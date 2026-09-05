@@ -12,3 +12,4 @@ export * from './views';
 export * from './blocked-terms';
 export * from './translation-gaps';
 export * from './export';
+export * from './services/publishes';

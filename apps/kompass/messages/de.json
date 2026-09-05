@@ -197,7 +197,14 @@
       "cta": "Module öffnen"
     },
     "backupMissing": "Diese Installation läuft im Vereinsnetz. Ein Backup wurde noch nicht erstellt — der erste Export dauert unter einer Minute.",
-    "backupDone": "Diese Installation läuft im Vereinsnetz. Das letzte Backup ist vorhanden."
+    "backupDone": "Diese Installation läuft im Vereinsnetz. Das letzte Backup ist vorhanden.",
+    "website": {
+      "title": "Webseite",
+      "text": "Inhalte prüfen und die Webseite publizieren.",
+      "count": "{count} Publishes",
+      "cta": "Publizieren öffnen",
+      "never": "Noch nie publiziert"
+    }
   },
   "users": {
     "title": "Nutzer",
@@ -840,6 +847,31 @@
       "auto": "Automatisch", "autoHint": "Automatisch wählt den neuesten Notfall, sonst den zuletzt angelegten Hund.",
       "addLocation": "Standort hinzufügen", "addSocial": "Link hinzufügen", "addBlocked": "Sperrwort hinzufügen",
       "blockedHint": "Begriffe, die auf keiner öffentlichen Seite und in keinem Dateinamen erscheinen dürfen. Der Publish bricht bei einem Treffer ab."
+    },
+    "publish": {
+      "title": "Publizieren",
+      "target": {
+        "development": "Ziel: keine Veröffentlichung in der Entwicklungsumgebung",
+        "test": "Ziel: Staging",
+        "production": "Ziel: Live-Webseite"
+      },
+      "state": {
+        "title": "Stand",
+        "last": "Letzter Publish: {date} ({status})",
+        "never": "Noch nie publiziert."
+      },
+      "check": {
+        "title": "Prüfen",
+        "intro": "Prüft alle Inhalte auf Sperrwörter und Übersetzungslücken. Ändert nichts.",
+        "run": "Prüfen",
+        "running": "Prüfung läuft …",
+        "hash": "Inhalts-Hash {hash}",
+        "violationsTitle": "Sperrworttreffer",
+        "noViolations": "Keine Treffer.",
+        "gapsTitle": "Übersetzungslücken",
+        "noGaps": "Alle Übersetzungen vorhanden."
+      },
+      "nextStage": "Vorschau-Build, Änderungsliste und Publish folgen in der nächsten Ausbaustufe."
     }
   },
   "animals": {
