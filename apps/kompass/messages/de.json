@@ -819,6 +819,14 @@
       "keys": { "home": "Startseite", "help": "Helfen", "donate": "Spenden", "sponsor": "Tierpate werden", "membership": "Fördermitglied werden", "about": "Über uns", "partners": "Unsere Partner", "contact": "Kontakt", "imprint": "Impressum", "privacy": "Datenschutz", "statutes": "Satzung", "adoption-process": "Ablauf der Adoption" },
       "form": { "title": "Titel", "titleHint": "Ein *kursives* Wort wird zur Betonung, z. B. „ein *Zuhause.*“", "lede": "Einleitung", "body": "Text", "bodyHint": "Markdown. Überschriften mit #, Aufzählungen mit -, Hinweiskasten mit >, Kartenraster mit :::karten … :::", "meta": "Meta-Beschreibung (Suchmaschinen)", "save": "Speichern" },
       "blocks": { "title": "Bausteine", "add": "Baustein hinzufügen", "empty": "Keine Bausteine. Nicht jede Seite braucht welche.", "edit": "Bearbeiten", "remove": "Entfernen", "id": "Baustein-ID", "href": "Link", "blockTitle": "Titel", "text": "Text", "label": "Beschriftung des Links", "image": "Bild", "apply": "Baustein übernehmen" }
+    },
+    "articles": {
+      "title": "Artikel",
+      "create": "Artikel anlegen",
+      "emptyTitle": "Noch keine Artikel",
+      "emptyText": "Wissenswertes-Beiträge wie „Ablauf der Adoption“ entstehen hier.",
+      "columns": { "title": "Titel", "slug": "Slug", "gaps": "Übersetzungen", "status": "Status" },
+      "form": { "title": "Titel", "lede": "Einleitung", "body": "Text", "publishedAt": "Datum (optional)" }
     }
   },
   "animals": {
