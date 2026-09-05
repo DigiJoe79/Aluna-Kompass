@@ -1,0 +1,144 @@
+import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+
+export const users = sqliteTable('users', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  email: text('email').notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
+  mustChangePassword: integer('must_change_password', { mode: 'boolean' }).notNull().default(false),
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  failedLoginCount: integer('failed_login_count').notNull().default(0),
+  lockedUntil: text('locked_until'),
+  lastLoginAt: text('last_login_at'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const sessions = sqliteTable(
+  'sessions',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    createdAt: text('created_at').notNull(),
+    expiresAt: text('expires_at').notNull(),
+  },
+  (t) => [index('sessions_user_idx').on(t.userId)],
+);
+
+export const apiTokens = sqliteTable(
+  'api_tokens',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    name: text('name').notNull(),
+    prefix: text('prefix').notNull(),
+    tokenHash: text('token_hash').notNull(),
+    createdAt: text('created_at').notNull(),
+    lastUsedAt: text('last_used_at'),
+    revokedAt: text('revoked_at'),
+  },
+  (t) => [uniqueIndex('api_tokens_hash_idx').on(t.tokenHash), index('api_tokens_user_idx').on(t.userId)],
+);
+
+export const roles = sqliteTable('roles', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  description: text('description').notNull().default(''),
+  isProtected: integer('is_protected', { mode: 'boolean' }).notNull().default(false),
+  createdAt: text('created_at').notNull(),
+});
+
+export const rolePermissions = sqliteTable(
+  'role_permissions',
+  {
+    roleId: text('role_id')
+      .notNull()
+      .references(() => roles.id),
+    permissionKey: text('permission_key').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.roleId, t.permissionKey] })],
+);
+
+export const userRoles = sqliteTable(
+  'user_roles',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    roleId: text('role_id')
+      .notNull()
+      .references(() => roles.id),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.roleId] })],
+);
+
+export const settings = sqliteTable('settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(), // JSON
+  updatedAt: text('updated_at').notNull(),
+  updatedByUserId: text('updated_by_user_id').references(() => users.id),
+});
+
+export const auditLog = sqliteTable(
+  'audit_log',
+  {
+    id: text('id').primaryKey(),
+    occurredAt: text('occurred_at').notNull(),
+    userId: text('user_id').references(() => users.id),
+    channel: text('channel', { enum: ['ui', 'mcp', 'system'] }).notNull(),
+    action: text('action').notNull(),
+    entityType: text('entity_type').notNull(),
+    entityId: text('entity_id'),
+    before: text('before'), // JSON
+    after: text('after'), // JSON
+    summary: text('summary').notNull(),
+    apiTokenId: text('api_token_id'),
+    ipAddress: text('ip_address'),
+    requestId: text('request_id').notNull(),
+    environment: text('environment').notNull(),
+  },
+  (t) => [
+    index('audit_occurred_idx').on(t.occurredAt),
+    index('audit_entity_idx').on(t.entityType, t.entityId),
+    index('audit_user_idx').on(t.userId),
+  ],
+);
+
+export const mediaAssets = sqliteTable('media_assets', {
+  id: text('id').primaryKey(),
+  filename: text('filename').notNull().unique(),
+  mimeType: text('mime_type').notNull(),
+  bytes: integer('bytes').notNull(),
+  width: integer('width'),
+  height: integer('height'),
+  uploadedByUserId: text('uploaded_by_user_id').references(() => users.id),
+  createdAt: text('created_at').notNull(),
+});
+
+export const documents = sqliteTable(
+  'documents',
+  {
+    id: text('id').primaryKey(),
+    templateKey: text('template_key').notNull(),
+    number: text('number').notNull(),
+    entityType: text('entity_type'),
+    entityId: text('entity_id'),
+    inputSnapshot: text('input_snapshot').notNull(), // JSON
+    assetId: text('asset_id')
+      .notNull()
+      .references(() => mediaAssets.id),
+    status: text('status', { enum: ['issued', 'voided'] }).notNull().default('issued'),
+    voidedAt: text('voided_at'),
+    voidedByUserId: text('voided_by_user_id').references(() => users.id),
+    voidReason: text('void_reason'),
+    createdByUserId: text('created_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [uniqueIndex('documents_number_idx').on(t.number)],
+);
