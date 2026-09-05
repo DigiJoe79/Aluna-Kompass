@@ -429,5 +429,42 @@
       "summary": "Zusammenfassung",
       "immutable": "Einträge können nicht geändert werden."
     }
+  },
+  "profile": {
+    "title": "Profil",
+    "identityHint": "Name und E-Mail ändert die Administration unter Verwaltung → Nutzer.",
+    "password": {
+      "title": "Passwort ändern",
+      "current": "Aktuelles Passwort",
+      "new": "Neues Passwort",
+      "repeat": "Passwort wiederholen",
+      "strength": "{count} Zeichen — mindestens 12 sind nötig.",
+      "submit": "Passwort ändern",
+      "footnote": "Alle anderen Sitzungen werden abgemeldet, API-Tokens bleiben gültig.",
+      "changed": "Passwort geändert.",
+      "wrongCurrent": "Das aktuelle Passwort stimmt nicht."
+    },
+    "tokens": {
+      "title": "API-Tokens (MCP-Zugang)",
+      "intro": "Ein Token wirkt mit Ihren Rechten. Vorgänge über MCP erscheinen im Änderungsprotokoll mit dem Kanal „MCP“ und dem Namen des Tokens.",
+      "create": "Token erstellen",
+      "createTitle": "Token erstellen",
+      "name": "Name",
+      "nameHint": "Wofür das Token verwendet wird, z. B. „Buchhaltung Skript“.",
+      "createSubmit": "Erstellen",
+      "columns": { "name": "Name", "created": "Erstellt", "lastUsed": "Zuletzt genutzt" },
+      "neverUsed": "noch nie genutzt",
+      "lastUsedDays": "{days, plural, =0 {heute} one {vor # Tag} other {vor # Tagen}}",
+      "revokedAt": "widerrufen {date}",
+      "revoke": "Widerrufen",
+      "revokeTitle": "Token „{name}“ widerrufen?",
+      "revokeText": "Aufrufe mit diesem Token werden sofort abgewiesen. Der Eintrag bleibt mit Datum in der Liste.",
+      "revoked": "Token widerrufen.",
+      "createdTitle": "Token „{name}“ erstellt",
+      "createdText": "Kopieren Sie das Token jetzt. Es wird nach dem Schließen dieses Dialogs nicht mehr angezeigt und kann nur widerrufen und neu erstellt werden.",
+      "createdInfo": "Gültig ohne Ablauf, Rechte wie Ihr Konto. Bei Verdacht auf Weitergabe sofort widerrufen.",
+      "createdDone": "Ich habe das Token gespeichert",
+      "footnote": "Widerrufene Tokens bleiben mit Datum in der Liste, damit Protokolleinträge zuordenbar bleiben."
+    }
   }
 }

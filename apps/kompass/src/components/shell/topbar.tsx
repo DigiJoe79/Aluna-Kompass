@@ -2,7 +2,7 @@
 
 import { Menu, PanelLeft, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { initials } from './user-menu';
+import { initials } from '@/lib/utils';
 
 export function Topbar({ breadcrumb, title, userName, collapsed, drawer, onExpand, onOpenDrawer, onSearch }: { breadcrumb: string; title: string; userName: string; collapsed: boolean; drawer: boolean; onExpand: () => void; onOpenDrawer: () => void; onSearch: () => void }) {
   const t = useTranslations('shell.topbar');

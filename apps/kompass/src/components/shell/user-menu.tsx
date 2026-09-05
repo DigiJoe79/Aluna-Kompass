@@ -5,16 +5,12 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { usePreference } from '@/lib/preferences';
-import { cn } from '@/lib/utils';
+import { cn, initials } from '@/lib/utils';
 
 export interface UserMenuProps {
   user: { name: string; roleNames: string[] };
   collapsed: boolean;
   trigger?: ReactNode;
-}
-
-export function initials(name: string): string {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]!.toUpperCase()).join('');
 }
 
 export function UserMenu({ user, collapsed, trigger }: UserMenuProps) {
