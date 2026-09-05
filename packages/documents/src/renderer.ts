@@ -13,9 +13,18 @@ export interface TypstRenderer {
 
 const LOGO_EXT: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/svg+xml': 'svg' };
 
+/** Im Container-Bundle zeigt import.meta.url nicht auf die Paketdateien; dann setzen die Container KOMPASS_TEMPLATES_DIR und KOMPASS_FONTS_DIR. */
+export function resolveAssetDirs(env: Record<string, string | undefined> = process.env): { templatesDir: string; fontsDir: string } {
+  return {
+    templatesDir: env.KOMPASS_TEMPLATES_DIR ?? path.join(PACKAGE_DIR, 'templates'),
+    fontsDir: env.KOMPASS_FONTS_DIR ?? path.join(PACKAGE_DIR, 'fonts'),
+  };
+}
+
 export function createTypstRenderer(opts: { binary?: string; templatesDir?: string; fontsDir?: string } = {}): TypstRenderer {
-  const templatesDir = opts.templatesDir ?? path.join(PACKAGE_DIR, 'templates');
-  const fontsDir = opts.fontsDir ?? path.join(PACKAGE_DIR, 'fonts');
+  const defaults = resolveAssetDirs();
+  const templatesDir = opts.templatesDir ?? defaults.templatesDir;
+  const fontsDir = opts.fontsDir ?? defaults.fontsDir;
   let binary: string | null = opts.binary ?? null;
   const bin = () => (binary ??= findTypstBinary());
   return {

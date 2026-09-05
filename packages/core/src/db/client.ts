@@ -11,6 +11,11 @@ export type DbOrTx = Db | Parameters<Parameters<Db['transaction']>[0]>[0];
 
 export const MIGRATIONS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'migrations');
 
+/** Im Container-Bundle zeigt import.meta.url nicht auf die Paketdateien; dann setzt der Container KOMPASS_MIGRATIONS_DIR auf den echten Pfad. */
+export function resolveMigrationsDir(env: Record<string, string | undefined> = process.env): string {
+  return env.KOMPASS_MIGRATIONS_DIR ?? MIGRATIONS_DIR;
+}
+
 export function openDatabase(filePath: string): { db: Db; sqlite: Database.Database } {
   if (filePath !== ':memory:') {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -24,5 +29,5 @@ export function openDatabase(filePath: string): { db: Db; sqlite: Database.Datab
 }
 
 export function runMigrations(db: Db): void {
-  migrate(db, { migrationsFolder: MIGRATIONS_DIR });
+  migrate(db, { migrationsFolder: resolveMigrationsDir() });
 }

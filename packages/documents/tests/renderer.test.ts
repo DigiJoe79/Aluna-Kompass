@@ -34,6 +34,12 @@ describe('typst renderer', () => {
     expect(bytes.byteLength).toBeGreaterThan(1000);
   });
 
+  it('honours KOMPASS_TEMPLATES_DIR and KOMPASS_FONTS_DIR', async () => {
+    const { resolveAssetDirs } = await import('../src/renderer');
+    const dirs = resolveAssetDirs({ KOMPASS_TEMPLATES_DIR: '/srv/t', KOMPASS_FONTS_DIR: '/srv/f' });
+    expect(dirs).toEqual({ templatesDir: '/srv/t', fontsDir: '/srv/f' });
+  });
+
   it('fails loudly when a font family is unknown', async () => {
     const renderer = createTypstRenderer();
     await expect(renderer.render('letterhead.typ', { data: { title: 'x', body: 'y', letterhead: false }, organization: {}, number: 'N', issuedDate: 'D', brand: { primary: '#000000', accent: '#000000', ink: '#000000', muted: '#666666', line: '#cccccc', fontBody: 'Comic Sans MS', fontHeading: 'Source Serif 4', fontMono: 'IBM Plex Mono' }, hasLogo: false })).rejects.toThrow(/unknown font family/);

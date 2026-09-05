@@ -40,4 +40,10 @@ describe('database', () => {
     const { db } = createTestDb();
     expect(() => runMigrations(db)).not.toThrow();
   });
+
+  it('honours KOMPASS_MIGRATIONS_DIR', async () => {
+    const { MIGRATIONS_DIR, resolveMigrationsDir } = await import('../src/db/client');
+    expect(resolveMigrationsDir({})).toBe(MIGRATIONS_DIR);
+    expect(resolveMigrationsDir({ KOMPASS_MIGRATIONS_DIR: '/srv/migrations' })).toBe('/srv/migrations');
+  });
 });
