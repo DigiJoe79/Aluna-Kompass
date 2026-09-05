@@ -1,6 +1,7 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import Database from 'better-sqlite3';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createDeps, readEnv } from '../src/app';
 import { isSetupRequired } from '../src/setup/service';
@@ -24,6 +25,25 @@ describe('createDeps', () => {
     const second = createDeps({ databasePath: file, mediaPath: path.join(dir, 'media'), env: 'test' });
     expect(isSetupRequired(second)).toBe(true);
     second.close();
+  });
+
+  it('backups the database and reopens after the file was replaced', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'kompass-'));
+    dirs.push(dir);
+    const file = path.join(dir, 'kompass.db');
+    const deps = createDeps({ databasePath: file, mediaPath: path.join(dir, 'media'), env: 'test' });
+    const dest = path.join(dir, 'copy.db');
+    await deps.backupDatabase(dest);
+    const copy = new Database(dest, { readonly: true });
+    expect((copy.prepare('select count(*) as n from users').get() as { n: number }).n).toBe(0);
+    copy.close();
+    for (const suffix of ['', '-wal', '-shm']) rmSync(`${file}${suffix}`, { force: true });
+    expect(existsSync(file)).toBe(false);
+    deps.reopen();
+    expect(existsSync(file)).toBe(true);
+    expect(isSetupRequired(deps)).toBe(true);
+    expect(deps.migrationCount).toBeGreaterThanOrEqual(2);
+    deps.close();
   });
 });
 

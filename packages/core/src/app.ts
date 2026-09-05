@@ -16,19 +16,37 @@ export interface CreateDepsOptions {
   clock?: Clock;
 }
 
-export function createDeps(opts: CreateDepsOptions): Deps & { migrationCount: number; close(): void } {
-  const { db, sqlite } = openDatabase(opts.databasePath);
-  runMigrations(db);
-  const migrationCount = (sqlite.prepare('select count(*) as n from __drizzle_migrations').get() as { n: number }).n;
-  return {
-    db,
+export type AppDeps = Deps & {
+  databasePath: string;
+  migrationCount: number;
+  backupDatabase(destination: string): Promise<void>;
+  reopen(): void;
+  close(): void;
+};
+
+export function createDeps(opts: CreateDepsOptions): AppDeps {
+  let handle = openDatabase(opts.databasePath);
+  const countMigrations = () => (handle.sqlite.prepare('select count(*) as n from __drizzle_migrations').get() as { n: number }).n;
+  runMigrations(handle.db);
+  const deps: AppDeps = {
+    db: handle.db,
     clock: opts.clock ?? systemClock,
     env: opts.env,
     registry: createRegistry([coreModule, ...(opts.modules ?? [])], { coreTemplates: opts.coreTemplates }),
     media: createFileMediaStore(opts.mediaPath),
-    migrationCount,
-    close: () => sqlite.close(),
+    databasePath: opts.databasePath,
+    migrationCount: countMigrations(),
+    backupDatabase: (destination) => handle.sqlite.backup(destination).then(() => undefined),
+    reopen() {
+      handle.sqlite.close();
+      handle = openDatabase(opts.databasePath);
+      runMigrations(handle.db);
+      deps.db = handle.db;
+      deps.migrationCount = countMigrations();
+    },
+    close: () => handle.sqlite.close(),
   };
+  return deps;
 }
 
 const envSchema = z.object({
