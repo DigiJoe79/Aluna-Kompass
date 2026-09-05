@@ -16,9 +16,8 @@ test.describe('settings', () => {
     await expect(page.getByRole('status')).toContainText('Einstellungen gespeichert');
     await page.reload();
     await expect(page.getByLabel('Vereinsname')).toHaveValue('Aluna Musterverein e.V.');
-    // In Task 12 aktivieren:
-    // await page.goto('/admin/audit');
-    // await expect(page.getByRole('row', { name: /organization.name/ }).first()).toBeVisible();
+    await page.goto('/admin/audit');
+    await expect(page.getByRole('row', { name: /organization.name/ }).first()).toBeVisible();
   });
 
   test('marks the tab with a validation error and keeps the input', async ({ page }) => {

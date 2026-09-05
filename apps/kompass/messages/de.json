@@ -384,5 +384,50 @@
       "enabled": "Modul aktiviert.",
       "disabled": "Modul deaktiviert."
     }
+  },
+  "audit": {
+    "title": "Änderungsprotokoll",
+    "export": "Als PDF exportieren",
+    "exportSoon": "Folgt mit der Dokumenten-Engine.",
+    "range": "{from}–{to} von {total}",
+    "prev": "Zurück",
+    "next": "Weiter",
+    "columns": {
+      "time": "Zeitpunkt",
+      "user": "Nutzer",
+      "channel": "Kanal",
+      "action": "Aktion",
+      "entity": "Objekt",
+      "summary": "Zusammenfassung"
+    },
+    "filters": {
+      "text": "Objekt oder Wert",
+      "user": "Nutzer",
+      "allUsers": "Alle Nutzer",
+      "channel": "Kanal",
+      "allChannels": "Alle Kanäle",
+      "action": "Aktion",
+      "allActions": "Alle Aktionen",
+      "from": "Von",
+      "to": "Bis",
+      "count": "{count, plural, one {# Eintrag} other {# Einträge}}",
+      "channels": {
+        "ui": "Oberfläche",
+        "mcp": "MCP",
+        "system": "System"
+      }
+    },
+    "detail": {
+      "before": "vorher",
+      "after": "nachher",
+      "noDiff": "Kein Feld-Diff für diesen Eintrag.",
+      "user": "Nutzer",
+      "channel": "Kanal",
+      "origin": "Herkunft",
+      "request": "Vorgang",
+      "environment": "Umgebung",
+      "summary": "Zusammenfassung",
+      "immutable": "Einträge können nicht geändert werden."
+    }
   }
 }
