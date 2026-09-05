@@ -51,7 +51,7 @@ Diese Pflichten eines gemeinnützigen e.V. müssen vom Datenmodell von Tag 1 an 
 ## 2. Grundprinzipien (gelten für alle Stufen, wandern in `AGENTS.md`)
 
 1. **Generischer Kern, optionale Module.** Der Kern kennt keine Vereinsspezifika. Faustregel: Würde ein anderer Verein bei einem Namen/Wert stutzen, ist er zu spezifisch für den Kern.
-2. **Konfiguration statt Konstanten.** Vereinsstamm, Steuerdaten, Satzungszweck, Branding, Rücklagenregeln sind admin-editierbare Einstellungen, nie Code-Konstanten, nie Env-Vars (Env-Vars nur für Betriebsparameter: Pfade, Port, Secrets, Umgebungsname).
+2. **Konfiguration statt Konstanten.** Vereinsstamm, Steuerdaten, Satzungszweck, Branding, Rücklagenregeln sind admin-editierbare Einstellungen, nie Code-Konstanten, nie Env-Vars (Env-Vars nur für Betriebsparameter: Pfade, Port, Secrets, Umgebungsname). **Das gilt auch für Farben: kein statischer Farbwert im Anwendungscode.** Komponenten, Typst-Vorlagen und der Website-Build verwenden ausschließlich Theme-Tokens (siehe Abschnitt 6, „Themes"); die Token-Werte kommen aus dem aktiven Theme in den Einstellungen.
 3. **Nichts Rechenschaftsrelevantes wird gelöscht.** Storno/Ersetzen statt Löschen; jede schreibende Aktion erzeugt einen Eintrag im Änderungsprotokoll (Nutzer, Zeit, Kanal, Vorher/Nachher).
 4. **Interner Datensatz ≠ veröffentlichte Sicht.** Webseite und Berichte lesen nur explizit freigegebene Sichten.
 5. **Abgeleitete Werte werden berechnet, nie gespeichert.**
@@ -108,7 +108,8 @@ Alle Tabellen englisch benannt, camelCase in Drizzle, snake_case in SQLite.
 
 Kern-Settings (Schlüssel, alle admin-editierbar):
 - `organization.*`: name, legalForm, street, postalCode, city, country, registerCourt, registerNumber, taxNumber, taxOffice, exemptionNoticeDate, exemptionNoticeType (`60a` | `exemption`), statutoryPurpose, email, website, iban, bic, bankName
-- `branding.*`: logoAssetId, colorPrimary, colorAccent, fontBody, fontHeading
+- `branding.*`: logoAssetId, fontBody, fontHeading, `activeTheme` (Theme-Key)
+- `themes`: Liste benannter Themes; jedes Theme = Key, Name, vollständiger Token-Satz für `light` und `dark` (siehe Abschnitt 6, „Themes"). Ein mitgeliefertes, neutrales Default-Theme ist Teil des Seeds, nicht des Codes; Aluna hinterlegt sein eigenes Theme als Daten.
 - `modules.enabled`: string[]
 
 Kern-Permission-Keys: `users.manage`, `roles.manage`, `settings.manage`, `modules.manage`, `audit.view`, `documents.create`, `documents.view`, `media.upload`, `backup.export`, `backup.import`.
@@ -129,6 +130,14 @@ Kern-Permission-Keys: `users.manage`, `roles.manage`, `settings.manage`, `module
 
 **MCP-Tools des Kerns:** `settings.get`, `settings.set`, `roles.list`, `roles.create`, `roles.update`, `roles.assign`, `users.list`, `users.create`, `audit.query`, `documents.render`, `modules.list`, `modules.setEnabled`. Ein Tool je Service-Funktion; Beschreibungen englisch.
 
+**Themes.** Der Kern definiert ein festes **Token-Schema** (Namen und Bedeutung), nie Werte:
+- Farben: `--color-primary`, `--color-primary-ink`, `--color-primary-soft`, `--color-accent`, `--color-accent-deep`, `--color-accent-soft`, `--color-success`, `--color-success-bg`, `--color-warning`, `--color-warning-bg`, `--color-error`, `--color-error-bg`, `--color-info`, `--color-info-bg`, `--bg`, `--surface`, `--surface-2`, `--sidebar-bg`, `--topbar-bg`, `--ink`, `--ink-2`, `--muted`, `--muted-2`, `--on-primary`, `--on-primary-muted`, `--line`, `--line-2`, `--line-strong`.
+- Typografie und Form: `--font-body`, `--font-heading`, `--radius-sm`, `--radius-md`, `--radius-lg`.
+- Ein Theme liefert für jedes Token einen Wert für `light` und für `dark`. Das Schema wird mit Zod validiert; unvollständige Themes werden abgewiesen.
+- Die App injiziert die Tokens des aktiven Themes zur Laufzeit als CSS-Custom-Properties in `:root` (Hell/Dunkel über `prefers-color-scheme` und einen Nutzer-Schalter). Tailwind-Farben sind ausschließlich auf diese Custom-Properties gemappt; shadcn/ui-Komponenten werden auf dieselben Tokens umgestellt.
+- Typst-Vorlagen erhalten dieselben Tokens (Farben, Schriften) als Parameter aus dem aktiven Theme; der Website-Build (Stufe 2) liest sie ebenfalls aus den Einstellungen.
+- Admin-UI: Theme anlegen/duplizieren/bearbeiten mit Live-Vorschau, aktives Theme wählen. Der Umgebungsbalken (Dev/Test) hat bewusst feste, theme-unabhängige Signalfarben, damit er nie „wegdesignt" werden kann — die einzige erlaubte Ausnahme, als Konstante mit Kommentar markiert.
+
 **Oberfläche.** App-Shell (Sidebar aus Manifesten, Topbar mit Vereinsname + Umgebungsbalken), Login, Einrichtungsseite beim ersten Start (legt genau einmal einen Admin an), Admin-Bereich: Nutzer, Rollen, Einstellungen (Vereinsstamm, Branding), Module, Änderungsprotokoll, Dokumente, Backup, eigenes Profil (Passwort, API-Tokens).
 
 ## 7. Dokumenten-Engine
@@ -144,6 +153,7 @@ Kern-Permission-Keys: `users.manage`, `roles.manage`, `settings.manage`, `module
 
 **TDD auf drei Ebenen:**
 - Service-Tests (`packages/core`, Vitest) gegen frische SQLite-DB je Testdatei mit echten Migrationen. Pro Service: Erfolg, `forbidden`, `validation`, Audit-Eintrag. Regeltests: kein Löschpfad für protokollierte Entitäten; `auditLog` ist unveränderbar (Trigger); Sichten reichen keine internen Felder durch; Rendering ist deterministisch.
+- Theme-Regeltests: ESLint/Stylelint-Regel, die Hex-, rgb()- und hsl()-Literale in `apps/`, `packages/documents` und `packages/modules` verbietet (Ausnahme: Umgebungsbalken, explizit markiert); Test, dass jedes Theme das vollständige Token-Schema erfüllt; Test, dass das Default-Theme aus dem Seed und nicht aus dem Code kommt.
 - Adapter-Tests: Token → `ctx`; widerrufenes/abgelaufenes Token wird abgewiesen; `Result`-Fehler kommen strukturiert an.
 - End-to-End (Playwright, gegen gebauten Container): Login, Rolle anlegen/zuweisen, Einstellung ändern, Dokument erzeugen, Umgebungsbalken sichtbar.
 
