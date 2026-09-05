@@ -2,7 +2,9 @@ import type Database from 'better-sqlite3';
 import { fixedClock, type FixedClock } from '../clock';
 import type { CallContext } from '../context';
 import { coreModule } from '../core-module';
+import { roles, users } from '../db/schema';
 import type { AppEnv, Deps } from '../deps';
+import { newId } from '../ids';
 import type { ModuleManifest } from '../modules/manifest';
 import { createRegistry } from '../modules/registry';
 import { createTestDb } from './test-db';
@@ -38,4 +40,33 @@ export function ctxWith(permissions: readonly string[], userId: string | null = 
     ipAddress: '127.0.0.1',
     requestId: 'REQ-TEST',
   };
+}
+
+export function insertRole(deps: Deps, overrides: { name: string; isProtected?: boolean }): string {
+  const id = newId();
+  deps.db
+    .insert(roles)
+    .values({ id, name: overrides.name, description: '', isProtected: overrides.isProtected ?? false, createdAt: TEST_NOW })
+    .run();
+  return id;
+}
+
+export function insertUser(
+  deps: Deps,
+  overrides: { id?: string; name?: string; email?: string; isActive?: boolean; passwordHash?: string },
+): string {
+  const id = overrides.id ?? newId();
+  deps.db
+    .insert(users)
+    .values({
+      id,
+      name: overrides.name ?? 'Test Person',
+      email: overrides.email ?? `${id.toLowerCase()}@example.org`,
+      passwordHash: overrides.passwordHash ?? '$argon2id$placeholder',
+      isActive: overrides.isActive ?? true,
+      createdAt: TEST_NOW,
+      updatedAt: TEST_NOW,
+    })
+    .run();
+  return id;
 }
