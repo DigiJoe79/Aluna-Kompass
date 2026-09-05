@@ -6,7 +6,7 @@ const withNextIntl = createNextIntlPlugin();
 
 const nextConfig: NextConfig = {
   transpilePackages: ['@kompass/core', '@kompass/documents', '@kompass/mcp', '@kompass/module-website', '@kompass/module-animals', '@kompass/markdown'],
-  serverExternalPackages: ['better-sqlite3', '@node-rs/argon2', 'tar', 'file-type', 'image-size'],
+  serverExternalPackages: ['better-sqlite3', '@node-rs/argon2', 'tar', 'file-type', 'image-size', 'sharp'],
   output: 'standalone',
   outputFileTracingRoot: path.join(import.meta.dirname, '../../'),
 };

@@ -36,6 +36,12 @@
       "moduleDependencyInactive": "Benötigte Module sind nicht aktiv: {detail}",
       "moduleRequiredByOthers": "Wird von aktiven Modulen benötigt: {detail}",
       "setupAlreadyDone": "Die Einrichtung wurde bereits abgeschlossen.",
+      "publicUrlMissing": "SITE_PUBLIC_URL ist nicht gesetzt.",
+      "publishTargetMissing": "Kein Publish-Ziel konfiguriert.",
+      "publishNotAllowedHere": "Aus der Entwicklungsumgebung wird nicht publiziert.",
+      "blockedTermsPresent": "Sperrworttreffer: {detail}",
+      "siteBuildFailed": "Der Build ist fehlgeschlagen: {detail}",
+      "publishFailed": "Die Übertragung ist fehlgeschlagen: {detail}",
       "default": "Der Vorgang ist nicht möglich: {detail}"
     },
     "fields": {
@@ -871,7 +877,11 @@
         "gapsTitle": "Übersetzungslücken",
         "noGaps": "Alle Übersetzungen vorhanden."
       },
-      "nextStage": "Vorschau-Build, Änderungsliste und Publish folgen in der nächsten Ausbaustufe."
+      "preview": { "run": "Vorschau bauen", "running": "Build läuft …", "open": "Vorschau öffnen", "built": "Vorschau gebaut." },
+      "diff": { "title": "Änderungen gegenüber Live", "changed": "Geändert", "added": "Neu", "removed": "Entfallen", "none": "Keine Änderungen gegenüber dem letzten Publish." },
+      "publishCard": { "staging": "Nach Staging publizieren", "live": "Live publizieren", "noTarget": "Kein Publish-Ziel konfiguriert (SITE_DEPLOY_*).", "notHere": "Aus der Entwicklungsumgebung wird nicht publiziert.", "blocked": "Sperrworttreffer — Publish nicht möglich.", "confirmTitle": "Webseite publizieren?", "confirmText": "Ziel: {url}. {changed} geändert, {added} neu, {removed} entfallen. Die Seite wird frisch gebaut und übertragen.", "confirm": "Jetzt publizieren", "steps": { "build": "Bauen", "transfer": "Übertragen", "record": "Protokollieren" } },
+      "done": "Publiziert: {changed} geändert, {added} neu, {removed} entfallen.",
+      "history": { "title": "Publish-Historie", "columns": { "time": "Zeitpunkt", "status": "Status", "hash": "Inhalts-Hash", "changes": "Änderungen", "by": "Auslöser" }, "log": "Protokoll" }
     }
   },
   "animals": {

@@ -5,7 +5,8 @@ import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
 import { runtimeEnv } from '@/lib/deps';
 import { requireSession } from '@/lib/request-context';
-import { CheckCard } from './check-card';
+import { siteEnv } from '@/lib/site-env';
+import { PublishClient } from './publish-client';
 
 export default async function PublishPage() {
   const { deps, ctx } = await requireSession();
@@ -13,11 +14,17 @@ export default async function PublishPage() {
   const t = await getTranslations('website.publish');
   const format = await getFormatter();
   const env = runtimeEnv().env;
-  const history = await listPublishes(deps, ctx, { environment: env });
-  const last = history.ok ? history.value[0] : undefined;
+  const se = siteEnv();
+  const historyRes = await listPublishes(deps, ctx, { environment: env });
+  const history = historyRes.ok ? historyRes.value : [];
+  const last = history[0];
+
   return (
     <>
-      <PageHeader title={t('title')} description={t(`target.${env}`)} />
+      <PageHeader
+        title={t('title')}
+        description={`${t(`target.${env}`)}${se.publicUrl ? ` (${se.publicUrl})` : ''}`}
+      />
       <div className="flex max-w-[880px] flex-col gap-4">
         <section className="rounded-lg border border-line bg-surface p-5 text-[13px]">
           <h3 className="font-heading text-[18px]">{t('state.title')}</h3>
@@ -30,8 +37,12 @@ export default async function PublishPage() {
               : t('state.never')}
           </p>
         </section>
-        <CheckCard />
-        <p className="text-[12px] text-muted-ink">{t('nextStage')}</p>
+        <PublishClient
+          env={env}
+          publicUrl={se.publicUrl}
+          hasDeploy={se.deploy !== null}
+          history={history}
+        />
       </div>
     </>
   );

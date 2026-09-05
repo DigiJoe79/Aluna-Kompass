@@ -22,6 +22,12 @@ const KNOWN_CONFLICTS = new Set([
   'moduleDependencyInactive',
   'moduleRequiredByOthers',
   'setupAlreadyDone',
+  'publicUrlMissing',
+  'publishTargetMissing',
+  'publishNotAllowedHere',
+  'blockedTermsPresent',
+  'siteBuildFailed',
+  'publishFailed',
 ]);
 
 const MEDIA_FIELD_CODES = ['unsupportedMediaType', 'fileTooLarge', 'svgContainsScript'];
@@ -29,6 +35,7 @@ const BACKUP_FIELD_CODES = ['confirmationMismatch', 'backupFormatUnsupported', '
 
 export function fieldMessage(issueMessage: string, t: Translate): string {
   const lower = issueMessage.toLowerCase();
+  if (issueMessage === 'confirmationRequired') return t('website.publish.publishCard.confirm');
   if (issueMessage === 'passwordTooShort' || issueMessage === 'unknownPermission' || issueMessage === 'unknownSetting' || MEDIA_FIELD_CODES.includes(issueMessage) || BACKUP_FIELD_CODES.includes(issueMessage)) {
     return t(`errors.fields.${issueMessage}`);
   }
@@ -51,7 +58,7 @@ function errorMessage(error: ServiceError, t: Translate): string {
       return t('errors.unauthorized');
     case 'conflict': {
       const detail = error.message.includes(':') ? error.message.slice(error.message.indexOf(':') + 1).trim() : error.message;
-      if (error.code === 'moduleDependencyInactive' || error.code === 'moduleRequiredByOthers') {
+      if (error.code === 'moduleDependencyInactive' || error.code === 'moduleRequiredByOthers' || error.code === 'blockedTermsPresent' || error.code === 'siteBuildFailed' || error.code === 'publishFailed') {
         return t(`errors.conflict.${error.code}`, { detail });
       }
       return KNOWN_CONFLICTS.has(error.code) ? t(`errors.conflict.${error.code}`) : t('errors.conflict.default', { detail: error.message });
