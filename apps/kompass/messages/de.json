@@ -173,5 +173,76 @@
         "import": { "label": "Backup importieren", "description": "Bestand überschreiben. Nur für die Administration sinnvoll." }
       }
     }
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "tabs": { "organization": "Verein", "tax": "Steuer & Bescheide", "bank": "Bank", "branding": "Branding" },
+    "tabInvalid": "Enthält Fehler",
+    "counter": "{count} von {max} Zeichen",
+    "taxIncomplete": "{count, plural, one {# Angabe ist unvollständig.} other {# Angaben sind unvollständig.}}",
+    "taxIncompleteText": "Ohne Steuernummer und Freistellungsbescheid lassen sich keine Zuwendungsbestätigungen erzeugen.",
+    "fields": {
+      "organization": {
+        "name": "Vereinsname",
+        "legalForm": "Rechtsform",
+        "street": "Straße und Hausnummer",
+        "postalCode": "PLZ",
+        "city": "Ort",
+        "country": "Land",
+        "registerCourt": "Registergericht",
+        "registerNumber": "Registernummer",
+        "email": "Kontakt-E-Mail",
+        "phone": "Telefon",
+        "website": "Webseite",
+        "taxNumber": "Steuernummer",
+        "taxOffice": "Finanzamt",
+        "exemptionNoticeType": "Art des Bescheids",
+        "exemptionNoticeDate": "Datum des Bescheids",
+        "statutoryPurpose": "Satzungszweck",
+        "iban": "IBAN",
+        "bic": "BIC",
+        "bankName": "Bankname"
+      },
+      "branding": {
+        "logoAssetId": "Logo",
+        "fontBody": "Schrift Fließtext",
+        "fontHeading": "Schrift Überschriften",
+        "activeTheme": "Aktives Theme"
+      }
+    },
+    "hints": {
+      "registerNumberHint": "Erscheint im Briefbogen-Fuß.",
+      "statutoryPurposeHint": "Wird wörtlich in Zuwendungsbestätigungen übernommen.",
+      "logoHint": "Logo-Upload folgt mit der Mediathek.",
+      "themeHint": "Themes werden unter Verwaltung → Themes bearbeitet."
+    },
+    "options": {
+      "organization": {
+        "legalForm": {
+          "registeredAssociation": "Eingetragener Verein (e.V.)",
+          "unregisteredAssociation": "Nicht eingetragener Verein"
+        },
+        "exemptionNoticeType": {
+          "none": "Noch kein Bescheid",
+          "exemptionNotice": "Freistellungsbescheid",
+          "corporateTaxNoticeAttachment": "Anlage zum Körperschaftsteuerbescheid",
+          "section60a": "Feststellung nach § 60a AO"
+        }
+      },
+      "branding": {
+        "fontBody": {
+          "source-sans-3": "Source Sans 3 (Standard)",
+          "public-sans": "Public Sans",
+          "atkinson-hyperlegible": "Atkinson Hyperlegible"
+        },
+        "fontHeading": {
+          "source-serif-4": "Source Serif 4 (Standard)",
+          "same-as-body": "Wie Fließtext"
+        }
+      }
+    },
+    "toast": {
+      "saved": "Einstellungen gespeichert. Änderungen sind im Protokoll vermerkt."
+    }
   }
 }
