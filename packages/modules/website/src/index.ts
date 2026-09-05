@@ -8,3 +8,7 @@ export * from './services/articles';
 export * from './services/team';
 export * from './services/faqs';
 export * from './services/downloads';
+export * from './views';
+export * from './blocked-terms';
+export * from './translation-gaps';
+export * from './export';

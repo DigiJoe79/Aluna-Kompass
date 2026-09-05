@@ -1,6 +1,7 @@
 import { defineModule, type ModuleManifest } from '@kompass/core';
 import { WEBSITE_PERMISSIONS } from './page-keys';
 import { WEBSITE_SETTINGS } from './settings';
+import { WEBSITE_VIEWS } from './views';
 
 const nav = (key: string, href: string, icon: string, permission: string) => ({ key: `website.${key}`, href, icon, group: 'website', permission });
 
@@ -19,4 +20,5 @@ export const websiteModule: ModuleManifest = defineModule({
     nav('facts', '/website/facts', 'sliders', 'website.manage'),
     nav('publish', '/website/publish', 'upload', 'website.publish'),
   ],
+  publishedViews: WEBSITE_VIEWS,
 });

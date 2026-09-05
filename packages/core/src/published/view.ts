@@ -6,14 +6,14 @@ import type { PublishedView } from '../modules/manifest';
  * Eine veröffentlichte Sicht liefert ausschließlich Felder ihres öffentlichen Schemas.
  * Der Loader darf intern mehr laden; alles Undeklarierte wird beim Parsen entfernt.
  */
-export function definePublishedView<T extends Record<string, unknown>>(def: {
+export function definePublishedView<Shape extends z.ZodRawShape>(def: {
   name: string;
-  schema: z.ZodObject<z.ZodRawShape>;
+  schema: z.ZodObject<Shape>;
   load: (deps: Deps) => unknown[];
-}): PublishedView<T> {
+}): PublishedView<z.infer<z.ZodObject<Shape>>> {
   return {
     name: def.name,
-    schema: def.schema as unknown as z.ZodType<T>,
-    load: (deps) => def.load(deps).map((row) => def.schema.parse(row) as T),
+    schema: def.schema,
+    load: (deps) => def.load(deps).map((row) => def.schema.parse(row)),
   };
 }
