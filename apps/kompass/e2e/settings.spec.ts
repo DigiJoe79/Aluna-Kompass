@@ -34,7 +34,7 @@ test.describe('settings', () => {
 
   test('tax tab shows the incomplete alert and the purpose counter', async ({ page }) => {
     await page.getByRole('tab', { name: 'Steuer & Bescheide' }).click();
-    await expect(page.getByRole('tabpanel').getByRole('alert')).toContainText('Zuwendungsbestätigungen');
+    await expect(page.locator('main').getByRole('alert')).toContainText('Zuwendungsbestätigungen');
     await page.getByLabel('Satzungszweck').fill('Förderung des Tierschutzes');
     await expect(page.getByText('26 von 500 Zeichen')).toBeVisible();
   });
