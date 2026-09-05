@@ -1,0 +1,1 @@
+ALTER TABLE `website_publishes` ADD `file_manifest` text DEFAULT '{}' NOT NULL;

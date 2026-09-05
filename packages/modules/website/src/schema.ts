@@ -80,4 +80,5 @@ export const websitePublishes = sqliteTable('website_publishes', {
   summary: text('summary').notNull().default(''),
   triggeredByUserId: text('triggered_by_user_id').references(() => core.users.id),
   log: text('log').notNull().default(''),
+  fileManifest: text('file_manifest').notNull().default('{}'),
 });
