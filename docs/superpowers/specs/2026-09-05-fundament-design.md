@@ -88,29 +88,30 @@ docs/superpowers/   Specs und Pläne
 - Auth: Session-Cookie (httpOnly, sameSite=lax), Sessions in DB, Passwörter mit Argon2id. Keine externe Auth-Bibliothek.
 - MCP: Streamable-HTTP-Transport unter `/mcp` im Kompass-Prozess; Bearer-Token → `apiTokens`.
 - Typst-Binary im Image (Version gepinnt), Aufruf als Kindprozess.
-- i18n: next-intl, Single-Locale, `messages/de.json`, Formatter für Datum/Währung.
+- i18n: next-intl, Single-Locale, `messages/de.json` (Anrede: Sie-Form), Formatter für Datum/Währung.
 - UI: Tailwind + shadcn/ui; Design-Tokens als CSS-Custom-Properties (`--color-primary`, …) aus den Branding-Einstellungen injiziert.
 
 ## 5. Datenmodell des Kerns
 
 Alle Tabellen englisch benannt, camelCase in Drizzle, snake_case in SQLite.
 
-**users** — id, name, email (unique), passwordHash, mustChangePassword, isActive, failedLoginCount, lockedUntil (nullable), lastLoginAt (nullable), createdAt, updatedAt. Kein Einladungs-Status: Ein Admin legt den Nutzer an, das System erzeugt ein Startpasswort, das genau einmal angezeigt wird; beim ersten Login erzwingt `mustChangePassword` ein neues Passwort. Nach 5 Fehlversuchen wird der Account 15 Minuten gesperrt (Login zeigt die verbleibenden Versuche an); ein Admin kann jederzeit ein neues Startpasswort setzen.
+**users** — id, name, email (unique), passwordHash, mustChangePassword, isActive, failedLoginCount, lockedUntil (nullable), lastLoginAt (nullable), createdAt, updatedAt. Kein Einladungs-Status: Ein Admin legt den Nutzer an, das System erzeugt ein Startpasswort, das genau einmal angezeigt wird; beim ersten Login erzwingt `mustChangePassword` ein neues Passwort. Nach 5 Fehlversuchen wird der Account 15 Minuten gesperrt (Login zeigt die verbleibenden Versuche an); ein Admin kann jederzeit ein neues Startpasswort setzen. Passwortregel: mindestens 12 Zeichen, keine Zeichenklassen-Pflicht, Stärkeanzeige im UI. Startpasswörter sind sprechbare Wortketten (z. B. `wiese-kanu-73-lampe`, vier Elemente aus einer deutschen Wortliste plus Zahl, ≥ 12 Zeichen), weil sie mündlich weitergegeben werden. Ein Passwortwechsel beendet alle anderen Sitzungen des Nutzers; API-Tokens bleiben gültig.
 **sessions** — id, userId, createdAt, expiresAt
 **apiTokens** — id, userId, name, tokenHash (unique), createdAt, lastUsedAt, revokedAt. Klartext-Token wird genau einmal angezeigt.
-**roles** — id, name (unique), description, createdAt
+**roles** — id, name (unique), description, isProtected, createdAt. Rollen werden nie gelöscht (eine nicht mehr benötigte Rolle wird von allen Nutzern entfernt und bleibt leer stehen). Die beim Setup angelegte Rolle „Administration" ist `isProtected`: nicht editierbar, hat immer alle Rechte, und mindestens ein aktiver Nutzer muss sie tragen — damit sich niemand aussperrt.
 **rolePermissions** — roleId, permissionKey (PK zusammengesetzt). Permission-Keys sind Code-Konstanten aus der Registry; unbekannte Keys werden beim Schreiben abgewiesen.
 **userRoles** — userId, roleId (PK zusammengesetzt). Effektive Rechte = Vereinigung.
 **settings** — key (PK), value (JSON), updatedAt, updatedByUserId. Jeder Schlüssel wird von Kern oder Modul mit Zod-Schema und Default registriert; unregistrierte Schlüssel werden abgewiesen.
-**auditLog** — id, occurredAt, userId (nullable bei `system`), channel (`ui` | `mcp` | `system`; `system` für Migrationen, Seed, Import, automatische Sperren), action, entityType, entityId, before (JSON, nullable), after (JSON, nullable), summary. Nur INSERT; kein UPDATE/DELETE (durch SQLite-Trigger abgesichert).
+**auditLog** — id, occurredAt, userId (nullable bei `system`), channel (`ui` | `mcp` | `system`; `system` für Migrationen, Seed, Import, automatische Sperren), action, entityType, entityId, before (JSON, nullable), after (JSON, nullable), summary, apiTokenId (nullable, bei `mcp`), ipAddress (nullable), requestId (Vorgangs-ID, erscheint identisch auf der 500-Seite und im Serverlog), environment (`APP_ENV` zum Zeitpunkt des Eintrags — bleibt nach einem Import nach Test lesbar). Nur INSERT; kein UPDATE/DELETE (durch SQLite-Trigger abgesichert).
 **mediaAssets** — id, filename (enthält Content-Hash), mimeType, bytes, width, height (nullable), uploadedByUserId, createdAt. Dateien unter `MEDIA_PATH`.
-**documents** — id, templateKey, number (laufende Nummer je templateKey und Jahr, z. B. `2026-000012`, lückenlos), entityType (nullable), entityId (nullable), inputSnapshot (JSON), assetId, status (`issued` | `voided`), voidedAt, voidedByUserId, voidReason (alle nullable), createdByUserId, createdAt. Ein Dokument wird nie gelöscht, sondern storniert; die PDF bleibt erhalten und trägt in der Liste den Zustand „storniert". Ersatzdokumente erhalten eine neue Nummer.
+**documents** — id, templateKey, number (lückenlos je Vorlage und Jahr im Format `<PREFIX>-<JAHR>-<NNN>`, z. B. `BRF-2026-004`; jede Vorlage definiert ein dreibuchstabiges Präfix), entityType (nullable), entityId (nullable), inputSnapshot (JSON), assetId, status (`issued` | `voided`), voidedAt, voidedByUserId, voidReason (alle nullable), createdByUserId, createdAt. Ein Dokument wird nie gelöscht, sondern storniert; die PDF bleibt erhalten und trägt in der Liste den Zustand „storniert". Ersatzdokumente erhalten eine neue Nummer.
 
 Kern-Settings (Schlüssel, alle admin-editierbar):
 - `organization.*`: name, legalForm, street, postalCode, city, country, registerCourt, registerNumber, taxNumber, taxOffice, exemptionNoticeDate, exemptionNoticeType (`60a` | `exemption`), statutoryPurpose, email, website, iban, bic, bankName
 - `branding.*`: logoAssetId, fontBody, fontHeading, `activeTheme` (Theme-Key)
 - `themes`: Liste benannter Themes; jedes Theme = Key, Name, vollständiger Token-Satz für `light` und `dark` (siehe Abschnitt 6, „Themes"). Ein mitgeliefertes, neutrales Default-Theme ist Teil des Seeds, nicht des Codes; Aluna hinterlegt sein eigenes Theme als Daten.
 - `modules.enabled`: string[]
+- `system.*` (nur vom System geschrieben, im Admin lesbar): `lastImportAt`, `lastImportSource`, `lastExportAt` — speist Umgebungsbalken („Daten vom …") und Backup-Seite.
 
 Kern-Permission-Keys: `users.manage`, `roles.manage`, `settings.manage`, `modules.manage`, `audit.view`, `documents.create`, `documents.view`, `media.upload`, `backup.export`, `backup.import`.
 
@@ -131,15 +132,23 @@ Kern-Permission-Keys: `users.manage`, `roles.manage`, `settings.manage`, `module
 **MCP-Tools des Kerns:** `settings.get`, `settings.set`, `roles.list`, `roles.create`, `roles.update`, `roles.assign`, `users.list`, `users.create`, `audit.query`, `documents.render`, `modules.list`, `modules.setEnabled`. Ein Tool je Service-Funktion; Beschreibungen englisch.
 
 **Themes.** Der Kern definiert ein festes **Token-Schema** (Namen und Bedeutung), nie Werte:
-- Farben: `--color-primary`, `--color-primary-ink`, `--color-primary-soft`, `--color-accent`, `--color-accent-deep`, `--color-accent-soft`, `--color-success`, `--color-success-bg`, `--color-warning`, `--color-warning-bg`, `--color-error`, `--color-error-bg`, `--color-info`, `--color-info-bg`, `--bg`, `--surface`, `--surface-2`, `--sidebar-bg`, `--topbar-bg`, `--ink`, `--ink-2`, `--muted`, `--muted-2`, `--on-primary`, `--on-primary-muted`, `--line`, `--line-2`, `--line-strong`.
-- Typografie und Form: `--font-body`, `--font-heading`, `--radius-sm`, `--radius-md`, `--radius-lg`.
+- Marke: `--color-primary`, `--color-primary-ink`, `--color-primary-soft`, `--color-accent`, `--color-accent-deep`, `--color-accent-soft`
+- Status: `--color-success`, `--color-success-bg`, `--color-warning`, `--color-warning-bg`, `--color-error`, `--color-error-bg`, `--color-info`, `--color-info-bg`
+- Flächen: `--bg`, `--surface`, `--surface-2`, `--sidebar-bg`, `--topbar-bg`
+- Schrift und Linien: `--ink`, `--ink-2`, `--muted`, `--muted-2` (nur Icons/Trenner, nie Text), `--on-primary`, `--on-primary-muted`, `--line`, `--line-2`, `--line-strong`
+- Interaktion (aus der Design-Runde ergänzt): `--focus-ring`, `--hover-surface`, `--active-surface`, `--selected-bg`, `--selected-ink`, `--link`, `--link-hover`, `--disabled-ink`, `--disabled-bg`
+- Tabellen und Felder (ergänzt): `--table-head-bg`, `--table-zebra`, `--table-row-hover` (Zebra, Hover und Auswahl müssen drei unterscheidbare Werte bleiben), `--input-bg`, `--input-placeholder`, `--code-bg`, `--neutral-badge-bg`, `--neutral-badge-ink`, `--tooltip-bg`, `--tooltip-ink`
+- Tiefe (ergänzt): `--overlay`, `--shadow-sm`, `--shadow-md` (Schatten und Overlay sind Theme-Werte, weil sie im Dunkel anders sein müssen)
+- Typografie und Form: `--font-body`, `--font-heading`, `--font-mono` (Tabellenziffern für Beträge, IBAN, Keys, Zeitstempel), `--radius-sm`, `--radius-md`, `--radius-lg`, `--radius-full`, `--row-h`
+- Die konkreten Werte des Default-Themes (Hell/Dunkel) stehen im Design-Handoff (Token-Sheet `1a`, siehe Abschnitt „Design-Referenz") und werden als Seed-Daten übernommen, nicht in Code.
+- `--row-h` (36/44/56 px): Das Theme liefert den Grundwert; die Zeilendichte ist eine **Nutzer-Einstellung im Browser** (wie der Sidebar-Zustand), keine Vereinseinstellung. Dichte ist Ergonomie, nicht Marke.
 - Ein Theme liefert für jedes Token einen Wert für `light` und für `dark`. **Keine Vererbung** vom Default-Theme: Jedes Theme ist vollständig, damit eine Änderung am Default kein anderes Theme verschiebt. „Duplizieren" füllt ein neues Theme mit allen Werten vor. Das Schema wird mit Zod validiert; unvollständige Themes werden abgewiesen.
 - Themes sind keine Rechenschaftsdaten und dürfen gelöscht werden, außer dem aktiven Theme und dem Default-Theme. Module werden nie gelöscht, nur deaktiviert.
 - Die App injiziert die Tokens des aktiven Themes zur Laufzeit als CSS-Custom-Properties in `:root` (Hell/Dunkel über `prefers-color-scheme` und einen Nutzer-Schalter). Tailwind-Farben sind ausschließlich auf diese Custom-Properties gemappt; shadcn/ui-Komponenten werden auf dieselben Tokens umgestellt.
 - Typst-Vorlagen erhalten dieselben Tokens (Farben, Schriften) als Parameter aus dem aktiven Theme; der Website-Build (Stufe 2) liest sie ebenfalls aus den Einstellungen.
-- Admin-UI: Theme anlegen/duplizieren/bearbeiten mit Live-Vorschau, aktives Theme wählen. Der Umgebungsbalken (Dev/Test) hat bewusst feste, theme-unabhängige Signalfarben, damit er nie „wegdesignt" werden kann — die einzige erlaubte Ausnahme, als Konstante mit Kommentar markiert.
+- Admin-UI: Theme anlegen/duplizieren/bearbeiten mit Live-Vorschau (Hell und Dunkel nebeneinander, nicht hinter einem Umschalter), aktives Theme wählen. Das Default-Theme ist schreibgeschützt; „Bearbeiten" legt eine Kopie an. Eine WCAG-Kontrastprüfung (reine Funktion, unit-getestet) warnt mit Zahl und Vorschlag, wenn ein definiertes Tokenpaar unter AA fällt; sie blockiert das Speichern nicht. Der Umgebungsbalken (Dev/Test) hat bewusst feste, theme-unabhängige Signalfarben, damit er nie „wegdesignt" werden kann — die einzige erlaubte Ausnahme, als Konstante mit Kommentar markiert.
 
-**Oberfläche.** App-Shell (Sidebar aus Manifesten, einklappbar auf eine 56-px-Icon-Leiste, Zustand je Nutzer im Browser gemerkt; ab 1024 px Breite legt sich die Sidebar als Drawer über den Inhalt und zweispaltige Formulare brechen auf eine Spalte; Topbar mit Vereinsname + Umgebungsbalken; Topbar-Suche ist in Stufe 1 eine Befehlspalette (Cmd/Ctrl+K) über Navigationseinträge und Einstellungsseiten, Module hängen später ihre Entitäten an), Fehlerseiten für 403 „Kein Recht", 404 und einen generischen technischen Fehler (z. B. Datenbank nicht erreichbar), Ladezustände für Export, Import und Dokument-Rendering, Login, Einrichtungsseite beim ersten Start (legt genau einmal einen Admin an), Admin-Bereich: Nutzer, Rollen, Einstellungen (Vereinsstamm, Branding), Module, Änderungsprotokoll, Dokumente, Backup, eigenes Profil (Passwort, API-Tokens).
+**Oberfläche.** App-Shell (Sidebar aus Manifesten, einklappbar auf eine 56-px-Icon-Leiste, Zustand je Nutzer im Browser gemerkt; ab 1024 px Breite legt sich die Sidebar als Drawer über den Inhalt und zweispaltige Formulare brechen auf eine Spalte; Topbar mit Vereinsname + Umgebungsbalken; Topbar-Suche ist in Stufe 1 eine Befehlspalette (Cmd/Ctrl+K) über Navigationsziele, Einstellungsfelder und vorhandene Aktionen — **keine** Suche nach Nutzer- oder Rollennamen; Einträge inaktiver Module erscheinen ausgegraut mit Grund; Module hängen später ihre Entitäten an), Fehlerseiten für 403 „Kein Recht", 404 und einen generischen technischen Fehler (z. B. Datenbank nicht erreichbar), Ladezustände für Export, Import und Dokument-Rendering, Login, Einrichtungsseite beim ersten Start (legt genau einmal einen Admin an), Admin-Bereich: Nutzer, Rollen, Einstellungen (Vereinsstamm, Branding), Module, Änderungsprotokoll, Dokumente, Backup, eigenes Profil (Passwort, API-Tokens).
 
 ## 7. Dokumenten-Engine
 
@@ -147,7 +156,7 @@ Kern-Permission-Keys: `users.manage`, `roles.manage`, `settings.manage`, `module
 - Kernvorlagen in Stufe 1: `letterhead` (Briefbogen mit Freitext) und `audit-log-export` (Änderungsprotokoll als Liste).
 - `renderDocument(ctx, templateKey, input)`: Rechteprüfung → Validierung → JSON in Temp-Verzeichnis → `typst compile --root <templates>` → Ergebnis als Media-Asset → Eintrag in `documents` mit vollständigem `inputSnapshot`. Typst-Fehler → `validation`-artiger Fehler mit Typst-Ausgabe, nichts gespeichert.
 - Determinismus: gleiche Eingabe + Template + Typst-Version ⇒ byte-identische PDF. Typst-Version gepinnt, Schriften im Repo, keine Systemzeit im Template (Datum kommt aus den Daten). Test: zweimal rendern, Hash vergleichen.
-- Schriften: freie Schriften mit ähnlichem Charakter zu Calibri/Cambria (Office-Schriften dürfen nicht ins Repo); als Branding-Einstellung austauschbar, eigene Schriftdateien später hochladbar.
+- Schriften (Design-Entscheidung): Source Sans 3 (Fließtext), Source Serif 4 (Überschriften), IBM Plex Mono (Mono), alternativ wählbar Public Sans und Atkinson Hyperlegible — alle SIL Open Font License, **im Repo self-hosted** (kein CDN, das NAS darf offline sein). Dieselben Schriftdateien nutzen App und Typst. Office-Schriften (Calibri/Cambria) kommen nicht ins Repo; eigene Schriftdateien sind ein späterer Upload.
 - Vorlagen mit rechtlich vorgegebenem Text (z. B. Zuwendungsbestätigung, Stufe 3) tragen den Text fest in der Typst-Datei und nehmen nur Daten entgegen.
 
 ## 8. Testing, Umgebungen, Auslieferung
@@ -162,15 +171,22 @@ Kern-Permission-Keys: `users.manage`, `roles.manage`, `settings.manage`, `module
 - Dev: `pnpm dev`, SQLite im Repo (git-ignoriert), Seed-Skript (Admin + Beispielrollen).
 - Test/Prod: identisches Image, zwei Compose-Dienste `kompass-test` / `kompass-prod` mit eigenen Ports und Volumes (`/share/Container/kompass-<env>/{data,media}`).
 - Umgebungsbalken bei allem außer `production`. Website-Publish (Stufe 2) nur bei `production`.
-- Backup: Export (ZIP aus DB-Datei + Medien) und Import (überschreibt vollständig, Bestätigung durch Eintippen des Umgebungsnamens) im Admin-Bereich. Nach einem Import sind alle Sitzungen ungültig (die Sessions-Tabelle wurde mitersetzt); der Nutzer landet auf der Login-Seite mit dem Hinweis „Import abgeschlossen". Der Import-Warnzustand nutzt die Warnfarbe, nicht Rot: Rot bleibt Validierungsfehlern und destruktiven Aktionen vorbehalten.
+- Backup: Export (ZIP aus DB-Datei + Medien; enthält Nutzer **mit** Passwort-Hashes, damit ein Restore ohne Neuanlage funktioniert, aber **ohne** Sitzungen und API-Tokens — ein Prod-Token darf in Test nie gültig sein) und Import (überschreibt vollständig, Bestätigung durch Eintippen des Umgebungsnamens) im Admin-Bereich. Nach einem Import sind alle Sitzungen ungültig (die Sessions-Tabelle wurde mitersetzt); der Nutzer landet auf der Login-Seite mit dem Hinweis „Import abgeschlossen". Der Import-Warnzustand nutzt die Warnfarbe, nicht Rot: Rot bleibt Validierungsfehlern und destruktiven Aktionen vorbehalten.
 
 **Auslieferung:** GitHub Actions: Tests → Multi-Stage-Docker-Build (amd64; arm64 optional) → Push in die GitHub Container Registry, Tag je Release. Auf dem NAS: Image erst für Test ziehen, nach Freigabe für Prod; Backup-Export vor jedem Prod-Update ist Pflicht (Anleitung). Migrationen laufen beim Start.
 
 **Repo-Hygiene:** `AGENTS.md` mit Prinzipien und Coding-Regeln (kanonisch); `CLAUDE.md` als dünner Verweis plus Befehle; `docs/superpowers/specs` und `plans`.
 
+## 8a. Design-Referenz
+
+Das High-Fidelity-Design für Stufe 1 liegt unter `docs/design/fundament/design_handoff_aluna_kompass_fundament/` (`README.md` mit vollständiger Token-, Screen- und Verhaltensdokumentation; `Aluna Kompass Fundament.dc.html` als Design-Board mit den Artboards `1a`–`1q` und `2a`–`2f`). Es ist **Design-Referenz, kein Produktionscode**: Screens werden mit shadcn/ui-Komponenten im Next.js-Projekt nachgebaut, die Prototyp-Dateien werden nicht kopiert. Board-Chrome, Anmerkungen und Prototyp-Interna (`support.js`, Tweak-Panel) sind nicht Teil des Produkts.
+
+Verbindlich aus dem Design übernommen: Token-Schema und Default-Werte (`1a`), Shell-Maße (Sidebar 248/56 px, Topbar 56 px, Drawer unter 1180 px), Umgebungsbalken-Farben (Test `#1A1A1A`/`#F2C200`, Dev `#B3261E`/`#FFFFFF` — die einzigen nicht themebaren Farbwerte), Rechte-Matrix mit sichtbaren Permission-Keys, Feld-Diff im Protokoll, Einmal-Dialoge ohne Schließen-× (Startpasswort, API-Token), Import-Bestätigung durch Eintippen des Umgebungsnamens, Fehlerseiten innerhalb der Shell, drei Lademuster (Balken, Schrittliste ohne Abbrechen, Skelett).
+
+Abweichung vom Design-Text: Der Export enthält Passwort-Hashes (Handoff `1o` sagt „Zugangsdaten nicht"), siehe Abschnitt 8 — ohne Hashes wäre ein Restore nicht anmeldbar. Ausgeschlossen sind nur Sitzungen und API-Tokens.
+
 ## 9. Offene Punkte für spätere Stufen (bewusst nicht hier entschieden)
 
-- Wahl der freien Schriften (Stufe 1 Umsetzung, Vorschlag im Plan).
 - Zuschnitt von „Projekt" zwischen Webseite (Stufe 2) und Finanzen (Stufe 3): Stufe 2 legt die Tabelle mit öffentlichen Feldern an, Stufe 3 erweitert sie.
 - Sphären-, Rücklagen- und Kontenmodell: Stufe 3.
 - Tier-Bestandsbuch und § 11 TierSchG-Nachweise: Stufe 4.
