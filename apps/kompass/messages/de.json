@@ -847,6 +847,91 @@
       "moduleInactiveTitle": "Modul Tiere ist nicht aktiv",
       "moduleInactiveText": "Aktivieren Sie das Modul unter Verwaltung → Module. Vorhandene Daten bleiben erhalten.",
       "openModules": "Module öffnen"
+    },
+    "list": {
+      "title": "Hunde",
+      "create": "Hund anlegen",
+      "emptyTitle": "Noch keine Hunde",
+      "emptyText": "Jeder Hund bekommt ein Profil mit Fotos, Status und Texten in Deutsch und Englisch.",
+      "columns": {
+        "animal": "Hund",
+        "status": "Status",
+        "flags": "Kennzeichen",
+        "location": "Aufenthalt",
+        "published": "Webseite"
+      },
+      "filter": {
+        "all": "Alle",
+        "label": "Status"
+      },
+      "emergency": "Notfall",
+      "sponsorable": "Patentier"
+    },
+    "form": {
+      "tabs": {
+        "profile": "Steckbrief",
+        "texts": "Texte",
+        "photos": "Fotos",
+        "story": "Geschichte"
+      },
+      "name": "Name",
+      "sex": "Geschlecht",
+      "sexes": {
+        "female": "Hündin",
+        "male": "Rüde"
+      },
+      "location": "Aufenthalt",
+      "locations": {
+        "shelter": "im Shelter",
+        "germany": "in Deutschland"
+      },
+      "sizeCm": "Größe in cm (für den Filter)",
+      "sizeText": "Größe als Text",
+      "birthText": "Geburtsangabe",
+      "externalProfileUrl": "Externes Profil (URL)",
+      "externalHint": "z. B. das Profil beim Vermittlungspartner.",
+      "isEmergency": "Notfall",
+      "isSponsorable": "Patentier",
+      "summary": "Kurztext",
+      "body": "Beschreibung",
+      "traits": "Wesensmerkmale",
+      "traitsHint": "Kommagetrennt, z. B. ruhig, verträglich, verspielt",
+      "status": {
+        "lookingForHome": "Sucht ein Zuhause",
+        "reserved": "Reserviert",
+        "adopted": "Vermittelt"
+      }
+    },
+    "status": {
+      "change": "Status ändern",
+      "title": "Status ändern",
+      "next": "Neuer Status",
+      "values": {
+        "lookingForHome": "Sucht ein Zuhause",
+        "reserved": "Reserviert",
+        "adopted": "Vermittelt"
+      },
+      "year": "Vermittlungsjahr",
+      "yearHint": "Erscheint bei den Glücklichen Vermittlungen.",
+      "submit": "Status setzen",
+      "saved": "Status gesetzt."
+    },
+    "photos": {
+      "upload": "Foto hochladen",
+      "primary": "Hauptfoto",
+      "remove": "Entfernen",
+      "save": "Fotos speichern",
+      "saved": "Fotos gespeichert."
+    },
+    "story": {
+      "locked": "Erst nach der Vermittlung: Setzen Sie den Status auf „Vermittelt“, dann lässt sich die Erfolgsgeschichte pflegen.",
+      "before": "Vorher-Bild",
+      "after": "Nachher-Bild",
+      "quote": "Zitat der Familie",
+      "family": "Familie",
+      "year": "Vermittlungsjahr",
+      "save": "Geschichte speichern",
+      "saved": "Geschichte gespeichert."
     }
   }
 }
