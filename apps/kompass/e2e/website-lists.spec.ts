@@ -57,4 +57,31 @@ test.describe('website lists', () => {
     await faq.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByRole('row', { name: /Wohin geht meine Spende/ })).toContainText('Spenden');
   });
+
+  test('projects: create with betterplace id and publish; downloads: attach a PDF', async ({ page }) => {
+    await page.goto('/website/projects');
+    await page.getByRole('link', { name: 'Projekt anlegen' }).click();
+    await page.getByLabel('Slug (URL-Teil)').fill('grundversorgung-shelter');
+    await page.locator('[name="name.de"]').fill('Grundversorgung des Shelters');
+    await page.getByLabel('Typ').selectOption('ongoing');
+    await page.getByLabel('Betterplace-Projekt-ID').fill('123456');
+    await page.locator('[name="summary.de"]').fill('Futter, Wärme und tierärztliche Versorgung.');
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page).toHaveURL(/\/website\/projects\/[A-Z0-9]+$/);
+    await expect(page.getByText('Finanzen folgen in einer späteren Stufe')).toBeVisible();
+    await page.goto('/website/projects');
+    const row = page.getByRole('row', { name: /Grundversorgung/ });
+    await expect(row).toContainText('Dauerprojekt');
+    await row.getByRole('switch').click();
+    await expect(row).toContainText('Veröffentlicht');
+
+    await page.goto('/website/downloads');
+    await expect(page.getByRole('row')).toHaveCount(5);
+    const form = page.getByRole('row', { name: /Patenschaftsantrag/ });
+    await form.locator('[name="title.de"]').fill('Patenschaftsantrag');
+    await form.getByLabel(/PDF/).setInputFiles({ name: 'antrag.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF') });
+    await form.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByRole('status')).toContainText('Gespeichert');
+    await expect(page.getByRole('row', { name: /Patenschaftsantrag/ }).getByRole('link', { name: 'PDF öffnen' })).toBeVisible();
+  });
 });
