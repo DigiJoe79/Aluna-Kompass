@@ -13,14 +13,16 @@ export interface CreateDepsOptions {
   clock?: Clock;
 }
 
-export function createDeps(opts: CreateDepsOptions): Deps & { close(): void } {
+export function createDeps(opts: CreateDepsOptions): Deps & { migrationCount: number; close(): void } {
   const { db, sqlite } = openDatabase(opts.databasePath);
   runMigrations(db);
+  const migrationCount = (sqlite.prepare('select count(*) as n from __drizzle_migrations').get() as { n: number }).n;
   return {
     db,
     clock: opts.clock ?? systemClock,
     env: opts.env,
     registry: createRegistry([coreModule, ...(opts.modules ?? [])]),
+    migrationCount,
     close: () => sqlite.close(),
   };
 }

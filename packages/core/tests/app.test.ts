@@ -16,6 +16,7 @@ describe('createDeps', () => {
     dirs.push(dir);
     const file = path.join(dir, 'kompass.db');
     const first = createDeps({ databasePath: file, env: 'test' });
+    expect(first.migrationCount).toBeGreaterThanOrEqual(2);
     expect(isSetupRequired(first)).toBe(true);
     expect(first.registry.module('core')).toBeDefined();
     first.close();

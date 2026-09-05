@@ -44,5 +44,17 @@
       "unknownSetting": "Unbekannte Einstellung.",
       "invalid": "Ungültiger Wert."
     }
+  },
+  "shell": {
+    "envBanner": {
+      "testContext": "Daten vom {date} · Änderungen hier haben keine Wirkung",
+      "noImport": "kein Import",
+      "devContext": "localhost · Migrationsstand {migrations}"
+    }
+  },
+  "auth": {
+    "login": {
+      "submit": "Anmelden"
+    }
   }
 }

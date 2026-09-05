@@ -1,1 +1,114 @@
 @import "tailwindcss";
+
+/*
+ * Tailwind-Standardpalette entfernen: es gibt keine bg-red-500 mehr.
+ * Alle Utilities unten verweisen auf Theme-Tokens, die das Root-Layout
+ * zur Laufzeit aus dem aktiven Theme in :root injiziert (siehe lib/theme-css.ts).
+ */
+@theme {
+  --color-*: initial;
+  --shadow-*: initial;
+  --radius-*: initial;
+  --font-*: initial;
+}
+
+@theme inline reference {
+  /* App-Namen (eigene Utilities) */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-sidebar: var(--sidebar-bg);
+  --color-topbar: var(--topbar-bg);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted-ink: var(--muted);
+  --color-muted-ink-2: var(--muted-2);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-line-strong: var(--line-strong);
+  --color-brand: var(--color-primary);
+  --color-brand-ink: var(--color-primary-ink);
+  --color-brand-soft: var(--color-primary-soft);
+  --color-on-brand: var(--on-primary);
+  --color-on-brand-muted: var(--on-primary-muted);
+  --color-brand-accent: var(--color-accent);
+  --color-brand-accent-deep: var(--color-accent-deep);
+  --color-brand-accent-soft: var(--color-accent-soft);
+  --color-success: var(--color-success);
+  --color-success-bg: var(--color-success-bg);
+  --color-warning: var(--color-warning);
+  --color-warning-bg: var(--color-warning-bg);
+  --color-error: var(--color-error);
+  --color-error-bg: var(--color-error-bg);
+  --color-info: var(--color-info);
+  --color-info-bg: var(--color-info-bg);
+  --color-hover: var(--hover-surface);
+  --color-active: var(--active-surface);
+  --color-selected: var(--selected-bg);
+  --color-selected-ink: var(--selected-ink);
+  --color-link: var(--link);
+  --color-link-hover: var(--link-hover);
+  --color-disabled: var(--disabled-bg);
+  --color-disabled-ink: var(--disabled-ink);
+  --color-table-head: var(--table-head-bg);
+  --color-zebra: var(--table-zebra);
+  --color-row-hover: var(--table-row-hover);
+  --color-field: var(--input-bg);
+  --color-placeholder: var(--input-placeholder);
+  --color-code: var(--code-bg);
+  --color-badge: var(--neutral-badge-bg);
+  --color-badge-ink: var(--neutral-badge-ink);
+  --color-tooltip: var(--tooltip-bg);
+  --color-tooltip-ink: var(--tooltip-ink);
+  --color-focus: var(--focus-ring);
+  --color-overlay: var(--overlay);
+
+  /* shadcn-Namen (von den generierten Komponenten erwartet) */
+  --color-background: var(--bg);
+  --color-foreground: var(--ink);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--ink);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--ink);
+  --color-primary: var(--color-primary);
+  --color-primary-foreground: var(--on-primary);
+  --color-secondary: var(--surface-2);
+  --color-secondary-foreground: var(--ink-2);
+  --color-muted: var(--surface-2);
+  --color-muted-foreground: var(--muted);
+  --color-accent: var(--hover-surface);
+  --color-accent-foreground: var(--ink);
+  --color-destructive: var(--color-error);
+  --color-destructive-foreground: var(--on-primary);
+  --color-border: var(--line);
+  --color-input: var(--line-strong);
+  --color-ring: var(--focus-ring);
+
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-full: var(--radius-full);
+  --font-body: var(--font-body);
+  --font-heading: var(--font-heading);
+  --font-mono: var(--font-mono);
+}
+
+@layer base {
+  * { border-color: var(--line); }
+  html { color-scheme: light; }
+  html[data-color-scheme="dark"] { color-scheme: dark; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  h1, h2, h3 { font-family: var(--font-heading); line-height: 1.2; }
+  :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+  ::placeholder { color: var(--input-placeholder); }
+  [data-density="compact"] { --row-h: 36px; }
+  [data-density="comfortable"] { --row-h: 56px; }
+}
