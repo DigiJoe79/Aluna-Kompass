@@ -26,8 +26,7 @@ CREATE TABLE `audit_log` (
 	`api_token_id` text,
 	`ip_address` text,
 	`request_id` text NOT NULL,
-	`environment` text NOT NULL,
-	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+	`environment` text NOT NULL
 );
 --> statement-breakpoint
 CREATE INDEX `audit_occurred_idx` ON `audit_log` (`occurred_at`);--> statement-breakpoint
@@ -95,8 +94,7 @@ CREATE TABLE `settings` (
 	`key` text PRIMARY KEY NOT NULL,
 	`value` text NOT NULL,
 	`updated_at` text NOT NULL,
-	`updated_by_user_id` text,
-	FOREIGN KEY (`updated_by_user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+	`updated_by_user_id` text
 );
 --> statement-breakpoint
 CREATE TABLE `user_roles` (

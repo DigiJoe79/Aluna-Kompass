@@ -80,7 +80,7 @@ export const settings = sqliteTable('settings', {
   key: text('key').primaryKey(),
   value: text('value').notNull(), // JSON
   updatedAt: text('updated_at').notNull(),
-  updatedByUserId: text('updated_by_user_id').references(() => users.id),
+  updatedByUserId: text('updated_by_user_id'),
 });
 
 export const auditLog = sqliteTable(
@@ -88,7 +88,7 @@ export const auditLog = sqliteTable(
   {
     id: text('id').primaryKey(),
     occurredAt: text('occurred_at').notNull(),
-    userId: text('user_id').references(() => users.id),
+    userId: text('user_id'),
     channel: text('channel', { enum: ['ui', 'mcp', 'system'] }).notNull(),
     action: text('action').notNull(),
     entityType: text('entity_type').notNull(),
