@@ -25,3 +25,13 @@ Nicht vorgesehen. Bei Bedarf QNAP-VPN (QVPN) verwenden; die App selbst bleibt LA
 
 ## MCP
 Endpunkt `http://<nas>:3000/mcp` (Streamable HTTP), Authentifizierung mit einem persönlichen API-Token aus dem Profil (`Authorization: Bearer akx_live_…`). Tokens wirken mit den Rechten des Nutzers; jeder Vorgang steht im Änderungsprotokoll mit Kanal „MCP".
+
+## Webseite (Staging und Live)
+
+1. Bei IONOS zwei Verzeichnisse anlegen: `…/staging` (Subdomain `staging.aluna-tierhilfe.org` darauf zeigen lassen) und das Live-Verzeichnis der Hauptdomain. SSH-Zugang im IONOS-Kundencenter aktivieren.
+2. Auf dem NAS ein SSH-Schlüsselpaar erzeugen (`ssh-keygen -t ed25519 -f site.key -N ""`), den öffentlichen Schlüssel bei IONOS hinterlegen (`~/.ssh/authorized_keys` des Webspace-Nutzers), `site.key` nach `/share/Container/kompass-test/` **und** `/share/Container/kompass-prod/` legen (Rechte 600, Besitzer UID 1000 = `node`).
+3. `.env.test` und `.env.prod` um die `SITE_*`-Variablen ergänzen (siehe `.env.*.example`). Ohne diese Variablen zeigt Kompass nur „Vorschau", keinen Publish-Knopf.
+4. Erster Publish aus Test nach Staging; im Browser prüfen (Staging trägt `noindex`). Dann aus Prod auf Live.
+5. Beim Wechsel von WordPress: Live-Verzeichnis vorher umbenennen (`aluna` → `aluna-wordpress-alt`), neues Verzeichnis anlegen, Domain darauf zeigen, dann publizieren. Das alte Verzeichnis nach einer Woche löschen.
+6. Fehlersuche: Publizieren-Seite → Historie → Protokoll. Häufige Ursachen: Schlüsselrechte, falscher `SITE_DEPLOY_PATH`, Host-Key-Wechsel (dann `known_hosts` im Container löschen: `docker exec kompass-prod rm -f /home/node/.ssh/known_hosts`).
+7. Bildcache: `/data/site-cache` darf jederzeit gelöscht werden; der nächste Build erzeugt ihn neu (dauert dann länger).
