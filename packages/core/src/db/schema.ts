@@ -1,4 +1,5 @@
 import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { localizedColumn } from './columns';
 
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
@@ -141,4 +142,24 @@ export const documents = sqliteTable(
     createdAt: text('created_at').notNull(),
   },
   (t) => [uniqueIndex('documents_number_idx').on(t.number)],
+);
+
+export const projects = sqliteTable(
+  'projects',
+  {
+    id: text('id').primaryKey(),
+    slug: text('slug').notNull().unique(),
+    name: localizedColumn('name'),
+    type: text('type', { enum: ['ongoing', 'shortTerm'] }).notNull(),
+    status: text('status', { enum: ['active', 'completed'] }).notNull().default('active'),
+    summary: localizedColumn('summary'),
+    body: localizedColumn('body'),
+    imageAssetId: text('image_asset_id').references(() => mediaAssets.id),
+    betterplaceProjectId: text('betterplace_project_id').notNull().default(''),
+    isPublished: integer('is_published', { mode: 'boolean' }).notNull().default(false),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [index('projects_sort_idx').on(t.sortOrder)],
 );

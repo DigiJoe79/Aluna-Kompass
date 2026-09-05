@@ -16,6 +16,7 @@ describe('database', () => {
       'audit_log',
       'documents',
       'media_assets',
+      'projects',
       'role_permissions',
       'roles',
       'sessions',

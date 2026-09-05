@@ -15,6 +15,13 @@
       "when": 1788618466108,
       "tag": "0001_audit_log_immutable",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788644542590,
+      "tag": "0002_projects",
+      "breakpoints": true
     }
   ]
 }
