@@ -86,7 +86,7 @@ apps/kompass/
 - Consumes aus `@kompass/core` (Namen müssen exakt existieren, sonst Task 1 anpassen und im Plan notieren): `createDeps`, `readEnv`, `isSetupRequired`, `completeSetup`, `login`, `resolveSession`, `revokeSession`, `changeOwnPassword`, `createUser`, `listUsers`, `updateUser`, `setUserActive`, `resetStartPassword`, `listRoles`, `createRole`, `updateRole`, `setRolePermissions`, `assignRole`, `removeRole`, `readSetting`, `readAllSettings`, `setSetting`, `listThemes`, `resolveActiveTheme`, `createTheme`, `updateTheme`, `duplicateTheme`, `deleteTheme`, `activateTheme`, `checkThemeContrast`, `THEME_TOKENS`, `listModules`, `setModuleEnabled`, `enabledManifests`, `queryAudit`, `getAuditEntry`, `createApiToken`, `listApiTokens`, `revokeApiToken`, `seedDevelopment`, `CORE_PERMISSIONS`, `requirePermission`, `newId`.
 - Produces: laufende Next-App unter `apps/kompass`, `pnpm dev` am Root, `pnpm --filter @kompass/app test`.
 
-- [ ] **Step 1: Kern-Vertragstest schreiben**
+- [x] **Step 1: Kern-Vertragstest schreiben**
 
 `apps/kompass/tests/core-contract.test.ts`:
 ```ts
@@ -113,7 +113,7 @@ describe('core contract', () => {
 });
 ```
 
-- [ ] **Step 2: App anlegen**
+- [x] **Step 2: App anlegen**
 
 Run (vom Repo-Root):
 ```bash
@@ -236,7 +236,7 @@ apps/kompass/playwright-report/
 next-env.d.ts
 ```
 
-- [ ] **Step 3: i18n-Skelett**
+- [x] **Step 3: i18n-Skelett**
 
 `apps/kompass/src/i18n/request.ts`:
 ```ts
@@ -328,7 +328,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
 }
 ```
 
-- [ ] **Step 4: Installieren, Vertragstest, Dev-Server**
+- [x] **Step 4: Installieren, Vertragstest, Dev-Server**
 
 Run: `pnpm install && pnpm --filter @kompass/app test`
 Expected: `core contract` grün. Schlägt er fehl, fehlende Namen in `packages/core/src/index.ts` nachziehen (Plan 1 definiert sie alle) — nicht den Test aufweichen.
@@ -342,7 +342,7 @@ Expected: `Aluna Kompass`. Dev-Server danach beenden. Hinweis: `next dev` legt i
 Run: `pnpm --filter @kompass/app typecheck`
 Expected: keine Fehler.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -366,7 +366,7 @@ git commit -m "feat(app): scaffold Next.js admin app with next-intl and core con
   - `getDeps(): Deps & { close(); reset(mode) }` — Singleton über `globalThis`.
   - Tailwind-Utilities (Namen → Token): siehe `globals.css`.
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 `tests/theme-css.test.ts`:
 ```ts
@@ -451,12 +451,12 @@ test('theme tokens reach computed styles and dark mode switches values', async (
 });
 ```
 
-- [ ] **Step 2: Tests ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Tests ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app test`
 Expected: FAIL — `@/lib/theme-css` fehlt; `no-color-literals` schlägt fehl, weil das von create-next-app erzeugte `globals.css` Literale enthält.
 
-- [ ] **Step 3: shadcn initialisieren und Komponenten holen**
+- [x] **Step 3: shadcn initialisieren und Komponenten holen**
 
 Run (in `apps/kompass`):
 ```bash
@@ -465,7 +465,7 @@ pnpm dlx shadcn@latest add button input label textarea select checkbox switch ba
 ```
 Expected: `components.json`, `src/lib/utils.ts` (`cn`), Komponenten unter `src/components/ui/`. Die CLI schreibt Farbliterale in `globals.css` — Step 4 ersetzt die Datei vollständig. Die Komponenten selbst nutzen nur semantische Klassen (`bg-primary`, `text-muted-foreground`, `border-input`, `ring-ring`, …), die Step 4 auf Tokens mappt.
 
-- [ ] **Step 4: globals.css ersetzen**
+- [x] **Step 4: globals.css ersetzen**
 
 `src/app/globals.css`:
 ```css
@@ -587,7 +587,7 @@ Expected: `components.json`, `src/lib/utils.ts` (`cn`), Komponenten unter `src/c
 
 Hinweis zur Zyklusgefahr: Token-Variablen (`--color-primary` in `:root`) und Tailwind-Theme-Variablen (`--color-primary` im `@theme`-Block) tragen denselben Namen. `@theme inline reference` sorgt dafür, dass Tailwind **keine** `:root`-Deklarationen für diese Namen ausgibt und die Utilities direkt `var(--color-primary)` verwenden. Der E2E-Test in Step 1 prüft genau das (berechnete Buttonfarbe = Theme-Wert). Schlägt er mit `rgba(0, 0, 0, 0)` fehl, hat Tailwind doch Variablen emittiert: dann im `@theme inline reference`-Block alle Token-Referenzen auf ein Präfix umstellen (`--color-primary: var(--kp-color-primary)`) **und** `themeToCss` so ändern, dass es Tokens zusätzlich mit Präfix `--kp-` schreibt. Beide Varianten bleiben spec-konform (Tokens sind CSS-Custom-Properties, Werte nur im Theme).
 
-- [ ] **Step 5: Reine Helfer und Deps-Singleton**
+- [x] **Step 5: Reine Helfer und Deps-Singleton**
 
 `src/lib/theme-css.ts`:
 ```ts
@@ -693,7 +693,7 @@ export async function resetDeps(mode: 'empty' | 'seeded'): Promise<void> {
 }
 ```
 
-- [ ] **Step 6: Root-Layout mit Theme-Injektion und Fonts**
+- [x] **Step 6: Root-Layout mit Theme-Injektion und Fonts**
 
 `src/app/layout.tsx`:
 ```tsx
@@ -751,7 +751,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
 }
 ```
 
-- [ ] **Step 7: Playwright einrichten**
+- [x] **Step 7: Playwright einrichten**
 
 `apps/kompass/playwright.config.ts`:
 ```ts
@@ -832,12 +832,12 @@ export default async function LoginPage() {
 ```
 und in `messages/de.json`: `"auth": { "login": { "submit": "Anmelden" } }` (Task 4 erweitert den Namensraum).
 
-- [ ] **Step 8: Tests ausführen**
+- [x] **Step 8: Tests ausführen**
 
 Run: `pnpm --filter @kompass/app test && pnpm --filter @kompass/app typecheck && pnpm --filter @kompass/app e2e e2e/theme.spec.ts`
 Expected: Vitest grün (inkl. Literal-Scanner), E2E `theme.spec.ts` grün.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add -A
@@ -859,7 +859,7 @@ git commit -m "feat(app): runtime theme injection, token-mapped tailwind, fonts,
   - `setSessionCookie(sessionId, expiresAt)`, `clearSessionCookie()`.
   - `type ActionState = { status: 'idle' } | { status: 'success'; message?: string; data?: unknown } | { status: 'error'; message: string; fieldErrors: Record<string, string> }`; `toActionState(result, t, successMessage?)` — reine Abbildung; `fieldMessage(issueMessage, t)`.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `tests/actions.test.ts`:
 ```ts
@@ -893,12 +893,12 @@ describe('toActionState', () => {
 });
 ```
 
-- [ ] **Step 2: Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Test ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app test tests/actions.test.ts`
 Expected: FAIL — `@/lib/actions` fehlt.
 
-- [ ] **Step 3: Implementieren**
+- [x] **Step 3: Implementieren**
 
 `src/lib/actions.ts`:
 ```ts
@@ -1044,12 +1044,12 @@ export async function POST(request: Request): Promise<Response> {
 
 Run: `pnpm --filter @kompass/app add server-only`
 
-- [ ] **Step 4: Tests ausführen**
+- [x] **Step 4: Tests ausführen**
 
 Run: `pnpm --filter @kompass/app test && pnpm --filter @kompass/app typecheck`
 Expected: grün.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -1071,7 +1071,7 @@ git commit -m "feat(app): session cookie handling, request context, action state
 - Consumes: `isSetupRequired`, `completeSetup`, `login`, `changeOwnPassword`, `requireSession`, `setSessionCookie`, `toActionState`.
 - Produces: Routen `/setup`, `/login`, `/password`; Komponenten `FormField`, `SubmitButton`, `FieldError`, `AuthCard`.
 
-- [ ] **Step 1: E2E-Test schreiben**
+- [x] **Step 1: E2E-Test schreiben**
 
 `e2e/auth.spec.ts`:
 ```ts
@@ -1143,12 +1143,12 @@ test.describe('first run and login', () => {
 ```
 (Der dritte Test benötigt die Nutzerseite aus Task 7; er wird in dieser Task mit `test.fixme` markiert und in Task 7 aktiviert.)
 
-- [ ] **Step 2: E2E ausführen, Fehlschlag prüfen**
+- [x] **Step 2: E2E ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app e2e e2e/auth.spec.ts`
 Expected: FAIL — `/setup` existiert nicht, Überschriften fehlen.
 
-- [ ] **Step 3: Formular-Bausteine**
+- [x] **Step 3: Formular-Bausteine**
 
 `src/components/forms/field-error.tsx`:
 ```tsx
@@ -1219,7 +1219,7 @@ export function AuthCard({ brand, organization, title, width = 400, children, fo
 }
 ```
 
-- [ ] **Step 4: Ersteinrichtung**
+- [x] **Step 4: Ersteinrichtung**
 
 `src/app/setup/actions.ts`:
 ```ts
@@ -1309,7 +1309,7 @@ export default async function SetupPage() {
 }
 ```
 
-- [ ] **Step 5: Login**
+- [x] **Step 5: Login**
 
 `src/app/login/actions.ts`:
 ```ts
@@ -1400,7 +1400,7 @@ export default async function LoginPage(props: { searchParams: Promise<{ importe
 }
 ```
 
-- [ ] **Step 6: Pflicht-Passwortwechsel**
+- [x] **Step 6: Pflicht-Passwortwechsel**
 
 `src/app/password/actions.ts`:
 ```ts
@@ -1540,7 +1540,7 @@ export default async function PasswordPage() {
 }
 ```
 
-- [ ] **Step 7: E2E ausführen**
+- [x] **Step 7: E2E ausführen**
 
 Den dritten Test in `e2e/auth.spec.ts` vorerst mit `test.fixme(...)` markieren (Nutzerseite kommt in Task 7). Run: `pnpm --filter @kompass/app e2e e2e/auth.spec.ts`
 Expected: Test 1 und 2 grün. Test 1 erwartet „Guten Tag, Anna." — das ist die Startseite aus Task 6; bis dahin liefert das temporäre `src/app/page.tsx` den Text `Guten Tag, {name}.` aus der Session (Zwischenstand):
@@ -1557,7 +1557,7 @@ export default async function Page() {
 Run: `pnpm --filter @kompass/app test && pnpm --filter @kompass/app typecheck`
 Expected: grün (Literal-Scanner bleibt grün).
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add -A
@@ -1580,7 +1580,7 @@ git commit -m "feat(app): first-run setup, login with lockout feedback, forced p
   - `ForbiddenCard({ permission })`, `PageHeader({ title, breadcrumb, actions })`.
   - `(shell)/layout.tsx`: Session-Gate + Umgebungsbalken + Frame.
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 `tests/navigation.test.ts`:
 ```ts
@@ -1668,12 +1668,12 @@ test.describe('app shell', () => {
 });
 ```
 
-- [ ] **Step 2: Tests ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Tests ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app test tests/navigation.test.ts`
 Expected: FAIL — `@/lib/navigation` fehlt.
 
-- [ ] **Step 3: Navigation und Präferenzen**
+- [x] **Step 3: Navigation und Präferenzen**
 
 `src/lib/navigation.ts`:
 ```ts
@@ -1787,7 +1787,7 @@ export function usePreference<K extends keyof Prefs>(key: K): [Prefs[K], (value:
 }
 ```
 
-- [ ] **Step 4: Shell-Komponenten**
+- [x] **Step 4: Shell-Komponenten**
 
 `src/components/shell/sidebar.tsx`:
 ```tsx
@@ -2102,7 +2102,7 @@ export function ForbiddenCard({ permission }: { permission: string }) {
 }
 ```
 
-- [ ] **Step 5: Shell-Layout**
+- [x] **Step 5: Shell-Layout**
 
 `src/app/(shell)/layout.tsx`:
 ```tsx
@@ -2164,12 +2164,12 @@ und den Rückgabetyp auf `Deps & { migrationCount: number; close(): void }` setz
 ```
 (`errors.pages` in den bestehenden `errors`-Block einfügen, nicht doppelt anlegen.)
 
-- [ ] **Step 6: Tests ausführen**
+- [x] **Step 6: Tests ausführen**
 
 Run: `pnpm --filter @kompass/app test && pnpm --filter @kompass/app typecheck && pnpm --filter @kompass/app e2e e2e/shell.spec.ts e2e/auth.spec.ts`
 Expected: grün. Falls `toHaveCSS('width', '248px')` an Transition-Timing scheitert, `await expect(...)` behält Retries; nicht die Transition entfernen.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -A
@@ -2188,7 +2188,7 @@ git commit -m "feat(app): app shell with sidebar, topbar, env banner, user menu 
 **Interfaces:**
 - Produces: `computeSetupProgress({ settings, roleCount, modules }) → { settings: { done, total, missing: string[] }, roles: { done, total }, modules: { done, total } }`. Pflichtfelder für „vollständig": `organization.name, street, postalCode, city, registerCourt, registerNumber, taxNumber, taxOffice, exemptionNoticeType (≠ none), exemptionNoticeDate` (10 Felder; das Design zeigt „4 von 9" — die Spec verlangt zusätzlich den Bescheidtyp). Rollen-Ziel: 3 (Administration + zwei empfohlene). Module: installierte Nicht-Kern-Module.
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 `tests/setup-progress.test.ts`:
 ```ts
@@ -2230,12 +2230,12 @@ test('home page greets by first name and shows three progress cards', async ({ p
 });
 ```
 
-- [ ] **Step 2: Tests ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Tests ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app test tests/setup-progress.test.ts`
 Expected: FAIL — Modul fehlt.
 
-- [ ] **Step 3: Implementieren**
+- [x] **Step 3: Implementieren**
 
 `src/lib/setup-progress.ts`:
 ```ts
@@ -2329,12 +2329,12 @@ export default async function HomePage() {
 }
 ```
 
-- [ ] **Step 4: Tests ausführen**
+- [x] **Step 4: Tests ausführen**
 
 Run: `pnpm --filter @kompass/app test && pnpm --filter @kompass/app e2e e2e/home.spec.ts`
 Expected: grün. Der Seed setzt nur `organization.name`, daher „1 von 10"; er legt vier Rollen an, daher „3 von 3".
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -2354,7 +2354,7 @@ git commit -m "feat(app): home page with setup progress cards"
 - Consumes: `listUsers`, `createUser`, `updateUser`, `setUserActive`, `resetStartPassword`, `listRoles`, `assignRole`, `removeRole`.
 - Produces: Actions `createUserAction`, `setUserActiveAction`, `resetStartPasswordAction`, `updateUserAction`, `setUserRolesAction`; Komponenten `StatusBadge`, `ConfirmDialog`, `StartPasswordDialog`.
 
-- [ ] **Step 1: E2E-Test schreiben**
+- [x] **Step 1: E2E-Test schreiben**
 
 `e2e/users.spec.ts`:
 ```ts
@@ -2437,12 +2437,12 @@ test.describe('users', () => {
 });
 ```
 
-- [ ] **Step 2: E2E ausführen, Fehlschlag prüfen**
+- [x] **Step 2: E2E ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app e2e e2e/users.spec.ts`
 Expected: FAIL — 404 für `/admin/users`.
 
-- [ ] **Step 3: Gemeinsame Bausteine**
+- [x] **Step 3: Gemeinsame Bausteine**
 
 `src/components/status-badge.tsx`:
 ```tsx
@@ -2543,7 +2543,7 @@ export function StartPasswordDialog({ open, onClose, name, email, startPassword 
 ```
 (Wenn die generierte `DialogContent`-Komponente kein `showCloseButton`-Prop hat, dort ein optionales Prop ergänzen, das das `×` bei `false` nicht rendert.)
 
-- [ ] **Step 4: Actions**
+- [x] **Step 4: Actions**
 
 `src/app/(shell)/admin/users/actions.ts`:
 ```ts
@@ -2611,7 +2611,7 @@ export async function setUserRolesAction(userId: string, roleIds: string[], prev
 ```
 
 
-- [ ] **Step 5: Dialog, Tabelle, Seite**
+- [x] **Step 5: Dialog, Tabelle, Seite**
 
 `src/app/(shell)/admin/users/create-user-dialog.tsx`:
 ```tsx
@@ -2828,14 +2828,14 @@ export default async function UsersPage() {
 }
 ```
 
-- [ ] **Step 6: E2E ausführen**
+- [x] **Step 6: E2E ausführen**
 
 In `e2e/auth.spec.ts` das `test.fixme` des dritten Tests entfernen.
 
 Run: `pnpm --filter @kompass/app test && pnpm --filter @kompass/app typecheck && pnpm --filter @kompass/app e2e e2e/users.spec.ts e2e/auth.spec.ts`
 Expected: grün.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -A
@@ -2854,7 +2854,7 @@ git commit -m "feat(app): user management with one-time start password dialogs"
 - Consumes: `listRoles`, `createRole`, `updateRole`, `setRolePermissions`, `CORE_PERMISSIONS`, `Registry.manifests`.
 - Produces: `groupPermissions(manifests) → { key: string; labelKey: string; keys: string[] }[]` (Kern in drei Gruppen `core.admin`, `core.accountability`, `core.data`; jedes Modul eine Gruppe); `SaveBar`.
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 `tests/permission-groups.test.ts`:
 ```ts
@@ -2927,12 +2927,12 @@ test.describe('roles', () => {
 });
 ```
 
-- [ ] **Step 2: Tests ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Tests ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app test tests/permission-groups.test.ts`
 Expected: FAIL — Modul fehlt.
 
-- [ ] **Step 3: Gruppierung und SaveBar**
+- [x] **Step 3: Gruppierung und SaveBar**
 
 `src/lib/permission-groups.ts`:
 ```ts
@@ -2981,7 +2981,7 @@ export function SaveBar({ pendingCount, info, onDiscard, onSave, saving, saveLab
 }
 ```
 
-- [ ] **Step 4: Actions, Editor, Seite**
+- [x] **Step 4: Actions, Editor, Seite**
 
 `src/app/(shell)/admin/roles/actions.ts`:
 ```ts
@@ -3183,12 +3183,12 @@ export default async function RolesPage() {
 }
 ```
 
-- [ ] **Step 5: Tests ausführen**
+- [x] **Step 5: Tests ausführen**
 
 Run: `pnpm --filter @kompass/app test && pnpm --filter @kompass/app typecheck && pnpm --filter @kompass/app e2e e2e/roles.spec.ts`
 Expected: grün.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -3207,7 +3207,7 @@ git commit -m "feat(app): role editor with permission matrix and pending-change 
 - Consumes: `readAllSettings`, `setSetting`, `listThemes`.
 - Produces: `SETTINGS_TABS: { key: 'organization' | 'tax' | 'bank' | 'branding'; fields: SettingsField[] }[]` mit `SettingsField = { key; kind: 'text' | 'mono' | 'textarea' | 'select' | 'date' | 'theme' | 'font-body' | 'font-heading'; span?: 'full'; options?: string[]; maxLength? }`; `saveSettingsAction(changes: Record<string, unknown>) → ActionState` (Feldfehler nach Key).
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 `tests/settings-fields.test.ts`:
 ```ts
@@ -3273,12 +3273,12 @@ test.describe('settings', () => {
 });
 ```
 
-- [ ] **Step 2: Tests ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Tests ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app test tests/settings-fields.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Feldkonfiguration**
+- [x] **Step 3: Feldkonfiguration**
 
 `src/lib/settings-fields.ts`:
 ```ts
@@ -3348,7 +3348,7 @@ export const TAX_REQUIRED = ['organization.taxNumber', 'organization.taxOffice',
 ```
 Hinweis: Der Logo-Upload (Dropzone, Media-Speicher) gehört zu Plan 3. Bis dahin ist `branding.logoAssetId` ein schreibgeschütztes Textfeld mit Hinweis „Logo-Upload folgt".
 
-- [ ] **Step 4: Action, Formular, Seite**
+- [x] **Step 4: Action, Formular, Seite**
 
 `src/app/(shell)/admin/settings/actions.ts`:
 ```ts
@@ -3539,12 +3539,12 @@ export default async function SettingsPage() {
 }
 ```
 
-- [ ] **Step 5: Tests ausführen**
+- [x] **Step 5: Tests ausführen**
 
 Run: `pnpm --filter @kompass/app test && pnpm --filter @kompass/app typecheck && pnpm --filter @kompass/app e2e e2e/settings.spec.ts`
 Expected: grün. (Der Audit-Teil des ersten E2E-Tests setzt Task 12 voraus; bis dahin die letzten zwei Zeilen mit `test.step`-Kommentar auslassen und in Task 12 aktivieren.)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -3564,7 +3564,7 @@ git commit -m "feat(app): settings tabs with per-field validation and audited sa
 - Consumes: `listThemes`, `createTheme`, `updateTheme`, `duplicateTheme`, `deleteTheme`, `activateTheme`; client-seitig `@kompass/core/themes` → `THEME_TOKENS`, `checkThemeContrast`, `contrastRatio`, `DEFAULT_THEME`.
 - Produces: Actions `saveThemeAction(theme)`, `duplicateThemeAction({ sourceKey, key, name })`, `deleteThemeAction(key)`, `activateThemeAction(key)`.
 
-- [ ] **Step 1: E2E-Test schreiben**
+- [x] **Step 1: E2E-Test schreiben**
 
 `e2e/themes.spec.ts`:
 ```ts
@@ -3629,12 +3629,12 @@ test.describe('themes', () => {
 });
 ```
 
-- [ ] **Step 2: E2E ausführen, Fehlschlag prüfen**
+- [x] **Step 2: E2E ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app e2e e2e/themes.spec.ts`
 Expected: FAIL — 404.
 
-- [ ] **Step 3: Client-sicherer Kern-Subpfad**
+- [x] **Step 3: Client-sicherer Kern-Subpfad**
 
 `packages/core/src/themes/index.ts`:
 ```ts
@@ -3651,7 +3651,7 @@ it('the themes subpath stays free of database imports', async () => {
 });
 ```
 
-- [ ] **Step 4: Actions**
+- [x] **Step 4: Actions**
 
 `src/app/(shell)/admin/themes/actions.ts`:
 ```ts
@@ -3677,7 +3677,7 @@ export const deleteThemeAction = (key: string) => run(({ deps, ctx }) => deleteT
 export const activateThemeAction = (key: string) => run(({ deps, ctx }) => activateTheme(deps, ctx, { key }), 'themes.toast.activated');
 ```
 
-- [ ] **Step 5: Vorschau und Editor**
+- [x] **Step 5: Vorschau und Editor**
 
 `src/app/(shell)/admin/themes/theme-preview.tsx`:
 ```tsx
@@ -3909,12 +3909,12 @@ export default async function ThemesPage() {
 }
 ```
 
-- [ ] **Step 6: Tests ausführen**
+- [x] **Step 6: Tests ausführen**
 
 Run: `pnpm --filter @kompass/core test && pnpm --filter @kompass/app test && pnpm --filter @kompass/app typecheck && pnpm --filter @kompass/app e2e e2e/themes.spec.ts`
 Expected: grün. Hinweis zum Literal-Scanner: `theme-editor.tsx` enthält den Regex `HEX` mit `#` und `[0-9a-fA-F]{6}` — das Muster des Scanners (`#[0-9a-fA-F]{3,8}\b`) trifft darauf nicht, weil auf `#` eine eckige Klammer folgt.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -A
@@ -3933,7 +3933,7 @@ git commit -m "feat(app): theme editor with live preview, contrast warnings and 
 - Consumes: `listModules`, `setModuleEnabled`, `Registry.manifests`.
 - Produces: `setModuleEnabledAction(key, enabled)`.
 
-- [ ] **Step 1: E2E-Test schreiben**
+- [x] **Step 1: E2E-Test schreiben**
 
 `e2e/modules.spec.ts`:
 ```ts
@@ -3953,12 +3953,12 @@ test('module page shows the locked core and the count', async ({ page }) => {
 });
 ```
 
-- [ ] **Step 2: E2E ausführen, Fehlschlag prüfen**
+- [x] **Step 2: E2E ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app e2e e2e/modules.spec.ts`
 Expected: FAIL — 404.
 
-- [ ] **Step 3: Implementieren**
+- [x] **Step 3: Implementieren**
 
 `src/app/(shell)/admin/modules/actions.ts`:
 ```ts
@@ -4058,12 +4058,12 @@ export default async function ModulesPage() {
 }
 ```
 
-- [ ] **Step 4: Tests ausführen**
+- [x] **Step 4: Tests ausführen**
 
 Run: `pnpm --filter @kompass/app typecheck && pnpm --filter @kompass/app e2e e2e/modules.spec.ts`
 Expected: grün.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -4082,7 +4082,7 @@ git commit -m "feat(app): module cards with enable/disable and locked core"
 - Consumes: `queryAudit`, `getAuditEntry`, `listUsers`.
 - Produces: `diffFields(before, after) → { key: string; before: string | null; after: string | null }[]` (nur geänderte Felder; Primitive als ein Eintrag `value`; Arrays als JSON-Zeilen).
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 `tests/audit-diff.test.ts`:
 ```ts
@@ -4160,12 +4160,12 @@ test.describe('audit log', () => {
 });
 ```
 
-- [ ] **Step 2: Tests ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Tests ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app test tests/audit-diff.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Diff-Helfer**
+- [x] **Step 3: Diff-Helfer**
 
 `src/lib/audit-diff.ts`:
 ```ts
@@ -4191,7 +4191,7 @@ export function diffFields(before: unknown, after: unknown): DiffRow[] {
 }
 ```
 
-- [ ] **Step 4: Filter, Tabelle, Detail, Seite**
+- [x] **Step 4: Filter, Tabelle, Detail, Seite**
 
 `src/app/(shell)/admin/audit/audit-filters.tsx`:
 ```tsx
@@ -4391,13 +4391,13 @@ Der PDF-Export des Protokolls ist in Plan 3 (Dokumenten-Engine); der Button ist 
 }
 ```
 
-- [ ] **Step 5: Tests ausführen**
+- [x] **Step 5: Tests ausführen**
 
 In `e2e/settings.spec.ts` die in Task 9 zurückgestellten Audit-Zeilen aktivieren.
 Run: `pnpm --filter @kompass/app test && pnpm --filter @kompass/app typecheck && pnpm --filter @kompass/app e2e e2e/audit.spec.ts e2e/settings.spec.ts`
 Expected: grün.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -4416,7 +4416,7 @@ git commit -m "feat(app): audit log with filters, pagination and field diff side
 - Consumes: `changeOwnPassword`, `createApiToken`, `listApiTokens`, `revokeApiToken`.
 - Produces: `changePasswordAction`, `createTokenAction`, `revokeTokenAction`.
 
-- [ ] **Step 1: E2E-Test schreiben**
+- [x] **Step 1: E2E-Test schreiben**
 
 `e2e/profile.spec.ts`:
 ```ts
@@ -4461,12 +4461,12 @@ test.describe('profile', () => {
 });
 ```
 
-- [ ] **Step 2: E2E ausführen, Fehlschlag prüfen**
+- [x] **Step 2: E2E ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app e2e e2e/profile.spec.ts`
 Expected: FAIL — 404.
 
-- [ ] **Step 3: Implementieren**
+- [x] **Step 3: Implementieren**
 
 `src/app/(shell)/profile/actions.ts`:
 ```ts
@@ -4678,12 +4678,12 @@ export default async function ProfilePage() {
 }
 ```
 
-- [ ] **Step 4: Tests ausführen**
+- [x] **Step 4: Tests ausführen**
 
 Run: `pnpm --filter @kompass/app test && pnpm --filter @kompass/app typecheck && pnpm --filter @kompass/app e2e e2e/profile.spec.ts`
 Expected: grün.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -4702,7 +4702,7 @@ git commit -m "feat(app): profile with password change and one-time API token di
 **Interfaces:**
 - Produces: `buildCommandIndex({ groups, settingsFields, permissions, t }) → CommandEntry[]` mit `{ id; group: 'navigation' | 'settings' | 'actions'; label; hint; href; disabled; disabledReason?; permission? }`.
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 `tests/command-index.test.ts`:
 ```ts
@@ -4764,12 +4764,12 @@ test.describe('command palette and error pages', () => {
 });
 ```
 
-- [ ] **Step 2: Tests ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Tests ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app test tests/command-index.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Index und Palette**
+- [x] **Step 3: Index und Palette**
 
 `src/lib/command-index.ts`:
 ```ts
@@ -4863,7 +4863,7 @@ export function CommandPalette({ groups, permissions }: { groups: NavGroup[]; pe
 
 In `src/components/shell/shell-frame.tsx` die Zeile `void permissions;` entfernen und `<CommandPalette groups={groups} permissions={permissions} />` innerhalb des `TooltipProvider` rendern (das Prop wird seit Task 5 vom Layout übergeben).
 
-- [ ] **Step 4: Fehler-, Lade- und Platzhalterseiten**
+- [x] **Step 4: Fehler-, Lade- und Platzhalterseiten**
 
 `src/app/(shell)/not-found.tsx`:
 ```tsx
@@ -4968,12 +4968,12 @@ export default async function DocumentsPage() {
 ```
 (`errors.pages.forbidden` aus Task 5 bleibt daneben bestehen.)
 
-- [ ] **Step 5: Gesamtlauf**
+- [x] **Step 5: Gesamtlauf**
 
 Run: `pnpm test && pnpm typecheck && pnpm --filter @kompass/app e2e`
 Expected: alle Vitest-Suites (Kern + App) und alle E2E-Specs grün. Falls einzelne E2E-Tests an Timing scheitern (`toHaveCSS` auf Transition, Toast-Sichtbarkeit), `expect`-Retries nutzen und Selektoren schärfen — keine `waitForTimeout`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A

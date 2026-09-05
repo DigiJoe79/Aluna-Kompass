@@ -80,7 +80,7 @@ docs/betrieb.md                   NAS-Anleitung (Container Station, Volumes, Upd
   - `getMediaAsset(deps, ctx, id) → Promise<Result<{ record; bytes }>>` — jeder angemeldete Nutzer; `listMediaAssets(deps, ctx)` — `media.upload`.
   - Fehlercodes (validation): `unsupportedMediaType`, `fileTooLarge`, `svgContainsScript`.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `packages/core/tests/media.test.ts`:
 ```ts
@@ -140,12 +140,12 @@ describe('media service', () => {
 });
 ```
 
-- [ ] **Step 2: Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Test ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/core add file-type@^22.0.2 image-size@^2.0.2 && pnpm --filter @kompass/core test tests/media.test.ts`
 Expected: FAIL — Module fehlen, `deps.media` existiert nicht.
 
-- [ ] **Step 3: Store und Deps**
+- [x] **Step 3: Store und Deps**
 
 `packages/core/src/media/store.ts`:
 ```ts
@@ -220,7 +220,7 @@ export interface Deps {
 
 `packages/core/src/app.ts`: `CreateDepsOptions` um `mediaPath: string` erweitern und `media: createFileMediaStore(opts.mediaPath)` ins Rückgabeobjekt aufnehmen (`app.test.ts`: `mediaPath: path.join(dir, 'media')` ergänzen und `expect(first.media.rootDir).toBe(path.join(dir, 'media'))` prüfen). `createTestDeps` in `src/testing/index.ts`: `media: createMemoryMediaStore()`.
 
-- [ ] **Step 4: Service**
+- [x] **Step 4: Service**
 
 `packages/core/src/media/service.ts`:
 ```ts
@@ -337,12 +337,12 @@ Der Parameter `prepared` vermeidet doppeltes Sniffen, wenn `storeMediaAsset` ber
 
 In `packages/core/src/index.ts` ergänzen: `export * from './media/store'; export * from './media/service';`.
 
-- [ ] **Step 5: Tests ausführen**
+- [x] **Step 5: Tests ausführen**
 
 Run: `pnpm --filter @kompass/core test && pnpm --filter @kompass/core typecheck`
 Expected: alle grün (auch `app.test.ts` mit `mediaPath`). Danach `apps/kompass/src/lib/deps.ts` anpassen: `createDeps({ databasePath, env, mediaPath: env.mediaPath })` — sonst bricht die App; `pnpm --filter @kompass/app typecheck` muss grün bleiben.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -370,7 +370,7 @@ git commit -m "feat(core): media store with type sniffing, dedupe and audited up
   - `getDocument(deps, ctx, id) → Promise<Result<{ record: DocumentRecord; bytes: Uint8Array; filename: string }>>` — `documents.view`.
   - `nextDocumentNumber(db, prefix, year) → string` (rein lesend).
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `packages/core/tests/documents.test.ts`:
 ```ts
@@ -448,12 +448,12 @@ describe('documents service', () => {
 });
 ```
 
-- [ ] **Step 2: Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Test ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/core test tests/documents.test.ts`
 Expected: FAIL — `coreTemplates` unbekannt, Modul fehlt.
 
-- [ ] **Step 3: Manifest, Registry, Deps erweitern**
+- [x] **Step 3: Manifest, Registry, Deps erweitern**
 
 In `packages/core/src/modules/manifest.ts` ergänzen:
 ```ts
@@ -512,7 +512,7 @@ export function createRegistry(manifests: readonly ModuleManifest[], extra: { co
 ```
 `registry.test.ts` ergänzen: doppelter Prefix wirft. `createDeps`-Option `coreTemplates?: DocumentTemplate[]` → `createRegistry([coreModule, ...modules], { coreTemplates })`; `createTestDeps({ coreTemplates })` analog.
 
-- [ ] **Step 4: Service**
+- [x] **Step 4: Service**
 
 `packages/core/src/documents/service.ts`:
 ```ts
@@ -669,12 +669,12 @@ export async function getDocument(deps: Deps, ctx: CallContext, id: string): Pro
 ```
 In `index.ts`: `export * from './documents/service';`.
 
-- [ ] **Step 5: Tests ausführen**
+- [x] **Step 5: Tests ausführen**
 
 Run: `pnpm --filter @kompass/core test && pnpm --filter @kompass/core typecheck`
 Expected: grün. `nextDocumentNumber(..., 2026)` nach zwei Dokumenten ⇒ `TST-2026-003`; stornierte Dokumente zählen mit (lückenlos).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -697,7 +697,7 @@ git commit -m "feat(core): document service with gapless numbering, voiding and 
   - `coreDocumentTemplates(renderer): DocumentTemplate[]` — `letterhead` (Prefix `BRF`: `{ title, body, letterhead }`) und `audit-log-export` (Prefix `PRO`, Recht `audit.view`: `{ title, filters, entries[] }`).
   - `buildPayload(data, ctx)` (rein): `{ data, organization, number, issuedDate, brand: { primary, accent, ink, muted, line, fontBody, fontHeading, fontMono }, hasLogo }`; `firstFontFamily('"Source Sans 3", system-ui, sans-serif') → 'Source Sans 3'`.
 
-- [ ] **Step 1: Fonts beschaffen (einmalig, werden committet)**
+- [x] **Step 1: Fonts beschaffen (einmalig, werden committet)**
 
 Run (in `packages/documents`):
 ```bash
@@ -712,7 +712,7 @@ rm sans.zip serif.zip mono.zip && ls
 ```
 Expected: acht `.ttf` plus Lizenzdateien (`LICENSE.md`/`LICENSE.txt` — bei Namenskollision mit `unzip -o -j ... -d sans/` getrennt ablegen und danach als `LICENSE-source-sans.txt` usw. umbenennen). Wenn ein Pfadmuster nicht trifft: `unzip -l datei.zip | grep -i regular` zeigt den tatsächlichen Pfad. Alle drei Familien stehen unter SIL Open Font License 1.1 und dürfen im Repo liegen.
 
-- [ ] **Step 2: Tests schreiben**
+- [x] **Step 2: Tests schreiben**
 
 `packages/documents/tests/renderer.test.ts`:
 ```ts
@@ -799,7 +799,7 @@ describe('core document templates', () => {
 });
 ```
 
-- [ ] **Step 3: Tests ausführen, Fehlschlag prüfen**
+- [x] **Step 3: Tests ausführen, Fehlschlag prüfen**
 
 Paket anlegen (`packages/documents/package.json`):
 ```json
@@ -817,7 +817,7 @@ Paket anlegen (`packages/documents/package.json`):
 `tsconfig.json` und `vitest.config.ts` wie in `packages/core`. Run: `pnpm install && pnpm --filter @kompass/documents test`
 Expected: FAIL — `../src` fehlt.
 
-- [ ] **Step 4: Typst-Aufruf und Renderer**
+- [x] **Step 4: Typst-Aufruf und Renderer**
 
 `packages/documents/src/typst.ts`:
 ```ts
@@ -905,7 +905,7 @@ export function createTypstRenderer(opts: { binary?: string; templatesDir?: stri
 }
 ```
 
-- [ ] **Step 5: Vorlagen**
+- [x] **Step 5: Vorlagen**
 
 `packages/documents/templates/base.typ`:
 ```typst
@@ -995,7 +995,7 @@ Wichtig: `p.data.title` und `para` sind Strings aus JSON; Typst rendert Strings 
 )
 ```
 
-- [ ] **Step 6: Vorlagen-Registrierung und Exporte**
+- [x] **Step 6: Vorlagen-Registrierung und Exporte**
 
 `packages/documents/src/templates.ts`:
 ```ts
@@ -1081,12 +1081,12 @@ export * from './templates';
 
 Zu `ctx.theme.tokens` im Client-freien Kern-Typ: `DEFAULT_THEME` im Test kommt aus `@kompass/core/themes` (Subpfad aus Plan 2, Task 10).
 
-- [ ] **Step 7: Tests ausführen**
+- [x] **Step 7: Tests ausführen**
 
 Run: `pnpm --filter @kompass/documents test && pnpm --filter @kompass/documents typecheck`
 Expected: grün. Bricht der Determinismus-Test (verschiedene Hashes), zuerst prüfen, ob `set document(date: none)` greift (`strings out.pdf | grep CreationDate` muss leer sein) und ob `--ignore-system-fonts` gesetzt ist.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add -A
@@ -1110,7 +1110,7 @@ git commit -m "feat(documents): typst renderer with deterministic base layout, l
   - `inspectBackup({ archivePath, workDir }) → Promise<Result<BackupManifest>>`.
   - `importBackup(deps: AppDeps, ctx, { archivePath, workDir, confirmation, environmentName }) → Promise<Result<{ manifest }>>` — `backup.import`; Codes (validation) `confirmationMismatch`, `backupFormatUnsupported`, `backupNewerThanApp`, `backupCorrupt`.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `packages/core/tests/backup.test.ts`:
 ```ts
@@ -1202,12 +1202,12 @@ describe('backup', () => {
   });
 });
 ```
-- [ ] **Step 2: Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Test ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/core add tar@^7.5.22 && pnpm --filter @kompass/core test tests/backup.test.ts`
 Expected: FAIL — `../src/backup` fehlt, `backupDatabase` unbekannt.
 
-- [ ] **Step 3: createDeps erweitern**
+- [x] **Step 3: createDeps erweitern**
 
 `packages/core/src/app.ts` (Rückgabe von `createDeps`):
 ```ts
@@ -1246,7 +1246,7 @@ export function createDeps(opts: CreateDepsOptions): AppDeps {
 ```
 `app.test.ts` ergänzen: `reopen()` nach dem Löschen der DB-Datei liefert `isSetupRequired === true`; `backupDatabase(dest)` erzeugt eine Datei mit `users`-Tabelle.
 
-- [ ] **Step 4: Manifest, Export, Import**
+- [x] **Step 4: Manifest, Export, Import**
 
 `packages/core/src/backup/manifest.ts`:
 ```ts
@@ -1423,12 +1423,12 @@ export async function importBackup(deps: AppDeps, ctx: CallContext, input: unkno
 
 Hinweis: Nach `deps.close()` darf bis `deps.reopen()` kein anderer Request auf die DB zugreifen. Die App (Task 8) serialisiert das über die Import-Action, die während des Vorgangs läuft; bei drei LAN-Nutzern und einem ausdrücklich bestätigten Import ist das ausreichend. Die alten Dateien bleiben mit `.before-import-…`-Suffix liegen (manuell löschbar, siehe `docs/betrieb.md`).
 
-- [ ] **Step 5: Tests ausführen**
+- [x] **Step 5: Tests ausführen**
 
 Run: `pnpm --filter @kompass/core test && pnpm --filter @kompass/core typecheck`
 Expected: grün.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -1450,7 +1450,7 @@ git commit -m "feat(core): backup export/import with manifest, integrity check a
   - `coreMcpTools: McpToolDefinition[]` — Namen mit Unterstrich (MCP erlaubt in Tool-Namen keine Punkte): `settings_list`, `settings_get`, `settings_set`, `roles_list`, `roles_create`, `roles_update`, `roles_set_permissions`, `roles_assign`, `roles_remove`, `users_list`, `users_create`, `users_set_active`, `users_reset_start_password`, `audit_query`, `documents_list`, `documents_render`, `documents_void`, `modules_list`, `modules_set_enabled`, `themes_list`.
   - `createKompassMcpHandler(deps, { extraTools?, version? }) → { fetch(request: Request): Promise<Response>; close(): Promise<void> }` — Bearer-Token → `resolveApiToken` → `authInfo.extra.ctx`; ohne gültiges Token `401` mit `WWW-Authenticate: Bearer`.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `packages/mcp/tests/handler.test.ts`:
 ```ts
@@ -1537,7 +1537,7 @@ describe('kompass mcp handler', () => {
 });
 ```
 
-- [ ] **Step 2: Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Test ausführen, Fehlschlag prüfen**
 
 `packages/mcp/package.json`:
 ```json
@@ -1555,7 +1555,7 @@ describe('kompass mcp handler', () => {
 `tsconfig.json`/`vitest.config.ts` wie in `packages/core`. Run: `pnpm install && pnpm --filter @kompass/mcp test`
 Expected: FAIL — `../src` fehlt.
 
-- [ ] **Step 3: Ergebnis-Abbildung und Kern-Tools**
+- [x] **Step 3: Ergebnis-Abbildung und Kern-Tools**
 
 `packages/mcp/src/result.ts`:
 ```ts
@@ -1608,7 +1608,7 @@ export const coreMcpTools: McpToolDefinition[] = [
   t({ name: 'themes_activate', description: 'Activate a theme. Requires settings.manage.', inputSchema: z.object({ key: z.string() }), handler: (deps, ctx, args) => activateTheme(deps, ctx, args) }),
 ];
 ```
-- [ ] **Step 4: Handler**
+- [x] **Step 4: Handler**
 
 `packages/mcp/src/handler.ts`:
 ```ts
@@ -1677,12 +1677,12 @@ export * from './core-tools';
 export * from './handler';
 ```
 
-- [ ] **Step 5: Tests ausführen**
+- [x] **Step 5: Tests ausführen**
 
 Run: `pnpm --filter @kompass/mcp test && pnpm --filter @kompass/mcp typecheck`
 Expected: grün. Wenn `registerTool` den Zod-Typ ablehnt (`StandardSchemaWithJSON`), `inputSchema: tool.inputSchema as never` casten — Zod 4 erfüllt Standard Schema und Standard JSON Schema zur Laufzeit.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -1701,7 +1701,7 @@ git commit -m "feat(mcp): token-authenticated MCP handler exposing core services
 **Interfaces:**
 - Produces: `getMcpHandler()` (Singleton), Routen `GET|POST|DELETE /mcp`, `GET /media/:id`, `GET /documents/:id/file`, `GET /api/health`.
 
-- [ ] **Step 1: E2E-Tests schreiben**
+- [x] **Step 1: E2E-Tests schreiben**
 
 `apps/kompass/e2e/health.spec.ts`:
 ```ts
@@ -1754,12 +1754,12 @@ test('the MCP endpoint rejects requests without a token', async ({ request }) =>
 });
 ```
 
-- [ ] **Step 2: Tests ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Tests ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app add @kompass/documents@workspace:* @kompass/mcp@workspace:* && pnpm --filter @kompass/app add -D @modelcontextprotocol/client@^2.0.0 && pnpm --filter @kompass/app e2e e2e/health.spec.ts e2e/mcp.spec.ts`
 Expected: FAIL — 404 auf `/api/health` und `/mcp`.
 
-- [ ] **Step 3: Deps und Handler**
+- [x] **Step 3: Deps und Handler**
 
 `apps/kompass/next.config.ts`: `transpilePackages: ['@kompass/core', '@kompass/documents', '@kompass/mcp']`.
 
@@ -1798,7 +1798,7 @@ export async function resetMcpHandler(): Promise<void> {
 ```
 In `resetDeps` (E2E) nach dem Neuaufbau `await resetMcpHandler()` aufrufen, damit der Handler die neuen Deps sieht.
 
-- [ ] **Step 4: Routen**
+- [x] **Step 4: Routen**
 
 `apps/kompass/src/app/mcp/route.ts`:
 ```ts
@@ -1858,12 +1858,12 @@ export async function GET(): Promise<Response> {
 }
 ```
 
-- [ ] **Step 5: Tests ausführen**
+- [x] **Step 5: Tests ausführen**
 
 Run: `pnpm --filter @kompass/app typecheck && pnpm --filter @kompass/app test && pnpm --filter @kompass/app e2e e2e/health.spec.ts e2e/mcp.spec.ts`
 Expected: grün. Der Literal-Scanner bleibt grün (keine Farben in den neuen Dateien).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -1884,7 +1884,7 @@ git commit -m "feat(app): wire typst templates, MCP endpoint, media and PDF deli
 - Consumes: `renderDocument`, `voidDocument`, `listDocuments`, `queryAudit`, `storeMediaAsset`, `setSetting`, `Registry.documentTemplates`.
 - Produces: Actions `createLetterheadAction(prev, formData)`, `voidDocumentAction(id, reason)`, `exportAuditPdfAction(filters)`, `uploadLogoAction(prev, formData)`.
 
-- [ ] **Step 1: E2E-Test schreiben**
+- [x] **Step 1: E2E-Test schreiben**
 
 `apps/kompass/e2e/documents.spec.ts`:
 ```ts
@@ -1945,12 +1945,12 @@ test.describe('documents', () => {
 });
 ```
 
-- [ ] **Step 2: E2E ausführen, Fehlschlag prüfen**
+- [x] **Step 2: E2E ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app e2e e2e/documents.spec.ts`
 Expected: FAIL — Platzhalterseite, keine Buttons.
 
-- [ ] **Step 3: Dokumente-Actions und -Komponenten**
+- [x] **Step 3: Dokumente-Actions und -Komponenten**
 
 `src/app/(shell)/admin/documents/actions.ts`:
 ```ts
@@ -2170,7 +2170,7 @@ export default async function DocumentsPage(props: { searchParams: Promise<{ sel
 }
 ```
 
-- [ ] **Step 4: Protokoll-Export**
+- [x] **Step 4: Protokoll-Export**
 
 `src/app/(shell)/admin/audit/actions.ts`:
 ```ts
@@ -2236,7 +2236,7 @@ export function ExportButton({ enabled }: { enabled: boolean }) {
 ```
 In `audit/page.tsx` den deaktivierten Button durch `<ExportButton enabled={hasPermission(ctx, 'documents.create')} />` ersetzen.
 
-- [ ] **Step 5: Logo-Upload**
+- [x] **Step 5: Logo-Upload**
 
 `src/app/(shell)/admin/settings/logo-actions.ts`:
 ```ts
@@ -2314,12 +2314,12 @@ Sidebar-Logo: `Sidebar` erhält `logoUrl: string | null`; im Kopf `logoUrl ? <im
 ```
 (Die Namensräume `settings`, `audit`, `nav`, `errors.fields` existieren bereits — Schlüssel dort ergänzen, nicht doppelt anlegen. `fieldMessage` in `src/lib/actions.ts` um die drei Medien-Codes erweitern: exakte Treffer `unsupportedMediaType`, `fileTooLarge`, `svgContainsScript` → `errors.fields.<code>`.)
 
-- [ ] **Step 6: Tests ausführen**
+- [x] **Step 6: Tests ausführen**
 
 Run: `pnpm --filter @kompass/app test && pnpm --filter @kompass/app typecheck && pnpm --filter @kompass/app e2e e2e/documents.spec.ts e2e/settings.spec.ts e2e/shell.spec.ts`
 Expected: grün.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -A
@@ -2338,7 +2338,7 @@ git commit -m "feat(app): documents page with preview and voiding, audit PDF exp
 **Interfaces:**
 - Produces: `POST /admin/backup/export` (Download `application/gzip`), `importBackupAction(prev, formData)`; Umgebungsnamen für die Bestätigung: `production → "produktion"`, `test → "test"`, `development → "entwicklung"` (`environmentConfirmationName(env)` in `src/lib/env-banner.ts`).
 
-- [ ] **Step 1: E2E-Test schreiben**
+- [x] **Step 1: E2E-Test schreiben**
 
 `apps/kompass/e2e/backup.spec.ts`:
 ```ts
@@ -2373,12 +2373,12 @@ test('exports a backup and imports it back, ending all sessions', async ({ page,
 });
 ```
 
-- [ ] **Step 2: E2E ausführen, Fehlschlag prüfen**
+- [x] **Step 2: E2E ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app e2e e2e/backup.spec.ts`
 Expected: FAIL — Platzhalterseite.
 
-- [ ] **Step 3: Export-Route und Actions**
+- [x] **Step 3: Export-Route und Actions**
 
 In `src/lib/env-banner.ts` ergänzen:
 ```ts
@@ -2467,7 +2467,7 @@ export async function importBackupAction(_prev: ActionState, formData: FormData)
 ```
 Hinweis: `clearSessionCookie` versucht die alte Session zu widerrufen — die Tabelle wurde ersetzt, `revokeSession` löscht dann 0 Zeilen; das ist in Ordnung.
 
-- [ ] **Step 4: Karten und Seite**
+- [x] **Step 4: Karten und Seite**
 
 `src/app/(shell)/admin/backup/export-card.tsx`:
 ```tsx
@@ -2626,12 +2626,12 @@ export default async function BackupPage() {
 ```
 (`fieldMessage` um die vier Codes erweitern; `placeholders.backup` entfernen.)
 
-- [ ] **Step 5: Tests ausführen**
+- [x] **Step 5: Tests ausführen**
 
 Run: `pnpm --filter @kompass/app test && pnpm --filter @kompass/app typecheck && pnpm --filter @kompass/app e2e e2e/backup.spec.ts`
 Expected: grün. Der Download läuft über `fetch` + Blob, damit Playwright das `download`-Ereignis sieht und die Seite danach neu lädt (aktualisiert „Letzter Export").
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -2650,7 +2650,7 @@ git commit -m "feat(app): backup page with export download and confirmed import"
 **Interfaces:**
 - Produces: Image `ghcr.io/<owner>/aluna-kompass:<tag>` (amd64) mit Node 26, Typst 0.15.1, Fonts, Vorlagen, Migrationen; Compose-Dienste `kompass-test` (Port 3001) und `kompass-prod` (Port 3000); CI mit Tests, E2E und Image-Push.
 
-- [ ] **Step 1: Pfad-Overrides testgetrieben ergänzen**
+- [x] **Step 1: Pfad-Overrides testgetrieben ergänzen**
 
 `packages/core/tests/db.test.ts` ergänzen:
 ```ts
@@ -2682,7 +2682,7 @@ it('honours KOMPASS_TEMPLATES_DIR and KOMPASS_FONTS_DIR', async () => {
 Run: `pnpm --filter @kompass/core test && pnpm --filter @kompass/documents test`
 Expected: grün.
 
-- [ ] **Step 2: Next für Standalone im Monorepo konfigurieren**
+- [x] **Step 2: Next für Standalone im Monorepo konfigurieren**
 
 `apps/kompass/next.config.ts` ergänzen:
 ```ts
@@ -2699,7 +2699,7 @@ const nextConfig: NextConfig = {
 Run: `pnpm --filter @kompass/app build`
 Expected: `.next/standalone/apps/kompass/server.js` existiert; `ls apps/kompass/.next/standalone/node_modules | head` zeigt u. a. `better-sqlite3`.
 
-- [ ] **Step 3: Dockerfile, Entrypoint, dockerignore**
+- [x] **Step 3: Dockerfile, Entrypoint, dockerignore**
 
 `.dockerignore`:
 ```
@@ -2787,7 +2787,7 @@ exec "$@"
 ```
 (Migrationen laufen beim ersten `getDeps()` im App-Prozess — kein separater Schritt nötig.)
 
-- [ ] **Step 4: Compose für das NAS**
+- [x] **Step 4: Compose für das NAS**
 
 `docker-compose.yml`:
 ```yaml
@@ -2819,7 +2819,7 @@ services:
 ```
 `OWNER` durch den GitHub-Namensraum ersetzen (im CI-Workflow kommt er aus `github.repository`). `.env.test.example`/`.env.prod.example` mit `SESSION_SECRET=` ins Repo, echte Dateien sind git-ignoriert (`.env.*` steht bereits in `.gitignore`, `!.env.example`-Muster für die Beispiele ergänzen).
 
-- [ ] **Step 5: CI**
+- [x] **Step 5: CI**
 
 `.github/workflows/ci.yml`:
 ```yaml
@@ -2887,7 +2887,7 @@ jobs:
 ```
 (`actions/upload-artifact@v5` ist die aktuelle Hauptversion; falls die CI eine neuere verlangt, den Major-Tag anheben.)
 
-- [ ] **Step 6: Lokaler Container-Smoke-Test**
+- [x] **Step 6: Lokaler Container-Smoke-Test**
 
 Run:
 ```bash
@@ -2900,7 +2900,7 @@ docker stop kompass-smoke
 ```
 Expected: Health-JSON mit `"environment":"test"`, `/setup` liefert `200`, `typst 0.15.1`. Auf einem Apple-Silicon-Mac `docker build --platform linux/amd64` verwenden (Emulation, langsamer, aber es ist das Zielformat des NAS).
 
-- [ ] **Step 7: Betriebsanleitung**
+- [x] **Step 7: Betriebsanleitung**
 
 `docs/betrieb.md`:
 ```markdown
@@ -2935,7 +2935,7 @@ Endpunkt `http://<nas>:3000/mcp` (Streamable HTTP), Authentifizierung mit einem 
 
 `AGENTS.md`, Abschnitt „Befehle", ergänzen: `pnpm --filter @kompass/app e2e`, `docker build -t kompass-local .`, Verweis auf `docs/betrieb.md`. `CLAUDE.md` bleibt der dünne Verweis.
 
-- [ ] **Step 8: Gesamtlauf und Commit**
+- [x] **Step 8: Gesamtlauf und Commit**
 
 Run: `pnpm typecheck && pnpm test && pnpm --filter @kompass/app e2e`
 Expected: alle grün (Kern, Dokumente, MCP, App-Vitest, alle E2E-Specs).

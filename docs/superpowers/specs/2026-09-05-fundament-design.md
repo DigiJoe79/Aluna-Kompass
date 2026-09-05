@@ -73,7 +73,7 @@ Konventionen: ULID-Strings als Primärschlüssel; Zeitstempel als ISO-8601 in UT
 ```
 apps/
   kompass/          Next.js-Admin-App (App Router, TypeScript) — nur UI + Adapter
-  site/             Astro-Paket für den Website-Build (Stufe 2, in Stufe 1 nur Platzhalter-Workspace)
+  site/             Astro-Paket für den Website-Build (entsteht erst in Stufe 2)
 packages/
   core/             Fachlogik: Schema, Migrationen, Service-Schicht, Rechte, Audit, Settings, Modul-Registry
   mcp/              MCP-Server (Tool-Definitionen → core), kein Fachcode
@@ -109,7 +109,7 @@ Alle Tabellen englisch benannt, camelCase in Drizzle, snake_case in SQLite.
 Kern-Settings (Schlüssel, alle admin-editierbar):
 - `organization.*`: name, legalForm, street, postalCode, city, country, registerCourt, registerNumber, taxNumber, taxOffice, exemptionNoticeDate, exemptionNoticeType (`60a` | `exemption`), statutoryPurpose, email, website, iban, bic, bankName
 - `branding.*`: logoAssetId, fontBody, fontHeading, `activeTheme` (Theme-Key)
-- `themes`: Liste benannter Themes; jedes Theme = Key, Name, vollständiger Token-Satz für `light` und `dark` (siehe Abschnitt 6, „Themes"). Ein mitgeliefertes, neutrales Default-Theme ist Teil des Seeds, nicht des Codes; Aluna hinterlegt sein eigenes Theme als Daten.
+- `themes`: Liste benannter Themes; jedes Theme = Key, Name, vollständiger Token-Satz für `light` und `dark` (siehe Abschnitt 6, „Themes"). Das mitgelieferte, neutrale Default-Theme ist der registrierte Standardwert dieser Einstellung und liegt als reine Datendatei im Kern (`packages/core/src/themes/default-theme.ts`, die einzige Datei mit Farbwerten) — so bleibt es bei Updates nachziehbar; Aluna hinterlegt sein eigenes Theme als Daten in der Datenbank. (Ursprünglich als Seed-Eintrag geplant; nach Umsetzung 2026-09-05 angepasst.)
 - `modules.enabled`: string[]
 - `system.*` (nur vom System geschrieben, im Admin lesbar): `lastImportAt`, `lastImportSource`, `lastExportAt` — speist Umgebungsbalken („Daten vom …") und Backup-Seite.
 
@@ -163,7 +163,7 @@ Kern-Permission-Keys: `users.manage`, `roles.manage`, `settings.manage`, `module
 
 **TDD auf drei Ebenen:**
 - Service-Tests (`packages/core`, Vitest) gegen frische SQLite-DB je Testdatei mit echten Migrationen. Pro Service: Erfolg, `forbidden`, `validation`, Audit-Eintrag. Regeltests: kein Löschpfad für protokollierte Entitäten; `auditLog` ist unveränderbar (Trigger); Sichten reichen keine internen Felder durch; Rendering ist deterministisch.
-- Theme-Regeltests: ESLint/Stylelint-Regel, die Hex-, rgb()- und hsl()-Literale in `apps/`, `packages/documents` und `packages/modules` verbietet (Ausnahme: Umgebungsbalken, explizit markiert); Test, dass jedes Theme das vollständige Token-Schema erfüllt; Test, dass das Default-Theme aus dem Seed und nicht aus dem Code kommt.
+- Theme-Regeltests: ein Vitest-Test (`apps/kompass/tests/no-color-literals.test.ts`) scannt `apps/kompass/src` auf Hex-, rgb()-, hsl()- und oklch()-Literale (Ausnahme: Umgebungsbalken, explizit markiert) und läuft in `pnpm test` und CI; Test, dass jedes Theme das vollständige Token-Schema erfüllt; Test, dass das Default-Theme der registrierte Standardwert der Einstellung `themes` ist.
 - Adapter-Tests: Token → `ctx`; widerrufenes/abgelaufenes Token wird abgewiesen; `Result`-Fehler kommen strukturiert an.
 - End-to-End (Playwright, gegen gebauten Container): Login, Rolle anlegen/zuweisen, Einstellung ändern, Dokument erzeugen, Umgebungsbalken sichtbar.
 
