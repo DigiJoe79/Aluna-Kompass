@@ -1,0 +1,361 @@
+{
+  "facts": {
+    "claim": {
+      "de": "Wir helfen. Leben retten.",
+      "en": ""
+    },
+    "forwardingPercent": 97.2,
+    "shelterDogCount": 150,
+    "donationBoxLocations": [
+      "Köln-Porz",
+      "Jülich",
+      "Merkstein"
+    ],
+    "section11Status": "pending",
+    "betterplaceMetaProjectId": "000000",
+    "socialLinks": [
+      {
+        "label": "Instagram",
+        "href": "https://instagram.com"
+      },
+      {
+        "label": "Facebook",
+        "href": "https://facebook.com"
+      },
+      {
+        "label": "YouTube",
+        "href": "https://youtube.com"
+      }
+    ],
+    "blockedTerms": []
+  },
+  "pages": {
+    "home": {
+      "title": {
+        "de": "Jeder Hund verdient ein *Zuhause.*",
+        "en": ""
+      },
+      "lede": {
+        "de": "Wir holen vergessene Hunde aus einem Shelter bei Bukarest in liebevolle Familien in Deutschland — und versorgen die, die bleiben, mit Futter, Wärme und tierärztlicher Hilfe.",
+        "en": ""
+      },
+      "body": {
+        "de": "",
+        "en": ""
+      },
+      "metaDescription": {
+        "de": "Aluna Tierhilfe e.V. — Jeder Hund verdient ein Zuhause.",
+        "en": ""
+      },
+      "blocks": [
+        {
+          "id": "impact-15",
+          "title": { "de": "15 €", "en": "" },
+          "text": { "de": "decken eine Woche Futter für einen Hund.", "en": "" },
+          "imageAssetId": null,
+          "href": "",
+          "label": { "de": "", "en": "" }
+        },
+        {
+          "id": "impact-50",
+          "title": { "de": "50 €", "en": "" },
+          "text": { "de": "finanzieren eine Impfung & den Mikrochip.", "en": "" },
+          "imageAssetId": null,
+          "href": "",
+          "label": { "de": "", "en": "" }
+        },
+        {
+          "id": "impact-120",
+          "title": { "de": "120 €", "en": "" },
+          "text": { "de": "tragen den Transport aus Bukarest nach Deutschland.", "en": "" },
+          "imageAssetId": null,
+          "href": "",
+          "label": { "de": "", "en": "" }
+        },
+        {
+          "id": "impact-sponsor",
+          "title": { "de": "∞", "en": "" },
+          "text": { "de": "gibst du einem Hund mit einer Patenschaft.", "en": "" },
+          "imageAssetId": null,
+          "href": "",
+          "label": { "de": "", "en": "" }
+        },
+        {
+          "id": "social",
+          "title": { "de": "Folge uns", "en": "" },
+          "text": { "de": "Neuigkeiten zu Vermittlungen, neuen Hunden und Projekten teilen wir auf unseren Social-Media-Kanälen — ohne Newsletter, ohne Anmeldung.", "en": "" },
+          "imageAssetId": null,
+          "href": "",
+          "label": { "de": "", "en": "" }
+        }
+      ]
+    },
+    "help": {
+      "title": {
+        "de": "Es gibt viele Wege, ein Leben zu *verändern.*",
+        "en": ""
+      },
+      "lede": {
+        "de": "Ob mit einer Spende, einer Patenschaft oder einem Platz auf deinem Sofa — jede Form der Unterstützung kommt bei den Hunden an. Such dir aus, was zu dir passt.",
+        "en": ""
+      },
+      "body": {
+        "de": "## Unsere *Spendenboxen.*\n\nDu bist lieber vor Ort dabei? Unsere Spendenboxen findest du an diesen Standorten — wir freuen uns über jeden Cent:\n\n- **Köln-Porz**\n- **Jülich**\n- **Merkstein**\n\n> Neuigkeiten zu Vermittlungen, neuen Hunden und Projekten teilen wir auf unseren Social-Media-Kanälen und hier auf der Seite — ohne Newsletter, ohne Anmeldung.",
+        "en": ""
+      },
+      "metaDescription": {
+        "de": "Es gibt viele Wege, den Hunden von Aluna Tierhilfe e.V. zu helfen.",
+        "en": ""
+      },
+      "blocks": [
+        {
+          "id": "help-donate",
+          "title": { "de": "Spenden", "en": "" },
+          "text": { "de": "Schon kleine Beträge sichern Futter, Impfungen und den Transport in ein neues Zuhause. 97,2 % deiner Spende kommen direkt an.", "en": "" },
+          "imageAssetId": null,
+          "href": "/spenden/",
+          "label": { "de": "Jetzt spenden", "en": "" }
+        },
+        {
+          "id": "help-sponsor",
+          "title": { "de": "Tierpate werden", "en": "" },
+          "text": { "de": "Übernimm die Patenschaft für einen bestimmten Hund — befristet oder unbegrenzt — und begleite seinen Weg ganz persönlich.", "en": "" },
+          "imageAssetId": null,
+          "href": "/helfen/tierpate-werden/",
+          "label": { "de": "Pate werden", "en": "" }
+        },
+        {
+          "id": "help-adopt",
+          "title": { "de": "Hund adoptieren", "en": "" },
+          "text": { "de": "Schenk einem Tierschutzhund das, was er sich am meisten wünscht: ein Zuhause für immer.", "en": "" },
+          "imageAssetId": null,
+          "href": "/zuhause-gesucht/",
+          "label": { "de": "Hunde kennenlernen", "en": "" }
+        },
+        {
+          "id": "help-membership",
+          "title": { "de": "Fördermitglied werden", "en": "" },
+          "text": { "de": "Unterstütze unsere Arbeit dauerhaft mit einem regelmäßigen Beitrag und gib uns Planungssicherheit.", "en": "" },
+          "imageAssetId": null,
+          "href": "/helfen/foerdermitglied-werden/",
+          "label": { "de": "Fördermitglied werden", "en": "" }
+        }
+      ]
+    },
+    "donate": {
+      "title": {
+        "de": "Deine Spende wird zu *Hoffnung.*",
+        "en": ""
+      },
+      "lede": {
+        "de": "Jeder Beitrag kommt dort an, wo er gebraucht wird: bei den Hunden in unserem Partner-Shelter. Futter, Wärme, tierärztliche Versorgung und der Weg in ein neues Zuhause — all das machst du möglich.",
+        "en": ""
+      },
+      "body": {
+        "de": "## Was deine Spende *bewirkt.*\n\n- **15 €** decken eine Woche Futter für einen Hund.\n- **50 €** finanzieren eine Impfung und den Mikrochip.\n- **120 €** tragen den Transport aus Bukarest nach Deutschland.\n\n## Volle *Transparenz.*\n\nWir glauben: Vertrauen entsteht durch Nachvollziehbarkeit. Deshalb dokumentieren wir die Verwendung jeder Spende lückenlos. **97,2 % aller erhaltenen Spenden fließen direkt an den Shelter** — der kleine Rest deckt die Gebühren der Spendenplattform. Rücklagen bilden wir nur in dem engen Rahmen, den das Gemeinnützigkeitsrecht erlaubt, und führen sie getrennt pro Projekt.\n\nFür jede Weiterleitung an unseren Partner führen wir einen Mittelverwendungsnachweis. So ist jederzeit belegbar, dass dein Geld genau dort ankommt, wo wir es versprechen.\n\n> **Spendenbescheinigung:** Spendest du über das Formular oben, erhältst du deine Zuwendungsbestätigung automatisch über Betterplace — wir verarbeiten dabei keine deiner persönlichen Daten. Bei einer Direktüberweisung schreib uns für die Bescheinigung an [info@aluna-tierhilfe.org](mailto:info@aluna-tierhilfe.org).",
+        "en": ""
+      },
+      "metaDescription": {
+        "de": "Spende für die Hunde der Aluna Tierhilfe e.V.",
+        "en": ""
+      },
+      "blocks": [
+        {
+          "id": "donate-sponsor",
+          "title": { "de": "Tierpate werden", "en": "" },
+          "text": { "de": "Übernimm die Patenschaft für einen bestimmten Hund — befristet oder unbegrenzt.", "en": "" },
+          "imageAssetId": null,
+          "href": "/helfen/tierpate-werden/",
+          "label": { "de": "Pate werden", "en": "" }
+        },
+        {
+          "id": "donate-membership",
+          "title": { "de": "Fördermitglied", "en": "" },
+          "text": { "de": "Unterstütze den Verein dauerhaft mit einem regelmäßigen Beitrag.", "en": "" },
+          "imageAssetId": null,
+          "href": "/helfen/foerdermitglied-werden/",
+          "label": { "de": "Fördermitglied werden", "en": "" }
+        },
+        {
+          "id": "donate-boxes",
+          "title": { "de": "Spendenboxen", "en": "" },
+          "text": { "de": "In Köln-Porz, Jülich und Merkstein. Wir freuen uns über jeden Cent.", "en": "" },
+          "imageAssetId": null,
+          "href": "/helfen/",
+          "label": { "de": "Standorte ansehen", "en": "" }
+        }
+      ]
+    },
+    "sponsor": {
+      "title": {
+        "de": "Schenk einem Hund deine *Verlässlichkeit.*",
+        "en": ""
+      },
+      "lede": {
+        "de": "Als Tierpate begleitest du einen bestimmten Hund auf seinem Weg — mit einem regelmäßigen Beitrag, der genau dort ankommt. Du entscheidest, wie lange: befristet oder unbegrenzt.",
+        "en": ""
+      },
+      "body": {
+        "de": "Eine Patenschaft gibt einem Hund Sicherheit, auch wenn er (noch) kein eigenes Zuhause hat. Dein Beitrag sichert seine Versorgung — Futter, Pflege und tierärztliche Hilfe — und du erfährst aus erster Hand, wie es deinem Patenhund geht.\n\n> Lieber einmalig oder flexibel helfen? Dann findest du auf der Seite [Spenden](/spenden/) alle weiteren Wege.",
+        "en": ""
+      },
+      "metaDescription": {
+        "de": "Werde Tierpate bei Aluna Tierhilfe e.V.",
+        "en": ""
+      },
+      "blocks": []
+    },
+    "membership": {
+      "title": {
+        "de": "Werde Teil von *Aluna.*",
+        "en": ""
+      },
+      "lede": {
+        "de": "Als Fördermitglied unterstützt du unsere Arbeit dauerhaft — mit einem regelmäßigen Beitrag, der uns Planungssicherheit gibt. So können wir helfen, bevor der Notfall da ist.",
+        "en": ""
+      },
+      "body": {
+        "de": "Verlässliche Unterstützung ist im Tierschutz das Wertvollste, was es gibt. Sie erlaubt uns, langfristig zu planen, Rücklagen für Notlagen zu bilden und in Ruhe das Richtige für die Hunde zu tun. Schon ein kleiner monatlicher Beitrag macht einen großen Unterschied.\n\nFördermitglieder sind in der Mitgliederversammlung teilnahme-, rede- und antragsberechtigt, haben jedoch kein Stimmrecht (§ 3 der [Satzung](/satzung/)).\n\n> Du möchtest ordentliches Mitglied werden und aktiv mitgestalten? Schreib uns an [info@aluna-tierhilfe.org](mailto:info@aluna-tierhilfe.org) — wir schicken dir den passenden Aufnahmeantrag.",
+        "en": ""
+      },
+      "metaDescription": {
+        "de": "Fördermitgliedschaft bei Aluna Tierhilfe e.V.",
+        "en": ""
+      },
+      "blocks": []
+    },
+    "about": {
+      "title": {
+        "de": "Jeder Hund verdient eine zweite *Chance.*",
+        "en": ""
+      },
+      "lede": {
+        "de": "Aluna Tierhilfe e.V. wurde 2026 aus einem einfachen Gedanken heraus gegründet: dass kein Hund vergessen werden sollte, nur weil er auf der falschen Seite einer Grenze geboren wurde.",
+        "en": ""
+      },
+      "body": {
+        "de": "Wir sind ein gemeinnütziger Tierschutzverein aus dem Rheinland. Unser Herz schlägt für die Hunde eines Partner-Shelters bei Bukarest, das von einer lokalen Tierschutzorganisation betrieben wird. Dort leben rund 150 Hunde — manche warten auf ein eigenes Zuhause, andere bleiben dauerhaft und brauchen jeden Tag Futter, Wärme und tierärztliche Versorgung.\n\nWir tun zweierlei: Wir holen vermittelbare Hunde in liebevolle Familien in Deutschland — und wir sorgen dafür, dass es den Hunden, die bleiben, gut geht. Dafür arbeiten wir projektorientiert, sammeln Spenden vor allem über Betterplace und leiten sie an unseren Partner weiter. Über jeden Euro führen wir genau Buch.\n\n## Was uns *antreibt.*\n\n- **Hunde retten.** Wir geben vergessenen Hunden eine Zukunft — im neuen Zuhause oder in Sicherheit im Shelter.\n- **Verantwortung tragen.** Eine Vermittlung endet für uns nicht an der Haustür. Wir begleiten Mensch und Hund mit Sorgfalt.\n- **Transparent bleiben.** 97,2 % aller erhaltenen Spenden fließen direkt an den Shelter. Wo dein Geld ankommt, kannst du jederzeit nachvollziehen.\n\n## Gemeinnützig & nicht *profitorientiert.*\n\nAluna Tierhilfe e.V. verfolgt ausschließlich und unmittelbar gemeinnützige Zwecke im Sinne der Förderung des Tierschutzes. Niemand bei uns bereichert sich — wir arbeiten ehrenamtlich, und alle Mittel dienen allein unserem Zweck. Die Anerkennung der Gemeinnützigkeit durch das Finanzamt ist Teil unseres Gründungswegs.\n\n> Für den Auslandstierschutz und den Transport von Hunden ist eine Erlaubnis nach § 11 Tierschutzgesetz erforderlich. Ihre Beantragung ist Teil unseres Gründungsprozesses und derzeit in Bearbeitung.",
+        "en": ""
+      },
+      "metaDescription": {
+        "de": "Über Aluna Tierhilfe e.V. — gemeinnütziger Verein für Tierschutz.",
+        "en": ""
+      },
+      "blocks": []
+    },
+    "partners": {
+      "title": {
+        "de": "Gemeinsam erreichen wir *mehr.*",
+        "en": ""
+      },
+      "lede": {
+        "de": "Tierschutz gelingt nicht allein. Wir arbeiten Hand in Hand mit Menschen vor Ort und mit erfahrenen Vereinen in Deutschland — damit aus Hilfe Wirkung wird.",
+        "en": ""
+      },
+      "body": {
+        "de": "## Hundeblicke e.V.\n\nHundeblicke e.V. ist ein gemeinnütziger Verein mit Sitz in Ludwigshafen am Rhein, der sich unter anderem für den Auslandstierschutz in Spanien, Bulgarien und Rumänien engagiert. Bei der Vermittlung unserer Hunde in ein neues Zuhause arbeiten wir eng mit Hundeblicke zusammen.\n\n[hundeblicke.net](https://hundeblicke.net)\n\n## Unser Partner-Shelter in *Rumänien.*\n\nIn der Nähe von Bukarest liegt ein kleiner Shelter, der von einer lokalen Tierschutzorganisation betrieben wird. Hier finden Hunde ein sicheres Dach über dem Kopf, die sonst niemand auffängt. Unsere Spenden fließen direkt in die tägliche Versorgung dieser Tiere.\n\n- Rund **150 Hunde** leben aktuell im Shelter\n- **2.500 m²** Shelterfläche\n- Zusätzlich ein **5.000 m² großes Open-Shelter** für Hunde, die nicht vermittelbar sind\n\n### Das leisten die Menschen vor Ort jeden Tag\n\n- Fütterung und Pflege der Tiere\n- Medizinische Versorgung\n- Arbeit mit ängstlichen und traumatisierten Hunden\n- Vorbereitung der Ausreise\n- Instandhaltung des Shelters und Reinigungsarbeiten\n\n> Du möchtest die Hunde im Shelter unterstützen? Schon kleine Beträge sichern Futter, Wärme und tierärztliche Hilfe. [Jetzt spenden](/spenden/)",
+        "en": ""
+      },
+      "metaDescription": {
+        "de": "Unsere Partnervereine und unser Partner-Shelter in Rumänien.",
+        "en": ""
+      },
+      "blocks": []
+    },
+    "contact": {
+      "title": {
+        "de": "Schreib *uns.*",
+        "en": ""
+      },
+      "lede": {
+        "de": "Du interessierst dich für einen unserer Hunde, hast eine Frage zu Spende, Patenschaft oder unserer Arbeit — oder möchtest einfach Hallo sagen? Wir freuen uns über jede Nachricht.",
+        "en": ""
+      },
+      "body": {
+        "de": "Diese Webseite hat bewusst **kein Kontaktformular**. Ein Formular müsste deine Nachricht irgendwo zwischenspeichern — genau das wollen wir als kleiner Verein vermeiden. Stattdessen schreibst du uns direkt aus deinem eigenen E-Mail-Programm. Deine Nachricht landet dann nur in unserem Postfach, nirgends sonst.\n\n> Interesse an einem bestimmten Hund? Auf der jeweiligen [Hundeseite](/zuhause-gesucht/) findest du eine vorbereitete E-Mail mit allen Stichpunkten. Häufige Fragen beantworten wir in den [FAQ](/faq/).",
+        "en": ""
+      },
+      "metaDescription": {
+        "de": "Kontakt zu Aluna Tierhilfe e.V. — per E-Mail oder Post.",
+        "en": ""
+      },
+      "blocks": []
+    },
+    "imprint": {
+      "title": {
+        "de": "Impressum",
+        "en": ""
+      },
+      "lede": {
+        "de": "",
+        "en": ""
+      },
+      "body": {
+        "de": "> **Vor dem Live-Gang vervollständigen:** Die mit `[…]` markierten Angaben (ladungsfähige Anschrift, Telefon, Registergericht & Vereinsregisternummer) einsetzen. Solange der Verein noch nicht eingetragen ist, beim Registereintrag „in Eintragung“ vermerken.\n\n## Angaben gemäß § 5 DDG\n\nAluna Tierhilfe e.V.\n[Straße und Hausnummer]\n[PLZ] Jülich\n\n## Vertreten durch den Vorstand\n\nNicole Wießner (Vorsitzende)\nChristobal Wießner (stellvertretender Vorsitzender)\nJennifer Jorgol (Schatzmeisterin)\n\nJedes Vorstandsmitglied vertritt den Verein einzeln (§ 8 der Satzung).\n\n## Kontakt\n\nE-Mail: [info@aluna-tierhilfe.org](mailto:info@aluna-tierhilfe.org)\nTelefon: [optional]\n\n## Registereintrag\n\nEintragung im Vereinsregister.\nRegistergericht: Amtsgericht [Registergericht]\nRegisternummer: VR [Nummer] *(bzw. „in Eintragung“, solange noch nicht eingetragen)*\n\n## Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV\n\nNicole Wießner\nAnschrift wie oben\n\n## EU-Streitschlichtung\n\nDie Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit: [https://ec.europa.eu/consumers/odr/](https://ec.europa.eu/consumers/odr/). Wir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.",
+        "en": ""
+      },
+      "metaDescription": {
+        "de": "Impressum von Aluna Tierhilfe e.V.",
+        "en": ""
+      },
+      "blocks": []
+    },
+    "privacy": {
+      "title": {
+        "de": "Datenschutzerklärung",
+        "en": ""
+      },
+      "lede": {
+        "de": "Kurz gesagt: Diese Webseite ist eine reine Informationsseite ohne Datenbank, ohne Nutzerkonten und ohne Cookies. Wir speichern nichts über deinen Besuch.",
+        "en": ""
+      },
+      "body": {
+        "de": "> **Entwurf für den Prototyp.** Diese Erklärung bildet den technischen Stand der CMS-freien Variante ab. Vor dem Live-Gang durch einen Generator (z. B. e-Recht24 / Dr. Schwenke) oder anwaltlich prüfen lassen.\n\n## 1. Verantwortlicher\n\nAluna Tierhilfe e.V., [Anschrift], vertreten durch den Vorstand. Kontakt: [info@aluna-tierhilfe.org](mailto:info@aluna-tierhilfe.org). Weitere Angaben im [Impressum](/impressum/).\n\n## 2. Aufruf der Webseite (Server-Logfiles)\n\nBeim Aufruf der Seiten übermittelt dein Browser technisch notwendige Daten an unseren Hoster (IONOS, Rechenzentrum in Deutschland): IP-Adresse, Datum und Uhrzeit, aufgerufene Datei, übertragene Datenmenge, Referrer und Browser-/Betriebssystem-Angaben. Diese Daten sind für die Auslieferung und Sicherheit der Seite erforderlich (Art. 6 Abs. 1 lit. f DSGVO) und werden nach kurzer Zeit gelöscht bzw. gekürzt. Mit dem Hoster besteht ein Auftragsverarbeitungsvertrag (Art. 28 DSGVO).\n\n## 3. Cookies, Tracking, Analyse\n\nWir setzen **keine** Cookies, kein Web-Analytics und keine Tracking- oder Marketing-Dienste ein. Es gibt daher auch keinen Cookie-Banner. Schriftarten werden von unserem eigenen Server geladen, nicht von Google Fonts.\n\n## 4. Kontaktaufnahme per E-Mail\n\nWenn du uns schreibst, verarbeiten wir die von dir übermittelten Angaben (Name, E-Mail-Adresse, Inhalt der Nachricht) zur Bearbeitung deiner Anfrage (Art. 6 Abs. 1 lit. b bzw. f DSGVO). Die Nachrichten liegen in unserem E-Mail-Postfach und werden gelöscht, sobald sie nicht mehr benötigt werden und keine Aufbewahrungspflichten entgegenstehen.\n\n## 5. Adoptions-, Patenschafts- und Fördermitgliedsanträge (PDF)\n\nFür diese Anliegen stellen wir ausfüllbare PDF-Dokumente zum Download bereit. Das Ausfüllen findet ausschließlich auf deinem Gerät statt; die Webseite erhält davon nichts. Erst wenn du das PDF per E-Mail oder Post an uns sendest, verarbeiten wir die enthaltenen Daten zur Bearbeitung deines Antrags und — bei Patenschaft/Fördermitgliedschaft — zur Abwicklung des SEPA-Mandats. Rechtsgrundlage ist die Vertragsanbahnung bzw. -durchführung (Art. 6 Abs. 1 lit. b DSGVO) sowie steuer- und vereinsrechtliche Pflichten (Art. 6 Abs. 1 lit. c DSGVO).\n\n## 6. Spenden über Betterplace\n\nDas Spendenformular der gut.org gAG (Betterplace) binden wir als „2-Klick-Lösung“ ein: Es wird erst geladen, wenn du aktiv auf „Formular laden“ klickst. Vorher besteht keine Verbindung zu Betterplace. Nach dem Klick lädt dein Browser Inhalte von `betterplace.org`; dabei können Daten (u. a. IP-Adresse) an Betterplace übertragen und Cookies gesetzt werden. Die Spendenabwicklung inklusive Zahlung und Zuwendungsbestätigung erfolgt vollständig bei Betterplace; Aluna Tierhilfe erhält dabei keine personenbezogenen Daten der Spenderinnen und Spender. Es gilt die [Datenschutzerklärung von Betterplace](https://www.betterplace.org/de/privacy). Rechtsgrundlage für die Einbindung ist deine Einwilligung durch den Klick (Art. 6 Abs. 1 lit. a DSGVO).\n\n## 7. Externe Links\n\nWir verlinken auf Seiten Dritter (z. B. Hundeblicke e.V., Social-Media-Kanäle). Für deren Inhalte und Datenverarbeitung sind die jeweiligen Anbieter verantwortlich.\n\n## 8. Deine Rechte\n\nDu hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch sowie das Recht, eine Einwilligung zu widerrufen. Außerdem kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren (in NRW: LDI Nordrhein-Westfalen).",
+        "en": ""
+      },
+      "metaDescription": {
+        "de": "Datenschutzerklärung von Aluna Tierhilfe e.V.",
+        "en": ""
+      },
+      "blocks": []
+    },
+    "statutes": {
+      "title": {
+        "de": "Unsere *Satzung.*",
+        "en": ""
+      },
+      "lede": {
+        "de": "Transparenz ist die Grundlage von Vertrauen. Hier kannst du unsere vollständige Vereinssatzung nachlesen — das rechtliche Fundament unserer gemeinnützigen Arbeit für den Tierschutz.",
+        "en": ""
+      },
+      "body": {
+        "de": "## § 1 Name und Sitz des Vereins, Geschäftsjahr\n\n1. Der Verein führt den Namen „Aluna Tierhilfe“. Er soll in das Vereinsregister eingetragen werden und führt nach der Eintragung den Zusatz „e.V.“.\n2. Der Verein hat seinen Sitz in Jülich.\n3. Das Geschäftsjahr ist das Kalenderjahr.\n\n## § 2 Zweck, Gemeinnützigkeit des Vereins\n\n1. Der Verein mit Sitz in Jülich verfolgt ausschließlich und unmittelbar gemeinnützige Zwecke im Sinne des Abschnitts „Steuerbegünstigte Zwecke“ der Abgabenordnung.\n2. Zweck des Vereins ist die Förderung des Tierschutzes (§ 52 Abs. 2 Satz 1 Nr. 14 der Abgabenordnung).\n\nDer Satzungszweck wird insbesondere verwirklicht durch\n\n**a) eigene (operative) Tätigkeit:**\n\n- Information und Aufklärung der Öffentlichkeit über den Tierschutz, die artgerechte Haltung von Tieren und die Situation von Tieren in Not;\n- Unterstützung der Tiervermittlung, insbesondere durch Bekanntmachung ausgewählter, vermittelbarer Tiere über die Vereinswebseite, soziale Medien und Aushänge, durch Vermittlungshilfe sowie durch die eigene Vermittlung von Tieren;\n- Unterstützung von Pflegestellen für Tiere aus dem Tierschutz;\n- Hilfe für bedürftige Tierhalterinnen und Tierhalter, insbesondere durch Beteiligung an Tierarztkosten oder durch Sicherstellung der Tierversorgung im Krankheitsfall;\n\n**b) Beschaffung und Weitergabe von Mitteln (§ 58 Nr. 1 der Abgabenordnung):**\n\n- die Beschaffung von Mitteln — insbesondere durch Spendenaufrufe, Fundraising-Plattformen, Sammelaktionen, Mitgliedsbeiträge, Fördermitgliedsbeiträge und Patenschaften — und deren Weitergabe an andere steuerbegünstigte Körperschaften oder an juristische Personen des öffentlichen Rechts im In- und Ausland (z. B. Tierschutzeinrichtungen, Tierheime, Gnadenhöfe sowie Auffang- und Tierschutzstationen) zur Verwendung für die Förderung des Tierschutzes.\n\nBei der Weitergabe von Mitteln an Empfänger im Ausland stellt der Verein durch geeignete Vereinbarungen, Aufzeichnungen und Belege sicher, dass die Mittel ausschließlich für steuerbegünstigte Zwecke im Sinne dieser Satzung verwendet werden (Mittelverwendungsnachweis). Die erhöhten Mitwirkungs- und Nachweispflichten bei Auslandssachverhalten (§ 90 Abs. 2 der Abgabenordnung) werden beachtet.\n\n3. Der Verein ist selbstlos tätig; er verfolgt nicht in erster Linie eigenwirtschaftliche Zwecke.\n4. Mittel des Vereins dürfen nur für die satzungsmäßigen Zwecke verwendet werden. Die Mitglieder erhalten keine Zuwendungen aus Mitteln des Vereins.\n5. Es darf keine Person durch Ausgaben, die dem Zweck des Vereins fremd sind, oder durch unverhältnismäßig hohe Vergütungen begünstigt werden.\n6. Der Verein verwendet seine Mittel zeitnah für die satzungsmäßigen Zwecke (§ 55 Abs. 1 Nr. 5 der Abgabenordnung). Er ist berechtigt, Rücklagen zu bilden, soweit dies nach § 62 der Abgabenordnung zulässig ist.\n\n## § 3 Erwerb der Mitgliedschaft\n\n1. Der Verein kennt **ordentliche Mitglieder** und **Fördermitglieder**. Ordentliche Mitglieder sind natürliche und juristische Personen, die den Zweck des Vereins aktiv mitgestalten; sie haben das volle Stimm- und Wahlrecht in der Mitgliederversammlung (§ 5). Fördermitglieder sind natürliche und juristische Personen, die den Verein vorrangig finanziell unterstützen möchten; sie sind teilnahme-, rede- und antragsberechtigt, haben jedoch kein Stimm- und Wahlrecht und sind nicht in den Vorstand wählbar.\n2. Die Aufnahme in den Verein ist in Textform beim Vorstand zu beantragen. Bei Minderjährigen ist der Aufnahmeantrag durch die gesetzlichen Vertreter zu stellen. Der Vorstand entscheidet über den Aufnahmeantrag nach freiem Ermessen. Eine Ablehnung muss er nicht begründen.\n3. Auf Vorschlag des Vorstands kann die Mitgliederversammlung Personen, die sich um den Verein besonders verdient gemacht haben, zu Ehrenmitgliedern auf Lebenszeit ernennen.\n\n## § 4 Beendigung der Mitgliedschaft\n\n1. Die Mitgliedschaft endet durch Tod (bei juristischen Personen mit deren Erlöschen), Austritt oder Ausschluss.\n2. Der Austritt ist in Textform gegenüber dem Vorstand zu erklären, nur mit einer Frist von drei Monaten zum Ende des Geschäftsjahres.\n3. Ein Mitglied kann durch Beschluss der Mitgliederversammlung ausgeschlossen werden, wenn es das Ansehen oder die Interessen des Vereins schwerwiegend schädigt oder mehr als drei Monate mit Beiträgen im Rückstand ist und trotz Mahnung nicht zahlt. Dem Mitglied ist Gelegenheit zur Stellungnahme zu geben.\n\n## § 5 Rechte und Pflichten der Mitglieder\n\n1. Jedes Mitglied darf die Einrichtungen des Vereins nutzen und an Veranstaltungen teilnehmen. Ordentliche Mitglieder haben gleiches Stimm- und Wahlrecht; Fördermitglieder sind teilnahme-, rede- und antragsberechtigt, ohne Stimm- und Wahlrecht.\n2. Jedes Mitglied hat die Interessen des Vereins zu fördern, insbesondere regelmäßig den Beitrag zu leisten und das Vereinsleben nach Kräften zu unterstützen.\n\n## § 6 Mitgliedsbeiträge\n\n1. Jedes Mitglied hat im Voraus fällig werdende Mitgliedsbeiträge zu entrichten.\n2. Art und Höhe der Beiträge sowie eine etwaige Aufnahmegebühr regelt eine von der Mitgliederversammlung beschlossene Beitragsordnung.\n3. Ehrenmitglieder sind von den Mitgliedsbeiträgen befreit.\n\n## § 7 Organe des Vereins\n\nOrgane des Vereins sind der Vorstand und die Mitgliederversammlung.\n\n## § 8 Vorstand\n\n1. Der Vorstand besteht aus der bzw. dem Vorsitzenden, der bzw. dem stellvertretenden Vorsitzenden und der bzw. dem Schatzmeister/in.\n2. Die bzw. der Vorsitzende, die bzw. der stellvertretende Vorsitzende und die bzw. der Schatzmeister/in vertreten den Verein jeweils allein.\n3. Den Mitgliedern des Vorstands kann eine Vergütung gezahlt werden; über die Höhe entscheidet die Mitgliederversammlung.\n4. Der Vorstand kann weitere Vereinsmitglieder als Beisitzer in einen erweiterten Vorstand berufen. Beisitzer sind nicht vertretungsberechtigt und nicht Vorstand im Sinne des § 26 BGB.\n\n## § 9 Aufgaben des Vorstands\n\nDem Vorstand obliegen die Vertretung des Vereins nach § 26 BGB und die Führung seiner Geschäfte, insbesondere:\n\n1. die Einberufung und Vorbereitung der Mitgliederversammlungen,\n2. die Ausführung von Beschlüssen der Mitgliederversammlung,\n3. die Verwaltung des Vereinsvermögens und die Anfertigung des Jahresberichts,\n4. die Aufnahme neuer Mitglieder,\n5. die Organisation der Vereinsprojekte und die Benennung verantwortlicher Projektleitungen.\n\n## § 10 Bestellung des Vorstands\n\n1. Die Mitglieder des Vorstands werden von der Mitgliederversammlung für zwei Jahre einzeln gewählt. Wiederwahl und vorzeitige Abberufung sind zulässig. Ein Mitglied bleibt nach Ablauf der Amtszeit bis zur Wahl des Nachfolgers im Amt.\n2. Scheidet ein Mitglied vorzeitig aus, sind die verbleibenden Vorstandsmitglieder berechtigt, bis zur Wahl durch die Mitgliederversammlung ein Vereinsmitglied in den Vorstand zu wählen.\n\n## § 11 Beratung und Beschlussfassung des Vorstands\n\n1. Der Vorstand tritt nach Bedarf zusammen; die Einberufung erfolgt durch die bzw. den Vorsitzenden mit einer Soll-Frist von einer Woche. Er ist beschlussfähig, wenn mindestens zwei Mitglieder anwesend sind. Es entscheidet die Mehrheit der abgegebenen gültigen Stimmen; bei Stimmengleichheit die Stimme der bzw. des Vorsitzenden.\n2. Die Beschlüsse des Vorstands sind zu protokollieren; das Protokoll ist von der Protokollführung und der bzw. dem Vorsitzenden zu unterschreiben.\n\n## § 12 Aufgaben der Mitgliederversammlung\n\nDie Mitgliederversammlung ist zuständig für:\n\n1. Änderungen der Satzung,\n2. die Festsetzung der Aufnahmegebühr und der Mitgliedsbeiträge sowie die Beitragsordnung,\n3. die Ernennung von Ehrenmitgliedern sowie den Ausschluss von Mitgliedern,\n4. die Wahl und Abberufung der Vorstandsmitglieder,\n5. die Wahl von zwei Kassenprüferinnen bzw. Kassenprüfern, die nicht dem Vorstand angehören dürfen,\n6. die Entgegennahme des Jahres- und Kassenprüfungsberichts sowie die Entlastung des Vorstands,\n7. die Auflösung des Vereins.\n\n## § 13 Einberufung der Mitgliederversammlung\n\n1. Mindestens einmal jährlich beruft der Vorstand eine ordentliche Mitgliederversammlung in Textform mit einer Frist von zwei Wochen und unter Angabe der Tagesordnung ein.\n2. Die Tagesordnung setzt der Vorstand fest. Jedes Mitglied kann bis eine Woche vorher in Textform eine Ergänzung beantragen. Über nicht aufgenommene oder erstmals in der Versammlung gestellte Anträge entscheidet die Mitgliederversammlung mit einfacher Mehrheit; ausgenommen sind Anträge zu Satzungsänderung, Beitragsänderung oder Auflösung.\n3. Eine außerordentliche Mitgliederversammlung ist einzuberufen, wenn das Vereinsinteresse es erfordert oder mindestens ein Zehntel der Mitglieder dies in Textform unter Angabe von Zweck und Gründen beantragt.\n\n## § 14 Beschlussfassung der Mitgliederversammlung\n\n1. Die Versammlung wird von der bzw. dem Vorsitzenden geleitet, bei Verhinderung von der Stellvertretung bzw. einer gewählten Versammlungsleitung.\n2. Die Versammlung ist beschlussfähig, wenn mindestens ein Drittel aller Mitglieder anwesend ist. Bei Beschlussunfähigkeit ist innerhalb von vier Wochen eine zweite Versammlung mit gleicher Tagesordnung einzuberufen, die ohne Rücksicht auf die Zahl der Erschienenen beschlussfähig ist; hierauf ist in der Einladung hinzuweisen.\n3. Beschlüsse werden in offener Abstimmung mit der Mehrheit der Stimmen der anwesenden Mitglieder gefasst; Enthaltungen zählen nicht. Satzungsänderungen bedürfen einer Dreiviertelmehrheit, die Änderung des Zwecks oder die Auflösung der Zustimmung von neun Zehnteln der anwesenden Mitglieder.\n4. Über die Versammlung und die Beschlüsse ist ein Protokoll zu fertigen, das von der Protokollführung und der Versammlungsleitung zu unterschreiben ist.\n\n## § 15 Auflösung des Vereins, Wegfall steuerbegünstigter Zwecke\n\n1. Bei Auflösung sind die bzw. der Vorsitzende und die bzw. der stellvertretende Vorsitzende gemeinsam vertretungsberechtigte Liquidatoren, falls die Mitgliederversammlung keine anderen Personen beruft.\n2. Bei Auflösung oder Aufhebung des Vereins oder bei Wegfall steuerbegünstigter Zwecke fällt das Vermögen an eine juristische Person des öffentlichen Rechts oder eine andere steuerbegünstigte Körperschaft zwecks Verwendung für die Förderung des Tierschutzes.\n3. Die vorstehenden Bestimmungen gelten entsprechend, wenn dem Verein die Rechtsfähigkeit entzogen wurde.\n\n> Diese Satzung wurde in der Gründungsversammlung in Jülich beschlossen und von den Gründungsmitgliedern unterzeichnet. Die per Mitgliederversammlung vom 05.09.2026 beschlossene Neufassung ist maßgeblich.",
+        "en": ""
+      },
+      "metaDescription": {
+        "de": "Die Satzung von Aluna Tierhilfe e.V.",
+        "en": ""
+      },
+      "blocks": []
+    },
+    "adoption-process": {
+      "title": {
+        "de": "Ablauf der *Adoption.*",
+        "en": ""
+      },
+      "lede": {
+        "de": "Einen Hund aus dem Tierschutz zu adoptieren ist eine Entscheidung fürs Leben — für dich und für ihn. Damit am Ende beide zueinander passen, begleiten wir jede Vermittlung mit Sorgfalt. Hier siehst du Schritt für Schritt, wie der Weg vom ersten Interesse bis zur Ankunft deines Hundes aussieht.",
+        "en": ""
+      },
+      "body": {
+        "de": ":::karten\n### Schritt 1 – Melde dich bei uns\nDu hast dich in einen unserer Hunde verliebt? Dann nimm Kontakt zu der Ansprechperson auf, die beim jeweiligen Hund genannt ist. Erzähl uns von dir und deinem Zuhause — gemeinsam finden wir heraus, ob ihr zueinander passt.\n\n### Schritt 2 – Selbstauskunft ausfüllen\nIm Selbstauskunftsbogen erzählst du uns von deinem Alltag, deiner Wohnsituation und deinen Erfahrungen mit Hunden. Das ist keine Prüfung — es hilft uns, den richtigen Hund für dich zu finden und ihm ein Zuhause zu geben, in dem er bleiben darf. Du erhältst den Bogen als PDF nach dem ersten Kontakt.\n\n### Schritt 3 – Vorkontrolle\nBei einem persönlichen Besuch lernen wir dich und dein Zuhause kennen und schauen gemeinsam, wo dein künftiger Hund leben wird. So stellen wir sicher, dass alles passt — für deine Sicherheit und für seine.\n\n### Schritt 4 – Schutzvertrag & Schutzgebühr\nMit dem Schutzvertrag verpflichten wir uns beide dem Wohl deines Hundes. Die Schutzgebühr deckt einen Teil der Kosten für Kastration, Impfungen, Tests und den Transport — sie fließt direkt zurück in den Tierschutz und hilft dem nächsten Hund.\n\n### Schritt 5 – Transport & Ankunft\nJetzt beginnt die schönste Etappe: die Reise zu dir. Dein Hund kommt gechipt, geimpft und mit vollständigen Papieren in einem klimatisierten Transporter nach Deutschland. Wie das genau abläuft und was du zur Abholung mitbringst, liest du im [Ablauf des Transportes](/wissenswertes/ablauf-des-transportes/).\n:::\n\n> Bevor dein Hund einzieht, lohnt sich ein Blick auf [Ein Tierschutzhund zieht ein](/wissenswertes/ein-tierschutzhund-zieht-ein/) — dort erfährst du, wie du ihm die ersten Tage so leicht wie möglich machst. Unsere Hunde findest du unter [Zuhause gesucht](/zuhause-gesucht/).",
+        "en": ""
+      },
+      "metaDescription": {
+        "de": "Schritt für Schritt zur Adoption eines Hundes bei Aluna Tierhilfe e.V.",
+        "en": ""
+      },
+      "blocks": []
+    }
+  }
+}

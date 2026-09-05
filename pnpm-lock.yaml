@@ -6,7 +6,23 @@ settings:
 
 importers:
 
-  .: {}
+  .:
+    devDependencies:
+      '@kompass/core':
+        specifier: workspace:*
+        version: link:packages/core
+      '@kompass/documents':
+        specifier: workspace:*
+        version: link:packages/documents
+      '@kompass/module-animals':
+        specifier: workspace:*
+        version: link:packages/modules/animals
+      '@kompass/module-website':
+        specifier: workspace:*
+        version: link:packages/modules/website
+      tsx:
+        specifier: ^4.19.3
+        version: 4.23.13
 
   apps/kompass:
     dependencies:
@@ -324,6 +340,9 @@ importers:
         specifier: ^4.5.4
         version: 4.5.4
     devDependencies:
+      '@kompass/module-animals':
+        specifier: workspace:*
+        version: link:../animals
       '@types/node':
         specifier: ^26.4.1
         version: 26.4.1

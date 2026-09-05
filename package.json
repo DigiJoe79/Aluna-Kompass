@@ -7,6 +7,14 @@
     "dev": "pnpm --filter @kompass/app dev",
     "e2e": "pnpm --filter @kompass/app e2e",
     "test": "pnpm -r --workspace-concurrency=1 test",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "import:prototype": "tsx scripts/import-prototype.ts"
+  },
+  "devDependencies": {
+    "@kompass/core": "workspace:*",
+    "@kompass/documents": "workspace:*",
+    "@kompass/module-animals": "workspace:*",
+    "@kompass/module-website": "workspace:*",
+    "tsx": "^4.19.3"
   }
 }
