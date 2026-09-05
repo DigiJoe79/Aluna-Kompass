@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
@@ -11,6 +12,9 @@ export type DbOrTx = Db | Parameters<Parameters<Db['transaction']>[0]>[0];
 export const MIGRATIONS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'migrations');
 
 export function openDatabase(filePath: string): { db: Db; sqlite: Database.Database } {
+  if (filePath !== ':memory:') {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  }
   const sqlite = new Database(filePath);
   sqlite.pragma('journal_mode = WAL');
   sqlite.pragma('foreign_keys = ON');
