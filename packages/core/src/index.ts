@@ -38,3 +38,4 @@ export * from './published/view';
 export * from './setup/service';
 export * from './app';
 export * from './seed/seed';
+export * from './i18n/localized';
