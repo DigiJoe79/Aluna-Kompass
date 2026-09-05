@@ -9,6 +9,7 @@ import type { NavGroup } from '@/lib/navigation';
 import { usePreference } from '@/lib/preferences';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
+import { CommandPalette } from './command-palette';
 
 export const DRAWER_BREAKPOINT = 1180;
 
@@ -23,7 +24,6 @@ function titleFor(pathname: string, groups: NavGroup[], t: (k: string) => string
 }
 
 export function ShellFrame({ organization, groups, user, permissions, children }: { organization: string; groups: NavGroup[]; user: { name: string; roleNames: string[] }; permissions: string[]; children: ReactNode }) {
-  void permissions; // ab Task 14 an die Befehlspalette durchgereicht
   const t = useTranslations();
   const pathname = usePathname();
   const [collapsed, setCollapsed] = usePreference('sidebarCollapsed');
@@ -52,6 +52,7 @@ export function ShellFrame({ organization, groups, user, permissions, children }
 
   return (
     <TooltipProvider>
+      <CommandPalette groups={groups} permissions={permissions} />
       <div className="flex min-h-0 flex-1">
         {drawer ? (
           <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>

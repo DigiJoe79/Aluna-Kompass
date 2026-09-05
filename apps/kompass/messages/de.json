@@ -44,7 +44,11 @@
       "unknownSetting": "Unbekannte Einstellung.",
       "invalid": "Ungültiger Wert."
     },
-    "pages": { "forbidden": { "kicker": "Kein Recht", "title": "Diese Seite ist für Ihre Rolle nicht freigegeben.", "text": "Das nötige Recht steht unten. Damit kann die Administration Ihre Rolle anpassen.", "home": "Zurück zur Startseite", "footnote": "Rechte ändert die Administration unter Rollen." } }
+    "pages": {
+      "forbidden": { "kicker": "Kein Recht", "title": "Diese Seite ist für Ihre Rolle nicht freigegeben.", "text": "Das nötige Recht steht unten. Damit kann die Administration Ihre Rolle anpassen.", "home": "Zurück zur Startseite", "footnote": "Rechte ändert die Administration unter Rollen." },
+      "notFound": { "kicker": "Nicht gefunden", "title": "Diesen Eintrag gibt es nicht mehr.", "text": "Protokollierte Daten werden nicht gelöscht — wenn Sie einen Vorgang suchen, hilft das Änderungsprotokoll.", "home": "Startseite", "audit": "Protokoll öffnen" },
+      "technical": { "kicker": "Technischer Fehler", "title": "Der Vorgang wurde abgebrochen.", "text": "Es wurde nichts gespeichert. Die Vorgangsnummer erscheint identisch im Serverprotokoll.", "retry": "Erneut versuchen", "home": "Startseite" }
+    }
   },
   "nav": {
     "aria": "Hauptnavigation",
@@ -465,6 +469,33 @@
       "createdInfo": "Gültig ohne Ablauf, Rechte wie Ihr Konto. Bei Verdacht auf Weitergabe sofort widerrufen.",
       "createdDone": "Ich habe das Token gespeichert",
       "footnote": "Widerrufene Tokens bleiben mit Datum in der Liste, damit Protokolleinträge zuordenbar bleiben."
+    }
+  },
+  "palette": {
+    "aria": "Befehlspalette",
+    "placeholder": "Seite, Einstellung oder Aktion suchen …",
+    "empty": "Keine Treffer.",
+    "groups": {
+      "navigation": "Navigation",
+      "settings": "Einstellungen",
+      "actions": "Aktionen"
+    },
+    "moduleInactive": "Modul {module} nicht aktiv",
+    "select": "wählen",
+    "open": "öffnen",
+    "close": "schließen",
+    "permissionsOnly": "Nur Einträge, für die Sie Rechte haben."
+  },
+  "placeholders": {
+    "documents": {
+      "title": "Dokumente",
+      "emptyTitle": "Folgt mit der Dokumenten-Engine",
+      "emptyText": "Erzeugte PDFs, Nummernkreise und Storno erscheinen hier, sobald Plan 3 (Betrieb) umgesetzt ist."
+    },
+    "backup": {
+      "title": "Backup",
+      "emptyTitle": "Folgt mit der Dokumenten-Engine",
+      "emptyText": "Export und Import des Bestands erscheinen hier, sobald Plan 3 (Betrieb) umgesetzt ist."
     }
   }
 }
