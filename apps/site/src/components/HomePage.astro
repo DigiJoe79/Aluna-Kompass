@@ -1,0 +1,65 @@
+---
+import Base from '../layouts/Base.astro';
+import Blocks from './Blocks.astro';
+import { loadContent, factsOf, pageOf } from '../lib/content';
+import { pick, ui, emphasize, type Locale } from '../lib/locale';
+import { pathFor } from '../lib/routes';
+
+const { locale } = Astro.props as { locale: Locale };
+const content = await loadContent();
+const facts = factsOf(content);
+const homePage = pageOf(content, 'home');
+const t = ui(locale);
+
+const claim = pick(facts.claim, locale);
+const lede = pick(homePage.lede, locale);
+const org = facts.organization;
+---
+<Base locale={locale} active="home">
+  <section class="hero">
+    <img class="hero-bg" src="/images/placeholder-hero.jpg" alt={org.name} />
+    <div class="hero-inner">
+      <p class="eyebrow eyebrow-light"><span class="eyebrow-dot"></span>{org.name} · {locale === 'de' ? 'Gemeinnützig' : 'Non-profit'}</p>
+      <h1 class="hero-title" set:html={emphasize(claim.value)}></h1>
+      {lede.value && <p class="hero-lede" data-fallback={lede.fallback ?? undefined}>{lede.value}</p>}
+      <div class="hero-ctas">
+        <a class="btn btn-primary btn-lg" href={pathFor('donate', locale)}>
+          <svg class="icon icon-md icon-heart" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 21s-7.5-4.5-9.5-9C1.1 8.6 3 5 6.5 5c2 0 3.5 1.1 4.5 2.5C12 6.1 13.5 5 15.5 5 19 5 20.9 8.6 19.5 12c-2 4.5-7.5 9-7.5 9z" />
+          </svg>
+          {t.cta.donate}
+        </a>
+        <a class="btn btn-onphoto btn-lg" href={pathFor('dogs', locale)}>{t.cta.meetDogs}</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="trust" aria-label="Vertrauen">
+    <div class="wrap trust-grid">
+      <div class="trust-item">
+        <p class="trust-num">100&nbsp;%</p>
+        <p class="trust-lbl">{locale === 'de' ? 'gemeinnützig &' : 'non-profit &'}<br />{locale === 'de' ? 'nicht profitorientiert' : 'not for profit'}</p>
+      </div>
+      <div class="trust-item">
+        <p class="trust-num">{facts.forwardingPercent.toString().replace('.', ',')}&nbsp;%</p>
+        <p class="trust-lbl">{locale === 'de' ? 'aller erhaltenen Spenden' : 'of all donations'}<br />{locale === 'de' ? 'fließen direkt an den Shelter' : 'go directly to the shelter'}</p>
+      </div>
+      <div class="trust-item">
+        <p class="trust-num">~{facts.shelterDogCount}</p>
+        <p class="trust-lbl">{locale === 'de' ? 'Hunde leben aktuell' : 'dogs currently live'}<br />{locale === 'de' ? 'in unserem Partner-Shelter' : 'in our partner shelter'}</p>
+      </div>
+      <div class="trust-item">
+        <p class="trust-num">§&nbsp;11</p>
+        <p class="trust-lbl">{t.footer.section11}<br />{facts.section11Status === 'granted' ? t.footer.granted : t.footer.pending}</p>
+      </div>
+    </div>
+  </section>
+
+  {homePage.blocks.length > 0 && (
+    <section class="section">
+      <div class="wrap">
+        <Blocks blocks={homePage.blocks} locale={locale} />
+      </div>
+    </section>
+  )}
+</Base>

@@ -1,0 +1,380 @@
+{
+  "facts": [
+    {
+      "claim": {
+        "de": "Hoffnung für Rumäniens *Straßenhunde.*",
+        "en": "Hope for Romania's *street dogs.*"
+      },
+      "forwardingPercent": 97.2,
+      "shelterDogCount": 150,
+      "donationBoxLocations": [
+        "Köln-Porz",
+        "Jülich"
+      ],
+      "section11Status": "pending",
+      "section11Date": "",
+      "socialLinks": [
+        {
+          "label": "Instagram",
+          "href": "https://instagram.com/example"
+        }
+      ],
+      "betterplaceMetaProjectId": "000000",
+      "betterplaceDefaultAmount": 50,
+      "featuredAnimalSlug": "auto",
+      "featuredStorySlug": "auto",
+      "organization": {
+        "name": "Musterverein e.V.",
+        "legalName": "Musterverein e.V.",
+        "email": "kontakt@example.org",
+        "phone": "+49 221 000000",
+        "address": "Musterstraße 1, 50667 Köln",
+        "iban": "DE00 0000 0000 0000 0000 00",
+        "bic": "GENODED1XXX",
+        "bankName": "Musterbank"
+      }
+    }
+  ],
+  "pages": [
+    {
+      "key": "home",
+      "title": { "de": "Willkommen bei Aluna", "en": "Welcome to Aluna" },
+      "lede": { "de": "Wir retten, versorgen und vermitteln Hunde in Not.", "en": "We rescue, care for and find homes for dogs in need." },
+      "body": { "de": "Gemeinsam schaffen wir Hoffnung für Hunde in Rumänien.", "en": "Together we bring hope to dogs in Romania." },
+      "metaDescription": { "de": "Aluna Tierhilfe e.V. — Schutz und Vermittlung für Hunde.", "en": "Aluna Animal Welfare — rescue and adoption." },
+      "blocks": [
+        {
+          "id": "block-help",
+          "title": { "de": "Helfen", "en": "Help" },
+          "text": { "de": "Spenden, Patenschaften und Fördermitgliedschaft.", "en": "Donations, sponsorships and memberships." },
+          "imageAssetId": "asset-project-grundversorgung",
+          "href": "/helfen/",
+          "label": { "de": "Mehr erfahren", "en": "Learn more" }
+        },
+        {
+          "id": "block-dogs",
+          "title": { "de": "Zuhause gesucht", "en": "Looking for a home" },
+          "text": { "de": "Unsere Hunde suchen ein liebevolles Zuhause.", "en": "Our dogs are looking for loving homes." },
+          "imageAssetId": "asset-chiara-1",
+          "href": "/zuhause-gesucht/",
+          "label": { "de": "Hunde ansehen", "en": "See dogs" }
+        }
+      ]
+    },
+    {
+      "key": "help",
+      "title": { "de": "Wie Sie *helfen* können", "en": "How you can *help*" },
+      "lede": { "de": "Jeder Beitrag sichert Futter, medizinische Versorgung und Kastrationen.", "en": "Every contribution secures food, medical care and neutering." },
+      "body": { "de": "Ob Einmalspende, Futterpatenschaft oder Fördermitgliedschaft — jede Hilfe zählt.", "en": "Whether one-off donation, sponsorship or membership — every bit helps." },
+      "metaDescription": { "de": "Helfen Sie Aluna Tierhilfe e.V.", "en": "Help Aluna Animal Welfare." },
+      "blocks": [
+        {
+          "id": "block-donate",
+          "title": { "de": "Spenden", "en": "Donate" },
+          "text": { "de": "Direkte Hilfe für Tierarztkosten und Futter.", "en": "Direct help for vet costs and food." },
+          "imageAssetId": null,
+          "href": "/spenden/",
+          "label": { "de": "Jetzt spenden", "en": "Donate now" }
+        },
+        {
+          "id": "block-sponsor",
+          "title": { "de": "Pate werden", "en": "Become a sponsor" },
+          "text": { "de": "Übernehmen Sie eine monatliche Patenschaft für ein Tier.", "en": "Support an animal with a monthly sponsorship." },
+          "imageAssetId": null,
+          "href": "/helfen/tierpate-werden/",
+          "label": { "de": "Tierpate werden", "en": "Become a sponsor" }
+        }
+      ]
+    },
+    {
+      "key": "donate",
+      "title": { "de": "Jetzt *spenden*", "en": "Donate *now*" },
+      "lede": { "de": "Ihre Spende kommt direkt den Hunden im Shelter zugute.", "en": "Your donation goes directly to the dogs in the shelter." },
+      "body": { "de": "Überweisen Sie direkt oder nutzen Sie unser Online-Spendenformular.", "en": "Transfer directly or use our online donation form." },
+      "metaDescription": { "de": "Spenden für Aluna Tierhilfe e.V.", "en": "Donate to Aluna." },
+      "blocks": []
+    },
+    {
+      "key": "sponsor",
+      "title": { "de": "Tierpate *werden*", "en": "Become a *sponsor*" },
+      "lede": { "de": "Begleiten Sie einen Hund bis zu seiner Vermittlung.", "en": "Support a dog until their adoption." },
+      "body": { "de": "Als Pate sichern Sie Futter und Betreuung.", "en": "As a sponsor you secure food and care." },
+      "metaDescription": { "de": "Patenschaften bei Aluna", "en": "Sponsorships at Aluna" },
+      "blocks": []
+    },
+    {
+      "key": "membership",
+      "title": { "de": "Fördermitglied *werden*", "en": "Become a *supporting member*" },
+      "lede": { "de": "Geben Sie unserer Arbeit langfristige Planungssicherheit.", "en": "Give our work long-term planning security." },
+      "body": { "de": "Fördermitglieder tragen den Verein verlässlich durch jedes Jahr.", "en": "Supporting members reliably sustain the association." },
+      "metaDescription": { "de": "Fördermitgliedschaft bei Aluna", "en": "Membership at Aluna" },
+      "blocks": []
+    },
+    {
+      "key": "about",
+      "title": { "de": "Über *uns*", "en": "About *us*" },
+      "lede": { "de": "Wer wir sind, was uns antreibt und wie wir arbeiten.", "en": "Who we are, what drives us, and how we work." },
+      "body": { "de": "Aluna Tierhilfe e.V. setzt sich für Straßentiere in Rumänien ein.", "en": "Aluna Animal Welfare advocates for street animals in Romania." },
+      "metaDescription": { "de": "Über Aluna Tierhilfe e.V.", "en": "About Aluna Animal Welfare" },
+      "blocks": []
+    },
+    {
+      "key": "team",
+      "title": { "de": "Unser *Team*", "en": "Our *team*" },
+      "lede": { "de": "Ehrenamtlich, engagiert und mit ganzem Herzen dabei.", "en": "Volunteer, committed, and full of heart." },
+      "body": { "de": "Lernen Sie die Menschen hinter Aluna Tierhilfe kennen.", "en": "Meet the people behind Aluna." },
+      "metaDescription": { "de": "Das Team von Aluna Tierhilfe", "en": "The Aluna Team" },
+      "blocks": []
+    },
+    {
+      "key": "partners",
+      "title": { "de": "Unsere *Partner*", "en": "Our *partners*" },
+      "lede": { "de": "Gemeinsam stark für den Tierschutz.", "en": "Stronger together for animal welfare." },
+      "body": { "de": "Wir arbeiten eng mit Partnern vor Ort und Vermittlungsorganisationen zusammen.", "en": "We work closely with local partners and adoption organizations." },
+      "metaDescription": { "de": "Partner von Aluna Tierhilfe", "en": "Partners of Aluna" },
+      "blocks": []
+    },
+    {
+      "key": "contact",
+      "title": { "de": "*Kontakt*", "en": "*Contact*" },
+      "lede": { "de": "Schreiben Sie uns — wir antworten so schnell wie möglich.", "en": "Write to us — we answer as quickly as possible." },
+      "body": { "de": "Nutzen Sie unsere E-Mail-Adresse oder Telefonnummer.", "en": "Reach us by email or phone." },
+      "metaDescription": { "de": "Kontakt zu Aluna Tierhilfe e.V.", "en": "Contact Aluna" },
+      "blocks": []
+    },
+    {
+      "key": "imprint",
+      "title": { "de": "*Impressum*", "en": "*Imprint*" },
+      "lede": { "de": "Angaben gemäß § 5 TMG.", "en": "Legal information." },
+      "body": { "de": "Musterverein e.V.\nMusterstraße 1\n50667 Köln\n\nVertreten durch den Vorstand.", "en": "Musterverein e.V.\nMusterstraße 1\n50667 Köln" },
+      "metaDescription": { "de": "Impressum von Aluna Tierhilfe e.V.", "en": "Imprint" },
+      "blocks": []
+    },
+    {
+      "key": "privacy",
+      "title": { "de": "*Datenschutz*", "en": "*Privacy Policy*" },
+      "lede": { "de": "Verantwortlicher Umgang mit Ihren Daten.", "en": "Responsible handling of your data." },
+      "body": { "de": "Wir verarbeiten personenbezogene Daten nur im notwendigen Rahmen.", "en": "We only process personal data when strictly necessary." },
+      "metaDescription": { "de": "Datenschutzerklärung von Aluna Tierhilfe e.V.", "en": "Privacy policy" },
+      "blocks": []
+    },
+    {
+      "key": "statutes",
+      "title": { "de": "Vereins*satzung*", "en": "Association *statutes*" },
+      "lede": { "de": "Die rechtliche Grundlage unserer gemeinnützigen Arbeit.", "en": "The legal foundation of our non-profit work." },
+      "body": { "de": "Hier finden Sie die vollständige Satzung unseres Vereins.", "en": "Here you can find the complete statutes of our association." },
+      "metaDescription": { "de": "Satzung von Aluna Tierhilfe e.V.", "en": "Statutes of Aluna" },
+      "blocks": []
+    },
+    {
+      "key": "adoption-process",
+      "title": { "de": "Ablauf der *Adoption*", "en": "Adoption *process*" },
+      "lede": { "de": "Schritt für Schritt zu Ihrem neuen Familienmitglied.", "en": "Step by step towards your new family member." },
+      "body": { "de": "Von der Selbstauskunft über die Vorkontrolle bis zur Ankunft.", "en": "From disclosure to home check to arrival." },
+      "metaDescription": { "de": "So läuft die Adoption bei Aluna", "en": "How adoption works at Aluna" },
+      "blocks": []
+    }
+  ],
+  "articles": [
+    {
+      "slug": "ablauf-der-adoption",
+      "title": { "de": "Ablauf der Adoption", "en": "Adoption Process" },
+      "lede": { "de": "Alles Wissenswerte von der Anfrage bis zum Einzug.", "en": "Everything from inquiry to arrival." },
+      "body": { "de": "# Schritt 1: Anfrage\n\nFüllen Sie unsere Selbstauskunft aus.", "en": "# Step 1: Inquiry\n\nFill out our questionnaire." },
+      "publishedAt": "2026-09-01",
+      "sortOrder": 1
+    },
+    {
+      "slug": "transport-und-ankunft",
+      "title": { "de": "Transport und Ankunft", "en": "Transport and Arrival" },
+      "lede": { "de": "Wie unsere Schützlinge sicher nach Deutschland reisen.", "en": "How our rescues travel safely to Germany." },
+      "body": { "de": "# Sicherer Transport\n\nMit klimatisierten Fahrzeugen und Traces-Zulassung.", "en": "# Safe transport\n\nWith certified vehicles." },
+      "publishedAt": "2026-09-02",
+      "sortOrder": 2
+    }
+  ],
+  "team": [
+    {
+      "name": "Nicole Wießner",
+      "position": { "de": "1. Vorsitzende & Vermittlung", "en": "Chairwoman & Adoption" },
+      "photoAssetId": "asset-nicole",
+      "petPhotoAssetId": null,
+      "sortOrder": 1
+    },
+    {
+      "name": "Anna Berger",
+      "position": { "de": "Kassenwartin", "en": "Treasurer" },
+      "photoAssetId": null,
+      "petPhotoAssetId": null,
+      "sortOrder": 2
+    },
+    {
+      "name": "Markus Schmidt",
+      "position": { "de": "Schriftführer", "en": "Secretary" },
+      "photoAssetId": null,
+      "petPhotoAssetId": null,
+      "sortOrder": 3
+    }
+  ],
+  "faqs": [
+    {
+      "category": { "de": "Spenden", "en": "Donations" },
+      "question": { "de": "Wohin geht meine Spende?", "en": "Where does my donation go?" },
+      "answer": { "de": "97,2 % fließen direkt in Futter und Tierarztkosten.", "en": "97.2% goes directly towards food and vet costs." },
+      "sortOrder": 1
+    },
+    {
+      "category": { "de": "Spenden", "en": "Donations" },
+      "question": { "de": "Erhalte ich eine Spendenquittung?", "en": "Do I receive a tax receipt?" },
+      "answer": { "de": "Ja, automatisch zu Beginn des Folgejahres.", "en": "Yes, automatically at the beginning of the next year." },
+      "sortOrder": 2
+    },
+    {
+      "category": { "de": "Adoption", "en": "Adoption" },
+      "question": { "de": "Wie läuft die Vorkontrolle ab?", "en": "How does the home check work?" },
+      "answer": { "de": "Ein ehrenamtlicher Helfer besucht Sie vor Ort.", "en": "A volunteer visits you at home." },
+      "sortOrder": 3
+    },
+    {
+      "category": { "de": "Adoption", "en": "Adoption" },
+      "question": { "de": "Sind die Hunde geimpft und gechippt?", "en": "Are the dogs vaccinated and microchipped?" },
+      "answer": { "de": "Ja, alle Hunde reisen voll geimpft, entwurmt und gechippt mit EU-Heimtierausweis.", "en": "Yes, all dogs travel fully vaccinated, microchipped with EU pet passport." },
+      "sortOrder": 4
+    }
+  ],
+  "projects": [
+    {
+      "slug": "grundversorgung",
+      "name": { "de": "Grundversorgung im Shelter", "en": "Basic care at the shelter" },
+      "type": "ongoing",
+      "status": "active",
+      "summary": { "de": "Tägliches Futter und Pflege für 150 Hunde.", "en": "Daily food and care for 150 dogs." },
+      "body": { "de": "# Futter und Pflege\n\nJeden Tag brauchen unsere Schützlinge Futter.", "en": "# Food and care\n\nEvery day our rescues need food." },
+      "imageAssetId": "asset-project-grundversorgung",
+      "betterplaceProjectId": "111111",
+      "sortOrder": 1
+    },
+    {
+      "slug": "op-fonds",
+      "name": { "de": "Notfall- und OP-Fonds", "en": "Emergency & Surgery Fund" },
+      "type": "shortTerm",
+      "status": "active",
+      "summary": { "de": "Dringende Operationen für verletzte Straßenhunde.", "en": "Urgent surgeries for injured street dogs." },
+      "body": { "de": "# Schnelle Hilfe\n\nWenn ein Hund angefahren wird, zählt jede Stunde.", "en": "# Fast help\n\nWhen a dog is injured, every hour counts." },
+      "imageAssetId": "asset-project-opfonds",
+      "betterplaceProjectId": "222222",
+      "sortOrder": 2
+    }
+  ],
+  "downloads": [
+    {
+      "key": "sponsorship-form",
+      "title": { "de": "Patenschaftsantrag", "en": "Sponsorship application" },
+      "assetId": "asset-download-pdf"
+    },
+    {
+      "key": "membership-form",
+      "title": { "de": "Aufnahmeantrag Fördermitgliedschaft", "en": "Membership application" },
+      "assetId": "asset-download-pdf"
+    },
+    {
+      "key": "self-disclosure-form",
+      "title": { "de": "Selbstauskunft", "en": "Self-disclosure form" },
+      "assetId": "asset-download-pdf"
+    },
+    {
+      "key": "statutes-pdf",
+      "title": { "de": "Satzung als PDF", "en": "Statutes PDF" },
+      "assetId": "asset-download-pdf"
+    }
+  ],
+  "animals": [
+    {
+      "slug": "chiara",
+      "name": "Chiara",
+      "sex": "female",
+      "birthText": { "de": "ca. 2 Jahre", "en": "approx. 2 years" },
+      "sizeCm": 45,
+      "sizeText": { "de": "ca. 45 cm", "en": "approx. 45 cm" },
+      "location": "shelter",
+      "status": "lookingForHome",
+      "isEmergency": true,
+      "isSponsorable": true,
+      "traits": {
+        "de": ["ruhig", "freundlich", "verträglich"],
+        "en": ["calm", "friendly", "sociable"]
+      },
+      "externalProfileUrl": "",
+      "summary": { "de": "Sanfte Hündin sucht ein geduldiges Zuhause.", "en": "Gentle female dog looking for a patient home." },
+      "body": { "de": "Chiara wurde verlassen am Straßenrand gefunden.", "en": "Chiara was found abandoned by the roadside." },
+      "photos": [
+        { "assetId": "asset-chiara-1", "sortOrder": 1, "isPrimary": true },
+        { "assetId": "asset-chiara-2", "sortOrder": 2, "isPrimary": false }
+      ],
+      "story": null
+    },
+    {
+      "slug": "bruno",
+      "name": "Bruno",
+      "sex": "male",
+      "birthText": { "de": "ca. 4 Jahre", "en": "approx. 4 years" },
+      "sizeCm": 55,
+      "sizeText": { "de": "ca. 55 cm", "en": "approx. 55 cm" },
+      "location": "germany",
+      "status": "lookingForHome",
+      "isEmergency": true,
+      "isSponsorable": false,
+      "traits": {
+        "de": ["aufgeschlossen", "aktiv"],
+        "en": ["open", "active"]
+      },
+      "externalProfileUrl": "",
+      "summary": { "de": "Bruno ist bereits in einer Pflegestelle in Deutschland.", "en": "Bruno is already in foster care in Germany." },
+      "body": { "de": "Bruno lernt fleißig das Hunde-1x1.", "en": "Bruno is learning his dog basics." },
+      "photos": [
+        { "assetId": "asset-bruno-1", "sortOrder": 1, "isPrimary": true }
+      ],
+      "story": null
+    },
+    {
+      "slug": "akiko",
+      "name": "Akiko",
+      "sex": "female",
+      "birthText": { "de": "ca. 1 Jahr", "en": "approx. 1 year" },
+      "sizeCm": 40,
+      "sizeText": { "de": "ca. 40 cm", "en": "approx. 40 cm" },
+      "location": "germany",
+      "status": "adopted",
+      "isEmergency": false,
+      "isSponsorable": false,
+      "traits": {
+        "de": ["verspielt", "verschmust"],
+        "en": ["playful", "cuddly"]
+      },
+      "externalProfileUrl": "",
+      "summary": { "de": "Glücklich vermittelt.", "en": "Happily adopted." },
+      "body": { "de": "Akiko hat ihr Traumzuhause gefunden.", "en": "Akiko found her dream home." },
+      "photos": [
+        { "assetId": "asset-akiko-after", "sortOrder": 1, "isPrimary": true }
+      ],
+      "story": {
+        "beforeAssetId": "asset-akiko-before",
+        "afterAssetId": "asset-akiko-after",
+        "quote": { "de": "Akiko bereichert unser Leben jeden Tag.", "en": "Akiko enriches our lives every day." },
+        "family": "Familie M., Köln",
+        "adoptedYear": 2026
+      }
+    }
+  ],
+  "assets": [
+    { "id": "asset-chiara-1", "filename": "placeholder-hund.png", "mimeType": "image/png", "width": 480, "height": 360 },
+    { "id": "asset-chiara-2", "filename": "placeholder-hund.png", "mimeType": "image/png", "width": 480, "height": 360 },
+    { "id": "asset-bruno-1", "filename": "placeholder-hund.png", "mimeType": "image/png", "width": 480, "height": 360 },
+    { "id": "asset-akiko-before", "filename": "placeholder-story-vorher.png", "mimeType": "image/png", "width": 480, "height": 360 },
+    { "id": "asset-akiko-after", "filename": "placeholder-story-nachher.jpg", "mimeType": "image/jpeg", "width": 480, "height": 360 },
+    { "id": "asset-nicole", "filename": "placeholder-hund.png", "mimeType": "image/png", "width": 320, "height": 320 },
+    { "id": "asset-project-grundversorgung", "filename": "placeholder-projekt.jpg", "mimeType": "image/jpeg", "width": 960, "height": 540 },
+    { "id": "asset-project-opfonds", "filename": "placeholder-projekt-feature.png", "mimeType": "image/png", "width": 960, "height": 540 },
+    { "id": "asset-download-pdf", "filename": "statutes.pdf", "mimeType": "application/pdf", "width": null, "height": null }
+  ]
+}

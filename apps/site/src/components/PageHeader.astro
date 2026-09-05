@@ -1,0 +1,16 @@
+---
+import { emphasize } from '../lib/locale';
+
+const { eyebrow, title, lede, narrow = false, fallback = null } = Astro.props as {
+  eyebrow: string;
+  title: string;
+  lede?: string;
+  narrow?: boolean;
+  fallback?: 'de' | null;
+};
+---
+<div class:list={['section-head', narrow && 'section-head-narrow']} data-fallback={fallback ?? undefined}>
+  <p class="eyebrow"><span class="eyebrow-dot"></span>{eyebrow}</p>
+  <h1 class="section-title" set:html={emphasize(title)}></h1>
+  {lede && <p class="section-lede">{lede}</p>}
+</div>

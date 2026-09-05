@@ -1,0 +1,70 @@
+---
+import TextPage from '../components/TextPage.astro';
+import HomePage from '../components/HomePage.astro';
+import { loadContent, pageOf } from '../lib/content';
+import { ui, type Locale } from '../lib/locale';
+import { paramFor, pathFor, type Kind } from '../lib/routes';
+
+export async function getStaticPaths() {
+  const locales: Locale[] = ['de', 'en'];
+  const textKinds: Kind[] = [
+    'help',
+    'donate',
+    'sponsor',
+    'membership',
+    'about',
+    'partners',
+    'contact',
+    'imprint',
+    'privacy',
+    'statutes',
+    'adoption-process',
+  ];
+  const paths: { params: { path: string | undefined }; props: { kind: Kind; locale: Locale; slug?: string } }[] = [];
+  for (const locale of locales) {
+    paths.push({ params: { path: paramFor(pathFor('home', locale)) }, props: { kind: 'home', locale } });
+    for (const kind of textKinds) {
+      paths.push({ params: { path: paramFor(pathFor(kind, locale)) }, props: { kind, locale } });
+    }
+  }
+  return paths;
+}
+
+const { kind, locale } = Astro.props as { kind: Kind; locale: Locale; slug?: string };
+const content = await loadContent();
+const t = ui(locale);
+const eyebrows: Record<string, string> = {
+  help: t.nav.help,
+  donate: t.cta.donate,
+  sponsor: t.cta.sponsor,
+  membership: locale === 'de' ? 'Fördermitglied werden' : 'Supporting membership',
+  about: t.nav.about,
+  partners: locale === 'de' ? 'Unsere Partner' : 'Our partners',
+  contact: t.footer.contact,
+  imprint: t.footer.imprint,
+  privacy: t.footer.privacy,
+  statutes: locale === 'de' ? 'Vereinssatzung' : 'Statutes',
+  'adoption-process': locale === 'de' ? 'Ablauf der Adoption' : 'Adoption process',
+};
+const activeFor: Partial<Record<Kind, string>> = {
+  help: 'help',
+  donate: 'help',
+  sponsor: 'help',
+  membership: 'help',
+  about: 'about',
+  partners: 'about',
+  faq: 'faq',
+  contact: 'faq',
+};
+---
+{kind === 'home' ? (
+  <HomePage locale={locale} />
+) : (
+  <TextPage
+    page={pageOf(content, kind)}
+    locale={locale}
+    eyebrow={eyebrows[kind] ?? ''}
+    active={activeFor[kind]}
+    wide={kind === 'help' || kind === 'donate'}
+  />
+)}

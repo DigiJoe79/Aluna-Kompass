@@ -1,0 +1,12 @@
+---
+import { renderMarkdown } from '@kompass/markdown';
+
+const { markdown, fallback = null, class: cls = 'prose' } = Astro.props as {
+  markdown: string;
+  fallback?: 'de' | null;
+  class?: string;
+};
+
+const html = await renderMarkdown(markdown ?? '');
+---
+{html && <div class={cls} data-fallback={fallback ?? undefined} set:html={html}></div>}
