@@ -23,6 +23,12 @@ describe('database', () => {
       'settings',
       'user_roles',
       'users',
+      'website_articles',
+      'website_downloads',
+      'website_faqs',
+      'website_pages',
+      'website_publishes',
+      'website_team',
     ]);
   });
 
