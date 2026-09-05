@@ -1,0 +1,73 @@
+---
+import Base from '../layouts/Base.astro';
+import DogCard from './DogCard.astro';
+import PageHeader from './PageHeader.astro';
+import { loadContent, animalsOf } from '../lib/content';
+import { loadImages } from '../lib/images';
+import { ui, type Locale } from '../lib/locale';
+import { pathFor } from '../lib/routes';
+
+const { locale } = Astro.props as { locale: Locale };
+const content = await loadContent();
+const images = await loadImages();
+const dogs = animalsOf(content).filter((d) => d.status !== 'adopted');
+const t = ui(locale);
+const listInfo = t.lists.dogs;
+---
+<Base title={listInfo.eyebrow} description={listInfo.lede} locale={locale} active="dogs">
+  <div class="aluna-page">
+    <div class="wrap">
+      <PageHeader eyebrow={listInfo.eyebrow} title={listInfo.title} lede={listInfo.lede} />
+
+      <div class="dog-filter" role="group" aria-label={t.filter.label}>
+        <span class="dog-filter-label">{t.filter.label}</span>
+        <button class="chip" data-filter="alle" aria-pressed="true">{t.filter.all}</button>
+        <button class="chip" data-filter="notfall" aria-pressed="false">{t.filter.emergency}</button>
+        <button class="chip" data-filter="deutschland" aria-pressed="false">{t.filter.germany}</button>
+        <button class="chip" data-filter="klein" aria-pressed="false">{t.filter.small}</button>
+        <button class="chip" data-filter="gross" aria-pressed="false">{t.filter.large}</button>
+      </div>
+
+      <div class="dog-grid" id="doggrid">
+        {dogs.map((dog) => <DogCard dog={dog} locale={locale} images={images} />)}
+        <p class="dog-empty" hidden>{t.filter.empty}</p>
+      </div>
+
+      <p class="aluna-note">
+        {locale === 'de' ? (
+          <>Du hast einen Liebling entdeckt? Auf der Hundeseite findest du eine vorbereitete E-Mail für deine erste Anfrage. Wie eine Vermittlung abläuft, liest du unter <a href={pathFor('adoption-process', locale)}>Ablauf der Adoption</a>.</>
+        ) : (
+          <>Found a favorite? On the dog’s page you’ll find a pre-filled email for your initial inquiry. Read about our process under <a href={pathFor('adoption-process', locale)}>Adoption process</a>.</>
+        )}
+      </p>
+    </div>
+  </div>
+
+  <script>
+    const grid = document.getElementById('doggrid');
+    if (grid) {
+      const cards = [...grid.querySelectorAll<HTMLElement>('.dog-card')];
+      const empty = grid.querySelector<HTMLElement>('.dog-empty');
+      const chips = [...document.querySelectorAll<HTMLElement>('.chip')];
+      const test: Record<string, (c: HTMLElement) => boolean> = {
+        alle: () => true,
+        notfall: (c) => c.dataset.notfall === '1',
+        deutschland: (c) => c.dataset.ort === 'germany' || c.dataset.ort === 'Deutschland',
+        klein: (c) => Number(c.dataset.groesse) <= 45,
+        gross: (c) => Number(c.dataset.groesse) > 45,
+      };
+      chips.forEach((chip) => chip.addEventListener('click', () => {
+        chips.forEach((c) => c.setAttribute('aria-pressed', String(c === chip)));
+        const filterKey = chip.dataset.filter ?? 'alle';
+        const fn = test[filterKey] || test.alle;
+        let visible = 0;
+        cards.forEach((c) => {
+          const ok = fn(c);
+          c.hidden = !ok;
+          if (ok) visible++;
+        });
+        if (empty) empty.hidden = visible !== 0;
+      }));
+    }
+  </script>
+</Base>

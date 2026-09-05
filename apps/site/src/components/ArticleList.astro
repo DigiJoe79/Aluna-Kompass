@@ -1,0 +1,36 @@
+---
+import Base from '../layouts/Base.astro';
+import PageHeader from './PageHeader.astro';
+import { loadContent } from '../lib/content';
+import { pick, ui, type Locale } from '../lib/locale';
+import { pathFor } from '../lib/routes';
+
+const { locale } = Astro.props as { locale: Locale };
+const content = await loadContent();
+const articles = [...content.articles].sort((a, b) => a.sortOrder - b.sortOrder);
+const t = ui(locale);
+const listInfo = t.lists.articles;
+---
+<Base title={listInfo.eyebrow} description={listInfo.lede} locale={locale} active="about">
+  <div class="aluna-page">
+    <div class="wrap">
+      <PageHeader eyebrow={listInfo.eyebrow} title={listInfo.title} lede={listInfo.lede} />
+
+      <div class="aluna-archive-grid cols-2">
+        {articles.map((a) => {
+          const title = pick(a.title, locale);
+          const lede = pick(a.lede, locale);
+          return (
+            <article class="dog-text">
+              <h3 style="font-family:var(--f-display);font-weight:600;font-size:24px;color:var(--navy);margin-bottom:8px" data-fallback={title.fallback ?? undefined}>
+                <a href={pathFor('article', locale, a.slug)} style="text-decoration:none;color:inherit">{title.value}</a>
+              </h3>
+              <p style="margin-bottom:12px" data-fallback={lede.fallback ?? undefined}>{lede.value.slice(0, 180)}…</p>
+              <a class="link link-arrow" href={pathFor('article', locale, a.slug)}>{t.cta.readMore}</a>
+            </article>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+</Base>

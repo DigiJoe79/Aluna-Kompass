@@ -1,0 +1,26 @@
+---
+import Base from '../layouts/Base.astro';
+import PageHeader from './PageHeader.astro';
+import ProjectCard from './ProjectCard.astro';
+import { loadContent } from '../lib/content';
+import { loadImages } from '../lib/images';
+import { ui, type Locale } from '../lib/locale';
+
+const { locale } = Astro.props as { locale: Locale };
+const content = await loadContent();
+const images = await loadImages();
+const projects = [...content.projects].sort((a, b) => a.sortOrder - b.sortOrder);
+const t = ui(locale);
+const listInfo = t.lists.projects;
+---
+<Base title={listInfo.eyebrow} description={listInfo.lede} locale={locale} active="projects">
+  <div class="aluna-page">
+    <div class="wrap">
+      <PageHeader eyebrow={listInfo.eyebrow} title={listInfo.title} lede={listInfo.lede} />
+
+      <div class="project-grid project-grid-even">
+        {projects.map((p) => <ProjectCard project={p} locale={locale} images={images} />)}
+      </div>
+    </div>
+  </div>
+</Base>

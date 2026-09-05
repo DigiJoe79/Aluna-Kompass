@@ -1,0 +1,62 @@
+---
+import Base from '../layouts/Base.astro';
+import PageHeader from './PageHeader.astro';
+import { animalsOf, loadContent } from '../lib/content';
+import { imageFor, loadImages } from '../lib/images';
+import { pick, ui, type Locale } from '../lib/locale';
+import { pathFor } from '../lib/routes';
+
+const { locale } = Astro.props as { locale: Locale };
+const content = await loadContent();
+const images = await loadImages();
+const stories = animalsOf(content).filter((d) => d.status === 'adopted' && d.story);
+const t = ui(locale);
+const listInfo = t.lists.stories;
+---
+<Base title={listInfo.eyebrow} description={listInfo.lede} locale={locale} active="dogs">
+  <div class="aluna-page">
+    <div class="wrap">
+      <PageHeader eyebrow={listInfo.eyebrow} title={listInfo.title} lede={listInfo.lede} />
+
+      {stories.map((d) => {
+        const story = d.story!;
+        const beforeImg = imageFor(images, story.beforeAssetId);
+        const afterImg = imageFor(images, story.afterAssetId);
+        const quote = pick(story.quote, locale);
+        return (
+          <article style="margin-bottom:64px">
+            <div class="aluna-archive-grid cols-2" style="margin-top:0">
+              <figure style="margin:0">
+                {beforeImg ? (
+                  <img src={beforeImg.src} srcset={beforeImg.srcset} alt={`${d.name} im Shelter`} loading="lazy" width={beforeImg.width} height={beforeImg.height} style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:18px" />
+                ) : (
+                  <img src="/images/placeholder-story-vorher.png" alt={`${d.name} im Shelter`} loading="lazy" width="480" height="360" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:18px" />
+                )}
+                <figcaption style="font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-top:8px">{t.story.before} · Shelter</figcaption>
+              </figure>
+              <figure style="margin:0">
+                {afterImg ? (
+                  <img src={afterImg.src} srcset={afterImg.srcset} alt={`${d.name} im neuen Zuhause`} loading="lazy" width={afterImg.width} height={afterImg.height} style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:18px" />
+                ) : (
+                  <img src="/images/placeholder-story-nachher.jpg" alt={`${d.name} im neuen Zuhause`} loading="lazy" width="480" height="360" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:18px" />
+                )}
+                <figcaption style="font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-top:8px">{t.story.after} · {locale === 'de' ? 'Ihr neues Zuhause' : 'New home'}</figcaption>
+              </figure>
+            </div>
+            <h2 class="section-title" style="margin-top:28px;font-size:clamp(30px,3.6vw,44px)">{d.name} {t.story.found}</h2>
+            <p class="dog-text" style="margin-top:12px" data-fallback={quote.fallback ?? undefined}>„{quote.value}“</p>
+            <p style="font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-top:8px">{story.family} · {t.story.year} {story.adoptedYear}</p>
+          </article>
+        );
+      })}
+
+      <p class="aluna-note">
+        {locale === 'de' ? (
+          <>Möchtest du die nächste Erfolgsgeschichte schreiben? Lern unsere Hunde unter <a href={pathFor('dogs', locale)}>Zuhause gesucht</a> kennen.</>
+        ) : (
+          <>Want to write the next success story? Meet our dogs under <a href={pathFor('dogs', locale)}>Looking for a home</a>.</>
+        )}
+      </p>
+    </div>
+  </div>
+</Base>

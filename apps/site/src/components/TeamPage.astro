@@ -1,0 +1,43 @@
+---
+import Base from '../layouts/Base.astro';
+import PageHeader from './PageHeader.astro';
+import { loadContent } from '../lib/content';
+import { imageFor, loadImages } from '../lib/images';
+import { pick, ui, type Locale } from '../lib/locale';
+
+const { locale } = Astro.props as { locale: Locale };
+const content = await loadContent();
+const images = await loadImages();
+const team = [...content.team].sort((a, b) => a.sortOrder - b.sortOrder);
+const t = ui(locale);
+const listInfo = t.lists.team;
+---
+<Base title={listInfo.eyebrow} description={listInfo.lede} locale={locale} active="about">
+  <div class="aluna-page">
+    <div class="wrap">
+      <PageHeader eyebrow={listInfo.eyebrow} title={listInfo.title} lede={listInfo.lede} />
+
+      <div class="aluna-archive-grid">
+        {team.map((m) => {
+          const photo = imageFor(images, m.photoAssetId);
+          const petPhoto = imageFor(images, m.petPhotoAssetId);
+          const pos = pick(m.position, locale);
+          return (
+            <article class="dog-text team-card">
+              {photo ? (
+                <img src={photo.src} srcset={photo.srcset} alt={m.name} loading="lazy" width={photo.width} height={photo.height} style="width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:18px;margin-bottom:14px" />
+              ) : (
+                <img src="/images/placeholder-hund.png" alt={m.name} loading="lazy" width="320" height="320" style="width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:18px;margin-bottom:14px" />
+              )}
+              <h3 style="font-family:var(--f-display);font-weight:600;font-size:20px;color:var(--navy)">{m.name}</h3>
+              <p data-fallback={pos.fallback ?? undefined}>{pos.value}</p>
+              {petPhoto && (
+                <img src={petPhoto.src} srcset={petPhoto.srcset} alt="" loading="lazy" width={petPhoto.width} height={petPhoto.height} style="width:64px;height:64px;border-radius:50%;object-fit:cover;margin-top:8px" />
+              )}
+            </article>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+</Base>

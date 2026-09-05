@@ -1,0 +1,32 @@
+---
+const { email, subject, body = '', title, description, buttonLabel, extraButtons = [] } = Astro.props as {
+  email: string;
+  subject: string;
+  body?: string;
+  title: string;
+  description?: string;
+  buttonLabel: string;
+  extraButtons?: { label: string; subject: string; body?: string }[];
+};
+
+const mailIcon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
+
+function makeHref(subj: string, b: string) {
+  const p = new URLSearchParams({ subject: subj });
+  if (b) p.set('body', b);
+  return `mailto:${email}?${p.toString()}`;
+}
+---
+<div class="mailto-cta">
+  <div class="pdf-ico"><Fragment set:html={mailIcon} /></div>
+  <div>
+    <h3>{title}</h3>
+    {description && <p>{description}</p>}
+    <div class="pdf-actions">
+      <a class="btn btn-primary" href={makeHref(subject, body)}>{buttonLabel}</a>
+      {extraButtons.map((btn) => (
+        <a class="btn btn-ghost" href={makeHref(btn.subject, btn.body ?? '')}>{btn.label}</a>
+      ))}
+    </div>
+  </div>
+</div>

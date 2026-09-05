@@ -1,32 +1,12 @@
 import { createHash } from 'node:crypto';
-import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
+import { build, cleanupDirs } from './helpers';
 
-const ROOT = path.resolve(import.meta.dirname, '..');
-const dirs: string[] = [];
 afterAll(() => {
-  for (const d of dirs) rmSync(d, { recursive: true, force: true });
+  cleanupDirs();
 });
-
-function build(env: Record<string, string>): string {
-  const out = mkdtempSync(path.join(tmpdir(), 'site-dist-'));
-  dirs.push(out);
-  const r = spawnSync('pnpm', ['exec', 'astro', 'build', '--outDir', out], {
-    cwd: ROOT,
-    env: {
-      ...process.env,
-      SITE_CONTENT_DIR: path.join(ROOT, 'fixtures/example'),
-      SITE_PUBLIC_URL: 'https://example.org',
-      ...env,
-    },
-    encoding: 'utf8',
-  });
-  if (r.status !== 0) throw new Error(r.stderr + r.stdout);
-  return out;
-}
 
 function hashTree(dir: string): string {
   const h = createHash('sha256');
@@ -54,6 +34,23 @@ describe('site build', () => {
       'en/index.html',
       'helfen/index.html',
       'en/help/index.html',
+      'zuhause-gesucht/index.html',
+      'en/looking-for-a-home/index.html',
+      'zuhause-gesucht/chiara/index.html',
+      'en/looking-for-a-home/chiara/index.html',
+      'glueckliche-vermittlungen/index.html',
+      'en/happy-endings/index.html',
+      'projekte/index.html',
+      'en/projects/index.html',
+      'projekte/grundversorgung/index.html',
+      'en/projects/grundversorgung/index.html',
+      'wissenswertes/index.html',
+      'en/good-to-know/index.html',
+      'wissenswertes/ablauf-der-adoption/index.html',
+      'faq/index.html',
+      'en/faq/index.html',
+      'ueber-uns/unser-team/index.html',
+      'en/team/index.html',
       'impressum/index.html',
       'sitemap-index.xml',
     ]) {

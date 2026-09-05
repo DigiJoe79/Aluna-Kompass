@@ -1,0 +1,107 @@
+---
+import Base from '../layouts/Base.astro';
+import MarkdownBody from './MarkdownBody.astro';
+import type { Animal } from '../lib/content';
+import { factsOf, loadContent } from '../lib/content';
+import { imageFor, type ImageVariant } from '../lib/images';
+import { pick, ui, type Locale } from '../lib/locale';
+import { pathFor } from '../lib/routes';
+
+const { dog, locale, images } = Astro.props as { dog: Animal; locale: Locale; images: Record<string, ImageVariant> };
+const content = await loadContent();
+const facts = factsOf(content);
+const email = facts.organization.email ?? 'info@example.org';
+const t = ui(locale);
+const summary = pick(dog.summary, locale);
+const body = pick(dog.body, locale);
+const sizeText = pick(dog.sizeText, locale);
+const birthText = pick(dog.birthText, locale);
+
+const primary = dog.photos.find((p) => p.isPrimary) ?? dog.photos[0];
+const primaryImg = imageFor(images, primary?.assetId);
+const otherPhotos = dog.photos.filter((p) => p !== primary);
+
+const pageUrl = pathFor('dog', locale, dog.slug);
+const subject = `${t.dog.interest} ${dog.name}`;
+const anfrageBody = locale === 'de'
+  ? `Hallo Aluna-Team,\n\nich interessiere mich für ${dog.name} (${pageUrl}).\n\nKurz zu mir:\n- Name:\n- Wohnort:\n- Wohnsituation (Haus/Wohnung, Garten):\n- Erfahrung mit Hunden:\n- weitere Tiere/Kinder im Haushalt:\n\nWann könnten wir telefonieren?\n\nViele Grüße`
+  : `Hello Aluna Team,\n\nI am interested in ${dog.name} (${pageUrl}).\n\nA little about me:\n- Name:\n- Location:\n- Living situation (house/flat, garden):\n- Experience with dogs:\n- Other pets/children:\n\nWhen would be a good time for a call?\n\nBest regards`;
+
+const mailParams = new URLSearchParams({ subject, body: anfrageBody });
+const mailHref = `mailto:${email}?${mailParams.toString()}`;
+
+const mailIcon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
+---
+<Base title={`${dog.name} — ${t.lists.dogs.eyebrow}`} description={summary.value} locale={locale} active="dogs">
+  <div class="aluna-page">
+    <div class="wrap">
+      <div class="dog-wrap">
+        <div class="dog-gallery">
+          <figure class="dog-photo">
+            {primaryImg ? (
+              <img src={primaryImg.src} srcset={primaryImg.srcset} sizes="(min-width: 900px) 600px, 100vw" alt={`${dog.name} — ${summary.value}`} width={primaryImg.width} height={primaryImg.height} />
+            ) : (
+              <img src="/images/placeholder-hund.png" alt={dog.name} width="600" height="750" />
+            )}
+          </figure>
+          {otherPhotos.length > 0 && (
+            <div class="dog-thumbnails" style="display:flex;gap:12px;margin-top:12px">
+              {otherPhotos.map((p) => {
+                const img = imageFor(images, p.assetId);
+                return img ? (
+                  <img src={img.src} alt={`${dog.name}`} width="120" height="90" style="aspect-ratio:4/3;object-fit:cover;border-radius:8px" loading="lazy" />
+                ) : null;
+              })}
+            </div>
+          )}
+        </div>
+        <div class="dog-body">
+          <p class="eyebrow"><span class="eyebrow-dot"></span>{t.lists.dogs.eyebrow}</p>
+          <h1 class="section-title">{dog.name}</h1>
+          <ul class="dog-tags">
+            <li>{dog.sex === 'female' ? t.dog.female : t.dog.male}</li>
+            <li data-fallback={birthText.fallback ?? undefined}>{birthText.value}</li>
+            <li data-fallback={sizeText.fallback ?? undefined}>{sizeText.value}</li>
+            <li>{dog.location === 'germany' ? t.dog.germany : t.dog.shelter}</li>
+            {(dog.traits[locale] ?? dog.traits.de ?? []).map((tr) => <li>{tr}</li>)}
+          </ul>
+
+          <p class="dog-text" data-fallback={summary.fallback ?? undefined}>{summary.value}</p>
+
+          <MarkdownBody markdown={body.value} fallback={body.fallback} />
+
+          {dog.status === 'lookingForHome' ? (
+            <div class="mailto-cta">
+              <div class="pdf-ico"><Fragment set:html={mailIcon} /></div>
+              <div>
+                <h3>{locale === 'de' ? `Interesse an ${dog.name}?` : `Interested in ${dog.name}?`}</h3>
+                <p>{locale === 'de'
+                  ? 'Der erste Schritt ist unkompliziert: eine kurze E-Mail. Wir haben dir Betreff und ein paar Stichpunkte schon vorbereitet — die ausführliche Selbstauskunft schicken wir dir danach als PDF.'
+                  : 'The first step is simple: a brief email. We prepared the subject and bullet points for you — we will send the full questionnaire afterwards as a PDF.'}</p>
+                <a class="btn btn-primary" href={mailHref}>{locale === 'de' ? `E-Mail zu ${dog.name} schreiben` : `Write an email about ${dog.name}`}</a>
+              </div>
+            </div>
+          ) : dog.status === 'reserved' ? (
+            <p class="aluna-note">{dog.name} {t.dog.reserved}</p>
+          ) : (
+            <p class="aluna-note">{dog.name} {t.dog.adopted}</p>
+          )}
+
+          {dog.externalProfileUrl && (
+            <p><a class="btn btn-ghost" href={dog.externalProfileUrl} rel="noopener">{t.dog.external}</a></p>
+          )}
+
+          <p class="dog-meta">
+            {locale === 'de' ? (
+              <>Wie eine Adoption abläuft, liest du unter <a href={pathFor('adoption-process', locale)}>Ablauf der Adoption</a> — und worauf es ankommt, in <a href={pathFor('articles', locale)}>Wissenswertes</a>.</>
+            ) : (
+              <>Learn how our adoption works under <a href={pathFor('adoption-process', locale)}>Adoption process</a> — and read helpful guides in <a href={pathFor('articles', locale)}>Good to know</a>.</>
+            )}
+          </p>
+        </div>
+      </div>
+
+      <p style="margin-top:56px"><a class="link link-arrow" href={pathFor('dogs', locale)}>{t.cta.backToDogs}</a></p>
+    </div>
+  </div>
+</Base>

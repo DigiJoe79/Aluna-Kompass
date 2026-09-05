@@ -1,12 +1,16 @@
 ---
 import Base from '../layouts/Base.astro';
 import Blocks from './Blocks.astro';
-import { loadContent, factsOf, pageOf } from '../lib/content';
+import ProjectCard from './ProjectCard.astro';
+import { loadContent, factsOf, pageOf, animalsOf } from '../lib/content';
+import { loadImages, imageFor } from '../lib/images';
+import { featuredAnimal, featuredStory } from '../lib/featured';
 import { pick, ui, emphasize, type Locale } from '../lib/locale';
 import { pathFor } from '../lib/routes';
 
 const { locale } = Astro.props as { locale: Locale };
 const content = await loadContent();
+const images = await loadImages();
 const facts = factsOf(content);
 const homePage = pageOf(content, 'home');
 const t = ui(locale);
@@ -14,6 +18,14 @@ const t = ui(locale);
 const claim = pick(facts.claim, locale);
 const lede = pick(homePage.lede, locale);
 const org = facts.organization;
+
+const featuredProjects = [...content.projects].sort((a, b) => a.sortOrder - b.sortOrder).slice(0, 2);
+const featured = featuredAnimal(animalsOf(content), facts);
+const story = featuredStory(animalsOf(content), facts);
+
+const impactBlocks = homePage.blocks.filter((b) => b.id.startsWith('impact'));
+const socialBlock = homePage.blocks.find((b) => b.id === 'social');
+const generalBlocks = homePage.blocks.filter((b) => !b.id.startsWith('impact') && b.id !== 'social');
 ---
 <Base locale={locale} active="home">
   <section class="hero">
@@ -41,7 +53,7 @@ const org = facts.organization;
         <p class="trust-lbl">{locale === 'de' ? 'gemeinnützig &' : 'non-profit &'}<br />{locale === 'de' ? 'nicht profitorientiert' : 'not for profit'}</p>
       </div>
       <div class="trust-item">
-        <p class="trust-num">{facts.forwardingPercent.toString().replace('.', ',')}&nbsp;%</p>
+        <p class="trust-num">{locale === 'de' ? facts.forwardingPercent.toString().replace('.', ',') : facts.forwardingPercent.toString()}&nbsp;%</p>
         <p class="trust-lbl">{locale === 'de' ? 'aller erhaltenen Spenden' : 'of all donations'}<br />{locale === 'de' ? 'fließen direkt an den Shelter' : 'go directly to the shelter'}</p>
       </div>
       <div class="trust-item">
@@ -55,10 +67,165 @@ const org = facts.organization;
     </div>
   </section>
 
-  {homePage.blocks.length > 0 && (
+  {featuredProjects.length > 0 && (
+    <section class="section section-projects">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow"><span class="eyebrow-dot"></span>{t.lists.projects.eyebrow}</p>
+          <h2 class="section-title" set:html={emphasize(t.lists.projects.title)}></h2>
+          <p class="section-lede">{t.lists.projects.lede}</p>
+        </div>
+        <div class="project-grid">
+          {featuredProjects.map((p) => <ProjectCard project={p} locale={locale} images={images} />)}
+        </div>
+        <p class="section-foot"><a class="link link-arrow" href={pathFor('projects', locale)}>{t.cta.allProjects}</a></p>
+      </div>
+    </section>
+  )}
+
+  {featured && (() => {
+    const p = featured.photos.find((ph) => ph.isPrimary) ?? featured.photos[0];
+    const img = imageFor(images, p?.assetId);
+    const sum = pick(featured.summary, locale);
+    const sizeText = pick(featured.sizeText, locale);
+    const traits = featured.traits[locale] ?? featured.traits.de ?? [];
+    return (
+      <section class="section section-dog">
+        <div class="wrap dog-wrap">
+          <figure class="dog-photo">
+            {img ? (
+              <img src={img.src} srcset={img.srcset} alt={`${featured.name} sucht ein Zuhause`} loading="lazy" width={img.width} height={img.height} />
+            ) : (
+              <img src="/images/placeholder-hund.png" alt={featured.name} loading="lazy" width="600" height="750" />
+            )}
+          </figure>
+          <div class="dog-body">
+            <p class="eyebrow"><span class="eyebrow-dot"></span>{t.lists.dogs.eyebrow}</p>
+            <h2 class="section-title">{featured.name} {locale === 'de' ? 'sucht ihre' : 'is looking for a'} <em>{locale === 'de' ? 'Familie.' : 'Family.'}</em></h2>
+            <ul class="dog-tags">
+              <li>{featured.sex === 'female' ? t.dog.female : t.dog.male}</li>
+              <li>{sizeText.value}</li>
+              <li>{featured.location === 'germany' ? t.dog.germany : t.dog.shelter}</li>
+              {traits.map((tr) => <li>{tr}</li>)}
+            </ul>
+            <p class="dog-text" data-fallback={sum.fallback ?? undefined}>{sum.value}</p>
+            <div class="dog-actions actions-row">
+              <a class="btn btn-primary" href={pathFor('dog', locale, featured.slug)}>{featured.name} {locale === 'de' ? 'kennenlernen' : 'profile'}</a>
+              <a class="btn btn-ghost-dark" href={pathFor('dogs', locale)}>{t.cta.allDogs} →</a>
+            </div>
+            <p class="dog-meta">
+              {locale === 'de' ? (
+                <>Wie eine Adoption abläuft, liest du unter <a href={pathFor('adoption-process', locale)}>Ablauf der Adoption</a>.</>
+              ) : (
+                <>Learn about our adoption process under <a href={pathFor('adoption-process', locale)}>Adoption process</a>.</>
+              )}
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  })()}
+
+  {story && story.story && (() => {
+    const st = story.story;
+    const beforeImg = imageFor(images, st.beforeAssetId);
+    const afterImg = imageFor(images, st.afterAssetId);
+    const quote = pick(st.quote, locale);
+    return (
+      <section class="section section-story">
+        <div class="wrap story-wrap">
+          <div class="story-head">
+            <p class="eyebrow eyebrow-light"><span class="eyebrow-dot"></span>{t.lists.stories.eyebrow}</p>
+            <h2 class="section-title section-title-light" set:html={emphasize(t.lists.stories.title)}></h2>
+          </div>
+          <div class="story-grid">
+            <figure class="story-before">
+              {beforeImg ? (
+                <img src={beforeImg.src} srcset={beforeImg.srcset} alt={`${story.name} im Shelter`} loading="lazy" width={beforeImg.width} height={beforeImg.height} />
+              ) : (
+                <img src="/images/placeholder-story-vorher.png" alt={`${story.name} im Shelter`} loading="lazy" width="400" height="500" />
+              )}
+              <figcaption class="story-caption"><span class="story-stage">{t.story.before}</span><span class="story-place">Shelter</span></figcaption>
+            </figure>
+            <figure class="story-after">
+              {afterImg ? (
+                <img src={afterImg.src} srcset={afterImg.srcset} alt={`${story.name} im neuen Zuhause`} loading="lazy" width={afterImg.width} height={afterImg.height} />
+              ) : (
+                <img src="/images/placeholder-story-nachher.jpg" alt={`${story.name} im neuen Zuhause`} loading="lazy" width="400" height="500" />
+              )}
+              <figcaption class="story-caption"><span class="story-stage">{t.story.after}</span><span class="story-place">{locale === 'de' ? 'Ihr neues Zuhause' : 'New home'}</span></figcaption>
+            </figure>
+            <figure class="story-quote">
+              <p class="story-quote-text" data-fallback={quote.fallback ?? undefined}>„{quote.value}“</p>
+              <figcaption class="story-quote-foot">
+                <span class="story-quote-name">{st.family}</span>
+                <span class="story-quote-from">{t.story.year} {st.adoptedYear}</span>
+              </figcaption>
+            </figure>
+          </div>
+          <p class="section-foot section-foot-light"><a class="link link-arrow link-light" href={pathFor('stories', locale)}>{t.cta.moreStories}</a></p>
+        </div>
+      </section>
+    );
+  })()}
+
+  <section class="section section-donate">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow"><span class="eyebrow-dot"></span>{t.cta.donate}</p>
+        <h2 class="section-title">{locale === 'de' ? 'Deine Spende wird zu ' : 'Your donation turns into '}<em>{locale === 'de' ? 'Hoffnung.' : 'Hope.'}</em></h2>
+        <p class="section-lede">{locale === 'de' ? 'Schon kleine Beträge sichern Futter, Impfungen und den Weg in ein neues Zuhause. 97,2 % kommen direkt an.' : 'Even small amounts secure food, vaccines, and the journey to a new home.'}</p>
+      </div>
+      <div class="impact-grid">
+        {impactBlocks.length > 0 ? (
+          impactBlocks.map((b) => {
+            const bt = pick(b.title, locale);
+            const bx = pick(b.text, locale);
+            return (
+              <div class="impact-card">
+                <p class="impact-amount" data-fallback={bt.fallback ?? undefined}>{bt.value}</p>
+                <p class="impact-text" data-fallback={bx.fallback ?? undefined}>{bx.value}</p>
+              </div>
+            );
+          })
+        ) : (
+          <>
+            <div class="impact-card"><p class="impact-amount">15&nbsp;€</p><p class="impact-text">{locale === 'de' ? 'decken eine Woche ' : 'cover one week of '}<strong>{locale === 'de' ? 'Futter' : 'food'}</strong>{locale === 'de' ? ' für einen Hund.' : ' for one dog.'}</p></div>
+            <div class="impact-card"><p class="impact-amount">50&nbsp;€</p><p class="impact-text">{locale === 'de' ? 'finanzieren eine ' : 'fund a '}<strong>{locale === 'de' ? 'Impfung & den Mikrochip' : 'vaccination & microchip'}</strong>.</p></div>
+            <div class="impact-card"><p class="impact-amount">120&nbsp;€</p><p class="impact-text">{locale === 'de' ? 'tragen den ' : 'cover the '}<strong>{locale === 'de' ? 'Transport' : 'transport'}</strong>{locale === 'de' ? ' nach Deutschland.' : ' to Germany.'}</p></div>
+            <div class="impact-card impact-card-accent"><p class="impact-amount">∞</p><p class="impact-text">{locale === 'de' ? 'schenkst du mit einer ' : 'you give with a '}<strong>{locale === 'de' ? 'Patenschaft' : 'sponsorship'}</strong>.</p></div>
+          </>
+        )}
+      </div>
+      <p class="section-foot">
+        <a class="btn btn-primary btn-lg" href={pathFor('donate', locale)}>
+          <svg class="icon icon-md icon-heart" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 21s-7.5-4.5-9.5-9C1.1 8.6 3 5 6.5 5c2 0 3.5 1.1 4.5 2.5C12 6.1 13.5 5 15.5 5 19 5 20.9 8.6 19.5 12c-2 4.5-7.5 9-7.5 9z" />
+          </svg>
+          {t.cta.toDonate}
+        </a>
+      </p>
+    </div>
+  </section>
+
+  {socialBlock && (
+    <section class="section section-social">
+      <div class="wrap" style="text-align:center">
+        <h2 class="section-title">{pick(socialBlock.title, locale).value}</h2>
+        <p class="section-lede">{pick(socialBlock.text, locale).value}</p>
+        <div style="display:flex;gap:12px;justify-content:center;margin-top:24px">
+          {facts.socialLinks.map((s) => (
+            <a class="btn btn-ghost" href={s.href} rel="noopener">{s.label}</a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  {generalBlocks.length > 0 && (
     <section class="section">
       <div class="wrap">
-        <Blocks blocks={homePage.blocks} locale={locale} />
+        <Blocks blocks={generalBlocks} locale={locale} />
       </div>
     </section>
   )}

@@ -1,0 +1,27 @@
+---
+import { ui, type Locale } from '../lib/locale';
+const { projectId, defaultAmount = 50, locale, label } = Astro.props as { projectId: string; defaultAmount?: number; locale: Locale; label: string };
+const t = ui(locale).bp;
+const src = `https://www.betterplace.org/${locale}/projects/${projectId}/donate?donation_form_in_iframe=true&default_amount=${defaultAmount}`;
+const external = `https://www.betterplace.org/${locale}/projects/${projectId}/donate?default_amount=${defaultAmount}`;
+---
+<div class="bp-embed" data-bp-src={src}>
+  <div class="bp-consent">
+    <h3>{t.title}</h3>
+    <p>{locale === 'de' ? 'Das Spendenformular wird von betterplace.org bereitgestellt. Wenn du es lädst, baut dein Browser eine Verbindung zu Betterplace auf und es können Cookies gesetzt werden. Vorher passiert das nicht.' : 'The donation form is provided by betterplace.org. Only when you load it does your browser connect to Betterplace, which may set cookies. Nothing happens before.'}</p>
+    <button type="button" class="btn btn-primary btn-lg" data-bp-load>{t.load.replace('{label}', label)}</button>
+    <p class="bp-alt"><a class="link" href={external} rel="noopener">{t.open}</a></p>
+  </div>
+</div>
+<script>
+  document.querySelectorAll<HTMLElement>('.bp-embed').forEach((box) => {
+    box.querySelector('[data-bp-load]')?.addEventListener('click', () => {
+      const iframe = document.createElement('iframe');
+      iframe.src = box.dataset.bpSrc ?? '';
+      iframe.title = 'betterplace.org';
+      iframe.loading = 'lazy';
+      iframe.setAttribute('referrerpolicy', 'no-referrer');
+      box.replaceChildren(iframe);
+    });
+  });
+</script>

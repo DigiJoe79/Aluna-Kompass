@@ -26,7 +26,7 @@
       "organization": {
         "name": "Musterverein e.V.",
         "legalName": "Musterverein e.V.",
-        "email": "kontakt@example.org",
+        "email": "info@example.org",
         "phone": "+49 221 000000",
         "address": "Musterstraße 1, 50667 Köln",
         "iban": "DE00 0000 0000 0000 0000 00",
@@ -249,9 +249,9 @@
       "type": "ongoing",
       "status": "active",
       "summary": { "de": "Tägliches Futter und Pflege für 150 Hunde.", "en": "Daily food and care for 150 dogs." },
-      "body": { "de": "# Futter und Pflege\n\nJeden Tag brauchen unsere Schützlinge Futter.", "en": "# Food and care\n\nEvery day our rescues need food." },
+      "body": { "de": "# Futter und Pflege\n\nJeden Tag brauchen unsere Schützlinge Futter.", "en": "" },
       "imageAssetId": "asset-project-grundversorgung",
-      "betterplaceProjectId": "111111",
+      "betterplaceProjectId": "000001",
       "sortOrder": 1
     },
     {
@@ -298,7 +298,7 @@
       "sizeText": { "de": "ca. 45 cm", "en": "approx. 45 cm" },
       "location": "shelter",
       "status": "lookingForHome",
-      "isEmergency": true,
+      "isEmergency": false,
       "isSponsorable": true,
       "traits": {
         "de": ["ruhig", "freundlich", "verträglich"],
