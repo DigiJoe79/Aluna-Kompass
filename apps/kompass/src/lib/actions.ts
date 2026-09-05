@@ -24,9 +24,11 @@ const KNOWN_CONFLICTS = new Set([
   'setupAlreadyDone',
 ]);
 
+const MEDIA_FIELD_CODES = ['unsupportedMediaType', 'fileTooLarge', 'svgContainsScript'];
+
 export function fieldMessage(issueMessage: string, t: Translate): string {
   const lower = issueMessage.toLowerCase();
-  if (issueMessage === 'passwordTooShort' || issueMessage === 'unknownPermission' || issueMessage === 'unknownSetting') {
+  if (issueMessage === 'passwordTooShort' || issueMessage === 'unknownPermission' || issueMessage === 'unknownSetting' || MEDIA_FIELD_CODES.includes(issueMessage)) {
     return t(`errors.fields.${issueMessage}`);
   }
   if (lower.includes('email')) return t('errors.fields.email');

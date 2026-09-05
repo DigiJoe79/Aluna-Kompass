@@ -1,10 +1,11 @@
-import { getAuditEntry, listUsers, queryAudit, requirePermission } from '@kompass/core';
+import { getAuditEntry, hasPermission, listUsers, queryAudit, requirePermission } from '@kompass/core';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { requireSession } from '@/lib/request-context';
+import { ExportButton } from './export-button';
 import { AuditDetail } from './audit-detail';
 import { AuditFilters } from './audit-filters';
 import { AuditTable } from './audit-table';
@@ -39,11 +40,7 @@ export default async function AuditPage(props: { searchParams: Promise<Record<st
     <>
       <PageHeader
         title={t('title')}
-        actions={
-          <Button variant="secondary" disabled title={t('exportSoon')}>
-            {t('export')}
-          </Button>
-        }
+        actions={<ExportButton enabled={hasPermission(ctx, 'documents.create')} />}
       />
       <div className="overflow-hidden rounded-lg border border-line bg-surface">
         <AuditFilters

@@ -13,6 +13,7 @@ const ICONS: Record<string, LucideIcon> = { users: Users, shield: Shield, slider
 
 export interface SidebarProps {
   organization: string;
+  logoUrl: string | null;
   groups: NavGroup[];
   collapsed: boolean;
   onToggle: () => void;
@@ -20,7 +21,7 @@ export interface SidebarProps {
   user: UserMenuProps['user'];
 }
 
-export function Sidebar({ organization, groups, collapsed, onToggle, onClose, user }: SidebarProps) {
+export function Sidebar({ organization, logoUrl, groups, collapsed, onToggle, onClose, user }: SidebarProps) {
   const t = useTranslations();
   const pathname = usePathname();
   const width = collapsed ? 56 : 248;
@@ -62,7 +63,7 @@ export function Sidebar({ organization, groups, collapsed, onToggle, onClose, us
   return (
     <nav aria-label={t('nav.aria')} style={{ width }} className="flex h-full shrink-0 flex-col border-r border-line bg-sidebar transition-[width]">
       <div className={cn('flex h-14 items-center border-b border-line', collapsed ? 'justify-center' : 'gap-2.5 pl-4 pr-3')}>
-        <div className="flex size-7 shrink-0 items-center justify-center rounded-sm border border-dashed border-line-strong text-[9px] text-muted-ink-2" aria-hidden>LOGO</div>
+        {logoUrl ? <img src={logoUrl} alt={t('nav.logoAlt')} className="size-7 shrink-0 rounded-sm object-contain" /> : <div className="flex size-7 shrink-0 items-center justify-center rounded-sm border border-dashed border-line-strong text-[9px] text-muted-ink-2" aria-hidden>LOGO</div>}
         {collapsed ? null : (
           <div className="min-w-0 flex-1 leading-tight">
             <div className="truncate text-[14px] font-semibold">{organization}</div>

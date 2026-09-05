@@ -52,7 +52,6 @@ export const SETTINGS_TABS: SettingsTab[] = [
   {
     key: 'branding',
     fields: [
-      { key: 'branding.logoAssetId', kind: 'text', hintKey: 'logoHint' },
       { key: 'branding.fontBody', kind: 'font-body', options: ['source-sans-3', 'public-sans', 'atkinson-hyperlegible'] },
       { key: 'branding.fontHeading', kind: 'font-heading', options: ['source-serif-4', 'same-as-body'] },
       { key: 'branding.activeTheme', kind: 'theme' },

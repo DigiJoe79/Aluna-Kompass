@@ -13,10 +13,11 @@ export default async function ShellLayout({ children }: { children: ReactNode })
   const context = { lastImportAt: readSetting<string | null>(deps, 'system.lastImportAt'), migrationCount: deps.migrationCount };
   const banner = bannerFor(env.env, context);
   const groups = buildNavigation({ manifests: deps.registry.manifests, enabledKeys: new Set(enabledManifests(deps).map((m) => m.key)), permissions: ctx.permissions });
+  const logoId = readSetting<string | null>(deps, 'branding.logoAssetId');
   return (
     <div className="flex min-h-screen flex-col">
       {banner ? <EnvBanner banner={banner} context={context} /> : null}
-      <ShellFrame organization={readSetting<string>(deps, 'organization.name')} groups={groups} user={{ name: user.name, roleNames: user.roles.map((r) => r.name) }} permissions={[...ctx.permissions]}>
+      <ShellFrame organization={readSetting<string>(deps, 'organization.name')} logoUrl={logoId ? `/media/${logoId}` : null} groups={groups} user={{ name: user.name, roleNames: user.roles.map((r) => r.name) }} permissions={[...ctx.permissions]}>
         {children}
       </ShellFrame>
     </div>

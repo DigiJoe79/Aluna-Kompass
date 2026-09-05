@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { SETTINGS_TABS, TAX_REQUIRED, type SettingsField } from '@/lib/settings-fields';
 import { cn } from '@/lib/utils';
+import { LogoUpload } from './logo-upload';
 import { saveSettingsAction } from './actions';
 
 type Values = Record<string, unknown>;
@@ -132,7 +133,6 @@ export function SettingsForm({
           <Input
             {...common}
             value={value === null || value === undefined ? '' : String(value)}
-            readOnly={field.key === 'branding.logoAssetId'}
             onChange={(e) => set(field.key, e.target.value)}
             aria-invalid={!!errors[field.key] || undefined}
           />
@@ -185,6 +185,7 @@ export function SettingsForm({
               </span>
             </p>
           ) : null}
+          {tab.key === 'branding' ? <LogoUpload currentAssetId={String(values['branding.logoAssetId'] ?? '') || null} /> : null}
           <div className="grid gap-x-6 gap-y-4 rounded-lg border border-line bg-surface p-6 md:grid-cols-2">
             {tab.fields.map(render)}
           </div>

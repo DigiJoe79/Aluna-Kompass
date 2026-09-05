@@ -5,7 +5,8 @@ import { SETTINGS_TABS } from '@/lib/settings-fields';
 describe('SETTINGS_TABS', () => {
   it('covers every organization and branding setting exactly once', () => {
     const covered = SETTINGS_TABS.flatMap((tab) => tab.fields.map((f) => f.key));
-    const expected = CORE_SETTINGS.map((s) => s.key).filter((k) => k.startsWith('organization.') || k.startsWith('branding.'));
+    // branding.logoAssetId wird über den Logo-Upload verwaltet, nicht als Textfeld
+    const expected = CORE_SETTINGS.map((s) => s.key).filter((k) => (k.startsWith('organization.') || k.startsWith('branding.')) && k !== 'branding.logoAssetId');
     expect([...covered].sort()).toEqual([...expected].sort());
     expect(new Set(covered).size).toBe(covered.length);
   });

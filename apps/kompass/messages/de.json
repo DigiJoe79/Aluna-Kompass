@@ -1,5 +1,7 @@
 {
-  "app": { "name": "Aluna Kompass" },
+  "app": {
+    "name": "Aluna Kompass"
+  },
   "common": {
     "save": "Speichern",
     "cancel": "Abbrechen",
@@ -42,12 +44,33 @@
       "passwordTooShort": "Mindestens 12 Zeichen.",
       "unknownPermission": "Unbekanntes Recht.",
       "unknownSetting": "Unbekannte Einstellung.",
-      "invalid": "Ungültiger Wert."
+      "invalid": "Ungültiger Wert.",
+      "unsupportedMediaType": "Dateityp nicht unterstützt (PNG, JPEG, WebP, SVG, PDF).",
+      "fileTooLarge": "Datei größer als 10 MB.",
+      "svgContainsScript": "SVG enthält Skripte und wird abgelehnt."
     },
     "pages": {
-      "forbidden": { "kicker": "Kein Recht", "title": "Diese Seite ist für Ihre Rolle nicht freigegeben.", "text": "Das nötige Recht steht unten. Damit kann die Administration Ihre Rolle anpassen.", "home": "Zurück zur Startseite", "footnote": "Rechte ändert die Administration unter Rollen." },
-      "notFound": { "kicker": "Nicht gefunden", "title": "Diesen Eintrag gibt es nicht mehr.", "text": "Protokollierte Daten werden nicht gelöscht — wenn Sie einen Vorgang suchen, hilft das Änderungsprotokoll.", "home": "Startseite", "audit": "Protokoll öffnen" },
-      "technical": { "kicker": "Technischer Fehler", "title": "Der Vorgang wurde abgebrochen.", "text": "Es wurde nichts gespeichert. Die Vorgangsnummer erscheint identisch im Serverprotokoll.", "retry": "Erneut versuchen", "home": "Startseite" }
+      "forbidden": {
+        "kicker": "Kein Recht",
+        "title": "Diese Seite ist für Ihre Rolle nicht freigegeben.",
+        "text": "Das nötige Recht steht unten. Damit kann die Administration Ihre Rolle anpassen.",
+        "home": "Zurück zur Startseite",
+        "footnote": "Rechte ändert die Administration unter Rollen."
+      },
+      "notFound": {
+        "kicker": "Nicht gefunden",
+        "title": "Diesen Eintrag gibt es nicht mehr.",
+        "text": "Protokollierte Daten werden nicht gelöscht — wenn Sie einen Vorgang suchen, hilft das Änderungsprotokoll.",
+        "home": "Startseite",
+        "audit": "Protokoll öffnen"
+      },
+      "technical": {
+        "kicker": "Technischer Fehler",
+        "title": "Der Vorgang wurde abgebrochen.",
+        "text": "Es wurde nichts gespeichert. Die Vorgangsnummer erscheint identisch im Serverprotokoll.",
+        "retry": "Erneut versuchen",
+        "home": "Startseite"
+      }
     }
   },
   "nav": {
@@ -57,14 +80,44 @@
     "collapse": "Navigation einklappen",
     "moduleInactive": "Modul nicht aktiv",
     "moduleHint": "Module werden unter Verwaltung → Module aktiviert.",
-    "groups": { "admin": "Verwaltung", "finance": "Finanzen", "members": "Mitglieder", "animals": "Tiere", "website": "Webseite" },
-    "users": "Nutzer", "roles": "Rollen", "settings": "Einstellungen", "themes": "Themes", "modules": "Module",
-    "audit": "Änderungsprotokoll", "documents": "Dokumente", "backup": "Backup"
+    "groups": {
+      "admin": "Verwaltung",
+      "finance": "Finanzen",
+      "members": "Mitglieder",
+      "animals": "Tiere",
+      "website": "Webseite"
+    },
+    "users": "Nutzer",
+    "roles": "Rollen",
+    "settings": "Einstellungen",
+    "themes": "Themes",
+    "modules": "Module",
+    "audit": "Änderungsprotokoll",
+    "documents": "Dokumente",
+    "backup": "Backup",
+    "logoAlt": "Vereinslogo"
   },
   "shell": {
-    "envBanner": { "testContext": "Daten vom {date} · Änderungen hier haben keine Wirkung", "noImport": "kein Import", "devContext": "localhost · Migrationsstand {migrations}" },
-    "topbar": { "search": "Suchen", "openNav": "Navigation öffnen", "expandNav": "Navigation aufklappen" },
-    "userMenu": { "aria": "Nutzermenü", "profile": "Profil", "dark": "Dunkles Design", "densityCompact": "Kompakte Zeilen", "densityDefault": "Normale Zeilen", "densityComfortable": "Komfortable Zeilen", "logout": "Abmelden", "noRole": "Keine Rolle" }
+    "envBanner": {
+      "testContext": "Daten vom {date} · Änderungen hier haben keine Wirkung",
+      "noImport": "kein Import",
+      "devContext": "localhost · Migrationsstand {migrations}"
+    },
+    "topbar": {
+      "search": "Suchen",
+      "openNav": "Navigation öffnen",
+      "expandNav": "Navigation aufklappen"
+    },
+    "userMenu": {
+      "aria": "Nutzermenü",
+      "profile": "Profil",
+      "dark": "Dunkles Design",
+      "densityCompact": "Kompakte Zeilen",
+      "densityDefault": "Normale Zeilen",
+      "densityComfortable": "Komfortable Zeilen",
+      "logout": "Abmelden",
+      "noRole": "Keine Rolle"
+    }
   },
   "auth": {
     "setup": {
@@ -107,35 +160,110 @@
     "greeting": "Guten Tag, {name}.",
     "intro": "Der Verein ist angelegt. Drei Dinge fehlen noch, bevor Sie mit der Verwaltung arbeiten können.",
     "counter": "{done} von {total}",
-    "settings": { "title": "Einstellungen vervollständigen", "text": "Steuernummer, Finanzamt und Freistellungsbescheid fehlen. Ohne diese Angaben lassen sich keine Zuwendungsbestätigungen erzeugen.", "hint": "{count, plural, =0 {Alle Pflichtfelder gefüllt} one {# Feld offen} other {# Felder offen}}", "cta": "Zu den Einstellungen" },
-    "roles": { "title": "Rollen anlegen", "text": "Es gibt nur die Rolle „Administration“. Für Kassenprüfung und Schriftführung sind eigene Rollen mit weniger Rechten sinnvoll.", "hint": "Empfohlen: Schatzmeisterin, Kassenprüfer", "cta": "Rollen öffnen" },
-    "modules": { "title": "Module aktivieren", "text": "Module sind installiert, aber inaktiv. Aktivieren Sie nur, was der Verein wirklich führt.", "none": "In dieser Installation sind noch keine Fachmodule enthalten. Der Kern ist immer aktiv.", "hint": "Kern ist immer aktiv", "cta": "Module öffnen" },
+    "settings": {
+      "title": "Einstellungen vervollständigen",
+      "text": "Steuernummer, Finanzamt und Freistellungsbescheid fehlen. Ohne diese Angaben lassen sich keine Zuwendungsbestätigungen erzeugen.",
+      "hint": "{count, plural, =0 {Alle Pflichtfelder gefüllt} one {# Feld offen} other {# Felder offen}}",
+      "cta": "Zu den Einstellungen"
+    },
+    "roles": {
+      "title": "Rollen anlegen",
+      "text": "Es gibt nur die Rolle „Administration“. Für Kassenprüfung und Schriftführung sind eigene Rollen mit weniger Rechten sinnvoll.",
+      "hint": "Empfohlen: Schatzmeisterin, Kassenprüfer",
+      "cta": "Rollen öffnen"
+    },
+    "modules": {
+      "title": "Module aktivieren",
+      "text": "Module sind installiert, aber inaktiv. Aktivieren Sie nur, was der Verein wirklich führt.",
+      "none": "In dieser Installation sind noch keine Fachmodule enthalten. Der Kern ist immer aktiv.",
+      "hint": "Kern ist immer aktiv",
+      "cta": "Module öffnen"
+    },
     "backupMissing": "Diese Installation läuft im Vereinsnetz. Ein Backup wurde noch nicht erstellt — der erste Export dauert unter einer Minute.",
     "backupDone": "Diese Installation läuft im Vereinsnetz. Das letzte Backup ist vorhanden."
   },
   "users": {
     "title": "Nutzer",
-    "filter": { "search": "Name oder E-Mail", "showInactive": "Inaktive anzeigen", "count": "{count} Nutzer, davon {inactive} inaktiv" },
-    "columns": { "name": "Name", "email": "E-Mail", "roles": "Rollen", "status": "Status", "lastLogin": "Letzte Anmeldung" },
-    "status": { "active": "Aktiv", "firstLoginPending": "Erstlogin offen", "inactive": "Inaktiv" },
-    "actions": { "menu": "Aktionen", "roles": "Rollen ändern", "resetPassword": "Neues Startpasswort", "deactivate": "Deaktivieren", "activate": "Aktivieren" },
-    "deactivate": { "title": "Nutzer deaktivieren?", "text": "{name} kann sich danach nicht mehr anmelden. Bereits protokollierte Vorgänge bleiben erhalten und bleiben ihm zugeordnet." },
-    "create": { "button": "Nutzer anlegen", "title": "Nutzer anlegen", "subtitle": "Nach dem Anlegen zeigt das System einmalig ein Startpasswort. Der Nutzer muss es beim ersten Login ändern.", "roles": "Rollen", "name": "Name", "email": "E-Mail", "submit": "Nutzer anlegen" },
-    "startPassword": { "title": "Nutzer „{name}“ angelegt", "text": "Geben Sie diese Zugangsdaten weiter. Das Startpasswort wird nach dem Schließen nicht mehr angezeigt; ein neues können Sie jederzeit setzen.", "copyBoth": "Beides kopieren", "info": "Beim ersten Login muss {name} ein eigenes Passwort setzen. Bis dahin steht in der Liste „Erstlogin offen“.", "done": "Ich habe die Daten notiert" },
-    "roles": { "title": "Rollen für {name}", "cancel": "Abbrechen", "save": "Rollen speichern" },
-    "toast": { "activated": "Nutzer aktiviert.", "deactivated": "Nutzer deaktiviert.", "saved": "Nutzer gespeichert.", "rolesSaved": "Rollen gespeichert." }
+    "filter": {
+      "search": "Name oder E-Mail",
+      "showInactive": "Inaktive anzeigen",
+      "count": "{count} Nutzer, davon {inactive} inaktiv"
+    },
+    "columns": {
+      "name": "Name",
+      "email": "E-Mail",
+      "roles": "Rollen",
+      "status": "Status",
+      "lastLogin": "Letzte Anmeldung"
+    },
+    "status": {
+      "active": "Aktiv",
+      "firstLoginPending": "Erstlogin offen",
+      "inactive": "Inaktiv"
+    },
+    "actions": {
+      "menu": "Aktionen",
+      "roles": "Rollen ändern",
+      "resetPassword": "Neues Startpasswort",
+      "deactivate": "Deaktivieren",
+      "activate": "Aktivieren"
+    },
+    "deactivate": {
+      "title": "Nutzer deaktivieren?",
+      "text": "{name} kann sich danach nicht mehr anmelden. Bereits protokollierte Vorgänge bleiben erhalten und bleiben ihm zugeordnet."
+    },
+    "create": {
+      "button": "Nutzer anlegen",
+      "title": "Nutzer anlegen",
+      "subtitle": "Nach dem Anlegen zeigt das System einmalig ein Startpasswort. Der Nutzer muss es beim ersten Login ändern.",
+      "roles": "Rollen",
+      "name": "Name",
+      "email": "E-Mail",
+      "submit": "Nutzer anlegen"
+    },
+    "startPassword": {
+      "title": "Nutzer „{name}“ angelegt",
+      "text": "Geben Sie diese Zugangsdaten weiter. Das Startpasswort wird nach dem Schließen nicht mehr angezeigt; ein neues können Sie jederzeit setzen.",
+      "copyBoth": "Beides kopieren",
+      "info": "Beim ersten Login muss {name} ein eigenes Passwort setzen. Bis dahin steht in der Liste „Erstlogin offen“.",
+      "done": "Ich habe die Daten notiert"
+    },
+    "roles": {
+      "title": "Rollen für {name}",
+      "cancel": "Abbrechen",
+      "save": "Rollen speichern"
+    },
+    "toast": {
+      "activated": "Nutzer aktiviert.",
+      "deactivated": "Nutzer deaktiviert.",
+      "saved": "Nutzer gespeichert.",
+      "rolesSaved": "Rollen gespeichert."
+    }
   },
   "roles": {
     "title": "Rollen",
     "description": "Rollennamen sind freier Text. Rechte werden je Rolle vergeben; Nutzer erhalten die Vereinigung ihrer Rollen.",
     "listAria": "Rollen",
-    "meta": { "protected": "Alle Rechte · {users, plural, one {# Nutzer} other {# Nutzer}} · gesperrt", "normal": "{permissions, plural, one {# Recht} other {# Rechte}} · {users, plural, one {# Nutzer} other {# Nutzer}}" },
+    "meta": {
+      "protected": "Alle Rechte · {users, plural, one {# Nutzer} other {# Nutzer}} · gesperrt",
+      "normal": "{permissions, plural, one {# Recht} other {# Rechte}} · {users, plural, one {# Nutzer} other {# Nutzer}}"
+    },
     "noDelete": "Löschen gibt es nicht — eine nicht mehr benötigte Rolle wird von allen Nutzern entfernt und bleibt leer stehen.",
-    "fields": { "name": "Rollenname", "description": "Beschreibung" },
+    "fields": {
+      "name": "Rollenname",
+      "description": "Beschreibung"
+    },
     "groupCount": "{active} von {total} aktiv",
     "save": "Rolle speichern",
-    "create": { "button": "Rolle anlegen", "title": "Rolle anlegen", "submit": "Anlegen" },
-    "toast": { "created": "Rolle angelegt.", "saved": "Rolle gespeichert." }
+    "create": {
+      "button": "Rolle anlegen",
+      "title": "Rolle anlegen",
+      "submit": "Anlegen"
+    },
+    "toast": {
+      "created": "Rolle angelegt.",
+      "saved": "Rolle gespeichert."
+    }
   },
   "permissions": {
     "groups": {
@@ -151,36 +279,71 @@
     },
     "keys": {
       "users": {
-        "manage": { "label": "Nutzer verwalten", "description": "Nutzer anlegen, bearbeiten, deaktivieren und Rollen zuweisen." }
+        "manage": {
+          "label": "Nutzer verwalten",
+          "description": "Nutzer anlegen, bearbeiten, deaktivieren und Rollen zuweisen."
+        }
       },
       "roles": {
-        "manage": { "label": "Rollen verwalten", "description": "Rollen anlegen und deren Rechte ändern." }
+        "manage": {
+          "label": "Rollen verwalten",
+          "description": "Rollen anlegen und deren Rechte ändern."
+        }
       },
       "settings": {
-        "manage": { "label": "Einstellungen verwalten", "description": "Vereinsdaten, Steuerangaben, Bankverbindung und Branding ändern." }
+        "manage": {
+          "label": "Einstellungen verwalten",
+          "description": "Vereinsdaten, Steuerangaben, Bankverbindung und Branding ändern."
+        }
       },
       "modules": {
-        "manage": { "label": "Module verwalten", "description": "Module aktivieren und deaktivieren." }
+        "manage": {
+          "label": "Module verwalten",
+          "description": "Module aktivieren und deaktivieren."
+        }
       },
       "audit": {
-        "view": { "label": "Änderungsprotokoll einsehen", "description": "Alle protokollierten Vorgänge lesen und als PDF exportieren." }
+        "view": {
+          "label": "Änderungsprotokoll einsehen",
+          "description": "Alle protokollierten Vorgänge lesen und als PDF exportieren."
+        }
       },
       "documents": {
-        "view": { "label": "Dokumente ansehen", "description": "Erzeugte PDFs öffnen und herunterladen." },
-        "create": { "label": "Dokumente erzeugen", "description": "PDFs aus Vorlagen erstellen; das Ergebnis wird protokolliert." }
+        "view": {
+          "label": "Dokumente ansehen",
+          "description": "Erzeugte PDFs öffnen und herunterladen."
+        },
+        "create": {
+          "label": "Dokumente erzeugen",
+          "description": "PDFs aus Vorlagen erstellen; das Ergebnis wird protokolliert."
+        }
       },
       "media": {
-        "upload": { "label": "Dateien hochladen", "description": "Logo, Anhänge und Belege in die Mediathek legen." }
+        "upload": {
+          "label": "Dateien hochladen",
+          "description": "Logo, Anhänge und Belege in die Mediathek legen."
+        }
       },
       "backup": {
-        "export": { "label": "Backup exportieren", "description": "Vollständigen Datenexport herunterladen." },
-        "import": { "label": "Backup importieren", "description": "Bestand überschreiben. Nur für die Administration sinnvoll." }
+        "export": {
+          "label": "Backup exportieren",
+          "description": "Vollständigen Datenexport herunterladen."
+        },
+        "import": {
+          "label": "Backup importieren",
+          "description": "Bestand überschreiben. Nur für die Administration sinnvoll."
+        }
       }
     }
   },
   "settings": {
     "title": "Einstellungen",
-    "tabs": { "organization": "Verein", "tax": "Steuer & Bescheide", "bank": "Bank", "branding": "Branding" },
+    "tabs": {
+      "organization": "Verein",
+      "tax": "Steuer & Bescheide",
+      "bank": "Bank",
+      "branding": "Branding"
+    },
     "tabInvalid": "Enthält Fehler",
     "counter": "{count} von {max} Zeichen",
     "taxIncomplete": "{count, plural, one {# Angabe ist unvollständig.} other {# Angaben sind unvollständig.}}",
@@ -247,6 +410,14 @@
     },
     "toast": {
       "saved": "Einstellungen gespeichert. Änderungen sind im Protokoll vermerkt."
+    },
+    "logo": {
+      "file": "Logo-Datei",
+      "hint": "PNG oder SVG, mindestens 256 px. Erscheint in Sidebar, Login und Briefkopf.",
+      "submit": "Logo speichern",
+      "saved": "Logo gespeichert.",
+      "noFile": "Bitte eine Datei auswählen.",
+      "current": "Aktuelles Logo"
     }
   },
   "themes": {
@@ -268,8 +439,13 @@
     "noInheritance": "Jedes Theme enthält alle Tokens vollständig — keine Vererbung, damit eine Änderung am Default kein anderes Theme verschiebt. „Duplizieren“ füllt die Werte des Ausgangsthemes vor.",
     "contrastTitle": "Kontrast unter AA: {ratio}:1",
     "contrastPair": "{fg} auf {bg} ({mode}): {ratio}:1, nötig {minimum}:1",
-    "mode": { "light": "Hell", "dark": "Dunkel" },
-    "columns": { "token": "Token" },
+    "mode": {
+      "light": "Hell",
+      "dark": "Dunkel"
+    },
+    "columns": {
+      "token": "Token"
+    },
     "preview": {
       "title": "Live-Vorschau",
       "group": "Verwaltung",
@@ -392,7 +568,6 @@
   "audit": {
     "title": "Änderungsprotokoll",
     "export": "Als PDF exportieren",
-    "exportSoon": "Folgt mit der Dokumenten-Engine.",
     "range": "{from}–{to} von {total}",
     "prev": "Zurück",
     "next": "Weiter",
@@ -432,7 +607,8 @@
       "environment": "Umgebung",
       "summary": "Zusammenfassung",
       "immutable": "Einträge können nicht geändert werden."
-    }
+    },
+    "exporting": "Wird erzeugt …"
   },
   "profile": {
     "title": "Profil",
@@ -456,7 +632,11 @@
       "name": "Name",
       "nameHint": "Wofür das Token verwendet wird, z. B. „Buchhaltung Skript“.",
       "createSubmit": "Erstellen",
-      "columns": { "name": "Name", "created": "Erstellt", "lastUsed": "Zuletzt genutzt" },
+      "columns": {
+        "name": "Name",
+        "created": "Erstellt",
+        "lastUsed": "Zuletzt genutzt"
+      },
       "neverUsed": "noch nie genutzt",
       "lastUsedDays": "{days, plural, =0 {heute} one {vor # Tag} other {vor # Tagen}}",
       "revokedAt": "widerrufen {date}",
@@ -487,15 +667,61 @@
     "permissionsOnly": "Nur Einträge, für die Sie Rechte haben."
   },
   "placeholders": {
-    "documents": {
-      "title": "Dokumente",
-      "emptyTitle": "Folgt mit der Dokumenten-Engine",
-      "emptyText": "Erzeugte PDFs, Nummernkreise und Storno erscheinen hier, sobald Plan 3 (Betrieb) umgesetzt ist."
-    },
     "backup": {
       "title": "Backup",
       "emptyTitle": "Folgt mit der Dokumenten-Engine",
       "emptyText": "Export und Import des Bestands erscheinen hier, sobald Plan 3 (Betrieb) umgesetzt ist."
+    }
+  },
+  "documents": {
+    "title": "Dokumente",
+    "description": "Erzeugte PDFs sind unveränderlich und lückenlos nummeriert. Ein fehlerhaftes Dokument wird storniert und ersetzt.",
+    "columns": {
+      "title": "Vorlage / Titel",
+      "reference": "Bezug",
+      "createdBy": "Erstellt von",
+      "date": "Datum"
+    },
+    "download": "Herunterladen",
+    "voided": "Storniert",
+    "templates": {
+      "letterhead": "Briefbogen",
+      "audit-log-export": "Änderungsprotokoll"
+    },
+    "create": {
+      "button": "Dokument erzeugen",
+      "title": "Dokument erzeugen",
+      "template": "Vorlage",
+      "titleField": "Titel",
+      "body": "Text",
+      "letterhead": "Briefkopf und Vereinsangaben einsetzen",
+      "submit": "Erzeugen",
+      "rendering": "Wird erzeugt …",
+      "missingPermission": "benötigt {permission}",
+      "templates": {
+        "letterhead": "Briefbogen",
+        "audit-log-export": "Änderungsprotokoll-Export"
+      }
+    },
+    "void": {
+      "title": "Dokument {number} stornieren?",
+      "text": "Das Dokument behält Nummer und PDF und wird als storniert markiert. Ein Ersatz erhält eine neue Nummer.",
+      "reason": "Grund",
+      "confirm": "Stornieren"
+    },
+    "preview": {
+      "title": "Vorschau",
+      "pages": "{count, plural, one {# Seite} other {# Seiten}}",
+      "download": "Herunterladen"
+    },
+    "empty": {
+      "title": "Noch keine Dokumente",
+      "text": "Erzeugen Sie ein erstes Dokument, zum Beispiel einen Briefbogen."
+    },
+    "footnote": "Dokumente werden nicht gelöscht. Ein fehlerhaftes Dokument wird storniert; es bleibt mit dem Vermerk „storniert“ in der Liste.",
+    "toast": {
+      "created": "Dokument erzeugt.",
+      "voided": "Dokument storniert."
     }
   }
 }

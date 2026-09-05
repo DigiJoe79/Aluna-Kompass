@@ -16,11 +16,12 @@ test.describe('command palette and error pages', () => {
     await expect(page).toHaveURL('/admin/roles');
   });
 
-  test('renders 404 inside the shell and the documents placeholder', async ({ page }) => {
+  test('renders 404 inside the shell and the real documents page', async ({ page }) => {
     await page.goto('/admin/gibt-es-nicht');
     await expect(page.getByText('404')).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Hauptnavigation' })).toBeVisible();
     await page.goto('/admin/documents');
-    await expect(page.getByText('Folgt mit der Dokumenten-Engine')).toBeVisible();
+    await expect(page.getByText('Noch keine Dokumente')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Dokument erzeugen' })).toBeVisible();
   });
 });
