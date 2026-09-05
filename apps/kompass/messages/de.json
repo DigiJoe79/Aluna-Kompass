@@ -53,8 +53,40 @@
     }
   },
   "auth": {
+    "setup": {
+      "title": "Erste Einrichtung",
+      "intro": "Legen Sie das erste Vorstandskonto an. Danach werden weitere Nutzer in der Verwaltung angelegt — dieser Schritt erscheint nicht wieder.",
+      "organizationName": "Vereinsname",
+      "name": "Ihr Name",
+      "email": "E-Mail",
+      "password": "Passwort",
+      "passwordHint": "Mindestens 12 Zeichen. Ein Merksatz ist besser als ein kurzes Sonderzeichen-Passwort.",
+      "submit": "Konto anlegen und starten",
+      "footer": "Dieses Konto erhält die Rolle „Administration“ mit allen Rechten. Weitere Rollen legen Sie später unter Verwaltung → Rollen an."
+    },
     "login": {
-      "submit": "Anmelden"
+      "title": "Anmelden",
+      "email": "E-Mail",
+      "password": "Passwort",
+      "submit": "Anmelden",
+      "invalid": "E-Mail oder Passwort stimmt nicht.",
+      "attemptsLeft": "{count, plural, one {Noch # Versuch, danach ist das Konto für 15 Minuten gesperrt.} other {Noch # Versuche, danach ist das Konto für 15 Minuten gesperrt.}}",
+      "locked": "Das Konto ist nach fünf Fehlversuchen für 15 Minuten gesperrt. Ein Admin kann ein neues Startpasswort setzen.",
+      "inactive": "Dieses Konto ist deaktiviert.",
+      "importedTitle": "Import abgeschlossen",
+      "importedText": "Alle Sitzungen wurden beendet. Melden Sie sich mit den Zugangsdaten aus dem eingelesenen Bestand an.",
+      "footer": "Zugänge werden vom Vorstand angelegt. Bei Problemen wendet man sich an die Administration des Vereins."
+    },
+    "password": {
+      "title": "Neues Passwort festlegen",
+      "intro": "Sie haben sich mit einem Startpasswort angemeldet. Legen Sie ein eigenes fest, um fortzufahren.",
+      "current": "Startpasswort",
+      "new": "Neues Passwort",
+      "repeat": "Passwort wiederholen",
+      "strength": "{count} Zeichen — mindestens 12 sind nötig.",
+      "mismatch": "Die Passwörter stimmen nicht überein.",
+      "submit": "Passwort setzen und fortfahren",
+      "footer": "Kein Überspringen, kein Abmelden-Knopf: ohne eigenes Passwort gibt es keinen Zugang. Der Wechsel wird protokolliert."
     }
   }
 }

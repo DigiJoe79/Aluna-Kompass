@@ -7,7 +7,7 @@ export type ActionState =
 
 export const idleState: ActionState = { status: 'idle' };
 
-type Translate = (key: string, values?: Record<string, unknown>) => string;
+type Translate = (key: string, values?: any) => string;
 
 const KNOWN_CONFLICTS = new Set([
   'emailTaken',

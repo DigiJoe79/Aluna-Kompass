@@ -1,6 +1,6 @@
-import { getTranslations } from 'next-intl/server';
+import { requireSession } from '@/lib/request-context';
 
 export default async function Page() {
-  const t = await getTranslations('app');
-  return <main>{t('name')}</main>;
+  const { user } = await requireSession();
+  return <main className="p-8">Guten Tag, {user.name.split(' ')[0]}.</main>;
 }
