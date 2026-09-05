@@ -1,6 +1,6 @@
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 
 export function ForbiddenCard({ permission }: { permission: string }) {
   const t = useTranslations('errors.pages.forbidden');
@@ -14,7 +14,7 @@ export function ForbiddenCard({ permission }: { permission: string }) {
       <p className="text-[14px] leading-[1.55] text-ink-2">{t('text')}</p>
       <code className="w-fit rounded-md bg-code px-2 py-1 font-mono text-[12px]">{permission}</code>
       <div className="mt-auto flex items-center gap-3">
-        <Button render={<Link href="/" />}>{t('home')}</Button>
+        <Link href="/" className={buttonVariants()}>{t('home')}</Link>
         <span className="text-[12px] text-muted-ink">{t('footnote')}</span>
       </div>
     </section>

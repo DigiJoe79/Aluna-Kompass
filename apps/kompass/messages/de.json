@@ -98,5 +98,15 @@
       "submit": "Passwort setzen und fortfahren",
       "footer": "Kein Überspringen, kein Abmelden-Knopf: ohne eigenes Passwort gibt es keinen Zugang. Der Wechsel wird protokolliert."
     }
+  },
+  "home": {
+    "greeting": "Guten Tag, {name}.",
+    "intro": "Der Verein ist angelegt. Drei Dinge fehlen noch, bevor Sie mit der Verwaltung arbeiten können.",
+    "counter": "{done} von {total}",
+    "settings": { "title": "Einstellungen vervollständigen", "text": "Steuernummer, Finanzamt und Freistellungsbescheid fehlen. Ohne diese Angaben lassen sich keine Zuwendungsbestätigungen erzeugen.", "hint": "{count, plural, =0 {Alle Pflichtfelder gefüllt} one {# Feld offen} other {# Felder offen}}", "cta": "Zu den Einstellungen" },
+    "roles": { "title": "Rollen anlegen", "text": "Es gibt nur die Rolle „Administration“. Für Kassenprüfung und Schriftführung sind eigene Rollen mit weniger Rechten sinnvoll.", "hint": "Empfohlen: Schatzmeisterin, Kassenprüfer", "cta": "Rollen öffnen" },
+    "modules": { "title": "Module aktivieren", "text": "Module sind installiert, aber inaktiv. Aktivieren Sie nur, was der Verein wirklich führt.", "none": "In dieser Installation sind noch keine Fachmodule enthalten. Der Kern ist immer aktiv.", "hint": "Kern ist immer aktiv", "cta": "Module öffnen" },
+    "backupMissing": "Diese Installation läuft im Vereinsnetz. Ein Backup wurde noch nicht erstellt — der erste Export dauert unter einer Minute.",
+    "backupDone": "Diese Installation läuft im Vereinsnetz. Das letzte Backup ist vorhanden."
   }
 }
