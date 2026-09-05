@@ -4,7 +4,7 @@ import { coreModule } from './core-module';
 import { openDatabase, runMigrations } from './db/client';
 import type { AppEnv, Deps } from './deps';
 import { createFileMediaStore } from './media/store';
-import type { ModuleManifest } from './modules/manifest';
+import type { DocumentTemplate, ModuleManifest } from './modules/manifest';
 import { createRegistry } from './modules/registry';
 
 export interface CreateDepsOptions {
@@ -12,6 +12,7 @@ export interface CreateDepsOptions {
   mediaPath: string;
   env: AppEnv;
   modules?: ModuleManifest[];
+  coreTemplates?: DocumentTemplate[];
   clock?: Clock;
 }
 
@@ -23,7 +24,7 @@ export function createDeps(opts: CreateDepsOptions): Deps & { migrationCount: nu
     db,
     clock: opts.clock ?? systemClock,
     env: opts.env,
-    registry: createRegistry([coreModule, ...(opts.modules ?? [])]),
+    registry: createRegistry([coreModule, ...(opts.modules ?? [])], { coreTemplates: opts.coreTemplates }),
     media: createFileMediaStore(opts.mediaPath),
     migrationCount,
     close: () => sqlite.close(),

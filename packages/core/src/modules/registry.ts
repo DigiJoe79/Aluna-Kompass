@@ -1,13 +1,17 @@
-import type { ModuleManifest, SettingDefinition } from './manifest';
+import type { DocumentTemplate, ModuleManifest, SettingDefinition } from './manifest';
 
 export interface Registry {
   manifests: readonly ModuleManifest[];
   permissionKeys: ReadonlySet<string>;
   settingDefinitions: ReadonlyMap<string, SettingDefinition>;
+  documentTemplates: ReadonlyMap<string, DocumentTemplate>;
   module(key: string): ModuleManifest | undefined;
 }
 
-export function createRegistry(manifests: readonly ModuleManifest[]): Registry {
+export function createRegistry(
+  manifests: readonly ModuleManifest[],
+  extra: { coreTemplates?: readonly DocumentTemplate[] } = {},
+): Registry {
   const byKey = new Map<string, ModuleManifest>();
   const permissionKeys = new Set<string>();
   const settingDefinitions = new Map<string, SettingDefinition>();
@@ -25,10 +29,20 @@ export function createRegistry(manifests: readonly ModuleManifest[]): Registry {
     }
   }
 
+  const documentTemplates = new Map<string, DocumentTemplate>();
+  const addTemplate = (t: DocumentTemplate) => {
+    if (documentTemplates.has(t.key)) throw new Error(`duplicate document template: ${t.key}`);
+    for (const other of documentTemplates.values()) if (other.prefix === t.prefix) throw new Error(`duplicate document prefix: ${t.prefix}`);
+    documentTemplates.set(t.key, t);
+  };
+  for (const t of extra.coreTemplates ?? []) addTemplate(t);
+  for (const manifest of manifests) for (const t of manifest.documentTemplates ?? []) addTemplate(t);
+
   return {
     manifests,
     permissionKeys,
     settingDefinitions,
+    documentTemplates,
     module: (key) => byKey.get(key),
   };
 }

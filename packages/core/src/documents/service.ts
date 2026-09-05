@@ -1,0 +1,150 @@
+import { and, count, desc, eq, sql, type SQL } from 'drizzle-orm';
+import { z } from 'zod';
+import { recordAudit } from '../audit/log';
+import { isoNow } from '../clock';
+import type { CallContext } from '../context';
+import type { DbOrTx } from '../db/client';
+import { documents, mediaAssets } from '../db/schema';
+import type { Deps } from '../deps';
+import { newId } from '../ids';
+import { storeMediaInternal } from '../media/service';
+import type { DocumentRenderContext, DocumentTemplate } from '../modules/manifest';
+import { requirePermission } from '../permissions/check';
+import { conflict, notFound, ok, type Result } from '../result';
+import { readAllSettings, readSetting } from '../settings/service';
+import { resolveActiveTheme } from '../themes/service';
+import { validate } from '../validate';
+
+export type DocumentRecord = Omit<typeof documents.$inferSelect, 'inputSnapshot'> & { inputSnapshot: unknown };
+
+const toRecord = (row: typeof documents.$inferSelect): DocumentRecord => ({ ...row, inputSnapshot: JSON.parse(row.inputSnapshot) });
+
+export function nextDocumentNumber(db: DbOrTx, prefix: string, year: number): string {
+  const row = db
+    .select({ n: count() })
+    .from(documents)
+    .where(sql`${documents.number} like ${`${prefix}-${year}-%`}`)
+    .get();
+  return `${prefix}-${year}-${String((row?.n ?? 0) + 1).padStart(3, '0')}`;
+}
+
+const renderSchema = z.object({
+  templateKey: z.string().min(1),
+  input: z.unknown(),
+  entityType: z.string().min(1).optional(),
+  entityId: z.string().min(1).optional(),
+});
+
+async function buildContext(deps: Deps, ctx: CallContext, number: string): Promise<DocumentRenderContext> {
+  const all = readAllSettings(deps);
+  const organization = Object.fromEntries(Object.entries(all).filter(([k]) => k.startsWith('organization.')));
+  const logoId = readSetting<string | null>(deps, 'branding.logoAssetId');
+  let logo: DocumentRenderContext['logo'] = null;
+  if (logoId) {
+    const asset = deps.db.select().from(mediaAssets).where(eq(mediaAssets.id, logoId)).get();
+    if (asset) logo = { bytes: await deps.media.read(asset.filename), mimeType: asset.mimeType };
+  }
+  return { number, issuedAt: isoNow(deps.clock), organization, theme: resolveActiveTheme(deps), logo };
+}
+
+export async function renderDocument(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DocumentRecord>> {
+  const denied = requirePermission(ctx, 'documents.create');
+  if (denied) return denied;
+  const parsed = validate(renderSchema, input);
+  if (!parsed.ok) return parsed;
+  const template = deps.registry.documentTemplates.get(parsed.value.templateKey) as DocumentTemplate | undefined;
+  if (!template) return notFound('documentTemplate', parsed.value.templateKey);
+  if (template.permission) {
+    const extra = requirePermission(ctx, template.permission);
+    if (extra) return extra;
+  }
+  const data = validate(template.schema, parsed.value.input);
+  if (!data.ok) return data;
+
+  // Nummer reservieren: rendern außerhalb der Transaktion (async), Eindeutigkeit über den Unique-Index; bei Kollision erneut versuchen.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const year = deps.clock.now().getUTCFullYear();
+    const number = nextDocumentNumber(deps.db, template.prefix, year);
+    const context = await buildContext(deps, ctx, number);
+    const bytes = await template.render(data.value, context);
+    const asset = await storeMediaInternal(deps, ctx, { originalName: `${number}.pdf`, bytes, declaredMimeType: 'application/pdf' });
+    if (!asset.ok) return asset;
+    try {
+      return deps.db.transaction((tx: DbOrTx) => {
+        const id = newId();
+        tx.insert(documents)
+          .values({
+            id,
+            templateKey: template.key,
+            number,
+            entityType: parsed.value.entityType ?? null,
+            entityId: parsed.value.entityId ?? null,
+            inputSnapshot: JSON.stringify(data.value),
+            assetId: asset.value.id,
+            status: 'issued',
+            createdByUserId: ctx.userId as string,
+            createdAt: context.issuedAt,
+          })
+          .run();
+        const record = toRecord(tx.select().from(documents).where(eq(documents.id, id)).get()!);
+        recordAudit(tx, deps, ctx, { action: 'documents.render', entityType: 'document', entityId: id, after: { number, templateKey: template.key, entityType: record.entityType, entityId: record.entityId }, summary: `Dokument ${number} erzeugt` });
+        return ok(record);
+      });
+    } catch (error) {
+      if (!(error instanceof Error && /UNIQUE constraint failed: documents.number/.test(error.message))) throw error;
+    }
+  }
+  return conflict('documentNumberContention', 'Dokumentnummer konnte nicht reserviert werden');
+}
+
+const voidSchema = z.object({ id: z.string().min(1), reason: z.string().trim().min(1).max(300) });
+
+export async function voidDocument(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DocumentRecord>> {
+  const denied = requirePermission(ctx, 'documents.create');
+  if (denied) return denied;
+  const parsed = validate(voidSchema, input);
+  if (!parsed.ok) return parsed;
+  const row = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
+  if (!row) return notFound('document', parsed.value.id);
+  if (row.status === 'voided') return conflict('documentAlreadyVoided', `Dokument ${row.number} ist bereits storniert`);
+  return deps.db.transaction((tx: DbOrTx) => {
+    tx.update(documents).set({ status: 'voided', voidedAt: isoNow(deps.clock), voidedByUserId: ctx.userId, voidReason: parsed.value.reason }).where(eq(documents.id, row.id)).run();
+    const after = toRecord(tx.select().from(documents).where(eq(documents.id, row.id)).get()!);
+    recordAudit(tx, deps, ctx, { action: 'documents.void', entityType: 'document', entityId: row.id, before: { status: 'issued' }, after: { status: 'voided', reason: parsed.value.reason }, summary: `Dokument ${row.number} storniert: ${parsed.value.reason}` });
+    return ok(after);
+  });
+}
+
+const listSchema = z.object({
+  templateKey: z.string().optional(),
+  entityType: z.string().optional(),
+  entityId: z.string().optional(),
+  limit: z.number().int().min(1).max(200).default(50),
+  offset: z.number().int().min(0).default(0),
+});
+
+export async function listDocuments(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ documents: DocumentRecord[]; total: number }>> {
+  const denied = requirePermission(ctx, 'documents.view');
+  if (denied) return denied;
+  const parsed = validate(listSchema, input);
+  if (!parsed.ok) return parsed;
+  const q = parsed.value;
+  const conditions: SQL[] = [];
+  if (q.templateKey) conditions.push(eq(documents.templateKey, q.templateKey));
+  if (q.entityType) conditions.push(eq(documents.entityType, q.entityType));
+  if (q.entityId) conditions.push(eq(documents.entityId, q.entityId));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  const total = deps.db.select({ n: count() }).from(documents).where(where).get()?.n ?? 0;
+  const rows = deps.db.select().from(documents).where(where).orderBy(desc(documents.createdAt), desc(documents.number)).limit(q.limit).offset(q.offset).all();
+  return ok({ documents: rows.map(toRecord), total });
+}
+
+export async function getDocument(deps: Deps, ctx: CallContext, id: string): Promise<Result<{ record: DocumentRecord; bytes: Uint8Array; filename: string }>> {
+  const denied = requirePermission(ctx, 'documents.view');
+  if (denied) return denied;
+  const row = deps.db.select().from(documents).where(eq(documents.id, id)).get();
+  if (!row) return notFound('document', id);
+  const asset = deps.db.select().from(mediaAssets).where(eq(mediaAssets.id, row.assetId)).get();
+  if (!asset) return notFound('mediaAsset', row.assetId);
+  return ok({ record: toRecord(row), bytes: await deps.media.read(asset.filename), filename: `${row.number}.pdf` });
+}

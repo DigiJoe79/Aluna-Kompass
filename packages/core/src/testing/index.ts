@@ -6,7 +6,7 @@ import { roles, users } from '../db/schema';
 import type { AppEnv, Deps } from '../deps';
 import { newId } from '../ids';
 import { createMemoryMediaStore } from '../media/store';
-import type { ModuleManifest } from '../modules/manifest';
+import type { DocumentTemplate, ModuleManifest } from '../modules/manifest';
 import { createRegistry } from '../modules/registry';
 import { createTestDb } from './test-db';
 
@@ -20,7 +20,7 @@ export interface TestDeps extends Deps {
 }
 
 export function createTestDeps(
-  opts: { now?: string; manifests?: ModuleManifest[]; env?: AppEnv } = {},
+  opts: { now?: string; manifests?: ModuleManifest[]; env?: AppEnv; coreTemplates?: DocumentTemplate[] } = {},
 ): TestDeps {
   const { db, sqlite } = createTestDb();
   return {
@@ -28,7 +28,7 @@ export function createTestDeps(
     sqlite,
     clock: fixedClock(opts.now ?? TEST_NOW),
     env: opts.env ?? 'test',
-    registry: createRegistry(opts.manifests ?? [coreModule]),
+    registry: createRegistry(opts.manifests ?? [coreModule], { coreTemplates: opts.coreTemplates }),
     media: createMemoryMediaStore(),
   };
 }

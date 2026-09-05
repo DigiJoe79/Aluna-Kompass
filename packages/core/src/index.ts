@@ -19,6 +19,7 @@ export * from './audit/log';
 export * from './audit/query';
 export * from './media/store';
 export * from './media/service';
+export * from './documents/service';
 export * from './settings/service';
 export { CORE_SETTINGS } from './settings/core';
 export * from './auth/password';
