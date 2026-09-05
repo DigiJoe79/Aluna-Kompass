@@ -99,7 +99,20 @@
     "audit": "Änderungsprotokoll",
     "documents": "Dokumente",
     "backup": "Backup",
-    "logoAlt": "Vereinslogo"
+    "logoAlt": "Vereinslogo",
+    "website": {
+      "pages": "Seiten",
+      "articles": "Artikel",
+      "team": "Team",
+      "faqs": "FAQ",
+      "projects": "Projekte",
+      "downloads": "Downloads",
+      "facts": "Site-Fakten",
+      "publish": "Publizieren"
+    },
+    "animals": {
+      "list": "Hunde"
+    }
   },
   "shell": {
     "envBanner": {

@@ -28,9 +28,18 @@ importers:
       '@kompass/documents':
         specifier: workspace:*
         version: link:../../packages/documents
+      '@kompass/markdown':
+        specifier: workspace:*
+        version: link:../../packages/markdown
       '@kompass/mcp':
         specifier: workspace:*
         version: link:../../packages/mcp
+      '@kompass/module-animals':
+        specifier: workspace:*
+        version: link:../../packages/modules/animals
+      '@kompass/module-website':
+        specifier: workspace:*
+        version: link:../../packages/modules/website
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1

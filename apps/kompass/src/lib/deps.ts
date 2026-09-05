@@ -1,6 +1,7 @@
 import { rmSync } from 'node:fs';
 import { coreDocumentTemplates, createTypstRenderer } from '@kompass/documents';
 import { createDeps, readEnv, seedDevelopment } from '@kompass/core';
+import { installedModules } from '../modules';
 import { resetMcpHandler } from './mcp';
 
 export type AppDeps = import('@kompass/core').AppDeps;
@@ -22,6 +23,7 @@ export function getDeps(): AppDeps {
       databasePath: env.databasePath,
       mediaPath: env.mediaPath,
       env: env.env,
+      modules: installedModules,
       coreTemplates: coreDocumentTemplates(createTypstRenderer()),
     });
   }

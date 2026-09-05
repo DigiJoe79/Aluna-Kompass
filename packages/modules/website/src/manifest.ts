@@ -2,6 +2,7 @@ import { defineModule, type ModuleManifest } from '@kompass/core';
 import { WEBSITE_PERMISSIONS } from './page-keys';
 import { WEBSITE_SETTINGS } from './settings';
 import { WEBSITE_VIEWS } from './views';
+import { WEBSITE_MCP_TOOLS } from './mcp-tools';
 
 const nav = (key: string, href: string, icon: string, permission: string) => ({ key: `website.${key}`, href, icon, group: 'website', permission });
 
@@ -21,4 +22,5 @@ export const websiteModule: ModuleManifest = defineModule({
     nav('publish', '/website/publish', 'upload', 'website.publish'),
   ],
   publishedViews: WEBSITE_VIEWS,
+  mcpTools: WEBSITE_MCP_TOOLS,
 });
