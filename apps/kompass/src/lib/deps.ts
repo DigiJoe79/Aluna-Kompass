@@ -1,7 +1,9 @@
 import { rmSync } from 'node:fs';
-import { createDeps, readEnv, seedDevelopment, type Deps } from '@kompass/core';
+import { coreDocumentTemplates, createTypstRenderer } from '@kompass/documents';
+import { createDeps, readEnv, seedDevelopment } from '@kompass/core';
+import { resetMcpHandler } from './mcp';
 
-export type AppDeps = Deps & { migrationCount: number; close(): void };
+export type AppDeps = import('@kompass/core').AppDeps;
 
 interface Holder {
   deps: AppDeps | null;
@@ -16,7 +18,12 @@ export function runtimeEnv() {
 export function getDeps(): AppDeps {
   if (!holder.deps) {
     const env = readEnv();
-    holder.deps = createDeps({ databasePath: env.databasePath, mediaPath: env.mediaPath, env: env.env });
+    holder.deps = createDeps({
+      databasePath: env.databasePath,
+      mediaPath: env.mediaPath,
+      env: env.env,
+      coreTemplates: coreDocumentTemplates(createTypstRenderer()),
+    });
   }
   return holder.deps;
 }
@@ -25,10 +32,12 @@ export function getDeps(): AppDeps {
 export async function resetDeps(mode: 'empty' | 'seeded'): Promise<void> {
   const env = readEnv();
   if (env.env !== 'test') throw new Error('resetDeps is only available in the test environment');
+  await resetMcpHandler();
   holder.deps?.close();
   holder.deps = null;
   for (const suffix of ['', '-wal', '-shm']) rmSync(`${env.databasePath}${suffix}`, { force: true });
   rmSync(env.mediaPath, { recursive: true, force: true });
   const deps = getDeps();
   if (mode === 'seeded') await seedDevelopment(deps);
+  await resetMcpHandler();
 }

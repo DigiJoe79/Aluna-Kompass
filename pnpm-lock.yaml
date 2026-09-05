@@ -25,6 +25,12 @@ importers:
       '@kompass/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@kompass/documents':
+        specifier: workspace:*
+        version: link:../../packages/documents
+      '@kompass/mcp':
+        specifier: workspace:*
+        version: link:../../packages/mcp
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -74,6 +80,9 @@ importers:
         specifier: ^4.5.4
         version: 4.5.4
     devDependencies:
+      '@modelcontextprotocol/client':
+        specifier: ^2.0.0
+        version: 2.0.0
       '@playwright/test':
         specifier: ^1.63.0
         version: 1.63.0

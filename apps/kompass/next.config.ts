@@ -4,7 +4,7 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const withNextIntl = createNextIntlPlugin();
 
 const nextConfig: NextConfig = {
-  transpilePackages: ['@kompass/core'],
+  transpilePackages: ['@kompass/core', '@kompass/documents', '@kompass/mcp'],
   serverExternalPackages: ['better-sqlite3', '@node-rs/argon2'],
   output: 'standalone',
 };
