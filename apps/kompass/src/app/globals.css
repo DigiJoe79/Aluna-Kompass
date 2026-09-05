@@ -111,4 +111,12 @@
   ::placeholder { color: var(--input-placeholder); }
   [data-density="compact"] { --row-h: 36px; }
   [data-density="comfortable"] { --row-h: 56px; }
+
+  .prose-preview h1, .prose-preview h2, .prose-preview h3 { font-family: var(--font-heading); margin: 0.8em 0 0.3em; }
+  .prose-preview h1 em, .prose-preview h2 em, .prose-preview h3 em { font-style: normal; color: var(--color-primary); }
+  .prose-preview p, .prose-preview ul, .prose-preview ol { margin: 0 0 0.75em; }
+  .prose-preview .note { border-left: 3px solid var(--color-warning); background: var(--color-warning-bg); padding: 8px 12px; border-radius: var(--radius-sm); }
+  .prose-preview .cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+  .prose-preview .card { border: 1px solid var(--line); border-radius: var(--radius-md); padding: 10px 12px; background: var(--surface-2); }
+  .prose-preview a { color: var(--link); text-decoration: underline; }
 }

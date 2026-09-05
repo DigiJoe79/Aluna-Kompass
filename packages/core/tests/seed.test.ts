@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { coreModule, defineModule } from '../src';
 import { login } from '../src/auth/login';
 import { roles, users } from '../src/db/schema';
 import { seedDevelopment } from '../src/seed/seed';
+import { readSetting } from '../src/settings/service';
 import { createTestDeps } from '../src/testing';
 
 describe('seedDevelopment', () => {
@@ -19,5 +21,12 @@ describe('seedDevelopment', () => {
   it('refuses to run in production', async () => {
     const deps = createTestDeps({ env: 'production' });
     await expect(seedDevelopment(deps)).rejects.toThrow(/production/);
+  });
+
+  it('enables all installed non-core modules', async () => {
+    const finance = defineModule({ key: 'finance', version: '0', permissions: ['finance.view'] });
+    const deps = createTestDeps({ env: 'development', manifests: [coreModule, finance] });
+    await seedDevelopment(deps);
+    expect(readSetting(deps, 'modules.enabled')).toEqual(['finance']);
   });
 });

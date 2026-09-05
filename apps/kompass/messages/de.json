@@ -788,5 +788,36 @@
       },
       "noAbort": "Fenster nicht schließen. Ab hier lässt sich der Vorgang nicht mehr abbrechen; danach werden alle Sitzungen abgemeldet."
     }
+  },
+  "website": {
+    "common": {
+      "preview": "Vorschau",
+      "previewEmpty": "Noch kein Text.",
+      "untranslated": "unübersetzt",
+      "published": "Veröffentlicht",
+      "unpublished": "Nicht veröffentlicht",
+      "moveUp": "Nach oben",
+      "moveDown": "Nach unten",
+      "chooseFile": "Datei wählen",
+      "removeImage": "Bild entfernen",
+      "noFile": "Bitte eine Datei auswählen.",
+      "gaps": "{count, plural, =0 {Alle Übersetzungen vorhanden} one {# Übersetzung offen} other {# Übersetzungen offen}}",
+      "moduleInactiveTitle": "Modul Webseite ist nicht aktiv",
+      "moduleInactiveText": "Aktivieren Sie das Modul unter Verwaltung → Module. Vorhandene Inhalte bleiben erhalten.",
+      "openModules": "Module öffnen",
+      "save": "Speichern",
+      "saved": "Gespeichert.",
+      "create": "Anlegen",
+      "back": "Zurück zur Liste",
+      "slug": "Slug (URL-Teil)",
+      "slugHint": "Kleinbuchstaben, Ziffern, Bindestrich. Sprachneutral."
+    }
+  },
+  "animals": {
+    "common": {
+      "moduleInactiveTitle": "Modul Tiere ist nicht aktiv",
+      "moduleInactiveText": "Aktivieren Sie das Modul unter Verwaltung → Module. Vorhandene Daten bleiben erhalten.",
+      "openModules": "Module öffnen"
+    }
   }
 }

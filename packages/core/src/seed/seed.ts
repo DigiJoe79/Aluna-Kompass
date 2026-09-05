@@ -4,6 +4,7 @@ import { roles, users } from '../db/schema';
 import type { Deps } from '../deps';
 import { unwrap } from '../result';
 import { createRole, setRolePermissions } from '../roles/service';
+import { writeSettingInternal } from '../settings/service';
 import { completeSetup, isSetupRequired } from '../setup/service';
 import { createUser } from '../users/service';
 
@@ -30,6 +31,9 @@ export async function seedDevelopment(deps: Deps): Promise<{ adminEmail: string;
   const admin = deps.db.select({ id: users.id }).from(users).where(eq(users.email, SEED_ADMIN_EMAIL)).get();
   if (!admin) throw new Error('seed admin missing');
   const ctx: CallContext = { userId: admin.id, permissions: new Set(deps.registry.permissionKeys), channel: 'system', apiTokenId: null, ipAddress: null, requestId: 'SEED' };
+
+  const installed = deps.registry.manifests.map((m) => m.key).filter((k) => k !== 'core').sort();
+  deps.db.transaction((tx) => { writeSettingInternal(tx, deps, ctx, 'modules.enabled', installed, 'seed.modules'); });
 
   const roleIds = new Map<string, string>();
   for (const role of EXAMPLE_ROLES) {
