@@ -95,16 +95,16 @@ docs/superpowers/   Specs und Pläne
 
 Alle Tabellen englisch benannt, camelCase in Drizzle, snake_case in SQLite.
 
-**users** — id, name, email (unique), passwordHash, isActive, createdAt, updatedAt
+**users** — id, name, email (unique), passwordHash, mustChangePassword, isActive, failedLoginCount, lockedUntil (nullable), lastLoginAt (nullable), createdAt, updatedAt. Kein Einladungs-Status: Ein Admin legt den Nutzer an, das System erzeugt ein Startpasswort, das genau einmal angezeigt wird; beim ersten Login erzwingt `mustChangePassword` ein neues Passwort. Nach 5 Fehlversuchen wird der Account 15 Minuten gesperrt (Login zeigt die verbleibenden Versuche an); ein Admin kann jederzeit ein neues Startpasswort setzen.
 **sessions** — id, userId, createdAt, expiresAt
 **apiTokens** — id, userId, name, tokenHash (unique), createdAt, lastUsedAt, revokedAt. Klartext-Token wird genau einmal angezeigt.
 **roles** — id, name (unique), description, createdAt
 **rolePermissions** — roleId, permissionKey (PK zusammengesetzt). Permission-Keys sind Code-Konstanten aus der Registry; unbekannte Keys werden beim Schreiben abgewiesen.
 **userRoles** — userId, roleId (PK zusammengesetzt). Effektive Rechte = Vereinigung.
 **settings** — key (PK), value (JSON), updatedAt, updatedByUserId. Jeder Schlüssel wird von Kern oder Modul mit Zod-Schema und Default registriert; unregistrierte Schlüssel werden abgewiesen.
-**auditLog** — id, occurredAt, userId, channel (`ui` | `mcp` | `system`), action, entityType, entityId, before (JSON, nullable), after (JSON, nullable), summary. Nur INSERT; kein UPDATE/DELETE (durch SQLite-Trigger abgesichert).
+**auditLog** — id, occurredAt, userId (nullable bei `system`), channel (`ui` | `mcp` | `system`; `system` für Migrationen, Seed, Import, automatische Sperren), action, entityType, entityId, before (JSON, nullable), after (JSON, nullable), summary. Nur INSERT; kein UPDATE/DELETE (durch SQLite-Trigger abgesichert).
 **mediaAssets** — id, filename (enthält Content-Hash), mimeType, bytes, width, height (nullable), uploadedByUserId, createdAt. Dateien unter `MEDIA_PATH`.
-**documents** — id, templateKey, entityType (nullable), entityId (nullable), inputSnapshot (JSON), assetId, createdByUserId, createdAt.
+**documents** — id, templateKey, number (laufende Nummer je templateKey und Jahr, z. B. `2026-000012`, lückenlos), entityType (nullable), entityId (nullable), inputSnapshot (JSON), assetId, status (`issued` | `voided`), voidedAt, voidedByUserId, voidReason (alle nullable), createdByUserId, createdAt. Ein Dokument wird nie gelöscht, sondern storniert; die PDF bleibt erhalten und trägt in der Liste den Zustand „storniert". Ersatzdokumente erhalten eine neue Nummer.
 
 Kern-Settings (Schlüssel, alle admin-editierbar):
 - `organization.*`: name, legalForm, street, postalCode, city, country, registerCourt, registerNumber, taxNumber, taxOffice, exemptionNoticeDate, exemptionNoticeType (`60a` | `exemption`), statutoryPurpose, email, website, iban, bic, bankName
@@ -133,12 +133,13 @@ Kern-Permission-Keys: `users.manage`, `roles.manage`, `settings.manage`, `module
 **Themes.** Der Kern definiert ein festes **Token-Schema** (Namen und Bedeutung), nie Werte:
 - Farben: `--color-primary`, `--color-primary-ink`, `--color-primary-soft`, `--color-accent`, `--color-accent-deep`, `--color-accent-soft`, `--color-success`, `--color-success-bg`, `--color-warning`, `--color-warning-bg`, `--color-error`, `--color-error-bg`, `--color-info`, `--color-info-bg`, `--bg`, `--surface`, `--surface-2`, `--sidebar-bg`, `--topbar-bg`, `--ink`, `--ink-2`, `--muted`, `--muted-2`, `--on-primary`, `--on-primary-muted`, `--line`, `--line-2`, `--line-strong`.
 - Typografie und Form: `--font-body`, `--font-heading`, `--radius-sm`, `--radius-md`, `--radius-lg`.
-- Ein Theme liefert für jedes Token einen Wert für `light` und für `dark`. Das Schema wird mit Zod validiert; unvollständige Themes werden abgewiesen.
+- Ein Theme liefert für jedes Token einen Wert für `light` und für `dark`. **Keine Vererbung** vom Default-Theme: Jedes Theme ist vollständig, damit eine Änderung am Default kein anderes Theme verschiebt. „Duplizieren" füllt ein neues Theme mit allen Werten vor. Das Schema wird mit Zod validiert; unvollständige Themes werden abgewiesen.
+- Themes sind keine Rechenschaftsdaten und dürfen gelöscht werden, außer dem aktiven Theme und dem Default-Theme. Module werden nie gelöscht, nur deaktiviert.
 - Die App injiziert die Tokens des aktiven Themes zur Laufzeit als CSS-Custom-Properties in `:root` (Hell/Dunkel über `prefers-color-scheme` und einen Nutzer-Schalter). Tailwind-Farben sind ausschließlich auf diese Custom-Properties gemappt; shadcn/ui-Komponenten werden auf dieselben Tokens umgestellt.
 - Typst-Vorlagen erhalten dieselben Tokens (Farben, Schriften) als Parameter aus dem aktiven Theme; der Website-Build (Stufe 2) liest sie ebenfalls aus den Einstellungen.
 - Admin-UI: Theme anlegen/duplizieren/bearbeiten mit Live-Vorschau, aktives Theme wählen. Der Umgebungsbalken (Dev/Test) hat bewusst feste, theme-unabhängige Signalfarben, damit er nie „wegdesignt" werden kann — die einzige erlaubte Ausnahme, als Konstante mit Kommentar markiert.
 
-**Oberfläche.** App-Shell (Sidebar aus Manifesten, Topbar mit Vereinsname + Umgebungsbalken), Login, Einrichtungsseite beim ersten Start (legt genau einmal einen Admin an), Admin-Bereich: Nutzer, Rollen, Einstellungen (Vereinsstamm, Branding), Module, Änderungsprotokoll, Dokumente, Backup, eigenes Profil (Passwort, API-Tokens).
+**Oberfläche.** App-Shell (Sidebar aus Manifesten, einklappbar auf eine 56-px-Icon-Leiste, Zustand je Nutzer im Browser gemerkt; ab 1024 px Breite legt sich die Sidebar als Drawer über den Inhalt und zweispaltige Formulare brechen auf eine Spalte; Topbar mit Vereinsname + Umgebungsbalken; Topbar-Suche ist in Stufe 1 eine Befehlspalette (Cmd/Ctrl+K) über Navigationseinträge und Einstellungsseiten, Module hängen später ihre Entitäten an), Fehlerseiten für 403 „Kein Recht", 404 und einen generischen technischen Fehler (z. B. Datenbank nicht erreichbar), Ladezustände für Export, Import und Dokument-Rendering, Login, Einrichtungsseite beim ersten Start (legt genau einmal einen Admin an), Admin-Bereich: Nutzer, Rollen, Einstellungen (Vereinsstamm, Branding), Module, Änderungsprotokoll, Dokumente, Backup, eigenes Profil (Passwort, API-Tokens).
 
 ## 7. Dokumenten-Engine
 
@@ -161,7 +162,7 @@ Kern-Permission-Keys: `users.manage`, `roles.manage`, `settings.manage`, `module
 - Dev: `pnpm dev`, SQLite im Repo (git-ignoriert), Seed-Skript (Admin + Beispielrollen).
 - Test/Prod: identisches Image, zwei Compose-Dienste `kompass-test` / `kompass-prod` mit eigenen Ports und Volumes (`/share/Container/kompass-<env>/{data,media}`).
 - Umgebungsbalken bei allem außer `production`. Website-Publish (Stufe 2) nur bei `production`.
-- Backup: Export (ZIP aus DB-Datei + Medien) und Import (überschreibt vollständig, Bestätigung durch Eintippen des Umgebungsnamens) im Admin-Bereich.
+- Backup: Export (ZIP aus DB-Datei + Medien) und Import (überschreibt vollständig, Bestätigung durch Eintippen des Umgebungsnamens) im Admin-Bereich. Nach einem Import sind alle Sitzungen ungültig (die Sessions-Tabelle wurde mitersetzt); der Nutzer landet auf der Login-Seite mit dem Hinweis „Import abgeschlossen". Der Import-Warnzustand nutzt die Warnfarbe, nicht Rot: Rot bleibt Validierungsfehlern und destruktiven Aktionen vorbehalten.
 
 **Auslieferung:** GitHub Actions: Tests → Multi-Stage-Docker-Build (amd64; arm64 optional) → Push in die GitHub Container Registry, Tag je Release. Auf dem NAS: Image erst für Test ziehen, nach Freigabe für Prod; Backup-Export vor jedem Prod-Update ist Pflicht (Anleitung). Migrationen laufen beim Start.
 
