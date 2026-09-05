@@ -350,6 +350,30 @@
           "label": "Backup importieren",
           "description": "Bestand überschreiben. Nur für die Administration sinnvoll."
         }
+      },
+      "website": {
+        "view": {
+          "label": "Webseite ansehen",
+          "description": "Webseiten-Inhalte, Artikel, Team und Downloads einsehen."
+        },
+        "manage": {
+          "label": "Webseite verwalten",
+          "description": "Seiten, Artikel, Team, FAQ, Downloads und Site-Fakten bearbeiten."
+        },
+        "publish": {
+          "label": "Webseite publizieren",
+          "description": "Webseiten-Export ausführen und Veröffentlichung starten."
+        }
+      },
+      "animals": {
+        "view": {
+          "label": "Tiere ansehen",
+          "description": "Tierprofile, Fotos und Geschichten einsehen."
+        },
+        "manage": {
+          "label": "Tiere verwalten",
+          "description": "Tierprofile anlegen, bearbeiten, Fotos zuordnen und Status ändern."
+        }
       }
     }
   },
