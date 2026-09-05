@@ -47,7 +47,11 @@
       "invalid": "Ungültiger Wert.",
       "unsupportedMediaType": "Dateityp nicht unterstützt (PNG, JPEG, WebP, SVG, PDF).",
       "fileTooLarge": "Datei größer als 10 MB.",
-      "svgContainsScript": "SVG enthält Skripte und wird abgelehnt."
+      "svgContainsScript": "SVG enthält Skripte und wird abgelehnt.",
+      "confirmationMismatch": "Der Umgebungsname stimmt nicht.",
+      "backupFormatUnsupported": "Diese Datei ist kein Kompass-Backup oder hat ein unbekanntes Format.",
+      "backupNewerThanApp": "Das Backup stammt aus einer neueren Version. Bitte zuerst die App aktualisieren.",
+      "backupCorrupt": "Die Datenbank im Backup ist beschädigt."
     },
     "pages": {
       "forbidden": {
@@ -666,13 +670,7 @@
     "close": "schließen",
     "permissionsOnly": "Nur Einträge, für die Sie Rechte haben."
   },
-  "placeholders": {
-    "backup": {
-      "title": "Backup",
-      "emptyTitle": "Folgt mit der Dokumenten-Engine",
-      "emptyText": "Export und Import des Bestands erscheinen hier, sobald Plan 3 (Betrieb) umgesetzt ist."
-    }
-  },
+  "placeholders": {},
   "documents": {
     "title": "Dokumente",
     "description": "Erzeugte PDFs sind unveränderlich und lückenlos nummeriert. Ein fehlerhaftes Dokument wird storniert und ersetzt.",
@@ -722,6 +720,36 @@
     "toast": {
       "created": "Dokument erzeugt.",
       "voided": "Dokument storniert."
+    }
+  },
+  "backup": {
+    "title": "Backup",
+    "export": {
+      "title": "Export erstellen",
+      "text": "Vollständiger Datenbestand samt Dokumenten, Protokoll und Einstellungen als eine Datei. Themes und Module sind enthalten, Sitzungen und API-Tokens nicht.",
+      "last": "Letzter Export",
+      "button": "Export erstellen",
+      "running": "Export läuft …",
+      "duration": "Dauert etwa 40 Sekunden.",
+      "failed": "Export fehlgeschlagen."
+    },
+    "import": {
+      "title": "Import",
+      "badge": "Überschreibt alles",
+      "warning": "Der Import ersetzt den gesamten Bestand dieser Umgebung, einschließlich Änderungsprotokoll. Erstellen Sie vorher einen Export. Der Vorgang selbst wird im neuen Bestand als Systemeintrag protokolliert.",
+      "file": "Backup-Datei",
+      "noFile": "Bitte eine Backup-Datei auswählen.",
+      "prepare": "Import vorbereiten",
+      "confirmTitle": "Bestand der Umgebung „{env}“ überschreiben?",
+      "confirmText": "{users} Nutzer, {audit} Protokolleinträge und {documents} Dokumente aus dem Backup ({source}) ersetzen den aktuellen Bestand. Dieser Schritt lässt sich nicht rückgängig machen.",
+      "confirmLabel": "Tippen Sie zur Bestätigung den Umgebungsnamen",
+      "notConfirmed": "Noch nicht bestätigt.",
+      "confirm": "Bestand überschreiben",
+      "steps": {
+        "writing": "Bestand wird ersetzt …",
+        "sessions": "Sitzungen werden beendet"
+      },
+      "noAbort": "Fenster nicht schließen. Ab hier lässt sich der Vorgang nicht mehr abbrechen; danach werden alle Sitzungen abgemeldet."
     }
   }
 }
