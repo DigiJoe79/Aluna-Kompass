@@ -12,6 +12,9 @@ describe('database', () => {
       )
       .all() as { name: string }[];
     expect(rows.map((r) => r.name)).toEqual([
+      'animal_photos',
+      'animal_stories',
+      'animals',
       'api_tokens',
       'audit_log',
       'documents',
