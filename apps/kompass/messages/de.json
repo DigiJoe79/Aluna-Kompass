@@ -827,7 +827,9 @@
       "emptyText": "Wissenswertes-Beiträge wie „Ablauf der Adoption“ entstehen hier.",
       "columns": { "title": "Titel", "slug": "Slug", "gaps": "Übersetzungen", "status": "Status" },
       "form": { "title": "Titel", "lede": "Einleitung", "body": "Text", "publishedAt": "Datum (optional)" }
-    }
+    },
+    "team": { "title": "Team", "create": "Teammitglied anlegen", "edit": "Bearbeiten", "emptyTitle": "Noch kein Team", "emptyText": "Die Teamseite zeigt Name, Funktion und Foto.", "columns": { "member": "Mitglied", "position": "Funktion", "status": "Status" }, "form": { "createTitle": "Teammitglied anlegen", "editTitle": "Teammitglied bearbeiten", "name": "Name", "position": "Funktion im Verein", "photo": "Foto", "petPhoto": "Foto des Haustiers (optional)" } },
+    "faqs": { "title": "FAQ", "create": "Frage anlegen", "edit": "Bearbeiten", "emptyTitle": "Noch keine Fragen", "emptyText": "Häufige Fragen zu Spende, Adoption, Transport und Datenschutz.", "columns": { "question": "Frage", "category": "Kategorie", "status": "Status" }, "form": { "createTitle": "Frage anlegen", "editTitle": "Frage bearbeiten", "category": "Kategorie", "question": "Frage", "answer": "Antwort" } }
   },
   "animals": {
     "common": {

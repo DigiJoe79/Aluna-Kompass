@@ -32,4 +32,29 @@ test.describe('website lists', () => {
     await rows.nth(2).getByRole('button', { name: 'Nach oben' }).click();
     await expect(page.getByRole('table').getByRole('row').nth(1)).toContainText('Ablauf des Transportes');
   });
+
+  test('team: create with photo, publish; faq: create in category', async ({ page }) => {
+    await page.goto('/website/team');
+    await page.getByRole('button', { name: 'Teammitglied anlegen' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Name').fill('Nicole Wießner');
+    await dialog.locator('[name="position.de"]').fill('Erste Vorsitzende & Fundraising');
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+    await dialog.getByLabel(/Foto Datei wählen/).setInputFiles({ name: 'nicole.png', mimeType: 'image/png', buffer: png });
+    await expect(dialog.locator('img[src^="/media/"]')).toBeVisible();
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    const row = page.getByRole('row', { name: /Nicole Wießner/ });
+    await expect(row).toContainText('Nicht veröffentlicht');
+    await row.getByRole('switch').click();
+    await expect(row).toContainText('Veröffentlicht');
+
+    await page.goto('/website/faqs');
+    await page.getByRole('button', { name: 'Frage anlegen' }).click();
+    const faq = page.getByRole('dialog');
+    await faq.locator('[name="category.de"]').fill('Spenden');
+    await faq.locator('[name="question.de"]').fill('Wohin geht meine Spende?');
+    await faq.locator('[name="answer.de"]').fill('An den Shelter.');
+    await faq.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByRole('row', { name: /Wohin geht meine Spende/ })).toContainText('Spenden');
+  });
 });
