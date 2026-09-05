@@ -120,5 +120,58 @@
     "startPassword": { "title": "Nutzer „{name}“ angelegt", "text": "Geben Sie diese Zugangsdaten weiter. Das Startpasswort wird nach dem Schließen nicht mehr angezeigt; ein neues können Sie jederzeit setzen.", "copyBoth": "Beides kopieren", "info": "Beim ersten Login muss {name} ein eigenes Passwort setzen. Bis dahin steht in der Liste „Erstlogin offen“.", "done": "Ich habe die Daten notiert" },
     "roles": { "title": "Rollen für {name}", "cancel": "Abbrechen", "save": "Rollen speichern" },
     "toast": { "activated": "Nutzer aktiviert.", "deactivated": "Nutzer deaktiviert.", "saved": "Nutzer gespeichert.", "rolesSaved": "Rollen gespeichert." }
+  },
+  "roles": {
+    "title": "Rollen",
+    "description": "Rollennamen sind freier Text. Rechte werden je Rolle vergeben; Nutzer erhalten die Vereinigung ihrer Rollen.",
+    "listAria": "Rollen",
+    "meta": { "protected": "Alle Rechte · {users, plural, one {# Nutzer} other {# Nutzer}} · gesperrt", "normal": "{permissions, plural, one {# Recht} other {# Rechte}} · {users, plural, one {# Nutzer} other {# Nutzer}}" },
+    "noDelete": "Löschen gibt es nicht — eine nicht mehr benötigte Rolle wird von allen Nutzern entfernt und bleibt leer stehen.",
+    "fields": { "name": "Rollenname", "description": "Beschreibung" },
+    "groupCount": "{active} von {total} aktiv",
+    "save": "Rolle speichern",
+    "create": { "button": "Rolle anlegen", "title": "Rolle anlegen", "submit": "Anlegen" },
+    "toast": { "created": "Rolle angelegt.", "saved": "Rolle gespeichert." }
+  },
+  "permissions": {
+    "groups": {
+      "core": {
+        "admin": "Kern — Verwaltung",
+        "accountability": "Kern — Rechenschaft",
+        "data": "Kern — Erzeugen und Daten"
+      },
+      "finance": "Finanzen",
+      "members": "Mitglieder",
+      "animals": "Tiere",
+      "website": "Webseite"
+    },
+    "keys": {
+      "users": {
+        "manage": { "label": "Nutzer verwalten", "description": "Nutzer anlegen, bearbeiten, deaktivieren und Rollen zuweisen." }
+      },
+      "roles": {
+        "manage": { "label": "Rollen verwalten", "description": "Rollen anlegen und deren Rechte ändern." }
+      },
+      "settings": {
+        "manage": { "label": "Einstellungen verwalten", "description": "Vereinsdaten, Steuerangaben, Bankverbindung und Branding ändern." }
+      },
+      "modules": {
+        "manage": { "label": "Module verwalten", "description": "Module aktivieren und deaktivieren." }
+      },
+      "audit": {
+        "view": { "label": "Änderungsprotokoll einsehen", "description": "Alle protokollierten Vorgänge lesen und als PDF exportieren." }
+      },
+      "documents": {
+        "view": { "label": "Dokumente ansehen", "description": "Erzeugte PDFs öffnen und herunterladen." },
+        "create": { "label": "Dokumente erzeugen", "description": "PDFs aus Vorlagen erstellen; das Ergebnis wird protokolliert." }
+      },
+      "media": {
+        "upload": { "label": "Dateien hochladen", "description": "Logo, Anhänge und Belege in die Mediathek legen." }
+      },
+      "backup": {
+        "export": { "label": "Backup exportieren", "description": "Vollständigen Datenexport herunterladen." },
+        "import": { "label": "Backup importieren", "description": "Bestand überschreiben. Nur für die Administration sinnvoll." }
+      }
+    }
   }
 }
