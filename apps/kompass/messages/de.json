@@ -108,5 +108,17 @@
     "modules": { "title": "Module aktivieren", "text": "Module sind installiert, aber inaktiv. Aktivieren Sie nur, was der Verein wirklich führt.", "none": "In dieser Installation sind noch keine Fachmodule enthalten. Der Kern ist immer aktiv.", "hint": "Kern ist immer aktiv", "cta": "Module öffnen" },
     "backupMissing": "Diese Installation läuft im Vereinsnetz. Ein Backup wurde noch nicht erstellt — der erste Export dauert unter einer Minute.",
     "backupDone": "Diese Installation läuft im Vereinsnetz. Das letzte Backup ist vorhanden."
+  },
+  "users": {
+    "title": "Nutzer",
+    "filter": { "search": "Name oder E-Mail", "showInactive": "Inaktive anzeigen", "count": "{count} Nutzer, davon {inactive} inaktiv" },
+    "columns": { "name": "Name", "email": "E-Mail", "roles": "Rollen", "status": "Status", "lastLogin": "Letzte Anmeldung" },
+    "status": { "active": "Aktiv", "firstLoginPending": "Erstlogin offen", "inactive": "Inaktiv" },
+    "actions": { "menu": "Aktionen", "roles": "Rollen ändern", "resetPassword": "Neues Startpasswort", "deactivate": "Deaktivieren", "activate": "Aktivieren" },
+    "deactivate": { "title": "Nutzer deaktivieren?", "text": "{name} kann sich danach nicht mehr anmelden. Bereits protokollierte Vorgänge bleiben erhalten und bleiben ihm zugeordnet." },
+    "create": { "button": "Nutzer anlegen", "title": "Nutzer anlegen", "subtitle": "Nach dem Anlegen zeigt das System einmalig ein Startpasswort. Der Nutzer muss es beim ersten Login ändern.", "roles": "Rollen", "name": "Name", "email": "E-Mail", "submit": "Nutzer anlegen" },
+    "startPassword": { "title": "Nutzer „{name}“ angelegt", "text": "Geben Sie diese Zugangsdaten weiter. Das Startpasswort wird nach dem Schließen nicht mehr angezeigt; ein neues können Sie jederzeit setzen.", "copyBoth": "Beides kopieren", "info": "Beim ersten Login muss {name} ein eigenes Passwort setzen. Bis dahin steht in der Liste „Erstlogin offen“.", "done": "Ich habe die Daten notiert" },
+    "roles": { "title": "Rollen für {name}", "cancel": "Abbrechen", "save": "Rollen speichern" },
+    "toast": { "activated": "Nutzer aktiviert.", "deactivated": "Nutzer deaktiviert.", "saved": "Nutzer gespeichert.", "rolesSaved": "Rollen gespeichert." }
   }
 }

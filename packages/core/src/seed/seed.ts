@@ -46,7 +46,10 @@ export async function seedDevelopment(deps: Deps): Promise<{ adminEmail: string;
     const exists = deps.db.select({ id: users.id }).from(users).where(eq(users.email, person.email)).get();
     if (exists) continue;
     const roleId = roleIds.get(person.role);
-    unwrap(await createUser(deps, ctx, { name: person.name, email: person.email, roleIds: roleId ? [roleId] : [] }));
+    const created = unwrap(await createUser(deps, ctx, { name: person.name, email: person.email, roleIds: roleId ? [roleId] : [] }));
+    if (person.name === 'Jonas Feld') {
+      deps.db.update(users).set({ mustChangePassword: false, lastLoginAt: '2026-09-01T10:00:00.000Z' }).where(eq(users.id, created.user.id)).run();
+    }
   }
   return { adminEmail: SEED_ADMIN_EMAIL, adminPassword: SEED_ADMIN_PASSWORD };
 }

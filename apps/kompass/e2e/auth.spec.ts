@@ -38,14 +38,15 @@ test.describe('first run and login', () => {
     await expect(alert).toContainText('für 15 Minuten gesperrt');
   });
 
-  test.fixme('a user with a start password must set a new one before seeing the shell', async ({ page }) => {
+  test('a user with a start password must set a new one before seeing the shell', async ({ page }) => {
     await resetDatabase(page, 'seeded');
     await loginAsAdmin(page);
     await page.goto('/admin/users');
     await page.getByRole('button', { name: 'Nutzer anlegen' }).click();
-    await page.getByLabel('Name').fill('Rita Sommer');
-    await page.getByLabel('E-Mail').fill('rita@example.org');
-    await page.getByRole('dialog').getByRole('button', { name: 'Nutzer anlegen' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Name').fill('Rita Sommer');
+    await dialog.getByLabel('E-Mail').fill('rita@example.org');
+    await dialog.getByRole('button', { name: 'Nutzer anlegen' }).click();
     const startPassword = (await page.getByTestId('start-password').textContent())!.trim();
     await page.getByRole('button', { name: 'Ich habe die Daten notiert' }).click();
     await page.request.post('/logout');

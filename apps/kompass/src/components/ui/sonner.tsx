@@ -8,7 +8,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()
 
   return (
-    <Sonner
+    <div role="status">
+      <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
       icons={{
@@ -43,6 +44,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       {...props}
     />
+    </div>
   )
 }
 
