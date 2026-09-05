@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import type { SettingDefinition } from '../modules/manifest';
+import { DEFAULT_THEME } from '../themes/default-theme';
+import { themeSchema } from '../themes/tokens';
 
 const shortText = z.string().trim().max(200);
 const isoDateOrEmpty = z.union([z.literal(''), z.iso.date()]);
@@ -45,6 +47,10 @@ const branding: SettingDefinition[] = [
   { key: 'branding.activeTheme', schema: z.string().min(1), default: 'default' },
 ];
 
+const themes: SettingDefinition[] = [
+  { key: 'themes', schema: z.array(themeSchema).min(1), default: [DEFAULT_THEME] },
+];
+
 const modules: SettingDefinition[] = [
   { key: 'modules.enabled', schema: z.array(z.string()), default: [] },
 ];
@@ -55,4 +61,4 @@ const system: SettingDefinition[] = [
   { key: 'system.lastExportAt', schema: z.string().nullable(), default: null, systemOnly: true },
 ];
 
-export const CORE_SETTINGS: SettingDefinition[] = [...organization, ...branding, ...modules, ...system];
+export const CORE_SETTINGS: SettingDefinition[] = [...organization, ...branding, ...themes, ...modules, ...system];
