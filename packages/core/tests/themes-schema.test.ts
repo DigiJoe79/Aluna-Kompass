@@ -26,6 +26,11 @@ describe('theme schema', () => {
     const themes = readSetting<{ key: string }[]>(deps, 'themes');
     expect(themes.map((t) => t.key)).toEqual(['default']);
   });
+
+  it('the themes subpath stays free of database imports', async () => {
+    const mod = await import('../src/themes/index');
+    expect(Object.keys(mod)).toEqual(expect.arrayContaining(['THEME_TOKENS', 'DEFAULT_THEME', 'checkThemeContrast']));
+  });
 });
 
 describe('contrast', () => {
