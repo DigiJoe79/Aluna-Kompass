@@ -811,6 +811,14 @@
       "back": "Zurück zur Liste",
       "slug": "Slug (URL-Teil)",
       "slugHint": "Kleinbuchstaben, Ziffern, Bindestrich. Sprachneutral."
+    },
+    "pages": {
+      "title": "Seiten",
+      "description": "Feste Seiten der Webseite. Texte und Bausteine werden hier gepflegt; Struktur und Design sind Teil der Seite selbst.",
+      "columns": { "page": "Seite", "key": "Schlüssel", "title": "Titel (DE)", "gaps": "Übersetzungen" },
+      "keys": { "home": "Startseite", "help": "Helfen", "donate": "Spenden", "sponsor": "Tierpate werden", "membership": "Fördermitglied werden", "about": "Über uns", "partners": "Unsere Partner", "contact": "Kontakt", "imprint": "Impressum", "privacy": "Datenschutz", "statutes": "Satzung", "adoption-process": "Ablauf der Adoption" },
+      "form": { "title": "Titel", "titleHint": "Ein *kursives* Wort wird zur Betonung, z. B. „ein *Zuhause.*“", "lede": "Einleitung", "body": "Text", "bodyHint": "Markdown. Überschriften mit #, Aufzählungen mit -, Hinweiskasten mit >, Kartenraster mit :::karten … :::", "meta": "Meta-Beschreibung (Suchmaschinen)", "save": "Speichern" },
+      "blocks": { "title": "Bausteine", "add": "Baustein hinzufügen", "empty": "Keine Bausteine. Nicht jede Seite braucht welche.", "edit": "Bearbeiten", "remove": "Entfernen", "id": "Baustein-ID", "href": "Link", "blockTitle": "Titel", "text": "Text", "label": "Beschriftung des Links", "image": "Bild", "apply": "Baustein übernehmen" }
     }
   },
   "animals": {
