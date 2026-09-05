@@ -5,6 +5,7 @@ import { coreModule } from '../core-module';
 import { roles, users } from '../db/schema';
 import type { AppEnv, Deps } from '../deps';
 import { newId } from '../ids';
+import { createMemoryMediaStore } from '../media/store';
 import type { ModuleManifest } from '../modules/manifest';
 import { createRegistry } from '../modules/registry';
 import { createTestDb } from './test-db';
@@ -28,6 +29,7 @@ export function createTestDeps(
     clock: fixedClock(opts.now ?? TEST_NOW),
     env: opts.env ?? 'test',
     registry: createRegistry(opts.manifests ?? [coreModule]),
+    media: createMemoryMediaStore(),
   };
 }
 

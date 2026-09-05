@@ -15,12 +15,13 @@ describe('createDeps', () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'kompass-'));
     dirs.push(dir);
     const file = path.join(dir, 'kompass.db');
-    const first = createDeps({ databasePath: file, env: 'test' });
+    const first = createDeps({ databasePath: file, mediaPath: path.join(dir, 'media'), env: 'test' });
     expect(first.migrationCount).toBeGreaterThanOrEqual(2);
+    expect(first.media.rootDir).toBe(path.join(dir, 'media'));
     expect(isSetupRequired(first)).toBe(true);
     expect(first.registry.module('core')).toBeDefined();
     first.close();
-    const second = createDeps({ databasePath: file, env: 'test' });
+    const second = createDeps({ databasePath: file, mediaPath: path.join(dir, 'media'), env: 'test' });
     expect(isSetupRequired(second)).toBe(true);
     second.close();
   });

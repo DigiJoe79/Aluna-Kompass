@@ -3,11 +3,13 @@ import { systemClock, type Clock } from './clock';
 import { coreModule } from './core-module';
 import { openDatabase, runMigrations } from './db/client';
 import type { AppEnv, Deps } from './deps';
+import { createFileMediaStore } from './media/store';
 import type { ModuleManifest } from './modules/manifest';
 import { createRegistry } from './modules/registry';
 
 export interface CreateDepsOptions {
   databasePath: string;
+  mediaPath: string;
   env: AppEnv;
   modules?: ModuleManifest[];
   clock?: Clock;
@@ -22,6 +24,7 @@ export function createDeps(opts: CreateDepsOptions): Deps & { migrationCount: nu
     clock: opts.clock ?? systemClock,
     env: opts.env,
     registry: createRegistry([coreModule, ...(opts.modules ?? [])]),
+    media: createFileMediaStore(opts.mediaPath),
     migrationCount,
     close: () => sqlite.close(),
   };

@@ -16,7 +16,7 @@ export function runtimeEnv() {
 export function getDeps(): AppDeps {
   if (!holder.deps) {
     const env = readEnv();
-    holder.deps = createDeps({ databasePath: env.databasePath, env: env.env });
+    holder.deps = createDeps({ databasePath: env.databasePath, mediaPath: env.mediaPath, env: env.env });
   }
   return holder.deps;
 }
@@ -28,6 +28,7 @@ export async function resetDeps(mode: 'empty' | 'seeded'): Promise<void> {
   holder.deps?.close();
   holder.deps = null;
   for (const suffix of ['', '-wal', '-shm']) rmSync(`${env.databasePath}${suffix}`, { force: true });
+  rmSync(env.mediaPath, { recursive: true, force: true });
   const deps = getDeps();
   if (mode === 'seeded') await seedDevelopment(deps);
 }
