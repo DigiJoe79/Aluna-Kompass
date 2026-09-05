@@ -349,5 +349,40 @@
       "radius-full": "Switch, Avatar, Balken",
       "row-h": "Tabellenzeilenhöhe"
     }
+  },
+  "modules": {
+    "title": "Module",
+    "count": "{active} von {total} aktiv",
+    "hint": "Beim Deaktivieren bleiben alle Daten des Moduls erhalten. Die Navigationsgruppe verschwindet, Berichte und protokollierte Vorgänge bleiben lesbar. Aktivieren stellt den Zustand unverändert wieder her.",
+    "alwaysActive": "Immer aktiv",
+    "enabled": "Aktiv",
+    "disabled": "Inaktiv",
+    "locked": "Gesperrt",
+    "meta": "Version {version}",
+    "dependsOn": "benötigt {list}",
+    "toggle": "{name} aktivieren oder deaktivieren",
+    "coreNote": "Ein Verein ohne Kern hätte keine Anmeldung.",
+    "noDescription": "Keine Beschreibung hinterlegt.",
+    "names": {
+      "core": "Kern",
+      "finance": "Finanzen",
+      "members": "Mitglieder",
+      "animals": "Tiere",
+      "website": "Webseite"
+    },
+    "descriptions": {
+      "core": "Anmeldung, Rollen, Einstellungen, Änderungsprotokoll, Dokumente und Backup.",
+      "finance": "Konten, Buchungen, Rücklagen, Zuwendungsbestätigungen.",
+      "members": "Mitgliederstamm, Beiträge, Versammlungen.",
+      "animals": "Tiere, Vermittlung, Patenschaften.",
+      "website": "Inhalte und statischer Website-Build."
+    },
+    "notes": {
+      "finance": "Voraussetzung für Zuwendungsbestätigungen."
+    },
+    "toast": {
+      "enabled": "Modul aktiviert.",
+      "disabled": "Modul deaktiviert."
+    }
   }
 }
