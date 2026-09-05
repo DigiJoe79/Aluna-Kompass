@@ -93,12 +93,12 @@ packages/core/
 **Interfaces:**
 - Produces: Workspace-Paket `@kompass/core`, Skripte `pnpm test`, `pnpm typecheck`, `pnpm --filter @kompass/core test`.
 
-- [ ] **Step 1: pnpm bereitstellen**
+- [x] **Step 1: pnpm bereitstellen**
 
 Run: `corepack enable && corepack prepare pnpm@11.25.0 --activate && pnpm --version`
 Expected: `11.25.0`. Falls `corepack` fehlt: `npm install -g pnpm@11.25.0`.
 
-- [ ] **Step 2: Root-Dateien anlegen**
+- [x] **Step 2: Root-Dateien anlegen**
 
 `package.json`:
 ```json
@@ -164,7 +164,7 @@ coverage/
 engine-strict=true
 ```
 
-- [ ] **Step 3: AGENTS.md und CLAUDE.md schreiben**
+- [x] **Step 3: AGENTS.md und CLAUDE.md schreiben**
 
 `AGENTS.md`:
 ```markdown
@@ -222,7 +222,7 @@ Regeln, Ziel und Befehle stehen in `AGENTS.md` — bitte zuerst lesen. Specs unt
 Schnellbefehle: `pnpm install` · `pnpm test` · `pnpm typecheck` · `pnpm --filter @kompass/core db:generate`.
 ```
 
-- [ ] **Step 4: Kern-Paket anlegen**
+- [x] **Step 4: Kern-Paket anlegen**
 
 `packages/core/package.json`:
 ```json
@@ -286,7 +286,7 @@ export default defineConfig({
 export const CORE_VERSION = '0.1.0';
 ```
 
-- [ ] **Step 5: Smoke-Test schreiben**
+- [x] **Step 5: Smoke-Test schreiben**
 
 `packages/core/tests/smoke.test.ts`:
 ```ts
@@ -300,7 +300,7 @@ describe('core package', () => {
 });
 ```
 
-- [ ] **Step 6: Installieren und Test ausführen**
+- [x] **Step 6: Installieren und Test ausführen**
 
 Run: `pnpm install && pnpm --filter @kompass/core test`
 Expected: `1 passed`. Falls better-sqlite3 beim Install kompiliert: `pnpm approve-builds` ausführen und `better-sqlite3` sowie `@node-rs/argon2` freigeben, dann `pnpm install` erneut.
@@ -308,7 +308,7 @@ Expected: `1 passed`. Falls better-sqlite3 beim Install kompiliert: `pnpm approv
 Run: `pnpm typecheck`
 Expected: keine Fehler.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -A
@@ -329,7 +329,7 @@ git commit -m "chore: monorepo scaffold with core package, AGENTS.md and smoke t
   - `interface Clock { now(): Date }`, `systemClock`, `fixedClock(iso)` mit `advance(ms)`, `isoNow(clock)`.
   - `newId(): string` (monotone ULID), `ID_PATTERN`.
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 `packages/core/tests/result.test.ts`:
 ```ts
@@ -416,12 +416,12 @@ describe('ids', () => {
 });
 ```
 
-- [ ] **Step 2: Tests ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Tests ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/core test`
 Expected: FAIL — `Cannot find module '../src/result'` (und clock, ids).
 
-- [ ] **Step 3: Implementieren**
+- [x] **Step 3: Implementieren**
 
 `packages/core/src/result.ts`:
 ```ts
@@ -497,12 +497,12 @@ export const ID_PATTERN = /^[0-9A-HJKMNP-TV-Z]{26}$/;
 export const newId = (): string => generate();
 ```
 
-- [ ] **Step 4: Tests ausführen**
+- [x] **Step 4: Tests ausführen**
 
 Run: `pnpm --filter @kompass/core test`
 Expected: alle Tests grün (smoke + result + clock + ids).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core
@@ -524,7 +524,7 @@ git commit -m "feat(core): Result type, Clock abstraction and monotonic ULIDs"
   - `openDatabase(path): { db: Db; sqlite: Database }`, `runMigrations(db)`, Typen `Db`, `DbOrTx`.
   - `createTestDb(): { db: Db; sqlite: Database }` (In-Memory, migriert).
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `packages/core/tests/db.test.ts`:
 ```ts
@@ -573,12 +573,12 @@ describe('database', () => {
 });
 ```
 
-- [ ] **Step 2: Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Test ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/core test tests/db.test.ts`
 Expected: FAIL — Module nicht gefunden.
 
-- [ ] **Step 3: Schema schreiben**
+- [x] **Step 3: Schema schreiben**
 
 `packages/core/src/db/schema.ts`:
 ```ts
@@ -728,7 +728,7 @@ export const documents = sqliteTable(
 );
 ```
 
-- [ ] **Step 4: Client und drizzle-Config schreiben**
+- [x] **Step 4: Client und drizzle-Config schreiben**
 
 `packages/core/drizzle.config.ts`:
 ```ts
@@ -781,17 +781,17 @@ export function createTestDb(): { db: Db; sqlite: Database.Database } {
 }
 ```
 
-- [ ] **Step 5: Migration erzeugen**
+- [x] **Step 5: Migration erzeugen**
 
 Run: `pnpm --filter @kompass/core db:generate --name init`
 Expected: `packages/core/src/db/migrations/0000_init.sql` und `meta/_journal.json`, `meta/0000_snapshot.json` entstehen. Die SQL-Datei kurz lesen: zehn `CREATE TABLE`, Indizes, `PRAGMA`-frei.
 
-- [ ] **Step 6: Tests ausführen**
+- [x] **Step 6: Tests ausführen**
 
 Run: `pnpm --filter @kompass/core test tests/db.test.ts`
 Expected: 3 passed.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/core
@@ -821,7 +821,7 @@ git commit -m "feat(core): core schema, sqlite client with migrations, in-memory
   - `coreModule: ModuleManifest` (Settings kommen in Task 6 dazu).
   - Testing: `createTestDeps(opts?)`, `ctxWith(permissions, userId?)`, `TEST_NOW`.
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 `packages/core/tests/permissions.test.ts`:
 ```ts
@@ -938,12 +938,12 @@ describe('validate', () => {
 });
 ```
 
-- [ ] **Step 2: Tests ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Tests ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/core test`
 Expected: FAIL — Module `../src/context`, `../src/testing` usw. nicht gefunden.
 
-- [ ] **Step 3: Implementieren**
+- [x] **Step 3: Implementieren**
 
 `packages/core/src/context.ts`:
 ```ts
@@ -1189,12 +1189,12 @@ export function ctxWith(permissions: readonly string[], userId: string | null = 
 }
 ```
 
-- [ ] **Step 4: Tests ausführen**
+- [x] **Step 4: Tests ausführen**
 
 Run: `pnpm --filter @kompass/core test && pnpm --filter @kompass/core typecheck`
 Expected: alle grün, keine Typfehler.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core
@@ -1214,7 +1214,7 @@ git commit -m "feat(core): call context, permission checks, module manifest and 
 - Consumes: `CallContext`, `Deps`, `newId`, `isoNow`, Tabelle `auditLog`.
 - Produces: `interface AuditInput { action: string; entityType: string; entityId: string | null; before?: unknown; after?: unknown; summary: string }`; `recordAudit(tx: DbOrTx, deps: Pick<Deps, 'clock' | 'env'>, ctx: CallContext, input: AuditInput): string` (gibt die Eintrags-ID zurück).
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `packages/core/tests/audit-log.test.ts`:
 ```ts
@@ -1282,12 +1282,12 @@ describe('recordAudit', () => {
 });
 ```
 
-- [ ] **Step 2: Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Test ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/core test tests/audit-log.test.ts`
 Expected: FAIL — `../src/audit/log` nicht gefunden.
 
-- [ ] **Step 3: recordAudit implementieren**
+- [x] **Step 3: recordAudit implementieren**
 
 `packages/core/src/audit/log.ts`:
 ```ts
@@ -1338,7 +1338,7 @@ export function recordAudit(
 }
 ```
 
-- [ ] **Step 4: Trigger-Migration anlegen**
+- [x] **Step 4: Trigger-Migration anlegen**
 
 Run: `pnpm --filter @kompass/core db:generate --custom --name audit_log_immutable`
 Expected: leere Datei `packages/core/src/db/migrations/0001_audit_log_immutable.sql` plus Journal-Eintrag.
@@ -1356,12 +1356,12 @@ BEGIN
 END;
 ```
 
-- [ ] **Step 5: Tests ausführen**
+- [x] **Step 5: Tests ausführen**
 
 Run: `pnpm --filter @kompass/core test`
 Expected: alle grün (auch `db.test.ts`, da Trigger keine Tabelle ist).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/core
@@ -1385,7 +1385,7 @@ git commit -m "feat(core): append-only audit log with immutability triggers"
   - `setSetting(deps, ctx, input: { key: string; value: unknown }): Promise<Result<{ key: string; value: unknown }>>`.
   - `writeSettingInternal(tx, deps, ctx, key, value, action?)` — ohne Rechteprüfung, für Setup/Import/Theme-Service; validiert und protokolliert trotzdem.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `packages/core/tests/settings.test.ts`:
 ```ts
@@ -1457,12 +1457,12 @@ describe('settings service', () => {
 });
 ```
 
-- [ ] **Step 2: Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Test ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/core test tests/settings.test.ts`
 Expected: FAIL — Module nicht gefunden.
 
-- [ ] **Step 3: Definitionen schreiben**
+- [x] **Step 3: Definitionen schreiben**
 
 `packages/core/src/settings/core.ts`:
 ```ts
@@ -1540,7 +1540,7 @@ export const coreModule = defineModule({
 });
 ```
 
-- [ ] **Step 4: Service schreiben**
+- [x] **Step 4: Service schreiben**
 
 `packages/core/src/settings/service.ts`:
 ```ts
@@ -1633,12 +1633,12 @@ export async function setSetting(
 }
 ```
 
-- [ ] **Step 5: Tests ausführen**
+- [x] **Step 5: Tests ausführen**
 
 Run: `pnpm --filter @kompass/core test && pnpm --filter @kompass/core typecheck`
 Expected: alle grün. (Hinweis: Zod 4 kennt `z.email()`, `z.url()`, `z.iso.date()` als Top-Level-Funktionen.)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/core
@@ -1656,7 +1656,7 @@ git commit -m "feat(core): registered settings with validation, defaults and aud
 **Interfaces:**
 - Produces: `PASSWORD_MIN_LENGTH = 12`, `passwordSchema` (Zod), `hashPassword(plain): Promise<string>`, `verifyPassword(hash, plain): Promise<boolean>`, `generateStartPassword(random?: (maxExclusive: number) => number): string`, `START_PASSWORD_PATTERN`.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `packages/core/tests/password.test.ts`:
 ```ts
@@ -1709,12 +1709,12 @@ describe('password', () => {
 });
 ```
 
-- [ ] **Step 2: Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Test ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/core test tests/password.test.ts`
 Expected: FAIL — Module nicht gefunden.
 
-- [ ] **Step 3: Implementieren**
+- [x] **Step 3: Implementieren**
 
 `packages/core/src/auth/wordlist.ts`:
 ```ts
@@ -1770,12 +1770,12 @@ export function generateStartPassword(random: (maxExclusive: number) => number =
 }
 ```
 
-- [ ] **Step 4: Tests ausführen**
+- [x] **Step 4: Tests ausführen**
 
 Run: `pnpm --filter @kompass/core test tests/password.test.ts`
 Expected: 5 passed. Falls `@node-rs/argon2` nicht lädt: `pnpm approve-builds` → freigeben → `pnpm install`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core
@@ -1799,7 +1799,7 @@ git commit -m "feat(core): argon2id password hashing, policy and speakable start
   - `getEffectivePermissions(dbOrTx, registry, userId): Set<string>`; `countActiveProtectedHolders(dbOrTx, { excludeUserId? }): number`.
   - Testing: `insertUser(deps, { id?, name?, email?, isActive?, passwordHash? }): string` und `insertRole(deps, { name, isProtected? }): string` (direkte Inserts für Tests; geschützte Rollen entstehen produktiv nur im Setup, Task 16).
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `packages/core/tests/roles.test.ts`:
 ```ts
@@ -1896,12 +1896,12 @@ describe('roles service', () => {
 });
 ```
 
-- [ ] **Step 2: Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Test ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/core test tests/roles.test.ts`
 Expected: FAIL — Module nicht gefunden / `insertUser` fehlt.
 
-- [ ] **Step 3: Test-Helfer ergänzen**
+- [x] **Step 3: Test-Helfer ergänzen**
 
 In `packages/core/src/testing/index.ts` anhängen:
 ```ts
@@ -1939,7 +1939,7 @@ export function insertUser(
 ```
 (Imports oben in der Datei einsortieren, nicht mitten in der Datei.)
 
-- [ ] **Step 4: Effektive Rechte implementieren**
+- [x] **Step 4: Effektive Rechte implementieren**
 
 `packages/core/src/roles/effective.ts`:
 ```ts
@@ -1982,7 +1982,7 @@ export function countActiveProtectedHolders(db: DbOrTx, opts: { excludeUserId?: 
 }
 ```
 
-- [ ] **Step 5: Rollen-Service implementieren**
+- [x] **Step 5: Rollen-Service implementieren**
 
 `packages/core/src/roles/service.ts`:
 ```ts
@@ -2150,12 +2150,12 @@ export async function listRoles(deps: Deps, ctx: CallContext): Promise<Result<Ro
 }
 ```
 
-- [ ] **Step 6: Tests ausführen**
+- [x] **Step 6: Tests ausführen**
 
 Run: `pnpm --filter @kompass/core test && pnpm --filter @kompass/core typecheck`
 Expected: alle grün.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/core
@@ -2181,7 +2181,7 @@ git commit -m "feat(core): roles with permission sets, protected admin role, eff
   - `resetStartPassword(deps, ctx, { id }) → Result<{ startPassword: string }>` (löscht Sitzungen)
   - intern exportiert: `loadUserSummary(dbOrTx, id)`, `normalizeEmail(email)`.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `packages/core/tests/users.test.ts`:
 ```ts
@@ -2278,12 +2278,12 @@ describe('users service', () => {
 });
 ```
 
-- [ ] **Step 2: Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Test ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/core test tests/users.test.ts`
 Expected: FAIL — Module nicht gefunden.
 
-- [ ] **Step 3: Implementieren**
+- [x] **Step 3: Implementieren**
 
 `packages/core/src/users/service.ts`:
 ```ts
@@ -2440,12 +2440,12 @@ export async function resetStartPassword(deps: Deps, ctx: CallContext, input: un
 }
 ```
 
-- [ ] **Step 4: Tests ausführen**
+- [x] **Step 4: Tests ausführen**
 
 Run: `pnpm --filter @kompass/core test && pnpm --filter @kompass/core typecheck`
 Expected: alle grün.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core
@@ -2467,7 +2467,7 @@ git commit -m "feat(core): user management with one-time start passwords and aud
   - `MAX_FAILED_LOGINS = 5`, `LOCK_MINUTES = 15`, `login(deps, { email, password, ipAddress, requestId }) → Result<{ sessionId; expiresAt; userId; mustChangePassword }>`.
   - `changeOwnPassword(deps, ctx, sessionId, { currentPassword, newPassword }) → Result<void>` (räumt `mustChangePassword`, beendet andere Sitzungen).
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `packages/core/tests/auth.test.ts`:
 ```ts
@@ -2570,12 +2570,12 @@ describe('login and sessions', () => {
 });
 ```
 
-- [ ] **Step 2: Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Test ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/core test tests/auth.test.ts`
 Expected: FAIL — Module nicht gefunden.
 
-- [ ] **Step 3: Sessions implementieren**
+- [x] **Step 3: Sessions implementieren**
 
 `packages/core/src/auth/sessions.ts`:
 ```ts
@@ -2643,7 +2643,7 @@ export function revokeUserSessions(tx: DbOrTx, userId: string, exceptSessionId?:
 }
 ```
 
-- [ ] **Step 4: Login und Passwortwechsel implementieren**
+- [x] **Step 4: Login und Passwortwechsel implementieren**
 
 `packages/core/src/auth/login.ts`:
 ```ts
@@ -2739,12 +2739,12 @@ export async function changeOwnPassword(deps: Deps, ctx: CallContext, sessionId:
 }
 ```
 
-- [ ] **Step 5: Tests ausführen**
+- [x] **Step 5: Tests ausführen**
 
 Run: `pnpm --filter @kompass/core test && pnpm --filter @kompass/core typecheck`
 Expected: alle grün. Hinweis: Der Dummy-Hash im Unbekannt-Zweig muss ein syntaktisch gültiger Argon2-String sein, damit `verify` rechnet statt sofort zu werfen; `verifyPassword` fängt beides ab.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/core
@@ -2769,7 +2769,7 @@ git commit -m "feat(core): session login with lockout, session resolution and ow
   - `listApiTokens(deps, ctx) → Result<ApiTokenSummary[]>` — eigene, inklusive widerrufener.
   - `tokenPrefixFor(env): 'live' | 'test' | 'dev'`.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `packages/core/tests/tokens.test.ts`:
 ```ts
@@ -2841,12 +2841,12 @@ describe('api tokens', () => {
 });
 ```
 
-- [ ] **Step 2: Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Test ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/core test tests/tokens.test.ts`
 Expected: FAIL — Modul nicht gefunden.
 
-- [ ] **Step 3: Implementieren**
+- [x] **Step 3: Implementieren**
 
 `packages/core/src/auth/tokens.ts`:
 ```ts
@@ -2948,12 +2948,12 @@ export async function listApiTokens(deps: Deps, ctx: CallContext): Promise<Resul
 }
 ```
 
-- [ ] **Step 4: Tests ausführen**
+- [x] **Step 4: Tests ausführen**
 
 Run: `pnpm --filter @kompass/core test && pnpm --filter @kompass/core typecheck`
 Expected: alle grün.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core
@@ -2976,7 +2976,7 @@ git commit -m "feat(core): personal API tokens resolving to audited MCP contexts
   - `contrastRatio(hexA, hexB): number`, `CONTRAST_PAIRS`, `checkThemeContrast(theme): ContrastFinding[]` mit `{ fg, bg, mode, ratio, minimum }`.
   - Setting `themes` (`z.array(themeSchema).min(1)`, Default `[DEFAULT_THEME]`).
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `packages/core/tests/themes-schema.test.ts`:
 ```ts
@@ -3038,12 +3038,12 @@ describe('contrast', () => {
 });
 ```
 
-- [ ] **Step 2: Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Test ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/core test tests/themes-schema.test.ts`
 Expected: FAIL — Module nicht gefunden.
 
-- [ ] **Step 3: Token-Schema schreiben**
+- [x] **Step 3: Token-Schema schreiben**
 
 `packages/core/src/themes/tokens.ts`:
 ```ts
@@ -3095,7 +3095,7 @@ export type ThemeTokens = z.infer<typeof themeTokensSchema>;
 export type Theme = z.infer<typeof themeSchema>;
 ```
 
-- [ ] **Step 4: Default-Theme schreiben (Seed-Daten aus Token-Sheet `1a`)**
+- [x] **Step 4: Default-Theme schreiben (Seed-Daten aus Token-Sheet `1a`)**
 
 `packages/core/src/themes/default-theme.ts`:
 ```ts
@@ -3171,7 +3171,7 @@ export const DEFAULT_THEME: Theme = {
 };
 ```
 
-- [ ] **Step 5: Kontrastprüfung schreiben**
+- [x] **Step 5: Kontrastprüfung schreiben**
 
 `packages/core/src/themes/contrast.ts`:
 ```ts
@@ -3255,7 +3255,7 @@ export function checkThemeContrast(theme: Theme): ContrastFinding[] {
 }
 ```
 
-- [ ] **Step 6: Setting `themes` registrieren**
+- [x] **Step 6: Setting `themes` registrieren**
 
 In `packages/core/src/settings/core.ts` oben importieren und in `branding` ergänzen:
 ```ts
@@ -3268,12 +3268,12 @@ const themes: SettingDefinition[] = [
 export const CORE_SETTINGS: SettingDefinition[] = [...organization, ...branding, ...themes, ...modules, ...system];
 ```
 
-- [ ] **Step 7: Tests ausführen**
+- [x] **Step 7: Tests ausführen**
 
 Run: `pnpm --filter @kompass/core test && pnpm --filter @kompass/core typecheck`
 Expected: alle grün. `checkThemeContrast(DEFAULT_THEME)` muss `[]` liefern — die Werte wurden vor dem Plan rechnerisch geprüft (schwächstes Paar: `input-placeholder`/`input-bg` hell 3,18:1 bei Minimum 3).
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add packages/core
@@ -3295,7 +3295,7 @@ git commit -m "feat(core): theme token schema, default theme seed data and WCAG 
   - `createTheme(deps, ctx, theme) → Result<Theme>`; `updateTheme(deps, ctx, theme) → Result<Theme>`; `duplicateTheme(deps, ctx, { sourceKey, key, name }) → Result<Theme>`; `deleteTheme(deps, ctx, { key }) → Result<void>`; `activateTheme(deps, ctx, { key }) → Result<Theme>`.
   - Alle Schreibfunktionen: `settings.manage`; Fehlercodes `themeKeyTaken`, `themeReadOnly` (default), `themeActive` (löschen), `themeNotFound` via `notFound('theme', key)`.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `packages/core/tests/themes-service.test.ts`:
 ```ts
@@ -3366,12 +3366,12 @@ describe('theme service', () => {
 });
 ```
 
-- [ ] **Step 2: Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Test ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/core test tests/themes-service.test.ts`
 Expected: FAIL — Modul nicht gefunden.
 
-- [ ] **Step 3: Implementieren**
+- [x] **Step 3: Implementieren**
 
 `packages/core/src/themes/service.ts`:
 ```ts
@@ -3482,12 +3482,12 @@ export async function activateTheme(deps: Deps, ctx: CallContext, input: unknown
 }
 ```
 
-- [ ] **Step 4: Tests ausführen**
+- [x] **Step 4: Tests ausführen**
 
 Run: `pnpm --filter @kompass/core test && pnpm --filter @kompass/core typecheck`
 Expected: alle grün.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core
@@ -3510,7 +3510,7 @@ git commit -m "feat(core): theme management with read-only default and delete gu
   - `setModuleEnabled(deps, ctx, { key, enabled }) → Result<ModuleStatus>` — `modules.manage`; Codes `moduleLocked` (core), `moduleDependencyInactive`, `moduleRequiredByOthers`; unbekannt → `notFound('module', key)`.
   - `definePublishedView<T>({ name, schema, load }) → PublishedView<T>` — `load` gibt nur Felder des Schemas zurück (Zod strip).
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 `packages/core/tests/modules.test.ts`:
 ```ts
@@ -3591,12 +3591,12 @@ describe('published views', () => {
 });
 ```
 
-- [ ] **Step 2: Tests ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Tests ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/core test tests/modules.test.ts tests/published-view.test.ts`
 Expected: FAIL — Module nicht gefunden.
 
-- [ ] **Step 3: Implementieren**
+- [x] **Step 3: Implementieren**
 
 `packages/core/src/modules/service.ts`:
 ```ts
@@ -3696,12 +3696,12 @@ export function definePublishedView<T extends Record<string, unknown>>(def: {
 }
 ```
 
-- [ ] **Step 4: Tests ausführen**
+- [x] **Step 4: Tests ausführen**
 
 Run: `pnpm --filter @kompass/core test && pnpm --filter @kompass/core typecheck`
 Expected: alle grün. Hinweis: `listModules(deps)` innerhalb der Transaktion liest über `deps.db`; better-sqlite3 sieht in derselben Verbindung die eigene ungeschriebene Transaktion, daher ist das Ergebnis korrekt.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core
@@ -3723,7 +3723,7 @@ git commit -m "feat(core): module enable/disable with dependency guards and publ
   - `queryAudit(deps, ctx, { userId?, channel?, action?, entityType?, entityId?, from?, to?, text?, limit?, offset? }) → Result<{ entries: AuditEntry[]; total: number }>` — neueste zuerst, `limit` 1–200 (Default 50).
   - `getAuditEntry(deps, ctx, id) → Result<AuditEntry>`.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `packages/core/tests/audit-query.test.ts`:
 ```ts
@@ -3781,12 +3781,12 @@ describe('audit query', () => {
 });
 ```
 
-- [ ] **Step 2: Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Test ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/core test tests/audit-query.test.ts`
 Expected: FAIL — Modul nicht gefunden.
 
-- [ ] **Step 3: Implementieren**
+- [x] **Step 3: Implementieren**
 
 `packages/core/src/audit/query.ts`:
 ```ts
@@ -3897,12 +3897,12 @@ export function getAuditEntry(deps: Deps, ctx: CallContext, id: string): Result<
 }
 ```
 
-- [ ] **Step 4: Tests ausführen**
+- [x] **Step 4: Tests ausführen**
 
 Run: `pnpm --filter @kompass/core test && pnpm --filter @kompass/core typecheck`
 Expected: alle grün.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core
@@ -3927,7 +3927,7 @@ git commit -m "feat(core): filterable audit log queries with user names and pars
   - `seedDevelopment(deps) → { adminEmail; adminPassword }` — idempotent, wirft außerhalb `development`/`test`.
   - `src/index.ts` exportiert alle Services, Typen und `coreModule`.
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 `packages/core/tests/setup.test.ts`:
 ```ts
@@ -4049,12 +4049,12 @@ describe('seedDevelopment', () => {
 });
 ```
 
-- [ ] **Step 2: Tests ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Tests ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/core test tests/setup.test.ts tests/app.test.ts tests/seed.test.ts`
 Expected: FAIL — Module nicht gefunden.
 
-- [ ] **Step 3: Setup implementieren**
+- [x] **Step 3: Setup implementieren**
 
 `packages/core/src/setup/service.ts`:
 ```ts
@@ -4113,7 +4113,7 @@ export async function completeSetup(deps: Deps, input: unknown): Promise<Result<
 }
 ```
 
-- [ ] **Step 4: Composition Root implementieren**
+- [x] **Step 4: Composition Root implementieren**
 
 `packages/core/src/app.ts`:
 ```ts
@@ -4171,7 +4171,7 @@ export function readEnv(source: Record<string, string | undefined> = process.env
 }
 ```
 
-- [ ] **Step 5: Seed implementieren**
+- [x] **Step 5: Seed implementieren**
 
 `packages/core/src/seed/seed.ts`:
 ```ts
@@ -4244,7 +4244,7 @@ try {
 }
 ```
 
-- [ ] **Step 6: Öffentliche Exporte**
+- [x] **Step 6: Öffentliche Exporte**
 
 `packages/core/src/index.ts` vollständig ersetzen:
 ```ts
@@ -4286,7 +4286,7 @@ export * from './app';
 export * from './seed/seed';
 ```
 
-- [ ] **Step 7: Tests, Typecheck, Seed-CLI ausprobieren**
+- [x] **Step 7: Tests, Typecheck, Seed-CLI ausprobieren**
 
 Run: `pnpm --filter @kompass/core test && pnpm --filter @kompass/core typecheck`
 Expected: alle grün (etwa 70 Tests).
@@ -4294,7 +4294,7 @@ Expected: alle grün (etwa 70 Tests).
 Run: `mkdir -p packages/core/data && cd packages/core && APP_ENV=development DATABASE_PATH=./data/kompass.db pnpm seed && cd ../..`
 Expected: `Seed abgeschlossen. Login: admin@kompass.local / kompass-entwicklung-2026`; die Datei `packages/core/data/kompass.db` ist git-ignoriert.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add packages/core
