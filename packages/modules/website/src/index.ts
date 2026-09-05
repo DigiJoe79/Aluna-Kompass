@@ -13,3 +13,4 @@ export * from './blocked-terms';
 export * from './translation-gaps';
 export * from './export';
 export * from './services/publishes';
+export * from './pipeline/images';

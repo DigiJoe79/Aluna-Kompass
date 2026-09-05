@@ -1,50 +1,50 @@
 {
-  "asset-chiara-1": {
-    "src": "/images/a11111111111-960.webp",
-    "srcset": "/images/a11111111111-480.webp 480w, /images/a11111111111-960.webp 960w",
+  "asset-akiko-after": {
+    "src": "/images/placeholder-story-nachher-960.webp",
+    "srcset": "/images/placeholder-story-nachher-480.webp 480w, /images/placeholder-story-nachher-960.webp 960w, /images/placeholder-story-nachher-1402.webp 1402w",
     "width": 960,
-    "height": 720
-  },
-  "asset-chiara-2": {
-    "src": "/images/a22222222222-960.webp",
-    "srcset": "/images/a22222222222-480.webp 480w, /images/a22222222222-960.webp 960w",
-    "width": 960,
-    "height": 720
-  },
-  "asset-bruno-1": {
-    "src": "/images/a33333333333-960.webp",
-    "srcset": "/images/a33333333333-480.webp 480w, /images/a33333333333-960.webp 960w",
-    "width": 960,
-    "height": 720
+    "height": 768
   },
   "asset-akiko-before": {
-    "src": "/images/a44444444444-960.webp",
-    "srcset": "/images/a44444444444-480.webp 480w, /images/a44444444444-960.webp 960w",
+    "src": "/images/placeholder-story-vorher-960.webp",
+    "srcset": "/images/placeholder-story-vorher-480.webp 480w, /images/placeholder-story-vorher-960.webp 960w, /images/placeholder-story-vorher-1402.webp 1402w",
     "width": 960,
-    "height": 720
+    "height": 768
   },
-  "asset-akiko-after": {
-    "src": "/images/a55555555555-960.webp",
-    "srcset": "/images/a55555555555-480.webp 480w, /images/a55555555555-960.webp 960w",
+  "asset-bruno-1": {
+    "src": "/images/placeholder-hund-960.webp",
+    "srcset": "/images/placeholder-hund-480.webp 480w, /images/placeholder-hund-960.webp 960w, /images/placeholder-hund-1402.webp 1402w",
     "width": 960,
-    "height": 720
+    "height": 768
+  },
+  "asset-chiara-1": {
+    "src": "/images/placeholder-hund-960.webp",
+    "srcset": "/images/placeholder-hund-480.webp 480w, /images/placeholder-hund-960.webp 960w, /images/placeholder-hund-1402.webp 1402w",
+    "width": 960,
+    "height": 768
+  },
+  "asset-chiara-2": {
+    "src": "/images/placeholder-hund-960.webp",
+    "srcset": "/images/placeholder-hund-480.webp 480w, /images/placeholder-hund-960.webp 960w, /images/placeholder-hund-1402.webp 1402w",
+    "width": 960,
+    "height": 768
   },
   "asset-nicole": {
-    "src": "/images/a66666666666-960.webp",
-    "srcset": "/images/a66666666666-480.webp 480w, /images/a66666666666-960.webp 960w",
+    "src": "/images/placeholder-hund-960.webp",
+    "srcset": "/images/placeholder-hund-480.webp 480w, /images/placeholder-hund-960.webp 960w, /images/placeholder-hund-1402.webp 1402w",
     "width": 960,
-    "height": 720
+    "height": 768
   },
   "asset-project-grundversorgung": {
-    "src": "/images/a77777777777-960.webp",
-    "srcset": "/images/a77777777777-480.webp 480w, /images/a77777777777-960.webp 960w",
-    "width": 960,
-    "height": 540
+    "src": "/images/placeholder-projekt-940.webp",
+    "srcset": "/images/placeholder-projekt-480.webp 480w, /images/placeholder-projekt-940.webp 940w",
+    "width": 940,
+    "height": 651
   },
   "asset-project-opfonds": {
-    "src": "/images/a88888888888-960.webp",
-    "srcset": "/images/a88888888888-480.webp 480w, /images/a88888888888-960.webp 960w",
+    "src": "/images/placeholder-projekt-feature-960.webp",
+    "srcset": "/images/placeholder-projekt-feature-480.webp 480w, /images/placeholder-projekt-feature-960.webp 960w, /images/placeholder-projekt-feature-1600.webp 1600w, /images/placeholder-projekt-feature-2556.webp 2556w",
     "width": 960,
-    "height": 540
+    "height": 443
   }
 }
