@@ -5,5 +5,13 @@ packages:
 
 allowBuilds:
   "@node-rs/argon2": true
+  '@parcel/watcher': true
+  '@swc/core': true
   better-sqlite3: true
   esbuild: true
+  unrs-resolver: true
+
+minimumReleaseAgeExclude:
+  - '@playwright/test@1.63.0'
+  - playwright-core@1.63.0
+  - playwright@1.63.0

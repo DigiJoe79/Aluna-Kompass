@@ -1,0 +1,48 @@
+{
+  "app": { "name": "Aluna Kompass" },
+  "common": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "discard": "Verwerfen",
+    "close": "Schließen",
+    "copy": "Kopieren",
+    "copied": "Kopiert",
+    "loading": "Wird geladen …",
+    "yes": "Ja",
+    "no": "Nein",
+    "none": "—",
+    "changesPending": "{count, plural, one {# Änderung noch nicht gespeichert} other {# Änderungen noch nicht gespeichert}}",
+    "lastSaved": "zuletzt gespeichert am {date} von {name}",
+    "audited": "Wird protokolliert."
+  },
+  "errors": {
+    "forbidden": "Dafür fehlt Ihrer Rolle das Recht {permission}.",
+    "validation": "Bitte prüfen Sie die markierten Felder.",
+    "notFound": "Der Eintrag wurde nicht gefunden.",
+    "unauthorized": "Bitte melden Sie sich erneut an.",
+    "technical": "Der Vorgang wurde abgebrochen. Es wurde nichts gespeichert.",
+    "conflict": {
+      "emailTaken": "Diese E-Mail-Adresse ist bereits vergeben.",
+      "roleNameTaken": "Eine Rolle mit diesem Namen existiert bereits.",
+      "roleProtected": "Die Rolle „Administration“ kann nicht geändert werden.",
+      "lastAdministrator": "Mindestens ein aktiver Nutzer muss die Rolle „Administration“ behalten.",
+      "settingSystemOnly": "Diese Einstellung setzt nur das System.",
+      "themeKeyTaken": "Ein Theme mit diesem Schlüssel existiert bereits.",
+      "themeReadOnly": "Das Default-Theme ist schreibgeschützt.",
+      "themeActive": "Das aktive Theme kann nicht gelöscht werden.",
+      "moduleLocked": "Der Kern kann nicht deaktiviert werden.",
+      "moduleDependencyInactive": "Benötigte Module sind nicht aktiv: {detail}",
+      "moduleRequiredByOthers": "Wird von aktiven Modulen benötigt: {detail}",
+      "setupAlreadyDone": "Die Einrichtung wurde bereits abgeschlossen.",
+      "default": "Der Vorgang ist nicht möglich: {detail}"
+    },
+    "fields": {
+      "required": "Pflichtfeld.",
+      "email": "Bitte eine gültige E-Mail-Adresse eingeben.",
+      "passwordTooShort": "Mindestens 12 Zeichen.",
+      "unknownPermission": "Unbekanntes Recht.",
+      "unknownSetting": "Unbekannte Einstellung.",
+      "invalid": "Ungültiger Wert."
+    }
+  }
+}

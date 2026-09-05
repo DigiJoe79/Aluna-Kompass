@@ -11,3 +11,7 @@ dist/
 .env.*
 !.env.example
 coverage/
+apps/kompass/e2e/.tmp/
+apps/kompass/test-results/
+apps/kompass/playwright-report/
+next-env.d.ts
