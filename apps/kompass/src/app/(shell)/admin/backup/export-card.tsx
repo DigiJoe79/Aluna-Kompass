@@ -1,6 +1,7 @@
 'use client';
 
 import { Download } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -9,6 +10,7 @@ import { Button } from '@/components/ui/button';
 export function ExportCard({ lastExportAt }: { lastExportAt: string | null }) {
   const t = useTranslations('backup.export');
   const format = useFormatter();
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const run = async () => {
     setBusy(true);
@@ -19,9 +21,15 @@ export function ExportCard({ lastExportAt }: { lastExportAt: string | null }) {
       const name = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1] ?? 'kompass-backup.tar.gz';
       const url = URL.createObjectURL(blob);
       const a = Object.assign(document.createElement('a'), { href: url, download: name });
+      // Der Anker muss im Dokument hängen: ein Klick auf ein losgelöstes
+      // Element löst in Safari und Firefox keinen Download aus.
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
-      window.location.reload();
+      a.remove();
+      // Der Download startet asynchron. Die Blob-URL erst später freigeben und
+      // die Seite weich aktualisieren — ein harter Reload bräche ihn ab.
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      router.refresh();
     } finally {
       setBusy(false);
     }
