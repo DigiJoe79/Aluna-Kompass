@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { access } from 'node:fs/promises';
+import { access, cp, mkdir, mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
 
 // eslint-disable-next-line no-control-regex
@@ -44,6 +44,30 @@ export async function buildSite(opts: {
   const outDir = path.resolve(opts.outDir);
   const contentDir = path.resolve(opts.contentDir);
   const astroBin = await findAstroBin(siteDir);
+  // Astro legt Zwischenstaende unter <siteDir>/.astro ab und verschiebt sie
+  // anschliessend ins Ausgabeverzeichnis. Liegt dieses auf einem anderen
+  // Dateisystem — im Container ist /data ein Volume, /app nicht —, scheitert
+  // das mit EXDEV. Deshalb wird neben .astro gebaut und danach kopiert.
+  const stageRoot = path.join(siteDir, '.astro');
+  await mkdir(stageRoot, { recursive: true });
+  const stage = await mkdtemp(path.join(stageRoot, 'out-'));
+  try {
+    const result = await runAstro(astroBin, siteDir, stage, contentDir, opts);
+    await mkdir(outDir, { recursive: true });
+    await cp(stage, outDir, { recursive: true });
+    return result;
+  } finally {
+    await rm(stage, { recursive: true, force: true });
+  }
+}
+
+function runAstro(
+  astroBin: string,
+  siteDir: string,
+  outDir: string,
+  contentDir: string,
+  opts: { publicUrl: string; staging: boolean; timeoutMs?: number },
+): Promise<{ log: string }> {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [astroBin, 'build', '--outDir', outDir], {
       cwd: siteDir,
