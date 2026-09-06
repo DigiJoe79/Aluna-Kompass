@@ -5,6 +5,11 @@ import { AuthCard } from '@/components/auth-card';
 import { getDeps } from '@/lib/deps';
 import { SetupForm } from './setup-form';
 
+// Diese Seite entscheidet anhand der Datenbank, ob eingerichtet werden muss.
+// Ohne force-dynamic backt `next build` den Bauzeit-Zustand ein — im Container
+// ist die Datenbank dann leer und die Weiterleitung bleibt fuer immer stehen.
+export const dynamic = 'force-dynamic';
+
 export default async function SetupPage() {
   if (!isSetupRequired(getDeps())) redirect('/login');
   const t = await getTranslations('auth.setup');

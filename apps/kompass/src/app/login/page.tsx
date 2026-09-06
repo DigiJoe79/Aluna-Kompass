@@ -6,6 +6,11 @@ import { getDeps } from '@/lib/deps';
 import { optionalSession } from '@/lib/request-context';
 import { LoginForm } from './login-form';
 
+// Diese Seite entscheidet anhand der Datenbank, ob eingerichtet werden muss.
+// Ohne force-dynamic backt `next build` den Bauzeit-Zustand ein — im Container
+// ist die Datenbank dann leer und die Weiterleitung bleibt fuer immer stehen.
+export const dynamic = 'force-dynamic';
+
 export default async function LoginPage(props: { searchParams: Promise<{ imported?: string }> }) {
   const deps = getDeps();
   if (isSetupRequired(deps)) redirect('/setup');

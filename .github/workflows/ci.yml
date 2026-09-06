@@ -3,7 +3,16 @@ on:
   push:
     branches: [main, dev]
     tags: ['v*']
+    # Greift nur, wenn *alle* geaenderten Dateien passen; ein gemischter
+    # Commit baut weiterhin.
+    paths-ignore: ['**.md', 'docs/**', 'docker-compose.*.yml', '.env.*.example']
   pull_request:
+
+# Ein neuer Push verdraengt den laufenden Build desselben Branches, damit nie
+# ein aelterer Lauf ein neueres Image unter demselben Tag ueberschreibt.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   TYPST_VERSION: 0.15.1
