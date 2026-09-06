@@ -21,7 +21,10 @@ RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 COPY . .
-RUN pnpm --filter @kompass/app build
+# next build rendert Seiten vor und laeuft dabei durch (shell)/layout.tsx,
+# das readEnv() aufruft. Zur Bauzeit gibt es keine .env, deshalb ein
+# Platzhalter — zur Laufzeit wird die Umgebung erneut gelesen, aus env_file.
+RUN SESSION_SECRET=build-time-only-not-a-real-secret-0000000000 pnpm --filter @kompass/app build
 
 FROM node:26-bookworm-slim AS runner
 ARG TYPST_VERSION=0.15.1
