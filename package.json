@@ -8,7 +8,8 @@
     "e2e": "pnpm --filter @kompass/app e2e",
     "test": "pnpm -r --workspace-concurrency=1 test",
     "typecheck": "pnpm -r typecheck",
-    "import:prototype": "tsx scripts/import-prototype.ts"
+    "import:prototype": "tsx scripts/import-prototype.ts",
+    "dev:reset": "tsx scripts/dev-reset.ts"
   },
   "devDependencies": {
     "@kompass/core": "workspace:*",
