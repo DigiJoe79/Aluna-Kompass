@@ -11,7 +11,7 @@ services:
     volumes:
       - /share/Container/kompass-test/data:/data
       - /share/Container/kompass-test/media:/media
-      - /share/Container/kompass-test/site.key:/data/site.key:ro
+      - /share/Container/kompass-test/site.pw:/data/site.pw:ro
 
   kompass-prod:
     image: ghcr.io/OWNER/aluna-kompass:latest
@@ -24,4 +24,4 @@ services:
     volumes:
       - /share/Container/kompass-prod/data:/data
       - /share/Container/kompass-prod/media:/media
-      - /share/Container/kompass-prod/site.key:/data/site.key:ro
+      - /share/Container/kompass-prod/site.pw:/data/site.pw:ro

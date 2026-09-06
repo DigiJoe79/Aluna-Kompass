@@ -4,7 +4,7 @@ import path from 'node:path';
 import { coreModule, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
-import { diffTrees, hashTree, readSiteEnv, runPreview, runPublish, websiteModule } from '../src';
+import { diffTrees, hashTree, readSiteEnv, rsyncCommand, runPreview, runPublish, websiteModule } from '../src';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -47,10 +47,28 @@ describe('readSiteEnv', () => {
     expect(env).toMatchObject({
       publicUrl: 'https://staging.example.org',
       staging: true,
-      deploy: { host: 'h', user: 'u', path: '/web/staging', keyFile: '/data/site.key' },
+      deploy: { host: 'h', user: 'u', path: '/web/staging', auth: { kind: 'key', keyFile: '/data/site.key' } },
       cacheDir: '/data/site-cache',
       previewDir: '/data/site-preview',
     });
+  });
+
+  it('reads a password file target and rejects a half configured one', () => {
+    const base = { DATABASE_PATH: '/data/k.db', SITE_DEPLOY_HOST: 'h', SITE_DEPLOY_USER: 'u', SITE_DEPLOY_PATH: '/web' };
+    expect(readSiteEnv({ ...base, SITE_DEPLOY_PASSWORD_FILE: '/data/site.pw' }).deploy).toEqual({
+      host: 'h',
+      user: 'u',
+      path: '/web',
+      auth: { kind: 'password', passwordFile: '/data/site.pw' },
+    });
+    expect(readSiteEnv({ ...base, SITE_DEPLOY_KEY_FILE: '/data/site.key' }).deploy).toEqual({
+      host: 'h',
+      user: 'u',
+      path: '/web',
+      auth: { kind: 'key', keyFile: '/data/site.key' },
+    });
+    // Ohne Anmeldeverfahren gibt es kein Ziel, sonst liefe der Publish ins Leere.
+    expect(readSiteEnv({ ...base }).deploy).toBeNull();
   });
 
   it('resolves cache and preview directories to absolute paths', () => {
@@ -83,7 +101,7 @@ describe('preview and publish', () => {
     const env = {
       publicUrl: 'https://staging.example.org',
       staging: true,
-      deploy: { host: '', user: '', path: target, keyFile: '' },
+      deploy: { host: '', user: '', path: target, auth: { kind: 'none' as const } },
       siteDir: SITE_DIR,
       cacheDir: tmp(),
       previewDir: tmp(),
@@ -107,7 +125,7 @@ describe('preview and publish', () => {
     const base = {
       publicUrl: 'https://x',
       staging: true,
-      deploy: { host: '', user: '', path: tmp(), keyFile: '' },
+      deploy: { host: '', user: '', path: tmp(), auth: { kind: 'none' as const } },
       siteDir: SITE_DIR,
       cacheDir: tmp(),
       previewDir: tmp(),
@@ -120,5 +138,39 @@ describe('preview and publish', () => {
     insertUser(dev, { id: 'USER-TEST' });
     const inDev = await runPublish(dev, ctx, base, { confirm: true });
     expect(inDev.ok === false && inDev.error.type === 'conflict' && inDev.error.code === 'publishNotAllowedHere').toBe(true);
+  });
+});
+
+describe('rsyncCommand', () => {
+  const local = { host: '', user: '', path: '/ziel', auth: { kind: 'none' } as const };
+  const withKey = { host: 'h', user: 'u', path: '/web', auth: { kind: 'key', keyFile: '/data/site.key' } as const };
+  const withPassword = { host: 'h', user: 'u', path: '/web', auth: { kind: 'password', passwordFile: '/data/site.pw' } as const };
+
+  it('writes into a local directory without ssh', () => {
+    const c = rsyncCommand({ distDir: '/build', deploy: local });
+    expect(c.command).toBe('rsync');
+    expect(c.args).toEqual(['-az', '--delete', '--checksum', '/build/', '/ziel/']);
+  });
+
+  it('uses the key file and refuses to prompt', () => {
+    const c = rsyncCommand({ distDir: '/build', deploy: withKey });
+    expect(c.command).toBe('rsync');
+    expect(c.args.join(' ')).toContain('ssh -i /data/site.key');
+    expect(c.args.join(' ')).toContain('BatchMode=yes');
+    expect(c.args).toContain('u@h:/web/');
+  });
+
+  it('wraps rsync in sshpass for password logins and never puts the secret on the command line', () => {
+    const c = rsyncCommand({ distDir: '/build', deploy: withPassword });
+    expect(c.command).toBe('sshpass');
+    expect(c.args.slice(0, 3)).toEqual(['-f', '/data/site.pw', 'rsync']);
+    // BatchMode würde die Passwortabfrage abschalten und den Login unmöglich machen.
+    expect(c.args.join(' ')).not.toContain('BatchMode');
+    expect(c.args).toContain('u@h:/web/');
+  });
+
+  it('passes the dry run flag through for a harmless connection test', () => {
+    expect(rsyncCommand({ distDir: '/build', deploy: withPassword, dryRun: true }).args).toContain('--dry-run');
+    expect(rsyncCommand({ distDir: '/build', deploy: local }).args).not.toContain('--dry-run');
   });
 });

@@ -23,7 +23,7 @@ RUN pnpm --filter @kompass/app build
 
 FROM node:26-bookworm-slim AS runner
 ARG TYPST_VERSION=0.15.1
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl xz-utils rsync openssh-client \
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl xz-utils rsync openssh-client sshpass \
  && curl -sSL "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-x86_64-unknown-linux-musl.tar.xz" \
     | tar -xJ -C /usr/local/bin --strip-components=1 "typst-x86_64-unknown-linux-musl/typst" \
  && typst --version \
