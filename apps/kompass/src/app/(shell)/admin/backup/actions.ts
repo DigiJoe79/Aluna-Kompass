@@ -1,9 +1,12 @@
 'use server';
 
 import { importBackup, inspectBackup } from '@kompass/core';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { createWriteStream } from 'node:fs';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { toActionState, type ActionState } from '@/lib/actions';
@@ -15,7 +18,9 @@ import { clearSessionCookie, requireSession } from '@/lib/request-context';
 async function stash(file: File): Promise<{ dir: string; archivePath: string }> {
   const dir = await mkdtemp(path.join(tmpdir(), 'kompass-upload-'));
   const archivePath = path.join(dir, 'backup.tar.gz');
-  await writeFile(archivePath, new Uint8Array(await file.arrayBuffer()));
+  // Strömen statt arrayBuffer(): sonst läge das ganze Archiv ein zweites Mal
+  // im Speicher, zusätzlich zu dem, was Next für die Action ohnehin puffert.
+  await pipeline(Readable.fromWeb(file.stream() as Parameters<typeof Readable.fromWeb>[0]), createWriteStream(archivePath));
   return { dir, archivePath };
 }
 
