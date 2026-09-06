@@ -2,6 +2,12 @@ import { spawn } from 'node:child_process';
 import { access } from 'node:fs/promises';
 import path from 'node:path';
 
+// eslint-disable-next-line no-control-regex
+const ANSI = /\u001B\[[0-9;]*[a-zA-Z]/g;
+
+/** Entfernt Farb- und Cursor-Sequenzen, damit Protokolle lesbar bleiben. */
+export const stripAnsi = (text: string): string => text.replace(ANSI, '');
+
 export class SiteBuildError extends Error {
   constructor(message: string, public readonly log: string) {
     super(message);
@@ -48,6 +54,8 @@ export async function buildSite(opts: {
         SITE_STAGING: opts.staging ? '1' : '0',
         NODE_ENV: 'production',
         FORCE_COLOR: '0',
+        NO_COLOR: '1',
+        TERM: 'dumb',
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -57,10 +65,10 @@ export async function buildSite(opts: {
       reject(new SiteBuildError('site build timed out', log));
     }, opts.timeoutMs ?? 300_000);
     child.stdout.on('data', (c: Buffer) => {
-      log += c.toString('utf8');
+      log += stripAnsi(c.toString('utf8'));
     });
     child.stderr.on('data', (c: Buffer) => {
-      log += c.toString('utf8');
+      log += stripAnsi(c.toString('utf8'));
     });
     child.on('error', (e) => {
       clearTimeout(timer);

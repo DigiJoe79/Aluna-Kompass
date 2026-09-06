@@ -49,6 +49,10 @@ WORKDIR /app
 COPY --from=build --chown=node:node /app/apps/kompass/.next/standalone ./
 COPY --from=build --chown=node:node /app/apps/kompass/.next/static ./apps/kompass/.next/static
 COPY --from=build --chown=node:node /app/apps/site ./apps/site
+# Die tsconfig von packages/markdown erweitert die Basisdatei im Wurzel-
+# verzeichnis. Ohne sie bricht der Site-Build ab, sobald vite den Markdown-
+# Quellcode transformiert: „Tsconfig not found /app/tsconfig.base.json".
+COPY --from=build --chown=node:node /app/tsconfig.base.json ./tsconfig.base.json
 COPY --from=build --chown=node:node /app/packages/markdown ./packages/markdown
 COPY --from=build --chown=node:node /app/packages/core/src/db/migrations ./packages/core/src/db/migrations
 COPY --from=build --chown=node:node /app/packages/documents/templates ./packages/documents/templates

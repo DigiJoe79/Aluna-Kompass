@@ -4,7 +4,7 @@ import path from 'node:path';
 import { coreModule, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
-import { diffTrees, hashTree, readSiteEnv, rsyncCommand, runPreview, runPublish, websiteModule } from '../src';
+import { diffTrees, hashTree, readSiteEnv, rsyncCommand, runPreview, runPublish, stripAnsi, websiteModule } from '../src';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -172,5 +172,16 @@ describe('rsyncCommand', () => {
   it('passes the dry run flag through for a harmless connection test', () => {
     expect(rsyncCommand({ distDir: '/build', deploy: withPassword, dryRun: true }).args).toContain('--dry-run');
     expect(rsyncCommand({ distDir: '/build', deploy: local }).args).not.toContain('--dry-run');
+  });
+});
+
+describe('stripAnsi', () => {
+  it('removes the escape sequences vite emits, so the log stays readable', () => {
+    const raw = '\u001B[2m16:46:43\u001B[22m \u001B[34m[build]\u001B[39m Fertig';
+    expect(stripAnsi(raw)).toBe('16:46:43 [build] Fertig');
+  });
+
+  it('leaves ordinary text untouched', () => {
+    expect(stripAnsi('Tsconfig not found /app/tsconfig.base.json')).toBe('Tsconfig not found /app/tsconfig.base.json');
   });
 });
