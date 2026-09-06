@@ -21,6 +21,7 @@ in derselben Transaktion prüfen, in der er schreibt — sonst ist es eine
 Fernübernahme der Installation. Zu klären: ob zusätzlich ein Wert aus der
 Umgebung als Nachweis verlangt wird.
 
+Entworfen in `docs/superpowers/specs/2026-09-06-setup-import-design.md` (2026-09-06).
 Betrifft `apps/kompass/src/app/setup/` und `packages/core/src/backup/import.ts`.
 
 ## 2. E2E gegen die Produktionsfassung
