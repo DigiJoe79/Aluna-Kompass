@@ -1,19 +1,4 @@
 ---
-import Base from '../layouts/Base.astro';
-import { ui, emphasize } from '../lib/locale';
-import { pathFor } from '../lib/routes';
-
-const t = ui('de');
+import NotFound from "../components/NotFound.astro";
 ---
-<Base title="404">
-  <div class="aluna-page">
-    <div class="wrap wrap-narrow" style="text-align:center">
-      <p class="eyebrow" style="justify-content:center"><span class="eyebrow-dot"></span>Fehler 404</p>
-      <h1 class="section-title" set:html={emphasize(t.misc.notFound)}></h1>
-      <p class="section-lede" style="margin-inline:auto">Die gesuchte Seite gibt es nicht (mehr).</p>
-      <p style="margin-top:32px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
-        <a class="btn btn-primary" href={pathFor('home', 'de')}>{t.misc.home}</a>
-      </p>
-    </div>
-  </div>
-</Base>
+<NotFound locale="de" />

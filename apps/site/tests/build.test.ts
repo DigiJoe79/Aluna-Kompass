@@ -112,6 +112,19 @@ describe('site build', () => {
     expect(eyebrow(build({ SITE_CONTENT_DIR: contentWithout('foundedYear') }))).not.toMatch(/·\s*<\/p>|·\s*$/);
   });
 
+  it('ships an htaccess so Apache serves the generated error page, per language', () => {
+    const out = build({});
+    const root = readFileSync(path.join(out, '.htaccess'), 'utf8');
+    expect(root).toContain('ErrorDocument 404 /404.html');
+    // Verzeichnisauflistung abschalten: sonst zeigt Apache den Inhalt von /images/.
+    expect(root).toContain('Options -Indexes');
+    // Der englische Baum braucht seine eigene Fehlerseite.
+    expect(readFileSync(path.join(out, 'en/.htaccess'), 'utf8')).toContain('ErrorDocument 404 /en/404/index.html');
+    // Astro macht aus /en/404 ein Verzeichnis; nur die Wurzel wird zu 404.html.
+    expect(readFileSync(path.join(out, 'en/404/index.html'), 'utf8')).toContain('<html lang="en"');
+    expect(readFileSync(path.join(out, '404.html'), 'utf8')).toContain('<html lang="de"');
+  });
+
   it('staging builds carry noindex and a disallow robots.txt', () => {
     const s = build({ SITE_STAGING: '1', SITE_PUBLIC_URL: 'https://staging.example.org' });
     expect(readFileSync(path.join(s, 'index.html'), 'utf8')).toContain('name="robots" content="noindex, nofollow"');
