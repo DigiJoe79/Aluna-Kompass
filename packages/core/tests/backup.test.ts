@@ -6,7 +6,7 @@ import * as tar from 'tar';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createDeps } from '../src/app';
 import { login } from '../src/auth/login';
-import { exportBackup, importBackup, inspectBackup } from '../src/backup';
+import { exportBackup, importBackup, importBackupForSetup, inspectBackup } from '../src/backup';
 import { auditLog, users } from '../src/db/schema';
 import { unwrap } from '../src/result';
 import { seedDevelopment } from '../src/seed/seed';
@@ -121,5 +121,55 @@ describe('backup', () => {
     expect(readdirSync(path.join(mediaRoot, aside!))).toContain('alt.png');
     expect(seed.adminEmail).toContain('@');
     targetDeps.close();
+  });
+});
+
+describe('importBackupForSetup', () => {
+  async function seededArchive(): Promise<string> {
+    const deps = fileDeps(tmp());
+    await seedDevelopment(deps);
+    const archive = unwrap(await exportBackup(deps, ctxWith(['backup.export']), { workDir: tmp() }));
+    deps.close();
+    return archive.archivePath;
+  }
+
+  it('imports into an empty installation and records a system entry without a user', async () => {
+    const archivePath = await seededArchive();
+    const deps = fileDeps(tmp());
+    expect(isSetupRequired(deps)).toBe(true);
+
+    const result = unwrap(await importBackupForSetup(deps, { archivePath, workDir: tmp() }));
+    expect(result.manifest.environment).toBe('test');
+    expect(isSetupRequired(deps)).toBe(false);
+
+    const entry = deps.db.select().from(auditLog).all().find((e) => e.action === 'backup.import');
+    expect(entry).toBeTruthy();
+    expect(entry!.userId).toBeNull();
+    expect(entry!.channel).toBe('system');
+    deps.close();
+  });
+
+  it('refuses once the installation has a user', async () => {
+    const archivePath = await seededArchive();
+    const deps = fileDeps(tmp());
+    await seedDevelopment(deps);
+    const result = await importBackupForSetup(deps, { archivePath, workDir: tmp() });
+    expect(result.ok).toBe(false);
+    if (!result.ok && result.error.type === 'conflict') expect(result.error.code).toBe('setupAlreadyDone');
+    deps.close();
+  });
+
+  it('refuses an archive without users, which would leave the installation open and unusable', async () => {
+    const empty = fileDeps(tmp());
+    const archive = unwrap(await exportBackup(empty, ctxWith(['backup.export']), { workDir: tmp() }));
+    empty.close();
+
+    const deps = fileDeps(tmp());
+    const result = await importBackupForSetup(deps, { archivePath: archive.archivePath, workDir: tmp() });
+    expect(result.ok).toBe(false);
+    if (!result.ok && result.error.type === 'validation') {
+      expect(result.error.issues[0]!.message).toBe('backupWithoutUsers');
+    }
+    deps.close();
   });
 });
