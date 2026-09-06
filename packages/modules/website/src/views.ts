@@ -23,6 +23,7 @@ export const publishedSiteFacts = definePublishedView({
     featuredStorySlug: z.string(),
     organization: z.object({
       name: z.string(),
+      foundedYear: z.string(),
       street: z.string(),
       postalCode: z.string(),
       city: z.string(),
@@ -53,6 +54,7 @@ export const publishedSiteFacts = definePublishedView({
       featuredStorySlug: w('featuredStorySlug'),
       organization: {
         name: o('name'),
+        foundedYear: o('foundedYear'),
         street: o('street'),
         postalCode: o('postalCode'),
         city: o('city'),

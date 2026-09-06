@@ -24,6 +24,7 @@ export const SETTINGS_TABS: SettingsTab[] = [
       { key: 'organization.postalCode', kind: 'mono' },
       { key: 'organization.city', kind: 'text' },
       { key: 'organization.country', kind: 'text' },
+      { key: 'organization.foundedYear', kind: 'mono' },
       { key: 'organization.registerCourt', kind: 'text' },
       { key: 'organization.registerNumber', kind: 'mono', hintKey: 'registerNumberHint' },
       { key: 'organization.email', kind: 'text' },

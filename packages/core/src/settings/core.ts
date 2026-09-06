@@ -17,6 +17,7 @@ const organization: SettingDefinition[] = [
   { key: 'organization.postalCode', schema: z.string().trim().max(10), default: '' },
   { key: 'organization.city', schema: shortText, default: '' },
   { key: 'organization.country', schema: z.string().trim().length(2).toUpperCase(), default: 'DE' },
+  { key: 'organization.foundedYear', schema: z.union([z.literal(''), z.string().regex(/^(1[89]|20|21)\d{2}$/)]), default: '' },
   { key: 'organization.registerCourt', schema: shortText, default: '' },
   { key: 'organization.registerNumber', schema: shortText, default: '' },
   { key: 'organization.taxNumber', schema: shortText, default: '' },

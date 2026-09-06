@@ -31,7 +31,7 @@ const generalBlocks = homePage.blocks.filter((b) => !b.id.startsWith('impact') &
   <section class="hero">
     <img class="hero-bg" src="/images/placeholder-hero.jpg" alt={org.name} />
     <div class="hero-inner">
-      <p class="eyebrow eyebrow-light"><span class="eyebrow-dot"></span>{org.name} · {locale === 'de' ? 'Gemeinnützig' : 'Non-profit'}</p>
+      <p class="eyebrow eyebrow-light"><span class="eyebrow-dot"></span>{[org.name, t.misc.nonprofit, org.foundedYear && `${t.misc.founded} ${org.foundedYear}`].filter(Boolean).join(' · ')}</p>
       <h1 class="hero-title" set:html={emphasize(claim.value)}></h1>
       {lede.value && <p class="hero-lede" data-fallback={lede.fallback ?? undefined}>{lede.value}</p>}
       <div class="hero-ctas">

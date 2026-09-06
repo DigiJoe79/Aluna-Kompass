@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { build, cleanupDirs } from './helpers';
+import { build, cleanupDirs, contentWithout } from './helpers';
 
 afterAll(() => {
   cleanupDirs();
@@ -97,6 +97,19 @@ describe('site build', () => {
     expect(panel).toContain('>DE<');
     // Der Umschalter muss auf die englische Entsprechung zeigen, nicht auf sich selbst.
     expect(panel).toContain('href="/en/"');
+  });
+
+  it('names the founding year in the hero and leaves the segment out when unset', () => {
+    const withYear = build({});
+    const eyebrow = (dir: string) => {
+      const html = readFileSync(path.join(dir, 'index.html'), 'utf8');
+      const start = html.indexOf('eyebrow-light');
+      return html.slice(start, html.indexOf('</p>', start));
+    };
+    expect(eyebrow(withYear)).toContain('Gegründet 2026');
+    expect(eyebrow(build({ SITE_CONTENT_DIR: contentWithout('foundedYear') }))).not.toContain('Gegründet');
+    // Kein hängender Trenner, wenn das Jahr fehlt.
+    expect(eyebrow(build({ SITE_CONTENT_DIR: contentWithout('foundedYear') }))).not.toMatch(/·\s*<\/p>|·\s*$/);
   });
 
   it('staging builds carry noindex and a disallow robots.txt', () => {

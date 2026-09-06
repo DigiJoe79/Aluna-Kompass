@@ -50,7 +50,7 @@ const DICT = {
         lede: 'Hinter Aluna Tierhilfe steht ein kleines, ehrenamtliches Team. Was uns verbindet, ist die Überzeugung, dass jeder Hund ein gutes Leben verdient — und der Wille, dafür anzupacken.',
       },
     },
-    misc: { skip: 'Zum Inhalt springen', menu: 'Menü', lang: 'Sprache', notFound: 'Diese Seite hat sich *verlaufen.*', home: 'Zur Startseite' },
+    misc: { skip: 'Zum Inhalt springen', menu: 'Menü', lang: 'Sprache', nonprofit: 'Gemeinnützig', founded: 'Gegründet', notFound: 'Diese Seite hat sich *verlaufen.*', home: 'Zur Startseite' },
   },
   en: {
     nav: { help: 'Help', about: 'About us', dogs: 'Looking for a home', projects: 'Projects', faq: 'FAQ' },
@@ -94,7 +94,7 @@ const DICT = {
         lede: 'Behind Aluna is a small, volunteer-run team united by the conviction that every dog deserves a safe, loving life.',
       },
     },
-    misc: { skip: 'Skip to content', menu: 'Menu', lang: 'Language', notFound: 'This page got *lost.*', home: 'Back to the start page' },
+    misc: { skip: 'Skip to content', menu: 'Menu', lang: 'Language', nonprofit: 'Non-profit', founded: 'Founded', notFound: 'This page got *lost.*', home: 'Back to the start page' },
   },
 } as const;
 

@@ -64,3 +64,20 @@ describe('settings service', () => {
     expect(result).toEqual({ ok: false, error: { type: 'forbidden', permission: 'settings.manage' } });
   });
 });
+
+describe('organization.foundedYear', () => {
+  it('accepts a four digit year, rejects anything else, and defaults to empty', async () => {
+    const deps = createTestDeps();
+    const ctx = ctxWith(['settings.manage']);
+    expect(readSetting(deps, 'organization.foundedYear')).toBe('');
+    expect(await setSetting(deps, ctx, { key: 'organization.foundedYear', value: '2026' })).toEqual({
+      ok: true,
+      value: { key: 'organization.foundedYear', value: '2026' },
+    });
+    for (const bad of ['26', 'zweitausend', '20260', '1799']) {
+      expect((await setSetting(deps, ctx, { key: 'organization.foundedYear', value: bad })).ok, bad).toBe(false);
+    }
+    // Leer bleibt erlaubt: der Verein muss das Jahr nicht pflegen.
+    expect((await setSetting(deps, ctx, { key: 'organization.foundedYear', value: '' })).ok).toBe(true);
+  });
+});

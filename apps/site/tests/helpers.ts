@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -31,4 +31,16 @@ export function cleanupDirs(): void {
   for (const d of dirs.splice(0)) {
     rmSync(d, { recursive: true, force: true });
   }
+}
+
+/** Kopie der Beispiel-Fixture, bei der ein Feld der Vereinsdaten fehlt. */
+export function contentWithout(field: string): string {
+  const dir = mkdtempSync(path.join(tmpdir(), 'site-content-'));
+  dirs.push(dir);
+  cpSync(path.join(ROOT, 'fixtures/example'), dir, { recursive: true });
+  const file = path.join(dir, 'content.json');
+  const content = JSON.parse(readFileSync(file, 'utf8')) as { facts: { organization: Record<string, string> }[] };
+  delete content.facts[0]!.organization[field];
+  writeFileSync(file, JSON.stringify(content, null, 2));
+  return dir;
 }

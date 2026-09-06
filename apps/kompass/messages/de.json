@@ -410,6 +410,7 @@
         "postalCode": "PLZ",
         "city": "Ort",
         "country": "Land",
+        "foundedYear": "Gründungsjahr",
         "registerCourt": "Registergericht",
         "registerNumber": "Registernummer",
         "email": "Kontakt-E-Mail",
