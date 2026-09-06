@@ -1,7 +1,9 @@
 # syntax=docker/dockerfile:1.7
 FROM node:26-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH CI=true
-RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
+# Node 26 liefert corepack nicht mehr mit; pnpm wird deshalb direkt
+# installiert. Version identisch mit packageManager in package.json.
+RUN npm install -g pnpm@11.25.0 && pnpm --version
 WORKDIR /app
 
 FROM base AS deps
