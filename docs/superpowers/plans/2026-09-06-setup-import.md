@@ -70,13 +70,14 @@ describe('isAllowedBackupEntry', () => {
     expect(isAllowedBackupEntry('kompass.db')).toBe(true);
     expect(isAllowedBackupEntry('media/foto-abc123.png')).toBe(true);
     expect(isAllowedBackupEntry('./manifest.json')).toBe(true);
+    expect(isAllowedBackupEntry('media')).toBe(true);
+    expect(isAllowedBackupEntry('media/')).toBe(true);
   });
 
   it('rejects escapes and anything unexpected', () => {
     expect(isAllowedBackupEntry('../etc/passwd')).toBe(false);
     expect(isAllowedBackupEntry('media/../../etc/passwd')).toBe(false);
     expect(isAllowedBackupEntry('/etc/passwd')).toBe(false);
-    expect(isAllowedBackupEntry('media')).toBe(false);
     expect(isAllowedBackupEntry('site.pw')).toBe(false);
     expect(isAllowedBackupEntry('kompass.db-wal')).toBe(false);
   });
@@ -93,7 +94,7 @@ Expected: FAIL — `Cannot find module '../src/backup/archive'`
 Neue Datei `packages/core/src/backup/archive.ts`:
 
 ```ts
-import { mkdtemp } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
 import * as tar from 'tar';
 
@@ -108,7 +109,9 @@ export class BackupTooLargeError extends Error {
   }
 }
 
-const ALLOWED = /^(manifest\.json|kompass\.db|media\/[^/].*)$/;
+// `media` selbst gehoert dazu: der Export packt das Verzeichnis mit, und ohne
+// diesen Eintrag entstuende es bei einem Backup ohne Medien gar nicht.
+const ALLOWED = /^(manifest\.json|kompass\.db|media(\/.*)?)$/;
 
 /**
  * Ein Backup enthaelt genau drei Arten von Eintrag. Alles andere wird beim
@@ -130,16 +133,29 @@ export async function extractBackup(opts: {
   const limit = opts.maxBytes ?? BACKUP_MAX_UNPACKED_BYTES;
   const dir = await mkdtemp(path.join(opts.workDir, 'kompass-import-'));
   let unpacked = 0;
+  let exceeded = false;
   await tar.extract({
     file: opts.archivePath,
     cwd: dir,
+    // Aus dem Filter darf nicht geworfen werden: tar 7.5 reicht den Fehler
+    // nicht als abgelehntes Promise weiter, er entkommt synchron durch den
+    // Ereignis-Emitter und beendet den Prozess. Ein zu grosses Archiv waere
+    // damit ein Denial-of-Service statt einer abgelehnten Datei. Stattdessen
+    // wird ab der Grenze nichts mehr geschrieben und danach geworfen.
     filter: (entryPath, entry) => {
-      if (!isAllowedBackupEntry(entryPath)) return false;
+      if (exceeded || !isAllowedBackupEntry(entryPath)) return false;
       unpacked += entry.size;
-      if (unpacked > limit) throw new BackupTooLargeError(limit);
+      if (unpacked > limit) {
+        exceeded = true;
+        return false;
+      }
       return true;
     },
   });
+  if (exceeded) {
+    await rm(dir, { recursive: true, force: true });
+    throw new BackupTooLargeError(limit);
+  }
   return dir;
 }
 ```
@@ -992,6 +1008,12 @@ Danach kann eine frische Installation ihren Bestand einspielen, ohne ein Wegwerf
 ## Self-Review (durchgeführt beim Schreiben)
 
 **Spec-Abdeckung:** Zuschnitt „nur eigene Backups" → Task 5 Step 1 (`credentialWarning`), kein Mechanismus zum Setzen eines Administrators. Ablauf mit Verweis statt zweitem Formular → Task 5 Step 6. Route Handler statt Server Action → Task 4. Ablage neben der Datenbank, eine Datei gleichzeitig → Task 3, Task 4 Step 1. Kennungsprüfung vor Pfadbildung → Task 3. `importBackupForSetup` ohne `ctx`, Prüfung unmittelbar vor dem Austausch → Task 2 Step 3 (`onlyWhileSetupPending`). Selbstverschluss → Task 6 Step 2 letzte Zusicherung. Ablehnung bei `counts.users = 0` → Task 2. Protokolleintrag mit `userId: null` → Task 2 Step 1. Archivfilter, Ausbruchschutz, 8-GB-Grenze → Task 1. 2-GB-Uploadgrenze → Task 3, Task 4. `force-dynamic` → Task 5 Step 5.
+
+**Korrektur nach der Planprüfung (2026-09-06):** Task 1 warf ursprünglich aus dem
+tar-Filter. Eine Probe gegen tar 7.5.22 zeigte, dass der Fehler dort nicht als
+abgelehntes Promise ankommt, sondern den Prozess beendet — ein absichtlich zu
+grosses Archiv wäre damit ein Denial-of-Service geworden. Der Filter gibt jetzt
+`false` zurück und `extractBackup` wirft danach im gewöhnlichen Ablauf.
 
 **Platzhalter:** Keine. Die beiden Stellen, an denen ich zunächst auf Nachschlagen ausgewichen war, sind aufgelöst: `resetDatabase` kennt `'empty' | 'seeded'`, und `loginAsAdmin` bringt die Zugangsdaten mit und prüft selbst auf `/`. Beides in `apps/kompass/e2e/helpers.ts:5-16` verifiziert.
 

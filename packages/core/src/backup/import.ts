@@ -1,7 +1,6 @@
-import { cp, mkdir, mkdtemp, readFile, readdir, rename, rm, stat } from 'node:fs/promises';
+import { cp, mkdir, readFile, readdir, rename, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import Database from 'better-sqlite3';
-import * as tar from 'tar';
 import { z } from 'zod';
 import type { AppDeps } from '../app';
 import { recordAudit } from '../audit/log';
@@ -12,13 +11,8 @@ import { invalid, ok, type Result } from '../result';
 import { writeSettingInternal } from '../settings/service';
 import { loadUserSummary } from '../users/service';
 import { validate } from '../validate';
+import { extractBackup } from './archive';
 import { backupManifestSchema, type BackupManifest } from './manifest';
-
-async function extract(archivePath: string, workDir: string): Promise<string> {
-  const dir = await mkdtemp(path.join(workDir, 'kompass-import-'));
-  await tar.extract({ file: archivePath, cwd: dir });
-  return dir;
-}
 
 async function readManifest(dir: string): Promise<Result<BackupManifest>> {
   const raw = await readFile(path.join(dir, 'manifest.json'), 'utf8').catch(() => null);
@@ -30,7 +24,7 @@ async function readManifest(dir: string): Promise<Result<BackupManifest>> {
 }
 
 export async function inspectBackup(opts: { archivePath: string; workDir: string }): Promise<Result<BackupManifest>> {
-  const dir = await extract(opts.archivePath, opts.workDir);
+  const dir = await extractBackup({ archivePath: opts.archivePath, workDir: opts.workDir });
   try { return await readManifest(dir); } finally { await rm(dir, { recursive: true, force: true }); }
 }
 
@@ -43,7 +37,7 @@ export async function importBackup(deps: AppDeps, ctx: CallContext, input: unkno
   if (!parsed.ok) return parsed;
   const { archivePath, workDir, confirmation, environmentName } = parsed.value;
   if (confirmation !== environmentName) return invalid([{ path: 'confirmation', message: 'confirmationMismatch' }]);
-  const dir = await extract(archivePath, workDir);
+  const dir = await extractBackup({ archivePath, workDir });
   try {
     const manifest = await readManifest(dir);
     if (!manifest.ok) return manifest;
