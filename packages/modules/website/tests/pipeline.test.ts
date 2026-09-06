@@ -1,10 +1,10 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { coreModule, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
-import { diffTrees, hashTree, readSiteEnv, rsyncCommand, runPreview, runPublish, stripAnsi, websiteModule } from '../src';
+import { copyTree, diffTrees, hashTree, readSiteEnv, rsyncCommand, runPreview, runPublish, stripAnsi, websiteModule } from '../src';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -193,5 +193,34 @@ describe('stripAnsi', () => {
 
   it('leaves ordinary text untouched', () => {
     expect(stripAnsi('Tsconfig not found /app/tsconfig.base.json')).toBe('Tsconfig not found /app/tsconfig.base.json');
+  });
+});
+
+describe('copyTree', () => {
+  it('copies nested files, merges into an existing target and keeps links as links', async () => {
+    const src = tmp();
+    const dest = tmp();
+    mkdirSync(path.join(src, 'tief', 'tiefer'), { recursive: true });
+    writeFileSync(path.join(src, 'oben.txt'), 'oben');
+    writeFileSync(path.join(src, 'tief', 'tiefer', 'unten.txt'), 'unten');
+    symlinkSync('oben.txt', path.join(src, 'verweis.txt'));
+    // Das Ziel existiert bereits mit Inhalt — genau der Fall der Bilduebernahme.
+    writeFileSync(path.join(dest, 'bestand.txt'), 'bestand');
+
+    await copyTree(src, dest);
+
+    expect(readFileSync(path.join(dest, 'oben.txt'), 'utf8')).toBe('oben');
+    expect(readFileSync(path.join(dest, 'tief', 'tiefer', 'unten.txt'), 'utf8')).toBe('unten');
+    expect(readFileSync(path.join(dest, 'bestand.txt'), 'utf8')).toBe('bestand');
+    expect(lstatSync(path.join(dest, 'verweis.txt')).isSymbolicLink()).toBe(true);
+  });
+
+  it('overwrites a file that is already there', async () => {
+    const src = tmp();
+    const dest = tmp();
+    writeFileSync(path.join(src, 'gleich.txt'), 'neu');
+    writeFileSync(path.join(dest, 'gleich.txt'), 'alt');
+    await copyTree(src, dest);
+    expect(readFileSync(path.join(dest, 'gleich.txt'), 'utf8')).toBe('neu');
   });
 });

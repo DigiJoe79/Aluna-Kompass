@@ -1,10 +1,11 @@
-import { cp, mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { conflict, invalid, isoNow, ok, requirePermission, type CallContext, type Deps, type Result } from '@kompass/core';
 import { exportSiteContent, type SiteExport } from '../export';
 import { lastSuccessfulPublish, recordPublish, type PublishDiff, type PublishRecord } from '../services/publishes';
 import { buildSite, SiteBuildError } from './build';
+import { copyTree } from './copy';
 import { diffTrees, hashTree } from './diff';
 import type { SiteEnv } from './env';
 import { prepareImageVariants } from './images';
@@ -36,15 +37,22 @@ async function step<T>(name: string, limitMs: number, run: () => Promise<T>): Pr
   console.log(`[site] ${name} …`);
   let timer: NodeJS.Timeout | undefined;
   try {
-    return await Promise.race([
+    const value = await Promise.race([
       run(),
       new Promise<never>((_, reject) => {
         timer = setTimeout(() => reject(new StepTimeoutError(name, limitMs)), limitMs);
       }),
     ]);
+    console.log(`[site] ${name} fertig nach ${Date.now() - started} ms`);
+    return value;
+  } catch (error) {
+    // „fertig" gehoert nur an einen geglueckten Schritt. Beim Zeitlimit laeuft
+    // die urspruengliche Arbeit weiter und belegt einen Worker im Threadpool.
+    const reason = error instanceof StepTimeoutError ? 'Zeitlimit überschritten' : 'fehlgeschlagen';
+    console.log(`[site] ${name} ${reason} nach ${Date.now() - started} ms`);
+    throw error;
   } finally {
     if (timer) clearTimeout(timer);
-    console.log(`[site] ${name} fertig nach ${Date.now() - started} ms`);
   }
 }
 
@@ -77,7 +85,7 @@ async function exportAndBuild(
     );
     await step('Bilder uebernehmen', 120_000, async () => {
       try {
-        await cp(path.join(job, 'images'), path.join(outDir, 'images'), { recursive: true });
+        await copyTree(path.join(job, 'images'), path.join(outDir, 'images'));
       } catch {
         // ignore if no images
       }

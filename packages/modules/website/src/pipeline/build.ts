@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
-import { access, cp, mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
+import { copyTree } from './copy';
 
 // eslint-disable-next-line no-control-regex
 const ANSI = /\u001B\[[0-9;]*[a-zA-Z]/g;
@@ -54,7 +55,7 @@ export async function buildSite(opts: {
   try {
     const result = await runAstro(astroBin, siteDir, stage, contentDir, opts);
     await mkdir(outDir, { recursive: true });
-    await cp(stage, outDir, { recursive: true });
+    await copyTree(stage, outDir);
     return result;
   } finally {
     await rm(stage, { recursive: true, force: true });
