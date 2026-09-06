@@ -26,32 +26,69 @@ export interface PublishResult {
   log: string;
 }
 
+/**
+ * Schreibt jeden Schritt mit Dauer nach stdout und bricht ab, wenn einer
+ * haengt. Ohne das steht die Oberflaeche im Fehlerfall beliebig lange auf
+ * „wird erstellt", und im Containerprotokoll steht nichts.
+ */
+async function step<T>(name: string, limitMs: number, run: () => Promise<T>): Promise<T> {
+  const started = Date.now();
+  console.log(`[site] ${name} …`);
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    return await Promise.race([
+      run(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new StepTimeoutError(name, limitMs)), limitMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+    console.log(`[site] ${name} fertig nach ${Date.now() - started} ms`);
+  }
+}
+
+export class StepTimeoutError extends Error {
+  constructor(public readonly step: string, limitMs: number) {
+    super(`Schritt „${step}" hat das Zeitlimit von ${Math.round(limitMs / 1000)} s überschritten`);
+    this.name = 'StepTimeoutError';
+  }
+}
+
 async function exportAndBuild(
   deps: Deps,
   ctx: CallContext,
   env: SiteEnv,
   outDir: string,
 ): Promise<Result<{ exported: SiteExport; log: string; manifest: Record<string, string>; diff: PublishDiff }>> {
-  if (!env.publicUrl) return conflict('publicUrlMissing', 'SITE_PUBLIC_URL ist nicht gesetzt');
+  const publicUrl = env.publicUrl;
+  if (!publicUrl) return conflict('publicUrlMissing', 'SITE_PUBLIC_URL ist nicht gesetzt');
   const job = await mkdtemp(path.join(tmpdir(), 'kompass-site-'));
   try {
-    const exported = await exportSiteContent(deps, ctx, { jobDir: job });
+    const exported = await step('Inhalt exportieren', 120_000, () => exportSiteContent(deps, ctx, { jobDir: job }));
     if (!exported.ok) return exported;
-    await prepareImageVariants({ jobDir: job, assets: exported.value.assets, cacheDir: env.cacheDir });
+    await step('Bildvarianten', 600_000, () =>
+      prepareImageVariants({ jobDir: job, assets: exported.value.assets, cacheDir: env.cacheDir }),
+    );
     await rm(outDir, { recursive: true, force: true });
     await mkdir(outDir, { recursive: true });
-    const { log } = await buildSite({ siteDir: env.siteDir, contentDir: job, outDir, publicUrl: env.publicUrl, staging: env.staging });
-    try {
-      await cp(path.join(job, 'images'), path.join(outDir, 'images'), { recursive: true });
-    } catch {
-      // ignore if no images
-    }
-    const manifest = await hashTree(outDir);
+    const { log } = await step('Site bauen', 600_000, () =>
+      buildSite({ siteDir: env.siteDir, contentDir: job, outDir, publicUrl, staging: env.staging }),
+    );
+    await step('Bilder uebernehmen', 120_000, async () => {
+      try {
+        await cp(path.join(job, 'images'), path.join(outDir, 'images'), { recursive: true });
+      } catch {
+        // ignore if no images
+      }
+    });
+    const manifest = await step('Pruefsummen', 300_000, () => hashTree(outDir));
     const last = lastSuccessfulPublish(deps, deps.env);
     const previous = last ? (JSON.parse(last.fileManifest) as Record<string, string>) : {};
     return ok({ exported: exported.value, log, manifest, diff: diffTrees(previous, manifest) });
   } catch (error) {
     if (error instanceof SiteBuildError) return conflict('siteBuildFailed', error.log.slice(-4000) || error.message);
+    if (error instanceof StepTimeoutError) return conflict('siteBuildFailed', error.message);
     throw error;
   } finally {
     await rm(job, { recursive: true, force: true });
