@@ -167,6 +167,7 @@ describe('rsyncCommand', () => {
     expect(c.command).toBe('rsync');
     expect(c.args.join(' ')).toContain('ssh -i /data/site.key');
     expect(c.args.join(' ')).toContain('BatchMode=yes');
+    expect(c.args.join(' ')).toContain('ConnectTimeout=15');
     expect(c.args).toContain('u@h:/web/');
   });
 
@@ -176,6 +177,9 @@ describe('rsyncCommand', () => {
     expect(c.args.slice(0, 3)).toEqual(['-f', '/data/site.pw', 'rsync']);
     // BatchMode würde die Passwortabfrage abschalten und den Login unmöglich machen.
     expect(c.args.join(' ')).not.toContain('BatchMode');
+    // Ein falsches Passwort soll einmal scheitern, nicht erneut fragen und
+    // dann auf eine Eingabe warten, die nie kommt.
+    expect(c.args.join(' ')).toContain('NumberOfPasswordPrompts=1');
     expect(c.args).toContain('u@h:/web/');
   });
 

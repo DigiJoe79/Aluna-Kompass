@@ -143,7 +143,7 @@ export async function runPublish(deps: Deps, ctx: CallContext, env: SiteEnv, opt
       return conflict('blockedTermsPresent', `${built.value.exported.violations.length} Sperrworttreffer`);
     }
     try {
-      const { log } = await rsyncPublish({ distDir: outDir, deploy: env.deploy });
+      const { log } = await step('Uebertragen', 600_000, () => rsyncPublish({ distDir: outDir, deploy: env.deploy! }));
       const record = recordPublish(deps, ctx, {
         environment: deps.env,
         startedAt,
