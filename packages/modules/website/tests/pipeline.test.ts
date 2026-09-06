@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { coreModule, unwrap } from '@kompass/core';
@@ -29,6 +29,16 @@ describe('diff', () => {
     rmSync(path.join(a, 'sub', 'x.html'));
     const after = await hashTree(a);
     expect(diffTrees(before, after)).toEqual({ changed: ['index.html'], added: ['new.html'], removed: ['sub/x.html'] });
+  });
+
+  it('does not follow symlinks, so a loop cannot spin the process forever', async () => {
+    const a = tmp();
+    mkdirSync(path.join(a, 'sub'));
+    writeFileSync(path.join(a, 'index.html'), 'a');
+    // Ein Verweis auf das Wurzelverzeichnis: mit stat() liefe walk() im Kreis.
+    symlinkSync(a, path.join(a, 'sub', 'zurueck'));
+    const tree = await hashTree(a);
+    expect(Object.keys(tree).sort()).toEqual(['index.html', 'sub/zurueck']);
   });
 });
 
