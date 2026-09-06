@@ -52,6 +52,26 @@ describe('readSiteEnv', () => {
       previewDir: '/data/site-preview',
     });
   });
+
+  it('resolves cache and preview directories to absolute paths', () => {
+    const env = readSiteEnv({ DATABASE_PATH: './data/kompass.db' });
+    expect(path.isAbsolute(env.cacheDir)).toBe(true);
+    expect(path.isAbsolute(env.previewDir)).toBe(true);
+    expect(env.cacheDir).toBe(path.resolve('data/site-cache'));
+    expect(env.previewDir).toBe(path.resolve('data/site-preview'));
+  });
+
+  it('resolves an explicitly relative site, cache and preview directory', () => {
+    const env = readSiteEnv({
+      DATABASE_PATH: '/data/k.db',
+      SITE_DIR: './apps/site',
+      SITE_CACHE_DIR: './cache',
+      SITE_PREVIEW_DIR: './preview',
+    });
+    expect(env.siteDir).toBe(path.resolve('apps/site'));
+    expect(env.cacheDir).toBe(path.resolve('cache'));
+    expect(env.previewDir).toBe(path.resolve('preview'));
+  });
 });
 
 describe('preview and publish', () => {

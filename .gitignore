@@ -5,8 +5,9 @@ dist/
 *.db
 *.db-wal
 *.db-shm
-/data/
+data/
 /media/
+apps/kompass/media/
 .env
 .env.*
 !.env.example

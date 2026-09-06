@@ -25,8 +25,10 @@ export function readSiteEnv(env: Record<string, string | undefined> = process.en
     publicUrl: env.SITE_PUBLIC_URL ?? null,
     staging: env.SITE_STAGING === '1',
     deploy,
-    siteDir: env.SITE_DIR ?? path.resolve(process.cwd(), '../../apps/site'),
-    cacheDir: env.SITE_CACHE_DIR ?? path.join(dataDir, 'site-cache'),
-    previewDir: env.SITE_PREVIEW_DIR ?? path.join(dataDir, 'site-preview'),
+    // Absolut auflösen: der Site-Build läuft als Kindprozess mit siteDir als
+    // Arbeitsverzeichnis, relative Pfade zeigten dort sonst woanders hin.
+    siteDir: path.resolve(env.SITE_DIR ?? path.resolve(process.cwd(), '../../apps/site')),
+    cacheDir: path.resolve(env.SITE_CACHE_DIR ?? path.join(dataDir, 'site-cache')),
+    previewDir: path.resolve(env.SITE_PREVIEW_DIR ?? path.join(dataDir, 'site-preview')),
   };
 }

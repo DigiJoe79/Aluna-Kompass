@@ -34,13 +34,16 @@ export async function buildSite(opts: {
   staging: boolean;
   timeoutMs?: number;
 }): Promise<{ log: string }> {
-  const astroBin = await findAstroBin(opts.siteDir);
+  const siteDir = path.resolve(opts.siteDir);
+  const outDir = path.resolve(opts.outDir);
+  const contentDir = path.resolve(opts.contentDir);
+  const astroBin = await findAstroBin(siteDir);
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [astroBin, 'build', '--outDir', opts.outDir], {
-      cwd: opts.siteDir,
+    const child = spawn(process.execPath, [astroBin, 'build', '--outDir', outDir], {
+      cwd: siteDir,
       env: {
         ...process.env,
-        SITE_CONTENT_DIR: opts.contentDir,
+        SITE_CONTENT_DIR: contentDir,
         SITE_PUBLIC_URL: opts.publicUrl,
         SITE_STAGING: opts.staging ? '1' : '0',
         NODE_ENV: 'production',
