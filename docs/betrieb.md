@@ -1,15 +1,18 @@
 # Betrieb auf dem QNAP TS-873
 
 ## Erstinstallation
-1. Container Station öffnen → **„Anwendung erstellen"** → Inhalt von `docker-compose.yml` einfügen.
+1. **Ordner anlegen**: `/share/Container/kompass-test/{data,media}` (Prod analog, erst wenn Test läuft).
+2. **`.env.test`** nach `/share/Container/kompass-test/` legen (Vorlage `.env.test.example`), mit `SESSION_SECRET=<48 zufällige Zeichen>`, z. B. `openssl rand -hex 24`. Je Umgebung ein eigener Wert, sonst gälten Sitzungen aus Test auch in Prod.
+3. **`site.pw`** daneben: `printf '%s' '<webspace-passwort>' > site.pw && chmod 600 site.pw && chown 1000:1000 site.pw`. `printf` statt `echo`, sonst hängt ein Zeilenumbruch am Passwort.
+4. Container Station öffnen → **„Anwendung erstellen"** → Inhalt von `docker-compose.test.yml` einfügen. Für Prod später eine **zweite Anwendung** aus `docker-compose.prod.yml`.
 
    Nicht über „Image erstellen" gehen: die Image-Suche der Container Station bietet nur Docker Hub und die LXD-Registry an. Eine Anwendung zieht dagegen jede Registry, die im Compose steht. `ghcr.io/digijoe79/aluna-kompass` ist öffentlich lesbar, eine Anmeldung ist also nicht nötig.
 
+   Die Pfade im Compose sind absolut. Die Container Station kopiert die Datei nach `/tmp`, wo ein relatives `env_file` ins Leere zeigt — der Fehler lautet dann `env file /tmp/.env.… not found`.
+
    Bei einem privaten Paket wäre stattdessen einmalig ein Login über SSH nötig: `docker login ghcr.io -u <github-benutzer>` mit einem Token, das `read:packages` erlaubt.
-2. Ordner anlegen: `/share/Container/kompass-test/{data,media}` und `/share/Container/kompass-prod/{data,media}`.
-3. `.env.test` und `.env.prod` neben die Compose-Datei legen, jeweils `SESSION_SECRET=<48 zufällige Zeichen>` (z. B. `openssl rand -hex 24`).
-4. Anwendung starten. Test: `http://<nas>:3001`, Prod: `http://<nas>:3000`. Der erste Aufruf zeigt die Einrichtungsseite (genau einmal).
-5. Health: `http://<nas>:3000/api/health`.
+5. Anwendung starten. Test: `http://<nas>:3001`, Prod: `http://<nas>:3000`. Der erste Aufruf zeigt die Einrichtungsseite (genau einmal).
+6. Health: `http://<nas>:3000/api/health`.
 
 ## Update
 1. In Prod ein Backup exportieren (Verwaltung → Backup → Export erstellen) und die Datei sichern.

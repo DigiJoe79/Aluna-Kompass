@@ -41,7 +41,7 @@ Aluna Kompass ist ein Open-Source-Vereinsverwaltungstool für gemeinnützige Ver
 - `pnpm --filter @kompass/site test` — Tests der statischen Site
 - `pnpm import:prototype` — Einmalige Datenübernahme aus dem Prototyp
 - `pnpm dev:reset` — Entwicklungsdatenbank verwerfen und mit Seed **und** Prototyp-Inhalten neu aufbauen (nur `APP_ENV=development`; Prototyp-Pfad über `PROTOTYPE_DIR`)
-- Betrieb: `docs/betrieb.md` (NAS-Deployment, Backups, Updates); Compose-Vorlage `docker-compose.yml`, CI `.github/workflows/ci.yml`
+- Betrieb: `docs/betrieb.md` (NAS-Deployment, Backups, Updates); Compose-Vorlagen `docker-compose.test.yml` und `docker-compose.prod.yml`, CI `.github/workflows/ci.yml`
 
 ## Quellen
 

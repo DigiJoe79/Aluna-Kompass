@@ -1,0 +1,32 @@
+# Produktionsumgebung für die Container Station (QNAP TS-873):
+# Container Station → Anwendung erstellen → diesen Inhalt einfügen.
+#
+# Die Image-Suche der Oberfläche kennt nur Docker Hub; über eine Anwendung
+# wird jede Registry gezogen, und ghcr.io/digijoe79/aluna-kompass ist
+# öffentlich lesbar, also ohne Anmeldung.
+#
+# Test und Prod sind bewusst getrennte Anwendungen: so lässt sich Test
+# aktualisieren, ohne Prod anzufassen, und die Validierung verlangt nicht
+# die Konfiguration der jeweils anderen Umgebung.
+#
+# Alle Pfade sind absolut, weil die Container Station das Compose nach /tmp
+# kopiert und relative env_file-Pfade dort ins Leere zeigen.
+#
+# Vorher anlegen: /share/Container/kompass-prod/{data,media},
+# die Datei .env.prod (siehe .env.prod.example) und site.pw (Rechte 600,
+# Besitzer 1000).
+services:
+  kompass-prod:
+    # Prod folgt dem main-Branch; das Tag latest entsteht erst beim
+    # ersten Merge von dev nach main.
+    image: ghcr.io/digijoe79/aluna-kompass:latest
+    container_name: kompass-prod
+    restart: unless-stopped
+    ports: ["3000:3000"]
+    environment:
+      APP_ENV: production
+    env_file: [/share/Container/kompass-prod/.env.prod]
+    volumes:
+      - /share/Container/kompass-prod/data:/data
+      - /share/Container/kompass-prod/media:/media
+      - /share/Container/kompass-prod/site.pw:/data/site.pw:ro
