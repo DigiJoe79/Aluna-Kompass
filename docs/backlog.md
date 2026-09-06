@@ -4,27 +4,7 @@ Bewusst zurückgestellte Punkte mit Begründung. Kein Ticketsystem — was hier
 steht, ist entschieden, aber nicht gebaut. Erledigtes wird gelöscht, nicht
 abgehakt; die Historie steht im Git-Log.
 
-## 1. Import auf der Einrichtungsseite
-
-**Was:** Die Seite „Erste Einrichtung" soll neben dem Anlegen des ersten
-Kontos auch das Einspielen eines Backups anbieten.
-
-**Warum:** Beim Testen ist der Regelfall ein frischer Container mit
-vorhandenem Bestand. Heute muss man erst einen Wegwerf-Admin anlegen, um die
-Import-Seite zu erreichen — und der wird vom Import sofort überschrieben. Der
-Umweg ist bei jedem Neuaufsetzen fällig, also oft.
-
-**Zwingende Einschränkung:** Vor der Einrichtung gibt es keine Anmeldung, der
-Import wäre an dieser Stelle also unauthentifiziert. Er darf ausschließlich
-laufen, solange `isSetupRequired` gilt, und muss diese Bedingung serverseitig
-in derselben Transaktion prüfen, in der er schreibt — sonst ist es eine
-Fernübernahme der Installation. Zu klären: ob zusätzlich ein Wert aus der
-Umgebung als Nachweis verlangt wird.
-
-Entworfen in `docs/superpowers/specs/2026-09-06-setup-import-design.md` (2026-09-06).
-Betrifft `apps/kompass/src/app/setup/` und `packages/core/src/backup/import.ts`.
-
-## 2. E2E gegen die Produktionsfassung
+## 1. E2E gegen die Produktionsfassung
 
 **Was:** Die Playwright-Suite zusätzlich gegen `next build && next start`
 laufen lassen, nicht nur gegen `next dev`.
@@ -37,7 +17,7 @@ für jede künftige Vorrender-Entscheidung.
 
 **Kosten:** Bauzeit im Test-Job der CI.
 
-## 3. Backup-Upload über einen Route Handler
+## 2. Backup-Upload über einen Route Handler
 
 **Was:** Den Import-Upload wie den Export über einen Route Handler führen, der
 den Datenstrom auf die Platte schreibt, statt über eine Server Action.
@@ -49,7 +29,7 @@ einmal für den Import.
 
 **Wann:** Spätestens wenn Archive einige hundert Megabyte erreichen.
 
-## 4. „Verbindung testen" auf der Publizieren-Seite
+## 3. „Verbindung testen" auf der Publizieren-Seite
 
 **Was:** Ein Knopf, der `rsyncPublish` mit `dryRun` gegen das konfigurierte
 Ziel fährt und das Protokoll zeigt.
@@ -62,7 +42,7 @@ wird aber nirgends gesetzt.
 **Einordnung:** Die großen Unbekannten sind seit dem manuellen Test vom
 2026-09-06 ausgeräumt. Bleibt der Schutz vor einem Tippfehler in `.env.prod`.
 
-## 5. Platzhalterbilder als WebP
+## 4. Platzhalterbilder als WebP
 
 **Was:** Die fünf Platzhalter in `apps/site/public/images/` als WebP
 ausliefern.
@@ -75,7 +55,7 @@ sie vorbei.
 **Einordnung:** Erledigt sich teilweise von selbst, sobald echte Fotos die
 Platzhalter verdrängen.
 
-## 6. Browsertest bei Handybreite
+## 5. Browsertest bei Handybreite
 
 **Was:** Ein Playwright-Lauf gegen die gebaute Site bei 390 px.
 
@@ -83,7 +63,7 @@ Platzhalter verdrängen.
 Lesen des Stylesheets auf, nicht durch einen Test. `apps/site/tests/` enthält
 keine Viewport-Prüfung, und die Kompass-E2E deckt die Site nicht ab.
 
-## 7. Übersetzungen der Webseite
+## 6. Übersetzungen der Webseite
 
 **Was:** Die englischen Felder füllen; der Import setzt sie leer.
 
