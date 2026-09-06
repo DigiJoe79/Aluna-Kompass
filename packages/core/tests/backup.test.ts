@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
@@ -83,5 +83,43 @@ describe('backup', () => {
     expect(result.ok === false && result.error.type === 'validation' && result.error.issues[0]?.message === 'backupFormatUnsupported').toBe(true);
     expect((await exportBackup(deps, ctxWith([]), { workDir: tmp() })).ok).toBe(false);
     deps.close();
+  });
+
+  it('keeps the media root itself and only moves its contents aside', async () => {
+    const source = tmp();
+    const sourceDeps = fileDeps(source);
+    const seed = await seedDevelopment(sourceDeps);
+    const ctx = ctxWith(['backup.export', 'backup.import']);
+    mkdirSync(path.join(source, 'media'), { recursive: true });
+    writeFileSync(path.join(source, 'media', 'neu.png'), 'neu');
+    const archive = unwrap(await exportBackup(sourceDeps, ctx, { workDir: tmp() }));
+    sourceDeps.close();
+
+    const target = tmp();
+    const targetDeps = fileDeps(target);
+    await seedDevelopment(targetDeps);
+    const mediaRoot = path.join(target, 'media');
+    mkdirSync(mediaRoot, { recursive: true });
+    writeFileSync(path.join(mediaRoot, 'alt.png'), 'alt');
+    // Im Container ist das Medienverzeichnis ein Einhaengepunkt: es laesst sich
+    // nicht umbenennen. Der Import muss darin arbeiten, nicht daran.
+    const before = statSync(mediaRoot).ino;
+
+    unwrap(await importBackup(targetDeps, ctx, {
+      archivePath: archive.archivePath,
+      workDir: tmp(),
+      confirmation: 'test',
+      environmentName: 'test',
+    }));
+
+    expect(statSync(mediaRoot).ino, 'Wurzelverzeichnis wurde ersetzt').toBe(before);
+    const entries = readdirSync(mediaRoot);
+    expect(entries).toContain('neu.png');
+    expect(entries).not.toContain('alt.png');
+    const aside = entries.find((e) => e.startsWith('.before-import-'));
+    expect(aside, 'alter Bestand wurde nicht gesichert').toBeTruthy();
+    expect(readdirSync(path.join(mediaRoot, aside!))).toContain('alt.png');
+    expect(seed.adminEmail).toContain('@');
+    targetDeps.close();
   });
 });

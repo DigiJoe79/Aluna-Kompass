@@ -1,4 +1,4 @@
-import { cp, mkdtemp, readFile, rename, rm, stat } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, readdir, rename, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import * as tar from 'tar';
@@ -64,8 +64,20 @@ export async function importBackup(deps: AppDeps, ctx: CallContext, input: unkno
     }
     await cp(dbFile, deps.databasePath);
     if (deps.media.rootDir) {
-      if (await stat(deps.media.rootDir).catch(() => null)) await rename(deps.media.rootDir, `${deps.media.rootDir}${stampSuffix}`);
-      await cp(path.join(dir, 'media'), deps.media.rootDir, { recursive: true });
+      const root = deps.media.rootDir;
+      // Im Container ist das Medienverzeichnis ein Einhaengepunkt eines Volumes.
+      // Ein Mountpoint laesst sich nicht umbenennen, und sein Elternverzeichnis
+      // ist nicht beschreibbar — deshalb wird innerhalb gearbeitet: der alte
+      // Bestand wandert in ein Unterverzeichnis, das der Medienspeicher nie
+      // sieht, weil dessen Dateinamen mit [a-z0-9] beginnen muessen.
+      await mkdir(root, { recursive: true });
+      const aside = path.join(root, stampSuffix);
+      await mkdir(aside, { recursive: true });
+      for (const entry of await readdir(root)) {
+        if (entry.startsWith('.before-import-')) continue;
+        await rename(path.join(root, entry), path.join(aside, entry));
+      }
+      await cp(path.join(dir, 'media'), root, { recursive: true });
     }
     deps.reopen();
 
