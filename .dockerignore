@@ -5,8 +5,12 @@ node_modules
 **/e2e/.tmp
 **/test-results
 **/playwright-report
-**/data
-**/media
+# Laufzeitverzeichnisse, verankert: ein unverankertes **/media schloss
+# packages/core/src/media und apps/kompass/src/app/media mit aus.
+/data
+/media
+apps/kompass/data
+apps/kompass/media
 .git
 docs/design
 *.db
