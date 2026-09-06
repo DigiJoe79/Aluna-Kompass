@@ -1,7 +1,12 @@
-# Vorlage für die Container Station (QNAP TS-873). Vor dem Start: .env.test und .env.prod mit SESSION_SECRET anlegen.
+# Vorlage für die Container Station (QNAP TS-873): Container Station →
+# Anwendung erstellen → diesen Inhalt einfügen. Die Image-Suche der Oberfläche
+# kennt nur Docker Hub; über eine Anwendung wird jede Registry gezogen, und
+# ghcr.io/digijoe79/aluna-kompass ist öffentlich lesbar, also ohne Anmeldung.
+# Vor dem Start: .env.test und .env.prod mit SESSION_SECRET anlegen.
 services:
   kompass-test:
-    image: ghcr.io/OWNER/aluna-kompass:latest
+    # Test folgt dem dev-Branch, Prod dem main-Branch (Tag latest).
+    image: ghcr.io/digijoe79/aluna-kompass:dev
     container_name: kompass-test
     restart: unless-stopped
     ports: ["3001:3000"]
@@ -14,7 +19,7 @@ services:
       - /share/Container/kompass-test/site.pw:/data/site.pw:ro
 
   kompass-prod:
-    image: ghcr.io/OWNER/aluna-kompass:latest
+    image: ghcr.io/digijoe79/aluna-kompass:latest
     container_name: kompass-prod
     restart: unless-stopped
     ports: ["3000:3000"]

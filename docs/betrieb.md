@@ -1,7 +1,11 @@
 # Betrieb auf dem QNAP TS-873
 
 ## Erstinstallation
-1. Container Station öffnen → „Anwendung erstellen" → Inhalt von `docker-compose.yml` einfügen, `OWNER` ersetzen.
+1. Container Station öffnen → **„Anwendung erstellen"** → Inhalt von `docker-compose.yml` einfügen.
+
+   Nicht über „Image erstellen" gehen: die Image-Suche der Container Station bietet nur Docker Hub und die LXD-Registry an. Eine Anwendung zieht dagegen jede Registry, die im Compose steht. `ghcr.io/digijoe79/aluna-kompass` ist öffentlich lesbar, eine Anmeldung ist also nicht nötig.
+
+   Bei einem privaten Paket wäre stattdessen einmalig ein Login über SSH nötig: `docker login ghcr.io -u <github-benutzer>` mit einem Token, das `read:packages` erlaubt.
 2. Ordner anlegen: `/share/Container/kompass-test/{data,media}` und `/share/Container/kompass-prod/{data,media}`.
 3. `.env.test` und `.env.prod` neben die Compose-Datei legen, jeweils `SESSION_SECRET=<48 zufällige Zeichen>` (z. B. `openssl rand -hex 24`).
 4. Anwendung starten. Test: `http://<nas>:3001`, Prod: `http://<nas>:3000`. Der erste Aufruf zeigt die Einrichtungsseite (genau einmal).
@@ -9,7 +13,7 @@
 
 ## Update
 1. In Prod ein Backup exportieren (Verwaltung → Backup → Export erstellen) und die Datei sichern.
-2. Container Station: Image `ghcr.io/OWNER/aluna-kompass:<version>` ziehen, zuerst `kompass-test` neu erstellen, prüfen (Login, Startseite, Health), dann `kompass-prod`.
+2. Container Station: Anwendung neu bereitstellen, damit das Image neu gezogen wird — `kompass-test` folgt dem Tag `dev`, `kompass-prod` dem Tag `latest`. Zuerst Test neu erstellen, prüfen (Login, Startseite, Health), dann `kompass-prod`.
 3. Migrationen laufen beim Start automatisch; der Migrationsstand steht im Health-JSON und im Umgebungsbalken der Testumgebung.
 
 ## Prod nach Test kopieren
