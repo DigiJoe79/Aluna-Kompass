@@ -57,7 +57,8 @@
       "confirmationMismatch": "Der Umgebungsname stimmt nicht.",
       "backupFormatUnsupported": "Diese Datei ist kein Kompass-Backup oder hat ein unbekanntes Format.",
       "backupNewerThanApp": "Das Backup stammt aus einer neueren Version. Bitte zuerst die App aktualisieren.",
-      "backupCorrupt": "Die Datenbank im Backup ist beschädigt."
+      "backupCorrupt": "Die Datenbank im Backup ist beschädigt.",
+      "backupWithoutUsers": "Dieses Backup enthält keine Nutzer. Damit ließe sich die Installation nicht mehr benutzen."
     },
     "pages": {
       "forbidden": {
@@ -152,7 +153,26 @@
       "password": "Passwort",
       "passwordHint": "Mindestens 12 Zeichen. Ein Merksatz ist besser als ein kurzes Sonderzeichen-Passwort.",
       "submit": "Konto anlegen und starten",
+      "importLink": "Sie haben ein Backup? Bestand wiederherstellen",
       "footer": "Dieses Konto erhält die Rolle „Administration“ mit allen Rechten. Weitere Rollen legen Sie später unter Verwaltung → Rollen an."
+    },
+    "setupImport": {
+      "title": "Bestand wiederherstellen",
+      "intro": "Spielen Sie ein Backup ein, statt neu zu beginnen. Die Datenbank ist noch leer, es geht nichts verloren.",
+      "file": "Backup-Datei",
+      "uploading": "Wird geprüft …",
+      "manifestTitle": "Inhalt des Archivs",
+      "environment": "Umgebung",
+      "createdAt": "Erstellt am",
+      "users": "Nutzer",
+      "documents": "Dokumente",
+      "mediaAssets": "Medien",
+      "credentialWarning": "Nach dem Einspielen melden Sie sich mit den Zugangsdaten aus diesem Backup an. Ohne diese kommen Sie nicht mehr hinein.",
+      "confirm": "Diesen Bestand einspielen",
+      "running": "Wird eingespielt …",
+      "back": "Zurück zur Einrichtung",
+      "tooLarge": "Die Datei ist größer als 2 GB.",
+      "unreadable": "Die Datei ist kein Kompass-Backup."
     },
     "login": {
       "title": "Anmelden",

@@ -31,7 +31,7 @@ const KNOWN_CONFLICTS = new Set([
 ]);
 
 const MEDIA_FIELD_CODES = ['unsupportedMediaType', 'fileTooLarge', 'svgContainsScript'];
-const BACKUP_FIELD_CODES = ['confirmationMismatch', 'backupFormatUnsupported', 'backupNewerThanApp', 'backupCorrupt'];
+const BACKUP_FIELD_CODES = ['confirmationMismatch', 'backupFormatUnsupported', 'backupNewerThanApp', 'backupCorrupt', 'backupWithoutUsers'];
 
 export function fieldMessage(issueMessage: string, t: Translate): string {
   const lower = issueMessage.toLowerCase();
