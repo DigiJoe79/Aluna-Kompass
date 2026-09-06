@@ -64,6 +64,30 @@ describe('site build', () => {
     expect(readFileSync(path.join(a, 'en/help/index.html'), 'utf8')).toContain('<html lang="en"');
   });
 
+  it('resolves every local asset referenced by the built pages', () => {
+    const out = build({});
+    const missing = new Set<string>();
+    const walk = (d: string) => {
+      for (const name of readdirSync(d).sort()) {
+        const file = path.join(d, name);
+        if (statSync(file).isDirectory()) {
+          walk(file);
+          continue;
+        }
+        if (!file.endsWith('.html')) continue;
+        const html = readFileSync(file, 'utf8');
+        for (const m of html.matchAll(/(?:src|href)="(\/[^"]*)"/g)) {
+          const url = m[1].split(/[?#]/)[0];
+          // Seitenlinks enden auf / oder .html und werden von den Routentests abgedeckt.
+          if (url.endsWith('/') || url.endsWith('.html')) continue;
+          if (!existsSync(path.join(out, url))) missing.add(`${path.relative(out, file)} → ${url}`);
+        }
+      }
+    };
+    walk(out);
+    expect([...missing].sort()).toEqual([]);
+  });
+
   it('staging builds carry noindex and a disallow robots.txt', () => {
     const s = build({ SITE_STAGING: '1', SITE_PUBLIC_URL: 'https://staging.example.org' });
     expect(readFileSync(path.join(s, 'index.html'), 'utf8')).toContain('name="robots" content="noindex, nofollow"');

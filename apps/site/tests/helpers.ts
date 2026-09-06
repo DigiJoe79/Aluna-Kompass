@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -20,6 +20,10 @@ export function build(env: Record<string, string>): string {
     encoding: 'utf8',
   });
   if (r.status !== 0) throw new Error(r.stderr + r.stdout);
+  // Wie die Pipeline: die aufbereiteten Bildvarianten liegen neben dem Inhalt
+  // und werden nach dem Build in die Ausgabe kopiert.
+  const images = path.join(env.SITE_CONTENT_DIR ?? path.join(ROOT, 'fixtures/example'), 'images');
+  if (existsSync(images)) cpSync(images, path.join(out, 'images'), { recursive: true });
   return out;
 }
 
