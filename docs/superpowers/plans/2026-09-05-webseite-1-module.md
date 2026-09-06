@@ -62,7 +62,7 @@ apps/kompass/src/modules.ts                  installierte Module → createDeps
   - `translationGaps(record: Record<string, unknown>, fields: string[]) → string[]` — Felder, deren `en` leer ist, obwohl `de` gefüllt.
   - `emptyLocalized() → { de: '', en: '' }`.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `packages/core/tests/localized.test.ts`:
 ```ts
@@ -97,12 +97,12 @@ describe('localized text', () => {
 });
 ```
 
-- [ ] **Step 2: Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Test ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/core test tests/localized.test.ts`
 Expected: FAIL — Modul fehlt.
 
-- [ ] **Step 3: Implementieren**
+- [x] **Step 3: Implementieren**
 
 `packages/core/src/i18n/localized.ts`:
 ```ts
@@ -143,12 +143,12 @@ export function translationGaps(record: Record<string, unknown>, fields: string[
 ```
 In `packages/core/src/index.ts`: `export * from './i18n/localized';`.
 
-- [ ] **Step 4: Tests ausführen**
+- [x] **Step 4: Tests ausführen**
 
 Run: `pnpm --filter @kompass/core test && pnpm --filter @kompass/core typecheck`
 Expected: grün.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core
@@ -172,7 +172,7 @@ git commit -m "feat(core): localized text type with fallback resolution and gap 
   - `createProject(deps, ctx, input) → Result<ProjectRecord>`, `updateProject(deps, ctx, { id, ...fields })`, `setProjectPublished(deps, ctx, { id, isPublished })`, `reorderProjects(deps, ctx, { ids })`, `listProjects(deps, ctx)`, `getProject(deps, ctx, id)` — Rechte: `website.manage` zum Schreiben, `website.view` zum Lesen (die Keys registriert Task 4; die Services verlangen sie per String).
   - Codes: `slugTaken` (conflict).
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 `packages/core/tests/projects.test.ts`:
 ```ts
@@ -224,12 +224,12 @@ describe('projects service', () => {
 
 In `packages/core/tests/db.test.ts` die erwartete Tabellenliste um `'projects'` ergänzen (alphabetisch zwischen `media_assets` und `role_permissions`).
 
-- [ ] **Step 2: Tests ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Tests ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/core test tests/projects.test.ts tests/db.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Schema, Migration, drizzle-Glob**
+- [x] **Step 3: Schema, Migration, drizzle-Glob**
 
 In `packages/core/src/db/schema.ts` ergänzen:
 ```ts
@@ -273,7 +273,7 @@ export default defineConfig({
 Run: `pnpm --filter @kompass/core db:generate --name projects`
 Expected: `0002_projects.sql` mit `CREATE TABLE projects` und Index.
 
-- [ ] **Step 4: Service**
+- [x] **Step 4: Service**
 
 `packages/core/src/projects/service.ts`:
 ```ts
@@ -406,12 +406,12 @@ In `index.ts`: `export * from './projects/service'; export { localizedColumn } f
 
 Hinweis zur Typisierung von `updateSchema`: `Object.fromEntries` verliert die Typen; beim Umsetzen die optionalen Felder explizit ausschreiben (`slug: projectFields.slug.optional(), …`), damit `parsed.value` korrekt typisiert ist und der `as`-Cast entfällt.
 
-- [ ] **Step 5: Tests ausführen**
+- [x] **Step 5: Tests ausführen**
 
 Run: `pnpm --filter @kompass/core test && pnpm --filter @kompass/core typecheck`
 Expected: grün (auch `db.test.ts` mit `projects` in der Liste).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/core
@@ -429,7 +429,7 @@ git commit -m "feat(core): projects with public fields, localized columns and mo
 **Interfaces:**
 - Produces: `renderMarkdown(markdown: string): Promise<string>` — HTML-String, sanitisiert. Konventionen: (1) `*Wort*` in Überschriften ⇒ `<em>` bleibt (Betonung; Template stylt `h1 em, h2 em`); (2) Zitatblock `>` ⇒ `<aside class="note">…</aside>`; (3) `:::karten` … `:::` mit `### Titel` je Karte ⇒ `<div class="cards"><article class="card"><h3>…</h3>…</article>…</div>`. Rohes HTML wird entfernt; Links bekommen `rel="noopener"` bei externen Zielen. `renderMarkdownSync` gibt es nicht (unified ist async-fähig; Aufrufer awaiten).
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `packages/markdown/tests/render.test.ts`:
 ```ts
@@ -477,7 +477,7 @@ describe('renderMarkdown', () => {
 });
 ```
 
-- [ ] **Step 2: Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Test ausführen, Fehlschlag prüfen**
 
 `packages/markdown/package.json`:
 ```json
@@ -505,7 +505,7 @@ describe('renderMarkdown', () => {
 `tsconfig.json`/`vitest.config.ts` wie in `packages/core`. Run: `pnpm install && pnpm --filter @kompass/markdown test`
 Expected: FAIL — `../src` fehlt.
 
-- [ ] **Step 3: Implementieren**
+- [x] **Step 3: Implementieren**
 
 `packages/markdown/src/directives.ts`:
 ```ts
@@ -606,12 +606,12 @@ export async function renderMarkdown(markdown: string): Promise<string> {
 
 Hinweis: `rehype-sanitize` läuft **nach** `externalLinks`, deshalb muss `rel` in `attributes.a` erlaubt sein (ist es). Klassen für `aside/div/article` sind explizit freigegeben; alles andere entfernt der Sanitizer, inklusive `img` (Bilder kommen aus den strukturierten Feldern, nie aus Markdown).
 
-- [ ] **Step 4: Tests ausführen**
+- [x] **Step 4: Tests ausführen**
 
 Run: `pnpm --filter @kompass/markdown test && pnpm --filter @kompass/markdown typecheck`
 Expected: grün. Wenn `<p>` innerhalb `aside` anders verschachtelt ist als erwartet, den Test-String an die tatsächliche (korrekte) Ausgabe angleichen — entscheidend ist `aside.note` statt `blockquote`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/markdown pnpm-lock.yaml
@@ -636,7 +636,7 @@ git commit -m "feat(markdown): shared renderer with emphasis, note and card conv
   - `interface PageBlock { id: string; title: LocalizedText; text: LocalizedText; imageAssetId: string | null; href: string; label: LocalizedText }`; `pageBlockSchema`.
   - `websiteModule: ModuleManifest` (Sichten und MCP-Tools werden in Task 6/8 ergänzt).
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `packages/modules/website/tests/manifest.test.ts`:
 ```ts
@@ -672,7 +672,7 @@ describe('website module manifest', () => {
 });
 ```
 
-- [ ] **Step 2: Paket anlegen, Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Paket anlegen, Test ausführen, Fehlschlag prüfen**
 
 `packages/modules/website/package.json`:
 ```json
@@ -690,7 +690,7 @@ describe('website module manifest', () => {
 `tsconfig.json`/`vitest.config.ts` wie in `packages/core`. Run: `pnpm install && pnpm --filter @kompass/module-website test`
 Expected: FAIL.
 
-- [ ] **Step 3: Schema und Konstanten**
+- [x] **Step 3: Schema und Konstanten**
 
 `packages/modules/website/src/page-keys.ts`:
 ```ts
@@ -794,7 +794,7 @@ Hinweis: `schema as core` — der Kern exportiert `export * as schema from './db
 Run: `pnpm --filter @kompass/core db:generate --name website`
 Expected: `0003_website.sql` mit sechs `CREATE TABLE website_*`.
 
-- [ ] **Step 4: Settings und Manifest**
+- [x] **Step 4: Settings und Manifest**
 
 `packages/modules/website/src/settings.ts`:
 ```ts
@@ -847,12 +847,12 @@ export const websiteModule: ModuleManifest = defineModule({
 ```
 `src/index.ts`: `export * from './page-keys'; export * from './schema'; export * from './settings'; export { websiteModule } from './manifest';`.
 
-- [ ] **Step 5: Tests ausführen**
+- [x] **Step 5: Tests ausführen**
 
 Run: `pnpm --filter @kompass/module-website test && pnpm --filter @kompass/module-website typecheck && pnpm --filter @kompass/core test`
 Expected: grün (Kern-Tests bleiben grün; `db.test.ts` listet nur Kern-Tabellen, weil es `website_%` nicht erwartet — falls der Test alle Tabellen auflistet, die sechs `website_*`-Tabellen dort ergänzen).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/modules/website packages/core pnpm-lock.yaml
@@ -877,7 +877,7 @@ git commit -m "feat(website): module manifest, schema, site-fact settings and mi
   - Downloads: `listDownloads(deps, ctx)`, `setDownload(deps, ctx, { key, title, assetId })` — Asset muss `application/pdf` sein (Code `downloadNotPdf`).
   - Gemeinsam (`common.ts`): `SLUG`, `withTimestamps`, `nextSortOrder(tx, table)`, `assertAsset(db, id, mimePrefix?)`, `reorder(tx, table, ids)`.
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 `packages/modules/website/tests/pages.test.ts`:
 ```ts
@@ -976,12 +976,12 @@ describe('downloads', () => {
 ```
 Hinweis: Der Mini-PDF-Puffer beginnt mit `%PDF-`, damit `file-type` ihn als PDF erkennt.
 
-- [ ] **Step 2: Tests ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Tests ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/module-website test`
 Expected: FAIL.
 
-- [ ] **Step 3: Gemeinsame Helfer**
+- [x] **Step 3: Gemeinsame Helfer**
 
 `packages/modules/website/src/services/common.ts`:
 ```ts
@@ -1007,7 +1007,7 @@ export function assetMime(db: DbOrTx, id: string | null | undefined): string | n
 ```
 Hinweis: `SQLiteTable` kommt aus `drizzle-orm/sqlite-core`, nicht aus `drizzle-orm` — Import beim Umsetzen entsprechend setzen. `set({ [sortColumn.name]: … })` verwendet den TypeScript-Property-Namen; da alle Sortierspalten `sortOrder` heißen, ist `set({ sortOrder: index + 1 })` mit einem Typ-Cast auf die konkrete Tabelle die einfachere Form — beim Umsetzen je Service direkt `tx.update(websiteArticles).set({ sortOrder })` schreiben und `reorderRows` nur als Muster nutzen, wenn die generische Typisierung Ärger macht.
 
-- [ ] **Step 4: Seiten-Service**
+- [x] **Step 4: Seiten-Service**
 
 `packages/modules/website/src/services/pages.ts`:
 ```ts
@@ -1091,7 +1091,7 @@ export async function updatePage(deps: Deps, ctx: CallContext, input: unknown): 
 export type { PageBlock };
 ```
 
-- [ ] **Step 5: Listen-Services**
+- [x] **Step 5: Listen-Services**
 
 `packages/modules/website/src/services/articles.ts`:
 ```ts
@@ -1246,12 +1246,12 @@ export async function setDownload(deps: Deps, ctx: CallContext, input: unknown):
 ```
 `src/index.ts` um `export * from './services/pages'; … './services/downloads';` ergänzen.
 
-- [ ] **Step 6: Tests ausführen**
+- [x] **Step 6: Tests ausführen**
 
 Run: `pnpm --filter @kompass/module-website test && pnpm --filter @kompass/module-website typecheck`
 Expected: grün.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/modules/website
@@ -1274,7 +1274,7 @@ git commit -m "feat(website): page, article, team, faq and download services wit
   - `collectTranslationGaps(content: Record<string, unknown[]>) → TranslationGap[]` mit `{ collection: string; id: string; field: string }` (id = `key` oder `slug` oder `id`).
   - `exportSiteContent(deps, ctx, { jobDir }) → Promise<Result<SiteExport>>` mit `SiteExport = { contentHash: string; contentPath: string; assets: ExportedAsset[]; gaps: TranslationGap[]; violations: BlockedTermHit[] }`; `ExportedAsset = { id; filename; mimeType; width; height }`. Schreibt `content.json` (kanonisch sortiert) und `assets/<filename>`; sammelt alle Sichten aller aktiven Module generisch (auch `animals`). Recht `website.publish`.
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 `packages/modules/website/tests/blocked-terms.test.ts`:
 ```ts
@@ -1394,12 +1394,12 @@ describe('exportSiteContent', () => {
 });
 ```
 
-- [ ] **Step 2: Tests ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Tests ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/module-website test`
 Expected: FAIL.
 
-- [ ] **Step 3: Prüfungen**
+- [x] **Step 3: Prüfungen**
 
 `packages/modules/website/src/blocked-terms.ts`:
 ```ts
@@ -1463,7 +1463,7 @@ export function collectTranslationGaps(content: Record<string, unknown>): Transl
 }
 ```
 
-- [ ] **Step 4: Sichten**
+- [x] **Step 4: Sichten**
 
 `packages/modules/website/src/views.ts`:
 ```ts
@@ -1537,7 +1537,7 @@ export const WEBSITE_VIEWS = [publishedSiteFacts, publishedPages, publishedArtic
 ```
 Im Manifest `publishedViews: WEBSITE_VIEWS` ergänzen (zirkulären Import vermeiden: `views.ts` importiert nicht aus `manifest.ts`).
 
-- [ ] **Step 5: Export**
+- [x] **Step 5: Export**
 
 `packages/modules/website/src/export.ts`:
 ```ts
@@ -1608,12 +1608,12 @@ Hinweis: `facts` ist ein Array mit einem Element (Sichten liefern Listen); die S
 
 `src/index.ts` um `views`, `blocked-terms`, `translation-gaps`, `export` ergänzen.
 
-- [ ] **Step 6: Tests ausführen**
+- [x] **Step 6: Tests ausführen**
 
 Run: `pnpm --filter @kompass/module-website test && pnpm --filter @kompass/module-website typecheck`
 Expected: grün. Im Export-Test enthält `Object.keys(content)` genau die sieben Sichten plus `assets`; das Tiermodul ist in diesem Test nicht installiert.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/modules/website
@@ -1636,7 +1636,7 @@ git commit -m "feat(website): published views, blocked-term and translation chec
   - Services (`animals.manage` schreiben, `animals.view` lesen; Audit `animals.*`): `createAnimal`, `updateAnimal`, `setAnimalStatus({ id, status, adoptedYear? })` (bei `adopted` ist `adoptedYear` Pflicht; legt leere Story an), `setAnimalPhotos({ id, photos: { assetId, isPrimary }[] })` (ersetzt die Zuordnung vollständig; Bilder müssen `image/*` sein), `setAnimalStory({ id, beforeAssetId, afterAssetId, quote, family, adoptedYear })` (nur bei `adopted`, sonst Code `animalNotAdopted`), `setAnimalPublished`, `listAnimals`, `getAnimal` (mit `photos` und `story`).
   - Sicht `publishedAnimals`: `slug, name, sex, birthText, sizeCm, sizeText, location, status, isEmergency, isSponsorable, traits, externalProfileUrl, summary, body, photos: { assetId, sortOrder, isPrimary }[], story: { beforeAssetId, afterAssetId, quote, family, adoptedYear } | null`.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `packages/modules/animals/tests/animals.test.ts`:
 ```ts
@@ -1714,12 +1714,12 @@ describe('animals module', () => {
 });
 ```
 
-- [ ] **Step 2: Paket anlegen, Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Paket anlegen, Test ausführen, Fehlschlag prüfen**
 
 `packages/modules/animals/package.json` wie das Webseiten-Modul mit Name `@kompass/module-animals` (ohne `@kompass/markdown`). Run: `pnpm install && pnpm --filter @kompass/module-animals test`
 Expected: FAIL.
 
-- [ ] **Step 3: Schema, Migration, Manifest**
+- [x] **Step 3: Schema, Migration, Manifest**
 
 `packages/modules/animals/src/schema.ts`:
 ```ts
@@ -1790,7 +1790,7 @@ export const animalsModule: ModuleManifest = defineModule({
 });
 ```
 
-- [ ] **Step 4: Service und Sicht**
+- [x] **Step 4: Service und Sicht**
 
 `packages/modules/animals/src/service.ts`:
 ```ts
@@ -1999,12 +1999,12 @@ export const publishedAnimals = definePublishedView({
 ```
 `src/index.ts`: `export * from './schema'; export * from './service'; export * from './views'; export { animalsModule } from './manifest';`.
 
-- [ ] **Step 5: Tests ausführen**
+- [x] **Step 5: Tests ausführen**
 
 Run: `pnpm --filter @kompass/module-animals test && pnpm --filter @kompass/module-animals typecheck && pnpm --filter @kompass/core test`
 Expected: grün. Beim Kern-Test `db.test.ts` erscheinen `animal_*`- und `website_*`-Tabellen nur, wenn er alle Tabellen listet — dann die Erwartung ergänzen.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/modules/animals packages/core pnpm-lock.yaml
@@ -2026,7 +2026,7 @@ git commit -m "feat(animals): minimal animal profiles with photos, status, story
   - Animals-Tools: `animals_list`, `animals_get {id}`, `animals_create`, `animals_update`, `animals_set_status`, `animals_set_photos`, `animals_set_story`, `animals_set_published`.
   - `apps/kompass/src/modules.ts`: `export const installedModules = [websiteModule, animalsModule]`.
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 `packages/modules/website/tests/mcp-tools.test.ts`:
 ```ts
@@ -2086,12 +2086,12 @@ describe('installed modules', () => {
 });
 ```
 
-- [ ] **Step 2: Tests ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Tests ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/module-website test tests/mcp-tools.test.ts; pnpm --filter @kompass/module-animals test tests/mcp-tools.test.ts; pnpm --filter @kompass/app test tests/modules.test.ts`
 Expected: FAIL (Tools fehlen, `@/modules` fehlt).
 
-- [ ] **Step 3: Tools**
+- [x] **Step 3: Tools**
 
 `packages/modules/website/src/mcp-tools.ts`:
 ```ts
@@ -2150,7 +2150,7 @@ Hinweis: `any` (`z.object({}).passthrough()`) lässt die Service-Validierung ent
 
 In beiden Manifesten `mcpTools: WEBSITE_MCP_TOOLS` bzw. `ANIMALS_MCP_TOOLS` ergänzen (Import aus `./mcp-tools`; zirkuläre Importe vermeiden: `mcp-tools.ts` importiert Services, nicht das Manifest).
 
-- [ ] **Step 4: App-Verdrahtung**
+- [x] **Step 4: App-Verdrahtung**
 
 `apps/kompass/src/modules.ts`:
 ```ts
@@ -2173,12 +2173,12 @@ export const installedModules: ModuleManifest[] = [websiteModule, animalsModule]
 ```
 (`nav.groups.website` und `nav.groups.animals` existieren bereits; die Untergruppen ergänzen. `buildNavigation` bildet `labelKey` als `nav.${item.key}` — `website.pages` ⇒ `nav.website.pages`.)
 
-- [ ] **Step 5: Gesamtlauf**
+- [x] **Step 5: Gesamtlauf**
 
 Run: `pnpm install && pnpm typecheck && pnpm test`
 Expected: alle Workspaces grün. Dann `pnpm --filter @kompass/app e2e e2e/modules.spec.ts` — die Modulseite zeigt jetzt Kern, Webseite und Tiere; die Erwartung „1 von 1 aktiv" in `modules.spec.ts` auf „1 von 3 aktiv" anpassen und `shell.spec.ts` prüfen (die deaktivierten Gruppen „Webseite" und „Tiere" erscheinen ausgegraut in der Sidebar).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A

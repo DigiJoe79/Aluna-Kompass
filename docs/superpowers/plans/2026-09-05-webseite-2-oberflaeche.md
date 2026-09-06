@@ -70,7 +70,7 @@ messages/de.json                         Namensräume website.*, animals.*
   - `website/layout.tsx` und `animals/layout.tsx`: rendern die Kinder nur, wenn das Modul aktiv ist (`isModuleEnabled`), sonst eine Karte „Modul nicht aktiv" mit Link zu Verwaltung → Module.
   - Seed: aktiviert alle installierten Nicht-Kern-Module (`modules.enabled`), damit Dev und E2E die Modulseiten sehen.
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 `apps/kompass/tests/localized-form.test.ts`:
 ```ts
@@ -110,12 +110,12 @@ it('enables all installed non-core modules', async () => {
 ```
 (`defineModule`, `coreModule`, `readSetting` importieren.)
 
-- [ ] **Step 2: Tests ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Tests ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app test tests/localized-form.test.ts; pnpm --filter @kompass/core test tests/seed.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Helfer und Seed**
+- [x] **Step 3: Helfer und Seed**
 
 `src/lib/localized-form.ts`:
 ```ts
@@ -161,7 +161,7 @@ export async function renderMarkdownAction(markdown: string): Promise<string> {
 }
 ```
 
-- [ ] **Step 4: Komponenten**
+- [x] **Step 4: Komponenten**
 
 `src/components/markdown-preview.tsx`:
 ```tsx
@@ -397,12 +397,12 @@ export default async function WebsiteLayout({ children }: { children: ReactNode 
 }
 ```
 
-- [ ] **Step 5: Tests ausführen**
+- [x] **Step 5: Tests ausführen**
 
 Run: `pnpm --filter @kompass/core test && pnpm --filter @kompass/app test && pnpm --filter @kompass/app typecheck`
 Expected: grün. Der Literal-Scanner bleibt grün (Vorschau-Stile nutzen nur Variablen).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -421,7 +421,7 @@ git commit -m "feat(app): bilingual field with markdown preview, publish switch,
 - Consumes: `listPages`, `getPage`, `updatePage`, `WEBSITE_PAGE_KEYS`, `LocalizedField`, `MediaPicker`, `localizedFromForm`, `jsonFromForm`.
 - Produces: `updatePageAction(prev, formData)`; Seitenlabels über `website.pages.keys.<key>`.
 
-- [ ] **Step 1: E2E-Test schreiben**
+- [x] **Step 1: E2E-Test schreiben**
 
 `apps/kompass/e2e/website-pages.spec.ts`:
 ```ts
@@ -478,12 +478,12 @@ test.describe('website pages', () => {
 });
 ```
 
-- [ ] **Step 2: E2E ausführen, Fehlschlag prüfen**
+- [x] **Step 2: E2E ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app e2e e2e/website-pages.spec.ts`
 Expected: FAIL — 404.
 
-- [ ] **Step 3: Actions, Liste, Formular, Bausteine**
+- [x] **Step 3: Actions, Liste, Formular, Bausteine**
 
 `src/app/(shell)/website/pages/actions.ts`:
 ```ts
@@ -704,12 +704,12 @@ export default async function WebsitePageEdit(props: { params: Promise<{ key: st
 }
 ```
 
-- [ ] **Step 4: E2E ausführen**
+- [x] **Step 4: E2E ausführen**
 
 Run: `pnpm --filter @kompass/app test && pnpm --filter @kompass/app typecheck && pnpm --filter @kompass/app e2e e2e/website-pages.spec.ts`
 Expected: grün. Hinweis: `getByLabel('DE', { exact: true }).first()` trifft das erste DE-Feld (Titel). Beim Umsetzen prüfen, dass die Reihenfolge Titel → Einleitung → Text stimmt.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -728,7 +728,7 @@ git commit -m "feat(app): website pages with bilingual fields, markdown preview 
 - Consumes: `listArticles`, `getArticle`, `createArticle`, `updateArticle`, `setArticlePublished`, `reorderArticles`.
 - Produces: `saveArticleAction(prev, formData)` (mit `id` ⇒ update, ohne ⇒ create, danach Redirect auf `/website/articles/<id>`), `setArticlePublishedAction(id, next)`, `reorderArticlesAction(ids)`.
 
-- [ ] **Step 1: E2E-Test schreiben (Datei anlegen; Team/FAQ/Projekte/Downloads werden in Task 4 und 5 ergänzt)**
+- [x] **Step 1: E2E-Test schreiben (Datei anlegen; Team/FAQ/Projekte/Downloads werden in Task 4 und 5 ergänzt)**
 
 `apps/kompass/e2e/website-lists.spec.ts`:
 ```ts
@@ -769,12 +769,12 @@ test.describe('website lists', () => {
 });
 ```
 
-- [ ] **Step 2: E2E ausführen, Fehlschlag prüfen**
+- [x] **Step 2: E2E ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app e2e e2e/website-lists.spec.ts`
 Expected: FAIL — 404.
 
-- [ ] **Step 3: Actions**
+- [x] **Step 3: Actions**
 
 `src/app/(shell)/website/articles/actions.ts`:
 ```ts
@@ -823,7 +823,7 @@ export async function reorderArticlesAction(ids: string[]): Promise<ActionState>
 }
 ```
 
-- [ ] **Step 4: Formular und Seiten**
+- [x] **Step 4: Formular und Seiten**
 
 `src/app/(shell)/website/articles/article-form.tsx`:
 ```tsx
@@ -945,12 +945,12 @@ export default async function ArticleEditPage(props: { params: Promise<{ id: str
 }
 ```
 
-- [ ] **Step 5: E2E ausführen**
+- [x] **Step 5: E2E ausführen**
 
 Run: `pnpm --filter @kompass/app typecheck && pnpm --filter @kompass/app e2e e2e/website-lists.spec.ts`
 Expected: grün.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -969,7 +969,7 @@ git commit -m "feat(app): website articles list and editor"
 - Consumes: `listTeam`, `createTeamMember`, `updateTeamMember`, `setTeamMemberPublished`, `reorderTeam`, `listFaqs`, `createFaq`, `updateFaq`, `setFaqPublished`, `reorderFaqs`.
 - Produces: `saveTeamMemberAction`, `setTeamPublishedAction`, `reorderTeamAction`, `saveFaqAction`, `setFaqPublishedAction`, `reorderFaqsAction`. Beide Seiten sind Listen mit einem Dialog zum Anlegen und Bearbeiten (kein Unterseiten-Routing, die Datensätze sind klein).
 
-- [ ] **Step 1: E2E-Test ergänzen**
+- [x] **Step 1: E2E-Test ergänzen**
 
 In `e2e/website-lists.spec.ts` ergänzen:
 ```ts
@@ -999,12 +999,12 @@ In `e2e/website-lists.spec.ts` ergänzen:
   });
 ```
 
-- [ ] **Step 2: E2E ausführen, Fehlschlag prüfen**
+- [x] **Step 2: E2E ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app e2e e2e/website-lists.spec.ts`
 Expected: FAIL beim neuen Test.
 
-- [ ] **Step 3: Team**
+- [x] **Step 3: Team**
 
 `src/app/(shell)/website/team/actions.ts`:
 ```ts
@@ -1136,7 +1136,7 @@ export default async function TeamPage() {
 }
 ```
 
-- [ ] **Step 4: FAQ**
+- [x] **Step 4: FAQ**
 
 `src/app/(shell)/website/faqs/actions.ts` — wie Team mit `createFaq`/`updateFaq`/`setFaqPublished`/`reorderFaqs`, Felder `category`, `question`, `answer` über `localizedFromForm`, `revalidatePath('/website/faqs')`; Exporte `saveFaqAction`, `setFaqPublishedAction`, `reorderFaqsAction`.
 
@@ -1150,12 +1150,12 @@ export default async function TeamPage() {
 "faqs": { "title": "FAQ", "create": "Frage anlegen", "edit": "Bearbeiten", "emptyTitle": "Noch keine Fragen", "emptyText": "Häufige Fragen zu Spende, Adoption, Transport und Datenschutz.", "columns": { "question": "Frage", "category": "Kategorie", "status": "Status" }, "form": { "createTitle": "Frage anlegen", "editTitle": "Frage bearbeiten", "category": "Kategorie", "question": "Frage", "answer": "Antwort" } }
 ```
 
-- [ ] **Step 5: E2E ausführen**
+- [x] **Step 5: E2E ausführen**
 
 Run: `pnpm --filter @kompass/app typecheck && pnpm --filter @kompass/app e2e e2e/website-lists.spec.ts`
 Expected: grün. Der Datei-Input im Team-Dialog trägt das `aria-label` „Foto Datei wählen" (Label + `chooseFile`), darüber findet ihn der Test.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -1174,7 +1174,7 @@ git commit -m "feat(app): website team and faq management"
 - Consumes: `listProjects`, `getProject`, `createProject`, `updateProject`, `setProjectPublished`, `reorderProjects` (Kern), `listDownloads`, `setDownload`, `WEBSITE_DOWNLOAD_KEYS`.
 - Produces: `saveProjectAction`, `setProjectPublishedAction`, `reorderProjectsAction`, `setDownloadAction(prev, formData)`.
 
-- [ ] **Step 1: E2E-Test ergänzen**
+- [x] **Step 1: E2E-Test ergänzen**
 
 ```ts
   test('projects: create with betterplace id and publish; downloads: attach a PDF', async ({ page }) => {
@@ -1205,12 +1205,12 @@ git commit -m "feat(app): website team and faq management"
   });
 ```
 
-- [ ] **Step 2: E2E ausführen, Fehlschlag prüfen**
+- [x] **Step 2: E2E ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app e2e e2e/website-lists.spec.ts`
 Expected: FAIL beim neuen Test.
 
-- [ ] **Step 3: Projekte**
+- [x] **Step 3: Projekte**
 
 `src/app/(shell)/website/projects/actions.ts` — wie Artikel: `saveProjectAction` liest `slug`, `name`, `type`, `status`, `summary`, `body`, `imageAssetId` (aus `MediaPicker`), `betterplaceProjectId`; `create` ⇒ Redirect auf `/website/projects/<id>`; `setProjectPublishedAction`, `reorderProjectsAction`; `revalidatePath('/website/projects')`. Services aus `@kompass/core`.
 
@@ -1265,7 +1265,7 @@ export function ProjectForm({ project }: { project: ProjectRecord | null }) {
 ```
 `page.tsx` (Liste mit Spalten Name, Typ als Badge, Betterplace-ID mono, Status-Schalter, Sortierung, Link zum Bearbeiten, Knopf „Projekt anlegen" → `/website/projects/new`) und `[id]/page.tsx` (wie Artikel, `new` ⇒ leeres Formular) nach dem Muster aus Task 3.
 
-- [ ] **Step 4: Downloads**
+- [x] **Step 4: Downloads**
 
 `src/app/(shell)/website/downloads/actions.ts`:
 ```ts
@@ -1341,12 +1341,12 @@ export function DownloadRow({ download }: { download: DownloadRecord }) {
 "downloads": { "title": "Downloads", "description": "Ausfüllbare PDFs, die die Webseite verlinkt.", "columns": { "download": "Download", "fileAndTitle": "Titel und Datei" }, "keys": { "sponsorship-form": "Patenschaftsantrag", "membership-form": "Aufnahmeantrag Fördermitgliedschaft", "self-disclosure-form": "Selbstauskunft", "statutes-pdf": "Satzung als PDF" }, "form": { "title": "Titel", "file": "PDF-Datei" }, "open": "PDF öffnen", "none": "Noch keine Datei." }
 ```
 
-- [ ] **Step 5: E2E ausführen**
+- [x] **Step 5: E2E ausführen**
 
 Run: `pnpm --filter @kompass/app typecheck && pnpm --filter @kompass/app e2e e2e/website-lists.spec.ts`
 Expected: grün.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -1365,7 +1365,7 @@ git commit -m "feat(app): website projects and downloads management"
 - Consumes: `readAllSettings`, `setSetting` (Kern), `listAnimals` (Tiermodul, falls aktiv) für die Dropdowns der Startseiten-Auswahl.
 - Produces: `saveFactsAction(changes: Record<string, unknown>) → ActionState` (ruft `setSetting` je geändertem Schlüssel wie `saveSettingsAction` aus Plan 2).
 
-- [ ] **Step 1: E2E-Test schreiben**
+- [x] **Step 1: E2E-Test schreiben**
 
 `apps/kompass/e2e/website-facts.spec.ts`:
 ```ts
@@ -1394,12 +1394,12 @@ test('site facts: numbers, donation boxes, blocked terms and featured selection'
 });
 ```
 
-- [ ] **Step 2: E2E ausführen, Fehlschlag prüfen**
+- [x] **Step 2: E2E ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app e2e e2e/website-facts.spec.ts`
 Expected: FAIL — 404.
 
-- [ ] **Step 3: Action und Formular**
+- [x] **Step 3: Action und Formular**
 
 `src/app/(shell)/website/facts/actions.ts`:
 ```ts
@@ -1553,12 +1553,12 @@ Hinweis: Die App darf `@kompass/module-animals` importieren, weil sie beide Modu
 }
 ```
 
-- [ ] **Step 4: E2E ausführen**
+- [x] **Step 4: E2E ausführen**
 
 Run: `pnpm --filter @kompass/app typecheck && pnpm --filter @kompass/app test && pnpm --filter @kompass/app e2e e2e/website-facts.spec.ts`
 Expected: grün.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -1577,7 +1577,7 @@ git commit -m "feat(app): website site facts form with lists, featured selection
 - Consumes: `listAnimals`, `getAnimal`, `createAnimal`, `updateAnimal`, `setAnimalStatus`, `setAnimalPhotos`, `setAnimalStory`, `setAnimalPublished`.
 - Produces: `saveAnimalAction(prev, formData)` (Steckbrief + Texte; create ⇒ Redirect), `setAnimalStatusAction(id, status, adoptedYear?)`, `setAnimalPhotosAction(id, photos)`, `saveAnimalStoryAction(prev, formData)`, `setAnimalPublishedAction(id, next)`.
 
-- [ ] **Step 1: E2E-Test schreiben**
+- [x] **Step 1: E2E-Test schreiben**
 
 `apps/kompass/e2e/animals.spec.ts`:
 ```ts
@@ -1645,12 +1645,12 @@ test.describe('animals', () => {
 });
 ```
 
-- [ ] **Step 2: E2E ausführen, Fehlschlag prüfen**
+- [x] **Step 2: E2E ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app e2e e2e/animals.spec.ts`
 Expected: FAIL — 404.
 
-- [ ] **Step 3: Actions**
+- [x] **Step 3: Actions**
 
 `src/app/(shell)/animals/actions.ts`:
 ```ts
@@ -1743,7 +1743,7 @@ export async function setAnimalPublishedAction(id: string, isPublished: boolean)
 ```
 (`jsonFromForm` wird hier nicht gebraucht — Import weglassen.)
 
-- [ ] **Step 4: Formular mit Reitern, Fotos, Geschichte, Status**
+- [x] **Step 4: Formular mit Reitern, Fotos, Geschichte, Status**
 
 `src/app/(shell)/animals/photos-editor.tsx`:
 ```tsx
@@ -1947,12 +1947,12 @@ Hinweis: Die Speicherleiste des Steckbrief-Formulars liegt außerhalb der Reiter
 ```
 (`animals.common` aus Task 1 bleibt bestehen; nur die neuen Namensräume ergänzen.)
 
-- [ ] **Step 5: E2E ausführen**
+- [x] **Step 5: E2E ausführen**
 
 Run: `pnpm --filter @kompass/app typecheck && pnpm --filter @kompass/app e2e e2e/animals.spec.ts`
 Expected: grün.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -1972,7 +1972,7 @@ git commit -m "feat(app): animal profiles with photos, status changes and succes
 - Consumes: `exportSiteContent`, `readSetting('website.blockedTerms')`, `listPublishes` (neu, klein: `packages/modules/website/src/services/publishes.ts` mit `listPublishes(deps, ctx, { environment }) → Result<PublishRecord[]>`, Recht `website.view`).
 - Produces: `runCheckAction() → ActionState` mit `data = { contentHash, gaps, violations }` (Export in ein Temp-Verzeichnis, danach gelöscht). Plan 6 ergänzt Vorschau, Diff und Publish auf derselben Seite.
 
-- [ ] **Step 1: E2E-Test schreiben**
+- [x] **Step 1: E2E-Test schreiben**
 
 `apps/kompass/e2e/website-publish.spec.ts`:
 ```ts
@@ -2005,12 +2005,12 @@ test('publish page runs the checks and blocks on a blocked term', async ({ page 
 });
 ```
 
-- [ ] **Step 2: E2E ausführen, Fehlschlag prüfen**
+- [x] **Step 2: E2E ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app e2e e2e/website-publish.spec.ts`
 Expected: FAIL — 404.
 
-- [ ] **Step 3: Publish-Historie im Modul**
+- [x] **Step 3: Publish-Historie im Modul**
 
 `packages/modules/website/src/services/publishes.ts`:
 ```ts
@@ -2028,7 +2028,7 @@ export async function listPublishes(deps: Deps, ctx: CallContext, input: { envir
 ```
 Test in `packages/modules/website/tests/lists.test.ts` ergänzen: leere Liste für `test`, `forbidden` ohne Recht. `src/index.ts` exportieren.
 
-- [ ] **Step 4: Action, Karte, Seite**
+- [x] **Step 4: Action, Karte, Seite**
 
 `src/app/(shell)/website/publish/actions.ts`:
 ```ts
@@ -2145,12 +2145,12 @@ Startseiten-Karte in `src/app/(shell)/page.tsx`: wenn `isModuleEnabled(deps, 'we
 "home": { "website": { "title": "Webseite", "text": "Inhalte prüfen und die Webseite publizieren.", "count": "{count} Publishes", "cta": "Publizieren öffnen", "never": "Noch nie publiziert" } }
 ```
 
-- [ ] **Step 5: Gesamtlauf**
+- [x] **Step 5: Gesamtlauf**
 
 Run: `pnpm typecheck && pnpm test && pnpm --filter @kompass/app e2e`
 Expected: alle grün, inklusive der bestehenden Specs (Startseite zeigt vier Karten; `home.spec.ts` prüft nur die drei bisherigen Überschriften und bleibt gültig).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A

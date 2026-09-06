@@ -74,7 +74,7 @@ Dockerfile  docker-compose.yml  .env.*.example  .github/workflows/ci.yml  docs/b
   - `imageFor(assetId, width)` aus `images.json` (Task 2 füllt es; das Fixture enthält Beispielwerte).
   - Catch-all-Seite rendert `home` und alle `TextPage`-Kinds; Task 3 ergänzt Listen und Detailseiten.
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 `apps/site/tests/routes.test.ts`:
 ```ts
@@ -150,7 +150,7 @@ describe('site build', () => {
 ```
 (Der Test verlangt Fixture-Daten mit einem Hund `chiara` und einem Projekt `grundversorgung`; die Listen-Kinds entstehen in Task 3 — bis dahin die Pfade `zuhause-gesucht/*`, `projekte/*`, `wissenswertes/*`, `faq/*` mit `test.todo` aussparen bzw. die Liste in Task 1 auf `index.html`, `en/index.html`, `helfen/index.html`, `en/help/index.html`, `impressum/index.html`, `sitemap-index.xml` beschränken und in Task 3 erweitern.)
 
-- [ ] **Step 2: Paket anlegen, Tests ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Paket anlegen, Tests ausführen, Fehlschlag prüfen**
 
 `apps/site/package.json`:
 ```json
@@ -190,11 +190,11 @@ Fonts und Logos aus dem Prototyp kopieren: `cp -r "/Users/joe/Development/Aluna 
 Run: `pnpm install && pnpm --filter @kompass/site test tests/routes.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Fixture**
+- [x] **Step 3: Fixture**
 
 `apps/site/fixtures/example/content.json` — ein kleiner, vollständiger Export im Format aus Plan 4 (Task 6): `facts` (ein Element mit Musterverein-Daten, `forwardingPercent: 97.2`, `shelterDogCount: 150`, `donationBoxLocations: ["Köln-Porz", "Jülich"]`, `section11Status: "pending"`, `socialLinks: [{ "label": "Instagram", "href": "https://instagram.com/example" }]`, `betterplaceMetaProjectId: "000000"`, `betterplaceDefaultAmount: 50`, `featuredAnimalSlug: "auto"`, `featuredStorySlug: "auto"`, `organization: { name: "Musterverein e.V.", … }`), alle zwölf `pages` mit DE-Texten (EN teils leer), zwei `articles`, drei `team`, vier `faqs` in zwei Kategorien, zwei `projects` (`grundversorgung` ongoing, `op-fonds` shortTerm), vier `downloads`, drei `animals` (`chiara` lookingForHome mit zwei Fotos, `bruno` emergency in germany, `akiko` adopted mit Story), `assets` mit den referenzierten IDs. Als Fotos dienen `assets/placeholder-hund.png` usw. (Platzhalter aus dem Prototyp). `images.json` enthält für jedes Asset Varianten `{ "<assetId>": { "src": "/images/<hash>-960.webp", "srcset": "/images/<hash>-480.webp 480w, …", "width": 960, "height": 720 } }`; die Bilddateien liegen unter `fixtures/example/images/`. Task 2 erzeugt genau dieses Format; für das Fixture einmalig mit dem Skript aus Task 2 erzeugen (`pnpm --filter @kompass/module-website exec tsx scripts/make-fixture-images.ts`) — bis dahin reichen kopierte Platzhalter-PNGs mit den vereinbarten Namen.
 
-- [ ] **Step 4: Bibliothek**
+- [x] **Step 4: Bibliothek**
 
 `apps/site/src/lib/locale.ts`:
 ```ts
@@ -327,7 +327,7 @@ export function imageFor(images: Record<string, ImageVariant>, assetId: string |
 }
 ```
 
-- [ ] **Step 5: Layout, Komponenten, Catch-all-Seite**
+- [x] **Step 5: Layout, Komponenten, Catch-all-Seite**
 
 `apps/site/src/layouts/Base.astro`:
 ```astro
@@ -557,12 +557,12 @@ export function GET() {
 }
 ```
 
-- [ ] **Step 6: Tests ausführen**
+- [x] **Step 6: Tests ausführen**
 
 Run: `pnpm --filter @kompass/site test && pnpm --filter @kompass/site typecheck`
 Expected: `routes.test.ts` grün; `build.test.ts` grün für die in Task 1 eingegrenzte Pfadliste (Startseite, Helfen, Impressum in DE/EN, Sitemap, robots). Der Determinismus-Vergleich muss bereits jetzt bestehen.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -A
@@ -581,7 +581,7 @@ git commit -m "feat(site): astro site scaffold with bilingual routing, layout, t
 **Interfaces:**
 - Produces: `IMAGE_WIDTHS = [480, 960, 1600]`; `prepareImageVariants({ jobDir, assets, cacheDir }) → Promise<Record<string, ImageVariant>>` — erzeugt `jobDir/images/<hash>-<w>.webp` (WebP, Qualität 80, nie hochskaliert; für SVG: Datei unverändert kopiert, `srcset` leer), nutzt `cacheDir/<hash>-<w>.webp` als Cache (Hash = die 12 Hex-Zeichen aus dem Asset-Dateinamen), schreibt `jobDir/images.json`. `ImageVariant = { src: string; srcset: string; width: number; height: number }` (`src` = größte verfügbare Variante ≤ 960, Pfade relativ zur Site-Wurzel `/images/…`).
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `packages/modules/website/tests/images.test.ts`:
 ```ts
@@ -632,12 +632,12 @@ describe('prepareImageVariants', () => {
 });
 ```
 
-- [ ] **Step 2: Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Test ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/module-website add sharp@^0.35.4 && pnpm --filter @kompass/module-website test tests/images.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Implementieren**
+- [x] **Step 3: Implementieren**
 
 `packages/modules/website/src/pipeline/images.ts`:
 ```ts
@@ -691,12 +691,12 @@ Hinweis zum Determinismus: sharp kodiert bei gleichem Input, gleichen Parametern
 
 `packages/modules/website/scripts/make-fixture-images.ts`: kleines tsx-Skript, das `prepareImageVariants` gegen `apps/site/fixtures/example` ausführt (Job = Fixture-Ordner, Cache = temporär) und so `images.json` und `images/` für das Fixture erzeugt. `src/index.ts`: `export * from './pipeline/images';`.
 
-- [ ] **Step 4: Tests ausführen und Fixture erzeugen**
+- [x] **Step 4: Tests ausführen und Fixture erzeugen**
 
 Run: `pnpm --filter @kompass/module-website test && pnpm --filter @kompass/module-website exec tsx scripts/make-fixture-images.ts && pnpm --filter @kompass/site test`
 Expected: grün; `apps/site/fixtures/example/images.json` existiert; Site-Build bleibt deterministisch.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -715,7 +715,7 @@ git commit -m "feat(website): cached webp image variants for the site build"
 **Interfaces:**
 - Produces: alle Kinds der Routentabelle sind gebaut; `featuredAnimal(content)` und `featuredStory(content)` (Automatik: neuester Notfall, sonst zuletzt angelegter Hund; neueste Geschichte nach `adoptedYear`); Betterplace-2-Klick mit `projectId`, `defaultAmount`, `locale`; Mailto-Links mit vorbelegtem Betreff und Stichpunkten je Sprache.
 
-- [ ] **Step 1: Tests erweitern**
+- [x] **Step 1: Tests erweitern**
 
 `tests/build.test.ts`: die vollständige Pfadliste aus Task 1 aktivieren (alle Kinds in DE und EN, inklusive `zuhause-gesucht/chiara/`, `en/looking-for-a-home/chiara/`, `glueckliche-vermittlungen/`, `en/happy-endings/`, `projekte/grundversorgung/`, `wissenswertes/<slug>/`, `faq/`, `ueber-uns/unser-team/`, `ablauf-der-adoption/`).
 
@@ -767,12 +767,12 @@ describe('rendered html', () => {
 });
 ```
 
-- [ ] **Step 2: Tests ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Tests ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/site test`
 Expected: FAIL — Pfade fehlen.
 
-- [ ] **Step 3: Komponenten**
+- [x] **Step 3: Komponenten**
 
 `src/components/BetterplaceEmbed.astro` (aus dem Prototyp, Texte je Sprache):
 ```astro
@@ -876,12 +876,12 @@ export function featuredStory(animals: Animal[], facts: Facts): Animal | null {
 ```
 („zuletzt angelegter Hund" = letzter Eintrag der nach Name sortierten Sicht ist keine Anlagereihenfolge; die Sicht liefert alphabetisch. Für die Automatik genügt: Notfall zuerst, sonst der erste Hund der Liste — im Test `Bruno` als Notfall.)
 
-- [ ] **Step 4: Tests ausführen**
+- [x] **Step 4: Tests ausführen**
 
 Run: `pnpm --filter @kompass/site test && pnpm --filter @kompass/site typecheck`
 Expected: grün; Build weiterhin deterministisch.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -908,7 +908,7 @@ git commit -m "feat(site): dogs, stories, projects, articles, faq, team and full
   - `runPublish(deps, ctx, env, { confirm: boolean }) → Result<PublishResult>` — verlangt `website.publish`, `deploy` konfiguriert, `env !== development`, keine Sperrworttreffer; baut frisch, rsync, `recordPublish` mit `fileManifest`, Audit `website.publish`; bei Fehlern `recordPublish` mit `status: 'failed'`.
   - `recordPublish(deps, ctx, { environment, status, contentHash, diff, fileManifest, log, summary })`; `lastSuccessfulPublish(deps, environment)`.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `packages/modules/website/tests/pipeline.test.ts`:
 ```ts
@@ -985,12 +985,12 @@ describe('preview and publish', () => {
 ```
 Hinweis: Mit leerem `host` publiziert `rsyncPublish` in einen **lokalen Pfad** (kein SSH) — genau so laufen die Tests und die E2E-Suite; im Betrieb ist `host` gesetzt. Der Preview/Publish-Test baut Astro zweimal und dauert entsprechend.
 
-- [ ] **Step 2: Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Test ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/module-website test tests/pipeline.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Schema und Historie**
+- [x] **Step 3: Schema und Historie**
 
 `schema.ts`: `websitePublishes` um `fileManifest: text('file_manifest').notNull().default('{}')` ergänzen. Run: `pnpm --filter @kompass/core db:generate --name website_publish_manifest` ⇒ `0005_…sql`.
 
@@ -1013,7 +1013,7 @@ export function recordPublish(deps: Deps, ctx: CallContext, input: { environment
 ```
 (Importe `and, desc, eq`, `newId`, `isoNow`, `recordAudit` ergänzen.)
 
-- [ ] **Step 4: Env, Build, Diff, Publish**
+- [x] **Step 4: Env, Build, Diff, Publish**
 
 `pipeline/env.ts`:
 ```ts
@@ -1199,12 +1199,12 @@ export async function runPublish(deps: Deps, ctx: CallContext, env: SiteEnv, opt
 ```
 Hinweis: Weil `runPreview` und `runPublish` beide bauen, ist ein Publish nie „der Vorschau-Build von vorhin", sondern immer frisch aus dem aktuellen Stand — genau das ist die Spec-Regel „Vorschau = echter Build, kein Entwurfsstand". `src/index.ts`: `export * from './pipeline/env'; …/build; …/diff; …/publish; …/jobs;`.
 
-- [ ] **Step 5: Tests ausführen**
+- [x] **Step 5: Tests ausführen**
 
 Run: `pnpm --filter @kompass/module-website test && pnpm --filter @kompass/module-website typecheck`
 Expected: grün (der Pipeline-Test benötigt `rsync` lokal; auf macOS vorhanden).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -1223,7 +1223,7 @@ git commit -m "feat(website): build, diff and publish pipeline with audited publ
 **Interfaces:**
 - Produces: `runPreviewAction() → ActionState` (`data = PreviewResult` ohne `log`), `runPublishAction(confirm: boolean) → ActionState`; Route `GET /website/preview/[[...path]]` liefert Dateien aus `previewDir` (Verzeichnis ⇒ `index.html`; nur angemeldet; `Cache-Control: no-store`; Content-Type nach Endung); die Publizieren-Seite zeigt Stand, Prüfen, Vorschau bauen (mit Link „Vorschau öffnen"), Änderungsliste, Publish-Knopf mit Bestätigung und Historie.
 
-- [ ] **Step 1: E2E-Test erweitern**
+- [x] **Step 1: E2E-Test erweitern**
 
 An `e2e/website-publish.spec.ts` anhängen:
 ```ts
@@ -1257,12 +1257,12 @@ test('preview build, diff and publish to the local staging target', async ({ pag
 ```
 (`import path from 'node:path'` ergänzen. `playwright.config.ts` setzt für den Dev-Server `SITE_PUBLIC_URL: 'https://staging.example.org'`, `SITE_STAGING: '1'`, `SITE_DEPLOY_HOST: ''`, `SITE_DEPLOY_USER: ''`, `SITE_DEPLOY_PATH: <e2e/.tmp/site-target>`, `SITE_DEPLOY_KEY_FILE: ''`, `SITE_DIR: <repo>/apps/site`, `SITE_CACHE_DIR`, `SITE_PREVIEW_DIR` unter `e2e/.tmp`, und exportiert `E2E_SITE_TARGET` für den Test-Prozess über `process.env` vor `defineConfig`.)
 
-- [ ] **Step 2: E2E ausführen, Fehlschlag prüfen**
+- [x] **Step 2: E2E ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/app e2e e2e/website-publish.spec.ts`
 Expected: FAIL beim neuen Test.
 
-- [ ] **Step 3: Env, Actions, Vorschau-Route**
+- [x] **Step 3: Env, Actions, Vorschau-Route**
 
 `src/lib/site-env.ts`:
 ```ts
@@ -1322,7 +1322,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ path?: str
 ```
 Damit die Vorschau innerhalb von Kompass unter dem Umgebungsbalken erscheint, rendert `/website/preview/` **nicht** die Shell; stattdessen öffnet der Link „Vorschau öffnen" die Vorschau in einem Frame: Seite `src/app/(shell)/website/preview-frame/page.tsx` mit `<iframe src="/website/preview/" title="Vorschau" class="h-[80vh] w-full rounded-md border border-line">` unter der Shell (der Balken bleibt sichtbar). Die absoluten Links der Vorschau zeigen auf `/…`; die Route leitet `/website/preview/` mit `<base href="/website/preview/">` ein — dafür ersetzt die Route in HTML-Antworten `<head>` durch `<head><base href="/website/preview/">`, damit relative Navigation innerhalb der Vorschau bleibt (Site-Links sind absolut, daher zusätzlich `href="/` → `href="/website/preview/` in HTML ersetzen; beides nur in der Vorschau-Route, nie im Build).
 
-- [ ] **Step 4: Karten und Seite**
+- [x] **Step 4: Karten und Seite**
 
 `preview-card.tsx`: Knopf „Vorschau bauen" (Ladezustand „Build läuft …", `aria-busy`), nach Erfolg: Inhalts-Hash, Sperrworttreffer und Lücken wie `CheckCard` (Wiederverwendung: `CheckCard` nimmt optional ein fertiges `Check`-Objekt), Link „Vorschau öffnen" → `/website/preview-frame`, und die Änderungsliste an `DiffCard` weiterreichen.
 
@@ -1346,12 +1346,12 @@ und `errors.conflict`: `"publicUrlMissing": "SITE_PUBLIC_URL ist nicht gesetzt."
 
 `next.config.ts`: `serverExternalPackages` um `'sharp'` ergänzen; `transpilePackages` bleibt.
 
-- [ ] **Step 5: E2E ausführen**
+- [x] **Step 5: E2E ausführen**
 
 Run: `pnpm --filter @kompass/app typecheck && pnpm --filter @kompass/app e2e e2e/website-publish.spec.ts`
 Expected: grün (Build im Test dauert; Timeouts sind in den Assertions gesetzt).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -1369,7 +1369,7 @@ git commit -m "feat(app): website preview build, diff, confirmed publish and his
 **Interfaces:**
 - Produces: `importPrototype(deps, ctx, { prototypeDir, pagesFile }) → Promise<{ animals: number; projects: number; team: number; faqs: number; articles: number; pages: number; facts: number }>`; CLI `pnpm import:prototype` (Root-Skript) mit `DATABASE_PATH`, `MEDIA_PATH`, `PROTOTYPE_DIR` (Default `/Users/joe/Development/Aluna Tierhilfe e.V./Webseite/aluna-static`), idempotent (überspringt vorhandene Slugs/Keys).
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `packages/modules/website/tests/import-prototype.test.ts`:
 ```ts
@@ -1424,16 +1424,16 @@ describe('importPrototype', () => {
 });
 ```
 
-- [ ] **Step 2: Test ausführen, Fehlschlag prüfen**
+- [x] **Step 2: Test ausführen, Fehlschlag prüfen**
 
 Run: `pnpm --filter @kompass/module-website test tests/import-prototype.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Seitentexte als JSON vorbereiten**
+- [x] **Step 3: Seitentexte als JSON vorbereiten**
 
 `scripts/prototype-pages.json` wird **von Hand** aus den Astro-Dateien des Prototyps erstellt (die Texte stehen in `pages/*.astro`; sie werden als Markdown übernommen): für jeden Seitenschlüssel `title` (mit `*Betonung*` statt `<em>`), `lede`, `body` (Überschriften mit `##`, Listen mit `-`, Hinweiskästen `aluna-note` als `>`-Zitat, Schrittkarten als `:::karten`), `blocks` (Helfen: die vier Hilfswege; Startseite: `impact-15`, `impact-50`, `impact-120`, `impact-sponsor` und `social`; Spenden: die drei „Andere Wege"), sowie `facts` (Claim „Wir helfen. Leben retten.", `forwardingPercent: 97.2`, `shelterDogCount: 150`, `donationBoxLocations: ["Köln-Porz", "Jülich", "Merkstein"]`, `section11Status: "pending"`, `betterplaceMetaProjectId` aus `site.js`, Social-Links aus `site.js`, `blockedTerms: []` — die Sperrwörter trägt der Vorstand selbst ein). Impressum, Datenschutz und Satzung bekommen die Texte aus dem Prototyp inklusive der `[Platzhalter]`; die Adoptionsschritte aus dem Artikel „Ablauf der Adoption" wandern als `:::karten` in die Seite `adoption-process`, der Artikel selbst wird nicht importiert. Englische Felder bleiben leer.
 
-- [ ] **Step 4: Skript**
+- [x] **Step 4: Skript**
 
 `scripts/import-prototype.ts`:
 ```ts
@@ -1568,14 +1568,14 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
 ```
 Bereinigung beim Umsetzen: `getPage` und `readSetting` oben normal importieren statt per dynamischem `import()`; `facts`-Zählung bleibt bei 4 im Test, weil `blockedTerms: []` dem Default entspricht und übersprungen wird (`claim`, `forwardingPercent` = Default 97.2 wird ebenfalls übersprungen → im Test ergeben `claim`, `shelterDogCount`, `donationBoxLocations` plus … — den Erwartungswert im Test beim Umsetzen auf die tatsächliche Zahl der vom Default abweichenden Fakten setzen und begründen). Root-`package.json`: `"import:prototype": "tsx scripts/import-prototype.ts"` mit `tsx` als Dev-Abhängigkeit im Root; der System-Kontext ohne Nutzer schreibt Audit-Einträge mit Kanal `system`.
 
-- [ ] **Step 5: Tests ausführen und echten Import gegen Test fahren**
+- [x] **Step 5: Tests ausführen und echten Import gegen Test fahren**
 
 Run: `pnpm --filter @kompass/module-website test`
 Expected: grün.
 
 Dann gegen die **Testumgebung** (lokal mit der Test-DB oder direkt im Test-Container per `docker exec`): `APP_ENV=test DATABASE_PATH=… MEDIA_PATH=… pnpm import:prototype`. Anschließend in Kompass: Site-Fakten prüfen, Sperrwörter eintragen, Vorschau bauen, Sperrworttreffer beheben (der Prototyp enthält keine, aber die Prüfung läuft), Übersetzungslücken sind erwartet.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -1590,7 +1590,7 @@ git commit -m "feat: one-time prototype content import into Kompass"
 - Modify: `Dockerfile`, `docker-compose.yml`, `.env.test.example`, `.env.prod.example`, `.github/workflows/ci.yml`, `docs/betrieb.md`, `AGENTS.md` (Befehle)
 - Test: lokaler Container-Smoke-Test mit Vorschau-Build
 
-- [ ] **Step 1: Dockerfile erweitern**
+- [x] **Step 1: Dockerfile erweitern**
 
 `deps`-Stage: `COPY apps/site/package.json apps/site/` und die drei neuen Pakete (`packages/markdown`, `packages/modules/website`, `packages/modules/animals`) vor `pnpm install`. `runner`-Stage: `apt-get install -y --no-install-recommends rsync openssh-client` (nicht purgen); zusätzlich kopieren:
 ```dockerfile
@@ -1600,7 +1600,7 @@ COPY --from=build --chown=node:node /app/node_modules ./node_modules
 ```
 Hinweis: Der Astro-Build im Container braucht die Workspace-`node_modules` von `apps/site` (Astro, Vite, sharp) — Standalone-Output von Next enthält sie nicht. Deshalb wird das gesamte `node_modules`-Verzeichnis aus der Build-Stage kopiert (Image wird größer, ~300 MB mehr; auf dem NAS unerheblich). `ENV SITE_DIR=/app/apps/site SITE_CACHE_DIR=/data/site-cache SITE_PREVIEW_DIR=/data/site-preview`. `.dockerignore`: `apps/site/dist`, `apps/site/fixtures/example/images` nicht ausschließen (Fixture wird für den Site-Test gebraucht, nicht im Image; ok).
 
-- [ ] **Step 2: Compose und Env-Beispiele**
+- [x] **Step 2: Compose und Env-Beispiele**
 
 `docker-compose.yml` je Dienst ergänzen:
 ```yaml
@@ -1621,11 +1621,11 @@ SITE_DEPLOY_KEY_FILE=/data/site.key
 ```
 `.env.prod.example` analog mit `SITE_PUBLIC_URL=https://aluna-tierhilfe.org`, ohne `SITE_STAGING`, `SITE_DEPLOY_PATH` auf das Live-Verzeichnis.
 
-- [ ] **Step 3: CI**
+- [x] **Step 3: CI**
 
 `ci.yml`, Job `test`: `sudo apt-get install -y rsync` vor den Tests (Ubuntu-Runner haben rsync meist, explizit ist sicherer); die Site-Tests laufen über `pnpm test` mit. Job `image` unverändert (Dockerfile enthält alles).
 
-- [ ] **Step 4: Smoke-Test im Container**
+- [x] **Step 4: Smoke-Test im Container**
 
 Run:
 ```bash
@@ -1637,7 +1637,7 @@ docker exec kompass-smoke sh -c "rsync --version | head -1 && ls /app/apps/site/
 ```
 Dann im Browser `http://localhost:3900`: Einrichtung, Module aktivieren, unter Webseite → Publizieren „Vorschau bauen" (muss im Container durchlaufen) und „Nach Staging publizieren" (landet in `/tmp/kompass-smoke/target`). Expected: `index.html` im Zielordner, Historie zeigt `success`. `docker stop kompass-smoke`.
 
-- [ ] **Step 5: Betriebsanleitung**
+- [x] **Step 5: Betriebsanleitung**
 
 `docs/betrieb.md` um das Kapitel „Webseite" ergänzen:
 ```markdown
@@ -1653,7 +1653,7 @@ Dann im Browser `http://localhost:3900`: Einrichtung, Module aktivieren, unter W
 ```
 `AGENTS.md` „Befehle": `pnpm --filter @kompass/site dev` (Site mit Fixture unter `http://localhost:4321`), `pnpm --filter @kompass/site test`, `pnpm import:prototype`.
 
-- [ ] **Step 6: Gesamtlauf und Commit**
+- [x] **Step 6: Gesamtlauf und Commit**
 
 Run: `pnpm typecheck && pnpm test && pnpm --filter @kompass/app e2e`
 Expected: alle grün.
