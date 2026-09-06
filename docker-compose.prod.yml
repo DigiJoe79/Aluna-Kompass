@@ -20,6 +20,9 @@ services:
     # Prod folgt dem main-Branch; das Tag latest entsteht erst beim
     # ersten Merge von dev nach main.
     image: ghcr.io/digijoe79/aluna-kompass:latest
+    # latest ist ebenfalls beweglich; bei einem Update soll das neue Image
+    # gezogen werden, nicht das zwischengespeicherte starten.
+    pull_policy: always
     container_name: kompass-prod
     restart: unless-stopped
     ports: ["3000:3000"]

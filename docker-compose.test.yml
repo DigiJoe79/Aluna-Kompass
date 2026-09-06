@@ -19,6 +19,9 @@ services:
   kompass-test:
     # Test folgt dem dev-Branch, Prod dem main-Branch (Tag latest).
     image: ghcr.io/digijoe79/aluna-kompass:dev
+    # dev ist ein beweglicher Tag: ohne pull_policy startet Docker das lokal
+    # zwischengespeicherte Image weiter, auch nach einer Neubereitstellung.
+    pull_policy: always
     container_name: kompass-test
     restart: unless-stopped
     ports: ["3001:3000"]

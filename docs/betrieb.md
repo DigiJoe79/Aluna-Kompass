@@ -15,8 +15,20 @@
 6. Health: `http://<nas>:3000/api/health`.
 
 ## Update
+
 1. In Prod ein Backup exportieren (Verwaltung → Backup → Export erstellen) und die Datei sichern.
-2. Container Station: Anwendung neu bereitstellen, damit das Image neu gezogen wird — `kompass-test` folgt dem Tag `dev`, `kompass-prod` dem Tag `latest`. Zuerst Test neu erstellen, prüfen (Login, Startseite, Health), dann `kompass-prod`.
+2. Anwendung neu bereitstellen — `kompass-test` folgt dem Tag `dev`, `kompass-prod` dem Tag `latest`. Zuerst Test, prüfen (Login, Startseite, Health), dann Prod.
+
+   **Wichtig:** `dev` und `latest` sind bewegliche Tags. Ein Neustart oder ein Neuanlegen der Anwendung startet sonst weiter das lokal zwischengespeicherte Image. Die Compose-Dateien setzen deshalb `pull_policy: always`. Wenn die Container Station das ignoriert, hilft der Weg über SSH:
+
+   ```
+   docker compose -f docker-compose.test.yml pull
+   docker compose -f docker-compose.test.yml up -d
+   ```
+
+   Ob wirklich die neue Fassung läuft, verrät `/api/health` oder `docker image inspect ghcr.io/digijoe79/aluna-kompass:dev --format '{{.Id}}'` im Vergleich zur Ausgabe des CI-Laufs.
+
+   Wer es ganz eindeutig will, trägt statt `dev` den unveränderlichen Tag `sha-<commit>` ein — dann ist jede Aktualisierung eine sichtbare Änderung der Compose-Datei.
 3. Migrationen laufen beim Start automatisch; der Migrationsstand steht im Health-JSON und im Umgebungsbalken der Testumgebung.
 
 ## Prod nach Test kopieren
