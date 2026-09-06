@@ -30,7 +30,12 @@ test.describe('animals', () => {
     await page.getByRole('button', { name: 'Fotos speichern' }).click();
     await expect(page.getByRole('status')).toContainText('Fotos gespeichert');
 
-    await page.getByRole('switch', { name: 'Veröffentlicht' }).click();
+    const publish = page.getByRole('switch', { name: 'Veröffentlicht' });
+    await publish.click();
+    // Der Schalter spiegelt den Serverzustand, nicht den Klick: erst wenn er
+    // gesetzt ist, hat die Action geschrieben. Ohne dieses Warten navigiert
+    // der Test gelegentlich vor dem Schreibvorgang weiter.
+    await expect(publish).toBeChecked();
     await page.goto('/animals');
     const row = page.getByRole('row', { name: /Chiara/ });
     await expect(row).toContainText('Sucht ein Zuhause');

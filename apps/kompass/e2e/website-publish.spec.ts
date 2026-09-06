@@ -35,7 +35,11 @@ test('preview build, diff and publish to the local staging target', async ({ pag
   await page.getByLabel('Name').fill('Luna');
   await page.getByLabel('Geschlecht').selectOption('female');
   await page.getByRole('button', { name: 'Speichern' }).click();
-  await page.getByRole('switch', { name: 'Veröffentlicht' }).click();
+  const publish = page.getByRole('switch', { name: 'Veröffentlicht' });
+  await publish.click();
+  // Siehe animals.spec.ts: ohne dieses Warten baut die Vorschau womoeglich
+  // einen Stand ohne den Hund.
+  await expect(publish).toBeChecked();
 
   await page.goto('/website/publish');
   await page.getByRole('button', { name: 'Vorschau bauen' }).click();
