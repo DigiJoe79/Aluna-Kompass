@@ -4,7 +4,7 @@ import path from 'node:path';
 import { coreModule, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
-import { copyTree, diffTrees, hashTree, readSiteEnv, rsyncCommand, runPreview, runPublish, stripAnsi, websiteModule } from '../src';
+import { checkDeployCredentials, copyTree, diffTrees, hashTree, readSiteEnv, rsyncCommand, runPreview, runPublish, stripAnsi, websiteModule } from '../src';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -226,5 +226,34 @@ describe('copyTree', () => {
     writeFileSync(path.join(dest, 'gleich.txt'), 'alt');
     await copyTree(src, dest);
     expect(readFileSync(path.join(dest, 'gleich.txt'), 'utf8')).toBe('neu');
+  });
+});
+
+describe('checkDeployCredentials', () => {
+  it('accepts a readable password file', async () => {
+    const dir = tmp();
+    const file = path.join(dir, 'site.pw');
+    writeFileSync(file, 'geheim');
+    expect(await checkDeployCredentials({ host: 'h', user: 'u', path: '/web', auth: { kind: 'password', passwordFile: file } })).toBeNull();
+  });
+
+  it('names the file when it cannot be read', async () => {
+    const missing = path.join(tmp(), 'fehlt.pw');
+    const problem = await checkDeployCredentials({ host: 'h', user: 'u', path: '/web', auth: { kind: 'password', passwordFile: missing } });
+    expect(problem).toContain(missing);
+  });
+
+  it('rejects an empty file and one that ends in a newline', async () => {
+    const dir = tmp();
+    const leer = path.join(dir, 'leer.pw');
+    writeFileSync(leer, '');
+    expect(await checkDeployCredentials({ host: 'h', user: 'u', path: '/web', auth: { kind: 'password', passwordFile: leer } })).toMatch(/leer/i);
+    const umbruch = path.join(dir, 'umbruch.pw');
+    writeFileSync(umbruch, 'geheim\n');
+    expect(await checkDeployCredentials({ host: 'h', user: 'u', path: '/web', auth: { kind: 'password', passwordFile: umbruch } })).toMatch(/Zeilenumbruch/i);
+  });
+
+  it('has nothing to check for a local target', async () => {
+    expect(await checkDeployCredentials({ host: '', user: '', path: '/ziel', auth: { kind: 'none' } })).toBeNull();
   });
 });

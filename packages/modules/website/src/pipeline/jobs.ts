@@ -9,7 +9,7 @@ import { copyTree } from './copy';
 import { diffTrees, hashTree } from './diff';
 import type { SiteEnv } from './env';
 import { prepareImageVariants } from './images';
-import { rsyncPublish } from './publish';
+import { checkDeployCredentials, rsyncPublish } from './publish';
 
 export interface PreviewResult {
   contentHash: string;
@@ -124,6 +124,8 @@ export async function runPublish(deps: Deps, ctx: CallContext, env: SiteEnv, opt
   if (!opts.confirm) return invalid([{ path: 'confirm', message: 'confirmationRequired' }]);
   if (deps.env === 'development') return conflict('publishNotAllowedHere', 'Aus der Entwicklungsumgebung wird nicht publiziert');
   if (!env.deploy) return conflict('publishTargetMissing', 'SITE_DEPLOY_* ist nicht gesetzt');
+  const credentialProblem = await checkDeployCredentials(env.deploy);
+  if (credentialProblem) return conflict('deployCredentialsUnusable', credentialProblem);
   const startedAt = isoNow(deps.clock);
   const outDir = await mkdtemp(path.join(tmpdir(), 'kompass-publish-'));
   try {

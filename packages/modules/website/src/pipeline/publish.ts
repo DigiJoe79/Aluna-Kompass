@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
 import type { DeployTarget } from './env';
 
 // ConnectTimeout: eine haengende Verbindung soll scheitern, nicht warten.
@@ -36,6 +37,38 @@ export function rsyncCommand(opts: { distDir: string; deploy: DeployTarget; dryR
     case 'none':
       return { command: 'rsync', args: [...flags, src, remote] };
   }
+}
+
+
+/**
+ * Prueft vor dem Publish, ob die Anmeldedaten ueberhaupt brauchbar sind.
+ * Ohne das aeussert sich eine unlesbare Datei erst als undurchsichtiges
+ * Verhalten von ssh — im Container gehoert sie leicht dem falschen Nutzer,
+ * weil die Eigentuemerschaft vom Wirtssystem kommt.
+ *
+ * @returns Klartext-Begruendung oder null, wenn alles stimmt.
+ */
+export async function checkDeployCredentials(deploy: DeployTarget): Promise<string | null> {
+  const file =
+    deploy.auth.kind === 'password' ? deploy.auth.passwordFile : deploy.auth.kind === 'key' ? deploy.auth.keyFile : null;
+  if (!file) return null;
+  let content: Buffer;
+  try {
+    content = await readFile(file);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    const hint =
+      code === 'EACCES'
+        ? ' Die Datei gehoert einem anderen Nutzer; auf dem Wirtssystem `chown 1000:1000` setzen.'
+        : '';
+    return `${file} ist nicht lesbar (${code ?? 'Fehler'}).${hint}`;
+  }
+  if (deploy.auth.kind !== 'password') return null;
+  if (content.length === 0) return `${file} ist leer.`;
+  if (/[\r\n]$/.test(content.toString('utf8'))) {
+    return `${file} endet mit einem Zeilenumbruch; der gehoert zum Passwort. Mit printf statt echo schreiben.`;
+  }
+  return null;
 }
 
 export async function rsyncPublish(opts: {

@@ -62,6 +62,12 @@ Hauptdomain bleibt bis zum Go-live auf WordPress.
    printf '%s' '<webspace-passwort>' > site.pw && chmod 600 site.pw && chown 1000:1000 site.pw
    ```
 
+   Der `chown` ist nicht optional: der Container laeuft als UID 1000 (`node`), die Eigentuemerschaft kommt vom Wirtssystem, und die Datei ist schreibgeschuetzt eingehaengt. Gehoert sie `root`, kann Kompass sie nicht lesen. Pruefen mit:
+
+   ```
+   docker exec kompass-test sh -c 'ls -l /data/site.pw; wc -c < /data/site.pw'
+   ```
+
    Kompass ruft `sshpass -f /data/site.pw rsync …` auf; das Passwort steht damit nie in der Prozessliste und nicht in `docker inspect`. Auf einem Hoster mit Schlüsselanmeldung stattdessen `SITE_DEPLOY_KEY_FILE` setzen — der Code beherrscht beides.
 3. `.env.test` und `.env.prod` um die `SITE_*`-Variablen ergänzen (siehe `.env.*.example`). Ohne diese Variablen zeigt Kompass nur „Vorschau", keinen Publish-Knopf.
 4. **Prod trägt vorerst `SITE_STAGING=1`.** Ohne das wäre `prod.aluna-tierhilfe.org` indexierbar und stünde später in Konkurrenz zur echten Domain. Der Schalter setzt `noindex`, `Disallow: /` und lässt die Sitemap weg.
