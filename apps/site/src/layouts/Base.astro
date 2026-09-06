@@ -83,6 +83,11 @@ const nav = [
             {nav.map(([kind, label]) => <a href={pathFor(kind, locale)}>{label}</a>)}
             <a class="mobile-nav-cta" href={pathFor('sponsor', locale)}>{t.cta.sponsor}</a>
             <a class="mobile-nav-cta" href={pathFor('donate', locale)}>{t.cta.donate}</a>
+            <div class="mobile-nav-lang" role="group" aria-label={t.misc.lang}>
+              <a href={locale === 'de' ? current : alt.other.path} aria-current={locale === 'de' ? 'true' : undefined}>DE</a>
+              <span aria-hidden="true">·</span>
+              <a href={locale === 'en' ? current : alt.other.path} aria-current={locale === 'en' ? 'true' : undefined}>EN</a>
+            </div>
           </div>
         </details>
       </div>

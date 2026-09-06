@@ -88,6 +88,17 @@ describe('site build', () => {
     expect([...missing].sort()).toEqual([]);
   });
 
+  it('offers the language switch on mobile, where the header switcher is hidden', () => {
+    const out = build({});
+    const html = readFileSync(path.join(out, 'index.html'), 'utf8');
+    const panel = html.slice(html.indexOf('mobile-nav-panel'), html.indexOf('</details>'));
+    expect(panel).toContain('mobile-nav-lang');
+    expect(panel).toContain('>EN<');
+    expect(panel).toContain('>DE<');
+    // Der Umschalter muss auf die englische Entsprechung zeigen, nicht auf sich selbst.
+    expect(panel).toContain('href="/en/"');
+  });
+
   it('staging builds carry noindex and a disallow robots.txt', () => {
     const s = build({ SITE_STAGING: '1', SITE_PUBLIC_URL: 'https://staging.example.org' });
     expect(readFileSync(path.join(s, 'index.html'), 'utf8')).toContain('name="robots" content="noindex, nofollow"');
