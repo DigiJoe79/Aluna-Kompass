@@ -383,6 +383,9 @@ importers:
       '@kompass/module-animals':
         specifier: workspace:*
         version: link:../animals
+      '@kompass/module-site':
+        specifier: workspace:*
+        version: link:../site
       '@types/node':
         specifier: ^26.4.1
         version: 26.4.1
