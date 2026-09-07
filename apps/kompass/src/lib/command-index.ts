@@ -26,7 +26,7 @@ export function buildCommandIndex(input: {
       entries.push({
         id: `nav:${item.key}`,
         group: 'navigation',
-        label: t(item.labelKey),
+        label: item.label ?? t(item.labelKey),
         hint: t(group.labelKey),
         href: item.href,
         disabled: item.disabled,

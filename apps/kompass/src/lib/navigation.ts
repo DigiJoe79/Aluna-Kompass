@@ -1,10 +1,12 @@
-import type { ModuleManifest } from '@kompass/core';
+import type { ModuleManifest, NavigationItem } from '@kompass/core';
 
 export interface NavItem {
   key: string;
   href: string;
   icon: string;
   labelKey: string;
+  /** Beschriftung aus Daten; hat Vorrang vor `labelKey`. */
+  label?: string;
   permission?: string;
   disabled: boolean;
   visible: boolean;
@@ -29,7 +31,13 @@ const CORE_ADMIN: { key: string; href: string; icon: string; permission?: string
   { key: 'backup', href: '/admin/backup', icon: 'database', permission: 'backup.export' },
 ];
 
-export function buildNavigation(input: { manifests: readonly ModuleManifest[]; enabledKeys: ReadonlySet<string>; permissions: ReadonlySet<string> }): NavGroup[] {
+export function buildNavigation(input: {
+  manifests: readonly ModuleManifest[];
+  enabledKeys: ReadonlySet<string>;
+  permissions: ReadonlySet<string>;
+  /** Zur Laufzeit ermittelte Einträge je Modul-Key — etwa je Sammlung eines Templates. */
+  extraItems?: Record<string, NavigationItem[]>;
+}): NavGroup[] {
   const visible = (permission?: string) => !permission || input.permissions.has(permission);
   const admin: NavGroup = {
     key: 'admin',
@@ -38,22 +46,24 @@ export function buildNavigation(input: { manifests: readonly ModuleManifest[]; e
     items: CORE_ADMIN.map((item) => ({ ...item, labelKey: `nav.${item.key}`, disabled: false, visible: visible(item.permission) })),
   };
   const modules: NavGroup[] = input.manifests
-    .filter((m) => m.key !== 'core' && (m.navigation?.length ?? 0) > 0)
+    .filter((m) => m.key !== 'core' && ((m.navigation?.length ?? 0) > 0 || (input.extraItems?.[m.key]?.length ?? 0) > 0))
     .map((m) => {
       const enabled = input.enabledKeys.has(m.key);
+      const toItem = (item: NavigationItem): NavItem => ({
+        key: item.key,
+        href: item.href,
+        icon: item.icon,
+        labelKey: `nav.${item.key}`,
+        label: item.label,
+        permission: item.permission,
+        disabled: !enabled,
+        visible: visible(item.permission),
+      });
       return {
         key: m.key,
         labelKey: `nav.groups.${m.key}`,
         disabled: !enabled,
-        items: (m.navigation ?? []).map((item) => ({
-          key: item.key,
-          href: item.href,
-          icon: item.icon,
-          labelKey: `nav.${item.key}`,
-          permission: item.permission,
-          disabled: !enabled,
-          visible: visible(item.permission),
-        })),
+        items: [...(m.navigation ?? []).map(toItem), ...(input.extraItems?.[m.key] ?? []).map(toItem)],
       };
     });
   return [admin, ...modules];

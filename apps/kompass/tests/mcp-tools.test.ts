@@ -1,15 +1,19 @@
-import { coreModule, type McpToolDefinition, type ModuleManifest } from '@kompass/core';
+import { coreModule, moduleMcpTools, type McpToolDefinition, type ModuleManifest } from '@kompass/core';
+import { createTestDeps } from '@kompass/core/testing';
 import { coreMcpTools } from '@kompass/mcp';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { installedModules } from '@/modules';
 
-const registeredTools: McpToolDefinition[] = [...coreMcpTools, ...installedModules.flatMap((m) => m.mcpTools ?? [])];
+// Die Werkzeugliste mancher Module (etwa `site`) entsteht erst zur Laufzeit aus
+// `deps` — deshalb über `moduleMcpTools` statt direkt über das Manifest.
+const deps = createTestDeps({ manifests: [coreModule, ...installedModules] });
+const registeredTools: McpToolDefinition[] = [...coreMcpTools, ...installedModules.flatMap((m) => [...moduleMcpTools(deps, m)])];
 
 // Die Kernwerkzeuge liegen in @kompass/mcp, nicht im Manifest des Kerns.
 const modulesWithTools: [ModuleManifest, readonly McpToolDefinition[]][] = [
   [coreModule, coreMcpTools],
-  ...installedModules.map((m): [ModuleManifest, readonly McpToolDefinition[]] => [m, m.mcpTools ?? []]),
+  ...installedModules.map((m): [ModuleManifest, readonly McpToolDefinition[]] => [m, moduleMcpTools(deps, m)]),
 ];
 
 /**

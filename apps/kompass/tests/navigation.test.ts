@@ -1,4 +1,4 @@
-import { coreModule, defineModule } from '@kompass/core';
+import { coreModule, defineModule, type ModuleManifest } from '@kompass/core';
 import { describe, expect, it } from 'vitest';
 import { buildNavigation } from '@/lib/navigation';
 
@@ -27,5 +27,24 @@ describe('buildNavigation', () => {
   it('enables module groups once the module is active', () => {
     const groups = buildNavigation({ manifests: [coreModule, finance], enabledKeys: new Set(['core', 'finance']), permissions: new Set(['finance.view']) });
     expect(groups.find((g) => g.key === 'finance')?.disabled).toBe(false);
+  });
+
+  it('adds runtime items with their own label after the static ones', () => {
+    const groups = buildNavigation({
+      manifests: [
+        {
+          key: 'site',
+          version: '1',
+          permissions: ['site.manage'],
+          navigation: [{ key: 'site.template', href: '/site/template', icon: 'x', group: 'site', permission: 'site.manage' }],
+        } as ModuleManifest,
+      ],
+      enabledKeys: new Set(['site']),
+      permissions: new Set(['site.manage']),
+      extraItems: { site: [{ key: 'site.collection.articles', href: '/site/c/articles', icon: 'list', group: 'site', permission: 'site.view', label: 'Artikel' }] },
+    });
+    const site = groups.find((g) => g.key === 'site')!;
+    expect(site.items.map((i) => i.href)).toEqual(['/site/template', '/site/c/articles']);
+    expect(site.items.at(-1)!.label).toBe('Artikel');
   });
 });

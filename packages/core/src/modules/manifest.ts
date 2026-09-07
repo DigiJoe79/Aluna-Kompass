@@ -20,6 +20,8 @@ export interface NavigationItem {
   group?: string;
   /** Recht, das zum Anzeigen nötig ist. */
   permission?: string;
+  /** Beschriftung aus Daten. Fehlt sie, kommt der Text aus `nav.<key>`. */
+  label?: string;
 }
 
 export interface PublishedView<T = unknown> {
@@ -63,8 +65,14 @@ export interface ModuleManifest {
   dependsOn?: readonly string[];
   publishedViews?: readonly PublishedView[];
   documentTemplates?: readonly DocumentTemplate[];
-  mcpTools?: readonly McpToolDefinition[];
+  mcpTools?: readonly McpToolDefinition[] | ((deps: Deps) => readonly McpToolDefinition[]);
+  /** Einträge, die erst zur Laufzeit feststehen — etwa je Sammlung eines Templates. */
+  navigationFor?: (deps: Deps) => NavigationItem[];
 }
+
+/** Die MCP-Werkzeuge eines Moduls, egal ob als feste Liste oder als Funktion von `deps` deklariert. */
+export const moduleMcpTools = (deps: Deps, manifest: ModuleManifest): readonly McpToolDefinition[] =>
+  typeof manifest.mcpTools === 'function' ? manifest.mcpTools(deps) : (manifest.mcpTools ?? []);
 
 const MODULE_KEY = /^[a-z][a-z0-9-]*$/;
 const PERMISSION_KEY = /^[a-z][a-zA-Z0-9]*\.[a-z][a-zA-Z0-9]*$/;

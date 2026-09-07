@@ -1,4 +1,4 @@
-import { enabledManifests, newId, resolveApiToken, type CallContext, type Deps, type McpToolDefinition } from '@kompass/core';
+import { enabledManifests, moduleMcpTools, newId, resolveApiToken, type CallContext, type Deps, type McpToolDefinition } from '@kompass/core';
 import { createMcpHandler, McpServer, type AuthInfo } from '@modelcontextprotocol/server';
 import { toCallToolResult } from './result';
 
@@ -36,7 +36,7 @@ export function createKompassMcpHandler(deps: Deps, opts: { extraTools?: McpTool
     (mcpCtx) => {
       const ctx = (mcpCtx.authInfo?.extra as { ctx?: CallContext } | undefined)?.ctx;
       if (!ctx) throw new Error('mcp request without authenticated context');
-      const tools = [...(opts.extraTools ?? []), ...enabledManifests(deps).flatMap((m) => [...(m.mcpTools ?? [])])];
+      const tools = [...(opts.extraTools ?? []), ...enabledManifests(deps).flatMap((m) => [...moduleMcpTools(deps, m)])];
       return buildServer(deps, ctx, tools, version);
     },
     { legacy: 'stateless', onerror: (error) => console.error('[mcp]', error) },

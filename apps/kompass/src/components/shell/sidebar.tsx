@@ -88,7 +88,7 @@ export function Sidebar({ organization, logoUrl, groups, collapsed, onToggle, on
                 {group.disabled ? <span className="rounded-sm border border-line bg-disabled px-1.5 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-disabled-ink">{t('nav.moduleInactive')}</span> : null}
               </div>
             )}
-            {group.items.filter((i) => i.visible || group.disabled).map((i) => item(i.key, i.href, i.icon, t(i.labelKey), i.disabled, t(group.labelKey)))}
+            {group.items.filter((i) => i.visible || group.disabled).map((i) => item(i.key, i.href, i.icon, i.label ?? t(i.labelKey), i.disabled, t(group.labelKey)))}
             {group.disabled && !collapsed ? <p className="px-2.5 pt-1 text-[11px] text-muted-ink">{t('nav.moduleHint')}</p> : null}
           </div>
         ))}
