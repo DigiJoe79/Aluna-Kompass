@@ -318,12 +318,45 @@ git commit -m "feat(site): add the module with its three tables"
 
 **Interfaces:**
 - Consumes: `TemplateDefinition` aus Task 1
-- Produces: `loadTemplate(dir: string): Promise<Result<LoadedTemplate>>`, `LoadedTemplate = { definition: TemplateDefinition; schema: TemplateSchema; checksum: string }`
+- Produces: `loadTemplate(dir: string): Promise<Result<LoadedTemplate>>`, `LoadedTemplate = { definition: TemplateDefinition; schema: TemplateSchema; checksum: string }`, `ensureModuleResolution(dir: string): Promise<void>`
 
 - [ ] **Step 1: Prüfen, ob Node die Datei direkt lädt**
 
 Run: `node --input-type=module -e "const m = await import('/tmp/probe.ts')"` gegen eine Wegwerfdatei mit `export default { a: 1 satisfies number }`
 Expected: lädt ohne Flag. Node 26 strippt Typen von sich aus. Schlägt es fehl, wird `kompass.template.mjs` als zweiter akzeptierter Name eingeführt und der Fund im Commit vermerkt — dann muss auch die Template-Dokumentation ihn nennen.
+
+- [ ] **Step 1b: Die Modulauflösung herstellen**
+
+Die Template-Datei importiert `@kompass/site-template` als Bare-Specifier. Node löst das vom Speicherort der Datei aus auf und findet im Volume — wie im Testverzeichnis — kein `node_modules`. Am 2026-09-07 verifiziert: `Cannot find package '@kompass/site-template' imported from …`.
+
+```ts
+// packages/modules/site/src/load.ts
+import { lstat, symlink } from 'node:fs/promises';
+import { createRequire } from 'node:module';
+
+/**
+ * Legt die Modulauflösung für ein Template-Verzeichnis an: einen Symlink auf die
+ * node_modules, in denen `@kompass/site-template` und `astro` liegen. Gehört zum
+ * Einrichten, nicht zum Lesen — `loadTemplate` verändert die Platte nicht.
+ */
+export async function ensureModuleResolution(dir: string): Promise<void> {
+  const target = path.join(dir, 'node_modules');
+  try {
+    await lstat(target);
+    return;
+  } catch {
+    // fehlt noch
+  }
+  const require = createRequire(import.meta.url);
+  const own = require.resolve('@kompass/site-template/package.json');
+  const root = own.slice(0, own.indexOf(`${path.sep}@kompass${path.sep}site-template`));
+  await symlink(root, target, 'dir');
+}
+```
+
+Der Loader legt sie nicht selbst an: `loadTemplate` wird auch von der Publish-Sicherung aufgerufen, die nur eine Prüfsumme vergleicht, und ein Lesevorgang, der schreibt, ist eine Falle. Aufgerufen wird `ensureModuleResolution` vom Einrichten (Task 6) und im Container beim Start (Plan 4, Task 2).
+
+Der Testaufbau in Step 2 ruft sie ebenfalls — ohne sie kann kein Test dieses Tasks grün werden.
 
 - [ ] **Step 2: Tests schreiben**
 
@@ -333,14 +366,16 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { loadTemplate } from '../src/load';
+import { ensureModuleResolution, loadTemplate } from '../src/load';
 
 const dirs: string[] = [];
 afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true }); });
-const withTemplate = (source: string) => {
+const withTemplate = async (source: string) => {
   const dir = mkdtempSync(path.join(tmpdir(), 'kompass-tpl-'));
   dirs.push(dir);
   writeFileSync(path.join(dir, 'kompass.template.ts'), source);
+  // Ohne Modulauflösung findet Node @kompass/site-template nicht.
+  await ensureModuleResolution(dir);
   return dir;
 };
 
@@ -354,7 +389,7 @@ export default defineTemplate({
 
 describe('loadTemplate', () => {
   it('reads the declaration and derives a checksum', async () => {
-    const result = await loadTemplate(withTemplate(GOOD));
+    const result = await loadTemplate(await withTemplate(GOOD));
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value.definition.name).toBe('Probe');
@@ -363,18 +398,26 @@ describe('loadTemplate', () => {
   });
 
   it('gives the same checksum for the same file and a different one after an edit', async () => {
-    const dir = withTemplate(GOOD);
+    const dir = await withTemplate(GOOD);
     const first = await loadTemplate(dir);
     const again = await loadTemplate(dir);
     expect(first.ok && again.ok && first.value.checksum === again.value.checksum).toBe(true);
   });
 
+  it('reports a directory without module resolution as its own conflict', async () => {
+    const bare = mkdtempSync(path.join(tmpdir(), 'kompass-bare-'));
+    dirs.push(bare);
+    writeFileSync(path.join(bare, 'kompass.template.ts'), GOOD);
+    const result = await loadTemplate(bare);
+    expect(result.ok === false && result.error.code === 'templateResolutionMissing').toBe(true);
+  });
+
   it('reports a missing file, a broken file and a wrong export as conflicts', async () => {
     const missing = await loadTemplate(mkdtempSync(path.join(tmpdir(), 'kompass-empty-')));
     expect(missing.ok === false && missing.error.type === 'conflict' && missing.error.code === 'templateMissing').toBe(true);
-    const broken = await loadTemplate(withTemplate('export default {'));
+    const broken = await loadTemplate(await withTemplate('export default {'));
     expect(broken.ok === false && broken.error.code === 'templateUnreadable').toBe(true);
-    const wrong = await loadTemplate(withTemplate('export default { hallo: 1 };'));
+    const wrong = await loadTemplate(await withTemplate('export default { hallo: 1 };'));
     expect(wrong.ok === false && wrong.error.code === 'templateInvalid').toBe(true);
   });
 });
@@ -390,7 +433,7 @@ Expected: FAIL, Modul fehlt
 ```ts
 // packages/modules/site/src/load.ts
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { lstat, readFile, symlink } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { conflict, ok, type Result } from '@kompass/core';
@@ -437,6 +480,13 @@ export async function loadTemplate(dir: string): Promise<Result<LoadedTemplate>>
     source = await readFile(file, 'utf8');
   } catch {
     return conflict('templateMissing', `${TEMPLATE_FILE} fehlt in ${dir}`);
+  }
+  // Ohne node_modules scheitert der Import an einem Bare-Specifier, und die
+  // Meldung von Node erklärt niemandem, was zu tun ist.
+  try {
+    await lstat(path.join(dir, 'node_modules'));
+  } catch {
+    return conflict('templateResolutionMissing', `${dir} hat keine Modulauflösung; sie wird beim Einrichten angelegt`);
   }
   let loaded: unknown;
   try {
@@ -689,6 +739,7 @@ export interface SyncPreview { name: string; findings: Finding[]; blocking: Find
 export async function previewTemplateSync(deps: Deps, ctx: CallContext, dir: string): Promise<Result<SyncPreview>> {
   const denied = requirePermission(ctx, 'site.manage');
   if (denied) return denied;
+  await ensureModuleResolution(dir);
   const loaded = await loadTemplate(dir);
   if (!loaded.ok) return loaded;
   const localesMissing = loaded.value.definition.locales.filter((l) => !deps.locales().includes(l));

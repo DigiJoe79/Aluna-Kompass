@@ -260,11 +260,27 @@ Vorschau, Verbindungstest. Sie kennen keine Feldnamen. `SITE_DIR` zeigt künftig
 auf `/data/site-template`. Sperrwortprüfung und Übersetzungsabgleich laufen
 generisch über alle Textfelder aller deklarierten Sprachen.
 
-**Zu lösen:** Das Template im Volume braucht beim Build Zugriff auf `astro` und
-`@kompass/site-template`, die im Image unter `/app/node_modules` liegen. Vorschlag:
-Kompass legt beim Einlesen einen Symlink `/data/site-template/node_modules` →
-`/app/node_modules` an. Der Weg ist beim ersten Build zu verifizieren; er
-entscheidet, ob ein Template eigene Abhängigkeiten haben darf (zunächst: nein).
+**Modulauflösung.** Das Template im Volume braucht `astro` für den Build und
+`@kompass/site-template` schon beim Lesen seiner Deklaration; beide liegen im
+Image unter `/app/node_modules`. Node löst Bare-Specifier vom Speicherort der
+Datei aus auf und findet dort nichts — am 2026-09-07 beim Umsetzen verifiziert:
+`Cannot find package '@kompass/site-template' imported from …`.
+
+Ein Symlink `<template>/node_modules` → `/app/node_modules` löst beides. Er wird
+**beim Einrichten angelegt, nicht beim Lesen**: Der Start stellt ihn her, und in
+Tests tut es der Testaufbau. `loadTemplate` bleibt lesend — es wird auch von der
+Publish-Sicherung aufgerufen, die nur eine Prüfsumme vergleicht, und ein
+Lesevorgang, der die Platte verändert, wäre eine Falle. Fehlt die Auflösung,
+meldet der Loader das als eigenen Fehler statt als unverständlichen Importfehler.
+
+Damit hat ein Template zunächst keine eigenen Abhängigkeiten. Wer sein Template
+lokal entwickelt, installiert `@kompass/site-template` als Entwicklungsabhängigkeit
+und bekommt so Typprüfung und Vervollständigung.
+
+Verworfen: die Deklaration als reine Daten statt als Modul zu lesen, was den
+Import erübrigt hätte. Der Astro-Build braucht die Auflösung ohnehin, also
+verschöbe es das Problem nur — und kostete die Typhilfe beim Schreiben eines
+Templates.
 
 ## 9. Auslieferung und Betrieb
 

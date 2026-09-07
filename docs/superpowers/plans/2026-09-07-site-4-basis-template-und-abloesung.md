@@ -107,11 +107,13 @@ fi
 
 - [ ] **Step 2: Abhängigkeiten auflösen**
 
-Das Template im Volume braucht `astro` und `@kompass/site-template` aus `/app/node_modules`. Symlink im Entrypoint anlegen:
+Das Template im Volume braucht `astro` für den Build und `@kompass/site-template` schon beim Lesen der Deklaration; beide liegen unter `/app/node_modules`. Symlink im Entrypoint anlegen:
 
 ```sh
 [ -e /data/site-template/node_modules ] || ln -s /app/node_modules /data/site-template/node_modules
 ```
+
+Dieselbe Wirkung hat `ensureModuleResolution` aus Plan 2 Task 3, das beim Einlesen läuft. Der Entrypoint kommt ihm zuvor, damit schon der erste Build ohne vorheriges Einlesen funktioniert; beide sind idempotent.
 
 - [ ] **Step 3: Im Container prüfen**
 
