@@ -29,7 +29,7 @@ wäre die Korrektur eine Migration produktiver Inhalte, deshalb vorher.
 | 1 | Das Template deklariert, was Kompass verwaltet. Struktur, Routen, Layout und alles Feste bleiben Astro-Code im Template. | Generischer Seitenbaukasten; freie Variablen als `(id, name, value)` in der Datenbank |
 | 2 | Zweiteilung: **Variablen** (einmalige Werte, eine Konfigurationsmaske) und **Sammlungen** (n Datensätze, eigene Listenpflege). Fachmodule steuern Sammlungen über `publishedViews` bei. | Nur Variablen; nur Sammlungen |
 | 3 | Templates liegen unter `/data/site-template`, wie `site.pw`. Kein Upload über die Oberfläche. | Upload eines Archivs; Git-Klon; eigenes Image je Verein |
-| 4 | Das Template deklariert seine Sprachen; `localizedText` im Kern wird zu einer Menge über `i18n.locales`. | `{de, en}` bleibt fest |
+| 4 | Sprachen sind verwaltete Stammdaten des Vereins; das Template **fordert** nur, was es rendert. `localizedText` im Kern wird zu einer Menge. | `{de, en}` bleibt fest; Template legt Sprachen an |
 | 5 | Der Cutover wartet auf diese Stufe; Aluna geht direkt auf `site` live. | Cutover mit `website`, Migration danach |
 | 6 | `site` löst `website` ab und ersetzt es; kein Nebeneinander. | Parallelbetrieb beider Module |
 | 7 | Der Verein ist Template-Autor. Wer die Struktur ändern will, schreibt Astro. | Kompass als Website-Baukasten für Laien |
@@ -167,21 +167,44 @@ einzulesen. Sonst baut Astro gegen Felder, die Kompass nicht kennt.
 
 ## 6. Sprachen
 
-`localizedText()` wird von einem festen `{de, en}` zu einer Menge über die
-Kern-Einstellung `i18n.locales`. Das Template deklariert seine Sprachen, das
-Einlesen setzt die Einstellung; ohne Website-Modul kommt die Vorgabe aus der
-Einrichtung. Die erste Sprache ist Leitsprache: Pflichtfeld, Rückfallebene und
-Bezugspunkt des Übersetzungsabgleichs.
+Sprachen sind **Stammdaten des Vereins**, verwaltet in Kompass wie Rollen:
+anlegen, umsortieren, entfernen. Die erste ist Leitsprache — Pflichtfeld,
+Rückfallebene und Bezugspunkt des Übersetzungsabgleichs. Vorgabe einer neuen
+Installation ist eine Sprache, gewählt bei der Einrichtung.
 
-Zwei Folgen: Ein Sprachwechsel wirkt **global**, das Tiermodul eingeschlossen —
-der Resync-Plan geht deshalb über alle Module, nicht nur über die Sammlungen des
-Templates. Und die Bestandsdaten bleiben unangetastet: Ein gespeichertes
-`{"de":"…","en":"…"}` ist gültig, sobald die Liste `['de','en']` lautet. Es wird
-Code generisch, keine Daten umgeschrieben.
+Das Template **fordert** Sprachen, es legt keine an: `locales: ['de','en']`
+heisst „ich rendere diese". Das Einlesen prüft, ob sie existieren, und bricht
+sonst mit einer Meldung ab. Pflegt der Verein mehr Sprachen, als das Template
+fordert, ist das kein Fehler — die überzähligen werden nicht ausgeliefert.
 
-Betroffen sind `localizedText`, `resolveText`, jede Maske mit
-`LocalizedField`, der Übersetzungsabgleich und die Lückenzähler — auch die des
-Tiermoduls.
+Der Grund für diese Richtung: Andernfalls wäre ein Template-Update mit
+`locales: ['de']` ein globaler Löschbefehl, der die englischen Texte aller
+Module verwirft — auch die der Tierprofile — als Nebenwirkung einer Änderung,
+die jemand zum Aufräumen gemacht hat. Eine Sprache zu entfernen ist deshalb eine
+eigene Handlung mit eigener Vorschau: Sie zeigt modulübergreifend, wie viele
+Felder Inhalt in dieser Sprache tragen, und verlangt eine Bestätigung.
+
+**Wie die Schemata an die Sprachen kommen.** Service-Schemata sind
+Modulkonstanten, die beim Import entstehen; die Sprachen stehen in der
+Datenbank. `localizedText()` erzeugt deshalb ein Record-Schema, das beliebige
+Sprachschlüssel annimmt, trimmt und auf Länge prüft, und markiert sich mit
+`.meta({ localized: true })`. Die Prüfung „Leitsprache gefüllt, keine fremden
+Schlüssel" läuft zentral in `validate(deps, schema, input)`, das die Liste aus
+`deps.locales` nimmt — dieselbe Stelle, an der heute schon jede Eingabe geprüft
+wird, und dasselbe Muster wie `deps.registry`.
+
+Verworfen: Schemata als Fabriken (`animalCreateSchema(locales)`) — fasst jeden
+Service und jede Aufrufstelle an. Prozessweite Sprachliste — globaler Zustand,
+Sprachwechsel bräuchte einen Neustart. Filtern im Drizzle-Spaltentyp — der kennt
+`deps` nicht.
+
+Bestandsdaten bleiben unangetastet: Ein gespeichertes `{"de":"…","en":"…"}` ist
+gültig, sobald die Liste `['de','en']` lautet. Es wird Code generisch, keine
+Daten umgeschrieben.
+
+Betroffen sind `localizedText`, `resolveText`, `translationGaps`, `validate` und
+seine rund vierzig Aufrufstellen, jede Maske mit `LocalizedField`, die
+Lückenzähler und die Formularhelfer — auch die des Tiermoduls.
 
 ## 7. Oberfläche und MCP
 
@@ -198,7 +221,12 @@ ausgibt, damit ein Client die Feldstruktur kennt, ohne das Volume zu lesen. Die
 `inputSchema` sind die Schemata des Templates — genau die, aus denen auch die
 Masken entstehen.
 
-Die Permission-Keys bleiben statisch: `site.view`, `site.manage`, `site.publish`.
+Die Sprachverwaltung gehört zum Kern und bekommt dort ihre Werkzeuge —
+`locales_list`, `locales_add`, `locales_remove`, `locales_reorder` unter
+`settings.manage`.
+
+Die Permission-Keys des Moduls bleiben statisch: `site.view`, `site.manage`,
+`site.publish`.
 Damit greift die Prüfung aus `apps/kompass/tests/mcp-tools.test.ts` unverändert.
 Sie braucht allerdings eine Ergänzung, weil die Werkzeugliste dieses Moduls erst
 zur Laufzeit aus dem eingelesenen Template entsteht: Ohne Template ist sie leer,
