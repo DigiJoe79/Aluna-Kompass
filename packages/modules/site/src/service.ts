@@ -45,6 +45,22 @@ export function activeTemplate(deps: Deps): StoredTemplate | null {
   return readTemplateState(deps) ?? null;
 }
 
+export interface ActiveTemplateView {
+  name: string;
+  locales: string[];
+  variables: TemplateSchema['variables'];
+  collections: TemplateSchema['collections'];
+}
+
+/** Die aktive Deklaration für einen Client — Struktur ohne Zugriff auf das Volume. */
+export async function readActiveTemplate(deps: Deps, ctx: CallContext): Promise<Result<ActiveTemplateView>> {
+  const denied = requirePermission(ctx, 'site.view');
+  if (denied) return denied;
+  const state = readTemplateState(deps);
+  if (!state) return conflict('noTemplate', 'Es ist kein Template eingelesen');
+  return ok({ name: state.schema.name, locales: state.schema.locales, variables: state.schema.variables, collections: state.schema.collections });
+}
+
 /** Die vorhandenen Inhalte in der Form, die `planResync` vergleicht. */
 function readAllData(deps: Deps): ResyncData {
   const variables: Record<string, unknown> = {};
