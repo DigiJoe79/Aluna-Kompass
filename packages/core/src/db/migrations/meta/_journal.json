@@ -50,6 +50,13 @@
       "when": 1788700000000,
       "tag": "0006_i18n_locales",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1788794895232,
+      "tag": "0007_clammy_carlie_cooper",
+      "breakpoints": true
     }
   ]
 }
