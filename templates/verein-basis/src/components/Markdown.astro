@@ -1,0 +1,7 @@
+---
+import { renderMarkdown } from '@kompass/markdown';
+
+const { markdown, class: cls = 'prose' } = Astro.props as { markdown: string; class?: string };
+const html = await renderMarkdown(markdown ?? '');
+---
+{html && <div class={cls} set:html={html}></div>}

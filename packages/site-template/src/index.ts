@@ -81,7 +81,10 @@ export interface TemplateDefinition extends Omit<TemplateInput, 'collections' | 
   uses: string[];
 }
 
-const KEY = /^[a-z][a-z0-9-]{0,40}$/;
+// Schlüssel werden zu Objektschlüsseln in content.json und im Template-Code als
+// `variables.heroImage` gelesen — camelCase ist deshalb erlaubt, Leerzeichen und
+// Sonderzeichen nicht.
+const KEY = /^[a-z][a-zA-Z0-9-]{0,40}$/;
 
 export function defineTemplate(input: TemplateInput): TemplateDefinition {
   if (!input.name.trim()) throw new Error('template needs a name');

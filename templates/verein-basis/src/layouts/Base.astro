@@ -1,0 +1,89 @@
+---
+import '../styles/global.css';
+import { IS_STAGING, loadContent, PUBLIC_URL, t } from '../lib/content';
+import { SITE } from '../lib/site';
+import { NAV, FOOTER_LINKS, pathFor, type Kind } from '../lib/routes';
+
+const {
+  title,
+  description,
+  active,
+} = Astro.props as { title?: string; description?: string; active?: Kind };
+
+const content = await loadContent();
+const claim = t(content.variables.claim) || SITE.fallbackClaim;
+const donationAccount = content.variables.donationAccount ?? '';
+
+const current = Astro.url.pathname.endsWith('/') ? Astro.url.pathname : `${Astro.url.pathname}/`;
+const fullTitle = title ? `${title} · ${SITE.name}` : `${SITE.name} — ${claim}`;
+const desc = description ?? claim;
+const abs = (p: string) => new URL(p, PUBLIC_URL).href;
+
+const isActive = (kind: Kind): boolean =>
+  active === kind || (kind === 'news' && active === 'article');
+---
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{fullTitle}</title>
+  <meta name="description" content={desc} />
+  {IS_STAGING && <meta name="robots" content="noindex, nofollow" />}
+  <link rel="canonical" href={abs(current)} />
+  <meta property="og:title" content={fullTitle} />
+  <meta property="og:description" content={desc} />
+  <meta property="og:type" content="website" />
+</head>
+<body>
+  <a class="skip-link" href="#inhalt">Zum Inhalt springen</a>
+  <header class="site-header">
+    <div class="wrap header-wrap">
+      <p class="brand"><a href={pathFor('home')}>{SITE.name}</a></p>
+      <nav aria-label="Hauptmenü">
+        <button class="nav-toggle" aria-expanded="false" aria-controls="primary-nav">Menü</button>
+        <ul id="primary-nav" class="primary-nav">
+          {NAV.map((item) => (
+            <li>
+              <a href={pathFor(item.kind)} aria-current={isActive(item.kind) ? 'page' : undefined}>{item.label}</a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="inhalt"><slot /></main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-grid">
+      <div>
+        <p class="footer-name">{SITE.name}</p>
+        <p>{SITE.address}</p>
+        <p><a href={`mailto:${SITE.email}`}>{SITE.email}</a></p>
+      </div>
+      <nav aria-label="Rechtliches">
+        <ul class="footer-links">
+          {FOOTER_LINKS.map((item) => <li><a href={pathFor(item.kind)}>{item.label}</a></li>)}
+        </ul>
+      </nav>
+      {donationAccount && (
+        <div>
+          <p class="footer-name">Bankverbindung</p>
+          <p>{donationAccount}</p>
+        </div>
+      )}
+    </div>
+    <p class="footer-note wrap">{SITE.name} ist ein gemeinnütziger Verein und arbeitet nicht profitorientiert.</p>
+  </footer>
+
+  <script>
+    const btn = document.querySelector('.nav-toggle');
+    const list = document.getElementById('primary-nav');
+    btn?.addEventListener('click', () => {
+      const open = list?.classList.toggle('is-open') ?? false;
+      btn.setAttribute('aria-expanded', String(open));
+    });
+  </script>
+</body>
+</html>

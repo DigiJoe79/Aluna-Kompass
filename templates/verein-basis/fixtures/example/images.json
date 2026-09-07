@@ -1,0 +1,20 @@
+{
+  "hero": {
+    "src": "/images/hero-960.webp",
+    "srcset": "/images/hero-480.webp 480w, /images/hero-960.webp 960w",
+    "width": 960,
+    "height": 540
+  },
+  "news-1": {
+    "src": "/images/news-940.webp",
+    "srcset": "/images/news-480.webp 480w, /images/news-940.webp 940w",
+    "width": 940,
+    "height": 627
+  },
+  "team-1": {
+    "src": "/images/team-480.webp",
+    "srcset": "/images/team-480.webp 480w",
+    "width": 480,
+    "height": 480
+  }
+}

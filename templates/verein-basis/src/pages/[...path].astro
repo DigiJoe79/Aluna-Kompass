@@ -1,0 +1,191 @@
+---
+import Base from '../layouts/Base.astro';
+import PageHeader from '../components/PageHeader.astro';
+import Markdown from '../components/Markdown.astro';
+import { loadContent, slugify, t, type NewsEntry } from '../lib/content';
+import { loadImages, imageFor } from '../lib/images';
+import { PAGES } from '../content/pages';
+import { paramFor, pathFor, type Kind } from '../lib/routes';
+
+export async function getStaticPaths() {
+  const content = await loadContent();
+  const staticKinds: Kind[] = ['home', 'about', 'team', 'news', 'faq', 'donate', 'join', 'contact', 'imprint', 'privacy', 'statutes'];
+  type Entry = { params: { path: string | undefined }; props: { kind: Kind; slug?: string } };
+  const paths: Entry[] = staticKinds.map((kind) => ({ params: { path: paramFor(pathFor(kind)) }, props: { kind } }));
+  for (const entry of content.collections.news) {
+    paths.push({ params: { path: paramFor(pathFor('article', entry.slug)) }, props: { kind: 'article', slug: entry.slug } });
+  }
+  return paths;
+}
+
+const { kind, slug } = Astro.props as { kind: Kind; slug?: string };
+const content = await loadContent();
+const images = await loadImages();
+const { variables } = content;
+
+const news = [...content.collections.news];
+const team = [...content.collections.team].sort((a, b) => a.sortOrder - b.sortOrder);
+const faq = [...content.collections.faq].sort((a, b) => a.sortOrder - b.sortOrder);
+const documents = content.collections.documents;
+
+const euro = (value: number | undefined): string =>
+  typeof value === 'number'
+    ? new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(value)
+    : '';
+
+const article: NewsEntry | undefined = kind === 'article' ? news.find((n) => n.slug === slug) : undefined;
+const page = PAGES[kind];
+
+const heroImage = imageFor(images, variables.heroImage ?? null);
+---
+{kind === 'home' && (
+  <Base>
+    <section class="hero wrap">
+      <div class="hero-text">
+        <h1>{t(variables.claim) || 'Willkommen'}</h1>
+        {t(variables.intro) && <Markdown markdown={t(variables.intro)} class="prose hero-intro" />}
+        <p class="hero-actions">
+          <a class="btn btn-primary" href={pathFor('donate')}>Spenden</a>
+          <a class="btn" href={pathFor('join')}>Mitglied werden</a>
+        </p>
+      </div>
+      {heroImage && (
+        <img class="hero-image" src={heroImage.src} srcset={heroImage.srcset || undefined} sizes="(min-width: 800px) 480px, 100vw" width={heroImage.width} height={heroImage.height} alt="" />
+      )}
+    </section>
+
+    {news.length > 0 && (
+      <section class="wrap section">
+        <h2>Aktuelles</h2>
+        <ul class="card-list">
+          {news.slice(0, 3).map((entry) => (
+            <li class="card">
+              <h3><a href={pathFor('article', entry.slug)}>{t(entry.title)}</a></h3>
+              <Markdown markdown={t(entry.body).split('\n\n')[0] ?? ''} class="prose card-excerpt" />
+            </li>
+          ))}
+        </ul>
+        <p><a href={pathFor('news')}>Alle Meldungen</a></p>
+      </section>
+    )}
+  </Base>
+)}
+
+{kind === 'news' && (
+  <Base title="Aktuelles" active="news">
+    <div class="wrap wrap-narrow section">
+      <PageHeader eyebrow="Neuigkeiten" title="Aktuelles" lede="Meldungen und Berichte aus dem Vereinsleben." />
+      {news.length === 0 ? (
+        <p>Zurzeit gibt es keine Meldungen.</p>
+      ) : (
+        <ul class="card-list">
+          {news.map((entry) => (
+            <li class="card">
+              <h2><a href={pathFor('article', entry.slug)}>{t(entry.title)}</a></h2>
+              <Markdown markdown={t(entry.body).split('\n\n')[0] ?? ''} class="prose card-excerpt" />
+              <p><a href={pathFor('article', entry.slug)}>Weiterlesen</a></p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  </Base>
+)}
+
+{kind === 'article' && article && (
+  <Base title={t(article.title)} description={t(article.body).slice(0, 160)} active="article">
+    <article class="wrap wrap-narrow section">
+      <PageHeader eyebrow="Aktuelles" title={t(article.title)} />
+      {imageFor(images, article.image) && (
+        <img class="article-image" src={imageFor(images, article.image)!.src} srcset={imageFor(images, article.image)!.srcset || undefined} sizes="(min-width: 720px) 680px, 100vw" width={imageFor(images, article.image)!.width} height={imageFor(images, article.image)!.height} alt="" />
+      )}
+      <Markdown markdown={t(article.body)} />
+      <p><a href={pathFor('news')}>Zurück zu Aktuelles</a></p>
+    </article>
+  </Base>
+)}
+
+{kind === 'team' && (
+  <Base title="Team" active="team">
+    <div class="wrap section">
+      <PageHeader eyebrow="Der Verein" title="Unser Team" lede="Die Menschen hinter dem Verein." />
+      {team.length === 0 ? (
+        <p>Die Teamliste wird gerade zusammengestellt.</p>
+      ) : (
+        <ul class="team-grid">
+          {team.map((member) => {
+            const photo = imageFor(images, member.photo);
+            return (
+              <li class="team-member">
+                {photo && <img src={photo.src} srcset={photo.srcset || undefined} sizes="220px" width={photo.width} height={photo.height} alt="" />}
+                <p class="team-name">{member.name}</p>
+                {t(member.role) && <p class="team-role">{t(member.role)}</p>}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  </Base>
+)}
+
+{kind === 'faq' && (
+  <Base title="Fragen und Antworten" active="faq">
+    <div class="wrap wrap-narrow section">
+      <PageHeader eyebrow="Hilfe" title="Fragen und Antworten" lede="Antworten auf die Fragen, die uns am häufigsten erreichen." />
+      {faq.length === 0 ? (
+        <p>Hier sammeln wir bald die häufigsten Fragen.</p>
+      ) : (
+        <dl class="faq-list">
+          {faq.map((item) => (
+            <div class="faq-item">
+              <dt>{t(item.question)}</dt>
+              <dd><Markdown markdown={t(item.answer)} /></dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
+  </Base>
+)}
+
+{page && kind !== 'statutes' && (
+  <Base title={page.title} description={page.lede} active={kind}>
+    <div class="wrap wrap-narrow section">
+      <PageHeader eyebrow={page.eyebrow} title={page.title} lede={page.lede} />
+      <Markdown markdown={page.body} />
+      {kind === 'donate' && variables.donationAccount && (
+        <div class="callout">
+          <p class="callout-title">Bankverbindung</p>
+          <p>{variables.donationAccount}</p>
+        </div>
+      )}
+      {kind === 'join' && euro(variables.memberFee) && (
+        <div class="callout">
+          <p class="callout-title">Jahresbeitrag</p>
+          <p>{euro(variables.memberFee)} im Jahr</p>
+        </div>
+      )}
+    </div>
+  </Base>
+)}
+
+{kind === 'statutes' && page && (
+  <Base title={page.title} description={page.lede} active="statutes">
+    <div class="wrap wrap-narrow section">
+      <PageHeader eyebrow={page.eyebrow} title={page.title} lede={page.lede} />
+      <Markdown markdown={page.body} />
+      {documents.length > 0 && (
+        <ul class="download-list">
+          {documents.map((doc) => (
+            <li>
+              {doc.file
+                ? <a href={`/dokumente/${slugify(t(doc.title))}.pdf`}>{t(doc.title)} (PDF)</a>
+                : <span>{t(doc.title)}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  </Base>
+)}

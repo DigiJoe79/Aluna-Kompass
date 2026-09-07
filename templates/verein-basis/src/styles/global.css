@@ -1,0 +1,389 @@
+/*
+ * Neutrales Grundlayout. Ein Verein passt Farben und Typografie hier an —
+ * am schnellsten über die wenigen Custom Properties in :root.
+ */
+:root {
+  --color-text: #1a1a1a;
+  --color-muted: #5a5a5a;
+  --color-bg: #ffffff;
+  --color-surface: #f4f4f2;
+  --color-border: #dcdcd8;
+  --color-accent: #2f5d50;
+  --color-accent-text: #ffffff;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --wrap: 1080px;
+  --wrap-narrow: 680px;
+  --radius: 6px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  color: var(--color-text);
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+a {
+  color: var(--color-accent);
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+  font-weight: 650;
+}
+
+.wrap {
+  width: 100%;
+  max-width: var(--wrap);
+  margin-inline: auto;
+  padding-inline: 20px;
+}
+
+.wrap-narrow {
+  max-width: var(--wrap-narrow);
+}
+
+.section {
+  padding-block: 48px;
+}
+
+main {
+  flex: 1;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+}
+
+.skip-link:focus {
+  left: 8px;
+  top: 8px;
+  background: var(--color-bg);
+  padding: 8px 12px;
+  z-index: 10;
+}
+
+/* Header ------------------------------------------------------------------ */
+.site-header {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.header-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block: 16px;
+  flex-wrap: wrap;
+}
+
+.brand a {
+  font-weight: 700;
+  font-size: 1.15rem;
+  text-decoration: none;
+  color: var(--color-text);
+}
+
+.primary-nav {
+  display: flex;
+  gap: 20px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+}
+
+.primary-nav a {
+  text-decoration: none;
+  color: var(--color-text);
+}
+
+.primary-nav a[aria-current="page"] {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.nav-toggle {
+  display: none;
+  font: inherit;
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+@media (max-width: 720px) {
+  .nav-toggle {
+    display: block;
+  }
+  .primary-nav {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 12px;
+  }
+  .primary-nav.is-open {
+    display: flex;
+  }
+}
+
+/* Buttons --------------------------------------------------------------- */
+.btn {
+  display: inline-block;
+  padding: 10px 18px;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.btn-primary {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+}
+
+/* Hero ----------------------------------------------------------------- */
+.hero {
+  display: grid;
+  gap: 32px;
+  padding-block: 64px;
+  align-items: center;
+}
+
+@media (min-width: 800px) {
+  .hero {
+    grid-template-columns: 1fr 480px;
+  }
+}
+
+.hero h1 {
+  font-size: clamp(1.9rem, 4vw, 2.8rem);
+  margin-top: 0;
+}
+
+.hero-intro {
+  color: var(--color-muted);
+}
+
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
+.hero-image {
+  border-radius: var(--radius);
+  width: 100%;
+  object-fit: cover;
+}
+
+/* Page header --------------------------------------------------------- */
+.page-header {
+  margin-bottom: 32px;
+}
+
+.page-header h1 {
+  font-size: clamp(1.7rem, 3vw, 2.3rem);
+  margin: 0 0 12px;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  margin: 0 0 8px;
+}
+
+.lede {
+  font-size: 1.15rem;
+  color: var(--color-muted);
+  margin: 0;
+}
+
+/* Prose -------------------------------------------------------------- */
+.prose > :first-child {
+  margin-top: 0;
+}
+
+.prose h2 {
+  margin-top: 2em;
+}
+
+.prose img {
+  border-radius: var(--radius);
+}
+
+/* Cards / lists ----------------------------------------------------- */
+.card-list {
+  list-style: none;
+  margin: 24px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 24px;
+}
+
+@media (min-width: 720px) {
+  .card-list {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+}
+
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.card h2,
+.card h3 {
+  margin-top: 0;
+}
+
+.card-excerpt {
+  color: var(--color-muted);
+}
+
+.article-image {
+  border-radius: var(--radius);
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.team-grid {
+  list-style: none;
+  margin: 24px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 28px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.team-member img {
+  border-radius: var(--radius);
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  width: 100%;
+}
+
+.team-name {
+  font-weight: 650;
+  margin: 12px 0 2px;
+}
+
+.team-role {
+  color: var(--color-muted);
+  margin: 0;
+}
+
+.faq-list {
+  margin: 24px 0 0;
+}
+
+.faq-item {
+  border-top: 1px solid var(--color-border);
+  padding-block: 20px;
+}
+
+.faq-item dt {
+  font-weight: 650;
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+}
+
+.faq-item dd {
+  margin: 0;
+}
+
+.callout {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-top: 24px;
+}
+
+.callout-title {
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.callout p:last-child {
+  margin-bottom: 0;
+}
+
+.download-list {
+  margin-top: 24px;
+  padding-left: 20px;
+}
+
+/* Footer ----------------------------------------------------------- */
+.site-footer {
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+  margin-top: 64px;
+  padding-block: 40px 24px;
+}
+
+.footer-grid {
+  display: grid;
+  gap: 28px;
+}
+
+@media (min-width: 640px) {
+  .footer-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+}
+
+.footer-name {
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.footer-grid p {
+  margin: 0 0 4px;
+}
+
+.footer-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.footer-note {
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  margin-top: 28px;
+}

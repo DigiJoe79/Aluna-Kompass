@@ -1,0 +1,11 @@
+---
+import Base from '../layouts/Base.astro';
+import { pathFor } from '../lib/routes';
+---
+<Base title="Seite nicht gefunden">
+  <div class="wrap wrap-narrow section">
+    <h1>Seite nicht gefunden</h1>
+    <p>Die aufgerufene Seite gibt es nicht (mehr).</p>
+    <p><a href={pathFor('home')}>Zur Startseite</a></p>
+  </div>
+</Base>

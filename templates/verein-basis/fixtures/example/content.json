@@ -1,0 +1,34 @@
+{
+  "assets": [
+    { "id": "hero", "filename": "hero.jpg", "mimeType": "image/jpeg", "width": 1600, "height": 900 },
+    { "id": "news-1", "filename": "news-1.jpg", "mimeType": "image/jpeg", "width": 1600, "height": 1067 },
+    { "id": "team-1", "filename": "team-1.jpg", "mimeType": "image/jpeg", "width": 960, "height": 960 },
+    { "id": "doc-satzung", "filename": "satzung.pdf", "mimeType": "application/pdf", "width": null, "height": null }
+  ],
+  "collections": {
+    "documents": [
+      { "title": { "de": "Satzung" }, "file": "doc-satzung" },
+      { "title": { "de": "Beitragsordnung" }, "file": null }
+    ],
+    "faq": [
+      { "question": { "de": "Wie kann ich mithelfen?" }, "answer": { "de": "Schreib uns eine Nachricht oder komm zu einem unserer offenen Treffen. Wir freuen uns über jede Hand." }, "sortOrder": 0 },
+      { "question": { "de": "Ist meine Spende steuerlich absetzbar?" }, "answer": { "de": "Ja. Auf Wunsch stellen wir eine **Zuwendungsbestätigung** aus." }, "sortOrder": 1 }
+    ],
+    "news": [
+      { "slug": "jahresrueckblick", "title": { "de": "Unser Jahresrückblick" }, "body": { "de": "Ein ereignisreiches Jahr liegt hinter uns.\n\nDanke an alle, die uns begleitet haben — als Mitglied, als Spenderin, als Helfer.\n\n## Was ansteht\n\nIm kommenden Jahr wollen wir unsere Arbeit weiter ausbauen." }, "image": "news-1" },
+      { "slug": "neue-raeume", "title": { "de": "Wir haben neue Räume" }, "body": { "de": "Ab sofort sind wir in der Musterstraße zu finden. Kommt gern vorbei." }, "image": null }
+    ],
+    "team": [
+      { "name": "Alex Beispiel", "role": { "de": "Vorsitz" }, "photo": "team-1", "sortOrder": 0 },
+      { "name": "Kim Muster", "role": { "de": "Kasse" }, "photo": null, "sortOrder": 1 }
+    ]
+  },
+  "variables": {
+    "claim": { "de": "Gemeinsam für unsere Sache." },
+    "donationAccount": "Musterverein · IBAN DE00 0000 0000 0000 0000 00 · GENODED1XXX · Musterbank",
+    "heroImage": "hero",
+    "intro": { "de": "Willkommen bei unserem Verein. Wir setzen uns Tag für Tag für unser gemeinsames Ziel ein — und freuen uns über jede Unterstützung.\n\nSchau dich um, lern uns kennen, mach mit." },
+    "memberFee": 60
+  },
+  "views": {}
+}

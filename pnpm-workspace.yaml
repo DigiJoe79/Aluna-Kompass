@@ -2,6 +2,7 @@ packages:
   - "apps/*"
   - "packages/*"
   - "packages/modules/*"
+  - "templates/*"
 
 allowBuilds:
   "@node-rs/argon2": true
