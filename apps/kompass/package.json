@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "mcp:check": "tsx scripts/mcp-check.mts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
