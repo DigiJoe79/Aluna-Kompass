@@ -64,7 +64,7 @@ describe('site export', () => {
     expect(content.variables).toEqual({ claim: { de: 'Hallo' } });
     expect(content.collections.notes).toEqual([{ body: 'Notiz' }]);
     // Ohne `uses` bleiben nur die Sichten des Kerns.
-    expect(Object.keys(content.views)).toEqual(['organization']);
+    expect(Object.keys(content.views).sort()).toEqual(['organization', 'projects']);
     expect(content.assets).toEqual([]);
   });
 
