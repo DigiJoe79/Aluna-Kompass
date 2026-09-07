@@ -13,8 +13,8 @@ const fields = {
   body: localizedText({ max: 40_000 }),
   publishedAt: z.union([z.null(), z.iso.date()]).default(null),
 };
-const createSchema = z.object(fields);
-const updateSchema = z.object({
+export const articleCreateSchema = z.object(fields);
+export const articleUpdateSchema = z.object({
   id: z.string().min(1),
   slug: fields.slug.optional(),
   title: fields.title.optional(),
@@ -32,7 +32,7 @@ const slugTaken = (db: Deps['db'], slug: string, exceptId?: string) => {
 export async function createArticle(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ArticleRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(createSchema, input);
+  const parsed = validate(articleCreateSchema, input);
   if (!parsed.ok) return parsed;
   if (slugTaken(deps.db, parsed.value.slug)) return conflict('slugTaken', `Slug ${parsed.value.slug} ist bereits vergeben`);
   return deps.db.transaction((tx) => {
@@ -48,7 +48,7 @@ export async function createArticle(deps: Deps, ctx: CallContext, input: unknown
 export async function updateArticle(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ArticleRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(updateSchema, input);
+  const parsed = validate(articleUpdateSchema, input);
   if (!parsed.ok) return parsed;
   const { id, ...changes } = parsed.value;
   const before = load(deps.db, id);

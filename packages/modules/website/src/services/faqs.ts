@@ -11,8 +11,8 @@ const fields = {
   question: localizedText({ required: true, max: 200 }),
   answer: localizedText({ required: true, max: 2000 }),
 };
-const createSchema = z.object(fields);
-const updateSchema = z.object({
+export const faqCreateSchema = z.object(fields);
+export const faqUpdateSchema = z.object({
   id: z.string().min(1),
   category: fields.category.optional(),
   question: fields.question.optional(),
@@ -24,7 +24,7 @@ const load = (db: Deps['db'], id: string) => db.select().from(websiteFaqs).where
 export async function createFaq(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<FaqRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(createSchema, input);
+  const parsed = validate(faqCreateSchema, input);
   if (!parsed.ok) return parsed;
   return deps.db.transaction((tx) => {
     const id = newId();
@@ -46,7 +46,7 @@ export async function createFaq(deps: Deps, ctx: CallContext, input: unknown): P
 export async function updateFaq(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<FaqRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(updateSchema, input);
+  const parsed = validate(faqUpdateSchema, input);
   if (!parsed.ok) return parsed;
   const { id, ...changes } = parsed.value;
   const before = load(deps.db, id);

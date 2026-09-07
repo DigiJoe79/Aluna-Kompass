@@ -26,8 +26,8 @@ const projectFields = {
   imageAssetId: z.string().nullable().default(null),
   betterplaceProjectId: z.string().trim().max(40).default(''),
 };
-const createSchema = z.object(projectFields);
-const updateSchema = z.object({
+export const projectCreateSchema = z.object(projectFields);
+export const projectUpdateSchema = z.object({
   id: z.string().min(1),
   slug: projectFields.slug.optional(),
   name: projectFields.name.optional(),
@@ -55,7 +55,7 @@ function assetExists(db: DbOrTx, id: string | null): boolean {
 export async function createProject(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ProjectRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(createSchema, input);
+  const parsed = validate(projectCreateSchema, input);
   if (!parsed.ok) return parsed;
   const v = parsed.value;
   if (slugTaken(deps.db, v.slug)) return conflict('slugTaken', `Slug ${v.slug} ist bereits vergeben`);
@@ -74,7 +74,7 @@ export async function createProject(deps: Deps, ctx: CallContext, input: unknown
 export async function updateProject(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ProjectRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(updateSchema, input);
+  const parsed = validate(projectUpdateSchema, input);
   if (!parsed.ok) return parsed;
   const { id, ...changes } = parsed.value;
   const before = load(deps.db, id);

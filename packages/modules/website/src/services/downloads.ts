@@ -23,12 +23,12 @@ export async function listDownloads(deps: Deps, ctx: CallContext): Promise<Resul
   return ok(rows.sort((a, b) => (order.get(a.key as never) ?? 99) - (order.get(b.key as never) ?? 99)));
 }
 
-const setSchema = z.object({ key: z.enum(WEBSITE_DOWNLOAD_KEYS), title: localizedText({ required: true, max: 120 }), assetId: z.string().min(1).nullable() });
+export const downloadSetSchema = z.object({ key: z.enum(WEBSITE_DOWNLOAD_KEYS), title: localizedText({ required: true, max: 120 }), assetId: z.string().min(1).nullable() });
 
 export async function setDownload(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DownloadRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(setSchema, input);
+  const parsed = validate(downloadSetSchema, input);
   if (!parsed.ok) return parsed;
   ensureDownloads(deps);
   const { key, title, assetId } = parsed.value;

@@ -12,8 +12,8 @@ const fields = {
   photoAssetId: z.string().nullable().default(null),
   petPhotoAssetId: z.string().nullable().default(null),
 };
-const createSchema = z.object(fields);
-const updateSchema = z.object({
+export const teamCreateSchema = z.object(fields);
+export const teamUpdateSchema = z.object({
   id: z.string().min(1),
   name: fields.name.optional(),
   position: fields.position.optional(),
@@ -34,7 +34,7 @@ function checkAsset(db: Deps['db'], id: string | null | undefined, path: string)
 export async function createTeamMember(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<TeamMemberRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(createSchema, input);
+  const parsed = validate(teamCreateSchema, input);
   if (!parsed.ok) return parsed;
   const errPhoto = checkAsset(deps.db, parsed.value.photoAssetId, 'photoAssetId');
   if (errPhoto) return errPhoto;
@@ -61,7 +61,7 @@ export async function createTeamMember(deps: Deps, ctx: CallContext, input: unkn
 export async function updateTeamMember(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<TeamMemberRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(updateSchema, input);
+  const parsed = validate(teamUpdateSchema, input);
   if (!parsed.ok) return parsed;
   const { id, ...changes } = parsed.value;
   const before = load(deps.db, id);

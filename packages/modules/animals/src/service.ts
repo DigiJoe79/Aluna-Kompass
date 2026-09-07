@@ -25,8 +25,8 @@ const fields = {
   summary: localizedText({ max: 300 }),
   body: localizedText({ max: 20_000 }),
 };
-const createSchema = z.object(fields);
-const updateSchema = z.object({
+export const animalCreateSchema = z.object(fields);
+export const animalUpdateSchema = z.object({
   id: z.string().min(1),
   slug: fields.slug.optional(),
   name: fields.name.optional(),
@@ -57,7 +57,7 @@ const imageMime = (db: DbOrTx, id: string): 'missing' | 'notImage' | 'ok' => { c
 export async function createAnimal(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AnimalRecord>> {
   const denied = requirePermission(ctx, 'animals.manage');
   if (denied) return denied;
-  const parsed = validate(createSchema, input);
+  const parsed = validate(animalCreateSchema, input);
   if (!parsed.ok) return parsed;
   if (slugTaken(deps.db, parsed.value.slug)) return conflict('slugTaken', `Slug ${parsed.value.slug} ist bereits vergeben`);
   return deps.db.transaction((tx) => {
@@ -73,7 +73,7 @@ export async function createAnimal(deps: Deps, ctx: CallContext, input: unknown)
 export async function updateAnimal(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AnimalRecord>> {
   const denied = requirePermission(ctx, 'animals.manage');
   if (denied) return denied;
-  const parsed = validate(updateSchema, input);
+  const parsed = validate(animalUpdateSchema, input);
   if (!parsed.ok) return parsed;
   const { id, ...changes } = parsed.value;
   const before = loadAnimal(deps.db, id);
@@ -87,12 +87,12 @@ export async function updateAnimal(deps: Deps, ctx: CallContext, input: unknown)
   });
 }
 
-const statusSchema = z.object({ id: z.string().min(1), status: z.enum(['lookingForHome', 'reserved', 'adopted']), adoptedYear: z.number().int().min(2000).max(2100).optional() });
+export const animalStatusSchema = z.object({ id: z.string().min(1), status: z.enum(['lookingForHome', 'reserved', 'adopted']), adoptedYear: z.number().int().min(2000).max(2100).optional() });
 
 export async function setAnimalStatus(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AnimalRecord>> {
   const denied = requirePermission(ctx, 'animals.manage');
   if (denied) return denied;
-  const parsed = validate(statusSchema, input);
+  const parsed = validate(animalStatusSchema, input);
   if (!parsed.ok) return parsed;
   const { id, status, adoptedYear } = parsed.value;
   if (status === 'adopted' && adoptedYear === undefined) return invalid([{ path: 'adoptedYear', message: 'required' }]);
@@ -109,12 +109,12 @@ export async function setAnimalStatus(deps: Deps, ctx: CallContext, input: unkno
   });
 }
 
-const photosSchema = z.object({ id: z.string().min(1), photos: z.array(z.object({ assetId: z.string().min(1), isPrimary: z.boolean().default(false) })).max(12) });
+export const animalPhotosSchema = z.object({ id: z.string().min(1), photos: z.array(z.object({ assetId: z.string().min(1), isPrimary: z.boolean().default(false) })).max(12) });
 
 export async function setAnimalPhotos(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AnimalRecord>> {
   const denied = requirePermission(ctx, 'animals.manage');
   if (denied) return denied;
-  const parsed = validate(photosSchema, input);
+  const parsed = validate(animalPhotosSchema, input);
   if (!parsed.ok) return parsed;
   const { id, photos } = parsed.value;
   const before = loadAnimal(deps.db, id);
@@ -134,12 +134,12 @@ export async function setAnimalPhotos(deps: Deps, ctx: CallContext, input: unkno
   });
 }
 
-const storySchema = z.object({ id: z.string().min(1), beforeAssetId: z.string().nullable(), afterAssetId: z.string().nullable(), quote: localizedText({ max: 600 }), family: z.string().trim().max(120), adoptedYear: z.number().int().min(2000).max(2100) });
+export const animalStorySchema = z.object({ id: z.string().min(1), beforeAssetId: z.string().nullable(), afterAssetId: z.string().nullable(), quote: localizedText({ max: 600 }), family: z.string().trim().max(120), adoptedYear: z.number().int().min(2000).max(2100) });
 
 export async function setAnimalStory(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AnimalRecord>> {
   const denied = requirePermission(ctx, 'animals.manage');
   if (denied) return denied;
-  const parsed = validate(storySchema, input);
+  const parsed = validate(animalStorySchema, input);
   if (!parsed.ok) return parsed;
   const { id, ...story } = parsed.value;
   const before = loadAnimal(deps.db, id);
