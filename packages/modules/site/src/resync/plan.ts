@@ -13,7 +13,6 @@ export interface CollectionSchema {
 export interface ResyncSchema {
   variables?: Record<string, FieldSchema>;
   collections?: Record<string, CollectionSchema>;
-  [key: string]: unknown;
 }
 
 export interface ResyncData {
