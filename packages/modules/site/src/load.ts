@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, symlink } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { conflict, ok, type Result } from '@kompass/core';
@@ -17,6 +18,37 @@ export interface TemplateSchema {
   collections: Record<string, { label: string; slug: boolean; sortable: boolean; publishable: boolean; max?: number; fields: Record<string, FieldSchema> }>;
 }
 export interface LoadedTemplate { definition: TemplateDefinition; schema: TemplateSchema; checksum: string }
+
+const localRequire = createRequire(import.meta.url);
+
+/**
+ * Legt die Modulauflösung für ein Template-Verzeichnis an: einen Symlink auf die
+ * node_modules, in denen `@kompass/site-template` und `astro` liegen. Gehört zum
+ * Einrichten, nicht zum Lesen — `loadTemplate` verändert die Platte nicht.
+ * Der Weg zur node_modules läuft über `require.resolve`, damit er im Image (ein
+ * flaches `/app/node_modules`) wie im Monorepo (das Paket liegt unter
+ * `packages/`) trägt.
+ */
+export async function ensureModuleResolution(dir: string): Promise<void> {
+  const link = path.join(dir, 'node_modules');
+  try {
+    await lstat(link);
+    return;
+  } catch {
+    // fehlt noch
+  }
+  const pkgDir = path.dirname(localRequire.resolve('@kompass/site-template/package.json'));
+  const nodeModules = path.resolve(pkgDir, '..', '..');
+  if (path.basename(nodeModules) === 'node_modules') {
+    await symlink(nodeModules, link, 'dir');
+    return;
+  }
+  // Monorepo: das Paket liegt unter packages/, nicht in einer node_modules —
+  // nur es selbst scoped verlinken; seine Abhängigkeiten löst Node vom echten
+  // Pfad aus auf.
+  await mkdir(path.join(link, '@kompass'), { recursive: true });
+  await symlink(pkgDir, path.join(link, '@kompass', 'site-template'), 'dir');
+}
 
 const asJson = (schema: unknown) => z.toJSONSchema(schema as z.ZodType<unknown>, { io: 'input' }) as FieldSchema;
 
@@ -46,6 +78,13 @@ export async function loadTemplate(dir: string): Promise<Result<LoadedTemplate>>
     source = await readFile(file, 'utf8');
   } catch {
     return conflict('templateMissing', `${TEMPLATE_FILE} fehlt in ${dir}`);
+  }
+  // Ohne node_modules scheitert der Import an einem Bare-Specifier, und die
+  // Meldung von Node erklärt niemandem, was zu tun ist.
+  try {
+    await lstat(path.join(dir, 'node_modules'));
+  } catch {
+    return conflict('templateResolutionMissing', `${dir} hat keine Modulauflösung; sie wird beim Einrichten angelegt`);
   }
   let loaded: unknown;
   try {
