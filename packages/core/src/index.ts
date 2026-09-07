@@ -40,5 +40,6 @@ export * from './app';
 export * from './seed/seed';
 export * from './i18n/locales';
 export * from './i18n/localized';
+export * from './i18n/service';
 export * from './projects/service';
 export { localizedColumn } from './db/columns';
