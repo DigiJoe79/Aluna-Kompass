@@ -115,7 +115,7 @@ In `packages/mcp/src/handler.ts` die Zeile, die die Werkzeuge sammelt, auf `modu
 
 In `apps/kompass/tests/mcp-tools.test.ts` die Liste über `moduleMcpTools(deps, m)` bilden, mit `createTestDeps()`. Ein Modul ohne eingelesenes Template liefert dabei keine Werkzeuge — das ist gültig, solange es auch keine eigenen Permission-Keys unbedient lässt. Da `site.view`, `site.manage` und `site.publish` von den festen Werkzeugen aus Task 6 genannt werden, bleibt die Prüfung scharf.
 
-- [ ] **Step 6: Gesamtlauf und Commit**
+- [ ] **Step 5: Gesamtlauf und Commit**
 
 ```bash
 pnpm typecheck && pnpm test
@@ -327,7 +327,7 @@ test('reads a template, fills a variable and keeps a collection entry', async ({
 
 Die Playwright-Konfiguration bekommt dafür `SITE_TEMPLATE_DIR` auf ein Verzeichnis unter `e2e/.tmp/`.
 
-- [ ] **Step 6: Gesamtlauf und Commit**
+- [ ] **Step 5: Gesamtlauf und Commit**
 
 ```bash
 pnpm typecheck && pnpm test && pnpm --filter @kompass/app e2e
@@ -408,18 +408,14 @@ Expected: FAIL
 
 Die Sichten kommen wie bisher über `publishedViews` der aktivierten Module, gefiltert auf `uses`. Vor allem anderen läuft `templateIsCurrent` aus Plan 2; ist der Stand veraltet, bricht der Export mit `conflict('templateStale', …)` ab.
 
-Die Pipeline aus `packages/modules/website/src/pipeline/` wandert unverändert nach `packages/modules/site/src/pipeline/` — sie kennt keine Feldnamen. `SITE_DIR` zeigt auf das Template-Verzeichnis.
+**Die Pipeline bleibt vorerst, wo sie ist.** Build, Bildvarianten, Prüfsummen, Diff, rsync und Historie liegen weiter in `packages/modules/website/src/pipeline/`; `site` bringt in diesem Plan nur den Export und die Sicherung mit. Der Umzug gehört nach Plan 4, aus zwei Gründen: Dort verschwindet `website`, der Umzug ist also ein Verschieben statt einer Verdopplung — und der E2E-Test für den Publish braucht ein baubares Astro-Template, das dort als Basis-Template ohnehin entsteht. Bis dahin publiziert Aluna über `website`; `site` hat keinen Publish-Bedarf.
 
 - [ ] **Step 4: Tests ausführen**
 
 Run: `pnpm --filter @kompass/module-site test`
 Expected: PASS
 
-- [ ] **Step 5: E2E für den ganzen Weg**
-
-`apps/kompass/e2e/site-publish.spec.ts` nach dem Vorbild von `website-publish.spec.ts`: Template einlesen, Inhalt pflegen, Vorschau bauen, ins lokale Ziel publizieren, Datei am Ziel prüfen.
-
-- [ ] **Step 6: Gesamtlauf und Commit**
+- [ ] **Step 5: Gesamtlauf und Commit**
 
 ```bash
 pnpm typecheck && pnpm test && pnpm --filter @kompass/app e2e
@@ -440,4 +436,4 @@ Danach ist das Modul vollständig bedienbar: einlesen, pflegen, publizieren — 
 
 **Typkonsistenz:** `schemaFor(field: FieldSchema): z.ZodType<unknown>` wird in Task 2, 3, 4 und 6 gleich benannt und gleich benutzt. `FieldSchema` stammt aus Plan 2 Task 3. Fehlerpfade sind überall die von `validate` gelieferten Punktpfade. `moduleMcpTools(deps, manifest)` aus Task 1 wird in Task 6 und im Handler verwendet.
 
-**Offene Abhängigkeit:** Task 7 verschiebt die Pipeline aus dem alten Modul. Solange `website` noch existiert, liegt sie doppelt; Plan 4 entfernt das Original. Das ist der einzige Zeitraum, in dem beide Module nebeneinander im Repo stehen — laufen sollen sie nie gleichzeitig.
+**Offene Abhängigkeit:** Der Publish von `site` ist nach diesem Plan noch nicht möglich — Export und Sicherung stehen, die Pipeline zieht erst in Plan 4 um. Das ist beabsichtigt: Ein Umzug dorthin ist ein Verschieben, eine Portierung hierher wäre ein Duplikat mit begrenzter Lebensdauer. Aluna publiziert in dieser Zeit über `website`.

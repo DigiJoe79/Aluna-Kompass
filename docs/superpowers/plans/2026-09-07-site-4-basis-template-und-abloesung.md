@@ -133,7 +133,61 @@ git commit -m "feat(docker): seed the volume with the base template"
 
 ---
 
-### Task 3: Alunas Inhalte übernehmen
+### Task 3: Die Publish-Pipeline umziehen
+
+**Files:**
+- Move: `packages/modules/website/src/pipeline/` → `packages/modules/site/src/pipeline/`
+- Move: `packages/modules/website/src/services/publishes.ts` → `packages/modules/site/src/services/publishes.ts`
+- Create: `apps/kompass/src/app/(shell)/site/publish/` (Seiten aus `website/publish` übernommen)
+- Modify: `packages/modules/site/src/mcp-tools.ts`, `packages/modules/site/src/schema.ts`
+- Generated: eine Migration, die `website_publishes` in `site_publishes` umbenennt
+
+**Interfaces:**
+- Consumes: `exportSiteContent` und `templateIsCurrent` aus Plan 3
+- Produces: `runPreview(deps, ctx, env)`, `runPublish(deps, ctx, env, { confirm })`, `checkDeployTarget(deps, ctx, env)` im Modul `site`
+
+Der Umzug kommt hierher und nicht nach Plan 3: Dort wäre er eine Verdopplung mit begrenzter Lebensdauer gewesen, hier ist er ein Verschieben. Der E2E-Test braucht ausserdem das Basis-Template aus Task 1.
+
+- [ ] **Step 1: Verschieben, nicht kopieren**
+
+```bash
+git mv packages/modules/website/src/pipeline packages/modules/site/src/pipeline
+git mv packages/modules/website/src/services/publishes.ts packages/modules/site/src/services/publishes.ts
+git mv packages/modules/website/tests/pipeline.test.ts packages/modules/site/tests/pipeline.test.ts
+```
+
+Die Pipeline kennt keine Feldnamen; anzupassen sind nur die Importe und der Bezug auf `exportSiteContent`, das jetzt aus `site` kommt. `SITE_DIR` zeigt auf das Template-Verzeichnis.
+
+- [ ] **Step 2: Die Historie umbenennen, nicht neu anlegen**
+
+In `packages/modules/site/src/schema.ts` die Tabelle als `site_publishes` mit den bisherigen Spalten aufnehmen und in `website/src/schema.ts` entfernen.
+
+Run: `pnpm --filter @kompass/core db:generate`
+Expected: eine Migration mit `ALTER TABLE website_publishes RENAME TO site_publishes`. Erzeugt drizzle stattdessen ein Löschen und Anlegen, wird die Datei **nicht** übernommen — dann ist die Migration von Hand als Umbenennung zu schreiben, damit Alunas Publish-Historie erhalten bleibt. Sie ist ein Betriebsprotokoll über Jahre.
+
+- [ ] **Step 3: Die Oberfläche übernehmen**
+
+`apps/kompass/src/app/(shell)/website/publish/` nach `site/publish/` verschieben. Inhaltlich unverändert bis auf die Herkunft der Dienste; die Karten für Prüfen, Vorschau, Änderungen, Verbindungstest und Historie bleiben, wie sie sind — samt der `Disclosure`-Blöcke.
+
+- [ ] **Step 4: MCP-Werkzeuge**
+
+`site_preview_build`, `site_publish`, `site_deploy_check` mit denselben Beschreibungen und Schemata wie ihre `website_*`-Vorgänger. Die Prüfung aus `apps/kompass/tests/mcp-tools.test.ts` verlangt, dass `site.publish` von mindestens einem Werkzeug genannt wird.
+
+- [ ] **Step 5: E2E gegen das Basis-Template**
+
+`apps/kompass/e2e/site-publish.spec.ts`: Basis-Template einlesen, einen Sammlungseintrag anlegen, Vorschau bauen, ins lokale Ziel publizieren, die Datei am Ziel prüfen. Die Playwright-Konfiguration zeigt `SITE_TEMPLATE_DIR` bereits auf ein Verzeichnis unter `e2e/.tmp/`; der Testaufbau kopiert `templates/verein-basis` dorthin und ruft `ensureModuleResolution`.
+
+- [ ] **Step 6: Gesamtlauf und Commit**
+
+```bash
+pnpm typecheck && pnpm test && pnpm --filter @kompass/app e2e
+git add -A
+git commit -m "refactor(site): move the publish pipeline over, history included"
+```
+
+---
+
+### Task 4: Alunas Inhalte übernehmen
 
 **Files:**
 - Create: `scripts/migrate-website-to-site.ts`
@@ -196,7 +250,7 @@ git commit -m "feat(migration): move Aluna's content into the template model"
 
 ---
 
-### Task 4: Alunas Seite herauslösen
+### Task 5: Alunas Seite herauslösen
 
 **Files:**
 - Delete: `apps/site/`
@@ -230,7 +284,7 @@ git commit -m "refactor: move Aluna's site out of the product repo"
 
 ---
 
-### Task 5: Das Modul `website` entfernen
+### Task 6: Das Modul `website` entfernen
 
 **Files:**
 - Delete: `packages/modules/website/`
@@ -249,7 +303,7 @@ Jede Stelle entfernen. `installedModules` enthält danach `[siteModule, animalsM
 
 - [ ] **Step 3: Tabellen entfernen**
 
-Migration, die `website_pages`, `website_articles`, `website_team`, `website_faqs`, `website_downloads` und `website_publishes` entfernt. Die Publish-Historie zieht vorher mit: Sie ist ein Betriebsprotokoll und gehört zu `site`.
+Migration, die `website_pages`, `website_articles`, `website_team`, `website_faqs` und `website_downloads` entfernt. `website_publishes` ist zu diesem Zeitpunkt bereits als `site_publishes` umbenannt (Task 3).
 
 Run: `pnpm --filter @kompass/core db:generate`
 
@@ -273,10 +327,10 @@ Danach ist Kompass ein Produkt, das man einem anderen Verein geben kann: Es brin
 
 ## Self-Review (durchgeführt beim Schreiben)
 
-**Spec-Abdeckung:** Basis-Template mit den üblichen Vereinsseiten (Abschnitt 9) → Task 1. Kopie ins Volume beim ersten Start → Task 2. Symlink für die Abhängigkeiten (Abschnitt 8, offener Punkt) → Task 2 Step 2 und 3, mit dem Rückfall aus Plan 2. Migration gegen Testdaten, danach löschbar (Abschnitt 10) → Task 3. `apps/site` verlässt das Repo → Task 4. Ablösung von `website` inklusive Tabellen → Task 5.
+**Spec-Abdeckung:** Basis-Template mit den üblichen Vereinsseiten (Abschnitt 9) → Task 1. Kopie ins Volume beim ersten Start → Task 2. Symlink für die Abhängigkeiten (Abschnitt 8, offener Punkt) → Task 2 Step 2 und 3, mit dem Rückfall aus Plan 2. Migration gegen Testdaten, danach löschbar (Abschnitt 10) → Task 4. `apps/site` verlässt das Repo → Task 5. Umzug der Pipeline mitsamt Historie → Task 3. Ablösung von `website` inklusive Tabellen → Task 6.
 
-**Platzhalter:** Task 1 Step 2 und Task 3 Step 3 nennen die Zuordnung als Tabellenkopf statt vollständig — beide hängen von Alunas endgültiger Template-Deklaration ab, die erst in Task 1 entsteht. Das ist der einzige Punkt, an dem der Plan bewusst offen bleibt, und er ist als solcher benannt: Die Liste wird beim Schreiben des Templates gefüllt, nicht beim Ausführen geraten.
+**Platzhalter:** Task 1 Step 2 und Task 4 Step 3 nennen die Zuordnung als Tabellenkopf statt vollständig — beide hängen von Alunas endgültiger Template-Deklaration ab, die erst in Task 1 entsteht. Das ist der einzige Punkt, an dem der Plan bewusst offen bleibt, und er ist als solcher benannt: Die Liste wird beim Schreiben des Templates gefüllt, nicht beim Ausführen geraten.
 
-**Reihenfolge:** Task 5 hängt an einer Bedingung, die kein Test prüfen kann — dass Alunas Installation wirklich läuft. Deshalb steht sie als erster Schritt dieses Tasks und nicht im Fliesstext.
+**Reihenfolge:** Task 6 hängt an einer Bedingung, die kein Test prüfen kann — dass Alunas Installation wirklich läuft. Deshalb steht sie als erster Schritt dieses Tasks und nicht im Fliesstext.
 
-**Typkonsistenz:** `migrateWebsiteToSite(deps, opts)` liefert `MigrationReport` mit einer Zeile je Quelltabelle; der Bericht wird in Task 3 Step 1 geprüft und in Step 4 gelesen. Die Sammlungsschlüssel `articles`, `team`, `faq`, `documents` stimmen mit Task 1 überein.
+**Typkonsistenz:** `migrateWebsiteToSite(deps, opts)` liefert `MigrationReport` mit einer Zeile je Quelltabelle; der Bericht wird in Task 4 Step 1 geprüft und in Step 4 gelesen. Die Sammlungsschlüssel `articles`, `team`, `faq`, `documents` stimmen mit Task 1 überein.
