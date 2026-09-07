@@ -41,8 +41,8 @@ den Template-Build.
 
 **Zerlegung.** Die Stufe ist zu gross für einen Plan. Vorschlag für fünf:
 (1) Sprachen im Kern, (2) Template-Vertrag mit Datenmodell und Einlesen samt
-Resync, (3) Oberfläche, MCP und Export, (4) Basis-Template und Umzug der
-Publish-Pipeline, (5) Cutover: Alunas Migration und die Ablösung von `website`.
+Resync, (3) Oberfläche, MCP und Export, (4) Basis-Template und Erstinbetriebnahme, (5) Cutover: Publish-Kette, Alunas
+Migration und die Ablösung von `website`.
 Nur (1) berührt den Kern und lässt sich unabhängig abschliessen; nur (5) wartet
 auf Voraussetzungen ausserhalb dieses Repos.
 

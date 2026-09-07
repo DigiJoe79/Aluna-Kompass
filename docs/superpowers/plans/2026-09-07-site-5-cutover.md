@@ -12,6 +12,8 @@
 
 **Voraussetzung:** `2026-09-07-site-4-basis-template.md` ist abgeschlossen.
 
+**Reihenfolge:** Task 1 nimmt `website` das Publizieren. Danach kann Aluna erst wieder veröffentlichen, wenn Task 2 die Inhalte umgezogen hat — die beiden gehören zeitlich zusammen und sollten nicht über Tage auseinanderfallen.
+
 ## Voraussetzungen ausserhalb dieses Repos
 
 Dieser Plan wartet auf drei Dinge, die kein Test hier herstellen kann. Wer ihn
@@ -37,7 +39,99 @@ diesen Plan anzufangen.
 
 ---
 
-### Task 1: Alunas Inhalte übernehmen
+### Task 1: Die Publish-Kette von `website` nach `site`
+
+**Files:**
+- Modify: `packages/modules/site/src/export.ts` (Sperrwörter, Übersetzungslücken)
+- Create: `packages/modules/site/src/settings.ts` (`site.blockedTerms`)
+- Move: `packages/modules/website/src/pipeline/` → `packages/modules/site/src/pipeline/`
+- Move: `packages/modules/website/src/services/publishes.ts` → `packages/modules/site/src/services/`
+- Create: `packages/modules/site/tests/pipeline.test.ts` (neu geschrieben, nicht verschoben)
+- Move: `apps/kompass/src/app/(shell)/website/publish/` → `.../site/publish/`
+- Modify: `packages/modules/website/src/manifest.ts`, `mcp-tools.ts`, `export.ts` (Publish entfällt dort)
+- Modify: `packages/modules/site/src/mcp-tools.ts`, `apps/kompass/messages/de.json`, `apps/kompass/playwright.config.ts`
+- Generated: Migration, die `website_publishes` in `site_publishes` umbenennt
+
+**Interfaces:**
+- Consumes: `exportSiteContent`, `templateIsCurrent`, `activeTemplate` aus Plan 3
+- Produces: `runPreview(deps, ctx, env)`, `runPublish(deps, ctx, env, { confirm })`, `checkDeployTarget(deps, ctx, env)` im Modul `site`
+
+Dieser Task ist grösser als ein Umzug, und er nimmt `website` das Publish-Recht — deshalb steht er hier und nicht in Plan 4. Von hier an publiziert nur noch `site`; Alunas Inhalte müssen also in Task 2 unmittelbar folgen.
+
+- [ ] **Step 1: Die Prüfungen generisch machen**
+
+`jobs.ts` erwartet von `exportSiteContent` ein `{ gaps, violations }`, das die Fassung in `site` nicht liefert. Beides muss über beliebige Feldstrukturen laufen, nicht über eine feste Feldliste — dieselbe Mechanik wie bei der Sprachbereinigung im Kern.
+
+```ts
+// packages/modules/site/src/export.ts
+/** Jeder Text im Export, mit seinem Pfad — Variablen wie Sammlungseinträge. */
+function* texts(node: unknown, path: string): Generator<{ path: string; locale: string; value: string }> { … }
+
+export interface ExportChecks {
+  gaps: { path: string; locale: string }[];
+  violations: { path: string; term: string; excerpt: string }[];
+}
+```
+
+`gaps`: Ein Feld, dessen Leitsprache gefüllt ist, während eine weitere Sprache leer bleibt — `translationGaps` aus dem Kern liefert die Regel, hier angewandt auf jeden Textpfad. `violations`: Treffer aus `site.blockedTerms`, mit Pfad, Begriff und Umgebung.
+
+Tests: ein Sperrwort in einer Variablen, eines in einem Sammlungseintrag, eine Lücke in einem verschachtelten Feld, und ein Lauf ohne Befunde.
+
+- [ ] **Step 2: `site.blockedTerms` als Moduleinstellung**
+
+```ts
+export const SITE_SETTINGS: SettingDefinition[] = [
+  { key: 'site.blockedTerms', schema: z.array(z.string().trim().min(2).max(80)).max(50), default: [] },
+];
+```
+
+Ins Manifest aufnehmen. Die Liste von `website` zieht in Task 2 mit den Inhalten um; hier entsteht nur das Feld.
+
+- [ ] **Step 3: Pipeline verschieben**
+
+```bash
+git mv packages/modules/website/src/pipeline packages/modules/site/src/pipeline
+git mv packages/modules/website/src/services/publishes.ts packages/modules/site/src/services/publishes.ts
+```
+
+Anzupassen sind die Importe und der Bezug auf `exportSiteContent`. **`SITE_DIR` entfällt**: Es zeigte auf `apps/site`; das Template-Verzeichnis steht in `SITE_TEMPLATE_DIR`. Zwei Variablen für dasselbe wären eine Fehlerquelle, gerade weil sie im Container aus verschiedenen Zeilen kommen.
+
+- [ ] **Step 4: `pipeline.test.ts` neu schreiben**
+
+Der alte Test baut `apps/site` gegen das alte Inhaltsmodell und lässt sich nicht mitnehmen. Der neue Test baut gegen `templates/verein-basis`: Template einlesen, eine Variable setzen, einen Eintrag anlegen, `runPreview`, danach `runPublish` in ein lokales Zielverzeichnis, und prüfen, dass die erwartete Datei dort liegt — **einschliesslich eines Bildes**, denn genau das hat der Export bis `790cdb7` verloren.
+
+- [ ] **Step 5: `website` verliert sein Publish**
+
+Aus `packages/modules/website` entfernen: die Permission `website.publish`, den Navigationseintrag „Publizieren", die Werkzeuge `website_deploy_check` und `website_export_check`, die Rechteprüfung in seinem `export.ts`. Sonst bleibt ein Recht ohne Werkzeug zurück, und `apps/kompass/tests/mcp-tools.test.ts` schlägt zu Recht an.
+
+- [ ] **Step 6: Die Historie umbenennen, nicht neu anlegen**
+
+`site_publishes` in `packages/modules/site/src/schema.ts` aufnehmen, in `website/src/schema.ts` entfernen.
+
+Run: `pnpm --filter @kompass/core db:generate`
+Expected: eine Migration mit `ALTER TABLE website_publishes RENAME TO site_publishes`. Erzeugt drizzle stattdessen ein Löschen und Anlegen, wird die Datei **nicht** übernommen — dann ist sie von Hand als Umbenennung zu schreiben. Alunas Publish-Historie reicht über Jahre und ist ein Betriebsprotokoll.
+
+- [ ] **Step 7: Oberfläche und Werkzeuge**
+
+`apps/kompass/src/app/(shell)/website/publish/` nach `site/publish/` verschieben; inhaltlich unverändert bis auf die Herkunft der Dienste. Übersetzungen unter `website.publish` in `de.json` nach `site.publish` umhängen.
+
+MCP: `site_preview_build`, `site_publish` und `site_deploy_check` neu — Vorgänger gibt es nur für `site_deploy_check` und `site_export_check`, die übrigen entstehen hier. Jedes nennt `site.publish` in seiner Beschreibung.
+
+- [ ] **Step 8: Gesamtlauf**
+
+Run: `pnpm typecheck && pnpm test && pnpm --filter @kompass/app e2e`
+Expected: alles grün. `apps/kompass/e2e/website-publish.spec.ts` wird dabei zu `site-publish.spec.ts` und arbeitet gegen das Basis-Template; `SITE_TEMPLATE_DIR` ist in der Playwright-Konfiguration bereits gesetzt.
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add -A
+git commit -m "refactor(site): move the publish chain over, history included"
+```
+
+---
+
+### Task 2: Alunas Inhalte übernehmen
 
 **Files:**
 - Create: `scripts/migrate-website-to-site.ts`
@@ -100,7 +194,7 @@ git commit -m "feat(migration): move Aluna's content into the template model"
 
 ---
 
-### Task 2: Alunas Seite herauslösen
+### Task 3: Alunas Seite herauslösen
 
 **Files:**
 - Delete: `apps/site/`
@@ -134,7 +228,7 @@ git commit -m "refactor: move Aluna's site out of the product repo"
 
 ---
 
-### Task 3: Das Modul `website` entfernen
+### Task 4: Das Modul `website` entfernen
 
 **Files:**
 - Delete: `packages/modules/website/`
@@ -153,7 +247,7 @@ Jede Stelle entfernen. `installedModules` enthält danach `[siteModule, animalsM
 
 - [ ] **Step 3: Tabellen entfernen**
 
-Migration, die `website_pages`, `website_articles`, `website_team`, `website_faqs` und `website_downloads` entfernt. `website_publishes` ist zu diesem Zeitpunkt bereits als `site_publishes` umbenannt (Task 3).
+Migration, die `website_pages`, `website_articles`, `website_team`, `website_faqs` und `website_downloads` entfernt. `website_publishes` ist zu diesem Zeitpunkt bereits als `site_publishes` umbenannt (Task 1).
 
 Run: `pnpm --filter @kompass/core db:generate`
 
@@ -180,11 +274,12 @@ publiziert wie jede andere.
 
 ## Self-Review (durchgeführt beim Schreiben)
 
-**Spec-Abdeckung:** Migration gegen Testdaten, danach löschbar (Abschnitt 10)
-→ Task 1. `apps/site` verlässt das Repo → Task 2. Ablösung von `website`
-inklusive Tabellen → Task 3.
+**Spec-Abdeckung:** Publish-Kette mitsamt Historie und den generischen
+Prüfungen (Abschnitt 8) → Task 1. Migration gegen Testdaten, danach löschbar
+(Abschnitt 10) → Task 2. `apps/site` verlässt das Repo → Task 3. Ablösung von
+`website` inklusive Tabellen → Task 4.
 
-**Platzhalter:** Task 1 Step 3 nennt die Zuordnung als Tabellenkopf statt
+**Platzhalter:** Task 2 Step 3 nennt die Zuordnung als Tabellenkopf statt
 vollständig. Sie hängt an Alunas Template-Deklaration, die ausserhalb dieses
 Repos entsteht — deshalb steht sie unter den Voraussetzungen und wird beim
 Ausführen gefüllt, nicht geraten. Die Zielschlüssel im Beispiel (`articles`,
@@ -192,10 +287,10 @@ Ausführen gefüllt, nicht geraten. Die Zielschlüssel im Beispiel (`articles`,
 Sammlungen des Basis-Templates nicht übereinstimmen, weil Aluna ein eigenes
 Template hat.
 
-**Reihenfolge:** Task 3 hängt an einer Bedingung, die kein Test prüfen kann —
+**Reihenfolge:** Task 4 hängt an einer Bedingung, die kein Test prüfen kann —
 dass Alunas Installation wirklich läuft. Deshalb steht sie als erster Schritt
 dieses Tasks und zusätzlich unter den Voraussetzungen.
 
 **Typkonsistenz:** `migrateWebsiteToSite(deps, opts)` liefert `MigrationReport`
-mit einer Zeile je Quelltabelle; der Bericht wird in Task 1 Step 1 geprüft und in
+mit einer Zeile je Quelltabelle; der Bericht wird in Task 2 Step 1 geprüft und in
 Step 4 gelesen.

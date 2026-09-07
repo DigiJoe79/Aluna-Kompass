@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Kompass liefert ein allgemeines Vereins-Template mit, richtet es beim ersten Start ein und publiziert darüber.
+**Goal:** Kompass liefert ein allgemeines Vereins-Template mit und richtet es beim ersten Start im Volume ein.
 
-**Architecture:** Das Basis-Template liegt als eigenes Astro-Projekt im Repo und wird beim ersten Start ins Volume kopiert. Die Publish-Pipeline zieht von `website` nach `site` um — verschoben, nicht kopiert, samt der Historie. Danach kann eine frische Installation ohne Zutun publizieren.
+**Architecture:** Das Basis-Template liegt als eigenes Astro-Projekt im Repo und wird beim ersten Start ins Volume kopiert, samt Modulauflösung. Die Publish-Pipeline bleibt vorerst bei `website` — ihr Umzug gehört in Plan 5, weil `website` sonst sein Publish-Recht verlöre, bevor Aluna umgezogen ist.
 
 **Tech Stack:** Astro 7, TypeScript, Drizzle/SQLite, Vitest, Playwright, Docker.
 
@@ -135,80 +135,24 @@ git commit -m "feat(docker): seed the volume with the base template"
 
 ---
 
-### Task 3: Die Publish-Pipeline umziehen
-
-**Files:**
-- Move: `packages/modules/website/src/pipeline/` → `packages/modules/site/src/pipeline/`
-- Move: `packages/modules/website/src/services/publishes.ts` → `packages/modules/site/src/services/publishes.ts`
-- Create: `apps/kompass/src/app/(shell)/site/publish/` (Seiten aus `website/publish` übernommen)
-- Modify: `packages/modules/site/src/mcp-tools.ts`, `packages/modules/site/src/schema.ts`
-- Generated: eine Migration, die `website_publishes` in `site_publishes` umbenennt
-
-**Interfaces:**
-- Consumes: `exportSiteContent` und `templateIsCurrent` aus Plan 3
-- Produces: `runPreview(deps, ctx, env)`, `runPublish(deps, ctx, env, { confirm })`, `checkDeployTarget(deps, ctx, env)` im Modul `site`
-
-Der Umzug kommt hierher und nicht nach Plan 3: Dort wäre er eine Verdopplung mit begrenzter Lebensdauer gewesen, hier ist er ein Verschieben. Der E2E-Test braucht ausserdem das Basis-Template aus Task 1.
-
-- [ ] **Step 1: Verschieben, nicht kopieren**
-
-```bash
-git mv packages/modules/website/src/pipeline packages/modules/site/src/pipeline
-git mv packages/modules/website/src/services/publishes.ts packages/modules/site/src/services/publishes.ts
-git mv packages/modules/website/tests/pipeline.test.ts packages/modules/site/tests/pipeline.test.ts
-```
-
-Die Pipeline kennt keine Feldnamen; anzupassen sind nur die Importe und der Bezug auf `exportSiteContent`, das jetzt aus `site` kommt. `SITE_DIR` zeigt auf das Template-Verzeichnis.
-
-- [ ] **Step 2: Die Historie umbenennen, nicht neu anlegen**
-
-In `packages/modules/site/src/schema.ts` die Tabelle als `site_publishes` mit den bisherigen Spalten aufnehmen und in `website/src/schema.ts` entfernen.
-
-Run: `pnpm --filter @kompass/core db:generate`
-Expected: eine Migration mit `ALTER TABLE website_publishes RENAME TO site_publishes`. Erzeugt drizzle stattdessen ein Löschen und Anlegen, wird die Datei **nicht** übernommen — dann ist die Migration von Hand als Umbenennung zu schreiben, damit Alunas Publish-Historie erhalten bleibt. Sie ist ein Betriebsprotokoll über Jahre.
-
-- [ ] **Step 3: Die Oberfläche übernehmen**
-
-`apps/kompass/src/app/(shell)/website/publish/` nach `site/publish/` verschieben. Inhaltlich unverändert bis auf die Herkunft der Dienste; die Karten für Prüfen, Vorschau, Änderungen, Verbindungstest und Historie bleiben, wie sie sind — samt der `Disclosure`-Blöcke.
-
-- [ ] **Step 4: MCP-Werkzeuge**
-
-`site_preview_build`, `site_publish`, `site_deploy_check` mit denselben Beschreibungen und Schemata wie ihre `website_*`-Vorgänger. Die Prüfung aus `apps/kompass/tests/mcp-tools.test.ts` verlangt, dass `site.publish` von mindestens einem Werkzeug genannt wird.
-
-- [ ] **Step 5: E2E gegen das Basis-Template**
-
-`apps/kompass/e2e/site-publish.spec.ts`: Basis-Template einlesen, einen Sammlungseintrag anlegen, Vorschau bauen, ins lokale Ziel publizieren, die Datei am Ziel prüfen. Die Playwright-Konfiguration zeigt `SITE_TEMPLATE_DIR` bereits auf ein Verzeichnis unter `e2e/.tmp/`; der Testaufbau kopiert `templates/verein-basis` dorthin und ruft `ensureModuleResolution`.
-
-- [ ] **Step 6: Gesamtlauf und Commit**
-
-```bash
-pnpm typecheck && pnpm test && pnpm --filter @kompass/app e2e
-git add -A
-git commit -m "refactor(site): move the publish pipeline over, history included"
-```
-
----
-
 ## Abschluss dieses Plans
 
 Danach bringt Kompass ein neutrales Template mit, das beim ersten Start im
-Volume landet, und publiziert darüber — ohne dass ein Verein etwas einrichten
-muss. `website` ist noch da und hält Alunas Inhalte; seine Ablösung ist Plan 5.
+Volume landet und dort baubar ist. Publiziert wird weiterhin über `website`;
+Pipeline-Umzug und Ablösung sind Plan 5.
 
 ## Self-Review (durchgeführt beim Schreiben)
 
 **Spec-Abdeckung:** Basis-Template mit den üblichen Vereinsseiten (Abschnitt 9)
 → Task 1. Kopie ins Volume beim ersten Start und Modulauflösung (Abschnitt 8)
-→ Task 2. Umzug der Pipeline mitsamt Historie → Task 3.
+→ Task 2. Der Pipeline-Umzug stand hier und ist nach Plan 5 gewandert: Er nimmt
+`website` das Publish-Recht, was vor Alunas Umzug nicht geht.
 
 **Platzhalter:** Task 1 Step 2 nennt die elf Seiten und verweist für Aufbau und
 Mechanik auf `apps/site` als Vorlage, statt sie abzuschreiben — die Dateien
 liegen im Repo und sind benannt.
 
 **Typkonsistenz:** Die Sammlungsschlüssel `news`, `team`, `faq`, `documents`
-stammen aus Task 1 Step 1 und werden in Task 3 Step 5 im E2E wieder benutzt.
-Alunas Template hat eigene Schlüssel; sie entstehen in Plan 5 und müssen mit
-diesen nicht übereinstimmen.
-
-**Reihenfolge:** Task 3 braucht das Basis-Template aus Task 1 als E2E-Fixture,
-deshalb steht es davor.
+stammen aus Task 1 Step 1 und werden in Plan 5 als E2E-Fixture wieder benutzt.
+Alunas Template hat eigene Schlüssel; sie entstehen dort und müssen mit diesen
+nicht übereinstimmen.
