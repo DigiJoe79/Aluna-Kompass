@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
-import { lstat, readFile, symlink } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { lstat, readFile, rm, symlink } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -58,14 +59,28 @@ export function resolveTemplateNodeModules(): string {
 
 export async function ensureModuleResolution(dir: string, from?: string): Promise<void> {
   const link = path.join(dir, 'node_modules');
+  const target = () => {
+    resolveTemplatePackage(from);
+    return resolveTemplateNodeModules();
+  };
+  let existing: Awaited<ReturnType<typeof lstat>> | undefined;
   try {
-    await lstat(link);
-    return;
+    existing = await lstat(link);
   } catch {
     // fehlt noch
   }
-  resolveTemplatePackage(from);
-  await symlink(resolveTemplateNodeModules(), link, 'dir');
+  if (existing && !existing.isSymbolicLink()) return; // eigene Installation, nicht anfassen
+  if (existing) {
+    // Ein Symlink aus einer früheren Fassung kann auf die falsche node_modules
+    // zeigen. Das fällt erst beim Build auf („astro not installed"), und niemand
+    // kommt darauf, ihn von Hand zu löschen — also hier richten.
+    const wanted = target();
+    if (existsSync(path.join(link, 'astro'))) return;
+    await rm(link);
+    await symlink(wanted, link, 'dir');
+    return;
+  }
+  await symlink(target(), link, 'dir');
 }
 
 const asJson = (schema: unknown) => z.toJSONSchema(schema as z.ZodType<unknown>, { io: 'input' }) as FieldSchema;

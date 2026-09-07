@@ -4,8 +4,9 @@
 # Legt beim ersten Start das mitgelieferte Basis-Template ins Datenvolume und
 # richtet die Modulauflösung ein, damit schon der erste Build läuft — auch ohne
 # vorheriges Einlesen über die Oberfläche. Idempotent: ein vorhandenes Template
-# bleibt unberührt, ein vorhandener Symlink ebenso. Ein Update darf ein
-# gepflegtes Template nie überschreiben.
+# bleibt unberührt, ein Update darf ein gepflegtes Template nie überschreiben.
+# Ein Symlink, der auf node_modules ohne Astro zeigt, wird dagegen erneuert —
+# sonst scheitert jeder Build.
 #
 # Vom Entrypoint aufgerufen; als eigenes Skript, damit sich die Logik ohne einen
 # ganzen Containerlauf prüfen lässt (apps/kompass/tests/entrypoint.test.ts).
@@ -35,6 +36,15 @@ if [ ! -f "$template_dir/kompass.template.ts" ]; then
   done
 fi
 
-if [ ! -e "$template_dir/node_modules" ]; then
+# Ein vorhandener Symlink aus einer früheren Fassung kann auf die falsche
+# node_modules zeigen; der Build bricht dann mit „astro not installed" ab.
+# Deshalb prüfen und richten statt blind stehen lassen. Ein echtes Verzeichnis
+# (eigene Installation im Template) bleibt unberührt.
+if [ -L "$template_dir/node_modules" ] && [ ! -e "$template_dir/node_modules/astro" ]; then
+  echo "Modulauflösung zeigt auf node_modules ohne Astro — Symlink erneuern"
+  rm "$template_dir/node_modules"
+fi
+
+if [ ! -e "$template_dir/node_modules" ] && [ ! -L "$template_dir/node_modules" ]; then
   ln -s "$node_modules" "$template_dir/node_modules"
 fi

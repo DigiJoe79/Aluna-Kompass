@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, lstatSync, mkdtempSync, mkdirSync, readFileSync, readlinkSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdtempSync, mkdirSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -52,6 +52,27 @@ describe('seed-site-template.sh', () => {
     run({ templateDir, nodeModules });
 
     expect(readFileSync(path.join(templateDir, 'kompass.template.ts'), 'utf8')).toBe('// vom Verein gepflegt\n');
+  });
+
+  /**
+   * Der Symlink überlebt ein Update. Zeigt er noch auf die node_modules einer
+   * früheren Fassung, findet der Build kein Astro und bricht ab — das lässt
+   * sich hier richten, statt es im Container von Hand zu löschen.
+   */
+  it('repoints a stale link whose target holds no astro', () => {
+    const root = workspace();
+    const templateDir = path.join(root, 'site-template');
+    const nodeModules = path.join(root, 'node_modules');
+    mkdirSync(path.join(nodeModules, 'astro'), { recursive: true });
+    const stale = path.join(root, 'alt');
+    mkdirSync(stale);
+    mkdirSync(templateDir, { recursive: true });
+    writeFileSync(path.join(templateDir, 'kompass.template.ts'), '// vom Verein gepflegt\n');
+    symlinkSync(stale, path.join(templateDir, 'node_modules'));
+
+    run({ templateDir, nodeModules });
+
+    expect(readlinkSync(path.join(templateDir, 'node_modules'))).toBe(nodeModules);
   });
 
   it('is idempotent — a second run changes nothing and does not fail on the existing link', () => {

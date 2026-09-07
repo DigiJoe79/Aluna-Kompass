@@ -1,4 +1,5 @@
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -89,5 +90,29 @@ describe('the node_modules a template needs', () => {
     const dir = resolveTemplateNodeModules();
     expect(existsSync(path.join(dir, 'astro')), `${dir} führt kein astro`).toBe(true);
     expect(existsSync(path.join(dir, '@kompass', 'site-template'))).toBe(true);
+  });
+});
+
+describe('an existing module resolution', () => {
+  /**
+   * Der Symlink überlebt Neustarts und Updates. Zeigt er noch auf eine ältere,
+   * falsche node_modules, scheitert jeder Build mit „astro not installed", und
+   * niemand kommt darauf, ihn von Hand zu löschen.
+   */
+  it('repairs a symlink whose target holds no astro', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'kompass-stale-'));
+    const stale = mkdtempSync(path.join(tmpdir(), 'kompass-empty-nm-'));
+    dirs.push(dir, stale);
+    await symlink(stale, path.join(dir, 'node_modules'), 'dir');
+    await ensureModuleResolution(dir);
+    expect(realpathSync(path.join(dir, 'node_modules'))).toBe(realpathSync(resolveTemplateNodeModules()));
+  });
+
+  it('leaves a real directory alone', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'kompass-own-nm-'));
+    dirs.push(dir);
+    mkdirSync(path.join(dir, 'node_modules'));
+    await ensureModuleResolution(dir);
+    expect(lstatSync(path.join(dir, 'node_modules')).isSymbolicLink()).toBe(false);
   });
 });
