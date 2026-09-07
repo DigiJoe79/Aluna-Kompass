@@ -20,7 +20,7 @@ export default async function DownloadsPage() {
           <thead className="bg-table-head text-left text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink"><tr className="h-9"><th className="px-4">{t('columns.download')}</th><th className="px-4" colSpan={2}>{t('columns.fileAndTitle')}</th></tr></thead>
           <tbody>
             {result.value.map((d) => (
-              <DownloadRow key={d.key} download={d} />
+              <DownloadRow key={d.key} download={d} locales={deps.locales()} />
             ))}
           </tbody>
         </table>

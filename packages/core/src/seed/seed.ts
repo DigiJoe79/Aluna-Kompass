@@ -33,7 +33,10 @@ export async function seedDevelopment(deps: Deps): Promise<{ adminEmail: string;
   const ctx: CallContext = { userId: admin.id, permissions: new Set(deps.registry.permissionKeys), channel: 'system', apiTokenId: null, ipAddress: null, requestId: 'SEED' };
 
   const installed = deps.registry.manifests.map((m) => m.key).filter((k) => k !== 'core').sort();
-  deps.db.transaction((tx) => { writeSettingInternal(tx, deps, ctx, 'modules.enabled', installed, 'seed.modules'); });
+  deps.db.transaction((tx) => {
+    writeSettingInternal(tx, deps, ctx, 'modules.enabled', installed, 'seed.modules');
+    writeSettingInternal(tx, deps, ctx, 'i18n.locales', ['de', 'en'], 'seed.locales');
+  });
 
   const roleIds = new Map<string, string>();
   for (const role of EXAMPLE_ROLES) {

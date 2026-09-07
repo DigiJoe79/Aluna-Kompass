@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { gapCount, jsonFromForm, localizedFromForm } from '@/lib/localized-form';
 
 describe('localized form helpers', () => {
-  it('reads de/en pairs and trims', () => {
+  it('reads arbitrary locales and trims, missing locales become empty string', () => {
     const fd = new FormData();
     fd.set('title.de', ' Hallo ');
-    fd.set('title.en', '');
-    expect(localizedFromForm(fd, 'title')).toEqual({ de: 'Hallo', en: '' });
-    expect(localizedFromForm(fd, 'missing')).toEqual({ de: '', en: '' });
+    fd.set('title.en', ' Hello ');
+    fd.set('title.fr', '');
+    expect(localizedFromForm(fd, 'title', ['de', 'en', 'fr'])).toEqual({ de: 'Hallo', en: 'Hello', fr: '' });
+    expect(localizedFromForm(fd, 'missing', ['de', 'en', 'es'])).toEqual({ de: '', en: '', es: '' });
   });
   it('parses json lists with fallback', () => {
     const fd = new FormData();

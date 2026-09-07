@@ -12,8 +12,10 @@ export default async function ArticleEditPage(props: { params: Promise<{ id: str
   if (requirePermission(ctx, 'website.view')) return <ForbiddenCard permission="website.view" />;
   const { id } = await props.params;
   const t = await getTranslations('website.articles');
-  if (id === 'new') return (<><PageHeader title={t('create')} /><ArticleForm article={null} /></>);
+  const locales = deps.locales();
+  const leading = locales[0] ?? 'de';
+  if (id === 'new') return (<><PageHeader title={t('create')} /><ArticleForm article={null} locales={locales} /></>);
   const article = await getArticle(deps, ctx, id);
   if (!article.ok) notFound();
-  return (<><PageHeader title={article.value.title.de || article.value.slug} description={`/wissenswertes/${article.value.slug}/`} /><ArticleForm article={article.value} /></>);
+  return (<><PageHeader title={article.value.title[leading] || article.value.slug} description={`/wissenswertes/${article.value.slug}/`} /><ArticleForm article={article.value} locales={locales} /></>);
 }

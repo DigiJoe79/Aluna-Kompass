@@ -12,9 +12,9 @@ export async function saveFaqAction(_prev: ActionState, formData: FormData): Pro
   const { deps, ctx } = await requireSession();
   const id = String(formData.get('id') ?? '');
   const fields = {
-    category: localizedFromForm(formData, 'category'),
-    question: localizedFromForm(formData, 'question'),
-    answer: localizedFromForm(formData, 'answer'),
+    category: localizedFromForm(formData, 'category', deps.locales()),
+    question: localizedFromForm(formData, 'question', deps.locales()),
+    answer: localizedFromForm(formData, 'answer', deps.locales()),
   };
   const result = id ? await updateFaq(deps, ctx, { id, ...fields }) : await createFaq(deps, ctx, fields);
   revalidatePath('/website/faqs');

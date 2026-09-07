@@ -14,6 +14,8 @@ export function ConfirmDialog({
   description,
   confirmLabel,
   destructive,
+  confirmDisabled,
+  role = 'alertdialog',
   action,
   children,
 }: {
@@ -23,6 +25,8 @@ export function ConfirmDialog({
   description: string;
   confirmLabel: string;
   destructive?: boolean;
+  confirmDisabled?: boolean;
+  role?: 'dialog' | 'alertdialog';
   action: () => Promise<ActionState>;
   children?: ReactNode;
 }) {
@@ -30,7 +34,7 @@ export function ConfirmDialog({
   const [pending, start] = useTransition();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent role="alertdialog" className="bg-surface shadow-md">
+      <DialogContent role={role} className="bg-surface shadow-md">
         <DialogTitle className="font-heading text-[19px]">{title}</DialogTitle>
         <DialogDescription className="text-[14px] text-ink-2">{description}</DialogDescription>
         {children}
@@ -38,7 +42,7 @@ export function ConfirmDialog({
           <Button variant="ghost" onClick={() => onOpenChange(false)}>{t('cancel')}</Button>
           <Button
             variant={destructive ? 'destructive' : 'default'}
-            disabled={pending}
+            disabled={pending || confirmDisabled}
             onClick={() => start(async () => {
               const state = await action();
               if (state.status === 'error') toast.error(state.message);

@@ -2,6 +2,24 @@
   "app": {
     "name": "Aluna Kompass"
   },
+  "admin": {
+    "locales": {
+      "title": "Sprachen",
+      "description": "Verwalten Sie die Sprachen, in denen Inhalte für Webseite und Dokumente gepflegt werden.",
+      "code": "Sprachcode",
+      "codeHint": "BCP-47-Sprachcode (z. B. de, en, fr, nl, es, pt-br).",
+      "add": "Sprache hinzufügen",
+      "leading": "Leitsprache",
+      "remove": "{code} entfernen",
+      "removeTitle": "Sprache „{code}“ entfernen",
+      "removeWarning": "{count, plural, =0 {In keinem Feld steht Text auf {locale}.} one {In # Feld steht Text auf {locale}. Beim Entfernen geht er verloren.} other {In # Feldern steht Text auf {locale}. Beim Entfernen geht er verloren.}}",
+      "removeConfirm": "Sprache unwiderruflich entfernen",
+      "added": "Sprache hinzugefügt.",
+      "removed": "Sprache entfernt.",
+      "duplicate": "Diese Sprache ist bereits eingerichtet.",
+      "lastLocale": "Die letzte verbleibende Sprache kann nicht entfernt werden."
+    }
+  },
   "common": {
     "save": "Speichern",
     "cancel": "Abbrechen",
@@ -42,6 +60,10 @@
       "blockedTermsPresent": "Sperrworttreffer: {detail}",
       "siteBuildFailed": "Der Build ist fehlgeschlagen: {detail}",
       "publishFailed": "Die Übertragung ist fehlgeschlagen: {detail}",
+      "duplicateLocale": "Diese Sprache ist bereits eingerichtet.",
+      "tooManyLocales": "Höchstens zehn Sprachen können eingerichtet werden.",
+      "lastLocale": "Die letzte verbleibende Sprache kann nicht entfernt werden.",
+      "unknownLocale": "Diese Sprache ist nicht eingerichtet.",
       "default": "Der Vorgang ist nicht möglich: {detail}"
     },
     "fields": {
@@ -50,6 +72,7 @@
       "passwordTooShort": "Mindestens 12 Zeichen.",
       "unknownPermission": "Unbekanntes Recht.",
       "unknownSetting": "Unbekannte Einstellung.",
+      "unknownLocale": "Diese Sprache ist nicht eingerichtet.",
       "invalid": "Ungültiger Wert.",
       "unsupportedMediaType": "Dateityp nicht unterstützt (PNG, JPEG, WebP, SVG, PDF).",
       "fileTooLarge": "Datei größer als 10 MB.",
@@ -101,6 +124,7 @@
     "users": "Nutzer",
     "roles": "Rollen",
     "settings": "Einstellungen",
+    "locales": "Sprachen",
     "themes": "Themes",
     "modules": "Module",
     "audit": "Änderungsprotokoll",
@@ -1022,6 +1046,7 @@
         "confidentiality": "Vertraulichkeit"
       },
       "fields": {
+        "claim": "Claim",
         "claimDe": "Claim (DE)",
         "claimEn": "Claim (EN)",
         "forwardingPercent": "Weiterleitungsquote (%)",

@@ -13,10 +13,10 @@ export async function updatePageAction(_prev: ActionState, formData: FormData): 
   const key = String(formData.get('key') ?? '');
   const result = await updatePage(deps, ctx, {
     key,
-    title: localizedFromForm(formData, 'title'),
-    lede: localizedFromForm(formData, 'lede'),
-    body: localizedFromForm(formData, 'body'),
-    metaDescription: localizedFromForm(formData, 'metaDescription'),
+    title: localizedFromForm(formData, 'title', deps.locales()),
+    lede: localizedFromForm(formData, 'lede', deps.locales()),
+    body: localizedFromForm(formData, 'body', deps.locales()),
+    metaDescription: localizedFromForm(formData, 'metaDescription', deps.locales()),
     blocks: jsonFromForm(formData, 'blocks', []),
   });
   revalidatePath('/website/pages');

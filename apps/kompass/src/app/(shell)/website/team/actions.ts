@@ -11,7 +11,7 @@ export async function saveTeamMemberAction(_prev: ActionState, formData: FormDat
   const t = await getTranslations();
   const { deps, ctx } = await requireSession();
   const id = String(formData.get('id') ?? '');
-  const fields = { name: String(formData.get('name') ?? '').trim(), position: localizedFromForm(formData, 'position'), photoAssetId: String(formData.get('photoAssetId') ?? '') || null, petPhotoAssetId: String(formData.get('petPhotoAssetId') ?? '') || null };
+  const fields = { name: String(formData.get('name') ?? '').trim(), position: localizedFromForm(formData, 'position', deps.locales()), photoAssetId: String(formData.get('photoAssetId') ?? '') || null, petPhotoAssetId: String(formData.get('petPhotoAssetId') ?? '') || null };
   const result = id ? await updateTeamMember(deps, ctx, { id, ...fields }) : await createTeamMember(deps, ctx, fields);
   revalidatePath('/website/team');
   return toActionState(result, t, t('website.common.saved'));

@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogTitle, DialogTrigger } from 
 import { idleState } from '@/lib/actions';
 import { saveFaqAction } from './actions';
 
-export function FaqDialog({ faq, trigger }: { faq: FaqRecord | null; trigger: React.ReactElement }) {
+export function FaqDialog({ faq, trigger, locales }: { faq: FaqRecord | null; trigger: React.ReactElement; locales: string[] }) {
   const t = useTranslations('website.faqs.form');
   const c = useTranslations('website.common');
   const [open, setOpen] = useState(false);
@@ -26,9 +26,9 @@ export function FaqDialog({ faq, trigger }: { faq: FaqRecord | null; trigger: Re
           <DialogTitle className="font-heading text-[19px] md:col-span-2">{faq ? t('editTitle') : t('createTitle')}</DialogTitle>
           {faq ? <input type="hidden" name="id" value={faq.id} /> : null}
           {state.status === 'error' && Object.keys(errors).length === 0 ? <p role="alert" className="rounded-md border border-error bg-error-bg p-3 text-[13px] text-error md:col-span-2">{state.message}</p> : null}
-          <LocalizedField name="category" label={t('category')} value={faq?.category ?? { de: '', en: '' }} required errors={errors} />
-          <LocalizedField name="question" label={t('question')} value={faq?.question ?? { de: '', en: '' }} required errors={errors} />
-          <LocalizedField name="answer" label={t('answer')} kind="textarea" rows={4} value={faq?.answer ?? { de: '', en: '' }} required errors={errors} />
+          <LocalizedField name="category" label={t('category')} value={faq?.category ?? {}} required errors={errors} locales={locales} />
+          <LocalizedField name="question" label={t('question')} value={faq?.question ?? {}} required errors={errors} locales={locales} />
+          <LocalizedField name="answer" label={t('answer')} kind="textarea" rows={4} value={faq?.answer ?? {}} required errors={errors} locales={locales} />
           <DialogFooter className="md:col-span-2"><Button type="button" variant="ghost" onClick={() => setOpen(false)}>{c('back')}</Button><SubmitButton>{c('save')}</SubmitButton></DialogFooter>
         </form>
       </DialogContent>

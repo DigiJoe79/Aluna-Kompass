@@ -1,8 +1,7 @@
 import { translationGaps, type LocalizedText } from '@kompass/core';
 
-export function localizedFromForm(formData: FormData, name: string): LocalizedText {
-  const read = (locale: 'de' | 'en') => String(formData.get(`${name}.${locale}`) ?? '').trim();
-  return { de: read('de'), en: read('en') };
+export function localizedFromForm(formData: FormData, name: string, locales: readonly string[]): LocalizedText {
+  return Object.fromEntries(locales.map((l) => [l, String(formData.get(`${name}.${l}`) ?? '').trim()]));
 }
 
 export function jsonFromForm<T>(formData: FormData, name: string, fallback: T): T {

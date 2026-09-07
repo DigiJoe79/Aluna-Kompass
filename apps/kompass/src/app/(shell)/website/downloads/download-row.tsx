@@ -9,7 +9,7 @@ import { SubmitButton } from '@/components/forms/submit-button';
 import { idleState } from '@/lib/actions';
 import { setDownloadAction } from './actions';
 
-export function DownloadRow({ download }: { download: DownloadRecord }) {
+export function DownloadRow({ download, locales }: { download: DownloadRecord; locales: string[] }) {
   const t = useTranslations('website.downloads');
   const c = useTranslations('website.common');
   const [state, action] = useActionState(setDownloadAction, idleState);
@@ -21,7 +21,7 @@ export function DownloadRow({ download }: { download: DownloadRecord }) {
         <form action={action} className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
           <input type="hidden" name="key" value={download.key} />
           <input type="hidden" name="assetId" value={download.assetId ?? ''} />
-          <LocalizedField name="title" label={t('form.title')} value={download.title} required />
+          <LocalizedField name="title" label={t('form.title')} value={download.title} required locales={locales} />
           <div className="flex flex-col gap-2">
             <label className="text-[13px] font-semibold text-ink-2">{t('form.file')}<input type="file" name="file" accept="application/pdf" aria-label={`${t('form.file')} PDF`} className="mt-1 block text-[12px]" /></label>
             {download.assetId ? <a href={`/media/${download.assetId}`} target="_blank" rel="noopener" className="text-[13px] text-link underline">{t('open')}</a> : <span className="text-[12px] text-muted-ink">{t('none')}</span>}

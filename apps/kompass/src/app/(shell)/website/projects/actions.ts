@@ -14,11 +14,11 @@ export async function saveProjectAction(_prev: ActionState, formData: FormData):
   const id = String(formData.get('id') ?? '');
   const fields = {
     slug: String(formData.get('slug') ?? '').trim(),
-    name: localizedFromForm(formData, 'name'),
+    name: localizedFromForm(formData, 'name', deps.locales()),
     type: (formData.get('type') as 'ongoing' | 'shortTerm') ?? 'ongoing',
     status: (formData.get('status') as 'active' | 'completed') ?? 'active',
-    summary: localizedFromForm(formData, 'summary'),
-    body: localizedFromForm(formData, 'body'),
+    summary: localizedFromForm(formData, 'summary', deps.locales()),
+    body: localizedFromForm(formData, 'body', deps.locales()),
     imageAssetId: String(formData.get('imageAssetId') ?? '') || null,
     betterplaceProjectId: String(formData.get('betterplaceProjectId') ?? '').trim() || null,
   };

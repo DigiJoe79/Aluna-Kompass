@@ -19,7 +19,7 @@ export async function setDownloadAction(_prev: ActionState, formData: FormData):
     if (!stored.ok) return toActionState(stored, t);
     assetId = stored.value.id;
   }
-  const result = await setDownload(deps, ctx, { key, title: localizedFromForm(formData, 'title'), assetId });
+  const result = await setDownload(deps, ctx, { key, title: localizedFromForm(formData, 'title', deps.locales()), assetId });
   revalidatePath('/website/downloads');
   return toActionState(result, t, t('website.common.saved'));
 }

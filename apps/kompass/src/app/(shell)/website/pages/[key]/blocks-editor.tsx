@@ -12,13 +12,15 @@ import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-const empty = (): PageBlock => ({ id: '', title: { de: '', en: '' }, text: { de: '', en: '' }, imageAssetId: null, href: '', label: { de: '', en: '' } });
+const empty = (): PageBlock => ({ id: '', title: {}, text: {}, imageAssetId: null, href: '', label: {} });
 
-export function BlocksEditor({ initial }: { initial: PageBlock[] }) {
+export function BlocksEditor({ initial, locales }: { initial: PageBlock[]; locales: string[] }) {
   const t = useTranslations('website.pages.blocks');
+  const leading = locales[0] ?? 'de';
   const [blocks, setBlocks] = useState<PageBlock[]>(initial);
   const [editing, setEditing] = useState<{ index: number | null; block: PageBlock } | null>(null);
-  const readLocalized = (form: HTMLFormElement, name: string): LocalizedText => ({ de: (form.elements.namedItem(`${name}.de`) as HTMLInputElement).value.trim(), en: (form.elements.namedItem(`${name}.en`) as HTMLInputElement).value.trim() });
+  const readLocalized = (form: HTMLFormElement, name: string): LocalizedText =>
+    Object.fromEntries(locales.map((l) => [l, ((form.elements.namedItem(`${name}.${l}`) as HTMLInputElement)?.value ?? '').trim()]));
   const commit = (form: HTMLFormElement) => {
     if (!editing) return;
     const block: PageBlock = {
@@ -41,7 +43,7 @@ export function BlocksEditor({ initial }: { initial: PageBlock[] }) {
         {blocks.map((b, i) => (
           <li key={`${b.id}-${i}`} className="flex items-center gap-3 rounded-md border border-line bg-surface-2 px-3 py-2 text-[13px]">
             {b.imageAssetId ? <img src={`/media/${b.imageAssetId}`} alt="" className="size-8 rounded-sm object-cover" /> : null}
-            <span className="font-semibold">{b.title.de || b.id}</span>
+            <span className="font-semibold">{b.title[leading] || b.id}</span>
             <span className="font-mono text-[11px] text-muted-ink">{b.id} · {b.href}</span>
             <span className="ml-auto flex items-center gap-1">
               <Button type="button" variant="ghost" size="sm" onClick={() => setEditing({ index: i, block: b })}>{t('edit')}</Button>
@@ -58,9 +60,9 @@ export function BlocksEditor({ initial }: { initial: PageBlock[] }) {
               <DialogTitle className="font-heading text-[19px] md:col-span-2">{editing.index === null ? t('add') : t('edit')}</DialogTitle>
               <div className="flex flex-col gap-1"><Label htmlFor="block-id">{t('id')}</Label><Input id="block-id" name="block-id" defaultValue={editing.block.id} required pattern="[a-z0-9][a-z0-9-]{0,40}" /></div>
               <div className="flex flex-col gap-1"><Label htmlFor="block-href">{t('href')}</Label><Input id="block-href" name="block-href" defaultValue={editing.block.href} /></div>
-              <LocalizedField name="block-title" label={t('blockTitle')} value={editing.block.title} required />
-              <LocalizedField name="block-text" label={t('text')} kind="textarea" rows={3} value={editing.block.text} />
-              <LocalizedField name="block-label" label={t('label')} value={editing.block.label} />
+              <LocalizedField name="block-title" label={t('blockTitle')} value={editing.block.title} required locales={locales} />
+              <LocalizedField name="block-text" label={t('text')} kind="textarea" rows={3} value={editing.block.text} locales={locales} />
+              <LocalizedField name="block-label" label={t('label')} value={editing.block.label} locales={locales} />
               <div className="md:col-span-2"><MediaPicker name="block-image" value={editing.block.imageAssetId} label={t('image')} /></div>
               <DialogFooter className="md:col-span-2"><Button type="submit">{t('apply')}</Button></DialogFooter>
             </form>

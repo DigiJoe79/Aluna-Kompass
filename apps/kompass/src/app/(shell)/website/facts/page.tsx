@@ -21,5 +21,5 @@ export default async function FactsPage() {
       stories = list.value.filter((a) => a.status === 'adopted' && a.isPublished).map((a) => ({ slug: a.slug, name: a.name }));
     }
   }
-  return (<><PageHeader title={t('title')} description={t('description')} /><FactsForm initial={initial} animals={animals} stories={stories} /></>);
+  return (<><PageHeader title={t('title')} description={t('description')} /><FactsForm initial={initial} animals={animals} stories={stories} locales={deps.locales()} /></>);
 }

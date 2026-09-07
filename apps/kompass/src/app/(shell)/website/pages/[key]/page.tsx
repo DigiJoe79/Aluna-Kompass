@@ -19,7 +19,7 @@ export default async function WebsitePageEdit(props: { params: Promise<{ key: st
   return (
     <>
       <PageHeader title={t(`keys.${page.value.key}`)} description={`/${page.value.key}`} actions={<GapCounter count={gapCount(page.value as unknown as Record<string, unknown>, ['title', 'lede', 'body', 'metaDescription'], deps.locales())} />} />
-      <PageForm page={page.value} />
+      <PageForm page={page.value} locales={deps.locales()} />
     </>
   );
 }

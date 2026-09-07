@@ -12,8 +12,8 @@ export default async function AnimalEditPage(props: { params: Promise<{ id: stri
   if (requirePermission(ctx, 'animals.view')) return <ForbiddenCard permission="animals.view" />;
   const { id } = await props.params;
   const t = await getTranslations('animals.list');
-  if (id === 'new') return (<><PageHeader title={t('create')} /><AnimalForm animal={null} /></>);
+  if (id === 'new') return (<><PageHeader title={t('create')} /><AnimalForm animal={null} locales={deps.locales()} /></>);
   const animal = await getAnimal(deps, ctx, id);
   if (!animal.ok) notFound();
-  return (<><PageHeader title={animal.value.name} description={`/hunde/${animal.value.slug}/`} /><AnimalForm animal={animal.value} /></>);
+  return (<><PageHeader title={animal.value.name} description={`/hunde/${animal.value.slug}/`} /><AnimalForm animal={animal.value} locales={deps.locales()} /></>);
 }

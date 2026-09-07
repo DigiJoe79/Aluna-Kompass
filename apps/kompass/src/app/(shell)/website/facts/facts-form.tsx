@@ -27,7 +27,7 @@ function StringList({ label, itemLabel, add, values, onChange }: { label: string
   );
 }
 
-export function FactsForm({ initial, animals, stories }: { initial: Values; animals: Option[]; stories: Option[] }) {
+export function FactsForm({ initial, animals, stories, locales }: { initial: Values; animals: Option[]; stories: Option[]; locales: string[] }) {
   const t = useTranslations('website.facts');
   const [values, setValues] = useState<Values>(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -36,7 +36,7 @@ export function FactsForm({ initial, animals, stories }: { initial: Values; anim
   const set = (key: string, value: unknown) => setValues((v) => ({ ...v, [key]: value }));
   const str = (key: string) => String(values[key] ?? '');
   const list = (key: string) => (values[key] as string[]) ?? [];
-  const claim = (values['website.claim'] as { de?: string; en?: string }) ?? { de: '', en: '' };
+  const claim = (values['website.claim'] as Record<string, string>) ?? {};
   const links = (values['website.socialLinks'] as { label: string; href: string }[]) ?? [];
   const select = 'h-9 rounded-md border border-line-strong bg-field px-2 text-[14px]';
   const num = (key: string, label: string, step = '1') => (
@@ -49,12 +49,11 @@ export function FactsForm({ initial, animals, stories }: { initial: Values; anim
     <div className="flex flex-col">
       <section className="grid gap-4 rounded-lg border border-line bg-surface p-6 md:grid-cols-2">
         <h3 className="font-heading text-[17px] md:col-span-2">{t('groups.presence')}</h3>
-        <FormField id="claim-de" label={t('fields.claimDe')} error={errors['website.claim']}>
-          <Input id="claim-de" value={claim.de ?? ''} onChange={(e) => set('website.claim', { ...claim, de: e.target.value })} />
-        </FormField>
-        <FormField id="claim-en" label={t('fields.claimEn')}>
-          <Input id="claim-en" value={claim.en ?? ''} onChange={(e) => set('website.claim', { ...claim, en: e.target.value })} />
-        </FormField>
+        {locales.map((loc) => (
+          <FormField key={loc} id={`claim-${loc}`} label={`${t('fields.claim')} (${loc.toUpperCase()})`} error={loc === locales[0] ? errors['website.claim'] : undefined}>
+            <Input id={`claim-${loc}`} value={claim[loc] ?? ''} onChange={(e) => set('website.claim', { ...claim, [loc]: e.target.value })} />
+          </FormField>
+        ))}
       </section>
       <section className="mt-4 grid gap-4 rounded-lg border border-line bg-surface p-6 md:grid-cols-2">
         <h3 className="font-heading text-[17px] md:col-span-2">{t('groups.numbers')}</h3>

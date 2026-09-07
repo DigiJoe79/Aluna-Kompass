@@ -21,6 +21,7 @@ const CORE_ADMIN: { key: string; href: string; icon: string; permission?: string
   { key: 'users', href: '/admin/users', icon: 'users', permission: 'users.manage' },
   { key: 'roles', href: '/admin/roles', icon: 'shield', permission: 'roles.manage' },
   { key: 'settings', href: '/admin/settings', icon: 'sliders', permission: 'settings.manage' },
+  { key: 'locales', href: '/admin/locales', icon: 'languages', permission: 'settings.manage' },
   { key: 'themes', href: '/admin/themes', icon: 'droplet', permission: 'settings.manage' },
   { key: 'modules', href: '/admin/modules', icon: 'grid', permission: 'modules.manage' },
   { key: 'audit', href: '/admin/audit', icon: 'clock', permission: 'audit.view' },

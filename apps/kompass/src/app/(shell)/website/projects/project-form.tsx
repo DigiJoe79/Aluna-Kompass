@@ -13,9 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { idleState } from '@/lib/actions';
 import { saveProjectAction } from './actions';
 
-const empty = { de: '', en: '' };
-
-export function ProjectForm({ project }: { project: ProjectRecord | null }) {
+export function ProjectForm({ project, locales }: { project: ProjectRecord | null; locales: string[] }) {
   const t = useTranslations('website.projects.form');
   const c = useTranslations('website.common');
   const [state, action] = useActionState(saveProjectAction, idleState);
@@ -32,9 +30,9 @@ export function ProjectForm({ project }: { project: ProjectRecord | null }) {
           <FormField id="betterplaceProjectId" label={t('betterplace')} hint={t('betterplaceHint')} error={errors.betterplaceProjectId}><Input id="betterplaceProjectId" name="betterplaceProjectId" defaultValue={project?.betterplaceProjectId ?? ''} className="font-mono" /></FormField>
           <FormField id="type" label={t('type')}><select id="type" name="type" defaultValue={project?.type ?? 'ongoing'} className={select}><option value="ongoing">{t('types.ongoing')}</option><option value="shortTerm">{t('types.shortTerm')}</option></select></FormField>
           <FormField id="status" label={t('status')}><select id="status" name="status" defaultValue={project?.status ?? 'active'} className={select}><option value="active">{t('statuses.active')}</option><option value="completed">{t('statuses.completed')}</option></select></FormField>
-          <LocalizedField name="name" label={t('name')} value={project?.name ?? empty} required errors={errors} />
-          <LocalizedField name="summary" label={t('summary')} kind="textarea" rows={3} value={project?.summary ?? empty} errors={errors} />
-          <LocalizedField name="body" label={t('body')} kind="markdown" rows={12} value={project?.body ?? empty} errors={errors} />
+          <LocalizedField name="name" label={t('name')} value={project?.name ?? {}} required errors={errors} locales={locales} />
+          <LocalizedField name="summary" label={t('summary')} kind="textarea" rows={3} value={project?.summary ?? {}} errors={errors} locales={locales} />
+          <LocalizedField name="body" label={t('body')} kind="markdown" rows={12} value={project?.body ?? {}} errors={errors} locales={locales} />
           <div className="md:col-span-2"><MediaPicker name="imageAssetId" value={project?.imageAssetId ?? null} label={t('image')} /></div>
           <div className="flex justify-end md:col-span-2"><SubmitButton>{c('save')}</SubmitButton></div>
         </TabsContent>

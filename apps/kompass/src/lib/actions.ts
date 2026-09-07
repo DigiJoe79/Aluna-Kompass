@@ -28,6 +28,10 @@ const KNOWN_CONFLICTS = new Set([
   'blockedTermsPresent',
   'siteBuildFailed',
   'publishFailed',
+  'duplicateLocale',
+  'tooManyLocales',
+  'lastLocale',
+  'unknownLocale',
 ]);
 
 const MEDIA_FIELD_CODES = ['unsupportedMediaType', 'fileTooLarge', 'svgContainsScript'];

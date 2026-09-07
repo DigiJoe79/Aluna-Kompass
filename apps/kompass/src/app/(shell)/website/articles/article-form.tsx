@@ -11,9 +11,7 @@ import { Input } from '@/components/ui/input';
 import { idleState } from '@/lib/actions';
 import { saveArticleAction } from './actions';
 
-const empty = { de: '', en: '' };
-
-export function ArticleForm({ article }: { article: ArticleRecord | null }) {
+export function ArticleForm({ article, locales }: { article: ArticleRecord | null; locales: string[] }) {
   const t = useTranslations('website.articles.form');
   const c = useTranslations('website.common');
   const [state, action] = useActionState(saveArticleAction, idleState);
@@ -24,9 +22,9 @@ export function ArticleForm({ article }: { article: ArticleRecord | null }) {
       {article ? <input type="hidden" name="id" value={article.id} /> : null}
       <FormField id="slug" label={c('slug')} hint={c('slugHint')} error={errors.slug}><Input id="slug" name="slug" defaultValue={article?.slug ?? ''} required pattern="[a-z0-9][a-z0-9-]{0,80}" className="font-mono" /></FormField>
       <FormField id="publishedAt" label={t('publishedAt')} error={errors.publishedAt}><Input id="publishedAt" name="publishedAt" type="date" defaultValue={article?.publishedAt ?? ''} className="font-mono" /></FormField>
-      <LocalizedField name="title" label={t('title')} value={article?.title ?? empty} required errors={errors} />
-      <LocalizedField name="lede" label={t('lede')} kind="textarea" rows={3} value={article?.lede ?? empty} errors={errors} />
-      <LocalizedField name="body" label={t('body')} kind="markdown" rows={16} value={article?.body ?? empty} errors={errors} />
+      <LocalizedField name="title" label={t('title')} value={article?.title ?? {}} required errors={errors} locales={locales} />
+      <LocalizedField name="lede" label={t('lede')} kind="textarea" rows={3} value={article?.lede ?? {}} errors={errors} locales={locales} />
+      <LocalizedField name="body" label={t('body')} kind="markdown" rows={16} value={article?.body ?? {}} errors={errors} locales={locales} />
       <div className="flex justify-end md:col-span-2"><SubmitButton>{c('save')}</SubmitButton></div>
     </form>
   );

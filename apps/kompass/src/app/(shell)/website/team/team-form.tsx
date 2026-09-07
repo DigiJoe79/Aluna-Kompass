@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { idleState } from '@/lib/actions';
 import { saveTeamMemberAction } from './actions';
 
-export function TeamMemberDialog({ member, trigger }: { member: TeamMemberRecord | null; trigger: React.ReactElement }) {
+export function TeamMemberDialog({ member, trigger, locales }: { member: TeamMemberRecord | null; trigger: React.ReactElement; locales: string[] }) {
   const t = useTranslations('website.team.form');
   const c = useTranslations('website.common');
   const [open, setOpen] = useState(false);
@@ -30,7 +30,7 @@ export function TeamMemberDialog({ member, trigger }: { member: TeamMemberRecord
           {member ? <input type="hidden" name="id" value={member.id} /> : null}
           {state.status === 'error' && Object.keys(errors).length === 0 ? <p role="alert" className="rounded-md border border-error bg-error-bg p-3 text-[13px] text-error md:col-span-2">{state.message}</p> : null}
           <FormField id="name" label={t('name')} error={errors.name} className="md:col-span-2"><Input id="name" name="name" defaultValue={member?.name ?? ''} required /></FormField>
-          <LocalizedField name="position" label={t('position')} value={member?.position ?? { de: '', en: '' }} required errors={errors} />
+          <LocalizedField name="position" label={t('position')} value={member?.position ?? {}} required errors={errors} locales={locales} />
           <div className="md:col-span-2"><MediaPicker name="photoAssetId" value={member?.photoAssetId ?? null} label={t('photo')} /></div>
           <div className="md:col-span-2"><MediaPicker name="petPhotoAssetId" value={member?.petPhotoAssetId ?? null} label={t('petPhoto')} /></div>
           <DialogFooter className="md:col-span-2"><Button type="button" variant="ghost" onClick={() => setOpen(false)}>{c('back')}</Button><SubmitButton>{c('save')}</SubmitButton></DialogFooter>

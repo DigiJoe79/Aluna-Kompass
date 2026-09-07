@@ -14,9 +14,9 @@ export async function saveArticleAction(_prev: ActionState, formData: FormData):
   const id = String(formData.get('id') ?? '');
   const fields = {
     slug: String(formData.get('slug') ?? '').trim(),
-    title: localizedFromForm(formData, 'title'),
-    lede: localizedFromForm(formData, 'lede'),
-    body: localizedFromForm(formData, 'body'),
+    title: localizedFromForm(formData, 'title', deps.locales()),
+    lede: localizedFromForm(formData, 'lede', deps.locales()),
+    body: localizedFromForm(formData, 'body', deps.locales()),
     publishedAt: String(formData.get('publishedAt') ?? '') || null,
   };
   const result = id ? await updateArticle(deps, ctx, { id, ...fields }) : await createArticle(deps, ctx, fields);

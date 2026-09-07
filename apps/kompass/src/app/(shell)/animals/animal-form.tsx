@@ -19,9 +19,7 @@ import { PhotosEditor } from './photos-editor';
 import { StatusDialog } from './status-dialog';
 import { StoryForm } from './story-form';
 
-const empty = { de: '', en: '' };
-
-export function AnimalForm({ animal }: { animal: AnimalRecord | null }) {
+export function AnimalForm({ animal, locales }: { animal: AnimalRecord | null; locales: string[] }) {
   const t = useTranslations('animals.form');
   const c = useTranslations('website.common');
   const [state, action] = useActionState(saveAnimalAction, idleState);
@@ -48,20 +46,20 @@ export function AnimalForm({ animal }: { animal: AnimalRecord | null }) {
             <FormField id="location" label={t('location')}><select id="location" name="location" defaultValue={animal?.location ?? 'shelter'} className={select}><option value="shelter">{t('locations.shelter')}</option><option value="germany">{t('locations.germany')}</option></select></FormField>
             <FormField id="sizeCm" label={t('sizeCm')} error={errors.sizeCm}><Input id="sizeCm" name="sizeCm" type="number" defaultValue={animal?.sizeCm ?? 0} className="font-mono" /></FormField>
             <FormField id="externalProfileUrl" label={t('externalProfileUrl')} hint={t('externalHint')} error={errors.externalProfileUrl}><Input id="externalProfileUrl" name="externalProfileUrl" defaultValue={animal?.externalProfileUrl ?? ''} /></FormField>
-            <LocalizedField name="birthText" label={t('birthText')} value={animal?.birthText ?? empty} errors={errors} />
-            <LocalizedField name="sizeText" label={t('sizeText')} value={animal?.sizeText ?? empty} errors={errors} />
+            <LocalizedField name="birthText" label={t('birthText')} value={animal?.birthText ?? {}} errors={errors} locales={locales} />
+            <LocalizedField name="sizeText" label={t('sizeText')} value={animal?.sizeText ?? {}} errors={errors} locales={locales} />
             <div className="flex items-center gap-2"><Checkbox id="isEmergency" name="isEmergency" defaultChecked={animal?.isEmergency ?? false} /><Label htmlFor="isEmergency">{t('isEmergency')}</Label></div>
             <div className="flex items-center gap-2"><Checkbox id="isSponsorable" name="isSponsorable" defaultChecked={animal?.isSponsorable ?? false} /><Label htmlFor="isSponsorable">{t('isSponsorable')}</Label></div>
           </TabsContent>
           <TabsContent keepMounted value="texts" className="grid gap-4 p-6 md:grid-cols-2">
-            <LocalizedField name="summary" label={t('summary')} kind="textarea" rows={2} value={animal?.summary ?? empty} errors={errors} />
-            <LocalizedField name="body" label={t('body')} kind="markdown" rows={10} value={animal?.body ?? empty} errors={errors} />
-            <LocalizedField name="traits__text" label={t('traits')} hint={t('traitsHint')} value={{ de: (animal?.traits.de ?? []).join(', '), en: (animal?.traits.en ?? []).join(', ') }} />
+            <LocalizedField name="summary" label={t('summary')} kind="textarea" rows={2} value={animal?.summary ?? {}} errors={errors} locales={locales} />
+            <LocalizedField name="body" label={t('body')} kind="markdown" rows={10} value={animal?.body ?? {}} errors={errors} locales={locales} />
+            <LocalizedField name="traits__text" label={t('traits')} hint={t('traitsHint')} value={Object.fromEntries(locales.map((l) => [l, ((animal?.traits as Record<string, string[]> | undefined)?.[l] ?? []).join(', ')]))} locales={locales} />
           </TabsContent>
           <div className="flex justify-end border-t border-line bg-surface-2 px-6 py-3"><SubmitButton>{c('save')}</SubmitButton></div>
         </form>
         <TabsContent value="photos" className="p-6">{animal ? <PhotosEditor animalId={animal.id} initial={animal.photos} /> : null}</TabsContent>
-        <TabsContent value="story" className="p-6">{animal ? <StoryForm animal={animal} /> : null}</TabsContent>
+        <TabsContent value="story" className="p-6">{animal ? <StoryForm animal={animal} locales={locales} /> : null}</TabsContent>
       </Tabs>
     </div>
   );

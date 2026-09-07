@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { idleState } from '@/lib/actions';
 import { saveAnimalStoryAction } from './actions';
 
-export function StoryForm({ animal }: { animal: AnimalRecord }) {
+export function StoryForm({ animal, locales }: { animal: AnimalRecord; locales: string[] }) {
   const t = useTranslations('animals.story');
   const [state, action] = useActionState(saveAnimalStoryAction, idleState);
   useEffect(() => { if (state.status === 'success') toast.success(state.message ?? ''); else if (state.status === 'error') toast.error(state.message); }, [state]);
@@ -23,7 +23,7 @@ export function StoryForm({ animal }: { animal: AnimalRecord }) {
       <input type="hidden" name="id" value={animal.id} />
       <div><MediaPicker name="beforeAssetId" value={story?.beforeAssetId ?? null} label={t('before')} /></div>
       <div><MediaPicker name="afterAssetId" value={story?.afterAssetId ?? null} label={t('after')} /></div>
-      <LocalizedField name="quote" label={t('quote')} kind="textarea" rows={3} value={story?.quote ?? { de: '', en: '' }} />
+      <LocalizedField name="quote" label={t('quote')} kind="textarea" rows={3} value={story?.quote ?? {}} locales={locales} />
       <FormField id="family" label={t('family')}><Input id="family" name="family" defaultValue={story?.family ?? ''} /></FormField>
       <FormField id="adoptedYear" label={t('year')}><Input id="adoptedYear" name="adoptedYear" type="number" defaultValue={story?.adoptedYear ?? new Date().getFullYear()} className="font-mono" /></FormField>
       <div className="flex justify-end md:col-span-2"><SubmitButton>{t('save')}</SubmitButton></div>

@@ -19,9 +19,11 @@ export default async function FaqsPage() {
   const result = await listFaqs(deps, ctx);
   if (!result.ok) return <ForbiddenCard permission="website.view" />;
   const ids = result.value.map((f) => f.id);
+  const locales = deps.locales();
+  const leading = locales[0] ?? 'de';
   return (
     <>
-      <PageHeader title={t('title')} actions={<FaqDialog faq={null} trigger={<Button>{t('create')}</Button>} />} />
+      <PageHeader title={t('title')} actions={<FaqDialog faq={null} trigger={<Button>{t('create')}</Button>} locales={locales} />} />
       {result.value.length === 0 ? <EmptyState title={t('emptyTitle')} text={t('emptyText')} /> : (
         <div className="overflow-hidden rounded-md border border-line bg-surface">
           <table className="w-full text-[14px]">
@@ -29,10 +31,10 @@ export default async function FaqsPage() {
             <tbody>
               {result.value.map((f, i) => (
                 <tr key={f.id} className={`h-[52px] border-b border-line-2 hover:bg-row-hover ${i % 2 === 1 ? 'bg-zebra' : ''}`}>
-                  <td className="px-4 font-semibold text-ink">{f.question.de}</td>
-                  <td className="px-4"><StatusBadge tone="neutral">{f.category.de}</StatusBadge></td>
+                  <td className="px-4 font-semibold text-ink">{f.question[leading] ?? f.question.de ?? ''}</td>
+                  <td className="px-4"><StatusBadge tone="neutral">{f.category[leading] ?? f.category.de ?? ''}</StatusBadge></td>
                   <td className="px-4"><PublishSwitch id={f.id} isPublished={f.isPublished} action={setFaqPublishedAction} /></td>
-                  <td className="px-4 text-right"><span className="inline-flex items-center gap-1"><FaqDialog faq={f} trigger={<Button variant="ghost" size="sm">{t('edit')}</Button>} /><ReorderButtons ids={ids} index={i} action={reorderFaqsAction} /></span></td>
+                  <td className="px-4 text-right"><span className="inline-flex items-center gap-1"><FaqDialog faq={f} trigger={<Button variant="ghost" size="sm">{t('edit')}</Button>} locales={locales} /><ReorderButtons ids={ids} index={i} action={reorderFaqsAction} /></span></td>
                 </tr>
               ))}
             </tbody>

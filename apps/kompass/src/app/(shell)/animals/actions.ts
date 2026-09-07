@@ -19,16 +19,16 @@ export async function saveAnimalAction(_prev: ActionState, formData: FormData): 
     slug: String(formData.get('slug') ?? '').trim(),
     name: String(formData.get('name') ?? '').trim(),
     sex: String(formData.get('sex') ?? 'female'),
-    birthText: localizedFromForm(formData, 'birthText'),
+    birthText: localizedFromForm(formData, 'birthText', deps.locales()),
     sizeCm: Number(formData.get('sizeCm') ?? 0),
-    sizeText: localizedFromForm(formData, 'sizeText'),
+    sizeText: localizedFromForm(formData, 'sizeText', deps.locales()),
     location: String(formData.get('location') ?? 'shelter'),
     isEmergency: formData.get('isEmergency') === 'on',
     isSponsorable: formData.get('isSponsorable') === 'on',
     traits: { de: splitList(formData.get('traits__text.de')), en: splitList(formData.get('traits__text.en')) },
     externalProfileUrl: String(formData.get('externalProfileUrl') ?? '').trim(),
-    summary: localizedFromForm(formData, 'summary'),
-    body: localizedFromForm(formData, 'body'),
+    summary: localizedFromForm(formData, 'summary', deps.locales()),
+    body: localizedFromForm(formData, 'body', deps.locales()),
   };
   const result = id ? await updateAnimal(deps, ctx, { id, ...fields }) : await createAnimal(deps, ctx, fields);
   revalidatePath('/animals');
@@ -69,7 +69,7 @@ export async function saveAnimalStoryAction(_prev: ActionState, formData: FormDa
     id: String(formData.get('id') ?? ''),
     beforeAssetId: String(formData.get('beforeAssetId') ?? '') || null,
     afterAssetId: String(formData.get('afterAssetId') ?? '') || null,
-    quote: localizedFromForm(formData, 'quote'),
+    quote: localizedFromForm(formData, 'quote', deps.locales()),
     family: String(formData.get('family') ?? '').trim(),
     adoptedYear: Number(formData.get('adoptedYear') ?? 0),
   });
