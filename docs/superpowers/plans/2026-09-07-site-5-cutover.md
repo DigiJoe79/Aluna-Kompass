@@ -14,21 +14,24 @@
 
 **Reihenfolge:** Task 1 nimmt `website` das Publizieren. Danach kann Aluna erst wieder veröffentlichen, wenn Task 2 die Inhalte umgezogen hat — die beiden gehören zeitlich zusammen und sollten nicht über Tage auseinanderfallen.
 
-## Voraussetzungen ausserhalb dieses Repos
+## Voraussetzungen
 
-Dieser Plan wartet auf drei Dinge, die kein Test hier herstellen kann. Wer ihn
-beginnt, prüft sie zuerst:
+**Vor Task 1 — erfüllt am 2026-09-07:** Alunas Template existiert im Repo von
+Aluna Tierhilfe e.V. (`Webseite/kompass-template`), liegt im Testcontainer unter
+`/data/site-template` und wurde dort eingelesen. Damit stehen die
+Sammlungsschlüssel und Variablen fest, auf die Task 2 abbildet.
 
-1. **Alunas Template existiert** im Repo von Aluna Tierhilfe e.V. — `apps/site`
-   dorthin überführt und um `kompass.template.ts` ergänzt. Erst damit stehen die
-   Sammlungsschlüssel und die Variablen fest, auf die Task 1 abbildet.
-2. **Es publiziert von dort**, geprüft gegen die Testumgebung.
-3. **Alunas Installation läuft in der Testumgebung auf `site`** und publiziert
-   von dort. Vorher wird `website` nicht angefasst: Seine Tabellen sind bis dahin
-   die einzige vollständige Kopie der Inhalte.
+**Vor Task 2:** Ein Publish aus der Testumgebung ist durchgelaufen und die Seite
+im Browser geprüft. Das lässt sich erst nach Task 1 feststellen — vorher gibt es
+in `site` keine Pipeline. Die frühere Fassung dieser Liste verlangte den Publish
+schon vor Task 1 und war damit im Kreis geschlossen.
 
-Fehlt eines davon, ist der richtige nächste Schritt, es herzustellen — nicht,
-diesen Plan anzufangen.
+**Vor Task 4:** Alunas Installation läuft in der Testumgebung vollständig auf
+`site` — Inhalte migriert, Publish geprüft. Vorher wird `website` nicht
+entfernt: Seine Tabellen sind bis dahin die einzige vollständige Kopie der
+Inhalte.
+
+Was fehlt, wird hergestellt, bevor der zugehörige Task beginnt.
 
 ## Global Constraints
 
