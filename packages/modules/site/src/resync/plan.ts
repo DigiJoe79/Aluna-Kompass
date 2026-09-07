@@ -1,4 +1,4 @@
-import type { FieldSchema } from '../load';
+import type { FieldSchema } from '../types';
 
 /** Verlustfreie Typumformungen: von → nach. Alles andere gilt als Verlust. */
 const LOSSLESS: Record<string, string[]> = { text: ['list', 'markdown'], number: ['text'], select: ['text'], markdown: ['text'] };

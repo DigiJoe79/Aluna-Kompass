@@ -41,7 +41,7 @@ export async function applySyncAction(): Promise<ActionState> {
   const result = await applyTemplateSync(deps, ctx, { dir: DIR(), confirm: true });
   revalidatePath('/site/template');
   revalidatePath('/site', 'layout');
-  return toActionState(result, t, t('site.template.read.done'));
+  return toActionState(result, t, t('site.template.readDone'));
 }
 
 export async function saveVariablesAction(_prev: ActionState, formData: FormData): Promise<ActionState> {

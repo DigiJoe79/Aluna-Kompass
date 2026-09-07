@@ -59,6 +59,9 @@ importers:
       '@kompass/module-website':
         specifier: workspace:*
         version: link:../../packages/modules/website
+      '@kompass/site-template':
+        specifier: workspace:*
+        version: link:../../packages/site-template
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1

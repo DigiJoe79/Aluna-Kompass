@@ -1,6 +1,6 @@
 'use client';
 
-import { widgetOf, type FieldSchema } from '@kompass/module-site';
+import { widgetOf, type FieldSchema } from '@kompass/module-site/client';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';

@@ -1,6 +1,6 @@
 'use client';
 
-import { losesContent, type Finding } from '@kompass/module-site';
+import { losesContent, type Finding } from '@kompass/module-site/client';
 import { useTranslations } from 'next-intl';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';

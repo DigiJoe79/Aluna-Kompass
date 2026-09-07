@@ -1,6 +1,6 @@
 'use client';
 
-import type { FieldSchema } from '@kompass/module-site';
+import type { FieldSchema } from '@kompass/module-site/client';
 import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useState } from 'react';
 import { toast } from 'sonner';

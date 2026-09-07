@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { FieldSchema } from './load';
+import type { FieldSchema } from './types';
 
 const LOCALE_KEY = /^[a-z]{2}(-[a-z]{2})?$/;
 

@@ -18,7 +18,7 @@ function titleFor(pathname: string, groups: NavGroup[], t: (k: string) => string
   if (pathname.startsWith('/profile')) return { title: t('nav.profile'), group: '' };
   for (const group of groups) {
     const hit = group.items.find((i) => pathname.startsWith(i.href));
-    if (hit) return { title: t(hit.labelKey), group: t(group.labelKey) };
+    if (hit) return { title: hit.label ?? t(hit.labelKey), group: t(group.labelKey) };
   }
   return { title: '', group: '' };
 }

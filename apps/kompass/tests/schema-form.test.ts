@@ -1,5 +1,5 @@
-import { schemaFor } from '@kompass/module-site';
-import type { FieldSchema } from '@kompass/module-site';
+import { schemaFor } from '@kompass/module-site/client';
+import type { FieldSchema } from '@kompass/module-site/client';
 import { createTestDeps } from '@kompass/core/testing';
 import { validate } from '@kompass/core';
 import { describe, expect, it } from 'vitest';

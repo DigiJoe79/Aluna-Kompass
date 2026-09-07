@@ -6,17 +6,12 @@ import { pathToFileURL } from 'node:url';
 import { conflict, ok, type Result } from '@kompass/core';
 import type { TemplateDefinition } from '@kompass/site-template';
 import { z } from 'zod';
+import type { FieldSchema, TemplateSchema } from './types';
 
 export const TEMPLATE_FILE = 'kompass.template.ts';
 
-export interface FieldSchema { widget?: string; label?: string; [key: string]: unknown }
-export interface TemplateSchema {
-  name: string;
-  locales: string[];
-  uses: string[];
-  variables: Record<string, FieldSchema>;
-  collections: Record<string, { label: string; slug: boolean; sortable: boolean; publishable: boolean; max?: number; fields: Record<string, FieldSchema> }>;
-}
+export type { FieldSchema, TemplateSchema } from './types';
+
 export interface LoadedTemplate { definition: TemplateDefinition; schema: TemplateSchema; checksum: string }
 
 const localRequire = createRequire(import.meta.url);
@@ -90,7 +85,9 @@ export async function loadTemplate(dir: string): Promise<Result<LoadedTemplate>>
   try {
     // Zeitstempel im Query-Teil: sonst liefert der Modul-Cache nach einer
     // Änderung die alte Fassung, und ein Resync sähe keine Unterschiede.
-    loaded = (await import(`${pathToFileURL(file).href}?t=${Date.now()}`)).default;
+    // `webpackIgnore`: der Pfad steht erst zur Laufzeit fest — der Bundler soll
+    // ihn nicht auflösen wollen.
+    loaded = (await import(/* webpackIgnore: true */ `${pathToFileURL(file).href}?t=${Date.now()}`)).default;
   } catch (error) {
     return conflict('templateUnreadable', error instanceof Error ? error.message.slice(0, 500) : 'Unbekannter Fehler');
   }

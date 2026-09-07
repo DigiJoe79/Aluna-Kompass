@@ -1,6 +1,6 @@
 'use client';
 
-import type { FieldSchema } from '@kompass/module-site';
+import type { FieldSchema } from '@kompass/module-site/client';
 import { SchemaField } from './field';
 import { withBlanks } from './state';
 

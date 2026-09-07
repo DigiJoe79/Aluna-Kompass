@@ -356,7 +356,8 @@
       "finance": "Finanzen",
       "members": "Mitglieder",
       "animals": "Tiere",
-      "website": "Webseite"
+      "website": "Webseite",
+      "site": "Webseite"
     },
     "keys": {
       "users": {
@@ -427,6 +428,20 @@
         "publish": {
           "label": "Webseite publizieren",
           "description": "Webseiten-Export ausführen und Veröffentlichung starten."
+        }
+      },
+      "site": {
+        "view": {
+          "label": "Webseite ansehen",
+          "description": "Template-Variablen und Sammlungseinträge einsehen."
+        },
+        "manage": {
+          "label": "Webseite verwalten",
+          "description": "Template einlesen, Variablen und Sammlungseinträge pflegen."
+        },
+        "publish": {
+          "label": "Webseite publizieren",
+          "description": "Inhalt exportieren und die Veröffentlichung starten."
         }
       },
       "animals": {
@@ -1278,7 +1293,7 @@
       "lossy": "Kostet Inhalt:",
       "harmless": "Unkritisch:",
       "localesMissing": "Das Template fordert Sprachen, die nicht eingerichtet sind: {locales}. Legen Sie sie unter Sprachen an.",
-      "read.done": "Template eingelesen.",
+      "readDone": "Template eingelesen.",
       "name": "Name"
     },
     "variables": {

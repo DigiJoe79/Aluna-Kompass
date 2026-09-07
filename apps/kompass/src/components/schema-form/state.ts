@@ -1,4 +1,4 @@
-import { blankValue, widgetOf, type FieldSchema } from '@kompass/module-site';
+import { blankValue, widgetOf, type FieldSchema } from '@kompass/module-site/client';
 
 /** Setzt `next` unter `path` (`title.de`, `blocks.2.href`) und lässt alles andere unberührt. */
 export function setAtPath(value: unknown, path: string, next: unknown): unknown {
