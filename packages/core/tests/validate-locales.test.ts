@@ -39,3 +39,30 @@ describe('validate with locales', () => {
     expect(validate(deps, schema, { title: { de: 'A' }, note: { en: 'only english' } }).ok).toBe(true);
   });
 });
+
+describe('validate reaches nested schemas', () => {
+  const nested = z.object({
+    title: localizedText({ required: true, max: 50 }),
+    blocks: z.array(z.object({ id: z.string(), label: localizedText(), inner: z.object({ note: localizedText() }) })),
+  });
+
+  it('rejects an unknown locale inside a list entry, naming its path', async () => {
+    const deps = await depsWith(['de', 'en']);
+    const result = validate(deps, nested, { title: { de: 'A' }, blocks: [{ id: 'b1', label: { de: 'x' }, inner: { note: { de: 'n' } } }, { id: 'b2', label: { de: 'y', kl: 'z' }, inner: { note: { de: 'n' } } }] });
+    expect(result.ok).toBe(false);
+    if (!result.ok && result.error.type === 'validation') {
+      expect(result.error.issues).toEqual([{ path: 'blocks.1.label.kl', message: 'unknownLocale' }]);
+    }
+  });
+
+  it('rejects an unknown locale two objects deep', async () => {
+    const deps = await depsWith(['de', 'en']);
+    const result = validate(deps, nested, { title: { de: 'A' }, blocks: [{ id: 'b1', label: { de: 'x' }, inner: { note: { de: 'n', kl: 'q' } } }] });
+    expect(result.ok === false && result.error.type === 'validation' && result.error.issues[0]!.path).toBe('blocks.0.inner.note.kl');
+  });
+
+  it('accepts a well-formed nested value', async () => {
+    const deps = await depsWith(['de', 'en']);
+    expect(validate(deps, nested, { title: { de: 'A' }, blocks: [{ id: 'b1', label: { de: 'x', en: 'y' }, inner: { note: { en: 'n' } } }] }).ok).toBe(true);
+  });
+});

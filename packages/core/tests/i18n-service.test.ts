@@ -85,3 +85,33 @@ describe('locale administration', () => {
     expect(bad.ok === false && bad.error.type === 'conflict').toBe(true);
   });
 });
+
+describe('locale removal reaches beyond localized columns', () => {
+  it('strips the locale from a setting and counts it in the preview', async () => {
+    const deps = setup();
+    const ctx = ctxWith(['settings.manage']);
+    unwrap(await addLocale(deps, ctx, { code: 'en' }));
+    deps.sqlite
+      .prepare("insert into settings (key, value, updated_at) values ('probe.localized', ?, '2026-09-07T00:00:00.000Z') on conflict(key) do update set value = excluded.value")
+      .run(JSON.stringify({ de: 'Ein Verein', en: 'A club' }));
+
+    const preview = unwrap(await previewLocaleRemoval(deps, ctx, { code: 'en' }));
+    expect(preview.filled).toBeGreaterThan(0);
+    expect(preview.tables.some((t) => t.table === 'settings')).toBe(true);
+
+    unwrap(await removeLocale(deps, ctx, { code: 'en', confirm: true }));
+    const row = deps.sqlite.prepare("select value from settings where key = 'probe.localized'").get() as { value: string };
+    expect(JSON.parse(row.value)).toEqual({ de: 'Ein Verein' });
+  });
+
+  it('never rewrites the audit log, which records what was there', async () => {
+    const deps = setup();
+    const ctx = ctxWith(['settings.manage', 'website.manage']);
+    unwrap(await addLocale(deps, ctx, { code: 'en' }));
+    unwrap(await createProject(deps, ctx, { slug: 'a', name: { de: 'Hof', en: 'Yard' }, type: 'ongoing', summary: { de: 'x' }, body: { de: '' } }));
+    unwrap(await removeLocale(deps, ctx, { code: 'en', confirm: true }));
+    const entries = deps.db.select().from(schema.auditLog).all();
+    const created = entries.find((e) => e.action === 'projects.create')!;
+    expect(String(created.after)).toContain('Yard');
+  });
+});

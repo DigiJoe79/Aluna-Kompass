@@ -1,10 +1,10 @@
-import { conflict, emptyLocalized, invalid, isoNow, localizedText, newId, notFound, ok, recordAudit, requirePermission, schema as core, validate, type CallContext, type DbOrTx, type Deps, type LocalizedText, type Result } from '@kompass/core';
+import { conflict, emptyLocalized, invalid, isoNow, localizedList as coreLocalizedList, localizedText, newId, notFound, ok, recordAudit, requirePermission, schema as core, validate, type CallContext, type DbOrTx, type Deps, type LocalizedText, type Result } from '@kompass/core';
 import { and, asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { animalPhotos, animalStories, animals, type LocalizedList } from './schema';
 
 export const SLUG = /^[a-z0-9][a-z0-9-]{0,80}$/;
-const localizedList = z.object({ de: z.array(z.string().trim().min(1).max(40)).max(12), en: z.array(z.string().trim().min(1).max(40)).max(12) });
+const localizedList = coreLocalizedList({ max: 12, itemMax: 40 });
 
 export interface AnimalPhoto { assetId: string; sortOrder: number; isPrimary: boolean }
 export interface AnimalStory { beforeAssetId: string | null; afterAssetId: string | null; quote: LocalizedText; family: string; adoptedYear: number }
@@ -20,7 +20,7 @@ const fields = {
   location: z.enum(['shelter', 'germany']).default('shelter'),
   isEmergency: z.boolean().default(false),
   isSponsorable: z.boolean().default(false),
-  traits: localizedList.default({ de: [], en: [] }),
+  traits: localizedList.default({}),
   externalProfileUrl: z.union([z.literal(''), z.url()]).default(''),
   summary: localizedText({ max: 300 }),
   body: localizedText({ max: 20_000 }),

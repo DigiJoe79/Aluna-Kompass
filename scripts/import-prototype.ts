@@ -132,7 +132,7 @@ export async function importPrototype(
         location: d.ort === 'Deutschland' ? 'germany' : 'shelter',
         isEmergency: !!d.notfall,
         isSponsorable: !!d.patentier,
-        traits: { de: d.wesen ?? [], en: [] },
+        traits: { [leading]: d.wesen ?? [] },
         externalProfileUrl: d.hundeblicke ?? '',
         summary: L(d.kurz ?? ''),
         body: L((d.text ?? []).join('\n\n')),

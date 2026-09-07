@@ -16,6 +16,14 @@ export function localizedText(opts: { required?: boolean; max?: number } = {}): 
     .meta({ localized: true, required: opts.required ?? false, max }) as unknown as z.ZodType<LocalizedText>;
 }
 
+/** Wie `localizedText`, nur trägt jede Sprache eine Liste kurzer Begriffe. */
+export function localizedList(opts: { max?: number; itemMax?: number } = {}): z.ZodType<Record<string, string[]>> {
+  const item = z.string().trim().min(1).max(opts.itemMax ?? 40);
+  return z
+    .record(z.string().regex(/^[a-z]{2}(-[a-z]{2})?$/), z.array(item).max(opts.max ?? 12))
+    .meta({ localized: true, required: false, list: true }) as unknown as z.ZodType<Record<string, string[]>>;
+}
+
 export const emptyLocalized = (locales: readonly string[]): LocalizedText =>
   Object.fromEntries(locales.map((l) => [l, '']));
 
