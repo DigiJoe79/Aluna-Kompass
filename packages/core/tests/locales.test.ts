@@ -23,4 +23,12 @@ describe('locales setting', () => {
     for (const good of ['de', 'en', 'pt-br']) expect(LOCALE_CODE.test(good)).toBe(true);
     for (const bad of ['DE', 'deu', '', 'de_DE', 'de-DE']) expect(LOCALE_CODE.test(bad)).toBe(false);
   });
+
+  it('reaches services through deps and follows a change without a restart', async () => {
+    const deps = createTestDeps();
+    insertUser(deps, { id: 'USER-TEST' });
+    expect(deps.locales()).toEqual(['de']);
+    await setSetting(deps, ctxWith(['settings.manage']), { key: 'i18n.locales', value: ['de', 'en'] });
+    expect(deps.locales()).toEqual(['de', 'en']);
+  });
 });

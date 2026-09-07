@@ -9,6 +9,7 @@ import { createMemoryMediaStore } from '../media/store';
 import type { DocumentTemplate, ModuleManifest } from '../modules/manifest';
 import { createRegistry } from '../modules/registry';
 import { createTestDb } from './test-db';
+import { readLocales } from '../i18n/locales';
 
 export { systemContext } from '../context';
 
@@ -23,14 +24,16 @@ export function createTestDeps(
   opts: { now?: string; manifests?: ModuleManifest[]; env?: AppEnv; coreTemplates?: DocumentTemplate[] } = {},
 ): TestDeps {
   const { db, sqlite } = createTestDb();
-  return {
+  const deps: TestDeps = {
     db,
     sqlite,
     clock: fixedClock(opts.now ?? TEST_NOW),
     env: opts.env ?? 'test',
     registry: createRegistry(opts.manifests ?? [coreModule], { coreTemplates: opts.coreTemplates }),
     media: createMemoryMediaStore(),
+    locales: () => readLocales(deps),
   };
+  return deps;
 }
 
 export function ctxWith(permissions: readonly string[], userId: string | null = 'USER-TEST'): CallContext {

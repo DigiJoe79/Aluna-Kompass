@@ -6,6 +6,7 @@ import type { AppEnv, Deps } from './deps';
 import { createFileMediaStore } from './media/store';
 import type { DocumentTemplate, ModuleManifest } from './modules/manifest';
 import { createRegistry } from './modules/registry';
+import { readLocales } from './i18n/locales';
 
 export interface CreateDepsOptions {
   databasePath: string;
@@ -30,10 +31,12 @@ export function createDeps(opts: CreateDepsOptions): AppDeps {
   runMigrations(handle.db);
   const deps: AppDeps = {
     db: handle.db,
+    sqlite: handle.sqlite,
     clock: opts.clock ?? systemClock,
     env: opts.env,
     registry: createRegistry([coreModule, ...(opts.modules ?? [])], { coreTemplates: opts.coreTemplates }),
     media: createFileMediaStore(opts.mediaPath),
+    locales: () => readLocales(deps),
     databasePath: opts.databasePath,
     migrationCount: countMigrations(),
     backupDatabase: (destination) => handle.sqlite.backup(destination).then(() => undefined),
@@ -42,6 +45,7 @@ export function createDeps(opts: CreateDepsOptions): AppDeps {
       handle = openDatabase(opts.databasePath);
       runMigrations(handle.db);
       deps.db = handle.db;
+      deps.sqlite = handle.sqlite;
       deps.migrationCount = countMigrations();
     },
     close: () => handle.sqlite.close(),
