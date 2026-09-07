@@ -6,3 +6,4 @@ export * from './resync/plan';
 export * from './resync/apply';
 export * from './service';
 export * from './values';
+export * from './entries';
