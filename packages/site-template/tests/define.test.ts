@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { asset, defineTemplate, markdown, number, select, text } from '../src';
+import { asset, defineTemplate, list, markdown, number, select, text } from '../src';
 
 const template = defineTemplate({
   name: 'Verein Basis',
@@ -40,5 +40,27 @@ describe('defineTemplate', () => {
 
   it('rejects a locale code the core would not accept', () => {
     expect(() => defineTemplate({ name: 'X', locales: ['DE'], variables: {}, collections: {} })).toThrow(/locale/i);
+  });
+
+  // Ohne diese Angabe liest der Resync eine Umbenennung als „entfällt plus neu"
+  // und der Inhalt des Feldes geht verloren.
+  it('carries renamedFrom into the schema, for every field helper', () => {
+    const cases = {
+      text: text({ label: 'A', renamedFrom: 'alt' }),
+      localized: text({ label: 'A', localized: true, renamedFrom: 'alt' }),
+      markdown: markdown({ label: 'A', renamedFrom: 'alt' }),
+      number: number({ label: 'A', renamedFrom: 'alt' }),
+      asset: asset({ label: 'A', renamedFrom: 'alt' }),
+      select: select(['a', 'b'], { label: 'A', renamedFrom: 'alt' }),
+      list: list(text(), { label: 'A', renamedFrom: 'alt' }),
+    };
+    for (const [name, field] of Object.entries(cases)) {
+      const json = z.toJSONSchema(field as never, { io: 'input' }) as { renamedFrom?: string };
+      expect(json.renamedFrom, `${name} verliert renamedFrom`).toBe('alt');
+    }
+  });
+
+  it('leaves renamedFrom out where it was not given', () => {
+    expect(z.toJSONSchema(text({ label: 'A' }) as never, { io: 'input' })).not.toHaveProperty('renamedFrom');
   });
 });
