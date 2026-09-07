@@ -33,9 +33,9 @@ export async function GET(_request: Request, ctx: { params: Promise<{ path?: str
   let content: BodyInit = bytes;
   if (ext === '.html') {
     let html = bytes.toString('utf8');
-    html = html.replace('<head>', '<head><base href="/website/preview/">');
-    html = html.replace(/href="\/(?!\/)/g, 'href="/website/preview/');
-    html = html.replace(/src="\/(?!\/)/g, 'src="/website/preview/');
+    html = html.replace('<head>', '<head><base href="/site/preview/">');
+    html = html.replace(/href="\/(?!\/)/g, 'href="/site/preview/');
+    html = html.replace(/src="\/(?!\/)/g, 'src="/site/preview/');
     content = html;
   }
   return new Response(content, {

@@ -1,7 +1,7 @@
 import { coreModule, schema, storeMediaAsset, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
-import { createArticle, createFaq, createTeamMember, listArticles, listDownloads, listFaqs, listPublishes, listTeam, reorderArticles, setArticlePublished, setDownload, updateArticle, updateTeamMember, websiteModule } from '../src';
+import { createArticle, createFaq, createTeamMember, listArticles, listDownloads, listFaqs, listTeam, reorderArticles, setArticlePublished, setDownload, updateArticle, updateTeamMember, websiteModule } from '../src';
 
 const PDF = new TextEncoder().encode('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF');
 const PNG = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64'));
@@ -51,12 +51,3 @@ describe('downloads', () => {
   });
 });
 
-describe('publishes', () => {
-  it('lists publishes for environment and checks permissions', async () => {
-    const d = deps();
-    const list = unwrap(await listPublishes(d, ctxWith(['website.view']), { environment: 'test' }));
-    expect(list).toEqual([]);
-    const denied = await listPublishes(d, ctxWith([]), { environment: 'test' });
-    expect(denied.ok === false && denied.error.type === 'forbidden').toBe(true);
-  });
-});

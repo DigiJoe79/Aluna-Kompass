@@ -14,3 +14,11 @@ export async function loginAsAdmin(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Anmelden' }).click();
   await expect(page).toHaveURL('/');
 }
+
+export async function setE2ESetting(page: Page, key: string, value: unknown): Promise<void> {
+  const response = await page.request.post('/__e2e/setting', {
+    headers: { 'x-e2e-token': 'e2e-reset' },
+    data: { key, value },
+  });
+  expect(response.ok()).toBe(true);
+}

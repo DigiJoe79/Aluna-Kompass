@@ -25,6 +25,7 @@ describe('database', () => {
       'sessions',
       'settings',
       'site_entries',
+      'site_publishes',
       'site_template_state',
       'site_values',
       'user_roles',
@@ -33,7 +34,6 @@ describe('database', () => {
       'website_downloads',
       'website_faqs',
       'website_pages',
-      'website_publishes',
       'website_team',
     ]);
   });

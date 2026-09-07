@@ -1,5 +1,6 @@
 import { defineModule, type ModuleManifest, type NavigationItem } from '@kompass/core';
 import { SITE_MCP_TOOLS } from './mcp-tools';
+import { SITE_SETTINGS } from './settings';
 import { activeTemplate } from './service';
 
 export const SITE_PERMISSIONS = ['site.view', 'site.manage', 'site.publish'] as const;
@@ -25,7 +26,11 @@ export const siteModule: ModuleManifest = defineModule({
   key: 'site',
   version: '0.1.0',
   permissions: SITE_PERMISSIONS,
-  navigation: [{ key: 'site.template', href: '/site/template', icon: 'layout-template', group: 'site', permission: 'site.manage' }],
+  settings: SITE_SETTINGS,
+  navigation: [
+    { key: 'site.template', href: '/site/template', icon: 'layout-template', group: 'site', permission: 'site.manage' },
+    { key: 'site.publish', href: '/site/publish', icon: 'upload', group: 'site', permission: 'site.publish' },
+  ],
   navigationFor: siteNavigationFor,
   mcpTools: SITE_MCP_TOOLS,
 });

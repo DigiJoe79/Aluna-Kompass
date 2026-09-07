@@ -67,18 +67,3 @@ export const websiteDownloads = sqliteTable('website_downloads', {
   updatedAt: text('updated_at').notNull(),
 });
 
-export const websitePublishes = sqliteTable('website_publishes', {
-  id: text('id').primaryKey(),
-  environment: text('environment').notNull(),
-  startedAt: text('started_at').notNull(),
-  finishedAt: text('finished_at'),
-  status: text('status', { enum: ['success', 'failed', 'aborted'] }).notNull(),
-  contentHash: text('content_hash').notNull().default(''),
-  pagesChanged: integer('pages_changed').notNull().default(0),
-  pagesAdded: integer('pages_added').notNull().default(0),
-  pagesRemoved: integer('pages_removed').notNull().default(0),
-  summary: text('summary').notNull().default(''),
-  triggeredByUserId: text('triggered_by_user_id').references(() => core.users.id),
-  log: text('log').notNull().default(''),
-  fileManifest: text('file_manifest').notNull().default('{}'),
-});

@@ -9,7 +9,7 @@ export default function PreviewFramePage() {
       />
       <div className="rounded-md border border-line overflow-hidden bg-white">
         <iframe
-          src="/website/preview/"
+          src="/site/preview/"
           title="Vorschau"
           className="h-[80vh] w-full border-0"
         />

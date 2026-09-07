@@ -1,12 +1,12 @@
 'use client';
 
-import type { PublishRecord } from '@kompass/module-website';
+import type { PublishRecord } from '@kompass/module-site';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 
 export function PublishHistory({ items }: { items: PublishRecord[] }) {
-  const t = useTranslations('website.publish.history');
+  const t = useTranslations('site.publish.history');
   const [selected, setSelected] = useState<PublishRecord | null>(null);
 
   return (

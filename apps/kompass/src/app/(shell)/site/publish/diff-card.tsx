@@ -20,7 +20,7 @@ function FileList({ files }: { files: string[] }) {
 }
 
 export function DiffCard({ diff }: { diff: PublishDiff | null }) {
-  const t = useTranslations('website.publish.diff');
+  const t = useTranslations('site.publish.diff');
   const hasChanges = diff && (diff.changed.length > 0 || diff.added.length > 0 || diff.removed.length > 0);
 
   return (

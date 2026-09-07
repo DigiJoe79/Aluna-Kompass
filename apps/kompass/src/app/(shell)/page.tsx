@@ -1,5 +1,5 @@
 import { isModuleEnabled, listModules, listRoles, readAllSettings, readSetting, requirePermission } from '@kompass/core';
-import { listPublishes } from '@kompass/module-website';
+import { listPublishes } from '@kompass/module-site';
 import { Info } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -60,11 +60,11 @@ export default async function HomePage() {
   const firstName = user.name.split(' ')[0] ?? user.name;
 
   const env = runtimeEnv().env;
-  const canSeeWebsite = isModuleEnabled(deps, 'website') && requirePermission(ctx, 'website.view') === null;
+  const canSeeWebsite = isModuleEnabled(deps, 'site') && requirePermission(ctx, 'site.view') === null;
   const publishesResult = canSeeWebsite ? await listPublishes(deps, ctx, { environment: env }) : null;
   const publishList = publishesResult?.ok ? publishesResult.value : [];
   const lastPublish = publishList[0];
-  const tWebsite = await getTranslations('website.publish');
+  const tWebsite = await getTranslations('site.publish');
   const format = await getFormatter();
   const websiteHint = lastPublish
     ? tWebsite('state.last', {
@@ -113,7 +113,7 @@ export default async function HomePage() {
             counter={t('website.count', { count: publishList.length })}
             text={t('website.text')}
             hint={websiteHint}
-            href="/website/publish"
+            href="/site/publish"
             cta={t('website.cta')}
           />
         ) : null}

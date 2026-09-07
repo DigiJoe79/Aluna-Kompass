@@ -7,11 +7,11 @@ import { Button } from '@/components/ui/button';
 import { runCheckAction } from './actions';
 import { ExportFindings } from './export-findings';
 
-type Check = { contentHash: string; gaps: { collection: string; id: string; field: string }[]; violations: { path: string; term: string; excerpt: string }[] };
+type Check = { contentHash: string; gaps: { path: string; locale: string }[]; violations: { path: string; term: string; excerpt: string }[] };
 
 
 export function CheckCard({ onResult }: { onResult?: (check: Check) => void }) {
-  const t = useTranslations('website.publish.check');
+  const t = useTranslations('site.publish.check');
   const [check, setCheck] = useState<Check | null>(null);
   const [pending, start] = useTransition();
   return (

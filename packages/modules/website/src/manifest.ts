@@ -19,7 +19,6 @@ export const websiteModule: ModuleManifest = defineModule({
     nav('projects', '/website/projects', 'folder', 'website.view'),
     nav('downloads', '/website/downloads', 'download', 'website.view'),
     nav('facts', '/website/facts', 'sliders', 'website.manage'),
-    nav('publish', '/website/publish', 'upload', 'website.publish'),
   ],
   publishedViews: WEBSITE_VIEWS,
   mcpTools: WEBSITE_MCP_TOOLS,

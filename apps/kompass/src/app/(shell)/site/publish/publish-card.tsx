@@ -22,7 +22,7 @@ export function PublishCard({
   hasViolations: boolean;
   onPublished?: () => void;
 }) {
-  const t = useTranslations('website.publish.publishCard');
+  const t = useTranslations('site.publish.publishCard');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pending, start] = useTransition();
 

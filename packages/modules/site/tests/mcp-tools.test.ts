@@ -46,7 +46,16 @@ const jsonSchema = (tool: { inputSchema: z.ZodType<unknown> }) =>
 describe('site mcp tools', () => {
   it('offers the fixed tools even without a template', () => {
     const names = moduleMcpTools(createTestDeps(), siteModule).map((t) => t.name);
-    expect(names).toEqual(['site_template_read', 'site_template_sync', 'site_variables_get', 'site_variables_set', 'site_export_check']);
+    expect(names).toEqual([
+      'site_template_read',
+      'site_template_sync',
+      'site_variables_get',
+      'site_variables_set',
+      'site_export_check',
+      'site_deploy_check',
+      'site_preview_build',
+      'site_publish',
+    ]);
   });
 
   it('adds five tools per collection, six where it is publishable', () => {

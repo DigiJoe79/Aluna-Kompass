@@ -10,6 +10,7 @@ import {
   requirePermission,
   validate,
 } from '@kompass/core';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { blankValue, schemaFor } from './field-schema';
 import { siteValues } from './schema';
@@ -60,10 +61,14 @@ export async function setValues(deps: Deps, ctx: CallContext, raw: unknown): Pro
   const now = isoNow(deps.clock);
   deps.db.transaction((tx) => {
     for (const [key, value] of Object.entries(parsed.value as Record<string, unknown>)) {
-      tx.insert(siteValues)
-        .values({ key, value, updatedAt: now })
-        .onConflictDoUpdate({ target: siteValues.key, set: { value, updatedAt: now } })
-        .run();
+      if (value === null || value === undefined) {
+        tx.delete(siteValues).where(eq(siteValues.key, key)).run();
+      } else {
+        tx.insert(siteValues)
+          .values({ key, value, updatedAt: now })
+          .onConflictDoUpdate({ target: siteValues.key, set: { value, updatedAt: now } })
+          .run();
+      }
     }
     recordAudit(tx, deps, ctx, {
       action: 'site.values.update',

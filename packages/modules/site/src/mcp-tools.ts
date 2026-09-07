@@ -18,6 +18,9 @@ import { schemaFor } from './field-schema';
 import type { TemplateSchema } from './load';
 import { activeTemplate, applyTemplateSync, previewTemplateSync, readActiveTemplate } from './service';
 import { getVariables, setValues } from './values';
+import { readSiteEnv } from './pipeline/env';
+import { checkDeployTarget, runPreview, runPublish } from './pipeline/jobs';
+
 
 const tool = (name: string, description: string, inputSchema: z.ZodType<unknown>, handler: McpToolDefinition['handler']): McpToolDefinition => ({
   name,
@@ -82,11 +85,29 @@ const FIXED: McpToolDefinition[] = [
     const dir = await mkdtemp(path.join(tmpdir(), 'kompass-site-check-'));
     try {
       const result = await exportSiteContent(deps, ctx, { jobDir: dir });
-      return result.ok ? { ok: true as const, value: { contentHash: result.value.contentHash, assets: result.value.assets.length } } : result;
+      return result.ok ? { ok: true as const, value: { contentHash: result.value.contentHash, assets: result.value.assets.length, gaps: result.value.gaps, violations: result.value.violations } } : result;
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
   }),
+  tool(
+    'site_deploy_check',
+    'Dry run against the configured deploy target: signs in, transfers nothing, and lists the files a publish would remove there. Requires site.publish.',
+    z.object({}),
+    (deps, ctx) => checkDeployTarget(deps, ctx, readSiteEnv()),
+  ),
+  tool(
+    'site_preview_build',
+    'Build the preview of the site into the configured preview directory and report diff against the last publish. Requires site.publish.',
+    z.object({}),
+    (deps, ctx) => runPreview(deps, ctx, readSiteEnv()),
+  ),
+  tool(
+    'site_publish',
+    'Build and publish the site to the configured deploy target. Requires site.publish and confirm: true. Audited.',
+    z.object({ confirm: z.boolean() }),
+    (deps, ctx, args) => runPublish(deps, ctx, readSiteEnv(), args as { confirm: boolean }),
+  ),
 ];
 
 /** Die Werkzeuge des Moduls: feste plus je Sammlung des eingelesenen Templates. */

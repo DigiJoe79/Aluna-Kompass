@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { conflict, invalid, isoNow, ok, requirePermission, type CallContext, type Deps, type Result } from '@kompass/core';
-import { exportSiteContent, type SiteExport } from '../export';
+import { exportSiteContent, type SiteContentExport } from '../export';
 import { lastSuccessfulPublish, recordPublish, type PublishDiff, type PublishRecord } from '../services/publishes';
 import { buildSite, SiteBuildError } from './build';
 import { copyTree } from './copy';
@@ -13,8 +13,8 @@ import { checkDeployCredentials, rsyncPublish } from './publish';
 
 export interface PreviewResult {
   contentHash: string;
-  gaps: SiteExport['gaps'];
-  violations: SiteExport['violations'];
+  gaps: SiteContentExport['gaps'];
+  violations: SiteContentExport['violations'];
   diff: PublishDiff;
   previewDir: string;
   log: string;
@@ -68,12 +68,14 @@ async function exportAndBuild(
   ctx: CallContext,
   env: SiteEnv,
   outDir: string,
-): Promise<Result<{ exported: SiteExport; log: string; manifest: Record<string, string>; diff: PublishDiff }>> {
+): Promise<Result<{ exported: SiteContentExport; log: string; manifest: Record<string, string>; diff: PublishDiff }>> {
   const publicUrl = env.publicUrl;
   if (!publicUrl) return conflict('publicUrlMissing', 'SITE_PUBLIC_URL ist nicht gesetzt');
   const job = await mkdtemp(path.join(tmpdir(), 'kompass-site-'));
   try {
-    const exported = await step('Inhalt exportieren', 120_000, () => exportSiteContent(deps, ctx, { jobDir: job }));
+    const exported = await step('Inhalt exportieren', 120_000, () =>
+      exportSiteContent(deps, ctx, { jobDir: job, templateDir: env.templateDir }),
+    );
     if (!exported.ok) return exported;
     await step('Bildvarianten', 600_000, () =>
       prepareImageVariants({ jobDir: job, assets: exported.value.assets, cacheDir: env.cacheDir }),
@@ -81,7 +83,7 @@ async function exportAndBuild(
     await rm(outDir, { recursive: true, force: true });
     await mkdir(outDir, { recursive: true });
     const { log } = await step('Site bauen', 600_000, () =>
-      buildSite({ siteDir: env.siteDir, contentDir: job, outDir, publicUrl, staging: env.staging }),
+      buildSite({ siteDir: env.templateDir, contentDir: job, outDir, publicUrl, staging: env.staging }),
     );
     await step('Bilder uebernehmen', 120_000, async () => {
       try {
@@ -104,7 +106,7 @@ async function exportAndBuild(
 }
 
 export async function runPreview(deps: Deps, ctx: CallContext, env: SiteEnv): Promise<Result<PreviewResult>> {
-  const denied = requirePermission(ctx, 'website.publish');
+  const denied = requirePermission(ctx, 'site.publish');
   if (denied) return denied;
   const built = await exportAndBuild(deps, ctx, env, env.previewDir);
   if (!built.ok) return built;
@@ -137,7 +139,7 @@ export interface DeployCheckResult {
  * Pfad; ist sie leer, zeigt er woandershin.
  */
 export async function checkDeployTarget(deps: Deps, ctx: CallContext, env: SiteEnv): Promise<Result<DeployCheckResult>> {
-  const denied = requirePermission(ctx, 'website.publish');
+  const denied = requirePermission(ctx, 'site.publish');
   if (denied) return denied;
   if (!env.deploy) return conflict('publishTargetMissing', 'SITE_DEPLOY_* ist nicht gesetzt');
   const credentialProblem = await checkDeployCredentials(env.deploy);
@@ -162,7 +164,7 @@ export async function checkDeployTarget(deps: Deps, ctx: CallContext, env: SiteE
 }
 
 export async function runPublish(deps: Deps, ctx: CallContext, env: SiteEnv, opts: { confirm: boolean }): Promise<Result<PublishResult>> {
-  const denied = requirePermission(ctx, 'website.publish');
+  const denied = requirePermission(ctx, 'site.publish');
   if (denied) return denied;
   if (!opts.confirm) return invalid([{ path: 'confirm', message: 'confirmationRequired' }]);
   if (deps.env === 'development') return conflict('publishNotAllowedHere', 'Aus der Entwicklungsumgebung wird nicht publiziert');

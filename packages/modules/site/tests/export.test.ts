@@ -1,11 +1,12 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { setSetting, storeMediaAsset, unwrap } from '@kompass/core';
+import { coreModule, setSetting, storeMediaAsset, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createEntry, setEntryPublished } from '../src/entries';
 import { exportSiteContent } from '../src/export';
+import { siteModule } from '../src/manifest';
 import { siteValues } from '../src/schema';
 import { applyTemplateSync } from '../src/service';
 import { setValues } from '../src/values';
@@ -42,7 +43,7 @@ const manage = ctxWith(['site.manage', 'site.view']);
 const publish = ctxWith(['site.publish']);
 
 const setup = async (source = GOOD, locales = ['de']) => {
-  const deps = createTestDeps({ locales });
+  const deps = createTestDeps({ locales, manifests: [coreModule, siteModule] });
   insertUser(deps, { id: 'USER-TEST' });
   const dir = templateDir(source);
   unwrap(await applyTemplateSync(deps, ctxWith(['site.manage']), { dir, confirm: true }));
@@ -139,4 +140,53 @@ export default defineTemplate({
     const views = (content as { views: Record<string, { city: string }[]> }).views;
     expect(views.organization?.[0]?.city).toBe('Jülich');
   });
+
+  it('runs without findings when there are no blocked terms or gaps', async () => {
+    const { deps, dir } = await setup();
+    unwrap(await setValues(deps, manage, { values: { claim: { de: 'Sauberer Text' } } }));
+    unwrap(await createEntry(deps, manage, { collection: 'notes', data: { body: 'Kein Fund' } }));
+    const { result } = await readContent(deps, dir);
+    expect(result.violations).toEqual([]);
+    expect(result.gaps).toEqual([]);
+  });
+
+  it('detects a blocked term in a variable', async () => {
+    const { deps, dir } = await setup();
+    unwrap(await setSetting(deps, ctxWith(['settings.manage']), { key: 'site.blockedTerms', value: ['geheim'] }));
+    unwrap(await setValues(deps, manage, { values: { claim: { de: 'Streng geheim' } } }));
+    const { result } = await readContent(deps, dir);
+    expect(result.violations).toEqual([
+      { path: 'variables.claim.de', term: 'geheim', excerpt: expect.stringContaining('geheim') },
+    ]);
+  });
+
+  it('detects a blocked term in a collection entry', async () => {
+    const { deps, dir } = await setup();
+    unwrap(await setSetting(deps, ctxWith(['settings.manage']), { key: 'site.blockedTerms', value: ['maria popescu'] }));
+    unwrap(await createEntry(deps, manage, { collection: 'notes', data: { body: 'Shelter von Maria Popescu vor Ort' } }));
+    const { result } = await readContent(deps, dir);
+    expect(result.violations).toEqual([
+      { path: 'collections.notes[0].body', term: 'maria popescu', excerpt: expect.stringContaining('Maria Popescu') },
+    ]);
+  });
+
+  it('reports a translation gap in a nested field', async () => {
+    const sourceWithNested = `
+import { defineTemplate, text } from '@kompass/site-template';
+export default defineTemplate({
+  name: 'X', locales: ['de', 'en'],
+  variables: { claim: text({ localized: true }) },
+  collections: {
+    articles: { label: 'Artikel', fields: { author: text({ localized: true }) } },
+  },
+});`;
+    const { deps, dir } = await setup(sourceWithNested, ['de', 'en']);
+    unwrap(await setValues(deps, manage, { values: { claim: { de: 'Hallo', en: 'Hello' } } }));
+    unwrap(await createEntry(deps, manage, { collection: 'articles', data: { author: { de: 'Johann', en: '' } } }));
+    const { result } = await readContent(deps, dir);
+    expect(result.gaps).toEqual([
+      { path: 'collections.articles[0].author', locale: 'en' },
+    ]);
+  });
 });
+

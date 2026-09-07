@@ -1,62 +1,68 @@
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
-import { loginAsAdmin, resetDatabase } from './helpers';
+import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
 
 test('publish page runs the checks and blocks on a blocked term', async ({ page }) => {
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
-  await page.goto('/website/facts');
-  await page.getByRole('button', { name: 'Sperrwort hinzufügen' }).click();
-  await page.getByLabel('Sperrwort 1').fill('Popescu');
-  await page.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByRole('status')).toContainText('gespeichert');
-  await page.goto('/website/pages/partners');
-  await page.locator('[name="body.de"]').fill('Frau Popescu betreibt den Shelter.');
+
+  await page.goto('/site/template');
+  await page.getByRole('button', { name: 'Template einlesen' }).click();
+  await page.getByRole('button', { name: 'Übernehmen' }).click();
+  await expect(page.getByRole('status')).toContainText('eingelesen');
+
+  await setE2ESetting(page, 'site.blockedTerms', ['Popescu']);
+
+  await page.goto('/site/variables');
+  await page.locator('[name="claim.de"]').fill('Frau Popescu betreibt den Verein.');
   await page.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.getByRole('status')).toContainText('Gespeichert');
 
-  await page.goto('/website/publish');
+  await page.goto('/site/publish');
   await page.getByRole('button', { name: 'Prüfen' }).click();
   const violations = page.getByRole('region', { name: 'Sperrworttreffer' });
-  await expect(violations).toContainText('pages');
+  await expect(violations).toContainText('variables.claim');
   await expect(violations).toContainText('Popescu');
   await expect(page.getByRole('button', { name: /publizieren/i })).toHaveCount(0);
-  await expect(page.getByRole('region', { name: 'Übersetzungslücken' })).toContainText('partners');
 
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Webseite' })).toBeVisible();
 });
 
-test('preview build, diff and publish to the local staging target', async ({ page, request }) => {
+test('preview build, diff and publish to the local staging target', async ({ page }) => {
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
-  await page.goto('/animals/new');
-  await page.getByLabel('Slug (URL-Teil)').fill('luna');
-  await page.getByLabel('Name').fill('Luna');
-  await page.getByLabel('Geschlecht').selectOption('female');
+
+  await page.goto('/site/template');
+  await page.getByRole('button', { name: 'Template einlesen' }).click();
+  await page.getByRole('button', { name: 'Übernehmen' }).click();
+  await expect(page.getByRole('status')).toContainText('eingelesen');
+
+  await page.goto('/site/c/news/neu');
+  await page.getByLabel('Slug (URL-Teil)').fill('sommerfest');
+  await page.locator('[name="title.de"]').fill('Sommerfest 2026');
   await page.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page).toHaveURL('/site/c/news');
   const publish = page.getByRole('switch', { name: 'Veröffentlicht' });
   await publish.click();
-  // Siehe animals.spec.ts: ohne dieses Warten baut die Vorschau womoeglich
-  // einen Stand ohne den Hund.
   await expect(publish).toBeChecked();
 
-  await page.goto('/website/publish');
+  await page.goto('/site/publish');
   await page.getByRole('button', { name: 'Vorschau bauen' }).click();
-  await expect(page.getByRole('region', { name: 'Änderungen gegenüber Live' })).toContainText('zuhause-gesucht/luna/index.html', { timeout: 180_000 });
-  const preview = await page.request.get('/website/preview/zuhause-gesucht/luna/');
+  await expect(page.getByRole('region', { name: 'Änderungen gegenüber Live' })).toContainText('aktuelles/sommerfest/index.html', { timeout: 180_000 });
+  const preview = await page.request.get('/site/preview/aktuelles/sommerfest/');
   expect(preview.ok()).toBe(true);
-  expect(await preview.text()).toContain('Luna');
+  expect(await preview.text()).toContain('Sommerfest 2026');
   await page.getByRole('link', { name: 'Vorschau öffnen' }).click();
   await expect(page.getByTestId('env-banner')).toBeVisible();
 
-  await page.goto('/website/publish');
+  await page.goto('/site/publish');
   await page.getByRole('button', { name: 'Nach Staging publizieren' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Jetzt publizieren' }).click();
   await expect(page.getByRole('status')).toContainText('Publiziert', { timeout: 180_000 });
   await expect(page.getByRole('table', { name: 'Publish-Historie' }).getByRole('row').nth(1)).toContainText('success');
   const fs = await import('node:fs');
-  expect(fs.existsSync(path.join(process.env.E2E_SITE_TARGET!, 'zuhause-gesucht', 'luna', 'index.html'))).toBe(true);
+  expect(fs.existsSync(path.join(process.env.E2E_SITE_TARGET!, 'aktuelles', 'sommerfest', 'index.html'))).toBe(true);
 });
 
 test('the connection test lists what a publish would remove and touches nothing', async ({ page }) => {
@@ -68,7 +74,7 @@ test('the connection test lists what a publish would remove and touches nothing'
   const stranger = path.join(target, 'fremde-datei.html');
   fs.writeFileSync(stranger, '<html>WordPress</html>');
 
-  await page.goto('/website/publish');
+  await page.goto('/site/publish');
   await page.getByRole('button', { name: 'Verbindung testen' }).click();
   const result = page.getByRole('region', { name: 'Verbindungstest' });
   await expect(result).toContainText('fremde-datei.html', { timeout: 60_000 });

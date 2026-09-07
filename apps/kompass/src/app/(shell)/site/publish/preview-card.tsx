@@ -12,7 +12,7 @@ import type { PublishDiff } from './diff-card';
 
 export interface PreviewData {
   contentHash: string;
-  gaps: { collection: string; id: string; field: string }[];
+  gaps: { path: string; locale: string }[];
   violations: { path: string; term: string; excerpt: string }[];
   diff: PublishDiff;
   previewDir: string;
@@ -20,8 +20,8 @@ export interface PreviewData {
 
 
 export function PreviewCard({ onResult }: { onResult?: (data: PreviewData) => void }) {
-  const t = useTranslations('website.publish');
-  const tCheck = useTranslations('website.publish.check');
+  const t = useTranslations('site.publish');
+  const tCheck = useTranslations('site.publish.check');
   const [data, setData] = useState<PreviewData | null>(null);
   const [pending, start] = useTransition();
 
@@ -32,7 +32,7 @@ export function PreviewCard({ onResult }: { onResult?: (data: PreviewData) => vo
         <div className="flex items-center gap-3">
           {data && (
             <Link
-              href="/website/preview-frame"
+              href="/site/preview-frame"
               className="flex items-center gap-1 text-[13px] font-medium text-link underline"
             >
               {t('preview.open')}

@@ -1,8 +1,8 @@
 import { isoNow, newId, ok, recordAudit, requirePermission, type CallContext, type Deps, type Result } from '@kompass/core';
 import { and, desc, eq } from 'drizzle-orm';
-import { websitePublishes } from '../schema';
+import { sitePublishes } from '../schema';
 
-export type PublishRecord = typeof websitePublishes.$inferSelect;
+export type PublishRecord = typeof sitePublishes.$inferSelect;
 
 export interface PublishDiff {
   changed: string[];
@@ -11,19 +11,19 @@ export interface PublishDiff {
 }
 
 export async function listPublishes(deps: Deps, ctx: CallContext, input: { environment: string; limit?: number }): Promise<Result<PublishRecord[]>> {
-  const denied = requirePermission(ctx, 'website.view');
+  const denied = requirePermission(ctx, 'site.view');
   if (denied) return denied;
-  return ok(deps.db.select().from(websitePublishes).where(eq(websitePublishes.environment, input.environment)).orderBy(desc(websitePublishes.startedAt)).limit(input.limit ?? 20).all());
+  return ok(deps.db.select().from(sitePublishes).where(eq(sitePublishes.environment, input.environment)).orderBy(desc(sitePublishes.startedAt)).limit(input.limit ?? 20).all());
 }
 
 export function lastSuccessfulPublish(deps: Deps, environment: string): PublishRecord | null {
-  return deps.db.select().from(websitePublishes).where(and(eq(websitePublishes.environment, environment), eq(websitePublishes.status, 'success'))).orderBy(desc(websitePublishes.startedAt)).get() ?? null;
+  return deps.db.select().from(sitePublishes).where(and(eq(sitePublishes.environment, environment), eq(sitePublishes.status, 'success'))).orderBy(desc(sitePublishes.startedAt)).get() ?? null;
 }
 
 export function recordPublish(deps: Deps, ctx: CallContext, input: { environment: string; startedAt: string; status: 'success' | 'failed' | 'aborted'; contentHash: string; diff: PublishDiff; fileManifest: Record<string, string>; log: string; summary: string }): PublishRecord {
   return deps.db.transaction((tx) => {
     const id = newId();
-    tx.insert(websitePublishes).values({
+    tx.insert(sitePublishes).values({
       id,
       environment: input.environment,
       startedAt: input.startedAt,
@@ -39,8 +39,8 @@ export function recordPublish(deps: Deps, ctx: CallContext, input: { environment
       fileManifest: JSON.stringify(input.fileManifest),
     }).run();
     recordAudit(tx, deps, ctx, {
-      action: 'website.publish',
-      entityType: 'websitePublish',
+      action: 'site.publish',
+      entityType: 'sitePublish',
       entityId: id,
       after: {
         environment: input.environment,
@@ -52,6 +52,6 @@ export function recordPublish(deps: Deps, ctx: CallContext, input: { environment
       },
       summary: input.summary,
     });
-    return tx.select().from(websitePublishes).where(eq(websitePublishes.id, id)).get()!;
+    return tx.select().from(sitePublishes).where(eq(sitePublishes.id, id)).get()!;
   });
 }

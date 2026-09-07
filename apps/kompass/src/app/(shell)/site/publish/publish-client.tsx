@@ -1,6 +1,6 @@
 'use client';
 
-import type { PublishRecord } from '@kompass/module-website';
+import type { PublishRecord } from '@kompass/module-site';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { CheckCard } from './check-card';

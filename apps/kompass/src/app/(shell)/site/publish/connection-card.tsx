@@ -15,7 +15,7 @@ interface DeployCheck {
 }
 
 export function ConnectionCard({ hasDeploy }: { hasDeploy: boolean }) {
-  const t = useTranslations('website.publish.connection');
+  const t = useTranslations('site.publish.connection');
   const [result, setResult] = useState<DeployCheck | null>(null);
   const [pending, start] = useTransition();
 

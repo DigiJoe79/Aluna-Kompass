@@ -1,5 +1,5 @@
 import { requirePermission } from '@kompass/core';
-import { listPublishes } from '@kompass/module-website';
+import { listPublishes } from '@kompass/module-site';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
@@ -10,8 +10,8 @@ import { PublishClient } from './publish-client';
 
 export default async function PublishPage() {
   const { deps, ctx } = await requireSession();
-  if (requirePermission(ctx, 'website.publish')) return <ForbiddenCard permission="website.publish" />;
-  const t = await getTranslations('website.publish');
+  if (requirePermission(ctx, 'site.publish')) return <ForbiddenCard permission="site.publish" />;
+  const t = await getTranslations('site.publish');
   const format = await getFormatter();
   const env = runtimeEnv().env;
   const se = siteEnv();

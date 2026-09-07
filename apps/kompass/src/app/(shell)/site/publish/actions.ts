@@ -1,6 +1,6 @@
 'use server';
 
-import { checkDeployTarget, exportSiteContent, runPreview, runPublish } from '@kompass/module-website';
+import { checkDeployTarget, exportSiteContent, runPreview, runPublish } from '@kompass/module-site';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -44,11 +44,11 @@ export async function runPublishAction(confirm: boolean): Promise<ActionState> {
   const t = await getTranslations();
   const { deps, ctx } = await requireSession();
   const result = await runPublish(deps, ctx, siteEnv(), { confirm });
-  revalidatePath('/website/publish');
+  revalidatePath('/site/publish');
   if (!result.ok) return toActionState(result, t);
   return {
     status: 'success',
-    message: t('website.publish.done', {
+    message: t('site.publish.done', {
       changed: result.value.diff.changed.length,
       added: result.value.diff.added.length,
       removed: result.value.diff.removed.length,

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { isModuleEnabled, ok, readSetting, requirePermission, schema as core, type CallContext, type Deps, type Result } from '@kompass/core';
+import { isModuleEnabled, ok, readSetting, schema as core, type CallContext, type Deps, type Result } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { findBlockedTerms, type BlockedTermHit } from './blocked-terms';
@@ -29,8 +29,6 @@ function collectAssetIds(node: unknown, out: Set<string>): void {
 const inputSchema = z.object({ jobDir: z.string().min(1) });
 
 export async function exportSiteContent(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<SiteExport>> {
-  const denied = requirePermission(ctx, 'website.publish');
-  if (denied) return denied;
   const parsed = inputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: { type: 'validation', issues: [{ path: 'jobDir', message: 'required' }] } };
   const { jobDir } = parsed.data;

@@ -139,15 +139,15 @@
       "faqs": "FAQ",
       "projects": "Projekte",
       "downloads": "Downloads",
-      "facts": "Site-Fakten",
-      "publish": "Publizieren"
+      "facts": "Site-Fakten"
     },
     "animals": {
       "list": "Hunde"
     },
     "site": {
       "template": "Template",
-      "variables": "Variablen"
+      "variables": "Variablen",
+      "publish": "Publizieren"
     }
   },
   "shell": {
@@ -424,10 +424,6 @@
         "manage": {
           "label": "Webseite verwalten",
           "description": "Seiten, Artikel, Team, FAQ, Downloads und Site-Fakten bearbeiten."
-        },
-        "publish": {
-          "label": "Webseite publizieren",
-          "description": "Webseiten-Export ausführen und Veröffentlichung starten."
         }
       },
       "site": {
@@ -1096,82 +1092,6 @@
       "addSocial": "Link hinzufügen",
       "addBlocked": "Sperrwort hinzufügen",
       "blockedHint": "Begriffe, die auf keiner öffentlichen Seite und in keinem Dateinamen erscheinen dürfen. Der Publish bricht bei einem Treffer ab."
-    },
-    "publish": {
-      "title": "Publizieren",
-      "target": {
-        "development": "Ziel: keine Veröffentlichung in der Entwicklungsumgebung",
-        "test": "Ziel: Staging",
-        "production": "Ziel: Live-Webseite"
-      },
-      "state": {
-        "title": "Stand",
-        "last": "Letzter Publish: {date} ({status})",
-        "never": "Noch nie publiziert."
-      },
-      "check": {
-        "title": "Prüfen",
-        "intro": "Prüft alle Inhalte auf Sperrwörter und Übersetzungslücken. Ändert nichts.",
-        "run": "Prüfen",
-        "running": "Prüfung läuft …",
-        "hash": "Inhalts-Hash {hash}",
-        "violationsTitle": "Sperrworttreffer",
-        "noViolations": "Keine Treffer.",
-        "gapsTitle": "Übersetzungslücken",
-        "noGaps": "Alle Übersetzungen vorhanden."
-      },
-      "preview": {
-        "run": "Vorschau bauen",
-        "running": "Build läuft …",
-        "open": "Vorschau öffnen",
-        "built": "Vorschau gebaut."
-      },
-      "connection": {
-        "title": "Verbindung testen",
-        "intro": "Meldet sich am Publish-Ziel an, überträgt aber nichts. Zeigt, was dort liegt und ein Publish entfernen würde.",
-        "run": "Verbindung testen",
-        "running": "Test läuft …",
-        "target": "Ziel: {target}",
-        "resultTitle": "Verbindungstest",
-        "ok": "Verbindung steht. Am Ziel liegen {count} Dateien, die ein Publish entfernen würde.",
-        "empty": "Verbindung steht, aber am Ziel liegt keine einzige Datei. Prüfen Sie SITE_DEPLOY_PATH — zeigt der Pfad wirklich auf das Webverzeichnis?",
-        "filesTitle": "Dateien am Ziel",
-        "logTitle": "Protokoll"
-      },
-      "diff": {
-        "title": "Änderungen gegenüber Live",
-        "changed": "Geändert",
-        "added": "Neu",
-        "removed": "Entfallen",
-        "none": "Keine Änderungen gegenüber dem letzten Publish."
-      },
-      "publishCard": {
-        "staging": "Nach Staging publizieren",
-        "live": "Live publizieren",
-        "noTarget": "Kein Publish-Ziel konfiguriert (SITE_DEPLOY_*).",
-        "notHere": "Aus der Entwicklungsumgebung wird nicht publiziert.",
-        "blocked": "Sperrworttreffer — Publish nicht möglich.",
-        "confirmTitle": "Webseite publizieren?",
-        "confirmText": "Ziel: {url}. {changed} geändert, {added} neu, {removed} entfallen. Die Seite wird frisch gebaut und übertragen.",
-        "confirm": "Jetzt publizieren",
-        "steps": {
-          "build": "Bauen",
-          "transfer": "Übertragen",
-          "record": "Protokollieren"
-        }
-      },
-      "done": "Publiziert: {changed} geändert, {added} neu, {removed} entfallen.",
-      "history": {
-        "title": "Publish-Historie",
-        "columns": {
-          "time": "Zeitpunkt",
-          "status": "Status",
-          "hash": "Inhalts-Hash",
-          "changes": "Änderungen",
-          "by": "Auslöser"
-        },
-        "log": "Protokoll"
-      }
     }
   },
   "animals": {
@@ -1310,6 +1230,82 @@
       "confirmDelete": "Diesen Eintrag löschen?",
       "confirmDeleteBody": "Der Inhalt wird entfernt. Der Löschvorgang steht im Änderungsprotokoll.",
       "count": "{n, plural, =0 {keine Einträge} one {ein Eintrag} other {# Einträge}}"
+    },
+    "publish": {
+      "title": "Publizieren",
+      "target": {
+        "development": "Ziel: keine Veröffentlichung in der Entwicklungsumgebung",
+        "test": "Ziel: Staging",
+        "production": "Ziel: Live-Webseite"
+      },
+      "state": {
+        "title": "Stand",
+        "last": "Letzter Publish: {date} ({status})",
+        "never": "Noch nie publiziert."
+      },
+      "check": {
+        "title": "Prüfen",
+        "intro": "Prüft alle Inhalte auf Sperrwörter und Übersetzungslücken. Ändert nichts.",
+        "run": "Prüfen",
+        "running": "Prüfung läuft …",
+        "hash": "Inhalts-Hash {hash}",
+        "violationsTitle": "Sperrworttreffer",
+        "noViolations": "Keine Treffer.",
+        "gapsTitle": "Übersetzungslücken",
+        "noGaps": "Alle Übersetzungen vorhanden."
+      },
+      "preview": {
+        "run": "Vorschau bauen",
+        "running": "Build läuft …",
+        "open": "Vorschau öffnen",
+        "built": "Vorschau gebaut."
+      },
+      "connection": {
+        "title": "Verbindung testen",
+        "intro": "Meldet sich am Publish-Ziel an, überträgt aber nichts. Zeigt, was dort liegt und ein Publish entfernen würde.",
+        "run": "Verbindung testen",
+        "running": "Test läuft …",
+        "target": "Ziel: {target}",
+        "resultTitle": "Verbindungstest",
+        "ok": "Verbindung steht. Am Ziel liegen {count} Dateien, die ein Publish entfernen würde.",
+        "empty": "Verbindung steht, aber am Ziel liegt keine einzige Datei. Prüfen Sie SITE_DEPLOY_PATH — zeigt der Pfad wirklich auf das Webverzeichnis?",
+        "filesTitle": "Dateien am Ziel",
+        "logTitle": "Protokoll"
+      },
+      "diff": {
+        "title": "Änderungen gegenüber Live",
+        "changed": "Geändert",
+        "added": "Neu",
+        "removed": "Entfallen",
+        "none": "Keine Änderungen gegenüber dem letzten Publish."
+      },
+      "publishCard": {
+        "staging": "Nach Staging publizieren",
+        "live": "Live publizieren",
+        "noTarget": "Kein Publish-Ziel konfiguriert (SITE_DEPLOY_*).",
+        "notHere": "Aus der Entwicklungsumgebung wird nicht publiziert.",
+        "blocked": "Sperrworttreffer — Publish nicht möglich.",
+        "confirmTitle": "Webseite publizieren?",
+        "confirmText": "Ziel: {url}. {changed} geändert, {added} neu, {removed} entfallen. Die Seite wird frisch gebaut und übertragen.",
+        "confirm": "Jetzt publizieren",
+        "steps": {
+          "build": "Bauen",
+          "transfer": "Übertragen",
+          "record": "Protokollieren"
+        }
+      },
+      "done": "Publiziert: {changed} geändert, {added} neu, {removed} entfallen.",
+      "history": {
+        "title": "Publish-Historie",
+        "columns": {
+          "time": "Zeitpunkt",
+          "status": "Status",
+          "hash": "Inhalts-Hash",
+          "changes": "Änderungen",
+          "by": "Auslöser"
+        },
+        "log": "Protokoll"
+      }
     }
   }
 }

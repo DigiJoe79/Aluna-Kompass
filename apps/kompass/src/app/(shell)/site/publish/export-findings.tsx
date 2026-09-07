@@ -1,27 +1,22 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
 import { Disclosure } from '@/components/ui/disclosure';
 
 export interface Findings {
-  gaps: { collection: string; id: string; field: string }[];
+  gaps: { path: string; locale: string }[];
   violations: { path: string; term: string; excerpt: string }[];
 }
-
-const linkFor = (collection: string, id: string) =>
-  collection === 'pages' ? `/website/pages/${id}` : collection === 'animals' ? '/animals' : `/website/${collection}`;
 
 /**
  * Die Befunde eines Exports. Prüfen und Vorschau zeigen dieselben zwei Listen,
  * deshalb stehen sie hier einmal.
  *
  * Sperrworttreffer bleiben aufgeklappt — sie verhindern den Publish. Alles
- * andere fängt zugeklappt an; Übersetzungslücken betreffen heute jede Seite
- * des englischen Baums und schoben die Karten darunter aus dem Bild.
+ * andere fängt zugeklappt an.
  */
 export function ExportFindings({ gaps, violations }: Findings) {
-  const t = useTranslations('website.publish.check');
+  const t = useTranslations('site.publish.check');
 
   return (
     <>
@@ -46,10 +41,12 @@ export function ExportFindings({ gaps, violations }: Findings) {
         <ul className="flex flex-col gap-1">
           {gaps.map((g, i) => (
             <li key={i}>
-              <Link href={linkFor(g.collection, g.id)} className="text-link underline">
-                {g.collection} · {g.id}
-              </Link>{' '}
-              · <span className="font-mono">{g.field}</span>
+              <span className="font-mono">{g.path}</span>
+              {g.locale ? (
+                <>
+                  {' '}· <span className="rounded bg-surface-2 px-1 py-0.5 font-mono text-[11px] uppercase">{g.locale}</span>
+                </>
+              ) : null}
             </li>
           ))}
         </ul>

@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { siteTemplateDir } from '../env';
 
 /** Wie sich Kompass beim Zielserver anmeldet. */
 export type DeployAuth =
@@ -17,7 +18,7 @@ export interface SiteEnv {
   publicUrl: string | null;
   staging: boolean;
   deploy: DeployTarget | null;
-  siteDir: string;
+  templateDir: string;
   cacheDir: string;
   previewDir: string;
 }
@@ -42,10 +43,9 @@ export function readSiteEnv(env: Record<string, string | undefined> = process.en
     publicUrl: env.SITE_PUBLIC_URL ?? null,
     staging: env.SITE_STAGING === '1',
     deploy,
-    // Absolut auflösen: der Site-Build läuft als Kindprozess mit siteDir als
-    // Arbeitsverzeichnis, relative Pfade zeigten dort sonst woanders hin.
-    siteDir: path.resolve(env.SITE_DIR ?? path.resolve(process.cwd(), '../../apps/site')),
+    templateDir: siteTemplateDir(env),
     cacheDir: path.resolve(env.SITE_CACHE_DIR ?? path.join(dataDir, 'site-cache')),
     previewDir: path.resolve(env.SITE_PREVIEW_DIR ?? path.join(dataDir, 'site-preview')),
   };
 }
+
