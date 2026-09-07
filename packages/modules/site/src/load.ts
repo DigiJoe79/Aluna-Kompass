@@ -14,7 +14,7 @@ export type { FieldSchema, TemplateSchema } from './types';
 
 export interface LoadedTemplate { definition: TemplateDefinition; schema: TemplateSchema; checksum: string }
 
-const localRequire = createRequire(import.meta.url);
+
 
 /**
  * Legt die Modulauflösung für ein Template-Verzeichnis an: einen Symlink auf die
@@ -24,7 +24,26 @@ const localRequire = createRequire(import.meta.url);
  * flaches `/app/node_modules`) wie im Monorepo (das Paket liegt unter
  * `packages/`) trägt.
  */
-export async function ensureModuleResolution(dir: string): Promise<void> {
+/**
+ * Findet das Verzeichnis von `@kompass/site-template`.
+ *
+ * Ausgangspunkt ist bewusst das Arbeitsverzeichnis und nicht `import.meta.url`:
+ * Turbopack ersetzt letzteres beim Bündeln durch eine Modul-ID, und
+ * `createRequire` einer Zahl scheitert im Container mit „path must be of type
+ * string". Im Dev-Modus fällt das nie auf, weil dort nicht gebündelt wird.
+ */
+export function resolveTemplatePackage(from: string = process.cwd()): string {
+  const requireFrom = createRequire(path.join(path.resolve(from), 'noop.js'));
+  try {
+    return path.dirname(requireFrom.resolve('@kompass/site-template/package.json'));
+  } catch {
+    throw new Error(
+      `@kompass/site-template ist von ${from} aus nicht auflösbar; ohne das Paket kann kein Template gelesen werden`,
+    );
+  }
+}
+
+export async function ensureModuleResolution(dir: string, from?: string): Promise<void> {
   const link = path.join(dir, 'node_modules');
   try {
     await lstat(link);
@@ -32,7 +51,7 @@ export async function ensureModuleResolution(dir: string): Promise<void> {
   } catch {
     // fehlt noch
   }
-  const pkgDir = path.dirname(localRequire.resolve('@kompass/site-template/package.json'));
+  const pkgDir = resolveTemplatePackage(from);
   const nodeModules = path.resolve(pkgDir, '..', '..');
   if (path.basename(nodeModules) === 'node_modules') {
     await symlink(nodeModules, link, 'dir');

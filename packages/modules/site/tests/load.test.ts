@@ -1,8 +1,8 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { ensureModuleResolution, loadTemplate } from '../src/load';
+import { ensureModuleResolution, loadTemplate, resolveTemplatePackage } from '../src/load';
 
 const dirs: string[] = [];
 afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true }); });
@@ -55,5 +55,25 @@ describe('loadTemplate', () => {
     expect(broken.ok === false && broken.error.type === 'conflict' && broken.error.code === 'templateUnreadable').toBe(true);
     const wrong = await loadTemplate(await withTemplate('export default { hallo: 1 };'));
     expect(wrong.ok === false && wrong.error.type === 'conflict' && wrong.error.code === 'templateInvalid').toBe(true);
+  });
+});
+
+describe('resolving node_modules', () => {
+  /**
+   * Turbopack ersetzt `import.meta.url` beim Bündeln durch eine Modul-ID. Ein
+   * `createRequire` darauf wirft im Container „path must be of type string,
+   * received number" — im Dev-Modus nie, weil dort nicht gebündelt wird.
+   */
+  it('finds the package without relying on import.meta.url', () => {
+    const found = resolveTemplatePackage();
+    expect(found.endsWith('site-template')).toBe(true);
+    expect(existsSync(path.join(found, 'package.json'))).toBe(true);
+  });
+
+  it('says what is missing instead of failing on a type', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'kompass-noresolve-'));
+    dirs.push(dir);
+    // Auflösung von einem Ort aus, an dem es das Paket nicht gibt.
+    await expect(ensureModuleResolution(dir, '/nirgendwo')).rejects.toThrow(/site-template/);
   });
 });

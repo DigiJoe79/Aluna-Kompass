@@ -2,7 +2,9 @@
   "name": "aluna-kompass",
   "private": true,
   "packageManager": "pnpm@11.25.0",
-  "engines": { "node": ">=24" },
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "pnpm --filter @kompass/app dev",
     "e2e": "pnpm --filter @kompass/app e2e",
@@ -15,7 +17,9 @@
     "@kompass/core": "workspace:*",
     "@kompass/documents": "workspace:*",
     "@kompass/module-animals": "workspace:*",
+    "@kompass/module-site": "workspace:*",
     "@kompass/module-website": "workspace:*",
+    "@kompass/site-template": "workspace:*",
     "tsx": "^4.19.3"
   }
 }
