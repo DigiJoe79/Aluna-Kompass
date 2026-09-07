@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { fixedClock, type FixedClock } from '../clock';
 import type { CallContext } from '../context';
 import { coreModule } from '../core-module';
-import { roles, users } from '../db/schema';
+import { roles, settings, users } from '../db/schema';
 import type { AppEnv, Deps } from '../deps';
 import { newId } from '../ids';
 import { createMemoryMediaStore } from '../media/store';
@@ -21,9 +21,14 @@ export interface TestDeps extends Deps {
 }
 
 export function createTestDeps(
-  opts: { now?: string; manifests?: ModuleManifest[]; env?: AppEnv; coreTemplates?: DocumentTemplate[] } = {},
+  opts: { now?: string; manifests?: ModuleManifest[]; env?: AppEnv; coreTemplates?: DocumentTemplate[]; locales?: string[] } = {},
 ): TestDeps {
   const { db, sqlite } = createTestDb();
+  if (opts.locales) {
+    db.insert(settings)
+      .values({ key: 'i18n.locales', value: JSON.stringify(opts.locales), updatedAt: opts.now ?? TEST_NOW })
+      .run();
+  }
   const deps: TestDeps = {
     db,
     sqlite,

@@ -5,7 +5,7 @@ const slugOrAuto = z.union([z.literal('auto'), z.string().regex(/^[a-z0-9][a-z0-
 const httpUrl = z.url().refine((u) => /^https?:\/\//.test(u), 'httpOnly');
 
 export const WEBSITE_SETTINGS: SettingDefinition[] = [
-  { key: 'website.claim', schema: localizedText({ max: 120 }), default: { de: '', en: '' } },
+  { key: 'website.claim', schema: localizedText({ max: 120 }), default: { de: '' } },
   { key: 'website.forwardingPercent', schema: z.number().min(0).max(100), default: 97.2 },
   { key: 'website.shelterDogCount', schema: z.number().int().min(0), default: 0 },
   { key: 'website.donationBoxLocations', schema: z.array(z.string().trim().min(1).max(80)).max(20), default: [] },

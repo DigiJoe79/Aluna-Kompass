@@ -5,6 +5,7 @@ import {
   createDeps,
   createProject,
   listProjects,
+  emptyLocalized,
   readEnv,
   readSetting,
   setProjectPublished,
@@ -13,6 +14,7 @@ import {
   unwrap,
   type CallContext,
   type Deps,
+  type LocalizedText,
 } from '@kompass/core';
 import { coreDocumentTemplates, createTypstRenderer } from '@kompass/documents';
 import {
@@ -23,6 +25,7 @@ import {
   setAnimalPublished,
   setAnimalStatus,
   setAnimalStory,
+  type LocalizedList,
 } from '@kompass/module-animals';
 import {
   createArticle,
@@ -38,9 +41,6 @@ import {
   updatePage,
   websiteModule,
 } from '@kompass/module-website';
-
-type Localized = { de: string; en: string };
-const L = (de: string): Localized => ({ de, en: '' });
 
 async function loadAsset(
   deps: Deps,
@@ -97,6 +97,20 @@ export async function importPrototype(
   ctx: CallContext,
   opts: { prototypeDir: string; pagesFile: string },
 ) {
+  const locales = deps.locales();
+  const leading = locales[0] ?? 'de';
+  const L = (de: string): LocalizedText => {
+    const res = emptyLocalized(locales);
+    res[leading] = de;
+    return res;
+  };
+  const pickLocales = (loc: Record<string, string>): LocalizedText => {
+    const res = emptyLocalized(locales);
+    for (const k of locales) {
+      if (typeof loc[k] === 'string') res[k] = loc[k];
+    }
+    return res;
+  };
   const assetCache = new Map<string, string>();
   const asset = (publicPath: string) => loadAsset(deps, ctx, opts.prototypeDir, publicPath, assetCache);
   const load = async <T,>(file: string, name: string): Promise<T> =>
@@ -213,19 +227,28 @@ export async function importPrototype(
 
   const pagesFile = JSON.parse(await readFile(opts.pagesFile, 'utf8')) as {
     facts: Record<string, unknown>;
-    pages: Record<string, { title: Localized; lede: Localized; body: Localized; blocks: unknown[] }>;
+    pages: Record<string, { title: Record<string, string>; lede: Record<string, string>; body: Record<string, string>; blocks: unknown[] }>;
   };
   for (const [key, page] of Object.entries(pagesFile.pages)) {
     const current = unwrap(await getPage(deps, ctx, key));
     if (current.title.de) continue;
-    unwrap(await updatePage(deps, ctx, { key, ...page }));
+    unwrap(
+      await updatePage(deps, ctx, {
+        key,
+        title: pickLocales(page.title),
+        lede: pickLocales(page.lede),
+        body: pickLocales(page.body),
+        blocks: page.blocks,
+      }),
+    );
     counts.pages += 1;
   }
   for (const [k, v] of Object.entries(pagesFile.facts)) {
     const key = `website.${k}`;
+    const value = k === 'claim' && typeof v === 'object' && v !== null ? pickLocales(v as Record<string, string>) : v;
     const currentValue = readSetting(deps, key);
-    if (JSON.stringify(currentValue) === JSON.stringify(v)) continue;
-    unwrap(await setSetting(deps, ctx, { key, value: v }));
+    if (JSON.stringify(currentValue) === JSON.stringify(value)) continue;
+    unwrap(await setSetting(deps, ctx, { key, value }));
     counts.facts += 1;
   }
   return counts;

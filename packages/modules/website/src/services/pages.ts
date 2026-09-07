@@ -1,4 +1,4 @@
-import { isoNow, localizedText, notFound, ok, recordAudit, requirePermission, validate, type CallContext, type Deps, type Result } from '@kompass/core';
+import { emptyLocalized, isoNow, localizedText, notFound, ok, recordAudit, requirePermission, validate, type CallContext, type Deps, type Result } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { WEBSITE_PAGE_KEYS } from '../page-keys';
@@ -18,7 +18,7 @@ export const pageBlockSchema = z.object({
 
 export function ensurePages(deps: Deps): void {
   const existing = new Set(deps.db.select({ key: websitePages.key }).from(websitePages).all().map((r) => r.key));
-  const empty = { de: '', en: '' };
+  const empty = emptyLocalized(deps.locales());
   const now = isoNow(deps.clock);
   for (const key of WEBSITE_PAGE_KEYS) {
     if (!existing.has(key)) deps.db.insert(websitePages).values({ key, title: empty, lede: empty, body: empty, metaDescription: empty, blocks: [], updatedAt: now }).run();

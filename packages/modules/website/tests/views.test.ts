@@ -3,7 +3,7 @@ import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { createArticle, publishedArticles, publishedPages, publishedProjects, publishedSiteFacts, setArticlePublished, updatePage, websiteModule } from '../src';
 
-const deps = () => { const d = createTestDeps({ manifests: [coreModule, websiteModule] }); insertUser(d, { id: 'USER-TEST' }); return d; };
+const deps = () => { const d = createTestDeps({ manifests: [coreModule, websiteModule], locales: ['de', 'en'] }); insertUser(d, { id: 'USER-TEST' }); return d; };
 const manage = ctxWith(['website.manage', 'website.view', 'settings.manage']);
 
 describe('published views', () => {

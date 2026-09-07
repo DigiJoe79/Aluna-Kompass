@@ -33,7 +33,7 @@ describe('exportSiteContent', () => {
   });
 
   it('reports blocked terms from settings and requires website.publish', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, websiteModule] });
+    const deps = createTestDeps({ manifests: [coreModule, websiteModule], locales: ['de', 'en'] });
     insertUser(deps, { id: 'USER-TEST' });
     unwrap(await setSetting(deps, manage, { key: 'website.blockedTerms', value: ['Popescu'] }));
     unwrap(await updatePage(deps, manage, { key: 'partners', body: { de: 'Frau Popescu betreibt den Shelter.', en: '' } }));

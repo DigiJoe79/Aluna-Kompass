@@ -1,4 +1,4 @@
-import { invalid, isoNow, localizedText, notFound, ok, recordAudit, requirePermission, validate, type CallContext, type Deps, type Result } from '@kompass/core';
+import { emptyLocalized, invalid, isoNow, localizedText, notFound, ok, recordAudit, requirePermission, validate, type CallContext, type Deps, type Result } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { WEBSITE_DOWNLOAD_KEYS } from '../page-keys';
@@ -9,8 +9,9 @@ export type DownloadRecord = typeof websiteDownloads.$inferSelect;
 
 function ensureDownloads(deps: Deps): void {
   const existing = new Set(deps.db.select({ key: websiteDownloads.key }).from(websiteDownloads).all().map((r) => r.key));
+  const empty = emptyLocalized(deps.locales());
   for (const key of WEBSITE_DOWNLOAD_KEYS) {
-    if (!existing.has(key)) deps.db.insert(websiteDownloads).values({ key, title: { de: '', en: '' }, assetId: null, updatedAt: isoNow(deps.clock) }).run();
+    if (!existing.has(key)) deps.db.insert(websiteDownloads).values({ key, title: empty, assetId: null, updatedAt: isoNow(deps.clock) }).run();
   }
 }
 

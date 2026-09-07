@@ -6,7 +6,7 @@ import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/cli
 import { describe, expect, it } from 'vitest';
 
 async function connectAsAnimalManager() {
-  const deps = createTestDeps({ manifests: [coreModule, animalsModule] });
+  const deps = createTestDeps({ manifests: [coreModule, animalsModule], locales: ['de', 'en'] });
   const handler = createKompassMcpHandler(deps, { extraTools: coreMcpTools });
   const userId = insertUser(deps, {});
   const admin = ctxWith(['roles.manage', 'users.manage', 'modules.manage'], userId);
