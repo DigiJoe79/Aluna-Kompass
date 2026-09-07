@@ -1,6 +1,10 @@
 import { type Deps, type McpToolDefinition } from '@kompass/core';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { z } from 'zod';
 import { siteTemplateDir } from './env';
+import { exportSiteContent } from './export';
 import {
   createEntry,
   deleteEntry,
@@ -74,6 +78,15 @@ const FIXED: McpToolDefinition[] = [
   ),
   tool('site_variables_get', 'Read all template variable values. Requires site.view.', z.object({}), (deps, ctx) => getVariables(deps, ctx)),
   tool('site_variables_set', 'Write template variable values, checked against the template schema. Requires site.manage.', z.object({ values: z.record(z.string(), z.unknown()) }), (deps, ctx, args) => setValues(deps, ctx, args)),
+  tool('site_export_check', 'Build the content export into a throwaway directory without publishing, to check it is current and complete. Requires site.publish.', z.object({}), async (deps, ctx) => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'kompass-site-check-'));
+    try {
+      const result = await exportSiteContent(deps, ctx, { jobDir: dir });
+      return result.ok ? { ok: true as const, value: { contentHash: result.value.contentHash, assets: result.value.assets.length } } : result;
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }),
 ];
 
 /** Die Werkzeuge des Moduls: feste plus je Sammlung des eingelesenen Templates. */

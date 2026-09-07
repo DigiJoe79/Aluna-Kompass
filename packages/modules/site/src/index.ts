@@ -9,3 +9,4 @@ export * from './resync/apply';
 export * from './service';
 export * from './values';
 export * from './entries';
+export * from './export';

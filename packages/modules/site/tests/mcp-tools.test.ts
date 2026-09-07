@@ -46,7 +46,7 @@ const jsonSchema = (tool: { inputSchema: z.ZodType<unknown> }) =>
 describe('site mcp tools', () => {
   it('offers the fixed tools even without a template', () => {
     const names = moduleMcpTools(createTestDeps(), siteModule).map((t) => t.name);
-    expect(names).toEqual(['site_template_read', 'site_template_sync', 'site_variables_get', 'site_variables_set']);
+    expect(names).toEqual(['site_template_read', 'site_template_sync', 'site_variables_get', 'site_variables_set', 'site_export_check']);
   });
 
   it('adds five tools per collection, six where it is publishable', () => {
@@ -70,7 +70,7 @@ describe('site mcp tools', () => {
   it('describes every tool with the permission it needs', () => {
     const tools = moduleMcpTools(withTemplate({ notes, articles }), siteModule);
     for (const t of tools) {
-      expect(t.description).toMatch(/site\.(view|manage)/);
+      expect(t.description).toMatch(/site\.(view|manage|publish)/);
     }
   });
 });
