@@ -15,8 +15,11 @@ COPY packages/core/package.json packages/core/
 COPY packages/documents/package.json packages/documents/
 COPY packages/markdown/package.json packages/markdown/
 COPY packages/mcp/package.json packages/mcp/
+COPY packages/site-template/package.json packages/site-template/
 COPY packages/modules/animals/package.json packages/modules/animals/
 COPY packages/modules/website/package.json packages/modules/website/
+COPY packages/modules/site/package.json packages/modules/site/
+COPY templates/verein-basis/package.json templates/verein-basis/
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
@@ -49,6 +52,10 @@ WORKDIR /app
 COPY --from=build --chown=node:node /app/apps/kompass/.next/standalone ./
 COPY --from=build --chown=node:node /app/apps/kompass/.next/static ./apps/kompass/.next/static
 COPY --from=build --chown=node:node /app/apps/site ./apps/site
+# Das mitgelieferte Basis-Template und das Paket, das seine Deklaration liest.
+# Der Entrypoint kopiert das Template beim ersten Start ins Volume.
+COPY --from=build --chown=node:node /app/templates/verein-basis ./templates/verein-basis
+COPY --from=build --chown=node:node /app/packages/site-template ./packages/site-template
 # Die tsconfig von packages/markdown erweitert die Basisdatei im Wurzel-
 # verzeichnis. Ohne sie bricht der Site-Build ab, sobald vite den Markdown-
 # Quellcode transformiert: „Tsconfig not found /app/tsconfig.base.json".
@@ -59,7 +66,9 @@ COPY --from=build --chown=node:node /app/packages/documents/templates ./packages
 COPY --from=build --chown=node:node /app/packages/documents/fonts ./packages/documents/fonts
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --chown=node:node scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN mkdir -p /data /media && chown node:node /data /media && chmod +x /usr/local/bin/docker-entrypoint.sh
+COPY --chown=node:node scripts/seed-site-template.sh /usr/local/bin/seed-site-template.sh
+RUN mkdir -p /data /media && chown node:node /data /media \
+ && chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/seed-site-template.sh
 USER node
 VOLUME ["/data", "/media"]
 EXPOSE 3000
