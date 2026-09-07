@@ -15,6 +15,13 @@ import { Toaster } from '@/components/ui/sonner';
 import { getDeps } from '@/lib/deps';
 import { themeToCss } from '@/lib/theme-css';
 
+/**
+ * Das Layout liest das Theme aus der Datenbank und gilt für jede Seite. Ohne
+ * diese Zeile rendert `next build` jede nicht selbst dynamische Seite vor, und
+ * die parallelen Worker öffnen dieselbe SQLite-Datei — `database is locked`.
+ */
+export const dynamic = 'force-dynamic';
+
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('app');
   return { title: t('name') };

@@ -20,4 +20,19 @@ describe('pre-auth pages', () => {
       );
     });
   }
+
+});
+
+/**
+ * Das Wurzel-Layout liest das Theme aus der Datenbank und läuft damit für jede
+ * Seite. Ohne `force-dynamic` rendert `next build` alles vor, was nicht selbst
+ * dynamisch ist — und siebzehn Worker öffnen dieselbe SQLite-Datei zugleich.
+ * Ergebnis: `SQLITE_BUSY: database is locked`, mitten im Build.
+ */
+describe('root layout', () => {
+  it('is rendered per request, because it reads the database', () => {
+    const source = readFileSync(path.join(APP, 'layout.tsx'), 'utf8');
+    expect(source, 'layout.tsx liest die Datenbank').toMatch(/getDeps\(/);
+    expect(source, 'layout.tsx muss dynamisch sein').toMatch(/export const dynamic = 'force-dynamic'/);
+  });
 });
