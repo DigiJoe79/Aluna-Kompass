@@ -38,6 +38,7 @@ export * from './published/view';
 export * from './setup/service';
 export * from './app';
 export * from './seed/seed';
+export * from './i18n/locales';
 export * from './i18n/localized';
 export * from './projects/service';
 export { localizedColumn } from './db/columns';

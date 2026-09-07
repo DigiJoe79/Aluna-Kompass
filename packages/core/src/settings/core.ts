@@ -56,10 +56,14 @@ const modules: SettingDefinition[] = [
   { key: 'modules.enabled', schema: z.array(z.string()), default: [] },
 ];
 
+const i18n: SettingDefinition[] = [
+  { key: 'i18n.locales', schema: z.array(z.string().regex(/^[a-z]{2}(-[a-z]{2})?$/)).min(1).max(10), default: ['de'] },
+];
+
 const system: SettingDefinition[] = [
   { key: 'system.lastImportAt', schema: z.string().nullable(), default: null, systemOnly: true },
   { key: 'system.lastImportSource', schema: z.string().nullable(), default: null, systemOnly: true },
   { key: 'system.lastExportAt', schema: z.string().nullable(), default: null, systemOnly: true },
 ];
 
-export const CORE_SETTINGS: SettingDefinition[] = [...organization, ...branding, ...themes, ...modules, ...system];
+export const CORE_SETTINGS: SettingDefinition[] = [...organization, ...branding, ...themes, ...modules, ...i18n, ...system];
