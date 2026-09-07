@@ -6,7 +6,7 @@ import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 import { losesContent } from '../src/resync/plan';
 import { siteEntries, siteTemplateState } from '../src/schema';
-import { applyTemplateSync, previewTemplateSync } from '../src/service';
+import { applyTemplateSync, previewTemplateSync, templateIsCurrent } from '../src/service';
 
 const dirs: string[] = [];
 afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true }); });
@@ -99,5 +99,15 @@ describe('template sync', () => {
     const applied = await applyTemplateSync(deps, ctx, { dir: templateDir('export default {'), confirm: true });
     expect(applied.ok === false && applied.error.type === 'conflict' && applied.error.code === 'templateUnreadable').toBe(true);
     expect(deps.db.select().from(siteTemplateState).get()).toEqual(before);
+  });
+
+  it('reports the template as stale once the file changed', async () => {
+    const deps = withUser();
+    const ctx = ctxWith(['site.manage']);
+    const dir = templateDir(GOOD);
+    unwrap(await applyTemplateSync(deps, ctx, { dir, confirm: true }));
+    await expect(templateIsCurrent(deps, dir)).resolves.toBe(true);
+    writeFileSync(path.join(dir, 'kompass.template.ts'), GOOD.replace("name: 'Basis'", "name: 'Basis 2'"));
+    await expect(templateIsCurrent(deps, dir)).resolves.toBe(false);
   });
 });
