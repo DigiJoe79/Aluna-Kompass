@@ -57,7 +57,7 @@ const imageMime = (db: DbOrTx, id: string): 'missing' | 'notImage' | 'ok' => { c
 export async function createAnimal(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AnimalRecord>> {
   const denied = requirePermission(ctx, 'animals.manage');
   if (denied) return denied;
-  const parsed = validate(animalCreateSchema, input);
+  const parsed = validate(deps, animalCreateSchema, input);
   if (!parsed.ok) return parsed;
   if (slugTaken(deps.db, parsed.value.slug)) return conflict('slugTaken', `Slug ${parsed.value.slug} ist bereits vergeben`);
   return deps.db.transaction((tx) => {
@@ -73,7 +73,7 @@ export async function createAnimal(deps: Deps, ctx: CallContext, input: unknown)
 export async function updateAnimal(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AnimalRecord>> {
   const denied = requirePermission(ctx, 'animals.manage');
   if (denied) return denied;
-  const parsed = validate(animalUpdateSchema, input);
+  const parsed = validate(deps, animalUpdateSchema, input);
   if (!parsed.ok) return parsed;
   const { id, ...changes } = parsed.value;
   const before = loadAnimal(deps.db, id);
@@ -92,7 +92,7 @@ export const animalStatusSchema = z.object({ id: z.string().min(1), status: z.en
 export async function setAnimalStatus(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AnimalRecord>> {
   const denied = requirePermission(ctx, 'animals.manage');
   if (denied) return denied;
-  const parsed = validate(animalStatusSchema, input);
+  const parsed = validate(deps, animalStatusSchema, input);
   if (!parsed.ok) return parsed;
   const { id, status, adoptedYear } = parsed.value;
   if (status === 'adopted' && adoptedYear === undefined) return invalid([{ path: 'adoptedYear', message: 'required' }]);
@@ -114,7 +114,7 @@ export const animalPhotosSchema = z.object({ id: z.string().min(1), photos: z.ar
 export async function setAnimalPhotos(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AnimalRecord>> {
   const denied = requirePermission(ctx, 'animals.manage');
   if (denied) return denied;
-  const parsed = validate(animalPhotosSchema, input);
+  const parsed = validate(deps, animalPhotosSchema, input);
   if (!parsed.ok) return parsed;
   const { id, photos } = parsed.value;
   const before = loadAnimal(deps.db, id);
@@ -139,7 +139,7 @@ export const animalStorySchema = z.object({ id: z.string().min(1), beforeAssetId
 export async function setAnimalStory(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AnimalRecord>> {
   const denied = requirePermission(ctx, 'animals.manage');
   if (denied) return denied;
-  const parsed = validate(animalStorySchema, input);
+  const parsed = validate(deps, animalStorySchema, input);
   if (!parsed.ok) return parsed;
   const { id, ...story } = parsed.value;
   const before = loadAnimal(deps.db, id);
@@ -163,7 +163,7 @@ export async function setAnimalStory(deps: Deps, ctx: CallContext, input: unknow
 export async function setAnimalPublished(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AnimalRecord>> {
   const denied = requirePermission(ctx, 'animals.manage');
   if (denied) return denied;
-  const parsed = validate(z.object({ id: z.string().min(1), isPublished: z.boolean() }), input);
+  const parsed = validate(deps, z.object({ id: z.string().min(1), isPublished: z.boolean() }), input);
   if (!parsed.ok) return parsed;
   const before = loadAnimal(deps.db, parsed.value.id);
   if (!before) return notFound('animal', parsed.value.id);

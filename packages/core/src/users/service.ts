@@ -56,7 +56,7 @@ const createUserSchema = z.object({
 export async function createUser(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ user: UserSummary; startPassword: string }>> {
   const denied = requirePermission(ctx, 'users.manage');
   if (denied) return denied;
-  const parsed = validate(createUserSchema, input);
+  const parsed = validate(deps, createUserSchema, input);
   if (!parsed.ok) return parsed;
   const { name, email, roleIds } = parsed.value;
   if (emailTaken(deps.db, email)) return conflict('emailTaken', `E-Mail ${email} ist bereits vergeben`);
@@ -95,7 +95,7 @@ const updateUserSchema = z.object({ id: z.string().min(1), name: z.string().trim
 export async function updateUser(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<UserSummary>> {
   const denied = requirePermission(ctx, 'users.manage');
   if (denied) return denied;
-  const parsed = validate(updateUserSchema, input);
+  const parsed = validate(deps, updateUserSchema, input);
   if (!parsed.ok) return parsed;
   const { id, name, email } = parsed.value;
   const before = loadUserSummary(deps.db, id);
@@ -114,7 +114,7 @@ const setActiveSchema = z.object({ id: z.string().min(1), isActive: z.boolean() 
 export async function setUserActive(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<UserSummary>> {
   const denied = requirePermission(ctx, 'users.manage');
   if (denied) return denied;
-  const parsed = validate(setActiveSchema, input);
+  const parsed = validate(deps, setActiveSchema, input);
   if (!parsed.ok) return parsed;
   const { id, isActive } = parsed.value;
   const before = loadUserSummary(deps.db, id);
@@ -136,7 +136,7 @@ const idSchema = z.object({ id: z.string().min(1) });
 export async function resetStartPassword(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ startPassword: string }>> {
   const denied = requirePermission(ctx, 'users.manage');
   if (denied) return denied;
-  const parsed = validate(idSchema, input);
+  const parsed = validate(deps, idSchema, input);
   if (!parsed.ok) return parsed;
   const user = loadUserSummary(deps.db, parsed.value.id);
   if (!user) return notFound('user', parsed.value.id);

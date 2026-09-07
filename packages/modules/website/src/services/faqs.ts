@@ -24,7 +24,7 @@ const load = (db: Deps['db'], id: string) => db.select().from(websiteFaqs).where
 export async function createFaq(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<FaqRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(faqCreateSchema, input);
+  const parsed = validate(deps, faqCreateSchema, input);
   if (!parsed.ok) return parsed;
   return deps.db.transaction((tx) => {
     const id = newId();
@@ -46,7 +46,7 @@ export async function createFaq(deps: Deps, ctx: CallContext, input: unknown): P
 export async function updateFaq(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<FaqRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(faqUpdateSchema, input);
+  const parsed = validate(deps, faqUpdateSchema, input);
   if (!parsed.ok) return parsed;
   const { id, ...changes } = parsed.value;
   const before = load(deps.db, id);
@@ -62,7 +62,7 @@ export async function updateFaq(deps: Deps, ctx: CallContext, input: unknown): P
 export async function setFaqPublished(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<FaqRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(z.object({ id: z.string().min(1), isPublished: z.boolean() }), input);
+  const parsed = validate(deps, z.object({ id: z.string().min(1), isPublished: z.boolean() }), input);
   if (!parsed.ok) return parsed;
   const before = load(deps.db, parsed.value.id);
   if (!before) return notFound('websiteFaq', parsed.value.id);
@@ -84,7 +84,7 @@ export async function setFaqPublished(deps: Deps, ctx: CallContext, input: unkno
 export async function reorderFaqs(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<void>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(z.object({ ids: z.array(z.string().min(1)).min(1) }), input);
+  const parsed = validate(deps, z.object({ ids: z.array(z.string().min(1)).min(1) }), input);
   if (!parsed.ok) return parsed;
   return deps.db.transaction((tx) => {
     parsed.value.ids.forEach((id, index) => tx.update(websiteFaqs).set({ sortOrder: index + 1 }).where(eq(websiteFaqs.id, id)).run());

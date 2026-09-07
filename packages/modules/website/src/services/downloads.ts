@@ -28,7 +28,7 @@ export const downloadSetSchema = z.object({ key: z.enum(WEBSITE_DOWNLOAD_KEYS), 
 export async function setDownload(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DownloadRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(downloadSetSchema, input);
+  const parsed = validate(deps, downloadSetSchema, input);
   if (!parsed.ok) return parsed;
   ensureDownloads(deps);
   const { key, title, assetId } = parsed.value;

@@ -63,7 +63,7 @@ const toEntry = (row: Row): AuditEntry => ({
 export function queryAudit(deps: Deps, ctx: CallContext, input: unknown): Result<{ entries: AuditEntry[]; total: number }> {
   const denied = requirePermission(ctx, 'audit.view');
   if (denied) return denied;
-  const parsed = validate(querySchema, input);
+  const parsed = validate(deps, querySchema, input);
   if (!parsed.ok) return parsed;
   const q = parsed.value;
   const conditions: SQL[] = [];

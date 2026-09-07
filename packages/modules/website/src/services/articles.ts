@@ -32,7 +32,7 @@ const slugTaken = (db: Deps['db'], slug: string, exceptId?: string) => {
 export async function createArticle(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ArticleRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(articleCreateSchema, input);
+  const parsed = validate(deps, articleCreateSchema, input);
   if (!parsed.ok) return parsed;
   if (slugTaken(deps.db, parsed.value.slug)) return conflict('slugTaken', `Slug ${parsed.value.slug} ist bereits vergeben`);
   return deps.db.transaction((tx) => {
@@ -48,7 +48,7 @@ export async function createArticle(deps: Deps, ctx: CallContext, input: unknown
 export async function updateArticle(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ArticleRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(articleUpdateSchema, input);
+  const parsed = validate(deps, articleUpdateSchema, input);
   if (!parsed.ok) return parsed;
   const { id, ...changes } = parsed.value;
   const before = load(deps.db, id);
@@ -65,7 +65,7 @@ export async function updateArticle(deps: Deps, ctx: CallContext, input: unknown
 export async function setArticlePublished(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ArticleRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(z.object({ id: z.string().min(1), isPublished: z.boolean() }), input);
+  const parsed = validate(deps, z.object({ id: z.string().min(1), isPublished: z.boolean() }), input);
   if (!parsed.ok) return parsed;
   const before = load(deps.db, parsed.value.id);
   if (!before) return notFound('websiteArticle', parsed.value.id);
@@ -80,7 +80,7 @@ export async function setArticlePublished(deps: Deps, ctx: CallContext, input: u
 export async function reorderArticles(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<void>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(z.object({ ids: z.array(z.string().min(1)).min(1) }), input);
+  const parsed = validate(deps, z.object({ ids: z.array(z.string().min(1)).min(1) }), input);
   if (!parsed.ok) return parsed;
   return deps.db.transaction((tx) => {
     parsed.value.ids.forEach((id, index) => tx.update(websiteArticles).set({ sortOrder: index + 1 }).where(eq(websiteArticles.id, id)).run());

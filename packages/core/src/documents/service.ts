@@ -50,7 +50,7 @@ async function buildContext(deps: Deps, ctx: CallContext, number: string): Promi
 export async function renderDocument(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DocumentRecord>> {
   const denied = requirePermission(ctx, 'documents.create');
   if (denied) return denied;
-  const parsed = validate(renderSchema, input);
+  const parsed = validate(deps, renderSchema, input);
   if (!parsed.ok) return parsed;
   const template = deps.registry.documentTemplates.get(parsed.value.templateKey) as DocumentTemplate | undefined;
   if (!template) return notFound('documentTemplate', parsed.value.templateKey);
@@ -58,7 +58,7 @@ export async function renderDocument(deps: Deps, ctx: CallContext, input: unknow
     const extra = requirePermission(ctx, template.permission);
     if (extra) return extra;
   }
-  const data = validate(template.schema, parsed.value.input);
+  const data = validate(deps, template.schema, parsed.value.input);
   if (!data.ok) return data;
 
   // Nummer reservieren: rendern außerhalb der Transaktion (async), Eindeutigkeit über den Unique-Index; bei Kollision erneut versuchen.
@@ -102,7 +102,7 @@ const voidSchema = z.object({ id: z.string().min(1), reason: z.string().trim().m
 export async function voidDocument(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DocumentRecord>> {
   const denied = requirePermission(ctx, 'documents.create');
   if (denied) return denied;
-  const parsed = validate(voidSchema, input);
+  const parsed = validate(deps, voidSchema, input);
   if (!parsed.ok) return parsed;
   const row = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
   if (!row) return notFound('document', parsed.value.id);
@@ -126,7 +126,7 @@ const listSchema = z.object({
 export async function listDocuments(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ documents: DocumentRecord[]; total: number }>> {
   const denied = requirePermission(ctx, 'documents.view');
   if (denied) return denied;
-  const parsed = validate(listSchema, input);
+  const parsed = validate(deps, listSchema, input);
   if (!parsed.ok) return parsed;
   const q = parsed.value;
   const conditions: SQL[] = [];

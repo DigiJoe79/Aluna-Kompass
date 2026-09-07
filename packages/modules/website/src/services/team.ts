@@ -34,7 +34,7 @@ function checkAsset(db: Deps['db'], id: string | null | undefined, path: string)
 export async function createTeamMember(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<TeamMemberRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(teamCreateSchema, input);
+  const parsed = validate(deps, teamCreateSchema, input);
   if (!parsed.ok) return parsed;
   const errPhoto = checkAsset(deps.db, parsed.value.photoAssetId, 'photoAssetId');
   if (errPhoto) return errPhoto;
@@ -61,7 +61,7 @@ export async function createTeamMember(deps: Deps, ctx: CallContext, input: unkn
 export async function updateTeamMember(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<TeamMemberRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(teamUpdateSchema, input);
+  const parsed = validate(deps, teamUpdateSchema, input);
   if (!parsed.ok) return parsed;
   const { id, ...changes } = parsed.value;
   const before = load(deps.db, id);
@@ -85,7 +85,7 @@ export async function updateTeamMember(deps: Deps, ctx: CallContext, input: unkn
 export async function setTeamMemberPublished(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<TeamMemberRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(z.object({ id: z.string().min(1), isPublished: z.boolean() }), input);
+  const parsed = validate(deps, z.object({ id: z.string().min(1), isPublished: z.boolean() }), input);
   if (!parsed.ok) return parsed;
   const before = load(deps.db, parsed.value.id);
   if (!before) return notFound('websiteTeamMember', parsed.value.id);
@@ -107,7 +107,7 @@ export async function setTeamMemberPublished(deps: Deps, ctx: CallContext, input
 export async function reorderTeam(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<void>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(z.object({ ids: z.array(z.string().min(1)).min(1) }), input);
+  const parsed = validate(deps, z.object({ ids: z.array(z.string().min(1)).min(1) }), input);
   if (!parsed.ok) return parsed;
   return deps.db.transaction((tx) => {
     parsed.value.ids.forEach((id, index) => tx.update(websiteTeam).set({ sortOrder: index + 1 }).where(eq(websiteTeam.id, id)).run());

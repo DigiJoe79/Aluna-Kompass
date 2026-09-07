@@ -28,7 +28,7 @@ function saveThemes(tx: DbOrTx, deps: Deps, ctx: CallContext, themes: Theme[], a
 export async function createTheme(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<Theme>> {
   const denied = requirePermission(ctx, 'settings.manage');
   if (denied) return denied;
-  const parsed = validate(themeSchema, input);
+  const parsed = validate(deps, themeSchema, input);
   if (!parsed.ok) return parsed;
   const theme = parsed.value;
   const { themes } = listThemes(deps);
@@ -42,7 +42,7 @@ export async function createTheme(deps: Deps, ctx: CallContext, input: unknown):
 export async function updateTheme(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<Theme>> {
   const denied = requirePermission(ctx, 'settings.manage');
   if (denied) return denied;
-  const parsed = validate(themeSchema, input);
+  const parsed = validate(deps, themeSchema, input);
   if (!parsed.ok) return parsed;
   const theme = parsed.value;
   if (theme.key === DEFAULT_KEY) return conflict('themeReadOnly', 'Das Default-Theme ist schreibgeschützt');
@@ -59,7 +59,7 @@ const duplicateSchema = z.object({ sourceKey: z.string().min(1), key: z.string()
 export async function duplicateTheme(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<Theme>> {
   const denied = requirePermission(ctx, 'settings.manage');
   if (denied) return denied;
-  const parsed = validate(duplicateSchema, input);
+  const parsed = validate(deps, duplicateSchema, input);
   if (!parsed.ok) return parsed;
   const { themes } = listThemes(deps);
   const source = themes.find((t) => t.key === parsed.value.sourceKey);
@@ -77,7 +77,7 @@ const keySchema = z.object({ key: z.string().min(1) });
 export async function deleteTheme(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<void>> {
   const denied = requirePermission(ctx, 'settings.manage');
   if (denied) return denied;
-  const parsed = validate(keySchema, input);
+  const parsed = validate(deps, keySchema, input);
   if (!parsed.ok) return parsed;
   const { key } = parsed.value;
   if (key === DEFAULT_KEY) return conflict('themeReadOnly', 'Das Default-Theme kann nicht gelöscht werden');
@@ -93,7 +93,7 @@ export async function deleteTheme(deps: Deps, ctx: CallContext, input: unknown):
 export async function activateTheme(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<Theme>> {
   const denied = requirePermission(ctx, 'settings.manage');
   if (denied) return denied;
-  const parsed = validate(keySchema, input);
+  const parsed = validate(deps, keySchema, input);
   if (!parsed.ok) return parsed;
   const { themes } = listThemes(deps);
   const theme = themes.find((t) => t.key === parsed.value.key);

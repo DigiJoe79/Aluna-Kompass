@@ -46,7 +46,7 @@ const setEnabledSchema = z.object({ key: z.string().min(1), enabled: z.boolean()
 export async function setModuleEnabled(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ModuleStatus>> {
   const denied = requirePermission(ctx, 'modules.manage');
   if (denied) return denied;
-  const parsed = validate(setEnabledSchema, input);
+  const parsed = validate(deps, setEnabledSchema, input);
   if (!parsed.ok) return parsed;
   const { key, enabled } = parsed.value;
   const manifest = deps.registry.module(key);

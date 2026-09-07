@@ -41,7 +41,7 @@ const createSchema = z.object({ name: z.string().trim().min(1).max(80) });
 
 export async function createApiToken(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ token: string; record: ApiTokenSummary }>> {
   if (!ctx.userId) return unauthorized('invalidCredentials');
-  const parsed = validate(createSchema, input);
+  const parsed = validate(deps, createSchema, input);
   if (!parsed.ok) return parsed;
   const token = `akx_${tokenPrefixFor(deps.env)}_${randomBytes(24).toString('base64url')}`;
   const userId = ctx.userId;
@@ -76,7 +76,7 @@ const idSchema = z.object({ id: z.string().min(1) });
 
 export async function revokeApiToken(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ApiTokenSummary>> {
   if (!ctx.userId) return unauthorized('invalidCredentials');
-  const parsed = validate(idSchema, input);
+  const parsed = validate(deps, idSchema, input);
   if (!parsed.ok) return parsed;
   const row = deps.db.select().from(apiTokens).where(and(eq(apiTokens.id, parsed.value.id), eq(apiTokens.userId, ctx.userId))).get();
   if (!row) return notFound('apiToken', parsed.value.id);

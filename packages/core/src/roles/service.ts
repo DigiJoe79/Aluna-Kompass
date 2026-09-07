@@ -58,7 +58,7 @@ function nameTaken(db: DbOrTx, name: string, exceptId?: string): boolean {
 export async function createRole(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<Role>> {
   const denied = requirePermission(ctx, 'roles.manage');
   if (denied) return denied;
-  const parsed = validate(createRoleSchema, input);
+  const parsed = validate(deps, createRoleSchema, input);
   if (!parsed.ok) return parsed;
   const { name, description } = parsed.value;
   if (nameTaken(deps.db, name)) return conflict('roleNameTaken', `Rolle „${name}" existiert bereits`);
@@ -76,7 +76,7 @@ const updateRoleSchema = z.object({ id: z.string().min(1), name: nameSchema.opti
 export async function updateRole(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<Role>> {
   const denied = requirePermission(ctx, 'roles.manage');
   if (denied) return denied;
-  const parsed = validate(updateRoleSchema, input);
+  const parsed = validate(deps, updateRoleSchema, input);
   if (!parsed.ok) return parsed;
   const before = loadRole(deps.db, parsed.value.id);
   if (!before) return notFound('role', parsed.value.id);
@@ -96,7 +96,7 @@ const setPermissionsSchema = z.object({ roleId: z.string().min(1), permissionKey
 export async function setRolePermissions(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<Role>> {
   const denied = requirePermission(ctx, 'roles.manage');
   if (denied) return denied;
-  const parsed = validate(setPermissionsSchema, input);
+  const parsed = validate(deps, setPermissionsSchema, input);
   if (!parsed.ok) return parsed;
   const unknown = parsed.value.permissionKeys
     .map((key, index) => ({ key, index }))
@@ -120,7 +120,7 @@ const assignmentSchema = z.object({ userId: z.string().min(1), roleId: z.string(
 export async function assignRole(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<void>> {
   const denied = requirePermission(ctx, 'users.manage');
   if (denied) return denied;
-  const parsed = validate(assignmentSchema, input);
+  const parsed = validate(deps, assignmentSchema, input);
   if (!parsed.ok) return parsed;
   const { userId, roleId } = parsed.value;
   const user = deps.db.select({ id: users.id, name: users.name }).from(users).where(eq(users.id, userId)).get();
@@ -137,7 +137,7 @@ export async function assignRole(deps: Deps, ctx: CallContext, input: unknown): 
 export async function removeRole(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<void>> {
   const denied = requirePermission(ctx, 'users.manage');
   if (denied) return denied;
-  const parsed = validate(assignmentSchema, input);
+  const parsed = validate(deps, assignmentSchema, input);
   if (!parsed.ok) return parsed;
   const { userId, roleId } = parsed.value;
   const user = deps.db.select({ id: users.id, name: users.name }).from(users).where(eq(users.id, userId)).get();

@@ -47,7 +47,7 @@ export function writeSettingInternal(
   action: string = 'settings.update',
 ): Result<{ key: string; value: unknown }> {
   const def = definitionOf(deps, key);
-  const parsed = validate(def.schema, value);
+  const parsed = validate(deps, def.schema, value);
   if (!parsed.ok) return parsed;
   const previous = readStored(tx, key);
   const before = previous.found ? previous.value : def.default;
@@ -78,7 +78,7 @@ export async function setSetting(
 ): Promise<Result<{ key: string; value: unknown }>> {
   const denied = requirePermission(ctx, 'settings.manage');
   if (denied) return denied;
-  const parsed = validate(setSettingSchema, input);
+  const parsed = validate(deps, setSettingSchema, input);
   if (!parsed.ok) return parsed;
   const def = deps.registry.settingDefinitions.get(parsed.value.key);
   if (!def) return invalid([{ path: 'key', message: 'unknownSetting' }]);

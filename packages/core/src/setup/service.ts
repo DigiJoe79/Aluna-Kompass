@@ -31,7 +31,7 @@ const setupSchema = z.object({
 
 export async function completeSetup(deps: Deps, input: unknown): Promise<Result<{ userId: string; sessionId: string; expiresAt: string }>> {
   if (!isSetupRequired(deps)) return conflict('setupAlreadyDone', 'Die Einrichtung wurde bereits abgeschlossen');
-  const parsed = validate(setupSchema, input);
+  const parsed = validate(deps, setupSchema, input);
   if (!parsed.ok) return parsed;
   const { organizationName, name, email, password, requestId, ipAddress } = parsed.value;
   const passwordHash = await hashPassword(password);

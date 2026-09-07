@@ -55,7 +55,7 @@ function assetExists(db: DbOrTx, id: string | null): boolean {
 export async function createProject(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ProjectRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(projectCreateSchema, input);
+  const parsed = validate(deps, projectCreateSchema, input);
   if (!parsed.ok) return parsed;
   const v = parsed.value;
   if (slugTaken(deps.db, v.slug)) return conflict('slugTaken', `Slug ${v.slug} ist bereits vergeben`);
@@ -74,7 +74,7 @@ export async function createProject(deps: Deps, ctx: CallContext, input: unknown
 export async function updateProject(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ProjectRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(projectUpdateSchema, input);
+  const parsed = validate(deps, projectUpdateSchema, input);
   if (!parsed.ok) return parsed;
   const { id, ...changes } = parsed.value;
   const before = load(deps.db, id);
@@ -94,7 +94,7 @@ const publishSchema = z.object({ id: z.string().min(1), isPublished: z.boolean()
 export async function setProjectPublished(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ProjectRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(publishSchema, input);
+  const parsed = validate(deps, publishSchema, input);
   if (!parsed.ok) return parsed;
   const before = load(deps.db, parsed.value.id);
   if (!before) return notFound('project', parsed.value.id);
@@ -111,7 +111,7 @@ const reorderSchema = z.object({ ids: z.array(z.string().min(1)).min(1) });
 export async function reorderProjects(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<void>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(reorderSchema, input);
+  const parsed = validate(deps, reorderSchema, input);
   if (!parsed.ok) return parsed;
   return deps.db.transaction((tx) => {
     parsed.value.ids.forEach((id, index) => tx.update(projects).set({ sortOrder: index + 1 }).where(eq(projects.id, id)).run());

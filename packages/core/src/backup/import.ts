@@ -20,8 +20,8 @@ async function readManifest(dir: string): Promise<Result<BackupManifest>> {
   if (raw === null) return invalid([{ path: 'archive', message: 'backupFormatUnsupported' }]);
   let json: unknown;
   try { json = JSON.parse(raw); } catch { return invalid([{ path: 'archive', message: 'backupFormatUnsupported' }]); }
-  const parsed = validate(backupManifestSchema, json);
-  return parsed.ok ? parsed : invalid([{ path: 'archive', message: 'backupFormatUnsupported' }]);
+  const parsed = backupManifestSchema.safeParse(json);
+  return parsed.success ? ok(parsed.data) : invalid([{ path: 'archive', message: 'backupFormatUnsupported' }]);
 }
 
 export async function inspectBackup(opts: { archivePath: string; workDir: string }): Promise<Result<BackupManifest>> {
@@ -91,7 +91,7 @@ async function applyBackup(
 export async function importBackup(deps: AppDeps, ctx: CallContext, input: unknown): Promise<Result<{ manifest: BackupManifest }>> {
   const denied = requirePermission(ctx, 'backup.import');
   if (denied) return denied;
-  const parsed = validate(importSchema, input);
+  const parsed = validate(deps, importSchema, input);
   if (!parsed.ok) return parsed;
   const { archivePath, workDir, confirmation, environmentName } = parsed.value;
   if (confirmation !== environmentName) return invalid([{ path: 'confirmation', message: 'confirmationMismatch' }]);
@@ -128,7 +128,7 @@ const setupImportSchema = z.object({ archivePath: z.string().min(1), workDir: z.
  * Austausch noch einmal.
  */
 export async function importBackupForSetup(deps: AppDeps, input: unknown): Promise<Result<{ manifest: BackupManifest }>> {
-  const parsed = validate(setupImportSchema, input);
+  const parsed = validate(deps, setupImportSchema, input);
   if (!parsed.ok) return parsed;
   if (!isSetupRequired(deps)) return conflict('setupAlreadyDone', 'Die Einrichtung wurde bereits abgeschlossen');
   const { archivePath, workDir } = parsed.value;

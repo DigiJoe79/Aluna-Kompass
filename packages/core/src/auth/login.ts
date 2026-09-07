@@ -29,7 +29,7 @@ export interface LoginResult {
 }
 
 export async function login(deps: Deps, input: unknown): Promise<Result<LoginResult>> {
-  const parsed = validate(loginSchema, input);
+  const parsed = validate(deps, loginSchema, input);
   if (!parsed.ok) return unauthorized('invalidCredentials');
   const { email, password, ipAddress, requestId } = parsed.value;
   const user = deps.db.select().from(users).where(eq(users.email, email)).get();
@@ -75,7 +75,7 @@ const changePasswordSchema = z.object({ currentPassword: z.string().min(1), newP
 
 export async function changeOwnPassword(deps: Deps, ctx: CallContext, sessionId: string, input: unknown): Promise<Result<void>> {
   if (!ctx.userId) return unauthorized('invalidCredentials');
-  const parsed = validate(changePasswordSchema, input);
+  const parsed = validate(deps, changePasswordSchema, input);
   if (!parsed.ok) return parsed;
   const user = deps.db.select().from(users).where(eq(users.id, ctx.userId)).get();
   if (!user) return unauthorized('invalidCredentials');

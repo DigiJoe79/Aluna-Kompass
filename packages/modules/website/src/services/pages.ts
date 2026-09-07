@@ -54,7 +54,7 @@ export const pageUpdateSchema = z.object({
 export async function updatePage(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<PageRecord>> {
   const denied = requirePermission(ctx, 'website.manage');
   if (denied) return denied;
-  const parsed = validate(pageUpdateSchema, input);
+  const parsed = validate(deps, pageUpdateSchema, input);
   if (!parsed.ok) {
     // unbekannter key ⇒ notFound statt validation, damit die UI 404 zeigen kann
     const key = (input as { key?: unknown })?.key;
