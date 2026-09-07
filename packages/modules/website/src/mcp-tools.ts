@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { z } from 'zod';
 import { exportSiteContent } from './export';
+import { readSiteEnv } from './pipeline/env';
+import { checkDeployTarget } from './pipeline/jobs';
 import { articleCreateSchema, articleUpdateSchema, createArticle, listArticles, setArticlePublished, updateArticle } from './services/articles';
 import { downloadSetSchema, listDownloads, setDownload } from './services/downloads';
 import { createFaq, faqCreateSchema, faqUpdateSchema, listFaqs, setFaqPublished, updateFaq } from './services/faqs';
@@ -35,6 +37,7 @@ export const WEBSITE_MCP_TOOLS: McpToolDefinition[] = [
   t('website_project_create', 'Create a project (unpublished). Requires website.manage.', projectCreateSchema, (deps, ctx, args) => createProject(deps, ctx, args)),
   t('website_project_update', 'Update a project. Requires website.manage.', projectUpdateSchema, (deps, ctx, args) => updateProject(deps, ctx, args)),
   t('website_project_set_published', 'Publish or unpublish a project. Requires website.manage.', z.object({ id: z.string(), isPublished: z.boolean() }), (deps, ctx, args) => setProjectPublished(deps, ctx, args)),
+  t('website_deploy_check', 'Dry run against the configured deploy target: signs in, transfers nothing, and lists the files a publish would remove there. Requires website.publish.', z.object({}), (deps, ctx) => checkDeployTarget(deps, ctx, readSiteEnv())),
   t('website_export_check', 'Run the content export checks (translation gaps, blocked terms) without publishing. Requires website.publish.', z.object({}), async (deps, ctx) => {
     const dir = await mkdtemp(path.join(tmpdir(), 'kompass-check-'));
     try {

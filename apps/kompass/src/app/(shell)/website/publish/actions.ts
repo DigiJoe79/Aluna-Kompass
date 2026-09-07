@@ -1,6 +1,6 @@
 'use server';
 
-import { exportSiteContent, runPreview, runPublish } from '@kompass/module-website';
+import { checkDeployTarget, exportSiteContent, runPreview, runPublish } from '@kompass/module-website';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -30,6 +30,14 @@ export async function runPreviewAction(): Promise<ActionState> {
   if (!result.ok) return toActionState(result, t);
   const { log: _log, ...data } = result.value;
   return { status: 'success', data };
+}
+
+export async function runDeployCheckAction(): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await checkDeployTarget(deps, ctx, siteEnv());
+  if (!result.ok) return toActionState(result, t);
+  return { status: 'success', data: result.value };
 }
 
 export async function runPublishAction(confirm: boolean): Promise<ActionState> {

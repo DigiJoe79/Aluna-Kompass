@@ -849,30 +849,205 @@
     "pages": {
       "title": "Seiten",
       "description": "Feste Seiten der Webseite. Texte und Bausteine werden hier gepflegt; Struktur und Design sind Teil der Seite selbst.",
-      "columns": { "page": "Seite", "key": "Schlüssel", "title": "Titel (DE)", "gaps": "Übersetzungen" },
-      "keys": { "home": "Startseite", "help": "Helfen", "donate": "Spenden", "sponsor": "Tierpate werden", "membership": "Fördermitglied werden", "about": "Über uns", "partners": "Unsere Partner", "contact": "Kontakt", "imprint": "Impressum", "privacy": "Datenschutz", "statutes": "Satzung", "adoption-process": "Ablauf der Adoption" },
-      "form": { "title": "Titel", "titleHint": "Ein *kursives* Wort wird zur Betonung, z. B. „ein *Zuhause.*“", "lede": "Einleitung", "body": "Text", "bodyHint": "Markdown. Überschriften mit #, Aufzählungen mit -, Hinweiskasten mit >, Kartenraster mit :::karten … :::", "meta": "Meta-Beschreibung (Suchmaschinen)", "save": "Speichern" },
-      "blocks": { "title": "Bausteine", "add": "Baustein hinzufügen", "empty": "Keine Bausteine. Nicht jede Seite braucht welche.", "edit": "Bearbeiten", "remove": "Entfernen", "id": "Baustein-ID", "href": "Link", "blockTitle": "Titel", "text": "Text", "label": "Beschriftung des Links", "image": "Bild", "apply": "Baustein übernehmen" }
+      "columns": {
+        "page": "Seite",
+        "key": "Schlüssel",
+        "title": "Titel (DE)",
+        "gaps": "Übersetzungen"
+      },
+      "keys": {
+        "home": "Startseite",
+        "help": "Helfen",
+        "donate": "Spenden",
+        "sponsor": "Tierpate werden",
+        "membership": "Fördermitglied werden",
+        "about": "Über uns",
+        "partners": "Unsere Partner",
+        "contact": "Kontakt",
+        "imprint": "Impressum",
+        "privacy": "Datenschutz",
+        "statutes": "Satzung",
+        "adoption-process": "Ablauf der Adoption"
+      },
+      "form": {
+        "title": "Titel",
+        "titleHint": "Ein *kursives* Wort wird zur Betonung, z. B. „ein *Zuhause.*“",
+        "lede": "Einleitung",
+        "body": "Text",
+        "bodyHint": "Markdown. Überschriften mit #, Aufzählungen mit -, Hinweiskasten mit >, Kartenraster mit :::karten … :::",
+        "meta": "Meta-Beschreibung (Suchmaschinen)",
+        "save": "Speichern"
+      },
+      "blocks": {
+        "title": "Bausteine",
+        "add": "Baustein hinzufügen",
+        "empty": "Keine Bausteine. Nicht jede Seite braucht welche.",
+        "edit": "Bearbeiten",
+        "remove": "Entfernen",
+        "id": "Baustein-ID",
+        "href": "Link",
+        "blockTitle": "Titel",
+        "text": "Text",
+        "label": "Beschriftung des Links",
+        "image": "Bild",
+        "apply": "Baustein übernehmen"
+      }
     },
     "articles": {
       "title": "Artikel",
       "create": "Artikel anlegen",
       "emptyTitle": "Noch keine Artikel",
       "emptyText": "Wissenswertes-Beiträge wie „Ablauf der Adoption“ entstehen hier.",
-      "columns": { "title": "Titel", "slug": "Slug", "gaps": "Übersetzungen", "status": "Status" },
-      "form": { "title": "Titel", "lede": "Einleitung", "body": "Text", "publishedAt": "Datum (optional)" }
+      "columns": {
+        "title": "Titel",
+        "slug": "Slug",
+        "gaps": "Übersetzungen",
+        "status": "Status"
+      },
+      "form": {
+        "title": "Titel",
+        "lede": "Einleitung",
+        "body": "Text",
+        "publishedAt": "Datum (optional)"
+      }
     },
-    "team": { "title": "Team", "create": "Teammitglied anlegen", "edit": "Bearbeiten", "emptyTitle": "Noch kein Team", "emptyText": "Die Teamseite zeigt Name, Funktion und Foto.", "columns": { "member": "Mitglied", "position": "Funktion", "status": "Status" }, "form": { "createTitle": "Teammitglied anlegen", "editTitle": "Teammitglied bearbeiten", "name": "Name", "position": "Funktion im Verein", "photo": "Foto", "petPhoto": "Foto des Haustiers (optional)" } },
-    "faqs": { "title": "FAQ", "create": "Frage anlegen", "edit": "Bearbeiten", "emptyTitle": "Noch keine Fragen", "emptyText": "Häufige Fragen zu Spende, Adoption, Transport und Datenschutz.", "columns": { "question": "Frage", "category": "Kategorie", "status": "Status" }, "form": { "createTitle": "Frage anlegen", "editTitle": "Frage bearbeiten", "category": "Kategorie", "question": "Frage", "answer": "Antwort" } },
-    "projects": { "title": "Projekte", "create": "Projekt anlegen", "emptyTitle": "Noch keine Projekte", "emptyText": "Dauer- und Kurzzeitprojekte mit Betterplace-Anbindung.", "columns": { "name": "Projekt", "type": "Typ", "betterplace": "Betterplace-ID", "status": "Status" }, "types": { "ongoing": "Dauerprojekt", "shortTerm": "Kurzzeitprojekt" }, "form": { "tabs": { "public": "Webseite", "finance": "Finanzen" }, "name": "Name", "summary": "Kurztext", "body": "Langtext", "image": "Bild", "type": "Typ", "status": "Status", "types": { "ongoing": "Dauerprojekt", "shortTerm": "Kurzzeitprojekt" }, "statuses": { "active": "Aktiv", "completed": "Abgeschlossen" }, "betterplace": "Betterplace-Projekt-ID", "betterplaceHint": "Ziffernfolge aus der Betterplace-Projekt-URL.", "financeLater": "Konten, Buchungen und Rücklagen: Finanzen folgen in einer späteren Stufe." } },
-    "downloads": { "title": "Downloads", "description": "Ausfüllbare PDFs, die die Webseite verlinkt.", "columns": { "download": "Download", "fileAndTitle": "Titel und Datei" }, "keys": { "sponsorship-form": "Patenschaftsantrag", "membership-form": "Aufnahmeantrag Fördermitgliedschaft", "self-disclosure-form": "Selbstauskunft", "statutes-pdf": "Satzung als PDF" }, "form": { "title": "Titel", "file": "PDF-Datei" }, "open": "PDF öffnen", "none": "Noch keine Datei." },
+    "team": {
+      "title": "Team",
+      "create": "Teammitglied anlegen",
+      "edit": "Bearbeiten",
+      "emptyTitle": "Noch kein Team",
+      "emptyText": "Die Teamseite zeigt Name, Funktion und Foto.",
+      "columns": {
+        "member": "Mitglied",
+        "position": "Funktion",
+        "status": "Status"
+      },
+      "form": {
+        "createTitle": "Teammitglied anlegen",
+        "editTitle": "Teammitglied bearbeiten",
+        "name": "Name",
+        "position": "Funktion im Verein",
+        "photo": "Foto",
+        "petPhoto": "Foto des Haustiers (optional)"
+      }
+    },
+    "faqs": {
+      "title": "FAQ",
+      "create": "Frage anlegen",
+      "edit": "Bearbeiten",
+      "emptyTitle": "Noch keine Fragen",
+      "emptyText": "Häufige Fragen zu Spende, Adoption, Transport und Datenschutz.",
+      "columns": {
+        "question": "Frage",
+        "category": "Kategorie",
+        "status": "Status"
+      },
+      "form": {
+        "createTitle": "Frage anlegen",
+        "editTitle": "Frage bearbeiten",
+        "category": "Kategorie",
+        "question": "Frage",
+        "answer": "Antwort"
+      }
+    },
+    "projects": {
+      "title": "Projekte",
+      "create": "Projekt anlegen",
+      "emptyTitle": "Noch keine Projekte",
+      "emptyText": "Dauer- und Kurzzeitprojekte mit Betterplace-Anbindung.",
+      "columns": {
+        "name": "Projekt",
+        "type": "Typ",
+        "betterplace": "Betterplace-ID",
+        "status": "Status"
+      },
+      "types": {
+        "ongoing": "Dauerprojekt",
+        "shortTerm": "Kurzzeitprojekt"
+      },
+      "form": {
+        "tabs": {
+          "public": "Webseite",
+          "finance": "Finanzen"
+        },
+        "name": "Name",
+        "summary": "Kurztext",
+        "body": "Langtext",
+        "image": "Bild",
+        "type": "Typ",
+        "status": "Status",
+        "types": {
+          "ongoing": "Dauerprojekt",
+          "shortTerm": "Kurzzeitprojekt"
+        },
+        "statuses": {
+          "active": "Aktiv",
+          "completed": "Abgeschlossen"
+        },
+        "betterplace": "Betterplace-Projekt-ID",
+        "betterplaceHint": "Ziffernfolge aus der Betterplace-Projekt-URL.",
+        "financeLater": "Konten, Buchungen und Rücklagen: Finanzen folgen in einer späteren Stufe."
+      }
+    },
+    "downloads": {
+      "title": "Downloads",
+      "description": "Ausfüllbare PDFs, die die Webseite verlinkt.",
+      "columns": {
+        "download": "Download",
+        "fileAndTitle": "Titel und Datei"
+      },
+      "keys": {
+        "sponsorship-form": "Patenschaftsantrag",
+        "membership-form": "Aufnahmeantrag Fördermitgliedschaft",
+        "self-disclosure-form": "Selbstauskunft",
+        "statutes-pdf": "Satzung als PDF"
+      },
+      "form": {
+        "title": "Titel",
+        "file": "PDF-Datei"
+      },
+      "open": "PDF öffnen",
+      "none": "Noch keine Datei."
+    },
     "facts": {
-      "title": "Site-Fakten", "description": "Zahlen und Angaben, die an vielen Stellen der Webseite erscheinen. Einmal ändern, überall aktuell.", "saved": "Site-Fakten gespeichert.",
-      "groups": { "presence": "Auftritt", "numbers": "Zahlen und Status", "donations": "Betterplace", "home": "Startseite", "social": "Social-Media-Links", "confidentiality": "Vertraulichkeit" },
-      "fields": { "claimDe": "Claim (DE)", "claimEn": "Claim (EN)", "forwardingPercent": "Weiterleitungsquote (%)", "shelterDogCount": "Hunde im Shelter", "section11Status": "§ 11 TSchG", "section11Date": "Datum der Erlaubnis", "donationBoxLocations": "Spendenboxen-Standorte", "location": "Standort {n}", "betterplaceMetaProjectId": "Betterplace-Meta-Projekt-ID", "betterplaceDefaultAmount": "Standardbetrag (€)", "featuredAnimalSlug": "Hund auf der Startseite", "featuredStorySlug": "Erfolgsgeschichte auf der Startseite", "socialLabel": "Bezeichnung {n}", "socialHref": "Adresse {n}", "blockedTerms": "Sperrwörter", "blockedTerm": "Sperrwort {n}" },
-      "section11": { "pending": "in Bearbeitung", "granted": "erteilt" },
-      "auto": "Automatisch", "autoHint": "Automatisch wählt den neuesten Notfall, sonst den zuletzt angelegten Hund.",
-      "addLocation": "Standort hinzufügen", "addSocial": "Link hinzufügen", "addBlocked": "Sperrwort hinzufügen",
+      "title": "Site-Fakten",
+      "description": "Zahlen und Angaben, die an vielen Stellen der Webseite erscheinen. Einmal ändern, überall aktuell.",
+      "saved": "Site-Fakten gespeichert.",
+      "groups": {
+        "presence": "Auftritt",
+        "numbers": "Zahlen und Status",
+        "donations": "Betterplace",
+        "home": "Startseite",
+        "social": "Social-Media-Links",
+        "confidentiality": "Vertraulichkeit"
+      },
+      "fields": {
+        "claimDe": "Claim (DE)",
+        "claimEn": "Claim (EN)",
+        "forwardingPercent": "Weiterleitungsquote (%)",
+        "shelterDogCount": "Hunde im Shelter",
+        "section11Status": "§ 11 TSchG",
+        "section11Date": "Datum der Erlaubnis",
+        "donationBoxLocations": "Spendenboxen-Standorte",
+        "location": "Standort {n}",
+        "betterplaceMetaProjectId": "Betterplace-Meta-Projekt-ID",
+        "betterplaceDefaultAmount": "Standardbetrag (€)",
+        "featuredAnimalSlug": "Hund auf der Startseite",
+        "featuredStorySlug": "Erfolgsgeschichte auf der Startseite",
+        "socialLabel": "Bezeichnung {n}",
+        "socialHref": "Adresse {n}",
+        "blockedTerms": "Sperrwörter",
+        "blockedTerm": "Sperrwort {n}"
+      },
+      "section11": {
+        "pending": "in Bearbeitung",
+        "granted": "erteilt"
+      },
+      "auto": "Automatisch",
+      "autoHint": "Automatisch wählt den neuesten Notfall, sonst den zuletzt angelegten Hund.",
+      "addLocation": "Standort hinzufügen",
+      "addSocial": "Link hinzufügen",
+      "addBlocked": "Sperrwort hinzufügen",
       "blockedHint": "Begriffe, die auf keiner öffentlichen Seite und in keinem Dateinamen erscheinen dürfen. Der Publish bricht bei einem Treffer ab."
     },
     "publish": {
@@ -898,11 +1073,58 @@
         "gapsTitle": "Übersetzungslücken",
         "noGaps": "Alle Übersetzungen vorhanden."
       },
-      "preview": { "run": "Vorschau bauen", "running": "Build läuft …", "open": "Vorschau öffnen", "built": "Vorschau gebaut." },
-      "diff": { "title": "Änderungen gegenüber Live", "changed": "Geändert", "added": "Neu", "removed": "Entfallen", "none": "Keine Änderungen gegenüber dem letzten Publish." },
-      "publishCard": { "staging": "Nach Staging publizieren", "live": "Live publizieren", "noTarget": "Kein Publish-Ziel konfiguriert (SITE_DEPLOY_*).", "notHere": "Aus der Entwicklungsumgebung wird nicht publiziert.", "blocked": "Sperrworttreffer — Publish nicht möglich.", "confirmTitle": "Webseite publizieren?", "confirmText": "Ziel: {url}. {changed} geändert, {added} neu, {removed} entfallen. Die Seite wird frisch gebaut und übertragen.", "confirm": "Jetzt publizieren", "steps": { "build": "Bauen", "transfer": "Übertragen", "record": "Protokollieren" } },
+      "preview": {
+        "run": "Vorschau bauen",
+        "running": "Build läuft …",
+        "open": "Vorschau öffnen",
+        "built": "Vorschau gebaut."
+      },
+      "connection": {
+        "title": "Verbindung testen",
+        "intro": "Meldet sich am Publish-Ziel an, überträgt aber nichts. Zeigt, was dort liegt und ein Publish entfernen würde.",
+        "run": "Verbindung testen",
+        "running": "Test läuft …",
+        "target": "Ziel: {target}",
+        "resultTitle": "Verbindungstest",
+        "ok": "Verbindung steht. Am Ziel liegen {count} Dateien, die ein Publish entfernen würde.",
+        "empty": "Verbindung steht, aber am Ziel liegt keine einzige Datei. Prüfen Sie SITE_DEPLOY_PATH — zeigt der Pfad wirklich auf das Webverzeichnis?",
+        "filesTitle": "Dateien am Ziel",
+        "logTitle": "Protokoll"
+      },
+      "diff": {
+        "title": "Änderungen gegenüber Live",
+        "changed": "Geändert",
+        "added": "Neu",
+        "removed": "Entfallen",
+        "none": "Keine Änderungen gegenüber dem letzten Publish."
+      },
+      "publishCard": {
+        "staging": "Nach Staging publizieren",
+        "live": "Live publizieren",
+        "noTarget": "Kein Publish-Ziel konfiguriert (SITE_DEPLOY_*).",
+        "notHere": "Aus der Entwicklungsumgebung wird nicht publiziert.",
+        "blocked": "Sperrworttreffer — Publish nicht möglich.",
+        "confirmTitle": "Webseite publizieren?",
+        "confirmText": "Ziel: {url}. {changed} geändert, {added} neu, {removed} entfallen. Die Seite wird frisch gebaut und übertragen.",
+        "confirm": "Jetzt publizieren",
+        "steps": {
+          "build": "Bauen",
+          "transfer": "Übertragen",
+          "record": "Protokollieren"
+        }
+      },
       "done": "Publiziert: {changed} geändert, {added} neu, {removed} entfallen.",
-      "history": { "title": "Publish-Historie", "columns": { "time": "Zeitpunkt", "status": "Status", "hash": "Inhalts-Hash", "changes": "Änderungen", "by": "Auslöser" }, "log": "Protokoll" }
+      "history": {
+        "title": "Publish-Historie",
+        "columns": {
+          "time": "Zeitpunkt",
+          "status": "Status",
+          "hash": "Inhalts-Hash",
+          "changes": "Änderungen",
+          "by": "Auslöser"
+        },
+        "log": "Protokoll"
+      }
     }
   },
   "animals": {

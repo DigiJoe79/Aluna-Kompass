@@ -4,6 +4,7 @@ import type { PublishRecord } from '@kompass/module-website';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { CheckCard } from './check-card';
+import { ConnectionCard } from './connection-card';
 import { DiffCard, type PublishDiff } from './diff-card';
 import { PublishHistory } from './history';
 import { PreviewCard, type PreviewData } from './preview-card';
@@ -38,6 +39,7 @@ export function PublishClient({
         }}
       />
       <DiffCard diff={diff} />
+      <ConnectionCard hasDeploy={hasDeploy} />
       <PublishCard
         env={env}
         publicUrl={publicUrl}

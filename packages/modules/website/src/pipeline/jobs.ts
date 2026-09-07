@@ -118,6 +118,49 @@ export async function runPreview(deps: Deps, ctx: CallContext, env: SiteEnv): Pr
   });
 }
 
+export interface DeployCheckResult {
+  /** Das Ziel, wie rsync es anspricht — user@host:pfad oder ein lokaler Pfad. */
+  target: string;
+  /** Dateien, die am Ziel liegen und die ein Publish entfernen wuerde. */
+  filesAtTarget: string[];
+  log: string;
+}
+
+/**
+ * Faehrt einen Trockenlauf gegen das eingestellte Ziel, ohne etwas zu
+ * uebertragen: die Anmeldung wird wirklich versucht, und `--delete` listet
+ * gegen ein leeres Quellverzeichnis auf, was dort liegt.
+ *
+ * Der Schutz, um den es geht, ist ein Tippfehler in SITE_DEPLOY_PATH — rsync
+ * scheitert daran nicht, ein falscher Pfad zeigt einfach ins Leere. Die Liste
+ * ist deshalb das Ergebnis: steht die erwartete Installation darin, stimmt der
+ * Pfad; ist sie leer, zeigt er woandershin.
+ */
+export async function checkDeployTarget(deps: Deps, ctx: CallContext, env: SiteEnv): Promise<Result<DeployCheckResult>> {
+  const denied = requirePermission(ctx, 'website.publish');
+  if (denied) return denied;
+  if (!env.deploy) return conflict('publishTargetMissing', 'SITE_DEPLOY_* ist nicht gesetzt');
+  const credentialProblem = await checkDeployCredentials(env.deploy);
+  if (credentialProblem) return conflict('deployCredentialsUnusable', credentialProblem);
+  const emptyDir = await mkdtemp(path.join(tmpdir(), 'kompass-deploy-check-'));
+  try {
+    const { log } = await rsyncPublish({ distDir: emptyDir, deploy: env.deploy, dryRun: true, timeoutMs: 60_000 });
+    return ok({
+      target: env.deploy.host ? `${env.deploy.user}@${env.deploy.host}:${env.deploy.path}` : env.deploy.path,
+      // Verzeichniszeilen enden auf "/" und zaehlen nicht als Datei.
+      filesAtTarget: log
+        .split('\n')
+        .flatMap((line) => (line.startsWith('*deleting ') ? [line.slice('*deleting '.length).trim()] : []))
+        .filter((entry) => entry.length > 0 && !entry.endsWith('/')),
+      log,
+    });
+  } catch (error) {
+    return conflict('deployCheckFailed', (error instanceof Error ? error.message : String(error)).slice(0, 2000));
+  } finally {
+    await rm(emptyDir, { recursive: true, force: true });
+  }
+}
+
 export async function runPublish(deps: Deps, ctx: CallContext, env: SiteEnv, opts: { confirm: boolean }): Promise<Result<PublishResult>> {
   const denied = requirePermission(ctx, 'website.publish');
   if (denied) return denied;

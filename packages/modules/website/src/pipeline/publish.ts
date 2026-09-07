@@ -21,7 +21,9 @@ export function rsyncCommand(opts: { distDir: string; deploy: DeployTarget; dryR
     ? `${deploy.user}@${deploy.host}:${deploy.path.replace(/\/?$/, '/')}`
     : deploy.path.replace(/\/?$/, '/');
   const src = opts.distDir.endsWith('/') ? opts.distDir : `${opts.distDir}/`;
-  const flags = ['-az', '--delete', '--checksum', ...(opts.dryRun ? ['--dry-run'] : [])];
+  // --itemize-changes nur im Trockenlauf: ohne es schweigt rsync, und der
+  // Verbindungstest haette kein Protokoll, aus dem der Zielinhalt hervorgeht.
+  const flags = ['-az', '--delete', '--checksum', ...(opts.dryRun ? ['--dry-run', '--itemize-changes'] : [])];
 
   switch (deploy.auth.kind) {
     case 'key':

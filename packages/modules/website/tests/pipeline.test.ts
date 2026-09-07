@@ -4,7 +4,7 @@ import path from 'node:path';
 import { coreModule, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
-import { checkDeployCredentials, copyTree, diffTrees, hashTree, readSiteEnv, rsyncCommand, runPreview, runPublish, stripAnsi, websiteModule } from '../src';
+import { checkDeployCredentials, checkDeployTarget, copyTree, diffTrees, hashTree, readSiteEnv, rsyncCommand, runPreview, runPublish, stripAnsi, websiteModule } from '../src';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -151,6 +151,61 @@ describe('preview and publish', () => {
   });
 });
 
+describe('checkDeployTarget', () => {
+  const envFor = (target: string | null) => ({
+    publicUrl: 'https://x',
+    staging: true,
+    deploy: target === null ? null : { host: '', user: '', path: target, auth: { kind: 'none' as const } },
+    siteDir: SITE_DIR,
+    cacheDir: tmp(),
+    previewDir: tmp(),
+  });
+
+  it('needs the publish permission and a configured target', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, websiteModule] });
+    insertUser(deps, { id: 'USER-TEST' });
+    const denied = await checkDeployTarget(deps, ctxWith(['website.view']), envFor(tmp()));
+    expect(denied.ok === false && denied.error.type === 'forbidden').toBe(true);
+    const noTarget = await checkDeployTarget(deps, ctxWith(['website.publish']), envFor(null));
+    expect(noTarget.ok === false && noTarget.error.type === 'conflict' && noTarget.error.code === 'publishTargetMissing').toBe(true);
+  });
+
+  it('reports what a publish would remove at the target and leaves every file in place', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, websiteModule] });
+    insertUser(deps, { id: 'USER-TEST' });
+    const target = tmp();
+    writeFileSync(path.join(target, 'wp-config.php'), '<?php');
+    mkdirSync(path.join(target, 'wp-content'));
+    writeFileSync(path.join(target, 'wp-content', 'logo.png'), 'binary');
+
+    const result = unwrap(await checkDeployTarget(deps, ctxWith(['website.publish']), envFor(target)));
+
+    expect(result.target).toBe(target);
+    expect(result.filesAtTarget).toEqual(expect.arrayContaining(['wp-config.php', 'wp-content/logo.png']));
+    expect(result.log).toContain('--dry-run');
+    expect(readFileSync(path.join(target, 'wp-config.php'), 'utf8')).toBe('<?php');
+    expect(readFileSync(path.join(target, 'wp-content', 'logo.png'), 'utf8')).toBe('binary');
+  });
+
+  // Ein vertippter Pfad laesst rsync nicht scheitern — er zeigt ins Leere. Der
+  // Fund ist deshalb die leere Liste, nicht ein Fehler.
+  it('comes back empty when the path points nowhere', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, websiteModule] });
+    insertUser(deps, { id: 'USER-TEST' });
+    const missing = path.join(tmp(), 'vertippt');
+    const result = unwrap(await checkDeployTarget(deps, ctxWith(['website.publish']), envFor(missing)));
+    expect(result.filesAtTarget).toEqual([]);
+  });
+
+  it('reports unusable credentials instead of starting rsync', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, websiteModule] });
+    insertUser(deps, { id: 'USER-TEST' });
+    const env = { ...envFor(tmp()), deploy: { host: 'webhost', user: 'web', path: '/www', auth: { kind: 'key' as const, keyFile: '/gibt/es/nicht.key' } } };
+    const result = await checkDeployTarget(deps, ctxWith(['website.publish']), env);
+    expect(result.ok === false && result.error.type === 'conflict' && result.error.code === 'deployCredentialsUnusable').toBe(true);
+  });
+});
+
 describe('rsyncCommand', () => {
   const local = { host: '', user: '', path: '/ziel', auth: { kind: 'none' } as const };
   const withKey = { host: 'h', user: 'u', path: '/web', auth: { kind: 'key', keyFile: '/data/site.key' } as const };
@@ -186,6 +241,11 @@ describe('rsyncCommand', () => {
   it('passes the dry run flag through for a harmless connection test', () => {
     expect(rsyncCommand({ distDir: '/build', deploy: withPassword, dryRun: true }).args).toContain('--dry-run');
     expect(rsyncCommand({ distDir: '/build', deploy: local }).args).not.toContain('--dry-run');
+  });
+
+  it('itemises the dry run, because a silent rsync leaves the connection test without a log', () => {
+    expect(rsyncCommand({ distDir: '/build', deploy: local, dryRun: true }).args).toContain('--itemize-changes');
+    expect(rsyncCommand({ distDir: '/build', deploy: local }).args).not.toContain('--itemize-changes');
   });
 });
 

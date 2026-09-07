@@ -29,20 +29,7 @@ einmal für den Import.
 
 **Wann:** Spätestens wenn Archive einige hundert Megabyte erreichen.
 
-## 3. „Verbindung testen" auf der Publizieren-Seite
-
-**Was:** Ein Knopf, der `rsyncPublish` mit `dryRun` gegen das konfigurierte
-Ziel fährt und das Protokoll zeigt.
-
-**Warum:** `rsync --delete` räumt bei falschem `SITE_DEPLOY_PATH` das
-Zielverzeichnis leer, und auf demselben Webspace liegt die
-WordPress-Installation. Das Flag ist im Transport implementiert und getestet,
-wird aber nirgends gesetzt.
-
-**Einordnung:** Die großen Unbekannten sind seit dem manuellen Test vom
-2026-09-06 ausgeräumt. Bleibt der Schutz vor einem Tippfehler in `.env.prod`.
-
-## 4. Platzhalterbilder als WebP
+## 3. Platzhalterbilder als WebP
 
 **Was:** Die fünf Platzhalter in `apps/site/public/images/` als WebP
 ausliefern.
@@ -55,7 +42,7 @@ sie vorbei.
 **Einordnung:** Erledigt sich teilweise von selbst, sobald echte Fotos die
 Platzhalter verdrängen.
 
-## 5. Browsertest bei Handybreite
+## 4. Browsertest bei Handybreite
 
 **Was:** Ein Playwright-Lauf gegen die gebaute Site bei 390 px.
 
@@ -63,7 +50,7 @@ Platzhalter verdrängen.
 Lesen des Stylesheets auf, nicht durch einen Test. `apps/site/tests/` enthält
 keine Viewport-Prüfung, und die Kompass-E2E deckt die Site nicht ab.
 
-## 6. Übersetzungen der Webseite
+## 5. Übersetzungen der Webseite
 
 **Was:** Die englischen Felder füllen; der Import setzt sie leer.
 

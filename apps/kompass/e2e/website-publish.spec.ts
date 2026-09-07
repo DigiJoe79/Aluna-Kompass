@@ -58,3 +58,20 @@ test('preview build, diff and publish to the local staging target', async ({ pag
   const fs = await import('node:fs');
   expect(fs.existsSync(path.join(process.env.E2E_SITE_TARGET!, 'zuhause-gesucht', 'luna', 'index.html'))).toBe(true);
 });
+
+test('the connection test lists what a publish would remove and touches nothing', async ({ page }) => {
+  await resetDatabase(page, 'seeded');
+  await loginAsAdmin(page);
+  const fs = await import('node:fs');
+  const target = process.env.E2E_SITE_TARGET!;
+  fs.mkdirSync(target, { recursive: true });
+  const stranger = path.join(target, 'fremde-datei.html');
+  fs.writeFileSync(stranger, '<html>WordPress</html>');
+
+  await page.goto('/website/publish');
+  await page.getByRole('button', { name: 'Verbindung testen' }).click();
+  const result = page.getByRole('region', { name: 'Verbindungstest' });
+  await expect(result).toContainText('fremde-datei.html', { timeout: 60_000 });
+
+  expect(fs.readFileSync(stranger, 'utf8')).toBe('<html>WordPress</html>');
+});

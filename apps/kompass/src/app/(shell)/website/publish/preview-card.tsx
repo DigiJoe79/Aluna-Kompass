@@ -1,12 +1,13 @@
 'use client';
 
-import { AlertTriangle, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { runPreviewAction } from './actions';
+import { ExportFindings } from './export-findings';
 import type { PublishDiff } from './diff-card';
 
 export interface PreviewData {
@@ -17,8 +18,6 @@ export interface PreviewData {
   previewDir: string;
 }
 
-const linkFor = (collection: string, id: string) =>
-  collection === 'pages' ? `/website/pages/${id}` : collection === 'animals' ? '/animals' : `/website/${collection}`;
 
 export function PreviewCard({ onResult }: { onResult?: (data: PreviewData) => void }) {
   const t = useTranslations('website.publish');
@@ -65,46 +64,7 @@ export function PreviewCard({ onResult }: { onResult?: (data: PreviewData) => vo
       {data ? (
         <>
           <p className="font-mono text-[12px] text-muted-ink">{tCheck('hash', { hash: data.contentHash.slice(0, 12) })}</p>
-          <section
-            aria-label={tCheck('violationsTitle')}
-            className={`rounded-md border p-3 text-[13px] ${data.violations.length > 0 ? 'border-error bg-error-bg' : 'border-line bg-surface-2'}`}
-          >
-            <h4 className="flex items-center gap-2 font-semibold">
-              {data.violations.length > 0 ? <AlertTriangle className="size-4 text-error" aria-hidden /> : null}
-              {tCheck('violationsTitle')} · {data.violations.length}
-            </h4>
-            {data.violations.length === 0 ? (
-              <p className="text-muted-ink">{tCheck('noViolations')}</p>
-            ) : (
-              <ul className="mt-2 flex flex-col gap-1">
-                {data.violations.map((v, i) => (
-                  <li key={i}>
-                    <span className="font-mono">{v.path}</span> · <span className="font-semibold text-error">{v.term}</span> ·{' '}
-                    <span className="text-ink-2">{v.excerpt}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-          <section aria-label={tCheck('gapsTitle')} className="rounded-md border border-line bg-surface-2 p-3 text-[13px]">
-            <h4 className="font-semibold">
-              {tCheck('gapsTitle')} · {data.gaps.length}
-            </h4>
-            {data.gaps.length === 0 ? (
-              <p className="text-muted-ink">{tCheck('noGaps')}</p>
-            ) : (
-              <ul className="mt-2 flex flex-col gap-1">
-                {data.gaps.map((g, i) => (
-                  <li key={i}>
-                    <Link href={linkFor(g.collection, g.id)} className="text-link underline">
-                      {g.collection} · {g.id}
-                    </Link>{' '}
-                    · <span className="font-mono">{g.field}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+          <ExportFindings gaps={data.gaps} violations={data.violations} />
         </>
       ) : (
         <p className="text-[13px] text-muted-ink">
