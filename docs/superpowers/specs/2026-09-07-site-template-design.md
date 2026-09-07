@@ -39,7 +39,7 @@ Baustein-Baukasten für Laien; Theme- oder Designsystem für Templates;
 maschinelle Übersetzung; Parallelbetrieb von `website` und `site`; Sandbox für
 den Template-Build.
 
-**Zerlegung.** Die Stufe ist zu gross für einen Plan. Vorschlag für vier:
+**Zerlegung.** Die Stufe ist zu gross für einen Plan. Vorschlag für fünf:
 (1) Sprachen im Kern, (2) Template-Vertrag mit Datenmodell und Einlesen samt
 Resync, (3) Oberfläche, MCP und Export, (4) Basis-Template und Umzug der
 Publish-Pipeline, (5) Cutover: Alunas Migration und die Ablösung von `website`.
