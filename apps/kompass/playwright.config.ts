@@ -3,7 +3,9 @@ import { defineConfig } from '@playwright/test';
 
 const dbPath = path.resolve(import.meta.dirname, 'e2e/.tmp/kompass.db');
 const siteTarget = path.resolve(import.meta.dirname, 'e2e/.tmp/site-target');
+const siteTemplateDir = path.resolve(import.meta.dirname, 'e2e/.tmp/site-template');
 process.env.E2E_SITE_TARGET = siteTarget;
+process.env.E2E_SITE_TEMPLATE_DIR = siteTemplateDir;
 
 export default defineConfig({
   testDir: './e2e',
@@ -30,6 +32,7 @@ export default defineConfig({
       SITE_DEPLOY_PATH: siteTarget,
       SITE_DEPLOY_KEY_FILE: '',
       SITE_DIR: path.resolve(import.meta.dirname, '../../apps/site'),
+      SITE_TEMPLATE_DIR: siteTemplateDir,
       SITE_CACHE_DIR: path.resolve(import.meta.dirname, 'e2e/.tmp/site-cache'),
       SITE_PREVIEW_DIR: path.resolve(import.meta.dirname, 'e2e/.tmp/site-preview'),
     },

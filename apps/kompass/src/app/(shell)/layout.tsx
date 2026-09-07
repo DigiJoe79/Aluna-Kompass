@@ -12,7 +12,10 @@ export default async function ShellLayout({ children }: { children: ReactNode })
   const env = runtimeEnv();
   const context = { lastImportAt: readSetting<string | null>(deps, 'system.lastImportAt'), migrationCount: deps.migrationCount };
   const banner = bannerFor(env.env, context);
-  const groups = buildNavigation({ manifests: deps.registry.manifests, enabledKeys: new Set(enabledManifests(deps).map((m) => m.key)), permissions: ctx.permissions });
+  const extraItems = Object.fromEntries(
+    deps.registry.manifests.filter((m) => m.navigationFor).map((m) => [m.key, m.navigationFor!(deps)]),
+  );
+  const groups = buildNavigation({ manifests: deps.registry.manifests, enabledKeys: new Set(enabledManifests(deps).map((m) => m.key)), permissions: ctx.permissions, extraItems });
   const logoId = readSetting<string | null>(deps, 'branding.logoAssetId');
   return (
     <div className="flex min-h-screen flex-col">

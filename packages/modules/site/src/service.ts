@@ -24,6 +24,7 @@ export interface StoredTemplate {
   name: string;
   schema: TemplateSchema;
   checksum: string;
+  readAt: string;
 }
 
 export interface SyncPreview {
@@ -37,7 +38,7 @@ export interface SyncPreview {
 function readTemplateState(deps: Deps): StoredTemplate | undefined {
   const row = deps.db.select().from(siteTemplateState).get();
   if (!row) return undefined;
-  return { name: row.name, schema: row.schemaJson as TemplateSchema, checksum: row.checksum };
+  return { name: row.name, schema: row.schemaJson as TemplateSchema, checksum: row.checksum, readAt: row.readAt };
 }
 
 /** Der zuletzt eingelesene Template-Stand oder `null`, wenn noch keiner gelesen wurde. */
