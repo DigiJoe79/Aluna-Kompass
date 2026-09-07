@@ -486,7 +486,7 @@ import { losesContent, planResync, type Finding } from '../src/resync/plan';
 
 const field = (widget: string, extra: Record<string, unknown> = {}) => ({ widget, ...extra });
 const before = {
-  name: 'T', locales: ['de', 'en', 'fr'], uses: [],
+  name: 'T', locales: ['de', 'en'], uses: [],
   variables: { claim: field('localized', { label: 'Claim' }), subtitle: field('localized', { label: 'Untertitel' }), layout: { enum: ['narrow', 'wide', 'full'], label: 'Breite' } },
   collections: { metrics: { label: 'Kennzahlen', slug: false, sortable: true, publishable: false, max: 4, fields: { label: field('localized', { label: 'Bezeichnung' }), suffix: field('text', { label: 'Einheit' }) } } },
 };
@@ -496,11 +496,11 @@ const after = {
   collections: { metrics: { label: 'Kennzahlen', slug: false, sortable: true, publishable: false, max: 2, fields: { label: field('localized', { label: 'Bezeichnung' }), suffix: { type: 'array', items: { type: 'string' }, label: 'Einheit' } } } },
 };
 const data = {
-  variables: { claim: { de: 'A', en: 'B', fr: 'C' }, subtitle: { de: 'Wer wir sind', en: '', fr: '' }, layout: 'full' },
+  variables: { claim: { de: 'A', en: 'B' }, subtitle: { de: 'Wer wir sind', en: '' }, layout: 'full' },
   collections: { metrics: [
-    { label: { de: 'Mitglieder', en: 'Members', fr: 'Membres' }, suffix: '' },
-    { label: { de: 'Quote', en: '', fr: '' }, suffix: '%' },
-    { label: { de: 'Hunde', en: '', fr: '' }, suffix: '' },
+    { label: { de: 'Mitglieder', en: 'Members' }, suffix: '' },
+    { label: { de: 'Quote', en: '' }, suffix: '%' },
+    { label: { de: 'Hunde', en: '' }, suffix: '' },
   ] },
 };
 
@@ -514,10 +514,9 @@ describe('planResync', () => {
     expect(of('removed', findings)).toEqual([]);
   });
 
-  it('separates a locale that costs content from one that does not', () => {
-    const gone = of('localeRemoved', findings);
-    expect(gone.find((f) => f.path === 'variables.claim')).toMatchObject({ locale: 'fr', filled: 1 });
-    expect(gone.find((f) => f.path === 'collections.metrics[].label')).toMatchObject({ locale: 'fr', filled: 1 });
+  it('says nothing about locales: a template cannot remove one', () => {
+    const fewer = planResync(before as never, { ...after, locales: ['de'] } as never, data);
+    expect(fewer.map((f) => f.kind)).toEqual(findings.map((f) => f.kind));
   });
 
   it('names the replacement for a value that is gone', () => {
@@ -530,13 +529,15 @@ describe('planResync', () => {
   });
 
   it('asks for confirmation only where content is at stake', () => {
+    // Umbenennung und verlustfreier Typwechsel kosten nichts; die Grenze und der
+    // entfallene Aufzählungswert immer.
     expect(findings.filter(losesContent).map((f) => f.path).sort()).toEqual(
-      ['collections.metrics', 'collections.metrics[].label', 'variables.claim', 'variables.layout'].sort(),
+      ['collections.metrics', 'variables.layout'].sort(),
     );
   });
 
-  it('treats an added field and an empty locale as harmless', () => {
-    const plan = planResync(before as never, { ...after, locales: ['de', 'en', 'fr'], variables: { ...after.variables, quote: field('localized', { label: 'Zitat' }) } } as never, data);
+  it('treats an added field as harmless', () => {
+    const plan = planResync(before as never, { ...after, variables: { ...after.variables, quote: field('localized', { label: 'Zitat' }) } } as never, data);
     expect(of('added', plan)).toEqual([{ kind: 'added', path: 'variables.quote', label: 'Zitat' }]);
     expect(of('added', plan).some(losesContent)).toBe(false);
   });
@@ -556,7 +557,14 @@ Pfade sind `variables.<name>` und `collections.<name>` beziehungsweise `collecti
 const LOSSLESS: Record<string, string[]> = { text: ['list', 'markdown'], number: ['text'], select: ['text'], markdown: ['text'] };
 ```
 
-`planResync` erzeugt die Befunde in dieser Reihenfolge: zuerst die neuen und umbenannten Felder aus `after`, dann je Feld aus `before` — entfallen, Typwechsel, Sprachen dazu und weg, Grenze, entfallener Aufzählungswert. `losesContent` ist wahr für `removed`/`retyped`/`localeRemoved` mit `filled > 0` — bei `retyped` nur, wenn `lossless` falsch ist — sowie immer für `overLimit` und `valueGone`.
+`planResync` erzeugt die Befunde in dieser Reihenfolge: zuerst die neuen und umbenannten Felder aus `after`, dann je Feld aus `before` — entfallen, Typwechsel, Grenze, entfallener Aufzählungswert. `losesContent` ist wahr für `removed` und `retyped` mit `filled > 0` — bei `retyped` nur, wenn `lossless` falsch ist — sowie immer für `overLimit` und `valueGone`.
+
+**Sprachen gehören nicht hierher.** Ein Template fordert Sprachen, es ändert
+keine; `locales` bleibt beim Vergleich unbeachtet. Ob die geforderten Sprachen
+existieren, prüft Task 6 vor dem Anwenden. Text einer Sprache verschwindet nur
+über `removeLocale` im Kern, das seit dem Nachtrag zu Plan 1 jede Zeile jeder
+Tabelle abläuft und dabei auch in JSON-Strukturen greift — genau das, was ein
+Sammlungseintrag ist. Der Resync braucht dafür nichts Eigenes.
 
 Der vollständige Rumpf entspricht der Feldstudie und ist beim Umsetzen aus den Tests abzuleiten; die Studie liegt nicht mehr im Repo, weil sie Wegwerf war.
 
@@ -624,8 +632,6 @@ Expected: FAIL, Modul fehlt
 | `removed` | Schlüssel aus `siteValues` löschen; bei einer ganzen Sammlung deren Einträge |
 | `retyped`, `lossless` | umformen: Text → Liste wird `[wert]`, Zahl → Text wird `String(wert)` |
 | `retyped`, verlustbehaftet | Feld auf den Leerwert des neuen Typs setzen |
-| `localeRemoved` | Sprachschlüssel aus dem Feld entfernen |
-| `localeAdded` | nichts — fehlende Schlüssel gelten als leer |
 | `valueGone` | Ersatzwert setzen |
 | `overLimit` | kommt hier nicht an: blockiert bereits die Bestätigung |
 
@@ -769,7 +775,7 @@ Danach liest Kompass ein Template aus dem Volume, hält seine Werte in eigenen T
 
 ## Self-Review (durchgeführt beim Schreiben)
 
-**Spec-Abdeckung:** Vertrag mit Variablen, Sammlungen und `uses` → Task 1. Merkmale einer Sammlung (`slug`, `sortable`, `publishable`, `max`) → Task 1 Step 5, geprüft in Task 1 Step 1. Datenmodell mit drei Tabellen → Task 2. Ablage im Volume und Abbruch vor dem ersten Schreibvorgang → Task 3, Task 6. Resync mit allen Befundarten und den vier Entscheidungen aus Abschnitt 5 der Spec → Task 4, 5. Template fordert Sprachen, legt keine an → Task 6 (`localesMissing`). Publish-Sicherung über die Prüfsumme → Task 7.
+**Spec-Abdeckung:** Vertrag mit Variablen, Sammlungen und `uses` → Task 1. Merkmale einer Sammlung (`slug`, `sortable`, `publishable`, `max`) → Task 1 Step 5, geprüft in Task 1 Step 1. Datenmodell mit drei Tabellen → Task 2. Ablage im Volume und Abbruch vor dem ersten Schreibvorgang → Task 3, Task 6. Resync mit allen Befundarten und den vier Entscheidungen aus Abschnitt 5 der Spec → Task 4, 5. Sprachen sind bewusst kein Befund: Sie sind Stammdaten (Abschnitt 6), und ihr Entfernen läuft über den Kern. Template fordert Sprachen, legt keine an → Task 6 (`localesMissing`). Publish-Sicherung über die Prüfsumme → Task 7.
 
 **Platzhalter:** Task 4 Step 3 und Task 5 Step 3 geben Tabelle und Regeln vor, statt den Rumpf abzuschreiben — die Tests darüber sind vollständig und legen das Verhalten fest, und beide Rümpfe sind reine Ableitungen daraus. Das ist die einzige Stelle, an der ich bewusst kürze; die Alternative wären zweihundert Zeilen, die schon in den Tests stehen. Task 5 Step 1 und Task 6 Step 1 nennen die Testnamen mit ihrer Zusicherung im Kommentar, weil die Rümpfe mechanisch demselben Aufbau folgen.
 

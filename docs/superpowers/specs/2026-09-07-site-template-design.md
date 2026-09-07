@@ -134,12 +134,20 @@ Client-Komponente geht.
 
 Belegt durch die zweite Feldstudie: 129 Zeilen erzeugen aus altem Schema, neuem
 Schema und den vorhandenen Daten eine Liste von Befunden — neu, entfällt,
-umbenannt, Typwechsel, Sprache dazu, Sprache weg, Grenze überschritten,
-Aufzählungswert entfallen. Jeder Befund trägt, wie oft er tatsächlich gefüllte
-Daten trifft; Befunde ohne Inhalt laufen ohne Rückfrage durch.
+umbenannt, Typwechsel, Grenze überschritten, Aufzählungswert entfallen. Jeder
+Befund trägt, wie oft er tatsächlich gefüllte Daten trifft; Befunde ohne Inhalt
+laufen ohne Rückfrage durch.
 
-Die Befunde reichen in Sammlungen hinein: `metrics[].label` verliert eine
-Sprache, und es zählt korrekt, in wie vielen Einträgen dort Text steht.
+**Sprachen sind hier kein Befund.** Die Studie kannte noch einen Fall „Sprache
+weg"; seit Sprachen Stammdaten sind (Abschnitt 6), kann ein Template-Wechsel
+keine entfernen. Fordert ein Template eine Sprache, die es nicht gibt, bricht das
+Einlesen ab; fordert es weniger, als der Verein pflegt, bleibt der Rest
+unangetastet und wird nur nicht ausgeliefert. Text aus einer Sprache verschwindet
+ausschliesslich über `removeLocale` im Kern, mit eigener Vorschau.
+
+Die Befunde reichen in Sammlungen hinein: Entfällt `metrics[].suffix` oder
+wechselt seinen Typ, zählt der Plan, in wie vielen der vorhandenen Einträge dort
+tatsächlich etwas steht — nicht, wie viele Einträge es gibt.
 
 **Ablauf.** Knopf „Template einlesen" → Datei laden → Deklaration prüfen →
 Befunde gegen die vorhandenen Daten erzeugen → Anzeige, verlustbehaftete Befunde
