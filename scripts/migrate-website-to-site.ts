@@ -87,6 +87,8 @@ const PAGE_FIELD_NAMES = ['title', 'lede', 'body', 'metaDescription'] as const;
 export interface MigrationReportLine {
   table: string;
   count: number;
+  /** Was gezählt wird — bei den Seiten Felder, bei den Sammlungen Einträge. */
+  unit: 'fields' | 'entries' | 'settings';
 }
 
 export interface LeftBehindItem {
@@ -310,12 +312,12 @@ export async function migrateWebsiteToSite(deps: Deps, ctx: CallContext, opts: M
 
   const report: MigrationReport = {
     lines: [
-      { table: 'website_pages', count: PAGE_FIELDS.length },
-      { table: 'website_articles', count: articles.length },
-      { table: 'website_team', count: team.length },
-      { table: 'website_faqs', count: faq.length },
-      { table: 'website_downloads', count: downloads.length },
-      { table: 'settings', count: SETTING_FIELDS.length + SETTING_RENAMES.length },
+      { table: 'website_pages', count: PAGE_FIELDS.length, unit: 'fields' },
+      { table: 'website_articles', count: articles.length, unit: 'entries' },
+      { table: 'website_team', count: team.length, unit: 'entries' },
+      { table: 'website_faqs', count: faq.length, unit: 'entries' },
+      { table: 'website_downloads', count: downloads.length, unit: 'entries' },
+      { table: 'settings', count: SETTING_FIELDS.length + SETTING_RENAMES.length, unit: 'settings' },
     ],
     leftBehind: [...pagesLeftBehind, ...settingsLeftBehind],
   };
@@ -355,7 +357,8 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
       }
       console.log(dryRun ? 'Probelauf — nichts geschrieben.' : 'Migriert.');
       console.log('Je Quelltabelle:');
-      for (const line of result.value.lines) console.log(`  ${line.table}: ${line.count}`);
+      const UNITS = { fields: 'Felder', entries: 'Einträge', settings: 'Einstellungen' } as const;
+      for (const line of result.value.lines) console.log(`  ${line.table}: ${line.count} ${UNITS[line.unit]}`);
       console.log('Bewusst nicht übernommen:');
       for (const item of result.value.leftBehind) console.log(`  ${item.field} (${item.hadContent ? 'hatte Inhalt' : 'war leer'})`);
     })

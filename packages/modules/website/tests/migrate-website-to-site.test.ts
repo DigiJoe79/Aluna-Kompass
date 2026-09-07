@@ -271,6 +271,24 @@ describe('migrate website to site', () => {
     expect(report.leftBehind.length).toBeGreaterThan(0);
   });
 
+  /**
+   * Die Zeilen zählen Verschiedenes: bei den Seiten Felder, bei den Sammlungen
+   * Einträge. „website_pages: 7" neben „website_faqs: 3" liest sich sonst wie
+   * sieben von zwölf Seiten — die Einheit muss dabeistehen.
+   */
+  it('names the unit of each count', async () => {
+    const deps = makeDeps();
+    await readTemplate(deps);
+    insertPage(deps, 'home', { lede: L('Willkommen') });
+    insertFaq(deps, { id: 'F1', question: 'Frage', sortOrder: 0 });
+
+    const report = unwrap(await migrateWebsiteToSite(deps, ctxWith(['site.manage', 'site.view', 'settings.manage']), { dryRun: true }));
+    const unit = (table: string) => report.lines.find((l) => l.table === table)?.unit;
+    expect(unit('website_pages')).toBe('fields');
+    expect(unit('website_faqs')).toBe('entries');
+    expect(unit('settings')).toBe('settings');
+  });
+
   it('refuses to run twice and leaves the second attempt untouched', async () => {
     const deps = makeDeps();
     await readTemplate(deps);
