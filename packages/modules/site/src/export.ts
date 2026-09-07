@@ -12,6 +12,7 @@ import {
   schema as core,
 } from '@kompass/core';
 import { eq } from 'drizzle-orm';
+import type { FieldSchema } from './types';
 import { z } from 'zod';
 import { siteTemplateDir } from './env';
 import { siteEntries } from './schema';
@@ -59,12 +60,32 @@ const canonical = (value: unknown): unknown => {
   return value;
 };
 
-function collectAssetIds(node: unknown, out: Set<string>): void {
-  if (Array.isArray(node)) node.forEach((n) => collectAssetIds(n, out));
+/**
+ * Assets aus Template-Inhalt: erkannt am Schema, nicht am Feldnamen. Ein
+ * Template-Autor benennt seine Felder selbst — `heroImage`, `titelbild`, was
+ * auch immer —, markiert sie aber über den Feldhelfer als `asset`.
+ */
+function assetIdsFromFields(fields: Record<string, FieldSchema>, value: unknown, out: Set<string>): void {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+  const record = value as Record<string, unknown>;
+  for (const [key, field] of Object.entries(fields)) {
+    if (field.widget !== 'asset') continue;
+    const id = record[key];
+    if (typeof id === 'string' && id) out.add(id);
+  }
+}
+
+/**
+ * Assets aus den Sichten der Fachmodule: dort greift weiterhin die
+ * Namenskonvention, weil diese Sichten im Quelltext definiert sind und sich
+ * daran halten — `photos: [{ assetId }]`, `beforeAssetId`, `afterAssetId`.
+ */
+function assetIdsFromViews(node: unknown, out: Set<string>): void {
+  if (Array.isArray(node)) node.forEach((n) => assetIdsFromViews(n, out));
   else if (node && typeof node === 'object') {
     for (const [key, value] of Object.entries(node)) {
       if (/assetid$/i.test(key) && typeof value === 'string' && value) out.add(value);
-      else collectAssetIds(value, out);
+      else assetIdsFromViews(value, out);
     }
   }
 }
@@ -120,7 +141,11 @@ export async function exportSiteContent(deps: Deps, ctx: CallContext, input: unk
   }
 
   const ids = new Set<string>();
-  collectAssetIds({ variables, collections, views }, ids);
+  assetIdsFromFields(template.schema.variables, variables, ids);
+  for (const [key, col] of Object.entries(template.schema.collections)) {
+    for (const entry of collections[key] ?? []) assetIdsFromFields(col.fields, entry, ids);
+  }
+  assetIdsFromViews(views, ids);
   const assets: ExportedAsset[] = [];
   await mkdir(path.join(jobDir, 'assets'), { recursive: true });
   for (const id of [...ids].sort()) {

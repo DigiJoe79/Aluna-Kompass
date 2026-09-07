@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { unwrap } from '@kompass/core';
+import { storeMediaAsset, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createEntry, setEntryPublished } from '../src/entries';
@@ -97,5 +97,35 @@ describe('site export', () => {
     const jobDir = tmp('kompass-exp-job-');
     const result = await exportSiteContent(deps, publish, { jobDir, templateDir: dir });
     expect(result.ok === false && result.error.type === 'conflict' && result.error.code === 'templateStale').toBe(true);
+  });
+
+  /**
+   * Assets wurden am Feldnamen erkannt (`/assetid$/i`) — ein Erbe des alten
+   * Moduls, wo sie fest `photoAssetId` hiessen. Im Template wählt der Autor den
+   * Namen; erkennbar ist ein Asset nur an seiner Markierung im Schema.
+   */
+  it('collects assets from fields whatever they are called', async () => {
+    const source = `
+import { defineTemplate, asset, text } from '@kompass/site-template';
+export default defineTemplate({
+  name: 'X', locales: ['de'],
+  variables: { heroImage: asset({ label: 'Titelbild' }) },
+  collections: {
+    team: { label: 'Team', fields: { name: text({ label: 'Name' }), photo: asset({ label: 'Foto' }) } },
+  },
+});`;
+    const { deps, dir } = await setup(source);
+    const manage = ctxWith(['site.manage', 'site.view', 'media.upload']);
+    // 1x1-PNG, damit die Assets echte Medien-Datensätze haben.
+    const png = (seed: string) =>
+      Buffer.from(`iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42m${seed}kYAAAAASUVORK5CYII=`, 'base64');
+    const hero = unwrap(await storeMediaAsset(deps, manage, { originalName: 'hero.png', bytes: png('P8z8BQDwAF') }));
+    const photo = unwrap(await storeMediaAsset(deps, manage, { originalName: 'photo.png', bytes: png('P8/x8AAwMB') }));
+
+    unwrap(await setValues(deps, manage, { values: { heroImage: hero.id } }));
+    unwrap(await createEntry(deps, manage, { collection: 'team', data: { name: 'Anna', photo: photo.id } }));
+
+    const { content } = await readContent(deps, dir);
+    expect((content as { assets: { id: string }[] }).assets.map((a) => a.id).sort()).toEqual([hero.id, photo.id].sort());
   });
 });
