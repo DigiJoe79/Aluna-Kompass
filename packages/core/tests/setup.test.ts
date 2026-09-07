@@ -36,4 +36,10 @@ describe('setup', () => {
     expect(short.ok === false && short.error.type === 'validation').toBe(true);
     expect(isSetupRequired(fresh)).toBe(true);
   });
+
+  it('sets the chosen locale in i18n.locales', async () => {
+    const deps = createTestDeps();
+    unwrap(await completeSetup(deps, { ...input, locale: 'fr' }));
+    expect(readSetting(deps, 'i18n.locales')).toEqual(['fr']);
+  });
 });

@@ -43,6 +43,13 @@
       "when": 1788647737443,
       "tag": "0005_website_publish_manifest",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1788700000000,
+      "tag": "0006_i18n_locales",
+      "breakpoints": true
     }
   ]
 }

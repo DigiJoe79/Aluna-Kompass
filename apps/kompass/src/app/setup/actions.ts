@@ -12,6 +12,7 @@ export async function completeSetupAction(_prev: ActionState, formData: FormData
   const meta = await requestMeta();
   const result = await completeSetup(getDeps(), {
     organizationName: formData.get('organizationName'),
+    locale: formData.get('locale'),
     name: formData.get('name'),
     email: formData.get('email'),
     password: formData.get('password'),

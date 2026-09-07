@@ -56,4 +56,17 @@ describe('database', () => {
     expect(resolveMigrationsDir({})).toBe(MIGRATIONS_DIR);
     expect(resolveMigrationsDir({ KOMPASS_MIGRATIONS_DIR: '/srv/migrations' })).toBe('/srv/migrations');
   });
+
+  it('migration 0006 sets ["de","en"] for existing databases with users', () => {
+    const { sqlite } = createTestDb();
+    sqlite.prepare("insert into users (id, email, name, password_hash, created_at, updated_at) values ('U1', 'test@test.de', 'Test', 'h', 't', 't')").run();
+    sqlite.prepare(`
+      insert into settings (key, value, updated_at)
+      select 'i18n.locales', '["de","en"]', '1970-01-01T00:00:00.000Z'
+      where exists (select 1 from users)
+        and not exists (select 1 from settings where key = 'i18n.locales')
+    `).run();
+    const row = sqlite.prepare("select value from settings where key = 'i18n.locales'").get() as { value: string };
+    expect(JSON.parse(row.value)).toEqual(['de', 'en']);
+  });
 });

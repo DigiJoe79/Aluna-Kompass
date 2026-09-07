@@ -1,6 +1,6 @@
 import {
-  activateTheme, assignRole, createRole, createUser, getAuditEntry, listDocuments, listModules, listRoles, listThemes, listUsers,
-  queryAudit, readAllSettings, readSetting, removeRole, renderDocument, resetStartPassword, setModuleEnabled, setRolePermissions,
+  activateTheme, addLocale, assignRole, createRole, createUser, getAuditEntry, listDocuments, listLocales, listModules, listRoles, listThemes, listUsers,
+  queryAudit, readAllSettings, readSetting, removeLocale, removeRole, renderDocument, reorderLocales, resetStartPassword, setModuleEnabled, setRolePermissions,
   setSetting, setUserActive, updateRole, voidDocument, ok, invalid,
   type McpToolDefinition,
 } from '@kompass/core';
@@ -31,4 +31,8 @@ export const coreMcpTools: McpToolDefinition[] = [
   t({ name: 'modules_set_enabled', description: 'Enable or disable a module. Requires modules.manage.', inputSchema: z.object({ key: z.string(), enabled: z.boolean() }), handler: (deps, ctx, args) => setModuleEnabled(deps, ctx, args) }),
   t({ name: 'themes_list', description: 'List themes and the active theme key.', inputSchema: z.object({}), handler: async (deps) => ok(listThemes(deps)) }),
   t({ name: 'themes_activate', description: 'Activate a theme. Requires settings.manage.', inputSchema: z.object({ key: z.string() }), handler: (deps, ctx, args) => activateTheme(deps, ctx, args) }),
+  t({ name: 'locales_list', description: 'List the locales this installation keeps, leading one first. Requires settings.manage.', inputSchema: z.object({}), handler: (deps, ctx) => listLocales(deps, ctx) }),
+  t({ name: 'locales_add', description: 'Add a locale. Requires settings.manage.', inputSchema: z.object({ code: z.string() }), handler: (deps, ctx, args) => addLocale(deps, ctx, args) }),
+  t({ name: 'locales_reorder', description: 'Reorder locales; the first is the leading locale. Requires settings.manage.', inputSchema: z.object({ codes: z.array(z.string()) }), handler: (deps, ctx, args) => reorderLocales(deps, ctx, args) }),
+  t({ name: 'locales_remove', description: 'Remove a locale and strip it from all stored text. Requires settings.manage and confirm. Audited.', inputSchema: z.object({ code: z.string(), confirm: z.boolean() }), handler: (deps, ctx, args) => removeLocale(deps, ctx, args) }),
 ];

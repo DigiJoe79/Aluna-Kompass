@@ -172,6 +172,8 @@
       "title": "Erste Einrichtung",
       "intro": "Legen Sie das erste Vorstandskonto an. Danach werden weitere Nutzer in der Verwaltung angelegt — dieser Schritt erscheint nicht wieder.",
       "organizationName": "Vereinsname",
+      "locale": "Sprache der Webseite und Oberfläche",
+      "localeOther": "Andere Sprache …",
       "name": "Ihr Name",
       "email": "E-Mail",
       "password": "Passwort",

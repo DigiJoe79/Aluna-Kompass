@@ -7,6 +7,7 @@ import { isoNow } from '../clock';
 import type { CallContext } from '../context';
 import { roles, userRoles, users } from '../db/schema';
 import type { Deps } from '../deps';
+import { LOCALE_CODE } from '../i18n/locales';
 import { newId } from '../ids';
 import { conflict, ok, type Result } from '../result';
 import { writeSettingInternal } from '../settings/service';
@@ -25,6 +26,7 @@ const setupSchema = z.object({
   name: z.string().trim().min(1).max(120),
   email: z.email().transform(normalizeEmail),
   password: passwordSchema,
+  locale: z.string().regex(LOCALE_CODE).default('de'),
   requestId: z.string().min(1),
   ipAddress: z.string().nullable(),
 });
@@ -33,7 +35,7 @@ export async function completeSetup(deps: Deps, input: unknown): Promise<Result<
   if (!isSetupRequired(deps)) return conflict('setupAlreadyDone', 'Die Einrichtung wurde bereits abgeschlossen');
   const parsed = validate(deps, setupSchema, input);
   if (!parsed.ok) return parsed;
-  const { organizationName, name, email, password, requestId, ipAddress } = parsed.value;
+  const { organizationName, name, email, password, locale, requestId, ipAddress } = parsed.value;
   const passwordHash = await hashPassword(password);
   return deps.db.transaction((tx) => {
     const now = isoNow(deps.clock);
@@ -45,6 +47,8 @@ export async function completeSetup(deps: Deps, input: unknown): Promise<Result<
     const ctx: CallContext = { userId, permissions: new Set(deps.registry.permissionKeys), channel: 'ui', apiTokenId: null, ipAddress, requestId };
     const org = writeSettingInternal(tx, deps, ctx, 'organization.name', organizationName, 'setup.organizationName');
     if (!org.ok) return org;
+    const localesRes = writeSettingInternal(tx, deps, ctx, 'i18n.locales', [locale], 'setup.locales');
+    if (!localesRes.ok) return localesRes;
     const session = createSession(tx, deps, userId);
     tx.update(users).set({ lastLoginAt: now }).where(eq(users.id, userId)).run();
     recordAudit(tx, deps, ctx, { action: 'setup.complete', entityType: 'user', entityId: userId, after: { name, email, role: PROTECTED_ROLE_NAME }, summary: `Einrichtung abgeschlossen durch ${name}` });
