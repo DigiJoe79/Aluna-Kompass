@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { lstat, mkdir, readFile, symlink } from 'node:fs/promises';
+import { lstat, readFile, symlink } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -43,6 +43,19 @@ export function resolveTemplatePackage(from: string = process.cwd()): string {
   }
 }
 
+/**
+ * Die node_modules, die ein Template zum Bauen braucht — mit `astro` darin.
+ *
+ * Nicht die Wurzel des Projekts: pnpm installiert nicht flach, `astro` liegt
+ * bei dem Paket, das es als Abhängigkeit führt. Das mitgelieferte Basis-Template
+ * hat genau die richtige Menge, im Image wie im Monorepo.
+ */
+export function resolveTemplateNodeModules(): string {
+  if (process.env.SITE_NODE_MODULES) return path.resolve(process.env.SITE_NODE_MODULES);
+  const root = path.resolve(resolveTemplatePackage(), '..', '..');
+  return path.join(root, 'templates', 'verein-basis', 'node_modules');
+}
+
 export async function ensureModuleResolution(dir: string, from?: string): Promise<void> {
   const link = path.join(dir, 'node_modules');
   try {
@@ -51,17 +64,8 @@ export async function ensureModuleResolution(dir: string, from?: string): Promis
   } catch {
     // fehlt noch
   }
-  const pkgDir = resolveTemplatePackage(from);
-  const nodeModules = path.resolve(pkgDir, '..', '..');
-  if (path.basename(nodeModules) === 'node_modules') {
-    await symlink(nodeModules, link, 'dir');
-    return;
-  }
-  // Monorepo: das Paket liegt unter packages/, nicht in einer node_modules —
-  // nur es selbst scoped verlinken; seine Abhängigkeiten löst Node vom echten
-  // Pfad aus auf.
-  await mkdir(path.join(link, '@kompass'), { recursive: true });
-  await symlink(pkgDir, path.join(link, '@kompass', 'site-template'), 'dir');
+  resolveTemplatePackage(from);
+  await symlink(resolveTemplateNodeModules(), link, 'dir');
 }
 
 const asJson = (schema: unknown) => z.toJSONSchema(schema as z.ZodType<unknown>, { io: 'input' }) as FieldSchema;

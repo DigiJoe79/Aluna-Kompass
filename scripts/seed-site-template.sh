@@ -12,12 +12,15 @@
 #
 # Argumente (nur für Tests; im Container gelten die Vorgaben):
 #   $1  Quellverzeichnis des Basis-Templates   (Vorgabe /app/templates/verein-basis)
-#   $2  node_modules für Astro und @kompass/*  (Vorgabe /app/node_modules)
+#   $2  node_modules mit Astro und @kompass/*  (Vorgabe: die des Basis-Templates)
 set -eu
 
 template_dir="${SITE_TEMPLATE_DIR:-$(dirname "${DATABASE_PATH:-/data/kompass.db}")/site-template}"
 source_dir="${1:-/app/templates/verein-basis}"
-node_modules="${2:-/app/node_modules}"
+# Nicht /app/node_modules: pnpm installiert nicht flach, astro liegt bei dem
+# Paket, das es braucht. Die node_modules des Basis-Templates führen genau die
+# Menge, die ein Template zum Bauen braucht.
+node_modules="${2:-/app/templates/verein-basis/node_modules}"
 
 if [ ! -f "$template_dir/kompass.template.ts" ]; then
   echo "Erstinbetriebnahme: Basis-Template nach $template_dir kopieren"

@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { ensureModuleResolution, loadTemplate, resolveTemplatePackage } from '../src/load';
+import { ensureModuleResolution, loadTemplate, resolveTemplateNodeModules, resolveTemplatePackage } from '../src/load';
 
 const dirs: string[] = [];
 afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true }); });
@@ -75,5 +75,19 @@ describe('resolving node_modules', () => {
     dirs.push(dir);
     // Auflösung von einem Ort aus, an dem es das Paket nicht gibt.
     await expect(ensureModuleResolution(dir, '/nirgendwo')).rejects.toThrow(/site-template/);
+  });
+});
+
+describe('the node_modules a template needs', () => {
+  /**
+   * pnpm installiert nicht flach: `astro` liegt nicht in der Wurzel, sondern
+   * bei dem Paket, das es braucht. Ein Symlink auf `/app/node_modules` findet
+   * deshalb `@kompass/site-template`, aber kein Astro — und der Build bricht
+   * mit „astro not installed".
+   */
+  it('points at a directory that actually holds astro', () => {
+    const dir = resolveTemplateNodeModules();
+    expect(existsSync(path.join(dir, 'astro')), `${dir} führt kein astro`).toBe(true);
+    expect(existsSync(path.join(dir, '@kompass', 'site-template'))).toBe(true);
   });
 });
