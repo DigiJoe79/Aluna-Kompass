@@ -18,7 +18,7 @@ export default async function WebsitePageEdit(props: { params: Promise<{ key: st
   const t = await getTranslations('website.pages');
   return (
     <>
-      <PageHeader title={t(`keys.${page.value.key}`)} description={`/${page.value.key}`} actions={<GapCounter count={gapCount(page.value as unknown as Record<string, unknown>, ['title', 'lede', 'body', 'metaDescription'])} />} />
+      <PageHeader title={t(`keys.${page.value.key}`)} description={`/${page.value.key}`} actions={<GapCounter count={gapCount(page.value as unknown as Record<string, unknown>, ['title', 'lede', 'body', 'metaDescription'], deps.locales())} />} />
       <PageForm page={page.value} />
     </>
   );

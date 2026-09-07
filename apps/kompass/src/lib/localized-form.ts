@@ -15,6 +15,6 @@ export function jsonFromForm<T>(formData: FormData, name: string, fallback: T): 
   }
 }
 
-export function gapCount(record: Record<string, unknown>, fields: string[]): number {
-  return translationGaps(record, fields).length;
+export function gapCount(record: Record<string, unknown>, fields: string[], locales: readonly string[]): number {
+  return translationGaps(record, fields, locales).length;
 }

@@ -16,6 +16,7 @@ describe('exportSiteContent', () => {
   it('writes canonical content.json with all published views, copies referenced assets and hashes deterministically', async () => {
     const deps = createTestDeps({ manifests: [coreModule, websiteModule] });
     insertUser(deps, { id: 'USER-TEST' });
+    unwrap(await setSetting(deps, manage, { key: 'i18n.locales', value: ['de', 'en'] }));
     const photo = unwrap(await storeMediaAsset(deps, manage, { originalName: 'nicole.png', bytes: PNG }));
     const m = unwrap(await createTeamMember(deps, manage, { name: 'Nicole', position: { de: 'Vorsitz', en: '' }, photoAssetId: photo.id }));
     unwrap(await setTeamMemberPublished(deps, manage, { id: m.id, isPublished: true }));

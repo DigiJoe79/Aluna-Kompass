@@ -1,34 +1,41 @@
 import { z } from 'zod';
 
-export const LOCALES = ['de', 'en'] as const;
-export type Locale = (typeof LOCALES)[number];
-export const DEFAULT_LOCALE: Locale = 'de';
+/** Text je Sprachschlüssel. Welche Schlüssel gültig sind, entscheidet die Installation. */
+export type LocalizedText = Record<string, string>;
 
-export interface LocalizedText {
-  de: string;
-  en: string;
-}
-
+/**
+ * Nimmt beliebige Sprachschlüssel an und prüft nur die Werte. Ob die Schlüssel
+ * zu den gepflegten Sprachen passen und die Leitsprache gefüllt ist, prüft
+ * `validate` — die Schemata entstehen beim Import, die Sprachen stehen in der
+ * Datenbank.
+ */
 export function localizedText(opts: { required?: boolean; max?: number } = {}): z.ZodType<LocalizedText> {
   const max = opts.max ?? 20_000;
-  const de = opts.required ? z.string().trim().min(1).max(max) : z.string().trim().max(max).default('');
-  const en = z.string().trim().max(max).default('');
-  return z.object({ de, en }) as unknown as z.ZodType<LocalizedText>;
+  return z
+    .record(z.string().regex(/^[a-z]{2}(-[a-z]{2})?$/), z.string().trim().max(max))
+    .meta({ localized: true, required: opts.required ?? false, max }) as unknown as z.ZodType<LocalizedText>;
 }
 
-export const emptyLocalized = (): LocalizedText => ({ de: '', en: '' });
+export const emptyLocalized = (locales: readonly string[]): LocalizedText =>
+  Object.fromEntries(locales.map((l) => [l, '']));
 
-export function resolveText(text: LocalizedText, locale: Locale): { value: string; fallback: Locale | null } {
+export function resolveText(text: LocalizedText, locale: string, fallback: string): { value: string; fallback: string | null } {
   const value = text[locale];
   if (value && value.length > 0) return { value, fallback: null };
-  return { value: text[DEFAULT_LOCALE], fallback: locale === DEFAULT_LOCALE ? null : DEFAULT_LOCALE };
+  const alternative = text[fallback] ?? '';
+  return { value: alternative, fallback: locale === fallback || alternative.length === 0 ? null : fallback };
 }
 
-const isLocalized = (v: unknown): v is LocalizedText => typeof v === 'object' && v !== null && 'de' in v && 'en' in v;
+const isLocalized = (v: unknown): v is LocalizedText =>
+  typeof v === 'object' && v !== null && !Array.isArray(v) && Object.values(v).every((x) => typeof x === 'string');
 
-export function translationGaps(record: Record<string, unknown>, fields: string[]): string[] {
+/** Felder, deren Leitsprache gefüllt ist, während eine weitere Sprache fehlt. */
+export function translationGaps(record: Record<string, unknown>, fields: string[], locales: readonly string[]): string[] {
+  const [leading, ...rest] = locales;
+  if (!leading || rest.length === 0) return [];
   return fields.filter((field) => {
     const value = record[field];
-    return isLocalized(value) && value.de.length > 0 && value.en.length === 0;
+    if (!isLocalized(value)) return false;
+    return (value[leading] ?? '').length > 0 && rest.some((l) => (value[l] ?? '').length === 0);
   });
 }

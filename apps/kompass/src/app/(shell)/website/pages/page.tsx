@@ -14,6 +14,8 @@ export default async function WebsitePagesPage() {
   const t = await getTranslations('website.pages');
   const pages = await listPages(deps, ctx);
   if (!pages.ok) return <ForbiddenCard permission="website.view" />;
+  const locales = deps.locales();
+  const leading = locales[0]!;
   return (
     <>
       <PageHeader title={t('title')} description={t('description')} />
@@ -25,8 +27,8 @@ export default async function WebsitePagesPage() {
               <tr key={p.key} className={`h-[var(--row-h)] border-b border-line-2 hover:bg-row-hover ${i % 2 === 1 ? 'bg-zebra' : ''}`} aria-label={t(`keys.${p.key}`)}>
                 <td className="px-4 font-semibold"><Link href={`/website/pages/${p.key}`} className="text-link underline">{t(`keys.${p.key}`)}</Link></td>
                 <td className="px-4 font-mono text-[12px] text-muted-ink">{p.key}</td>
-                <td className="px-4 text-ink-2">{p.title.de || '—'}</td>
-                <td className="px-4"><GapCounter count={gapCount(p as unknown as Record<string, unknown>, ['title', 'lede', 'body', 'metaDescription'])} /></td>
+                <td className="px-4 text-ink-2">{p.title[leading] || '—'}</td>
+                <td className="px-4"><GapCounter count={gapCount(p as unknown as Record<string, unknown>, ['title', 'lede', 'body', 'metaDescription'], locales)} /></td>
               </tr>
             ))}
           </tbody>

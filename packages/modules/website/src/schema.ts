@@ -12,10 +12,10 @@ export interface PageBlock {
 
 export const websitePages = sqliteTable('website_pages', {
   key: text('key').primaryKey(),
-  title: localizedColumn('title'),
-  lede: localizedColumn('lede'),
-  body: localizedColumn('body'),
-  metaDescription: localizedColumn('meta_description'),
+  title: localizedColumn('title', 'website_pages'),
+  lede: localizedColumn('lede', 'website_pages'),
+  body: localizedColumn('body', 'website_pages'),
+  metaDescription: localizedColumn('meta_description', 'website_pages'),
   blocks: text('blocks', { mode: 'json' }).$type<PageBlock[]>().notNull().default([]),
   updatedAt: text('updated_at').notNull(),
 });
@@ -25,9 +25,9 @@ export const websiteArticles = sqliteTable(
   {
     id: text('id').primaryKey(),
     slug: text('slug').notNull().unique(),
-    title: localizedColumn('title'),
-    lede: localizedColumn('lede'),
-    body: localizedColumn('body'),
+    title: localizedColumn('title', 'website_articles'),
+    lede: localizedColumn('lede', 'website_articles'),
+    body: localizedColumn('body', 'website_articles'),
     publishedAt: text('published_at'),
     sortOrder: integer('sort_order').notNull().default(0),
     isPublished: integer('is_published', { mode: 'boolean' }).notNull().default(false),
@@ -40,7 +40,7 @@ export const websiteArticles = sqliteTable(
 export const websiteTeam = sqliteTable('website_team', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
-  position: localizedColumn('position'),
+  position: localizedColumn('position', 'website_team'),
   photoAssetId: text('photo_asset_id').references(() => core.mediaAssets.id),
   petPhotoAssetId: text('pet_photo_asset_id').references(() => core.mediaAssets.id),
   sortOrder: integer('sort_order').notNull().default(0),
@@ -51,9 +51,9 @@ export const websiteTeam = sqliteTable('website_team', {
 
 export const websiteFaqs = sqliteTable('website_faqs', {
   id: text('id').primaryKey(),
-  category: localizedColumn('category'),
-  question: localizedColumn('question'),
-  answer: localizedColumn('answer'),
+  category: localizedColumn('category', 'website_faqs'),
+  question: localizedColumn('question', 'website_faqs'),
+  answer: localizedColumn('answer', 'website_faqs'),
   sortOrder: integer('sort_order').notNull().default(0),
   isPublished: integer('is_published', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('created_at').notNull(),
@@ -62,7 +62,7 @@ export const websiteFaqs = sqliteTable('website_faqs', {
 
 export const websiteDownloads = sqliteTable('website_downloads', {
   key: text('key').primaryKey(),
-  title: localizedColumn('title'),
+  title: localizedColumn('title', 'website_downloads'),
   assetId: text('asset_id').references(() => core.mediaAssets.id),
   updatedAt: text('updated_at').notNull(),
 });

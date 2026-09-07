@@ -17,12 +17,12 @@ export function LocalizedField({ name, label, kind = 'input', value, rows = 4, h
   const error = errors?.[name] ?? errors?.[`${name}.de`];
   const field = (locale: 'de' | 'en') => {
     const id = `${name}-${locale}`;
-    const props = { id, name: `${name}.${locale}`, value: text[locale], onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setText({ ...text, [locale]: e.target.value }), required: required && locale === 'de', 'aria-invalid': locale === 'de' && !!error ? true : undefined };
+    const props = { id, name: `${name}.${locale}`, value: text[locale] ?? '', onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setText({ ...text, [locale]: e.target.value }), required: required && locale === 'de', 'aria-invalid': locale === 'de' && !!error ? true : undefined };
     return (
       <div className="flex min-w-0 flex-col gap-1">
         <Label htmlFor={id} className="flex items-center gap-2 text-[12px] font-semibold text-muted-ink">
           <span className="rounded-sm bg-badge px-1.5 py-0.5 font-mono text-[10px] text-badge-ink">{locale.toUpperCase()}</span>
-          {locale === 'en' && text.de.length > 0 && text.en.length === 0 ? <span className="text-warning">{t('untranslated')}</span> : null}
+          {locale === 'en' && (text['de'] ?? '').length > 0 && (text['en'] ?? '').length === 0 ? <span className="text-warning">{t('untranslated')}</span> : null}
         </Label>
         {kind === 'input' ? <Input {...props} className="h-9" /> : <Textarea {...props} rows={rows} className={cn(kind === 'markdown' && 'font-mono text-[13px]')} />}
       </div>
@@ -40,7 +40,7 @@ export function LocalizedField({ name, label, kind = 'input', value, rows = 4, h
             <span className="text-muted-ink">{t('preview')}</span>
             {(['de', 'en'] as const).map((l) => <button key={l} type="button" aria-pressed={previewLocale === l} onClick={() => setPreviewLocale(l)} className={cn('rounded-sm px-2 py-0.5 font-mono', previewLocale === l ? 'bg-brand text-on-brand' : 'bg-badge text-badge-ink')}>{l.toUpperCase()}</button>)}
           </div>
-          <MarkdownPreview markdown={text[previewLocale]} />
+          <MarkdownPreview markdown={text[previewLocale] ?? ''} />
         </div>
       ) : null}
     </div>

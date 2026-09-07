@@ -18,6 +18,6 @@ describe('localized form helpers', () => {
     expect(jsonFromForm(fd, 'broken', 'fallback')).toBe('fallback');
   });
   it('counts translation gaps', () => {
-    expect(gapCount({ title: { de: 'A', en: '' }, lede: { de: 'B', en: 'C' }, body: { de: '', en: '' } }, ['title', 'lede', 'body'])).toBe(1);
+    expect(gapCount({ title: { de: 'A', en: '' }, lede: { de: 'B', en: 'C' }, body: { de: '', en: '' } }, ['title', 'lede', 'body'], ['de', 'en'])).toBe(1);
   });
 });

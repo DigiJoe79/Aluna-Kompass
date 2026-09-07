@@ -63,6 +63,6 @@ export async function exportSiteContent(deps: Deps, ctx: CallContext, input: unk
   const contentHash = createHash('sha256').update(json).digest('hex');
   const terms = readSetting<string[]>(deps, 'website.blockedTerms');
   const violations = findBlockedTerms(content, terms, assets.map((a) => a.filename));
-  const gaps = collectTranslationGaps(content as Record<string, unknown[]>);
+  const gaps = collectTranslationGaps(content as Record<string, unknown[]>, deps.locales());
   return ok({ contentHash, contentPath, assets, gaps, violations });
 }

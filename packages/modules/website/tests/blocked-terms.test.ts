@@ -20,7 +20,7 @@ describe('collectTranslationGaps', () => {
       articles: [{ slug: 'transport', body: { de: 'x', en: '' }, title: { de: '', en: '' } }],
       team: [{ id: 'T1', position: { de: 'Vorsitz', en: '' }, name: 'N' }],
     };
-    expect(collectTranslationGaps(content)).toEqual([
+    expect(collectTranslationGaps(content, ['de', 'en'])).toEqual([
       { collection: 'pages', id: 'help', field: 'title' },
       { collection: 'articles', id: 'transport', field: 'body' },
       { collection: 'team', id: 'T1', field: 'position' },

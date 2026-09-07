@@ -1,4 +1,4 @@
-import { conflict, invalid, isoNow, localizedText, newId, notFound, ok, recordAudit, requirePermission, schema as core, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { conflict, emptyLocalized, invalid, isoNow, localizedText, newId, notFound, ok, recordAudit, requirePermission, schema as core, validate, type CallContext, type DbOrTx, type Deps, type LocalizedText, type Result } from '@kompass/core';
 import { and, asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { animalPhotos, animalStories, animals, type LocalizedList } from './schema';
@@ -7,7 +7,7 @@ export const SLUG = /^[a-z0-9][a-z0-9-]{0,80}$/;
 const localizedList = z.object({ de: z.array(z.string().trim().min(1).max(40)).max(12), en: z.array(z.string().trim().min(1).max(40)).max(12) });
 
 export interface AnimalPhoto { assetId: string; sortOrder: number; isPrimary: boolean }
-export interface AnimalStory { beforeAssetId: string | null; afterAssetId: string | null; quote: { de: string; en: string }; family: string; adoptedYear: number }
+export interface AnimalStory { beforeAssetId: string | null; afterAssetId: string | null; quote: LocalizedText; family: string; adoptedYear: number }
 export type AnimalRecord = typeof animals.$inferSelect & { photos: AnimalPhoto[]; story: AnimalStory | null };
 
 const fields = {
@@ -101,7 +101,7 @@ export async function setAnimalStatus(deps: Deps, ctx: CallContext, input: unkno
   return deps.db.transaction((tx) => {
     tx.update(animals).set({ status, updatedAt: isoNow(deps.clock) }).where(eq(animals.id, id)).run();
     if (status === 'adopted' && !before.story) {
-      tx.insert(animalStories).values({ animalId: id, beforeAssetId: null, afterAssetId: null, quote: { de: '', en: '' }, family: '', adoptedYear: adoptedYear as number }).run();
+      tx.insert(animalStories).values({ animalId: id, beforeAssetId: null, afterAssetId: null, quote: emptyLocalized(deps.locales()), family: '', adoptedYear: adoptedYear as number }).run();
     }
     const after = loadAnimal(tx, id)!;
     recordAudit(tx, deps, ctx, { action: 'animals.setStatus', entityType: 'animal', entityId: id, before: { status: before.status }, after: { status, adoptedYear: adoptedYear ?? null }, summary: `Status von ${after.name}: ${status}` });

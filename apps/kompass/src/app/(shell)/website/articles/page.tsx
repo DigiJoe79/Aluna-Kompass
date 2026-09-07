@@ -20,6 +20,8 @@ export default async function ArticlesPage() {
   const result = await listArticles(deps, ctx);
   if (!result.ok) return <ForbiddenCard permission="website.view" />;
   const ids = result.value.map((a) => a.id);
+  const locales = deps.locales();
+  const leading = locales[0]!;
   return (
     <>
       <PageHeader title={t('title')} actions={<Link href="/website/articles/new" className={buttonVariants()}>{t('create')}</Link>} />
@@ -30,9 +32,9 @@ export default async function ArticlesPage() {
             <tbody>
               {result.value.map((a, i) => (
                 <tr key={a.id} className={`h-[var(--row-h)] border-b border-line-2 hover:bg-row-hover ${i % 2 === 1 ? 'bg-zebra' : ''}`}>
-                  <td className="px-4 font-semibold"><Link href={`/website/articles/${a.id}`} className="text-link underline">{a.title.de || a.slug}</Link></td>
+                  <td className="px-4 font-semibold"><Link href={`/website/articles/${a.id}`} className="text-link underline">{a.title[leading] || a.slug}</Link></td>
                   <td className="px-4 font-mono text-[12px] text-muted-ink">{a.slug}</td>
-                  <td className="px-4"><GapCounter count={gapCount(a as unknown as Record<string, unknown>, ['title', 'lede', 'body'])} /></td>
+                  <td className="px-4"><GapCounter count={gapCount(a as unknown as Record<string, unknown>, ['title', 'lede', 'body'], locales)} /></td>
                   <td className="px-4"><PublishSwitch id={a.id} isPublished={a.isPublished} action={setArticlePublishedAction} /></td>
                   <td className="px-4 text-right"><ReorderButtons ids={ids} index={i} action={reorderArticlesAction} /></td>
                 </tr>
