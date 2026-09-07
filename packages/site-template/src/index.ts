@@ -105,3 +105,17 @@ export function defineTemplate(input: TemplateInput): TemplateDefinition {
     ),
   };
 }
+
+export const date = (opts: FieldOptions = {}) =>
+  z.iso.date().meta(meta(opts, 'date', { format: 'date' })) as z.ZodType<unknown>;
+
+/**
+ * Eine Liste gleichartiger Datensätze — Social-Media-Links, Kennzahlen,
+ * Öffnungszeiten. Anders als `list`, das Zeilen aus Text führt, trägt jeder
+ * Eintrag hier eigene Felder mit eigenen Beschriftungen.
+ */
+export const objectList = (opts: FieldOptions & { max?: number; fields: Record<string, z.ZodType<unknown>> }) =>
+  z
+    .array(z.object(opts.fields))
+    .max(opts.max ?? 50)
+    .meta(meta(opts, 'objectList')) as z.ZodType<unknown>;

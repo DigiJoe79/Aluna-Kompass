@@ -130,6 +130,11 @@ export async function exportSiteContent(deps: Deps, ctx: CallContext, input: unk
   }
 
   const views: Record<string, unknown[]> = {};
+  // Die Sichten des Kerns sind immer dabei: Vereinsstammdaten pflegt man einmal
+  // in den Einstellungen, kein Template soll sie als Variablen verdoppeln.
+  for (const view of deps.registry.module('core')?.publishedViews ?? []) {
+    views[view.name] = pruneLocales(view.load(deps), locales) as unknown[];
+  }
   for (const use of template.schema.uses) {
     const manifest = deps.registry.manifests.find((m) => m.key === use);
     if (!manifest || !isModuleEnabled(deps, use)) {

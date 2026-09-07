@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { asset, defineTemplate, list, markdown, number, select, text } from '../src';
+import { asset, date, defineTemplate, list, markdown, number, objectList, select, text } from '../src';
 
 const template = defineTemplate({
   name: 'Verein Basis',
@@ -62,5 +62,29 @@ describe('defineTemplate', () => {
 
   it('leaves renamedFrom out where it was not given', () => {
     expect(z.toJSONSchema(text({ label: 'A' }) as never, { io: 'input' })).not.toHaveProperty('renamedFrom');
+  });
+
+  it('offers a date field the renderer recognises', () => {
+    const json = z.toJSONSchema(date({ label: 'Erteilt am' }) as never, { io: 'input' }) as { format?: string; widget?: string; label?: string };
+    expect(json.format).toBe('date');
+    expect(json.widget).toBe('date');
+    expect(json.label).toBe('Erteilt am');
+    expect((date() as never as { safeParse: (v: unknown) => { success: boolean } }).safeParse('2026-09-07').success).toBe(true);
+    expect((date() as never as { safeParse: (v: unknown) => { success: boolean } }).safeParse('07.09.2026').success).toBe(false);
+  });
+
+  it('offers a list of objects, each with its own fields', () => {
+    const links = objectList({ label: 'Social-Media-Links', max: 10, fields: { label: text({ label: 'Name' }), href: text({ label: 'Adresse' }) } });
+    const json = z.toJSONSchema(links as never, { io: 'input' }) as { widget?: string; maxItems?: number; items?: { properties?: Record<string, { widget?: string; label?: string }> } };
+    expect(json.widget).toBe('objectList');
+    expect(json.maxItems).toBe(10);
+    expect(Object.keys(json.items?.properties ?? {})).toEqual(['label', 'href']);
+    expect(json.items?.properties?.href?.label).toBe('Adresse');
+  });
+
+  it('validates the entries of an object list', () => {
+    const links = objectList({ label: 'L', fields: { label: text({ max: 4 }), href: text() } }) as never as { safeParse: (v: unknown) => { success: boolean } };
+    expect(links.safeParse([{ label: 'kurz', href: 'https://example.org' }]).success).toBe(true);
+    expect(links.safeParse([{ label: 'viel zu lang', href: 'x' }]).success).toBe(false);
   });
 });

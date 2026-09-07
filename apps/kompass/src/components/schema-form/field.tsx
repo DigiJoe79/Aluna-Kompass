@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { FieldError } from '@/components/forms/field-error';
 import { MarkdownPreview } from '@/components/markdown-preview';
-import { setAtPath } from './state';
+import { blankFor, setAtPath } from './state';
 
 export interface FieldProps {
   path: string;
@@ -80,13 +80,18 @@ function Localized({ path, field, value, errors, locales, onChange }: FieldProps
   );
 }
 
-function StringList({ path, field, value, errors, locales, onChange }: FieldProps) {
+/** Liste aus Textzeilen oder aus Datensätzen — was von beidem, sagt das Feldschema. */
+function ListField({ path, field, value, errors, locales, onChange }: FieldProps) {
   const t = useTranslations('site.form');
   const items = Array.isArray(value) ? (value as unknown[]) : [];
   const itemSchema = (field.items as FieldSchema | undefined) ?? { widget: 'text' };
-  const objectItems = itemSchema.type === 'object' && !!(itemSchema as { properties?: unknown }).properties;
+  const properties = (itemSchema as { properties?: Record<string, FieldSchema> }).properties;
+  const objectItems = itemSchema.type === 'object' && !!properties;
   const max = typeof field.maxItems === 'number' ? field.maxItems : undefined;
-  const blank = objectItems ? {} : '';
+  // Ein neuer Datensatz bringt seine Felder gleich mit, sonst steht die Maske leer.
+  const blank = objectItems
+    ? Object.fromEntries(Object.entries(properties ?? {}).map(([key, sub]) => [key, blankFor(sub, locales)]))
+    : '';
 
   const update = (index: number, next: unknown) => onChange(items.map((it, i) => (i === index ? next : it)));
   const move = (index: number, dir: -1 | 1) => {
@@ -153,7 +158,7 @@ export function SchemaField(props: FieldProps) {
   const label = labelOf(field, path);
 
   if (widget === 'localized') return <Localized {...props} />;
-  if (widget === 'list') return <StringList {...props} />;
+  if (widget === 'list' || widget === 'objectList') return <ListField {...props} />;
 
   const simple = (control: React.ReactNode) => (
     <div className="flex flex-col gap-1">

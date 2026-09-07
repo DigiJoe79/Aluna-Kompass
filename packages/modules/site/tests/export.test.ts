@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { storeMediaAsset, unwrap } from '@kompass/core';
+import { setSetting, storeMediaAsset, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createEntry, setEntryPublished } from '../src/entries';
@@ -63,7 +63,8 @@ describe('site export', () => {
     const { content } = await readContent(deps, dir);
     expect(content.variables).toEqual({ claim: { de: 'Hallo' } });
     expect(content.collections.notes).toEqual([{ body: 'Notiz' }]);
-    expect(content.views).toEqual({});
+    // Ohne `uses` bleiben nur die Sichten des Kerns.
+    expect(Object.keys(content.views)).toEqual(['organization']);
     expect(content.assets).toEqual([]);
   });
 
@@ -127,5 +128,15 @@ export default defineTemplate({
 
     const { content } = await readContent(deps, dir);
     expect((content as { assets: { id: string }[] }).assets.map((a) => a.id).sort()).toEqual([hero.id, photo.id].sort());
+  });
+
+  /** Stammdaten pflegt ein Verein einmal in den Einstellungen — kein Template
+   *  soll sie als eigene Variablen verdoppeln müssen. */
+  it('always ships the organization view, without the template asking for it', async () => {
+    const { deps, dir } = await setup();
+    unwrap(await setSetting(deps, ctxWith(['settings.manage']), { key: 'organization.city', value: 'Jülich' }));
+    const { content } = await readContent(deps, dir);
+    const views = (content as { views: Record<string, { city: string }[]> }).views;
+    expect(views.organization?.[0]?.city).toBe('Jülich');
   });
 });

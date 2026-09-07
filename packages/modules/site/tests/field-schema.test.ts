@@ -3,8 +3,8 @@ import { createTestDeps } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { markdown, number, select, text } from '@kompass/site-template';
-import { blankValue, schemaFor } from '../src/field-schema';
-import type { FieldSchema } from '../src/load';
+import { blankValue, schemaFor, widgetOf } from '../src/field-schema';
+import type { FieldSchema } from '../src/types';
 
 const asJson = (s: unknown) => z.toJSONSchema(s as z.ZodType, { io: 'input' }) as FieldSchema;
 
@@ -46,5 +46,29 @@ describe('blankValue', () => {
     expect(blankValue(asJson(text({})))).toBe('');
     expect(blankValue(asJson(number({})))).toBe(0);
     expect(blankValue(asJson(select(['a', 'b'])))).toBe('a');
+  });
+});
+
+describe('object lists', () => {
+  const links = {
+    widget: 'objectList',
+    type: 'array',
+    maxItems: 5,
+    items: { type: 'object', properties: { label: { widget: 'text', type: 'string', label: 'Name' }, href: { widget: 'text', type: 'string', label: 'Adresse' } } },
+  } as unknown as FieldSchema;
+
+  it('is recognised as its own widget, not as a string list', () => {
+    expect(widgetOf(links)).toBe('objectList');
+  });
+
+  it('starts empty, like any list', () => {
+    expect(blankValue(links)).toEqual([]);
+  });
+
+  it('validates each entry against its fields', () => {
+    const schema = schemaFor(links);
+    expect(schema.safeParse([{ label: 'Mastodon', href: 'https://example.org' }]).success).toBe(true);
+    expect(schema.safeParse([{ label: 'Mastodon' }]).success).toBe(false);
+    expect(schema.safeParse([{}, {}, {}, {}, {}, {}]).success).toBe(false);
   });
 });

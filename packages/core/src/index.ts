@@ -35,6 +35,7 @@ export * from './themes/default-theme';
 export * from './themes/contrast';
 export * from './themes/service';
 export * from './published/view';
+export * from './published/organization';
 export * from './setup/service';
 export * from './app';
 export * from './seed/seed';

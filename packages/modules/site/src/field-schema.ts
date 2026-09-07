@@ -52,6 +52,13 @@ export function schemaFor(field: FieldSchema): z.ZodType<unknown> {
       const values = (field as { enum?: string[] }).enum ?? [];
       return values.length > 0 ? z.enum(values as [string, ...string[]]) : z.string();
     }
+    case 'objectList': {
+      const props = (field as { items?: { properties?: Record<string, FieldSchema> } }).items?.properties ?? {};
+      let arr = z.array(z.object(Object.fromEntries(Object.entries(props).map(([k, f]) => [k, schemaFor(f)]))));
+      const max = (field as { maxItems?: number }).maxItems;
+      if (typeof max === 'number') arr = arr.max(max);
+      return arr;
+    }
     case 'list': {
       const items = (field as { items?: FieldSchema }).items;
       const inner = items ? schemaFor(items) : z.string();
@@ -75,6 +82,7 @@ export function blankValue(field: FieldSchema): unknown {
     case 'asset':
       return null;
     case 'list':
+    case 'objectList':
       return [];
     case 'select':
       return (field as { enum?: string[] }).enum?.[0] ?? '';

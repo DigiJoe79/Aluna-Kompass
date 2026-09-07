@@ -24,7 +24,9 @@ describe('exportSiteContent', () => {
     const b = unwrap(await exportSiteContent(deps, manage, { jobDir: job() }));
     expect(a.contentHash).toBe(b.contentHash);
     const content = JSON.parse(readFileSync(a.contentPath, 'utf8'));
-    expect(Object.keys(content).sort()).toEqual(['articles', 'assets', 'downloads', 'facts', 'faqs', 'pages', 'projects', 'team']);
+    // 'organization' kommt seit der Kern-Sicht dazu; das alte Modul sammelt die
+    // Sichten aller aktivierten Module und damit auch die des Kerns.
+    expect(Object.keys(content).sort()).toEqual(['articles', 'assets', 'downloads', 'facts', 'faqs', 'organization', 'pages', 'projects', 'team']);
     expect(content.team[0].photoAssetId).toBe(photo.id);
     expect(a.assets.map((x) => x.id)).toEqual([photo.id]);
     expect(readFileSync(path.join(path.dirname(a.contentPath), 'assets', photo.filename)).byteLength).toBe(PNG.byteLength);
