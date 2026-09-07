@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
   // nicht. Der Import läuft über eine Server Action, deren Body Next puffert,
   // deshalb bewusst begrenzt statt unbeschränkt.
   experimental: { serverActions: { bodySizeLimit: '512mb' } },
+  // Next blockiert im Entwicklungsmodus Anfragen an /_next/* von anderen
+  // Ursprüngen als dem Starthost. Der Browser löst localhost je nach System
+  // auf 127.0.0.1 auf, und dann trifft genau das den eigenen Rechner.
+  allowedDevOrigins: ['127.0.0.1'],
   output: 'standalone',
   outputFileTracingRoot: path.join(import.meta.dirname, '../../'),
 };
