@@ -119,7 +119,8 @@
       "finance": "Finanzen",
       "members": "Mitglieder",
       "animals": "Tiere",
-      "website": "Webseite"
+      "website": "Webseite",
+      "site": "Webseite"
     },
     "users": "Nutzer",
     "roles": "Rollen",
@@ -143,6 +144,10 @@
     },
     "animals": {
       "list": "Hunde"
+    },
+    "site": {
+      "template": "Template",
+      "variables": "Variablen"
     }
   },
   "shell": {
@@ -1244,6 +1249,52 @@
       "year": "Vermittlungsjahr",
       "save": "Geschichte speichern",
       "saved": "Geschichte gespeichert."
+    }
+  },
+  "site": {
+    "form": {
+      "add": "Hinzufügen",
+      "remove": "Entfernen",
+      "moveUp": "Nach oben",
+      "moveDown": "Nach unten",
+      "preview": "Vorschau",
+      "edit": "Bearbeiten",
+      "atMost": "höchstens {max}",
+      "untranslated": "noch nicht übersetzt",
+      "chooseImage": "Bild wählen",
+      "removeImage": "Bild entfernen",
+      "empty": "noch nichts angelegt"
+    },
+    "template": {
+      "title": "Template",
+      "lastRead": "Zuletzt eingelesen: {when}",
+      "neverRead": "Noch kein Template eingelesen.",
+      "read": "Template einlesen",
+      "apply": "Übernehmen",
+      "cancel": "Abbrechen",
+      "findings": "Befunde",
+      "noFindings": "Keine Änderungen gegenüber dem eingelesenen Stand.",
+      "blocking": "Blockiert — erst aufräumen:",
+      "lossy": "Kostet Inhalt:",
+      "harmless": "Unkritisch:",
+      "localesMissing": "Das Template fordert Sprachen, die nicht eingerichtet sind: {locales}. Legen Sie sie unter Sprachen an.",
+      "read.done": "Template eingelesen.",
+      "name": "Name"
+    },
+    "variables": {
+      "title": "Variablen",
+      "save": "Speichern",
+      "saved": "Gespeichert."
+    },
+    "entries": {
+      "new": "Neu",
+      "save": "Speichern",
+      "saved": "Gespeichert.",
+      "deleted": "Eintrag gelöscht.",
+      "published": "Veröffentlicht",
+      "confirmDelete": "Diesen Eintrag löschen?",
+      "confirmDeleteBody": "Der Inhalt wird entfernt. Der Löschvorgang steht im Änderungsprotokoll.",
+      "count": "{n, plural, =0 {keine Einträge} one {ein Eintrag} other {# Einträge}}"
     }
   }
 }

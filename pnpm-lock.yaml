@@ -53,6 +53,9 @@ importers:
       '@kompass/module-animals':
         specifier: workspace:*
         version: link:../../packages/modules/animals
+      '@kompass/module-site':
+        specifier: workspace:*
+        version: link:../../packages/modules/site
       '@kompass/module-website':
         specifier: workspace:*
         version: link:../../packages/modules/website
