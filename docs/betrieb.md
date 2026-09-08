@@ -42,6 +42,29 @@ Export in Prod → Datei herunterladen → in Test unter Verwaltung → Backup i
 ## Zugriff von außerhalb
 Nicht vorgesehen. Bei Bedarf QNAP-VPN (QVPN) verwenden; die App selbst bleibt LAN-only und ohne TLS.
 
+## Bauen und Prüfen
+
+Drei Ringe, jeder prüft eine andere Schicht:
+
+| Ring | Befehl | Wogegen |
+|---|---|---|
+| Logik | `pnpm test` | Quellcode |
+| Abläufe | `pnpm --filter @kompass/app e2e` | `next dev` |
+| Verpackung | `pnpm e2e:image` | dem gebauten Image im Container |
+
+`pnpm verify` fährt alle drei plus den Image-Build und braucht rund zwei
+Minuten. **Vor jedem Push.** Der dritte Ring braucht Docker; er startet
+`kompass-local` auf Port 3200 mit einem Wegwerf-Volume unter
+`apps/kompass/.e2e-container/` und prüft damit, was nur im Container schiefgehen
+kann: gebündelter Code, `/data`, das mitgelieferte Template und die
+Modulauflösung aus dem Entrypoint.
+
+Die CI wiederholt Ring eins und zwei auf frischem Checkout und fährt Ring drei
+im `image`-Job gegen die **amd64**-Fassung, bevor sie hochgeladen wird — lokal
+baut ein Apple-Silicon-Rechner arm64, und `better-sqlite3`, `sharp` und Typst
+sind je Architektur andere Dateien. Was im Registry liegt, ist damit auf seiner
+Zielarchitektur end-to-end geprüft.
+
 ## MCP
 Endpunkt `http://<nas>:3000/mcp` (Streamable HTTP), Authentifizierung mit einem persönlichen API-Token aus dem Profil (`Authorization: Bearer akx_live_…`). Tokens wirken mit den Rechten des Nutzers; jeder Vorgang steht im Änderungsprotokoll mit Kanal „MCP".
 

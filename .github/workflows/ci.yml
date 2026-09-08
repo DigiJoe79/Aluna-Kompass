@@ -77,13 +77,47 @@ jobs:
             type=ref,event=branch
             type=semver,pattern={{version}}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+      # Erst in den lokalen Daemon laden, nicht sofort pushen: Der Ring gegen
+      # den Container ist die einzige Stelle, an der die amd64-Fassung je
+      # ausgefuehrt wird — lokal baut ein Apple-Silicon-Rechner arm64, und
+      # `better-sqlite3`, `sharp` und Typst sind je Architektur andere Dateien.
       - uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          load: true
+          tags: kompass-local
           labels: ${{ steps.meta.outputs.labels }}
           build-args: TYPST_VERSION=${{ env.TYPST_VERSION }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - uses: pnpm/action-setup@v6
+        with: { version: 11.25.0 }
+      - uses: actions/setup-node@v7
+        with: { node-version: 26, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - id: playwright-version
+        run: echo "value=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+        working-directory: apps/kompass
+      - uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.value }}
+      - run: pnpm --filter @kompass/app exec playwright install --with-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+      - run: pnpm --filter @kompass/app exec playwright install-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+      - run: pnpm e2e:image
+      - uses: actions/upload-artifact@v5
+        if: failure()
+        with: { name: playwright-report-container, path: apps/kompass/playwright-report-container, retention-days: 7 }
+      # Genau das geprüfte Bild bekommt die Namen und wird hochgeladen — kein
+      # zweiter Bau, der sich vom getesteten unterscheiden koennte.
+      - name: Push the tested image
+        run: |
+          echo "${{ steps.meta.outputs.tags }}" | while read -r tag; do
+            [ -z "$tag" ] && continue
+            docker tag kompass-local "$tag"
+            docker push "$tag"
+          done
