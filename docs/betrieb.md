@@ -53,7 +53,9 @@ Drei Ringe, jeder prüft eine andere Schicht:
 | Verpackung | `pnpm e2e:image` | dem gebauten Image im Container |
 
 `pnpm verify` fährt alle drei plus den Image-Build und braucht rund zwei
-Minuten. **Vor jedem Push.** Der dritte Ring braucht Docker; er startet
+Minuten. **Vor jedem Push.** Für ein Ausprobieren von Hand gibt es
+`pnpm dev:image` — eine stehende Installation auf Port 3300 mit bleibenden
+Daten, die sich verhält wie der Testcontainer auf dem NAS. Der dritte Ring braucht Docker; er startet
 `kompass-local` auf Port 3200 mit einem Wegwerf-Volume unter
 `apps/kompass/.e2e-container/` und prüft damit, was nur im Container schiefgehen
 kann: gebündelter Code, `/data`, das mitgelieferte Template und die
