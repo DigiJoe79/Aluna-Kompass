@@ -21,9 +21,14 @@ export function rsyncCommand(opts: { distDir: string; deploy: DeployTarget; dryR
     ? `${deploy.user}@${deploy.host}:${deploy.path.replace(/\/?$/, '/')}`
     : deploy.path.replace(/\/?$/, '/');
   const src = opts.distDir.endsWith('/') ? opts.distDir : `${opts.distDir}/`;
+  // --no-owner/--no-group: `-a` enthaelt `-og` und laesst rsync versuchen,
+  // Besitzer und Gruppe am Ziel zu setzen. Das darf nur root. Auf einem
+  // Webspace oder in einem Container gehoert das Zielverzeichnis jemand
+  // anderem, und der Lauf bricht mit „chgrp … Operation not permitted" ab —
+  // eine Webseite braucht diese Angaben ohnehin nicht.
   // --itemize-changes nur im Trockenlauf: ohne es schweigt rsync, und der
   // Verbindungstest haette kein Protokoll, aus dem der Zielinhalt hervorgeht.
-  const flags = ['-az', '--delete', '--checksum', ...(opts.dryRun ? ['--dry-run', '--itemize-changes'] : [])];
+  const flags = ['-az', '--no-owner', '--no-group', '--delete', '--checksum', ...(opts.dryRun ? ['--dry-run', '--itemize-changes'] : [])];
 
   switch (deploy.auth.kind) {
     case 'key':
