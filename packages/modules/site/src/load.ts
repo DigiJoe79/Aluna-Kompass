@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { lstat, readFile, rm, symlink } from 'node:fs/promises';
+import { lstat, mkdir, readFile, realpath, rm, symlink } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -57,6 +57,30 @@ export function resolveTemplateNodeModules(): string {
   return path.join(root, 'templates', 'verein-basis', 'node_modules');
 }
 
+/**
+ * Sorgt dafür, dass `@kompass/site-template` in einer mitgebrachten
+ * node_modules ein Link auf die Fassung von Kompass ist.
+ *
+ * pnpm legt eine `file:`-Abhängigkeit als Kopie ab. Dann liegt das Paket als
+ * TypeScript unter `node_modules`, und Node entfernt dort keine Typen
+ * („Stripping types is currently unsupported for files under node_modules").
+ * Über einen Symlink löst Node den echten Pfad auf, der ausserhalb liegt.
+ * Nebeneffekt und Absicht zugleich: Der Vertrag stammt damit immer aus der
+ * laufenden Fassung und nicht aus einer Kopie von vor drei Updates.
+ */
+async function linkContractPackage(nodeModules: string, from?: string): Promise<void> {
+  const target = resolveTemplatePackage(from);
+  const link = path.join(nodeModules, '@kompass', 'site-template');
+  try {
+    if (await realpath(link) === await realpath(target)) return;
+  } catch {
+    // fehlt oder zeigt ins Leere — in beiden Fällen neu setzen
+  }
+  await mkdir(path.dirname(link), { recursive: true });
+  await rm(link, { recursive: true, force: true });
+  await symlink(target, link, 'dir');
+}
+
 export async function ensureModuleResolution(dir: string, from?: string): Promise<void> {
   const link = path.join(dir, 'node_modules');
   const target = () => {
@@ -69,7 +93,7 @@ export async function ensureModuleResolution(dir: string, from?: string): Promis
   } catch {
     // fehlt noch
   }
-  if (existing && !existing.isSymbolicLink()) return; // eigene Installation, nicht anfassen
+  if (existing && !existing.isSymbolicLink()) return linkContractPackage(link, from); // eigene Installation: nur der Vertrag gehört uns
   if (existing) {
     // Ein Symlink aus einer früheren Fassung kann auf die falsche node_modules
     // zeigen. Das fällt erst beim Build auf („astro not installed"), und niemand

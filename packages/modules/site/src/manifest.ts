@@ -5,12 +5,18 @@ import { activeTemplate } from './service';
 
 export const SITE_PERMISSIONS = ['site.view', 'site.manage', 'site.publish'] as const;
 
-/** Je Sammlung ein Navigationseintrag mit ihrer Beschriftung, dazu „Variablen" — erst wenn ein Template eingelesen ist. */
+/**
+ * Je Sammlung ein Navigationseintrag mit ihrer Beschriftung, dazu „Variablen"
+ * und „Publizieren" — alles erst, wenn ein Template eingelesen ist. Ohne
+ * Template lehnt der Export mit `noTemplate` ab; der Eintrag führte bis dahin
+ * auf eine Seite, die nur scheitern konnte.
+ */
 const siteNavigationFor = (deps: Parameters<typeof activeTemplate>[0]): NavigationItem[] => {
   const template = activeTemplate(deps);
   if (!template) return [];
   return [
     { key: 'site.variables', href: '/site/variables', icon: 'sliders', group: 'site', permission: 'site.manage' },
+    { key: 'site.publish', href: '/site/publish', icon: 'upload', group: 'site', permission: 'site.publish' },
     ...Object.entries(template.schema.collections).map(([key, col]): NavigationItem => ({
       key: `site.c.${key}`,
       href: `/site/c/${key}`,
@@ -27,10 +33,8 @@ export const siteModule: ModuleManifest = defineModule({
   version: '0.1.0',
   permissions: SITE_PERMISSIONS,
   settings: SITE_SETTINGS,
-  navigation: [
-    { key: 'site.template', href: '/site/template', icon: 'layout-template', group: 'site', permission: 'site.manage' },
-    { key: 'site.publish', href: '/site/publish', icon: 'upload', group: 'site', permission: 'site.publish' },
-  ],
+  // Nur der Weg hinein steht immer da; alles Weitere hängt am Template.
+  navigation: [{ key: 'site.template', href: '/site/template', icon: 'layout-template', group: 'site', permission: 'site.manage' }],
   navigationFor: siteNavigationFor,
   mcpTools: SITE_MCP_TOOLS,
 });

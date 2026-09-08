@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createDeps, readSetting } from '@kompass/core';
@@ -20,6 +20,7 @@ function workspace() {
     databasePath: path.join(dir, 'data', 'kompass.db'),
     mediaPath: path.join(dir, 'media'),
     prototypeDir: proto,
+    templateDir: path.join(dir, 'data', 'site-template'),
   };
 }
 
@@ -50,6 +51,26 @@ describe('devReset', () => {
     } finally {
       deps.close();
     }
+  });
+
+  /**
+   * Im Container legt der Entrypoint das Basis-Template ins Volume. In der
+   * Entwicklung tat das niemand — dort blieb liegen, was zuletzt hineinkopiert
+   * wurde, und das Einlesen las das Template eines fremden Vereins.
+   */
+  it('sets up the base template beside the fresh database', async () => {
+    const ws = workspace();
+    await devReset({ ...ws, env: 'development' });
+    expect(existsSync(path.join(ws.templateDir, 'kompass.template.ts'))).toBe(true);
+    expect(existsSync(path.join(ws.templateDir, 'node_modules', 'astro'))).toBe(true);
+  });
+
+  it('leaves a template that is already there alone', async () => {
+    const ws = workspace();
+    mkdirSync(ws.templateDir, { recursive: true });
+    writeFileSync(path.join(ws.templateDir, 'kompass.template.ts'), '// selbst gebaut\n');
+    await devReset({ ...ws, env: 'development' });
+    expect(readFileSync(path.join(ws.templateDir, 'kompass.template.ts'), 'utf8')).toBe('// selbst gebaut\n');
   });
 
   it('discards an existing database and its media instead of importing on top', async () => {

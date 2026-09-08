@@ -1,6 +1,7 @@
 import { requirePermission } from '@kompass/core';
-import { listPublishes } from '@kompass/module-site';
+import { activeTemplate, listPublishes } from '@kompass/module-site';
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
 import { runtimeEnv } from '@/lib/deps';
@@ -12,6 +13,17 @@ export default async function PublishPage() {
   const { deps, ctx } = await requireSession();
   if (requirePermission(ctx, 'site.publish')) return <ForbiddenCard permission="site.publish" />;
   const t = await getTranslations('site.publish');
+  // Die Navigation blendet „Publizieren" ohne Template aus; über die Adresse
+  // ist die Seite trotzdem erreichbar, und jeder Lauf endete an `noTemplate`.
+  if (!activeTemplate(deps)) {
+    const tpl = await getTranslations('site.template');
+    return (
+      <>
+        <PageHeader title={t('title')} />
+        <EmptyState title={t('title')} text={tpl('neverRead')} />
+      </>
+    );
+  }
   const format = await getFormatter();
   const env = runtimeEnv().env;
   const se = siteEnv();

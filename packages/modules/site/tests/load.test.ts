@@ -1,4 +1,4 @@
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -114,5 +114,47 @@ describe('an existing module resolution', () => {
     mkdirSync(path.join(dir, 'node_modules'));
     await ensureModuleResolution(dir);
     expect(lstatSync(path.join(dir, 'node_modules')).isSymbolicLink()).toBe(false);
+  });
+});
+
+describe('a template that brings its own node_modules', () => {
+  /**
+   * Wer sein Template lokal entwickelt, hat dort ein `pnpm install` laufen und
+   * lädt den Ordner mitsamt `node_modules` hoch. pnpm legt eine
+   * `file:`-Abhängigkeit als Kopie ab — `@kompass/site-template` liegt dann als
+   * TypeScript unter `node_modules`, und Node weigert sich dort, Typen zu
+   * entfernen: „Stripping types is currently unsupported for files under
+   * node_modules". Über einen Symlink löst Node den echten Pfad auf, der
+   * ausserhalb liegt, und lädt.
+   */
+  it('replaces a copied contract package with a link to the running one', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'kompass-own-nm-'));
+    dirs.push(dir);
+    const own = path.join(dir, 'node_modules');
+    mkdirSync(path.join(own, '@kompass', 'site-template', 'src'), { recursive: true });
+    writeFileSync(path.join(own, '@kompass', 'site-template', 'package.json'), JSON.stringify({ name: '@kompass/site-template', type: 'module', exports: { '.': './src/index.ts' } }));
+    writeFileSync(path.join(own, '@kompass', 'site-template', 'src', 'index.ts'), 'export const stale: number = 1;\n');
+    writeFileSync(path.join(dir, 'kompass.template.ts'), GOOD);
+
+    await ensureModuleResolution(dir);
+
+    const linked = path.join(own, '@kompass', 'site-template');
+    expect(lstatSync(linked).isSymbolicLink()).toBe(true);
+    expect(realpathSync(linked)).toBe(realpathSync(resolveTemplatePackage()));
+    const result = await loadTemplate(dir);
+    expect(result.ok === true && result.value.definition.name === 'Probe').toBe(true);
+  });
+
+  it('keeps the rest of that node_modules untouched', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'kompass-own-nm2-'));
+    dirs.push(dir);
+    const own = path.join(dir, 'node_modules');
+    mkdirSync(path.join(own, 'astro'), { recursive: true });
+    writeFileSync(path.join(own, 'astro', 'marker.txt'), 'vom Verein installiert');
+
+    await ensureModuleResolution(dir);
+
+    expect(lstatSync(own).isSymbolicLink()).toBe(false);
+    expect(readFileSync(path.join(own, 'astro', 'marker.txt'), 'utf8')).toBe('vom Verein installiert');
   });
 });

@@ -1,11 +1,14 @@
+import { execFileSync } from 'node:child_process';
 import { rm } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createDeps, readEnv, seedDevelopment, setSetting, unwrap, type AppEnv, type CallContext } from '@kompass/core';
 import { coreDocumentTemplates, createTypstRenderer } from '@kompass/documents';
 import { animalsModule } from '@kompass/module-animals';
-import { siteModule } from '@kompass/module-site';
+import { siteModule, siteTemplateDir } from '@kompass/module-site';
 import { importPrototype } from './import-prototype';
+
+const BASE_TEMPLATE = path.resolve(import.meta.dirname, '..', 'templates', 'verein-basis');
 
 /** Liest `site.name` aus den Prototyp-Daten; null, wenn die Datei fehlt oder keinen Namen trägt. */
 async function prototypeOrganizationName(prototypeDir: string): Promise<string | null> {
@@ -25,6 +28,8 @@ export interface DevResetOptions {
   databasePath: string;
   mediaPath: string;
   prototypeDir: string;
+  /** Das Template-Verzeichnis, das in der Entwicklung dem Volume entspricht. */
+  templateDir: string;
 }
 
 /**
@@ -39,6 +44,13 @@ export async function devReset(opts: DevResetOptions) {
   for (const target of [opts.databasePath, `${opts.databasePath}-wal`, `${opts.databasePath}-shm`, opts.mediaPath]) {
     await rm(target, { recursive: true, force: true });
   }
+  // Dasselbe Skript, das der Entrypoint im Container fährt: Basis-Template
+  // hinein, wenn keins da ist, und die Modulauflösung setzen. Ohne diesen
+  // Schritt liest die Entwicklung, was zuletzt jemand hineinkopiert hat.
+  execFileSync('sh', [path.resolve(import.meta.dirname, 'seed-site-template.sh'), BASE_TEMPLATE, path.join(BASE_TEMPLATE, 'node_modules')], {
+    env: { ...process.env, SITE_TEMPLATE_DIR: opts.templateDir },
+    stdio: 'inherit',
+  });
   const deps = createDeps({
     databasePath: opts.databasePath,
     mediaPath: opts.mediaPath,
@@ -77,6 +89,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
     databasePath: process.env.DATABASE_PATH ?? path.join(root, 'apps/kompass/data/kompass.db'),
     mediaPath: process.env.MEDIA_PATH ?? path.join(root, 'apps/kompass/media'),
     prototypeDir: process.env.PROTOTYPE_DIR ?? '/Users/joe/Development/Aluna Tierhilfe e.V./Webseite/aluna-static',
+    templateDir: siteTemplateDir({ ...process.env, DATABASE_PATH: process.env.DATABASE_PATH ?? path.join(root, 'apps/kompass/data/kompass.db') }),
   })
     .then(({ adminEmail, adminPassword, counts }) => {
       console.log('Zurückgesetzt und importiert:', counts);
