@@ -21,14 +21,16 @@ export function rsyncCommand(opts: { distDir: string; deploy: DeployTarget; dryR
     ? `${deploy.user}@${deploy.host}:${deploy.path.replace(/\/?$/, '/')}`
     : deploy.path.replace(/\/?$/, '/');
   const src = opts.distDir.endsWith('/') ? opts.distDir : `${opts.distDir}/`;
-  // --no-owner/--no-group: `-a` enthaelt `-og` und laesst rsync versuchen,
-  // Besitzer und Gruppe am Ziel zu setzen. Das darf nur root. Auf einem
-  // Webspace oder in einem Container gehoert das Zielverzeichnis jemand
-  // anderem, und der Lauf bricht mit „chgrp … Operation not permitted" ab —
-  // eine Webseite braucht diese Angaben ohnehin nicht.
+  // --no-owner/--no-group/--no-perms: `-a` enthaelt `-ogp` und laesst rsync
+  // versuchen, Besitzer, Gruppe und Rechte am Zielverzeichnis selbst zu setzen.
+  // Gehoert es jemand anderem — auf einem Webspace der Regelfall —, bricht der
+  // Lauf mit „failed to set permissions on \"…/.\": Operation not permitted" ab.
+  // Eine ausgelieferte Webseite braucht nichts davon: Die Dateien bekommen die
+  // Vorgaben des Ziels (644 fuer Dateien, 755 fuer Verzeichnisse), und genau
+  // die will ein Webserver. Zeiten und Symlinks bleiben erhalten.
   // --itemize-changes nur im Trockenlauf: ohne es schweigt rsync, und der
   // Verbindungstest haette kein Protokoll, aus dem der Zielinhalt hervorgeht.
-  const flags = ['-az', '--no-owner', '--no-group', '--delete', '--checksum', ...(opts.dryRun ? ['--dry-run', '--itemize-changes'] : [])];
+  const flags = ['-az', '--no-owner', '--no-group', '--no-perms', '--delete', '--checksum', ...(opts.dryRun ? ['--dry-run', '--itemize-changes'] : [])];
 
   switch (deploy.auth.kind) {
     case 'key':
