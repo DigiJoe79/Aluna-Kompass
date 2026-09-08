@@ -93,6 +93,14 @@ der Entrypoint das mitgelieferte Basis-Template dort ab; ein vorhandenes bleibt
 unberührt, auch bei einem Update. Der Verein ersetzt es durch sein eigenes und
 liest es unter Webseite → Template ein.
 
+**Startinhalte.** Bringt ein Template ein Verzeichnis `seed/` mit
+(`seed/content.json` plus `seed/assets/`), erscheint unter Webseite → Template
+der Knopf „Startinhalte" — einmalig, solange die Webseite leer ist. Er legt die
+Variablen und Sammlungseinträge des Seeds an und lädt dessen Dateien hoch.
+Danach ist die Datenbank die Quelle; ein zweiter Lauf ist gesperrt
+(`site.seedAppliedAt`). Für einen erneuten Lauf braucht es eine frische
+Datenbank. Das mitgelieferte Basis-Template hat kein `seed/`.
+
 Dieses Verzeichnis ist eine **Vertrauensgrenze**: Der Build führt den Code des
 Templates aus, mit den Rechten des Containers. Wer dorthin schreiben darf, kann
 im Container Code ausführen. Es gehört deshalb `node` (UID 1000) und niemandem

@@ -36,3 +36,12 @@ pnpm --filter verein-basis test    # Build-Test
 
 Kompass liefert den Inhalt als `content.json` und die Bildvarianten als
 `images.json` in `SITE_CONTENT_DIR`; `fixtures/example/` bildet diese Form nach.
+
+## Startinhalte (optional)
+
+Ein Template kann ein Verzeichnis `seed/` mitbringen — `seed/content.json` in
+der Form des Kompass-Exports (`variables`, `collections`, `assets`) und die
+Dateien unter `seed/assets/`. Kompass zeigt dann unter Webseite → Template den
+Knopf „Startinhalte", der sie **einmalig** in eine leere Webseite übernimmt.
+Dieses Basis-Template hat bewusst kein `seed/`: ein neuer Verein startet mit
+leerer Webseite.

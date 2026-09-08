@@ -25,3 +25,15 @@ test('reads a template, fills a variable and keeps a collection entry', async ({
   await expect(page).toHaveURL('/site/c/news');
   await expect(page.getByRole('table')).toContainText('Erste Notiz');
 });
+
+test('shows no starting-content card when the template has no seed/', async ({ page }) => {
+  await resetDatabase(page, 'seeded');
+  await loginAsAdmin(page);
+  await page.goto('/site/template');
+  await page.getByRole('button', { name: 'Template einlesen' }).click();
+  await page.getByRole('button', { name: 'Übernehmen' }).click();
+  await expect(page.getByRole('status')).toContainText('eingelesen');
+  await page.reload();
+  await expect(page.getByText('Das Template bringt Startinhalte mit')).toHaveCount(0);
+  await expect(page.getByText('Startinhalte übernommen am')).toHaveCount(0);
+});
