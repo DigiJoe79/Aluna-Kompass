@@ -1,4 +1,5 @@
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { conflict, invalid, isoNow, ok, requirePermission, type CallContext, type Deps, type Result } from '@kompass/core';
@@ -63,6 +64,47 @@ export class StepTimeoutError extends Error {
   }
 }
 
+/** Steht im Protokoll, wenn ein Publish den Vorschau-Build uebernommen hat. */
+export const REUSED_PREVIEW = 'Vorschau uebernommen, nicht neu gebaut.';
+
+/** Neueste Aenderung im Template — ohne node_modules und Baureste. */
+async function newestTemplateChange(dir: string): Promise<number> {
+  const skip = new Set(['node_modules', '.astro', 'dist', '.git']);
+  let newest = 0;
+  const walk = async (current: string): Promise<void> => {
+    for (const entry of await readdir(current, { withFileTypes: true })) {
+      if (skip.has(entry.name)) continue;
+      const full = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        await walk(full);
+        continue;
+      }
+      const { mtimeMs } = await stat(full);
+      if (mtimeMs > newest) newest = mtimeMs;
+    }
+  };
+  await walk(dir);
+  return newest;
+}
+
+interface PreviewStamp {
+  contentHash: string;
+  publicUrl: string;
+  staging: boolean;
+  /** Stand des Templates zum Bauzeitpunkt; ein bearbeitetes Template macht die Vorschau ungueltig. */
+  templateChangedAt: number;
+}
+
+const stampFile = (env: SiteEnv) => path.join(env.cacheDir, 'preview-build.json');
+
+async function readStamp(env: SiteEnv): Promise<PreviewStamp | null> {
+  try {
+    return JSON.parse(await readFile(stampFile(env), 'utf8')) as PreviewStamp;
+  } catch {
+    return null;
+  }
+}
+
 async function exportAndBuild(
   deps: Deps,
   ctx: CallContext,
@@ -80,11 +122,41 @@ async function exportAndBuild(
     await step('Bildvarianten', 600_000, () =>
       prepareImageVariants({ jobDir: job, assets: exported.value.assets, cacheDir: env.cacheDir }),
     );
-    await rm(outDir, { recursive: true, force: true });
-    await mkdir(outDir, { recursive: true });
-    const { log } = await step('Site bauen', 600_000, () =>
-      buildSite({ siteDir: env.templateDir, contentDir: job, outDir, publicUrl, staging: env.staging }),
-    );
+    const stamp: PreviewStamp = {
+      contentHash: exported.value.contentHash,
+      publicUrl,
+      staging: env.staging,
+      templateChangedAt: await newestTemplateChange(env.templateDir),
+    };
+    const toPreview = path.resolve(outDir) === path.resolve(env.previewDir);
+    const lastBuild = await readStamp(env);
+    // Der uebliche Ablauf ist Vorschau ansehen, dann publizieren — zweimal
+    // dasselbe zu bauen kostet auf dem NAS Minuten. Uebernommen wird nur, wenn
+    // Inhalt, Zieladresse, Staging-Schalter *und* der Stand des Templates
+    // unveraendert sind; Letzteres, weil ein bearbeitetes `.astro` den
+    // Inhalts-Hash nicht beruehrt.
+    const reusable =
+      !toPreview &&
+      lastBuild !== null &&
+      lastBuild.contentHash === stamp.contentHash &&
+      lastBuild.publicUrl === stamp.publicUrl &&
+      lastBuild.staging === stamp.staging &&
+      lastBuild.templateChangedAt === stamp.templateChangedAt &&
+      existsSync(path.join(env.previewDir, 'index.html'));
+
+    let log: string;
+    if (reusable) {
+      await mkdir(outDir, { recursive: true });
+      await copyTree(env.previewDir, outDir);
+      log = `${REUSED_PREVIEW}\n`;
+    } else {
+      await rm(outDir, { recursive: true, force: true });
+      await mkdir(outDir, { recursive: true });
+      ({ log } = await step('Site bauen', 600_000, () =>
+        buildSite({ siteDir: env.templateDir, contentDir: job, outDir, publicUrl, staging: env.staging }),
+      ));
+      if (toPreview) await writeFile(stampFile(env), JSON.stringify(stamp), 'utf8');
+    }
     await step('Bilder uebernehmen', 120_000, async () => {
       try {
         await copyTree(path.join(job, 'images'), path.join(outDir, 'images'));

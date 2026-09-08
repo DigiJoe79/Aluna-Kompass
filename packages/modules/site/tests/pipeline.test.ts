@@ -13,6 +13,7 @@ import {
   hashTree,
   readSiteEnv,
   rsyncCommand,
+  REUSED_PREVIEW,
   runPreview,
   runPublish,
   setEntryPublished,
@@ -164,6 +165,42 @@ describe('preview and publish against templates/verein-basis', () => {
     // 8. Zweiter Preview-Lauf: kein Diff gegenüber dem publizierten Stand
     const again = unwrap(await runPreview(deps, publishCtx, env));
     expect(again.diff).toEqual({ changed: [], added: [], removed: [] });
+  }, 240_000);
+
+  /**
+   * Vorschau ansehen, dann publizieren ist der normale Ablauf — und er baute
+   * die Seite zweimal. Auf dem Läufer kostete allein dieser Test drei Minuten,
+   * auf dem NAS wartet dabei ein Mensch.
+   */
+  it('publishes the preview it just built instead of building a second time', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, siteModule] });
+    insertUser(deps, { id: 'USER-TEST' });
+    const manageCtx = ctxWith(['site.manage', 'site.view', 'media.upload']);
+    const publishCtx = ctxWith(['site.publish', 'site.view']);
+    unwrap(await applyTemplateSync(deps, manageCtx, { dir: TEMPLATE_DIR, confirm: true }));
+    unwrap(await setValues(deps, manageCtx, { values: { claim: { de: 'Erster Stand' } } }));
+
+    const target = tmp();
+    const env = {
+      publicUrl: 'https://staging.example.org',
+      staging: true,
+      deploy: { host: '', user: '', path: target, auth: { kind: 'none' as const } },
+      templateDir: TEMPLATE_DIR,
+      cacheDir: tmp(),
+      previewDir: tmp(),
+    };
+
+    unwrap(await runPreview(deps, publishCtx, env));
+    const published = unwrap(await runPublish(deps, publishCtx, env, { confirm: true }));
+    expect(published.record.log).toContain(REUSED_PREVIEW);
+    expect(readFileSync(path.join(target, 'index.html'), 'utf8')).toContain('Erster Stand');
+
+    // Nach einer Änderung ist die Vorschau nicht mehr der Stand, der publiziert
+    // werden soll — dann muss neu gebaut werden.
+    unwrap(await setValues(deps, manageCtx, { values: { claim: { de: 'Zweiter Stand' } } }));
+    const again = unwrap(await runPublish(deps, publishCtx, env, { confirm: true }));
+    expect(again.record.log).not.toContain(REUSED_PREVIEW);
+    expect(readFileSync(path.join(target, 'index.html'), 'utf8')).toContain('Zweiter Stand');
   }, 240_000);
 
   it('refuses to publish without confirmation, without a target, in development, or with blocked terms', async () => {
