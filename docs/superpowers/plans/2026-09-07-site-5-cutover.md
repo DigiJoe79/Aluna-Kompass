@@ -297,3 +297,38 @@ dieses Tasks und zusätzlich unter den Voraussetzungen.
 **Typkonsistenz:** `migrateWebsiteToSite(deps, opts)` liefert `MigrationReport`
 mit einer Zeile je Quelltabelle; der Bericht wird in Task 2 Step 1 geprüft und in
 Step 4 gelesen.
+
+---
+
+## Nachtrag zur Ausführung (2026-09-08)
+
+Drei Dinge standen so nicht im Plan und mussten beim Ausführen entschieden
+werden. Sie stehen hier, weil sie den Zuschnitt des Cutovers verändert haben.
+
+**1. Die Projekte hingen an fremden Rechten.** `packages/core/src/projects/service.ts`
+prüfte `website.view` und `website.manage` — Rechte, die das Modul mitbrachte.
+Mit Task 4 wären sie aus der Registry verschwunden und niemand hätte Projekte
+mehr pflegen können. Sie bekommen deshalb eigene Kernrechte (`projects.view`,
+`projects.manage`), sechs MCP-Werkzeuge in `@kompass/mcp`, eine eigene
+Navigationsgruppe (`nav.groups.core`), die Oberfläche unter `/projects` statt
+`/website/projects` und eine Datenmigration, die die Rechte bestehender Rollen
+überträgt. Das ist der Zwischenschritt zu dem eigenen Kernmodul, das die
+Entscheidung vom 2026-09-07 ohnehin vorsieht.
+
+**2. `pnpm dev:reset` hing am Webseiten-Modul.** `scripts/import-prototype.ts`
+schrieb Seiten, Artikel, Team, FAQ und Site-Fakten in die `website_*`-Tabellen.
+Es führt jetzt nur noch Tiere und Projekte; seine Tests sind ins Tiermodul
+gezogen, weil sie sonst mit `packages/modules/website/tests/` verschwunden
+wären. Der Entwicklungsstand danach entspricht dem, was ein neuer Verein
+vorfindet: Bestand gefüllt, `site` leer.
+
+**3. Task 3 Step 3 stand eine Stufe zu früh.** Der `grep` nach Aluna-Begriffen
+kann erst grün werden, wenn `website` weg ist — bis dahin führt das Modul
+`website.shelterDogCount`. Er ist jetzt ein Test
+(`apps/kompass/tests/no-association-content.test.ts`), und seine Wortliste ist
+kürzer als geplant: `aluna` bleibt erlaubt, so heisst das Produkt; `shelter`
+gehört legitim ins Tiermodul; `betterplace` steckt im Kern und ist deshalb als
+Backlog-Punkt 6 vermerkt statt hier stillschweigend geduldet.
+
+**Nicht geprüft:** `docker build` — in dieser Umgebung gibt es kein Docker.
+Typecheck, alle Tests und die 46 E2E-Fälle sind grün.
