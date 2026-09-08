@@ -301,7 +301,7 @@ describe('rsyncCommand', () => {
   it('writes into a local directory without ssh', () => {
     const c = rsyncCommand({ distDir: '/build', deploy: local });
     expect(c.command).toBe('rsync');
-    expect(c.args).toEqual(['-az', '--no-owner', '--no-group', '--no-perms', '--delete', '--checksum', '/build/', '/ziel/']);
+    expect(c.args).toEqual(['-az', '--no-owner', '--no-group', '--no-perms', '--omit-dir-times', '--delete', '--checksum', '/build/', '/ziel/']);
   });
 
   it('uses the key file and refuses to prompt', () => {
@@ -312,6 +312,7 @@ describe('rsyncCommand', () => {
       '--no-owner',
       '--no-group',
       '--no-perms',
+      '--omit-dir-times',
       '--delete',
       '--checksum',
       '-e',
@@ -332,6 +333,7 @@ describe('rsyncCommand', () => {
       '--no-owner',
       '--no-group',
       '--no-perms',
+      '--omit-dir-times',
       '--delete',
       '--checksum',
       '-e',
@@ -343,6 +345,6 @@ describe('rsyncCommand', () => {
 
   it('adds dry-run and itemize-changes flags when requested', () => {
     const c = rsyncCommand({ distDir: '/build', deploy: local, dryRun: true });
-    expect(c.args).toEqual(['-az', '--no-owner', '--no-group', '--no-perms', '--delete', '--checksum', '--dry-run', '--itemize-changes', '/build/', '/ziel/']);
+    expect(c.args).toEqual(['-az', '--no-owner', '--no-group', '--no-perms', '--omit-dir-times', '--delete', '--checksum', '--dry-run', '--itemize-changes', '/build/', '/ziel/']);
   });
 });
