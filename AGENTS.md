@@ -38,16 +38,16 @@ Aluna Kompass ist ein Open-Source-Vereinsverwaltungstool für gemeinnützige Ver
 - `docker build -t kompass-local .` — lokales Image bauen (Zielplattform amd64; unter Apple Silicon `--platform linux/amd64`)
 - `pnpm --filter @kompass/core db:generate` — Migration aus Schema erzeugen
 - `pnpm --filter @kompass/core seed` — Entwicklungsdaten (nur `APP_ENV=development`)
-- `pnpm --filter @kompass/site dev` — Site mit Fixture unter `http://localhost:4321`
-- `pnpm --filter @kompass/site test` — Tests der statischen Site
-- `pnpm import:prototype` — Einmalige Datenübernahme aus dem Prototyp
+- `pnpm --filter verein-basis dev` — mitgeliefertes Basis-Template mit Fixture unter `http://localhost:4321`
+- `pnpm --filter verein-basis test` — Tests des Basis-Templates
+- `pnpm import:prototype` — Einmalige Übernahme der Tiere und Projekte aus dem Prototyp
 - `pnpm --filter @kompass/app mcp:check <url> [token]` — MCP-Endpunkt einer laufenden Instanz prüfen
-- `pnpm dev:reset` — Entwicklungsdatenbank verwerfen und mit Seed **und** Prototyp-Inhalten neu aufbauen (nur `APP_ENV=development`; Prototyp-Pfad über `PROTOTYPE_DIR`)
+- `pnpm dev:reset` — Entwicklungsdatenbank verwerfen und mit Seed **und** den Tieren und Projekten des Prototyps neu aufbauen (nur `APP_ENV=development`; Prototyp-Pfad über `PROTOTYPE_DIR`)
 - Betrieb: `docs/betrieb.md` (NAS-Deployment, Backups, Updates); Compose-Vorlagen `docker-compose.test.yml` und `docker-compose.prod.yml`, CI `.github/workflows/ci.yml`
 
 ## Quellen
 
-- Specs: `docs/superpowers/specs/` (Fundament: `2026-09-05-fundament-design.md`)
+- Specs: `docs/superpowers/specs/` (Fundament: `2026-09-05-fundament-design.md`; Webseite als Template: `2026-09-07-site-template-design.md`)
 - Pläne: `docs/superpowers/plans/`
 - Backlog: `docs/backlog.md` (bewusst zurückgestellte Punkte mit Begründung)
 - Design-Referenz Stufe 1: `docs/design/fundament/design_handoff_aluna_kompass_fundament/README.md`

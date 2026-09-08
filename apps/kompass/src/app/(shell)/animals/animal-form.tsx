@@ -21,7 +21,7 @@ import { StoryForm } from './story-form';
 
 export function AnimalForm({ animal, locales }: { animal: AnimalRecord | null; locales: string[] }) {
   const t = useTranslations('animals.form');
-  const c = useTranslations('website.common');
+  const c = useTranslations('content');
   const [state, action] = useActionState(saveAnimalAction, idleState);
   const errors = state.status === 'error' ? state.fieldErrors : {};
   useEffect(() => { if (state.status === 'success') toast.success(state.message ?? ''); else if (state.status === 'error' && Object.keys(errors).length === 0) toast.error(state.message); }, [state, errors]);

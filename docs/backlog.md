@@ -50,32 +50,39 @@ Stufe 3 Finanzfelder beziehungsweise ab Stufe 4 Bestandsbuch und
 
 ## 4. Platzhalterbilder als WebP
 
-**Was:** Die fünf Platzhalter in `apps/site/public/images/` als WebP
+**Was:** Die Platzhalter in `templates/verein-basis/public/images/` als WebP
 ausliefern.
 
-**Warum:** Sie machen 5,6 MB von 8,3 MB Seitengewicht aus,
-`placeholder-hund.png` allein 2,3 MB und liegt auf fast jeder Seite. Die
+**Warum:** Sie machen den grössten Teil des Seitengewichts aus. Die
 Inhaltsbilder wandelt die Pipeline bereits um, an den statischen Dateien geht
 sie vorbei.
 
-**Einordnung:** Erledigt sich teilweise von selbst, sobald echte Fotos die
-Platzhalter verdrängen.
+**Einordnung:** Erledigt sich für einen Verein von selbst, sobald echte Fotos
+die Platzhalter verdrängen — für das mitgelieferte Template aber nicht.
 
 ## 5. Browsertest bei Handybreite
 
 **Was:** Ein Playwright-Lauf gegen die gebaute Site bei 390 px.
 
 **Warum:** Dass unterhalb von 1023 px der Sprachumschalter fehlte, fiel beim
-Lesen des Stylesheets auf, nicht durch einen Test. `apps/site/tests/` enthält
-keine Viewport-Prüfung, und die Kompass-E2E deckt die Site nicht ab.
+Lesen des Stylesheets auf, nicht durch einen Test. `templates/verein-basis/tests/`
+enthält keine Viewport-Prüfung, und die Kompass-E2E deckt die gebaute Site
+nicht ab.
 
-## 6. Übersetzungen der Webseite
+## 6. Betterplace steckt im Kern
 
-**Was:** Die englischen Felder füllen; der Import setzt sie leer.
+**Was:** `projects.betterplaceProjectId` ist eine Spalte der Kerntabelle
+`projects`, mit eigenem Feld in der Oberfläche und im veröffentlichten Blick.
 
-**Warum:** Der `/en/`-Baum wird gebaut, indexiert und zeigt durchgehend
-deutschen Text — `pick()` fällt zurück und markiert das mit `data-fallback`,
-was kein Stylesheet auswertet, also für Besucher unsichtbar bleibt.
+**Warum:** Eine bestimmte Spendenplattform gehört nicht in den generischen
+Kern (Prinzip 1). Ein Modellbauverein bekommt ein Pflichtfeld für etwas, das
+er nicht benutzt. Gefunden beim Cutover am 2026-09-08, als der Test gegen
+vereinsspezifische Inhalte gebaut wurde; `betterplace` musste dort von der
+Liste genommen werden, weil der Kern es selbst führt.
 
-**Wann:** Nach der Abnahme der Seite, vor dem Go-live. Entscheidung vom
-2026-09-06: erst wenn die Seite inhaltlich steht.
+**Zuschnitt:** Entweder eine allgemeine Liste externer Verweise je Projekt
+(Label plus URL) oder ein Feld, das das Template deklariert. Beides braucht
+eine Migration und berührt den veröffentlichten Blick.
+
+**Wann:** Wenn Projekte ihr eigenes Kernmodul bekommen — die Entscheidung vom
+2026-09-07 sieht das ohnehin vor.

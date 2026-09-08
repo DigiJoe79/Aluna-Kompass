@@ -10,14 +10,12 @@ FROM base AS deps
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY apps/kompass/package.json apps/kompass/
-COPY apps/site/package.json apps/site/
 COPY packages/core/package.json packages/core/
 COPY packages/documents/package.json packages/documents/
 COPY packages/markdown/package.json packages/markdown/
 COPY packages/mcp/package.json packages/mcp/
 COPY packages/site-template/package.json packages/site-template/
 COPY packages/modules/animals/package.json packages/modules/animals/
-COPY packages/modules/website/package.json packages/modules/website/
 COPY packages/modules/site/package.json packages/modules/site/
 COPY templates/verein-basis/package.json templates/verein-basis/
 RUN pnpm install --frozen-lockfile
@@ -42,7 +40,6 @@ ENV NODE_ENV=production \
     PORT=3000 \
     DATABASE_PATH=/data/kompass.db \
     MEDIA_PATH=/media \
-    SITE_DIR=/app/apps/site \
     SITE_CACHE_DIR=/data/site-cache \
     SITE_PREVIEW_DIR=/data/site-preview \
     KOMPASS_MIGRATIONS_DIR=/app/packages/core/src/db/migrations \
@@ -51,7 +48,6 @@ ENV NODE_ENV=production \
 WORKDIR /app
 COPY --from=build --chown=node:node /app/apps/kompass/.next/standalone ./
 COPY --from=build --chown=node:node /app/apps/kompass/.next/static ./apps/kompass/.next/static
-COPY --from=build --chown=node:node /app/apps/site ./apps/site
 # Das mitgelieferte Basis-Template und das Paket, das seine Deklaration liest.
 # Der Entrypoint kopiert das Template beim ersten Start ins Volume.
 COPY --from=build --chown=node:node /app/templates/verein-basis ./templates/verein-basis

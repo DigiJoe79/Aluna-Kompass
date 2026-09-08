@@ -3,12 +3,12 @@ import { renderMarkdown } from '../src';
 
 describe('renderMarkdown', () => {
   it('renders paragraphs, headings with emphasis, lists and links', async () => {
-    const html = await renderMarkdown('# Jeder Hund verdient ein *Zuhause.*\n\nErster Absatz mit **fett**.\n\n- eins\n- zwei\n\n[Satzung](/satzung/) und [extern](https://hundeblicke.net)');
+    const html = await renderMarkdown('# Jeder Hund verdient ein *Zuhause.*\n\nErster Absatz mit **fett**.\n\n- eins\n- zwei\n\n[Satzung](/satzung/) und [extern](https://example.org)');
     expect(html).toContain('<h1>Jeder Hund verdient ein <em>Zuhause.</em></h1>');
     expect(html).toContain('<strong>fett</strong>');
     expect(html).toContain('<ul>');
     expect(html).toContain('<a href="/satzung/">Satzung</a>');
-    expect(html).toContain('<a href="https://hundeblicke.net" rel="noopener">extern</a>');
+    expect(html).toContain('<a href="https://example.org" rel="noopener">extern</a>');
   });
 
   it('turns blockquotes into note boxes', async () => {

@@ -4,10 +4,10 @@ import { useTranslations } from 'next-intl';
 import { useRef, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { uploadMediaAction } from '@/app/(shell)/website/media-actions';
+import { uploadMediaAction } from '@/app/(shell)/media-actions';
 
 export function MediaPicker({ name, value, label, accept = 'image/png,image/jpeg,image/webp,image/svg+xml' }: { name: string; value: string | null; label: string; accept?: string }) {
-  const t = useTranslations('website.common');
+  const t = useTranslations('content');
   const [assetId, setAssetId] = useState<string | null>(value);
   const [pending, start] = useTransition();
   const input = useRef<HTMLInputElement>(null);

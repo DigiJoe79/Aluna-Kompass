@@ -5,7 +5,7 @@ import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 const setup = async () => {
   const deps = createTestDeps({ manifests: [coreModule] });
   insertUser(deps, { id: 'USER-TEST' });
-  const ctx = ctxWith(['website.manage', 'website.view']);
+  const ctx = ctxWith(['projects.manage', 'projects.view']);
   const a = unwrap(await createProject(deps, ctx, { slug: 'hof', name: { de: 'Der Hof' }, type: 'ongoing', summary: { de: 'kurz' }, body: { de: 'lang' } }));
   unwrap(await createProject(deps, ctx, { slug: 'still', name: { de: 'Stiller' }, type: 'shortTerm', summary: { de: '' }, body: { de: '' } }));
   unwrap(await setProjectPublished(deps, ctx, { id: a.id, isPublished: true }));

@@ -1,4 +1,0 @@
-# Eigene Fehlerseite für den englischen Baum. Apache wertet die .htaccess des
-# jeweiligen Verzeichnisses aus. Astro legt diese Seite als Verzeichnis ab,
-# deshalb der vollständige Pfad statt /en/404.html.
-ErrorDocument 404 /en/404/index.html

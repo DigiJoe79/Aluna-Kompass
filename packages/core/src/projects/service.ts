@@ -53,7 +53,7 @@ function assetExists(db: DbOrTx, id: string | null): boolean {
 }
 
 export async function createProject(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ProjectRecord>> {
-  const denied = requirePermission(ctx, 'website.manage');
+  const denied = requirePermission(ctx, 'projects.manage');
   if (denied) return denied;
   const parsed = validate(deps, projectCreateSchema, input);
   if (!parsed.ok) return parsed;
@@ -72,7 +72,7 @@ export async function createProject(deps: Deps, ctx: CallContext, input: unknown
 }
 
 export async function updateProject(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ProjectRecord>> {
-  const denied = requirePermission(ctx, 'website.manage');
+  const denied = requirePermission(ctx, 'projects.manage');
   if (denied) return denied;
   const parsed = validate(deps, projectUpdateSchema, input);
   if (!parsed.ok) return parsed;
@@ -92,7 +92,7 @@ export async function updateProject(deps: Deps, ctx: CallContext, input: unknown
 const publishSchema = z.object({ id: z.string().min(1), isPublished: z.boolean() });
 
 export async function setProjectPublished(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ProjectRecord>> {
-  const denied = requirePermission(ctx, 'website.manage');
+  const denied = requirePermission(ctx, 'projects.manage');
   if (denied) return denied;
   const parsed = validate(deps, publishSchema, input);
   if (!parsed.ok) return parsed;
@@ -109,7 +109,7 @@ export async function setProjectPublished(deps: Deps, ctx: CallContext, input: u
 const reorderSchema = z.object({ ids: z.array(z.string().min(1)).min(1) });
 
 export async function reorderProjects(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<void>> {
-  const denied = requirePermission(ctx, 'website.manage');
+  const denied = requirePermission(ctx, 'projects.manage');
   if (denied) return denied;
   const parsed = validate(deps, reorderSchema, input);
   if (!parsed.ok) return parsed;
@@ -121,13 +121,13 @@ export async function reorderProjects(deps: Deps, ctx: CallContext, input: unkno
 }
 
 export async function listProjects(deps: Deps, ctx: CallContext): Promise<Result<ProjectRecord[]>> {
-  const denied = requirePermission(ctx, 'website.view');
+  const denied = requirePermission(ctx, 'projects.view');
   if (denied) return denied;
   return ok(deps.db.select().from(projects).orderBy(asc(projects.sortOrder)).all());
 }
 
 export async function getProject(deps: Deps, ctx: CallContext, id: string): Promise<Result<ProjectRecord>> {
-  const denied = requirePermission(ctx, 'website.view');
+  const denied = requirePermission(ctx, 'projects.view');
   if (denied) return denied;
   const record = load(deps.db, id);
   return record ? ok(record) : notFound('project', id);

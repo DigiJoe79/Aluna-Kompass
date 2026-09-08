@@ -34,7 +34,7 @@ export async function saveAnimalAction(_prev: ActionState, formData: FormData): 
   revalidatePath('/animals');
   if (!result.ok) return toActionState(result, t);
   if (!id) redirect(`/animals/${result.value.id}`);
-  return toActionState(result, t, t('website.common.saved'));
+  return toActionState(result, t, t('content.saved'));
 }
 
 export async function setAnimalStatusAction(id: string, status: string, adoptedYear?: number): Promise<ActionState> {
@@ -57,7 +57,7 @@ export async function uploadAnimalPhotoAction(formData: FormData): Promise<Actio
   const t = await getTranslations();
   const { deps, ctx } = await requireSession();
   const file = formData.get('file');
-  if (!(file instanceof File) || file.size === 0) return { status: 'error', message: t('website.common.noFile'), fieldErrors: {} };
+  if (!(file instanceof File) || file.size === 0) return { status: 'error', message: t('content.noFile'), fieldErrors: {} };
   const result = await storeMediaAsset(deps, ctx, { originalName: file.name, bytes: new Uint8Array(await file.arrayBuffer()), declaredMimeType: file.type });
   return toActionState(result, t);
 }

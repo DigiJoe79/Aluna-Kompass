@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import type { ActionState } from '@/lib/actions';
 
 export function ReorderButtons({ ids, index, action }: { ids: string[]; index: number; action: (ids: string[]) => Promise<ActionState> }) {
-  const t = useTranslations('website.common');
+  const t = useTranslations('content');
   const [pending, start] = useTransition();
   const move = (delta: number) => {
     const next = [...ids];

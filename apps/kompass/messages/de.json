@@ -35,6 +35,28 @@
     "lastSaved": "zuletzt gespeichert am {date} von {name}",
     "audited": "Wird protokolliert."
   },
+  "content": {
+    "preview": "Vorschau",
+    "previewEmpty": "Noch kein Text.",
+    "untranslated": "unübersetzt",
+    "published": "Veröffentlicht",
+    "unpublished": "Nicht veröffentlicht",
+    "moveUp": "Nach oben",
+    "moveDown": "Nach unten",
+    "chooseFile": "Datei wählen",
+    "removeImage": "Bild entfernen",
+    "noFile": "Bitte eine Datei auswählen.",
+    "gaps": "{count, plural, =0 {Alle Übersetzungen vorhanden} one {# Übersetzung offen} other {# Übersetzungen offen}}",
+    "moduleInactiveTitle": "Modul Webseite ist nicht aktiv",
+    "moduleInactiveText": "Aktivieren Sie das Modul unter Verwaltung → Module. Vorhandene Inhalte bleiben erhalten.",
+    "openModules": "Module öffnen",
+    "save": "Speichern",
+    "saved": "Gespeichert.",
+    "create": "Anlegen",
+    "back": "Zurück zur Liste",
+    "slug": "Slug (URL-Teil)",
+    "slugHint": "Kleinbuchstaben, Ziffern, Bindestrich. Sprachneutral."
+  },
   "errors": {
     "forbidden": "Dafür fehlt Ihrer Rolle das Recht {permission}.",
     "validation": "Bitte prüfen Sie die markierten Felder.",
@@ -119,8 +141,8 @@
       "finance": "Finanzen",
       "members": "Mitglieder",
       "animals": "Tiere",
-      "website": "Webseite",
-      "site": "Webseite"
+      "site": "Webseite",
+      "core": "Verein"
     },
     "users": "Nutzer",
     "roles": "Rollen",
@@ -132,15 +154,6 @@
     "documents": "Dokumente",
     "backup": "Backup",
     "logoAlt": "Vereinslogo",
-    "website": {
-      "pages": "Seiten",
-      "articles": "Artikel",
-      "team": "Team",
-      "faqs": "FAQ",
-      "projects": "Projekte",
-      "downloads": "Downloads",
-      "facts": "Site-Fakten"
-    },
     "animals": {
       "list": "Hunde"
     },
@@ -148,7 +161,8 @@
       "template": "Template",
       "variables": "Variablen",
       "publish": "Publizieren"
-    }
+    },
+    "projects": "Projekte"
   },
   "shell": {
     "envBanner": {
@@ -351,12 +365,12 @@
       "core": {
         "admin": "Kern — Verwaltung",
         "accountability": "Kern — Rechenschaft",
-        "data": "Kern — Erzeugen und Daten"
+        "data": "Kern — Erzeugen und Daten",
+        "projects": "Kern — Projekte"
       },
       "finance": "Finanzen",
       "members": "Mitglieder",
       "animals": "Tiere",
-      "website": "Webseite",
       "site": "Webseite"
     },
     "keys": {
@@ -416,16 +430,6 @@
           "description": "Bestand überschreiben. Nur für die Administration sinnvoll."
         }
       },
-      "website": {
-        "view": {
-          "label": "Webseite ansehen",
-          "description": "Webseiten-Inhalte, Artikel, Team und Downloads einsehen."
-        },
-        "manage": {
-          "label": "Webseite verwalten",
-          "description": "Seiten, Artikel, Team, FAQ, Downloads und Site-Fakten bearbeiten."
-        }
-      },
       "site": {
         "view": {
           "label": "Webseite ansehen",
@@ -448,6 +452,16 @@
         "manage": {
           "label": "Tiere verwalten",
           "description": "Tierprofile anlegen, bearbeiten, Fotos zuordnen und Status ändern."
+        }
+      },
+      "projects": {
+        "view": {
+          "label": "Projekte ansehen",
+          "description": "Projekte des Vereins lesen."
+        },
+        "manage": {
+          "label": "Projekte verwalten",
+          "description": "Projekte anlegen, bearbeiten, sortieren und veröffentlichen."
         }
       }
     }
@@ -865,233 +879,43 @@
       "noAbort": "Fenster nicht schließen. Ab hier lässt sich der Vorgang nicht mehr abbrechen; danach werden alle Sitzungen abgemeldet."
     }
   },
-  "website": {
-    "common": {
-      "preview": "Vorschau",
-      "previewEmpty": "Noch kein Text.",
-      "untranslated": "unübersetzt",
-      "published": "Veröffentlicht",
-      "unpublished": "Nicht veröffentlicht",
-      "moveUp": "Nach oben",
-      "moveDown": "Nach unten",
-      "chooseFile": "Datei wählen",
-      "removeImage": "Bild entfernen",
-      "noFile": "Bitte eine Datei auswählen.",
-      "gaps": "{count, plural, =0 {Alle Übersetzungen vorhanden} one {# Übersetzung offen} other {# Übersetzungen offen}}",
-      "moduleInactiveTitle": "Modul Webseite ist nicht aktiv",
-      "moduleInactiveText": "Aktivieren Sie das Modul unter Verwaltung → Module. Vorhandene Inhalte bleiben erhalten.",
-      "openModules": "Module öffnen",
-      "save": "Speichern",
-      "saved": "Gespeichert.",
-      "create": "Anlegen",
-      "back": "Zurück zur Liste",
-      "slug": "Slug (URL-Teil)",
-      "slugHint": "Kleinbuchstaben, Ziffern, Bindestrich. Sprachneutral."
+  "projects": {
+    "title": "Projekte",
+    "create": "Projekt anlegen",
+    "emptyTitle": "Noch keine Projekte",
+    "emptyText": "Dauer- und Kurzzeitprojekte mit Betterplace-Anbindung.",
+    "columns": {
+      "name": "Projekt",
+      "type": "Typ",
+      "betterplace": "Betterplace-ID",
+      "status": "Status"
     },
-    "pages": {
-      "title": "Seiten",
-      "description": "Feste Seiten der Webseite. Texte und Bausteine werden hier gepflegt; Struktur und Design sind Teil der Seite selbst.",
-      "columns": {
-        "page": "Seite",
-        "key": "Schlüssel",
-        "title": "Titel (DE)",
-        "gaps": "Übersetzungen"
-      },
-      "keys": {
-        "home": "Startseite",
-        "help": "Helfen",
-        "donate": "Spenden",
-        "sponsor": "Tierpate werden",
-        "membership": "Fördermitglied werden",
-        "about": "Über uns",
-        "partners": "Unsere Partner",
-        "contact": "Kontakt",
-        "imprint": "Impressum",
-        "privacy": "Datenschutz",
-        "statutes": "Satzung",
-        "adoption-process": "Ablauf der Adoption"
-      },
-      "form": {
-        "title": "Titel",
-        "titleHint": "Ein *kursives* Wort wird zur Betonung, z. B. „ein *Zuhause.*“",
-        "lede": "Einleitung",
-        "body": "Text",
-        "bodyHint": "Markdown. Überschriften mit #, Aufzählungen mit -, Hinweiskasten mit >, Kartenraster mit :::karten … :::",
-        "meta": "Meta-Beschreibung (Suchmaschinen)",
-        "save": "Speichern"
-      },
-      "blocks": {
-        "title": "Bausteine",
-        "add": "Baustein hinzufügen",
-        "empty": "Keine Bausteine. Nicht jede Seite braucht welche.",
-        "edit": "Bearbeiten",
-        "remove": "Entfernen",
-        "id": "Baustein-ID",
-        "href": "Link",
-        "blockTitle": "Titel",
-        "text": "Text",
-        "label": "Beschriftung des Links",
-        "image": "Bild",
-        "apply": "Baustein übernehmen"
-      }
+    "types": {
+      "ongoing": "Dauerprojekt",
+      "shortTerm": "Kurzzeitprojekt"
     },
-    "articles": {
-      "title": "Artikel",
-      "create": "Artikel anlegen",
-      "emptyTitle": "Noch keine Artikel",
-      "emptyText": "Wissenswertes-Beiträge wie „Ablauf der Adoption“ entstehen hier.",
-      "columns": {
-        "title": "Titel",
-        "slug": "Slug",
-        "gaps": "Übersetzungen",
-        "status": "Status"
+    "form": {
+      "tabs": {
+        "public": "Webseite",
+        "finance": "Finanzen"
       },
-      "form": {
-        "title": "Titel",
-        "lede": "Einleitung",
-        "body": "Text",
-        "publishedAt": "Datum (optional)"
-      }
-    },
-    "team": {
-      "title": "Team",
-      "create": "Teammitglied anlegen",
-      "edit": "Bearbeiten",
-      "emptyTitle": "Noch kein Team",
-      "emptyText": "Die Teamseite zeigt Name, Funktion und Foto.",
-      "columns": {
-        "member": "Mitglied",
-        "position": "Funktion",
-        "status": "Status"
-      },
-      "form": {
-        "createTitle": "Teammitglied anlegen",
-        "editTitle": "Teammitglied bearbeiten",
-        "name": "Name",
-        "position": "Funktion im Verein",
-        "photo": "Foto",
-        "petPhoto": "Foto des Haustiers (optional)"
-      }
-    },
-    "faqs": {
-      "title": "FAQ",
-      "create": "Frage anlegen",
-      "edit": "Bearbeiten",
-      "emptyTitle": "Noch keine Fragen",
-      "emptyText": "Häufige Fragen zu Spende, Adoption, Transport und Datenschutz.",
-      "columns": {
-        "question": "Frage",
-        "category": "Kategorie",
-        "status": "Status"
-      },
-      "form": {
-        "createTitle": "Frage anlegen",
-        "editTitle": "Frage bearbeiten",
-        "category": "Kategorie",
-        "question": "Frage",
-        "answer": "Antwort"
-      }
-    },
-    "projects": {
-      "title": "Projekte",
-      "create": "Projekt anlegen",
-      "emptyTitle": "Noch keine Projekte",
-      "emptyText": "Dauer- und Kurzzeitprojekte mit Betterplace-Anbindung.",
-      "columns": {
-        "name": "Projekt",
-        "type": "Typ",
-        "betterplace": "Betterplace-ID",
-        "status": "Status"
-      },
+      "name": "Name",
+      "summary": "Kurztext",
+      "body": "Langtext",
+      "image": "Bild",
+      "type": "Typ",
+      "status": "Status",
       "types": {
         "ongoing": "Dauerprojekt",
         "shortTerm": "Kurzzeitprojekt"
       },
-      "form": {
-        "tabs": {
-          "public": "Webseite",
-          "finance": "Finanzen"
-        },
-        "name": "Name",
-        "summary": "Kurztext",
-        "body": "Langtext",
-        "image": "Bild",
-        "type": "Typ",
-        "status": "Status",
-        "types": {
-          "ongoing": "Dauerprojekt",
-          "shortTerm": "Kurzzeitprojekt"
-        },
-        "statuses": {
-          "active": "Aktiv",
-          "completed": "Abgeschlossen"
-        },
-        "betterplace": "Betterplace-Projekt-ID",
-        "betterplaceHint": "Ziffernfolge aus der Betterplace-Projekt-URL.",
-        "financeLater": "Konten, Buchungen und Rücklagen: Finanzen folgen in einer späteren Stufe."
-      }
-    },
-    "downloads": {
-      "title": "Downloads",
-      "description": "Ausfüllbare PDFs, die die Webseite verlinkt.",
-      "columns": {
-        "download": "Download",
-        "fileAndTitle": "Titel und Datei"
+      "statuses": {
+        "active": "Aktiv",
+        "completed": "Abgeschlossen"
       },
-      "keys": {
-        "sponsorship-form": "Patenschaftsantrag",
-        "membership-form": "Aufnahmeantrag Fördermitgliedschaft",
-        "self-disclosure-form": "Selbstauskunft",
-        "statutes-pdf": "Satzung als PDF"
-      },
-      "form": {
-        "title": "Titel",
-        "file": "PDF-Datei"
-      },
-      "open": "PDF öffnen",
-      "none": "Noch keine Datei."
-    },
-    "facts": {
-      "title": "Site-Fakten",
-      "description": "Zahlen und Angaben, die an vielen Stellen der Webseite erscheinen. Einmal ändern, überall aktuell.",
-      "saved": "Site-Fakten gespeichert.",
-      "groups": {
-        "presence": "Auftritt",
-        "numbers": "Zahlen und Status",
-        "donations": "Betterplace",
-        "home": "Startseite",
-        "social": "Social-Media-Links",
-        "confidentiality": "Vertraulichkeit"
-      },
-      "fields": {
-        "claim": "Claim",
-        "claimDe": "Claim (DE)",
-        "claimEn": "Claim (EN)",
-        "forwardingPercent": "Weiterleitungsquote (%)",
-        "shelterDogCount": "Hunde im Shelter",
-        "section11Status": "§ 11 TSchG",
-        "section11Date": "Datum der Erlaubnis",
-        "donationBoxLocations": "Spendenboxen-Standorte",
-        "location": "Standort {n}",
-        "betterplaceMetaProjectId": "Betterplace-Meta-Projekt-ID",
-        "betterplaceDefaultAmount": "Standardbetrag (€)",
-        "featuredAnimalSlug": "Hund auf der Startseite",
-        "featuredStorySlug": "Erfolgsgeschichte auf der Startseite",
-        "socialLabel": "Bezeichnung {n}",
-        "socialHref": "Adresse {n}",
-        "blockedTerms": "Sperrwörter",
-        "blockedTerm": "Sperrwort {n}"
-      },
-      "section11": {
-        "pending": "in Bearbeitung",
-        "granted": "erteilt"
-      },
-      "auto": "Automatisch",
-      "autoHint": "Automatisch wählt den neuesten Notfall, sonst den zuletzt angelegten Hund.",
-      "addLocation": "Standort hinzufügen",
-      "addSocial": "Link hinzufügen",
-      "addBlocked": "Sperrwort hinzufügen",
-      "blockedHint": "Begriffe, die auf keiner öffentlichen Seite und in keinem Dateinamen erscheinen dürfen. Der Publish bricht bei einem Treffer ab."
+      "betterplace": "Betterplace-Projekt-ID",
+      "betterplaceHint": "Ziffernfolge aus der Betterplace-Projekt-URL.",
+      "financeLater": "Konten, Buchungen und Rücklagen: Finanzen folgen in einer späteren Stufe."
     }
   },
   "animals": {

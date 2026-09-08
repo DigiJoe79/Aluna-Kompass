@@ -31,7 +31,7 @@ export function EntryForm({
   locales: string[];
 }) {
   const t = useTranslations('site.entries');
-  const c = useTranslations('website.common');
+  const c = useTranslations('content');
   const [data, setData] = useState(() => withBlanks(fields, entry?.data ?? {}, locales));
   const [slug, setSlug] = useState(entry?.slug ?? '');
   const [state, action] = useActionState(saveEntryAction, idleState);

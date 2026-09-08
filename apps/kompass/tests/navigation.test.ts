@@ -17,6 +17,22 @@ describe('buildNavigation', () => {
     expect(admin.items.filter((i) => i.visible).map((i) => i.key)).toEqual(['users', 'audit']);
   });
 
+  /**
+   * Die Projekte liegen im Kern. Ohne eigene Gruppe wären sie mit dem
+   * abgelösten Webseiten-Modul aus der Navigation verschwunden.
+   */
+  it('offers the core projects outside the admin group', () => {
+    const groups = buildNavigation({ manifests: [coreModule], enabledKeys: new Set(['core']), permissions: new Set(['projects.view']) });
+    const core = groups.find((g) => g.key === 'core')!;
+    expect(core.items.map((i) => [i.key, i.href, i.visible])).toEqual([['projects', '/projects', true]]);
+    expect(core.disabled).toBe(false);
+  });
+
+  it('hides the projects from anyone without the permission', () => {
+    const groups = buildNavigation({ manifests: [coreModule], enabledKeys: new Set(['core']), permissions: new Set() });
+    expect(groups.find((g) => g.key === 'core')?.items.every((i) => !i.visible)).toBe(true);
+  });
+
   it('renders installed but inactive modules as disabled groups', () => {
     const groups = buildNavigation({ manifests: [coreModule, finance], enabledKeys: new Set(['core']), permissions: new Set(['finance.view']) });
     const group = groups.find((g) => g.key === 'finance')!;

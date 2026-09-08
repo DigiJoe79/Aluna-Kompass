@@ -1,7 +1,8 @@
 import {
-  activateTheme, addLocale, assignRole, createRole, createUser, getAuditEntry, listDocuments, listLocales, listModules, listRoles, listThemes, listUsers,
-  queryAudit, readAllSettings, readSetting, removeLocale, removeRole, renderDocument, reorderLocales, resetStartPassword, setModuleEnabled, setRolePermissions,
-  setSetting, setUserActive, updateRole, voidDocument, ok, invalid,
+  activateTheme, addLocale, assignRole, createProject, createRole, createUser, getAuditEntry, getProject, listDocuments, listLocales, listModules, listProjects,
+  listRoles, listThemes, listUsers, projectCreateSchema, projectUpdateSchema, queryAudit, readAllSettings, readSetting, removeLocale, removeRole, renderDocument,
+  reorderLocales, reorderProjects, resetStartPassword, setModuleEnabled, setProjectPublished, setRolePermissions, setSetting, setUserActive, updateProject,
+  updateRole, voidDocument, ok, invalid,
   type McpToolDefinition,
 } from '@kompass/core';
 import { z } from 'zod';
@@ -35,4 +36,11 @@ export const coreMcpTools: McpToolDefinition[] = [
   t({ name: 'locales_add', description: 'Add a locale. Requires settings.manage.', inputSchema: z.object({ code: z.string() }), handler: (deps, ctx, args) => addLocale(deps, ctx, args) }),
   t({ name: 'locales_reorder', description: 'Reorder locales; the first is the leading locale. Requires settings.manage.', inputSchema: z.object({ codes: z.array(z.string()) }), handler: (deps, ctx, args) => reorderLocales(deps, ctx, args) }),
   t({ name: 'locales_remove', description: 'Remove a locale and strip it from all stored text. Requires settings.manage and confirm. Audited.', inputSchema: z.object({ code: z.string(), confirm: z.boolean() }), handler: (deps, ctx, args) => removeLocale(deps, ctx, args) }),
+  // Die Projekte gehören dem Kern; bis zum Cutover boten sie das Webseiten-Modul an.
+  t({ name: 'projects_list', description: 'List projects with their public fields. Requires projects.view.', inputSchema: z.object({}), handler: (deps, ctx) => listProjects(deps, ctx) }),
+  t({ name: 'project_get', description: 'Read one project. Requires projects.view.', inputSchema: z.object({ id: z.string() }), handler: (deps, ctx, { id }) => getProject(deps, ctx, id) }),
+  t({ name: 'project_create', description: 'Create a project (unpublished). Requires projects.manage. Audited.', inputSchema: projectCreateSchema, handler: (deps, ctx, args) => createProject(deps, ctx, args) }),
+  t({ name: 'project_update', description: 'Update a project. Requires projects.manage. Audited.', inputSchema: projectUpdateSchema, handler: (deps, ctx, args) => updateProject(deps, ctx, args) }),
+  t({ name: 'project_set_published', description: 'Publish or unpublish a project. Requires projects.manage. Audited.', inputSchema: z.object({ id: z.string(), isPublished: z.boolean() }), handler: (deps, ctx, args) => setProjectPublished(deps, ctx, args) }),
+  t({ name: 'projects_reorder', description: 'Reorder projects; the order decides what a template shows first. Requires projects.manage.', inputSchema: z.object({ ids: z.array(z.string()) }), handler: (deps, ctx, args) => reorderProjects(deps, ctx, args) }),
 ];

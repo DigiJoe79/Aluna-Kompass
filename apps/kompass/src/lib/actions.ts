@@ -39,7 +39,7 @@ const BACKUP_FIELD_CODES = ['confirmationMismatch', 'backupFormatUnsupported', '
 
 export function fieldMessage(issueMessage: string, t: Translate): string {
   const lower = issueMessage.toLowerCase();
-  if (issueMessage === 'confirmationRequired') return t('website.publish.publishCard.confirm');
+  if (issueMessage === 'confirmationRequired') return t('site.publish.publishCard.confirm');
   if (issueMessage === 'passwordTooShort' || issueMessage === 'unknownPermission' || issueMessage === 'unknownSetting' || MEDIA_FIELD_CODES.includes(issueMessage) || BACKUP_FIELD_CODES.includes(issueMessage)) {
     return t(`errors.fields.${issueMessage}`);
   }

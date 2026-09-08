@@ -11,7 +11,7 @@ const deps = async () => {
   return d;
 };
 const manage = ctxWith(['animals.manage', 'animals.view', 'media.upload']);
-const chiara = { slug: 'chiara', name: 'Chiara', sex: 'female' as const, birthText: { de: '16.02.2021', en: '16 Feb 2021' }, sizeCm: 45, sizeText: { de: '45–50 cm', en: '45–50 cm' }, location: 'shelter' as const, isEmergency: false, isSponsorable: true, traits: { de: ['ruhig', 'verträglich'], en: ['calm', 'sociable'] }, externalProfileUrl: 'https://www.hundeblicke.net/chiara', summary: { de: 'Sanfte Hündin.', en: '' }, body: { de: 'Text', en: '' } };
+const chiara = { slug: 'chiara', name: 'Chiara', sex: 'female' as const, birthText: { de: '16.02.2021', en: '16 Feb 2021' }, sizeCm: 45, sizeText: { de: '45–50 cm', en: '45–50 cm' }, location: 'shelter' as const, isEmergency: false, isSponsorable: true, traits: { de: ['ruhig', 'verträglich'], en: ['calm', 'sociable'] }, externalProfileUrl: 'https://example.org/profile/chiara', summary: { de: 'Sanfte Hündin.', en: '' }, body: { de: 'Text', en: '' } };
 
 describe('animals module', () => {
   it('creates tables via the core chain and registers the view', async () => {

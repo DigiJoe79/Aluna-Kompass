@@ -47,6 +47,22 @@ Endpunkt `http://<nas>:3000/mcp` (Streamable HTTP), Authentifizierung mit einem 
 
 ## Webseite (Test und Prod)
 
+**Das Template unter `/data/site-template`.** Kompass pflegt nicht die Seite,
+sondern die Inhalte, die ein Astro-Template deklariert. Beim ersten Start legt
+der Entrypoint das mitgelieferte Basis-Template dort ab; ein vorhandenes bleibt
+unberührt, auch bei einem Update. Der Verein ersetzt es durch sein eigenes und
+liest es unter Webseite → Template ein.
+
+Dieses Verzeichnis ist eine **Vertrauensgrenze**: Der Build führt den Code des
+Templates aus, mit den Rechten des Containers. Wer dorthin schreiben darf, kann
+im Container Code ausführen. Es gehört deshalb `node` (UID 1000) und niemandem
+sonst, und es wird nicht über eine Freigabe geteilt.
+
+`node_modules` darin ist ein Symlink auf die Module des Images. Zeigt er ins
+Leere — etwa nach einem Update aus einer älteren Fassung —, erneuert ihn der
+Entrypoint beim nächsten Start selbst; ein Build meldete das vorher als
+„astro not installed".
+
 Beide Umgebungen liegen als Subdomains auf demselben IONOS-Webspace, die
 Hauptdomain bleibt bis zum Go-live auf WordPress.
 

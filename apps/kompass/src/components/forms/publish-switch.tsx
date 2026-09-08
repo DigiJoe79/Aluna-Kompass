@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import type { ActionState } from '@/lib/actions';
 
 export function PublishSwitch({ id, isPublished, action, label }: { id: string; isPublished: boolean; action: (id: string, next: boolean) => Promise<ActionState>; label?: string }) {
-  const t = useTranslations('website.common');
+  const t = useTranslations('content');
   const [pending, start] = useTransition();
   return (
     <label className="flex items-center gap-2 text-[13px]">

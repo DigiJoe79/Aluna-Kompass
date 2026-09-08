@@ -41,7 +41,7 @@ describe('locale administration', () => {
 
   it('counts the content a removal would cost, across modules', async () => {
     const deps = setup();
-    const ctx = ctxWith(['settings.manage', 'website.manage']);
+    const ctx = ctxWith(['settings.manage', 'projects.manage']);
     unwrap(await addLocale(deps, ctx, { code: 'en' }));
     unwrap(await createProject(deps, ctx, { slug: 'a', name: { de: 'Hof', en: 'Yard' }, type: 'ongoing', summary: { de: 'x', en: '' }, body: { de: '', en: '' } }));
     const preview = unwrap(await previewLocaleRemoval(deps, ctx, { code: 'en' }));
@@ -51,7 +51,7 @@ describe('locale administration', () => {
 
   it('removes a locale, strips it from stored text and keeps the leading one', async () => {
     const deps = setup();
-    const ctx = ctxWith(['settings.manage', 'website.manage']);
+    const ctx = ctxWith(['settings.manage', 'projects.manage']);
     unwrap(await addLocale(deps, ctx, { code: 'en' }));
     const project = unwrap(await createProject(deps, ctx, { slug: 'a', name: { de: 'Hof', en: 'Yard' }, type: 'ongoing', summary: { de: 'x', en: '' }, body: { de: '', en: '' } }));
     unwrap(await removeLocale(deps, ctx, { code: 'en', confirm: true }));
@@ -106,7 +106,7 @@ describe('locale removal reaches beyond localized columns', () => {
 
   it('never rewrites the audit log, which records what was there', async () => {
     const deps = setup();
-    const ctx = ctxWith(['settings.manage', 'website.manage']);
+    const ctx = ctxWith(['settings.manage', 'projects.manage']);
     unwrap(await addLocale(deps, ctx, { code: 'en' }));
     unwrap(await createProject(deps, ctx, { slug: 'a', name: { de: 'Hof', en: 'Yard' }, type: 'ongoing', summary: { de: 'x' }, body: { de: '' } }));
     unwrap(await removeLocale(deps, ctx, { code: 'en', confirm: true }));

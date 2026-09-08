@@ -31,7 +31,7 @@ export function LocalizedField({
   required?: boolean;
   locales: string[];
 }) {
-  const t = useTranslations('website.common');
+  const t = useTranslations('content');
   const [text, setText] = useState<LocalizedText>(value);
   const leading = locales[0] ?? 'de';
   const [previewLocale, setPreviewLocale] = useState<string>(leading);

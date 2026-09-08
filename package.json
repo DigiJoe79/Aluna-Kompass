@@ -18,7 +18,6 @@
     "@kompass/documents": "workspace:*",
     "@kompass/module-animals": "workspace:*",
     "@kompass/module-site": "workspace:*",
-    "@kompass/module-website": "workspace:*",
     "@kompass/site-template": "workspace:*",
     "tsx": "^4.19.3"
   }

@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { createDeps, readEnv, seedDevelopment, setSetting, unwrap, type AppEnv, type CallContext } from '@kompass/core';
 import { coreDocumentTemplates, createTypstRenderer } from '@kompass/documents';
 import { animalsModule } from '@kompass/module-animals';
-import { websiteModule } from '@kompass/module-website';
+import { siteModule } from '@kompass/module-site';
 import { importPrototype } from './import-prototype';
 
 /** Liest `site.name` aus den Prototyp-Daten; null, wenn die Datei fehlt oder keinen Namen trägt. */
@@ -25,7 +25,6 @@ export interface DevResetOptions {
   databasePath: string;
   mediaPath: string;
   prototypeDir: string;
-  pagesFile: string;
 }
 
 /**
@@ -44,7 +43,7 @@ export async function devReset(opts: DevResetOptions) {
     databasePath: opts.databasePath,
     mediaPath: opts.mediaPath,
     env: opts.env,
-    modules: [websiteModule, animalsModule],
+    modules: [siteModule, animalsModule],
     coreTemplates: coreDocumentTemplates(createTypstRenderer()),
   });
   try {
@@ -57,7 +56,7 @@ export async function devReset(opts: DevResetOptions) {
       ipAddress: null,
       requestId: 'DEV-RESET',
     };
-    const counts = await importPrototype(deps, ctx, { prototypeDir: opts.prototypeDir, pagesFile: opts.pagesFile });
+    const counts = await importPrototype(deps, ctx, { prototypeDir: opts.prototypeDir });
     // Der Vereinsname ist Stammdatum des Kerns, keine Webseiten-Einstellung; der
     // Import lässt ihn deshalb in Ruhe. Für die Entwicklung ist der Name des
     // Prototyps aber die brauchbarere Vorgabe als der des Musterverein-Seeds.
@@ -78,7 +77,6 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
     databasePath: process.env.DATABASE_PATH ?? path.join(root, 'apps/kompass/data/kompass.db'),
     mediaPath: process.env.MEDIA_PATH ?? path.join(root, 'apps/kompass/media'),
     prototypeDir: process.env.PROTOTYPE_DIR ?? '/Users/joe/Development/Aluna Tierhilfe e.V./Webseite/aluna-static',
-    pagesFile: path.join(root, 'scripts/prototype-pages.json'),
   })
     .then(({ adminEmail, adminPassword, counts }) => {
       console.log('Zurückgesetzt und importiert:', counts);

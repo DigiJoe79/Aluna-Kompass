@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { renderMarkdownAction } from '@/lib/markdown-preview';
 
 export function MarkdownPreview({ markdown }: { markdown: string }) {
-  const t = useTranslations('website.common');
+  const t = useTranslations('content');
   const [html, setHtml] = useState('');
   useEffect(() => {
     const handle = setTimeout(() => { renderMarkdownAction(markdown).then(setHtml).catch(() => setHtml('')); }, 300);

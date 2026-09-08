@@ -19,6 +19,14 @@ export interface NavGroup {
   items: NavItem[];
 }
 
+/**
+ * Kerneinträge ausserhalb der Verwaltung. Die Projekte gehören dem Kern und
+ * hingen bis zum Cutover an der Navigation des Webseiten-Moduls.
+ */
+const CORE_MAIN: { key: string; href: string; icon: string; permission?: string }[] = [
+  { key: 'projects', href: '/projects', icon: 'folder', permission: 'projects.view' },
+];
+
 const CORE_ADMIN: { key: string; href: string; icon: string; permission?: string }[] = [
   { key: 'users', href: '/admin/users', icon: 'users', permission: 'users.manage' },
   { key: 'roles', href: '/admin/roles', icon: 'shield', permission: 'roles.manage' },
@@ -45,6 +53,12 @@ export function buildNavigation(input: {
     disabled: false,
     items: CORE_ADMIN.map((item) => ({ ...item, labelKey: `nav.${item.key}`, disabled: false, visible: visible(item.permission) })),
   };
+  const core: NavGroup = {
+    key: 'core',
+    labelKey: 'nav.groups.core',
+    disabled: false,
+    items: CORE_MAIN.map((item) => ({ ...item, labelKey: `nav.${item.key}`, disabled: false, visible: visible(item.permission) })),
+  };
   const modules: NavGroup[] = input.manifests
     .filter((m) => m.key !== 'core' && ((m.navigation?.length ?? 0) > 0 || (input.extraItems?.[m.key]?.length ?? 0) > 0))
     .map((m) => {
@@ -66,5 +80,5 @@ export function buildNavigation(input: {
         items: [...(m.navigation ?? []).map(toItem), ...(input.extraItems?.[m.key] ?? []).map(toItem)],
       };
     });
-  return [admin, ...modules];
+  return [core, admin, ...modules];
 }
