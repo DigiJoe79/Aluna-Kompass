@@ -22,3 +22,11 @@ export interface TemplateSchema {
   variables: Record<string, FieldSchema>;
   collections: Record<string, CollectionSchema>;
 }
+
+export interface SeedReport {
+  applied: boolean;
+  variables: number;
+  entries: number;
+  byCollection: Record<string, number>;
+  assets: number;
+}

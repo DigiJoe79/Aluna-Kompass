@@ -9,6 +9,7 @@ export * from './resync/apply';
 export * from './service';
 export * from './values';
 export * from './entries';
+export * from './seed';
 export * from './export';
 export * from './settings';
 export * from './services/publishes';

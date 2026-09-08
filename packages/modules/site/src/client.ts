@@ -6,4 +6,4 @@
 export { blankValue, schemaFor, widgetOf } from './field-schema';
 export { flatten, kindOf, losesContent } from './resync/plan';
 export type { Finding } from './resync/plan';
-export type { CollectionSchema, FieldSchema, TemplateSchema } from './types';
+export type { CollectionSchema, FieldSchema, SeedReport, TemplateSchema } from './types';
