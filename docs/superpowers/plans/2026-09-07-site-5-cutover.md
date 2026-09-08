@@ -327,8 +327,25 @@ kann erst grün werden, wenn `website` weg ist — bis dahin führt das Modul
 `website.shelterDogCount`. Er ist jetzt ein Test
 (`apps/kompass/tests/no-association-content.test.ts`), und seine Wortliste ist
 kürzer als geplant: `aluna` bleibt erlaubt, so heisst das Produkt; `shelter`
-gehört legitim ins Tiermodul; `betterplace` steckt im Kern und ist deshalb als
-Backlog-Punkt 6 vermerkt statt hier stillschweigend geduldet.
+gehört legitim ins Tiermodul; `betterplace` steckt im Kern und ist deshalb im
+Backlog vermerkt statt hier stillschweigend geduldet.
 
-**Nicht geprüft:** `docker build` — in dieser Umgebung gibt es kein Docker.
-Typecheck, alle Tests und die 46 E2E-Fälle sind grün.
+**Nachgereicht am 2026-09-08:** Der Image-Build war beim Schreiben dieses
+Nachtrags nicht prüfbar (kein Docker). Er ist es inzwischen — lokal wie in der
+CI, mitsamt einem Lauf der vollständigen E2E-Suite gegen das gebaute Bild.
+Dabei kamen drei Fehler ans Licht, die der Cutover hinterlassen hatte oder die
+vorher niemand sehen konnte; sie stehen in
+`docs/superpowers/specs/2026-09-08-pruefringe-design.md`.
+
+## Stand
+
+Tasks 1, 3 und 4 sind ausgeführt und auf `dev`. Task 2 (das Migrationsskript)
+wurde gebaut und gegen die Entwicklungsdaten geprobt, danach aber mit dem Modul
+`website` wieder entfernt: Die Entscheidung vom 2026-09-08 lautet, Alunas
+Inhalte Stück für Stück aus dem CMS direkt in `site` zu pflegen, weil die
+vollständige Kopie ohnehin dort liegt und nicht in den `website_*`-Tabellen.
+Wer das Skript doch braucht, findet es unter `git show 7829e16^:scripts/migrate-website-to-site.ts`.
+
+Damit ist dieser Plan abgeschlossen. Was aussteht, ist keine Entwicklungsarbeit
+mehr, sondern Redaktion: die Inhalte im Testcontainer einpflegen und die Seite
+abnehmen.

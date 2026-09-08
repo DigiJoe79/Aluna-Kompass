@@ -30,6 +30,7 @@
 
    Wer es ganz eindeutig will, trägt statt `dev` den unveränderlichen Tag `sha-<commit>` ein — dann ist jede Aktualisierung eine sichtbare Änderung der Compose-Datei.
 3. Migrationen laufen beim Start automatisch; der Migrationsstand steht im Health-JSON und im Umgebungsbalken der Testumgebung.
+4. Die Bilder unter `:dev` und `:latest` sind vor dem Hochladen auf amd64 durchgetestet (siehe „Bauen und Prüfen"). Ein rotes CI-Ergebnis heißt deshalb: Es gibt kein neues Bild, nicht etwa ein ungeprüftes.
 
 ## Prod nach Test kopieren
 Export in Prod → Datei herunterladen → in Test unter Verwaltung → Backup importieren (Umgebungsname `test` eintippen). Danach sind in Test alle Sitzungen beendet; Anmeldung mit den Prod-Zugangsdaten. API-Tokens werden nicht mitkopiert.
@@ -53,19 +54,33 @@ Drei Ringe, jeder prüft eine andere Schicht:
 | Verpackung | `pnpm e2e:image` | dem gebauten Image im Container |
 
 `pnpm verify` fährt alle drei plus den Image-Build und braucht rund zwei
-Minuten. **Vor jedem Push.** Für ein Ausprobieren von Hand gibt es
-`pnpm dev:image` — eine stehende Installation auf Port 3300 mit bleibenden
-Daten, die sich verhält wie der Testcontainer auf dem NAS. Der dritte Ring braucht Docker; er startet
-`kompass-local` auf Port 3200 mit einem Wegwerf-Volume unter
-`apps/kompass/.e2e-container/` und prüft damit, was nur im Container schiefgehen
-kann: gebündelter Code, `/data`, das mitgelieferte Template und die
-Modulauflösung aus dem Entrypoint.
+Minuten. **Vor jedem Push.**
+
+Der dritte Ring braucht Docker. Er startet `kompass-local` auf Port 3200 mit
+frischen Volumes und prüft, was nur im Container schiefgehen kann: gebündelter
+Code, `/data`, das mitgelieferte Template und die Modulauflösung aus dem
+Entrypoint. `/data` und `/media` bekommen anonyme Volumes, damit jeder Lauf
+eine Erstinbetriebnahme ist; eingehängt wird nur das Publish-Ziel unter
+`apps/kompass/.e2e-container/deploy`, weil der Test dort nachsieht.
+
+Für ein Ausprobieren von Hand gibt es `pnpm dev:image` — eine **stehende**
+Installation auf Port 3300 mit Daten, die Neustarts überleben, und mit
+demselben Verhalten wie der Testcontainer auf dem NAS. `pnpm dev:image down`
+beendet sie, `reset` verwirft auch die Daten.
 
 Die CI wiederholt Ring eins und zwei auf frischem Checkout und fährt Ring drei
 im `image`-Job gegen die **amd64**-Fassung, bevor sie hochgeladen wird — lokal
 baut ein Apple-Silicon-Rechner arm64, und `better-sqlite3`, `sharp` und Typst
-sind je Architektur andere Dateien. Was im Registry liegt, ist damit auf seiner
-Zielarchitektur end-to-end geprüft.
+sind je Architektur andere Dateien. Sie lädt das gebaute Bild dafür erst in den
+lokalen Daemon und vergibt die Namen danach an genau dieses Bild. Damit gilt:
+
+> **Liegt ein Bild unter `:dev` oder `:latest`, sind seine Tests grün gelaufen
+> und es hat auf amd64 alle Browserfälle bestanden.**
+
+Laufzeiten: `pnpm verify` lokal rund zwei Minuten; die CI etwa neun Minuten,
+bei geänderten Abhängigkeiten etwa siebzehn — dann baut die Deps-Schicht des
+Images `better-sqlite3` und `sharp` neu. Die Begründung der Aufteilung steht in
+`docs/superpowers/specs/2026-09-08-pruefringe-design.md`.
 
 ## MCP
 Endpunkt `http://<nas>:3000/mcp` (Streamable HTTP), Authentifizierung mit einem persönlichen API-Token aus dem Profil (`Authorization: Bearer akx_live_…`). Tokens wirken mit den Rechten des Nutzers; jeder Vorgang steht im Änderungsprotokoll mit Kanal „MCP".

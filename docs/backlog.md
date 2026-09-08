@@ -4,31 +4,7 @@ Bewusst zurückgestellte Punkte mit Begründung. Kein Ticketsystem — was hier
 steht, ist entschieden, aber nicht gebaut. Erledigtes wird gelöscht, nicht
 abgehakt; die Historie steht im Git-Log.
 
-## 1. E2E gegen die Produktionsfassung
-
-**Was:** Die Playwright-Suite zusätzlich gegen `next build && next start`
-laufen lassen, nicht nur gegen `next dev`.
-
-**Warum:** Im Entwicklungsmodus gibt es kein Vorrendern. Dass `/login` und
-`/setup` ihren Bauzeit-Zustand einbacken und eine eingerichtete Installation
-dauerhaft auf die Einrichtungsseite schickt, konnte deshalb keiner der 47
-Tests sehen — gefunden wurde es erst im Container. Dieselbe Klasse Lücke gilt
-für jede künftige Vorrender-Entscheidung.
-
-**Kosten:** Bauzeit im Test-Job der CI.
-
-**Erledigt am 2026-09-08:** `pnpm verify` baut das Image und fährt dieselbe
-Playwright-Suite gegen den laufenden Container
-(`apps/kompass/playwright.container.config.ts`). Der erste Lauf fand sofort
-einen Fehler, den kein Test im Entwicklungsmodus sehen konnte: Die Abmeldung
-leitete auf `http://0.0.0.0:3000/login`, die interne Bindeadresse des
-Containers.
-
-**Was bleibt:** Dieser Ring läuft nur, wenn jemand `pnpm verify` fährt. Ob er
-zusätzlich in die CI gehört, hängt daran, wie viel Laufzeit dort vertretbar
-ist — der Image-Job hat das Bild ohnehin schon gebaut.
-
-## 2. Backup-Upload über einen Route Handler
+## 1. Backup-Upload über einen Route Handler
 
 **Was:** Den Import-Upload wie den Export über einen Route Handler führen, der
 den Datenstrom auf die Platte schreibt, statt über eine Server Action.
@@ -40,7 +16,7 @@ einmal für den Import.
 
 **Wann:** Spätestens wenn Archive einige hundert Megabyte erreichen.
 
-## 3. Löschen für redaktionelle Inhalte
+## 2. Löschen für redaktionelle Inhalte
 
 **Was:** Löschfunktionen für Artikel, Team-Mitglieder, FAQ-Einträge, Downloads,
 Seiten-Bausteine und Medien — in der Oberfläche, im MCP und mit Eintrag im
@@ -59,7 +35,7 @@ Transparenzregister, nicht die Redaktion.
 Stufe 3 Finanzfelder beziehungsweise ab Stufe 4 Bestandsbuch und
 § 11-Nachweise; ob und wie sie löschbar werden, entscheidet sich dort.
 
-## 4. Platzhalterbilder als WebP
+## 3. Platzhalterbilder als WebP
 
 **Was:** Die Platzhalter in `templates/verein-basis/public/images/` als WebP
 ausliefern.
@@ -71,7 +47,7 @@ sie vorbei.
 **Einordnung:** Erledigt sich für einen Verein von selbst, sobald echte Fotos
 die Platzhalter verdrängen — für das mitgelieferte Template aber nicht.
 
-## 5. Browsertest bei Handybreite
+## 4. Browsertest bei Handybreite
 
 **Was:** Ein Playwright-Lauf gegen die gebaute Site bei 390 px.
 
@@ -80,7 +56,7 @@ Lesen des Stylesheets auf, nicht durch einen Test. `templates/verein-basis/tests
 enthält keine Viewport-Prüfung, und die Kompass-E2E deckt die gebaute Site
 nicht ab.
 
-## 6. Betterplace steckt im Kern
+## 5. Betterplace steckt im Kern
 
 **Was:** `projects.betterplaceProjectId` ist eine Spalte der Kerntabelle
 `projects`, mit eigenem Feld in der Oberfläche und im veröffentlichten Blick.
