@@ -29,9 +29,19 @@ RUN SESSION_SECRET=build-time-only-not-a-real-secret-0000000000 pnpm --filter @k
 
 FROM node:26-bookworm-slim AS runner
 ARG TYPST_VERSION=0.15.1
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl xz-utils rsync openssh-client sshpass \
- && curl -sSL "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-x86_64-unknown-linux-musl.tar.xz" \
-    | tar -xJ -C /usr/local/bin --strip-components=1 "typst-x86_64-unknown-linux-musl/typst" \
+# Zielarchitektur statt fester x86_64-Datei: Sonst zwingt jeder Bau auf einem
+# ARM-Rechner das ganze Image in die Emulation, und die Container-Tests werden
+# unbrauchbar langsam. Fuer die Registry baut die CI weiterhin amd64.
+ARG TARGETARCH
+RUN set -eu; \
+    case "${TARGETARCH:-amd64}" in \
+      amd64) typst_arch=x86_64 ;; \
+      arm64) typst_arch=aarch64 ;; \
+      *) echo "keine Typst-Datei fuer TARGETARCH=${TARGETARCH}" >&2; exit 1 ;; \
+    esac; \
+    apt-get update && apt-get install -y --no-install-recommends ca-certificates curl xz-utils rsync openssh-client sshpass \
+ && curl -sSL "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-${typst_arch}-unknown-linux-musl.tar.xz" \
+    | tar -xJ -C /usr/local/bin --strip-components=1 "typst-${typst_arch}-unknown-linux-musl/typst" \
  && typst --version \
  && apt-get purge -y curl xz-utils && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production \

@@ -13,10 +13,13 @@ apps/kompass/media/
 !.env.example
 !.env.*.example
 coverage/
-# Zwischenstand des Site-Builds; wird normalerweise aufgeraeumt.
-apps/site/.astro/out-*
+# Zwischenstand des Template-Builds; wird normalerweise aufgeraeumt.
+templates/*/.astro/out-*
 apps/kompass/e2e/.tmp/
 apps/kompass/test-results/
 apps/kompass/playwright-report/
+apps/kompass/playwright-report-container/
+apps/kompass/test-results-container/
+apps/kompass/.e2e-container/
 next-env.d.ts
 *.tsbuildinfo

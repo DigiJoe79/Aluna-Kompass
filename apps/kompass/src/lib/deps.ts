@@ -1,4 +1,5 @@
 import { rmSync } from 'node:fs';
+import { clearDirectory } from './clear-directory';
 import { coreDocumentTemplates, createTypstRenderer } from '@kompass/documents';
 import { createDeps, readEnv, seedDevelopment } from '@kompass/core';
 import { installedModules } from '../modules';
@@ -38,7 +39,7 @@ export async function resetDeps(mode: 'empty' | 'seeded'): Promise<void> {
   holder.deps?.close();
   holder.deps = null;
   for (const suffix of ['', '-wal', '-shm']) rmSync(`${env.databasePath}${suffix}`, { force: true });
-  rmSync(env.mediaPath, { recursive: true, force: true });
+  clearDirectory(env.mediaPath);
   const deps = getDeps();
   if (mode === 'seeded') await seedDevelopment(deps);
   await resetMcpHandler();

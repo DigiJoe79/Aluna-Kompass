@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "e2e": "playwright test",
+    "e2e:image": "playwright test -c playwright.container.config.ts",
     "mcp:check": "tsx scripts/mcp-check.mts"
   },
   "dependencies": {

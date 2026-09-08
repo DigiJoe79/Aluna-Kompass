@@ -17,12 +17,16 @@ für jede künftige Vorrender-Entscheidung.
 
 **Kosten:** Bauzeit im Test-Job der CI.
 
-**Teilweise erledigt am 2026-09-08:** `pnpm verify` baut das Image mit und
-führt damit `next build` gegen den Arbeitsstand aus, bevor jemand pusht — die
-drei Fehlschläge vom 7.9. (Turbopack und `import.meta.url`, fehlendes
-Workspace-Paket, gesperrte Datenbank beim Vorrendern) wären dort aufgeschlagen.
-Was bleibt: die Suite auch gegen die gebaute Fassung laufen zu lassen statt nur
-gegen `next dev`.
+**Erledigt am 2026-09-08:** `pnpm verify` baut das Image und fährt dieselbe
+Playwright-Suite gegen den laufenden Container
+(`apps/kompass/playwright.container.config.ts`). Der erste Lauf fand sofort
+einen Fehler, den kein Test im Entwicklungsmodus sehen konnte: Die Abmeldung
+leitete auf `http://0.0.0.0:3000/login`, die interne Bindeadresse des
+Containers.
+
+**Was bleibt:** Dieser Ring läuft nur, wenn jemand `pnpm verify` fährt. Ob er
+zusätzlich in die CI gehört, hängt daran, wie viel Laufzeit dort vertretbar
+ist — der Image-Job hat das Bild ohnehin schon gebaut.
 
 ## 2. Backup-Upload über einen Route Handler
 
