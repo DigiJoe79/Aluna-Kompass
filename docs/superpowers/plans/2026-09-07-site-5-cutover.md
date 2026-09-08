@@ -337,15 +337,45 @@ Dabei kamen drei Fehler ans Licht, die der Cutover hinterlassen hatte oder die
 vorher niemand sehen konnte; sie stehen in
 `docs/superpowers/specs/2026-09-08-pruefringe-design.md`.
 
-## Stand
+## Stand (2026-09-08)
 
-Tasks 1, 3 und 4 sind ausgeführt und auf `dev`. Task 2 (das Migrationsskript)
-wurde gebaut und gegen die Entwicklungsdaten geprobt, danach aber mit dem Modul
-`website` wieder entfernt: Die Entscheidung vom 2026-09-08 lautet, Alunas
-Inhalte Stück für Stück aus dem CMS direkt in `site` zu pflegen, weil die
-vollständige Kopie ohnehin dort liegt und nicht in den `website_*`-Tabellen.
-Wer das Skript doch braucht, findet es unter `git show 7829e16^:scripts/migrate-website-to-site.ts`.
+**Nicht abgeschlossen.** Das Ziel dieses Plans lautet „Alunas Inhalte laufen auf
+dem Modul `site`" — und genau das steht noch aus.
 
-Damit ist dieser Plan abgeschlossen. Was aussteht, ist keine Entwicklungsarbeit
-mehr, sondern Redaktion: die Inhalte im Testcontainer einpflegen und die Seite
-abnehmen.
+| Task | Stand |
+|---|---|
+| 1 — Publish-Kette nach `site` | ausgeführt |
+| 2 — Alunas Inhalte übernehmen | **offen** |
+| 3 — `apps/site` herauslösen | ausgeführt |
+| 4 — Modul `website` entfernen | ausgeführt |
+
+Task 2 wurde gebaut (`scripts/migrate-website-to-site.ts`), gegen die
+Entwicklungsdaten geprobt — sieben Seitenfelder, drei Artikel, sieben
+Teammitglieder, zehn FAQ, keine Validierungsfehler — und danach mit dem Modul
+`website` wieder entfernt. Grund ist die Entscheidung vom 2026-09-08: Die
+vollständige Kopie der Inhalte liegt im CMS, nicht in den `website_*`-Tabellen,
+die nur den Prototyp-Import enthielten. Alunas Inhalte kommen deshalb Stück für
+Stück direkt aus dem CMS nach `site`. Wer das Skript doch braucht:
+`git show 7829e16^:scripts/migrate-website-to-site.ts`.
+
+**Bewusst übergangene Vorbedingung:** Der Plan verlangt vor Task 4, dass Alunas
+Installation in der Testumgebung bereits vollständig auf `site` läuft. Das war
+nicht der Fall. Die Auflage stand unter der Annahme, die `website_*`-Tabellen
+seien die einzige vollständige Kopie — mit dem CMS als Quelle trägt sie nicht
+mehr. Die Tabellen sind in Migration `0010` entfernt.
+
+**Was noch zu tun ist**, in dieser Reihenfolge:
+
+1. Das aktuelle Bild auf den Testcontainer ziehen. Erst die Fassung ab
+   `3865996` enthält die drei Fehlerbehebungen, die der Container-Ring gefunden
+   hat — ohne sie führt „Abmelden" ins Leere und ein Publish bricht am
+   Zielverzeichnis ab.
+2. Alunas Template unter `/data/site-template` einlesen, falls dort noch das
+   Basis-Template liegt.
+3. Die Inhalte aus dem CMS in `site` pflegen: elf Variablen, vier Sammlungen.
+   Was fest im Template steht, wandert nicht mit — die Aufstellung dazu steht in
+   `bestandsaufnahme.md` im Vereinsrepo.
+4. Publish aus der Testumgebung, Seite im Browser abnehmen.
+
+Erst danach ist dieser Plan durch. Schritt 3 ist Redaktion, keine
+Entwicklungsarbeit; 1, 2 und 4 sind Handgriffe im Betrieb.
