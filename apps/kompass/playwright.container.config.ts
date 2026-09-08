@@ -22,8 +22,16 @@ const PORT = 3200;
 // Volume, und dessen eigene Vitest-Dateien würde Playwright sonst als Testfälle
 // einsammeln.
 const tmp = path.resolve(import.meta.dirname, '.e2e-container');
-const data = path.join(tmp, 'data');
-const media = path.join(tmp, 'media');
+
+/**
+ * Nur das Publish-Ziel wird eingehängt — dort schaut der Test auf dem Wirt
+ * nach, was der Container geschrieben hat. `/data` und `/media` bekommen
+ * anonyme Volumes: Docker legt sie mit den Rechten aus dem Image an und
+ * entfernt sie mit `--rm` wieder. Eingehängte Wirtsverzeichnisse behalten unter
+ * Linux dagegen ihren Besitzer, und der Container (`node`, UID 1000) durfte
+ * dort nicht schreiben — sichtbar erst auf dem CI-Läufer, nie unter macOS, das
+ * die Rechte abbildet.
+ */
 const deploy = path.join(tmp, 'deploy');
 
 // Der Publish-Test sieht auf dem Wirt nach, was im Container geschrieben wurde.
@@ -65,20 +73,21 @@ const env: Record<string, string> = {
 const run = [
   // Beim Beenden mitnehmen, sonst ueberlebt der Container den Lauf.
   `trap "docker rm -f ${CONTAINER} >/dev/null 2>&1" EXIT INT TERM`,
-  // Ein frisches Volume je Lauf; sonst prüft der zweite Lauf eine
-  // Installation, die der erste eingerichtet hat, und die Erstinbetriebnahme
-  // bliebe ungetestet. Geleert statt gelöscht: Docker Desktop reicht ein
-  // eben erst angelegtes Verzeichnis nicht schnell genug in seine VM weiter,
-  // und der Start scheiterte an „error while creating mount source path".
-  `mkdir -p '${data}' '${media}' '${deploy}'`,
-  `find '${data}' '${media}' '${deploy}' -mindepth 1 -delete`,
+  // Geleert statt gelöscht: Docker Desktop reicht ein eben erst angelegtes
+  // Verzeichnis nicht schnell genug in seine VM weiter, und der Start
+  // scheiterte an „error while creating mount source path".
+  `mkdir -p '${deploy}'`,
+  // Im Container aufräumen, nicht auf dem Wirt: Was der letzte Lauf dorthin
+  // geschrieben hat, gehört unter Linux `node` und liegt in Unterverzeichnissen,
+  // die der Wirtsnutzer nicht leeren darf.
+  `docker run --rm --user 0 -v '${deploy}:/x' ${IMAGE} sh -c 'rm -rf /x/..?* /x/.[!.]* /x/*' >/dev/null 2>&1 || true`,
+  // Damit der Container als `node` hineinschreiben kann.
+  `chmod 0777 '${deploy}'`,
   [
     'docker run --rm',
     `--name ${CONTAINER}`,
     `-p ${PORT}:3000`,
     ...Object.entries(env).map(([key, value]) => `-e ${key}='${value}'`),
-    `-v '${data}:/data'`,
-    `-v '${media}:/media'`,
     `-v '${deploy}:/deploy'`,
     IMAGE,
   ].join(' '),
