@@ -68,6 +68,11 @@ test('preview build, diff and publish to the local staging target', async ({ pag
 test('the connection test lists what a publish would remove and touches nothing', async ({ page }) => {
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
+  // Die Publizieren-Seite gibt es erst mit eingelesenem Template.
+  await page.goto('/site/template');
+  await page.getByRole('button', { name: 'Template einlesen' }).click();
+  await page.getByRole('button', { name: 'Übernehmen' }).click();
+  await expect(page.getByRole('status')).toContainText('eingelesen');
   const fs = await import('node:fs');
   const target = process.env.E2E_SITE_TARGET!;
   fs.mkdirSync(target, { recursive: true });

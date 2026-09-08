@@ -34,9 +34,14 @@ export function CommandPalette({ groups, permissions }: { groups: NavGroup[]; pe
     const onOpen = () => setOpen(true);
     window.addEventListener('keydown', onKey);
     window.addEventListener('kompass:command-palette', onOpen);
+    // Strg+K wirkt erst, wenn dieser Effekt gelaufen ist. Ohne ein Merkmal am
+    // DOM kann ein Test das nicht abwarten und drückt ins Leere — auf einem
+    // langsamen Läufer zuverlässig, hier nie.
+    document.body.dataset.commandPalette = 'ready';
     return () => {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('kompass:command-palette', onOpen);
+      delete document.body.dataset.commandPalette;
     };
   }, []);
 

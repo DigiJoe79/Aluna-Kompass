@@ -17,6 +17,13 @@ für jede künftige Vorrender-Entscheidung.
 
 **Kosten:** Bauzeit im Test-Job der CI.
 
+**Teilweise erledigt am 2026-09-08:** `pnpm verify` baut das Image mit und
+führt damit `next build` gegen den Arbeitsstand aus, bevor jemand pusht — die
+drei Fehlschläge vom 7.9. (Turbopack und `import.meta.url`, fehlendes
+Workspace-Paket, gesperrte Datenbank beim Vorrendern) wären dort aufgeschlagen.
+Was bleibt: die Suite auch gegen die gebaute Fassung laufen zu lassen statt nur
+gegen `next dev`.
+
 ## 2. Backup-Upload über einen Route Handler
 
 **Was:** Den Import-Upload wie den Export über einen Route Handler führen, der

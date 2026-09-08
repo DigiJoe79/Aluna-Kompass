@@ -13,7 +13,12 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   timeout: 30_000,
-  use: { baseURL: 'http://localhost:3100', locale: 'de-DE', viewport: { width: 1280, height: 800 } },
+  // Ohne HTML-Bericht lädt die CI bei einem Fehlschlag ein leeres Artefakt
+  // hoch („No files were found") — und man sitzt vor einem roten Lauf ohne
+  // Bild. Die Spur gibt es nur beim Fehlschlag, damit der grüne Lauf schnell
+  // bleibt.
+  reporter: [['list'], ['html', { open: 'never' }]],
+  use: { baseURL: 'http://localhost:3100', locale: 'de-DE', viewport: { width: 1280, height: 800 }, trace: 'retain-on-failure' },
   webServer: {
     command: 'pnpm exec next dev -p 3100',
     url: 'http://localhost:3100/login',

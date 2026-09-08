@@ -35,7 +35,8 @@ Aluna Kompass ist ein Open-Source-Vereinsverwaltungstool für gemeinnützige Ver
 - `pnpm test` — alle Tests; `pnpm --filter @kompass/core test` — nur Kern
 - `pnpm typecheck` — TypeScript
 - `pnpm --filter @kompass/app e2e` — Playwright-E2E (Start den Dev-Server auf Port 3100 selbst)
-- `docker build -t kompass-local .` — lokales Image bauen (Zielplattform amd64; unter Apple Silicon `--platform linux/amd64`)
+- `pnpm verify` — **vor dem Push**: Typecheck, alle Tests, E2E und Image-Build in einem Lauf. Findet, was sonst erst die CI meldet.
+- `pnpm image` — nur das Image bauen (Zielplattform amd64; unter Apple Silicon setzt das Skript `--platform linux/amd64` bereits)
 - `pnpm --filter @kompass/core db:generate` — Migration aus Schema erzeugen
 - `pnpm --filter @kompass/core seed` — Entwicklungsdaten (nur `APP_ENV=development`)
 - `pnpm --filter verein-basis dev` — mitgeliefertes Basis-Template mit Fixture unter `http://localhost:4321`

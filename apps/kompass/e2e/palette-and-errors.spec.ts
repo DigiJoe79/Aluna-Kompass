@@ -8,6 +8,9 @@ test.describe('command palette and error pages', () => {
   });
 
   test('opens with Ctrl+K, filters and navigates', async ({ page }) => {
+    // Der Tastaturhorcher hängt an einem Effekt; vor der Hydration geht der
+    // Tastendruck ins Leere.
+    await expect(page.locator('body[data-command-palette="ready"]')).toBeAttached();
     await page.keyboard.press('Control+k');
     const palette = page.getByRole('dialog', { name: 'Befehlspalette' });
     await expect(palette).toBeVisible();

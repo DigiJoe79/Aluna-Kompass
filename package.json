@@ -10,6 +10,8 @@
     "e2e": "pnpm --filter @kompass/app e2e",
     "test": "pnpm -r --workspace-concurrency=1 test",
     "typecheck": "pnpm -r typecheck",
+    "image": "docker build --platform linux/amd64 -t kompass-local .",
+    "verify": "pnpm typecheck && pnpm test && pnpm --filter @kompass/app e2e && pnpm image",
     "import:prototype": "tsx scripts/import-prototype.ts",
     "dev:reset": "tsx scripts/dev-reset.ts"
   },
