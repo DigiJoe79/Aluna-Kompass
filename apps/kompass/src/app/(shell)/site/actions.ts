@@ -1,6 +1,7 @@
 'use server';
 
 import {
+  applySeed,
   applyTemplateSync,
   createEntry,
   deleteEntry,
@@ -13,6 +14,7 @@ import {
   type Finding,
   type SyncPreview,
 } from '@kompass/module-site';
+import type { SeedReport } from '@kompass/module-site/client';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -42,6 +44,29 @@ export async function applySyncAction(): Promise<ActionState> {
   revalidatePath('/site/template');
   revalidatePath('/site', 'layout');
   return toActionState(result, t, t('site.template.readDone'));
+}
+
+export type SeedPreviewState =
+  | { status: 'idle' }
+  | { status: 'preview'; report: SeedReport }
+  | { status: 'error'; message: string };
+
+export async function previewSeedAction(): Promise<SeedPreviewState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await applySeed(deps, ctx, { confirm: false });
+  if (result.ok) return { status: 'preview', report: result.value };
+  const state = toActionState(result, t);
+  return { status: 'error', message: state.status === 'error' ? state.message : t('errors.validation') };
+}
+
+export async function applySeedAction(): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await applySeed(deps, ctx, { confirm: true });
+  revalidatePath('/site/template');
+  revalidatePath('/site', 'layout');
+  return toActionState(result, t, t('site.seed.applied'));
 }
 
 export async function saveVariablesAction(_prev: ActionState, formData: FormData): Promise<ActionState> {

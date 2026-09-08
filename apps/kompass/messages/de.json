@@ -1040,6 +1040,16 @@
       "readDone": "Template eingelesen.",
       "name": "Name"
     },
+    "seed": {
+      "title": "Startinhalte",
+      "intro": "Das Template bringt Startinhalte mit. Einmalig übernehmbar, solange die Webseite leer ist.",
+      "preview": "Vorschau",
+      "apply": "Übernehmen",
+      "cancel": "Abbrechen",
+      "report": "{variables} Variablen, {entries} Einträge, {assets} Dateien",
+      "done": "Startinhalte übernommen am {when}.",
+      "applied": "Startinhalte übernommen."
+    },
     "variables": {
       "title": "Variablen",
       "save": "Speichern",
