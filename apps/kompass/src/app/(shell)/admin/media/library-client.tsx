@@ -13,6 +13,7 @@ import {
   deleteMediaAction,
   moveMediaAction,
   renameFolderAction,
+  uploadMediaAction,
 } from './actions';
 
 interface Item {
@@ -133,6 +134,23 @@ export function LibraryClient({ current, folders, items }: { current: string | n
       </nav>
 
       <div className="min-w-0 flex-1">
+        <label className="mb-4 flex items-center gap-2 text-[13px] text-ink-2">
+          {t('upload')}
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/svg+xml,application/pdf"
+            className="text-[12px]"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const fd = new FormData();
+              fd.set('file', file);
+              if (current) fd.set('folder', current);
+              e.target.value = '';
+              void run(uploadMediaAction(fd));
+            }}
+          />
+        </label>
         {items.length === 0 ? (
           <p className="text-ink-2">{t('empty')}</p>
         ) : (

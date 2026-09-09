@@ -30,6 +30,17 @@ test.describe('media library', () => {
     await expect(row.getByRole('button', { name: 'Löschen' })).toBeDisabled();
   });
 
+  test('uploads a file and deletes it again while it is unused', async ({ page }) => {
+    await page.goto('/admin/media');
+    await page.getByLabel('Datei hochladen').setInputFiles({ name: 'frei.png', mimeType: 'image/png', buffer: PNG });
+
+    const row = page.getByRole('row', { name: /frei-/ });
+    await expect(row).toContainText('nicht verwendet');
+    await row.getByRole('button', { name: 'Löschen' }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Löschen' }).click();
+    await expect(page.getByRole('row', { name: /frei-/ })).toHaveCount(0);
+  });
+
   test('creates a folder, opens it and deletes it while empty', async ({ page }) => {
     await page.goto('/admin/media');
     await page.getByLabel('Ordnername').fill('kampagnen');

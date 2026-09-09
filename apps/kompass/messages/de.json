@@ -44,6 +44,8 @@
       "usage": "Verwendung"
     },
     "unused": "nicht verwendet",
+    "upload": "Datei hochladen",
+    "uploaded": "Datei hochgeladen.",
     "delete": "Löschen",
     "confirmDelete": "Diese Datei löschen?",
     "confirmDeleteBody": "Die Datei wird entfernt. Der Löschvorgang steht im Änderungsprotokoll.",

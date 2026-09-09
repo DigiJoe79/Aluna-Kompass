@@ -48,9 +48,15 @@ Zwei Probleme also:
 
 **Nicht-Ziele.** Ein erzwungener Lösch-Mechanismus; Löschbarkeit von Projekten
 oder Tierprofilen (entscheidet sich in Stufe 3 bzw. 4, siehe `AGENTS.md`);
-Mehrfachauswahl zum Verschieben in der Mediathek; ein Upload-Feld auf der
-Mediathek-Seite (Uploads laufen weiter dort, wo das Bild gebraucht wird);
-strukturierte Fehler-Nutzlast im `Result`-Typ.
+Mehrfachauswahl zum Verschieben in der Mediathek; strukturierte Fehler-Nutzlast
+im `Result`-Typ.
+
+**Nachtrag 2026-09-09.** Die Mediathek-Seite bekommt doch ein Upload-Feld — in
+den gerade offenen Ordner. Der ursprüngliche Zuschnitt („Uploads laufen weiter
+dort, wo das Bild gebraucht wird") liess sich in der Praxis nicht halten: Ohne
+Upload kann man in der Mediathek nichts anlegen, um Löschen und Ordnen zu
+erproben, und ein eigenständiger Medienbestand ohne eigenen Upload-Weg ist
+unvollständig.
 
 ## 3. Die Löschpolitik als Konstante
 
@@ -317,13 +323,15 @@ Neu: `apps/kompass/src/app/(shell)/admin/media/page.tsx`, Navigationseintrag
   aus dem Dienst.
 
 **Server-Actions** in `apps/kompass/src/app/(shell)/admin/media/actions.ts`:
-`deleteMediaAction`, `moveMediaAction`, `createFolderAction`, `renameFolderAction`,
-`deleteFolderAction` — jede ruft die entsprechende Kern-Funktion und
-`revalidatePath`. Übersetzungen unter `media.*` in `apps/kompass/messages/de.json`.
+`uploadMediaAction`, `deleteMediaAction`, `moveMediaAction`, `createFolderAction`,
+`renameFolderAction`, `deleteFolderAction` — jede ruft die entsprechende
+Kern-Funktion und `revalidatePath`. Übersetzungen unter `media.*` in
+`apps/kompass/messages/de.json`.
 
-Kein Upload-Feld auf dieser Seite in dieser Stufe (Nicht-Ziel). Der `MediaPicker`
-in Formularen bleibt unverändert — sein „Entfernen" löst nur die Feld-Referenz
-und macht das Asset damit gegebenenfalls löschbar.
+Oben in der rechten Spalte ein **Upload-Feld** (`uploadMediaAction` →
+`storeMediaAsset` mit dem gerade offenen Ordner). Der `MediaPicker` in Formularen
+bleibt unverändert — sein „Entfernen" löst nur die Feld-Referenz und macht das
+Asset damit gegebenenfalls löschbar.
 
 ## 10. Tests
 
