@@ -1,0 +1,5 @@
+[
+  { "id": "a4-plain", "label": "A4 ohne Briefkopf (Bericht)", "kind": "report" },
+  { "id": "a4-mit-briefkopf", "label": "A4 mit Briefkopf", "kind": "letter" },
+  { "id": "a4-ohne-briefkopf", "label": "A4 Brief-Folgeblatt", "kind": "letter" }
+]

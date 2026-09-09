@@ -37,7 +37,7 @@ describe('typst renderer', () => {
   it('honours KOMPASS_TEMPLATES_DIR and KOMPASS_FONTS_DIR', async () => {
     const { resolveAssetDirs } = await import('../src/renderer');
     const dirs = resolveAssetDirs({ KOMPASS_TEMPLATES_DIR: '/srv/t', KOMPASS_FONTS_DIR: '/srv/f' });
-    expect(dirs).toEqual({ templatesDir: '/srv/t', fontsDir: '/srv/f' });
+    expect(dirs).toEqual({ templatesDir: '/srv/t', fontsDir: '/srv/f', documentTemplatesDir: null });
   });
 
   it('fails loudly when a font family is unknown', async () => {
