@@ -71,11 +71,13 @@ const PROBE_PAYLOAD = {
   slots: { kind: 'plain', title: 'Prüfung' },
 };
 
-/** Prüf-Render einer Basis mit Minimal-Payload — fängt Signatur- und Schriftfehler ab. */
+/** Prüf-Render einer Basis mit Minimal-Payload — fängt Signatur-, Schrift- und Grafikfehler ab. */
 export async function probeBase(opts: {
   renderer: TypstRenderer;
   baseId: string;
   bases: Map<string, ResolvedBase>;
+  fontPaths?: string[];
+  assetsDir?: string | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!opts.bases.has(opts.baseId)) return { ok: false, error: 'not found' };
   try {
@@ -84,6 +86,8 @@ export async function probeBase(opts: {
       bases: opts.bases,
       bodyTypst: 'Prüftext.',
       payload: PROBE_PAYLOAD,
+      fontPaths: opts.fontPaths,
+      assetsDir: opts.assetsDir,
     });
     return { ok: true };
   } catch (e) {

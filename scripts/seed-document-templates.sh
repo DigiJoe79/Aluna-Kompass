@@ -31,6 +31,15 @@ mitgelieferte zu ersetzen (gleiche ID gewinnt). Jede exportiert die Funktion
 `set document(date: none)` (Determinismus). Vorlagen zum Abkupfern liegen in
 `bases.reference/`.
 
+Dazu optional:
+
+- `fonts/`  — eigene Schriftdateien (`.ttf` / `.otf` / `.ttc`). Werden als
+  zusätzlicher Font-Pfad übergeben; eine Basis nutzt sie über den Familiennamen
+  (`payload.brand.fontHeading` usw., gesetzt im Theme). `.woff2` geht nicht.
+- `assets/` — Grafiken, die eine Basis fest einbindet (Banner, Siegel,
+  Unterschrift). Referenziert als `#image("/assets/<name>")` (mit führendem `/`).
+  Das Vereinslogo kommt weiterhin aus den Einstellungen (`payload.logoFile`).
+
 Ein leeres Verzeichnis ist in Ordnung — dann gelten die mitgelieferten Basen.
 
 Dieses Verzeichnis ist eine Vertrauensgrenze: Der Code läuft beim Rendern im

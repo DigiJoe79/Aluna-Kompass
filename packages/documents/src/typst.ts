@@ -20,9 +20,10 @@ export function typstVersion(binary: string): string {
   return spawnSync(binary, ['--version'], { encoding: 'utf8' }).stdout.trim();
 }
 
-export function compileTypst(opts: { binary: string; rootDir: string; fontsDir: string; entry: string; output: string }): Promise<void> {
+export function compileTypst(opts: { binary: string; rootDir: string; fontPaths: string[]; entry: string; output: string }): Promise<void> {
+  const fontArgs = opts.fontPaths.flatMap((p) => ['--font-path', p]);
   return new Promise((resolve, reject) => {
-    const child = spawn(opts.binary, ['compile', '--root', opts.rootDir, '--font-path', opts.fontsDir, '--ignore-system-fonts', opts.entry, opts.output], { stdio: ['ignore', 'ignore', 'pipe'] });
+    const child = spawn(opts.binary, ['compile', '--root', opts.rootDir, ...fontArgs, '--ignore-system-fonts', opts.entry, opts.output], { stdio: ['ignore', 'ignore', 'pipe'] });
     let stderr = '';
     child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString('utf8'); });
     child.on('error', reject);

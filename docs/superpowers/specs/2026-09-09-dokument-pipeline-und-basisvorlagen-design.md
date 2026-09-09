@@ -178,6 +178,19 @@ Die Pipeline schreibt pro Render eine winzige Einstiegsdatei ins Job-Verzeichnis
   (SHA-256 der aufgelösten `.typ`). Ein späterer Render mit geänderter Basis ist
   damit erkennbar — die alte PDF bleibt die Wahrheit.
 
+**Nachtrag 2026-09-09.** Das Volume kann neben `.typ` und `bases.json` tragen:
+- `fonts/` — eigene `.ttf`/`.otf`/`.ttc`. Als zusätzlicher `--font-path`
+  übergeben (`--ignore-system-fonts` bleibt). Eine Basis nutzt sie über den
+  Familiennamen aus `payload.brand.font*` (Theme). `.woff2` unterstützt Typst
+  hier nicht.
+- `assets/` — Grafiken, die eine Basis fest einbindet. Beim Rendern nach
+  `job/assets/` kopiert; die Basis referenziert sie **root-absolut**:
+  `#image("/assets/<name>")`, wie `json("/data.json")`. Das Vereinslogo bleibt
+  `payload.logoFile` (aus `branding.logoAssetId`).
+- `baseChecksum` deckt weiterhin nur die `.typ` — eine geänderte Grafik oder
+  Schrift im Volume schlägt sich nicht darin nieder. Bewusst: das Volume ist die
+  Vertrauensgrenze, Änderungen daran sind Betriebssache.
+
 ### 6.3 IDs, Manifest, Label
 
 - **ID** = Dateiname ohne `.typ`, Muster `^[a-z][a-z0-9-]{1,40}$`.

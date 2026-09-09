@@ -119,10 +119,13 @@ Entrypoint beim nächsten Start selbst; ein Build meldete das vorher als
 Die Seitenrahmen für erzeugte PDFs (Briefkopf, Berichtslayout, …). Kompass
 liefert die generischen Basen `a4-plain`, `a4-mit-briefkopf` und
 `a4-ohne-briefkopf` mit; ein Verein legt hier eigene `.typ`-Dateien ab, um eine
-zu ergänzen oder zu ersetzen (gleiche ID gewinnt). Der Entrypoint legt das
-Verzeichnis beim ersten Start an, mit einem `README` und `bases.reference/` als
-Kopiervorlage. **Ein leeres Verzeichnis ist gültig** — dann gelten die
-mitgelieferten Basen; anders als `/data/site-template` muss hier nichts liegen.
+zu ergänzen oder zu ersetzen (gleiche ID gewinnt). Daneben optional `fonts/`
+(eigene `.ttf`/`.otf` als zusätzlicher Font-Pfad) und `assets/` (Grafiken, die
+eine Basis über `#image("/assets/…")` einbindet — das Vereinslogo kommt weiter
+aus den Einstellungen). Der Entrypoint legt das Verzeichnis beim ersten Start an,
+mit einem `README` und `bases.reference/` als Kopiervorlage. **Ein leeres
+Verzeichnis ist gültig** — dann gelten die mitgelieferten Basen; anders als
+`/data/site-template` muss hier nichts liegen.
 
 Auch dies ist eine **Vertrauensgrenze**: Jede `.typ` läuft beim Rendern als Code
 im Container. Es gehört `node` und wird nicht über eine Freigabe geteilt.

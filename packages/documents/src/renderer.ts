@@ -1,4 +1,5 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,6 +18,10 @@ export interface RenderDocumentOptions {
   /** Wird als data.json unter dem Root abgelegt; `slots` erwartet. */
   payload: object;
   logo?: { bytes: Uint8Array; mimeType: string } | null;
+  /** Zusätzliche `--font-path`-Verzeichnisse (z. B. `<volume>/fonts`). */
+  fontPaths?: string[];
+  /** Wird als `assets/` in den Job kopiert — Basen greifen mit `#image("assets/…")` zu. */
+  assetsDir?: string | null;
 }
 
 export interface TypstRenderer {
@@ -45,13 +50,16 @@ export function createTypstRenderer(opts: { binary?: string; fontsDir?: string }
     async version() {
       return typstVersion(bin());
     },
-    async renderDocument({ baseId, bases, bodyTypst, payload, logo = null }) {
+    async renderDocument({ baseId, bases, bodyTypst, payload, logo = null, fontPaths = [], assetsDir = null }) {
       if (!bases.has(baseId)) throw new Error(`unknown document base: ${baseId}`);
       const job = await mkdtemp(path.join(tmpdir(), 'kompass-doc-'));
       try {
         await mkdir(path.join(job, 'bases'), { recursive: true });
         for (const base of bases.values()) {
           await writeFile(path.join(job, 'bases', `${base.id}.typ`), base.typst);
+        }
+        if (assetsDir && existsSync(assetsDir)) {
+          await cp(assetsDir, path.join(job, 'assets'), { recursive: true });
         }
         let logoFile: string | null = null;
         if (logo && LOGO_EXT[logo.mimeType]) {
@@ -64,7 +72,13 @@ export function createTypstRenderer(opts: { binary?: string; fontsDir?: string }
           path.join(job, 'entry.typ'),
           `#import "bases/${baseId}.typ": base\n#import "body.typ": content\n#let payload = json("/data.json")\n#show: base.with(payload, payload.slots)\n#content\n`,
         );
-        await compileTypst({ binary: bin(), rootDir: job, fontsDir, entry: path.join(job, 'entry.typ'), output: path.join(job, 'out.pdf') });
+        await compileTypst({
+          binary: bin(),
+          rootDir: job,
+          fontPaths: [fontsDir, ...fontPaths.filter((p) => existsSync(p))],
+          entry: path.join(job, 'entry.typ'),
+          output: path.join(job, 'out.pdf'),
+        });
         return new Uint8Array(await readFile(path.join(job, 'out.pdf')));
       } finally {
         await rm(job, { recursive: true, force: true });
