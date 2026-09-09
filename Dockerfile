@@ -58,7 +58,8 @@ ENV NODE_ENV=production \
     SITE_PREVIEW_DIR=/data/site-preview \
     KOMPASS_MIGRATIONS_DIR=/app/packages/core/src/db/migrations \
     KOMPASS_TEMPLATES_DIR=/app/packages/documents/templates \
-    KOMPASS_FONTS_DIR=/app/packages/documents/fonts
+    KOMPASS_FONTS_DIR=/app/packages/documents/fonts \
+    KOMPASS_DOCUMENT_TEMPLATES_DIR=/data/document-templates
 WORKDIR /app
 COPY --from=build --chown=node:node /app/apps/kompass/.next/standalone ./
 COPY --from=build --chown=node:node /app/apps/kompass/.next/static ./apps/kompass/.next/static
@@ -77,8 +78,9 @@ COPY --from=build --chown=node:node /app/packages/documents/fonts ./packages/doc
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --chown=node:node scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY --chown=node:node scripts/seed-site-template.sh /usr/local/bin/seed-site-template.sh
+COPY --chown=node:node scripts/seed-document-templates.sh /usr/local/bin/seed-document-templates.sh
 RUN mkdir -p /data /media && chown node:node /data /media \
- && chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/seed-site-template.sh
+ && chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/seed-site-template.sh /usr/local/bin/seed-document-templates.sh
 USER node
 VOLUME ["/data", "/media"]
 EXPOSE 3000

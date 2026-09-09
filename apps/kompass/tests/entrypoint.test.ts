@@ -86,3 +86,30 @@ describe('seed-site-template.sh', () => {
     expect(lstatSync(path.join(templateDir, 'node_modules')).isSymbolicLink()).toBe(true);
   });
 });
+
+const DOC_SCRIPT = path.resolve(import.meta.dirname, '../../../scripts/seed-document-templates.sh');
+const DOC_BASES_SRC = path.resolve(import.meta.dirname, '../../../packages/documents/templates/bases');
+
+describe('seed-document-templates.sh', () => {
+  it('creates an empty volume with a README and reference bases', () => {
+    const root = workspace();
+    const dir = path.join(root, 'document-templates');
+    execFileSync('sh', [DOC_SCRIPT, DOC_BASES_SRC], { env: { ...process.env, KOMPASS_DOCUMENT_TEMPLATES_DIR: dir }, encoding: 'utf8' });
+
+    expect(existsSync(path.join(dir, 'README.md'))).toBe(true);
+    expect(existsSync(path.join(dir, 'bases.reference/a4-plain.typ'))).toBe(true);
+    expect(readFileSync(path.join(dir, 'README.md'), 'utf8')).toContain('Vertrauensgrenze');
+  });
+
+  it('leaves an existing volume untouched', () => {
+    const root = workspace();
+    const dir = path.join(root, 'document-templates');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, 'a4-mit-briefkopf.typ'), '#let base(payload, slots, body) = body\n');
+
+    execFileSync('sh', [DOC_SCRIPT, DOC_BASES_SRC], { env: { ...process.env, KOMPASS_DOCUMENT_TEMPLATES_DIR: dir }, encoding: 'utf8' });
+
+    expect(readFileSync(path.join(dir, 'a4-mit-briefkopf.typ'), 'utf8')).toBe('#let base(payload, slots, body) = body\n');
+    expect(existsSync(path.join(dir, 'README.md'))).toBe(false);
+  });
+});
