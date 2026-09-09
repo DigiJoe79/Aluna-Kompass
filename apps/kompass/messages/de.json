@@ -35,6 +35,31 @@
     "lastSaved": "zuletzt gespeichert am {date} von {name}",
     "audited": "Wird protokolliert."
   },
+  "media": {
+    "title": "Mediathek",
+    "empty": "Keine Dateien in diesem Ordner.",
+    "columns": {
+      "file": "Datei",
+      "size": "Größe",
+      "usage": "Verwendung"
+    },
+    "unused": "nicht verwendet",
+    "delete": "Löschen",
+    "confirmDelete": "Diese Datei löschen?",
+    "confirmDeleteBody": "Die Datei wird entfernt. Der Löschvorgang steht im Änderungsprotokoll.",
+    "deleted": "Datei gelöscht.",
+    "inUse": "In Verwendung — kann nicht gelöscht werden.",
+    "move": "Verschieben nach",
+    "movedToast": "Datei verschoben.",
+    "root": "Alle Dateien",
+    "newFolder": "Neuer Ordner",
+    "newFolderName": "Ordnername",
+    "renameFolder": "Umbenennen",
+    "deleteFolder": "Ordner löschen",
+    "folderDeleted": "Ordner gelöscht.",
+    "created": "Ordner angelegt.",
+    "renamed": "Ordner umbenannt."
+  },
   "content": {
     "preview": "Vorschau",
     "previewEmpty": "Noch kein Text.",
@@ -86,6 +111,11 @@
       "tooManyLocales": "Höchstens zehn Sprachen können eingerichtet werden.",
       "lastLocale": "Die letzte verbleibende Sprache kann nicht entfernt werden.",
       "unknownLocale": "Diese Sprache ist nicht eingerichtet.",
+      "mediaAssetInUse": "{detail}",
+      "folderNotEmpty": "{detail}",
+      "folderExists": "Ein Ordner mit diesem Namen existiert bereits.",
+      "folderParentMissing": "Der übergeordnete Ordner fehlt.",
+      "folderNotFound": "Der Zielordner existiert nicht.",
       "default": "Der Vorgang ist nicht möglich: {detail}"
     },
     "fields": {
@@ -162,7 +192,8 @@
       "variables": "Variablen",
       "publish": "Publizieren"
     },
-    "projects": "Projekte"
+    "projects": "Projekte",
+    "media": "Mediathek"
   },
   "shell": {
     "envBanner": {

@@ -32,6 +32,19 @@ const KNOWN_CONFLICTS = new Set([
   'tooManyLocales',
   'lastLocale',
   'unknownLocale',
+  'folderExists',
+  'folderParentMissing',
+  'folderNotFound',
+]);
+
+const CONFLICTS_WITH_DETAIL = new Set([
+  'moduleDependencyInactive',
+  'moduleRequiredByOthers',
+  'blockedTermsPresent',
+  'siteBuildFailed',
+  'publishFailed',
+  'mediaAssetInUse',
+  'folderNotEmpty',
 ]);
 
 const MEDIA_FIELD_CODES = ['unsupportedMediaType', 'fileTooLarge', 'svgContainsScript'];
@@ -62,7 +75,7 @@ function errorMessage(error: ServiceError, t: Translate): string {
       return t('errors.unauthorized');
     case 'conflict': {
       const detail = error.message.includes(':') ? error.message.slice(error.message.indexOf(':') + 1).trim() : error.message;
-      if (error.code === 'moduleDependencyInactive' || error.code === 'moduleRequiredByOthers' || error.code === 'blockedTermsPresent' || error.code === 'siteBuildFailed' || error.code === 'publishFailed') {
+      if (CONFLICTS_WITH_DETAIL.has(error.code)) {
         return t(`errors.conflict.${error.code}`, { detail });
       }
       return KNOWN_CONFLICTS.has(error.code) ? t(`errors.conflict.${error.code}`) : t('errors.conflict.default', { detail: error.message });

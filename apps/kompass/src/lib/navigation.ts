@@ -36,6 +36,7 @@ const CORE_ADMIN: { key: string; href: string; icon: string; permission?: string
   { key: 'modules', href: '/admin/modules', icon: 'grid', permission: 'modules.manage' },
   { key: 'audit', href: '/admin/audit', icon: 'clock', permission: 'audit.view' },
   { key: 'documents', href: '/admin/documents', icon: 'file-text', permission: 'documents.view' },
+  { key: 'media', href: '/admin/media', icon: 'image', permission: 'media.upload' },
   { key: 'backup', href: '/admin/backup', icon: 'database', permission: 'backup.export' },
 ];
 

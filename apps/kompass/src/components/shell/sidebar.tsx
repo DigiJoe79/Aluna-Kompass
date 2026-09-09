@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronUp, Clock, Database, Droplet, Euro, FileText, Grid2x2, Home, Languages, PanelLeft, Shield, SlidersHorizontal, Users, X, type LucideIcon } from 'lucide-react';
+import { ChevronUp, Clock, Database, Droplet, Euro, FileText, Grid2x2, Home, Image, Languages, PanelLeft, Shield, SlidersHorizontal, Users, X, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -9,7 +9,7 @@ import type { NavGroup } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import { UserMenu, type UserMenuProps } from './user-menu';
 
-const ICONS: Record<string, LucideIcon> = { users: Users, shield: Shield, sliders: SlidersHorizontal, languages: Languages, droplet: Droplet, grid: Grid2x2, clock: Clock, 'file-text': FileText, database: Database, euro: Euro, home: Home };
+const ICONS: Record<string, LucideIcon> = { users: Users, shield: Shield, sliders: SlidersHorizontal, languages: Languages, droplet: Droplet, grid: Grid2x2, clock: Clock, 'file-text': FileText, image: Image, database: Database, euro: Euro, home: Home };
 
 export interface SidebarProps {
   organization: string;

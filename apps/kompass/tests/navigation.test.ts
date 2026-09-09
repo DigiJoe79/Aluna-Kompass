@@ -10,10 +10,10 @@ const finance = defineModule({
 });
 
 describe('buildNavigation', () => {
-  it('builds the admin group with all nine core entries, filtered by permission', () => {
+  it('builds the admin group with all core entries, filtered by permission', () => {
     const groups = buildNavigation({ manifests: [coreModule], enabledKeys: new Set(['core']), permissions: new Set(['users.manage', 'audit.view']) });
     const admin = groups.find((g) => g.key === 'admin')!;
-    expect(admin.items.map((i) => i.key)).toEqual(['users', 'roles', 'settings', 'locales', 'themes', 'modules', 'audit', 'documents', 'backup']);
+    expect(admin.items.map((i) => i.key)).toEqual(['users', 'roles', 'settings', 'locales', 'themes', 'modules', 'audit', 'documents', 'media', 'backup']);
     expect(admin.items.filter((i) => i.visible).map((i) => i.key)).toEqual(['users', 'audit']);
   });
 
