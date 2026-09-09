@@ -63,7 +63,6 @@ export function CommandPalette({ groups, permissions }: { groups: NavGroup[]; pe
                     <CommandItem
                       key={e.id}
                       value={`${e.label} ${e.hint}`}
-                      disabled={e.disabled}
                       onSelect={() => {
                         setOpen(false);
                         router.push(e.href);
@@ -71,9 +70,7 @@ export function CommandPalette({ groups, permissions }: { groups: NavGroup[]; pe
                       className="flex items-center gap-3 data-[selected=true]:bg-selected data-[selected=true]:text-selected-ink"
                     >
                       <span className="flex-1">{e.label}</span>
-                      <span className="text-[12px] text-muted-ink">
-                        {e.disabled && e.disabledReason ? t(e.disabledReason, { module: e.hint }) : e.hint}
-                      </span>
+                      <span className="text-[12px] text-muted-ink">{e.hint}</span>
                     </CommandItem>
                   ))}
                 </CommandGroup>

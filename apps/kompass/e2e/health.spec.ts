@@ -6,4 +6,6 @@ test('health endpoint reports environment and migrations without auth', async ({
   const body = await res.json();
   expect(body).toMatchObject({ status: 'ok', environment: 'test' });
   expect(body.migrationCount).toBeGreaterThan(0);
+  expect(typeof body.build).toBe('string');
+  expect(body.build.length).toBeGreaterThan(0);
 });

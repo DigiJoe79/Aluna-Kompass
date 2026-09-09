@@ -44,8 +44,12 @@ RUN set -eu; \
     | tar -xJ -C /usr/local/bin --strip-components=1 "typst-${typst_arch}-unknown-linux-musl/typst" \
  && typst --version \
  && apt-get purge -y curl xz-utils && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+# Build-Kennung (CI: der Git-SHA; `pnpm image`: der kurze SHA). Erscheint im
+# Sidebar-Fuss und unter /api/health. Ohne Argument steht „local".
+ARG KOMPASS_BUILD=local
 ENV NODE_ENV=production \
     APP_ENV=production \
+    KOMPASS_BUILD=${KOMPASS_BUILD} \
     HOSTNAME=0.0.0.0 \
     PORT=3000 \
     DATABASE_PATH=/data/kompass.db \

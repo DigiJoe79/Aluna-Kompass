@@ -88,7 +88,9 @@ jobs:
           load: true
           tags: kompass-local
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: TYPST_VERSION=${{ env.TYPST_VERSION }}
+          build-args: |
+            TYPST_VERSION=${{ env.TYPST_VERSION }}
+            KOMPASS_BUILD=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - uses: pnpm/action-setup@v6

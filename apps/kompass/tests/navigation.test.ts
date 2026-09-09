@@ -33,16 +33,16 @@ describe('buildNavigation', () => {
     expect(groups.find((g) => g.key === 'core')?.items.every((i) => !i.visible)).toBe(true);
   });
 
-  it('renders installed but inactive modules as disabled groups', () => {
+  it('leaves installed but inactive modules out of the navigation entirely', () => {
     const groups = buildNavigation({ manifests: [coreModule, finance], enabledKeys: new Set(['core']), permissions: new Set(['finance.view']) });
-    const group = groups.find((g) => g.key === 'finance')!;
-    expect(group.disabled).toBe(true);
-    expect(group.items[0]).toMatchObject({ key: 'finance.ledger', href: '/finance', disabled: true });
+    expect(groups.find((g) => g.key === 'finance')).toBeUndefined();
   });
 
-  it('enables module groups once the module is active', () => {
+  it('shows a module group once the module is active', () => {
     const groups = buildNavigation({ manifests: [coreModule, finance], enabledKeys: new Set(['core', 'finance']), permissions: new Set(['finance.view']) });
-    expect(groups.find((g) => g.key === 'finance')?.disabled).toBe(false);
+    const group = groups.find((g) => g.key === 'finance')!;
+    expect(group.disabled).toBe(false);
+    expect(group.items[0]).toMatchObject({ key: 'finance.ledger', href: '/finance', disabled: false });
   });
 
   it('adds runtime items with their own label after the static ones', () => {

@@ -60,10 +60,17 @@ export function buildNavigation(input: {
     disabled: false,
     items: CORE_MAIN.map((item) => ({ ...item, labelKey: `nav.${item.key}`, disabled: false, visible: visible(item.permission) })),
   };
+  // Inaktive Module erscheinen gar nicht in der Navigation. Wer sie einschalten
+  // will, tut das unter Verwaltung → Module; ihre Seiten zeigen bis dahin die
+  // „Modul inaktiv"-Seite, falls jemand die URL direkt aufruft.
   const modules: NavGroup[] = input.manifests
-    .filter((m) => m.key !== 'core' && ((m.navigation?.length ?? 0) > 0 || (input.extraItems?.[m.key]?.length ?? 0) > 0))
+    .filter(
+      (m) =>
+        m.key !== 'core' &&
+        input.enabledKeys.has(m.key) &&
+        ((m.navigation?.length ?? 0) > 0 || (input.extraItems?.[m.key]?.length ?? 0) > 0),
+    )
     .map((m) => {
-      const enabled = input.enabledKeys.has(m.key);
       const toItem = (item: NavigationItem): NavItem => ({
         key: item.key,
         href: item.href,
@@ -71,13 +78,13 @@ export function buildNavigation(input: {
         labelKey: `nav.${item.key}`,
         label: item.label,
         permission: item.permission,
-        disabled: !enabled,
+        disabled: false,
         visible: visible(item.permission),
       });
       return {
         key: m.key,
         labelKey: `nav.groups.${m.key}`,
-        disabled: !enabled,
+        disabled: false,
         items: [...(m.navigation ?? []).map(toItem), ...(input.extraItems?.[m.key] ?? []).map(toItem)],
       };
     });

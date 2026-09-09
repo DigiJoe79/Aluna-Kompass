@@ -15,13 +15,14 @@ export interface SidebarProps {
   organization: string;
   logoUrl: string | null;
   groups: NavGroup[];
+  build: string;
   collapsed: boolean;
   onToggle: () => void;
   onClose?: () => void;
   user: UserMenuProps['user'];
 }
 
-export function Sidebar({ organization, logoUrl, groups, collapsed, onToggle, onClose, user }: SidebarProps) {
+export function Sidebar({ organization, logoUrl, groups, build, collapsed, onToggle, onClose, user }: SidebarProps) {
   const t = useTranslations();
   const pathname = usePathname();
   const width = collapsed ? 56 : 248;
@@ -83,18 +84,21 @@ export function Sidebar({ organization, logoUrl, groups, collapsed, onToggle, on
             {collapsed ? (
               <div className="mx-auto my-1.5 h-px w-6 bg-line-strong" aria-hidden />
             ) : (
-              <div className={cn('flex items-center gap-2 px-2.5 pb-1.5 pt-3.5 text-[11px] font-bold uppercase tracking-[.09em]', group.disabled ? 'text-disabled-ink' : 'text-muted-ink')}>
+              <div className="flex items-center gap-2 px-2.5 pb-1.5 pt-3.5 text-[11px] font-bold uppercase tracking-[.09em] text-muted-ink">
                 {t(group.labelKey)}
-                {group.disabled ? <span className="rounded-sm border border-line bg-disabled px-1.5 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-disabled-ink">{t('nav.moduleInactive')}</span> : null}
               </div>
             )}
-            {group.items.filter((i) => i.visible || group.disabled).map((i) => item(i.key, i.href, i.icon, i.label ?? t(i.labelKey), i.disabled, t(group.labelKey)))}
-            {group.disabled && !collapsed ? <p className="px-2.5 pt-1 text-[11px] text-muted-ink">{t('nav.moduleHint')}</p> : null}
+            {group.items.filter((i) => i.visible).map((i) => item(i.key, i.href, i.icon, i.label ?? t(i.labelKey), i.disabled, t(group.labelKey)))}
           </div>
         ))}
       </div>
       <div className="border-t border-line p-2">
         <UserMenu user={user} collapsed={collapsed} trigger={<ChevronUp className="size-3.5" aria-hidden />} />
+        {collapsed ? null : (
+          <p className="px-2 pt-1.5 text-[10px] text-muted-ink" title={t('app.name')}>
+            {t('shell.build', { id: build })}
+          </p>
+        )}
       </div>
     </nav>
   );

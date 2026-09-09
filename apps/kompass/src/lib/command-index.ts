@@ -6,8 +6,6 @@ export interface CommandEntry {
   label: string;
   hint: string;
   href: string;
-  disabled: boolean;
-  disabledReason?: string;
   permission?: string;
 }
 
@@ -29,8 +27,6 @@ export function buildCommandIndex(input: {
         label: item.label ?? t(item.labelKey),
         hint: t(group.labelKey),
         href: item.href,
-        disabled: item.disabled,
-        disabledReason: item.disabled ? 'palette.moduleInactive' : undefined,
         permission: item.permission,
       });
     }
@@ -43,7 +39,6 @@ export function buildCommandIndex(input: {
         label: t(`settings.fields.${field.key}`),
         hint: `${t('nav.settings')} / ${t(`settings.tabs.${field.tab}`)}`,
         href: `/admin/settings?tab=${field.tab}`,
-        disabled: false,
         permission: 'settings.manage',
       });
     }

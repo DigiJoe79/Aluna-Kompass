@@ -23,7 +23,7 @@ function titleFor(pathname: string, groups: NavGroup[], t: (k: string) => string
   return { title: '', group: '' };
 }
 
-export function ShellFrame({ organization, logoUrl, groups, user, permissions, children }: { organization: string; logoUrl: string | null; groups: NavGroup[]; user: { name: string; roleNames: string[] }; permissions: string[]; children: ReactNode }) {
+export function ShellFrame({ organization, logoUrl, groups, build, user, permissions, children }: { organization: string; logoUrl: string | null; groups: NavGroup[]; build: string; user: { name: string; roleNames: string[] }; permissions: string[]; children: ReactNode }) {
   const t = useTranslations();
   const pathname = usePathname();
   const [collapsed, setCollapsed] = usePreference('sidebarCollapsed');
@@ -58,11 +58,11 @@ export function ShellFrame({ organization, logoUrl, groups, user, permissions, c
           <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
             <SheetContent side="left" className="w-[280px] p-0 shadow-md">
               <SheetTitle className="sr-only">{t('nav.aria')}</SheetTitle>
-              <Sidebar organization={organization} logoUrl={logoUrl} groups={groups} collapsed={false} onToggle={() => {}} onClose={() => setDrawerOpen(false)} user={user} />
+              <Sidebar organization={organization} logoUrl={logoUrl} groups={groups} build={build} collapsed={false} onToggle={() => {}} onClose={() => setDrawerOpen(false)} user={user} />
             </SheetContent>
           </Sheet>
         ) : (
-          <Sidebar organization={organization} logoUrl={logoUrl} groups={groups} collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} user={user} />
+          <Sidebar organization={organization} logoUrl={logoUrl} groups={groups} build={build} collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} user={user} />
         )}
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar breadcrumb={breadcrumb} title={title} userName={user.name} collapsed={collapsed} drawer={drawer} onExpand={() => setCollapsed(false)} onOpenDrawer={() => setDrawerOpen(true)} onSearch={openPalette} />

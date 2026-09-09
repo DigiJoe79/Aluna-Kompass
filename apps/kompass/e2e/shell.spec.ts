@@ -14,6 +14,7 @@ test.describe('app shell', () => {
     for (const label of ['Startseite', 'Nutzer', 'Rollen', 'Einstellungen', 'Themes', 'Module', 'Änderungsprotokoll', 'Dokumente', 'Backup']) {
       await expect(nav.getByRole('link', { name: label })).toBeVisible();
     }
+    await expect(nav.getByText(/^Build /)).toBeVisible();
   });
 
   test('collapses the sidebar with [ and remembers it', async ({ page }) => {

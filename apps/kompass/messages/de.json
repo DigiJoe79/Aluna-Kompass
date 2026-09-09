@@ -176,8 +176,6 @@
     "home": "Startseite",
     "profile": "Profil",
     "collapse": "Navigation einklappen",
-    "moduleInactive": "Modul nicht aktiv",
-    "moduleHint": "Module werden unter Verwaltung → Module aktiviert.",
     "groups": {
       "admin": "Verwaltung",
       "finance": "Finanzen",
@@ -208,6 +206,7 @@
     "media": "Mediathek"
   },
   "shell": {
+    "build": "Build {id}",
     "envBanner": {
       "testContext": "Daten vom {date} · Änderungen hier haben keine Wirkung",
       "noImport": "kein Import",
@@ -834,7 +833,6 @@
       "settings": "Einstellungen",
       "actions": "Aktionen"
     },
-    "moduleInactive": "Modul {module} nicht aktiv",
     "select": "wählen",
     "open": "öffnen",
     "close": "schließen",
