@@ -18,6 +18,7 @@ import {
 interface Item {
   id: string;
   filename: string;
+  mimeType: string;
   bytes: number;
   createdAt: string;
   references: string[];
@@ -147,7 +148,18 @@ export function LibraryClient({ current, folders, items }: { current: string | n
             <tbody>
               {items.map((it) => (
                 <tr key={it.id} className="h-[var(--row-h)] border-b border-line-2">
-                  <td className="py-2 font-mono text-[13px]">{it.filename}</td>
+                  <td className="py-2">
+                    <span className="flex items-center gap-2">
+                      {it.mimeType.startsWith('image/') ? (
+                        <img src={`/media/${it.id}`} alt="" className="size-8 shrink-0 rounded border border-line object-cover" />
+                      ) : (
+                        <span className="grid size-8 shrink-0 place-items-center rounded border border-line bg-surface-2 text-[10px] uppercase text-ink-2">
+                          {it.filename.split('.').at(-1)}
+                        </span>
+                      )}
+                      <span className="font-mono text-[13px]">{it.filename}</span>
+                    </span>
+                  </td>
                   <td>{kb(it.bytes)}</td>
                   <td>{it.references.length === 0 ? <span className="text-ink-2">{t('unused')}</span> : it.references.join(', ')}</td>
                   <td className="whitespace-nowrap text-right">

@@ -16,6 +16,7 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
   const items = unwrap(await listMediaAssets(deps, ctx, current)).map((it) => ({
     id: it.record.id,
     filename: it.record.filename,
+    mimeType: it.record.mimeType,
     bytes: it.record.bytes,
     createdAt: it.record.createdAt,
     references: it.references.map((r) => r.label),
