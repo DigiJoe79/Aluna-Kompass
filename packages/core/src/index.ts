@@ -21,6 +21,7 @@ export * from './audit/query';
 export * from './media/store';
 export * from './media/service';
 export * from './media/references';
+export * from './media/folders';
 export * from './documents/service';
 export * from './backup';
 export * from './settings/service';

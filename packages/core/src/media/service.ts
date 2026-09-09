@@ -12,6 +12,7 @@ import type { Deps } from '../deps';
 import { newId } from '../ids';
 import { requirePermission } from '../permissions/check';
 import { conflict, invalid, notFound, ok, unauthorized, type Result } from '../result';
+import { folderExists } from './folders';
 import { findMediaReferences } from './references';
 
 export const MEDIA_MAX_BYTES = 10 * 1024 * 1024;
@@ -30,6 +31,9 @@ export interface StoreMediaInput {
   originalName: string;
   bytes: Uint8Array;
   declaredMimeType?: string;
+  /** Zielordner (Pfad aus media_folders) oder null/weggelassen = Wurzel.
+   *  Bei einem Dedup-Treffer bleibt der Ordner des vorhandenen Datensatzes. */
+  folder?: string | null;
 }
 
 function slug(name: string): string {
@@ -82,12 +86,13 @@ export async function storeMediaInternal(deps: Deps, ctx: CallContext, input: St
     .from(mediaAssets)
     .where(sql`${mediaAssets.filename} like ${`%-${meta.hash.slice(0, 12)}.${meta.ext}`}`)
     .get();
-  if (existing) return ok(existing);
+  if (existing) return ok(existing); // Dedup: der Ordner des vorhandenen Datensatzes bleibt
+  const folder = input.folder && folderExists(deps, input.folder) ? input.folder : null;
   await deps.media.write(filename, input.bytes);
   return deps.db.transaction((tx: DbOrTx) => {
     const id = newId();
     tx.insert(mediaAssets)
-      .values({ id, filename, mimeType: meta.mimeType, bytes: input.bytes.byteLength, width: meta.width, height: meta.height, uploadedByUserId: ctx.userId, createdAt: isoNow(deps.clock) })
+      .values({ id, filename, mimeType: meta.mimeType, bytes: input.bytes.byteLength, width: meta.width, height: meta.height, uploadedByUserId: ctx.userId, createdAt: isoNow(deps.clock), folder })
       .run();
     const record = tx.select().from(mediaAssets).where(eq(mediaAssets.id, id)).get() as MediaAssetRecord;
     recordAudit(tx, deps, ctx, { action: 'media.upload', entityType: 'mediaAsset', entityId: id, after: record, summary: `Datei ${filename} abgelegt` });
