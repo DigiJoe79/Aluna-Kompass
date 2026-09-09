@@ -17,13 +17,13 @@ const modulesWithTools: [ModuleManifest, readonly McpToolDefinition[]][] = [
 ];
 
 /**
- * Rechte, die bewusst ohne MCP-Werkzeug bleiben. Alle drei hängen an
- * Dateiströmen — ein Backup von einigen hundert Megabyte oder ein Foto durch
- * JSON-RPC zu reichen, brächte niemandem etwas; sie laufen über Route Handler.
- * Wer hier einträgt, entscheidet bewusst; wer ein Recht ergänzt, ohne es hier
- * oder in einem Werkzeug zu nennen, bekommt einen roten Test.
+ * Rechte, die bewusst ohne MCP-Werkzeug bleiben. Beide hängen an Dateiströmen —
+ * ein Backup von einigen hundert Megabyte durch JSON-RPC zu reichen, brächte
+ * niemandem etwas; sie laufen über Route Handler. Wer hier einträgt, entscheidet
+ * bewusst; wer ein Recht ergänzt, ohne es hier oder in einem Werkzeug zu nennen,
+ * bekommt einen roten Test.
  */
-const WITHOUT_MCP = new Set(['media.upload', 'backup.export', 'backup.import']);
+const WITHOUT_MCP = new Set(['backup.export', 'backup.import']);
 
 /** Rechte, die kein Werkzeug nennt, als `modul: recht`. */
 const uncoveredPermissions = (pairs: [ModuleManifest, readonly McpToolDefinition[]][]) =>
