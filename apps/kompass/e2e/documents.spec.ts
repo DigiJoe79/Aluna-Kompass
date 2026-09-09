@@ -46,7 +46,7 @@ test.describe('documents', () => {
     await expect(page.getByRole('row', { name: /Änderungsprotokoll/ })).toContainText('PRO-2026-001');
   });
 
-  test('uploads a logo that appears in the sidebar', async ({ page }) => {
+  test('a logo set in branding appears in the sidebar and in a rendered document', async ({ page }) => {
     await page.goto('/admin/settings');
     await page.getByRole('tab', { name: 'Branding' }).click();
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
@@ -55,5 +55,15 @@ test.describe('documents', () => {
     await expect(page.getByRole('status')).toContainText('Logo gespeichert');
     const logo = page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('img', { name: 'Vereinslogo' });
     await expect(logo).toHaveAttribute('src', /\/media\/[A-Z0-9]+$/);
+
+    // Mit gesetztem Logo darf ein Dokument-Render nicht scheitern (das Bild landet im Briefkopf).
+    await page.goto('/admin/documents');
+    await page.getByRole('button', { name: 'Dokument erzeugen' }).click();
+    await page.getByRole('dialog').getByLabel('Titel').fill('Mit Logo');
+    await page.getByRole('dialog').getByRole('button', { name: 'Erzeugen' }).click();
+    const row = page.getByRole('row', { name: /Mit Logo/ });
+    await expect(row).toContainText('BRF-2026-001');
+    const pdf = await (await page.request.get((await row.getByRole('link', { name: 'Herunterladen' }).getAttribute('href'))!)).body();
+    expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
   });
 });

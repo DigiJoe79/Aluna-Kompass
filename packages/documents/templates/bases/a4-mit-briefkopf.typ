@@ -77,7 +77,7 @@
     v(4mm)
   }
 
-  grid(columns: (1fr, auto), [], [#text(size: 9.5pt)[#org("city"), #payload.issuedDate]])
+  grid(columns: (1fr, auto), [], [#text(size: 9.5pt)[#if org("city") != "" [#org("city"), ]#payload.issuedDate]])
   v(6mm)
 
   if slots.at("subject", default: "") != "" {
