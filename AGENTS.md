@@ -50,7 +50,7 @@ Aluna Kompass ist ein Open-Source-Vereinsverwaltungstool für gemeinnützige Ver
 
 ## Quellen
 
-- Specs: `docs/superpowers/specs/` (Fundament: `2026-09-05-fundament-design.md`; Webseite als Template: `2026-09-07-site-template-design.md`; Prüfringe: `2026-09-08-pruefringe-design.md`; Löschbarkeit und Mediathek: `2026-09-09-loeschbarkeit-und-mediathek-design.md`)
+- Specs: `docs/superpowers/specs/` (Fundament: `2026-09-05-fundament-design.md`; Webseite als Template: `2026-09-07-site-template-design.md`; Prüfringe: `2026-09-08-pruefringe-design.md`; Löschbarkeit und Mediathek: `2026-09-09-loeschbarkeit-und-mediathek-design.md`; Dokument-Pipeline und Basis-Vorlagen: `2026-09-09-dokument-pipeline-und-basisvorlagen-design.md`)
 - Pläne: `docs/superpowers/plans/`
 - Backlog: `docs/backlog.md` (bewusst zurückgestellte Punkte mit Begründung)
 - Design-Referenz Stufe 1: `docs/design/fundament/design_handoff_aluna_kompass_fundament/README.md`
