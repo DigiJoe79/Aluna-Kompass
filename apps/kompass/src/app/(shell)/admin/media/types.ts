@@ -7,6 +7,7 @@ export interface Item {
   height: number | null;
   createdAt: string;
   uploadedBy: string | null;
+  folder: string | null;
   references: string[];
 }
 

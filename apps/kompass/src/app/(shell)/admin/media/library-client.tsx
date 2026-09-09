@@ -125,7 +125,7 @@ export function LibraryClient({ current, folders, items }: { current: string | n
       <AssetDetailDialog
         item={detail}
         folders={folders}
-        currentFolder={current}
+        assetFolder={detail?.folder ?? null}
         onOpenChange={(open) => !open && setDetailId(null)}
         onMove={move}
         onDelete={requestDelete}

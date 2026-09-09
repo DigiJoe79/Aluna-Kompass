@@ -16,8 +16,10 @@ const siteNavigationFor = (deps: Parameters<typeof activeTemplate>[0]): Navigati
   const template = activeTemplate(deps);
   if (!template) return [];
   return [
-    { key: 'site.variables', href: '/site/variables', icon: 'sliders', group: 'site', permission: 'site.manage' },
+    // „Publizieren" schließt oben an „Template" an (das steht als fester Eintrag im
+    // Manifest); darunter, hinter einer Trennlinie, die pflegbaren Inhalte.
     { key: 'site.publish', href: '/site/publish', icon: 'upload', group: 'site', permission: 'site.publish' },
+    { key: 'site.variables', href: '/site/variables', icon: 'sliders', group: 'site', permission: 'site.manage', sectionBreak: true },
     ...Object.entries(template.schema.collections).map(([key, col]): NavigationItem => ({
       key: `site.c.${key}`,
       href: `/site/c/${key}`,

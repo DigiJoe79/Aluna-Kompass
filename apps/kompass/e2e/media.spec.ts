@@ -50,6 +50,19 @@ test.describe('media library', () => {
     await expect(page.getByRole('button', { name: 'Grid', exact: true })).toHaveClass(/bg-selected/);
   });
 
+  test('"Alle Dateien" shows files from every folder', async ({ page }) => {
+    await page.goto('/admin/media');
+    await page.getByLabel('Ordnername').fill('bilder');
+    await page.getByRole('button', { name: 'Neuer Ordner' }).click();
+    await page.getByRole('link', { name: /bilder/ }).click();
+    await page.getByLabel('Datei hochladen').setInputFiles({ name: 'inbilder.png', mimeType: 'image/png', buffer: PNG });
+    await expect(page.getByRole('row', { name: /inbilder-/ })).toBeVisible();
+
+    await page.getByRole('link', { name: 'Alle Dateien' }).click();
+    await expect(page).toHaveURL('/admin/media');
+    await expect(page.getByRole('row', { name: /inbilder-/ })).toBeVisible();
+  });
+
   test('creates a folder, opens it and deletes it while empty', async ({ page }) => {
     await page.goto('/admin/media');
     await page.getByLabel('Ordnername').fill('kampagnen');

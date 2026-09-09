@@ -4,14 +4,14 @@ import { describe, expect, it } from 'vitest';
 import { siteModule } from '../src';
 import { siteTemplateState } from '../src/schema';
 
-const withTemplate = () => {
+const withTemplate = (collections: Record<string, unknown> = {}) => {
   const deps = createTestDeps({ locales: ['de'] });
   deps.db
     .insert(siteTemplateState)
     .values({
       id: 'current',
       name: 'T',
-      schemaJson: { name: 'T', locales: ['de'], uses: [], variables: {}, collections: {} },
+      schemaJson: { name: 'T', locales: ['de'], uses: [], variables: {}, collections },
       checksum: 'a'.repeat(64),
       readAt: 't',
       readByUserId: null,
@@ -47,5 +47,13 @@ describe('site module', () => {
   it('always offers the way in', () => {
     const empty = createTestDeps({ locales: ['de'] });
     expect([...hrefs(siteModule.navigation), ...hrefs(siteModule.navigationFor?.(empty))]).toContain('/site/template');
+  });
+
+  it('puts publishing above a section break, then the editable content', () => {
+    const items = siteModule.navigationFor?.(withTemplate({ news: { label: 'News', fields: {} } })) ?? [];
+    expect(items.map((i) => i.href)).toEqual(['/site/publish', '/site/variables', '/site/c/news']);
+    // Die Trennlinie sitzt vor den Inhalten, nicht vor „Publizieren".
+    expect(items.find((i) => i.href === '/site/publish')?.sectionBreak).toBeFalsy();
+    expect(items.find((i) => i.href === '/site/variables')?.sectionBreak).toBe(true);
   });
 });

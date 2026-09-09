@@ -17,6 +17,15 @@ test.describe('app shell', () => {
     await expect(nav.getByText(/^Build /)).toBeVisible();
   });
 
+  test('collapses a navigation group and remembers it', async ({ page }) => {
+    const nav = page.getByRole('navigation', { name: 'Hauptnavigation' });
+    await expect(nav.getByRole('link', { name: 'Nutzer' })).toBeVisible();
+    await nav.getByRole('button', { name: 'Verwaltung' }).click();
+    await expect(nav.getByRole('link', { name: 'Nutzer' })).toBeHidden();
+    await page.reload();
+    await expect(nav.getByRole('link', { name: 'Nutzer' })).toBeHidden();
+  });
+
   test('collapses the sidebar with [ and remembers it', async ({ page }) => {
     const nav = page.getByRole('navigation', { name: 'Hauptnavigation' });
     await expect(nav).toHaveCSS('width', '248px');

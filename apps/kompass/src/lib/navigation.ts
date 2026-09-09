@@ -10,6 +10,8 @@ export interface NavItem {
   permission?: string;
   disabled: boolean;
   visible: boolean;
+  /** Trennlinie oberhalb dieses Eintrags. */
+  sectionBreak?: boolean;
 }
 
 export interface NavGroup {
@@ -80,6 +82,7 @@ export function buildNavigation(input: {
         permission: item.permission,
         disabled: false,
         visible: visible(item.permission),
+        sectionBreak: item.sectionBreak ?? false,
       });
       return {
         key: m.key,

@@ -8,14 +8,14 @@ import { kb, type Folder, type Item } from './types';
 export function AssetDetailDialog({
   item,
   folders,
-  currentFolder,
+  assetFolder,
   onOpenChange,
   onMove,
   onDelete,
 }: {
   item: Item | null;
   folders: Folder[];
-  currentFolder: string | null;
+  assetFolder: string | null;
   onOpenChange: (open: boolean) => void;
   onMove: (id: string, folder: string | null) => void;
   onDelete: (id: string) => void;
@@ -52,7 +52,7 @@ export function AssetDetailDialog({
                 </>
               ) : null}
               <dt className="text-ink-2">{t('folder')}</dt>
-              <dd>{currentFolder ?? t('root')}</dd>
+              <dd>{assetFolder ?? t('root')}</dd>
               <dt className="text-ink-2">{t('uploadedAt')}</dt>
               <dd>{new Date(item.createdAt).toLocaleDateString('de-DE')}</dd>
               {item.uploadedBy ? (
@@ -69,7 +69,7 @@ export function AssetDetailDialog({
               <label className="flex items-center gap-2 text-[13px] text-ink-2">
                 {t('move')}
                 <select
-                  value={currentFolder ?? ''}
+                  value={assetFolder ?? ''}
                   className="rounded border border-line bg-input px-1 py-0.5 text-[13px]"
                   onChange={(e) => onMove(item.id, e.target.value || null)}
                 >

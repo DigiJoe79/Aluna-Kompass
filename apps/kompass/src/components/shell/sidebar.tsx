@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronUp, Clock, Database, Droplet, Euro, FileText, Grid2x2, Home, Image, Languages, PanelLeft, Shield, SlidersHorizontal, Users, X, type LucideIcon } from 'lucide-react';
+import { ChevronDown, ChevronUp, Clock, Database, Droplet, Euro, FileText, Folder, Grid2x2, Home, Image, LayoutTemplate, Languages, List, PanelLeft, PawPrint, Shield, SlidersHorizontal, Upload, Users, X, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -9,7 +9,25 @@ import type { NavGroup } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import { UserMenu, type UserMenuProps } from './user-menu';
 
-const ICONS: Record<string, LucideIcon> = { users: Users, shield: Shield, sliders: SlidersHorizontal, languages: Languages, droplet: Droplet, grid: Grid2x2, clock: Clock, 'file-text': FileText, image: Image, database: Database, euro: Euro, home: Home };
+const ICONS: Record<string, LucideIcon> = {
+  users: Users,
+  shield: Shield,
+  sliders: SlidersHorizontal,
+  languages: Languages,
+  droplet: Droplet,
+  grid: Grid2x2,
+  clock: Clock,
+  'file-text': FileText,
+  image: Image,
+  database: Database,
+  euro: Euro,
+  home: Home,
+  folder: Folder,
+  'paw-print': PawPrint,
+  'layout-template': LayoutTemplate,
+  upload: Upload,
+  list: List,
+};
 
 export interface SidebarProps {
   organization: string;
@@ -20,9 +38,12 @@ export interface SidebarProps {
   onToggle: () => void;
   onClose?: () => void;
   user: UserMenuProps['user'];
+  /** Gruppen-Keys, deren Einträge eingeklappt sind (nur im ausgeklappten Zustand). */
+  collapsedGroups: string[];
+  onToggleGroup: (key: string) => void;
 }
 
-export function Sidebar({ organization, logoUrl, groups, build, collapsed, onToggle, onClose, user }: SidebarProps) {
+export function Sidebar({ organization, logoUrl, groups, build, collapsed, onToggle, onClose, user, collapsedGroups, onToggleGroup }: SidebarProps) {
   const t = useTranslations();
   const pathname = usePathname();
   const width = collapsed ? 56 : 248;
@@ -79,18 +100,36 @@ export function Sidebar({ organization, logoUrl, groups, build, collapsed, onTog
       </div>
       <div className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2">
         {item('home', '/', 'home', t('nav.home'), false)}
-        {groups.map((group) => (
-          <div key={group.key} className="flex flex-col gap-0.5">
-            {collapsed ? (
-              <div className="mx-auto my-1.5 h-px w-6 bg-line-strong" aria-hidden />
-            ) : (
-              <div className="flex items-center gap-2 px-2.5 pb-1.5 pt-3.5 text-[11px] font-bold uppercase tracking-[.09em] text-muted-ink">
-                {t(group.labelKey)}
-              </div>
-            )}
-            {group.items.filter((i) => i.visible).map((i) => item(i.key, i.href, i.icon, i.label ?? t(i.labelKey), i.disabled, t(group.labelKey)))}
-          </div>
-        ))}
+        {groups.map((group) => {
+          const groupCollapsed = !collapsed && collapsedGroups.includes(group.key);
+          return (
+            <div key={group.key} className="flex flex-col gap-0.5">
+              {collapsed ? (
+                <div className="mx-auto my-1.5 h-px w-6 bg-line-strong" aria-hidden />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onToggleGroup(group.key)}
+                  aria-expanded={!groupCollapsed}
+                  className="flex items-center gap-1.5 px-2.5 pb-1.5 pt-3.5 text-[11px] font-bold uppercase tracking-[.09em] text-muted-ink hover:text-ink-2"
+                >
+                  <ChevronDown className={cn('size-3 shrink-0 transition-transform', groupCollapsed && '-rotate-90')} aria-hidden />
+                  {t(group.labelKey)}
+                </button>
+              )}
+              {groupCollapsed
+                ? null
+                : group.items
+                    .filter((i) => i.visible)
+                    .map((i) => (
+                      <div key={i.key} className="flex flex-col gap-0.5">
+                        {i.sectionBreak && !collapsed ? <div className="mx-2.5 my-1 h-px bg-line" aria-hidden /> : null}
+                        {item(i.key, i.href, i.icon, i.label ?? t(i.labelKey), i.disabled, t(group.labelKey))}
+                      </div>
+                    ))}
+            </div>
+          );
+        })}
       </div>
       <div className="border-t border-line p-2">
         <UserMenu user={user} collapsed={collapsed} trigger={<ChevronUp className="size-3.5" aria-hidden />} />

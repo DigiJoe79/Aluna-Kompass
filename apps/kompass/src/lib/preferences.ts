@@ -7,8 +7,15 @@ type Prefs = {
   colorScheme: 'light' | 'dark';
   density: 'compact' | 'default' | 'comfortable';
   mediaView: 'list' | 'grid';
+  navCollapsedGroups: string[];
 };
-const DEFAULTS: Prefs = { sidebarCollapsed: false, colorScheme: 'light', density: 'default', mediaView: 'list' };
+const DEFAULTS: Prefs = {
+  sidebarCollapsed: false,
+  colorScheme: 'light',
+  density: 'default',
+  mediaView: 'list',
+  navCollapsedGroups: [],
+};
 
 function read<K extends keyof Prefs>(key: K): Prefs[K] {
   try {

@@ -31,6 +31,8 @@ export interface NavigationItem {
   permission?: string;
   /** Beschriftung aus Daten. Fehlt sie, kommt der Text aus `nav.<key>`. */
   label?: string;
+  /** Trennlinie oberhalb dieses Eintrags — teilt eine Gruppe in Abschnitte. */
+  sectionBreak?: boolean;
 }
 
 export interface PublishedView<T = unknown> {
