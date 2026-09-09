@@ -12,6 +12,15 @@ export interface SettingDefinition<T = unknown> {
   systemOnly?: boolean;
 }
 
+export interface MediaReference {
+  /** Menschlich lesbar, für die Fehlermeldung und die Verwendungs-Spalte:
+   *  z. B. 'Tier „Rocky"', 'Artikel „Sommerfest"', 'Logo des Vereins'. */
+  label: string;
+  /** Entitätstyp und ID, falls die Oberfläche verlinken will. */
+  entity: string;
+  id: string;
+}
+
 export interface NavigationItem {
   key: string;
   href: string;
@@ -68,6 +77,9 @@ export interface ModuleManifest {
   mcpTools?: readonly McpToolDefinition[] | ((deps: Deps) => readonly McpToolDefinition[]);
   /** Einträge, die erst zur Laufzeit feststehen — etwa je Sammlung eines Templates. */
   navigationFor?: (deps: Deps) => NavigationItem[];
+  /** Wo dieses Modul ein Medium verwendet — synchron, nur lesend, ohne
+   *  Rechteprüfung. Befragt vor dem Löschen eines Assets. */
+  mediaReferences?: (deps: Deps, assetId: string) => readonly MediaReference[];
 }
 
 /** Die MCP-Werkzeuge eines Moduls, egal ob als feste Liste oder als Funktion von `deps` deklariert. */

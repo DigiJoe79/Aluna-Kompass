@@ -1,3 +1,4 @@
+import { coreMediaReferences } from './media/references';
 import { defineModule } from './modules/manifest';
 import { publishedOrganization } from './published/organization';
 import { publishedProjects } from './published/projects';
@@ -10,4 +11,5 @@ export const coreModule = defineModule({
   permissions: CORE_PERMISSIONS,
   settings: CORE_SETTINGS,
   publishedViews: [publishedOrganization, publishedProjects],
+  mediaReferences: coreMediaReferences,
 });
