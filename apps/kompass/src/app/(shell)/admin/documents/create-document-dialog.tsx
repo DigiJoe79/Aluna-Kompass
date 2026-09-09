@@ -7,10 +7,8 @@ import { toast } from 'sonner';
 import { FormField } from '@/components/forms/form-field';
 import { SubmitButton } from '@/components/forms/submit-button';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { idleState } from '@/lib/actions';
 import { createLetterheadAction } from './actions';
@@ -42,8 +40,7 @@ export function CreateDocumentDialog({ templates }: { templates: { key: string; 
             </select>
           </FormField>
           <FormField id="title" label={t('titleField')} error={errors.title}><Input id="title" name="title" required maxLength={120} /></FormField>
-          <FormField id="body" label={t('body')} error={errors.body}><Textarea id="body" name="body" rows={6} maxLength={5000} /></FormField>
-          <div className="flex items-center gap-2"><Checkbox id="letterhead" name="letterhead" defaultChecked /><Label htmlFor="letterhead">{t('letterhead')}</Label></div>
+          <FormField id="body" label={t('body')} hint={t('bodyHint')} error={errors.body}><Textarea id="body" name="body" rows={8} maxLength={20000} /></FormField>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>{c('cancel')}</Button>
             <SubmitButton>{pending ? t('rendering') : t('submit')}</SubmitButton>

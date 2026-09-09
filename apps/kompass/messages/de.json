@@ -854,13 +854,20 @@
       "letterhead": "Briefbogen",
       "audit-log-export": "Änderungsprotokoll"
     },
+    "bases": {
+      "title": "Basis-Vorlagen",
+      "ready": "bereit",
+      "broken": "fehlerhaft",
+      "useDefault": "Vorgabe der Vorlage",
+      "saved": "Basis-Vorlage gesetzt."
+    },
     "create": {
       "button": "Dokument erzeugen",
       "title": "Dokument erzeugen",
       "template": "Vorlage",
       "titleField": "Titel",
-      "body": "Text",
-      "letterhead": "Briefkopf und Vereinsangaben einsetzen",
+      "body": "Text (Markdown)",
+      "bodyHint": "Überschriften mit #, Listen mit -, Tabellen wie in Markdown.",
       "submit": "Erzeugen",
       "rendering": "Wird erzeugt …",
       "missingPermission": "benötigt {permission}",

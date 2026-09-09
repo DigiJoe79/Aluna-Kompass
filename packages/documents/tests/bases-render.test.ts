@@ -1,5 +1,7 @@
+import type { DocumentRenderContext } from '@kompass/core';
+import { DEFAULT_THEME } from '@kompass/core/themes';
 import { describe, expect, it } from 'vitest';
-import { createTypstRenderer, resolveAssetDirs, resolveBases } from '../src';
+import { coreDocumentTemplates, createTypstRenderer, resolveAssetDirs, resolveBases } from '../src';
 
 const bases = resolveBases(resolveAssetDirs({}));
 const renderer = createTypstRenderer();
@@ -50,5 +52,17 @@ describe('generic bases render', () => {
     const pdf = await renderer.renderDocument({ baseId: 'a4-mit-briefkopf', bases, bodyTypst: long, payload: payload() });
     // Zwei Seiten: die grobe Größe reicht als Nachweis, dass umgebrochen wurde.
     expect(pdf.byteLength).toBeGreaterThan(6000);
+  });
+
+  it('renders the audit-log-export body (typst, not markdown) into a4-plain', async () => {
+    const [, audit] = coreDocumentTemplates();
+    const ctx: DocumentRenderContext = { number: 'PRO-2026-001', issuedAt: '2026-09-05T08:00:00.000Z', organization: { 'organization.name': 'Musterverein e.V.' }, theme: DEFAULT_THEME, logo: null };
+    const built = audit!.build(
+      { title: 'Änderungsprotokoll', filters: { Kanal: 'system' }, entries: [{ occurredAt: '2026-09-05T08:00:00.000Z', userName: 'Anna Berger', channel: 'ui', action: 'settings.update', entityType: 'setting', entityId: 'organization.name', summary: 'geändert #[nicht als Code]' }] },
+      ctx,
+    );
+    expect('typst' in built.body).toBe(true);
+    const pdf = await renderer.renderDocument({ baseId: audit!.base, bases, bodyTypst: 'typst' in built.body ? built.body.typst : '', payload: { ...payload(), slots: built.slots } });
+    expect(new TextDecoder().decode(pdf.subarray(0, 5))).toBe('%PDF-');
   });
 });

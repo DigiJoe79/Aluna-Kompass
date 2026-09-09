@@ -32,8 +32,10 @@ export function buildPayload(ctx: DocumentRenderContext) {
   };
 }
 
-/** Typst-String literal absichern (Werte aus dem Bestand). */
+/** Typst-String-Literal absichern. */
 const q = (s: string) => `"${s.replace(/[\\"]/g, (c) => `\\${c}`)}"`;
+/** Freitext ohne Markup-Wirkung (für den Einsatz zwischen `[ ]`). */
+const esc = (s: string) => s.replace(/[\\#$[\]*_`~@<>]/g, (ch) => `\\${ch}`);
 
 const letterheadSchema = z.object({
   title: z.string().trim().min(1).max(120),
@@ -59,25 +61,20 @@ const auditExportSchema = z.object({
 /** Die Änderungsprotokoll-Tabelle als Typst (datenlastig, kein Markdown). */
 function auditTable(data: z.infer<typeof auditExportSchema>): string {
   const filters = Object.entries(data.filters).map(([k, v]) => `${k}: ${v}`).join('; ');
-  const rows = data.entries
-    .map((e) => {
-      const cells = [
-        `raw(${q(e.occurredAt)})`,
-        `[${e.userName ?? '\\u{2014}'}]`,
-        `[${e.channel}]`,
-        `raw(${q(e.action)})`,
-        `[${e.entityType}${e.entityId ? ` \\u{00B7} ${e.entityId}` : ''} \\\n#text(size: 8.5pt)[${e.summary.replace(/[\]\\]/g, (c) => `\\${c}`)}]]`,
-      ];
-      return `(${cells.join(', ')})`;
-    })
-    .join(',\n  ');
+  const cells = data.entries.flatMap((e) => [
+    `raw(${q(e.occurredAt)})`,
+    `[${esc(e.userName ?? '—')}]`,
+    `[${esc(e.channel)}]`,
+    `raw(${q(e.action)})`,
+    `[${esc(e.entityType + (e.entityId ? ` · ${e.entityId}` : ''))} #linebreak() #text(size: 8.5pt)[${esc(e.summary)}]]`,
+  ]);
   return [
-    `#text(size: 9pt)[Filter: ${filters || 'keine'}]`,
+    `#text(size: 9pt)[${esc(`Filter: ${filters || 'keine'}`)}]`,
     '#v(3mm)',
     '#table(',
     '  columns: (auto, auto, auto, auto, 1fr),',
     '  table.header([*Zeitpunkt*], [*Nutzer*], [*Kanal*], [*Aktion*], [*Objekt / Zusammenfassung*]),',
-    `  ${rows}`,
+    `  ${cells.join(',\n  ')}`,
     ')',
   ].join('\n');
 }

@@ -7,13 +7,17 @@ test.describe('documents', () => {
     await loginAsAdmin(page);
   });
 
-  test('creates a letterhead document, previews it, downloads the PDF and voids it', async ({ page, request }) => {
+  test('creates a letterhead document from Markdown, previews it, downloads the PDF and voids it', async ({ page }) => {
     await page.goto('/admin/documents');
+    await page.getByRole('button', { name: 'Basis-Vorlagen' }).click();
+    await expect(page.getByText('a4-mit-briefkopf', { exact: true })).toBeVisible();
+    await expect(page.getByText('bereit').first()).toBeVisible();
+
     await page.getByRole('button', { name: 'Dokument erzeugen' }).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel('Vorlage').selectOption('letterhead');
     await dialog.getByLabel('Titel').fill('Einladung zur Mitgliederversammlung');
-    await dialog.getByLabel('Text').fill('Sehr geehrte Mitglieder,\n\nhiermit laden wir ein.');
+    await dialog.getByLabel('Text (Markdown)').fill('Sehr geehrte Mitglieder,\n\n## Tagesordnung\n\n- Bericht\n- Wahlen');
     await dialog.getByRole('button', { name: 'Erzeugen' }).click();
     const row = page.getByRole('row', { name: /Einladung zur Mitgliederversammlung/ });
     await expect(row).toContainText('BRF-2026-001');
@@ -42,7 +46,7 @@ test.describe('documents', () => {
     await expect(page.getByRole('row', { name: /Änderungsprotokoll/ })).toContainText('PRO-2026-001');
   });
 
-  test('uploads a logo that appears in the sidebar and in the letterhead', async ({ page }) => {
+  test('uploads a logo that appears in the sidebar', async ({ page }) => {
     await page.goto('/admin/settings');
     await page.getByRole('tab', { name: 'Branding' }).click();
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
