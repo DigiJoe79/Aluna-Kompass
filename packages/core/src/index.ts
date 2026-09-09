@@ -6,6 +6,7 @@ export { newId, ID_PATTERN } from './ids';
 export * from './context';
 export type { AppEnv, Deps } from './deps';
 export { validate } from './validate';
+export * from './deletion-policy';
 export * as schema from './db/schema';
 export type { Db, DbOrTx } from './db/client';
 export { openDatabase, runMigrations } from './db/client';
