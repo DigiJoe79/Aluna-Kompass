@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { eq, sql } from 'drizzle-orm';
 import { fileTypeFromBuffer } from 'file-type';
 import { imageSize } from 'image-size';
+import { z } from 'zod';
 import { recordAudit } from '../audit/log';
 import { isoNow } from '../clock';
 import type { CallContext } from '../context';
@@ -10,7 +11,8 @@ import { mediaAssets } from '../db/schema';
 import type { Deps } from '../deps';
 import { newId } from '../ids';
 import { requirePermission } from '../permissions/check';
-import { invalid, notFound, ok, unauthorized, type Result } from '../result';
+import { conflict, invalid, notFound, ok, unauthorized, type Result } from '../result';
+import { findMediaReferences } from './references';
 
 export const MEDIA_MAX_BYTES = 10 * 1024 * 1024;
 
@@ -112,4 +114,35 @@ export async function listMediaAssets(deps: Deps, ctx: CallContext): Promise<Res
   const denied = requirePermission(ctx, 'media.upload');
   if (denied) return denied;
   return ok(deps.db.select().from(mediaAssets).orderBy(mediaAssets.createdAt).all());
+}
+
+const deleteInput = z.object({ id: z.string().min(1) });
+
+export async function deleteMediaAsset(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<null>> {
+  const denied = requirePermission(ctx, 'media.upload');
+  if (denied) return denied;
+  const parsed = deleteInput.safeParse(input);
+  if (!parsed.success) return invalid(parsed.error.issues.map((i) => ({ path: i.path.map(String).join('.'), message: i.message })));
+
+  const record = deps.db.select().from(mediaAssets).where(eq(mediaAssets.id, parsed.data.id)).get();
+  if (!record) return notFound('mediaAsset', parsed.data.id);
+
+  const refs = findMediaReferences(deps, record.id);
+  if (refs.length > 0) {
+    return conflict('mediaAssetInUse', `Wird verwendet bei: ${refs.map((r) => r.label).join(', ')}. Entferne die Datei dort zuerst.`);
+  }
+
+  deps.db.transaction((tx) => {
+    tx.delete(mediaAssets).where(eq(mediaAssets.id, record.id)).run();
+    recordAudit(tx, deps, ctx, {
+      action: 'media.delete',
+      entityType: 'mediaAsset',
+      entityId: record.id,
+      before: record,
+      summary: `Datei „${record.filename}" gelöscht`,
+    });
+  });
+  // Datei erst nach dem Commit; ein verwaister Rest wäre harmlos (Dedup nach Hash).
+  await deps.media.delete(record.filename);
+  return ok(null);
 }

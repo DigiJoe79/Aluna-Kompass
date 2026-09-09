@@ -1,4 +1,4 @@
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, stat, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 export interface MediaStore {
@@ -8,6 +8,8 @@ export interface MediaStore {
   read(filename: string): Promise<Uint8Array>;
   exists(filename: string): Promise<boolean>;
   pathFor(filename: string): string | null;
+  /** Idempotent: fehlt die Datei, kein Fehler. */
+  delete(filename: string): Promise<void>;
 }
 
 const SAFE_FILENAME = /^[a-z0-9][a-z0-9._-]{0,180}$/;
@@ -32,6 +34,11 @@ export function createFileMediaStore(rootDir: string): MediaStore {
     read: (filename) => readFile(resolve(filename)),
     exists: (filename) => stat(resolve(filename)).then(() => true, () => false),
     pathFor: (filename) => resolve(filename),
+    async delete(filename) {
+      await unlink(resolve(filename)).catch((e: NodeJS.ErrnoException) => {
+        if (e.code !== 'ENOENT') throw e;
+      });
+    },
   };
 }
 
@@ -50,5 +57,9 @@ export function createMemoryMediaStore(): MediaStore {
     },
     exists: async (filename) => files.has(filename),
     pathFor: () => null,
+    async delete(filename) {
+      assertSafeFilename(filename);
+      files.delete(filename);
+    },
   };
 }
