@@ -48,7 +48,23 @@ describe('media service', () => {
     const record = unwrap(await storeMediaAsset(deps, uploader, { originalName: 'a.png', bytes: PNG }));
     const read = unwrap(await getMediaAsset(deps, ctxWith([], 'someone'), record.id));
     expect(Buffer.from(read.bytes).equals(Buffer.from(PNG))).toBe(true);
-    expect(unwrap(await listMediaAssets(deps, uploader)).map((m) => m.id)).toEqual([record.id]);
+    const listed = unwrap(await listMediaAssets(deps, uploader));
+    expect(listed.map((m) => m.record.id)).toEqual([record.id]);
+    expect(listed[0]!.references).toEqual([]);
     expect((await getMediaAsset(deps, ctxWith([], null), record.id)).ok).toBe(false);
+  });
+
+  it('filters by folder and reports references', async () => {
+    const deps = createTestDeps();
+    const ctx = ctxWith(['media.upload', 'settings.manage'], insertUser(deps, {}));
+    const { createMediaFolder } = await import('../src/media/folders');
+    const { setSetting } = await import('../src/settings/service');
+    unwrap(await createMediaFolder(deps, ctx, { path: 'logos' }));
+    const a = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'a.png', bytes: PNG, folder: 'logos' }));
+    unwrap(await setSetting(deps, ctx, { key: 'branding.logoAssetId', value: a.id }));
+
+    expect(unwrap(await listMediaAssets(deps, ctx, null))).toEqual([]);
+    const inLogos = unwrap(await listMediaAssets(deps, ctx, 'logos'));
+    expect(inLogos[0]!.references.map((r) => r.label)).toEqual(['Logo des Vereins']);
   });
 });

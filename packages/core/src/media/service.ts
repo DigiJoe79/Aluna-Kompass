@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { eq, sql } from 'drizzle-orm';
+import { eq, isNull, sql } from 'drizzle-orm';
 import { fileTypeFromBuffer } from 'file-type';
 import { imageSize } from 'image-size';
 import { z } from 'zod';
@@ -11,6 +11,7 @@ import { mediaAssets } from '../db/schema';
 import type { Deps } from '../deps';
 import { newId } from '../ids';
 import { requirePermission } from '../permissions/check';
+import type { MediaReference } from '../modules/manifest';
 import { conflict, invalid, notFound, ok, unauthorized, type Result } from '../result';
 import { folderExists } from './folders';
 import { findMediaReferences } from './references';
@@ -115,10 +116,21 @@ export async function getMediaAsset(deps: Deps, ctx: CallContext, id: string): P
   return ok({ record, bytes: await deps.media.read(record.filename) });
 }
 
-export async function listMediaAssets(deps: Deps, ctx: CallContext): Promise<Result<MediaAssetRecord[]>> {
+export interface MediaLibraryItem {
+  record: MediaAssetRecord;
+  references: MediaReference[];
+}
+
+/**
+ * Alle Assets (mit ihren Fundstellen). `folder` filtert: weggelassen = alle,
+ * `null` = Wurzel, ein Pfad = genau dieser Ordner.
+ */
+export async function listMediaAssets(deps: Deps, ctx: CallContext, folder?: string | null): Promise<Result<MediaLibraryItem[]>> {
   const denied = requirePermission(ctx, 'media.upload');
   if (denied) return denied;
-  return ok(deps.db.select().from(mediaAssets).orderBy(mediaAssets.createdAt).all());
+  const where = folder === undefined ? undefined : folder === null ? isNull(mediaAssets.folder) : eq(mediaAssets.folder, folder);
+  const rows = deps.db.select().from(mediaAssets).where(where).orderBy(mediaAssets.createdAt).all();
+  return ok(rows.map((record) => ({ record, references: findMediaReferences(deps, record.id) })));
 }
 
 const deleteInput = z.object({ id: z.string().min(1) });
