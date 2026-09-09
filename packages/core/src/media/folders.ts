@@ -8,7 +8,10 @@ import type { Deps } from '../deps';
 import { requirePermission } from '../permissions/check';
 import { conflict, invalid, notFound, ok, type Result } from '../result';
 
-export const FOLDER_SEGMENT = /^[a-z0-9][a-z0-9-]{0,60}$/;
+// Ein Ordnername ist eine Beschriftung, kein Slug: Groß-/Kleinschreibung und
+// Leerzeichen sind erlaubt. Verboten sind nur `/` (Pfadtrenner), `\` und
+// Steuerzeichen; Rand-Leerzeichen und die Segmente `.`/`..` fängt parseFolderPath.
+export const FOLDER_SEGMENT = /^[^/\\\x00-\x1f]{1,60}$/;
 
 /** Kanonische Ordnerform oder `null`, wenn ungültig. */
 export function parseFolderPath(raw: unknown): string | null {
@@ -17,7 +20,9 @@ export function parseFolderPath(raw: unknown): string | null {
   if (trimmed === '' || trimmed.length > 200) return null;
   const segments = trimmed.split('/');
   if (segments.length > 8) return null;
-  if (!segments.every((s) => FOLDER_SEGMENT.test(s))) return null;
+  for (const s of segments) {
+    if (!FOLDER_SEGMENT.test(s) || s !== s.trim() || s === '.' || s === '..') return null;
+  }
   return segments.join('/');
 }
 

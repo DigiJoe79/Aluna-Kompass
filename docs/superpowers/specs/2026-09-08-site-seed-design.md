@@ -44,12 +44,18 @@ Vertrauensgrenze `/data/site-template`:
 
 ```
 seed/
-  content.json      { variables, collections, assets }  — Form des Kompass-Exports
+  content.json      { variables, collections, assets, folder? }  — Form des Kompass-Exports
   assets/
     nicole.jpg
     selbstauskunft.pdf
     …
 ```
+
+**Nachtrag 2026-09-09.** `content.json` darf zusätzlich `folder` tragen: den
+Mediathek-Ordner, in den die Seed-Dateien wandern. Fehlt der Schlüssel, gilt
+**„Webseite"**. `applySeed` legt den Ordner an (auditiert als
+`media.folder.create`) und reicht ihn an `storeMediaInternal` durch. So liegen
+die statischen Webseiten-Dateien in der Mediathek beisammen statt in der Wurzel.
 
 - **`content.json` hat exakt die Form, die `exportSiteContent` erzeugt.** Gelesen
   werden `variables`, `collections` und `assets`. Ein mitgeführtes `views` wird

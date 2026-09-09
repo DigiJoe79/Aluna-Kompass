@@ -9,13 +9,16 @@ import {
   isoNow,
   newId,
   ok,
+  parseFolderPath,
   readSetting,
   recordAudit,
   requirePermission,
+  schema as core,
   storeMediaInternal,
   validate,
   writeSettingInternal,
 } from '@kompass/core';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { siteTemplateDir } from './env';
 import { schemaFor, widgetOf } from './field-schema';
@@ -36,7 +39,12 @@ export interface SeedDocument {
   variables: Record<string, unknown>;
   collections: Record<string, Array<Record<string, unknown>>>;
   assets: SeedAsset[];
+  /** Mediathek-Ordner, in den die Seed-Dateien wandern. Vorgabe „Webseite". */
+  folder?: string;
 }
+
+/** Ordner, in den die Startinhalte ihre Dateien legen, wenn `seed/content.json` keinen nennt. */
+export const DEFAULT_SEED_MEDIA_FOLDER = 'Webseite';
 
 /** Das Verzeichnis mit der Seed-Fixette, neben `kompass.template.ts`. */
 export const seedDir = (templateDir: string): string => path.join(templateDir, 'seed');
@@ -47,6 +55,7 @@ const documentSchema = z.object({
   assets: z
     .array(z.object({ id: z.string().min(1), filename: z.string().min(1), mimeType: z.string().min(1) }))
     .default([]),
+  folder: z.string().min(1).optional(),
 });
 
 /**
@@ -109,6 +118,9 @@ export async function applySeed(deps: Deps, ctx: CallContext, opts: { confirm: b
   if (!seed.ok) return seed;
   const doc = seed.value;
 
+  const mediaFolder = parseFolderPath(doc.folder ?? DEFAULT_SEED_MEDIA_FOLDER);
+  if (!mediaFolder) return invalid([{ path: 'folder', message: 'invalidFolderPath' }]);
+
   // 1. Schema-Prüfung: unbekannte Schlüssel und Wertverstöße
   for (const key of Object.keys(doc.variables)) {
     if (!(key in schema.variables)) return invalid([{ path: `variables.${key}`, message: 'unknownVariable' }]);
@@ -164,13 +176,27 @@ export async function applySeed(deps: Deps, ctx: CallContext, opts: { confirm: b
   };
   if (!opts.confirm) return ok(report);
 
-  // 3. Assets hochladen (async, jeweils eigene Transaktion; Dedup nach Inhalts-Hash)
+  // 3. Assets hochladen (async, jeweils eigene Transaktion; Dedup nach Inhalts-Hash).
+  //    Alle Seed-Dateien wandern in einen Mediathek-Ordner (Vorgabe „Webseite").
+  if (files.size > 0 && !deps.db.select().from(core.mediaFolders).where(eq(core.mediaFolders.path, mediaFolder)).get()) {
+    deps.db.transaction((tx) => {
+      tx.insert(core.mediaFolders).values({ path: mediaFolder, createdAt: isoNow(deps.clock) }).run();
+      recordAudit(tx, deps, ctx, {
+        action: 'media.folder.create',
+        entityType: 'mediaFolder',
+        entityId: mediaFolder,
+        after: { path: mediaFolder },
+        summary: `Ordner „${mediaFolder}" für die Startinhalte angelegt`,
+      });
+    });
+  }
   const idMap = new Map<string, string>();
   for (const [logicalId, f] of files) {
     const stored = await storeMediaInternal(deps, ctx, {
       originalName: f.filename,
       bytes: f.bytes,
       declaredMimeType: f.mimeType,
+      folder: mediaFolder,
     });
     if (!stored.ok) return stored;
     idMap.set(logicalId, stored.value.id);

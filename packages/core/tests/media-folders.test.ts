@@ -50,7 +50,10 @@ describe('media folders — create & list', () => {
     const orphan = await createMediaFolder(deps, ctx, { path: 'a/b' });
     expect(orphan.ok === false && orphan.error.type === 'conflict' && orphan.error.code === 'folderParentMissing').toBe(true);
 
-    const bad = await createMediaFolder(deps, ctx, { path: 'Tiere Ordner' });
+    // Groß-/Kleinschreibung und Leerzeichen sind erlaubt (Beschriftung, kein Slug)
+    unwrap(await createMediaFolder(deps, ctx, { path: 'Kampagnen 2024' }));
+    // aber `..` als Segment nicht
+    const bad = await createMediaFolder(deps, ctx, { path: 'a/../b' });
     expect(bad.ok === false && bad.error.type === 'validation').toBe(true);
 
     const noPerm = await createMediaFolder(deps, ctxWith([], 'U'), { path: 'x' });

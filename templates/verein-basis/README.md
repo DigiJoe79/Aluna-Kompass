@@ -45,3 +45,6 @@ Dateien unter `seed/assets/`. Kompass zeigt dann unter Webseite → Template den
 Knopf „Startinhalte", der sie **einmalig** in eine leere Webseite übernimmt.
 Dieses Basis-Template hat bewusst kein `seed/`: ein neuer Verein startet mit
 leerer Webseite.
+
+Die Seed-Dateien landen in der Mediathek in einem eigenen Ordner — „Webseite",
+oder was `seed/content.json` unter dem Schlüssel `folder` angibt.
