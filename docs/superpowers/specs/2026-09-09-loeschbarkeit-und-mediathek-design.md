@@ -58,6 +58,12 @@ Upload kann man in der Mediathek nichts anlegen, um Löschen und Ordnen zu
 erproben, und ein eigenständiger Medienbestand ohne eigenen Upload-Weg ist
 unvollständig.
 
+Dazu: ein Umschalter **Liste / Grid** (Wahl pro Browser gemerkt über
+`usePreference`, Default Liste), und ein **Detail-Dialog** je Datei (Klick auf
+Zeile bzw. Kachel) mit grosser Vorschau, Metadaten (Typ, Grösse, Maße, Ordner,
+hochgeladen am/von), Verwendungs-Liste und den Aktionen Verschieben und Löschen.
+Die Zeilen-/Kachel-Ansicht selbst trägt keine Aktionen mehr — sie sind im Dialog.
+
 ## 3. Die Löschpolitik als Konstante
 
 Neue Datei `packages/core/src/deletion-policy.ts`, exportiert über den Paket-Index.

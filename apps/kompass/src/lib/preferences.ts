@@ -2,8 +2,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-type Prefs = { sidebarCollapsed: boolean; colorScheme: 'light' | 'dark'; density: 'compact' | 'default' | 'comfortable' };
-const DEFAULTS: Prefs = { sidebarCollapsed: false, colorScheme: 'light', density: 'default' };
+type Prefs = {
+  sidebarCollapsed: boolean;
+  colorScheme: 'light' | 'dark';
+  density: 'compact' | 'default' | 'comfortable';
+  mediaView: 'list' | 'grid';
+};
+const DEFAULTS: Prefs = { sidebarCollapsed: false, colorScheme: 'light', density: 'default', mediaView: 'list' };
 
 function read<K extends keyof Prefs>(key: K): Prefs[K] {
   try {

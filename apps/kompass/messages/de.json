@@ -44,6 +44,16 @@
       "usage": "Verwendung"
     },
     "unused": "nicht verwendet",
+    "used": "verwendet",
+    "view": {
+      "list": "Liste",
+      "grid": "Grid"
+    },
+    "type": "Typ",
+    "dimensions": "Maße",
+    "folder": "Ordner",
+    "uploadedAt": "Hochgeladen am",
+    "uploadedBy": "Hochgeladen von",
     "upload": "Datei hochladen",
     "uploaded": "Datei hochgeladen.",
     "delete": "Löschen",
