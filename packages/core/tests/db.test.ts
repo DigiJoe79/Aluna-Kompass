@@ -21,6 +21,7 @@ describe('database', () => {
       'audit_log',
       'documents',
       'media_assets',
+      'media_folders',
       'projects',
       'role_permissions',
       'roles',

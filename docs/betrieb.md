@@ -35,6 +35,9 @@
 ## Prod nach Test kopieren
 Export in Prod → Datei herunterladen → in Test unter Verwaltung → Backup importieren (Umgebungsname `test` eintippen). Danach sind in Test alle Sitzungen beendet; Anmeldung mit den Prod-Zugangsdaten. API-Tokens werden nicht mitkopiert.
 
+## Medien
+- Die Dateien liegen flach im `media`-Verzeichnis. Die Ordner der Mediathek sind virtuell: Sie stehen nur in der Datenbank (Tabelle `media_folders`, Spalte `media_assets.folder`) und ändern nichts an der Ablage auf der Platte.
+
 ## Backups
 - Anwendungs-Backup: Export-Datei (`kompass-backup-<env>-<datum>.tar.gz`) — enthält DB, Medien, Manifest; ohne Sitzungen und Tokens.
 - NAS-Ebene: Snapshots des Shared Folders `Container` zusätzlich aktivieren (Volume-Konsistenz: SQLite im WAL-Modus ist snapshot-sicher, das Backup-Export ist aber die verlässliche Form).

@@ -118,6 +118,13 @@ export const mediaAssets = sqliteTable('media_assets', {
   height: integer('height'),
   uploadedByUserId: text('uploaded_by_user_id').references(() => users.id),
   createdAt: text('created_at').notNull(),
+  folder: text('folder'), // null = Wurzel; sonst ein Pfad aus media_folders
+});
+
+/** Virtuelle Ordner der Mediathek. Die Dateien liegen flach unter MEDIA_PATH. */
+export const mediaFolders = sqliteTable('media_folders', {
+  path: text('path').primaryKey(), // 'tiere', 'tiere/2024' — kanonisch, '/'-getrennt
+  createdAt: text('created_at').notNull(),
 });
 
 export const documents = sqliteTable(
