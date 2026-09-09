@@ -16,6 +16,7 @@
     "seed": "tsx src/seed/cli.ts"
   },
   "dependencies": {
+    "@kompass/markdown": "workspace:*",
     "@node-rs/argon2": "^2.2.0",
     "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.45.2",

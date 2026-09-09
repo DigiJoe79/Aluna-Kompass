@@ -147,6 +147,9 @@ importers:
 
   packages/core:
     dependencies:
+      '@kompass/markdown':
+        specifier: workspace:*
+        version: link:../markdown
       '@node-rs/argon2':
         specifier: ^2.2.0
         version: 2.2.0

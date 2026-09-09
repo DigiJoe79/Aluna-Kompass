@@ -1,10 +1,11 @@
 import { and, count, desc, eq, sql, type SQL } from 'drizzle-orm';
+import { renderMarkdownTypst } from '@kompass/markdown';
 import { z } from 'zod';
 import { recordAudit } from '../audit/log';
 import { isoNow } from '../clock';
 import type { CallContext } from '../context';
 import type { DbOrTx } from '../db/client';
-import { documents, mediaAssets } from '../db/schema';
+import { documents, mediaAssets, mediaFolders } from '../db/schema';
 import type { Deps } from '../deps';
 import { newId } from '../ids';
 import { storeMediaInternal } from '../media/service';
@@ -47,6 +48,30 @@ async function buildContext(deps: Deps, ctx: CallContext, number: string): Promi
   return { number, issuedAt: isoNow(deps.clock), organization, theme: resolveActiveTheme(deps), logo };
 }
 
+const DOCUMENT_FOLDER = 'Dokumente';
+
+/** Legt den Mediathek-Ordner „Dokumente" an, falls er noch fehlt (auditiert). */
+function ensureDocumentFolder(deps: Deps, ctx: CallContext): void {
+  const exists = deps.db.select({ path: mediaFolders.path }).from(mediaFolders).where(eq(mediaFolders.path, DOCUMENT_FOLDER)).get();
+  if (exists) return;
+  deps.db.transaction((tx: DbOrTx) => {
+    tx.insert(mediaFolders).values({ path: DOCUMENT_FOLDER, createdAt: isoNow(deps.clock) }).run();
+    recordAudit(tx, deps, ctx, {
+      action: 'media.folder.create',
+      entityType: 'mediaFolder',
+      entityId: DOCUMENT_FOLDER,
+      after: { path: DOCUMENT_FOLDER },
+      summary: `Ordner „${DOCUMENT_FOLDER}" für erzeugte Dokumente angelegt`,
+    });
+  });
+}
+
+/** Vorgabe der Vorlage, überschrieben von `build()` und von `documents.bases`. */
+function resolveBaseId(deps: Deps, template: DocumentTemplate, fromBuild: string | undefined): string {
+  const configured = readSetting<Record<string, string>>(deps, 'documents.bases')[template.key];
+  return configured ?? fromBuild ?? template.base;
+}
+
 export async function renderDocument(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DocumentRecord>> {
   const denied = requirePermission(ctx, 'documents.create');
   if (denied) return denied;
@@ -61,14 +86,23 @@ export async function renderDocument(deps: Deps, ctx: CallContext, input: unknow
   const data = validate(deps, template.schema, parsed.value.input);
   if (!data.ok) return data;
 
+  const built = template.build(data.value, await buildContext(deps, ctx, 'PENDING'));
+  const baseId = resolveBaseId(deps, template, built.base);
+  const base = deps.documents.base(baseId);
+  if (!base) return conflict('documentBaseUnavailable', `Basis-Vorlage „${baseId}" ist nicht verfügbar`);
+
+  const bodyTypst = 'markdown' in built.body ? await renderMarkdownTypst(built.body.markdown) : built.body.typst;
+
   // Nummer reservieren: rendern außerhalb der Transaktion (async), Eindeutigkeit über den Unique-Index; bei Kollision erneut versuchen.
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const year = deps.clock.now().getUTCFullYear();
     const number = nextDocumentNumber(deps.db, template.prefix, year);
     const context = await buildContext(deps, ctx, number);
-    const bytes = await template.render(data.value, context);
-    const asset = await storeMediaInternal(deps, ctx, { originalName: `${number}.pdf`, bytes, declaredMimeType: 'application/pdf' });
+    const bytes = await deps.documents.render({ baseId, bodyTypst, slots: built.slots, context });
+    ensureDocumentFolder(deps, ctx);
+    const asset = await storeMediaInternal(deps, ctx, { originalName: `${number}.pdf`, bytes, declaredMimeType: 'application/pdf', folder: DOCUMENT_FOLDER });
     if (!asset.ok) return asset;
+    const snapshot = { input: data.value, slots: built.slots, base: baseId, baseChecksum: base.checksum };
     try {
       return deps.db.transaction((tx: DbOrTx) => {
         const id = newId();
@@ -79,7 +113,7 @@ export async function renderDocument(deps: Deps, ctx: CallContext, input: unknow
             number,
             entityType: parsed.value.entityType ?? null,
             entityId: parsed.value.entityId ?? null,
-            inputSnapshot: JSON.stringify(data.value),
+            inputSnapshot: JSON.stringify(snapshot),
             assetId: asset.value.id,
             status: 'issued',
             createdByUserId: ctx.userId as string,
@@ -87,7 +121,7 @@ export async function renderDocument(deps: Deps, ctx: CallContext, input: unknow
           })
           .run();
         const record = toRecord(tx.select().from(documents).where(eq(documents.id, id)).get()!);
-        recordAudit(tx, deps, ctx, { action: 'documents.render', entityType: 'document', entityId: id, after: { number, templateKey: template.key, entityType: record.entityType, entityId: record.entityId }, summary: `Dokument ${number} erzeugt` });
+        recordAudit(tx, deps, ctx, { action: 'documents.render', entityType: 'document', entityId: id, after: { number, templateKey: template.key, base: baseId, entityType: record.entityType, entityId: record.entityId }, summary: `Dokument ${number} erzeugt` });
         return ok(record);
       });
     } catch (error) {
@@ -95,6 +129,20 @@ export async function renderDocument(deps: Deps, ctx: CallContext, input: unknow
     }
   }
   return conflict('documentNumberContention', 'Dokumentnummer konnte nicht reserviert werden');
+}
+
+export async function listDocumentBases(
+  deps: Deps,
+  ctx: CallContext,
+): Promise<Result<{ id: string; label: string; kind: string; ok: boolean; error?: string }[]>> {
+  const denied = requirePermission(ctx, 'documents.view');
+  if (denied) return denied;
+  const out = [];
+  for (const base of deps.documents.bases()) {
+    const probe = await deps.documents.probe(base.id);
+    out.push({ id: base.id, label: base.label, kind: base.kind, ok: probe.ok, error: probe.ok ? undefined : probe.error });
+  }
+  return ok(out.sort((a, b) => a.id.localeCompare(b.id)));
 }
 
 const voidSchema = z.object({ id: z.string().min(1), reason: z.string().trim().min(1).max(300) });

@@ -3,7 +3,7 @@ import { rm } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createDeps, readEnv, seedDevelopment, setSetting, unwrap, type AppEnv, type CallContext } from '@kompass/core';
-import { coreDocumentTemplates, createTypstRenderer } from '@kompass/documents';
+import { coreDocumentTemplates, createDocumentEngine } from '@kompass/documents';
 import { animalsModule } from '@kompass/module-animals';
 import { siteModule, siteTemplateDir } from '@kompass/module-site';
 import { importPrototype } from './import-prototype';
@@ -56,7 +56,8 @@ export async function devReset(opts: DevResetOptions) {
     mediaPath: opts.mediaPath,
     env: opts.env,
     modules: [siteModule, animalsModule],
-    coreTemplates: coreDocumentTemplates(createTypstRenderer()),
+    coreTemplates: coreDocumentTemplates(),
+    documents: createDocumentEngine(),
   });
   try {
     const { adminEmail, adminPassword } = await seedDevelopment(deps);

@@ -3,6 +3,7 @@ import { systemClock, type Clock } from './clock';
 import { coreModule } from './core-module';
 import { openDatabase, runMigrations } from './db/client';
 import type { AppEnv, Deps } from './deps';
+import { noopDocumentEngine, type DocumentEngine } from './documents/engine';
 import { createFileMediaStore } from './media/store';
 import type { DocumentTemplate, ModuleManifest } from './modules/manifest';
 import { createRegistry } from './modules/registry';
@@ -14,6 +15,8 @@ export interface CreateDepsOptions {
   env: AppEnv;
   modules?: ModuleManifest[];
   coreTemplates?: DocumentTemplate[];
+  /** Ohne Angabe kann nicht gerendert werden (Skripte, migrationsnahe Tests). */
+  documents?: DocumentEngine;
   clock?: Clock;
 }
 
@@ -36,6 +39,7 @@ export function createDeps(opts: CreateDepsOptions): AppDeps {
     env: opts.env,
     registry: createRegistry([coreModule, ...(opts.modules ?? [])], { coreTemplates: opts.coreTemplates }),
     media: createFileMediaStore(opts.mediaPath),
+    documents: opts.documents ?? noopDocumentEngine,
     locales: () => readLocales(deps),
     databasePath: opts.databasePath,
     migrationCount: countMigrations(),
@@ -59,6 +63,7 @@ const envSchema = z.object({
   MEDIA_PATH: z.string().min(1).default('./media'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   SESSION_SECRET: z.string().min(32),
+  KOMPASS_DOCUMENT_TEMPLATES_DIR: z.string().min(1).optional(),
 });
 
 export interface RuntimeEnv {
@@ -67,6 +72,8 @@ export interface RuntimeEnv {
   mediaPath: string;
   port: number;
   sessionSecret: string;
+  /** Volume mit den vereinseigenen Basis-Vorlagen; ohne = nur die mitgelieferten. */
+  documentTemplatesDir: string | null;
 }
 
 export function readEnv(source: Record<string, string | undefined> = process.env): RuntimeEnv {
@@ -76,5 +83,12 @@ export function readEnv(source: Record<string, string | undefined> = process.env
     throw new Error(`invalid environment: ${names}`);
   }
   const v = parsed.data;
-  return { env: v.APP_ENV, databasePath: v.DATABASE_PATH, mediaPath: v.MEDIA_PATH, port: v.PORT, sessionSecret: v.SESSION_SECRET };
+  return {
+    env: v.APP_ENV,
+    databasePath: v.DATABASE_PATH,
+    mediaPath: v.MEDIA_PATH,
+    port: v.PORT,
+    sessionSecret: v.SESSION_SECRET,
+    documentTemplatesDir: v.KOMPASS_DOCUMENT_TEMPLATES_DIR ?? null,
+  };
 }

@@ -23,6 +23,7 @@ export * from './media/service';
 export * from './media/references';
 export * from './media/folders';
 export * from './documents/service';
+export * from './documents/engine';
 export * from './backup';
 export * from './settings/service';
 export { CORE_SETTINGS } from './settings/core';

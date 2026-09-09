@@ -56,6 +56,11 @@ const modules: SettingDefinition[] = [
   { key: 'modules.enabled', schema: z.array(z.string()), default: [] },
 ];
 
+const documentsSettings: SettingDefinition[] = [
+  // Dokumentart-Schlüssel → Basis-Vorlagen-ID. Leer = Vorgabe der Vorlage.
+  { key: 'documents.bases', schema: z.record(z.string(), z.string()), default: {} },
+];
+
 const i18n: SettingDefinition[] = [
   { key: 'i18n.locales', schema: z.array(z.string().regex(/^[a-z]{2}(-[a-z]{2})?$/)).min(1).max(10), default: ['de'] },
 ];
@@ -66,4 +71,4 @@ const system: SettingDefinition[] = [
   { key: 'system.lastExportAt', schema: z.string().nullable(), default: null, systemOnly: true },
 ];
 
-export const CORE_SETTINGS: SettingDefinition[] = [...organization, ...branding, ...themes, ...modules, ...i18n, ...system];
+export const CORE_SETTINGS: SettingDefinition[] = [...organization, ...branding, ...themes, ...modules, ...documentsSettings, ...i18n, ...system];

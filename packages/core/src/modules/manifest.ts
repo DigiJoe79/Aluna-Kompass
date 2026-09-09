@@ -50,6 +50,28 @@ export interface DocumentRenderContext {
   logo: { bytes: Uint8Array; mimeType: string } | null;
 }
 
+export type DocumentBody = { markdown: string } | { typst: string };
+
+export interface DocumentSlots {
+  /** Bestimmt, welche Felder die Basis-Vorlage füllt. */
+  kind: 'letter' | 'report' | 'form' | 'plain';
+  title?: string;
+  subtitle?: string;
+  /** „Ort, Datum" — Vorgabe: organization.city + ausgestellt am. */
+  place?: string;
+  /** Mehrzeiliges Anschriftenfeld (Brief). */
+  recipient?: string;
+  /** „Betreff" (Brief). */
+  subject?: string;
+}
+
+export interface DocumentBuildResult {
+  /** Überschreibt die Vorgabe-Basis der Vorlage; sonst gilt `DocumentTemplate.base`. */
+  base?: string;
+  slots: DocumentSlots;
+  body: DocumentBody;
+}
+
 export interface DocumentTemplate<T = unknown> {
   key: string;
   /** Drei Großbuchstaben, z. B. BRF; Teil der Dokumentnummer. */
@@ -57,7 +79,13 @@ export interface DocumentTemplate<T = unknown> {
   schema: z.ZodType<T>;
   /** Zusätzliches Recht neben documents.create, z. B. finance.edit. */
   permission?: string;
-  render(data: T, ctx: DocumentRenderContext): Promise<Uint8Array>;
+  /** Vorgabe-Basis, wenn `build` keine nennt und keine Einstellung greift. */
+  base: string;
+  /**
+   * Erzeugt Slots und Körper aus den geprüften Daten. Rein über (data, ctx):
+   * keine Uhr, kein Zufall, keine I/O. Determinismus hängt daran.
+   */
+  build(data: T, ctx: DocumentRenderContext): DocumentBuildResult;
 }
 
 export interface McpToolDefinition<T = unknown> {

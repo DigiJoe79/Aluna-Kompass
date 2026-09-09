@@ -14,7 +14,7 @@ import {
   type Deps,
   type LocalizedText,
 } from '@kompass/core';
-import { coreDocumentTemplates, createTypstRenderer } from '@kompass/documents';
+import { coreDocumentTemplates, createDocumentEngine } from '@kompass/documents';
 import {
   animalsModule,
   createAnimal,
@@ -131,7 +131,8 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
     mediaPath: env.mediaPath,
     env: env.env,
     modules: [animalsModule],
-    coreTemplates: coreDocumentTemplates(createTypstRenderer()),
+    coreTemplates: coreDocumentTemplates(),
+    documents: createDocumentEngine(),
   });
   const ctx: CallContext = {
     userId: null,

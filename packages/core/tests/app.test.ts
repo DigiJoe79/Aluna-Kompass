@@ -51,7 +51,7 @@ describe('readEnv', () => {
   const base = { APP_ENV: 'production', DATABASE_PATH: '/data/kompass.db', MEDIA_PATH: '/media', PORT: '3000', SESSION_SECRET: 'x'.repeat(32) };
 
   it('parses a complete environment', () => {
-    expect(readEnv(base)).toEqual({ env: 'production', databasePath: '/data/kompass.db', mediaPath: '/media', port: 3000, sessionSecret: 'x'.repeat(32) });
+    expect(readEnv(base)).toEqual({ env: 'production', databasePath: '/data/kompass.db', mediaPath: '/media', port: 3000, sessionSecret: 'x'.repeat(32), documentTemplatesDir: null });
   });
 
   it('defaults to development with local paths when only the secret is set', () => {

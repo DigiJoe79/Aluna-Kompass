@@ -31,8 +31,9 @@ describe('module registry', () => {
     const letter = (key: string, prefix: string) => ({
       key,
       prefix,
+      base: 'a4-plain',
       schema: z.any(),
-      render: async () => new Uint8Array(),
+      build: () => ({ slots: { kind: 'plain' as const }, body: { markdown: '' } }),
     });
     expect(() => createRegistry([coreModule], { coreTemplates: [letter('a-letter', 'AAA'), letter('b-letter', 'AAA')] })).toThrow(/duplicate document prefix/);
     expect(() => createRegistry([coreModule], { coreTemplates: [letter('a-letter', 'AAA'), letter('a-letter', 'BBB')] })).toThrow(/duplicate document template/);

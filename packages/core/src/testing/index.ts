@@ -6,6 +6,7 @@ import { roles, settings, users } from '../db/schema';
 import type { AppEnv, Deps } from '../deps';
 import { newId } from '../ids';
 import { createMemoryMediaStore } from '../media/store';
+import type { DocumentEngine } from '../documents/engine';
 import type { DocumentTemplate, ModuleManifest } from '../modules/manifest';
 import { createRegistry } from '../modules/registry';
 import { createTestDb } from './test-db';
@@ -20,8 +21,31 @@ export interface TestDeps extends Deps {
   sqlite: Database.Database;
 }
 
+/** Attrappe der Dokument-Engine für Kern-Tests: liefert Fake-PDF-Bytes, drei Basen. */
+export function fakeDocumentEngine(overrides: Partial<DocumentEngine> = {}): DocumentEngine {
+  const bases = [
+    { id: 'a4-plain', label: 'A4 ohne Briefkopf', kind: 'report', checksum: 'a'.repeat(64) },
+    { id: 'a4-mit-briefkopf', label: 'A4 mit Briefkopf', kind: 'letter', checksum: 'b'.repeat(64) },
+    { id: 'a4-ohne-briefkopf', label: 'A4 Folgeblatt', kind: 'letter', checksum: 'c'.repeat(64) },
+  ];
+  return {
+    bases: () => bases,
+    base: (id) => bases.find((b) => b.id === id),
+    probe: async (id) => (bases.some((b) => b.id === id) ? { ok: true } : { ok: false, error: 'not found' }),
+    render: async ({ baseId, slots }) => new TextEncoder().encode(`%PDF-fake ${baseId} ${slots.title ?? ''}`),
+    ...overrides,
+  };
+}
+
 export function createTestDeps(
-  opts: { now?: string; manifests?: ModuleManifest[]; env?: AppEnv; coreTemplates?: DocumentTemplate[]; locales?: string[] } = {},
+  opts: {
+    now?: string;
+    manifests?: ModuleManifest[];
+    env?: AppEnv;
+    coreTemplates?: DocumentTemplate[];
+    documents?: DocumentEngine;
+    locales?: string[];
+  } = {},
 ): TestDeps {
   const { db, sqlite } = createTestDb();
   if (opts.locales) {
@@ -36,6 +60,7 @@ export function createTestDeps(
     env: opts.env ?? 'test',
     registry: createRegistry(opts.manifests ?? [coreModule], { coreTemplates: opts.coreTemplates }),
     media: createMemoryMediaStore(),
+    documents: opts.documents ?? fakeDocumentEngine(),
     locales: () => readLocales(deps),
   };
   return deps;
