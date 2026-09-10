@@ -38,7 +38,8 @@
     margin: (top: 26mm, bottom: 24mm, left: 22mm, right: 20mm),
     header: context [
       #set text(size: 8pt, fill: rgb(b.muted))
-      #grid(columns: (1fr, auto), [#org("name")], [#payload.number])
+      // Akteneintrag: die Nummer. Ad-hoc-Auszug: kein Nummernkreis, deshalb das Ausgabedatum.
+      #grid(columns: (1fr, auto), [#org("name")], [#if payload.number != "" [#payload.number] else [#payload.issuedDate]])
       #line(length: 100%, stroke: 0.5pt + rgb(b.line))
     ],
     footer: context [

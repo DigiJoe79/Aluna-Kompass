@@ -65,4 +65,12 @@ describe('generic bases render', () => {
     const pdf = await renderer.renderDocument({ baseId: audit!.base, bases, bodyTypst: 'typst' in built.body ? built.body.typst : '', payload: { ...payload(), slots: built.slots } });
     expect(new TextDecoder().decode(pdf.subarray(0, 5))).toBe('%PDF-');
   });
+  it('a4-plain shows the issue date in the header when a document has no number', async () => {
+    const excerpt = (issuedDate: string) =>
+      renderer.renderDocument({ baseId: 'a4-plain', bases, bodyTypst: 'Auszug.', payload: { ...payload(), number: '', issuedDate } });
+    const a = await excerpt('05.09.2026');
+    const b = await excerpt('06.09.2026');
+    // Ein Ad-hoc-Auszug hat keine Nummer. Träge der Kopf dann nichts, wären beide Seiten byte-gleich.
+    expect(Buffer.from(a).equals(Buffer.from(b))).toBe(false);
+  });
 });

@@ -98,6 +98,7 @@ export function coreDocumentTemplates(): DocumentTemplate[] {
     schema: auditExportSchema,
     permission: 'audit.view',
     base: 'a4-plain',
+    filed: false, // Ad-hoc-Auszug: wird gezogen und heruntergeladen, nicht abgelegt.
     build: (data) => ({
       slots: { kind: 'report', title: data.title },
       body: { typst: auditTable(data) },

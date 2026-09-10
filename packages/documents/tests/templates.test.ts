@@ -32,6 +32,9 @@ describe('core document templates', () => {
     const audit = templates[1]!;
     expect([letter.key, letter.prefix, letter.base]).toEqual(['letterhead', 'BRF', 'a4-mit-briefkopf']);
     expect([audit.key, audit.prefix, audit.permission, audit.base]).toEqual(['audit-log-export', 'PRO', 'audit.view', 'a4-plain']);
+    // Der Brief ist ein Akteneintrag, der Protokollauszug wird nur gezogen — keine Nummer, keine Ablage.
+    expect(letter.filed ?? true).toBe(true);
+    expect(audit.filed).toBe(false);
 
     expect(letter.schema.safeParse({ title: '', body: 'x' }).success).toBe(false);
     const r = letter.build({ title: 'Einladung', body: '# Hallo\n\nText.' }, ctx);

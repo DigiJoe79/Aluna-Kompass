@@ -9,7 +9,7 @@ import { documents, mediaAssets, mediaFolders } from '../db/schema';
 import type { Deps } from '../deps';
 import { newId } from '../ids';
 import { storeMediaInternal } from '../media/service';
-import type { DocumentRenderContext, DocumentTemplate } from '../modules/manifest';
+import type { DocumentBuildResult, DocumentRenderContext, DocumentTemplate } from '../modules/manifest';
 import { requirePermission } from '../permissions/check';
 import { conflict, notFound, ok, type Result } from '../result';
 import { readAllSettings, readSetting } from '../settings/service';
@@ -72,18 +72,19 @@ function resolveBaseId(deps: Deps, template: DocumentTemplate, fromBuild: string
   return configured ?? fromBuild ?? template.base;
 }
 
-export async function renderDocument(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DocumentRecord>> {
-  const denied = requirePermission(ctx, 'documents.create');
-  if (denied) return denied;
-  const parsed = validate(deps, renderSchema, input);
-  if (!parsed.ok) return parsed;
-  const template = deps.registry.documentTemplates.get(parsed.value.templateKey) as DocumentTemplate | undefined;
-  if (!template) return notFound('documentTemplate', parsed.value.templateKey);
+/** Vorlage auflösen, Rechte und Eingabe prüfen, Körper und Basis bestimmen — gemeinsam für Akteneintrag und Auszug. */
+async function prepare(
+  deps: Deps,
+  ctx: CallContext,
+  parsedInput: z.infer<typeof renderSchema>,
+): Promise<Result<{ template: DocumentTemplate; data: unknown; built: DocumentBuildResult; baseId: string; base: { checksum: string }; bodyTypst: string }>> {
+  const template = deps.registry.documentTemplates.get(parsedInput.templateKey) as DocumentTemplate | undefined;
+  if (!template) return notFound('documentTemplate', parsedInput.templateKey);
   if (template.permission) {
     const extra = requirePermission(ctx, template.permission);
     if (extra) return extra;
   }
-  const data = validate(deps, template.schema, parsed.value.input);
+  const data = validate(deps, template.schema, parsedInput.input);
   if (!data.ok) return data;
 
   const built = template.build(data.value, await buildContext(deps, ctx, 'PENDING'));
@@ -92,6 +93,52 @@ export async function renderDocument(deps: Deps, ctx: CallContext, input: unknow
   if (!base) return conflict('documentBaseUnavailable', `Basis-Vorlage „${baseId}" ist nicht verfügbar`);
 
   const bodyTypst = 'markdown' in built.body ? await renderMarkdownTypst(built.body.markdown) : built.body.typst;
+  return ok({ template, data: data.value, built, baseId, base, bodyTypst });
+}
+
+/**
+ * Ein Ad-hoc-Auszug: rendern und zurückgeben. Keine Nummer, keine Zeile in
+ * `documents`, keine Ablage in der Mediathek — nur ein Eintrag im
+ * Änderungsprotokoll, denn der Vorgang ist das Ziehen, nicht die Datei.
+ */
+export async function exportDocument(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ bytes: Uint8Array; filename: string; mimeType: string }>> {
+  const denied = requirePermission(ctx, 'documents.create');
+  if (denied) return denied;
+  const parsed = validate(deps, renderSchema, input);
+  if (!parsed.ok) return parsed;
+  const prepared = await prepare(deps, ctx, parsed.value);
+  if (!prepared.ok) return prepared;
+  const { template, built, baseId, bodyTypst } = prepared.value;
+  if (template.filed !== false) {
+    return conflict('documentIsFiled', `Vorlage „${template.key}" ist ein Akteneintrag und wird über renderDocument erzeugt`);
+  }
+
+  const context = await buildContext(deps, ctx, '');
+  const bytes = await deps.documents.render({ baseId, bodyTypst, slots: built.slots, context });
+  const filename = `${(built.slots.title ?? template.key).replace(/[^\p{L}\p{N} _-]/gu, '').trim() || template.key}.pdf`;
+  deps.db.transaction((tx: DbOrTx) => {
+    recordAudit(tx, deps, ctx, {
+      action: 'documents.export',
+      entityType: 'documentTemplate',
+      entityId: template.key,
+      after: { templateKey: template.key, base: baseId },
+      summary: `Auszug „${built.slots.title ?? template.key}" aus Vorlage ${template.key} gezogen`,
+    });
+  });
+  return ok({ bytes, filename, mimeType: 'application/pdf' });
+}
+
+export async function renderDocument(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DocumentRecord>> {
+  const denied = requirePermission(ctx, 'documents.create');
+  if (denied) return denied;
+  const parsed = validate(deps, renderSchema, input);
+  if (!parsed.ok) return parsed;
+  const prepared = await prepare(deps, ctx, parsed.value);
+  if (!prepared.ok) return prepared;
+  const { template, data, built, baseId, base, bodyTypst } = prepared.value;
+  if (template.filed === false) {
+    return conflict('documentNotFiled', `Vorlage „${template.key}" ist ein Ad-hoc-Auszug und wird über exportDocument gezogen`);
+  }
 
   // Nummer reservieren: rendern außerhalb der Transaktion (async), Eindeutigkeit über den Unique-Index; bei Kollision erneut versuchen.
   for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -102,7 +149,7 @@ export async function renderDocument(deps: Deps, ctx: CallContext, input: unknow
     ensureDocumentFolder(deps, ctx);
     const asset = await storeMediaInternal(deps, ctx, { originalName: `${number}.pdf`, bytes, declaredMimeType: 'application/pdf', folder: DOCUMENT_FOLDER });
     if (!asset.ok) return asset;
-    const snapshot = { input: data.value, slots: built.slots, base: baseId, baseChecksum: base.checksum };
+    const snapshot = { input: data, slots: built.slots, base: baseId, baseChecksum: base.checksum };
     try {
       return deps.db.transaction((tx: DbOrTx) => {
         const id = newId();

@@ -39,11 +39,17 @@ test.describe('documents', () => {
     await expect(page.getByRole('row', { name: /Ersatz/ })).toContainText('BRF-2026-002');
   });
 
-  test('exports the audit log as a PRO document with the active filters', async ({ page }) => {
+  test('exports the audit log as an ad-hoc download that files no document', async ({ page }) => {
     await page.goto('/admin/audit?channel=system');
-    await page.getByRole('button', { name: 'Als PDF exportieren' }).click();
-    await expect(page).toHaveURL(/\/admin\/documents\?selected=/);
-    await expect(page.getByRole('row', { name: /Änderungsprotokoll/ })).toContainText('PRO-2026-001');
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('link', { name: 'Als PDF exportieren' }).click(),
+    ]);
+    expect(download.suggestedFilename()).toBe('Änderungsprotokoll.pdf');
+
+    // Ein Auszug ist kein Akteneintrag: keine Nummer, keine Zeile, keine Ablage.
+    await page.goto('/admin/documents');
+    await expect(page.getByRole('row', { name: /Änderungsprotokoll/ })).toHaveCount(0);
   });
 
   test('a logo set in branding appears in the sidebar and in a rendered document', async ({ page }) => {

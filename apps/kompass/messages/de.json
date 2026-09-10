@@ -780,8 +780,7 @@
       "environment": "Umgebung",
       "summary": "Zusammenfassung",
       "immutable": "Einträge können nicht geändert werden."
-    },
-    "exporting": "Wird erzeugt …"
+    }
   },
   "profile": {
     "title": "Profil",

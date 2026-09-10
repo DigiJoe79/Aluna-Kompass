@@ -82,6 +82,14 @@ export interface DocumentTemplate<T = unknown> {
   /** Vorgabe-Basis, wenn `build` keine nennt und keine Einstellung greift. */
   base: string;
   /**
+   * Akteneintrag (Vorgabe) oder Ad-hoc-Auszug. Ein Akteneintrag — Brief,
+   * Vertrag, Bescheinigung — bekommt eine lückenlose Nummer, eine Zeile in
+   * `documents` und eine Ablage in der Mediathek. Ein Auszug wie das
+   * Änderungsprotokoll entsteht auf Nachfrage, wird heruntergeladen und
+   * hinterlässt nur einen Eintrag im Änderungsprotokoll: `filed: false`.
+   */
+  filed?: boolean;
+  /**
    * Erzeugt Slots und Körper aus den geprüften Daten. Rein über (data, ctx):
    * keine Uhr, kein Zufall, keine I/O. Determinismus hängt daran.
    */
