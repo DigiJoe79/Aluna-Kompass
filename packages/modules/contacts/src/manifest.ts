@@ -9,4 +9,16 @@ export const contactsModule: ModuleManifest = defineModule({
   // falsches Icon. `contact` ist noch nicht eingetragen; das erledigt Plan 3 Task 4
   // zusammen mit der Installation.
   navigation: [{ key: 'contacts.list', href: '/contacts', icon: 'contact', group: 'contacts', permission: 'contacts.view' }],
+  /**
+   * Die allgemeinen Rollen. Fachliche Rollen bringen die Fachmodule mit:
+   * Tiere `adopter`/`sponsor`, Finanzen `donor`, Mitglieder `member`.
+   * `authority` ist `permanent`, weil eine Behörde kein personenbezogener
+   * Datensatz ist und nichts an ihr abläuft.
+   */
+  contactRoles: [
+    { key: 'interested', retention: 'consent' },
+    { key: 'partner', retention: 'consent' },
+    { key: 'authority', retention: 'permanent' },
+    { key: 'service', retention: 'consent' },
+  ],
 });
