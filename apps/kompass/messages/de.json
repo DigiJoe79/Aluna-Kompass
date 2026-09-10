@@ -128,6 +128,11 @@
       "folderExists": "Ein Ordner mit diesem Namen existiert bereits.",
       "folderParentMissing": "Der übergeordnete Ordner fehlt.",
       "folderNotFound": "Der Zielordner existiert nicht.",
+      "retentionHoldActive": "Der Kontakt wird noch durch aktive Aufbewahrungsfristen gehalten.",
+      "retentionUnknown": "Für diesen Kontakt ist keine Frist nachgewiesen.",
+      "belongsToNotAnOrganization": "Ein Kontakt kann nur einer Organisation zugeordnet werden.",
+      "multiplePrimaryChannels": "Es kann nur ein Hauptkontaktweg festgelegt werden.",
+      "roleAlreadyRunning": "Diese Rolle ist für diesen Kontakt bereits aktiv.",
       "default": "Der Vorgang ist nicht möglich: {detail}"
     },
     "fields": {
@@ -1233,6 +1238,91 @@
         },
         "log": "Protokoll"
       }
+    }
+  },
+  "contacts": {
+    "title": "Kontakte",
+    "description": "Personen und Organisationen, ihre Rollen und Kommunikationswege.",
+    "empty": {
+      "title": "Keine Kontakte",
+      "text": "Es wurden noch keine Kontakte angelegt."
+    },
+    "search": "Suche",
+    "allKinds": "Alle Arten",
+    "includeArchived": "Auch archivierte",
+    "archived": "Archiviert",
+    "preview": "So fällt die Anschrift",
+    "previewPlaceholder": "Anschrift wird hier als Vorschau angezeigt…",
+    "create": {
+      "trigger": "Kontakt anlegen",
+      "title": "Kontakt anlegen",
+      "description": "Legen Sie eine Person oder Organisation an.",
+      "submit": "Anlegen"
+    },
+    "toast": {
+      "created": "Kontakt angelegt",
+      "updated": "Kontakt gespeichert",
+      "deleted": "Kontakt gelöscht",
+      "roleAdded": "Rolle hinzugefügt",
+      "roleEnded": "Rolle beendet",
+      "channelsSaved": "Kommunikationswege gespeichert"
+    },
+    "columns": {
+      "name": "Name",
+      "kind": "Art",
+      "roles": "Rollen",
+      "city": "Ort",
+      "contact": "Kontaktweg"
+    },
+    "fields": {
+      "kind": "Art",
+      "person": "Person",
+      "organization": "Organisation",
+      "salutation": "Anrede",
+      "firstName": "Vorname",
+      "lastName": "Nachname",
+      "name": "Name",
+      "legalForm": "Rechtsform",
+      "street": "Straße",
+      "postalCode": "PLZ",
+      "city": "Ort",
+      "country": "Land",
+      "addressExtra": "Adresszusatz",
+      "notes": "Notizen"
+    },
+    "roles": {
+      "title": "Rollen",
+      "add": "Rolle hinzufügen",
+      "submit": "Übernehmen",
+      "field": "Rolle",
+      "since": "Seit",
+      "until": "Bis",
+      "end": "Beenden"
+    },
+    "channels": {
+      "title": "Kommunikationswege",
+      "add": "Weg hinzufügen",
+      "save": "Speichern",
+      "kind": "Typ",
+      "value": "Wert",
+      "label": "Bezeichnung",
+      "isPrimary": "Hauptkontaktweg",
+      "kinds": {
+        "email": "E-Mail",
+        "phone": "Telefon",
+        "mobile": "Mobil",
+        "website": "Webseite",
+        "fax": "Fax",
+        "other": "Sonstiges"
+      }
+    },
+    "retention": {
+      "title": "Aufbewahrung",
+      "heldUntil": "gehalten bis {date}",
+      "heldPermanently": "dauerhaft gehalten",
+      "delete": "Kontakt löschen",
+      "deleteBlocked": "Solange etwas diesen Kontakt hält, kann er nicht gelöscht werden.",
+      "unknown": "Für diesen Kontakt ist keine Frist nachgewiesen. Vergeben Sie eine Rolle oder archivieren Sie ihn."
     }
   }
 }

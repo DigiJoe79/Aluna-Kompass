@@ -35,6 +35,11 @@ const KNOWN_CONFLICTS = new Set([
   'folderExists',
   'folderParentMissing',
   'folderNotFound',
+  'retentionHoldActive',
+  'retentionUnknown',
+  'belongsToNotAnOrganization',
+  'multiplePrimaryChannels',
+  'roleAlreadyRunning',
 ]);
 
 const CONFLICTS_WITH_DETAIL = new Set([
