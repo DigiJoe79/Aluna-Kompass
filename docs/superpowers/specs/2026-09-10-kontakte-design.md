@@ -23,12 +23,14 @@ Das trägt nicht mehr. Drei Vorhaben hängen daran:
   braucht einen strukturierten Empfänger, keinen Freitext.
 - **Tiere (Stufe 4).** Ein Adoptionsvertrag verbindet ein Tier mit einer Person.
 
-Dazu kommt ein Befund, der beim Durchsehen der Dokumentenpipeline auffiel und
-den das Folgevorhaben aufräumt: `renderDocument` behandelt jede Vorlage gleich
-und vergibt auch für den Änderungsprotokoll-Export eine lückenlose
-Dokumentnummer. Ein Ad-hoc-Auszug, den man dreimal am Tag mit anderem Filter
-zieht, verbrennt damit drei Nummern und läge nach neuer Fristenlogik zehn Jahre
-im Bestand.
+Ein Befund aus derselben Durchsicht ist bereits behoben (Commit
+`feat(documents): ad-hoc excerpts no longer burn a document number`):
+`renderDocument` behandelte jede Vorlage gleich und vergab auch für den
+Änderungsprotokoll-Export eine lückenlose Dokumentnummer. Seitdem trennt
+`DocumentTemplate.filed` den Akteneintrag vom Ad-hoc-Auszug; Auszüge laufen über
+`exportDocument`, bekommen weder Nummer noch Zeile noch Ablage und hinterlassen
+nur einen Eintrag im Änderungsprotokoll. Anhang-Entscheidung 9 ist damit
+umgesetzt, bevor die Folge-Spec geschrieben wird.
 
 ## 2. Ziel
 
@@ -345,7 +347,7 @@ gehen; jene Spec übernimmt sie.
 | 6 | Mehrere Bezüge je Dokument über `document_links` mit Rolle, statt eines `entity_type`/`entity_id`-Paars |
 | 7 | `resolve(refs)` unrein / `build(data)` rein — Module dürfen ihre Daten lesen, Determinismus bleibt bei `build` |
 | 8 | Die Akte ist die einzige Ablage; Fachmodule sind Auslöser, keine Ablage |
-| 9 | Akteneintrag gegen Ad-hoc-Auszug ist eine Eigenschaft der Vorlage — ein Auszug bekommt keine Nummer und keine Zeile |
+| 9 | Akteneintrag gegen Ad-hoc-Auszug ist eine Eigenschaft der Vorlage — ein Auszug bekommt keine Nummer und keine Zeile *(umgesetzt am 2026-09-10)* |
 | 10 | Aufbewahrungsfrist sticht Löschpflicht; Löschen wird ein fälliger Vorgang mit Datum, kein Knopf |
 | 11 | Das DMS wird ein Modul mit `dependsOn: ['contacts']`; die Pipeline bleibt im Kern |
 | 12 | Nicht in dieser Reihe: Texteditor mit Vorlagenspeicher (rudimentär, später), OCR, Volltextsuche |
