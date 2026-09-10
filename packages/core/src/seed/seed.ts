@@ -14,7 +14,7 @@ export const SEED_ADMIN_PASSWORD = 'kompass-entwicklung-2026';
 
 const EXAMPLE_ROLES: { name: string; description: string; permissions: string[] }[] = [
   { name: 'Schatzmeisterin', description: 'Finanzen und Dokumente', permissions: ['documents.export', 'media.upload', 'audit.view', 'backup.export'] },
-  { name: 'Kassenprüfer', description: 'Nur lesen', permissions: ['audit.view'] },
+  { name: 'Kassenprüfer', description: 'Nur lesen', permissions: ['audit.view', 'documents.export'] },
   { name: 'Schriftführung', description: 'Dokumente erzeugen', permissions: ['documents.export'] },
 ];
 

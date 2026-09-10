@@ -40,7 +40,7 @@ export default async function AuditPage(props: { searchParams: Promise<Record<st
     <>
       <PageHeader
         title={t('title')}
-        actions={<ExportButton enabled={hasPermission(ctx, 'documents.create')} />}
+        actions={<ExportButton enabled={hasPermission(ctx, 'documents.export')} />}
       />
       <div className="overflow-hidden rounded-lg border border-line bg-surface">
         <AuditFilters

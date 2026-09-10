@@ -21,14 +21,14 @@ test.describe('roles', () => {
     await page.getByRole('button', { name: /Kassenprüfer/ }).click();
     await expect(page.getByRole('checkbox', { name: 'Änderungsprotokoll einsehen' })).toBeChecked();
     await page.getByRole('checkbox', { name: 'Backup exportieren' }).check();
-    await page.getByRole('checkbox', { name: 'Dokumente ansehen' }).uncheck();
+    await page.getByRole('checkbox', { name: 'Auszüge ziehen' }).uncheck();
     await expect(page.getByText('2 Änderungen noch nicht gespeichert')).toBeVisible();
     await page.getByRole('button', { name: 'Rolle speichern' }).click();
     await expect(page.getByRole('status')).toContainText('Rolle gespeichert.');
     await page.reload();
     await page.getByRole('button', { name: /Kassenprüfer/ }).click();
     await expect(page.getByRole('checkbox', { name: 'Backup exportieren' })).toBeChecked();
-    await expect(page.getByRole('checkbox', { name: 'Dokumente ansehen' })).not.toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'Auszüge ziehen' })).not.toBeChecked();
     await expect(page.getByText('backup.export')).toBeVisible();
   });
 

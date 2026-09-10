@@ -424,7 +424,8 @@
       "members": "Mitglieder",
       "animals": "Tiere",
       "contacts": "Kontakte",
-      "site": "Webseite"
+      "site": "Webseite",
+      "dms": "Akte"
     },
     "keys": {
       "users": {
@@ -458,13 +459,9 @@
         }
       },
       "documents": {
-        "view": {
-          "label": "Dokumente ansehen",
-          "description": "Erzeugte PDFs öffnen und herunterladen."
-        },
-        "create": {
-          "label": "Dokumente erzeugen",
-          "description": "PDFs aus Vorlagen erstellen; das Ergebnis wird protokolliert."
+        "export": {
+          "label": "Auszüge ziehen",
+          "description": "Auszüge wie das Änderungsprotokoll als PDF herunterladen. Sie bekommen keine Nummer und werden nicht abgelegt."
         }
       },
       "media": {
@@ -531,6 +528,32 @@
         "manage": {
           "label": "Kontakte verwalten",
           "description": "Kontakte anlegen, bearbeiten, Rollen und Kommunikationswege pflegen und löschen."
+        }
+      },
+      "dms": {
+        "view": {
+          "label": "Akte ansehen",
+          "description": "Dokumente der Akte öffnen, herunterladen und durchsuchen."
+        },
+        "create": {
+          "label": "Dokumente anlegen",
+          "description": "Entwürfe schreiben, eingegangene Post ablegen, einsortieren und verknüpfen."
+        },
+        "file": {
+          "label": "Dokumente festschreiben",
+          "description": "Einen Entwurf festschreiben: Er bekommt seine Nummer und ist danach unveränderlich."
+        },
+        "void": {
+          "label": "Dokumente stornieren",
+          "description": "Ein festgeschriebenes Dokument stornieren. Die Nummer bleibt vergeben."
+        },
+        "deleteDraft": {
+          "label": "Entwürfe verwerfen",
+          "description": "Einen noch nicht festgeschriebenen Entwurf wegwerfen."
+        },
+        "manage": {
+          "label": "Akte verwalten",
+          "description": "Dokumentarten, Ordner und Einsortierregeln pflegen; fällige Löschungen bestätigen."
         }
       }
     }
