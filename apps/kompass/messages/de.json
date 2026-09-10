@@ -1311,9 +1311,8 @@
         "email": "E-Mail",
         "phone": "Telefon",
         "mobile": "Mobil",
-        "website": "Webseite",
         "fax": "Fax",
-        "other": "Sonstiges"
+        "web": "Webseite"
       }
     },
     "retention": {
