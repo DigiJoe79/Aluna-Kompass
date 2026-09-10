@@ -23,6 +23,24 @@ describe('formatPostalAddress', () => {
     expect(formatPostalAddress(employee, org)).toBe('Sparkasse Musterstadt\nz. Hd. Frau Bea Klein\nBankplatz 2\n12345 Musterstadt');
   });
 
+  it('names a branch office of its own, without z. Hd., when it belongs to a head office', () => {
+    const headOffice: PostalAddressInput = { ...person, kind: 'organization', salutation: null, firstName: null, lastName: null, name: 'Hauptverwaltung', legalForm: null, street: 'Bankplatz 2', postalCode: '12345', city: 'Musterstadt' };
+    const branch: PostalAddressInput = { ...person, kind: 'organization', salutation: null, firstName: null, lastName: null, name: 'Filiale Nord', legalForm: null, street: null, postalCode: null, city: null };
+    expect(formatPostalAddress(branch, headOffice)).toBe('Hauptverwaltung\nFiliale Nord\nBankplatz 2\n12345 Musterstadt');
+  });
+
+  it('keeps a person at an organisation prefixed with z. Hd., unlike a branch office', () => {
+    const org: PostalAddressInput = { ...person, kind: 'organization', salutation: null, firstName: null, lastName: null, name: 'Sparkasse Musterstadt', legalForm: null, street: 'Bankplatz 2', postalCode: '12345', city: 'Musterstadt' };
+    const employee: PostalAddressInput = { ...person, salutation: 'Frau', firstName: 'Bea', lastName: 'Klein', street: null, postalCode: null, city: null };
+    expect(formatPostalAddress(employee, org)).toBe('Sparkasse Musterstadt\nz. Hd. Frau Bea Klein\nBankplatz 2\n12345 Musterstadt');
+  });
+
+  it("keeps a person's own address extra even when the organisation's address supplies the street", () => {
+    const org: PostalAddressInput = { ...person, kind: 'organization', salutation: null, firstName: null, lastName: null, name: 'Sparkasse Musterstadt', legalForm: null, addressExtra: 'Kundencenter', street: 'Bankplatz 2', postalCode: '12345', city: 'Musterstadt' };
+    const employee: PostalAddressInput = { ...person, salutation: 'Frau', firstName: 'Bea', lastName: 'Klein', addressExtra: 'Abteilung Kredite', street: null, postalCode: null, city: null };
+    expect(formatPostalAddress(employee, org)).toBe('Sparkasse Musterstadt\nz. Hd. Frau Bea Klein\nAbteilung Kredite\nBankplatz 2\n12345 Musterstadt');
+  });
+
   it('keeps the address extra above the street', () => {
     expect(formatPostalAddress({ ...person, addressExtra: 'c/o Familie Meier' })).toBe('Frau\nAnna Berger\nc/o Familie Meier\nMusterweg 1\n12345 Musterstadt');
   });

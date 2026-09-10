@@ -28,4 +28,12 @@ describe('contacts schema', () => {
     const person = deps.db.select().from(contacts).all().find((c) => c.id === 'P')!;
     expect(person.belongsToId).toBe('ORG');
   });
+
+  it('rejects a belongsToId that points at no existing contact', () => {
+    const deps = createTestDeps();
+    const base = { status: 'active' as const, createdAt: '2026-09-05T08:00:00.000Z', updatedAt: '2026-09-05T08:00:00.000Z' };
+    expect(() =>
+      deps.db.insert(contacts).values({ id: 'P', kind: 'person', firstName: 'Bea', lastName: 'Klein', belongsToId: 'GHOST', ...base }).run(),
+    ).toThrow(/FOREIGN KEY/i);
+  });
 });

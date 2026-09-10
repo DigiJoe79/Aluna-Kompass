@@ -36,8 +36,13 @@ export function formatPostalAddress(
 
   if (organisation) {
     lines.push(displayName(organisation));
-    const attention = [clean(contact.salutation), personName(contact)].filter(Boolean).join(' ');
-    if (attention) lines.push(`z. Hd. ${attention}`);
+    if (contact.kind === 'person') {
+      const attention = [clean(contact.salutation), personName(contact)].filter(Boolean).join(' ');
+      if (attention) lines.push(`z. Hd. ${attention}`);
+    } else {
+      const name = displayName(contact);
+      if (name) lines.push(name);
+    }
   } else {
     if (contact.kind === 'person' && clean(contact.salutation)) lines.push(clean(contact.salutation));
     lines.push(displayName(contact));
@@ -46,7 +51,10 @@ export function formatPostalAddress(
   // Die Anschrift des Kontakts gewinnt; fehlt sie ganz, gilt die der Organisation.
   const source = clean(contact.street) || clean(contact.postalCode) || clean(contact.city) ? contact : (organisation ?? contact);
 
-  lines.push(clean(source.addressExtra));
+  // Die Anrede-Zeile ist Empfänger-Routing des Kontakts selbst, kein Teil des
+  // Straßenblocks — sie gewinnt immer, auch wenn die Adresse von der
+  // Organisation stammt.
+  lines.push(clean(contact.addressExtra) || clean(source.addressExtra));
   lines.push(clean(source.street));
   lines.push([clean(source.postalCode), clean(source.city)].filter(Boolean).join(' '));
 

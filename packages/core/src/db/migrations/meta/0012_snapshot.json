@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "c2efce94-8015-4e4d-aae8-0c6b1fd0fa03",
+  "id": "751cb802-4029-41e0-984a-ee81991e836f",
   "prevId": "758ec59a-90b3-41fa-adfb-9119dbdfbf5e",
   "tables": {
     "api_tokens": {
@@ -1620,7 +1620,21 @@
           "isUnique": false
         }
       },
-      "foreignKeys": {},
+      "foreignKeys": {
+        "contacts_belongs_to_id_contacts_id_fk": {
+          "name": "contacts_belongs_to_id_contacts_id_fk",
+          "tableFrom": "contacts",
+          "tableTo": "contacts",
+          "columnsFrom": [
+            "belongs_to_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}

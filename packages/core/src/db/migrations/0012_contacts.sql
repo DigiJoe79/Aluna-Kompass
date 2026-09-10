@@ -38,7 +38,8 @@ CREATE TABLE `contacts` (
 	`notes` text,
 	`status` text DEFAULT 'active' NOT NULL,
 	`created_at` text NOT NULL,
-	`updated_at` text NOT NULL
+	`updated_at` text NOT NULL,
+	FOREIGN KEY (`belongs_to_id`) REFERENCES `contacts`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
 CREATE INDEX `contacts_status_idx` ON `contacts` (`status`);--> statement-breakpoint

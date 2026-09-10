@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { index, integer, sqliteTable, text, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 
 /**
  * Ein Kontakt ist entweder eine natürliche Person oder eine Organisation.
@@ -20,7 +20,7 @@ export const contacts = sqliteTable(
     name: text('name'),
     legalForm: text('legal_form'),
     // beide
-    belongsToId: text('belongs_to_id'),
+    belongsToId: text('belongs_to_id').references((): AnySQLiteColumn => contacts.id),
     addressExtra: text('address_extra'),
     street: text('street'),
     postalCode: text('postal_code'),
