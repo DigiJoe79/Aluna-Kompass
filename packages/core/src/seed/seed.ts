@@ -58,5 +58,12 @@ export async function seedDevelopment(deps: Deps): Promise<{ adminEmail: string;
       deps.db.update(users).set({ mustChangePassword: false, lastLoginAt: '2026-09-01T10:00:00.000Z' }).where(eq(users.id, created.user.id)).run();
     }
   }
+
+  for (const manifest of deps.registry.manifests) {
+    if (manifest.seed) {
+      await manifest.seed(deps, ctx);
+    }
+  }
+
   return { adminEmail: SEED_ADMIN_EMAIL, adminPassword: SEED_ADMIN_PASSWORD };
 }

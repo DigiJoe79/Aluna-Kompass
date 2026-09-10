@@ -1,6 +1,7 @@
 import { defineModule, type ModuleManifest } from '@kompass/core';
 import { CONTACTS_MCP_TOOLS } from './mcp-tools';
 import { contactsRetentionDue, contactsRetentionHolds } from './retention';
+import { seedContacts } from './seed';
 
 export const contactsModule: ModuleManifest = defineModule({
   key: 'contacts',
@@ -26,4 +27,5 @@ export const contactsModule: ModuleManifest = defineModule({
   retentionHolds: contactsRetentionHolds,
   retentionDue: contactsRetentionDue,
   mcpTools: CONTACTS_MCP_TOOLS,
+  seed: seedContacts,
 });

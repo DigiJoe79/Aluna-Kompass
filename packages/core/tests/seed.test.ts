@@ -29,4 +29,19 @@ describe('seedDevelopment', () => {
     await seedDevelopment(deps);
     expect(readSetting(deps, 'modules.enabled')).toEqual(['finance']);
   });
+
+  it('executes manifest seed hooks for modules', async () => {
+    let called = false;
+    const testMod = defineModule({
+      key: 'testmod',
+      version: '0',
+      permissions: ['testmod.view'],
+      seed: async () => {
+        called = true;
+      },
+    });
+    const deps = createTestDeps({ env: 'development', manifests: [coreModule, testMod] });
+    await seedDevelopment(deps);
+    expect(called).toBe(true);
+  });
 });

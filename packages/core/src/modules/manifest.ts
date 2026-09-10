@@ -151,6 +151,8 @@ export interface ModuleManifest {
   retentionDue?: (deps: Deps) => readonly DueItem[];
   /** Kontaktrollen, die dieses Modul beisteuert. */
   contactRoles?: readonly ContactRoleDefinition[];
+  /** Beispieldaten für die Entwicklungsumgebung. */
+  seed?: (deps: Deps, ctx: CallContext) => Promise<void>;
 }
 
 /** Die MCP-Werkzeuge eines Moduls, egal ob als feste Liste oder als Funktion von `deps` deklariert. */

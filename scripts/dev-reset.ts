@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { createDeps, readEnv, seedDevelopment, setSetting, unwrap, type AppEnv, type CallContext } from '@kompass/core';
 import { coreDocumentTemplates, createDocumentEngine } from '@kompass/documents';
 import { animalsModule } from '@kompass/module-animals';
+import { contactsModule } from '@kompass/module-contacts';
 import { siteModule, siteTemplateDir } from '@kompass/module-site';
 import { importPrototype } from './import-prototype';
 
@@ -55,7 +56,7 @@ export async function devReset(opts: DevResetOptions) {
     databasePath: opts.databasePath,
     mediaPath: opts.mediaPath,
     env: opts.env,
-    modules: [siteModule, animalsModule],
+    modules: [siteModule, animalsModule, contactsModule],
     coreTemplates: coreDocumentTemplates(),
     documents: createDocumentEngine(),
   });

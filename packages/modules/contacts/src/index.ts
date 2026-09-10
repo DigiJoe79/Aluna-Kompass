@@ -4,4 +4,5 @@ export * from './mcp-tools';
 export * from './retention';
 export * from './roles';
 export * from './schema';
+export * from './seed';
 export * from './service';

@@ -17,6 +17,9 @@ importers:
       '@kompass/module-animals':
         specifier: workspace:*
         version: link:packages/modules/animals
+      '@kompass/module-contacts':
+        specifier: workspace:*
+        version: link:packages/modules/contacts
       '@kompass/module-site':
         specifier: workspace:*
         version: link:packages/modules/site

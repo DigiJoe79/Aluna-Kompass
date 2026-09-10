@@ -22,6 +22,7 @@
     "@kompass/core": "workspace:*",
     "@kompass/documents": "workspace:*",
     "@kompass/module-animals": "workspace:*",
+    "@kompass/module-contacts": "workspace:*",
     "@kompass/module-site": "workspace:*",
     "@kompass/site-template": "workspace:*",
     "tsx": "^4.19.3"
