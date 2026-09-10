@@ -46,4 +46,20 @@ describe('modules service', () => {
     const denied = await setModuleEnabled(deps, ctxWith(['settings.manage']), { key: 'finance', enabled: false });
     expect(denied.ok === false && denied.error.type === 'forbidden').toBe(true);
   });
+
+  it('refuses to enable a module whose contact roles collide with an active module', async () => {
+    const modA = defineModule({ key: 'mod-a', version: '0.1.0', permissions: [], contactRoles: [{ key: 'donor', retention: 'statutory10Y' }] });
+    const modB = defineModule({ key: 'mod-b', version: '0.1.0', permissions: [], contactRoles: [{ key: 'donor', retention: 'consent' }] });
+    const deps = createTestDeps({ manifests: [coreModule, modA, modB] });
+    unwrap(await setModuleEnabled(deps, admin, { key: 'mod-a', enabled: true }));
+
+    const res = await setModuleEnabled(deps, admin, { key: 'mod-b', enabled: true });
+    expect(res.ok === false && res.error.type === 'conflict' && res.error.code === 'contactRoleConflict').toBe(true);
+    if (!res.ok) {
+      expect(res.error.message).toContain('donor');
+      expect(res.error.message).toContain('mod-a');
+      expect(res.error.message).toContain('mod-b');
+    }
+    expect(isModuleEnabled(deps, 'mod-b')).toBe(false);
+  });
 });

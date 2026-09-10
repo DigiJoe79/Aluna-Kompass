@@ -1,4 +1,5 @@
 import { defineModule, type ModuleManifest } from '@kompass/core';
+import { contactsRetentionDue, contactsRetentionHolds } from './retention';
 
 export const contactsModule: ModuleManifest = defineModule({
   key: 'contacts',
@@ -21,4 +22,6 @@ export const contactsModule: ModuleManifest = defineModule({
     { key: 'authority', retention: 'permanent' },
     { key: 'service', retention: 'consent' },
   ],
+  retentionHolds: contactsRetentionHolds,
+  retentionDue: contactsRetentionDue,
 });

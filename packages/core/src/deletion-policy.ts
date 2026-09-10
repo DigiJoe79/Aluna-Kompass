@@ -1,3 +1,5 @@
+import type { RetentionClass } from './retention/classes';
+
 /**
  * Was in Kompass gelöscht werden darf — und was nicht. Kanonische Fassung von
  * Prinzip 3 (`AGENTS.md`): „Nichts Rechenschaftsrelevantes wird gelöscht."
@@ -24,6 +26,8 @@ export interface DeletionRule {
   guard?: string;
   /** Nur bei deletable: die Aktion, die ins Änderungsprotokoll geht (`bereich.verb`). */
   auditAction?: string;
+  /** Nur bei deletable: die Aufbewahrungsklasse, nach deren Ablauf gelöscht werden darf. */
+  retentionClass?: RetentionClass;
 }
 
 export const DELETION_POLICY: readonly DeletionRule[] = [
@@ -104,5 +108,13 @@ export const DELETION_POLICY: readonly DeletionRule[] = [
     reason: 'Gestaltung, kein Nachweis.',
     guard: 'nicht das aktive und nicht das Default-Theme',
     auditAction: 'themes.delete',
+  },
+  {
+    entity: 'contact',
+    deletable: true,
+    reason:
+      'Personenbezogene Daten sind nach Wegfall des Zwecks zu löschen (DSGVO Art. 17). Die gesetzliche Aufbewahrung sticht diese Pflicht nur, solange sie läuft.',
+    guard: 'Erst wenn kein Halter mehr läuft — geprüft über retentionHolds aller aktiven Module. Ohne nachgewiesene Frist bleibt der Kontakt bestehen.',
+    auditAction: 'contacts.delete',
   },
 ];

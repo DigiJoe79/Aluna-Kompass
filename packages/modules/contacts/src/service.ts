@@ -270,3 +270,62 @@ export async function endContactRole(deps: Deps, ctx: CallContext, input: unknow
     return ok(after);
   });
 }
+
+import { dueUntil, holdsFor, type DueItem, type RetentionHold } from '@kompass/core';
+import { contactsRetentionDue } from './retention';
+
+/** Bis wann dieser Kontakt gehalten wird — und von wem, damit man es nachlesen kann. */
+export async function contactRetention(
+  deps: Deps,
+  ctx: CallContext,
+  id: string,
+): Promise<Result<{ holds: RetentionHold[]; until: string | null; due: boolean }>> {
+  const denied = requirePermission(ctx, 'contacts.view');
+  if (denied) return denied;
+  const contact = deps.db.select({ id: contacts.id }).from(contacts).where(eq(contacts.id, id)).get();
+  if (!contact) return notFound('contact', id);
+  const holds = holdsFor(deps, 'contact', id);
+  const until = dueUntil(holds);
+  const today = deps.clock.now().toISOString().slice(0, 10);
+  return ok({ holds, until, due: holds.length > 0 && until !== null && until < today });
+}
+
+export async function listDueContacts(deps: Deps, ctx: CallContext): Promise<Result<DueItem[]>> {
+  const denied = requirePermission(ctx, 'contacts.manage');
+  if (denied) return denied;
+  return ok(contactsRetentionDue(deps));
+}
+
+export const contactDeleteSchema = z.object({ id: z.string().min(1) });
+
+/**
+ * Löscht einen Kontakt samt Rollen und Kommunikationswegen — aber erst, wenn
+ * kein Halter mehr läuft. Was verschwindet, ist der Inhalt; dass jemand ihn
+ * entfernt hat, bleibt im Änderungsprotokoll (Prinzip 3).
+ */
+export async function deleteContact(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ id: string }>> {
+  const denied = requirePermission(ctx, 'contacts.manage');
+  if (denied) return denied;
+  const parsed = validate(deps, contactDeleteSchema, input);
+  if (!parsed.ok) return parsed;
+  const contact = loadContact(deps.db, parsed.value.id);
+  if (!contact) return notFound('contact', parsed.value.id);
+
+  const holds = holdsFor(deps, 'contact', contact.id);
+  if (holds.length === 0) {
+    return conflict('retentionUnknown', 'Für diesen Kontakt ist keine Frist nachgewiesen. Vergeben Sie eine Rolle oder archivieren Sie ihn.');
+  }
+  const until = dueUntil(holds);
+  const today = deps.clock.now().toISOString().slice(0, 10);
+  if (until === null || until >= today) {
+    return conflict('retentionHoldActive', `Noch gehalten von: ${holds.map((h) => `${h.label}${h.until ? ` (bis ${h.until})` : ' (dauerhaft)'}`).join('; ')}`);
+  }
+
+  return deps.db.transaction((tx: DbOrTx) => {
+    tx.delete(contactChannels).where(eq(contactChannels.contactId, contact.id)).run();
+    tx.delete(contactRoles).where(eq(contactRoles.contactId, contact.id)).run();
+    tx.delete(contacts).where(eq(contacts.id, contact.id)).run();
+    recordAudit(tx, deps, ctx, { action: 'contacts.delete', entityType: 'contact', entityId: contact.id, before: { name: displayName(contact), until }, summary: `Kontakt ${displayName(contact)} nach Fristablauf gelöscht` });
+    return ok({ id: contact.id });
+  });
+}

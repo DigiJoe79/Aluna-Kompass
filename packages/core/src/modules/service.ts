@@ -56,6 +56,14 @@ export async function setModuleEnabled(deps: Deps, ctx: CallContext, input: unkn
   if (enabled) {
     const missing = (manifest.dependsOn ?? []).filter((dep) => !current.has(dep));
     if (missing.length > 0) return conflict('moduleDependencyInactive', `Benötigt aktive Module: ${missing.join(', ')}`);
+    const activeManifests = deps.registry.manifests.filter((m) => current.has(m.key) && m.key !== key);
+    for (const role of manifest.contactRoles ?? []) {
+      for (const active of activeManifests) {
+        if ((active.contactRoles ?? []).some((r) => r.key === role.key)) {
+          return conflict('contactRoleConflict', `Rolle „${role.key}“ kollidiert zwischen ${active.key} und ${manifest.key}`);
+        }
+      }
+    }
   } else {
     const dependents = deps.registry.manifests.filter((m) => current.has(m.key) && (m.dependsOn ?? []).includes(key));
     if (dependents.length > 0) return conflict('moduleRequiredByOthers', `Wird benötigt von: ${dependents.map((m) => m.key).join(', ')}`);
