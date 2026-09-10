@@ -8,7 +8,7 @@ export interface PermissionGroup {
 
 const CORE_GROUPS: { key: string; keys: string[] }[] = [
   { key: 'core.admin', keys: ['users.manage', 'roles.manage', 'settings.manage', 'modules.manage'] },
-  { key: 'core.accountability', keys: ['audit.view', 'documents.view'] },
+  { key: 'core.accountability', keys: ['audit.view', 'retention.view', 'documents.view'] },
   { key: 'core.data', keys: ['documents.create', 'media.upload', 'backup.export', 'backup.import'] },
   { key: 'core.projects', keys: ['projects.view', 'projects.manage'] },
 ];

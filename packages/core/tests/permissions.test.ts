@@ -5,7 +5,7 @@ import { hasPermission, requireAnyPermission, requirePermission } from '../src/p
 import { ctxWith } from '../src/testing';
 
 describe('permissions', () => {
-  it('defines the twelve core permission keys', () => {
+  it('defines the core permission keys', () => {
     expect([...CORE_PERMISSIONS].sort()).toEqual([
       'audit.view',
       'backup.export',
@@ -16,6 +16,7 @@ describe('permissions', () => {
       'modules.manage',
       'projects.manage',
       'projects.view',
+      'retention.view',
       'roles.manage',
       'settings.manage',
       'users.manage',

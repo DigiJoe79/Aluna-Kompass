@@ -192,6 +192,7 @@
     "themes": "Themes",
     "modules": "Module",
     "audit": "Änderungsprotokoll",
+    "retention": "Aufbewahrung",
     "documents": "Dokumente",
     "backup": "Backup",
     "logoAlt": "Vereinslogo",
@@ -417,6 +418,7 @@
       "finance": "Finanzen",
       "members": "Mitglieder",
       "animals": "Tiere",
+      "contacts": "Kontakte",
       "site": "Webseite"
     },
     "keys": {
@@ -508,6 +510,22 @@
         "manage": {
           "label": "Projekte verwalten",
           "description": "Projekte anlegen, bearbeiten, sortieren und veröffentlichen."
+        }
+      },
+      "retention": {
+        "view": {
+          "label": "Aufbewahrung einsehen",
+          "description": "Fällige Löschfristen über alle Module einsehen."
+        }
+      },
+      "contacts": {
+        "view": {
+          "label": "Kontakte ansehen",
+          "description": "Kontakte, Rollen und Kommunikationswege einsehen."
+        },
+        "manage": {
+          "label": "Kontakte verwalten",
+          "description": "Kontakte anlegen, bearbeiten, Rollen und Kommunikationswege pflegen und löschen."
         }
       }
     }
@@ -899,6 +917,29 @@
     "toast": {
       "created": "Dokument erzeugt.",
       "voided": "Dokument storniert."
+    }
+  },
+  "retention": {
+    "title": "Aufbewahrung und Löschfristen",
+    "description": "Was zur Löschung ansteht, weil die gesetzliche Aufbewahrung abgelaufen ist.",
+    "empty": {
+      "title": "Nichts fällig",
+      "text": "Zurzeit steht keine Löschung an."
+    },
+    "dueSince": "fällig seit {date}",
+    "entities": {
+      "contact": "Kontakte"
+    },
+    "footnote": "Gelöscht wird auf der Seite des jeweiligen Eintrags — dort steht, was dabei verschwindet.",
+    "settings": {
+      "title": "Fristen",
+      "statutory10Y": "Gesetzliche Aufbewahrung 10 Jahre",
+      "statutory10YHint": "§ 147 Abs. 1 Nr. 1, 4, 4a AO (z. B. Buchungsbelege, Jahresabschlüsse)",
+      "statutory6Y": "Gesetzliche Aufbewahrung 6 Jahre",
+      "statutory6YHint": "§ 147 Abs. 1 Nr. 2, 3, 5 AO (z. B. empfangene Handels- und Geschäftsbriefe)",
+      "consent": "Einwilligung / berechtigtes Interesse",
+      "consentHint": "ohne gesetzliche Grundlage (z. B. Interessenten)",
+      "save": "Speichern"
     }
   },
   "backup": {

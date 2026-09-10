@@ -1,6 +1,6 @@
 import {
   activateTheme, addLocale, assignRole, createMediaFolder, createProject, createRole, createUser, deleteMediaAsset, deleteMediaFolder, getAuditEntry, getProject, listDocumentBases, listDocuments, listLocales, listMediaAssets, listModules, listProjects,
-  listRoles, listThemes, listUsers, moveMediaAsset, projectCreateSchema, projectUpdateSchema, queryAudit, readAllSettings, readSetting, removeLocale, removeRole, renameMediaFolder, renderDocument,
+  listRetentionDue, listRoles, listThemes, listUsers, moveMediaAsset, projectCreateSchema, projectUpdateSchema, queryAudit, readAllSettings, readSetting, removeLocale, removeRole, renameMediaFolder, renderDocument,
   reorderLocales, reorderProjects, resetStartPassword, setModuleEnabled, setProjectPublished, setRolePermissions, setSetting, setUserActive, updateProject,
   updateRole, voidDocument, ok, invalid,
   type McpToolDefinition,
@@ -50,4 +50,5 @@ export const coreMcpTools: McpToolDefinition[] = [
   t({ name: 'project_update', description: 'Update a project. Requires projects.manage. Audited.', inputSchema: projectUpdateSchema, handler: (deps, ctx, args) => updateProject(deps, ctx, args) }),
   t({ name: 'project_set_published', description: 'Publish or unpublish a project. Requires projects.manage. Audited.', inputSchema: z.object({ id: z.string(), isPublished: z.boolean() }), handler: (deps, ctx, args) => setProjectPublished(deps, ctx, args) }),
   t({ name: 'projects_reorder', description: 'Reorder projects; the order decides what a template shows first. Requires projects.manage.', inputSchema: z.object({ ids: z.array(z.string()) }), handler: (deps, ctx, args) => reorderProjects(deps, ctx, args) }),
+  t({ name: 'retention_due', description: 'List everything whose retention period has run out and that is due for deletion, across all enabled modules. Requires retention.view.', inputSchema: z.object({}), handler: (deps, ctx) => listRetentionDue(deps, ctx) }),
 ];

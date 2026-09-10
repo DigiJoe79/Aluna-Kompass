@@ -4,6 +4,9 @@ export const CORE_PERMISSIONS = [
   'settings.manage',
   'modules.manage',
   'audit.view',
+  // Der Fristenbildschirm sammelt über alle Module; er braucht ein eigenes
+  // Recht, weil er zeigt, welche personenbezogenen Daten zur Löschung anstehen.
+  'retention.view',
   'documents.create',
   'documents.view',
   'media.upload',

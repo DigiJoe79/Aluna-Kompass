@@ -290,3 +290,17 @@ describe('a throwing module hook must never be read as "holds nothing" (Fix 2)',
     expect(() => collectRetentionDue(deps)).toThrow('finance module is broken');
   });
 });
+
+import { listRetentionDue } from '../src/retention/service';
+
+describe('listRetentionDue', () => {
+  it('collects across enabled modules and requires retention.view', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, holder('alpha', '2028-12-31')] });
+    deps.db.transaction((tx) => {
+      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['alpha'], 'test.enable');
+    });
+    expect(unwrap(await listRetentionDue(deps, ctxWith(['retention.view']))).map((d) => d.id)).toEqual(['X1']);
+    const denied = await listRetentionDue(deps, ctxWith([]));
+    expect(denied.ok === false && denied.error.type === 'forbidden').toBe(true);
+  });
+});

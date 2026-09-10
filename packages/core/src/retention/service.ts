@@ -1,6 +1,9 @@
+import type { CallContext } from '../context';
 import type { Deps } from '../deps';
 import type { DueItem, RetentionHold } from '../modules/manifest';
 import { enabledManifests } from '../modules/service';
+import { requirePermission } from '../permissions/check';
+import { ok, type Result } from '../result';
 import { readSetting } from '../settings/service';
 import type { RetentionClass } from './classes';
 
@@ -63,4 +66,11 @@ export function dueUntil(holds: readonly RetentionHold[]): string | null {
  */
 export function collectRetentionDue(deps: Deps): DueItem[] {
   return enabledManifests(deps).flatMap((m) => [...(m.retentionDue?.(deps) ?? [])]);
+}
+
+/** Alles, was zur Löschung ansteht — über alle aktiven Module hinweg. */
+export async function listRetentionDue(deps: Deps, ctx: CallContext): Promise<Result<DueItem[]>> {
+  const denied = requirePermission(ctx, 'retention.view');
+  if (denied) return denied;
+  return ok(collectRetentionDue(deps));
 }

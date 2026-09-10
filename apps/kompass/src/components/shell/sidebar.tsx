@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, ChevronUp, Clock, Contact, Database, Droplet, Euro, FileText, Folder, Grid2x2, Home, Image, LayoutTemplate, Languages, List, PanelLeft, PawPrint, Shield, SlidersHorizontal, Upload, Users, X, type LucideIcon } from 'lucide-react';
+import { ChevronDown, ChevronUp, Clock, Contact, Database, Droplet, Euro, FileText, Folder, Grid2x2, Home, Hourglass, Image, LayoutTemplate, Languages, List, PanelLeft, PawPrint, Shield, SlidersHorizontal, Upload, Users, X, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -28,6 +28,7 @@ const ICONS: Record<string, LucideIcon> = {
   upload: Upload,
   list: List,
   contact: Contact,
+  hourglass: Hourglass,
 };
 
 export interface SidebarProps {
