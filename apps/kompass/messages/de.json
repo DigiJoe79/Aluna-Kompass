@@ -1249,6 +1249,8 @@
     },
     "search": "Suche",
     "allKinds": "Alle Arten",
+    "filterRole": "Rolle",
+    "allRoles": "Alle Rollen",
     "includeArchived": "Auch archivierte",
     "archived": "Archiviert",
     "preview": "So fällt die Anschrift",

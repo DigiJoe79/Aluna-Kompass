@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useMemo, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { StatusBadge } from '@/components/status-badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,42 +22,34 @@ export interface ContactListItem {
   status: 'active' | 'archived';
 }
 
-export function ContactList({ contacts }: { contacts: ContactListItem[] }) {
+export function ContactList({ contacts, roles }: { contacts: ContactListItem[]; roles: string[] }) {
   const t = useTranslations('contacts');
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const [, startTransition] = useTransition();
 
+  // Gefiltert wird serverseitig (`listContacts`); die Felder hier setzen nur die
+  // Query-Parameter, dieselbe Trennung wie in der Dokumentenliste.
   const [query, setQuery] = useState(params.get('text') ?? '');
   const [kindFilter, setKindFilter] = useState(params.get('kind') ?? '');
+  const [roleFilter, setRoleFilter] = useState(params.get('role') ?? '');
   const [showArchived, setShowArchived] = useState(params.get('archived') === '1');
 
-  const updateUrl = (k: string, val: string | null) => {
-    const next = new URLSearchParams(params.toString());
-    if (val) next.set(k, val);
-    else next.delete(k);
+  // Aus allen vier Feldern zusammen, nicht als Patch auf `params` — sonst geht
+  // eine Änderung verloren, wenn zwei Filter im selben Render umgestellt werden.
+  const applyFilters = (patch: Partial<{ text: string; kind: string; role: string; archived: boolean }>) => {
+    const merged = { text: query, kind: kindFilter, role: roleFilter, archived: showArchived, ...patch };
+    const next = new URLSearchParams();
+    if (merged.text.trim()) next.set('text', merged.text.trim());
+    if (merged.kind) next.set('kind', merged.kind);
+    if (merged.role) next.set('role', merged.role);
+    if (merged.archived) next.set('archived', '1');
+    const qs = next.toString();
     startTransition(() => {
-      router.replace(`${pathname}?${next.toString()}`);
+      router.replace(qs ? `${pathname}?${qs}` : pathname);
     });
   };
-
-  const rows = useMemo(() => {
-    return contacts.filter((c) => {
-      if (!showArchived && c.status === 'archived') return false;
-      if (kindFilter && kindFilter !== 'all' && c.kind !== kindFilter) return false;
-      if (query.trim()) {
-        const q = query.toLowerCase();
-        const matchesName = c.name.toLowerCase().includes(q);
-        const matchesAffiliation = c.affiliation?.toLowerCase().includes(q) ?? false;
-        const matchesCity = c.city.toLowerCase().includes(q);
-        const matchesChannel = c.primaryChannel.toLowerCase().includes(q);
-        const matchesRole = c.roles.some((r) => r.toLowerCase().includes(q));
-        if (!matchesName && !matchesAffiliation && !matchesCity && !matchesChannel && !matchesRole) return false;
-      }
-      return true;
-    });
-  }, [contacts, showArchived, kindFilter, query]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -68,7 +60,7 @@ export function ContactList({ contacts }: { contacts: ContactListItem[] }) {
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
-            updateUrl('text', e.target.value.trim() || null);
+            applyFilters({ text: e.target.value });
           }}
           className="h-[34px] w-[260px]"
         />
@@ -78,7 +70,7 @@ export function ContactList({ contacts }: { contacts: ContactListItem[] }) {
           onChange={(e) => {
             const val = e.target.value;
             setKindFilter(val);
-            updateUrl('kind', val && val !== 'all' ? val : null);
+            applyFilters({ kind: val });
           }}
           className="h-[34px] rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
         >
@@ -86,13 +78,30 @@ export function ContactList({ contacts }: { contacts: ContactListItem[] }) {
           <option value="person">{t('fields.person')}</option>
           <option value="organization">{t('fields.organization')}</option>
         </select>
+        <select
+          aria-label={t('filterRole')}
+          value={roleFilter}
+          onChange={(e) => {
+            const val = e.target.value;
+            setRoleFilter(val);
+            applyFilters({ role: val });
+          }}
+          className="h-[34px] rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
+        >
+          <option value="">{t('allRoles')}</option>
+          {roles.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </select>
         <div className="flex items-center gap-2">
           <Switch
             id="show-archived"
             checked={showArchived}
             onCheckedChange={(checked) => {
               setShowArchived(checked);
-              updateUrl('archived', checked ? '1' : null);
+              applyFilters({ archived: checked });
             }}
           />
           <Label htmlFor="show-archived" className="text-[13px] text-ink-2 cursor-pointer">
@@ -113,7 +122,7 @@ export function ContactList({ contacts }: { contacts: ContactListItem[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.map((c, i) => (
+            {contacts.map((c, i) => (
               <TableRow
                 key={c.id}
                 onClick={() => router.push(`/contacts/${c.id}`)}

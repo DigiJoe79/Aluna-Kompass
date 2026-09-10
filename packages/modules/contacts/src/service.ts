@@ -2,7 +2,7 @@ import {
   conflict, isoNow, newId, notFound, ok, recordAudit, requirePermission, validate,
   type CallContext, type DbOrTx, type Deps, type Result,
 } from '@kompass/core';
-import { and, count, desc, eq, like, or, sql, type SQL, type SQLWrapper } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, isNull, like, or, sql, type SQL, type SQLWrapper } from 'drizzle-orm';
 import { z } from 'zod';
 import { displayName } from './address';
 import { contactChannels, contactRoles, contacts, type ContactChannelRow, type ContactRoleRow, type ContactRow } from './schema';
@@ -161,12 +161,28 @@ export async function listContacts(deps: Deps, ctx: CallContext, input: unknown)
     // das nicht, deshalb wird zusätzlich klein geschrieben verglichen.
     const needle = `%${q.text.toLowerCase()}%`;
     const hit = (col: SQLWrapper) => like(sqlLower(col), needle);
-    conditions.push(or(hit(contacts.lastName), hit(contacts.firstName), hit(contacts.name), hit(contacts.city))!);
+    // Die Suche greift auch auf Kommunikationswege, damit „die mit der Nummer
+    // 0157…" auffindbar ist (Spec § 7).
+    const byChannel = deps.db
+      .select({ id: contactChannels.contactId })
+      .from(contactChannels)
+      .where(like(sqlLower(contactChannels.value), needle))
+      .all()
+      .map((r) => r.id);
+    const clauses: SQL[] = [hit(contacts.lastName), hit(contacts.firstName), hit(contacts.name), hit(contacts.city)];
+    if (byChannel.length > 0) clauses.push(inArray(contacts.id, byChannel));
+    conditions.push(or(...clauses)!);
   }
   if (q.role) {
-    const ids = deps.db.select({ id: contactRoles.contactId }).from(contactRoles).where(eq(contactRoles.role, q.role)).all().map((r) => r.id);
+    // Nur laufende Rollen (`until IS NULL`) — die Liste zeigt auch nur diese.
+    const ids = deps.db
+      .select({ id: contactRoles.contactId })
+      .from(contactRoles)
+      .where(and(eq(contactRoles.role, q.role), isNull(contactRoles.until)))
+      .all()
+      .map((r) => r.id);
     if (ids.length === 0) return ok({ contacts: [], total: 0 });
-    conditions.push(or(...ids.map((id) => eq(contacts.id, id)))!);
+    conditions.push(inArray(contacts.id, ids));
   }
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 

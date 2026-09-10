@@ -25,6 +25,20 @@ test.describe('contacts', () => {
     await expect(page.getByRole('row', { name: /Anna Berger/ })).toBeVisible();
   });
 
+  test('finds a contact by a phone number and filters the list by role', async ({ page }) => {
+    await page.goto('/contacts');
+
+    // Die Beispieldaten: Tomas Leitner (partner, Telefon), Mira Sandberg (interested).
+    await page.getByLabel('Suche').fill('123 456789');
+    await expect(page.getByRole('row', { name: /Leitner/ })).toBeVisible();
+    await expect(page.getByRole('row', { name: /Sandberg/ })).toHaveCount(0);
+
+    await page.getByLabel('Suche').fill('');
+    await page.getByLabel('Rolle').selectOption('interested');
+    await expect(page.getByRole('row', { name: /Sandberg/ })).toBeVisible();
+    await expect(page.getByRole('row', { name: /Leitner/ })).toHaveCount(0);
+  });
+
   test('gives a role, shows the address block and blocks deletion while a hold runs', async ({ page }) => {
     await page.goto('/contacts');
     await page.getByRole('button', { name: 'Kontakt anlegen' }).click();

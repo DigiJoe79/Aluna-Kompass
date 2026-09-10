@@ -7,6 +7,7 @@ import { createRole, setRolePermissions } from '../roles/service';
 import { writeSettingInternal } from '../settings/service';
 import { completeSetup, isSetupRequired } from '../setup/service';
 import { createUser } from '../users/service';
+import { seedProjects } from './projects';
 
 export const SEED_ADMIN_EMAIL = 'admin@kompass.local';
 export const SEED_ADMIN_PASSWORD = 'kompass-entwicklung-2026';
@@ -58,6 +59,8 @@ export async function seedDevelopment(deps: Deps): Promise<{ adminEmail: string;
       deps.db.update(users).set({ mustChangePassword: false, lastLoginAt: '2026-09-01T10:00:00.000Z' }).where(eq(users.id, created.user.id)).run();
     }
   }
+
+  await seedProjects(deps, ctx);
 
   for (const manifest of deps.registry.manifests) {
     if (manifest.seed) {

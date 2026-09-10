@@ -1,5 +1,5 @@
 import { hasPermission, requirePermission } from '@kompass/core';
-import { displayName, listContacts } from '@kompass/module-contacts';
+import { contactRoleDefinitions, displayName, listContacts } from '@kompass/module-contacts';
 import { getTranslations } from 'next-intl/server';
 import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
@@ -34,6 +34,7 @@ export default async function ContactsPage(props: { searchParams: Promise<{ kind
   }));
 
   const hasFilter = Boolean(q.text || q.kind || q.role || q.archived === '1');
+  const roleKeys = [...contactRoleDefinitions(deps).keys()];
 
   return (
     <>
@@ -45,7 +46,7 @@ export default async function ContactsPage(props: { searchParams: Promise<{ kind
       {rows.length === 0 && !hasFilter ? (
         <EmptyState title={t('empty.title')} text={t('empty.text')} />
       ) : (
-        <ContactList contacts={rows} />
+        <ContactList contacts={rows} roles={roleKeys} />
       )}
     </>
   );

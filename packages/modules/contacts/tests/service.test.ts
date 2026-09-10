@@ -158,4 +158,35 @@ describe('contact channels and roles', () => {
     expect((await setContactChannels(deps, ctxWith(['contacts.view']), { id: c.id, channels: [] })).ok).toBe(false);
     expect((await addContactRole(deps, ctxWith(['contacts.view']), { id: c.id, role: 'interested', since: '2026-01-01' })).ok).toBe(false);
   });
+
+  it('finds a contact by a communication channel value, not only by name and city', async () => {
+    const { deps, ctx } = setup();
+    const berger = unwrap(await createContact(deps, ctx, { kind: 'person', lastName: 'Berger' }));
+    unwrap(await createContact(deps, ctx, { kind: 'person', lastName: 'Klein' }));
+    // Der gesuchte Weg ist bewusst nicht der primäre.
+    unwrap(await setContactChannels(deps, ctx, {
+      id: berger.id,
+      channels: [
+        { kind: 'email', value: 'berger@example.org', isPrimary: true },
+        { kind: 'mobile', value: '+49 157 1234567' },
+      ],
+    }));
+
+    const byNumber = unwrap(await listContacts(deps, ctx, { text: '157 1234567' }));
+    expect(byNumber.contacts.map((c) => c.lastName)).toEqual(['Berger']);
+    expect(byNumber.total).toBe(1);
+  });
+
+  it('filters by role and keeps only contacts whose role still runs', async () => {
+    const { deps, ctx } = setup();
+    const current = unwrap(await createContact(deps, ctx, { kind: 'person', lastName: 'Laufend' }));
+    const past = unwrap(await createContact(deps, ctx, { kind: 'person', lastName: 'Beendet' }));
+    unwrap(await addContactRole(deps, ctx, { id: current.id, role: 'partner', since: '2026-01-01' }));
+    const endedRole = unwrap(await addContactRole(deps, ctx, { id: past.id, role: 'partner', since: '2026-01-01' }));
+    unwrap(await endContactRole(deps, ctx, { roleId: endedRole.roles[0]!.id, until: '2026-02-01' }));
+
+    const partners = unwrap(await listContacts(deps, ctx, { role: 'partner' }));
+    expect(partners.contacts.map((c) => c.lastName)).toEqual(['Laufend']);
+    expect(partners.total).toBe(1);
+  });
 });
