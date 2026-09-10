@@ -227,7 +227,7 @@ git commit -m "feat(contacts): module scaffold with contacts, channels and roles
 
 **Interfaces:**
 - Consumes: `ContactRow` aus `./schema` (Task 1).
-- Produces: `formatPostalAddress(contact: PostalAddressInput, organisation?: PostalAddressInput | null): string` — mehrzeilig, `\n`-getrennt, ohne Leerzeilen und ohne einsame Satzzeichen. `PostalAddressInput` ist ein Ausschnitt aus `ContactRow`, damit die Funktion auch mit Testobjekten aufrufbar bleibt.
+- Produces: `formatPostalAddress(contact: PostalAddressInput, organisation?: PostalAddressInput | null, homeCountry?: string): string` — mehrzeilig, `\n`-getrennt, ohne Leerzeilen und ohne einsame Satzzeichen. `homeCountry` ist das Land des Vereins; nur ein davon abweichendes Land wird genannt. Dazu `displayName(contact): string` — der Name, unter dem angeschrieben wird; Plan 3 benutzt ihn in den Audit-Zusammenfassungen. `PostalAddressInput` ist ein Ausschnitt aus `ContactRow`, damit die Funktion auch mit Testobjekten aufrufbar bleibt.
 
 - [ ] **Step 1: Den Test schreiben**
 
