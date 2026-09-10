@@ -32,7 +32,6 @@ export function createRegistry(
   const documentTemplates = new Map<string, DocumentTemplate>();
   const addTemplate = (t: DocumentTemplate) => {
     if (documentTemplates.has(t.key)) throw new Error(`duplicate document template: ${t.key}`);
-    for (const other of documentTemplates.values()) if (other.prefix === t.prefix) throw new Error(`duplicate document prefix: ${t.prefix}`);
     documentTemplates.set(t.key, t);
   };
   for (const t of extra.coreTemplates ?? []) addTemplate(t);

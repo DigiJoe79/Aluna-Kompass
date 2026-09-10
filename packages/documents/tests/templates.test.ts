@@ -26,12 +26,12 @@ describe('core document templates', () => {
     });
   });
 
-  it('exposes letterhead (BRF) and audit-log-export (PRO) as build() on a default base', () => {
+  it('exposes letterhead (type letter) and audit-log-export (type audit-export) as build() on a default base', () => {
     const templates = coreDocumentTemplates();
     const letter = templates[0]!;
     const audit = templates[1]!;
-    expect([letter.key, letter.prefix, letter.base]).toEqual(['letterhead', 'BRF', 'a4-mit-briefkopf']);
-    expect([audit.key, audit.prefix, audit.permission, audit.base]).toEqual(['audit-log-export', 'PRO', 'audit.view', 'a4-plain']);
+    expect([letter.key, letter.type, letter.base]).toEqual(['letterhead', 'letter', 'a4-mit-briefkopf']);
+    expect([audit.key, audit.type, audit.permission, audit.base]).toEqual(['audit-log-export', 'audit-export', 'audit.view', 'a4-plain']);
     // Der Brief ist ein Akteneintrag, der Protokollauszug wird nur gezogen — keine Nummer, keine Ablage.
     expect(letter.filed ?? true).toBe(true);
     expect(audit.filed).toBe(false);

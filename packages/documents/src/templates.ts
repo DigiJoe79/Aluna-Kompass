@@ -82,7 +82,7 @@ function auditTable(data: z.infer<typeof auditExportSchema>): string {
 export function coreDocumentTemplates(): DocumentTemplate[] {
   const letterhead: DocumentTemplate<z.infer<typeof letterheadSchema>> = {
     key: 'letterhead',
-    prefix: 'BRF',
+    type: 'letter',
     schema: letterheadSchema,
     base: 'a4-mit-briefkopf',
     build: (data) => ({
@@ -94,7 +94,7 @@ export function coreDocumentTemplates(): DocumentTemplate[] {
 
   const auditExport: DocumentTemplate<z.infer<typeof auditExportSchema>> = {
     key: 'audit-log-export',
-    prefix: 'PRO',
+    type: 'audit-export',
     schema: auditExportSchema,
     permission: 'audit.view',
     base: 'a4-plain',

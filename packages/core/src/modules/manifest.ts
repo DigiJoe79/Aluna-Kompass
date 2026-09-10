@@ -80,6 +80,8 @@ export type DocumentBody = { markdown: string } | { typst: string };
 export interface DocumentSlots {
   /** Bestimmt, welche Felder die Basis-Vorlage füllt. */
   kind: 'letter' | 'report' | 'form' | 'plain';
+  /** Vorschau eines Entwurfs: die Basis zeichnet ein Wasserzeichen. */
+  draft?: boolean;
   title?: string;
   subtitle?: string;
   /** „Ort, Datum" — Vorgabe: organization.city + ausgestellt am. */
@@ -99,8 +101,8 @@ export interface DocumentBuildResult {
 
 export interface DocumentTemplate<T = unknown> {
   key: string;
-  /** Drei Großbuchstaben, z. B. BRF; Teil der Dokumentnummer. */
-  prefix: string;
+  /** Schlüssel der Dokumentart. Sie trägt Nummernpräfix und Fristklasse. */
+  type: string;
   schema: z.ZodType<T>;
   /** Zusätzliches Recht neben documents.create, z. B. finance.edit. */
   permission?: string;
@@ -162,7 +164,7 @@ export const moduleMcpTools = (deps: Deps, manifest: ModuleManifest): readonly M
 const MODULE_KEY = /^[a-z][a-z0-9-]*$/;
 const PERMISSION_KEY = /^[a-z][a-zA-Z0-9]*\.[a-z][a-zA-Z0-9]*$/;
 const TEMPLATE_KEY = /^[a-z][a-z0-9-]*$/;
-const TEMPLATE_PREFIX = /^[A-Z]{3}$/;
+const TEMPLATE_TYPE = /^[a-z][a-z0-9-]*$/;
 const ROLE_KEY = /^[a-z][a-z0-9-]*$/;
 
 export function defineModule(manifest: ModuleManifest): ModuleManifest {
@@ -172,7 +174,7 @@ export function defineModule(manifest: ModuleManifest): ModuleManifest {
   }
   for (const template of manifest.documentTemplates ?? []) {
     if (!TEMPLATE_KEY.test(template.key)) throw new Error(`invalid document template key: ${template.key}`);
-    if (!TEMPLATE_PREFIX.test(template.prefix)) throw new Error(`invalid document template prefix: ${template.prefix}`);
+    if (!TEMPLATE_TYPE.test(template.type)) throw new Error(`invalid document type: ${template.type}`);
   }
   for (const role of manifest.contactRoles ?? []) {
     if (!ROLE_KEY.test(role.key)) throw new Error(`invalid contact role key: ${role.key}`);

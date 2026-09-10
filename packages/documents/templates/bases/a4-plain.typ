@@ -54,6 +54,14 @@
     ],
   )
 
+  if slots.at("draft", default: false) [
+    #place(
+      center + horizon,
+      dx: 0pt, dy: 0pt,
+      rotate(-30deg, text(size: 96pt, fill: rgb(0, 0, 0, 12%), weight: "bold")[ENTWURF]),
+    )
+  ]
+
   if slots.at("title", default: "") != "" {
     text(font: b.fontHeading, size: 20pt, weight: "bold", fill: rgb(b.primary))[#slots.title]
     if slots.at("subtitle", default: "") != "" {

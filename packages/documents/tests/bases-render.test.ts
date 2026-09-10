@@ -65,6 +65,12 @@ describe('generic bases render', () => {
     const pdf = await renderer.renderDocument({ baseId: audit!.base, bases, bodyTypst: 'typst' in built.body ? built.body.typst : '', payload: { ...payload(), slots: built.slots } });
     expect(new TextDecoder().decode(pdf.subarray(0, 5))).toBe('%PDF-');
   });
+  it('zeichnet bei draft-Slots ein Wasserzeichen', async () => {
+    const plain = await renderer.renderDocument({ baseId: 'a4-plain', bases, bodyTypst: 'Absatz eins.\n\nAbsatz zwei.', payload: payload() });
+    const draft = await renderer.renderDocument({ baseId: 'a4-plain', bases, bodyTypst: 'Absatz eins.\n\nAbsatz zwei.', payload: payload({ slots: { ...payload().slots, draft: true } }) });
+    expect(draft.byteLength).not.toBe(plain.byteLength);
+  });
+
   it('a4-plain shows the issue date in the header when a document has no number', async () => {
     const excerpt = (issuedDate: string) =>
       renderer.renderDocument({ baseId: 'a4-plain', bases, bodyTypst: 'Auszug.', payload: { ...payload(), number: '', issuedDate } });

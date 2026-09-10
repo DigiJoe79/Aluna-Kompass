@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import { coreModule } from '../src/core-module';
 import { auditLog } from '../src/db/schema';
 import { defineModule } from '../src/modules/manifest';
@@ -61,5 +62,14 @@ describe('modules service', () => {
       expect(res.error.message).toContain('mod-b');
     }
     expect(isModuleEnabled(deps, 'mod-b')).toBe(false);
+  });
+
+  it('lehnt eine Dokumentart mit ungültigem Schlüssel ab', () => {
+    expect(() =>
+      defineModule({
+        key: 'demo', version: '1.0.0', permissions: [],
+        documentTemplates: [{ key: 'letter', type: 'Brief!', schema: z.object({}), base: 'a4-plain', build: () => ({ slots: { kind: 'plain' }, body: { markdown: '' } }) }],
+      }),
+    ).toThrow(/invalid document type/);
   });
 });

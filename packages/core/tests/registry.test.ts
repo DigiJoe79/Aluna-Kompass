@@ -27,16 +27,16 @@ describe('module registry', () => {
     expect(() => createRegistry([coreModule, clash])).toThrow(/duplicate permission/);
   });
 
-  it('rejects duplicate template keys and duplicate template prefixes', () => {
-    const letter = (key: string, prefix: string) => ({
+  it('rejects duplicate template keys, but allows two templates to share a document type', () => {
+    const letter = (key: string, type: string) => ({
       key,
-      prefix,
+      type,
       base: 'a4-plain',
       schema: z.any(),
       build: () => ({ slots: { kind: 'plain' as const }, body: { markdown: '' } }),
     });
-    expect(() => createRegistry([coreModule], { coreTemplates: [letter('a-letter', 'AAA'), letter('b-letter', 'AAA')] })).toThrow(/duplicate document prefix/);
-    expect(() => createRegistry([coreModule], { coreTemplates: [letter('a-letter', 'AAA'), letter('a-letter', 'BBB')] })).toThrow(/duplicate document template/);
+    expect(createRegistry([coreModule], { coreTemplates: [letter('a-letter', 'letter'), letter('b-letter', 'letter')] }).documentTemplates.size).toBe(2);
+    expect(() => createRegistry([coreModule], { coreTemplates: [letter('a-letter', 'letter'), letter('a-letter', 'other')] })).toThrow(/duplicate document template/);
   });
 
   it('defineModule validates key and permission formats', () => {

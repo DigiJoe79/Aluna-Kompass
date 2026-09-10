@@ -54,6 +54,14 @@
     ],
   )
 
+  if slots.at("draft", default: false) [
+    #place(
+      center + horizon,
+      dx: 0pt, dy: 0pt,
+      rotate(-30deg, text(size: 96pt, fill: rgb(0, 0, 0, 12%), weight: "bold")[ENTWURF]),
+    )
+  ]
+
   grid(columns: (1fr, auto), [], [#text(size: 9.5pt)[#if org("city") != "" [#org("city"), ]#payload.issuedDate]])
   v(6mm)
 
