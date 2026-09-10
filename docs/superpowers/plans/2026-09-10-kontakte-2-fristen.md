@@ -22,8 +22,8 @@
 
 | Datei | Verantwortung |
 |---|---|
-| `packages/core/src/retention/classes.ts` | `RetentionClass`, `retentionEnd`, Vorgabelängen |
-| `packages/core/src/retention/service.ts` | `holdsFor`, `dueUntil`, `collectRetentionDue` — befragt aktive Module (die rechtegeprüfte Fassung `listRetentionDue` kommt in Plan 4) |
+| `packages/core/src/retention/classes.ts` | `RetentionClass`, `retentionEnd`, Vorgabelängen — **importiert nichts** |
+| `packages/core/src/retention/service.ts` | `retentionMonths`, `holdsFor`, `dueUntil`, `collectRetentionDue` — alles, was `deps` liest (die rechtegeprüfte Fassung `listRetentionDue` kommt in Plan 4) |
 | `packages/core/src/modules/manifest.ts` | `RetentionHold`, `DueItem`, `ContactRoleDefinition`, die zwei Haken, `contactRoles` |
 | `packages/core/src/settings/core.ts` | `retention.statutory10Y`, `retention.statutory6Y`, `retention.consent` |
 | `packages/core/src/index.ts` | Re-Export des Fristenbereichs |
@@ -148,11 +148,12 @@ git commit -m "feat(core): retention classes with the end-of-calendar-year rule"
 
 **Files:**
 - Modify: `packages/core/src/settings/core.ts`
+- Create: `packages/core/src/retention/service.ts`
 - Modify: `packages/core/tests/retention.test.ts`
 
 **Interfaces:**
 - Consumes: `RETENTION_DEFAULT_MONTHS` (Task 1).
-- Produces: Einstellungsschlüssel `retention.statutory10Y`, `retention.statutory6Y`, `retention.consent` (ganze Zahlen, Monate); `retentionMonths(deps, cls: RetentionClass): number | null` — `null` bei `permanent`.
+- Produces: Einstellungsschlüssel `retention.statutory10Y`, `retention.statutory6Y`, `retention.consent` (ganze Zahlen, Monate); `retentionMonths(deps, cls: RetentionClass): number | null` in der **neuen Datei** `packages/core/src/retention/service.ts` — `null` bei `permanent`.
 
 - [ ] **Step 1: Den Test ergänzen**
 
@@ -160,7 +161,7 @@ An `packages/core/tests/retention.test.ts` anhängen:
 
 ```typescript
 import { createTestDeps } from '../src/testing';
-import { retentionMonths } from '../src/retention/classes';
+import { retentionMonths } from '../src/retention/service';
 import { setSetting } from '../src/settings/service';
 import { ctxWith } from '../src/testing';
 import { unwrap } from '../src/result';
@@ -201,13 +202,16 @@ const retention: SettingDefinition[] = [
 ];
 ```
 
-- [ ] **Step 4: `retentionMonths` schreiben**
+- [ ] **Step 4: `retentionMonths` schreiben — in einer neuen Datei**
 
-An `packages/core/src/retention/classes.ts` anhängen:
+**Nicht** an `classes.ts` anhängen. `classes.ts` bleibt frei von Importen: `modules/manifest.ts` importiert von dort den Typ `RetentionClass`, und `settings/service.ts` importiert seinerseits `SettingDefinition` aus `manifest.ts`. Beide Kanten sind heute `import type` und werden beim Übersetzen gelöscht — hinge an `classes.ts` aber ein Wert-Import auf `settings/service`, wäre der Zyklus nur noch eine vergessene `type`-Angabe entfernt. Alles, was `deps` liest, gehört deshalb nach `retention/service.ts`.
+
+`packages/core/src/retention/service.ts` (neu):
 
 ```typescript
 import type { Deps } from '../deps';
 import { readSetting } from '../settings/service';
+import type { RetentionClass } from './classes';
 
 /**
  * Die konfigurierte Länge einer Klasse in Monaten. `permanent` liefert `null` —
@@ -227,7 +231,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add packages/core/src/settings/core.ts packages/core/src/retention/classes.ts packages/core/tests/retention.test.ts
+git add packages/core/src/settings/core.ts packages/core/src/retention/service.ts packages/core/tests/retention.test.ts
 git commit -m "feat(core): retention periods as settings, not constants"
 ```
 
@@ -357,10 +361,9 @@ und im `ModuleManifest`, unter `mediaReferences`:
 
 - [ ] **Step 4: Den Sammler schreiben**
 
-`packages/core/src/retention/service.ts`:
+An `packages/core/src/retention/service.ts` anhängen (die Datei entstand in Task 2), Importe oben ergänzen:
 
 ```typescript
-import type { Deps } from '../deps';
 import { enabledManifests } from '../modules/service';
 import type { DueItem, RetentionHold } from '../modules/manifest';
 
@@ -551,6 +554,14 @@ git commit -m "feat(contacts): contact roles come from a registry the modules fi
 **Platzhalter.** Keine. Die einzige Stelle mit Leseanweisung statt wörtlichem Code ist Task 2 Schritt 3 (wo die Settings-Blöcke in `core.ts` zusammengeführt werden), weil das Dateiende gelesen werden muss.
 
 **Typkonsistenz.** `RetentionClass` (Task 1) wird von `ContactRoleDefinition` (Task 3) und den Rollen (Task 4) benutzt. `RetentionHold`/`DueItem` (Task 3) sind die Rückgaben der Haken und werden in Plan 3 von `deleteContact` und in Plan 4 vom Fristenbildschirm gelesen. `holdsFor`/`dueUntil`/`collectRetentionDue` heißen dort genauso.
+
+**Zweite Abweichung, aus dem Konfliktscan.** Der ursprüngliche Zuschnitt legte
+`retentionMonths` zu `retentionEnd` in `classes.ts`. Damit hätte `classes.ts`
+einen Wert-Import auf `settings/service` getragen, während `modules/manifest.ts`
+von `classes.ts` importiert und `settings/service` von `manifest.ts` — ein
+Zyklus, der heute nur daran scheitert, dass zwei Kanten `import type` sind.
+`classes.ts` bleibt deshalb importfrei; alles mit `deps` liegt in
+`retention/service.ts`.
 
 **Abweichung von der Dateiliste der Spec.** § 9 der Spec nennt
 `packages/core/src/modules/registry.ts` für die Aggregation der neuen Haken.
