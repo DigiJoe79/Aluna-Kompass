@@ -22,6 +22,17 @@
 
 **Voraussetzung:** Plan 1 (`2026-09-10-dms-1-umzug.md`) ist abgeschlossen.
 
+## Lehren aus Plan 1 (2026-09-10)
+
+Plan 1 ist ausgeführt; diese Punkte kosteten dort Zeit oder gingen erst in `pnpm verify` auf. Sie gelten für jeden Task dieses Plans.
+
+- **Die echten Testhelfer** heißen `createTestDeps({ manifests })`, `ctxWith(permissions, userId?)`, `insertUser(deps, {...})`, `insertRole(deps, {...})` und `TEST_NOW` — alle aus `@kompass/core` (`packages/core/src/testing/`). Frühere Planentwürfe nannten `deps.testing.adminContext()` und `contextWithout(...)`; **die gibt es nicht**. Ein fehlendes Recht prüft man mit `ctxWith(['dms.view'])` statt mit einem Kontext, dem man etwas wegnimmt.
+- **`createTestDeps` rendert keine echten PDFs.** Es setzt `fakeDocumentEngine()` ein, deren `render` schlicht `%PDF-fake <baseId> <title>` zurückgibt. Deshalb: Modultests prüfen **was in die Engine hineingeht**, nicht wie das PDF aussieht — über `createTestDeps({ documents: fakeDocumentEngine({ render: async (args) => { calls.push(args); return bytes; } }) })`. Echte Typst-Prüfungen (Wasserzeichen, Byte-Gleichheit) gehören nach `packages/documents/tests/`, wo Typst wirklich läuft.
+- **Neue Rechte ohne Beschriftung brechen die Rollenseite.** Jedes Recht braucht `permissions.keys.<bereich>.<verb>.label` und `.description` in `apps/kompass/messages/de.json`, jede Gruppe `permissions.groups.<key>`. `apps/kompass/tests/permission-labels.test.ts` erzwingt das in Millisekunden — dort zuerst rot sehen, statt es in zwei Minuten E2E zu suchen. Derselbe Test verbietet, in `apps/kompass/src` ein Recht zu nennen, das die Registry nicht kennt.
+- **Migrationen:** `0013`–`0017` sind vergeben, die nächste freie Nummer ist `0018`. Wenn eine Schemaänderung nötig wird, **nie neue Spalten und einen Tabellenneubau in derselben Migration** — drizzle-kit 0.31.10 erzeugt dann SQL, das beim Tabellenneubau Spalten aus der alten Tabelle liest, die es dort noch nicht gibt. Trennen: erst Constraints lockern und Tabellen anlegen, dann `ALTER TABLE ADD COLUMN`, dann Werte füllen, dann verriegeln.
+- **Einen E2E-Test nie entkernen, um ihn grün zu bekommen.** Wenn ein Test an einem Label oder Recht hängt, das sich geändert hat, wird der fachlich richtige Ersatz eingesetzt — nicht die Zusicherung gestrichen.
+
+
 ---
 
 ### Task 1: Dokumentarten lesen
@@ -37,7 +48,7 @@ Vor dem Entwurf braucht das Modul die Art — sie liefert Präfix und Fristklass
 - Produces:
   - `documentTypeFor(db: DbOrTx, key: string): DocumentTypeRow | null`
   - `listDocumentTypes(deps, ctx, input?) → Result<DocumentTypeRow[]>` (Recht `dms.view`, nur aktive, wenn `includeInactive` nicht gesetzt)
-  - `DEFAULT_DOCUMENT_TYPES: readonly Omit<DocumentTypeRow, 'sortOrder'>[]` — der generische Startsatz aus § 10 der Spec
+  - `DEFAULT_DOCUMENT_TYPES: readonly Omit<DocumentTypeRow, 'sortOrder'>[]` — der generische Startsatz aus § 10 der Spec. **Achtung:** Migration `0016_dms_links.sql` legt bei einer Installation **mit Bestand** bereits eine Art `letter` (Präfix `BRF`, `statutory6Y`) an. `DEFAULT_DOCUMENT_TYPES` muss dazu passen — gleicher Schlüssel, gleiches Präfix — und jedes Einfügen muss vorhandene Schlüssel überspringen statt zu überschreiben.
 
 - [ ] **Step 1: Failing Test schreiben**
 
@@ -66,7 +77,7 @@ describe('document types', () => {
 
   it('verlangt dms.view', async () => {
     const { deps } = setup();
-    const denied = await listDocumentTypes(deps, deps.testing.contextWithout('dms.view'), {});
+    const denied = await listDocumentTypes(deps, ctxWith(ALL_DMS.filter((p) => p !== 'dms.view')), {});
     expect(denied.ok).toBe(false);
   });
 
@@ -176,7 +187,7 @@ describe('createDraft', () => {
 
   it('verlangt dms.create', async () => {
     const { deps } = setupWithTypes();
-    const denied = await createDraft(deps, deps.testing.contextWithout('dms.create'), { typeKey: 'letter', subject: 'x', body: 'y' });
+    const denied = await createDraft(deps, ctxWith(ALL_DMS.filter((p) => p !== 'dms.create')), { typeKey: 'letter', subject: 'x', body: 'y' });
     expect(denied.ok).toBe(false);
   });
 
@@ -191,7 +202,7 @@ describe('createDraft', () => {
   it('schreibt einen Eintrag ins Änderungsprotokoll', async () => {
     const { deps, ctx } = setupWithTypes();
     await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Einladung', body: 'x' });
-    expect(deps.testing.auditActions()).toContain('dms.draft.create');
+    expect(auditActions(deps)).toContain('dms.draft.create');
   });
 });
 
@@ -214,14 +225,14 @@ describe('deleteDraft', () => {
     if (!created.ok) throw new Error('setup');
     const deleted = await deleteDraft(deps, ctx, { id: created.value.id });
     expect(deleted.ok).toBe(true);
-    expect(deps.testing.auditActions()).toContain('dms.draft.delete');
+    expect(auditActions(deps)).toContain('dms.draft.delete');
   });
 
   it('verlangt dms.deleteDraft', async () => {
     const { deps, ctx } = setupWithTypes();
     const created = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Weg', body: 'x' });
     if (!created.ok) throw new Error('setup');
-    const denied = await deleteDraft(deps, deps.testing.contextWithout('dms.deleteDraft'), { id: created.value.id });
+    const denied = await deleteDraft(deps, ctxWith(ALL_DMS.filter((p) => p !== 'dms.deleteDraft')), { id: created.value.id });
     expect(denied.ok).toBe(false);
   });
 });
@@ -237,12 +248,15 @@ import { DEFAULT_DOCUMENT_TYPES } from '../src/catalog';
 import { documentTypes } from '../src/schema';
 
 /** `deps` und `ctx` mit installiertem dms-Modul und dem Startsatz an Dokumentarten. */
-export function setupWithTypes() {
+export const ALL_DMS = ['dms.view', 'dms.create', 'dms.file', 'dms.void', 'dms.deleteDraft', 'dms.manage'];
+
+export function setupWithTypes(permissions: readonly string[] = ALL_DMS) {
   const deps = createTestDeps({ manifests: [coreModule, contactsModule, dmsModule] });
   for (const [index, type] of DEFAULT_DOCUMENT_TYPES.entries()) {
     deps.db.insert(documentTypes).values({ ...type, sortOrder: index }).run();
   }
-  return { deps, ctx: deps.testing.adminContext() };
+  const userId = insertUser(deps, { name: 'Test', email: 'test@kompass.local' });
+  return { deps, ctx: ctxWith([...permissions, 'media.upload'], userId) };
 }
 
 /** Ein minimales, gültiges PDF für Eingangstests. */
@@ -260,7 +274,7 @@ export async function fileFixture(deps: Deps, ctx: CallContext) {
 }
 ```
 
-`fileFixture` entsteht erst mit Task 6 — bis dahin bleibt sie auskommentiert oder wird dort ergänzt. `deps.testing.adminContext()` und `contextWithout(...)` heißen im Repo möglicherweise anders; die in `packages/modules/contacts/tests/service.test.ts` verwendeten Namen übernehmen. `deps.testing.auditActions()` heißt im Repo möglicherweise anders — den in `packages/modules/contacts/tests/service.test.ts` verwendeten Weg zur Audit-Prüfung übernehmen.
+`fileFixture` entsteht erst mit Task 6 — bis dahin bleibt sie auskommentiert oder wird dort ergänzt. `createTestDeps`, `ctxWith` und `insertUser` kommen aus `@kompass/core`; `insertUser` ist nötig, weil `documents.createdByUserId` einen echten Nutzer braucht. `auditActions(deps)` heißt im Repo möglicherweise anders — den in `packages/modules/contacts/tests/service.test.ts` verwendeten Weg zur Audit-Prüfung übernehmen.
 
 - [ ] **Step 2: Tests rot sehen**
 
@@ -411,7 +425,23 @@ git commit -m "feat(dms): the free letter moves from the core into the module"
 
 - [ ] **Step 1: Failing Test schreiben**
 
+Die Vorschau unterscheidet sich vom Original genau durch `slots.draft`. Weil die Testumgebung mit `fakeDocumentEngine` rendert, wird dieses Flag am Aufruf geprüft, nicht am PDF:
+
 ```ts
+it('rendert mit Entwurfskennzeichnung', async () => {
+  const calls: { slots: { draft?: boolean } }[] = [];
+  const deps = createTestDeps({
+    manifests: [coreModule, contactsModule, dmsModule],
+    documents: fakeDocumentEngine({ render: async (args) => { calls.push(args as { slots: { draft?: boolean } }); return new TextEncoder().encode('%PDF-fake'); } }),
+  });
+  seedTypes(deps);
+  const ctx = ctxWith(ALL_DMS, insertUser(deps, { name: 'T', email: 't@kompass.local' }));
+  const draft = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Test', body: 'Hallo' });
+  if (!draft.ok) throw new Error('setup');
+  await previewDraft(deps, ctx, { id: draft.value.id });
+  expect(calls[0].slots.draft).toBe(true);
+});
+
 it('rendert eine Vorschau, ohne etwas abzulegen', async () => {
   const { deps, ctx } = setupWithTypes();
   const draft = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Test', body: 'Hallo' });
@@ -572,27 +602,41 @@ describe('fileDocument', () => {
     const { deps, ctx } = setupWithTypes();
     const draft = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'x', body: 'y' });
     if (!draft.ok) throw new Error('setup');
-    const denied = await fileDocument(deps, deps.testing.contextWithout('dms.file'), { id: draft.value.id });
+    const denied = await fileDocument(deps, ctxWith(ALL_DMS.filter((p) => p !== 'dms.file')), { id: draft.value.id });
     expect(denied.ok).toBe(false);
   });
 
-  it('erzeugt bei gleichem Entwurf ein byte-identisches PDF', async () => {
-    const { deps, ctx } = setupWithTypes();
-    const one = await bytesOfFiled(deps, ctx, 'Gleicher Text');
-    const two = await bytesOfFiled(deps, ctx, 'Gleicher Text');
-    // Die Nummer steht im PDF, deshalb wird sie beim Vergleich fixiert:
-    expect(Buffer.compare(Buffer.from(one), Buffer.from(two))).toBe(0);
+  it('reicht Basis, Slots und Nummer unverändert an die Engine', async () => {
+    // Die Testumgebung rendert mit `fakeDocumentEngine` — echte Byte-Gleichheit
+    // prüft `packages/documents/tests/bases-render.test.ts` gegen echtes Typst.
+    // Hier zählt, was in die Pipeline hineingeht.
+    const calls: unknown[] = [];
+    const deps = createTestDeps({
+      manifests: [coreModule, contactsModule, dmsModule],
+      documents: fakeDocumentEngine({ render: async (args) => { calls.push(args); return new TextEncoder().encode('%PDF-fake'); } }),
+    });
+    seedTypes(deps);
+    const ctx = ctxWith(ALL_DMS.concat('media.upload'), insertUser(deps, { name: 'T', email: 't@kompass.local' }));
+    const draft = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Einladung', body: '# Einladung' });
+    if (!draft.ok) throw new Error('setup');
+    await fileDocument(deps, ctx, { id: draft.value.id });
+    expect(calls).toHaveLength(1);
+    const call = calls[0] as { baseId: string; slots: { subject?: string; draft?: boolean }; context: { number: string } };
+    expect(call.baseId).toBe('a4-mit-briefkopf');
+    expect(call.slots.subject).toBe('Einladung');
+    expect(call.slots.draft).toBeFalsy(); // kein Wasserzeichen auf dem Original
+    expect(call.context.number).toMatch(/^BRF-\d{4}-\d{3}$/);
   });
 
   it('schreibt einen Eintrag ins Änderungsprotokoll', async () => {
     const { deps, ctx } = setupWithTypes();
     await fileFixture(deps, ctx);
-    expect(deps.testing.auditActions()).toContain('dms.file');
+    expect(auditActions(deps)).toContain('dms.file');
   });
 });
 ```
 
-`bytesOfFiled` legt zwei Entwürfe an, schreibt sie mit **derselben** festen Uhr und derselben Nummer fest (Testuhr über `createTestDeps` fixieren, zweiten Lauf mit eigenen `deps`), liest die Dateien und vergleicht. Läuft der Determinismus-Test wegen der Nummer nicht sauber, stattdessen `previewDraft` zweimal vergleichen — die Vorschau trägt keine Nummer.
+`seedTypes(deps)` ist der Teil von `setupWithTypes`, der nur die Dokumentarten einfügt — beim Bauen von Task 2 gleich so herausziehen, damit dieser Test eine eigene Engine übergeben kann.
 
 - [ ] **Step 2: Tests rot sehen**
 

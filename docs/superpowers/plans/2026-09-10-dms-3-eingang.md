@@ -24,6 +24,17 @@
 
 **Voraussetzung:** Plan 2 (`2026-09-10-dms-2-entwurf.md`) ist abgeschlossen. Die Testhelfer `setupWithTypes()`, `pdfBytes()` und `fileFixture()` stehen in `packages/modules/dms/tests/helpers.ts` (Plan 2, Task 2).
 
+## Lehren aus Plan 1 (2026-09-10)
+
+Plan 1 ist ausgeführt; diese Punkte kosteten dort Zeit oder gingen erst in `pnpm verify` auf. Sie gelten für jeden Task dieses Plans.
+
+- **Die echten Testhelfer** heißen `createTestDeps({ manifests })`, `ctxWith(permissions, userId?)`, `insertUser(deps, {...})`, `insertRole(deps, {...})` und `TEST_NOW` — alle aus `@kompass/core` (`packages/core/src/testing/`). Frühere Planentwürfe nannten `deps.testing.adminContext()` und `contextWithout(...)`; **die gibt es nicht**. Ein fehlendes Recht prüft man mit `ctxWith(['dms.view'])` statt mit einem Kontext, dem man etwas wegnimmt.
+- **`createTestDeps` rendert keine echten PDFs.** Es setzt `fakeDocumentEngine()` ein, deren `render` schlicht `%PDF-fake <baseId> <title>` zurückgibt. Deshalb: Modultests prüfen **was in die Engine hineingeht**, nicht wie das PDF aussieht — über `createTestDeps({ documents: fakeDocumentEngine({ render: async (args) => { calls.push(args); return bytes; } }) })`. Echte Typst-Prüfungen (Wasserzeichen, Byte-Gleichheit) gehören nach `packages/documents/tests/`, wo Typst wirklich läuft.
+- **Neue Rechte ohne Beschriftung brechen die Rollenseite.** Jedes Recht braucht `permissions.keys.<bereich>.<verb>.label` und `.description` in `apps/kompass/messages/de.json`, jede Gruppe `permissions.groups.<key>`. `apps/kompass/tests/permission-labels.test.ts` erzwingt das in Millisekunden — dort zuerst rot sehen, statt es in zwei Minuten E2E zu suchen. Derselbe Test verbietet, in `apps/kompass/src` ein Recht zu nennen, das die Registry nicht kennt.
+- **Migrationen:** `0013`–`0017` sind vergeben, die nächste freie Nummer ist `0018`. Wenn eine Schemaänderung nötig wird, **nie neue Spalten und einen Tabellenneubau in derselben Migration** — drizzle-kit 0.31.10 erzeugt dann SQL, das beim Tabellenneubau Spalten aus der alten Tabelle liest, die es dort noch nicht gibt. Trennen: erst Constraints lockern und Tabellen anlegen, dann `ALTER TABLE ADD COLUMN`, dann Werte füllen, dann verriegeln.
+- **Einen E2E-Test nie entkernen, um ihn grün zu bekommen.** Wenn ein Test an einem Label oder Recht hängt, das sich geändert hat, wird der fachlich richtige Ersatz eingesetzt — nicht die Zusicherung gestrichen.
+
+
 ---
 
 ### Task 1: Eingegangene Post ablegen
@@ -82,19 +93,19 @@ describe('receiveDocument', () => {
 
   it('verlangt dms.create', async () => {
     const { deps } = setupWithTypes();
-    const denied = await receiveDocument(deps, deps.testing.contextWithout('dms.create'), { filename: 'x.pdf', bytes: pdfBytes(), typeKey: 'authority', subject: 'X', documentDate: '2026-03-14' });
+    const denied = await receiveDocument(deps, ctxWith(ALL_DMS.filter((p) => p !== 'dms.create')), { filename: 'x.pdf', bytes: pdfBytes(), typeKey: 'authority', subject: 'X', documentDate: '2026-03-14' });
     expect(denied.ok).toBe(false);
   });
 
   it('schreibt einen Eintrag ins Änderungsprotokoll', async () => {
     const { deps, ctx } = setupWithTypes();
     await receiveDocument(deps, ctx, { filename: 'x.pdf', bytes: pdfBytes(), typeKey: 'authority', subject: 'X', documentDate: '2026-03-14' });
-    expect(deps.testing.auditActions()).toContain('dms.receive');
+    expect(auditActions(deps)).toContain('dms.receive');
   });
 });
 ```
 
-`pdfBytes()` liefert ein minimales, gültiges PDF (`%PDF-1.4\n…`); die Mediathek prüft den MIME-Typ, also muss `application/pdf` durchgehen. Der vorhandene Helfer in `packages/core/tests/media.test.ts` zeigt das Muster.
+`pdfBytes()` liefert ein minimales, gültiges PDF (`%PDF-1.4\n…`); die Mediathek prüft den MIME-Typ am Inhalt, nicht am angegebenen Wert — die Bytes müssen also wirklich mit `%PDF` beginnen. Der vorhandene Helfer in `packages/core/tests/media.test.ts` zeigt das Muster. Der Kontext braucht zusätzlich `media.upload`, weil `receiveDocument` über den Medienspeicher geht.
 
 - [ ] **Step 2: Tests rot sehen**
 
@@ -165,7 +176,7 @@ describe('folders', () => {
 
   it('verlangt dms.manage', async () => {
     const { deps } = setupWithTypes();
-    const denied = await createDocumentFolder(deps, deps.testing.contextWithout('dms.manage'), { path: 'x' });
+    const denied = await createDocumentFolder(deps, ctxWith(ALL_DMS.filter((p) => p !== 'dms.manage')), { path: 'x' });
     expect(denied.ok).toBe(false);
   });
 });
@@ -180,7 +191,7 @@ describe('moveDocument', () => {
     expect(moved.ok).toBe(true);
     if (!moved.ok) return;
     expect(moved.value.folder).toBe('behoerden');
-    expect(deps.testing.auditActions()).toContain('dms.move');
+    expect(auditActions(deps)).toContain('dms.move');
   });
 
   it('lehnt einen unbekannten Ordner ab', async () => {
@@ -303,7 +314,7 @@ it('stellt eine Art still, statt sie zu löschen', async () => {
 
 it('verlangt dms.manage für Regeln', async () => {
   const { deps } = setupWithTypes();
-  const denied = await createDocumentRule(deps, deps.testing.contextWithout('dms.manage'), { matchField: 'filename', matchContains: 'Finanzamt', thenTypeKey: 'authority' });
+  const denied = await createDocumentRule(deps, ctxWith(ALL_DMS.filter((p) => p !== 'dms.manage')), { matchField: 'filename', matchContains: 'Finanzamt', thenTypeKey: 'authority' });
   expect(denied.ok).toBe(false);
 });
 ```
@@ -422,7 +433,7 @@ describe('suggestClassification', () => {
 
   it('verlangt dms.view', async () => {
     const { deps } = setupWithTypes();
-    const denied = await suggestClassification(deps, deps.testing.contextWithout('dms.view'), { filename: 'x.pdf' });
+    const denied = await suggestClassification(deps, ctxWith(ALL_DMS.filter((p) => p !== 'dms.view')), { filename: 'x.pdf' });
     expect(denied.ok).toBe(false);
   });
 });
@@ -533,14 +544,14 @@ describe('deleteDocument', () => {
     expect(result.ok).toBe(true);
     expect(deps.db.select().from(documents).all()).toHaveLength(0);
     expect(deps.db.select().from(documentLinks).all()).toHaveLength(0);
-    expect(deps.testing.auditActions()).toContain('dms.delete');
+    expect(auditActions(deps)).toContain('dms.delete');
   });
 
   it('verlangt dms.manage', async () => {
     const { deps, ctx } = setupWithTypes();
     const doc = await receiveDocument(deps, ctx, { filename: 'alt.pdf', bytes: pdfBytes(), typeKey: 'invoice', subject: 'Alt', documentDate: '2005-06-01' });
     if (!doc.ok) throw new Error('setup');
-    const denied = await deleteDocument(deps, deps.testing.contextWithout('dms.manage'), { id: doc.value.id });
+    const denied = await deleteDocument(deps, ctxWith(ALL_DMS.filter((p) => p !== 'dms.manage')), { id: doc.value.id });
     expect(denied.ok).toBe(false);
   });
 });

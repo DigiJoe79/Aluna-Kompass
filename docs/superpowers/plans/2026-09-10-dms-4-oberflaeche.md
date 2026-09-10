@@ -22,6 +22,17 @@
 
 **Voraussetzung:** Plan 3 (`2026-09-10-dms-3-eingang.md`) ist abgeschlossen.
 
+## Lehren aus Plan 1 (2026-09-10)
+
+Plan 1 ist ausgeführt; diese Punkte kosteten dort Zeit oder gingen erst in `pnpm verify` auf. Sie gelten für jeden Task dieses Plans.
+
+- **Die echten Testhelfer** heißen `createTestDeps({ manifests })`, `ctxWith(permissions, userId?)`, `insertUser(deps, {...})`, `insertRole(deps, {...})` und `TEST_NOW` — alle aus `@kompass/core` (`packages/core/src/testing/`). Frühere Planentwürfe nannten `deps.testing.adminContext()` und `contextWithout(...)`; **die gibt es nicht**. Ein fehlendes Recht prüft man mit `ctxWith(['dms.view'])` statt mit einem Kontext, dem man etwas wegnimmt.
+- **`createTestDeps` rendert keine echten PDFs.** Es setzt `fakeDocumentEngine()` ein, deren `render` schlicht `%PDF-fake <baseId> <title>` zurückgibt. Deshalb: Modultests prüfen **was in die Engine hineingeht**, nicht wie das PDF aussieht — über `createTestDeps({ documents: fakeDocumentEngine({ render: async (args) => { calls.push(args); return bytes; } }) })`. Echte Typst-Prüfungen (Wasserzeichen, Byte-Gleichheit) gehören nach `packages/documents/tests/`, wo Typst wirklich läuft.
+- **Neue Rechte ohne Beschriftung brechen die Rollenseite.** Jedes Recht braucht `permissions.keys.<bereich>.<verb>.label` und `.description` in `apps/kompass/messages/de.json`, jede Gruppe `permissions.groups.<key>`. `apps/kompass/tests/permission-labels.test.ts` erzwingt das in Millisekunden — dort zuerst rot sehen, statt es in zwei Minuten E2E zu suchen. Derselbe Test verbietet, in `apps/kompass/src` ein Recht zu nennen, das die Registry nicht kennt.
+- **Migrationen:** `0013`–`0017` sind vergeben, die nächste freie Nummer ist `0018`. Wenn eine Schemaänderung nötig wird, **nie neue Spalten und einen Tabellenneubau in derselben Migration** — drizzle-kit 0.31.10 erzeugt dann SQL, das beim Tabellenneubau Spalten aus der alten Tabelle liest, die es dort noch nicht gibt. Trennen: erst Constraints lockern und Tabellen anlegen, dann `ALTER TABLE ADD COLUMN`, dann Werte füllen, dann verriegeln.
+- **Einen E2E-Test nie entkernen, um ihn grün zu bekommen.** Wenn ein Test an einem Label oder Recht hängt, das sich geändert hat, wird der fachlich richtige Ersatz eingesetzt — nicht die Zusicherung gestrichen.
+
+
 ---
 
 ### Task 1: MCP-Werkzeuge
@@ -106,7 +117,9 @@ export const receiveSchema = z.object({
 
 Der Service nimmt beides entgegen; bei `assetId` entfällt das Ablegen und die vorhandene Prüfsumme gilt.
 
-`dms_delete_document` gibt es bewusst **nicht**: Eine Löschung nach Fristablauf bestätigt ein Mensch am Fristenbildschirm (Entscheidung 10). In `apps/kompass/tests/mcp-tools.test.ts` die Ausnahme für `dms.manage` → `deleteDocument` mit genau dieser Begründung eintragen.
+`dms_delete_document` gibt es bewusst **nicht**: Eine Löschung nach Fristablauf bestätigt ein Mensch am Fristenbildschirm (Entscheidung 10).
+
+**Wichtig, aus Plan 1 mitgebracht:** In `apps/kompass/tests/mcp-tools.test.ts` stehen derzeit **alle sechs** `dms.*`-Rechte in `WITHOUT_MCP`, weil das Modul beim Umzug noch keine Werkzeuge hatte. Dieser Task nimmt sie dort heraus — bis auf `dms.manage`, das als einzige Ausnahme bleibt, mit der Begründung aus dem vorigen Absatz. Bleibt die Liste unverändert, ist der Test grün, obwohl er nichts mehr prüft.
 
 - [ ] **Step 4: Tests grün sehen**
 
@@ -187,7 +200,7 @@ git commit -m "feat(dms): invented example file for development"
 **Files:**
 - Create: `apps/kompass/src/app/(shell)/dms/page.tsx`, `document-list.tsx`, `actions.ts`
 - Modify: `packages/modules/dms/src/manifest.ts` (Navigationseintrag `{ key: 'dms.list', href: '/dms', icon: 'file', group: 'dms', permission: 'dms.view' }` eintragen — Plan 1 hat ihn bewusst weggelassen, solange die Route fehlte; `file` muss in der Icon-Whitelist in `apps/kompass/src/components/shell/sidebar.tsx` stehen)
-- Delete: `apps/kompass/src/app/(shell)/admin/documents/` bis auf `bases-panel.tsx` (dieses nach `admin/documents/page.tsx` als reine Basisübersicht zurechtstutzen)
+- (Bereits erledigt in Plan 1: `admin/documents/` ist schon auf `page.tsx` plus `bases-panel.tsx` zurechtgestutzt. Hier nichts mehr zu löschen.)
 - Modify: `apps/kompass/messages/de.json`
 - Test: `apps/kompass/e2e/dms.spec.ts`
 
@@ -249,7 +262,23 @@ git commit -m "feat(dms): the file as a list, with the inbox as a filter"
 
 - [ ] **Step 1: Failing E2E schreiben**
 
+Der erste Test holt eine Zusicherung zurück, die Plan 1 verloren hat: Vor dem Umzug prüfte `documents.spec.ts`, dass ein Brief **mit dem Vereinslogo aus dem Branding** gerendert wird. Dieser Weg existierte über den alten Erzeugungsdialog und hat seither keinen Ersatz.
+
 ```ts
+test('rendert den festgeschriebenen Brief mit dem Branding-Logo', async ({ page }) => {
+  // Ersatz für die in Plan 1 entfallene Zusicherung aus documents.spec.ts.
+  await login(page);
+  await page.goto('/dms/new');
+  await page.getByLabel('Betreff').fill('Mit Logo');
+  await page.getByLabel('Text').fill('Text');
+  await page.getByRole('button', { name: 'Entwurf speichern' }).click();
+  await page.getByRole('button', { name: 'Festschreiben' }).click();
+  await page.getByRole('button', { name: 'Festschreiben bestätigen' }).click();
+  const response = await page.request.get(await page.getByRole('link', { name: 'PDF öffnen' }).getAttribute('href') ?? '');
+  expect(response.headers()['content-type']).toContain('application/pdf');
+  expect((await response.body()).byteLength).toBeGreaterThan(1000);
+});
+
 test('entwirft einen Brief, sieht die Vorschau und schreibt ihn fest', async ({ page }) => {
   await login(page);
   await page.goto('/dms/new');
@@ -400,11 +429,15 @@ Expected: PASS
 Run: `pnpm verify`
 Expected: PASS (Docker nötig; liegt unter `/Applications/Docker.app/Contents/Resources/bin`)
 
-- [ ] **Step 4: Dokumentation nachziehen**
+- [ ] **Step 4: Kern-MCP prüfen**
+
+Plan 1 hat `documents_list`, `documents_render` und `documents_void` aus `packages/mcp/src/core-tools.ts` entfernt, weil ihre Funktionen in den Kern nicht mehr existieren. Sie kommen **nicht** zurück — die Akte spricht über die `dms_*`-Werkzeuge dieses Plans. `documents_bases` bleibt und verlangt `documents.export`. Prüfen, dass `pnpm --filter @kompass/app mcp:check` gegen eine laufende Instanz die neuen Werkzeuge zeigt.
+
+- [ ] **Step 5: Dokumentation nachziehen**
 
 `AGENTS.md`: `dms` in der Modulliste und im Seed-Muster erwähnen, falls dort Module aufgezählt werden. `docs/backlog.md`: nichts eintragen, außer es ist unterwegs etwas aufgefallen.
 
-- [ ] **Step 5: Commit und Push**
+- [ ] **Step 6: Commit und Push**
 
 ```bash
 git add -A
