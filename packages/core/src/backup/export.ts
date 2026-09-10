@@ -7,7 +7,7 @@ import type { AppDeps } from '../app';
 import { recordAudit } from '../audit/log';
 import { isoNow } from '../clock';
 import { systemContext, type CallContext } from '../context';
-import { auditLog, documents, mediaAssets, users } from '../db/schema';
+import { auditLog, mediaAssets, users } from '../db/schema';
 import { requirePermission } from '../permissions/check';
 import { ok, type Result } from '../result';
 import { writeSettingInternal } from '../settings/service';
@@ -43,7 +43,6 @@ export async function exportBackup(deps: AppDeps, ctx: CallContext, opts: { work
       counts: {
         users: deps.db.select({ n: count() }).from(users).get()?.n ?? 0,
         auditEntries: deps.db.select({ n: count() }).from(auditLog).get()?.n ?? 0,
-        documents: deps.db.select({ n: count() }).from(documents).get()?.n ?? 0,
         mediaAssets: deps.db.select({ n: count() }).from(mediaAssets).get()?.n ?? 0,
       },
     };

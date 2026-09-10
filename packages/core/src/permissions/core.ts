@@ -7,8 +7,9 @@ export const CORE_PERMISSIONS = [
   // Der Fristenbildschirm sammelt über alle Module; er braucht ein eigenes
   // Recht, weil er zeigt, welche personenbezogenen Daten zur Löschung anstehen.
   'retention.view',
-  'documents.create',
-  'documents.view',
+  // Der Auszugsweg der Pipeline (Ad-hoc, `filed: false`) bleibt im Kern; die
+  // Akte selbst — Ablage, Nummernvergabe, Storno — lebt im Modul `dms`.
+  'documents.export',
   'media.upload',
   // Die Projekte liegen im Kern und trugen bis zum Cutover die Rechte des
   // Webseiten-Moduls. Ohne dieses Modul gäbe es sie sonst nicht mehr.

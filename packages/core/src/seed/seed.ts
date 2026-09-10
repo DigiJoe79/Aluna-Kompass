@@ -13,9 +13,9 @@ export const SEED_ADMIN_EMAIL = 'admin@kompass.local';
 export const SEED_ADMIN_PASSWORD = 'kompass-entwicklung-2026';
 
 const EXAMPLE_ROLES: { name: string; description: string; permissions: string[] }[] = [
-  { name: 'Schatzmeisterin', description: 'Finanzen und Dokumente', permissions: ['documents.create', 'documents.view', 'media.upload', 'audit.view', 'backup.export'] },
-  { name: 'Kassenprüfer', description: 'Nur lesen', permissions: ['audit.view', 'documents.view'] },
-  { name: 'Schriftführung', description: 'Dokumente erzeugen', permissions: ['documents.create', 'documents.view'] },
+  { name: 'Schatzmeisterin', description: 'Finanzen und Dokumente', permissions: ['documents.export', 'media.upload', 'audit.view', 'backup.export'] },
+  { name: 'Kassenprüfer', description: 'Nur lesen', permissions: ['audit.view'] },
+  { name: 'Schriftführung', description: 'Dokumente erzeugen', permissions: ['documents.export'] },
 ];
 
 const EXAMPLE_USERS: { name: string; email: string; role: string }[] = [

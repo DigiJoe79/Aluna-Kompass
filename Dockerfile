@@ -17,6 +17,7 @@ COPY packages/mcp/package.json packages/mcp/
 COPY packages/site-template/package.json packages/site-template/
 COPY packages/modules/animals/package.json packages/modules/animals/
 COPY packages/modules/contacts/package.json packages/modules/contacts/
+COPY packages/modules/dms/package.json packages/modules/dms/
 COPY packages/modules/site/package.json packages/modules/site/
 COPY templates/verein-basis/package.json templates/verein-basis/
 RUN pnpm install --frozen-lockfile

@@ -29,7 +29,7 @@ test.describe('audit log', () => {
   });
 
   test('requires audit.view', async ({ page }) => {
-    // Schriftführung (documents.create, documents.view) hat kein audit.view
+    // Schriftführung (documents.export) hat kein audit.view
     await page.goto('/admin/users');
     await page.getByRole('row', { name: /Peter Lang/ }).getByRole('button', { name: 'Aktionen' }).click();
     await page.getByRole('menuitem', { name: 'Neues Startpasswort' }).click();

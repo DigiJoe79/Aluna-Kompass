@@ -1,11 +1,15 @@
 import { eq } from 'drizzle-orm';
-import { documents, projects } from '../db/schema';
+import { projects } from '../db/schema';
 import type { Deps } from '../deps';
 import type { MediaReference } from '../modules/manifest';
 import { enabledManifests } from '../modules/service';
 import { readSetting } from '../settings/service';
 
-/** Die Fundstellen im Kern selbst: Logo, Projektbilder, gerenderte Dokumente. */
+/**
+ * Die Fundstellen im Kern selbst: Logo, Projektbilder. Gerenderte Dokumente
+ * lebten hier, bis die Akte ins Modul `dms` zog — das Modul beantwortet sie
+ * seither über seinen eigenen `mediaReferences`-Haken.
+ */
 export function coreMediaReferences(deps: Deps, assetId: string): MediaReference[] {
   const refs: MediaReference[] = [];
 
@@ -14,9 +18,6 @@ export function coreMediaReferences(deps: Deps, assetId: string): MediaReference
   }
   for (const p of deps.db.select({ id: projects.id, slug: projects.slug }).from(projects).where(eq(projects.imageAssetId, assetId)).all()) {
     refs.push({ label: `Projekt „${p.slug}"`, entity: 'project', id: p.id });
-  }
-  for (const d of deps.db.select({ id: documents.id, number: documents.number }).from(documents).where(eq(documents.assetId, assetId)).all()) {
-    refs.push({ label: `Dokument ${d.number}`, entity: 'document', id: d.id });
   }
   return refs;
 }

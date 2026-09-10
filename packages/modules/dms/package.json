@@ -12,6 +12,7 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
+    "@kompass/module-contacts": "workspace:*",
     "@types/node": "^26.4.1",
     "typescript": "^6.0.3",
     "vitest": "^5.0.0"

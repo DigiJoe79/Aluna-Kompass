@@ -6,10 +6,11 @@ import { installedModules } from '@/modules';
 describe('installed modules', () => {
   it('registers installed modules without clashes', () => {
     const registry = createRegistry([coreModule, ...installedModules]);
-    expect(installedModules.map((m) => m.key)).toEqual(['site', 'animals', 'contacts']);
+    expect(installedModules.map((m) => m.key)).toEqual(['site', 'animals', 'contacts', 'dms']);
     expect(registry.permissionKeys.has('animals.manage')).toBe(true);
     expect(registry.permissionKeys.has('site.publish')).toBe(true);
     expect(registry.permissionKeys.has('contacts.manage')).toBe(true);
+    expect(registry.permissionKeys.has('dms.view')).toBe(true);
     expect(registry.settingDefinitions.has('site.blockedTerms')).toBe(true);
   });
 

@@ -56,7 +56,7 @@ test.describe('users', () => {
   });
 
   test('is forbidden for a role without users.manage', async ({ page }) => {
-    // Mira Klein (Kassenprüfer) hat nur audit.view und documents.view; Startpasswort per Reset holen.
+    // Mira Klein (Kassenprüfer) hat nur audit.view; Startpasswort per Reset holen.
     await page.getByRole('row', { name: /Mira Klein/ }).getByRole('button', { name: 'Aktionen' }).click();
     await page.getByRole('menuitem', { name: 'Neues Startpasswort' }).click();
     const startPassword = (await page.getByTestId('start-password').textContent())!.trim();

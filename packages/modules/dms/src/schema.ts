@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 /**
  * Die Klassifikation als Stammdaten, nicht als Konstanten (Prinzip 2). Die Art
@@ -22,7 +22,7 @@ export const documentFolders = sqliteTable('document_folders', {
   createdAt: text('created_at').notNull(),
 });
 
-/** Einsortierhilfe: belegt das Formular vor, legt nie selbst ab (Entscheidung 19). */
+/** Regel zur Formularvorbelegung beim Einsortieren; legt nie selbst ab (Entscheidung 19). */
 export const documentRules = sqliteTable(
   'document_rules',
   {
@@ -40,3 +40,62 @@ export const documentRules = sqliteTable(
 export type DocumentTypeRow = typeof documentTypes.$inferSelect;
 export type DocumentFolderRow = typeof documentFolders.$inferSelect;
 export type DocumentRuleRow = typeof documentRules.$inferSelect;
+
+/**
+ * Ein Eintrag ist eine Datei plus Metadaten — erzeugt oder eingegangen
+ * (Entscheidung 5). Ein Entwurf hat weder Nummer noch Datei; er ist
+ * Arbeitsmaterial und trägt seinen Text in `draftBody`.
+ */
+export const documents = sqliteTable(
+  'documents',
+  {
+    id: text('id').primaryKey(),
+    phase: text('phase', { enum: ['draft', 'issued'] }).notNull().default('draft'),
+    direction: text('direction', { enum: ['outgoing', 'incoming'] }).notNull().default('outgoing'),
+    sourceKind: text('source_kind', { enum: ['generated', 'uploaded'] }).notNull().default('generated'),
+    typeKey: text('type_key').notNull().references(() => documentTypes.key),
+    number: text('number'),
+    subject: text('subject').notNull().default(''),
+    /** Datum **auf** dem Dokument; löst die Frist aus, nicht `createdAt`. */
+    documentDate: text('document_date').notNull(),
+    folder: text('folder'), // null = Eingangskorb
+    /** Markdown des Entwurfs; beim Festschreiben geleert (Entscheidung 4). */
+    draftBody: text('draft_body'),
+    templateKey: text('template_key'),
+    inputSnapshot: text('input_snapshot'), // JSON, nur `generated`
+    assetId: text('asset_id'),
+    status: text('status', { enum: ['issued', 'voided'] }).notNull().default('issued'),
+    voidedAt: text('voided_at'),
+    voidedByUserId: text('voided_by_user_id'),
+    voidReason: text('void_reason'),
+    createdByUserId: text('created_by_user_id').notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('documents_number_idx').on(t.number),
+    index('documents_folder_idx').on(t.folder),
+    index('documents_phase_idx').on(t.phase),
+  ],
+);
+
+/** Mehrere Bezüge je Dokument, jeder mit Rolle (Entscheidung 6). */
+export const documentLinks = sqliteTable(
+  'document_links',
+  {
+    id: text('id').primaryKey(),
+    documentId: text('document_id').notNull().references(() => documents.id),
+    /** Generisch wie bei `mediaReferences` — das Modul kennt keine fremden Entitäten. */
+    entityType: text('entity_type').notNull(),
+    entityId: text('entity_id').notNull(),
+    role: text('role', { enum: ['sender', 'recipient', 'about'] }).notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('document_links_unique_idx').on(t.documentId, t.entityType, t.entityId, t.role),
+    index('document_links_entity_idx').on(t.entityType, t.entityId),
+  ],
+);
+
+export type DocumentRow = typeof documents.$inferSelect;
+export type DocumentLinkRow = typeof documentLinks.$inferSelect;

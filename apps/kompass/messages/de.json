@@ -867,19 +867,7 @@
   "placeholders": {},
   "documents": {
     "title": "Dokumente",
-    "description": "Erzeugte PDFs sind unveränderlich und lückenlos nummeriert. Ein fehlerhaftes Dokument wird storniert und ersetzt.",
-    "columns": {
-      "title": "Vorlage / Titel",
-      "reference": "Bezug",
-      "createdBy": "Erstellt von",
-      "date": "Datum"
-    },
-    "download": "Herunterladen",
-    "voided": "Storniert",
-    "templates": {
-      "letterhead": "Briefbogen",
-      "audit-log-export": "Änderungsprotokoll"
-    },
+    "description": "Die Pipeline hinter der Akte: Basis-Vorlagen und ihr Rendering. Die Akte selbst — Entwürfe, Liste, Storno — führt das Modul „Akte“.",
     "bases": {
       "title": "Basis-Vorlagen",
       "ready": "bereit",
@@ -888,40 +876,10 @@
       "saved": "Basis-Vorlage gesetzt."
     },
     "create": {
-      "button": "Dokument erzeugen",
-      "title": "Dokument erzeugen",
-      "template": "Vorlage",
-      "titleField": "Titel",
-      "body": "Text (Markdown)",
-      "bodyHint": "Leerzeile zwischen Absätzen. Überschrift: Raute + Leerzeichen. Liste: Bindestrich + Leerzeichen. Fett: **Wort**.",
-      "preview": "Vorschau",
-      "submit": "Erzeugen",
-      "rendering": "Wird erzeugt …",
-      "missingPermission": "benötigt {permission}",
       "templates": {
         "letterhead": "Briefbogen",
         "audit-log-export": "Änderungsprotokoll-Export"
       }
-    },
-    "void": {
-      "title": "Dokument {number} stornieren?",
-      "text": "Das Dokument behält Nummer und PDF und wird als storniert markiert. Ein Ersatz erhält eine neue Nummer.",
-      "reason": "Grund",
-      "confirm": "Stornieren"
-    },
-    "preview": {
-      "title": "Vorschau",
-      "pages": "{count, plural, one {# Seite} other {# Seiten}}",
-      "download": "Herunterladen"
-    },
-    "empty": {
-      "title": "Noch keine Dokumente",
-      "text": "Erzeugen Sie ein erstes Dokument, zum Beispiel einen Briefbogen."
-    },
-    "footnote": "Dokumente werden nicht gelöscht. Ein fehlerhaftes Dokument wird storniert; es bleibt mit dem Vermerk „storniert“ in der Liste.",
-    "toast": {
-      "created": "Dokument erzeugt.",
-      "voided": "Dokument storniert."
     }
   },
   "retention": {

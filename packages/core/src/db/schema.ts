@@ -129,30 +129,6 @@ export const mediaFolders = sqliteTable('media_folders', {
   createdAt: text('created_at').notNull(),
 });
 
-export const documents = sqliteTable(
-  'documents',
-  {
-    id: text('id').primaryKey(),
-    templateKey: text('template_key').notNull(),
-    number: text('number').notNull(),
-    entityType: text('entity_type'),
-    entityId: text('entity_id'),
-    inputSnapshot: text('input_snapshot').notNull(), // JSON
-    assetId: text('asset_id')
-      .notNull()
-      .references(() => mediaAssets.id),
-    status: text('status', { enum: ['issued', 'voided'] }).notNull().default('issued'),
-    voidedAt: text('voided_at'),
-    voidedByUserId: text('voided_by_user_id').references(() => users.id),
-    voidReason: text('void_reason'),
-    createdByUserId: text('created_by_user_id')
-      .notNull()
-      .references(() => users.id),
-    createdAt: text('created_at').notNull(),
-  },
-  (t) => [uniqueIndex('documents_number_idx').on(t.number)],
-);
-
 export const projects = sqliteTable(
   'projects',
   {

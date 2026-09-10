@@ -40,7 +40,7 @@ describe('kompass mcp handler', () => {
     const { token } = await tokenFor(deps, ['settings.manage']);
     const client = await connect((url, init) => handler.fetch(new Request(url, init)), token);
     const tools = await client.listTools();
-    expect(tools.tools.map((t) => t.name)).toEqual(expect.arrayContaining(['settings_get', 'settings_set', 'roles_list', 'users_create', 'audit_query', 'documents_render', 'modules_set_enabled']));
+    expect(tools.tools.map((t) => t.name)).toEqual(expect.arrayContaining(['settings_get', 'settings_set', 'roles_list', 'users_create', 'audit_query', 'documents_bases', 'modules_set_enabled']));
     const result = await client.callTool({ name: 'settings_get', arguments: { key: 'organization.name' } });
     expect(JSON.parse((result.content as { text: string }[])[0]!.text)).toEqual({ key: 'organization.name', value: 'Neuer Verein' });
     await client.close();

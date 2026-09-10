@@ -7,8 +7,8 @@ describe('groupPermissions', () => {
     const groups = groupPermissions([coreModule]);
     expect(groups.map((g) => [g.key, g.keys])).toEqual([
       ['core.admin', ['users.manage', 'roles.manage', 'settings.manage', 'modules.manage']],
-      ['core.accountability', ['audit.view', 'retention.view', 'documents.view']],
-      ['core.data', ['documents.create', 'media.upload', 'backup.export', 'backup.import']],
+      ['core.accountability', ['audit.view', 'retention.view']],
+      ['core.data', ['documents.export', 'media.upload', 'backup.export', 'backup.import']],
       ['core.projects', ['projects.view', 'projects.manage']],
     ]);
   });

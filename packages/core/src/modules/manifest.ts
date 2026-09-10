@@ -104,7 +104,7 @@ export interface DocumentTemplate<T = unknown> {
   /** Schlüssel der Dokumentart. Sie trägt Nummernpräfix und Fristklasse. */
   type: string;
   schema: z.ZodType<T>;
-  /** Zusätzliches Recht neben documents.create, z. B. finance.edit. */
+  /** Zusätzliches Recht neben documents.export, z. B. audit.view. */
   permission?: string;
   /** Vorgabe-Basis, wenn `build` keine nennt und keine Einstellung greift. */
   base: string;

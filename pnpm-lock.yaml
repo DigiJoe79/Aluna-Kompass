@@ -62,6 +62,9 @@ importers:
       '@kompass/module-contacts':
         specifier: workspace:*
         version: link:../../packages/modules/contacts
+      '@kompass/module-dms':
+        specifier: workspace:*
+        version: link:../../packages/modules/dms
       '@kompass/module-site':
         specifier: workspace:*
         version: link:../../packages/modules/site
@@ -346,6 +349,9 @@ importers:
         specifier: ^4.5.4
         version: 4.5.4
     devDependencies:
+      '@kompass/module-contacts':
+        specifier: workspace:*
+        version: link:../contacts
       '@types/node':
         specifier: ^26.4.1
         version: 26.4.1

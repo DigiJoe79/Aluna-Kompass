@@ -29,12 +29,12 @@ describe('roles service', () => {
   it('sets permissions, rejects unknown keys, audits before/after', async () => {
     const deps = createTestDeps();
     const role = unwrap(await createRole(deps, admin, { name: 'Kassenprüfer' }));
-    const updated = unwrap(await setRolePermissions(deps, admin, { roleId: role.id, permissionKeys: ['documents.view', 'audit.view'] }));
-    expect(updated.permissionKeys).toEqual(['audit.view', 'documents.view']);
+    const updated = unwrap(await setRolePermissions(deps, admin, { roleId: role.id, permissionKeys: ['documents.export', 'audit.view'] }));
+    expect(updated.permissionKeys).toEqual(['audit.view', 'documents.export']);
     const bad = await setRolePermissions(deps, admin, { roleId: role.id, permissionKeys: ['finance.magic'] });
     expect(bad.ok === false && bad.error.type === 'validation' && bad.error.issues[0]?.path === 'permissionKeys.0').toBe(true);
     const entries = deps.db.select().from(auditLog).all();
-    expect(entries.at(-1)).toMatchObject({ action: 'roles.setPermissions', before: '[]', after: '["audit.view","documents.view"]' });
+    expect(entries.at(-1)).toMatchObject({ action: 'roles.setPermissions', before: '[]', after: '["audit.view","documents.export"]' });
   });
 
   it('protected roles cannot be edited or re-permissioned', async () => {
@@ -54,10 +54,10 @@ describe('roles service', () => {
     const a = unwrap(await createRole(deps, admin, { name: 'A' }));
     const b = unwrap(await createRole(deps, admin, { name: 'B' }));
     unwrap(await setRolePermissions(deps, admin, { roleId: a.id, permissionKeys: ['audit.view'] }));
-    unwrap(await setRolePermissions(deps, admin, { roleId: b.id, permissionKeys: ['documents.view'] }));
+    unwrap(await setRolePermissions(deps, admin, { roleId: b.id, permissionKeys: ['documents.export'] }));
     unwrap(await assignRole(deps, admin, { userId, roleId: a.id }));
     unwrap(await assignRole(deps, admin, { userId, roleId: b.id }));
-    expect([...getEffectivePermissions(deps.db, deps.registry, userId)].sort()).toEqual(['audit.view', 'documents.view']);
+    expect([...getEffectivePermissions(deps.db, deps.registry, userId)].sort()).toEqual(['audit.view', 'documents.export']);
     unwrap(await removeRole(deps, admin, { userId, roleId: b.id }));
     expect([...getEffectivePermissions(deps.db, deps.registry, userId)]).toEqual(['audit.view']);
 

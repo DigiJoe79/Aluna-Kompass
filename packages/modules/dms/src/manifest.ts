@@ -1,4 +1,5 @@
 import { defineModule, type ModuleManifest } from '@kompass/core';
+import { dmsMediaReferences } from './service';
 
 export const dmsModule: ModuleManifest = defineModule({
   key: 'dms',
@@ -7,4 +8,5 @@ export const dmsModule: ModuleManifest = defineModule({
   permissions: ['dms.view', 'dms.create', 'dms.file', 'dms.void', 'dms.deleteDraft', 'dms.manage'],
   // `icon` muss in der Whitelist in `apps/kompass/src/components/shell/sidebar.tsx` stehen.
   navigation: [{ key: 'dms.list', href: '/dms', icon: 'file', group: 'dms', permission: 'dms.view' }],
+  mediaReferences: dmsMediaReferences,
 });

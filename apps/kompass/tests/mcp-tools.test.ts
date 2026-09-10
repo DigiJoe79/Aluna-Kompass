@@ -17,13 +17,15 @@ const modulesWithTools: [ModuleManifest, readonly McpToolDefinition[]][] = [
 ];
 
 /**
- * Rechte, die bewusst ohne MCP-Werkzeug bleiben. Beide hängen an Dateiströmen —
+ * Rechte, die bewusst ohne MCP-Werkzeug bleiben. Backup hängt an Dateiströmen —
  * ein Backup von einigen hundert Megabyte durch JSON-RPC zu reichen, brächte
- * niemandem etwas; sie laufen über Route Handler. Wer hier einträgt, entscheidet
- * bewusst; wer ein Recht ergänzt, ohne es hier oder in einem Werkzeug zu nennen,
- * bekommt einen roten Test.
+ * niemandem etwas; es läuft über Route Handler. Die sechs `dms.*`-Rechte sind
+ * mit dem Modul selbst nur umgezogen (Plan „dms-1-umzug"); ihre Werkzeuge
+ * bringt Plan „dms-4-oberflaeche-mcp-seed" (§ 7 der Spec). Wer hier einträgt,
+ * entscheidet bewusst; wer ein Recht ergänzt, ohne es hier oder in einem
+ * Werkzeug zu nennen, bekommt einen roten Test.
  */
-const WITHOUT_MCP = new Set(['backup.export', 'backup.import']);
+const WITHOUT_MCP = new Set(['backup.export', 'backup.import', 'dms.view', 'dms.create', 'dms.file', 'dms.void', 'dms.deleteDraft', 'dms.manage']);
 
 /** Rechte, die kein Werkzeug nennt, als `modul: recht`. */
 const uncoveredPermissions = (pairs: [ModuleManifest, readonly McpToolDefinition[]][]) =>

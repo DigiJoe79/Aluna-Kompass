@@ -1,8 +1,8 @@
 import {
-  activateTheme, addLocale, assignRole, createMediaFolder, createProject, createRole, createUser, deleteMediaAsset, deleteMediaFolder, getAuditEntry, getProject, listDocumentBases, listDocuments, listLocales, listMediaAssets, listModules, listProjects,
-  listRetentionDue, listRoles, listThemes, listUsers, moveMediaAsset, projectCreateSchema, projectUpdateSchema, queryAudit, readAllSettings, readSetting, removeLocale, removeRole, renameMediaFolder, renderDocument,
+  activateTheme, addLocale, assignRole, createMediaFolder, createProject, createRole, createUser, deleteMediaAsset, deleteMediaFolder, getAuditEntry, getProject, listDocumentBases, listLocales, listMediaAssets, listModules, listProjects,
+  listRetentionDue, listRoles, listThemes, listUsers, moveMediaAsset, projectCreateSchema, projectUpdateSchema, queryAudit, readAllSettings, readSetting, removeLocale, removeRole, renameMediaFolder,
   reorderLocales, reorderProjects, resetStartPassword, setModuleEnabled, setProjectPublished, setRolePermissions, setSetting, setUserActive, updateProject,
-  updateRole, voidDocument, ok, invalid,
+  updateRole, ok, invalid,
   type McpToolDefinition,
 } from '@kompass/core';
 import { z } from 'zod';
@@ -25,10 +25,9 @@ export const coreMcpTools: McpToolDefinition[] = [
   t({ name: 'users_reset_start_password', description: 'Issue a new one-time start password. Requires users.manage.', inputSchema: z.object({ id: z.string() }), handler: (deps, ctx, args) => resetStartPassword(deps, ctx, args) }),
   t({ name: 'audit_query', description: 'Query the immutable audit log. Requires audit.view.', inputSchema: z.object({ userId: z.string().optional(), channel: z.enum(['ui', 'mcp', 'system']).optional(), action: z.string().optional(), entityType: z.string().optional(), entityId: z.string().optional(), from: z.string().optional(), to: z.string().optional(), text: z.string().optional(), limit: z.number().int().optional(), offset: z.number().int().optional() }), handler: async (deps, ctx, args) => queryAudit(deps, ctx, args) }),
   t({ name: 'audit_get', description: 'Read one audit entry. Requires audit.view.', inputSchema: z.object({ id: z.string() }), handler: async (deps, ctx, { id }) => getAuditEntry(deps, ctx, id) }),
-  t({ name: 'documents_list', description: 'List generated documents. Requires documents.view.', inputSchema: z.object({ templateKey: z.string().optional(), entityType: z.string().optional(), entityId: z.string().optional(), limit: z.number().int().optional(), offset: z.number().int().optional() }), handler: (deps, ctx, args) => listDocuments(deps, ctx, args) }),
-  t({ name: 'documents_render', description: 'Render a filed document (letter, contract, certificate) from a registered template; returns the document record (download via the app). Ad-hoc excerpts such as the audit log are pulled in the app, not here. Requires documents.create.', inputSchema: z.object({ templateKey: z.string(), input: z.unknown(), entityType: z.string().optional(), entityId: z.string().optional() }), handler: (deps, ctx, args) => renderDocument(deps, ctx, args) }),
-  t({ name: 'documents_void', description: 'Void a document with a reason; the PDF and number remain. Requires documents.create.', inputSchema: z.object({ id: z.string(), reason: z.string() }), handler: (deps, ctx, args) => voidDocument(deps, ctx, args) }),
-  t({ name: 'documents_bases', description: 'List the available document base templates and whether each renders. Requires documents.view.', inputSchema: z.object({}), handler: (deps, ctx) => listDocumentBases(deps, ctx) }),
+  // Die Akte (Ablage, Nummernvergabe, Storno) lebt im Modul `dms`, das seine
+  // eigenen Werkzeuge mitbringt. Der Kern behält nur den Auszugsweg.
+  t({ name: 'documents_bases', description: 'List the available document base templates and whether each renders. Requires documents.export.', inputSchema: z.object({}), handler: (deps, ctx) => listDocumentBases(deps, ctx) }),
   t({ name: 'media_list', description: 'List media assets with size, type, folder and where each is used. Optional folder filter (omitted = all, null = root). Requires media.upload.', inputSchema: z.object({ folder: z.string().nullable().optional() }), handler: (deps, ctx, { folder }) => listMediaAssets(deps, ctx, folder) }),
   t({ name: 'media_delete', description: 'Delete a media asset. Refused while any record still references it (editorial content, audited). Requires media.upload.', inputSchema: z.object({ id: z.string() }), handler: (deps, ctx, args) => deleteMediaAsset(deps, ctx, args) }),
   t({ name: 'media_move', description: 'Move a media asset into a folder (null = root). Requires media.upload.', inputSchema: z.object({ id: z.string(), folder: z.string().nullable() }), handler: (deps, ctx, args) => moveMediaAsset(deps, ctx, args) }),
