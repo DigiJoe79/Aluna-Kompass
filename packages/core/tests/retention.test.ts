@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { coreModule } from '../src/core-module';
+import { defineModule, type ModuleManifest } from '../src/modules/manifest';
 import { unwrap } from '../src/result';
 import { RETENTION_DEFAULT_MONTHS, retentionEnd } from '../src/retention/classes';
-import { retentionMonths } from '../src/retention/service';
-import { setSetting } from '../src/settings/service';
+import { collectRetentionDue, dueUntil, holdsFor, retentionMonths } from '../src/retention/service';
+import { setSetting, writeSettingInternal } from '../src/settings/service';
 import { createTestDeps, ctxWith } from '../src/testing';
 
 describe('retentionEnd', () => {
@@ -40,5 +42,43 @@ describe('retentionMonths', () => {
 
     unwrap(await setSetting(deps, ctxWith(['settings.manage']), { key: 'retention.consent', value: 18 }));
     expect(retentionMonths(deps, 'consent')).toBe(18);
+  });
+});
+
+const holder = (key: string, until: string | null): ModuleManifest =>
+  defineModule({
+    key,
+    version: '1',
+    permissions: [`${key}.view`],
+    retentionHolds: (_deps, entityType, id) => (entityType === 'contact' ? [{ label: `${key} hält ${id}`, until, entity: key, id }] : []),
+    retentionDue: () => [{ entity: key, id: 'X1', label: `${key} X1`, dueSince: '2026-01-01' }],
+  });
+
+describe('retention collection', () => {
+  it('asks every enabled module and takes the longest hold', () => {
+    const deps = createTestDeps({ manifests: [coreModule, holder('alpha', '2028-12-31'), holder('beta', '2036-12-31')] });
+    deps.db.transaction((tx) => {
+      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['alpha', 'beta'], 'test.enable');
+    });
+    const holds = holdsFor(deps, 'contact', 'C1');
+    expect(holds.map((h) => h.entity).sort()).toEqual(['alpha', 'beta']);
+    expect(dueUntil(holds)).toBe('2036-12-31');
+  });
+
+  it('never becomes due while one holder is permanent', () => {
+    expect(dueUntil([{ label: 'Satzung', until: null, entity: 'x', id: '1' }, { label: 'Brief', until: '2030-12-31', entity: 'x', id: '2' }])).toBeNull();
+  });
+
+  it('is not due when nothing holds it', () => {
+    expect(dueUntil([])).toBe(null);
+  });
+
+  it('does not ask a disabled module', () => {
+    const deps = createTestDeps({ manifests: [coreModule, holder('alpha', '2028-12-31'), holder('beta', '2036-12-31')] });
+    deps.db.transaction((tx) => {
+      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['alpha'], 'test.enable');
+    });
+    expect(holdsFor(deps, 'contact', 'C1').map((h) => h.entity)).toEqual(['alpha']);
+    expect(collectRetentionDue(deps).map((d) => d.entity)).toEqual(['alpha']);
   });
 });

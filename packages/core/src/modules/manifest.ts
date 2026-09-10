@@ -2,6 +2,7 @@ import type { z } from 'zod';
 import type { CallContext } from '../context';
 import type { Deps } from '../deps';
 import type { Result } from '../result';
+import type { RetentionClass } from '../retention/classes';
 import type { Theme } from '../themes/tokens';
 
 export interface SettingDefinition<T = unknown> {
@@ -19,6 +20,30 @@ export interface MediaReference {
   /** Entitätstyp und ID, falls die Oberfläche verlinken will. */
   entity: string;
   id: string;
+}
+
+export interface RetentionHold {
+  /** Menschlich lesbar, für die Anzeige und die Fehlermeldung:
+   *  'Zuwendungsbestätigung BST-2026-0042', 'Adoptionsvertrag für „Rocky"'. */
+  label: string;
+  /** ISO-Datum, bis zu dem gehalten wird; null = dauerhaft. */
+  until: string | null;
+  entity: string;
+  id: string;
+}
+
+export interface DueItem {
+  entity: string;
+  id: string;
+  label: string;
+  /** ISO-Datum, seit wann fällig. */
+  dueSince: string;
+}
+
+/** Eine Kontaktrolle, die ein Modul beisteuert, samt ihrer Aufbewahrungsklasse. */
+export interface ContactRoleDefinition {
+  key: string;
+  retention: RetentionClass;
 }
 
 export interface NavigationItem {
@@ -118,6 +143,14 @@ export interface ModuleManifest {
   /** Wo dieses Modul ein Medium verwendet — synchron, nur lesend, ohne
    *  Rechteprüfung. Befragt vor dem Löschen eines Assets. */
   mediaReferences?: (deps: Deps, assetId: string) => readonly MediaReference[];
+  /** Was dieses Modul festhält — synchron, nur lesend, ohne Rechteprüfung.
+   *  Befragt vor dem Löschen und für den Fristenbildschirm. `entityType` ist
+   *  generisch: derselbe Haken trägt später Dokumente und Belege. */
+  retentionHolds?: (deps: Deps, entityType: string, id: string) => readonly RetentionHold[];
+  /** Was bei diesem Modul zur Löschung fällig ist. */
+  retentionDue?: (deps: Deps) => readonly DueItem[];
+  /** Kontaktrollen, die dieses Modul beisteuert. */
+  contactRoles?: readonly ContactRoleDefinition[];
 }
 
 /** Die MCP-Werkzeuge eines Moduls, egal ob als feste Liste oder als Funktion von `deps` deklariert. */

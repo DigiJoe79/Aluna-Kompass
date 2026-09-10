@@ -49,3 +49,5 @@ export * from './i18n/localized';
 export * from './i18n/service';
 export * from './projects/service';
 export { localizedColumn } from './db/columns';
+export * from './retention/classes';
+export * from './retention/service';
