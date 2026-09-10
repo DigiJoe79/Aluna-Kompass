@@ -31,9 +31,11 @@ Jede Stufe erhält eine eigene Spec und einen eigenen Implementierungsplan.
 
 1. **Fundament** (dieses Dokument): Monorepo, Docker, Login, Rollen/Rechte, Einstellungen, Modul-System, i18n, Änderungsprotokoll, Dokumenten-Engine, MCP-Server, Dev/Test/Prod.
 2. **Webseite**: Seiten, Team, FAQ, Projekte (öffentliche Felder), Medien, Astro-Build, Publish aus dem Tool. Tiermodul in Minimalstufe (Profil + Status für die Hundeseiten). Import der Daten aus dem bestehenden Astro-Prototyp. Ergebnis: WordPress abgelöst.
-3. **Finanzen**: Konten, Buchungen mit Sphären-Zuordnung, Projekte (Finanzseite), Rücklagen nach § 62 AO, Belege, Storno statt Löschen, Kontakte, Zuwendungsbestätigungen, Kostenerstattungen, Mittelweitergabe, EÜR/Vermögensübersicht/Kassenprüfungsunterlagen.
+3. **Finanzen**: Konten, Buchungen mit Sphären-Zuordnung, Projekte (Finanzseite), Rücklagen nach § 62 AO, Belege, Storno statt Löschen, Zuwendungsbestätigungen, Kostenerstattungen, Mittelweitergabe, EÜR/Vermögensübersicht/Kassenprüfungsunterlagen.
 4. **Tiere & Vermittlung** (Aluna-Modul, Vollstufe): Bestandsbuch, Herkunft/Verbleib, Verträge, Patenschaften, Partner-Shelter.
 5. **Mitglieder & Gremien**: Mitgliederstamm, Beiträge als Buchungen, Mitgliederversammlung (Einladung, Anwesenheit, Protokoll), Vorstandsbeschlüsse, Satzungs-/Beitragsordnungsstände.
+
+> **Nachtrag 2026-09-10.** Kontakte sind aus Stufe 3 vorgezogen und ein eigenes Modul (`2026-09-10-kontakte-design.md`). Grund: Korrespondenz, Finanzen und Mitglieder hängen alle daran, und ohne sie hat ein Brief keinen Empfänger. Der Abschnitt „Nicht-Ziele" der Stufe 1 nennt Kontakte weiterhin zu Recht — dort ging es um den Umfang jener Stufe.
 
 ### Rechenschaftspflichten als Arbeitsraster
 
