@@ -160,7 +160,7 @@ export async function listContacts(deps: Deps, ctx: CallContext, input: unknown)
     // SQLite `like` ist bei ASCII ohnehin case-insensitive; für Umlaute reicht
     // das nicht, deshalb wird zusätzlich klein geschrieben verglichen.
     const needle = `%${q.text.toLowerCase()}%`;
-    const hit = (col: typeof contacts.lastName) => like(sqlLower(col), needle);
+    const hit = (col: SQLWrapper) => like(sqlLower(col), needle);
     conditions.push(or(hit(contacts.lastName), hit(contacts.firstName), hit(contacts.name), hit(contacts.city))!);
   }
   if (q.role) {

@@ -24,6 +24,7 @@
     "@kompass/markdown": "workspace:*",
     "@kompass/mcp": "workspace:*",
     "@kompass/module-animals": "workspace:*",
+    "@kompass/module-contacts": "workspace:*",
     "@kompass/module-site": "workspace:*",
     "@kompass/site-template": "workspace:*",
     "class-variance-authority": "^0.7.1",

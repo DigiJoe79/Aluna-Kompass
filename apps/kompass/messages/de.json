@@ -181,6 +181,7 @@
       "finance": "Finanzen",
       "members": "Mitglieder",
       "animals": "Tiere",
+      "contacts": "Kontakte",
       "site": "Webseite",
       "core": "Verein"
     },
@@ -196,6 +197,9 @@
     "logoAlt": "Vereinslogo",
     "animals": {
       "list": "Hunde"
+    },
+    "contacts": {
+      "list": "Kontakte"
     },
     "site": {
       "template": "Template",

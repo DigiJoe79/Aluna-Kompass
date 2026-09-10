@@ -55,7 +55,7 @@ describe('modules service', () => {
 
     const res = await setModuleEnabled(deps, admin, { key: 'mod-b', enabled: true });
     expect(res.ok === false && res.error.type === 'conflict' && res.error.code === 'contactRoleConflict').toBe(true);
-    if (!res.ok) {
+    if (!res.ok && res.error.type === 'conflict') {
       expect(res.error.message).toContain('donor');
       expect(res.error.message).toContain('mod-a');
       expect(res.error.message).toContain('mod-b');

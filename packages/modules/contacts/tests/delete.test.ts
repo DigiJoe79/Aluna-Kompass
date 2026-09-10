@@ -66,7 +66,9 @@ describe('contact retention and deletion', () => {
     unwrap(await addContactRole(deps, ctx, { id: c.id, role: 'interested', since: '2026-03-15' }));
     const res = await deleteContact(deps, ctx, { id: c.id });
     expect(res.ok === false && res.error.type === 'conflict' && res.error.code === 'retentionHoldActive').toBe(true);
-    expect(res.ok === false && res.error.message).toContain('interested');
+    if (!res.ok && res.error.type === 'conflict') {
+      expect(res.error.message).toContain('interested');
+    }
   });
 
   it('deletes a contact with no running hold, removes its rows and audits it', async () => {

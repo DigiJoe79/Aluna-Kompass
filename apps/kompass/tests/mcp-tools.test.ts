@@ -33,7 +33,18 @@ const uncoveredPermissions = (pairs: [ModuleManifest, readonly McpToolDefinition
       .map((key) => `${manifest.key}: ${key}`),
   );
 
-const jsonSchema = (tool: McpToolDefinition) => z.toJSONSchema(tool.inputSchema, { io: 'input' }) as { properties?: Record<string, unknown>; additionalProperties?: unknown };
+const jsonSchema = (tool: McpToolDefinition) => {
+  const schema = z.toJSONSchema(tool.inputSchema, { io: 'input' }) as {
+    properties?: Record<string, unknown>;
+    additionalProperties?: unknown;
+    oneOf?: Array<{ properties?: Record<string, unknown>; additionalProperties?: unknown }>;
+  };
+  if (schema.oneOf) {
+    const combined = Object.assign({}, ...schema.oneOf.map((s) => s.properties ?? {}));
+    return { ...schema, properties: combined };
+  }
+  return schema;
+};
 
 describe('registered mcp tools', () => {
   it('names the arguments of every tool that takes some', () => {
@@ -44,12 +55,32 @@ describe('registered mcp tools', () => {
   });
 
   it('accepts nothing beyond the named arguments', () => {
-    const open = registeredTools.filter((tool) => (jsonSchema(tool).additionalProperties ?? false) !== false).map((tool) => tool.name);
+    const open = registeredTools
+      .filter((tool) => {
+        const schema = jsonSchema(tool) as { additionalProperties?: unknown; oneOf?: Array<{ additionalProperties?: unknown }> };
+        if (schema.oneOf) {
+          return schema.oneOf.some((branch) => (branch.additionalProperties ?? false) !== false);
+        }
+        return (schema.additionalProperties ?? false) !== false;
+      })
+      .map((tool) => tool.name);
     expect(open).toEqual([]);
   });
 
   it('offers a tool for every permission a module defines', () => {
     expect(uncoveredPermissions(modulesWithTools)).toEqual([]);
+  });
+
+  /**
+   * `contacts_delete` fehlt bewusst. Das unwiederbringliche Löschen
+   * personenbezogener Daten soll einen Menschen vor einem Bildschirm haben, der
+   * zeigt, was gleich verschwindet. Ein Agent, der eine Fälligkeitsliste falsch
+   * liest, löscht sonst dreißig Spender. Die Fälligkeitsliste selbst ist über
+   * `contacts_due` lesbar — nur das Ausführen bleibt der Oberfläche vorbehalten.
+   */
+  it('offers no tool that deletes a contact', () => {
+    expect(registeredTools.map((tool) => tool.name)).not.toContain('contacts_delete');
+    expect(registeredTools.some((tool) => tool.name === 'contacts_due')).toBe(true);
   });
 
   // Beweist, dass die Prüfung oben greift: ein erfundenes Modul, das seine

@@ -13,7 +13,7 @@ export function contactsRetentionHolds(deps: Deps, entityType: string, id: strin
   if (entityType !== 'contact') return [];
   const definitions = contactRoleDefinitions(deps);
   const rows = deps.db.select().from(contactRoles).where(eq(contactRoles.contactId, id)).all();
-  return rows.flatMap((row) => {
+  return rows.flatMap((row): RetentionHold[] => {
     const definition = definitions.get(row.role);
     if (!definition) return [];
     if (definition.retention === 'permanent') return [{ label: `Rolle ${row.role} (dauerhaft)`, until: null, entity: 'contactRole', id: row.id }];
