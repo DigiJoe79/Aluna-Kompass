@@ -907,9 +907,41 @@ export const CONTACTS_MCP_TOOLS: McpToolDefinition[] = [
 
 In `packages/modules/contacts/src/manifest.ts` `mcpTools: CONTACTS_MCP_TOOLS,` ergänzen, mit Import. In `packages/modules/contacts/src/index.ts` `export * from './mcp-tools';` ergänzen.
 
-- [ ] **Step 3: Modul installieren (falls noch nicht geschehen)**
+- [ ] **Step 3: Das Modul in der App installieren**
 
-`apps/kompass/src/modules.ts` und `apps/kompass/package.json` wie in Plan 1 Task 3 Schritt 5 beschrieben, dann `pnpm install`.
+Plan 1 hat das bewusst offengelassen, damit dort kein roter Paritätstest entsteht. Hier gehört es hin — vier Stellen:
+
+1. `apps/kompass/package.json`: `"@kompass/module-contacts": "workspace:*"` neben `@kompass/module-animals`, danach `pnpm install`.
+2. `apps/kompass/src/modules.ts`:
+
+```typescript
+import type { ModuleManifest } from '@kompass/core';
+import { animalsModule } from '@kompass/module-animals';
+import { contactsModule } from '@kompass/module-contacts';
+import { siteModule } from '@kompass/module-site';
+
+/** Installierte Fachmodule dieser Installation. Aktivierung erfolgt unter Verwaltung → Module. */
+export const installedModules: ModuleManifest[] = [siteModule, animalsModule, contactsModule];
+```
+
+3. `apps/kompass/src/components/shell/sidebar.tsx`: Die Icon-Zuordnung ist eine feste Whitelist. `Contact` aus `lucide-react` in den Import aufnehmen und in die Zuordnung eintragen:
+
+```typescript
+  contact: Contact,
+```
+
+Ohne diesen Eintrag bleibt der Navigationspunkt ohne Symbol.
+
+4. `apps/kompass/messages/de.json`: Die Beschriftungen liegen **verschachtelt**, nicht als Schlüssel mit Punkt. Nach dem Muster von `animals`:
+
+```json
+"nav": {
+  "groups": { "contacts": "Kontakte" },
+  "contacts": { "list": "Kontakte" }
+}
+```
+
+Die beiden Einträge gehören in die vorhandenen Objekte `nav.groups` und `nav`, nicht als neue Geschwister daneben.
 
 - [ ] **Step 4: Die bewusste Ausnahme begründen**
 

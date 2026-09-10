@@ -32,7 +32,6 @@
 | `packages/modules/contacts/src/index.ts` | Öffentliche Oberfläche des Pakets |
 | `packages/modules/contacts/tests/address.test.ts` | Tests des Anschriftsblocks |
 | `packages/core/src/db/migrations/00NN_contacts.sql` | erzeugte Migration |
-| `apps/kompass/src/modules.ts` | Modul installieren |
 
 ---
 
@@ -406,6 +405,9 @@ export const contactsModule: ModuleManifest = defineModule({
   key: 'contacts',
   version: '0.1.0',
   permissions: ['contacts.view', 'contacts.manage'],
+  // `icon` muss in der Whitelist in `apps/kompass/src/components/shell/sidebar.tsx`
+  // stehen. `contact` ist dort noch nicht eingetragen — das erledigt Plan 3 Task 4
+  // zusammen mit der Installation. Bis dahin ist der Name nur eine Zeichenkette.
   navigation: [{ key: 'contacts.list', href: '/contacts', icon: 'contact', group: 'contacts', permission: 'contacts.view' }],
 });
 ```
@@ -423,34 +425,14 @@ export * from './schema';
 Run: `pnpm --filter @kompass/module-contacts test`
 Expected: PASS (alle Tests des Pakets).
 
-- [ ] **Step 5: Das Modul in der App installieren**
+- [ ] **Step 5: Prüfen, dass das Paket für sich steht**
 
-`apps/kompass/src/modules.ts`:
+Run: `pnpm --filter @kompass/module-contacts test && pnpm --filter @kompass/module-contacts typecheck && pnpm test`
+Expected: PASS, alles.
 
-```typescript
-import type { ModuleManifest } from '@kompass/core';
-import { animalsModule } from '@kompass/module-animals';
-import { contactsModule } from '@kompass/module-contacts';
-import { siteModule } from '@kompass/module-site';
+**Das Modul wird in diesem Plan bewusst noch nicht in der App installiert.** Es bringt zwei Rechte mit, aber noch keine MCP-Werkzeuge; `apps/kompass/tests/mcp-tools.test.ts` würde sofort rot. Installation, Navigation, Icon und Übersetzungen macht Plan 3 Task 4, wenn die Werkzeuge da sind. Bis dahin bleibt jeder Commit grün.
 
-/** Installierte Fachmodule dieser Installation. Aktivierung erfolgt unter Verwaltung → Module. */
-export const installedModules: ModuleManifest[] = [siteModule, animalsModule, contactsModule];
-```
-
-`@kompass/module-contacts` als Abhängigkeit in `apps/kompass/package.json` ergänzen (neben `@kompass/module-animals`, gleiche Schreibweise `"workspace:*"`), dann `pnpm install`.
-
-- [ ] **Step 6: Den Übersetzungstext für die Navigation ergänzen**
-
-In `apps/kompass/messages/de.json` unter `nav` den Schlüssel `contacts.list` mit dem Wert `"Kontakte"` ergänzen, und — falls dort Gruppen geführt werden — die Gruppe `contacts` mit `"Kontakte"`. Sieh dir an, wie `animals.list` dort steht, und folge genau dem Muster.
-
-- [ ] **Step 7: Die ganze Prüfung fahren**
-
-Run: `pnpm typecheck && pnpm test`
-Expected: PASS. Der Test `apps/kompass/tests/mcp-tools.test.ts` **wird jetzt rot** und meldet `contacts: contacts.view` und `contacts: contacts.manage` — das ist richtig so: Das Modul bringt Rechte mit, aber noch keine Werkzeuge. Plan 3 schließt das. Trage die beiden Rechte **nicht** in `WITHOUT_MCP` ein.
-
-Um diesen Plan grün abzuschließen, hänge das Modul erst in Plan 3 in `installedModules` ein — oder markiere den Test hier vorübergehend mit `it.fails`. **Empfehlung:** Schritt 5 und 6 an das Ende von Plan 3 verschieben und diesen Task ohne sie committen; dann bleibt der Baum durchgehend grün.
-
-- [ ] **Step 8: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add packages/modules/contacts
@@ -467,4 +449,4 @@ git commit -m "feat(contacts): module manifest with view and manage permissions"
 
 **Typkonsistenz.** `ContactRow` (Task 1) ist die Quelle für `PostalAddressInput` (Task 2). `contactsModule` (Task 3) heißt in `apps/kompass/src/modules.ts` genauso.
 
-**Bekannte Zwischenstufe.** Nach Task 3 ist der MCP-Paritätstest rot, bis Plan 3 die Werkzeuge nachliefert. Schritt 7 sagt, wie man das vermeidet, statt es zu verschweigen.
+**Bekannte Zwischenstufe — aufgelöst.** Der ursprüngliche Zuschnitt installierte das Modul schon hier und nahm dafür einen roten MCP-Paritätstest in Kauf. Nach dem Konfliktscan am 2026-09-10 zieht Plan 3 Task 4 die ganze Installation (modules.ts, package.json, Icon-Whitelist, Übersetzungen) an sich. Plan 1 bleibt vollständig innerhalb von `packages/` und ist durchgehend grün.
