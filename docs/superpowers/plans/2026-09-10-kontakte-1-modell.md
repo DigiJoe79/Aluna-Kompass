@@ -365,7 +365,6 @@ git commit -m "feat(contacts): postal address block that survives missing fields
 **Files:**
 - Create: `packages/modules/contacts/src/manifest.ts`, `packages/modules/contacts/src/index.ts`
 - Create: `packages/modules/contacts/tests/manifest.test.ts`
-- Modify: `apps/kompass/src/modules.ts`
 
 **Interfaces:**
 - Consumes: `defineModule` aus `@kompass/core`.
@@ -445,7 +444,7 @@ git commit -m "feat(contacts): module manifest with view and manage permissions"
 
 **Spec-Abdeckung.** § 4 Datenmodell: Task 1 (drei Tabellen, `kind`, Selbstverweis, `until` statt Löschen) und Task 2 (`formatPostalAddress`). § 3 Entscheidung 1 (Modul, `dependsOn: []`): Task 3. Entscheidung 4 (Anrede als Freitext): das Feld ist `text` ohne Enum, die Vorschlagsliste kommt in Plan 4 mit der Oberfläche.
 
-**Platzhalter.** Keine. Die einzige Stelle ohne wörtlichen Code ist Schritt 6 in Task 3 (Übersetzungsschlüssel), weil die Struktur von `de.json` gelesen werden muss, statt sie hier zu raten — der Schlüssel und der Wert sind genannt.
+**Platzhalter.** Keine. Task 3 berührt `apps/kompass` gar nicht mehr; Navigation, Icon und Übersetzungen wandern mit der Installation nach Plan 3 Task 4.
 
 **Typkonsistenz.** `ContactRow` (Task 1) ist die Quelle für `PostalAddressInput` (Task 2). `contactsModule` (Task 3) heißt in `apps/kompass/src/modules.ts` genauso.
 

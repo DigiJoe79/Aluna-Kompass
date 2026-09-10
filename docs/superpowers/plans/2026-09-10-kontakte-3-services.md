@@ -932,7 +932,8 @@ export const installedModules: ModuleManifest[] = [siteModule, animalsModule, co
 
 Ohne diesen Eintrag bleibt der Navigationspunkt ohne Symbol.
 
-4. `apps/kompass/messages/de.json`: Die Beschriftungen liegen **verschachtelt**, nicht als Schlüssel mit Punkt. Nach dem Muster von `animals`:
+4. `Dockerfile`, bei den `COPY`-Zeilen der Paket-Manifeste (um Zeile 18): eine Zeile `COPY packages/modules/contacts/package.json packages/modules/contacts/`. **Nichts testet das** — fehlt sie, laufen `pnpm test` und `pnpm typecheck` weiter grün, und erst `pnpm image` bzw. `pnpm e2e:image` bricht. Sieh dir die vorhandenen Zeilen für `animals` und `site` an und folge ihnen genau.
+5. `apps/kompass/messages/de.json`: Die Beschriftungen liegen **verschachtelt**, nicht als Schlüssel mit Punkt. Nach dem Muster von `animals`:
 
 ```json
 "nav": {
@@ -942,6 +943,23 @@ Ohne diesen Eintrag bleibt der Navigationspunkt ohne Symbol.
 ```
 
 Die beiden Einträge gehören in die vorhandenen Objekte `nav.groups` und `nav`, nicht als neue Geschwister daneben.
+
+- [ ] **Step 3b: Die Lücke schließen, die nichts bewacht**
+
+Dass ein installiertes Modul eine `COPY`-Zeile im `Dockerfile` braucht, prüft heute kein Test — die Lücke fällt erst beim Image-Bau auf, also nach `pnpm test` und `pnpm typecheck`. Schreib den Test, der sie schließt, in `apps/kompass/tests/modules.test.ts`:
+
+```typescript
+it('gives every installed module a COPY line in the Dockerfile', () => {
+  // Fehlt sie, laufen Tests und Typecheck grün durch und erst `pnpm image` bricht.
+  const dockerfile = readFileSync(new URL('../../../Dockerfile', import.meta.url), 'utf8');
+  const missing = installedModules
+    .map((m) => m.key)
+    .filter((key) => !dockerfile.includes(`COPY packages/modules/${key}/package.json`));
+  expect(missing).toEqual([]);
+});
+```
+
+Schreib ihn **vor** der `COPY`-Zeile aus Schritt 3, damit du ihn einmal rot siehst. Der Pfad zum `Dockerfile` ist relativ zur Testdatei — prüfe ihn, statt ihn zu glauben. Der Modulschlüssel ist zugleich der Verzeichnisname; wo das je auseinanderfällt, muss dieser Test mitwachsen.
 
 - [ ] **Step 4: Die bewusste Ausnahme begründen**
 
