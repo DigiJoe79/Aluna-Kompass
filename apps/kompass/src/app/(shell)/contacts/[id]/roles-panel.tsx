@@ -65,7 +65,7 @@ export function RolesPanel({
                 </Button>
               }
             />
-            <DialogContent className="w-[440px] max-w-[calc(100%-2rem)] bg-surface p-0 shadow-md">
+            <DialogContent className="w-full sm:max-w-[440px] bg-surface p-0 shadow-md">
               <form onSubmit={handleAddSubmit}>
                 <div className="p-6">
                   <DialogTitle className="font-heading text-[17px]">{t('roles.add')}</DialogTitle>
@@ -148,7 +148,7 @@ export function RolesPanel({
 
       {endingRoleId ? (
         <Dialog open={true} onOpenChange={(o) => { if (!o) setEndingRoleId(null); }}>
-          <DialogContent className="w-[400px] max-w-[calc(100%-2rem)] bg-surface p-0 shadow-md">
+          <DialogContent className="w-full sm:max-w-[400px] bg-surface p-0 shadow-md">
             <form onSubmit={handleEndSubmit}>
               <div className="p-6">
                 <DialogTitle className="font-heading text-[17px]">{t('roles.end')}</DialogTitle>

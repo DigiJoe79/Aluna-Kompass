@@ -88,7 +88,7 @@ export function CreateContactDialog() {
           </Button>
         }
       />
-      <DialogContent className="w-[840px] max-w-[calc(100%-2rem)] bg-surface p-0 shadow-md">
+      <DialogContent className="w-full sm:max-w-[840px] bg-surface p-0 shadow-md">
         <form action={action}>
           <div className="p-6">
             <DialogTitle className="font-heading text-[19px]">{t('create.title')}</DialogTitle>
@@ -100,8 +100,8 @@ export function CreateContactDialog() {
               </p>
             ) : null}
 
-            <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-12">
-              <div className="space-y-4 lg:col-span-7">
+            <div className="mt-5 grid grid-cols-1 gap-6 md:grid-cols-12">
+              <div className="space-y-4 md:col-span-7">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="kind" className="text-[13px] font-semibold text-ink-2">
                     {t('fields.kind')}
@@ -236,7 +236,7 @@ export function CreateContactDialog() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2 rounded-md border border-line bg-surface-2 p-4 lg:col-span-5">
+              <div className="flex flex-col gap-2 rounded-md border border-line bg-surface-2 p-4 md:col-span-5">
                 <span className="text-[13px] font-semibold text-muted-ink">{t('preview')}</span>
                 <pre className="min-h-[120px] whitespace-pre-line rounded-md border border-line bg-code-bg p-3 font-body text-[14px] leading-relaxed text-ink">
                   {preview || <span className="italic text-muted-ink">{t('previewPlaceholder')}</span>}

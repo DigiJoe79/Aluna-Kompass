@@ -80,7 +80,7 @@ export function ChannelsEditor({
                 </Button>
               }
             />
-            <DialogContent className="w-[440px] max-w-[calc(100%-2rem)] bg-surface p-0 shadow-md">
+            <DialogContent className="w-full sm:max-w-[440px] bg-surface p-0 shadow-md">
               <form onSubmit={handleAdd}>
                 <div className="p-6">
                   <DialogTitle className="font-heading text-[17px]">{t('channels.add')}</DialogTitle>
