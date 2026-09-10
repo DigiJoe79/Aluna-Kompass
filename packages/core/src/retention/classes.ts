@@ -30,7 +30,11 @@ export const RETENTION_DEFAULT_MONTHS: Record<Exclude<RetentionClass, 'permanent
  * @param fromIso ISO-Datum oder -Zeitstempel; gelesen wird nur das Jahr.
  * @param months  Länge in Monaten, aus der Einstellung der Klasse.
  */
+const ISO_PREFIX = /^\d{4}-\d{2}-\d{2}/;
+
 export function retentionEnd(fromIso: string, months: number): string {
+  if (!ISO_PREFIX.test(fromIso)) throw new Error(`retentionEnd: malformed fromIso: ${JSON.stringify(fromIso)}`);
+  if (!Number.isInteger(months) || months < 0) throw new Error(`retentionEnd: months must be a non-negative integer, got ${months}`);
   const year = Number(fromIso.slice(0, 4));
   const total = 11 + months; // Dezember (0-basiert 11) als Startmonat
   const targetYear = year + Math.floor(total / 12);

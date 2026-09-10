@@ -72,14 +72,22 @@ const system: SettingDefinition[] = [
   { key: 'system.lastExportAt', schema: z.string().nullable(), default: null, systemOnly: true },
 ];
 
-const months = z.number().int().min(1).max(1200);
+// `min(0)`: null ist ein gültiger Wert, etwa für `consent` — „löschen mit Ablauf
+// des Jahres, in dem der Zweck entfiel", ohne zusätzliche Monate obendrauf.
+const months = z.number().int().min(0).max(1200);
 
-/** Aufbewahrungsfristen in Monaten. Die Klasse `permanent` hat keine Länge. */
-const retention: SettingDefinition[] = [
-  { key: 'retention.statutory10Y', schema: months, default: RETENTION_DEFAULT_MONTHS.statutory10Y },
-  { key: 'retention.statutory6Y', schema: months, default: RETENTION_DEFAULT_MONTHS.statutory6Y },
-  { key: 'retention.consent', schema: months, default: RETENTION_DEFAULT_MONTHS.consent },
-];
+/**
+ * Aufbewahrungsfristen in Monaten, aus `RETENTION_DEFAULT_MONTHS` abgeleitet statt
+ * von Hand dupliziert — eine neue Klasse dort erzwingt sonst nur einen Vorgabewert,
+ * hier aber keine Einstellung, und würde erst zur Laufzeit mit
+ * `unknown setting: retention.<x>` auffallen. Die Klasse `permanent` hat keine
+ * Länge und fehlt deshalb in `RETENTION_DEFAULT_MONTHS` und hier.
+ */
+const retention: SettingDefinition[] = Object.entries(RETENTION_DEFAULT_MONTHS).map(([cls, value]) => ({
+  key: `retention.${cls}`,
+  schema: months,
+  default: value,
+}));
 
 export const CORE_SETTINGS: SettingDefinition[] = [
   ...organization,

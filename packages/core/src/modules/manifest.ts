@@ -2,7 +2,7 @@ import type { z } from 'zod';
 import type { CallContext } from '../context';
 import type { Deps } from '../deps';
 import type { Result } from '../result';
-import type { RetentionClass } from '../retention/classes';
+import { RETENTION_CLASSES, type RetentionClass } from '../retention/classes';
 import type { Theme } from '../themes/tokens';
 
 export interface SettingDefinition<T = unknown> {
@@ -161,6 +161,7 @@ const MODULE_KEY = /^[a-z][a-z0-9-]*$/;
 const PERMISSION_KEY = /^[a-z][a-zA-Z0-9]*\.[a-z][a-zA-Z0-9]*$/;
 const TEMPLATE_KEY = /^[a-z][a-z0-9-]*$/;
 const TEMPLATE_PREFIX = /^[A-Z]{3}$/;
+const ROLE_KEY = /^[a-z][a-z0-9-]*$/;
 
 export function defineModule(manifest: ModuleManifest): ModuleManifest {
   if (!MODULE_KEY.test(manifest.key)) throw new Error(`invalid module key: ${manifest.key}`);
@@ -170,6 +171,10 @@ export function defineModule(manifest: ModuleManifest): ModuleManifest {
   for (const template of manifest.documentTemplates ?? []) {
     if (!TEMPLATE_KEY.test(template.key)) throw new Error(`invalid document template key: ${template.key}`);
     if (!TEMPLATE_PREFIX.test(template.prefix)) throw new Error(`invalid document template prefix: ${template.prefix}`);
+  }
+  for (const role of manifest.contactRoles ?? []) {
+    if (!ROLE_KEY.test(role.key)) throw new Error(`invalid contact role key: ${role.key}`);
+    if (!RETENTION_CLASSES.includes(role.retention)) throw new Error(`invalid contact role retention class: ${role.retention}`);
   }
   return manifest;
 }

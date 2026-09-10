@@ -13,15 +13,34 @@ export function retentionMonths(deps: Deps, cls: RetentionClass): number | null 
   return readSetting<number>(deps, `retention.${cls}`);
 }
 
+const FULL_ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
 /**
  * Wer dieses Objekt festhält. Befragt werden nur **aktive** Module: ein
  * ausgeschaltetes Modul schweigt (wie bei `mediaReferences`). Weil Schweigen
  * hier gefährlich ist — ein ausgeschaltetes Finanzmodul dürfte keinen Spender
  * freigeben —, muss jedes Modul mit diesem Haken in `dependsOn` des haltenden
  * Moduls stehen; `setModuleEnabled` verhindert das Abschalten dann von selbst.
+ *
+ * Diese Funktion ist die Grenze, an der ein von fremdem Code geschriebener
+ * `until`-Wert zum ersten Mal ankommt: er wird hier gegen das volle
+ * `YYYY-MM-DD`-Format geprüft und bei Verstoß geworfen — nie still verworfen,
+ * denn ein verworfener Halter ist ein Halter, der den Datensatz nicht mehr
+ * schützt, genau das Gegenteil dessen, wofür diese Funktion existiert.
+ *
+ * Wirft ein Modul-Haken selbst, wird das **durchgereicht**, nicht verschluckt:
+ * ein defekter Haken darf niemals als „hält nichts" gelesen werden — sonst
+ * würde ein kaputtes Finanzmodul jeden Spender zur Löschung freigeben.
  */
 export function holdsFor(deps: Deps, entityType: string, id: string): RetentionHold[] {
-  return enabledManifests(deps).flatMap((m) => [...(m.retentionHolds?.(deps, entityType, id) ?? [])]);
+  return enabledManifests(deps).flatMap((m) =>
+    [...(m.retentionHolds?.(deps, entityType, id) ?? [])].map((hold) => {
+      if (hold.until !== null && !FULL_ISO_DATE.test(hold.until)) {
+        throw new Error(`holdsFor: module "${m.key}" returned a malformed until for hold "${hold.label}": ${JSON.stringify(hold.until)}`);
+      }
+      return hold;
+    }),
+  );
 }
 
 /**
@@ -36,7 +55,12 @@ export function dueUntil(holds: readonly RetentionHold[]): string | null {
   return holds.reduce((max, h) => (h.until! > max ? h.until! : max), holds[0]!.until!);
 }
 
-/** Alles, was bei den aktiven Modulen zur Löschung fällig ist. */
+/**
+ * Alles, was bei den aktiven Modulen zur Löschung fällig ist. Wirft ein
+ * Modul-Haken, reißt das den ganzen Fristenbildschirm mit — anders als bei
+ * `holdsFor` ist das hier hinnehmbar (ein leerer statt ein falscher Bildschirm),
+ * aber bewusst so entschieden und nicht nur ein Nebeneffekt von `flatMap`.
+ */
 export function collectRetentionDue(deps: Deps): DueItem[] {
   return enabledManifests(deps).flatMap((m) => [...(m.retentionDue?.(deps) ?? [])]);
 }
