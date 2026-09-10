@@ -184,6 +184,12 @@ export default async function RetentionPage() {
 }
 ```
 
+- [ ] **Step 6b: Die Fristlängen einstellbar machen**
+
+`retention.statutory10Y`, `retention.statutory6Y` und `retention.consent` sind Einstellungen (Prinzip 2), aber niemand kommt an sie heran: `admin/settings/page.tsx` filtert die bearbeitbare Menge auf `organization.*` und `branding.*`, und ein MCP-Werkzeug für Einstellungen gibt es nicht. Prinzip 2 ist damit strukturell erfüllt und praktisch nicht.
+
+Der Fristenbildschirm ist die natürliche Heimat: Setz die drei Längen als kleinen Abschnitt „Fristen" darüber, mit `setSetting` und dem Recht `settings.manage` (nicht `retention.view` — Lesen und Ändern sind hier verschieden schwer). Zeig neben jedem Wert die gesetzliche Herkunft als Hilfetext (§ 147 AO für die beiden ersten, „ohne gesetzliche Grundlage" für `consent`), damit niemand sie versehentlich unter das gesetzliche Maß setzt.
+
 - [ ] **Step 7: Texte ergänzen**
 
 In `apps/kompass/messages/de.json` einen Abschnitt `retention` anlegen. Sieh dir vorher an, wie `documents` dort aufgebaut ist, und folge dem Muster. Inhalte:
@@ -647,5 +653,15 @@ git commit -m "docs: contacts spec in the source list, retention added to princi
 **Platzhalter.** Task 2 Schritt 4 und Task 3 Schritt 4 beschreiben Listen- und Panel-Komponenten in Prosa statt in vollständigem JSX, weil sie vorhandene Hauskomponenten spiegeln, die gelesen werden müssen (`document-list.tsx`, `photos-editor.tsx`). Beide nennen die Vorlage namentlich, die Testkennzeichen (`data-testid`) und die Beschriftungen, an denen der E2E-Test greift — daran ist die Umsetzung eindeutig geprüft. Task 4 Schritt 3 hat bewusst eine Verzweigung: Die Trennung Kern/Modul lässt sich erst am Code entscheiden.
 
 **Typkonsistenz.** `formatPostalAddress(contact, belongsTo, homeCountry)` wird in Task 2 und Task 3 mit derselben Signatur aus Plan 1 Task 2 aufgerufen. `contactRetention` liefert `{ holds, until, due }` wie in Plan 3 Task 3 definiert; das Panel liest genau diese drei. `DueItem.dueSince` heißt im Fristenbildschirm genauso.
+
+**Übernommen aus der Abschlussreview von Plan 2.** Der Haken `retentionHolds`
+beantwortet je eine ID. Der Fälligkeitsbildschirm läuft damit über alle Kontakte
+und ruft je Kontakt `holdsFor` — je Kontakt eine Einstellungslesung plus eine
+Abfrage je haltendem Modul. Bei ein paar hundert Kontakten ist das gleichgültig,
+bei ein paar tausend samt DMS und Finanzen wird es die langsamste Seite der
+Anwendung. Wenn dieser Bildschirm hakt, ist die Antwort eine Stapelvariante
+(`retentionHoldsFor(deps, entityType, ids)`) am Manifest — nachträglich kostet
+sie jedes Modul, das den Haken schon führt. Also hier bewusst entscheiden, statt
+es später zu entdecken.
 
 **Ein bewusster Bruch mit der Bequemlichkeit.** Der Löschknopf ist aus, solange gehalten wird — und der Grund steht daneben, nicht in einem Tooltip. Wer nicht löschen darf, soll ohne Mausbewegung lesen können, warum.

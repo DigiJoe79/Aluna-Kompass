@@ -805,6 +805,14 @@ export async function deleteContact(deps: Deps, ctx: CallContext, input: unknown
 }
 ```
 
+- [ ] **Step 4b: Die Rollenkollision dort abfangen, wo sie entsteht**
+
+`contactRoleDefinitions` wirft bei doppelten Rollenschlüsseln (Plan 2 Task 4). Das ist der Rückfall, nicht die gute Stelle: Der Wurf trifft die nächste Seite, die Rollen liest — mit diesem Plan also die Kontaktdetailseite, den Fristenbildschirm und `deleteContact`, alle zur Anfragezeit. Die Entscheidung fällt aber viel früher, nämlich beim Einschalten des Moduls.
+
+Ergänze in `packages/core/src/modules/service.ts`, in `setModuleEnabled` im `enabled`-Zweig neben der vorhandenen `dependsOn`-Prüfung: Kollidiert ein Rollenschlüssel des einzuschaltenden Moduls mit einem der bereits aktiven, dann `conflict('contactRoleConflict', …)` mit beiden Modulnamen und dem Schlüssel. Der Wurf in `contactRoleDefinitions` bleibt als Rückfall stehen.
+
+Test in `packages/core/tests/modules.test.ts`: zwei Module mit demselben Rollenschlüssel, eines aktiv, das zweite einschalten → `conflict`, und die Einstellung `modules.enabled` bleibt unverändert.
+
 - [ ] **Step 5: Die Haken ans Manifest hängen**
 
 In `packages/modules/contacts/src/manifest.ts` innerhalb von `defineModule` ergänzen:
