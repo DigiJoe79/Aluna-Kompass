@@ -174,3 +174,99 @@ export async function listContacts(deps: Deps, ctx: CallContext, input: unknown)
   const rows = deps.db.select({ id: contacts.id }).from(contacts).where(where).orderBy(desc(contacts.createdAt)).limit(q.limit).offset(q.offset).all();
   return ok({ contacts: rows.map((r) => loadContact(deps.db, r.id)!), total });
 }
+
+import { contactRoleDefinitions } from './roles';
+
+export const contactChannelsSchema = z.object({
+  id: z.string().min(1),
+  channels: z
+    .array(
+      z.object({
+        kind: z.enum(['email', 'phone', 'mobile', 'fax', 'web']),
+        value: z.string().trim().min(1).max(200),
+        label: z.string().trim().max(60).nullable().optional(),
+        isPrimary: z.boolean().default(false),
+      }),
+    )
+    .max(20),
+});
+
+/** Ersetzt die Menge der Kommunikationswege — dasselbe Muster wie `setAnimalPhotos`. */
+export async function setContactChannels(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ContactRecord>> {
+  const denied = requirePermission(ctx, 'contacts.manage');
+  if (denied) return denied;
+  const parsed = validate(deps, contactChannelsSchema, input);
+  if (!parsed.ok) return parsed;
+  const before = loadContact(deps.db, parsed.value.id);
+  if (!before) return notFound('contact', parsed.value.id);
+  const marked = parsed.value.channels.filter((c) => c.isPrimary);
+  if (marked.length > 1) return conflict('multiplePrimaryChannels', 'Es kann nur einen primären Kommunikationsweg geben');
+
+  return deps.db.transaction((tx: DbOrTx) => {
+    tx.delete(contactChannels).where(eq(contactChannels.contactId, before.id)).run();
+    parsed.value.channels.forEach((channel, index) => {
+      tx.insert(contactChannels)
+        .values({
+          id: newId(),
+          contactId: before.id,
+          kind: channel.kind,
+          value: channel.value,
+          label: channel.label ?? null,
+          // Ohne ausdrückliche Angabe ist der erste Weg der primäre.
+          isPrimary: marked.length === 0 ? index === 0 : channel.isPrimary,
+        })
+        .run();
+    });
+    const after = loadContact(tx, before.id)!;
+    recordAudit(tx, deps, ctx, { action: 'contacts.setChannels', entityType: 'contact', entityId: after.id, before: before.channels, after: after.channels, summary: `Kommunikationswege von ${displayName(after)} geändert` });
+    return ok(after);
+  });
+}
+
+export const contactRoleAddSchema = z.object({
+  id: z.string().min(1),
+  role: z.string().min(1),
+  since: z.iso.date(),
+  note: z.string().trim().max(500).nullable().optional(),
+});
+
+export const contactRoleEndSchema = z.object({ roleId: z.string().min(1), until: z.iso.date() });
+
+export async function addContactRole(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ContactRecord>> {
+  const denied = requirePermission(ctx, 'contacts.manage');
+  if (denied) return denied;
+  const parsed = validate(deps, contactRoleAddSchema, input);
+  if (!parsed.ok) return parsed;
+  // Die Rolle muss aus der Registry kommen, weil an ihr die Frist hängt.
+  const known = contactRoleDefinitions(deps);
+  if (!known.has(parsed.value.role)) {
+    return validate(deps, z.object({ role: z.enum([...known.keys()] as [string, ...string[]]) }), { role: parsed.value.role }) as Result<ContactRecord>;
+  }
+  const contact = loadContact(deps.db, parsed.value.id);
+  if (!contact) return notFound('contact', parsed.value.id);
+  if (contact.roles.some((r) => r.role === parsed.value.role && r.until === null)) {
+    return conflict('roleAlreadyRunning', `Die Rolle „${parsed.value.role}" läuft bereits`);
+  }
+  return deps.db.transaction((tx: DbOrTx) => {
+    tx.insert(contactRoles).values({ id: newId(), contactId: contact.id, role: parsed.value.role, since: parsed.value.since, until: null, note: parsed.value.note ?? null }).run();
+    const after = loadContact(tx, contact.id)!;
+    recordAudit(tx, deps, ctx, { action: 'contacts.addRole', entityType: 'contact', entityId: after.id, after: { role: parsed.value.role, since: parsed.value.since }, summary: `Rolle ${parsed.value.role} für ${displayName(after)} begonnen` });
+    return ok(after);
+  });
+}
+
+/** Beendet eine Rolle. Die Zeile bleibt stehen — an ihr hängt die Frist. */
+export async function endContactRole(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ContactRecord>> {
+  const denied = requirePermission(ctx, 'contacts.manage');
+  if (denied) return denied;
+  const parsed = validate(deps, contactRoleEndSchema, input);
+  if (!parsed.ok) return parsed;
+  const row = deps.db.select().from(contactRoles).where(eq(contactRoles.id, parsed.value.roleId)).get();
+  if (!row) return notFound('contactRole', parsed.value.roleId);
+  return deps.db.transaction((tx: DbOrTx) => {
+    tx.update(contactRoles).set({ until: parsed.value.until }).where(eq(contactRoles.id, row.id)).run();
+    const after = loadContact(tx, row.contactId)!;
+    recordAudit(tx, deps, ctx, { action: 'contacts.endRole', entityType: 'contact', entityId: after.id, before: { role: row.role, until: null }, after: { role: row.role, until: parsed.value.until }, summary: `Rolle ${row.role} für ${displayName(after)} beendet` });
+    return ok(after);
+  });
+}

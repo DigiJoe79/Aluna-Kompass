@@ -1,4 +1,4 @@
-import { coreModule, schema, unwrap } from '@kompass/core';
+import { coreModule, schema, unwrap, writeSettingInternal } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { contactsModule } from '../src/manifest';
@@ -7,7 +7,11 @@ import { createContact, getContact, listContacts, setContactStatus, updateContac
 function setup() {
   const deps = createTestDeps({ manifests: [coreModule, contactsModule] });
   const userId = insertUser(deps, {});
-  return { deps, ctx: ctxWith(['contacts.view', 'contacts.manage'], userId), userId };
+  const ctx = ctxWith(['contacts.view', 'contacts.manage', 'settings.manage'], userId);
+  deps.db.transaction((tx) => {
+    writeSettingInternal(tx, deps, ctx, 'modules.enabled', ['contacts'], 'test.enable');
+  });
+  return { deps, ctx, userId };
 }
 
 const anna = { kind: 'person' as const, salutation: 'Frau', firstName: 'Anna', lastName: 'Berger', street: 'Musterweg 1', postalCode: '12345', city: 'Musterstadt' };
@@ -84,5 +88,74 @@ describe('contacts service', () => {
     expect(unwrap(await listContacts(deps, ctx, { text: 'musterstadt' })).total).toBe(2);
     expect(unwrap(await listContacts(deps, ctx, { includeArchived: true })).total).toBe(3);
     expect((await listContacts(deps, ctxWith([]), {})).ok).toBe(false);
+  });
+});
+
+import { addContactRole, endContactRole, setContactChannels } from '../src/service';
+
+describe('contact channels and roles', () => {
+  it('replaces the whole channel set and keeps exactly one primary', async () => {
+    const { deps, ctx } = setup();
+    const c = unwrap(await createContact(deps, ctx, anna));
+    const withTwo = unwrap(await setContactChannels(deps, ctx, {
+      id: c.id,
+      channels: [
+        { kind: 'email', value: 'anna@example.org', isPrimary: true },
+        { kind: 'mobile', value: '0157 000', label: 'privat' },
+      ],
+    }));
+    expect(withTwo.channels).toHaveLength(2);
+    expect(withTwo.channels.filter((ch) => ch.isPrimary)).toHaveLength(1);
+
+    const replaced = unwrap(await setContactChannels(deps, ctx, { id: c.id, channels: [{ kind: 'phone', value: '030 000' }] }));
+    expect(replaced.channels.map((ch) => ch.kind)).toEqual(['phone']);
+    // Ohne ausdrückliche Angabe wird der erste Weg der primäre.
+    expect(replaced.channels[0]!.isPrimary).toBe(true);
+    expect(deps.db.select().from(schema.auditLog).all().some((e) => e.action === 'contacts.setChannels')).toBe(true);
+  });
+
+  it('refuses more than one primary channel', async () => {
+    const { deps, ctx } = setup();
+    const c = unwrap(await createContact(deps, ctx, anna));
+    const bad = await setContactChannels(deps, ctx, { id: c.id, channels: [{ kind: 'email', value: 'a@example.org', isPrimary: true }, { kind: 'phone', value: '1', isPrimary: true }] });
+    expect(bad.ok === false && bad.error.type === 'conflict' && bad.error.code === 'multiplePrimaryChannels').toBe(true);
+  });
+
+  it('adds a known role and refuses an unknown one', async () => {
+    const { deps, ctx } = setup();
+    const c = unwrap(await createContact(deps, ctx, anna));
+    const withRole = unwrap(await addContactRole(deps, ctx, { id: c.id, role: 'interested', since: '2026-01-01' }));
+    expect(withRole.roles.map((r) => [r.role, r.since, r.until])).toEqual([['interested', '2026-01-01', null]]);
+
+    const unknown = await addContactRole(deps, ctx, { id: c.id, role: 'erfunden', since: '2026-01-01' });
+    expect(unknown.ok === false && unknown.error.type === 'validation' && unknown.error.issues[0]?.path === 'role').toBe(true);
+  });
+
+  it('refuses the same role twice while it is still running', async () => {
+    const { deps, ctx } = setup();
+    const c = unwrap(await createContact(deps, ctx, anna));
+    unwrap(await addContactRole(deps, ctx, { id: c.id, role: 'interested', since: '2026-01-01' }));
+    const again = await addContactRole(deps, ctx, { id: c.id, role: 'interested', since: '2026-02-01' });
+    expect(again.ok === false && again.error.type === 'conflict' && again.error.code === 'roleAlreadyRunning').toBe(true);
+  });
+
+  it('ends a role by setting until, without deleting the row', async () => {
+    const { deps, ctx } = setup();
+    const c = unwrap(await createContact(deps, ctx, anna));
+    const added = unwrap(await addContactRole(deps, ctx, { id: c.id, role: 'interested', since: '2026-01-01' }));
+    const ended = unwrap(await endContactRole(deps, ctx, { roleId: added.roles[0]!.id, until: '2026-06-30' }));
+    expect(ended.roles).toHaveLength(1);
+    expect(ended.roles[0]!.until).toBe('2026-06-30');
+    expect(deps.db.select().from(schema.auditLog).all().some((e) => e.action === 'contacts.endRole')).toBe(true);
+
+    // Danach darf dieselbe Rolle wieder beginnen.
+    expect((await addContactRole(deps, ctx, { id: c.id, role: 'interested', since: '2026-07-01' })).ok).toBe(true);
+  });
+
+  it('refuses both without contacts.manage', async () => {
+    const { deps, ctx } = setup();
+    const c = unwrap(await createContact(deps, ctx, anna));
+    expect((await setContactChannels(deps, ctxWith(['contacts.view']), { id: c.id, channels: [] })).ok).toBe(false);
+    expect((await addContactRole(deps, ctxWith(['contacts.view']), { id: c.id, role: 'interested', since: '2026-01-01' })).ok).toBe(false);
   });
 });
