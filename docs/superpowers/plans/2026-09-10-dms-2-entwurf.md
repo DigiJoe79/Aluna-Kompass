@@ -55,16 +55,18 @@ Vor dem Entwurf braucht das Modul die Art — sie liefert Präfix und Fristklass
 `packages/modules/dms/tests/catalog.test.ts`:
 
 ```ts
-import { coreModule, createTestDeps } from '@kompass/core';
+import { coreModule, createTestDeps, ctxWith, insertUser } from '@kompass/core';
 import { contactsModule } from '@kompass/module-contacts';
 import { describe, expect, it } from 'vitest';
 import { dmsModule } from '../src/manifest';
 import { DEFAULT_DOCUMENT_TYPES, documentTypeFor, listDocumentTypes } from '../src/catalog';
 import { documentTypes } from '../src/schema';
 
-function setup() {
+const ALL_DMS = ['dms.view', 'dms.create', 'dms.file', 'dms.void', 'dms.deleteDraft', 'dms.manage'];
+
+function setup(permissions: readonly string[] = ALL_DMS) {
   const deps = createTestDeps({ manifests: [coreModule, contactsModule, dmsModule] });
-  return { deps, ctx: deps.testing.adminContext() };
+  return { deps, ctx: ctxWith(permissions, insertUser(deps, { name: 'Test', email: 'test@kompass.local' })) };
 }
 
 describe('document types', () => {
