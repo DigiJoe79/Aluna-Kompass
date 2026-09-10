@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { unwrap } from '../src/result';
 import { RETENTION_DEFAULT_MONTHS, retentionEnd } from '../src/retention/classes';
+import { retentionMonths } from '../src/retention/service';
+import { setSetting } from '../src/settings/service';
+import { createTestDeps, ctxWith } from '../src/testing';
 
 describe('retentionEnd', () => {
   it('starts the period at the end of the calendar year, not at the date itself', () => {
@@ -25,5 +29,16 @@ describe('retentionEnd', () => {
 
   it('names a default length for every class except permanent', () => {
     expect(RETENTION_DEFAULT_MONTHS).toEqual({ statutory10Y: 120, statutory6Y: 72, consent: 24 });
+  });
+});
+
+describe('retentionMonths', () => {
+  it('reads the configured length and treats permanent as never due', async () => {
+    const deps = createTestDeps();
+    expect(retentionMonths(deps, 'statutory10Y')).toBe(120);
+    expect(retentionMonths(deps, 'permanent')).toBeNull();
+
+    unwrap(await setSetting(deps, ctxWith(['settings.manage']), { key: 'retention.consent', value: 18 }));
+    expect(retentionMonths(deps, 'consent')).toBe(18);
   });
 });

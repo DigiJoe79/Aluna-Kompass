@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { SettingDefinition } from '../modules/manifest';
+import { RETENTION_DEFAULT_MONTHS } from '../retention/classes';
 import { DEFAULT_THEME } from '../themes/default-theme';
 import { themeSchema } from '../themes/tokens';
 
@@ -71,4 +72,22 @@ const system: SettingDefinition[] = [
   { key: 'system.lastExportAt', schema: z.string().nullable(), default: null, systemOnly: true },
 ];
 
-export const CORE_SETTINGS: SettingDefinition[] = [...organization, ...branding, ...themes, ...modules, ...documentsSettings, ...i18n, ...system];
+const months = z.number().int().min(1).max(1200);
+
+/** Aufbewahrungsfristen in Monaten. Die Klasse `permanent` hat keine Länge. */
+const retention: SettingDefinition[] = [
+  { key: 'retention.statutory10Y', schema: months, default: RETENTION_DEFAULT_MONTHS.statutory10Y },
+  { key: 'retention.statutory6Y', schema: months, default: RETENTION_DEFAULT_MONTHS.statutory6Y },
+  { key: 'retention.consent', schema: months, default: RETENTION_DEFAULT_MONTHS.consent },
+];
+
+export const CORE_SETTINGS: SettingDefinition[] = [
+  ...organization,
+  ...branding,
+  ...themes,
+  ...modules,
+  ...documentsSettings,
+  ...i18n,
+  ...system,
+  ...retention,
+];
