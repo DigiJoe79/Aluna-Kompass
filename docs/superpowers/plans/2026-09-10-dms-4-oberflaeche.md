@@ -186,6 +186,7 @@ git commit -m "feat(dms): invented example file for development"
 
 **Files:**
 - Create: `apps/kompass/src/app/(shell)/dms/page.tsx`, `document-list.tsx`, `actions.ts`
+- Modify: `packages/modules/dms/src/manifest.ts` (Navigationseintrag `{ key: 'dms.list', href: '/dms', icon: 'file', group: 'dms', permission: 'dms.view' }` eintragen — Plan 1 hat ihn bewusst weggelassen, solange die Route fehlte; `file` muss in der Icon-Whitelist in `apps/kompass/src/components/shell/sidebar.tsx` stehen)
 - Delete: `apps/kompass/src/app/(shell)/admin/documents/` bis auf `bases-panel.tsx` (dieses nach `admin/documents/page.tsx` als reine Basisübersicht zurechtstutzen)
 - Modify: `apps/kompass/messages/de.json`
 - Test: `apps/kompass/e2e/dms.spec.ts`
