@@ -93,7 +93,7 @@ export async function storeMediaInternal(deps: Deps, ctx: CallContext, input: St
   return deps.db.transaction((tx: DbOrTx) => {
     const id = newId();
     tx.insert(mediaAssets)
-      .values({ id, filename, mimeType: meta.mimeType, bytes: input.bytes.byteLength, width: meta.width, height: meta.height, uploadedByUserId: ctx.userId, createdAt: isoNow(deps.clock), folder })
+      .values({ id, filename, mimeType: meta.mimeType, bytes: input.bytes.byteLength, width: meta.width, height: meta.height, uploadedByUserId: ctx.userId, createdAt: isoNow(deps.clock), folder, checksum: meta.hash })
       .run();
     const record = tx.select().from(mediaAssets).where(eq(mediaAssets.id, id)).get() as MediaAssetRecord;
     recordAudit(tx, deps, ctx, { action: 'media.upload', entityType: 'mediaAsset', entityId: id, after: record, summary: `Datei ${filename} abgelegt` });

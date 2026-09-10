@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { auditLog } from '../src/db/schema';
 import { getMediaAsset, listMediaAssets, storeMediaAsset } from '../src/media/service';
@@ -17,6 +18,15 @@ describe('media service', () => {
     expect(record.filename).toMatch(/^vereins-logo-[0-9a-f]{12}\.png$/);
     expect(await deps.media.exists(record.filename)).toBe(true);
     expect(deps.db.select().from(auditLog).all().at(-1)).toMatchObject({ action: 'media.upload', entityType: 'mediaAsset', entityId: record.id });
+  });
+
+  it('speichert die vollständige SHA-256 der Datei', async () => {
+    const deps = createTestDeps();
+    const ctx = ctxWith(['media.upload'], insertUser(deps, {}));
+    const stored = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'bild.png', bytes: PNG, declaredMimeType: 'image/png' }));
+    const expected = createHash('sha256').update(PNG).digest('hex');
+    expect(stored.checksum).toBe(expected);
+    expect(stored.checksum).toHaveLength(64);
   });
 
   it('deduplicates identical content and accepts safe SVG', async () => {
