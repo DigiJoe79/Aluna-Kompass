@@ -15,6 +15,7 @@ import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { toActionState, type ActionState } from '@/lib/actions';
+import { textWorker } from '@/lib/background';
 import { requireSession } from '@/lib/request-context';
 
 const orNull = (value: FormDataEntryValue | null): string | null => {
@@ -90,6 +91,9 @@ export async function fileDocumentAction(id: string): Promise<ActionState> {
   if (!result.ok) {
     return toActionState(result, t);
   }
+
+  // Nicht warten: Der Upload ist fertig, das Lesen darf dauern.
+  textWorker()?.wake();
 
   revalidatePath(`/dms/${id}`);
   revalidatePath('/dms');
@@ -190,6 +194,9 @@ export async function receiveDocumentAction(_prev: ActionState, formData: FormDa
   if (!result.ok) {
     return toActionState(result, t);
   }
+
+  // Nicht warten: Der Upload ist fertig, das Lesen darf dauern.
+  textWorker()?.wake();
 
   revalidatePath('/dms');
   redirect(`/dms/${result.value.id}`);

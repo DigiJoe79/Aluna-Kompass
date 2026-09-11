@@ -75,7 +75,7 @@ export const documents = sqliteTable(
      * Zustand der Texterkennung — zugleich die Warteschlange (Entscheidung 24).
      * `null` für Entwürfe: Die haben keine Datei und also nichts zu lesen.
      *
-     * `running` unterscheidet „liegt unter dem Werkzeug" von „wartet". Was nach
+     * `running` unterscheidet „liegt unter dem Werkzeug“ von „wartet“. Was nach
      * einem Neustart noch darauf steht, war ein Absturz; der Worker räumt es auf.
      */
     textStatus: text('text_status', { enum: ['pending', 'running', 'done', 'failed', 'unavailable'] }),
