@@ -82,6 +82,9 @@ export async function updateDraftAction(id: string, _prev: ActionState, formData
 
   revalidatePath(`/dms/${id}`);
   revalidatePath('/dms');
+  // Beim Schreiben mit Vorschau daneben führt kein Weg weg: Gespeichert wird,
+  // damit das Blatt rechts neu entsteht.
+  if (formData.get('stay')) return { status: 'success', data: { savedAt: deps.clock.now().toISOString() } };
   redirect(`/dms/${id}`);
 }
 

@@ -24,8 +24,11 @@ export function FormActionBar({
   cancel,
   sticky = true,
   saveLabel,
+  saveLabelChanged,
   saveDisabled,
   count,
+  baseline,
+  onChangedCount,
   onDiscard,
 }: {
   /**
@@ -46,6 +49,11 @@ export function FormActionBar({
   sticky?: boolean;
   saveLabel?: string;
   /**
+   * Beschriftung, solange etwas geändert ist. Der Knopf sagt dann, was er
+   * wirklich tut — „Speichern und Vorschau aktualisieren“ statt „Speichern“.
+   */
+  saveLabelChanged?: string;
+  /**
    * Für Formulare, denen noch etwas fehlt, ohne das ein Absenden nichts
    * bewirken kann — die Akte ohne Datei etwa.
    */
@@ -56,6 +64,17 @@ export function FormActionBar({
    * viel geändert wurde. Sie kennen ihren Stand selbst und geben ihn mit.
    */
   count?: number;
+  /**
+   * Zählt neu ab hier. Formulare, die auf ihrem Bildschirm bleiben, erhöhen den
+   * Wert nach jedem erfolgreichen Speichern — sonst stünde dort für immer
+   * „geändert“, obwohl längst alles gespeichert ist.
+   */
+  baseline?: number;
+  /**
+   * Für Bildschirme, die vom Zustand des Formulars abhängen — die Briefvorschau
+   * etwa, die veraltet, sobald jemand tippt.
+   */
+  onChangedCount?: (count: number) => void;
   /**
    * Formulare mit eigenem Zustand geben ihr Zurücksetzen selbst mit. Ohne das
    * wird die Seite neu geladen — `form.reset()` allein trägt nicht weit genug:
@@ -69,6 +88,9 @@ export function FormActionBar({
   const initial = useRef<Snapshot | null>(null);
   const [fromDom, setFromDom] = useState(0);
   const [hasRequired, setHasRequired] = useState(false);
+  // Als Ref, damit ein neuer Rückruf die Horcher nicht jedes Mal neu hängt.
+  const onChanged = useRef(onChangedCount);
+  onChanged.current = onChangedCount;
   const changed = count ?? fromDom;
 
   // Die Legende erklärt das Sternchen an den Feldern — nur dort, wo eines steht.
@@ -83,7 +105,18 @@ export function FormActionBar({
 
     const read = () => snapshotOf(new FormData(form));
     initial.current = read();
-    const recount = () => setFromDom(countChanged(initial.current ?? new Map(), read()));
+    const recount = () => {
+      const next = countChanged(initial.current ?? new Map(), read());
+      setFromDom(next);
+      // Erst nach dem Ereignis melden: Dieser Horcher hängt am Formular und
+      // läuft vor Reacts eigenem.
+      queueMicrotask(() => onChanged.current?.(next));
+    };
+
+    // Der neue Stand ist der Stand: Nach einem Speichern, das auf dem
+    // Bildschirm bleibt, zählt die Leiste bei null weiter — und sagt es auch
+    // denen, die davon abhängen.
+    recount();
 
     // `input` deckt das Tippen ab, `change` die Auswahlfelder und Haken.
     form.addEventListener('input', recount);
@@ -93,7 +126,7 @@ export function FormActionBar({
       form.removeEventListener('input', recount);
       form.removeEventListener('change', recount);
     };
-  }, [count]);
+  }, [count, baseline]);
 
   return (
     <div
@@ -125,7 +158,9 @@ export function FormActionBar({
         >
           {t('discard')}
         </Button>
-        <SubmitButton disabled={saveDisabled}>{saveLabel ?? t('save')}</SubmitButton>
+        <SubmitButton disabled={saveDisabled}>
+          {(changed > 0 ? saveLabelChanged : undefined) ?? saveLabel ?? t('save')}
+        </SubmitButton>
       </div>
     </div>
   );

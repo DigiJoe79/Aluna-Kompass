@@ -3,9 +3,8 @@ import { displayName, listContacts } from '@kompass/module-contacts';
 import { defaultTypeKey, listDocumentFolders, listDocumentTypes } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
-import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
-import { DraftForm } from './draft-form';
+import { DraftScreen } from './draft-screen';
 
 export default async function NewDraftPage() {
   const { deps, ctx } = await requireSession();
@@ -29,17 +28,15 @@ export default async function NewDraftPage() {
     : [];
 
   return (
-    <>
-      <PageHeader title={t('newDraft')} description={t('newDraftDescription')} back={{ href: '/dms', label: tCommon('backToList') }} />
-      <div className="max-w-[720px]">
-        <DraftForm
-          types={types.map((type) => ({ key: type.key, label: type.label }))}
-          folders={folders}
-          contacts={contacts}
-          today={deps.clock.now().toISOString().slice(0, 10)}
-          defaultTypeKey={defaultTypeKey(deps, 'outgoing')}
-        />
-      </div>
-    </>
+    <DraftScreen
+      title={t('newDraft')}
+      description={t('newDraftDescription')}
+      back={{ href: '/dms', label: tCommon('backToList') }}
+      types={types.map((type) => ({ key: type.key, label: type.label }))}
+      folders={folders}
+      contacts={contacts}
+      today={deps.clock.now().toISOString().slice(0, 10)}
+      defaultTypeKey={defaultTypeKey(deps, 'outgoing')}
+    />
   );
 }

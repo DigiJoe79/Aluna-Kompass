@@ -123,12 +123,42 @@ test.describe('dms', () => {
 
     await page.getByLabel('Betreff').fill('Einladung zur Versammlung');
     await page.getByLabel('Text').fill('Zweiter Wurf.');
-    await page.getByRole('button', { name: 'Änderungen speichern' }).click();
+    // Der Knopf sagt beim Schreiben mit Vorschau, was er wirklich tut.
+    await page.getByRole('button', { name: 'Speichern und Vorschau aktualisieren' }).click();
+    await expect(page.getByText(/Vorschau aktuell/)).toBeVisible();
 
+    await page.getByRole('link', { name: 'Zurück zum Dokument' }).click();
     await expect(page.getByRole('heading', { name: 'Einladung zur Versammlung' })).toBeVisible();
     // Immer noch ein Entwurf: keine Nummer, nichts festgeschrieben.
     await expect(page.getByText('Entwurf', { exact: true })).toBeVisible();
     await expect(page.getByText(/BRF-\d{4}-\d{3}/)).toHaveCount(0);
+  });
+
+  test('zeigt den Entwurf neben dem Papier, auf dem er landet', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/new');
+
+    // Solange nichts gespeichert ist, gibt es nichts zu zeigen — und die
+    // Vorschau sagt das, statt ein leeres Blatt zu behaupten.
+    await expect(page.getByText('Die Vorschau entsteht beim ersten Speichern.')).toBeVisible();
+
+    await page.getByLabel('Betreff').fill('Einladung');
+    await page.getByLabel('Text').fill('Sehr geehrte Mitglieder,');
+    await page.getByRole('button', { name: 'Entwurf speichern' }).click();
+    await page.getByRole('link', { name: 'Bearbeiten' }).click();
+
+    await expect(page.getByText(/Vorschau aktuell/)).toBeVisible();
+    await expect(page.locator('iframe')).toBeVisible();
+
+    // Eine Änderung veraltet die Vorschau, und der Knopf sagt, was er tun wird.
+    await page.getByLabel('Betreff').fill('Einladung zur Versammlung');
+    await expect(page.getByText(/Vorschau veraltet/)).toBeVisible();
+    await page.getByRole('button', { name: 'Speichern und Vorschau aktualisieren' }).click();
+
+    // Gespeichert wird, ohne den Bildschirm zu verlassen.
+    await expect(page.getByText(/Vorschau aktuell/)).toBeVisible();
+    await expect(page).toHaveURL(/\/edit$/);
+    await expect(page.getByLabel('Betreff')).toHaveValue('Einladung zur Versammlung');
   });
 
   test('lässt das Datum des Schreibens setzen und später ausbessern', async ({ page }) => {
@@ -143,7 +173,9 @@ test.describe('dms', () => {
     await page.getByRole('link', { name: 'Bearbeiten' }).click();
     await expect(page.getByLabel('Datum auf dem Dokument')).toHaveValue('2026-04-01');
     await page.getByLabel('Datum auf dem Dokument').fill('2026-05-02');
-    await page.getByRole('button', { name: 'Änderungen speichern' }).click();
+    await page.getByRole('button', { name: 'Speichern und Vorschau aktualisieren' }).click();
+    await expect(page.getByText(/Vorschau aktuell/)).toBeVisible();
+    await page.getByRole('link', { name: 'Zurück zum Dokument' }).click();
     await expect(page.getByText('2026-05-02')).toBeVisible();
   });
 

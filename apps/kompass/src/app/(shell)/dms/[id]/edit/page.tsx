@@ -4,9 +4,8 @@ import { defaultTypeKey, getDocumentRecord, listDocumentFolders, listDocumentTyp
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
-import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
-import { DraftForm } from '../../new/draft-form';
+import { DraftScreen } from '../../new/draft-screen';
 
 export default async function EditDraftPage(props: { params: Promise<{ id: string }> }) {
   const { deps, ctx } = await requireSession();
@@ -36,26 +35,25 @@ export default async function EditDraftPage(props: { params: Promise<{ id: strin
   const recipient = doc.links.find((link) => link.role === 'recipient' && link.entityType === 'contact');
 
   return (
-    <>
-      <PageHeader title={t('editDraft')} description={t('editDraftDescription')} back={{ href: `/dms/${id}`, label: t('backToDocument') }} />
-      <div className="max-w-[720px]">
-        <DraftForm
-          types={types.map((type) => ({ key: type.key, label: type.label }))}
-          folders={folders}
-          contacts={contacts}
-          today={deps.clock.now().toISOString().slice(0, 10)}
-          defaultTypeKey={defaultTypeKey(deps, 'outgoing')}
-          draft={{
-            id: doc.id,
-            subject: doc.subject,
-            body: doc.draftBody ?? '',
-            typeKey: doc.typeKey,
-            documentDate: doc.documentDate,
-            folder: doc.folder,
-            recipientId: recipient?.entityId ?? null,
-          }}
-        />
-      </div>
-    </>
+    <DraftScreen
+      title={t('editDraft')}
+      description={t('editDraftDescription')}
+      back={{ href: `/dms/${id}`, label: t('backToDocument') }}
+      types={types.map((type) => ({ key: type.key, label: type.label }))}
+      folders={folders}
+      contacts={contacts}
+      today={deps.clock.now().toISOString().slice(0, 10)}
+      defaultTypeKey={defaultTypeKey(deps, 'outgoing')}
+      draft={{
+        id: doc.id,
+        subject: doc.subject,
+        body: doc.draftBody ?? '',
+        typeKey: doc.typeKey,
+        documentDate: doc.documentDate,
+        folder: doc.folder,
+        recipientId: recipient?.entityId ?? null,
+        savedAt: doc.updatedAt,
+      }}
+    />
   );
 }

@@ -1410,6 +1410,18 @@
     "saveChanges": "Änderungen speichern",
     "typeFixedHint": "Die Dokumentart steht seit dem Anlegen fest — sie bestimmt Nummernkreis und Aufbewahrung.",
     "preview": "Vorschau",
+    "draft": {
+      "saveAndPreview": "Speichern und Vorschau aktualisieren",
+      "tabForm": "Formular"
+    },
+    "previewPane": {
+      "none": "Die Vorschau entsteht beim ersten Speichern.",
+      "current": "Vorschau aktuell — gespeichert {time}",
+      "stale": "Vorschau veraltet — Stand von {time}",
+      "rendering": "Vorschau wird gerendert …",
+      "failed": "Vorschau konnte nicht erzeugt werden",
+      "retry": "Erneut versuchen"
+    },
     "file": "Festschreiben",
     "fileConfirmTitle": "Dokument festschreiben",
     "fileConfirmDescription": "Beim Festschreiben wird dem Dokument eine fortlaufende Nummer zugewiesen und der Inhalt wird unveränderlich eingefroren.",

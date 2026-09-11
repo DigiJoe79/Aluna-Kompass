@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { FieldError } from '@/components/forms/field-error';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Input } from '@/components/ui/input';
@@ -16,14 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
  * Entwurf; mit `draft` wird der vorhandene geändert — die Dokumentart bleibt
  * dabei stehen, weil an ihr Nummernkreis und Aufbewahrung hängen.
  */
-export function DraftForm({
-  types,
-  folders,
-  contacts,
-  today,
-  defaultTypeKey,
-  draft,
-}: {
+export interface DraftFormProps {
   types: { key: string; label: string }[];
   folders: string[];
   contacts: { id: string; name: string }[];
@@ -31,8 +24,31 @@ export function DraftForm({
   today: string;
   /** Die eingestellte Vorgabeart für den Ausgang, keine Konstante im Code. */
   defaultTypeKey: string;
-  draft?: { id: string; subject: string; body: string; typeKey: string; documentDate: string; folder: string | null; recipientId: string | null };
-}) {
+  draft?: {
+    id: string;
+    subject: string;
+    body: string;
+    typeKey: string;
+    documentDate: string;
+    folder: string | null;
+    recipientId: string | null;
+    /** Wann dieser Stand gespeichert wurde — die Vorschau nennt die Uhrzeit. */
+    savedAt: string;
+  };
+  onChangedCount?: (count: number) => void;
+  onSaved?: (at: Date) => void;
+}
+
+export function DraftForm({
+  types,
+  folders,
+  contacts,
+  today,
+  defaultTypeKey,
+  draft,
+  onChangedCount,
+  onSaved,
+}: DraftFormProps) {
   const t = useTranslations('dms');
   const tCommon = useTranslations('common');
   const [state, formAction] = useActionState(
@@ -52,8 +68,21 @@ export function DraftForm({
 
   const errors = state.status === 'error' ? state.fieldErrors : {};
 
+  // Nach dem Speichern zählt die Fußleiste ab dem neuen Stand.
+  const [saves, setSaves] = useState(0);
+
+  useEffect(() => {
+    if (state.status !== 'success') return;
+    setSaves((n) => n + 1);
+    const at = (state.data as { savedAt?: string } | undefined)?.savedAt;
+    onSaved?.(at ? new Date(at) : new Date());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
+
   return (
     <form action={formAction} className="space-y-4 rounded-md border border-line bg-surface p-6">
+      {/* Gespeichert wird hier, nicht anderswo: Die Vorschau steht daneben. */}
+      {draft ? <input type="hidden" name="stay" value="1" /> : null}
       {state.status === 'error' && Object.keys(errors).length === 0 ? (
         <div role="alert" className="rounded-md bg-error-bg p-3 text-[13px] text-error">{state.message}</div>
       ) : null}
@@ -151,6 +180,9 @@ export function DraftForm({
       <FormActionBar
         back={{ href: draft ? `/dms/${draft.id}` : '/dms', label: draft ? t('backToDocument') : tCommon('backToList') }}
         saveLabel={draft ? t('saveChanges') : t('saveDraft')}
+        saveLabelChanged={draft ? t('draft.saveAndPreview') : undefined}
+        baseline={saves}
+        onChangedCount={onChangedCount}
       />
     </form>
   );

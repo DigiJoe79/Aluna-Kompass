@@ -61,6 +61,8 @@
   --color-tooltip: var(--tooltip-bg);
   --color-tooltip-ink: var(--tooltip-ink);
   --color-focus: var(--focus-ring);
+  /* Papier ist weiss, auch im Dunkelmodus — es ist ja Papier. */
+  --color-paper: white;
   --color-overlay: var(--overlay);
 
   /* shadcn-Namen (von den generierten Komponenten erwartet) */
