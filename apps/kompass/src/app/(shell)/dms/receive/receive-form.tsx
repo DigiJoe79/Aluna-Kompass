@@ -13,17 +13,20 @@ export function ReceiveForm({
   types,
   folders,
   contacts,
+  defaultTypeKey,
 }: {
   types: { key: string; label: string }[];
   folders: string[];
   contacts: { id: string; name: string }[];
+  /** Die eingestellte Vorgabeart für den Eingang, keine Konstante im Code. */
+  defaultTypeKey: string;
 }) {
   const t = useTranslations('dms');
   const [state, formAction, isPending] = useActionState(receiveDocumentAction, idleState);
 
   const [documentDate, setDocumentDate] = useState('');
   const [subject, setSubject] = useState('');
-  const [typeKey, setTypeKey] = useState(types[0]?.key ?? 'authority');
+  const [typeKey, setTypeKey] = useState(defaultTypeKey);
   const [folder, setFolder] = useState('');
   const [senderId, setSenderId] = useState('');
 

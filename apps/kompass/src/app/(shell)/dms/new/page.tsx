@@ -1,6 +1,6 @@
 import { requirePermission } from '@kompass/core';
 import { displayName, listContacts } from '@kompass/module-contacts';
-import { listDocumentFolders, listDocumentTypes } from '@kompass/module-dms';
+import { defaultTypeKey, listDocumentFolders, listDocumentTypes } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
@@ -36,6 +36,7 @@ export default async function NewDraftPage() {
           folders={folders}
           contacts={contacts}
           today={deps.clock.now().toISOString().slice(0, 10)}
+          defaultTypeKey={defaultTypeKey(deps, 'outgoing')}
         />
       </div>
     </>

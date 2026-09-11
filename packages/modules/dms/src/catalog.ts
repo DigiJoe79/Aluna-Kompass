@@ -6,6 +6,7 @@ import {
   notFound,
   ok,
   parseFolderPath,
+  readSetting,
   recordAudit,
   requirePermission,
   validate,
@@ -27,10 +28,12 @@ import {
 } from './schema';
 
 /**
- * Generischer Startsatz. Bewusst klein und ohne Vereinsspezifika (Prinzip 1) —
- * ein Verein legt seine eigenen Arten an.
+ * **Beispiele für die Entwicklung**, nicht das, was das Produkt mitbringt.
+ * Ausgeliefert werden nur die beiden unklassifizierten Arten aus `install.ts`;
+ * Nummernkreise und Fristen sind Entscheidungen des Vereins. Diese Liste füllt
+ * den Seed und die Tests, damit beide mit Vielfalt arbeiten.
  */
-export const DEFAULT_DOCUMENT_TYPES = [
+export const EXAMPLE_DOCUMENT_TYPES = [
   { key: 'letter', label: 'Brief', prefix: 'BRF', defaultDirection: 'outgoing', retentionClass: 'statutory6Y', defaultFolder: null, isActive: true },
   { key: 'authority', label: 'Behördenschreiben', prefix: 'BEH', defaultDirection: 'incoming', retentionClass: 'statutory10Y', defaultFolder: null, isActive: true },
   { key: 'contract', label: 'Vertrag', prefix: 'VER', defaultDirection: 'incoming', retentionClass: 'statutory10Y', defaultFolder: null, isActive: true },
@@ -40,6 +43,15 @@ export const DEFAULT_DOCUMENT_TYPES = [
 
 export function documentTypeFor(db: DbOrTx, key: string): DocumentTypeRow | null {
   return db.select().from(documentTypes).where(eq(documentTypes.key, key)).get() ?? null;
+}
+
+/** Die Vorgabeart je Richtung — woraus die Formulare ihre Vorbelegung nehmen. */
+export function defaultTypeKey(deps: Deps, direction: 'incoming' | 'outgoing'): string {
+  return readSetting<string>(deps, direction === 'incoming' ? 'dms.defaultTypeIncoming' : 'dms.defaultTypeOutgoing');
+}
+
+export function isDefaultType(deps: Deps, key: string): boolean {
+  return defaultTypeKey(deps, 'incoming') === key || defaultTypeKey(deps, 'outgoing') === key;
 }
 
 export const documentTypeListSchema = z.object({ includeInactive: z.boolean().default(false) });
@@ -212,6 +224,12 @@ export async function updateDocumentType(
 
   const existing = documentTypeFor(deps.db, parsed.value.key);
   if (!existing) return notFound('documentType', parsed.value.key);
+
+  // Eine Art, auf die eine Vorgabe zeigt, darf nicht verschwinden — sonst steht
+  // man beim nächsten Entwurf wieder vor einer leeren Auswahl.
+  if (parsed.value.isActive === false && isDefaultType(deps, existing.key)) {
+    return conflict('documentTypeIsDefault', `Dokumentart „${existing.label}“ ist als Vorgabe eingetragen`);
+  }
 
   const updates: Partial<typeof documentTypes.$inferInsert> = {};
   if (parsed.value.label !== undefined) updates.label = parsed.value.label;

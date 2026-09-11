@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createDocumentRule,
   createDocumentType,
-  DEFAULT_DOCUMENT_TYPES,
+  EXAMPLE_DOCUMENT_TYPES,
   deleteDocumentRule,
   documentTypeFor,
   listDocumentRules,
@@ -28,7 +28,7 @@ describe('document types', () => {
   });
 
   it('hat für jede Vorgabeart ein dreistelliges Präfix', () => {
-    for (const type of DEFAULT_DOCUMENT_TYPES) expect(type.prefix).toMatch(/^[A-Z]{3}$/);
+    for (const type of EXAMPLE_DOCUMENT_TYPES) expect(type.prefix).toMatch(/^[A-Z]{3}$/);
   });
 
   it('legt eine Art mit dreistelligem Präfix an', async () => {

@@ -34,6 +34,7 @@ test.describe('dms', () => {
     await page.goto('/dms/new');
     await page.getByLabel('Betreff').fill('Einladung zur Mitgliederversammlung');
     await page.getByLabel('Text').fill('Sehr geehrte Mitglieder,\n\nhiermit laden wir ein.');
+    await page.getByLabel('Dokumentart').selectOption('letter');
     await page.getByRole('button', { name: 'Entwurf speichern' }).click();
     await expect(page.getByText('Entwurf', { exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Vorschau' })).toBeVisible();
@@ -47,6 +48,7 @@ test.describe('dms', () => {
     await page.goto('/dms/receive');
     await page.getByLabel('Datei').setInputFiles({ name: '2026-03-14 Behoerde.pdf', mimeType: 'application/pdf', buffer: samplePdf() });
     await expect(page.getByLabel('Datum auf dem Dokument')).toHaveValue('2026-03-14');
+    await page.getByLabel('Dokumentart').selectOption('authority');
     await page.getByLabel('Betreff').fill('Eingegangenes Schreiben');
     await page.getByRole('button', { name: 'Ablegen' }).click();
     await expect(page.getByText(/BEH-\d{4}-\d{3}/)).toBeVisible();
@@ -115,6 +117,7 @@ test.describe('dms', () => {
     await page.goto('/dms/new');
     await page.getByLabel('Betreff').fill('Fest und fertig');
     await page.getByLabel('Text').fill('Text.');
+    await page.getByLabel('Dokumentart').selectOption('letter');
     await page.getByRole('button', { name: 'Entwurf speichern' }).click();
     await page.getByRole('button', { name: 'Festschreiben' }).click();
     await page.getByRole('button', { name: 'Festschreiben bestätigen' }).click();

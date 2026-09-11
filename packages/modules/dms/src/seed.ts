@@ -1,7 +1,7 @@
 import { isoNow, newId, unwrap, type CallContext, type Deps } from '@kompass/core';
 import { contacts } from '@kompass/module-contacts';
 import { eq } from 'drizzle-orm';
-import { DEFAULT_DOCUMENT_TYPES } from './catalog';
+import { EXAMPLE_DOCUMENT_TYPES } from './catalog';
 import { createDraft, fileDocument } from './drafts';
 import { receiveDocument } from './incoming';
 import { documentFolders, documentRules, documents, documentTypes } from './schema';
@@ -10,11 +10,14 @@ export async function seedDms(deps: Deps, ctx: CallContext): Promise<void> {
   const existing = deps.db.select({ id: documents.id }).from(documents).all();
   if (existing.length > 0) return;
 
-  const typesCount = deps.db.select().from(documentTypes).all().length;
-  if (typesCount === 0) {
-    for (const [index, type] of DEFAULT_DOCUMENT_TYPES.entries()) {
-      deps.db.insert(documentTypes).values({ ...type, sortOrder: index }).run();
-    }
+  // Die beiden unklassifizierten Arten stehen schon: `installDms` hat sie beim
+  // Einschalten angelegt. Hier kommen nur die Beispiele dazu, die noch fehlen —
+  // je Schlüssel, nicht alles oder nichts.
+  const existingKeys = new Set(deps.db.select({ key: documentTypes.key }).from(documentTypes).all().map((row) => row.key));
+  let sortOrder = existingKeys.size;
+  for (const type of EXAMPLE_DOCUMENT_TYPES) {
+    if (existingKeys.has(type.key)) continue;
+    deps.db.insert(documentTypes).values({ ...type, sortOrder: sortOrder += 1 }).run();
   }
 
   const folders = ['behoerden', 'behoerden/finanzamt', 'vertraege', 'protokolle'];

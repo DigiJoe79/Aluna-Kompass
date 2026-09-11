@@ -2,14 +2,14 @@ import { coreModule, schema, type CallContext, type Deps } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { contactsModule } from '@kompass/module-contacts';
 import { dmsModule } from '../src/manifest';
-import { DEFAULT_DOCUMENT_TYPES } from '../src/catalog';
+import { EXAMPLE_DOCUMENT_TYPES } from '../src/catalog';
 import { documentTypes } from '../src/schema';
 
 /** `deps` und `ctx` mit installiertem dms-Modul und dem Startsatz an Dokumentarten. */
 export const ALL_DMS = ['dms.view', 'dms.create', 'dms.file', 'dms.void', 'dms.deleteDraft', 'dms.manage'];
 
 export function seedTypes(deps: Deps) {
-  for (const [index, type] of DEFAULT_DOCUMENT_TYPES.entries()) {
+  for (const [index, type] of EXAMPLE_DOCUMENT_TYPES.entries()) {
     deps.db.insert(documentTypes).values({ ...type, sortOrder: index }).run();
   }
 }

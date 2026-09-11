@@ -2,6 +2,7 @@ export * from './catalog';
 export * from './classification';
 export * from './drafts';
 export * from './incoming';
+export * from './install';
 export * from './manifest';
 export * from './mcp-tools';
 export * from './recipients';

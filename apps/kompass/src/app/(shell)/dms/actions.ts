@@ -2,6 +2,7 @@
 
 import {
   createDraft,
+  defaultTypeKey,
   deleteDocument,
   deleteDraft,
   fileDocument,
@@ -27,7 +28,7 @@ export async function createDraftAction(_prev: ActionState, formData: FormData):
 
   const subject = String(formData.get('subject') ?? '').trim();
   const body = String(formData.get('body') ?? '');
-  const typeKey = String(formData.get('typeKey') ?? 'letter');
+  const typeKey = orNull(formData.get('typeKey')) ?? defaultTypeKey(deps, 'outgoing');
   const folder = orNull(formData.get('folder'));
   const documentDate = orNull(formData.get('documentDate')) ?? undefined;
   const recipientId = orNull(formData.get('recipientId'));
@@ -166,7 +167,7 @@ export async function receiveDocumentAction(_prev: ActionState, formData: FormDa
 
   const bytes = new Uint8Array(await file.arrayBuffer());
   const filename = file.name;
-  const typeKey = String(formData.get('typeKey') ?? 'authority');
+  const typeKey = orNull(formData.get('typeKey')) ?? defaultTypeKey(deps, 'incoming');
   const subject = String(formData.get('subject') ?? '').trim();
   const documentDate = String(formData.get('documentDate') ?? '').trim();
   const folder = orNull(formData.get('folder'));

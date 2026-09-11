@@ -37,6 +37,10 @@ export async function seedDevelopment(deps: Deps): Promise<{ adminEmail: string;
   deps.db.transaction((tx) => {
     writeSettingInternal(tx, deps, ctx, 'modules.enabled', installed, 'seed.modules');
     writeSettingInternal(tx, deps, ctx, 'i18n.locales', ['de', 'en'], 'seed.locales');
+    // Derselbe Schritt, den `setModuleEnabled` beim Einschalten geht. Ohne ihn
+    // stünde die Entwicklung auf einem anderen Zustand als eine echte
+    // Installation — und genau solche Unterschiede fallen zuletzt auf.
+    for (const manifest of deps.registry.manifests) manifest.install?.(tx, deps, ctx);
   });
 
   const roleIds = new Map<string, string>();

@@ -19,6 +19,7 @@ export function DraftForm({
   folders,
   contacts,
   today,
+  defaultTypeKey,
   draft,
 }: {
   types: { key: string; label: string }[];
@@ -26,6 +27,8 @@ export function DraftForm({
   contacts: { id: string; name: string }[];
   /** Vorbelegung beim Anlegen, aus `deps.clock` der Seite — nicht aus der Uhr des Browsers. */
   today: string;
+  /** Die eingestellte Vorgabeart für den Ausgang, keine Konstante im Code. */
+  defaultTypeKey: string;
   draft?: { id: string; subject: string; body: string; typeKey: string; documentDate: string; folder: string | null; recipientId: string | null };
 }) {
   const t = useTranslations('dms');
@@ -78,7 +81,7 @@ export function DraftForm({
           <select
             id="typeKey"
             name="typeKey"
-            defaultValue={draft?.typeKey ?? 'letter'}
+            defaultValue={draft?.typeKey ?? defaultTypeKey}
             disabled={Boolean(draft)}
             className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs disabled:opacity-60"
           >

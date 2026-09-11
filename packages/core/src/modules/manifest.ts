@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import type { CallContext } from '../context';
+import type { DbOrTx } from '../db/client';
 import type { Deps } from '../deps';
 import type { Result } from '../result';
 import { RETENTION_CLASSES, type RetentionClass } from '../retention/classes';
@@ -174,6 +175,16 @@ export interface ModuleManifest {
   contactRoles?: readonly ContactRoleDefinition[];
   /** Beispieldaten für die Entwicklungsumgebung. */
   seed?: (deps: Deps, ctx: CallContext) => Promise<void>;
+  /**
+   * Was dieses Modul braucht, um überhaupt benutzbar zu sein — Stammdaten, die
+   * es ohne Konfiguration nicht gäbe. Läuft beim **Einschalten** des Moduls, in
+   * derselben Transaktion, und gilt in jeder Umgebung; `seed` dagegen erfindet
+   * Beispiele und läuft nur in `development`.
+   *
+   * Muss idempotent sein: Aus- und wieder Einschalten darf nichts verdoppeln.
+   * Bewusst synchron, damit der Schritt mit dem Einschalten steht und fällt.
+   */
+  install?: (tx: DbOrTx, deps: Deps, ctx: CallContext) => void;
 }
 
 /** Die MCP-Werkzeuge eines Moduls, egal ob als feste Liste oder als Funktion von `deps` deklariert. */
