@@ -11,6 +11,7 @@ import {
   suggestClassification,
   updateDraft,
   voidDocument,
+  type Suggestion,
 } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
@@ -150,7 +151,7 @@ export async function deleteDocumentAction(id: string): Promise<ActionState> {
 export async function suggestClassificationAction(
   filename: string,
   senderId?: string,
-): Promise<{ typeKey: string | null; folder: string | null; documentDate: string | null } | null> {
+): Promise<Suggestion | null> {
   const { deps, ctx } = await requireSession();
   const res = await suggestClassification(deps, ctx, {
     filename,

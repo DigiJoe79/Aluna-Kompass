@@ -242,6 +242,28 @@ test.describe('dms', () => {
     expect(download.suggestedFilename()).toMatch(/\.pdf$/);
   });
 
+  test('sagt am vorbelegten Feld, woher der Vorschlag kommt', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/receive');
+    const dialog = receiveDialog(page);
+
+    await dialog.getByLabel('Datei').setInputFiles({
+      name: '2026-03-14 Finanzamt Bescheid.pdf',
+      mimeType: 'application/pdf',
+      buffer: samplePdf(),
+    });
+
+    await expect(dialog.getByLabel('Datum auf dem Dokument')).toHaveValue('2026-03-14');
+    await expect(dialog.getByText('aus dem Dateinamen')).toBeVisible();
+    // Die Regel hat Art und Ordner belegt; beide sagen es.
+    await expect(dialog.getByText('Regel: „Finanzamt“ im Namen')).toHaveCount(2);
+
+    // Wer das Feld anfasst, hat es selbst in der Hand — die Herkunft verschwindet.
+    await dialog.getByLabel('Datum auf dem Dokument').fill('2026-04-01');
+    await expect(dialog.getByText('aus dem Dateinamen')).toHaveCount(0);
+    await expect(dialog.getByText('Regel: „Finanzamt“ im Namen')).toHaveCount(2);
+  });
+
   test('legt Post in einem Dialog über der Liste ab, statt die Liste zu verlassen', async ({ page }) => {
     await login(page);
     await page.goto('/dms');

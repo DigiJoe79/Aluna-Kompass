@@ -1385,6 +1385,13 @@
       "view": "Ansehen",
       "replace": "Ersetzen"
     },
+    "suggest": {
+      "fromFilename": "aus dem Dateinamen",
+      "fromRuleFilename": "Regel: „{term}“ im Namen",
+      "fromRuleSender": "Regel: „{term}“ im Absender",
+      "fromSender": "wie zuletzt bei diesem Absender",
+      "fromDrop": "hierauf gezogen"
+    },
     "saveDraft": "Entwurf speichern",
     "edit": "Bearbeiten",
     "editDraft": "Entwurf bearbeiten",

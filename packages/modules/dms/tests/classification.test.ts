@@ -44,6 +44,10 @@ describe('suggestClassification', () => {
     expect(suggestion.value.folder).toBe('behoerden');
     expect(suggestion.value.documentDate).toBe('2026-03-14');
     expect(suggestion.value.matchedRuleId).toBe(rule.value.id);
+    // Woher der Vorschlag kommt, gehört zum Vorschlag: Die Oberfläche soll es
+    // am Feld sagen können, ohne die Regeln noch einmal zu lesen.
+    expect(suggestion.value.matchedRuleField).toBe('filename');
+    expect(suggestion.value.matchedRuleContains).toBe('Finanzamt');
   });
 
   it('schlägt die zuletzt für diesen Absender benutzte Art vor', async () => {

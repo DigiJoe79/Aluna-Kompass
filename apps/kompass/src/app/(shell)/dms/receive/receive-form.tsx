@@ -1,15 +1,19 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useActionState, useState } from 'react';
+import { useActionState, useRef, useState } from 'react';
 import { FieldError } from '@/components/forms/field-error';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { idleState } from '@/lib/actions';
 import { receiveDocumentAction, suggestClassificationAction } from '../actions';
-import { Select } from '@/components/ui/select';
 import { FileDropzone } from './file-dropzone';
+import { SuggestionFlag } from './suggestion-flag';
+
+/** Die Felder, die die Einsortierregeln vorbelegen können. */
+type Suggested = 'documentDate' | 'typeKey' | 'folder';
 
 export function ReceiveForm({
   types,
@@ -36,129 +40,178 @@ export function ReceiveForm({
   const [senderId, setSenderId] = useState('');
   const [hasFile, setHasFile] = useState(false);
 
+  /**
+   * Woher ein Feld seinen Wert hat. Steht nur an Feldern, die der Nutzer noch
+   * nicht angefasst hat — was er selbst getippt hat, braucht keine Herkunft.
+   */
+  const [origin, setOrigin] = useState<Partial<Record<Suggested, string>>>({});
+  const touched = useRef(new Set<Suggested>());
+
   const errors = state.status === 'error' ? state.fieldErrors : {};
+
+  /** Ein Feld, das jemand angefasst hat, gehört ihm. */
+  const touch = (field: Suggested) => {
+    touched.current.add(field);
+    setOrigin((prev) => {
+      if (!(field in prev)) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const apply = (
+    suggestion: Awaited<ReturnType<typeof suggestClassificationAction>>,
+    sender: string,
+  ) => {
+    if (!suggestion) return;
+
+    // Eine Regel nennt sich beim Namen; ohne Regel stammt der Vorschlag vom
+    // letzten Schreiben desselben Absenders.
+    const fromRule = suggestion.matchedRuleContains
+      ? t(suggestion.matchedRuleField === 'senderName' ? 'suggest.fromRuleSender' : 'suggest.fromRuleFilename', {
+          term: suggestion.matchedRuleContains,
+        })
+      : sender
+        ? t('suggest.fromSender')
+        : null;
+
+    const next: Partial<Record<Suggested, string>> = {};
+    if (suggestion.documentDate && !touched.current.has('documentDate')) {
+      setDocumentDate(suggestion.documentDate);
+      next.documentDate = t('suggest.fromFilename');
+    }
+    if (suggestion.typeKey && !touched.current.has('typeKey')) {
+      setTypeKey(suggestion.typeKey);
+      if (fromRule) next.typeKey = fromRule;
+    }
+    if (suggestion.folder != null && !touched.current.has('folder')) {
+      setFolder(suggestion.folder);
+      if (fromRule) next.folder = fromRule;
+    }
+    setOrigin((prev) => ({ ...prev, ...next }));
+  };
 
   const handleFile = async (file: File | null) => {
     setHasFile(!!file);
     if (!file) return;
-
-    const suggestion = await suggestClassificationAction(file.name, senderId || undefined);
-    if (suggestion) {
-      if (suggestion.documentDate) setDocumentDate(suggestion.documentDate);
-      if (suggestion.typeKey) setTypeKey(suggestion.typeKey);
-      if (suggestion.folder !== undefined && suggestion.folder !== null) setFolder(suggestion.folder);
-    }
+    apply(await suggestClassificationAction(file.name, senderId || undefined), senderId);
   };
 
   const handleSenderChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newSenderId = e.target.value;
-    setSenderId(newSenderId);
-    const fileInput = document.getElementById('file') as HTMLInputElement | null;
-    const file = fileInput?.files?.[0];
-    if (file) {
-      const suggestion = await suggestClassificationAction(file.name, newSenderId || undefined);
-      if (suggestion) {
-        if (suggestion.documentDate) setDocumentDate(suggestion.documentDate);
-        if (suggestion.typeKey) setTypeKey(suggestion.typeKey);
-        if (suggestion.folder !== undefined && suggestion.folder !== null) setFolder(suggestion.folder);
-      }
-    }
+    const nextSender = e.target.value;
+    setSenderId(nextSender);
+    const file = (document.getElementById('file') as HTMLInputElement | null)?.files?.[0];
+    if (!file) return;
+    apply(await suggestClassificationAction(file.name, nextSender || undefined), nextSender);
   };
 
   return (
     <form action={formAction} className="flex min-h-0 flex-col">
       {/* Der Körper scrollt, die Fußleiste bleibt stehen. */}
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
-      {state.status === 'error' && Object.keys(errors).length === 0 ? (
-        <div role="alert" className="rounded-md bg-error-bg p-3 text-[13px] text-error">{state.message}</div>
-      ) : null}
+        {state.status === 'error' && Object.keys(errors).length === 0 ? (
+          <div role="alert" className="rounded-md bg-error-bg p-3 text-[13px] text-error">{state.message}</div>
+        ) : null}
 
-      <div className="space-y-1.5">
-        <Label htmlFor="file" required>{t('fields.file')}</Label>
-        <FileDropzone id="file" name="file" required onFile={handleFile} />
-        <FieldError id="file-error" message={errors.file} />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="documentDate" required>{t('fields.documentDate')}</Label>
+          <Label htmlFor="file" required>{t('fields.file')}</Label>
+          <FileDropzone id="file" name="file" required onFile={handleFile} />
+          <FieldError id="file-error" message={errors.file} />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="documentDate" required>{t('fields.documentDate')}</Label>
+            <Input
+              id="documentDate"
+              name="documentDate"
+              type="date"
+              required
+              className={origin.documentDate ? 'border-info font-mono' : 'font-mono'}
+              value={documentDate}
+              onFocus={() => touch('documentDate')}
+              onChange={(e) => {
+                touch('documentDate');
+                setDocumentDate(e.target.value);
+              }}
+            />
+            <SuggestionFlag text={origin.documentDate} />
+            <FieldError id="documentDate-error" message={errors.documentDate} />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="typeKey" required>{t('fields.type')}</Label>
+            <Select
+              id="typeKey"
+              name="typeKey"
+              required
+              className={origin.typeKey ? 'border-info' : undefined}
+              value={typeKey}
+              onFocus={() => touch('typeKey')}
+              onChange={(e) => {
+                touch('typeKey');
+                setTypeKey(e.target.value);
+              }}
+            >
+              {types.map((type) => (
+                <option key={type.key} value={type.key}>
+                  {type.label}
+                </option>
+              ))}
+            </Select>
+            <SuggestionFlag text={origin.typeKey} />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="subject" required>{t('fields.subject')}</Label>
           <Input
-            id="documentDate"
-            name="documentDate"
-            type="date"
+            id="subject"
+            name="subject"
             required
-            value={documentDate}
-            onChange={(e) => setDocumentDate(e.target.value)}
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
           />
-          <FieldError id="documentDate-error" message={errors.documentDate} />
+          <FieldError id="subject-error" message={errors.subject} />
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="typeKey" required>{t('fields.type')}</Label>
-          <Select
-            id="typeKey"
-            name="typeKey"
-            required
-            value={typeKey}
-            onChange={(e) => setTypeKey(e.target.value)}
-          >
-            {types.map((type) => (
-              <option key={type.key} value={type.key}>
-                {type.label}
-              </option>
-            ))}
-          </Select>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="folder">{t('fields.folder')}</Label>
+            <Select
+              id="folder"
+              name="folder"
+              className={origin.folder ? 'border-info' : undefined}
+              value={folder}
+              onFocus={() => touch('folder')}
+              onChange={(e) => {
+                touch('folder');
+                setFolder(e.target.value);
+              }}
+            >
+              <option value="">{t('inbox')}</option>
+              {folders.map((f) => (
+                <option key={f} value={f}>
+                  {f}
+                </option>
+              ))}
+            </Select>
+            <SuggestionFlag text={origin.folder} />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="senderId">{t('fields.sender')}</Label>
+            <Select id="senderId" name="senderId" value={senderId} onChange={handleSenderChange}>
+              <option value="">{t('fields.noSender')}</option>
+              {contacts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          </div>
         </div>
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="subject" required>{t('fields.subject')}</Label>
-        <Input
-          id="subject"
-          name="subject"
-          required
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-        />
-        <FieldError id="subject-error" message={errors.subject} />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="folder">{t('fields.folder')}</Label>
-          <Select
-            id="folder"
-            name="folder"
-            value={folder}
-            onChange={(e) => setFolder(e.target.value)}
-          >
-            <option value="">{t('inbox')}</option>
-            {folders.map((f) => (
-              <option key={f} value={f}>
-                {f}
-              </option>
-            ))}
-          </Select>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="senderId">{t('fields.sender')}</Label>
-          <Select
-            id="senderId"
-            name="senderId"
-            value={senderId}
-            onChange={handleSenderChange}
-          >
-            <option value="">{t('fields.noSender')}</option>
-            {contacts.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
-        </div>
-      </div>
-
       </div>
       <FormActionBar cancel={onCancel} sticky={false} saveLabel={t('receiveSubmit')} saveDisabled={!hasFile} />
     </form>

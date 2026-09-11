@@ -16,6 +16,13 @@ export type Suggestion = {
   folder: string | null;
   documentDate: string | null;
   matchedRuleId: string | null;
+  /**
+   * Woran die Regel gegriffen hat. Die Oberfläche sagt es am vorbelegten Feld —
+   * ein Vorschlag, dessen Herkunft man nicht sieht, sieht aus wie Tipparbeit
+   * des Nutzers.
+   */
+  matchedRuleField: 'filename' | 'senderName' | null;
+  matchedRuleContains: string | null;
 };
 
 function isValidDate(year: number, month: number, day: number): boolean {
@@ -147,5 +154,7 @@ export async function suggestClassification(
     folder,
     documentDate,
     matchedRuleId,
+    matchedRuleField: matchedRule?.matchField ?? null,
+    matchedRuleContains: matchedRule?.matchContains ?? null,
   });
 }
