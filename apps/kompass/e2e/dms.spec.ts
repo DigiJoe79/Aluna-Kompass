@@ -90,6 +90,26 @@ test.describe('dms', () => {
     await expect(page.getByText('2026-05-02')).toBeVisible();
   });
 
+  test('nennt den Bezug beim Namen, nicht beim Entitätstyp', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/new');
+    await page.getByLabel('Betreff').fill('Brief mit Empfänger');
+    await page.getByLabel('Text').fill('Text.');
+    // Der erste echte Kontakt aus dem Seed, wer immer es ist.
+    const recipient = page.getByLabel('Empfänger');
+    const name = (await recipient.locator('option').nth(1).textContent())?.trim() ?? '';
+    expect(name.length).toBeGreaterThan(0);
+    await recipient.selectOption({ index: 1 });
+    await page.getByRole('button', { name: 'Entwurf speichern' }).click();
+
+    const links = page.getByTestId('document-links');
+    await expect(links).toContainText(name);
+    await expect(links).toContainText('Empfänger');
+    // Die rohen Bezeichner haben auf dem Bildschirm nichts verloren.
+    await expect(links).not.toContainText('contact');
+    await expect(links).not.toContainText('recipient');
+  });
+
   test('bietet für ein festgeschriebenes Dokument kein Bearbeiten an', async ({ page }) => {
     await login(page);
     await page.goto('/dms/new');

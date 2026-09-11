@@ -1388,6 +1388,18 @@
     "retentionUntil": "Aufbewahrungsfrist endet am {date}.",
     "retentionRunning": "Aufbewahrungsfrist läuft.",
     "linksTitle": "Verknüpfungen",
+    "roles": {
+      "sender": "Absender",
+      "recipient": "Empfänger",
+      "about": "Betrifft"
+    },
+    "entities": {
+      "contact": "Kontakt",
+      "animal": "Tier",
+      "project": "Projekt"
+    },
+    "linkMissing": "Nicht mehr vorhanden",
+    "linkForbidden": "Name nicht sichtbar",
     "voidReasonTitle": "Stornierungsgrund",
     "fields": {
       "file": "Datei",

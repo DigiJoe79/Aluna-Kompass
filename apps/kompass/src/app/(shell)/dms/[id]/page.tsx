@@ -5,6 +5,7 @@ import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
 import { DocumentDetail } from './document-detail';
+import { resolveLinks } from './links';
 
 export default async function DocumentDetailPage(props: {
   params: Promise<{ id: string }>;
@@ -40,6 +41,8 @@ export default async function DocumentDetailPage(props: {
     };
   }
 
+  const links = await resolveLinks(deps, ctx, doc.links);
+
   const permissions = {
     canFile: hasPermission(ctx, 'dms.file'),
     canVoid: hasPermission(ctx, 'dms.void'),
@@ -66,11 +69,7 @@ export default async function DocumentDetailPage(props: {
           voidReason: doc.voidReason,
           voidedAt: doc.voidedAt,
           createdAt: doc.createdAt,
-          links: doc.links.map((l) => ({
-            entityType: l.entityType,
-            entityId: l.entityId,
-            role: l.role,
-          })),
+          links,
         }}
         retentionInfo={retentionInfo}
         permissions={permissions}

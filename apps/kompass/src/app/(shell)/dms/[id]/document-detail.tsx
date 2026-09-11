@@ -27,7 +27,14 @@ export interface DocumentDetailProps {
     voidReason: string | null;
     voidedAt: string | null;
     createdAt: string;
-    links: { entityType: string; entityId: string; role: string }[];
+    links: {
+      entityType: string;
+      entityId: string;
+      role: string;
+      label: string | null;
+      href: string | null;
+      reason: 'missing' | 'forbidden' | null;
+    }[];
   };
   retentionInfo: {
     retentionClass: string;
@@ -264,12 +271,23 @@ export function DocumentDetail({ document: doc, retentionInfo, permissions }: Do
           {doc.links.length > 0 ? (
             <section className="rounded-md border border-line bg-surface p-5 shadow-xs">
               <h3 className="mb-3 text-[15px] font-semibold text-ink">{t('linksTitle')}</h3>
-              <ul className="space-y-2 text-[13px] text-ink-2">
+              <ul data-testid="document-links" className="space-y-2 text-[13px] text-ink-2">
                 {doc.links.map((link, i) => (
                   <li key={i} className="flex items-center gap-2">
                     <span className="size-1.5 rounded-full bg-muted-ink" aria-hidden />
                     <span>
-                      {link.entityType} ({link.role})
+                      {link.href && link.label ? (
+                        <Link href={link.href} className="underline underline-offset-2">
+                          {link.label}
+                        </Link>
+                      ) : (
+                        <span className={link.label ? undefined : 'text-muted-ink'}>
+                          {link.label ?? (link.reason === 'forbidden' ? t('linkForbidden') : t('linkMissing'))}
+                        </span>
+                      )}
+                      {' — '}
+                      {t.has(`roles.${link.role}`) ? t(`roles.${link.role}`) : link.role}
+                      {t.has(`entities.${link.entityType}`) ? ` (${t(`entities.${link.entityType}`)})` : null}
                     </span>
                   </li>
                 ))}
