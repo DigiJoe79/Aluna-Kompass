@@ -1,4 +1,4 @@
-import { coreModule, fakeTextExtraction } from '@kompass/core';
+import { coreModule, fakeTextExtraction, type Deps, type TextExtraction } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { contactsModule } from '@kompass/module-contacts';
 import { eq } from 'drizzle-orm';
@@ -6,7 +6,8 @@ import { describe, expect, it } from 'vitest';
 import { receiveDocument } from '../src/incoming';
 import { dmsModule } from '../src/manifest';
 import { documents } from '../src/schema';
-import { processNextDocument, recoverRunning, startTextWorker } from '../src/worker';
+import { extractDocumentText } from '../src/text';
+import { processNextDocument, recoverRunning, requeueUnavailable, startTextWorker } from '../src/worker';
 import { seedTypes } from './helpers';
 
 const pdf = () => new Uint8Array(Buffer.from('%PDF-1.4\n%fake\n', 'latin1'));
@@ -26,15 +27,40 @@ async function collectWarnings(run: () => Promise<void>): Promise<string> {
   return lines.join('\n');
 }
 
-async function setup() {
+async function setup(textExtraction?: TextExtraction) {
   const deps = createTestDeps({
     manifests: [coreModule, contactsModule, dmsModule],
-    textExtraction: fakeTextExtraction({ pages: [{ page: 1, text: 'Rechnung', source: 'layer' }] }),
+    textExtraction:
+      textExtraction ?? fakeTextExtraction({ pages: [{ page: 1, text: 'Rechnung', source: 'layer' }] }),
   });
   insertUser(deps, { id: 'USER-TEST' });
   await seedTypes(deps);
   return deps;
 }
+
+/** Eine Erkennung, deren Werkzeuge im Lauf des Tests auftauchen. */
+function switchableExtraction(available: boolean): { available: boolean; extraction: TextExtraction } {
+  let installed = available;
+  const extraction: TextExtraction = {
+    probe: async () =>
+      installed
+        ? { ok: true, languages: ['deu'] }
+        : { ok: false, error: 'tesseract ist nicht installiert' },
+    extract: async () => [{ page: 1, text: 'Rechnung', source: 'layer' }],
+  };
+  return {
+    get available() {
+      return installed;
+    },
+    set available(value: boolean) {
+      installed = value;
+    },
+    extraction,
+  };
+}
+
+const statusOf = (deps: Deps, id: string) =>
+  deps.db.select().from(documents).where(eq(documents.id, id)).get()?.textStatus;
 
 async function receive(deps: Awaited<ReturnType<typeof setup>>, subject: string) {
   const r = await receiveDocument(deps, ctxWith(['dms.create']), {
@@ -84,6 +110,34 @@ describe('Worker', () => {
     const deps = await setup();
     // Ein Entwurf hat textStatus null und darf nie in die Schlange geraten.
     expect(await processNextDocument(deps)).toBe('idle');
+  });
+
+  it('holt zurück, was mangels Werkzeug liegen geblieben ist', async () => {
+    // Der Entwicklungsrechner ohne Tesseract, auf dem später `brew install`
+    // läuft: Das Dokument darf nicht auf einen Menschen warten müssen.
+    const port = switchableExtraction(false);
+    const deps = await setup(port.extraction);
+    const id = await receive(deps, 'Vor der Installation');
+    await extractDocumentText(deps, ctxWith(['dms.manage']), { documentId: id });
+    expect(statusOf(deps, id)).toBe('unavailable');
+
+    port.available = true;
+    expect(await requeueUnavailable(deps)).toBe(1);
+
+    expect(statusOf(deps, id)).toBe('pending');
+    expect(await processNextDocument(deps)).toBe('done');
+    expect(statusOf(deps, id)).toBe('done');
+  });
+
+  it('lässt es liegen, solange die Werkzeuge fehlen', async () => {
+    const port = switchableExtraction(false);
+    const deps = await setup(port.extraction);
+    const id = await receive(deps, 'Ohne Werkzeug');
+    await extractDocumentText(deps, ctxWith(['dms.manage']), { documentId: id });
+
+    expect(await requeueUnavailable(deps)).toBe(0);
+
+    expect(statusOf(deps, id)).toBe('unavailable');
   });
 
   it('meldet einen Abbruch, statt ihn stumm zu verschlucken', async () => {

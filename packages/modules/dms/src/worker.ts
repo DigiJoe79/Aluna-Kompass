@@ -36,6 +36,37 @@ function warn(what: string, error: unknown): void {
 }
 
 /**
+ * Was auf `unavailable` steht, wartet nicht auf einen Menschen, sondern auf die
+ * Werkzeuge (Spec § 15). Sind sie da, kommt es von selbst zurück in die
+ * Schlange — sonst stünde auf dem Bildschirm „Sobald sie da sind, wird das
+ * Dokument von selbst gelesen“ und es geschähe nichts.
+ *
+ * Gefragt wird nur, wenn überhaupt etwas liegt, und die Antwort entscheidet:
+ * Fehlen die Werkzeuge weiter, bleibt alles, wo es ist. Eine Schleife kann
+ * daraus nicht werden.
+ */
+export async function requeueUnavailable(deps: Deps): Promise<number> {
+  const waiting = deps.db
+    .select({ id: documents.id })
+    .from(documents)
+    .where(eq(documents.textStatus, 'unavailable'))
+    .all();
+  if (waiting.length === 0) return 0;
+
+  const probe = await deps.textExtraction.probe();
+  if (!probe.ok) return 0;
+
+  for (const row of waiting) {
+    deps.db
+      .update(documents)
+      .set({ textStatus: 'pending', textError: null })
+      .where(eq(documents.id, row.id))
+      .run();
+  }
+  return waiting.length;
+}
+
+/**
  * Genau ein Dokument abarbeiten. Eins zur Zeit ist Absicht: Auf der NAS-CPU
  * rendert nebenher Typst, und zwei parallele Tesseract-Läufe nehmen sich
  * gegenseitig die Luft.
@@ -83,6 +114,8 @@ export function startTextWorker(
     if (busy || stopped) return;
     busy = true;
     try {
+      // Erst nachsehen, ob die Werkzeuge inzwischen da sind.
+      await requeueUnavailable(getDeps());
       // Solange etwas da ist, weitermachen — aber immer nur eins auf einmal.
       let outcome = await processNextDocument(getDeps());
       while (outcome !== 'idle' && outcome !== 'unavailable' && !stopped) {
