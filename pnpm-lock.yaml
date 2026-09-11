@@ -20,6 +20,9 @@ importers:
       '@kompass/module-contacts':
         specifier: workspace:*
         version: link:packages/modules/contacts
+      '@kompass/module-dms':
+        specifier: workspace:*
+        version: link:packages/modules/dms
       '@kompass/module-site':
         specifier: workspace:*
         version: link:packages/modules/site

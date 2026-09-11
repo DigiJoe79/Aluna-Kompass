@@ -25,7 +25,7 @@ const modulesWithTools: [ModuleManifest, readonly McpToolDefinition[]][] = [
  * entscheidet bewusst; wer ein Recht ergänzt, ohne es hier oder in einem
  * Werkzeug zu nennen, bekommt einen roten Test.
  */
-const WITHOUT_MCP = new Set(['backup.export', 'backup.import', 'dms.manage']);
+const WITHOUT_MCP = new Set(['backup.export', 'backup.import']);
 
 /** Rechte, die kein Werkzeug nennt, als `modul: recht`. */
 const uncoveredPermissions = (pairs: [ModuleManifest, readonly McpToolDefinition[]][]) =>
