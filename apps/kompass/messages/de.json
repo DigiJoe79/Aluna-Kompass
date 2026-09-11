@@ -1395,7 +1395,13 @@
     "drop": {
       "overlayTitle": "{count, plural, one {# Datei ablegen} other {# Dateien ablegen}}",
       "overlayHint": "Auf einen Ordner ziehen, um dort einzusortieren — oder hier loslassen für den Eingangskorb.",
-      "notPdf": "{count, plural, one {Nur PDF möglich — eine Datei übersprungen.} other {Nur PDF möglich — # Dateien übersprungen.}}"
+      "notPdf": "{count, plural, one {Nur PDF möglich — eine Datei übersprungen.} other {Nur PDF möglich — # Dateien übersprungen.}}",
+      "queueBadge": "{current} von {total}",
+      "queueHint": "Gezogen auf {folder}. Nach dem Ablegen folgt die nächste Datei.",
+      "queueHintInbox": "Nach dem Ablegen folgt die nächste Datei.",
+      "discardTitle": "Warteschlange verwerfen?",
+      "discardDescription": "{count, plural, one {Eine Datei ist noch nicht abgelegt.} other {# Dateien sind noch nicht abgelegt.}} Sie bleiben ungespeichert.",
+      "discardConfirm": "Verwerfen"
     },
     "saveDraft": "Entwurf speichern",
     "edit": "Bearbeiten",

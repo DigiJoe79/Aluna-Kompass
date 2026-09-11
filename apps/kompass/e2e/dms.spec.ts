@@ -304,6 +304,55 @@ test.describe('dms', () => {
     await expect(dialog.getByLabel('Ordner')).toHaveValue('');
   });
 
+  test('arbeitet mehrere gezogene Dateien der Reihe nach ab', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+
+    await dropFiles(page, '[data-folder="vertraege"]', ['Erster Vertrag.pdf', 'Zweiter Vertrag.pdf']);
+    const dialog = receiveDialog(page);
+
+    await expect(dialog.getByText('1 von 2')).toBeVisible();
+    await expect(dialog.getByText('Erster Vertrag.pdf')).toBeVisible();
+    await dialog.getByLabel('Datum auf dem Dokument').fill('2026-05-01');
+    await dialog.getByLabel('Betreff').fill('Erster Vertrag');
+    await dialog.getByRole('button', { name: 'Ablegen' }).click();
+
+    // Die nächste Datei steht schon da; der Ordner, auf den gezogen wurde, bleibt.
+    await expect(dialog.getByText('2 von 2')).toBeVisible();
+    await expect(dialog.getByText('Zweiter Vertrag.pdf')).toBeVisible();
+    await expect(dialog.getByLabel('Ordner')).toHaveValue('vertraege');
+    await dialog.getByLabel('Datum auf dem Dokument').fill('2026-05-02');
+    await dialog.getByLabel('Betreff').fill('Zweiter Vertrag');
+    await dialog.getByRole('button', { name: 'Ablegen' }).click();
+
+    // Nach der letzten schliesst der Dialog, und beide stehen in der Liste.
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Erster Vertrag' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Zweiter Vertrag' })).toBeVisible();
+  });
+
+  test('fragt nach, bevor der Rest einer angefangenen Warteschlange verfällt', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+
+    await dropFiles(page, '[data-folder="vertraege"]', ['Eins.pdf', 'Zwei.pdf']);
+    const dialog = receiveDialog(page);
+    await dialog.getByLabel('Datum auf dem Dokument').fill('2026-05-01');
+    await dialog.getByLabel('Betreff').fill('Eins');
+    await dialog.getByRole('button', { name: 'Ablegen' }).click();
+    await expect(dialog.getByText('2 von 2')).toBeVisible();
+
+    await dialog.getByRole('button', { name: 'Abbrechen' }).click();
+    const ask = page.getByRole('alertdialog');
+    await expect(ask).toContainText('Warteschlange verwerfen?');
+    await expect(ask).toContainText('Eine Datei ist noch nicht abgelegt.');
+    await ask.getByRole('button', { name: 'Verwerfen' }).click();
+
+    await expect(dialog).toHaveCount(0);
+    // Was abgelegt wurde, bleibt abgelegt.
+    await expect(page.getByRole('link', { name: 'Eins' })).toBeVisible();
+  });
+
   test('sagt am vorbelegten Feld, woher der Vorschlag kommt', async ({ page }) => {
     await login(page);
     await page.goto('/dms/receive');

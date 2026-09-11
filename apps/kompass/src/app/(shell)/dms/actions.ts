@@ -201,6 +201,9 @@ export async function receiveDocumentAction(_prev: ActionState, formData: FormDa
   textWorker()?.wake();
 
   revalidatePath('/dms');
+  // Aus einer Warteschlange heraus führt kein Weg zum einzelnen Dokument: Die
+  // nächste Datei wartet schon, und ein Sprung dorthin verlöre sie.
+  if (formData.get('queued')) return { status: 'success' };
   redirect(`/dms/${result.value.id}`);
 }
 

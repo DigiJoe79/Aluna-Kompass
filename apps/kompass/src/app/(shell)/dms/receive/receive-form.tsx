@@ -23,6 +23,8 @@ export function ReceiveForm({
   droppedFile,
   droppedFolder,
   skipped = 0,
+  queued,
+  onFiled,
   onCancel,
 }: {
   types: { key: string; label: string }[];
@@ -36,6 +38,9 @@ export function ReceiveForm({
   droppedFolder?: string | null;
   /** Wie viele mitgezogene Dateien keine PDFs waren. */
   skipped?: number;
+  /** Es warten weitere Dateien: nach dem Ablegen geht es hier weiter. */
+  queued?: boolean;
+  onFiled?: () => void;
   /** Gesetzt, wenn das Formular in einem Dialog steht. */
   onCancel?: () => void;
 }) {
@@ -117,6 +122,11 @@ export function ReceiveForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [droppedFile]);
 
+  useEffect(() => {
+    if (state.status === 'success') onFiled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
+
   const handleSenderChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const nextSender = e.target.value;
     setSenderId(nextSender);
@@ -127,6 +137,7 @@ export function ReceiveForm({
 
   return (
     <form action={formAction} className="flex min-h-0 flex-col">
+      {queued ? <input type="hidden" name="queued" value="1" /> : null}
       {/* Der Körper scrollt, die Fußleiste bleibt stehen. */}
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
         {state.status === 'error' && Object.keys(errors).length === 0 ? (

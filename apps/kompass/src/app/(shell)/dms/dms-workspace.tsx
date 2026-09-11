@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { PageHeader } from '@/components/page-header';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { DropOverlay } from './drop-overlay';
@@ -13,7 +14,8 @@ import { ReceiveDialog } from './receive/receive-dialog';
 /** Was ein Zug ins Fenster gebracht hat. */
 export interface Drop {
   id: number;
-  file: File | null;
+  /** Alle PDFs des Zuges, in der Reihenfolge, in der sie abgearbeitet werden. */
+  files: File[];
   folder: string | null;
   /** Wie viele Dateien keine PDFs waren und deshalb liegen blieben. */
   skipped: number;
@@ -57,6 +59,8 @@ export function DmsWorkspace({
 
   const [open, setOpen] = useState(!!receiveOpen);
   const [drop, setDrop] = useState<Drop | null>(null);
+  const [index, setIndex] = useState(0);
+  const [asking, setAsking] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [over, setOver] = useState<string | null>(null);
   const [files, setFiles] = useState(0);
@@ -64,20 +68,30 @@ export function DmsWorkspace({
   const depth = useRef(0);
   const drops = useRef(0);
 
-  const take = useCallback(
-    (folder: string | null, list: FileList) => {
-      const pdfs = [...list].filter(isPdf);
-      drops.current += 1;
-      setDrop({
-        id: drops.current,
-        file: pdfs[0] ?? null,
-        folder,
-        skipped: list.length - pdfs.length,
-      });
-      setOpen(true);
-    },
-    []
-  );
+  const take = useCallback((folder: string | null, list: FileList) => {
+    const pdfs = [...list].filter(isPdf);
+    drops.current += 1;
+    setDrop({ id: drops.current, files: pdfs, folder, skipped: list.length - pdfs.length });
+    setIndex(0);
+    setOpen(true);
+  }, []);
+
+  /**
+   * Eine Datei ist abgelegt. Warten noch welche, rückt der Dialog vor, statt
+   * sich zu schliessen — der Zielordner bleibt, die übrigen Felder füllen die
+   * Einsortierregeln neu.
+   */
+  const filed = () => {
+    const rest = drop ? drop.files.length - index - 1 : 0;
+    if (rest > 0) {
+      setIndex((i) => i + 1);
+      router.refresh();
+      return;
+    }
+    setOpen(false);
+    setDrop(null);
+    router.refresh();
+  };
 
   useEffect(() => {
     if (!canCreate) return;
@@ -129,12 +143,29 @@ export function DmsWorkspace({
     };
   }, [canCreate, take]);
 
+  /** Wie viele Dateien der Warteschlange noch offen sind. */
+  const pending = drop ? drop.files.length - index : 0;
+
+  const close = () => {
+    setOpen(false);
+    setAsking(false);
+    setDrop(null);
+    setIndex(0);
+    if (pathname === '/dms/receive') router.replace('/dms');
+  };
+
   const change = (next: boolean) => {
-    setOpen(next);
-    if (!next) {
-      setDrop(null);
-      if (pathname === '/dms/receive') router.replace('/dms');
+    if (next) {
+      setOpen(true);
+      return;
     }
+    // Wer mitten in einer Warteschlange abbricht, wirft den Rest weg. Vor dem
+    // ersten Ablegen ist noch nichts geschehen — da fragt niemand.
+    if (index > 0 && pending > 0) {
+      setAsking(true);
+      return;
+    }
+    close();
   };
 
   return (
@@ -180,7 +211,7 @@ export function DmsWorkspace({
 
       {canCreate ? (
         <ReceiveDialog
-          key={drop?.id ?? 'leer'}
+          key={`${drop?.id ?? 'leer'}-${index}`}
           types={types}
           folders={folders}
           contacts={contacts}
@@ -188,8 +219,23 @@ export function DmsWorkspace({
           open={open}
           onOpenChange={change}
           drop={drop}
+          index={index}
+          onFiled={filed}
         />
       ) : null}
+
+      <ConfirmDialog
+        open={asking}
+        onOpenChange={setAsking}
+        title={t('drop.discardTitle')}
+        description={t('drop.discardDescription', { count: pending })}
+        confirmLabel={t('drop.discardConfirm')}
+        destructive
+        action={async () => {
+          close();
+          return { status: 'success' };
+        }}
+      />
     </>
   );
 }
