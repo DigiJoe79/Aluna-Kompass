@@ -22,6 +22,7 @@ import { documentTypeFor } from './catalog';
 import { documentFolders, documentLinks, documents, type DocumentLinkRow, type DocumentRow } from './schema';
 import { readDocumentFile, removeDocumentFile } from './storage';
 import { removeDocumentText } from './index-store';
+import { fulltextDocumentIds } from './search';
 
 export type DocumentRecord = Omit<DocumentRow, 'inputSnapshot'> & { inputSnapshot: unknown; links: DocumentLinkRow[] };
 
@@ -80,7 +81,11 @@ export const documentListSchema = z.object({
   offset: z.number().int().min(0).default(0),
 });
 
-export async function listDocuments(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ documents: DocumentRecord[]; total: number }>> {
+export async function listDocuments(
+  deps: Deps,
+  ctx: CallContext,
+  input: unknown,
+): Promise<Result<{ documents: DocumentRecord[]; total: number; fulltextTooShort: boolean }>> {
   const denied = requirePermission(ctx, 'dms.view');
   if (denied) return denied;
   const parsed = validate(deps, documentListSchema, input);
@@ -92,7 +97,20 @@ export async function listDocuments(deps: Deps, ctx: CallContext, input: unknown
   if (q.typeKey) conditions.push(eq(documents.typeKey, q.typeKey));
   if (q.inbox) conditions.push(sql`${documents.folder} is null`);
   else if (q.folder !== undefined) conditions.push(q.folder === null ? sql`${documents.folder} is null` : eq(documents.folder, q.folder));
-  if (q.text) conditions.push(or(like(documents.subject, `%${q.text}%`), like(documents.number, `%${q.text}%`)) as SQL);
+
+  let fulltextTooShort = false;
+  if (q.text) {
+    const ids = fulltextDocumentIds(deps, q.text);
+    fulltextTooShort = ids === null;
+    const byText = or(like(documents.subject, `%${q.text}%`), like(documents.number, `%${q.text}%`));
+    // Der Volltext erweitert die Treffermenge, nicht die Reihenfolge
+    // (Entscheidung 31): Die Liste bleibt chronologisch, `total`, `limit` und
+    // `offset` bleiben, wie sie waren.
+    conditions.push(
+      (ids && ids.length > 0 ? or(byText, inArray(documents.id, ids)) : byText) as SQL,
+    );
+  }
+
   if (q.linkedTo) {
     const ids = deps.db
       .select({ id: documentLinks.documentId })
@@ -105,7 +123,7 @@ export async function listDocuments(deps: Deps, ctx: CallContext, input: unknown
   const where = conditions.length > 0 ? and(...conditions) : undefined;
   const total = deps.db.select({ n: count() }).from(documents).where(where).get()?.n ?? 0;
   const rows = deps.db.select().from(documents).where(where).orderBy(desc(documents.createdAt), desc(documents.number)).limit(q.limit).offset(q.offset).all();
-  return ok({ documents: rows.map((row) => toRecord(deps, row)), total });
+  return ok({ documents: rows.map((row) => toRecord(deps, row)), total, fulltextTooShort });
 }
 
 export async function getDocumentRecord(deps: Deps, ctx: CallContext, id: string): Promise<Result<DocumentRecord>> {
