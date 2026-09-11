@@ -5,9 +5,10 @@ import { contactsModule } from '@kompass/module-contacts';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { createDraft, deleteDraft, fileDocument, updateDraft } from '../src/drafts';
+import { receiveDocument } from '../src/incoming';
 import { dmsModule } from '../src/manifest';
-import { voidDocument } from '../src/service';
-import { ALL_DMS, auditActions, fileFixture, seedTypes, setupWithTypes } from './helpers';
+import { deleteDocument, voidDocument } from '../src/service';
+import { ALL_DMS, auditActions, fileFixture, pdfBytes, seedTypes, setupWithTypes } from './helpers';
 
 const mediaAssets = schema.mediaAssets;
 
@@ -108,4 +109,30 @@ describe('fileDocument', () => {
     expect(voided.value.status).toBe('voided');
     expect(voided.value.number).toBe(filed.number); // die Nummer bleibt vergeben
   });
+});
+
+describe('Nummernvergabe', () => {
+  it('vergibt nach einer Löschung keine schon benutzte Nummer erneut', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const expired = await receiveDocument(deps, ctx, {
+      filename: 'alt.pdf', bytes: pdfBytes(), typeKey: 'invoice', subject: 'Alt', documentDate: '2005-06-01',
+    });
+    const kept = await receiveDocument(deps, ctx, {
+      filename: 'jung.pdf', bytes: pdfBytes(), typeKey: 'invoice', subject: 'Jung', documentDate: '2026-01-01',
+    });
+    if (!expired.ok || !kept.ok) throw new Error('setup');
+    expect(expired.value.number).toMatch(/-001$/);
+    expect(kept.value.number).toMatch(/-002$/);
+
+    const deleted = await deleteDocument(deps, ctx, { id: expired.value.id });
+    expect(deleted.ok).toBe(true);
+
+    const next = await receiveDocument(deps, ctx, {
+      filename: 'neu.pdf', bytes: pdfBytes(), typeKey: 'invoice', subject: 'Neu', documentDate: '2026-02-01',
+    });
+    expect(next.ok).toBe(true);
+    if (!next.ok) return;
+    expect(next.value.number).toMatch(/-003$/);
+  });
+
 });

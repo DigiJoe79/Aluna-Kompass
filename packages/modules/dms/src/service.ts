@@ -46,14 +46,29 @@ export function toRecord(deps: Deps, row: DocumentRow, dbOrTx: DbOrTx = deps.db)
   return { ...row, inputSnapshot: row.inputSnapshot ? JSON.parse(row.inputSnapshot) : null, links };
 }
 
-/** Präfix kommt aus der Dokumentart (Entscheidung 18); Format und Lückenlosigkeit je Präfix und Jahr. */
+/**
+ * Präfix kommt aus der Dokumentart (Entscheidung 18); Format und Lückenlosigkeit
+ * je Präfix und Jahr. Maßgeblich ist die **höchste** vergebene Nummer, nicht die
+ * Anzahl der Zeilen: Nach einer Löschung wegen Fristablauf gibt es weniger
+ * Zeilen als vergebene Nummern, und ein Zähler liefe erneut auf eine schon
+ * belegte Nummer — die Ablage bliebe bis zum Jahreswechsel stehen.
+ */
 export function nextDocumentNumber(db: DbOrTx, prefix: string, year: number): string {
-  const row = db
-    .select({ n: count() })
+  const start = `${prefix}-${year}-`;
+  const taken = db
+    .select({ number: documents.number })
     .from(documents)
-    .where(sql`${documents.number} like ${`${prefix}-${year}-%`}`)
-    .get();
-  return `${prefix}-${year}-${String((row?.n ?? 0) + 1).padStart(3, '0')}`;
+    .where(sql`${documents.number} like ${`${start}%`}`)
+    .all();
+
+  let highest = 0;
+  for (const row of taken) {
+    const suffix = row.number?.slice(start.length) ?? '';
+    if (!/^\d+$/.test(suffix)) continue;
+    highest = Math.max(highest, Number.parseInt(suffix, 10));
+  }
+
+  return `${start}${String(highest + 1).padStart(3, '0')}`;
 }
 
 export const documentListSchema = z.object({
