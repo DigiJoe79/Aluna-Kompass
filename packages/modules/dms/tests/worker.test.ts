@@ -59,8 +59,21 @@ function switchableExtraction(available: boolean): { available: boolean; extract
   };
 }
 
+/** Werkzeuge da, aber das Lesen scheitert — ein zerschossenes PDF. */
+function brokenExtraction(): TextExtraction {
+  return {
+    probe: async () => ({ ok: true, languages: ['deu'] }),
+    extract: async () => {
+      throw new Error('Seite 1 liess sich nicht lesen');
+    },
+  };
+}
+
 const statusOf = (deps: Deps, id: string) =>
   deps.db.select().from(documents).where(eq(documents.id, id)).get()?.textStatus;
+
+const attemptsOf = (deps: Deps, id: string) =>
+  deps.db.select().from(documents).where(eq(documents.id, id)).get()?.textAttempts;
 
 async function receive(deps: Awaited<ReturnType<typeof setup>>, subject: string) {
   const r = await receiveDocument(deps, ctxWith(['dms.create']), {
@@ -138,6 +151,38 @@ describe('Worker', () => {
     expect(await requeueUnavailable(deps)).toBe(0);
 
     expect(statusOf(deps, id)).toBe('unavailable');
+  });
+
+  it('verbraucht nach einem Fehlschlag nicht gleich alle Versuche', async () => {
+    // Ein Fehlschlag setzt auf `pending` zurück. Griffe die Schleife in
+    // derselben Runde wieder zu, wären die drei Versuche in Millisekunden
+    // durch — und ein vorübergehender Fehler (Tesseract vom OOM-Killer
+    // erwischt, während Typst rendert) hätte nie eine zweite Chance.
+    const deps = await setup(brokenExtraction());
+    const id = await receive(deps, 'Zerschossen');
+
+    const worker = startTextWorker(deps, { intervalMs: 1_000_000 });
+    await tick();
+    worker.stop();
+
+    expect(attemptsOf(deps, id)).toBe(1);
+    expect(statusOf(deps, id)).toBe('pending');
+  });
+
+  it('hängt sich an einem Dokument nicht auf, das immer scheitert', async () => {
+    const deps = await setup(brokenExtraction());
+    const id = await receive(deps, 'Zerschossen');
+
+    // Drei Takte, drei Versuche — danach ist Schluss, nicht vorher und nicht
+    // in einer Schleife.
+    for (let i = 0; i < 4; i += 1) {
+      const worker = startTextWorker(deps, { intervalMs: 1_000_000 });
+      await tick();
+      worker.stop();
+    }
+
+    expect(attemptsOf(deps, id)).toBe(3);
+    expect(statusOf(deps, id)).toBe('failed');
   });
 
   it('meldet einen Abbruch, statt ihn stumm zu verschlucken', async () => {

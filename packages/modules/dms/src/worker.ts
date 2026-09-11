@@ -116,9 +116,20 @@ export function startTextWorker(
     try {
       // Erst nachsehen, ob die Werkzeuge inzwischen da sind.
       await requeueUnavailable(getDeps());
-      // Solange etwas da ist, weitermachen — aber immer nur eins auf einmal.
+
+      // Weiter geht es nur, solange auch wirklich etwas gelesen wurde — immer
+      // eins auf einmal. Jeder andere Ausgang beendet die Runde:
+      //
+      // Ein Fehlschlag setzt das Dokument auf `pending` zurück, und es ist das
+      // älteste. Wer jetzt weitermacht, greift wieder danach und hat die drei
+      // Versuche in Millisekunden verbraucht — ein vorübergehender Fehler
+      // bekäme nie eine zweite Chance. Der Takt ist der Backoff.
+      //
+      // Und es macht die Schleife an sich selbst sicher statt an einer
+      // Invariante: Liefert der Lauf je einen Fachfehler, ohne den Zustand
+      // anzufassen, endet die Runde, statt sich festzufressen.
       let outcome = await processNextDocument(getDeps());
-      while (outcome !== 'idle' && outcome !== 'unavailable' && !stopped) {
+      while (outcome === 'done' && !stopped) {
         outcome = await processNextDocument(getDeps());
       }
     } catch (error) {
