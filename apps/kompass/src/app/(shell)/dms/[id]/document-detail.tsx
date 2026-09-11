@@ -1,15 +1,16 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useFormatter, useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
+import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { StatusBadge } from '@/components/status-badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { deleteDocumentAction, deleteDraftAction, voidDocumentAction } from '../actions';
+import { deleteDocumentAction, deleteDraftAction, rereadDocumentAction, voidDocumentAction } from '../actions';
 import { FileDialog } from './file-dialog';
 
 export interface DocumentDetailProps {
@@ -27,6 +28,9 @@ export interface DocumentDetailProps {
     voidReason: string | null;
     voidedAt: string | null;
     createdAt: string;
+    textStatus: string | null;
+    textExtractedAt: string | null;
+    textError: string | null;
     links: {
       entityType: string;
       entityId: string;
@@ -53,6 +57,7 @@ export interface DocumentDetailProps {
 export function DocumentDetail({ document: doc, retentionInfo, permissions }: DocumentDetailProps) {
   const t = useTranslations('dms');
   const tCommon = useTranslations('common');
+  const format = useFormatter();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [voidOpen, setVoidOpen] = useState(false);
   const [purgeOpen, setPurgeOpen] = useState(false);
@@ -269,6 +274,32 @@ export function DocumentDetail({ document: doc, retentionInfo, permissions }: Do
             </section>
           ) : null}
 
+          {/* Volltext */}
+          {doc.textStatus ? (
+            <section className="rounded-md border border-line bg-surface p-5 shadow-xs">
+              <h3 className="mb-3 text-[15px] font-semibold text-ink">{t('text.heading')}</h3>
+              <p className="text-[13px] text-ink-2">
+                {doc.textStatus === 'done'
+                  ? t('text.done', {
+                      date: doc.textExtractedAt
+                        ? format.dateTime(new Date(doc.textExtractedAt), { dateStyle: 'medium', timeStyle: 'short' })
+                        : '—',
+                    })
+                  : doc.textStatus === 'failed'
+                    ? t('text.failed', { reason: doc.textError ?? '' })
+                    : t(`text.${doc.textStatus}`)}
+              </p>
+              {doc.textStatus === 'unavailable' ? (
+                <p className="mt-2 text-[12px] text-muted-ink">{t('text.unavailableHint')}</p>
+              ) : null}
+              {permissions.canManage ? (
+                <div className="mt-4 border-t border-line-2 pt-4">
+                  <RereadButton documentId={doc.id} />
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
           {/* Links / Bezüge */}
           {doc.links.length > 0 ? (
             <section className="rounded-md border border-line bg-surface p-5 shadow-xs">
@@ -301,3 +332,30 @@ export function DocumentDetail({ document: doc, retentionInfo, permissions }: Do
     </div>
   );
 }
+
+function RereadButton({ documentId }: { documentId: string }) {
+  const t = useTranslations('dms');
+  const [pending, start] = useTransition();
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      disabled={pending}
+      onClick={() => {
+        start(async () => {
+          const s = await rereadDocumentAction(documentId);
+          if (s.status === 'error') {
+            toast.error(s.message);
+          } else if (s.status === 'success' && s.message) {
+            toast.success(s.message);
+          }
+        });
+      }}
+    >
+      {t('text.reread')}
+    </Button>
+  );
+}
+

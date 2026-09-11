@@ -1395,6 +1395,17 @@
     "retentionPermanent": "Dieses Dokument unterliegt der dauerhaften Aufbewahrung.",
     "retentionUntil": "Aufbewahrungsfrist endet am {date}.",
     "retentionRunning": "Aufbewahrungsfrist läuft.",
+    "text": {
+      "heading": "Volltext",
+      "pending": "Wartet auf Erkennung",
+      "running": "Wird gelesen",
+      "done": "Gelesen am {date}",
+      "failed": "Fehlgeschlagen: {reason}",
+      "unavailable": "Texterkennung nicht verfügbar",
+      "unavailableHint": "Die Werkzeuge fehlen in dieser Umgebung. Sobald sie da sind, wird das Dokument von selbst gelesen.",
+      "reread": "Neu lesen",
+      "rereadQueued": "Das Dokument wurde zum Neu-Lesen vorgemerkt."
+    },
     "linksTitle": "Verknüpfungen",
     "roles": {
       "sender": "Absender",

@@ -5,6 +5,7 @@ import {
   defaultTypeKey,
   deleteDocument,
   deleteDraft,
+  extractDocumentText,
   fileDocument,
   receiveDocument,
   suggestClassification,
@@ -201,3 +202,18 @@ export async function receiveDocumentAction(_prev: ActionState, formData: FormDa
   revalidatePath('/dms');
   redirect(`/dms/${result.value.id}`);
 }
+
+export async function rereadDocumentAction(documentId: string): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+
+  const result = await extractDocumentText(deps, ctx, { documentId });
+  if (!result.ok) {
+    return toActionState(result, t);
+  }
+
+  revalidatePath(`/dms/${documentId}`);
+  revalidatePath('/dms');
+  return toActionState(result, t, t('dms.text.rereadQueued'));
+}
+

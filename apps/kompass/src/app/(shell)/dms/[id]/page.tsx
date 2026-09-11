@@ -69,6 +69,9 @@ export default async function DocumentDetailPage(props: {
           voidReason: doc.voidReason,
           voidedAt: doc.voidedAt,
           createdAt: doc.createdAt,
+          textStatus: doc.textStatus,
+          textExtractedAt: doc.textExtractedAt,
+          textError: doc.textError,
           links,
         }}
         retentionInfo={retentionInfo}
