@@ -52,6 +52,19 @@ export function toRecord(deps: Deps, row: DocumentRow, dbOrTx: DbOrTx = deps.db)
  * Anzahl der Zeilen: Nach einer Löschung wegen Fristablauf gibt es weniger
  * Zeilen als vergebene Nummern, und ein Zähler liefe erneut auf eine schon
  * belegte Nummer — die Ablage bliebe bis zum Jahreswechsel stehen.
+ *
+ * Das Jahr in der Nummer ist das **Ablagejahr** (`clock.now()`), die Frist
+ * rechnet ab `documentDate`. Im Normalbetrieb liegen beide beieinander und ein
+ * Dokument wird erst fällig, wenn der Zähler seines Jahres längst ruht. Sie
+ * fallen auseinander, wenn Altbestand eingescannt wird — eine Rechnung von 2005
+ * bekommt eine Nummer von heute und ist sofort fällig — oder wenn jemand eine
+ * Aufbewahrungseinstellung senkt. Nur dort trifft eine Löschung den Zähler des
+ * laufenden Jahres.
+ *
+ * Verschwindet dabei der **letzte** Eintrag eines Präfixes und Jahres, beginnt
+ * die Zählung wieder bei 001. Das ist bewusst so: ein Gedächtnis über gelöschte
+ * Zeilen hinaus wäre ein gespeicherter abgeleiteter Wert (Prinzip 5), und die
+ * freigewordene Nummer hängt an keinem Dokument mehr.
  */
 export function nextDocumentNumber(db: DbOrTx, prefix: string, year: number): string {
   const start = `${prefix}-${year}-`;
