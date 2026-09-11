@@ -21,6 +21,7 @@ import { z } from 'zod';
 import { documentTypeFor } from './catalog';
 import { documentFolders, documentLinks, documents, type DocumentLinkRow, type DocumentRow } from './schema';
 import { readDocumentFile, removeDocumentFile } from './storage';
+import { removeDocumentText } from './index-store';
 
 export type DocumentRecord = Omit<DocumentRow, 'inputSnapshot'> & { inputSnapshot: unknown; links: DocumentLinkRow[] };
 
@@ -346,6 +347,8 @@ export async function deleteDocument(
     tx.delete(documentLinks).where(eq(documentLinks.documentId, doc.id)).run();
     tx.delete(documents).where(eq(documents.id, doc.id)).run();
   });
+
+  removeDocumentText(deps, doc.id);
 
   // Die Datei gehört diesem Modul, nicht der Mediathek: Kein fremder Dienst,
   // kein fremdes Recht, kein Kontext, dem hier etwas untergeschoben wird.

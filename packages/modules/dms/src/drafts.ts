@@ -21,6 +21,7 @@ import { resolveRecipient } from './recipients';
 import { documentLinks, documents } from './schema';
 import { storeDocumentFile } from './storage';
 import { nextDocumentNumber, toRecord, type DocumentRecord } from './service';
+import { removeDocumentText } from './index-store';
 
 export const draftCreateSchema = z.object({
   typeKey: z.string().min(1),
@@ -229,6 +230,9 @@ export async function deleteDraft(deps: Deps, ctx: CallContext, input: unknown):
 
     return ok(null);
   });
+
+  removeDocumentText(deps, row.id);
+  return ok(null);
 }
 
 export async function previewDraft(

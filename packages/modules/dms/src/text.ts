@@ -16,6 +16,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { documents } from './schema';
 import { readDocumentFile } from './storage';
+import { replaceDocumentText } from './index-store';
 
 export const extractTextSchema = z.object({ documentId: z.string().min(1) });
 
@@ -87,6 +88,15 @@ export async function extractDocumentText(
       .run();
     return ok({ documentId, pages: 0, status: 'failed' });
   }
+
+  // Erst der Index, dann der Zustand: Bricht das Schreiben ab, bleibt das
+  // Dokument auf `running` und wird beim naechsten Start neu genommen. Andersrum
+  // stuende `done` an einem Dokument, das nicht auffindbar ist.
+  replaceDocumentText(
+    deps,
+    documentId,
+    pages.map((p) => ({ page: p.page, text: p.text })),
+  );
 
   const now = isoNow(deps.clock);
   return deps.db.transaction((tx: DbOrTx) => {
