@@ -1,4 +1,5 @@
 import { defineModule, type ModuleManifest } from '@kompass/core';
+import { dmsRetentionDue, dmsRetentionHolds } from './retention';
 import { dmsMediaReferences } from './service';
 import { letterTemplate } from './templates';
 
@@ -12,4 +13,6 @@ export const dmsModule: ModuleManifest = defineModule({
   // Ein Menüpunkt auf eine fehlende Route wäre ein toter Link.
   // `icon` muss dann in der Whitelist in `apps/kompass/src/components/shell/sidebar.tsx` stehen.
   mediaReferences: dmsMediaReferences,
+  retentionHolds: dmsRetentionHolds,
+  retentionDue: dmsRetentionDue,
 });

@@ -23,10 +23,18 @@ describe('deletion policy', () => {
   });
 
   it('locks the accountability core as not deletable', () => {
-    for (const entity of ['user', 'role', 'setting', 'auditEntry', 'document', 'module', 'project']) {
+    for (const entity of ['user', 'role', 'setting', 'auditEntry', 'module', 'project']) {
       const rule = DELETION_POLICY.find((r) => r.entity === entity);
       expect(rule, entity).toBeDefined();
       expect(rule!.deletable, entity).toBe(false);
     }
+  });
+
+  it('allows document deletion only after retention expiration with audit action', () => {
+    const rule = DELETION_POLICY.find((r) => r.entity === 'document');
+    expect(rule).toBeDefined();
+    expect(rule!.deletable).toBe(true);
+    expect(rule!.retentionClass).toBe('statutory10Y');
+    expect(rule!.auditAction).toBe('dms.delete');
   });
 });

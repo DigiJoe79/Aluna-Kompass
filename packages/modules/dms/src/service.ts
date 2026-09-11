@@ -1,6 +1,7 @@
 import { and, count, desc, eq, inArray, like, or, sql, type SQL } from 'drizzle-orm';
 import {
   conflict,
+  deleteMediaAsset,
   invalid,
   isoNow,
   newId,
@@ -9,6 +10,8 @@ import {
   parseFolderPath,
   recordAudit,
   requirePermission,
+  retentionEnd,
+  retentionMonths,
   schema,
   validate,
   type CallContext,
@@ -18,6 +21,7 @@ import {
   type Result,
 } from '@kompass/core';
 import { z } from 'zod';
+import { documentTypeFor } from './catalog';
 import { documentFolders, documentLinks, documents, type DocumentLinkRow, type DocumentRow } from './schema';
 
 /**
@@ -28,11 +32,11 @@ import { documentFolders, documentLinks, documents, type DocumentLinkRow, type D
  */
 export function dmsMediaReferences(deps: Deps, assetId: string): MediaReference[] {
   return deps.db
-    .select({ id: documents.id, number: documents.number })
+    .select({ id: documents.id, number: documents.number, subject: documents.subject })
     .from(documents)
     .where(eq(documents.assetId, assetId))
     .all()
-    .map((d) => ({ label: `Dokument ${d.number ?? d.id}`, entity: 'document', id: d.id }));
+    .map((row) => ({ label: `Dokument ${row.number ?? row.subject}`, entity: 'document', id: row.id }));
 }
 
 export type DocumentRecord = Omit<DocumentRow, 'inputSnapshot'> & { inputSnapshot: unknown; links: DocumentLinkRow[] };
@@ -268,4 +272,72 @@ export async function unlinkDocument(
     return ok(null);
   });
 }
+
+export const deleteDocumentSchema = z.object({
+  id: z.string().min(1),
+});
+
+export async function deleteDocument(
+  deps: Deps,
+  ctx: CallContext,
+  input: unknown,
+): Promise<Result<null>> {
+  const denied = requirePermission(ctx, 'dms.manage');
+  if (denied) return denied;
+
+  const parsed = validate(deps, deleteDocumentSchema, input);
+  if (!parsed.ok) return parsed;
+
+  const doc = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
+  if (!doc) return notFound('document', parsed.value.id);
+
+  const docType = documentTypeFor(deps.db, doc.typeKey);
+  if (!docType) return notFound('documentType', doc.typeKey);
+
+  if (docType.retentionClass === 'permanent') {
+    return conflict('retentionRunning', `Dokument ${doc.number ?? doc.id} unterliegt dauerhafter Aufbewahrung`);
+  }
+
+  const months = retentionMonths(deps, docType.retentionClass);
+  if (months === null) {
+    return conflict('retentionRunning', `Aufbewahrungsfrist für ${doc.number ?? doc.id} ist nicht konfiguriert`);
+  }
+
+  const until = retentionEnd(doc.documentDate, months);
+  const today = deps.clock.now().toISOString().slice(0, 10);
+  if (until >= today) {
+    return conflict('retentionRunning', `Aufbewahrungsfrist für Dokument ${doc.number ?? doc.id} läuft noch bis ${until}`);
+  }
+
+  deps.db.transaction((tx: DbOrTx) => {
+    recordAudit(tx, deps, ctx, {
+      action: 'dms.delete',
+      entityType: 'document',
+      entityId: doc.id,
+      before: {
+        id: doc.id,
+        number: doc.number,
+        subject: doc.subject,
+        typeKey: doc.typeKey,
+        documentDate: doc.documentDate,
+        folder: doc.folder,
+        assetId: doc.assetId,
+      },
+      summary: `Dokument ${doc.number ?? doc.subject} gelöscht`,
+    });
+
+    tx.delete(documentLinks).where(eq(documentLinks.documentId, doc.id)).run();
+    tx.delete(documents).where(eq(documents.id, doc.id)).run();
+  });
+
+  if (doc.assetId) {
+    const mediaCtx = ctx.permissions.has('media.upload')
+      ? ctx
+      : { ...ctx, permissions: new Set([...ctx.permissions, 'media.upload']) };
+    await deleteMediaAsset(deps, mediaCtx, { id: doc.assetId });
+  }
+
+  return ok(null);
+}
+
 

@@ -54,12 +54,6 @@ export const DELETION_POLICY: readonly DeletionRule[] = [
     reason: 'Das Änderungsprotokoll ist der Nachweis selbst; nur INSERT, per Trigger abgesichert.',
   },
   {
-    entity: 'document',
-    deletable: false,
-    reason:
-      'Belege und erzeugte Dokumente sind gegenüber Finanzamt und Transparenzregister nachweispflichtig; Storno statt Löschen.',
-  },
-  {
     entity: 'module',
     deletable: false,
     reason: 'Module werden deaktiviert; ihre Datenspuren bleiben.',
@@ -145,5 +139,16 @@ export const DELETION_POLICY: readonly DeletionRule[] = [
       'Personenbezogene Daten sind nach Wegfall des Zwecks zu löschen (DSGVO Art. 17). Die gesetzliche Aufbewahrung sticht diese Pflicht nur, solange sie läuft.',
     guard: 'Erst wenn kein Halter mehr läuft — geprüft über retentionHolds aller aktiven Module. Ohne nachgewiesene Frist bleibt der Kontakt bestehen.',
     auditAction: 'contacts.delete',
+  },
+  {
+    // Der Eintrag nennt statutory10Y als längste in der Praxis vorkommende Klasse; maßgeblich ist die Klasse an der Dokumentart.
+    entity: 'document',
+    deletable: true,
+    reason:
+      'Personenbezogene Daten sind nach Wegfall des Zwecks zu löschen (DSGVO Art. 17). Die Aufbewahrungsfrist sticht diese Pflicht, solange sie läuft (Entscheidung 10).',
+    guard:
+      'Erst nach Ablauf der Frist der Dokumentart, gerechnet ab Ablauf des Kalenderjahres von documentDate. Ein Mensch bestätigt jede Löschung.',
+    auditAction: 'dms.delete',
+    retentionClass: 'statutory10Y',
   },
 ];
