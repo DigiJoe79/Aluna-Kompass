@@ -20,6 +20,14 @@ describe('createDraft', () => {
     expect(created.value.draftBody).toContain('Einladung');
   });
 
+  it('schließt das Anführungszeichen im Protokolleintrag deutsch', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const created = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Einladung', body: 'x' });
+    if (!created.ok) throw new Error('setup');
+    const entry = deps.db.select().from(schema.auditLog).all().find((e) => e.action === 'dms.draft.create');
+    expect(entry?.summary).toBe('Entwurf \u201eEinladung\u201c angelegt');
+  });
+
   it('lehnt eine unbekannte Dokumentart ab', async () => {
     const { deps, ctx } = setupWithTypes();
     const result = await createDraft(deps, ctx, { typeKey: 'gibtsnicht', subject: 'x', body: 'y' });

@@ -22,41 +22,46 @@ import { DOCUMENT_FOLDER, ensureDocumentFolder } from './drafts';
 import { documentLinks, documents } from './schema';
 import { linkInputSchema, nextDocumentNumber, toRecord, type DocumentRecord } from './service';
 
+/**
+ * Was jede Ablage eingehender Post beschreibt — unabhängig davon, woher die
+ * Bytes kommen. Beide Schemata unten teilen sich diesen Bestand, damit der
+ * Weg über MCP nichts annimmt, was der Service verwirft.
+ */
+const receiveFields = {
+  filename: z.string().trim().min(1).max(255),
+  typeKey: z.string().min(1),
+  subject: z.string().trim().min(1).max(300),
+  documentDate: z.string().date(),
+  folder: z.string().trim().min(1).nullable().optional(),
+  links: z.array(linkInputSchema).default([]),
+};
+
+const oneSource = {
+  message: 'entweder bytes, contentBase64 oder assetId',
+} as const;
+
+/** Was der Service annimmt: rohe Bytes aus der Oberfläche, Base64 oder ein vorhandenes Asset. */
 export const receiveDocumentSchema = z
   .object({
-    filename: z.string().trim().min(1).max(255),
+    ...receiveFields,
     bytes: z.custom<Uint8Array>((val) => val instanceof Uint8Array, { message: 'invalidBytes' }).optional(),
     contentBase64: z.string().optional(),
     assetId: z.string().optional(),
-    typeKey: z.string().min(1),
-    subject: z.string().trim().min(1).max(300),
-    documentDate: z.string().date(),
-    folder: z.string().trim().min(1).nullable().optional(),
-    links: z.array(linkInputSchema).default([]),
   })
   .refine(
-    (value) => {
-      const count = (value.bytes ? 1 : 0) + (value.contentBase64 ? 1 : 0) + (value.assetId ? 1 : 0);
-      return count === 1;
-    },
-    { message: 'entweder bytes, contentBase64 oder assetId' },
+    (value) => (value.bytes ? 1 : 0) + (value.contentBase64 ? 1 : 0) + (value.assetId ? 1 : 0) === 1,
+    oneSource,
   );
 
+/** Was MCP zeigt: derselbe Bestand ohne `bytes`, weil ein Agent nur JSON schickt. */
 export const receiveSchema = z
   .object({
-    filename: z.string().trim().min(1),
+    ...receiveFields,
     /** Entweder die Bytes als Base64 oder ein bereits abgelegtes Asset. */
     contentBase64: z.string().optional(),
     assetId: z.string().optional(),
-    typeKey: z.string().min(1),
-    subject: z.string().trim().min(1).max(300),
-    documentDate: z.string().date(),
-    folder: z.string().trim().min(1).nullable().optional(),
-    links: z.array(linkInputSchema).default([]),
   })
-  .refine((value) => Boolean(value.contentBase64) !== Boolean(value.assetId), {
-    message: 'entweder contentBase64 oder assetId',
-  });
+  .refine((value) => Boolean(value.contentBase64) !== Boolean(value.assetId), oneSource);
 
 export async function receiveDocument(
   deps: Deps,

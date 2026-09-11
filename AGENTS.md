@@ -42,6 +42,7 @@ Aluna Kompass ist ein Open-Source-Vereinsverwaltungstool für gemeinnützige Ver
 - `pnpm dev:image [up|down|reset]` — eine **stehende** Testumgebung auf Port 3300, mit Daten, die Neustarts überleben. Zum Anklicken, wenn die Frage „verhält es sich als Container auch so?" lautet. Der Alltag bleibt `pnpm dev`: Dort siehst du eine Änderung sofort, hier kostet sie einen Neubau.
 - `pnpm --filter @kompass/core db:generate` — Migration aus Schema erzeugen
 - `pnpm --filter @kompass/core seed` — Entwicklungsdaten (nur `APP_ENV=development`)
+- `scripts/doc-preview.sh [basis-id] [verzeichnis]` — Live-Vorschau einer Dokument-Basisvorlage: rendert einen Beispielbrief, öffnet das PDF und rendert bei jeder Änderung an der `.typ` neu
 - `pnpm --filter verein-basis dev` — mitgeliefertes Basis-Template mit Fixture unter `http://localhost:4321`
 - `pnpm --filter verein-basis test` — Tests des Basis-Templates
 - `pnpm import:prototype` — Einmalige Übernahme der Tiere und Projekte aus dem Prototyp

@@ -128,7 +128,7 @@ export async function createDraft(deps: Deps, ctx: CallContext, input: unknown):
       entityType: 'documentDraft',
       entityId: id,
       after: { typeKey: docType.key, subject: parsed.value.subject },
-      summary: `Entwurf „${parsed.value.subject}" angelegt`,
+      summary: `Entwurf „${parsed.value.subject}“ angelegt`,
     });
 
     const row = tx.select().from(documents).where(eq(documents.id, id)).get()!;
@@ -169,7 +169,7 @@ export async function updateDraft(deps: Deps, ctx: CallContext, input: unknown):
       entityId: row.id,
       before: { subject: row.subject },
       after: { subject: after.subject },
-      summary: `Entwurf „${after.subject}" geändert`,
+      summary: `Entwurf „${after.subject}“ geändert`,
     });
 
     return ok(toRecord(deps, after, tx));
@@ -199,7 +199,7 @@ export async function deleteDraft(deps: Deps, ctx: CallContext, input: unknown):
       entityType: 'documentDraft',
       entityId: row.id,
       before: { subject: row.subject, typeKey: row.typeKey },
-      summary: `Entwurf „${row.subject}" gelöscht`,
+      summary: `Entwurf „${row.subject}“ gelöscht`,
     });
 
     return ok(null);
@@ -246,7 +246,7 @@ export async function previewDraft(
       entityType: 'documentDraft',
       entityId: row.id,
       after: { templateKey, subject: row.subject },
-      summary: `Vorschau für Entwurf „${row.subject}" erzeugt`,
+      summary: `Vorschau für Entwurf „${row.subject}“ erzeugt`,
     });
   });
 
@@ -272,7 +272,7 @@ export function ensureDocumentFolder(deps: Deps, ctx: CallContext) {
         entityType: 'mediaFolder',
         entityId: DOCUMENT_FOLDER,
         after: { path: DOCUMENT_FOLDER },
-        summary: `Ordner „${DOCUMENT_FOLDER}" angelegt`,
+        summary: `Ordner „${DOCUMENT_FOLDER}“ angelegt`,
       });
     });
   }

@@ -1,6 +1,6 @@
 import { ctxWith } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
-import { receiveDocument } from '../src/incoming';
+import { receiveDocument, receiveDocumentSchema, receiveSchema } from '../src/incoming';
 import { ALL_DMS, auditActions, pdfBytes, setupWithTypes } from './helpers';
 
 describe('receiveDocument', () => {
@@ -84,5 +84,31 @@ describe('receiveDocument', () => {
       documentDate: '2026-03-14',
     });
     expect(auditActions(deps)).toContain('dms.receive');
+  });
+});
+
+describe('Eingangsschemata', () => {
+  /**
+   * Zwei Schemata, ein Feldbestand: Der Service nimmt zusätzlich rohe `bytes`
+   * aus der Oberfläche, MCP darf nur JSON-Fähiges zeigen. Läuft der Feldbestand
+   * auseinander, nimmt ein Werkzeug etwas an, das der Service verwirft.
+   */
+  const keys = (schema: { def: { shape: Record<string, unknown> } }) => Object.keys(schema.def.shape);
+
+  it('zeigt über MCP dieselben Felder wie der Service, nur ohne bytes', () => {
+    expect(keys(receiveSchema).sort()).toEqual(keys(receiveDocumentSchema).filter((k) => k !== 'bytes').sort());
+  });
+
+  it('verlangt über MCP genau eine Quelle', () => {
+    const base = { filename: 'a.pdf', typeKey: 'authority', subject: 'A', documentDate: '2026-03-14' };
+    expect(receiveSchema.safeParse({ ...base }).success).toBe(false);
+    expect(receiveSchema.safeParse({ ...base, contentBase64: 'x', assetId: 'y' }).success).toBe(false);
+    expect(receiveSchema.safeParse({ ...base, contentBase64: 'x' }).success).toBe(true);
+  });
+
+  it('begrenzt den Dateinamen auf beiden Wegen gleich', () => {
+    const long = { filename: 'a'.repeat(256), typeKey: 'authority', subject: 'A', documentDate: '2026-03-14', contentBase64: 'x' };
+    expect(receiveSchema.safeParse(long).success).toBe(false);
+    expect(receiveDocumentSchema.safeParse(long).success).toBe(false);
   });
 });
