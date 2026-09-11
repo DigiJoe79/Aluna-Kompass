@@ -85,6 +85,8 @@ bei geänderten Abhängigkeiten etwa siebzehn — dann baut die Deps-Schicht des
 Images `better-sqlite3` und `sharp` neu. Die Begründung der Aufteilung steht in
 `docs/superpowers/specs/2026-09-08-pruefringe-design.md`.
 
+**Texterkennung im Image:** Das Container-Image bringt Tesseract 5.3, Poppler (`poppler-utils`) und die Sprachdaten für Deutsch und Englisch (`tesseract-ocr-deu`, `tesseract-ocr-eng`) mit (Zuwachs rund 117 MB aus Debian). Die Sprachwahl für die Erkennung erfolgt über die Einstellung `dms.ocrLanguages`.
+
 ## MCP
 Endpunkt `http://<nas>:3000/mcp` (Streamable HTTP), Authentifizierung mit einem persönlichen API-Token aus dem Profil (`Authorization: Bearer akx_live_…`). Tokens wirken mit den Rechten des Nutzers; jeder Vorgang steht im Änderungsprotokoll mit Kanal „MCP“.
 

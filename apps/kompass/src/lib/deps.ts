@@ -1,6 +1,7 @@
 
 import { coreDocumentTemplates, createDocumentEngine } from '@kompass/documents';
 import { coreModule, createDeps, readEnv, resetDataPath, seedDevelopment } from '@kompass/core';
+import { createTextExtraction } from '@kompass/text-extraction';
 import { installedModules } from '../modules';
 import { resetMcpHandler } from './mcp';
 
@@ -25,6 +26,7 @@ export function getDeps(): AppDeps {
       modules: installedModules,
       coreTemplates: coreDocumentTemplates(),
       documents: createDocumentEngine({ documentTemplatesDir: env.documentTemplatesDir }),
+      textExtraction: createTextExtraction(),
     });
   }
   return holder.deps;

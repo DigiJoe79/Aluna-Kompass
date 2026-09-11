@@ -15,6 +15,7 @@ COPY packages/documents/package.json packages/documents/
 COPY packages/markdown/package.json packages/markdown/
 COPY packages/mcp/package.json packages/mcp/
 COPY packages/site-template/package.json packages/site-template/
+COPY packages/text-extraction/package.json packages/text-extraction/
 COPY packages/modules/animals/package.json packages/modules/animals/
 COPY packages/modules/contacts/package.json packages/modules/contacts/
 COPY packages/modules/dms/package.json packages/modules/dms/
@@ -41,7 +42,11 @@ RUN set -eu; \
       arm64) typst_arch=aarch64 ;; \
       *) echo "keine Typst-Datei fuer TARGETARCH=${TARGETARCH}" >&2; exit 1 ;; \
     esac; \
+# Texterkennung fuer den Posteingang: Poppler liest die Textebene, Tesseract
+# liest die Seiten, die nur ein Bild sind. Rund 117 MB, alles aus Debian —
+# keine Fremdquelle, und nichts verlaesst das Geraet.
     apt-get update && apt-get install -y --no-install-recommends ca-certificates curl xz-utils rsync openssh-client sshpass \
+      tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng poppler-utils \
  && curl -sSL "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-${typst_arch}-unknown-linux-musl.tar.xz" \
     | tar -xJ -C /usr/local/bin --strip-components=1 "typst-${typst_arch}-unknown-linux-musl/typst" \
  && typst --version \

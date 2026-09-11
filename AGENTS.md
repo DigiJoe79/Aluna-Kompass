@@ -48,6 +48,7 @@ Aluna Kompass ist ein Open-Source-Vereinsverwaltungstool für gemeinnützige Ver
 - `pnpm import:prototype` — Einmalige Übernahme der Tiere und Projekte aus dem Prototyp
 - `pnpm --filter @kompass/app mcp:check <url> [token]` — MCP-Endpunkt einer laufenden Instanz prüfen
 - `pnpm dev:reset` — Entwicklungsdatenbank verwerfen und mit Seed **und** den Tieren und Projekten des Prototyps neu aufbauen (nur `APP_ENV=development`; Prototyp-Pfad über `PROTOTYPE_DIR`)
+- Texterkennung lokal: `brew install tesseract tesseract-lang poppler` — ohne sie meldet die Akte „Texterkennung nicht verfügbar", und `packages/text-extraction` überspringt seine Tests nicht, sondern schlägt fehl.
 - Betrieb: `docs/betrieb.md` (NAS-Deployment, Backups, Updates); Compose-Vorlagen `docker-compose.test.yml` und `docker-compose.prod.yml`, CI `.github/workflows/ci.yml`
 
 ## Quellen

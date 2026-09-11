@@ -5,7 +5,17 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const withNextIntl = createNextIntlPlugin();
 
 const nextConfig: NextConfig = {
-  transpilePackages: ['@kompass/core', '@kompass/documents', '@kompass/mcp', '@kompass/module-site', '@kompass/module-animals', '@kompass/module-contacts', '@kompass/markdown'],
+  transpilePackages: [
+    '@kompass/core',
+    '@kompass/documents',
+    '@kompass/mcp',
+    '@kompass/module-site',
+    '@kompass/module-animals',
+    '@kompass/module-contacts',
+    '@kompass/module-dms',
+    '@kompass/markdown',
+    '@kompass/text-extraction',
+  ],
   serverExternalPackages: ['better-sqlite3', '@node-rs/argon2', 'tar', 'file-type', 'image-size', 'sharp'],
   // Backups enthalten Datenbank und Medien; die Vorgabe von 1 MB reicht dafür
   // nicht. Der Import läuft über eine Server Action, deren Body Next puffert,

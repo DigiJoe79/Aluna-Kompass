@@ -74,6 +74,9 @@ importers:
       '@kompass/site-template':
         specifier: workspace:*
         version: link:../../packages/site-template
+      '@kompass/text-extraction':
+        specifier: workspace:*
+        version: link:../../packages/text-extraction
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
