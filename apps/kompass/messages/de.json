@@ -1350,6 +1350,8 @@
       "text": "In dieser Ansicht liegen keine Dokumente vor."
     },
     "newDraftDescription": "Verfassen Sie ein Schreiben mit Briefkopf auf Basis der Vorlagen.",
+    "receiveDescription": "Legen Sie eingehende Schreiben ab. Einsortierregeln belegen Art, Ordner und Datum automatisch vor.",
+    "receiveSubmit": "Ablegen",
     "saveDraft": "Entwurf speichern",
     "preview": "Vorschau",
     "file": "Festschreiben",
@@ -1374,14 +1376,21 @@
     "linksTitle": "Verknüpfungen",
     "voidReasonTitle": "Stornierungsgrund",
     "fields": {
+      "file": "Datei",
+      "documentDate": "Datum auf dem Dokument",
       "subject": "Betreff",
       "body": "Text",
       "type": "Dokumentart",
       "folder": "Ordner",
       "recipient": "Empfänger",
       "noRecipient": "— Kein Empfänger —",
+      "sender": "Absender",
+      "noSender": "— Kein Absender —",
       "voidReason": "Grund für die Stornierung",
       "voidReasonPlaceholder": "z. B. Falsche Anschrift oder fehlerhafter Inhalt"
+    },
+    "errors": {
+      "noFile": "Bitte wählen Sie eine Datei aus."
     },
     "toast": {
       "draftUpdated": "Entwurf gespeichert",

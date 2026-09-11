@@ -41,4 +41,18 @@ test.describe('dms', () => {
     await page.getByRole('button', { name: 'Festschreiben bestätigen' }).click();
     await expect(page.getByText(/BRF-\d{4}-\d{3}/)).toBeVisible();
   });
+
+  test('legt eine Datei im Eingangskorb ab und sortiert sie ein', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/receive');
+    await page.getByLabel('Datei').setInputFiles({ name: '2026-03-14 Behoerde.pdf', mimeType: 'application/pdf', buffer: samplePdf() });
+    await expect(page.getByLabel('Datum auf dem Dokument')).toHaveValue('2026-03-14');
+    await page.getByLabel('Betreff').fill('Eingegangenes Schreiben');
+    await page.getByRole('button', { name: 'Ablegen' }).click();
+    await expect(page.getByText(/BEH-\d{4}-\d{3}/)).toBeVisible();
+  });
 });
+
+function samplePdf(): Buffer {
+  return Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n');
+}

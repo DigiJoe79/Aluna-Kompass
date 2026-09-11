@@ -4,6 +4,8 @@ import {
   createDraft,
   deleteDraft,
   fileDocument,
+  receiveDocument,
+  suggestClassification,
   updateDraft,
   voidDocument,
 } from '@kompass/module-dms';
@@ -115,4 +117,57 @@ export async function deleteDraftAction(id: string): Promise<ActionState> {
 
   revalidatePath('/dms');
   redirect('/dms');
+}
+
+export async function suggestClassificationAction(
+  filename: string,
+  senderId?: string,
+): Promise<{ typeKey: string | null; folder: string | null; documentDate: string | null } | null> {
+  const { deps, ctx } = await requireSession();
+  const res = await suggestClassification(deps, ctx, {
+    filename,
+    senderEntityType: senderId ? 'contact' : undefined,
+    senderEntityId: senderId || undefined,
+  });
+  if (res.ok) return res.value;
+  return null;
+}
+
+export async function receiveDocumentAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+
+  const file = formData.get('file') as File | null;
+  if (!file || file.size === 0) {
+    return { status: 'error', message: t('dms.errors.noFile'), fieldErrors: { file: t('dms.errors.noFile') } };
+  }
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const filename = file.name;
+  const typeKey = String(formData.get('typeKey') ?? 'authority');
+  const subject = String(formData.get('subject') ?? '').trim();
+  const documentDate = String(formData.get('documentDate') ?? '').trim();
+  const folder = orNull(formData.get('folder'));
+  const senderId = orNull(formData.get('senderId'));
+
+  const links = senderId
+    ? [{ entityType: 'contact', entityId: senderId, role: 'sender' as const }]
+    : [];
+
+  const result = await receiveDocument(deps, ctx, {
+    filename,
+    bytes,
+    typeKey,
+    subject,
+    documentDate,
+    folder,
+    links,
+  });
+
+  if (!result.ok) {
+    return toActionState(result, t);
+  }
+
+  revalidatePath('/dms');
+  redirect(`/dms/${result.value.id}`);
 }
