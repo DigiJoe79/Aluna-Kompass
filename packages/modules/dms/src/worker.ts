@@ -1,5 +1,5 @@
 import { systemContext, type Deps } from '@kompass/core';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq, notInArray } from 'drizzle-orm';
 import { documents } from './schema';
 import { extractDocumentText } from './text';
 
@@ -66,26 +66,39 @@ export async function requeueUnavailable(deps: Deps): Promise<number> {
   return waiting.length;
 }
 
+export type DocumentOutcome = 'idle' | 'done' | 'failed' | 'unavailable';
+
 /**
  * Genau ein Dokument abarbeiten. Eins zur Zeit ist Absicht: Auf der NAS-CPU
  * rendert nebenher Typst, und zwei parallele Tesseract-Läufe nehmen sich
  * gegenseitig die Luft.
+ *
+ * `skip` sind die Dokumente, die in dieser Runde schon gescheitert sind. Ein
+ * Fehlschlag setzt auf `pending` zurück, und das Gescheiterte ist das älteste —
+ * ohne diese Menge griffe die Runde sofort wieder danach.
  */
-export async function processNextDocument(deps: Deps): Promise<'idle' | 'done' | 'failed' | 'unavailable'> {
+export async function processNextDocument(
+  deps: Deps,
+  skip: ReadonlySet<string> = new Set(),
+): Promise<{ status: DocumentOutcome; documentId: string | null }> {
   const next = deps.db
     .select({ id: documents.id })
     .from(documents)
-    .where(eq(documents.textStatus, 'pending'))
+    .where(
+      skip.size > 0
+        ? and(eq(documents.textStatus, 'pending'), notInArray(documents.id, [...skip]))
+        : eq(documents.textStatus, 'pending'),
+    )
     .orderBy(asc(documents.createdAt))
     .limit(1)
     .get();
-  if (!next) return 'idle';
+  if (!next) return { status: 'idle', documentId: null };
 
   const ctx = systemContext({ permissions: ['dms.manage'] });
 
   const result = await extractDocumentText(deps, ctx, { documentId: next.id });
-  if (!result.ok) return 'failed';
-  return result.value.status;
+  if (!result.ok) return { status: 'failed', documentId: next.id };
+  return { status: result.value.status, documentId: next.id };
 }
 
 export interface TextWorker {
@@ -117,20 +130,25 @@ export function startTextWorker(
       // Erst nachsehen, ob die Werkzeuge inzwischen da sind.
       await requeueUnavailable(getDeps());
 
-      // Weiter geht es nur, solange auch wirklich etwas gelesen wurde — immer
-      // eins auf einmal. Jeder andere Ausgang beendet die Runde:
-      //
       // Ein Fehlschlag setzt das Dokument auf `pending` zurück, und es ist das
-      // älteste. Wer jetzt weitermacht, greift wieder danach und hat die drei
-      // Versuche in Millisekunden verbraucht — ein vorübergehender Fehler
-      // bekäme nie eine zweite Chance. Der Takt ist der Backoff.
+      // älteste. Es in derselben Runde erneut zu nehmen, verbrauchte die drei
+      // Versuche in Millisekunden — ein vorübergehender Fehler bekäme nie eine
+      // zweite Chance. Der Takt ist der Backoff.
       //
-      // Und es macht die Schleife an sich selbst sicher statt an einer
-      // Invariante: Liefert der Lauf je einen Fachfehler, ohne den Zustand
-      // anzufassen, endet die Runde, statt sich festzufressen.
-      let outcome = await processNextDocument(getDeps());
-      while (outcome === 'done' && !stopped) {
-        outcome = await processNextDocument(getDeps());
+      // Die Runde endet deshalb aber **nicht**: Ein einzelnes zerschossenes PDF
+      // blockierte sonst alles hinter sich, und beim nächsten Takt wieder, weil
+      // es das älteste bleibt. Drei Versuche wären drei blockierte Takte — ein
+      // frisch abgelegter Scan käme erst nach einer Minute in den Index.
+      // Übersprungen wird nur, was in dieser Runde schon gescheitert ist.
+      //
+      // `unavailable` beendet die Runde dagegen sehr wohl: Fehlen die
+      // Werkzeuge, ist auch für jedes andere Dokument nichts zu holen.
+      const failed = new Set<string>();
+      for (;;) {
+        if (stopped) break;
+        const { status, documentId } = await processNextDocument(getDeps(), failed);
+        if (status === 'idle' || status === 'unavailable') break;
+        if (status === 'failed' && documentId) failed.add(documentId);
       }
     } catch (error) {
       // Unerwartete Fehler (z. B. geschlossene DB beim Herunterfahren, oder
