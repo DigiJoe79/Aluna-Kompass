@@ -96,6 +96,14 @@ export async function listDocuments(deps: Deps, ctx: CallContext, input: unknown
   return ok({ documents: rows.map((row) => toRecord(deps, row)), total });
 }
 
+export async function getDocumentRecord(deps: Deps, ctx: CallContext, id: string): Promise<Result<DocumentRecord>> {
+  const denied = requirePermission(ctx, 'dms.view');
+  if (denied) return denied;
+  const row = deps.db.select().from(documents).where(eq(documents.id, id)).get();
+  if (!row) return notFound('document', id);
+  return ok(toRecord(deps, row));
+}
+
 export async function getDocument(deps: Deps, ctx: CallContext, id: string): Promise<Result<{ record: DocumentRecord; bytes: Uint8Array; filename: string }>> {
   const denied = requirePermission(ctx, 'dms.view');
   if (denied) return denied;

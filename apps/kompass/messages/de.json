@@ -1348,6 +1348,45 @@
     "empty": {
       "title": "Keine Dokumente gefunden",
       "text": "In dieser Ansicht liegen keine Dokumente vor."
+    },
+    "newDraftDescription": "Verfassen Sie ein Schreiben mit Briefkopf auf Basis der Vorlagen.",
+    "saveDraft": "Entwurf speichern",
+    "preview": "Vorschau",
+    "file": "Festschreiben",
+    "fileConfirmTitle": "Dokument festschreiben",
+    "fileConfirmDescription": "Beim Festschreiben wird dem Dokument eine fortlaufende Nummer zugewiesen und der Inhalt wird unveränderlich eingefroren.",
+    "fileConfirmSubmit": "Festschreiben bestätigen",
+    "openPdf": "PDF öffnen",
+    "backToList": "Zurück zur Übersicht",
+    "deleteDraft": "Entwurf löschen",
+    "deleteDraftConfirmTitle": "Entwurf verwerfen",
+    "deleteDraftConfirmDescription": "Möchten Sie diesen Entwurf wirklich unwiderruflich löschen?",
+    "deleteDraftConfirmSubmit": "Entwurf löschen",
+    "void": "Stornieren",
+    "voidConfirmTitle": "Dokument stornieren",
+    "voidConfirmDescription": "Geben Sie einen Grund für die Stornierung an. Die vergebene Nummer bleibt erhalten.",
+    "voidConfirmSubmit": "Stornieren bestätigen",
+    "detailsTitle": "Details",
+    "retentionTitle": "Aufbewahrung",
+    "retentionPermanent": "Dieses Dokument unterliegt der dauerhaften Aufbewahrung.",
+    "retentionUntil": "Aufbewahrungsfrist endet am {date}.",
+    "retentionRunning": "Aufbewahrungsfrist läuft.",
+    "linksTitle": "Verknüpfungen",
+    "voidReasonTitle": "Stornierungsgrund",
+    "fields": {
+      "subject": "Betreff",
+      "body": "Text",
+      "type": "Dokumentart",
+      "folder": "Ordner",
+      "recipient": "Empfänger",
+      "noRecipient": "— Kein Empfänger —",
+      "voidReason": "Grund für die Stornierung",
+      "voidReasonPlaceholder": "z. B. Falsche Anschrift oder fehlerhafter Inhalt"
+    },
+    "toast": {
+      "draftUpdated": "Entwurf gespeichert",
+      "filed": "Dokument festgeschrieben",
+      "voided": "Dokument storniert"
     }
   }
 }
