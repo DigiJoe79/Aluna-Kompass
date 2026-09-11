@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { idleState } from '@/lib/actions';
 import { receiveDocumentAction, suggestClassificationAction } from '../actions';
+import { Select } from '@/components/ui/select';
 
 export function ReceiveForm({
   types,
@@ -89,19 +90,18 @@ export function ReceiveForm({
 
         <div className="space-y-1.5">
           <Label htmlFor="typeKey">{t('fields.type')}</Label>
-          <select
+          <Select
             id="typeKey"
             name="typeKey"
             value={typeKey}
             onChange={(e) => setTypeKey(e.target.value)}
-            className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
           >
             {types.map((type) => (
               <option key={type.key} value={type.key}>
                 {type.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 
@@ -120,12 +120,11 @@ export function ReceiveForm({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="folder">{t('fields.folder')}</Label>
-          <select
+          <Select
             id="folder"
             name="folder"
             value={folder}
             onChange={(e) => setFolder(e.target.value)}
-            className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
           >
             <option value="">{t('inbox')}</option>
             {folders.map((f) => (
@@ -133,17 +132,16 @@ export function ReceiveForm({
                 {f}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="space-y-1.5">
           <Label htmlFor="senderId">{t('fields.sender')}</Label>
-          <select
+          <Select
             id="senderId"
             name="senderId"
             value={senderId}
             onChange={handleSenderChange}
-            className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
           >
             <option value="">{t('fields.noSender')}</option>
             {contacts.map((c) => (
@@ -151,7 +149,7 @@ export function ReceiveForm({
                 {c.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 

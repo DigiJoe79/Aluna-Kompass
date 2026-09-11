@@ -13,6 +13,7 @@ import { idleState } from '@/lib/actions';
 import { cn } from '@/lib/utils';
 import { createDocumentRuleAction, deleteDocumentRuleAction, updateDocumentRuleAction } from './actions';
 import type { DocumentTypeItem } from './types-panel';
+import { Select } from '@/components/ui/select';
 
 export interface DocumentRuleItem {
   id: string;
@@ -152,15 +153,14 @@ export function RulesPanel({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="create-rule-field">{t('ruleFields.matchField')}</Label>
-                <select
+                <Select
                   id="create-rule-field"
                   name="matchField"
                   defaultValue="filename"
-                  className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
                 >
                   <option value="filename">{t('ruleFields.filename')}</option>
                   <option value="senderName">{t('ruleFields.senderName')}</option>
-                </select>
+                </Select>
               </div>
 
               <div className="space-y-1.5">
@@ -176,11 +176,10 @@ export function RulesPanel({
 
             <div className="space-y-1.5">
               <Label htmlFor="create-rule-type">{t('ruleFields.thenType')}</Label>
-              <select
+              <Select
                 id="create-rule-type"
                 name="thenTypeKey"
                 defaultValue=""
-                className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
               >
                 <option value="">{t('ruleFields.noType')}</option>
                 {types.map((tp) => (
@@ -188,16 +187,15 @@ export function RulesPanel({
                     {tp.label} ({tp.prefix})
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="create-rule-folder">{t('ruleFields.thenFolder')}</Label>
-              <select
+              <Select
                 id="create-rule-folder"
                 name="thenFolder"
                 defaultValue=""
-                className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
               >
                 <option value="">{t('ruleFields.noFolder')}</option>
                 {folders.map((f) => (
@@ -205,7 +203,7 @@ export function RulesPanel({
                     {f}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <DialogFooter>
@@ -235,15 +233,14 @@ export function RulesPanel({
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="edit-rule-field">{t('ruleFields.matchField')}</Label>
-                  <select
+                  <Select
                     id="edit-rule-field"
                     name="matchField"
                     defaultValue={editingRule.matchField}
-                    className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
                   >
                     <option value="filename">{t('ruleFields.filename')}</option>
                     <option value="senderName">{t('ruleFields.senderName')}</option>
-                  </select>
+                  </Select>
                 </div>
 
                 <div className="space-y-1.5">
@@ -259,11 +256,10 @@ export function RulesPanel({
 
               <div className="space-y-1.5">
                 <Label htmlFor="edit-rule-type">{t('ruleFields.thenType')}</Label>
-                <select
+                <Select
                   id="edit-rule-type"
                   name="thenTypeKey"
                   defaultValue={editingRule.thenTypeKey ?? ''}
-                  className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
                 >
                   <option value="">{t('ruleFields.noType')}</option>
                   {types.map((tp) => (
@@ -271,16 +267,15 @@ export function RulesPanel({
                       {tp.label} ({tp.prefix})
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="edit-rule-folder">{t('ruleFields.thenFolder')}</Label>
-                <select
+                <Select
                   id="edit-rule-folder"
                   name="thenFolder"
                   defaultValue={editingRule.thenFolder ?? ''}
-                  className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
                 >
                   <option value="">{t('ruleFields.noFolder')}</option>
                   {folders.map((f) => (
@@ -288,7 +283,7 @@ export function RulesPanel({
                       {f}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div className="flex items-center gap-2 pt-1">

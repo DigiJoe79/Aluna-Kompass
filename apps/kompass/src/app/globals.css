@@ -109,6 +109,11 @@
   h1, h2, h3 { font-family: var(--font-heading); line-height: 1.2; }
   :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
   ::placeholder { color: var(--input-placeholder); }
+  /*
+   * Eine Feldhöhe für Eingabe-, Auswahl- und Knopfelemente. Steht hier und
+   * sonst nirgends, damit in einer Formularzeile nichts mehr springt.
+   */
+  :root { --field-h: 38px; }
   [data-density="compact"] { --row-h: 36px; }
   [data-density="comfortable"] { --row-h: 56px; }
 

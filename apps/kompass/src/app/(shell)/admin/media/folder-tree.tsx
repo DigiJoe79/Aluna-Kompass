@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import type { ActionState } from '@/lib/actions';
 import { createFolderAction, deleteFolderAction, renameFolderAction } from './actions';
 import type { Folder } from './types';
+import { Input } from '@/components/ui/input';
 
 const folderHref = (path: string | null) => (path === null ? '/admin/media' : `/admin/media?folder=${encodeURIComponent(path)}`);
 
@@ -49,12 +50,12 @@ export function FolderTree({
           void run(createFolderAction(current ? `${current}/${name}` : name)).then((s) => s.status === 'success' && setNewName(''));
         }}
       >
-        <input
+        <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder={t('newFolderName')}
           aria-label={t('newFolderName')}
-          className="min-w-0 flex-1 rounded border border-line bg-input px-2 py-1 text-[13px]"
+          className="min-w-0 flex-1"
         />
         <Button type="submit" size="sm" variant="ghost" disabled={newName.trim() === ''}>
           {t('newFolder')}

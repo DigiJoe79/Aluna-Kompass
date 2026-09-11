@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 
 export function AuditFilters({
   users,
@@ -25,7 +26,6 @@ export function AuditFilters({
     next.delete('offset');
     router.replace(`${pathname}?${next.toString()}`);
   };
-  const select = 'h-8 rounded-md border border-line-strong bg-field px-2 text-[13px]';
   return (
     <div className="flex flex-wrap items-center gap-3 border-b border-line bg-surface px-5 py-4">
       <Input
@@ -38,9 +38,9 @@ export function AuditFilters({
         }}
         className="h-8 w-[200px]"
       />
-      <select
+      <Select
         aria-label={t('user')}
-        className={select}
+        className="w-auto"
         value={params.get('userId') ?? ''}
         onChange={(e) => update('userId', e.target.value)}
       >
@@ -50,10 +50,10 @@ export function AuditFilters({
             {u.name}
           </option>
         ))}
-      </select>
-      <select
+      </Select>
+      <Select
         aria-label={t('channel')}
-        className={select}
+        className="w-auto"
         value={params.get('channel') ?? ''}
         onChange={(e) => update('channel', e.target.value)}
       >
@@ -61,10 +61,10 @@ export function AuditFilters({
         <option value="ui">{t('channels.ui')}</option>
         <option value="mcp">{t('channels.mcp')}</option>
         <option value="system">{t('channels.system')}</option>
-      </select>
-      <select
+      </Select>
+      <Select
         aria-label={t('action')}
-        className={select}
+        className="w-auto"
         value={params.get('action') ?? ''}
         onChange={(e) => update('action', e.target.value)}
       >
@@ -74,7 +74,7 @@ export function AuditFilters({
             {a}
           </option>
         ))}
-      </select>
+      </Select>
       <Input
         aria-label={t('from')}
         type="date"

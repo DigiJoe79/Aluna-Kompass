@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { idleState } from '@/lib/actions';
 import { cn } from '@/lib/utils';
 import { createDocumentTypeAction, updateDocumentTypeAction } from './actions';
+import { Select } from '@/components/ui/select';
 
 export interface DocumentTypeItem {
   key: string;
@@ -131,40 +132,37 @@ export function TypesPanel({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="create-direction">{t('typeColumns.direction')}</Label>
-                <select
+                <Select
                   id="create-direction"
                   name="defaultDirection"
                   defaultValue="incoming"
-                  className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
                 >
                   <option value="incoming">{tDms('directions.incoming')}</option>
                   <option value="outgoing">{tDms('directions.outgoing')}</option>
-                </select>
+                </Select>
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="create-retention">{t('typeColumns.retention')}</Label>
-                <select
+                <Select
                   id="create-retention"
                   name="retentionClass"
                   defaultValue="statutory10Y"
-                  className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
                 >
                   <option value="statutory10Y">{t('retentionClasses.statutory10Y')}</option>
                   <option value="statutory6Y">{t('retentionClasses.statutory6Y')}</option>
                   <option value="permanent">{t('retentionClasses.permanent')}</option>
                   <option value="consent">{t('retentionClasses.consent')}</option>
-                </select>
+                </Select>
               </div>
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="create-folder">{t('typeColumns.folder')}</Label>
-              <select
+              <Select
                 id="create-folder"
                 name="defaultFolder"
                 defaultValue=""
-                className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
               >
                 <option value="">{tDms('inbox')}</option>
                 {folders.map((f) => (
@@ -172,7 +170,7 @@ export function TypesPanel({
                     {f}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <DialogFooter>
@@ -219,40 +217,37 @@ export function TypesPanel({
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="edit-direction">{t('typeColumns.direction')}</Label>
-                  <select
+                  <Select
                     id="edit-direction"
                     name="defaultDirection"
                     defaultValue={editingType.defaultDirection}
-                    className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
                   >
                     <option value="incoming">{tDms('directions.incoming')}</option>
                     <option value="outgoing">{tDms('directions.outgoing')}</option>
-                  </select>
+                  </Select>
                 </div>
 
                 <div className="space-y-1.5">
                   <Label htmlFor="edit-retention">{t('typeColumns.retention')}</Label>
-                  <select
+                  <Select
                     id="edit-retention"
                     name="retentionClass"
                     defaultValue={editingType.retentionClass}
-                    className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
                   >
                     <option value="statutory10Y">{t('retentionClasses.statutory10Y')}</option>
                     <option value="statutory6Y">{t('retentionClasses.statutory6Y')}</option>
                     <option value="permanent">{t('retentionClasses.permanent')}</option>
                     <option value="consent">{t('retentionClasses.consent')}</option>
-                  </select>
+                  </Select>
                 </div>
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="edit-folder">{t('typeColumns.folder')}</Label>
-                <select
+                <Select
                   id="edit-folder"
                   name="defaultFolder"
                   defaultValue={editingType.defaultFolder ?? ''}
-                  className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
                 >
                   <option value="">{tDms('inbox')}</option>
                   {folders.map((f) => (
@@ -260,7 +255,7 @@ export function TypesPanel({
                       {f}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div className="flex items-center gap-2 pt-1">

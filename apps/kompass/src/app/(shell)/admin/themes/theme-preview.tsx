@@ -4,6 +4,7 @@ import type { Theme } from '@kompass/core/themes';
 import { THEME_TOKENS } from '@kompass/core/themes';
 import { useTranslations } from 'next-intl';
 import type { CSSProperties } from 'react';
+import { Input } from '@/components/ui/input';
 
 export function ThemePreview({ theme, mode }: { theme: Theme; mode: 'light' | 'dark' }) {
   const t = useTranslations('themes.preview');
@@ -48,11 +49,7 @@ export function ThemePreview({ theme, mode }: { theme: Theme; mode: 'light' | 'd
         <span className="rounded-sm bg-error-bg px-2 py-0.5 text-error">{t('badgeError')}</span>
         <span className="rounded-sm bg-badge px-2 py-0.5 text-badge-ink">{t('badgeInactive')}</span>
       </div>
-      <input
-        readOnly
-        value={t('inputValue')}
-        className="h-8 rounded-md border border-line-strong bg-field px-2 text-[13px] text-ink"
-      />
+      <Input readOnly value={t('inputValue')} />
       <table className="w-full overflow-hidden rounded-md border border-line text-[12px]">
         <thead className="bg-table-head text-muted-ink">
           <tr>

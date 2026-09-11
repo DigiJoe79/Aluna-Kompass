@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { FieldError } from '@/components/forms/field-error';
 import { MarkdownPreview } from '@/components/markdown-preview';
 import { blankFor, setAtPath } from './state';
+import { Select } from '@/components/ui/select';
 
 export interface FieldProps {
   path: string;
@@ -184,11 +185,11 @@ export function SchemaField(props: FieldProps) {
   if (widget === 'select') {
     const options = ((field as { enum?: string[] }).enum ?? []) as string[];
     return simple(
-      <select id={path} name={path} value={typeof value === 'string' ? value : options[0] ?? ''} onChange={(e) => onChange(e.target.value)} className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm">
+      <Select id={path} name={path} value={typeof value === 'string' ? value : options[0] ?? ''} onChange={(e) => onChange(e.target.value)} >
         {options.map((opt) => (
           <option key={opt} value={opt}>{opt}</option>
         ))}
-      </select>,
+      </Select>,
     );
   }
   if (widget === 'asset') {

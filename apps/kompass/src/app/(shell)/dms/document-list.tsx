@@ -10,6 +10,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { Select } from '@/components/ui/select';
 
 export interface DocumentListItem {
   id: string;
@@ -121,7 +122,7 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
           }}
           className="h-[34px] w-[260px]"
         />
-        <select
+        <Select
           aria-label={t('columns.direction')}
           value={directionFilter}
           onChange={(e) => {
@@ -129,13 +130,13 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
             setDirectionFilter(val);
             applyFilters({ direction: val });
           }}
-          className="h-[34px] rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
+          className="w-auto"
         >
           <option value="">{t('allDirections')}</option>
           <option value="incoming">{t('directions.incoming')}</option>
           <option value="outgoing">{t('directions.outgoing')}</option>
-        </select>
-        <select
+        </Select>
+        <Select
           aria-label={t('columns.type')}
           value={typeFilter}
           onChange={(e) => {
@@ -143,7 +144,7 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
             setTypeFilter(val);
             applyFilters({ type: val });
           }}
-          className="h-[34px] rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
+          className="w-auto"
         >
           <option value="">{t('allTypes')}</option>
           {types.map((type) => (
@@ -151,9 +152,9 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
               {type.label}
             </option>
           ))}
-        </select>
+        </Select>
         {!isInbox ? (
-          <select
+          <Select
             aria-label={t('columns.folder')}
             value={folderFilter}
             onChange={(e) => {
@@ -161,7 +162,7 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
               setFolderFilter(val);
               applyFilters({ folder: val });
             }}
-            className="h-[34px] rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
+            className="w-auto"
           >
             <option value="">{t('allFolders')}</option>
             {folders.map((f) => (
@@ -169,9 +170,9 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
                 {f}
               </option>
             ))}
-          </select>
+          </Select>
         ) : null}
-        <select
+        <Select
           aria-label={t('columns.status')}
           value={phaseFilter}
           onChange={(e) => {
@@ -179,12 +180,12 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
             setPhaseFilter(val);
             applyFilters({ phase: val });
           }}
-          className="h-[34px] rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
+          className="w-auto"
         >
           <option value="">{t('allPhases')}</option>
           <option value="draft">{t('phases.draft')}</option>
           <option value="issued">{t('phases.issued')}</option>
-        </select>
+        </Select>
       </div>
 
       {fulltextTooShort ? <p className="text-[13px] text-muted-ink">{t('searchTooShort')}</p> : null}

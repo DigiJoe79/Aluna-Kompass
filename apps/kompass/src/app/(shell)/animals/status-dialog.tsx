@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { setAnimalStatusAction } from './actions';
+import { Select } from '@/components/ui/select';
 
 export function StatusDialog({ animalId, current }: { animalId: string; current: string }) {
   const t = useTranslations('animals.status');
@@ -21,11 +22,11 @@ export function StatusDialog({ animalId, current }: { animalId: string; current:
       <DialogContent className="bg-surface shadow-md">
         <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
         <FormField id="status" label={t('next')}>
-          <select id="status" aria-label={t('next')} value={status} onChange={(e) => setStatus(e.target.value)} className="h-9 rounded-md border border-line-strong bg-field px-2 text-[14px]">
+          <Select id="status" aria-label={t('next')} value={status} onChange={(e) => setStatus(e.target.value)} className="w-auto">
             <option value="lookingForHome">{t('values.lookingForHome')}</option>
             <option value="reserved">{t('values.reserved')}</option>
             <option value="adopted">{t('values.adopted')}</option>
-          </select>
+          </Select>
         </FormField>
         {status === 'adopted' ? (
           <FormField id="year" label={t('year')} hint={t('yearHint')}>

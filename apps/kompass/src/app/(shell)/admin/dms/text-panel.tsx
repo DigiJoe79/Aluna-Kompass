@@ -5,6 +5,7 @@ import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { reindexAllDocumentsAction, updateOcrLanguagesAction } from './actions';
+import { Select } from '@/components/ui/select';
 
 export interface TextPanelProps {
   currentLanguages: string;
@@ -100,12 +101,12 @@ export function TextPanel({
 
             {canManageSettings ? (
               <div className="flex flex-wrap items-center gap-2">
-                <select
+                <Select
                   value=""
                   onChange={(e) => {
                     if (e.target.value) handleAddLanguage(e.target.value);
                   }}
-                  className="h-[34px] rounded-md border border-line-strong bg-field px-2.5 font-mono text-[13px] text-ink shadow-xs"
+                  className="w-auto font-mono"
                   aria-label={t('textPanel.languages')}
                 >
                   <option value="">{t('textPanel.addLanguage')}</option>
@@ -116,7 +117,7 @@ export function TextPanel({
                         {l}
                       </option>
                     ))}
-                </select>
+                </Select>
 
                 {hasLanguageChanges ? (
                   <Button

@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { setContactChannelsAction } from '../actions';
+import { Select } from '@/components/ui/select';
 
 type ChannelKind = 'email' | 'phone' | 'mobile' | 'fax' | 'web';
 
@@ -90,18 +91,17 @@ export function ChannelsEditor({
 
                   <div className="mt-4 space-y-3.5">
                     <FormField id="channel-kind" label={t('channels.kind')}>
-                      <select
+                      <Select
                         id="channel-kind"
                         value={kind}
                         onChange={(e) => setKind(e.target.value as ChannelKind)}
-                        className="h-9 w-full rounded-md border border-line-strong bg-field px-3 text-[13px] text-ink shadow-xs"
                       >
                         <option value="email">{t('channels.kinds.email')}</option>
                         <option value="phone">{t('channels.kinds.phone')}</option>
                         <option value="mobile">{t('channels.kinds.mobile')}</option>
                         <option value="fax">{t('channels.kinds.fax')}</option>
                         <option value="web">{t('channels.kinds.web')}</option>
-                      </select>
+                      </Select>
                     </FormField>
 
                     <FormField id="channel-value" label={t('channels.value')}>

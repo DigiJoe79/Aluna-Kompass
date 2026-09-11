@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { idleState } from '@/lib/actions';
 import { createDraftAction, updateDraftAction } from '../actions';
+import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 /**
  * Dasselbe Formular legt an und bessert aus. Ohne `draft` entsteht ein neuer
@@ -64,13 +66,13 @@ export function DraftForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="body">{t('fields.body')}</Label>
-        <textarea
+        <Textarea
           id="body"
           name="body"
           rows={10}
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          className="w-full rounded-md border border-line-strong bg-field p-2.5 font-mono text-[13px] text-ink shadow-xs focus:border-ring focus:outline-hidden"
+          className="resize-y font-mono text-[13px] leading-relaxed"
         />
         <FieldError id="body-error" message={errors.body} />
       </div>
@@ -91,31 +93,29 @@ export function DraftForm({
 
         <div className="space-y-1.5">
           <Label htmlFor="typeKey">{t('fields.type')}</Label>
-          <select
+          <Select
             id="typeKey"
             name="typeKey"
             value={typeKey}
             onChange={(e) => setTypeKey(e.target.value)}
             disabled={Boolean(draft)}
-            className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs disabled:opacity-60"
           >
             {types.map((type) => (
               <option key={type.key} value={type.key}>
                 {type.label}
               </option>
             ))}
-          </select>
+          </Select>
           {draft ? <p className="text-[12px] text-muted-ink">{t('typeFixedHint')}</p> : null}
         </div>
 
         <div className="space-y-1.5">
           <Label htmlFor="folder">{t('fields.folder')}</Label>
-          <select
+          <Select
             id="folder"
             name="folder"
             value={folder}
             onChange={(e) => setFolder(e.target.value)}
-            className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
           >
             {/* Nicht „Eingangskorb“: Der liegt im Eingang. Hier heißt kein
                 Ordner schlicht, dass noch nicht einsortiert wurde. */}
@@ -125,17 +125,16 @@ export function DraftForm({
                 {f}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="space-y-1.5">
           <Label htmlFor="recipientId">{t('fields.recipient')}</Label>
-          <select
+          <Select
             id="recipientId"
             name="recipientId"
             value={recipientId}
           onChange={(e) => setRecipientId(e.target.value)}
-            className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
           >
             <option value="">{t('fields.noRecipient')}</option>
             {contacts.map((c) => (
@@ -143,7 +142,7 @@ export function DraftForm({
                 {c.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 

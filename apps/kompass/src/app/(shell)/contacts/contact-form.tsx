@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { idleState } from '@/lib/actions';
 import { createContactAction } from './actions';
+import { Select } from '@/components/ui/select';
 
 export function CreateContactDialog() {
   const t = useTranslations('contacts');
@@ -106,16 +107,16 @@ export function CreateContactDialog() {
                   <Label htmlFor="kind" className="text-[13px] font-semibold text-ink-2">
                     {t('fields.kind')}
                   </Label>
-                  <select
+                  <Select
                     id="kind"
                     name="kind"
                     value={kind}
                     onChange={(e) => setKind(e.target.value as 'person' | 'organization')}
-                    className="h-9 rounded-md border border-line-strong bg-field px-3 text-[13px] text-ink shadow-xs focus:border-focus focus:outline-none"
+                    className="w-auto"
                   >
                     <option value="person">{t('fields.person')}</option>
                     <option value="organization">{t('fields.organization')}</option>
-                  </select>
+                  </Select>
                 </div>
 
                 {kind === 'person' ? (

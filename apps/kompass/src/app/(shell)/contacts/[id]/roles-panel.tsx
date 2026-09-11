@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { addContactRoleAction, endContactRoleAction } from '../actions';
+import { Select } from '@/components/ui/select';
 
 export function RolesPanel({
   contactId,
@@ -75,20 +76,19 @@ export function RolesPanel({
 
                   <div className="mt-4 space-y-3.5">
                     <FormField id="role" label={t('roles.field')}>
-                      <select
+                      <Select
                         id="role"
                         name="role"
                         value={selectedRole}
                         onChange={(e) => setSelectedRole(e.target.value)}
                         required
-                        className="h-9 w-full rounded-md border border-line-strong bg-field px-3 text-[13px] text-ink shadow-xs"
                       >
                         {roleDefinitions.map((d) => (
                           <option key={d.key} value={d.key}>
                             {d.key}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     </FormField>
 
                     <FormField id="since" label={t('roles.since')}>

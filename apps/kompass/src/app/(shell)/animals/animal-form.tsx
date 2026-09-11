@@ -20,6 +20,7 @@ import { setAnimalPublishedAction, saveAnimalAction } from './actions';
 import { PhotosEditor } from './photos-editor';
 import { StatusDialog } from './status-dialog';
 import { StoryForm } from './story-form';
+import { Select } from '@/components/ui/select';
 
 /**
  * Welches Feld auf welchem Reiter steht. Nur dafür da, einen Fehler dort
@@ -41,7 +42,6 @@ export function AnimalForm({ animal, locales }: { animal: AnimalRecord | null; l
   const errors = state.status === 'error' ? state.fieldErrors : {};
   useEffect(() => { if (state.status === 'success') toast.success(state.message ?? ''); else if (state.status === 'error' && Object.keys(errors).length === 0) toast.error(state.message); }, [state, errors]);
   const broken = invalidTabs(TABS, errors);
-  const select = 'h-9 rounded-md border border-line-strong bg-field px-2 text-[14px]';
   return (
     <div className="flex flex-col gap-4">
       {animal ? (
@@ -59,8 +59,8 @@ export function AnimalForm({ animal, locales }: { animal: AnimalRecord | null; l
           <TabsContent keepMounted value="profile" className="grid gap-4 p-6 md:grid-cols-2">
             <FormField id="slug" label={c('slug')} hint={c('slugHint')} error={errors.slug}><Input id="slug" name="slug" defaultValue={animal?.slug ?? ''} required pattern="[a-z0-9][a-z0-9-]{0,80}" className="font-mono" /></FormField>
             <FormField id="name" label={t('name')} error={errors.name}><Input id="name" name="name" defaultValue={animal?.name ?? ''} required /></FormField>
-            <FormField id="sex" label={t('sex')}><select id="sex" name="sex" defaultValue={animal?.sex ?? 'female'} className={select}><option value="female">{t('sexes.female')}</option><option value="male">{t('sexes.male')}</option></select></FormField>
-            <FormField id="location" label={t('location')}><select id="location" name="location" defaultValue={animal?.location ?? 'shelter'} className={select}><option value="shelter">{t('locations.shelter')}</option><option value="germany">{t('locations.germany')}</option></select></FormField>
+            <FormField id="sex" label={t('sex')}><Select id="sex" name="sex" defaultValue={animal?.sex ?? 'female'} className="w-auto"><option value="female">{t('sexes.female')}</option><option value="male">{t('sexes.male')}</option></Select></FormField>
+            <FormField id="location" label={t('location')}><Select id="location" name="location" defaultValue={animal?.location ?? 'shelter'} className="w-auto"><option value="shelter">{t('locations.shelter')}</option><option value="germany">{t('locations.germany')}</option></Select></FormField>
             <FormField id="sizeCm" label={t('sizeCm')} error={errors.sizeCm}><Input id="sizeCm" name="sizeCm" type="number" defaultValue={animal?.sizeCm ?? 0} className="font-mono" /></FormField>
             <FormField id="externalProfileUrl" label={t('externalProfileUrl')} hint={t('externalHint')} error={errors.externalProfileUrl}><Input id="externalProfileUrl" name="externalProfileUrl" defaultValue={animal?.externalProfileUrl ?? ''} /></FormField>
             <LocalizedField name="birthText" label={t('birthText')} value={animal?.birthText ?? {}} errors={errors} locales={locales} />

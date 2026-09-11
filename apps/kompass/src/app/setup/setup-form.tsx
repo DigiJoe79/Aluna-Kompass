@@ -7,6 +7,7 @@ import { SubmitButton } from '@/components/forms/submit-button';
 import { Input } from '@/components/ui/input';
 import { idleState } from '@/lib/actions';
 import { completeSetupAction } from './actions';
+import { Select } from '@/components/ui/select';
 
 const PRESET_LOCALES = [
   { code: 'de', label: 'Deutsch (de)' },
@@ -22,7 +23,6 @@ export function SetupForm() {
   const [selectedLocale, setSelectedLocale] = useState('de');
   const [isCustom, setIsCustom] = useState(false);
   const errors = state.status === 'error' ? state.fieldErrors : {};
-  const select = 'h-9 w-full rounded-md border border-line-strong bg-field px-2 text-[14px]';
   return (
     <form action={action} className="flex flex-col gap-4">
       {state.status === 'error' && Object.keys(errors).length === 0 ? <p role="alert" className="rounded-md border border-error bg-error-bg p-3 text-[13px] text-error">{state.message}</p> : null}
@@ -30,9 +30,9 @@ export function SetupForm() {
         <Input id="organizationName" name="organizationName" required autoComplete="organization" />
       </FormField>
       <FormField id="locale-select" label={t('locale')} error={errors.locale}>
-        <select
+        <Select
           id="locale-select"
-          className={select}
+
           value={isCustom ? 'custom' : selectedLocale}
           onChange={(e) => {
             if (e.target.value === 'custom') {
@@ -47,7 +47,7 @@ export function SetupForm() {
             <option key={l.code} value={l.code}>{l.label}</option>
           ))}
           <option value="custom">{t('localeOther')}</option>
-        </select>
+        </Select>
         {isCustom ? (
           <div className="mt-2">
             <Input

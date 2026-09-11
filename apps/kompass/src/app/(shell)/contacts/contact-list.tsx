@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { Select } from '@/components/ui/select';
 
 export interface ContactListItem {
   id: string;
@@ -64,7 +65,7 @@ export function ContactList({ contacts, roles }: { contacts: ContactListItem[]; 
           }}
           className="h-[34px] w-[260px]"
         />
-        <select
+        <Select
           aria-label={t('fields.kind')}
           value={kindFilter}
           onChange={(e) => {
@@ -72,13 +73,13 @@ export function ContactList({ contacts, roles }: { contacts: ContactListItem[]; 
             setKindFilter(val);
             applyFilters({ kind: val });
           }}
-          className="h-[34px] rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
+          className="w-auto"
         >
           <option value="">{t('allKinds')}</option>
           <option value="person">{t('fields.person')}</option>
           <option value="organization">{t('fields.organization')}</option>
-        </select>
-        <select
+        </Select>
+        <Select
           aria-label={t('filterRole')}
           value={roleFilter}
           onChange={(e) => {
@@ -86,7 +87,7 @@ export function ContactList({ contacts, roles }: { contacts: ContactListItem[]; 
             setRoleFilter(val);
             applyFilters({ role: val });
           }}
-          className="h-[34px] rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
+          className="w-auto"
         >
           <option value="">{t('allRoles')}</option>
           {roles.map((r) => (
@@ -94,7 +95,7 @@ export function ContactList({ contacts, roles }: { contacts: ContactListItem[]; 
               {r}
             </option>
           ))}
-        </select>
+        </Select>
         <div className="flex items-center gap-2">
           <Switch
             id="show-archived"

@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { kb, type Folder, type Item } from './types';
+import { Select } from '@/components/ui/select';
 
 export function AssetDetailDialog({
   item,
@@ -68,9 +69,9 @@ export function AssetDetailDialog({
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-2 pt-3">
               <label className="flex items-center gap-2 text-[13px] text-ink-2">
                 {t('move')}
-                <select
+                <Select
                   value={assetFolder ?? ''}
-                  className="rounded border border-line bg-input px-1 py-0.5 text-[13px]"
+                  className="w-auto"
                   onChange={(e) => onMove(item.id, e.target.value || null)}
                 >
                   <option value="">{t('root')}</option>
@@ -79,7 +80,7 @@ export function AssetDetailDialog({
                       {f.path}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
               <Button
                 type="button"

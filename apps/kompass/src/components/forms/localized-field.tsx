@@ -62,7 +62,7 @@ export function LocalizedField({
           ) : null}
         </Label>
         {kind === 'input' ? (
-          <Input {...props} className="h-9" />
+          <Input {...props} />
         ) : (
           <Textarea {...props} rows={rows} className={cn(kind === 'markdown' && 'font-mono text-[13px]')} />
         )}

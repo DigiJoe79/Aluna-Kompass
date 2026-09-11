@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { setDocumentBaseAction } from './actions';
+import { Select } from '@/components/ui/select';
 
 interface Base {
   id: string;
@@ -52,10 +53,10 @@ export function BasesPanel({ bases, types, canManage }: { bases: Base[]; types: 
                 <tr key={row.key} className="h-9">
                   <td className="text-ink-2">{row.label}</td>
                   <td className="text-right">
-                    <select
+                    <Select
                       value={row.isDefault ? '' : row.base}
                       disabled={!canManage}
-                      className="rounded border border-line bg-input px-1 py-0.5 text-[13px]"
+                      className="w-auto"
                       onChange={(e) =>
                         start(async () => {
                           const s = await setDocumentBaseAction(row.key, e.target.value || null);
@@ -73,7 +74,7 @@ export function BasesPanel({ bases, types, canManage }: { bases: Base[]; types: 
                           {b.label}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </td>
                 </tr>
               ))}

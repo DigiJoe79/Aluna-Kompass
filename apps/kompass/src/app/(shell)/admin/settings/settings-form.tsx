@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { FormField } from '@/components/forms/form-field';
 import { SaveBar } from '@/components/forms/save-bar';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select } from '@/components/ui/select';
 import { FormErrorSummary } from '@/components/forms/form-error-summary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
@@ -55,7 +55,7 @@ export function SettingsForm({
     const label = t(`fields.${field.key}`);
     const value = values[field.key];
     const id = field.key.replace('.', '-');
-    const common = { id, className: cn('h-9', field.kind === 'mono' && 'font-mono') };
+    const common = { id, className: cn(field.kind === 'mono' && 'font-mono') };
     const hint = field.hintKey ? t(`hints.${field.hintKey}`) : undefined;
     const wrap = (node: React.ReactNode, extraHint?: string) => (
       <FormField
@@ -89,32 +89,22 @@ export function SettingsForm({
       case 'font-body':
       case 'font-heading':
         return wrap(
-          <Select value={String(value ?? '')} onValueChange={(v) => set(field.key, v)}>
-            <SelectTrigger id={id} aria-label={label} className="h-9 w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-surface">
-              {(field.options ?? []).map((o) => (
-                <SelectItem key={o} value={o}>
-                  {t(`options.${field.key}.${o}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
+          <Select id={id} value={String(value ?? '')} onChange={(e) => set(field.key, e.target.value)}>
+            {(field.options ?? []).map((o) => (
+              <option key={o} value={o}>
+                {t(`options.${field.key}.${o}`)}
+              </option>
+            ))}
           </Select>
         );
       case 'theme':
         return wrap(
-          <Select value={String(value ?? 'default')} onValueChange={(v) => set(field.key, v)}>
-            <SelectTrigger id={id} aria-label={label} className="h-9 w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-surface">
-              {themes.map((th) => (
-                <SelectItem key={th.key} value={th.key}>
-                  {th.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
+          <Select id={id} value={String(value ?? 'default')} onChange={(e) => set(field.key, e.target.value)}>
+            {themes.map((th) => (
+              <option key={th.key} value={th.key}>
+                {th.name}
+              </option>
+            ))}
           </Select>,
           t('hints.themeHint')
         );
@@ -125,7 +115,7 @@ export function SettingsForm({
             type="date"
             value={String(value ?? '')}
             onChange={(e) => set(field.key, e.target.value)}
-            className="h-9 font-mono"
+            className="font-mono"
             aria-invalid={!!errors[field.key] || undefined}
           />
         );
