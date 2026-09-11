@@ -52,7 +52,7 @@ const CONFLICTS_WITH_DETAIL = new Set([
   'folderNotEmpty',
 ]);
 
-const MEDIA_FIELD_CODES = ['unsupportedMediaType', 'fileTooLarge', 'svgContainsScript'];
+const MEDIA_FIELD_CODES = ['unsupportedMediaType', 'notAPdf', 'fileTooLarge', 'svgContainsScript'];
 const BACKUP_FIELD_CODES = ['confirmationMismatch', 'backupFormatUnsupported', 'backupNewerThanApp', 'backupCorrupt', 'backupWithoutUsers'];
 
 export function fieldMessage(issueMessage: string, t: Translate): string {

@@ -63,7 +63,14 @@ export const documents = sqliteTable(
     draftBody: text('draft_body'),
     templateKey: text('template_key'),
     inputSnapshot: text('input_snapshot'), // JSON, nur `generated`
-    assetId: text('asset_id'),
+    /**
+     * Die Datei im Speicher dieses Moduls (`deps.files('dms')`). Kein Dedupe
+     * über den Inhalt wie in der Mediathek: Zwei inhaltsgleiche Schreiben an
+     * verschiedene Empfänger sind zwei Vorgänge und zwei Dateien.
+     */
+    fileName: text('file_name'),
+    fileChecksum: text('file_checksum'),
+    fileBytes: integer('file_bytes'),
     status: text('status', { enum: ['issued', 'voided'] }).notNull().default('issued'),
     voidedAt: text('voided_at'),
     voidedByUserId: text('voided_by_user_id'),

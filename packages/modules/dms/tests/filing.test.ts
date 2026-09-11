@@ -1,16 +1,13 @@
 import { createHash } from 'node:crypto';
-import { coreModule, schema } from '@kompass/core';
+import { coreModule } from '@kompass/core';
 import { createTestDeps, ctxWith, fakeDocumentEngine, insertUser } from '@kompass/core/testing';
 import { contactsModule } from '@kompass/module-contacts';
-import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { createDraft, deleteDraft, fileDocument, updateDraft } from '../src/drafts';
 import { receiveDocument } from '../src/incoming';
 import { dmsModule } from '../src/manifest';
 import { deleteDocument, voidDocument } from '../src/service';
 import { ALL_DMS, auditActions, fileFixture, pdfBytes, seedTypes, setupWithTypes } from './helpers';
-
-const mediaAssets = schema.mediaAssets;
 
 describe('fileDocument', () => {
   it('vergibt die Nummer, legt das PDF ab und leert den Entwurfstext', async () => {
@@ -22,16 +19,15 @@ describe('fileDocument', () => {
     if (!filed.ok) return;
     expect(filed.value.phase).toBe('issued');
     expect(filed.value.number).toMatch(/^BRF-\d{4}-\d{3}$/);
-    expect(filed.value.assetId).not.toBeNull();
+    expect(filed.value.fileName).not.toBeNull();
     expect(filed.value.draftBody).toBeNull();
   });
 
   it('hält die Prüfsumme der abgelegten Datei fest', async () => {
     const { deps, ctx } = setupWithTypes();
     const filed = await fileFixture(deps, ctx);
-    const asset = deps.db.select().from(mediaAssets).where(eq(mediaAssets.id, filed.assetId as string)).get();
-    const bytes = await deps.media.read(asset!.filename);
-    expect(asset?.checksum).toBe(createHash('sha256').update(bytes).digest('hex'));
+    const bytes = await deps.files('dms').read(filed.fileName as string);
+    expect(filed.fileChecksum).toBe(createHash('sha256').update(bytes).digest('hex'));
   });
 
   it('lehnt das zweite Festschreiben ab', async () => {
@@ -66,7 +62,7 @@ describe('fileDocument', () => {
       documents: fakeDocumentEngine({ render: async (args) => { calls.push(args); return new TextEncoder().encode('%PDF-fake'); } }),
     });
     seedTypes(deps);
-    const ctx = ctxWith(ALL_DMS.concat('media.upload'), insertUser(deps, { name: 'T', email: 't@kompass.local' }));
+    const ctx = ctxWith(ALL_DMS, insertUser(deps, { name: 'T', email: 't@kompass.local' }));
     const draft = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Einladung', body: '# Einladung' });
     if (!draft.ok) throw new Error('setup');
     await fileDocument(deps, ctx, { id: draft.value.id });

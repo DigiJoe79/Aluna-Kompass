@@ -64,7 +64,8 @@ export function ReceiveForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="file">{t('fields.file')}</Label>
-        <Input id="file" name="file" type="file" required onChange={handleFileChange} />
+        <Input id="file" name="file" type="file" accept="application/pdf" required onChange={handleFileChange} />
+        {errors.file ? null : <p className="text-[12px] text-muted-ink">{t('fileHint')}</p>}
         <FieldError id="file-error" message={errors.file} />
       </div>
 

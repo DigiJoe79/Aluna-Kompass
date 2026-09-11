@@ -19,7 +19,7 @@ describe('receiveDocument', () => {
     expect(received.value.direction).toBe('incoming');
     expect(received.value.sourceKind).toBe('uploaded');
     expect(received.value.number).toMatch(/^BEH-\d{4}-\d{3}$/);
-    expect(received.value.assetId).not.toBeNull();
+    expect(received.value.fileName).not.toBeNull();
     expect(received.value.draftBody).toBeNull();
     expect(received.value.templateKey).toBeNull();
   });

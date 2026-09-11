@@ -21,18 +21,6 @@ const orNull = (value: FormDataEntryValue | null): string | null => {
   return text === '' ? null : text;
 };
 
-/**
- * Der Medienservice meldet seine Prüfungen auf `bytes` — das Formular kennt
- * dieses Feld nicht, es heißt dort `file`. Ohne diese Übersetzung landet die
- * Meldung („Dateityp nicht unterstützt") an keinem Feld, und der Kasten
- * verweist auf Markierungen, die es nicht gibt.
- */
-function onFileField(state: ActionState): ActionState {
-  if (state.status !== 'error' || state.fieldErrors.bytes === undefined) return state;
-  const { bytes, ...rest } = state.fieldErrors;
-  return { ...state, fieldErrors: { ...rest, file: bytes } };
-}
-
 export async function createDraftAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const t = await getTranslations();
   const { deps, ctx } = await requireSession();
@@ -199,7 +187,7 @@ export async function receiveDocumentAction(_prev: ActionState, formData: FormDa
   });
 
   if (!result.ok) {
-    return onFileField(toActionState(result, t));
+    return toActionState(result, t);
   }
 
   revalidatePath('/dms');

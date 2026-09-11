@@ -59,7 +59,8 @@ describe('migration 0016', () => {
 
     const row = sqlite.prepare('select * from documents where id = ?').get('D1') as Record<string, unknown>;
     expect(row.number).toBe('BRF-2026-001');
-    expect(row.asset_id).toBe('A1');
+    // `asset_id` fiel in 0019 weg: Die Akte hält ihre Dateien seither selbst.
+    expect(row.asset_id).toBeUndefined();
     expect(row.type_key).toBe('letter');
     expect(row.phase).toBe('issued');
     expect(row.document_date).toBe('2026-05-01');

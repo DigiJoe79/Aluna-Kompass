@@ -1,7 +1,6 @@
 import { and, count, desc, eq, inArray, like, or, sql, type SQL } from 'drizzle-orm';
 import {
   conflict,
-  deleteMediaAsset,
   invalid,
   isoNow,
   newId,
@@ -12,32 +11,16 @@ import {
   requirePermission,
   retentionEnd,
   retentionMonths,
-  schema,
   validate,
   type CallContext,
   type DbOrTx,
   type Deps,
-  type MediaReference,
   type Result,
 } from '@kompass/core';
 import { z } from 'zod';
 import { documentTypeFor } from './catalog';
 import { documentFolders, documentLinks, documents, type DocumentLinkRow, type DocumentRow } from './schema';
-
-/**
- * Wo dieses Modul ein Medium verwendet — das PDF eines Dokuments. Ohne diesen
- * Haken ließe sich das PDF eines festgeschriebenen Dokuments aus der
- * Mediathek löschen, obwohl es der rechenschaftsrelevante Datensatz ist
- * (§ 4 der Spec, Prinzip 3). Befragt vor dem Löschen eines Assets.
- */
-export function dmsMediaReferences(deps: Deps, assetId: string): MediaReference[] {
-  return deps.db
-    .select({ id: documents.id, number: documents.number, subject: documents.subject })
-    .from(documents)
-    .where(eq(documents.assetId, assetId))
-    .all()
-    .map((row) => ({ label: `Dokument ${row.number ?? row.subject}`, entity: 'document', id: row.id }));
-}
+import { readDocumentFile, removeDocumentFile } from './storage';
 
 export type DocumentRecord = Omit<DocumentRow, 'inputSnapshot'> & { inputSnapshot: unknown; links: DocumentLinkRow[] };
 
@@ -137,10 +120,8 @@ export async function getDocument(deps: Deps, ctx: CallContext, id: string): Pro
   if (denied) return denied;
   const row = deps.db.select().from(documents).where(eq(documents.id, id)).get();
   if (!row) return notFound('document', id);
-  if (!row.assetId) return notFound('mediaAsset', id);
-  const asset = deps.db.select().from(schema.mediaAssets).where(eq(schema.mediaAssets.id, row.assetId)).get();
-  if (!asset) return notFound('mediaAsset', row.assetId);
-  return ok({ record: toRecord(deps, row), bytes: await deps.media.read(asset.filename), filename: `${row.number}.pdf` });
+  if (!row.fileName) return notFound('documentFile', id);
+  return ok({ record: toRecord(deps, row), bytes: await readDocumentFile(deps, row.fileName), filename: `${row.number}.pdf` });
 }
 
 const voidSchema = z.object({ id: z.string().min(1), reason: z.string().trim().min(1).max(300) });
@@ -357,7 +338,7 @@ export async function deleteDocument(
         typeKey: doc.typeKey,
         documentDate: doc.documentDate,
         folder: doc.folder,
-        assetId: doc.assetId,
+        fileChecksum: doc.fileChecksum,
       },
       summary: `Dokument ${doc.number ?? doc.subject} gelöscht`,
     });
@@ -366,12 +347,9 @@ export async function deleteDocument(
     tx.delete(documents).where(eq(documents.id, doc.id)).run();
   });
 
-  if (doc.assetId) {
-    const mediaCtx = ctx.permissions.has('media.upload')
-      ? ctx
-      : { ...ctx, permissions: new Set([...ctx.permissions, 'media.upload']) };
-    await deleteMediaAsset(deps, mediaCtx, { id: doc.assetId });
-  }
+  // Die Datei gehört diesem Modul, nicht der Mediathek: Kein fremder Dienst,
+  // kein fremdes Recht, kein Kontext, dem hier etwas untergeschoben wird.
+  if (doc.fileName) await removeDocumentFile(deps, doc.fileName);
 
   return ok(null);
 }

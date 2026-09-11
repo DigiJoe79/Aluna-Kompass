@@ -8,8 +8,6 @@ import {
   prepare,
   recordAudit,
   requirePermission,
-  schema,
-  storeMediaInternal,
   validate,
   type CallContext,
   type DbOrTx,
@@ -21,6 +19,7 @@ import { z } from 'zod';
 import { documentTypeFor } from './catalog';
 import { resolveRecipient } from './recipients';
 import { documentLinks, documents } from './schema';
+import { storeDocumentFile } from './storage';
 import { nextDocumentNumber, toRecord, type DocumentRecord } from './service';
 
 export const draftCreateSchema = z.object({
@@ -108,7 +107,9 @@ export async function createDraft(deps: Deps, ctx: CallContext, input: unknown):
         draftBody: parsed.value.body,
         templateKey: templateKeyForType(deps, docType.key),
         inputSnapshot: null,
-        assetId: null,
+        fileName: null,
+        fileChecksum: null,
+        fileBytes: null,
         status: 'issued',
         createdByUserId: ctx.userId ?? 'system',
         createdAt: now,
@@ -277,31 +278,6 @@ export async function previewDraft(
   return ok({ bytes, filename, mimeType: 'application/pdf' });
 }
 
-export const DOCUMENT_FOLDER = 'Dokumente';
-
-export function ensureDocumentFolder(deps: Deps, ctx: CallContext) {
-  const existing = deps.db
-    .select()
-    .from(schema.mediaFolders)
-    .where(eq(schema.mediaFolders.path, DOCUMENT_FOLDER))
-    .get();
-
-  if (!existing) {
-    deps.db.transaction((tx: DbOrTx) => {
-      tx.insert(schema.mediaFolders)
-        .values({ path: DOCUMENT_FOLDER, createdAt: isoNow(deps.clock) })
-        .run();
-      recordAudit(tx, deps, ctx, {
-        action: 'media.folder.create',
-        entityType: 'mediaFolder',
-        entityId: DOCUMENT_FOLDER,
-        after: { path: DOCUMENT_FOLDER },
-        summary: `Ordner „${DOCUMENT_FOLDER}“ angelegt`,
-      });
-    });
-  }
-}
-
 export async function fileDocument(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DocumentRecord>> {
   const denied = requirePermission(ctx, 'dms.file');
   if (denied) return denied;
@@ -336,15 +312,8 @@ export async function fileDocument(deps: Deps, ctx: CallContext, input: unknown)
     const context = await buildContext(deps, ctx, number);
     const bytes = await deps.documents.render({ baseId, bodyTypst, slots: built.slots, context });
 
-    ensureDocumentFolder(deps, ctx);
-
-    const asset = await storeMediaInternal(deps, ctx, {
-      originalName: `${number}.pdf`,
-      bytes,
-      declaredMimeType: 'application/pdf',
-      folder: DOCUMENT_FOLDER,
-    });
-    if (!asset.ok) return asset;
+    const stored = await storeDocumentFile(deps, row.id, bytes);
+    if (!stored.ok) return stored;
 
     const snapshot = { input: data, slots: built.slots, base: baseId, baseChecksum: base.checksum };
     try {
@@ -354,7 +323,9 @@ export async function fileDocument(deps: Deps, ctx: CallContext, input: unknown)
           .set({
             phase: 'issued',
             number,
-            assetId: asset.value.id,
+            fileName: stored.value.fileName,
+            fileChecksum: stored.value.fileChecksum,
+            fileBytes: stored.value.fileBytes,
             inputSnapshot: JSON.stringify(snapshot),
             draftBody: null,
             updatedAt: now,

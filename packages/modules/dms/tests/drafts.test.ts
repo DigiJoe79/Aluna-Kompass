@@ -16,7 +16,7 @@ describe('createDraft', () => {
     if (!created.ok) return;
     expect(created.value.phase).toBe('draft');
     expect(created.value.number).toBeNull();
-    expect(created.value.assetId).toBeNull();
+    expect(created.value.fileName).toBeNull();
     expect(created.value.draftBody).toContain('Einladung');
   });
 
@@ -146,7 +146,7 @@ describe('Vorlagenwahl beim Entwurf', () => {
   function setupWithMinutes() {
     const deps = createTestDeps({ manifests: [coreModule, contactsModule, dmsModule, minutesModule] });
     seedTypes(deps);
-    const ctx = ctxWith([...ALL_DMS, 'media.upload'], insertUser(deps, { name: 'T', email: 't@kompass.local' }));
+    const ctx = ctxWith([...ALL_DMS], insertUser(deps, { name: 'T', email: 't@kompass.local' }));
     return { deps, ctx };
   }
 

@@ -35,7 +35,7 @@ async function insertIssued(deps: ReturnType<typeof createTestDeps>, userId: str
       number: overrides.number ?? `BRF-2026-${id.slice(-3)}`,
       subject: 'Einladung',
       documentDate: '2026-09-10',
-      assetId: `${id}-asset`,
+      fileName: `${id.toLowerCase()}.pdf`,
       status: 'issued',
       createdByUserId: userId,
       createdAt: '2026-09-10T00:00:00.000Z',
@@ -57,7 +57,7 @@ describe('documents', () => {
     }).run();
     const row = deps.db.select().from(documents).get();
     expect(row?.number).toBeNull();
-    expect(row?.assetId).toBeNull();
+    expect(row?.fileName).toBeNull();
   });
 
   describe('nextDocumentNumber', () => {
@@ -115,6 +115,8 @@ describe('documents', () => {
     it('liest die Datei zurück, verweigert ohne Recht und meldet Unbekanntes', async () => {
       const { deps, ctx, userId } = setup();
       const id = await insertIssued(deps, userId);
+      // Die Zeile wird hier von Hand gesetzt; die Datei muss dazu passen.
+      await deps.files('dms').write(`${id.toLowerCase()}.pdf`, new TextEncoder().encode('%PDF-1.4'));
       const got = await getDocument(deps, ctx, id);
       expect(got.ok).toBe(true);
       expect(got.ok && got.value.record.id).toBe(id);

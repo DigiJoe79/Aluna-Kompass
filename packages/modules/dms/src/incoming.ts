@@ -7,8 +7,6 @@ import {
   ok,
   recordAudit,
   requirePermission,
-  schema,
-  storeMediaInternal,
   validate,
   type CallContext,
   type DbOrTx,
@@ -18,8 +16,8 @@ import {
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { documentTypeFor } from './catalog';
-import { DOCUMENT_FOLDER, ensureDocumentFolder } from './drafts';
 import { documentLinks, documents } from './schema';
+import { storeDocumentFile } from './storage';
 import { linkInputSchema, nextDocumentNumber, toRecord, type DocumentRecord } from './service';
 
 /**
@@ -77,31 +75,11 @@ export async function receiveDocument(
   const docType = documentTypeFor(deps.db, parsed.value.typeKey);
   if (!docType) return notFound('documentType', parsed.value.typeKey);
 
-  let assetId: string;
-  if (parsed.value.assetId) {
-    const existingAsset = deps.db
-      .select()
-      .from(schema.mediaAssets)
-      .where(eq(schema.mediaAssets.id, parsed.value.assetId))
-      .get();
-    if (!existingAsset) return notFound('mediaAsset', parsed.value.assetId);
-    assetId = existingAsset.id;
-  } else {
-    let bytes = parsed.value.bytes;
-    if (!bytes && parsed.value.contentBase64) {
-      bytes = Buffer.from(parsed.value.contentBase64, 'base64');
-    }
-    if (!bytes) return invalid([{ path: 'bytes', message: 'missingBytes' }]);
-
-    ensureDocumentFolder(deps, ctx);
-    const asset = await storeMediaInternal(deps, ctx, {
-      originalName: parsed.value.filename,
-      bytes,
-      folder: DOCUMENT_FOLDER,
-    });
-    if (!asset.ok) return asset;
-    assetId = asset.value.id;
+  let bytes = parsed.value.bytes;
+  if (!bytes && parsed.value.contentBase64) {
+    bytes = Buffer.from(parsed.value.contentBase64, 'base64');
   }
+  if (!bytes) return invalid([{ path: 'file', message: 'missingBytes' }]);
 
   const folder = parsed.value.folder !== undefined ? parsed.value.folder : (docType.defaultFolder ?? null);
 
@@ -110,6 +88,9 @@ export async function receiveDocument(
     const number = nextDocumentNumber(deps.db, docType.prefix, year);
     const id = newId();
     const now = isoNow(deps.clock);
+
+    const stored = await storeDocumentFile(deps, id, bytes);
+    if (!stored.ok) return stored;
 
     try {
       return deps.db.transaction((tx: DbOrTx) => {
@@ -127,7 +108,9 @@ export async function receiveDocument(
             draftBody: null,
             templateKey: null,
             inputSnapshot: null,
-            assetId,
+            fileName: stored.value.fileName,
+            fileChecksum: stored.value.fileChecksum,
+            fileBytes: stored.value.fileBytes,
             status: 'issued',
             createdByUserId: ctx.userId ?? 'system',
             createdAt: now,

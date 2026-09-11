@@ -109,7 +109,7 @@ test.describe('dms', () => {
     await page.getByLabel('Datum auf dem Dokument').fill('2026-03-01');
     await page.getByLabel('Betreff').fill('Falscher Dateityp');
     await page.getByRole('button', { name: 'Ablegen' }).click();
-    await expect(page.getByText('Dateityp nicht unterstützt (PNG, JPEG, WebP, SVG, PDF).')).toBeVisible();
+    await expect(page.getByText('Nur PDF. Schriftverkehr wird als PDF abgelegt, damit er in zehn Jahren noch lesbar ist.')).toBeVisible();
     // Der allgemeine Kasten verweist nur dann auf Markierungen, wenn es welche gibt.
     await expect(page.getByText('Bitte prüfen Sie die markierten Felder.')).toHaveCount(0);
   });
