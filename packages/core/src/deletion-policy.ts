@@ -104,6 +104,13 @@ export const DELETION_POLICY: readonly DeletionRule[] = [
     auditAction: 'dms.unlink',
   },
   {
+    entity: 'documentRule',
+    deletable: true,
+    reason: 'Eine Regel ist Bedienkomfort, kein Nachweis.',
+    guard: 'keiner',
+    auditAction: 'dms.rule.delete',
+  },
+  {
     entity: 'siteEntry',
     deletable: true,
     reason: 'Redaktioneller Inhalt der Webseite (Prinzip 3).',

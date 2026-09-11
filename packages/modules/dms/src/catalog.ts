@@ -2,6 +2,7 @@ import {
   conflict,
   invalid,
   isoNow,
+  newId,
   notFound,
   ok,
   parseFolderPath,
@@ -17,9 +18,11 @@ import { asc, eq, like } from 'drizzle-orm';
 import { z } from 'zod';
 import {
   documentFolders,
+  documentRules,
   documents,
   documentTypes,
   type DocumentFolderRow,
+  type DocumentRuleRow,
   type DocumentTypeRow,
 } from './schema';
 
@@ -134,4 +137,271 @@ export async function deleteDocumentFolder(
     return ok(null);
   });
 }
+
+export const documentTypeCreateSchema = z.object({
+  key: z.string().trim().regex(/^[a-z][a-z0-9-]*$/),
+  label: z.string().trim().min(1).max(120),
+  prefix: z.string().trim().regex(/^[A-Z]{3}$/),
+  defaultDirection: z.enum(['outgoing', 'incoming']),
+  retentionClass: z.enum(['permanent', 'statutory10Y', 'statutory6Y', 'consent']),
+  defaultFolder: z.string().trim().min(1).nullable().optional(),
+  sortOrder: z.number().int().min(0).default(0),
+});
+
+export const documentTypeUpdateSchema = z.object({
+  key: z.string().min(1),
+  label: z.string().trim().min(1).max(120).optional(),
+  defaultDirection: z.enum(['outgoing', 'incoming']).optional(),
+  retentionClass: z.enum(['permanent', 'statutory10Y', 'statutory6Y', 'consent']).optional(),
+  defaultFolder: z.string().trim().min(1).nullable().optional(),
+  isActive: z.boolean().optional(),
+  sortOrder: z.number().int().min(0).optional(),
+});
+
+export async function createDocumentType(
+  deps: Deps,
+  ctx: CallContext,
+  input: unknown,
+): Promise<Result<DocumentTypeRow>> {
+  const denied = requirePermission(ctx, 'dms.manage');
+  if (denied) return denied;
+
+  const parsed = validate(deps, documentTypeCreateSchema, input);
+  if (!parsed.ok) return parsed;
+
+  const existing = documentTypeFor(deps.db, parsed.value.key);
+  if (existing) return conflict('documentTypeExists', `Dokumentart „${parsed.value.key}“ existiert bereits`);
+
+  return deps.db.transaction((tx: DbOrTx) => {
+    tx.insert(documentTypes)
+      .values({
+        key: parsed.value.key,
+        label: parsed.value.label,
+        prefix: parsed.value.prefix,
+        defaultDirection: parsed.value.defaultDirection,
+        retentionClass: parsed.value.retentionClass,
+        defaultFolder: parsed.value.defaultFolder ?? null,
+        isActive: true,
+        sortOrder: parsed.value.sortOrder,
+      })
+      .run();
+
+    recordAudit(tx, deps, ctx, {
+      action: 'dms.type.create',
+      entityType: 'documentType',
+      entityId: parsed.value.key,
+      after: { key: parsed.value.key, label: parsed.value.label, prefix: parsed.value.prefix },
+      summary: `Dokumentart „${parsed.value.label}“ angelegt`,
+    });
+
+    const row = tx.select().from(documentTypes).where(eq(documentTypes.key, parsed.value.key)).get()!;
+    return ok(row);
+  });
+}
+
+export async function updateDocumentType(
+  deps: Deps,
+  ctx: CallContext,
+  input: unknown,
+): Promise<Result<DocumentTypeRow>> {
+  const denied = requirePermission(ctx, 'dms.manage');
+  if (denied) return denied;
+
+  const parsed = validate(deps, documentTypeUpdateSchema, input);
+  if (!parsed.ok) return parsed;
+
+  const existing = documentTypeFor(deps.db, parsed.value.key);
+  if (!existing) return notFound('documentType', parsed.value.key);
+
+  const updates: Partial<typeof documentTypes.$inferInsert> = {};
+  if (parsed.value.label !== undefined) updates.label = parsed.value.label;
+  if (parsed.value.defaultDirection !== undefined) updates.defaultDirection = parsed.value.defaultDirection;
+  if (parsed.value.retentionClass !== undefined) updates.retentionClass = parsed.value.retentionClass;
+  if (parsed.value.defaultFolder !== undefined) updates.defaultFolder = parsed.value.defaultFolder;
+  if (parsed.value.isActive !== undefined) updates.isActive = parsed.value.isActive;
+  if (parsed.value.sortOrder !== undefined) updates.sortOrder = parsed.value.sortOrder;
+
+  return deps.db.transaction((tx: DbOrTx) => {
+    tx.update(documentTypes).set(updates).where(eq(documentTypes.key, existing.key)).run();
+
+    const after = tx.select().from(documentTypes).where(eq(documentTypes.key, existing.key)).get()!;
+    recordAudit(tx, deps, ctx, {
+      action: 'dms.type.update',
+      entityType: 'documentType',
+      entityId: existing.key,
+      before: { label: existing.label, isActive: existing.isActive },
+      after: { label: after.label, isActive: after.isActive },
+      summary: `Dokumentart „${after.label}“ geändert`,
+    });
+
+    return ok(after);
+  });
+}
+
+export const documentRuleCreateSchema = z.object({
+  matchField: z.enum(['filename', 'senderName']),
+  matchContains: z.string().trim().min(2).max(120),
+  thenTypeKey: z.string().min(1).nullable().optional(),
+  thenFolder: z.string().trim().min(1).nullable().optional(),
+  sortOrder: z.number().int().min(0).default(0),
+});
+
+export const documentRuleUpdateSchema = z.object({
+  id: z.string().min(1),
+  matchField: z.enum(['filename', 'senderName']).optional(),
+  matchContains: z.string().trim().min(2).max(120).optional(),
+  thenTypeKey: z.string().min(1).nullable().optional(),
+  thenFolder: z.string().trim().min(1).nullable().optional(),
+  isActive: z.boolean().optional(),
+  sortOrder: z.number().int().min(0).optional(),
+});
+
+export const documentRuleDeleteSchema = z.object({
+  id: z.string().min(1),
+});
+
+export const documentRuleListSchema = z.object({
+  includeInactive: z.boolean().default(false),
+});
+
+export async function createDocumentRule(
+  deps: Deps,
+  ctx: CallContext,
+  input: unknown,
+): Promise<Result<DocumentRuleRow>> {
+  const denied = requirePermission(ctx, 'dms.manage');
+  if (denied) return denied;
+
+  const parsed = validate(deps, documentRuleCreateSchema, input);
+  if (!parsed.ok) return parsed;
+
+  if (parsed.value.thenTypeKey) {
+    const docType = documentTypeFor(deps.db, parsed.value.thenTypeKey);
+    if (!docType) return notFound('documentType', parsed.value.thenTypeKey);
+  }
+
+  const id = newId();
+  return deps.db.transaction((tx: DbOrTx) => {
+    tx.insert(documentRules)
+      .values({
+        id,
+        matchField: parsed.value.matchField,
+        matchContains: parsed.value.matchContains,
+        thenTypeKey: parsed.value.thenTypeKey ?? null,
+        thenFolder: parsed.value.thenFolder ?? null,
+        isActive: true,
+        sortOrder: parsed.value.sortOrder,
+      })
+      .run();
+
+    recordAudit(tx, deps, ctx, {
+      action: 'dms.rule.create',
+      entityType: 'documentRule',
+      entityId: id,
+      after: {
+        matchField: parsed.value.matchField,
+        matchContains: parsed.value.matchContains,
+        thenTypeKey: parsed.value.thenTypeKey,
+      },
+      summary: `Einsortierregel für „${parsed.value.matchContains}“ angelegt`,
+    });
+
+    const row = tx.select().from(documentRules).where(eq(documentRules.id, id)).get()!;
+    return ok(row);
+  });
+}
+
+export async function updateDocumentRule(
+  deps: Deps,
+  ctx: CallContext,
+  input: unknown,
+): Promise<Result<DocumentRuleRow>> {
+  const denied = requirePermission(ctx, 'dms.manage');
+  if (denied) return denied;
+
+  const parsed = validate(deps, documentRuleUpdateSchema, input);
+  if (!parsed.ok) return parsed;
+
+  const existing = deps.db.select().from(documentRules).where(eq(documentRules.id, parsed.value.id)).get();
+  if (!existing) return notFound('documentRule', parsed.value.id);
+
+  if (parsed.value.thenTypeKey) {
+    const docType = documentTypeFor(deps.db, parsed.value.thenTypeKey);
+    if (!docType) return notFound('documentType', parsed.value.thenTypeKey);
+  }
+
+  const updates: Partial<typeof documentRules.$inferInsert> = {};
+  if (parsed.value.matchField !== undefined) updates.matchField = parsed.value.matchField;
+  if (parsed.value.matchContains !== undefined) updates.matchContains = parsed.value.matchContains;
+  if (parsed.value.thenTypeKey !== undefined) updates.thenTypeKey = parsed.value.thenTypeKey;
+  if (parsed.value.thenFolder !== undefined) updates.thenFolder = parsed.value.thenFolder;
+  if (parsed.value.isActive !== undefined) updates.isActive = parsed.value.isActive;
+  if (parsed.value.sortOrder !== undefined) updates.sortOrder = parsed.value.sortOrder;
+
+  return deps.db.transaction((tx: DbOrTx) => {
+    tx.update(documentRules).set(updates).where(eq(documentRules.id, existing.id)).run();
+
+    const after = tx.select().from(documentRules).where(eq(documentRules.id, existing.id)).get()!;
+    recordAudit(tx, deps, ctx, {
+      action: 'dms.rule.update',
+      entityType: 'documentRule',
+      entityId: existing.id,
+      before: { matchContains: existing.matchContains, isActive: existing.isActive },
+      after: { matchContains: after.matchContains, isActive: after.isActive },
+      summary: `Einsortierregel für „${after.matchContains}“ geändert`,
+    });
+
+    return ok(after);
+  });
+}
+
+export async function deleteDocumentRule(
+  deps: Deps,
+  ctx: CallContext,
+  input: unknown,
+): Promise<Result<null>> {
+  const denied = requirePermission(ctx, 'dms.manage');
+  if (denied) return denied;
+
+  const parsed = validate(deps, documentRuleDeleteSchema, input);
+  if (!parsed.ok) return parsed;
+
+  const existing = deps.db.select().from(documentRules).where(eq(documentRules.id, parsed.value.id)).get();
+  if (!existing) return notFound('documentRule', parsed.value.id);
+
+  return deps.db.transaction((tx: DbOrTx) => {
+    tx.delete(documentRules).where(eq(documentRules.id, existing.id)).run();
+
+    recordAudit(tx, deps, ctx, {
+      action: 'dms.rule.delete',
+      entityType: 'documentRule',
+      entityId: existing.id,
+      before: { matchContains: existing.matchContains, matchField: existing.matchField },
+      summary: `Einsortierregel für „${existing.matchContains}“ gelöscht`,
+    });
+
+    return ok(null);
+  });
+}
+
+export async function listDocumentRules(
+  deps: Deps,
+  ctx: CallContext,
+  input: unknown = {},
+): Promise<Result<DocumentRuleRow[]>> {
+  const denied = requirePermission(ctx, 'dms.view');
+  if (denied) return denied;
+
+  const parsed = validate(deps, documentRuleListSchema, input ?? {});
+  if (!parsed.ok) return parsed;
+
+  const rows = deps.db
+    .select()
+    .from(documentRules)
+    .orderBy(asc(documentRules.sortOrder), asc(documentRules.id))
+    .all();
+
+  return ok(parsed.value.includeInactive ? rows : rows.filter((r) => r.isActive));
+}
+
 
