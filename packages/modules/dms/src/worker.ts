@@ -53,8 +53,12 @@ export interface TextWorker {
   stop(): void;
 }
 
-export function startTextWorker(deps: Deps, opts: { intervalMs?: number } = {}): TextWorker {
-  recoverRunning(deps);
+export function startTextWorker(
+  depsOrGetter: Deps | (() => Deps),
+  opts: { intervalMs?: number } = {},
+): TextWorker {
+  const getDeps = typeof depsOrGetter === 'function' ? depsOrGetter : () => depsOrGetter;
+  recoverRunning(getDeps());
 
   let busy = false;
   let stopped = false;
@@ -64,9 +68,9 @@ export function startTextWorker(deps: Deps, opts: { intervalMs?: number } = {}):
     busy = true;
     try {
       // Solange etwas da ist, weitermachen — aber immer nur eins auf einmal.
-      let outcome = await processNextDocument(deps);
+      let outcome = await processNextDocument(getDeps());
       while (outcome !== 'idle' && outcome !== 'unavailable' && !stopped) {
-        outcome = await processNextDocument(deps);
+        outcome = await processNextDocument(getDeps());
       }
     } catch {
       // Unerwartete Fehler (z. B. geschlossene DB beim Herunterfahren)

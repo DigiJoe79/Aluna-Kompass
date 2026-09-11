@@ -45,4 +45,6 @@ export async function resetDeps(mode: 'empty' | 'seeded'): Promise<void> {
   const deps = getDeps();
   if (mode === 'seeded') await seedDevelopment(deps);
   await resetMcpHandler();
+  const { textWorker } = await import('./background');
+  textWorker()?.wake();
 }

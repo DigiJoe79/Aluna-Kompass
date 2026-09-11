@@ -1,7 +1,9 @@
+import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { loginAsAdmin, resetDatabase } from './helpers';
 
 const login = loginAsAdmin;
+const FIXTURE_PDF = path.resolve(import.meta.dirname, 'fixtures/brief-digital.pdf');
 
 test.describe('dms', () => {
   test.beforeEach(async ({ page }) => {
@@ -190,6 +192,44 @@ test.describe('dms', () => {
     await expect(page.getByRole('heading', { name: 'Dokumentarten' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Einsortierregeln' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Ordner' })).toBeVisible();
+  });
+
+  test('ein abgelegter Scan wird gelesen und über seinen Inhalt gefunden', async ({ page }) => {
+    test.setTimeout(60_000);
+    await login(page);
+
+    await page.goto('/dms/receive');
+    await page.getByLabel('Datei').setInputFiles(FIXTURE_PDF);
+    await page.getByLabel('Betreff').fill('Ohne sprechenden Betreff');
+    await page.getByLabel('Datum auf dem Dokument').fill('2026-09-11');
+    await page.getByRole('button', { name: 'Ablegen' }).click();
+
+    // Der Worker laeuft im Hintergrund; gewartet wird auf den Zustand, nicht auf
+    // eine feste Zeit — sonst ist der Test auf einer langsamen Maschine rot.
+    await expect(page.getByText(/Gelesen am/)).toBeVisible({ timeout: 60_000 });
+
+    await page.goto('/dms');
+    await page.getByPlaceholder('Betreff, Nummer oder Inhalt').fill('rechnung');
+    await expect(page.getByText('Ohne sprechenden Betreff')).toBeVisible();
+
+    const previewLink = page.getByRole('link', { name: /Seite 1/ });
+    await expect(previewLink).toBeVisible();
+    await expect(previewLink).toHaveAttribute('href', /\/dms\/.+\/preview#page=1/);
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      previewLink.click(),
+    ]);
+    expect(download.suggestedFilename()).toMatch(/\.pdf$/);
+  });
+
+  test('ein zu kurzer Begriff sagt, warum er nichts findet', async ({ page }) => {
+    await login(page);
+
+    await page.goto('/dms');
+    await page.getByPlaceholder('Betreff, Nummer oder Inhalt').fill('ab');
+
+    await expect(page.getByText(/mindestens drei Zeichen/)).toBeVisible();
   });
 });
 

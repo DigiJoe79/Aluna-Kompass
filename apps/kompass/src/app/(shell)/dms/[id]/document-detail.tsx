@@ -2,7 +2,8 @@
 
 import { useFormatter, useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { StatusBadge } from '@/components/status-badge';
@@ -58,10 +59,19 @@ export function DocumentDetail({ document: doc, retentionInfo, permissions }: Do
   const t = useTranslations('dms');
   const tCommon = useTranslations('common');
   const format = useFormatter();
+  const router = useRouter();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [voidOpen, setVoidOpen] = useState(false);
   const [purgeOpen, setPurgeOpen] = useState(false);
   const [voidReason, setVoidReason] = useState('');
+
+  useEffect(() => {
+    if (doc.textStatus !== 'pending' && doc.textStatus !== 'running') return;
+    const interval = setInterval(() => {
+      router.refresh();
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [doc.textStatus, router]);
 
   return (
     <div className="space-y-6">

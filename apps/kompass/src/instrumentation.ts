@@ -13,7 +13,7 @@ export async function register(): Promise<void> {
     const { startTextWorker } = await import('@kompass/module-dms');
     startBackgroundWork({
       onStart: () => {
-        const worker = startTextWorker(getDeps());
+        const worker = startTextWorker(getDeps);
         console.log('[kompass] Texterkennung läuft');
         return worker;
       },

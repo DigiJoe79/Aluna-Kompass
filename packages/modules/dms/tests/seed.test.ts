@@ -1,7 +1,9 @@
 import { coreModule } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { contactsModule } from '@kompass/module-contacts';
+import { isNotNull } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
+import { countDocumentText } from '../src/index-store';
 import { dmsModule } from '../src/manifest';
 import { documentFolders, documents, documentTypes } from '../src/schema';
 import { seedDms } from '../src/seed';
@@ -34,5 +36,18 @@ describe('seedDms', () => {
     const after = deps.db.select().from(documents).all().length;
     await seedDms(deps, ctx);
     expect(deps.db.select().from(documents).all().length).toBe(after);
+  });
+
+  it('lässt die Beispieldokumente vom Worker lesen, statt den Index selbst zu füllen', async () => {
+    const { deps, ctx } = setup();
+
+    await seedDms(deps, ctx);
+
+    const withFile = deps.db.select().from(documents).where(isNotNull(documents.fileName)).all();
+    expect(withFile.length).toBeGreaterThan(0);
+    for (const row of withFile) {
+      expect(row.textStatus).toBe('pending');
+      expect(countDocumentText(deps, row.id)).toBe(0);
+    }
   });
 });

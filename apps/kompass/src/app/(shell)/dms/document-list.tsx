@@ -273,13 +273,13 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
                         <SnippetText value={hits[doc.id]!.snippet} />{' '}
                         {/* `#page=` versteht jeder Browser-PDF-Betrachter; wir brauchen dafuer keinen
                             eigenen Betrachter und keine Bibliothek. */}
-                        <Link
+                        <a
                           href={`/dms/${doc.id}/preview#page=${hits[doc.id]!.page}`}
                           className="font-medium underline underline-offset-2 hover:text-link"
                           onClick={(e) => e.stopPropagation()}
                         >
                           {t('hitOnPage', { page: hits[doc.id]!.page })}
-                        </Link>
+                        </a>
                       </TableCell>
                     </TableRow>
                   ) : null}
