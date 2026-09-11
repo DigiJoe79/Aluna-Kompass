@@ -39,7 +39,7 @@ Drizzle kennt keine virtuellen Tabellen. Die Migration entsteht deshalb über `-
   - `removeDocumentText(deps, documentId): void`
   - `countDocumentText(deps, documentId): number` — nur für Tests und die Verwaltung.
 
-- [ ] **Step 1: Failing Test schreiben**
+- [x] **Step 1: Failing Test schreiben**
 
 `packages/modules/dms/tests/index-store.test.ts`:
 
@@ -108,12 +108,12 @@ describe('Textindex', () => {
 });
 ```
 
-- [ ] **Step 2: Test laufen lassen, Fehlschlag sehen**
+- [x] **Step 2: Test laufen lassen, Fehlschlag sehen**
 
 Run: `pnpm --filter @kompass/module-dms test -- index-store`
 Expected: FAIL — es gibt weder Tabelle noch Modul.
 
-- [ ] **Step 3: Die Migration anlegen**
+- [x] **Step 3: Die Migration anlegen**
 
 ```bash
 ls packages/core/src/db/migrations           # naechste freie Nummer pruefen
@@ -143,7 +143,7 @@ CREATE VIRTUAL TABLE `document_text` USING fts5(
 );
 ```
 
-- [ ] **Step 4: Den Zugriff schreiben**
+- [x] **Step 4: Den Zugriff schreiben**
 
 `packages/modules/dms/src/index-store.ts`:
 
@@ -188,12 +188,12 @@ export function countDocumentText(deps: Deps, documentId: string): number {
 }
 ```
 
-- [ ] **Step 5: Tests grün sehen**
+- [x] **Step 5: Tests grün sehen**
 
 Run: `pnpm --filter @kompass/module-dms test -- index-store`
 Expected: PASS (5 Tests)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/core/src/db/migrations packages/modules/dms/src/index-store.ts packages/modules/dms/tests/index-store.test.ts
@@ -213,7 +213,7 @@ Jetzt trifft Plan 2 auf Task 1: Was `extractDocumentText` liest, landet im Index
 **Interfaces:**
 - Consumes: `replaceDocumentText`, `removeDocumentText`, `countDocumentText` (Task 1)
 
-- [ ] **Step 1: Failing Test schreiben**
+- [x] **Step 1: Failing Test schreiben**
 
 In `packages/modules/dms/tests/text.test.ts` ergänzen:
 
@@ -257,12 +257,12 @@ In `packages/modules/dms/tests/text.test.ts` ergänzen:
 
 **Hinweis:** Wie die Löschung in diesem Modul heißt und welche Rechte sie verlangt, in `packages/modules/dms/src/service.ts` und `drafts.ts` nachlesen (`DELETION_POLICY` führt `documentDraft` und `document`). Den Test auf die echte Signatur setzen, nicht umgekehrt.
 
-- [ ] **Step 2: Test laufen lassen, Fehlschlag sehen**
+- [x] **Step 2: Test laufen lassen, Fehlschlag sehen**
 
 Run: `pnpm --filter @kompass/module-dms test -- text`
 Expected: FAIL — der Index bleibt leer.
 
-- [ ] **Step 3: Den Index füllen**
+- [x] **Step 3: Den Index füllen**
 
 In `packages/modules/dms/src/text.ts`, im Erfolgszweig **vor** der Transaktion (die virtuelle Tabelle wird über `deps.sqlite` geschrieben, nicht über die Drizzle-Transaktion):
 
@@ -277,7 +277,7 @@ In `packages/modules/dms/src/text.ts`, im Erfolgszweig **vor** der Transaktion (
   );
 ```
 
-- [ ] **Step 4: Beim Löschen aufräumen**
+- [x] **Step 4: Beim Löschen aufräumen**
 
 In jeder Löschfunktion des Moduls nach dem erfolgreichen Löschen der Zeile:
 
@@ -287,12 +287,12 @@ In jeder Löschfunktion des Moduls nach dem erfolgreichen Löschen der Zeile:
 
 **Storno nicht anfassen:** Ein storniertes Dokument behält seine Zeilen und bleibt auffindbar (Spec § 5.3).
 
-- [ ] **Step 5: Tests grün sehen**
+- [x] **Step 5: Tests grün sehen**
 
 Run: `pnpm --filter @kompass/module-dms test`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/modules/dms
@@ -318,7 +318,7 @@ Eine Bedingung mehr, kein zweiter Bauplan. Und der Hinweis für zu kurze Eingabe
   - `fulltextDocumentIds(deps, text: string): string[] | null`
   - `listDocuments` liefert zusätzlich `fulltextTooShort: boolean`.
 
-- [ ] **Step 1: Failing Test schreiben**
+- [x] **Step 1: Failing Test schreiben**
 
 `packages/modules/dms/tests/search.test.ts`:
 
@@ -425,12 +425,12 @@ describe('matchExpression', () => {
 });
 ```
 
-- [ ] **Step 2: Test laufen lassen, Fehlschlag sehen**
+- [x] **Step 2: Test laufen lassen, Fehlschlag sehen**
 
 Run: `pnpm --filter @kompass/module-dms test -- search`
 Expected: FAIL — `../src/search` gibt es nicht.
 
-- [ ] **Step 3: Den Suchausdruck schreiben**
+- [x] **Step 3: Den Suchausdruck schreiben**
 
 `packages/modules/dms/src/search.ts`:
 
@@ -477,7 +477,7 @@ export function fulltextDocumentIds(deps: Deps, text: string): string[] | null {
 }
 ```
 
-- [ ] **Step 4: `listDocuments` erweitern**
+- [x] **Step 4: `listDocuments` erweitern**
 
 In `packages/modules/dms/src/service.ts` die Textbedingung ersetzen:
 
@@ -502,12 +502,12 @@ Und im Rückgabewert:
   return ok({ documents: rows.map((row) => toRecord(deps, row)), total, fulltextTooShort });
 ```
 
-- [ ] **Step 5: Tests grün sehen**
+- [x] **Step 5: Tests grün sehen**
 
 Run: `pnpm --filter @kompass/module-dms test -- search`
 Expected: PASS (9 Tests)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/modules/dms
@@ -531,7 +531,7 @@ Ohne Passage ist ein Volltexttreffer eine Behauptung. `snippet()` liefert sie, `
   - `fulltextHits(deps, documentIds: readonly string[], text: string): Map<string, TextHit>` — je Dokument die beste Seite.
   - `listDocuments` liefert `hits: Record<string, TextHit>` für die **sichtbare** Seite.
 
-- [ ] **Step 1: Failing Test schreiben**
+- [x] **Step 1: Failing Test schreiben**
 
 In `packages/modules/dms/tests/search.test.ts` ergänzen:
 
@@ -593,12 +593,12 @@ In `packages/modules/dms/tests/search.test.ts` ergänzen:
 
 Den Import in der Testdatei ergänzen: `import { matchExpression, SNIPPET_MARK_START } from '../src/search';`
 
-- [ ] **Step 2: Test laufen lassen, Fehlschlag sehen**
+- [x] **Step 2: Test laufen lassen, Fehlschlag sehen**
 
 Run: `pnpm --filter @kompass/module-dms test -- search`
 Expected: FAIL — `hits` gibt es nicht.
 
-- [ ] **Step 3: Die Passagen holen**
+- [x] **Step 3: Die Passagen holen**
 
 In `packages/modules/dms/src/search.ts` ergänzen:
 
@@ -667,7 +667,7 @@ export function fulltextHits(
 }
 ```
 
-- [ ] **Step 4: An `listDocuments` anhängen**
+- [x] **Step 4: An `listDocuments` anhängen**
 
 Nach dem Laden von `rows`, also **nur für die sichtbare Seite**:
 
@@ -684,12 +684,12 @@ Nach dem Laden von `rows`, also **nur für die sichtbare Seite**:
   });
 ```
 
-- [ ] **Step 5: Tests grün sehen**
+- [x] **Step 5: Tests grün sehen**
 
 Run: `pnpm --filter @kompass/module-dms test -- search`
 Expected: PASS (12 Tests)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/modules/dms
@@ -711,7 +711,7 @@ Zum Abschluss: der Sammelauftrag für die Verwaltung und `dms_search` über MCP,
   - `reindexAllDocuments(deps, ctx) → Promise<Result<{ queued: number }>>`, Recht `dms.manage`
   - MCP-Werkzeuge `dms_search` und `dms_reindex`
 
-- [ ] **Step 1: Failing Test schreiben**
+- [x] **Step 1: Failing Test schreiben**
 
 In `packages/modules/dms/tests/text.test.ts` ergänzen:
 
@@ -741,12 +741,12 @@ In `packages/modules/dms/tests/text.test.ts` ergänzen:
   });
 ```
 
-- [ ] **Step 2: Test laufen lassen, Fehlschlag sehen**
+- [x] **Step 2: Test laufen lassen, Fehlschlag sehen**
 
 Run: `pnpm --filter @kompass/module-dms test -- text`
 Expected: FAIL — `reindexAllDocuments` gibt es nicht.
 
-- [ ] **Step 3: Den Sammelauftrag schreiben**
+- [x] **Step 3: Den Sammelauftrag schreiben**
 
 In `packages/modules/dms/src/text.ts`:
 
@@ -787,7 +787,7 @@ export async function reindexAllDocuments(deps: Deps, ctx: CallContext): Promise
 }
 ```
 
-- [ ] **Step 4: Die MCP-Werkzeuge ergänzen**
+- [x] **Step 4: Die MCP-Werkzeuge ergänzen**
 
 In `packages/modules/dms/src/mcp-tools.ts` nach dem Muster der vorhandenen Einträge:
 
@@ -808,12 +808,12 @@ In `packages/modules/dms/src/mcp-tools.ts` nach dem Muster der vorhandenen Eintr
 
 **Hinweis:** Die genaue Form des Handlers aus den Nachbareinträgen derselben Datei übernehmen — sie unterscheidet sich je nachdem, wie `McpToolDefinition` die Argumente reicht.
 
-- [ ] **Step 5: Tests grün sehen**
+- [x] **Step 5: Tests grün sehen**
 
 Run: `pnpm --filter @kompass/module-dms test && pnpm --filter @kompass/app test -- mcp-tools`
 Expected: PASS. `mcp-tools.test.ts` prüft, dass jedes Recht mindestens ein Werkzeug hat, das es in seiner Beschreibung nennt.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/modules/dms
@@ -824,8 +824,8 @@ git commit -m "feat(dms): read everything again, and let an agent search the fil
 
 ## Abschluss dieses Plans
 
-- [ ] `pnpm typecheck`
-- [ ] `pnpm test`
-- [ ] `pnpm verify`
+- [x] `pnpm typecheck`
+- [x] `pnpm test`
+- [x] `pnpm verify`
 
 Danach: `2026-09-11-volltext-4-oberflaeche.md`.
