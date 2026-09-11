@@ -18,8 +18,8 @@ describe('dmsRetentionHolds', () => {
     if (!doc.ok) throw new Error('setup');
     const holds = dmsRetentionHolds(deps, 'contact', 'c-1');
     expect(holds).toHaveLength(1);
-    expect(holds[0].label).toContain(doc.value.number as string);
-    expect(holds[0].until).toBe('2036-12-31'); // 10 Jahre ab Ablauf des Kalenderjahres 2026
+    expect(holds[0]!.label).toContain(doc.value.number as string);
+    expect(holds[0]!.until).toBe('2036-12-31'); // 10 Jahre ab Ablauf des Kalenderjahres 2026
   });
 
   it('hält nichts über einen Entwurf', async () => {
@@ -43,7 +43,7 @@ describe('dmsRetentionHolds', () => {
       documentDate: '2020-01-01',
       links: [{ entityType: 'contact', entityId: 'c-3', role: 'about' }],
     });
-    expect(dmsRetentionHolds(deps, 'contact', 'c-3')[0].until).toBeNull();
+    expect(dmsRetentionHolds(deps, 'contact', 'c-3')[0]!.until).toBeNull();
   });
 });
 
@@ -59,7 +59,7 @@ describe('dmsRetentionDue', () => {
     });
     const due = dmsRetentionDue(deps);
     expect(due).toHaveLength(1);
-    expect(due[0].entity).toBe('document');
+    expect(due[0]!.entity).toBe('document');
   });
 
   it('führt nichts auf, was noch läuft', async () => {

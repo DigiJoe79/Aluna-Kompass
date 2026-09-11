@@ -30,7 +30,7 @@ function isValidDate(year: number, month: number, day: number): boolean {
  */
 export function dateFromFilename(filename: string): string | null {
   const isoMatch = /\b(\d{4})-(\d{2})-(\d{2})\b/.exec(filename);
-  if (isoMatch) {
+  if (isoMatch && isoMatch[1] && isoMatch[2] && isoMatch[3]) {
     const year = parseInt(isoMatch[1], 10);
     const month = parseInt(isoMatch[2], 10);
     const day = parseInt(isoMatch[3], 10);
@@ -40,7 +40,7 @@ export function dateFromFilename(filename: string): string | null {
   }
 
   const deMatch = /\b(\d{2})\.(\d{2})\.(\d{4})\b/.exec(filename);
-  if (deMatch) {
+  if (deMatch && deMatch[1] && deMatch[2] && deMatch[3]) {
     const day = parseInt(deMatch[1], 10);
     const month = parseInt(deMatch[2], 10);
     const year = parseInt(deMatch[3], 10);
