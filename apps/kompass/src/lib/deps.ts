@@ -9,9 +9,11 @@ export type AppDeps = import('@kompass/core').AppDeps;
 
 interface Holder {
   deps: AppDeps | null;
+  /** Läuft gerade ein Reset, steht hier sein Versprechen. Siehe `depsReady`. */
+  resetting: Promise<void> | null;
 }
 
-const holder: Holder = ((globalThis as unknown as { __kompass?: Holder }).__kompass ??= { deps: null });
+const holder: Holder = ((globalThis as unknown as { __kompass?: Holder }).__kompass ??= { deps: null, resetting: null });
 
 export function runtimeEnv() {
   return readEnv();
@@ -27,6 +29,19 @@ function openDeps(): AppDeps {
     documents: createDocumentEngine({ documentTemplatesDir: env.documentTemplatesDir }),
     textExtraction: createTextExtraction(),
   });
+}
+
+/**
+ * Vor dem Zugriff abwarten, falls gerade zurückgesetzt wird.
+ *
+ * `getDeps()` ist synchron und kann nicht warten — die Aufrufer können es. Wer
+ * mitten in einen Reset läuft, bekommt deshalb nicht eine Ausnahme (das traf
+ * auch Vorabrufe und endete als Fehler im Browser) und legt auch nicht die
+ * Datenbank neu an, während sie gerade gelöscht wird (das liess den Reset mit
+ * ENOTEMPTY scheitern). Er wartet.
+ */
+export async function depsReady(): Promise<void> {
+  while (holder.resetting) await holder.resetting;
 }
 
 export function getDeps(): AppDeps {
@@ -59,6 +74,11 @@ export async function resetDeps(mode: 'empty' | 'seeded'): Promise<void> {
   // zufällig in dasselbe Fenster läuft, bekommt trotzdem eine Antwort.
   const background = await import('./background');
   background.stopBackgroundWork();
+
+  let done!: () => void;
+  holder.resetting = new Promise<void>((resolve) => {
+    done = resolve;
+  });
   try {
     await resetMcpHandler();
     holder.deps?.close();
@@ -72,6 +92,8 @@ export async function resetDeps(mode: 'empty' | 'seeded'): Promise<void> {
     // halb eingerichteten Bestand zu sehen bekommen.
     holder.deps = deps;
   } finally {
+    holder.resetting = null;
+    done();
     background.restartBackgroundWork();
   }
 

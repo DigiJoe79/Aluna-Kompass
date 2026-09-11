@@ -59,7 +59,11 @@ jobs:
 
   image:
     needs: test
-    if: github.event_name == 'push'
+    # Auch bei rotem `test` bauen und gegen den Container prüfen: Sonst kostet
+    # jeder Fehlschlag im zweiten Ring eine weitere Runde von einer
+    # Viertelstunde, bevor der dritte überhaupt etwas sagen darf. Nur
+    # hochgeladen wird das Bild dann nicht — siehe letzter Schritt.
+    if: ${{ !cancelled() && github.event_name == 'push' }}
     runs-on: ubuntu-latest
     permissions: { contents: read, packages: write }
     steps:
@@ -119,6 +123,7 @@ jobs:
       # Genau das geprüfte Bild bekommt die Namen und wird hochgeladen — kein
       # zweiter Bau, der sich vom getesteten unterscheiden koennte.
       - name: Push the tested image
+        if: needs.test.result == 'success'
         run: |
           echo "${{ steps.meta.outputs.tags }}" | while read -r tag; do
             [ -z "$tag" ] && continue

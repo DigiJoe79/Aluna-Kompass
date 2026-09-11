@@ -31,7 +31,10 @@ export async function resetDataPath(dataPath: string, manifests: readonly Module
         await removeExcept(target);
         continue;
       }
-      await rm(target, { recursive: true, force: true });
+      // Wiederholen statt scheitern: Legt nebenher jemand eine Datei an — eine
+      // Anfrage, die mitten in den Reset läuft und die Datenbank öffnet —,
+      // meldet `rm` ENOTEMPTY, obwohl gleich darauf alles weg wäre.
+      await rm(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     }
   };
 

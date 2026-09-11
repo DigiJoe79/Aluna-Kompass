@@ -9,6 +9,7 @@ process.env.E2E_SITE_TEMPLATE_DIR = siteTemplateDir;
 
 export default defineConfig({
   testDir: './e2e',
+  globalSetup: './e2e/warmup.ts',
   fullyParallel: false,
   workers: 1,
   retries: 0,

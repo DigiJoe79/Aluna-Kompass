@@ -2,7 +2,7 @@ import 'server-only';
 import { newId, resolveSession, revokeSession, type CallContext, type ResolvedSession } from '@kompass/core';
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { getDeps } from './deps';
+import { depsReady, getDeps } from './deps';
 
 export const SESSION_COOKIE = 'kompass_session';
 
@@ -16,6 +16,8 @@ export async function requestMeta(): Promise<{ ipAddress: string | null; request
 }
 
 export async function optionalSession(): Promise<(ResolvedSession & { sessionId: string }) | null> {
+  // Läuft gerade ein E2E-Reset, hier warten statt in ihn hineinzulaufen.
+  await depsReady();
   const store = await cookies();
   const sessionId = store.get(SESSION_COOKIE)?.value;
   if (!sessionId) return null;

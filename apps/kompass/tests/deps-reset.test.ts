@@ -133,3 +133,26 @@ describe('während ein Reset läuft', () => {
     expect(thrown).toBeNull();
   });
 });
+
+describe('eine Anfrage mitten im Reset', () => {
+  it('bringt ihn nicht zum Scheitern', async () => {
+    const { getDeps, resetDeps, depsReady } = await import('@/lib/deps');
+
+    getDeps();
+    let spinning = true;
+    // Ohne `depsReady()` legt dieser Aufruf die Datenbank neu an, während sie
+    // gelöscht wird — `rm` meldete dann ENOTEMPTY und der Reset brach ab.
+    // Genau so scheiterte am 11.09. `setup-import` in der CI.
+    const spin = (async () => {
+      while (spinning) {
+        await depsReady();
+        getDeps();
+        await new Promise((resolve) => setImmediate(resolve));
+      }
+    })();
+
+    await expect(resetDeps('empty')).resolves.toBeUndefined();
+    spinning = false;
+    await spin;
+  });
+});

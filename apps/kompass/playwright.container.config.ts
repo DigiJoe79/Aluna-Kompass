@@ -95,6 +95,7 @@ const run = [
 
 export default defineConfig({
   testDir: './e2e',
+  globalSetup: './e2e/warmup.ts',
   testMatch: '**/*.spec.ts',
   fullyParallel: false,
   workers: 1,
