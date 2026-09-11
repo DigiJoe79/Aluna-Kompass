@@ -22,7 +22,7 @@ import { documentTypeFor } from './catalog';
 import { documentFolders, documentLinks, documents, type DocumentLinkRow, type DocumentRow } from './schema';
 import { readDocumentFile, removeDocumentFile } from './storage';
 import { removeDocumentText } from './index-store';
-import { fulltextDocumentIds, fulltextHits, type TextHit } from './search';
+import { fulltextCondition, fulltextHits, type TextHit } from './search';
 
 export type DocumentRecord = Omit<DocumentRow, 'inputSnapshot'> & { inputSnapshot: unknown; links: DocumentLinkRow[] };
 
@@ -100,15 +100,13 @@ export async function listDocuments(
 
   let fulltextTooShort = false;
   if (q.text) {
-    const ids = fulltextDocumentIds(deps, q.text);
-    fulltextTooShort = ids === null;
+    const inFulltext = fulltextCondition(q.text);
+    fulltextTooShort = inFulltext === null;
     const byText = or(like(documents.subject, `%${q.text}%`), like(documents.number, `%${q.text}%`));
     // Der Volltext erweitert die Treffermenge, nicht die Reihenfolge
     // (Entscheidung 31): Die Liste bleibt chronologisch, `total`, `limit` und
     // `offset` bleiben, wie sie waren.
-    conditions.push(
-      (ids && ids.length > 0 ? or(byText, inArray(documents.id, ids)) : byText) as SQL,
-    );
+    conditions.push((inFulltext ? or(byText, inFulltext) : byText) as SQL);
   }
 
   if (q.linkedTo) {

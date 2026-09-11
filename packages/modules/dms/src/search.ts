@@ -1,4 +1,6 @@
 import type { Deps } from '@kompass/core';
+import { sql, type SQL } from 'drizzle-orm';
+import { documents } from './schema';
 
 /**
  * Kürzer als drei Zeichen findet der Trigramm-Tokenizer nichts — er zerlegt in
@@ -33,18 +35,20 @@ export function matchExpression(text: string): string | null {
 }
 
 /**
- * Die Dokumente, in deren Volltext der Ausdruck trifft. `null` heißt: Die
- * Eingabe war zu kurz — der Aufrufer sagt das, statt eine leere Liste zu zeigen.
+ * Die Bedingung „dieses Dokument trifft im Volltext“, als Unterabfrage.
+ * `null` heißt: Die Eingabe war zu kurz — der Aufrufer sagt das, statt eine
+ * leere Liste zu zeigen.
+ *
+ * Eine Unterabfrage und keine Liste von IDs: Die Treffermenge bliebe sonst
+ * vollständig in JavaScript stehen und ginge als ebenso viele Parameter zurück
+ * in die Abfrage. SQLite nimmt davon rund 32.000, und was darüber liegt, käme
+ * als technischer Fehler heraus statt als Suchergebnis.
  */
-export function fulltextDocumentIds(deps: Deps, text: string): string[] | null {
+export function fulltextCondition(text: string): SQL | null {
   const expression = matchExpression(text);
   if (!expression) return null;
 
-  const rows = deps.sqlite
-    .prepare(`SELECT DISTINCT document_id FROM document_text WHERE document_text MATCH ?`)
-    .all(expression) as { document_id: string }[];
-
-  return rows.map((r) => r.document_id);
+  return sql`${documents.id} IN (SELECT document_id FROM document_text WHERE document_text MATCH ${expression})`;
 }
 
 /**
