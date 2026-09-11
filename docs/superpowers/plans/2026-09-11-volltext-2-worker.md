@@ -38,7 +38,7 @@ Die Spec behauptet eine Mechanik, die es in dieser Anwendung noch nicht gibt: `i
   - `backgroundStarted(): boolean` — nur für Tests und die Gesundheitsanzeige.
   - `register()` in `instrumentation.ts` — Next ruft das von sich aus.
 
-- [ ] **Step 1: Failing Test schreiben**
+- [x] **Step 1: Failing Test schreiben**
 
 `apps/kompass/tests/background.test.ts`:
 
@@ -70,12 +70,12 @@ describe('startBackgroundWork', () => {
 });
 ```
 
-- [ ] **Step 2: Test laufen lassen, Fehlschlag sehen**
+- [x] **Step 2: Test laufen lassen, Fehlschlag sehen**
 
 Run: `pnpm --filter @kompass/app test -- background`
 Expected: FAIL — `@/lib/background` gibt es nicht.
 
-- [ ] **Step 3: Den Anlasser schreiben**
+- [x] **Step 3: Den Anlasser schreiben**
 
 `apps/kompass/src/lib/background.ts`:
 
@@ -127,12 +127,12 @@ export function register(): void {
 }
 ```
 
-- [ ] **Step 4: Tests grün sehen**
+- [x] **Step 4: Tests grün sehen**
 
 Run: `pnpm --filter @kompass/app test -- background`
 Expected: PASS (2 Tests)
 
-- [ ] **Step 5: Den Beweis am laufenden Server führen**
+- [x] **Step 5: Den Beweis am laufenden Server führen**
 
 Das ist der eigentliche Zweck dieses Tasks: Der Test oben prüft die Funktion, nicht Next.
 
@@ -151,7 +151,7 @@ docker logs kompass-dev 2>&1 | grep Hintergrundarbeit
 
 Expected: dieselbe Zeile, einmal.
 
-- [ ] **Step 6: Den Beweis festhalten**
+- [x] **Step 6: Den Beweis festhalten**
 
 `apps/kompass/e2e/instrumentation.spec.ts`:
 
@@ -181,12 +181,12 @@ import { backgroundStarted } from '@/lib/background';
     background: backgroundStarted(),
 ```
 
-- [ ] **Step 7: E2E laufen lassen**
+- [x] **Step 7: E2E laufen lassen**
 
 Run: `pnpm --filter @kompass/app e2e -- instrumentation`
 Expected: PASS
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/kompass/instrumentation.ts apps/kompass/src/lib/background.ts apps/kompass/tests/background.test.ts apps/kompass/e2e/instrumentation.spec.ts apps/kompass/src/app/api/health/route.ts
@@ -212,7 +212,7 @@ Vier Spalten, fünf Werte. `running` ist dabei, weil ein 200-Seiten-Scan Minuten
   - `documents.textExtractedAt: string | null`
   - `DocumentRecord` trägt die vier Felder mit denselben Namen.
 
-- [ ] **Step 1: Failing Test schreiben**
+- [x] **Step 1: Failing Test schreiben**
 
 `packages/modules/dms/tests/text-status.test.ts`:
 
@@ -273,12 +273,12 @@ describe('Erkennungszustand am Dokument', () => {
 
 **Hinweis:** `seedTypes` aus `packages/modules/dms/tests/helpers.ts` ist der vorhandene Helfer, der die Dokumentarten anlegt. Die genaue Signatur dort nachlesen, statt sie zu raten.
 
-- [ ] **Step 2: Test laufen lassen, Fehlschlag sehen**
+- [x] **Step 2: Test laufen lassen, Fehlschlag sehen**
 
 Run: `pnpm --filter @kompass/module-dms test -- text-status`
 Expected: FAIL — `textStatus` gibt es nicht.
 
-- [ ] **Step 3: Schema erweitern**
+- [x] **Step 3: Schema erweitern**
 
 In `packages/modules/dms/src/schema.ts`, innerhalb von `documents`, nach `fileBytes`:
 
@@ -302,7 +302,7 @@ Im Index-Block ergänzen, damit der Worker sein nächstes Stück Arbeit ohne Tab
     index('documents_text_status_idx').on(t.textStatus),
 ```
 
-- [ ] **Step 4: `pending` beim Ablegen setzen**
+- [x] **Step 4: `pending` beim Ablegen setzen**
 
 In `packages/modules/dms/src/incoming.ts` (`receiveDocument`) und in `packages/modules/dms/src/drafts.ts` (`fileDocument`) bei den `tx.insert(documents).values({...})` bzw. `tx.update(documents).set({...})` ergänzen:
 
@@ -317,7 +317,7 @@ In `packages/modules/dms/src/incoming.ts` (`receiveDocument`) und in `packages/m
 
 In `toRecord` (`packages/modules/dms/src/service.ts`) die vier Felder durchreichen.
 
-- [ ] **Step 5: Migration erzeugen**
+- [x] **Step 5: Migration erzeugen**
 
 ```bash
 ls packages/core/src/db/migrations   # naechste freie Nummer pruefen
@@ -326,12 +326,12 @@ pnpm --filter @kompass/core db:generate
 
 Die erzeugte Datei lesen. Erwartet werden vier `ALTER TABLE documents ADD COLUMN` und ein `CREATE INDEX` — **kein Tabellenneubau**. Steht dort ein Neubau, ist etwas anderes am Schema geändert worden; dann zurücknehmen und einzeln vorgehen.
 
-- [ ] **Step 6: Tests grün sehen**
+- [x] **Step 6: Tests grün sehen**
 
 Run: `pnpm --filter @kompass/module-dms test`
 Expected: PASS, auch die vorhandenen Tests.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/modules/dms/src packages/core/src/db/migrations packages/modules/dms/tests/text-status.test.ts
@@ -355,7 +355,7 @@ Ein Dokument lesen ist ein gewöhnlicher Service — mit Recht, Protokoll und `R
   - `extractDocumentText(deps, ctx, input) → Promise<Result<{ documentId: string; pages: number; status: 'done' | 'failed' | 'unavailable' }>>`, Recht `dms.manage`
   - `onPages?: (pages: PageText[]) => void` gibt es **nicht** — Plan 3 schreibt den Index direkt in diesem Service.
 
-- [ ] **Step 1: Failing Test schreiben**
+- [x] **Step 1: Failing Test schreiben**
 
 `packages/modules/dms/tests/text.test.ts`:
 
@@ -489,12 +489,12 @@ describe('extractDocumentText', () => {
 
 **Hinweis:** Die genaue Signatur von `listAudit` und die Form seines Ergebnisses in `packages/core/src/audit/query.ts` nachlesen; die Stelle oben ist nach dem Muster der vorhandenen Audit-Tests im Modul zu schreiben.
 
-- [ ] **Step 2: Test laufen lassen, Fehlschlag sehen**
+- [x] **Step 2: Test laufen lassen, Fehlschlag sehen**
 
 Run: `pnpm --filter @kompass/module-dms test -- text`
 Expected: FAIL — `../src/text` gibt es nicht.
 
-- [ ] **Step 3: Den Service schreiben**
+- [x] **Step 3: Den Service schreiben**
 
 `packages/modules/dms/src/text.ts`:
 
@@ -616,7 +616,7 @@ export function ocrLanguages(deps: Deps): string[] {
 
 **Hinweis:** `readSetting` ist der vorhandene Leser aus `packages/core/src/settings/service.ts`; die genaue Signatur dort nachlesen und den Aufruf anpassen. Die Einstellung `dms.ocrLanguages` wird im nächsten Step angelegt.
 
-- [ ] **Step 4: Die Einstellung anmelden**
+- [x] **Step 4: Die Einstellung anmelden**
 
 In `packages/modules/dms/src/install.ts` bei `DMS_SETTINGS` ergänzen:
 
@@ -630,12 +630,12 @@ In `packages/modules/dms/src/install.ts` bei `DMS_SETTINGS` ergänzen:
   { key: 'dms.ocrLanguages', schema: z.string().regex(/^[a-z]{3}(\+[a-z]{3})*$/), default: 'deu+eng' },
 ```
 
-- [ ] **Step 5: Tests grün sehen**
+- [x] **Step 5: Tests grün sehen**
 
 Run: `pnpm --filter @kompass/module-dms test -- text`
 Expected: PASS (7 Tests)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/modules/dms/src/text.ts packages/modules/dms/src/install.ts packages/modules/dms/tests/text.test.ts
@@ -659,7 +659,7 @@ Die Schleife: aufräumen, nehmen, lesen, wiederholen. Ein Dokument zur Zeit — 
   - `processNextDocument(deps): Promise<'idle' | 'done' | 'failed' | 'unavailable'>` — nimmt genau eines.
   - `startTextWorker(deps, opts?: { intervalMs?: number }): { wake(): void; stop(): void }`
 
-- [ ] **Step 1: Failing Test schreiben**
+- [x] **Step 1: Failing Test schreiben**
 
 `packages/modules/dms/tests/worker.test.ts`:
 
@@ -738,12 +738,12 @@ describe('Worker', () => {
 });
 ```
 
-- [ ] **Step 2: Test laufen lassen, Fehlschlag sehen**
+- [x] **Step 2: Test laufen lassen, Fehlschlag sehen**
 
 Run: `pnpm --filter @kompass/module-dms test -- worker`
 Expected: FAIL — `../src/worker` gibt es nicht.
 
-- [ ] **Step 3: Den Worker schreiben**
+- [x] **Step 3: Den Worker schreiben**
 
 `packages/modules/dms/src/worker.ts`:
 
@@ -839,12 +839,12 @@ export function startTextWorker(deps: Deps, opts: { intervalMs?: number } = {}):
 
 **Hinweis:** `systemContext()` liefert einen Kontext mit leerem Rechte-Satz. Ob `ctx.permissions` beschreibbar ist, in `packages/core/src/context.ts` prüfen; ist es das nicht, dort eine Variante `systemContext({ permissions })` ergänzen, statt den Typ im Modul aufzubrechen.
 
-- [ ] **Step 4: Tests grün sehen**
+- [x] **Step 4: Tests grün sehen**
 
 Run: `pnpm --filter @kompass/module-dms test -- worker`
 Expected: PASS (4 Tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/modules/dms/src/worker.ts packages/modules/dms/tests/worker.test.ts
@@ -865,7 +865,7 @@ Jetzt trifft Task 1 auf Task 4: Der Haken startet den Worker, und das Ablegen ti
 - Consumes: `startTextWorker` (Task 4), `startBackgroundWork` (Task 1)
 - Produces: `textWorker(): TextWorker | null` in `background.ts` — für das Antippen aus den Server Actions.
 
-- [ ] **Step 1: Failing Test schreiben**
+- [x] **Step 1: Failing Test schreiben**
 
 In `apps/kompass/tests/background.test.ts` ergänzen:
 
@@ -886,12 +886,12 @@ In `apps/kompass/tests/background.test.ts` ergänzen:
   });
 ```
 
-- [ ] **Step 2: Test laufen lassen, Fehlschlag sehen**
+- [x] **Step 2: Test laufen lassen, Fehlschlag sehen**
 
 Run: `pnpm --filter @kompass/app test -- background`
 Expected: FAIL — `textWorker` ist nicht exportiert.
 
-- [ ] **Step 3: `background.ts` erweitern**
+- [x] **Step 3: `background.ts` erweitern**
 
 ```ts
 import type { TextWorker } from '@kompass/module-dms';
@@ -919,7 +919,7 @@ export function startBackgroundWork(
 }
 ```
 
-- [ ] **Step 4: Den Haken verdrahten**
+- [x] **Step 4: Den Haken verdrahten**
 
 `apps/kompass/instrumentation.ts`:
 
@@ -947,7 +947,7 @@ export function register(): void {
 
 **Hinweis:** Wie die Anwendung ihr `Deps`-Objekt baut, in `apps/kompass/src/lib/deps.ts` nachlesen — der Name `buildDeps` ist hier geraten und muss durch den echten ersetzt werden. Ist die Akte nicht installiert, darf der Start trotzdem nicht scheitern: Dann läuft `startTextWorker` gegen eine Datenbank ohne Zeilen und meldet stets `idle`.
 
-- [ ] **Step 5: Nach dem Ablegen antippen**
+- [x] **Step 5: Nach dem Ablegen antippen**
 
 In `apps/kompass/src/app/(shell)/dms/actions.ts`, in den Aktionen für Eingang und Festschreiben, nach dem erfolgreichen Aufruf:
 
@@ -956,12 +956,12 @@ In `apps/kompass/src/app/(shell)/dms/actions.ts`, in den Aktionen für Eingang u
   textWorker()?.wake();
 ```
 
-- [ ] **Step 6: Tests grün sehen**
+- [x] **Step 6: Tests grün sehen**
 
 Run: `pnpm --filter @kompass/app test -- background`
 Expected: PASS (4 Tests)
 
-- [ ] **Step 7: Am laufenden Server nachsehen**
+- [x] **Step 7: Am laufenden Server nachsehen**
 
 ```bash
 pnpm dev:reset && pnpm --filter @kompass/app dev
@@ -975,7 +975,7 @@ sqlite3 .data/kompass.db "select subject, text_status, text_extracted_at from do
 
 **Hinweis:** Den Pfad der Entwicklungsdatenbank in `apps/kompass/src/lib/deps.ts` oder `.env` nachsehen.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/kompass
@@ -986,8 +986,8 @@ git commit -m "feat(app): filed post goes to the reader without holding up the u
 
 ## Abschluss dieses Plans
 
-- [ ] `pnpm typecheck`
-- [ ] `pnpm test`
-- [ ] `pnpm verify`
+- [x] `pnpm typecheck`
+- [x] `pnpm test`
+- [x] `pnpm verify`
 
 Danach: `2026-09-11-volltext-3-index.md`.
