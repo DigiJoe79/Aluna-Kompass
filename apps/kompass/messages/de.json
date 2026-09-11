@@ -209,7 +209,8 @@
       "list": "Kontakte"
     },
     "dms": {
-      "list": "Akte"
+      "list": "Akte",
+      "manage": "Stammdaten"
     },
     "site": {
       "template": "Template",
@@ -1396,6 +1397,95 @@
       "draftUpdated": "Entwurf gespeichert",
       "filed": "Dokument festgeschrieben",
       "voided": "Dokument storniert"
+    },
+    "admin": {
+      "title": "Akte – Stammdaten",
+      "description": "Dokumentarten, Ordnerstruktur und Einsortierregeln der Sachakte",
+      "typesTitle": "Dokumentarten",
+      "typesDescription": "Verwalten Sie die Dokumentarten für Vorlagen, Nummernkreis-Präfixe und Aufbewahrungsfristen.",
+      "createType": "Dokumentart anlegen",
+      "createTypeTitle": "Neue Dokumentart",
+      "createTypeDescription": "Legen Sie eine neue Dokumentart fest. Das Präfix und der Schlüssel können später nicht mehr geändert werden.",
+      "editTypeTitle": "Dokumentart bearbeiten",
+      "editTypeDescription": "Passen Sie Bezeichnung, Richtung, Aufbewahrungsfrist oder Standardordner an.",
+      "typeImmutableHint": "Schlüssel und Präfix sind unveränderlich, damit bestehende Dokumentnummern konsistent bleiben.",
+      "typeColumns": {
+        "prefix": "Präfix",
+        "label": "Bezeichnung",
+        "key": "Schlüssel",
+        "direction": "Richtung",
+        "retention": "Aufbewahrung",
+        "folder": "Standardordner",
+        "status": "Status",
+        "actions": "Aktionen"
+      },
+      "retentionClasses": {
+        "statutory10Y": "10 Jahre (Handels-/Steuerrecht)",
+        "statutory6Y": "6 Jahre",
+        "permanent": "Dauerhaft",
+        "consent": "Einwilligung"
+      },
+      "foldersTitle": "Ordner",
+      "foldersDescription": "Strukturieren Sie die Ablage in Ordnerpfaden.",
+      "createFolder": "Ordner anlegen",
+      "createFolderTitle": "Neuen Ordner anlegen",
+      "createFolderDescription": "Geben Sie den relativen Ordnerpfad an (z. B. „behoerden/finanzamt“).",
+      "folderPath": "Ordnerpfad",
+      "folderColumns": {
+        "path": "Pfad",
+        "actions": "Aktionen"
+      },
+      "deleteFolderTitle": "Ordner löschen",
+      "deleteFolderDescription": "Möchten Sie den Ordner „{path}“ wirklich löschen? Nur leere Ordner können gelöscht werden.",
+      "deleteFolderConfirm": "Ordner löschen",
+      "emptyFolders": "Noch keine Ordner vorhanden.",
+      "rulesTitle": "Einsortierregeln",
+      "rulesDescription": "Automatische Erkennung und Zuordnung von Dokumentart und Ordner beim Ablegen eingehender Post.",
+      "createRule": "Regel anlegen",
+      "createRuleTitle": "Neue Einsortierregel",
+      "createRuleDescription": "Definieren Sie ein Erkennungsmerkmal für eingehende Post.",
+      "editRuleTitle": "Regel bearbeiten",
+      "editRuleDescription": "Passen Sie die Kriterien oder Zielzuordnungen an.",
+      "deleteRuleTitle": "Regel löschen",
+      "deleteRuleDescription": "Möchten Sie diese Einsortierregel wirklich löschen?",
+      "deleteRuleConfirm": "Regel löschen",
+      "emptyRules": "Noch keine Einsortierregeln vorhanden.",
+      "ruleColumns": {
+        "matchField": "Prüffeld",
+        "matchContains": "Suchbegriff",
+        "thenType": "Dokumentart",
+        "thenFolder": "Ordner",
+        "status": "Status",
+        "actions": "Aktionen"
+      },
+      "ruleFields": {
+        "matchField": "Feld",
+        "filename": "Dateiname",
+        "senderName": "Absendername",
+        "matchContains": "Muss enthalten",
+        "matchContainsPlaceholder": "z. B. Finanzamt oder Rechnung",
+        "thenType": "Ziel-Dokumentart",
+        "noType": "— Keine Änderung —",
+        "thenFolder": "Ziel-Ordner",
+        "noFolder": "— Keine Änderung —",
+        "sortOrder": "Reihenfolge",
+        "activeCheckbox": "Regel ist aktiv"
+      },
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "activeCheckbox": "Dokumentart ist aktiv",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "save": "Speichern",
+      "toast": {
+        "typeCreated": "Dokumentart angelegt",
+        "typeUpdated": "Dokumentart aktualisiert",
+        "folderCreated": "Ordner angelegt",
+        "folderDeleted": "Ordner gelöscht",
+        "ruleCreated": "Regel angelegt",
+        "ruleUpdated": "Regel aktualisiert",
+        "ruleDeleted": "Regel gelöscht"
+      }
     }
   }
 }

@@ -51,6 +51,14 @@ test.describe('dms', () => {
     await page.getByRole('button', { name: 'Ablegen' }).click();
     await expect(page.getByText(/BEH-\d{4}-\d{3}/)).toBeVisible();
   });
+
+  test('verwaltet Dokumentarten und Regeln', async ({ page }) => {
+    await login(page);
+    await page.goto('/admin/dms');
+    await expect(page.getByRole('heading', { name: 'Dokumentarten' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Einsortierregeln' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Ordner' })).toBeVisible();
+  });
 });
 
 function samplePdf(): Buffer {
