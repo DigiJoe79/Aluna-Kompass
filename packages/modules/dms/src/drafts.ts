@@ -243,7 +243,7 @@ export async function previewDraft(
 
 export const DOCUMENT_FOLDER = 'Dokumente';
 
-function ensureDocumentFolder(deps: Deps, ctx: CallContext) {
+export function ensureDocumentFolder(deps: Deps, ctx: CallContext) {
   const existing = deps.db
     .select()
     .from(schema.mediaFolders)
