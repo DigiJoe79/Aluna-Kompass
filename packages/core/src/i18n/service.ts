@@ -110,9 +110,20 @@ function scanLocale(
 ): { tables: LocaleRemovalPreview['tables']; filled: number } {
   const locales = readLocales(deps);
   const tables: LocaleRemovalPreview['tables'] = [];
-  const names = (deps.sqlite.prepare("select name from sqlite_master where type='table'").all() as { name: string }[])
-    .map((r) => r.name)
-    .filter((name) => !UNTOUCHED_TABLES.has(name) && !name.startsWith('sqlite_'));
+  const names = (
+    deps.sqlite
+      .prepare(
+        "select name, sql from sqlite_master where type='table' and name not like 'sqlite_%' and name not like '__drizzle%'",
+      )
+      .all() as { name: string; sql: string | null }[]
+  )
+    .filter((r) => {
+      if (UNTOUCHED_TABLES.has(r.name)) return false;
+      if (r.name.startsWith('document_text')) return false;
+      if (r.sql && (r.sql.includes('WITHOUT ROWID') || r.sql.startsWith('CREATE VIRTUAL TABLE'))) return false;
+      return true;
+    })
+    .map((r) => r.name);
 
   for (const table of names) {
     const columns = (deps.sqlite.prepare(`pragma table_info("${table}")`).all() as { name: string }[]).map((c) => c.name);
