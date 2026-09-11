@@ -47,8 +47,10 @@ export async function extractDocumentText(
 
   const row = deps.db.select().from(documents).where(eq(documents.id, documentId)).get();
   if (!row) return notFound('document', documentId);
-  if (!row.fileName) return conflict('documentHasNoFile');
-  if (row.textAttempts >= MAX_ATTEMPTS) return conflict('textExtractionGaveUp');
+  if (!row.fileName) return conflict('documentHasNoFile', 'Dokument hat keine Datei');
+  if (row.textAttempts >= MAX_ATTEMPTS) {
+    return conflict('textExtractionGaveUp', 'Maximale Anzahl an Erkennungsversuchen erreicht');
+  }
 
   const probe = await deps.textExtraction.probe();
   if (!probe.ok) {

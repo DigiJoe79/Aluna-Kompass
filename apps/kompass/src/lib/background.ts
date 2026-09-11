@@ -34,7 +34,7 @@ export function backgroundStarted(): boolean {
 }
 
 export function startBackgroundWork(
-  opts: { runtime?: string; onStart?: () => TextWorker | void } = {},
+  opts: { runtime?: string; onStart?: () => TextWorker | void | unknown } = {},
 ): void {
   const runtime = opts.runtime ?? process.env.NEXT_RUNTIME ?? 'nodejs';
   if (runtime !== 'nodejs') return;
