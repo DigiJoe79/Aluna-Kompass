@@ -52,6 +52,40 @@ test.describe('dms', () => {
     await expect(page.getByText(/BEH-\d{4}-\d{3}/)).toBeVisible();
   });
 
+  test('bessert einen Tippfehler im Entwurf aus, statt ihn wegzuwerfen', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/new');
+    await page.getByLabel('Betreff').fill('Einladnug zur Versammlung');
+    await page.getByLabel('Text').fill('Erster Wurf.');
+    await page.getByRole('button', { name: 'Entwurf speichern' }).click();
+    await expect(page.getByText('Entwurf', { exact: true })).toBeVisible();
+
+    await page.getByRole('link', { name: 'Bearbeiten' }).click();
+    await expect(page.getByLabel('Betreff')).toHaveValue('Einladnug zur Versammlung');
+    await expect(page.getByLabel('Text')).toHaveValue('Erster Wurf.');
+
+    await page.getByLabel('Betreff').fill('Einladung zur Versammlung');
+    await page.getByLabel('Text').fill('Zweiter Wurf.');
+    await page.getByRole('button', { name: 'Änderungen speichern' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Einladung zur Versammlung' })).toBeVisible();
+    // Immer noch ein Entwurf: keine Nummer, nichts festgeschrieben.
+    await expect(page.getByText('Entwurf', { exact: true })).toBeVisible();
+    await expect(page.getByText(/BRF-\d{4}-\d{3}/)).toHaveCount(0);
+  });
+
+  test('bietet für ein festgeschriebenes Dokument kein Bearbeiten an', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/new');
+    await page.getByLabel('Betreff').fill('Fest und fertig');
+    await page.getByLabel('Text').fill('Text.');
+    await page.getByRole('button', { name: 'Entwurf speichern' }).click();
+    await page.getByRole('button', { name: 'Festschreiben' }).click();
+    await page.getByRole('button', { name: 'Festschreiben bestätigen' }).click();
+    await expect(page.getByText(/BRF-\d{4}-\d{3}/)).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Bearbeiten' })).toHaveCount(0);
+  });
+
   test('nennt den Grund am Feld, statt auf Markierungen zu verweisen, die es nicht gibt', async ({ page }) => {
     await login(page);
     await page.goto('/dms/receive');

@@ -1,10 +1,10 @@
 import { coreModule, defineModule, schema } from '@kompass/core';
 import { createTestDeps, ctxWith, fakeDocumentEngine, insertUser } from '@kompass/core/testing';
-import { contactsModule } from '@kompass/module-contacts';
+import { contactsModule, createContact } from '@kompass/module-contacts';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { dmsModule } from '../src/manifest';
-import { documents } from '../src/schema';
+import { documentLinks, documents } from '../src/schema';
 import { createDraft, deleteDraft, previewDraft, updateDraft } from '../src/drafts';
 import { ALL_DMS, auditActions, seedTypes, setupWithTypes } from './helpers';
 
@@ -164,5 +164,70 @@ describe('Vorlagenwahl beim Entwurf', () => {
     expect(created.ok).toBe(true);
     if (!created.ok) return;
     expect(created.value.templateKey).toBe('letter');
+  });
+});
+
+describe('Empfänger eines Entwurfs ändern', () => {
+  async function twoContacts(deps: Parameters<typeof createDraft>[0], ctx: Parameters<typeof createDraft>[1]) {
+    const make = async (lastName: string) => {
+      const res = await createContact(deps, ctx, { kind: 'person', lastName, firstName: 'Erika', street: 'Weg 1', postalCode: '12345', city: 'Stadt' });
+      if (!res.ok) throw new Error('setup');
+      return res.value.id;
+    };
+    return { first: await make('Erst'), second: await make('Zweit') };
+  }
+
+  const recipientOf = (deps: { db: { select: Function } }, documentId: string) =>
+    deps.db.select().from(documentLinks).all().filter((l: { documentId: string; role: string }) => l.documentId === documentId && l.role === 'recipient');
+
+  it('tauscht den Empfänger aus, statt einen zweiten anzuhängen', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const { first, second } = await twoContacts(deps, ctx);
+    const draft = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Einladung', body: 'x', links: [{ entityType: 'contact', entityId: first, role: 'recipient' }] });
+    if (!draft.ok) throw new Error('setup');
+
+    const changed = await updateDraft(deps, ctx, { id: draft.value.id, recipientId: second });
+    expect(changed.ok).toBe(true);
+    const links = recipientOf(deps, draft.value.id);
+    expect(links).toHaveLength(1);
+    expect(links[0].entityId).toBe(second);
+  });
+
+  it('nimmt den Empfänger weg, wenn null kommt', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const { first } = await twoContacts(deps, ctx);
+    const draft = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Einladung', body: 'x', links: [{ entityType: 'contact', entityId: first, role: 'recipient' }] });
+    if (!draft.ok) throw new Error('setup');
+
+    expect((await updateDraft(deps, ctx, { id: draft.value.id, recipientId: null })).ok).toBe(true);
+    expect(recipientOf(deps, draft.value.id)).toHaveLength(0);
+  });
+
+  it('lässt Bezüge anderer Rollen unangetastet', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const { first, second } = await twoContacts(deps, ctx);
+    const draft = await createDraft(deps, ctx, {
+      typeKey: 'letter', subject: 'Einladung', body: 'x',
+      links: [
+        { entityType: 'contact', entityId: first, role: 'recipient' },
+        { entityType: 'contact', entityId: first, role: 'about' },
+      ],
+    });
+    if (!draft.ok) throw new Error('setup');
+
+    expect((await updateDraft(deps, ctx, { id: draft.value.id, recipientId: second })).ok).toBe(true);
+    const all = deps.db.select().from(documentLinks).all();
+    expect(all.filter((l) => l.role === 'about')).toHaveLength(1);
+    expect(all.filter((l) => l.role === 'recipient')).toHaveLength(1);
+  });
+
+  it('rührt den Empfänger nicht an, wenn das Feld fehlt', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const { first } = await twoContacts(deps, ctx);
+    const draft = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Einladung', body: 'x', links: [{ entityType: 'contact', entityId: first, role: 'recipient' }] });
+    if (!draft.ok) throw new Error('setup');
+
+    expect((await updateDraft(deps, ctx, { id: draft.value.id, subject: 'Anders' })).ok).toBe(true);
+    expect(recipientOf(deps, draft.value.id)).toHaveLength(1);
   });
 });

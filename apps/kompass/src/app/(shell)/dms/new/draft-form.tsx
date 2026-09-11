@@ -7,19 +7,29 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { idleState } from '@/lib/actions';
-import { createDraftAction } from '../actions';
+import { createDraftAction, updateDraftAction } from '../actions';
 
+/**
+ * Dasselbe Formular legt an und bessert aus. Ohne `draft` entsteht ein neuer
+ * Entwurf; mit `draft` wird der vorhandene geändert — die Dokumentart bleibt
+ * dabei stehen, weil an ihr Nummernkreis und Aufbewahrung hängen.
+ */
 export function DraftForm({
   types,
   folders,
   contacts,
+  draft,
 }: {
   types: { key: string; label: string }[];
   folders: string[];
   contacts: { id: string; name: string }[];
+  draft?: { id: string; subject: string; body: string; typeKey: string; folder: string | null; recipientId: string | null };
 }) {
   const t = useTranslations('dms');
-  const [state, formAction, isPending] = useActionState(createDraftAction, idleState);
+  const [state, formAction, isPending] = useActionState(
+    draft ? updateDraftAction.bind(null, draft.id) : createDraftAction,
+    idleState,
+  );
 
   const errors = state.status === 'error' ? state.fieldErrors : {};
 
@@ -31,7 +41,7 @@ export function DraftForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="subject">{t('fields.subject')}</Label>
-        <Input id="subject" name="subject" required />
+        <Input id="subject" name="subject" required defaultValue={draft?.subject ?? ''} />
         <FieldError id="subject-error" message={errors.subject} />
       </div>
 
@@ -41,6 +51,7 @@ export function DraftForm({
           id="body"
           name="body"
           rows={10}
+          defaultValue={draft?.body ?? ''}
           className="w-full rounded-md border border-line-strong bg-field p-2.5 font-mono text-[13px] text-ink shadow-xs focus:border-ring focus:outline-hidden"
         />
         <FieldError id="body-error" message={errors.body} />
@@ -52,8 +63,9 @@ export function DraftForm({
           <select
             id="typeKey"
             name="typeKey"
-            defaultValue="letter"
-            className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
+            defaultValue={draft?.typeKey ?? 'letter'}
+            disabled={Boolean(draft)}
+            className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs disabled:opacity-60"
           >
             {types.map((type) => (
               <option key={type.key} value={type.key}>
@@ -61,6 +73,7 @@ export function DraftForm({
               </option>
             ))}
           </select>
+          {draft ? <p className="text-[12px] text-muted-ink">{t('typeFixedHint')}</p> : null}
         </div>
 
         <div className="space-y-1.5">
@@ -68,7 +81,7 @@ export function DraftForm({
           <select
             id="folder"
             name="folder"
-            defaultValue=""
+            defaultValue={draft?.folder ?? ''}
             className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
           >
             <option value="">{t('inbox')}</option>
@@ -86,7 +99,7 @@ export function DraftForm({
         <select
           id="recipientId"
           name="recipientId"
-          defaultValue=""
+          defaultValue={draft?.recipientId ?? ''}
           className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
         >
           <option value="">{t('fields.noRecipient')}</option>
@@ -100,7 +113,7 @@ export function DraftForm({
 
       <div className="pt-2">
         <Button type="submit" disabled={isPending}>
-          {t('saveDraft')}
+          {draft ? t('saveChanges') : t('saveDraft')}
         </Button>
       </div>
     </form>

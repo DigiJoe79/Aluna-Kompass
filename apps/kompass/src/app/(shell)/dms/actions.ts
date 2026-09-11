@@ -80,6 +80,8 @@ export async function updateDraftAction(id: string, _prev: ActionState, formData
     body,
     folder,
     documentDate,
+    // Das Formular schickt das Feld immer mit; leer heißt „kein Empfänger".
+    recipientId: orNull(formData.get('recipientId')),
   });
 
   if (!result.ok) {
@@ -88,7 +90,7 @@ export async function updateDraftAction(id: string, _prev: ActionState, formData
 
   revalidatePath(`/dms/${id}`);
   revalidatePath('/dms');
-  return toActionState(result, t, t('dms.toast.draftUpdated'));
+  redirect(`/dms/${id}`);
 }
 
 export async function fileDocumentAction(id: string): Promise<ActionState> {

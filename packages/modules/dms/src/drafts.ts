@@ -16,7 +16,7 @@ import {
   type Deps,
   type Result,
 } from '@kompass/core';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { documentTypeFor } from './catalog';
 import { resolveRecipient } from './recipients';
@@ -46,6 +46,12 @@ export const draftUpdateSchema = z.object({
   body: z.string().max(100_000).optional(),
   documentDate: z.string().date().optional(),
   folder: z.string().trim().min(1).nullable().optional(),
+  /**
+   * Der Empfänger, nicht die ganze Bezugsliste: Ein Tippfehler in der Anschrift
+   * darf nicht die Bezüge kosten, die jemand über `dms_link` gesetzt hat.
+   * Fehlt das Feld, bleibt der Empfänger stehen; `null` nimmt ihn weg.
+   */
+  recipientId: z.string().trim().min(1).nullable().optional(),
 });
 
 export const draftDeleteSchema = z.object({
@@ -160,6 +166,24 @@ export async function updateDraft(deps: Deps, ctx: CallContext, input: unknown):
 
   return deps.db.transaction((tx: DbOrTx) => {
     tx.update(documents).set(updates).where(eq(documents.id, row.id)).run();
+
+    if (parsed.value.recipientId !== undefined) {
+      tx.delete(documentLinks)
+        .where(and(eq(documentLinks.documentId, row.id), eq(documentLinks.role, 'recipient')))
+        .run();
+      if (parsed.value.recipientId !== null) {
+        tx.insert(documentLinks)
+          .values({
+            id: newId(),
+            documentId: row.id,
+            entityType: 'contact',
+            entityId: parsed.value.recipientId,
+            role: 'recipient',
+            createdAt: isoNow(deps.clock),
+          })
+          .run();
+      }
+    }
 
     const after = tx.select().from(documents).where(eq(documents.id, row.id)).get()!;
 

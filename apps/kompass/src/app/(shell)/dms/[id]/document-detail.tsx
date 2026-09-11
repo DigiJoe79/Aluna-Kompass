@@ -38,6 +38,7 @@ export interface DocumentDetailProps {
     canFile: boolean;
     canVoid: boolean;
     canDeleteDraft: boolean;
+    canEdit: boolean;
     canManage: boolean;
   };
 }
@@ -81,6 +82,11 @@ export function DocumentDetail({ document: doc, retentionInfo, permissions }: Do
               >
                 {t('preview')}
               </a>
+              {permissions.canEdit ? (
+                <Link href={`/dms/${doc.id}/edit`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+                  {t('edit')}
+                </Link>
+              ) : null}
               {permissions.canFile ? <FileDialog documentId={doc.id} /> : null}
               {permissions.canDeleteDraft ? (
                 <>

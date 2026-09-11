@@ -44,6 +44,7 @@ export default async function DocumentDetailPage(props: {
     canFile: hasPermission(ctx, 'dms.file'),
     canVoid: hasPermission(ctx, 'dms.void'),
     canDeleteDraft: hasPermission(ctx, 'dms.deleteDraft'),
+    canEdit: hasPermission(ctx, 'dms.create'),
     canManage: hasPermission(ctx, 'dms.manage'),
   };
 
