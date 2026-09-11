@@ -22,7 +22,7 @@ import { documentTypeFor } from './catalog';
 import { documentFolders, documentLinks, documents, type DocumentLinkRow, type DocumentRow } from './schema';
 import { readDocumentFile, removeDocumentFile } from './storage';
 import { removeDocumentText } from './index-store';
-import { fulltextDocumentIds } from './search';
+import { fulltextDocumentIds, fulltextHits, type TextHit } from './search';
 
 export type DocumentRecord = Omit<DocumentRow, 'inputSnapshot'> & { inputSnapshot: unknown; links: DocumentLinkRow[] };
 
@@ -85,7 +85,7 @@ export async function listDocuments(
   deps: Deps,
   ctx: CallContext,
   input: unknown,
-): Promise<Result<{ documents: DocumentRecord[]; total: number; fulltextTooShort: boolean }>> {
+): Promise<Result<{ documents: DocumentRecord[]; total: number; fulltextTooShort: boolean; hits: Record<string, TextHit> }>> {
   const denied = requirePermission(ctx, 'dms.view');
   if (denied) return denied;
   const parsed = validate(deps, documentListSchema, input);
@@ -123,7 +123,17 @@ export async function listDocuments(
   const where = conditions.length > 0 ? and(...conditions) : undefined;
   const total = deps.db.select({ n: count() }).from(documents).where(where).get()?.n ?? 0;
   const rows = deps.db.select().from(documents).where(where).orderBy(desc(documents.createdAt), desc(documents.number)).limit(q.limit).offset(q.offset).all();
-  return ok({ documents: rows.map((row) => toRecord(deps, row)), total, fulltextTooShort });
+
+  // Erst blättern, dann Passagen holen: Für fünfzig Zeilen braucht niemand
+  // die Fundstellen von fünfhundert.
+  const hits = q.text ? fulltextHits(deps, rows.map((r) => r.id), q.text) : new Map<string, TextHit>();
+
+  return ok({
+    documents: rows.map((row) => toRecord(deps, row)),
+    total,
+    fulltextTooShort,
+    hits: Object.fromEntries(hits),
+  });
 }
 
 export async function getDocumentRecord(deps: Deps, ctx: CallContext, id: string): Promise<Result<DocumentRecord>> {

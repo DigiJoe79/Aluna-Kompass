@@ -38,3 +38,66 @@ export function fulltextDocumentIds(deps: Deps, text: string): string[] | null {
 
   return rows.map((r) => r.document_id);
 }
+
+/**
+ * Wie groß das Fenster um den Treffer ist. `snippet()` zählt Token, und Token
+ * sind hier Trigramme: Mit einem kleinen Wert liefert es einen Wortfetzen statt
+ * eines Satzes. 64 ergibt rund eine Zeile Kontext.
+ */
+export const SNIPPET_TOKENS = 64;
+
+/**
+ * Die Markierung ist bewusst kein `<mark>`: Was hier herauskommt, stammt aus
+ * einem PDF, das jemand von außen geschickt hat. Steuerzeichen kann die
+ * Oberfläche sicher zerlegen; Markup müsste sie erst wieder entschärfen.
+ */
+export const SNIPPET_MARK_START = '\u0001';
+export const SNIPPET_MARK_END = '\u0002';
+
+export interface TextHit {
+  documentId: string;
+  page: number;
+  snippet: string;
+}
+
+/**
+ * Je Dokument die beste Seite. `bm25()` zählt bei Trigrammen
+ * Trigramm-Übereinstimmungen — „die Seite, auf der am meisten passt“. Für die
+ * Auswahl einer Passage reicht das; für die Reihenfolge der Liste wird es gar
+ * nicht erst herangezogen (Entscheidung 31).
+ */
+export function fulltextHits(
+  deps: Deps,
+  documentIds: readonly string[],
+  text: string,
+): Map<string, TextHit> {
+  const expression = matchExpression(text);
+  const hits = new Map<string, TextHit>();
+  if (!expression || documentIds.length === 0) return hits;
+
+  const placeholders = documentIds.map(() => '?').join(', ');
+  const rows = deps.sqlite
+    .prepare(
+      `SELECT document_id, page,
+              snippet(document_text, 2, ?, ?, '…', ?) AS snippet,
+              bm25(document_text) AS rank
+         FROM document_text
+        WHERE document_text MATCH ?
+          AND document_id IN (${placeholders})
+        ORDER BY rank`,
+    )
+    .all(SNIPPET_MARK_START, SNIPPET_MARK_END, SNIPPET_TOKENS, expression, ...documentIds) as {
+    document_id: string;
+    page: number;
+    snippet: string;
+  }[];
+
+  // `ORDER BY rank` sortiert aufsteigend, und bm25 ist umso kleiner, je besser
+  // der Treffer — die erste Zeile je Dokument ist also die beste Seite.
+  for (const row of rows) {
+    if (!hits.has(row.document_id)) {
+      hits.set(row.document_id, { documentId: row.document_id, page: row.page, snippet: row.snippet });
+    }
+  }
+  return hits;
+}
