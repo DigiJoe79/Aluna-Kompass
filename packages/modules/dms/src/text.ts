@@ -57,12 +57,23 @@ export async function extractDocumentText(
   if (!probe.ok) {
     // Keine Schuld des Dokuments: Versuche werden nicht gezählt, damit es
     // wieder drankommt, sobald die Werkzeuge da sind.
-    deps.db
-      .update(documents)
-      .set({ textStatus: 'unavailable', textError: probe.error })
-      .where(eq(documents.id, documentId))
-      .run();
-    return ok({ documentId, pages: 0, status: 'unavailable' });
+    return deps.db.transaction((tx: DbOrTx) => {
+      tx.update(documents)
+        .set({ textStatus: 'unavailable', textError: probe.error })
+        .where(eq(documents.id, documentId))
+        .run();
+
+      recordAudit(tx, deps, ctx, {
+        action: 'document.textExtractionUnavailable',
+        entityType: 'document',
+        entityId: documentId,
+        before: { textStatus: row.textStatus },
+        after: { textStatus: 'unavailable', reason: probe.error },
+        summary: `Volltext von ${row.number ?? row.subject} nicht lesbar: ${probe.error}`,
+      });
+
+      return ok({ documentId, pages: 0, status: 'unavailable' as const });
+    });
   }
 
   deps.db.update(documents).set({ textStatus: 'running' }).where(eq(documents.id, documentId)).run();
@@ -77,16 +88,31 @@ export async function extractDocumentText(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const attempts = row.textAttempts + 1;
-    deps.db
-      .update(documents)
-      .set({
-        textStatus: attempts >= MAX_ATTEMPTS ? 'failed' : 'pending',
-        textAttempts: attempts,
-        textError: message,
-      })
-      .where(eq(documents.id, documentId))
-      .run();
-    return ok({ documentId, pages: 0, status: 'failed' });
+    const gaveUp = attempts >= MAX_ATTEMPTS;
+
+    return deps.db.transaction((tx: DbOrTx) => {
+      tx.update(documents)
+        .set({ textStatus: gaveUp ? 'failed' : 'pending', textAttempts: attempts, textError: message })
+        .where(eq(documents.id, documentId))
+        .run();
+
+      // Protokolliert wird das Aufgeben, nicht jeder Anlauf. Ein Versuch, dem
+      // ein weiterer folgt, ist noch kein Vorgang — der Zähler trägt ihn. Was
+      // ins Protokoll gehört, ist der Moment, ab dem dieses Dokument nicht
+      // mehr gelesen wird: Er erklärt später, warum im Volltext etwas fehlt.
+      if (gaveUp) {
+        recordAudit(tx, deps, ctx, {
+          action: 'document.textExtractionFailed',
+          entityType: 'document',
+          entityId: documentId,
+          before: { textStatus: row.textStatus, textAttempts: row.textAttempts },
+          after: { textStatus: 'failed', textAttempts: attempts, reason: message },
+          summary: `Volltext von ${row.number ?? row.subject} nach ${attempts} Versuchen aufgegeben: ${message}`,
+        });
+      }
+
+      return ok({ documentId, pages: 0, status: 'failed' as const });
+    });
   }
 
   // Erst der Index, dann der Zustand: Bricht das Schreiben ab, bleibt das

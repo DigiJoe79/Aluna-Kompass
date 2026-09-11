@@ -1,4 +1,4 @@
-import { coreModule, fakeTextExtraction, queryAudit, systemContext } from '@kompass/core';
+import { coreModule, fakeTextExtraction, queryAudit, systemContext, type Deps, type TextExtraction } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { contactsModule } from '@kompass/module-contacts';
 import { eq } from 'drizzle-orm';
@@ -12,6 +12,20 @@ import { extractDocumentText, reindexAllDocuments } from '../src/text';
 import { seedTypes } from './helpers';
 
 const pdf = () => new Uint8Array(Buffer.from('%PDF-1.4\n%fake\n', 'latin1'));
+
+/** Werkzeuge da, aber das Lesen scheitert — ein zerschossenes PDF. */
+const brokenExtraction = (): TextExtraction => ({
+  probe: async () => ({ ok: true, languages: ['deu'] }),
+  extract: async () => {
+    throw new Error('Seite 1 liess sich nicht lesen');
+  },
+});
+
+function auditFor(deps: Deps, action: string) {
+  const entries = queryAudit(deps, ctxWith(['audit.view']), { entityType: 'document' });
+  if (!entries.ok) throw new Error('Protokoll nicht lesbar');
+  return entries.value.entries.filter((e) => e.action === action);
+}
 
 async function withDocument(textExtraction = fakeTextExtraction(), documentDate = '2026-09-11') {
   const deps = createTestDeps({ manifests: [coreModule, contactsModule, dmsModule], textExtraction });
@@ -126,6 +140,34 @@ describe('extractDocumentText', () => {
     const read = entries.value.entries.filter((e) => e.action === 'document.textExtracted');
     expect(read).toHaveLength(1);
     expect(read[0]!.channel).toBe('system');
+  });
+
+  it('hält auch das Aufgeben im Protokoll fest', async () => {
+    // Jede schreibende Aktion gehört ins Änderungsprotokoll (AGENTS.md). Ein
+    // Dokument, das dreimal scheiterte und danach nie wieder gelesen wird, ist
+    // kein Nichts — es ist der Grund, warum später etwas fehlt.
+    const { deps, documentId } = await withDocument(brokenExtraction());
+    const ctx = systemContext({ permissions: ['dms.manage'] });
+
+    for (let i = 0; i < 3; i += 1) await extractDocumentText(deps, ctx, { documentId });
+
+    const failed = auditFor(deps, 'document.textExtractionFailed');
+    // Einer, beim Aufgeben — nicht bei jedem der drei Anläufe.
+    expect(failed).toHaveLength(1);
+    expect(failed[0]!.channel).toBe('system');
+    expect(JSON.stringify(failed[0]!.after)).toContain('Seite 1');
+  });
+
+  it('hält fest, dass die Werkzeuge fehlten', async () => {
+    const { deps, documentId } = await withDocument(
+      fakeTextExtraction({ probe: { ok: false, error: 'tesseract ist nicht installiert' } }),
+    );
+
+    await extractDocumentText(deps, systemContext({ permissions: ['dms.manage'] }), { documentId });
+
+    const entries = auditFor(deps, 'document.textExtractionUnavailable');
+    expect(entries).toHaveLength(1);
+    expect(entries[0]!.channel).toBe('system');
   });
 
   it('legt die gelesenen Seiten in den Index', async () => {
