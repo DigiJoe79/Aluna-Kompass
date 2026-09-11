@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { FormField } from '@/components/forms/form-field';
 import { LocalizedField } from '@/components/forms/localized-field';
 import { MediaPicker } from '@/components/forms/media-picker';
-import { SubmitButton } from '@/components/forms/submit-button';
+import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Input } from '@/components/ui/input';
 import { idleState } from '@/lib/actions';
 import { saveAnimalStoryAction } from './actions';
@@ -26,7 +26,7 @@ export function StoryForm({ animal, locales }: { animal: AnimalRecord; locales: 
       <LocalizedField name="quote" label={t('quote')} kind="textarea" rows={3} value={story?.quote ?? {}} locales={locales} />
       <FormField id="family" label={t('family')}><Input id="family" name="family" defaultValue={story?.family ?? ''} /></FormField>
       <FormField id="adoptedYear" label={t('year')}><Input id="adoptedYear" name="adoptedYear" type="number" defaultValue={story?.adoptedYear ?? new Date().getFullYear()} className="font-mono" /></FormField>
-      <div className="flex justify-end md:col-span-2"><SubmitButton>{t('save')}</SubmitButton></div>
+      <div className="md:col-span-2"><FormActionBar saveLabel={t('save')} /></div>
     </form>
   );
 }

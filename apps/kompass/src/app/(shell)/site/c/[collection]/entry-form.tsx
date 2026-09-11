@@ -5,10 +5,11 @@ import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { FormField } from '@/components/forms/form-field';
-import { SubmitButton } from '@/components/forms/submit-button';
+import { FormActionBar } from '@/components/forms/form-action-bar';
 import { SchemaForm, withBlanks } from '@/components/schema-form';
 import { Input } from '@/components/ui/input';
 import { idleState } from '@/lib/actions';
+import { countChangedValues } from '@/lib/form-dirty';
 import { saveEntryAction } from '../../actions';
 
 interface Entry {
@@ -32,8 +33,16 @@ export function EntryForm({
 }) {
   const t = useTranslations('site.entries');
   const c = useTranslations('content');
+  const tCommon = useTranslations('common');
   const [data, setData] = useState(() => withBlanks(fields, entry?.data ?? {}, locales));
   const [slug, setSlug] = useState(entry?.slug ?? '');
+  const [loaded] = useState({ data, slug });
+  const changedCount =
+    countChangedValues(loaded.data, data) + (loaded.slug === slug ? 0 : 1);
+  const discard = () => {
+    setData(loaded.data);
+    setSlug(loaded.slug);
+  };
   const [state, action] = useActionState(saveEntryAction, idleState);
   const errors = state.status === 'error' ? state.fieldErrors : {};
 
@@ -53,9 +62,11 @@ export function EntryForm({
         </FormField>
       ) : null}
       <SchemaForm schema={fields} value={data} errors={errors} locales={locales} onChange={setData} />
-      <div className="flex justify-end">
-        <SubmitButton>{t('save')}</SubmitButton>
-      </div>
+      <FormActionBar
+        back={{ href: `/site/c/${collection}`, label: tCommon('backToList') }}
+        count={changedCount}
+        onDiscard={discard}
+      />
     </form>
   );
 }

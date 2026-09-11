@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { useActionState, useState } from 'react';
 import { FieldError } from '@/components/forms/field-error';
-import { Button } from '@/components/ui/button';
+import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { idleState } from '@/lib/actions';
@@ -32,7 +32,8 @@ export function DraftForm({
   draft?: { id: string; subject: string; body: string; typeKey: string; documentDate: string; folder: string | null; recipientId: string | null };
 }) {
   const t = useTranslations('dms');
-  const [state, formAction, isPending] = useActionState(
+  const tCommon = useTranslations('common');
+  const [state, formAction] = useActionState(
     draft ? updateDraftAction.bind(null, draft.id) : createDraftAction,
     idleState,
   );
@@ -146,11 +147,10 @@ export function DraftForm({
         </div>
       </div>
 
-      <div className="pt-2">
-        <Button type="submit" disabled={isPending}>
-          {draft ? t('saveChanges') : t('saveDraft')}
-        </Button>
-      </div>
+      <FormActionBar
+        back={{ href: draft ? `/dms/${draft.id}` : '/dms', label: draft ? t('backToDocument') : tCommon('backToList') }}
+        saveLabel={draft ? t('saveChanges') : t('saveDraft')}
+      />
     </form>
   );
 }

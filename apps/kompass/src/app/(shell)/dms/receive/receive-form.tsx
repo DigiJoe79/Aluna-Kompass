@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { useActionState, useState } from 'react';
 import { FieldError } from '@/components/forms/field-error';
-import { Button } from '@/components/ui/button';
+import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { idleState } from '@/lib/actions';
@@ -22,7 +22,8 @@ export function ReceiveForm({
   defaultTypeKey: string;
 }) {
   const t = useTranslations('dms');
-  const [state, formAction, isPending] = useActionState(receiveDocumentAction, idleState);
+  const tCommon = useTranslations('common');
+  const [state, formAction] = useActionState(receiveDocumentAction, idleState);
 
   const [documentDate, setDocumentDate] = useState('');
   const [subject, setSubject] = useState('');
@@ -154,11 +155,7 @@ export function ReceiveForm({
         </div>
       </div>
 
-      <div className="pt-2">
-        <Button type="submit" disabled={isPending}>
-          {t('receiveSubmit')}
-        </Button>
-      </div>
+      <FormActionBar back={{ href: '/dms', label: tCommon('backToList') }} saveLabel={t('receiveSubmit')} />
     </form>
   );
 }

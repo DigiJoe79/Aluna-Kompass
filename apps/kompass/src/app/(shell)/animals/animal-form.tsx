@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { FormField } from '@/components/forms/form-field';
 import { LocalizedField } from '@/components/forms/localized-field';
 import { PublishSwitch } from '@/components/forms/publish-switch';
-import { SubmitButton } from '@/components/forms/submit-button';
+import { FormActionBar } from '@/components/forms/form-action-bar';
 import { StatusBadge } from '@/components/status-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -56,7 +56,7 @@ export function AnimalForm({ animal, locales }: { animal: AnimalRecord | null; l
             <LocalizedField name="body" label={t('body')} kind="markdown" rows={10} value={animal?.body ?? {}} errors={errors} locales={locales} />
             <LocalizedField name="traits__text" label={t('traits')} hint={t('traitsHint')} value={Object.fromEntries(locales.map((l) => [l, ((animal?.traits as Record<string, string[]> | undefined)?.[l] ?? []).join(', ')]))} locales={locales} />
           </TabsContent>
-          <div className="flex justify-end border-t border-line bg-surface-2 px-6 py-3"><SubmitButton>{c('save')}</SubmitButton></div>
+          <FormActionBar back={{ href: '/animals', label: c('backToList') }} />
         </form>
         <TabsContent value="photos" className="p-6">{animal ? <PhotosEditor animalId={animal.id} initial={animal.photos} /> : null}</TabsContent>
         <TabsContent value="story" className="p-6">{animal ? <StoryForm animal={animal} locales={locales} /> : null}</TabsContent>

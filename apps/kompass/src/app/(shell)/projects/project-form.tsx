@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { FormField } from '@/components/forms/form-field';
 import { LocalizedField } from '@/components/forms/localized-field';
 import { MediaPicker } from '@/components/forms/media-picker';
-import { SubmitButton } from '@/components/forms/submit-button';
+import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { idleState } from '@/lib/actions';
@@ -34,7 +34,7 @@ export function ProjectForm({ project, locales }: { project: ProjectRecord | nul
           <LocalizedField name="summary" label={t('summary')} kind="textarea" rows={3} value={project?.summary ?? {}} errors={errors} locales={locales} />
           <LocalizedField name="body" label={t('body')} kind="markdown" rows={12} value={project?.body ?? {}} errors={errors} locales={locales} />
           <div className="md:col-span-2"><MediaPicker name="imageAssetId" value={project?.imageAssetId ?? null} label={t('image')} /></div>
-          <div className="flex justify-end md:col-span-2"><SubmitButton>{c('save')}</SubmitButton></div>
+          <div className="md:col-span-2"><FormActionBar back={{ href: '/projects', label: c('backToList') }} /></div>
         </TabsContent>
         <TabsContent value="finance" className="p-6 text-[13px] text-muted-ink">{t('financeLater')}</TabsContent>
       </Tabs>
