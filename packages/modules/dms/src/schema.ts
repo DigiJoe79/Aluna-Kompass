@@ -71,6 +71,17 @@ export const documents = sqliteTable(
     fileName: text('file_name'),
     fileChecksum: text('file_checksum'),
     fileBytes: integer('file_bytes'),
+    /**
+     * Zustand der Texterkennung — zugleich die Warteschlange (Entscheidung 24).
+     * `null` für Entwürfe: Die haben keine Datei und also nichts zu lesen.
+     *
+     * `running` unterscheidet „liegt unter dem Werkzeug" von „wartet". Was nach
+     * einem Neustart noch darauf steht, war ein Absturz; der Worker räumt es auf.
+     */
+    textStatus: text('text_status', { enum: ['pending', 'running', 'done', 'failed', 'unavailable'] }),
+    textAttempts: integer('text_attempts').notNull().default(0),
+    textError: text('text_error'),
+    textExtractedAt: text('text_extracted_at'),
     status: text('status', { enum: ['issued', 'voided'] }).notNull().default('issued'),
     voidedAt: text('voided_at'),
     voidedByUserId: text('voided_by_user_id'),
@@ -83,6 +94,7 @@ export const documents = sqliteTable(
     uniqueIndex('documents_number_idx').on(t.number),
     index('documents_folder_idx').on(t.folder),
     index('documents_phase_idx').on(t.phase),
+    index('documents_text_status_idx').on(t.textStatus),
   ],
 );
 
