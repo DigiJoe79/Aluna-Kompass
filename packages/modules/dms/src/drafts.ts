@@ -1,9 +1,11 @@
 import {
+  buildContext,
   conflict,
   isoNow,
   newId,
   notFound,
   ok,
+  prepare,
   recordAudit,
   requirePermission,
   validate,
@@ -15,6 +17,7 @@ import {
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { documentTypeFor } from './catalog';
+import { resolveRecipient } from './recipients';
 import { documentLinks, documents } from './schema';
 import { toRecord, type DocumentRecord } from './service';
 
@@ -44,6 +47,10 @@ export const draftUpdateSchema = z.object({
 });
 
 export const draftDeleteSchema = z.object({
+  id: z.string().min(1),
+});
+
+export const draftPreviewSchema = z.object({
   id: z.string().min(1),
 });
 
@@ -179,4 +186,51 @@ export async function deleteDraft(deps: Deps, ctx: CallContext, input: unknown):
 
     return ok(null);
   });
+}
+
+export async function previewDraft(
+  deps: Deps,
+  ctx: CallContext,
+  input: unknown,
+): Promise<Result<{ bytes: Uint8Array; filename: string; mimeType: string }>> {
+  const denied = requirePermission(ctx, 'dms.view');
+  if (denied) return denied;
+
+  const parsed = validate(deps, draftPreviewSchema, input);
+  if (!parsed.ok) return parsed;
+
+  const row = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
+  if (!row) return notFound('document', parsed.value.id);
+
+  const recipient = resolveRecipient(deps, row.id);
+  const templateKey = row.templateKey ?? 'letter';
+
+  const prepared = await prepare(deps, ctx, {
+    templateKey,
+    input: { subject: row.subject, body: row.draftBody ?? '', recipient },
+  });
+  if (!prepared.ok) return prepared;
+
+  const { built, baseId, bodyTypst } = prepared.value;
+  const context = await buildContext(deps, ctx, '');
+  const bytes = await deps.documents.render({
+    baseId,
+    bodyTypst,
+    slots: { ...built.slots, draft: true },
+    context,
+  });
+
+  const filename = `${(row.subject || 'Entwurf').replace(/[^\p{L}\p{N} _-]/gu, '').trim() || 'Entwurf'}-Vorschau.pdf`;
+
+  deps.db.transaction((tx: DbOrTx) => {
+    recordAudit(tx, deps, ctx, {
+      action: 'dms.draft.preview',
+      entityType: 'documentDraft',
+      entityId: row.id,
+      after: { templateKey, subject: row.subject },
+      summary: `Vorschau für Entwurf „${row.subject}" erzeugt`,
+    });
+  });
+
+  return ok({ bytes, filename, mimeType: 'application/pdf' });
 }

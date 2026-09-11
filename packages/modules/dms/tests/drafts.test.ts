@@ -1,7 +1,11 @@
-import { ctxWith } from '@kompass/core/testing';
+import { coreModule, schema } from '@kompass/core';
+import { createTestDeps, ctxWith, fakeDocumentEngine, insertUser } from '@kompass/core/testing';
+import { contactsModule } from '@kompass/module-contacts';
 import { describe, expect, it } from 'vitest';
-import { createDraft, deleteDraft, updateDraft } from '../src/drafts';
-import { ALL_DMS, auditActions, setupWithTypes } from './helpers';
+import { dmsModule } from '../src/manifest';
+import { documents } from '../src/schema';
+import { createDraft, deleteDraft, previewDraft, updateDraft } from '../src/drafts';
+import { ALL_DMS, auditActions, seedTypes, setupWithTypes } from './helpers';
 
 describe('createDraft', () => {
   it('legt einen Entwurf ohne Nummer und ohne Datei an', async () => {
@@ -72,5 +76,40 @@ describe('deleteDraft', () => {
     if (!created.ok) throw new Error('setup');
     const denied = await deleteDraft(deps, ctxWith(ALL_DMS.filter((p) => p !== 'dms.deleteDraft')), { id: created.value.id });
     expect(denied.ok).toBe(false);
+  });
+});
+
+describe('previewDraft', () => {
+  it('rendert mit Entwurfskennzeichnung', async () => {
+    const calls: { slots: { draft?: boolean } }[] = [];
+    const deps = createTestDeps({
+      manifests: [coreModule, contactsModule, dmsModule],
+      documents: fakeDocumentEngine({
+        render: async (args) => {
+          calls.push(args as { slots: { draft?: boolean } });
+          return new TextEncoder().encode('%PDF-fake');
+        },
+      }),
+    });
+    seedTypes(deps);
+    const ctx = ctxWith(ALL_DMS, insertUser(deps, { name: 'T', email: 't@kompass.local' }));
+    const draft = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Test', body: 'Hallo' });
+    if (!draft.ok) throw new Error('setup');
+    await previewDraft(deps, ctx, { id: draft.value.id });
+    expect(calls[0].slots.draft).toBe(true);
+  });
+
+  it('rendert eine Vorschau, ohne etwas abzulegen', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const draft = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Test', body: 'Hallo' });
+    if (!draft.ok) throw new Error('setup');
+    const before = deps.db.select().from(schema.mediaAssets).all().length;
+    const preview = await previewDraft(deps, ctx, { id: draft.value.id });
+    expect(preview.ok).toBe(true);
+    if (!preview.ok) return;
+    expect(preview.value.mimeType).toBe('application/pdf');
+    expect(preview.value.bytes.byteLength).toBeGreaterThan(0);
+    expect(deps.db.select().from(schema.mediaAssets).all().length).toBe(before);
+    expect(deps.db.select().from(documents).get()?.number).toBeNull();
   });
 });
