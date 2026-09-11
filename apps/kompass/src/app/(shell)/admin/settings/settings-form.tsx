@@ -8,6 +8,7 @@ import { FormField } from '@/components/forms/form-field';
 import { SaveBar } from '@/components/forms/save-bar';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FormErrorSummary } from '@/components/forms/form-error-summary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { SETTINGS_TABS, TAX_REQUIRED, type SettingsField } from '@/lib/settings-fields';
@@ -153,6 +154,8 @@ export function SettingsForm({
     });
 
   return (
+    <>
+    <FormErrorSummary errors={errors} />
     <Tabs defaultValue="organization">
       <TabsList className="border-b border-line bg-surface px-6">
         {SETTINGS_TABS.map((tab) => (
@@ -202,5 +205,6 @@ export function SettingsForm({
         onSave={save}
       />
     </Tabs>
+    </>
   );
 }

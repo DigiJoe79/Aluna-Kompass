@@ -8,6 +8,8 @@ import { FormField } from '@/components/forms/form-field';
 import { LocalizedField } from '@/components/forms/localized-field';
 import { PublishSwitch } from '@/components/forms/publish-switch';
 import { FormActionBar } from '@/components/forms/form-action-bar';
+import { FormErrorSummary, TabInvalidDot } from '@/components/forms/form-error-summary';
+import { invalidTabs } from '@/lib/form-errors';
 import { StatusBadge } from '@/components/status-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -19,12 +21,25 @@ import { PhotosEditor } from './photos-editor';
 import { StatusDialog } from './status-dialog';
 import { StoryForm } from './story-form';
 
+/**
+ * Welches Feld auf welchem Reiter steht. Nur dafür da, einen Fehler dort
+ * anzuzeigen, wo er steckt — die Felder selbst stehen unten im JSX.
+ */
+const TABS = [
+  {
+    key: 'profile',
+    fields: ['slug', 'name', 'sex', 'location', 'sizeCm', 'externalProfileUrl', 'birthText', 'sizeText'],
+  },
+  { key: 'texts', fields: ['summary', 'body', 'traits__text', 'traits'] },
+] as const;
+
 export function AnimalForm({ animal, locales }: { animal: AnimalRecord | null; locales: string[] }) {
   const t = useTranslations('animals.form');
   const c = useTranslations('content');
   const [state, action] = useActionState(saveAnimalAction, idleState);
   const errors = state.status === 'error' ? state.fieldErrors : {};
   useEffect(() => { if (state.status === 'success') toast.success(state.message ?? ''); else if (state.status === 'error' && Object.keys(errors).length === 0) toast.error(state.message); }, [state, errors]);
+  const broken = invalidTabs(TABS, errors);
   const select = 'h-9 rounded-md border border-line-strong bg-field px-2 text-[14px]';
   return (
     <div className="flex flex-col gap-4">
@@ -35,8 +50,9 @@ export function AnimalForm({ animal, locales }: { animal: AnimalRecord | null; l
           <span className="ml-auto"><PublishSwitch id={animal.id} isPublished={animal.isPublished} action={setAnimalPublishedAction} /></span>
         </div>
       ) : null}
+      <FormErrorSummary errors={errors} />
       <Tabs defaultValue="profile" className="overflow-hidden rounded-lg border border-line bg-surface">
-        <TabsList className="border-b border-line bg-surface px-6"><TabsTrigger value="profile">{t('tabs.profile')}</TabsTrigger><TabsTrigger value="texts">{t('tabs.texts')}</TabsTrigger><TabsTrigger value="photos" disabled={!animal}>{t('tabs.photos')}</TabsTrigger><TabsTrigger value="story" disabled={!animal}>{t('tabs.story')}</TabsTrigger></TabsList>
+        <TabsList className="border-b border-line bg-surface px-6"><TabsTrigger value="profile" className="gap-2">{t('tabs.profile')}{broken.has('profile') ? <TabInvalidDot label={c('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="texts" className="gap-2">{t('tabs.texts')}{broken.has('texts') ? <TabInvalidDot label={c('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="photos" disabled={!animal}>{t('tabs.photos')}</TabsTrigger><TabsTrigger value="story" disabled={!animal}>{t('tabs.story')}</TabsTrigger></TabsList>
         <form action={action}>
           {animal ? <input type="hidden" name="id" value={animal.id} /> : null}
           <TabsContent keepMounted value="profile" className="grid gap-4 p-6 md:grid-cols-2">

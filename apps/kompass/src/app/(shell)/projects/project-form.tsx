@@ -8,6 +8,7 @@ import { FormField } from '@/components/forms/form-field';
 import { LocalizedField } from '@/components/forms/localized-field';
 import { MediaPicker } from '@/components/forms/media-picker';
 import { FormActionBar } from '@/components/forms/form-action-bar';
+import { FormErrorSummary, TabInvalidDot } from '@/components/forms/form-error-summary';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { idleState } from '@/lib/actions';
@@ -23,8 +24,9 @@ export function ProjectForm({ project, locales }: { project: ProjectRecord | nul
   return (
     <form action={action} className="overflow-hidden rounded-lg border border-line bg-surface">
       {project ? <input type="hidden" name="id" value={project.id} /> : null}
+      <FormErrorSummary errors={errors} />
       <Tabs defaultValue="public">
-        <TabsList className="border-b border-line bg-surface px-6"><TabsTrigger value="public">{t('tabs.public')}</TabsTrigger><TabsTrigger value="finance" disabled>{t('tabs.finance')}</TabsTrigger></TabsList>
+        <TabsList className="border-b border-line bg-surface px-6"><TabsTrigger value="public" className="gap-2">{t('tabs.public')}{Object.keys(errors).length > 0 ? <TabInvalidDot label={c('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="finance" disabled>{t('tabs.finance')}</TabsTrigger></TabsList>
         <TabsContent value="public" className="grid gap-5 p-6 md:grid-cols-2">
           <FormField id="slug" label={c('slug')} hint={c('slugHint')} error={errors.slug}><Input id="slug" name="slug" defaultValue={project?.slug ?? ''} required pattern="[a-z0-9][a-z0-9-]{0,80}" className="font-mono" /></FormField>
           <FormField id="betterplaceProjectId" label={t('betterplace')} hint={t('betterplaceHint')} error={errors.betterplaceProjectId}><Input id="betterplaceProjectId" name="betterplaceProjectId" defaultValue={project?.betterplaceProjectId ?? ''} className="font-mono" /></FormField>

@@ -34,7 +34,9 @@
     "changesPending": "{count, plural, one {# Änderung noch nicht gespeichert} other {# Änderungen noch nicht gespeichert}}",
     "lastSaved": "zuletzt gespeichert am {date} von {name}",
     "audited": "Wird protokolliert.",
-    "backToList": "Zurück zur Übersicht"
+    "backToList": "Zurück zur Übersicht",
+    "fieldsInvalid": "{count, plural, one {Ein Feld braucht noch eine Angabe.} other {# Felder brauchen noch eine Angabe.}}",
+    "tabInvalid": "Enthält einen Fehler"
   },
   "media": {
     "title": "Mediathek",
