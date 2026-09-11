@@ -174,7 +174,8 @@
         "title": "Der Vorgang wurde abgebrochen.",
         "text": "Es wurde nichts gespeichert. Die Vorgangsnummer erscheint identisch im Serverprotokoll.",
         "retry": "Erneut versuchen",
-        "home": "Startseite"
+        "home": "Startseite",
+        "login": "Zur Anmeldung"
       }
     }
   },
