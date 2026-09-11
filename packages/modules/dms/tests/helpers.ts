@@ -18,7 +18,7 @@ export function setupWithTypes(permissions: readonly string[] = ALL_DMS) {
   const deps = createTestDeps({ manifests: [coreModule, contactsModule, dmsModule] });
   seedTypes(deps);
   const userId = insertUser(deps, { name: 'Test', email: 'test@kompass.local' });
-  return { deps, ctx: ctxWith([...permissions, 'media.upload'], userId), userId };
+  return { deps, ctx: ctxWith([...permissions, 'media.upload', 'contacts.manage'], userId), userId };
 }
 
 export function auditActions(deps: Deps): string[] {
