@@ -96,7 +96,7 @@ describe('previewDraft', () => {
     const draft = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Test', body: 'Hallo' });
     if (!draft.ok) throw new Error('setup');
     await previewDraft(deps, ctx, { id: draft.value.id });
-    expect(calls[0].slots.draft).toBe(true);
+    expect(calls[0]?.slots.draft).toBe(true);
   });
 
   it('rendert eine Vorschau, ohne etwas abzulegen', async () => {
