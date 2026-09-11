@@ -21,6 +21,7 @@ import { countChanged, snapshotOf, type Snapshot } from '@/lib/form-dirty';
 export function FormActionBar({
   back,
   saveLabel,
+  saveDisabled,
   count,
   onDiscard,
 }: {
@@ -30,6 +31,11 @@ export function FormActionBar({
    */
   back?: { href: string; label: string };
   saveLabel?: string;
+  /**
+   * Für Formulare, denen noch etwas fehlt, ohne das ein Absenden nichts
+   * bewirken kann — die Akte ohne Datei etwa.
+   */
+  saveDisabled?: boolean;
   /**
    * Für Formulare, die ihren Inhalt als ein einziges verstecktes Feld
    * abschicken: Aus dem Formular gezählt wäre es immer genau eines, egal wie
@@ -98,7 +104,7 @@ export function FormActionBar({
         >
           {t('discard')}
         </Button>
-        <SubmitButton>{saveLabel ?? t('save')}</SubmitButton>
+        <SubmitButton disabled={saveDisabled}>{saveLabel ?? t('save')}</SubmitButton>
       </div>
     </div>
   );

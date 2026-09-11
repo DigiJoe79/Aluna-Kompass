@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { idleState } from '@/lib/actions';
 import { receiveDocumentAction, suggestClassificationAction } from '../actions';
 import { Select } from '@/components/ui/select';
+import { FileDropzone } from './file-dropzone';
 
 export function ReceiveForm({
   types,
@@ -31,11 +32,12 @@ export function ReceiveForm({
   const [typeKey, setTypeKey] = useState(defaultTypeKey);
   const [folder, setFolder] = useState('');
   const [senderId, setSenderId] = useState('');
+  const [hasFile, setHasFile] = useState(false);
 
   const errors = state.status === 'error' ? state.fieldErrors : {};
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFile = async (file: File | null) => {
+    setHasFile(!!file);
     if (!file) return;
 
     const suggestion = await suggestClassificationAction(file.name, senderId || undefined);
@@ -69,8 +71,7 @@ export function ReceiveForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="file" required>{t('fields.file')}</Label>
-        <Input id="file" name="file" type="file" accept="application/pdf" required onChange={handleFileChange} />
-        {errors.file ? null : <p className="text-[12px] text-muted-ink">{t('fileHint')}</p>}
+        <FileDropzone id="file" name="file" required onFile={handleFile} />
         <FieldError id="file-error" message={errors.file} />
       </div>
 
@@ -154,7 +155,7 @@ export function ReceiveForm({
         </div>
       </div>
 
-      <FormActionBar back={{ href: '/dms', label: tCommon('backToList') }} saveLabel={t('receiveSubmit')} />
+      <FormActionBar back={{ href: '/dms', label: tCommon('backToList') }} saveLabel={t('receiveSubmit')} saveDisabled={!hasFile} />
     </form>
   );
 }

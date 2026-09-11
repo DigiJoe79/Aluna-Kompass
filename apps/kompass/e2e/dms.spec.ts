@@ -228,6 +228,31 @@ test.describe('dms', () => {
     expect(download.suggestedFilename()).toMatch(/\.pdf$/);
   });
 
+  test('nimmt die Datei auf einer Ablagefläche an und zeigt danach ihre Karte', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/receive');
+
+    await expect(page.getByText('PDF hierher ziehen')).toBeVisible();
+    await expect(page.getByText('Nur PDF, höchstens 10 MB.')).toBeVisible();
+    // Ohne Datei gäbe „Ablegen“ ein Versprechen, das ins Leere greift.
+    await expect(page.getByRole('button', { name: 'Ablegen' })).toBeDisabled();
+
+    await page.getByLabel('Datei').setInputFiles({
+      name: 'Stadtkasse Bescheid.pdf',
+      mimeType: 'application/pdf',
+      buffer: samplePdf(),
+    });
+
+    // Aus der Fläche wird die Karte: Name, Grösse und was als Nächstes passiert.
+    await expect(page.getByText('Stadtkasse Bescheid.pdf')).toBeVisible();
+    await expect(page.getByText(/^PDF · \d/)).toBeVisible();
+    await expect(page.getByText('Texterkennung läuft nach dem Ablegen.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Ansehen' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Ersetzen' })).toBeVisible();
+    await expect(page.getByText('PDF hierher ziehen')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Ablegen' })).toBeEnabled();
+  });
+
   test('ein zu kurzer Begriff sagt, warum er nichts findet', async ({ page }) => {
     await login(page);
 

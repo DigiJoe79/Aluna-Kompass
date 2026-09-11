@@ -1377,6 +1377,14 @@
     "receiveDescription": "Legen Sie eingehende Schreiben ab. Einsortierregeln belegen Art, Ordner und Datum automatisch vor.",
     "receiveSubmit": "Ablegen",
     "fileHint": "Nur PDF, höchstens 10 MB.",
+    "upload": {
+      "dropTitle": "PDF hierher ziehen",
+      "dropBrowse": "oder Datei auswählen",
+      "meta": "PDF · {size}",
+      "ocrPending": "Texterkennung läuft nach dem Ablegen.",
+      "view": "Ansehen",
+      "replace": "Ersetzen"
+    },
     "saveDraft": "Entwurf speichern",
     "edit": "Bearbeiten",
     "editDraft": "Entwurf bearbeiten",
