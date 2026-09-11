@@ -191,11 +191,8 @@ export async function updateOcrLanguagesAction(languages: string): Promise<Actio
 
   for (const lang of list) {
     if (!probe.languages.includes(lang)) {
-      return {
-        status: 'error',
-        message: `${lang} ist nicht installiert`,
-        fieldErrors: { languages: `${lang} ist nicht installiert` },
-      };
+      const missing = t('dms.admin.textPanel.languageMissing', { lang });
+      return { status: 'error', message: missing, fieldErrors: { languages: missing } };
     }
   }
 

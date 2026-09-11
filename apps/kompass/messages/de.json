@@ -1527,7 +1527,8 @@
         "languages": "Sprachen der Texterkennung",
         "reindex": "Alles neu lesen",
         "queued": "{count} Dokumente wurden zum Neu-Lesen vorgemerkt.",
-        "open": "{count} warten noch"
+        "open": "{count} warten noch",
+        "languageMissing": "{lang} ist in dieser Umgebung nicht installiert."
       },
       "toast": {
         "typeCreated": "Dokumentart angelegt",
