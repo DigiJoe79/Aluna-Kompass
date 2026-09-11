@@ -29,18 +29,26 @@ const CORE_MAIN: { key: string; href: string; icon: string; permission?: string 
   { key: 'projects', href: '/projects', icon: 'folder', permission: 'projects.view' },
 ];
 
+/**
+ * Arbeitsflächen: Dinge, die man benutzt. Elf Einträge in einer Gruppe waren zu
+ * viel, und die Hälfte davon stellt man einmal ein, statt damit zu arbeiten.
+ */
 const CORE_ADMIN: { key: string; href: string; icon: string; permission?: string }[] = [
   { key: 'users', href: '/admin/users', icon: 'users', permission: 'users.manage' },
   { key: 'roles', href: '/admin/roles', icon: 'shield', permission: 'roles.manage' },
+  { key: 'audit', href: '/admin/audit', icon: 'clock', permission: 'audit.view' },
+  { key: 'retention', href: '/admin/retention', icon: 'hourglass', permission: 'retention.view' },
+  { key: 'media', href: '/admin/media', icon: 'image', permission: 'media.upload' },
+  { key: 'backup', href: '/admin/backup', icon: 'database', permission: 'backup.export' },
+];
+
+/** Einrichtung: Dinge, die man einstellt. Module hängen ihre Stammdaten hier ein. */
+const CORE_CONFIG: { key: string; href: string; icon: string; permission?: string }[] = [
   { key: 'settings', href: '/admin/settings', icon: 'sliders', permission: 'settings.manage' },
   { key: 'locales', href: '/admin/locales', icon: 'languages', permission: 'settings.manage' },
   { key: 'themes', href: '/admin/themes', icon: 'droplet', permission: 'settings.manage' },
   { key: 'modules', href: '/admin/modules', icon: 'grid', permission: 'modules.manage' },
-  { key: 'audit', href: '/admin/audit', icon: 'clock', permission: 'audit.view' },
-  { key: 'retention', href: '/admin/retention', icon: 'hourglass', permission: 'retention.view' },
   { key: 'documents', href: '/admin/documents', icon: 'file-text', permission: 'documents.export' },
-  { key: 'media', href: '/admin/media', icon: 'image', permission: 'media.upload' },
-  { key: 'backup', href: '/admin/backup', icon: 'database', permission: 'backup.export' },
 ];
 
 export function buildNavigation(input: {
@@ -56,6 +64,27 @@ export function buildNavigation(input: {
     labelKey: 'nav.groups.admin',
     disabled: false,
     items: CORE_ADMIN.map((item) => ({ ...item, labelKey: `nav.${item.key}`, disabled: false, visible: visible(item.permission) })),
+  };
+  const config: NavGroup = {
+    key: 'config',
+    labelKey: 'nav.groups.config',
+    disabled: false,
+    items: [
+      ...CORE_CONFIG.map((item) => ({ ...item, labelKey: `nav.${item.key}`, disabled: false, visible: visible(item.permission) })),
+      ...input.manifests
+        .filter((m) => m.key !== 'core' && input.enabledKeys.has(m.key))
+        .flatMap((m) => m.adminNavigation ?? [])
+        .map((item) => ({
+          key: item.key,
+          href: item.href,
+          icon: item.icon,
+          labelKey: `nav.${item.key}`,
+          label: item.label,
+          permission: item.permission,
+          disabled: false,
+          visible: visible(item.permission),
+        })),
+    ],
   };
   const core: NavGroup = {
     key: 'core',
@@ -92,5 +121,5 @@ export function buildNavigation(input: {
         items: [...(m.navigation ?? []).map(toItem), ...(input.extraItems?.[m.key] ?? []).map(toItem)],
       };
     });
-  return [core, admin, ...modules];
+  return [core, admin, config, ...modules];
 }

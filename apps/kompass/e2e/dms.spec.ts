@@ -171,7 +171,9 @@ test.describe('dms', () => {
 
   test('verwaltet Dokumentarten und Regeln', async ({ page }) => {
     await login(page);
-    await page.goto('/admin/dms');
+    // Über die Navigation, nicht über die URL: Der Bildschirm war gebaut und
+    // fertig, nur zeigte nichts darauf.
+    await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Akte einrichten' }).click();
     await expect(page.getByRole('heading', { name: 'Dokumentarten' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Einsortierregeln' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Ordner' })).toBeVisible();

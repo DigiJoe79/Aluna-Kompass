@@ -10,11 +10,33 @@ const finance = defineModule({
 });
 
 describe('buildNavigation', () => {
-  it('builds the admin group with all core entries, filtered by permission', () => {
+  /**
+   * Elf Einträge in einer Gruppe waren zu viel, und die Hälfte davon stellt man
+   * einmal ein statt sie zu benutzen. Deshalb zwei Gruppen: Arbeitsflächen und
+   * Einrichtung.
+   */
+  it('trennt Arbeitsflächen von Einrichtung', () => {
     const groups = buildNavigation({ manifests: [coreModule], enabledKeys: new Set(['core']), permissions: new Set(['users.manage', 'audit.view']) });
     const admin = groups.find((g) => g.key === 'admin')!;
-    expect(admin.items.map((i) => i.key)).toEqual(['users', 'roles', 'settings', 'locales', 'themes', 'modules', 'audit', 'retention', 'documents', 'media', 'backup']);
+    const config = groups.find((g) => g.key === 'config')!;
+    expect(admin.items.map((i) => i.key)).toEqual(['users', 'roles', 'audit', 'retention', 'media', 'backup']);
+    expect(config.items.map((i) => i.key)).toEqual(['settings', 'locales', 'themes', 'modules', 'documents']);
     expect(admin.items.filter((i) => i.visible).map((i) => i.key)).toEqual(['users', 'audit']);
+  });
+
+  it('hängt die Verwaltungsfläche eines Moduls in die Einrichtung', () => {
+    const akte = defineModule({
+      key: 'akte',
+      version: '0.1.0',
+      permissions: ['akte.manage'],
+      adminNavigation: [{ key: 'akte.admin', href: '/admin/akte', icon: 'folder', permission: 'akte.manage' }],
+    });
+    const groups = buildNavigation({ manifests: [coreModule, akte], enabledKeys: new Set(['core', 'akte']), permissions: new Set(['akte.manage']) });
+    const config = groups.find((g) => g.key === 'config')!;
+    expect(config.items.map((i) => i.key)).toContain('akte.admin');
+    // Ein ausgeschaltetes Modul hängt nichts ein.
+    const off = buildNavigation({ manifests: [coreModule, akte], enabledKeys: new Set(['core']), permissions: new Set(['akte.manage']) });
+    expect(off.find((g) => g.key === 'config')!.items.map((i) => i.key)).not.toContain('akte.admin');
   });
 
   /**

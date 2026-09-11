@@ -184,6 +184,7 @@
     "collapse": "Navigation einklappen",
     "groups": {
       "admin": "Verwaltung",
+      "config": "Einrichtung",
       "finance": "Finanzen",
       "members": "Mitglieder",
       "animals": "Tiere",
@@ -194,7 +195,7 @@
     },
     "users": "Nutzer",
     "roles": "Rollen",
-    "settings": "Einstellungen",
+    "settings": "Verein",
     "locales": "Sprachen",
     "themes": "Themes",
     "modules": "Module",
@@ -211,7 +212,8 @@
     },
     "dms": {
       "list": "Akte",
-      "manage": "Stammdaten"
+      "manage": "Stammdaten",
+      "admin": "Akte einrichten"
     },
     "site": {
       "template": "Template",

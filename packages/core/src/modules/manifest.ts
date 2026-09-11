@@ -144,6 +144,13 @@ export interface ModuleManifest {
   permissions: readonly string[];
   settings?: readonly SettingDefinition[];
   navigation?: readonly NavigationItem[];
+  /**
+   * Die Verwaltungsfläche des Moduls — Stammdaten, die ein Admin pflegt. Die
+   * Schale entscheidet, wo sie erscheint; das Modul sagt nur, dass es eine hat.
+   * Ohne diese Deklaration müsste der Kern für jedes künftige Modul mit
+   * Stammdaten angefasst werden.
+   */
+  adminNavigation?: readonly NavigationItem[];
   dependsOn?: readonly string[];
   publishedViews?: readonly PublishedView[];
   documentTemplates?: readonly DocumentTemplate[];

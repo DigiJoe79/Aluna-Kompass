@@ -15,6 +15,7 @@ export const dmsModule: ModuleManifest = defineModule({
   permissions: ['dms.view', 'dms.create', 'dms.file', 'dms.void', 'dms.deleteDraft', 'dms.manage'],
   documentTemplates: [letterTemplate],
   navigation: [{ key: 'dms.list', href: '/dms', icon: 'file', group: 'dms', permission: 'dms.view' }],
+  adminNavigation: [{ key: 'dms.admin', href: '/admin/dms', icon: 'folder', permission: 'dms.manage' }],
   retentionHolds: dmsRetentionHolds,
   retentionDue: dmsRetentionDue,
   mcpTools: DMS_MCP_TOOLS,

@@ -11,7 +11,9 @@ test.describe('app shell', () => {
     await expect(page.getByTestId('env-banner')).toContainText('TESTUMGEBUNG');
     const nav = page.getByRole('navigation', { name: 'Hauptnavigation' });
     await expect(nav.getByText('Musterverein e.V.')).toBeVisible();
-    for (const label of ['Startseite', 'Nutzer', 'Rollen', 'Einstellungen', 'Themes', 'Module', 'Änderungsprotokoll', 'Dokumente', 'Backup']) {
+    // „Verein“ statt „Einstellungen“: Der Eintrag sitzt jetzt in der Gruppe
+    // „Einrichtung“ und trägt seinen Inhalt im Namen.
+    for (const label of ['Startseite', 'Nutzer', 'Rollen', 'Verein', 'Themes', 'Module', 'Änderungsprotokoll', 'Dokumente', 'Backup', 'Akte einrichten']) {
       await expect(nav.getByRole('link', { name: label })).toBeVisible();
     }
     await expect(nav.getByText(/^Build /)).toBeVisible();
