@@ -1,0 +1,84 @@
+import { createHash } from 'node:crypto';
+import { coreModule, schema } from '@kompass/core';
+import { createTestDeps, ctxWith, fakeDocumentEngine, insertUser } from '@kompass/core/testing';
+import { contactsModule } from '@kompass/module-contacts';
+import { eq } from 'drizzle-orm';
+import { describe, expect, it } from 'vitest';
+import { createDraft, fileDocument } from '../src/drafts';
+import { dmsModule } from '../src/manifest';
+import { ALL_DMS, auditActions, fileFixture, seedTypes, setupWithTypes } from './helpers';
+
+const mediaAssets = schema.mediaAssets;
+
+describe('fileDocument', () => {
+  it('vergibt die Nummer, legt das PDF ab und leert den Entwurfstext', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const draft = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Einladung', body: '# Einladung' });
+    if (!draft.ok) throw new Error('setup');
+    const filed = await fileDocument(deps, ctx, { id: draft.value.id });
+    expect(filed.ok).toBe(true);
+    if (!filed.ok) return;
+    expect(filed.value.phase).toBe('issued');
+    expect(filed.value.number).toMatch(/^BRF-\d{4}-\d{3}$/);
+    expect(filed.value.assetId).not.toBeNull();
+    expect(filed.value.draftBody).toBeNull();
+  });
+
+  it('hält die Prüfsumme der abgelegten Datei fest', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const filed = await fileFixture(deps, ctx);
+    const asset = deps.db.select().from(mediaAssets).where(eq(mediaAssets.id, filed.assetId as string)).get();
+    const bytes = await deps.media.read(asset!.filename);
+    expect(asset?.checksum).toBe(createHash('sha256').update(bytes).digest('hex'));
+  });
+
+  it('lehnt das zweite Festschreiben ab', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const filed = await fileFixture(deps, ctx);
+    const again = await fileDocument(deps, ctx, { id: filed.id });
+    expect(again.ok).toBe(false);
+    if (again.ok) return;
+    expect(again.error.type).toBe('conflict');
+  });
+
+  it('vergibt lückenlose Nummern je Präfix und Jahr', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const first = await fileFixture(deps, ctx);
+    const second = await fileFixture(deps, ctx);
+    expect(first.number).toMatch(/-001$/);
+    expect(second.number).toMatch(/-002$/);
+  });
+
+  it('verlangt dms.file', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const draft = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'x', body: 'y' });
+    if (!draft.ok) throw new Error('setup');
+    const denied = await fileDocument(deps, ctxWith(ALL_DMS.filter((p) => p !== 'dms.file')), { id: draft.value.id });
+    expect(denied.ok).toBe(false);
+  });
+
+  it('reicht Basis, Slots und Nummer unverändert an die Engine', async () => {
+    const calls: unknown[] = [];
+    const deps = createTestDeps({
+      manifests: [coreModule, contactsModule, dmsModule],
+      documents: fakeDocumentEngine({ render: async (args) => { calls.push(args); return new TextEncoder().encode('%PDF-fake'); } }),
+    });
+    seedTypes(deps);
+    const ctx = ctxWith(ALL_DMS.concat('media.upload'), insertUser(deps, { name: 'T', email: 't@kompass.local' }));
+    const draft = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Einladung', body: '# Einladung' });
+    if (!draft.ok) throw new Error('setup');
+    await fileDocument(deps, ctx, { id: draft.value.id });
+    expect(calls).toHaveLength(1);
+    const call = calls[0] as { baseId: string; slots: { subject?: string; draft?: boolean }; context: { number: string } };
+    expect(call.baseId).toBe('a4-mit-briefkopf');
+    expect(call.slots.subject).toBe('Einladung');
+    expect(call.slots.draft).toBeFalsy(); // kein Wasserzeichen auf dem Original
+    expect(call.context.number).toMatch(/^BRF-\d{4}-\d{3}$/);
+  });
+
+  it('schreibt einen Eintrag ins Änderungsprotokoll', async () => {
+    const { deps, ctx } = setupWithTypes();
+    await fileFixture(deps, ctx);
+    expect(auditActions(deps)).toContain('dms.file');
+  });
+});

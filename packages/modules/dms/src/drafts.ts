@@ -8,6 +8,8 @@ import {
   prepare,
   recordAudit,
   requirePermission,
+  schema,
+  storeMediaInternal,
   validate,
   type CallContext,
   type DbOrTx,
@@ -19,7 +21,7 @@ import { z } from 'zod';
 import { documentTypeFor } from './catalog';
 import { resolveRecipient } from './recipients';
 import { documentLinks, documents } from './schema';
-import { toRecord, type DocumentRecord } from './service';
+import { nextDocumentNumber, toRecord, type DocumentRecord } from './service';
 
 export const draftCreateSchema = z.object({
   typeKey: z.string().min(1),
@@ -51,6 +53,10 @@ export const draftDeleteSchema = z.object({
 });
 
 export const draftPreviewSchema = z.object({
+  id: z.string().min(1),
+});
+
+export const fileDocumentSchema = z.object({
   id: z.string().min(1),
 });
 
@@ -233,4 +239,109 @@ export async function previewDraft(
   });
 
   return ok({ bytes, filename, mimeType: 'application/pdf' });
+}
+
+export const DOCUMENT_FOLDER = 'Dokumente';
+
+function ensureDocumentFolder(deps: Deps, ctx: CallContext) {
+  const existing = deps.db
+    .select()
+    .from(schema.mediaFolders)
+    .where(eq(schema.mediaFolders.path, DOCUMENT_FOLDER))
+    .get();
+
+  if (!existing) {
+    deps.db.transaction((tx: DbOrTx) => {
+      tx.insert(schema.mediaFolders)
+        .values({ path: DOCUMENT_FOLDER, createdAt: isoNow(deps.clock) })
+        .run();
+      recordAudit(tx, deps, ctx, {
+        action: 'media.folder.create',
+        entityType: 'mediaFolder',
+        entityId: DOCUMENT_FOLDER,
+        after: { path: DOCUMENT_FOLDER },
+        summary: `Ordner „${DOCUMENT_FOLDER}" angelegt`,
+      });
+    });
+  }
+}
+
+export async function fileDocument(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DocumentRecord>> {
+  const denied = requirePermission(ctx, 'dms.file');
+  if (denied) return denied;
+
+  const parsed = validate(deps, fileDocumentSchema, input);
+  if (!parsed.ok) return parsed;
+
+  const row = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
+  if (!row) return notFound('document', parsed.value.id);
+
+  if (row.phase === 'issued') {
+    return conflict('documentIsFiled', `Dokument ${row.number ?? row.id} ist bereits festgeschrieben`);
+  }
+
+  const docType = documentTypeFor(deps.db, row.typeKey);
+  if (!docType) return notFound('documentType', row.typeKey);
+
+  const templateKey = row.templateKey ?? 'letter';
+  const recipient = resolveRecipient(deps, row.id);
+
+  const prepared = await prepare(deps, ctx, {
+    templateKey,
+    input: { subject: row.subject, body: row.draftBody ?? '', recipient },
+  });
+  if (!prepared.ok) return prepared;
+
+  const { data, built, baseId, base, bodyTypst } = prepared.value;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const year = deps.clock.now().getUTCFullYear();
+    const number = nextDocumentNumber(deps.db, docType.prefix, year);
+    const context = await buildContext(deps, ctx, number);
+    const bytes = await deps.documents.render({ baseId, bodyTypst, slots: built.slots, context });
+
+    ensureDocumentFolder(deps, ctx);
+
+    const asset = await storeMediaInternal(deps, ctx, {
+      originalName: `${number}.pdf`,
+      bytes,
+      declaredMimeType: 'application/pdf',
+      folder: DOCUMENT_FOLDER,
+    });
+    if (!asset.ok) return asset;
+
+    const snapshot = { input: data, slots: built.slots, base: baseId, baseChecksum: base.checksum };
+    try {
+      return deps.db.transaction((tx: DbOrTx) => {
+        const now = isoNow(deps.clock);
+        tx.update(documents)
+          .set({
+            phase: 'issued',
+            number,
+            assetId: asset.value.id,
+            inputSnapshot: JSON.stringify(snapshot),
+            draftBody: null,
+            updatedAt: now,
+          })
+          .where(eq(documents.id, row.id))
+          .run();
+
+        const after = tx.select().from(documents).where(eq(documents.id, row.id)).get()!;
+        recordAudit(tx, deps, ctx, {
+          action: 'dms.file',
+          entityType: 'document',
+          entityId: row.id,
+          after: { number, templateKey, base: baseId },
+          summary: `Dokument ${number} festgeschrieben`,
+        });
+        return ok(toRecord(deps, after, tx));
+      });
+    } catch (error) {
+      if (!(error instanceof Error && /UNIQUE constraint failed: documents\.number/.test(error.message))) {
+        throw error;
+      }
+    }
+  }
+
+  return conflict('documentNumberContention', 'Dokumentnummer konnte nicht reserviert werden');
 }

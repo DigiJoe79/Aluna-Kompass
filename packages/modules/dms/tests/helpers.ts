@@ -25,7 +25,18 @@ export function auditActions(deps: Deps): string[] {
   return deps.db.select().from(schema.auditLog).all().map((e) => e.action);
 }
 
+import { createDraft, fileDocument } from '../src/drafts';
+
 /** Ein minimales, gültiges PDF für Eingangstests. */
 export function pdfBytes(): Uint8Array {
   return new TextEncoder().encode('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n');
+}
+
+/** Ein festgeschriebener Brief, wie ihn mehrere Tests als Ausgangslage brauchen. */
+export async function fileFixture(deps: Deps, ctx: CallContext) {
+  const draft = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Fixture', body: 'Text' });
+  if (!draft.ok) throw new Error('fixture: draft');
+  const filed = await fileDocument(deps, ctx, { id: draft.value.id });
+  if (!filed.ok) throw new Error('fixture: filing');
+  return filed.value;
 }
