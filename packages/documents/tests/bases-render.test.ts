@@ -55,7 +55,7 @@ describe('generic bases render', () => {
   });
 
   it('renders the audit-log-export body (typst, not markdown) into a4-plain', async () => {
-    const [, audit] = coreDocumentTemplates();
+    const [audit] = coreDocumentTemplates();
     const ctx: DocumentRenderContext = { number: 'PRO-2026-001', issuedAt: '2026-09-05T08:00:00.000Z', organization: { 'organization.name': 'Musterverein e.V.' }, theme: DEFAULT_THEME, logo: null };
     const built = audit!.build(
       { title: 'Änderungsprotokoll', filters: { Kanal: 'system' }, entries: [{ occurredAt: '2026-09-05T08:00:00.000Z', userName: 'Anna Berger', channel: 'ui', action: 'settings.update', entityType: 'setting', entityId: 'organization.name', summary: 'geändert #[nicht als Code]' }] },

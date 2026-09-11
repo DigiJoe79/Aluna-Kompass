@@ -37,12 +37,6 @@ const q = (s: string) => `"${s.replace(/[\\"]/g, (c) => `\\${c}`)}"`;
 /** Freitext ohne Markup-Wirkung (für den Einsatz zwischen `[ ]`). */
 const esc = (s: string) => s.replace(/[\\#$[\]*_`~@<>]/g, (ch) => `\\${ch}`);
 
-const letterheadSchema = z.object({
-  title: z.string().trim().min(1).max(120),
-  body: z.string().max(20_000).default(''),
-  base: z.string().optional(),
-});
-
 const auditEntrySchema = z.object({
   occurredAt: z.string(),
   userName: z.string().nullable(),
@@ -80,18 +74,6 @@ function auditTable(data: z.infer<typeof auditExportSchema>): string {
 }
 
 export function coreDocumentTemplates(): DocumentTemplate[] {
-  const letterhead: DocumentTemplate<z.infer<typeof letterheadSchema>> = {
-    key: 'letterhead',
-    type: 'letter',
-    schema: letterheadSchema,
-    base: 'a4-mit-briefkopf',
-    build: (data) => ({
-      base: data.base,
-      slots: { kind: 'letter', title: data.title, subject: data.title },
-      body: { markdown: data.body },
-    }),
-  };
-
   const auditExport: DocumentTemplate<z.infer<typeof auditExportSchema>> = {
     key: 'audit-log-export',
     type: 'audit-export',
@@ -105,5 +87,5 @@ export function coreDocumentTemplates(): DocumentTemplate[] {
     }),
   };
 
-  return [letterhead as DocumentTemplate, auditExport as DocumentTemplate];
+  return [auditExport as DocumentTemplate];
 }

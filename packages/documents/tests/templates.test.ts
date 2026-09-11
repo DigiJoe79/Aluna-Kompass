@@ -26,20 +26,13 @@ describe('core document templates', () => {
     });
   });
 
-  it('exposes letterhead (type letter) and audit-log-export (type audit-export) as build() on a default base', () => {
+  it('exposes audit-log-export (type audit-export) as build() on a default base', () => {
     const templates = coreDocumentTemplates();
-    const letter = templates[0]!;
-    const audit = templates[1]!;
-    expect([letter.key, letter.type, letter.base]).toEqual(['letterhead', 'letter', 'a4-mit-briefkopf']);
+    expect(templates).toHaveLength(1);
+    const audit = templates[0]!;
     expect([audit.key, audit.type, audit.permission, audit.base]).toEqual(['audit-log-export', 'audit-export', 'audit.view', 'a4-plain']);
-    // Der Brief ist ein Akteneintrag, der Protokollauszug wird nur gezogen — keine Nummer, keine Ablage.
-    expect(letter.filed ?? true).toBe(true);
+    // Der Protokollauszug wird nur gezogen — keine Nummer, keine Ablage.
     expect(audit.filed).toBe(false);
-
-    expect(letter.schema.safeParse({ title: '', body: 'x' }).success).toBe(false);
-    const r = letter.build({ title: 'Einladung', body: '# Hallo\n\nText.' }, ctx);
-    expect(r.slots).toMatchObject({ kind: 'letter', title: 'Einladung', subject: 'Einladung' });
-    expect(r.body).toEqual({ markdown: '# Hallo\n\nText.' });
 
     const a = audit.build({ title: 'Protokoll', filters: { Kanal: 'Alle' }, entries: [] }, { ...ctx, number: 'PRO-2026-001' });
     expect(a.slots).toMatchObject({ kind: 'report', title: 'Protokoll' });
