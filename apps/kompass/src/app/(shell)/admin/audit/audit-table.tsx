@@ -1,6 +1,7 @@
 import type { AuditEntry } from '@kompass/core';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { EmptyState } from '@/components/empty-state';
 import { StatusBadge } from '@/components/status-badge';
 import { cn } from '@/lib/utils';
 
@@ -16,6 +17,13 @@ export async function AuditTable({
   const t = await getTranslations('audit');
   const format = await getFormatter();
   const tone = { ui: 'info', mcp: 'accent', system: 'neutral' } as const;
+
+  // Spaltenköpfe über einer leeren Fläche sagen nicht, ob nichts passiert ist
+  // oder der Filter zu eng steht.
+  if (entries.length === 0) {
+    return <EmptyState title={t('empty.title')} text={t('empty.text')} />;
+  }
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-[14px]">

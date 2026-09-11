@@ -71,7 +71,8 @@
     "deleteFolder": "Ordner löschen",
     "folderDeleted": "Ordner gelöscht.",
     "created": "Ordner angelegt.",
-    "renamed": "Ordner umbenannt."
+    "renamed": "Ordner umbenannt.",
+    "emptyTitle": "Keine Dateien"
   },
   "content": {
     "preview": "Vorschau",
@@ -840,6 +841,10 @@
       "environment": "Umgebung",
       "summary": "Zusammenfassung",
       "immutable": "Einträge können nicht geändert werden."
+    },
+    "empty": {
+      "title": "Keine Einträge",
+      "text": "Zu diesem Filter gibt es nichts. Protokolliert wird jede schreibende Aktion — vielleicht ist der Zeitraum zu eng oder der Nutzer war nicht beteiligt."
     }
   },
   "profile": {
@@ -1217,7 +1222,9 @@
           "build": "Bauen",
           "transfer": "Übertragen",
           "record": "Protokollieren"
-        }
+        },
+        "cancel": "Abbrechen",
+        "published": "Publiziert"
       },
       "done": "Publiziert: {changed} geändert, {added} neu, {removed} entfallen.",
       "history": {
@@ -1229,8 +1236,10 @@
           "changes": "Änderungen",
           "by": "Auslöser"
         },
-        "log": "Protokoll"
-      }
+        "log": "Protokoll",
+        "empty": "Bislang keine Veröffentlichungen."
+      },
+      "previewExplainer": "Baut die vollständige Webseite als statische Vorschau und vergleicht den Stand mit der Live-Version."
     }
   },
   "contacts": {
@@ -1528,7 +1537,8 @@
         "reindex": "Alles neu lesen",
         "queued": "{count} Dokumente wurden zum Neu-Lesen vorgemerkt.",
         "open": "{count} warten noch",
-        "languageMissing": "{lang} ist in dieser Umgebung nicht installiert."
+        "languageMissing": "{lang} ist in dieser Umgebung nicht installiert.",
+        "addLanguage": "+ Sprache auswählen…"
       },
       "toast": {
         "typeCreated": "Dokumentart angelegt",

@@ -78,7 +78,7 @@ export function PublishCard({
             ) : (
               <div className="mt-6 flex justify-end gap-3">
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                  Abbrechen
+                  {t('cancel')}
                 </Button>
                 <Button
                   onClick={() =>
@@ -87,7 +87,7 @@ export function PublishCard({
                       if (s.status === 'error') {
                         toast.error(s.message);
                       } else if (s.status === 'success') {
-                        toast.success(s.message ?? 'Publiziert');
+                        toast.success(s.message ?? t('published'));
                         setDialogOpen(false);
                         onPublished?.();
                       }

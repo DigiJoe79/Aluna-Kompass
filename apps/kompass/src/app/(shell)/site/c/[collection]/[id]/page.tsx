@@ -22,7 +22,7 @@ export default async function EntryPage(props: { params: Promise<{ collection: s
   const back = { href: `/site/c/${collection}`, label: c('backToList') };
   const locales = deps.locales();
 
-  if (id === 'neu') {
+  if (id === 'new') {
     return (
       <>
         <PageHeader title={`${col.label} — ${t('new')}`} back={back} />

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
+import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import type { ActionState } from '@/lib/actions';
 import { usePreference } from '@/lib/preferences';
@@ -82,7 +83,7 @@ export function LibraryClient({ current, folders, items }: { current: string | n
         </div>
 
         {items.length === 0 ? (
-          <p className="text-ink-2">{t('empty')}</p>
+          <EmptyState title={t('emptyTitle')} text={t('empty')} />
         ) : view === 'grid' ? (
           <AssetGrid items={items} onOpen={(it) => setDetailId(it.id)} />
         ) : (

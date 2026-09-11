@@ -108,7 +108,7 @@ export function TextPanel({
                   className="h-[34px] rounded-md border border-line-strong bg-field px-2.5 font-mono text-[13px] text-ink shadow-xs"
                   aria-label={t('textPanel.languages')}
                 >
-                  <option value="">+ Sprache auswählen…</option>
+                  <option value="">{t('textPanel.addLanguage')}</option>
                   {availableLanguages
                     .filter((l) => !selectedLangs.includes(l))
                     .map((l) => (

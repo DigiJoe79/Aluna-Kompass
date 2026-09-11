@@ -7,13 +7,14 @@ import { Button } from '@/components/ui/button';
 
 export function PublishHistory({ items }: { items: PublishRecord[] }) {
   const t = useTranslations('site.publish.history');
+  const tCommon = useTranslations('common');
   const [selected, setSelected] = useState<PublishRecord | null>(null);
 
   return (
     <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-5">
       <h3 className="font-heading text-[18px]">{t('title')}</h3>
       {items.length === 0 ? (
-        <p className="text-[13px] text-muted-ink">Bislang keine Veröffentlichungen.</p>
+        <p className="text-[13px] text-muted-ink">{t('empty')}</p>
       ) : (
         <div className="overflow-x-auto">
           <table aria-label={t('title')} className="w-full text-left text-[13px]">
@@ -75,7 +76,7 @@ export function PublishHistory({ items }: { items: PublishRecord[] }) {
                 {t('log')} · {new Date(selected.startedAt).toLocaleString('de-DE')}
               </h4>
               <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>
-                Schließen
+                {tCommon('close')}
               </Button>
             </div>
             <pre className="flex-1 overflow-auto p-4 font-mono text-[12px] text-ink-2 bg-surface-2 whitespace-pre-wrap">

@@ -38,7 +38,7 @@ test('preview build, diff and publish to the local staging target', async ({ pag
   await page.getByRole('button', { name: 'Übernehmen' }).click();
   await expect(page.getByRole('status')).toContainText('eingelesen');
 
-  await page.goto('/site/c/news/neu');
+  await page.goto('/site/c/news/new');
   await page.getByLabel('Slug (URL-Teil)').fill('sommerfest');
   await page.locator('[name="title.de"]').fill('Sommerfest 2026');
   await page.getByRole('button', { name: 'Speichern' }).click();

@@ -40,7 +40,7 @@ export default async function CollectionPage(props: { params: Promise<{ collecti
     <>
       <PageHeader
         title={col.label}
-        actions={<Link href={`/site/c/${collection}/neu`} className={buttonVariants()}>{t('new')}</Link>}
+        actions={<Link href={`/site/c/${collection}/new`} className={buttonVariants()}>{t('new')}</Link>}
       />
       {rows.length === 0 ? (
         <EmptyState title={col.label} text={t('count', { n: 0 })} />

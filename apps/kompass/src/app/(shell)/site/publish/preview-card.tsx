@@ -68,7 +68,7 @@ export function PreviewCard({ onResult }: { onResult?: (data: PreviewData) => vo
         </>
       ) : (
         <p className="text-[13px] text-muted-ink">
-          Baut die vollständige Webseite als statische Vorschau und vergleicht den Stand mit der Live-Version.
+          {t('previewExplainer')}
         </p>
       )}
     </section>
