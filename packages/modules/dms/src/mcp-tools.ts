@@ -25,6 +25,7 @@ import {
   moveDocument,
   voidDocument,
 } from './service';
+import { reindexAllDocuments } from './text';
 
 const t = (
   name: string,
@@ -49,4 +50,16 @@ export const DMS_MCP_TOOLS: McpToolDefinition[] = [
   t('dms_void', 'Void a filed document with a reason. The number stays taken. Requires dms.void.', voidSchema, (deps, ctx, args) => voidDocument(deps, ctx, args)),
   t('dms_delete_draft', 'Throw away a draft. Requires dms.deleteDraft.', z.object({ id: z.string() }), (deps, ctx, args) => deleteDraft(deps, ctx, args)),
   t('dms_manage_types', 'Create or change a document type. Requires dms.manage.', documentTypeCreateSchema, (deps, ctx, args) => createDocumentType(deps, ctx, args)),
+  t(
+    'dms_search',
+    'Sucht Dokumente der Akte über Betreff, Nummer und den erkannten Volltext (Recht dms.view). Liefert je Treffer die Fundstelle mit Seitenzahl. Suchbegriffe unter drei Zeichen finden im Volltext nichts.',
+    documentListSchema,
+    async (deps, ctx, input) => listDocuments(deps, ctx, input),
+  ),
+  t(
+    'dms_reindex',
+    'Stellt alle abgelegten Dokumente zum erneuten Lesen in die Warteschlange (Recht dms.manage). Der Volltext wird im Hintergrund neu erkannt.',
+    z.object({}),
+    async (deps, ctx) => reindexAllDocuments(deps, ctx),
+  ),
 ];

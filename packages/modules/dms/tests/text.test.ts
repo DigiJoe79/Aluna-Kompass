@@ -8,7 +8,7 @@ import { countDocumentText } from '../src/index-store';
 import { dmsModule } from '../src/manifest';
 import { documents } from '../src/schema';
 import { deleteDocument } from '../src/service';
-import { extractDocumentText } from '../src/text';
+import { extractDocumentText, reindexAllDocuments } from '../src/text';
 import { seedTypes } from './helpers';
 
 const pdf = () => new Uint8Array(Buffer.from('%PDF-1.4\n%fake\n', 'latin1'));
@@ -163,5 +163,29 @@ describe('extractDocumentText', () => {
     expect(deleted.ok).toBe(true);
 
     expect(countDocumentText(deps, documentId)).toBe(0);
+  });
+
+  it('stellt alle Dokumente mit Datei wieder in die Schlange', async () => {
+    const { deps, documentId } = await withDocument();
+    await extractDocumentText(deps, ctxWith(['dms.manage']), { documentId });
+
+    const result = await reindexAllDocuments(deps, ctxWith(['dms.manage']));
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.queued).toBe(1);
+    const row = deps.db.select().from(documents).where(eq(documents.id, documentId)).get();
+    expect(row?.textStatus).toBe('pending');
+    expect(row?.textAttempts).toBe(0);
+  });
+
+  it('verweigert das Neu-Lesen ohne dms.manage', async () => {
+    const { deps } = await withDocument();
+
+    const result = await reindexAllDocuments(deps, ctxWith(['dms.view']));
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe('forbidden');
   });
 });

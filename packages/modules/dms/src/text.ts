@@ -12,7 +12,7 @@ import {
   type Deps,
   type Result,
 } from '@kompass/core';
-import { eq } from 'drizzle-orm';
+import { eq, isNotNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { documents } from './schema';
 import { readDocumentFile } from './storage';
@@ -122,4 +122,39 @@ export async function extractDocumentText(
 export function ocrLanguages(deps: Deps): string[] {
   const raw = readSetting(deps, 'dms.ocrLanguages') ?? 'deu+eng';
   return String(raw).split('+').map((l) => l.trim()).filter(Boolean);
+}
+
+/**
+ * Alles noch einmal lesen. Setzt nur den Zustand zurück — gelesen wird vom
+ * Worker, eins nach dem anderen. Ein Knopf, der zehn Minuten blockiert, wäre
+ * kein Knopf, sondern eine Falle.
+ *
+ * Der Index bleibt bis zum jeweiligen Lauf stehen: Die Suche wird während des
+ * Neu-Lesens nicht schlechter, nur langsam aktueller.
+ */
+export async function reindexAllDocuments(deps: Deps, ctx: CallContext): Promise<Result<{ queued: number }>> {
+  const denied = requirePermission(ctx, 'dms.manage');
+  if (denied) return denied;
+
+  const rows = deps.db.select({ id: documents.id }).from(documents).where(isNotNull(documents.fileName)).all();
+
+  return deps.db.transaction((tx: DbOrTx) => {
+    for (const row of rows) {
+      tx.update(documents)
+        .set({ textStatus: 'pending', textAttempts: 0, textError: null })
+        .where(eq(documents.id, row.id))
+        .run();
+    }
+
+    recordAudit(tx, deps, ctx, {
+      action: 'document.reindexRequested',
+      entityType: 'document',
+      entityId: 'all',
+      before: null,
+      after: { queued: rows.length },
+      summary: `${rows.length} Dokumente zum Neu-Lesen vorgemerkt`,
+    });
+
+    return ok({ queued: rows.length });
+  });
 }
