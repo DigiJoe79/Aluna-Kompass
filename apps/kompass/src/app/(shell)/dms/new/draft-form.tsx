@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { FieldError } from '@/components/forms/field-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +37,16 @@ export function DraftForm({
     idleState,
   );
 
+  // Kontrolliert, nicht über `defaultValue`: React setzt ein `<form action>`
+  // nach dem Lauf der Aktion zurück. Bei einem Fehler stand der Mensch sonst
+  // vor leeren Feldern und durfte seinen Text neu tippen.
+  const [subject, setSubject] = useState(draft?.subject ?? '');
+  const [body, setBody] = useState(draft?.body ?? '');
+  const [documentDate, setDocumentDate] = useState(draft?.documentDate ?? today);
+  const [typeKey, setTypeKey] = useState(draft?.typeKey ?? defaultTypeKey);
+  const [folder, setFolder] = useState(draft?.folder ?? '');
+  const [recipientId, setRecipientId] = useState(draft?.recipientId ?? '');
+
   const errors = state.status === 'error' ? state.fieldErrors : {};
 
   return (
@@ -47,7 +57,7 @@ export function DraftForm({
 
       <div className="space-y-1.5">
         <Label htmlFor="subject">{t('fields.subject')}</Label>
-        <Input id="subject" name="subject" required defaultValue={draft?.subject ?? ''} />
+        <Input id="subject" name="subject" required value={subject} onChange={(e) => setSubject(e.target.value)} />
         <FieldError id="subject-error" message={errors.subject} />
       </div>
 
@@ -57,7 +67,8 @@ export function DraftForm({
           id="body"
           name="body"
           rows={10}
-          defaultValue={draft?.body ?? ''}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
           className="w-full rounded-md border border-line-strong bg-field p-2.5 font-mono text-[13px] text-ink shadow-xs focus:border-ring focus:outline-hidden"
         />
         <FieldError id="body-error" message={errors.body} />
@@ -71,7 +82,8 @@ export function DraftForm({
             name="documentDate"
             type="date"
             required
-            defaultValue={draft?.documentDate ?? today}
+            value={documentDate}
+            onChange={(e) => setDocumentDate(e.target.value)}
           />
           <FieldError id="documentDate-error" message={errors.documentDate} />
         </div>
@@ -81,7 +93,8 @@ export function DraftForm({
           <select
             id="typeKey"
             name="typeKey"
-            defaultValue={draft?.typeKey ?? defaultTypeKey}
+            value={typeKey}
+            onChange={(e) => setTypeKey(e.target.value)}
             disabled={Boolean(draft)}
             className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs disabled:opacity-60"
           >
@@ -99,10 +112,13 @@ export function DraftForm({
           <select
             id="folder"
             name="folder"
-            defaultValue={draft?.folder ?? ''}
+            value={folder}
+            onChange={(e) => setFolder(e.target.value)}
             className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
           >
-            <option value="">{t('inbox')}</option>
+            {/* Nicht „Eingangskorb“: Der liegt im Eingang. Hier heißt kein
+                Ordner schlicht, dass noch nicht einsortiert wurde. */}
+            <option value="">{t('noFolder')}</option>
             {folders.map((f) => (
               <option key={f} value={f}>
                 {f}
@@ -116,7 +132,8 @@ export function DraftForm({
           <select
             id="recipientId"
             name="recipientId"
-            defaultValue={draft?.recipientId ?? ''}
+            value={recipientId}
+          onChange={(e) => setRecipientId(e.target.value)}
             className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
           >
             <option value="">{t('fields.noRecipient')}</option>

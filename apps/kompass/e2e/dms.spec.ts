@@ -54,6 +54,19 @@ test.describe('dms', () => {
     await expect(page.getByText(/BEH-\d{4}-\d{3}/)).toBeVisible();
   });
 
+  test('behält die Eingaben, wenn das Speichern scheitert', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/new');
+    // Zu langer Betreff: Der Server lehnt ab, der Browser lässt es durch.
+    await page.getByLabel('Betreff').fill('x'.repeat(301));
+    await page.getByLabel('Text').fill('Mühsam getippter Text, der nicht verloren gehen darf.');
+    await page.getByRole('button', { name: 'Entwurf speichern' }).click();
+
+    await expect(page.locator('#subject-error')).toBeVisible();
+    await expect(page.getByLabel('Text')).toHaveValue('Mühsam getippter Text, der nicht verloren gehen darf.');
+    await expect(page.getByLabel('Betreff')).toHaveValue('x'.repeat(301));
+  });
+
   test('bessert einen Tippfehler im Entwurf aus, statt ihn wegzuwerfen', async ({ page }) => {
     await login(page);
     await page.goto('/dms/new');
