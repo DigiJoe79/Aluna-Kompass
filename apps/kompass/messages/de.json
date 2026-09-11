@@ -188,6 +188,7 @@
       "animals": "Tiere",
       "contacts": "Kontakte",
       "site": "Webseite",
+      "dms": "Akte",
       "core": "Verein"
     },
     "users": "Nutzer",
@@ -206,6 +207,9 @@
     },
     "contacts": {
       "list": "Kontakte"
+    },
+    "dms": {
+      "list": "Akte"
     },
     "site": {
       "template": "Template",
@@ -1305,6 +1309,45 @@
       "delete": "Kontakt löschen",
       "deleteBlocked": "Solange etwas diesen Kontakt hält, kann er nicht gelöscht werden.",
       "unknown": "Für diesen Kontakt ist keine Frist nachgewiesen. Vergeben Sie eine Rolle oder archivieren Sie ihn."
+    }
+  },
+  "dms": {
+    "title": "Akte",
+    "description": "Schriftverkehr und Dokumente des Vereins",
+    "inbox": "Eingangskorb",
+    "allDocuments": "Alle Dokumente",
+    "newDraft": "Neuer Entwurf",
+    "receivePost": "Post ablegen",
+    "search": "Betreff oder Nummer suchen",
+    "allDirections": "Alle Richtungen",
+    "allTypes": "Alle Arten",
+    "allFolders": "Alle Ordner",
+    "allPhases": "Alle Zustände",
+    "columns": {
+      "number": "Nummer",
+      "subject": "Betreff",
+      "type": "Art",
+      "date": "Datum",
+      "folder": "Ordner",
+      "direction": "Richtung",
+      "status": "Zustand"
+    },
+    "directions": {
+      "incoming": "Eingang",
+      "outgoing": "Ausgang"
+    },
+    "phases": {
+      "draft": "Entwurf",
+      "issued": "Festgeschrieben"
+    },
+    "statuses": {
+      "draft": "Entwurf",
+      "issued": "Festgeschrieben",
+      "voided": "Storniert"
+    },
+    "empty": {
+      "title": "Keine Dokumente gefunden",
+      "text": "In dieser Ansicht liegen keine Dokumente vor."
     }
   }
 }

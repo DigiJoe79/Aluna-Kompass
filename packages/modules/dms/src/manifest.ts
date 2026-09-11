@@ -11,9 +11,7 @@ export const dmsModule: ModuleManifest = defineModule({
   dependsOn: ['contacts'],
   permissions: ['dms.view', 'dms.create', 'dms.file', 'dms.void', 'dms.deleteDraft', 'dms.manage'],
   documentTemplates: [letterTemplate],
-  // Noch kein Navigationseintrag: `/dms` entsteht erst mit dem Oberflächenplan.
-  // Ein Menüpunkt auf eine fehlende Route wäre ein toter Link.
-  // `icon` muss dann in der Whitelist in `apps/kompass/src/components/shell/sidebar.tsx` stehen.
+  navigation: [{ key: 'dms.list', href: '/dms', icon: 'file', group: 'dms', permission: 'dms.view' }],
   mediaReferences: dmsMediaReferences,
   retentionHolds: dmsRetentionHolds,
   retentionDue: dmsRetentionDue,
