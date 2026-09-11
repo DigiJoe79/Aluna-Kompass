@@ -4,8 +4,9 @@ import { createTestDeps, ctxWith, fakeDocumentEngine, insertUser } from '@kompas
 import { contactsModule } from '@kompass/module-contacts';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { createDraft, fileDocument } from '../src/drafts';
+import { createDraft, deleteDraft, fileDocument, updateDraft } from '../src/drafts';
 import { dmsModule } from '../src/manifest';
+import { voidDocument } from '../src/service';
 import { ALL_DMS, auditActions, fileFixture, seedTypes, setupWithTypes } from './helpers';
 
 const mediaAssets = schema.mediaAssets;
@@ -80,5 +81,31 @@ describe('fileDocument', () => {
     const { deps, ctx } = setupWithTypes();
     await fileFixture(deps, ctx);
     expect(auditActions(deps)).toContain('dms.file');
+  });
+
+  it('lässt ein festgeschriebenes Dokument nicht mehr ändern', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const filed = await fileFixture(deps, ctx);
+    const changed = await updateDraft(deps, ctx, { id: filed.id, subject: 'Anders', body: 'anders' });
+    expect(changed.ok).toBe(false);
+    if (changed.ok) return;
+    expect(changed.error.type).toBe('conflict');
+  });
+
+  it('lässt ein festgeschriebenes Dokument nicht als Entwurf löschen', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const filed = await fileFixture(deps, ctx);
+    const deleted = await deleteDraft(deps, ctx, { id: filed.id });
+    expect(deleted.ok).toBe(false);
+  });
+
+  it('storniert statt zu ändern', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const filed = await fileFixture(deps, ctx);
+    const voided = await voidDocument(deps, ctx, { id: filed.id, reason: 'Falscher Empfänger' });
+    expect(voided.ok).toBe(true);
+    if (!voided.ok) return;
+    expect(voided.value.status).toBe('voided');
+    expect(voided.value.number).toBe(filed.number); // die Nummer bleibt vergeben
   });
 });
