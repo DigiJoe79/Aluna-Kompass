@@ -37,7 +37,7 @@ const t = (
 const voidSchema = z.object({ id: z.string().min(1), reason: z.string().trim().min(1).max(300) });
 
 export const DMS_MCP_TOOLS: McpToolDefinition[] = [
-  t('dms_list', 'List documents in the file, filtered by direction, type, folder, phase or linked entity. Requires dms.view.', documentListSchema, (deps, ctx, args) => listDocuments(deps, ctx, args)),
+  t('dms_list', 'List and search documents in the file. Filters by direction, type, folder, phase or linked entity; the text filter searches subject, number and the recognised full text, and returns the passage with its page number for every full-text hit. Terms shorter than three characters do not reach the full text. Requires dms.view.', documentListSchema, (deps, ctx, args) => listDocuments(deps, ctx, args)),
   t('dms_get', 'Read one document with its metadata and links. Requires dms.view.', z.object({ id: z.string() }), (deps, ctx, args) => getDocument(deps, ctx, (args as { id: string }).id)),
   t('dms_types', 'List the document types with their number prefix and retention class. Requires dms.view.', documentTypeListSchema, (deps, ctx, args) => listDocumentTypes(deps, ctx, args)),
   t('dms_suggest_classification', 'Suggest type, folder and document date for a file about to be filed. Reads only, files nothing. Requires dms.view.', suggestSchema, (deps, ctx, args) => suggestClassification(deps, ctx, args)),
@@ -50,15 +50,13 @@ export const DMS_MCP_TOOLS: McpToolDefinition[] = [
   t('dms_void', 'Void a filed document with a reason. The number stays taken. Requires dms.void.', voidSchema, (deps, ctx, args) => voidDocument(deps, ctx, args)),
   t('dms_delete_draft', 'Throw away a draft. Requires dms.deleteDraft.', z.object({ id: z.string() }), (deps, ctx, args) => deleteDraft(deps, ctx, args)),
   t('dms_manage_types', 'Create or change a document type. Requires dms.manage.', documentTypeCreateSchema, (deps, ctx, args) => createDocumentType(deps, ctx, args)),
-  t(
-    'dms_search',
-    'Sucht Dokumente der Akte über Betreff, Nummer und den erkannten Volltext (Recht dms.view). Liefert je Treffer die Fundstelle mit Seitenzahl. Suchbegriffe unter drei Zeichen finden im Volltext nichts.',
-    documentListSchema,
-    async (deps, ctx, input) => listDocuments(deps, ctx, input),
-  ),
+  // Kein eigenes `dms_search`: Es nähme dasselbe Schema und riefe denselben
+  // Service wie `dms_list`. Zwei Namen für eine Sache kosten einen Agenten eine
+  // Entscheidung und geben ihm nichts dafür — die Suche steht in der
+  // Beschreibung von `dms_list`.
   t(
     'dms_reindex',
-    'Stellt alle abgelegten Dokumente zum erneuten Lesen in die Warteschlange (Recht dms.manage). Der Volltext wird im Hintergrund neu erkannt.',
+    'Queue every filed document to be read again (requires dms.manage). The full text is recognised in the background, one document at a time.',
     z.object({}),
     async (deps, ctx) => reindexAllDocuments(deps, ctx),
   ),

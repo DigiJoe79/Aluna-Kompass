@@ -1325,7 +1325,6 @@
     "allDocuments": "Alle Dokumente",
     "newDraft": "Neuer Entwurf",
     "receivePost": "Post ablegen",
-    "search": "Betreff oder Nummer suchen",
     "searchPlaceholder": "Betreff, Nummer oder Inhalt",
     "searchTooShort": "Für die Suche im Inhalt braucht es mindestens drei Zeichen. Gesucht wurde nur in Betreff und Nummer.",
     "hitOnPage": "Seite {page}",

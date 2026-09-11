@@ -74,6 +74,17 @@ describe('registered mcp tools', () => {
   });
 
   /**
+   * Eine Werkzeugbeschreibung geht an einen Agenten, nicht an ein
+   * Vereinsmitglied: Sie läuft nicht über `messages/de.json` und ist damit
+   * Code — also Englisch (AGENTS.md, Prinzip 7).
+   */
+  it('describes every tool in English, like the rest of the code', () => {
+    const german = /[äöüßÄÖÜ]|\b(der|die|das|und|oder|nicht|über|eine|einen|Sie|wird|werden)\b/;
+    const offenders = registeredTools.filter((tool) => german.test(tool.description)).map((tool) => tool.name);
+    expect(offenders).toEqual([]);
+  });
+
+  /**
    * `contacts_delete` fehlt bewusst. Das unwiederbringliche Löschen
    * personenbezogener Daten soll einen Menschen vor einem Bildschirm haben, der
    * zeigt, was gleich verschwindet. Ein Agent, der eine Fälligkeitsliste falsch
