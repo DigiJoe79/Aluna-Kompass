@@ -210,7 +210,9 @@ export function DocumentDetail({ document: doc, retentionInfo, permissions }: Do
               </div>
               <div>
                 <dt className="text-muted-ink">{t('columns.folder')}</dt>
-                <dd className="font-medium text-ink">{doc.folder ?? t('inbox')}</dd>
+                <dd className="font-medium text-ink">
+                  {doc.folder ?? (doc.direction === 'incoming' ? t('inbox') : t('noFolder'))}
+                </dd>
               </div>
               <div>
                 <dt className="text-muted-ink">{t('columns.direction')}</dt>

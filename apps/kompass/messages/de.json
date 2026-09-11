@@ -909,7 +909,8 @@
     "create": {
       "templates": {
         "letterhead": "Briefbogen",
-        "audit-log-export": "Änderungsprotokoll-Export"
+        "audit-log-export": "Änderungsprotokoll-Export",
+        "letter": "Brief"
       }
     }
   },
@@ -1320,6 +1321,7 @@
     "title": "Akte",
     "description": "Schriftverkehr und Dokumente des Vereins",
     "inbox": "Eingangskorb",
+    "noFolder": "Kein Ordner",
     "allDocuments": "Alle Dokumente",
     "newDraft": "Neuer Entwurf",
     "receivePost": "Post ablegen",
