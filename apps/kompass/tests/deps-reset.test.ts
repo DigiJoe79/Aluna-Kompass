@@ -107,3 +107,29 @@ describe('resetDeps', () => {
     expect(() => before.sqlite.prepare('SELECT 1').get()).toThrow();
   });
 });
+
+describe('während ein Reset läuft', () => {
+  it('bekommt eine Anfrage Deps statt einer Ausnahme', async () => {
+    const { getDeps, resetDeps } = await import('@/lib/deps');
+
+    getDeps();
+    let thrown: unknown = null;
+    const spin = (async () => {
+      for (let i = 0; i < 50; i += 1) {
+        try {
+          getDeps();
+        } catch (error) {
+          thrown ??= error;
+        }
+        await new Promise((resolve) => setImmediate(resolve));
+      }
+    })();
+
+    await resetDeps('empty');
+    await spin;
+
+    // Eine Anfrage, die mitten in den Reset läuft, darf nicht mit einem Fehler
+    // im Browser enden — das tat sie, und die CI hat es gezeigt.
+    expect(thrown).toBeNull();
+  });
+});
