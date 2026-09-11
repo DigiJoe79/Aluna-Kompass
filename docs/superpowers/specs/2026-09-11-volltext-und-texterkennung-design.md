@@ -61,21 +61,22 @@ bleibt.
 | 27 | **Trigramm-Tokenizer** mit Diakritika-Faltung, weil deutsche Komposita sonst unauffindbar bleiben. Preis: Suchbegriffe unter drei Zeichen finden nichts. | `unicode61` (findet „Tierarztrechnung“ nicht bei Eingabe „rechnung“); beide Tabellen nebeneinander |
 | 28 | **Die vorhandene Liste wird die Suche.** Das Filterfeld liest den Volltext mit; Treffer aus dem Volltext zeigen Passage und Seite. | Eigener Suchbildschirm |
 | 29 | **Die Erkennung ist ein `deps`-Port** mit Attrappe in den Service-Tests. | Binaries direkt im Fachcode aufrufen — Tests, die auf dem Entwicklungsrechner nicht laufen |
-| 30 | **Der Zustand ist sichtbar** (`pending`, `done`, `failed`, `unavailable`), samt Grund und Knopf „Neu lesen“. | Stiller Ausfall; Dokumente, die für immer auf `pending` stehen |
+| 30 | **Der Zustand ist sichtbar** (`pending`, `running`, `done`, `failed`, `unavailable`), samt Grund und Knopf „Neu lesen“. | Stiller Ausfall; Dokumente, die für immer auf `pending` stehen; ein Zustand weniger, der „wartet“ zeigt, während gelesen wird |
+| 31 | **Die Liste bleibt chronologisch.** Der Volltext erweitert die Treffermenge, nicht die Reihenfolge. | Relevanzsortierung: `LIKE`- und `MATCH`-Treffer müssten vereinigt, gemeinsam gezählt und nach einem Rang sortiert werden, den nur eine Hälfte besitzt |
 
 **Nicht-Ziele.** Durchsuchbare PDFs für die Welt außerhalb von Kompass
 (Entscheidung 21); Bildeingang — die Akte nimmt weiter nur PDF, die
 Scanfunktion von iOS und macOS liefert genau das; Handschrifterkennung;
 Einsortierregeln auf dem Volltext (siehe § 12); Suche über Kontakte, Tiere,
-Projekte oder die Mediathek; Rangfolge mit Feinschliff; Synonyme, Stammformen,
-Rechtschreibtoleranz.
+Projekte oder die Mediathek; Relevanzsortierung (Entscheidung 31); Synonyme,
+Stammformen, Rechtschreibtoleranz.
 
 ## 4. Der Weg des Textes
 
 ```
 Ablegen (receiveDocument | fileDocument)
   └─ Datei im Modulspeicher, textStatus = 'pending', Worker antippen
-       └─ Worker nimmt das älteste 'pending', eins nach dem anderen
+       └─ Worker nimmt das älteste 'pending' und setzt 'running'
             ├─ pdftotext je Seite  ──────────────┐
             │    Seite über Schwellenwert?  ja ──┤ Text der Seite
             │                              nein ─┤
@@ -97,7 +98,7 @@ Verarbeitung zählt `textAttempts` hoch; beim dritten Versuch bleibt es bei
 
 | Spalte | Typ | Bedeutung |
 |---|---|---|
-| `textStatus` | `pending` \| `done` \| `failed` \| `unavailable` | zugleich die Warteschlange (Entscheidung 24) |
+| `textStatus` | `pending` \| `running` \| `done` \| `failed` \| `unavailable` | zugleich die Warteschlange (Entscheidung 24) |
 | `textAttempts` | Integer, Vorgabe 0 | Versuche; ab 3 keine Wiederholung |
 | `textError` | Text, nullable | Grund im Klartext, für die Detailseite |
 | `textExtractedAt` | ISO-8601 UTC, nullable | wann gelesen wurde |
@@ -105,6 +106,11 @@ Verarbeitung zählt `textAttempts` hoch; beim dritten Versuch bleibt es bei
 Entwürfe haben keine Datei und bekommen `textStatus` nicht gesetzt — für sie
 bleibt es beim Filter über den Betreff. Ein Entwurf ist kein Dokument im Sinne
 der Rechenschaft; er hat auch keinen Volltext.
+
+`running` ist kein Schmuck: Ein 200-Seiten-Scan liegt Minuten unter dem
+Werkzeug, und „wartet“ wäre dann schlicht falsch. Den Zustand aufzuräumen kostet
+eine Regel, die in § 7 steht — wer ihn nach einem Neustart vorfindet, hat einen
+Absturz vor sich, keinen laufenden Lauf.
 
 Erzeugt über `pnpm --filter @kompass/core db:generate`.
 
@@ -153,6 +159,16 @@ export interface TextExtraction {
 }
 ```
 
+**Warum der Port in den Kern gehört, obwohl ihn ein Modul braucht.** Die
+Dokument-Spec zieht den Schnitt so: Fachlichkeit ins Modul, Infrastruktur in den
+Kern. Was außerhalb des Prozesses liegt — Dateispeicher (`deps.files`),
+Typst (`deps.documents`), die Datenbank — besitzt der Kern und reicht es als
+Vertrag durch; sonst müsste jedes Modul seine eigenen Binaries finden, prüfen
+und in Tests ersetzen. `deps.textExtraction` ist von derselben Art: kein
+Vereinsvorgang, sondern ein Werkzeug im Container. **Der Kern ruft ihn selbst
+nie** — wie er auch `deps.files('dms')` nie benutzt. Wenn später die Mediathek
+Text aus einem hochgeladenen PDF braucht, liegt der Vertrag schon da.
+
 Die Umsetzung liegt in einem eigenen Paket und ruft `pdftotext`, `pdftoppm` und
 `tesseract` über `execFile`; der Kern kennt nur die Schnittstelle, wie bei
 `deps.documents`. In `createTestDeps()` steht eine Attrappe davor, die feste
@@ -164,18 +180,32 @@ gilt als Bild. Der Wert steht als begründete Konstante im Code, nicht als
 Einstellung: Er beschreibt eine Eigenschaft von PDFs, kein Vereinsspezifikum,
 und ein Drehknopf dafür lädt nur zum Verstellen ein.
 
-**Grenzen.** Zeitlimit je Seite und Gesamtlimit je Dokument; wird eines
-gerissen, endet der Lauf als `failed` mit der Seitenzahl im Grund. Ein
+**Grenzen, mit Zahlen.** 30 Sekunden je Seite, 10 Minuten je Dokument. Wird
+eines gerissen, endet der Lauf als `failed` mit der Seitenzahl im Grund. Beides
+sind Konstanten wie der Schwellenwert: Sie beschreiben, wie lange ein Werkzeug
+auf dieser Maschinenklasse brauchen darf, nicht wie ein Verein arbeitet. Ein
 zerschossenes PDF darf den Worker nicht festfahren.
 
 ## 7. Der Worker
 
 Ein Dienst im selben Prozess, gestartet aus `instrumentation.ts` beim
-Serverstart. Er arbeitet **ein** Dokument zur Zeit — die NAS-CPU rendert
+Serverstart. **Diesen Haken gibt es in dieser Anwendung noch nicht**, und was
+er zusichert, ist hier nicht erprobt: dass er genau einmal läuft, dass ein
+Intervall im Standalone-Server überlebt, dass `next dev` ihn nicht doppelt
+startet. Deshalb steht er als **erste Aufgabe** in Block 2 des Plans — mit
+`process.env.NEXT_RUNTIME === 'nodejs'` als Wächter und einem Beweis in Form
+eines Tests, bevor irgendetwas darauf aufbaut. Trägt der Haken nicht, ist es
+eine Aufgabe, die kippt, und nicht der Bildschirm aus Block 4. Er arbeitet **ein** Dokument zur Zeit — die NAS-CPU rendert
 nebenher Typst, und zwei parallele Tesseract-Läufe nehmen sich gegenseitig die
 Luft. Angestoßen wird zweifach: ein Intervall, das nach einem Neustart
 Liegengebliebenes aufsammelt, und ein Antippen direkt nach dem Ablegen, damit
 ein frisch hochgeladener Scan nicht bis zum nächsten Takt wartet.
+
+**Aufräumen beim Start.** Was auf `running` steht, wenn der Prozess hochkommt,
+kann kein laufender Lauf sein — es war ein Absturz oder ein Neustart mitten in
+der Arbeit. Der Dienst setzt solche Zeilen auf `pending` zurück, bevor er die
+erste nimmt. Das ist gefahrlos, weil ein Lauf die Zeilen seines Dokuments
+ohnehin löscht und neu schreibt (§ 5.3).
 
 Der Lauf selbst ist ein gewöhnlicher Service in der Hausform — `extractText(deps, ctx, { documentId })`
 mit `systemContext()` im Kanal `system`. Damit ist er einzeln testbar, über MCP
@@ -184,12 +214,28 @@ nicht je Seite.
 
 ## 8. Suche
 
-`searchDocuments(deps, ctx, query)` erweitert den vorhandenen Filter. Betreff
-und Nummer laufen weiter über `LIKE`, der Volltext über `MATCH` mit `snippet()`
-und `bm25()` — beides bildet Drizzle nicht ab, gelesen wird deshalb über
-`deps.sqlite`, gekapselt im Service. Je Dokument zählt die **beste** Seite; hat
-der Volltext getroffen, sortiert die Liste nach Relevanz, sonst wie bisher nach
-Datum.
+`listDocuments` bekommt eine Bedingung dazu, keinen zweiten Bauplan. Betreff und
+Nummer laufen weiter über `LIKE`; der Volltext kommt als
+`documents.id IN (SELECT document_id FROM document_text WHERE document_text MATCH ?)`
+in dieselbe `OR`-Gruppe. Damit bleiben `limit`, `offset` und `total` unangetastet,
+und die Liste bleibt chronologisch sortiert (Entscheidung 31).
+
+**Warum keine Relevanzsortierung.** Sie klingt billiger, als sie ist: `LIKE`- und
+`MATCH`-Treffer wären zu einer Menge zu vereinigen, gemeinsam zu zählen und nach
+einem Rang zu ordnen, den nur die eine Hälfte besitzt — und das bei
+seitenweisem Abruf. In einer Akte trägt die Datumsordnung ohnehin eine Aussage;
+wer im Herbst gesucht hat, findet den Herbst. Zeigt sich das im Gebrauch als
+Mangel, ist Relevanz ein eigener kleiner Vorgang und kein Fundament, das hier
+fehlt.
+
+**Die Passagen werden nachgeladen**, nur für die sichtbare Seite: ein zweiter,
+kleiner Zugriff über `deps.sqlite` mit `snippet()` — `MATCH` und `snippet()`
+bildet Drizzle nicht ab —, der je Dokument die beste Seite nimmt. Gekapselt im
+Service; die Oberfläche bekommt Passage und Seitenzahl fertig.
+
+**Fenstergröße.** `snippet()` zählt Token, und Token sind hier Trigramme: Mit
+einem kleinen Fenster liefert es „…t[rechnung] …“ statt eines Satzes. Der Wert
+steht auf 64 — gemessen ergibt das eine Zeile Kontext um den Treffer.
 
 **Warum Trigramme.** Gemessen gegen SQLite 3.53.4 aus `better-sqlite3@13`, am
 Beispielsatz „Tierarztrechnung vom 14. Oktober 2026 für die Kätzin Bärbel“:
@@ -211,9 +257,11 @@ Preis gehört in die Oberfläche: **Suchbegriffe unter drei Zeichen finden im
 Volltext nichts.** Dann greift weiterhin der Filter über Betreff und Nummer,
 und das Feld sagt es, statt leer zu bleiben.
 
-**Der Ausschnitt ist ungefähr, nicht exakt.** Bei Trigrammen zählt `bm25()`
-Trigramm-Treffer; die Rangfolge heißt „mehr Übereinstimmung weiter oben“ und
-ist kein feinjustiertes Relevanzmaß. Für eine Akte dieser Größe reicht das.
+**Welche Seite gezeigt wird.** Bei mehreren Treffern im selben Dokument
+entscheidet `bm25()`, welche Passage in der Zeile steht. Bei Trigrammen zählt
+das Trigramm-Übereinstimmungen — „die Seite, auf der am meisten passt“, kein
+feinjustiertes Relevanzmaß. Für die Auswahl einer Passage reicht das; für die
+Reihenfolge der Liste wird es gar nicht erst herangezogen (Entscheidung 31).
 
 ## 9. Rechte, Einstellungen, MCP
 
@@ -229,6 +277,10 @@ welche Pakete vorliegen, ist eine Betriebstatsache, und die unterscheidet sich
 je Umgebung: Der Container meldet `deu`, `eng`, `osd`, ein Entwicklungsrechner
 mit `tesseract-lang` meldet 162 Sprachen. Die Einstellung prüft ihre Werte
 deshalb gegen `probe()`, nicht gegen eine Liste im Code.
+
+**Eine Änderung wirkt nach vorn, nicht rückwirkend.** Wer eine Sprache
+hinzunimmt, löst damit kein Neu-Lesen von tausend Dokumenten aus — das ist eine
+Entscheidung mit Laufzeit, und die trifft ein Mensch über „Alles neu lesen“.
 
 **Ein MCP-Werkzeug.** `dms_search` über denselben Service, mit Dokument, Seite
 und Passage im Ergebnis, unter `dms.view` (Prinzip 8).
@@ -246,11 +298,14 @@ Kein `dangerouslySetInnerHTML`: Dieser Text stammt aus einem PDF, das jemand von
 außen geschickt hat, und ist fremde Eingabe wie jede andere. Der Helfer bekommt
 einen eigenen Test.
 
-**Der Zustand steht auf der Detailseite**: „Volltext gelesen am 11.09.2026“,
-„wird gelesen“, „fehlgeschlagen: Seite 4 überschritt das Zeitlimit“,
-„Texterkennung nicht verfügbar“ — dazu der Knopf „Neu lesen“. In der Liste
-reicht ein unauffälliges Zeichen an Dokumenten, die noch warten. In der
-Verwaltung steht „Alles neu lesen“ mit Zähler.
+**Der Zustand steht auf der Detailseite**, und er sagt die Wahrheit über die
+fünf Fälle: „Volltext gelesen am 11.09.2026“, „wartet auf Erkennung“, „wird
+gelesen“, „fehlgeschlagen: Seite 4 überschritt das Zeitlimit“, „Texterkennung
+nicht verfügbar“ — dazu der Knopf „Neu lesen“. Der Unterschied zwischen den
+ersten beiden ist kein Wortklauben: Bei einem 200-Seiten-Scan steht „wird
+gelesen“ minutenlang, und wer dort „wartet“ läse, hielte den Worker für tot. In
+der Liste reicht ein unauffälliges Zeichen an allem, was noch nicht `done` ist.
+In der Verwaltung steht „Alles neu lesen“ mit Zähler.
 
 Alle Texte über `messages/de.json`, Sie-Form (Prinzip 7).
 
@@ -286,10 +341,13 @@ Die Attrappe am Port trägt die Masse (Vitest, `createTestDeps()`):
 - Schwellenwert je Seite: Seite 1 digital, Seite 2 leer ⇒ OCR läuft genau einmal.
 - Drei Versuche, dann `failed` mit lesbarem Grund in `textError`.
 - Port meldet fehlendes Binary ⇒ `unavailable`, keine Wiederholungsschleife.
+- Was beim Start auf `running` steht, ist danach `pending` und wird gelesen.
 - Zweimal „Neu lesen“ ergibt denselben Bestand, keine doppelten Zeilen.
 - Suche: Kompositum gefunden (`rechnung` → *Tierarztrechnung*), Seitenzahl
   stimmt, Passage trägt die Markierung; unter drei Zeichen kommt der Hinweis
   statt einer leeren Liste.
+- Die Liste bleibt chronologisch, auch wenn der Volltext trifft; `total`,
+  `limit` und `offset` zählen Volltexttreffer mit.
 - Storniertes bleibt auffindbar; mit dem Dokument verschwinden seine Zeilen.
 - Escaping: Ein PDF, in dem `<script>` steht, erscheint als Text, nicht als
   Markup.
@@ -298,6 +356,10 @@ Die Attrappe am Port trägt die Masse (Vitest, `createTestDeps()`):
 **Echtes Tesseract** prüft genau ein Integrationstest im dritten Ring, gegen eine
 mitgelieferte Beispiel-PDF mit erfundenem Inhalt
 (`no-association-content.test.ts` gilt auch für Testdaten).
+
+**Der Haken selbst** bekommt einen eigenen Test, bevor der Worker darauf
+aufsetzt: `instrumentation.ts` läuft genau einmal, nur im Node-Laufzeitzweig,
+und der Dienst steht danach.
 
 **E2E:** Ein Dokument ablegen, warten, bis der Zustand „gelesen“ steht, im
 Suchfeld ein Wort aus dem Inhalt eingeben, Treffer mit Passage und Seite sehen,
@@ -338,11 +400,18 @@ Entscheidung 23) — auch bei selbst erzeugten Briefen; die Abkürzung über
 Abschnitt unverändert (§ 2, § 5.3, Entscheidung 21).
 
 **Zuschnitt.** Vier Blöcke für den Plan: (1) Port, Binaries, Erkennung je Seite
-samt Image und Einrichtung; (2) Zustand und Worker; (3) Index, Migration,
-Suchservice, MCP; (4) Oberfläche, i18n, E2E.
+samt Image und Einrichtung; (2) der Instrumentierungshaken — zuerst, weil
+unerprobt — dann Zustand und Worker; (3) Index, Migration, Suchservice, MCP;
+(4) Oberfläche, i18n, E2E.
+
+**Was hier behauptet und nicht geprüft ist.** Genau eines: dass Next' Haken
+trägt (§ 7). Alles andere steht auf gemessenen Werten — Tokenizer, Indexgröße,
+Paketgröße, Tesseract-Ausgaben. Deshalb die Reihenfolge in Block 2.
 
 **Ambiguität.** „Gelesen“ heißt: Alle Seiten haben eine Zeile im Index,
-`textStatus = 'done'`. „Nicht verfügbar“ heißt: Die Binaries fehlen, nicht dass
+`textStatus = 'done'`. „Wartet“ (`pending`) und „wird gelesen“ (`running`) sind
+zwei Zustände, nicht einer mit zwei Namen; nach einem Neustart gibt es kein
+`running` (§ 7). „Nicht verfügbar“ heißt: Die Binaries fehlen, nicht dass
 das Dokument keinen Text hätte — es kommt wieder in die Schlange, sobald sie da
 sind. Ein Dokument ohne jeden erkennbaren Text (leeres Blatt) ist `done` mit
 leeren Zeilen, nicht `failed`.
