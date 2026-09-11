@@ -1,7 +1,8 @@
-import { coreModule, schema } from '@kompass/core';
+import { coreModule, defineModule, schema } from '@kompass/core';
 import { createTestDeps, ctxWith, fakeDocumentEngine, insertUser } from '@kompass/core/testing';
 import { contactsModule } from '@kompass/module-contacts';
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import { dmsModule } from '../src/manifest';
 import { documents } from '../src/schema';
 import { createDraft, deleteDraft, previewDraft, updateDraft } from '../src/drafts';
@@ -111,5 +112,49 @@ describe('previewDraft', () => {
     expect(preview.value.bytes.byteLength).toBeGreaterThan(0);
     expect(deps.db.select().from(schema.mediaAssets).all().length).toBe(before);
     expect(deps.db.select().from(documents).get()?.number).toBeNull();
+  });
+});
+
+describe('Vorlagenwahl beim Entwurf', () => {
+  /** Ein Modul, das eine eigene Vorlage unter dem Schlüssel einer Dokumentart mitbringt. */
+  const minutesModule = defineModule({
+    key: 'minutes-demo',
+    version: '0.0.1',
+    permissions: [],
+    documentTemplates: [
+      {
+        key: 'minutes',
+        type: 'minutes',
+        schema: z.object({ subject: z.string(), body: z.string(), recipient: z.string().default('') }),
+        base: 'a4-mit-briefkopf',
+        build: (data: { subject: string; body: string }) => ({
+          slots: { kind: 'minutes', subject: data.subject, title: data.subject },
+          body: { markdown: data.body },
+        }),
+      },
+    ],
+  });
+
+  function setupWithMinutes() {
+    const deps = createTestDeps({ manifests: [coreModule, contactsModule, dmsModule, minutesModule] });
+    seedTypes(deps);
+    const ctx = ctxWith([...ALL_DMS, 'media.upload'], insertUser(deps, { name: 'T', email: 't@kompass.local' }));
+    return { deps, ctx };
+  }
+
+  it('nimmt die Vorlage, die den Schlüssel der Dokumentart trägt', async () => {
+    const { deps, ctx } = setupWithMinutes();
+    const created = await createDraft(deps, ctx, { typeKey: 'minutes', subject: 'Sitzung', body: 'Text' });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    expect(created.value.templateKey).toBe('minutes');
+  });
+
+  it('fällt auf den freien Brief zurück, wenn die Art keine eigene Vorlage hat', async () => {
+    const { deps, ctx } = setupWithMinutes();
+    const created = await createDraft(deps, ctx, { typeKey: 'invoice', subject: 'Rechnung', body: 'Text' });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    expect(created.value.templateKey).toBe('letter');
   });
 });

@@ -60,6 +60,18 @@ export const fileDocumentSchema = z.object({
   id: z.string().min(1),
 });
 
+/** Der freie Brief trägt jede Art, die keine eigene Vorlage mitbringt. */
+export const FALLBACK_TEMPLATE_KEY = 'letter';
+
+/**
+ * Eine Dokumentart benutzt die Vorlage, die ihren Schlüssel trägt — bringt kein
+ * Modul eine mit, bleibt der freie Brief. So bekommt eine später ergänzte
+ * Vorlage ihre Art von selbst, ohne dass hier eine Liste gepflegt wird.
+ */
+export function templateKeyForType(deps: Deps, typeKey: string): string {
+  return deps.registry.documentTemplates.has(typeKey) ? typeKey : FALLBACK_TEMPLATE_KEY;
+}
+
 export async function createDraft(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DocumentRecord>> {
   const denied = requirePermission(ctx, 'dms.create');
   if (denied) return denied;
@@ -88,7 +100,7 @@ export async function createDraft(deps: Deps, ctx: CallContext, input: unknown):
         documentDate,
         folder,
         draftBody: parsed.value.body,
-        templateKey: 'letter',
+        templateKey: templateKeyForType(deps, docType.key),
         inputSnapshot: null,
         assetId: null,
         status: 'issued',
@@ -209,7 +221,7 @@ export async function previewDraft(
   if (!row) return notFound('document', parsed.value.id);
 
   const recipient = resolveRecipient(deps, row.id);
-  const templateKey = row.templateKey ?? 'letter';
+  const templateKey = row.templateKey ?? FALLBACK_TEMPLATE_KEY;
 
   const prepared = await prepare(deps, ctx, {
     templateKey,
@@ -283,7 +295,7 @@ export async function fileDocument(deps: Deps, ctx: CallContext, input: unknown)
   const docType = documentTypeFor(deps.db, row.typeKey);
   if (!docType) return notFound('documentType', row.typeKey);
 
-  const templateKey = row.templateKey ?? 'letter';
+  const templateKey = row.templateKey ?? FALLBACK_TEMPLATE_KEY;
   const recipient = resolveRecipient(deps, row.id);
 
   const prepared = await prepare(deps, ctx, {
