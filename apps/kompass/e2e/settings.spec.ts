@@ -8,6 +8,24 @@ test.describe('settings', () => {
     await page.goto('/admin/settings');
   });
 
+  /**
+   * Die Reiterleiste gehört über die Inhaltsfläche, nicht daneben. Geprüft wird
+   * hier die Geometrie, weil genau die brach: Zwölf Klassen zielten auf ein
+   * `data-horizontal`, das im DOM nie stand, und die Wurzel blieb in
+   * Zeilenrichtung. Ein Test, der nur klickt, sieht das nicht.
+   */
+  test('legt die Reiterleiste über die Inhaltsfläche, nicht daneben', async ({ page }) => {
+    const list = page.getByRole('tablist').first();
+    const panel = page.getByRole('tabpanel').first();
+    const listBox = await list.boundingBox();
+    const panelBox = await panel.boundingBox();
+    if (!listBox || !panelBox) throw new Error('Reiter nicht sichtbar');
+
+    expect(listBox.y + listBox.height).toBeLessThanOrEqual(panelBox.y + 1);
+    // Und sie ist eine Leiste, kein hoher Kasten: deutlich breiter als hoch.
+    expect(listBox.width).toBeGreaterThan(listBox.height);
+  });
+
   test('saves changed fields, shows the pending counter and audits', async ({ page }) => {
     await page.getByLabel('Vereinsname').fill('Aluna Musterverein e.V.');
     await page.getByLabel('Ort').fill('Jülich');
