@@ -22,11 +22,13 @@ test.describe('field metrics', () => {
 
   test('gibt Eingabefeld, Auswahlfeld und Knopf dieselbe Höhe', async ({ page }) => {
     await page.goto('/dms/receive');
-    await expect(page.getByLabel('Betreff')).toBeVisible();
+    // Im Dialog gesucht: „Betreff“ heisst auch das Suchfeld der Liste dahinter.
+    const dialog = page.getByRole('dialog', { name: 'Post ablegen' });
+    await expect(dialog.getByLabel('Betreff')).toBeVisible();
 
-    expect(await height(page.getByLabel('Betreff'))).toBe(FIELD_HEIGHT);
-    expect(await height(page.getByLabel('Dokumentart'))).toBe(FIELD_HEIGHT);
-    expect(await height(page.getByRole('button', { name: 'Ablegen' }))).toBe(FIELD_HEIGHT);
+    expect(await height(dialog.getByLabel('Betreff'))).toBe(FIELD_HEIGHT);
+    expect(await height(dialog.getByLabel('Dokumentart'))).toBe(FIELD_HEIGHT);
+    expect(await height(dialog.getByRole('button', { name: 'Ablegen' }))).toBe(FIELD_HEIGHT);
   });
 
   test('hält die Höhe auch dort, wo Felder von Hand gebaut waren', async ({ page }) => {
@@ -39,17 +41,18 @@ test.describe('field metrics', () => {
 
   test('zeigt Pflichtfelder am Sternchen und die Legende darunter', async ({ page }) => {
     await page.goto('/dms/receive');
-    await expect(page.getByLabel('Betreff', { exact: true })).toBeVisible();
+    const dialog = page.getByRole('dialog', { name: 'Post ablegen' });
+    await expect(dialog.getByLabel('Betreff', { exact: true })).toBeVisible();
 
     // Sichtbar am Feld, ohne im Namen des Feldes zu landen …
-    await expect(page.locator('[data-slot="label-required"]').filter({ hasText: 'Betreff' })).toHaveText(
+    await expect(dialog.locator('[data-slot="label-required"]').filter({ hasText: 'Betreff' })).toHaveText(
       /^Betreff\s*\*$/
     );
     // … und erklärt in der Fußleiste, solange nichts geändert wurde.
-    await expect(page.getByText('* Pflichtfeld')).toBeVisible();
+    await expect(dialog.getByText('* Pflichtfeld')).toBeVisible();
 
-    await page.getByLabel('Betreff', { exact: true }).fill('Bescheid der Stadtkasse');
-    await expect(page.getByText('1 Änderung noch nicht gespeichert')).toBeVisible();
-    await expect(page.getByText('* Pflichtfeld')).toHaveCount(0);
+    await dialog.getByLabel('Betreff', { exact: true }).fill('Bescheid der Stadtkasse');
+    await expect(dialog.getByText('1 Änderung noch nicht gespeichert')).toBeVisible();
+    await expect(dialog.getByText('* Pflichtfeld')).toHaveCount(0);
   });
 });
