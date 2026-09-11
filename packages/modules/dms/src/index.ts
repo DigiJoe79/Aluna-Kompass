@@ -7,5 +7,6 @@ export * from './mcp-tools';
 export * from './recipients';
 export * from './retention';
 export * from './schema';
+export * from './seed';
 export * from './service';
 export * from './templates';
