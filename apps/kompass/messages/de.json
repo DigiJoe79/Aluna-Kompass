@@ -1521,6 +1521,14 @@
       "edit": "Bearbeiten",
       "delete": "Löschen",
       "save": "Speichern",
+      "textPanel": {
+        "heading": "Volltext",
+        "description": "Liest alle abgelegten Dokumente erneut ein. Das geschieht im Hintergrund, eins nach dem anderen; die Suche bleibt währenddessen benutzbar.",
+        "languages": "Sprachen der Texterkennung",
+        "reindex": "Alles neu lesen",
+        "queued": "{count} Dokumente wurden zum Neu-Lesen vorgemerkt.",
+        "open": "{count} warten noch"
+      },
       "toast": {
         "typeCreated": "Dokumentart angelegt",
         "typeUpdated": "Dokumentart aktualisiert",
@@ -1528,7 +1536,8 @@
         "folderDeleted": "Ordner gelöscht",
         "ruleCreated": "Regel angelegt",
         "ruleUpdated": "Regel aktualisiert",
-        "ruleDeleted": "Regel gelöscht"
+        "ruleDeleted": "Regel gelöscht",
+        "languagesSaved": "Sprachen gespeichert"
       }
     }
   }

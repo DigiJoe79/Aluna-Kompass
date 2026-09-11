@@ -12,7 +12,7 @@ import {
   type Deps,
   type Result,
 } from '@kompass/core';
-import { eq, isNotNull } from 'drizzle-orm';
+import { and, count, eq, isNotNull, isNull, ne, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { documents } from './schema';
 import { readDocumentFile } from './storage';
@@ -158,3 +158,20 @@ export async function reindexAllDocuments(deps: Deps, ctx: CallContext): Promise
     return ok({ queued: rows.length });
   });
 }
+
+/**
+ * Wie viele Dokumente mit Datei noch nicht fertig gelesen sind.
+ */
+export function countUnreadDocuments(deps: Deps, ctx: CallContext): Result<number> {
+  const denied = requirePermission(ctx, 'dms.view');
+  if (denied) return denied;
+
+  const row = deps.db
+    .select({ value: count() })
+    .from(documents)
+    .where(and(isNotNull(documents.fileName), or(isNull(documents.textStatus), ne(documents.textStatus, 'done'))))
+    .get();
+
+  return ok(row?.value ?? 0);
+}
+

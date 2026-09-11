@@ -1,11 +1,12 @@
-import { requirePermission } from '@kompass/core';
-import { listDocumentFolders, listDocumentRules, listDocumentTypes } from '@kompass/module-dms';
+import { hasPermission, readSetting, requirePermission } from '@kompass/core';
+import { countUnreadDocuments, listDocumentFolders, listDocumentRules, listDocumentTypes } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
 import { FoldersPanel } from './folders-panel';
 import { RulesPanel } from './rules-panel';
+import { TextPanel } from './text-panel';
 import { TypesPanel } from './types-panel';
 
 export default async function AdminDmsPage() {
@@ -14,11 +15,19 @@ export default async function AdminDmsPage() {
 
   const t = await getTranslations('dms.admin');
 
-  const [typesRes, foldersRes, rulesRes] = await Promise.all([
+  const [typesRes, foldersRes, rulesRes, probe] = await Promise.all([
     listDocumentTypes(deps, ctx, { includeInactive: true }),
     listDocumentFolders(deps, ctx),
     listDocumentRules(deps, ctx, { includeInactive: true }),
+    deps.textExtraction.probe(),
   ]);
+
+  const currentLanguages = (readSetting(deps, 'dms.ocrLanguages') as string | null) ?? 'deu+eng';
+  const availableLanguages = probe.ok ? probe.languages : null;
+
+  const unreadRes = countUnreadDocuments(deps, ctx);
+  const openCount = unreadRes.ok ? unreadRes.value : 0;
+  const canManageSettings = hasPermission(ctx, 'settings.manage');
 
   const types = typesRes.ok ? typesRes.value : [];
   const folders = foldersRes.ok ? foldersRes.value.map((f) => f.path) : [];
@@ -41,7 +50,14 @@ export default async function AdminDmsPage() {
         <TypesPanel types={types} folders={folders} />
         <RulesPanel rules={rules} types={types} folders={folders} />
         <FoldersPanel folders={folders} />
+        <TextPanel
+          currentLanguages={currentLanguages}
+          availableLanguages={availableLanguages}
+          openCount={openCount}
+          canManageSettings={canManageSettings}
+        />
       </div>
     </>
   );
 }
+

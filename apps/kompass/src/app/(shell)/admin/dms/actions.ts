@@ -1,17 +1,20 @@
 'use server';
 
+import { setSetting } from '@kompass/core';
 import {
   createDocumentFolder,
   createDocumentRule,
   createDocumentType,
   deleteDocumentFolder,
   deleteDocumentRule,
+  reindexAllDocuments,
   updateDocumentRule,
   updateDocumentType,
 } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { toActionState, type ActionState } from '@/lib/actions';
+import { textWorker } from '@/lib/background';
 import { requireSession } from '@/lib/request-context';
 
 const orNull = (value: FormDataEntryValue | null): string | null => {
@@ -147,3 +150,61 @@ export async function deleteDocumentRuleAction(id: string): Promise<ActionState>
   revalidatePath('/admin/dms');
   return toActionState(result, t, t('dms.admin.toast.ruleDeleted'));
 }
+
+export async function reindexAllDocumentsAction(): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+
+  const result = await reindexAllDocuments(deps, ctx);
+  if (!result.ok) {
+    return toActionState(result, t);
+  }
+
+  textWorker()?.wake();
+
+  revalidatePath('/admin/dms');
+  revalidatePath('/dms');
+  return toActionState(result, t, t('dms.admin.textPanel.queued', { count: result.value.queued }));
+}
+
+export async function updateOcrLanguagesAction(languages: string): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+
+  const probe = await deps.textExtraction.probe();
+  if (!probe.ok) {
+    return {
+      status: 'error',
+      message: t('dms.text.unavailableHint'),
+      fieldErrors: {},
+    };
+  }
+
+  const list = languages.split('+').map((s) => s.trim()).filter(Boolean);
+  if (list.length === 0) {
+    return {
+      status: 'error',
+      message: t('errors.fields.required'),
+      fieldErrors: { languages: t('errors.fields.required') },
+    };
+  }
+
+  for (const lang of list) {
+    if (!probe.languages.includes(lang)) {
+      return {
+        status: 'error',
+        message: `${lang} ist nicht installiert`,
+        fieldErrors: { languages: `${lang} ist nicht installiert` },
+      };
+    }
+  }
+
+  const result = await setSetting(deps, ctx, { key: 'dms.ocrLanguages', value: list.join('+') });
+  if (!result.ok) {
+    return toActionState(result, t);
+  }
+
+  revalidatePath('/admin/dms');
+  return toActionState(result, t, t('dms.admin.toast.languagesSaved'));
+}
+
