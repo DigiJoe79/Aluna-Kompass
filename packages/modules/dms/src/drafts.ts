@@ -216,7 +216,7 @@ export async function deleteDraft(deps: Deps, ctx: CallContext, input: unknown):
     return conflict('documentIsFiled', `Dokument ${row.number ?? row.id} ist bereits festgeschrieben`);
   }
 
-  return deps.db.transaction((tx: DbOrTx) => {
+  deps.db.transaction((tx: DbOrTx) => {
     tx.delete(documentLinks).where(eq(documentLinks.documentId, row.id)).run();
     tx.delete(documents).where(eq(documents.id, row.id)).run();
 
@@ -227,8 +227,6 @@ export async function deleteDraft(deps: Deps, ctx: CallContext, input: unknown):
       before: { subject: row.subject, typeKey: row.typeKey },
       summary: `Entwurf „${row.subject}“ gelöscht`,
     });
-
-    return ok(null);
   });
 
   removeDocumentText(deps, row.id);
