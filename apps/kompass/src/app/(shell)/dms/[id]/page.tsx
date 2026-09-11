@@ -1,5 +1,6 @@
 import { hasPermission, requirePermission, retentionEnd, retentionMonths } from '@kompass/core';
 import { documentTypeFor, getDocumentRecord } from '@kompass/module-dms';
+import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
@@ -11,6 +12,7 @@ export default async function DocumentDetailPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { deps, ctx } = await requireSession();
+  const tCommon = await getTranslations('common');
   if (requirePermission(ctx, 'dms.view')) return <ForbiddenCard permission="dms.view" />;
 
   const { id } = await props.params;
@@ -53,7 +55,7 @@ export default async function DocumentDetailPage(props: {
 
   return (
     <>
-      <PageHeader title={doc.subject} />
+      <PageHeader title={doc.subject} back={{ href: '/dms', label: tCommon('backToList') }} />
       <DocumentDetail
         document={{
           id: doc.id,

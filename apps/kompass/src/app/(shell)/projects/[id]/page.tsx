@@ -13,8 +13,10 @@ export default async function ProjectEditPage(props: { params: Promise<{ id: str
   const t = await getTranslations('projects');
   const locales = deps.locales();
   const leading = locales[0] ?? 'de';
-  if (id === 'new') return (<><PageHeader title={t('create')} /><ProjectForm project={null} locales={locales} /></>);
+  const c = await getTranslations('common');
+  const back = { href: '/projects', label: c('backToList') };
+  if (id === 'new') return (<><PageHeader title={t('create')} back={back} /><ProjectForm project={null} locales={locales} /></>);
   const project = await getProject(deps, ctx, id);
   if (!project.ok) notFound();
-  return (<><PageHeader title={project.value.name[leading] || project.value.slug} description={`/projekte/${project.value.slug}/`} /><ProjectForm project={project.value} locales={locales} /></>);
+  return (<><PageHeader title={project.value.name[leading] || project.value.slug} description={`/projekte/${project.value.slug}/`} back={back} /><ProjectForm project={project.value} locales={locales} /></>);
 }

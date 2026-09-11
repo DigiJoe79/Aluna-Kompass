@@ -33,7 +33,8 @@
     "none": "—",
     "changesPending": "{count, plural, one {# Änderung noch nicht gespeichert} other {# Änderungen noch nicht gespeichert}}",
     "lastSaved": "zuletzt gespeichert am {date} von {name}",
-    "audited": "Wird protokolliert."
+    "audited": "Wird protokolliert.",
+    "backToList": "Zurück zur Übersicht"
   },
   "media": {
     "title": "Mediathek",
@@ -1375,7 +1376,6 @@
     "fileConfirmDescription": "Beim Festschreiben wird dem Dokument eine fortlaufende Nummer zugewiesen und der Inhalt wird unveränderlich eingefroren.",
     "fileConfirmSubmit": "Festschreiben bestätigen",
     "openPdf": "PDF öffnen",
-    "backToList": "Zurück zur Übersicht",
     "deleteDraft": "Entwurf löschen",
     "deleteDraftConfirmTitle": "Entwurf verwerfen",
     "deleteDraftConfirmDescription": "Möchten Sie diesen Entwurf wirklich unwiderruflich löschen?",
@@ -1539,6 +1539,7 @@
         "ruleDeleted": "Regel gelöscht",
         "languagesSaved": "Sprachen gespeichert"
       }
-    }
+    },
+    "backToDocument": "Zurück zum Dokument"
   }
 }

@@ -18,12 +18,14 @@ export default async function EntryPage(props: { params: Promise<{ collection: s
   if (!col) notFound();
 
   const t = await getTranslations('site.entries');
+  const c = await getTranslations('common');
+  const back = { href: `/site/c/${collection}`, label: c('backToList') };
   const locales = deps.locales();
 
   if (id === 'neu') {
     return (
       <>
-        <PageHeader title={`${col.label} — ${t('new')}`} />
+        <PageHeader title={`${col.label} — ${t('new')}`} back={back} />
         <EntryForm collection={collection} fields={col.fields} hasSlug={col.slug} entry={null} locales={locales} />
       </>
     );
@@ -34,7 +36,7 @@ export default async function EntryPage(props: { params: Promise<{ collection: s
 
   return (
     <>
-      <PageHeader title={col.label} />
+      <PageHeader title={col.label} back={back} />
       <EntryForm
         collection={collection}
         fields={col.fields}

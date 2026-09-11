@@ -12,6 +12,7 @@ export default async function ReceivePage() {
   if (requirePermission(ctx, 'dms.create')) return <ForbiddenCard permission="dms.create" />;
 
   const t = await getTranslations('dms');
+  const tCommon = await getTranslations('common');
 
   const typesRes = await listDocumentTypes(deps, ctx, { includeInactive: false });
   const types = typesRes.ok
@@ -33,7 +34,7 @@ export default async function ReceivePage() {
 
   return (
     <>
-      <PageHeader title={t('receivePost')} description={t('receiveDescription')} />
+      <PageHeader title={t('receivePost')} description={t('receiveDescription')} back={{ href: '/dms', label: tCommon('backToList') }} />
       <div className="max-w-[720px]">
         <ReceiveForm
           types={types.map((type) => ({ key: type.key, label: type.label }))}

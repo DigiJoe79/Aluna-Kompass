@@ -78,9 +78,7 @@ export function DocumentDetail({ document: doc, retentionInfo, permissions }: Do
       {/* Action bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-line bg-surface p-4">
         <div className="flex items-center gap-3">
-          <Link href="/dms" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
-            ← {t('backToList')}
-          </Link>
+          {/* Der Rückweg steht am `PageHeader`, wie auf jeder Seite abseits der Navigation. */}
           {doc.number ? (
             <span className="font-mono text-[16px] font-bold text-ink">{doc.number}</span>
           ) : null}

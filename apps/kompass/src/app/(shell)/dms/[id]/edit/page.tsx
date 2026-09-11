@@ -37,7 +37,7 @@ export default async function EditDraftPage(props: { params: Promise<{ id: strin
 
   return (
     <>
-      <PageHeader title={t('editDraft')} description={t('editDraftDescription')} />
+      <PageHeader title={t('editDraft')} description={t('editDraftDescription')} back={{ href: `/dms/${id}`, label: t('backToDocument') }} />
       <div className="max-w-[720px]">
         <DraftForm
           types={types.map((type) => ({ key: type.key, label: type.label }))}

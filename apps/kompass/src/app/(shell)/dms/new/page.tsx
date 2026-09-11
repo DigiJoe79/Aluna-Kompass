@@ -12,6 +12,7 @@ export default async function NewDraftPage() {
   if (requirePermission(ctx, 'dms.create')) return <ForbiddenCard permission="dms.create" />;
 
   const t = await getTranslations('dms');
+  const tCommon = await getTranslations('common');
 
   const typesRes = await listDocumentTypes(deps, ctx, { includeInactive: false });
   const types = typesRes.ok ? typesRes.value : [];
@@ -29,7 +30,7 @@ export default async function NewDraftPage() {
 
   return (
     <>
-      <PageHeader title={t('newDraft')} description={t('newDraftDescription')} />
+      <PageHeader title={t('newDraft')} description={t('newDraftDescription')} back={{ href: '/dms', label: tCommon('backToList') }} />
       <div className="max-w-[720px]">
         <DraftForm
           types={types.map((type) => ({ key: type.key, label: type.label }))}

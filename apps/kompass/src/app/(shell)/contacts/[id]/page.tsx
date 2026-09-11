@@ -16,6 +16,7 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
   if (requirePermission(ctx, 'contacts.view')) return <ForbiddenCard permission="contacts.view" />;
 
   const t = await getTranslations('contacts');
+  const c = await getTranslations('common');
 
   const contactResult = await getContact(deps, ctx, id);
   if (!contactResult.ok) notFound();
@@ -34,6 +35,7 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
       <PageHeader
         title={displayName(contact)}
         description={contact.kind === 'organization' ? t('fields.organization') : t('fields.person')}
+        back={{ href: '/contacts', label: c('backToList') }}
         actions={
           contact.status === 'archived' ? (
             <StatusBadge tone="neutral">{t('archived')}</StatusBadge>
