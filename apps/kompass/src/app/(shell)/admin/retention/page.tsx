@@ -10,6 +10,7 @@ import { RetentionSettings } from './retention-settings';
 /** Wohin ein fälliger Eintrag führt. Der Kern löscht nie selbst — er verweist. */
 const HREF_BY_ENTITY: Record<string, (id: string) => string> = {
   contact: (id) => `/contacts/${id}`,
+  document: (id) => `/dms/${id}`,
 };
 
 export default async function RetentionPage() {

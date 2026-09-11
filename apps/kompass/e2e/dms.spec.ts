@@ -52,6 +52,38 @@ test.describe('dms', () => {
     await expect(page.getByText(/BEH-\d{4}-\d{3}/)).toBeVisible();
   });
 
+  test('löscht ein Dokument, dessen Aufbewahrungsfrist abgelaufen ist', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/receive');
+    await page.getByLabel('Datei').setInputFiles({ name: 'Alte Rechnung.pdf', mimeType: 'application/pdf', buffer: samplePdf() });
+    await page.getByLabel('Dokumentart').selectOption('invoice');
+    await page.getByLabel('Datum auf dem Dokument').fill('2005-06-01');
+    await page.getByLabel('Betreff').fill('Abgelaufene Rechnung');
+    await page.getByRole('button', { name: 'Ablegen' }).click();
+    await expect(page.getByText(/RCH-\d{4}-\d{3}/)).toBeVisible();
+
+    // Der Fristenbildschirm führt auf genau dieses Dokument.
+    await page.goto('/admin/retention');
+    await expect(page.getByRole('heading', { name: 'Dokumente' })).toBeVisible();
+    await page.getByRole('link', { name: /Dokument RCH-/ }).click();
+
+    await page.getByRole('button', { name: 'Endgültig löschen' }).click();
+    await page.getByRole('button', { name: 'Löschung bestätigen' }).click();
+    await expect(page).toHaveURL(/\/dms$/);
+    await expect(page.getByText('Abgelaufene Rechnung')).toHaveCount(0);
+  });
+
+  test('lässt ein Dokument in laufender Frist nicht löschen', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/receive');
+    await page.getByLabel('Datei').setInputFiles({ name: 'Neue Rechnung.pdf', mimeType: 'application/pdf', buffer: samplePdf() });
+    await page.getByLabel('Dokumentart').selectOption('invoice');
+    await page.getByLabel('Datum auf dem Dokument').fill('2026-03-01');
+    await page.getByLabel('Betreff').fill('Laufende Rechnung');
+    await page.getByRole('button', { name: 'Ablegen' }).click();
+    await expect(page.getByRole('button', { name: 'Endgültig löschen' })).toBeDisabled();
+  });
+
   test('verwaltet Dokumentarten und Regeln', async ({ page }) => {
     await login(page);
     await page.goto('/admin/dms');

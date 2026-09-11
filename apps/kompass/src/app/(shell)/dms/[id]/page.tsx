@@ -22,7 +22,8 @@ export default async function DocumentDetailPage(props: {
   const docType = documentTypeFor(deps.db, doc.typeKey);
   const typeLabel = docType?.label ?? doc.typeKey;
 
-  let retentionInfo: { retentionClass: string; until: string | null } | null = null;
+  const today = deps.clock.now().toISOString().slice(0, 10);
+  let retentionInfo: { retentionClass: string; until: string | null; due: boolean } | null = null;
   if (doc.phase === 'issued' && docType) {
     let until: string | null = null;
     if (docType.retentionClass !== 'permanent') {
@@ -34,6 +35,8 @@ export default async function DocumentDetailPage(props: {
     retentionInfo = {
       retentionClass: docType.retentionClass,
       until,
+      // Dauerhaft aufbewahrte Dokumente haben kein `until` und werden nie fällig.
+      due: until !== null && until < today,
     };
   }
 
@@ -41,6 +44,7 @@ export default async function DocumentDetailPage(props: {
     canFile: hasPermission(ctx, 'dms.file'),
     canVoid: hasPermission(ctx, 'dms.void'),
     canDeleteDraft: hasPermission(ctx, 'dms.deleteDraft'),
+    canManage: hasPermission(ctx, 'dms.manage'),
   };
 
   return (

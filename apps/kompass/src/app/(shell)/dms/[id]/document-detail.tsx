@@ -9,7 +9,7 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { deleteDraftAction, voidDocumentAction } from '../actions';
+import { deleteDocumentAction, deleteDraftAction, voidDocumentAction } from '../actions';
 import { FileDialog } from './file-dialog';
 
 export interface DocumentDetailProps {
@@ -32,11 +32,13 @@ export interface DocumentDetailProps {
   retentionInfo: {
     retentionClass: string;
     until: string | null;
+    due: boolean;
   } | null;
   permissions: {
     canFile: boolean;
     canVoid: boolean;
     canDeleteDraft: boolean;
+    canManage: boolean;
   };
 }
 
@@ -45,6 +47,7 @@ export function DocumentDetail({ document: doc, retentionInfo, permissions }: Do
   const tCommon = useTranslations('common');
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [voidOpen, setVoidOpen] = useState(false);
+  const [purgeOpen, setPurgeOpen] = useState(false);
   const [voidReason, setVoidReason] = useState('');
 
   return (
@@ -220,6 +223,34 @@ export function DocumentDetail({ document: doc, retentionInfo, permissions }: Do
                     ? t('retentionUntil', { date: retentionInfo.until })
                     : t('retentionRunning')}
               </p>
+
+              {/* Die Frist ist abgelaufen — ein Mensch bestätigt die Löschung (Prinzip 3). */}
+              {permissions.canManage ? (
+                <div className="mt-4 flex flex-col gap-2 border-t border-line-2 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!retentionInfo.due}
+                    onClick={() => setPurgeOpen(true)}
+                    className="self-start border-error text-error hover:bg-error-bg hover:text-error"
+                  >
+                    {t('deleteDocument')}
+                  </Button>
+                  {!retentionInfo.due ? (
+                    <span className="text-[12px] text-muted-ink">{t('deleteDocumentBlocked')}</span>
+                  ) : null}
+                  <ConfirmDialog
+                    open={purgeOpen}
+                    onOpenChange={setPurgeOpen}
+                    title={t('deleteDocumentConfirmTitle')}
+                    description={t('deleteDocumentConfirmDescription')}
+                    confirmLabel={t('deleteDocumentConfirmSubmit')}
+                    destructive
+                    action={() => deleteDocumentAction(doc.id)}
+                  />
+                </div>
+              ) : null}
             </section>
           ) : null}
 

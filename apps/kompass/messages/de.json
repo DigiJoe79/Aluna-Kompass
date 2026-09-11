@@ -919,7 +919,8 @@
     },
     "dueSince": "fällig seit {date}",
     "entities": {
-      "contact": "Kontakte"
+      "contact": "Kontakte",
+      "document": "Dokumente"
     },
     "footnote": "Gelöscht wird auf der Seite des jeweiligen Eintrags — dort steht, was dabei verschwindet.",
     "settings": {
@@ -1369,6 +1370,11 @@
     "voidConfirmTitle": "Dokument stornieren",
     "voidConfirmDescription": "Geben Sie einen Grund für die Stornierung an. Die vergebene Nummer bleibt erhalten.",
     "voidConfirmSubmit": "Stornieren bestätigen",
+    "deleteDocument": "Endgültig löschen",
+    "deleteDocumentBlocked": "Löschen ist erst nach Ablauf der Aufbewahrungsfrist möglich.",
+    "deleteDocumentConfirmTitle": "Dokument endgültig löschen?",
+    "deleteDocumentConfirmDescription": "Die Datei, die Metadaten und alle Bezüge verschwinden. Im Änderungsprotokoll bleibt festgehalten, wer wann welches Dokument gelöscht hat. Dieser Schritt lässt sich nicht rückgängig machen.",
+    "deleteDocumentConfirmSubmit": "Löschung bestätigen",
     "detailsTitle": "Details",
     "retentionTitle": "Aufbewahrung",
     "retentionPermanent": "Dieses Dokument unterliegt der dauerhaften Aufbewahrung.",

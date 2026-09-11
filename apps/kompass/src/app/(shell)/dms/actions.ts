@@ -2,6 +2,7 @@
 
 import {
   createDraft,
+  deleteDocument,
   deleteDraft,
   fileDocument,
   receiveDocument,
@@ -116,6 +117,25 @@ export async function deleteDraftAction(id: string): Promise<ActionState> {
   }
 
   revalidatePath('/dms');
+  redirect('/dms');
+}
+
+/**
+ * Die einzige Löschung, die ein festgeschriebenes Dokument kennt — sie steht
+ * hinter der abgelaufenen Frist und einem Menschen, der sie bestätigt
+ * (Prinzip 3, Entscheidung 10). Der Service prüft die Frist erneut.
+ */
+export async function deleteDocumentAction(id: string): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+
+  const result = await deleteDocument(deps, ctx, { id });
+  if (!result.ok) {
+    return toActionState(result, t);
+  }
+
+  revalidatePath('/dms');
+  revalidatePath('/admin/retention');
   redirect('/dms');
 }
 

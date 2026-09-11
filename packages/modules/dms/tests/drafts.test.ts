@@ -136,7 +136,7 @@ describe('Vorlagenwahl beim Entwurf', () => {
         schema: z.object({ subject: z.string(), body: z.string(), recipient: z.string().default('') }),
         base: 'a4-mit-briefkopf',
         build: (data: { subject: string; body: string }) => ({
-          slots: { kind: 'minutes', subject: data.subject, title: data.subject },
+          slots: { kind: 'report' as const, subject: data.subject, title: data.subject },
           body: { markdown: data.body },
         }),
       },
