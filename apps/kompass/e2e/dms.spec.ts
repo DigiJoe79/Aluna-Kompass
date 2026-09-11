@@ -74,6 +74,22 @@ test.describe('dms', () => {
     await expect(page.getByText(/BRF-\d{4}-\d{3}/)).toHaveCount(0);
   });
 
+  test('lässt das Datum des Schreibens setzen und später ausbessern', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/new');
+    await page.getByLabel('Betreff').fill('Auf ein bestimmtes Datum');
+    await page.getByLabel('Text').fill('Text.');
+    await page.getByLabel('Datum auf dem Dokument').fill('2026-04-01');
+    await page.getByRole('button', { name: 'Entwurf speichern' }).click();
+    await expect(page.getByText('2026-04-01')).toBeVisible();
+
+    await page.getByRole('link', { name: 'Bearbeiten' }).click();
+    await expect(page.getByLabel('Datum auf dem Dokument')).toHaveValue('2026-04-01');
+    await page.getByLabel('Datum auf dem Dokument').fill('2026-05-02');
+    await page.getByRole('button', { name: 'Änderungen speichern' }).click();
+    await expect(page.getByText('2026-05-02')).toBeVisible();
+  });
+
   test('bietet für ein festgeschriebenes Dokument kein Bearbeiten an', async ({ page }) => {
     await login(page);
     await page.goto('/dms/new');

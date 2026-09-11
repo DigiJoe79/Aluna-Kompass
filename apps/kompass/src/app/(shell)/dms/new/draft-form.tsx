@@ -18,12 +18,15 @@ export function DraftForm({
   types,
   folders,
   contacts,
+  today,
   draft,
 }: {
   types: { key: string; label: string }[];
   folders: string[];
   contacts: { id: string; name: string }[];
-  draft?: { id: string; subject: string; body: string; typeKey: string; folder: string | null; recipientId: string | null };
+  /** Vorbelegung beim Anlegen, aus `deps.clock` der Seite — nicht aus der Uhr des Browsers. */
+  today: string;
+  draft?: { id: string; subject: string; body: string; typeKey: string; documentDate: string; folder: string | null; recipientId: string | null };
 }) {
   const t = useTranslations('dms');
   const [state, formAction, isPending] = useActionState(
@@ -59,6 +62,18 @@ export function DraftForm({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
+          <Label htmlFor="documentDate">{t('fields.documentDate')}</Label>
+          <Input
+            id="documentDate"
+            name="documentDate"
+            type="date"
+            required
+            defaultValue={draft?.documentDate ?? today}
+          />
+          <FieldError id="documentDate-error" message={errors.documentDate} />
+        </div>
+
+        <div className="space-y-1.5">
           <Label htmlFor="typeKey">{t('fields.type')}</Label>
           <select
             id="typeKey"
@@ -92,23 +107,23 @@ export function DraftForm({
             ))}
           </select>
         </div>
-      </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="recipientId">{t('fields.recipient')}</Label>
-        <select
-          id="recipientId"
-          name="recipientId"
-          defaultValue={draft?.recipientId ?? ''}
-          className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
-        >
-          <option value="">{t('fields.noRecipient')}</option>
-          {contacts.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+        <div className="space-y-1.5">
+          <Label htmlFor="recipientId">{t('fields.recipient')}</Label>
+          <select
+            id="recipientId"
+            name="recipientId"
+            defaultValue={draft?.recipientId ?? ''}
+            className="h-[34px] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px] text-ink shadow-xs"
+          >
+            <option value="">{t('fields.noRecipient')}</option>
+            {contacts.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="pt-2">

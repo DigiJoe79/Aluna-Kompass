@@ -35,6 +35,7 @@ export default async function NewDraftPage() {
           types={types.map((type) => ({ key: type.key, label: type.label }))}
           folders={folders}
           contacts={contacts}
+          today={deps.clock.now().toISOString().slice(0, 10)}
         />
       </div>
     </>

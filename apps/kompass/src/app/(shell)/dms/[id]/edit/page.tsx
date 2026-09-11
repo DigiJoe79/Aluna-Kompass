@@ -43,11 +43,13 @@ export default async function EditDraftPage(props: { params: Promise<{ id: strin
           types={types.map((type) => ({ key: type.key, label: type.label }))}
           folders={folders}
           contacts={contacts}
+          today={deps.clock.now().toISOString().slice(0, 10)}
           draft={{
             id: doc.id,
             subject: doc.subject,
             body: doc.draftBody ?? '',
             typeKey: doc.typeKey,
+            documentDate: doc.documentDate,
             folder: doc.folder,
             recipientId: recipient?.entityId ?? null,
           }}
