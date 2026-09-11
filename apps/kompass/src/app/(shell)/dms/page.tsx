@@ -58,6 +58,7 @@ export default async function DmsPage(props: {
     direction: d.direction,
     phase: d.phase,
     status: d.status,
+    textStatus: d.textStatus,
   }));
 
   const canCreate = hasPermission(ctx, 'dms.create');
@@ -85,6 +86,8 @@ export default async function DmsPage(props: {
         types={types.map((type) => ({ key: type.key, label: type.label }))}
         folders={folders}
         inboxCount={inboxCount}
+        hits={docsRes.value.hits}
+        fulltextTooShort={docsRes.value.fulltextTooShort}
       />
     </>
   );

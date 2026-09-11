@@ -3,8 +3,9 @@
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { Fragment, useState, useTransition } from 'react';
 import { EmptyState } from '@/components/empty-state';
+import { SnippetText } from '@/components/snippet-text';
 import { StatusBadge } from '@/components/status-badge';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -21,6 +22,7 @@ export interface DocumentListItem {
   direction: 'incoming' | 'outgoing';
   phase: 'draft' | 'issued';
   status: 'draft' | 'issued' | 'voided';
+  textStatus?: 'pending' | 'running' | 'done' | 'failed' | 'unavailable' | null;
 }
 
 export interface DocumentListProps {
@@ -28,9 +30,11 @@ export interface DocumentListProps {
   types: { key: string; label: string }[];
   folders: string[];
   inboxCount: number;
+  hits?: Record<string, { page: number; snippet: string }>;
+  fulltextTooShort?: boolean;
 }
 
-export function DocumentList({ documents, types, folders, inboxCount }: DocumentListProps) {
+export function DocumentList({ documents, types, folders, inboxCount, hits, fulltextTooShort }: DocumentListProps) {
   const t = useTranslations('dms');
   const router = useRouter();
   const pathname = usePathname();
@@ -108,8 +112,8 @@ export function DocumentList({ documents, types, folders, inboxCount }: Document
 
       <div className="flex flex-wrap items-center gap-3">
         <Input
-          aria-label={t('search')}
-          placeholder={t('search')}
+          aria-label={t('searchPlaceholder')}
+          placeholder={t('searchPlaceholder')}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -183,6 +187,8 @@ export function DocumentList({ documents, types, folders, inboxCount }: Document
         </select>
       </div>
 
+      {fulltextTooShort ? <p className="text-[13px] text-muted-ink">{t('searchTooShort')}</p> : null}
+
       {documents.length === 0 ? (
         <EmptyState title={t('empty.title')} text={t('empty.text')} />
       ) : (
@@ -201,50 +207,83 @@ export function DocumentList({ documents, types, folders, inboxCount }: Document
             </TableHeader>
             <TableBody>
               {documents.map((doc, i) => (
-                <TableRow
-                  key={doc.id}
-                  onClick={() => router.push(`/dms/${doc.id}`)}
-                  className={cn(
-                    'h-[52px] cursor-pointer border-b border-line-2 hover:bg-row-hover',
-                    i % 2 === 1 && 'bg-zebra',
-                  )}
-                >
-                  <TableCell className="px-4 font-mono text-[13px] text-ink">
-                    {doc.number ? (
-                      <Link
-                        href={`/dms/${doc.id}`}
-                        className="font-semibold underline underline-offset-2 hover:text-link"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {doc.number}
-                      </Link>
-                    ) : (
-                      '—'
+                <Fragment key={doc.id}>
+                  <TableRow
+                    onClick={() => router.push(`/dms/${doc.id}`)}
+                    className={cn(
+                      'h-[52px] cursor-pointer hover:bg-row-hover',
+                      hits?.[doc.id] ? 'border-b-0' : 'border-b border-line-2',
+                      i % 2 === 1 && 'bg-zebra',
                     )}
-                  </TableCell>
-                  <TableCell className="px-4">
-                    <Link
-                      href={`/dms/${doc.id}`}
-                      className="font-semibold underline underline-offset-2 hover:text-link"
-                      onClick={(e) => e.stopPropagation()}
+                  >
+                    <TableCell className="px-4 font-mono text-[13px] text-ink">
+                      {doc.number ? (
+                        <Link
+                          href={`/dms/${doc.id}`}
+                          className="font-semibold underline underline-offset-2 hover:text-link"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {doc.number}
+                        </Link>
+                      ) : (
+                        '—'
+                      )}
+                    </TableCell>
+                    <TableCell className="px-4">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/dms/${doc.id}`}
+                          className="font-semibold underline underline-offset-2 hover:text-link"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {doc.subject}
+                        </Link>
+                        {doc.textStatus && doc.textStatus !== 'done' ? (
+                          <span
+                            title={t('textPending')}
+                            className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-warning"
+                            aria-label={t('textPending')}
+                          />
+                        ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-4 text-ink-2">{doc.typeLabel}</TableCell>
+                    <TableCell className="px-4 text-ink-2">{doc.documentDate}</TableCell>
+                    <TableCell className="px-4 text-ink-2">{doc.folder ?? t('inbox')}</TableCell>
+                    <TableCell className="px-4 text-ink-2">{t(`directions.${doc.direction}`)}</TableCell>
+                    <TableCell className="px-4">
+                      {doc.status === 'voided' ? (
+                        <StatusBadge tone="error">{t('statuses.voided')}</StatusBadge>
+                      ) : doc.phase === 'draft' ? (
+                        <StatusBadge tone="warning">{t('phases.draft')}</StatusBadge>
+                      ) : (
+                        <StatusBadge tone="success">{t('phases.issued')}</StatusBadge>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                  {hits?.[doc.id] ? (
+                    <TableRow
+                      onClick={() => router.push(`/dms/${doc.id}`)}
+                      className={cn(
+                        'cursor-pointer border-b border-line-2 hover:bg-row-hover',
+                        i % 2 === 1 && 'bg-zebra',
+                      )}
                     >
-                      {doc.subject}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="px-4 text-ink-2">{doc.typeLabel}</TableCell>
-                  <TableCell className="px-4 text-ink-2">{doc.documentDate}</TableCell>
-                  <TableCell className="px-4 text-ink-2">{doc.folder ?? t('inbox')}</TableCell>
-                  <TableCell className="px-4 text-ink-2">{t(`directions.${doc.direction}`)}</TableCell>
-                  <TableCell className="px-4">
-                    {doc.status === 'voided' ? (
-                      <StatusBadge tone="error">{t('statuses.voided')}</StatusBadge>
-                    ) : doc.phase === 'draft' ? (
-                      <StatusBadge tone="warning">{t('phases.draft')}</StatusBadge>
-                    ) : (
-                      <StatusBadge tone="success">{t('phases.issued')}</StatusBadge>
-                    )}
-                  </TableCell>
-                </TableRow>
+                      <TableCell colSpan={7} className="px-4 pt-0 pb-3 text-[13px] text-muted-ink">
+                        <SnippetText value={hits[doc.id]!.snippet} />{' '}
+                        {/* `#page=` versteht jeder Browser-PDF-Betrachter; wir brauchen dafuer keinen
+                            eigenen Betrachter und keine Bibliothek. */}
+                        <Link
+                          href={`/dms/${doc.id}/preview#page=${hits[doc.id]!.page}`}
+                          className="font-medium underline underline-offset-2 hover:text-link"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {t('hitOnPage', { page: hits[doc.id]!.page })}
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </Fragment>
               ))}
             </TableBody>
           </Table>
