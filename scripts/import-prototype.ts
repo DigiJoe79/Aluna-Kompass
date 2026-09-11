@@ -127,8 +127,7 @@ export async function importPrototype(
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const env = readEnv({ SESSION_SECRET: 'import-only-not-a-real-secret-value-0000', ...process.env });
   const deps = createDeps({
-    databasePath: env.databasePath,
-    mediaPath: env.mediaPath,
+    dataPath: env.dataPath,
     env: env.env,
     modules: [animalsModule],
     coreTemplates: coreDocumentTemplates(),

@@ -3,7 +3,7 @@
 ## Erstinstallation
 1. **Ordner anlegen**: `/share/Container/kompass-test/{data,media}` (Prod analog, erst wenn Test läuft).
 2. **`.env.test`** nach `/share/Container/kompass-test/` legen (Vorlage `.env.test.example`), mit `SESSION_SECRET=<48 zufällige Zeichen>`, z. B. `openssl rand -hex 24`. Je Umgebung ein eigener Wert, sonst gälten Sitzungen aus Test auch in Prod.
-3. **`site.pw`** daneben: `printf '%s' '<webspace-passwort>' > site.pw && chmod 600 site.pw && chown 1000:1000 site.pw`. `printf` statt `echo`, sonst hängt ein Zeilenumbruch am Passwort.
+3. **`secret/site.pw`** daneben: `mkdir -p secret && printf '%s' '<webspace-passwort>' > secret/site.pw && chmod 600 secret/site.pw && chown 1000:1000 secret/site.pw`. Das Verzeichnis `secret` liegt **neben** `data`, nicht darin: Das Backup bildet `/data` ab, und ein Geheimnis darf in kein Archiv geraten, das man herunterlädt und weitergibt. `printf` statt `echo`, sonst hängt ein Zeilenumbruch am Passwort.
 4. Container Station öffnen → **„Anwendung erstellen"** → Inhalt von `docker-compose.test.yml` einfügen. Für Prod später eine **zweite Anwendung** aus `docker-compose.prod.yml`.
 
    Nicht über „Image erstellen" gehen: die Image-Suche der Container Station bietet nur Docker Hub und die LXD-Registry an. Eine Anwendung zieht dagegen jede Registry, die im Compose steht. `ghcr.io/digijoe79/aluna-kompass` ist öffentlich lesbar, eine Anmeldung ist also nicht nötig.
@@ -62,7 +62,7 @@ Minuten. **Vor jedem Push.**
 Der dritte Ring braucht Docker. Er startet `kompass-local` auf Port 3200 mit
 frischen Volumes und prüft, was nur im Container schiefgehen kann: gebündelter
 Code, `/data`, das mitgelieferte Template und die Modulauflösung aus dem
-Entrypoint. `/data` und `/media` bekommen anonyme Volumes, damit jeder Lauf
+Entrypoint. `/data` bekommt ein anonymes Volume, damit jeder Lauf
 eine Erstinbetriebnahme ist; eingehängt wird nur das Publish-Ziel unter
 `apps/kompass/.e2e-container/deploy`, weil der Test dort nachsieht.
 
@@ -90,7 +90,7 @@ Endpunkt `http://<nas>:3000/mcp` (Streamable HTTP), Authentifizierung mit einem 
 
 ## Webseite (Test und Prod)
 
-**Das Template unter `/data/site-template`.** Kompass pflegt nicht die Seite,
+**Das Template unter `/data/site/template`.** Kompass pflegt nicht die Seite,
 sondern die Inhalte, die ein Astro-Template deklariert. Beim ersten Start legt
 der Entrypoint das mitgelieferte Basis-Template dort ab; ein vorhandenes bleibt
 unberührt, auch bei einem Update. Der Verein ersetzt es durch sein eigenes und
@@ -114,7 +114,7 @@ Leere — etwa nach einem Update aus einer älteren Fassung —, erneuert ihn de
 Entrypoint beim nächsten Start selbst; ein Build meldete das vorher als
 „astro not installed".
 
-## Dokument-Basisvorlagen unter `/data/document-templates`
+## Dokument-Basisvorlagen unter `/data/core/document-templates`
 
 Die Seitenrahmen für erzeugte PDFs (Briefkopf, Berichtslayout, …). Kompass
 liefert die generischen Basen `a4-plain`, `a4-mit-briefkopf` und
@@ -125,7 +125,7 @@ eine Basis über `#image("/assets/…")` einbindet — das Vereinslogo kommt wei
 aus den Einstellungen). Der Entrypoint legt das Verzeichnis beim ersten Start an,
 mit einem `README` und `bases.reference/` als Kopiervorlage. **Ein leeres
 Verzeichnis ist gültig** — dann gelten die mitgelieferten Basen; anders als
-`/data/site-template` muss hier nichts liegen.
+`/data/site/template` muss hier nichts liegen.
 
 Auch dies ist eine **Vertrauensgrenze**: Jede `.typ` läuft beim Rendern als Code
 im Container. Es gehört `node` und wird nicht über eine Freigabe geteilt.
@@ -139,25 +139,25 @@ Hauptdomain bleibt bis zum Go-live auf WordPress.
 | Prod | `prod.aluna-tierhilfe.org` | `/kunden/homepages/<NN>/<dNNNNNNNNN>/htdocs/aluna-prod` | `1` bis zum Go-live |
 
 1. Subdomains bei IONOS auf die beiden Verzeichnisse zeigen lassen, SSH-Zugang im Kundencenter aktivieren.
-2. **Anmeldung:** IONOS-Webhosting bietet keine SSH-Schlüssel, deshalb Passwort-Login. Das Webspace-Passwort in eine Datei `site.pw` schreiben (nur die Zeile mit dem Passwort, kein Zeilenumbruch nötig) und nach `/share/Container/kompass-test/` **und** `/share/Container/kompass-prod/` legen, Rechte 600, Besitzer UID 1000 (`node`):
+2. **Anmeldung:** IONOS-Webhosting bietet keine SSH-Schlüssel, deshalb Passwort-Login. Das Webspace-Passwort in eine Datei `site.pw` schreiben (nur die Zeile mit dem Passwort, kein Zeilenumbruch nötig) und nach `/share/Container/kompass-test/secret/` **und** `/share/Container/kompass-prod/secret/` legen, Rechte 600, Besitzer UID 1000 (`node`):
 
    ```
-   printf '%s' '<webspace-passwort>' > site.pw && chmod 600 site.pw && chown 1000:1000 site.pw
+   mkdir -p secret && printf '%s' '<webspace-passwort>' > secret/site.pw && chmod 600 secret/site.pw && chown 1000:1000 secret/site.pw
    ```
 
    Der `chown` ist nicht optional: der Container laeuft als UID 1000 (`node`), die Eigentuemerschaft kommt vom Wirtssystem, und die Datei ist schreibgeschuetzt eingehaengt. Gehoert sie `root`, kann Kompass sie nicht lesen. Pruefen mit:
 
    ```
-   docker exec kompass-test sh -c 'ls -l /data/site.pw; wc -c < /data/site.pw'
+   docker exec kompass-test sh -c 'ls -l /secret/site.pw; wc -c < /secret/site.pw'
    ```
 
-   Kompass ruft `sshpass -f /data/site.pw rsync -az --no-owner --no-group --no-perms --omit-dir-times --delete --checksum …` auf. Die vier `--no…`-Flaggen nehmen `-a` das, was es am **Zielverzeichnis selbst** setzen will: Besitzer, Gruppe, Rechte, Zeitstempel. Gehört das Verzeichnis jemand anderem oder ist es ein Einhängepunkt, bricht der Lauf sonst mit „Operation not permitted" ab, obwohl jede Datei übertragen wurde. Zeitstempel und Symlinks der Dateien bleiben erhalten. das Passwort steht damit nie in der Prozessliste und nicht in `docker inspect`. Auf einem Hoster mit Schlüsselanmeldung stattdessen `SITE_DEPLOY_KEY_FILE` setzen — der Code beherrscht beides.
+   Kompass ruft `sshpass -f /secret/site.pw rsync -az --no-owner --no-group --no-perms --omit-dir-times --delete --checksum …` auf. Die vier `--no…`-Flaggen nehmen `-a` das, was es am **Zielverzeichnis selbst** setzen will: Besitzer, Gruppe, Rechte, Zeitstempel. Gehört das Verzeichnis jemand anderem oder ist es ein Einhängepunkt, bricht der Lauf sonst mit „Operation not permitted" ab, obwohl jede Datei übertragen wurde. Zeitstempel und Symlinks der Dateien bleiben erhalten. das Passwort steht damit nie in der Prozessliste und nicht in `docker inspect`. Auf einem Hoster mit Schlüsselanmeldung stattdessen `SITE_DEPLOY_KEY_FILE` setzen — der Code beherrscht beides.
 3. `.env.test` und `.env.prod` um die `SITE_*`-Variablen ergänzen (siehe `.env.*.example`). Ohne diese Variablen zeigt Kompass nur „Vorschau", keinen Publish-Knopf.
 4. **Prod trägt vorerst `SITE_STAGING=1`.** Ohne das wäre `prod.aluna-tierhilfe.org` indexierbar und stünde später in Konkurrenz zur echten Domain. Der Schalter setzt `noindex`, `Disallow: /` und lässt die Sitemap weg.
 5. **Vor dem ersten Publish:** Publizieren-Seite → „Verbindung testen“. Der Lauf meldet sich am Ziel an und überträgt nichts; er listet auf, was dort liegt und ein Publish entfernen würde. Steht die erwartete Installation darin, stimmt der Pfad. Kommt die Liste leer zurück, zeigt `SITE_DEPLOY_PATH` ins Leere — ein vertippter Pfad lässt rsync nicht scheitern, er trifft nur nichts.
 6. Erster Publish aus Test nach `…/aluna-test`, im Browser prüfen. Das ist zugleich der erste Lauf von rsync über SSH — bei Fehlern siehe Punkt 9. Danach dasselbe aus Prod nach `…/aluna-prod`.
 7. **Go-live** (nach der e.V.-Eintragung, wenn die Seite abgenommen ist): Hauptdomain von WordPress auf `…/aluna-prod` umstellen, in `.env.prod` `SITE_PUBLIC_URL=https://aluna-tierhilfe.org` setzen und `SITE_STAGING` entfernen, Container neu starten, einmal publizieren. Erst dann steht die Seite im Index. Das WordPress-Verzeichnis eine Woche aufbewahren, dann löschen.
-8. **Am 2026-09-06 manuell gegen `…/aluna-test` verifiziert:** Passwort-Login, rsync (hier openrsync, dort 3.4.1), Zielpfad, `--delete`, Auslieferung von HTML, `.woff2`, `.webp` und die `.htaccess`-Auswertung. Der Weg funktioniert also; im Container ändert sich nur, dass `sshpass` das Passwort aus `/data/site.pw` liefert.
+8. **Am 2026-09-06 manuell gegen `…/aluna-test` verifiziert:** Passwort-Login, rsync (hier openrsync, dort 3.4.1), Zielpfad, `--delete`, Auslieferung von HTML, `.woff2`, `.webp` und die `.htaccess`-Auswertung. Der Weg funktioniert also; im Container ändert sich nur, dass `sshpass` das Passwort aus `/secret/site.pw` liefert.
 9. Fehlersuche: erst „Verbindung testen“, dann Publizieren-Seite → Historie → Protokoll. Häufige Ursachen: Schlüsselrechte, falscher `SITE_DEPLOY_PATH`, Host-Key-Wechsel (dann `known_hosts` im Container löschen: `docker exec kompass-prod rm -f /home/node/.ssh/known_hosts`). Beim Nachstellen von Hand: rsync schweigt bei Erfolg — ohne `-v` sieht ein geglückter Lauf wie ein wirkungsloser aus.
 10. **MCP prüfen** (nach jedem Update sinnvoll): `pnpm --filter @kompass/app mcp:check http://<nas>:3001` meldet, ob der Endpunkt erreichbar ist und unangemeldete Anfragen ablehnt. Mit einem API-Token als zweitem Argument verbindet es sich, listet die Werkzeuge und ruft eines lesend auf — die Zahl der Werkzeuge zeigt zugleich, ob die Fachmodule aktiv sind. Das Token danach unter Profil → API-Token widerrufen.
-11. Bildcache: `/data/site-cache` darf jederzeit gelöscht werden; der nächste Build erzeugt ihn neu (dauert dann länger).
+11. Bildcache: `/cache/site-build` darf jederzeit gelöscht werden; der nächste Build erzeugt ihn neu (dauert dann länger). `/cache` ist bewusst kein Volume — was dort liegt, ist jederzeit neu erzeugbar und gehört in kein Backup.

@@ -32,7 +32,9 @@ function readAuth(env: Record<string, string | undefined>, host: string): Deploy
 }
 
 export function readSiteEnv(env: Record<string, string | undefined> = process.env): SiteEnv {
-  const dataDir = path.dirname(env.DATABASE_PATH ?? './data/kompass.db');
+  // Cache und Vorschau sind jederzeit neu erzeugbar und gehören deshalb
+  // ausdrücklich **nicht** unter `DATA_PATH` — sonst trüge sie jedes Backup mit.
+  const cacheDir = env.CACHE_PATH ?? './.cache';
   const host = env.SITE_DEPLOY_HOST ?? '';
   const auth = readAuth(env, host);
   const deploy =
@@ -44,8 +46,8 @@ export function readSiteEnv(env: Record<string, string | undefined> = process.en
     staging: env.SITE_STAGING === '1',
     deploy,
     templateDir: siteTemplateDir(env),
-    cacheDir: path.resolve(env.SITE_CACHE_DIR ?? path.join(dataDir, 'site-cache')),
-    previewDir: path.resolve(env.SITE_PREVIEW_DIR ?? path.join(dataDir, 'site-preview')),
+    cacheDir: path.resolve(env.SITE_CACHE_DIR ?? path.join(cacheDir, 'site-build')),
+    previewDir: path.resolve(env.SITE_PREVIEW_DIR ?? path.join(cacheDir, 'site-preview')),
   };
 }
 

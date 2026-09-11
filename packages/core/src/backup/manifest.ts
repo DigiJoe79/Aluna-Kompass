@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const BACKUP_FORMAT = 1 as const;
+export const BACKUP_FORMAT = 2 as const;
 
 export const backupManifestSchema = z.object({
   format: z.literal(BACKUP_FORMAT),

@@ -8,18 +8,22 @@ import { createDeps } from '../src/app';
 import { login } from '../src/auth/login';
 import { exportBackup, importBackup, importBackupForSetup, inspectBackup } from '../src/backup';
 import { auditLog, users } from '../src/db/schema';
+import { storeMediaAsset } from '../src/media/service';
 import { unwrap } from '../src/result';
 import { seedDevelopment } from '../src/seed/seed';
 import { readSetting } from '../src/settings/service';
 import { ctxWith } from '../src/testing';
 import { isSetupRequired } from '../src/setup/service';
 
+// 1×1 PNG
+const PNG = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64'));
+
 const dirs: string[] = [];
 const tmp = () => { const d = mkdtempSync(path.join(tmpdir(), 'kompass-backup-')); dirs.push(d); return d; };
 afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true }); });
 
 function fileDeps(dir: string, env: 'test' | 'production' = 'test') {
-  return createDeps({ databasePath: path.join(dir, 'kompass.db'), mediaPath: path.join(dir, 'media'), env });
+  return createDeps({ dataPath: dir, env });
 }
 
 describe('backup', () => {
@@ -31,12 +35,12 @@ describe('backup', () => {
     const admin = deps.db.select().from(users).all()[0]!;
     const result = unwrap(await exportBackup(deps, ctxWith(['backup.export'], admin.id), { workDir: tmp() }));
     expect(result.archivePath).toMatch(/kompass-backup-test-\d{8}-\d{6}\.tar\.gz$/);
-    expect(result.manifest).toMatchObject({ format: 1, environment: 'test', counts: { users: 4 } });
+    expect(result.manifest).toMatchObject({ format: 2, environment: 'test', counts: { users: 4 } });
     const out = tmp();
     await tar.extract({ file: result.archivePath, cwd: out });
     const manifest = JSON.parse(readFileSync(path.join(out, 'manifest.json'), 'utf8'));
     expect(manifest.migrationCount).toBe(deps.migrationCount);
-    const copy = new Database(path.join(out, 'kompass.db'), { readonly: true });
+    const copy = new Database(path.join(out, 'data', 'core', 'db', 'kompass.db'), { readonly: true });
     expect((copy.prepare('select count(*) as n from sessions').get() as { n: number }).n).toBe(0);
     expect((copy.prepare('select count(*) as n from api_tokens').get() as { n: number }).n).toBe(0);
     expect((copy.prepare('select count(*) as n from users').get() as { n: number }).n).toBe(4);
@@ -85,25 +89,24 @@ describe('backup', () => {
     deps.close();
   });
 
-  it('keeps the media root itself and only moves its contents aside', async () => {
+  it('legt den ganzen Bestand als eine Rueckfahrkarte beiseite und raeumt die vorige weg', async () => {
     const source = tmp();
     const sourceDeps = fileDeps(source);
     const seed = await seedDevelopment(sourceDeps);
-    const ctx = ctxWith(['backup.export', 'backup.import']);
-    mkdirSync(path.join(source, 'media'), { recursive: true });
-    writeFileSync(path.join(source, 'media', 'neu.png'), 'neu');
+    const admin = sourceDeps.db.select().from(users).all()[0]!;
+    const ctx = ctxWith(['backup.export', 'backup.import'], admin.id);
+    unwrap(await storeMediaAsset(sourceDeps, ctxWith(['media.upload'], admin.id), { originalName: 'neu.png', bytes: PNG }));
     const archive = unwrap(await exportBackup(sourceDeps, ctx, { workDir: tmp() }));
     sourceDeps.close();
 
     const target = tmp();
     const targetDeps = fileDeps(target);
     await seedDevelopment(targetDeps);
-    const mediaRoot = path.join(target, 'media');
+    const mediaRoot = path.join(target, 'core', 'media');
     mkdirSync(mediaRoot, { recursive: true });
     writeFileSync(path.join(mediaRoot, 'alt.png'), 'alt');
-    // Im Container ist das Medienverzeichnis ein Einhaengepunkt: es laesst sich
-    // nicht umbenennen. Der Import muss darin arbeiten, nicht daran.
-    const before = statSync(mediaRoot).ino;
+    // Eine Rueckfahrkarte aus einem frueheren Lauf, die verschwinden soll.
+    mkdirSync(path.join(target, '.before-import-20250101T000000'), { recursive: true });
 
     unwrap(await importBackup(targetDeps, ctx, {
       archivePath: archive.archivePath,
@@ -112,13 +115,14 @@ describe('backup', () => {
       environmentName: 'test',
     }));
 
-    expect(statSync(mediaRoot).ino, 'Wurzelverzeichnis wurde ersetzt').toBe(before);
     const entries = readdirSync(mediaRoot);
-    expect(entries).toContain('neu.png');
+    expect(entries.some((e) => e.startsWith('neu'))).toBe(true);
     expect(entries).not.toContain('alt.png');
-    const aside = entries.find((e) => e.startsWith('.before-import-'));
-    expect(aside, 'alter Bestand wurde nicht gesichert').toBeTruthy();
-    expect(readdirSync(path.join(mediaRoot, aside!))).toContain('alt.png');
+
+    const asides = readdirSync(target).filter((e) => e.startsWith('.before-import-'));
+    expect(asides, 'genau eine Rueckfahrkarte').toHaveLength(1);
+    expect(asides[0]).not.toBe('.before-import-20250101T000000');
+    expect(readdirSync(path.join(target, asides[0]!, 'core', 'media'))).toContain('alt.png');
     expect(seed.adminEmail).toContain('@');
     targetDeps.close();
   });

@@ -54,14 +54,12 @@ ENV NODE_ENV=production \
     KOMPASS_BUILD=${KOMPASS_BUILD} \
     HOSTNAME=0.0.0.0 \
     PORT=3000 \
-    DATABASE_PATH=/data/kompass.db \
-    MEDIA_PATH=/media \
-    SITE_CACHE_DIR=/data/site-cache \
-    SITE_PREVIEW_DIR=/data/site-preview \
+    DATA_PATH=/data \
+    CACHE_PATH=/cache \
     KOMPASS_MIGRATIONS_DIR=/app/packages/core/src/db/migrations \
     KOMPASS_TEMPLATES_DIR=/app/packages/documents/templates \
     KOMPASS_FONTS_DIR=/app/packages/documents/fonts \
-    KOMPASS_DOCUMENT_TEMPLATES_DIR=/data/document-templates
+    KOMPASS_DOCUMENT_TEMPLATES_DIR=/data/core/document-templates
 WORKDIR /app
 COPY --from=build --chown=node:node /app/apps/kompass/.next/standalone ./
 COPY --from=build --chown=node:node /app/apps/kompass/.next/static ./apps/kompass/.next/static
@@ -81,10 +79,10 @@ COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --chown=node:node scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY --chown=node:node scripts/seed-site-template.sh /usr/local/bin/seed-site-template.sh
 COPY --chown=node:node scripts/seed-document-templates.sh /usr/local/bin/seed-document-templates.sh
-RUN mkdir -p /data /media && chown node:node /data /media \
+RUN mkdir -p /data /cache && chown node:node /data /cache \
  && chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/seed-site-template.sh /usr/local/bin/seed-document-templates.sh
 USER node
-VOLUME ["/data", "/media"]
+VOLUME ["/data"]
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"

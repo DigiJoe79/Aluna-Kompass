@@ -1,7 +1,12 @@
 import { mkdir, readFile, stat, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-export interface MediaStore {
+/**
+ * Ein Verzeichnis, in dem ein Bereich seine Dateien ablegt. Die Mediathek war
+ * der erste; jedes Modul mit `files: true` im Manifest bekommt einen eigenen
+ * unter `<dataPath>/<modulschlüssel>`.
+ */
+export interface FileStore {
   /** Dateisystem-Wurzel oder null (In-Memory). */
   rootDir: string | null;
   write(filename: string, bytes: Uint8Array): Promise<void>;
@@ -15,10 +20,10 @@ export interface MediaStore {
 const SAFE_FILENAME = /^[a-z0-9][a-z0-9._-]{0,180}$/;
 
 export function assertSafeFilename(filename: string): void {
-  if (!SAFE_FILENAME.test(filename) || filename.includes('..')) throw new Error(`unsafe media filename: ${filename}`);
+  if (!SAFE_FILENAME.test(filename) || filename.includes('..')) throw new Error(`unsafe filename: ${filename}`);
 }
 
-export function createFileMediaStore(rootDir: string): MediaStore {
+export function createFileStore(rootDir: string): FileStore {
   const resolve = (filename: string) => {
     assertSafeFilename(filename);
     return path.join(rootDir, filename);
@@ -42,7 +47,7 @@ export function createFileMediaStore(rootDir: string): MediaStore {
   };
 }
 
-export function createMemoryMediaStore(): MediaStore {
+export function createMemoryFileStore(): FileStore {
   const files = new Map<string, Uint8Array>();
   return {
     rootDir: null,
@@ -52,7 +57,7 @@ export function createMemoryMediaStore(): MediaStore {
     },
     async read(filename) {
       const bytes = files.get(filename);
-      if (!bytes) throw new Error(`media not found: ${filename}`);
+      if (!bytes) throw new Error(`file not found: ${filename}`);
       return bytes;
     },
     exists: async (filename) => files.has(filename),

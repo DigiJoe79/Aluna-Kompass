@@ -13,7 +13,7 @@
 # kopiert und relative env_file-Pfade dort ins Leere zeigen.
 #
 # Vorher anlegen: /share/Container/kompass-test/{data,media},
-# die Datei .env.test (siehe .env.test.example) und site.pw (Rechte 600,
+# die Datei .env.test (siehe .env.test.example) und secret/site.pw (Rechte 600,
 # Besitzer 1000).
 services:
   kompass-test:
@@ -29,6 +29,9 @@ services:
       APP_ENV: test
     env_file: [/share/Container/kompass-test/.env.test]
     volumes:
+      # Ein Volume für alles, was gesichert wird: darunter liegt je Modul ein
+      # Verzeichnis, `core` hält Datenbank, Mediathek und Basis-Vorlagen.
       - /share/Container/kompass-test/data:/data
-      - /share/Container/kompass-test/media:/media
-      - /share/Container/kompass-test/site.pw:/data/site.pw:ro
+      # Geheimnisse ausdrücklich daneben, nie unter /data — das Backup bildet
+      # /data ab und darf das Webspace-Passwort nicht mit ausliefern.
+      - /share/Container/kompass-test/secret:/secret:ro

@@ -2,7 +2,7 @@ import { createDeps, readEnv } from '../app';
 import { seedDevelopment } from './seed';
 
 const runtime = readEnv({ SESSION_SECRET: 'seed-only-not-a-real-secret-value-0000', ...process.env });
-const deps = createDeps({ databasePath: runtime.databasePath, mediaPath: runtime.mediaPath, env: runtime.env });
+const deps = createDeps({ dataPath: runtime.dataPath, env: runtime.env });
 try {
   const { adminEmail, adminPassword } = await seedDevelopment(deps);
   console.log(`Seed abgeschlossen. Login: ${adminEmail} / ${adminPassword}`);

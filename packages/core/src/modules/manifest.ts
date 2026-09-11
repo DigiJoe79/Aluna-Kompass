@@ -152,6 +152,18 @@ export interface ModuleManifest {
   /** Wo dieses Modul ein Medium verwendet — synchron, nur lesend, ohne
    *  Rechteprüfung. Befragt vor dem Löschen eines Assets. */
   mediaReferences?: (deps: Deps, assetId: string) => readonly MediaReference[];
+  /**
+   * Dieses Modul legt eigene Dateien ab. Es bekommt dann `<dataPath>/<key>`
+   * über `deps.files(key)`. Die Anmeldung ist nicht Form, sondern Zweck: Das
+   * Backup sichert genau die angemeldeten Verzeichnisse.
+   */
+  files?: boolean;
+  /**
+   * Verzeichnisse im eigenen Speicher, die **bereitgestelltes Material** sind
+   * und kein Bestand: Sie gehören ins Backup, überleben aber ein Zurücksetzen.
+   * Pfade relativ zum Modulverzeichnis, z. B. `['template']`.
+   */
+  providedFiles?: readonly string[];
   /** Was dieses Modul festhält — synchron, nur lesend, ohne Rechteprüfung.
    *  Befragt vor dem Löschen und für den Fristenbildschirm. `entityType` ist
    *  generisch: derselbe Haken trägt später Dokumente und Belege. */

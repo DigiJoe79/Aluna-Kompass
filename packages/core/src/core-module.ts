@@ -12,4 +12,6 @@ export const coreModule = defineModule({
   settings: CORE_SETTINGS,
   publishedViews: [publishedOrganization, publishedProjects],
   mediaReferences: coreMediaReferences,
+  files: true,
+  providedFiles: ['document-templates'],
 });

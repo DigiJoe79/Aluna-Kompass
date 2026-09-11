@@ -13,7 +13,7 @@
 #   $1  Verzeichnis der mitgelieferten Basen (Vorgabe /app/packages/documents/templates/bases)
 set -eu
 
-dir="${KOMPASS_DOCUMENT_TEMPLATES_DIR:-$(dirname "${DATABASE_PATH:-/data/kompass.db}")/document-templates}"
+dir="${KOMPASS_DOCUMENT_TEMPLATES_DIR:-${DATA_PATH:-/data}/core/document-templates}"
 ship="${1:-/app/packages/documents/templates/bases}"
 
 if [ ! -d "$dir" ]; then

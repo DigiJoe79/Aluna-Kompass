@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { defineConfig } from '@playwright/test';
 
-const dbPath = path.resolve(import.meta.dirname, 'e2e/.tmp/kompass.db');
+const dataPath = path.resolve(import.meta.dirname, 'e2e/.tmp/data');
 const siteTarget = path.resolve(import.meta.dirname, 'e2e/.tmp/site-target');
 const siteTemplateDir = path.resolve(import.meta.dirname, '../../templates/verein-basis');
 process.env.E2E_SITE_TARGET = siteTarget;
@@ -26,8 +26,7 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       APP_ENV: 'test',
-      DATABASE_PATH: dbPath,
-      MEDIA_PATH: path.resolve(import.meta.dirname, 'e2e/.tmp/media'),
+      DATA_PATH: dataPath,
       SESSION_SECRET: 'e2e-session-secret-0123456789abcdef0123456789',
       E2E_RESET_TOKEN: 'e2e-reset',
       SITE_PUBLIC_URL: 'https://staging.example.org',

@@ -1,8 +1,7 @@
 import { execFileSync } from 'node:child_process';
-import { rm } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { createDeps, readEnv, seedDevelopment, setSetting, unwrap, type AppEnv, type CallContext } from '@kompass/core';
+import { coreModule, createDeps, readEnv, resetDataPath, seedDevelopment, setSetting, unwrap, type AppEnv, type CallContext } from '@kompass/core';
 import { coreDocumentTemplates, createDocumentEngine } from '@kompass/documents';
 import { animalsModule } from '@kompass/module-animals';
 import { contactsModule } from '@kompass/module-contacts';
@@ -27,8 +26,7 @@ async function prototypeOrganizationName(prototypeDir: string): Promise<string |
 
 export interface DevResetOptions {
   env: AppEnv;
-  databasePath: string;
-  mediaPath: string;
+  dataPath: string;
   prototypeDir: string;
   /** Das Template-Verzeichnis, das in der Entwicklung dem Volume entspricht. */
   templateDir: string;
@@ -43,9 +41,8 @@ export async function devReset(opts: DevResetOptions) {
   if (opts.env !== 'development') {
     throw new Error(`dev:reset runs only in the development environment, not in ${opts.env}`);
   }
-  for (const target of [opts.databasePath, `${opts.databasePath}-wal`, `${opts.databasePath}-shm`, opts.mediaPath]) {
-    await rm(target, { recursive: true, force: true });
-  }
+  await resetDataPath(opts.dataPath, [coreModule, siteModule, animalsModule, contactsModule, dmsModule]);
+
   // Dasselbe Skript, das der Entrypoint im Container fährt: Basis-Template
   // hinein, wenn keins da ist, und die Modulauflösung setzen. Ohne diesen
   // Schritt liest die Entwicklung, was zuletzt jemand hineinkopiert hat.
@@ -54,8 +51,7 @@ export async function devReset(opts: DevResetOptions) {
     stdio: 'inherit',
   });
   const deps = createDeps({
-    databasePath: opts.databasePath,
-    mediaPath: opts.mediaPath,
+    dataPath: opts.dataPath,
     env: opts.env,
     modules: [siteModule, animalsModule, contactsModule, dmsModule],
     coreTemplates: coreDocumentTemplates(),
@@ -88,11 +84,10 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const runtime = readEnv({ SESSION_SECRET: 'dev-reset-only-not-a-real-secret-0000', ...process.env });
   devReset({
     env: runtime.env,
-    // Vorgabe ist die Datenbank der App; die liest sie mit cwd apps/kompass als ./data.
-    databasePath: process.env.DATABASE_PATH ?? path.join(root, 'apps/kompass/data/kompass.db'),
-    mediaPath: process.env.MEDIA_PATH ?? path.join(root, 'apps/kompass/media'),
+    // Vorgabe ist das Datenverzeichnis der App; die liest es mit cwd apps/kompass als ./data.
+    dataPath: process.env.DATA_PATH ?? path.join(root, 'apps/kompass/data'),
     prototypeDir: process.env.PROTOTYPE_DIR ?? '/Users/joe/Development/Aluna Tierhilfe e.V./Webseite/aluna-static',
-    templateDir: siteTemplateDir({ ...process.env, DATABASE_PATH: process.env.DATABASE_PATH ?? path.join(root, 'apps/kompass/data/kompass.db') }),
+    templateDir: siteTemplateDir({ ...process.env, DATA_PATH: process.env.DATA_PATH ?? path.join(root, 'apps/kompass/data') }),
   })
     .then(({ adminEmail, adminPassword, counts }) => {
       console.log('Zurückgesetzt und importiert:', counts);

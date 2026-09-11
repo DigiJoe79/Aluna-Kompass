@@ -13,6 +13,7 @@ import { isSetupRequired } from '../setup/service';
 import { loadUserSummary } from '../users/service';
 import { validate } from '../validate';
 import { extractBackup } from './archive';
+import { DB_RELATIVE } from './export';
 import { backupManifestSchema, type BackupManifest } from './manifest';
 
 async function readManifest(dir: string): Promise<Result<BackupManifest>> {
@@ -49,26 +50,26 @@ async function applyBackup(
   if (opts.onlyWhileSetupPending && !isSetupRequired(deps)) {
     return conflict('setupAlreadyDone', 'Die Einrichtung wurde bereits abgeschlossen');
   }
-  const stampSuffix = `.before-import-${isoNow(deps.clock).replace(/[-:.]/g, '')}`;
   deps.close();
-  for (const suffix of ['', '-wal', '-shm']) {
-    const file = `${deps.databasePath}${suffix}`;
-    if (await stat(file).catch(() => null)) await rename(file, `${file}${stampSuffix}`);
+  // `dataPath` ist der Einhaengepunkt, alles darunter sind gewoehnliche
+  // Verzeichnisse. Der ganze Bestand wandert deshalb in einem Zug zur Seite,
+  // statt wie frueher innerhalb jedes einzelnen Speichers gearbeitet werden
+  // zu muessen.
+  const aside = path.join(deps.dataPath, `.before-import-${isoNow(deps.clock).replace(/[-:.]/g, '')}`);
+  await mkdir(deps.dataPath, { recursive: true });
+  for (const entry of await readdir(deps.dataPath)) {
+    // Nur die juengste Rueckfahrkarte wird aufgehoben: zwei Generationen
+    // helfen niemandem und verdoppeln den Platzbedarf bei jedem Versuch.
+    if (entry.startsWith('.before-import-')) await rm(path.join(deps.dataPath, entry), { recursive: true, force: true });
   }
-  await cp(path.join(dir, 'kompass.db'), deps.databasePath);
-  if (deps.media.rootDir) {
-    const root = deps.media.rootDir;
-    // Im Container ist das Medienverzeichnis ein Einhaengepunkt eines Volumes.
-    // Ein Mountpoint laesst sich nicht umbenennen, und sein Elternverzeichnis
-    // ist nicht beschreibbar — deshalb wird innerhalb gearbeitet.
-    await mkdir(root, { recursive: true });
-    const aside = path.join(root, stampSuffix);
-    await mkdir(aside, { recursive: true });
-    for (const entry of await readdir(root)) {
-      if (entry.startsWith('.before-import-')) continue;
-      await rename(path.join(root, entry), path.join(aside, entry));
-    }
-    await cp(path.join(dir, 'media'), root, { recursive: true });
+  await mkdir(aside, { recursive: true });
+  for (const entry of await readdir(deps.dataPath)) {
+    if (entry.startsWith('.before-import-')) continue;
+    await rename(path.join(deps.dataPath, entry), path.join(aside, entry));
+  }
+  const restored = path.join(dir, 'data');
+  if (await stat(restored).catch(() => null)) {
+    await cp(restored, deps.dataPath, { recursive: true });
   }
   deps.reopen();
 
@@ -100,7 +101,7 @@ export async function importBackup(deps: AppDeps, ctx: CallContext, input: unkno
     const manifest = await readManifest(dir);
     if (!manifest.ok) return manifest;
     if (manifest.value.migrationCount > deps.migrationCount) return invalid([{ path: 'archive', message: 'backupNewerThanApp' }]);
-    const dbFile = path.join(dir, 'kompass.db');
+    const dbFile = path.join(dir, 'data', ...DB_RELATIVE);
     if (!(await stat(dbFile).catch(() => null))) return invalid([{ path: 'archive', message: 'backupCorrupt' }]);
     const probe = new Database(dbFile, { readonly: true });
     const integrity = (probe.prepare('pragma integrity_check').get() as { integrity_check: string }).integrity_check;
@@ -140,7 +141,7 @@ export async function importBackupForSetup(deps: AppDeps, input: unknown): Promi
     // Ohne Nutzer bliebe die Installation unbenutzbar und zugleich dauerhaft
     // offen: niemand koennte sich anmelden, der Endpunkt bliebe erreichbar.
     if (manifest.value.counts.users === 0) return invalid([{ path: 'archive', message: 'backupWithoutUsers' }]);
-    const dbFile = path.join(dir, 'kompass.db');
+    const dbFile = path.join(dir, 'data', ...DB_RELATIVE);
     if (!(await stat(dbFile).catch(() => null))) return invalid([{ path: 'archive', message: 'backupCorrupt' }]);
     const probe = new Database(dbFile, { readonly: true });
     const integrity = (probe.prepare('pragma integrity_check').get() as { integrity_check: string }).integrity_check;

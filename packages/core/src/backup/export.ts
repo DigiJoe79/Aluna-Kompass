@@ -1,5 +1,5 @@
 import { count } from 'drizzle-orm';
-import { cp, mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import * as tar from 'tar';
@@ -15,6 +15,10 @@ import { BACKUP_FORMAT, type BackupManifest } from './manifest';
 
 export const APP_VERSION = '0.1.0';
 
+/** Wo die Datenbank im Archiv liegt — dasselbe Layout wie unter `dataPath`. */
+export const DB_DIR_RELATIVE = ['core', 'db'] as const;
+export const DB_RELATIVE = [...DB_DIR_RELATIVE, 'kompass.db'] as const;
+
 function stamp(iso: string): string {
   return iso.replace(/[-:]/g, '').replace('T', '-').slice(0, 15);
 }
@@ -25,14 +29,28 @@ export async function exportBackup(deps: AppDeps, ctx: CallContext, opts: { work
   const now = isoNow(deps.clock);
   const staging = await mkdtemp(path.join(opts.workDir, 'kompass-export-'));
   try {
-    const dbCopy = path.join(staging, 'kompass.db');
+    // Ein Abbild von `dataPath`, mit einer Ausnahme: Die Datenbank wird nicht
+    // kopiert, sondern über die SQLite-Backup-API gezogen und um Sitzungen und
+    // Token erleichtert. Ein roher Dateikopie-Durchgang lieferte sonst gültige
+    // Sitzungscookies und Token-Hashes mit aus.
+    const dataStaging = path.join(staging, 'data');
+    const dbCopy = path.join(dataStaging, ...DB_RELATIVE);
+    await mkdir(path.dirname(dbCopy), { recursive: true });
     await deps.backupDatabase(dbCopy);
     const copy = new Database(dbCopy);
     copy.exec('delete from sessions; delete from api_tokens; vacuum;');
     copy.close();
-    await mkdir(path.join(staging, 'media'), { recursive: true });
-    if (deps.media.rootDir && (await stat(deps.media.rootDir).catch(() => null))) {
-      await cp(deps.media.rootDir, path.join(staging, 'media'), { recursive: true });
+
+    for (const entry of await readdir(deps.dataPath).catch(() => [] as string[])) {
+      // Rückfahrkarten eines früheren Imports und anderes Betriebsgeschiebe
+      // bleiben draußen, sonst trüge jedes Backup den Bestand des vorigen.
+      if (entry.startsWith('.')) continue;
+      const source = path.join(deps.dataPath, entry);
+      const target = path.join(dataStaging, entry);
+      await cp(source, target, {
+        recursive: true,
+        filter: (from) => from !== path.join(deps.dataPath, ...DB_DIR_RELATIVE),
+      });
     }
     const manifest: BackupManifest = {
       format: BACKUP_FORMAT,
@@ -48,7 +66,7 @@ export async function exportBackup(deps: AppDeps, ctx: CallContext, opts: { work
     };
     await writeFile(path.join(staging, 'manifest.json'), JSON.stringify(manifest, null, 2));
     const archivePath = path.join(opts.workDir, `kompass-backup-${deps.env}-${stamp(now)}.tar.gz`);
-    await tar.create({ gzip: true, cwd: staging, file: archivePath, portable: true }, ['manifest.json', 'kompass.db', 'media']);
+    await tar.create({ gzip: true, cwd: staging, file: archivePath, portable: true }, ['manifest.json', 'data']);
     const bytes = (await stat(archivePath)).size;
     deps.db.transaction((tx) => {
       writeSettingInternal(tx, deps, systemContext(ctx.requestId), 'system.lastExportAt', now, 'backup.export.mark');

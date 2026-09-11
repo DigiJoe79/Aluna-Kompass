@@ -16,7 +16,7 @@
 #   $2  node_modules mit Astro und @kompass/*  (Vorgabe: die des Basis-Templates)
 set -eu
 
-template_dir="${SITE_TEMPLATE_DIR:-$(dirname "${DATABASE_PATH:-/data/kompass.db}")/site-template}"
+template_dir="${SITE_TEMPLATE_DIR:-${DATA_PATH:-/data}/site/template}"
 source_dir="${1:-/app/templates/verein-basis}"
 # Nicht /app/node_modules: pnpm installiert nicht flach, astro liegt bei dem
 # Paket, das es braucht. Die node_modules des Basis-Templates führen genau die

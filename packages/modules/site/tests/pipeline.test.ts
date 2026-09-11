@@ -65,38 +65,39 @@ describe('readSiteEnv', () => {
   it('reports no deploy target when variables are missing and parses them when present', () => {
     expect(readSiteEnv({ DATABASE_PATH: '/data/k.db' }).deploy).toBeNull();
     const env = readSiteEnv({
-      DATABASE_PATH: '/data/k.db',
+      DATA_PATH: '/data',
+      CACHE_PATH: '/cache',
       SITE_PUBLIC_URL: 'https://staging.example.org',
       SITE_STAGING: '1',
       SITE_DEPLOY_HOST: 'h',
       SITE_DEPLOY_USER: 'u',
       SITE_DEPLOY_PATH: '/web/staging',
-      SITE_DEPLOY_KEY_FILE: '/data/site.key',
-      SITE_TEMPLATE_DIR: '/data/site-template',
+      SITE_DEPLOY_KEY_FILE: '/secret/site.key',
+      SITE_TEMPLATE_DIR: '/data/site/template',
     });
     expect(env).toMatchObject({
       publicUrl: 'https://staging.example.org',
       staging: true,
-      deploy: { host: 'h', user: 'u', path: '/web/staging', auth: { kind: 'key', keyFile: '/data/site.key' } },
-      templateDir: path.resolve('/data/site-template'),
-      cacheDir: path.resolve('/data/site-cache'),
-      previewDir: path.resolve('/data/site-preview'),
+      deploy: { host: 'h', user: 'u', path: '/web/staging', auth: { kind: 'key', keyFile: '/secret/site.key' } },
+      templateDir: path.resolve('/data/site/template'),
+      cacheDir: path.resolve('/cache/site-build'),
+      previewDir: path.resolve('/cache/site-preview'),
     });
   });
 
   it('reads a password file target and rejects a half configured one', () => {
-    const base = { DATABASE_PATH: '/data/k.db', SITE_DEPLOY_HOST: 'h', SITE_DEPLOY_USER: 'u', SITE_DEPLOY_PATH: '/web' };
-    expect(readSiteEnv({ ...base, SITE_DEPLOY_PASSWORD_FILE: '/data/site.pw' }).deploy).toEqual({
+    const base = { DATA_PATH: '/data', SITE_DEPLOY_HOST: 'h', SITE_DEPLOY_USER: 'u', SITE_DEPLOY_PATH: '/web' };
+    expect(readSiteEnv({ ...base, SITE_DEPLOY_PASSWORD_FILE: '/secret/site.pw' }).deploy).toEqual({
       host: 'h',
       user: 'u',
       path: '/web',
-      auth: { kind: 'password', passwordFile: '/data/site.pw' },
+      auth: { kind: 'password', passwordFile: '/secret/site.pw' },
     });
-    expect(readSiteEnv({ ...base, SITE_DEPLOY_KEY_FILE: '/data/site.key' }).deploy).toEqual({
+    expect(readSiteEnv({ ...base, SITE_DEPLOY_KEY_FILE: '/secret/site.key' }).deploy).toEqual({
       host: 'h',
       user: 'u',
       path: '/web',
-      auth: { kind: 'key', keyFile: '/data/site.key' },
+      auth: { kind: 'key', keyFile: '/secret/site.key' },
     });
     expect(readSiteEnv({ ...base }).deploy).toBeNull();
   });

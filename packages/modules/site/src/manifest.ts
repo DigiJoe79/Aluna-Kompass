@@ -41,4 +41,6 @@ export const siteModule: ModuleManifest = defineModule({
   navigationFor: siteNavigationFor,
   mcpTools: SITE_MCP_TOOLS,
   mediaReferences: siteMediaReferences,
+  files: true,
+  providedFiles: ['template'],
 });

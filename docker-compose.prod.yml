@@ -13,7 +13,7 @@
 # kopiert und relative env_file-Pfade dort ins Leere zeigen.
 #
 # Vorher anlegen: /share/Container/kompass-prod/{data,media},
-# die Datei .env.prod (siehe .env.prod.example) und site.pw (Rechte 600,
+# die Datei .env.prod (siehe .env.prod.example) und secret/site.pw (Rechte 600,
 # Besitzer 1000).
 services:
   kompass-prod:
@@ -30,6 +30,9 @@ services:
       APP_ENV: production
     env_file: [/share/Container/kompass-prod/.env.prod]
     volumes:
+      # Ein Volume für alles, was gesichert wird: darunter liegt je Modul ein
+      # Verzeichnis, `core` hält Datenbank, Mediathek und Basis-Vorlagen.
       - /share/Container/kompass-prod/data:/data
-      - /share/Container/kompass-prod/media:/media
-      - /share/Container/kompass-prod/site.pw:/data/site.pw:ro
+      # Geheimnisse ausdrücklich daneben, nie unter /data — das Backup bildet
+      # /data ab und darf das Webspace-Passwort nicht mit ausliefern.
+      - /share/Container/kompass-prod/secret:/secret:ro

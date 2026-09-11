@@ -16,23 +16,28 @@ afterEach(() => {
 });
 
 describe('isAllowedBackupEntry', () => {
-  it('accepts exactly the three kinds of entry a backup contains', () => {
+  it('accepts the manifest and the whole data tree', () => {
     expect(isAllowedBackupEntry('manifest.json')).toBe(true);
-    expect(isAllowedBackupEntry('kompass.db')).toBe(true);
-    expect(isAllowedBackupEntry('media/foto-abc123.png')).toBe(true);
     expect(isAllowedBackupEntry('./manifest.json')).toBe(true);
-    // Der Export packt das Medienverzeichnis selbst mit; ohne diesen Eintrag
-    // entstuende es bei einem Backup ohne Medien nicht.
-    expect(isAllowedBackupEntry('media')).toBe(true);
-    expect(isAllowedBackupEntry('media/')).toBe(true);
+    expect(isAllowedBackupEntry('data/core/db/kompass.db')).toBe(true);
+    expect(isAllowedBackupEntry('data/core/media/foto-abc123.png')).toBe(true);
+    // Ein Modul, das es heute noch nicht gibt, ist ohne Codeaenderung dabei.
+    expect(isAllowedBackupEntry('data/dms/BRF-2026-001.pdf')).toBe(true);
+    // Der Export packt `data` selbst mit; ohne diesen Eintrag entstuende das
+    // Verzeichnis bei einem leeren Bestand nicht.
+    expect(isAllowedBackupEntry('data')).toBe(true);
+    expect(isAllowedBackupEntry('data/')).toBe(true);
   });
 
-  it('rejects escapes and anything unexpected', () => {
+  it('rejects escapes and anything outside the data tree', () => {
     expect(isAllowedBackupEntry('../etc/passwd')).toBe(false);
-    expect(isAllowedBackupEntry('media/../../etc/passwd')).toBe(false);
+    expect(isAllowedBackupEntry('data/../../etc/passwd')).toBe(false);
     expect(isAllowedBackupEntry('/etc/passwd')).toBe(false);
+    // Geheimnisse liegen ausserhalb von `dataPath` und kaemen gar nicht erst
+    // ins Archiv — hier steht, dass sie es auch beim Entpacken nicht tun.
+    expect(isAllowedBackupEntry('secret/site.pw')).toBe(false);
     expect(isAllowedBackupEntry('site.pw')).toBe(false);
-    expect(isAllowedBackupEntry('kompass.db-wal')).toBe(false);
+    expect(isAllowedBackupEntry('kompass.db')).toBe(false);
   });
 });
 
@@ -52,18 +57,18 @@ describe('extractBackup', () => {
   it('unpacks the expected entries and drops the rest', async () => {
     const archive = archiveWith({
       'manifest.json': '{}',
-      'kompass.db': 'db',
-      'media/foto.png': 'bild',
+      'data/core/db/kompass.db': 'db',
+      'data/core/media/foto.png': 'bild',
       'fremd.txt': 'weg damit',
     });
     const dir = await extractBackup({ archivePath: archive, workDir: tmp() });
     const { existsSync, readdirSync } = await import('node:fs');
-    expect(readdirSync(dir).sort()).toEqual(['kompass.db', 'manifest.json', 'media']);
+    expect(readdirSync(dir).sort()).toEqual(['data', 'manifest.json']);
     expect(existsSync(path.join(dir, 'fremd.txt'))).toBe(false);
   });
 
   it('refuses an oversized archive without taking the process down', async () => {
-    const archive = archiveWith({ 'manifest.json': '{}', 'kompass.db': 'x'.repeat(4096) });
+    const archive = archiveWith({ 'manifest.json': '{}', 'data/core/db/kompass.db': 'x'.repeat(4096) });
     await expect(extractBackup({ archivePath: archive, workDir: tmp(), maxBytes: 100 })).rejects.toThrow(
       BackupTooLargeError,
     );

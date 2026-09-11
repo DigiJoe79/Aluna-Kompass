@@ -13,14 +13,16 @@ export class BackupTooLargeError extends Error {
   }
 }
 
-// `media` selbst gehoert dazu: der Export packt das Verzeichnis mit, und ohne
-// diesen Eintrag entstuende es bei einem Backup ohne Medien gar nicht.
-const ALLOWED = /^(manifest\.json|kompass\.db|media(\/.*)?)$/;
+// Zwei Eintraege: das Manifest und ein Abbild von `dataPath`. Alles, was ein
+// Modul dort ablegt, ist damit ohne weiteres Zutun im Backup — genau dafuer
+// liegt es unter `dataPath` und nicht daneben. `data` selbst gehoert dazu,
+// sonst entstuende das Verzeichnis bei einem leeren Bestand gar nicht.
+const ALLOWED = /^(manifest\.json|data(\/.*)?)$/;
 
 /**
- * Ein Backup enthaelt genau drei Arten von Eintrag. Alles andere wird beim
- * Entpacken verworfen — ausdruecklich, statt sich auf die Voreinstellung von
- * node-tar zu verlassen, die sich in einer neuen Fassung aendern koennte.
+ * Alles andere wird beim Entpacken verworfen — ausdruecklich, statt sich auf
+ * die Voreinstellung von node-tar zu verlassen, die sich in einer neuen
+ * Fassung aendern koennte.
  */
 export function isAllowedBackupEntry(entryPath: string): boolean {
   const normalized = entryPath.replace(/^\.\//, '');

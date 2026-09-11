@@ -16,11 +16,13 @@ function workspace() {
   const dir = mkdtempSync(path.join(tmpdir(), 'dev-reset-'));
   dirs.push(dir);
   const proto = fakePrototype();
+  const dataPath = path.join(dir, 'data');
   return {
-    databasePath: path.join(dir, 'data', 'kompass.db'),
-    mediaPath: path.join(dir, 'media'),
+    dataPath,
+    databasePath: path.join(dataPath, 'core', 'db', 'kompass.db'),
+    mediaPath: path.join(dataPath, 'core', 'media'),
     prototypeDir: proto,
-    templateDir: path.join(dir, 'data', 'site-template'),
+    templateDir: path.join(dataPath, 'site', 'template'),
   };
 }
 
@@ -45,7 +47,7 @@ describe('devReset', () => {
   it('takes the organisation name from the prototype instead of the generic seed', async () => {
     const ws = workspace();
     await devReset({ ...ws, env: 'development' });
-    const deps = createDeps({ databasePath: ws.databasePath, mediaPath: ws.mediaPath, env: 'development' });
+    const deps = createDeps({ dataPath: ws.dataPath, env: 'development' });
     try {
       expect(readSetting<string>(deps, 'organization.name')).toBe('Beispielverein e.V.');
     } finally {

@@ -1,7 +1,6 @@
-import { rmSync } from 'node:fs';
-import { clearDirectory } from './clear-directory';
+
 import { coreDocumentTemplates, createDocumentEngine } from '@kompass/documents';
-import { createDeps, readEnv, seedDevelopment } from '@kompass/core';
+import { coreModule, createDeps, readEnv, resetDataPath, seedDevelopment } from '@kompass/core';
 import { installedModules } from '../modules';
 import { resetMcpHandler } from './mcp';
 
@@ -21,8 +20,7 @@ export function getDeps(): AppDeps {
   if (!holder.deps) {
     const env = readEnv();
     holder.deps = createDeps({
-      databasePath: env.databasePath,
-      mediaPath: env.mediaPath,
+      dataPath: env.dataPath,
       env: env.env,
       modules: installedModules,
       coreTemplates: coreDocumentTemplates(),
@@ -39,8 +37,9 @@ export async function resetDeps(mode: 'empty' | 'seeded'): Promise<void> {
   await resetMcpHandler();
   holder.deps?.close();
   holder.deps = null;
-  for (const suffix of ['', '-wal', '-shm']) rmSync(`${env.databasePath}${suffix}`, { force: true });
-  clearDirectory(env.mediaPath);
+  // Bestand weg, bereitgestelltes Material bleibt: Ohne die Unterscheidung
+  // risse jeder Testlauf das Template aus dem Volume.
+  await resetDataPath(env.dataPath, [coreModule, ...installedModules]);
   const deps = getDeps();
   if (mode === 'seeded') await seedDevelopment(deps);
   await resetMcpHandler();

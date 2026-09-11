@@ -5,7 +5,7 @@ import { coreModule } from '../core-module';
 import { roles, settings, users } from '../db/schema';
 import type { AppEnv, Deps } from '../deps';
 import { newId } from '../ids';
-import { createMemoryMediaStore } from '../media/store';
+import { createMemoryFileStore } from '../files/store';
 import type { DocumentEngine } from '../documents/engine';
 import type { DocumentTemplate, ModuleManifest } from '../modules/manifest';
 import { createRegistry } from '../modules/registry';
@@ -48,6 +48,8 @@ export function createTestDeps(
   } = {},
 ): TestDeps {
   const { db, sqlite } = createTestDb();
+  /** Je Modul ein eigener In-Memory-Speicher, damit Tests sie nicht vermischen. */
+  const memoryStores = new Map<string, ReturnType<typeof createMemoryFileStore>>();
   if (opts.locales) {
     db.insert(settings)
       .values({ key: 'i18n.locales', value: JSON.stringify(opts.locales), updatedAt: opts.now ?? TEST_NOW })
@@ -59,7 +61,12 @@ export function createTestDeps(
     clock: fixedClock(opts.now ?? TEST_NOW),
     env: opts.env ?? 'test',
     registry: createRegistry(opts.manifests ?? [coreModule], { coreTemplates: opts.coreTemplates }),
-    media: createMemoryMediaStore(),
+    media: createMemoryFileStore(),
+    files: (moduleKey: string) => {
+      const store = memoryStores.get(moduleKey) ?? createMemoryFileStore();
+      memoryStores.set(moduleKey, store);
+      return store;
+    },
     documents: opts.documents ?? fakeDocumentEngine(),
     locales: () => readLocales(deps),
   };
