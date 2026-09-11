@@ -52,6 +52,18 @@ test.describe('dms', () => {
     await expect(page.getByText(/BEH-\d{4}-\d{3}/)).toBeVisible();
   });
 
+  test('nennt den Grund am Feld, statt auf Markierungen zu verweisen, die es nicht gibt', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/receive');
+    await page.getByLabel('Datei').setInputFiles({ name: 'notiz.txt', mimeType: 'text/plain', buffer: Buffer.from('Text, kein PDF.') });
+    await page.getByLabel('Datum auf dem Dokument').fill('2026-03-01');
+    await page.getByLabel('Betreff').fill('Falscher Dateityp');
+    await page.getByRole('button', { name: 'Ablegen' }).click();
+    await expect(page.getByText('Dateityp nicht unterstützt (PNG, JPEG, WebP, SVG, PDF).')).toBeVisible();
+    // Der allgemeine Kasten verweist nur dann auf Markierungen, wenn es welche gibt.
+    await expect(page.getByText('Bitte prüfen Sie die markierten Felder.')).toHaveCount(0);
+  });
+
   test('löscht ein Dokument, dessen Aufbewahrungsfrist abgelaufen ist', async ({ page }) => {
     await login(page);
     await page.goto('/dms/receive');

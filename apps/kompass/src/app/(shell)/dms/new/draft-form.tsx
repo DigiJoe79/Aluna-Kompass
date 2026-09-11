@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useActionState } from 'react';
+import { FieldError } from '@/components/forms/field-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,15 +21,18 @@ export function DraftForm({
   const t = useTranslations('dms');
   const [state, formAction, isPending] = useActionState(createDraftAction, idleState);
 
+  const errors = state.status === 'error' ? state.fieldErrors : {};
+
   return (
     <form action={formAction} className="space-y-4 rounded-md border border-line bg-surface p-6">
-      {state.status === 'error' && (
-        <div className="rounded-md bg-error-bg p-3 text-[13px] text-error">{state.message}</div>
-      )}
+      {state.status === 'error' && Object.keys(errors).length === 0 ? (
+        <div role="alert" className="rounded-md bg-error-bg p-3 text-[13px] text-error">{state.message}</div>
+      ) : null}
 
       <div className="space-y-1.5">
         <Label htmlFor="subject">{t('fields.subject')}</Label>
         <Input id="subject" name="subject" required />
+        <FieldError id="subject-error" message={errors.subject} />
       </div>
 
       <div className="space-y-1.5">
@@ -39,6 +43,7 @@ export function DraftForm({
           rows={10}
           className="w-full rounded-md border border-line-strong bg-field p-2.5 font-mono text-[13px] text-ink shadow-xs focus:border-ring focus:outline-hidden"
         />
+        <FieldError id="body-error" message={errors.body} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

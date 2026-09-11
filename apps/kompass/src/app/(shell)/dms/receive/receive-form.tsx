@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useActionState, useState } from 'react';
+import { FieldError } from '@/components/forms/field-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,6 +26,8 @@ export function ReceiveForm({
   const [typeKey, setTypeKey] = useState(types[0]?.key ?? 'authority');
   const [folder, setFolder] = useState('');
   const [senderId, setSenderId] = useState('');
+
+  const errors = state.status === 'error' ? state.fieldErrors : {};
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -55,13 +58,14 @@ export function ReceiveForm({
 
   return (
     <form action={formAction} className="space-y-4 rounded-md border border-line bg-surface p-6">
-      {state.status === 'error' && (
-        <div className="rounded-md bg-error-bg p-3 text-[13px] text-error">{state.message}</div>
-      )}
+      {state.status === 'error' && Object.keys(errors).length === 0 ? (
+        <div role="alert" className="rounded-md bg-error-bg p-3 text-[13px] text-error">{state.message}</div>
+      ) : null}
 
       <div className="space-y-1.5">
         <Label htmlFor="file">{t('fields.file')}</Label>
         <Input id="file" name="file" type="file" required onChange={handleFileChange} />
+        <FieldError id="file-error" message={errors.file} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -75,6 +79,7 @@ export function ReceiveForm({
             value={documentDate}
             onChange={(e) => setDocumentDate(e.target.value)}
           />
+          <FieldError id="documentDate-error" message={errors.documentDate} />
         </div>
 
         <div className="space-y-1.5">
@@ -104,6 +109,7 @@ export function ReceiveForm({
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
         />
+        <FieldError id="subject-error" message={errors.subject} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
