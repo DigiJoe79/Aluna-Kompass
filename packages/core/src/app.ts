@@ -11,6 +11,7 @@ import { createFileStore, type FileStore } from './files/store';
 import type { DocumentTemplate, ModuleManifest } from './modules/manifest';
 import { createRegistry } from './modules/registry';
 import { readLocales } from './i18n/locales';
+import { noopTextExtraction, type TextExtraction } from './text/extraction';
 
 export interface CreateDepsOptions {
   /**
@@ -26,6 +27,8 @@ export interface CreateDepsOptions {
   coreTemplates?: DocumentTemplate[];
   /** Ohne Angabe kann nicht gerendert werden (Skripte, migrationsnahe Tests). */
   documents?: DocumentEngine;
+  /** Ohne Angabe ist Texterkennung nicht eingerichtet (Skripte, Tests ohne Modul). */
+  textExtraction?: TextExtraction;
   clock?: Clock;
 }
 
@@ -73,6 +76,7 @@ export function createDeps(opts: CreateDepsOptions): AppDeps {
       return store;
     },
     documents: opts.documents ?? noopDocumentEngine,
+    textExtraction: opts.textExtraction ?? noopTextExtraction,
     locales: () => readLocales(deps),
     dataPath: opts.dataPath,
     databasePath,

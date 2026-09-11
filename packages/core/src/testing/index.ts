@@ -11,6 +11,7 @@ import type { DocumentTemplate, ModuleManifest } from '../modules/manifest';
 import { createRegistry } from '../modules/registry';
 import { createTestDb } from './test-db';
 import { readLocales } from '../i18n/locales';
+import { fakeTextExtraction, type TextExtraction } from '../text/extraction';
 
 export { systemContext } from '../context';
 
@@ -44,6 +45,7 @@ export function createTestDeps(
     env?: AppEnv;
     coreTemplates?: DocumentTemplate[];
     documents?: DocumentEngine;
+    textExtraction?: TextExtraction;
     locales?: string[];
   } = {},
 ): TestDeps {
@@ -68,6 +70,7 @@ export function createTestDeps(
       return store;
     },
     documents: opts.documents ?? fakeDocumentEngine(),
+    textExtraction: opts.textExtraction ?? fakeTextExtraction(),
     locales: () => readLocales(deps),
   };
   return deps;

@@ -52,3 +52,4 @@ export * from './projects/service';
 export { localizedColumn } from './db/columns';
 export * from './retention/classes';
 export * from './retention/service';
+export * from './text/extraction';

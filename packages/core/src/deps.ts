@@ -4,6 +4,7 @@ import type { Db } from './db/client';
 import type { DocumentEngine } from './documents/engine';
 import type { FileStore } from './files/store';
 import type { Registry } from './modules/registry';
+import type { TextExtraction } from './text/extraction';
 
 export type AppEnv = 'development' | 'test' | 'production';
 
@@ -21,6 +22,12 @@ export interface Deps {
    */
   files(moduleKey: string): FileStore;
   documents: DocumentEngine;
+  /**
+   * Texterkennung als Werkzeug des Containers, nicht als Fachlichkeit: Der Kern
+   * besitzt, was außerhalb des Prozesses liegt, und reicht es durch. Er ruft es
+   * selbst nie — heute benutzt es nur `dms`.
+   */
+  textExtraction: TextExtraction;
   /** Gepflegte Sprachen, erste ist Leitsprache. Als Funktion, damit eine Änderung sofort wirkt. */
   locales: () => string[];
 }
