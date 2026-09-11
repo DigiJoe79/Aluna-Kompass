@@ -82,6 +82,14 @@ export const DELETION_POLICY: readonly DeletionRule[] = [
 
   // Arbeitsmaterial — löschbar, mit Protokolleintrag
   {
+    entity: 'documentDraft',
+    deletable: true,
+    reason:
+      'Ein Entwurf ist Arbeitsmaterial: keine Nummer, keine Datei, kein Nachweis. Erst das Festschreiben macht ihn rechenschaftsrelevant.',
+    guard: 'nur solange phase = draft',
+    auditAction: 'dms.draft.delete',
+  },
+  {
     entity: 'siteEntry',
     deletable: true,
     reason: 'Redaktioneller Inhalt der Webseite (Prinzip 3).',

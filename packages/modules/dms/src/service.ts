@@ -20,8 +20,8 @@ export function dmsMediaReferences(deps: Deps, assetId: string): MediaReference[
 
 export type DocumentRecord = Omit<DocumentRow, 'inputSnapshot'> & { inputSnapshot: unknown; links: DocumentLinkRow[] };
 
-function toRecord(deps: Deps, row: DocumentRow): DocumentRecord {
-  const links = deps.db.select().from(documentLinks).where(eq(documentLinks.documentId, row.id)).all();
+export function toRecord(deps: Deps, row: DocumentRow, dbOrTx: DbOrTx = deps.db): DocumentRecord {
+  const links = dbOrTx.select().from(documentLinks).where(eq(documentLinks.documentId, row.id)).all();
   return { ...row, inputSnapshot: row.inputSnapshot ? JSON.parse(row.inputSnapshot) : null, links };
 }
 
