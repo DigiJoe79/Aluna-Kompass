@@ -20,9 +20,19 @@ export function recoverRunning(deps: Deps): number {
       deps.db.update(documents).set({ textStatus: 'pending' }).where(eq(documents.id, row.id)).run();
     }
     return stuck.length;
-  } catch {
+  } catch (error) {
+    warn('Aufräumen übersprungen', error);
     return 0;
   }
+}
+
+/**
+ * Ein Abbruch im Hintergrund darf den Prozess nicht mitnehmen — verschwinden
+ * darf er aber auch nicht. Ohne diese Zeile im Protokoll steht man vor einem
+ * roten Prüfring ohne Spur.
+ */
+function warn(what: string, error: unknown): void {
+  console.warn(`[kompass] Textworker: ${what} —`, error instanceof Error ? error.message : error);
 }
 
 /**
@@ -58,7 +68,13 @@ export function startTextWorker(
   opts: { intervalMs?: number } = {},
 ): TextWorker {
   const getDeps = typeof depsOrGetter === 'function' ? depsOrGetter : () => depsOrGetter;
-  recoverRunning(getDeps());
+  try {
+    recoverRunning(getDeps());
+  } catch (error) {
+    // `getDeps()` wirft, solange der E2E-Reset läuft. Der Start darf daran
+    // nicht scheitern — er hinge sonst am Serverstart. Der Takt holt es nach.
+    warn('Start ohne Aufräumen', error);
+  }
 
   let busy = false;
   let stopped = false;
@@ -72,9 +88,11 @@ export function startTextWorker(
       while (outcome !== 'idle' && outcome !== 'unavailable' && !stopped) {
         outcome = await processNextDocument(getDeps());
       }
-    } catch {
-      // Unerwartete Fehler (z. B. geschlossene DB beim Herunterfahren)
-      // dürfen nicht als unhandledRejection den Prozess abbrechen.
+    } catch (error) {
+      // Unerwartete Fehler (z. B. geschlossene DB beim Herunterfahren, oder
+      // gesperrte Deps während des E2E-Resets) dürfen nicht als
+      // unhandledRejection den Prozess abbrechen.
+      warn('Durchlauf abgebrochen', error);
     } finally {
       busy = false;
     }
