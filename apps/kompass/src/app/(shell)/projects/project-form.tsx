@@ -17,6 +17,7 @@ import { saveProjectAction } from './actions';
 export function ProjectForm({ project, locales }: { project: ProjectRecord | null; locales: string[] }) {
   const t = useTranslations('projects.form');
   const c = useTranslations('content');
+  const tCommon = useTranslations('common');
   const [state, action] = useActionState(saveProjectAction, idleState);
   const errors = state.status === 'error' ? state.fieldErrors : {};
   useEffect(() => { if (state.status === 'success') toast.success(state.message ?? ''); else if (state.status === 'error' && Object.keys(errors).length === 0) toast.error(state.message); }, [state, errors]);
@@ -26,7 +27,7 @@ export function ProjectForm({ project, locales }: { project: ProjectRecord | nul
       {project ? <input type="hidden" name="id" value={project.id} /> : null}
       <FormErrorSummary errors={errors} />
       <Tabs defaultValue="public">
-        <TabsList className="border-b border-line bg-surface px-6"><TabsTrigger value="public" className="gap-2">{t('tabs.public')}{Object.keys(errors).length > 0 ? <TabInvalidDot label={c('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="finance" disabled>{t('tabs.finance')}</TabsTrigger></TabsList>
+        <TabsList className="border-b border-line bg-surface px-6"><TabsTrigger value="public" className="gap-2">{t('tabs.public')}{Object.keys(errors).length > 0 ? <TabInvalidDot label={tCommon('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="finance" disabled>{t('tabs.finance')}</TabsTrigger></TabsList>
         <TabsContent value="public" className="grid gap-5 p-6 md:grid-cols-2">
           <FormField id="slug" label={c('slug')} hint={c('slugHint')} error={errors.slug}><Input id="slug" name="slug" defaultValue={project?.slug ?? ''} required pattern="[a-z0-9][a-z0-9-]{0,80}" className="font-mono" /></FormField>
           <FormField id="betterplaceProjectId" label={t('betterplace')} hint={t('betterplaceHint')} error={errors.betterplaceProjectId}><Input id="betterplaceProjectId" name="betterplaceProjectId" defaultValue={project?.betterplaceProjectId ?? ''} className="font-mono" /></FormField>
@@ -36,7 +37,7 @@ export function ProjectForm({ project, locales }: { project: ProjectRecord | nul
           <LocalizedField name="summary" label={t('summary')} kind="textarea" rows={3} value={project?.summary ?? {}} errors={errors} locales={locales} />
           <LocalizedField name="body" label={t('body')} kind="markdown" rows={12} value={project?.body ?? {}} errors={errors} locales={locales} />
           <div className="md:col-span-2"><MediaPicker name="imageAssetId" value={project?.imageAssetId ?? null} label={t('image')} /></div>
-          <div className="md:col-span-2"><FormActionBar back={{ href: '/projects', label: c('backToList') }} /></div>
+          <div className="md:col-span-2"><FormActionBar back={{ href: '/projects', label: tCommon('backToList') }} /></div>
         </TabsContent>
         <TabsContent value="finance" className="p-6 text-[13px] text-muted-ink">{t('financeLater')}</TabsContent>
       </Tabs>

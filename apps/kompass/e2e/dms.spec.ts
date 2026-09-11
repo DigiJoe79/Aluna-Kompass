@@ -49,7 +49,12 @@ test.describe('dms', () => {
     await login(page);
     await page.goto('/dms/receive');
     await page.getByLabel('Datei').setInputFiles({ name: '2026-03-14 Behoerde.pdf', mimeType: 'application/pdf', buffer: samplePdf() });
-    await expect(page.getByLabel('Datum auf dem Dokument')).toHaveValue('2026-03-14');
+    // Die Dateiwahl ruft `suggestClassification` als Server-Action. Auf dem
+    // CI-Läufer wird sie dabei zum ersten Mal übersetzt — die Vorgabe von fünf
+    // Sekunden reicht dafür nicht verlässlich, gemessen an zwei von drei roten
+    // Läufen am 11.09. Wie beim Publish und beim Scan steht die Frist deshalb
+    // ausdrücklich da, statt sich auf die Vorgabe zu verlassen.
+    await expect(page.getByLabel('Datum auf dem Dokument')).toHaveValue('2026-03-14', { timeout: 30_000 });
     await page.getByLabel('Dokumentart').selectOption('authority');
     await page.getByLabel('Betreff').fill('Eingegangenes Schreiben');
     await page.getByRole('button', { name: 'Ablegen' }).click();

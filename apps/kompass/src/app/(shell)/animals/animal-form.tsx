@@ -36,6 +36,7 @@ const TABS = [
 export function AnimalForm({ animal, locales }: { animal: AnimalRecord | null; locales: string[] }) {
   const t = useTranslations('animals.form');
   const c = useTranslations('content');
+  const tCommon = useTranslations('common');
   const [state, action] = useActionState(saveAnimalAction, idleState);
   const errors = state.status === 'error' ? state.fieldErrors : {};
   useEffect(() => { if (state.status === 'success') toast.success(state.message ?? ''); else if (state.status === 'error' && Object.keys(errors).length === 0) toast.error(state.message); }, [state, errors]);
@@ -52,7 +53,7 @@ export function AnimalForm({ animal, locales }: { animal: AnimalRecord | null; l
       ) : null}
       <FormErrorSummary errors={errors} />
       <Tabs defaultValue="profile" className="overflow-hidden rounded-lg border border-line bg-surface">
-        <TabsList className="border-b border-line bg-surface px-6"><TabsTrigger value="profile" className="gap-2">{t('tabs.profile')}{broken.has('profile') ? <TabInvalidDot label={c('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="texts" className="gap-2">{t('tabs.texts')}{broken.has('texts') ? <TabInvalidDot label={c('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="photos" disabled={!animal}>{t('tabs.photos')}</TabsTrigger><TabsTrigger value="story" disabled={!animal}>{t('tabs.story')}</TabsTrigger></TabsList>
+        <TabsList className="border-b border-line bg-surface px-6"><TabsTrigger value="profile" className="gap-2">{t('tabs.profile')}{broken.has('profile') ? <TabInvalidDot label={tCommon('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="texts" className="gap-2">{t('tabs.texts')}{broken.has('texts') ? <TabInvalidDot label={tCommon('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="photos" disabled={!animal}>{t('tabs.photos')}</TabsTrigger><TabsTrigger value="story" disabled={!animal}>{t('tabs.story')}</TabsTrigger></TabsList>
         <form action={action}>
           {animal ? <input type="hidden" name="id" value={animal.id} /> : null}
           <TabsContent keepMounted value="profile" className="grid gap-4 p-6 md:grid-cols-2">
@@ -72,7 +73,7 @@ export function AnimalForm({ animal, locales }: { animal: AnimalRecord | null; l
             <LocalizedField name="body" label={t('body')} kind="markdown" rows={10} value={animal?.body ?? {}} errors={errors} locales={locales} />
             <LocalizedField name="traits__text" label={t('traits')} hint={t('traitsHint')} value={Object.fromEntries(locales.map((l) => [l, ((animal?.traits as Record<string, string[]> | undefined)?.[l] ?? []).join(', ')]))} locales={locales} />
           </TabsContent>
-          <FormActionBar back={{ href: '/animals', label: c('backToList') }} />
+          <FormActionBar back={{ href: '/animals', label: tCommon('backToList') }} />
         </form>
         <TabsContent value="photos" className="p-6">{animal ? <PhotosEditor animalId={animal.id} initial={animal.photos} /> : null}</TabsContent>
         <TabsContent value="story" className="p-6">{animal ? <StoryForm animal={animal} locales={locales} /> : null}</TabsContent>
