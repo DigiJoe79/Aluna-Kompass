@@ -11,15 +11,23 @@ export const MIN_FULLTEXT_CHARS = 3;
  * Aus einer Eingabe wird ein FTS5-Ausdruck: jedes Wort eine Phrase, verbunden
  * mit UND. Phrasen, weil Trigramme sonst als Syntax gelesen würden.
  *
- * Anführungszeichen in der Eingabe werden verdoppelt — das ist FTS5' eigene
- * Entschärfung. Ohne sie könnte eine Eingabe den Ausdruck umschreiben.
+ * **Satzzeichen bleiben stehen.** Der Trigramm-Tokenizer zerlegt den Text, wie
+ * er dasteht: „2026-4711“ liegt mit Bindestrich im Index, und wer ihn abstreift,
+ * sucht nach „20264711“ und findet nichts. Gerade Aktenzeichen und Datumsangaben
+ * — das, wonach jemand in einer Akte sucht — bestehen zur Hälfte aus
+ * Satzzeichen.
+ *
+ * Entfernt wird allein das Anführungszeichen, und zwar ersatzlos: Es begrenzt
+ * die Phrase, die wir bauen. Danach kann keine Eingabe mehr aus ihr ausbrechen,
+ * denn innerhalb einer FTS5-Phrase ist jedes andere Zeichen Suchtext und keine
+ * Syntax.
  */
 export function matchExpression(text: string): string | null {
   const terms = text
     .split(/\s+/)
-    .map((t) => t.replace(/[^\p{L}\p{N}"]/gu, ''))
-    .filter((t) => t.replace(/"/g, '').length >= MIN_FULLTEXT_CHARS)
-    .map((t) => `"${t.replace(/"/g, '""')}"`);
+    .map((t) => t.replace(/"/g, ''))
+    .filter((t) => t.length >= MIN_FULLTEXT_CHARS)
+    .map((t) => `"${t}"`);
 
   return terms.length > 0 ? terms.join(' AND ') : null;
 }

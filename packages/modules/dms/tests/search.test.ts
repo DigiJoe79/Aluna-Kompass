@@ -41,6 +41,32 @@ describe('Suche', () => {
     expect(result.value.documents.map((d) => d.id)).toEqual([documentId]);
   });
 
+  it('findet eine Rechnungsnummer, so wie sie auf dem Papier steht', async () => {
+    // Das Beispiel aus der Spec: „welches Schreiben nennt die Rechnungsnummer
+    // 2026-4711?" — getippt wird sie mit Bindestrich, nicht ohne.
+    const { deps, documentId } = await withRead('Rechnung 2026-4711 vom 14.10.2026');
+
+    const number = await listDocuments(deps, ctxWith(['dms.view']), { text: '2026-4711' });
+    const date = await listDocuments(deps, ctxWith(['dms.view']), { text: '14.10.2026' });
+
+    expect(number.ok).toBe(true);
+    expect(date.ok).toBe(true);
+    if (!number.ok || !date.ok) return;
+    expect(number.value.documents.map((d) => d.id)).toEqual([documentId]);
+    expect(date.value.documents.map((d) => d.id)).toEqual([documentId]);
+  });
+
+  it('lässt eine Eingabe den Suchausdruck nicht umschreiben', async () => {
+    const { deps } = await withRead('Tierarztrechnung');
+
+    const result = await listDocuments(deps, ctxWith(['dms.view']), {
+      text: 'rechnung" OR document_text MATCH "kaetzin',
+    });
+
+    // Kein technischer Fehler, kein Ausbruch: Die Zeichen sind Suchtext.
+    expect(result.ok).toBe(true);
+  });
+
   it('findet weiterhin über den Betreff', async () => {
     const { deps, documentId } = await withRead('Irgendein Inhalt', 'Kündigung Mietvertrag');
 
@@ -146,10 +172,17 @@ describe('matchExpression', () => {
   });
 
   it('gibt null, wenn nichts übrig bleibt', () => {
-    expect(matchExpression('dr. x')).toBeNull();
+    expect(matchExpression('dr x')).toBeNull();
   });
 
-  it('entschärft Anführungszeichen', () => {
-    expect(matchExpression('rech"nung')).toBe('"rech""nung"');
+  it('nimmt dem Nutzer seine Anführungszeichen ab, statt nach ihnen zu suchen', () => {
+    // Die Phrase bauen wir; seine Zeichen wären sonst Teil des Suchtexts.
+    expect(matchExpression('rech"nung')).toBe('"rechnung"');
+    expect(matchExpression('"Praxis Sommer"')).toBe('"Praxis" AND "Sommer"');
+  });
+
+  it('lässt Bindestriche und Punkte stehen — sie gehören zum Aktenzeichen', () => {
+    expect(matchExpression('2026-4711')).toBe('"2026-4711"');
+    expect(matchExpression('14.10.2026')).toBe('"14.10.2026"');
   });
 });
