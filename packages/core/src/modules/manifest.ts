@@ -20,6 +20,13 @@ export interface MediaReference {
   /** Entitätstyp und ID, falls die Oberfläche verlinken will. */
   entity: string;
   id: string;
+  /**
+   * Das Recht, unter dem dieses Asset steht. Gesetzt heißt: Die Datei gehört
+   * einem Datensatz, den nicht jeder sehen darf, und `getMediaAsset` liefert
+   * sie nur mit diesem Recht aus. Ohne Angabe bleibt es beim Bisherigen —
+   * Arbeitsmaterial, das jede angemeldete Person lesen kann.
+   */
+  permission?: string;
 }
 
 export interface RetentionHold {

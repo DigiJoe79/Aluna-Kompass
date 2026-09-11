@@ -109,10 +109,24 @@ export async function storeMediaAsset(deps: Deps, ctx: CallContext, input: Store
   return storeMediaInternal(deps, ctx, input, prepared.value);
 }
 
+/**
+ * Die Auslieferung einer einzelnen Datei. Bis hierher galt „angemeldet reicht",
+ * was für Arbeitsmaterial der Redaktion stimmt — Logo, Projektbild, Tierfoto
+ * landen ohnehin auf der Webseite. Beansprucht ein Modul das Asset aber unter
+ * einem Recht, gilt dieses Recht auch hier: Sonst stünde neben der geprüften
+ * Tür des Moduls eine ungeprüfte daneben.
+ */
 export async function getMediaAsset(deps: Deps, ctx: CallContext, id: string): Promise<Result<{ record: MediaAssetRecord; bytes: Uint8Array }>> {
   if (!ctx.userId && ctx.channel !== 'system') return unauthorized('invalidCredentials');
   const record = deps.db.select().from(mediaAssets).where(eq(mediaAssets.id, id)).get();
   if (!record) return notFound('mediaAsset', id);
+  if (ctx.channel !== 'system') {
+    for (const reference of findMediaReferences(deps, record.id)) {
+      if (!reference.permission) continue;
+      const denied = requirePermission(ctx, reference.permission);
+      if (denied) return denied;
+    }
+  }
   return ok({ record, bytes: await deps.media.read(record.filename) });
 }
 

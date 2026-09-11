@@ -1,8 +1,11 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
+import { coreModule } from '../src/core-module';
 import { auditLog } from '../src/db/schema';
+import { defineModule } from '../src/modules/manifest';
 import { getMediaAsset, listMediaAssets, storeMediaAsset } from '../src/media/service';
 import { unwrap } from '../src/result';
+import { writeSettingInternal } from '../src/settings/service';
 import { createTestDeps, ctxWith, insertUser } from '../src/testing';
 
 // 1×1 PNG
@@ -76,5 +79,40 @@ describe('media service', () => {
     expect(unwrap(await listMediaAssets(deps, ctx, null))).toEqual([]);
     const inLogos = unwrap(await listMediaAssets(deps, ctx, 'logos'));
     expect(inLogos[0]!.references.map((r) => r.label)).toEqual(['Logo des Vereins']);
+  });
+});
+describe('Assets unter dem Recht eines Moduls', () => {
+  /** Ein Modul, das jedes Asset für sich beansprucht und unter sein Recht stellt. */
+  const guarded = defineModule({
+    key: 'guard',
+    version: '0.0.1',
+    permissions: ['guard.view'],
+    mediaReferences: (_deps, assetId) => [
+      { label: 'Verschlossen', entity: 'secret', id: assetId, permission: 'guard.view' },
+    ],
+  });
+
+  it('liefert es nur an jemanden mit diesem Recht aus', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, guarded] });
+    deps.db.transaction((tx) => {
+      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['guard'], 'test.enable');
+    });
+    const uploader = ctxWith(['media.upload', 'guard.view'], insertUser(deps, {}));
+    const record = unwrap(await storeMediaAsset(deps, uploader, { originalName: 'a.png', bytes: PNG }));
+
+    const allowed = await getMediaAsset(deps, ctxWith(['guard.view'], 'someone'), record.id);
+    expect(allowed.ok).toBe(true);
+
+    const denied = await getMediaAsset(deps, ctxWith(['media.upload'], 'someone'), record.id);
+    expect(denied.ok).toBe(false);
+    if (denied.ok) return;
+    expect(denied.error.type).toBe('forbidden');
+  });
+
+  it('lässt ein Asset ohne Anspruch weiterhin für jede angemeldete Person zu', async () => {
+    const deps = createTestDeps();
+    const uploader = ctxWith(['media.upload'], insertUser(deps, {}));
+    const record = unwrap(await storeMediaAsset(deps, uploader, { originalName: 'a.png', bytes: PNG }));
+    expect((await getMediaAsset(deps, ctxWith([], 'someone'), record.id)).ok).toBe(true);
   });
 });
