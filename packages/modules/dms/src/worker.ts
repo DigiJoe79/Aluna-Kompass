@@ -14,11 +14,15 @@ const DEFAULT_INTERVAL_MS = 30_000;
  * schreibt (Spec § 5.3).
  */
 export function recoverRunning(deps: Deps): number {
-  const stuck = deps.db.select({ id: documents.id }).from(documents).where(eq(documents.textStatus, 'running')).all();
-  for (const row of stuck) {
-    deps.db.update(documents).set({ textStatus: 'pending' }).where(eq(documents.id, row.id)).run();
+  try {
+    const stuck = deps.db.select({ id: documents.id }).from(documents).where(eq(documents.textStatus, 'running')).all();
+    for (const row of stuck) {
+      deps.db.update(documents).set({ textStatus: 'pending' }).where(eq(documents.id, row.id)).run();
+    }
+    return stuck.length;
+  } catch {
+    return 0;
   }
-  return stuck.length;
 }
 
 /**
@@ -64,6 +68,9 @@ export function startTextWorker(deps: Deps, opts: { intervalMs?: number } = {}):
       while (outcome !== 'idle' && outcome !== 'unavailable' && !stopped) {
         outcome = await processNextDocument(deps);
       }
+    } catch {
+      // Unerwartete Fehler (z. B. geschlossene DB beim Herunterfahren)
+      // dürfen nicht als unhandledRejection den Prozess abbrechen.
     } finally {
       busy = false;
     }
