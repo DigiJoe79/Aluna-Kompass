@@ -1,4 +1,5 @@
 import { defineModule, type ModuleManifest } from '@kompass/core';
+import { DMS_MCP_TOOLS } from './mcp-tools';
 import { dmsRetentionDue, dmsRetentionHolds } from './retention';
 import { dmsMediaReferences } from './service';
 import { letterTemplate } from './templates';
@@ -15,4 +16,5 @@ export const dmsModule: ModuleManifest = defineModule({
   mediaReferences: dmsMediaReferences,
   retentionHolds: dmsRetentionHolds,
   retentionDue: dmsRetentionDue,
+  mcpTools: DMS_MCP_TOOLS,
 });

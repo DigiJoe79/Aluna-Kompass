@@ -1,11 +1,13 @@
 import {
   conflict,
+  invalid,
   isoNow,
   newId,
   notFound,
   ok,
   recordAudit,
   requirePermission,
+  schema,
   storeMediaInternal,
   validate,
   type CallContext,
@@ -18,25 +20,43 @@ import { z } from 'zod';
 import { documentTypeFor } from './catalog';
 import { DOCUMENT_FOLDER, ensureDocumentFolder } from './drafts';
 import { documentLinks, documents } from './schema';
-import { nextDocumentNumber, toRecord, type DocumentRecord } from './service';
+import { linkInputSchema, nextDocumentNumber, toRecord, type DocumentRecord } from './service';
 
-export const receiveDocumentSchema = z.object({
-  filename: z.string().trim().min(1).max(255),
-  bytes: z.custom<Uint8Array>((val) => val instanceof Uint8Array, { message: 'invalidBytes' }),
-  typeKey: z.string().min(1),
-  subject: z.string().trim().min(1).max(300),
-  documentDate: z.string().date(),
-  folder: z.string().trim().min(1).nullable().optional(),
-  links: z
-    .array(
-      z.object({
-        entityType: z.string().trim().min(1).max(60),
-        entityId: z.string().trim().min(1),
-        role: z.enum(['sender', 'recipient', 'about']),
-      }),
-    )
-    .default([]),
-});
+export const receiveDocumentSchema = z
+  .object({
+    filename: z.string().trim().min(1).max(255),
+    bytes: z.custom<Uint8Array>((val) => val instanceof Uint8Array, { message: 'invalidBytes' }).optional(),
+    contentBase64: z.string().optional(),
+    assetId: z.string().optional(),
+    typeKey: z.string().min(1),
+    subject: z.string().trim().min(1).max(300),
+    documentDate: z.string().date(),
+    folder: z.string().trim().min(1).nullable().optional(),
+    links: z.array(linkInputSchema).default([]),
+  })
+  .refine(
+    (value) => {
+      const count = (value.bytes ? 1 : 0) + (value.contentBase64 ? 1 : 0) + (value.assetId ? 1 : 0);
+      return count === 1;
+    },
+    { message: 'entweder bytes, contentBase64 oder assetId' },
+  );
+
+export const receiveSchema = z
+  .object({
+    filename: z.string().trim().min(1),
+    /** Entweder die Bytes als Base64 oder ein bereits abgelegtes Asset. */
+    contentBase64: z.string().optional(),
+    assetId: z.string().optional(),
+    typeKey: z.string().min(1),
+    subject: z.string().trim().min(1).max(300),
+    documentDate: z.string().date(),
+    folder: z.string().trim().min(1).nullable().optional(),
+    links: z.array(linkInputSchema).default([]),
+  })
+  .refine((value) => Boolean(value.contentBase64) !== Boolean(value.assetId), {
+    message: 'entweder contentBase64 oder assetId',
+  });
 
 export async function receiveDocument(
   deps: Deps,
@@ -52,14 +72,31 @@ export async function receiveDocument(
   const docType = documentTypeFor(deps.db, parsed.value.typeKey);
   if (!docType) return notFound('documentType', parsed.value.typeKey);
 
-  ensureDocumentFolder(deps, ctx);
+  let assetId: string;
+  if (parsed.value.assetId) {
+    const existingAsset = deps.db
+      .select()
+      .from(schema.mediaAssets)
+      .where(eq(schema.mediaAssets.id, parsed.value.assetId))
+      .get();
+    if (!existingAsset) return notFound('mediaAsset', parsed.value.assetId);
+    assetId = existingAsset.id;
+  } else {
+    let bytes = parsed.value.bytes;
+    if (!bytes && parsed.value.contentBase64) {
+      bytes = Buffer.from(parsed.value.contentBase64, 'base64');
+    }
+    if (!bytes) return invalid([{ path: 'bytes', message: 'missingBytes' }]);
 
-  const asset = await storeMediaInternal(deps, ctx, {
-    originalName: parsed.value.filename,
-    bytes: parsed.value.bytes,
-    folder: DOCUMENT_FOLDER,
-  });
-  if (!asset.ok) return asset;
+    ensureDocumentFolder(deps, ctx);
+    const asset = await storeMediaInternal(deps, ctx, {
+      originalName: parsed.value.filename,
+      bytes,
+      folder: DOCUMENT_FOLDER,
+    });
+    if (!asset.ok) return asset;
+    assetId = asset.value.id;
+  }
 
   const folder = parsed.value.folder !== undefined ? parsed.value.folder : (docType.defaultFolder ?? null);
 
@@ -85,7 +122,7 @@ export async function receiveDocument(
             draftBody: null,
             templateKey: null,
             inputSnapshot: null,
-            assetId: asset.value.id,
+            assetId,
             status: 'issued',
             createdByUserId: ctx.userId ?? 'system',
             createdAt: now,

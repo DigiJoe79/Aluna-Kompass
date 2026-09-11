@@ -3,6 +3,7 @@ export * from './classification';
 export * from './drafts';
 export * from './incoming';
 export * from './manifest';
+export * from './mcp-tools';
 export * from './recipients';
 export * from './retention';
 export * from './schema';

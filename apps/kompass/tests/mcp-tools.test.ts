@@ -25,7 +25,7 @@ const modulesWithTools: [ModuleManifest, readonly McpToolDefinition[]][] = [
  * entscheidet bewusst; wer ein Recht ergänzt, ohne es hier oder in einem
  * Werkzeug zu nennen, bekommt einen roten Test.
  */
-const WITHOUT_MCP = new Set(['backup.export', 'backup.import', 'dms.view', 'dms.create', 'dms.file', 'dms.void', 'dms.deleteDraft', 'dms.manage']);
+const WITHOUT_MCP = new Set(['backup.export', 'backup.import', 'dms.manage']);
 
 /** Rechte, die kein Werkzeug nennt, als `modul: recht`. */
 const uncoveredPermissions = (pairs: [ModuleManifest, readonly McpToolDefinition[]][]) =>
@@ -83,6 +83,14 @@ describe('registered mcp tools', () => {
   it('offers no tool that deletes a contact', () => {
     expect(registeredTools.map((tool) => tool.name)).not.toContain('contacts_delete');
     expect(registeredTools.some((tool) => tool.name === 'contacts_due')).toBe(true);
+  });
+
+  /**
+   * `dms_delete_document` fehlt bewusst. Eine Löschung nach Fristablauf
+   * bestätigt ein Mensch am Fristenbildschirm (Entscheidung 10).
+   */
+  it('offers no tool that deletes a document', () => {
+    expect(registeredTools.map((tool) => tool.name)).not.toContain('dms_delete_document');
   });
 
   // Beweist, dass die Prüfung oben greift: ein erfundenes Modul, das seine
