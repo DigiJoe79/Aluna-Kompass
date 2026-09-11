@@ -21,7 +21,10 @@ test.describe('command palette and error pages', () => {
 
   test('renders 404 inside the shell and the real documents page', async ({ page }) => {
     await page.goto('/admin/gibt-es-nicht');
-    await expect(page.getByText('404')).toBeVisible();
+    // Genau „404“, nicht irgendwo enthalten: Im Container steht unten das
+    // Build-Kürzel, und ein Commit-Hash trägt die drei Ziffern früher oder
+    // später — `58404f6` tat es und liess den Test an zwei Treffern scheitern.
+    await expect(page.getByText('404', { exact: true })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Hauptnavigation' })).toBeVisible();
     await page.goto('/admin/documents');
     await expect(page.getByRole('button', { name: 'Basis-Vorlagen' })).toBeVisible();

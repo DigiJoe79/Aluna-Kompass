@@ -72,7 +72,7 @@ test.describe('users', () => {
     await page.getByRole('button', { name: 'Passwort setzen und fortfahren' }).click();
     await expect(page).toHaveURL('/');
     await page.goto('/admin/users');
-    await expect(page.getByText('403')).toBeVisible();
+    await expect(page.getByText('403', { exact: true })).toBeVisible();
     await expect(page.getByText('users.manage')).toBeVisible();
   });
 });
