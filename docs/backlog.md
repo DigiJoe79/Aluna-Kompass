@@ -54,3 +54,12 @@ eine Migration und berührt den veröffentlichten Blick.
 
 **Wann:** Wenn Projekte ihr eigenes Kernmodul bekommen — die Entscheidung vom
 2026-09-07 sieht das ohnehin vor.
+
+## 5. Einsortierregeln auf dem Volltext
+
+**Was:** `document_rules.matchField = 'fulltext'` als weiteres Kriterium für Einsortierregeln.
+
+**Warum:** Die Regeln belegen das Ablegen-Formular vor, und zu dem Zeitpunkt ist die Texterkennung noch nicht durch (das Dokument wird erst nach dem Ablegen im Hintergrund gelesen). Ein Volltext-Kriterium greift beim Ablegen daher ins Leere.
+
+**Wann:** Wenn ein Agent oder Hintergrundprozess Dokumente nachträglich klassifiziert und vorschlägt (der Zielzustand aus § 2 der Dokument-Spec), als eigener Vorgang mit eigener Spec.
+

@@ -37,7 +37,7 @@ Der kleinste Baustein und der einzige mit Sicherheitsgewicht. Deshalb zuerst, un
   - `splitSnippet(raw: string): { text: string; marked: boolean }[]`
   - `<SnippetText value={string} />`
 
-- [ ] **Step 1: Failing Test schreiben**
+- [x] **Step 1: Failing Test schreiben**
 
 `apps/kompass/tests/snippet-text.test.tsx`:
 
@@ -46,8 +46,8 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { SnippetText, splitSnippet } from '@/components/snippet-text';
 
-const START = '';
-const END = '';
+const START = ' ';
+const END = ' ';
 
 describe('splitSnippet', () => {
   it('trennt markierte von unmarkierten Stücken', () => {
@@ -89,12 +89,12 @@ describe('SnippetText', () => {
 
 **Hinweis:** Ob `@testing-library/react` im Projekt eingerichtet ist, in `apps/kompass/package.json` und `vitest.config.ts` prüfen. Fehlt es, den reinen Funktionstest für `splitSnippet` behalten und die beiden Darstellungstests durch den E2E-Test in Task 5 ersetzen — **nicht** ungetestet lassen.
 
-- [ ] **Step 2: Test laufen lassen, Fehlschlag sehen**
+- [x] **Step 2: Test laufen lassen, Fehlschlag sehen**
 
 Run: `pnpm --filter @kompass/app test -- snippet-text`
 Expected: FAIL — `@/components/snippet-text` gibt es nicht.
 
-- [ ] **Step 3: Den Helfer schreiben**
+- [x] **Step 3: Den Helfer schreiben**
 
 `apps/kompass/src/components/snippet-text.tsx`:
 
@@ -157,12 +157,12 @@ export function SnippetText({ value }: { value: string }) {
 
 **Hinweis:** Die Klassennamen an die Theme-Tokens des Projekts anpassen — kein statischer Farbwert im Anwendungscode (Prinzip 2). Welche Tokens es gibt, in `apps/kompass/src/components/ui/` nachsehen.
 
-- [ ] **Step 4: Tests grün sehen**
+- [x] **Step 4: Tests grün sehen**
 
 Run: `pnpm --filter @kompass/app test -- snippet-text`
 Expected: PASS (5 Tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/kompass/src/components/snippet-text.tsx apps/kompass/tests/snippet-text.test.tsx
@@ -181,7 +181,7 @@ git commit -m "feat(ui): show the passage, and nothing the document tries to run
 - Consumes: `hits`, `fulltextTooShort` (Plan 3), `SnippetText` (Task 1)
 - Produces: `DocumentListProps` um `hits: Record<string, { page: number; snippet: string }>` und `fulltextTooShort: boolean` erweitert.
 
-- [ ] **Step 1: Texte anlegen**
+- [x] **Step 1: Texte anlegen**
 
 In `apps/kompass/messages/de.json` unter `dms`:
 
@@ -192,7 +192,7 @@ In `apps/kompass/messages/de.json` unter `dms`:
       "textPending": "Der Inhalt wird noch gelesen",
 ```
 
-- [ ] **Step 2: Die Liste erweitern**
+- [x] **Step 2: Die Liste erweitern**
 
 In `apps/kompass/src/app/(shell)/dms/page.tsx` die beiden neuen Felder aus `listDocuments` an die Komponente durchreichen.
 
@@ -227,7 +227,7 @@ Und über der Tabelle, wenn `fulltextTooShort`:
 {fulltextTooShort ? <p className="text-sm text-muted-foreground">{t('searchTooShort')}</p> : null}
 ```
 
-- [ ] **Step 3: Von Hand ansehen**
+- [x] **Step 3: Von Hand ansehen**
 
 ```bash
 pnpm dev:reset && pnpm --filter @kompass/app dev
@@ -237,12 +237,12 @@ Ein PDF mit Textebene über `/dms/receive` ablegen, warten, bis der Zustand steh
 
 Expected: Die Zeile erscheint, darunter die Passage mit hervorgehobenem Wort und „Seite 1“. Der Klick öffnet die Vorschau an der Stelle. Eingabe „ab“: Der Hinweis erscheint, keine leere Liste.
 
-- [ ] **Step 4: Übersetzungstest laufen lassen**
+- [x] **Step 4: Übersetzungstest laufen lassen**
 
 Run: `pnpm --filter @kompass/app test`
 Expected: PASS — insbesondere die Tests, die fehlende i18n-Schlüssel und gerade Anführungszeichen finden.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/kompass/src/app/\(shell\)/dms apps/kompass/messages/de.json
@@ -263,7 +263,7 @@ Fünf Fälle, fünf Sätze. Der Unterschied zwischen „wartet“ und „wird ge
 - Consumes: `extractDocumentText` (Plan 2), `textStatus` (Plan 2)
 - Produces: Server Action `rereadDocumentAction(documentId)` unter `dms.manage`.
 
-- [ ] **Step 1: Texte anlegen**
+- [x] **Step 1: Texte anlegen**
 
 ```json
       "text": {
@@ -279,7 +279,7 @@ Fünf Fälle, fünf Sätze. Der Unterschied zwischen „wartet“ und „wird ge
       },
 ```
 
-- [ ] **Step 2: Die Aktion schreiben**
+- [x] **Step 2: Die Aktion schreiben**
 
 In `apps/kompass/src/app/(shell)/dms/actions.ts`, nach dem Muster der vorhandenen Aktionen (Rechteprüfung im Service, `revalidatePath` danach):
 
@@ -295,7 +295,7 @@ export async function rereadDocumentAction(documentId: string) {
 
 **Hinweis:** Wie `requireSession` und die Fehlerübersetzung in dieser Datei heißen, dort nachlesen. `extractDocumentText` verlangt `dms.manage` — die Prüfung bleibt im Service, der Knopf wird nur zusätzlich ausgeblendet.
 
-- [ ] **Step 3: Den Block auf der Detailseite zeichnen**
+- [x] **Step 3: Den Block auf der Detailseite zeichnen**
 
 In `document-detail.tsx` nach dem Aufbewahrungsblock, nach dessen Muster. Ein Entwurf hat `textStatus === null` und bekommt den Block gar nicht.
 
@@ -318,22 +318,22 @@ In `document-detail.tsx` nach dem Aufbewahrungsblock, nach dessen Muster. Ein En
 
 `permissions.canManage` in `page.tsx` ergänzen: `hasPermission(ctx, 'dms.manage')`.
 
-- [ ] **Step 4: In der Liste ein Zeichen setzen**
+- [x] **Step 4: In der Liste ein Zeichen setzen**
 
 In `document-list.tsx` an Dokumenten, deren `textStatus` weder `done` noch `null` ist, ein unauffälliges Zeichen mit `title={t('textPending')}`. Kein eigener Spaltenkopf — es ist eine Randnotiz, keine Information, nach der jemand sortiert.
 
-- [ ] **Step 5: Von Hand ansehen**
+- [x] **Step 5: Von Hand ansehen**
 
 Dev-Server starten, ein Dokument ablegen und die Detailseite während und nach dem Lesen ansehen.
 
 Expected: Erst „Wartet auf Erkennung“, dann „Wird gelesen“, dann „Gelesen am …“. Der Knopf „Neu lesen“ setzt es zurück und der Lauf beginnt von vorn.
 
-- [ ] **Step 6: Tests laufen lassen**
+- [x] **Step 6: Tests laufen lassen**
 
 Run: `pnpm --filter @kompass/app test`
 Expected: PASS
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/kompass
@@ -350,7 +350,7 @@ git commit -m "feat(dms): a document says whether it has been read, and why not"
 **Interfaces:**
 - Consumes: `reindexAllDocuments` (Plan 3)
 
-- [ ] **Step 1: Texte anlegen**
+- [x] **Step 1: Texte anlegen**
 
 ```json
         "textPanel": {
@@ -363,24 +363,24 @@ git commit -m "feat(dms): a document says whether it has been read, and why not"
         },
 ```
 
-- [ ] **Step 2: Die Tafel bauen**
+- [x] **Step 2: Die Tafel bauen**
 
 `text-panel.tsx` nach dem Muster von `rules-panel.tsx` in demselben Verzeichnis: die Einstellung `dms.ocrLanguages` zum Bearbeiten, der Knopf „Alles neu lesen“, und ein Zähler, wie viele Dokumente nicht auf `done` stehen.
 
 Die Einstellung prüft ihre Werte gegen `deps.textExtraction.probe()` — was der Container meldet, ist die Auswahl. Meldet `probe()` einen Fehler, steht statt der Auswahl der Hinweis aus `text.unavailableHint`.
 
-- [ ] **Step 3: Von Hand ansehen**
+- [x] **Step 3: Von Hand ansehen**
 
 Dev-Server starten, `/admin/dms` öffnen.
 
 Expected: Die Sprachliste zeigt, was lokal installiert ist (mit `tesseract-lang` über 160 Einträge). „Alles neu lesen“ meldet die Zahl und die Dokumente laufen durch.
 
-- [ ] **Step 4: Tests laufen lassen**
+- [x] **Step 4: Tests laufen lassen**
 
 Run: `pnpm --filter @kompass/app test`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/kompass
@@ -400,7 +400,7 @@ Zum Schluss der Test, der alles zusammen prüft — und der Seed, der dafür sor
 **Interfaces:**
 - Consumes: alles Vorherige
 
-- [ ] **Step 1: Den Seed-Test erweitern**
+- [x] **Step 1: Den Seed-Test erweitern**
 
 In `packages/modules/dms/tests/seed.test.ts`:
 
@@ -422,12 +422,12 @@ In `packages/modules/dms/tests/seed.test.ts`:
 
 **Hinweis:** Die echte Signatur von `seedDms` in `packages/modules/dms/src/seed.ts` nachlesen.
 
-- [ ] **Step 2: Test laufen lassen**
+- [x] **Step 2: Test laufen lassen**
 
 Run: `pnpm --filter @kompass/module-dms test -- seed`
 Expected: Läuft womöglich sofort grün — der Seed legt über `receiveDocument` ab, und das setzt seit Plan 2 `pending`. Dann ist der Test die Absicherung dagegen, dass jemand später eine Abkürzung in den Index einbaut. Schlägt er fehl, den Seed anpassen, **nicht** den Test.
 
-- [ ] **Step 3: Den E2E-Test schreiben**
+- [x] **Step 3: Den E2E-Test schreiben**
 
 In `apps/kompass/e2e/dms.spec.ts`, nach dem Muster der vorhandenen Tests dort:
 
@@ -466,17 +466,17 @@ test('ein zu kurzer Begriff sagt, warum er nichts findet', async ({ page }) => {
 
 **Hinweis:** Die Beschriftungen (`Datei`, `Betreff`, `Ablegen`) und den Anmeldehelfer aus den vorhandenen Tests derselben Datei übernehmen, nicht raten. Die Beispieldatei nach `apps/kompass/e2e/fixtures/brief-digital.pdf` kopieren (aus `packages/text-extraction/tests/fixtures/`, Plan 1 Task 2).
 
-- [ ] **Step 4: E2E gegen den Dev-Server**
+- [x] **Step 4: E2E gegen den Dev-Server**
 
 Run: `pnpm --filter @kompass/app e2e -- dms`
 Expected: PASS. Schlägt der Zustandswechsel fehl, prüfen, ob Poppler lokal installiert ist (`pdftotext -v`).
 
-- [ ] **Step 5: E2E gegen den Container**
+- [x] **Step 5: E2E gegen den Container**
 
 Run: `pnpm e2e:image`
 Expected: PASS — hier läuft echtes Tesseract im Image.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/modules/dms apps/kompass/e2e
@@ -487,8 +487,8 @@ git commit -m "test(dms): file a letter, wait for it to be read, find it by its 
 
 ## Abschluss der Reihe
 
-- [ ] `pnpm typecheck`
-- [ ] `pnpm test`
-- [ ] `pnpm verify` — alle drei Ringe
-- [ ] `docs/backlog.md`: Einsortierregeln auf dem Volltext eintragen, mit der Begründung aus § 15 der Spec (nützt erst, wenn ein Agent nachträglich vorschlägt).
-- [ ] Ein Blick auf die Datenbankgröße nach dem ersten vollen Lauf — die Spec rechnet mit Faktor 2,8 gegenüber dem reinen Text. Weicht es stark ab, gehört die Zahl in der Spec korrigiert.
+- [x] `pnpm typecheck`
+- [x] `pnpm test`
+- [x] `pnpm verify` — alle drei Ringe
+- [x] `docs/backlog.md`: Einsortierregeln auf dem Volltext eintragen, mit der Begründung aus § 15 der Spec (nützt erst, wenn ein Agent nachträglich vorschlägt).
+- [x] Ein Blick auf die Datenbankgröße nach dem ersten vollen Lauf — die Spec rechnet mit Faktor 2,8 gegenüber dem reinen Text. Weicht es stark ab, gehört die Zahl in der Spec korrigiert.
