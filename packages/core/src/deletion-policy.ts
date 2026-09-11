@@ -90,6 +90,20 @@ export const DELETION_POLICY: readonly DeletionRule[] = [
     auditAction: 'dms.draft.delete',
   },
   {
+    entity: 'documentFolder',
+    deletable: true,
+    reason: 'Nur Ordnung, kein Nachweis — wie ein Ordner der Mediathek.',
+    guard: 'nur wenn leer (keine Dokumente, keine Unterordner)',
+    auditAction: 'dms.folder.delete',
+  },
+  {
+    entity: 'documentLink',
+    deletable: true,
+    reason: 'Ein Bezug ist eine Zuordnung, kein Vorgang. Falsch gesetzte Bezüge müssen korrigierbar sein.',
+    guard: 'keiner',
+    auditAction: 'dms.unlink',
+  },
+  {
     entity: 'siteEntry',
     deletable: true,
     reason: 'Redaktioneller Inhalt der Webseite (Prinzip 3).',

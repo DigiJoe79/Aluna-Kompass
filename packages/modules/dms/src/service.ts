@@ -1,7 +1,24 @@
 import { and, count, desc, eq, inArray, like, or, sql, type SQL } from 'drizzle-orm';
-import { conflict, isoNow, notFound, ok, recordAudit, requirePermission, schema, validate, type CallContext, type DbOrTx, type Deps, type MediaReference, type Result } from '@kompass/core';
+import {
+  conflict,
+  invalid,
+  isoNow,
+  newId,
+  notFound,
+  ok,
+  parseFolderPath,
+  recordAudit,
+  requirePermission,
+  schema,
+  validate,
+  type CallContext,
+  type DbOrTx,
+  type Deps,
+  type MediaReference,
+  type Result,
+} from '@kompass/core';
 import { z } from 'zod';
-import { documentLinks, documents, type DocumentLinkRow, type DocumentRow } from './schema';
+import { documentFolders, documentLinks, documents, type DocumentLinkRow, type DocumentRow } from './schema';
 
 /**
  * Wo dieses Modul ein Medium verwendet — das PDF eines Dokuments. Ohne diesen
@@ -103,3 +120,152 @@ export async function voidDocument(deps: Deps, ctx: CallContext, input: unknown)
     return ok(toRecord(deps, after));
   });
 }
+
+export const moveDocumentSchema = z.object({
+  id: z.string().min(1),
+  folder: z.string().min(1).nullable(),
+});
+
+export async function moveDocument(
+  deps: Deps,
+  ctx: CallContext,
+  input: unknown,
+): Promise<Result<DocumentRecord>> {
+  const denied = requirePermission(ctx, 'dms.create');
+  if (denied) return denied;
+
+  const parsed = validate(deps, moveDocumentSchema, input);
+  if (!parsed.ok) return parsed;
+
+  const doc = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
+  if (!doc) return notFound('document', parsed.value.id);
+
+  let targetFolder: string | null = null;
+  if (parsed.value.folder !== null) {
+    const normalized = parseFolderPath(parsed.value.folder);
+    if (!normalized) return invalid([{ path: 'folder', message: 'invalidFolderPath' }]);
+    const folderRow = deps.db.select().from(documentFolders).where(eq(documentFolders.path, normalized)).get();
+    if (!folderRow) return notFound('documentFolder', parsed.value.folder);
+    targetFolder = normalized;
+  }
+
+  return deps.db.transaction((tx: DbOrTx) => {
+    const now = isoNow(deps.clock);
+    tx.update(documents).set({ folder: targetFolder, updatedAt: now }).where(eq(documents.id, doc.id)).run();
+
+    recordAudit(tx, deps, ctx, {
+      action: 'dms.move',
+      entityType: 'document',
+      entityId: doc.id,
+      before: { folder: doc.folder },
+      after: { folder: targetFolder },
+      summary: `Dokument ${doc.number ?? doc.subject} nach „${targetFolder ?? 'Eingangskorb'}“ verschoben`,
+    });
+
+    const after = tx.select().from(documents).where(eq(documents.id, doc.id)).get()!;
+    return ok(toRecord(deps, after, tx));
+  });
+}
+
+export const linkInputSchema = z.object({
+  entityType: z.string().trim().min(1).max(60),
+  entityId: z.string().trim().min(1),
+  role: z.enum(['sender', 'recipient', 'about']),
+});
+
+export const linkSchema = linkInputSchema.extend({
+  documentId: z.string().min(1),
+});
+
+export async function linkDocument(
+  deps: Deps,
+  ctx: CallContext,
+  input: unknown,
+): Promise<Result<DocumentLinkRow>> {
+  const denied = requirePermission(ctx, 'dms.create');
+  if (denied) return denied;
+
+  const parsed = validate(deps, linkSchema, input);
+  if (!parsed.ok) return parsed;
+
+  const doc = deps.db.select().from(documents).where(eq(documents.id, parsed.value.documentId)).get();
+  if (!doc) return notFound('document', parsed.value.documentId);
+
+  const id = newId();
+  const now = isoNow(deps.clock);
+
+  try {
+    return deps.db.transaction((tx: DbOrTx) => {
+      tx.insert(documentLinks)
+        .values({
+          id,
+          documentId: parsed.value.documentId,
+          entityType: parsed.value.entityType,
+          entityId: parsed.value.entityId,
+          role: parsed.value.role,
+          createdAt: now,
+        })
+        .run();
+
+      recordAudit(tx, deps, ctx, {
+        action: 'dms.link',
+        entityType: 'documentLink',
+        entityId: id,
+        after: {
+          documentId: parsed.value.documentId,
+          entityType: parsed.value.entityType,
+          entityId: parsed.value.entityId,
+          role: parsed.value.role,
+        },
+        summary: `Bezug zu ${parsed.value.entityType}:${parsed.value.entityId} angelegt`,
+      });
+
+      const row = tx.select().from(documentLinks).where(eq(documentLinks.id, id)).get()!;
+      return ok(row);
+    });
+  } catch (error) {
+    if (error instanceof Error && /UNIQUE constraint failed: document_links/.test(error.message)) {
+      return conflict('linkExists', 'Bezug existiert bereits');
+    }
+    throw error;
+  }
+}
+
+export const unlinkSchema = z.object({
+  id: z.string().min(1),
+});
+
+export async function unlinkDocument(
+  deps: Deps,
+  ctx: CallContext,
+  input: unknown,
+): Promise<Result<null>> {
+  const denied = requirePermission(ctx, 'dms.create');
+  if (denied) return denied;
+
+  const parsed = validate(deps, unlinkSchema, input);
+  if (!parsed.ok) return parsed;
+
+  const link = deps.db.select().from(documentLinks).where(eq(documentLinks.id, parsed.value.id)).get();
+  if (!link) return notFound('documentLink', parsed.value.id);
+
+  return deps.db.transaction((tx: DbOrTx) => {
+    tx.delete(documentLinks).where(eq(documentLinks.id, link.id)).run();
+
+    recordAudit(tx, deps, ctx, {
+      action: 'dms.unlink',
+      entityType: 'documentLink',
+      entityId: link.id,
+      before: {
+        documentId: link.documentId,
+        entityType: link.entityType,
+        entityId: link.entityId,
+        role: link.role,
+      },
+      summary: `Bezug ${link.id} gelöscht`,
+    });
+
+    return ok(null);
+  });
+}
+

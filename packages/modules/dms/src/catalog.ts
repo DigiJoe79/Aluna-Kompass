@@ -1,7 +1,27 @@
-import { ok, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
-import { asc, eq } from 'drizzle-orm';
+import {
+  conflict,
+  invalid,
+  isoNow,
+  notFound,
+  ok,
+  parseFolderPath,
+  recordAudit,
+  requirePermission,
+  validate,
+  type CallContext,
+  type DbOrTx,
+  type Deps,
+  type Result,
+} from '@kompass/core';
+import { asc, eq, like } from 'drizzle-orm';
 import { z } from 'zod';
-import { documentTypes, type DocumentTypeRow } from './schema';
+import {
+  documentFolders,
+  documents,
+  documentTypes,
+  type DocumentFolderRow,
+  type DocumentTypeRow,
+} from './schema';
 
 /**
  * Generischer Startsatz. Bewusst klein und ohne Vereinsspezifika (Prinzip 1) —
@@ -29,3 +49,89 @@ export async function listDocumentTypes(deps: Deps, ctx: CallContext, input: unk
   const rows = deps.db.select().from(documentTypes).orderBy(asc(documentTypes.sortOrder), asc(documentTypes.key)).all();
   return ok(parsed.value.includeInactive ? rows : rows.filter((row) => row.isActive));
 }
+
+export const documentFolderCreateSchema = z.object({
+  path: z.string().min(1),
+});
+
+export async function createDocumentFolder(
+  deps: Deps,
+  ctx: CallContext,
+  input: unknown,
+): Promise<Result<DocumentFolderRow>> {
+  const denied = requirePermission(ctx, 'dms.manage');
+  if (denied) return denied;
+
+  const parsed = validate(deps, documentFolderCreateSchema, input);
+  if (!parsed.ok) return parsed;
+
+  const path = parseFolderPath(parsed.value.path);
+  if (!path) return invalid([{ path: 'path', message: 'invalidFolderPath' }]);
+
+  const existing = deps.db.select().from(documentFolders).where(eq(documentFolders.path, path)).get();
+  if (existing) return conflict('folderExists', `Der Ordner „${path}“ existiert bereits`);
+
+  const now = isoNow(deps.clock);
+  return deps.db.transaction((tx: DbOrTx) => {
+    tx.insert(documentFolders).values({ path, createdAt: now }).run();
+    recordAudit(tx, deps, ctx, {
+      action: 'dms.folder.create',
+      entityType: 'documentFolder',
+      entityId: path,
+      after: { path },
+      summary: `Ordner „${path}“ angelegt`,
+    });
+    const row = tx.select().from(documentFolders).where(eq(documentFolders.path, path)).get()!;
+    return ok(row);
+  });
+}
+
+export async function listDocumentFolders(
+  deps: Deps,
+  ctx: CallContext,
+): Promise<Result<DocumentFolderRow[]>> {
+  const denied = requirePermission(ctx, 'dms.view');
+  if (denied) return denied;
+
+  const rows = deps.db.select().from(documentFolders).orderBy(asc(documentFolders.path)).all();
+  return ok(rows);
+}
+
+export const documentFolderDeleteSchema = z.object({
+  path: z.string().min(1),
+});
+
+export async function deleteDocumentFolder(
+  deps: Deps,
+  ctx: CallContext,
+  input: unknown,
+): Promise<Result<null>> {
+  const denied = requirePermission(ctx, 'dms.manage');
+  if (denied) return denied;
+
+  const parsed = validate(deps, documentFolderDeleteSchema, input);
+  if (!parsed.ok) return parsed;
+
+  const path = parseFolderPath(parsed.value.path);
+  if (!path) return invalid([{ path: 'path', message: 'invalidFolderPath' }]);
+
+  const existing = deps.db.select().from(documentFolders).where(eq(documentFolders.path, path)).get();
+  if (!existing) return notFound('documentFolder', path);
+
+  const hasDoc = deps.db.select({ id: documents.id }).from(documents).where(eq(documents.folder, path)).get();
+  const hasChild = deps.db.select({ path: documentFolders.path }).from(documentFolders).where(like(documentFolders.path, `${path}/%`)).get();
+  if (hasDoc || hasChild) return conflict('folderNotEmpty', `Der Ordner „${path}“ ist nicht leer`);
+
+  return deps.db.transaction((tx: DbOrTx) => {
+    tx.delete(documentFolders).where(eq(documentFolders.path, path)).run();
+    recordAudit(tx, deps, ctx, {
+      action: 'dms.folder.delete',
+      entityType: 'documentFolder',
+      entityId: path,
+      before: { path },
+      summary: `Ordner „${path}“ gelöscht`,
+    });
+    return ok(null);
+  });
+}
+
