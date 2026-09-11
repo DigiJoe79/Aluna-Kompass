@@ -63,7 +63,7 @@ export function ContactList({ contacts, roles }: { contacts: ContactListItem[]; 
             setQuery(e.target.value);
             applyFilters({ text: e.target.value });
           }}
-          className="h-[34px] w-[260px]"
+          className="w-[260px]"
         />
         <Select
           aria-label={t('fields.kind')}

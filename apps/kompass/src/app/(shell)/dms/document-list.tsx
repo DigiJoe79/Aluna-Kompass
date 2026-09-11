@@ -120,7 +120,7 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
             setQuery(e.target.value);
             applyFilters({ text: e.target.value });
           }}
-          className="h-[34px] w-[260px]"
+          className="w-[260px]"
         />
         <Select
           aria-label={t('columns.direction')}

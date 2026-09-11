@@ -36,7 +36,7 @@ export function AuditFilters({
         onKeyDown={(e) => {
           if (e.key === 'Enter') update('text', (e.target as HTMLInputElement).value);
         }}
-        className="h-8 w-[200px]"
+        className="w-[200px]"
       />
       <Select
         aria-label={t('user')}
@@ -80,14 +80,14 @@ export function AuditFilters({
         type="date"
         defaultValue={params.get('from') ?? ''}
         onChange={(e) => update('from', e.target.value)}
-        className="h-8 w-[150px] font-mono"
+        className="w-[150px] font-mono"
       />
       <Input
         aria-label={t('to')}
         type="date"
         defaultValue={params.get('to') ?? ''}
         onChange={(e) => update('to', e.target.value)}
-        className="h-8 w-[150px] font-mono"
+        className="w-[150px] font-mono"
       />
       <span className="ml-auto text-[13px] text-muted-ink">{t('count', { count: total })}</span>
     </div>

@@ -26,14 +26,32 @@ function sources(): { rel: string; text: string }[] {
     .map((f) => ({ rel: path.relative(ROOT, f), text: readFileSync(f, 'utf8') }));
 }
 
-/** Der Text eines Elements vom Namen bis zum Ende des öffnenden Tags. */
+/**
+ * Der Text eines Elements vom Namen bis zum Ende des öffnenden Tags. Das erste
+ * `>` reicht nicht: In `onChange={(e) => …}` steht eines mitten im Tag, und die
+ * Prüfung endete früher, als das Element zu Ende war — `h-[34px]` hinter einem
+ * Ereignisbehandler blieb so jahrelang unbemerkt.
+ */
 function openingTags(text: string, name: string): string[] {
   const found: string[] = [];
   const start = new RegExp(`<${name}[\\s/>]`, 'g');
   for (const match of text.matchAll(start)) {
-    const from = match.index;
-    const end = text.indexOf('>', from);
-    if (end > from) found.push(text.slice(from, end));
+    let depth = 0;
+    let quote = '';
+    for (let i = match.index; i < text.length; i++) {
+      const char = text[i]!;
+      if (quote) {
+        if (char === quote) quote = '';
+        continue;
+      }
+      if (char === '"' || char === "'" || char === '`') quote = char;
+      else if (char === '{') depth++;
+      else if (char === '}') depth--;
+      else if (char === '>' && depth === 0) {
+        found.push(text.slice(match.index, i));
+        break;
+      }
+    }
   }
   return found;
 }

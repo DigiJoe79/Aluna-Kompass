@@ -15,11 +15,14 @@ import { describe, expect, it } from 'vitest';
 const ROOT = path.resolve(import.meta.dirname, '../src/app/(shell)');
 
 /** Seiten ohne Rückweg — jede mit dem Grund, warum sie keinen braucht. */
-const REACHED_FROM_NAVIGATION = new Set([
+const NO_BACK_NEEDED = new Set([
   // Sammlungen des Templates stehen als eigene Einträge in der Navigation.
   'site/c/[collection]',
   // Fängt unbekannte Pfade ab und zeigt selbst die Wege an.
   '[...catchAll]',
+  // Zeigt die Akte mit dem Ablegen-Dialog darüber: Der Ausgang ist das
+  // Schliessen des Dialogs, dahinter steht die Liste schon.
+  'dms/receive',
 ]);
 
 /**
@@ -47,7 +50,7 @@ describe('Seiten abseits der Navigation', () => {
       .filter((file) => path.basename(file) === 'page.tsx')
       .map((file) => ({ route: routeOf(file).split(path.sep).join('/'), file }))
       .filter(({ route }) => needsBack(route))
-      .filter(({ route }) => !REACHED_FROM_NAVIGATION.has(route))
+      .filter(({ route }) => !NO_BACK_NEEDED.has(route))
       .filter(({ file }) => !readFileSync(file, 'utf8').includes('back={'))
       .map(({ route }) => route);
 

@@ -16,15 +16,17 @@ export function ReceiveForm({
   folders,
   contacts,
   defaultTypeKey,
+  onCancel,
 }: {
   types: { key: string; label: string }[];
   folders: string[];
   contacts: { id: string; name: string }[];
   /** Die eingestellte Vorgabeart für den Eingang, keine Konstante im Code. */
   defaultTypeKey: string;
+  /** Gesetzt, wenn das Formular in einem Dialog steht. */
+  onCancel?: () => void;
 }) {
   const t = useTranslations('dms');
-  const tCommon = useTranslations('common');
   const [state, formAction] = useActionState(receiveDocumentAction, idleState);
 
   const [documentDate, setDocumentDate] = useState('');
@@ -64,7 +66,9 @@ export function ReceiveForm({
   };
 
   return (
-    <form action={formAction} className="space-y-4 rounded-md border border-line bg-surface p-6">
+    <form action={formAction} className="flex min-h-0 flex-col">
+      {/* Der Körper scrollt, die Fußleiste bleibt stehen. */}
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
       {state.status === 'error' && Object.keys(errors).length === 0 ? (
         <div role="alert" className="rounded-md bg-error-bg p-3 text-[13px] text-error">{state.message}</div>
       ) : null}
@@ -155,7 +159,8 @@ export function ReceiveForm({
         </div>
       </div>
 
-      <FormActionBar back={{ href: '/dms', label: tCommon('backToList') }} saveLabel={t('receiveSubmit')} saveDisabled={!hasFile} />
+      </div>
+      <FormActionBar cancel={onCancel} sticky={false} saveLabel={t('receiveSubmit')} saveDisabled={!hasFile} />
     </form>
   );
 }

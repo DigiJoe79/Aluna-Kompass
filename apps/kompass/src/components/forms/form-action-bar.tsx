@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { SubmitButton } from '@/components/forms/submit-button';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { countChanged, snapshotOf, type Snapshot } from '@/lib/form-dirty';
+import { cn } from '@/lib/utils';
 
 /**
  * Die Speicherleiste für Formularseiten, wie im Handover beschrieben: sticky,
@@ -20,6 +21,8 @@ import { countChanged, snapshotOf, type Snapshot } from '@/lib/form-dirty';
  */
 export function FormActionBar({
   back,
+  cancel,
+  sticky = true,
   saveLabel,
   saveDisabled,
   count,
@@ -30,6 +33,17 @@ export function FormActionBar({
    * oben, und „Abbrechen“ führte nirgendwohin. „Verwerfen“ bleibt.
    */
   back?: { href: string; label: string };
+  /**
+   * In einem Dialog führt „Abbrechen“ nicht weg, sondern schliesst. Ein Link
+   * dorthin, wo man ohnehin schon steht, wäre eine Lüge.
+   */
+  cancel?: () => void;
+  /**
+   * In einem Dialog klebt nichts: Der Dialog steht fest und ist selbst
+   * verschoben — eine klebende Leiste darin rechnet gegen das Fenster und
+   * landet mitten im Formular.
+   */
+  sticky?: boolean;
   saveLabel?: string;
   /**
    * Für Formulare, denen noch etwas fehlt, ohne das ein Absenden nichts
@@ -84,13 +98,20 @@ export function FormActionBar({
   return (
     <div
       ref={anchor}
-      className="sticky bottom-0 flex items-center gap-3 border-t border-line bg-surface-2 px-6 py-3"
+      className={cn(
+        'flex items-center gap-3 border-t border-line bg-surface-2 px-6 py-3',
+        sticky && 'sticky bottom-0'
+      )}
     >
       <span className={changed > 0 ? 'text-[13px] font-semibold text-warning' : 'text-[12px] text-muted-ink'}>
         {changed > 0 ? t('changesPending', { count: changed }) : hasRequired ? t('requiredLegend') : ''}
       </span>
       <div className="ml-auto flex items-center gap-2">
-        {back ? (
+        {cancel ? (
+          <Button type="button" variant="ghost" onClick={cancel}>
+            {t('cancel')}
+          </Button>
+        ) : back ? (
           <Link href={back.href} className={buttonVariants({ variant: 'ghost' })}>
             {t('cancel')}
           </Link>

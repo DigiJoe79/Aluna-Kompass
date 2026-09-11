@@ -1,9 +1,18 @@
 import path from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { loginAsAdmin, resetDatabase } from './helpers';
 
 const login = loginAsAdmin;
 const FIXTURE_PDF = path.resolve(import.meta.dirname, 'fixtures/brief-digital.pdf');
+
+/**
+ * „Post ablegen“ liegt als Dialog über der Liste. Die Felder darin heissen wie
+ * Dinge auf der Liste dahinter — „Betreff“ steht auch im Suchfeld —, deshalb
+ * wird im Dialog gesucht und nicht auf der Seite.
+ */
+function receiveDialog(page: Page) {
+  return page.getByRole('dialog', { name: 'Post ablegen' });
+}
 
 test.describe('dms', () => {
   test.beforeEach(async ({ page }) => {
@@ -48,16 +57,17 @@ test.describe('dms', () => {
   test('legt eine Datei im Eingangskorb ab und sortiert sie ein', async ({ page }) => {
     await login(page);
     await page.goto('/dms/receive');
-    await page.getByLabel('Datei').setInputFiles({ name: '2026-03-14 Behoerde.pdf', mimeType: 'application/pdf', buffer: samplePdf() });
+    const dialog = receiveDialog(page);
+    await dialog.getByLabel('Datei').setInputFiles({ name: '2026-03-14 Behoerde.pdf', mimeType: 'application/pdf', buffer: samplePdf() });
     // Die Dateiwahl ruft `suggestClassification` als Server-Action. Auf dem
     // CI-Läufer wird sie dabei zum ersten Mal übersetzt — die Vorgabe von fünf
     // Sekunden reicht dafür nicht verlässlich, gemessen an zwei von drei roten
     // Läufen am 11.09. Wie beim Publish und beim Scan steht die Frist deshalb
     // ausdrücklich da, statt sich auf die Vorgabe zu verlassen.
-    await expect(page.getByLabel('Datum auf dem Dokument')).toHaveValue('2026-03-14', { timeout: 30_000 });
-    await page.getByLabel('Dokumentart').selectOption('authority');
-    await page.getByLabel('Betreff').fill('Eingegangenes Schreiben');
-    await page.getByRole('button', { name: 'Ablegen' }).click();
+    await expect(dialog.getByLabel('Datum auf dem Dokument')).toHaveValue('2026-03-14', { timeout: 30_000 });
+    await dialog.getByLabel('Dokumentart').selectOption('authority');
+    await dialog.getByLabel('Betreff').fill('Eingegangenes Schreiben');
+    await dialog.getByRole('button', { name: 'Ablegen' }).click();
     await expect(page.getByText(/BEH-\d{4}-\d{3}/)).toBeVisible();
   });
 
@@ -148,10 +158,11 @@ test.describe('dms', () => {
   test('nennt den Grund am Feld, statt auf Markierungen zu verweisen, die es nicht gibt', async ({ page }) => {
     await login(page);
     await page.goto('/dms/receive');
-    await page.getByLabel('Datei').setInputFiles({ name: 'notiz.txt', mimeType: 'text/plain', buffer: Buffer.from('Text, kein PDF.') });
-    await page.getByLabel('Datum auf dem Dokument').fill('2026-03-01');
-    await page.getByLabel('Betreff').fill('Falscher Dateityp');
-    await page.getByRole('button', { name: 'Ablegen' }).click();
+    const dialog = receiveDialog(page);
+    await dialog.getByLabel('Datei').setInputFiles({ name: 'notiz.txt', mimeType: 'text/plain', buffer: Buffer.from('Text, kein PDF.') });
+    await dialog.getByLabel('Datum auf dem Dokument').fill('2026-03-01');
+    await dialog.getByLabel('Betreff').fill('Falscher Dateityp');
+    await dialog.getByRole('button', { name: 'Ablegen' }).click();
     await expect(page.getByText('Nur PDF. Schriftverkehr wird als PDF abgelegt, damit er in zehn Jahren noch lesbar ist.')).toBeVisible();
     // Der allgemeine Kasten verweist nur dann auf Markierungen, wenn es welche gibt.
     await expect(page.getByText('Bitte prüfen Sie die markierten Felder.')).toHaveCount(0);
@@ -160,11 +171,12 @@ test.describe('dms', () => {
   test('löscht ein Dokument, dessen Aufbewahrungsfrist abgelaufen ist', async ({ page }) => {
     await login(page);
     await page.goto('/dms/receive');
-    await page.getByLabel('Datei').setInputFiles({ name: 'Alte Rechnung.pdf', mimeType: 'application/pdf', buffer: samplePdf() });
-    await page.getByLabel('Dokumentart').selectOption('invoice');
-    await page.getByLabel('Datum auf dem Dokument').fill('2005-06-01');
-    await page.getByLabel('Betreff').fill('Abgelaufene Rechnung');
-    await page.getByRole('button', { name: 'Ablegen' }).click();
+    const dialog = receiveDialog(page);
+    await dialog.getByLabel('Datei').setInputFiles({ name: 'Alte Rechnung.pdf', mimeType: 'application/pdf', buffer: samplePdf() });
+    await dialog.getByLabel('Dokumentart').selectOption('invoice');
+    await dialog.getByLabel('Datum auf dem Dokument').fill('2005-06-01');
+    await dialog.getByLabel('Betreff').fill('Abgelaufene Rechnung');
+    await dialog.getByRole('button', { name: 'Ablegen' }).click();
     await expect(page.getByText(/RCH-\d{4}-\d{3}/)).toBeVisible();
 
     // Der Fristenbildschirm führt auf genau dieses Dokument.
@@ -181,11 +193,12 @@ test.describe('dms', () => {
   test('lässt ein Dokument in laufender Frist nicht löschen', async ({ page }) => {
     await login(page);
     await page.goto('/dms/receive');
-    await page.getByLabel('Datei').setInputFiles({ name: 'Neue Rechnung.pdf', mimeType: 'application/pdf', buffer: samplePdf() });
-    await page.getByLabel('Dokumentart').selectOption('invoice');
-    await page.getByLabel('Datum auf dem Dokument').fill('2026-03-01');
-    await page.getByLabel('Betreff').fill('Laufende Rechnung');
-    await page.getByRole('button', { name: 'Ablegen' }).click();
+    const dialog = receiveDialog(page);
+    await dialog.getByLabel('Datei').setInputFiles({ name: 'Neue Rechnung.pdf', mimeType: 'application/pdf', buffer: samplePdf() });
+    await dialog.getByLabel('Dokumentart').selectOption('invoice');
+    await dialog.getByLabel('Datum auf dem Dokument').fill('2026-03-01');
+    await dialog.getByLabel('Betreff').fill('Laufende Rechnung');
+    await dialog.getByRole('button', { name: 'Ablegen' }).click();
     await expect(page.getByRole('button', { name: 'Endgültig löschen' })).toBeDisabled();
   });
 
@@ -204,10 +217,11 @@ test.describe('dms', () => {
     await login(page);
 
     await page.goto('/dms/receive');
-    await page.getByLabel('Datei').setInputFiles(FIXTURE_PDF);
-    await page.getByLabel('Betreff').fill('Ohne sprechenden Betreff');
-    await page.getByLabel('Datum auf dem Dokument').fill('2026-09-11');
-    await page.getByRole('button', { name: 'Ablegen' }).click();
+    const dialog = receiveDialog(page);
+    await dialog.getByLabel('Datei').setInputFiles(FIXTURE_PDF);
+    await dialog.getByLabel('Betreff').fill('Ohne sprechenden Betreff');
+    await dialog.getByLabel('Datum auf dem Dokument').fill('2026-09-11');
+    await dialog.getByRole('button', { name: 'Ablegen' }).click();
 
     // Der Worker laeuft im Hintergrund; gewartet wird auf den Zustand, nicht auf
     // eine feste Zeit — sonst ist der Test auf einer langsamen Maschine rot.
@@ -228,29 +242,56 @@ test.describe('dms', () => {
     expect(download.suggestedFilename()).toMatch(/\.pdf$/);
   });
 
+  test('legt Post in einem Dialog über der Liste ab, statt die Liste zu verlassen', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+
+    await page.getByRole('button', { name: 'Post ablegen' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Post ablegen' });
+    await expect(dialog).toBeVisible();
+    // Die Liste bleibt stehen, wo sie war.
+    await expect(page.locator('table')).toBeVisible();
+
+    await dialog.getByRole('button', { name: 'Abbrechen' }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page).toHaveURL(/\/dms$/);
+  });
+
+  test('der Deep-Link auf das Ablegen zeigt denselben Dialog über derselben Liste', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/receive');
+    const dialog = receiveDialog(page);
+
+    await expect(page.getByRole('dialog', { name: 'Post ablegen' })).toBeVisible();
+    // Nicht über die Rolle: Der Dialog nimmt die Liste aus dem Baum für
+    // Vorlesesoftware — stehen bleibt sie trotzdem.
+    await expect(page.locator('table')).toBeVisible();
+  });
+
   test('nimmt die Datei auf einer Ablagefläche an und zeigt danach ihre Karte', async ({ page }) => {
     await login(page);
     await page.goto('/dms/receive');
+    const dialog = receiveDialog(page);
 
-    await expect(page.getByText('PDF hierher ziehen')).toBeVisible();
-    await expect(page.getByText('Nur PDF, höchstens 10 MB.')).toBeVisible();
+    await expect(dialog.getByText('PDF hierher ziehen')).toBeVisible();
+    await expect(dialog.getByText('Nur PDF, höchstens 10 MB.')).toBeVisible();
     // Ohne Datei gäbe „Ablegen“ ein Versprechen, das ins Leere greift.
-    await expect(page.getByRole('button', { name: 'Ablegen' })).toBeDisabled();
+    await expect(dialog.getByRole('button', { name: 'Ablegen' })).toBeDisabled();
 
-    await page.getByLabel('Datei').setInputFiles({
+    await dialog.getByLabel('Datei').setInputFiles({
       name: 'Stadtkasse Bescheid.pdf',
       mimeType: 'application/pdf',
       buffer: samplePdf(),
     });
 
     // Aus der Fläche wird die Karte: Name, Grösse und was als Nächstes passiert.
-    await expect(page.getByText('Stadtkasse Bescheid.pdf')).toBeVisible();
-    await expect(page.getByText(/^PDF · \d/)).toBeVisible();
-    await expect(page.getByText('Texterkennung läuft nach dem Ablegen.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Ansehen' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Ersetzen' })).toBeVisible();
-    await expect(page.getByText('PDF hierher ziehen')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Ablegen' })).toBeEnabled();
+    await expect(dialog.getByText('Stadtkasse Bescheid.pdf')).toBeVisible();
+    await expect(dialog.getByText(/^PDF · \d/)).toBeVisible();
+    await expect(dialog.getByText('Texterkennung läuft nach dem Ablegen.')).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Ansehen' })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Ersetzen' })).toBeVisible();
+    await expect(dialog.getByText('PDF hierher ziehen')).toHaveCount(0);
+    await expect(dialog.getByRole('button', { name: 'Ablegen' })).toBeEnabled();
   });
 
   test('ein zu kurzer Begriff sagt, warum er nichts findet', async ({ page }) => {

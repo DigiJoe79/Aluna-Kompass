@@ -45,7 +45,7 @@ export function UserTable({ users, roles }: { users: UserSummary[]; roles: { id:
           placeholder={t('filter.search')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="h-[34px] w-[260px]"
+          className="w-[260px]"
         />
         <div className="flex items-center gap-2">
           <Switch id="show-inactive" checked={showInactive} onCheckedChange={setShowInactive} />
