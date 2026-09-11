@@ -8,6 +8,13 @@ export const DEFAULT_TYPE_OUTGOING = 'unclassified-out';
 export const DMS_SETTINGS: SettingDefinition[] = [
   { key: 'dms.defaultTypeIncoming', schema: z.string().min(1), default: DEFAULT_TYPE_INCOMING },
   { key: 'dms.defaultTypeOutgoing', schema: z.string().min(1), default: DEFAULT_TYPE_OUTGOING },
+  /**
+   * Welche Sprachen die Erkennung annimmt. Welche Pakete vorliegen, ist eine
+   * Betriebstatsache und unterscheidet sich je Umgebung: Der Container meldet
+   * `deu`, `eng`, `osd`, ein Entwicklungsrechner mit `tesseract-lang` meldet
+   * über 160. Geprüft wird deshalb gegen `probe()`, nicht gegen eine Liste.
+   */
+  { key: 'dms.ocrLanguages', schema: z.string().regex(/^[a-z]{3}(\+[a-z]{3})*$/), default: 'deu+eng' },
 ];
 
 /**

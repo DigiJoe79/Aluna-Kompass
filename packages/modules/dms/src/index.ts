@@ -12,3 +12,4 @@ export * from './seed';
 export * from './service';
 export * from './storage';
 export * from './templates';
+export * from './text';
