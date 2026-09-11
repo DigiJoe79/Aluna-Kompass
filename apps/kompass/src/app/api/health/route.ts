@@ -1,3 +1,4 @@
+import { backgroundStarted } from '@/lib/background';
 import { buildId } from '@/lib/build';
 import { getDeps, runtimeEnv } from '@/lib/deps';
 
@@ -9,6 +10,7 @@ export async function GET(): Promise<Response> {
     status: 'ok',
     environment: runtimeEnv().env,
     migrationCount: deps.migrationCount,
+    background: backgroundStarted(),
     version: '0.1.0',
     build: buildId(),
   });
