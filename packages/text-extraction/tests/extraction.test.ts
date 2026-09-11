@@ -13,6 +13,18 @@ describe('createTextExtraction', () => {
     if (probe.ok) expect(probe.languages).toContain('deu');
   });
 
+  it('fragt die Werkzeuge nicht bei jedem Dokument neu ab', async () => {
+    // `probe()` startet zwei Prozesse. Bei „Alles neu lesen“ über tausend
+    // Dokumente wären das zweitausend — für eine Antwort, die sich zwischen
+    // zwei Dokumenten nicht ändert.
+    const extraction = createTextExtraction();
+
+    const first = await extraction.probe();
+    const second = await extraction.probe();
+
+    expect(second).toBe(first);
+  });
+
   it('nimmt die Textebene, wenn es eine gibt — ohne OCR', async () => {
     const pages = await createTextExtraction().extract({
       bytes: fixture('brief-digital.pdf'),

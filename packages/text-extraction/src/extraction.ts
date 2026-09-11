@@ -21,17 +21,34 @@ function parseLanguages(out: string): string[] {
     .filter((l) => l.length > 0 && !l.includes(' '));
 }
 
+/**
+ * Wie lange die Antwort von `probe()` gilt. Sie kostet zwei Prozessstarts und
+ * ändert sich zwischen zwei Dokumenten nicht — bei „Alles neu lesen“ über
+ * tausend Dokumente wären es zweitausend. Kurz genug bleibt die Frist trotzdem,
+ * damit frisch installierte Werkzeuge innerhalb eines Worker-Taktes auffallen.
+ */
+export const PROBE_TTL_MS = 60_000;
+
 export function createTextExtraction(): TextExtraction {
+  let cached: { at: number; result: ProbeResult } | null = null;
+
   return {
     async probe(): Promise<ProbeResult> {
-      try {
-        await runTool('pdftotext', ['-v'], { timeoutMs: 5_000 });
-        const langs = await runTool('tesseract', ['--list-langs'], { timeoutMs: 10_000 });
-        return { ok: true, languages: parseLanguages(langs.toString('utf8')) };
-      } catch (error) {
-        if (error instanceof ToolMissingError) return { ok: false, error: error.message };
-        return { ok: false, error: error instanceof Error ? error.message : String(error) };
-      }
+      if (cached && Date.now() - cached.at < PROBE_TTL_MS) return cached.result;
+
+      const result = await (async (): Promise<ProbeResult> => {
+        try {
+          await runTool('pdftotext', ['-v'], { timeoutMs: 5_000 });
+          const langs = await runTool('tesseract', ['--list-langs'], { timeoutMs: 10_000 });
+          return { ok: true, languages: parseLanguages(langs.toString('utf8')) };
+        } catch (error) {
+          if (error instanceof ToolMissingError) return { ok: false, error: error.message };
+          return { ok: false, error: error instanceof Error ? error.message : String(error) };
+        }
+      })();
+
+      cached = { at: Date.now(), result };
+      return result;
     },
 
     async extract({ bytes, languages }): Promise<PageText[]> {
