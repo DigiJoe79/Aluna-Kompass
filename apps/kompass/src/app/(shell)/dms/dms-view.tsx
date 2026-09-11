@@ -1,14 +1,16 @@
 import { hasPermission, requirePermission } from '@kompass/core';
 import { displayName, listContacts } from '@kompass/module-contacts';
-import { defaultTypeKey, listDocumentFolders, listDocuments, listDocumentTypes } from '@kompass/module-dms';
-import { getTranslations } from 'next-intl/server';
-import Link from 'next/link';
+import {
+  countDocumentsByFolder,
+  defaultTypeKey,
+  listDocumentFolders,
+  listDocuments,
+  listDocumentTypes,
+} from '@kompass/module-dms';
 import { ForbiddenCard } from '@/components/forbidden-card';
-import { PageHeader } from '@/components/page-header';
-import { buttonVariants } from '@/components/ui/button';
 import { requireSession } from '@/lib/request-context';
+import { DmsWorkspace } from './dms-workspace';
 import { DocumentList, type DocumentListItem } from './document-list';
-import { ReceiveDialog } from './receive/receive-dialog';
 
 export interface DmsQuery {
   direction?: string;
@@ -29,8 +31,6 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
   const { deps, ctx } = await requireSession();
   if (requirePermission(ctx, 'dms.view')) return <ForbiddenCard permission="dms.view" />;
 
-  const t = await getTranslations('dms');
-
   const typesRes = await listDocumentTypes(deps, ctx, { includeInactive: false });
   const types = typesRes.ok ? typesRes.value : [];
   const typesMap = new Map(types.map((type) => [type.key, type.label]));
@@ -40,6 +40,12 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
 
   const inboxRes = await listDocuments(deps, ctx, { inbox: true, limit: 1 });
   const inboxCount = inboxRes.ok ? inboxRes.value.total : 0;
+
+  const allRes = await listDocuments(deps, ctx, { limit: 1 });
+  const total = allRes.ok ? allRes.value.total : 0;
+
+  const countsRes = await countDocumentsByFolder(deps, ctx);
+  const counts = countsRes.ok ? countsRes.value : {};
 
   const isInbox = query.inbox === '1';
   const docsRes = await listDocuments(deps, ctx, {
@@ -82,27 +88,17 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
     : [];
 
   return (
-    <>
-      <PageHeader
-        title={t('title')}
-        description={t('description')}
-        actions={
-          canCreate ? (
-            <>
-              <Link href="/dms/new" className={buttonVariants({ variant: 'default', size: 'sm' })}>
-                {t('newDraft')}
-              </Link>
-              <ReceiveDialog
-                types={incomingFirst}
-                folders={folders}
-                contacts={contacts}
-                defaultTypeKey={defaultTypeKey(deps, 'incoming')}
-                defaultOpen={receive}
-              />
-            </>
-          ) : null
-        }
-      />
+    <DmsWorkspace
+      folders={folders}
+      counts={counts}
+      inboxCount={inboxCount}
+      total={total}
+      canCreate={canCreate}
+      types={incomingFirst}
+      contacts={contacts}
+      defaultTypeKey={defaultTypeKey(deps, 'incoming')}
+      receiveOpen={receive}
+    >
       <DocumentList
         documents={rows}
         types={types.map((type) => ({ key: type.key, label: type.label }))}
@@ -111,6 +107,6 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
         hits={docsRes.value.hits}
         fulltextTooShort={docsRes.value.fulltextTooShort}
       />
-    </>
+    </DmsWorkspace>
   );
 }

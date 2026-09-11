@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useActionState, useRef, useState } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import { FieldError } from '@/components/forms/field-error';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,9 @@ export function ReceiveForm({
   folders,
   contacts,
   defaultTypeKey,
+  droppedFile,
+  droppedFolder,
+  skipped = 0,
   onCancel,
 }: {
   types: { key: string; label: string }[];
@@ -27,6 +30,12 @@ export function ReceiveForm({
   contacts: { id: string; name: string }[];
   /** Die eingestellte Vorgabeart für den Eingang, keine Konstante im Code. */
   defaultTypeKey: string;
+  /** Aus dem Dateimanager ins Fenster gezogen. */
+  droppedFile?: File | null;
+  /** Der Ordner, auf dem sie gelandet ist — er schlägt jeden Regelvorschlag. */
+  droppedFolder?: string | null;
+  /** Wie viele mitgezogene Dateien keine PDFs waren. */
+  skipped?: number;
   /** Gesetzt, wenn das Formular in einem Dialog steht. */
   onCancel?: () => void;
 }) {
@@ -36,16 +45,20 @@ export function ReceiveForm({
   const [documentDate, setDocumentDate] = useState('');
   const [subject, setSubject] = useState('');
   const [typeKey, setTypeKey] = useState(defaultTypeKey);
-  const [folder, setFolder] = useState('');
+  const [folder, setFolder] = useState(droppedFolder ?? '');
   const [senderId, setSenderId] = useState('');
-  const [hasFile, setHasFile] = useState(false);
+  const [hasFile, setHasFile] = useState(!!droppedFile);
 
   /**
    * Woher ein Feld seinen Wert hat. Steht nur an Feldern, die der Nutzer noch
    * nicht angefasst hat — was er selbst getippt hat, braucht keine Herkunft.
    */
-  const [origin, setOrigin] = useState<Partial<Record<Suggested, string>>>({});
-  const touched = useRef(new Set<Suggested>());
+  const [origin, setOrigin] = useState<Partial<Record<Suggested, string>>>(
+    droppedFolder ? { folder: t('suggest.fromDrop') } : {}
+  );
+  // Der Ordner, auf den gezogen wurde, ist eine Entscheidung — kein Vorschlag
+  // darf sie überschreiben.
+  const touched = useRef(new Set<Suggested>(droppedFolder ? ['folder'] : []));
 
   const errors = state.status === 'error' ? state.fieldErrors : {};
 
@@ -98,6 +111,12 @@ export function ReceiveForm({
     apply(await suggestClassificationAction(file.name, senderId || undefined), senderId);
   };
 
+  // Eine gezogene Datei war nie im Dateifeld: Der Vorschlag muss beim Öffnen laufen.
+  useEffect(() => {
+    if (droppedFile) void handleFile(droppedFile);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [droppedFile]);
+
   const handleSenderChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const nextSender = e.target.value;
     setSenderId(nextSender);
@@ -114,9 +133,15 @@ export function ReceiveForm({
           <div role="alert" className="rounded-md bg-error-bg p-3 text-[13px] text-error">{state.message}</div>
         ) : null}
 
+        {skipped > 0 ? (
+          <div role="alert" className="rounded-md bg-error-bg p-3 text-[13px] text-error">
+            {t('drop.notPdf', { count: skipped })}
+          </div>
+        ) : null}
+
         <div className="space-y-1.5">
           <Label htmlFor="file" required>{t('fields.file')}</Label>
-          <FileDropzone id="file" name="file" required onFile={handleFile} />
+          <FileDropzone id="file" name="file" required initial={droppedFile} onFile={handleFile} />
           <FieldError id="file-error" message={errors.file} />
         </div>
 

@@ -2,7 +2,7 @@
 
 import { Upload } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -16,18 +16,29 @@ export function FileDropzone({
   id,
   name,
   required,
+  initial,
   onFile,
 }: {
   id: string;
   name: string;
   required?: boolean;
+  /** Eine Datei, die schon vor dem Öffnen des Formulars gezogen wurde. */
+  initial?: File | null;
   onFile?: (file: File | null) => void;
 }) {
   const t = useTranslations('dms');
   const format = useFormatter();
   const input = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [file, setFile] = useState<File | null>(initial ?? null);
   const [over, setOver] = useState(false);
+
+  // Was gezogen wurde, muss ins Feld: Abgeschickt wird, was dort steht.
+  useEffect(() => {
+    if (!initial || !input.current) return;
+    const transfer = new DataTransfer();
+    transfer.items.add(initial);
+    input.current.files = transfer.files;
+  }, [initial]);
 
   const take = (next: File | null) => {
     setFile(next);

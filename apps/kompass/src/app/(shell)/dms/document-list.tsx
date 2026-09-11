@@ -46,7 +46,6 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
   const [query, setQuery] = useState(params.get('text') ?? '');
   const [directionFilter, setDirectionFilter] = useState(params.get('direction') ?? '');
   const [typeFilter, setTypeFilter] = useState(params.get('type') ?? '');
-  const [folderFilter, setFolderFilter] = useState(params.get('folder') ?? '');
   const [phaseFilter, setPhaseFilter] = useState(params.get('phase') ?? '');
 
   const applyFilters = (patch: Partial<{ text: string; direction: string; type: string; folder: string; phase: string; inbox: boolean }>) => {
@@ -55,7 +54,7 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
       text: query,
       direction: directionFilter,
       type: typeFilter,
-      folder: folderFilter,
+      folder: params.get('folder') ?? '',
       phase: phaseFilter,
       ...patch,
     };
@@ -77,40 +76,6 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <Link
-          href="/dms"
-          onClick={(e) => {
-            if (!isInbox) return;
-            e.preventDefault();
-            applyFilters({ inbox: false });
-          }}
-          className={cn(
-            'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors',
-            !isInbox ? 'bg-brand-soft font-semibold text-brand-ink' : 'text-ink-2 hover:bg-hover hover:text-ink',
-          )}
-        >
-          {t('allDocuments')}
-        </Link>
-        <Link
-          href="/dms?inbox=1"
-          onClick={(e) => {
-            if (isInbox) return;
-            e.preventDefault();
-            applyFilters({ inbox: true });
-          }}
-          className={cn(
-            'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors',
-            isInbox ? 'bg-brand-soft font-semibold text-brand-ink' : 'text-ink-2 hover:bg-hover hover:text-ink',
-          )}
-        >
-          <span>{t('inbox')}</span>
-          <span className="rounded-full bg-badge px-2 py-0.5 text-[11px] font-semibold text-badge-ink">
-            {inboxCount}
-          </span>
-        </Link>
-      </div>
-
       <div className="flex flex-wrap items-center gap-3">
         <Input
           aria-label={t('searchPlaceholder')}
@@ -153,25 +118,6 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
             </option>
           ))}
         </Select>
-        {!isInbox ? (
-          <Select
-            aria-label={t('columns.folder')}
-            value={folderFilter}
-            onChange={(e) => {
-              const val = e.target.value;
-              setFolderFilter(val);
-              applyFilters({ folder: val });
-            }}
-            className="w-auto"
-          >
-            <option value="">{t('allFolders')}</option>
-            {folders.map((f) => (
-              <option key={f} value={f}>
-                {f}
-              </option>
-            ))}
-          </Select>
-        ) : null}
         <Select
           aria-label={t('columns.status')}
           value={phaseFilter}

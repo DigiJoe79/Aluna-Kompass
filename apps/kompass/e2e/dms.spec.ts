@@ -14,6 +14,31 @@ function receiveDialog(page: Page) {
   return page.getByRole('dialog', { name: 'Post ablegen' });
 }
 
+/**
+ * Ziehen lässt sich aus dem Dateimanager nicht nachstellen; nachgestellt wird,
+ * was im Fenster ankommt — eine Datei in einem DataTransfer auf einem Ziel.
+ */
+async function dropFiles(page: Page, selector: string, names: string[]) {
+  // Die Horcher hängen an einem Effekt; vor der Hydration geht der Zug ins Leere.
+  await expect(page.locator('[data-drop="ready"]')).toBeAttached();
+  await page.evaluate(
+    ({ selector, names }) => {
+      const transfer = new DataTransfer();
+      for (const name of names) {
+        transfer.items.add(
+          new File(['%PDF-1.4'], name, { type: name.endsWith('.pdf') ? 'application/pdf' : 'text/plain' })
+        );
+      }
+      const target = document.querySelector(selector);
+      if (!target) throw new Error(`kein Ziel: ${selector}`);
+      for (const type of ['dragenter', 'dragover', 'drop']) {
+        target.dispatchEvent(new DragEvent(type, { dataTransfer: transfer, bubbles: true, cancelable: true }));
+      }
+    },
+    { selector, names }
+  );
+}
+
 test.describe('dms', () => {
   test.beforeEach(async ({ page }) => {
     await resetDatabase(page, 'seeded');
@@ -240,6 +265,43 @@ test.describe('dms', () => {
       previewLink.click(),
     ]);
     expect(download.suggestedFilename()).toMatch(/\.pdf$/);
+  });
+
+  test('zeigt die Ordner mit ihrem Bestand neben der Liste', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+
+    const folders = page.getByRole('navigation', { name: 'Ordner' });
+    await expect(folders.getByRole('link', { name: /Eingangskorb/ })).toBeVisible();
+    await expect(folders.getByRole('link', { name: /protokolle/ })).toBeVisible();
+
+    // Ein Klick filtert die Liste auf diesen Ordner.
+    await folders.getByRole('link', { name: /protokolle/ }).click();
+    await expect(page).toHaveURL(/folder=protokolle/);
+  });
+
+  test('zieht eine Datei auf einen Ordner und legt sie dorthin', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+
+    await dropFiles(page, '[data-folder="behoerden/finanzamt"]', ['Bescheid der Stadtkasse.pdf']);
+
+    const dialog = receiveDialog(page);
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText('Bescheid der Stadtkasse.pdf')).toBeVisible();
+    await expect(dialog.getByLabel('Ordner')).toHaveValue('behoerden/finanzamt');
+    await expect(dialog.getByText('hierauf gezogen')).toBeVisible();
+  });
+
+  test('eine Datei irgendwo im Fenster landet im Eingangskorb', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+
+    await dropFiles(page, 'main', ['Ohne Ziel.pdf']);
+
+    const dialog = receiveDialog(page);
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByLabel('Ordner')).toHaveValue('');
   });
 
   test('sagt am vorbelegten Feld, woher der Vorschlag kommt', async ({ page }) => {

@@ -1335,6 +1335,7 @@
     "title": "Akte",
     "description": "Schriftverkehr und Dokumente des Vereins",
     "inbox": "Eingangskorb",
+    "folders": "Ordner",
     "noFolder": "Kein Ordner",
     "allDocuments": "Alle Dokumente",
     "newDraft": "Neuer Entwurf",
@@ -1345,7 +1346,6 @@
     "textPending": "Der Inhalt wird noch gelesen",
     "allDirections": "Alle Richtungen",
     "allTypes": "Alle Arten",
-    "allFolders": "Alle Ordner",
     "allPhases": "Alle Zustände",
     "columns": {
       "number": "Nummer",
@@ -1391,6 +1391,11 @@
       "fromRuleSender": "Regel: „{term}“ im Absender",
       "fromSender": "wie zuletzt bei diesem Absender",
       "fromDrop": "hierauf gezogen"
+    },
+    "drop": {
+      "overlayTitle": "{count, plural, one {# Datei ablegen} other {# Dateien ablegen}}",
+      "overlayHint": "Auf einen Ordner ziehen, um dort einzusortieren — oder hier loslassen für den Eingangskorb.",
+      "notPdf": "{count, plural, one {Nur PDF möglich — eine Datei übersprungen.} other {Nur PDF möglich — # Dateien übersprungen.}}"
     },
     "saveDraft": "Entwurf speichern",
     "edit": "Bearbeiten",

@@ -1,6 +1,6 @@
 import { ctxWith } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
-import { createDocumentFolder, deleteDocumentFolder, listDocumentFolders } from '../src/catalog';
+import { countDocumentsByFolder, createDocumentFolder, deleteDocumentFolder, listDocumentFolders } from '../src/catalog';
 import { receiveDocument } from '../src/incoming';
 import { moveDocument } from '../src/service';
 import { ALL_DMS, auditActions, pdfBytes, setupWithTypes } from './helpers';
@@ -22,6 +22,30 @@ describe('folders', () => {
     expect(list.ok).toBe(true);
     if (!list.ok) return;
     expect(list.value.map((f) => f.path)).toEqual(['behoerden', 'vertraege']);
+  });
+
+  it('zählt, was in jedem Ordner liegt', async () => {
+    const { deps, ctx } = setupWithTypes();
+    await createDocumentFolder(deps, ctx, { path: 'behoerden' });
+    await createDocumentFolder(deps, ctx, { path: 'vertraege' });
+    for (const subject of ['Erstes', 'Zweites']) {
+      const received = await receiveDocument(deps, ctx, {
+        filename: `${subject}.pdf`,
+        bytes: pdfBytes(),
+        typeKey: 'authority',
+        subject,
+        documentDate: '2026-03-14',
+        folder: 'behoerden',
+      });
+      if (!received.ok) throw new Error('setup');
+    }
+
+    const counts = await countDocumentsByFolder(deps, ctx);
+    expect(counts.ok).toBe(true);
+    if (!counts.ok) return;
+    expect(counts.value['behoerden']).toBe(2);
+    // Leere Ordner tauchen nicht auf; die Spalte zeigt dort keine Zahl.
+    expect(counts.value['vertraege']).toBeUndefined();
   });
 
   it('löscht einen Ordner nur, wenn er leer ist', async () => {

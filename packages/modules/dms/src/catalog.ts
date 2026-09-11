@@ -15,7 +15,7 @@ import {
   type Deps,
   type Result,
 } from '@kompass/core';
-import { asc, eq, like } from 'drizzle-orm';
+import { asc, count, eq, isNotNull, like } from 'drizzle-orm';
 import { z } from 'zod';
 import {
   documentFolders,
@@ -110,6 +110,32 @@ export async function listDocumentFolders(
 
   const rows = deps.db.select().from(documentFolders).orderBy(asc(documentFolders.path)).all();
   return ok(rows);
+}
+
+/**
+ * Wie viele Dokumente in welchem Ordner liegen. Die Ordnerspalte der Akte
+ * zeigt die Zahl neben dem Namen; ohne sie ist ein Ordner eine Behauptung.
+ * Leere Ordner fehlen in der Antwort — dort steht dann keine Zahl.
+ */
+export async function countDocumentsByFolder(
+  deps: Deps,
+  ctx: CallContext,
+): Promise<Result<Record<string, number>>> {
+  const denied = requirePermission(ctx, 'dms.view');
+  if (denied) return denied;
+
+  const rows = deps.db
+    .select({ folder: documents.folder, count: count() })
+    .from(documents)
+    .where(isNotNull(documents.folder))
+    .groupBy(documents.folder)
+    .all();
+
+  const counts: Record<string, number> = {};
+  for (const row of rows) {
+    if (row.folder) counts[row.folder] = row.count;
+  }
+  return ok(counts);
 }
 
 export const documentFolderDeleteSchema = z.object({
