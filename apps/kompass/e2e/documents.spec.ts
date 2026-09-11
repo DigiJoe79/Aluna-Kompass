@@ -3,8 +3,8 @@ import { loginAsAdmin, resetDatabase } from './helpers';
 
 /**
  * Die Akte — Entwurf, Vorschau, Festschreiben, Liste, Storno — zog ins Modul
- * `dms` (Plan „dms-1-umzug"). Ihre Oberfläche unter `/dms` entsteht erst mit
- * Plan „dms-4-oberflaeche-mcp-seed"; bis dahin bleibt hier nur die Pipeline.
+ * `dms` (Plan „dms-1-umzug“). Ihre Oberfläche unter `/dms` entsteht erst mit
+ * Plan „dms-4-oberflaeche-mcp-seed“; bis dahin bleibt hier nur die Pipeline.
  */
 test.describe('documents', () => {
   test.beforeEach(async ({ page }) => {

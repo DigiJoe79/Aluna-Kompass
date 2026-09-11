@@ -10,7 +10,7 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
   if (requirePermission(ctx, 'media.upload')) return <ForbiddenCard permission="media.upload" />;
   const t = await getTranslations('media');
   const { folder } = await searchParams;
-  // `current === null` ist die Ansicht „Alle Dateien" (Filter aus).
+  // `current === null` ist die Ansicht „Alle Dateien“ (Filter aus).
   const current = folder ?? null;
 
   const names = new Map(deps.db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).all().map((u) => [u.id, u.name]));

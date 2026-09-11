@@ -110,7 +110,7 @@ export async function storeMediaAsset(deps: Deps, ctx: CallContext, input: Store
 }
 
 /**
- * Die Auslieferung einer einzelnen Datei. Bis hierher galt „angemeldet reicht",
+ * Die Auslieferung einer einzelnen Datei. Bis hierher galt „angemeldet reicht“,
  * was für Arbeitsmaterial der Redaktion stimmt — Logo, Projektbild, Tierfoto
  * landen ohnehin auf der Webseite. Beansprucht ein Modul das Asset aber unter
  * einem Recht, gilt dieses Recht auch hier: Sonst stünde neben der geprüften
@@ -170,7 +170,7 @@ export async function deleteMediaAsset(deps: Deps, ctx: CallContext, input: unkn
       entityType: 'mediaAsset',
       entityId: record.id,
       before: record,
-      summary: `Datei „${record.filename}" gelöscht`,
+      summary: `Datei „${record.filename}“ gelöscht`,
     });
   });
   // Datei erst nach dem Commit; ein verwaister Rest wäre harmlos (Dedup nach Hash).

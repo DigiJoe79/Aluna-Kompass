@@ -2,7 +2,7 @@ import type { RetentionClass } from './retention/classes';
 
 /**
  * Was in Kompass gelöscht werden darf — und was nicht. Kanonische Fassung von
- * Prinzip 3 (`AGENTS.md`): „Nichts Rechenschaftsrelevantes wird gelöscht."
+ * Prinzip 3 (`AGENTS.md`): „Nichts Rechenschaftsrelevantes wird gelöscht.“
  *
  * Diese Konstante ändert kein Laufzeitverhalten; sie ist die eine Stelle, gegen
  * die Menschen und Agenten prüfen, und ein Test hält sie konsistent. Wer eine

@@ -3,7 +3,7 @@ import { index, integer, sqliteTable, text, type AnySQLiteColumn } from 'drizzle
 /**
  * Ein Kontakt ist entweder eine natürliche Person oder eine Organisation.
  * `belongsToId` bildet die dritte Sorte aus dem Alltag ab: eine Person bei
- * einer Organisation („Frau Klein, Sparkasse"). Welche Felder Pflicht sind,
+ * einer Organisation („Frau Klein, Sparkasse“). Welche Felder Pflicht sind,
  * entscheidet `kind` — geprüft wird das in Zod, nicht in der Tabelle, weil
  * SQLite keine bedingten Constraints kennt.
  */

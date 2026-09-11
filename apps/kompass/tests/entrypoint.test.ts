@@ -18,7 +18,7 @@ const workspace = () => {
   return dir;
 };
 
-/** Führt seed-site-template.sh gegen ein isoliertes „Volume" aus. */
+/** Führt seed-site-template.sh gegen ein isoliertes „Volume“ aus. */
 const run = (opts: { templateDir: string; nodeModules: string; source?: string }) =>
   execFileSync('sh', [SCRIPT, opts.source ?? TEMPLATE_SRC, opts.nodeModules], {
     env: { ...process.env, SITE_TEMPLATE_DIR: opts.templateDir },

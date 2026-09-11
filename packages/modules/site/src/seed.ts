@@ -39,7 +39,7 @@ export interface SeedDocument {
   variables: Record<string, unknown>;
   collections: Record<string, Array<Record<string, unknown>>>;
   assets: SeedAsset[];
-  /** Mediathek-Ordner, in den die Seed-Dateien wandern. Vorgabe „Webseite". */
+  /** Mediathek-Ordner, in den die Seed-Dateien wandern. Vorgabe „Webseite“. */
   folder?: string;
 }
 
@@ -177,7 +177,7 @@ export async function applySeed(deps: Deps, ctx: CallContext, opts: { confirm: b
   if (!opts.confirm) return ok(report);
 
   // 3. Assets hochladen (async, jeweils eigene Transaktion; Dedup nach Inhalts-Hash).
-  //    Alle Seed-Dateien wandern in einen Mediathek-Ordner (Vorgabe „Webseite").
+  //    Alle Seed-Dateien wandern in einen Mediathek-Ordner (Vorgabe „Webseite“).
   if (files.size > 0 && !deps.db.select().from(core.mediaFolders).where(eq(core.mediaFolders.path, mediaFolder)).get()) {
     deps.db.transaction((tx) => {
       tx.insert(core.mediaFolders).values({ path: mediaFolder, createdAt: isoNow(deps.clock) }).run();
@@ -186,7 +186,7 @@ export async function applySeed(deps: Deps, ctx: CallContext, opts: { confirm: b
         entityType: 'mediaFolder',
         entityId: mediaFolder,
         after: { path: mediaFolder },
-        summary: `Ordner „${mediaFolder}" für die Startinhalte angelegt`,
+        summary: `Ordner „${mediaFolder}“ für die Startinhalte angelegt`,
       });
     });
   }

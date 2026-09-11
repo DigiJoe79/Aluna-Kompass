@@ -1,7 +1,7 @@
 /**
  * Die Build-Kennung des laufenden Images. Kommt über `KOMPASS_BUILD` aus dem
  * Docker-Build (CI: der Git-SHA; `pnpm image`: der kurze SHA). Ohne Wert —
- * also `next dev` oder ein Bau ohne das Argument — steht „dev".
+ * also `next dev` oder ein Bau ohne das Argument — steht „dev“.
  */
 export function buildId(): string {
   const raw = process.env.KOMPASS_BUILD?.trim();

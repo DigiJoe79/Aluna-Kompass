@@ -36,26 +36,26 @@ function collectionTools(key: string, col: TemplateSchema['collections'][string]
   const shape = fieldShape(col.fields);
   const slug = col.slug ? { slug: z.string().optional() } : {};
   const tools: McpToolDefinition[] = [
-    tool(`site_${key}_list`, `List the entries of the „${col.label}" collection. Requires site.view.`, z.object({}), (deps, ctx) => listEntries(deps, ctx, key)),
-    tool(`site_${key}_get`, `Read one entry of „${col.label}". Requires site.view.`, z.object({ id: z.string() }), (deps, ctx, args) => getEntry(deps, ctx, (args as { id: string }).id)),
-    tool(`site_${key}_create`, `Create an entry in „${col.label}" against its declared fields. Requires site.manage.`, z.object({ ...slug, ...shape }), (deps, ctx, args) => {
+    tool(`site_${key}_list`, `List the entries of the „${col.label}“ collection. Requires site.view.`, z.object({}), (deps, ctx) => listEntries(deps, ctx, key)),
+    tool(`site_${key}_get`, `Read one entry of „${col.label}“. Requires site.view.`, z.object({ id: z.string() }), (deps, ctx, args) => getEntry(deps, ctx, (args as { id: string }).id)),
+    tool(`site_${key}_create`, `Create an entry in „${col.label}“ against its declared fields. Requires site.manage.`, z.object({ ...slug, ...shape }), (deps, ctx, args) => {
       const { slug: entrySlug, ...data } = args as Record<string, unknown>;
       return createEntry(deps, ctx, { collection: key, slug: entrySlug, data });
     }),
-    tool(`site_${key}_update`, `Update an entry in „${col.label}". Requires site.manage.`, z.object({ id: z.string(), ...slug, ...shape }), (deps, ctx, args) => {
+    tool(`site_${key}_update`, `Update an entry in „${col.label}“. Requires site.manage.`, z.object({ id: z.string(), ...slug, ...shape }), (deps, ctx, args) => {
       const { id, slug: entrySlug, ...data } = args as Record<string, unknown> & { id: string };
       return updateEntry(deps, ctx, { id, slug: entrySlug, data });
     }),
-    tool(`site_${key}_delete`, `Delete an entry in „${col.label}" (editorial content, audited). Requires site.manage.`, z.object({ id: z.string() }), (deps, ctx, args) => deleteEntry(deps, ctx, args)),
+    tool(`site_${key}_delete`, `Delete an entry in „${col.label}“ (editorial content, audited). Requires site.manage.`, z.object({ id: z.string() }), (deps, ctx, args) => deleteEntry(deps, ctx, args)),
   ];
   if (col.publishable) {
     tools.push(
-      tool(`site_${key}_set_published`, `Publish or withdraw an entry in „${col.label}". Requires site.manage.`, z.object({ id: z.string(), isPublished: z.boolean() }), (deps, ctx, args) => setEntryPublished(deps, ctx, args)),
+      tool(`site_${key}_set_published`, `Publish or withdraw an entry in „${col.label}“. Requires site.manage.`, z.object({ id: z.string(), isPublished: z.boolean() }), (deps, ctx, args) => setEntryPublished(deps, ctx, args)),
     );
   }
   if (col.sortable) {
     tools.push(
-      tool(`site_${key}_reorder`, `Set the order of entries in „${col.label}". Requires site.manage.`, z.object({ ids: z.array(z.string()) }), (deps, ctx, args) => reorderEntries(deps, ctx, { collection: key, ids: (args as { ids: string[] }).ids })),
+      tool(`site_${key}_reorder`, `Set the order of entries in „${col.label}“. Requires site.manage.`, z.object({ ids: z.array(z.string()) }), (deps, ctx, args) => reorderEntries(deps, ctx, { collection: key, ids: (args as { ids: string[] }).ids })),
     );
   }
   return tools;

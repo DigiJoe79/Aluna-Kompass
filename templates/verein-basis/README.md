@@ -42,9 +42,9 @@ Kompass liefert den Inhalt als `content.json` und die Bildvarianten als
 Ein Template kann ein Verzeichnis `seed/` mitbringen — `seed/content.json` in
 der Form des Kompass-Exports (`variables`, `collections`, `assets`) und die
 Dateien unter `seed/assets/`. Kompass zeigt dann unter Webseite → Template den
-Knopf „Startinhalte", der sie **einmalig** in eine leere Webseite übernimmt.
+Knopf „Startinhalte“, der sie **einmalig** in eine leere Webseite übernimmt.
 Dieses Basis-Template hat bewusst kein `seed/`: ein neuer Verein startet mit
 leerer Webseite.
 
-Die Seed-Dateien landen in der Mediathek in einem eigenen Ordner — „Webseite",
+Die Seed-Dateien landen in der Mediathek in einem eigenen Ordner — „Webseite“,
 oder was `seed/content.json` unter dem Schlüssel `folder` angibt.

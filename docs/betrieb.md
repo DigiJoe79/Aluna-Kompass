@@ -4,9 +4,9 @@
 1. **Ordner anlegen**: `/share/Container/kompass-test/{data,media}` (Prod analog, erst wenn Test läuft).
 2. **`.env.test`** nach `/share/Container/kompass-test/` legen (Vorlage `.env.test.example`), mit `SESSION_SECRET=<48 zufällige Zeichen>`, z. B. `openssl rand -hex 24`. Je Umgebung ein eigener Wert, sonst gälten Sitzungen aus Test auch in Prod.
 3. **`secret/site.pw`** daneben: `mkdir -p secret && printf '%s' '<webspace-passwort>' > secret/site.pw && chmod 600 secret/site.pw && chown 1000:1000 secret/site.pw`. Das Verzeichnis `secret` liegt **neben** `data`, nicht darin: Das Backup bildet `/data` ab, und ein Geheimnis darf in kein Archiv geraten, das man herunterlädt und weitergibt. `printf` statt `echo`, sonst hängt ein Zeilenumbruch am Passwort.
-4. Container Station öffnen → **„Anwendung erstellen"** → Inhalt von `docker-compose.test.yml` einfügen. Für Prod später eine **zweite Anwendung** aus `docker-compose.prod.yml`.
+4. Container Station öffnen → **„Anwendung erstellen“** → Inhalt von `docker-compose.test.yml` einfügen. Für Prod später eine **zweite Anwendung** aus `docker-compose.prod.yml`.
 
-   Nicht über „Image erstellen" gehen: die Image-Suche der Container Station bietet nur Docker Hub und die LXD-Registry an. Eine Anwendung zieht dagegen jede Registry, die im Compose steht. `ghcr.io/digijoe79/aluna-kompass` ist öffentlich lesbar, eine Anmeldung ist also nicht nötig.
+   Nicht über „Image erstellen“ gehen: die Image-Suche der Container Station bietet nur Docker Hub und die LXD-Registry an. Eine Anwendung zieht dagegen jede Registry, die im Compose steht. `ghcr.io/digijoe79/aluna-kompass` ist öffentlich lesbar, eine Anmeldung ist also nicht nötig.
 
    Die Pfade im Compose sind absolut. Die Container Station kopiert die Datei nach `/tmp`, wo ein relatives `env_file` ins Leere zeigt — der Fehler lautet dann `env file /tmp/.env.… not found`.
 
@@ -30,7 +30,7 @@
 
    Wer es ganz eindeutig will, trägt statt `dev` den unveränderlichen Tag `sha-<commit>` ein — dann ist jede Aktualisierung eine sichtbare Änderung der Compose-Datei.
 3. Migrationen laufen beim Start automatisch; der Migrationsstand steht im Health-JSON und im Umgebungsbalken der Testumgebung.
-4. Die Bilder unter `:dev` und `:latest` sind vor dem Hochladen auf amd64 durchgetestet (siehe „Bauen und Prüfen"). Ein rotes CI-Ergebnis heißt deshalb: Es gibt kein neues Bild, nicht etwa ein ungeprüftes.
+4. Die Bilder unter `:dev` und `:latest` sind vor dem Hochladen auf amd64 durchgetestet (siehe „Bauen und Prüfen“). Ein rotes CI-Ergebnis heißt deshalb: Es gibt kein neues Bild, nicht etwa ein ungeprüftes.
 
 ## Prod nach Test kopieren
 Export in Prod → Datei herunterladen → in Test unter Verwaltung → Backup importieren (Umgebungsname `test` eintippen). Danach sind in Test alle Sitzungen beendet; Anmeldung mit den Prod-Zugangsdaten. API-Tokens werden nicht mitkopiert.
@@ -86,7 +86,7 @@ Images `better-sqlite3` und `sharp` neu. Die Begründung der Aufteilung steht in
 `docs/superpowers/specs/2026-09-08-pruefringe-design.md`.
 
 ## MCP
-Endpunkt `http://<nas>:3000/mcp` (Streamable HTTP), Authentifizierung mit einem persönlichen API-Token aus dem Profil (`Authorization: Bearer akx_live_…`). Tokens wirken mit den Rechten des Nutzers; jeder Vorgang steht im Änderungsprotokoll mit Kanal „MCP".
+Endpunkt `http://<nas>:3000/mcp` (Streamable HTTP), Authentifizierung mit einem persönlichen API-Token aus dem Profil (`Authorization: Bearer akx_live_…`). Tokens wirken mit den Rechten des Nutzers; jeder Vorgang steht im Änderungsprotokoll mit Kanal „MCP“.
 
 ## Webseite (Test und Prod)
 
@@ -98,7 +98,7 @@ liest es unter Webseite → Template ein.
 
 **Startinhalte.** Bringt ein Template ein Verzeichnis `seed/` mit
 (`seed/content.json` plus `seed/assets/`), erscheint unter Webseite → Template
-der Knopf „Startinhalte" — einmalig, solange die Webseite leer ist. Er legt die
+der Knopf „Startinhalte“ — einmalig, solange die Webseite leer ist. Er legt die
 Variablen und Sammlungseinträge des Seeds an und lädt dessen Dateien hoch.
 Danach ist die Datenbank die Quelle; ein zweiter Lauf ist gesperrt
 (`site.seedAppliedAt`). Für einen erneuten Lauf braucht es eine frische
@@ -112,7 +112,7 @@ sonst, und es wird nicht über eine Freigabe geteilt.
 `node_modules` darin ist ein Symlink auf die Module des Images. Zeigt er ins
 Leere — etwa nach einem Update aus einer älteren Fassung —, erneuert ihn der
 Entrypoint beim nächsten Start selbst; ein Build meldete das vorher als
-„astro not installed".
+„astro not installed“.
 
 ## Dokument-Basisvorlagen unter `/data/core/document-templates`
 
@@ -151,8 +151,8 @@ Hauptdomain bleibt bis zum Go-live auf WordPress.
    docker exec kompass-test sh -c 'ls -l /secret/site.pw; wc -c < /secret/site.pw'
    ```
 
-   Kompass ruft `sshpass -f /secret/site.pw rsync -az --no-owner --no-group --no-perms --omit-dir-times --delete --checksum …` auf. Die vier `--no…`-Flaggen nehmen `-a` das, was es am **Zielverzeichnis selbst** setzen will: Besitzer, Gruppe, Rechte, Zeitstempel. Gehört das Verzeichnis jemand anderem oder ist es ein Einhängepunkt, bricht der Lauf sonst mit „Operation not permitted" ab, obwohl jede Datei übertragen wurde. Zeitstempel und Symlinks der Dateien bleiben erhalten. das Passwort steht damit nie in der Prozessliste und nicht in `docker inspect`. Auf einem Hoster mit Schlüsselanmeldung stattdessen `SITE_DEPLOY_KEY_FILE` setzen — der Code beherrscht beides.
-3. `.env.test` und `.env.prod` um die `SITE_*`-Variablen ergänzen (siehe `.env.*.example`). Ohne diese Variablen zeigt Kompass nur „Vorschau", keinen Publish-Knopf.
+   Kompass ruft `sshpass -f /secret/site.pw rsync -az --no-owner --no-group --no-perms --omit-dir-times --delete --checksum …` auf. Die vier `--no…`-Flaggen nehmen `-a` das, was es am **Zielverzeichnis selbst** setzen will: Besitzer, Gruppe, Rechte, Zeitstempel. Gehört das Verzeichnis jemand anderem oder ist es ein Einhängepunkt, bricht der Lauf sonst mit „Operation not permitted“ ab, obwohl jede Datei übertragen wurde. Zeitstempel und Symlinks der Dateien bleiben erhalten. das Passwort steht damit nie in der Prozessliste und nicht in `docker inspect`. Auf einem Hoster mit Schlüsselanmeldung stattdessen `SITE_DEPLOY_KEY_FILE` setzen — der Code beherrscht beides.
+3. `.env.test` und `.env.prod` um die `SITE_*`-Variablen ergänzen (siehe `.env.*.example`). Ohne diese Variablen zeigt Kompass nur „Vorschau“, keinen Publish-Knopf.
 4. **Prod trägt vorerst `SITE_STAGING=1`.** Ohne das wäre `prod.aluna-tierhilfe.org` indexierbar und stünde später in Konkurrenz zur echten Domain. Der Schalter setzt `noindex`, `Disallow: /` und lässt die Sitemap weg.
 5. **Vor dem ersten Publish:** Publizieren-Seite → „Verbindung testen“. Der Lauf meldet sich am Ziel an und überträgt nichts; er listet auf, was dort liegt und ein Publish entfernen würde. Steht die erwartete Installation darin, stimmt der Pfad. Kommt die Liste leer zurück, zeigt `SITE_DEPLOY_PATH` ins Leere — ein vertippter Pfad lässt rsync nicht scheitern, er trifft nur nichts.
 6. Erster Publish aus Test nach `…/aluna-test`, im Browser prüfen. Das ist zugleich der erste Lauf von rsync über SSH — bei Fehlern siehe Punkt 9. Danach dasselbe aus Prod nach `…/aluna-prod`.

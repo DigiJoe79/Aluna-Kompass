@@ -14,7 +14,7 @@ export default defineConfig({
   retries: 0,
   timeout: 30_000,
   // Ohne HTML-Bericht lädt die CI bei einem Fehlschlag ein leeres Artefakt
-  // hoch („No files were found") — und man sitzt vor einem roten Lauf ohne
+  // hoch („No files were found“) — und man sitzt vor einem roten Lauf ohne
   // Bild. Die Spur gibt es nur beim Fehlschlag, damit der grüne Lauf schnell
   // bleibt.
   reporter: [['list'], ['html', { open: 'never' }]],

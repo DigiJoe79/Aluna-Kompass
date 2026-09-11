@@ -75,7 +75,7 @@ const run = [
   `trap "docker rm -f ${CONTAINER} >/dev/null 2>&1" EXIT INT TERM`,
   // Geleert statt gelöscht: Docker Desktop reicht ein eben erst angelegtes
   // Verzeichnis nicht schnell genug in seine VM weiter, und der Start
-  // scheiterte an „error while creating mount source path".
+  // scheiterte an „error while creating mount source path“.
   `mkdir -p '${deploy}'`,
   // Im Container aufräumen, nicht auf dem Wirt: Was der letzte Lauf dorthin
   // geschrieben hat, gehört unter Linux `node` und liegt in Unterverzeichnissen,

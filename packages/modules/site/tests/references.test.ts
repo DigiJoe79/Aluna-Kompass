@@ -48,7 +48,7 @@ describe('siteMediaReferences', () => {
     unwrap(await createEntry(deps, ctx, { collection: 'news', slug: 'fest', data: { title: { de: 'Fest' }, image: a.id } }));
 
     const hits = siteMediaReferences(deps, a.id);
-    expect(hits.map((h) => h.label).sort()).toEqual(['Eintrag „fest" in „News"', 'Variable „heroImage"']);
+    expect(hits.map((h) => h.label).sort()).toEqual(['Eintrag „fest“ in „News“', 'Variable „heroImage“']);
     expect(siteMediaReferences(deps, 'OTHER')).toEqual([]);
   });
 });

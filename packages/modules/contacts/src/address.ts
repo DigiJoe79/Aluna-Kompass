@@ -17,7 +17,7 @@ export const displayName = (c: PostalAddressInput): string => (c.kind === 'organ
 /**
  * Der mehrzeilige Anschriftsblock fürs Fensterkuvert. Leere Felder erzeugen
  * keine Leerzeile und kein einsames Satzzeichen — genau hier entstehen sonst
- * die „12345 " mit hängendem Leerzeichen.
+ * die „12345 “ mit hängendem Leerzeichen.
  *
  * Reine Funktion ohne `ctx`: Die Dokumentenpipeline ruft sie ohne Aufrufkontext.
  *

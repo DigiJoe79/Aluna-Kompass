@@ -65,7 +65,7 @@ export function buildNavigation(input: {
   };
   // Inaktive Module erscheinen gar nicht in der Navigation. Wer sie einschalten
   // will, tut das unter Verwaltung → Module; ihre Seiten zeigen bis dahin die
-  // „Modul inaktiv"-Seite, falls jemand die URL direkt aufruft.
+  // „Modul inaktiv“-Seite, falls jemand die URL direkt aufruft.
   const modules: NavGroup[] = input.manifests
     .filter(
       (m) =>

@@ -57,9 +57,9 @@ export async function createMediaFolder(deps: Deps, ctx: CallContext, input: unk
   const path = parseFolderPath(parsed.data.path);
   if (!path) return invalid([{ path: 'path', message: 'invalidFolderPath' }]);
 
-  if (folderExists(deps, path)) return conflict('folderExists', `Der Ordner „${path}" existiert bereits`);
+  if (folderExists(deps, path)) return conflict('folderExists', `Der Ordner „${path}“ existiert bereits`);
   const parent = parentOf(path);
-  if (parent && !folderExists(deps, parent)) return conflict('folderParentMissing', `Der übergeordnete Ordner „${parent}" fehlt`);
+  if (parent && !folderExists(deps, parent)) return conflict('folderParentMissing', `Der übergeordnete Ordner „${parent}“ fehlt`);
 
   deps.db.transaction((tx) => {
     tx.insert(mediaFolders).values({ path, createdAt: isoNow(deps.clock) }).run();
@@ -68,7 +68,7 @@ export async function createMediaFolder(deps: Deps, ctx: CallContext, input: unk
       entityType: 'mediaFolder',
       entityId: path,
       after: { path },
-      summary: `Ordner „${path}" angelegt`,
+      summary: `Ordner „${path}“ angelegt`,
     });
   });
   return ok({ path });
@@ -86,9 +86,9 @@ export async function renameMediaFolder(deps: Deps, ctx: CallContext, input: unk
   if (!from || !to) return invalid([{ path: 'to', message: 'invalidFolderPath' }]);
 
   if (!folderExists(deps, from)) return notFound('mediaFolder', from);
-  if (folderExists(deps, to)) return conflict('folderExists', `Der Ordner „${to}" existiert bereits`);
+  if (folderExists(deps, to)) return conflict('folderExists', `Der Ordner „${to}“ existiert bereits`);
   const toParent = parentOf(to);
-  if (toParent && !folderExists(deps, toParent)) return conflict('folderParentMissing', `Der übergeordnete Ordner „${toParent}" fehlt`);
+  if (toParent && !folderExists(deps, toParent)) return conflict('folderParentMissing', `Der übergeordnete Ordner „${toParent}“ fehlt`);
 
   const affected = deps.db
     .select({ path: mediaFolders.path })
@@ -109,7 +109,7 @@ export async function renameMediaFolder(deps: Deps, ctx: CallContext, input: unk
       entityId: from,
       before: { path: from },
       after: { path: to },
-      summary: `Ordner „${from}" in „${to}" umbenannt`,
+      summary: `Ordner „${from}“ in „${to}“ umbenannt`,
     });
   });
   return ok({ path: to });
@@ -128,7 +128,7 @@ export async function deleteMediaFolder(deps: Deps, ctx: CallContext, input: unk
   if (!folderExists(deps, path)) return notFound('mediaFolder', path);
   const hasAsset = !!deps.db.select({ id: mediaAssets.id }).from(mediaAssets).where(eq(mediaAssets.folder, path)).get();
   const hasChild = !!deps.db.select({ path: mediaFolders.path }).from(mediaFolders).where(like(mediaFolders.path, path + '/%')).get();
-  if (hasAsset || hasChild) return conflict('folderNotEmpty', `Der Ordner „${path}" ist nicht leer`);
+  if (hasAsset || hasChild) return conflict('folderNotEmpty', `Der Ordner „${path}“ ist nicht leer`);
 
   deps.db.transaction((tx) => {
     tx.delete(mediaFolders).where(eq(mediaFolders.path, path)).run();
@@ -137,7 +137,7 @@ export async function deleteMediaFolder(deps: Deps, ctx: CallContext, input: unk
       entityType: 'mediaFolder',
       entityId: path,
       before: { path },
-      summary: `Ordner „${path}" gelöscht`,
+      summary: `Ordner „${path}“ gelöscht`,
     });
   });
   return ok(null);
@@ -168,7 +168,7 @@ export async function moveMediaAsset(deps: Deps, ctx: CallContext, input: unknow
       entityId: asset.id,
       before: { folder: asset.folder },
       after: { folder },
-      summary: `Datei „${asset.filename}" nach „${folder ?? 'Wurzel'}" verschoben`,
+      summary: `Datei „${asset.filename}“ nach „${folder ?? 'Wurzel'}“ verschoben`,
     });
   });
   return ok(null);

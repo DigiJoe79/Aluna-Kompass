@@ -84,7 +84,7 @@ describe('the node_modules a template needs', () => {
    * pnpm installiert nicht flach: `astro` liegt nicht in der Wurzel, sondern
    * bei dem Paket, das es braucht. Ein Symlink auf `/app/node_modules` findet
    * deshalb `@kompass/site-template`, aber kein Astro — und der Build bricht
-   * mit „astro not installed".
+   * mit „astro not installed“.
    */
   it('points at a directory that actually holds astro', () => {
     const dir = resolveTemplateNodeModules();
@@ -96,7 +96,7 @@ describe('the node_modules a template needs', () => {
 describe('an existing module resolution', () => {
   /**
    * Der Symlink überlebt Neustarts und Updates. Zeigt er noch auf eine ältere,
-   * falsche node_modules, scheitert jeder Build mit „astro not installed", und
+   * falsche node_modules, scheitert jeder Build mit „astro not installed“, und
    * niemand kommt darauf, ihn von Hand zu löschen.
    */
   it('repairs a symlink whose target holds no astro', async () => {

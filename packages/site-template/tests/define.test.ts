@@ -42,7 +42,7 @@ describe('defineTemplate', () => {
     expect(() => defineTemplate({ name: 'X', locales: ['DE'], variables: {}, collections: {} })).toThrow(/locale/i);
   });
 
-  // Ohne diese Angabe liest der Resync eine Umbenennung als „entfällt plus neu"
+  // Ohne diese Angabe liest der Resync eine Umbenennung als „entfällt plus neu“
   // und der Inhalt des Feldes geht verloren.
   it('carries renamedFrom into the schema, for every field helper', () => {
     const cases = {

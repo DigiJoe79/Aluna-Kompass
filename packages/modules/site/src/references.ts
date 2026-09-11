@@ -20,7 +20,7 @@ export function siteMediaReferences(deps: Deps, assetId: string): MediaReference
 
   const values = readValues(deps);
   for (const key of assetKeys(template.schema.variables)) {
-    if (values[key] === assetId) refs.push({ label: `Variable „${key}"`, entity: 'siteValue', id: key });
+    if (values[key] === assetId) refs.push({ label: `Variable „${key}“`, entity: 'siteValue', id: key });
   }
 
   const collections = template.schema.collections;
@@ -34,7 +34,7 @@ export function siteMediaReferences(deps: Deps, assetId: string): MediaReference
           row.slug ??
           (data.title && typeof data.title === 'object' ? Object.values(data.title as Record<string, string>)[0] : null) ??
           row.id;
-        refs.push({ label: `Eintrag „${title}" in „${col.label}"`, entity: 'siteEntry', id: row.id });
+        refs.push({ label: `Eintrag „${title}“ in „${col.label}“`, entity: 'siteEntry', id: row.id });
       }
     }
   }

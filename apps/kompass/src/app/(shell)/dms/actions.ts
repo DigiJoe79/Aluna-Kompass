@@ -68,7 +68,7 @@ export async function updateDraftAction(id: string, _prev: ActionState, formData
     body,
     folder,
     documentDate,
-    // Das Formular schickt das Feld immer mit; leer heißt „kein Empfänger".
+    // Das Formular schickt das Feld immer mit; leer heißt „kein Empfänger“.
     recipientId: orNull(formData.get('recipientId')),
   });
 

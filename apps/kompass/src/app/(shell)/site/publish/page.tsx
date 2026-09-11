@@ -13,7 +13,7 @@ export default async function PublishPage() {
   const { deps, ctx } = await requireSession();
   if (requirePermission(ctx, 'site.publish')) return <ForbiddenCard permission="site.publish" />;
   const t = await getTranslations('site.publish');
-  // Die Navigation blendet „Publizieren" ohne Template aus; über die Adresse
+  // Die Navigation blendet „Publizieren“ ohne Template aus; über die Adresse
   // ist die Seite trotzdem erreichbar, und jeder Lauf endete an `noTemplate`.
   if (!activeTemplate(deps)) {
     const tpl = await getTranslations('site.template');

@@ -10,7 +10,7 @@ const ROOT = path.resolve(import.meta.dirname, '../../..');
  * der Quellcode, nicht `docs/` (dort steht die Entstehungsgeschichte) und
  * nicht `scripts/` (Entwicklungswerkzeuge, die nicht ins Image gehen).
  *
- * „Aluna" allein steht nicht auf der Liste: So heisst das Produkt selbst
+ * „Aluna“ allein steht nicht auf der Liste: So heisst das Produkt selbst
  * (`Aluna Kompass`). Verboten ist, was den Verein meint.
  */
 const FORBIDDEN = ['tierhilfe', 'zuhause-gesucht', 'hundeblicke\\.net'];

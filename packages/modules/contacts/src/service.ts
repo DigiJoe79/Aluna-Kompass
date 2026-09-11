@@ -261,7 +261,7 @@ export async function addContactRole(deps: Deps, ctx: CallContext, input: unknow
   const contact = loadContact(deps.db, parsed.value.id);
   if (!contact) return notFound('contact', parsed.value.id);
   if (contact.roles.some((r) => r.role === parsed.value.role && r.until === null)) {
-    return conflict('roleAlreadyRunning', `Die Rolle „${parsed.value.role}" läuft bereits`);
+    return conflict('roleAlreadyRunning', `Die Rolle „${parsed.value.role}“ läuft bereits`);
   }
   return deps.db.transaction((tx: DbOrTx) => {
     tx.insert(contactRoles).values({ id: newId(), contactId: contact.id, role: parsed.value.role, since: parsed.value.since, until: null, note: parsed.value.note ?? null }).run();

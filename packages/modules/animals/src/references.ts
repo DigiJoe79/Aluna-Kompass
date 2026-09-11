@@ -17,6 +17,6 @@ export function animalsMediaReferences(deps: Deps, assetId: string): MediaRefere
   }
   return [...animalIds].map((id) => {
     const name = deps.db.select({ name: animals.name }).from(animals).where(eq(animals.id, id)).get()?.name ?? id;
-    return { label: `Tier „${name}"`, entity: 'animal', id };
+    return { label: `Tier „${name}“`, entity: 'animal', id };
   });
 }

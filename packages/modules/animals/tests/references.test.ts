@@ -25,7 +25,7 @@ describe('animalsMediaReferences', () => {
     const animal = unwrap(await createAnimal(d, ctx, { slug: 'rocky', name: 'Rocky', sex: 'male', ...base }));
     unwrap(await setAnimalPhotos(d, ctx, { id: animal.id, photos: [{ assetId: photo.id, isPrimary: true }] }));
 
-    expect(animalsMediaReferences(d, photo.id)).toEqual([{ label: 'Tier „Rocky"', entity: 'animal', id: animal.id }]);
+    expect(animalsMediaReferences(d, photo.id)).toEqual([{ label: 'Tier „Rocky“', entity: 'animal', id: animal.id }]);
     expect(animalsMediaReferences(d, 'OTHER')).toEqual([]);
   });
 });

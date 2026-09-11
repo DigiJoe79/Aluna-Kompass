@@ -21,7 +21,7 @@ function findingText(f: Finding): string {
     case 'overLimit':
       return `${name} hat ${f.have} Einträge, erlaubt sind ${f.max}`;
     case 'valueGone':
-      return `${name}: „${f.value}" entfällt und wird zu „${f.replacement}" (${f.count}×)`;
+      return `${name}: „${f.value}“ entfällt und wird zu „${f.replacement}“ (${f.count}×)`;
     default:
       return name;
   }

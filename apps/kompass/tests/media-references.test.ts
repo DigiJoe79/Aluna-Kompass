@@ -25,6 +25,6 @@ describe('media delete across modules', () => {
     expect(res.error.type).toBe('conflict');
     if (res.error.type !== 'conflict') throw new Error('unexpected');
     expect(res.error.code).toBe('mediaAssetInUse');
-    expect(res.error.message).toContain('Tier „Rex"');
+    expect(res.error.message).toContain('Tier „Rex“');
   });
 });

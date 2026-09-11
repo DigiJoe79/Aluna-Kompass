@@ -20,8 +20,8 @@ const modulesWithTools: [ModuleManifest, readonly McpToolDefinition[]][] = [
  * Rechte, die bewusst ohne MCP-Werkzeug bleiben. Backup hängt an Dateiströmen —
  * ein Backup von einigen hundert Megabyte durch JSON-RPC zu reichen, brächte
  * niemandem etwas; es läuft über Route Handler. Die sechs `dms.*`-Rechte sind
- * mit dem Modul selbst nur umgezogen (Plan „dms-1-umzug"); ihre Werkzeuge
- * bringt Plan „dms-4-oberflaeche-mcp-seed" (§ 7 der Spec). Wer hier einträgt,
+ * mit dem Modul selbst nur umgezogen (Plan „dms-1-umzug“); ihre Werkzeuge
+ * bringt Plan „dms-4-oberflaeche-mcp-seed“ (§ 7 der Spec). Wer hier einträgt,
  * entscheidet bewusst; wer ein Recht ergänzt, ohne es hier oder in einem
  * Werkzeug zu nennen, bekommt einen roten Test.
  */

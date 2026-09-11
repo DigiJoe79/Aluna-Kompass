@@ -31,7 +31,7 @@ export interface PublishResult {
 /**
  * Schreibt jeden Schritt mit Dauer nach stdout und bricht ab, wenn einer
  * haengt. Ohne das steht die Oberflaeche im Fehlerfall beliebig lange auf
- * „wird erstellt", und im Containerprotokoll steht nichts.
+ * „wird erstellt“, und im Containerprotokoll steht nichts.
  */
 async function step<T>(name: string, limitMs: number, run: () => Promise<T>): Promise<T> {
   const started = Date.now();
@@ -47,7 +47,7 @@ async function step<T>(name: string, limitMs: number, run: () => Promise<T>): Pr
     console.log(`[site] ${name} fertig nach ${Date.now() - started} ms`);
     return value;
   } catch (error) {
-    // „fertig" gehoert nur an einen geglueckten Schritt. Beim Zeitlimit laeuft
+    // „fertig“ gehoert nur an einen geglueckten Schritt. Beim Zeitlimit laeuft
     // die urspruengliche Arbeit weiter und belegt einen Worker im Threadpool.
     const reason = error instanceof StepTimeoutError ? 'Zeitlimit überschritten' : 'fehlgeschlagen';
     console.log(`[site] ${name} ${reason} nach ${Date.now() - started} ms`);
@@ -59,7 +59,7 @@ async function step<T>(name: string, limitMs: number, run: () => Promise<T>): Pr
 
 export class StepTimeoutError extends Error {
   constructor(public readonly step: string, limitMs: number) {
-    super(`Schritt „${step}" hat das Zeitlimit von ${Math.round(limitMs / 1000)} s überschritten`);
+    super(`Schritt „${step}“ hat das Zeitlimit von ${Math.round(limitMs / 1000)} s überschritten`);
     this.name = 'StepTimeoutError';
   }
 }

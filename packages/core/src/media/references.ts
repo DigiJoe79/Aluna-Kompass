@@ -17,7 +17,7 @@ export function coreMediaReferences(deps: Deps, assetId: string): MediaReference
     refs.push({ label: 'Logo des Vereins', entity: 'setting', id: 'branding.logoAssetId' });
   }
   for (const p of deps.db.select({ id: projects.id, slug: projects.slug }).from(projects).where(eq(projects.imageAssetId, assetId)).all()) {
-    refs.push({ label: `Projekt „${p.slug}"`, entity: 'project', id: p.id });
+    refs.push({ label: `Projekt „${p.slug}“`, entity: 'project', id: p.id });
   }
   return refs;
 }

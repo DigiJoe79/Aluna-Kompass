@@ -63,7 +63,7 @@ export function resolveTemplateNodeModules(): string {
  *
  * pnpm legt eine `file:`-Abhängigkeit als Kopie ab. Dann liegt das Paket als
  * TypeScript unter `node_modules`, und Node entfernt dort keine Typen
- * („Stripping types is currently unsupported for files under node_modules").
+ * („Stripping types is currently unsupported for files under node_modules“).
  * Über einen Symlink löst Node den echten Pfad auf, der ausserhalb liegt.
  * Nebeneffekt und Absicht zugleich: Der Vertrag stammt damit immer aus der
  * laufenden Fassung und nicht aus einer Kopie von vor drei Updates.
@@ -96,7 +96,7 @@ export async function ensureModuleResolution(dir: string, from?: string): Promis
   if (existing && !existing.isSymbolicLink()) return linkContractPackage(link, from); // eigene Installation: nur der Vertrag gehört uns
   if (existing) {
     // Ein Symlink aus einer früheren Fassung kann auf die falsche node_modules
-    // zeigen. Das fällt erst beim Build auf („astro not installed"), und niemand
+    // zeigen. Das fällt erst beim Build auf („astro not installed“), und niemand
     // kommt darauf, ihn von Hand zu löschen — also hier richten.
     const wanted = target();
     if (existsSync(path.join(link, 'astro'))) return;

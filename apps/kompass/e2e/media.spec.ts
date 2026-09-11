@@ -27,7 +27,7 @@ test.describe('media library', () => {
     await page.goto('/admin/media');
     await page.getByRole('row', { name: /hof-/ }).click();
     const dialog = page.getByRole('dialog');
-    await expect(dialog).toContainText('Projekt „hofprojekt"');
+    await expect(dialog).toContainText('Projekt „hofprojekt“');
     await expect(dialog.getByRole('button', { name: 'Löschen' })).toBeDisabled();
   });
 

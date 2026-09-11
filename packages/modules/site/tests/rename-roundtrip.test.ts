@@ -29,7 +29,7 @@ export default defineTemplate({
 /**
  * Der Weg, den eine Umbenennung wirklich nimmt: ein Autor schreibt sie in sein
  * Template, der Loader trägt sie ins Schema, der Resync erkennt sie. Reisst die
- * Kette irgendwo, meldet der Plan „entfällt plus neu" und der Text ist weg.
+ * Kette irgendwo, meldet der Plan „entfällt plus neu“ und der Text ist weg.
  */
 describe('a rename declared in a template survives to the resync', () => {
   it('reports one rename that carries its content, not a removal and an addition', async () => {

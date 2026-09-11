@@ -80,7 +80,7 @@ export async function seedAnimals(deps: Deps, ctx: CallContext): Promise<void> {
         body: a.body,
       }),
     );
-    // `createAnimal` legt jedes Tier als „sucht ein Zuhause" an; abweichende
+    // `createAnimal` legt jedes Tier als „sucht ein Zuhause“ an; abweichende
     // Zustände kommen über den regulären Statuswechsel.
     if (a.status !== 'lookingForHome') {
       unwrap(await setAnimalStatus(deps, ctx, { id: created.id, status: a.status, adoptedYear: a.adoptedYear }));

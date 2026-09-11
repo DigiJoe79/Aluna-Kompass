@@ -93,10 +93,10 @@ export async function createEntry(deps: Deps, ctx: CallContext, raw: unknown): P
 
   const existing = rowsOf(deps.db, collection);
   if (col.max !== undefined && existing.length >= col.max) {
-    return conflict('tooManyEntries', `Die Sammlung „${col.label}" fasst höchstens ${col.max} Einträge`);
+    return conflict('tooManyEntries', `Die Sammlung „${col.label}“ fasst höchstens ${col.max} Einträge`);
   }
   if (slugResult.value && slugTaken(deps.db, collection, slugResult.value)) {
-    return conflict('duplicateSlug', `Der Slug „${slugResult.value}" ist in „${col.label}" schon vergeben`);
+    return conflict('duplicateSlug', `Der Slug „${slugResult.value}“ ist in „${col.label}“ schon vergeben`);
   }
 
   const now = isoNow(deps.clock);
@@ -107,7 +107,7 @@ export async function createEntry(deps: Deps, ctx: CallContext, raw: unknown): P
       .values({ id, collection, slug: slugResult.value, sortOrder, isPublished: false, data: validated.value, createdAt: now, updatedAt: now })
       .run();
     const row = tx.select().from(siteEntries).where(eq(siteEntries.id, id)).get()!;
-    recordAudit(tx, deps, ctx, { action: 'site.entry.create', entityType: 'siteEntry', entityId: id, after: row, summary: `Eintrag in „${col.label}" angelegt` });
+    recordAudit(tx, deps, ctx, { action: 'site.entry.create', entityType: 'siteEntry', entityId: id, after: row, summary: `Eintrag in „${col.label}“ angelegt` });
     return ok(row);
   });
 }
@@ -129,7 +129,7 @@ export async function updateEntry(deps: Deps, ctx: CallContext, raw: unknown): P
     const slugResult = checkSlug(col, slug);
     if (!slugResult.ok) return slugResult;
     if (slugResult.value && slugTaken(deps.db, before.collection, slugResult.value, id)) {
-      return conflict('duplicateSlug', `Der Slug „${slugResult.value}" ist in „${col.label}" schon vergeben`);
+      return conflict('duplicateSlug', `Der Slug „${slugResult.value}“ ist in „${col.label}“ schon vergeben`);
     }
     nextSlug = slugResult.value;
   }
@@ -145,7 +145,7 @@ export async function updateEntry(deps: Deps, ctx: CallContext, raw: unknown): P
   return deps.db.transaction((tx) => {
     tx.update(siteEntries).set({ slug: nextSlug, data: nextData, updatedAt: now }).where(eq(siteEntries.id, id)).run();
     const after = tx.select().from(siteEntries).where(eq(siteEntries.id, id)).get()!;
-    recordAudit(tx, deps, ctx, { action: 'site.entry.update', entityType: 'siteEntry', entityId: id, before, after, summary: `Eintrag in „${col.label}" geändert` });
+    recordAudit(tx, deps, ctx, { action: 'site.entry.update', entityType: 'siteEntry', entityId: id, before, after, summary: `Eintrag in „${col.label}“ geändert` });
     return ok(after);
   });
 }
@@ -167,7 +167,7 @@ export async function deleteEntry(deps: Deps, ctx: CallContext, raw: unknown): P
       entityType: 'siteEntry',
       entityId: before.id,
       before,
-      summary: `Eintrag aus „${col?.label ?? before.collection}" gelöscht`,
+      summary: `Eintrag aus „${col?.label ?? before.collection}“ gelöscht`,
     });
     return ok(null);
   });
@@ -193,7 +193,7 @@ export async function reorderEntries(deps: Deps, ctx: CallContext, raw: unknown)
     ids.forEach((id, index) => {
       tx.update(siteEntries).set({ sortOrder: index, updatedAt: now }).where(eq(siteEntries.id, id)).run();
     });
-    recordAudit(tx, deps, ctx, { action: 'site.entry.reorder', entityType: 'siteCollection', entityId: collection, after: ids, summary: `Reihenfolge in „${col.label}" geändert` });
+    recordAudit(tx, deps, ctx, { action: 'site.entry.reorder', entityType: 'siteCollection', entityId: collection, after: ids, summary: `Reihenfolge in „${col.label}“ geändert` });
     return ok(rowsOf(tx, collection));
   });
 }
@@ -209,7 +209,7 @@ export async function setEntryPublished(deps: Deps, ctx: CallContext, raw: unkno
   if (!before) return notFound('siteEntry', id);
   const col = collectionOf(deps, before.collection);
   if (!col) return notFound('siteCollection', before.collection);
-  if (!col.publishable) return conflict('notPublishable', `Die Sammlung „${col.label}" kennt keinen Veröffentlicht-Schalter`);
+  if (!col.publishable) return conflict('notPublishable', `Die Sammlung „${col.label}“ kennt keinen Veröffentlicht-Schalter`);
 
   const now = isoNow(deps.clock);
   return deps.db.transaction((tx) => {
@@ -221,7 +221,7 @@ export async function setEntryPublished(deps: Deps, ctx: CallContext, raw: unkno
       entityId: id,
       before: { isPublished: before.isPublished },
       after: { isPublished },
-      summary: `Eintrag in „${col.label}" ${isPublished ? 'veröffentlicht' : 'zurückgezogen'}`,
+      summary: `Eintrag in „${col.label}“ ${isPublished ? 'veröffentlicht' : 'zurückgezogen'}`,
     });
     return ok(after);
   });

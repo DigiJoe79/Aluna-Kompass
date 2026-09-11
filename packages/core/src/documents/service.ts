@@ -58,7 +58,7 @@ export async function prepare(
   const built = template.build(data.value, await buildContext(deps, ctx, 'PENDING'));
   const baseId = resolveBaseId(deps, template, built.base);
   const base = deps.documents.base(baseId);
-  if (!base) return conflict('documentBaseUnavailable', `Basis-Vorlage „${baseId}" ist nicht verfügbar`);
+  if (!base) return conflict('documentBaseUnavailable', `Basis-Vorlage „${baseId}“ ist nicht verfügbar`);
 
   const bodyTypst = 'markdown' in built.body ? await renderMarkdownTypst(built.body.markdown) : built.body.typst;
   return ok({ template, data: data.value, built, baseId, base, bodyTypst });
@@ -79,7 +79,7 @@ export async function exportDocument(deps: Deps, ctx: CallContext, input: unknow
   if (!prepared.ok) return prepared;
   const { template, built, baseId, bodyTypst } = prepared.value;
   if (template.filed !== false) {
-    return conflict('documentIsFiled', `Vorlage „${template.key}" ist ein Akteneintrag und wird über das Modul dms erzeugt`);
+    return conflict('documentIsFiled', `Vorlage „${template.key}“ ist ein Akteneintrag und wird über das Modul dms erzeugt`);
   }
 
   const context = await buildContext(deps, ctx, '');
@@ -91,7 +91,7 @@ export async function exportDocument(deps: Deps, ctx: CallContext, input: unknow
       entityType: 'documentTemplate',
       entityId: template.key,
       after: { templateKey: template.key, base: baseId },
-      summary: `Auszug „${built.slots.title ?? template.key}" aus Vorlage ${template.key} gezogen`,
+      summary: `Auszug „${built.slots.title ?? template.key}“ aus Vorlage ${template.key} gezogen`,
     });
   });
   return ok({ bytes, filename, mimeType: 'application/pdf' });

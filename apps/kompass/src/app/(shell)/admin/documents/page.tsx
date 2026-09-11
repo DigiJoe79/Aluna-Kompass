@@ -8,7 +8,7 @@ import { BasesPanel } from './bases-panel';
 /**
  * Nur noch die Pipeline (Basis-Vorlagen): die Akte selbst — Liste, Entwurf,
  * Vorschau, Storno — zog ins Modul `dms` und bekommt dort ihre eigene
- * Oberfläche unter `/dms` (Plan „dms-4-oberflaeche-mcp-seed").
+ * Oberfläche unter `/dms` (Plan „dms-4-oberflaeche-mcp-seed“).
  */
 export default async function DocumentsPage() {
   const { deps, ctx } = await requireSession();

@@ -15,7 +15,7 @@ export interface SettingDefinition<T = unknown> {
 
 export interface MediaReference {
   /** Menschlich lesbar, für die Fehlermeldung und die Verwendungs-Spalte:
-   *  z. B. 'Tier „Rocky"', 'Artikel „Sommerfest"', 'Logo des Vereins'. */
+   *  z. B. 'Tier „Rocky“', 'Artikel „Sommerfest“', 'Logo des Vereins'. */
   label: string;
   /** Entitätstyp und ID, falls die Oberfläche verlinken will. */
   entity: string;
@@ -31,7 +31,7 @@ export interface MediaReference {
 
 export interface RetentionHold {
   /** Menschlich lesbar, für die Anzeige und die Fehlermeldung:
-   *  'Zuwendungsbestätigung BST-2026-0042', 'Adoptionsvertrag für „Rocky"'. */
+   *  'Zuwendungsbestätigung BST-2026-0042', 'Adoptionsvertrag für „Rocky“'. */
   label: string;
   /** ISO-Datum, bis zu dem gehalten wird; null = dauerhaft. */
   until: string | null;
@@ -91,11 +91,11 @@ export interface DocumentSlots {
   draft?: boolean;
   title?: string;
   subtitle?: string;
-  /** „Ort, Datum" — Vorgabe: organization.city + ausgestellt am. */
+  /** „Ort, Datum“ — Vorgabe: organization.city + ausgestellt am. */
   place?: string;
   /** Mehrzeiliges Anschriftenfeld (Brief). */
   recipient?: string;
-  /** „Betreff" (Brief). */
+  /** „Betreff“ (Brief). */
   subject?: string;
 }
 

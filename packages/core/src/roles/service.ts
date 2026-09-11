@@ -61,12 +61,12 @@ export async function createRole(deps: Deps, ctx: CallContext, input: unknown): 
   const parsed = validate(deps, createRoleSchema, input);
   if (!parsed.ok) return parsed;
   const { name, description } = parsed.value;
-  if (nameTaken(deps.db, name)) return conflict('roleNameTaken', `Rolle „${name}" existiert bereits`);
+  if (nameTaken(deps.db, name)) return conflict('roleNameTaken', `Rolle „${name}“ existiert bereits`);
   return deps.db.transaction((tx) => {
     const id = newId();
     tx.insert(roles).values({ id, name, description, isProtected: false, createdAt: isoNow(deps.clock) }).run();
     const role = loadRole(tx, id) as Role;
-    recordAudit(tx, deps, ctx, { action: 'roles.create', entityType: 'role', entityId: id, after: role, summary: `Rolle „${name}" angelegt` });
+    recordAudit(tx, deps, ctx, { action: 'roles.create', entityType: 'role', entityId: id, after: role, summary: `Rolle „${name}“ angelegt` });
     return ok(role);
   });
 }
@@ -82,11 +82,11 @@ export async function updateRole(deps: Deps, ctx: CallContext, input: unknown): 
   if (!before) return notFound('role', parsed.value.id);
   if (before.isProtected) return conflict('roleProtected', 'Geschützte Rolle kann nicht geändert werden');
   const name = parsed.value.name ?? before.name;
-  if (nameTaken(deps.db, name, before.id)) return conflict('roleNameTaken', `Rolle „${name}" existiert bereits`);
+  if (nameTaken(deps.db, name, before.id)) return conflict('roleNameTaken', `Rolle „${name}“ existiert bereits`);
   return deps.db.transaction((tx) => {
     tx.update(roles).set({ name, description: parsed.value.description ?? before.description }).where(eq(roles.id, before.id)).run();
     const after = loadRole(tx, before.id) as Role;
-    recordAudit(tx, deps, ctx, { action: 'roles.update', entityType: 'role', entityId: before.id, before, after, summary: `Rolle „${after.name}" geändert` });
+    recordAudit(tx, deps, ctx, { action: 'roles.update', entityType: 'role', entityId: before.id, before, after, summary: `Rolle „${after.name}“ geändert` });
     return ok(after);
   });
 }
@@ -110,7 +110,7 @@ export async function setRolePermissions(deps: Deps, ctx: CallContext, input: un
     tx.delete(rolePermissions).where(eq(rolePermissions.roleId, before.id)).run();
     if (next.length > 0) tx.insert(rolePermissions).values(next.map((permissionKey) => ({ roleId: before.id, permissionKey }))).run();
     const after = loadRole(tx, before.id) as Role;
-    recordAudit(tx, deps, ctx, { action: 'roles.setPermissions', entityType: 'role', entityId: before.id, before: before.permissionKeys, after: next, summary: `Rechte der Rolle „${before.name}" geändert` });
+    recordAudit(tx, deps, ctx, { action: 'roles.setPermissions', entityType: 'role', entityId: before.id, before: before.permissionKeys, after: next, summary: `Rechte der Rolle „${before.name}“ geändert` });
     return ok(after);
   });
 }
@@ -129,7 +129,7 @@ export async function assignRole(deps: Deps, ctx: CallContext, input: unknown): 
   if (!role) return notFound('role', roleId);
   return deps.db.transaction((tx) => {
     tx.insert(userRoles).values({ userId, roleId }).onConflictDoNothing().run();
-    recordAudit(tx, deps, ctx, { action: 'users.assignRole', entityType: 'user', entityId: userId, after: { roleId, roleName: role.name }, summary: `Rolle „${role.name}" an ${user.name} vergeben` });
+    recordAudit(tx, deps, ctx, { action: 'users.assignRole', entityType: 'user', entityId: userId, after: { roleId, roleName: role.name }, summary: `Rolle „${role.name}“ an ${user.name} vergeben` });
     return ok(undefined);
   });
 }
@@ -149,7 +149,7 @@ export async function removeRole(deps: Deps, ctx: CallContext, input: unknown): 
   }
   return deps.db.transaction((tx) => {
     tx.delete(userRoles).where(and(eq(userRoles.userId, userId), eq(userRoles.roleId, roleId))).run();
-    recordAudit(tx, deps, ctx, { action: 'users.removeRole', entityType: 'user', entityId: userId, before: { roleId, roleName: role.name }, summary: `Rolle „${role.name}" von ${user.name} entfernt` });
+    recordAudit(tx, deps, ctx, { action: 'users.removeRole', entityType: 'user', entityId: userId, before: { roleId, roleName: role.name }, summary: `Rolle „${role.name}“ von ${user.name} entfernt` });
     return ok(undefined);
   });
 }

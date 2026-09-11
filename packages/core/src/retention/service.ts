@@ -32,7 +32,7 @@ const FULL_ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
  * schützt, genau das Gegenteil dessen, wofür diese Funktion existiert.
  *
  * Wirft ein Modul-Haken selbst, wird das **durchgereicht**, nicht verschluckt:
- * ein defekter Haken darf niemals als „hält nichts" gelesen werden — sonst
+ * ein defekter Haken darf niemals als „hält nichts“ gelesen werden — sonst
  * würde ein kaputtes Finanzmodul jeden Spender zur Löschung freigeben.
  */
 export function holdsFor(deps: Deps, entityType: string, id: string): RetentionHold[] {
@@ -49,7 +49,7 @@ export function holdsFor(deps: Deps, entityType: string, id: string): RetentionH
 /**
  * Bis wann gehalten wird: das **Maximum** über alle Halter. Ein dauerhafter
  * Halter (`until: null`) gewinnt immer. Eine leere Liste liefert `null` im
- * Sinne von „kein Halter" — ob das „sofort fällig" oder „gar nicht geführt"
+ * Sinne von „kein Halter“ — ob das „sofort fällig“ oder „gar nicht geführt“
  * heißt, entscheidet der Aufrufer, nicht diese Funktion.
  */
 export function dueUntil(holds: readonly RetentionHold[]): string | null {

@@ -7,8 +7,8 @@ import { activeTemplate } from './service';
 export const SITE_PERMISSIONS = ['site.view', 'site.manage', 'site.publish'] as const;
 
 /**
- * Je Sammlung ein Navigationseintrag mit ihrer Beschriftung, dazu „Variablen"
- * und „Publizieren" — alles erst, wenn ein Template eingelesen ist. Ohne
+ * Je Sammlung ein Navigationseintrag mit ihrer Beschriftung, dazu „Variablen“
+ * und „Publizieren“ — alles erst, wenn ein Template eingelesen ist. Ohne
  * Template lehnt der Export mit `noTemplate` ab; der Eintrag führte bis dahin
  * auf eine Seite, die nur scheitern konnte.
  */
@@ -16,7 +16,7 @@ const siteNavigationFor = (deps: Parameters<typeof activeTemplate>[0]): Navigati
   const template = activeTemplate(deps);
   if (!template) return [];
   return [
-    // „Publizieren" schließt oben an „Template" an (das steht als fester Eintrag im
+    // „Publizieren“ schließt oben an „Template“ an (das steht als fester Eintrag im
     // Manifest); darunter, hinter einer Trennlinie, die pflegbaren Inhalte.
     { key: 'site.publish', href: '/site/publish', icon: 'upload', group: 'site', permission: 'site.publish' },
     { key: 'site.variables', href: '/site/variables', icon: 'sliders', group: 'site', permission: 'site.manage', sectionBreak: true },

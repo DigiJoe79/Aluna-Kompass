@@ -261,7 +261,7 @@ export async function exportSiteContent(deps: Deps, ctx: CallContext, input: unk
   for (const use of template.schema.uses) {
     const manifest = deps.registry.manifests.find((m) => m.key === use);
     if (!manifest || !isModuleEnabled(deps, use)) {
-      return conflict('moduleDisabled', `Das Template nutzt Sichten von „${use}", aber das Modul ist nicht aktiv`);
+      return conflict('moduleDisabled', `Das Template nutzt Sichten von „${use}“, aber das Modul ist nicht aktiv`);
     }
     for (const view of manifest.publishedViews ?? []) {
       views[view.name] = pruneLocales(view.load(deps), locales) as unknown[];

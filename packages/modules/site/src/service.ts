@@ -149,7 +149,7 @@ export async function applyTemplateSync(deps: Deps, ctx: CallContext, input: unk
       entityId: STATE_ID,
       before: before ? { name: before.name, checksum: before.checksum } : null,
       after: { name: loaded.value.definition.name, checksum: loaded.value.checksum, findings: preview.findings },
-      summary: `Template „${loaded.value.definition.name}" eingelesen`,
+      summary: `Template „${loaded.value.definition.name}“ eingelesen`,
     });
   });
 

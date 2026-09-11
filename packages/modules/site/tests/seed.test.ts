@@ -159,7 +159,7 @@ describe('applySeed', () => {
     const media = deps.db.select().from(core.mediaAssets).all();
     expect(media).toHaveLength(1);
     expect(media[0]?.id).toBe(mediaId);
-    // Seed-Dateien wandern in den Ordner „Webseite"
+    // Seed-Dateien wandern in den Ordner „Webseite“
     expect(media[0]?.folder).toBe('Webseite');
     expect(deps.db.select().from(core.mediaFolders).all().map((f) => f.path)).toEqual(['Webseite']);
   });

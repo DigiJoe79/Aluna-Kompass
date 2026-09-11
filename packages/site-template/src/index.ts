@@ -13,7 +13,7 @@ export interface FieldOptions {
   localized?: boolean;
   /**
    * Der frühere Name dieses Feldes. Ohne die Angabe liest der Resync eine
-   * Umbenennung als „entfällt plus neu" — der Inhalt wäre verloren.
+   * Umbenennung als „entfällt plus neu“ — der Inhalt wäre verloren.
    */
   renamedFrom?: string;
 }

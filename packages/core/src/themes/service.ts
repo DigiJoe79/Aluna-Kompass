@@ -32,7 +32,7 @@ export async function createTheme(deps: Deps, ctx: CallContext, input: unknown):
   if (!parsed.ok) return parsed;
   const theme = parsed.value;
   const { themes } = listThemes(deps);
-  if (themes.some((t) => t.key === theme.key)) return conflict('themeKeyTaken', `Theme „${theme.key}" existiert bereits`);
+  if (themes.some((t) => t.key === theme.key)) return conflict('themeKeyTaken', `Theme „${theme.key}“ existiert bereits`);
   return deps.db.transaction((tx) => {
     const saved = saveThemes(tx, deps, ctx, [...themes, theme], 'themes.create');
     return saved.ok ? ok(theme) : saved;
@@ -64,7 +64,7 @@ export async function duplicateTheme(deps: Deps, ctx: CallContext, input: unknow
   const { themes } = listThemes(deps);
   const source = themes.find((t) => t.key === parsed.value.sourceKey);
   if (!source) return notFound('theme', parsed.value.sourceKey);
-  if (themes.some((t) => t.key === parsed.value.key)) return conflict('themeKeyTaken', `Theme „${parsed.value.key}" existiert bereits`);
+  if (themes.some((t) => t.key === parsed.value.key)) return conflict('themeKeyTaken', `Theme „${parsed.value.key}“ existiert bereits`);
   const copy: Theme = { key: parsed.value.key, name: parsed.value.name, tokens: structuredClone(source.tokens) };
   return deps.db.transaction((tx) => {
     const saved = saveThemes(tx, deps, ctx, [...themes, copy], 'themes.duplicate');
