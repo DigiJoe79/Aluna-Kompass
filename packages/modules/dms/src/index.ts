@@ -1,4 +1,5 @@
 export * from './catalog';
+export * from './classification';
 export * from './drafts';
 export * from './incoming';
 export * from './manifest';
