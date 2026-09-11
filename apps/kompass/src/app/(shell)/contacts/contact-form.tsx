@@ -146,7 +146,7 @@ export function CreateContactDialog() {
                         />
                       </FormField>
                     </div>
-                    <FormField id="lastName" label={t('fields.lastName')} error={errors.lastName}>
+                    <FormField id="lastName" label={t('fields.lastName')} error={errors.lastName} required>
                       <Input
                         id="lastName"
                         name="lastName"
@@ -158,7 +158,7 @@ export function CreateContactDialog() {
                   </>
                 ) : (
                   <>
-                    <FormField id="name" label={t('fields.name')} error={errors.name}>
+                    <FormField id="name" label={t('fields.name')} error={errors.name} required>
                       <Input
                         id="name"
                         name="name"

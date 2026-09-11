@@ -48,7 +48,13 @@ export function FormActionBar({
   const anchor = useRef<HTMLDivElement>(null);
   const initial = useRef<Snapshot | null>(null);
   const [fromDom, setFromDom] = useState(0);
+  const [hasRequired, setHasRequired] = useState(false);
   const changed = count ?? fromDom;
+
+  // Die Legende erklärt das Sternchen an den Feldern — nur dort, wo eines steht.
+  useEffect(() => {
+    setHasRequired(!!anchor.current?.closest('form')?.querySelector('[required]'));
+  }, []);
 
   useEffect(() => {
     if (count !== undefined) return;
@@ -74,8 +80,8 @@ export function FormActionBar({
       ref={anchor}
       className="sticky bottom-0 flex items-center gap-3 border-t border-line bg-surface-2 px-6 py-3"
     >
-      <span className={changed > 0 ? 'text-[13px] font-semibold text-warning' : 'text-[13px] text-ink-2'}>
-        {changed > 0 ? t('changesPending', { count: changed }) : ''}
+      <span className={changed > 0 ? 'text-[13px] font-semibold text-warning' : 'text-[12px] text-muted-ink'}>
+        {changed > 0 ? t('changesPending', { count: changed }) : hasRequired ? t('requiredLegend') : ''}
       </span>
       <div className="ml-auto flex items-center gap-2">
         {back ? (

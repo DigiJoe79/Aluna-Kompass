@@ -36,4 +36,20 @@ test.describe('field metrics', () => {
     expect(await height(page.getByLabel('Vereinsname'))).toBe(FIELD_HEIGHT);
     expect(await height(page.getByLabel('Rechtsform'))).toBe(FIELD_HEIGHT);
   });
+
+  test('zeigt Pflichtfelder am Sternchen und die Legende darunter', async ({ page }) => {
+    await page.goto('/dms/receive');
+    await expect(page.getByLabel('Betreff', { exact: true })).toBeVisible();
+
+    // Sichtbar am Feld, ohne im Namen des Feldes zu landen …
+    await expect(page.locator('[data-slot="label-required"]').filter({ hasText: 'Betreff' })).toHaveText(
+      /^Betreff\s*\*$/
+    );
+    // … und erklärt in der Fußleiste, solange nichts geändert wurde.
+    await expect(page.getByText('* Pflichtfeld')).toBeVisible();
+
+    await page.getByLabel('Betreff', { exact: true }).fill('Bescheid der Stadtkasse');
+    await expect(page.getByText('1 Änderung noch nicht gespeichert')).toBeVisible();
+    await expect(page.getByText('* Pflichtfeld')).toHaveCount(0);
+  });
 });

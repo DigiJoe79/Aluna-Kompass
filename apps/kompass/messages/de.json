@@ -35,6 +35,7 @@
     "lastSaved": "zuletzt gespeichert am {date} von {name}",
     "audited": "Wird protokolliert.",
     "backToList": "Zurück zur Übersicht",
+    "requiredLegend": "* Pflichtfeld",
     "fieldsInvalid": "{count, plural, one {Ein Feld braucht noch eine Angabe.} other {# Felder brauchen noch eine Angabe.}}",
     "tabInvalid": "Enthält einen Fehler"
   },

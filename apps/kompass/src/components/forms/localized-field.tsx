@@ -74,7 +74,11 @@ export function LocalizedField({
     <div className="flex flex-col gap-1.5 md:col-span-2">
       <span className="text-[13px] font-semibold text-ink-2">
         {label}
-        {required ? ' *' : ''}
+        {required ? (
+          <span aria-hidden="true" className="ml-1.5 font-bold text-brand-accent">
+            *
+          </span>
+        ) : null}
       </span>
       {locales.length >= 4 ? (
         <div className="flex flex-wrap gap-1 border-b border-subtle pb-1">

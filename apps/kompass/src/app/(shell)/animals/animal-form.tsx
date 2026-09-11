@@ -57,8 +57,8 @@ export function AnimalForm({ animal, locales }: { animal: AnimalRecord | null; l
         <form action={action}>
           {animal ? <input type="hidden" name="id" value={animal.id} /> : null}
           <TabsContent keepMounted value="profile" className="grid gap-4 p-6 md:grid-cols-2">
-            <FormField id="slug" label={c('slug')} hint={c('slugHint')} error={errors.slug}><Input id="slug" name="slug" defaultValue={animal?.slug ?? ''} required pattern="[a-z0-9][a-z0-9-]{0,80}" className="font-mono" /></FormField>
-            <FormField id="name" label={t('name')} error={errors.name}><Input id="name" name="name" defaultValue={animal?.name ?? ''} required /></FormField>
+            <FormField id="slug" label={c('slug')} hint={c('slugHint')} error={errors.slug} required><Input id="slug" name="slug" defaultValue={animal?.slug ?? ''} required pattern="[a-z0-9][a-z0-9-]{0,80}" className="font-mono" /></FormField>
+            <FormField id="name" label={t('name')} error={errors.name} required><Input id="name" name="name" defaultValue={animal?.name ?? ''} required /></FormField>
             <FormField id="sex" label={t('sex')}><Select id="sex" name="sex" defaultValue={animal?.sex ?? 'female'} className="w-auto"><option value="female">{t('sexes.female')}</option><option value="male">{t('sexes.male')}</option></Select></FormField>
             <FormField id="location" label={t('location')}><Select id="location" name="location" defaultValue={animal?.location ?? 'shelter'} className="w-auto"><option value="shelter">{t('locations.shelter')}</option><option value="germany">{t('locations.germany')}</option></Select></FormField>
             <FormField id="sizeCm" label={t('sizeCm')} error={errors.sizeCm}><Input id="sizeCm" name="sizeCm" type="number" defaultValue={animal?.sizeCm ?? 0} className="font-mono" /></FormField>

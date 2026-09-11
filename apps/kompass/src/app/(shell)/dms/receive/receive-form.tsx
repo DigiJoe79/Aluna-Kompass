@@ -68,7 +68,7 @@ export function ReceiveForm({
       ) : null}
 
       <div className="space-y-1.5">
-        <Label htmlFor="file">{t('fields.file')}</Label>
+        <Label htmlFor="file" required>{t('fields.file')}</Label>
         <Input id="file" name="file" type="file" accept="application/pdf" required onChange={handleFileChange} />
         {errors.file ? null : <p className="text-[12px] text-muted-ink">{t('fileHint')}</p>}
         <FieldError id="file-error" message={errors.file} />
@@ -76,7 +76,7 @@ export function ReceiveForm({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="documentDate">{t('fields.documentDate')}</Label>
+          <Label htmlFor="documentDate" required>{t('fields.documentDate')}</Label>
           <Input
             id="documentDate"
             name="documentDate"
@@ -89,10 +89,11 @@ export function ReceiveForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="typeKey">{t('fields.type')}</Label>
+          <Label htmlFor="typeKey" required>{t('fields.type')}</Label>
           <Select
             id="typeKey"
             name="typeKey"
+            required
             value={typeKey}
             onChange={(e) => setTypeKey(e.target.value)}
           >
@@ -106,7 +107,7 @@ export function ReceiveForm({
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="subject">{t('fields.subject')}</Label>
+        <Label htmlFor="subject" required>{t('fields.subject')}</Label>
         <Input
           id="subject"
           name="subject"
