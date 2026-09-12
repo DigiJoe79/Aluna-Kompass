@@ -50,4 +50,17 @@ describe('seedDms', () => {
       expect(countDocumentText(deps, row.id)).toBe(0);
     }
   });
+
+  it('bringt je Neuerung ein Beispiel: Antwort, Versand, Notiz, Bausteine', async () => {
+    const { deps, ctx } = setup();
+    await seedDms(deps, ctx);
+    const { documentNotes, documentRelations, documentSnippets } = await import('../src/schema');
+    expect(deps.db.select().from(documentRelations).all().some((r) => r.kind === 'repliesTo')).toBe(true);
+    expect(deps.db.select().from(documents).all().some((d) => d.sentAt !== null && d.sentVia === 'post')).toBe(true);
+    expect(deps.db.select().from(documents).all().some((d) => d.direction === 'outgoing' && d.phase === 'issued' && d.sentAt === null)).toBe(true);
+    expect(deps.db.select().from(documentNotes).all().length).toBeGreaterThan(0);
+    expect(deps.db.select().from(documentSnippets).all().map((s) => s.name).sort()).toEqual(['Bitte um Rückmeldung', 'Grußformel']);
+    await seedDms(deps, ctx);
+    expect(deps.db.select().from(documentSnippets).all()).toHaveLength(2);
+  });
 });

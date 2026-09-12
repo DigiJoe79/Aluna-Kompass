@@ -2,9 +2,13 @@ import { isoNow, newId, unwrap, type CallContext, type Deps } from '@kompass/cor
 import { contacts } from '@kompass/module-contacts';
 import { eq } from 'drizzle-orm';
 import { EXAMPLE_DOCUMENT_TYPES } from './catalog';
+import { recordDispatch } from './dispatch';
 import { createDraft, fileDocument } from './drafts';
 import { receiveDocument } from './incoming';
-import { documentFolders, documentRules, documents, documentTypes } from './schema';
+import { addNote } from './notes';
+import { relateDocuments } from './relations';
+import { documentFolders, documentRules, documentSnippets, documents, documentTypes } from './schema';
+import { createSnippet } from './snippets';
 
 export async function seedDms(deps: Deps, ctx: CallContext): Promise<void> {
   const existing = deps.db.select({ id: documents.id }).from(documents).all();
@@ -57,6 +61,8 @@ export async function seedDms(deps: Deps, ctx: CallContext): Promise<void> {
       typeKey: 'letter',
       subject: 'Einladung zur ordentlichen Mitgliederversammlung',
       body: 'Sehr geehrte Damen und Herren,\n\nhiermit laden wir Sie herzlich ein.',
+      // Festes Datum, damit der Versandvermerk danach liegen kann.
+      documentDate: '2026-02-10',
       links,
     }),
   );
@@ -64,7 +70,7 @@ export async function seedDms(deps: Deps, ctx: CallContext): Promise<void> {
 
   // 3. Eingangsdokument im Eingangskorb (folder: null)
   const samplePdf = new TextEncoder().encode('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n');
-  unwrap(
+  const inbound = unwrap(
     await receiveDocument(deps, ctx, {
       filename: '2026-02-15 Bescheid.pdf',
       bytes: samplePdf,
@@ -74,4 +80,34 @@ export async function seedDms(deps: Deps, ctx: CallContext): Promise<void> {
       folder: null,
     }),
   );
+
+  // 4. Der Eingang antwortet auf den Brief; der Brief ist per Post raus.
+  unwrap(await relateDocuments(deps, ctx, { documentId: inbound.id, relatedDocumentId: draft.id, kind: 'repliesTo' }));
+  unwrap(await recordDispatch(deps, ctx, { id: draft.id, sentAt: '2026-02-12', sentVia: 'post', note: 'mit Anmeldeformular' }));
+
+  // 4b. Ein zweiter Brief, festgeschrieben und **nicht** versandt — die Liste
+  // soll beides zeigen.
+  const thanks = unwrap(
+    await createDraft(deps, ctx, {
+      typeKey: 'letter',
+      subject: 'Dankschreiben an die Tierarztpraxis',
+      body: 'Vielen Dank für die kurzfristige Behandlung.',
+      documentDate: '2026-03-02',
+      links,
+    }),
+  );
+  unwrap(await fileDocument(deps, ctx, { id: thanks.id }));
+
+  // 5. Eine Notiz am Eingang.
+  unwrap(await addNote(deps, ctx, { documentId: inbound.id, body: 'Bescheid liegt im Original im Ordner Behörden, Fach 3.' }));
+
+  // 6. Zwei Bausteine, je Schlüssel — der Abbruch oben zählt Dokumente, nicht
+  // Bausteine, deshalb hier die eigene Prüfung.
+  for (const snippet of [
+    { name: 'Grußformel', body: 'Mit freundlichen Grüßen\n\nDer Vorstand' },
+    { name: 'Bitte um Rückmeldung', subject: 'Bitte um Rückmeldung', body: 'wir bitten um Ihre Rückmeldung bis zum genannten Termin.' },
+  ]) {
+    const exists = deps.db.select().from(documentSnippets).where(eq(documentSnippets.name, snippet.name)).get();
+    if (!exists) unwrap(await createSnippet(deps, ctx, snippet));
+  }
 }
