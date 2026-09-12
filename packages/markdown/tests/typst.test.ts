@@ -36,4 +36,43 @@ describe('renderMarkdownTypst', () => {
   it('returns empty string for blank input', async () => {
     expect(await renderMarkdownTypst('   \n')).toBe('');
   });
+
+  it('wraps each karten card in its own typst content block', async () => {
+    const out = await renderMarkdownTypst(':::karten\n### Karte A\n\nText A\n\n### Karte B\n\nText B\n:::');
+    // Ohne eigene Inhaltsblöcke stünde die Überschrift als Ausdruck im Argument — Typst bricht ab.
+    expect(out).toContain('#grid(columns: 2, gutter: 1em,');
+    expect(out).toContain('[\n=== Karte A');
+    expect(out).toContain('[\n=== Karte B');
+    expect(out).not.toMatch(/,\s*===/);
+  });
+
+  it('keeps text before the first card instead of dropping it', async () => {
+    const out = await renderMarkdownTypst(':::karten\nVorspann.\n\n### Karte A\n\nText A\n:::');
+    expect(out).toContain('Vorspann.');
+  });
+
+  it('renders a karten block without headings as plain content, not an empty grid', async () => {
+    const out = await renderMarkdownTypst(':::karten\nNur Fließtext.\n:::');
+    expect(out).toContain('Nur Fließtext.');
+    expect(out).not.toContain('#grid(');
+  });
+
+  it('escapes characters typst reads as markup at the start of a line', async () => {
+    const out = await renderMarkdownTypst('Guten Tag,\n\n= Umsatz 2026 ist das Thema.\n\n\\- kein Listenpunkt\n\n\\+ auch keiner');
+    expect(out).toContain('\\= Umsatz');
+    expect(out).toContain('\\- kein Listenpunkt');
+    expect(out).toContain('\\+ auch keiner');
+  });
+
+  it('escapes a number that would start a typst enumeration', async () => {
+    const out = await renderMarkdownTypst('Wir schreiben\n2026. Ein gutes Jahr.');
+    expect(out).toContain('2026\\. Ein gutes Jahr.');
+  });
+
+  it('escapes slashes so typst does not read them as a comment or a term list', async () => {
+    const out = await renderMarkdownTypst('und/oder // keine Notiz\n\n/ Begriff: Erklärung');
+    expect(out).toContain('und\\/oder \\/\\/ keine Notiz');
+    expect(out).toContain('\\/ Begriff');
+    expect(out).not.toMatch(/(^|[^\\])\/\//);
+  });
 });

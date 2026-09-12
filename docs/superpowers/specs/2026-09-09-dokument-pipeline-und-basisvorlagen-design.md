@@ -122,13 +122,19 @@ die Kompass-Konventionen führt, bisher nur nach HTML).
 - **Reiner AST-Weg in TypeScript**, kein Typst-seitiges Parsen. Ausgabe ist Typst-
   *Content-Markup*, kein Code.
 - **Jeder Textknoten wird escaped**: `#`, `[`, `]`, `\`, `*`, `_`, `$`, `@`, `<`,
-  `` ` ``, `~` → `\`-Sequenz. Nutzertext kann kein Typst injizieren — dieselbe
-  Härte wie im heutigen Renderer-Test „treats user text as literal".
+  `>`, `` ` ``, `~`, `/` → `\`-Sequenz. Der Schrägstrich gehört dazu, weil Typst
+  sonst zwei davon als Zeilenkommentar liest und den Rest der Zeile verschluckt.
+  Zusätzlich am **Zeilenanfang**: `=`, `-`, `+` und `2026.` — dort stünde sonst
+  eine Überschrift oder eine Aufzählung, wo jemand einen Satz getippt hat.
+  Nutzertext kann kein Typst injizieren — dieselbe Härte wie im heutigen
+  Renderer-Test „treats user text as literal".
 - **Blockelemente auf Typst-Standard**: Überschriften → `= … == …`, Listen →
   `- …` / `+ …`, Tabellen → `#table(...)`, Blockzitat → ein Marker-Element, das
   die Basis-Vorlage als Hinweiskasten stylt (`#note[...]`), `---` → `#line(...)`.
 - **Kompass-Konventionen** aus `directives.ts` gelten weiter: `:::karten` →
-  Kartenraster, Blockzitat → Hinweis.
+  Kartenraster, Blockzitat → Hinweis. Jede `###`-Karte wird ein eigener
+  Inhaltsblock `[…]` im `#grid`; Text vor der ersten Karte steht davor, statt zu
+  verschwinden (der HTML-Weg wirft ihn heute weg).
 - Die Basis-Vorlage sieht **nur Typst-Standardelemente** und stylt sie über
   `show heading:`, `show table.cell:`, `show list:` und die `#note`-Definition.
   Sie kennt Markdown nicht.
@@ -318,8 +324,12 @@ Schema); die Basis wird nicht dort gewählt (Entscheidung 4).
 
 **`@kompass/markdown`:**
 - `renderMarkdownTypst`: Überschriften/Listen/Tabellen/Blockzitat/Regel →
-  erwartetes Typst; Sonderzeichen im Text werden escaped; `:::karten` bleibt;
-  zweimal wandeln ist identisch.
+  erwartetes Typst; Sonderzeichen im Text werden escaped, auch die am
+  Zeilenanfang; `:::karten` bleibt; zweimal wandeln ist identisch.
+- `documents/tests/markdown-render.test.ts`: jede Markdown-Spielart einmal **echt
+  bis zum PDF**. Ein Zeichenkettentest sieht nicht, ob Typst das Ergebnis
+  übersetzt — `:::karten` lieferte lange gültig aussehendes, nicht übersetzbares
+  Markup.
 
 **`@kompass/documents`:**
 - `bases/a4-plain` und `bases/a4-mit-briefkopf` rendern mit Minimal-Payload;
