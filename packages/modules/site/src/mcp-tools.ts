@@ -19,6 +19,7 @@ import type { TemplateSchema } from './load';
 import { activeTemplate, applyTemplateSync, previewTemplateSync, readActiveTemplate } from './service';
 import { getVariables, setValues } from './values';
 import { readSiteEnv } from './pipeline/env';
+import { listPublishes } from './services/publishes';
 import { checkDeployTarget, runPreview, runPublish } from './pipeline/jobs';
 
 
@@ -119,6 +120,15 @@ const FIXED: McpToolDefinition[] = [
     z.object({ confirm: z.boolean() }),
     (deps, ctx, args) => runPublish(deps, ctx, readSiteEnv(), args as { confirm: boolean }),
     runPublish,
+  ),
+  // Wer veröffentlichen darf, soll nachsehen können, ob und wann zuletzt
+  // veröffentlicht wurde (Prinzip 8) — ein reiner Lesezugriff.
+  tool(
+    'site_publishes',
+    'List the publish history of an environment, newest first: when, by whom, with what result and how many pages changed. Requires site.view.',
+    z.object({ environment: z.string().min(1), limit: z.number().int().min(1).max(200).optional() }),
+    (deps, ctx, args) => listPublishes(deps, ctx, args as { environment: string; limit?: number }),
+    listPublishes,
   ),
 ];
 

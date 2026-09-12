@@ -6,6 +6,7 @@ import { asset, text } from '@kompass/site-template';
 import type { FieldSchema, TemplateSchema } from '../src/load';
 import { siteModule } from '../src/manifest';
 import { siteTemplateState } from '../src/schema';
+import { listPublishes } from '../src/services/publishes';
 
 const asJson = (s: unknown) => z.toJSONSchema(s as z.ZodType, { io: 'input' }) as FieldSchema;
 
@@ -55,7 +56,15 @@ describe('site mcp tools', () => {
       'site_deploy_check',
       'site_preview_build',
       'site_publish',
+      'site_publishes',
     ]);
+  });
+
+  it('lässt den Verlauf lesen und nennt dafür seinen Service', () => {
+    const tool = moduleMcpTools(createTestDeps(), siteModule).find((t) => t.name === 'site_publishes')!;
+    expect(tool.service).toBe(listPublishes);
+    expect(tool.description).toContain('site.view');
+    expect(Object.keys(jsonSchema(tool).properties ?? {})).toEqual(expect.arrayContaining(['environment', 'limit']));
   });
 
   it('adds five tools per collection, six where it is publishable', () => {

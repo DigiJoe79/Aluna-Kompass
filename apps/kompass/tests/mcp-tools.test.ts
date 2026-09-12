@@ -150,7 +150,6 @@ const WITHOUT_TOOL: Record<string, string> = {
   'site.applySeed': 'Beispielinhalte des Templates; ein Mensch bestätigt sie in der Oberfläche.',
   'site.previewTemplateSync': 'Derselbe Vorgang wie site_template_sync ohne confirm; das Werkzeug nennt den anwendenden Zweig.',
   'site.recordPublish': 'Innenleben von site_publish: schreibt den Verlaufseintrag, den der Lauf erzeugt.',
-  'site.listPublishes': 'Der Veröffentlichungsverlauf steht in der Oberfläche; über MCP läuft das Veröffentlichen selbst.',
 };
 
 const servicesOf = (moduleKey: string, pkg: Record<string, unknown>) =>
