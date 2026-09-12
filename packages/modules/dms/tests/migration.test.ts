@@ -77,3 +77,28 @@ describe('migration 0016', () => {
     sqlite.close();
   });
 });
+
+describe('migration dms_counters_fill', () => {
+  it('setzt den Zähler auf die höchste vorhandene Nummer je Präfix und Jahr', () => {
+    const sqlite = new Database(':memory:');
+    sqlite.pragma('foreign_keys = ON');
+    const fill = readdirSync(MIGRATIONS_DIR).find((f) => f.endsWith('_dms_counters_fill.sql'))!.replace(/\.sql$/, '');
+    const schemaTag = readdirSync(MIGRATIONS_DIR).find((f) => f.endsWith('_dms_akte_fertig.sql'))!.replace(/\.sql$/, '');
+    applyMigrations(sqlite, { upTo: schemaTag });
+
+    sqlite.prepare("insert into document_types (key, label, prefix, default_direction, retention_class, is_active, sort_order) values ('letter','Brief','BRF','outgoing','statutory6Y',1,0)").run();
+    const insert = sqlite.prepare("insert into documents (id, phase, direction, source_kind, type_key, number, subject, document_date, status, created_by_user_id, created_at, updated_at) values (?, 'issued', 'outgoing', 'generated', 'letter', ?, 's', '2026-01-01', 'issued', 'U1', 't', 't')");
+    insert.run('D1', 'BRF-2026-001');
+    insert.run('D2', 'BRF-2026-007');
+    insert.run('D3', 'BRF-2025-003');
+
+    applyMigrations(sqlite, { after: schemaTag, upTo: fill });
+
+    const rows = sqlite.prepare('select prefix, year, last from document_counters order by year').all();
+    expect(rows).toEqual([
+      { prefix: 'BRF', year: 2025, last: 3 },
+      { prefix: 'BRF', year: 2026, last: 7 },
+    ]);
+    sqlite.close();
+  });
+});

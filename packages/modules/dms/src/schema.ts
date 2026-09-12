@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 /**
  * Die Klassifikation als Stammdaten, nicht als Konstanten (Prinzip 2). Die Art
@@ -82,6 +82,15 @@ export const documents = sqliteTable(
     textAttempts: integer('text_attempts').notNull().default(0),
     textError: text('text_error'),
     textExtractedAt: text('text_extracted_at'),
+    /**
+     * Der Versandvermerk (Entscheidung 34): alle drei zusammen gesetzt oder
+     * zusammen leer. Nur an ausgehenden, festgeschriebenen Dokumenten. `sentVia`
+     * ist ein Schlüssel aus der Einstellung `dms.dispatchChannels`; ein später
+     * entfernter Weg bleibt hier als Schlüssel lesbar.
+     */
+    sentAt: text('sent_at'),
+    sentVia: text('sent_via'),
+    sentNote: text('sent_note'),
     status: text('status', { enum: ['issued', 'voided'] }).notNull().default('issued'),
     voidedAt: text('voided_at'),
     voidedByUserId: text('voided_by_user_id'),
@@ -118,3 +127,72 @@ export const documentLinks = sqliteTable(
 
 export type DocumentRow = typeof documents.$inferSelect;
 export type DocumentLinkRow = typeof documentLinks.$inferSelect;
+
+export const RELATION_KINDS = ['repliesTo', 'signedCopyOf', 'replaces', 'attachmentOf'] as const;
+export type RelationKind = (typeof RELATION_KINDS)[number];
+
+/**
+ * Bezug zwischen zwei Dokumenten (Entscheidung 33). Gelesen von `documentId`
+ * aus: „BEH-004 ist Antwort auf BRF-002“. Beide Enden dürfen Entwürfe sein.
+ */
+export const documentRelations = sqliteTable(
+  'document_relations',
+  {
+    id: text('id').primaryKey(),
+    documentId: text('document_id').notNull().references(() => documents.id),
+    relatedDocumentId: text('related_document_id').notNull().references(() => documents.id),
+    kind: text('kind', { enum: RELATION_KINDS }).notNull(),
+    createdByUserId: text('created_by_user_id').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('document_relations_unique_idx').on(t.documentId, t.relatedDocumentId, t.kind),
+    index('document_relations_related_idx').on(t.relatedDocumentId),
+  ],
+);
+
+/** Journal (Entscheidung 35): nur anhängen, nie ändern. Nie im PDF, nie im Index. */
+export const documentNotes = sqliteTable(
+  'document_notes',
+  {
+    id: text('id').primaryKey(),
+    documentId: text('document_id').notNull().references(() => documents.id),
+    body: text('body').notNull(),
+    createdByUserId: text('created_by_user_id').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [index('document_notes_document_idx').on(t.documentId)],
+);
+
+/** Textbausteine ohne Platzhalter (Entscheidung 36). */
+export const documentSnippets = sqliteTable(
+  'document_snippets',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    subject: text('subject'),
+    body: text('body').notNull(),
+    sortOrder: integer('sort_order').notNull().default(0),
+    isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  },
+  (t) => [uniqueIndex('document_snippets_name_idx').on(t.name)],
+);
+
+/**
+ * Nummernzähler je Präfix und Jahr (Entscheidung 38). Zustand, kein
+ * abgeleiteter Wert: Er erinnert sich an Nummern, deren Dokument nicht mehr
+ * da ist — genau dafür ist er da.
+ */
+export const documentCounters = sqliteTable(
+  'document_counters',
+  {
+    prefix: text('prefix').notNull(),
+    year: integer('year').notNull(),
+    last: integer('last').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.prefix, t.year] })],
+);
+
+export type DocumentRelationRow = typeof documentRelations.$inferSelect;
+export type DocumentNoteRow = typeof documentNotes.$inferSelect;
+export type DocumentSnippetRow = typeof documentSnippets.$inferSelect;

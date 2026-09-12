@@ -2,6 +2,28 @@ import { recordAudit, writeSettingInternal, type CallContext, type DbOrTx, type 
 import { z } from 'zod';
 import { documentTypes } from './schema';
 
+export interface DispatchChannel {
+  key: string;
+  label: string;
+}
+
+const CHANNEL_KEY = /^[a-z][a-zA-Z0-9]*$/;
+
+/** Die Vorgabe in der Leitsprache; ein Verein ergänzt oder benennt um. */
+export const DEFAULT_DISPATCH_CHANNELS: DispatchChannel[] = [
+  { key: 'post', label: 'Post' },
+  { key: 'registeredMail', label: 'Einschreiben' },
+  { key: 'email', label: 'E-Mail' },
+  { key: 'inPerson', label: 'Persönlich übergeben' },
+  { key: 'portal', label: 'Portal' },
+  { key: 'other', label: 'Sonstiges' },
+];
+
+export const dispatchChannelsSchema = z
+  .array(z.object({ key: z.string().regex(CHANNEL_KEY), label: z.string().trim().min(1).max(60) }))
+  .min(1)
+  .refine((list) => new Set(list.map((c) => c.key)).size === list.length, { message: 'duplicateChannelKey' });
+
 export const DEFAULT_TYPE_INCOMING = 'unclassified-in';
 export const DEFAULT_TYPE_OUTGOING = 'unclassified-out';
 
@@ -15,6 +37,8 @@ export const DMS_SETTINGS: SettingDefinition[] = [
    * über 160. Geprüft wird deshalb gegen `probe()`, nicht gegen eine Liste.
    */
   { key: 'dms.ocrLanguages', schema: z.string().regex(/^[a-z]{3}(\+[a-z]{3})*$/), default: 'deu+eng' },
+  /** Die Wege, die ein Versandvermerk kennt (Entscheidung 34). */
+  { key: 'dms.dispatchChannels', schema: dispatchChannelsSchema, default: DEFAULT_DISPATCH_CHANNELS },
 ];
 
 /**
@@ -58,6 +82,21 @@ export function installDms(tx: DbOrTx, deps: Deps, ctx: CallContext): void {
 
   writeSettingInternal(tx, deps, ctx, 'dms.defaultTypeIncoming', DEFAULT_TYPE_INCOMING, 'dms.install');
   writeSettingInternal(tx, deps, ctx, 'dms.defaultTypeOutgoing', DEFAULT_TYPE_OUTGOING, 'dms.install');
+
+  // Eine englische Installation bekommt englische Beschriftungen; die Vorgabe
+  // der Definition bleibt deutsch — sie gilt für Installationen, die vor dieser
+  // Einstellung eingerichtet wurden.
+  const channelLabels: Record<string, Record<string, string>> = {
+    en: { post: 'Post', registeredMail: 'Registered mail', email: 'E-mail', inPerson: 'Handed over', portal: 'Portal', other: 'Other' },
+  };
+  const labelsFor = channelLabels[locale];
+  if (labelsFor) {
+    writeSettingInternal(
+      tx, deps, ctx, 'dms.dispatchChannels',
+      DEFAULT_DISPATCH_CHANNELS.map((c) => ({ key: c.key, label: labelsFor[c.key] ?? c.label })),
+      'dms.install',
+    );
+  }
 
   recordAudit(tx, deps, ctx, {
     action: 'dms.install',

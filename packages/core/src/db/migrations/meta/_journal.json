@@ -169,6 +169,20 @@
       "when": 1789210794519,
       "tag": "0023_follow_ups_permissions",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1789212263758,
+      "tag": "0024_dms_akte_fertig",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1789212272963,
+      "tag": "0025_dms_counters_fill",
+      "breakpoints": true
     }
   ]
 }
