@@ -1,11 +1,14 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import type { InferContent } from '@kompass/site-template';
+import template from '../../kompass.template';
 
 /**
  * Ein mehrsprachiges Feld ist ein Record über Sprachschlüssel, genau wie Kompass
  * es exportiert. Dieses Template rendert eine Sprache; welche, sagt `LOCALE`.
  */
-export type Localized = Record<string, string>;
+export type { Localized } from '@kompass/site-template';
+import type { Localized } from '@kompass/site-template';
 
 export const LOCALE = process.env.SITE_LOCALE ?? 'de';
 
@@ -16,58 +19,18 @@ export function t(field: Localized | string | undefined | null): string {
   return field[LOCALE] ?? Object.values(field)[0] ?? '';
 }
 
-export interface Asset {
-  id: string;
-  filename: string;
-  mimeType: string;
-  width: number | null;
-  height: number | null;
-}
-
-export interface Variables {
-  claim?: Localized;
-  intro?: Localized;
-  heroImage?: string | null;
-  donationAccount?: string;
-  memberFee?: number;
-}
-
-export interface NewsEntry {
-  slug: string;
-  title: Localized;
-  body: Localized;
-  image: string | null;
-}
-
-export interface TeamEntry {
-  name: string;
-  role: Localized;
-  photo: string | null;
-  sortOrder: number;
-}
-
-export interface FaqEntry {
-  question: Localized;
-  answer: Localized;
-  sortOrder: number;
-}
-
-export interface DocumentEntry {
-  title: Localized;
-  file: string | null;
-}
-
-export interface SiteContent {
-  variables: Variables;
-  collections: {
-    news: NewsEntry[];
-    team: TeamEntry[];
-    faq: FaqEntry[];
-    documents: DocumentEntry[];
-  };
-  views: Record<string, unknown[]>;
-  assets: Asset[];
-}
+/**
+ * Die Form von content.json kommt aus der Deklaration, nicht aus einer zweiten
+ * Abschrift: Wer in kompass.template.ts ein Feld umbenennt, bekommt hier einen
+ * Typfehler statt einer leeren Seite.
+ */
+export type SiteContent = InferContent<typeof template>;
+export type Asset = SiteContent['assets'][number];
+export type Variables = SiteContent['variables'];
+export type NewsEntry = SiteContent['collections']['news'][number];
+export type TeamEntry = SiteContent['collections']['team'][number];
+export type FaqEntry = SiteContent['collections']['faq'][number];
+export type DocumentEntry = SiteContent['collections']['documents'][number];
 
 export const CONTENT_DIR = process.env.SITE_CONTENT_DIR ?? path.resolve(process.cwd(), 'fixtures/example');
 export const PUBLIC_URL = process.env.SITE_PUBLIC_URL ?? 'https://example.org';

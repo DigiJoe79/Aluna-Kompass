@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import { z } from 'zod';
-import { asset, date, defineTemplate, list, markdown, number, objectList, select, text } from '../src';
+import { asset, date, defineTemplate, list, markdown, number, objectList, select, text, type InferContent } from '../src';
 
 const template = defineTemplate({
   name: 'Verein Basis',
@@ -86,5 +86,30 @@ describe('defineTemplate', () => {
     const links = objectList({ label: 'L', fields: { label: text({ max: 4 }), href: text() } }) as never as { safeParse: (v: unknown) => { success: boolean } };
     expect(links.safeParse([{ label: 'kurz', href: 'https://example.org' }]).success).toBe(true);
     expect(links.safeParse([{ label: 'viel zu lang', href: 'x' }]).success).toBe(false);
+  });
+});
+
+/**
+ * Die Form von content.json folgt der Deklaration. Ein Template, das seine
+ * Typen von Hand schreibt, merkt ein umbenanntes Feld erst auf der leeren
+ * Seite; mit dem abgeleiteten Typ bricht der Build.
+ */
+describe('InferContent', () => {
+  type Content = InferContent<typeof template>;
+
+  it('derives variables, collection entries with their traits, views and assets', () => {
+    expectTypeOf<Content['variables']['claim']>().toEqualTypeOf<Record<string, string> | undefined>();
+    expectTypeOf<Content['variables']['members']>().toEqualTypeOf<number | undefined>();
+    expectTypeOf<Content['collections']['articles'][number]['title']>().toEqualTypeOf<Record<string, string>>();
+    expectTypeOf<Content['collections']['articles'][number]['slug']>().toEqualTypeOf<string>();
+    expectTypeOf<Content['collections']['team'][number]['photo']>().toEqualTypeOf<string | null>();
+    expectTypeOf<Content['collections']['team'][number]['sortOrder']>().toEqualTypeOf<number>();
+    // Kein Slug ohne `slug: true`, keine Reihenfolge ohne `sortable: true`.
+    expectTypeOf<'slug' extends keyof Content['collections']['team'][number] ? true : false>().toEqualTypeOf<false>();
+    expectTypeOf<'sortOrder' extends keyof Content['collections']['articles'][number] ? true : false>().toEqualTypeOf<false>();
+    expectTypeOf<Content['views']>().toEqualTypeOf<Record<string, unknown[]>>();
+    expectTypeOf<Content['assets'][number]['filename']>().toEqualTypeOf<string>();
+    // Ein Feld, das es nicht gibt, ist ein Typfehler — das ist der Zweck.
+    expectTypeOf<'subtitle' extends keyof Content['variables'] ? true : false>().toEqualTypeOf<false>();
   });
 });
