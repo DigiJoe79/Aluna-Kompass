@@ -11,6 +11,8 @@ describe('permissions', () => {
       'backup.export',
       'backup.import',
       'documents.export',
+      'followUps.manage',
+      'followUps.view',
       'media.upload',
       'modules.manage',
       'projects.manage',

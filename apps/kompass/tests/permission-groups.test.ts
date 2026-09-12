@@ -10,6 +10,7 @@ describe('groupPermissions', () => {
       ['core.accountability', ['audit.view', 'retention.view']],
       ['core.data', ['documents.export', 'media.upload', 'backup.export', 'backup.import']],
       ['core.projects', ['projects.view', 'projects.manage']],
+      ['core.followUps', ['followUps.view', 'followUps.manage']],
     ]);
   });
   /**

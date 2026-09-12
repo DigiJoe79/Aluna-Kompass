@@ -432,7 +432,8 @@
         "admin": "Kern — Verwaltung",
         "accountability": "Kern — Rechenschaft",
         "data": "Kern — Erzeugen und Daten",
-        "projects": "Kern — Projekte"
+        "projects": "Kern — Projekte",
+        "followUps": "Kern — Wiedervorlagen"
       },
       "finance": "Finanzen",
       "members": "Mitglieder",
@@ -476,6 +477,16 @@
         "export": {
           "label": "Auszüge ziehen",
           "description": "Auszüge wie das Änderungsprotokoll als PDF herunterladen. Sie bekommen keine Nummer und werden nicht abgelegt."
+        }
+      },
+      "followUps": {
+        "view": {
+          "label": "Wiedervorlagen sehen",
+          "description": "Offene und erledigte Wiedervorlagen an Vorgängen lesen und die fälligen auf der Startseite sehen."
+        },
+        "manage": {
+          "label": "Wiedervorlagen pflegen",
+          "description": "Wiedervorlagen anlegen, abhaken, wieder öffnen und löschen."
         }
       },
       "media": {

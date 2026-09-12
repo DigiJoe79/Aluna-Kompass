@@ -33,6 +33,7 @@ describe('database', () => {
       'document_text_idx',
       'document_types',
       'documents',
+      'follow_ups',
       'media_assets',
       'media_folders',
       'projects',

@@ -148,3 +148,29 @@ export const projects = sqliteTable(
   },
   (t) => [index('projects_sort_idx').on(t.sortOrder)],
 );
+
+/**
+ * Wiedervorlagen an beliebigen Entitäten — generischer Bezug wie in
+ * `document_links`. Der Kern prüft die Entität nicht; das tut das Modul, das
+ * die Wiedervorlage anlegt. Erledigt heißt abgehakt, nicht gelöscht: Die Zeile
+ * bleibt, damit ein Vorgang zeigt, dass jemand nachgesehen hat.
+ */
+export const followUps = sqliteTable(
+  'follow_ups',
+  {
+    id: text('id').primaryKey(),
+    entityType: text('entity_type').notNull(),
+    entityId: text('entity_id').notNull(),
+    /** ISO-Datum. */
+    dueAt: text('due_at').notNull(),
+    title: text('title').notNull(),
+    /** Leer heißt: alle. */
+    assigneeUserId: text('assignee_user_id').references(() => users.id),
+    createdByUserId: text('created_by_user_id').notNull(),
+    createdAt: text('created_at').notNull(),
+    doneAt: text('done_at'),
+    doneByUserId: text('done_by_user_id'),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [index('follow_ups_entity_idx').on(t.entityType, t.entityId), index('follow_ups_due_idx').on(t.doneAt, t.dueAt)],
+);

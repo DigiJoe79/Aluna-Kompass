@@ -11,6 +11,10 @@ const CORE_GROUPS: { key: string; keys: string[] }[] = [
   { key: 'core.accountability', keys: ['audit.view', 'retention.view'] },
   { key: 'core.data', keys: ['documents.export', 'media.upload', 'backup.export', 'backup.import'] },
   { key: 'core.projects', keys: ['projects.view', 'projects.manage'] },
+  // Wiedervorlagen sind weder Verwaltung noch Rechenschaft, sondern
+  // Arbeitsorganisation über alle Module hinweg — unter „Erzeugen und Daten“
+  // stünden sie versteckt.
+  { key: 'core.followUps', keys: ['followUps.view', 'followUps.manage'] },
 ];
 
 export function groupPermissions(manifests: readonly ModuleManifest[]): PermissionGroup[] {

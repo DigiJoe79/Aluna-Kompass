@@ -15,6 +15,10 @@ export const CORE_PERMISSIONS = [
   // Webseiten-Moduls. Ohne dieses Modul gäbe es sie sonst nicht mehr.
   'projects.view',
   'projects.manage',
+  // Wiedervorlagen hängen an Vorgängen aller Module; die Liste auf der
+  // Startseite zeigt Anlässe, keine Inhalte — deshalb ein eigenes Leserecht.
+  'followUps.view',
+  'followUps.manage',
   'backup.export',
   'backup.import',
 ] as const;
