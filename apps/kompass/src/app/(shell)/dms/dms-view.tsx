@@ -11,6 +11,7 @@ import { ForbiddenCard } from '@/components/forbidden-card';
 import { requireSession } from '@/lib/request-context';
 import { DmsWorkspace } from './dms-workspace';
 import { DocumentList, type DocumentListItem } from './document-list';
+import { readSort } from '@/components/sortable-head';
 
 export interface DmsQuery {
   direction?: string;
@@ -19,7 +20,12 @@ export interface DmsQuery {
   phase?: string;
   inbox?: string;
   text?: string;
+  sort?: string;
+  dir?: string;
 }
+
+/** Die Spalten, nach denen die Liste sortieren darf — mehr nimmt der Service nicht. */
+const SORTABLE = ['number', 'subject', 'documentDate', 'typeKey', 'folder', 'createdAt'] as const;
 
 /**
  * Die Akte mit ihrer Liste — und darüber, wenn gewünscht, der Dialog zum
@@ -55,6 +61,7 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
     inbox: isInbox ? true : undefined,
     folder: isInbox ? undefined : query.folder || undefined,
     text: query.text || undefined,
+    orderBy: readSort(query, SORTABLE),
     limit: 200,
   });
 

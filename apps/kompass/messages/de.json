@@ -21,6 +21,7 @@
     }
   },
   "common": {
+    "sortBy": "Sortieren nach {column}",
     "save": "Speichern",
     "cancel": "Abbrechen",
     "discard": "Verwerfen",

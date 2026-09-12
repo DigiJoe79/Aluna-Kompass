@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/empty-state';
 import { SnippetText } from '@/components/snippet-text';
 import { StatusBadge } from '@/components/status-badge';
 import { Input } from '@/components/ui/input';
+import { SortableHead } from '@/components/sortable-head';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { Select } from '@/components/ui/select';
@@ -67,6 +68,11 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
       next.set('inbox', '1');
     } else if (merged.folder) {
       next.set('folder', merged.folder);
+    }
+    // Sortierung ist kein Filter, sie überlebt jeden Filterwechsel.
+    for (const key of ['sort', 'dir']) {
+      const value = params.get(key);
+      if (value) next.set(key, value);
     }
     const qs = next.toString();
     startTransition(() => {
@@ -143,11 +149,11 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
           <Table>
             <TableHeader className="bg-table-head text-left text-[11px] font-bold uppercase tracking-[.06em] text-muted-ink">
               <TableRow className="h-9">
-                <TableHead className="px-4">{t('columns.number')}</TableHead>
-                <TableHead className="px-4">{t('columns.subject')}</TableHead>
-                <TableHead className="px-4">{t('columns.type')}</TableHead>
-                <TableHead className="px-4">{t('columns.date')}</TableHead>
-                <TableHead className="px-4">{t('columns.folder')}</TableHead>
+                <SortableHead field="number" label={t('columns.number')} />
+                <SortableHead field="subject" label={t('columns.subject')} />
+                <SortableHead field="typeKey" label={t('columns.type')} />
+                <SortableHead field="documentDate" label={t('columns.date')} />
+                <SortableHead field="folder" label={t('columns.folder')} />
                 <TableHead className="px-4">{t('columns.direction')}</TableHead>
                 <TableHead className="px-4">{t('columns.status')}</TableHead>
               </TableRow>

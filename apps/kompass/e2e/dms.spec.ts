@@ -714,6 +714,20 @@ test.describe('dms', () => {
 
     await expect(page.getByText(/mindestens drei Zeichen/)).toBeVisible();
   });
+
+  test('ein Klick auf den Spaltenkopf dreht die Reihenfolge, und die URL trägt sie', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+    await page.getByRole('button', { name: 'Sortieren nach Betreff' }).click();
+    await expect(page).toHaveURL(/sort=subject&dir=desc/);
+    const first = await page.getByRole('row').nth(1).getByRole('link').first().textContent();
+    await page.getByRole('button', { name: 'Sortieren nach Betreff' }).click();
+    await expect(page).toHaveURL(/dir=asc/);
+    const afterFlip = await page.getByRole('row').nth(1).getByRole('link').first().textContent();
+    expect(afterFlip).not.toBe(first);
+    await page.reload();
+    await expect(page.getByRole('columnheader', { name: /Betreff/ })).toHaveAttribute('aria-sort', 'ascending');
+  });
 });
 
 function samplePdf(): Buffer {
