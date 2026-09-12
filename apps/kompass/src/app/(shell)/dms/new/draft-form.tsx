@@ -106,9 +106,11 @@ export function DraftForm({
           rows={10}
           value={body}
           onChange={(e) => setBody(e.target.value)}
+          aria-describedby="body-hint"
           className="resize-y font-mono text-[13px] leading-relaxed"
         />
         <FieldError id="body-error" message={errors.body} />
+        {errors.body ? null : <p id="body-hint" className="text-[12px] text-muted-ink">{t('fields.bodyHint')}</p>}
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -1475,6 +1475,7 @@
       "documentDate": "Datum auf dem Dokument",
       "subject": "Betreff",
       "body": "Text",
+      "bodyHint": "Markdown: **fett**, _kursiv_, ## Überschrift, - Liste, > Hinweis, | Tabelle |. Bilder, Fußnoten und HTML erscheinen nicht im PDF.",
       "type": "Dokumentart",
       "folder": "Ordner",
       "recipient": "Empfänger",
