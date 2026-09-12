@@ -43,6 +43,7 @@ export function FollowUpsPanel({
   canManage: boolean;
 }) {
   const t = useTranslations('dms.followUps');
+  const tCommon = useTranslations('common');
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState(createFollowUpAction.bind(null, documentId), idleState);
   const [pending, start] = useTransition();
@@ -166,6 +167,7 @@ export function FollowUpsPanel({
             </div>
 
             <DialogFooter className="mt-6">
+              <span className="mr-auto text-[12px] text-muted-ink">{tCommon('requiredLegend')}</span>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 {t('cancel')}
               </Button>

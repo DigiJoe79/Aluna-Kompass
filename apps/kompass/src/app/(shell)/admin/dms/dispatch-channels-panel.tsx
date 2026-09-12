@@ -151,6 +151,7 @@ export function DispatchChannelsPanel({
           </div>
 
           <DialogFooter className="mt-6">
+            <span className="mr-auto text-[12px] text-muted-ink">{tCommon('requiredLegend')}</span>
             <Button
               type="button"
               variant="outline"

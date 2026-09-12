@@ -154,6 +154,7 @@ export function SnippetsPanel({ snippets }: { snippets: SnippetRow[] }) {
             ) : null}
 
             <DialogFooter className="mt-6">
+              <span className="mr-auto text-[12px] text-muted-ink">{tCommon('requiredLegend')}</span>
               <Button
                 type="button"
                 variant="outline"

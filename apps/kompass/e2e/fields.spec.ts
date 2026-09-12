@@ -55,4 +55,20 @@ test.describe('field metrics', () => {
     await expect(dialog.getByText('1 Änderung noch nicht gespeichert')).toBeVisible();
     await expect(dialog.getByText('* Pflichtfeld')).toHaveCount(0);
   });
+
+  test('hält die Höhe auch beim Suchfeld, das seinen Rahmen selbst mitbringt', async ({ page }) => {
+    await page.goto('/dms/new');
+    const picker = page.getByRole('combobox', { name: 'Empfänger' });
+    await expect(picker).toBeVisible();
+    // Gemessen wird die Hülle, nicht das innere `input`: Sie trägt Rand und Höhe.
+    expect(await height(page.locator('[data-slot="input-group"]').first())).toBe(FIELD_HEIGHT);
+  });
+
+  test('erklärt die Pflichtfelder auch in den Dialogen der Akte', async ({ page }) => {
+    await page.goto('/admin/dms');
+    await page.getByRole('button', { name: 'Baustein anlegen' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Baustein anlegen' });
+    await expect(dialog.getByText('* Pflichtfeld')).toBeVisible();
+    expect(await height(dialog.getByLabel('Name'))).toBe(FIELD_HEIGHT);
+  });
 });

@@ -45,6 +45,7 @@ export function LinksPanel({
   projects: { id: string; name: string }[];
 }) {
   const t = useTranslations('dms');
+  const tCommon = useTranslations('common');
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [entityType, setEntityType] = useState('contact');
@@ -183,6 +184,7 @@ export function LinksPanel({
           </div>
 
           <DialogFooter className="mt-6">
+            <span className="mr-auto text-[12px] text-muted-ink">{tCommon('requiredLegend')}</span>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               {t('links.cancel')}
             </Button>

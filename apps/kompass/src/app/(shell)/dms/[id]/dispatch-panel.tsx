@@ -37,6 +37,7 @@ export function DispatchPanel({
   canEdit: boolean;
 }) {
   const t = useTranslations('dms.dispatch');
+  const tCommon = useTranslations('common');
   const [open, setOpen] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [state, action] = useActionState(recordDispatchAction.bind(null, documentId), idleState);
@@ -126,6 +127,7 @@ export function DispatchPanel({
             </div>
 
             <DialogFooter className="mt-6">
+              <span className="mr-auto text-[12px] text-muted-ink">{tCommon('requiredLegend')}</span>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 {t('cancel')}
               </Button>

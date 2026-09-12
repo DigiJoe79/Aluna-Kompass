@@ -40,6 +40,7 @@ export function RelationsPanel({
   canEdit: boolean;
 }) {
   const t = useTranslations('dms.relations');
+  const tCommon = useTranslations('common');
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<(typeof KINDS)[number]>('repliesTo');
@@ -135,6 +136,7 @@ export function RelationsPanel({
           </div>
 
           <DialogFooter className="mt-6">
+            <span className="mr-auto text-[12px] text-muted-ink">{tCommon('requiredLegend')}</span>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               {t('cancel')}
             </Button>
