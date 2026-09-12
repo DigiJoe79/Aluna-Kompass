@@ -552,9 +552,8 @@ tragen `followUps.manage`.
 den Brief mit Versandvermerk (Post, drei Tage nach Dokumentdatum), eine
 Notiz, zwei Bausteine („Grußformel", „Bitte um Rückmeldung" mit Betreff), eine
 offene Wiedervorlage „Antwort abwarten" in fünf Tagen und eine erledigte.
-`packages/core/src/seed/follow-ups.ts` läuft nur, wenn die Akte einen Bezug
-liefern kann; ohne Akte legt der Kern keine Wiedervorlage ins Leere. Alles
-erfunden, idempotent, mit `seed.test.ts`.
+Die Beispiel-Wiedervorlagen kommen aus `seedDms`; der Kern-Seed legt keine an,
+weil er kein Ziel dafür hat. Alles erfunden, idempotent, mit `seed.test.ts`.
 
 ## 10. Migration und Betrieb
 
@@ -570,10 +569,10 @@ Werkzeug im Container.
 ```
 packages/core/src/db/schema.ts                     follow_ups
 packages/core/src/follow-ups/service.ts            § 5.1
+packages/core/src/follow-ups/targets.ts            resolveFollowUpTarget, listDueFollowUpsWithTargets
 packages/core/src/permissions/core.ts              followUps.view, followUps.manage
 packages/core/src/modules/manifest.ts              followUpTargets, McpToolDefinition.service
 packages/core/src/deletion-policy.ts               followUp, documentRelation, documentNote, documentSnippet
-packages/core/src/seed/follow-ups.ts
 packages/mcp/src/core-tools.ts                     followups_*
 packages/modules/dms/src/schema.ts                 vier Tabellen, drei Spalten
 packages/modules/dms/src/service.ts                allocateDocumentNumber, resolveFolder, Filter, orderBy, phase-Prüfungen
