@@ -190,7 +190,7 @@ export function DocumentDetail({
                         {t('voidConfirmDescription')}
                       </DialogDescription>
                       <div className="space-y-1.5 py-2">
-                        <Label htmlFor="voidReason">{t('fields.voidReason')}</Label>
+                        <Label htmlFor="voidReason" required>{t('fields.voidReason')}</Label>
                         <Input
                           id="voidReason"
                           value={voidReason}
@@ -199,12 +199,20 @@ export function DocumentDetail({
                         />
                       </div>
                       {permissions.canEdit ? (
-                        <label className="flex items-center gap-2 py-1 text-[13px] text-ink-2">
-                          <Checkbox checked={withReplacement} onCheckedChange={(next) => setWithReplacement(next === true)} />
-                          {t('voidWithReplacement')}
-                        </label>
+                        <div className="flex items-center gap-2 py-1 text-[13px] text-ink-2">
+                          <Checkbox
+                            id="void-with-replacement"
+                            aria-labelledby="void-with-replacement-label"
+                            checked={withReplacement}
+                            onCheckedChange={(next) => setWithReplacement(next === true)}
+                          />
+                          <Label id="void-with-replacement-label" htmlFor="void-with-replacement" className="cursor-pointer font-normal">
+                            {t('voidWithReplacement')}
+                          </Label>
+                        </div>
                       ) : null}
-                      <DialogFooter>
+                      <DialogFooter className="items-center">
+                        <span className="mr-auto text-[12px] text-muted-ink">{tCommon('requiredLegend')}</span>
                         <Button variant="ghost" onClick={() => setVoidOpen(false)}>
                           {tCommon('cancel')}
                         </Button>

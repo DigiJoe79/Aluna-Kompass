@@ -40,6 +40,19 @@ export function DispatchPanel({
   const tCommon = useTranslations('common');
   const [open, setOpen] = useState(false);
   const [clearing, setClearing] = useState(false);
+  // Kontrolliert, nicht `defaultValue`: Base UI warnt, wenn sich der Vorgabewert
+  // eines unkontrollierten Feldes nach dem Aufbau ändert — und `sentAt` ändert
+  // sich mit jedem Vermerk (Befund 7, 2026-09-12).
+  const [sentAtValue, setSentAtValue] = useState(sentAt ?? today);
+  const [sentViaValue, setSentViaValue] = useState(sentVia ?? channels[0]?.key ?? '');
+  const [noteValue, setNoteValue] = useState(sentNote ?? '');
+  useEffect(() => {
+    if (!open) return;
+    setSentAtValue(sentAt ?? today);
+    setSentViaValue(sentVia ?? channels[0]?.key ?? '');
+    setNoteValue(sentNote ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
   const [state, action] = useActionState(recordDispatchAction.bind(null, documentId), idleState);
   const errors = state.status === 'error' ? state.fieldErrors : {};
 
@@ -104,14 +117,14 @@ export function DispatchPanel({
                 <Label htmlFor="sentAt" required>
                   {t('sentAt')}
                 </Label>
-                <Input id="sentAt" name="sentAt" type="date" defaultValue={sentAt ?? today} required />
+                <Input id="sentAt" name="sentAt" type="date" value={sentAtValue} onChange={(e) => setSentAtValue(e.target.value)} required />
                 <FieldError id="sentAt-error" message={errors.sentAt} />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="sentVia" required>
                   {t('sentVia')}
                 </Label>
-                <Select id="sentVia" name="sentVia" defaultValue={sentVia ?? channels[0]?.key ?? ''} required>
+                <Select id="sentVia" name="sentVia" value={sentViaValue} onChange={(e) => setSentViaValue(e.target.value)} required>
                   {channels.map((channel) => (
                     <option key={channel.key} value={channel.key}>
                       {channel.label}
@@ -122,7 +135,7 @@ export function DispatchPanel({
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="note">{t('note')}</Label>
-                <Input id="note" name="note" defaultValue={sentNote ?? ''} />
+                <Input id="note" name="note" value={noteValue} onChange={(e) => setNoteValue(e.target.value)} />
               </div>
             </div>
 

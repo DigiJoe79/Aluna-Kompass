@@ -887,6 +887,9 @@ test.describe('dms', () => {
   });
 
   test('vermerkt den Versand eines Briefs und entfernt den Vermerk wieder', async ({ page }) => {
+    // Eine React-Warnung im Dialog ist ein Befund, kein Rauschen (Befund 7).
+    const warnings: string[] = [];
+    page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') warnings.push(m.text()); });
     await login(page);
     await page.goto('/dms');
     // Der zweite Brief des Seeds ist festgeschrieben und noch nicht versandt.
@@ -901,6 +904,7 @@ test.describe('dms', () => {
     await panel.getByRole('button', { name: 'Vermerk entfernen' }).click();
     await page.getByRole('button', { name: 'Entfernen', exact: true }).click();
     await expect(panel).toContainText('Noch nicht versandt.');
+    expect(warnings.filter((w) => w.includes('Base UI'))).toEqual([]);
   });
 
   test('legt eine Wiedervorlage an und hakt sie ab', async ({ page }) => {
@@ -939,8 +943,11 @@ test.describe('dms', () => {
     await page.getByRole('link', { name: 'Einladung zur ordentlichen Mitgliederversammlung' }).click();
     await page.getByRole('button', { name: 'Stornieren' }).click();
     const dialog = page.getByRole('dialog');
+    // Der Grund ist Pflicht und sagt es; die Checkbox hat einen Namen.
+    await expect(dialog.getByText('* Pflichtfeld')).toBeVisible();
+    await expect(dialog.getByRole('checkbox', { name: 'Ersatz als Entwurf anlegen' })).toBeVisible();
     await dialog.getByLabel('Grund für die Stornierung').fill('Falsches Datum');
-    await dialog.getByLabel('Ersatz als Entwurf anlegen').check();
+    await dialog.getByRole('checkbox', { name: 'Ersatz als Entwurf anlegen' }).check();
     await dialog.getByRole('button', { name: 'Stornieren bestätigen' }).click();
     await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}\/edit$/);
     await expect(page.getByLabel('Betreff')).toHaveValue('Einladung zur ordentlichen Mitgliederversammlung');
