@@ -289,10 +289,12 @@ abgelehnte wäre Modul → fremdes Modul.
   `notFound('documentFolder')`, wenn es ihn nicht gibt. Dieselbe Hilfsfunktion
   `resolveFolder(db, folder)` für alle vier.
 - `nextDocumentNumber(tx, prefix, year)` wird `allocateDocumentNumber`: liest
-  den Zähler in der Transaktion, erhöht ihn, gibt die Nummer zurück. Die
-  Schleife mit drei Versuchen in `fileDocument` und `receiveDocument` entfällt;
-  die Unique-Verletzung wird zum technischen Fehler, weil sie nicht mehr
-  vorkommen darf. `previewNextNumber` liest `last + 1` ohne zu erhöhen.
+  den Zähler in der Transaktion, erhöht ihn, gibt die Nummer zurück.
+  `previewNextNumber` liest `last + 1` ohne zu erhöhen (`peekDocumentNumber`).
+  In `fileDocument` bleibt eine Schleife, aber aus einem anderen Grund: Das PDF
+  trägt die Nummer, also wird sie angesehen, gerendert, und in der Transaktion
+  gezogen; weicht die gezogene ab, wird zurückgerollt und neu gerendert.
+  `receiveDocument` kommt ohne Schleife aus.
 - `fileDocument`/`receiveDocument`: Die Datei wird weiter vor der Transaktion
   geschrieben, weil das Schreiben scheitern kann und die Zeile dann nicht da
   sein darf. Ohne Kollisionsschleife entsteht keine verwaiste Datei mehr;
