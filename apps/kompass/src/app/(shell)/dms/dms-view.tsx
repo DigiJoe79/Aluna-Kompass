@@ -1,4 +1,6 @@
-import { hasPermission, requirePermission } from '@kompass/core';
+import { getProject, hasPermission, requirePermission, type CallContext, type Deps } from '@kompass/core';
+import { getAnimal } from '@kompass/module-animals';
+import { displayName, getContact } from '@kompass/module-contacts';
 import {
   countDocumentsByFolder,
   defaultTypeKey,
@@ -12,6 +14,24 @@ import { DmsWorkspace } from './dms-workspace';
 import { DocumentList, type DocumentListItem } from './document-list';
 import { readSort } from '@/lib/sort';
 
+/**
+ * Der Name hinter `about=<typ>:<id>` — dieselben drei Typen wie in
+ * `dms/[id]/links.ts`, nur ohne den Weg dorthin.
+ */
+async function labelFor(deps: Deps, ctx: CallContext, entityType: string, entityId: string): Promise<string> {
+  if (entityType === 'contact') {
+    const res = await getContact(deps, ctx, entityId);
+    return res.ok ? displayName(res.value) : entityId;
+  }
+  if (entityType === 'animal') {
+    const res = await getAnimal(deps, ctx, entityId);
+    return res.ok ? res.value.name : entityId;
+  }
+  const res = await getProject(deps, ctx, entityId);
+  const leading = deps.locales()[0] ?? 'de';
+  return res.ok ? res.value.name[leading] || res.value.slug : entityId;
+}
+
 export interface DmsQuery {
   direction?: string;
   type?: string;
@@ -23,6 +43,10 @@ export interface DmsQuery {
   dir?: string;
   unsent?: string;
   followUp?: string;
+  /** Von der Kontaktseite: der Absender steht schon fest. */
+  sender?: string;
+  /** Von der Seite eines Bezugs: `<entityType>:<entityId>`. */
+  about?: string;
 }
 
 /** Die Spalten, nach denen die Liste sortieren darf — mehr nimmt der Service nicht. */
@@ -88,6 +112,17 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
 
   const canCreate = hasPermission(ctx, 'dms.create');
 
+  // Vorbelegungen aus der Adresszeile: Wer von einer Kontakt-, Tier- oder
+  // Projektseite kommt, findet den Bezug schon gesetzt.
+  const senderRes = query.sender ? await getContact(deps, ctx, query.sender) : null;
+  const initialSender = senderRes?.ok ? { id: senderRes.value.id, name: displayName(senderRes.value) } : null;
+
+  const [aboutType, aboutId] = (query.about ?? '').split(':');
+  const initialAbout =
+    aboutType && aboutId && ['contact', 'animal', 'project'].includes(aboutType)
+      ? { entityType: aboutType, entityId: aboutId, label: await labelFor(deps, ctx, aboutType, aboutId) }
+      : null;
+
   // Eingehende Arten zuerst: Wer Post ablegt, sucht sie oben.
   const incomingFirst = types
     .filter((type) => type.defaultDirection === 'incoming')
@@ -105,7 +140,9 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
       types={incomingFirst}
       canCreateContact={hasPermission(ctx, 'contacts.manage')}
       defaultTypeKey={defaultTypeKey(deps, 'incoming')}
-      receiveOpen={receive}
+      initialSender={initialSender}
+      initialAbout={initialAbout}
+      receiveOpen={receive || Boolean(initialSender) || Boolean(initialAbout)}
     >
       <DocumentList
         documents={rows}

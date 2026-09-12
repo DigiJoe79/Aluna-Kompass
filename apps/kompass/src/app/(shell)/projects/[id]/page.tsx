@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
+import { RelatedDocuments } from '@/components/related-documents';
 import { ProjectForm } from '../project-form';
 
 export default async function ProjectEditPage(props: { params: Promise<{ id: string }> }) {
@@ -18,5 +19,13 @@ export default async function ProjectEditPage(props: { params: Promise<{ id: str
   if (id === 'new') return (<><PageHeader title={t('create')} back={back} /><ProjectForm project={null} locales={locales} /></>);
   const project = await getProject(deps, ctx, id);
   if (!project.ok) notFound();
-  return (<><PageHeader title={project.value.name[leading] || project.value.slug} description={`/projekte/${project.value.slug}/`} back={back} /><ProjectForm project={project.value} locales={locales} /></>);
+  return (
+    <>
+      <PageHeader title={project.value.name[leading] || project.value.slug} description={`/projekte/${project.value.slug}/`} back={back} />
+      <ProjectForm project={project.value} locales={locales} />
+      <div className="mt-6">
+        <RelatedDocuments deps={deps} ctx={ctx} entityType="project" entityId={project.value.id} />
+      </div>
+    </>
+  );
 }

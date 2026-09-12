@@ -9,6 +9,7 @@ import { requireSession } from '@/lib/request-context';
 import { ChannelsEditor } from './channels-editor';
 import { RetentionPanel } from './retention-panel';
 import { RolesPanel } from './roles-panel';
+import { RelatedDocuments } from '@/components/related-documents';
 
 export default async function ContactDetailPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params;
@@ -80,6 +81,8 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
           channels={contact.channels}
           canManage={canManage}
         />
+
+        <RelatedDocuments deps={deps} ctx={ctx} entityType="contact" entityId={contact.id} />
       </div>
     </>
   );

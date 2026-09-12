@@ -39,6 +39,8 @@ export function DmsWorkspace({
   canCreate,
   types,
   canCreateContact,
+  initialSender,
+  initialAbout,
   defaultTypeKey,
   receiveOpen,
   children,
@@ -50,6 +52,10 @@ export function DmsWorkspace({
   canCreate: boolean;
   types: { key: string; label: string }[];
   canCreateContact: boolean;
+  /** Von der Kontaktseite vorbelegter Absender. */
+  initialSender?: { id: string; name: string } | null;
+  /** Von der Seite eines Bezugs vorbelegtes „Betrifft“. */
+  initialAbout?: { entityType: string; entityId: string; label: string } | null;
   defaultTypeKey: string;
   /** Der Deep-Link `/dms/receive` zeigt denselben Bildschirm mit offenem Dialog. */
   receiveOpen?: boolean;
@@ -233,6 +239,8 @@ export function DmsWorkspace({
           types={types}
           folders={folders}
           canCreateContact={canCreateContact}
+          initialSender={initialSender}
+          initialAbout={initialAbout}
           defaultTypeKey={defaultTypeKey}
           open={open}
           onOpenChange={change}

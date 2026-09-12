@@ -1,11 +1,12 @@
 import { hasPermission, requirePermission } from '@kompass/core';
+import { displayName, getContact } from '@kompass/module-contacts';
 import { defaultTypeKey, listDocumentFolders, listDocumentTypes, listSnippets } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { requireSession } from '@/lib/request-context';
 import { DraftScreen } from './draft-screen';
 
-export default async function NewDraftPage() {
+export default async function NewDraftPage(props: { searchParams: Promise<{ recipient?: string }> }) {
   const { deps, ctx } = await requireSession();
   if (requirePermission(ctx, 'dms.create')) return <ForbiddenCard permission="dms.create" />;
 
@@ -17,6 +18,12 @@ export default async function NewDraftPage() {
 
   const foldersRes = await listDocumentFolders(deps, ctx);
   const folders = foldersRes.ok ? foldersRes.value.map((f) => f.path) : [];
+
+  // Von der Kontaktseite aus: Der Empfänger steht schon fest, und das Feld
+  // sagt, woher er kommt.
+  const { recipient: recipientId } = await props.searchParams;
+  const recipientRes = recipientId ? await getContact(deps, ctx, recipientId) : null;
+  const recipient = recipientRes?.ok ? { id: recipientRes.value.id, name: displayName(recipientRes.value) } : null;
 
   const snippetsRes = await listSnippets(deps, ctx, {});
   const snippets = snippetsRes.ok
@@ -32,6 +39,8 @@ export default async function NewDraftPage() {
       folders={folders}
       canCreateContact={hasPermission(ctx, 'contacts.manage')}
       snippets={snippets}
+      initialRecipient={recipient}
+      recipientOrigin={recipient ? t('suggest.fromContactPage') : undefined}
       today={deps.clock.now().toISOString().slice(0, 10)}
       defaultTypeKey={defaultTypeKey(deps, 'outgoing')}
     />

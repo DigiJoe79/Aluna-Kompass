@@ -14,6 +14,8 @@ export function ReceiveDialog({
   types,
   folders,
   canCreateContact,
+  initialSender,
+  initialAbout,
   defaultTypeKey,
   open,
   onOpenChange,
@@ -24,6 +26,10 @@ export function ReceiveDialog({
   types: { key: string; label: string }[];
   folders: string[];
   canCreateContact: boolean;
+  /** Von der Kontaktseite vorbelegter Absender. */
+  initialSender?: { id: string; name: string } | null;
+  /** Von der Seite eines Bezugs vorbelegtes „Betrifft“. */
+  initialAbout?: { entityType: string; entityId: string; label: string } | null;
   defaultTypeKey: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -60,6 +66,8 @@ export function ReceiveDialog({
           types={types}
           folders={folders}
           canCreateContact={canCreateContact}
+          initialSender={initialSender}
+          initialAbout={initialAbout}
           defaultTypeKey={defaultTypeKey}
           droppedFile={drop?.files[index] ?? null}
           droppedFolder={drop?.folder ?? null}

@@ -24,6 +24,8 @@ export function ReceiveForm({
   types,
   folders,
   canCreateContact,
+  initialSender,
+  initialAbout,
   defaultTypeKey,
   droppedFile,
   droppedFolder,
@@ -36,6 +38,10 @@ export function ReceiveForm({
   folders: string[];
   /** Darf der Mensch fehlende Kontakte gleich hier anlegen? */
   canCreateContact: boolean;
+  /** Von der Kontaktseite vorbelegter Absender. */
+  initialSender?: { id: string; name: string } | null;
+  /** Von der Seite eines Bezugs vorbelegtes „Betrifft“. */
+  initialAbout?: { entityType: string; entityId: string; label: string } | null;
   /** Die eingestellte Vorgabeart für den Eingang, keine Konstante im Code. */
   defaultTypeKey: string;
   /** Aus dem Dateimanager ins Fenster gezogen. */
@@ -57,7 +63,8 @@ export function ReceiveForm({
   const [subject, setSubject] = useState('');
   const [typeKey, setTypeKey] = useState(defaultTypeKey);
   const [folder, setFolder] = useState(droppedFolder ?? '');
-  const [sender, setSender] = useState<PickedContact | null>(null);
+  const [sender, setSender] = useState<PickedContact | null>(initialSender ?? null);
+  const senderTouched = useRef(false);
   const senderId = sender?.id ?? '';
   const [repliesTo, setRepliesTo] = useState<PickedDocument | null>(null);
   const repliesToTouched = useRef(false);
@@ -253,9 +260,13 @@ export function ReceiveForm({
             name="senderId"
             label={t('fields.sender')}
             value={sender}
-            onChange={(next) => void handleSenderChange(next)}
+            onChange={(next) => {
+              senderTouched.current = true;
+              void handleSenderChange(next);
+            }}
             canCreate={canCreateContact}
           />
+          {initialSender && !senderTouched.current ? <SuggestionFlag text={t('suggest.fromContactPage')} /> : null}
         </div>
 
         <div>
@@ -271,6 +282,16 @@ export function ReceiveForm({
           />
           {repliesTo && !repliesToTouched.current ? <SuggestionFlag text={t('suggest.fromSender')} /> : null}
         </div>
+
+        {initialAbout ? (
+          <div className="space-y-1.5">
+            <span className="block text-[13px] font-semibold text-ink-2">{t('fields.about')}</span>
+            <p className="text-[13px] text-ink">{initialAbout.label}</p>
+            <input type="hidden" name="aboutType" value={initialAbout.entityType} />
+            <input type="hidden" name="aboutId" value={initialAbout.entityId} />
+            <SuggestionFlag text={t('suggest.fromEntityPage')} />
+          </div>
+        ) : null}
 
         {/* Die Nummer ist eine Vorschau: Gezogen wird sie beim Ablegen. */}
         <NumberHint typeKey={typeKey} />

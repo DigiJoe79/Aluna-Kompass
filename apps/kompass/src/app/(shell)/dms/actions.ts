@@ -218,9 +218,14 @@ export async function receiveDocumentAction(_prev: ActionState, formData: FormDa
   const folder = orNull(formData.get('folder'));
   const senderId = orNull(formData.get('senderId'));
 
-  const links = senderId
-    ? [{ entityType: 'contact', entityId: senderId, role: 'sender' as const }]
+  const links: { entityType: string; entityId: string; role: 'sender' | 'recipient' | 'about' }[] = senderId
+    ? [{ entityType: 'contact', entityId: senderId, role: 'sender' }]
     : [];
+
+  // Von der Seite eines Tiers oder Projekts aus: der Bezug reist im Formular mit.
+  const aboutType = orNull(formData.get('aboutType'));
+  const aboutId = orNull(formData.get('aboutId'));
+  if (aboutType && aboutId) links.push({ entityType: aboutType, entityId: aboutId, role: 'about' });
 
   // „Antwort auf“ entsteht in derselben Transaktion wie das Dokument — sonst
   // stünde die Post kurz ohne den Bezug da, der sie erklärt.

@@ -1421,7 +1421,9 @@
       "fromRuleFilename": "Regel: „{term}“ im Namen",
       "fromRuleSender": "Regel: „{term}“ im Absender",
       "fromSender": "wie zuletzt bei diesem Absender",
-      "fromDrop": "hierauf gezogen"
+      "fromDrop": "hierauf gezogen",
+      "fromContactPage": "von der Kontaktseite",
+      "fromEntityPage": "von der Seite des Bezugs"
     },
     "drop": {
       "overlayTitle": "{count, plural, one {# Datei ablegen} other {# Dateien ablegen}}",
@@ -1505,6 +1507,14 @@
       "project": "Projekt"
     },
     "folderSave": "Ordner speichern",
+    "related": {
+      "title": "Dokumente",
+      "none": "Noch kein Dokument mit Bezug hierher.",
+      "writeLetter": "Brief schreiben",
+      "receivePost": "Post ablegen",
+      "draft": "Entwurf",
+      "roles": { "sender": "Absender", "recipient": "Empfänger", "about": "Betrifft" }
+    },
     "followUpBadge": "Wiedervorlage {date}",
     "filters": {
       "dispatch": "Versand",
@@ -1617,6 +1627,7 @@
       "noSender": "— Kein Absender —",
       "repliesTo": "Antwort auf",
       "noRepliesTo": "— Kein Bezug —",
+      "about": "Betrifft",
       "voidReason": "Grund für die Stornierung",
       "voidReasonPlaceholder": "z. B. Falsche Anschrift oder fehlerhafter Inhalt"
     },

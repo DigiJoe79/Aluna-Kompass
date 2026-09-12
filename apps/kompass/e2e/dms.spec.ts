@@ -961,6 +961,50 @@ test.describe('dms', () => {
     await channel.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByRole('row').filter({ hasText: 'Kurier' })).toBeVisible();
   });
+
+  test('die Kontaktseite zeigt die Dokumente des Kontakts und beginnt von dort einen Brief', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+    await page.getByRole('link', { name: 'Einladung zur ordentlichen Mitgliederversammlung' }).click();
+    const contactLink = page.getByTestId('document-links').getByRole('link').first();
+    const contactName = await contactLink.textContent();
+    await contactLink.click();
+    await expect(page).toHaveURL(/\/contacts\//);
+    const box = page.getByTestId('related-documents');
+    // Der Kontakt ist Empfänger beider Seed-Briefe.
+    await expect(box.getByRole('link', { name: /BRF-/ }).first()).toBeVisible();
+    await box.getByRole('link', { name: 'Brief schreiben' }).click();
+    await expect(page).toHaveURL(/\/dms\/new\?recipient=/);
+    await expect(page.getByRole('combobox', { name: 'Empfänger' })).toHaveValue(contactName!.trim());
+    await expect(page.getByText('von der Kontaktseite')).toBeVisible();
+  });
+
+  test('von der Kontaktseite aus Post ablegen belegt den Absender vor', async ({ page }) => {
+    await login(page);
+    await page.goto('/contacts');
+    await page.getByRole('row').nth(1).click();
+    await expect(page).toHaveURL(/\/contacts\/[0-9A-Z]{26}$/);
+    await page.getByTestId('related-documents').getByRole('link', { name: 'Post ablegen' }).click();
+    const dialog = receiveDialog(page);
+    await expect(dialog.getByRole('combobox', { name: 'Absender' })).not.toHaveValue('');
+  });
+
+  test('ein Tier zeigt seine Dokumente und legt Post mit Bezug „betrifft“ ab', async ({ page }) => {
+    await login(page);
+    await page.goto('/animals');
+    // Die Tierliste navigiert über den Namen, nicht über die Zeile.
+    await page.getByRole('row').nth(1).getByRole('link').first().click();
+    await expect(page).toHaveURL(/\/animals\/[0-9A-Z]{26}$/);
+    await page.getByTestId('related-documents').getByRole('link', { name: 'Post ablegen' }).click();
+    const dialog = receiveDialog(page);
+    await dialog.getByLabel('Datei').setInputFiles(FIXTURE_PDF);
+    await dialog.getByLabel('Betreff').fill('Impfpass');
+    await dialog.getByLabel('Datum auf dem Dokument').fill('2026-09-10');
+    await dialog.getByRole('button', { name: 'Ablegen' }).click();
+    await expect(page.getByTestId('document-links').getByText('Betrifft')).toBeVisible();
+    await page.getByTestId('document-links').getByRole('link').first().click();
+    await expect(page.getByTestId('related-documents').getByText('Impfpass')).toBeVisible();
+  });
 });
 
 function samplePdf(): Buffer {

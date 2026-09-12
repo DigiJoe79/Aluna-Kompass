@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
+import { RelatedDocuments } from '@/components/related-documents';
 import { AnimalForm } from '../animal-form';
 
 export default async function AnimalEditPage(props: { params: Promise<{ id: string }> }) {
@@ -17,5 +18,13 @@ export default async function AnimalEditPage(props: { params: Promise<{ id: stri
   if (id === 'new') return (<><PageHeader title={t('create')} back={back} /><AnimalForm animal={null} locales={deps.locales()} /></>);
   const animal = await getAnimal(deps, ctx, id);
   if (!animal.ok) notFound();
-  return (<><PageHeader title={animal.value.name} description={`/hunde/${animal.value.slug}/`} back={back} /><AnimalForm animal={animal.value} locales={deps.locales()} /></>);
+  return (
+    <>
+      <PageHeader title={animal.value.name} description={`/hunde/${animal.value.slug}/`} back={back} />
+      <AnimalForm animal={animal.value} locales={deps.locales()} />
+      <div className="mt-6">
+        <RelatedDocuments deps={deps} ctx={ctx} entityType="animal" entityId={animal.value.id} />
+      </div>
+    </>
+  );
 }

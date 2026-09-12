@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
+import { SuggestionFlag } from '../receive/suggestion-flag';
 import { FieldError } from '@/components/forms/field-error';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Input } from '@/components/ui/input';
@@ -24,6 +25,10 @@ export interface DraftFormProps {
   canCreateContact: boolean;
   /** Textbausteine, die der Editor auf Wunsch einfügt. */
   snippets: { id: string; name: string; subject: string | null; body: string }[];
+  /** Vorbelegter Empfänger, etwa von der Kontaktseite. */
+  initialRecipient?: PickedContact | null;
+  /** Woher die Vorbelegung kommt — steht am Feld, solange sie unverändert ist. */
+  recipientOrigin?: string;
   /** Vorbelegung beim Anlegen, aus `deps.clock` der Seite — nicht aus der Uhr des Browsers. */
   today: string;
   /** Die eingestellte Vorgabeart für den Ausgang, keine Konstante im Code. */
@@ -48,6 +53,8 @@ export function DraftForm({
   folders,
   canCreateContact,
   snippets,
+  initialRecipient,
+  recipientOrigin,
   today,
   defaultTypeKey,
   draft,
@@ -92,7 +99,8 @@ export function DraftForm({
   const [documentDate, setDocumentDate] = useState(draft?.documentDate ?? today);
   const [typeKey, setTypeKey] = useState(draft?.typeKey ?? defaultTypeKey);
   const [folder, setFolder] = useState(draft?.folder ?? '');
-  const [recipient, setRecipient] = useState<PickedContact | null>(draft?.recipient ?? null);
+  const [recipient, setRecipient] = useState<PickedContact | null>(draft?.recipient ?? initialRecipient ?? null);
+  const recipientTouched = useRef(false);
 
   const errors = state.status === 'error' ? state.fieldErrors : {};
 
@@ -225,14 +233,20 @@ export function DraftForm({
           </Select>
         </div>
 
-        <ContactPicker
-          id="recipientId"
-          name="recipientId"
-          label={t('fields.recipient')}
-          value={recipient}
-          onChange={setRecipient}
-          canCreate={canCreateContact}
-        />
+        <div>
+          <ContactPicker
+            id="recipientId"
+            name="recipientId"
+            label={t('fields.recipient')}
+            value={recipient}
+            onChange={(next) => {
+              recipientTouched.current = true;
+              setRecipient(next);
+            }}
+            canCreate={canCreateContact}
+          />
+          {recipientOrigin && !recipientTouched.current ? <SuggestionFlag text={recipientOrigin} /> : null}
+        </div>
       </div>
 
       </div>
