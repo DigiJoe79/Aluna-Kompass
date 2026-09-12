@@ -117,7 +117,7 @@ export const documentListSchema = z.object({
   direction: z.enum(['outgoing', 'incoming']).optional(),
   phase: z.enum(['draft', 'issued']).optional(),
   typeKey: z.string().min(1).optional(),
-  folder: z.string().nullable().optional(), // null = Eingangskorb
+  folder: z.string().nullable().optional(), // null = ohne Ordner
   inbox: z.boolean().optional(),
   linkedTo: z.object({ entityType: z.string().min(1), entityId: z.string().min(1) }).optional(),
   text: z.string().trim().min(1).optional(), // Betreff oder Nummer
@@ -151,7 +151,10 @@ export async function listDocuments(
   if (q.direction) conditions.push(eq(documents.direction, q.direction));
   if (q.phase) conditions.push(eq(documents.phase, q.phase));
   if (q.typeKey) conditions.push(eq(documents.typeKey, q.typeKey));
-  if (q.inbox) conditions.push(sql`${documents.folder} is null`);
+  // Der Eingangskorb ist Post, die noch nicht einsortiert ist — nicht alles
+  // ohne Ordner. Ein Brief ohne Ordner ist ein Brief ohne Ordner (Nachtrag zu
+  // Entscheidung 20).
+  if (q.inbox) conditions.push(eq(documents.direction, 'incoming'), sql`${documents.folder} is null`);
   else if (q.folder !== undefined) conditions.push(q.folder === null ? sql`${documents.folder} is null` : eq(documents.folder, q.folder));
 
   let fulltextTooShort = false;

@@ -67,7 +67,7 @@ Die Nummern 1–12 sind die Rahmenentscheidungen aus `2026-09-10-kontakte-design
 | 17 | Kompass bringt einen **freien Brief** als Dokumentart mit: Empfänger aus den Kontakten, Betreff, Markdown-Textfeld. | Nur Fachvorlagen (kein eigener Brief möglich); Brief samt Textbausteinspeicher |
 | 18 | Das **Nummernpräfix hängt an der Dokumentart**, nicht an der Vorlage; `DocumentTemplate.prefix` wird zu `type`. Ein Weg für erzeugte und eingegangene Post. | Vorlage behält `prefix`, Eingang bekommt ein zweites Verfahren |
 | 19 | **Einsortierhilfe schlägt vor, legt nie ab.** Regeln belegen das Formular vor; bestätigt wird von Hand. | Regeln legen automatisch ab; gar keine Regeln |
-| 20 | Der **Eingangskorb ist `folder IS NULL`**, kein eigener Zustand und keine eigene Tabelle. | Statusfeld `inbox`; eigene Tabelle für Unsortiertes |
+| 20 | Der **Eingangskorb ist `folder IS NULL`**, kein eigener Zustand und keine eigene Tabelle. *Nachtrag 2026-09-12: und `direction = 'incoming'`. Ein Ausgang oder Entwurf ohne Ordner ist kein Eingang; die Ordnerspalte zählte sonst Briefe als Post, die einzusortieren wäre.* | Statusfeld `inbox`; eigene Tabelle für Unsortiertes |
 
 **Nicht-Ziele** (Entscheidung 12, hier präzisiert): Formatierleiste und
 Vorlagenspeicher für Brieftexte; OCR; Volltextsuche; Serienbriefe; E-Mail-Versand

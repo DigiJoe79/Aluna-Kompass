@@ -90,7 +90,7 @@ describe('documents', () => {
     it('filtert nach Richtung, Art, Ordner, Eingangskorb, Text und Bezug', async () => {
       const { deps, ctx, userId } = setup();
       const a = await insertIssued(deps, userId, { id: 'doc-a', number: 'BRF-2026-001', subject: 'Einladung Mitgliederversammlung', folder: 'vorstand' });
-      await insertIssued(deps, userId, { id: 'doc-b', number: 'BRF-2026-002', subject: 'Kündigung', folder: null });
+      await insertIssued(deps, userId, { id: 'doc-b', number: 'BRF-2026-002', subject: 'Kündigung', folder: null, direction: 'incoming' });
       deps.db.insert(documentLinks).values({ id: 'link-1', documentId: a, entityType: 'contact', entityId: 'C1', role: 'recipient', createdAt: '2026-09-10T00:00:00.000Z' }).run();
 
       const all = await listDocuments(deps, ctx, {});

@@ -261,7 +261,7 @@ export function DocumentDetail({
                 <dd className="font-medium text-ink">{doc.documentDate}</dd>
               </div>
               <div>
-                <FolderPanel documentId={doc.id} folder={doc.folder} folders={folders} canEdit={permissions.canEdit} />
+                <FolderPanel documentId={doc.id} folder={doc.folder} folders={folders} direction={doc.direction} canEdit={permissions.canEdit} />
               </div>
               <div>
                 <dt className="text-muted-ink">{t('columns.direction')}</dt>

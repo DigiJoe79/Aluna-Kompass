@@ -263,7 +263,7 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
                     </TableCell>
                     <TableCell className="px-4 text-ink-2">{doc.typeLabel}</TableCell>
                     <TableCell className="px-4 font-mono text-[13px] text-ink-2">{doc.documentDate}</TableCell>
-                    <TableCell className="px-4 text-ink-2">{doc.folder ?? t('inbox')}</TableCell>
+                    <TableCell className="px-4 text-ink-2">{doc.folder ?? (doc.direction === 'incoming' ? t('inbox') : t('noFolder'))}</TableCell>
                     <TableCell className="px-4 text-ink-2">{t(`directions.${doc.direction}`)}</TableCell>
                     <TableCell className="px-4">
                       {doc.status === 'voided' ? (

@@ -41,6 +41,21 @@ describe('listDocuments: Sortierung und Filter', () => {
     expect(unsent.ok && unsent.value.documents.map((d) => d.subject)).toEqual(['liegt noch']);
   });
 
+  /**
+   * Der Eingangskorb ist Post, die noch nicht einsortiert ist — nicht alles,
+   * was keinen Ordner hat. Ein Brief ohne Ordner ist ein Brief ohne Ordner
+   * (Nachtrag zu Entscheidung 20, 2026-09-12).
+   */
+  it('der Eingangskorb enthält nur Eingänge ohne Ordner', async () => {
+    const { deps, ctx } = setupWithTypes();
+    await issued(deps, ctx, 'Ausgang ohne Ordner');
+    await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Entwurf ohne Ordner', body: 'x' });
+    await receiveDocument(deps, ctx, { filename: 'a.pdf', bytes: pdfBytes(), typeKey: 'authority', subject: 'Eingang', documentDate: '2026-09-01' });
+    const inbox = await listDocuments(deps, ctx, { inbox: true });
+    expect(inbox.ok && inbox.value.documents.map((d) => d.subject)).toEqual(['Eingang']);
+    expect(inbox.ok && inbox.value.total).toBe(1);
+  });
+
   it('„relatedTo“ liefert die Dokumente an beiden Enden eines Bezugs', async () => {
     const { deps, ctx } = setupWithTypes();
     const a = await issued(deps, ctx, 'a');

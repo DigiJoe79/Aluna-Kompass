@@ -13,11 +13,14 @@ export function FolderPanel({
   documentId,
   folder,
   folders,
+  direction,
   canEdit,
 }: {
   documentId: string;
   folder: string | null;
   folders: string[];
+  /** Ohne Ordner heißt beim Eingang „Eingangskorb“, sonst schlicht „Kein Ordner“. */
+  direction: 'incoming' | 'outgoing';
   canEdit: boolean;
 }) {
   const t = useTranslations('dms');
@@ -30,7 +33,7 @@ export function FolderPanel({
       <Label htmlFor="document-folder">{t('columns.folder')}</Label>
       <div className="flex gap-2">
         <Select id="document-folder" value={value} onChange={(e) => setValue(e.target.value)} disabled={!canEdit}>
-          <option value="">{t('inbox')}</option>
+          <option value="">{direction === 'incoming' ? t('inbox') : t('noFolder')}</option>
           {folders.map((f) => (
             <option key={f} value={f}>
               {f}
