@@ -764,6 +764,59 @@ test.describe('dms', () => {
     await options.first().click();
     await expect(page.locator('input[name="recipientId"]')).not.toHaveValue('');
   });
+
+  test('holt ein Dokument aus dem Eingangskorb in einen Ordner', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms?inbox=1');
+    const row = page.getByRole('row').nth(1);
+    const subject = (await row.getByRole('cell').nth(1).textContent())?.trim() ?? '';
+    expect(subject.length).toBeGreaterThan(0);
+    await row.click();
+    await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}$/);
+    await page.getByLabel('Ordner').selectOption('behoerden/finanzamt');
+    await page.getByRole('button', { name: 'Ordner speichern' }).click();
+    await expect(page.getByText('Dokument verschoben')).toBeVisible();
+
+    // Im Eingangskorb liegt es nicht mehr, im Ordner dafür schon.
+    await page.goto('/dms?inbox=1');
+    await expect(page.getByRole('row').filter({ hasText: subject })).toHaveCount(0);
+    await page.goto('/dms?folder=behoerden%2Ffinanzamt');
+    await expect(page.getByRole('row').filter({ hasText: subject })).toHaveCount(1);
+  });
+
+  test('legt am Dokument einen Bezug zu einem Kontakt an und entfernt ihn wieder', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+    await page.getByRole('link', { name: /BRF-\d{4}-\d{3}/ }).first().click();
+    await page.getByRole('button', { name: 'Bezug hinzufügen', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Bezug hinzufügen', exact: true });
+    await dialog.getByRole('combobox', { name: 'Kontakt' }).fill('Mus');
+    await page.getByTestId('contact-option').first().click();
+    await dialog.getByLabel('Rolle').selectOption('about');
+    await dialog.getByRole('button', { name: 'Hinzufügen' }).click();
+    const links = page.getByTestId('document-links');
+    await expect(links.getByText('Betrifft')).toBeVisible();
+    await links.getByRole('button', { name: 'Entfernen' }).last().click();
+    await expect(links.getByText('Betrifft')).toBeHidden();
+  });
+
+  test('ein Eingang ist Anlage zu einem Brief, und beide Seiten sagen es', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms?direction=incoming');
+    await page.getByRole('row').nth(1).click();
+    await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}$/);
+    await page.getByRole('button', { name: 'Dokumentbezug hinzufügen' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Dokumentbezug hinzufügen' });
+    // Der Seed setzt „Antwort auf“ schon; hier eine zweite Art.
+    await dialog.getByLabel('Art').selectOption('attachmentOf');
+    await dialog.getByRole('combobox', { name: 'Dokument' }).fill('BRF');
+    await page.getByTestId('document-option').first().click();
+    await dialog.getByRole('button', { name: 'Hinzufügen' }).click();
+    const relations = page.getByTestId('document-relations');
+    await expect(relations.getByText('Anlage zu')).toBeVisible();
+    await relations.getByRole('link', { name: /BRF-/ }).last().click();
+    await expect(page.getByTestId('document-relations').getByText('Anlage:')).toBeVisible();
+  });
 });
 
 function samplePdf(): Buffer {

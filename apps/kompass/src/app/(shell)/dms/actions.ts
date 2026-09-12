@@ -3,6 +3,11 @@
 import {
   createDraft,
   defaultTypeKey,
+  linkDocument,
+  moveDocument,
+  relateDocuments,
+  unlinkDocument,
+  unrelateDocuments,
   deleteDocument,
   deleteDraft,
   extractDocumentText,
@@ -239,3 +244,50 @@ export async function rereadDocumentAction(documentId: string): Promise<ActionSt
   return toActionState(result, t, t('dms.text.rereadQueued'));
 }
 
+export async function moveDocumentAction(id: string, folder: string | null): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await moveDocument(deps, ctx, { id, folder });
+  if (!result.ok) return toActionState(result, t);
+  revalidatePath(`/dms/${id}`);
+  revalidatePath('/dms');
+  return toActionState(result, t, t('dms.toast.moved'));
+}
+
+export async function linkDocumentAction(
+  id: string,
+  entityType: string,
+  entityId: string,
+  role: 'sender' | 'recipient' | 'about',
+): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await linkDocument(deps, ctx, { documentId: id, entityType, entityId, role });
+  revalidatePath(`/dms/${id}`);
+  return toActionState(result, t, t('dms.toast.linked'));
+}
+
+export async function unlinkDocumentAction(id: string, linkId: string): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await unlinkDocument(deps, ctx, { id: linkId });
+  revalidatePath(`/dms/${id}`);
+  return toActionState(result, t, t('dms.toast.unlinked'));
+}
+
+export async function relateDocumentsAction(id: string, relatedDocumentId: string, kind: string): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await relateDocuments(deps, ctx, { documentId: id, relatedDocumentId, kind });
+  revalidatePath(`/dms/${id}`);
+  revalidatePath(`/dms/${relatedDocumentId}`);
+  return toActionState(result, t, t('dms.toast.related'));
+}
+
+export async function unrelateDocumentsAction(id: string, relationId: string): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await unrelateDocuments(deps, ctx, { id: relationId });
+  revalidatePath(`/dms/${id}`);
+  return toActionState(result, t, t('dms.toast.unrelated'));
+}

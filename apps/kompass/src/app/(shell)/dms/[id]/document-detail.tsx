@@ -13,6 +13,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { deleteDocumentAction, deleteDraftAction, rereadDocumentAction, voidDocumentAction } from '../actions';
 import { FileDialog } from './file-dialog';
+import { FolderPanel } from './folder-panel';
+import { LinksPanel, type ResolvedLink } from './links-panel';
+import { RelationsPanel, type RelationView } from './relations-panel';
 
 export interface DocumentDetailProps {
   document: {
@@ -32,15 +35,13 @@ export interface DocumentDetailProps {
     textStatus: string | null;
     textExtractedAt: string | null;
     textError: string | null;
-    links: {
-      entityType: string;
-      entityId: string;
-      role: string;
-      label: string | null;
-      href: string | null;
-      reason: 'missing' | 'forbidden' | null;
-    }[];
+    links: ResolvedLink[];
+    relations: RelationView[];
   };
+  folders: string[];
+  animals: { id: string; name: string }[];
+  projects: { id: string; name: string }[];
+  canCreateContact: boolean;
   retentionInfo: {
     retentionClass: string;
     until: string | null;
@@ -55,7 +56,7 @@ export interface DocumentDetailProps {
   };
 }
 
-export function DocumentDetail({ document: doc, retentionInfo, permissions }: DocumentDetailProps) {
+export function DocumentDetail({ document: doc, folders, animals, projects, canCreateContact, retentionInfo, permissions }: DocumentDetailProps) {
   const t = useTranslations('dms');
   const tCommon = useTranslations('common');
   const format = useFormatter();
@@ -222,10 +223,7 @@ export function DocumentDetail({ document: doc, retentionInfo, permissions }: Do
                 <dd className="font-medium text-ink">{doc.documentDate}</dd>
               </div>
               <div>
-                <dt className="text-muted-ink">{t('columns.folder')}</dt>
-                <dd className="font-medium text-ink">
-                  {doc.folder ?? (doc.direction === 'incoming' ? t('inbox') : t('noFolder'))}
-                </dd>
+                <FolderPanel documentId={doc.id} folder={doc.folder} folders={folders} canEdit={permissions.canEdit} />
               </div>
               <div>
                 <dt className="text-muted-ink">{t('columns.direction')}</dt>
@@ -308,33 +306,16 @@ export function DocumentDetail({ document: doc, retentionInfo, permissions }: Do
             </section>
           ) : null}
 
-          {/* Links / Bezüge */}
-          {doc.links.length > 0 ? (
-            <section className="rounded-md border border-line bg-surface p-5 shadow-xs">
-              <h3 className="mb-3 text-[15px] font-semibold text-ink">{t('linksTitle')}</h3>
-              <ul data-testid="document-links" className="space-y-2 text-[13px] text-ink-2">
-                {doc.links.map((link, i) => (
-                  <li key={i} className="flex items-center gap-2">
-                    <span className="size-1.5 rounded-full bg-muted-ink" aria-hidden />
-                    <span>
-                      {link.href && link.label ? (
-                        <Link href={link.href} className="underline underline-offset-2">
-                          {link.label}
-                        </Link>
-                      ) : (
-                        <span className={link.label ? undefined : 'text-muted-ink'}>
-                          {link.label ?? (link.reason === 'forbidden' ? t('linkForbidden') : t('linkMissing'))}
-                        </span>
-                      )}
-                      {' — '}
-                      {t.has(`roles.${link.role}`) ? t(`roles.${link.role}`) : link.role}
-                      {t.has(`entities.${link.entityType}`) ? ` (${t(`entities.${link.entityType}`)})` : null}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
+          <LinksPanel
+            documentId={doc.id}
+            links={doc.links}
+            canEdit={permissions.canEdit}
+            canCreateContact={canCreateContact}
+            animals={animals}
+            projects={projects}
+          />
+
+          <RelationsPanel documentId={doc.id} relations={doc.relations} canEdit={permissions.canEdit} />
         </div>
       </div>
     </div>

@@ -107,6 +107,16 @@
     "unauthorized": "Bitte melden Sie sich erneut an.",
     "technical": "Der Vorgang wurde abgebrochen. Es wurde nichts gespeichert.",
     "conflict": {
+      "documentIsDraft": "Das ist noch ein Entwurf.",
+      "notOutgoing": "Eingegangene Post wird nicht versandt.",
+      "notDispatched": "Es gibt keinen Versandvermerk.",
+      "relationSelf": "Ein Dokument kann sich nicht auf sich selbst beziehen.",
+      "relationExists": "Dieser Bezug besteht bereits.",
+      "snippetExists": "Ein Baustein mit diesem Namen existiert bereits.",
+      "documentNotVoided": "Ein Ersatz gibt es nur für ein storniertes Dokument.",
+      "followUpDone": "Die Wiedervorlage ist bereits erledigt.",
+      "followUpOpen": "Die Wiedervorlage ist noch offen.",
+      "linkExists": "Dieser Bezug besteht bereits.",
       "emailTaken": "Diese E-Mail-Adresse ist bereits vergeben.",
       "roleNameTaken": "Eine Rolle mit diesem Namen existiert bereits.",
       "roleProtected": "Die Rolle „Administration“ kann nicht geändert werden.",
@@ -1489,6 +1499,48 @@
       "animal": "Tier",
       "project": "Projekt"
     },
+    "folderSave": "Ordner speichern",
+    "picker": {
+      "placeholder": "Nummer oder Betreff …",
+      "empty": "Kein Dokument gefunden.",
+      "draft": "Entwurf"
+    },
+    "links": {
+      "none": "Noch kein Bezug.",
+      "add": "Bezug hinzufügen",
+      "addTitle": "Bezug hinzufügen",
+      "addDescription": "Ein Kontakt, Tier oder Projekt, zu dem dieses Dokument gehört.",
+      "entityType": "Art des Bezugs",
+      "contact": "Kontakt",
+      "choose": "— Bitte wählen —",
+      "role": "Rolle",
+      "cancel": "Abbrechen",
+      "submit": "Hinzufügen",
+      "remove": "Entfernen"
+    },
+    "relations": {
+      "title": "Dokumentbezüge",
+      "none": "Noch kein Dokumentbezug.",
+      "add": "Dokumentbezug hinzufügen",
+      "addDescription": "Ein anderes Dokument der Akte, zu dem dieses gehört.",
+      "kind": "Art",
+      "document": "Dokument",
+      "cancel": "Abbrechen",
+      "submit": "Hinzufügen",
+      "remove": "Entfernen",
+      "kinds": {
+        "repliesTo": { "out": "Antwort auf", "in": "beantwortet durch" },
+        "signedCopyOf": { "out": "unterschriebene Fassung von", "in": "unterschrieben zurück als" },
+        "replaces": { "out": "ersetzt", "in": "ersetzt durch" },
+        "attachmentOf": { "out": "Anlage zu", "in": "Anlage:" }
+      },
+      "kindLabels": {
+        "repliesTo": "Antwort auf",
+        "signedCopyOf": "Unterschriebene Fassung von",
+        "replaces": "Ersetzt",
+        "attachmentOf": "Anlage zu"
+      }
+    },
     "linkMissing": "Nicht mehr vorhanden",
     "linkForbidden": "Name nicht sichtbar",
     "voidReasonTitle": "Stornierungsgrund",
@@ -1513,7 +1565,12 @@
     "toast": {
       "draftUpdated": "Entwurf gespeichert",
       "filed": "Dokument festgeschrieben",
-      "voided": "Dokument storniert"
+      "voided": "Dokument storniert",
+      "moved": "Dokument verschoben",
+      "linked": "Bezug angelegt",
+      "unlinked": "Bezug entfernt",
+      "related": "Dokumentbezug angelegt",
+      "unrelated": "Dokumentbezug entfernt"
     },
     "admin": {
       "title": "Akte – Stammdaten",

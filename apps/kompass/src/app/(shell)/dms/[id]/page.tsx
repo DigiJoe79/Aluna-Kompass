@@ -1,5 +1,6 @@
-import { hasPermission, requirePermission, retentionEnd, retentionMonths } from '@kompass/core';
-import { documentTypeFor, getDocumentRecord } from '@kompass/module-dms';
+import { hasPermission, isModuleEnabled, listProjects, requirePermission, retentionEnd, retentionMonths } from '@kompass/core';
+import { listAnimals } from '@kompass/module-animals';
+import { documentTypeFor, getDocumentRecord, listDocumentFolders } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
@@ -45,6 +46,19 @@ export default async function DocumentDetailPage(props: {
 
   const links = await resolveLinks(deps, ctx, doc.links);
 
+  const foldersRes = await listDocumentFolders(deps, ctx);
+  const folders = foldersRes.ok ? foldersRes.value.map((f) => f.path) : [];
+
+  // Nur, was dieser Betrachter auch verknüpfen dürfte: ein ausgeschaltetes
+  // Modul und ein fehlendes Recht sehen gleich aus — die Art steht dann nicht
+  // zur Wahl.
+  const animalsRes =
+    isModuleEnabled(deps, 'animals') && hasPermission(ctx, 'animals.view') ? await listAnimals(deps, ctx) : null;
+  const animals = animalsRes?.ok ? animalsRes.value.map((a) => ({ id: a.id, name: a.name })) : [];
+  const leading = deps.locales()[0] ?? 'de';
+  const projectsRes = hasPermission(ctx, 'projects.view') ? await listProjects(deps, ctx) : null;
+  const projects = projectsRes?.ok ? projectsRes.value.map((p) => ({ id: p.id, name: p.name[leading] || p.slug })) : [];
+
   const permissions = {
     canFile: hasPermission(ctx, 'dms.file'),
     canVoid: hasPermission(ctx, 'dms.void'),
@@ -75,7 +89,12 @@ export default async function DocumentDetailPage(props: {
           textExtractedAt: doc.textExtractedAt,
           textError: doc.textError,
           links,
+          relations: doc.relations,
         }}
+        folders={folders}
+        animals={animals}
+        projects={projects}
+        canCreateContact={hasPermission(ctx, 'contacts.manage')}
         retentionInfo={retentionInfo}
         permissions={permissions}
       />

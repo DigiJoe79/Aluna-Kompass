@@ -10,6 +10,16 @@ export const idleState: ActionState = { status: 'idle' };
 type Translate = (key: string, values?: any) => string;
 
 const KNOWN_CONFLICTS = new Set([
+  'documentIsDraft',
+  'notOutgoing',
+  'notDispatched',
+  'relationSelf',
+  'relationExists',
+  'snippetExists',
+  'documentNotVoided',
+  'followUpDone',
+  'followUpOpen',
+  'linkExists',
   'emailTaken',
   'roleNameTaken',
   'roleProtected',

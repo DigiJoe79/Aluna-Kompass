@@ -3,6 +3,8 @@ import { getAnimal } from '@kompass/module-animals';
 import { displayName, getContact } from '@kompass/module-contacts';
 
 export interface ResolvedLink {
+  /** Die Zeile selbst — sie wird gelöst, nicht die Entität. */
+  id: string;
   entityType: string;
   entityId: string;
   role: string;
@@ -39,13 +41,13 @@ function fromResult<T>(
 export async function resolveLinks(
   deps: Deps,
   ctx: CallContext,
-  links: readonly { entityType: string; entityId: string; role: string }[],
+  links: readonly { id: string; entityType: string; entityId: string; role: string }[],
 ): Promise<ResolvedLink[]> {
   const leading = deps.locales()[0] ?? 'de';
 
   return Promise.all(
     links.map(async (link) => {
-      const base = { entityType: link.entityType, entityId: link.entityId, role: link.role };
+      const base = { id: link.id, entityType: link.entityType, entityId: link.entityId, role: link.role };
 
       if (link.entityType === 'contact') {
         const contact = await getContact(deps, ctx, link.entityId);

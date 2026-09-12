@@ -18,7 +18,7 @@ describe('resolveLinks', () => {
     const contact = await createContact(deps, ctx, { kind: 'person', lastName: 'Muster', firstName: 'Erika' });
     if (!contact.ok) throw new Error('setup');
 
-    const [link] = await resolveLinks(deps, ctx, [{ entityType: 'contact', entityId: contact.value.id, role: 'recipient' }]);
+    const [link] = await resolveLinks(deps, ctx, [{ id: 'L2', entityType: 'contact', entityId: contact.value.id, role: 'recipient' }]);
     expect(link?.label).toContain('Muster');
     expect(link?.href).toBe(`/contacts/${contact.value.id}`);
     expect(link?.reason).toBeNull();
@@ -30,13 +30,13 @@ describe('resolveLinks', () => {
     const contact = await createContact(deps, ctx, { kind: 'person', lastName: 'Muster', firstName: 'Erika' });
     if (!contact.ok) throw new Error('setup');
 
-    const [gone] = await resolveLinks(deps, ctx, [{ entityType: 'contact', entityId: 'gibtsnicht', role: 'about' }]);
+    const [gone] = await resolveLinks(deps, ctx, [{ id: 'L1', entityType: 'contact', entityId: 'gibtsnicht', role: 'about' }]);
     expect(gone?.label).toBeNull();
     expect(gone?.reason).toBe('missing');
 
     // Derselbe Bezug, aber ohne Leserecht auf Kontakte.
     const blind = ctxWith(['dms.view'], userId);
-    const [hidden] = await resolveLinks(deps, blind, [{ entityType: 'contact', entityId: contact.value.id, role: 'recipient' }]);
+    const [hidden] = await resolveLinks(deps, blind, [{ id: 'L2', entityType: 'contact', entityId: contact.value.id, role: 'recipient' }]);
     expect(hidden?.label).toBeNull();
     expect(hidden?.reason).toBe('forbidden');
   });
@@ -44,7 +44,7 @@ describe('resolveLinks', () => {
   it('fällt bei einem unbekannten Entitätstyp nicht um', async () => {
     const { deps, userId } = setup();
     const [link] = await resolveLinks(deps, ctxWith(['dms.view'], userId), [
-      { entityType: 'gibtsnicht', entityId: 'x', role: 'about' },
+      { id: 'L3', entityType: 'gibtsnicht', entityId: 'x', role: 'about' },
     ]);
     expect(link?.label).toBeNull();
     expect(link?.reason).toBe('missing');
