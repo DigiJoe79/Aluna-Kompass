@@ -123,9 +123,11 @@ export function ContactPicker({
                 <CommandEmpty>{t('empty')}</CommandEmpty>
                 <CommandGroup>
                   {options.map((option) => (
-                    <CommandItem key={option.id} value={option.id} data-testid="contact-option" onSelect={() => pick(option)}>
-                      {option.name}
-                      {option.city ? <span className="ml-2 text-[12px] text-muted-ink">{option.city}</span> : null}
+                    <CommandItem key={option.id} value={option.id} data-testid="contact-option" data-name={option.name} onSelect={() => pick(option)}>
+                      {/* Einzeilig: Der Name wird gekürzt, der Ort bleibt stehen. Ein
+                          zweizeiliger Treffer verschiebt die Liste unter der Maus. */}
+                      <span className="min-w-0 truncate">{option.name}</span>
+                      {option.city ? <span className="ml-auto shrink-0 pl-2 text-[12px] text-muted-ink">{option.city}</span> : null}
                     </CommandItem>
                   ))}
                   {value ? (

@@ -343,7 +343,8 @@ test.describe('dms', () => {
     const firstOption = page.getByTestId('contact-option').first();
     await expect(firstOption).toBeVisible();
     await expect(firstOption).toBeVisible();
-    const name = (await firstOption.textContent())?.trim() ?? '';
+    // Der Treffer zeigt Name und Ort; erwartet wird nur der Name.
+    const name = (await firstOption.getAttribute('data-name'))?.trim() ?? '';
     expect(name.length).toBeGreaterThan(0);
     await firstOption.click();
     await page.getByRole('button', { name: 'Entwurf speichern' }).click();
@@ -520,7 +521,7 @@ test.describe('dms', () => {
 
     // Datum wie Nummer: Zahlen, die man untereinander vergleicht, stehen in
     // Monospace — das ist der Zweck der Spalte.
-    const date = page.getByRole('cell', { name: '2026-02-15' });
+    const date = page.getByRole('cell', { name: '15.02.2026' });
     expect(await date.evaluate((el) => getComputedStyle(el).fontFamily)).toContain('Plex');
 
     // Die ganze Zeile führt zum Dokument; ein fester Unterstrich am Betreff
@@ -788,6 +789,11 @@ test.describe('dms', () => {
     await picker.fill('Mus');
     const option = page.getByTestId('contact-option').first();
     await expect(option).toBeVisible();
+    await option.scrollIntoViewIfNeeded();
+    // Erst, wenn die Schriften da sind: Im kalten Server kommen sie spät, und
+    // ein Layout, das sich unter der gedrückten Maus verschiebt, lässt den
+    // Klick daneben landen — das wäre dann der Test, nicht die Anwendung.
+    await page.evaluate(() => document.fonts.ready);
     const box = (await option.boundingBox())!;
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
@@ -807,6 +813,7 @@ test.describe('dms', () => {
     // Der Eintrag steht am Ende der Liste und damit im 800-px-Fenster unter
     // der Kante; ein Mensch scrollt, bevor er klickt.
     await create.scrollIntoViewIfNeeded();
+    await page.evaluate(() => document.fonts.ready);
     const box = (await create.boundingBox())!;
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
@@ -823,6 +830,7 @@ test.describe('dms', () => {
     const create = dialog.getByRole('listbox').getByRole('option', { name: 'Neu anlegen …' });
     await expect(create).toBeVisible();
     await create.scrollIntoViewIfNeeded();
+    await page.evaluate(() => document.fonts.ready);
     const box = (await create.boundingBox())!;
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
