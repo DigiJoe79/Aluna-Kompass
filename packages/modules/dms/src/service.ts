@@ -19,16 +19,18 @@ import {
 } from '@kompass/core';
 import { z } from 'zod';
 import { documentTypeFor } from './catalog';
-import { documentCounters, documentFolders, documentLinks, documents, type DocumentLinkRow, type DocumentRow } from './schema';
+import { documentCounters, documentFolders, documentLinks, documents, type DocumentLinkRow, type DocumentNoteRow, type DocumentRow } from './schema';
 import { readDocumentFile, removeDocumentFile } from './storage';
 import { removeDocumentText } from './index-store';
 import { fulltextCondition, fulltextHits, type TextHit } from './search';
+import { deleteNotesFor, notesFor } from './notes';
 import { deleteRelationsFor, relationsFor, type DocumentRelationView } from './relations';
 
 export type DocumentRecord = Omit<DocumentRow, 'inputSnapshot'> & {
   inputSnapshot: unknown;
   links: DocumentLinkRow[];
   relations: DocumentRelationView[];
+  notes: DocumentNoteRow[];
 };
 
 export function toRecord(deps: Deps, row: DocumentRow, dbOrTx: DbOrTx = deps.db): DocumentRecord {
@@ -38,6 +40,7 @@ export function toRecord(deps: Deps, row: DocumentRow, dbOrTx: DbOrTx = deps.db)
     inputSnapshot: row.inputSnapshot ? JSON.parse(row.inputSnapshot) : null,
     links,
     relations: relationsFor(dbOrTx, row.id),
+    notes: notesFor(dbOrTx, row.id),
   };
 }
 
@@ -412,6 +415,7 @@ export async function deleteDocument(
     });
 
     deleteRelationsFor(tx, doc.id);
+    deleteNotesFor(tx, doc.id);
     tx.delete(documentLinks).where(eq(documentLinks.documentId, doc.id)).run();
     tx.delete(documents).where(eq(documents.id, doc.id)).run();
   });

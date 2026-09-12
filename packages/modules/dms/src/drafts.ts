@@ -22,6 +22,7 @@ import { documentLinks, documents } from './schema';
 import { storeDocumentFile } from './storage';
 import { allocateDocumentNumber, peekDocumentNumber, resolveFolder, toRecord, type DocumentRecord } from './service';
 import { removeDocumentText } from './index-store';
+import { deleteNotesFor } from './notes';
 import { deleteRelationsFor } from './relations';
 
 export const draftCreateSchema = z.object({
@@ -237,6 +238,7 @@ export async function deleteDraft(deps: Deps, ctx: CallContext, input: unknown):
 
   deps.db.transaction((tx: DbOrTx) => {
     deleteRelationsFor(tx, row.id);
+    deleteNotesFor(tx, row.id);
     tx.delete(documentLinks).where(eq(documentLinks.documentId, row.id)).run();
     tx.delete(documents).where(eq(documents.id, row.id)).run();
 

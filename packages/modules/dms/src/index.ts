@@ -7,6 +7,7 @@ export * from './install';
 export * from './index-store';
 export * from './manifest';
 export * from './mcp-tools';
+export * from './notes';
 export * from './recipients';
 export * from './relations';
 export * from './retention';
