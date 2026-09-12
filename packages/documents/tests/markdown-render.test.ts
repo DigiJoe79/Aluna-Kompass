@@ -1,4 +1,7 @@
 import { renderMarkdownTypst } from '@kompass/markdown';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { createTypstRenderer, resolveAssetDirs, resolveBases } from '../src';
 
@@ -48,4 +51,51 @@ describe('markdown bodies compile', () => {
       expect(new TextDecoder().decode(pdf.subarray(0, 5))).toBe('%PDF-');
     });
   }
+});
+
+describe('page breaks', () => {
+  /** Ein PDF trägt je Seite ein `/Type /Page` im Klartext — das reicht als Seitenzähler. */
+  const pages = (pdf: Uint8Array): number =>
+    (Buffer.from(pdf).toString('latin1').match(/\/Type\s*\/Page[^s]/g) ?? []).length;
+
+  it('::seitenumbruch starts a new page', async () => {
+    const ohne = await letter('Seite eins.\n\nNoch Seite eins.');
+    const mit = await letter('Seite eins.\n\n::seitenumbruch\n\nSeite zwei.');
+    expect(pages(ohne)).toBe(1);
+    expect(pages(mit)).toBe(2);
+  });
+
+  it('does not append a blank page for a break at the end of the text', async () => {
+    // `weak: true` verhindert genau das: einen Umbruch, hinter dem nichts mehr kommt.
+    const pdf = await letter('Nur eine Seite.\n\n::seitenumbruch');
+    expect(pages(pdf)).toBe(1);
+  });
+
+  it('two breaks in a row make one new page, not two', async () => {
+    const pdf = await letter('Seite eins.\n\n::seitenumbruch\n\n::seitenumbruch\n\nSeite zwei.');
+    expect(pages(pdf)).toBe(2);
+  });
+});
+
+describe('the example in the help page', () => {
+  /**
+   * `docs/briefe-formatieren.md` verspricht der schreibenden Person, dass ihr
+   * Beispielbrief durch die Pipeline geht. Hier wird das Versprechen eingelöst —
+   * und die Seite kann nicht unbemerkt von der Wirklichkeit abweichen.
+   */
+  const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+
+  function exampleFromHelpPage(): string {
+    const page = readFileSync(path.join(ROOT, 'docs/briefe-formatieren.md'), 'utf8');
+    const match = /<!-- beispielbrief -->\s*````markdown\n([\s\S]*?)\n````/.exec(page);
+    if (!match?.[1]) throw new Error('kein mit <!-- beispielbrief --> markierter Block in docs/briefe-formatieren.md');
+    return match[1];
+  }
+
+  it('renders and runs onto a second page', async () => {
+    const pdf = await letter(exampleFromHelpPage());
+    expect(new TextDecoder().decode(pdf.subarray(0, 5))).toBe('%PDF-');
+    const pages = (Buffer.from(pdf).toString('latin1').match(/\/Type\s*\/Page[^s]/g) ?? []).length;
+    expect(pages).toBeGreaterThanOrEqual(2);
+  });
 });
