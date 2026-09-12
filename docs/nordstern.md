@@ -149,10 +149,16 @@ Spec: noch keine.
 ### Vereinsspezifische Module
 
 Was ein Verein braucht und ein anderer nicht. Für Aluna: das Tiermodul in
-seiner Vollstufe mit Bestandsbuch, Herkunft und Verbleib, Verträgen,
-Patenschaften, Partner-Shelter und den Nachweisen nach § 11 Tierschutzgesetz.
-Ein Abgleich mit einer Spendenplattform wäre ein weiteres solches Modul. Ein
-Modul erfüllt dieselben Regeln wie der Kern: Rechte, Protokoll, MCP, Seed.
+seiner Vollstufe. Es bildet den ganzen Weg eines Tieres ab, von Anfang bis
+Ende, und hängt jeden Schritt an die anderen Säulen: die Aufnahme im
+Partner-Shelter, der Transport mit seinen Papieren, die medizinische Akte mit
+Tierarztrechnungen als Belegen, die Vermittlung von der Anfrage über
+Selbstauskunft und Vorkontrolle bis zum Adoptionsvertrag und zur Schutzgebühr
+als Buchung, die Nachkontrolle, die Patenschaft, der Verbleib. Dazu
+Bestandsbuch und die Nachweise nach § 11 Tierschutzgesetz, die sich aus genau
+diesen Schritten ergeben. Ein Abgleich mit einer Spendenplattform wäre ein
+weiteres solches Modul. Ein Modul erfüllt dieselben Regeln wie der Kern:
+Rechte, Protokoll, MCP, Seed.
 
 Spec: das Profil aus `2026-09-05-webseite-design.md`; die Vollstufe hat noch
 keine.
@@ -277,17 +283,40 @@ bis zum Protokoll in Kompass geführt wurde.
 
 ### Schritt 5: Tiere Vollstufe
 
-Eigene Spec. Bestandsbuch, Herkunft und Verbleib, Verträge als Dokumente der
-Akte mit unterschriebener Fassung als Eingang, Patenschaften mit Beiträgen
-als Buchungen, Partner-Shelter als Kontakte, Nachweise nach § 11
-Tierschutzgesetz. Danach werden Tierprofile rechenschaftsrelevant.
+Eigene Spec, eigenes Brainstorming. Das Modul bildet den Prozess von Anfang
+bis Ende ab, nicht nur das Profil und das Bestandsbuch. Was heute feststeht,
+entlang des Weges eines Tieres:
+
+- **Aufnahme.** Herkunft, Partner-Shelter als Kontakt, Datum, Zustand;
+  Übernahmevereinbarung als Dokument der Akte.
+- **Transport.** Fahrt, Fahrer, Fahrzeug, Tiere an Bord, Papiere (TRACES,
+  Gesundheitszeugnis, EU-Heimtierausweis) als Dokumente; Kosten als Belege.
+- **Medizinische Akte.** Impfungen, Kastration, Behandlungen, Chip; jede
+  Tierarztrechnung als Beleg in Finanzen und als Dokument in der Akte, am
+  Tier verlinkt.
+- **Vermittlung.** Anfrage, Selbstauskunft und Vorkontrolle als Dokumente,
+  Adoptionsvertrag als erzeugtes Dokument mit unterschriebener Fassung als
+  Eingang, Schutzgebühr als Buchung, Übergabe, Nachkontrolle mit
+  Wiedervorlage.
+- **Patenschaft.** Pate als Kontakt, Beitrag als Buchung, Laufzeit.
+- **Verbleib.** Vermittelt, zurückgekommen, verstorben, an Partner
+  weitergegeben; jeder Wechsel mit Datum und Dokument.
+- **Rechenschaft.** Bestandsbuch und die Nachweise nach § 11
+  Tierschutzgesetz kommen aus diesen Schritten, nicht aus einer eigenen
+  Erfassung. Danach sind Tierprofile rechenschaftsrelevant.
+
+Jeder Schritt hängt an den anderen Säulen: Kontakte für Menschen und
+Partner, Akte für Papiere, Finanzen für Geld, Wiedervorlagen für Fristen.
+Das Modul erfindet nichts davon neu; es verbindet.
 
 Nach Gremien, weil die Pflichten aus § 11 erst mit der Erlaubnis entstehen,
 die nach der Eintragung beantragt wird. Bis dahin genügt das Profil für die
 Webseite.
 
-**Fertig, wenn:** das Bestandsbuch aus Kompass kommt und der Vertrag zu einem
-Tier in der Akte liegt.
+**Fertig, wenn:** ein Tier vom Eintreffen im Partner-Shelter bis zur
+Nachkontrolle nach der Adoption lückenlos in Kompass steht, jede Rechnung,
+jede Fahrt und jeder Vertrag daran hängt, und das Bestandsbuch aus Kompass
+kommt.
 
 ## 5. Später
 
