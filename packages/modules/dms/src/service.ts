@@ -1,6 +1,7 @@
 import { and, asc, count, desc, eq, inArray, like, or, sql, type SQL } from 'drizzle-orm';
 import {
   conflict,
+  deleteFollowUpsFor,
   invalid,
   isoNow,
   newId,
@@ -11,10 +12,12 @@ import {
   requirePermission,
   retentionEnd,
   retentionMonths,
+  schema,
   validate,
   type CallContext,
   type DbOrTx,
   type Deps,
+  type FollowUpRecord,
   type Result,
 } from '@kompass/core';
 import { z } from 'zod';
@@ -31,6 +34,7 @@ export type DocumentRecord = Omit<DocumentRow, 'inputSnapshot'> & {
   links: DocumentLinkRow[];
   relations: DocumentRelationView[];
   notes: DocumentNoteRow[];
+  followUps: FollowUpRecord[];
 };
 
 export function toRecord(deps: Deps, row: DocumentRow, dbOrTx: DbOrTx = deps.db): DocumentRecord {
@@ -41,6 +45,14 @@ export function toRecord(deps: Deps, row: DocumentRow, dbOrTx: DbOrTx = deps.db)
     links,
     relations: relationsFor(dbOrTx, row.id),
     notes: notesFor(dbOrTx, row.id),
+    // Direkt gelesen, ohne Rechteprüfung: Die Akte liest ihre eigenen
+    // Anhängsel — wer das Dokument sehen darf, sieht seine Wiedervorlagen.
+    followUps: dbOrTx
+      .select()
+      .from(schema.followUps)
+      .where(and(eq(schema.followUps.entityType, 'document'), eq(schema.followUps.entityId, row.id)))
+      .orderBy(asc(schema.followUps.dueAt))
+      .all(),
   };
 }
 
@@ -119,6 +131,8 @@ export const documentListSchema = z.object({
   unsent: z.boolean().optional(),
   /** Dokumente, die mit diesem in einem Bezug stehen — in beiden Richtungen. */
   relatedTo: z.string().min(1).optional(),
+  /** Nur Dokumente mit mindestens einer offenen Wiedervorlage. */
+  withOpenFollowUp: z.boolean().optional(),
   limit: z.number().int().min(1).max(200).default(50),
   offset: z.number().int().min(0).default(0),
 });
@@ -168,6 +182,10 @@ export async function listDocuments(
     for (const r of deps.db.select().from(documentRelations).where(eq(documentRelations.documentId, q.relatedTo)).all()) ids.add(r.relatedDocumentId);
     for (const r of deps.db.select().from(documentRelations).where(eq(documentRelations.relatedDocumentId, q.relatedTo)).all()) ids.add(r.documentId);
     conditions.push(inArray(documents.id, ids.size > 0 ? [...ids] : ['__none__']));
+  }
+
+  if (q.withOpenFollowUp) {
+    conditions.push(sql`${documents.id} IN (SELECT entity_id FROM follow_ups WHERE entity_type = 'document' AND done_at IS NULL)`);
   }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -425,6 +443,14 @@ export async function deleteDocument(
   }
 
   deps.db.transaction((tx: DbOrTx) => {
+    // Was mit dem Dokument verschwindet, steht im Protokoll — als Zahl, nicht
+    // als Inhalt: Arbeitsmaterial geht mit, die Tatsache bleibt.
+    const removed = {
+      relations: deleteRelationsFor(tx, doc.id),
+      notes: deleteNotesFor(tx, doc.id),
+      followUps: deleteFollowUpsFor(tx, 'document', doc.id),
+    };
+
     recordAudit(tx, deps, ctx, {
       action: 'dms.delete',
       entityType: 'document',
@@ -437,12 +463,11 @@ export async function deleteDocument(
         documentDate: doc.documentDate,
         folder: doc.folder,
         fileChecksum: doc.fileChecksum,
+        removed,
       },
       summary: `Dokument ${doc.number ?? doc.subject} gelöscht`,
     });
 
-    deleteRelationsFor(tx, doc.id);
-    deleteNotesFor(tx, doc.id);
     tx.delete(documentLinks).where(eq(documentLinks.documentId, doc.id)).run();
     tx.delete(documents).where(eq(documents.id, doc.id)).run();
   });

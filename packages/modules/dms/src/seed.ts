@@ -1,14 +1,18 @@
-import { isoNow, newId, unwrap, type CallContext, type Deps } from '@kompass/core';
+import { completeFollowUp, isoNow, newId, unwrap, type CallContext, type Deps } from '@kompass/core';
 import { contacts } from '@kompass/module-contacts';
 import { eq } from 'drizzle-orm';
 import { EXAMPLE_DOCUMENT_TYPES } from './catalog';
 import { recordDispatch } from './dispatch';
+import { createDocumentFollowUp } from './follow-ups';
 import { createDraft, fileDocument } from './drafts';
 import { receiveDocument } from './incoming';
 import { addNote } from './notes';
 import { relateDocuments } from './relations';
 import { documentFolders, documentRules, documentSnippets, documents, documentTypes } from './schema';
 import { createSnippet } from './snippets';
+
+/** Tage relativ zum Seed-Lauf — die Beispiele sollen nie „schon vorbei“ wirken. */
+const addDays = (deps: Deps, days: number) => new Date(deps.clock.now().getTime() + days * 86_400_000).toISOString().slice(0, 10);
 
 export async function seedDms(deps: Deps, ctx: CallContext): Promise<void> {
   const existing = deps.db.select({ id: documents.id }).from(documents).all();
@@ -110,4 +114,9 @@ export async function seedDms(deps: Deps, ctx: CallContext): Promise<void> {
     const exists = deps.db.select().from(documentSnippets).where(eq(documentSnippets.name, snippet.name)).get();
     if (!exists) unwrap(await createSnippet(deps, ctx, snippet));
   }
+
+  // 7. Eine offene und eine erledigte Wiedervorlage am Brief.
+  unwrap(await createDocumentFollowUp(deps, ctx, { documentId: draft.id, dueAt: addDays(deps, 5), title: 'Antwort abwarten' }));
+  const done = unwrap(await createDocumentFollowUp(deps, ctx, { documentId: draft.id, dueAt: addDays(deps, -3), title: 'Unterlagen beilegen' }));
+  unwrap(await completeFollowUp(deps, ctx, { id: done.id }));
 }

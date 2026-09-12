@@ -14,7 +14,7 @@ function setup() {
   const userId = insertUser(deps, { name: 'Admin', email: 'admin@kompass.local' });
   return {
     deps,
-    ctx: ctxWith([...ALL_DMS, 'contacts.manage'], userId),
+    ctx: ctxWith([...ALL_DMS, 'contacts.manage', 'followUps.view', 'followUps.manage'], userId),
   };
 }
 

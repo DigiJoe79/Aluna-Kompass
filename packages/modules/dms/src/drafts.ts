@@ -1,6 +1,7 @@
 import {
   buildContext,
   conflict,
+  deleteFollowUpsFor,
   isoNow,
   newId,
   notFound,
@@ -237,8 +238,11 @@ export async function deleteDraft(deps: Deps, ctx: CallContext, input: unknown):
   }
 
   deps.db.transaction((tx: DbOrTx) => {
-    deleteRelationsFor(tx, row.id);
-    deleteNotesFor(tx, row.id);
+    const removed = {
+      relations: deleteRelationsFor(tx, row.id),
+      notes: deleteNotesFor(tx, row.id),
+      followUps: deleteFollowUpsFor(tx, 'document', row.id),
+    };
     tx.delete(documentLinks).where(eq(documentLinks.documentId, row.id)).run();
     tx.delete(documents).where(eq(documents.id, row.id)).run();
 
@@ -246,7 +250,7 @@ export async function deleteDraft(deps: Deps, ctx: CallContext, input: unknown):
       action: 'dms.draft.delete',
       entityType: 'documentDraft',
       entityId: row.id,
-      before: { subject: row.subject, typeKey: row.typeKey },
+      before: { subject: row.subject, typeKey: row.typeKey, removed },
       summary: `Entwurf „${row.subject}“ gelöscht`,
     });
   });

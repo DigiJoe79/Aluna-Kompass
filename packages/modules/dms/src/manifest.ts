@@ -1,4 +1,5 @@
 import { defineModule, type ModuleManifest } from '@kompass/core';
+import { dmsFollowUpTargets } from './follow-ups';
 import { DMS_SETTINGS, installDms } from './install';
 import { DMS_MCP_TOOLS } from './mcp-tools';
 import { dmsRetentionDue, dmsRetentionHolds } from './retention';
@@ -18,6 +19,7 @@ export const dmsModule: ModuleManifest = defineModule({
   adminNavigation: [{ key: 'dms.admin', href: '/admin/dms', icon: 'folder', permission: 'dms.manage' }],
   retentionHolds: dmsRetentionHolds,
   retentionDue: dmsRetentionDue,
+  followUpTargets: dmsFollowUpTargets,
   mcpTools: DMS_MCP_TOOLS,
   seed: seedDms,
 });
