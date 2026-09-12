@@ -1286,7 +1286,25 @@
         "log": "Protokoll",
         "empty": "Bislang keine Veröffentlichungen."
       },
-      "previewExplainer": "Baut die vollständige Webseite als statische Vorschau und vergleicht den Stand mit der Live-Version."
+      "previewExplainer": "Baut die vollständige Webseite als statische Vorschau und vergleicht den Stand mit der Live-Version.",
+      "job": {
+        "running": "{name} läuft seit {duration}",
+        "names": {
+          "preview": "Vorschau",
+          "publish": "Publish"
+        }
+      }
+    },
+    "previewFrame": {
+      "title": "Webseiten-Vorschau",
+      "description": "Vollständige Vorschau der statischen Webseite unter dem aktuellen Kompass-Datenstand.",
+      "frameTitle": "Vorschau",
+      "widths": {
+        "label": "Breite",
+        "mobile": "Mobil",
+        "tablet": "Tablet",
+        "desktop": "Desktop"
+      }
     }
   },
   "contacts": {
@@ -1540,7 +1558,11 @@
       "writeLetter": "Brief schreiben",
       "receivePost": "Post ablegen",
       "draft": "Entwurf",
-      "roles": { "sender": "Absender", "recipient": "Empfänger", "about": "Betrifft" }
+      "roles": {
+        "sender": "Absender",
+        "recipient": "Empfänger",
+        "about": "Betrifft"
+      }
     },
     "followUpBadge": "Wiedervorlage {date}",
     "filters": {
@@ -1626,10 +1648,22 @@
       "submit": "Hinzufügen",
       "remove": "Entfernen",
       "kinds": {
-        "repliesTo": { "out": "Antwort auf", "in": "beantwortet durch" },
-        "signedCopyOf": { "out": "unterschriebene Fassung von", "in": "unterschrieben zurück als" },
-        "replaces": { "out": "ersetzt", "in": "ersetzt durch" },
-        "attachmentOf": { "out": "Anlage zu", "in": "Anlage:" }
+        "repliesTo": {
+          "out": "Antwort auf",
+          "in": "beantwortet durch"
+        },
+        "signedCopyOf": {
+          "out": "unterschriebene Fassung von",
+          "in": "unterschrieben zurück als"
+        },
+        "replaces": {
+          "out": "ersetzt",
+          "in": "ersetzt durch"
+        },
+        "attachmentOf": {
+          "out": "Anlage zu",
+          "in": "Anlage:"
+        }
       },
       "kindLabels": {
         "repliesTo": "Antwort auf",
@@ -1719,8 +1753,18 @@
       "createSnippet": "Baustein anlegen",
       "createSnippetTitle": "Baustein anlegen",
       "editSnippetTitle": "Baustein bearbeiten",
-      "snippetColumns": { "name": "Name", "subject": "Betreff", "active": "Aktiv", "actions": "Aktionen" },
-      "snippetFields": { "name": "Name", "subject": "Betreff (optional)", "body": "Text", "sortOrder": "Reihenfolge" },
+      "snippetColumns": {
+        "name": "Name",
+        "subject": "Betreff",
+        "active": "Aktiv",
+        "actions": "Aktionen"
+      },
+      "snippetFields": {
+        "name": "Name",
+        "subject": "Betreff (optional)",
+        "body": "Text",
+        "sortOrder": "Reihenfolge"
+      },
       "deleteSnippetTitle": "Baustein löschen",
       "deleteSnippetDescription": "„{name}“ wird gelöscht. Briefe, die ihn benutzt haben, behalten ihren Text.",
       "deleteSnippetConfirm": "Löschen",
@@ -1730,8 +1774,15 @@
       "createChannel": "Versandweg anlegen",
       "createChannelTitle": "Versandweg anlegen",
       "renameChannelTitle": "Versandweg umbenennen",
-      "channelFields": { "key": "Schlüssel", "label": "Beschriftung" },
-      "channelColumns": { "key": "Schlüssel", "label": "Beschriftung", "actions": "Aktionen" },
+      "channelFields": {
+        "key": "Schlüssel",
+        "label": "Beschriftung"
+      },
+      "channelColumns": {
+        "key": "Schlüssel",
+        "label": "Beschriftung",
+        "actions": "Aktionen"
+      },
       "removeChannelTitle": "Versandweg entfernen",
       "removeChannelDescription": "„{label}“ steht danach nicht mehr zur Wahl.",
       "removeChannelConfirm": "Entfernen",

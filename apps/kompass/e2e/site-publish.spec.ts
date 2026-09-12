@@ -30,6 +30,7 @@ test('publish page runs the checks and blocks on a blocked term', async ({ page 
 });
 
 test('preview build, diff and publish to the local staging target', async ({ page }) => {
+  test.setTimeout(240_000);
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
 
@@ -49,12 +50,40 @@ test('preview build, diff and publish to the local staging target', async ({ pag
 
   await page.goto('/site/publish');
   await page.getByRole('button', { name: 'Vorschau bauen' }).click();
+  // Während des Baus meldet /site/job, was läuft und seit wann; die Seite
+  // fragt das sekündlich ab. Warm baut das Basis-Template in unter einer
+  // Sekunde, deshalb fragt der Test selbst sofort nach dem Klick.
+  type Job = { name: string; startedAt: string };
+  let running: Job | null = null;
+  for (let i = 0; i < 100 && !running; i++) {
+    running = (await (await page.request.get('/site/job')).json()) as Job | null;
+    if (!running) await page.waitForTimeout(50);
+  }
+  expect(running?.name).toBe('preview');
   await expect(page.getByRole('region', { name: 'Änderungen gegenüber Live' })).toContainText('aktuelles/sommerfest/index.html', { timeout: 180_000 });
+  // Danach ist nichts mehr gemeldet und nichts mehr angezeigt.
+  expect(await (await page.request.get('/site/job')).json()).toBeNull();
+  await expect(page.getByTestId('site-job')).toHaveCount(0);
   const preview = await page.request.get('/site/preview/aktuelles/sommerfest/');
   expect(preview.ok()).toBe(true);
   expect(await preview.text()).toContain('Sommerfest 2026');
   await page.getByRole('link', { name: 'Vorschau öffnen' }).click();
   await expect(page.getByTestId('env-banner')).toBeVisible();
+  // Die Vorschau lässt sich auf Telefon- und Tablet-Breite schalten.
+  const frame = page.getByTitle('Vorschau');
+  await expect(frame).not.toHaveCSS('width', '390px');
+  await page.getByRole('button', { name: /Mobil/ }).click();
+  await expect(frame).toHaveCSS('width', '390px');
+  await page.getByRole('button', { name: /Tablet/ }).click();
+  await expect(frame).toHaveCSS('width', '820px');
+
+  // Die gebaute Seite selbst bei Handybreite: nichts ragt über den Rand, das Menü öffnet.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/site/preview/');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByRole('button', { name: 'Menü' }).click();
+  await expect(page.getByRole('link', { name: 'Aktuelles' })).toBeVisible();
+  await page.setViewportSize({ width: 1280, height: 800 });
 
   await page.goto('/site/publish');
   await page.getByRole('button', { name: 'Nach Staging publizieren' }).click();

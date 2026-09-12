@@ -7,6 +7,7 @@ import { CheckCard } from './check-card';
 import { ConnectionCard } from './connection-card';
 import { DiffCard, type PublishDiff } from './diff-card';
 import { PublishHistory } from './history';
+import { JobStatus } from './job-status';
 import { PreviewCard, type PreviewData } from './preview-card';
 import { PublishCard } from './publish-card';
 
@@ -27,6 +28,7 @@ export function PublishClient({
 
   return (
     <div className="flex max-w-[880px] flex-col gap-4">
+      <JobStatus onFinished={() => router.refresh()} />
       <CheckCard
         onResult={(c) => {
           setHasViolations(c.violations.length > 0);

@@ -19,6 +19,7 @@ import {
   setEntryPublished,
   setValues,
   listPublishes,
+  currentSiteJob,
   siteModule,
 } from '../src';
 
@@ -420,4 +421,29 @@ describe('publish history', () => {
     expect(history[0]!.status).toBe('aborted');
     expect(history[0]!.log).toContain('templateStale');
   });
+});
+
+describe('currentSiteJob', () => {
+  /**
+   * Wer den Tab schliesst, sieht nicht, dass noch gebaut wird. Die Seite fragt
+   * deshalb nach, was gerade laeuft und seit wann — auch nach dem Neuladen.
+   */
+  it('names the running job with its start, and is empty afterwards', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, siteModule] });
+    insertUser(deps, { id: 'USER-TEST' });
+    unwrap(await applyTemplateSync(deps, ctxWith(['site.manage']), { dir: TEMPLATE_DIR, confirm: true }));
+    const env = {
+      publicUrl: 'https://staging.example.org',
+      staging: true,
+      deploy: null,
+      templateDir: TEMPLATE_DIR,
+      cacheDir: tmp(),
+      previewDir: tmp(),
+    };
+    expect(currentSiteJob(env)).toBeNull();
+    const running = runPreview(deps, ctxWith(['site.publish', 'site.view']), env);
+    expect(currentSiteJob(env)).toEqual({ name: 'preview', startedAt: deps.clock.now().toISOString() });
+    unwrap(await running);
+    expect(currentSiteJob(env)).toBeNull();
+  }, 240_000);
 });

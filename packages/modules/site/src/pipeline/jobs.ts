@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -69,15 +69,43 @@ export class StepTimeoutError extends Error {
  * räumten dasselbe Vorschauverzeichnis gleichzeitig ab und schrieben denselben
  * Stempel; der zweite meldet deshalb den ersten, statt zu warten.
  */
-let runningJob: string | null = null;
+export interface RunningSiteJob {
+  /** `preview` oder `publish`; die Oberfläche übersetzt. */
+  name: string;
+  startedAt: string;
+}
 
-async function exclusive<T>(name: string, run: () => Promise<Result<T>>): Promise<Result<T>> {
-  if (runningJob) return conflict('siteJobRunning', `Es läuft bereits: ${runningJob}`);
-  runningJob = name;
+/**
+ * Der Zustand liegt als Datei im Cache, nicht in einer Modulvariablen: Next
+ * bündelt dieses Modul je Route, und der Route Handler, der den Zustand
+ * abfragt, sähe eine andere Instanz als die Server Action, die baut. Die
+ * Prozessnummer steht dabei, damit eine Datei aus einem abgestürzten Prozess
+ * nicht als laufender Job gilt.
+ */
+const jobFile = (env: SiteEnv) => path.join(env.cacheDir, 'running-job.json');
+
+/** Was gerade läuft und seit wann — für die Anzeige, auch nach dem Neuladen. */
+export function currentSiteJob(env: SiteEnv): RunningSiteJob | null {
+  try {
+    const job = JSON.parse(readFileSync(jobFile(env), 'utf8')) as RunningSiteJob & { pid: number };
+    if (job.pid !== process.pid) return null;
+    return { name: job.name, startedAt: job.startedAt };
+  } catch {
+    return null;
+  }
+}
+
+async function exclusive<T>(deps: Deps, env: SiteEnv, name: string, run: () => Promise<Result<T>>): Promise<Result<T>> {
+  // Prüfen und Schreiben ohne await dazwischen, sonst kämen zwei Aufrufe
+  // gleichzeitig an der Prüfung vorbei.
+  const running = currentSiteJob(env);
+  if (running) return conflict('siteJobRunning', `Es läuft bereits: ${running.name}`);
+  mkdirSync(env.cacheDir, { recursive: true });
+  writeFileSync(jobFile(env), JSON.stringify({ name, startedAt: isoNow(deps.clock), pid: process.pid }));
   try {
     return await run();
   } finally {
-    runningJob = null;
+    rmSync(jobFile(env), { force: true });
   }
 }
 
@@ -197,7 +225,7 @@ async function exportAndBuild(
 export async function runPreview(deps: Deps, ctx: CallContext, env: SiteEnv): Promise<Result<PreviewResult>> {
   const denied = requirePermission(ctx, 'site.publish');
   if (denied) return denied;
-  return exclusive('Vorschau', async () => {
+  return exclusive(deps, env, 'preview', async () => {
     const built = await exportAndBuild(deps, ctx, env, env.previewDir);
     if (!built.ok) return built;
     return ok({
@@ -262,7 +290,7 @@ export async function runPublish(deps: Deps, ctx: CallContext, env: SiteEnv, opt
   if (!env.deploy) return conflict('publishTargetMissing', 'SITE_DEPLOY_* ist nicht gesetzt');
   const credentialProblem = await checkDeployCredentials(env.deploy);
   if (credentialProblem) return conflict('deployCredentialsUnusable', credentialProblem);
-  return exclusive('Publish', async () => {
+  return exclusive(deps, env, 'publish', async () => {
     const startedAt = isoNow(deps.clock);
     const outDir = await mkdtemp(path.join(tmpdir(), 'kompass-publish-'));
     try {
