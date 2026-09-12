@@ -1026,7 +1026,9 @@ test.describe('dms', () => {
     await dialog.getByRole('combobox', { name: 'Antwort auf' }).fill('BRF');
     await page.getByTestId('document-option').first().click();
     await dialog.getByRole('button', { name: 'Ablegen' }).click();
-    await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}$/);
+    // Kalt übersetzt der Server die Action beim ersten Ablegen erst — fünf
+    // Sekunden reichten im Prüflauf vom 2026-09-12 nicht, warm dreimal 1 s.
+    await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}$/, { timeout: 30_000 });
     await expect(page.getByTestId('document-relations').getByText(/Antwort auf/)).toBeVisible();
   });
 
