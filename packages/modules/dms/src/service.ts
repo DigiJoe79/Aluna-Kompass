@@ -69,6 +69,34 @@ export function nextDocumentNumber(db: DbOrTx, prefix: string, year: number): st
   return `${start}${String(highest + 1).padStart(3, '0')}`;
 }
 
+export const previewNumberSchema = z.object({
+  typeKey: z.string().trim().min(1),
+});
+
+/**
+ * Die Nummer, die das nächste Dokument dieser Art bekäme. Ein reiner Blick:
+ * `nextDocumentNumber` führt keinen Zähler, gezogen wird die Nummer erst beim
+ * Ablegen. Zwischen Ansehen und Ablegen kann jemand anders schneller sein —
+ * deshalb sagt die Oberfläche „wird beim Ablegen gezogen“ und nicht „ist Ihre“.
+ */
+export async function previewNextNumber(
+  deps: Deps,
+  ctx: CallContext,
+  input: unknown,
+): Promise<Result<{ number: string }>> {
+  const denied = requirePermission(ctx, 'dms.view');
+  if (denied) return denied;
+
+  const parsed = validate(deps, previewNumberSchema, input);
+  if (!parsed.ok) return parsed;
+
+  const docType = documentTypeFor(deps.db, parsed.value.typeKey);
+  if (!docType) return notFound('documentType', parsed.value.typeKey);
+
+  const year = deps.clock.now().getUTCFullYear();
+  return ok({ number: nextDocumentNumber(deps.db, docType.prefix, year) });
+}
+
 export const documentListSchema = z.object({
   direction: z.enum(['outgoing', 'incoming']).optional(),
   phase: z.enum(['draft', 'issued']).optional(),

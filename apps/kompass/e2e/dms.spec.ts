@@ -97,6 +97,10 @@ test.describe('dms', () => {
     await dialog.getByLabel('Dokumentart').selectOption('authority');
     await dialog.getByLabel('Betreff').fill('Eingegangenes Schreiben');
     await dialog.getByRole('button', { name: 'Ablegen' }).click();
+    // Erst auf das Dokument warten, dann die Nummer lesen: Solange der Dialog
+    // offen steht, trägt die Liste dahinter ihre Nummern und der Hinweis im
+    // Dialog die nächste — zwei Treffer auf dasselbe Muster.
+    await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}$/);
     await expect(page.getByText(/BEH-\d{4}-\d{3}/)).toBeVisible();
   });
 
@@ -278,6 +282,7 @@ test.describe('dms', () => {
     await dialog.getByLabel('Datum auf dem Dokument').fill('2005-06-01');
     await dialog.getByLabel('Betreff').fill('Abgelaufene Rechnung');
     await dialog.getByRole('button', { name: 'Ablegen' }).click();
+    await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}$/);
     await expect(page.getByText(/RCH-\d{4}-\d{3}/)).toBeVisible();
 
     // Der Fristenbildschirm führt auf genau dieses Dokument.
@@ -456,6 +461,19 @@ test.describe('dms', () => {
     await expect(dialog).toHaveCount(0);
     // Was abgelegt wurde, bleibt abgelegt.
     await expect(page.getByRole('link', { name: 'Eins' })).toBeVisible();
+  });
+
+  test('sagt im Dialog, welche Nummer beim Ablegen gezogen wird', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/receive');
+    const dialog = receiveDialog(page);
+
+    await dialog.getByLabel('Dokumentart').selectOption('authority');
+    await expect(dialog.getByText(/Die Nummer BEH-\d{4}-\d{3} wird beim Ablegen gezogen/)).toBeVisible();
+
+    // Eine andere Art, ein anderer Nummernkreis.
+    await dialog.getByLabel('Dokumentart').selectOption('invoice');
+    await expect(dialog.getByText(/Die Nummer RCH-\d{4}-\d{3} wird beim Ablegen gezogen/)).toBeVisible();
   });
 
   test('sagt am vorbelegten Feld, woher der Vorschlag kommt', async ({ page }) => {

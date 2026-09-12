@@ -1403,6 +1403,9 @@
       "discardDescription": "{count, plural, one {Eine Datei ist noch nicht abgelegt.} other {# Dateien sind noch nicht abgelegt.}} Sie bleiben ungespeichert.",
       "discardConfirm": "Verwerfen"
     },
+    "number": {
+      "pending": "Die Nummer <mono>{number}</mono> wird beim Ablegen gezogen. Danach steht die Dokumentart fest."
+    },
     "saveDraft": "Entwurf speichern",
     "edit": "Bearbeiten",
     "editDraft": "Entwurf bearbeiten",

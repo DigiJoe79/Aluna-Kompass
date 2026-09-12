@@ -8,6 +8,7 @@ import {
   extractDocumentText,
   fileDocument,
   receiveDocument,
+  previewNextNumber,
   suggestClassification,
   updateDraft,
   voidDocument,
@@ -166,6 +167,17 @@ export async function suggestClassificationAction(
   });
   if (res.ok) return res.value;
   return null;
+}
+
+/**
+ * Die Nummer, die das nächste Dokument dieser Art bekäme. Nur zum Ansehen —
+ * gezogen wird sie beim Ablegen, und zwischen beidem kann jemand anders
+ * schneller sein.
+ */
+export async function previewNumberAction(typeKey: string): Promise<string | null> {
+  const { deps, ctx } = await requireSession();
+  const result = await previewNextNumber(deps, ctx, { typeKey });
+  return result.ok ? result.value.number : null;
 }
 
 export async function receiveDocumentAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
