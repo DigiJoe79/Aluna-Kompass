@@ -1,5 +1,6 @@
 export * from './catalog';
 export * from './classification';
+export * from './dispatch';
 export * from './drafts';
 export * from './incoming';
 export * from './install';
