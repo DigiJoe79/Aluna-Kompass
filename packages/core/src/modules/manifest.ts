@@ -48,6 +48,13 @@ export interface DueItem {
   dueSince: string;
 }
 
+/** Wie ein Modul eine Entität für die Wiedervorlage-Liste beschriftet. */
+export interface FollowUpTarget {
+  label: string;
+  /** Der Weg zur Entität; `null`, wenn es keine Seite dafür gibt. */
+  href: string | null;
+}
+
 /** Eine Kontaktrolle, die ein Modul beisteuert, samt ihrer Aufbewahrungsklasse. */
 export interface ContactRoleDefinition {
   key: string;
@@ -136,6 +143,14 @@ export interface McpToolDefinition<T = unknown> {
   description: string;
   inputSchema: z.ZodType<T>;
   handler(deps: Deps, ctx: CallContext, args: T): Promise<Result<unknown>>;
+  /**
+   * Der Service, den `handler` ruft — als Referenz, nicht als Name. Der
+   * Paritätstest der App vergleicht damit mechanisch: jeder Service eines
+   * Moduls muss von mindestens einem Werkzeug genannt werden. Fehlt das Feld,
+   * gilt das Werkzeug als „ruft keinen Service“ — und fällt im Test auf,
+   * sobald ein Service ohne Werkzeug bleibt.
+   */
+  service?: (...args: never[]) => unknown;
 }
 
 export interface ModuleManifest {
@@ -178,6 +193,13 @@ export interface ModuleManifest {
   retentionHolds?: (deps: Deps, entityType: string, id: string) => readonly RetentionHold[];
   /** Was bei diesem Modul zur Löschung fällig ist. */
   retentionDue?: (deps: Deps) => readonly DueItem[];
+  /**
+   * Beschriftung und Link für eine Entität dieses Moduls, an der eine
+   * Wiedervorlage hängt. Richtung Kern → Modul, wie `retentionHolds`: Der Kern
+   * fragt nach einem Namen für etwas, das das Modul besitzt. `null` heißt:
+   * nicht meine Entität.
+   */
+  followUpTargets?: (deps: Deps, entityType: string, id: string) => FollowUpTarget | null;
   /** Kontaktrollen, die dieses Modul beisteuert. */
   contactRoles?: readonly ContactRoleDefinition[];
   /** Beispieldaten für die Entwicklungsumgebung. */

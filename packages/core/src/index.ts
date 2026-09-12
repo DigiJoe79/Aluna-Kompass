@@ -53,4 +53,5 @@ export { localizedColumn } from './db/columns';
 export * from './retention/classes';
 export * from './retention/service';
 export * from './follow-ups/service';
+export * from './follow-ups/targets';
 export * from './text/extraction';
