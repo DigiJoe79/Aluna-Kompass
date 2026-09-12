@@ -361,6 +361,35 @@ test.describe('dms', () => {
     await expect(page).toHaveURL(/folder=protokolle/);
   });
 
+  test('hält die Zeilenhöhe des Fundaments ein', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+
+    const row = page.locator('tbody tr').first();
+    const box = await row.boundingBox();
+    if (!box) throw new Error('Zeile nicht sichtbar');
+    expect(Math.round(box.height)).toBe(44);
+  });
+
+  test('richtet die Liste auf das Überfliegen aus', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+
+    // Datum wie Nummer: Zahlen, die man untereinander vergleicht, stehen in
+    // Monospace — das ist der Zweck der Spalte.
+    const date = page.getByRole('cell', { name: '2026-02-15' });
+    expect(await date.evaluate((el) => getComputedStyle(el).fontFamily)).toContain('Plex');
+
+    // Die ganze Zeile führt zum Dokument; ein fester Unterstrich am Betreff
+    // bietet einen zweiten Weg an, den es nicht gibt.
+    const subject = page.getByRole('link', { name: 'Freistellungsbescheid' });
+    expect(await subject.evaluate((el) => getComputedStyle(el).textDecorationLine)).toBe('none');
+
+    // Der Entwurf steht beim Betreff, nicht nur am rechten Rand.
+    const draftRow = page.getByRole('row', { name: /Protokoll Vorstandssitzung/ });
+    await expect(draftRow.getByRole('cell').nth(1)).toContainText('Entwurf');
+  });
+
   test('führt die Ordnerspalte bis zum unteren Rand der Fläche', async ({ page }) => {
     await login(page);
     await page.goto('/dms');

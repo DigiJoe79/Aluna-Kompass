@@ -141,7 +141,7 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
       ) : (
         <div className="overflow-hidden rounded-md border border-line bg-surface">
           <Table>
-            <TableHeader className="bg-table-head text-left text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink">
+            <TableHeader className="bg-table-head text-left text-[11px] font-bold uppercase tracking-[.06em] text-muted-ink">
               <TableRow className="h-9">
                 <TableHead className="px-4">{t('columns.number')}</TableHead>
                 <TableHead className="px-4">{t('columns.subject')}</TableHead>
@@ -158,7 +158,7 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
                   <TableRow
                     onClick={() => router.push(`/dms/${doc.id}`)}
                     className={cn(
-                      'h-[52px] cursor-pointer hover:bg-row-hover',
+                      'h-[var(--row-h)] cursor-pointer hover:bg-row-hover',
                       hits?.[doc.id] ? 'border-b-0' : 'border-b border-line-2',
                       i % 2 === 1 && 'bg-zebra',
                     )}
@@ -180,11 +180,17 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
                       <div className="flex items-center gap-2">
                         <Link
                           href={`/dms/${doc.id}`}
-                          className="font-semibold underline underline-offset-2 hover:text-link"
+                          className="font-semibold text-ink underline-offset-2 hover:text-link hover:underline"
                           onClick={(e) => e.stopPropagation()}
                         >
                           {doc.subject}
                         </Link>
+                        {/* Auch hier, nicht nur am rechten Rand: Die
+                            Statusspalte steht zu weit weg, um beim Überfliegen
+                            zu wirken. */}
+                        {doc.phase === 'draft' && doc.status !== 'voided' ? (
+                          <StatusBadge tone="warning">{t('phases.draft')}</StatusBadge>
+                        ) : null}
                         {doc.textStatus && doc.textStatus !== 'done' ? (
                           <span
                             title={t('textPending')}
@@ -195,7 +201,7 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
                       </div>
                     </TableCell>
                     <TableCell className="px-4 text-ink-2">{doc.typeLabel}</TableCell>
-                    <TableCell className="px-4 text-ink-2">{doc.documentDate}</TableCell>
+                    <TableCell className="px-4 font-mono text-[13px] text-ink-2">{doc.documentDate}</TableCell>
                     <TableCell className="px-4 text-ink-2">{doc.folder ?? t('inbox')}</TableCell>
                     <TableCell className="px-4 text-ink-2">{t(`directions.${doc.direction}`)}</TableCell>
                     <TableCell className="px-4">

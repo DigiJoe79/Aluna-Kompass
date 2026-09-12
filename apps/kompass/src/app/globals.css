@@ -116,6 +116,12 @@
    * sonst nirgends, damit in einer Formularzeile nichts mehr springt.
    */
   :root { --field-h: 38px; }
+  /*
+   * Die Zeilenhöhe hatte nur Werte für die beiden abweichenden Dichten und
+   * keinen für den Normalfall: `var(--row-h)` war ohne gesetzte Dichte
+   * undefiniert, und `height` fiel auf `auto` zurück.
+   */
+  :root { --row-h: 44px; }
   [data-density="compact"] { --row-h: 36px; }
   [data-density="comfortable"] { --row-h: 56px; }
 
