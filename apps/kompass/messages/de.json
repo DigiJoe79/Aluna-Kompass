@@ -611,7 +611,8 @@
       "organization": "Verein",
       "tax": "Steuer & Bescheide",
       "bank": "Bank",
-      "branding": "Branding"
+      "branding": "Branding",
+      "display": "Darstellung"
     },
     "tabInvalid": "Enthält Fehler",
     "counter": "{count} von {max} Zeichen",
@@ -645,6 +646,9 @@
         "fontBody": "Schrift Fließtext",
         "fontHeading": "Schrift Überschriften",
         "activeTheme": "Aktives Theme"
+      },
+      "ui": {
+        "dateFormat": "Datumsformat"
       }
     },
     "hints": {
@@ -654,6 +658,12 @@
       "themeHint": "Themes werden unter Verwaltung → Themes bearbeitet."
     },
     "options": {
+      "ui": {
+        "dateFormat": {
+          "locale": "Aus der Sprache (12.09.2026)",
+          "iso": "ISO 8601 (2026-09-12)"
+        }
+      },
       "organization": {
         "legalForm": {
           "registeredAssociation": "Eingetragener Verein (e.V.)",

@@ -1,5 +1,6 @@
 'use client';
 
+import { useDateFormat } from '@/components/date-format-provider';
 import { roleLabel } from '@/lib/contact-roles';
 import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -25,6 +26,7 @@ export function RolesPanel({
 }) {
   const t = useTranslations('contacts');
   const c = useTranslations('common');
+  const fmt = useDateFormat();
 
   const [addOpen, setAddOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState(roleDefinitions[0]?.key ?? '');
@@ -128,8 +130,8 @@ export function RolesPanel({
               <div className="flex items-center gap-3">
                 <StatusBadge tone={r.until ? 'neutral' : 'info'}>{roleLabel(t, r.role)}</StatusBadge>
                 <span className="text-[13px] text-ink-2">
-                  {t('roles.since')}: {r.since}
-                  {r.until ? ` · ${t('roles.until')}: ${r.until}` : ''}
+                  {t('roles.since')}: {fmt.date(r.since)}
+                  {r.until ? ` · ${t('roles.until')}: ${fmt.date(r.until)}` : ''}
                 </span>
               </div>
               {canManage && !r.until ? (

@@ -1,5 +1,6 @@
 'use client';
 
+import { useDateFormat } from '@/components/date-format-provider';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -45,6 +46,7 @@ export interface DocumentListProps {
 
 export function DocumentList({ documents, types, folders, inboxCount, hits, fulltextTooShort, today, canMove }: DocumentListProps) {
   const t = useTranslations('dms');
+  const fmt = useDateFormat();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -249,7 +251,7 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
                         ) : null}
                         {doc.openFollowUp ? (
                           <StatusBadge tone={doc.openFollowUp.dueAt < today ? 'warning' : 'info'}>
-                            {t('followUpBadge', { date: doc.openFollowUp.dueAt })}
+                            {t('followUpBadge', { date: fmt.date(doc.openFollowUp.dueAt) })}
                           </StatusBadge>
                         ) : null}
                         {doc.textStatus && doc.textStatus !== 'done' ? (
@@ -262,7 +264,7 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
                       </div>
                     </TableCell>
                     <TableCell className="px-4 text-ink-2">{doc.typeLabel}</TableCell>
-                    <TableCell className="px-4 font-mono text-[13px] text-ink-2">{doc.documentDate}</TableCell>
+                    <TableCell className="px-4 font-mono text-[13px] text-ink-2">{fmt.date(doc.documentDate)}</TableCell>
                     <TableCell className="px-4 text-ink-2">{doc.folder ?? (doc.direction === 'incoming' ? t('inbox') : t('noFolder'))}</TableCell>
                     <TableCell className="px-4 text-ink-2">{t(`directions.${doc.direction}`)}</TableCell>
                     <TableCell className="px-4">

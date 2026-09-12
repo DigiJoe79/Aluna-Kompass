@@ -1,6 +1,7 @@
 'use client';
 
-import { useFormatter, useTranslations } from 'next-intl';
+import { useDateFormat } from '@/components/date-format-provider';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
@@ -88,7 +89,7 @@ export function DocumentDetail({
 }: DocumentDetailProps) {
   const t = useTranslations('dms');
   const tCommon = useTranslations('common');
-  const format = useFormatter();
+  const fmt = useDateFormat();
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [voidOpen, setVoidOpen] = useState(false);
@@ -266,7 +267,7 @@ export function DocumentDetail({
               </div>
               <div>
                 <dt className="text-muted-ink">{t('columns.date')}</dt>
-                <dd className="font-medium text-ink">{doc.documentDate}</dd>
+                <dd className="font-medium text-ink">{fmt.date(doc.documentDate)}</dd>
               </div>
               <div>
                 <FolderPanel documentId={doc.id} folder={doc.folder} folders={folders} direction={doc.direction} canEdit={permissions.canEdit} />
@@ -314,7 +315,7 @@ export function DocumentDetail({
                 {retentionInfo.retentionClass === 'permanent'
                   ? t('retentionPermanent')
                   : retentionInfo.until
-                    ? t('retentionUntil', { date: retentionInfo.until })
+                    ? t('retentionUntil', { date: fmt.date(retentionInfo.until) })
                     : t('retentionRunning')}
               </p>
 
@@ -356,7 +357,7 @@ export function DocumentDetail({
                 {doc.textStatus === 'done'
                   ? t('text.done', {
                       date: doc.textExtractedAt
-                        ? format.dateTime(new Date(doc.textExtractedAt), { dateStyle: 'medium', timeStyle: 'short' })
+                        ? fmt.dateTime(doc.textExtractedAt)
                         : '—',
                     })
                   : doc.textStatus === 'failed'

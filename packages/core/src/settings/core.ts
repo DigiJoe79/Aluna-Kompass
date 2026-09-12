@@ -53,6 +53,11 @@ const themes: SettingDefinition[] = [
   { key: 'themes', schema: z.array(themeSchema).min(1), default: [DEFAULT_THEME] },
 ];
 
+/** Wie ein Datum auf dem Bildschirm aussieht (Befund 8, 2026-09-12): aus der Sprache, oder ISO 8601. */
+const ui: SettingDefinition[] = [
+  { key: 'ui.dateFormat', schema: z.enum(['locale', 'iso']), default: 'locale' },
+];
+
 const modules: SettingDefinition[] = [
   { key: 'modules.enabled', schema: z.array(z.string()), default: [] },
 ];
@@ -97,5 +102,4 @@ export const CORE_SETTINGS: SettingDefinition[] = [
   ...documentsSettings,
   ...i18n,
   ...system,
-  ...retention,
-];
+  ...retention, ...ui];

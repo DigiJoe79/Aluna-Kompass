@@ -1,5 +1,6 @@
 'use client';
 
+import { useDateFormat } from '@/components/date-format-provider';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -38,6 +39,7 @@ export function DuePanel({
   canManage: boolean;
 }) {
   const t = useTranslations('home.due');
+  const fmt = useDateFormat();
   const router = useRouter();
   const [onlyMine, setOnlyMine] = usePreference('dueOnlyMine');
   const [, start] = useTransition();
@@ -73,7 +75,7 @@ export function DuePanel({
                 />
               ) : null}
               <span className={cn('font-mono text-[12px]', item.dueAt < today ? 'text-warning' : 'text-ink-2')}>
-                {item.dueAt}
+                {fmt.date(item.dueAt)}
               </span>
               <span className="min-w-0 flex-1 truncate text-ink">{item.title}</span>
               {item.target ? (

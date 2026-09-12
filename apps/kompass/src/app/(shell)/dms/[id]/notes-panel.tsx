@@ -1,7 +1,8 @@
 'use client';
 
+import { useDateFormat } from '@/components/date-format-provider';
 import { Trash2 } from 'lucide-react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { SubmitButton } from '@/components/forms/submit-button';
@@ -35,7 +36,7 @@ export function NotesPanel({
   canManage: boolean;
 }) {
   const t = useTranslations('dms.notes');
-  const format = useFormatter();
+  const fmt = useDateFormat();
   const [state, action] = useActionState(addNoteAction.bind(null, documentId), idleState);
   const [deleting, setDeleting] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -57,7 +58,7 @@ export function NotesPanel({
             <li key={note.id} className="flex items-start gap-3 border-b border-line-2 pb-3 last:border-b-0 last:pb-0">
               <div className="flex-1">
                 <p className="text-muted-ink">
-                  {note.authorName} · {format.dateTime(new Date(note.createdAt), { dateStyle: 'short', timeStyle: 'short' })}
+                  {note.authorName} · {fmt.dateTime(note.createdAt)}
                 </p>
                 <p className="whitespace-pre-line text-ink-2">{note.body}</p>
               </div>

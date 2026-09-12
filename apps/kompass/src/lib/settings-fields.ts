@@ -10,7 +10,7 @@ export interface SettingsField {
 }
 
 export interface SettingsTab {
-  key: 'organization' | 'tax' | 'bank' | 'branding';
+  key: 'organization' | 'tax' | 'bank' | 'branding' | 'display';
   fields: SettingsField[];
 }
 
@@ -57,6 +57,10 @@ export const SETTINGS_TABS: SettingsTab[] = [
       { key: 'branding.fontHeading', kind: 'font-heading', options: ['source-serif-4', 'same-as-body'] },
       { key: 'branding.activeTheme', kind: 'theme' },
     ],
+  },
+  {
+    key: 'display',
+    fields: [{ key: 'ui.dateFormat', kind: 'select', options: ['locale', 'iso'] }],
   },
 ];
 

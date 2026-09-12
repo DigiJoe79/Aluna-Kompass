@@ -1,5 +1,6 @@
 'use client';
 
+import { useDateFormat } from '@/components/date-format-provider';
 import { useTranslations } from 'next-intl';
 import { useTransition } from 'react';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ export function RetentionPanel({
   canManage: boolean;
 }) {
   const t = useTranslations('contacts');
+  const fmt = useDateFormat();
   const [pending, startTransition] = useTransition();
 
   const handleDelete = () => {
@@ -45,7 +47,7 @@ export function RetentionPanel({
                   ? t('retention.roleHold', { role: roleLabel(t, roleKeysById[h.id]!) })
                   : h.label}
                 {' — '}
-                {h.until ? t('retention.heldUntil', { date: h.until }) : t('retention.heldPermanently')}
+                {h.until ? t('retention.heldUntil', { date: fmt.date(h.until) }) : t('retention.heldPermanently')}
               </span>
             </div>
           ))}

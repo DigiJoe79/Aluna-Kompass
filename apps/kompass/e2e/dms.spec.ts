@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { loginAsAdmin, resetDatabase } from './helpers';
+import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
 
 const login = loginAsAdmin;
 const FIXTURE_PDF = path.resolve(import.meta.dirname, 'fixtures/brief-digital.pdf');
@@ -42,6 +42,22 @@ async function dropFiles(page: Page, selector: string, names: string[]) {
 test.describe('dms', () => {
   test.beforeEach(async ({ page }) => {
     await resetDatabase(page, 'seeded');
+  });
+
+  /**
+   * Ein Datum sieht überall gleich aus, und wie, ist eine Einstellung (Befund 8,
+   * 2026-09-12): aus der Sprache — bei Deutsch mit Punkten — oder ISO 8601.
+   */
+  test('zeigt Daten in der eingestellten Form, in Liste und Detail', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+    const row = page.getByRole('row').filter({ hasText: 'Einladung zur ordentlichen Mitgliederversammlung' });
+    await expect(row).toContainText('10.02.2026');
+    await setE2ESetting(page, 'ui.dateFormat', 'iso');
+    await page.goto('/dms');
+    await expect(row).toContainText('2026-02-10');
+    await row.getByRole('link', { name: 'Einladung zur ordentlichen Mitgliederversammlung' }).click();
+    await expect(page.getByTestId('dispatch-panel')).toContainText('2026-02-12');
   });
 
   test('zeigt die Akte mit Eingangskorb', async ({ page }) => {
@@ -313,7 +329,7 @@ test.describe('dms', () => {
     await page.getByRole('button', { name: 'Speichern und Vorschau aktualisieren' }).click();
     await expect(page.getByText(/Vorschau aktuell/)).toBeVisible();
     await page.getByRole('link', { name: 'Zurück zum Dokument' }).click();
-    await expect(page.getByText('2026-05-02')).toBeVisible();
+    await expect(page.getByText('02.05.2026')).toBeVisible();
   });
 
   test('nennt den Bezug beim Namen, nicht beim Entitätstyp', async ({ page }) => {

@@ -1,5 +1,6 @@
 'use client';
 
+import { useDateFormat } from '@/components/date-format-provider';
 import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useState, useTransition } from 'react';
 import { toast } from 'sonner';
@@ -38,6 +39,7 @@ export function DispatchPanel({
 }) {
   const t = useTranslations('dms.dispatch');
   const tCommon = useTranslations('common');
+  const fmt = useDateFormat();
   const [open, setOpen] = useState(false);
   const [clearing, setClearing] = useState(false);
   // Kontrolliert, nicht `defaultValue`: Base UI warnt, wenn sich der Vorgabewert
@@ -70,7 +72,7 @@ export function DispatchPanel({
         <dl className="space-y-2 text-[13px]">
           <div>
             <dt className="text-muted-ink">{t('sentAt')}</dt>
-            <dd className="font-medium text-ink">{sentAt}</dd>
+            <dd className="font-medium text-ink">{fmt.date(sentAt)}</dd>
           </div>
           <div>
             <dt className="text-muted-ink">{t('sentVia')}</dt>

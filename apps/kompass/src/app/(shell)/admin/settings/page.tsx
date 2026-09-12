@@ -11,7 +11,7 @@ export default async function SettingsPage() {
   const t = await getTranslations('settings');
   const all = readAllSettings(deps);
   const editable = Object.fromEntries(
-    Object.entries(all).filter(([k]) => k.startsWith('organization.') || k.startsWith('branding.'))
+    Object.entries(all).filter(([k]) => k.startsWith('organization.') || k.startsWith('branding.') || k.startsWith('ui.'))
   );
   return (
     <>

@@ -1,5 +1,6 @@
 'use client';
 
+import { useDateFormat } from '@/components/date-format-provider';
 import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useState, useTransition } from 'react';
 import { toast } from 'sonner';
@@ -43,6 +44,7 @@ export function FollowUpsPanel({
   canManage: boolean;
 }) {
   const t = useTranslations('dms.followUps');
+  const fmt = useDateFormat();
   const tCommon = useTranslations('common');
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState(createFollowUpAction.bind(null, documentId), idleState);
@@ -91,7 +93,7 @@ export function FollowUpsPanel({
               ) : null}
               <span className="flex-1">
                 <span className={cn('font-medium', followUp.dueAt < today ? 'text-warning' : 'text-ink')}>
-                  {followUp.dueAt}
+                  {fmt.date(followUp.dueAt)}
                   {followUp.dueAt < today ? ` · ${t('overdue')}` : ''}
                 </span>
                 <span className="block text-ink-2">{followUp.title}</span>
@@ -117,7 +119,7 @@ export function FollowUpsPanel({
                     />
                   ) : null}
                   <span className="flex-1 line-through">
-                    {followUp.dueAt} · {followUp.title}
+                    {fmt.date(followUp.dueAt)} · {followUp.title}
                   </span>
                 </li>
               ))}

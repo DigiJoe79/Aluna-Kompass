@@ -64,7 +64,7 @@ test.describe('contacts', () => {
     // Solange die Rolle läuft, hält sie den Kontakt — der Löschknopf ist aus und sagt warum.
     await expect(page.getByRole('button', { name: 'Kontakt löschen' })).toBeDisabled();
     await expect(page.getByTestId('retention-holds')).toContainText('Rolle Interessiert');
-    await expect(page.getByTestId('retention-holds')).toContainText('2028-12-31');
+    await expect(page.getByTestId('retention-holds')).toContainText('31.12.2028');
   });
 
   test('sortiert die Kontakte über den Spaltenkopf', async ({ page }) => {
