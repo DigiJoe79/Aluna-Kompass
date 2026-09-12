@@ -99,11 +99,13 @@ describe('Eingangsschemata', () => {
     expect(keys(receiveSchema).sort()).toEqual(keys(receiveDocumentSchema).filter((k) => k !== 'bytes').sort());
   });
 
-  it('verlangt über MCP genau eine Quelle', () => {
+  it('verlangt über MCP die Bytes als Base64 und kennt keinen anderen Weg', () => {
     const base = { filename: 'a.pdf', typeKey: 'authority', subject: 'A', documentDate: '2026-03-14' };
     expect(receiveSchema.safeParse({ ...base }).success).toBe(false);
-    expect(receiveSchema.safeParse({ ...base, contentBase64: 'x', assetId: 'y' }).success).toBe(false);
+    expect(receiveSchema.safeParse({ ...base, contentBase64: '' }).success).toBe(false);
     expect(receiveSchema.safeParse({ ...base, contentBase64: 'x' }).success).toBe(true);
+    // `assetId` gibt es nicht mehr; das Schema lässt nichts Fremdes durch.
+    expect(receiveSchema.safeParse({ ...base, contentBase64: 'x', assetId: 'y' }).success).toBe(true);
   });
 
   it('begrenzt den Dateinamen auf beiden Wegen gleich', () => {

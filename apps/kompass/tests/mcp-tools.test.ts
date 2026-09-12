@@ -1,4 +1,8 @@
 import { coreModule, moduleMcpTools, type McpToolDefinition, type ModuleManifest } from '@kompass/core';
+import * as animalsPkg from '@kompass/module-animals';
+import * as contactsPkg from '@kompass/module-contacts';
+import * as dmsPkg from '@kompass/module-dms';
+import * as sitePkg from '@kompass/module-site';
 import { createTestDeps } from '@kompass/core/testing';
 import { coreMcpTools } from '@kompass/mcp';
 import { describe, expect, it } from 'vitest';
@@ -112,5 +116,98 @@ describe('registered mcp tools', () => {
     expect(uncoveredPermissions([[newcomer, []]])).toEqual(['members: members.manage']);
     const withTool = [{ description: 'Create a member. Requires members.manage.' }] as unknown as McpToolDefinition[];
     expect(uncoveredPermissions([[newcomer, withTool]])).toEqual([]);
+  });
+});
+
+/**
+ * Was ein Service ist, entscheidet die Signatur, nicht eine Liste: eine
+ * exportierte Funktion, deren erste zwei Parameter `deps` und `ctx` heißen.
+ * Jede muss von einem Werkzeug als `service` genannt werden — sonst ist sie
+ * über MCP unerreichbar, und Prinzip 8 („ein Weg zu den Daten“) ist verletzt.
+ *
+ * Der Kern bleibt beim Rechte-Test darüber: Seine Exporte umfassen Auth, Setup,
+ * Backup und Rendering, die aus guten Gründen nicht über MCP laufen; eine
+ * Ausnahmeliste dafür wäre länger als die Werkzeugliste.
+ */
+const SERVICE_SIGNATURE = /^(?:async\s+)?function\s+\w+\s*\(\s*deps\s*,\s*ctx\b/;
+
+/** Wie `McpToolDefinition.service` eine Funktion beschreibt. */
+type ServiceFn = (...args: never[]) => unknown;
+
+/** Services, die bewusst ohne Werkzeug bleiben — jeder mit Grund. */
+const WITHOUT_TOOL: Record<string, string> = {
+  'dms.deleteDocument': 'Löschung nach Fristablauf bestätigt ein Mensch (Entscheidung 10).',
+  'dms.previewDraft': 'Liefert Bytes; ein Agent liest den Volltext (Entscheidung 39).',
+  'dms.getDocument': 'Liefert Bytes; dms_get ruft getDocumentRecord.',
+  'dms.extractDocumentText': 'Innenleben des Workers; dms_reindex stößt es an.',
+  'dms.previewNextNumber': 'Ein Hinweis in der Oberfläche, kein Vorgang.',
+  'dms.countUnreadDocuments': 'Ein Zähler für die Verwaltungsseite.',
+  'dms.countDocumentsByFolder': 'Die Zahlen neben den Ordnern; die Liste selbst ist dms_list.',
+  'dms.seedDms': 'Beispieldaten der Entwicklung; laufen über seedDevelopment, nie über MCP.',
+  'contacts.deleteContact': 'Löschung personenbezogener Daten bestätigt ein Mensch.',
+  'contacts.seedContacts': 'Beispieldaten der Entwicklung.',
+  'animals.seedAnimals': 'Beispieldaten der Entwicklung.',
+  'site.applySeed': 'Beispielinhalte des Templates; ein Mensch bestätigt sie in der Oberfläche.',
+  'site.previewTemplateSync': 'Derselbe Vorgang wie site_template_sync ohne confirm; das Werkzeug nennt den anwendenden Zweig.',
+  'site.recordPublish': 'Innenleben von site_publish: schreibt den Verlaufseintrag, den der Lauf erzeugt.',
+  'site.listPublishes': 'Der Veröffentlichungsverlauf steht in der Oberfläche; über MCP läuft das Veröffentlichen selbst.',
+};
+
+const servicesOf = (moduleKey: string, pkg: Record<string, unknown>) =>
+  Object.entries(pkg)
+    .filter(([, value]) => typeof value === 'function' && SERVICE_SIGNATURE.test(String(value)))
+    .map(([name, fn]) => ({ key: `${moduleKey}.${name}`, fn: fn as ServiceFn }));
+
+/**
+ * Die Werkzeuge einer Sammlung entstehen erst, wenn ein Template eingelesen
+ * ist — ohne eins nennt `site` seine Eintrags-Services nicht, und der Test
+ * hielte sie für unerreichbar. Deshalb eine zweite Registry mit Template.
+ */
+function siteToolsWithTemplate(): readonly McpToolDefinition[] {
+  const deps = createTestDeps({ manifests: [coreModule, ...installedModules], locales: ['de'] });
+  deps.db
+    .insert(sitePkg.siteTemplateState)
+    .values({
+      id: 'current',
+      name: 'T',
+      schemaJson: {
+        name: 'T',
+        locales: ['de'],
+        uses: [],
+        variables: {},
+        collections: { notes: { label: 'Notizen', slug: true, sortable: true, publishable: true, fields: { body: { type: 'string' } } } },
+      },
+      checksum: 'a'.repeat(64),
+      readAt: 't',
+      readByUserId: null,
+    })
+    .run();
+  return installedModules.flatMap((m) => [...moduleMcpTools(deps, m)]);
+}
+
+describe('every service has a tool', () => {
+  const packages: [string, Record<string, unknown>][] = [['contacts', contactsPkg], ['animals', animalsPkg], ['site', sitePkg], ['dms', dmsPkg]];
+  const named = new Set(
+    [...registeredTools, ...siteToolsWithTemplate()].map((tool) => tool.service).filter((s): s is ServiceFn => typeof s === 'function'),
+  );
+
+  it('names every module service from a tool, or explains why not', () => {
+    const uncovered = packages.flatMap(([moduleKey, pkg]) =>
+      servicesOf(moduleKey, pkg).filter(({ key, fn }) => !named.has(fn) && !(key in WITHOUT_TOOL)).map(({ key }) => key),
+    );
+    expect(uncovered).toEqual([]);
+  });
+
+  it('keeps the exception list honest: every listed service exists and has no tool', () => {
+    const all = new Map(packages.flatMap(([moduleKey, pkg]) => servicesOf(moduleKey, pkg).map(({ key, fn }) => [key, fn] as const)));
+    for (const key of Object.keys(WITHOUT_TOOL)) {
+      expect(all.has(key), `${key} gibt es nicht mehr`).toBe(true);
+      expect(named.has(all.get(key)!), `${key} hat inzwischen ein Werkzeug — aus der Liste nehmen`).toBe(false);
+    }
+  });
+
+  it('finds a module service without a tool', () => {
+    const fake = { orphan: async function orphan(deps: never, ctx: never) { void deps; void ctx; } };
+    expect(servicesOf('fake', fake).map((s) => s.key)).toEqual(['fake.orphan']);
   });
 });

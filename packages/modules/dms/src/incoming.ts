@@ -36,31 +36,28 @@ const receiveFields = {
 };
 
 const oneSource = {
-  message: 'entweder bytes, contentBase64 oder assetId',
+  message: 'entweder bytes oder contentBase64',
 } as const;
 
-/** Was der Service annimmt: rohe Bytes aus der Oberfläche, Base64 oder ein vorhandenes Asset. */
+/**
+ * Was der Service annimmt: rohe Bytes aus der Oberfläche oder Base64 über MCP.
+ * Kein `assetId` mehr: Die Akte legt ihre Dateien im eigenen Speicher ab, nicht
+ * in der Mediathek — der Weg über ein Asset führte nie zu Bytes.
+ */
 export const receiveDocumentSchema = z
   .object({
     ...receiveFields,
     bytes: z.custom<Uint8Array>((val) => val instanceof Uint8Array, { message: 'invalidBytes' }).optional(),
     contentBase64: z.string().optional(),
-    assetId: z.string().optional(),
   })
-  .refine(
-    (value) => (value.bytes ? 1 : 0) + (value.contentBase64 ? 1 : 0) + (value.assetId ? 1 : 0) === 1,
-    oneSource,
-  );
+  .refine((value) => Boolean(value.bytes) !== Boolean(value.contentBase64), oneSource);
 
 /** Was MCP zeigt: derselbe Bestand ohne `bytes`, weil ein Agent nur JSON schickt. */
-export const receiveSchema = z
-  .object({
-    ...receiveFields,
-    /** Entweder die Bytes als Base64 oder ein bereits abgelegtes Asset. */
-    contentBase64: z.string().optional(),
-    assetId: z.string().optional(),
-  })
-  .refine((value) => Boolean(value.contentBase64) !== Boolean(value.assetId), oneSource);
+export const receiveSchema = z.object({
+  ...receiveFields,
+  /** Die Bytes als Base64. */
+  contentBase64: z.string().min(1),
+});
 
 export async function receiveDocument(
   deps: Deps,
