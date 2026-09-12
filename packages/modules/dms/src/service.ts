@@ -23,12 +23,22 @@ import { documentCounters, documentFolders, documentLinks, documents, type Docum
 import { readDocumentFile, removeDocumentFile } from './storage';
 import { removeDocumentText } from './index-store';
 import { fulltextCondition, fulltextHits, type TextHit } from './search';
+import { deleteRelationsFor, relationsFor, type DocumentRelationView } from './relations';
 
-export type DocumentRecord = Omit<DocumentRow, 'inputSnapshot'> & { inputSnapshot: unknown; links: DocumentLinkRow[] };
+export type DocumentRecord = Omit<DocumentRow, 'inputSnapshot'> & {
+  inputSnapshot: unknown;
+  links: DocumentLinkRow[];
+  relations: DocumentRelationView[];
+};
 
 export function toRecord(deps: Deps, row: DocumentRow, dbOrTx: DbOrTx = deps.db): DocumentRecord {
   const links = dbOrTx.select().from(documentLinks).where(eq(documentLinks.documentId, row.id)).all();
-  return { ...row, inputSnapshot: row.inputSnapshot ? JSON.parse(row.inputSnapshot) : null, links };
+  return {
+    ...row,
+    inputSnapshot: row.inputSnapshot ? JSON.parse(row.inputSnapshot) : null,
+    links,
+    relations: relationsFor(dbOrTx, row.id),
+  };
 }
 
 const format = (prefix: string, year: number, n: number) => `${prefix}-${year}-${String(n).padStart(3, '0')}`;
@@ -401,6 +411,7 @@ export async function deleteDocument(
       summary: `Dokument ${doc.number ?? doc.subject} gelöscht`,
     });
 
+    deleteRelationsFor(tx, doc.id);
     tx.delete(documentLinks).where(eq(documentLinks.documentId, doc.id)).run();
     tx.delete(documents).where(eq(documents.id, doc.id)).run();
   });
