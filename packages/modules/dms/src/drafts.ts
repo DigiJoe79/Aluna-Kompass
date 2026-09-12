@@ -20,10 +20,10 @@ import { documentTypeFor } from './catalog';
 import { resolveRecipient } from './recipients';
 import { documentLinks, documents } from './schema';
 import { storeDocumentFile } from './storage';
-import { allocateDocumentNumber, peekDocumentNumber, resolveFolder, toRecord, type DocumentRecord } from './service';
+import { allocateDocumentNumber, getDocumentRecord, peekDocumentNumber, resolveFolder, toRecord, type DocumentRecord } from './service';
 import { removeDocumentText } from './index-store';
 import { deleteNotesFor } from './notes';
-import { deleteRelationsFor } from './relations';
+import { deleteRelationsFor, relateDocuments } from './relations';
 
 export const draftCreateSchema = z.object({
   typeKey: z.string().min(1),
@@ -389,4 +389,31 @@ export async function fileDocument(deps: Deps, ctx: CallContext, input: unknown)
   }
 
   return conflict('documentNumberContention', 'Dokumentnummer konnte nicht reserviert werden');
+}
+
+export const replacementSchema = z.object({ voidedId: z.string().min(1) });
+
+/**
+ * Nach dem Storno: derselbe Brief noch einmal, als Entwurf, mit Bezug
+ * „ersetzt“. Der Text kommt aus dem eingefrorenen Eingabestand — nur bei
+ * erzeugten Dokumenten; eingegangene Post hat keinen.
+ */
+export async function createReplacementDraft(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DocumentRecord>> {
+  const denied = requirePermission(ctx, 'dms.create');
+  if (denied) return denied;
+  const parsed = validate(deps, replacementSchema, input);
+  if (!parsed.ok) return parsed;
+  const old = deps.db.select().from(documents).where(eq(documents.id, parsed.value.voidedId)).get();
+  if (!old) return notFound('document', parsed.value.voidedId);
+  if (old.status !== 'voided') return conflict('documentNotVoided', `Dokument ${old.number ?? old.subject} ist nicht storniert`);
+
+  const snapshot = old.inputSnapshot ? (JSON.parse(old.inputSnapshot) as { input?: { body?: string } }) : null;
+  const body = old.sourceKind === 'generated' ? (snapshot?.input?.body ?? '') : '';
+  const links = deps.db.select().from(documentLinks).where(eq(documentLinks.documentId, old.id)).all().map((l) => ({ entityType: l.entityType, entityId: l.entityId, role: l.role }));
+
+  const created = await createDraft(deps, ctx, { typeKey: old.typeKey, subject: old.subject, body, folder: old.folder, links });
+  if (!created.ok) return created;
+  const related = await relateDocuments(deps, ctx, { documentId: created.value.id, relatedDocumentId: old.id, kind: 'replaces' });
+  if (!related.ok) return related;
+  return getDocumentRecord(deps, ctx, created.value.id);
 }

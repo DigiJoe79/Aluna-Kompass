@@ -16,7 +16,7 @@ import { and, count, eq, isNotNull, isNull, ne, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { documents } from './schema';
 import { readDocumentFile } from './storage';
-import { replaceDocumentText } from './index-store';
+import { readDocumentText, replaceDocumentText } from './index-store';
 
 export const extractTextSchema = z.object({ documentId: z.string().min(1) });
 
@@ -201,3 +201,24 @@ export function countUnreadDocuments(deps: Deps, ctx: CallContext): Result<numbe
   return ok(row?.value ?? 0);
 }
 
+
+export const documentTextSchema = z.object({ documentId: z.string().min(1) });
+
+/**
+ * Was ein Agent von einem Dokument bekommt (Entscheidung 39): den erkannten
+ * Text, seitenweise, oder den Grund, warum es keinen gibt. Nie die Bytes.
+ */
+export async function getDocumentText(
+  deps: Deps,
+  ctx: CallContext,
+  input: unknown,
+): Promise<Result<{ textStatus: string | null; textError: string | null; pages: { page: number; text: string }[] }>> {
+  const denied = requirePermission(ctx, 'dms.view');
+  if (denied) return denied;
+  const parsed = validate(deps, documentTextSchema, input);
+  if (!parsed.ok) return parsed;
+  const row = deps.db.select({ textStatus: documents.textStatus, textError: documents.textError }).from(documents).where(eq(documents.id, parsed.value.documentId)).get();
+  if (!row) return notFound('document', parsed.value.documentId);
+  const pages = row.textStatus === 'done' ? readDocumentText(deps, parsed.value.documentId) : [];
+  return ok({ textStatus: row.textStatus, textError: row.textError, pages });
+}

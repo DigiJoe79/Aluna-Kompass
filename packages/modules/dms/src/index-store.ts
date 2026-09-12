@@ -36,3 +36,8 @@ export function countDocumentText(deps: Deps, documentId: string): number {
     .get(documentId) as { n: number } | undefined;
   return row?.n ?? 0;
 }
+
+/** Die Seiten eines Dokuments, wie sie erkannt wurden — für Agenten und Oberfläche. */
+export function readDocumentText(deps: Deps, documentId: string): { page: number; text: string }[] {
+  return deps.sqlite.prepare(`SELECT page, text FROM document_text WHERE document_id = ? ORDER BY page`).all(documentId) as { page: number; text: string }[];
+}
