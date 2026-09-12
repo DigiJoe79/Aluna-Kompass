@@ -82,7 +82,11 @@ export function ContactPicker({
         {label}
       </Label>
       <input type="hidden" name={name} value={value?.id ?? ''} />
-      <Command shouldFilter={false} className="relative overflow-visible rounded-md border border-line-strong bg-field p-0">
+      {/* Der Rahmen sitzt am Feld, nicht an der Hülle: `h-auto` gegen das
+          `size-full` der Palette, sonst nimmt die Hülle in einer Rasterzelle
+          neben einem höheren Nachbarn die Zellenhöhe und rahmt das 38-px-Feld
+          ein zweites Mal ein (Befund 3, 2026-09-12). */}
+      <Command shouldFilter={false} className="relative h-auto overflow-visible bg-transparent p-0">
         <CommandInput
           id={id}
           role="combobox"
@@ -98,7 +102,7 @@ export function ContactPicker({
           onBlur={() => setTimeout(() => setOpen(false), 120)}
           placeholder={t('placeholder')}
           wrapperClassName="p-0"
-          fieldClassName="h-[var(--field-h)] rounded-md! border-none bg-transparent"
+          fieldClassName="h-[var(--field-h)] rounded-md! border-line-strong bg-field"
         />
         {open ? (
           // `preventDefault` beim Drücken: Sonst verliert das Feld den Fokus,

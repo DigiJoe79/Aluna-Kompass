@@ -64,6 +64,19 @@ test.describe('field metrics', () => {
     expect(await height(page.locator('[data-slot="input-group"]').first())).toBe(FIELD_HEIGHT);
   });
 
+  /**
+   * Im Ablegen-Dialog steht das Suchfeld neben einem höheren Nachbarn; die
+   * Rasterzelle streckt sich, und ein Rahmen, der die volle Zellenhöhe nimmt,
+   * wird zum doppelten Rahmen um ein 38-px-Feld. Gemessen wird deshalb der
+   * äußere Rahmen, nicht das innere Feld.
+   */
+  test('das Suchfeld wächst nicht mit seiner Rasterzelle', async ({ page }) => {
+    await page.goto('/dms/receive');
+    const dialog = page.getByRole('dialog', { name: 'Post ablegen' });
+    await expect(dialog.getByRole('combobox', { name: 'Absender' })).toBeVisible();
+    expect(await height(dialog.locator('[cmdk-root]').first())).toBe(FIELD_HEIGHT);
+  });
+
   test('erklärt die Pflichtfelder auch in den Dialogen der Akte', async ({ page }) => {
     await page.goto('/admin/dms');
     await page.getByRole('button', { name: 'Baustein anlegen' }).click();
