@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, like, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, like, or, sql, type SQL } from 'drizzle-orm';
 import {
   conflict,
   invalid,
@@ -19,7 +19,7 @@ import {
 } from '@kompass/core';
 import { z } from 'zod';
 import { documentTypeFor } from './catalog';
-import { documentCounters, documentFolders, documentLinks, documents, type DocumentLinkRow, type DocumentNoteRow, type DocumentRow } from './schema';
+import { documentCounters, documentFolders, documentLinks, documentRelations, documents, type DocumentLinkRow, type DocumentNoteRow, type DocumentRow } from './schema';
 import { readDocumentFile, removeDocumentFile } from './storage';
 import { removeDocumentText } from './index-store';
 import { fulltextCondition, fulltextHits, type TextHit } from './search';
@@ -109,6 +109,16 @@ export const documentListSchema = z.object({
   inbox: z.boolean().optional(),
   linkedTo: z.object({ entityType: z.string().min(1), entityId: z.string().min(1) }).optional(),
   text: z.string().trim().min(1).optional(), // Betreff oder Nummer
+  orderBy: z
+    .object({
+      field: z.enum(['number', 'subject', 'documentDate', 'typeKey', 'folder', 'createdAt']),
+      direction: z.enum(['asc', 'desc']),
+    })
+    .optional(),
+  /** Ausgehend, festgeschrieben, ohne Versandvermerk. */
+  unsent: z.boolean().optional(),
+  /** Dokumente, die mit diesem in einem Bezug stehen — in beiden Richtungen. */
+  relatedTo: z.string().min(1).optional(),
   limit: z.number().int().min(1).max(200).default(50),
   offset: z.number().int().min(0).default(0),
 });
@@ -150,9 +160,26 @@ export async function listDocuments(
       .map((r) => r.id);
     conditions.push(inArray(documents.id, ids.length > 0 ? ids : ['__none__']));
   }
+  if (q.unsent) {
+    conditions.push(eq(documents.direction, 'outgoing'), eq(documents.phase, 'issued'), sql`${documents.sentAt} is null`);
+  }
+  if (q.relatedTo) {
+    const ids = new Set<string>();
+    for (const r of deps.db.select().from(documentRelations).where(eq(documentRelations.documentId, q.relatedTo)).all()) ids.add(r.relatedDocumentId);
+    for (const r of deps.db.select().from(documentRelations).where(eq(documentRelations.relatedDocumentId, q.relatedTo)).all()) ids.add(r.documentId);
+    conditions.push(inArray(documents.id, ids.size > 0 ? [...ids] : ['__none__']));
+  }
+
   const where = conditions.length > 0 ? and(...conditions) : undefined;
   const total = deps.db.select({ n: count() }).from(documents).where(where).get()?.n ?? 0;
-  const rows = deps.db.select().from(documents).where(where).orderBy(desc(documents.createdAt), desc(documents.number)).limit(q.limit).offset(q.offset).all();
+
+  const columns = { number: documents.number, subject: documents.subject, documentDate: documents.documentDate, typeKey: documents.typeKey, folder: documents.folder, createdAt: documents.createdAt } as const;
+  // Ohne Parameter bleibt es chronologisch (Entscheidung 31); mit Parameter
+  // bricht die Nummer Gleichstände, damit die Reihenfolge stabil bleibt.
+  const order = q.orderBy
+    ? [q.orderBy.direction === 'asc' ? asc(columns[q.orderBy.field]) : desc(columns[q.orderBy.field]), desc(documents.number)]
+    : [desc(documents.createdAt), desc(documents.number)];
+  const rows = deps.db.select().from(documents).where(where).orderBy(...order).limit(q.limit).offset(q.offset).all();
 
   // Erst blättern, dann Passagen holen: Für fünfzig Zeilen braucht niemand
   // die Fundstellen von fünfhundert.

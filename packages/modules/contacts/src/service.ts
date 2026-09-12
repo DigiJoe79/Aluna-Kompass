@@ -2,7 +2,7 @@ import {
   conflict, isoNow, newId, notFound, ok, recordAudit, requirePermission, validate,
   type CallContext, type DbOrTx, type Deps, type Result,
 } from '@kompass/core';
-import { and, count, desc, eq, inArray, isNull, like, or, sql, type SQL, type SQLWrapper } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, like, or, sql, type SQL, type SQLWrapper } from 'drizzle-orm';
 import { z } from 'zod';
 import { displayName } from './address';
 import { contactChannels, contactRoles, contacts, type ContactChannelRow, type ContactRoleRow, type ContactRow } from './schema';
@@ -75,6 +75,7 @@ export const contactListSchema = z.object({
   role: z.string().min(1).optional(),
   text: z.string().trim().min(1).optional(),
   includeArchived: z.boolean().default(false),
+  orderBy: z.object({ field: z.enum(['name', 'kind', 'city', 'createdAt']), direction: z.enum(['asc', 'desc']) }).optional(),
   limit: z.number().int().min(1).max(200).default(50),
   offset: z.number().int().min(0).default(0),
 });
@@ -187,7 +188,14 @@ export async function listContacts(deps: Deps, ctx: CallContext, input: unknown)
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   const total = deps.db.select({ n: count() }).from(contacts).where(where).get()?.n ?? 0;
-  const rows = deps.db.select({ id: contacts.id }).from(contacts).where(where).orderBy(desc(contacts.createdAt)).limit(q.limit).offset(q.offset).all();
+  // „Name“ ist bei Personen der Nachname, bei Organisationen der Name — sortiert
+  // wird über das, was in der Liste steht, nicht über zwei Spalten getrennt.
+  const nameKey = sql`lower(coalesce(${contacts.lastName}, ${contacts.name}, ''))`;
+  const columns = { name: nameKey, kind: contacts.kind, city: contacts.city, createdAt: contacts.createdAt } as const;
+  const order = q.orderBy
+    ? [q.orderBy.direction === 'asc' ? asc(columns[q.orderBy.field]) : desc(columns[q.orderBy.field]), desc(contacts.createdAt)]
+    : [desc(contacts.createdAt)];
+  const rows = deps.db.select({ id: contacts.id }).from(contacts).where(where).orderBy(...order).limit(q.limit).offset(q.offset).all();
   return ok({ contacts: rows.map((r) => loadContact(deps.db, r.id)!), total });
 }
 
