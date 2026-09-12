@@ -32,6 +32,8 @@ export function DocumentPicker({
   const [query, setQuery] = useState(value ? labelOf(value) : '');
   const [options, setOptions] = useState<PickedDocument[]>([]);
   const [open, setOpen] = useState(false);
+  /** Nichts Anklickbares, bis die Suche geantwortet hat — wie im Kontakt-Suchfeld. */
+  const [loaded, setLoaded] = useState(false);
   const latest = useRef(0);
 
   useEffect(() => {
@@ -41,10 +43,13 @@ export function DocumentPicker({
 
   useEffect(() => {
     if (!open) return;
+    setLoaded(false);
     const run = ++latest.current;
     const handle = setTimeout(async () => {
       const found = await searchDocumentsAction(query, exceptId);
-      if (run === latest.current) setOptions(found);
+      if (run !== latest.current) return;
+      setOptions(found);
+      setLoaded(true);
     }, 150);
     return () => clearTimeout(handle);
   }, [query, open, exceptId]);
@@ -80,16 +85,29 @@ export function DocumentPicker({
           fieldClassName="h-[var(--field-h)] rounded-md! border-none bg-transparent"
         />
         {open ? (
-          <CommandList className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 rounded-md border border-line bg-surface shadow-md">
-            <CommandEmpty>{t('empty')}</CommandEmpty>
-            <CommandGroup>
-              {options.map((option) => (
-                <CommandItem key={option.id} value={option.id} data-testid="document-option" onSelect={() => pick(option)}>
-                  {labelOf(option)}
-                  {option.phase === 'draft' ? <span className="ml-2 text-[12px] text-muted-ink">{t('draft')}</span> : null}
-                </CommandItem>
-              ))}
-            </CommandGroup>
+          // Wie im Kontakt-Suchfeld: Das Drücken darf dem Feld den Fokus nicht
+          // nehmen, sonst ist die Liste weg, bevor der Klick ankommt.
+          <CommandList
+            onMouseDown={(e) => e.preventDefault()}
+            className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 rounded-md border border-line bg-surface shadow-md"
+          >
+            {!loaded ? (
+              <div role="presentation" className="px-3 py-2 text-[13px] text-muted-ink">
+                {t('searching')}
+              </div>
+            ) : (
+              <>
+                <CommandEmpty>{t('empty')}</CommandEmpty>
+                <CommandGroup>
+                  {options.map((option) => (
+                    <CommandItem key={option.id} value={option.id} data-testid="document-option" onSelect={() => pick(option)}>
+                      {labelOf(option)}
+                      {option.phase === 'draft' ? <span className="ml-2 text-[12px] text-muted-ink">{t('draft')}</span> : null}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </>
+            )}
           </CommandList>
         ) : null}
       </Command>

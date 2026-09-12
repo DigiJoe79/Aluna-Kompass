@@ -1283,7 +1283,8 @@
       "placeholder": "Name eingeben …",
       "empty": "Kein Kontakt gefunden.",
       "clear": "— Kein Kontakt —",
-      "create": "Neu anlegen …"
+      "create": "Neu anlegen …",
+      "searching": "Suche …"
     },
     "title": "Kontakte",
     "description": "Personen und Organisationen, ihre Rollen und Kommunikationswege.",
@@ -1580,7 +1581,8 @@
     "picker": {
       "placeholder": "Nummer oder Betreff …",
       "empty": "Kein Dokument gefunden.",
-      "draft": "Entwurf"
+      "draft": "Entwurf",
+      "searching": "Suche …"
     },
     "links": {
       "none": "Noch kein Bezug.",

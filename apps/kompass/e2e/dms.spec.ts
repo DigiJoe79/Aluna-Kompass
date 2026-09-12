@@ -758,6 +758,68 @@ test.describe('dms', () => {
     await expect(page.getByRole('combobox', { name: 'Empfänger' })).toHaveValue('Nora Neuland');
   });
 
+  /**
+   * Ein Mausklick ist kein Augenblick: Zwischen Drücken und Loslassen liegen
+   * bei einem Menschen leicht 150 ms. Das Drücken nimmt dem Feld den Fokus;
+   * schließt die Liste daraufhin, bevor die Maus losgelassen wird, trifft der
+   * Klick ins Leere. Enter funktionierte, weil die Tastatur den Fokus nicht
+   * bewegt — genau der Befund vom 2026-09-12.
+   */
+  test('wählt einen Kontakt auch mit einem langsamen Mausklick', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/new');
+    const picker = page.getByRole('combobox', { name: 'Empfänger' });
+    await picker.fill('Mus');
+    const option = page.getByTestId('contact-option').first();
+    await expect(option).toBeVisible();
+    const box = (await option.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(300);
+    await page.mouse.up();
+    await expect(page.locator('input[name="recipientId"]')).not.toHaveValue('');
+    await expect(picker).not.toHaveValue('Mus');
+  });
+
+  test('öffnet „Neu anlegen“ auch mit einem langsamen Mausklick', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/new');
+    const picker = page.getByRole('combobox', { name: 'Empfänger' });
+    await picker.click();
+    const create = page.getByRole('listbox').getByRole('option', { name: 'Neu anlegen …' });
+    await expect(create).toBeVisible();
+    // Der Eintrag steht am Ende der Liste und damit im 800-px-Fenster unter
+    // der Kante; ein Mensch scrollt, bevor er klickt.
+    await create.scrollIntoViewIfNeeded();
+    const box = (await create.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(300);
+    await page.mouse.up();
+    await expect(page.getByRole('dialog', { name: 'Kontakt anlegen' })).toBeVisible();
+  });
+
+  test('öffnet „Neu anlegen“ auch aus dem Ablegen-Dialog heraus mit langsamem Klick', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/receive');
+    const dialog = receiveDialog(page);
+    await dialog.getByRole('combobox', { name: 'Absender' }).click();
+    const create = dialog.getByRole('listbox').getByRole('option', { name: 'Neu anlegen …' });
+    await expect(create).toBeVisible();
+    await create.scrollIntoViewIfNeeded();
+    const box = (await create.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(300);
+    await page.mouse.up();
+    await expect(page.getByRole('dialog', { name: 'Kontakt anlegen' })).toBeVisible();
+    // Der Ablegen-Dialog bleibt darunter stehen — solange der obere offen ist,
+    // ist er für Hilfstechnik verborgen, danach wieder da.
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Kontakt anlegen' })).toBeHidden();
+    await expect(dialog).toBeVisible();
+  });
+
   test('findet einen Kontakt über das Suchfeld', async ({ page }) => {
     await login(page);
     await page.goto('/dms/new');

@@ -44,6 +44,13 @@ export function ContactPicker({
   const [options, setOptions] = useState<PickedContact[]>([]);
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  /**
+   * Bis die Suche geantwortet hat, zeigt die Liste nichts Anklickbares. Sonst
+   * steht „Neu anlegen …“ allein da, die Treffer schieben es beim Eintreffen
+   * nach unten, und wer gerade die Maus gedrückt hält, lässt sie über einem
+   * anderen Eintrag los — der Klick trifft dann keinen (Befund 2026-09-12).
+   */
+  const [loaded, setLoaded] = useState(false);
   const latest = useRef(0);
 
   useEffect(() => {
@@ -52,10 +59,13 @@ export function ContactPicker({
 
   useEffect(() => {
     if (!open) return;
+    setLoaded(false);
     const run = ++latest.current;
     const handle = setTimeout(async () => {
       const found = await searchContactsAction(query);
-      if (run === latest.current) setOptions(found);
+      if (run !== latest.current) return;
+      setOptions(found);
+      setLoaded(true);
     }, 150);
     return () => clearTimeout(handle);
   }, [query, open]);
@@ -91,26 +101,40 @@ export function ContactPicker({
           fieldClassName="h-[var(--field-h)] rounded-md! border-none bg-transparent"
         />
         {open ? (
-          <CommandList className={cn('absolute left-0 right-0 top-full z-20 mt-1 max-h-64 rounded-md border border-line bg-surface shadow-md')}>
-            <CommandEmpty>{t('empty')}</CommandEmpty>
-            <CommandGroup>
-              {options.map((option) => (
-                <CommandItem key={option.id} value={option.id} data-testid="contact-option" onSelect={() => pick(option)}>
-                  {option.name}
-                </CommandItem>
-              ))}
-              {value ? (
-                <CommandItem value="__clear" onSelect={() => pick(null)} className="text-muted-ink">
-                  {t('clear')}
-                </CommandItem>
-              ) : null}
-              {canCreate ? (
-                <CommandItem value="__create" onSelect={() => { setOpen(false); setCreating(true); }} className="border-t border-line-2 font-semibold">
-                  <Plus className="size-3.5" aria-hidden />
-                  {t('create')}
-                </CommandItem>
-              ) : null}
-            </CommandGroup>
+          // `preventDefault` beim Drücken: Sonst verliert das Feld den Fokus,
+          // die Liste schließt nach 120 ms, und ein Klick, der länger dauert,
+          // trifft ins Leere — Enter ging, die Maus nicht (Befund 2026-09-12).
+          <CommandList
+            onMouseDown={(e) => e.preventDefault()}
+            className={cn('absolute left-0 right-0 top-full z-20 mt-1 max-h-64 rounded-md border border-line bg-surface shadow-md')}
+          >
+            {!loaded ? (
+              <div role="presentation" className="px-3 py-2 text-[13px] text-muted-ink">
+                {t('searching')}
+              </div>
+            ) : (
+              <>
+                <CommandEmpty>{t('empty')}</CommandEmpty>
+                <CommandGroup>
+                  {options.map((option) => (
+                    <CommandItem key={option.id} value={option.id} data-testid="contact-option" onSelect={() => pick(option)}>
+                      {option.name}
+                    </CommandItem>
+                  ))}
+                  {value ? (
+                    <CommandItem value="__clear" onSelect={() => pick(null)} className="text-muted-ink">
+                      {t('clear')}
+                    </CommandItem>
+                  ) : null}
+                  {canCreate ? (
+                    <CommandItem value="__create" onSelect={() => { setOpen(false); setCreating(true); }} className="border-t border-line-2 font-semibold">
+                      <Plus className="size-3.5" aria-hidden />
+                      {t('create')}
+                    </CommandItem>
+                  ) : null}
+                </CommandGroup>
+              </>
+            )}
           </CommandList>
         ) : null}
       </Command>
