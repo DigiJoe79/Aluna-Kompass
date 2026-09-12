@@ -137,9 +137,17 @@ Abhaken.
 Unique `(document_id, related_document_id, kind)`; Index auf
 `related_document_id`. Ein Dokument darf sich nicht auf sich selbst beziehen.
 Beide Enden dürfen Entwürfe sein: Der Entwurf einer Antwort bezieht sich auf
-den Eingang, bevor er festgeschrieben ist. Wird ein Entwurf verworfen, gehen
-seine Bezüge in beide Richtungen mit; ein festgeschriebenes Dokument, das nach
-Fristablauf gelöscht wird, ebenso (das Protokoll trägt die Nummern).
+den Eingang, bevor er festgeschrieben ist.
+
+**Was ein Dokument beim Verschwinden mitnimmt** (`deleteDraft` und
+`deleteDocument`, in derselben Transaktion, vor der Zeile selbst): seine
+Bezüge zu Entitäten, seine Dokumentbezüge in beiden Richtungen, seine
+Notizen, seinen Volltext, und seine Wiedervorlagen im Kern über
+`deleteFollowUpsFor(tx, 'document', id)` — auch die erledigten, weil der Kern
+sonst Zeilen auf ein Ziel hält, das es nicht mehr gibt. Das Protokoll trägt
+die Nummer des Dokuments und die Zahl der mitgelöschten Anhängsel im
+`before`. Eine offene Wiedervorlage hindert das Löschen nicht: Die Frist ist
+abgelaufen, und ein Anlass ohne Dokument wäre ein Anlass ins Leere.
 
 Die gedrehte Lesart je Art:
 
@@ -244,6 +252,7 @@ Alle nach Muster: `requirePermission` → `validate` → Transaktion →
 | `deleteFollowUp({ id })` | `followUps.manage` | Arbeitsmaterial |
 | `listFollowUps({ entityType, entityId, includeDone? })` | `followUps.view` | am Vorgang |
 | `listDueFollowUps({ until, assigneeUserId? })` | `followUps.view` | offen und `dueAt <= until`, älteste zuerst; für die Startseite |
+| `deleteFollowUpsFor(tx, entityType, entityId)` | intern, kein `ctx` | für Module, die ihre Entität löschen; läuft in deren Transaktion, schreibt keinen eigenen Protokolleintrag — der des Moduls nennt die Zahl |
 
 Der Kern prüft nicht, ob die Entität existiert oder ob der Aufrufer sie sehen
 darf — er kennt sie nicht. Das prüft, wer die Wiedervorlage anlegt: In der
@@ -262,6 +271,14 @@ Ein Manifest-Haken `followUpTargets` sagt dem Kern, wie ein Bezug zu
 beschriften und zu verlinken ist: `(deps, entityType, id) => { label, href }
 | null`. Die Akte antwortet für `document` mit Nummer und Betreff. Ohne
 Antwort zeigt die Startseite den Anlass ohne Link.
+
+Das ist kein Widerspruch zu Entscheidung 37, die einen Haken für Kästen
+ablehnt. Dort ginge es darum, dass ein Modul Oberfläche in die Seite eines
+anderen Moduls einhängt — ein neuer Mechanismus mit offenem Zuschnitt. Hier
+fragt der Kern ein Modul nach einem Namen für etwas, das das Modul besitzt,
+genau wie bei `mediaReferences` und `retentionHolds`: ein eingeführtes
+Muster, dritte Anwendung. Der Haken ist die Richtung Kern → Modul, der
+abgelehnte wäre Modul → fremdes Modul.
 
 ### 5.2 Akte: Bestand korrigieren
 
@@ -373,11 +390,20 @@ Keine neuen Rechte in der Akte. Zwei im Kern (§ 5.1).
 Weiter kein `dms_delete_document` (Entscheidung 10), begründet in
 `mcp-tools.test.ts`.
 
-Der Paritätstest wird strenger: Er prüft nicht mehr nur, dass jedes Recht von
-einem Werkzeug genannt wird, sondern führt eine Liste der Services je Modul,
-die ein Werkzeug haben müssen, und meldet die, die keines haben. Die Ausnahmen
-(`deleteDocument`, `previewDraft`, `extractDocumentText` als Innenleben des
-Workers) stehen begründet im Test.
+Der Paritätstest wird strenger, und zwar mechanisch, nicht über eine
+handgepflegte Liste: Er lädt das Paket jedes eingeschalteten Moduls und den
+Kern, nimmt jeden Export, der eine Funktion mit der Service-Signatur ist
+(drei Parameter, der erste heißt `deps`, der zweite `ctx`; geprüft über
+`fn.length` und die Parameternamen aus `fn.toString()`), und verlangt, dass
+mindestens ein registriertes Werkzeug diesen Service in seinem `handler`
+aufruft. Damit das prüfbar ist, trägt jede `McpToolDefinition` ein neues
+Feld `service: Function` neben `handler`; der Test vergleicht Referenzen. Ein
+Service ohne Werkzeug ist rot, es sei denn, er steht in der Ausnahmeliste des
+Tests mit Begründung: `deleteDocument` (Entscheidung 10), `previewDraft`
+(liefert Bytes), `extractDocumentText` (Innenleben des Workers, von
+`dms_reindex` angestoßen), `previewNextNumber` (nur ein Hinweis in der
+Oberfläche), `getDocument` (liefert Bytes; `dms_get` ruft
+`getDocumentRecord`). Der bisherige Rechte-Test bleibt daneben bestehen.
 
 ## 7. Oberfläche
 
@@ -482,8 +508,10 @@ Protokoll. Dazu gezielt:
   Testdatei bekommen zwei verschiedene Nummern ohne Wiederholung.
 - Storno und Fristlöschung an einem Entwurf: `conflict`.
 - Ordner: Ablegen in einen unbekannten Ordner: `notFound`.
-- Bezüge: Selbstbezug abgelehnt; Doppel abgelehnt; Verwerfen eines Entwurfs
-  nimmt seine Bezüge in beiden Richtungen mit.
+- Bezüge: Selbstbezug abgelehnt; Doppel abgelehnt.
+- Löschen: Verwerfen eines Entwurfs und Fristlöschung nehmen Bezüge in beiden
+  Richtungen, Notizen, Volltext und Wiedervorlagen (auch erledigte) mit; die
+  Startseite zeigt danach nichts ins Leere.
 - Versand: an Eingang und Entwurf abgelehnt; Datum vor Dokumentdatum
   abgelehnt; unbekannter Weg abgelehnt; Änderung mit Vorher/Nachher im
   Protokoll; ein aus der Einstellung entfernter Weg bleibt am Dokument lesbar.
@@ -495,7 +523,8 @@ Protokoll. Dazu gezielt:
 - `getDocumentText`: leere Seiten mit Zustand, wenn nicht gelesen.
 - Löschpolitik-Test kennt die vier neuen Einträge.
 
-**MCP:** Paritätstest in der strengeren Form (§ 6); `dms_get` enthält keine
+**MCP:** Paritätstest in der strengeren Form (§ 6), dazu sein Gegenbeweis:
+ein erfundener Service ohne Werkzeug muss auffallen; `dms_get` enthält keine
 Bytes; `dms_receive` weist `assetId` als unbekanntes Feld ab.
 
 **E2E** (`apps/kompass/e2e/dms.spec.ts`, `follow-ups.spec.ts`):
@@ -542,7 +571,7 @@ Werkzeug im Container.
 packages/core/src/db/schema.ts                     follow_ups
 packages/core/src/follow-ups/service.ts            § 5.1
 packages/core/src/permissions/core.ts              followUps.view, followUps.manage
-packages/core/src/modules/manifest.ts              followUpTargets
+packages/core/src/modules/manifest.ts              followUpTargets, McpToolDefinition.service
 packages/core/src/deletion-policy.ts               followUp, documentRelation, documentNote, documentSnippet
 packages/core/src/seed/follow-ups.ts
 packages/mcp/src/core-tools.ts                     followups_*
