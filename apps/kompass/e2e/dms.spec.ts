@@ -178,6 +178,7 @@ test.describe('dms', () => {
     // Solange nichts gespeichert ist, gibt es nichts zu zeigen — und die
     // Vorschau sagt das, statt ein leeres Blatt zu behaupten.
     await expect(page.getByText('Die Vorschau entsteht beim ersten Speichern.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'PDF öffnen' })).toHaveCount(0);
 
     await page.getByLabel('Betreff').fill('Einladung');
     await page.getByLabel('Text').fill('Sehr geehrte Mitglieder,');
@@ -185,6 +186,11 @@ test.describe('dms', () => {
 
     await expect(page.getByText(/Vorschau aktuell/)).toBeVisible();
     await expect(page.locator('iframe')).toBeVisible();
+
+    // Das Blatt in gross: als Verweis, damit auch die mittlere Maustaste trägt.
+    const openPdf = page.getByRole('link', { name: 'PDF öffnen' });
+    await expect(openPdf).toHaveAttribute('target', '_blank');
+    await expect(openPdf).toHaveAttribute('href', /\/preview/);
 
     // Eine Änderung veraltet die Vorschau, und der Knopf sagt, was er tun wird.
     await page.getByLabel('Betreff').fill('Einladung zur Versammlung');

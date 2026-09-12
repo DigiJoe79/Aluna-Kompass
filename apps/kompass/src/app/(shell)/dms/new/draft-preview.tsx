@@ -2,7 +2,7 @@
 
 import { AlertTriangle, Check } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export type PreviewStatus = 'none' | 'current' | 'stale' | 'rendering' | 'error';
@@ -75,6 +75,23 @@ export function DraftPreview({
               {t('previewPane.retry')}
             </Button>
           </>
+        ) : null}
+
+        {/*
+          Das Blatt in voller Grösse. Ein Verweis, kein Knopf: So trägt die
+          mittlere Maustaste, und der Weg dorthin steht in der Statusleiste des
+          Browsers, bevor jemand klickt. Der Platz davor bleibt frei — dort
+          steht die Seitenzahl, sobald der Renderer sie liefert.
+        */}
+        {src && (status === 'current' || status === 'stale') ? (
+          <a
+            href={src}
+            target="_blank"
+            rel="noopener"
+            className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'ml-auto')}
+          >
+            {t('openPdf')}
+          </a>
         ) : null}
         {/* Der leere Zustand erklärt sich auf dem Blatt selbst — zweimal
             dasselbe zu schreiben macht es nicht klarer. */}
