@@ -12,6 +12,9 @@ import { receiveDocumentAction, suggestClassificationAction } from '../actions';
 import { FileDropzone } from './file-dropzone';
 import { NumberHint } from './number-hint';
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
+import { DocumentPicker } from '../document-picker';
+import { lastOutgoingToAction } from '../search-action';
+import type { PickedDocument } from '../search-action';
 import { SuggestionFlag } from './suggestion-flag';
 
 /** Die Felder, die die Einsortierregeln vorbelegen können. */
@@ -56,6 +59,8 @@ export function ReceiveForm({
   const [folder, setFolder] = useState(droppedFolder ?? '');
   const [sender, setSender] = useState<PickedContact | null>(null);
   const senderId = sender?.id ?? '';
+  const [repliesTo, setRepliesTo] = useState<PickedDocument | null>(null);
+  const repliesToTouched = useRef(false);
   const [hasFile, setHasFile] = useState(!!droppedFile);
 
   /**
@@ -133,6 +138,10 @@ export function ReceiveForm({
 
   const handleSenderChange = async (next: PickedContact | null) => {
     setSender(next);
+    // Wer schreibt, antwortet meist auf das, was er zuletzt bekommen hat.
+    if (!repliesToTouched.current) {
+      setRepliesTo(next ? await lastOutgoingToAction(next.id) : null);
+    }
     const file = (document.getElementById('file') as HTMLInputElement | null)?.files?.[0];
     if (!file) return;
     apply(await suggestClassificationAction(file.name, next?.id || undefined), next?.id ?? '');
@@ -247,6 +256,20 @@ export function ReceiveForm({
             onChange={(next) => void handleSenderChange(next)}
             canCreate={canCreateContact}
           />
+        </div>
+
+        <div>
+          <DocumentPicker
+            id="repliesToId"
+            name="repliesToId"
+            label={t('fields.repliesTo')}
+            value={repliesTo}
+            onChange={(next) => {
+              repliesToTouched.current = true;
+              setRepliesTo(next);
+            }}
+          />
+          {repliesTo && !repliesToTouched.current ? <SuggestionFlag text={t('suggest.fromSender')} /> : null}
         </div>
 
         {/* Die Nummer ist eine Vorschau: Gezogen wird sie beim Ablegen. */}

@@ -1,6 +1,6 @@
 import { hasPermission, requirePermission } from '@kompass/core';
 import { displayName, getContact } from '@kompass/module-contacts';
-import { defaultTypeKey, getDocumentRecord, listDocumentFolders, listDocumentTypes } from '@kompass/module-dms';
+import { defaultTypeKey, getDocumentRecord, listDocumentFolders, listDocumentTypes, listSnippets } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
@@ -26,6 +26,11 @@ export default async function EditDraftPage(props: { params: Promise<{ id: strin
   const foldersRes = await listDocumentFolders(deps, ctx);
   const folders = foldersRes.ok ? foldersRes.value.map((f) => f.path) : [];
 
+  const snippetsRes = await listSnippets(deps, ctx, {});
+  const snippets = snippetsRes.ok
+    ? snippetsRes.value.map((s) => ({ id: s.id, name: s.name, subject: s.subject, body: s.body }))
+    : [];
+
   const doc = result.value;
   const recipientLink = doc.links.find((link) => link.role === 'recipient' && link.entityType === 'contact');
   // Nur der gewählte Kontakt wird aufgelöst; gesucht wird im Feld selbst.
@@ -40,6 +45,7 @@ export default async function EditDraftPage(props: { params: Promise<{ id: strin
       types={types.map((type) => ({ key: type.key, label: type.label }))}
       folders={folders}
       canCreateContact={hasPermission(ctx, 'contacts.manage')}
+      snippets={snippets}
       today={deps.clock.now().toISOString().slice(0, 10)}
       defaultTypeKey={defaultTypeKey(deps, 'outgoing')}
       draft={{

@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
 import { FieldError } from '@/components/forms/field-error';
 import { FormActionBar } from '@/components/forms/form-action-bar';
@@ -22,6 +22,8 @@ export interface DraftFormProps {
   folders: string[];
   /** Darf der Mensch fehlende Kontakte gleich hier anlegen? */
   canCreateContact: boolean;
+  /** Textbausteine, die der Editor auf Wunsch einfügt. */
+  snippets: { id: string; name: string; subject: string | null; body: string }[];
   /** Vorbelegung beim Anlegen, aus `deps.clock` der Seite — nicht aus der Uhr des Browsers. */
   today: string;
   /** Die eingestellte Vorgabeart für den Ausgang, keine Konstante im Code. */
@@ -45,6 +47,7 @@ export function DraftForm({
   types,
   folders,
   canCreateContact,
+  snippets,
   today,
   defaultTypeKey,
   draft,
@@ -63,6 +66,29 @@ export function DraftForm({
   // vor leeren Feldern und durfte seinen Text neu tippen.
   const [subject, setSubject] = useState(draft?.subject ?? '');
   const [body, setBody] = useState(draft?.body ?? '');
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+
+  /**
+   * Ein Baustein landet an der Schreibmarke, nicht am Ende: Wer mitten im Brief
+   * eine Grußformel braucht, will sie dort. Ist der Betreff noch leer und der
+   * Baustein bringt einen mit, übernimmt das Formular ihn — aber nie über einen
+   * schon getippten hinweg.
+   */
+  const insertSnippet = (id: string) => {
+    const snippet = snippets.find((s) => s.id === id);
+    if (!snippet) return;
+    const el = bodyRef.current;
+    const start = el?.selectionStart ?? body.length;
+    const end = el?.selectionEnd ?? body.length;
+    setBody(body.slice(0, start) + snippet.body + body.slice(end));
+    if (!subject.trim() && snippet.subject) setSubject(snippet.subject);
+    requestAnimationFrame(() => {
+      if (!el) return;
+      const cursor = start + snippet.body.length;
+      el.focus();
+      el.setSelectionRange(cursor, cursor);
+    });
+  };
   const [documentDate, setDocumentDate] = useState(draft?.documentDate ?? today);
   const [typeKey, setTypeKey] = useState(draft?.typeKey ?? defaultTypeKey);
   const [folder, setFolder] = useState(draft?.folder ?? '');
@@ -104,8 +130,28 @@ export function DraftForm({
       </div>
 
       <div className="flex min-h-0 shrink-0 grow flex-col gap-1.5">
-        <Label htmlFor="body" required>{t('fields.body')}</Label>
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="body" required>{t('fields.body')}</Label>
+          {snippets.length > 0 ? (
+            <Select
+              aria-label={t('draft.insertSnippet')}
+              value=""
+              onChange={(e) => {
+                if (e.target.value) insertSnippet(e.target.value);
+              }}
+              className="w-auto"
+            >
+              <option value="">{t('draft.insertSnippetNone')}</option>
+              {snippets.map((snippet) => (
+                <option key={snippet.id} value={snippet.id}>
+                  {snippet.name}
+                </option>
+              ))}
+            </Select>
+          ) : null}
+        </div>
         <Textarea
+          ref={bodyRef}
           id="body"
           name="body"
           required

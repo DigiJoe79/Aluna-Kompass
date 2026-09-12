@@ -1446,7 +1446,9 @@
     "preview": "Vorschau",
     "draft": {
       "saveAndPreview": "Speichern und Vorschau aktualisieren",
-      "tabForm": "Formular"
+      "tabForm": "Formular",
+      "insertSnippet": "Baustein einfügen",
+      "insertSnippetNone": "Baustein einfügen …"
     },
     "previewPane": {
       "none": "Die Vorschau entsteht beim ersten Speichern.",
@@ -1613,6 +1615,8 @@
       "noRecipient": "— Kein Empfänger —",
       "sender": "Absender",
       "noSender": "— Kein Absender —",
+      "repliesTo": "Antwort auf",
+      "noRepliesTo": "— Kein Bezug —",
       "voidReason": "Grund für die Stornierung",
       "voidReasonPlaceholder": "z. B. Falsche Anschrift oder fehlerhafter Inhalt"
     },

@@ -20,3 +20,20 @@ export async function searchDocumentsAction(text: string, exceptId?: string): Pr
     .filter((d) => d.id !== exceptId)
     .map((d) => ({ id: d.id, number: d.number, subject: d.subject, phase: d.phase }));
 }
+
+/**
+ * Das jüngste Schreiben an diesen Kontakt — die wahrscheinlichste Antwort auf
+ * eingehende Post. Ein Vorschlag, kein Zwang: Das Feld bleibt änderbar.
+ */
+export async function lastOutgoingToAction(contactId: string): Promise<PickedDocument | null> {
+  const { deps, ctx } = await requireSession();
+  const res = await listDocuments(deps, ctx, {
+    linkedTo: { entityType: 'contact', entityId: contactId },
+    direction: 'outgoing',
+    phase: 'issued',
+    limit: 1,
+  });
+  if (!res.ok || res.value.documents.length === 0) return null;
+  const doc = res.value.documents[0]!;
+  return { id: doc.id, number: doc.number, subject: doc.subject, phase: doc.phase };
+}

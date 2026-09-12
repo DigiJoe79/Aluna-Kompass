@@ -222,6 +222,11 @@ export async function receiveDocumentAction(_prev: ActionState, formData: FormDa
     ? [{ entityType: 'contact', entityId: senderId, role: 'sender' as const }]
     : [];
 
+  // „Antwort auf“ entsteht in derselben Transaktion wie das Dokument — sonst
+  // stünde die Post kurz ohne den Bezug da, der sie erklärt.
+  const repliesToId = orNull(formData.get('repliesToId'));
+  const relations = repliesToId ? [{ relatedDocumentId: repliesToId, kind: 'repliesTo' as const }] : [];
+
   const result = await receiveDocument(deps, ctx, {
     filename,
     bytes,
@@ -230,6 +235,7 @@ export async function receiveDocumentAction(_prev: ActionState, formData: FormDa
     documentDate,
     folder,
     links,
+    relations,
   });
 
   if (!result.ok) {

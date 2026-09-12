@@ -916,6 +916,33 @@ test.describe('dms', () => {
     await page.getByLabel('Versand', { exact: true }).selectOption('unsent');
     await expect(page).toHaveURL(/unsent=1/);
   });
+
+  test('legt Post als Antwort auf einen Brief ab', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/receive');
+    const dialog = receiveDialog(page);
+    await dialog.getByLabel('Datei').setInputFiles(FIXTURE_PDF);
+    await dialog.getByLabel('Betreff').fill('Antwort der Praxis');
+    await dialog.getByLabel('Datum auf dem Dokument').fill('2026-09-10');
+    await dialog.getByRole('combobox', { name: 'Antwort auf' }).fill('BRF');
+    await page.getByTestId('document-option').first().click();
+    await dialog.getByRole('button', { name: 'Ablegen' }).click();
+    await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}$/);
+    await expect(page.getByTestId('document-relations').getByText(/Antwort auf/)).toBeVisible();
+  });
+
+  test('fügt einen Baustein an der Schreibmarke ein und übernimmt den Betreff in einen leeren Entwurf', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/new');
+    await page.getByLabel('Baustein einfügen').selectOption({ label: 'Bitte um Rückmeldung' });
+    await expect(page.getByLabel('Betreff')).toHaveValue('Bitte um Rückmeldung');
+    await expect(page.getByLabel('Text')).toHaveValue(/Rückmeldung/);
+    const body = page.getByLabel('Text');
+    await body.fill('Anfang ');
+    await body.evaluate((el: HTMLTextAreaElement) => { el.setSelectionRange(el.value.length, el.value.length); });
+    await page.getByLabel('Baustein einfügen').selectOption({ label: 'Grußformel' });
+    await expect(body).toHaveValue(/^Anfang Mit freundlichen Grüßen/);
+  });
 });
 
 function samplePdf(): Buffer {
