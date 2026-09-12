@@ -15,7 +15,7 @@ import {
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { documentTypeFor } from './catalog';
-import { documentLinks, documents } from './schema';
+import { RELATION_KINDS, documentLinks, documentRelations, documents } from './schema';
 import { removeDocumentFile, storeDocumentFile } from './storage';
 import { allocateDocumentNumber, linkInputSchema, resolveFolder, toRecord, type DocumentRecord } from './service';
 
@@ -31,6 +31,8 @@ const receiveFields = {
   documentDate: z.string().date(),
   folder: z.string().trim().min(1).nullable().optional(),
   links: z.array(linkInputSchema).default([]),
+  /** Bezüge zu anderen Dokumenten, gelesen von diesem aus (Entscheidung 33). */
+  relations: z.array(z.object({ relatedDocumentId: z.string().min(1), kind: z.enum(RELATION_KINDS) })).default([]),
 };
 
 const oneSource = {
@@ -83,6 +85,11 @@ export async function receiveDocument(
   const folderRes = resolveFolder(deps.db, parsed.value.folder, docType.defaultFolder ?? null);
   if (!folderRes.ok) return folderRes;
   const folder = folderRes.value;
+
+  for (const relation of parsed.value.relations) {
+    const other = deps.db.select({ id: documents.id }).from(documents).where(eq(documents.id, relation.relatedDocumentId)).get();
+    if (!other) return notFound('document', relation.relatedDocumentId);
+  }
 
   const id = newId();
   const now = isoNow(deps.clock);
@@ -137,11 +144,24 @@ export async function receiveDocument(
           .run();
       }
 
+      for (const relation of parsed.value.relations) {
+        tx.insert(documentRelations)
+          .values({
+            id: newId(),
+            documentId: id,
+            relatedDocumentId: relation.relatedDocumentId,
+            kind: relation.kind,
+            createdByUserId: ctx.userId ?? 'system',
+            createdAt: now,
+          })
+          .run();
+      }
+
       recordAudit(tx, deps, ctx, {
         action: 'dms.receive',
         entityType: 'document',
         entityId: id,
-        after: { number, typeKey: docType.key, subject: parsed.value.subject },
+        after: { number, typeKey: docType.key, subject: parsed.value.subject, relations: parsed.value.relations.length },
         summary: `Dokument ${number} („${parsed.value.subject}“) eingegangen`,
       });
 

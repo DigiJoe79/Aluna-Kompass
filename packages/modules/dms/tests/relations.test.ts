@@ -71,4 +71,21 @@ describe('Dokumentbezüge', () => {
     const bad = await relateDocuments(deps, ctx, { documentId: a.id, relatedDocumentId: b.id, kind: 'somethingElse' });
     expect(!bad.ok && bad.error.type).toBe('validation');
   });
+
+  it('Post kann beim Ablegen schon sagen, worauf sie antwortet', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const letter = await fileFixture(deps, ctx);
+    const res = await receiveDocument(deps, ctx, {
+      filename: 'antwort.pdf', bytes: pdfBytes(), typeKey: 'authority', subject: 'Antwort', documentDate: '2026-09-02',
+      relations: [{ relatedDocumentId: letter.id, kind: 'repliesTo' }],
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.value.relations).toEqual([expect.objectContaining({ kind: 'repliesTo', direction: 'out', otherId: letter.id })]);
+    const ghost = await receiveDocument(deps, ctx, {
+      filename: 'x.pdf', bytes: pdfBytes(), typeKey: 'authority', subject: 'x', documentDate: '2026-09-02',
+      relations: [{ relatedDocumentId: 'NOPE', kind: 'repliesTo' }],
+    });
+    expect(!ghost.ok && ghost.error.type).toBe('notFound');
+  });
 });
