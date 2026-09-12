@@ -12,7 +12,7 @@ export function DropOverlay({ count }: { count: number }) {
   return (
     <div className="absolute inset-0 z-2 flex items-center justify-center rounded-md bg-overlay">
       <div className="max-w-[340px] rounded-lg border border-line bg-surface px-7 py-5.5 text-center shadow-md">
-        <div className="mb-3.5 flex items-end justify-center gap-1.5" aria-hidden>
+        <div className="mb-3.5 flex items-end justify-center gap-2.5" aria-hidden>
           {[-6, 0, 6].map((angle) => (
             <span
               key={angle}

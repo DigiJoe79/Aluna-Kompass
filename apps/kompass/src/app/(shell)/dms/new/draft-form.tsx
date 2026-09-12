@@ -103,7 +103,7 @@ export function DraftForm({
           id="body"
           name="body"
           required
-          rows={10}
+          rows={9}
           value={body}
           onChange={(e) => setBody(e.target.value)}
           aria-describedby="body-hint"

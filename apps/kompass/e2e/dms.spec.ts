@@ -583,6 +583,12 @@ test.describe('dms', () => {
 
     await expect(dialog.getByText('PDF hierher ziehen')).toBeVisible();
     await expect(dialog.getByText('Nur PDF, höchstens 10 MB.')).toBeVisible();
+
+    // Unterstrichen ist, was klickt — nicht der Satz drumherum.
+    const pick = dialog.getByRole('button', { name: 'Datei auswählen' });
+    expect(await pick.evaluate((el) => getComputedStyle(el).textDecorationLine)).toBe('underline');
+    const around = dialog.getByText(/^oder Datei auswählen$/);
+    expect(await around.evaluate((el) => getComputedStyle(el).textDecorationLine)).toBe('none');
     // Ohne Datei gäbe „Ablegen“ ein Versprechen, das ins Leere greift.
     await expect(dialog.getByRole('button', { name: 'Ablegen' })).toBeDisabled();
 

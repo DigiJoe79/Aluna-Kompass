@@ -108,20 +108,24 @@ export function FileDropzone({
             take(dropped);
           }}
           className={cn(
-            'flex flex-col items-center gap-2 rounded-md border-2 border-dashed border-line-strong bg-surface-2 px-5 py-6 text-center',
+            'flex flex-col items-center gap-2 rounded-md border-2 border-dashed border-line-strong bg-surface-2 px-5 py-[26px] text-center',
             over && 'border-brand bg-brand-soft'
           )}
         >
-          <Upload className="size-6 text-muted-ink" strokeWidth={1.7} aria-hidden />
+          <Upload className="size-[26px] text-muted-ink" strokeWidth={1.7} aria-hidden />
           <p className="text-sm font-semibold text-ink">{t('upload.dropTitle')}</p>
           <p className="text-[13px] text-ink-2">
-            <button
-              type="button"
-              className="cursor-pointer underline underline-offset-2"
-              onClick={() => input.current?.click()}
-            >
-              {t('upload.dropBrowse')}
-            </button>
+            {t.rich('upload.dropBrowse', {
+              a: (chunks) => (
+                <button
+                  type="button"
+                  className="cursor-pointer underline underline-offset-2"
+                  onClick={() => input.current?.click()}
+                >
+                  {chunks}
+                </button>
+              ),
+            })}
           </p>
           <p className="text-[12px] text-muted-ink">{t('fileHint')}</p>
         </div>
