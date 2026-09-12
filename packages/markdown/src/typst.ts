@@ -22,6 +22,28 @@ const escapeLineStarts = (s: string): string =>
 
 const escapeText = (s: string): string => escapeLineStarts(escapeChars(s));
 
+/** Dieselbe Liste wie `sanitize.ts` im HTML-Weg. */
+const ALLOWED_PROTOCOLS = new Set(['http', 'https', 'mailto', 'tel']);
+
+/**
+ * Wie `hast-util-sanitize`: ein Doppelpunkt zählt nur als Schema, wenn er vor
+ * dem ersten `/`, `?` oder `#` steht. Alles ohne Schema bleibt erlaubt.
+ */
+function isAllowedUrl(url: string): boolean {
+  const colon = url.indexOf(':');
+  if (colon < 0) return true;
+  const stop = url.search(/[/?#]/);
+  if (stop >= 0 && stop < colon) return true;
+  return ALLOWED_PROTOCOLS.has(url.slice(0, colon).toLowerCase());
+}
+
+/** Folgezeilen eines Listeneintrags einrücken — sonst fällt ein Unterpunkt auf die Ebene des Elternteils zurück. */
+const indentContinuation = (s: string): string =>
+  s
+    .split('\n')
+    .map((line, index) => (index === 0 || line === '' ? line : `  ${line}`))
+    .join('\n');
+
 type Child = RootContent | PhrasingContent;
 
 function inline(nodes: readonly Child[] | undefined): string {
@@ -43,6 +65,8 @@ function inline(nodes: readonly Child[] | undefined): string {
           return `#strike[${inline(node.children)}]`;
         case 'link': {
           const url = String(node.url).replace(/[\\"]/g, '');
+          // Ein abgelehntes Schema verliert den Verweis, nicht den Text.
+          if (!isAllowedUrl(url)) return inline(node.children);
           return `#link("${url}")[${inline(node.children)}]`;
         }
         default:
@@ -95,17 +119,25 @@ function block(node: Nodes): string {
       const marker = node.ordered ? '+' : '-';
       return (
         (node.children as unknown as ListItem[])
-          .map((item) => `${marker} ${item.children.map(block).join(' ').trim()}`)
+          .map((item) => `${marker} ${indentContinuation(item.children.map(block).join('\n').trim())}`)
           .join('\n') + '\n'
       );
     }
     case 'code':
       return '```\n' + node.value.replace(/`/g, '') + '\n```\n';
     case 'table': {
-      const rows = node.children as unknown as TableRow[];
-      const cols = rows[0]?.children.length ?? 1;
-      const cells = rows.flatMap((row) => row.children.map((cell) => `[${inline(cell.children)}]`));
-      return `#table(\n  columns: ${cols},\n  ${cells.join(', ')}\n)\n`;
+      const [head, ...body] = node.children as unknown as TableRow[];
+      const cols = head?.children.length ?? 1;
+      const cell = (c: TableCell): string => `[${inline(c.children)}]`;
+      // Erste Zeile als `table.header`: nur so wiederholt Typst sie über den Seitenumbruch.
+      const header = head ? `  table.header(${head.children.map(cell).join(', ')}),\n` : '';
+      const align = node.align ?? [];
+      const alignment = align.some((a) => a)
+        ? `  align: (${Array.from({ length: cols }, (_, i) => align[i] ?? 'auto').join(', ')}),\n`
+        : '';
+      const cells = body.flatMap((row) => row.children.map(cell));
+      const rest = cells.length > 0 ? `  ${cells.join(', ')}\n` : '';
+      return `#table(\n  columns: ${cols},\n${alignment}${header}${rest})\n`;
     }
     default: {
       const directive = node as { type: string; name?: string; children?: Nodes[] };

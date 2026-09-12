@@ -75,4 +75,48 @@ describe('renderMarkdownTypst', () => {
     expect(out).toContain('\\/ Begriff');
     expect(out).not.toMatch(/(^|[^\\])\/\//);
   });
+
+  it('keeps a nested list one level deeper', async () => {
+    const out = await renderMarkdownTypst('- a\n  - a1\n  - a2\n- b');
+    // Ohne Einrückung der Folgezeilen fällt a2 auf die Ebene von a zurück.
+    expect(out).toContain('  - a1');
+    expect(out).toContain('  - a2');
+    expect(out).not.toMatch(/\n- a2/);
+  });
+
+  it('indents a nested ordered list inside an unordered one', async () => {
+    const out = await renderMarkdownTypst('- Punkt\n  1. erstens\n  2. zweitens');
+    expect(out).toContain('  + erstens');
+    expect(out).toContain('  + zweitens');
+  });
+
+  it('carries the column alignment of a gfm table', async () => {
+    const out = await renderMarkdownTypst('| A | B | C |\n|:--|:-:|--:|\n| 1 | 2 | 3 |');
+    expect(out).toContain('align: (left, center, right)');
+  });
+
+  it('leaves out the alignment when the table declares none', async () => {
+    const out = await renderMarkdownTypst('| A | B |\n|---|---|\n| 1 | 2 |');
+    expect(out).not.toContain('align:');
+  });
+
+  it('marks the first table row as a header so it repeats across pages', async () => {
+    const out = await renderMarkdownTypst('| A | B |\n|---|---|\n| 1 | 2 |');
+    expect(out).toContain('table.header([A], [B])');
+  });
+
+  it('only links protocols that the html path allows too', async () => {
+    const out = await renderMarkdownTypst('[Satzung](https://example.org/s), [Mail](mailto:kontakt@example.org), [Anruf](tel:+4930123), [intern](/satzung/)');
+    expect(out).toContain('#link("https://example.org/s")[Satzung]');
+    expect(out).toContain('#link("mailto:kontakt@example.org")[Mail]');
+    expect(out).toContain('#link("tel:+4930123")[Anruf]');
+    expect(out).toContain('#link("/satzung/")[intern]');
+  });
+
+  it('drops the link but keeps the text for a protocol the html path rejects', async () => {
+    const out = await renderMarkdownTypst('[klick](javascript:alert(1)) und [Datei](file:///etc/passwd)');
+    expect(out).not.toContain('#link(');
+    expect(out).toContain('klick');
+    expect(out).toContain('Datei');
+  });
 });

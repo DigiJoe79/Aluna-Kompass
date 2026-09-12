@@ -129,8 +129,14 @@ die Kompass-Konventionen führt, bisher nur nach HTML).
   Nutzertext kann kein Typst injizieren — dieselbe Härte wie im heutigen
   Renderer-Test „treats user text as literal".
 - **Blockelemente auf Typst-Standard**: Überschriften → `= … == …`, Listen →
-  `- …` / `+ …`, Tabellen → `#table(...)`, Blockzitat → ein Marker-Element, das
-  die Basis-Vorlage als Hinweiskasten stylt (`#note[...]`), `---` → `#line(...)`.
+  `- …` / `+ …` (Folgezeilen eingerückt, sonst verliert ein Unterpunkt seine
+  Ebene), Tabellen → `#table(...)` mit der Kopfzeile in `table.header(...)` und
+  der Spaltenausrichtung aus dem Markdown, Blockzitat → `#quote(block: true)`,
+  das die Basis-Vorlage über `show quote.where(block: true)` als Hinweiskasten
+  stylt, `---` → `#line(...)`.
+- **Verweise** tragen dieselbe Protokoll-Erlaubnisliste wie der HTML-Weg
+  (`http`, `https`, `mailto`, `tel`, dazu alles ohne Schema). Ein abgelehntes
+  Schema verliert den Verweis, nicht den Text.
 - **Kompass-Konventionen** aus `directives.ts` gelten weiter: `:::karten` →
   Kartenraster, Blockzitat → Hinweis. Jede `###`-Karte wird ein eigener
   Inhaltsblock `[…]` im `#grid`; Text vor der ersten Karte steht davor, statt zu

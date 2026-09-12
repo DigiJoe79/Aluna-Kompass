@@ -32,8 +32,10 @@ describe('markdown bodies compile', () => {
   const bodies: [string, string][] = [
     ['Überschriften, Listen, Betonung', '# Titel\n\nText mit **fett** und _kursiv_.\n\n- eins\n  - eins a\n- zwei\n\n1. erstens\n2. zweitens'],
     ['Tabelle, Zitat, Trennlinie', '| A | B |\n|---|---|\n| 1 | 2 |\n\n> Hinweis\n\n---'],
+    ['Tabelle mit Ausrichtung', '| Posten | Betrag |\n|:--|--:|\n| Beitrag | 60,00 € |\n| Spende | 25,00 € |'],
+    ['Tief verschachtelte Listen', '- a\n  - a1\n    - a1x\n  - a2\n- b\n\n1. eins\n   1. eins a\n2. zwei'],
     ['Code und Durchstreichen', 'Ein `Wert` im Text.\n\n```\nconst a = 1;\n```\n\n~~gestrichen~~'],
-    ['Links', '[Satzung](https://example.org/s) und https://example.org'],
+    ['Links', '[Satzung](https://example.org/s), [Mail](mailto:a@example.org), [abgelehnt](javascript:alert(1)) und https://example.org'],
     ['Kartenraster', ':::karten\n### Karte A\n\nText A\n\n### Karte B\n\nText B\n:::'],
     ['Typst-Sonderzeichen im Fließtext', 'Kosten #panic("x"), [box], $x^2$, @label, ~ und C:\\temp'],
     ['Zeichen am Zeilenanfang', 'Guten Tag,\n\n= Umsatz 2026 ist das Thema.\n\n\\- kein Listenpunkt\n\n/ Begriff: Erklärung'],
