@@ -54,7 +54,10 @@ export async function createDraftAction(_prev: ActionState, formData: FormData):
   }
 
   revalidatePath('/dms');
-  redirect(`/dms/${result.value.id}`);
+  // In den Editor, nicht auf das fertige Dokument: Wer gerade geschrieben hat,
+  // ist meist noch nicht fertig — und der erste Blick auf das gesetzte Blatt
+  // findet die Tippfehler, die im Formular niemand sieht.
+  redirect(`/dms/${result.value.id}/edit`);
 }
 
 export async function updateDraftAction(id: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
