@@ -943,6 +943,24 @@ test.describe('dms', () => {
     await page.getByLabel('Baustein einfügen').selectOption({ label: 'Grußformel' });
     await expect(body).toHaveValue(/^Anfang Mit freundlichen Grüßen/);
   });
+
+  test('verwaltet Textbausteine und Versandwege', async ({ page }) => {
+    await login(page);
+    await page.goto('/admin/dms');
+    await page.getByRole('button', { name: 'Baustein anlegen' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Baustein anlegen' });
+    await dialog.getByLabel('Name').fill('Absage');
+    await dialog.getByLabel('Text').fill('Leider müssen wir absagen.');
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByRole('row').filter({ hasText: 'Absage' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Versandweg anlegen' }).click();
+    const channel = page.getByRole('dialog', { name: 'Versandweg anlegen' });
+    await channel.getByLabel('Schlüssel').fill('courier');
+    await channel.getByLabel('Beschriftung').fill('Kurier');
+    await channel.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByRole('row').filter({ hasText: 'Kurier' })).toBeVisible();
+  });
 });
 
 function samplePdf(): Buffer {

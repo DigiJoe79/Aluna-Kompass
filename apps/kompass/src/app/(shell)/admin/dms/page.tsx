@@ -1,10 +1,12 @@
 import { hasPermission, readSetting, requirePermission } from '@kompass/core';
-import { countUnreadDocuments, listDocumentFolders, listDocumentRules, listDocumentTypes } from '@kompass/module-dms';
+import { countUnreadDocuments, dispatchChannels, listDocumentFolders, listDocumentRules, listDocumentTypes, listSnippets } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
+import { DispatchChannelsPanel } from './dispatch-channels-panel';
 import { FoldersPanel } from './folders-panel';
+import { SnippetsPanel } from './snippets-panel';
 import { RulesPanel } from './rules-panel';
 import { TextPanel } from './text-panel';
 import { TypesPanel } from './types-panel';
@@ -29,6 +31,10 @@ export default async function AdminDmsPage() {
   const openCount = unreadRes.ok ? unreadRes.value : 0;
   const canManageSettings = hasPermission(ctx, 'settings.manage');
 
+  const snippetsRes = await listSnippets(deps, ctx, { includeInactive: true });
+  const snippets = snippetsRes.ok ? snippetsRes.value : [];
+  const channels = dispatchChannels(deps);
+
   const types = typesRes.ok ? typesRes.value : [];
   const folders = foldersRes.ok ? foldersRes.value.map((f) => f.path) : [];
   const rules = rulesRes.ok
@@ -50,6 +56,8 @@ export default async function AdminDmsPage() {
         <TypesPanel types={types} folders={folders} />
         <RulesPanel rules={rules} types={types} folders={folders} />
         <FoldersPanel folders={folders} />
+        <SnippetsPanel snippets={snippets} />
+        <DispatchChannelsPanel channels={channels} canManageSettings={canManageSettings} />
         <TextPanel
           currentLanguages={currentLanguages}
           availableLanguages={availableLanguages}

@@ -3,6 +3,9 @@
 import { setSetting } from '@kompass/core';
 import {
   createDocumentFolder,
+  createSnippet,
+  deleteSnippet,
+  updateSnippet,
   createDocumentRule,
   createDocumentType,
   deleteDocumentFolder,
@@ -205,3 +208,47 @@ export async function updateOcrLanguagesAction(languages: string): Promise<Actio
   return toActionState(result, t, t('dms.admin.toast.languagesSaved'));
 }
 
+export async function createSnippetAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await createSnippet(deps, ctx, {
+    name: String(formData.get('name') ?? '').trim(),
+    subject: orNull(formData.get('subject')),
+    body: String(formData.get('body') ?? ''),
+    sortOrder: Number(formData.get('sortOrder') ?? 0),
+  });
+  revalidatePath('/admin/dms');
+  return toActionState(result, t, t('dms.admin.toast.snippetCreated'));
+}
+
+export async function updateSnippetAction(id: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await updateSnippet(deps, ctx, {
+    id,
+    name: String(formData.get('name') ?? '').trim(),
+    subject: orNull(formData.get('subject')),
+    body: String(formData.get('body') ?? ''),
+    sortOrder: Number(formData.get('sortOrder') ?? 0),
+    isActive: formData.get('isActive') === 'on' || formData.get('isActive') === 'true',
+  });
+  revalidatePath('/admin/dms');
+  return toActionState(result, t, t('dms.admin.toast.snippetUpdated'));
+}
+
+export async function deleteSnippetAction(id: string): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await deleteSnippet(deps, ctx, { id });
+  revalidatePath('/admin/dms');
+  return toActionState(result, t, t('dms.admin.toast.snippetDeleted'));
+}
+
+/** Die ganze Liste wird gesetzt — sie ist eine Einstellung, kein Datensatz je Zeile. */
+export async function saveDispatchChannelsAction(channels: { key: string; label: string }[]): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await setSetting(deps, ctx, { key: 'dms.dispatchChannels', value: channels });
+  revalidatePath('/admin/dms');
+  return toActionState(result, t, t('dms.admin.toast.channelsSaved'));
+}
