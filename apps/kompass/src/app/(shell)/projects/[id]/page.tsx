@@ -1,4 +1,5 @@
-import { getProject, requirePermission } from '@kompass/core';
+import { requirePermission } from '@kompass/core';
+import { getProject } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';

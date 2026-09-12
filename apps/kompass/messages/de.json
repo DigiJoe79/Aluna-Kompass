@@ -212,7 +212,8 @@
       "contacts": "Kontakte",
       "site": "Webseite",
       "dms": "Akte",
-      "core": "Verein"
+      "core": "Verein",
+      "projects": "Projekte"
     },
     "users": "Nutzer",
     "roles": "Rollen",
@@ -241,7 +242,9 @@
       "variables": "Variablen",
       "publish": "Publizieren"
     },
-    "projects": "Projekte",
+    "projects": {
+      "list": "Projekte"
+    },
     "media": "Mediathek"
   },
   "shell": {
@@ -455,7 +458,6 @@
         "admin": "Kern — Verwaltung",
         "accountability": "Kern — Rechenschaft",
         "data": "Kern — Erzeugen und Daten",
-        "projects": "Kern — Projekte",
         "followUps": "Kern — Wiedervorlagen"
       },
       "finance": "Finanzen",
@@ -463,7 +465,8 @@
       "animals": "Tiere",
       "contacts": "Kontakte",
       "site": "Webseite",
-      "dms": "Akte"
+      "dms": "Akte",
+      "projects": "Projekte"
     },
     "keys": {
       "users": {
@@ -829,7 +832,8 @@
       "finance": "Finanzen",
       "members": "Mitglieder",
       "animals": "Tiere",
-      "website": "Webseite"
+      "website": "Webseite",
+      "projects": "Projekte"
     },
     "descriptions": {
       "core": "Anmeldung, Rollen, Einstellungen, Änderungsprotokoll, Dokumente und Backup.",
@@ -1026,12 +1030,12 @@
     "title": "Projekte",
     "create": "Projekt anlegen",
     "emptyTitle": "Noch keine Projekte",
-    "emptyText": "Dauer- und Kurzzeitprojekte mit Betterplace-Anbindung.",
+    "emptyText": "Dauer- und Kurzzeitprojekte mit ihrer öffentlichen Seite.",
     "columns": {
       "name": "Projekt",
       "type": "Typ",
-      "betterplace": "Betterplace-ID",
-      "status": "Status"
+      "status": "Status",
+      "links": "Verweise"
     },
     "types": {
       "ongoing": "Dauerprojekt",
@@ -1056,9 +1060,16 @@
         "active": "Aktiv",
         "completed": "Abgeschlossen"
       },
-      "betterplace": "Betterplace-Projekt-ID",
-      "betterplaceHint": "Ziffernfolge aus der Betterplace-Projekt-URL.",
-      "financeLater": "Konten, Buchungen und Rücklagen: Finanzen folgen in einer späteren Stufe."
+      "financeLater": "Konten, Buchungen und Rücklagen: Finanzen folgen in einer späteren Stufe.",
+      "links": {
+        "title": "Verweise nach außen",
+        "hint": "Spendenseite, Bericht, Partner — Bezeichnung und Adresse. Was die Webseite daraus macht, entscheidet das Template.",
+        "label": "Bezeichnung",
+        "url": "Adresse (https://…)",
+        "add": "Verweis hinzufügen",
+        "remove": "Verweis entfernen",
+        "empty": "Noch keine Verweise."
+      }
     }
   },
   "animals": {

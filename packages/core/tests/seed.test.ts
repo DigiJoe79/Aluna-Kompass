@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { coreModule, defineModule } from '../src';
 import { login } from '../src/auth/login';
-import { projects, roles, users } from '../src/db/schema';
+import { roles, users } from '../src/db/schema';
 import { seedDevelopment } from '../src/seed/seed';
 import { readSetting } from '../src/settings/service';
 import { createTestDeps } from '../src/testing';
@@ -18,17 +18,6 @@ describe('seedDevelopment', () => {
     expect(session.ok).toBe(true);
   });
 
-  it('seeds a few example projects with a published one and is idempotent', async () => {
-    const deps = createTestDeps({ env: 'development' });
-    await seedDevelopment(deps);
-    const rows = deps.db.select().from(projects).all();
-    expect(rows.length).toBeGreaterThanOrEqual(3);
-    expect(rows.some((p) => p.isPublished)).toBe(true);
-    expect(new Set(rows.map((p) => p.type)).size).toBeGreaterThan(1);
-
-    await seedDevelopment(deps);
-    expect(deps.db.select().from(projects).all().length).toBe(rows.length);
-  });
 
   it('refuses to run in production', async () => {
     const deps = createTestDeps({ env: 'production' });

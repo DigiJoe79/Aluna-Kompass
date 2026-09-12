@@ -1,9 +1,9 @@
 import {
   activateTheme, addLocale, assignRole, completeFollowUp, createFollowUp, deleteFollowUp, followUpCreateSchema,
   followUpDueSchema, followUpIdSchema, followUpListSchema, listDueFollowUpsWithTargets, listFollowUps, reopenFollowUp,
-  createMediaFolder, createProject, createRole, createUser, deleteMediaAsset, deleteMediaFolder, getAuditEntry, getProject, listDocumentBases, listLocales, listMediaAssets, listModules, listProjects,
-  listRetentionDue, listRoles, listThemes, listUsers, moveMediaAsset, projectCreateSchema, projectUpdateSchema, queryAudit, readAllSettings, readSetting, removeLocale, removeRole, renameMediaFolder,
-  reorderLocales, reorderProjects, resetStartPassword, setModuleEnabled, setProjectPublished, setRolePermissions, setSetting, setUserActive, updateProject,
+  createMediaFolder, createRole, createUser, deleteMediaAsset, deleteMediaFolder, getAuditEntry, listDocumentBases, listLocales, listMediaAssets, listModules,
+  listRetentionDue, listRoles, listThemes, listUsers, moveMediaAsset, queryAudit, readAllSettings, readSetting, removeLocale, removeRole, renameMediaFolder,
+  reorderLocales, resetStartPassword, setModuleEnabled, setRolePermissions, setSetting, setUserActive,
   updateRole, ok, invalid,
   type McpToolDefinition,
 } from '@kompass/core';
@@ -45,12 +45,6 @@ export const coreMcpTools: McpToolDefinition[] = [
   t({ name: 'locales_reorder', description: 'Reorder locales; the first is the leading locale. Requires settings.manage.', inputSchema: z.object({ codes: z.array(z.string()) }), handler: (deps, ctx, args) => reorderLocales(deps, ctx, args), service: reorderLocales }),
   t({ name: 'locales_remove', description: 'Remove a locale and strip it from all stored text. Requires settings.manage and confirm. Audited.', inputSchema: z.object({ code: z.string(), confirm: z.boolean() }), handler: (deps, ctx, args) => removeLocale(deps, ctx, args), service: removeLocale }),
   // Die Projekte gehören dem Kern; bis zum Cutover boten sie das Webseiten-Modul an.
-  t({ name: 'projects_list', description: 'List projects with their public fields. Requires projects.view.', inputSchema: z.object({}), handler: (deps, ctx) => listProjects(deps, ctx), service: listProjects }),
-  t({ name: 'project_get', description: 'Read one project. Requires projects.view.', inputSchema: z.object({ id: z.string() }), handler: (deps, ctx, { id }) => getProject(deps, ctx, id), service: getProject }),
-  t({ name: 'project_create', description: 'Create a project (unpublished). Requires projects.manage. Audited.', inputSchema: projectCreateSchema, handler: (deps, ctx, args) => createProject(deps, ctx, args), service: createProject }),
-  t({ name: 'project_update', description: 'Update a project. Requires projects.manage. Audited.', inputSchema: projectUpdateSchema, handler: (deps, ctx, args) => updateProject(deps, ctx, args), service: updateProject }),
-  t({ name: 'project_set_published', description: 'Publish or unpublish a project. Requires projects.manage. Audited.', inputSchema: z.object({ id: z.string(), isPublished: z.boolean() }), handler: (deps, ctx, args) => setProjectPublished(deps, ctx, args), service: setProjectPublished }),
-  t({ name: 'projects_reorder', description: 'Reorder projects; the order decides what a template shows first. Requires projects.manage.', inputSchema: z.object({ ids: z.array(z.string()) }), handler: (deps, ctx, args) => reorderProjects(deps, ctx, args), service: reorderProjects }),
   t({ name: 'retention_due', description: 'List everything whose retention period has run out and that is due for deletion, across all enabled modules. Requires retention.view.', inputSchema: z.object({}), handler: (deps, ctx) => listRetentionDue(deps, ctx), service: listRetentionDue }),
   // Wiedervorlagen: Anlässe an Vorgängen aller Module. Der Kern prüft die
   // Entität nicht; ein Modul, das eine anlegt, hat sie vorher geprüft. Über

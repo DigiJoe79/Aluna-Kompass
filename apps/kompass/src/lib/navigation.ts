@@ -22,14 +22,6 @@ export interface NavGroup {
 }
 
 /**
- * Kerneinträge ausserhalb der Verwaltung. Die Projekte gehören dem Kern und
- * hingen bis zum Cutover an der Navigation des Webseiten-Moduls.
- */
-const CORE_MAIN: { key: string; href: string; icon: string; permission?: string }[] = [
-  { key: 'projects', href: '/projects', icon: 'folder', permission: 'projects.view' },
-];
-
-/**
  * Arbeitsflächen: Dinge, die man benutzt. Elf Einträge in einer Gruppe waren zu
  * viel, und die Hälfte davon stellt man einmal ein, statt damit zu arbeiten.
  */
@@ -86,12 +78,6 @@ export function buildNavigation(input: {
         })),
     ],
   };
-  const core: NavGroup = {
-    key: 'core',
-    labelKey: 'nav.groups.core',
-    disabled: false,
-    items: CORE_MAIN.map((item) => ({ ...item, labelKey: `nav.${item.key}`, disabled: false, visible: visible(item.permission) })),
-  };
   // Inaktive Module erscheinen gar nicht in der Navigation. Wer sie einschalten
   // will, tut das unter Verwaltung → Module; ihre Seiten zeigen bis dahin die
   // „Modul inaktiv“-Seite, falls jemand die URL direkt aufruft.
@@ -121,5 +107,5 @@ export function buildNavigation(input: {
         items: [...(m.navigation ?? []).map(toItem), ...(input.extraItems?.[m.key] ?? []).map(toItem)],
       };
     });
-  return [core, admin, config, ...modules];
+  return [admin, config, ...modules];
 }

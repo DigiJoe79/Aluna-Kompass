@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { coreModule } from '../src/core-module';
 import { defineModule } from '../src/modules/manifest';
-import { createProject } from '../src/projects/service';
 import { unwrap } from '../src/result';
 import { setSetting } from '../src/settings/service';
 import { findMediaReferences } from '../src/media/references';
@@ -14,19 +13,17 @@ const PNG = Uint8Array.from(
 const OTHER_PNG = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><rect width="2" height="2"/></svg>');
 
 describe('findMediaReferences', () => {
-  it('reports the club logo, a project image and no false positives', async () => {
+  it('reports the club logo and no false positives', async () => {
     const deps = createTestDeps();
-    const ctx = ctxWith(['media.upload', 'settings.manage', 'projects.manage'], insertUser(deps, {}));
+    const ctx = ctxWith(['media.upload', 'settings.manage'], insertUser(deps, {}));
     const logo = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'logo.png', bytes: PNG }));
     const other = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'other.svg', bytes: OTHER_PNG, declaredMimeType: 'image/svg+xml' }));
 
     unwrap(await setSetting(deps, ctx, { key: 'branding.logoAssetId', value: logo.id }));
-    unwrap(await createProject(deps, ctx, { slug: 'hof', name: { de: 'Hofprojekt' }, type: 'ongoing', summary: { de: '' }, body: { de: '' }, imageAssetId: logo.id }));
 
     const hits = findMediaReferences(deps, logo.id);
-    expect(hits.map((h) => h.entity).sort()).toEqual(['project', 'setting']);
+    expect(hits.map((h) => h.entity)).toEqual(['setting']);
     expect(hits.find((h) => h.entity === 'setting')!.label).toBe('Logo des Vereins');
-    expect(hits.find((h) => h.entity === 'project')!.label).toBe('Projekt „hof“');
     expect(findMediaReferences(deps, other.id)).toEqual([]);
   });
 

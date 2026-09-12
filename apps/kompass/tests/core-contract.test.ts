@@ -11,7 +11,7 @@ const REQUIRED = [
   'queryAudit', 'getAuditEntry',
   'createApiToken', 'listApiTokens', 'revokeApiToken',
   'seedDevelopment', 'CORE_PERMISSIONS', 'requirePermission', 'newId',
-  'localizedText', 'resolveText', 'createProject', 'listProjects',
+  'localizedText', 'resolveText',
 ] as const;
 
 describe('core contract', () => {

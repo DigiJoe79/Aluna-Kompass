@@ -6,8 +6,9 @@ import { installedModules } from '@/modules';
 describe('installed modules', () => {
   it('registers installed modules without clashes', () => {
     const registry = createRegistry([coreModule, ...installedModules]);
-    expect(installedModules.map((m) => m.key)).toEqual(['site', 'animals', 'contacts', 'dms']);
+    expect(installedModules.map((m) => m.key)).toEqual(['site', 'projects', 'animals', 'contacts', 'dms']);
     expect(registry.permissionKeys.has('animals.manage')).toBe(true);
+    expect(registry.permissionKeys.has('projects.manage')).toBe(true);
     expect(registry.permissionKeys.has('site.publish')).toBe(true);
     expect(registry.permissionKeys.has('contacts.manage')).toBe(true);
     expect(registry.permissionKeys.has('dms.view')).toBe(true);
@@ -24,13 +25,14 @@ describe('installed modules', () => {
   });
 
   /**
-   * Die Projekte liegen im Kern, nicht im abgelösten Webseiten-Modul; ohne
-   * eigene Kernrechte wären sie mit ihm verschwunden.
+   * Die Projekte lagen bis zum 2026-09-12 im Kern; seither bringt das Modul
+   * `projects` ihre Rechte mit, und der Kern kennt sie nicht mehr.
    */
-  it('keeps the project permissions in the core', () => {
+  it('takes the project permissions from the projects module, not the core', () => {
     const registry = createRegistry([coreModule, ...installedModules]);
     expect(registry.permissionKeys.has('projects.view')).toBe(true);
     expect(registry.permissionKeys.has('projects.manage')).toBe(true);
+    expect([...coreModule.permissions].filter((k) => k.startsWith('projects.'))).toEqual([]);
     expect([...registry.permissionKeys].filter((k) => k.startsWith('website.'))).toEqual([]);
   });
 });

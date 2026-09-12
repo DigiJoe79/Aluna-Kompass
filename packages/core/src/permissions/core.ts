@@ -11,10 +11,6 @@ export const CORE_PERMISSIONS = [
   // Akte selbst — Ablage, Nummernvergabe, Storno — lebt im Modul `dms`.
   'documents.export',
   'media.upload',
-  // Die Projekte liegen im Kern und trugen bis zum Cutover die Rechte des
-  // Webseiten-Moduls. Ohne dieses Modul gäbe es sie sonst nicht mehr.
-  'projects.view',
-  'projects.manage',
   // Wiedervorlagen hängen an Vorgängen aller Module; die Liste auf der
   // Startseite zeigt Anlässe, keine Inhalte — deshalb ein eigenes Leserecht.
   'followUps.view',

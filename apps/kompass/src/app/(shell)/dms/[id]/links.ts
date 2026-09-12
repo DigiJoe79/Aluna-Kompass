@@ -1,4 +1,5 @@
-import { getProject, type CallContext, type Deps } from '@kompass/core';
+import type { CallContext, Deps } from '@kompass/core';
+import { getProject } from '@kompass/module-projects';
 import { getAnimal } from '@kompass/module-animals';
 import { displayName, getContact } from '@kompass/module-contacts';
 

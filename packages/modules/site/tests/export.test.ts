@@ -1,7 +1,8 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { coreModule, setSetting, storeMediaAsset, unwrap } from '@kompass/core';
+import { coreModule, setModuleEnabled, setSetting, storeMediaAsset, unwrap } from '@kompass/core';
+import { createProject, projectsModule, setProjectPublished } from '@kompass/module-projects';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createEntry, setEntryPublished } from '../src/entries';
@@ -64,8 +65,9 @@ describe('site export', () => {
     const { content } = await readContent(deps, dir);
     expect(content.variables).toEqual({ claim: { de: 'Hallo' } });
     expect(content.collections.notes).toEqual([{ body: 'Notiz' }]);
-    // Ohne `uses` bleiben nur die Sichten des Kerns.
-    expect(Object.keys(content.views).sort()).toEqual(['organization', 'projects']);
+    // Ohne `uses` bleiben nur die Sichten des Kerns; Projekte sind seit dem
+    // 2026-09-12 ein Modul und kommen nur auf Anforderung.
+    expect(Object.keys(content.views).sort()).toEqual(['organization']);
     expect(content.assets).toEqual([]);
   });
 
@@ -83,6 +85,19 @@ describe('site export', () => {
     deps.db.insert(siteValues).values({ key: 'claim', value: { de: 'Hallo', en: 'leftover' }, updatedAt: 't' }).run();
     const { content } = await readContent(deps, dir);
     expect(content.variables.claim).toEqual({ de: 'Hallo' });
+  });
+
+  it('brings the projects view when the template asks for the module', async () => {
+    const deps = createTestDeps({ locales: ['de'], manifests: [coreModule, projectsModule, siteModule] });
+    insertUser(deps, { id: 'USER-TEST' });
+    const admin = ctxWith(['site.manage', 'modules.manage', 'projects.manage', 'projects.view']);
+    unwrap(await setModuleEnabled(deps, admin, { key: 'projects', enabled: true }));
+    const dir = templateDir(GOOD.replace('collections: {', "uses: ['projects'],\n  collections: {"));
+    unwrap(await applyTemplateSync(deps, admin, { dir, confirm: true }));
+    const project = unwrap(await createProject(deps, admin, { slug: 'hof', name: { de: 'Hof' }, type: 'ongoing', summary: { de: '' }, body: { de: '' }, externalLinks: [{ label: 'Spenden', url: 'https://example.org/s' }] }));
+    unwrap(await setProjectPublished(deps, admin, { id: project.id, isPublished: true }));
+    const { content } = await readContent(deps, dir);
+    expect(content.views.projects).toEqual([expect.objectContaining({ slug: 'hof', externalLinks: [{ label: 'Spenden', url: 'https://example.org/s' }] })]);
   });
 
   it('reports a used view whose module is disabled instead of writing an empty list', async () => {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { coreModule, schema, unwrap } from '../src';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { addLocale, listLocales, previewLocaleRemoval, removeLocale, reorderLocales } from '../src/i18n/service';
-import { createProject } from '../src/projects/service';
+import { recordAudit } from '../src/audit/log';
 import { eq } from 'drizzle-orm';
 
 const setup = () => {
@@ -39,25 +39,35 @@ describe('locale administration', () => {
     expect((await addLocale(deps, ctxWith([]), { code: 'en' })).ok).toBe(false);
   });
 
-  it('counts the content a removal would cost, across modules', async () => {
+
+/**
+ * Der Sprachdienst kennt keine Spaltenliste; er liest jede Tabelle. Eine
+ * Probetabelle zeigt das, ohne dass der Kern ein Fachmodul bräuchte.
+ */
+const probeTable = (deps: ReturnType<typeof setup>, name: Record<string, string>) => {
+  deps.sqlite.exec('create table if not exists probe_texts (id text primary key, name text not null)');
+  deps.sqlite.prepare('insert into probe_texts (id, name) values (?, ?)').run('P1', JSON.stringify(name));
+};
+
+  it('counts the content a removal would cost, in any table', async () => {
     const deps = setup();
-    const ctx = ctxWith(['settings.manage', 'projects.manage']);
+    const ctx = ctxWith(['settings.manage']);
     unwrap(await addLocale(deps, ctx, { code: 'en' }));
-    unwrap(await createProject(deps, ctx, { slug: 'a', name: { de: 'Hof', en: 'Yard' }, type: 'ongoing', summary: { de: 'x', en: '' }, body: { de: '', en: '' } }));
+    probeTable(deps, { de: 'Hof', en: 'Yard' });
     const preview = unwrap(await previewLocaleRemoval(deps, ctx, { code: 'en' }));
     expect(preview.filled).toBeGreaterThan(0);
-    expect(preview.tables.some((t) => t.table === 'projects' && t.filled > 0)).toBe(true);
+    expect(preview.tables.some((t) => t.table === 'probe_texts' && t.filled > 0)).toBe(true);
   });
 
   it('removes a locale, strips it from stored text and keeps the leading one', async () => {
     const deps = setup();
-    const ctx = ctxWith(['settings.manage', 'projects.manage']);
+    const ctx = ctxWith(['settings.manage']);
     unwrap(await addLocale(deps, ctx, { code: 'en' }));
-    const project = unwrap(await createProject(deps, ctx, { slug: 'a', name: { de: 'Hof', en: 'Yard' }, type: 'ongoing', summary: { de: 'x', en: '' }, body: { de: '', en: '' } }));
+    probeTable(deps, { de: 'Hof', en: 'Yard' });
     unwrap(await removeLocale(deps, ctx, { code: 'en', confirm: true }));
     expect(unwrap(await listLocales(deps, ctx))).toEqual(['de']);
-    const row = deps.db.select().from(schema.projects).where(eq(schema.projects.id, project.id)).get()!;
-    expect(row.name).toEqual({ de: 'Hof' });
+    const row = deps.sqlite.prepare('select name from probe_texts where id = ?').get('P1') as { name: string };
+    expect(JSON.parse(row.name)).toEqual({ de: 'Hof' });
     const last = await removeLocale(deps, ctx, { code: 'de', confirm: true });
     expect(last.ok === false && last.error.type === 'conflict' && last.error.code === 'lastLocale').toBe(true);
   });
@@ -106,12 +116,12 @@ describe('locale removal reaches beyond localized columns', () => {
 
   it('never rewrites the audit log, which records what was there', async () => {
     const deps = setup();
-    const ctx = ctxWith(['settings.manage', 'projects.manage']);
+    const ctx = ctxWith(['settings.manage']);
     unwrap(await addLocale(deps, ctx, { code: 'en' }));
-    unwrap(await createProject(deps, ctx, { slug: 'a', name: { de: 'Hof', en: 'Yard' }, type: 'ongoing', summary: { de: 'x' }, body: { de: '' } }));
+    recordAudit(deps.db, deps, ctx, { action: 'probe.create', entityType: 'probe', entityId: 'P1', after: { name: { de: 'Hof', en: 'Yard' } }, summary: 'Probe' });
     unwrap(await removeLocale(deps, ctx, { code: 'en', confirm: true }));
     const entries = deps.db.select().from(schema.auditLog).all();
-    const created = entries.find((e) => e.action === 'projects.create')!;
+    const created = entries.find((e) => e.action === 'probe.create')!;
     expect(String(created.after)).toContain('Yard');
   });
 });

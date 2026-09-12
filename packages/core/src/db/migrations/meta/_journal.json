@@ -183,6 +183,27 @@
       "when": 1789212272963,
       "tag": "0025_dms_counters_fill",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1789234022875,
+      "tag": "0026_projects_external_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "6",
+      "when": 1789234045296,
+      "tag": "0027_projects_module",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "6",
+      "when": 1789234045936,
+      "tag": "0028_projects_drop_betterplace",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,5 @@
-import { hasPermission, isModuleEnabled, listProjects, requirePermission, retentionEnd, retentionMonths, schema } from '@kompass/core';
+import { hasPermission, isModuleEnabled, requirePermission, retentionEnd, retentionMonths, schema } from '@kompass/core';
+import { listProjects } from '@kompass/module-projects';
 import { listAnimals } from '@kompass/module-animals';
 import { dispatchChannels, documentTypeFor, getDocumentRecord, listDocumentFolders } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';

@@ -28,6 +28,7 @@
     "@kompass/module-dms": "workspace:*",
     "@kompass/module-site": "workspace:*",
     "@kompass/site-template": "workspace:*",
-    "tsx": "^4.19.3"
+    "tsx": "^4.19.3",
+    "@kompass/module-projects": "workspace:*"
   }
 }

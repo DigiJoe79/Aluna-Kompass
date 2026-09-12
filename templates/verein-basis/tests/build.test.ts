@@ -29,12 +29,12 @@ describe('verein-basis', () => {
   it('declares only fields any club could fill', () => {
     const keys = Object.keys(template.variables).concat(Object.keys(template.collections));
     expect(keys).not.toContain('shelterDogCount');
-    for (const key of keys) expect(key).not.toMatch(/dog|animal|shelter|tier|betterplace/i);
+    for (const key of keys) expect(key).not.toMatch(/dog|animal|shelter|tier|spendenplattform/i);
 
     for (const [, col] of Object.entries(template.collections)) {
-      expect(col.label).not.toMatch(/tier|hund|shelter|betterplace/i);
+      expect(col.label).not.toMatch(/tier|hund|shelter|spendenplattform/i);
       for (const field of Object.keys(col.fields)) {
-        expect(field).not.toMatch(/dog|animal|shelter|tier|betterplace/i);
+        expect(field).not.toMatch(/dog|animal|shelter|tier|spendenplattform/i);
       }
     }
   });

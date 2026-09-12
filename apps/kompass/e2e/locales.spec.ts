@@ -17,7 +17,6 @@ test('adds a locale, fills it, and sees what removing it would cost', async ({ p
   await page.getByLabel('Typ').selectOption('ongoing');
   await page.locator('[name="name.de"]').fill('Grundversorgung');
   await page.locator('[name="summary.de"]').fill('Futter und Wärme.');
-  await page.getByLabel('Betterplace-Projekt-ID').fill('123456');
   await page.getByRole('button', { name: 'Speichern' }).click();
   // Anlegen leitet auf die Detailseite weiter; erst dort meldet das Speichern.
   await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);

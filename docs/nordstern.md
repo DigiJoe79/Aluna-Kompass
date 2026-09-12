@@ -106,8 +106,8 @@ Specs: `2026-09-05-webseite-design.md` (abgelöst),
 **Stand: steht, Cutover offen.** Alunas Template und seine Startinhalte liegen
 im Vereinsrepo und laufen lokal durch die Pipeline (2026-09-12: 77 Dateien,
 keine Lücken, keine Sperrworttreffer). Auf dem Testcontainer ist noch nichts
-eingelesen, ein Publish aus Test nicht abgenommen. Betterplace steckt noch im
-Kern.
+eingelesen, ein Publish aus Test nicht abgenommen. Projekte sind seit dem
+2026-09-12 ein eigenes Modul; der Kern kennt keine Spendenplattform mehr.
 
 ### Korrespondenz und Akte
 
@@ -237,8 +237,9 @@ Akte läuft weiter, gehört aber nicht mehr zu diesem Schritt.
 - Cutover-Rest aus `2026-09-07-site-5-cutover.md`: Image auf den
   Testcontainer, Alunas Template einlesen, Startinhalte übernehmen, Publish
   aus Test abnehmen. Danach der erste Publish aus Prod.
-- Betterplace aus dem Kern, Projekte als eigenes Kernmodul (Backlog 4). Vor
-  Finanzen, weil Finanzen die Projekte erweitert.
+- Erledigt am 2026-09-12: Projekte als eigenes Modul, mit Verweisen nach
+  aussen statt einer Plattformspalte. Kam vor Finanzen, weil Finanzen die
+  Projekte erweitert.
 - Browsertest bei Handybreite (Backlog 3).
 
 **Fertig, wenn:** Alunas Seite aus Prod publiziert wird, WordPress abgeschaltet

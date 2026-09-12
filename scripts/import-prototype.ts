@@ -3,11 +3,8 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
   createDeps,
-  createProject,
-  listProjects,
   emptyLocalized,
   readEnv,
-  setProjectPublished,
   storeMediaAsset,
   unwrap,
   type CallContext,
@@ -15,6 +12,7 @@ import {
   type LocalizedText,
 } from '@kompass/core';
 import { coreDocumentTemplates, createDocumentEngine } from '@kompass/documents';
+import { createProject, listProjects, projectsModule, setProjectPublished } from '@kompass/module-projects';
 import {
   animalsModule,
   createAnimal,
@@ -114,7 +112,8 @@ export async function importPrototype(
         summary: L(p.kurz ?? ''),
         body: L((p.text ?? []).join('\n\n')),
         imageAssetId: await asset(p.photo),
-        betterplaceProjectId: p.betterplaceId ?? '',
+        // Die Plattform-ID des Prototyps wird zum Verweis nach aussen.
+        externalLinks: p.betterplaceId ? [{ label: 'Betterplace', url: `https://www.betterplace.org/de/projects/${p.betterplaceId}` }] : [],
       }),
     );
     unwrap(await setProjectPublished(deps, ctx, { id: created.id, isPublished: true }));
@@ -129,7 +128,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const deps = createDeps({
     dataPath: env.dataPath,
     env: env.env,
-    modules: [animalsModule],
+    modules: [animalsModule, projectsModule],
     coreTemplates: coreDocumentTemplates(),
     documents: createDocumentEngine(),
   });

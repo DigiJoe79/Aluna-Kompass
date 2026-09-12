@@ -11,13 +11,15 @@ test.describe('projects', () => {
     await loginAsAdmin(page);
   });
 
-  test('create with betterplace id, then publish from the list', async ({ page }) => {
+  test('create with an external link, then publish from the list', async ({ page }) => {
     await page.goto('/projects');
     await page.getByRole('link', { name: 'Projekt anlegen' }).click();
     await page.getByLabel('Slug (URL-Teil)').fill('grundversorgung');
     await page.locator('[name="name.de"]').fill('Grundversorgung');
     await page.getByLabel('Typ').selectOption('ongoing');
-    await page.getByLabel('Betterplace-Projekt-ID').fill('123456');
+    await page.getByRole('button', { name: 'Verweis hinzufügen' }).click();
+    await page.getByLabel('Bezeichnung').fill('Spendenseite');
+    await page.getByLabel('Adresse (https://…)').fill('https://example.org/spenden/grundversorgung');
     await page.locator('[name="summary.de"]').fill('Futter, Wärme und tierärztliche Versorgung.');
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);
@@ -26,6 +28,7 @@ test.describe('projects', () => {
     await page.goto('/projects');
     const row = page.getByRole('row', { name: /Grundversorgung/ });
     await expect(row).toContainText('Dauerprojekt');
+    await expect(row).toContainText('Spendenseite');
     await row.getByRole('switch').click();
     await expect(row).toContainText('Veröffentlicht');
   });

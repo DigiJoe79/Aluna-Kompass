@@ -3,6 +3,7 @@ import { pathToFileURL } from 'node:url';
 import { createDeps, readEnv, seedDevelopment, type AppEnv } from '@kompass/core';
 import { coreDocumentTemplates, createDocumentEngine } from '@kompass/documents';
 import { animalsModule } from '@kompass/module-animals';
+import { projectsModule } from '@kompass/module-projects';
 import { contactsModule } from '@kompass/module-contacts';
 import { dmsModule } from '@kompass/module-dms';
 import { siteModule } from '@kompass/module-site';
@@ -24,7 +25,7 @@ export async function seedWithModules(opts: SeedOptions): Promise<{ adminEmail: 
   const deps = createDeps({
     dataPath: opts.dataPath,
     env: opts.env,
-    modules: [siteModule, animalsModule, contactsModule, dmsModule],
+    modules: [siteModule, projectsModule, animalsModule, contactsModule, dmsModule],
     coreTemplates: coreDocumentTemplates(),
     documents: createDocumentEngine(),
   });

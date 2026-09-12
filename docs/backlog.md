@@ -32,24 +32,6 @@ deckt die gebaute Site nicht ab.
 hat unter `public/` nur die `.htaccess`, die genannten Dateien gab es am
 2026-09-12 nicht mehr.
 
-## 4. Betterplace steckt im Kern
-
-**Was:** `projects.betterplaceProjectId` ist eine Spalte der Kerntabelle
-`projects`, mit eigenem Feld in der Oberfläche und im veröffentlichten Blick.
-
-**Warum:** Eine bestimmte Spendenplattform gehört nicht in den generischen
-Kern (Prinzip 1). Ein Modellbauverein bekommt ein Pflichtfeld für etwas, das
-er nicht benutzt. Gefunden beim Cutover am 2026-09-08, als der Test gegen
-vereinsspezifische Inhalte gebaut wurde; `betterplace` musste dort von der
-Liste genommen werden, weil der Kern es selbst führt.
-
-**Zuschnitt:** Entweder eine allgemeine Liste externer Verweise je Projekt
-(Label plus URL) oder ein Feld, das das Template deklariert. Beides braucht
-eine Migration und berührt den veröffentlichten Blick.
-
-**Wann:** Wenn Projekte ihr eigenes Kernmodul bekommen — die Entscheidung vom
-2026-09-07 sieht das ohnehin vor.
-
 ## 5. Einsortierregeln auf dem Volltext
 
 **Was:** `document_rules.matchField = 'fulltext'` als weiteres Kriterium für Einsortierregeln.
@@ -57,20 +39,6 @@ eine Migration und berührt den veröffentlichten Blick.
 **Warum:** Die Regeln belegen das Ablegen-Formular vor, und zu dem Zeitpunkt ist die Texterkennung noch nicht durch (das Dokument wird erst nach dem Ablegen im Hintergrund gelesen). Ein Volltext-Kriterium greift beim Ablegen daher ins Leere.
 
 **Wann:** Wenn ein Agent oder Hintergrundprozess Dokumente nachträglich klassifiziert und vorschlägt (der Zielzustand aus § 2 der Dokument-Spec), als eigener Vorgang mit eigener Spec.
-
-## 6. Das Template-Paket exportiert keinen Vertragstyp
-
-**Was:** `@kompass/site-template` liefert `defineTemplate` und die Feldtypen,
-aber keinen exportierten Typ für den Vertrag, den ein Template erfüllt. Ein
-Vereinsrepo, das sein Template gegen den Vertrag prüfen will, kann ihn nicht
-benennen.
-
-**Warum:** Gefunden beim lokalen Vorflug des Cutovers am 2026-09-12 gegen
-Alunas Template. Bis dahin lief kein Template außerhalb dieses Repos gegen
-das Paket.
-
-**Wann:** Mit Schritt 2 des Nordsterns, sobald Alunas Template aus dem
-Testcontainer publiziert; dann zeigt sich, welche Form der Typ braucht.
 
 ## 7. Das Basis-Template ignoriert die Vereinsstammdaten
 

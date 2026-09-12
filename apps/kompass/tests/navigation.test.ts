@@ -40,19 +40,21 @@ describe('buildNavigation', () => {
   });
 
   /**
-   * Die Projekte liegen im Kern. Ohne eigene Gruppe wären sie mit dem
-   * abgelösten Webseiten-Modul aus der Navigation verschwunden.
+   * Die Projekte waren bis zum 2026-09-12 ein Kerneintrag mit eigener Gruppe;
+   * seither sind sie ein Modul wie jedes andere und hängen als Gruppe daran.
    */
-  it('offers the core projects outside the admin group', () => {
-    const groups = buildNavigation({ manifests: [coreModule], enabledKeys: new Set(['core']), permissions: new Set(['projects.view']) });
-    const core = groups.find((g) => g.key === 'core')!;
-    expect(core.items.map((i) => [i.key, i.href, i.visible])).toEqual([['projects', '/projects', true]]);
-    expect(core.disabled).toBe(false);
-  });
-
-  it('hides the projects from anyone without the permission', () => {
-    const groups = buildNavigation({ manifests: [coreModule], enabledKeys: new Set(['core']), permissions: new Set() });
-    expect(groups.find((g) => g.key === 'core')?.items.every((i) => !i.visible)).toBe(true);
+  it('offers the projects as a module group, hidden without the permission', () => {
+    const projects = defineModule({
+      key: 'projects',
+      version: '0.1.0',
+      permissions: ['projects.view'],
+      navigation: [{ key: 'projects.list', href: '/projects', icon: 'folder', group: 'projects', permission: 'projects.view' }],
+    });
+    const groups = buildNavigation({ manifests: [coreModule, projects], enabledKeys: new Set(['core', 'projects']), permissions: new Set(['projects.view']) });
+    expect(groups.find((g) => g.key === 'core')).toBeUndefined();
+    expect(groups.find((g) => g.key === 'projects')!.items.map((i) => [i.key, i.href, i.visible])).toEqual([['projects.list', '/projects', true]]);
+    const none = buildNavigation({ manifests: [coreModule, projects], enabledKeys: new Set(['core', 'projects']), permissions: new Set() });
+    expect(none.find((g) => g.key === 'projects')!.items.every((i) => !i.visible)).toBe(true);
   });
 
   it('leaves installed but inactive modules out of the navigation entirely', () => {

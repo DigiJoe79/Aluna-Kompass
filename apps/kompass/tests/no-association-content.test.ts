@@ -13,12 +13,15 @@ const ROOT = path.resolve(import.meta.dirname, '../../..');
  * „Aluna“ allein steht nicht auf der Liste: So heisst das Produkt selbst
  * (`Aluna Kompass`). Verboten ist, was den Verein meint.
  */
-const FORBIDDEN = ['tierhilfe', 'zuhause-gesucht', 'hundeblicke\\.net'];
+// `betterplace` kam am 2026-09-12 dazu, als die Projekte ihre Plattformspalte verloren.
+const FORBIDDEN = ['tierhilfe', 'zuhause-gesucht', 'hundeblicke\\.net', 'betterplace'];
 
 const CODE = ['--include=*.ts', '--include=*.tsx', '--include=*.astro', '--include=*.json', '--include=*.css'];
 
 /** `apps/kompass/data` ist das Entwicklungsvolume — dort liegt das eingelesene Template des Betreibers. */
-const IGNORED = ['node_modules/', '/.next/', '/.astro/', 'apps/kompass/data/', 'tests/no-association-content.test.ts'];
+// `prototype-fixture.ts` bildet die Datenform des alten Prototyps nach, samt dessen Plattformfeld.
+// Migrationen und ihre Snapshots sind Geschichte und werden nie editiert; sie tragen, was einmal war.
+const IGNORED = ['node_modules/', '/.next/', '/.astro/', 'apps/kompass/data/', 'tests/no-association-content.test.ts', 'tests/prototype-fixture.ts', 'src/db/migrations/'];
 
 const search = (dir: string, includes: string[] = CODE): string[] => {
   try {

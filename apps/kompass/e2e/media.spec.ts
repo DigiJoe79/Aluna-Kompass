@@ -17,7 +17,6 @@ test.describe('media library', () => {
     await page.getByRole('link', { name: 'Projekt anlegen' }).click();
     await page.getByLabel('Slug (URL-Teil)').fill('hofprojekt');
     await page.locator('[name="name.de"]').fill('Hofprojekt');
-    await page.getByLabel('Betterplace-Projekt-ID').fill('654321');
     await page.locator('[name="summary.de"]').fill('Kurztext.');
     await page.getByLabel('Bild Datei wählen').setInputFiles({ name: 'hof.png', mimeType: 'image/png', buffer: PNG });
     await expect(page.getByRole('button', { name: 'Bild entfernen' })).toBeVisible();

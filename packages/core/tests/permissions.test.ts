@@ -15,8 +15,6 @@ describe('permissions', () => {
       'followUps.view',
       'media.upload',
       'modules.manage',
-      'projects.manage',
-      'projects.view',
       'retention.view',
       'roles.manage',
       'settings.manage',

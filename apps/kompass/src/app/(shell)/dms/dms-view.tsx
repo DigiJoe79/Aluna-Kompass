@@ -1,4 +1,5 @@
-import { getProject, hasPermission, requirePermission, type CallContext, type Deps } from '@kompass/core';
+import { hasPermission, requirePermission, type CallContext, type Deps } from '@kompass/core';
+import { getProject } from '@kompass/module-projects';
 import { getAnimal } from '@kompass/module-animals';
 import { displayName, getContact } from '@kompass/module-contacts';
 import {

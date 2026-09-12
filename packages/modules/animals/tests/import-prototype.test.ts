@@ -1,4 +1,5 @@
-import { coreModule, listProjects, unwrap } from '@kompass/core';
+import { coreModule, unwrap } from '@kompass/core';
+import { listProjects } from '@kompass/module-projects';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 import { importPrototype } from '../../../../scripts/import-prototype';

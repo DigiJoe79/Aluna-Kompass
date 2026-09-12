@@ -1,6 +1,6 @@
 'use client';
 
-import type { ProjectRecord } from '@kompass/core';
+import type { ProjectRecord } from '@kompass/module-projects';
 import { useTranslations } from 'next-intl';
 import { useActionState, useEffect } from 'react';
 import { toast } from 'sonner';
@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { idleState } from '@/lib/actions';
 import { saveProjectAction } from './actions';
+import { ExternalLinksField } from './external-links-field';
 import { Select } from '@/components/ui/select';
 
 export function ProjectForm({ project, locales }: { project: ProjectRecord | null; locales: string[] }) {
@@ -30,13 +31,13 @@ export function ProjectForm({ project, locales }: { project: ProjectRecord | nul
         <TabsList className="border-b border-line bg-surface px-6"><TabsTrigger value="public" className="gap-2">{t('tabs.public')}{Object.keys(errors).length > 0 ? <TabInvalidDot label={tCommon('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="finance" disabled>{t('tabs.finance')}</TabsTrigger></TabsList>
         <TabsContent value="public" className="grid gap-5 p-6 md:grid-cols-2">
           <FormField id="slug" label={c('slug')} hint={c('slugHint')} error={errors.slug} required><Input id="slug" name="slug" defaultValue={project?.slug ?? ''} required pattern="[a-z0-9][a-z0-9-]{0,80}" className="font-mono" /></FormField>
-          <FormField id="betterplaceProjectId" label={t('betterplace')} hint={t('betterplaceHint')} error={errors.betterplaceProjectId}><Input id="betterplaceProjectId" name="betterplaceProjectId" defaultValue={project?.betterplaceProjectId ?? ''} className="font-mono" /></FormField>
           <FormField id="type" label={t('type')}><Select id="type" name="type" defaultValue={project?.type ?? 'ongoing'} className="w-auto"><option value="ongoing">{t('types.ongoing')}</option><option value="shortTerm">{t('types.shortTerm')}</option></Select></FormField>
           <FormField id="status" label={t('status')}><Select id="status" name="status" defaultValue={project?.status ?? 'active'} className="w-auto"><option value="active">{t('statuses.active')}</option><option value="completed">{t('statuses.completed')}</option></Select></FormField>
           <LocalizedField name="name" label={t('name')} value={project?.name ?? {}} required errors={errors} locales={locales} />
           <LocalizedField name="summary" label={t('summary')} kind="textarea" rows={3} value={project?.summary ?? {}} errors={errors} locales={locales} />
           <LocalizedField name="body" label={t('body')} kind="markdown" rows={12} value={project?.body ?? {}} errors={errors} locales={locales} />
           <div className="md:col-span-2"><MediaPicker name="imageAssetId" value={project?.imageAssetId ?? null} label={t('image')} /></div>
+          <ExternalLinksField value={project?.externalLinks ?? []} errors={errors} />
           <div className="md:col-span-2"><FormActionBar back={{ href: '/projects', label: tCommon('backToList') }} /></div>
         </TabsContent>
         <TabsContent value="finance" className="p-6 text-[13px] text-muted-ink">{t('financeLater')}</TabsContent>

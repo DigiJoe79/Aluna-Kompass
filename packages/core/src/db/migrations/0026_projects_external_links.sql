@@ -1,0 +1,1 @@
+ALTER TABLE `projects` ADD `external_links` text DEFAULT '[]' NOT NULL;

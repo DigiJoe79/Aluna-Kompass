@@ -1,17 +1,13 @@
+import { definePublishedView, localizedText, type Deps } from '@kompass/core';
 import { asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { projects } from '../db/schema';
-import type { Deps } from '../deps';
-import { localizedText } from '../i18n/localized';
-import { definePublishedView } from './view';
+import { projects } from './schema';
 
 /**
- * Projekte in ihrer öffentlichen Form. Die Tabelle liegt im Kern, deshalb die
- * Sicht auch — ein Template führt sie nicht als eigene Sammlung, sonst pflegte
- * es Daten, die ihm nicht gehören.
- *
- * Ab Stufe 3 tragen Projekte Finanzfelder. Die kommen hier nicht dazu: Was ein
- * Spendenzweck intern kostet und einbringt, ist Rechenschaft, keine Webseite.
+ * Projekte in ihrer öffentlichen Form. Die Verweise nach aussen kommen mit;
+ * ob daraus ein Spendenformular oder eine Schaltfläche wird, weiss das
+ * Template. Finanzfelder kommen hier nie dazu: Was ein Spendenzweck intern
+ * kostet und einbringt, ist Rechenschaft, keine Webseite.
  */
 export const publishedProjects = definePublishedView({
   name: 'projects',
@@ -23,7 +19,7 @@ export const publishedProjects = definePublishedView({
     summary: localizedText(),
     body: localizedText(),
     imageAssetId: z.string().nullable(),
-    betterplaceProjectId: z.string(),
+    externalLinks: z.array(z.object({ label: z.string(), url: z.string() })),
     sortOrder: z.number(),
   }),
   load: (deps: Deps) =>

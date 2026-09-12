@@ -1,16 +1,24 @@
+import {
+  type CallContext,
+  type DbOrTx,
+  type Deps,
+  type Result,
+  conflict,
+  isoNow,
+  localizedText,
+  newId,
+  notFound,
+  ok,
+  recordAudit,
+  requirePermission,
+  schema as core,
+  validate,
+} from '@kompass/core';
 import { asc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { recordAudit } from '../audit/log';
-import { isoNow } from '../clock';
-import type { CallContext } from '../context';
-import type { DbOrTx } from '../db/client';
-import { mediaAssets, projects } from '../db/schema';
-import type { Deps } from '../deps';
-import { localizedText } from '../i18n/localized';
-import { newId } from '../ids';
-import { requirePermission } from '../permissions/check';
-import { conflict, notFound, ok, type Result } from '../result';
-import { validate } from '../validate';
+import { projects } from './schema';
+
+const { mediaAssets } = core;
 
 export type ProjectRecord = typeof projects.$inferSelect;
 
@@ -24,7 +32,12 @@ const projectFields = {
   summary: localizedText({ max: 400 }),
   body: localizedText({ max: 20_000 }),
   imageAssetId: z.string().nullable().default(null),
-  betterplaceProjectId: z.string().trim().max(40).default(''),
+  // Verweise nach aussen, Bezeichnung plus Adresse. Nur http(s): Ein Template
+  // setzt sie als Links auf die Seite, und `javascript:` hat dort nichts verloren.
+  externalLinks: z
+    .array(z.object({ label: z.string().trim().min(1).max(80), url: z.string().trim().regex(/^https?:\/\/\S+$/i).max(500) }))
+    .max(10)
+    .default([]),
 };
 export const projectCreateSchema = z.object(projectFields);
 export const projectUpdateSchema = z.object({
@@ -36,7 +49,7 @@ export const projectUpdateSchema = z.object({
   summary: projectFields.summary.optional(),
   body: projectFields.body.optional(),
   imageAssetId: projectFields.imageAssetId.optional(),
-  betterplaceProjectId: projectFields.betterplaceProjectId.optional(),
+  externalLinks: projectFields.externalLinks.optional(),
 });
 
 function load(db: DbOrTx, id: string): ProjectRecord | null {
