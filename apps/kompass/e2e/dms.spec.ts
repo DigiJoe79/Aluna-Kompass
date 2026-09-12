@@ -361,6 +361,25 @@ test.describe('dms', () => {
     await expect(page).toHaveURL(/folder=protokolle/);
   });
 
+  test('stellt die Kopfknöpfe auf Feldhöhe und den primären nach rechts', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+
+    const receive = page.getByRole('button', { name: 'Post ablegen' });
+    const draft = page.getByRole('link', { name: 'Neuer Entwurf' });
+    const receiveBox = await receive.boundingBox();
+    const draftBox = await draft.boundingBox();
+    if (!receiveBox || !draftBox) throw new Error('Knöpfe nicht sichtbar');
+
+    // Hauptwege des Bildschirms, keine Nebenaktionen — und daneben steht ein
+    // 38-px-Suchfeld.
+    expect(Math.round(receiveBox.height)).toBe(38);
+    expect(Math.round(draftBox.height)).toBe(38);
+
+    // Der primäre Knopf schliesst die Gruppe ab.
+    expect(draftBox.x).toBeGreaterThan(receiveBox.x);
+  });
+
   test('hält die Zeilenhöhe des Fundaments ein', async ({ page }) => {
     await login(page);
     await page.goto('/dms');

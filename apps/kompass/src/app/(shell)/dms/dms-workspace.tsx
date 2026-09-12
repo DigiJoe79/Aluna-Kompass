@@ -176,12 +176,15 @@ export function DmsWorkspace({
         actions={
           canCreate ? (
             <>
-              <Link href="/dms/new" className={buttonVariants({ variant: 'default', size: 'sm' })}>
-                {t('newDraft')}
-              </Link>
-              <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+              {/* Der primäre Knopf schliesst die Gruppe ab. Und beides auf
+                  Feldhöhe: Es sind die Hauptwege des Bildschirms, keine
+                  Nebenaktionen. */}
+              <Button variant="outline" onClick={() => setOpen(true)}>
                 {t('receivePost')}
               </Button>
+              <Link href="/dms/new" className={buttonVariants({ variant: 'default' })}>
+                {t('newDraft')}
+              </Link>
             </>
           ) : null
         }
