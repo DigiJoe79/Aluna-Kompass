@@ -131,6 +131,7 @@ export function FormActionBar({
   return (
     <div
       ref={anchor}
+      data-slot="form-action-bar"
       className={cn(
         'flex items-center gap-3 border-t border-line bg-surface-2 px-6 py-3',
         sticky && 'sticky bottom-0'
@@ -149,15 +150,23 @@ export function FormActionBar({
             {t('cancel')}
           </Link>
         ) : null}
-        <Button
-          type="button"
-          variant="ghost"
-          // Ohne Änderungen wäre der Knopf ein Versprechen, das ins Leere greift.
-          disabled={changed === 0}
-          onClick={() => (onDiscard ? onDiscard() : window.location.reload())}
-        >
-          {t('discard')}
-        </Button>
+        {/*
+          Im Dialog gibt es kein „Verwerfen“: Dort wirft „Abbrechen“ ohnehin
+          alles weg, und derselbe Vorgang unter zweitem Namen ist ein Weg zu
+          viel. Auf Seiten sind die beiden verschiedene Dinge — das eine nimmt
+          die Eingaben zurück, das andere führt weg.
+        */}
+        {cancel ? null : (
+          <Button
+            type="button"
+            variant="ghost"
+            // Ohne Änderungen wäre der Knopf ein Versprechen, das ins Leere greift.
+            disabled={changed === 0}
+            onClick={() => (onDiscard ? onDiscard() : window.location.reload())}
+          >
+            {t('discard')}
+          </Button>
+        )}
         <SubmitButton disabled={saveDisabled}>
           {(changed > 0 ? saveLabelChanged : undefined) ?? saveLabel ?? t('save')}
         </SubmitButton>

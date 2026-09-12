@@ -110,7 +110,7 @@ export function DraftScreen({
           ))}
         </div>
 
-        <div className={cn('min-w-0 flex-1 px-6 pb-6', tab === 'preview' && 'hidden min-[1180px]:block')}>
+        <div className={cn('min-w-0 flex-1', tab === 'preview' && 'hidden min-[1180px]:block')}>
           <Form {...form} onChangedCount={setChanged} onSaved={saved} />
         </div>
       </div>

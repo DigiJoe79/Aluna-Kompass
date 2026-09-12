@@ -156,6 +156,21 @@ test.describe('dms', () => {
     await expect(page.getByLabel('Betreff')).toHaveValue('Einladung zur Versammlung');
   });
 
+  test('lässt die Speicherleiste durch die ganze Spalte laufen', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/new');
+
+    const card = page.locator('[data-slot="form-card"]');
+    const bar = page.locator('[data-slot="form-action-bar"]');
+    const cardBox = await card.boundingBox();
+    const barBox = await bar.boundingBox();
+    if (!cardBox || !barBox) throw new Error('Karte oder Leiste nicht sichtbar');
+
+    // Die Karte steht eingerückt in der Spalte; die Leiste läuft darunter durch.
+    expect(barBox.x).toBeLessThan(cardBox.x);
+    expect(barBox.x + barBox.width).toBeGreaterThan(cardBox.x + cardBox.width);
+  });
+
   test('zeigt den Entwurf neben dem Papier, auf dem er landet', async ({ page }) => {
     await login(page);
     await page.goto('/dms/new');
@@ -335,6 +350,35 @@ test.describe('dms', () => {
     await expect(page).toHaveURL(/folder=protokolle/);
   });
 
+  test('führt die Ordnerspalte bis zum unteren Rand der Fläche', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+
+    // Gegen den Arbeitsbereich gemessen, nicht gegen die Zeilen: Bei wenigen
+    // Ordnern wäre die Spalte sonst das höchste Element und die Prüfung ginge
+    // aus dem falschen Grund durch.
+    const main = page.locator('main');
+    const column = page.getByRole('navigation', { name: 'Ordner' });
+    const mainBox = await main.boundingBox();
+    const columnBox = await column.boundingBox();
+    if (!mainBox || !columnBox) throw new Error('Bereich oder Spalte nicht sichtbar');
+
+    // Beim Ziehen ist die Spalte die helle Fläche gegen das abgedunkelte Feld
+    // daneben. Endet sie vorher, sieht darunter Overlay aus wie Spalte.
+    expect(columnBox.y + columnBox.height).toBeGreaterThanOrEqual(mainBox.y + mainBox.height - 1);
+  });
+
+  test('färbt den Zähler mit der Zeile, in der er steht', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+
+    const current = page.getByRole('navigation', { name: 'Ordner' }).locator('[aria-current="page"]');
+    const row = await current.evaluate((el) => getComputedStyle(el).color);
+    const count = await current.locator('span').last().evaluate((el) => getComputedStyle(el).color);
+
+    expect(count).toBe(row);
+  });
+
   test('zieht eine Datei auf einen Ordner und legt sie dorthin', async ({ page }) => {
     await login(page);
     await page.goto('/dms');
@@ -439,6 +483,10 @@ test.describe('dms', () => {
     await expect(dialog).toBeVisible();
     // Die Liste bleibt stehen, wo sie war.
     await expect(page.locator('table')).toBeVisible();
+
+    // Zwei Wege hinaus, nicht drei: „Abbrechen“ wirft im Dialog ohnehin alles
+    // weg — „Verwerfen“ wäre derselbe Vorgang unter zweitem Namen.
+    await expect(dialog.getByRole('button', { name: 'Verwerfen' })).toHaveCount(0);
 
     await dialog.getByRole('button', { name: 'Abbrechen' }).click();
     await expect(dialog).toHaveCount(0);

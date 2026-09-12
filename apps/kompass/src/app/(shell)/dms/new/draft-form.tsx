@@ -80,9 +80,13 @@ export function DraftForm({
   }, [state]);
 
   return (
-    <form action={formAction} className="space-y-4 rounded-md border border-line bg-surface p-6">
+    // Die Karte steht in der Spalte, die Leiste darunter läuft durch: Sie gehört
+    // zur Spalte, nicht zum Kasten — sonst klebt sie eingerückt über dessen
+    // abgerundeter Unterkante.
+    <form action={formAction} className="flex flex-col">
       {/* Gespeichert wird hier, nicht anderswo: Die Vorschau steht daneben. */}
       {draft ? <input type="hidden" name="stay" value="1" /> : null}
+      <div data-slot="form-card" className="mx-6 mb-6 space-y-4 rounded-md border border-line bg-surface p-5">
       {state.status === 'error' && Object.keys(errors).length === 0 ? (
         <div role="alert" className="rounded-md bg-error-bg p-3 text-[13px] text-error">{state.message}</div>
       ) : null}
@@ -177,6 +181,7 @@ export function DraftForm({
         </div>
       </div>
 
+      </div>
       <FormActionBar
         back={{ href: draft ? `/dms/${draft.id}` : '/dms', label: draft ? t('backToDocument') : tCommon('backToList') }}
         saveLabel={draft ? t('saveChanges') : t('saveDraft')}
