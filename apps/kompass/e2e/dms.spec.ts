@@ -322,10 +322,14 @@ test.describe('dms', () => {
     await page.getByLabel('Betreff').fill('Brief mit Empfänger');
     await page.getByLabel('Text').fill('Text.');
     // Der erste echte Kontakt aus dem Seed, wer immer es ist.
-    const recipient = page.getByLabel('Empfänger');
-    const name = (await recipient.locator('option').nth(1).textContent())?.trim() ?? '';
+    const recipient = page.getByRole('combobox', { name: 'Empfänger' });
+    await recipient.click();
+    const firstOption = page.getByTestId('contact-option').first();
+    await expect(firstOption).toBeVisible();
+    await expect(firstOption).toBeVisible();
+    const name = (await firstOption.textContent())?.trim() ?? '';
     expect(name.length).toBeGreaterThan(0);
-    await recipient.selectOption({ index: 1 });
+    await firstOption.click();
     await page.getByRole('button', { name: 'Entwurf speichern' }).click();
     // Anlegen lässt einen im Editor stehen; zum fertigen Dokument führt der Rückweg.
     await page.getByRole('link', { name: 'Zurück zum Dokument' }).click();
@@ -727,6 +731,38 @@ test.describe('dms', () => {
     expect(afterFlip).not.toBe(first);
     await page.reload();
     await expect(page.getByRole('columnheader', { name: /Betreff/ })).toHaveAttribute('aria-sort', 'ascending');
+  });
+
+  test('legt aus dem Entwurf heraus einen neuen Kontakt an und wählt ihn als Empfänger', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/new');
+    const picker = page.getByRole('combobox', { name: 'Empfänger' });
+    await picker.click();
+    await page.getByRole('listbox').getByRole('option', { name: 'Neu anlegen …' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Kontakt anlegen' });
+    await dialog.getByLabel('Nachname').fill('Neuland');
+    await dialog.getByLabel('Vorname').fill('Nora');
+    await dialog.getByRole('button', { name: 'Anlegen' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(picker).toHaveValue('Nora Neuland');
+    await page.getByLabel('Betreff').fill('An Nora');
+    await page.getByLabel('Text').fill('Hallo');
+    await page.getByRole('button', { name: 'Entwurf speichern' }).click();
+    await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}\/edit$/);
+    await expect(page.getByRole('combobox', { name: 'Empfänger' })).toHaveValue('Nora Neuland');
+  });
+
+  test('findet einen Kontakt über das Suchfeld', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/new');
+    const picker = page.getByRole('combobox', { name: 'Empfänger' });
+    await picker.fill('Mus');
+    // Nur echte Kontakte, nicht „Neu anlegen …“ — das steht schon da, bevor die
+    // Suche geantwortet hat.
+    const options = page.getByTestId('contact-option');
+    await expect(options.first()).toBeVisible();
+    await options.first().click();
+    await expect(page.locator('input[name="recipientId"]')).not.toHaveValue('');
   });
 });
 

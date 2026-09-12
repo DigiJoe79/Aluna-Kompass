@@ -5,23 +5,8 @@ import { useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
 import { TableHead } from '@/components/ui/table';
+import type { SortDirection } from '@/lib/sort';
 import { cn } from '@/lib/utils';
-
-export type SortDirection = 'asc' | 'desc';
-
-/**
- * Sortierung lebt in der URL (`sort`, `dir`), damit sie Blättern und den
- * Zurück-Knopf überlebt. Serverseitig sortiert, weil die Listen blättern —
- * im Browser sortiert wäre nur die sichtbare Seite umgedreht.
- */
-export function readSort<F extends string>(
-  params: { sort?: string; dir?: string },
-  allowed: readonly F[],
-): { field: F; direction: SortDirection } | undefined {
-  const field = params.sort;
-  if (!field || !allowed.includes(field as F)) return undefined;
-  return { field: field as F, direction: params.dir === 'asc' ? 'asc' : 'desc' };
-}
 
 export function SortableHead({ field, label, className }: { field: string; label: string; className?: string }) {
   const t = useTranslations('common');

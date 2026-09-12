@@ -1,5 +1,4 @@
-import { requirePermission } from '@kompass/core';
-import { displayName, listContacts } from '@kompass/module-contacts';
+import { hasPermission, requirePermission } from '@kompass/core';
 import { defaultTypeKey, listDocumentFolders, listDocumentTypes } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
@@ -19,14 +18,6 @@ export default async function NewDraftPage() {
   const foldersRes = await listDocumentFolders(deps, ctx);
   const folders = foldersRes.ok ? foldersRes.value.map((f) => f.path) : [];
 
-  const contactsRes = await listContacts(deps, ctx, { limit: 200 });
-  const contacts = contactsRes.ok
-    ? contactsRes.value.contacts.map((c) => ({
-        id: c.id,
-        name: displayName(c),
-      }))
-    : [];
-
   return (
     <DraftScreen
       title={t('newDraft')}
@@ -34,7 +25,7 @@ export default async function NewDraftPage() {
       back={{ href: '/dms', label: tCommon('backToList') }}
       types={types.map((type) => ({ key: type.key, label: type.label }))}
       folders={folders}
-      contacts={contacts}
+      canCreateContact={hasPermission(ctx, 'contacts.manage')}
       today={deps.clock.now().toISOString().slice(0, 10)}
       defaultTypeKey={defaultTypeKey(deps, 'outgoing')}
     />

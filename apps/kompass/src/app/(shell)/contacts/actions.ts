@@ -1,6 +1,6 @@
 'use server';
 
-import { addContactRole, createContact, deleteContact, endContactRole, setContactChannels, updateContact } from '@kompass/module-contacts';
+import { addContactRole, createContact, deleteContact, displayName, endContactRole, setContactChannels, updateContact } from '@kompass/module-contacts';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -37,7 +37,12 @@ export async function createContactAction(_prev: ActionState, formData: FormData
         };
   const result = await createContact(deps, ctx, input);
   revalidatePath('/contacts');
-  return toActionState(result, t, t('contacts.toast.created'));
+  const state = toActionState(result, t, t('contacts.toast.created'));
+  // Das Suchfeld übernimmt den neuen Kontakt sofort; dafür braucht es seinen
+  // Anzeigenamen, nicht den ganzen Datensatz.
+  return result.ok && state.status === 'success'
+    ? { ...state, data: { id: result.value.id, name: displayName(result.value) } }
+    : state;
 }
 
 export async function updateContactAction(id: string, changes: Record<string, string | null>): Promise<ActionState> {

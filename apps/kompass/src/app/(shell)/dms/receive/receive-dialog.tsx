@@ -13,7 +13,7 @@ import { ReceiveForm } from './receive-form';
 export function ReceiveDialog({
   types,
   folders,
-  contacts,
+  canCreateContact,
   defaultTypeKey,
   open,
   onOpenChange,
@@ -23,7 +23,7 @@ export function ReceiveDialog({
 }: {
   types: { key: string; label: string }[];
   folders: string[];
-  contacts: { id: string; name: string }[];
+  canCreateContact: boolean;
   defaultTypeKey: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -59,7 +59,7 @@ export function ReceiveDialog({
         <ReceiveForm
           types={types}
           folders={folders}
-          contacts={contacts}
+          canCreateContact={canCreateContact}
           defaultTypeKey={defaultTypeKey}
           droppedFile={drop?.files[index] ?? null}
           droppedFolder={drop?.folder ?? null}

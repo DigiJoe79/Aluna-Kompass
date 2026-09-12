@@ -36,7 +36,7 @@ export function DmsWorkspace({
   total,
   canCreate,
   types,
-  contacts,
+  canCreateContact,
   defaultTypeKey,
   receiveOpen,
   children,
@@ -47,7 +47,7 @@ export function DmsWorkspace({
   total: number;
   canCreate: boolean;
   types: { key: string; label: string }[];
-  contacts: { id: string; name: string }[];
+  canCreateContact: boolean;
   defaultTypeKey: string;
   /** Der Deep-Link `/dms/receive` zeigt denselben Bildschirm mit offenem Dialog. */
   receiveOpen?: boolean;
@@ -220,7 +220,7 @@ export function DmsWorkspace({
           key={`${drop?.id ?? 'leer'}-${index}`}
           types={types}
           folders={folders}
-          contacts={contacts}
+          canCreateContact={canCreateContact}
           defaultTypeKey={defaultTypeKey}
           open={open}
           onOpenChange={change}

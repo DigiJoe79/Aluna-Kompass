@@ -1,5 +1,5 @@
-import { requirePermission } from '@kompass/core';
-import { displayName, listContacts } from '@kompass/module-contacts';
+import { hasPermission, requirePermission } from '@kompass/core';
+import { displayName, getContact } from '@kompass/module-contacts';
 import { defaultTypeKey, getDocumentRecord, listDocumentFolders, listDocumentTypes } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -26,13 +26,11 @@ export default async function EditDraftPage(props: { params: Promise<{ id: strin
   const foldersRes = await listDocumentFolders(deps, ctx);
   const folders = foldersRes.ok ? foldersRes.value.map((f) => f.path) : [];
 
-  const contactsRes = await listContacts(deps, ctx, { limit: 200 });
-  const contacts = contactsRes.ok
-    ? contactsRes.value.contacts.map((c) => ({ id: c.id, name: displayName(c) }))
-    : [];
-
   const doc = result.value;
-  const recipient = doc.links.find((link) => link.role === 'recipient' && link.entityType === 'contact');
+  const recipientLink = doc.links.find((link) => link.role === 'recipient' && link.entityType === 'contact');
+  // Nur der gewählte Kontakt wird aufgelöst; gesucht wird im Feld selbst.
+  const recipientRes = recipientLink ? await getContact(deps, ctx, recipientLink.entityId) : null;
+  const recipient = recipientRes?.ok ? { id: recipientRes.value.id, name: displayName(recipientRes.value) } : null;
 
   return (
     <DraftScreen
@@ -41,7 +39,7 @@ export default async function EditDraftPage(props: { params: Promise<{ id: strin
       back={{ href: `/dms/${id}`, label: t('backToDocument') }}
       types={types.map((type) => ({ key: type.key, label: type.label }))}
       folders={folders}
-      contacts={contacts}
+      canCreateContact={hasPermission(ctx, 'contacts.manage')}
       today={deps.clock.now().toISOString().slice(0, 10)}
       defaultTypeKey={defaultTypeKey(deps, 'outgoing')}
       draft={{
@@ -51,7 +49,7 @@ export default async function EditDraftPage(props: { params: Promise<{ id: strin
         typeKey: doc.typeKey,
         documentDate: doc.documentDate,
         folder: doc.folder,
-        recipientId: recipient?.entityId ?? null,
+        recipient,
         savedAt: doc.updatedAt,
       }}
     />

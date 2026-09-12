@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useState } from 'react';
+import { ContactPicker, type PickedContact } from '@/components/contact-picker';
 import { FieldError } from '@/components/forms/field-error';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Input } from '@/components/ui/input';
@@ -19,7 +20,8 @@ import { Textarea } from '@/components/ui/textarea';
 export interface DraftFormProps {
   types: { key: string; label: string }[];
   folders: string[];
-  contacts: { id: string; name: string }[];
+  /** Darf der Mensch fehlende Kontakte gleich hier anlegen? */
+  canCreateContact: boolean;
   /** Vorbelegung beim Anlegen, aus `deps.clock` der Seite — nicht aus der Uhr des Browsers. */
   today: string;
   /** Die eingestellte Vorgabeart für den Ausgang, keine Konstante im Code. */
@@ -31,7 +33,7 @@ export interface DraftFormProps {
     typeKey: string;
     documentDate: string;
     folder: string | null;
-    recipientId: string | null;
+    recipient: PickedContact | null;
     /** Wann dieser Stand gespeichert wurde — die Vorschau nennt die Uhrzeit. */
     savedAt: string;
   };
@@ -42,7 +44,7 @@ export interface DraftFormProps {
 export function DraftForm({
   types,
   folders,
-  contacts,
+  canCreateContact,
   today,
   defaultTypeKey,
   draft,
@@ -64,7 +66,7 @@ export function DraftForm({
   const [documentDate, setDocumentDate] = useState(draft?.documentDate ?? today);
   const [typeKey, setTypeKey] = useState(draft?.typeKey ?? defaultTypeKey);
   const [folder, setFolder] = useState(draft?.folder ?? '');
-  const [recipientId, setRecipientId] = useState(draft?.recipientId ?? '');
+  const [recipient, setRecipient] = useState<PickedContact | null>(draft?.recipient ?? null);
 
   const errors = state.status === 'error' ? state.fieldErrors : {};
 
@@ -177,22 +179,14 @@ export function DraftForm({
           </Select>
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="recipientId">{t('fields.recipient')}</Label>
-          <Select
-            id="recipientId"
-            name="recipientId"
-            value={recipientId}
-          onChange={(e) => setRecipientId(e.target.value)}
-          >
-            <option value="">{t('fields.noRecipient')}</option>
-            {contacts.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
-        </div>
+        <ContactPicker
+          id="recipientId"
+          name="recipientId"
+          label={t('fields.recipient')}
+          value={recipient}
+          onChange={setRecipient}
+          canCreate={canCreateContact}
+        />
       </div>
 
       </div>

@@ -14,10 +14,31 @@ import { idleState } from '@/lib/actions';
 import { createContactAction } from './actions';
 import { Select } from '@/components/ui/select';
 
-export function CreateContactDialog() {
+/**
+ * Dasselbe Formular an zwei Stellen: als eigener Knopf auf der Kontaktseite,
+ * und als Overlay aus dem Suchfeld heraus. Wer es von außen öffnet, gibt
+ * `open`/`onOpenChange` mit und bekommt über `onCreated` den neuen Kontakt
+ * zurück — ohne diese Angaben bleibt alles, wie es war.
+ */
+export function CreateContactDialog({
+  open: controlledOpen,
+  onOpenChange,
+  onCreated,
+  withTrigger = true,
+}: {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onCreated?: (contact: { id: string; name: string }) => void;
+  withTrigger?: boolean;
+} = {}) {
   const t = useTranslations('contacts');
   const c = useTranslations('common');
-  const [open, setOpen] = useState(false);
+  const [innerOpen, setInnerOpen] = useState(false);
+  const open = controlledOpen ?? innerOpen;
+  const setOpen = (next: boolean) => {
+    setInnerOpen(next);
+    onOpenChange?.(next);
+  };
   const [state, action] = useActionState(createContactAction, idleState);
 
   const [kind, setKind] = useState<'person' | 'organization'>('person');
@@ -50,9 +71,12 @@ export function CreateContactDialog() {
 
   useEffect(() => {
     if (state.status === 'success') {
+      const created = state.data as { id: string; name: string } | undefined;
+      if (created) onCreated?.(created);
       setOpen(false);
       reset();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
 
   const preview = useMemo(() => {
@@ -81,14 +105,16 @@ export function CreateContactDialog() {
         if (!next) reset();
       }}
     >
-      <DialogTrigger
-        render={
-          <Button>
-            <Plus className="size-3.5" aria-hidden />
-            {t('create.trigger')}
-          </Button>
-        }
-      />
+      {withTrigger ? (
+        <DialogTrigger
+          render={
+            <Button>
+              <Plus className="size-3.5" aria-hidden />
+              {t('create.trigger')}
+            </Button>
+          }
+        />
+      ) : null}
       <DialogContent className="w-full sm:max-w-[840px] bg-surface p-0 shadow-md">
         <form action={action}>
           <div className="p-6">

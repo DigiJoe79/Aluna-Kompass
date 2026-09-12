@@ -1258,6 +1258,12 @@
     }
   },
   "contacts": {
+    "picker": {
+      "placeholder": "Name eingeben …",
+      "empty": "Kein Kontakt gefunden.",
+      "clear": "— Kein Kontakt —",
+      "create": "Neu anlegen …"
+    },
     "title": "Kontakte",
     "description": "Personen und Organisationen, ihre Rollen und Kommunikationswege.",
     "empty": {

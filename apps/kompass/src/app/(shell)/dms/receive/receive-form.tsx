@@ -11,6 +11,7 @@ import { idleState } from '@/lib/actions';
 import { receiveDocumentAction, suggestClassificationAction } from '../actions';
 import { FileDropzone } from './file-dropzone';
 import { NumberHint } from './number-hint';
+import { ContactPicker, type PickedContact } from '@/components/contact-picker';
 import { SuggestionFlag } from './suggestion-flag';
 
 /** Die Felder, die die Einsortierregeln vorbelegen können. */
@@ -19,7 +20,7 @@ type Suggested = 'documentDate' | 'typeKey' | 'folder';
 export function ReceiveForm({
   types,
   folders,
-  contacts,
+  canCreateContact,
   defaultTypeKey,
   droppedFile,
   droppedFolder,
@@ -30,7 +31,8 @@ export function ReceiveForm({
 }: {
   types: { key: string; label: string }[];
   folders: string[];
-  contacts: { id: string; name: string }[];
+  /** Darf der Mensch fehlende Kontakte gleich hier anlegen? */
+  canCreateContact: boolean;
   /** Die eingestellte Vorgabeart für den Eingang, keine Konstante im Code. */
   defaultTypeKey: string;
   /** Aus dem Dateimanager ins Fenster gezogen. */
@@ -52,7 +54,8 @@ export function ReceiveForm({
   const [subject, setSubject] = useState('');
   const [typeKey, setTypeKey] = useState(defaultTypeKey);
   const [folder, setFolder] = useState(droppedFolder ?? '');
-  const [senderId, setSenderId] = useState('');
+  const [sender, setSender] = useState<PickedContact | null>(null);
+  const senderId = sender?.id ?? '';
   const [hasFile, setHasFile] = useState(!!droppedFile);
 
   /**
@@ -128,12 +131,11 @@ export function ReceiveForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
 
-  const handleSenderChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const nextSender = e.target.value;
-    setSenderId(nextSender);
+  const handleSenderChange = async (next: PickedContact | null) => {
+    setSender(next);
     const file = (document.getElementById('file') as HTMLInputElement | null)?.files?.[0];
     if (!file) return;
-    apply(await suggestClassificationAction(file.name, nextSender || undefined), nextSender);
+    apply(await suggestClassificationAction(file.name, next?.id || undefined), next?.id ?? '');
   };
 
   return (
@@ -237,17 +239,14 @@ export function ReceiveForm({
             <SuggestionFlag text={origin.folder} />
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="senderId">{t('fields.sender')}</Label>
-            <Select id="senderId" name="senderId" value={senderId} onChange={handleSenderChange}>
-              <option value="">{t('fields.noSender')}</option>
-              {contacts.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </Select>
-          </div>
+          <ContactPicker
+            id="senderId"
+            name="senderId"
+            label={t('fields.sender')}
+            value={sender}
+            onChange={(next) => void handleSenderChange(next)}
+            canCreate={canCreateContact}
+          />
         </div>
 
         {/* Die Nummer ist eine Vorschau: Gezogen wird sie beim Ablegen. */}

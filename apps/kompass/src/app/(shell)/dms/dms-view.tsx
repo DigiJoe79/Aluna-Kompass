@@ -1,5 +1,4 @@
 import { hasPermission, requirePermission } from '@kompass/core';
-import { displayName, listContacts } from '@kompass/module-contacts';
 import {
   countDocumentsByFolder,
   defaultTypeKey,
@@ -11,7 +10,7 @@ import { ForbiddenCard } from '@/components/forbidden-card';
 import { requireSession } from '@/lib/request-context';
 import { DmsWorkspace } from './dms-workspace';
 import { DocumentList, type DocumentListItem } from './document-list';
-import { readSort } from '@/components/sortable-head';
+import { readSort } from '@/lib/sort';
 
 export interface DmsQuery {
   direction?: string;
@@ -89,10 +88,6 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
     .concat(types.filter((type) => type.defaultDirection !== 'incoming'))
     .map((type) => ({ key: type.key, label: type.label }));
 
-  const contactsRes = canCreate ? await listContacts(deps, ctx, { limit: 200 }) : null;
-  const contacts = contactsRes?.ok
-    ? contactsRes.value.contacts.map((c) => ({ id: c.id, name: displayName(c) }))
-    : [];
 
   return (
     <DmsWorkspace
@@ -102,7 +97,7 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
       total={total}
       canCreate={canCreate}
       types={incomingFirst}
-      contacts={contacts}
+      canCreateContact={hasPermission(ctx, 'contacts.manage')}
       defaultTypeKey={defaultTypeKey(deps, 'incoming')}
       receiveOpen={receive}
     >

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readSort } from '@/components/sortable-head';
+import { readSort } from '@/lib/sort';
 
 describe('readSort', () => {
   it('liest Feld und Richtung aus den Parametern, nur wenn das Feld erlaubt ist', () => {
