@@ -38,6 +38,7 @@ const KNOWN_CONFLICTS = new Set([
   'blockedTermsPresent',
   'siteBuildFailed',
   'publishFailed',
+  'siteJobRunning',
   'duplicateLocale',
   'tooManyLocales',
   'lastLocale',

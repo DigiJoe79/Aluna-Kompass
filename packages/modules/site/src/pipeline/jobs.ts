@@ -64,6 +64,23 @@ export class StepTimeoutError extends Error {
   }
 }
 
+/**
+ * Es läuft höchstens ein Vorschau- oder Publish-Lauf je Prozess. Zwei Läufe
+ * räumten dasselbe Vorschauverzeichnis gleichzeitig ab und schrieben denselben
+ * Stempel; der zweite meldet deshalb den ersten, statt zu warten.
+ */
+let runningJob: string | null = null;
+
+async function exclusive<T>(name: string, run: () => Promise<Result<T>>): Promise<Result<T>> {
+  if (runningJob) return conflict('siteJobRunning', `Es läuft bereits: ${runningJob}`);
+  runningJob = name;
+  try {
+    return await run();
+  } finally {
+    runningJob = null;
+  }
+}
+
 /** Steht im Protokoll, wenn ein Publish den Vorschau-Build uebernommen hat. */
 export const REUSED_PREVIEW = 'Vorschau uebernommen, nicht neu gebaut.';
 
@@ -180,15 +197,17 @@ async function exportAndBuild(
 export async function runPreview(deps: Deps, ctx: CallContext, env: SiteEnv): Promise<Result<PreviewResult>> {
   const denied = requirePermission(ctx, 'site.publish');
   if (denied) return denied;
-  const built = await exportAndBuild(deps, ctx, env, env.previewDir);
-  if (!built.ok) return built;
-  return ok({
-    contentHash: built.value.exported.contentHash,
-    gaps: built.value.exported.gaps,
-    violations: built.value.exported.violations,
-    diff: built.value.diff,
-    previewDir: env.previewDir,
-    log: built.value.log,
+  return exclusive('Vorschau', async () => {
+    const built = await exportAndBuild(deps, ctx, env, env.previewDir);
+    if (!built.ok) return built;
+    return ok({
+      contentHash: built.value.exported.contentHash,
+      gaps: built.value.exported.gaps,
+      violations: built.value.exported.violations,
+      diff: built.value.diff,
+      previewDir: env.previewDir,
+      log: built.value.log,
+    });
   });
 }
 
@@ -243,52 +262,69 @@ export async function runPublish(deps: Deps, ctx: CallContext, env: SiteEnv, opt
   if (!env.deploy) return conflict('publishTargetMissing', 'SITE_DEPLOY_* ist nicht gesetzt');
   const credentialProblem = await checkDeployCredentials(env.deploy);
   if (credentialProblem) return conflict('deployCredentialsUnusable', credentialProblem);
-  const startedAt = isoNow(deps.clock);
-  const outDir = await mkdtemp(path.join(tmpdir(), 'kompass-publish-'));
-  try {
-    const built = await exportAndBuild(deps, ctx, env, outDir);
-    if (!built.ok) return built;
-    if (built.value.exported.violations.length > 0) {
-      recordPublish(deps, ctx, {
-        environment: deps.env,
-        startedAt,
-        status: 'aborted',
-        contentHash: built.value.exported.contentHash,
-        diff: built.value.diff,
-        fileManifest: {},
-        log: JSON.stringify(built.value.exported.violations),
-        summary: 'Publish abgebrochen: Sperrworttreffer',
-      });
-      return conflict('blockedTermsPresent', `${built.value.exported.violations.length} Sperrworttreffer`);
-    }
+  return exclusive('Publish', async () => {
+    const startedAt = isoNow(deps.clock);
+    const outDir = await mkdtemp(path.join(tmpdir(), 'kompass-publish-'));
     try {
-      const { log } = await step('Uebertragen', 600_000, () => rsyncPublish({ distDir: outDir, deploy: env.deploy! }));
-      const record = recordPublish(deps, ctx, {
-        environment: deps.env,
-        startedAt,
-        status: 'success',
-        contentHash: built.value.exported.contentHash,
-        diff: built.value.diff,
-        fileManifest: built.value.manifest,
-        log: built.value.log + log,
-        summary: `Publiziert: ${built.value.diff.changed.length} geändert, ${built.value.diff.added.length} neu, ${built.value.diff.removed.length} entfernt`,
-      });
-      return ok({ status: 'success', record, diff: built.value.diff, log });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      recordPublish(deps, ctx, {
-        environment: deps.env,
-        startedAt,
-        status: 'failed',
-        contentHash: built.value.exported.contentHash,
-        diff: built.value.diff,
-        fileManifest: {},
-        log: message,
-        summary: 'Publish fehlgeschlagen',
-      });
-      return conflict('publishFailed', message.slice(0, 2000));
+      const built = await exportAndBuild(deps, ctx, env, outDir);
+      if (!built.ok) {
+        // Auch ein Abbruch vor dem Build ist ein Versuch: Wer nachsieht, warum
+        // gestern nichts publiziert wurde, soll ihn in der Historie finden.
+        const reason = built.error.type === 'conflict' ? built.error.code : built.error.type;
+        recordPublish(deps, ctx, {
+          environment: deps.env,
+          startedAt,
+          status: 'aborted',
+          contentHash: '',
+          diff: { changed: [], added: [], removed: [] },
+          fileManifest: {},
+          log: JSON.stringify(built.error),
+          summary: `Publish abgebrochen: ${reason}`,
+        });
+        return built;
+      }
+      if (built.value.exported.violations.length > 0) {
+        recordPublish(deps, ctx, {
+          environment: deps.env,
+          startedAt,
+          status: 'aborted',
+          contentHash: built.value.exported.contentHash,
+          diff: built.value.diff,
+          fileManifest: {},
+          log: JSON.stringify(built.value.exported.violations),
+          summary: 'Publish abgebrochen: Sperrworttreffer',
+        });
+        return conflict('blockedTermsPresent', `${built.value.exported.violations.length} Sperrworttreffer`);
+      }
+      try {
+        const { log } = await step('Uebertragen', 600_000, () => rsyncPublish({ distDir: outDir, deploy: env.deploy! }));
+        const record = recordPublish(deps, ctx, {
+          environment: deps.env,
+          startedAt,
+          status: 'success',
+          contentHash: built.value.exported.contentHash,
+          diff: built.value.diff,
+          fileManifest: built.value.manifest,
+          log: built.value.log + log,
+          summary: `Publiziert: ${built.value.diff.changed.length} geändert, ${built.value.diff.added.length} neu, ${built.value.diff.removed.length} entfernt`,
+        });
+        return ok({ status: 'success' as const, record, diff: built.value.diff, log });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        recordPublish(deps, ctx, {
+          environment: deps.env,
+          startedAt,
+          status: 'failed',
+          contentHash: built.value.exported.contentHash,
+          diff: built.value.diff,
+          fileManifest: {},
+          log: message,
+          summary: 'Publish fehlgeschlagen',
+        });
+        return conflict('publishFailed', message.slice(0, 2000));
+      }
+    } finally {
+      await rm(outDir, { recursive: true, force: true });
     }
-  } finally {
-    await rm(outDir, { recursive: true, force: true });
-  }
+  });
 }

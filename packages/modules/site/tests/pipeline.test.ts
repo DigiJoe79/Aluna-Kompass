@@ -18,6 +18,7 @@ import {
   runPublish,
   setEntryPublished,
   setValues,
+  listPublishes,
   siteModule,
 } from '../src';
 
@@ -347,5 +348,74 @@ describe('rsyncCommand', () => {
   it('adds dry-run and itemize-changes flags when requested', () => {
     const c = rsyncCommand({ distDir: '/build', deploy: local, dryRun: true });
     expect(c.args).toEqual(['-az', '--no-owner', '--no-group', '--no-perms', '--omit-dir-times', '--delete', '--checksum', '--dry-run', '--itemize-changes', '/build/', '/ziel/']);
+  });
+});
+
+describe('one job at a time', () => {
+  const setup = async () => {
+    const deps = createTestDeps({ manifests: [coreModule, siteModule] });
+    insertUser(deps, { id: 'USER-TEST' });
+    unwrap(await applyTemplateSync(deps, ctxWith(['site.manage']), { dir: TEMPLATE_DIR, confirm: true }));
+    const env = {
+      publicUrl: 'https://staging.example.org',
+      staging: true,
+      deploy: { host: '', user: '', path: tmp(), auth: { kind: 'none' as const } },
+      templateDir: TEMPLATE_DIR,
+      cacheDir: tmp(),
+      previewDir: tmp(),
+    };
+    return { deps, env, publishCtx: ctxWith(['site.publish', 'site.view']) };
+  };
+
+  /**
+   * Zwei Personen auf „Vorschau bauen“ räumten dasselbe Verzeichnis
+   * gleichzeitig ab. Der zweite Lauf wartet nicht, er meldet den ersten.
+   */
+  it('refuses a second preview while the first is still building', async () => {
+    const { deps, env, publishCtx } = await setup();
+    const [first, second] = await Promise.all([runPreview(deps, publishCtx, env), runPreview(deps, publishCtx, env)]);
+    const outcomes = [first, second].map((r) => (r.ok ? 'ok' : r.error.type === 'conflict' ? r.error.code : r.error.type)).sort();
+    expect(outcomes).toEqual(['ok', 'siteJobRunning']);
+    // Danach ist der Riegel wieder offen.
+    expect((await runPreview(deps, publishCtx, env)).ok).toBe(true);
+  }, 240_000);
+
+  it('releases the guard when a run fails', async () => {
+    const { deps, env, publishCtx } = await setup();
+    const failed = await runPreview(deps, publishCtx, { ...env, publicUrl: null });
+    expect(failed.ok).toBe(false);
+    expect((await runPreview(deps, publishCtx, env)).ok).toBe(true);
+  }, 240_000);
+});
+
+describe('publish history', () => {
+  /**
+   * Ein Publish, der vor dem Build scheitert — Template veraltet, Modul
+   * abgeschaltet —, hinterliess keine Zeile. Wer nachsah, warum gestern
+   * nichts publiziert wurde, fand nichts.
+   */
+  it('records an aborted attempt when the export refuses', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, siteModule] });
+    insertUser(deps, { id: 'USER-TEST' });
+    unwrap(await applyTemplateSync(deps, ctxWith(['site.manage']), { dir: TEMPLATE_DIR, confirm: true }));
+    // Ein Template-Verzeichnis, dessen Deklaration vom eingelesenen Stand abweicht.
+    const stale = tmp();
+    writeFileSync(path.join(stale, 'kompass.template.ts'), `${readFileSync(path.join(TEMPLATE_DIR, 'kompass.template.ts'), 'utf8')}\n// geändert\n`);
+    symlinkSync(path.join(TEMPLATE_DIR, 'node_modules'), path.join(stale, 'node_modules'));
+    const env = {
+      publicUrl: 'https://staging.example.org',
+      staging: true,
+      deploy: { host: '', user: '', path: tmp(), auth: { kind: 'none' as const } },
+      templateDir: stale,
+      cacheDir: tmp(),
+      previewDir: tmp(),
+    };
+    const publishCtx = ctxWith(['site.publish', 'site.view']);
+    const result = await runPublish(deps, publishCtx, env, { confirm: true });
+    expect(result.ok === false && result.error.type === 'conflict' && result.error.code === 'templateStale').toBe(true);
+    const history = unwrap(await listPublishes(deps, publishCtx, { environment: 'test' }));
+    expect(history).toHaveLength(1);
+    expect(history[0]!.status).toBe('aborted');
+    expect(history[0]!.log).toContain('templateStale');
   });
 });

@@ -103,9 +103,11 @@ Säule Finanzen.
 Specs: `2026-09-05-webseite-design.md` (abgelöst),
 `2026-09-07-site-template-design.md`, `2026-09-08-site-seed-design.md`.
 
-**Stand: steht, Cutover offen.** Alunas Inhalte sind noch nicht in `site`
-gepflegt, ein Publish aus Test ist noch nicht abgenommen. Betterplace steckt
-noch im Kern.
+**Stand: steht, Cutover offen.** Alunas Template und seine Startinhalte liegen
+im Vereinsrepo und laufen lokal durch die Pipeline (2026-09-12: 77 Dateien,
+keine Lücken, keine Sperrworttreffer). Auf dem Testcontainer ist noch nichts
+eingelesen, ein Publish aus Test nicht abgenommen. Betterplace steckt noch im
+Kern.
 
 ### Korrespondenz und Akte
 
@@ -233,11 +235,11 @@ Akte läuft weiter, gehört aber nicht mehr zu diesem Schritt.
 ### Schritt 2: Webseite fertig
 
 - Cutover-Rest aus `2026-09-07-site-5-cutover.md`: Image auf den
-  Testcontainer, Alunas Template einlesen, Inhalte aus dem CMS in `site`
-  pflegen, Publish aus Test abnehmen. Danach der erste Publish aus Prod.
+  Testcontainer, Alunas Template einlesen, Startinhalte übernehmen, Publish
+  aus Test abnehmen. Danach der erste Publish aus Prod.
 - Betterplace aus dem Kern, Projekte als eigenes Kernmodul (Backlog 4). Vor
   Finanzen, weil Finanzen die Projekte erweitert.
-- Platzhalterbilder als WebP, Browsertest bei Handybreite (Backlog 2 und 3).
+- Browsertest bei Handybreite (Backlog 3).
 
 **Fertig, wenn:** Alunas Seite aus Prod publiziert wird, WordPress abgeschaltet
 ist und im Kern kein Feld mehr steht, bei dem ein anderer Verein stutzt.

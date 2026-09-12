@@ -190,3 +190,19 @@ export default defineTemplate({
   });
 });
 
+
+describe('locales the template renders', () => {
+  /**
+   * Das Template fordert Sprachen, es bekommt nicht alle: Pflegt der Verein
+   * mehr, als das Template rendert, werden die überzähligen nicht
+   * ausgeliefert und nicht als Lücke gemeldet (Spec § 6 und § 8).
+   */
+  it('delivers only the locales the template declares and reports no gaps for the rest', async () => {
+    const { deps, dir } = await setup(GOOD, ['de', 'en']);
+    unwrap(await setValues(deps, manage, { values: { claim: { de: 'Hallo', en: 'Hello' } } }));
+    unwrap(await createEntry(deps, manage, { collection: 'notes', data: { body: 'Notiz' } }));
+    const { result, content } = await readContent(deps, dir);
+    expect(content.variables.claim).toEqual({ de: 'Hallo' });
+    expect(result.gaps).toEqual([]);
+  });
+});

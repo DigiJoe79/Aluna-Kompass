@@ -379,3 +379,30 @@ mehr. Die Tabellen sind in Migration `0010` entfernt.
 
 Erst danach ist dieser Plan durch. Schritt 3 ist Redaktion, keine
 Entwicklungsarbeit; 1, 2 und 4 sind Handgriffe im Betrieb.
+
+## Stand (2026-09-12)
+
+**Weiter nicht abgeschlossen**, aber der Zuschnitt hat sich seit dem 8.9.
+zweimal verschoben:
+
+- **Schritt 3 ist kein Redaktionstag mehr.** Die Seed-Spec vom 2026-09-08
+  (`2026-09-08-site-seed-design.md`) hat „Inhalte aus dem CMS pflegen" durch den
+  Knopf „Startinhalte" ersetzt. Alunas `seed/` liegt fertig im Vereinsrepo
+  (elf Variablen, 24 Einträge in vier Sammlungen, zwei Dateien, zweisprachig).
+- **Alunas Template ist umgezogen:** vom 2026-09-09 an unter
+  `Kompass/webseite/` im Vereinsrepo, nicht mehr `Webseite/kompass-template/`.
+
+**Lokal nachgebaut am 2026-09-12**, weil der Testcontainer noch aussteht: Die
+Pipeline liest Alunas Template, übernimmt den Seed und baut die Vorschau —
+77 Dateien, jede Variable und jede Sammlung auf der Seite, keine
+Übersetzungslücken, keine Sperrworttreffer, Tiermodul als Sicht dabei. Ein
+Fehler kam dabei heraus und ist im Vereinsrepo behoben: Die Startseite nahm
+ihre Einleitung nicht aus Kompass.
+
+**Was bleibt**, in dieser Reihenfolge:
+
+1. Das aktuelle Bild auf den Testcontainer ziehen.
+2. Alunas Template nach `/data/site/template`, einlesen.
+3. Knopf „Startinhalte" auf der Template-Seite.
+4. Publish aus der Testumgebung, Seite im Browser abnehmen — zusammen mit dem
+   inhaltlichen Abgleich der Texte (Termin am 2026-09-13).

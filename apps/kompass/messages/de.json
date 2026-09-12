@@ -135,6 +135,7 @@
       "blockedTermsPresent": "Sperrworttreffer: {detail}",
       "siteBuildFailed": "Der Build ist fehlgeschlagen: {detail}",
       "publishFailed": "Die Übertragung ist fehlgeschlagen: {detail}",
+      "siteJobRunning": "Es läuft bereits ein Vorschau- oder Publish-Lauf. Bitte warten Sie, bis er fertig ist.",
       "duplicateLocale": "Diese Sprache ist bereits eingerichtet.",
       "tooManyLocales": "Höchstens zehn Sprachen können eingerichtet werden.",
       "lastLocale": "Die letzte verbleibende Sprache kann nicht entfernt werden.",

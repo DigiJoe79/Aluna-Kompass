@@ -16,26 +16,21 @@ einmal für den Import.
 
 **Wann:** Spätestens wenn Archive einige hundert Megabyte erreichen.
 
-## 2. Platzhalterbilder als WebP
-
-**Was:** Die Platzhalter in `templates/verein-basis/public/images/` als WebP
-ausliefern.
-
-**Warum:** Sie machen den grössten Teil des Seitengewichts aus. Die
-Inhaltsbilder wandelt die Pipeline bereits um, an den statischen Dateien geht
-sie vorbei.
-
-**Einordnung:** Erledigt sich für einen Verein von selbst, sobald echte Fotos
-die Platzhalter verdrängen — für das mitgelieferte Template aber nicht.
-
 ## 3. Browsertest bei Handybreite
 
-**Was:** Ein Playwright-Lauf gegen die gebaute Site bei 390 px.
+**Was:** Ein Playwright-Lauf gegen die gebaute Site bei 390 px, in
+`templates/verein-basis/tests/` für das mitgelieferte Template und im
+Vereinsrepo für Alunas.
 
 **Warum:** Dass unterhalb von 1023 px der Sprachumschalter fehlte, fiel beim
-Lesen des Stylesheets auf, nicht durch einen Test. `templates/verein-basis/tests/`
-enthält keine Viewport-Prüfung, und die Kompass-E2E deckt die gebaute Site
-nicht ab.
+Lesen des Stylesheets auf, nicht durch einen Test. Der Befund galt Alunas
+Seite, die seit dem Cutover im Vereinsrepo lebt; das Basis-Template ist
+einsprachig, hat aber ebenso wenig eine Viewport-Prüfung. Die Kompass-E2E
+deckt die gebaute Site nicht ab.
+
+**Nummer 2 (Platzhalterbilder als WebP) ist gestrichen:** Das Basis-Template
+hat unter `public/` nur die `.htaccess`, die genannten Dateien gab es am
+2026-09-12 nicht mehr.
 
 ## 4. Betterplace steckt im Kern
 

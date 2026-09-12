@@ -232,7 +232,11 @@ export async function exportSiteContent(deps: Deps, ctx: CallContext, input: unk
     return conflict('templateStale', 'Die Template-Datei weicht vom eingelesenen Stand ab; erst neu einlesen');
   }
 
-  const locales = deps.locales();
+  // Das Template fordert Sprachen, es bekommt nicht alle: Was der Verein darüber
+  // hinaus pflegt, bleibt in der Datenbank und wird weder ausgeliefert noch als
+  // Lücke gemeldet (Spec § 6 und § 8). Die Reihenfolge — Leitsprache zuerst —
+  // ist die der Installation.
+  const locales = deps.locales().filter((l) => template.schema.locales.includes(l));
 
   const variables = pruneLocales(readValues(deps), locales) as Record<string, unknown>;
 

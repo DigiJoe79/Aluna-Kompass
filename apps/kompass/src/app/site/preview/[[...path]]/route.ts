@@ -2,6 +2,7 @@ import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { optionalSession } from '@/lib/request-context';
 import { siteEnv } from '@/lib/site-env';
+import { resolvePreviewFile } from '@/lib/site-preview';
 
 const TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -21,9 +22,9 @@ export async function GET(_request: Request, ctx: { params: Promise<{ path?: str
   const session = await optionalSession();
   if (!session) return new Response(null, { status: 401 });
   const { path: parts = [] } = await ctx.params;
-  const root = path.resolve(siteEnv().previewDir);
-  let target = path.resolve(root, ...parts);
-  if (!target.startsWith(root)) return new Response(null, { status: 404 });
+  const resolved = resolvePreviewFile(siteEnv().previewDir, parts);
+  if (!resolved) return new Response(null, { status: 404 });
+  let target = resolved;
   const info = await stat(target).catch(() => null);
   if (!info) return new Response(null, { status: 404 });
   if (info.isDirectory()) target = path.join(target, 'index.html');
