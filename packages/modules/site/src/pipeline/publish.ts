@@ -32,7 +32,11 @@ export function rsyncCommand(opts: { distDir: string; deploy: DeployTarget; dryR
   // nur die Zeitstempel der Verzeichnisse entfallen, und die liest niemand.
   // --itemize-changes nur im Trockenlauf: ohne es schweigt rsync, und der
   // Verbindungstest haette kein Protokoll, aus dem der Zielinhalt hervorgeht.
-  const flags = ['-az', '--no-owner', '--no-group', '--no-perms', '--omit-dir-times', '--delete', '--checksum', ...(opts.dryRun ? ['--dry-run', '--itemize-changes'] : [])];
+  // --delay-updates: rsync legt jede Datei erst in einem Zwischenverzeichnis am
+  // Ziel ab und tauscht am Ende alle auf einmal um. Ohne das ersetzt es Datei
+  // fuer Datei, und ein Abbruch nach der Haelfte laesst eine halb alte, halb
+  // neue Seite im Netz stehen.
+  const flags = ['-az', '--no-owner', '--no-group', '--no-perms', '--omit-dir-times', '--delete', '--checksum', '--delay-updates', ...(opts.dryRun ? ['--dry-run', '--itemize-changes'] : [])];
 
   switch (deploy.auth.kind) {
     case 'key':

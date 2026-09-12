@@ -303,7 +303,7 @@ describe('rsyncCommand', () => {
   it('writes into a local directory without ssh', () => {
     const c = rsyncCommand({ distDir: '/build', deploy: local });
     expect(c.command).toBe('rsync');
-    expect(c.args).toEqual(['-az', '--no-owner', '--no-group', '--no-perms', '--omit-dir-times', '--delete', '--checksum', '/build/', '/ziel/']);
+    expect(c.args).toEqual(['-az', '--no-owner', '--no-group', '--no-perms', '--omit-dir-times', '--delete', '--checksum', '--delay-updates', '/build/', '/ziel/']);
   });
 
   it('uses the key file and refuses to prompt', () => {
@@ -317,6 +317,7 @@ describe('rsyncCommand', () => {
       '--omit-dir-times',
       '--delete',
       '--checksum',
+      '--delay-updates',
       '-e',
       'ssh -i /data/site.key -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 -o NumberOfPasswordPrompts=1 -o BatchMode=yes',
       '/build/',
@@ -338,6 +339,7 @@ describe('rsyncCommand', () => {
       '--omit-dir-times',
       '--delete',
       '--checksum',
+      '--delay-updates',
       '-e',
       'ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 -o NumberOfPasswordPrompts=1 -o PreferredAuthentications=password,keyboard-interactive -o PubkeyAuthentication=no',
       '/build/',
@@ -347,7 +349,7 @@ describe('rsyncCommand', () => {
 
   it('adds dry-run and itemize-changes flags when requested', () => {
     const c = rsyncCommand({ distDir: '/build', deploy: local, dryRun: true });
-    expect(c.args).toEqual(['-az', '--no-owner', '--no-group', '--no-perms', '--omit-dir-times', '--delete', '--checksum', '--dry-run', '--itemize-changes', '/build/', '/ziel/']);
+    expect(c.args).toEqual(['-az', '--no-owner', '--no-group', '--no-perms', '--omit-dir-times', '--delete', '--checksum', '--delay-updates', '--dry-run', '--itemize-changes', '/build/', '/ziel/']);
   });
 });
 
