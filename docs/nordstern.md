@@ -223,6 +223,13 @@ Akte migriert werden muss.
 führen kann, vom Entwurf über den Versand bis zur Antwort, und die Oberfläche
 dem Handoff entspricht.
 
+**Abgeschlossen am 2026-09-12.** Woran erkannt: Die E2E-Liste aus § 8 der Spec
+`2026-09-12-akte-fertig-design.md` läuft grün — Einsortieren aus dem
+Eingangskorb, Antwort auf einen Eingang, Versandvermerk, Wiedervorlage bis zur
+Startseite, Notiz, Baustein, Kontakt aus dem Overlay, Beziehungsakte am
+Kontakt, Sortierung, Storno mit Ersatz. Der Handoff-Abgleich außerhalb der
+Akte läuft weiter, gehört aber nicht mehr zu diesem Schritt.
+
 ### Schritt 2: Webseite fertig
 
 - Cutover-Rest aus `2026-09-07-site-5-cutover.md`: Image auf den

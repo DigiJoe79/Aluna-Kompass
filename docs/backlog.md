@@ -62,36 +62,3 @@ eine Migration und berührt den veröffentlichten Blick.
 **Warum:** Die Regeln belegen das Ablegen-Formular vor, und zu dem Zeitpunkt ist die Texterkennung noch nicht durch (das Dokument wird erst nach dem Ablegen im Hintergrund gelesen). Ein Volltext-Kriterium greift beim Ablegen daher ins Leere.
 
 **Wann:** Wenn ein Agent oder Hintergrundprozess Dokumente nachträglich klassifiziert und vorschlägt (der Zielzustand aus § 2 der Dokument-Spec), als eigener Vorgang mit eigener Spec.
-
-## 6. Sortierbare Tabellen für Kontakte und Dokumente
-
-**Was:** `orderBy` in `listContacts` und `listDocuments`, dazu klickbare
-Spaltenköpfe mit Richtungsanzeige. Der Zustand gehört in die URL, damit
-Sortierung das Blättern und den Zurück-Knopf überlebt.
-
-**Warum:** Das Handover verlangt Sortierung per Klick auf den Spaltenkopf; keine
-Tabelle der Anwendung hat sie. Gefunden bei der Durchsicht der Oberfläche am
-2026-09-11, als einziger von zehn Befunden nicht behoben.
-
-**Warum serverseitig:** Beide Listen blättern über `limit`/`offset`/`total`. Im
-Browser sortiert würde nur die gerade sichtbare Seite umgedreht — auf Seite 2
-stünde dann nicht, was nach Seite 1 kommt, sondern die zweiten fünfzig Zeilen
-der alten Ordnung, neu sortiert. Das ist schlechter als keine Sortierung, weil
-es richtig aussieht.
-
-**Zuschnitt:** Zwei Kernservices samt Zod-Schema, MCP-Werkzeugen und
-Service-Tests, dazu ein gemeinsamer Spaltenkopf in der Oberfläche. Die Liste
-bleibt ohne Parameter chronologisch: Für die Akte ist das eine Aussage
-(Entscheidung 31 der Volltext-Spec), keine Vorgabe.
-
-**Bewusst nicht dabei:** Einsortierregeln und Dokumentarten tragen ihre
-Reihenfolge als Inhalt — bei den Regeln greift die erste passende, die
-Reihenfolge *ist* die Fachlichkeit. Eine Tabelle, die sich nach einer anderen
-Spalte umsortieren lässt, zeigte dort eine Ordnung, die es nicht gibt, und der
-nächste, der eine Regel einfügt, verliesse sich darauf. Die Ordnerliste hat nur
-eine sortierbare Spalte und steht schon alphabetisch. Die Nutzertabelle lädt
-alles auf einmal und wäre im Browser zu sortieren — lohnt für sich allein den
-eigenen Weg nicht.
-
-**Wann:** Wenn eine der beiden Listen so lang wird, dass Blättern das Suchen
-ersetzt. Bei ein paar hundert Kontakten und Schreiben im Jahr trägt der Filter.
