@@ -57,3 +57,45 @@ eine Migration und berührt den veröffentlichten Blick.
 **Warum:** Die Regeln belegen das Ablegen-Formular vor, und zu dem Zeitpunkt ist die Texterkennung noch nicht durch (das Dokument wird erst nach dem Ablegen im Hintergrund gelesen). Ein Volltext-Kriterium greift beim Ablegen daher ins Leere.
 
 **Wann:** Wenn ein Agent oder Hintergrundprozess Dokumente nachträglich klassifiziert und vorschlägt (der Zielzustand aus § 2 der Dokument-Spec), als eigener Vorgang mit eigener Spec.
+
+## 6. Das Template-Paket exportiert keinen Vertragstyp
+
+**Was:** `@kompass/site-template` liefert `defineTemplate` und die Feldtypen,
+aber keinen exportierten Typ für den Vertrag, den ein Template erfüllt. Ein
+Vereinsrepo, das sein Template gegen den Vertrag prüfen will, kann ihn nicht
+benennen.
+
+**Warum:** Gefunden beim lokalen Vorflug des Cutovers am 2026-09-12 gegen
+Alunas Template. Bis dahin lief kein Template außerhalb dieses Repos gegen
+das Paket.
+
+**Wann:** Mit Schritt 2 des Nordsterns, sobald Alunas Template aus dem
+Testcontainer publiziert; dann zeigt sich, welche Form der Typ braucht.
+
+## 7. Das Basis-Template ignoriert die Vereinsstammdaten
+
+**Was:** `templates/verein-basis` liest keine Werte aus `organization.*`.
+Name, Anschrift, Register- und Bankdaten, die der Verein unter Verwaltung →
+Einstellungen pflegt, kommen auf der mitgelieferten Seite nicht an; das
+Impressum bleibt Sache der Template-Variablen.
+
+**Warum:** Prinzip 2 und die veröffentlichte Sicht `publishedOrganization`
+sind genau dafür da. Alunas eigenes Template nutzt sie; das Basis-Template,
+das ein neuer Verein als Vorlage bekommt, zeigt es ihm nicht vor. Gefunden
+beim Vorflug am 2026-09-12.
+
+**Wann:** Mit Schritt 2, als Vorlagecharakter des Basis-Templates — ein
+neuer Verein soll sehen, dass die Stammdaten aus Kompass kommen.
+
+## 8. Seed-Inhalt widerspricht der Seite (Vereinsrepo)
+
+**Was:** Der Seed-Text der Seite „Helfen" in Alunas Template bewirbt einen
+Newsletter; die Startseite sagt „ohne Newsletter", und der Nordstern
+schließt Newsletter aus.
+
+**Warum:** Inhalt, kein Code, und im Vereinsrepo, nicht hier. Steht trotzdem
+hier, weil der Widerspruch vor dem ersten Publish aus Test aufgelöst sein
+sollte und sonst niemand ihn sieht.
+
+**Wann:** Vor dem Publish aus Test (Cutover-Plan, Schritt 4). Redaktion, nicht
+Entwicklung.
