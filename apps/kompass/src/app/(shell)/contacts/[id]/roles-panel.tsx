@@ -1,5 +1,6 @@
 'use client';
 
+import { roleLabel } from '@/lib/contact-roles';
 import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState, useTransition } from 'react';
@@ -85,7 +86,7 @@ export function RolesPanel({
                       >
                         {roleDefinitions.map((d) => (
                           <option key={d.key} value={d.key}>
-                            {d.key}
+                            {roleLabel(t, d.key)}
                           </option>
                         ))}
                       </Select>
@@ -125,7 +126,7 @@ export function RolesPanel({
           {roles.map((r) => (
             <li key={r.id} className="flex items-center justify-between gap-4 py-2.5">
               <div className="flex items-center gap-3">
-                <StatusBadge tone={r.until ? 'neutral' : 'info'}>{r.role}</StatusBadge>
+                <StatusBadge tone={r.until ? 'neutral' : 'info'}>{roleLabel(t, r.role)}</StatusBadge>
                 <span className="text-[13px] text-ink-2">
                   {t('roles.since')}: {r.since}
                   {r.until ? ` · ${t('roles.until')}: ${r.until}` : ''}

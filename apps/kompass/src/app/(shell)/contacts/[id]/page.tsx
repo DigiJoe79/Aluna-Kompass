@@ -64,6 +64,7 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
         <RetentionPanel
           contactId={contact.id}
           holds={retention.holds}
+          roleKeysById={Object.fromEntries(contact.roles.map((r) => [r.id, r.role]))}
           until={retention.until}
           due={retention.due}
           canManage={canManage}

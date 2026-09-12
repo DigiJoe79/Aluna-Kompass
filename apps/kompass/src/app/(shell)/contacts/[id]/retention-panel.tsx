@@ -3,17 +3,21 @@
 import { useTranslations } from 'next-intl';
 import { useTransition } from 'react';
 import { Button } from '@/components/ui/button';
+import { roleLabel } from '@/lib/contact-roles';
 import { deleteContactAction } from '../actions';
 
 export function RetentionPanel({
   contactId,
   holds,
+  roleKeysById,
   until,
   due,
   canManage,
 }: {
   contactId: string;
   holds: { entity: string; id: string; label: string; until: string | null }[];
+  /** Rollenschlüssel je Rollenzeile — der Halter aus dem Modul nennt nur die ID. */
+  roleKeysById: Record<string, string>;
   until: string | null;
   due: boolean;
   canManage: boolean;
@@ -37,7 +41,11 @@ export function RetentionPanel({
             <div key={`${h.entity}:${h.id}`} className="flex items-center gap-2">
               <span className="size-1.5 rounded-full bg-muted-ink" aria-hidden />
               <span>
-                {h.label} — {h.until ? t('retention.heldUntil', { date: h.until }) : t('retention.heldPermanently')}
+                {h.entity === 'contactRole' && roleKeysById[h.id]
+                  ? t('retention.roleHold', { role: roleLabel(t, roleKeysById[h.id]!) })
+                  : h.label}
+                {' — '}
+                {h.until ? t('retention.heldUntil', { date: h.until }) : t('retention.heldPermanently')}
               </span>
             </div>
           ))}

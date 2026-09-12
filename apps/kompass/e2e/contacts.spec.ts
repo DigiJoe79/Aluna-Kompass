@@ -59,11 +59,11 @@ test.describe('contacts', () => {
     await page.getByRole('dialog').getByLabel('Rolle').selectOption('interested');
     await page.getByRole('dialog').getByLabel('Seit').fill('2026-03-15');
     await page.getByRole('dialog').getByRole('button', { name: 'Übernehmen' }).click();
-    await expect(page.getByRole('listitem').filter({ hasText: 'interested' })).toBeVisible();
+    await expect(page.getByRole('listitem').filter({ hasText: 'Interessiert' })).toBeVisible();
 
     // Solange die Rolle läuft, hält sie den Kontakt — der Löschknopf ist aus und sagt warum.
     await expect(page.getByRole('button', { name: 'Kontakt löschen' })).toBeDisabled();
-    await expect(page.getByTestId('retention-holds')).toContainText('interested');
+    await expect(page.getByTestId('retention-holds')).toContainText('Rolle Interessiert');
     await expect(page.getByTestId('retention-holds')).toContainText('2028-12-31');
   });
 

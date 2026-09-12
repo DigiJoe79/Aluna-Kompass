@@ -1286,6 +1286,12 @@
       "create": "Neu anlegen …",
       "searching": "Suche …"
     },
+    "roleNames": {
+      "interested": "Interessiert",
+      "partner": "Partner",
+      "authority": "Behörde",
+      "service": "Dienstleister"
+    },
     "title": "Kontakte",
     "description": "Personen und Organisationen, ihre Rollen und Kommunikationswege.",
     "empty": {
@@ -1364,6 +1370,7 @@
     },
     "retention": {
       "title": "Aufbewahrung",
+      "roleHold": "Rolle {role}",
       "heldUntil": "gehalten bis {date}",
       "heldPermanently": "dauerhaft gehalten",
       "delete": "Kontakt löschen",

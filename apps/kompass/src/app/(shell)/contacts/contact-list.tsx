@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { SortableHead } from '@/components/sortable-head';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { roleLabel } from '@/lib/contact-roles';
 import { cn } from '@/lib/utils';
 import { Select } from '@/components/ui/select';
 
@@ -98,7 +99,7 @@ export function ContactList({ contacts, roles }: { contacts: ContactListItem[]; 
           <option value="">{t('allRoles')}</option>
           {roles.map((r) => (
             <option key={r} value={r}>
-              {r}
+              {roleLabel(t, r)}
             </option>
           ))}
         </Select>
@@ -164,7 +165,7 @@ export function ContactList({ contacts, roles }: { contacts: ContactListItem[]; 
                   <div className="flex flex-wrap gap-1">
                     {c.roles.map((r) => (
                       <StatusBadge key={r} tone="info">
-                        {r}
+                        {roleLabel(t, r)}
                       </StatusBadge>
                     ))}
                   </div>
