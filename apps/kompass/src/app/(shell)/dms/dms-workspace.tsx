@@ -169,7 +169,7 @@ export function DmsWorkspace({
   };
 
   return (
-    <>
+    <div className="flex min-h-full flex-col">
       <PageHeader
         title={t('title')}
         description={t('description')}
@@ -187,7 +187,10 @@ export function DmsWorkspace({
         }
       />
 
-      <div className="flex gap-3" data-drop={ready ? 'ready' : 'pending'}>
+      {/* Bis an die Ränder des Arbeitsbereichs: Die Ordnerspalte ist eine
+          Spalte, keine Karte — beim Ziehen ist sie die helle Fläche gegen das
+          abgedunkelte Feld daneben, und die Grenze muss bis unten tragen. */}
+      <div className="-mx-6 -mb-6 flex min-h-0 flex-1" data-drop={ready ? 'ready' : 'pending'}>
         <FolderColumn
           folders={folders}
           counts={counts}
@@ -203,7 +206,7 @@ export function DmsWorkspace({
             take(folder, list);
           }}
         />
-        <div className="relative min-w-0 flex-1">
+        <div className="relative min-w-0 flex-1 overflow-auto p-5">
           {children}
           {dragging ? <DropOverlay count={files} /> : null}
         </div>
@@ -236,6 +239,6 @@ export function DmsWorkspace({
           return { status: 'success' };
         }}
       />
-    </>
+    </div>
   );
 }

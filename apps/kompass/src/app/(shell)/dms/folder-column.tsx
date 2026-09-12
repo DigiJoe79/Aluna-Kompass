@@ -51,7 +51,7 @@ export function FolderColumn({
   return (
     <nav
       aria-label={t('folders')}
-      className="relative z-3 w-[250px] shrink-0 self-start rounded-md border border-line bg-surface px-2.5 py-3.5"
+      className="relative z-3 w-[250px] shrink-0 border-r border-line bg-surface px-2.5 py-3.5"
     >
       <p className="px-2.5 pb-2 text-[11px] font-bold tracking-[0.08em] text-muted-ink">
         {t('folders').toUpperCase()}
@@ -68,6 +68,7 @@ export function FolderColumn({
             <li key={row.key}>
               <Link
                 href={row.href}
+                aria-current={current === row.key ? 'page' : undefined}
                 data-folder={row.folder ?? undefined}
                 onDragOver={
                   isTarget
@@ -99,7 +100,11 @@ export function FolderColumn({
               >
                 <row.icon className="size-4 shrink-0" aria-hidden />
                 <span className="min-w-0 flex-1 truncate">{row.label}</span>
-                <span className="font-mono text-[12px] text-muted-ink">{row.count}</span>
+                {/* Nur im Ruhezustand grau: Färbt sich die Zeile, färbt sich
+                    die Zahl mit — sonst bleibt sie als einziges zurück. */}
+                <span className={cn('font-mono text-[12px]', current === row.key || isOver ? 'text-current' : 'text-muted-ink')}>
+                  {row.count}
+                </span>
               </Link>
             </li>
           );
