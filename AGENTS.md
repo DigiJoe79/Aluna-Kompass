@@ -6,6 +6,8 @@ Regeln für alle, die an diesem Repo arbeiten (menschlich oder agentisch). Kanon
 
 Aluna Kompass ist ein Open-Source-Vereinsverwaltungstool für gemeinnützige Vereine: Single Source of Truth für alle Vereinsvorgänge, aus der Jahresbericht, Kassenprüfungsunterlagen und Rechenschaftsdokumente erzeugt werden. Generischer Kern plus optionale, pro Installation schaltbare Module. Eine Installation pro Verein, kein Multi-Tenancy. Aluna Tierhilfe e.V. ist Erstnutzer und Taktgeber, nicht Grenze der Zielgruppe.
 
+Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. Jede neue Spec nennt die Säule, zu der sie gehört; wer das Bild ändert, zieht den Nordstern im selben Commit nach.
+
 ## Neun Prinzipien
 
 1. **Generischer Kern, optionale Module.** Keine Vereinsspezifika im Kern. Faustregel: Würde ein anderer Verein bei einem Namen stutzen, ist er zu spezifisch.
@@ -28,7 +30,7 @@ Aluna Kompass ist ein Open-Source-Vereinsverwaltungstool für gemeinnützige Ver
 - Seed-Daten für jedes Modul und jede neue Fachfunktion. Ein neues Modul bringt einen `seed`-Haken im Manifest mit, Kern-Funktionen einen Block unter `packages/core/src/seed/`; beide laufen über `seedDevelopment`. Regeln: frei erfundene Beispiele (das Repo ist öffentlich, `no-association-content.test.ts`), idempotent (kein Lauf, wenn schon Zeilen da sind), mit Varianten der wichtigen Zustände, und ein Test wie `…/tests/seed.test.ts`. Muster: `packages/modules/contacts/src/seed.ts`, `packages/modules/animals/src/seed.ts`, `packages/modules/dms/src/seed.ts`, `packages/core/src/seed/projects.ts`. In `development` liegen sie neben den Prototyp-Daten von `dev:reset`; NAS-Test bleibt Aluna-only, weil dort `seedDevelopment` nicht läuft.
 - Migrationen: `pnpm --filter @kompass/core db:generate` nach jeder Schema-Änderung; erzeugte SQL-Dateien werden committet und nie nachträglich editiert.
 - Keine Löschfunktionen außer den in `DELETION_POLICY` (`packages/core/src/deletion-policy.ts`) als `deletable: true` geführten — jede mit Eintrag im Änderungsprotokoll. Flüchtige Infrastruktur (Sitzungen löschen, Tokens widerrufen) steht dort nicht, weil sie keinen Vereinsvorgang abbildet.
-- Zwei Grenzfälle sind bewusst noch nicht freigegeben: **Projekte** tragen ab Stufe 3 Finanzfelder, **Tierprofile** ab Stufe 4 Bestandsbuch und § 11-Nachweise. Beide dokumentieren dann Vorgänge und nicht mehr nur Webseiteninhalt. Wer vorher eine Löschfunktion dafür bauen will, entscheidet diese Frage mit.
+- Zwei Grenzfälle sind bewusst noch nicht freigegeben: **Projekte** tragen mit der Säule Finanzen Finanzfelder, **Tierprofile** mit der Tiere-Vollstufe Bestandsbuch und § 11-Nachweise (Roadmap-Schritte 3 und 5 in `docs/nordstern.md`). Beide dokumentieren dann Vorgänge und nicht mehr nur Webseiteninhalt. Wer vorher eine Löschfunktion dafür bauen will, entscheidet diese Frage mit.
 
 ## Befehle
 
@@ -56,6 +58,7 @@ Aluna Kompass ist ein Open-Source-Vereinsverwaltungstool für gemeinnützige Ver
 
 - Specs: `docs/superpowers/specs/` (Fundament: `2026-09-05-fundament-design.md`; Webseite als Template: `2026-09-07-site-template-design.md`; Prüfringe: `2026-09-08-pruefringe-design.md`; Löschbarkeit und Mediathek: `2026-09-09-loeschbarkeit-und-mediathek-design.md`; Dokument-Pipeline und Basis-Vorlagen: `2026-09-09-dokument-pipeline-und-basisvorlagen-design.md`; Kontakte: `2026-09-10-kontakte-design.md`; Dokumente und Korrespondenz: `2026-09-10-dokumente-und-korrespondenz-design.md`; Volltext und Texterkennung: `2026-09-11-volltext-und-texterkennung-design.md`)
 - Pläne: `docs/superpowers/plans/`
+- Nordstern: `docs/nordstern.md` (Gesamtbild, Grenzen, Roadmap)
 - Backlog: `docs/backlog.md` (bewusst zurückgestellte Punkte mit Begründung)
 - Hilfeseite für die schreibende Person: `docs/briefe-formatieren.md` — welche Formatierungen ein Brief kennt. Der Beispielbrief darin ist zugleich Fixture: `packages/documents/tests/markdown-render.test.ts` liest ihn aus der Seite und rendert ihn.
 - Design-Referenz Stufe 1: `docs/design/fundament/design_handoff_aluna_kompass_fundament/README.md`

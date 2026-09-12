@@ -35,6 +35,8 @@ Jede Stufe erhält eine eigene Spec und einen eigenen Implementierungsplan.
 4. **Tiere & Vermittlung** (Aluna-Modul, Vollstufe): Bestandsbuch, Herkunft/Verbleib, Verträge, Patenschaften, Partner-Shelter.
 5. **Mitglieder & Gremien**: Mitgliederstamm, Beiträge als Buchungen, Mitgliederversammlung (Einladung, Anwesenheit, Protokoll), Vorstandsbeschlüsse, Satzungs-/Beitragsordnungsstände.
 
+> **Nachtrag 2026-09-12.** Dieser Stufenplan ist abgelöst. Er hat eine Woche gehalten: Stufe 3 wurde für die Webseiten-Templates ein zweites Mal vergeben, Kontakte, Akte und Volltext kamen ohne Nummer. Das Gesamtbild und die Reihenfolge stehen seitdem in `docs/nordstern.md`, nach Säulen statt Stufen. Der Rest dieser Spec bleibt gültig; sie beschreibt das Fundament, nicht die Zukunft.
+>
 > **Nachtrag 2026-09-10.** Kontakte sind aus Stufe 3 vorgezogen und ein eigenes Modul (`2026-09-10-kontakte-design.md`). Grund: Korrespondenz, Finanzen und Mitglieder hängen alle daran, und ohne sie hat ein Brief keinen Empfänger. Der Abschnitt „Nicht-Ziele" der Stufe 1 nennt Kontakte weiterhin zu Recht — dort ging es um den Umfang jener Stufe.
 
 ### Rechenschaftspflichten als Arbeitsraster
