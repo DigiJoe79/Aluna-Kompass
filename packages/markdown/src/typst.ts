@@ -3,6 +3,7 @@ import remarkGfm from 'remark-gfm';
 import remarkParse from 'remark-parse';
 import { unified } from 'unified';
 import type { Nodes, PhrasingContent, Root, RootContent } from 'mdast';
+import { literalUnknownDirectives, splitCards } from './directives';
 
 /**
  * Zeichen, die Typst als Markup oder Code deutet — im Fließtext neutralisiert.
@@ -93,12 +94,7 @@ interface ListItem {
  * bricht ab. Text vor der ersten Karte steht vor dem Raster statt zu verschwinden.
  */
 function karten(children: readonly Nodes[]): string {
-  const lead: Nodes[] = [];
-  const cards: Nodes[][] = [];
-  for (const child of children) {
-    if (child.type === 'heading' && child.depth === 3) cards.push([child]);
-    else (cards[cards.length - 1] ?? lead).push(child);
-  }
+  const { lead, cards } = splitCards(children);
   const before = lead.map(block).join('\n');
   if (cards.length === 0) return `${before}\n`;
   const cells = cards.map((card) => `[\n${card.map(block).join('\n').trim()}\n]`);
@@ -141,6 +137,10 @@ function block(node: Nodes): string {
     }
     default: {
       const directive = node as { type: string; name?: string; children?: Nodes[] };
+      if (directive.type === 'leafDirective' && directive.name === 'seitenumbruch') {
+        // `weak`: am Seitenanfang bleibt der Umbruch aus, statt eine leere Seite zu öffnen.
+        return '#pagebreak(weak: true)\n';
+      }
       if (directive.type === 'containerDirective' && directive.children) {
         if (directive.name === 'karten') return karten(directive.children);
         return `${directive.children.map(block).join('\n')}\n`;
@@ -150,11 +150,12 @@ function block(node: Nodes): string {
   }
 }
 
-const parser = unified().use(remarkParse).use(remarkGfm).use(remarkDirective);
+const parser = unified().use(remarkParse).use(remarkGfm).use(remarkDirective).use(literalUnknownDirectives);
 
 export async function renderMarkdownTypst(markdown: string): Promise<string> {
   if (markdown.trim().length === 0) return '';
   const tree = parser.parse(markdown);
-  const processed = (await parser.run(tree)) as Root;
+  // Der Quelltext muss mit: das Direktiven-Plugin schneidet aus ihm den Originalwortlaut.
+  const processed = (await parser.run(tree, markdown)) as Root;
   return processed.children.map((child) => block(child as Nodes)).join('\n').trim();
 }

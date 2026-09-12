@@ -7,7 +7,7 @@ import remarkRehype from 'remark-rehype';
 import { unified } from 'unified';
 import { visit } from 'unist-util-visit';
 import type { Root as HastRoot, Element } from 'hast';
-import { kompassConventions } from './directives';
+import { kompassConventions, literalUnknownDirectives } from './directives';
 import { schema } from './sanitize';
 
 function externalLinks() {
@@ -24,6 +24,7 @@ const processor = unified()
   .use(remarkParse)
   .use(remarkGfm)
   .use(remarkDirective)
+  .use(literalUnknownDirectives)
   .use(kompassConventions)
   .use(remarkRehype)
   .use(externalLinks)

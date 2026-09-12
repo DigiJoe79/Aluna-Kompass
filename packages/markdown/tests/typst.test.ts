@@ -119,4 +119,29 @@ describe('renderMarkdownTypst', () => {
     expect(out).toContain('klick');
     expect(out).toContain('Datei');
   });
+
+  it('leaves a time of day and a ratio alone', async () => {
+    // remark-directive liest `:00` als Direktive und verschluckte sie samt Minuten.
+    const out = await renderMarkdownTypst('Beginn um 15:00 Uhr, Verhältnis 2:1.');
+    expect(out).toContain('15:00');
+    expect(out).toContain('2:1');
+  });
+
+  it('turns an unknown inline directive back into the text that was typed', async () => {
+    const out = await renderMarkdownTypst('Ein :hinweis[wichtig] und :abstand mittendrin.');
+    expect(out).toContain(':hinweis');
+    expect(out).toContain('wichtig');
+    expect(out).toContain(':abstand');
+  });
+
+  it('turns an unknown leaf directive back into the text that was typed', async () => {
+    const out = await renderMarkdownTypst('::abstand');
+    expect(out).toContain('::abstand');
+  });
+
+  it('turns ::seitenumbruch into a typst page break', async () => {
+    const out = await renderMarkdownTypst('Seite eins.\n\n::seitenumbruch\n\nSeite zwei.');
+    expect(out).toContain('#pagebreak(weak: true)');
+    expect(out).not.toContain('seitenumbruch');
+  });
 });

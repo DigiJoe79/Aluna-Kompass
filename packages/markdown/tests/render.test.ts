@@ -39,4 +39,29 @@ describe('renderMarkdown', () => {
     const a = await renderMarkdown('Text');
     expect(await renderMarkdown('Text')).toBe(a);
   });
+
+  it('leaves a time of day alone instead of making an element of it', async () => {
+    const html = await renderMarkdown('Beginn um 15:00 Uhr, Verhältnis 2:1.');
+    expect(html).toBe('<p>Beginn um 15:00 Uhr, Verhältnis 2:1.</p>');
+  });
+
+  it('drops ::seitenumbruch, which only means something on paper', async () => {
+    const html = await renderMarkdown('Oben.\n\n::seitenumbruch\n\nUnten.');
+    expect(html).toContain('<p>Oben.</p>');
+    expect(html).toContain('<p>Unten.</p>');
+    expect(html).not.toContain('seitenumbruch');
+  });
+
+  it('keeps text before the first card instead of dropping it', async () => {
+    const html = await renderMarkdown(':::karten\nVorspann.\n\n### Schritt 1\nMelde dich bei uns.\n:::');
+    expect(html).toContain('<p>Vorspann.</p>');
+    expect(html).toContain('<div class="cards">');
+    expect(html).toContain('<h3>Schritt 1</h3>');
+  });
+
+  it('renders a karten block without headings as plain content, not an empty grid', async () => {
+    const html = await renderMarkdown(':::karten\nNur Fließtext.\n:::');
+    expect(html).toContain('<p>Nur Fließtext.</p>');
+    expect(html).not.toContain('class="cards"');
+  });
 });
