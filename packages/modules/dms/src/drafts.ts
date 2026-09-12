@@ -20,7 +20,7 @@ import { documentTypeFor } from './catalog';
 import { resolveRecipient } from './recipients';
 import { documentLinks, documents } from './schema';
 import { storeDocumentFile } from './storage';
-import { nextDocumentNumber, toRecord, type DocumentRecord } from './service';
+import { allocateDocumentNumber, peekDocumentNumber, toRecord, type DocumentRecord } from './service';
 import { removeDocumentText } from './index-store';
 
 export const draftCreateSchema = z.object({
@@ -65,6 +65,18 @@ export const draftPreviewSchema = z.object({
 export const fileDocumentSchema = z.object({
   id: z.string().min(1),
 });
+
+/**
+ * Abbruch der Ablage-Transaktion: Die gezogene Nummer ist nicht die, die im
+ * gerenderten PDF steht. Das Werfen rollt zurück; der nächste Anlauf rendert
+ * neu. Eine eigene Klasse, damit der Fang nicht an einer Fehlermeldung hängt.
+ */
+class NumberMovedOn extends Error {
+  constructor() {
+    super('number moved on between peek and draw');
+    this.name = 'NumberMovedOn';
+  }
+}
 
 /** Der freie Brief trägt jede Art, die keine eigene Vorlage mitbringt. */
 export const FALLBACK_TEMPLATE_KEY = 'letter';
@@ -308,18 +320,29 @@ export async function fileDocument(deps: Deps, ctx: CallContext, input: unknown)
 
   const { data, built, baseId, base, bodyTypst } = prepared.value;
 
+  /**
+   * Das PDF trägt die Nummer, also muss sie vor dem Rendern feststehen — und
+   * gerendert wird asynchron, also außerhalb der Transaktion. Deshalb: ansehen,
+   * rendern, schreiben, und in der Transaktion ziehen. Weicht die gezogene von
+   * der angesehenen ab, war jemand dazwischen: zurückrollen und neu rendern.
+   */
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const year = deps.clock.now().getUTCFullYear();
-    const number = nextDocumentNumber(deps.db, docType.prefix, year);
-    const context = await buildContext(deps, ctx, number);
+    const expected = peekDocumentNumber(deps.db, docType.prefix, year);
+    const context = await buildContext(deps, ctx, expected);
     const { bytes } = await deps.documents.render({ baseId, bodyTypst, slots: built.slots, context });
 
+    // Die Datei trägt den Namen des Dokuments; ein zweiter Anlauf überschreibt
+    // sie, es bleibt nichts liegen.
     const stored = await storeDocumentFile(deps, row.id, bytes);
     if (!stored.ok) return stored;
 
     const snapshot = { input: data, slots: built.slots, base: baseId, baseChecksum: base.checksum };
+    let outcome: Result<DocumentRecord> | null = null;
     try {
-      return deps.db.transaction((tx: DbOrTx) => {
+      outcome = deps.db.transaction((tx: DbOrTx) => {
+        const number = allocateDocumentNumber(tx, docType.prefix, year);
+        if (number !== expected) throw new NumberMovedOn();
         const now = isoNow(deps.clock);
         tx.update(documents)
           .set({
@@ -350,10 +373,9 @@ export async function fileDocument(deps: Deps, ctx: CallContext, input: unknown)
         return ok(toRecord(deps, after, tx));
       });
     } catch (error) {
-      if (!(error instanceof Error && /UNIQUE constraint failed: documents\.number/.test(error.message))) {
-        throw error;
-      }
+      if (!(error instanceof NumberMovedOn)) throw error;
     }
+    if (outcome) return outcome;
   }
 
   return conflict('documentNumberContention', 'Dokumentnummer konnte nicht reserviert werden');

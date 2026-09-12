@@ -1,5 +1,4 @@
 import {
-  conflict,
   invalid,
   isoNow,
   newId,
@@ -17,8 +16,8 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { documentTypeFor } from './catalog';
 import { documentLinks, documents } from './schema';
-import { storeDocumentFile } from './storage';
-import { linkInputSchema, nextDocumentNumber, toRecord, type DocumentRecord } from './service';
+import { removeDocumentFile, storeDocumentFile } from './storage';
+import { allocateDocumentNumber, linkInputSchema, toRecord, type DocumentRecord } from './service';
 
 /**
  * Was jede Ablage eingehender Post beschreibt — unabhängig davon, woher die
@@ -83,75 +82,72 @@ export async function receiveDocument(
 
   const folder = parsed.value.folder !== undefined ? parsed.value.folder : (docType.defaultFolder ?? null);
 
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const year = deps.clock.now().getUTCFullYear();
-    const number = nextDocumentNumber(deps.db, docType.prefix, year);
-    const id = newId();
-    const now = isoNow(deps.clock);
+  const id = newId();
+  const now = isoNow(deps.clock);
+  const year = deps.clock.now().getUTCFullYear();
 
-    const stored = await storeDocumentFile(deps, id, bytes);
-    if (!stored.ok) return stored;
+  // Die Datei zuerst: Ihr Schreiben kann scheitern, und dann darf keine Zeile
+  // da sein. Scheitert danach die Transaktion, wird sie wieder entfernt.
+  const stored = await storeDocumentFile(deps, id, bytes);
+  if (!stored.ok) return stored;
 
-    try {
-      return deps.db.transaction((tx: DbOrTx) => {
-        tx.insert(documents)
+  try {
+    return deps.db.transaction((tx: DbOrTx) => {
+      const number = allocateDocumentNumber(tx, docType.prefix, year);
+      tx.insert(documents)
+        .values({
+          id,
+          phase: 'issued',
+          direction: 'incoming',
+          sourceKind: 'uploaded',
+          typeKey: docType.key,
+          number,
+          subject: parsed.value.subject,
+          documentDate: parsed.value.documentDate,
+          folder,
+          draftBody: null,
+          templateKey: null,
+          inputSnapshot: null,
+          fileName: stored.value.fileName,
+          fileChecksum: stored.value.fileChecksum,
+          fileBytes: stored.value.fileBytes,
+          textStatus: 'pending',
+          textAttempts: 0,
+          textError: null,
+          textExtractedAt: null,
+          status: 'issued',
+          createdByUserId: ctx.userId ?? 'system',
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      for (const link of parsed.value.links) {
+        tx.insert(documentLinks)
           .values({
-            id,
-            phase: 'issued',
-            direction: 'incoming',
-            sourceKind: 'uploaded',
-            typeKey: docType.key,
-            number,
-            subject: parsed.value.subject,
-            documentDate: parsed.value.documentDate,
-            folder,
-            draftBody: null,
-            templateKey: null,
-            inputSnapshot: null,
-            fileName: stored.value.fileName,
-            fileChecksum: stored.value.fileChecksum,
-            fileBytes: stored.value.fileBytes,
-            textStatus: 'pending',
-            textAttempts: 0,
-            textError: null,
-            textExtractedAt: null,
-            status: 'issued',
-            createdByUserId: ctx.userId ?? 'system',
+            id: newId(),
+            documentId: id,
+            entityType: link.entityType,
+            entityId: link.entityId,
+            role: link.role,
             createdAt: now,
-            updatedAt: now,
           })
           .run();
-
-        for (const link of parsed.value.links) {
-          tx.insert(documentLinks)
-            .values({
-              id: newId(),
-              documentId: id,
-              entityType: link.entityType,
-              entityId: link.entityId,
-              role: link.role,
-              createdAt: now,
-            })
-            .run();
-        }
-
-        recordAudit(tx, deps, ctx, {
-          action: 'dms.receive',
-          entityType: 'document',
-          entityId: id,
-          after: { number, typeKey: docType.key, subject: parsed.value.subject },
-          summary: `Dokument ${number} („${parsed.value.subject}“) eingegangen`,
-        });
-
-        const row = tx.select().from(documents).where(eq(documents.id, id)).get()!;
-        return ok(toRecord(deps, row, tx));
-      });
-    } catch (error) {
-      if (!(error instanceof Error && /UNIQUE constraint failed: documents\.number/.test(error.message))) {
-        throw error;
       }
-    }
-  }
 
-  return conflict('documentNumberContention', 'Dokumentnummer konnte nicht reserviert werden');
+      recordAudit(tx, deps, ctx, {
+        action: 'dms.receive',
+        entityType: 'document',
+        entityId: id,
+        after: { number, typeKey: docType.key, subject: parsed.value.subject },
+        summary: `Dokument ${number} („${parsed.value.subject}“) eingegangen`,
+      });
+
+      const row = tx.select().from(documents).where(eq(documents.id, id)).get()!;
+      return ok(toRecord(deps, row, tx));
+    });
+  } catch (error) {
+    await removeDocumentFile(deps, stored.value.fileName);
+    throw error;
+  }
 }

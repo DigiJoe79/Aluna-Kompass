@@ -4,7 +4,7 @@ import { contactsModule } from '@kompass/module-contacts';
 import { describe, expect, it } from 'vitest';
 import { dmsModule } from '../src/manifest';
 import { documentLinks, documentTypes, documents } from '../src/schema';
-import { getDocument, listDocuments, nextDocumentNumber, voidDocument } from '../src/service';
+import { allocateDocumentNumber, getDocument, listDocuments, peekDocumentNumber, voidDocument } from '../src/service';
 
 const ALL = ['dms.view', 'dms.create', 'dms.file', 'dms.void', 'dms.deleteDraft', 'dms.manage'];
 
@@ -60,16 +60,16 @@ describe('documents', () => {
     expect(row?.fileName).toBeNull();
   });
 
-  describe('nextDocumentNumber', () => {
-    it('vergibt lückenlos je Präfix und Jahr', async () => {
-      const { deps, userId } = setup();
-      expect(nextDocumentNumber(deps.db, 'BRF', 2026)).toBe('BRF-2026-001');
-      await insertIssued(deps, userId, { id: 'doc-1', number: 'BRF-2026-001' });
-      expect(nextDocumentNumber(deps.db, 'BRF', 2026)).toBe('BRF-2026-002');
-      await insertIssued(deps, userId, { id: 'doc-2', number: 'BRF-2026-002' });
-      expect(nextDocumentNumber(deps.db, 'BRF', 2026)).toBe('BRF-2026-003');
+  describe('Nummernvergabe', () => {
+    it('vergibt lückenlos je Präfix und Jahr', () => {
+      const { deps } = setup();
+      expect(peekDocumentNumber(deps.db, 'BRF', 2026)).toBe('BRF-2026-001');
+      expect(deps.db.transaction((tx) => allocateDocumentNumber(tx, 'BRF', 2026))).toBe('BRF-2026-001');
+      expect(peekDocumentNumber(deps.db, 'BRF', 2026)).toBe('BRF-2026-002');
+      expect(deps.db.transaction((tx) => allocateDocumentNumber(tx, 'BRF', 2026))).toBe('BRF-2026-002');
+      expect(peekDocumentNumber(deps.db, 'BRF', 2026)).toBe('BRF-2026-003');
       // Anderes Jahr, eigener Kreis.
-      expect(nextDocumentNumber(deps.db, 'BRF', 2027)).toBe('BRF-2027-001');
+      expect(peekDocumentNumber(deps.db, 'BRF', 2027)).toBe('BRF-2027-001');
     });
   });
 

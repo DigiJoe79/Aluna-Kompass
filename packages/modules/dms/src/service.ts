@@ -19,7 +19,7 @@ import {
 } from '@kompass/core';
 import { z } from 'zod';
 import { documentTypeFor } from './catalog';
-import { documentFolders, documentLinks, documents, type DocumentLinkRow, type DocumentRow } from './schema';
+import { documentCounters, documentFolders, documentLinks, documents, type DocumentLinkRow, type DocumentRow } from './schema';
 import { readDocumentFile, removeDocumentFile } from './storage';
 import { removeDocumentText } from './index-store';
 import { fulltextCondition, fulltextHits, type TextHit } from './search';
@@ -31,42 +31,33 @@ export function toRecord(deps: Deps, row: DocumentRow, dbOrTx: DbOrTx = deps.db)
   return { ...row, inputSnapshot: row.inputSnapshot ? JSON.parse(row.inputSnapshot) : null, links };
 }
 
+const format = (prefix: string, year: number, n: number) => `${prefix}-${year}-${String(n).padStart(3, '0')}`;
+
 /**
- * Präfix kommt aus der Dokumentart (Entscheidung 18); Format und Lückenlosigkeit
- * je Präfix und Jahr. Maßgeblich ist die **höchste** vergebene Nummer, nicht die
- * Anzahl der Zeilen: Nach einer Löschung wegen Fristablauf gibt es weniger
- * Zeilen als vergebene Nummern, und ein Zähler liefe erneut auf eine schon
- * belegte Nummer — die Ablage bliebe bis zum Jahreswechsel stehen.
+ * Präfix aus der Dokumentart (Entscheidung 18), Jahr ist das Ablagejahr.
+ * Der Zähler ist Zustand (Entscheidung 38): Eine Nummer, deren Dokument nach
+ * Fristablauf gelöscht wurde, kommt nie wieder — das Protokoll nennt sie, und
+ * sie darf kein zweites Dokument bezeichnen.
  *
- * Das Jahr in der Nummer ist das **Ablagejahr** (`clock.now()`), die Frist
- * rechnet ab `documentDate`. Im Normalbetrieb liegen beide beieinander und ein
- * Dokument wird erst fällig, wenn der Zähler seines Jahres längst ruht. Sie
- * fallen auseinander, wenn Altbestand eingescannt wird — eine Rechnung von 2005
- * bekommt eine Nummer von heute und ist sofort fällig — oder wenn jemand eine
- * Aufbewahrungseinstellung senkt. Nur dort trifft eine Löschung den Zähler des
- * laufenden Jahres.
- *
- * Verschwindet dabei der **letzte** Eintrag eines Präfixes und Jahres, beginnt
- * die Zählung wieder bei 001. Das ist bewusst so: ein Gedächtnis über gelöschte
- * Zeilen hinaus wäre ein gespeicherter abgeleiteter Wert (Prinzip 5), und die
- * freigewordene Nummer hängt an keinem Dokument mehr.
+ * Nur in einer Transaktion aufrufen: Lesen und Erhöhen müssen zusammen
+ * stehen. better-sqlite3 führt Transaktionen nacheinander aus, ein zweiter
+ * Aufruf sieht also immer den erhöhten Stand.
  */
-export function nextDocumentNumber(db: DbOrTx, prefix: string, year: number): string {
-  const start = `${prefix}-${year}-`;
-  const taken = db
-    .select({ number: documents.number })
-    .from(documents)
-    .where(sql`${documents.number} like ${`${start}%`}`)
-    .all();
-
-  let highest = 0;
-  for (const row of taken) {
-    const suffix = row.number?.slice(start.length) ?? '';
-    if (!/^\d+$/.test(suffix)) continue;
-    highest = Math.max(highest, Number.parseInt(suffix, 10));
+export function allocateDocumentNumber(tx: DbOrTx, prefix: string, year: number): string {
+  const row = tx.select().from(documentCounters).where(and(eq(documentCounters.prefix, prefix), eq(documentCounters.year, year))).get();
+  const next = (row?.last ?? 0) + 1;
+  if (row) {
+    tx.update(documentCounters).set({ last: next }).where(and(eq(documentCounters.prefix, prefix), eq(documentCounters.year, year))).run();
+  } else {
+    tx.insert(documentCounters).values({ prefix, year, last: next }).run();
   }
+  return format(prefix, year, next);
+}
 
-  return `${start}${String(highest + 1).padStart(3, '0')}`;
+/** Die Nummer, die das nächste Dokument bekäme — ein Blick, kein Zug. */
+export function peekDocumentNumber(db: DbOrTx, prefix: string, year: number): string {
+  const row = db.select().from(documentCounters).where(and(eq(documentCounters.prefix, prefix), eq(documentCounters.year, year))).get();
+  return format(prefix, year, (row?.last ?? 0) + 1);
 }
 
 export const previewNumberSchema = z.object({
@@ -75,9 +66,9 @@ export const previewNumberSchema = z.object({
 
 /**
  * Die Nummer, die das nächste Dokument dieser Art bekäme. Ein reiner Blick:
- * `nextDocumentNumber` führt keinen Zähler, gezogen wird die Nummer erst beim
- * Ablegen. Zwischen Ansehen und Ablegen kann jemand anders schneller sein —
- * deshalb sagt die Oberfläche „wird beim Ablegen gezogen“ und nicht „ist Ihre“.
+ * Gezogen wird die Nummer erst beim Ablegen, aus dem Zähler. Zwischen Ansehen
+ * und Ablegen kann jemand anders schneller sein — deshalb sagt die Oberfläche
+ * „wird beim Ablegen gezogen“ und nicht „ist Ihre“.
  */
 export async function previewNextNumber(
   deps: Deps,
@@ -94,7 +85,7 @@ export async function previewNextNumber(
   if (!docType) return notFound('documentType', parsed.value.typeKey);
 
   const year = deps.clock.now().getUTCFullYear();
-  return ok({ number: nextDocumentNumber(deps.db, docType.prefix, year) });
+  return ok({ number: peekDocumentNumber(deps.db, docType.prefix, year) });
 }
 
 export const documentListSchema = z.object({
