@@ -1230,3 +1230,44 @@ git commit -m "fix(dms): the new fields keep the measures of the foundation"
 **Placeholder.** Die Panels in Task 4 und 7 sind als Aufbau mit Feldern, Props und Texten beschrieben und folgen den vorhandenen Dateien (`folders-panel.tsx`, `text-panel.tsx`); die Actions und die Picker-Komponente stehen vollständig da. Keine offenen Textschlüssel: jeder Schlüssel, den eine Komponente ruft, steht im Task mit Wert.
 
 **Typen.** `PickedContact`, `PickedDocument`, `DocumentListItem` (erweitert um `sentAt`, `openFollowUp`), `DocumentRelationView` (Plan 2) und `FollowUpRecord` (Plan 1) sind die Formen, die durch Seiten und Panels laufen; die Actions nehmen `id` zuerst, dann die Nutzlast, wie die vorhandenen.
+
+## Nachtrag zur Ausführung (2026-09-12)
+
+Vierzehn Abweichungen, vier davon mehr als Tippfehler:
+
+**1. `readSort` durfte nicht in einer `'use client'`-Datei liegen.** Eine
+Server Component rief sie, Next verbietet das. Sie sitzt jetzt in
+`apps/kompass/src/lib/sort.ts`; `sortable-head.tsx` importiert sie von dort.
+Bemerkenswert ist, wann es auffiel: Der E2E-Lauf nach Task 1 war grün, weil
+`.next` warm war; erst der kalte Lauf in Task 2 zeigte den Verstoß — genau
+der Fall, für den `pnpm e2e:cold` in `AGENTS.md` steht.
+
+**2. `CommandInput` erzwang `h-8!` an seiner Hülle.** Die Klasse aus dem Plan
+landete am inneren `input` und wirkte nicht. Die geteilte Komponente nimmt
+jetzt `wrapperClassName` und `fieldClassName`, das `!` ist weg, und ein
+Maßtest hält die 38 px fest.
+
+**3. `getByRole('option')` ist auf diesen Seiten mehrdeutig.** Native
+`<select>`-Optionen tragen dieselbe Rolle; die Tests des Plans trafen das
+Dokumentart-Feld statt der Suchliste, und klickten teils „Neu anlegen …“, das
+schon dasteht, bevor die Suche antwortet. Kontakt- und Dokumenteinträge
+tragen jetzt `data-testid="contact-option"` bzw. `"document-option"`; Tests
+greifen darüber zu, oder über `getByRole('listbox').getByRole('option', …)`.
+
+**4. Task 4 setzte Task 5 voraus.** Der Versand-Test fuhr `?unsent=1` an und
+erwartete die Markierung — beides entsteht erst in Task 5. Der Versand wird
+in Task 4 am Dokument geprüft, Filter und Markierung in Task 5.
+
+**Die übrigen zehn:** Testdateien heißen `.test.ts`, vitest nimmt hier kein
+`.tsx`; `resolveLinks` liefert die Link-ID mit, sonst lässt sich nichts
+lösen; „Bezug hinzufügen“ ist Teilkette von „Dokumentbezug hinzufügen“
+(`exact: true`); der Eingangskorb enthält seit Plan 2 mehr als ein Dokument;
+`format.dateTime(…, 'short')` gibt es in next-intl nicht, Optionen ausschreiben;
+`drizzle-orm` ist keine App-Abhängigkeit, die Nutzerabfrage filtert in JS;
+`Disclosure` hat eine andere API als angenommen; das Budget des Volltext-Tests
+(60 s) deckte die längere Worker-Schlange des neuen Seeds nicht, jetzt 150 s;
+zwei Maßtests statt Augenmaß beim Handoff-Abgleich; `FieldError` verlangt
+eine `id`.
+
+**Vorab:** `site_publishes` als Werkzeug ergänzt (Entscheidung aus Plan 2),
+Commit `c74bc84`.

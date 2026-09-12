@@ -13,6 +13,7 @@
 ## Global Constraints
 
 - Wie Plan 3: kein hartcodierter Text, nur Theme-Tokens, Rechte serverseitig, Vorbelegungen mit Herkunftsfähnchen.
+- Aus dem Nachtrag zu Plan 3: `readSort` liegt in `@/lib/sort` (nicht in `sortable-head.tsx`); Einträge der Suchfelder werden über `getByTestId('contact-option')` bzw. `getByTestId('document-option')` angesprochen, nie über `getByRole('option')` — die Rolle tragen auch native `<select>`-Optionen; Testdateien heißen `.test.ts`; jeder E2E-Lauf vor dem Commit ist ein kalter (`pnpm e2e:cold`), weil ein warmer `.next` Server/Client-Verstöße verdeckt.
 - Kontakte, Tiere und Projekte hängen **nicht** von der Akte ab; die Verbindung lebt in `apps/kompass`.
 - Nach jedem Task ein Commit; nicht pushen.
 
@@ -398,7 +399,7 @@ Expected: FAIL
 
 - [ ] **Step 3: Umstellen**
 
-`contact-list.tsx`: die Köpfe `Name`, `Art`, `Ort` werden `<SortableHead field="name" | "kind" | "city" label=… />`; `Rollen` und `Kontakt` bleiben. `applyFilters` behält `sort`/`dir` (wie in der Dokumentliste). `contacts/page.tsx`: `searchParams` um `sort`, `dir` erweitern und `orderBy: readSort(q, ['name', 'kind', 'city', 'createdAt'] as const)` an `listContacts`.
+`contact-list.tsx`: die Köpfe `Name`, `Art`, `Ort` werden `<SortableHead field="name" | "kind" | "city" label=… />`; `Rollen` und `Kontakt` bleiben. `applyFilters` behält `sort`/`dir` (wie in der Dokumentliste). `contacts/page.tsx`: `searchParams` um `sort`, `dir` erweitern und `orderBy: readSort(q, ['name', 'kind', 'city', 'createdAt'] as const)` an `listContacts`, mit `readSort` aus `@/lib/sort`.
 
 - [ ] **Step 4: E2E laufen lassen**
 
