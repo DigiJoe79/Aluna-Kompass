@@ -18,8 +18,11 @@ export default async function ShellLayout({ children }: { children: ReactNode })
   );
   const groups = buildNavigation({ manifests: deps.registry.manifests, enabledKeys: new Set(enabledManifests(deps).map((m) => m.key)), permissions: ctx.permissions, extraItems });
   const logoId = readSetting<string | null>(deps, 'branding.logoAssetId');
+  // Feste Höhe, nicht „mindestens“: Gescrollt wird im Hauptbereich. Mit
+  // `min-h-screen` konnte ein einzelner Bildschirm die Hülle aufblähen — der
+  // Splitscreen der Akte tat es und liess unter sich tote Fläche.
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex h-dvh flex-col overflow-hidden">
       {banner ? <EnvBanner banner={banner} context={context} /> : null}
       <ShellFrame organization={readSetting<string>(deps, 'organization.name')} logoUrl={logoId ? `/media/${logoId}` : null} groups={groups} build={buildId()} user={{ name: user.name, roleNames: user.roles.map((r) => r.name) }} permissions={[...ctx.permissions]}>
         {children}

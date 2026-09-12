@@ -81,7 +81,11 @@ export function DraftScreen({
   );
 
   return (
-    <div className="-mx-6 -mt-6 flex h-[calc(100vh-56px)] flex-col overflow-hidden min-[1180px]:flex-row">
+    // Die Höhe kommt aus dem Hauptbereich, nicht aus einer Rechnung gegen das
+    // Fenster: Was über dem Bereich steht — Umgebungsbalken, Kopfzeile, was
+    // später dazukommt —, geht die Seite hier nichts an. `+3rem` gleicht die
+    // Polsterung des Bereichs aus, die das `-m-6` nach aussen schiebt.
+    <div className="-m-6 flex h-[calc(100%+3rem)] flex-col overflow-hidden min-[1180px]:flex-row">
       {/* Links wird gescrollt, rechts bleibt das Blatt stehen. */}
       <div className="flex min-h-0 min-w-0 flex-col overflow-y-auto border-line min-[1180px]:w-[560px] min-[1180px]:shrink-0 min-[1180px]:border-r">
         <div className="px-6 pt-6">

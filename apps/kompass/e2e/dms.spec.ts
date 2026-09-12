@@ -160,6 +160,27 @@ test.describe('dms', () => {
     await expect(page.getByLabel('Betreff')).toHaveValue('Einladung zur Versammlung');
   });
 
+  test('füllt mit dem Splitscreen die Höhe des Arbeitsbereichs', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await login(page);
+    await page.goto('/dms/new');
+
+    // Nichts schiebt die Seite über das Fenster hinaus: Gescrollt wird in den
+    // Spalten, nicht im Dokument.
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollHeight - window.innerHeight
+    );
+    expect(overflow).toBeLessThanOrEqual(1);
+
+    // Und beide Spalten reichen bis an die Unterkante — dafür ist es ein
+    // Splitscreen: links scrollt der Text, rechts steht das Blatt.
+    const main = await page.locator('main').boundingBox();
+    const preview = await page.locator('[data-slot="preview-pane"]').boundingBox();
+    if (!main || !preview) throw new Error('Bereich oder Vorschau nicht sichtbar');
+    expect(Math.round(main.y + main.height)).toBe(1000);
+    expect(Math.round(preview.y + preview.height)).toBe(1000);
+  });
+
   test('lässt die Speicherleiste durch die ganze Spalte laufen', async ({ page }) => {
     await login(page);
     await page.goto('/dms/new');

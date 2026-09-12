@@ -33,7 +33,7 @@ export function DraftPreview({
   const time = savedAt ? format.dateTime(savedAt, { hour: '2-digit', minute: '2-digit' }) : '';
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-surface-2">
+    <div data-slot="preview-pane" className="flex min-h-0 flex-1 flex-col bg-surface-2">
       <div
         className={cn(
           'flex h-[46px] shrink-0 items-center gap-2.5 border-b border-line px-5',
