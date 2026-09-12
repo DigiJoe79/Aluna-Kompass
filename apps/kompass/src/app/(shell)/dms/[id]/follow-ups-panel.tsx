@@ -45,6 +45,7 @@ export function FollowUpsPanel({
 }) {
   const t = useTranslations('dms.followUps');
   const fmt = useDateFormat();
+  const inOneWeek = new Date(Date.parse(`${today}T00:00:00.000Z`) + 7 * 86_400_000).toISOString().slice(0, 10);
   const tCommon = useTranslations('common');
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState(createFollowUpAction.bind(null, documentId), idleState);
@@ -145,7 +146,8 @@ export function FollowUpsPanel({
                 <Label htmlFor="dueAt" required>
                   {t('dueAt')}
                 </Label>
-                <Input id="dueAt" name="dueAt" type="date" required />
+                {/* In einer Woche nachsehen ist der häufigste Fall; wer es anders will, tippt. */}
+                <Input id="dueAt" name="dueAt" type="date" defaultValue={inOneWeek} required />
                 <FieldError id="dueAt-error" message={errors.dueAt} />
               </div>
               <div className="space-y-1.5">

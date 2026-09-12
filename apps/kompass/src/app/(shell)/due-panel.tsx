@@ -77,19 +77,23 @@ export function DuePanel({
               <span className={cn('font-mono text-[12px]', item.dueAt < today ? 'text-warning' : 'text-ink-2')}>
                 {fmt.date(item.dueAt)}
               </span>
-              <span className="min-w-0 flex-1 truncate text-ink">{item.title}</span>
-              {item.target ? (
-                item.target.href ? (
-                  <Link
-                    href={item.target.href}
-                    className="truncate font-mono text-[12px] underline underline-offset-2 hover:text-link"
-                  >
-                    {item.target.label}
-                  </Link>
-                ) : (
-                  <span className="truncate font-mono text-[12px] text-muted-ink">{item.target.label}</span>
-                )
-              ) : null}
+              {/* Anlass und Ziel gehören zusammen — nicht der Anlass links und das
+                  Ziel am rechten Fensterrand, einen halben Meter entfernt. */}
+              <span className="flex min-w-0 flex-1 items-baseline gap-3">
+                <span className="truncate text-ink">{item.title}</span>
+                {item.target ? (
+                  item.target.href ? (
+                    <Link
+                      href={item.target.href}
+                      className="truncate font-mono text-[12px] underline underline-offset-2 hover:text-link"
+                    >
+                      {item.target.label}
+                    </Link>
+                  ) : (
+                    <span className="truncate font-mono text-[12px] text-muted-ink">{item.target.label}</span>
+                  )
+                ) : null}
+              </span>
               {item.assigneeName ? <span className="text-[12px] text-muted-ink">{item.assigneeName}</span> : null}
             </li>
           ))}

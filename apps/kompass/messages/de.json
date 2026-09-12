@@ -335,6 +335,7 @@
     },
     "greeting": "Guten Tag, {name}.",
     "intro": "Der Verein ist angelegt. Drei Dinge fehlen noch, bevor Sie mit der Verwaltung arbeiten können.",
+    "introDone": "Der Verein ist eingerichtet. Was ansteht, steht unter „Fällig“.",
     "counter": "{done} von {total}",
     "settings": {
       "title": "Einstellungen vervollständigen",
@@ -1521,7 +1522,7 @@
       "reread": "Neu lesen",
       "rereadQueued": "Das Dokument wurde zum Neu-Lesen vorgemerkt."
     },
-    "linksTitle": "Verknüpfungen",
+    "linksTitle": "Bezüge",
     "roles": {
       "sender": "Absender",
       "recipient": "Empfänger",

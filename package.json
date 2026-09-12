@@ -15,6 +15,7 @@
     "verify": "pnpm typecheck && pnpm test && pnpm e2e:cold && pnpm image && pnpm e2e:image",
     "import:prototype": "tsx scripts/import-prototype.ts",
     "dev:reset": "tsx scripts/dev-reset.ts",
+    "seed": "tsx scripts/seed.ts",
     "image:release": "docker build --platform linux/amd64 --build-arg KOMPASS_BUILD=$(git rev-parse --short HEAD 2>/dev/null || echo local) -t kompass-local:amd64 .",
     "e2e:image": "pnpm --filter @kompass/app e2e:image",
     "e2e:cold": "rm -rf apps/kompass/.next && pnpm --filter @kompass/app e2e"

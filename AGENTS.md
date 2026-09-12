@@ -44,7 +44,7 @@ Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. J
 - `pnpm e2e:image` — die E2E-Suite gegen ein gebautes `kompass-local` auf Port 3200. Prüft die Verpackung: gebündelter Code, `/data`-Volume, mitgeliefertes Template, Modulauflösung.
 - `pnpm dev:image [up|down|reset]` — eine **stehende** Testumgebung auf Port 3300, mit Daten, die Neustarts überleben. Zum Anklicken, wenn die Frage „verhält es sich als Container auch so?" lautet. Der Alltag bleibt `pnpm dev`: Dort siehst du eine Änderung sofort, hier kostet sie einen Neubau.
 - `pnpm --filter @kompass/core db:generate` — Migration aus Schema erzeugen
-- `pnpm --filter @kompass/core seed` — Entwicklungsdaten (nur `APP_ENV=development`)
+- `pnpm seed` — Entwicklungsdaten für Kern **und** alle Module, ohne etwas zu verwerfen (nur `APP_ENV=development`). `pnpm --filter @kompass/core seed` kennt nur den Kern und schaltet kein Modul ein.
 - `scripts/doc-preview.sh [basis-id] [verzeichnis]` — Live-Vorschau einer Dokument-Basisvorlage: rendert einen Beispielbrief, öffnet das PDF und rendert bei jeder Änderung an der `.typ` neu
 - `pnpm --filter verein-basis dev` — mitgeliefertes Basis-Template mit Fixture unter `http://localhost:4321`
 - `pnpm --filter verein-basis test` — Tests des Basis-Templates

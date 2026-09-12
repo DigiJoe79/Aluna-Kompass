@@ -111,7 +111,11 @@ export default async function HomePage() {
     <div className="flex flex-col gap-6">
       <div>
         <h2 className="font-heading text-[26px]">{t('greeting', { name: firstName })}</h2>
-        <p className="mt-1 text-[15px] leading-[1.55] text-ink-2">{t('intro')}</p>
+        <p className="mt-1 text-[15px] leading-[1.55] text-ink-2">
+          {progress.settings.missing.length === 0 && progress.roles.done >= progress.roles.total && progress.modules.done >= progress.modules.total
+            ? t('introDone')
+            : t('intro')}
+        </p>
       </div>
       {canSeeDue ? (
         <DuePanel items={dueItems} userId={user.id} today={today} canManage={hasPermission(ctx, 'followUps.manage')} />

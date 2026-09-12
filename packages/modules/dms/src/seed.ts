@@ -109,7 +109,7 @@ export async function seedDms(deps: Deps, ctx: CallContext): Promise<void> {
   // Bausteine, deshalb hier die eigene Prüfung.
   for (const snippet of [
     { name: 'Grußformel', body: 'Mit freundlichen Grüßen\n\nDer Vorstand' },
-    { name: 'Bitte um Rückmeldung', subject: 'Bitte um Rückmeldung', body: 'wir bitten um Ihre Rückmeldung bis zum genannten Termin.' },
+    { name: 'Bitte um Rückmeldung', subject: 'Bitte um Rückmeldung', body: 'Wir bitten um Ihre Rückmeldung bis zum genannten Termin.' },
   ]) {
     const exists = deps.db.select().from(documentSnippets).where(eq(documentSnippets.name, snippet.name)).get();
     if (!exists) unwrap(await createSnippet(deps, ctx, snippet));

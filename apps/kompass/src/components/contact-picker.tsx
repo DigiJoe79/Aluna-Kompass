@@ -12,6 +12,8 @@ import { cn } from '@/lib/utils';
 export interface PickedContact {
   id: string;
   name: string;
+  /** Nur in der Trefferliste: sagt, warum ein Treffer da ist. */
+  city?: string | null;
 }
 
 /**
@@ -123,6 +125,7 @@ export function ContactPicker({
                   {options.map((option) => (
                     <CommandItem key={option.id} value={option.id} data-testid="contact-option" onSelect={() => pick(option)}>
                       {option.name}
+                      {option.city ? <span className="ml-2 text-[12px] text-muted-ink">{option.city}</span> : null}
                     </CommandItem>
                   ))}
                   {value ? (
