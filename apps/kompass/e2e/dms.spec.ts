@@ -386,6 +386,11 @@ test.describe('dms', () => {
     await page.goto('/dms/receive');
     const dialog = receiveDialog(page);
     await dialog.getByLabel('Datei').setInputFiles(FIXTURE_PDF);
+    // Erst die Einsortierregeln laufen lassen, dann tippen: Ihr Vorschlag setzt
+    // Felder, und ein Neuzeichnen mitten in einem gesetzten Wert verschluckt
+    // ihn. Wie im Test darüber, nur dass hier nichts vorbelegt wird — gewartet
+    // wird deshalb auf die Nummer, die derselbe Weg mitbringt.
+    await expect(dialog.getByText(/wird beim Ablegen gezogen/)).toBeVisible({ timeout: 30_000 });
     await dialog.getByLabel('Betreff').fill('Ohne sprechenden Betreff');
     await dialog.getByLabel('Datum auf dem Dokument').fill('2026-09-11');
     await dialog.getByRole('button', { name: 'Ablegen' }).click();

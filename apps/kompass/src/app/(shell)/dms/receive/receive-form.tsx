@@ -1,6 +1,5 @@
 'use client';
 
-import { Info } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { FieldError } from '@/components/forms/field-error';
@@ -9,8 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { idleState } from '@/lib/actions';
-import { previewNumberAction, receiveDocumentAction, suggestClassificationAction } from '../actions';
+import { receiveDocumentAction, suggestClassificationAction } from '../actions';
 import { FileDropzone } from './file-dropzone';
+import { NumberHint } from './number-hint';
 import { SuggestionFlag } from './suggestion-flag';
 
 /** Die Felder, die die Einsortierregeln vorbelegen können. */
@@ -54,7 +54,6 @@ export function ReceiveForm({
   const [folder, setFolder] = useState(droppedFolder ?? '');
   const [senderId, setSenderId] = useState('');
   const [hasFile, setHasFile] = useState(!!droppedFile);
-  const [number, setNumber] = useState<string | null>(null);
 
   /**
    * Woher ein Feld seinen Wert hat. Steht nur an Feldern, die der Nutzer noch
@@ -123,17 +122,6 @@ export function ReceiveForm({
     if (droppedFile) void handleFile(droppedFile);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [droppedFile]);
-
-  // Die Nummer hängt an der Dokumentart: Wechselt sie, wechselt der Nummernkreis.
-  useEffect(() => {
-    let current = true;
-    void previewNumberAction(typeKey).then((next) => {
-      if (current) setNumber(next);
-    });
-    return () => {
-      current = false;
-    };
-  }, [typeKey]);
 
   useEffect(() => {
     if (state.status === 'success') onFiled?.();
@@ -263,17 +251,7 @@ export function ReceiveForm({
         </div>
 
         {/* Die Nummer ist eine Vorschau: Gezogen wird sie beim Ablegen. */}
-        {number ? (
-          <p className="flex items-start gap-2 rounded-md bg-info-bg px-3.5 py-3 text-[13px] text-ink-2">
-            <Info className="mt-px size-4 shrink-0 text-info" aria-hidden />
-            <span>
-              {t.rich('number.pending', {
-                number,
-                mono: (chunks) => <span className="font-mono">{chunks}</span>,
-              })}
-            </span>
-          </p>
-        ) : null}
+        <NumberHint typeKey={typeKey} />
       </div>
       <FormActionBar cancel={onCancel} sticky={false} saveLabel={t('receiveSubmit')} saveDisabled={!hasFile} />
     </form>
