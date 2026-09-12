@@ -65,10 +65,13 @@ const CONFLICTS_WITH_DETAIL = new Set([
 const MEDIA_FIELD_CODES = ['unsupportedMediaType', 'notAPdf', 'fileTooLarge', 'svgContainsScript'];
 const BACKUP_FIELD_CODES = ['confirmationMismatch', 'backupFormatUnsupported', 'backupNewerThanApp', 'backupCorrupt', 'backupWithoutUsers'];
 
+/** Die drei Prüfungen des Versandvermerks — sie melden Codes, keine Zod-Texte. */
+const DISPATCH_FIELD_CODES = ['unknownDispatchChannel', 'sentBeforeDocumentDate', 'sentInFuture'];
+
 export function fieldMessage(issueMessage: string, t: Translate): string {
   const lower = issueMessage.toLowerCase();
   if (issueMessage === 'confirmationRequired') return t('site.publish.publishCard.confirm');
-  if (issueMessage === 'passwordTooShort' || issueMessage === 'unknownPermission' || issueMessage === 'unknownSetting' || MEDIA_FIELD_CODES.includes(issueMessage) || BACKUP_FIELD_CODES.includes(issueMessage)) {
+  if (issueMessage === 'passwordTooShort' || issueMessage === 'unknownPermission' || issueMessage === 'unknownSetting' || MEDIA_FIELD_CODES.includes(issueMessage) || BACKUP_FIELD_CODES.includes(issueMessage) || DISPATCH_FIELD_CODES.includes(issueMessage)) {
     return t(`errors.fields.${issueMessage}`);
   }
   if (lower.includes('email')) return t('errors.fields.email');

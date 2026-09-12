@@ -1,8 +1,14 @@
 'use server';
 
 import {
+  addNote,
+  clearDispatch,
+  createDocumentFollowUp,
   createDraft,
+  createReplacementDraft,
   defaultTypeKey,
+  deleteNote,
+  recordDispatch,
   linkDocument,
   moveDocument,
   relateDocuments,
@@ -19,6 +25,7 @@ import {
   voidDocument,
   type Suggestion,
 } from '@kompass/module-dms';
+import { completeFollowUp, reopenFollowUp } from '@kompass/core';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -114,7 +121,7 @@ export async function fileDocumentAction(id: string): Promise<ActionState> {
   return toActionState(result, t, t('dms.toast.filed'));
 }
 
-export async function voidDocumentAction(id: string, reason: string): Promise<ActionState> {
+export async function voidDocumentAction(id: string, reason: string, withReplacement = false): Promise<ActionState> {
   const t = await getTranslations();
   const { deps, ctx } = await requireSession();
 
@@ -125,6 +132,15 @@ export async function voidDocumentAction(id: string, reason: string): Promise<Ac
 
   revalidatePath(`/dms/${id}`);
   revalidatePath('/dms');
+
+  // Der Ersatz ist ein zweiter Vorgang: Erst steht das Storno, dann entsteht
+  // der neue Entwurf — scheitert er, bleibt das Storno bestehen und gesagt.
+  if (withReplacement) {
+    const replacement = await createReplacementDraft(deps, ctx, { voidedId: id });
+    if (!replacement.ok) return toActionState(replacement, t);
+    redirect(`/dms/${replacement.value.id}/edit`);
+  }
+
   return toActionState(result, t, t('dms.toast.voided'));
 }
 
@@ -290,4 +306,78 @@ export async function unrelateDocumentsAction(id: string, relationId: string): P
   const result = await unrelateDocuments(deps, ctx, { id: relationId });
   revalidatePath(`/dms/${id}`);
   return toActionState(result, t, t('dms.toast.unrelated'));
+}
+
+export async function recordDispatchAction(id: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await recordDispatch(deps, ctx, {
+    id,
+    sentAt: String(formData.get('sentAt') ?? ''),
+    sentVia: String(formData.get('sentVia') ?? ''),
+    note: orNull(formData.get('note')) ?? undefined,
+  });
+  revalidatePath(`/dms/${id}`);
+  revalidatePath('/dms');
+  return toActionState(result, t, t('dms.toast.dispatched'));
+}
+
+export async function clearDispatchAction(id: string): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await clearDispatch(deps, ctx, { id });
+  revalidatePath(`/dms/${id}`);
+  revalidatePath('/dms');
+  return toActionState(result, t, t('dms.toast.dispatchCleared'));
+}
+
+export async function createFollowUpAction(id: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await createDocumentFollowUp(deps, ctx, {
+    documentId: id,
+    dueAt: String(formData.get('dueAt') ?? ''),
+    title: String(formData.get('title') ?? '').trim(),
+    assigneeUserId: orNull(formData.get('assigneeUserId')),
+  });
+  revalidatePath(`/dms/${id}`);
+  revalidatePath('/dms');
+  revalidatePath('/');
+  return toActionState(result, t, t('dms.toast.followUpCreated'));
+}
+
+export async function completeFollowUpAction(id: string, followUpId: string): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await completeFollowUp(deps, ctx, { id: followUpId });
+  revalidatePath(`/dms/${id}`);
+  revalidatePath('/dms');
+  revalidatePath('/');
+  return toActionState(result, t);
+}
+
+export async function reopenFollowUpAction(id: string, followUpId: string): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await reopenFollowUp(deps, ctx, { id: followUpId });
+  revalidatePath(`/dms/${id}`);
+  revalidatePath('/dms');
+  revalidatePath('/');
+  return toActionState(result, t);
+}
+
+export async function addNoteAction(id: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await addNote(deps, ctx, { documentId: id, body: String(formData.get('body') ?? '') });
+  revalidatePath(`/dms/${id}`);
+  return toActionState(result, t, t('dms.toast.noteAdded'));
+}
+
+export async function deleteNoteAction(id: string, noteId: string): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await deleteNote(deps, ctx, { id: noteId });
+  revalidatePath(`/dms/${id}`);
+  return toActionState(result, t, t('dms.toast.noteDeleted'));
 }

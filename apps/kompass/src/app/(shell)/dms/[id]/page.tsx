@@ -1,6 +1,6 @@
-import { hasPermission, isModuleEnabled, listProjects, requirePermission, retentionEnd, retentionMonths } from '@kompass/core';
+import { hasPermission, isModuleEnabled, listProjects, requirePermission, retentionEnd, retentionMonths, schema } from '@kompass/core';
 import { listAnimals } from '@kompass/module-animals';
-import { documentTypeFor, getDocumentRecord, listDocumentFolders } from '@kompass/module-dms';
+import { dispatchChannels, documentTypeFor, getDocumentRecord, listDocumentFolders } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
@@ -59,6 +59,39 @@ export default async function DocumentDetailPage(props: {
   const projectsRes = hasPermission(ctx, 'projects.view') ? await listProjects(deps, ctx) : null;
   const projects = projectsRes?.ok ? projectsRes.value.map((p) => ({ id: p.id, name: p.name[leading] || p.slug })) : [];
 
+  /**
+   * Die Namen der Kolleginnen sind keine Verwaltungsdaten: Ohne sie ließe sich
+   * keine Zuständigkeit setzen und keine Notiz einem Menschen zuordnen. Die
+   * Abfrage steht hier und nicht in einem Service, weil sie keinen Vorgang
+   * abbildet.
+   */
+  const users = deps.db
+    .select({ id: schema.users.id, name: schema.users.name, isActive: schema.users.isActive })
+    .from(schema.users)
+    .all()
+    .filter((u) => u.isActive)
+    .map((u) => ({ id: u.id, name: u.name }));
+  const nameOf = new Map(users.map((u) => [u.id, u.name]));
+
+  const canSeeFollowUps = hasPermission(ctx, 'followUps.view');
+  const followUps = canSeeFollowUps
+    ? doc.followUps.map((f) => ({
+        id: f.id,
+        dueAt: f.dueAt,
+        title: f.title,
+        assigneeName: f.assigneeUserId ? (nameOf.get(f.assigneeUserId) ?? null) : null,
+        doneAt: f.doneAt,
+      }))
+    : [];
+
+  const notes = doc.notes.map((note) => ({
+    id: note.id,
+    body: note.body,
+    authorName: nameOf.get(note.createdByUserId) ?? note.createdByUserId,
+    createdAt: note.createdAt,
+    mine: note.createdByUserId === ctx.userId,
+  }));
+
   const permissions = {
     canFile: hasPermission(ctx, 'dms.file'),
     canVoid: hasPermission(ctx, 'dms.void'),
@@ -90,7 +123,17 @@ export default async function DocumentDetailPage(props: {
           textError: doc.textError,
           links,
           relations: doc.relations,
+          sentAt: doc.sentAt,
+          sentVia: doc.sentVia,
+          sentNote: doc.sentNote,
         }}
+        followUps={followUps}
+        notes={notes}
+        users={users}
+        channels={dispatchChannels(deps)}
+        today={today}
+        canSeeFollowUps={canSeeFollowUps}
+        canManageFollowUps={hasPermission(ctx, 'followUps.manage')}
         folders={folders}
         animals={animals}
         projects={projects}

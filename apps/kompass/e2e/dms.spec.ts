@@ -817,6 +817,66 @@ test.describe('dms', () => {
     await relations.getByRole('link', { name: /BRF-/ }).last().click();
     await expect(page.getByTestId('document-relations').getByText('Anlage:')).toBeVisible();
   });
+
+  test('vermerkt den Versand eines Briefs und entfernt den Vermerk wieder', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+    // Der zweite Brief des Seeds ist festgeschrieben und noch nicht versandt.
+    await page.getByRole('link', { name: 'Dankschreiben an die Tierarztpraxis' }).click();
+    await page.getByRole('button', { name: 'Als versandt vermerken' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Als versandt vermerken' });
+    await dialog.getByLabel('Versandt am').fill('2026-09-06');
+    await dialog.getByLabel('Weg').selectOption('email');
+    await dialog.getByRole('button', { name: 'Vermerken' }).click();
+    const panel = page.getByTestId('dispatch-panel');
+    await expect(panel).toContainText('E-Mail');
+    await panel.getByRole('button', { name: 'Vermerk entfernen' }).click();
+    await page.getByRole('button', { name: 'Entfernen', exact: true }).click();
+    await expect(panel).toContainText('Noch nicht versandt.');
+  });
+
+  test('legt eine Wiedervorlage an und hakt sie ab', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+    await page.getByRole('link', { name: /BRF-\d{4}-\d{3}/ }).first().click();
+    await page.getByRole('button', { name: 'Neue Wiedervorlage' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Neue Wiedervorlage' });
+    await dialog.getByLabel('Fällig am').fill('2026-10-01');
+    await dialog.getByLabel('Anlass').fill('Nachfragen');
+    await dialog.getByRole('button', { name: 'Anlegen' }).click();
+    const panel = page.getByTestId('follow-ups-panel');
+    await expect(panel.getByText('Nachfragen')).toBeVisible();
+    await panel.getByRole('checkbox', { name: 'Nachfragen erledigen' }).click();
+    await expect(panel.getByText('Nachfragen')).toBeHidden();
+  });
+
+  test('fügt eine Notiz an, sieht Name und Zeit, löscht sie', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+    await page.getByRole('row').nth(1).click();
+    await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}$/);
+    await page.getByLabel('Notiz anfügen').fill('Original liegt im Schrank');
+    await page.getByRole('button', { name: 'Anfügen' }).click();
+    const journal = page.getByTestId('notes-panel');
+    await expect(journal.getByText('Original liegt im Schrank')).toBeVisible();
+    await expect(journal.getByText('Anna Berger')).toBeVisible();
+    await journal.getByRole('button', { name: 'Notiz löschen' }).last().click();
+    await page.getByRole('button', { name: 'Löschen', exact: true }).click();
+    await expect(journal.getByText('Original liegt im Schrank')).toBeHidden();
+  });
+
+  test('storniert mit Ersatz und landet im Editor des Ersatzes', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+    await page.getByRole('link', { name: 'Einladung zur ordentlichen Mitgliederversammlung' }).click();
+    await page.getByRole('button', { name: 'Stornieren' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Grund für die Stornierung').fill('Falsches Datum');
+    await dialog.getByLabel('Ersatz als Entwurf anlegen').check();
+    await dialog.getByRole('button', { name: 'Stornieren bestätigen' }).click();
+    await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}\/edit$/);
+    await expect(page.getByLabel('Betreff')).toHaveValue('Einladung zur ordentlichen Mitgliederversammlung');
+  });
 });
 
 function samplePdf(): Buffer {

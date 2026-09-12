@@ -7,6 +7,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { StatusBadge } from '@/components/status-badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,9 @@ import { deleteDocumentAction, deleteDraftAction, rereadDocumentAction, voidDocu
 import { FileDialog } from './file-dialog';
 import { FolderPanel } from './folder-panel';
 import { LinksPanel, type ResolvedLink } from './links-panel';
+import { DispatchPanel } from './dispatch-panel';
+import { FollowUpsPanel, type FollowUpView } from './follow-ups-panel';
+import { NotesPanel, type NoteView } from './notes-panel';
 import { RelationsPanel, type RelationView } from './relations-panel';
 
 export interface DocumentDetailProps {
@@ -37,7 +41,17 @@ export interface DocumentDetailProps {
     textError: string | null;
     links: ResolvedLink[];
     relations: RelationView[];
+    sentAt: string | null;
+    sentVia: string | null;
+    sentNote: string | null;
   };
+  followUps: FollowUpView[];
+  notes: NoteView[];
+  users: { id: string; name: string }[];
+  channels: { key: string; label: string }[];
+  today: string;
+  canSeeFollowUps: boolean;
+  canManageFollowUps: boolean;
   folders: string[];
   animals: { id: string; name: string }[];
   projects: { id: string; name: string }[];
@@ -56,7 +70,22 @@ export interface DocumentDetailProps {
   };
 }
 
-export function DocumentDetail({ document: doc, folders, animals, projects, canCreateContact, retentionInfo, permissions }: DocumentDetailProps) {
+export function DocumentDetail({
+  document: doc,
+  followUps,
+  notes,
+  users,
+  channels,
+  today,
+  canSeeFollowUps,
+  canManageFollowUps,
+  folders,
+  animals,
+  projects,
+  canCreateContact,
+  retentionInfo,
+  permissions,
+}: DocumentDetailProps) {
   const t = useTranslations('dms');
   const tCommon = useTranslations('common');
   const format = useFormatter();
@@ -65,6 +94,7 @@ export function DocumentDetail({ document: doc, folders, animals, projects, canC
   const [voidOpen, setVoidOpen] = useState(false);
   const [purgeOpen, setPurgeOpen] = useState(false);
   const [voidReason, setVoidReason] = useState('');
+  const [withReplacement, setWithReplacement] = useState(false);
 
   useEffect(() => {
     if (doc.textStatus !== 'pending' && doc.textStatus !== 'running') return;
@@ -168,6 +198,12 @@ export function DocumentDetail({ document: doc, folders, animals, projects, canC
                           placeholder={t('fields.voidReasonPlaceholder')}
                         />
                       </div>
+                      {permissions.canEdit ? (
+                        <label className="flex items-center gap-2 py-1 text-[13px] text-ink-2">
+                          <Checkbox checked={withReplacement} onCheckedChange={(next) => setWithReplacement(next === true)} />
+                          {t('voidWithReplacement')}
+                        </label>
+                      ) : null}
                       <DialogFooter>
                         <Button variant="ghost" onClick={() => setVoidOpen(false)}>
                           {tCommon('cancel')}
@@ -176,7 +212,7 @@ export function DocumentDetail({ document: doc, folders, animals, projects, canC
                           variant="destructive"
                           disabled={!voidReason.trim()}
                           onClick={async () => {
-                            await voidDocumentAction(doc.id, voidReason);
+                            await voidDocumentAction(doc.id, voidReason, withReplacement);
                             setVoidOpen(false);
                           }}
                         >
@@ -203,6 +239,8 @@ export function DocumentDetail({ document: doc, folders, animals, projects, canC
               title={doc.subject}
             />
           </div>
+
+          <NotesPanel documentId={doc.id} notes={notes} canEdit={permissions.canEdit} canManage={permissions.canManage} />
         </div>
 
         {/* Right column: Metadaten & Aufbewahrung */}
@@ -237,6 +275,28 @@ export function DocumentDetail({ document: doc, folders, animals, projects, canC
               ) : null}
             </dl>
           </section>
+
+          {doc.direction === 'outgoing' && doc.phase === 'issued' ? (
+            <DispatchPanel
+              documentId={doc.id}
+              sentAt={doc.sentAt}
+              sentVia={doc.sentVia}
+              sentNote={doc.sentNote}
+              channels={channels}
+              today={today}
+              canEdit={permissions.canEdit}
+            />
+          ) : null}
+
+          {canSeeFollowUps ? (
+            <FollowUpsPanel
+              documentId={doc.id}
+              followUps={followUps}
+              users={users}
+              today={today}
+              canManage={canManageFollowUps}
+            />
+          ) : null}
 
           {/* Retention panel */}
           {retentionInfo ? (
