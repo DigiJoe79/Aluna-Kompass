@@ -204,6 +204,38 @@ test.describe('dms', () => {
     expect(Math.round(hintBox.x)).toBe(Math.round(dateBox.x));
   });
 
+  test('teilt den Splitscreen mit dem Fenster, statt die Spalte festzunageln', async ({ page }) => {
+    await page.setViewportSize({ width: 2560, height: 1440 });
+    await login(page);
+    await page.goto('/dms/new');
+
+    const main = await page.locator('main').boundingBox();
+    const column = await page.locator('[data-slot="form-column"]').boundingBox();
+    if (!main || !column) throw new Error('Bereich oder Spalte nicht sichtbar');
+
+    // Ein Viertel war es vorher: Die 560 px stammen aus einem 1220-px-Entwurf
+    // und liessen den Teil, in dem gearbeitet wird, mit jedem Zoll schrumpfen.
+    expect(column.width / main.width).toBeGreaterThan(0.3);
+    expect(column.width).toBeLessThanOrEqual(760);
+    expect(column.width).toBeGreaterThanOrEqual(520);
+  });
+
+  test('gibt die übrige Höhe der Spalte dem Schreibfeld', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await login(page);
+    await page.goto('/dms/new');
+
+    const card = await page.locator('[data-slot="form-card"]').boundingBox();
+    const bar = await page.locator('[data-slot="form-action-bar"]').boundingBox();
+    const text = await page.getByLabel('Text').boundingBox();
+    if (!card || !bar || !text) throw new Error('Karte, Leiste oder Feld nicht sichtbar');
+
+    // Keine tote Spalte mehr zwischen Karte und Leiste …
+    expect(bar.y - (card.y + card.height)).toBeLessThan(60);
+    // … und der Platz geht dorthin, wo der Brief entsteht.
+    expect(text.height).toBeGreaterThan(300);
+  });
+
   test('nennt im Vorschaukopf, wie viele Seiten das Schreiben hat', async ({ page }) => {
     await login(page);
     await page.goto('/dms/new');

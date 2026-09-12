@@ -113,7 +113,14 @@ export function DraftScreen({
     // Polsterung des Bereichs aus, die das `-m-6` nach aussen schiebt.
     <div className="-m-6 flex h-[calc(100%+3rem)] flex-col overflow-hidden min-[1180px]:flex-row">
       {/* Links wird gescrollt, rechts bleibt das Blatt stehen. */}
-      <div className="flex min-h-0 min-w-0 flex-col overflow-y-auto border-line min-[1180px]:w-[560px] min-[1180px]:shrink-0 min-[1180px]:border-r">
+      {/* Mitwachsend statt festgenagelt: Die 560 px des Entwurfs waren dort
+          fast die halbe Breite und sind auf einem grossen Bildschirm ein
+          Viertel — der Teil, in dem gearbeitet wird, schrumpfte mit jedem
+          Zoll. Die Grenzen halten die Spalte lesbar. */}
+      <div
+        data-slot="form-column"
+        className="flex min-h-0 min-w-0 flex-col overflow-y-auto border-line min-[1180px]:w-[clamp(520px,34%,760px)] min-[1180px]:shrink-0 min-[1180px]:border-r"
+      >
         <div className="px-6 pt-6">
           <PageHeader title={title} description={description} back={back} />
         </div>

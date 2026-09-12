@@ -86,10 +86,11 @@ export function DraftForm({
     <form action={formAction} className="flex h-full flex-col">
       {/* Gespeichert wird hier, nicht anderswo: Die Vorschau steht daneben. */}
       {draft ? <input type="hidden" name="stay" value="1" /> : null}
-      {/* Der Platzhalter dehnt sich, nicht die Karte: So steht die Leiste unten
-          in der Spalte, auch wenn wenig darin steht. */}
-      <div className="flex-1">
-      <div data-slot="form-card" className="mx-6 mb-6 space-y-4 rounded-md border border-line bg-surface p-5">
+      {/* Die Karte füllt die Spalte, und die übrige Höhe geht an das Schreibfeld:
+          Sonst stünde unter der Karte tote Fläche, während der Ort, an dem der
+          Brief entsteht, das kleinste Element der Spalte wäre. */}
+      <div className="min-h-0 flex-1 px-6 pb-6">
+      <div data-slot="form-card" className="flex h-full flex-col gap-4 rounded-md border border-line bg-surface p-5">
       {state.status === 'error' && Object.keys(errors).length === 0 ? (
         <div role="alert" className="rounded-md bg-error-bg p-3 text-[13px] text-error">{state.message}</div>
       ) : null}
@@ -100,17 +101,19 @@ export function DraftForm({
         <FieldError id="subject-error" message={errors.subject} />
       </div>
 
-      <div className="space-y-1.5">
+      <div className="flex min-h-0 shrink-0 grow flex-col gap-1.5">
         <Label htmlFor="body" required>{t('fields.body')}</Label>
         <Textarea
           id="body"
           name="body"
           required
+          // Neun Zeilen sind das Mindestmass, nicht das Mass: Was die Spalte
+          // übrig lässt, bekommt das Feld.
           rows={9}
           value={body}
           onChange={(e) => setBody(e.target.value)}
           aria-describedby="body-hint"
-          className="resize-y font-mono text-[13px] leading-relaxed"
+          className="shrink-0 grow resize-none font-mono text-[13px] leading-relaxed"
         />
         <FieldError id="body-error" message={errors.body} />
         {errors.body ? null : <p id="body-hint" className="text-[12px] text-muted-ink">{t('fields.bodyHint')}</p>}
