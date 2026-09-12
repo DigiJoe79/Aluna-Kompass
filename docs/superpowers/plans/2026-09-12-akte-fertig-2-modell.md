@@ -2379,3 +2379,48 @@ git commit -m "docs(dms): why filing still loops, and receiving does not"
 **Platzhalter.** Die „wie bisher“-Stellen in Task 2 (Insert-Werte, Links, Audit) stehen im heutigen Code an derselben Stelle und ändern nur die Herkunft von `number`; Task 4 in Plan 1 und `service:`-Ergänzungen in Task 12 folgen einer genannten Regel.
 
 **Typen.** `DocumentRecord` wächst in Task 4 (`relations`), 6 (`notes`), 11 (`followUps`); `toRecord(deps, row, dbOrTx)` behält die Signatur. `resolveFolder(db, folder, fallback): Result<string | null>` wird in Task 3 überall gleich benutzt. `DispatchChannel` aus `install.ts` wird in `dispatch.ts` importiert. `deleteFollowUpsFor(tx, 'document', id)` entspricht Plan 1 Task 2.
+
+## Nachtrag zur Ausführung (2026-09-12)
+
+Vier Stellen standen im Plan anders, als sie beim Bauen trugen. Sie stehen
+hier, weil die nächste Person sonst denselben Umweg geht.
+
+**1. `tx.rollback()` gibt es auf `DbOrTx` nicht.** Der Typ vereint Datenbank
+und Transaktion; `rollback` kennt nur die zweite. In `fileDocument` bricht
+jetzt eine eigene Fehlerklasse `NumberMovedOn` die Transaktion ab, und der
+`catch` fängt diese Klasse — nicht eine Fehlermeldung, die Drizzle ändern
+könnte.
+
+**2. Der Versand-Test in Task 5 war unhaltbar.** Er vermerkte nachträglich
+den `2026-09-04`, das Fixture-Dokument trägt aber `documentDate` `2026-09-05`
+(`TEST_NOW`); der frühere Versand wurde zu Recht abgewiesen — der Test hatte
+die Regel verletzt, die er prüfen sollte. Er baut sich jetzt einen Brief mit
+Datum `2026-09-01`.
+
+**3. Der Selbsttest des Paritätstests fand nichts.** `{ async orphan(deps,
+ctx) {} }` ist Methodenkurzschrift; ihr `toString()` beginnt mit `async
+orphan(`, nicht mit `function`. Der Beweis, dass die Regex greift, ist jetzt
+eine echte Funktionsdeklaration.
+
+**4. Die Sammlungs-Werkzeuge der Webseite entstehen erst mit Template.**
+`site.mcpTools` ist eine Funktion von `deps`; ohne eingelesenes Template gibt
+es keine Sammlungen und damit keine Werkzeuge für `createEntry`,
+`updateEntry`, `deleteEntry` und ihre Nachbarn. Der Test baut sich eine zweite
+Registry mit gesetztem `siteTemplateState`, damit diese sieben Services als
+das gezählt werden, was sie sind: Services mit Werkzeug. Ohne diesen Schritt
+hätte die Ausnahmeliste sie verdeckt.
+
+**Ausnahmeliste `WITHOUT_TOOL`, Stand nach Task 12:** die sechs der Akte aus
+dem Plan, dazu `countDocumentsByFolder`; die `seed*`-Funktionen aller Module
+(Beispieldaten der Entwicklung, nie über MCP); `contacts.deleteContact`
+(Entscheidung 12 der Kontakte-Spec); `site.applySeed` (Entscheidung 4 der
+Site-Seed-Spec: kein MCP-Werkzeug); `site.previewTemplateSync` und
+`site.recordPublish` (Innenleben von `site_template_sync` und
+`site_publish`). Offen geblieben: `site.listPublishes`, ein reiner
+Lesezugriff auf den Veröffentlichungsverlauf — siehe die Entscheidung unten.
+
+**Kleineres:** `tests/mcp-tools.test.ts` der Akte gab es schon, der neue
+Block wurde angehängt; `tests/incoming.test.ts` behauptete die Abweisung von
+`contentBase64 + assetId` und zog mit dem Wegfall von `assetId` mit;
+`deps.clock` ist im Test ein `FixedClock` mit `set(...)`, kein Objekt zum
+Ersetzen.
