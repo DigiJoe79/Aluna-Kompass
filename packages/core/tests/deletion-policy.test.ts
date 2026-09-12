@@ -14,7 +14,9 @@ describe('deletion policy', () => {
     for (const rule of DELETION_POLICY) {
       if (rule.deletable) {
         expect(rule.guard, rule.entity).toBeTruthy();
-        expect(rule.auditAction ?? '', rule.entity).toMatch(/^[a-z]+(\.[a-z]+)+$/);
+        // Dieselbe Form wie ein Permission-Key im Manifest: camelCase je
+        // Abschnitt, weil `followUps.delete` sonst durchfiele.
+        expect(rule.auditAction ?? '', rule.entity).toMatch(/^[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*)+$/);
       } else {
         expect(rule.guard, rule.entity).toBeUndefined();
         expect(rule.auditAction, rule.entity).toBeUndefined();
@@ -27,6 +29,21 @@ describe('deletion policy', () => {
       const rule = DELETION_POLICY.find((r) => r.entity === entity);
       expect(rule, entity).toBeDefined();
       expect(rule!.deletable, entity).toBe(false);
+    }
+  });
+
+  it('kennt die vier Arbeitsmaterialien der Akte als löschbar, mit ihrer Protokollaktion', () => {
+    const expected: Record<string, string> = {
+      followUp: 'followUps.delete',
+      documentRelation: 'dms.unrelate',
+      documentNote: 'dms.note.delete',
+      documentSnippet: 'dms.snippet.delete',
+    };
+    for (const [entity, action] of Object.entries(expected)) {
+      const rule = DELETION_POLICY.find((r) => r.entity === entity);
+      expect(rule, entity).toBeDefined();
+      expect(rule!.deletable, entity).toBe(true);
+      expect(rule!.auditAction, entity).toBe(action);
     }
   });
 
