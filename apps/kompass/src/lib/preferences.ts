@@ -8,6 +8,8 @@ type Prefs = {
   density: 'compact' | 'default' | 'comfortable';
   mediaView: 'list' | 'grid';
   navCollapsedGroups: string[];
+  /** Die Fälligkeitsliste der Startseite auf die eigenen beschränken. */
+  dueOnlyMine: boolean;
 };
 const DEFAULTS: Prefs = {
   sidebarCollapsed: false,
@@ -15,6 +17,7 @@ const DEFAULTS: Prefs = {
   density: 'default',
   mediaView: 'list',
   navCollapsedGroups: [],
+  dueOnlyMine: false,
 };
 
 function read<K extends keyof Prefs>(key: K): Prefs[K] {

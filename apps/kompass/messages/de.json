@@ -325,6 +325,13 @@
     }
   },
   "home": {
+    "due": {
+      "title": "Fällig",
+      "none": "Nichts fällig.",
+      "onlyMine": "Nur meine",
+      "complete": "{title} erledigen",
+      "completed": "Wiedervorlage erledigt"
+    },
     "greeting": "Guten Tag, {name}.",
     "intro": "Der Verein ist angelegt. Drei Dinge fehlen noch, bevor Sie mit der Verwaltung arbeiten können.",
     "counter": "{done} von {total}",

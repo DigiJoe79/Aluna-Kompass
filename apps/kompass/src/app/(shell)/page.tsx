@@ -1,4 +1,14 @@
-import { isModuleEnabled, listModules, listRoles, readAllSettings, readSetting, requirePermission } from '@kompass/core';
+import {
+  hasPermission,
+  isModuleEnabled,
+  listDueFollowUpsWithTargets,
+  listModules,
+  listRoles,
+  readAllSettings,
+  readSetting,
+  requirePermission,
+  schema,
+} from '@kompass/core';
 import { listPublishes } from '@kompass/module-site';
 import { Info } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
@@ -7,6 +17,7 @@ import { buttonVariants } from '@/components/ui/button';
 import { runtimeEnv } from '@/lib/deps';
 import { requireSession } from '@/lib/request-context';
 import { computeSetupProgress } from '@/lib/setup-progress';
+import { DuePanel, type DueItemView } from './due-panel';
 
 function Card({
   title,
@@ -57,6 +68,29 @@ export default async function HomePage() {
     modules: listModules(deps),
   });
   const pct = (d: number, tot: number) => (tot === 0 ? 0 : Math.round((d / tot) * 100));
+
+  /**
+   * Sieben Tage nach vorn: Was weiter weg liegt, gehört noch nicht auf die
+   * Startseite — es stünde da, bis man darüber hinwegliest.
+   */
+  const today = deps.clock.now().toISOString().slice(0, 10);
+  const until = new Date(deps.clock.now().getTime() + 7 * 86_400_000).toISOString().slice(0, 10);
+  const canSeeDue = hasPermission(ctx, 'followUps.view');
+  const dueRes = canSeeDue ? await listDueFollowUpsWithTargets(deps, ctx, { until }) : null;
+  const userNames = new Map(
+    deps.db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).all().map((u) => [u.id, u.name]),
+  );
+  const dueItems: DueItemView[] =
+    dueRes?.ok
+      ? dueRes.value.map((row) => ({
+          id: row.id,
+          dueAt: row.dueAt,
+          title: row.title,
+          assigneeUserId: row.assigneeUserId,
+          assigneeName: row.assigneeUserId ? (userNames.get(row.assigneeUserId) ?? null) : null,
+          target: row.target,
+        }))
+      : [];
   const firstName = user.name.split(' ')[0] ?? user.name;
 
   const env = runtimeEnv().env;
@@ -79,6 +113,9 @@ export default async function HomePage() {
         <h2 className="font-heading text-[26px]">{t('greeting', { name: firstName })}</h2>
         <p className="mt-1 text-[15px] leading-[1.55] text-ink-2">{t('intro')}</p>
       </div>
+      {canSeeDue ? (
+        <DuePanel items={dueItems} userId={user.id} today={today} canManage={hasPermission(ctx, 'followUps.manage')} />
+      ) : null}
       <div className={canSeeWebsite ? 'grid gap-4 md:grid-cols-2 xl:grid-cols-4' : 'grid gap-4 md:grid-cols-3'}>
         <Card
           title={t('settings.title')}
