@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { cn } from '@/lib/utils';
 import { DraftForm, type DraftFormProps } from './draft-form';
@@ -38,13 +38,48 @@ export function DraftScreen({
   const [rendering, setRendering] = useState(false);
   const [failed, setFailed] = useState(false);
   const [tab, setTab] = useState<'form' | 'preview'>('form');
+  const [sheet, setSheet] = useState<{ url: string; pages: number | null } | null>(null);
 
   const src = form.draft ? `/dms/${form.draft.id}/preview?v=${version}` : null;
+
+  /**
+   * Das Blatt wird hier geholt, nicht vom `<iframe>`: Nur so kommt die
+   * Seitenzahl an, die im Kopf der Antwort steht — und das Rendern ist fertig,
+   * wenn die Antwort da ist, statt wenn ein Zeitgeber abläuft.
+   */
+  useEffect(() => {
+    if (!src) return;
+    let current = true;
+    let url: string | null = null;
+    setRendering(true);
+
+    fetch(src)
+      .then(async (response) => {
+        if (!response.ok) throw new Error(String(response.status));
+        const pages = Number.parseInt(response.headers.get('x-pages') ?? '', 10);
+        const blob = await response.blob();
+        if (!current) return;
+        url = URL.createObjectURL(blob);
+        setSheet({ url, pages: Number.isNaN(pages) ? null : pages });
+        setFailed(false);
+      })
+      .catch(() => {
+        if (current) setFailed(true);
+      })
+      .finally(() => {
+        if (current) setRendering(false);
+      });
+
+    return () => {
+      current = false;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [src]);
   const status: PreviewStatus = !form.draft
     ? 'none'
     : failed
       ? 'error'
-      : rendering
+      : rendering || !sheet
         ? 'rendering'
         : changed > 0
           ? 'stale'
@@ -54,27 +89,18 @@ export function DraftScreen({
   const saved = useCallback((at: Date) => {
     setSavedAt(at);
     setFailed(false);
-    setRendering(true);
     setVersion((v) => v + 1);
-    // Auf das `load` des Rahmens allein ist kein Verlass: Ein PDF zeigt der
-    // Browser mit einem eigenen Betrachter, und der meldet sich nicht überall.
-    // Ohne diese Schranke bliebe der Kopf für immer beim „wird gerendert“.
-    window.setTimeout(() => setRendering(false), 1500);
   }, []);
 
   const preview = (
     <DraftPreview
       status={status}
-      src={src}
+      src={sheet?.url ?? null}
+      href={src}
+      pages={sheet?.pages ?? null}
       savedAt={savedAt}
-      onLoaded={() => setRendering(false)}
-      onFailed={() => {
-        setRendering(false);
-        setFailed(true);
-      }}
       onRetry={() => {
         setFailed(false);
-        setRendering(true);
         setVersion((v) => v + 1);
       }}
     />

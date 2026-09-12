@@ -1419,6 +1419,7 @@
     },
     "previewPane": {
       "none": "Die Vorschau entsteht beim ersten Speichern.",
+      "pageCount": "{count, plural, one {# Seite} other {# Seiten}}",
       "current": "Vorschau aktuell — gespeichert {time}",
       "stale": "Vorschau veraltet — Stand von {time}",
       "rendering": "Vorschau wird gerendert …",

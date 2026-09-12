@@ -83,7 +83,7 @@ export async function exportDocument(deps: Deps, ctx: CallContext, input: unknow
   }
 
   const context = await buildContext(deps, ctx, '');
-  const bytes = await deps.documents.render({ baseId, bodyTypst, slots: built.slots, context });
+  const { bytes } = await deps.documents.render({ baseId, bodyTypst, slots: built.slots, context });
   const filename = `${(built.slots.title ?? template.key).replace(/[^\p{L}\p{N} _-]/gu, '').trim() || template.key}.pdf`;
   deps.db.transaction((tx: DbOrTx) => {
     recordAudit(tx, deps, ctx, {

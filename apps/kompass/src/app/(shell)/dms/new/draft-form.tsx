@@ -83,9 +83,12 @@ export function DraftForm({
     // Die Karte steht in der Spalte, die Leiste darunter läuft durch: Sie gehört
     // zur Spalte, nicht zum Kasten — sonst klebt sie eingerückt über dessen
     // abgerundeter Unterkante.
-    <form action={formAction} className="flex flex-col">
+    <form action={formAction} className="flex h-full flex-col">
       {/* Gespeichert wird hier, nicht anderswo: Die Vorschau steht daneben. */}
       {draft ? <input type="hidden" name="stay" value="1" /> : null}
+      {/* Der Platzhalter dehnt sich, nicht die Karte: So steht die Leiste unten
+          in der Spalte, auch wenn wenig darin steht. */}
+      <div className="flex-1">
       <div data-slot="form-card" className="mx-6 mb-6 space-y-4 rounded-md border border-line bg-surface p-5">
       {state.status === 'error' && Object.keys(errors).length === 0 ? (
         <div role="alert" className="rounded-md bg-error-bg p-3 text-[13px] text-error">{state.message}</div>
@@ -183,6 +186,7 @@ export function DraftForm({
         </div>
       </div>
 
+      </div>
       </div>
       <FormActionBar
         back={{ href: draft ? `/dms/${draft.id}` : '/dms', label: draft ? t('backToDocument') : tCommon('backToList') }}

@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { DocumentEngine } from '@kompass/core';
 import { probeBase, resolveBases, type ResolvedBase } from './bases';
 import { createTypstRenderer, resolveAssetDirs } from './renderer';
+import { pdfPageCount } from './page-count';
 import { buildPayload } from './templates';
 
 /**
@@ -27,8 +28,8 @@ export function createDocumentEngine(opts: { documentTemplatesDir?: string | nul
       return b ? { id: b.id, label: b.label, kind: b.kind, checksum: b.checksum } : undefined;
     },
     probe: (baseId) => probeBase({ renderer, baseId, bases, fontPaths, assetsDir }),
-    render: ({ baseId, bodyTypst, slots, context }) =>
-      renderer.renderDocument({
+    render: async ({ baseId, bodyTypst, slots, context }) => {
+      const bytes = await renderer.renderDocument({
         baseId,
         bases,
         bodyTypst,
@@ -36,6 +37,8 @@ export function createDocumentEngine(opts: { documentTemplatesDir?: string | nul
         logo: context.logo,
         fontPaths,
         assetsDir,
-      }),
+      });
+      return { bytes, pages: pdfPageCount(bytes) };
+    },
   };
 }

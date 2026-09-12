@@ -59,7 +59,7 @@ describe('fileDocument', () => {
     const calls: unknown[] = [];
     const deps = createTestDeps({
       manifests: [coreModule, contactsModule, dmsModule],
-      documents: fakeDocumentEngine({ render: async (args) => { calls.push(args); return new TextEncoder().encode('%PDF-fake'); } }),
+      documents: fakeDocumentEngine({ render: async (args) => { calls.push(args); return { bytes: new TextEncoder().encode('%PDF-fake'), pages: 1 }; } }),
     });
     seedTypes(deps);
     const ctx = ctxWith(ALL_DMS, insertUser(deps, { name: 'T', email: 't@kompass.local' }));

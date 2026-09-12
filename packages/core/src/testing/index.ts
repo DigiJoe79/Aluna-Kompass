@@ -33,7 +33,10 @@ export function fakeDocumentEngine(overrides: Partial<DocumentEngine> = {}): Doc
     bases: () => bases,
     base: (id) => bases.find((b) => b.id === id),
     probe: async (id) => (bases.some((b) => b.id === id) ? { ok: true } : { ok: false, error: 'not found' }),
-    render: async ({ baseId, slots }) => new TextEncoder().encode(`%PDF-fake ${baseId} ${slots.title ?? ''}`),
+    render: async ({ baseId, slots }) => ({
+      bytes: new TextEncoder().encode(`%PDF-fake ${baseId} ${slots.title ?? ''}`),
+      pages: 1,
+    }),
     ...overrides,
   };
 }

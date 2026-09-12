@@ -20,13 +20,18 @@ export interface DocumentEngine {
   base(id: string): DocumentBase | undefined;
   /** Prüf-Render einer Basis mit Minimal-Payload. */
   probe(baseId: string): Promise<{ ok: true } | { ok: false; error: string }>;
-  /** Baut den Payload aus dem Theme, setzt den Körper in die Basis, kompiliert. */
+  /**
+   * Baut den Payload aus dem Theme, setzt den Körper in die Basis, kompiliert.
+   * Gibt die Seitenzahl mit heraus: Sie fällt beim Rendern ohnehin an, und wer
+   * sie später braucht, müsste denselben Brief sonst ein zweites Mal setzen.
+   * `null`, wenn sie sich aus dem Ergebnis nicht ablesen lässt.
+   */
   render(opts: {
     baseId: string;
     bodyTypst: string;
     slots: DocumentSlots;
     context: DocumentRenderContext;
-  }): Promise<Uint8Array>;
+  }): Promise<{ bytes: Uint8Array; pages: number | null }>;
 }
 
 /** Fallback für Kontexte, die keine Dokumente rendern (manche Tests, Skripte). */

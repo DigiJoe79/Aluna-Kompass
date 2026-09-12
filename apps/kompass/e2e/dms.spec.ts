@@ -176,9 +176,29 @@ test.describe('dms', () => {
     // Splitscreen: links scrollt der Text, rechts steht das Blatt.
     const main = await page.locator('main').boundingBox();
     const preview = await page.locator('[data-slot="preview-pane"]').boundingBox();
-    if (!main || !preview) throw new Error('Bereich oder Vorschau nicht sichtbar');
+    const bar = await page.locator('[data-slot="form-action-bar"]').boundingBox();
+    if (!main || !preview || !bar) throw new Error('Bereich, Vorschau oder Leiste nicht sichtbar');
     expect(Math.round(main.y + main.height)).toBe(1000);
     expect(Math.round(preview.y + preview.height)).toBe(1000);
+    // Die Speicherleiste steht am unteren Rand der Spalte, nicht unter der Karte.
+    expect(Math.round(bar.y + bar.height)).toBe(1000);
+  });
+
+  test('nennt im Vorschaukopf, wie viele Seiten das Schreiben hat', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/new');
+    await page.getByLabel('Betreff').fill('Kurzes Schreiben');
+    await page.getByLabel('Text').fill('Ein Absatz, mehr nicht.');
+    await page.getByRole('button', { name: 'Entwurf speichern' }).click();
+    await expect(page).toHaveURL(/\/edit$/);
+
+    const header = page.locator('[data-slot="preview-pane"]');
+    await expect(header).toContainText('1 Seite', { timeout: 30_000 });
+
+    // Gezählt wird wirklich: Mehr Text, mehr Seiten.
+    await page.getByLabel('Text').fill('Sehr geehrte Mitglieder,\n\n' + 'Lorem ipsum dolor sit amet. '.repeat(200));
+    await page.getByRole('button', { name: 'Speichern und Vorschau aktualisieren' }).click();
+    await expect(header).toContainText(/[2-9] Seiten/, { timeout: 30_000 });
   });
 
   test('lässt die Speicherleiste durch die ganze Spalte laufen', async ({ page }) => {

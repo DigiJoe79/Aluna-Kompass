@@ -96,7 +96,7 @@ describe('previewDraft', () => {
       documents: fakeDocumentEngine({
         render: async (args) => {
           calls.push(args as { slots: { draft?: boolean } });
-          return new TextEncoder().encode('%PDF-fake');
+          return { bytes: new TextEncoder().encode('%PDF-fake'), pages: 2 };
         },
       }),
     });

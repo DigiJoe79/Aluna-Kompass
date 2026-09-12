@@ -15,17 +15,18 @@ export type PreviewStatus = 'none' | 'current' | 'stale' | 'rendering' | 'error'
 export function DraftPreview({
   status,
   src,
+  href,
+  pages,
   savedAt,
-  onLoaded,
-  onFailed,
   onRetry,
 }: {
   status: PreviewStatus;
-  /** Fehlt, solange der Entwurf noch nie gespeichert wurde. */
+  /** Das geholte Blatt. Fehlt, solange der Entwurf noch nie gespeichert wurde. */
   src?: string | null;
+  /** Der Weg zum PDF für „PDF öffnen“ — ein Verweis führt weiter als ein Blob. */
+  href?: string | null;
+  pages?: number | null;
   savedAt?: Date | null;
-  onLoaded?: () => void;
-  onFailed?: () => void;
   onRetry?: () => void;
 }) {
   const t = useTranslations('dms');
@@ -83,12 +84,16 @@ export function DraftPreview({
           Browsers, bevor jemand klickt. Der Platz davor bleibt frei — dort
           steht die Seitenzahl, sobald der Renderer sie liefert.
         */}
-        {src && (status === 'current' || status === 'stale') ? (
+        {pages && (status === 'current' || status === 'stale') ? (
+          <span className="ml-auto text-[12px] text-ink-2">{t('previewPane.pageCount', { count: pages })}</span>
+        ) : null}
+
+        {href && (status === 'current' || status === 'stale') ? (
           <a
-            href={src}
+            href={href}
             target="_blank"
             rel="noopener"
-            className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'ml-auto')}
+            className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), !pages && 'ml-auto')}
           >
             {t('openPdf')}
           </a>
@@ -97,22 +102,23 @@ export function DraftPreview({
             dasselbe zu schreiben macht es nicht klarer. */}
       </div>
 
-      <div className="flex min-h-0 flex-1 items-start justify-center overflow-auto p-6">
+      <div className="flex min-h-0 flex-1 items-stretch justify-center overflow-auto p-6">
         {src ? (
           <iframe
             key={src}
             src={src}
             title={t('preview')}
-            onLoad={onLoaded}
-            onError={onFailed}
             className={cn(
-              // Papier ist weiss, auch im Dunkelmodus — es ist ja Papier.
-              'aspect-[1/1.414] w-full max-w-[452px] rounded-xs border border-line bg-paper shadow-md transition-opacity',
+              // Volle Höhe statt einer Seite hoch: Ein mehrseitiges Schreiben
+              // ist der Normalfall, und der Betrachter im Rahmen scrollt.
+              // Rand und Papierfarbe bringt er selbst mit — ein zweiter
+              // weisser Kasten darum wäre Papier auf Papier.
+              'h-full w-full max-w-[820px] rounded-xs shadow-md transition-opacity',
               status === 'stale' && 'opacity-72'
             )}
           />
         ) : (
-          <div className="flex aspect-[1/1.414] w-full max-w-[452px] items-center justify-center rounded-xs border border-dashed border-line-strong bg-paper/60 p-10 text-center text-[13px] text-muted-ink">
+          <div className="flex aspect-[1/1.414] w-full max-w-[452px] self-center items-center justify-center rounded-xs border border-dashed border-line-strong bg-paper/60 p-10 text-center text-[13px] text-muted-ink">
             {t('previewPane.none')}
           </div>
         )}

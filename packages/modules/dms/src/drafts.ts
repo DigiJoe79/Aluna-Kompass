@@ -237,7 +237,7 @@ export async function previewDraft(
   deps: Deps,
   ctx: CallContext,
   input: unknown,
-): Promise<Result<{ bytes: Uint8Array; filename: string; mimeType: string }>> {
+): Promise<Result<{ bytes: Uint8Array; filename: string; mimeType: string; pages: number | null }>> {
   const denied = requirePermission(ctx, 'dms.view');
   if (denied) return denied;
 
@@ -258,7 +258,7 @@ export async function previewDraft(
 
   const { built, baseId, bodyTypst } = prepared.value;
   const context = await buildContext(deps, ctx, '');
-  const bytes = await deps.documents.render({
+  const { bytes, pages } = await deps.documents.render({
     baseId,
     bodyTypst,
     slots: { ...built.slots, draft: true },
@@ -277,7 +277,7 @@ export async function previewDraft(
     });
   });
 
-  return ok({ bytes, filename, mimeType: 'application/pdf' });
+  return ok({ bytes, filename, mimeType: 'application/pdf', pages });
 }
 
 export async function fileDocument(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DocumentRecord>> {
@@ -312,7 +312,7 @@ export async function fileDocument(deps: Deps, ctx: CallContext, input: unknown)
     const year = deps.clock.now().getUTCFullYear();
     const number = nextDocumentNumber(deps.db, docType.prefix, year);
     const context = await buildContext(deps, ctx, number);
-    const bytes = await deps.documents.render({ baseId, bodyTypst, slots: built.slots, context });
+    const { bytes } = await deps.documents.render({ baseId, bodyTypst, slots: built.slots, context });
 
     const stored = await storeDocumentFile(deps, row.id, bytes);
     if (!stored.ok) return stored;
