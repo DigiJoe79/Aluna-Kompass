@@ -21,8 +21,13 @@ const renderSchema = z.object({
   entityId: z.string().min(1).optional(),
 });
 
-/** Baut den Rendering-Kontext für eine Vorlage. `number` ist leer für einen Ad-hoc-Auszug. */
-export async function buildContext(deps: Deps, ctx: CallContext, number: string): Promise<DocumentRenderContext> {
+/**
+ * Baut den Rendering-Kontext für eine Vorlage. `number` ist leer für einen
+ * Ad-hoc-Auszug. `issuedOn` ist das Datum **auf** dem Dokument (ISO-Datum),
+ * wenn der Aufrufer eines führt — die Akte druckt es statt des Tages, an dem
+ * jemand auf „Festschreiben“ drückt. Fehlt es, gilt die Uhr.
+ */
+export async function buildContext(deps: Deps, ctx: CallContext, number: string, issuedOn?: string): Promise<DocumentRenderContext> {
   const all = readAllSettings(deps);
   const organization = Object.fromEntries(Object.entries(all).filter(([k]) => k.startsWith('organization.')));
   const logoId = readSetting<string | null>(deps, 'branding.logoAssetId');
@@ -31,7 +36,8 @@ export async function buildContext(deps: Deps, ctx: CallContext, number: string)
     const asset = deps.db.select().from(mediaAssets).where(eq(mediaAssets.id, logoId)).get();
     if (asset) logo = { bytes: await deps.media.read(asset.filename), mimeType: asset.mimeType };
   }
-  return { number, issuedAt: isoNow(deps.clock), organization, theme: resolveActiveTheme(deps), logo };
+  const issuedAt = issuedOn ? `${issuedOn}T12:00:00.000Z` : isoNow(deps.clock);
+  return { number, issuedAt, organization, theme: resolveActiveTheme(deps), logo };
 }
 
 /** Vorgabe der Vorlage, überschrieben von `build()` und von `documents.bases`. */

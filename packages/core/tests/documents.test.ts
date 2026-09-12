@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { auditLog, mediaFolders } from '../src/db/schema';
-import { exportDocument, listDocumentBases } from '../src/documents/service';
+import { buildContext, exportDocument, listDocumentBases } from '../src/documents/service';
 import type { DocumentTemplate } from '../src/modules/manifest';
 import { unwrap } from '../src/result';
 import { createTestDeps, ctxWith, insertUser } from '../src/testing';
@@ -96,5 +96,16 @@ describe('documents service', () => {
     expect(noExtra.ok === false && noExtra.error.type === 'forbidden').toBe(true);
     const bad = await exportDocument(deps, ctxWith(['documents.export', 'audit.view'], userId), { templateKey: 'test-excerpt', input: { title: '' } });
     expect(bad.ok === false && bad.error.type === 'validation').toBe(true);
+  });
+});
+
+describe('buildContext', () => {
+  it('nimmt das Datum des Dokuments, wenn eines mitkommt — sonst die Uhr', async () => {
+    const deps = createTestDeps({ now: '2026-09-12T10:00:00.000Z' });
+    const ctx = ctxWith([]);
+    const fromClock = await buildContext(deps, ctx, 'BRF-2026-001');
+    expect(fromClock.issuedAt).toBe('2026-09-12T10:00:00.000Z');
+    const dated = await buildContext(deps, ctx, 'BRF-2026-001', '2026-02-10');
+    expect(dated.issuedAt).toMatch(/^2026-02-10/);
   });
 });

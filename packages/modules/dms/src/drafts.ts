@@ -283,7 +283,7 @@ export async function previewDraft(
   if (!prepared.ok) return prepared;
 
   const { built, baseId, bodyTypst } = prepared.value;
-  const context = await buildContext(deps, ctx, '');
+  const context = await buildContext(deps, ctx, '', row.documentDate);
   const { bytes, pages } = await deps.documents.render({
     baseId,
     bodyTypst,
@@ -343,7 +343,7 @@ export async function fileDocument(deps: Deps, ctx: CallContext, input: unknown)
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const year = deps.clock.now().getUTCFullYear();
     const expected = peekDocumentNumber(deps.db, docType.prefix, year);
-    const context = await buildContext(deps, ctx, expected);
+    const context = await buildContext(deps, ctx, expected, row.documentDate);
     const { bytes } = await deps.documents.render({ baseId, bodyTypst, slots: built.slots, context });
 
     // Die Datei trägt den Namen des Dokuments; ein zweiter Anlauf überschreibt

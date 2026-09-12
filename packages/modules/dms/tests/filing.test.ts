@@ -10,6 +10,31 @@ import { deleteDocument, voidDocument } from '../src/service';
 import { ALL_DMS, auditActions, fileFixture, pdfBytes, seedTypes, setupWithTypes } from './helpers';
 
 describe('fileDocument', () => {
+  /**
+   * Das Feld heißt „Datum auf dem Dokument“ — also steht es auch darauf. Wer
+   * am 12. September einen Brief festschreibt, den er auf den 10. Februar
+   * datiert hat, tut das bewusst; das Festschreibedatum steht im Protokoll.
+   */
+  it('druckt das Datum auf dem Dokument, nicht das Datum des Festschreibens', async () => {
+    const rendered: string[] = [];
+    const deps = createTestDeps({
+      manifests: [coreModule, contactsModule, dmsModule],
+      documents: fakeDocumentEngine({
+        render: async ({ context }) => {
+          rendered.push(context.issuedAt);
+          return { bytes: pdfBytes(), pages: 1 };
+        },
+      }),
+    });
+    seedTypes(deps);
+    const ctx = ctxWith(ALL_DMS, insertUser(deps, {}));
+    const draft = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Einladung', body: 'x', documentDate: '2026-02-10' });
+    if (!draft.ok) throw new Error('setup');
+    const filed = await fileDocument(deps, ctx, { id: draft.value.id });
+    expect(filed.ok).toBe(true);
+    expect(rendered.at(-1)).toMatch(/^2026-02-10/);
+  });
+
   it('vergibt die Nummer, legt das PDF ab und leert den Entwurfstext', async () => {
     const { deps, ctx } = setupWithTypes();
     const draft = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Einladung', body: '# Einladung' });
