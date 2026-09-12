@@ -159,7 +159,7 @@ SELECT `role_id`, 'followUps.manage' FROM `role_permissions` WHERE `permission_k
 - [ ] **Step 5: Tests laufen lassen**
 
 Run: `pnpm --filter @kompass/core test -- follow-ups-schema && pnpm --filter @kompass/core test -- db`
-Expected: PASS. (`db.test.ts` prüft, dass jede Tabelle im Schema eine Migration hat.)
+Expected: PASS — sobald `follow_ups` in `packages/core/tests/db.test.ts` steht: Der Test führt **alle** Tabellen der Datenbank namentlich auf, Kern und Module, und meldet jede, die er nicht kennt.
 
 - [ ] **Step 6: Migrationstest für die Rechteübertragung**
 
@@ -589,7 +589,7 @@ export * from './follow-ups/service';
 - [ ] **Step 4: Tests laufen lassen**
 
 Run: `pnpm --filter @kompass/core test -- follow-ups.test`
-Expected: PASS (13 Tests)
+Expected: PASS (12 Tests)
 
 - [ ] **Step 5: Commit**
 

@@ -32,6 +32,7 @@
 - Modify: `packages/modules/dms/src/install.ts` (Einstellung `dms.dispatchChannels`)
 - Generated: `packages/core/src/db/migrations/00NN_dms_akte_fertig.sql`
 - Generated (custom): `packages/core/src/db/migrations/00NN_dms_counters_fill.sql`
+- Modify: `packages/core/tests/db.test.ts` (führt alle Tabellen namentlich auf — die vier neuen eintragen: `document_counters`, `document_notes`, `document_relations`, `document_snippets`)
 - Test: `packages/modules/dms/tests/schema-akte-fertig.test.ts`, Ergänzung in `packages/modules/dms/tests/migration.test.ts`
 
 **Interfaces:**
@@ -278,12 +279,12 @@ describe('migration dms_counters_fill', () => {
 - [ ] **Step 7: Tests laufen lassen**
 
 Run: `pnpm --filter @kompass/module-dms test -- schema-akte-fertig migration && pnpm --filter @kompass/core test -- db`
-Expected: PASS
+Expected: PASS — `db.test.ts` erst, nachdem die vier Tabellen in seiner Liste stehen (Plan 1 hat das für `follow_ups` gelernt).
 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add packages/modules/dms/src/schema.ts packages/modules/dms/src/install.ts packages/core/src/db/migrations packages/modules/dms/tests/schema-akte-fertig.test.ts packages/modules/dms/tests/migration.test.ts
+git add packages/modules/dms/src/schema.ts packages/modules/dms/src/install.ts packages/core/src/db/migrations packages/core/tests/db.test.ts packages/modules/dms/tests/schema-akte-fertig.test.ts packages/modules/dms/tests/migration.test.ts
 git commit -m "feat(dms): four tables and a dispatch note, and the counters remember every number"
 ```
 
