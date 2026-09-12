@@ -437,7 +437,9 @@ test.describe('dms', () => {
 
     // Der Worker laeuft im Hintergrund; gewartet wird auf den Zustand, nicht auf
     // eine feste Zeit — sonst ist der Test auf einer langsamen Maschine rot.
-    await expect(page.getByText(/Gelesen am/)).toBeVisible({ timeout: 60_000 });
+    // Die Frist liegt unter dem Testbudget darüber und über der Zeit, die der
+    // Worker für die Seed-Dokumente vor diesem hier braucht.
+    await expect(page.getByText(/Gelesen am/)).toBeVisible({ timeout: 120_000 });
 
     await page.goto('/dms');
     await page.getByPlaceholder('Betreff, Nummer oder Inhalt').fill('rechnung');
@@ -922,6 +924,10 @@ test.describe('dms', () => {
     await page.goto('/dms/receive');
     const dialog = receiveDialog(page);
     await dialog.getByLabel('Datei').setInputFiles(FIXTURE_PDF);
+    // Erst die Einsortierregeln laufen lassen, dann tippen: Ihr Vorschlag setzt
+    // Felder, und ein Neuzeichnen mitten in einem gesetzten Wert verschluckt
+    // ihn. Im Container fiel genau das auf — dort kommt der Vorschlag später.
+    await expect(dialog.getByText(/wird beim Ablegen gezogen/)).toBeVisible({ timeout: 30_000 });
     await dialog.getByLabel('Betreff').fill('Antwort der Praxis');
     await dialog.getByLabel('Datum auf dem Dokument').fill('2026-09-10');
     await dialog.getByRole('combobox', { name: 'Antwort auf' }).fill('BRF');
