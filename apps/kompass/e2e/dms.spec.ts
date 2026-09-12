@@ -184,6 +184,26 @@ test.describe('dms', () => {
     expect(Math.round(bar.y + bar.height)).toBe(1000);
   });
 
+  test('lässt den Hinweis zur festen Art über die Zeile laufen, statt ein Loch zu reissen', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/new');
+    await page.getByLabel('Betreff').fill('Mit festem Typ');
+    await page.getByLabel('Text').fill('Text.');
+    await page.getByRole('button', { name: 'Entwurf speichern' }).click();
+    await expect(page).toHaveURL(/\/edit$/);
+
+    const hint = page.getByText(/Die Dokumentart steht seit dem Anlegen fest/);
+    const date = page.getByLabel('Datum auf dem Dokument');
+    const hintBox = await hint.boundingBox();
+    const dateBox = await date.boundingBox();
+    if (!hintBox || !dateBox) throw new Error('Hinweis oder Feld nicht sichtbar');
+
+    // Über beide Spalten statt in einer Zelle: Sonst steht neben „Datum“ ein
+    // Loch, und die vier Felder lesen sich als zwei lose Paare.
+    expect(hintBox.width).toBeGreaterThan(dateBox.width * 1.5);
+    expect(Math.round(hintBox.x)).toBe(Math.round(dateBox.x));
+  });
+
   test('nennt im Vorschaukopf, wie viele Seiten das Schreiben hat', async ({ page }) => {
     await login(page);
     await page.goto('/dms/new');

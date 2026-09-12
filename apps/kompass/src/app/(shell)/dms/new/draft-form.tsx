@@ -146,8 +146,14 @@ export function DraftForm({
               </option>
             ))}
           </Select>
-          {draft ? <p className="text-[12px] text-muted-ink">{t('typeFixedHint')}</p> : null}
         </div>
+
+        {/* Über die ganze Zeile, nicht in der Zelle: In der Zelle streckt der
+            Hinweis nur seine Spalte, neben „Datum“ bleibt ein Loch, und die
+            vier Felder lesen sich als zwei lose Paare statt als Raster. */}
+        {draft ? (
+          <p className="text-[12px] text-muted-ink sm:col-span-2">{t('typeFixedHint')}</p>
+        ) : null}
 
         <div className="space-y-1.5">
           <Label htmlFor="folder">{t('fields.folder')}</Label>
