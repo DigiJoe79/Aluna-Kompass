@@ -125,8 +125,22 @@ jobs:
       - name: Push the tested image
         if: needs.test.result == 'success'
         run: |
+          # GHCR nimmt gelegentlich alle Schichten an und lehnt danach das
+          # Manifest mit „unknown blob“ ab: Die letzte, grosse Schicht ist
+          # hochgeladen, aber noch nicht verknuepft. Am Bild liegt das nicht —
+          # es ist dasselbe, das der Containerring eben geprueft hat. Ein
+          # zweiter Anlauf traegt; nach dem dritten bleibt es rot, damit ein
+          # echter Fehler nicht in einer Schleife verschwindet.
+          push() {
+            for attempt in 1 2 3; do
+              docker push "$1" && return 0
+              echo "Hochladen von $1 fehlgeschlagen (Anlauf $attempt) — neuer Versuch in 15s"
+              sleep 15
+            done
+            return 1
+          }
           echo "${{ steps.meta.outputs.tags }}" | while read -r tag; do
             [ -z "$tag" ] && continue
             docker tag kompass-local "$tag"
-            docker push "$tag"
+            push "$tag" || exit 1
           done
