@@ -25,6 +25,9 @@ export interface DocumentListItem {
   phase: 'draft' | 'issued';
   status: 'draft' | 'issued' | 'voided';
   textStatus?: 'pending' | 'running' | 'done' | 'failed' | 'unavailable' | null;
+  sentAt: string | null;
+  /** Die nächste offene Wiedervorlage, wenn es eine gibt. */
+  openFollowUp: { dueAt: string } | null;
 }
 
 export interface DocumentListProps {
@@ -34,9 +37,13 @@ export interface DocumentListProps {
   inboxCount: number;
   hits?: Record<string, { page: number; snippet: string }>;
   fulltextTooShort?: boolean;
+  /** Heute, aus der Uhr des Servers — nicht aus der des Browsers. */
+  today: string;
+  /** Darf der Betrachter Dokumente verschieben (`dms.create`)? */
+  canMove: boolean;
 }
 
-export function DocumentList({ documents, types, folders, inboxCount, hits, fulltextTooShort }: DocumentListProps) {
+export function DocumentList({ documents, types, folders, inboxCount, hits, fulltextTooShort, today, canMove }: DocumentListProps) {
   const t = useTranslations('dms');
   const router = useRouter();
   const pathname = usePathname();
@@ -48,8 +55,12 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
   const [directionFilter, setDirectionFilter] = useState(params.get('direction') ?? '');
   const [typeFilter, setTypeFilter] = useState(params.get('type') ?? '');
   const [phaseFilter, setPhaseFilter] = useState(params.get('phase') ?? '');
+  const [dispatchFilter, setDispatchFilter] = useState(params.get('unsent') === '1' ? 'unsent' : '');
+  const [followUpFilter, setFollowUpFilter] = useState(params.get('followUp') === 'open' ? 'open' : '');
 
-  const applyFilters = (patch: Partial<{ text: string; direction: string; type: string; folder: string; phase: string; inbox: boolean }>) => {
+  const applyFilters = (
+    patch: Partial<{ text: string; direction: string; type: string; folder: string; phase: string; inbox: boolean; unsent: string; followUp: string }>,
+  ) => {
     const nextInbox = patch.inbox !== undefined ? patch.inbox : isInbox;
     const merged = {
       text: query,
@@ -57,6 +68,8 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
       type: typeFilter,
       folder: params.get('folder') ?? '',
       phase: phaseFilter,
+      unsent: dispatchFilter,
+      followUp: followUpFilter,
       ...patch,
     };
     const next = new URLSearchParams();
@@ -64,6 +77,8 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
     if (merged.direction) next.set('direction', merged.direction);
     if (merged.type) next.set('type', merged.type);
     if (merged.phase) next.set('phase', merged.phase);
+    if (merged.unsent === 'unsent') next.set('unsent', '1');
+    if (merged.followUp === 'open') next.set('followUp', 'open');
     if (nextInbox) {
       next.set('inbox', '1');
     } else if (merged.folder) {
@@ -138,6 +153,32 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
           <option value="draft">{t('phases.draft')}</option>
           <option value="issued">{t('phases.issued')}</option>
         </Select>
+        <Select
+          aria-label={t('filters.dispatch')}
+          value={dispatchFilter}
+          onChange={(e) => {
+            const val = e.target.value;
+            setDispatchFilter(val);
+            applyFilters({ unsent: val });
+          }}
+          className="w-auto"
+        >
+          <option value="">{t('filters.dispatchAll')}</option>
+          <option value="unsent">{t('filters.unsent')}</option>
+        </Select>
+        <Select
+          aria-label={t('filters.followUp')}
+          value={followUpFilter}
+          onChange={(e) => {
+            const val = e.target.value;
+            setFollowUpFilter(val);
+            applyFilters({ followUp: val });
+          }}
+          className="w-auto"
+        >
+          <option value="">{t('filters.followUpAll')}</option>
+          <option value="open">{t('filters.followUpOpen')}</option>
+        </Select>
       </div>
 
       {fulltextTooShort ? <p className="text-[13px] text-muted-ink">{t('searchTooShort')}</p> : null}
@@ -162,6 +203,12 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
               {documents.map((doc, i) => (
                 <Fragment key={doc.id}>
                   <TableRow
+                    data-document-id={doc.id}
+                    draggable={canMove}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('application/x-kompass-document', doc.id);
+                      e.dataTransfer.effectAllowed = 'move';
+                    }}
                     onClick={() => router.push(`/dms/${doc.id}`)}
                     className={cn(
                       'h-[var(--row-h)] cursor-pointer hover:bg-row-hover',
@@ -196,6 +243,14 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
                             zu wirken. */}
                         {doc.phase === 'draft' && doc.status !== 'voided' ? (
                           <StatusBadge tone="warning">{t('phases.draft')}</StatusBadge>
+                        ) : null}
+                        {doc.direction === 'outgoing' && doc.phase === 'issued' && doc.status !== 'voided' && !doc.sentAt ? (
+                          <StatusBadge tone="neutral">{t('dispatch.unsentBadge')}</StatusBadge>
+                        ) : null}
+                        {doc.openFollowUp ? (
+                          <StatusBadge tone={doc.openFollowUp.dueAt < today ? 'warning' : 'info'}>
+                            {t('followUpBadge', { date: doc.openFollowUp.dueAt })}
+                          </StatusBadge>
                         ) : null}
                         {doc.textStatus && doc.textStatus !== 'done' ? (
                           <span

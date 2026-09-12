@@ -3,10 +3,12 @@
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
+import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { PageHeader } from '@/components/page-header';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { moveDocumentAction } from './actions';
 import { DropOverlay } from './drop-overlay';
 import { FolderColumn } from './folder-column';
 import { ReceiveDialog } from './receive/receive-dialog';
@@ -62,6 +64,7 @@ export function DmsWorkspace({
   const [index, setIndex] = useState(0);
   const [asking, setAsking] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [, startMove] = useTransition();
   const [over, setOver] = useState<string | null>(null);
   const [files, setFiles] = useState(0);
   const [ready, setReady] = useState(false);
@@ -207,6 +210,15 @@ export function DmsWorkspace({
             setOver(null);
             depth.current = 0;
             take(folder, list);
+          }}
+          onDropDocument={(folder, documentId) => {
+            setOver(null);
+            startMove(async () => {
+              const state = await moveDocumentAction(documentId, folder);
+              if (state.status === 'error') toast.error(state.message);
+              else if (state.status === 'success' && state.message) toast.success(state.message);
+              router.refresh();
+            });
           }}
         />
         <div className="relative min-w-0 flex-1 overflow-auto p-5">

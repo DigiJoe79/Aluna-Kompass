@@ -1503,6 +1503,15 @@
       "project": "Projekt"
     },
     "folderSave": "Ordner speichern",
+    "followUpBadge": "Wiedervorlage {date}",
+    "filters": {
+      "dispatch": "Versand",
+      "dispatchAll": "Versand: alle",
+      "unsent": "nicht versandt",
+      "followUp": "Wiedervorlage",
+      "followUpAll": "Wiedervorlage: alle",
+      "followUpOpen": "offen"
+    },
     "voidWithReplacement": "Ersatz als Entwurf anlegen",
     "dispatch": {
       "title": "Versand",

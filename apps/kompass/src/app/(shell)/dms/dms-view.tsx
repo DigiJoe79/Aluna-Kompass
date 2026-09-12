@@ -21,6 +21,8 @@ export interface DmsQuery {
   text?: string;
   sort?: string;
   dir?: string;
+  unsent?: string;
+  followUp?: string;
 }
 
 /** Die Spalten, nach denen die Liste sortieren darf — mehr nimmt der Service nicht. */
@@ -60,6 +62,8 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
     inbox: isInbox ? true : undefined,
     folder: isInbox ? undefined : query.folder || undefined,
     text: query.text || undefined,
+    unsent: query.unsent === '1' ? true : undefined,
+    withOpenFollowUp: query.followUp === 'open' ? true : undefined,
     orderBy: readSort(query, SORTABLE),
     limit: 200,
   });
@@ -78,6 +82,8 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
     phase: d.phase,
     status: d.status,
     textStatus: d.textStatus,
+    sentAt: d.sentAt,
+    openFollowUp: d.followUps.find((f) => !f.doneAt) ?? null,
   }));
 
   const canCreate = hasPermission(ctx, 'dms.create');
@@ -106,6 +112,8 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
         types={types.map((type) => ({ key: type.key, label: type.label }))}
         folders={folders}
         inboxCount={inboxCount}
+        today={deps.clock.now().toISOString().slice(0, 10)}
+        canMove={canCreate}
         hits={docsRes.value.hits}
         fulltextTooShort={docsRes.value.fulltextTooShort}
       />

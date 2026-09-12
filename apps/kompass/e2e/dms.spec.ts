@@ -416,7 +416,11 @@ test.describe('dms', () => {
   });
 
   test('ein abgelegter Scan wird gelesen und über seinen Inhalt gefunden', async ({ page }) => {
-    test.setTimeout(60_000);
+    // Der Worker liest ein Dokument nach dem anderen, und der Seed bringt seit
+    // „Akte fertig“ mehrere mit Datei mit — das eigene steht also hinten in der
+    // Schlange. Das Budget muss über der Wartezeit darunter liegen, sonst
+    // läuft der Test ab, bevor sein Warten fertig ist.
+    test.setTimeout(150_000);
     await login(page);
 
     await page.goto('/dms/receive');
@@ -876,6 +880,41 @@ test.describe('dms', () => {
     await dialog.getByRole('button', { name: 'Stornieren bestätigen' }).click();
     await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}\/edit$/);
     await expect(page.getByLabel('Betreff')).toHaveValue('Einladung zur ordentlichen Mitgliederversammlung');
+  });
+
+  test('zieht eine Zeile der Liste auf einen Ordner und verschiebt sie', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms?inbox=1');
+    await expect(page.locator('[data-drop="ready"]')).toBeAttached();
+    const row = page.getByRole('row').nth(1);
+    const subject = (await row.getByRole('cell').nth(1).textContent())?.trim() ?? '';
+    const rowId = await row.getAttribute('data-document-id');
+    expect(rowId).toBeTruthy();
+    await page.evaluate(({ id }) => {
+      const transfer = new DataTransfer();
+      transfer.setData('application/x-kompass-document', id!);
+      const target = document.querySelector('[data-folder="behoerden/finanzamt"]')!;
+      for (const type of ['dragenter', 'dragover', 'drop']) {
+        target.dispatchEvent(new DragEvent(type, { dataTransfer: transfer, bubbles: true, cancelable: true }));
+      }
+    }, { id: rowId });
+    await expect(page.getByText('Dokument verschoben')).toBeVisible();
+    await expect(page.getByRole('row').filter({ hasText: subject })).toHaveCount(0);
+  });
+
+  test('markiert nicht versandte Ausgänge und offene Wiedervorlagen in der Liste', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+    await expect(page.getByRole('row').filter({ hasText: 'nicht versandt' }).first()).toBeVisible();
+    await expect(page.getByRole('row').filter({ hasText: 'Wiedervorlage' }).first()).toBeVisible();
+
+    await page.getByLabel('Wiedervorlage', { exact: true }).selectOption('open');
+    await expect(page).toHaveURL(/followUp=open/);
+    const rows = page.getByRole('row');
+    await expect(rows.filter({ hasText: 'Wiedervorlage' })).toHaveCount((await rows.count()) - 1);
+
+    await page.getByLabel('Versand', { exact: true }).selectOption('unsent');
+    await expect(page).toHaveURL(/unsent=1/);
   });
 });
 

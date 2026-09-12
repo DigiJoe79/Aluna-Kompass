@@ -20,6 +20,7 @@ export function FolderColumn({
   over,
   onOver,
   onDrop,
+  onDropDocument,
 }: {
   folders: string[];
   counts: Record<string, number>;
@@ -30,6 +31,8 @@ export function FolderColumn({
   over?: string | null;
   onOver?: (folder: string | null) => void;
   onDrop?: (folder: string | null, files: FileList) => void;
+  /** Eine Zeile der Liste, die auf einen Ordner gezogen wurde. */
+  onDropDocument?: (folder: string | null, documentId: string) => void;
 }) {
   const t = useTranslations('dms');
   const params = useSearchParams();
@@ -84,7 +87,11 @@ export function FolderColumn({
                     ? (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        onDrop?.(row.folder, e.dataTransfer.files);
+                        // Zwei Sorten Fracht auf demselben Ziel: Dateien legen
+                        // etwas Neues ab, eine Zeile verschiebt Vorhandenes.
+                        const documentId = e.dataTransfer.getData('application/x-kompass-document');
+                        if (documentId) onDropDocument?.(row.folder, documentId);
+                        else onDrop?.(row.folder, e.dataTransfer.files);
                       }
                     : undefined
                 }
