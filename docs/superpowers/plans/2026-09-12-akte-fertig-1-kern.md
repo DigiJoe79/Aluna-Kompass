@@ -31,6 +31,9 @@
 - Modify: `packages/core/src/permissions/core.ts`
 - Generated: `packages/core/src/db/migrations/00NN_follow_ups.sql`
 - Generated (custom): `packages/core/src/db/migrations/00NN_follow_ups_permissions.sql`
+- Modify: `packages/core/tests/permissions.test.ts` (führt die Kernrechte vollständig auf)
+- Modify: `apps/kompass/src/lib/permission-groups.ts` (jedes Kernrecht steht in einer Gruppe, sonst zeigt der Rolleneditor es nie)
+- Modify: `apps/kompass/messages/de.json` (`permissions.groups.core.followUps`, `permissions.keys.followUps.*`)
 - Test: `packages/core/tests/follow-ups-schema.test.ts`
 
 **Interfaces:**
@@ -107,6 +110,32 @@ export const followUps = sqliteTable(
   'followUps.manage',
 ```
 
+- [ ] **Step 3b: Die Rechte in Test, Gruppe und Sprachdatei nachziehen**
+
+Drei Stellen kennen die Kernrechte als Liste und werden sonst rot:
+
+`packages/core/tests/permissions.test.ts`: die beiden Schlüssel in die erwartete Liste aufnehmen, hinter `'retention.view'`.
+
+`apps/kompass/src/lib/permission-groups.ts`, `CORE_GROUPS`: eine eigene Gruppe, weil Wiedervorlagen weder Verwaltung noch Rechenschaft sind:
+
+```ts
+  { key: 'core.followUps', keys: ['followUps.view', 'followUps.manage'] },
+```
+
+`apps/kompass/messages/de.json`: unter `permissions.groups.core` `"followUps": "Kern — Wiedervorlagen"`; unter `permissions.keys`:
+
+```json
+"followUps": {
+  "view": { "label": "Wiedervorlagen sehen", "description": "Die Liste der fälligen Wiedervorlagen auf der Startseite und an Vorgängen sehen — Anlässe, keine Inhalte." },
+  "manage": { "label": "Wiedervorlagen pflegen", "description": "Wiedervorlagen an Vorgängen anlegen, abhaken, wieder öffnen und löschen." }
+}
+```
+
+Run: `pnpm --filter @kompass/core test -- permissions && pnpm --filter @kompass/app test -- permission`
+Expected: PASS (`permission-groups.test.ts` und `permission-labels.test.ts`).
+
+**Bis Task 5 bleibt `apps/kompass/tests/mcp-tools.test.ts` rot:** zwei Rechte ohne Werkzeug. Das ist erwartet und löst sich in Task 5; wer dazwischen `pnpm test` fährt, sieht genau diesen einen Fehler.
+
 - [ ] **Step 4: Migrationen erzeugen**
 
 ```bash
@@ -161,7 +190,7 @@ Expected: PASS
 - [ ] **Step 7: Commit**
 
 ```bash
-git add packages/core/src/db/schema.ts packages/core/src/permissions/core.ts packages/core/src/db/migrations packages/core/tests/follow-ups-schema.test.ts
+git add packages/core/src/db/schema.ts packages/core/src/permissions/core.ts packages/core/src/db/migrations packages/core/tests/follow-ups-schema.test.ts packages/core/tests/permissions.test.ts apps/kompass/src/lib/permission-groups.ts apps/kompass/messages/de.json
 git commit -m "feat(core): a table for follow-ups, and two rights to see and keep them"
 ```
 
@@ -687,7 +716,7 @@ import type { CallContext } from '../context';
 import type { Deps } from '../deps';
 import type { FollowUpTarget } from '../modules/manifest';
 import { enabledManifests } from '../modules/service';
-import type { Result } from '../result';
+import { ok, type Result } from '../result';
 import { listDueFollowUps, type FollowUpRecord } from './service';
 
 /**
@@ -708,7 +737,7 @@ export type FollowUpWithTarget = FollowUpRecord & { target: FollowUpTarget | nul
 export async function listDueFollowUpsWithTargets(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<FollowUpWithTarget[]>> {
   const due = await listDueFollowUps(deps, ctx, input);
   if (!due.ok) return due;
-  return { ok: true, value: due.value.map((row) => ({ ...row, target: resolveFollowUpTarget(deps, row.entityType, row.entityId) })) };
+  return ok(due.value.map((row) => ({ ...row, target: resolveFollowUpTarget(deps, row.entityType, row.entityId) })));
 }
 ```
 
@@ -766,6 +795,14 @@ Anhängen an `packages/core/tests/deletion-policy.test.ts`, innerhalb `describe(
 
 Run: `pnpm --filter @kompass/core test -- deletion-policy`
 Expected: FAIL — `followUp` nicht definiert.
+
+- [ ] **Step 2b: Die Regex des Tests kennt camelCase**
+
+`deletion-policy.test.ts` prüft jede `auditAction` gegen `/^[a-z]+(\.[a-z]+)+$/` — reine Kleinschreibung, und `followUps.delete` fällt durch. Die Segmente dürfen dieselbe Form haben wie `PERMISSION_KEY` in `modules/manifest.ts`:
+
+```ts
+        expect(rule.auditAction ?? '', rule.entity).toMatch(/^[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*)+$/);
+```
 
 - [ ] **Step 3: Einträge ergänzen**
 
