@@ -179,6 +179,7 @@ export async function voidDocument(deps: Deps, ctx: CallContext, input: unknown)
   if (!parsed.ok) return parsed;
   const row = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
   if (!row) return notFound('document', parsed.value.id);
+  if (row.phase !== 'issued') return conflict('documentIsDraft', `Entwurf „${row.subject}“ kann nicht storniert werden — nur verworfen`);
   if (row.status === 'voided') return conflict('documentAlreadyVoided', `Dokument ${row.number} ist bereits storniert`);
   return deps.db.transaction((tx: DbOrTx) => {
     tx.update(documents).set({ status: 'voided', voidedAt: isoNow(deps.clock), voidedByUserId: ctx.userId, voidReason: parsed.value.reason }).where(eq(documents.id, row.id)).run();
@@ -186,6 +187,21 @@ export async function voidDocument(deps: Deps, ctx: CallContext, input: unknown)
     recordAudit(tx, deps, ctx, { action: 'dms.void', entityType: 'document', entityId: row.id, before: { status: 'issued' }, after: { status: 'voided', reason: parsed.value.reason }, summary: `Dokument ${row.number} storniert: ${parsed.value.reason}` });
     return ok(toRecord(deps, after));
   });
+}
+
+/**
+ * Ein Ordner, der im Formular steht, muss in `document_folders` stehen — sonst
+ * landet ein Dokument an einem Ort, den die Ordnerspalte nie zeigt. Dieselbe
+ * Regel für Ablegen, Entwurf und Verschieben.
+ */
+export function resolveFolder(db: DbOrTx, folder: string | null | undefined, fallback: string | null): Result<string | null> {
+  if (folder === undefined) return ok(fallback);
+  if (folder === null) return ok(null);
+  const normalized = parseFolderPath(folder);
+  if (!normalized) return invalid([{ path: 'folder', message: 'invalidFolderPath' }]);
+  const row = db.select({ path: documentFolders.path }).from(documentFolders).where(eq(documentFolders.path, normalized)).get();
+  if (!row) return notFound('documentFolder', folder);
+  return ok(normalized);
 }
 
 export const moveDocumentSchema = z.object({
@@ -207,14 +223,9 @@ export async function moveDocument(
   const doc = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
   if (!doc) return notFound('document', parsed.value.id);
 
-  let targetFolder: string | null = null;
-  if (parsed.value.folder !== null) {
-    const normalized = parseFolderPath(parsed.value.folder);
-    if (!normalized) return invalid([{ path: 'folder', message: 'invalidFolderPath' }]);
-    const folderRow = deps.db.select().from(documentFolders).where(eq(documentFolders.path, normalized)).get();
-    if (!folderRow) return notFound('documentFolder', parsed.value.folder);
-    targetFolder = normalized;
-  }
+  const resolved = resolveFolder(deps.db, parsed.value.folder, null);
+  if (!resolved.ok) return resolved;
+  const targetFolder = resolved.value;
 
   return deps.db.transaction((tx: DbOrTx) => {
     const now = isoNow(deps.clock);
@@ -353,6 +364,7 @@ export async function deleteDocument(
 
   const doc = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
   if (!doc) return notFound('document', parsed.value.id);
+  if (doc.phase !== 'issued') return conflict('documentIsDraft', `Entwurf „${doc.subject}“ unterliegt keiner Frist — Entwürfe werden verworfen`);
 
   const docType = documentTypeFor(deps.db, doc.typeKey);
   if (!docType) return notFound('documentType', doc.typeKey);

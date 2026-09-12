@@ -20,7 +20,7 @@ import { documentTypeFor } from './catalog';
 import { resolveRecipient } from './recipients';
 import { documentLinks, documents } from './schema';
 import { storeDocumentFile } from './storage';
-import { allocateDocumentNumber, peekDocumentNumber, toRecord, type DocumentRecord } from './service';
+import { allocateDocumentNumber, peekDocumentNumber, resolveFolder, toRecord, type DocumentRecord } from './service';
 import { removeDocumentText } from './index-store';
 
 export const draftCreateSchema = z.object({
@@ -103,7 +103,9 @@ export async function createDraft(deps: Deps, ctx: CallContext, input: unknown):
   const id = newId();
   const now = isoNow(deps.clock);
   const documentDate = parsed.value.documentDate ?? now.slice(0, 10);
-  const folder = parsed.value.folder !== undefined ? parsed.value.folder : docType.defaultFolder;
+  const folderRes = resolveFolder(deps.db, parsed.value.folder, docType.defaultFolder);
+  if (!folderRes.ok) return folderRes;
+  const folder = folderRes.value;
 
   return deps.db.transaction((tx: DbOrTx) => {
     tx.insert(documents)
@@ -176,7 +178,11 @@ export async function updateDraft(deps: Deps, ctx: CallContext, input: unknown):
   if (parsed.value.subject !== undefined) updates.subject = parsed.value.subject;
   if (parsed.value.body !== undefined) updates.draftBody = parsed.value.body;
   if (parsed.value.documentDate !== undefined) updates.documentDate = parsed.value.documentDate;
-  if (parsed.value.folder !== undefined) updates.folder = parsed.value.folder;
+  if (parsed.value.folder !== undefined) {
+    const folderRes = resolveFolder(deps.db, parsed.value.folder, null);
+    if (!folderRes.ok) return folderRes;
+    updates.folder = folderRes.value;
+  }
 
   return deps.db.transaction((tx: DbOrTx) => {
     tx.update(documents).set(updates).where(eq(documents.id, row.id)).run();

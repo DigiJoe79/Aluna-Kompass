@@ -17,7 +17,7 @@ import { z } from 'zod';
 import { documentTypeFor } from './catalog';
 import { documentLinks, documents } from './schema';
 import { removeDocumentFile, storeDocumentFile } from './storage';
-import { allocateDocumentNumber, linkInputSchema, toRecord, type DocumentRecord } from './service';
+import { allocateDocumentNumber, linkInputSchema, resolveFolder, toRecord, type DocumentRecord } from './service';
 
 /**
  * Was jede Ablage eingehender Post beschreibt — unabhängig davon, woher die
@@ -80,7 +80,9 @@ export async function receiveDocument(
   }
   if (!bytes) return invalid([{ path: 'file', message: 'missingBytes' }]);
 
-  const folder = parsed.value.folder !== undefined ? parsed.value.folder : (docType.defaultFolder ?? null);
+  const folderRes = resolveFolder(deps.db, parsed.value.folder, docType.defaultFolder ?? null);
+  if (!folderRes.ok) return folderRes;
+  const folder = folderRes.value;
 
   const id = newId();
   const now = isoNow(deps.clock);
