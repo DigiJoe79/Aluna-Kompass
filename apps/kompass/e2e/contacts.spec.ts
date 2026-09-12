@@ -66,4 +66,14 @@ test.describe('contacts', () => {
     await expect(page.getByTestId('retention-holds')).toContainText('interested');
     await expect(page.getByTestId('retention-holds')).toContainText('2028-12-31');
   });
+
+  test('sortiert die Kontakte über den Spaltenkopf', async ({ page }) => {
+    await page.goto('/contacts');
+    await page.getByRole('button', { name: 'Sortieren nach Ort' }).click();
+    await expect(page).toHaveURL(/sort=city&dir=desc/);
+    await page.getByRole('button', { name: 'Sortieren nach Ort' }).click();
+    await expect(page).toHaveURL(/dir=asc/);
+    const cities = await page.getByRole('row').locator('td:nth-child(4)').allTextContents();
+    expect([...cities].sort((a, b) => a.localeCompare(b, 'de'))).toEqual(cities);
+  });
 });

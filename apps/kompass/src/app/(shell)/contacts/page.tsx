@@ -5,10 +5,16 @@ import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
+import { readSort } from '@/lib/sort';
 import { ContactList } from './contact-list';
 import { CreateContactDialog } from './contact-form';
 
-export default async function ContactsPage(props: { searchParams: Promise<{ kind?: string; role?: string; text?: string; archived?: string }> }) {
+/** Die Spalten, nach denen die Liste sortieren darf — mehr nimmt der Service nicht. */
+const SORTABLE = ['name', 'kind', 'city', 'createdAt'] as const;
+
+export default async function ContactsPage(props: {
+  searchParams: Promise<{ kind?: string; role?: string; text?: string; archived?: string; sort?: string; dir?: string }>;
+}) {
   const { deps, ctx } = await requireSession();
   if (requirePermission(ctx, 'contacts.view')) return <ForbiddenCard permission="contacts.view" />;
   const t = await getTranslations('contacts');
@@ -18,6 +24,7 @@ export default async function ContactsPage(props: { searchParams: Promise<{ kind
     role: q.role || undefined,
     text: q.text || undefined,
     includeArchived: q.archived === '1',
+    orderBy: readSort(q, SORTABLE),
     limit: 200,
   });
   if (!result.ok) return <ForbiddenCard permission="contacts.view" />;

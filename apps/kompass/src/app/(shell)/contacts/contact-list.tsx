@@ -8,6 +8,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { SortableHead } from '@/components/sortable-head';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { Select } from '@/components/ui/select';
@@ -46,6 +47,11 @@ export function ContactList({ contacts, roles }: { contacts: ContactListItem[]; 
     if (merged.kind) next.set('kind', merged.kind);
     if (merged.role) next.set('role', merged.role);
     if (merged.archived) next.set('archived', '1');
+    // Sortierung ist kein Filter, sie überlebt jeden Filterwechsel.
+    for (const key of ['sort', 'dir']) {
+      const value = params.get(key);
+      if (value) next.set(key, value);
+    }
     const qs = next.toString();
     startTransition(() => {
       router.replace(qs ? `${pathname}?${qs}` : pathname);
@@ -115,10 +121,10 @@ export function ContactList({ contacts, roles }: { contacts: ContactListItem[]; 
         <Table>
           <TableHeader className="bg-table-head text-left text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink">
             <TableRow className="h-9">
-              <TableHead className="px-4">{t('columns.name')}</TableHead>
-              <TableHead className="px-4">{t('columns.kind')}</TableHead>
+              <SortableHead field="name" label={t('columns.name')} />
+              <SortableHead field="kind" label={t('columns.kind')} />
               <TableHead className="px-4">{t('columns.roles')}</TableHead>
-              <TableHead className="px-4">{t('columns.city')}</TableHead>
+              <SortableHead field="city" label={t('columns.city')} />
               <TableHead className="px-4">{t('columns.contact')}</TableHead>
             </TableRow>
           </TableHeader>
