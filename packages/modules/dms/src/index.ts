@@ -15,6 +15,7 @@ export * from './schema';
 export * from './search';
 export * from './seed';
 export * from './service';
+export * from './snippets';
 export * from './storage';
 export * from './templates';
 export * from './text';
