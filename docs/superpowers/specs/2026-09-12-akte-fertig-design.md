@@ -83,7 +83,7 @@ Volltext).
 |---|---|---|
 | 32 | **Wiedervorlagen liegen im Kern**, mit generischem Bezug auf Entitätstyp und ID, und einer Liste auf der Startseite. Die Akte ist der erste Anwender, Finanzen und Gremien folgen ohne zweites Bauen. | Felder am Dokument im Modul; Liste unter Verwaltung |
 | 33 | **Bezüge zwischen Dokumenten sind eine eigene Tabelle** mit Richtung und fester Art: Antwort auf, unterschriebene Fassung von, ersetzt, Anlage zu. Beide Enden zeigen den Bezug mit gedrehtem Text. | `document_links` mit `entityType: 'document'`; freie Art |
-| 34 | **Ein Versandvermerk je Dokument**: Datum, Weg, Bemerkung. Nur an ausgehenden, festgeschriebenen Dokumenten, freiwillig, nachträglich mit Protokoll änderbar. Der Weg ist eine feste Liste. | Liste von Versänden; Weg als Einstellung; Versand als Pflicht |
+| 34 | **Ein Versandvermerk je Dokument**: Datum, Weg, Bemerkung. Nur an ausgehenden, festgeschriebenen Dokumenten, freiwillig, nachträglich mit Protokoll änderbar. Die Wege sind eine Einstellung mit Vorgabeliste (Prinzip 2). | Liste von Versänden; Weg als Konstante im Code; Versand als Pflicht |
 | 35 | **Notizen sind ein Journal**: mehrere je Dokument, mit Person und Zeit, nur anhängen, nie ändern; löschen darf, wer geschrieben hat, oder wer verwaltet. Nie Teil des Dokuments. | Ein frei änderbares Feld |
 | 36 | **Textbausteine ohne Platzhalter**: Name, wahlweise Betreff, Markdown. Eingefügt an der Schreibmarke; in einem leeren Entwurf setzt ein Baustein mit Betreff auch den Betreff. | Platzhalter für Empfänger und Datum (Vorstufe zum Serienbrief, der bei Finanzen kommt) |
 | 37 | **Die Beziehungsakte an Kontakt, Tier und Projekt baut die App-Schicht**, die alle Module kennt, wie sie heute Bezüge zu Namen auflöst. | Manifest-Haken für Kästen an fremden Entitäten (kommt, wenn ein zweites Modul ihn braucht) |
@@ -160,15 +160,23 @@ Drei Spalten an `documents`:
 | Spalte | Typ | |
 |---|---|---|
 | `sentAt` | text (Datum), nullable | |
-| `sentVia` | enum `post` \| `registeredMail` \| `email` \| `inPerson` \| `portal` \| `other`, nullable | |
+| `sentVia` | text, nullable | Schlüssel eines Versandwegs aus der Einstellung |
 | `sentNote` | text, nullable | max. 300 Zeichen |
 
 Alle drei sind zusammen gesetzt oder zusammen leer. Nur `direction:
 'outgoing'` und `phase: 'issued'`; ein Entwurf oder ein Eingang weist den
-Vermerk mit `conflict` ab. Der Weg ist bewusst eine Konstante, keine
-Einstellung: Die Liste ist für jeden Verein dieselbe, und `other` mit
-Bemerkung fängt den Rest. Das ist eine dokumentierte Ausnahme von Prinzip 2,
-wie die Umgebungsbalken-Farben.
+Vermerk mit `conflict` ab.
+
+Die Versandwege sind eine Einstellung `dms.dispatchChannels` (Prinzip 2):
+eine Liste aus `{ key, label }`, registriert in `install.ts` mit der
+Vorgabe Post, Einschreiben, E-Mail, persönlich übergeben, Portal, sonstiges
+(Schlüssel `post`, `registeredMail`, `email`, `inPerson`, `portal`,
+`other`; Beschriftungen in der führenden Sprache der Installation, wie die
+Startarten). Schlüssel sind `^[a-z][a-zA-Z0-9]*$`, eindeutig, mindestens
+einer. `recordDispatch` nimmt nur Schlüssel an, die in der Einstellung
+stehen. Wird ein Weg später aus der Einstellung genommen, behalten
+vorhandene Vermerke ihren Schlüssel; die Oberfläche zeigt dann den
+Schlüssel statt der Beschriftung, und das Protokoll trägt den Wert ohnehin.
 
 ### 4.4 Akte: Notizen
 
@@ -300,7 +308,8 @@ Voraussetzung: das alte ist `voided`.
 | `clearDispatch({ id })` | `dms.create` | leert; Audit `dms.dispatch.clear` |
 
 `sentAt` darf nicht vor `documentDate` liegen und nicht in der Zukunft
-(`deps.clock`).
+(`deps.clock`); `sentVia` muss ein Schlüssel aus `dms.dispatchChannels`
+sein (`validation`).
 
 ### 5.5 Akte: Notizen (`notes.ts`)
 
@@ -450,7 +459,10 @@ eigenen sehen will, schaltet um; die Wahl merkt sich der Browser.
 ### 7.8 Verwaltung → Akte
 
 Ein Panel **„Textbausteine"** neben Dokumentarten, Regeln und Ordnern: Liste,
-Anlegen, Bearbeiten, Deaktivieren, Löschen.
+Anlegen, Bearbeiten, Deaktivieren, Löschen. Und ein Panel **„Versandwege"**:
+die Liste aus der Einstellung, Schlüssel und Beschriftung, Anlegen, Umbenennen,
+Entfernen; gespeichert über `setSetting` mit `settings.manage`, wie die
+Erkennungssprachen im Volltext-Panel.
 
 ### 7.9 Handoff
 
@@ -473,7 +485,8 @@ Protokoll. Dazu gezielt:
 - Bezüge: Selbstbezug abgelehnt; Doppel abgelehnt; Verwerfen eines Entwurfs
   nimmt seine Bezüge in beiden Richtungen mit.
 - Versand: an Eingang und Entwurf abgelehnt; Datum vor Dokumentdatum
-  abgelehnt; Änderung mit Vorher/Nachher im Protokoll.
+  abgelehnt; unbekannter Weg abgelehnt; Änderung mit Vorher/Nachher im
+  Protokoll; ein aus der Einstellung entfernter Weg bleibt am Dokument lesbar.
 - Notiz: Fremde Notiz ohne `dms.manage` nicht löschbar.
 - Wiedervorlage im Kern: Fälligkeitsliste sortiert; Abhaken zweimal ist
   `conflict`; Wrapper in der Akte weist ein unbekanntes Dokument ab.
@@ -535,6 +548,7 @@ packages/core/src/seed/follow-ups.ts
 packages/mcp/src/core-tools.ts                     followups_*
 packages/modules/dms/src/schema.ts                 vier Tabellen, drei Spalten
 packages/modules/dms/src/service.ts                allocateDocumentNumber, resolveFolder, Filter, orderBy, phase-Prüfungen
+packages/modules/dms/src/install.ts                dms.dispatchChannels
 packages/modules/dms/src/relations.ts  dispatch.ts  notes.ts  snippets.ts
 packages/modules/dms/src/text.ts                   getDocumentText
 packages/modules/dms/src/follow-ups.ts             Wrapper + followUpTargets
@@ -544,7 +558,7 @@ apps/kompass/src/components/contact-picker.tsx  sortable-head.tsx  related-docum
 apps/kompass/src/app/(shell)/dms/…                 Detail, Liste, Dialog, Editor
 apps/kompass/src/app/(shell)/page.tsx              Fällig-Kasten
 apps/kompass/src/app/(shell)/contacts/[id]/page.tsx  animals/[id]  projects/[id]
-apps/kompass/src/app/(shell)/admin/dms/snippets-panel.tsx
+apps/kompass/src/app/(shell)/admin/dms/snippets-panel.tsx  dispatch-channels-panel.tsx
 apps/kompass/messages/de.json                      dms.*, followUps.*
 apps/kompass/tests/mcp-tools.test.ts               strengere Parität
 apps/kompass/e2e/dms.spec.ts  follow-ups.spec.ts
@@ -561,8 +575,8 @@ voneinander; (3) braucht (2), (4) braucht beide.
 
 ## 12. Self-Review
 
-**Platzhalter.** Keine. Die Liste der Versandwege ist vollständig aufgezählt,
-die vier Bezugsarten samt gedrehter Lesart stehen in § 4.2.
+**Platzhalter.** Keine. Die Vorgabeliste der Versandwege ist vollständig
+aufgezählt, die vier Bezugsarten samt gedrehter Lesart stehen in § 4.2.
 
 **Konsistenz.** Entscheidung 42 (Entwurf ohne Feldspuren) und § 5.4
 (Versand mit Vorher/Nachher) widersprechen sich nicht: Der Versandvermerk
