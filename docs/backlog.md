@@ -115,3 +115,24 @@ Verein erstellten Beleg. Ohne PDF muss der Spender fragen.
 
 **Wann:** Jetzt möglich — der Bescheid nach § 60a AO liegt vor (Joe,
 2026-09-13). Vor dem Go-live, damit die FAQ-Antwort auf etwas zeigt.
+
+## 20. Maske und MCP überschreiben sich bei mehrsprachigen Feldern
+
+**Was:** Ein Speichern aus der Maske ersetzt jedes mehrsprachige Feld
+vollständig, mit allen Sprachen, so wie sie beim Laden des Formulars standen.
+Kommt dazwischen eine Änderung über MCP (etwa `translations_set`, das nur eine
+Sprache schreibt), geht sie beim nächsten Speichern der Maske verloren. Zwei
+Abhilfen, eine reicht: Die Maske sendet nur Sprachen, die sich gegenüber dem
+geladenen Stand geändert haben, und der Dienst mischt je Sprache — oder ein
+Versionsstempel am Datensatz weist ein Speichern ab, dessen Ladestand veraltet
+ist, mit Hinweis statt stillem Überschreiben.
+
+**Warum:** Am 2026-09-13 um 18:01 UTC schrieb ein Agent die englischen Texte
+von Akiko über MCP; um 18:03 speicherte Nicole die Maske, die sie vorher
+geöffnet hatte, und alle sechs englischen Felder waren wieder leer. Das
+Änderungsprotokoll zeigt es vollständig (vorher gefüllt, nachher leer), aber
+niemand hat es bemerkt, bis die Lückenliste erneut sechs Einträge zeigte. Mit
+Agenten als zweitem Kanal wird das der Normalfall, nicht die Ausnahme.
+
+**Wann:** Vor dem ersten Übersetzungslauf gegen Prod, spätestens sobald
+Inhalte parallel in Maske und über MCP gepflegt werden.
