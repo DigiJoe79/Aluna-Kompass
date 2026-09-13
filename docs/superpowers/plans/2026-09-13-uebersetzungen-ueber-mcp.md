@@ -922,7 +922,7 @@ git commit -m "feat(animals): translation hooks — list localized fields, write
 - Consumes: `updateProject`, `type ProjectRecord` aus `./service`; `projects` aus `./schema`; `readLocales` (für die Beschriftung in der Leitsprache) und die Typen aus `@kompass/core`.
 - Produces: `projectsTranslatables`, `projectsSetTranslations`; `entityType` `project`; Felder `name`, `summary`, `body`; `label` = Leitsprachen-`name`, sonst Slug; `href` `/projects/<id>`.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 ```ts
 // packages/modules/projects/tests/translations.test.ts
@@ -984,12 +984,12 @@ describe('projects translations', () => {
 });
 ```
 
-- [ ] **Step 2: Test laufen lassen, rot**
+- [x] **Step 2: Test laufen lassen, rot**
 
 Run: `pnpm --filter @kompass/module-projects test -- translations`
 Expected: FAIL — `../src/translations` fehlt.
 
-- [ ] **Step 3: Haken schreiben**
+- [x] **Step 3: Haken schreiben**
 
 ```ts
 // packages/modules/projects/src/translations.ts
@@ -1042,12 +1042,12 @@ export function projectsSetTranslations(deps: Deps, ctx: CallContext, input: Tra
 
 In `packages/modules/projects/src/manifest.ts`: `import { projectsSetTranslations, projectsTranslatables } from './translations';` und im `defineModule({ … })` nach `mediaReferences: projectsMediaReferences,` die Zeilen `translatables: projectsTranslatables,` und `setTranslations: projectsSetTranslations,`. Nicht aus `index.ts` exportieren.
 
-- [ ] **Step 4: Tests laufen lassen**
+- [x] **Step 4: Tests laufen lassen**
 
 Run: `pnpm --filter @kompass/module-projects test`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 pnpm typecheck
