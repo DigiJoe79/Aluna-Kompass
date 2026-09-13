@@ -21,6 +21,7 @@ export function LibraryClient({ current, folders, items }: { current: string | n
   const [view, setView] = usePreference('mediaView');
   const [detailId, setDetailId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [, start] = useTransition();
 
   const detail = items.find((it) => it.id === detailId) ?? null;
@@ -57,6 +58,7 @@ export function LibraryClient({ current, folders, items }: { current: string | n
               type="file"
               accept="image/png,image/jpeg,image/webp,image/svg+xml,application/pdf"
               className="text-[12px]"
+              disabled={uploading}
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
@@ -64,9 +66,11 @@ export function LibraryClient({ current, folders, items }: { current: string | n
                 fd.set('file', file);
                 if (current) fd.set('folder', current);
                 e.target.value = '';
-                void run(uploadMediaAction(fd));
+                setUploading(true);
+                void run(uploadMediaAction(fd)).finally(() => setUploading(false));
               }}
             />
+            {uploading ? <span aria-live="polite">{t('uploading')}</span> : null}
           </label>
           <div className="flex overflow-hidden rounded-md border border-line text-[13px]">
             {(['list', 'grid'] as const).map((v) => (
