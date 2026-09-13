@@ -130,7 +130,7 @@ git commit -m "feat(app): /media/{id}/preview serves the 320 px webp, sandboxed 
   ```
   `GET /media?folder=&query=&kind=&sort=` → JSON `MediaListing`; 401 ohne Sitzung, 400 bei ungültigen Parametern, 403 ohne `media.upload`. `folder=` (leer) heißt ohne Ordner, weggelassen heißt alle.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 ```ts
 // apps/kompass/tests/media-listing.test.ts
@@ -176,7 +176,7 @@ describe('buildMediaListing', () => {
 });
 ```
 
-- [ ] **Step 2: Rot sehen**
+- [x] **Step 2: Rot sehen**
 
 ```bash
 pnpm --filter @kompass/app exec vitest run tests/media-listing
@@ -184,7 +184,7 @@ pnpm --filter @kompass/app exec vitest run tests/media-listing
 
 Erwartung: FAIL, Modul fehlt.
 
-- [ ] **Step 3: Implementierung**
+- [x] **Step 3: Implementierung**
 
 ```ts
 // apps/kompass/src/lib/media-listing.ts
@@ -265,14 +265,14 @@ export async function GET(request: Request): Promise<Response> {
 }
 ```
 
-- [ ] **Step 4: Grün sehen**
+- [x] **Step 4: Grün sehen**
 
 ```bash
 pnpm --filter @kompass/app exec vitest run tests/media-listing
 pnpm typecheck
 ```
 
-- [ ] **Step 5: E2E-Rauchtest der Route**
+- [x] **Step 5: E2E-Rauchtest der Route**
 
 In `apps/kompass/e2e/media.spec.ts` anhängen:
 
@@ -295,7 +295,7 @@ pnpm --filter @kompass/app e2e -- media.spec.ts
 
 Erwartung: grün.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/kompass/src/lib/media-listing.ts apps/kompass/src/app/media/route.ts apps/kompass/tests/media-listing.test.ts apps/kompass/e2e/media.spec.ts

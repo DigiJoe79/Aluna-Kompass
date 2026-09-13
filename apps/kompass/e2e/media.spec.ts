@@ -116,4 +116,15 @@ test.describe('media library', () => {
     const missing = await page.request.get('/media/NOPE/preview');
     expect(missing.status()).toBe(404);
   });
+
+  test('GET /media answers the listing as JSON and refuses bad parameters', async ({ page }) => {
+    await page.goto('/admin/media');
+    await page.getByLabel('Datei hochladen').setInputFiles({ name: 'json.png', mimeType: 'image/png', buffer: PNG });
+    await expect(page.getByRole('row', { name: /json-/ })).toBeVisible();
+    const ok = await page.request.get('/media?query=json&sort=name');
+    expect(ok.status()).toBe(200);
+    const body = (await ok.json()) as { items: { filename: string }[]; folders: unknown[] };
+    expect(body.items.map((i) => i.filename)).toEqual([expect.stringMatching(/^json-/)]);
+    expect((await page.request.get('/media?kind=video')).status()).toBe(400);
+  });
 });
