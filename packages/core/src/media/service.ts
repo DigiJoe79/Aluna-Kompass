@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, like, sql } from 'drizzle-orm';
 import { fileTypeFromBuffer } from 'file-type';
 import { z } from 'zod';
 import { recordAudit } from '../audit/log';
@@ -178,16 +178,47 @@ export interface MediaLibraryItem {
   references: MediaReference[];
 }
 
+export interface MediaListFilter {
+  /** weggelassen = alle; null = ohne Ordner; Pfad = genau dieser Ordner */
+  folder?: string | null;
+  /** Teilstring ohne Groß-/Kleinschreibung im Dateinamen oder in einem Verwendungs-Label */
+  query?: string;
+  /** image umfasst PNG, JPEG, WebP und SVG; pdf nur PDF */
+  kind?: 'image' | 'pdf';
+  /** Vorgabe newest */
+  sort?: 'newest' | 'oldest' | 'name' | 'size';
+}
+
+/** Ein Schema für alle Kanäle: MCP-Werkzeug, Route Handler, Seite. */
+export const mediaListFilterSchema = z.object({
+  folder: z.string().nullable().optional(),
+  query: z.string().max(200).optional(),
+  kind: z.enum(['image', 'pdf']).optional(),
+  sort: z.enum(['newest', 'oldest', 'name', 'size']).optional(),
+});
+
 /**
- * Alle Assets (mit ihren Fundstellen). `folder` filtert: weggelassen = alle,
- * `null` = Wurzel, ein Pfad = genau dieser Ordner.
+ * Alle Assets mit ihren Fundstellen. Ordner und Typ filtern in SQL, die
+ * Suche danach — die Labels entstehen erst durch `findMediaReferences`.
  */
-export async function listMediaAssets(deps: Deps, ctx: CallContext, folder?: string | null): Promise<Result<MediaLibraryItem[]>> {
+export async function listMediaAssets(deps: Deps, ctx: CallContext, filter: MediaListFilter = {}): Promise<Result<MediaLibraryItem[]>> {
   const denied = requirePermission(ctx, 'media.upload');
   if (denied) return denied;
-  const where = folder === undefined ? undefined : folder === null ? isNull(mediaAssets.folder) : eq(mediaAssets.folder, folder);
-  const rows = deps.db.select().from(mediaAssets).where(where).orderBy(mediaAssets.createdAt).all();
-  return ok(rows.map((record) => ({ record, references: findMediaReferences(deps, record.id) })));
+  const conditions = [];
+  if (filter.folder !== undefined) conditions.push(filter.folder === null ? isNull(mediaAssets.folder) : eq(mediaAssets.folder, filter.folder));
+  if (filter.kind === 'image') conditions.push(like(mediaAssets.mimeType, 'image/%'));
+  if (filter.kind === 'pdf') conditions.push(eq(mediaAssets.mimeType, 'application/pdf'));
+  const order = {
+    newest: [desc(mediaAssets.createdAt), desc(mediaAssets.id)],
+    oldest: [asc(mediaAssets.createdAt), asc(mediaAssets.id)],
+    name: [asc(mediaAssets.filename)],
+    size: [desc(mediaAssets.bytes), asc(mediaAssets.filename)],
+  }[filter.sort ?? 'newest'];
+  const rows = deps.db.select().from(mediaAssets).where(conditions.length ? and(...conditions) : undefined).orderBy(...order).all();
+  const items = rows.map((record) => ({ record, references: findMediaReferences(deps, record.id) }));
+  const q = filter.query?.trim().toLowerCase();
+  if (!q) return ok(items);
+  return ok(items.filter((it) => it.record.filename.toLowerCase().includes(q) || it.references.some((r) => r.label.toLowerCase().includes(q))));
 }
 
 const deleteInput = z.object({ id: z.string().min(1) });

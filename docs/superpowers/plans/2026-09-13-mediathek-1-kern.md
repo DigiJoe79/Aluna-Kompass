@@ -439,7 +439,7 @@ git commit -m "feat(media): a 320 px webp preview is rendered before the upload 
   ```
   Vorgabe `sort: 'newest'`.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 In `packages/core/tests/media.test.ts` den Fall „filters by folder and reports references“ ersetzen durch:
 
@@ -496,7 +496,7 @@ In `packages/core/tests/media.test.ts` den Fall „filters by folder and reports
   });
 ```
 
-- [ ] **Step 2: Rot sehen**
+- [x] **Step 2: Rot sehen**
 
 ```bash
 pnpm --filter @kompass/core exec vitest run tests/media.test
@@ -504,7 +504,7 @@ pnpm --filter @kompass/core exec vitest run tests/media.test
 
 Erwartung: FAIL — Typfehler bzw. `mediaListFilterSchema` fehlt.
 
-- [ ] **Step 3: Implementierung**
+- [x] **Step 3: Implementierung**
 
 In `service.ts` die Imports um `asc, desc, like` aus `drizzle-orm` erweitern und `listMediaAssets` ersetzen:
 
@@ -561,7 +561,7 @@ Aufrufer anpassen:
 - `packages/mcp/src/core-tools.ts`, `media_list`: Handler `(deps, ctx, { folder }) => listMediaAssets(deps, ctx, folder)` → `(deps, ctx, args) => listMediaAssets(deps, ctx, args)`. Das Schema tauscht Task 5.
 - `packages/core/tests/media.test.ts`, Fall „reads assets back…“: `listMediaAssets(deps, uploader)` bleibt gültig.
 
-- [ ] **Step 4: Grün sehen**
+- [x] **Step 4: Grün sehen**
 
 ```bash
 pnpm --filter @kompass/core exec vitest run tests/media.test
@@ -571,7 +571,7 @@ pnpm --filter @kompass/mcp test
 
 Erwartung: grün.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core/src/media/service.ts packages/core/tests/media.test.ts "apps/kompass/src/app/(shell)/admin/media/page.tsx" packages/mcp/src/core-tools.ts

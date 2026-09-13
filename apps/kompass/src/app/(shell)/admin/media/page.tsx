@@ -15,7 +15,7 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
 
   const names = new Map(deps.db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).all().map((u) => [u.id, u.name]));
   const folders = unwrap(await listMediaFolders(deps, ctx));
-  const items = unwrap(await listMediaAssets(deps, ctx, current ?? undefined)).map((it) => ({
+  const items = unwrap(await listMediaAssets(deps, ctx, current === null ? {} : { folder: current })).map((it) => ({
     id: it.record.id,
     filename: it.record.filename,
     mimeType: it.record.mimeType,
