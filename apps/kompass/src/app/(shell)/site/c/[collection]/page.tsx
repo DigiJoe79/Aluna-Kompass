@@ -1,5 +1,5 @@
 import { requirePermission } from '@kompass/core';
-import { activeTemplate, listEntries, widgetOf } from '@kompass/module-site';
+import { activeTemplate, entryLabel, listEntries } from '@kompass/module-site';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -26,15 +26,8 @@ export default async function CollectionPage(props: { params: Promise<{ collecti
   const t = await getTranslations('site.entries');
   const locales = deps.locales();
   const leading = locales[0] ?? 'de';
-  const labelField = Object.entries(col.fields).find(([, f]) => ['text', 'localized', 'markdown'].includes(widgetOf(f)))?.[0];
 
-  const rows = result.value.map((entry) => {
-    const data = entry.data as Record<string, unknown>;
-    const raw = labelField ? data[labelField] : undefined;
-    const label =
-      typeof raw === 'string' ? raw : raw && typeof raw === 'object' ? String((raw as Record<string, string>)[leading] ?? '') : '';
-    return { id: entry.id, label: label || entry.slug || entry.id, isPublished: entry.isPublished };
-  });
+  const rows = result.value.map((entry) => ({ id: entry.id, label: entryLabel(col, entry, leading), isPublished: entry.isPublished }));
 
   return (
     <>

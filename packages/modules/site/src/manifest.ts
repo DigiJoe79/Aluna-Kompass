@@ -3,6 +3,7 @@ import { SITE_MCP_TOOLS } from './mcp-tools';
 import { siteMediaReferences } from './references';
 import { SITE_SETTINGS } from './settings';
 import { activeTemplate } from './service';
+import { siteSetTranslations, siteTranslatables } from './translations';
 
 export const SITE_PERMISSIONS = ['site.view', 'site.manage', 'site.publish'] as const;
 
@@ -41,6 +42,8 @@ export const siteModule: ModuleManifest = defineModule({
   navigationFor: siteNavigationFor,
   mcpTools: SITE_MCP_TOOLS,
   mediaReferences: siteMediaReferences,
+  translatables: siteTranslatables,
+  setTranslations: siteSetTranslations,
   files: true,
   providedFiles: ['template'],
 });

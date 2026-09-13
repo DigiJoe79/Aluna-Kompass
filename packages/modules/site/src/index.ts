@@ -22,4 +22,5 @@ export * from './pipeline/build';
 export * from './pipeline/copy';
 export * from './pipeline/publish';
 export * from './pipeline/images';
+export { entryLabel, localizedPaths } from './translations';
 

@@ -1073,7 +1073,7 @@ git commit -m "feat(projects): translation hooks"
   - `localizedPaths(fields: Record<string, FieldSchema>, value: Record<string, unknown>, prefix?: string): Record<string, Record<string, LocalizedValue>>` — jede `localized`-Stelle, auch in `objectList`, als Pfad `faq[2].answer`.
   - `siteTranslatables(deps, ctx)`, `siteSetTranslations(deps, ctx, input)` mit `entityType` `site.variables` (`id: 'variables'`, `href: '/site/variables'`, `label`: Template-Name) und `site.entry` (`href: /site/c/<collection>/<id>`), beide mit `locales: template.schema.locales`.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 ```ts
 // packages/modules/site/tests/translations.test.ts
@@ -1203,12 +1203,12 @@ describe('siteSetTranslations', () => {
 });
 ```
 
-- [ ] **Step 2: Test laufen lassen, rot**
+- [x] **Step 2: Test laufen lassen, rot**
 
 Run: `pnpm --filter @kompass/module-site test -- translations`
 Expected: FAIL — `../src/translations` fehlt.
 
-- [ ] **Step 3: Helfer und Haken schreiben**
+- [x] **Step 3: Helfer und Haken schreiben**
 
 ```ts
 // packages/modules/site/src/translations.ts
@@ -1316,12 +1316,12 @@ Manifest: in `packages/modules/site/src/manifest.ts` `import { siteSetTranslatio
 
 Index: in `packages/modules/site/src/index.ts` ergänzen: `export { entryLabel, localizedPaths } from './translations';` — nur die zwei Helfer, nicht die Haken.
 
-- [ ] **Step 4: Tests laufen lassen**
+- [x] **Step 4: Tests laufen lassen**
 
 Run: `pnpm --filter @kompass/module-site test`
 Expected: PASS. `markdown({ localized: true })` setzt im Template-Paket `widget: 'localized'` mit `markdown: true` daneben (`packages/site-template/src/index.ts`, Funktion `wrap`), landet also im selben Zweig wie `text({ localized: true })`.
 
-- [ ] **Step 5: Listenseite auf `entryLabel` umstellen**
+- [x] **Step 5: Listenseite auf `entryLabel` umstellen**
 
 In `apps/kompass/src/app/(shell)/site/c/[collection]/page.tsx` den Import `widgetOf` durch `entryLabel` ersetzen (`import { activeTemplate, entryLabel, listEntries } from '@kompass/module-site';`) und die Zeilen von `const labelField = …` bis zum Ende von `const rows = …` ersetzen durch:
 
@@ -1332,7 +1332,7 @@ In `apps/kompass/src/app/(shell)/site/c/[collection]/page.tsx` den Import `widge
 Run: `pnpm typecheck` und `pnpm --filter @kompass/app test`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/modules/site/src/translations.ts packages/modules/site/src/manifest.ts packages/modules/site/src/index.ts packages/modules/site/tests/translations.test.ts "apps/kompass/src/app/(shell)/site/c/[collection]/page.tsx"
