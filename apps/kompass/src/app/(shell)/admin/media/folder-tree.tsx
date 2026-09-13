@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import type { ActionState } from '@/lib/actions';
 import { createFolderAction, deleteFolderAction, renameFolderAction } from './actions';
+import { flattenFolderTree } from './folder-tree-model';
 import type { Folder } from './types';
 import { Input } from '@/components/ui/input';
 
@@ -30,14 +31,14 @@ export function FolderTree({
       <a href={folderHref(null)} className={`block rounded px-2 py-1 ${current === null ? 'bg-selected text-selected-ink' : 'hover:bg-row-hover'}`}>
         {t('root')}
       </a>
-      {folders.map((f) => (
+      {flattenFolderTree(folders).map((f) => (
         <a
           key={f.path}
           href={folderHref(f.path)}
           className={`block rounded px-2 py-1 ${current === f.path ? 'bg-selected text-selected-ink' : 'hover:bg-row-hover'}`}
-          style={{ paddingLeft: `${0.5 + (f.path.split('/').length - 1) * 0.75}rem` }}
+          style={{ paddingLeft: `${0.5 + f.depth * 0.75}rem` }}
         >
-          {f.path.split('/').at(-1)} <span className="text-ink-2">({f.assetCount})</span>
+          {f.name} <span className="text-ink-2">({f.assetCount})</span>
         </a>
       ))}
 
