@@ -78,10 +78,19 @@ export default defineTemplate({
 });
 ```
 
-Die Helfer (`text`, `markdown`, `number`, `asset`, `select`, `list`) erzeugen
-Zod-Schemata mit `.meta({ widget, label, … })`. Zod ist damit die einzige
-Sprache für Validierung, Maskenerzeugung, veröffentlichte Sichten und
-MCP-Schemata — dieselbe, die der Kern schon benutzt.
+Die Helfer (`text`, `markdown`, `number`, `asset`, `select`, `list`,
+`reference`, `references`) erzeugen Zod-Schemata mit `.meta({ widget, label,
+… })`. Zod ist damit die einzige Sprache für Validierung, Maskenerzeugung,
+veröffentlichte Sichten und MCP-Schemata — dieselbe, die der Kern schon
+benutzt.
+
+`reference({ view, where?, key?, labelField? })` und `references({ …, max })`
+verweisen auf Datensätze einer veröffentlichten Sicht (Kern oder Modul aus
+`uses`). Gespeichert wird `key` (Vorgabe `slug`), gezeigt `labelField`
+(Vorgabe `name`); `where` kennt Gleichheit und `{ present: true }`. Leer
+heißt: das Template entscheidet. Ein Wert, der die Bedingung nicht mehr
+erfüllt, wird beim Export `null` und als Befund gemeldet. Design und
+Begründung: `2026-09-13-startseiten-referenzen-und-nacharbeiten-design.md`.
 
 `uses` zieht veröffentlichte Sichten aktivierter Fachmodule dazu. Ist ein dort
 genanntes Modul abgeschaltet, meldet das der Publish, statt stumm eine leere

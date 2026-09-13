@@ -102,38 +102,6 @@ gestrichen worden. Eine gezählte Zahl verspricht nichts und wächst von selbst.
 
 **Wann:** Sobald die Zahl zweistellig ist; heute stünde dort 2.
 
-## 17. Startseiten-Hund am Tier markieren statt per Slug-Variable
-
-**Was:** Ein Kennzeichen am Tier, „auf der Startseite zeigen“, gesetzt mit
-einem Knopf in der Tiermaske — wie „Hauptfoto“ bei den Fotos. Genau eines je
-Gruppe: ein suchender Hund, ein vermittelter Hund mit Geschichte; wer markiert,
-löst die vorherige Markierung der Gruppe. Kommt als Feld in die veröffentlichte
-Sicht. Das Template liest es und lässt die beiden Variablen „Hund auf der
-Startseite“ und „Geschichte auf der Startseite“ fallen; ohne Markierung gilt
-weiter die Automatik. Betrifft Schema und Migration, Dienst und MCP-Werkzeug,
-Maske, Sicht, Seed und Tests, dazu Template und Deklaration.
-
-**Warum:** Heute tippt jemand einen Slug in eine Variable; ein Tippfehler oder
-ein inzwischen vermittelter Hund lässt den Abschnitt still verschwinden. Am
-Tier selbst ist die Wahl sichtbar und kann nicht ins Leere zeigen (Joe,
-2026-09-13).
-
-**Auch für Projekte:** Dieselbe Markierung an Projekten, dort für zwei
-Plätze auf der Startseite statt einem. Heute zeigt das Template die ersten
-zwei nach Sortierung; wer teasern will, muss die Reihenfolge der ganzen Liste
-umbauen (Joe, 2026-09-13).
-
-**Vorher zu klären:** Ob „auf der Startseite zeigen“ eine feste Funktion
-von Kompass ist — ein Kennzeichen am Datensatz, das jedes Template lesen
-kann — oder etwas, das ein Template deklariert, weil erst das Template weiß,
-wie viele Plätze es hat und für welche Sammlungen und Sichten. Die zweite
-Lesart würde die Deklaration um eine Art „Teaser-Plätze je Sicht“ erweitern
-und Kompass die Maske dafür bauen lassen; die erste ist einfacher, aber die
-Zahl der Plätze stünde dann im Kern.
-
-**Wann:** Nach der Inhaltssitzung, zusammen mit Punkt 16 — beides sind
-Felder an der Tiergeschichte und der Tiermaske.
-
 ## 18. Vereinfachter Zuwendungsnachweis als Download (Vereinsrepo)
 
 **Was:** Ein PDF in der Sammlung „Formulare“, das der Spender zum Kontoauszug

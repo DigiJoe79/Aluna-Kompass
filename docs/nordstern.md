@@ -240,6 +240,8 @@ Akte läuft weiter, gehört aber nicht mehr zu diesem Schritt.
 - Erledigt am 2026-09-12: Projekte als eigenes Modul, mit Verweisen nach
   aussen statt einer Plattformspalte. Kam vor Finanzen, weil Finanzen die
   Projekte erweitert.
+- Erledigt am 2026-09-13: Referenzfelder in der Deklaration; Startseitenplätze
+  sind Template-Variablen mit Auswahl, nicht Kennzeichen am Tier.
 - Browsertest bei Handybreite (Backlog 3).
 
 **Fertig, wenn:** Alunas Seite aus Prod publiziert wird, WordPress abgeschaltet
