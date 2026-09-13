@@ -167,7 +167,7 @@ Was die drei Module melden:
 
 | Modul | entityType | Felder | Schreibt über |
 |---|---|---|---|
-| Tiere | `animal` | `birthText`, `sizeText`, `traits` (Liste), `summary`, `body`, `story.quote` (nur wenn eine Geschichte existiert) | `updateAnimal`; `story.quote` über `setAnimalStory` (eine Gruppe mit beidem ergibt zwei Aufrufe, weil es zwei Services sind) |
+| Tiere | `animal` | `birthText`, `sizeText`, `traits` (Liste), `summary`, `body`; mit Geschichte zusätzlich `story.quote`, `story.beforeCaption`, `story.afterCaption` | `updateAnimal`; die `story.*`-Felder über `setAnimalStory` (eine Gruppe mit beidem ergibt zwei Aufrufe, weil es zwei Services sind) |
 | Projekte | `project` | `name`, `summary`, `body` | `updateProject` |
 | Site | `site.variables` (eine Zeile, `id: 'variables'`) | alle `localized`-Variablen des Templates, auch in `objectList` | `setValues` |
 | Site | `site.entry` | alle `localized`-Felder der Sammlung, auch in `objectList` | `updateEntry` |
@@ -260,7 +260,21 @@ Projekte und Site legen mindestens je einen Datensatz mit gefüllter deutscher
 und leerer englischer Fassung an, damit `translations_list_gaps` in der
 Entwicklung etwas zeigt. Die vorhandenen `seed.test.ts` prüfen das je Modul.
 
-## 8. Nicht-Ziele
+## 8. Abhängigkeiten und Reihenfolge
+
+Diese Spec kommt nach den vier Plänen der Startseiten-Spec
+(`2026-09-13-startseiten-referenzen-und-nacharbeiten-design.md`):
+
+- Deren § 8 macht die Bildunterschriften der Vermittlungsgeschichte
+  mehrsprachig; die Feldtabelle in § 4 setzt das voraus.
+- Beide Vorhaben fassen `packages/mcp/src/core-tools.ts`,
+  `apps/kompass/tests/mcp-tools.test.ts` und den Seed des Tiermoduls an. Keine
+  Widersprüche, nur Merge-Nähe; nacheinander ist einfacher als parallel.
+- Deren § 4.4 lässt `setValues` Referenzwerte prüfen. Der Site-Haken schreibt
+  Variablen über `setValues`; wie sich veraltete Referenzen dabei verhalten,
+  entscheidet die Startseiten-Spec, nicht diese.
+
+## 9. Nicht-Ziele
 
 - **Keine eigene Oberfläche „Übersetzungen".** Die Masken zeigen Lückenzähler,
   der Export-Prüflauf prüft Veröffentlichtes. Eine spätere Seite wäre eine
