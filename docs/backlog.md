@@ -206,5 +206,5 @@ verlinkt es.
 Nachweis nach § 50 Abs. 4 EStDV. Der verlangt neben dem Kontoauszug einen vom
 Verein erstellten Beleg. Ohne PDF muss der Spender fragen.
 
-**Wann:** Sobald der Bescheid über die Gemeinnützigkeit da ist — vorher gilt
-die FAQ-Antwort ohnehin nicht.
+**Wann:** Jetzt möglich — der Bescheid nach § 60a AO liegt vor (Joe,
+2026-09-13). Vor dem Go-live, damit die FAQ-Antwort auf etwas zeigt.
