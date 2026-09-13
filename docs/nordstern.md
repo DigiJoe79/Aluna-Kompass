@@ -1,6 +1,6 @@
 # Nordstern
 
-Stand 2026-09-12. Das Gesamtbild von Aluna Kompass und die Reihenfolge, in der
+Stand 2026-09-13. Das Gesamtbild von Aluna Kompass und die Reihenfolge, in der
 es entsteht. Regeln stehen in `AGENTS.md`, das Was einzelner Vorhaben in
 `docs/superpowers/specs/`, bewusst zurückgestellte Kleinigkeiten in
 `docs/backlog.md`. Dieses Dokument zeigt, wohin das alles führt.
@@ -103,11 +103,20 @@ Säule Finanzen.
 Specs: `2026-09-05-webseite-design.md` (abgelöst),
 `2026-09-07-site-template-design.md`, `2026-09-08-site-seed-design.md`.
 
-**Stand: steht, Cutover offen.** Alunas Template und seine Startinhalte liegen
-im Vereinsrepo und laufen lokal durch die Pipeline (2026-09-12: 77 Dateien,
-keine Lücken, keine Sperrworttreffer). Auf dem Testcontainer ist noch nichts
-eingelesen, ein Publish aus Test nicht abgenommen. Projekte sind seit dem
-2026-09-12 ein eigenes Modul; der Kern kennt keine Spendenplattform mehr.
+Was der Verein anbietet, entscheidet das Template, nicht der Kern. Seit dem
+2026-09-13 gilt das ausdrücklich: Ein Angebot wie die Patenschaft ist eine
+deklarierte Variable mit Schalter, und die Rechtstexte (Impressum,
+Datenschutzerklärung) entstehen im Template aus den Vereinsdaten in Kompass.
+Der Grundsatz „eine Quelle" reicht damit bis in die Pflichtangaben: Anschrift,
+Vorstand und Registereintrag stehen nirgends ein zweites Mal.
+
+**Stand: steht, Prod offen.** Test läuft mit Alunas Template und echten
+Inhalten; Publish aus Test ist seit dem 2026-09-13 der Arbeitsweg der
+Inhaltspflege (Template per Sync-Skript aus dem Vereinsrepo, Stammdaten,
+Hunde und Projekte über MCP eingetragen). Offen: der erste Publish aus Prod,
+und die Dummy-Register- und Bankdaten auf Test, die vorher durch echte
+ersetzt werden. Projekte sind seit dem 2026-09-12 ein eigenes Modul; der Kern
+kennt keine Spendenplattform mehr.
 
 ### Korrespondenz und Akte
 
@@ -309,8 +318,15 @@ entlang des Weges eines Tieres:
 - **Vermittlung.** Anfrage, Selbstauskunft und Vorkontrolle als Dokumente,
   Adoptionsvertrag als erzeugtes Dokument mit unterschriebener Fassung als
   Eingang, Schutzgebühr als Buchung, Übergabe, Nachkontrolle mit
-  Wiedervorlage.
+  Wiedervorlage. Entschieden am 2026-09-13: Bei Hunden eines Partnervereins
+  läuft die Anfrage über den Partner, nicht über Kompass; der Link zum
+  Partnerprofil ist das Kennzeichen. Der Vorgang in Kompass beginnt erst,
+  wenn der Verein selbst vermittelt.
 - **Patenschaft.** Pate als Kontakt, Beitrag als Buchung, Laufzeit.
+  Entschieden am 2026-09-13: erst mit eigenen Hunden. Solange alle Hunde vom
+  Partnerverein kommen, bietet Aluna keine Patenschaft an, das Angebot ist
+  im Template abgeschaltet, und Dauerzahler laufen über Fördermitgliedschaft
+  und Dauerspende. Der Teil wird nicht vor dem ersten eigenen Hund gebaut.
 - **Verbleib.** Vermittelt, zurückgekommen, verstorben, an Partner
   weitergegeben; jeder Wechsel mit Datum und Dokument.
 - **Rechenschaft.** Bestandsbuch und die Nachweise nach § 11
