@@ -42,6 +42,17 @@ test.describe('media library', () => {
     await expect(page.getByRole('row', { name: /frei-/ })).toHaveCount(0);
   });
 
+  test('serves a file sandboxed, so an SVG cannot run in the origin of the app', async ({ page }) => {
+    await page.goto('/admin/media');
+    await page.getByLabel('Datei hochladen').setInputFiles({ name: 'sandbox.png', mimeType: 'image/png', buffer: PNG });
+    const src = await page.getByRole('row', { name: /sandbox-/ }).locator('img').getAttribute('src');
+    expect(src).toMatch(/^\/media\//);
+    const response = await page.request.get(src!);
+    expect(response.status()).toBe(200);
+    expect(response.headers()['content-security-policy']).toBe('sandbox');
+    expect(response.headers()['x-content-type-options']).toBe('nosniff');
+  });
+
   test('remembers the grid view across a reload', async ({ page }) => {
     await page.goto('/admin/media');
     await page.getByRole('button', { name: 'Grid', exact: true }).click();
