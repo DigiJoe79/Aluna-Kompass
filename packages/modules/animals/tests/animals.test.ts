@@ -74,4 +74,13 @@ describe('animals module', () => {
     expect(unwrap(await listAnimals(d, ctxWith(['animals.view'])))).toHaveLength(2);
     expect(unwrap(await getAnimal(d, ctxWith(['animals.view']), a.id)).slug).toBe('chiara');
   });
+
+  it('the view tolerates traits that carry only one language, as the service accepts them', async () => {
+    // Über MCP kommt ein Tier auch mit `traits: { de: [...] }` an — was der
+    // Dienst annimmt, darf die Sicht beim Export nicht mit einer Exception quittieren.
+    const d = await deps();
+    const a = unwrap(await createAnimal(d, manage, { ...chiara, traits: { de: ['ruhig'] } }));
+    unwrap(await setAnimalPublished(d, manage, { id: a.id, isPublished: true }));
+    expect(publishedAnimals.load(d)[0]!.traits).toEqual({ de: ['ruhig'] });
+  });
 });

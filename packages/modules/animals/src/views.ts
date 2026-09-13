@@ -1,4 +1,4 @@
-import { definePublishedView, localizedText } from '@kompass/core';
+import { definePublishedView, localizedList, localizedText } from '@kompass/core';
 import { asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { animals } from './schema';
@@ -19,7 +19,9 @@ export const publishedAnimals = definePublishedView({
     status: z.enum(['lookingForHome', 'reserved', 'adopted']),
     isEmergency: z.boolean(),
     isSponsorable: z.boolean(),
-    traits: z.object({ de: z.array(z.string()), en: z.array(z.string()) }),
+    // Welche Sprachen vorkommen, entscheidet die Installation — und der Dienst
+    // nimmt auch ein Teil-Record an. Die Sicht darf nicht strenger sein als er.
+    traits: localizedList(),
     externalProfileUrl: z.string(),
     summary: L,
     body: L,
