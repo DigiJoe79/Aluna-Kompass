@@ -244,7 +244,7 @@ Run: `Kompass/sync-template.sh` aus dem Vereinsrepo (liest den Zielpfad aus sein
 
 - [ ] **Step 2: Einlesen**
 
-In Kompass (Test) unter Webseite → Template „Template einlesen". Erwartete Befunde: zwei Umbenennungen (`featuredAnimalSlug → featuredAnimal`, `featuredStorySlug → featuredStory`), beide als Typwechsel `text → reference` verlustfrei, ein neues Feld `featuredProjects`. Übernehmen.
+In Kompass (Test) unter Webseite → Template „Template einlesen". Erwartete Befunde: zwei Umbenennungen (`featuredAnimalSlug → featuredAnimal`, `featuredStorySlug → featuredStory`) und ein neues Feld `featuredProjects`. Kein Typwechsel-Befund: `planResync` vergleicht Typen nur bei gleichem Pfad, eine Umbenennung übernimmt den Wert unverändert (`packages/modules/site/src/resync/plan.ts`, Abschnitt 3). Der Slug oder das Wort `auto` kommt so mit; die Verlustfrei-Regel aus Plan 3, Task 7, greift nur bei einem Typwechsel ohne Umbenennung. Übernehmen.
 
 - [ ] **Step 3: Variablen**
 
