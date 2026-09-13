@@ -270,9 +270,10 @@ Diese Spec kommt nach den vier Plänen der Startseiten-Spec
 - Beide Vorhaben fassen `packages/mcp/src/core-tools.ts`,
   `apps/kompass/tests/mcp-tools.test.ts` und den Seed des Tiermoduls an. Keine
   Widersprüche, nur Merge-Nähe; nacheinander ist einfacher als parallel.
-- Deren § 4.4 lässt `setValues` Referenzwerte prüfen. Der Site-Haken schreibt
-  Variablen über `setValues`; wie sich veraltete Referenzen dabei verhalten,
-  entscheidet die Startseiten-Spec, nicht diese.
+- Deren § 4.4 lässt `setValues` jeden Referenzwert prüfen, auch unveränderte.
+  Der Site-Haken schreibt Variablen über `setValues`; eine veraltete Referenz
+  ließe damit jede Variablen-Übersetzung scheitern. Backlog-Punkt 19 (nur
+  geänderte Referenzwerte prüfen) kommt vor oder mit dieser Spec.
 
 ## 9. Nicht-Ziele
 
