@@ -136,3 +136,34 @@ Agenten als zweitem Kanal wird das der Normalfall, nicht die Ausnahme.
 
 **Wann:** Vor dem ersten Übersetzungslauf gegen Prod, spätestens sobald
 Inhalte parallel in Maske und über MCP gepflegt werden.
+
+## 21. Alt-Text am Medium
+
+**Was:** Ein optionales Feld `alt` (mehrsprachig) am Medien-Datensatz, gepflegt
+im Detail-Dialog der Mediathek und über `media_*`-Werkzeuge. Der Website-Export
+gibt es in `assets[]` mit, das Template setzt es statt `alt=""`.
+
+**Warum:** Das Basis-Template markiert heute jedes Bild als dekorativ. Für eine
+barrierefreie Webseite braucht jedes inhaltliche Bild eine Beschreibung, und
+sie gehört ans Medium, nicht an jede Verwendung. Das Feld ändert den
+Template-Vertrag (`content.json`), deshalb nicht nebenbei (Durchsicht
+2026-09-13).
+
+**Wann:** Mit dem nächsten Schritt am Template-Vertrag, oder sobald die
+Webseite barrierefrei sein soll.
+
+## 22. Referenzabfrage der Mediathek in einer Sammelabfrage
+
+**Was:** `listMediaAssets` fragt heute je Asset jedes aktive Modul über
+`mediaReferences(deps, assetId)`. Der Haken des Website-Moduls liest dafür
+jedes Mal alle Sammlungseinträge und den Template-Stand. Ein zweiter,
+optionaler Haken `mediaReferencesAll(deps)` liefert alle Fundstellen eines
+Moduls auf einmal; `listMediaAssets` nutzt ihn, wo er da ist, und fällt sonst
+auf die Einzelabfrage zurück.
+
+**Warum:** Aufwand wächst mit Assets mal Einträgen. Bei Dutzenden Assets
+unmerklich, bei Hunderten spürbar (Durchsicht 2026-09-13). Kein Verhalten
+ändert sich, deshalb erst, wenn es messbar ist.
+
+**Wann:** Sobald die Mediathek-Seite spürbar langsam wird, oder mit dem
+Auswahl-Dialog in den Formularen, der dieselbe Liste lädt.
