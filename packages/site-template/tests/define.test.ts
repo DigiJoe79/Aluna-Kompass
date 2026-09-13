@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { z } from 'zod';
-import { asset, date, defineTemplate, list, markdown, number, objectList, select, text, type InferContent } from '../src';
+import { asset, date, defineTemplate, list, markdown, number, objectList, reference, references, select, text, type InferContent } from '../src';
 
 const template = defineTemplate({
   name: 'Verein Basis',
@@ -111,5 +111,37 @@ describe('InferContent', () => {
     expectTypeOf<Content['assets'][number]['filename']>().toEqualTypeOf<string>();
     // Ein Feld, das es nicht gibt, ist ein Typfehler — das ist der Zweck.
     expectTypeOf<'subtitle' extends keyof Content['variables'] ? true : false>().toEqualTypeOf<false>();
+  });
+});
+
+describe('reference fields', () => {
+  it('reference carries view, key, labelField and where as widget metadata, with slug and name as defaults', () => {
+    const schema = z.toJSONSchema(reference({ view: 'animals', label: 'Hund auf der Startseite', where: { status: 'lookingForHome', story: { present: true } } }), { io: 'input' }) as Record<string, unknown>;
+    expect(schema).toMatchObject({ widget: 'reference', view: 'animals', key: 'slug', labelField: 'name', label: 'Hund auf der Startseite', where: { status: 'lookingForHome', story: { present: true } } });
+    expect(reference({ view: 'animals' }).parse(null)).toBe(null);
+    expect(reference({ view: 'animals' }).parse('chiara')).toBe('chiara');
+    expect(reference({ view: 'animals' }).parse(undefined)).toBe(null);
+  });
+
+  it('references is an ordered list with maxItems, and needs a positive max', () => {
+    const schema = z.toJSONSchema(references({ view: 'projects', max: 2, label: 'Projekte' }), { io: 'input' }) as Record<string, unknown>;
+    expect(schema).toMatchObject({ widget: 'references', view: 'projects', key: 'slug', labelField: 'name', maxItems: 2 });
+    expect(references({ view: 'projects', max: 2 }).parse(['a', 'b'])).toEqual(['a', 'b']);
+    expect(references({ view: 'projects', max: 2 }).safeParse(['a', 'b', 'c']).success).toBe(false);
+    expect(() => references({ view: 'projects', max: 0 })).toThrow(/max/);
+    expect(() => references({ view: 'projects', max: 1.5 })).toThrow(/max/);
+  });
+
+  it('rejects an empty view and anything in where beyond a scalar or { present: true }', () => {
+    expect(() => reference({ view: ' ' })).toThrow(/view/);
+    expect(() => reference({ view: 'animals', where: { story: { present: false } as never } })).toThrow(/where/);
+    expect(() => reference({ view: 'animals', where: { status: ['a'] as never } })).toThrow(/where/);
+    expect(() => reference({ view: 'animals', where: { story: { present: true, extra: 1 } as never } })).toThrow(/where/);
+  });
+
+  it('types a reference variable as string | null | undefined and a references variable as string[] | undefined', () => {
+    const t = defineTemplate({ name: 'X', locales: ['de'], variables: { dog: reference({ view: 'animals' }), projects: references({ view: 'projects', max: 2 }) }, collections: {}, uses: ['animals', 'projects'] });
+    expectTypeOf<InferContent<typeof t>['variables']['dog']>().toEqualTypeOf<string | null | undefined>();
+    expectTypeOf<InferContent<typeof t>['variables']['projects']>().toEqualTypeOf<string[] | undefined>();
   });
 });

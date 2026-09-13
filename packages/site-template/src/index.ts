@@ -153,6 +153,60 @@ export const objectList = <F extends Fields>(opts: FieldOptions & { max?: number
     .meta(meta(opts, 'objectList')) as z.ZodType<Array<{ [K in keyof F]: Infer<F[K]> }>>;
 
 // ---------------------------------------------------------------------------
+// Verweise auf Datensätze veröffentlichter Sichten
+// ---------------------------------------------------------------------------
+
+/**
+ * Eine Bedingung über Felder der Sicht. Ein Skalar heißt Gleichheit,
+ * `{ present: true }` heißt „nicht null“. Mehr Operatoren gibt es bewusst nicht
+ * (Spec 2026-09-13, Entscheidung 3): Was ein Template darüber hinaus filtert,
+ * filtert es selbst.
+ */
+export type WhereValue = string | number | boolean | { present: true };
+export type Where = Record<string, WhereValue>;
+
+export interface ReferenceOptions extends FieldOptions {
+  /** Name einer veröffentlichten Sicht des Kerns oder eines Moduls aus `uses`. */
+  view: string;
+  /** Feld der Sicht, dessen Wert gespeichert wird. Vorgabe `slug`. */
+  key?: string;
+  /** Feld der Sicht, das die Auswahl zeigt. Vorgabe `name`. */
+  labelField?: string;
+  where?: Where;
+}
+
+const isPresentClause = (v: unknown): v is { present: true } =>
+  !!v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 1 && (v as { present?: unknown }).present === true;
+
+function checkReference(opts: ReferenceOptions): void {
+  if (!opts.view || !opts.view.trim()) throw new Error('reference needs a view');
+  for (const [field, value] of Object.entries(opts.where ?? {})) {
+    const scalar = typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+    if (!scalar && !isPresentClause(value)) throw new Error(`invalid where for ${field}: only a scalar or { present: true }`);
+  }
+}
+
+const referenceMeta = (opts: ReferenceOptions) => ({
+  view: opts.view.trim(),
+  key: opts.key ?? 'slug',
+  labelField: opts.labelField ?? 'name',
+  ...(opts.where === undefined ? {} : { where: opts.where }),
+});
+
+/** Ein Verweis auf genau einen Datensatz; `null` heißt: keine Wahl, das Template entscheidet. */
+export const reference = (opts: ReferenceOptions): z.ZodType<string | null> => {
+  checkReference(opts);
+  return z.string().nullable().default(null).meta(meta(opts, 'reference', referenceMeta(opts))) as z.ZodType<string | null>;
+};
+
+/** Eine geordnete Liste von Verweisen mit fester Zahl an Plätzen. */
+export const references = (opts: ReferenceOptions & { max: number }): z.ZodType<string[]> => {
+  checkReference(opts);
+  if (!Number.isInteger(opts.max) || opts.max < 1) throw new Error(`references needs a positive integer max: ${opts.view}`);
+  return z.array(z.string()).max(opts.max).meta(meta(opts, 'references', referenceMeta(opts))) as z.ZodType<string[]>;
+};
+
+// ---------------------------------------------------------------------------
 // InferContent — die Form von content.json, abgeleitet aus der Deklaration
 // ---------------------------------------------------------------------------
 
