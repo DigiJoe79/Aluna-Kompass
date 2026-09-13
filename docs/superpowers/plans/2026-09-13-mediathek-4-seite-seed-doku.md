@@ -668,7 +668,7 @@ git commit -m "docs: preview files are a cache, and the old media spec points to
 
 ### Task 4: Alle drei Prüfringe
 
-- [ ] **Step 1: `pnpm verify`**
+- [x] **Step 1: `pnpm verify`**
 
 ```bash
 pnpm verify
@@ -676,7 +676,7 @@ pnpm verify
 
 Erwartung: Typecheck, alle Tests, E2E kalt gegen `next dev`, Image-Build und E2E gegen den Container grün. Der Container-Ring prüft, dass `sharp` im Image für den Kern auflösbar ist — das Site-Modul brachte es schon mit, der Kern nutzt dieselbe Version. Schlägt der Container-Ring wegen `sharp` fehl: `Dockerfile` und `output: 'standalone'` prüfen, ob `packages/core` seine Abhängigkeit im Trace hat (`outputFileTracingRoot` steht auf dem Repo-Stamm).
 
-- [ ] **Step 2: Nichts committen, Joe pusht**
+- [x] **Step 2: Nichts committen, Joe pusht**
 
 Der Push ist nicht Teil des Plans.
 
