@@ -26,7 +26,7 @@ export async function uploadMediaAction(formData: FormData): Promise<ActionState
   // „hochgeladen“ wäre gelogen, und im offenen Ordner erschiene nichts.
   const { record, created } = result.value;
   const message = created ? t('media.uploaded') : t('media.alreadyStored', { filename: record.filename, folder: record.folder ?? t('media.rootFolder') });
-  return { status: 'success', message, data: record };
+  return { status: 'success', message, data: { id: record.id, filename: record.filename, folder: record.folder, created } };
 }
 
 export async function deleteMediaAction(id: string): Promise<ActionState> {

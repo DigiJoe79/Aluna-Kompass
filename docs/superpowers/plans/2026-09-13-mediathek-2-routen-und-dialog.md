@@ -312,7 +312,7 @@ git commit -m "feat(app): GET /media hands the chooser the filtered listing and 
 **Interfaces:**
 - Produces: `uploadMediaAction(formData): Promise<ActionState>`; bei Erfolg `data: { id: string; filename: string; folder: string | null; created: boolean }`. Meldung wie bisher (`media.uploaded` bzw. `media.alreadyStored`).
 
-- [ ] **Step 1: Die Rückgabe umstellen**
+- [x] **Step 1: Die Rückgabe umstellen**
 
 In `uploadMediaAction` die letzte Zeile ersetzen:
 
@@ -322,7 +322,7 @@ In `uploadMediaAction` die letzte Zeile ersetzen:
 
 Die Mediathek-Seite liest `data` nicht (sie lädt neu); der Dialog in Task 4 liest `id` und `created`.
 
-- [ ] **Step 2: Prüfen und committen**
+- [x] **Step 2: Prüfen und committen**
 
 ```bash
 pnpm typecheck
