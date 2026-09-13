@@ -154,17 +154,17 @@ test.describe('media library', () => {
 
     // Ein PDF für den Typfilter
     await page.goto('/admin/media');
-    await page.getByLabel('Datei hochladen').setInputFiles({ name: 'satzung.pdf', mimeType: 'application/pdf', buffer: PDF });
-    await expect(page.getByRole('row', { name: /satzung-/ })).toBeVisible();
+    await page.getByLabel('Datei hochladen').setInputFiles({ name: 'mitgliederordnung.pdf', mimeType: 'application/pdf', buffer: PDF });
+    await expect(page.getByRole('row', { name: /mitgliederordnung-/ })).toBeVisible();
 
     await page.getByLabel('Suchen').fill('Rex');
     await page.getByRole('button', { name: 'Filtern' }).click();
     await expect(page).toHaveURL(/q=Rex/);
     await expect(page.getByRole('row', { name: /rex-foto-/ })).toBeVisible();
-    await expect(page.getByRole('row', { name: /satzung-/ })).toHaveCount(0);
+    await expect(page.getByRole('row', { name: /mitgliederordnung-/ })).toHaveCount(0);
 
     await page.goto('/admin/media?kind=pdf');
-    await expect(page.getByRole('row', { name: /satzung-/ })).toBeVisible();
+    await expect(page.getByRole('row', { name: /mitgliederordnung-/ })).toBeVisible();
     await expect(page.getByRole('row', { name: /rex-foto-/ })).toHaveCount(0);
 
     await page.goto('/admin/media?sort=name');
