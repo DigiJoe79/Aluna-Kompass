@@ -53,6 +53,20 @@ test.describe('media library', () => {
     expect(response.headers()['x-content-type-options']).toBe('nosniff');
   });
 
+  test('says so when the same bytes are uploaded a second time, and names the folder they live in', async ({ page }) => {
+    await page.goto('/admin/media');
+    await page.getByLabel('Ordnername').fill('bilder');
+    await page.getByRole('button', { name: 'Neuer Ordner' }).click();
+    await page.getByRole('link', { name: /bilder/ }).click();
+    await page.getByLabel('Datei hochladen').setInputFiles({ name: 'einmal.png', mimeType: 'image/png', buffer: PNG });
+    await expect(page.getByRole('row', { name: /einmal-/ })).toBeVisible();
+
+    await page.getByRole('link', { name: 'Alle Dateien' }).click();
+    await page.getByLabel('Datei hochladen').setInputFiles({ name: 'zweimal.png', mimeType: 'image/png', buffer: PNG });
+    await expect(page.getByText(/Diese Datei gibt es schon: „einmal-[0-9a-f]+\.png“ im Ordner „bilder“/)).toBeVisible();
+    await expect(page.getByRole('row', { name: /zweimal-/ })).toHaveCount(0);
+  });
+
   test('remembers the grid view across a reload', async ({ page }) => {
     await page.goto('/admin/media');
     await page.getByRole('button', { name: 'Grid', exact: true }).click();

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { coreModule } from '../src/core-module';
 import { auditLog } from '../src/db/schema';
 import { defineModule } from '../src/modules/manifest';
-import { getMediaAsset, listMediaAssets, storeMediaAsset } from '../src/media/service';
+import { getMediaAsset, listMediaAssets, storeMediaAsset, storeMediaAssetDetailed } from '../src/media/service';
 import { unwrap } from '../src/result';
 import { writeSettingInternal } from '../src/settings/service';
 import { createTestDeps, ctxWith, insertUser } from '../src/testing';
@@ -30,6 +30,18 @@ describe('media service', () => {
     expect(a.filename).toMatch(/^fur-[0-9a-f]{12}\.png$/);
     const b = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'Straße Foto.svg', bytes: SVG, declaredMimeType: 'image/svg+xml' }));
     expect(b.filename).toMatch(/^strasse-foto-[0-9a-f]{12}\.svg$/);
+  });
+
+  it('says whether the bytes were new or already stored', async () => {
+    const deps = createTestDeps();
+    const ctx = ctxWith(['media.upload'], insertUser(deps, {}));
+    const first = unwrap(await storeMediaAssetDetailed(deps, ctx, { originalName: 'a.png', bytes: PNG }));
+    expect(first.created).toBe(true);
+    const second = unwrap(await storeMediaAssetDetailed(deps, ctx, { originalName: 'b.png', bytes: PNG }));
+    expect(second.created).toBe(false);
+    expect(second.record.id).toBe(first.record.id);
+    const denied = await storeMediaAssetDetailed(deps, ctxWith([], 'U'), { originalName: 'a.png', bytes: PNG });
+    expect(denied.ok === false && denied.error.type === 'forbidden').toBe(true);
   });
 
   it('speichert die vollständige SHA-256 der Datei', async () => {

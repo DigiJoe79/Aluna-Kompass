@@ -1,6 +1,6 @@
 'use server';
 
-import { createMediaFolder, deleteMediaAsset, deleteMediaFolder, moveMediaAsset, renameMediaFolder, storeMediaAsset } from '@kompass/core';
+import { createMediaFolder, deleteMediaAsset, deleteMediaFolder, moveMediaAsset, renameMediaFolder, storeMediaAssetDetailed } from '@kompass/core';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { toActionState, type ActionState } from '@/lib/actions';
@@ -14,14 +14,19 @@ export async function uploadMediaAction(formData: FormData): Promise<ActionState
   if (!(file instanceof File) || file.size === 0) {
     return { status: 'error', message: t('content.noFile'), fieldErrors: {} };
   }
-  const result = await storeMediaAsset(deps, ctx, {
+  const result = await storeMediaAssetDetailed(deps, ctx, {
     originalName: file.name,
     bytes: new Uint8Array(await file.arrayBuffer()),
     declaredMimeType: file.type,
     folder: typeof folder === 'string' && folder !== '' ? folder : null,
   });
   revalidatePath('/admin/media');
-  return toActionState(result, t, t('media.uploaded'));
+  if (!result.ok) return toActionState(result, t);
+  // Dedup-Treffer: Der Datensatz lag schon da, womöglich in einem anderen Ordner —
+  // „hochgeladen“ wäre gelogen, und im offenen Ordner erschiene nichts.
+  const { record, created } = result.value;
+  const message = created ? t('media.uploaded') : t('media.alreadyStored', { filename: record.filename, folder: record.folder ?? t('media.rootFolder') });
+  return { status: 'success', message, data: record };
 }
 
 export async function deleteMediaAction(id: string): Promise<ActionState> {

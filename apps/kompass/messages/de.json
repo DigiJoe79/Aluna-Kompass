@@ -62,6 +62,8 @@
     "upload": "Datei hochladen",
     "uploaded": "Datei hochgeladen.",
     "uploading": "Datei wird hochgeladen …",
+    "alreadyStored": "Diese Datei gibt es schon: „{filename}“ im Ordner „{folder}“.",
+    "rootFolder": "Wurzel",
     "delete": "Löschen",
     "confirmDelete": "Diese Datei löschen?",
     "confirmDeleteBody": "Die Datei wird entfernt. Der Löschvorgang steht im Änderungsprotokoll.",

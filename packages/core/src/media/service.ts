@@ -75,8 +75,14 @@ async function prepare(input: StoreMediaInput, trustDeclaredPdf: boolean = false
   return ok({ mimeType, ext: EXTENSIONS[mimeType] as string, hash: createHash('sha256').update(input.bytes).digest('hex'), width, height });
 }
 
-/** Ohne Rechteprüfung; für Dokument-Rendering und Import. Validiert und protokolliert trotzdem. */
-export async function storeMediaInternal(deps: Deps, ctx: CallContext, input: StoreMediaInput, prepared?: Prepared): Promise<Result<MediaAssetRecord>> {
+/** Was `storeMedia*` zurückgibt, wenn der Aufrufer wissen muss, ob die Bytes neu waren. */
+export interface StoredMedia {
+  record: MediaAssetRecord;
+  /** false = Dedup-Treffer: der Datensatz gab es schon, sein Ordner und Name bleiben. */
+  created: boolean;
+}
+
+async function storeDetailed(deps: Deps, ctx: CallContext, input: StoreMediaInput, prepared?: Prepared): Promise<Result<StoredMedia>> {
   const prep = prepared ? ok(prepared) : await prepare(input, true);
   if (!prep.ok) return prep;
   const meta = prep.value;
@@ -87,7 +93,7 @@ export async function storeMediaInternal(deps: Deps, ctx: CallContext, input: St
     .from(mediaAssets)
     .where(sql`${mediaAssets.filename} like ${`%-${meta.hash.slice(0, 12)}.${meta.ext}`}`)
     .get();
-  if (existing) return ok(existing); // Dedup: der Ordner des vorhandenen Datensatzes bleibt
+  if (existing) return ok({ record: existing, created: false }); // Dedup: der Ordner des vorhandenen Datensatzes bleibt
   const folder = input.folder && folderExists(deps, input.folder) ? input.folder : null;
   await deps.media.write(filename, input.bytes);
   return deps.db.transaction((tx: DbOrTx) => {
@@ -97,16 +103,28 @@ export async function storeMediaInternal(deps: Deps, ctx: CallContext, input: St
       .run();
     const record = tx.select().from(mediaAssets).where(eq(mediaAssets.id, id)).get() as MediaAssetRecord;
     recordAudit(tx, deps, ctx, { action: 'media.upload', entityType: 'mediaAsset', entityId: id, after: record, summary: `Datei ${filename} abgelegt` });
-    return ok(record);
+    return ok({ record, created: true });
   });
 }
 
-export async function storeMediaAsset(deps: Deps, ctx: CallContext, input: StoreMediaInput): Promise<Result<MediaAssetRecord>> {
+const recordOnly = (r: Result<StoredMedia>): Result<MediaAssetRecord> => (r.ok ? ok(r.value.record) : r);
+
+/** Ohne Rechteprüfung; für Dokument-Rendering und Import. Validiert und protokolliert trotzdem. */
+export async function storeMediaInternal(deps: Deps, ctx: CallContext, input: StoreMediaInput, prepared?: Prepared): Promise<Result<MediaAssetRecord>> {
+  return recordOnly(await storeDetailed(deps, ctx, input, prepared));
+}
+
+/** Wie `storeMediaAsset`, sagt aber dazu, ob die Datei neu war oder ein Dedup-Treffer. */
+export async function storeMediaAssetDetailed(deps: Deps, ctx: CallContext, input: StoreMediaInput): Promise<Result<StoredMedia>> {
   const denied = requirePermission(ctx, 'media.upload');
   if (denied) return denied;
   const prepared = await prepare(input);
   if (!prepared.ok) return prepared;
-  return storeMediaInternal(deps, ctx, input, prepared.value);
+  return storeDetailed(deps, ctx, input, prepared.value);
+}
+
+export async function storeMediaAsset(deps: Deps, ctx: CallContext, input: StoreMediaInput): Promise<Result<MediaAssetRecord>> {
+  return recordOnly(await storeMediaAssetDetailed(deps, ctx, input));
 }
 
 /**
