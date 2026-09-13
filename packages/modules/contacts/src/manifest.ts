@@ -24,6 +24,16 @@ export const contactsModule: ModuleManifest = defineModule({
   ],
   retentionHolds: contactsRetentionHolds,
   retentionDue: contactsRetentionDue,
+  deletionRules: [
+    {
+      entity: 'contact',
+      deletable: true,
+      reason:
+        'Personenbezogene Daten sind nach Wegfall des Zwecks zu löschen (DSGVO Art. 17). Die gesetzliche Aufbewahrung sticht diese Pflicht nur, solange sie läuft.',
+      guard: 'Erst wenn kein Halter mehr läuft — geprüft über retentionHolds aller aktiven Module. Ohne nachgewiesene Frist bleibt der Kontakt bestehen.',
+      auditAction: 'contacts.delete',
+    },
+  ],
   mcpTools: CONTACTS_MCP_TOOLS,
   seed: seedContacts,
 });

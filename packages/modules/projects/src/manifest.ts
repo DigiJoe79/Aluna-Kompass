@@ -15,6 +15,13 @@ export const projectsModule: ModuleManifest = defineModule({
   version: '0.1.0',
   permissions: ['projects.view', 'projects.manage'],
   navigation: [{ key: 'projects.list', href: '/projects', icon: 'folder', group: 'projects', permission: 'projects.view' }],
+  deletionRules: [
+    {
+      entity: 'project',
+      deletable: false,
+      reason: 'Trägt mit der Säule Finanzen Finanzfelder; Löschbarkeit entscheidet sich dort (AGENTS.md).',
+    },
+  ],
   publishedViews: [publishedProjects],
   mcpTools: PROJECTS_MCP_TOOLS,
   mediaReferences: projectsMediaReferences,

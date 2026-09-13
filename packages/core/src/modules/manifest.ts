@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 import type { CallContext } from '../context';
 import type { DbOrTx } from '../db/client';
+import { validateDeletionRules, type DeletionRule } from '../deletion-policy';
 import type { Deps } from '../deps';
 import type { Result } from '../result';
 import { RETENTION_CLASSES, type RetentionClass } from '../retention/classes';
@@ -239,6 +240,13 @@ export interface ModuleManifest {
   setTranslations?: (deps: Deps, ctx: CallContext, input: TranslationWrite) => Promise<Result<unknown>> | null;
   /** Kontaktrollen, die dieses Modul beisteuert. */
   contactRoles?: readonly ContactRoleDefinition[];
+  /**
+   * Was von den Entitäten dieses Moduls gelöscht werden darf, und warum
+   * (nicht). Prinzip 3 als Daten: `deletionPolicy(registry)` bündelt Kern und
+   * Module, `defineModule` prüft jede Regel, die Registry lehnt eine Entität
+   * ab, die zwei Module regeln. Ein Modul regelt nur, was ihm gehört.
+   */
+  deletionRules?: readonly DeletionRule[];
   /** Beispieldaten für die Entwicklungsumgebung. */
   seed?: (deps: Deps, ctx: CallContext) => Promise<void>;
   /**
@@ -272,6 +280,7 @@ export function defineModule(manifest: ModuleManifest): ModuleManifest {
     if (!TEMPLATE_KEY.test(template.key)) throw new Error(`invalid document template key: ${template.key}`);
     if (!TEMPLATE_TYPE.test(template.type)) throw new Error(`invalid document type: ${template.type}`);
   }
+  validateDeletionRules(manifest.key, manifest.deletionRules ?? []);
   for (const role of manifest.contactRoles ?? []) {
     if (!ROLE_KEY.test(role.key)) throw new Error(`invalid contact role key: ${role.key}`);
     if (!RETENTION_CLASSES.includes(role.retention)) throw new Error(`invalid contact role retention class: ${role.retention}`);

@@ -42,6 +42,20 @@ export const siteModule: ModuleManifest = defineModule({
   navigationFor: siteNavigationFor,
   mcpTools: SITE_MCP_TOOLS,
   mediaReferences: siteMediaReferences,
+  deletionRules: [
+    {
+      entity: 'sitePublish',
+      deletable: false,
+      reason: 'Die Publish-Historie ist ein Betriebsprotokoll über Jahre.',
+    },
+    {
+      entity: 'siteEntry',
+      deletable: true,
+      reason: 'Redaktioneller Inhalt der Webseite (Prinzip 3).',
+      guard: 'keiner',
+      auditAction: 'site.entry.delete',
+    },
+  ],
   translatables: siteTranslatables,
   setTranslations: siteSetTranslations,
   files: true,

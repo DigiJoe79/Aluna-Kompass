@@ -1,3 +1,4 @@
+import { CORE_DELETION_RULES } from './deletion-policy';
 import { coreMediaReferences } from './media/references';
 import { defineModule } from './modules/manifest';
 import { publishedOrganization } from './published/organization';
@@ -11,6 +12,7 @@ export const coreModule = defineModule({
   settings: CORE_SETTINGS,
   publishedViews: [publishedOrganization],
   mediaReferences: coreMediaReferences,
+  deletionRules: CORE_DELETION_RULES,
   files: true,
   providedFiles: ['document-templates'],
 });

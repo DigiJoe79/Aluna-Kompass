@@ -1,12 +1,16 @@
+import type { ModuleManifest } from './modules/manifest';
 import type { RetentionClass } from './retention/classes';
 
 /**
  * Was in Kompass gelöscht werden darf — und was nicht. Kanonische Fassung von
  * Prinzip 3 (`AGENTS.md`): „Nichts Rechenschaftsrelevantes wird gelöscht.“
  *
- * Diese Konstante ändert kein Laufzeitverhalten; sie ist die eine Stelle, gegen
- * die Menschen und Agenten prüfen, und ein Test hält sie konsistent. Wer eine
- * `delete*`-Funktion baut, trägt hier die Begründung ein.
+ * Jedes Manifest führt die Regeln für seine eigenen Entitäten unter
+ * `deletionRules`; der Kern seine hier. `deletionPolicy(registry)` ist die
+ * Summe, gegen die Menschen und Agenten prüfen. Die Regeln ändern kein
+ * Laufzeitverhalten; `defineModule` hält jede einzelne konsistent, die Registry
+ * verhindert, dass zwei Module dieselbe Entität regeln. Wer eine
+ * `delete*`-Funktion baut, trägt die Begründung am Manifest seines Moduls ein.
  *
  * `entity` ist ein logischer Name. Wo die Entität eine eigene Tabelle hat, ist
  * er gleich dem `entityType` ihrer `recordAudit`-Aufrufe; `theme` etwa lebt als
@@ -30,7 +34,33 @@ export interface DeletionRule {
   retentionClass?: RetentionClass;
 }
 
-export const DELETION_POLICY: readonly DeletionRule[] = [
+/** Dieselbe Form wie ein Permission-Key: camelCase je Abschnitt, mindestens ein Punkt. */
+const AUDIT_ACTION = /^[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*)+$/;
+
+/** Wirft bei einer in sich widersprüchlichen Regel; von `defineModule` aufgerufen. */
+export function validateDeletionRules(moduleKey: string, rules: readonly DeletionRule[]): void {
+  const seen = new Set<string>();
+  for (const rule of rules) {
+    const where = `${moduleKey}/${rule.entity}`;
+    if (seen.has(rule.entity)) throw new Error(`duplicate deletion rule: ${rule.entity} (${moduleKey})`);
+    seen.add(rule.entity);
+    if (rule.deletable) {
+      if (!rule.guard) throw new Error(`deletable rule without guard: ${where}`);
+      if (!rule.auditAction || !AUDIT_ACTION.test(rule.auditAction)) throw new Error(`deletable rule without well-formed audit action: ${where}`);
+    } else {
+      if (rule.guard !== undefined) throw new Error(`non-deletable rule with guard: ${where}`);
+      if (rule.auditAction !== undefined) throw new Error(`non-deletable rule with audit action: ${where}`);
+    }
+  }
+}
+
+/** Die Löschpolitik einer Installation: der Kern plus jedes installierte Modul, aktiv oder nicht. */
+export function deletionPolicy(registry: { manifests: readonly ModuleManifest[] }): DeletionRule[] {
+  return registry.manifests.flatMap((m) => m.deletionRules ?? []);
+}
+
+/** Die Regeln für die Entitäten des Kerns. Fachmodule führen ihre am eigenen Manifest. */
+export const CORE_DELETION_RULES: readonly DeletionRule[] = [
   // Rechenschaft — nie löschbar
   {
     entity: 'user',
@@ -58,86 +88,14 @@ export const DELETION_POLICY: readonly DeletionRule[] = [
     deletable: false,
     reason: 'Module werden deaktiviert; ihre Datenspuren bleiben.',
   },
-  {
-    entity: 'project',
-    deletable: false,
-    reason: 'Trägt ab Stufe 3 Finanzfelder; Löschbarkeit entscheidet sich dort (AGENTS.md).',
-  },
-  {
-    entity: 'animal',
-    deletable: false,
-    reason: 'Trägt ab Stufe 4 Bestandsbuch und § 11-Nachweise; Löschbarkeit entscheidet sich dort (AGENTS.md).',
-  },
-  {
-    entity: 'sitePublish',
-    deletable: false,
-    reason: 'Die Publish-Historie ist ein Betriebsprotokoll über Jahre.',
-  },
 
   // Arbeitsmaterial — löschbar, mit Protokolleintrag
-  {
-    entity: 'documentDraft',
-    deletable: true,
-    reason:
-      'Ein Entwurf ist Arbeitsmaterial: keine Nummer, keine Datei, kein Nachweis. Erst das Festschreiben macht ihn rechenschaftsrelevant.',
-    guard: 'nur solange phase = draft',
-    auditAction: 'dms.draft.delete',
-  },
-  {
-    entity: 'documentFolder',
-    deletable: true,
-    reason: 'Nur Ordnung, kein Nachweis — wie ein Ordner der Mediathek.',
-    guard: 'nur wenn leer (keine Dokumente, keine Unterordner)',
-    auditAction: 'dms.folder.delete',
-  },
-  {
-    entity: 'documentLink',
-    deletable: true,
-    reason: 'Ein Bezug ist eine Zuordnung, kein Vorgang. Falsch gesetzte Bezüge müssen korrigierbar sein.',
-    guard: 'keiner',
-    auditAction: 'dms.unlink',
-  },
-  {
-    entity: 'documentRule',
-    deletable: true,
-    reason: 'Eine Regel ist Bedienkomfort, kein Nachweis.',
-    guard: 'keiner',
-    auditAction: 'dms.rule.delete',
-  },
-  {
-    entity: 'documentRelation',
-    deletable: true,
-    reason: 'Ein Bezug zwischen zwei Dokumenten ist eine Zuordnung, kein Vorgang — wie documentLink.',
-    guard: 'keiner',
-    auditAction: 'dms.unrelate',
-  },
-  {
-    entity: 'documentNote',
-    deletable: true,
-    reason: 'Eine Notiz ist Arbeitsmaterial neben dem Dokument; sie steht nie im PDF, nie im Index, nie in einem Export.',
-    guard: 'nur die eigene Notiz, oder mit dms.manage',
-    auditAction: 'dms.note.delete',
-  },
-  {
-    entity: 'documentSnippet',
-    deletable: true,
-    reason: 'Ein Textbaustein ist Bedienkomfort; der Text lebt im Brief, der ihn benutzt hat.',
-    guard: 'keiner',
-    auditAction: 'dms.snippet.delete',
-  },
   {
     entity: 'followUp',
     deletable: true,
     reason: 'Eine Wiedervorlage ist ein Merkzettel am Vorgang. Der Normalweg ist Abhaken; Löschen bleibt für Versehen.',
     guard: 'keiner',
     auditAction: 'followUps.delete',
-  },
-  {
-    entity: 'siteEntry',
-    deletable: true,
-    reason: 'Redaktioneller Inhalt der Webseite (Prinzip 3).',
-    guard: 'keiner',
-    auditAction: 'site.entry.delete',
   },
   {
     entity: 'mediaAsset',
@@ -159,24 +117,5 @@ export const DELETION_POLICY: readonly DeletionRule[] = [
     reason: 'Gestaltung, kein Nachweis.',
     guard: 'nicht das aktive und nicht das Default-Theme',
     auditAction: 'themes.delete',
-  },
-  {
-    entity: 'contact',
-    deletable: true,
-    reason:
-      'Personenbezogene Daten sind nach Wegfall des Zwecks zu löschen (DSGVO Art. 17). Die gesetzliche Aufbewahrung sticht diese Pflicht nur, solange sie läuft.',
-    guard: 'Erst wenn kein Halter mehr läuft — geprüft über retentionHolds aller aktiven Module. Ohne nachgewiesene Frist bleibt der Kontakt bestehen.',
-    auditAction: 'contacts.delete',
-  },
-  {
-    // Der Eintrag nennt statutory10Y als längste in der Praxis vorkommende Klasse; maßgeblich ist die Klasse an der Dokumentart.
-    entity: 'document',
-    deletable: true,
-    reason:
-      'Personenbezogene Daten sind nach Wegfall des Zwecks zu löschen (DSGVO Art. 17). Die Aufbewahrungsfrist sticht diese Pflicht, solange sie läuft (Entscheidung 10).',
-    guard:
-      'Erst nach Ablauf der Frist der Dokumentart, gerechnet ab Ablauf des Kalenderjahres von documentDate. Ein Mensch bestätigt jede Löschung.',
-    auditAction: 'dms.delete',
-    retentionClass: 'statutory10Y',
   },
 ];

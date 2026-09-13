@@ -130,6 +130,17 @@ eigene Tabelle hat, deckt sich `entity` mit dem `entityType` ihrer
 **`AGENTS.md`** verweist künftig auf `DELETION_POLICY` als kanonische Liste,
 statt die Aufzählung in Prinzip 3 und in der Coding-Regel selbst zu führen.
 
+**Nachtrag 2026-09-13.** Die eine Konstante kannte am Ende jede Modulentität
+(`project`, `animal`, `document…`, `contact`, `site…`) und widersprach damit
+Prinzip 1. Sie ist aufgeteilt: Jedes Manifest führt unter `deletionRules` die
+Regeln für seine eigenen Entitäten, der Kern seine als `CORE_DELETION_RULES` in
+derselben Datei. `defineModule` prüft jede Regel (Guard und Protokollaktion
+genau bei `deletable`), `createRegistry` lehnt eine Entität ab, die zwei Module
+regeln, und `deletionPolicy(registry)` liefert die Summe einer Installation.
+Der Kern-Test prüft nur noch den Kern; die Summe und die festgezurrten
+Grenzfälle (`project`, `animal`, `sitePublish`, `document`) prüft
+`apps/kompass/tests/deletion-policy.test.ts` gegen die installierten Module.
+
 ## 4. Der Manifest-Haken `mediaReferences`
 
 **Typ und Feld** in `packages/core/src/modules/manifest.ts`:

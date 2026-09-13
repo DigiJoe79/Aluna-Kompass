@@ -15,6 +15,7 @@ export function createRegistry(
   const byKey = new Map<string, ModuleManifest>();
   const permissionKeys = new Set<string>();
   const settingDefinitions = new Map<string, SettingDefinition>();
+  const ruledEntities = new Set<string>();
 
   for (const manifest of manifests) {
     if (byKey.has(manifest.key)) throw new Error(`duplicate module key: ${manifest.key}`);
@@ -26,6 +27,10 @@ export function createRegistry(
     for (const setting of manifest.settings ?? []) {
       if (settingDefinitions.has(setting.key)) throw new Error(`duplicate setting key: ${setting.key}`);
       settingDefinitions.set(setting.key, setting);
+    }
+    for (const rule of manifest.deletionRules ?? []) {
+      if (ruledEntities.has(rule.entity)) throw new Error(`duplicate deletion rule: ${rule.entity}`);
+      ruledEntities.add(rule.entity);
     }
   }
 

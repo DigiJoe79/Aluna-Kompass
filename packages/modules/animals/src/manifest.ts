@@ -10,6 +10,13 @@ export const animalsModule: ModuleManifest = defineModule({
   version: '0.1.0',
   permissions: ['animals.view', 'animals.manage'],
   navigation: [{ key: 'animals.list', href: '/animals', icon: 'paw-print', group: 'animals', permission: 'animals.view' }],
+  deletionRules: [
+    {
+      entity: 'animal',
+      deletable: false,
+      reason: 'Trägt mit der Tiere-Vollstufe Bestandsbuch und § 11-Nachweise; Löschbarkeit entscheidet sich dort (AGENTS.md).',
+    },
+  ],
   publishedViews: [publishedAnimals],
   mcpTools: ANIMALS_MCP_TOOLS,
   mediaReferences: animalsMediaReferences,
