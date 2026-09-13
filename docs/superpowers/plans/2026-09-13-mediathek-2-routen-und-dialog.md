@@ -32,7 +32,7 @@
 - Consumes: `getMediaPreview(deps, ctx, id)` → `Result<{ record, bytes: Uint8Array | null, contentType }>` (Plan 1, Task 2); `optionalSession`, `getDeps` wie in `apps/kompass/src/app/media/[id]/route.ts`.
 - Produces: `GET /media/{id}/preview` → 401 ohne Sitzung, 404 bei unbekanntem Asset oder `bytes === null`, sonst Bytes mit `content-type` aus dem Dienst.
 
-- [ ] **Step 1: E2E-Fall schreiben**
+- [x] **Step 1: E2E-Fall schreiben**
 
 In `apps/kompass/e2e/media.spec.ts` innerhalb von `test.describe('media library', …)` anhängen:
 
@@ -59,7 +59,7 @@ Hinweis: Bis Plan 4 zeigt der Dialog noch `/media/{id}` als `src`; die ID am End
     const id = src!.replace(/\/preview$/, '').split('/').at(-1)!;
 ```
 
-- [ ] **Step 2: Rot sehen**
+- [x] **Step 2: Rot sehen**
 
 ```bash
 pnpm --filter @kompass/app e2e -- media.spec.ts -g "webp preview"
@@ -67,7 +67,7 @@ pnpm --filter @kompass/app e2e -- media.spec.ts -g "webp preview"
 
 Erwartung: FAIL, Status 404 statt 200 (Route existiert nicht).
 
-- [ ] **Step 3: Route schreiben**
+- [x] **Step 3: Route schreiben**
 
 ```ts
 // apps/kompass/src/app/media/[id]/preview/route.ts
@@ -94,7 +94,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
 }
 ```
 
-- [ ] **Step 4: Grün sehen**
+- [x] **Step 4: Grün sehen**
 
 ```bash
 pnpm typecheck
@@ -103,7 +103,7 @@ pnpm --filter @kompass/app e2e -- media.spec.ts
 
 Erwartung: alle Fälle grün.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add "apps/kompass/src/app/media/[id]/preview/route.ts" apps/kompass/e2e/media.spec.ts

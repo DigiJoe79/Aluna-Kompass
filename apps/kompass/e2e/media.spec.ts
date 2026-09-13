@@ -101,4 +101,19 @@ test.describe('media library', () => {
     await expect(page).toHaveURL('/admin/media');
     await expect(page.getByRole('link', { name: /kampagnen/ })).toHaveCount(0);
   });
+
+  test('serves a webp preview for an uploaded image, sandboxed', async ({ page }) => {
+    await page.goto('/admin/media');
+    await page.getByLabel('Datei hochladen').setInputFiles({ name: 'vorschau.png', mimeType: 'image/png', buffer: PNG });
+    await page.getByRole('row', { name: /vorschau-/ }).click();
+    const src = await page.getByRole('dialog').locator('img').getAttribute('src');
+    const id = src!.replace(/\/preview$/, '').split('/').at(-1)!;
+    const response = await page.request.get(`/media/${id}/preview`);
+    expect(response.status()).toBe(200);
+    expect(response.headers()['content-type']).toBe('image/webp');
+    expect(response.headers()['content-security-policy']).toBe('sandbox');
+    expect(response.headers()['x-content-type-options']).toBe('nosniff');
+    const missing = await page.request.get('/media/NOPE/preview');
+    expect(missing.status()).toBe(404);
+  });
 });
