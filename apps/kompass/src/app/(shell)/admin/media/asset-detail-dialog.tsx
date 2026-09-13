@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { useDateFormat } from '@/components/date-format-provider';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { kb, type Folder, type Item } from './types';
@@ -22,6 +23,7 @@ export function AssetDetailDialog({
   onDelete: (id: string) => void;
 }) {
   const t = useTranslations('media');
+  const fmt = useDateFormat();
   const isImage = item?.mimeType.startsWith('image/') ?? false;
 
   return (
@@ -55,7 +57,7 @@ export function AssetDetailDialog({
               <dt className="text-ink-2">{t('folder')}</dt>
               <dd>{assetFolder ?? t('root')}</dd>
               <dt className="text-ink-2">{t('uploadedAt')}</dt>
-              <dd>{new Date(item.createdAt).toLocaleDateString('de-DE')}</dd>
+              <dd>{fmt.date(item.createdAt)}</dd>
               {item.uploadedBy ? (
                 <>
                   <dt className="text-ink-2">{t('uploadedBy')}</dt>
