@@ -9,5 +9,5 @@ export function projectsMediaReferences(deps: Deps, assetId: string): MediaRefer
     .from(projects)
     .where(eq(projects.imageAssetId, assetId))
     .all()
-    .map((p) => ({ label: `Projekt „${p.slug}“`, entity: 'project', id: p.id }));
+    .map((p) => ({ label: `Projekt „${p.slug}“`, entity: 'project', id: p.id, href: `/projects/${p.id}` }));
 }

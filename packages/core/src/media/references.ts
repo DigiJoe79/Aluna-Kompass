@@ -13,7 +13,7 @@ export function coreMediaReferences(deps: Deps, assetId: string): MediaReference
   const refs: MediaReference[] = [];
 
   if (readSetting<string | null>(deps, 'branding.logoAssetId') === assetId) {
-    refs.push({ label: 'Logo des Vereins', entity: 'setting', id: 'branding.logoAssetId' });
+    refs.push({ label: 'Logo des Vereins', entity: 'setting', id: 'branding.logoAssetId', href: '/admin/settings' });
   }
   return refs;
 }

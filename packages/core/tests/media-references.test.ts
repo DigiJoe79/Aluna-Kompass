@@ -24,6 +24,7 @@ describe('findMediaReferences', () => {
     const hits = findMediaReferences(deps, logo.id);
     expect(hits.map((h) => h.entity)).toEqual(['setting']);
     expect(hits.find((h) => h.entity === 'setting')!.label).toBe('Logo des Vereins');
+    expect(hits[0]!.href).toBe('/admin/settings');
     expect(findMediaReferences(deps, other.id)).toEqual([]);
   });
 

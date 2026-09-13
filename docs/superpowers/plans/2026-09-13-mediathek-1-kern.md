@@ -598,7 +598,7 @@ git commit -m "feat(media): the list takes a filter — folder, kind, query over
   | site | `siteEntry` | `/site/c/<collection>/<id>` |
   | site | `siteValue` | `/site/variables` |
 
-- [ ] **Step 1: Tests anpassen**
+- [x] **Step 1: Tests anpassen**
 
 Die bestehenden `toEqual`-Erwartungen in den vier Testdateien bekommen `href`:
 
@@ -627,7 +627,7 @@ Die bestehenden `toEqual`-Erwartungen in den vier Testdateien bekommen `href`:
     expect(entry.href).toBe(`/site/c/news/${entry.id}`);
 ```
 
-- [ ] **Step 2: Rot sehen**
+- [x] **Step 2: Rot sehen**
 
 ```bash
 pnpm --filter @kompass/core exec vitest run tests/media-references
@@ -638,7 +638,7 @@ pnpm --filter @kompass/module-site exec vitest run tests/references
 
 Erwartung: je FAIL wegen fehlendem `href`.
 
-- [ ] **Step 3: Typ und Implementierungen**
+- [x] **Step 3: Typ und Implementierungen**
 
 `packages/core/src/modules/manifest.ts`, in `MediaReference` nach `id: string;`:
 
@@ -671,11 +671,11 @@ und
         refs.push({ label: `Eintrag „${title}“ in „${col.label}“`, entity: 'siteEntry', id: row.id, href: `/site/c/${row.collection}/${row.id}` });
 ```
 
-- [ ] **Step 4: Grün sehen**
+- [x] **Step 4: Grün sehen**
 
 Dieselben vier Befehle wie in Step 2, dazu `pnpm typecheck`. Erwartung: grün. Die `apps/kompass/tests/media-references.test.ts` prüft nur `message` und bleibt unberührt.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core/src/modules/manifest.ts packages/core/src/media/references.ts packages/core/tests/media-references.test.ts packages/modules/animals/src/references.ts packages/modules/animals/tests/references.test.ts packages/modules/projects/src/references.ts packages/modules/projects/tests/references.test.ts packages/modules/site/src/references.ts packages/modules/site/tests/references.test.ts

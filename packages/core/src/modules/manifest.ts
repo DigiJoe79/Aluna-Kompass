@@ -46,6 +46,8 @@ export interface MediaReference {
   /** Entitätstyp und ID, falls die Oberfläche verlinken will. */
   entity: string;
   id: string;
+  /** Der Weg zur Fundstelle in der Oberfläche; weggelassen, wenn es keine Seite gibt. Muster wie `FollowUpTarget.href`. */
+  href?: string;
   /**
    * Das Recht, unter dem dieses Asset steht. Gesetzt heißt: Die Datei gehört
    * einem Datensatz, den nicht jeder sehen darf, und `getMediaAsset` liefert

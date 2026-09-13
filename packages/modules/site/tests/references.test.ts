@@ -49,6 +49,10 @@ describe('siteMediaReferences', () => {
 
     const hits = siteMediaReferences(deps, a.id);
     expect(hits.map((h) => h.label).sort()).toEqual(['Eintrag „fest“ in „News“', 'Variable „heroImage“']);
+    const variable = hits.find((h) => h.entity === 'siteValue')!;
+    expect(variable.href).toBe('/site/variables');
+    const entry = hits.find((h) => h.entity === 'siteEntry')!;
+    expect(entry.href).toBe(`/site/c/news/${entry.id}`);
     expect(siteMediaReferences(deps, 'OTHER')).toEqual([]);
   });
 });
