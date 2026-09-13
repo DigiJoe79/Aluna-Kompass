@@ -74,6 +74,9 @@ describe('media service', () => {
     expect(big.ok === false && big.error.type === 'validation' && big.error.issues[0]?.message === 'fileTooLarge').toBe(true);
     const noPerm = await storeMediaAsset(deps, ctxWith([], 'U'), { originalName: 'a.png', bytes: PNG });
     expect(noPerm.ok === false && noPerm.error.type === 'forbidden').toBe(true);
+    const truncated = await storeMediaAsset(deps, ctx, { originalName: 't.png', bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]) });
+    expect(truncated.ok === false && truncated.error.type === 'validation' && truncated.error.issues[0]?.message === 'unsupportedMediaType').toBe(true);
+    expect(deps.db.select().from(auditLog).all().filter((e) => e.action === 'media.upload')).toHaveLength(0);
   });
 
   it('reads assets back for any authenticated user and lists them for uploaders', async () => {

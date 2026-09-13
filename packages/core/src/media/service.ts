@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto';
 import { eq, isNull, sql } from 'drizzle-orm';
 import { fileTypeFromBuffer } from 'file-type';
-import { imageSize } from 'image-size';
 import { z } from 'zod';
 import { recordAudit } from '../audit/log';
 import { isoNow } from '../clock';
@@ -14,6 +13,7 @@ import { requirePermission } from '../permissions/check';
 import type { MediaReference } from '../modules/manifest';
 import { conflict, invalid, notFound, ok, unauthorized, type Result } from '../result';
 import { folderExists } from './folders';
+import { ensurePreview, hasPreview, previewFilename, readImageMeta, renderPreview } from './preview';
 import { findMediaReferences } from './references';
 
 export const MEDIA_MAX_BYTES = 10 * 1024 * 1024;
@@ -52,7 +52,7 @@ async function detectMimeType(input: StoreMediaInput, trustDeclaredPdf: boolean 
   return null;
 }
 
-type Prepared = { mimeType: string; ext: string; hash: string; width: number | null; height: number | null };
+type Prepared = { mimeType: string; ext: string; hash: string; width: number | null; height: number | null; preview: Uint8Array | null };
 
 async function prepare(input: StoreMediaInput, trustDeclaredPdf: boolean = false): Promise<Result<Prepared>> {
   if (input.bytes.byteLength > MEDIA_MAX_BYTES) return invalid([{ path: 'bytes', message: 'fileTooLarge' }]);
@@ -63,16 +63,18 @@ async function prepare(input: StoreMediaInput, trustDeclaredPdf: boolean = false
   }
   let width: number | null = null;
   let height: number | null = null;
-  if (mimeType === 'image/png' || mimeType === 'image/jpeg' || mimeType === 'image/webp') {
+  let preview: Uint8Array | null = null;
+  if (hasPreview(mimeType)) {
+    // Maße und Vorschau entstehen hier, vor jedem Schreibzugriff: Ein Bild, das
+    // sharp nicht lesen kann, wird abgelehnt, nicht halb abgelegt.
     try {
-      const size = imageSize(input.bytes);
-      width = size.width ?? null;
-      height = size.height ?? null;
+      ({ width, height } = await readImageMeta(input.bytes));
+      preview = await renderPreview(input.bytes);
     } catch {
       return invalid([{ path: 'bytes', message: 'unsupportedMediaType' }]);
     }
   }
-  return ok({ mimeType, ext: EXTENSIONS[mimeType] as string, hash: createHash('sha256').update(input.bytes).digest('hex'), width, height });
+  return ok({ mimeType, ext: EXTENSIONS[mimeType] as string, hash: createHash('sha256').update(input.bytes).digest('hex'), width, height, preview });
 }
 
 /** Was `storeMedia*` zurückgibt, wenn der Aufrufer wissen muss, ob die Bytes neu waren. */
@@ -96,6 +98,7 @@ async function storeDetailed(deps: Deps, ctx: CallContext, input: StoreMediaInpu
   if (existing) return ok({ record: existing, created: false }); // Dedup: der Ordner des vorhandenen Datensatzes bleibt
   const folder = input.folder && folderExists(deps, input.folder) ? input.folder : null;
   await deps.media.write(filename, input.bytes);
+  if (meta.preview) await deps.media.write(previewFilename(filename), meta.preview);
   return deps.db.transaction((tx: DbOrTx) => {
     const id = newId();
     tx.insert(mediaAssets)
@@ -134,7 +137,8 @@ export async function storeMediaAsset(deps: Deps, ctx: CallContext, input: Store
  * einem Recht, gilt dieses Recht auch hier: Sonst stünde neben der geprüften
  * Tür des Moduls eine ungeprüfte daneben.
  */
-export async function getMediaAsset(deps: Deps, ctx: CallContext, id: string): Promise<Result<{ record: MediaAssetRecord; bytes: Uint8Array }>> {
+/** Angemeldet, und wo ein Modul das Asset unter ein Recht stellt, dieses Recht. */
+function loadReadable(deps: Deps, ctx: CallContext, id: string): Result<MediaAssetRecord> {
   if (!ctx.userId && ctx.channel !== 'system') return unauthorized('invalidCredentials');
   const record = deps.db.select().from(mediaAssets).where(eq(mediaAssets.id, id)).get();
   if (!record) return notFound('mediaAsset', id);
@@ -145,7 +149,28 @@ export async function getMediaAsset(deps: Deps, ctx: CallContext, id: string): P
       if (denied) return denied;
     }
   }
+  return ok(record);
+}
+
+export async function getMediaAsset(deps: Deps, ctx: CallContext, id: string): Promise<Result<{ record: MediaAssetRecord; bytes: Uint8Array }>> {
+  const loaded = loadReadable(deps, ctx, id);
+  if (!loaded.ok) return loaded;
+  const record = loaded.value;
   return ok({ record, bytes: await deps.media.read(record.filename) });
+}
+
+/**
+ * Die Vorschau zu einem Asset, mit denselben Rechten wie das Original. Fehlt
+ * die Datei, wird sie gebaut — ohne Protokolleintrag, es ist ein Cache.
+ * `bytes` ist `null`, wenn es zu diesem Typ keine Vorschau gibt (PDF).
+ */
+export async function getMediaPreview(deps: Deps, ctx: CallContext, id: string): Promise<Result<{ record: MediaAssetRecord; bytes: Uint8Array | null; contentType: string }>> {
+  const loaded = loadReadable(deps, ctx, id);
+  if (!loaded.ok) return loaded;
+  const record = loaded.value;
+  const bytes = await ensurePreview(deps, record);
+  const contentType = record.mimeType === 'image/svg+xml' ? 'image/svg+xml' : 'image/webp';
+  return ok({ record, bytes, contentType });
 }
 
 export interface MediaLibraryItem {
@@ -193,5 +218,6 @@ export async function deleteMediaAsset(deps: Deps, ctx: CallContext, input: unkn
   });
   // Datei erst nach dem Commit; ein verwaister Rest wäre harmlos (Dedup nach Hash).
   await deps.media.delete(record.filename);
+  await deps.media.delete(previewFilename(record.filename));
   return ok(null);
 }

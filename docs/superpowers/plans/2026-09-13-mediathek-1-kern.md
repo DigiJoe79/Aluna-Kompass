@@ -37,7 +37,7 @@
   - `readImageMeta(bytes: Uint8Array): Promise<{ width: number; height: number }>` — EXIF-gedrehte Maße, wirft bei unlesbarem Bild
   - `ensurePreview(deps: Pick<Deps, 'media'>, record: Pick<MediaAssetRecord, 'filename' | 'mimeType'>): Promise<Uint8Array | null>` — SVG: Original; PDF: `null`; Raster: liest oder baut die Vorschau
 
-- [ ] **Step 1: Abhängigkeit umstellen**
+- [x] **Step 1: Abhängigkeit umstellen**
 
 In `packages/core/package.json` unter `dependencies`: `"image-size": "^2.0.2"` entfernen, `"sharp": "^0.35.4"` einfügen (gleiche Version wie `packages/modules/site/package.json`). Dann:
 
@@ -47,7 +47,7 @@ pnpm install
 
 Erwartung: Lockfile ändert sich nur um den Eintrag für `@kompass/core`; `sharp` ist bereits im Lockfile.
 
-- [ ] **Step 2: Test schreiben**
+- [x] **Step 2: Test schreiben**
 
 ```ts
 // packages/core/tests/media-preview.test.ts
@@ -122,7 +122,7 @@ describe('ensurePreview', () => {
 });
 ```
 
-- [ ] **Step 3: Test laufen lassen, rot sehen**
+- [x] **Step 3: Test laufen lassen, rot sehen**
 
 ```bash
 pnpm --filter @kompass/core exec vitest run tests/media-preview
@@ -130,7 +130,7 @@ pnpm --filter @kompass/core exec vitest run tests/media-preview
 
 Erwartung: FAIL, `Cannot find module '../src/media/preview'`.
 
-- [ ] **Step 4: Implementierung**
+- [x] **Step 4: Implementierung**
 
 ```ts
 // packages/core/src/media/preview.ts
@@ -186,7 +186,7 @@ export async function ensurePreview(deps: Pick<Deps, 'media'>, record: Pick<Medi
 }
 ```
 
-- [ ] **Step 5: Test grün sehen**
+- [x] **Step 5: Test grün sehen**
 
 ```bash
 pnpm --filter @kompass/core exec vitest run tests/media-preview
@@ -210,7 +210,7 @@ Erwartung: PASS, 6 Tests. Typecheck schlägt an dieser Stelle noch fehl, weil `s
   - `getMediaPreview(deps, ctx, id): Promise<Result<{ record: MediaAssetRecord; bytes: Uint8Array | null; contentType: string }>>` — Rechte wie `getMediaAsset`; `bytes === null` für PDF.
   - Upload legt `<name>.preview.webp` ab; `deleteMediaAsset` entfernt beide.
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 An `packages/core/tests/media-preview.test.ts` anhängen:
 
@@ -279,7 +279,7 @@ Der Test „rejects unsupported types…“ in `media.test.ts` bleibt und bekomm
     expect(deps.db.select().from(auditLog).all().filter((e) => e.action === 'media.upload')).toHaveLength(0);
 ```
 
-- [ ] **Step 2: Rot sehen**
+- [x] **Step 2: Rot sehen**
 
 ```bash
 pnpm --filter @kompass/core exec vitest run tests/media-preview tests/media.test
@@ -287,7 +287,7 @@ pnpm --filter @kompass/core exec vitest run tests/media-preview tests/media.test
 
 Erwartung: FAIL — `getMediaPreview` fehlt, Vorschau-Datei fehlt nach Upload.
 
-- [ ] **Step 3: `service.ts` umbauen**
+- [x] **Step 3: `service.ts` umbauen**
 
 Import-Zeile `import { imageSize } from 'image-size';` entfernen, stattdessen:
 
@@ -389,7 +389,7 @@ In `packages/core/src/index.ts` nach `export * from './media/folders';`:
 export * from './media/preview';
 ```
 
-- [ ] **Step 4: Grün sehen**
+- [x] **Step 4: Grün sehen**
 
 ```bash
 pnpm --filter @kompass/core exec vitest run tests/media
@@ -398,7 +398,7 @@ pnpm typecheck
 
 Erwartung: alle `tests/media*` grün; Typecheck ohne Fehler (kein `image-size` mehr referenziert).
 
-- [ ] **Step 5: Gesamte Kern-Suite**
+- [x] **Step 5: Gesamte Kern-Suite**
 
 ```bash
 pnpm --filter @kompass/core test
@@ -406,7 +406,7 @@ pnpm --filter @kompass/core test
 
 Erwartung: grün. Falls ein Test mit dem 1×1-PNG an `readImageMeta` scheitert: Das 1×1-PNG der Tests ist ein gültiges Bild, sharp liest es. Sollte der Site-Seed-Test (`packages/modules/site/tests/seed.test.ts`) ein Bild nutzen, das sharp nicht mag, dort auf das 1×1-PNG umstellen — nicht die Prüfung lockern.
 
-- [ ] **Step 6: Modul- und App-Tests, die Bilder hochladen**
+- [x] **Step 6: Modul- und App-Tests, die Bilder hochladen**
 
 ```bash
 pnpm test
@@ -414,7 +414,7 @@ pnpm test
 
 Erwartung: grün. Betroffen sind nur Tests, die `storeMediaAsset` mit echten Bytes rufen; alle nutzen das 1×1-PNG oder ein SVG.
 
-- [ ] **Step 7: Commit (Task 1 und 2 zusammen)**
+- [x] **Step 7: Commit (Task 1 und 2 zusammen)**
 
 ```bash
 git add packages/core/package.json pnpm-lock.yaml packages/core/src/media/preview.ts packages/core/src/media/service.ts packages/core/src/index.ts packages/core/tests/media-preview.test.ts packages/core/tests/media.test.ts

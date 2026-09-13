@@ -134,11 +134,12 @@ export default defineTemplate({
 });`;
     const { deps, dir } = await setup(source);
     const manage = ctxWith(['site.manage', 'site.view', 'media.upload']);
-    // 1x1-PNG, damit die Assets echte Medien-Datensätze haben.
-    const png = (seed: string) =>
-      Buffer.from(`iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42m${seed}kYAAAAASUVORK5CYII=`, 'base64');
-    const hero = unwrap(await storeMediaAsset(deps, manage, { originalName: 'hero.png', bytes: png('P8z8BQDwAF') }));
-    const photo = unwrap(await storeMediaAsset(deps, manage, { originalName: 'photo.png', bytes: png('P8/x8AAwMB') }));
+    // Zwei echte, verschiedenfarbige 1x1-PNGs, damit die Assets echte Medien-Datensätze
+    // haben und nicht per Dedup zusammenfallen; sharp liest sie beim Rendern der Vorschau.
+    const heroPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWMQFBQEAABqADTs/917AAAAAElFTkSuQmCC', 'base64');
+    const photoPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWNQUlICAADQAGcWts3AAAAAAElFTkSuQmCC', 'base64');
+    const hero = unwrap(await storeMediaAsset(deps, manage, { originalName: 'hero.png', bytes: heroPng }));
+    const photo = unwrap(await storeMediaAsset(deps, manage, { originalName: 'photo.png', bytes: photoPng }));
 
     unwrap(await setValues(deps, manage, { values: { heroImage: hero.id } }));
     unwrap(await createEntry(deps, manage, { collection: 'team', data: { name: 'Anna', photo: photo.id } }));

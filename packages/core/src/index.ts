@@ -23,6 +23,7 @@ export * from './files/store';
 export * from './media/service';
 export * from './media/references';
 export * from './media/folders';
+export * from './media/preview';
 export * from './documents/service';
 export * from './documents/engine';
 export * from './backup';
