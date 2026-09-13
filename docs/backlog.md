@@ -92,16 +92,6 @@ Bilder.
 
 **Wann:** Mit dem nächsten Blick auf die Mediathek.
 
-## 11. Sammlungseinträge über MCP
-
-**Was:** Werkzeuge für die Einträge der Template-Sammlungen (anlegen, ändern,
-veröffentlichen, sortieren, löschen), so wie es sie für die Variablen gibt.
-
-**Warum:** Ein Sperrworttreffer in einer FAQ-Antwort ließ sich am 2026-09-13
-nur in der Maske beheben. Prinzip 8 verspricht denselben Weg für MCP.
-
-**Wann:** Bevor ein Agent Webseiteninhalte pflegen soll.
-
 ## 12. Template-Upload als Archiv über die Oberfläche
 
 **Was:** Unter Webseite → Template ein Archiv hochladen, das Kompass in das
@@ -122,46 +112,6 @@ Sync-Skript im Vereinsrepo deckt das für Entwickler ab, nicht für den Verein.
 gestrichen worden. Eine gezählte Zahl verspricht nichts und wächst von selbst.
 
 **Wann:** Sobald die Zahl zweistellig ist; heute stünde dort 2.
-
-## 14. Hilfetext am Profil-Link in der Tiermaske
-
-**Was:** Am Feld „externes Profil“ erklären, was der Link bewirkt: Trägt ein
-Hund ihn, laufen Anfragen auf der Webseite über den Partner statt per E-Mail.
-
-**Warum:** Die Regel vom 2026-09-13 lebt im Template; die Maske verrät sie
-nicht. Wer den Link vergisst, leitet Anfragen unbemerkt zu sich.
-
-**Wann:** Mit der nächsten Änderung an der Tiermaske.
-
-## 15. Sichten nie strenger als ihre Dienste
-
-**Was:** Jede veröffentlichte Sicht gegen die Eingabeschemata ihres Moduls
-prüfen — was ein Dienst annimmt, muss die Sicht ohne Exception liefern. Ein
-generischer Test je Modul, der einen Datensatz mit minimalen Pflichtfeldern
-anlegt und die Sicht lädt.
-
-**Warum:** Die Tiersicht verlangte `traits` in `de` und `en`, der Dienst nahm
-ein Teil-Record an; ein MCP-Anlage brach damit jeden Export (2026-09-13,
-`686c843`). Im Tiermodul war es die einzige Stelle, die anderen Module sind
-nicht geprüft.
-
-**Wann:** Vor dem nächsten Modul mit veröffentlichter Sicht.
-
-## 16. Bildunterschriften der Vermittlungsgeschichte je Hund
-
-**Was:** Zwei mehrsprachige Felder an der Geschichte eines vermittelten Tiers,
-`beforeCaption` und `afterCaption`, mit Vorgabe leer. Das Template zeigt sie
-unter Vorher- und Nachher-Bild und fällt auf seine festen Texte zurück, wenn
-sie leer sind. Betrifft Schema und Migration, Dienst und MCP-Werkzeug, die
-Maske „Geschichte“, die veröffentlichte Sicht, Seed und Tests.
-
-**Warum:** Heute steht unter dem Vorher-Bild fest „Shelter“ bzw. „Shelter,
-Bukarest“. Das Bild kann aber von der Pflegestelle oder von der Straße
-stammen (Joe, 2026-09-13). Das Template kennt den Ort des Fotos nicht, die
-Daten müssen ihn liefern.
-
-**Wann:** Nach der Inhaltssitzung; als Übergang kann das Template die
-Ortsangabe unter „Vorher“ weglassen.
 
 ## 17. Startseiten-Hund am Tier markieren statt per Slug-Variable
 
