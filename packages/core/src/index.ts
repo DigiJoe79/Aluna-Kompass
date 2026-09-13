@@ -48,6 +48,7 @@ export * from './i18n/locales';
 export * from './i18n/localized';
 export * from './i18n/service';
 export * from './i18n/paths';
+export * from './i18n/translations';
 export { localizedColumn } from './db/columns';
 export * from './retention/classes';
 export * from './retention/service';

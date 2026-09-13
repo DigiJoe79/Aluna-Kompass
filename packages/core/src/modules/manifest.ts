@@ -6,6 +6,30 @@ import type { Result } from '../result';
 import { RETENTION_CLASSES, type RetentionClass } from '../retention/classes';
 import type { Theme } from '../themes/tokens';
 
+/** Text je Sprache oder Liste kurzer Begriffe je Sprache — die zwei Formen von `localizedText` und `localizedList`. */
+export type LocalizedValue = string | string[];
+
+/** Ein Datensatz mit seinen mehrsprachigen Feldern, wie ein Modul ihn dem Kern für die Übersetzungsliste meldet. */
+export interface Translatable {
+  entityType: string;
+  id: string;
+  /** Tiername, Projektname, Slug — für die Liste, die ein Client dem Menschen zeigt. */
+  label: string;
+  /** Der Weg zur Maske, z. B. `/animals/<id>`. */
+  href: string;
+  /** Feldpfad (`summary`, `story.quote`, `faq[2].answer`) → Wert je Sprache. */
+  fields: Record<string, Record<string, LocalizedValue>>;
+  /** Sprachen, in denen dieser Datensatz ausgespielt wird. Fehlt die Angabe, gelten die der Installation. */
+  locales?: readonly string[];
+}
+
+/** Alle Übersetzungen eines Datensatzes, die der Kern in einem Aufruf an das Modul gibt. */
+export interface TranslationWrite {
+  entityType: string;
+  id: string;
+  items: { field: string; locale: string; text: LocalizedValue }[];
+}
+
 export interface SettingDefinition<T = unknown> {
   key: string;
   schema: z.ZodType<T>;
@@ -200,6 +224,19 @@ export interface ModuleManifest {
    * nicht meine Entität.
    */
   followUpTargets?: (deps: Deps, entityType: string, id: string) => FollowUpTarget | null;
+  /**
+   * Die mehrsprachigen Datensätze dieses Moduls, Entwürfe eingeschlossen.
+   * Richtung Kern → Modul wie `followUpTargets`. Prüft das Ansichtsrecht des
+   * Moduls selbst und antwortet `forbidden`, wenn es fehlt — der Kern nennt das
+   * Modul dann unter `omitted`, statt die ganze Liste zu verweigern.
+   */
+  translatables?: (deps: Deps, ctx: CallContext) => Result<Translatable[]>;
+  /**
+   * Schreibt Übersetzungen eines Datensatzes über den eigenen Update-Service:
+   * eine Transaktion, ein Audit-Eintrag, nur die genannten Sprachschlüssel
+   * ersetzt. `null` heißt: nicht mein `entityType`.
+   */
+  setTranslations?: (deps: Deps, ctx: CallContext, input: TranslationWrite) => Promise<Result<unknown>> | null;
   /** Kontaktrollen, die dieses Modul beisteuert. */
   contactRoles?: readonly ContactRoleDefinition[];
   /** Beispieldaten für die Entwicklungsumgebung. */

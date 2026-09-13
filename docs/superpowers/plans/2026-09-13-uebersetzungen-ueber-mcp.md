@@ -252,7 +252,7 @@ git commit -m "feat(core): path helpers for localized fields in nested content"
   export async function setTranslations(deps, ctx, input: unknown): Promise<Result<TranslationWriteReport>>
   ```
 
-- [ ] **Step 1: Haken-Typen ins Manifest**
+- [x] **Step 1: Haken-Typen ins Manifest**
 
 In `packages/core/src/modules/manifest.ts` vor `export interface ModuleManifest {` einfügen:
 
@@ -300,7 +300,7 @@ Im Interface `ModuleManifest` nach `followUpTargets?: …;` einfügen:
   setTranslations?: (deps: Deps, ctx: CallContext, input: TranslationWrite) => Promise<Result<unknown>> | null;
 ```
 
-- [ ] **Step 2: Test für die Services schreiben**
+- [x] **Step 2: Test für die Services schreiben**
 
 ```ts
 // packages/core/tests/translations.test.ts
@@ -446,12 +446,12 @@ describe('setTranslations', () => {
 });
 ```
 
-- [ ] **Step 3: Test laufen lassen, rot**
+- [x] **Step 3: Test laufen lassen, rot**
 
 Run: `pnpm --filter @kompass/core test -- translations`
 Expected: FAIL — `../src/i18n/translations` fehlt.
 
-- [ ] **Step 4: Services schreiben**
+- [x] **Step 4: Services schreiben**
 
 ```ts
 // packages/core/src/i18n/translations.ts
@@ -599,12 +599,12 @@ export async function setTranslations(deps: Deps, ctx: CallContext, input: unkno
 
 In `packages/core/src/index.ts` nach `export * from './i18n/paths';` einfügen: `export * from './i18n/translations';`
 
-- [ ] **Step 5: Tests laufen lassen**
+- [x] **Step 5: Tests laufen lassen**
 
 Run: `pnpm --filter @kompass/core test -- translations`
 Expected: PASS. Fällt `groups items per record` an der Reihenfolge, prüfe, dass `Map` die Einfügereihenfolge hält (tut sie) und dass `forEach` die Indizes in Eingabereihenfolge sammelt.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 pnpm typecheck
