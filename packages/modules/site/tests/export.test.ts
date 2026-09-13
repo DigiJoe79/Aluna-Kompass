@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { coreModule, setModuleEnabled, setSetting, storeMediaAsset, unwrap } from '@kompass/core';
+import { animalsModule, createAnimal, setAnimalPublished, setAnimalStatus } from '@kompass/module-animals';
 import { createProject, projectsModule, setProjectPublished } from '@kompass/module-projects';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -219,5 +220,65 @@ describe('locales the template renders', () => {
     const { result, content } = await readContent(deps, dir);
     expect(content.variables.claim).toEqual({ de: 'Hallo' });
     expect(result.gaps).toEqual([]);
+  });
+});
+
+describe('reference variables in the export', () => {
+  const REFS = `
+import { defineTemplate, reference, references } from '@kompass/site-template';
+export default defineTemplate({
+  name: 'X', locales: ['de'],
+  variables: {
+    dog: reference({ view: 'animals', where: { status: 'lookingForHome' }, label: 'Hund' }),
+    dogs: references({ view: 'animals', max: 2, label: 'Hunde' }),
+  },
+  collections: {},
+  uses: ['animals'],
+});`;
+
+  const setup = async () => {
+    const deps = createTestDeps({ locales: ['de'], manifests: [coreModule, animalsModule, siteModule] });
+    insertUser(deps, { id: 'USER-TEST' });
+    const admin = ctxWith(['site.manage', 'modules.manage', 'animals.manage', 'animals.view']);
+    unwrap(await setModuleEnabled(deps, admin, { key: 'animals', enabled: true }));
+    const dog = async (slug: string) => {
+      const a = unwrap(await createAnimal(deps, admin, { slug, name: slug, sex: 'male', birthText: {}, sizeText: {}, summary: {}, body: {} }));
+      unwrap(await setAnimalPublished(deps, admin, { id: a.id, isPublished: true }));
+      return a;
+    };
+    const bruno = await dog('bruno');
+    const rex = await dog('rex');
+    const dir = templateDir(REFS);
+    unwrap(await applyTemplateSync(deps, manage, { dir, confirm: true }));
+    unwrap(await setValues(deps, manage, { values: { dog: 'bruno', dogs: ['bruno', 'rex'] } }));
+    return { deps, dir, bruno, rex, admin };
+  };
+
+  it('writes chosen references as they are when they still hold', async () => {
+    const { deps, dir } = await setup();
+    const out = unwrap(await exportSiteContent(deps, publish, { jobDir: tmp('kompass-exp-'), templateDir: dir }));
+    const content = JSON.parse(readFileSync(out.contentPath, 'utf8')) as { variables: Record<string, unknown> };
+    expect(content.variables).toMatchObject({ dog: 'bruno', dogs: ['bruno', 'rex'] });
+    expect(out.stale).toEqual([]);
+  });
+
+  it('writes null for a reference that no longer holds, drops it from a list, and reports it as stale', async () => {
+    const { deps, dir, bruno, admin } = await setup();
+    unwrap(await setAnimalStatus(deps, admin, { id: bruno.id, status: 'adopted', adoptedYear: 2026 }));
+    const out = unwrap(await exportSiteContent(deps, publish, { jobDir: tmp('kompass-exp-'), templateDir: dir }));
+    const content = JSON.parse(readFileSync(out.contentPath, 'utf8')) as { variables: Record<string, unknown> };
+    expect(content.variables.dog).toBe(null);
+    expect(content.variables.dogs).toEqual(['bruno', 'rex']);
+    expect(out.stale).toEqual([{ path: 'variables.dog', value: 'bruno' }]);
+    expect(out.violations).toEqual([]);
+  });
+
+  it('drops a withdrawn record from a references list and reports it as stale', async () => {
+    const { deps, dir, rex, admin } = await setup();
+    unwrap(await setAnimalPublished(deps, admin, { id: rex.id, isPublished: false }));
+    const out = unwrap(await exportSiteContent(deps, publish, { jobDir: tmp('kompass-exp-'), templateDir: dir }));
+    const content = JSON.parse(readFileSync(out.contentPath, 'utf8')) as { variables: Record<string, unknown> };
+    expect(content.variables.dogs).toEqual(['bruno']);
+    expect(out.stale).toEqual([{ path: 'variables.dogs', value: 'rex' }]);
   });
 });

@@ -16,6 +16,7 @@ import { eq } from 'drizzle-orm';
 import type { FieldSchema } from './types';
 import { z } from 'zod';
 import { siteTemplateDir } from './env';
+import { checkReferenceValues } from './reference-fields';
 import { siteEntries } from './schema';
 import { activeTemplate, templateIsCurrent } from './service';
 import { readValues } from './values';
@@ -35,6 +36,8 @@ export interface ExportedAsset {
 export interface ExportChecks {
   gaps: { path: string; locale: string }[];
   violations: { path: string; term: string; excerpt: string }[];
+  /** Referenzwerte, die nicht mehr in der gefilterten Sicht stehen; im Export durch null ersetzt bzw. aus der Liste genommen. */
+  stale: { path: string; value: string }[];
 }
 
 export interface SiteContentExport extends ExportChecks {
@@ -240,6 +243,15 @@ export async function exportSiteContent(deps: Deps, ctx: CallContext, input: unk
 
   const variables = pruneLocales(readValues(deps), locales) as Record<string, unknown>;
 
+  // Ein Verweis, der nicht mehr trägt, hält keinen Publish an, verschwindet
+  // aber auch nicht still: null im Export, ein Befund im Ergebnis (Spec § 4.6).
+  const staleRaw = checkReferenceValues(deps, template.schema, variables);
+  const stale = staleRaw.map((s) => ({ path: `variables.${s.field}`, value: s.value }));
+  for (const s of staleRaw) {
+    const current = variables[s.field];
+    variables[s.field] = Array.isArray(current) ? current.filter((v) => v !== s.value) : null;
+  }
+
   const collections: Record<string, unknown[]> = {};
   for (const [key, col] of Object.entries(template.schema.collections)) {
     const rows = deps.db
@@ -300,5 +312,5 @@ export async function exportSiteContent(deps: Deps, ctx: CallContext, input: unk
   const gaps: { path: string; locale: string }[] = [];
   collectGaps(contentPayload, '', locales, gaps);
 
-  return ok({ contentHash, contentPath, assets, gaps, violations });
+  return ok({ contentHash, contentPath, assets, gaps, violations, stale });
 }

@@ -96,7 +96,7 @@ const FIXED: McpToolDefinition[] = [
     const dir = await mkdtemp(path.join(tmpdir(), 'kompass-site-check-'));
     try {
       const result = await exportSiteContent(deps, ctx, { jobDir: dir });
-      return result.ok ? { ok: true as const, value: { contentHash: result.value.contentHash, assets: result.value.assets.length, gaps: result.value.gaps, violations: result.value.violations } } : result;
+      return result.ok ? { ok: true as const, value: { contentHash: result.value.contentHash, assets: result.value.assets.length, gaps: result.value.gaps, violations: result.value.violations, stale: result.value.stale } } : result;
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

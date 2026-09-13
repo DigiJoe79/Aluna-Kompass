@@ -16,6 +16,7 @@ export interface PreviewResult {
   contentHash: string;
   gaps: SiteContentExport['gaps'];
   violations: SiteContentExport['violations'];
+  stale: SiteContentExport['stale'];
   diff: PublishDiff;
   previewDir: string;
   log: string;
@@ -164,6 +165,7 @@ async function exportAndBuild(
       exportSiteContent(deps, ctx, { jobDir: job, templateDir: env.templateDir }),
     );
     if (!exported.ok) return exported;
+    for (const s of exported.value.stale) console.log(`[site] veralteter Verweis: ${s.path} = ${s.value}`);
     await step('Bildvarianten', 600_000, () =>
       prepareImageVariants({ jobDir: job, assets: exported.value.assets, cacheDir: env.cacheDir }),
     );
@@ -232,6 +234,7 @@ export async function runPreview(deps: Deps, ctx: CallContext, env: SiteEnv): Pr
       contentHash: built.value.exported.contentHash,
       gaps: built.value.exported.gaps,
       violations: built.value.exported.violations,
+      stale: built.value.exported.stale,
       diff: built.value.diff,
       previewDir: env.previewDir,
       log: built.value.log,
