@@ -32,7 +32,10 @@ muss am Jahresende nichts rekonstruieren. Kompass ist so gebaut, dass diese
 Aufzeichnung nebenbei entsteht, während der Vorstand seine Arbeit tut.
 
 Der Kern ist generisch und für jeden Verein gleich; Vereinsspezifisches ist ein
-Modul, das sich je Installation ein- und ausschalten lässt. Eine Installation
+Modul, das sich je Installation ein- und ausschalten lässt. Ein Modul ist heute
+ein Baustein derselben Auslieferung: Es steckt im Image, seine Tabellen kommen
+mit den Migrationen des Kerns, seine Seiten mit der Anwendung. Nachinstallieren
+ohne neues Image gibt es nicht; das steht in Abschnitt 5. Eine Installation
 je Verein, auf eigener Hardware, nur im eigenen Netz. Aluna Tierhilfe e.V. ist
 Erstnutzer und Taktgeber, nicht Grenze der Zielgruppe. Das Projekt ist Open
 Source.
@@ -363,6 +366,16 @@ die Säulen stehen.
   Entscheidung 7).
 - **Spendenplattform-Abgleich** als vereinsspezifisches Modul.
 - **XRechnung** in der Akte, samt Sichtfassung.
+- **Module nachinstallierbar** (entschieden am 2026-09-13 als V2). Heute
+  beschreibt sich ein Modul über sein Manifest, und die Anwendung setzt die
+  Liste zusammen; das bleibt so, weil eine Registry, die sich beim Import
+  selbst füllt, in Next je Route anders befüllt wäre. Was für ein
+  nachinstallierbares Modul fehlt: Migrationen im eigenen Paket, die der Kern
+  beim Einschalten in Abhängigkeitsreihenfolge ausführt; eine Oberfläche, die
+  das Modul mitbringt, statt Routen in der Anwendung; und Tests, die ein
+  Modul nur mit dem Kern und seinem `dependsOn` laufen, mit genau den
+  Tabellen, die seine Registry kennt. Die Modul-Tests bauen ihre Registry
+  schon so; die Tabellen kommen bis dahin für alle aus dem Kern.
 
 ## 6. Pflege
 
