@@ -67,3 +67,82 @@ sollte und sonst niemand ihn sieht.
 
 **Wann:** Vor dem Publish aus Test (Cutover-Plan, Schritt 4). Redaktion, nicht
 Entwicklung.
+
+## 9. Fotos auf der Hundeseite vergrößern (Vereinsrepo)
+
+**Was:** Hauptfoto und Miniaturbilder verlinken auf die größte Bildvariante;
+ein Inline-Skript öffnet sie in einem nativen `<dialog>` mit Blättern, Escape
+und Klick daneben. Ohne JavaScript öffnet der Link das Bild selbst. Keine
+Bibliothek, keine Fremdaufrufe. Dazu ein Browsertest und ein Fixture-Hund mit
+zwei Fotos.
+
+**Warum:** Hunde mit mehreren Fotos zeigen die weiteren nur als Miniaturen,
+die sich nicht öffnen lassen (2026-09-13).
+
+**Wann:** Entscheidung offen — Joe und Nicole entscheiden, ob und wie.
+
+## 10. Medien-Upload über MCP
+
+**Was:** Ein Werkzeug `media_upload` mit Base64-Inhalt und Größengrenze, das
+`storeMediaAsset` ruft — mit Test, Audit und Seed wie jedes Werkzeug.
+
+**Warum:** Ein Agent kann heute ein Tier samt Text anlegen, aber kein Foto
+mitgeben. Der Import der Prototyp-Hunde am 2026-09-13 lief deshalb ohne
+Bilder.
+
+**Wann:** Mit dem nächsten Blick auf die Mediathek.
+
+## 11. Sammlungseinträge über MCP
+
+**Was:** Werkzeuge für die Einträge der Template-Sammlungen (anlegen, ändern,
+veröffentlichen, sortieren, löschen), so wie es sie für die Variablen gibt.
+
+**Warum:** Ein Sperrworttreffer in einer FAQ-Antwort ließ sich am 2026-09-13
+nur in der Maske beheben. Prinzip 8 verspricht denselben Weg für MCP.
+
+**Wann:** Bevor ein Agent Webseiteninhalte pflegen soll.
+
+## 12. Template-Upload als Archiv über die Oberfläche
+
+**Was:** Unter Webseite → Template ein Archiv hochladen, das Kompass in das
+Template-Verzeichnis entpackt, Punktdateien inklusive, Besitzer `node`.
+
+**Warum:** Handkopien über Freigaben verlieren Punktdateien und setzen falsche
+Besitzer — so fehlte am 2026-09-13 die `.htaccess` auf dem Server. Das
+Sync-Skript im Vereinsrepo deckt das für Entwickler ab, nicht für den Verein.
+
+**Wann:** Wenn jemand außer Joe Templates einspielen soll.
+
+## 13. Kachel „Hunde vermittelt“ aus den Daten (Vereinsrepo)
+
+**Was:** In der Vertrauensleiste die Zahl der vermittelten Hunde aus
+`views.animals` zählen, statt einer festen Zahl.
+
+**Warum:** Die Weiterleitungsquote ist am 2026-09-13 als Versprechen
+gestrichen worden. Eine gezählte Zahl verspricht nichts und wächst von selbst.
+
+**Wann:** Sobald die Zahl zweistellig ist; heute stünde dort 2.
+
+## 14. Hilfetext am Profil-Link in der Tiermaske
+
+**Was:** Am Feld „externes Profil“ erklären, was der Link bewirkt: Trägt ein
+Hund ihn, laufen Anfragen auf der Webseite über den Partner statt per E-Mail.
+
+**Warum:** Die Regel vom 2026-09-13 lebt im Template; die Maske verrät sie
+nicht. Wer den Link vergisst, leitet Anfragen unbemerkt zu sich.
+
+**Wann:** Mit der nächsten Änderung an der Tiermaske.
+
+## 15. Sichten nie strenger als ihre Dienste
+
+**Was:** Jede veröffentlichte Sicht gegen die Eingabeschemata ihres Moduls
+prüfen — was ein Dienst annimmt, muss die Sicht ohne Exception liefern. Ein
+generischer Test je Modul, der einen Datensatz mit minimalen Pflichtfeldern
+anlegt und die Sicht lädt.
+
+**Warum:** Die Tiersicht verlangte `traits` in `de` und `en`, der Dienst nahm
+ein Teil-Record an; ein MCP-Anlage brach damit jeden Export (2026-09-13,
+`686c843`). Im Tiermodul war es die einzige Stelle, die anderen Module sind
+nicht geprüft.
+
+**Wann:** Vor dem nächsten Modul mit veröffentlichter Sicht.
