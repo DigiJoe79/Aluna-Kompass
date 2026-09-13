@@ -1,34 +1,61 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useRef, useState, useTransition } from 'react';
-import { toast } from 'sonner';
+import { useState } from 'react';
+import { MediaChooserDialog } from '@/components/media/media-chooser-dialog';
 import { Button } from '@/components/ui/button';
-import { uploadMediaAction } from '@/app/(shell)/media-actions';
 
-export function MediaPicker({ name, value, label, accept = 'image/png,image/jpeg,image/webp,image/svg+xml' }: { name: string; value: string | null; label: string; accept?: string }) {
+/**
+ * Ein Medienfeld: Vorschau, „Wählen“, „Entfernen“. Hochladen gibt es hier
+ * nicht mehr — das macht der Dialog, in den offenen Ordner der Mediathek.
+ * Der Wert ist die Asset-ID im versteckten Feld; `onChange` für Formulare,
+ * die ihren Zustand selbst halten (Einstellungen, Schema-Formulare).
+ */
+export function MediaPicker({
+  name,
+  value,
+  label,
+  kind = 'image',
+  onChange,
+}: {
+  name: string;
+  value: string | null;
+  label: string;
+  kind?: 'image' | 'pdf';
+  onChange?: (id: string | null) => void;
+}) {
   const t = useTranslations('content');
   const [assetId, setAssetId] = useState<string | null>(value);
-  const [pending, start] = useTransition();
-  const input = useRef<HTMLInputElement>(null);
-  const upload = (file: File) => start(async () => {
-    const fd = new FormData();
-    fd.set('file', file);
-    const s = await uploadMediaAction(fd);
-    if (s.status === 'success') setAssetId((s.data as { id: string }).id);
-    else if (s.status === 'error') toast.error(s.message);
-  });
+  const [open, setOpen] = useState(false);
+  const set = (id: string | null) => {
+    setAssetId(id);
+    onChange?.(id);
+  };
+  const isImage = kind === 'image';
   return (
     <div className="flex items-center gap-3">
       <input type="hidden" name={name} value={assetId ?? ''} />
-      {assetId ? <img src={`/media/${assetId}`} alt="" className="size-14 rounded-md border border-line object-cover" /> : <div className="size-14 rounded-md border border-dashed border-line-strong bg-surface-2" aria-hidden />}
+      {assetId && isImage ? (
+        <img src={`/media/${assetId}/preview`} alt="" className="size-14 rounded-md border border-line object-cover" />
+      ) : assetId ? (
+        <span className="grid size-14 place-items-center rounded-md border border-line bg-surface-2 text-[11px] font-semibold uppercase text-ink-2">{kind}</span>
+      ) : (
+        <div className="size-14 rounded-md border border-dashed border-line-strong bg-surface-2" aria-hidden />
+      )}
       <div className="flex flex-col gap-1">
         <span className="text-[13px] font-semibold text-ink-2">{label}</span>
         <div className="flex gap-2">
-          <input ref={input} type="file" accept={accept} aria-label={`${label} ${t('chooseFile')}`} className="text-[12px]" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); }} disabled={pending} />
-          {assetId ? <Button type="button" variant="ghost" size="sm" onClick={() => setAssetId(null)}>{t('removeImage')}</Button> : null}
+          <Button type="button" variant="secondary" size="sm" aria-label={`${label}: ${t('choose')}`} onClick={() => setOpen(true)}>
+            {t('choose')}
+          </Button>
+          {assetId ? (
+            <Button type="button" variant="ghost" size="sm" onClick={() => set(null)}>
+              {t('removeImage')}
+            </Button>
+          ) : null}
         </div>
       </div>
+      <MediaChooserDialog open={open} onOpenChange={setOpen} kind={kind} multiple={false} selected={assetId ? [assetId] : []} onConfirm={(ids) => set(ids[0] ?? null)} />
     </div>
   );
 }

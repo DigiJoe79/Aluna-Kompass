@@ -18,7 +18,10 @@ test.describe('media library', () => {
     await page.getByLabel('Slug (URL-Teil)').fill('hofprojekt');
     await page.locator('[name="name.de"]').fill('Hofprojekt');
     await page.locator('[name="summary.de"]').fill('Kurztext.');
-    await page.getByLabel('Bild Datei wählen').setInputFiles({ name: 'hof.png', mimeType: 'image/png', buffer: PNG });
+    await page.getByRole('button', { name: 'Bild: Wählen' }).click();
+    const chooser = page.getByRole('dialog', { name: 'Bild wählen' });
+    await chooser.getByLabel('Hochladen').setInputFiles({ name: 'hof.png', mimeType: 'image/png', buffer: PNG });
+    await expect(chooser).toBeHidden();
     await expect(page.getByRole('button', { name: 'Bild entfernen' })).toBeVisible();
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);

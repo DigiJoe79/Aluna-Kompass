@@ -112,7 +112,7 @@
     "unpublished": "Nicht veröffentlicht",
     "moveUp": "Nach oben",
     "moveDown": "Nach unten",
-    "chooseFile": "Datei wählen",
+    "choose": "Wählen",
     "removeImage": "Bild entfernen",
     "noFile": "Bitte eine Datei auswählen.",
     "gaps": "{count, plural, =0 {Alle Übersetzungen vorhanden} one {# Übersetzung offen} other {# Übersetzungen offen}}",

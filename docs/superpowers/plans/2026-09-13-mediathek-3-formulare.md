@@ -35,7 +35,7 @@
   ```
   Rendert `<input type="hidden" name={name}>` mit der ID, eine Vorschau (`/media/{id}/preview`), Knopf „Wählen“ (`content.choose`) und bei Wert „Entfernen“ (`content.removeImage`). `onChange` wird bei jeder Änderung gerufen.
 
-- [ ] **Step 1: E2E anpassen**
+- [x] **Step 1: E2E anpassen**
 
 `apps/kompass/e2e/media.spec.ts`, Fall „opens the detail dialog and blocks deleting an asset that is in use“: die zwei Zeilen
 
@@ -80,7 +80,7 @@ Und in `apps/kompass/e2e/projects.spec.ts` einen Fall anhängen, der aus dem Bes
 
 `PNG` in `projects.spec.ts` wie in `media.spec.ts` als Konstante anlegen, falls es dort fehlt.
 
-- [ ] **Step 2: Rot sehen**
+- [x] **Step 2: Rot sehen**
 
 ```bash
 pnpm --filter @kompass/app e2e -- media.spec.ts projects.spec.ts
@@ -88,11 +88,11 @@ pnpm --filter @kompass/app e2e -- media.spec.ts projects.spec.ts
 
 Erwartung: FAIL — kein Knopf „Wählen“.
 
-- [ ] **Step 3: Übersetzungen**
+- [x] **Step 3: Übersetzungen**
 
 In `de.json` unter `content`: `"chooseFile": "Datei wählen"` entfernen, `"choose": "Wählen"` einfügen. `content.removeImage` bleibt.
 
-- [ ] **Step 4: `MediaPicker` neu schreiben**
+- [x] **Step 4: `MediaPicker` neu schreiben**
 
 ```tsx
 // apps/kompass/src/components/forms/media-picker.tsx
@@ -163,7 +163,7 @@ Prüfe, dass `variant="secondary"` in `apps/kompass/src/components/ui/button.tsx
 
 Der Knopf heißt sichtbar überall „Wählen“; sein `aria-label` ist „<Label>: Wählen“, damit ein Screenreader und die E2E-Tests bei zwei Pickern in einem Formular (Vorher/Nachher) den richtigen treffen. Das Projektbild heißt `projects.form.image` — prüfe in `de.json`, dass es „Bild“ ist, sonst den Selektor in Step 1 anpassen.
 
-- [ ] **Step 5: `media-actions.ts` entfernen**
+- [x] **Step 5: `media-actions.ts` entfernen**
 
 ```bash
 git rm "apps/kompass/src/app/(shell)/media-actions.ts"
@@ -172,7 +172,7 @@ grep -rn "media-actions" apps/kompass/src
 
 Erwartung: kein Treffer mehr.
 
-- [ ] **Step 6: Grün sehen**
+- [x] **Step 6: Grün sehen**
 
 ```bash
 pnpm typecheck
@@ -180,7 +180,7 @@ pnpm --filter @kompass/app test
 pnpm --filter @kompass/app e2e -- media.spec.ts projects.spec.ts
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/kompass/src/components/forms/media-picker.tsx apps/kompass/messages/de.json apps/kompass/e2e/media.spec.ts apps/kompass/e2e/projects.spec.ts
