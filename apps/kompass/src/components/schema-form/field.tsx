@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { FieldError } from '@/components/forms/field-error';
+import { MediaPicker } from '@/components/forms/media-picker';
 import { MarkdownPreview } from '@/components/markdown-preview';
 import { blankFor, setAtPath } from './state';
 import { Select } from '@/components/ui/select';
@@ -205,25 +206,17 @@ export function SchemaField(props: FieldProps) {
 }
 
 function AssetField({ path, field, value, errors, onChange }: FieldProps) {
-  const t = useTranslations('site.form');
   const assetId = typeof value === 'string' ? value : null;
+  const accept = (field as { accept?: string }).accept;
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-[13px] font-semibold text-ink-2">{labelOf(field, path)}</span>
-      <div className="flex items-center gap-3">
-        <input type="hidden" name={path} value={assetId ?? ''} />
-        {assetId ? <img src={`/media/${assetId}`} alt="" className="size-14 rounded-md border border-line object-cover" /> : <div className="size-14 rounded-md border border-dashed border-line-strong bg-surface-2" aria-hidden />}
-        <Input
-          aria-label={t('chooseImage')}
-          value={assetId ?? ''}
-          placeholder="asset-id"
-          onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}
-          className="max-w-xs"
-        />
-        {assetId ? (
-          <button type="button" onClick={() => onChange(null)} className="rounded-sm bg-badge px-2 py-0.5 text-[11px] text-error">{t('removeImage')}</button>
-        ) : null}
-      </div>
+      <MediaPicker
+        name={path}
+        value={assetId}
+        label={labelOf(field, path)}
+        kind={accept === 'application/pdf' ? 'pdf' : 'image'}
+        onChange={(id) => onChange(id)}
+      />
       <FieldError id={`${path}-error`} message={errors[path]} />
     </div>
   );

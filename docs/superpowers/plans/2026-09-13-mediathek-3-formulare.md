@@ -199,7 +199,7 @@ git commit -m "feat(app): a media field chooses from the library — preview, ch
 **Interfaces:**
 - Consumes: `MediaPicker` mit `onChange` (Task 1); Feld-Metadaten `field.accept` (`asset()` in `packages/site-template/src/index.ts` schreibt `accept`, Vorgabe `image/*`, Dokumente-Sammlung `application/pdf`).
 
-- [ ] **Step 1: E2E schreiben**
+- [x] **Step 1: E2E schreiben**
 
 Öffne `apps/kompass/e2e/site-template.spec.ts` und finde den Fall, der die Variablen-Seite oder einen Sammlungseintrag speichert (Suche nach `'/site/variables'` oder `'/site/c/'`). Ergänze einen eigenen Fall:
 
@@ -220,13 +220,13 @@ git commit -m "feat(app): a media field chooses from the library — preview, ch
 
 Die Beschriftung „Bild auf der Startseite“ ist das `label` von `heroImage` in `templates/verein-basis/kompass.template.ts`; die Playwright-Konfiguration setzt `SITE_TEMPLATE_DIR` auf dieses Template. Prüfe im bestehenden Spec, wie das Template eingelesen wird (ein Schritt „Template einlesen“ vor dem Variablen-Aufruf), und übernimm ihn in den `beforeEach` oder an den Anfang des Falls.
 
-- [ ] **Step 2: Rot sehen**
+- [x] **Step 2: Rot sehen**
 
 ```bash
 pnpm --filter @kompass/app e2e -- site-template.spec.ts -g "chosen from the library"
 ```
 
-- [ ] **Step 3: `AssetField` umstellen**
+- [x] **Step 3: `AssetField` umstellen**
 
 In `field.tsx` `AssetField` ersetzen:
 
@@ -253,7 +253,7 @@ Import ergänzen: `import { MediaPicker } from '@/components/forms/media-picker'
 
 `site.form.chooseImage` entfernen, wenn es nirgends mehr gelesen wird (`grep -rn "chooseImage" apps/kompass/src`); `site.form.removeImage` ebenso prüfen.
 
-- [ ] **Step 4: Grün sehen**
+- [x] **Step 4: Grün sehen**
 
 ```bash
 pnpm typecheck
@@ -261,7 +261,7 @@ pnpm --filter @kompass/app test
 pnpm --filter @kompass/app e2e -- site-template.spec.ts
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/kompass/src/components/schema-form/field.tsx apps/kompass/messages/de.json apps/kompass/e2e/site-template.spec.ts

@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { loginAsAdmin, resetDatabase } from './helpers';
 
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+  'base64',
+);
+
 test('reads a template, fills a variable and keeps a collection entry', async ({ page }) => {
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
@@ -78,4 +83,25 @@ test('a reference variable is a choice, and a withdrawn record shows as stale un
   await page.reload();
   await expect(page.getByLabel('Projekt auf der Startseite')).toHaveValue('');
   await expect(page.getByText('steht nicht mehr zur Auswahl')).toHaveCount(0);
+});
+
+test('a variable of type asset is chosen from the library', async ({ page }) => {
+  await resetDatabase(page, 'seeded');
+  await loginAsAdmin(page);
+
+  await page.goto('/admin/media');
+  await page.getByLabel('Datei hochladen').setInputFiles({ name: 'startbild.png', mimeType: 'image/png', buffer: PNG });
+  await expect(page.getByRole('row', { name: /startbild-/ })).toBeVisible();
+
+  await page.goto('/site/template');
+  await page.getByRole('button', { name: 'Template einlesen' }).click();
+  await page.getByRole('button', { name: 'Übernehmen' }).click();
+  await expect(page.getByRole('status')).toContainText('eingelesen');
+
+  await page.goto('/site/variables');
+  await page.getByRole('button', { name: 'Bild auf der Startseite: Wählen' }).click();
+  const chooser = page.getByRole('dialog', { name: 'Bild wählen' });
+  await chooser.getByRole('button', { name: /startbild-/ }).click();
+  await expect(chooser).toBeHidden();
+  await expect(page.locator('input[name="heroImage"]')).toHaveValue(/^[0-9A-Z]{26}$/);
 });
