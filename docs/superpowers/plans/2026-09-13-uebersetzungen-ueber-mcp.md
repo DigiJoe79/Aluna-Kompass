@@ -34,7 +34,7 @@
 - Consumes: `checkReferenceValues(deps, schema, values)`, `duplicateReferences(schema, values)` aus `packages/modules/site/src/reference-fields.ts`; `readValues(deps)` aus `values.ts`.
 - Produces: unverändertes API von `setValues(deps, ctx, { values })`; neues Verhalten: ein Referenzwert, der gleich dem gespeicherten ist, wird nicht mehr geprüft.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 In `packages/modules/site/tests/values.test.ts` innerhalb von `describe('reference values', …)` nach dem Test `saves a value that is among the options and rejects one that is not` einfügen. `siteValues` zusätzlich aus `../src/schema` importieren (die Datei importiert dort bisher nur `siteTemplateState`).
 
@@ -54,12 +54,12 @@ In `packages/modules/site/tests/values.test.ts` innerhalb von `describe('referen
   });
 ```
 
-- [ ] **Step 2: Test laufen lassen, er muss rot sein**
+- [x] **Step 2: Test laufen lassen, er muss rot sein**
 
 Run: `pnpm --filter @kompass/module-site test -- values`
 Expected: FAIL — `saved.ok` ist `false`, weil `checkReferenceValues` den unveränderten `ghost` meldet.
 
-- [ ] **Step 3: Nur geänderte Referenzwerte prüfen**
+- [x] **Step 3: Nur geänderte Referenzwerte prüfen**
 
 In `packages/modules/site/src/values.ts` den Block ab dem Kommentar „Referenzwerte müssen in der gefilterten Sicht stehen" ersetzen. `before` wandert dabei vor die Prüfung (es wird unten für den Audit-Eintrag ohnehin gelesen; die Zeile `const before = readValues(deps);` weiter unten entfällt).
 
@@ -86,16 +86,16 @@ In `packages/modules/site/src/values.ts` den Block ab dem Kommentar „Referenzw
   const now = isoNow(deps.clock);
 ```
 
-- [ ] **Step 4: Tests laufen lassen**
+- [x] **Step 4: Tests laufen lassen**
 
 Run: `pnpm --filter @kompass/module-site test -- values`
 Expected: PASS, auch die bestehenden Referenz-Tests (ein geänderter `ghost` bleibt `referenceNotFound`).
 
-- [ ] **Step 5: Backlog-Punkt 19 entfernen**
+- [x] **Step 5: Backlog-Punkt 19 entfernen**
 
 In `docs/backlog.md` den gesamten Abschnitt von `## 19. Veraltete Referenz blockiert das Speichern der Variablen` bis zum Dateiende löschen (Erledigtes wird gelöscht, nicht abgehakt — steht im Kopf der Datei). Die Datei endet danach mit dem letzten Absatz von Punkt 18.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 pnpm typecheck
