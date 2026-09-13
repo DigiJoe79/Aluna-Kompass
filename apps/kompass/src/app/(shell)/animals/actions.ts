@@ -1,6 +1,5 @@
 'use server';
 
-import { storeMediaAsset } from '@kompass/core';
 import { createAnimal, setAnimalPhotos, setAnimalPublished, setAnimalStatus, setAnimalStory, updateAnimal } from '@kompass/module-animals';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
@@ -51,15 +50,6 @@ export async function setAnimalPhotosAction(id: string, photos: { assetId: strin
   const result = await setAnimalPhotos(deps, ctx, { id, photos });
   revalidatePath('/animals');
   return toActionState(result, t, t('animals.photos.saved'));
-}
-
-export async function uploadAnimalPhotoAction(formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const file = formData.get('file');
-  if (!(file instanceof File) || file.size === 0) return { status: 'error', message: t('content.noFile'), fieldErrors: {} };
-  const result = await storeMediaAsset(deps, ctx, { originalName: file.name, bytes: new Uint8Array(await file.arrayBuffer()), declaredMimeType: file.type });
-  return toActionState(result, t);
 }
 
 export async function saveAnimalStoryAction(_prev: ActionState, formData: FormData): Promise<ActionState> {

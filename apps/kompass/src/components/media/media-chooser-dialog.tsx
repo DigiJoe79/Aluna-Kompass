@@ -45,10 +45,19 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, selecte
   const [uploading, setUploading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  // Beim Öffnen den Stand des Feldes übernehmen.
+  // `selected` kommt vom aufrufenden Formular und bekommt bei jedem Render dort
+  // (z. B. nach einem Server-Action-Refresh der Seite während des Uploads) eine
+  // neue Array-Referenz, auch wenn sich der Inhalt nicht ändert. Ein Ref hält den
+  // aktuellen Wert, ohne dass er den Effekt unten erneut auslöst — sonst würde
+  // jeder solche Refresh die gerade angehakte Auswahl mitten im Dialog verwerfen.
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
+
+  // Beim Öffnen den Stand des Feldes übernehmen — nur beim Öffnen, nicht bei
+  // jeder Änderung der (instabilen) `selected`-Referenz während der Dialog offen ist.
   useEffect(() => {
-    if (open) setPicked(new Set(selected));
-  }, [open, selected]);
+    if (open) setPicked(new Set(selectedRef.current));
+  }, [open]);
 
   const load = useCallback(async () => {
     const params = new URLSearchParams();

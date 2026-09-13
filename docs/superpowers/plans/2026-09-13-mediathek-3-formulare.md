@@ -385,7 +385,7 @@ git commit -m "feat(app): the logo is a settings field chosen from the library; 
 - Consumes: `MediaChooserDialog` mit `multiple: true`; `setAnimalPhotosAction(id, photos)`.
 - Produces: `PhotosEditor` ohne Dateifeld; Knopf „Fotos wählen“ öffnet den Dialog mit den aktuellen IDs.
 
-- [ ] **Step 1: E2E anpassen**
+- [x] **Step 1: E2E anpassen**
 
 In `apps/kompass/e2e/animals.spec.ts`, Fall „creates a dog, adds photos, publishes…“, die Zeilen
 
@@ -447,13 +447,13 @@ Dazu einen zweiten Fall, der abwählt:
 
 Übernimm die Pflichtfelder des Tierformulars aus dem ersten Fall der Datei (Slug, Name, ggf. Geschlecht), damit das Speichern durchgeht.
 
-- [ ] **Step 2: Rot sehen**
+- [x] **Step 2: Rot sehen**
 
 ```bash
 pnpm --filter @kompass/app e2e -- animals.spec.ts
 ```
 
-- [ ] **Step 3: Übersetzung und Editor**
+- [x] **Step 3: Übersetzung und Editor**
 
 `de.json`, `animals.photos`: `"upload": "Foto hochladen"` → `"choose": "Fotos wählen"`.
 
@@ -535,7 +535,7 @@ Der Import einer `'use client'`-Datei in einem Node-Vitest funktioniert, weil `'
 
 Aus `actions.ts` `uploadAnimalPhotoAction` samt ungenutzter Imports entfernen.
 
-- [ ] **Step 4: Grün sehen**
+- [x] **Step 4: Grün sehen**
 
 ```bash
 pnpm typecheck
@@ -546,7 +546,7 @@ grep -rn "uploadAnimalPhotoAction\|photos.upload" apps/kompass/src apps/kompass/
 
 Erwartung: grün, kein Treffer.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add "apps/kompass/src/app/(shell)/animals/photos-editor.tsx" "apps/kompass/src/app/(shell)/animals/actions.ts" apps/kompass/messages/de.json apps/kompass/e2e/animals.spec.ts apps/kompass/tests/animal-photos-merge.test.ts

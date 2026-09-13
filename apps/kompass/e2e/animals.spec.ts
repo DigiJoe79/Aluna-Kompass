@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import { loginAsAdmin, resetDatabase } from './helpers';
 
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4"/></svg>');
 
 test.describe('animals', () => {
   test.beforeEach(async ({ page }) => {
@@ -26,8 +27,16 @@ test.describe('animals', () => {
     await expect(page).toHaveURL(/\/animals\/[A-Z0-9]+$/);
 
     await page.getByRole('tab', { name: 'Fotos' }).click();
-    await page.getByLabel(/Foto hochladen/).setInputFiles({ name: 'chiara-1.png', mimeType: 'image/png', buffer: PNG });
-    await expect(page.locator('[data-testid="animal-photo"]')).toHaveCount(1);
+    await page.getByRole('button', { name: 'Fotos wählen' }).click();
+    const chooser = page.getByRole('dialog', { name: 'Bilder wählen' });
+    await chooser.getByLabel('Hochladen').setInputFiles([
+      { name: 'chiara-1.png', mimeType: 'image/png', buffer: PNG },
+      { name: 'chiara-2.svg', mimeType: 'image/svg+xml', buffer: SVG },
+    ]);
+    await expect(chooser.getByText('2 ausgewählt')).toBeVisible();
+    await chooser.getByRole('button', { name: 'Übernehmen' }).click();
+    await expect(chooser).toBeHidden();
+    await expect(page.locator('[data-testid="animal-photo"]')).toHaveCount(2);
     await page.getByRole('button', { name: 'Fotos speichern' }).click();
     await expect(page.getByRole('status')).toContainText('Fotos gespeichert');
 
@@ -70,5 +79,32 @@ test.describe('animals', () => {
     await page.getByRole('button', { name: 'Speichern' }).click();
     await page.getByRole('tab', { name: 'Geschichte' }).click();
     await expect(page.getByText('Erst nach der Vermittlung')).toBeVisible();
+  });
+
+  test('unchecking a photo in the chooser removes it from the list', async ({ page }) => {
+    await page.goto('/animals');
+    await page.getByRole('link', { name: 'Hund anlegen' }).click();
+    await page.getByLabel('Slug (URL-Teil)').fill('bo');
+    await page.getByLabel('Name').fill('Bo');
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page).toHaveURL(/\/animals\/[A-Z0-9]+$/);
+    await page.getByRole('tab', { name: 'Fotos' }).click();
+
+    await page.getByRole('button', { name: 'Fotos wählen' }).click();
+    let chooser = page.getByRole('dialog', { name: 'Bilder wählen' });
+    await chooser.getByLabel('Hochladen').setInputFiles([
+      { name: 'bo-1.png', mimeType: 'image/png', buffer: PNG },
+      { name: 'bo-2.svg', mimeType: 'image/svg+xml', buffer: SVG },
+    ]);
+    await expect(chooser.getByText('2 ausgewählt')).toBeVisible();
+    await chooser.getByRole('button', { name: 'Übernehmen' }).click();
+    await expect(page.locator('[data-testid="animal-photo"]')).toHaveCount(2);
+
+    await page.getByRole('button', { name: 'Fotos wählen' }).click();
+    chooser = page.getByRole('dialog', { name: 'Bilder wählen' });
+    await chooser.getByRole('button', { name: /bo-2-/ }).click();
+    await expect(chooser.getByText('1 ausgewählt')).toBeVisible();
+    await chooser.getByRole('button', { name: 'Übernehmen' }).click();
+    await expect(page.locator('[data-testid="animal-photo"]')).toHaveCount(1);
   });
 });
