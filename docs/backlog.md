@@ -162,3 +162,22 @@ Daten müssen ihn liefern.
 
 **Wann:** Nach der Inhaltssitzung; als Übergang kann das Template die
 Ortsangabe unter „Vorher“ weglassen.
+
+## 17. Startseiten-Hund am Tier markieren statt per Slug-Variable
+
+**Was:** Ein Kennzeichen am Tier, „auf der Startseite zeigen“, gesetzt mit
+einem Knopf in der Tiermaske — wie „Hauptfoto“ bei den Fotos. Genau eines je
+Gruppe: ein suchender Hund, ein vermittelter Hund mit Geschichte; wer markiert,
+löst die vorherige Markierung der Gruppe. Kommt als Feld in die veröffentlichte
+Sicht. Das Template liest es und lässt die beiden Variablen „Hund auf der
+Startseite“ und „Geschichte auf der Startseite“ fallen; ohne Markierung gilt
+weiter die Automatik. Betrifft Schema und Migration, Dienst und MCP-Werkzeug,
+Maske, Sicht, Seed und Tests, dazu Template und Deklaration.
+
+**Warum:** Heute tippt jemand einen Slug in eine Variable; ein Tippfehler oder
+ein inzwischen vermittelter Hund lässt den Abschnitt still verschwinden. Am
+Tier selbst ist die Wahl sichtbar und kann nicht ins Leere zeigen (Joe,
+2026-09-13).
+
+**Wann:** Nach der Inhaltssitzung, zusammen mit Punkt 16 — beides sind
+Felder an der Tiergeschichte und der Tiermaske.
