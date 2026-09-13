@@ -281,7 +281,7 @@ git commit -m "feat(app): asset fields of the website forms choose from the libr
 **Interfaces:**
 - Consumes: `MediaPicker` mit `onChange`; `set(key, value)` in `SettingsForm`; `saveSettingsAction(changes)` schreibt `branding.logoAssetId` wie jede Einstellung.
 
-- [ ] **Step 1: E2E schreiben**
+- [x] **Step 1: E2E schreiben**
 
 In `apps/kompass/e2e/settings.spec.ts` anhängen (Setup wie die vorhandenen Fälle dort, `resetDatabase(page, 'seeded')` und `loginAsAdmin`):
 
@@ -308,13 +308,13 @@ In `apps/kompass/e2e/settings.spec.ts` anhängen (Setup wie die vorhandenen Fäl
 
 Prüfe die Tab-Beschriftung (`settings.tabs.branding` in `de.json`) und den Text der Speichern-Schaltfläche der `SaveBar`, und setze die Selektoren entsprechend.
 
-- [ ] **Step 2: Rot sehen**
+- [x] **Step 2: Rot sehen**
 
 ```bash
 pnpm --filter @kompass/app e2e -- settings.spec.ts -g "logo"
 ```
 
-- [ ] **Step 3: Umbau**
+- [x] **Step 3: Umbau**
 
 In `settings-form.tsx`: Import `LogoUpload` entfernen, `MediaPicker` importieren, und die Zeile
 
@@ -356,7 +356,7 @@ grep -rn "logo-upload\|logo-actions\|settings.logo\.\(file\|submit\|saved\|noFil
 
 Erwartung: kein Treffer. Der Wert `null` für „Logo entfernt“ muss von der Einstellungsdefinition erlaubt sein — prüfe `branding.logoAssetId` in `packages/core/src/settings/` (Definition mit Zod-Schema); erlaubt sie nur `string`, ergänze `.nullable()` dort und einen Kern-Test in `packages/core/tests/settings*.test.ts`, der `null` schreibt.
 
-- [ ] **Step 4: Grün sehen**
+- [x] **Step 4: Grün sehen**
 
 ```bash
 pnpm typecheck
@@ -364,7 +364,7 @@ pnpm --filter @kompass/app test
 pnpm --filter @kompass/app e2e -- settings.spec.ts
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add "apps/kompass/src/app/(shell)/admin/settings/settings-form.tsx" apps/kompass/messages/de.json apps/kompass/e2e/settings.spec.ts

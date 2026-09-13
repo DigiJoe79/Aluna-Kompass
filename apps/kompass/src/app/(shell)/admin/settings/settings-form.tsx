@@ -11,9 +11,9 @@ import { Select } from '@/components/ui/select';
 import { FormErrorSummary } from '@/components/forms/form-error-summary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { MediaPicker } from '@/components/forms/media-picker';
 import { SETTINGS_TABS, TAX_REQUIRED, type SettingsField } from '@/lib/settings-fields';
 import { cn } from '@/lib/utils';
-import { LogoUpload } from './logo-upload';
 import { saveSettingsAction } from './actions';
 
 type Values = Record<string, unknown>;
@@ -178,7 +178,17 @@ export function SettingsForm({
               </span>
             </p>
           ) : null}
-          {tab.key === 'branding' ? <LogoUpload currentAssetId={String(values['branding.logoAssetId'] ?? '') || null} /> : null}
+          {tab.key === 'branding' ? (
+            <div className="mb-4 flex flex-col gap-1 rounded-lg border border-line bg-surface p-6">
+              <MediaPicker
+                name="branding.logoAssetId"
+                value={String(values['branding.logoAssetId'] ?? '') || null}
+                label={t('logo.label')}
+                onChange={(id) => set('branding.logoAssetId', id)}
+              />
+              <p className="text-[12px] text-ink-2">{t('logo.hint')}</p>
+            </div>
+          ) : null}
           <div className="grid gap-x-6 gap-y-4 rounded-lg border border-line bg-surface p-6 md:grid-cols-2">
             {tab.fields.map(render)}
           </div>

@@ -726,12 +726,8 @@
       "saved": "Einstellungen gespeichert. Änderungen sind im Protokoll vermerkt."
     },
     "logo": {
-      "file": "Logo-Datei",
-      "hint": "PNG oder SVG, mindestens 256 px. Erscheint in Sidebar, Login und Briefkopf.",
-      "submit": "Logo speichern",
-      "saved": "Logo gespeichert.",
-      "noFile": "Bitte eine Datei auswählen.",
-      "current": "Aktuelles Logo"
+      "label": "Logo",
+      "hint": "PNG oder SVG, mindestens 256 px. Erscheint in Sidebar, Login und Briefkopf."
     }
   },
   "themes": {

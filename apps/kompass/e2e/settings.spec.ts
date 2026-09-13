@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { loginAsAdmin, resetDatabase } from './helpers';
 
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+  'base64',
+);
+
 test.describe('settings', () => {
   test.beforeEach(async ({ page }) => {
     await resetDatabase(page, 'seeded');
@@ -54,5 +59,24 @@ test.describe('settings', () => {
     await expect(page.locator('main').getByRole('alert')).toContainText('Zuwendungsbestätigungen');
     await page.getByLabel('Satzungszweck').fill('Förderung des Tierschutzes');
     await expect(page.getByText('26 von 500 Zeichen')).toBeVisible();
+  });
+
+  test('the logo is chosen from the library and saved with the settings', async ({ page }) => {
+    await page.goto('/admin/media');
+    await page.getByLabel('Datei hochladen').setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: PNG });
+    await expect(page.getByRole('row', { name: /logo-/ })).toBeVisible();
+
+    await page.goto('/admin/settings');
+    await page.getByRole('tab', { name: 'Branding' }).click();
+    await page.getByRole('button', { name: 'Logo: Wählen' }).click();
+    const chooser = page.getByRole('dialog', { name: 'Bild wählen' });
+    await chooser.getByRole('button', { name: /logo-/ }).click();
+    await expect(chooser).toBeHidden();
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByRole('status')).toContainText('gespeichert');
+
+    await page.goto('/admin/media');
+    await page.getByRole('row', { name: /logo-/ }).click();
+    await expect(page.getByRole('dialog')).toContainText('Logo des Vereins');
   });
 });
