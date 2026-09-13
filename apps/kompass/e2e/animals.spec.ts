@@ -14,6 +14,7 @@ test.describe('animals', () => {
     await page.getByRole('link', { name: 'Hund anlegen' }).click();
     await page.getByLabel('Slug (URL-Teil)').fill('chiara');
     await page.getByLabel('Name').fill('Chiara');
+    await expect(page.getByText('laufen Anfragen auf der Webseite über den Partner')).toBeVisible();
     await page.getByLabel('Geschlecht').selectOption('female');
     await page.getByLabel('Größe in cm (für den Filter)').fill('45');
     await page.getByLabel('Notfall').check();
@@ -51,8 +52,14 @@ test.describe('animals', () => {
     await page.getByRole('tab', { name: 'Geschichte' }).click();
     await page.locator('[name="quote.de"]').fill('Endlich zuhause.');
     await page.getByLabel('Familie').fill('Familie M.');
+    await page.locator('[name="beforeCaption.de"]').fill('Auf der Pflegestelle');
+    await page.locator('[name="afterCaption.de"]').fill('Zuhause in Köln');
     await page.getByRole('button', { name: 'Geschichte speichern' }).click();
     await expect(page.getByRole('status')).toContainText('Geschichte gespeichert');
+    await page.reload();
+    await page.getByRole('tab', { name: 'Geschichte' }).click();
+    await expect(page.locator('[name="beforeCaption.de"]')).toHaveValue('Auf der Pflegestelle');
+    await expect(page.locator('[name="afterCaption.de"]')).toHaveValue('Zuhause in Köln');
   });
 
   test('the story tab is locked until the dog is adopted', async ({ page }) => {

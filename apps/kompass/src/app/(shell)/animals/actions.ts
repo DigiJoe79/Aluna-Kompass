@@ -72,6 +72,8 @@ export async function saveAnimalStoryAction(_prev: ActionState, formData: FormDa
     quote: localizedFromForm(formData, 'quote', deps.locales()),
     family: String(formData.get('family') ?? '').trim(),
     adoptedYear: Number(formData.get('adoptedYear') ?? 0),
+    beforeCaption: localizedFromForm(formData, 'beforeCaption', deps.locales()),
+    afterCaption: localizedFromForm(formData, 'afterCaption', deps.locales()),
   });
   revalidatePath('/animals');
   return toActionState(result, t, t('animals.story.saved'));

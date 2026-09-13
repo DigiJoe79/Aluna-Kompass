@@ -1119,7 +1119,7 @@
       "sizeText": "Größe als Text",
       "birthText": "Geburtsangabe",
       "externalProfileUrl": "Externes Profil (URL)",
-      "externalHint": "z. B. das Profil beim Vermittlungspartner.",
+      "externalHint": "Trägt ein Hund diesen Link, laufen Anfragen auf der Webseite über den Partner statt per E-Mail an den Verein. Ohne Link erscheint das E-Mail-Formular.",
       "isEmergency": "Notfall",
       "isSponsorable": "Patentier",
       "summary": "Kurztext",
@@ -1161,7 +1161,10 @@
       "family": "Familie",
       "year": "Vermittlungsjahr",
       "save": "Geschichte speichern",
-      "saved": "Geschichte gespeichert."
+      "saved": "Geschichte gespeichert.",
+      "beforeCaption": "Unterschrift unter dem Vorher-Bild",
+      "afterCaption": "Unterschrift unter dem Nachher-Bild",
+      "captionHint": "Leer heißt: keine Ortsangabe unter dem Bild."
     }
   },
   "site": {
