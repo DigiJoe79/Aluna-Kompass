@@ -356,7 +356,7 @@ git commit -m "refactor(app): the media upload action returns id, folder and whe
   ```
   `previewSrc` hat die Vorgabe `(id) => `/media/${id}/preview``; die Mediathek-Seite übergibt in Plan 4 nichts anderes mehr, bis dahin nutzt sie die Vorgabe ebenfalls (die Vorschau-Route existiert seit Task 1).
 
-- [ ] **Step 1: Übersetzungen anlegen**
+- [x] **Step 1: Übersetzungen anlegen**
 
 In `apps/kompass/messages/de.json` unter `media` ergänzen (bestehende Schlüssel bleiben):
 
@@ -386,7 +386,7 @@ In `apps/kompass/messages/de.json` unter `media` ergänzen (bestehende Schlüsse
     },
 ```
 
-- [ ] **Step 2: Präferenz ergänzen**
+- [x] **Step 2: Präferenz ergänzen**
 
 In `apps/kompass/src/lib/preferences.ts` in `Prefs` und `DEFAULTS`:
 
@@ -398,7 +398,7 @@ In `apps/kompass/src/lib/preferences.ts` in `Prefs` und `DEFAULTS`:
   mediaChooserFolder: null,
 ```
 
-- [ ] **Step 3: Grid verschieben und erweitern**
+- [x] **Step 3: Grid verschieben und erweitern**
 
 `git mv "apps/kompass/src/app/(shell)/admin/media/asset-grid.tsx" apps/kompass/src/components/media/asset-grid.tsx`, dann Inhalt ersetzen:
 
@@ -473,7 +473,7 @@ In `admin/media/library-client.tsx`: Import `./asset-grid` → `@/components/med
           <AssetGrid items={items.map((it) => ({ id: it.id, filename: it.filename, mimeType: it.mimeType, used: it.references.length > 0 }))} onOpen={(it) => setDetailId(it.id)} />
 ```
 
-- [ ] **Step 4: Der Dialog**
+- [x] **Step 4: Der Dialog**
 
 ```tsx
 // apps/kompass/src/components/media/media-chooser-dialog.tsx
@@ -698,7 +698,7 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, selecte
 
 Prüfe `DialogFooter` in `apps/kompass/src/components/ui/dialog.tsx` (exportiert, siehe Zeile 162 ff.). Gibt es `toast.info` in `sonner` nicht in der eingesetzten Version, nimm `toast.message`.
 
-- [ ] **Step 5: Prüfen**
+- [x] **Step 5: Prüfen**
 
 ```bash
 pnpm typecheck
@@ -708,7 +708,7 @@ pnpm --filter @kompass/app e2e -- media.spec.ts
 
 Erwartung: grün. `message-keys.test.ts` findet `chooser.*`, `sort.*`, `search*`; `no-hardcoded-ui-text.test.ts` sieht keine Literale (die einzigen Strings sind Klassen, `accept` und URL-Teile). Der Dialog wird in diesem Plan noch nirgends eingebaut — der Browsertest folgt in Plan 3 mit dem ersten Formular.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/kompass/src/components/media/asset-grid.tsx apps/kompass/src/components/media/media-chooser-dialog.tsx "apps/kompass/src/app/(shell)/admin/media/library-client.tsx" apps/kompass/src/lib/preferences.ts apps/kompass/messages/de.json

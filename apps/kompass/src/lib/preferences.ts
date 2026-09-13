@@ -10,6 +10,8 @@ type Prefs = {
   navCollapsedGroups: string[];
   /** Die Fälligkeitsliste der Startseite auf die eigenen beschränken. */
   dueOnlyMine: boolean;
+  /** Der zuletzt im Auswahl-Dialog geöffnete Ordner; null = Alle Dateien. */
+  mediaChooserFolder: string | null;
 };
 const DEFAULTS: Prefs = {
   sidebarCollapsed: false,
@@ -18,6 +20,7 @@ const DEFAULTS: Prefs = {
   mediaView: 'list',
   navCollapsedGroups: [],
   dueOnlyMine: false,
+  mediaChooserFolder: null,
 };
 
 function read<K extends keyof Prefs>(key: K): Prefs[K] {

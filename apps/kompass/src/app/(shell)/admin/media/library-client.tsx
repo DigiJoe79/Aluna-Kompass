@@ -9,8 +9,8 @@ import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import type { ActionState } from '@/lib/actions';
 import { usePreference } from '@/lib/preferences';
+import { AssetGrid } from '@/components/media/asset-grid';
 import { AssetDetailDialog } from './asset-detail-dialog';
-import { AssetGrid } from './asset-grid';
 import { FolderTree } from './folder-tree';
 import { kb, type Folder, type Item } from './types';
 import { deleteMediaAction, moveMediaAction, uploadMediaAction } from './actions';
@@ -89,7 +89,7 @@ export function LibraryClient({ current, folders, items }: { current: string | n
         {items.length === 0 ? (
           <EmptyState title={t('emptyTitle')} text={t('empty')} />
         ) : view === 'grid' ? (
-          <AssetGrid items={items} onOpen={(it) => setDetailId(it.id)} />
+          <AssetGrid items={items.map((it) => ({ id: it.id, filename: it.filename, mimeType: it.mimeType, used: it.references.length > 0 }))} onOpen={(it) => setDetailId(it.id)} />
         ) : (
           <table className="w-full text-[14px]">
             <thead className="text-left text-ink-2">

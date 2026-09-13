@@ -79,7 +79,30 @@
     "folderDeleted": "Ordner gelöscht.",
     "created": "Ordner angelegt.",
     "renamed": "Ordner umbenannt.",
-    "emptyTitle": "Keine Dateien"
+    "emptyTitle": "Keine Dateien",
+    "search": "Suchen",
+    "searchPlaceholder": "Dateiname oder Verwendung",
+    "sort": {
+      "label": "Sortierung",
+      "newest": "Neueste zuerst",
+      "oldest": "Älteste zuerst",
+      "name": "Name",
+      "size": "Größe"
+    },
+    "chooser": {
+      "titleImage": "Bild wählen",
+      "titlePdf": "Datei wählen",
+      "titleMultiple": "Bilder wählen",
+      "upload": "Hochladen",
+      "confirm": "Übernehmen",
+      "cancel": "Abbrechen",
+      "selectedCount": "{count, plural, =0 {Nichts ausgewählt} one {# ausgewählt} other {# ausgewählt}}",
+      "emptyTitle": "Keine passende Datei",
+      "empty": "Laden Sie eine Datei hoch oder ändern Sie Suche und Ordner.",
+      "loadFailed": "Die Mediathek konnte nicht geladen werden.",
+      "select": "Auswählen",
+      "selected": "Ausgewählt"
+    }
   },
   "content": {
     "preview": "Vorschau",
