@@ -1,7 +1,7 @@
 import type { FieldSchema } from '../types';
 
 /** Verlustfreie Typumformungen: von → nach. Alles andere gilt als Verlust. */
-const LOSSLESS: Record<string, string[]> = { text: ['list', 'markdown'], number: ['text'], select: ['text'], markdown: ['text'] };
+const LOSSLESS: Record<string, string[]> = { text: ['list', 'markdown', 'reference'], number: ['text'], select: ['text'], markdown: ['text'] };
 
 export interface CollectionSchema {
   label?: string;

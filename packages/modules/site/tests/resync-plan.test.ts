@@ -58,4 +58,11 @@ describe('planResync', () => {
     expect(of('added', plan)).toEqual([{ kind: 'added', path: 'variables.quote', label: 'Zitat' }]);
     expect(of('added', plan).some(losesContent)).toBe(false);
   });
+
+  it('text to reference is lossless: a slug carries over', () => {
+    const before = { variables: { dog: { widget: 'text', label: 'Hund' } } };
+    const after = { variables: { dog: { widget: 'reference', view: 'animals', key: 'slug', labelField: 'name', label: 'Hund' } } };
+    const findings = planResync(before as never, after as never, { variables: { dog: 'chiara' } });
+    expect(of('retyped', findings)).toEqual([{ kind: 'retyped', path: 'variables.dog', label: 'Hund', from: 'text', to: 'reference', filled: 1, lossless: true }]);
+  });
 });

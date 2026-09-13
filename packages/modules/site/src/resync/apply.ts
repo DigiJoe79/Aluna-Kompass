@@ -15,10 +15,12 @@ const collectionField = (path: string) => {
 const emptyOf = (kind: string): unknown => {
   switch (kind) {
     case 'list':
+    case 'references':
       return [];
     case 'number':
       return 0;
     case 'asset':
+    case 'reference':
       return null;
     case 'localized':
       return {};
@@ -31,6 +33,7 @@ const emptyOf = (kind: string): unknown => {
 const recast = (value: unknown, from: string, to: string): unknown => {
   if (from === 'text' && to === 'list') return value === undefined || value === null || value === '' ? [] : [value];
   if (from === 'number' && to === 'text') return value === undefined || value === null ? '' : String(value);
+  if (from === 'text' && to === 'reference') return value === undefined || value === null || value === '' ? null : value;
   return value;
 };
 
@@ -45,12 +48,19 @@ export function applyFindings(tx: DbOrTx, deps: Deps, findings: Finding[], schem
   void schemaAfter;
   const now = isoNow(deps.clock);
 
-  const setVariable = (key: string, value: unknown) =>
+  // `siteValues.value` ist NOT NULL (JSON-Spalte); ein Leerwert wie bei einem
+  // gelöschten Referenzverweis heißt: die Zeile fehlt, wie `setValues` es hält.
+  const setVariable = (key: string, value: unknown) => {
+    if (value === null || value === undefined) {
+      tx.delete(siteValues).where(eq(siteValues.key, key)).run();
+      return;
+    }
     tx
       .insert(siteValues)
       .values({ key, value, updatedAt: now })
       .onConflictDoUpdate({ target: siteValues.key, set: { value, updatedAt: now } })
       .run();
+  };
 
   const mapEntries = (collection: string, fn: (data: Record<string, unknown>) => Record<string, unknown> | null) => {
     const rows = tx.select().from(siteEntries).where(eq(siteEntries.collection, collection)).all();

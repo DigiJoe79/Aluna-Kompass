@@ -57,6 +57,37 @@ describe('applyFindings', () => {
     expect(deps.db.select().from(siteValues).where(eq(siteValues.key, 'note')).get()?.value).toBe('');
   });
 
+  it('keeps a slug when text becomes reference; auto stays and is reported later, not recast', () => {
+    const deps = createTestDeps();
+    deps.db.insert(siteValues).values({ key: 'dog', value: 'chiara', updatedAt: 't' }).run();
+    deps.db.insert(siteValues).values({ key: 'story', value: 'auto', updatedAt: 't' }).run();
+    deps.db.insert(siteValues).values({ key: 'blank', value: '', updatedAt: 't' }).run();
+    const findings: Finding[] = [
+      { kind: 'retyped', path: 'variables.dog', from: 'text', to: 'reference', filled: 1, lossless: true, label: 'Hund' },
+      { kind: 'retyped', path: 'variables.story', from: 'text', to: 'reference', filled: 1, lossless: true, label: 'Geschichte' },
+      { kind: 'retyped', path: 'variables.blank', from: 'text', to: 'reference', filled: 0, lossless: true, label: 'Leer' },
+    ];
+    deps.db.transaction((tx) => applyFindings(tx, deps, findings, schemaAfter()));
+    expect(deps.db.select().from(siteValues).where(eq(siteValues.key, 'dog')).get()?.value).toBe('chiara');
+    // „auto“ ist kein Referenzwert; der Resync rechnet nicht um, Maske und Export melden ihn (Spec § 4.7).
+    expect(deps.db.select().from(siteValues).where(eq(siteValues.key, 'story')).get()?.value).toBe('auto');
+    // `setVariable` löscht die Zeile statt eines NOT-NULL-Verstoßes (wie `setValues`).
+    expect(deps.db.select().from(siteValues).where(eq(siteValues.key, 'blank')).get()).toBeUndefined();
+  });
+
+  it('a lossy retype into reference clears to null, into references to an empty list', () => {
+    const deps = createTestDeps();
+    deps.db.insert(siteValues).values({ key: 'one', value: ['a', 'b'], updatedAt: 't' }).run();
+    deps.db.insert(siteValues).values({ key: 'many', value: 'x', updatedAt: 't' }).run();
+    const findings: Finding[] = [
+      { kind: 'retyped', path: 'variables.one', from: 'list', to: 'reference', filled: 1, lossless: false, label: 'Eins' },
+      { kind: 'retyped', path: 'variables.many', from: 'text', to: 'references', filled: 1, lossless: false, label: 'Viele' },
+    ];
+    deps.db.transaction((tx) => applyFindings(tx, deps, findings, schemaAfter()));
+    expect(deps.db.select().from(siteValues).where(eq(siteValues.key, 'one')).get()).toBeUndefined();
+    expect(deps.db.select().from(siteValues).where(eq(siteValues.key, 'many')).get()?.value).toEqual([]);
+  });
+
   it('replaces a value that is gone with the named replacement', () => {
     const deps = createTestDeps();
     deps.db.insert(siteValues).values({ key: 'layout', value: 'full', updatedAt: 't' }).run();
