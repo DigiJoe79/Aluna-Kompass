@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countChanged, countChangedValues, snapshotOf } from '@/lib/form-dirty';
+import { changedValues, countChanged, countChangedValues, snapshotOf } from '@/lib/form-dirty';
 
 /**
  * Die Formulare der Anwendung sind unkontrolliert: Die Felder tragen
@@ -59,5 +59,15 @@ describe('countChangedValues', () => {
 
   it('merkt einen entfernten und einen neuen Schlüssel', () => {
     expect(countChangedValues({ a: 1 }, { b: 2 })).toBe(2);
+  });
+});
+
+describe('changedValues', () => {
+  it('liefert nur die Schlüssel, deren Wert sich seit dem Laden geändert hat', () => {
+    const loaded = { claim: { de: 'A' }, dog: 'chiara', count: 3 };
+    expect(changedValues(loaded, { claim: { de: 'A' }, dog: 'chiara', count: 3 })).toEqual({});
+    expect(changedValues(loaded, { claim: { de: 'B' }, dog: 'chiara', count: 3 })).toEqual({ claim: { de: 'B' } });
+    // Leeren ist eine Änderung: null wird mitgeschickt, damit der Dienst die Zeile löscht.
+    expect(changedValues(loaded, { claim: { de: 'A' }, dog: null, count: 3 })).toEqual({ dog: null });
   });
 });

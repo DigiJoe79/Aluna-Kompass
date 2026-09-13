@@ -17,7 +17,7 @@ export async function runCheckAction(): Promise<ActionState> {
   try {
     const result = await exportSiteContent(deps, ctx, { jobDir: dir });
     if (!result.ok) return toActionState(result, t);
-    return { status: 'success', data: { contentHash: result.value.contentHash, gaps: result.value.gaps, violations: result.value.violations } };
+    return { status: 'success', data: { contentHash: result.value.contentHash, gaps: result.value.gaps, violations: result.value.violations, stale: result.value.stale } };
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

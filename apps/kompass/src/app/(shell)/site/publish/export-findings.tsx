@@ -6,6 +6,7 @@ import { Disclosure } from '@/components/ui/disclosure';
 export interface Findings {
   gaps: { path: string; locale: string }[];
   violations: { path: string; term: string; excerpt: string }[];
+  stale: { path: string; value: string }[];
 }
 
 /**
@@ -15,7 +16,7 @@ export interface Findings {
  * Sperrworttreffer bleiben aufgeklappt — sie verhindern den Publish. Alles
  * andere fängt zugeklappt an.
  */
-export function ExportFindings({ gaps, violations }: Findings) {
+export function ExportFindings({ gaps, violations, stale }: Findings) {
   const t = useTranslations('site.publish.check');
 
   return (
@@ -47,6 +48,16 @@ export function ExportFindings({ gaps, violations }: Findings) {
                   {' '}· <span className="rounded bg-surface-2 px-1 py-0.5 font-mono text-[11px] uppercase">{g.locale}</span>
                 </>
               ) : null}
+            </li>
+          ))}
+        </ul>
+      </Disclosure>
+      <Disclosure label={t('staleTitle')} count={stale.length} tone={stale.length > 0 ? 'warning' : 'neutral'} defaultOpen={stale.length > 0} empty={t('noStale')}>
+        <p className="text-[12px] text-muted-ink">{t('staleHint')}</p>
+        <ul className="flex flex-col gap-1">
+          {stale.map((s, i) => (
+            <li key={i}>
+              <span className="font-mono">{s.path}</span> · <span className="text-ink-2">{s.value}</span>
             </li>
           ))}
         </ul>

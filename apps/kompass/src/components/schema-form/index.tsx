@@ -13,10 +13,12 @@ export interface SchemaFormProps {
   errors?: Record<string, string>;
   locales: string[];
   onChange: (next: Record<string, unknown>) => void;
+  /** Wählbare Datensätze je Referenzfeld (Wert und Beschriftung). */
+  options?: Record<string, { value: string; label: string }[]>;
 }
 
 /** Baut aus dem gespeicherten Schema eine Maske: je Feld das Widget aus `.meta()`. */
-export function SchemaForm({ schema, value, errors = {}, locales, onChange }: SchemaFormProps) {
+export function SchemaForm({ schema, value, errors = {}, locales, onChange, options }: SchemaFormProps) {
   const filled = withBlanks(schema, value, locales);
   return (
     <div className="flex flex-col gap-5">
@@ -29,6 +31,7 @@ export function SchemaForm({ schema, value, errors = {}, locales, onChange }: Sc
           errors={errors}
           locales={locales}
           onChange={(next) => onChange({ ...filled, [key]: next })}
+          options={options?.[key]}
         />
       ))}
     </div>

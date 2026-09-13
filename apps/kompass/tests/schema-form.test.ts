@@ -37,6 +37,11 @@ describe('blankFor', () => {
     expect(blankFor(NUMBER(0, 10))).toBe(0);
     expect(blankFor(SELECT)).toBe('narrow');
   });
+
+  it('gives a reference null and a references list an empty array', () => {
+    expect(blankFor({ widget: 'reference', view: 'animals', key: 'slug', labelField: 'name' })).toBe(null);
+    expect(blankFor({ widget: 'references', view: 'projects', key: 'slug', labelField: 'name', maxItems: 2 })).toEqual([]);
+  });
 });
 
 describe('withBlanks', () => {

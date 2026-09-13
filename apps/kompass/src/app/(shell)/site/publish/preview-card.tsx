@@ -14,6 +14,7 @@ export interface PreviewData {
   contentHash: string;
   gaps: { path: string; locale: string }[];
   violations: { path: string; term: string; excerpt: string }[];
+  stale: { path: string; value: string }[];
   diff: PublishDiff;
   previewDir: string;
 }
@@ -64,7 +65,7 @@ export function PreviewCard({ onResult }: { onResult?: (data: PreviewData) => vo
       {data ? (
         <>
           <p className="font-mono text-[12px] text-muted-ink">{tCheck('hash', { hash: data.contentHash.slice(0, 12) })}</p>
-          <ExportFindings gaps={data.gaps} violations={data.violations} />
+          <ExportFindings gaps={data.gaps} violations={data.violations} stale={data.stale} />
         </>
       ) : (
         <p className="text-[13px] text-muted-ink">

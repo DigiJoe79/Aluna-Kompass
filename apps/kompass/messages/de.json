@@ -1183,7 +1183,11 @@
       "untranslated": "noch nicht übersetzt",
       "chooseImage": "Bild wählen",
       "removeImage": "Bild entfernen",
-      "empty": "noch nichts angelegt"
+      "empty": "noch nichts angelegt",
+      "noChoice": "Keine Auswahl – das Template entscheidet",
+      "slot": "Platz {n}",
+      "staleReference": "„{value}“ steht nicht mehr zur Auswahl.",
+      "clearReference": "Leeren"
     },
     "template": {
       "title": "Template",
@@ -1247,7 +1251,10 @@
         "violationsTitle": "Sperrworttreffer",
         "noViolations": "Keine Treffer.",
         "gapsTitle": "Übersetzungslücken",
-        "noGaps": "Alle Übersetzungen vorhanden."
+        "noGaps": "Alle Übersetzungen vorhanden.",
+        "staleTitle": "Veraltete Verweise",
+        "noStale": "Alle Verweise gültig.",
+        "staleHint": "Wird im Export leer ausgeliefert; das Template zeigt dann seine Automatik."
       },
       "preview": {
         "run": "Vorschau bauen",

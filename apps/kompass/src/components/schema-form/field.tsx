@@ -18,6 +18,7 @@ export interface FieldProps {
   errors: Record<string, string>;
   locales: string[];
   onChange: (next: unknown) => void;
+  options?: { value: string; label: string }[];
 }
 
 const labelOf = (field: FieldSchema, path: string) => (typeof field.label === 'string' && field.label) || path;
@@ -160,6 +161,8 @@ export function SchemaField(props: FieldProps) {
 
   if (widget === 'localized') return <Localized {...props} />;
   if (widget === 'list' || widget === 'objectList') return <ListField {...props} />;
+  if (widget === 'reference') return <ReferenceField {...props} />;
+  if (widget === 'references') return <ReferencesField {...props} />;
 
   const simple = (control: React.ReactNode) => (
     <div className="flex flex-col gap-1">
@@ -223,5 +226,71 @@ function AssetField({ path, field, value, errors, onChange }: FieldProps) {
       </div>
       <FieldError id={`${path}-error`} message={errors[path]} />
     </div>
+  );
+}
+
+function StaleNote({ value, onClear }: { value: string; onClear: () => void }) {
+  const t = useTranslations('site.form');
+  return (
+    <p role="status" className="flex flex-wrap items-center gap-2 text-[12px] text-warning">
+      <span>{t('staleReference', { value })}</span>
+      <button type="button" onClick={onClear} className="rounded-sm bg-badge px-2 py-0.5 text-[11px] text-badge-ink">{t('clearReference')}</button>
+    </p>
+  );
+}
+
+function ReferenceSelect({ id, name, value, options, stale, onChange }: { id: string; name: string; value: string; options: { value: string; label: string }[]; stale: boolean; onChange: (next: string) => void }) {
+  const t = useTranslations('site.form');
+  return (
+    <Select id={id} name={name} value={stale ? '' : value} onChange={(e) => onChange(e.target.value)}>
+      <option value="">{t('noChoice')}</option>
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>{o.label}</option>
+      ))}
+    </Select>
+  );
+}
+
+/** Ein Verweis auf einen Datensatz einer Sicht; die Optionen liefert die Seite. */
+function ReferenceField({ path, field, value, errors, onChange, options = [] }: FieldProps) {
+  const current = typeof value === 'string' ? value : '';
+  const stale = current !== '' && !options.some((o) => o.value === current);
+  return (
+    <div className="flex flex-col gap-1">
+      <label htmlFor={path} className="text-[13px] font-semibold text-ink-2">{labelOf(field, path)}</label>
+      <ReferenceSelect id={path} name={path} value={current} options={options} stale={stale} onChange={(next) => onChange(next === '' ? null : next)} />
+      {stale ? <StaleNote value={current} onClear={() => onChange(null)} /> : null}
+      <FieldError id={`${path}-error`} message={errors[path]} />
+    </div>
+  );
+}
+
+/** Feste Plätze in Reihenfolge; leere Plätze fallen aus dem Wert heraus. */
+function ReferencesField({ path, field, value, errors, onChange, options = [] }: FieldProps) {
+  const t = useTranslations('site.form');
+  const max = typeof field.maxItems === 'number' ? field.maxItems : 1;
+  const list = Array.isArray(value) ? (value as unknown[]).filter((v): v is string => typeof v === 'string') : [];
+  const slots = Array.from({ length: max }, (_, i) => list[i] ?? '');
+  const set = (index: number, next: string) => {
+    const copy = [...slots];
+    copy[index] = next;
+    onChange(copy.filter((v) => v !== ''));
+  };
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="text-[13px] font-semibold text-ink-2">{labelOf(field, path)}</legend>
+      {slots.map((current, index) => {
+        const id = `${path}.${index}`;
+        const stale = current !== '' && !options.some((o) => o.value === current);
+        return (
+          <div key={index} className="flex flex-col gap-1">
+            <label htmlFor={id} className="text-[11px] font-semibold text-muted-ink">{t('slot', { n: index + 1 })}</label>
+            <ReferenceSelect id={id} name={id} value={current} options={options} stale={stale} onChange={(next) => set(index, next)} />
+            {stale ? <StaleNote value={current} onClear={() => set(index, '')} /> : null}
+          </div>
+        );
+      })}
+      <FieldError id={`${path}-error`} message={errors[path]} />
+    </fieldset>
   );
 }
