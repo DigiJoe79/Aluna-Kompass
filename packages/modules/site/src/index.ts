@@ -10,6 +10,7 @@ export * from './service';
 export * from './values';
 export * from './entries';
 export * from './references';
+export * from './reference-fields';
 export * from './seed';
 export * from './export';
 export * from './settings';

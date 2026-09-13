@@ -429,6 +429,9 @@ importers:
         specifier: ^4.5.4
         version: 4.5.4
     devDependencies:
+      '@kompass/module-animals':
+        specifier: workspace:*
+        version: link:../animals
       '@kompass/module-projects':
         specifier: workspace:*
         version: link:../projects
