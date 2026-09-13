@@ -81,17 +81,6 @@ die sich nicht öffnen lassen (2026-09-13).
 
 **Wann:** Entscheidung offen — Joe und Nicole entscheiden, ob und wie.
 
-## 10. Medien-Upload über MCP
-
-**Was:** Ein Werkzeug `media_upload` mit Base64-Inhalt und Größengrenze, das
-`storeMediaAsset` ruft — mit Test, Audit und Seed wie jedes Werkzeug.
-
-**Warum:** Ein Agent kann heute ein Tier samt Text anlegen, aber kein Foto
-mitgeben. Der Import der Prototyp-Hunde am 2026-09-13 lief deshalb ohne
-Bilder.
-
-**Wann:** Mit dem nächsten Blick auf die Mediathek.
-
 ## 12. Template-Upload als Archiv über die Oberfläche
 
 **Was:** Unter Webseite → Template ein Archiv hochladen, das Kompass in das
