@@ -147,6 +147,9 @@ interface Translatable {
   label: string;
   href: string;
   fields: Record<string, LocalizedText | Record<string, string[]>>;
+  /** Sprachen, in denen dieser Datensatz ausgespielt wird. Fehlt die Angabe,
+   *  gelten die Sprachen der Installation. */
+  locales?: readonly string[];
 }
 
 translatables?: (deps: Deps, ctx: CallContext) => Result<Translatable[]>;
@@ -159,6 +162,19 @@ setTranslations?: (
 
 `translatables` prüft das Ansichtsrecht des Moduls und gibt `forbidden`
 zurück, wenn es fehlt. Es liefert alle Datensätze, auch unveröffentlichte.
+Das Site-Modul setzt `locales` auf die Sprachen, die das Template deklariert:
+Das mitgelieferte Basis-Template kennt nur `de`, und eine Installation mit
+`['de', 'en']` bekäme sonst für jeden Webseiteninhalt eine Scheinlücke, die
+kein Template je rendert. Der Kern rechnet Lücken nur in der Schnittmenge aus
+`locales` des Datensatzes und Sprachen der Installation. Tiere und Projekte
+lassen die Angabe weg.
+
+Die Haken sind Funktionen mit der Signatur `(deps, ctx, …)`. Der Test „jeder
+Service hat ein Werkzeug" in `apps/kompass/tests/mcp-tools.test.ts` erkennt
+Services an genau dieser Signatur unter den Exporten eines Modulpakets.
+Deshalb stehen die Haken in einer eigenen Datei `translations.ts` je Modul,
+werden im Manifest eingetragen und **nicht** aus `index.ts` exportiert; die
+Modul-Tests importieren sie direkt aus `../src/translations`.
 `setTranslations` bekommt alle Positionen eines Datensatzes auf einmal, gibt
 `null` für einen fremden `entityType` zurück und sonst das Ergebnis des einen
 Update-Aufrufs.
@@ -255,10 +271,15 @@ Modul die Übersetzungsliste nicht still auslassen.
 
 ## 7. Seed
 
-`seedDevelopment` führt bereits `['de', 'en']`. Die Seeds der Module Tiere,
-Projekte und Site legen mindestens je einen Datensatz mit gefüllter deutscher
-und leerer englischer Fassung an, damit `translations_list_gaps` in der
-Entwicklung etwas zeigt. Die vorhandenen `seed.test.ts` prüfen das je Modul.
+`seedDevelopment` führt bereits `['de', 'en']`. Die Seeds der Module Tiere
+und Projekte legen je einen Datensatz mit gefüllter deutscher und leerer
+englischer Fassung an, damit `translations_list_gaps` in der Entwicklung
+etwas zeigt. Die vorhandenen `seed.test.ts` prüfen das je Modul.
+
+Das Site-Modul hat keinen eigenen Seed-Haken: Seine Beispielinhalte bringt
+das Template mit (`applySeed`, von einem Menschen bestätigt). Das Basis-
+Template ist einsprachig, seine Inhalte haben also keine Lücken. Ein
+mehrsprachiges Template liefert sie über seinen eigenen Seed.
 
 ## 8. Abhängigkeiten und Reihenfolge
 
