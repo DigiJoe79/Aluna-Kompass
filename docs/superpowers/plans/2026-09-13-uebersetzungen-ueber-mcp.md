@@ -1502,7 +1502,7 @@ git commit -m "chore(seed): one animal and one project keep a translation gap fo
 **Interfaces:**
 - Consumes: `installedModules`, `coreMcpTools`, `seedDevelopment`, alles Vorige.
 
-- [ ] **Step 1: Rundlauf-Test schreiben**
+- [x] **Step 1: Rundlauf-Test schreiben**
 
 ```ts
 // apps/kompass/tests/translations-roundtrip.test.ts
@@ -1547,17 +1547,17 @@ describe('translations over MCP, end to end', () => {
 
 `seedDevelopment` schaltet alle installierten Module ein (`packages/core/src/seed/seed.ts`, Einstellung `modules.enabled`) und führt `['de', 'en']`. `Object.groupBy` gibt es ab Node 21; das Repo läuft auf Node 26.
 
-- [ ] **Step 2: Test laufen lassen**
+- [x] **Step 2: Test laufen lassen**
 
 Run: `pnpm --filter @kompass/app test -- translations-roundtrip`
 Expected: PASS. Meldet der erste Test mehr Lücken als drei, hat der Site-Seed oder ein anderer Seed-Datensatz eine leere englische Fassung — dann entweder die Erwartung um den Fund erweitern oder den Seed füllen; die Spec verlangt mindestens eine Lücke je Tiere und Projekte, nicht genau eine.
 
-- [ ] **Step 3: Alles**
+- [x] **Step 3: Alles**
 
 Run: `pnpm typecheck && pnpm test`
 Expected: grün. `pnpm verify` läuft vor dem Push (Joe), nicht hier.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/kompass/tests/translations-roundtrip.test.ts
