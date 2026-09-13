@@ -1,6 +1,26 @@
-import { unwrap, type CallContext, type Deps } from '@kompass/core';
+import { unwrap, type CallContext, type Deps, type LocalizedText } from '@kompass/core';
 import { animals } from './schema';
-import { createAnimal, setAnimalPublished, setAnimalStatus } from './service';
+import { createAnimal, setAnimalPublished, setAnimalStatus, setAnimalStory } from './service';
+
+interface ExampleStory { quote: LocalizedText; family: string; beforeCaption: LocalizedText; afterCaption: LocalizedText }
+interface ExampleAnimal {
+  slug: string;
+  name: string;
+  sex: 'female' | 'male';
+  birthText: LocalizedText;
+  sizeCm: number;
+  sizeText: LocalizedText;
+  location: 'shelter' | 'germany';
+  isEmergency: boolean;
+  isSponsorable: boolean;
+  traits: Record<string, string[]>;
+  summary: LocalizedText;
+  body: LocalizedText;
+  status: 'lookingForHome' | 'reserved' | 'adopted';
+  adoptedYear?: number;
+  published: boolean;
+  story?: ExampleStory;
+}
 
 /**
  * Beispieltiere für Entwicklung und Test — frei erfunden, weil das Repo
@@ -8,7 +28,7 @@ import { createAnimal, setAnimalPublished, setAnimalStatus } from './service';
  * vermittelt), damit Liste, Filter und die veröffentlichte Sicht Inhalt haben.
  * In `development` liegen sie neben den Prototyp-Daten von `dev:reset`.
  */
-const EXAMPLE_ANIMALS = [
+const EXAMPLE_ANIMALS: ExampleAnimal[] = [
   {
     slug: 'baxter',
     name: 'Baxter',
@@ -57,6 +77,35 @@ const EXAMPLE_ANIMALS = [
     status: 'adopted' as const,
     adoptedYear: 2025,
     published: false,
+    story: {
+      quote: { de: 'Nala schläft jetzt auf dem Sofa, als hätte sie nie woanders gelebt.', en: 'Nala now sleeps on the sofa as if she had never lived anywhere else.' },
+      family: 'Familie Berger',
+      beforeCaption: { de: 'Auf der Pflegestelle in Bonn', en: 'At the foster home in Bonn' },
+      afterCaption: { de: 'Zuhause am Rhein', en: 'At home by the Rhine' },
+    },
+  },
+  {
+    slug: 'juno',
+    name: 'Juno',
+    sex: 'female' as const,
+    birthText: { de: '2020', en: '2020' },
+    sizeCm: 52,
+    sizeText: { de: 'ca. 52 cm', en: 'approx. 52 cm' },
+    location: 'germany' as const,
+    isEmergency: false,
+    isSponsorable: false,
+    traits: { de: ['aufmerksam'], en: ['attentive'] },
+    summary: { de: 'Hat 2024 ihre Familie gefunden.', en: 'Found her family in 2024.' },
+    body: { de: 'Juno ist vermittelt; ihre Geschichte hat keine Bildunterschriften.', en: 'Juno has been adopted; her story carries no captions.' },
+    status: 'adopted' as const,
+    adoptedYear: 2024,
+    published: true,
+    story: {
+      quote: { de: 'Sie hat uns vom ersten Tag an ausgesucht.', en: 'She chose us from day one.' },
+      family: 'Familie Kaya',
+      beforeCaption: {},
+      afterCaption: {},
+    },
   },
 ];
 
@@ -84,6 +133,9 @@ export async function seedAnimals(deps: Deps, ctx: CallContext): Promise<void> {
     // Zustände kommen über den regulären Statuswechsel.
     if (a.status !== 'lookingForHome') {
       unwrap(await setAnimalStatus(deps, ctx, { id: created.id, status: a.status, adoptedYear: a.adoptedYear }));
+    }
+    if (a.status === 'adopted' && a.story) {
+      unwrap(await setAnimalStory(deps, ctx, { id: created.id, beforeAssetId: null, afterAssetId: null, quote: a.story.quote, family: a.story.family, adoptedYear: a.adoptedYear!, beforeCaption: a.story.beforeCaption, afterCaption: a.story.afterCaption }));
     }
     if (a.published) unwrap(await setAnimalPublished(deps, ctx, { id: created.id, isPublished: true }));
   }

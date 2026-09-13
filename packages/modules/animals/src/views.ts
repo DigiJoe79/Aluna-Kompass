@@ -33,6 +33,8 @@ export const publishedAnimals = definePublishedView({
         quote: L,
         family: z.string(),
         adoptedYear: z.number(),
+        beforeCaption: L,
+        afterCaption: L,
       })
       .nullable(),
   }),

@@ -75,6 +75,16 @@ describe('animals module', () => {
     expect(unwrap(await getAnimal(d, ctxWith(['animals.view']), a.id)).slug).toBe('chiara');
   });
 
+  it('exposes story captions in the published view', async () => {
+    const d = await deps();
+    const a = unwrap(await createAnimal(d, manage, chiara));
+    unwrap(await setAnimalPublished(d, manage, { id: a.id, isPublished: true }));
+    unwrap(await setAnimalStatus(d, manage, { id: a.id, status: 'adopted', adoptedYear: 2026 }));
+    unwrap(await setAnimalStory(d, manage, { id: a.id, beforeAssetId: null, afterAssetId: null, quote: {}, family: '', adoptedYear: 2026, beforeCaption: { de: 'Im Shelter', en: 'At the shelter' } }));
+    const rows = publishedAnimals.load(d);
+    expect(rows[0]!.story).toMatchObject({ beforeCaption: { de: 'Im Shelter', en: 'At the shelter' }, afterCaption: {} });
+  });
+
   it('an update touches only the fields it names — defaults never overwrite stored values', async () => {
     // Zod 4 wendet `.default()` auch hinter `.optional()` an: Ein Update mit
     // nur `name` setzte Größe, Standort, Notfall und Patenschaft zurück.
