@@ -38,7 +38,7 @@ export interface StoreMediaInput {
 }
 
 function slug(name: string): string {
-  const base = name.replace(/\.[^.]+$/, '').toLowerCase().normalize('NFKD').replace(/\u0300-\u036f/g, '');
+  const base = name.replace(/\.[^.]+$/, '').toLowerCase().replace(/ß/g, 'ss').normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
   return base.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'file';
 }
 

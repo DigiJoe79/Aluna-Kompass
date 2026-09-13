@@ -23,6 +23,15 @@ describe('media service', () => {
     expect(deps.db.select().from(auditLog).all().at(-1)).toMatchObject({ action: 'media.upload', entityType: 'mediaAsset', entityId: record.id });
   });
 
+  it('keeps umlauts and ß readable in the filename', async () => {
+    const deps = createTestDeps();
+    const ctx = ctxWith(['media.upload'], insertUser(deps, {}));
+    const a = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'für.png', bytes: PNG }));
+    expect(a.filename).toMatch(/^fur-[0-9a-f]{12}\.png$/);
+    const b = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'Straße Foto.svg', bytes: SVG, declaredMimeType: 'image/svg+xml' }));
+    expect(b.filename).toMatch(/^strasse-foto-[0-9a-f]{12}\.svg$/);
+  });
+
   it('speichert die vollständige SHA-256 der Datei', async () => {
     const deps = createTestDeps();
     const ctx = ctxWith(['media.upload'], insertUser(deps, {}));
