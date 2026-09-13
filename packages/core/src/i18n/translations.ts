@@ -51,7 +51,7 @@ const filled = (value: unknown): boolean =>
  * Alle Lücken über die eingeschalteten Module: Leitsprache gefüllt, Zielsprache
  * leer, Entwürfe eingeschlossen. Kein eigenes Recht — jedes Modul prüft sein
  * Ansichtsrecht im Haken; wer ein Modul nicht lesen darf, sieht es unter
- * `omitted`, damit „keine Lücken" nicht wie „alles übersetzt" aussieht.
+ * `omitted`, damit „keine Lücken“ nicht wie „alles übersetzt“ aussieht.
  */
 export async function listTranslationGaps(deps: Deps, ctx: CallContext, input: unknown = {}): Promise<Result<TranslationGapList>> {
   const parsed = validate(deps, translationGapsFilterSchema, input);

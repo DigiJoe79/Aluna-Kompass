@@ -5,6 +5,7 @@ import {
   listRetentionDue, listRoles, listThemes, listUsers, moveMediaAsset, queryAudit, readAllSettings, readSetting, removeLocale, removeRole, renameMediaFolder,
   reorderLocales, resetStartPassword, setModuleEnabled, setRolePermissions, setSetting, setUserActive, storeMediaAsset,
   updateRole, ok, invalid,
+  listTranslationGaps, setTranslations, translationGapsFilterSchema, translationsSetSchema,
   type McpToolDefinition,
 } from '@kompass/core';
 import { z } from 'zod';
@@ -67,6 +68,11 @@ export const coreMcpTools: McpToolDefinition[] = [
   t({ name: 'locales_add', description: 'Add a locale. Requires settings.manage.', inputSchema: z.object({ code: z.string() }), handler: (deps, ctx, args) => addLocale(deps, ctx, args), service: addLocale }),
   t({ name: 'locales_reorder', description: 'Reorder locales; the first is the leading locale. Requires settings.manage.', inputSchema: z.object({ codes: z.array(z.string()) }), handler: (deps, ctx, args) => reorderLocales(deps, ctx, args), service: reorderLocales }),
   t({ name: 'locales_remove', description: 'Remove a locale and strip it from all stored text. Requires settings.manage and confirm. Audited.', inputSchema: z.object({ code: z.string(), confirm: z.boolean() }), handler: (deps, ctx, args) => removeLocale(deps, ctx, args), service: removeLocale }),
+  // Übersetzungen (Spec 2026-09-13-uebersetzungen-ueber-mcp). Kein eigenes
+  // Recht: Die Module prüfen ihres im Haken, deshalb nennt die Beschreibung
+  // die Rechte der Module.
+  t({ name: 'translations_list_gaps', description: 'List missing translations across all enabled modules with the source text in the leading locale: every record whose leading-locale text is filled while another locale is empty, drafts included. Optional filters: locale, entityType. Requires the view right of each module (animals.view, projects.view, site.view); modules you may not read are named under omitted.', inputSchema: translationGapsFilterSchema, handler: (deps, ctx, args) => listTranslationGaps(deps, ctx, args), service: listTranslationGaps }),
+  t({ name: 'translations_set', description: 'Write translations for single locales without touching the other locales. Items for the same record (entityType + id) are written together through the module update service and need its manage right (animals.manage, projects.manage, site.manage). Audited once per record. Returns the applied count and the failed items by index; a failed record does not stop the others.', inputSchema: translationsSetSchema, handler: (deps, ctx, args) => setTranslations(deps, ctx, args), service: setTranslations }),
   // Die Projekte gehören dem Kern; bis zum Cutover boten sie das Webseiten-Modul an.
   t({ name: 'retention_due', description: 'List everything whose retention period has run out and that is due for deletion, across all enabled modules. Requires retention.view.', inputSchema: z.object({}), handler: (deps, ctx) => listRetentionDue(deps, ctx), service: listRetentionDue }),
   // Wiedervorlagen: Anlässe an Vorgängen aller Module. Der Kern prüft die

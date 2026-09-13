@@ -624,7 +624,7 @@ git commit -m "feat(core): translation gaps and per-locale writes over module ho
 - Consumes: `listTranslationGaps`, `setTranslations`, `translationGapsFilterSchema`, `translationsSetSchema`, `defineModule`, `type Translatable` aus `@kompass/core` (Task 3).
 - Produces: Werkzeuge `translations_list_gaps` (`{ locale?, entityType? }`) und `translations_set` (`{ items: [...] }`), beide mit `service` auf den Kernservice.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 ```ts
 // packages/mcp/tests/translation-tools.test.ts
@@ -676,12 +676,12 @@ describe('translation tools', () => {
 });
 ```
 
-- [ ] **Step 2: Test laufen lassen, rot**
+- [x] **Step 2: Test laufen lassen, rot**
 
 Run: `pnpm --filter @kompass/mcp test -- translation-tools`
 Expected: FAIL — `kein Werkzeug translations_list_gaps`.
 
-- [ ] **Step 3: Werkzeuge eintragen**
+- [x] **Step 3: Werkzeuge eintragen**
 
 Im Import-Block von `packages/mcp/src/core-tools.ts` ergänzen: `listTranslationGaps, setTranslations, translationGapsFilterSchema, translationsSetSchema,`. Nach dem Eintrag `locales_remove` einfügen:
 
@@ -693,12 +693,12 @@ Im Import-Block von `packages/mcp/src/core-tools.ts` ergänzen: `listTranslation
   t({ name: 'translations_set', description: 'Write translations for single locales without touching the other locales. Items for the same record (entityType + id) are written together through the module update service and need its manage right (animals.manage, projects.manage, site.manage). Audited once per record. Returns the applied count and the failed items by index; a failed record does not stop the others.', inputSchema: translationsSetSchema, handler: (deps, ctx, args) => setTranslations(deps, ctx, args), service: setTranslations }),
 ```
 
-- [ ] **Step 4: Tests laufen lassen**
+- [x] **Step 4: Tests laufen lassen**
 
 Run: `pnpm --filter @kompass/mcp test` und `pnpm --filter @kompass/app test -- mcp-tools`
 Expected: PASS. Die App-Regeln (benannte Argumente, keine zusätzlichen, Englisch) greifen für beide Werkzeuge.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 pnpm typecheck
