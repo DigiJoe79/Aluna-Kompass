@@ -67,6 +67,14 @@ export function schemaFor(field: FieldSchema): z.ZodType<unknown> {
       if (typeof maxItems === 'number') arr = arr.max(maxItems);
       return arr;
     }
+    case 'reference':
+      return z.string().nullable().default(null);
+    case 'references': {
+      let arr = z.array(z.string());
+      const maxItems = (field as { maxItems?: number }).maxItems;
+      if (typeof maxItems === 'number') arr = arr.max(maxItems);
+      return arr;
+    }
     default:
       return z.string().trim().max(boundNumber(field) ?? 500);
   }
@@ -80,9 +88,11 @@ export function blankValue(field: FieldSchema): unknown {
     case 'number':
       return 0;
     case 'asset':
+    case 'reference':
       return null;
     case 'list':
     case 'objectList':
+    case 'references':
       return [];
     case 'select':
       return (field as { enum?: string[] }).enum?.[0] ?? '';
