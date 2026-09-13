@@ -68,8 +68,8 @@ references({ view, max, label?, where?, key?, labelField?, renamedFrom? }) // st
   Vorgabe `slug`. Die Sichten liefern keine `id`; das bleibt so, weil das
   Template ohnehin über den Slug navigiert.
 - `labelField`: das Feld für die Anzeige in der Maske. Vorgabe `name`. Ein
-  mehrsprachiger Wert wird in der Oberflächensprache gezeigt, sonst in der
-  ersten gepflegten Sprache mit Inhalt.
+  mehrsprachiger Wert wird in der Leitsprache der Installation gezeigt, sonst
+  in der ersten gepflegten Sprache mit Inhalt.
 - `where`: ein Objekt über Felder der Sicht. Ein Skalar bedeutet Gleichheit,
   `{ present: true }` bedeutet „nicht `null`". Mehrere Einträge sind ein
   Und. Beispiel: `{ status: 'adopted', story: { present: true } }`.
@@ -172,11 +172,14 @@ selbst rechnet nichts um.
 
 ### 4.8 MCP
 
-Kein neues Werkzeug: `site_variables_get` liefert die Werte, `site_variables_set`
-prüft sie über denselben Dienst. Damit ein Agent wählen kann, ohne die
-Sichten selbst zu filtern, liefert `site_variables_get` je Referenzfeld
-zusätzlich die aktuellen Optionen unter `references: Record<pfad, Option[]>`.
-Das ist derselbe `resolveReferenceOptions`-Aufruf wie in der Maske.
+`site_variables_set` prüft über denselben Dienst wie die Maske. Damit ein
+Agent wählen kann, ohne die Sichten selbst zu filtern, gibt es ein Werkzeug
+`site_variables_options` (Recht `site.view`): je Referenzfeld die aktuellen
+Optionen als `Record<feld, Option[]>`. Ein eigenes Werkzeug, weil
+`site_variables_get` ein flaches Objekt aus Variablennamen liefert und ein
+Schlüssel `references` darin mit einer gleichnamigen Variable kollidieren
+könnte. Dahinter steht der Dienst `listReferenceOptions`, derselbe
+`resolveReferenceOptions`-Aufruf wie in der Maske.
 
 ## 5. Aluna-Template (Vereinsrepo)
 
@@ -193,9 +196,15 @@ Eigener Schritt, nach dem Kompass-Teil:
 - Der Resync auf der Test-Instanz zeigt zwei Umbenennungen und den
   Typwechsel; `auto` erscheint danach als Befund und wird geleert.
 
-Das Basis-Template `templates/verein-basis` nutzt keine Sichten und bekommt
-kein Beispiel; die Site-Template-Spec (§ 2, Feldhelfer) nennt die beiden
-Helfer.
+Das Basis-Template `templates/verein-basis` bekommt ein Referenzfeld
+`featuredProject: reference({ view: 'projects', label: 'Projekt auf der
+Startseite' })` und dafür `uses: ['projects']`. Zwei Gründe: Die E2E-Suite
+liest immer dieses Template, und nur so wird die Auswahl in der Maske
+automatisiert geprüft. Und ein neuer Verein sieht daran, dass ein Template
+Datensätze aus Kompass verweisen kann (Backlog 7, Vorlagecharakter). Der
+Preis: Der Export des Basis-Templates verlangt das aktive Projektmodul; wer
+es nicht will, streicht `uses` und das Feld in seiner Kopie. Die
+Site-Template-Spec (§ 2, Feldhelfer) nennt die beiden Helfer.
 
 ## 6. Sichten nie strenger als ihre Dienste (Punkt 15)
 
@@ -221,7 +230,9 @@ AGENTS.md, die Review liest sie.
 
 ## 7. Medien-Upload über MCP (Punkt 10)
 
-Zwei Werkzeuge in `packages/mcp/src/core-tools.ts`:
+Der Kern hat bereits `media_list`, `media_move`, `media_delete` und die
+Ordnerwerkzeuge (`packages/mcp/src/core-tools.ts`). Es fehlt genau der
+Upload. Ein Werkzeug:
 
 - `media_upload`: `{ filename, contentBase64, folder? }`. Dekodiert, ruft
   `storeMediaAsset`; die Grenze bleibt `MEDIA_MAX_BYTES` des Dienstes (zehn
@@ -230,9 +241,6 @@ Zwei Werkzeuge in `packages/mcp/src/core-tools.ts`:
   Dateiname und Ordner; die Werkzeugbeschreibung sagt das, damit ein Agent
   nicht rätselt, warum die Antwort nicht seine Angaben trägt. Der Dienst
   bleibt, wie er ist, und bekommt kein Kennzeichen.
-- `media_list`: `{ folder? }`, ruft `listMediaAssets`, das ebenfalls
-  `media.upload` verlangt. Damit findet ein Agent, was schon da ist, bevor er
-  es ein zweites Mal hochlädt.
 
 Base64 bläht zehn Megabyte auf gut dreizehn; das ist für ein Foto im
 JSON-RPC vertretbar und die Grenze des Dienstes gilt weiter. Größere Dateien
@@ -270,10 +278,10 @@ Verein. Kein Code sonst.
   und doppeltem Wert; `setValues` lehnt fremde Werte ab und protokolliert;
   Einlesen lehnt unbekannte Sicht und unbekanntes Feld ab; Export schreibt
   `null` und meldet `stale`; Resync stuft `text → reference` als verlustfrei
-  ein; `site_variables_get` liefert `references`.
-- Oberfläche: Playwright, Variablenseite mit einem Referenzfeld, Auswahl
-  speichern, veralteten Wert sehen und leeren. Fixture-Template der E2E
-  erhält ein Referenzfeld auf `animals`.
+  ein; `site_variables_options` liefert die Optionen.
+- Oberfläche: Playwright, Variablenseite des Basis-Templates, ein Projekt
+  wählen und speichern, das Projekt zurückziehen, den veralteten Wert in der
+  Maske und als Befund unter Prüfen sehen, leeren.
 - § 6 bis § 8 wie dort beschrieben; jeder Dienst mit Erfolg, `forbidden`,
   `validation`, Audit.
 
@@ -302,5 +310,3 @@ durch ist.
   aus; er speichert sie nicht doppelt (Prinzip 5).
 - Keine Referenzen in Sammlungsfeldern. Erst wenn ein Template das braucht,
   mit derselben Auflösung.
-- Kein `media_delete` über MCP: Löschen bestätigt ein Mensch, wie bei den
-  anderen Löschfunktionen.
