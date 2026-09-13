@@ -115,7 +115,7 @@ git commit -m "fix(site): an unchanged stale reference no longer blocks saving t
 **Interfaces:**
 - Produces: `splitPath(path: string): (string | number)[]`, `readPath(root: unknown, path: string): unknown`, `writePath<T>(root: T, path: string, value: unknown): T | undefined`. Pfadform: Punktnotation mit Index in eckigen Klammern (`faq[2].answer`, `story.quote`, `summary`). `writePath` kopiert (der Eingabewert bleibt unverändert) und liefert `undefined`, wenn ein Zwischenknoten oder der letzte Schlüssel fehlt.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 ```ts
 // packages/core/tests/i18n-paths.test.ts
@@ -153,12 +153,12 @@ describe('localized field paths', () => {
 });
 ```
 
-- [ ] **Step 2: Test laufen lassen, rot**
+- [x] **Step 2: Test laufen lassen, rot**
 
 Run: `pnpm --filter @kompass/core test -- i18n-paths`
 Expected: FAIL — Modul `../src/i18n/paths` fehlt.
 
-- [ ] **Step 3: Helfer schreiben**
+- [x] **Step 3: Helfer schreiben**
 
 ```ts
 // packages/core/src/i18n/paths.ts
@@ -208,12 +208,12 @@ export function writePath<T>(root: T, path: string, value: unknown): T | undefin
 
 In `packages/core/src/index.ts` nach `export * from './i18n/service';` einfügen: `export * from './i18n/paths';`
 
-- [ ] **Step 4: Tests laufen lassen**
+- [x] **Step 4: Tests laufen lassen**
 
 Run: `pnpm --filter @kompass/core test -- i18n-paths`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 pnpm typecheck
