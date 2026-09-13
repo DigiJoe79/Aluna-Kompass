@@ -194,3 +194,17 @@ Zahl der Plätze stünde dann im Kern.
 
 **Wann:** Nach der Inhaltssitzung, zusammen mit Punkt 16 — beides sind
 Felder an der Tiergeschichte und der Tiermaske.
+
+## 18. Vereinfachter Zuwendungsnachweis als Download (Vereinsrepo)
+
+**Was:** Ein PDF in der Sammlung „Formulare“, das der Spender zum Kontoauszug
+legt: Angaben zur Steuerbegünstigung, Verwendungszweck, Hinweis auf den
+Freistellungs- oder § 60a-Bescheid. Die FAQ-Antwort zur Spendenbescheinigung
+verlinkt es.
+
+**Warum:** Die FAQ verweist seit 2026-09-13 bis 300 € auf den vereinfachten
+Nachweis nach § 50 Abs. 4 EStDV. Der verlangt neben dem Kontoauszug einen vom
+Verein erstellten Beleg. Ohne PDF muss der Spender fragen.
+
+**Wann:** Sobald der Bescheid über die Gemeinnützigkeit da ist — vorher gilt
+die FAQ-Antwort ohnehin nicht.
