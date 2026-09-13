@@ -14,6 +14,7 @@ import { readLocales } from '../i18n/locales';
 import { fakeTextExtraction, type TextExtraction } from '../text/extraction';
 
 export { systemContext } from '../context';
+export { loadAllViews } from './views';
 
 export const TEST_NOW = '2026-09-05T08:00:00.000Z';
 
