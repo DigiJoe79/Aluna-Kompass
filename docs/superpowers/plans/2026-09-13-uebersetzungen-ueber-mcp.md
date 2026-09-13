@@ -1353,7 +1353,7 @@ git commit -m "feat(site): translation hooks for variables and entries; entryLab
 - Consumes: `installedModules`, `moduleMcpTools`, `siteToolsWithTemplate()` aus der Testdatei.
 - Produces: eine Regel — jedes Modul, dessen Werkzeug-Eingabeschemata `localized: true` tragen, hat `translatables` und `setTranslations`.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 In `apps/kompass/tests/mcp-tools.test.ts` in `siteToolsWithTemplate()` das Fixture-Feld `body: { type: 'string' }` ersetzen durch `body: { widget: 'localized', type: 'object' }` — so trägt das Sammlungswerkzeug ein mehrsprachiges Feld. Dann im `describe('registered mcp tools', …)` nach dem Test `names a module that brings a permission without a tool` einfügen:
 
@@ -1390,12 +1390,12 @@ In `apps/kompass/tests/mcp-tools.test.ts` in `siteToolsWithTemplate()` das Fixtu
 
 `siteToolsWithTemplate` steht weiter unten in der Datei als Funktionsdeklaration — Hoisting macht sie im oberen `describe` verfügbar. Die Konstante `deps` ist oben definiert.
 
-- [ ] **Step 2: Test laufen lassen, rot**
+- [x] **Step 2: Test laufen lassen, rot**
 
 Run: `pnpm --filter @kompass/app test -- mcp-tools`
 Expected: FAIL im zweiten neuen Test — die Beschreibungen nennen `translations_set` noch nicht. Der erste neue Test ist grün, wenn Tasks 5–7 durch sind; ist er rot mit einer leeren Liste, überträgt `z.toJSONSchema` die Metadaten nicht — dann `console.log(JSON.stringify(z.toJSONSchema(animalUpdateSchema, { io: 'input' })))` ansehen und `carriesLocalized` auf den tatsächlichen Schlüssel anpassen.
 
-- [ ] **Step 3: Hinweise ergänzen**
+- [x] **Step 3: Hinweise ergänzen**
 
 Der Satz, überall gleich: ` Localized fields are replaced as a whole map; to change one locale use translations_set.`
 
@@ -1403,12 +1403,12 @@ Der Satz, überall gleich: ` Localized fields are replaced as a whole map; to ch
 - `packages/modules/projects/src/mcp-tools.ts`: `'Update a project. Requires projects.manage. Audited. Localized fields are replaced as a whole map; to change one locale use translations_set.'`
 - `packages/modules/site/src/mcp-tools.ts`: in `collectionTools` bei `site_${key}_update`: `` `Update an entry in „${col.label}“. Requires site.manage. Localized fields are replaced as a whole map; to change one locale use translations_set.` `` und bei `site_variables_set`: `'Write template variable values, checked against the template schema. Requires site.manage. Localized fields are replaced as a whole map; to change one locale use translations_set.'`
 
-- [ ] **Step 4: Tests laufen lassen**
+- [x] **Step 4: Tests laufen lassen**
 
 Run: `pnpm --filter @kompass/app test -- mcp-tools` und `pnpm --filter @kompass/module-site test -- mcp-tools`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 pnpm typecheck

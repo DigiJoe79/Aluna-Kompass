@@ -50,7 +50,7 @@ function collectionTools(key: string, col: TemplateSchema['collections'][string]
       const { slug: entrySlug, ...data } = args as Record<string, unknown>;
       return createEntry(deps, ctx, { collection: key, slug: entrySlug, data });
     }, createEntry),
-    tool(`site_${key}_update`, `Update an entry in „${col.label}“. Requires site.manage.`, z.object({ id: z.string(), ...slug, ...shape }), (deps, ctx, args) => {
+    tool(`site_${key}_update`, `Update an entry in „${col.label}“. Requires site.manage. Localized fields are replaced as a whole map; to change one locale use translations_set.`, z.object({ id: z.string(), ...slug, ...shape }), (deps, ctx, args) => {
       const { id, slug: entrySlug, ...data } = args as Record<string, unknown> & { id: string };
       return updateEntry(deps, ctx, { id, slug: entrySlug, data });
     }, updateEntry),
@@ -90,7 +90,7 @@ const FIXED: McpToolDefinition[] = [
     applyTemplateSync,
   ),
   tool('site_variables_get', 'Read all template variable values. Requires site.view.', z.object({}), (deps, ctx) => getVariables(deps, ctx), getVariables),
-  tool('site_variables_set', 'Write template variable values, checked against the template schema. Requires site.manage.', z.object({ values: z.record(z.string(), z.unknown()) }), (deps, ctx, args) => setValues(deps, ctx, args), setValues),
+  tool('site_variables_set', 'Write template variable values, checked against the template schema. Requires site.manage. Localized fields are replaced as a whole map; to change one locale use translations_set.', z.object({ values: z.record(z.string(), z.unknown()) }), (deps, ctx, args) => setValues(deps, ctx, args), setValues),
   tool('site_variables_options', 'List the selectable records per reference variable (value and label), filtered by the declared condition. Requires site.view.', z.object({}), (deps, ctx) => listReferenceOptions(deps, ctx), listReferenceOptions),
   tool('site_export_check', 'Build the content export into a throwaway directory without publishing, to check it is current and complete. Requires site.publish.', z.object({}), async (deps, ctx) => {
     const dir = await mkdtemp(path.join(tmpdir(), 'kompass-site-check-'));

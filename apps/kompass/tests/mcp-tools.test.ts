@@ -117,6 +117,39 @@ describe('registered mcp tools', () => {
     const withTool = [{ description: 'Create a member. Requires members.manage.' }] as unknown as McpToolDefinition[];
     expect(uncoveredPermissions([[newcomer, withTool]])).toEqual([]);
   });
+
+  /**
+   * Wer mehrsprachige Felder anbietet, muss sie auch übersetzen lassen: Die
+   * Werkzeuge tragen die echten Zod-Schemata der Services, und `localizedText`
+   * hinterlässt darin `localized: true`. Ein Modul mit Treffer ohne beide Haken
+   * fiele aus `translations_list_gaps` still heraus.
+   */
+  const carriesLocalized = (node: unknown): boolean => {
+    if (!node || typeof node !== 'object') return false;
+    if ((node as { localized?: unknown }).localized === true) return true;
+    return Object.values(node as Record<string, unknown>).some(carriesLocalized);
+  };
+  const toolsOf = (m: ModuleManifest): readonly McpToolDefinition[] =>
+    m.key === 'site' ? siteToolsWithTemplate().filter((t) => t.name.startsWith('site_')) : moduleMcpTools(deps, m);
+
+  it('every module whose tools carry localized fields offers both translation hooks', () => {
+    const localized = installedModules.filter((m) => toolsOf(m).some((tool) => carriesLocalized(z.toJSONSchema(tool.inputSchema, { io: 'input' }))));
+    expect(localized.map((m) => m.key).sort()).toEqual(['animals', 'projects', 'site']);
+    const missing = localized.filter((m) => !m.translatables || !m.setTranslations).map((m) => m.key);
+    expect(missing).toEqual([]);
+  });
+
+  it('every update tool with localized fields points at translations_set for single locales', () => {
+    const updaters = registeredTools.concat(siteToolsWithTemplate()).filter((tool) => /_update$|^site_variables_set$|^animals_set_story$/.test(tool.name));
+    const withLocalized = updaters.filter((tool) => carriesLocalized(z.toJSONSchema(tool.inputSchema, { io: 'input' })));
+    // `site_variables_set` nimmt Werte generisch entgegen (`z.record(string, unknown())`),
+    // weil sich die echte Form erst aus dem eingelesenen Template ergibt — sein
+    // Schema zeigt deshalb nie `localized: true`. Den Hinweis trägt es trotzdem
+    // (Step 3), nur greift die Prüfung unten dafür nicht.
+    expect(withLocalized.map((t) => t.name)).toEqual(expect.arrayContaining(['animals_update', 'animals_set_story', 'project_update', 'site_notes_update']));
+    const silent = withLocalized.filter((tool) => !tool.description.includes('translations_set')).map((t) => t.name);
+    expect(silent).toEqual([]);
+  });
 });
 
 /**
@@ -174,7 +207,7 @@ function siteToolsWithTemplate(): readonly McpToolDefinition[] {
         locales: ['de'],
         uses: [],
         variables: {},
-        collections: { notes: { label: 'Notizen', slug: true, sortable: true, publishable: true, fields: { body: { type: 'string' } } } },
+        collections: { notes: { label: 'Notizen', slug: true, sortable: true, publishable: true, fields: { body: { widget: 'localized', type: 'object' } } } },
       },
       checksum: 'a'.repeat(64),
       readAt: 't',
