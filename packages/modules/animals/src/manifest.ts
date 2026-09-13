@@ -1,6 +1,7 @@
 import { defineModule, type ModuleManifest } from '@kompass/core';
 import { animalsMediaReferences } from './references';
 import { seedAnimals } from './seed';
+import { animalsSetTranslations, animalsTranslatables } from './translations';
 import { publishedAnimals } from './views';
 import { ANIMALS_MCP_TOOLS } from './mcp-tools';
 
@@ -12,5 +13,7 @@ export const animalsModule: ModuleManifest = defineModule({
   publishedViews: [publishedAnimals],
   mcpTools: ANIMALS_MCP_TOOLS,
   mediaReferences: animalsMediaReferences,
+  translatables: animalsTranslatables,
+  setTranslations: animalsSetTranslations,
   seed: seedAnimals,
 });

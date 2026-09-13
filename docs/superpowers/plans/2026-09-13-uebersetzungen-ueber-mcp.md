@@ -719,7 +719,7 @@ git commit -m "feat(mcp): translations_list_gaps and translations_set"
 - Consumes: `loadAnimal(db, id)`, `updateAnimal`, `setAnimalStory`, `type AnimalRecord` aus `./service`; `animals` aus `./schema`; `requirePermission`, `notFound`, `ok`, `type Translatable`, `type TranslationWrite`, `type LocalizedValue` aus `@kompass/core`.
 - Produces: `animalsTranslatables(deps, ctx)`, `animalsSetTranslations(deps, ctx, input)` — im Manifest eingetragen, **nicht** aus `index.ts` exportiert. `entityType` `animal`; Felder `birthText`, `sizeText`, `traits`, `summary`, `body`, mit Geschichte `story.quote`, `story.beforeCaption`, `story.afterCaption`; `href` `/animals/<id>`.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 ```ts
 // packages/modules/animals/tests/translations.test.ts
@@ -811,12 +811,12 @@ describe('animals translations', () => {
 });
 ```
 
-- [ ] **Step 2: Test laufen lassen, rot**
+- [x] **Step 2: Test laufen lassen, rot**
 
 Run: `pnpm --filter @kompass/module-animals test -- translations`
 Expected: FAIL — `../src/translations` fehlt.
 
-- [ ] **Step 3: Haken schreiben**
+- [x] **Step 3: Haken schreiben**
 
 ```ts
 // packages/modules/animals/src/translations.ts
@@ -896,12 +896,12 @@ In `packages/modules/animals/src/manifest.ts`: `import { animalsSetTranslations,
 
 **Nicht** in `packages/modules/animals/src/index.ts` exportieren (Global Constraints).
 
-- [ ] **Step 4: Tests laufen lassen**
+- [x] **Step 4: Tests laufen lassen**
 
 Run: `pnpm --filter @kompass/module-animals test`
 Expected: PASS. Schlägt der Typ von `profile[item.field]` fehl, weil `traits` `Record<string, string[]>` ist und die anderen `Record<string, string>`: `updateAnimal` validiert mit Zod, der Typ `Record<string, LocalizedValue>` ist für den Aufruf als `unknown` unkritisch — notfalls `{ id: input.id, ...profile } as unknown` übergeben; `updateAnimal` nimmt `input: unknown`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 pnpm typecheck
