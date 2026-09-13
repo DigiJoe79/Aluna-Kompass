@@ -26,19 +26,22 @@ const fields = {
   body: localizedText({ max: 20_000 }),
 };
 export const animalCreateSchema = z.object(fields);
+// Beim Update zählt nur, was genannt ist. `.default()` greift in Zod 4 auch
+// hinter `.optional()` — ohne `removeDefault()` setzte ein Update mit einem
+// einzigen Feld Größe, Standort, Notfall und Patenschaft auf die Vorgabe zurück.
 export const animalUpdateSchema = z.object({
   id: z.string().min(1),
   slug: fields.slug.optional(),
   name: fields.name.optional(),
   sex: fields.sex.optional(),
   birthText: fields.birthText.optional(),
-  sizeCm: fields.sizeCm.optional(),
+  sizeCm: fields.sizeCm.removeDefault().optional(),
   sizeText: fields.sizeText.optional(),
-  location: fields.location.optional(),
-  isEmergency: fields.isEmergency.optional(),
-  isSponsorable: fields.isSponsorable.optional(),
+  location: fields.location.removeDefault().optional(),
+  isEmergency: fields.isEmergency.removeDefault().optional(),
+  isSponsorable: fields.isSponsorable.removeDefault().optional(),
   traits: localizedList.optional(),
-  externalProfileUrl: fields.externalProfileUrl.optional(),
+  externalProfileUrl: fields.externalProfileUrl.removeDefault().optional(),
   summary: fields.summary.optional(),
   body: fields.body.optional(),
 });

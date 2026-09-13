@@ -45,11 +45,13 @@ export const projectUpdateSchema = z.object({
   slug: projectFields.slug.optional(),
   name: projectFields.name.optional(),
   type: projectFields.type.optional(),
-  status: projectFields.status.optional(),
+  // removeDefault: Zod 4 wendet `.default()` auch hinter `.optional()` an;
+  // ein Update mit nur `name` setzte sonst Status, Bild und Verweise zurück.
+  status: projectFields.status.removeDefault().optional(),
   summary: projectFields.summary.optional(),
   body: projectFields.body.optional(),
-  imageAssetId: projectFields.imageAssetId.optional(),
-  externalLinks: projectFields.externalLinks.optional(),
+  imageAssetId: projectFields.imageAssetId.removeDefault().optional(),
+  externalLinks: projectFields.externalLinks.removeDefault().optional(),
 });
 
 function load(db: DbOrTx, id: string): ProjectRecord | null {

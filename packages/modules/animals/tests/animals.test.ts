@@ -75,6 +75,15 @@ describe('animals module', () => {
     expect(unwrap(await getAnimal(d, ctxWith(['animals.view']), a.id)).slug).toBe('chiara');
   });
 
+  it('an update touches only the fields it names — defaults never overwrite stored values', async () => {
+    // Zod 4 wendet `.default()` auch hinter `.optional()` an: Ein Update mit
+    // nur `name` setzte Größe, Standort, Notfall und Patenschaft zurück.
+    const d = await deps();
+    const a = unwrap(await createAnimal(d, manage, { ...chiara, location: 'germany', isEmergency: true }));
+    const after = unwrap(await updateAnimal(d, manage, { id: a.id, name: 'Chiara Maria' }));
+    expect(after).toMatchObject({ name: 'Chiara Maria', sizeCm: 45, location: 'germany', isEmergency: true, isSponsorable: true, traits: chiara.traits, externalProfileUrl: chiara.externalProfileUrl });
+  });
+
   it('the view tolerates traits that carry only one language, as the service accepts them', async () => {
     // Über MCP kommt ein Tier auch mit `traits: { de: [...] }` an — was der
     // Dienst annimmt, darf die Sicht beim Export nicht mit einer Exception quittieren.
