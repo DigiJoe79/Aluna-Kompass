@@ -168,7 +168,7 @@ test.describe('media library', () => {
     await expect(page.getByRole('row', { name: /rex-foto-/ })).toHaveCount(0);
 
     await page.goto('/admin/media?sort=name');
-    // Nur der Dateiname, nicht die Typ-Badge davor (die für PDF „PDF" zeigt).
+    // Nur der Dateiname, nicht die Typ-Badge davor (die für PDF „PDF“ zeigt).
     const names = await page.locator('tbody tr td:first-child span.font-mono').allInnerTexts();
     expect(names.map((n) => n.trim())).toEqual([...names.map((n) => n.trim())].sort((a, b) => a.localeCompare(b)));
 

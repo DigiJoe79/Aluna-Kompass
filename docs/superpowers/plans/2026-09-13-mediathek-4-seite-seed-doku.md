@@ -508,7 +508,7 @@ git commit -m "feat(app): the media library searches, filters by kind and sorts 
 - Consumes: `createMediaFolder`, `storeMediaInternal`, `folderExists`, `renderPreview`-Pfad über `storeMediaInternal`.
 - Produces: `seedMedia(deps: Deps, ctx: CallContext): Promise<void>` — legt `Bilder`, `Bilder/2026`, `Dokumente` an, vier Rasterbilder, ein PDF, ein SVG; läuft nicht, wenn `Bilder` existiert.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 ```ts
 // packages/core/tests/seed-media.test.ts
@@ -546,13 +546,13 @@ describe('seedMedia', () => {
 });
 ```
 
-- [ ] **Step 2: Rot sehen**
+- [x] **Step 2: Rot sehen**
 
 ```bash
 pnpm --filter @kompass/core exec vitest run tests/seed-media
 ```
 
-- [ ] **Step 3: Seed schreiben**
+- [x] **Step 3: Seed schreiben**
 
 ```ts
 // packages/core/src/seed/media.ts
@@ -609,7 +609,7 @@ In `seed.ts` vor der Schleife `for (const manifest of deps.registry.manifests) {
 
 mit `import { seedMedia } from './media';`. Die Reihenfolge (vor den Modulen) ist Absicht: Der Site-Seed legt den Ordner „Webseite“ an; der Kern-Seed prüft „Bilder“, beide stören sich nicht.
 
-- [ ] **Step 4: Grün sehen**
+- [x] **Step 4: Grün sehen**
 
 ```bash
 pnpm --filter @kompass/core test
@@ -622,7 +622,7 @@ Dann `pnpm --filter @kompass/app test` (der `seed-script.test.ts` und die Seed-T
 pnpm --filter @kompass/app e2e
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core/src/seed/media.ts packages/core/src/seed/seed.ts packages/core/tests/seed-media.test.ts
