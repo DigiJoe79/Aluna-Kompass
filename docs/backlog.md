@@ -146,3 +146,19 @@ ein Teil-Record an; ein MCP-Anlage brach damit jeden Export (2026-09-13,
 nicht geprüft.
 
 **Wann:** Vor dem nächsten Modul mit veröffentlichter Sicht.
+
+## 16. Bildunterschriften der Vermittlungsgeschichte je Hund
+
+**Was:** Zwei mehrsprachige Felder an der Geschichte eines vermittelten Tiers,
+`beforeCaption` und `afterCaption`, mit Vorgabe leer. Das Template zeigt sie
+unter Vorher- und Nachher-Bild und fällt auf seine festen Texte zurück, wenn
+sie leer sind. Betrifft Schema und Migration, Dienst und MCP-Werkzeug, die
+Maske „Geschichte“, die veröffentlichte Sicht, Seed und Tests.
+
+**Warum:** Heute steht unter dem Vorher-Bild fest „Shelter“ bzw. „Shelter,
+Bukarest“. Das Bild kann aber von der Pflegestelle oder von der Straße
+stammen (Joe, 2026-09-13). Das Template kennt den Ort des Fotos nicht, die
+Daten müssen ihn liefern.
+
+**Wann:** Nach der Inhaltssitzung; als Übergang kann das Template die
+Ortsangabe unter „Vorher“ weglassen.
