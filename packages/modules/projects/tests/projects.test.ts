@@ -37,7 +37,7 @@ describe('projects service', () => {
 
   it('an update touches only the fields it names — defaults never overwrite stored values', async () => {
     const deps = await setup();
-    const links = [{ label: 'Betterplace', url: 'https://www.betterplace.org/de/projects/1' }];
+    const links = [{ label: 'Spendenplattform', url: 'https://spenden.example.org/projekte/1' }];
     const a = unwrap(await createProject(deps, manage(), { ...base, status: 'completed', externalLinks: links }));
     const after = unwrap(await updateProject(deps, manage(), { id: a.id, name: { de: 'Neu', en: 'New' } }));
     expect(after).toMatchObject({ name: { de: 'Neu', en: 'New' }, status: 'completed', externalLinks: links });
