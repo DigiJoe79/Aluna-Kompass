@@ -11,6 +11,7 @@ import {
 } from '@kompass/core';
 import { z } from 'zod';
 import { ensureModuleResolution, loadTemplate, type TemplateSchema } from './load';
+import { checkReferenceFields } from './reference-fields';
 import { applyFindings } from './resync/apply';
 import { type Finding, type ResyncData, planResync } from './resync/plan';
 import { siteEntries, siteTemplateState, siteValues } from './schema';
@@ -92,6 +93,8 @@ export async function previewTemplateSync(deps: Deps, ctx: CallContext, dir: str
   await ensureModuleResolution(dir);
   const loaded = await loadTemplate(dir);
   if (!loaded.ok) return loaded;
+  const refs = checkReferenceFields(deps, loaded.value.schema);
+  if (!refs.ok) return refs;
   return ok(buildPreview(deps, loaded.value.schema, loaded.value.definition.locales, loaded.value.checksum, loaded.value.definition.name));
 }
 
@@ -107,6 +110,8 @@ export async function applyTemplateSync(deps: Deps, ctx: CallContext, input: unk
   await ensureModuleResolution(dir);
   const loaded = await loadTemplate(dir);
   if (!loaded.ok) return loaded;
+  const refs = checkReferenceFields(deps, loaded.value.schema);
+  if (!refs.ok) return refs;
 
   const preview = buildPreview(deps, loaded.value.schema, loaded.value.definition.locales, loaded.value.checksum, loaded.value.definition.name);
 

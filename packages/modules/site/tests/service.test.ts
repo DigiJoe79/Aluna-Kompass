@@ -1,12 +1,14 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { schema, unwrap } from '@kompass/core';
+import { coreModule, schema, unwrap } from '@kompass/core';
+import { animalsModule } from '@kompass/module-animals';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 import { losesContent } from '../src/resync/plan';
+import { siteModule } from '../src/manifest';
 import { siteEntries, siteTemplateState } from '../src/schema';
-import { applyTemplateSync, previewTemplateSync, templateIsCurrent } from '../src/service';
+import { activeTemplate, applyTemplateSync, previewTemplateSync, templateIsCurrent } from '../src/service';
 
 const dirs: string[] = [];
 afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true }); });
@@ -109,5 +111,41 @@ describe('template sync', () => {
     await expect(templateIsCurrent(deps, dir)).resolves.toBe(true);
     writeFileSync(path.join(dir, 'kompass.template.ts'), GOOD.replace("name: 'Basis'", "name: 'Basis 2'"));
     await expect(templateIsCurrent(deps, dir)).resolves.toBe(false);
+  });
+});
+
+describe('reference fields at read time', () => {
+  const REFS = `
+import { defineTemplate, reference } from '@kompass/site-template';
+export default defineTemplate({
+  name: 'X', locales: ['de'],
+  variables: { dog: reference({ view: 'animals', where: { status: 'lookingForHome' }, label: 'Hund' }) },
+  collections: {},
+  uses: ['animals'],
+});`;
+
+  it('reads a template whose reference names an existing view and field', async () => {
+    const deps = createTestDeps({ locales: ['de'], manifests: [coreModule, animalsModule, siteModule] });
+    insertUser(deps, { id: 'USER-TEST' });
+    const applied = await applyTemplateSync(deps, ctxWith(['site.manage']), { dir: templateDir(REFS), confirm: true });
+    expect(applied.ok).toBe(true);
+  });
+
+  it('refuses a reference to a view the template does not use, before writing anything', async () => {
+    const deps = createTestDeps({ locales: ['de'], manifests: [coreModule, animalsModule, siteModule] });
+    insertUser(deps, { id: 'USER-TEST' });
+    const result = await applyTemplateSync(deps, ctxWith(['site.manage']), { dir: templateDir(REFS.replace("uses: ['animals'],", '')), confirm: true });
+    expect(result.ok === false && result.error.type === 'conflict' && result.error.code).toBe('unknownView');
+    expect(activeTemplate(deps)).toBe(null);
+  });
+
+  it('refuses a where field the view does not have, in preview as in apply', async () => {
+    const deps = createTestDeps({ locales: ['de'], manifests: [coreModule, animalsModule, siteModule] });
+    insertUser(deps, { id: 'USER-TEST' });
+    const dir = templateDir(REFS.replace("status: 'lookingForHome'", "colour: 'red'"));
+    const preview = await previewTemplateSync(deps, ctxWith(['site.manage']), dir);
+    expect(preview.ok === false && preview.error.type === 'conflict' && preview.error.code).toBe('unknownViewField');
+    const applied = await applyTemplateSync(deps, ctxWith(['site.manage']), { dir, confirm: true });
+    expect(applied.ok === false && applied.error.type === 'conflict' && applied.error.code).toBe('unknownViewField');
   });
 });
