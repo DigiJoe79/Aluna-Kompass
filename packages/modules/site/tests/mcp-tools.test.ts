@@ -7,6 +7,7 @@ import type { FieldSchema, TemplateSchema } from '../src/load';
 import { siteModule } from '../src/manifest';
 import { siteTemplateState } from '../src/schema';
 import { listPublishes } from '../src/services/publishes';
+import { listReferenceOptions } from '../src/values';
 
 const asJson = (s: unknown) => z.toJSONSchema(s as z.ZodType, { io: 'input' }) as FieldSchema;
 
@@ -52,6 +53,7 @@ describe('site mcp tools', () => {
       'site_template_sync',
       'site_variables_get',
       'site_variables_set',
+      'site_variables_options',
       'site_export_check',
       'site_deploy_check',
       'site_preview_build',
@@ -90,5 +92,12 @@ describe('site mcp tools', () => {
     for (const t of tools) {
       expect(t.description).toMatch(/site\.(view|manage|publish)/);
     }
+  });
+
+  it('site_variables_options calls listReferenceOptions', () => {
+    const deps = withTemplate({});
+    const tools = Object.fromEntries(moduleMcpTools(deps, siteModule).map((t) => [t.name, t]));
+    expect(tools.site_variables_options?.service).toBe(listReferenceOptions);
+    expect(tools.site_variables_options?.description).toContain('site.view');
   });
 });

@@ -13,6 +13,7 @@ import {
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { blankValue, schemaFor } from './field-schema';
+import { checkReferenceValues, duplicateReferences, referenceMetaOf, resolveReferenceOptions, type ReferenceOption } from './reference-fields';
 import { siteValues } from './schema';
 import { activeTemplate } from './service';
 
@@ -57,6 +58,17 @@ export async function setValues(deps: Deps, ctx: CallContext, raw: unknown): Pro
   const parsed = validate(deps, z.object(shape), values);
   if (!parsed.ok) return parsed;
 
+  // Referenzwerte müssen in der gefilterten Sicht stehen — dieselbe Prüfung
+  // für Maske und site_variables_set (Spec 2026-09-13, § 4.4).
+  const stale = checkReferenceValues(deps, template.schema, parsed.value as Record<string, unknown>);
+  const duplicates = duplicateReferences(template.schema, parsed.value as Record<string, unknown>);
+  if (stale.length > 0 || duplicates.length > 0) {
+    return invalid([
+      ...stale.map((s) => ({ path: s.field, message: 'referenceNotFound' })),
+      ...duplicates.map((field) => ({ path: field, message: 'duplicateReference' })),
+    ]);
+  }
+
   const before = readValues(deps);
   const now = isoNow(deps.clock);
   deps.db.transaction((tx) => {
@@ -80,4 +92,17 @@ export async function setValues(deps: Deps, ctx: CallContext, raw: unknown): Pro
     });
   });
   return ok(readValues(deps));
+}
+
+/** Die wählbaren Datensätze je Referenzfeld — für die Maske und für `site_variables_options`. */
+export async function listReferenceOptions(deps: Deps, ctx: CallContext): Promise<Result<Record<string, ReferenceOption[]>>> {
+  const denied = requirePermission(ctx, 'site.view');
+  if (denied) return denied;
+  const template = activeTemplate(deps);
+  if (!template) return conflict('noTemplate', 'Es ist kein Template eingelesen');
+  const out: Record<string, ReferenceOption[]> = {};
+  for (const [key, field] of Object.entries(template.schema.variables)) {
+    if (referenceMetaOf(field)) out[key] = resolveReferenceOptions(deps, template.schema.uses, field);
+  }
+  return ok(out);
 }

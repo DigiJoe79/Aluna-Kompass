@@ -1,11 +1,12 @@
-import { schema as core, unwrap } from '@kompass/core';
+import { coreModule, schema as core, unwrap } from '@kompass/core';
+import { animalsModule, createAnimal, setAnimalPublished } from '@kompass/module-animals';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { number, text } from '@kompass/site-template';
+import { number, reference, references, text } from '@kompass/site-template';
 import type { FieldSchema } from '../src/load';
 import { siteTemplateState } from '../src/schema';
-import { readValues, setValues } from '../src/values';
+import { listReferenceOptions, readValues, setValues } from '../src/values';
 
 const asJson = (s: unknown) => z.toJSONSchema(s as z.ZodType, { io: 'input' }) as FieldSchema;
 
@@ -81,5 +82,53 @@ describe('site values', () => {
     expect(entries.length).toBe(2);
     expect(JSON.parse(entries.at(-1)?.before ?? '{}')).toEqual({ pct: 10 });
     expect(JSON.parse(entries.at(-1)?.after ?? '{}')).toEqual({ pct: 20 });
+  });
+});
+
+describe('reference values', () => {
+  const withAnimals = async () => {
+    const deps = createTestDeps({ locales: ['de', 'en'], manifests: [coreModule, animalsModule] });
+    insertUser(deps, { id: 'USER-TEST' });
+    const ctx = ctxWith(['animals.manage', 'animals.view']);
+    const bruno = unwrap(await createAnimal(deps, ctx, { slug: 'bruno', name: 'Bruno', sex: 'male', birthText: {}, sizeText: {}, summary: {}, body: {} }));
+    unwrap(await setAnimalPublished(deps, ctx, { id: bruno.id, isPublished: true }));
+    deps.db
+      .insert(siteTemplateState)
+      .values({
+        id: 'current',
+        name: 'T',
+        schemaJson: { name: 'T', locales: ['de', 'en'], uses: ['animals'], variables: { dog: asJson(reference({ view: 'animals', where: { status: 'lookingForHome' }, label: 'Hund' })), dogs: asJson(references({ view: 'animals', max: 2, label: 'Hunde' })) }, collections: {} },
+        checksum: 'a'.repeat(64),
+        readAt: 't',
+        readByUserId: null,
+      })
+      .run();
+    return deps;
+  };
+
+  it('saves a value that is among the options and rejects one that is not', async () => {
+    const deps = await withAnimals();
+    const manage = ctxWith(['site.manage']);
+    const saved = unwrap(await setValues(deps, manage, { values: { dog: 'bruno' } }));
+    expect(saved.dog).toBe('bruno');
+    const stale = await setValues(deps, manage, { values: { dog: 'ghost' } });
+    expect(stale.ok === false && stale.error.type === 'validation' && stale.error.issues).toEqual([{ path: 'dog', message: 'referenceNotFound' }]);
+    expect(readValues(deps).dog).toBe('bruno');
+  });
+
+  it('accepts null as no choice, and refuses the same record twice in a references field', async () => {
+    const deps = await withAnimals();
+    const manage = ctxWith(['site.manage']);
+    expect(unwrap(await setValues(deps, manage, { values: { dog: null } })).dog).toBe(null);
+    const twice = await setValues(deps, manage, { values: { dogs: ['bruno', 'bruno'] } });
+    expect(twice.ok === false && twice.error.type === 'validation' && twice.error.issues).toEqual([{ path: 'dogs', message: 'duplicateReference' }]);
+  });
+
+  it('lists the options per reference field for the mask and for MCP', async () => {
+    const deps = await withAnimals();
+    const options = unwrap(await listReferenceOptions(deps, ctxWith(['site.view'])));
+    expect(options).toEqual({ dog: [{ value: 'bruno', label: 'Bruno' }], dogs: [{ value: 'bruno', label: 'Bruno' }] });
+    const denied = await listReferenceOptions(deps, ctxWith([]));
+    expect(denied.ok === false && denied.error.type).toBe('forbidden');
   });
 });

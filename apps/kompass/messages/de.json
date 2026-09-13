@@ -150,6 +150,8 @@
       "belongsToNotAnOrganization": "Ein Kontakt kann nur einer Organisation zugeordnet werden.",
       "multiplePrimaryChannels": "Es kann nur ein Hauptkontaktweg festgelegt werden.",
       "roleAlreadyRunning": "Diese Rolle ist für diesen Kontakt bereits aktiv.",
+      "unknownView": "Das Template verweist auf eine Sicht, die es nicht gibt: {detail}",
+      "unknownViewField": "Das Template nennt ein Feld, das die Sicht nicht hat: {detail}",
       "default": "Der Vorgang ist nicht möglich: {detail}"
     },
     "fields": {
@@ -171,7 +173,9 @@
       "backupFormatUnsupported": "Diese Datei ist kein Kompass-Backup oder hat ein unbekanntes Format.",
       "backupNewerThanApp": "Das Backup stammt aus einer neueren Version. Bitte zuerst die App aktualisieren.",
       "backupCorrupt": "Die Datenbank im Backup ist beschädigt.",
-      "backupWithoutUsers": "Dieses Backup enthält keine Nutzer. Damit ließe sich die Installation nicht mehr benutzen."
+      "backupWithoutUsers": "Dieses Backup enthält keine Nutzer. Damit ließe sich die Installation nicht mehr benutzen.",
+      "referenceNotFound": "Dieser Datensatz steht nicht (mehr) zur Auswahl. Bitte leeren oder neu wählen.",
+      "duplicateReference": "Derselbe Datensatz ist zweimal gewählt."
     },
     "pages": {
       "forbidden": {

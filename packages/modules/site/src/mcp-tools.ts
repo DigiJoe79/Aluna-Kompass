@@ -17,7 +17,7 @@ import {
 import { schemaFor } from './field-schema';
 import type { TemplateSchema } from './load';
 import { activeTemplate, applyTemplateSync, previewTemplateSync, readActiveTemplate } from './service';
-import { getVariables, setValues } from './values';
+import { getVariables, listReferenceOptions, setValues } from './values';
 import { readSiteEnv } from './pipeline/env';
 import { listPublishes } from './services/publishes';
 import { checkDeployTarget, runPreview, runPublish } from './pipeline/jobs';
@@ -91,6 +91,7 @@ const FIXED: McpToolDefinition[] = [
   ),
   tool('site_variables_get', 'Read all template variable values. Requires site.view.', z.object({}), (deps, ctx) => getVariables(deps, ctx), getVariables),
   tool('site_variables_set', 'Write template variable values, checked against the template schema. Requires site.manage.', z.object({ values: z.record(z.string(), z.unknown()) }), (deps, ctx, args) => setValues(deps, ctx, args), setValues),
+  tool('site_variables_options', 'List the selectable records per reference variable (value and label), filtered by the declared condition. Requires site.view.', z.object({}), (deps, ctx) => listReferenceOptions(deps, ctx), listReferenceOptions),
   tool('site_export_check', 'Build the content export into a throwaway directory without publishing, to check it is current and complete. Requires site.publish.', z.object({}), async (deps, ctx) => {
     const dir = await mkdtemp(path.join(tmpdir(), 'kompass-site-check-'));
     try {
