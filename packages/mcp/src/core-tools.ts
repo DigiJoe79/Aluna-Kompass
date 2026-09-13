@@ -3,7 +3,7 @@ import {
   followUpDueSchema, followUpIdSchema, followUpListSchema, listDueFollowUpsWithTargets, listFollowUps, reopenFollowUp,
   createMediaFolder, createRole, createUser, deleteMediaAsset, deleteMediaFolder, getAuditEntry, listDocumentBases, listLocales, listMediaAssets, listModules,
   listRetentionDue, listRoles, listThemes, listUsers, moveMediaAsset, queryAudit, readAllSettings, readSetting, removeLocale, removeRole, renameMediaFolder,
-  reorderLocales, resetStartPassword, setModuleEnabled, setRolePermissions, setSetting, setUserActive,
+  reorderLocales, resetStartPassword, setModuleEnabled, setRolePermissions, setSetting, setUserActive, storeMediaAsset,
   updateRole, ok, invalid,
   type McpToolDefinition,
 } from '@kompass/core';
@@ -11,7 +11,30 @@ import { z } from 'zod';
 
 const t = <T>(def: McpToolDefinition<T>): McpToolDefinition => def as McpToolDefinition;
 
+/**
+ * Base64 ohne Data-URL-Präfix. Node's `Buffer.from(…, 'base64')` verwirft
+ * fremde Zeichen still; ein Agent bekäme dann ein leeres oder verstümmeltes
+ * Bild ohne Fehler. Deshalb die Form vorab prüfen.
+ */
+const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;
+function decodeBase64(text: string): Uint8Array | null {
+  const compact = text.replace(/\s+/g, '');
+  if (compact.length === 0 || compact.length % 4 !== 0 || !BASE64.test(compact)) return null;
+  return new Uint8Array(Buffer.from(compact, 'base64'));
+}
+
 export const coreMcpTools: McpToolDefinition[] = [
+  t({
+    name: 'media_upload',
+    description: 'Upload a file into the media library: filename plus base64 content (no data-URL prefix), optional folder path (null or omitted = root). Same limits as the UI: 10 MB, PNG/JPEG/WebP/SVG/PDF. Identical bytes are deduplicated — the existing record comes back, with its own filename and folder. Requires media.upload. Audited.',
+    inputSchema: z.object({ filename: z.string().min(1).max(200), contentBase64: z.string().min(1), folder: z.string().nullable().optional() }),
+    handler: (deps, ctx, { filename, contentBase64, folder }) => {
+      const bytes = decodeBase64(contentBase64);
+      if (!bytes) return Promise.resolve(invalid([{ path: 'contentBase64', message: 'invalidBase64' }]));
+      return storeMediaAsset(deps, ctx, { originalName: filename, bytes, folder: folder ?? null });
+    },
+    service: storeMediaAsset,
+  }),
   t({ name: 'settings_list', description: 'Read all registered settings with their current values.', inputSchema: z.object({}), handler: async (deps) => ok(readAllSettings(deps)), service: readAllSettings }),
   t({ name: 'settings_get', description: 'Read one setting by key, e.g. organization.name.', inputSchema: z.object({ key: z.string() }), handler: async (deps, _ctx, { key }) => (deps.registry.settingDefinitions.has(key) ? ok({ key, value: readSetting(deps, key) }) : invalid([{ path: 'key', message: 'unknownSetting' }])), service: readSetting }),
   t({ name: 'settings_set', description: 'Update one setting. Requires settings.manage. Audited.', inputSchema: z.object({ key: z.string(), value: z.unknown() }), handler: (deps, ctx, args) => setSetting(deps, ctx, args), service: setSetting }),
