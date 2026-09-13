@@ -68,3 +68,24 @@ describe('media_upload', () => {
     expect(result.ok === false && result.error.type).toBe('forbidden');
   });
 });
+
+describe('media_list', () => {
+  it('shows the four filter fields and passes them to the service', async () => {
+    const deps = setup();
+    const ctx = ctxWith(['media.upload']);
+    const shape = (tool('media_list').inputSchema as unknown as { shape: Record<string, unknown> }).shape;
+    expect(Object.keys(shape).sort()).toEqual(['folder', 'kind', 'query', 'sort']);
+    expect(tool('media_list').description).toContain('media.upload');
+
+    await tool('media_upload').handler(deps, ctx, { filename: 'punkt.png', contentBase64: PNG_BASE64 });
+    const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><rect width="2" height="2"/></svg>').toString('base64');
+    await tool('media_upload').handler(deps, ctx, { filename: 'zeichen.svg', contentBase64: svg });
+
+    const all = unwrap(await tool('media_list').handler(deps, ctx, {})) as { record: { filename: string } }[];
+    expect(all).toHaveLength(2);
+    const found = unwrap(await tool('media_list').handler(deps, ctx, { query: 'punkt' })) as { record: { filename: string } }[];
+    expect(found.map((m) => m.record.filename)).toEqual([expect.stringMatching(/^punkt-/)]);
+    const byName = unwrap(await tool('media_list').handler(deps, ctx, { sort: 'name' })) as { record: { filename: string } }[];
+    expect(byName.map((m) => m.record.filename.split('-')[0])).toEqual(['punkt', 'zeichen']);
+  });
+});

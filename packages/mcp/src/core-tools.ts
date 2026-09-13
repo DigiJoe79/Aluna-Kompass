@@ -1,7 +1,7 @@
 import {
   activateTheme, addLocale, assignRole, completeFollowUp, createFollowUp, deleteFollowUp, followUpCreateSchema,
   followUpDueSchema, followUpIdSchema, followUpListSchema, listDueFollowUpsWithTargets, listFollowUps, reopenFollowUp,
-  createMediaFolder, createRole, createUser, deleteMediaAsset, deleteMediaFolder, getAuditEntry, listDocumentBases, listLocales, listMediaAssets, listModules,
+  createMediaFolder, createRole, createUser, deleteMediaAsset, deleteMediaFolder, getAuditEntry, listDocumentBases, listLocales, listMediaAssets, listModules, mediaListFilterSchema,
   listRetentionDue, listRoles, listThemes, listUsers, moveMediaAsset, queryAudit, readAllSettings, readSetting, removeLocale, removeRole, renameMediaFolder,
   reorderLocales, resetStartPassword, setModuleEnabled, setRolePermissions, setSetting, setUserActive, storeMediaAsset,
   updateRole, ok, invalid,
@@ -54,7 +54,7 @@ export const coreMcpTools: McpToolDefinition[] = [
   // Die Akte (Ablage, Nummernvergabe, Storno) lebt im Modul `dms`, das seine
   // eigenen Werkzeuge mitbringt. Der Kern behält nur den Auszugsweg.
   t({ name: 'documents_bases', description: 'List the available document base templates and whether each renders. Requires documents.export.', inputSchema: z.object({}), handler: (deps, ctx) => listDocumentBases(deps, ctx), service: listDocumentBases }),
-  t({ name: 'media_list', description: 'List media assets with size, type, folder and where each is used. Optional folder filter (omitted = all, null = root). Requires media.upload.', inputSchema: z.object({ folder: z.string().nullable().optional() }), handler: (deps, ctx, args) => listMediaAssets(deps, ctx, args), service: listMediaAssets }),
+  t({ name: 'media_list', description: 'List media assets with size, type, folder and where each is used (label, entity, id, href). Filters: folder (omitted = all, null = root), query (case-insensitive, matches filename and usage labels), kind (image | pdf), sort (newest default | oldest | name | size). Requires media.upload.', inputSchema: mediaListFilterSchema, handler: (deps, ctx, args) => listMediaAssets(deps, ctx, args), service: listMediaAssets }),
   t({ name: 'media_delete', description: 'Delete a media asset. Refused while any record still references it (editorial content, audited). Requires media.upload.', inputSchema: z.object({ id: z.string() }), handler: (deps, ctx, args) => deleteMediaAsset(deps, ctx, args), service: deleteMediaAsset }),
   t({ name: 'media_move', description: 'Move a media asset into a folder (null = root). Requires media.upload.', inputSchema: z.object({ id: z.string(), folder: z.string().nullable() }), handler: (deps, ctx, args) => moveMediaAsset(deps, ctx, args), service: moveMediaAsset }),
   t({ name: 'media_folder_create', description: 'Create a virtual media folder; the parent must exist. Requires media.upload.', inputSchema: z.object({ path: z.string() }), handler: (deps, ctx, args) => createMediaFolder(deps, ctx, args), service: createMediaFolder }),

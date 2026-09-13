@@ -694,7 +694,7 @@ git commit -m "feat(media): every usage of an asset carries the path to its page
 - Consumes: `mediaListFilterSchema`, `listMediaAssets` aus Task 3.
 - Produces: Werkzeug `media_list` mit Eingabe `{ folder?, query?, kind?, sort? }`.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 An `packages/mcp/tests/media-tools.test.ts` anhängen:
 
@@ -721,7 +721,7 @@ describe('media_list', () => {
 });
 ```
 
-- [ ] **Step 2: Rot sehen**
+- [x] **Step 2: Rot sehen**
 
 ```bash
 pnpm --filter @kompass/mcp exec vitest run tests/media-tools
@@ -729,7 +729,7 @@ pnpm --filter @kompass/mcp exec vitest run tests/media-tools
 
 Erwartung: FAIL — `shape` hat nur `folder`.
 
-- [ ] **Step 3: Werkzeug umstellen**
+- [x] **Step 3: Werkzeug umstellen**
 
 In `packages/mcp/src/core-tools.ts` `mediaListFilterSchema` mit importieren und die Zeile für `media_list` ersetzen:
 
@@ -737,7 +737,7 @@ In `packages/mcp/src/core-tools.ts` `mediaListFilterSchema` mit importieren und 
   t({ name: 'media_list', description: 'List media assets with size, type, folder and where each is used (label, entity, id, href). Filters: folder (omitted = all, null = root), query (case-insensitive, matches filename and usage labels), kind (image | pdf), sort (newest default | oldest | name | size). Requires media.upload.', inputSchema: mediaListFilterSchema, handler: (deps, ctx, args) => listMediaAssets(deps, ctx, args), service: listMediaAssets }),
 ```
 
-- [ ] **Step 4: Grün sehen**
+- [x] **Step 4: Grün sehen**
 
 ```bash
 pnpm --filter @kompass/mcp test
@@ -747,7 +747,7 @@ pnpm typecheck
 
 Erwartung: grün.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/mcp/src/core-tools.ts packages/mcp/tests/media-tools.test.ts
