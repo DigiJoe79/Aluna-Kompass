@@ -30,4 +30,15 @@ describe('animals seed', () => {
     expect(stories.some((s) => Object.values(s.beforeCaption).some((v) => v.length > 0))).toBe(true);
     expect(stories.some((s) => Object.keys(s.beforeCaption).length === 0 && Object.keys(s.afterCaption).length === 0)).toBe(true);
   });
+
+  it('leaves one animal untranslated so translations_list_gaps has something to show', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, animalsModule], env: 'development' });
+    await seedDevelopment(deps);
+    const rows = deps.db.select().from(animals).all();
+    // `noUncheckedIndexedAccess` macht Record-Zugriffe optional — Helfer statt Cast-Wiederholung.
+    const locale = (summary: unknown, code: string): string => (summary as Record<string, string | undefined>)[code] ?? '';
+    const gap = rows.filter((a) => locale(a.summary, 'de').length > 0 && locale(a.summary, 'en').length === 0);
+    expect(gap.map((a) => a.slug)).toEqual(['frida']);
+    expect(rows.filter((a) => locale(a.summary, 'en').length > 0).length).toBeGreaterThanOrEqual(2);
+  });
 });

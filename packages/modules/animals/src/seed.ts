@@ -56,8 +56,9 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
     isEmergency: false,
     isSponsorable: true,
     traits: { de: ['ruhig', 'verträglich'], en: ['calm', 'sociable'] },
-    summary: { de: 'Sanfte Hündin für ein ruhiges Zuhause.', en: 'Gentle girl for a quiet home.' },
-    body: { de: 'Frida lebt bereits in einer Pflegestelle in Deutschland.', en: 'Frida already lives in a foster home in Germany.' },
+    // Bewusst ohne englische Fassung: die eine Lücke, die `translations_list_gaps` in der Entwicklung zeigt.
+    summary: { de: 'Sanfte Hündin für ein ruhiges Zuhause.', en: '' },
+    body: { de: 'Frida lebt bereits in einer Pflegestelle in Deutschland.', en: '' },
     status: 'reserved' as const,
     published: false,
   },

@@ -1429,7 +1429,7 @@ git commit -m "test(app): modules with localized fields must offer the translati
 - Consumes: `seedDevelopment` (Tiere), `seedProjects` (Projekte) — unverändert.
 - Produces: Frida ohne englische `summary` und `body`; „Auslauf am Heim" ohne englische `summary`. Damit zeigt `translations_list_gaps` in `development` drei Lücken.
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 In `packages/modules/animals/tests/seed.test.ts` am Ende des `describe`:
 
@@ -1457,12 +1457,12 @@ In `packages/modules/projects/tests/seed.test.ts` am Ende des `describe`:
   });
 ```
 
-- [ ] **Step 2: Tests laufen lassen, rot**
+- [x] **Step 2: Tests laufen lassen, rot**
 
 Run: `pnpm --filter @kompass/module-animals test -- seed` und `pnpm --filter @kompass/module-projects test -- seed`
 Expected: FAIL — beide Listen sind leer.
 
-- [ ] **Step 3: Seeds ändern**
+- [x] **Step 3: Seeds ändern**
 
 `packages/modules/animals/src/seed.ts`, Eintrag `frida`:
 
@@ -1479,12 +1479,12 @@ Expected: FAIL — beide Listen sind leer.
     summary: { de: 'Ein eingezäunter Auslauf für die Hunde, 2025 fertiggestellt.', en: '' },
 ```
 
-- [ ] **Step 4: Tests laufen lassen**
+- [x] **Step 4: Tests laufen lassen**
 
 Run: `pnpm --filter @kompass/module-animals test` und `pnpm --filter @kompass/module-projects test`
 Expected: PASS. Schlägt ein anderer Seed-Test an, weil er eine englische Frida erwartet (`grep -rn "Gentle girl" packages apps`), passe dort die Erwartung an.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 pnpm typecheck

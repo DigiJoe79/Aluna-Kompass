@@ -33,7 +33,8 @@ const EXAMPLE_PROJECTS = [
     name: { de: 'Auslauf am Heim', en: 'Exercise yard at the home' },
     type: 'shortTerm' as const,
     status: 'completed' as const,
-    summary: { de: 'Ein eingezäunter Auslauf für die Hunde, 2025 fertiggestellt.', en: 'A fenced exercise yard for the dogs, finished in 2025.' },
+    // Bewusst ohne englische Fassung, siehe Tiere-Seed.
+    summary: { de: 'Ein eingezäunter Auslauf für die Hunde, 2025 fertiggestellt.', en: '' },
     body: { de: 'Der Auslauf wurde 2025 gebaut und dient hier als Beispiel für ein abgeschlossenes Projekt.', en: 'The yard was built in 2025 and serves here as an example of a completed project.' },
     externalLinks: [{ label: 'Baubericht', url: 'https://example.org/berichte/auslauf-2025' }],
     published: false,
