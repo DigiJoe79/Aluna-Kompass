@@ -1,4 +1,4 @@
-import { localizedColumn, schema as core } from '@kompass/core';
+import { localizedColumn, schema as core, type LocalizedText } from '@kompass/core';
 import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 /** Kurzbegriffe je Sprache. Welche Sprachen, entscheidet die Installation. */
@@ -48,4 +48,7 @@ export const animalStories = sqliteTable('animal_stories', {
   quote: localizedColumn('quote'),
   family: text('family').notNull().default(''),
   adoptedYear: integer('adopted_year').notNull(),
+  /** Unterschrift unter dem Vorher- bzw. Nachher-Bild. Leer heißt: das Template zeigt keine Ortsangabe. */
+  beforeCaption: text('before_caption', { mode: 'json' }).$type<LocalizedText>().notNull().default({}),
+  afterCaption: text('after_caption', { mode: 'json' }).$type<LocalizedText>().notNull().default({}),
 });

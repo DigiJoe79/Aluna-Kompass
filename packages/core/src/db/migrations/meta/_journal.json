@@ -204,6 +204,13 @@
       "when": 1789234045936,
       "tag": "0028_projects_drop_betterplace",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1789302104700,
+      "tag": "0029_animal_story_captions",
+      "breakpoints": true
     }
   ]
 }

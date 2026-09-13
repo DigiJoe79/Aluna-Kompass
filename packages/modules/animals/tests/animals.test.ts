@@ -92,4 +92,22 @@ describe('animals module', () => {
     unwrap(await setAnimalPublished(d, manage, { id: a.id, isPublished: true }));
     expect(publishedAnimals.load(d)[0]!.traits).toEqual({ de: ['ruhig'] });
   });
+
+  it('a story carries captions per image, empty by default, and audits them', async () => {
+    const d = await deps();
+    const a = unwrap(await createAnimal(d, manage, chiara));
+    unwrap(await setAnimalStatus(d, manage, { id: a.id, status: 'adopted', adoptedYear: 2026 }));
+    const bare = unwrap(await setAnimalStory(d, manage, { id: a.id, beforeAssetId: null, afterAssetId: null, quote: { de: 'Zitat', en: '' }, family: 'Familie M.', adoptedYear: 2026 }));
+    expect(bare.story).toMatchObject({ beforeCaption: {}, afterCaption: {} });
+    const captioned = unwrap(await setAnimalStory(d, manage, { id: a.id, beforeAssetId: null, afterAssetId: null, quote: { de: 'Zitat', en: '' }, family: 'Familie M.', adoptedYear: 2026, beforeCaption: { de: 'Auf der Pflegestelle', en: 'At the foster home' }, afterCaption: { de: 'Zuhause in Köln', en: '' } }));
+    expect(captioned.story).toMatchObject({ beforeCaption: { de: 'Auf der Pflegestelle', en: 'At the foster home' }, afterCaption: { de: 'Zuhause in Köln', en: '' } });
+    const entry = d.db.select().from(schema.auditLog).all().at(-1)!;
+    expect(entry.action).toBe('animals.setStory');
+    // `after` ist eine JSON-Textspalte (`packages/core/src/db/schema.ts`).
+    expect(String(entry.after)).toContain('Auf der Pflegestelle');
+    const tooLong = await setAnimalStory(d, manage, { id: a.id, beforeAssetId: null, afterAssetId: null, quote: {}, family: '', adoptedYear: 2026, beforeCaption: { de: 'x'.repeat(201) } });
+    expect(tooLong.ok === false && tooLong.error.type === 'validation').toBe(true);
+    const unknownLocale = await setAnimalStory(d, manage, { id: a.id, beforeAssetId: null, afterAssetId: null, quote: {}, family: '', adoptedYear: 2026, afterCaption: { fr: 'Chez nous' } });
+    expect(unknownLocale.ok === false && unknownLocale.error.type === 'validation').toBe(true);
+  });
 });

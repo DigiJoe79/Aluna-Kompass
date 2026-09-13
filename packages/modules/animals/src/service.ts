@@ -7,7 +7,7 @@ export const SLUG = /^[a-z0-9][a-z0-9-]{0,80}$/;
 const localizedList = coreLocalizedList({ max: 12, itemMax: 40 });
 
 export interface AnimalPhoto { assetId: string; sortOrder: number; isPrimary: boolean }
-export interface AnimalStory { beforeAssetId: string | null; afterAssetId: string | null; quote: LocalizedText; family: string; adoptedYear: number }
+export interface AnimalStory { beforeAssetId: string | null; afterAssetId: string | null; quote: LocalizedText; family: string; adoptedYear: number; beforeCaption: LocalizedText; afterCaption: LocalizedText }
 export type AnimalRecord = typeof animals.$inferSelect & { photos: AnimalPhoto[]; story: AnimalStory | null };
 
 const fields = {
@@ -51,7 +51,7 @@ export function loadAnimal(db: DbOrTx, id: string): AnimalRecord | null {
   if (!row) return null;
   const photos = db.select({ assetId: animalPhotos.assetId, sortOrder: animalPhotos.sortOrder, isPrimary: animalPhotos.isPrimary }).from(animalPhotos).where(eq(animalPhotos.animalId, id)).orderBy(asc(animalPhotos.sortOrder)).all();
   const story = db.select().from(animalStories).where(eq(animalStories.animalId, id)).get();
-  return { ...row, traits: row.traits as LocalizedList, photos, story: story ? { beforeAssetId: story.beforeAssetId, afterAssetId: story.afterAssetId, quote: story.quote, family: story.family, adoptedYear: story.adoptedYear } : null };
+  return { ...row, traits: row.traits as LocalizedList, photos, story: story ? { beforeAssetId: story.beforeAssetId, afterAssetId: story.afterAssetId, quote: story.quote, family: story.family, adoptedYear: story.adoptedYear, beforeCaption: story.beforeCaption, afterCaption: story.afterCaption } : null };
 }
 
 const slugTaken = (db: DbOrTx, slug: string, exceptId?: string) => { const r = db.select({ id: animals.id }).from(animals).where(eq(animals.slug, slug)).get(); return !!r && r.id !== exceptId; };
@@ -137,7 +137,17 @@ export async function setAnimalPhotos(deps: Deps, ctx: CallContext, input: unkno
   });
 }
 
-export const animalStorySchema = z.object({ id: z.string().min(1), beforeAssetId: z.string().nullable(), afterAssetId: z.string().nullable(), quote: localizedText({ max: 600 }), family: z.string().trim().max(120), adoptedYear: z.number().int().min(2000).max(2100) });
+export const animalStorySchema = z.object({
+  id: z.string().min(1),
+  beforeAssetId: z.string().nullable(),
+  afterAssetId: z.string().nullable(),
+  quote: localizedText({ max: 600 }),
+  family: z.string().trim().max(120),
+  adoptedYear: z.number().int().min(2000).max(2100),
+  // Vorgabe leer: `animals_set_story` und ältere Aufrufer kennen die Felder nicht.
+  beforeCaption: localizedText({ max: 200 }).default({}),
+  afterCaption: localizedText({ max: 200 }).default({}),
+});
 
 export async function setAnimalStory(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AnimalRecord>> {
   const denied = requirePermission(ctx, 'animals.manage');
