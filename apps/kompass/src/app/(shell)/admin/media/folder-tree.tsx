@@ -7,34 +7,33 @@ import { Button } from '@/components/ui/button';
 import type { ActionState } from '@/lib/actions';
 import { createFolderAction, deleteFolderAction, renameFolderAction } from './actions';
 import { flattenFolderTree } from './folder-tree-model';
-import type { Folder } from './types';
+import { mediaHref, type Folder, type ListQuery } from './types';
 import { Input } from '@/components/ui/input';
 
-const folderHref = (path: string | null) => (path === null ? '/admin/media' : `/admin/media?folder=${encodeURIComponent(path)}`);
-
 export function FolderTree({
-  current,
+  query,
   folders,
   run,
 }: {
-  current: string | null;
+  query: ListQuery;
   folders: Folder[];
   run: (p: Promise<ActionState>) => Promise<ActionState>;
 }) {
   const t = useTranslations('media');
   const router = useRouter();
+  const current = query.folder;
   const [newName, setNewName] = useState('');
   const [renameTo, setRenameTo] = useState<string | null>(null);
 
   return (
     <nav className="w-60 shrink-0 text-[14px]">
-      <a href={folderHref(null)} className={`block rounded px-2 py-1 ${current === null ? 'bg-selected text-selected-ink' : 'hover:bg-row-hover'}`}>
+      <a href={mediaHref({ ...query, folder: null })} className={`block rounded px-2 py-1 ${current === null ? 'bg-selected text-selected-ink' : 'hover:bg-row-hover'}`}>
         {t('root')}
       </a>
       {flattenFolderTree(folders).map((f) => (
         <a
           key={f.path}
-          href={folderHref(f.path)}
+          href={mediaHref({ ...query, folder: f.path })}
           className={`block rounded px-2 py-1 ${current === f.path ? 'bg-selected text-selected-ink' : 'hover:bg-row-hover'}`}
           style={{ paddingLeft: `${0.5 + f.depth * 0.75}rem` }}
         >
@@ -80,7 +79,7 @@ export function FolderTree({
                 void run(renameFolderAction(current, parent + seg)).then((s) => {
                   if (s.status === 'success') {
                     setRenameTo(null);
-                    router.push(folderHref(parent + seg));
+                    router.push(mediaHref({ ...query, folder: parent + seg }));
                   }
                 });
               }}
@@ -99,7 +98,7 @@ export function FolderTree({
           <button
             type="button"
             className="self-start text-error underline"
-            onClick={() => void run(deleteFolderAction(current)).then((s) => s.status === 'success' && router.push('/admin/media'))}
+            onClick={() => void run(deleteFolderAction(current)).then((s) => s.status === 'success' && router.push(mediaHref({ ...query, folder: null })))}
           >
             {t('deleteFolder')}
           </button>

@@ -25,7 +25,7 @@ export async function uploadMediaAction(formData: FormData): Promise<ActionState
   // Dedup-Treffer: Der Datensatz lag schon da, womöglich in einem anderen Ordner —
   // „hochgeladen“ wäre gelogen, und im offenen Ordner erschiene nichts.
   const { record, created } = result.value;
-  const message = created ? t('media.uploaded') : t('media.alreadyStored', { filename: record.filename, folder: record.folder ?? t('media.rootFolder') });
+  const message = created ? t('media.uploaded') : t('media.alreadyStored', { filename: record.filename, folder: record.folder ?? t('media.noFolder') });
   return { status: 'success', message, data: { id: record.id, filename: record.filename, folder: record.folder, created } };
 }
 

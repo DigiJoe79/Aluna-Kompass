@@ -1,10 +1,11 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { useDateFormat } from '@/components/date-format-provider';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { kb, type Folder, type Item } from './types';
+import { formatBytes, type Folder, type Item } from './types';
 import { Select } from '@/components/ui/select';
 
 export function AssetDetailDialog({
@@ -35,7 +36,7 @@ export function AssetDetailDialog({
 
             <div className="grid place-items-center rounded-md border border-line bg-surface-2 p-3">
               {isImage ? (
-                <img src={`/media/${item.id}`} alt="" className="max-h-[55vh] w-auto object-contain" />
+                <img src={`/media/${item.id}/preview`} alt="" className="max-h-[55vh] w-auto object-contain" />
               ) : (
                 <span className="px-6 py-10 text-[24px] font-semibold uppercase text-ink-2">{item.filename.split('.').at(-1)}</span>
               )}
@@ -45,7 +46,7 @@ export function AssetDetailDialog({
               <dt className="text-ink-2">{t('type')}</dt>
               <dd>{item.mimeType}</dd>
               <dt className="text-ink-2">{t('columns.size')}</dt>
-              <dd>{kb(item.bytes)}</dd>
+              <dd>{formatBytes(item.bytes)}</dd>
               {item.width && item.height ? (
                 <>
                   <dt className="text-ink-2">{t('dimensions')}</dt>
@@ -55,7 +56,7 @@ export function AssetDetailDialog({
                 </>
               ) : null}
               <dt className="text-ink-2">{t('folder')}</dt>
-              <dd>{assetFolder ?? t('root')}</dd>
+              <dd>{assetFolder ?? t('noFolder')}</dd>
               <dt className="text-ink-2">{t('uploadedAt')}</dt>
               <dd>{fmt.date(item.createdAt)}</dd>
               {item.uploadedBy ? (
@@ -65,10 +66,30 @@ export function AssetDetailDialog({
                 </>
               ) : null}
               <dt className="text-ink-2">{t('columns.usage')}</dt>
-              <dd>{item.references.length === 0 ? <span className="text-ink-2">{t('unused')}</span> : item.references.join(', ')}</dd>
+              <dd>
+                {item.references.length === 0 ? (
+                  <span className="text-ink-2">{t('unused')}</span>
+                ) : (
+                  item.references.map((r, i) => (
+                    <span key={`${r.label}-${i}`}>
+                      {i > 0 ? ', ' : null}
+                      {r.href ? (
+                        <Link href={r.href} className="text-link underline">
+                          {r.label}
+                        </Link>
+                      ) : (
+                        r.label
+                      )}
+                    </span>
+                  ))
+                )}
+              </dd>
             </dl>
 
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-2 pt-3">
+              <a href={`/media/${item.id}`} target="_blank" rel="noopener" className="text-[13px] text-link underline">
+                {t('open')}
+              </a>
               <label className="flex items-center gap-2 text-[13px] text-ink-2">
                 {t('move')}
                 <Select
@@ -76,7 +97,7 @@ export function AssetDetailDialog({
                   className="w-auto"
                   onChange={(e) => onMove(item.id, e.target.value || null)}
                 >
-                  <option value="">{t('root')}</option>
+                  <option value="">{t('noFolder')}</option>
                   {folders.map((f) => (
                     <option key={f.path} value={f.path}>
                       {f.path}

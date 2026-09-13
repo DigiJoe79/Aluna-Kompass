@@ -36,7 +36,7 @@
 - Consumes: `listMediaAssets(deps, ctx, { folder?, query?, kind?, sort? })`, `mediaListFilterSchema`, `MediaReference.href`, `AssetGrid` aus `components/media/asset-grid.tsx`, `useDateFormat`.
 - Produces: `Item.references: { label: string; href?: string }[]`; URL-Parameter `folder`, `q`, `kind` (`all | image | pdf`), `sort` (`newest | oldest | name | size`).
 
-- [ ] **Step 1: E2E schreiben**
+- [x] **Step 1: E2E schreiben**
 
 In `apps/kompass/e2e/media.spec.ts` anhängen:
 
@@ -105,13 +105,13 @@ Der Dedup-Fall aus dem Fork („dedup“, Meldung `im Ordner „bilder“`) blei
 
 Pflichtfelder des Tierformulars aus `animals.spec.ts` übernehmen.
 
-- [ ] **Step 2: Rot sehen**
+- [x] **Step 2: Rot sehen**
 
 ```bash
 pnpm --filter @kompass/app e2e -- media.spec.ts
 ```
 
-- [ ] **Step 3: Übersetzungen**
+- [x] **Step 3: Übersetzungen**
 
 `de.json`, `media`: `"rootFolder": "Wurzel"` → `"noFolder": "Ohne Ordner"`; ergänzen:
 
@@ -126,7 +126,7 @@ pnpm --filter @kompass/app e2e -- media.spec.ts
 
 In `actions.ts`: `t('media.rootFolder')` → `t('media.noFolder')`.
 
-- [ ] **Step 4: `types.ts`**
+- [x] **Step 4: `types.ts`**
 
 ```ts
 export interface Reference {
@@ -198,7 +198,7 @@ describe('formatBytes', () => {
 });
 ```
 
-- [ ] **Step 5: `page.tsx`**
+- [x] **Step 5: `page.tsx`**
 
 ```tsx
 import { listMediaAssets, listMediaFolders, mediaListFilterSchema, requirePermission, schema, unwrap } from '@kompass/core';
@@ -256,11 +256,11 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
 }
 ```
 
-- [ ] **Step 6: `folder-tree.tsx`**
+- [x] **Step 6: `folder-tree.tsx`**
 
 Die Signatur wird `{ query, folders, run }` mit `query: ListQuery`; `current` ist `query.folder`. `folderHref(path)` wird `mediaHref({ ...query, folder: path })`, damit Suche und Sortierung beim Ordnerwechsel bleiben. Nach Umbenennen: `router.push(mediaHref({ ...query, folder: parent + seg }))`; nach Löschen: `router.push(mediaHref({ ...query, folder: null }))`. Alle Vorkommen von `current` im Datei-Rumpf auf `query.folder` umstellen (`const current = query.folder;` am Anfang der Komponente reicht).
 
-- [ ] **Step 7: `library-client.tsx`**
+- [x] **Step 7: `library-client.tsx`**
 
 Props: `{ query: ListQuery; folders: Folder[]; items: Item[] }`. Über der Liste, neben Upload und Umschalter, die Werkzeugleiste als GET-Formular; die Liste bekommt die Spalten Ordner und Hochgeladen, Zeilen einen fokussierbaren Knopf, Vorschau statt Original:
 
@@ -447,7 +447,7 @@ export function LibraryClient({ query, folders, items }: { query: ListQuery; fol
 
 Die Zeilen bleiben klickbar, der Knopf im Dateinamen macht sie zusätzlich per Tastatur erreichbar. Der E2E-Selektor `getByRole('row', { name: /…/ })` greift weiter, weil der Zeilenname aus dem Text der Zellen entsteht.
 
-- [ ] **Step 8: `asset-detail-dialog.tsx`**
+- [x] **Step 8: `asset-detail-dialog.tsx`**
 
 Vorschau über `/media/${item.id}/preview`; `kb` → `formatBytes`; Ordnerzeile `assetFolder ?? t('noFolder')`; Verwendung als Links; „Öffnen“:
 
@@ -477,7 +477,7 @@ und in der Aktionsleiste vor dem Verschieben-Feld:
 
 `import Link from 'next/link';` ergänzen. Die Zeile mit `t('root')` im Ordnerfeld wird `assetFolder ?? t('noFolder')`.
 
-- [ ] **Step 9: Grün sehen**
+- [x] **Step 9: Grün sehen**
 
 ```bash
 pnpm typecheck
@@ -488,7 +488,7 @@ grep -rn "rootFolder\|'./asset-grid'\|kb(" "apps/kompass/src/app/(shell)/admin/m
 
 Erwartung: grün, kein Treffer.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add "apps/kompass/src/app/(shell)/admin/media" apps/kompass/messages/de.json apps/kompass/e2e/media.spec.ts apps/kompass/tests/media-href.test.ts

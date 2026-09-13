@@ -45,7 +45,9 @@
     "empty": "Keine Dateien in diesem Ordner.",
     "columns": {
       "file": "Datei",
+      "folder": "Ordner",
       "size": "Größe",
+      "uploadedAt": "Hochgeladen",
       "usage": "Verwendung"
     },
     "unused": "nicht verwendet",
@@ -63,7 +65,15 @@
     "uploaded": "Datei hochgeladen.",
     "uploading": "Datei wird hochgeladen …",
     "alreadyStored": "Diese Datei gibt es schon: „{filename}“ im Ordner „{folder}“.",
-    "rootFolder": "Wurzel",
+    "noFolder": "Ohne Ordner",
+    "filter": "Filtern",
+    "kind": {
+      "label": "Typ",
+      "all": "Alle",
+      "image": "Bilder",
+      "pdf": "PDF"
+    },
+    "open": "Öffnen",
     "delete": "Löschen",
     "confirmDelete": "Diese Datei löschen?",
     "confirmDeleteBody": "Die Datei wird entfernt. Der Löschvorgang steht im Änderungsprotokoll.",
