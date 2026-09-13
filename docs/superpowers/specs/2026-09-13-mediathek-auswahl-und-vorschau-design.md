@@ -56,15 +56,20 @@ abgeleitet, jederzeit neu berechenbar). SVG und PDF haben keine Vorschau.
 ```ts
 export function previewFilename(filename: string): string;
 export function hasPreview(mimeType: string): boolean;          // die drei Rasterformate
-/** Baut die Vorschau, wenn sie fehlt, und gibt ihre Bytes zurück. Für SVG das Original, für PDF null. */
+/** Vorschau-Bytes aus dem Original; wirft bei unlesbarem Bild. */
+export async function renderPreview(bytes: Uint8Array): Promise<Uint8Array>;
+/** Liest die Vorschau, baut sie nach, wenn sie fehlt. Für SVG das Original, für PDF null. */
 export async function ensurePreview(deps: Deps, record: MediaAssetRecord): Promise<Uint8Array | null>;
 ```
 
-- `storeMediaInternal` ruft nach dem Schreiben des Originals `ensurePreview`
-  auf — im selben Aufruf, vor der Transaktion, damit ein Upload mit Vorschau
-  ankommt. Schlägt `sharp` fehl (kaputte Datei, die `image-size` noch nahm),
-  wird der Upload als `validation('unsupportedMediaType')` abgelehnt, nicht
-  halb abgelegt.
+- Beim Upload entsteht die Vorschau in `prepare`, dort wo heute die Maße
+  gelesen werden: `sharp(bytes).metadata()` liefert Breite und Höhe, ein
+  zweiter Aufruf die Vorschau-Bytes. `image-size` entfällt damit. Schlägt
+  `sharp` fehl (kaputte Datei), wird der Upload als
+  `validation('unsupportedMediaType')` abgelehnt, bevor irgendetwas auf der
+  Platte liegt. Erst danach schreibt `storeMediaInternal` Original und
+  Vorschau, dann die Transaktion. Das Dedup greift vorher wie heute: Ein
+  Treffer schreibt nichts.
 - `getMediaPreview(deps, ctx, id)` in `service.ts`: dieselben Rechteregeln wie
   `getMediaAsset` (angemeldet; Modul-Recht, wo eine Fundstelle eins nennt),
   dann `ensurePreview`. Der Nachbau beim Abruf ist kein Vereinsvorgang und
@@ -245,8 +250,9 @@ erste. Kacheln zeigen die Vorschau. `uploadAnimalPhotoAction` entfällt.
   mit `sharp` als einfarbige Flächen mit Rahmen erzeugt — keine Binärdateien
   im Repo; je Datei ein anderer Farbton, damit sie im Grid unterscheidbar
   sind. Zwei davon in `Bilder/2026`, eins in `Bilder`, eins ohne Ordner.
-- Ein PDF (eine Seite, mit `@kompass/documents` gerendert oder als minimales
-  handgeschriebenes PDF) in `Dokumente`.
+- Ein PDF in `Dokumente`: ein minimales, handgeschriebenes Ein-Seiten-PDF als
+  Konstante im Seed. Kein Rendern über `@kompass/documents` — der Kern hängt
+  nicht am Dokumentpaket.
 - Ein SVG (einfaches Vereinssymbol) ohne Ordner.
 - Nichts davon wird referenziert — die Module hängen ihre eigenen Seeds an
   eigene Uploads. So zeigt die Entwicklung „nicht verwendet", Löschen,
@@ -302,7 +308,7 @@ bestehende Muster-Test für Route Handler, falls vorhanden; sonst E2E).
 - `packages/core/src/media/references.ts` — `href` fürs Logo
 - `packages/core/src/modules/manifest.ts` — `MediaReference.href?`
 - `packages/core/src/seed/media.ts` (neu), `seed.ts` — Aufruf
-- `packages/core/package.json` — `sharp`
+- `packages/core/package.json` — `sharp` rein, `image-size` raus
 - `packages/core/tests/media-preview.test.ts` (neu), `media.test.ts`, `media-references.test.ts`, `seed-media.test.ts` (neu)
 
 **Module**
@@ -348,6 +354,7 @@ Plan folgt dieser Reihenfolge.
 
 **Mehrdeutigkeit.** „Auswählen" bei Einzelauswahl ist der Klick auf die
 Kachel, kein Übernehmen-Knopf. „Nachbau beim Abruf" heißt: `ensurePreview`
-prüft `exists`, baut bei `false`, und schreibt mit `flag: 'wx'` — zwei
-gleichzeitige Abrufe stören sich nicht. `query` trifft auch Labels, damit ein
+prüft `exists`, baut bei `false` über `renderPreview`, und schreibt mit
+`flag: 'wx'` — zwei gleichzeitige Abrufe stören sich nicht. Beim Upload
+läuft `renderPreview` in `prepare`, vor jedem Schreiben (Abschnitt 3). `query` trifft auch Labels, damit ein
 Tiername Fotos findet; die Sammelabfrage aus Backlog 22 ändert daran nichts.
