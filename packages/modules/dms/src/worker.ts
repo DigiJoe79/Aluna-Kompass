@@ -104,7 +104,11 @@ export async function processNextDocument(
 export interface TextWorker {
   /** Sofort nachsehen, statt auf den nächsten Takt zu warten. */
   wake(): void;
-  stop(): void;
+  /**
+   * Anhalten. Erfüllt, sobald ein gerade laufender Durchlauf fertig ist — wer
+   * danach die Datenbank schliesst, trifft keinen Schreibzugriff mehr.
+   */
+  stop(): Promise<void>;
 }
 
 export function startTextWorker(
@@ -122,6 +126,8 @@ export function startTextWorker(
 
   let busy = false;
   let stopped = false;
+  /** Der laufende Durchlauf, damit `stop()` auf ihn warten kann. */
+  let current: Promise<void> = Promise.resolve();
 
   const drain = async (): Promise<void> => {
     if (busy || stopped) return;
@@ -160,16 +166,23 @@ export function startTextWorker(
     }
   };
 
-  const timer = setInterval(() => void drain(), opts.intervalMs ?? DEFAULT_INTERVAL_MS);
+  // `drain` selbst fängt alles; `current` kann nicht verwerfen.
+  const run = (): void => {
+    if (busy || stopped) return;
+    current = drain();
+  };
+
+  const timer = setInterval(run, opts.intervalMs ?? DEFAULT_INTERVAL_MS);
   // Der Takt darf den Prozess nicht am Leben halten, wenn sonst nichts läuft.
   timer.unref?.();
-  void drain();
+  run();
 
   return {
-    wake: () => void drain(),
+    wake: run,
     stop: () => {
       stopped = true;
       clearInterval(timer);
+      return current;
     },
   };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { backgroundStarted, resetBackgroundForTests, startBackgroundWork, textWorker } from '@/lib/background';
+import { backgroundStarted, resetBackgroundForTests, startBackgroundWork, stopBackgroundWork, textWorker } from '@/lib/background';
 
 describe('startBackgroundWork', () => {
   it('startet einmal und bleibt beim zweiten Aufruf stumm', () => {
@@ -36,5 +36,28 @@ describe('startBackgroundWork', () => {
     resetBackgroundForTests();
 
     expect(textWorker()).toBeNull();
+  });
+
+  it('hält den Worker an und kommt erst zurück, wenn dessen Durchlauf fertig ist', async () => {
+    resetBackgroundForTests();
+    let release!: () => void;
+    const running = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const fake = { wake: () => {}, stop: () => running };
+    startBackgroundWork({ onStart: () => fake });
+
+    let stopped = false;
+    const stopping = stopBackgroundWork().then(() => {
+      stopped = true;
+    });
+    await Promise.resolve();
+    expect(stopped).toBe(false);
+    expect(textWorker()).toBeNull();
+    expect(backgroundStarted()).toBe(false);
+
+    release();
+    await stopping;
+    expect(stopped).toBe(true);
   });
 });

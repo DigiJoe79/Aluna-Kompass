@@ -73,7 +73,7 @@ export async function resetDeps(mode: 'empty' | 'seeded'): Promise<void> {
   // kann die Deps nicht mitten im Reset neu anlegen, und eine Anfrage, die
   // zufällig in dasselbe Fenster läuft, bekommt trotzdem eine Antwort.
   const background = await import('./background');
-  background.stopBackgroundWork();
+  await background.stopBackgroundWork();
 
   let done!: () => void;
   holder.resetting = new Promise<void>((resolve) => {

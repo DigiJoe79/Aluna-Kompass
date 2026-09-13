@@ -235,6 +235,48 @@ describe('Worker', () => {
     expect(warnings).toMatch(/Textworker/);
   });
 
+  it('stop wartet den laufenden Durchlauf ab, statt ihn in eine geschlossene Datenbank laufen zu lassen', async () => {
+    // Der E2E-Reset hielt den Worker an und schloss die Datenbank — ein gerade
+    // laufender Durchlauf lief weiter und schrieb ins Leere („The database
+    // connection is not open“). Der Stopp muss deshalb erst zurückkommen, wenn
+    // der Durchlauf fertig ist.
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const slow: TextExtraction = {
+      probe: async () => ({ ok: true, languages: ['deu'] }),
+      extract: async () => {
+        await gate;
+        return [{ page: 1, text: 'Rechnung', source: 'layer' }];
+      },
+    };
+    const deps = await setup(slow);
+    const id = await receive(deps, 'Langsam');
+
+    const worker = startTextWorker(deps, { intervalMs: 1_000_000 });
+    await tick();
+    expect(statusOf(deps, id)).toBe('running');
+
+    let stopped = false;
+    const stopping = worker.stop().then(() => {
+      stopped = true;
+    });
+    await tick();
+    expect(stopped).toBe(false);
+
+    release();
+    await stopping;
+    expect(statusOf(deps, id)).toBe('done');
+  });
+
+  it('stop kommt sofort zurück, wenn nichts läuft', async () => {
+    const deps = await setup();
+    const worker = startTextWorker(deps, { intervalMs: 1_000_000 });
+    await tick();
+    await expect(worker.stop()).resolves.toBeUndefined();
+  });
+
   it('läuft an, auch wenn die Deps gerade nicht zu haben sind', () => {
     // `getDeps()` wirft, solange der E2E-Reset läuft. Der Start darf daran
     // nicht scheitern — sonst reisst er den Serverstart mit.

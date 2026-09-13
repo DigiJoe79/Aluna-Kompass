@@ -27,7 +27,7 @@ export function resetBackgroundForTests(): void {
   state.started = false;
   state.start = null;
   if (typeof state.worker?.stop === 'function') {
-    state.worker.stop();
+    void state.worker.stop();
   }
   state.worker = null;
 }
@@ -57,10 +57,14 @@ export function startBackgroundWork(
  * werfen; das traf auch gewöhnliche Anfragen, die zufällig in das Fenster
  * liefen, und endete als Fehler im Browser.
  */
-export function stopBackgroundWork(): void {
-  state.worker?.stop();
+export async function stopBackgroundWork(): Promise<void> {
+  const stopping = state.worker?.stop();
   state.worker = null;
   state.started = false;
+  // Erst zurückkommen, wenn ein laufender Durchlauf fertig ist: Der Reset
+  // schliesst gleich danach die Datenbank, und ein Durchlauf, der noch
+  // schreibt, endete sonst als „The database connection is not open“.
+  await stopping;
 }
 
 export function restartBackgroundWork(): void {
