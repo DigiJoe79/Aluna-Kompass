@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { number, reference, references, text } from '@kompass/site-template';
 import type { FieldSchema } from '../src/load';
-import { siteTemplateState } from '../src/schema';
+import { siteTemplateState, siteValues } from '../src/schema';
 import { listReferenceOptions, readValues, setValues } from '../src/values';
 
 const asJson = (s: unknown) => z.toJSONSchema(s as z.ZodType, { io: 'input' }) as FieldSchema;
@@ -114,6 +114,20 @@ describe('reference values', () => {
     const stale = await setValues(deps, manage, { values: { dog: 'ghost' } });
     expect(stale.ok === false && stale.error.type === 'validation' && stale.error.issues).toEqual([{ path: 'dog', message: 'referenceNotFound' }]);
     expect(readValues(deps).dog).toBe('bruno');
+  });
+
+  it('leaves an unchanged stale reference alone so other variables can still be saved (Backlog 19)', async () => {
+    const deps = await withAnimals();
+    const manage = ctxWith(['site.manage']);
+    // Bruno wurde gewählt und später vermittelt: Der gespeicherte Wert trägt nicht mehr.
+    deps.db.insert(siteValues).values({ key: 'dog', value: 'ghost', updatedAt: 't' }).run();
+    // Die Maske schickt immer alle Werte — der veraltete kommt unverändert mit.
+    const saved = await setValues(deps, manage, { values: { dog: 'ghost', dogs: ['bruno'] } });
+    expect(saved.ok).toBe(true);
+    expect(readValues(deps)).toMatchObject({ dog: 'ghost', dogs: ['bruno'] });
+    // Wer den Wert anfasst, muss einen gültigen wählen.
+    const changed = await setValues(deps, manage, { values: { dog: 'akiko' } });
+    expect(changed.ok === false && changed.error.type === 'validation' && changed.error.issues).toEqual([{ path: 'dog', message: 'referenceNotFound' }]);
   });
 
   it('accepts null as no choice, and refuses the same record twice in a references field', async () => {

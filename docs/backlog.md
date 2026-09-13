@@ -115,24 +115,3 @@ Verein erstellten Beleg. Ohne PDF muss der Spender fragen.
 
 **Wann:** Jetzt möglich — der Bescheid nach § 60a AO liegt vor (Joe,
 2026-09-13). Vor dem Go-live, damit die FAQ-Antwort auf etwas zeigt.
-
-## 19. Veraltete Referenz blockiert das Speichern der Variablen
-
-**Was:** `setValues` im Site-Modul prüft nur die Referenzwerte, die sich
-gegenüber dem gespeicherten Stand geändert haben. Ein unveränderter,
-inzwischen veralteter Wert (Startseiten-Hund vermittelt) bleibt stehen und
-wird im Export-Prüflauf zum Befund, wie die Startseiten-Spec es ohnehin
-vorsieht. Dazu ein Test: „unveränderte veraltete Referenz blockiert das
-Speichern anderer Variablen nicht".
-
-**Warum:** Heute prüft `checkReferenceValues` jeden Referenzwert. Wer nach
-der Vermittlung des Startseiten-Hunds nur das Motto ändern will, kann weder
-in der Maske noch über `site_variables_set` speichern, bis er zuerst den Hund
-tauscht. Die Übersetzungen über MCP
-(`2026-09-13-uebersetzungen-ueber-mcp-design.md`) schreiben Variablen über
-denselben Dienst und scheitern dann an einem Feld, das mit der Übersetzung
-nichts zu tun hat.
-
-**Wann:** Vor oder mit der Umsetzung der Übersetzungs-Spec; dort ist es der
-erste Fall, in dem der Fehler jemanden trifft, der die Referenz nie gesehen
-hat.

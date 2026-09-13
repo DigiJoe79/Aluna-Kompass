@@ -59,8 +59,16 @@ export async function setValues(deps: Deps, ctx: CallContext, raw: unknown): Pro
   if (!parsed.ok) return parsed;
 
   // Referenzwerte müssen in der gefilterten Sicht stehen — dieselbe Prüfung
-  // für Maske und site_variables_set (Spec 2026-09-13, § 4.4).
-  const stale = checkReferenceValues(deps, template.schema, parsed.value as Record<string, unknown>);
+  // für Maske und site_variables_set (Spec 2026-09-13, § 4.4). Geprüft wird
+  // nur, was sich ändert: Ein gespeicherter Wert, der inzwischen nicht mehr
+  // trägt (Hund vermittelt), bleibt stehen und wird im Export-Prüflauf zum
+  // Befund; er darf nicht das Speichern aller anderen Variablen blockieren
+  // (Backlog 19).
+  const before = readValues(deps);
+  const changed = Object.fromEntries(
+    Object.entries(parsed.value as Record<string, unknown>).filter(([key, value]) => JSON.stringify(value) !== JSON.stringify(before[key])),
+  );
+  const stale = checkReferenceValues(deps, template.schema, changed);
   const duplicates = duplicateReferences(template.schema, parsed.value as Record<string, unknown>);
   if (stale.length > 0 || duplicates.length > 0) {
     return invalid([
@@ -69,7 +77,6 @@ export async function setValues(deps: Deps, ctx: CallContext, raw: unknown): Pro
     ]);
   }
 
-  const before = readValues(deps);
   const now = isoNow(deps.clock);
   deps.db.transaction((tx) => {
     for (const [key, value] of Object.entries(parsed.value as Record<string, unknown>)) {
