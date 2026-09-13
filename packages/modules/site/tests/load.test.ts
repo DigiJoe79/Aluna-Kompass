@@ -2,7 +2,8 @@ import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSy
 import { symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import Module from 'node:module';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ensureModuleResolution, loadTemplate, resolveTemplateNodeModules, resolveTemplatePackage } from '../src/load';
 
 const dirs: string[] = [];
@@ -74,8 +75,21 @@ describe('resolving node_modules', () => {
   it('says what is missing instead of failing on a type', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'kompass-noresolve-'));
     dirs.push(dir);
-    // Auflösung von einem Ort aus, an dem es das Paket nicht gibt.
-    await expect(ensureModuleResolution(dir, '/nirgendwo')).rejects.toThrow(/site-template/);
+    // Auflösung von einem Ort aus, an dem es das Paket nicht gibt. Der
+    // pnpm-Shim setzt NODE_PATH auf node_modules/.pnpm/node_modules; liegt dort
+    // ein Link auf das Paket (Rest einer älteren Installation), findet Node es
+    // von überall. Der Test soll nicht davon abhängen, was der Testläufer
+    // mitbringt — deshalb ohne NODE_PATH, und Node berechnet die Suchpfade neu
+    // (`_initPaths` ist undokumentiert, aber seit Jahren stabil; der REPL nutzt es).
+    const initPaths = (Module as unknown as { _initPaths: () => void })._initPaths;
+    vi.stubEnv('NODE_PATH', '');
+    initPaths();
+    try {
+      await expect(ensureModuleResolution(dir, '/nirgendwo')).rejects.toThrow(/site-template/);
+    } finally {
+      vi.unstubAllEnvs();
+      initPaths();
+    }
   });
 });
 
