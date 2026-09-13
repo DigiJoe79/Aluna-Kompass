@@ -136,15 +136,22 @@ zeigt `maxItems` solcher Auswahlen untereinander, nummeriert als Plätze.
 
 Steht der gespeicherte Wert nicht in den Optionen, zeigt das Feld ihn als
 Warnung („`chiara` erfüllt die Bedingung nicht mehr") mit einem Knopf
-„leeren". Die Auswahl selbst bietet ihn nicht an.
+„leeren". Die Auswahl selbst bietet ihn nicht an. Die Maske sendet beim
+Speichern nur die Werte, die sich seit dem Laden geändert haben: Ein
+veralteter Wert, den niemand anfasst, blockiert das Speichern der übrigen
+Variablen nicht. Er bleibt stehen, mit Warnung, bis jemand ihn leert oder
+neu wählt.
 
 ### 4.4 Dienst
 
-`setValues` prüft nach `validate` zusätzlich `checkReferenceValues` und gibt
-`validation` mit `referenceNotFound` je Pfad zurück. Damit gilt die Prüfung
-für Maske und `site_variables_set` gleichermaßen (Prinzip 8). Ein Wert, der
-beim Speichern nicht trägt, wird nicht gespeichert; einer, der später nicht
-mehr trägt (Hund vermittelt), bleibt stehen und wird zum Befund.
+`setValues` prüft nach `validate` zusätzlich `checkReferenceValues` für die
+übergebenen Schlüssel und gibt `validation` mit `referenceNotFound` je Pfad
+zurück. Damit gilt die Prüfung für Maske und `site_variables_set`
+gleichermaßen (Prinzip 8). Ein Wert, der beim Speichern nicht trägt, wird
+nicht gespeichert; einer, der später nicht mehr trägt (Hund vermittelt),
+bleibt stehen und wird zum Befund. Geprüft wird nur, was übergeben wird:
+Die Maske schickt geänderte Werte (§ 4.3), ein Agent schickt, was er setzen
+will.
 
 ### 4.5 Einlesen des Templates
 

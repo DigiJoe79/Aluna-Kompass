@@ -1032,9 +1032,10 @@ git commit -m "feat(site): a text variable becomes a reference without losing it
 - Modify: `apps/kompass/src/components/schema-form/index.tsx` (`options`-Prop)
 - Modify: `apps/kompass/src/components/schema-form/field.tsx` (`ReferenceField`, `ReferencesField`)
 - Modify: `apps/kompass/src/app/(shell)/site/variables/page.tsx`, `variables-form.tsx`
+- Modify: `apps/kompass/src/lib/form-dirty.ts` (`changedValues`)
 - Modify: `apps/kompass/src/app/(shell)/site/publish/export-findings.tsx`, `check-card.tsx`, `preview-card.tsx`, `actions.ts`
 - Modify: `apps/kompass/messages/de.json`
-- Test: `apps/kompass/tests/schema-form.test.ts` (Leerwerte), E2E in Task 9
+- Test: `apps/kompass/tests/schema-form.test.ts` (Leerwerte), `apps/kompass/tests/form-dirty.test.ts` (`changedValues`), E2E in Task 9
 
 **Interfaces:**
 - Consumes: `listReferenceOptions` aus Task 5, `ReferenceOption` aus Task 3, `stale` aus Task 6.
@@ -1052,6 +1053,52 @@ In `apps/kompass/tests/schema-form.test.ts` bei `blankFor` ergänzen:
 ```
 
 Run: `pnpm --filter @kompass/app test -- schema-form` — muss nach Task 2 bereits bestehen; er hält den Vertrag fest.
+
+- [ ] **Step 1b: Nur geänderte Werte senden**
+
+Ein veralteter Wert, den niemand anfasst, darf das Speichern der übrigen Variablen nicht blockieren (Spec § 4.3). Deshalb schickt die Maske nur, was sich seit dem Laden geändert hat. In `apps/kompass/tests/form-dirty.test.ts` anhängen:
+
+```ts
+describe('changedValues', () => {
+  it('liefert nur die Schlüssel, deren Wert sich seit dem Laden geändert hat', () => {
+    const loaded = { claim: { de: 'A' }, dog: 'chiara', count: 3 };
+    expect(changedValues(loaded, { claim: { de: 'A' }, dog: 'chiara', count: 3 })).toEqual({});
+    expect(changedValues(loaded, { claim: { de: 'B' }, dog: 'chiara', count: 3 })).toEqual({ claim: { de: 'B' } });
+    // Leeren ist eine Änderung: null wird mitgeschickt, damit der Dienst die Zeile löscht.
+    expect(changedValues(loaded, { claim: { de: 'A' }, dog: null, count: 3 })).toEqual({ dog: null });
+  });
+});
+```
+
+Import auf `import { changedValues, countChanged, countChangedValues, snapshotOf } from '@/lib/form-dirty';` erweitern. Run: `pnpm --filter @kompass/app test -- form-dirty` — FAIL, `changedValues` fehlt.
+
+In `apps/kompass/src/lib/form-dirty.ts` anhängen:
+
+```ts
+/**
+ * Die Werte, die sich seit dem Laden geändert haben — derselbe Vergleich wie
+ * `countChangedValues`. Die Variablenmaske schickt nur diese: Ein veralteter
+ * Referenzwert, den niemand anfasst, bleibt so stehen, statt das Speichern
+ * der übrigen Felder zu blockieren.
+ */
+export function changedValues(before: Record<string, unknown>, after: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+    if (JSON.stringify(before[key]) !== JSON.stringify(after[key])) out[key] = after[key] ?? null;
+  }
+  return out;
+}
+```
+
+In `variables-form.tsx` das versteckte Feld ändern:
+
+```tsx
+      <input type="hidden" name="payload" value={JSON.stringify(changedValues(loaded, current))} />
+```
+
+mit `import { changedValues, countChangedValues } from '@/lib/form-dirty';`. `saveVariablesAction` bleibt, wie sie ist: `setValues` nimmt eine Teilmenge der Variablen an und prüft nur die übergebenen Schlüssel (Plan 3, Task 5). Nach dem Speichern setzt die Seite per `revalidatePath` neu auf; damit `loaded` den gespeicherten Stand trägt, ist nichts weiter nötig, weil die Serverkomponente neue Props liefert und `useState(() => …)` nur beim ersten Rendern liest — prüfe das nach dem Speichern in der E2E (Task 9, Schritt 3: nach Reload steht der Wert). Bleibt `loaded` alt, setze in dem `useEffect`, der den Toast zeigt, bei `success` auch `setLoaded(current)` und mache `loaded` dafür zu `useState` mit Setter.
+
+Run: `pnpm --filter @kompass/app test -- form-dirty` — PASS.
 
 - [ ] **Step 2: Sprachdatei**
 
@@ -1194,7 +1241,7 @@ Expected: PASS, insbesondere `no-hardcoded-ui-text`, `message-keys`, `site-previ
 - [ ] **Step 7: Commit**
 
 ```bash
-git add apps/kompass/src/components/schema-form "apps/kompass/src/app/(shell)/site" apps/kompass/messages/de.json apps/kompass/tests/schema-form.test.ts
+git add apps/kompass/src/components/schema-form "apps/kompass/src/app/(shell)/site" apps/kompass/src/lib/form-dirty.ts apps/kompass/messages/de.json apps/kompass/tests/schema-form.test.ts apps/kompass/tests/form-dirty.test.ts
 git commit -m "feat(site): reference variables are a choice in the mask, and stale ones show under checks"
 ```
 
@@ -1273,11 +1320,21 @@ test('a reference variable is a choice, and a withdrawn record shows as stale un
 
   await page.goto('/site/variables');
   await expect(page.getByText('„winterhilfe“ steht nicht mehr zur Auswahl.')).toBeVisible();
+
+  // Ein veralteter Wert, den niemand anfasst, blockiert die übrigen Felder nicht (Spec § 4.3).
+  await page.locator('[name="claim.de"]').fill('Trotz veraltetem Verweis gespeichert');
+  await page.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByRole('status')).toContainText('Gespeichert');
+  await page.reload();
+  await expect(page.locator('[name="claim.de"]')).toHaveValue('Trotz veraltetem Verweis gespeichert');
+  await expect(page.getByText('„winterhilfe“ steht nicht mehr zur Auswahl.')).toBeVisible();
+
   await page.getByRole('button', { name: 'Leeren' }).click();
   await page.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.getByRole('status')).toContainText('Gespeichert');
   await page.reload();
   await expect(page.getByLabel('Projekt auf der Startseite')).toHaveValue('');
+  await expect(page.getByText('steht nicht mehr zur Auswahl')).toHaveCount(0);
 });
 ```
 
