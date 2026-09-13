@@ -5,6 +5,11 @@ Stand 2026-09-13. Säule „Öffentlichkeit", Roadmap-Schritt 2 aus
 Webseiteninhalte in einem Aufruf abholen und die abgestimmten Texte in einem
 zweiten zurückschreiben, ohne andere Sprachen anzufassen.
 
+Der Nutzen landet in der Öffentlichkeit, weil heute nur Webseiteninhalte
+mehrsprachig sind. Der Mechanismus — Kernservice, Manifest-Haken,
+MCP-Werkzeuge — gehört zum Fundament, wie Wiedervorlagen oder Aufbewahrung,
+und steht jedem künftigen Modul mit mehrsprachigen Feldern offen.
+
 ## 1. Ausgangslage
 
 Mehrsprachige Felder liegen als Map je Sprachschlüssel vor
@@ -109,18 +114,22 @@ interface TranslationInput {
 
 Ablauf: Eingabe mit Zod validieren (mindestens eine Position, `locale`
 eingerichtet — sonst `validation` für den ganzen Aufruf, bevor etwas
-geschrieben wird). Dann jede Position an das Modul geben, dessen
-`setTranslation`-Haken den `entityType` kennt. Kennt ihn keines, ist die
-Position `notFound`. Das Modul liest den Datensatz, ersetzt im Feld genau den
-einen Sprachschlüssel und ruft seinen Update-Service — mit dessen
-Rechteprüfung, Validierung und Audit-Eintrag. Alle übrigen Sprachen des Felds
-bleiben, wie sie sind.
+geschrieben wird). Dann die Positionen nach `entityType` und `id` gruppieren
+und jede Gruppe an das Modul geben, dessen `setTranslations`-Haken den
+`entityType` kennt. Kennt ihn keines, sind alle Positionen der Gruppe
+`notFound`. Das Modul liest den Datensatz einmal, ersetzt in jedem genannten
+Feld genau den einen Sprachschlüssel und ruft seinen Update-Service einmal —
+mit dessen Rechteprüfung, Validierung und einem Audit-Eintrag je Datensatz.
+Fünf englische Felder für denselben Hund sind eine Transaktion und ein
+Eintrag im Änderungsprotokoll. Alle übrigen Sprachen der Felder bleiben, wie
+sie sind.
 
-Kein Alles-oder-nichts: Jeder Modul-Service öffnet seine eigene Transaktion,
-eine gemeinsame über Module hinweg gibt es nicht. Eine gescheiterte Position
-(`notFound`, `forbidden`, `validation`) landet mit ihrem Index in `failed`,
-die übrigen werden geschrieben. Der Aufruf selbst ist `ok`, solange die
-Eingabe gültig war.
+Kein Alles-oder-nichts über Datensätze hinweg: Jeder Modul-Service öffnet
+seine eigene Transaktion, eine gemeinsame über Module gibt es nicht. Scheitert
+eine Gruppe (`notFound`, `forbidden`, `validation`), scheitern alle ihre
+Positionen zusammen und stehen mit ihren Indizes in `failed`; die übrigen
+Gruppen werden geschrieben. Der Aufruf selbst ist `ok`, solange die Eingabe
+gültig war.
 
 Leerer Text (`""` oder `[]`) ist erlaubt und leert die Übersetzung wieder;
 die Lücke erscheint dann erneut in der Liste. Die Leitsprache ist nicht
@@ -141,19 +150,24 @@ interface Translatable {
 }
 
 translatables?: (deps: Deps, ctx: CallContext) => Result<Translatable[]>;
-setTranslation?: (deps: Deps, ctx: CallContext, input: TranslationInput) => Promise<Result<void>> | null;
+setTranslations?: (
+  deps: Deps,
+  ctx: CallContext,
+  input: { entityType: string; id: string; items: { field: string; locale: string; text: string | string[] }[] },
+) => Promise<Result<void>> | null;
 ```
 
 `translatables` prüft das Ansichtsrecht des Moduls und gibt `forbidden`
 zurück, wenn es fehlt. Es liefert alle Datensätze, auch unveröffentlichte.
-`setTranslation` gibt `null` für einen fremden `entityType` zurück und sonst
-das Ergebnis des Update-Services.
+`setTranslations` bekommt alle Positionen eines Datensatzes auf einmal, gibt
+`null` für einen fremden `entityType` zurück und sonst das Ergebnis des einen
+Update-Aufrufs.
 
 Was die drei Module melden:
 
 | Modul | entityType | Felder | Schreibt über |
 |---|---|---|---|
-| Tiere | `animal` | `birthText`, `sizeText`, `traits` (Liste), `summary`, `body`, `story.quote` (nur wenn eine Geschichte existiert) | `updateAnimal`; `story.quote` über `setAnimalStory` |
+| Tiere | `animal` | `birthText`, `sizeText`, `traits` (Liste), `summary`, `body`, `story.quote` (nur wenn eine Geschichte existiert) | `updateAnimal`; `story.quote` über `setAnimalStory` (eine Gruppe mit beidem ergibt zwei Aufrufe, weil es zwei Services sind) |
 | Projekte | `project` | `name`, `summary`, `body` | `updateProject` |
 | Site | `site.variables` (eine Zeile, `id: 'variables'`) | alle `localized`-Variablen des Templates, auch in `objectList` | `setValues` |
 | Site | `site.entry` | alle `localized`-Felder der Sammlung, auch in `objectList` | `updateEntry` |
@@ -162,9 +176,13 @@ Links: `/animals/<id>`, `/projects/<id>`, `/site/variables`,
 `/site/c/<collection>/<id>` — dieselben Ziele wie in der Navigation.
 
 Beschriftungen: Tiere und Projekte ihren Namen (bei Projekten die Leitsprache
-von `name`). Variablen den Namen des Templates. Sammlungseinträge den Slug,
-sonst den Leitsprachen-Text des ersten mehrsprachigen Felds, auf 60 Zeichen
-gekürzt.
+von `name`). Variablen den Namen des Templates. Sammlungseinträge so, wie die
+Listenseite sie heute beschriftet: der Leitsprachen-Text des ersten Felds vom
+Typ `text`, `localized` oder `markdown`, sonst der Slug, sonst die ID. Diese
+Logik steht bisher in der App-Route
+`apps/kompass/src/app/(shell)/site/c/[collection]/page.tsx`; sie zieht als
+Helfer `entryLabel` ins Site-Modul, den Listenseite und Haken gemeinsam
+nutzen.
 
 Feldpfade: eine Punktnotation mit Index in eckigen Klammern, wie sie der
 Export-Prüflauf schon verwendet (`faq[2].answer`). Das Site-Modul löst sie
@@ -182,9 +200,10 @@ Zwei Werkzeuge im Kern (`packages/mcp/src/core-tools.ts`):
   `projects.view`, `site.view`); modules you may not read are named under
   `omitted`."
 - `translations_set` — Argument `items`. Beschreibung: „Write translations for
-  single locales without touching the other locales. Each item goes through
-  the module's update service and needs its manage right (`animals.manage`,
-  `projects.manage`, `site.manage`). Audited per record."
+  single locales without touching the other locales. Items for the same
+  record are written together through the module's update service and need
+  its manage right (`animals.manage`, `projects.manage`, `site.manage`).
+  Audited once per record."
 
 Die bestehenden Update-Werkzeuge (`animals_update`, `animals_set_story`,
 `project_update`, `site_variables_set`, `site_<sammlung>_update`) bekommen
@@ -206,27 +225,33 @@ mit einem Fake-Modul, das beide Haken trägt:
   Sprache ist `validation`.
 - Antwortet ein Modul `forbidden`, steht sein Schlüssel in `omitted` und die
   Lücken der anderen Module bleiben.
-- `setTranslations` ersetzt genau eine Sprache; eine gescheiterte Position
-  stoppt die übrigen nicht und steht mit Index und Fehler in `failed`;
-  unbekannter `entityType` ist `notFound`; ungültige Sprache lehnt den ganzen
-  Aufruf ab, bevor etwas geschrieben wird.
+- `setTranslations` ersetzt genau eine Sprache; Positionen desselben
+  Datensatzes ergeben einen Haken-Aufruf; eine gescheiterte Gruppe stoppt die
+  übrigen nicht und steht mit allen ihren Indizes in `failed`; unbekannter
+  `entityType` ist `notFound`; ungültige Sprache lehnt den ganzen Aufruf ab,
+  bevor etwas geschrieben wird.
 - Ein Aufrufer ohne jedes Recht bekommt eine leere Liste mit allen Modulen
   unter `omitted`.
 
 Je Modul (Tiere, Projekte, Site):
 
 - `translatables` listet Entwürfe mit und gibt `forbidden` ohne Ansichtsrecht.
-- `setTranslation` ändert nur die eine Sprache, erzeugt den Audit-Eintrag des
-  bestehenden Services, ist `forbidden` ohne Manage-Recht, `notFound` für eine
-  fremde ID oder einen unbekannten Pfad.
+- `setTranslations` ändert nur die genannten Sprachen, erzeugt für mehrere
+  Felder eines Datensatzes genau einen Audit-Eintrag des bestehenden Services,
+  ist `forbidden` ohne Manage-Recht, `notFound` für eine fremde ID oder einen
+  unbekannten Pfad.
 - Tiere: `story.quote` läuft über `setAnimalStory`, `traits` als Liste.
 - Site: Variablen und ein verschachteltes Feld in einer `objectList`; ein
-  Template ohne `localized`-Felder liefert eine leere Liste.
+  Template ohne `localized`-Felder liefert eine leere Liste; `entryLabel`
+  liefert dieselbe Beschriftung wie die Listenseite.
 
 `apps/kompass/tests/mcp-tools.test.ts`: die beiden Werkzeuge fallen unter die
-vorhandenen Regeln. Neu ein Test: Jedes Modul, dessen Schemata ein Feld mit
-`localized: true` in den Zod-Metadaten tragen, hat den Haken `translatables`.
-So kann ein künftiges Modul die Übersetzungsliste nicht still auslassen.
+vorhandenen Regeln. Neu ein Test: Er geht die Eingabeschemata der
+MCP-Werkzeuge jedes Moduls durch — sie tragen die echten Zod-Schemata der
+Services — und sucht nach Feldern mit `localized: true` in den Metadaten, auch
+in verschachtelten Objekten und Listen. Jedes Modul mit einem Treffer muss
+die Haken `translatables` und `setTranslations` haben. So kann ein künftiges
+Modul die Übersetzungsliste nicht still auslassen.
 
 ## 7. Seed
 
