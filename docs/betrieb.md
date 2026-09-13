@@ -37,6 +37,7 @@ Export in Prod → Datei herunterladen → in Test unter Verwaltung → Backup i
 
 ## Medien
 - Die Dateien liegen flach im `media`-Verzeichnis. Die Ordner der Mediathek sind virtuell: Sie stehen nur in der Datenbank (Tabelle `media_folders`, Spalte `media_assets.folder`) und ändern nichts an der Ablage auf der Platte.
+- Neben jedem Rasterbild liegt eine Vorschau `<name>.preview.webp` (320 px breit). Sie ist ein Cache: Sie darf jederzeit gelöscht werden, der nächste Abruf in der Verwaltung baut sie neu. Backups nehmen sie mit; ein Backup ohne sie ist ebenfalls vollständig.
 
 ## Backups
 - Anwendungs-Backup: Export-Datei (`kompass-backup-<env>-<datum>.tar.gz`) — enthält DB, Medien, Manifest; ohne Sitzungen und Tokens.

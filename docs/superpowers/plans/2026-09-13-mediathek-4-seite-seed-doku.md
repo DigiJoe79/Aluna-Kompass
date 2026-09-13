@@ -637,7 +637,7 @@ git commit -m "feat(core): the development seed fills the media library — fold
 - Modify: `docs/betrieb.md` (Abschnitt „Medien“)
 - Modify: `docs/superpowers/specs/2026-09-09-loeschbarkeit-und-mediathek-design.md` (Nachtrag)
 
-- [ ] **Step 1: `betrieb.md`**
+- [x] **Step 1: `betrieb.md`**
 
 Unter „## Medien“ nach dem bestehenden Punkt:
 
@@ -645,7 +645,7 @@ Unter „## Medien“ nach dem bestehenden Punkt:
 - Neben jedem Rasterbild liegt eine Vorschau `<name>.preview.webp` (320 px breit). Sie ist ein Cache: Sie darf jederzeit gelöscht werden, der nächste Abruf in der Verwaltung baut sie neu. Backups nehmen sie mit; ein Backup ohne sie ist ebenfalls vollständig.
 ```
 
-- [ ] **Step 2: Nachtrag in der alten Spec**
+- [x] **Step 2: Nachtrag in der alten Spec**
 
 Am Ende von Abschnitt 2 („Entscheidungen“) der Spec vom 09.09., nach dem Nachtrag vom 2026-09-09:
 
@@ -657,7 +657,7 @@ in `2026-09-13-mediathek-auswahl-und-vorschau-design.md`. Die Wurzel heißt am
 Asset seither „Ohne Ordner“; „Alle Dateien“ bleibt der oberste Eintrag.
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add docs/betrieb.md docs/superpowers/specs/2026-09-09-loeschbarkeit-und-mediathek-design.md

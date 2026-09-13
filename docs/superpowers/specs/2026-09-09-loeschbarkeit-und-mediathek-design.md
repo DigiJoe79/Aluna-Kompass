@@ -64,6 +64,12 @@ Zeile bzw. Kachel) mit grosser Vorschau, Metadaten (Typ, Grösse, Maße, Ordner,
 hochgeladen am/von), Verwendungs-Liste und den Aktionen Verschieben und Löschen.
 Die Zeilen-/Kachel-Ansicht selbst trägt keine Aktionen mehr — sie sind im Dialog.
 
+**Nachtrag 2026-09-13.** Die Durchsicht vor dem ersten Release ergab, dass die
+Mediathek eine Ablage ohne Weg in die Formulare war. Auswahl-Dialog,
+Vorschaubilder, Suche/Sortierung/Typfilter und verlinkte Fundstellen stehen
+in `2026-09-13-mediathek-auswahl-und-vorschau-design.md`. Die Wurzel heißt am
+Asset seither „Ohne Ordner"; „Alle Dateien" bleibt der oberste Eintrag.
+
 ## 3. Die Löschpolitik als Konstante
 
 Neue Datei `packages/core/src/deletion-policy.ts`, exportiert über den Paket-Index.
