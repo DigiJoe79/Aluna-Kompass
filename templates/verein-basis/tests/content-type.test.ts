@@ -13,5 +13,6 @@ describe('content types', () => {
     expectTypeOf<SiteContent['collections']['news'][number]['slug']>().toEqualTypeOf<string>();
     expectTypeOf<SiteContent['collections']['team'][number]['sortOrder']>().toEqualTypeOf<number>();
     expectTypeOf<SiteContent['variables']['memberFee']>().toEqualTypeOf<number | undefined>();
+    expectTypeOf<SiteContent['variables']['featuredProject']>().toEqualTypeOf<string | null | undefined>();
   });
 });

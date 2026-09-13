@@ -1,7 +1,8 @@
 import { lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { coreModule, setSetting, storeMediaAsset, unwrap } from '@kompass/core';
+import { coreModule, setModuleEnabled, setSetting, storeMediaAsset, unwrap } from '@kompass/core';
+import { projectsModule } from '@kompass/module-projects';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
@@ -38,6 +39,9 @@ const TEMPLATE_DIR = path.resolve(import.meta.dirname, '../../../../templates/ve
 const PNG = Uint8Array.from(
   Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64'),
 );
+
+/** `kompass.template.ts` von verein-basis nennt seit dem Projekt-Teaser `uses: ['projects']`. */
+const enableProjects = (deps: ReturnType<typeof createTestDeps>) => setModuleEnabled(deps, ctxWith(['modules.manage']), { key: 'projects', enabled: true });
 
 describe('diff', () => {
   it('hashes trees and reports changed, added and removed files', async () => {
@@ -107,8 +111,9 @@ describe('readSiteEnv', () => {
 
 describe('preview and publish against templates/verein-basis', () => {
   it('builds a preview from live content, publishes to a local target including images, and checks diff', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, siteModule] });
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule] });
     insertUser(deps, { id: 'USER-TEST' });
+    unwrap(await enableProjects(deps));
     const manageCtx = ctxWith(['site.manage', 'site.view', 'media.upload']);
     const publishCtx = ctxWith(['site.publish', 'site.view']);
 
@@ -176,8 +181,9 @@ describe('preview and publish against templates/verein-basis', () => {
    * auf dem NAS wartet dabei ein Mensch.
    */
   it('publishes the preview it just built instead of building a second time', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, siteModule] });
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule] });
     insertUser(deps, { id: 'USER-TEST' });
+    unwrap(await enableProjects(deps));
     const manageCtx = ctxWith(['site.manage', 'site.view', 'media.upload']);
     const publishCtx = ctxWith(['site.publish', 'site.view']);
     unwrap(await applyTemplateSync(deps, manageCtx, { dir: TEMPLATE_DIR, confirm: true }));
@@ -207,8 +213,9 @@ describe('preview and publish against templates/verein-basis', () => {
   }, 240_000);
 
   it('refuses to publish without confirmation, without a target, in development, or with blocked terms', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, siteModule] });
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule] });
     insertUser(deps, { id: 'USER-TEST' });
+    unwrap(await enableProjects(deps));
     const manageCtx = ctxWith(['site.manage', 'settings.manage']);
     const publishCtx = ctxWith(['site.publish', 'site.view']);
 
@@ -229,8 +236,9 @@ describe('preview and publish against templates/verein-basis', () => {
     const noTarget = await runPublish(deps, publishCtx, { ...base, deploy: null }, { confirm: true });
     expect(noTarget.ok === false && noTarget.error.type === 'conflict' && noTarget.error.code === 'publishTargetMissing').toBe(true);
 
-    const dev = createTestDeps({ manifests: [coreModule, siteModule], env: 'development' });
+    const dev = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], env: 'development' });
     insertUser(dev, { id: 'USER-TEST' });
+    unwrap(await enableProjects(dev));
     unwrap(await applyTemplateSync(dev, manageCtx, { dir: TEMPLATE_DIR, confirm: true }));
     const inDev = await runPublish(dev, publishCtx, base, { confirm: true });
     expect(inDev.ok === false && inDev.error.type === 'conflict' && inDev.error.code === 'publishNotAllowedHere').toBe(true);
@@ -254,7 +262,7 @@ describe('checkDeployTarget', () => {
   });
 
   it('needs the publish permission and a configured target', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, siteModule] });
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule] });
     insertUser(deps, { id: 'USER-TEST' });
     const denied = await checkDeployTarget(deps, ctxWith(['site.view']), envFor(tmp()));
     expect(denied.ok === false && denied.error.type === 'forbidden').toBe(true);
@@ -263,7 +271,7 @@ describe('checkDeployTarget', () => {
   });
 
   it('reports what a publish would remove at the target and leaves every file in place', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, siteModule] });
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule] });
     insertUser(deps, { id: 'USER-TEST' });
     const target = tmp();
     writeFileSync(path.join(target, 'wp-config.php'), '<?php');
@@ -280,7 +288,7 @@ describe('checkDeployTarget', () => {
   });
 
   it('comes back empty when the path points nowhere', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, siteModule] });
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule] });
     insertUser(deps, { id: 'USER-TEST' });
     const missing = path.join(tmp(), 'vertippt');
     const result = unwrap(await checkDeployTarget(deps, ctxWith(['site.publish']), envFor(missing)));
@@ -288,7 +296,7 @@ describe('checkDeployTarget', () => {
   });
 
   it('reports unusable credentials instead of starting rsync', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, siteModule] });
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule] });
     insertUser(deps, { id: 'USER-TEST' });
     const env = { ...envFor(tmp()), deploy: { host: 'webhost', user: 'web', path: '/www', auth: { kind: 'key' as const, keyFile: '/gibt/es/nicht.key' } } };
     const result = await checkDeployTarget(deps, ctxWith(['site.publish']), env);
@@ -356,8 +364,9 @@ describe('rsyncCommand', () => {
 
 describe('one job at a time', () => {
   const setup = async () => {
-    const deps = createTestDeps({ manifests: [coreModule, siteModule] });
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule] });
     insertUser(deps, { id: 'USER-TEST' });
+    unwrap(await enableProjects(deps));
     unwrap(await applyTemplateSync(deps, ctxWith(['site.manage']), { dir: TEMPLATE_DIR, confirm: true }));
     const env = {
       publicUrl: 'https://staging.example.org',
@@ -398,7 +407,7 @@ describe('publish history', () => {
    * nichts publiziert wurde, fand nichts.
    */
   it('records an aborted attempt when the export refuses', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, siteModule] });
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule] });
     insertUser(deps, { id: 'USER-TEST' });
     unwrap(await applyTemplateSync(deps, ctxWith(['site.manage']), { dir: TEMPLATE_DIR, confirm: true }));
     // Ein Template-Verzeichnis, dessen Deklaration vom eingelesenen Stand abweicht.
@@ -429,8 +438,9 @@ describe('currentSiteJob', () => {
    * deshalb nach, was gerade laeuft und seit wann — auch nach dem Neuladen.
    */
   it('names the running job with its start, and is empty afterwards', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, siteModule] });
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule] });
     insertUser(deps, { id: 'USER-TEST' });
+    unwrap(await enableProjects(deps));
     unwrap(await applyTemplateSync(deps, ctxWith(['site.manage']), { dir: TEMPLATE_DIR, confirm: true }));
     const env = {
       publicUrl: 'https://staging.example.org',

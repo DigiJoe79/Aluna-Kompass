@@ -28,7 +28,8 @@
     "donationAccount": "Musterverein · IBAN DE00 0000 0000 0000 0000 00 · GENODED1XXX · Musterbank",
     "heroImage": "hero",
     "intro": { "de": "Willkommen bei unserem Verein. Wir setzen uns Tag für Tag für unser gemeinsames Ziel ein — und freuen uns über jede Unterstützung.\n\nSchau dich um, lern uns kennen, mach mit." },
-    "memberFee": 60
+    "memberFee": 60,
+    "featuredProject": null
   },
   "views": {}
 }

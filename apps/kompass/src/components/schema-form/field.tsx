@@ -229,10 +229,15 @@ function AssetField({ path, field, value, errors, onChange }: FieldProps) {
   );
 }
 
+/**
+ * Bewusst ohne `role="status"`: Der Hinweis bleibt stehen, solange der Wert
+ * veraltet ist — anders als ein Toast, kollidiert er sonst mit `getByRole('status')`
+ * für die Speichern-Rückmeldung.
+ */
 function StaleNote({ value, onClear }: { value: string; onClear: () => void }) {
   const t = useTranslations('site.form');
   return (
-    <p role="status" className="flex flex-wrap items-center gap-2 text-[12px] text-warning">
+    <p className="flex flex-wrap items-center gap-2 text-[12px] text-warning">
       <span>{t('staleReference', { value })}</span>
       <button type="button" onClick={onClear} className="rounded-sm bg-badge px-2 py-0.5 text-[11px] text-badge-ink">{t('clearReference')}</button>
     </p>

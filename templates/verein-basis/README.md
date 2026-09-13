@@ -10,10 +10,17 @@ aufgebaut ist.
 `kompass.template.ts` deklariert es:
 
 - **Variablen** (eine Konfigurationsmaske): Claim, Startseitentext, Startbild,
-  Hinweis zur Bankverbindung, Mitgliedsbeitrag.
+  Hinweis zur Bankverbindung, Mitgliedsbeitrag, ein Projekt auf der Startseite
+  (Verweis auf eine Sicht des Projektmoduls, `uses: ['projects']`).
 - **Sammlungen** (eigene Listenpflege): Aktuelles (mit Slug und
   Veröffentlicht-Schalter), Team (sortierbar), Fragen und Antworten
   (sortierbar), Dokumente.
+
+Die Variable `featuredProject` zeigt, dass ein Template Datensätze aus Kompass
+verweisen kann (Referenzfelder, `reference`/`references` aus
+`@kompass/site-template`): Die Auswahl ist gepflegt und geprüft, gerendert wird
+sie erst, sobald dieses Template selbst Projekte auf der Startseite zeigt —
+das ist heute noch nicht der Fall.
 
 ## Was im Template steht
 

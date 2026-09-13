@@ -115,3 +115,27 @@ test('the connection test lists what a publish would remove and touches nothing'
 
   expect(fs.readFileSync(stranger, 'utf8')).toBe('<html>WordPress</html>');
 });
+
+test('the check reports a stale reference as a warning, not as a block', async ({ page }) => {
+  await resetDatabase(page, 'seeded');
+  await loginAsAdmin(page);
+  await page.goto('/site/template');
+  await page.getByRole('button', { name: 'Template einlesen' }).click();
+  await page.getByRole('button', { name: 'Übernehmen' }).click();
+  await expect(page.getByRole('status')).toContainText('eingelesen');
+
+  await page.goto('/site/variables');
+  await page.getByLabel('Projekt auf der Startseite').selectOption('winterhilfe');
+  await page.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByRole('status')).toContainText('Gespeichert');
+
+  await page.goto('/projects');
+  await page.getByRole('row', { name: /Winterhilfe/ }).getByRole('switch').click();
+
+  await page.goto('/site/publish');
+  await page.getByRole('button', { name: 'Prüfen' }).click();
+  const stale = page.getByRole('region', { name: 'Veraltete Verweise' });
+  await expect(stale).toContainText('variables.featuredProject');
+  await expect(stale).toContainText('winterhilfe');
+  await expect(page.getByRole('region', { name: 'Sperrworttreffer' })).toContainText('Keine Treffer');
+});
