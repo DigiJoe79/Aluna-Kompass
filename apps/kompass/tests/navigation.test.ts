@@ -1,6 +1,6 @@
 import { coreModule, defineModule, type ModuleManifest } from '@kompass/core';
 import { describe, expect, it } from 'vitest';
-import { buildNavigation } from '@/lib/navigation';
+import { activeRailKey, buildNavigation, locate, type NavGroup, type NavItem } from '@/lib/navigation';
 
 const finance = defineModule({
   key: 'finance',
@@ -8,6 +8,31 @@ const finance = defineModule({
   permissions: ['finance.view'],
   navigation: [{ key: 'finance.ledger', href: '/finance', icon: 'euro', group: 'finance', permission: 'finance.view' }],
 });
+
+/** Ein Eintrag, wie `buildNavigation` ihn baut — sichtbar, es sei denn, der Test sagt anders. */
+const item = (key: string, href: string, icon = 'list', extra: Partial<NavItem> = {}): NavItem => ({
+  key,
+  href,
+  icon,
+  labelKey: `nav.${key}`,
+  disabled: false,
+  visible: true,
+  ...extra,
+});
+
+/** Eine Installation mit Verwaltung, Einrichtung, Webseite (mit Sammlung) und Akte. */
+const FIXTURE: NavGroup[] = [
+  { key: 'admin', labelKey: 'nav.groups.admin', disabled: false, items: [item('users', '/admin/users', 'users'), item('media', '/admin/media', 'image')] },
+  { key: 'config', labelKey: 'nav.groups.config', disabled: false, items: [item('settings', '/admin/settings', 'sliders'), item('themes', '/admin/themes', 'droplet'), item('dms.admin', '/admin/dms', 'folder')] },
+  {
+    key: 'site',
+    labelKey: 'nav.groups.site',
+    disabled: false,
+    icon: 'globe',
+    items: [item('site.template', '/site/template', 'layout-template'), item('site.c.artikel', '/site/c/artikel', 'list', { label: 'Artikel' })],
+  },
+  { key: 'dms', labelKey: 'nav.groups.dms', disabled: false, items: [item('dms.list', '/dms', 'file')] },
+];
 
 describe('buildNavigation', () => {
   /**
@@ -100,5 +125,43 @@ describe('buildNavigation', () => {
     expect(groups.find((g) => g.key === 'site')!.icon).toBe('globe');
     expect(groups.find((g) => g.key === 'finance')!.icon).toBeUndefined();
     expect(groups.find((g) => g.key === 'admin')!.icon).toBeUndefined();
+  });
+});
+
+describe('locate', () => {
+  it('matches at a segment boundary, not by raw prefix', () => {
+    expect(locate(FIXTURE, '/dms')!.item.key).toBe('dms.list');
+    expect(locate(FIXTURE, '/dms/01J')!.item.key).toBe('dms.list');
+    expect(locate(FIXTURE, '/dmsx')).toBeNull();
+  });
+
+  it('prefers the longest matching entry', () => {
+    const hit = locate(FIXTURE, '/site/c/artikel/neu')!;
+    expect(hit.item.key).toBe('site.c.artikel');
+    expect(hit.area).toBe('site');
+  });
+
+  it('maps admin and config to the settings area', () => {
+    expect(locate(FIXTURE, '/admin/themes')!.area).toBe('settings');
+    expect(locate(FIXTURE, '/admin/dms')!.group.key).toBe('config');
+  });
+
+  it('ignores entries the user may not see', () => {
+    const hidden: NavGroup[] = [{ ...FIXTURE[3]!, items: [item('dms.list', '/dms', 'file', { visible: false })] }];
+    expect(locate(hidden, '/dms')).toBeNull();
+  });
+
+  it('finds nothing on the home page and the profile', () => {
+    expect(locate(FIXTURE, '/')).toBeNull();
+    expect(locate(FIXTURE, '/profile')).toBeNull();
+  });
+});
+
+describe('activeRailKey', () => {
+  it('names the rail entry for the path', () => {
+    expect(activeRailKey(FIXTURE, '/')).toBe('home');
+    expect(activeRailKey(FIXTURE, '/site/c/artikel')).toBe('site');
+    expect(activeRailKey(FIXTURE, '/admin/themes')).toBe('settings');
+    expect(activeRailKey(FIXTURE, '/profile')).toBeNull();
   });
 });

@@ -112,3 +112,41 @@ export function buildNavigation(input: {
     });
   return [admin, config, ...modules];
 }
+
+/** Die beiden Kerngruppen, die in der Schiene als ein Bereich „Einstellungen“ erscheinen. */
+const SETTINGS_GROUPS: ReadonlySet<string> = new Set(['admin', 'config']);
+
+export interface Location {
+  /** Modul-Key, oder 'settings' für admin/config. */
+  area: string;
+  group: NavGroup;
+  item: NavItem;
+}
+
+/** Ein `href` passt an der Segmentgrenze: `/dms` trifft `/dms` und `/dms/x`, nicht `/dmsx`. */
+function matches(href: string, pathname: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/**
+ * Die eine Ortsbestimmung der Schale: der längste sichtbare Eintrag, der auf
+ * den Pfad passt. Schiene, Zweitebene und Brotkrume leiten sich alle daraus ab,
+ * damit sie nie auseinanderlaufen.
+ */
+export function locate(groups: NavGroup[], pathname: string): Location | null {
+  let best: Location | null = null;
+  for (const group of groups) {
+    for (const item of group.items) {
+      if (!item.visible || !matches(item.href, pathname)) continue;
+      if (best && item.href.length <= best.item.href.length) continue;
+      best = { area: SETTINGS_GROUPS.has(group.key) ? 'settings' : group.key, group, item };
+    }
+  }
+  return best;
+}
+
+/** Welcher Eintrag der Schiene markiert ist: 'home' auf '/', sonst der Bereich des Treffers. */
+export function activeRailKey(groups: NavGroup[], pathname: string): string | null {
+  if (pathname === '/') return 'home';
+  return locate(groups, pathname)?.area ?? null;
+}
