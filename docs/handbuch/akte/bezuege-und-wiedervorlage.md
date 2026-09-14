@@ -28,9 +28,9 @@ Vier Arten, jede in beide Richtungen lesbar:
 „Bezug hinzufügen“ nimmt die Art und ein Suchfeld nach Nummer oder Betreff.
 Ein Bezug darf auf einen Entwurf zeigen — die Antwort bezieht sich auf den
 Eingang, bevor sie festgeschrieben ist. Der typische Ablauf: Ein
-Behördenschreiben kommt herein; aus seiner Detailseite heraus „Antworten“
-öffnet den Entwurf mit dem Bezug „Antwort auf“ und dem Absender als
-Empfänger. Die unterschriebene Fassung eines Vertrags, die per Post
+Behördenschreiben kommt herein; Sie legen über „Brief schreiben“ auf der
+Seite des Absenders einen Entwurf an und hängen ihn mit „Antwort auf“ an das
+Schreiben. Die unterschriebene Fassung eines Vertrags, die per Post
 zurückkommt, wird abgelegt und mit „unterschriebene Fassung von“ an den
 Entwurf gehängt — ein Vorgang, zwei Dokumente, eine Spur.
 

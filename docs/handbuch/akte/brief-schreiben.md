@@ -7,7 +7,7 @@ und wird als PDF abgelegt; danach ändert sich nichts mehr daran.
 
 ## Entwurf
 
-Über „Neuer Brief“ in der Akte öffnet sich der Entwurf als geteilter
+Über „Neuer Entwurf“ in der Akte öffnet sich der Entwurf als geteilter
 Bildschirm: links die Felder, rechts die Vorschau. Der Empfänger kommt aus den
 Kontakten — fehlt er, legen Sie ihn von hier aus an. Betreff und Text sind
 Pflicht; Datum und Absender setzt Kompass aus den Vereinsdaten.
