@@ -165,7 +165,8 @@ Treffer); die Funktion wird aus `navigation.ts` exportiert, nicht kopiert.
 
 Der Kern liest das Handbuch; die App rendert es. So kann später auch MCP eine
 Handbuchseite liefern („Wie lege ich Post ab?"), ohne dass die App gefragt
-wird.
+wird. Die **Zuordnung** Route → Seite (§ 4) bleibt dagegen in der App, wie
+`CORE_ADMIN` bei der Navigation — der Kern kennt keine Routen.
 
 ```ts
 // packages/core/src/help/handbook.ts
@@ -178,6 +179,8 @@ export interface HandbookPage {
 export function handbookDir(env: RuntimeEnv): string;
 export function readHandbookPage(env: RuntimeEnv, doc: string): HandbookPage | null;
 export function readHandbookIndex(env: RuntimeEnv): string;          // inhalt.md, Markdown
+export interface HandbookChapter { title: string; pages: { doc: string; title: string }[] }
+export function parseHandbookIndex(markdown: string): HandbookChapter[]; // Struktur aus inhalt.md
 export function readHandbookAsset(env: RuntimeEnv, rel: string): { bytes: Uint8Array; mimeType: string } | null;
 export function listHandbookDocs(env: RuntimeEnv): string[];         // alle doc-Pfade außer 'inhalt'
 ```
@@ -196,6 +199,14 @@ export function listHandbookDocs(env: RuntimeEnv): string[];         // alle doc
 - `readHandbookPage` parst nur die Form aus § 3: Zeile 1 `# Titel`, dann
   Leerzeilen, dann der erste Absatz bis zur nächsten Leerzeile. Alles Weitere
   ist `body`.
+- `parseHandbookIndex` liest die verschachtelte Liste aus `inhalt.md`: Ein
+  Eintrag der obersten Ebene ist ein Kapitel (Text ohne Link, etwa
+  `- Akte`, oder mit Link auf eine Seite, etwa `- [Mediathek](mediathek.md)`
+  — dann ist das Kapitel zugleich seine einzige Seite); eingerückte Einträge
+  sind seine Seiten, `[Titel](pfad.md)`. Daraus beziehen Brotkrume (§ 7),
+  Paletten-Hinweis (§ 7) und die Markierung im Verzeichnis ihr Kapitel; die
+  Seite selbst nimmt ihren Titel aus der Datei, nicht aus der Liste (Test:
+  beide gleich).
 
 ## 6. Rendern: `packages/markdown`
 
@@ -209,7 +220,9 @@ export async function renderHandbook(markdown: string, options: { base: string }
 
 - Schema: wie `schema` in `sanitize.ts`, plus `img` mit `src`, `alt`; `src`
   nur relativ (kein Protokoll), wird zu `${base}/<aufgelöster Pfad>`
-  umgeschrieben (`../bilder/akte/x.png` von `akte/post-ablegen` → `/help/bilder/akte/x.png`).
+  umgeschrieben (`../bilder/akte/x.png` von `akte/post-ablegen` →
+  `/help-bilder/akte/x.png`). Eigener Pfad, damit er nicht mit der
+  Handbuchseite `/help/[[...doc]]` konkurriert.
 - Links auf `*.md` relativ → `/help/<doc>`; `#`-Anker bleiben; `http(s)`
   bleibt und bekommt `rel="noopener"`.
 - **Alle Überschriften eine Stufe tiefer** (`#` → `<h2>`, `##` → `<h3>`):
@@ -235,22 +248,24 @@ Component in der Schale (Login nötig wie jede Schalen-Seite).
   (Kapitel = oberster Listeneintrag, unter dem die Seite steht). Kein
   Schienen-Eintrag: `activeRailKey` liefert `null`, die Zweitebene entfällt.
 
-**Route Handler** `apps/kompass/src/app/help/bilder/[...path]/route.ts` —
+**Route Handler** `apps/kompass/src/app/help-bilder/[...path]/route.ts` —
 `GET`, liefert `readHandbookAsset`, `Cache-Control: private, max-age=3600`,
 404 sonst. Login nötig (gleiche Prüfung wie `/media/<id>`).
 
 **Route Handler** `apps/kompass/src/app/api/help/route.ts` — `GET
 ?path=<pathname>`: `{ doc, title, leadHtml, href }` für die Seite zum Pfad,
-oder `{ doc: null, indexHtml }` ohne Treffer. Das Panel holt sich das beim
-Öffnen; so bleibt `ShellFrame` frei von Handbuch-Wissen und die Hilfe folgt
-weichen Navigationen ohne Neuladen des Layouts.
+oder `{ doc: null, indexHtml }` ohne Treffer. Login nötig (gleiche Prüfung
+wie `/media/<id>`; ohne Sitzung 401). Das Panel holt sich das beim Öffnen; so
+bleibt `ShellFrame` frei von Handbuch-Wissen und die Hilfe folgt weichen
+Navigationen ohne Neuladen des Layouts.
 
 **Panel** `apps/kompass/src/components/shell/help-panel.tsx`:
 
 - Trigger: Knopf in der Topbar zwischen Suche und Nutzermenü, `CircleQuestionMark`
   (`lucide-react`, vorhanden), 30 × 30, `aria-label` `shell.topbar.help`
-  („Hilfe zu dieser Seite"). Tastenkürzel `?` außerhalb von Eingabefeldern
-  (wie `[` früher; `Shift+/` liefert `?`).
+  („Hilfe zu dieser Seite"). Tastenkürzel `?` (`e.key === '?'`), außer wenn
+  der Fokus in `input`, `textarea`, `select` oder einem `contenteditable`
+  liegt — der Brief-Editor ist eines.
 - `Sheet` `side="right"`, `w-[400px]`, `SheetTitle` = Seitentitel. Inhalt:
   `leadHtml`, darunter ein Link „Ganze Seite lesen" auf `/help/<doc>`, der
   das Panel schließt. Ohne Treffer: „Zu dieser Seite gibt es noch keine
@@ -294,6 +309,8 @@ unter `packages/core/tests/fixtures/handbuch/` (drei Seiten, ein Bild, ein
 - `readHandbookAsset`: PNG mit MIME; `.md` als Asset → `null`; außerhalb →
   `null`.
 - `listHandbookDocs` ohne `inhalt`.
+- `parseHandbookIndex`: Kapitel mit Seiten; Kapitel, das zugleich Seite ist;
+  Reihenfolge wie in der Datei.
 
 **Markdown, `packages/markdown/tests/help.test.ts`**: Bild wird umgeschrieben
 und behalten; `img` mit `http`-Quelle wird gestrichen; `.md`-Link →
@@ -307,8 +324,9 @@ und behalten; `img` mit `http`-Quelle wird gestrichen; `.md`-Link →
 - **Handbuch-Vollständigkeit** gegen das echte `docs/handbuch/`: jeder `doc`
   aus `CORE_HELP` und allen Manifesten existiert als Datei; jede Datei außer
   `inhalt.md` steht genau einmal in `inhalt.md`; jede Datei erfüllt § 3 (1)
-  und (2); jedes Bild, das eine Seite referenziert, existiert; jeder relative
-  `.md`-Link zeigt auf eine existierende Datei.
+  und (2); der Titel in `inhalt.md` ist der Titel der Datei; jedes Bild, das
+  eine Seite referenziert, existiert; jeder relative `.md`-Link zeigt auf eine
+  existierende Datei.
 - `buildCommandIndex` liefert die Gruppe `help` mit Kapitel als Hinweis.
 - `crumbsFor` unter `/help/akte/post-ablegen` → `['Hilfe', 'Akte', 'Post ablegen']`.
 
@@ -348,7 +366,7 @@ und behalten; `img` mit `http`-Quelle wird gestrichen; `.md`-Link →
 | `apps/kompass/src/components/shell/topbar.tsx` | Hilfe-Knopf |
 | `apps/kompass/src/components/shell/shell-frame.tsx` | `?`-Kürzel, Panel einhängen |
 | `apps/kompass/src/app/(shell)/help/[[...doc]]/page.tsx` | neu |
-| `apps/kompass/src/app/help/bilder/[...path]/route.ts` | neu |
+| `apps/kompass/src/app/help-bilder/[...path]/route.ts` | neu |
 | `apps/kompass/src/app/api/help/route.ts` | neu |
 | `apps/kompass/src/app/(shell)/layout.tsx` | `helpPages` für die Palette |
 | `apps/kompass/messages/de.json` | § 9 |
@@ -380,6 +398,8 @@ Zwei Pläne, weil Mechanik und Text verschiedene Arbeit sind:
    `inhalt.md` und **drei** fertige Seiten als Beleg (`einstieg/oberflaeche`,
    `akte/post-ablegen`, `akte/brief-schreiben`), alle übrigen Seiten als
    Gerüst mit Titel und Kurzabsatz (der Vollständigkeitstest verlangt beides).
+   Die Kurzabsätze stehen **wörtlich im Plan** — sie sind das Erste, was ein
+   Vorstand liest, und werden nicht vom ausführenden Agenten formuliert.
 2. **Text** — jede Gerüstseite bekommt ihren Inhalt aus den Specs und der
    Oberfläche; Joe fügt Screenshots ein. Ein Commit je Kapitel.
 
@@ -402,7 +422,7 @@ Zwei Pläne, weil Mechanik und Text verschiedene Arbeit sind:
 - Konsistenz: `doc`-Pfade in § 3, § 4 und § 13 stimmen überein
   (`akte/post-ablegen`, `akte/brief-schreiben`, `einstieg/oberflaeche`).
   `helpDocFor` benutzt `matches` aus `navigation.ts` (§ 4, § 11). Der
-  Bild-Pfad `/help/bilder/…` steht in § 6, § 7 und § 10 gleich.
+  Bild-Pfad `/help-bilder/…` steht in § 6, § 7 und § 11 gleich.
 - Umfang: zwei Pläne (§ 13); der erste ist für sich lauffähig und abnehmbar.
 - Ambiguität: „Kurzabsatz" ist in § 3 (2) definiert (erster Absatz nach der
   Überschrift, bis zur ersten Leerzeile); „längster Treffer" verweist auf die
