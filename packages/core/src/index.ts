@@ -44,6 +44,7 @@ export * from './published/view';
 export * from './published/organization';
 export * from './setup/service';
 export * from './app';
+export * from './help/handbook';
 export * from './seed/seed';
 export * from './i18n/locales';
 export * from './i18n/localized';

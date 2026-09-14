@@ -102,6 +102,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   SESSION_SECRET: z.string().min(32),
   KOMPASS_DOCUMENT_TEMPLATES_DIR: z.string().min(1).optional(),
+  KOMPASS_HANDBOOK_DIR: z.string().min(1).optional(),
 });
 
 export interface RuntimeEnv {
@@ -111,6 +112,8 @@ export interface RuntimeEnv {
   sessionSecret: string;
   /** Volume mit den vereinseigenen Basis-Vorlagen; ohne = nur die mitgelieferten. */
   documentTemplatesDir: string | null;
+  /** Das Handbuch; im Container gesetzt, in der Entwicklung `docs/handbuch` im Repo. */
+  handbookDir: string | null;
 }
 
 export function readEnv(source: Record<string, string | undefined> = process.env): RuntimeEnv {
@@ -126,5 +129,6 @@ export function readEnv(source: Record<string, string | undefined> = process.env
     port: v.PORT,
     sessionSecret: v.SESSION_SECRET,
     documentTemplatesDir: v.KOMPASS_DOCUMENT_TEMPLATES_DIR ?? null,
+    handbookDir: v.KOMPASS_HANDBOOK_DIR ?? null,
   };
 }

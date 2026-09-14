@@ -52,7 +52,7 @@ describe('readEnv', () => {
   const base = { APP_ENV: 'production', DATA_PATH: '/data', PORT: '3000', SESSION_SECRET: 'x'.repeat(32) };
 
   it('parses a complete environment', () => {
-    expect(readEnv(base)).toEqual({ env: 'production', dataPath: '/data', port: 3000, sessionSecret: 'x'.repeat(32), documentTemplatesDir: null });
+    expect(readEnv(base)).toEqual({ env: 'production', dataPath: '/data', port: 3000, sessionSecret: 'x'.repeat(32), documentTemplatesDir: null, handbookDir: null });
   });
 
   it('defaults to development with local paths when only the secret is set', () => {

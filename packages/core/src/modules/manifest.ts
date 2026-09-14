@@ -180,6 +180,14 @@ export interface McpToolDefinition<T = unknown> {
   service?: (...args: never[]) => unknown;
 }
 
+/** Welche Handbuchseite zu einer Route gehört. Der Kern kennt keine Routen; die App wertet das aus. */
+export interface HelpEntry {
+  /** Routenpräfix, an der Segmentgrenze verglichen wie die Navigation. */
+  href: string;
+  /** Pfad der Handbuchseite ohne `.md`, relativ zu `docs/handbuch/`: 'akte/post-ablegen'. */
+  doc: string;
+}
+
 export interface ModuleManifest {
   key: string;
   version: string;
@@ -192,6 +200,8 @@ export interface ModuleManifest {
    * der ICONS-Whitelist von `apps/kompass/src/components/shell/rail.tsx` stehen.
    */
   moduleIcon?: string;
+  /** Hilfe je Route des Moduls. Längster `href` gewinnt. */
+  help?: readonly HelpEntry[];
   /**
    * Die Verwaltungsfläche des Moduls — Stammdaten, die ein Admin pflegt. Die
    * Schale entscheidet, wo sie erscheint; das Modul sagt nur, dass es eine hat.
