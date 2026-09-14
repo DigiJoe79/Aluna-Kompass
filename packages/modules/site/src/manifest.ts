@@ -37,6 +37,10 @@ export const siteModule: ModuleManifest = defineModule({
   version: '0.1.0',
   permissions: SITE_PERMISSIONS,
   settings: SITE_SETTINGS,
+  // `moduleIcon` muss in der Whitelist in `apps/kompass/src/components/shell/rail.tsx`
+  // stehen (`globe`). Das erste Item-Icon `layout-template` meint die Seite
+  // „Template“, nicht das Modul „Webseite“.
+  moduleIcon: 'globe',
   // Nur der Weg hinein steht immer da; alles Weitere hängt am Template.
   navigation: [{ key: 'site.template', href: '/site/template', icon: 'layout-template', group: 'site', permission: 'site.manage' }],
   navigationFor: siteNavigationFor,

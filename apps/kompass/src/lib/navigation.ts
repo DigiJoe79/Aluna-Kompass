@@ -19,6 +19,8 @@ export interface NavGroup {
   labelKey: string;
   disabled: boolean;
   items: NavItem[];
+  /** Symbol des Moduls in der Schiene (`moduleIcon` des Manifests); fehlt bei `admin`/`config`. */
+  icon?: string;
 }
 
 /**
@@ -105,6 +107,7 @@ export function buildNavigation(input: {
         labelKey: `nav.groups.${m.key}`,
         disabled: false,
         items: [...(m.navigation ?? []).map(toItem), ...(input.extraItems?.[m.key] ?? []).map(toItem)],
+        icon: m.moduleIcon,
       };
     });
   return [admin, config, ...modules];

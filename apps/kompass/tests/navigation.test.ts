@@ -87,4 +87,18 @@ describe('buildNavigation', () => {
     expect(site.items.map((i) => i.href)).toEqual(['/site/template', '/site/c/articles']);
     expect(site.items.at(-1)!.label).toBe('Artikel');
   });
+
+  it('carries the module icon on the group so the rail can show it', () => {
+    const site = defineModule({
+      key: 'site',
+      version: '0.1.0',
+      permissions: ['site.manage'],
+      moduleIcon: 'globe',
+      navigation: [{ key: 'site.template', href: '/site/template', icon: 'layout-template', group: 'site', permission: 'site.manage' }],
+    });
+    const groups = buildNavigation({ manifests: [coreModule, site, finance], enabledKeys: new Set(['core', 'site', 'finance']), permissions: new Set(['site.manage', 'finance.view']) });
+    expect(groups.find((g) => g.key === 'site')!.icon).toBe('globe');
+    expect(groups.find((g) => g.key === 'finance')!.icon).toBeUndefined();
+    expect(groups.find((g) => g.key === 'admin')!.icon).toBeUndefined();
+  });
 });

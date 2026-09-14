@@ -187,6 +187,12 @@ export interface ModuleManifest {
   settings?: readonly SettingDefinition[];
   navigation?: readonly NavigationItem[];
   /**
+   * Symbol des Moduls in der Schiene. Fehlt es, nimmt die Schale das Icon des
+   * ersten sichtbaren Navigationseintrags. Muss wie `NavigationItem.icon` in
+   * der ICONS-Whitelist von `apps/kompass/src/components/shell/rail.tsx` stehen.
+   */
+  moduleIcon?: string;
+  /**
    * Die Verwaltungsfläche des Moduls — Stammdaten, die ein Admin pflegt. Die
    * Schale entscheidet, wo sie erscheint; das Modul sagt nur, dass es eine hat.
    * Ohne diese Deklaration müsste der Kern für jedes künftige Modul mit
