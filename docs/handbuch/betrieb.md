@@ -1,5 +1,10 @@
 # Betrieb auf dem QNAP TS-873
 
+Kompass läuft als ein Docker-Image auf dem NAS des Vereins, mit Test und Prod
+als getrennten Anwendungen. Diese Seite beschreibt Erstinstallation, Update,
+Backup und den Weg der Webseite vom NAS zum Webspace — für die Person, die
+das NAS betreut.
+
 ## Erstinstallation
 1. **Ordner anlegen**: `/share/Container/kompass-test/{data,media}` (Prod analog, erst wenn Test läuft).
 2. **`.env.test`** nach `/share/Container/kompass-test/` legen (Vorlage `.env.test.example`), mit `SESSION_SECRET=<48 zufällige Zeichen>`, z. B. `openssl rand -hex 24`. Je Umgebung ein eigener Wert, sonst gälten Sitzungen aus Test auch in Prod.

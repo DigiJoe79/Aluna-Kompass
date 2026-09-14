@@ -31,6 +31,7 @@ Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. J
 - Seed-Daten für jedes Modul und jede neue Fachfunktion. Ein neues Modul bringt einen `seed`-Haken im Manifest mit, Kern-Funktionen einen Block unter `packages/core/src/seed/`; beide laufen über `seedDevelopment`. Regeln: frei erfundene Beispiele (das Repo ist öffentlich, `no-association-content.test.ts`), idempotent (kein Lauf, wenn schon Zeilen da sind), mit Varianten der wichtigen Zustände, und ein Test wie `…/tests/seed.test.ts`. Muster: `packages/modules/contacts/src/seed.ts`, `packages/modules/animals/src/seed.ts`, `packages/modules/dms/src/seed.ts`, `packages/modules/projects/src/seed.ts`. In `development` liegen sie neben den Prototyp-Daten von `dev:reset`; NAS-Test bleibt Aluna-only, weil dort `seedDevelopment` nicht läuft.
 - Migrationen: `pnpm --filter @kompass/core db:generate` nach jeder Schema-Änderung; erzeugte SQL-Dateien werden committet und nie nachträglich editiert.
 - Keine Löschfunktionen außer den in den `deletionRules` des eigenen Manifests als `deletable: true` geführten (Kern: `packages/core/src/deletion-policy.ts`; `defineModule` prüft jede Regel, `apps/kompass/tests/deletion-policy.test.ts` die Summe) — jede mit Eintrag im Änderungsprotokoll. Flüchtige Infrastruktur (Sitzungen löschen, Tokens widerrufen) steht dort nicht, weil sie keinen Vereinsvorgang abbildet.
+- Handbuch: Jede neue Seite der Oberfläche bringt ihre Handbuchseite unter `docs/handbuch/` und ihren `help`-Eintrag mit (Modul: im Manifest; Kern: `apps/kompass/src/lib/help.ts`). Eine Seite beginnt mit `# Titel` und einem Kurzabsatz; `apps/kompass/tests/handbook-complete.test.ts` prüft Vollständigkeit und Form. Spec: `2026-09-14-handbuch-und-hilfe-design.md`.
 - Zwei Grenzfälle sind bewusst noch nicht freigegeben: **Projekte** tragen mit der Säule Finanzen Finanzfelder, **Tierprofile** mit der Tiere-Vollstufe Bestandsbuch und § 11-Nachweise (Roadmap-Schritte 3 und 5 in `docs/nordstern.md`). Beide dokumentieren dann Vorgänge und nicht mehr nur Webseiteninhalt. Wer vorher eine Löschfunktion dafür bauen will, entscheidet diese Frage mit.
 
 ## Befehle
@@ -53,7 +54,7 @@ Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. J
 - `pnpm --filter @kompass/app mcp:check <url> [token]` — MCP-Endpunkt einer laufenden Instanz prüfen
 - `pnpm dev:reset` — Entwicklungsdatenbank verwerfen und mit Seed **und** den Tieren und Projekten des Prototyps neu aufbauen (nur `APP_ENV=development`; Prototyp-Pfad über `PROTOTYPE_DIR`)
 - Texterkennung lokal: `brew install tesseract tesseract-lang poppler` — ohne sie meldet die Akte „Texterkennung nicht verfügbar", und `packages/text-extraction` überspringt seine Tests nicht, sondern schlägt fehl.
-- Betrieb: `docs/betrieb.md` (NAS-Deployment, Backups, Updates); Compose-Vorlagen `docker-compose.test.yml` und `docker-compose.prod.yml`, CI `.github/workflows/ci.yml`
+- Betrieb: `docs/handbuch/betrieb.md` (NAS-Deployment, Backups, Updates); Compose-Vorlagen `docker-compose.test.yml` und `docker-compose.prod.yml`, CI `.github/workflows/ci.yml`
 
 ## Quellen
 
@@ -61,5 +62,5 @@ Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. J
 - Pläne: `docs/superpowers/plans/`
 - Nordstern: `docs/nordstern.md` (Gesamtbild, Grenzen, Roadmap)
 - Backlog: `docs/backlog.md` (bewusst zurückgestellte Punkte mit Begründung)
-- Hilfeseite für die schreibende Person: `docs/briefe-formatieren.md` — welche Formatierungen ein Brief kennt. Der Beispielbrief darin ist zugleich Fixture: `packages/documents/tests/markdown-render.test.ts` liest ihn aus der Seite und rendert ihn.
+- Hilfeseite für die schreibende Person: `docs/handbuch/akte/brief-schreiben.md` — welche Formatierungen ein Brief kennt. Der Beispielbrief darin ist zugleich Fixture: `packages/documents/tests/markdown-render.test.ts` liest ihn aus der Seite und rendert ihn.
 - Design-Referenz Stufe 1: `docs/design/fundament/design_handoff_aluna_kompass_fundament/README.md`

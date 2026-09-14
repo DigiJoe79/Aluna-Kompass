@@ -185,7 +185,7 @@ Ein Image für Dev, Test und Prod, Container auf dem NAS des Vereins, Backup
 vor jedem Update, Migrationen beim Start, CI, die gegen die ausgelieferte
 Fassung prüft. Kein Feature, aber die Bedingung für alle.
 
-Quellen: `docs/betrieb.md`, `2026-09-08-pruefringe-design.md`.
+Quellen: `docs/handbuch/betrieb.md`, `2026-09-08-pruefringe-design.md`.
 
 **Stand: steht.**
 

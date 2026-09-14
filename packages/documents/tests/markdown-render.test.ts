@@ -79,16 +79,16 @@ describe('page breaks', () => {
 
 describe('the example in the help page', () => {
   /**
-   * `docs/briefe-formatieren.md` verspricht der schreibenden Person, dass ihr
+   * `docs/handbuch/akte/brief-schreiben.md` verspricht der schreibenden Person, dass ihr
    * Beispielbrief durch die Pipeline geht. Hier wird das Versprechen eingelöst —
    * und die Seite kann nicht unbemerkt von der Wirklichkeit abweichen.
    */
   const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
   function exampleFromHelpPage(): string {
-    const page = readFileSync(path.join(ROOT, 'docs/briefe-formatieren.md'), 'utf8');
+    const page = readFileSync(path.join(ROOT, 'docs/handbuch/akte/brief-schreiben.md'), 'utf8');
     const match = /<!-- beispielbrief -->\s*````markdown\n([\s\S]*?)\n````/.exec(page);
-    if (!match?.[1]) throw new Error('kein mit <!-- beispielbrief --> markierter Block in docs/briefe-formatieren.md');
+    if (!match?.[1]) throw new Error('kein mit <!-- beispielbrief --> markierter Block in docs/handbuch/akte/brief-schreiben.md');
     return match[1];
   }
 

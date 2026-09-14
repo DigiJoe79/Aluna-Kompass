@@ -1,4 +1,28 @@
-# Briefe formatieren
+# Brief schreiben
+
+Ein Brief entsteht als Entwurf: Empfänger aus den Kontakten, Betreff, Text —
+rechts sehen Sie sofort, wie er auf dem Briefbogen aussieht. Bausteine fügen
+wiederkehrende Absätze ein. Beim Festschreiben bekommt der Brief seine Nummer
+und wird als PDF abgelegt; danach ändert sich nichts mehr daran.
+
+## Entwurf
+
+Über „Neuer Brief“ in der Akte öffnet sich der Entwurf als geteilter
+Bildschirm: links die Felder, rechts die Vorschau. Der Empfänger kommt aus den
+Kontakten — fehlt er, legen Sie ihn von hier aus an. Betreff und Text sind
+Pflicht; Datum und Absender setzt Kompass aus den Vereinsdaten.
+
+Ein Entwurf bleibt, bis Sie ihn festschreiben oder verwerfen. Verwerfen ist
+die einzige Löschung in der Akte, und sie steht im Änderungsprotokoll.
+
+## Bausteine
+
+Wiederkehrende Absätze — Grußformel, Spendenhinweis, Bankverbindung — legen
+Sie unter Einstellungen → Akte einrichten als Bausteine an. Im Entwurf fügt
+„Baustein einfügen“ den Text an der Schreibmarke ein; danach ist er normaler
+Text und lässt sich ändern.
+
+## Formatierungen
 
 Das Feld **Text** eines Briefentwurfs nimmt gewöhnlichen Fließtext. Ein paar
 Zeichen geben dem Text zusätzlich Form: eine Raute macht eine Überschrift,
@@ -9,7 +33,7 @@ sauber gesetzt. Und was auf dieser Seite nicht steht, kann der Brief auch nicht 
 der Abschnitt [Was nicht im Brief ankommt](#was-nicht-im-brief-ankommt) sagt, was
 beim Erzeugen des PDFs stillschweigend wegfällt.
 
-## Absätze und Zeilenumbrüche
+### Absätze und Zeilenumbrüche
 
 Eine **Leerzeile** trennt zwei Absätze. Ein einfacher Zeilenwechsel trennt nichts:
 Der Text läuft weiter, als stünde er in einer Zeile. Das ist praktisch, wenn Sie
@@ -18,7 +42,7 @@ lange Sätze beim Tippen umbrechen wollen.
 Brauchen Sie den Umbruch wirklich — bei einer Anschrift etwa —, setzen Sie **zwei
 Leerzeichen** ans Zeilenende.
 
-## Auszeichnungen im Satz
+### Auszeichnungen im Satz
 
 | Sie schreiben | Im Brief steht |
 |---|---|
@@ -28,20 +52,20 @@ Leerzeichen** ans Zeilenende.
 | `~~gestrichen~~` | ~~gestrichen~~ |
 | `` `Wert` `` | ein Wert in Schreibmaschinenschrift |
 
-## Überschriften
+### Überschriften
 
 Eine Raute je Ebene, danach ein Leerzeichen:
 
 ```
-## Tagesordnung
-### Beiträge im Überblick
+### Tagesordnung
+#### Beiträge im Überblick
 ```
 
 Für einen Brief reichen zwei Ebenen. Es gibt bis zu sechs, aber ab der dritten
 unterscheiden sie sich kaum noch sichtbar — wer sie braucht, gliedert vermutlich
 zu tief.
 
-## Listen
+### Listen
 
 Ein Strich für Aufzählungen, eine Zahl mit Punkt für Nummerierungen:
 
@@ -63,7 +87,7 @@ Unterpunkte rücken Sie um **zwei Leerzeichen** ein:
 
 Eine Nummerierung beginnt im Brief immer bei 1, auch wenn Sie mit `5.` anfangen.
 
-## Hinweiskasten
+### Hinweiskasten
 
 Eine Zeile, die mit `>` beginnt, wird im Brief zu einem abgesetzten Kasten:
 
@@ -71,7 +95,7 @@ Eine Zeile, die mit `>` beginnt, wird im Brief zu einem abgesetzten Kasten:
 > Wer verhindert ist, kann sich vertreten lassen.
 ```
 
-## Trennlinie
+### Trennlinie
 
 Drei Striche allein in einer Zeile ziehen eine dünne Linie quer über die Seite:
 
@@ -79,7 +103,7 @@ Drei Striche allein in einer Zeile ziehen eine dünne Linie quer über die Seite
 ---
 ```
 
-## Tabellen
+### Tabellen
 
 Senkrechte Striche trennen die Spalten, die zweite Zeile trennt den Kopf vom
 Rumpf. Ein Doppelpunkt in dieser zweiten Zeile bestimmt die Ausrichtung: links,
@@ -96,7 +120,7 @@ Die Spalten müssen nicht bündig untereinander stehen, das macht nur das Tippen
 angenehmer. Geht eine Tabelle über den Seitenumbruch, wiederholt sich die
 Kopfzeile oben auf der nächsten Seite.
 
-## Verweise
+### Verweise
 
 ```
 [unsere Satzung](https://example.org/satzung)
@@ -111,7 +135,7 @@ Andere Arten von Adressen werden **nicht** verknüpft; dort bleibt nur der Text
 stehen. Das ist Absicht: Ein Brief soll niemanden irgendwohin schicken, wo er
 nicht hinwollte.
 
-## Seitenumbruch
+### Seitenumbruch
 
 Eine Zeile, in der nur das steht, beginnt eine neue Seite:
 
@@ -122,7 +146,7 @@ Eine Zeile, in der nur das steht, beginnt eine neue Seite:
 Steht er am Ende des Textes, passiert nichts — es entsteht keine leere Seite.
 Zwei Umbrüche hintereinander ergeben genau einen.
 
-## Karten nebeneinander
+### Karten nebeneinander
 
 Für Angaben, die nebeneinander gehören — Ort und Zeit etwa — gibt es ein
 zweispaltiges Raster. Jede Überschrift mit drei Rauten beginnt darin eine neue
@@ -130,19 +154,19 @@ Karte:
 
 ```
 :::karten
-### Ort
+#### Ort
 
 Vereinsheim am Mühlenweg 4
 12345 Musterstadt
 
-### Zeit
+#### Zeit
 
 Samstag, 14. März 2026
 um 15:00 Uhr
 :::
 ```
 
-## Sonderzeichen
+### Sonderzeichen
 
 Sie können tippen, was Sie wollen. Rauten, Dollarzeichen, Klammern, Klammeraffen,
 Schrägstriche und Backslashes kommen genau so im Brief an. Auch Uhrzeiten wie
@@ -152,7 +176,7 @@ Eine Zeile, die mit `=`, `-`, `+` oder einer Zahl mit Punkt beginnt, deuten wir
 als Text und nicht als Überschrift oder Liste, solange Sie sie nicht als solche
 gemeint haben — wollen Sie eine Liste, setzen Sie wie oben beschrieben `- ` davor.
 
-## Was nicht im Brief ankommt
+### Was nicht im Brief ankommt
 
 Diese Dinge dürfen Sie schreiben, sie erscheinen aber **nicht** im PDF, und es
 gibt keine Warnung:
@@ -166,14 +190,14 @@ gibt keine Warnung:
 Wenn Sie eines davon brauchen, sagen Sie Bescheid — das ist eine Lücke, keine
 Entscheidung für die Ewigkeit.
 
-## Auf der Webseite gilt etwas anderes
+### Auf der Webseite gilt etwas anderes
 
 Texte für die Vereinswebseite werden mit derselben Schreibweise verfasst, aber
 anders gesetzt. Dort **funktionieren Bilder**, dafür bedeutet ein Seitenumbruch
 nichts — es gibt keine Seiten. Verlassen Sie sich für Webseitentexte also nicht
 Zeile für Zeile auf diese Seite.
 
-## Ein vollständiges Beispiel
+### Ein vollständiges Beispiel
 
 Der folgende Brief benutzt alles, was oben steht. Er ist zugleich ein Testfall:
 Bei jedem Testlauf wird genau dieser Text durch die Briefpipeline geschickt und

@@ -29,7 +29,7 @@ const IGNORED = [
  * abgeschlossener Arbeit und ein übernommenes Handoff-Dokument — die schreibt
  * man nicht nachträglich um, nur damit ein Test grün wird.
  */
-const SCOPE = ['packages', 'apps', 'templates', 'scripts', 'docs/betrieb.md'];
+const SCOPE = ['packages', 'apps', 'templates', 'scripts', 'docs/handbuch'];
 
 const search = (dir: string): string[] => {
   try {

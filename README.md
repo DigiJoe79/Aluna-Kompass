@@ -33,11 +33,11 @@ Kompass dreht das um:
 - **Nur Freigegebenes verlässt das Haus.** Die Seite liest ausschließlich Sichten, die ein Modul ausdrücklich veröffentlicht — ein Tier zeigt sein Profil, nicht seine Tierarztrechnungen. Interner Datensatz und öffentliche Sicht sind zwei Dinge (Prinzip 4 in [`AGENTS.md`](AGENTS.md)).
 - **Publizieren ist ein bewusster Schritt.** Nur aus der Prod-Instanz, mit Prüfung vor dem Hochladen, und der Publish steht wie alles andere im Änderungsprotokoll.
 
-Der Webspace kostet ein paar Euro im Jahr und braucht keine Wartung. Das NAS muss sicher betrieben werden — das stimmt, und [`docs/betrieb.md`](docs/betrieb.md) beschreibt, wie. Aber es steht im eigenen Netz, nicht am offenen Internet, und das ist der Unterschied.
+Der Webspace kostet ein paar Euro im Jahr und braucht keine Wartung. Das NAS muss sicher betrieben werden — das stimmt, und [`docs/handbuch/betrieb.md`](docs/handbuch/betrieb.md) beschreibt, wie. Aber es steht im eigenen Netz, nicht am offenen Internet, und das ist der Unterschied.
 
 ## Betrieb
 
-Kompass läuft als ein Docker-Image auf dem NAS oder Server des Vereins, mit Dev, Test und Prod strikt getrennt. Installation, Update, Backup und Webseiten-Publish: [`docs/betrieb.md`](docs/betrieb.md).
+Kompass läuft als ein Docker-Image auf dem NAS oder Server des Vereins, mit Dev, Test und Prod strikt getrennt. Installation, Update, Backup und Webseiten-Publish: [`docs/handbuch/betrieb.md`](docs/handbuch/betrieb.md). Das vollständige Handbuch liegt unter [`docs/handbuch/`](docs/handbuch/inhalt.md) und ist in der App über das „?“ in der Kopfleiste erreichbar.
 
 ## Entwicklung
 
