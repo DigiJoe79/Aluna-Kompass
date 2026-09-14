@@ -82,6 +82,12 @@ export const dmsModule: ModuleManifest = defineModule({
   documentTemplates: [letterTemplate],
   navigation: [{ key: 'dms.list', href: '/dms', icon: 'file', group: 'dms', permission: 'dms.view' }],
   adminNavigation: [{ key: 'dms.admin', href: '/admin/dms', icon: 'folder', permission: 'dms.manage' }],
+  help: [
+    { href: '/dms', doc: 'akte/dokumente-und-ordner' },
+    { href: '/dms/receive', doc: 'akte/post-ablegen' },
+    { href: '/dms/new', doc: 'akte/brief-schreiben' },
+    { href: '/admin/dms', doc: 'einstellungen/akte-einrichten' },
+  ],
   retentionHolds: dmsRetentionHolds,
   retentionDue: dmsRetentionDue,
   followUpTargets: dmsFollowUpTargets,

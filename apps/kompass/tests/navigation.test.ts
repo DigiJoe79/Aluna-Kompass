@@ -1,4 +1,4 @@
-import { coreModule, defineModule, type ModuleManifest } from '@kompass/core';
+import { coreModule, defineModule, type HandbookChapter, type ModuleManifest } from '@kompass/core';
 import { describe, expect, it } from 'vitest';
 import { activeRailKey, buildNavigation, buildRail, crumbsFor, locate, sectionsFor, type NavGroup, type NavItem } from '@/lib/navigation';
 
@@ -303,5 +303,18 @@ describe('crumbsFor', () => {
 
   it('is empty when nothing matches', () => {
     expect(crumbsFor(FIXTURE, '/nirgends', t)).toEqual([]);
+  });
+
+  const chapters: HandbookChapter[] = [
+    { title: 'Akte', pages: [{ doc: 'akte/post-ablegen', title: 'Post ablegen' }] },
+    { title: 'Mediathek', pages: [{ doc: 'mediathek', title: 'Mediathek' }] },
+  ];
+
+  it('names help pages by chapter and title, collapsing a chapter that is its own page', () => {
+    const th = (key: string) => (key === 'nav.help' ? 'Hilfe' : t(key));
+    expect(crumbsFor(FIXTURE, '/help', th, chapters)).toEqual(['Hilfe']);
+    expect(crumbsFor(FIXTURE, '/help/akte/post-ablegen', th, chapters)).toEqual(['Hilfe', 'Akte', 'Post ablegen']);
+    expect(crumbsFor(FIXTURE, '/help/mediathek', th, chapters)).toEqual(['Hilfe', 'Mediathek']);
+    expect(crumbsFor(FIXTURE, '/help/gibt-es-nicht', th, chapters)).toEqual(['Hilfe']);
   });
 });

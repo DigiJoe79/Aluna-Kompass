@@ -43,6 +43,12 @@ export const siteModule: ModuleManifest = defineModule({
   moduleIcon: 'globe',
   // Nur der Weg hinein steht immer da; alles Weitere hängt am Template.
   navigation: [{ key: 'site.template', href: '/site/template', icon: 'layout-template', group: 'site', permission: 'site.manage' }],
+  help: [
+    { href: '/site/template', doc: 'webseite/template-einlesen' },
+    { href: '/site/variables', doc: 'webseite/variablen' },
+    { href: '/site/c', doc: 'webseite/sammlungen' },
+    { href: '/site/publish', doc: 'webseite/publizieren' },
+  ],
   navigationFor: siteNavigationFor,
   mcpTools: SITE_MCP_TOOLS,
   mediaReferences: siteMediaReferences,

@@ -1,4 +1,4 @@
-import type { ModuleManifest, NavigationItem } from '@kompass/core';
+import type { HandbookChapter, ModuleManifest, NavigationItem } from '@kompass/core';
 
 export interface NavItem {
   key: string;
@@ -134,7 +134,7 @@ export interface Location {
 }
 
 /** Ein `href` passt an der Segmentgrenze: `/dms` trifft `/dms` und `/dms/x`, nicht `/dmsx`. */
-function matches(href: string, pathname: string): boolean {
+export function matches(href: string, pathname: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -231,9 +231,22 @@ export function sectionsFor(groups: NavGroup[], pathname: string): NavSection[] 
  * Die Brotkrume der Kopfleiste. Das letzte Segment ist das `<h1>` der Seite.
  * Heißen Modul und Seite gleich (Kontakte / Kontakte), bleibt ein Segment.
  */
-export function crumbsFor(groups: NavGroup[], pathname: string, t: (key: string) => string): string[] {
+/**
+ * Die Brotkrume der Kopfleiste. Das letzte Segment ist das `<h1>` der Seite.
+ * Heißen Modul und Seite gleich (Kontakte / Kontakte), bleibt ein Segment.
+ * Unter `/help` kommen Kapitel und Titel aus dem Inhaltsverzeichnis.
+ */
+export function crumbsFor(groups: NavGroup[], pathname: string, t: (key: string) => string, helpChapters: HandbookChapter[] = []): string[] {
   if (pathname === '/') return [t('nav.home')];
   if (matches('/profile', pathname)) return [t('nav.profile')];
+  if (matches('/help', pathname)) {
+    const doc = pathname.slice('/help/'.length);
+    for (const chapter of helpChapters) {
+      const page = chapter.pages.find((p) => p.doc === doc);
+      if (page) return page.title === chapter.title ? [t('nav.help'), page.title] : [t('nav.help'), chapter.title, page.title];
+    }
+    return [t('nav.help')];
+  }
   const hit = locate(groups, pathname);
   if (!hit) return [];
   const page = hit.item.label ?? t(hit.item.labelKey);

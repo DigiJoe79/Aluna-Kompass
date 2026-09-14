@@ -10,6 +10,7 @@ export const animalsModule: ModuleManifest = defineModule({
   version: '0.1.0',
   permissions: ['animals.view', 'animals.manage'],
   navigation: [{ key: 'animals.list', href: '/animals', icon: 'paw-print', group: 'animals', permission: 'animals.view' }],
+  help: [{ href: '/animals', doc: 'tiere' }],
   deletionRules: [
     {
       entity: 'animal',

@@ -10,6 +10,7 @@ export const contactsModule: ModuleManifest = defineModule({
   // `icon` muss in der Whitelist in `apps/kompass/src/components/shell/sidebar.tsx`
   // stehen (`contact`), sonst bleibt der Navigationspunkt ohne Symbol.
   navigation: [{ key: 'contacts.list', href: '/contacts', icon: 'contact', group: 'contacts', permission: 'contacts.view' }],
+  help: [{ href: '/contacts', doc: 'kontakte' }],
   /**
    * Die allgemeinen Rollen. Fachliche Rollen bringen die Fachmodule mit:
    * Tiere `adopter`/`sponsor`, Finanzen `donor`, Mitglieder `member`.

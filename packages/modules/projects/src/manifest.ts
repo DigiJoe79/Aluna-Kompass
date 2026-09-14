@@ -15,6 +15,7 @@ export const projectsModule: ModuleManifest = defineModule({
   version: '0.1.0',
   permissions: ['projects.view', 'projects.manage'],
   navigation: [{ key: 'projects.list', href: '/projects', icon: 'folder', group: 'projects', permission: 'projects.view' }],
+  help: [{ href: '/projects', doc: 'projekte' }],
   deletionRules: [
     {
       entity: 'project',
