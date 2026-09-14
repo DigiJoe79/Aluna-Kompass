@@ -28,14 +28,14 @@ test.describe('app shell', () => {
     await page.keyboard.press('Escape');
   });
 
-  test('marks the area in the rail and the page in the second level', async ({ page }) => {
+  test('marks the area in the rail and shows no second level while the area has a single page', async ({ page }) => {
     await page.goto('/animals');
     const rail = page.getByRole('navigation', { name: 'Hauptnavigation' });
     await expect(rail.getByRole('link', { name: 'Tiere' })).toHaveAttribute('aria-current', 'page');
     await expect(rail.getByRole('link', { name: 'Startseite' })).not.toHaveAttribute('aria-current', 'page');
-    const sections = page.getByRole('navigation', { name: 'Unternavigation' });
-    await expect(sections).toHaveCSS('width', '208px');
-    await expect(sections.getByRole('link', { name: 'Hunde' })).toHaveAttribute('aria-current', 'page');
+    // Tiere hat heute eine Seite; eine Spalte mit „Hunde“ unter „Tiere“ würde
+    // nur die Schiene wiederholen. Sie erscheint, sobald das Modul wächst.
+    await expect(page.getByRole('navigation', { name: 'Unternavigation' })).toHaveCount(0);
     await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hunde');
   });
@@ -67,7 +67,9 @@ test.describe('app shell', () => {
     for (const label of ['Nutzer', 'Rollen', 'Änderungsprotokoll', 'Aufbewahrung', 'Mediathek', 'Backup', 'Verein', 'Sprachen', 'Themes', 'Module', 'Dokumente', 'Akte einrichten']) {
       await expect(sections.getByRole('link', { name: label })).toBeVisible();
     }
+    await expect(sections).toHaveCSS('width', '208px');
     await sections.getByRole('link', { name: 'Themes' }).click();
+    await expect(sections.getByRole('link', { name: 'Themes' })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('banner')).toContainText('Einstellungen');
     await expect(page.getByRole('banner')).toContainText('Einrichtung');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Themes');
@@ -95,13 +97,13 @@ test.describe('app shell', () => {
   });
 
   test('turns into a drawer below 1180px with labelled areas and the second level beneath', async ({ page }) => {
-    await page.goto('/animals');
+    await page.goto('/admin/themes');
     await page.setViewportSize({ width: 1024, height: 800 });
     await expect(page.getByRole('navigation', { name: 'Hauptnavigation' })).toBeHidden();
     await page.getByRole('button', { name: 'Navigation öffnen' }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Tiere' })).toBeVisible();
-    await expect(dialog.getByRole('navigation', { name: 'Unternavigation' }).getByRole('link', { name: 'Hunde' })).toBeVisible();
+    await expect(dialog.getByRole('navigation', { name: 'Unternavigation' }).getByRole('link', { name: 'Themes' })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
   });

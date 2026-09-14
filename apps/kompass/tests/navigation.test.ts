@@ -226,6 +226,23 @@ describe('sectionsFor', () => {
     expect(sectionsFor(FIXTURE, '/profile')).toEqual([]);
     expect(sectionsFor(FIXTURE, '/nirgends')).toEqual([]);
   });
+
+  /**
+   * Eine Spalte mit einem Eintrag wiederholt nur die Schiene („Hunde“ unter
+   * „Tiere“) und kostet 208 px. Erst ab zwei sichtbaren Einträgen gibt es
+   * etwas zu wählen — die Spalte erscheint, wenn ein Modul wächst.
+   */
+  it('shows no second level while an area has fewer than two visible entries', () => {
+    expect(sectionsFor(FIXTURE, '/dms/01J')).toEqual([]);
+    const site: NavGroup[] = [{ ...FIXTURE[2]!, items: [FIXTURE[2]!.items[0]!, item('site.c.artikel', '/site/c/artikel', 'list', { visible: false })] }];
+    expect(sectionsFor(site, '/site/template')).toEqual([]);
+    // Auch Einstellungen: ein einziges Verwaltungsrecht ergibt keine Spalte.
+    const oneRight: NavGroup[] = [
+      { ...FIXTURE[0]!, items: [item('backup', '/admin/backup', 'database')] },
+      { ...FIXTURE[1]!, items: [item('themes', '/admin/themes', 'droplet', { visible: false })] },
+    ];
+    expect(sectionsFor(oneRight, '/admin/backup')).toEqual([]);
+  });
 });
 
 describe('crumbsFor', () => {

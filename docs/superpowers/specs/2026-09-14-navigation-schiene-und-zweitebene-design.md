@@ -46,7 +46,7 @@ Modul eine **Seite** dazubekommt.
 | 4 | **Eine Ortsbestimmung** `locate()` liefert Bereich, Gruppe und Eintrag zum Pfad; Schiene, Zweitebene und Brotkrume leiten sich alle daraus ab. | Handoff: drei getrennte Regeln (`active` über `startsWith(href)` des Rail-Eintrags, `moduleNavFor`, `crumbsFor`). Sie liefen auseinander: auf `/site/c/artikel` war „Webseite" nicht markiert, auf `/admin/themes` nicht „Einstellungen", weil der Rail-`href` nur der erste Eintrag ist. |
 | 5 | **Die Zweitebene ist eine Liste von Abschnitten**, eine Render-Regel für Module und Einstellungen. Ein Modul hat heute einen Abschnitt ohne Überschrift; wenn ein Modul mehrere braucht (Finanzen: BUCHEN, BERICHTE), bekommt `NavigationItem` ein Feld `section`. | Zwei Sonderfälle (Module flach, Einstellungen mit Gruppenköpfen). |
 | 6 | **Ein Eintrag der Zweitebene ist ein Link mit eigener URL.** Wohin — Seite, Sammlung, gespeicherte Sicht — entscheidet das Modul über `navigation` und `navigationFor`. Was ein Eintrag nicht ist: eine Fläche mit eigenem Verhalten. | Die Ordner der Akte in der Zweitebene. Die Ordnerspalte der Akte nimmt Ablagen per Drag-and-drop an und zählt; das kann eine von der Schale gerenderte Linkliste nicht. Die Spalte bleibt in der Seite. |
-| 7 | **Die Zweitebene steht, sobald ein Bereich aktiv ist** — auch mit einem einzigen Eintrag. Auf Startseite und Profil entfällt sie. | Spalte nur ab zwei Einträgen (springendes Layout beim Bereichswechsel). |
+| 7 | **Die Zweitebene steht, sobald ein Bereich zwei sichtbare Einträge hat.** Mit einem Eintrag wiederholte sie nur die Schiene („Hunde“ unter „Tiere“) und kostete 208 px; die Spalte erscheint, wenn ein Bereich wächst. Auf Startseite und Profil entfällt sie ohnehin. Gilt auch für Einstellungen. (Geändert am 2026-09-14 nach der Umsetzung; vorher „immer, sobald ein Bereich aktiv ist“.) | Spalte immer bei aktivem Bereich — das Argument „springendes Layout“ zog nicht, weil der Sprung Startseite → Modul denselben Effekt hat und nie störte. Heute hätten vier von fünf Modulen eine Spalte mit einer Zeile, die Akte dazu ihre eigene Ordnerspalte daneben. |
 | 8 | `buildNavigation()` bleibt unverändert und liefert weiter `NavGroup[]`. | Umbau des Datenflusses. Befehlspalette (`buildCommandIndex`) und Palette-Filter hängen daran und sollen nichts merken. |
 | 9 | Schiene und Zweitebene sind zwei `<nav>` mit eigenem `aria-label`. | Eine Rolle für beide (Screenreader und E2E-Selektoren können sie nicht unterscheiden). |
 | 10 | Am Kern: `moduleIcon?: string` an `ModuleManifest`, gesetzt nur bei `site` (`globe`). | Icon aus dem ersten Eintrag ableiten (bei `site` ist das `layout-template` — das Symbol der Seite „Template", nicht des Moduls). |
@@ -149,7 +149,8 @@ export function crumbsFor(groups: NavGroup[], pathname: string, t: (k: string) =
 `[{ key: 'admin', labelKey: 'nav.groups.admin', items }, { key: 'config',
 labelKey: 'nav.groups.config', items }]`, leere Abschnitte weggelassen. Sonst
 `[{ key: group.key, items }]` ohne `labelKey`. `items` sind die sichtbaren
-Einträge der Gruppe.
+Einträge der Gruppe. **Zählen alle Abschnitte zusammen weniger als zwei
+Einträge, ist das Ergebnis `[]`** — die Spalte entfällt (Entscheidung 7).
 
 **`crumbsFor`**:
 
@@ -285,7 +286,9 @@ TDD: erst die Tests, dann der Umbau.
 - `activeRailKey`: `/site/c/artikel` → `site`; `/admin/themes` → `settings`;
   `/` → `home`; `/profile` → null.
 - `sectionsFor`: Modul → ein Abschnitt ohne `labelKey`; settings → zwei mit
-  Überschrift, leerer Abschnitt weggelassen; `/` → `[]`.
+  Überschrift, leerer Abschnitt weggelassen; `/` → `[]`; weniger als zwei
+  sichtbare Einträge insgesamt → `[]` (Modul, Webseite ohne Sammlung, ein
+  einzelnes Verwaltungsrecht).
 - `crumbsFor`: die fünf Zeilen der Tabelle in § 4, dazu die Dedup-Regel.
 
 **E2E, `apps/kompass/e2e/shell.spec.ts`** — neu geschrieben entlang § 14:
@@ -370,7 +373,8 @@ bleibt gültig (die Schiene heißt weiter „Hauptnavigation").
       „Startseite" oben, „Einstellungen" unten hinter einer Trennlinie. Kein
       Klappknopf, kein `[`.
 - [ ] Schiene 88 px und Zweitebene 208 px stehen fest; der Inhalt beginnt bei
-      296 px, auf Startseite und Profil bei 88 px.
+      296 px — bei 88 px auf Startseite und Profil und in jedem Bereich mit
+      nur einem sichtbaren Eintrag.
 - [ ] Die Kopfleiste läuft über die volle Breite mit Logo, Vereinsname,
       Brotkrume, Suche und Nutzermenü; die Build-Zeile steht im Nutzermenü.
 - [ ] In einem Modul ist der Bereich in der Schiene markiert und die Seite in

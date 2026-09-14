@@ -204,13 +204,17 @@ const visibleItems = (group: NavGroup): NavItem[] => group.items.filter((i) => i
 export function sectionsFor(groups: NavGroup[], pathname: string): NavSection[] {
   const hit = locate(groups, pathname);
   if (!hit) return [];
-  if (hit.area === 'settings') {
-    return ['admin', 'config']
-      .map((key) => groups.find((g) => g.key === key))
-      .filter((group): group is NavGroup => group !== undefined && visibleItems(group).length > 0)
-      .map((group) => ({ key: group.key, labelKey: group.labelKey, items: visibleItems(group) }));
-  }
-  return [{ key: hit.group.key, items: visibleItems(hit.group) }];
+  const sections: NavSection[] =
+    hit.area === 'settings'
+      ? ['admin', 'config']
+          .map((key) => groups.find((g) => g.key === key))
+          .filter((group): group is NavGroup => group !== undefined && visibleItems(group).length > 0)
+          .map((group) => ({ key: group.key, labelKey: group.labelKey, items: visibleItems(group) }))
+      : [{ key: hit.group.key, items: visibleItems(hit.group) }];
+  // Ein einzelner Eintrag wiederholt nur die Schiene und kostet 208 px. Erst
+  // ab zwei gibt es etwas zu wählen — die Spalte erscheint, wenn ein Bereich wächst.
+  const count = sections.reduce((n, section) => n + section.items.length, 0);
+  return count < 2 ? [] : sections;
 }
 
 /**
