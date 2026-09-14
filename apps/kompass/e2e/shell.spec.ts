@@ -108,7 +108,7 @@ test.describe('app shell', () => {
 
   test('a user without module rights sees neither the modules nor an admin page she may not open', async ({ page }) => {
     // Kassenprüfer ist eine Seed-Rolle ohne Modulrecht: audit.view und
-    // documents.export (roles.spec.ts, Test „edits permissions …", zeigt den
+    // documents.export (roles.spec.ts, Test „edits permissions …“, zeigt den
     // Stand). Beides sind Kernrechte, keine Modulrechte, also bleibt die
     // Schiene bei Startseite und Einstellungen.
     await page.goto('/admin/users');
