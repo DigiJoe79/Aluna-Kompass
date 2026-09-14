@@ -395,12 +395,10 @@ describe('renderHandbook', () => {
 
   it('still strips scripts and keeps the kompass directives', async () => {
     expect(await renderHandbook('<script>alert(1)</script>Text', { doc: 'x' })).not.toContain('script');
-    expect(await renderHandbook('::hinweis[Vorsicht]', { doc: 'x' })).toContain('class="note"');
+    expect(await renderHandbook('> Vorsicht', { doc: 'x' })).toContain('class="note"');
   });
 });
 ```
-
-Prüfe vor dem Schreiben des letzten Tests, wie `::hinweis` in `packages/markdown/src/directives.ts` heißt und welche Klasse es setzt (`grep -n "note\|hinweis" packages/markdown/src/directives.ts`); wenn die Direktive anders heißt, den Test darauf umstellen — nicht die Direktive.
 
 - [ ] **Step 2: Rot**
 

@@ -230,8 +230,9 @@ export async function renderHandbook(markdown: string, options: { base: string }
 - Überschriften bekommen `id` aus dem Text (klein, Bindestrich, Umlaute zu
   ae/oe/ue/ss), damit `inhalt.md` und das Panel auf Abschnitte verlinken
   können.
-- Die Kompass-Direktiven aus `directives.ts` (`::hinweis` u. ä.) gelten auch
-  hier — dieselbe Schreibweise wie im Brief.
+- Die Kompass-Konventionen aus `directives.ts` gelten auch hier — ein Zitat
+  (`> …`) wird zum Hinweiskasten, `:::karten` zum Kartenraster — dieselbe
+  Schreibweise wie im Brief.
 
 ## 7. Routen und Oberfläche
 
