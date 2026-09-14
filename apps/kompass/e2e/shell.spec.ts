@@ -105,4 +105,42 @@ test.describe('app shell', () => {
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
   });
+
+  test('a user without module rights sees neither the modules nor an admin page she may not open', async ({ page }) => {
+    // Kassenprüfer ist eine Seed-Rolle ohne Modulrecht: audit.view und
+    // documents.export (roles.spec.ts, Test „edits permissions …", zeigt den
+    // Stand). Beides sind Kernrechte, keine Modulrechte, also bleibt die
+    // Schiene bei Startseite und Einstellungen.
+    await page.goto('/admin/users');
+    await page.getByRole('button', { name: 'Nutzer anlegen' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Kassenprüfer').check();
+    await dialog.getByLabel('Name').fill('Lea Prüfer');
+    await dialog.getByLabel('E-Mail').fill('lea@example.org');
+    await dialog.getByRole('button', { name: 'Nutzer anlegen' }).click();
+    const startPassword = (await page.getByTestId('start-password').textContent())!.trim();
+    await page.getByRole('button', { name: 'Ich habe die Daten notiert' }).click();
+    await page.request.post('/logout');
+
+    await page.goto('/login');
+    await page.getByLabel('E-Mail').fill('lea@example.org');
+    await page.getByLabel('Passwort').fill(startPassword);
+    await page.getByRole('button', { name: 'Anmelden' }).click();
+    await expect(page).toHaveURL('/password');
+    await page.getByLabel('Startpasswort').fill(startPassword);
+    await page.getByLabel('Neues Passwort', { exact: true }).fill('lea-prueft-die-kasse-2026');
+    await page.getByLabel('Passwort wiederholen').fill('lea-prueft-die-kasse-2026');
+    await page.getByRole('button', { name: 'Passwort setzen und fortfahren' }).click();
+    await expect(page).toHaveURL('/');
+
+    const rail = page.getByRole('navigation', { name: 'Hauptnavigation' });
+    await expect(rail.getByRole('link')).toHaveText(['Startseite', 'Einstellungen']);
+    await expect(rail.getByRole('link', { name: 'Einstellungen' })).toHaveAttribute('href', '/admin/audit');
+    await rail.getByRole('link', { name: 'Einstellungen' }).click();
+    await expect(page).toHaveURL('/admin/audit');
+    const sections = page.getByRole('navigation', { name: 'Unternavigation' });
+    await expect(sections.getByText('Verwaltung')).toBeVisible();
+    await expect(sections.getByText('Einrichtung')).toBeVisible();
+    await expect(sections.getByRole('link')).toHaveText(['Änderungsprotokoll', 'Dokumente']);
+  });
 });

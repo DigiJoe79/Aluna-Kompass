@@ -13,17 +13,16 @@ test('module page shows the locked core and the count', async ({ page }) => {
   await expect(page.getByText('6 von 6 aktiv')).toBeVisible();
 });
 
-test('a deactivated module disappears from the sidebar', async ({ page }) => {
+test('a deactivated module disappears from the rail', async ({ page }) => {
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
-  const nav = page.getByRole('navigation', { name: 'Hauptnavigation' });
-  await expect(nav.getByRole('link', { name: 'Hunde' })).toBeVisible();
+  const rail = page.getByRole('navigation', { name: 'Hauptnavigation' });
+  await expect(rail.getByRole('link', { name: 'Tiere' })).toBeVisible();
 
   await page.goto('/admin/modules');
   await page.getByRole('switch', { name: 'Tiere aktivieren oder deaktivieren' }).click();
   await expect(page.getByText('5 von 6 aktiv')).toBeVisible();
 
   await page.goto('/');
-  await expect(nav.getByRole('link', { name: 'Hunde' })).toHaveCount(0);
-  await expect(nav.getByText('Tiere', { exact: true })).toHaveCount(0);
+  await expect(rail.getByRole('link', { name: 'Tiere' })).toHaveCount(0);
 });

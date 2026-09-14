@@ -426,7 +426,8 @@ test.describe('dms', () => {
     await login(page);
     // Über die Navigation, nicht über die URL: Der Bildschirm war gebaut und
     // fertig, nur zeigte nichts darauf.
-    await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Akte einrichten' }).click();
+    await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Einstellungen' }).click();
+    await page.getByRole('navigation', { name: 'Unternavigation' }).getByRole('link', { name: 'Akte einrichten' }).click();
     await expect(page.getByRole('heading', { name: 'Dokumentarten' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Einsortierregeln' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Ordner' })).toBeVisible();
@@ -633,7 +634,7 @@ test.describe('dms', () => {
 
     await expect(dialog).toHaveCount(0);
     // Was abgelegt wurde, bleibt abgelegt.
-    await expect(page.getByRole('link', { name: 'Eins' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Eins', exact: true })).toBeVisible();
   });
 
   test('sagt im Dialog, welche Nummer beim Ablegen gezogen wird', async ({ page }) => {
