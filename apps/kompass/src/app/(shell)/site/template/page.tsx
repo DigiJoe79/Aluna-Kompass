@@ -29,16 +29,18 @@ export default async function SiteTemplatePage() {
         title={t('title')}
         description={state ? t('lastRead', { when: format.dateTime(new Date(state.readAt), { dateStyle: 'medium', timeStyle: 'short' }) }) : t('neverRead')}
       />
-      <SyncClient name={state?.name ?? null} />
-      {showSeedCard ? (
-        seedAppliedAt ? (
-          <p className="rounded-lg border border-line bg-surface p-6 text-[14px] text-ink-2">
-            {tSeed('done', { when: format.dateTime(new Date(seedAppliedAt), { dateStyle: 'medium', timeStyle: 'short' }) })}
-          </p>
-        ) : (
-          <SeedClient />
-        )
-      ) : null}
+      <div className="flex max-w-[880px] flex-col gap-4">
+        <SyncClient name={state?.name ?? null} />
+        {showSeedCard ? (
+          seedAppliedAt ? (
+            <p className="rounded-lg border border-line bg-surface p-6 text-[14px] text-ink-2">
+              {tSeed('done', { when: format.dateTime(new Date(seedAppliedAt), { dateStyle: 'medium', timeStyle: 'short' }) })}
+            </p>
+          ) : (
+            <SeedClient />
+          )
+        ) : null}
+      </div>
     </>
   );
 }
