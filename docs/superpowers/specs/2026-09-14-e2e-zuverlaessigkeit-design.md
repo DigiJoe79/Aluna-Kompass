@@ -57,44 +57,31 @@ ruft `optionalSession()`, Zeile 35 rechnet in `previewDraft`.
 
 ### Neu
 
-Das Tor bekommt eine zweite Hälfte: von „wer kommt herein" auf „wer ist noch
-drin".
+`resetDeps()` zieht die alte Verbindung aus dem Verkehr und schliesst sie erst
+eine halbe Minute später (`retire()` in `deps.ts`). Wer noch auf ihr rechnet,
+rechnet auf einer bereits gelöschten Datei zu Ende, die niemand mehr liest;
+alles Neue bekommt längst den frischen Bestand. Geschlossen wird trotzdem, sonst
+bliebe je Reset ein Dateizeiger liegen, und ein Lauf macht hundertfünfzig davon.
 
-- `deps.ts` führt einen Zähler der laufenden Anfragen mit `enterRequest()` und
-  `leaveRequest()`.
-- `optionalSession()` zählt nach `depsReady()` hoch und registriert die
-  Gegenbuchung über `after()` aus `next/server` (Next 16.3.4; im Projekt bisher
-  ungenutzt). `after()` läuft, nachdem die Antwort abgeschlossen ist — für Server
-  Components, Route Handler und Server Actions gleichermassen.
-- `layout.tsx` behält seinen `depsReady()`-Aufruf unverändert.
-- `resetDeps()` wartet nach `stopBackgroundWork()`, bis der Zähler null ist,
-  bevor es die Datenbank verwirft.
+### Verworfen: mitzählen, wer gerade arbeitet
 
-Mehrfaches `optionalSession()` in derselben Anfrage (Layout und Seite) zählt
-mehrfach hoch und über je ein `after()` wieder herunter — das bleibt im
-Gleichgewicht.
+Der erste Anlauf (20f2963) zählte die laufenden Anfragen: `enterRequest()` in
+`optionalSession()`, Abmeldung über `after()`, und `resetDeps` wartete auf null.
+**Das trägt nicht**, und der Lauf 34896633331 hat es gezeigt — `dms.spec.ts:437`
+scheiterte weiter.
 
-### Die Frist
+`after()` hängt an der **Antwort**, nicht am **Handler**. Bricht der Browser ab
+— beim Neuladen eines `<iframe>` mit der Vorschau ständig — gilt die Antwort als
+erledigt, während der Code weiterrechnet. Mit einer Sonde in der Vorschau-Route
+gemessen: `previewDraft` begann seine Arbeit bei einem Zählerstand von **null**.
+In der Gegenrichtung blieb der Zähler stehen, und die Frist zog nach zehn
+Sekunden. Die Next-Dokumentation sagt zu, dass `after()` auch bei Fehlern läuft
+— sie sagt nichts darüber, *wann* relativ zum Handler-Code, und genau darauf kam
+es an.
 
-Läuft `after()` einmal nicht — ein abgebrochener Client ist der Verdachtsfall,
-`The destination stream closed early` steht in den Protokollen — leckt der
-Zähler und der Reset hinge unbegrenzt. Deshalb wartet `resetDeps()` höchstens
-eine Frist ab und setzt danach trotzdem zurück. Im Normalfall ist die
-Fehlerklasse strukturell weg; im Leckfall degradiert das Verhalten auf das von
-heute, nicht auf schlechteres. Überschreitet der Reset die Frist, schreibt er
-eine Zeile ins Protokoll — sonst verschwindet ein Leck stillschweigend.
-
-**Geklärt (14.09.):** Die Next-Dokumentation zu `after()` sagt zu, dass der
-Rückruf auch dann läuft, wenn die Antwort nicht sauber durchkommt — bei einer
-geworfenen Ausnahme ebenso wie bei `notFound()` und `redirect()`. Ein eigener
-Test dafür entfällt damit; die Frist bleibt als Absicherung und wird über den
-vollen Durchlauf beobachtet.
-
-**Die Frist beträgt zehn Sekunden, nicht zwei.** Mit zwei Sekunden zog sie in
-einem vollen Durchlauf einmal, und zwar am Astro-Bau der Vorschau — eine ehrlich
-lange Anfrage, kein Leck. Ein echtes Leck bliebe stehen und meldete sich bei
-jedem folgenden Reset; einmal heisst, jemand hat gearbeitet. Die Frist muss
-darüber liegen, sonst schneidet sie genau das ab, wofür sie gebaut ist.
+Ein `try/finally` um jeden Handler wäre korrekt, aber eine Regel, an die
+siebzehn Route Handler und jeder künftige denken müssten — dieselbe Sorte
+Fussangel, die A gerade beseitigt hat. Deshalb gar keine Buchhaltung.
 
 ## 3. A — Die Hydration gehört in eine Fixture
 
@@ -128,13 +115,12 @@ warten.
 
 Strikt testgetrieben, jeder Teil rot bevor er grün wird.
 
-**B** (beide in `tests/deps-reset.test.ts`):
-1. Eine lange laufende Anfrage, mitten darin `resetDeps()` — sie muss ihre
-   Antwort noch erhalten, statt an einer geschlossenen Datenbank zu scheitern.
-   Vor der Änderung rot, und zwar mit genau der Meldung aus der CI
-   (`TypeError: The database connection is not open`).
-2. Der Leckfall: Der Zähler steht, die Abmeldung bleibt aus. Der Reset muss nach
-   der Frist trotzdem durchgehen.
+**B** (alle in `tests/deps-reset.test.ts`):
+1. Eine Anfrage, die ihre Deps am Anfang holt, lange rechnet und die Datenbank
+   erst danach anfasst — genau die Reihenfolge der Vorschau-Route. Vor der
+   Änderung rot mit der Meldung aus der CI.
+2. Der Reset liefert trotzdem einen frischen Bestand für alles Neue.
+3. Die abgelegte Verbindung bleibt nicht für immer offen.
 
 **A:**
 3. `e2e/hydration.spec.ts` löst den Wackler absichtlich aus. Zwei Wege dorthin
