@@ -51,7 +51,7 @@
   ```
   `body` ist alles **nach** der Titelzeile (schließt den Kurzabsatz ein); die Seite rendert den Titel selbst.
 
-- [ ] **Step 1: Fixture anlegen**
+- [x] **Step 1: Fixture anlegen**
 
 `packages/core/tests/fixtures/handbuch/inhalt.md`:
 
@@ -105,7 +105,7 @@ mkdir -p packages/core/tests/fixtures/handbuch/bilder/akte
 printf 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==' | base64 -d > packages/core/tests/fixtures/handbuch/bilder/akte/eingang.png
 ```
 
-- [ ] **Step 2: Tests schreiben**
+- [x] **Step 2: Tests schreiben**
 
 `packages/core/tests/handbook.test.ts`:
 
@@ -170,12 +170,12 @@ describe('handbook', () => {
 });
 ```
 
-- [ ] **Step 3: Rot**
+- [x] **Step 3: Rot**
 
 Run: `cd packages/core && npx vitest run tests/handbook.test.ts`
 Expected: FAIL — Exporte fehlen.
 
-- [ ] **Step 4: `RuntimeEnv` und Manifest**
+- [x] **Step 4: `RuntimeEnv` und Manifest**
 
 In `packages/core/src/app.ts`, `envSchema`, nach `KOMPASS_DOCUMENT_TEMPLATES_DIR`:
 
@@ -215,7 +215,7 @@ Und in `ModuleManifest` nach `moduleIcon?: string;`:
   help?: readonly HelpEntry[];
 ```
 
-- [ ] **Step 5: `handbook.ts`**
+- [x] **Step 5: `handbook.ts`**
 
 `packages/core/src/help/handbook.ts`:
 
@@ -334,12 +334,12 @@ In `packages/core/src/index.ts` nach `export * from './app';`:
 export * from './help/handbook';
 ```
 
-- [ ] **Step 6: Grün und Typecheck**
+- [x] **Step 6: Grün und Typecheck**
 
 Run: `cd packages/core && npx vitest run tests/handbook.test.ts tests/app.test.ts && cd ../.. && pnpm typecheck`
 Expected: PASS, kein Typfehler.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/core/src/app.ts packages/core/src/modules/manifest.ts packages/core/src/help/handbook.ts packages/core/src/index.ts packages/core/tests/handbook.test.ts packages/core/tests/fixtures/handbuch
@@ -358,7 +358,7 @@ git commit -m "feat(core): the core reads the handbook — pages with a lead par
 **Interfaces:**
 - Produces: `export async function renderHandbook(markdown: string, options: { doc: string }): Promise<string>` — `doc` ist der Pfad der Seite (`'akte/post-ablegen'`, `'inhalt'` für das Verzeichnis); relative Bild- und `.md`-Links werden gegen sein Verzeichnis aufgelöst.
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 `packages/markdown/tests/help.test.ts`:
 
@@ -400,12 +400,12 @@ describe('renderHandbook', () => {
 });
 ```
 
-- [ ] **Step 2: Rot**
+- [x] **Step 2: Rot**
 
 Run: `cd packages/markdown && npx vitest run tests/help.test.ts`
 Expected: FAIL — `renderHandbook` fehlt.
 
-- [ ] **Step 3: `help.ts`**
+- [x] **Step 3: `help.ts`**
 
 `packages/markdown/src/help.ts`:
 
@@ -517,12 +517,12 @@ export { renderHandbook } from './help';
 
 Hinweis: `h6` wird nicht weiter verschoben (Regex `h[1-5]`); ein `######` im Handbuch bleibt `h6`.
 
-- [ ] **Step 4: Grün und Typecheck**
+- [x] **Step 4: Grün und Typecheck**
 
 Run: `cd packages/markdown && npx vitest run && cd ../.. && pnpm typecheck`
 Expected: alle PASS (auch `render.test.ts`, das Brief-Schema ist unverändert), kein Typfehler.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/markdown/src/help.ts packages/markdown/src/index.ts packages/markdown/tests/help.test.ts
@@ -551,7 +551,7 @@ git commit -m "feat(markdown): renderHandbook() — images from bilder/, links b
   export function crumbsFor(groups, pathname, t, helpChapters?: HandbookChapter[]): string[]
   ```
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 `apps/kompass/tests/help.test.ts`:
 
@@ -613,12 +613,12 @@ In `apps/kompass/tests/navigation.test.ts`, im `describe('crumbsFor', …)`, den
   });
 ```
 
-- [ ] **Step 2: Rot**
+- [x] **Step 2: Rot**
 
 Run: `cd apps/kompass && npx vitest run tests/help.test.ts tests/navigation.test.ts`
 Expected: FAIL — `@/lib/help` fehlt, `crumbsFor` kennt `/help` nicht.
 
-- [ ] **Step 3: `matches` exportieren und `crumbsFor` erweitern**
+- [x] **Step 3: `matches` exportieren und `crumbsFor` erweitern**
 
 In `apps/kompass/src/lib/navigation.ts`: `function matches(` → `export function matches(`. Import ergänzen: `import type { HandbookChapter, ModuleManifest, NavigationItem } from '@kompass/core';`. `crumbsFor` ersetzen:
 
@@ -648,7 +648,7 @@ export function crumbsFor(groups: NavGroup[], pathname: string, t: (key: string)
 }
 ```
 
-- [ ] **Step 4: `help.ts`**
+- [x] **Step 4: `help.ts`**
 
 `apps/kompass/src/lib/help.ts`:
 
@@ -696,7 +696,7 @@ export function helpDocFor(entries: HelpEntry[], pathname: string): string | nul
 
 (`matches('/', '/x')` ist wahr, weil `'/x'.startsWith('//')` falsch, aber `pathname === href` … nein: `matches('/', '/x')` prüft `'/x'.startsWith('/' + '/')` → falsch und `'/x' === '/'` → falsch. Die Zeile mit `entry.href === '/'` ist also nur eine Absicherung, falls `matches` einmal die Wurzel anders behandelt; sie darf bleiben.)
 
-- [ ] **Step 5: Manifeste**
+- [x] **Step 5: Manifeste**
 
 Je Manifest im `defineModule({ … })`-Objekt direkt nach `navigation: […]` (bei `dms` nach `adminNavigation`):
 
@@ -735,12 +735,12 @@ Je Manifest im `defineModule({ … })`-Objekt direkt nach `navigation: […]` (b
   ],
 ```
 
-- [ ] **Step 6: Grün und Typecheck**
+- [x] **Step 6: Grün und Typecheck**
 
 Run: `cd apps/kompass && npx vitest run tests/help.test.ts tests/navigation.test.ts && cd ../.. && pnpm typecheck`
 Expected: PASS, kein Typfehler.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/kompass/src/lib/help.ts apps/kompass/src/lib/navigation.ts apps/kompass/tests/help.test.ts apps/kompass/tests/navigation.test.ts packages/modules/site/src/manifest.ts packages/modules/projects/src/manifest.ts packages/modules/animals/src/manifest.ts packages/modules/contacts/src/manifest.ts packages/modules/dms/src/manifest.ts
@@ -761,7 +761,7 @@ git commit -m "feat(shell): every route knows its handbook page — core pages i
 
 Der Test ist am Ende dieses Tasks **rot** und wird in Task 5 grün — er ist die Abnahme für das Gerüst.
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 `apps/kompass/tests/handbook-complete.test.ts`:
 
@@ -825,12 +825,12 @@ describe('das Handbuch', () => {
 
 Wenn `matchAll(...).toArray()` unter der Node-Version des Repos nicht existiert, stattdessen `[...body.matchAll(…)]` benutzen.
 
-- [ ] **Step 2: Rot**
+- [x] **Step 2: Rot**
 
 Run: `cd apps/kompass && npx vitest run tests/handbook-complete.test.ts`
 Expected: FAIL — `docs/handbuch` gibt es nicht; die genannten Seiten fehlen.
 
-- [ ] **Step 3: Umzüge**
+- [x] **Step 3: Umzüge**
 
 ```bash
 mkdir -p docs/handbuch/akte
@@ -888,7 +888,7 @@ p.write_text(head + rest)
 
 Danach prüfen, dass die Datei genau einen `# `-Titel hat (`grep -c '^# ' docs/handbuch/akte/brief-schreiben.md` → `1`) und der Block `<!-- beispielbrief -->` unverändert enthalten ist.
 
-- [ ] **Step 4: Verweise nachziehen**
+- [x] **Step 4: Verweise nachziehen**
 
 `packages/documents/tests/markdown-render.test.ts`: die drei Vorkommen von `docs/briefe-formatieren.md` (Kommentar, `readFileSync`, Fehlertext) → `docs/handbuch/akte/brief-schreiben.md`.
 
@@ -904,12 +904,12 @@ Danach prüfen, dass die Datei genau einen `# `-Titel hat (`grep -c '^# ' docs/h
 
 `docs/nordstern.md`, Säule Betrieb: `Quellen: \`docs/betrieb.md\`, …` → `docs/handbuch/betrieb.md`.
 
-- [ ] **Step 5: Bestehende Tests grün**
+- [x] **Step 5: Bestehende Tests grün**
 
 Run: `cd packages/documents && npx vitest run tests/markdown-render.test.ts && cd ../../apps/kompass && npx vitest run tests/german-quotes.test.ts`
 Expected: beide PASS. Findet `german-quotes` in `betrieb.md` oder `brief-schreiben.md` gerade Anführungszeichen, die es vorher nicht prüfte (in `brief-schreiben.md` war die Datei bisher nicht im Scope): die Stellen auf „…“ umstellen — **außer** innerhalb von Code-Blöcken und dem `<!-- beispielbrief -->`-Block; dort sind sie Teil des Beispiels. Sollte der Test einen Codeblock anschlagen, den Befund hier notieren und die Regel des Tests lesen, bevor etwas geändert wird.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/kompass/tests/handbook-complete.test.ts docs/handbuch/betrieb.md docs/handbuch/akte/brief-schreiben.md packages/documents/tests/markdown-render.test.ts apps/kompass/tests/german-quotes.test.ts README.md AGENTS.md docs/nordstern.md
@@ -928,7 +928,7 @@ git commit -m "docs(handbuch): betrieb and brief-schreiben move into the handboo
 
 Die Kurzabsätze stehen hier wörtlich und werden **unverändert** übernommen. Drei Seiten sind vollständig (`einstieg/oberflaeche`, `akte/post-ablegen`, `akte/brief-schreiben` — letztere aus Task 4). Alle anderen bestehen aus Titel und Kurzabsatz; Plan 2 füllt sie.
 
-- [ ] **Step 1: Inhaltsverzeichnis**
+- [x] **Step 1: Inhaltsverzeichnis**
 
 `docs/handbuch/inhalt.md`:
 
@@ -970,7 +970,7 @@ Die Kurzabsätze stehen hier wörtlich und werden **unverändert** übernommen. 
 - [Betrieb auf dem QNAP TS-873](betrieb.md)
 ```
 
-- [ ] **Step 2: Die drei vollständigen Seiten**
+- [x] **Step 2: Die drei vollständigen Seiten**
 
 `docs/handbuch/einstieg/oberflaeche.md`:
 
@@ -1083,7 +1083,7 @@ Wiedervorlage](bezuege-und-wiedervorlage.md).
 
 Der Agent gleicht die Feldnamen des Dialogs (Dokumentart, Betreff, Absender, Datum, Ordner) und die Knopfbeschriftung „Post ablegen" mit `apps/kompass/messages/de.json` unter `dms` ab; weicht eine Beschriftung ab, wird **das Wort** im Handbuch angepasst, nicht der Satz.
 
-- [ ] **Step 3: Alle übrigen Seiten — Titel und Kurzabsatz, wörtlich**
+- [x] **Step 3: Alle übrigen Seiten — Titel und Kurzabsatz, wörtlich**
 
 Je Datei genau dieser Inhalt (Titel, Leerzeile, Kurzabsatz, Zeilenumbruch am Ende):
 
@@ -1361,12 +1361,12 @@ wie Sie, mit denselben Rechten, und jede Aktion steht unter Ihrem Namen im
 Änderungsprotokoll. Ein Token wird nur einmal angezeigt.
 ```
 
-- [ ] **Step 4: Vollständigkeitstest grün**
+- [x] **Step 4: Vollständigkeitstest grün**
 
 Run: `cd apps/kompass && npx vitest run tests/handbook-complete.test.ts tests/german-quotes.test.ts`
 Expected: PASS. Meldet der Test einen Titel, der nicht mit `inhalt.md` übereinstimmt, ist ein Tippfehler in einer der beiden Stellen — beheben, nicht den Test lockern.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add docs/handbuch
@@ -1389,7 +1389,7 @@ git commit -m "docs(handbuch): the table of contents and every page of the curre
 - Consumes: `readHandbookPage`, `readHandbookIndex`, `parseHandbookIndex`, `readHandbookAsset` (Task 1); `renderHandbook` (Task 2); `helpEntries`, `helpDocFor` (Task 3); `getDeps`, `runtimeEnv` aus `@/lib/deps`; `optionalSession`, `requireSession` aus `@/lib/request-context`; `enabledManifests` aus `@kompass/core`.
 - Produces: `GET /api/help?path=` → `{ doc, title, href, leadHtml }` oder `{ doc: null, indexHtml }`; `GET /help-bilder/<rel>`; Seite `/help[/<doc>]`.
 
-- [ ] **Step 1: Texte**
+- [x] **Step 1: Texte**
 
 `apps/kompass/messages/de.json`: im Objekt `nav` nach `"sectionAria"`: `"help": "Hilfe",`. Auf oberster Ebene ein neues Objekt (alphabetisch passend, etwa nach `"home"`):
 
@@ -1400,7 +1400,7 @@ git commit -m "docs(handbuch): the table of contents and every page of the curre
   },
 ```
 
-- [ ] **Step 2: Inhaltsverzeichnis-Komponente**
+- [x] **Step 2: Inhaltsverzeichnis-Komponente**
 
 `apps/kompass/src/components/handbook-toc.tsx`:
 
@@ -1441,7 +1441,7 @@ export async function HandbookToc({ chapters, current }: { chapters: HandbookCha
 }
 ```
 
-- [ ] **Step 3: Die Seite**
+- [x] **Step 3: Die Seite**
 
 `apps/kompass/src/app/(shell)/help/[[...doc]]/page.tsx`:
 
@@ -1501,7 +1501,7 @@ In `apps/kompass/src/app/globals.css`, im `.prose-preview`-Block nach der `a`-Re
 
 Prüfe vorher, ob `.prose-preview h2`/`h3` schon eine Schriftgröße haben (`grep -n "prose-preview h" apps/kompass/src/app/globals.css`); wenn ja, die vorhandene Regel ergänzen statt eine zweite anzulegen.
 
-- [ ] **Step 4: Bilder-Route**
+- [x] **Step 4: Bilder-Route**
 
 `apps/kompass/src/app/help-bilder/[...path]/route.ts`:
 
@@ -1529,7 +1529,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ path: stri
 }
 ```
 
-- [ ] **Step 5: Panel-Daten**
+- [x] **Step 5: Panel-Daten**
 
 `apps/kompass/src/app/api/help/route.ts`:
 
@@ -1562,14 +1562,14 @@ export async function GET(request: Request): Promise<Response> {
 }
 ```
 
-- [ ] **Step 6: Typecheck, Schlüsseltest, Handprobe**
+- [x] **Step 6: Typecheck, Schlüsseltest, Handprobe**
 
 Run: `pnpm typecheck && cd apps/kompass && npx vitest run tests/message-keys.test.ts tests/no-hardcoded-ui-text.test.ts`
 Expected: ohne Fehler, PASS.
 
 Dann `cd apps/kompass && pnpm dev` im Hintergrund starten, anmelden, `http://localhost:3000/help/akte/post-ablegen` aufrufen: Verzeichnis links, Text rechts, Links auf `/help/akte/volltext` funktionieren; `http://localhost:3000/api/help?path=/dms/receive` liefert JSON mit `leadHtml`. Dev-Server danach beenden. (Die E2E dafür kommen in Task 8; die Handprobe ist nur, um nicht blind in Task 7 zu laufen.)
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add "apps/kompass/src/app/(shell)/help" apps/kompass/src/components/handbook-toc.tsx apps/kompass/src/app/help-bilder apps/kompass/src/app/api/help apps/kompass/src/app/globals.css apps/kompass/messages/de.json
@@ -1594,7 +1594,7 @@ git commit -m "feat(shell): /help renders the handbook with its table of content
 - Consumes: `HandbookChapter` aus `@kompass/core`; `crumbsFor(…, helpChapters)` (Task 3); `/api/help` (Task 6).
 - Produces: `CommandEntry.group` um `'help'` erweitert; `buildCommandIndex({ …, helpPages: { doc; title; chapter }[] })`; `ShellFrame` bekommt `helpChapters: HandbookChapter[]`; `Topbar` bekommt `onHelp: () => void`.
 
-- [ ] **Step 1: Texte**
+- [x] **Step 1: Texte**
 
 `de.json`: unter `shell.topbar` nach `"openNav"`: `"help": "Hilfe zu dieser Seite"`. Unter `shell` ein neues Objekt:
 
@@ -1608,7 +1608,7 @@ git commit -m "feat(shell): /help renders the handbook with its table of content
 
 Unter `palette.groups` nach `"actions"`: `"help": "Hilfe"`.
 
-- [ ] **Step 2: Test für den Paletten-Index**
+- [x] **Step 2: Test für den Paletten-Index**
 
 Prüfe: `ls apps/kompass/tests/command-index.test.ts`. Existiert die Datei, den Fall anhängen; sonst anlegen:
 
@@ -1632,7 +1632,7 @@ describe('buildCommandIndex', () => {
 
 Run: `cd apps/kompass && npx vitest run tests/command-index.test.ts` → FAIL (`helpPages` unbekannt / Gruppe fehlt).
 
-- [ ] **Step 3: Index und Palette**
+- [x] **Step 3: Index und Palette**
 
 `apps/kompass/src/lib/command-index.ts`: `group: 'navigation' | 'settings' | 'actions'` → `group: 'navigation' | 'settings' | 'actions' | 'help'`. Im `input`-Typ: `helpPages?: { doc: string; title: string; chapter: string }[];`. Vor `return entries;`:
 
@@ -1644,7 +1644,7 @@ Run: `cd apps/kompass && npx vitest run tests/command-index.test.ts` → FAIL (`
 
 `apps/kompass/src/components/shell/command-palette.tsx`: Props um `helpPages: { doc: string; title: string; chapter: string }[]` erweitern, an `buildCommandIndex` durchreichen (`useMemo`-Abhängigkeiten ergänzen); `groupsOf`-Typ um `'help'`; die Render-Liste `(['navigation', 'settings'] as const)` → `(['navigation', 'settings', 'help'] as const)`.
 
-- [ ] **Step 4: Panel**
+- [x] **Step 4: Panel**
 
 `apps/kompass/src/components/shell/help-panel.tsx`:
 
@@ -1711,7 +1711,7 @@ export function HelpPanel({ open, onOpenChange, pathname }: { open: boolean; onO
 
 Prüfe, ob `text-link` als Token existiert (`grep -n "\-\-link\|text-link" apps/kompass/src/app/globals.css`); wenn nicht, die Klasse weglassen — `.prose-preview a` färbt Links ohnehin.
 
-- [ ] **Step 5: Topbar-Knopf**
+- [x] **Step 5: Topbar-Knopf**
 
 In `topbar.tsx`: Import `import { CircleQuestionMark, Menu, Search } from 'lucide-react';`. Prop `onHelp: () => void` in `TopbarProps` und in der Destrukturierung. Zwischen dem Suchknopf und `<UserMenu …/>`:
 
@@ -1721,7 +1721,7 @@ In `topbar.tsx`: Import `import { CircleQuestionMark, Menu, Search } from 'lucid
       </button>
 ```
 
-- [ ] **Step 6: ShellFrame**
+- [x] **Step 6: ShellFrame**
 
 In `shell-frame.tsx`:
 
@@ -1747,7 +1747,7 @@ In `shell-frame.tsx`:
 
 - `<Topbar …>` bekommt `onHelp={() => setHelpOpen(true)}`; `<CommandPalette groups={groups} permissions={permissions} helpPages={helpPages} />`; direkt nach `<CommandPalette …/>`: `<HelpPanel open={helpOpen} onOpenChange={setHelpOpen} pathname={pathname} />`.
 
-- [ ] **Step 7: Layout**
+- [x] **Step 7: Layout**
 
 In `apps/kompass/src/app/(shell)/layout.tsx`: Import `parseHandbookIndex, readHandbookIndex` aus `@kompass/core`. Nach `const groups = …`:
 
@@ -1758,12 +1758,12 @@ In `apps/kompass/src/app/(shell)/layout.tsx`: Import `parseHandbookIndex, readHa
 
 Und an `<ShellFrame …>`: `helpChapters={helpChapters} helpPages={helpPages}`.
 
-- [ ] **Step 8: Grün, Typecheck, Schlüssel**
+- [x] **Step 8: Grün, Typecheck, Schlüssel**
 
 Run: `pnpm typecheck && cd apps/kompass && npx vitest run`
 Expected: ohne Fehler, alle Unit-Tests PASS.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add apps/kompass/src/components/shell/help-panel.tsx apps/kompass/src/components/shell/topbar.tsx apps/kompass/src/components/shell/shell-frame.tsx apps/kompass/src/components/shell/command-palette.tsx apps/kompass/src/lib/command-index.ts "apps/kompass/src/app/(shell)/layout.tsx" apps/kompass/messages/de.json apps/kompass/tests/command-index.test.ts
@@ -1779,7 +1779,7 @@ git commit -m "feat(shell): the ? in the top bar opens the help panel with the p
 - Create: `apps/kompass/e2e/help.spec.ts`
 - Modify: `docs/superpowers/plans/2026-09-14-handbuch-1-mechanik.md` (Häkchen)
 
-- [ ] **Step 1: E2E schreiben**
+- [x] **Step 1: E2E schreiben**
 
 `apps/kompass/e2e/help.spec.ts`:
 
@@ -1854,12 +1854,12 @@ test.describe('handbook and help', () => {
 
 Falls `page.keyboard.press('Shift+?')` das Zeichen nicht liefert, `page.keyboard.type('?')` verwenden. Der Suchknopf heißt „Suchen" (`shell.topbar.search`); trifft `getByRole('button', { name: 'Suchen' })` mehrere Elemente, `page.getByRole('banner').getByRole('button', { name: 'Suchen' })`.
 
-- [ ] **Step 2: E2E gegen `next dev`**
+- [x] **Step 2: E2E gegen `next dev`**
 
 Run: `cd apps/kompass && npx playwright test e2e/help.spec.ts e2e/shell.spec.ts e2e/palette-and-errors.spec.ts`
 Expected: alle PASS.
 
-- [ ] **Step 3: Dockerfile**
+- [x] **Step 3: Dockerfile**
 
 In `Dockerfile`, im `ENV`-Block des Runners nach `KOMPASS_TEMPLATES_DIR=/app/packages/documents/templates \`:
 
@@ -1874,19 +1874,19 @@ Nach `COPY --from=build --chown=node:node /app/templates/verein-basis ./template
 COPY --from=build --chown=node:node /app/docs/handbuch ./docs/handbuch
 ```
 
-- [ ] **Step 4: `pnpm verify`**
+- [x] **Step 4: `pnpm verify`**
 
 Run: `pnpm verify` (Wurzel; Docker; ~4–5 Minuten, Timeout großzügig)
 Expected: Typecheck, alle Tests, E2E kalt, Image, E2E gegen das Image — grün. Der Image-Ring beweist, dass `docs/handbuch` im Image liegt (Test „images load" lädt ein Bild daraus).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Dockerfile apps/kompass/e2e/help.spec.ts
 git commit -m "feat(image): the handbook ships in the image; e2e covers panel, ? key, images, links, table of contents and palette"
 ```
 
-- [ ] **Step 6: Plan abhaken und committen**
+- [x] **Step 6: Plan abhaken und committen**
 
 Alle `- [ ]` dieses Plans auf `- [x]`:
 
