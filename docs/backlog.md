@@ -167,3 +167,21 @@ unmerklich, bei Hunderten spürbar (Durchsicht 2026-09-13). Kein Verhalten
 
 **Wann:** Sobald die Mediathek-Seite spürbar langsam wird, oder mit dem
 Auswahl-Dialog in den Formularen, der dieselbe Liste lädt.
+
+## 23. Sperrwörter der Webseite pflegbar machen
+
+**Was:** Ein Feld für die Einstellung `site.blockedTerms` — die Begriffe, die
+nie auf der Webseite erscheinen dürfen und deren Treffer den Publish sperren.
+Naheliegend als eigener Reiter oder Block unter Webseite → Publizieren, wo
+die Treffer angezeigt werden; dazu das MCP-Werkzeug, das die Liste liest und
+setzt (Prinzip 8, ein Weg zu den Daten).
+
+**Warum:** Die Einstellung existiert (`packages/modules/site/src/settings.ts`,
+Vorgabe leer) und die Prüfung liest sie — aber weder die Oberfläche noch ein
+MCP-Werkzeug kann sie schreiben. Aufgefallen beim Schreiben des Handbuchs am
+2026-09-14: `webseite/publizieren.md` beschreibt die Prüfung, kann aber nicht
+sagen, wo man die Wörter einträgt.
+
+**Wann:** Vor dem ersten Publish aus Prod, wenn Aluna einen alten
+Vereinsnamen oder Platzhalter sperren will — sonst mit dem nächsten
+Site-Vorhaben. Bis dahin steht die Liste leer und die Prüfung meldet nichts.
