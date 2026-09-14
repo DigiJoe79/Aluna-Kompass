@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { loginAsAdmin, resetDatabase } from './helpers';
+import { loginAsAdmin, resetDatabase, waitForHydration } from './helpers';
 
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
@@ -64,10 +64,14 @@ test.describe('media library', () => {
     await page.getByLabel('Ordnername').fill('bilder');
     await page.getByRole('button', { name: 'Neuer Ordner' }).click();
     await page.getByRole('link', { name: /bilder/ }).click();
+    await expect(page).toHaveURL(/folder=bilder/);
+    await waitForHydration(page, 'input[type=file]');
     await page.getByLabel('Datei hochladen').setInputFiles({ name: 'einmal.png', mimeType: 'image/png', buffer: PNG });
     await expect(page.getByRole('row', { name: /einmal-/ })).toBeVisible();
 
     await page.getByRole('link', { name: 'Alle Dateien' }).click();
+    await expect(page).toHaveURL('/admin/media');
+    await waitForHydration(page, 'input[type=file]');
     await page.getByLabel('Datei hochladen').setInputFiles({ name: 'zweimal.png', mimeType: 'image/png', buffer: PNG });
     await expect(page.getByText(/Diese Datei gibt es schon: „einmal-[0-9a-f]+\.png“ im Ordner „bilder“/)).toBeVisible();
     await expect(page.getByRole('row', { name: /zweimal-/ })).toHaveCount(0);
@@ -85,6 +89,8 @@ test.describe('media library', () => {
     await page.getByLabel('Ordnername').fill('bilder');
     await page.getByRole('button', { name: 'Neuer Ordner' }).click();
     await page.getByRole('link', { name: /bilder/ }).click();
+    await expect(page).toHaveURL(/folder=bilder/);
+    await waitForHydration(page, 'input[type=file]');
     await page.getByLabel('Datei hochladen').setInputFiles({ name: 'inbilder.png', mimeType: 'image/png', buffer: PNG });
     await expect(page.getByRole('row', { name: /inbilder-/ })).toBeVisible();
 

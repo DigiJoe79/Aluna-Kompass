@@ -22,3 +22,30 @@ export async function setE2ESetting(page: Page, key: string, value: unknown): Pr
   });
   expect(response.ok()).toBe(true);
 }
+
+/**
+ * Wartet, bis React die Handler dieser Seite angehängt hat.
+ *
+ * Ein Feld steht schon im servergerenderten HTML: sichtbar, stabil und ohne
+ * jede Wirkung, solange die Hydration nicht durch ist. Playwright sieht ein
+ * fertiges Element und schreibt hinein — niemand hört zu, und die Eingabe
+ * verfällt ersatzlos. Auf einem schnellen Rechner ist das Fenster winzig; auf
+ * dem CI-Läufer kostete es am 14.09. einen roten Lauf, weil ein Upload spurlos
+ * verschwand: die Datei lag hinterher weder im Ordner noch in „Alle Dateien“.
+ *
+ * Nach einem Seitenwechsel gehört eine Prüfung auf die neue Adresse davor.
+ * Sonst ist die Bedingung am alten Dokument sofort erfüllt, das noch steht,
+ * und der Helfer wartet auf nichts.
+ *
+ * `__reactProps$…` ist ein Interna von React. Benennt React es um, schlägt
+ * dieser Helfer sichtbar fehl, statt stillschweigend durchzuwinken.
+ */
+export async function waitForHydration(page: Page, selector: string): Promise<void> {
+  await page.waitForFunction(
+    (sel) => {
+      const el = document.querySelector(sel);
+      return !!el && Object.keys(el).some((key) => key.startsWith('__reactProps$'));
+    },
+    selector,
+  );
+}
