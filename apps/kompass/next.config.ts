@@ -25,6 +25,11 @@ const nextConfig: NextConfig = {
   // Ursprüngen als dem Starthost. Der Browser löst localhost je nach System
   // auf 127.0.0.1 auf, und dann trifft genau das den eigenen Rechner.
   allowedDevOrigins: ['127.0.0.1'],
+  // Die Schiene hat jetzt einen Bereich „Einstellungen“ unten links, genau wo
+  // der Next-Entwicklungsindikator sonst sitzt (`position: 'bottom-left'`,
+  // Vorgabe) — er nimmt der Zeile die Klicks weg. Rein visuell, ohne
+  // Wirkung auf Prod-Build oder die Fehleranzeige.
+  devIndicators: { position: 'bottom-right' },
   output: 'standalone',
   outputFileTracingRoot: path.join(import.meta.dirname, '../../'),
 };

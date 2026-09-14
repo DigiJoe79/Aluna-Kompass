@@ -244,7 +244,6 @@
     "profile": "Profil",
     "settingsArea": "Einstellungen",
     "sectionAria": "Unternavigation",
-    "collapse": "Navigation einklappen",
     "groups": {
       "admin": "Verwaltung",
       "config": "Einrichtung",
@@ -298,8 +297,7 @@
     },
     "topbar": {
       "search": "Suchen",
-      "openNav": "Navigation öffnen",
-      "expandNav": "Navigation aufklappen"
+      "openNav": "Navigation öffnen"
     },
     "userMenu": {
       "aria": "Nutzermenü",

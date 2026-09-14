@@ -2,34 +2,19 @@
 
 import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import type { NavGroup } from '@/lib/navigation';
-import { usePreference } from '@/lib/preferences';
-import { Sidebar } from './sidebar';
-import { Topbar } from './topbar';
+import { activeRailKey, buildRail, crumbsFor, locate, sectionsFor, type NavGroup } from '@/lib/navigation';
 import { CommandPalette } from './command-palette';
+import { Rail } from './rail';
+import { SectionNav } from './section-nav';
+import { Topbar } from './topbar';
 
 export const DRAWER_BREAKPOINT = 1180;
-
-function titleFor(pathname: string, groups: NavGroup[], t: (k: string) => string): { title: string; group: string } {
-  if (pathname === '/') return { title: t('nav.home'), group: '' };
-  if (pathname.startsWith('/profile')) return { title: t('nav.profile'), group: '' };
-  for (const group of groups) {
-    const hit = group.items.find((i) => pathname.startsWith(i.href));
-    if (hit) return { title: hit.label ?? t(hit.labelKey), group: t(group.labelKey) };
-  }
-  return { title: '', group: '' };
-}
 
 export function ShellFrame({ organization, logoUrl, groups, build, user, permissions, children }: { organization: string; logoUrl: string | null; groups: NavGroup[]; build: string; user: { name: string; roleNames: string[] }; permissions: string[]; children: ReactNode }) {
   const t = useTranslations();
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = usePreference('sidebarCollapsed');
-  const [collapsedGroups, setCollapsedGroups] = usePreference('navCollapsedGroups');
-  const toggleGroup = (key: string) =>
-    setCollapsedGroups(collapsedGroups.includes(key) ? collapsedGroups.filter((k) => k !== key) : [...collapsedGroups, key]);
   const [drawer, setDrawer] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -41,37 +26,39 @@ export function ShellFrame({ organization, logoUrl, groups, build, user, permiss
     return () => media.removeEventListener('change', sync);
   }, []);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === '[' && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) setCollapsed(!collapsed);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [collapsed, setCollapsed]);
-
-  const { title, group } = titleFor(pathname, groups, t);
-  const crumbs = [group, title].filter(Boolean);
+  // Eine Ortsbestimmung, vier Ableitungen — damit Schiene, Zweitebene und
+  // Brotkrume nie verschiedener Meinung sind, auf welcher Seite wir stehen.
+  const rail = useMemo(() => buildRail(groups), [groups]);
+  const active = useMemo(() => activeRailKey(groups, pathname), [groups, pathname]);
+  const sections = useMemo(() => sectionsFor(groups, pathname), [groups, pathname]);
+  const activeHref = useMemo(() => locate(groups, pathname)?.item.href ?? null, [groups, pathname]);
+  const crumbs = useMemo(() => crumbsFor(groups, pathname, t), [groups, pathname, t]);
   const openPalette = () => window.dispatchEvent(new CustomEvent('kompass:command-palette'));
+  const closeDrawer = () => setDrawerOpen(false);
 
   return (
-    <TooltipProvider>
+    <>
       <CommandPalette groups={groups} permissions={permissions} />
-      <div className="flex min-h-0 flex-1">
-        {drawer ? (
-          <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-            <SheetContent side="left" className="w-[280px] p-0 shadow-md">
-              <SheetTitle className="sr-only">{t('nav.aria')}</SheetTitle>
-              <Sidebar organization={organization} logoUrl={logoUrl} groups={groups} build={build} collapsed={false} onToggle={() => {}} onClose={() => setDrawerOpen(false)} user={user} collapsedGroups={collapsedGroups} onToggleGroup={toggleGroup} />
-            </SheetContent>
-          </Sheet>
-        ) : (
-          <Sidebar organization={organization} logoUrl={logoUrl} groups={groups} build={build} collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} user={user} collapsedGroups={collapsedGroups} onToggleGroup={toggleGroup} />
-        )}
-        <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar organization={organization} logoUrl={logoUrl} crumbs={crumbs} user={user} build={build} drawer={drawer} onOpenDrawer={() => setDrawerOpen(true)} onSearch={openPalette} />
+      <div className="flex min-h-0 flex-1 flex-col">
+        <Topbar organization={organization} logoUrl={logoUrl} crumbs={crumbs} user={user} build={build} drawer={drawer} onOpenDrawer={() => setDrawerOpen(true)} onSearch={openPalette} />
+        <div className="flex min-h-0 flex-1">
+          {drawer ? (
+            <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+              <SheetContent side="left" className="w-[280px] gap-0 overflow-y-auto p-0 pt-10 shadow-md">
+                <SheetTitle className="sr-only">{t('nav.aria')}</SheetTitle>
+                <Rail entries={rail} active={active} variant="list" onClose={closeDrawer} />
+                <SectionNav sections={sections} activeHref={activeHref} variant="list" onClose={closeDrawer} />
+              </SheetContent>
+            </Sheet>
+          ) : (
+            <>
+              <Rail entries={rail} active={active} variant="rail" />
+              <SectionNav sections={sections} activeHref={activeHref} variant="column" />
+            </>
+          )}
           <main className="min-h-0 flex-1 overflow-auto p-6">{children}</main>
         </div>
       </div>
-    </TooltipProvider>
+    </>
   );
 }

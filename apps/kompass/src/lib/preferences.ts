@@ -3,22 +3,18 @@
 import { useCallback, useEffect, useState } from 'react';
 
 type Prefs = {
-  sidebarCollapsed: boolean;
   colorScheme: 'light' | 'dark';
   density: 'compact' | 'default' | 'comfortable';
   mediaView: 'list' | 'grid';
-  navCollapsedGroups: string[];
   /** Die Fälligkeitsliste der Startseite auf die eigenen beschränken. */
   dueOnlyMine: boolean;
   /** Der zuletzt im Auswahl-Dialog geöffnete Ordner; null = Alle Dateien. */
   mediaChooserFolder: string | null;
 };
 const DEFAULTS: Prefs = {
-  sidebarCollapsed: false,
   colorScheme: 'light',
   density: 'default',
   mediaView: 'list',
-  navCollapsedGroups: [],
   dueOnlyMine: false,
   mediaChooserFolder: null,
 };
