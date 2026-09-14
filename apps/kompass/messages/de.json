@@ -254,7 +254,8 @@
       "site": "Webseite",
       "dms": "Akte",
       "core": "Verein",
-      "projects": "Projekte"
+      "projects": "Projekte",
+      "media": "Mediathek"
     },
     "users": "Nutzer",
     "roles": "Rollen",

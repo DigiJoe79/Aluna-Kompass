@@ -32,7 +32,6 @@ const CORE_ADMIN: { key: string; href: string; icon: string; permission?: string
   { key: 'roles', href: '/admin/roles', icon: 'shield', permission: 'roles.manage' },
   { key: 'audit', href: '/admin/audit', icon: 'clock', permission: 'audit.view' },
   { key: 'retention', href: '/admin/retention', icon: 'hourglass', permission: 'retention.view' },
-  { key: 'media', href: '/admin/media', icon: 'image', permission: 'media.upload' },
   { key: 'backup', href: '/admin/backup', icon: 'database', permission: 'backup.export' },
 ];
 
@@ -110,7 +109,18 @@ export function buildNavigation(input: {
         icon: m.moduleIcon,
       };
     });
-  return [admin, config, ...modules];
+  // Die Mediathek ist kein Verwaltungspunkt, den man einmal einstellt, sondern
+  // Werkzeug im Tagesgeschäft jedes Moduls. Deshalb ein eigener Bereich nach
+  // den Modulen — in der Schiene direkt über der Trennlinie. Die Route bleibt
+  // `/admin/media`; nur der Weg dorthin ändert sich.
+  const media: NavGroup = {
+    key: 'media',
+    labelKey: 'nav.groups.media',
+    disabled: false,
+    icon: 'image',
+    items: [{ key: 'media', href: '/admin/media', icon: 'image', labelKey: 'nav.media', permission: 'media.upload', disabled: false, visible: visible('media.upload') }],
+  };
+  return [admin, config, ...modules, media];
 }
 
 /** Die beiden Kerngruppen, die in der Schiene als ein Bereich „Einstellungen“ erscheinen. */

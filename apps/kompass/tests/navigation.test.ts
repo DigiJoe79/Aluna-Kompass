@@ -44,7 +44,7 @@ describe('buildNavigation', () => {
     const groups = buildNavigation({ manifests: [coreModule], enabledKeys: new Set(['core']), permissions: new Set(['users.manage', 'audit.view']) });
     const admin = groups.find((g) => g.key === 'admin')!;
     const config = groups.find((g) => g.key === 'config')!;
-    expect(admin.items.map((i) => i.key)).toEqual(['users', 'roles', 'audit', 'retention', 'media', 'backup']);
+    expect(admin.items.map((i) => i.key)).toEqual(['users', 'roles', 'audit', 'retention', 'backup']);
     expect(config.items.map((i) => i.key)).toEqual(['settings', 'locales', 'themes', 'modules', 'documents']);
     expect(admin.items.filter((i) => i.visible).map((i) => i.key)).toEqual(['users', 'audit']);
   });
@@ -111,6 +111,21 @@ describe('buildNavigation', () => {
     const site = groups.find((g) => g.key === 'site')!;
     expect(site.items.map((i) => i.href)).toEqual(['/site/template', '/site/c/articles']);
     expect(site.items.at(-1)!.label).toBe('Artikel');
+  });
+
+  /**
+   * Die Mediathek ist kein Verwaltungspunkt, den man einmal einstellt, sondern
+   * Werkzeug im Tagesgeschäft jedes Moduls. Seit dem 2026-09-14 ist sie ein
+   * eigener Bereich: nach den Modulen, direkt über der Trennlinie der Schiene.
+   */
+  it('offers the media library as its own area after the modules, not under administration', () => {
+    const groups = buildNavigation({ manifests: [coreModule, finance], enabledKeys: new Set(['core', 'finance']), permissions: new Set(['media.upload', 'finance.view']) });
+    expect(groups.map((g) => g.key)).toEqual(['admin', 'config', 'finance', 'media']);
+    const media = groups.find((g) => g.key === 'media')!;
+    expect(media.labelKey).toBe('nav.groups.media');
+    expect(media.items.map((i) => [i.key, i.href, i.icon, i.labelKey, i.visible])).toEqual([['media', '/admin/media', 'image', 'nav.media', true]]);
+    const without = buildNavigation({ manifests: [coreModule], enabledKeys: new Set(['core']), permissions: new Set() });
+    expect(without.find((g) => g.key === 'media')!.items[0]!.visible).toBe(false);
   });
 
   it('carries the module icon on the group so the rail can show it', () => {
@@ -191,6 +206,14 @@ describe('buildRail', () => {
       ['home', '/'],
       ['settings', '/admin/media'],
     ]);
+  });
+
+  it('places the media library right before settings and keeps it out of the settings area', () => {
+    const groups = buildNavigation({ manifests: [coreModule, finance], enabledKeys: new Set(['core', 'finance']), permissions: new Set(['media.upload', 'finance.view', 'users.manage']) });
+    expect(buildRail(groups).map((e) => e.key)).toEqual(['home', 'finance', 'media', 'settings']);
+    expect(activeRailKey(groups, '/admin/media')).toBe('media');
+    expect(activeRailKey(groups, '/admin/users')).toBe('settings');
+    expect(sectionsFor(groups, '/admin/users').flatMap((s) => s.items.map((i) => i.key))).not.toContain('media');
   });
 
   it('has no settings entry when neither admin nor config shows anything', () => {

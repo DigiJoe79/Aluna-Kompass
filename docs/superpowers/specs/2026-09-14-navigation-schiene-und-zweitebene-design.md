@@ -50,6 +50,7 @@ Modul eine **Seite** dazubekommt.
 | 8 | `buildNavigation()` bleibt unverändert und liefert weiter `NavGroup[]`. | Umbau des Datenflusses. Befehlspalette (`buildCommandIndex`) und Palette-Filter hängen daran und sollen nichts merken. |
 | 9 | Schiene und Zweitebene sind zwei `<nav>` mit eigenem `aria-label`. | Eine Rolle für beide (Screenreader und E2E-Selektoren können sie nicht unterscheiden). |
 | 10 | Am Kern: `moduleIcon?: string` an `ModuleManifest`, gesetzt nur bei `site` (`globe`). | Icon aus dem ersten Eintrag ableiten (bei `site` ist das `layout-template` — das Symbol der Seite „Template", nicht des Moduls). |
+| 11 | **Die Mediathek ist ein eigener Bereich** — Gruppe `media` nach den Modulen, in der Schiene direkt über der Trennlinie. Sie ist Werkzeug im Tagesgeschäft jedes Moduls, kein Verwaltungspunkt, den man einmal einstellt. Route bleibt `/admin/media`. (Ergänzt am 2026-09-14 nach der Umsetzung.) | Unter Einstellungen → VERWALTUNG lassen (wo man sie ständig suchte); oben nach Startseite (sie ist Querschnitt, kein Fachbereich). |
 
 ## 3. Rahmen
 

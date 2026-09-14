@@ -10,7 +10,7 @@ test.describe('app shell', () => {
   test('shows one rail row per area, home on top and settings behind a line', async ({ page }) => {
     await expect(page.getByTestId('env-banner')).toContainText('TESTUMGEBUNG');
     const rail = page.getByRole('navigation', { name: 'Hauptnavigation' });
-    await expect(rail.getByRole('link')).toHaveText(['Startseite', 'Webseite', 'Projekte', 'Tiere', 'Kontakte', 'Akte', 'Einstellungen']);
+    await expect(rail.getByRole('link')).toHaveText(['Startseite', 'Webseite', 'Projekte', 'Tiere', 'Kontakte', 'Akte', 'Mediathek', 'Einstellungen']);
     // Seiten stehen nicht in der Schiene — weder aus Verwaltung noch aus einem Modul.
     await expect(rail.getByRole('link', { name: 'Nutzer' })).toHaveCount(0);
     await expect(rail.getByRole('link', { name: 'Hunde' })).toHaveCount(0);
@@ -64,9 +64,11 @@ test.describe('app shell', () => {
     const sections = page.getByRole('navigation', { name: 'Unternavigation' });
     await expect(sections.getByText('Verwaltung')).toBeVisible();
     await expect(sections.getByText('Einrichtung')).toBeVisible();
-    for (const label of ['Nutzer', 'Rollen', 'Änderungsprotokoll', 'Aufbewahrung', 'Mediathek', 'Backup', 'Verein', 'Sprachen', 'Themes', 'Module', 'Dokumente', 'Akte einrichten']) {
+    for (const label of ['Nutzer', 'Rollen', 'Änderungsprotokoll', 'Aufbewahrung', 'Backup', 'Verein', 'Sprachen', 'Themes', 'Module', 'Dokumente', 'Akte einrichten']) {
       await expect(sections.getByRole('link', { name: label })).toBeVisible();
     }
+    // Die Mediathek ist ein eigener Bereich in der Schiene, kein Verwaltungspunkt.
+    await expect(sections.getByRole('link', { name: 'Mediathek' })).toHaveCount(0);
     await expect(sections).toHaveCSS('width', '208px');
     await sections.getByRole('link', { name: 'Themes' }).click();
     await expect(sections.getByRole('link', { name: 'Themes' })).toHaveAttribute('aria-current', 'page');
