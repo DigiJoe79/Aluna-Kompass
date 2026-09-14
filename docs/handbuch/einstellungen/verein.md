@@ -1,4 +1,4 @@
-# Verein
+# Stammdaten
 
 Hier stehen die Stammdaten des Vereins: Name und Anschrift, Vorstand,
 Registereintrag, Steuernummer und Finanzamt, Bankverbindung, Logo. Aus diesen

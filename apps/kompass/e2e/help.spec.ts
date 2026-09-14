@@ -54,7 +54,7 @@ test.describe('handbook and help', () => {
 
   test('the table of contents, the palette and a page without help', async ({ page }) => {
     await page.goto('/help');
-    await expect(page.getByRole('navigation', { name: 'Inhaltsverzeichnis' }).getByRole('link', { name: 'Themes' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Inhaltsverzeichnis' }).getByRole('link', { name: 'Erscheinungsbild' })).toBeVisible();
     await page.getByRole('button', { name: 'Hilfe zu dieser Seite' }).click();
     const panel = page.getByTestId('help-panel');
     await expect(panel).toContainText('Zu dieser Seite gibt es noch keine Hilfe.');

@@ -64,17 +64,17 @@ test.describe('app shell', () => {
     const sections = page.getByRole('navigation', { name: 'Unternavigation' });
     await expect(sections.getByText('Verwaltung')).toBeVisible();
     await expect(sections.getByText('Einrichtung')).toBeVisible();
-    for (const label of ['Nutzer', 'Rollen', 'Änderungsprotokoll', 'Aufbewahrung', 'Backup', 'Verein', 'Sprachen', 'Themes', 'Module', 'Dokumente', 'Akte einrichten']) {
+    for (const label of ['Nutzer', 'Rollen', 'Änderungsprotokoll', 'Aufbewahrung', 'Backup', 'Stammdaten', 'Sprachen', 'Erscheinungsbild', 'Module', 'Dokumentvorlagen', 'Akte einrichten']) {
       await expect(sections.getByRole('link', { name: label })).toBeVisible();
     }
     // Die Mediathek ist ein eigener Bereich in der Schiene, kein Verwaltungspunkt.
     await expect(sections.getByRole('link', { name: 'Mediathek' })).toHaveCount(0);
     await expect(sections).toHaveCSS('width', '208px');
-    await sections.getByRole('link', { name: 'Themes' }).click();
-    await expect(sections.getByRole('link', { name: 'Themes' })).toHaveAttribute('aria-current', 'page');
+    await sections.getByRole('link', { name: 'Erscheinungsbild' }).click();
+    await expect(sections.getByRole('link', { name: 'Erscheinungsbild' })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('banner')).toContainText('Einstellungen');
     await expect(page.getByRole('banner')).toContainText('Einrichtung');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Themes');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Erscheinungsbild');
     await expect(page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Einstellungen' })).toHaveAttribute('aria-current', 'page');
   });
 
@@ -84,7 +84,7 @@ test.describe('app shell', () => {
     const palette = page.getByRole('dialog', { name: 'Befehlspalette' });
     await palette.getByRole('combobox').fill('Hunde');
     await expect(palette.getByRole('option', { name: /Hunde/ })).toBeVisible();
-    await palette.getByRole('combobox').fill('Themes');
+    await palette.getByRole('combobox').fill('Erscheinungsbild');
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL('/admin/themes');
   });
@@ -105,7 +105,7 @@ test.describe('app shell', () => {
     await page.getByRole('button', { name: 'Navigation öffnen' }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Tiere' })).toBeVisible();
-    await expect(dialog.getByRole('navigation', { name: 'Unternavigation' }).getByRole('link', { name: 'Themes' })).toBeVisible();
+    await expect(dialog.getByRole('navigation', { name: 'Unternavigation' }).getByRole('link', { name: 'Erscheinungsbild' })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
   });
@@ -145,6 +145,6 @@ test.describe('app shell', () => {
     const sections = page.getByRole('navigation', { name: 'Unternavigation' });
     await expect(sections.getByText('Verwaltung')).toBeVisible();
     await expect(sections.getByText('Einrichtung')).toBeVisible();
-    await expect(sections.getByRole('link')).toHaveText(['Änderungsprotokoll', 'Dokumente']);
+    await expect(sections.getByRole('link')).toHaveText(['Änderungsprotokoll', 'Dokumentvorlagen']);
   });
 });

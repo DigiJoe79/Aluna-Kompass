@@ -1,4 +1,4 @@
-# Dokumente
+# Dokumentvorlagen
 
 Briefe und andere Dokumente entstehen aus Basis-Vorlagen: Briefbogen, Rand,
 Schrift, Fußzeile. Kompass bringt Vorlagen mit; der Verein kann eigene daneben

@@ -278,7 +278,7 @@ describe('crumbsFor', () => {
       'nav.groups.config': 'Einrichtung',
       'nav.groups.site': 'Webseite',
       'nav.groups.dms': 'Akte',
-      'nav.themes': 'Themes',
+      'nav.themes': 'Erscheinungsbild',
       'nav.site.template': 'Template',
       'nav.dms.list': 'Akte',
     })[key] ?? key;
@@ -298,7 +298,7 @@ describe('crumbsFor', () => {
   });
 
   it('gives settings three segments', () => {
-    expect(crumbsFor(FIXTURE, '/admin/themes', t)).toEqual(['Einstellungen', 'Einrichtung', 'Themes']);
+    expect(crumbsFor(FIXTURE, '/admin/themes', t)).toEqual(['Einstellungen', 'Einrichtung', 'Erscheinungsbild']);
   });
 
   it('is empty when nothing matches', () => {

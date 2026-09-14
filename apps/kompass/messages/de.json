@@ -127,7 +127,7 @@
     "noFile": "Bitte eine Datei auswählen.",
     "gaps": "{count, plural, =0 {Alle Übersetzungen vorhanden} one {# Übersetzung offen} other {# Übersetzungen offen}}",
     "moduleInactiveTitle": "Modul Webseite ist nicht aktiv",
-    "moduleInactiveText": "Aktivieren Sie das Modul unter Verwaltung → Module. Vorhandene Inhalte bleiben erhalten.",
+    "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Inhalte bleiben erhalten.",
     "openModules": "Module öffnen",
     "save": "Speichern",
     "saved": "Gespeichert.",
@@ -260,13 +260,13 @@
     },
     "users": "Nutzer",
     "roles": "Rollen",
-    "settings": "Verein",
+    "settings": "Stammdaten",
     "locales": "Sprachen",
-    "themes": "Themes",
+    "themes": "Erscheinungsbild",
     "modules": "Module",
     "audit": "Änderungsprotokoll",
     "retention": "Aufbewahrung",
-    "documents": "Dokumente",
+    "documents": "Dokumentvorlagen",
     "backup": "Backup",
     "logoAlt": "Vereinslogo",
     "animals": {
@@ -711,7 +711,7 @@
       "registerNumberHint": "Erscheint im Briefbogen-Fuß.",
       "statutoryPurposeHint": "Wird wörtlich in Zuwendungsbestätigungen übernommen.",
       "logoHint": "Logo-Upload folgt mit der Mediathek.",
-      "themeHint": "Themes werden unter Verwaltung → Themes bearbeitet."
+      "themeHint": "Themes werden unter Einrichtung → Erscheinungsbild bearbeitet."
     },
     "options": {
       "ui": {
@@ -753,7 +753,7 @@
     }
   },
   "themes": {
-    "title": "Themes",
+    "title": "Erscheinungsbild",
     "listAria": "Themes",
     "active": "Aktiv",
     "readOnly": "Schreibgeschützt",
@@ -1009,8 +1009,8 @@
   },
   "placeholders": {},
   "documents": {
-    "title": "Dokumente",
-    "description": "Die Pipeline hinter der Akte: Basis-Vorlagen und ihr Rendering. Die Akte selbst — Entwürfe, Liste, Storno — führt das Modul „Akte“.",
+    "title": "Dokumentvorlagen",
+    "description": "Woraus Briefe und Ausdrucke gebaut werden: die Basis-Vorlagen und die Vorlage je Dokumentart. Die Dokumente selbst liegen in der Akte.",
     "bases": {
       "title": "Basis-Vorlagen",
       "ready": "bereit",
@@ -1129,7 +1129,7 @@
   "animals": {
     "common": {
       "moduleInactiveTitle": "Modul Tiere ist nicht aktiv",
-      "moduleInactiveText": "Aktivieren Sie das Modul unter Verwaltung → Module. Vorhandene Daten bleiben erhalten.",
+      "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Daten bleiben erhalten.",
       "openModules": "Module öffnen"
     },
     "list": {
