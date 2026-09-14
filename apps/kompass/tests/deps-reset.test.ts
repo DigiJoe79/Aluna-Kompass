@@ -102,9 +102,6 @@ describe('resetDeps', () => {
 
     expect(after).not.toBe(before);
     expect(after.databasePath).toBe(before.databasePath);
-    // Der alte Handle ist zu — wer ihn noch hält, merkt es, statt ins Leere zu
-    // schreiben.
-    expect(() => before.sqlite.prepare('SELECT 1').get()).toThrow();
   });
 });
 
@@ -158,38 +155,40 @@ describe('eine Anfrage mitten im Reset', () => {
 });
 
 /**
- * Der zweite Teil des Tores.
+ * Eine Anfrage, die schon rechnet, wenn der Reset kommt.
  *
- * `depsReady()` hält auf, wer während eines Resets **ankommt**. Wer schon durch
- * ist, hielt bisher nichts auf: Eine Anfrage, die ihre Deps geholt hat und
- * danach sekundenlang rechnet — Typst-Rendering, Draft-Vorschau, Astro-Build —
- * verlor die Datenbank unter sich, sobald der nächste Test zurücksetzte.
+ * Sie hat ihre Deps am Anfang geholt und fasst die Datenbank erst am Ende
+ * wieder an — dazwischen rendert Typst, baut Astro oder läuft eine Vorschau.
+ * Wurde die Verbindung in der Zwischenzeit geschlossen, meldete `previewDraft`
+ * `TypeError: The database connection is not open`, und der Ring wurde rot.
  *
- * So entstanden die Protokollzeilen `TypeError: The database connection is not
- * open` aus `previewDraft` und der ECONNRESET, der am 14.09. den `dms`-Fall
- * rot machte. `apps/kompass/src/app/dms/[id]/preview/route.ts` ist der Beleg:
- * Zeile 15 geht durch das Tor, Zeile 35 rechnet.
+ * Ein Zähler über `after()` half hier nicht: `after()` hängt an der Antwort,
+ * nicht am Handler. Bricht der Browser ab — beim Neuladen eines `<iframe>` mit
+ * der Vorschau tut er das ständig — gilt die Antwort als erledigt, während der
+ * Code weiterrechnet. Gemessen am 14.09.: `previewDraft` begann mit einem
+ * Zählerstand von null.
+ *
+ * Deshalb zählt niemand mehr mit. Die alte Verbindung wird aus dem Verkehr
+ * gezogen, aber erst später geschlossen; wer auf ihr rechnet, rechnet auf einer
+ * bereits gelöschten Datei zu Ende, und das stört keinen.
  */
-describe('eine Anfrage, die schon durch das Tor ist', () => {
-  it('behält ihre Datenbank, bis sie fertig ist', async () => {
-    const { getDeps, resetDeps, depsReady, enterRequest, leaveRequest } = await import('@/lib/deps');
+describe('eine Anfrage, die beim Reset schon rechnet', () => {
+  it('kann ihre Datenbank zu Ende benutzen', async () => {
+    const { getDeps, resetDeps } = await import('@/lib/deps');
 
+    // Genau wie ein Route Handler: Deps am Anfang holen ...
     const deps = getDeps();
 
-    // Die Anfrage: durch das Tor, dann lange rechnen, dann erst die Datenbank
-    // anfassen — genau die Reihenfolge der Vorschau-Route.
-    await depsReady();
-    enterRequest();
     let seen: unknown = null;
     let failed: unknown = null;
     const request = (async () => {
       try {
+        // ... lange rechnen (Typst, Astro) ...
         await new Promise((resolve) => setTimeout(resolve, 50));
+        // ... und erst danach die Datenbank anfassen.
         seen = deps.sqlite.prepare('SELECT 1 AS x').get();
       } catch (error) {
         failed = error;
-      } finally {
-        leaveRequest();
       }
     })();
 
@@ -200,18 +199,28 @@ describe('eine Anfrage, die schon durch das Tor ist', () => {
     expect(seen).toEqual({ x: 1 });
   });
 
-  it('hält den Reset nicht länger auf als seine Frist', async () => {
-    const { getDeps, resetDeps, enterRequest } = await import('@/lib/deps');
+  it('bekommt trotzdem einen frischen Bestand für alles Neue', async () => {
+    const { getDeps, resetDeps } = await import('@/lib/deps');
 
-    getDeps();
-    // Eine Anfrage, die nie abmeldet: So sähe es aus, wenn `after()` einmal
-    // nicht liefe — ein abgebrochener Client ist der Verdachtsfall. Der Reset
-    // darf darüber nicht stehenbleiben, sondern verfällt auf das Verhalten von
-    // vorher.
-    enterRequest();
+    const before = getDeps();
+    before.sqlite.exec(`CREATE TABLE ${MARKER} (x)`);
 
-    const started = Date.now();
-    await expect(resetDeps('empty', 20)).resolves.toBeUndefined();
-    expect(Date.now() - started).toBeLessThan(1000);
+    await resetDeps('empty');
+
+    const after = getDeps();
+    expect(after).not.toBe(before);
+    expect(hasMarker(after.sqlite)).toBe(false);
+  });
+
+  it('lässt die abgelegte Verbindung nicht für immer offen', async () => {
+    const { getDeps, resetDeps } = await import('@/lib/deps');
+
+    const before = getDeps();
+    // Kurze Frist statt der vorgegebenen halben Minute, damit der Test nicht
+    // wartet: Danach ist zu, wer aus dem Verkehr gezogen wurde.
+    await resetDeps('empty', 10);
+    await new Promise((resolve) => setTimeout(resolve, 60));
+
+    expect(() => before.sqlite.prepare('SELECT 1').get()).toThrow();
   });
 });

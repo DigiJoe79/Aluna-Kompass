@@ -11,14 +11,11 @@ interface Holder {
   deps: AppDeps | null;
   /** Läuft gerade ein Reset, steht hier sein Versprechen. Siehe `depsReady`. */
   resetting: Promise<void> | null;
-  /** Wie viele Anfragen gerade in Bearbeitung sind. Siehe `enterRequest`. */
-  inFlight: number;
 }
 
 const holder: Holder = ((globalThis as unknown as { __kompass?: Holder }).__kompass ??= {
   deps: null,
   resetting: null,
-  inFlight: 0,
 });
 
 export function runtimeEnv() {
@@ -50,59 +47,43 @@ export async function depsReady(): Promise<void> {
   while (holder.resetting) await holder.resetting;
 }
 
-/**
- * Die zweite Hälfte des Tores: wer noch drin ist.
- *
- * `depsReady()` hält auf, wer während eines Resets **ankommt**. Wer schon durch
- * ist, hielt bisher nichts auf — eine Anfrage, die ihre Deps geholt hat und
- * danach sekundenlang rechnet (Typst-Rendering, Draft-Vorschau, Astro-Build),
- * verlor die Datenbank unter sich, sobald zurückgesetzt wurde. `resetDeps`
- * wartet deshalb, bis dieser Zähler auf null steht.
- *
- * Angemeldet wird in `optionalSession()`, abgemeldet über `after()` — siehe
- * `request-context.ts`.
- */
-export function enterRequest(): void {
-  holder.inFlight += 1;
-}
-
-export function leaveRequest(): void {
-  if (holder.inFlight > 0) holder.inFlight -= 1;
-}
-
-/**
- * Warten, bis keine Anfrage mehr in Bearbeitung ist — höchstens aber `graceMs`.
- *
- * Die Frist ist kein Schönheitsfehler, sondern die Absicherung gegen ein Leck:
- * Läuft `after()` einmal nicht (ein abgebrochener Client ist der Verdachtsfall,
- * `The destination stream closed early` steht in den Protokollen), bliebe der
- * Zähler stehen und der Reset für immer davor. Nach der Frist setzt er trotzdem
- * zurück — das Verhalten verfällt damit auf das von vorher, nie auf ein
- * schlechteres. Die Zeile im Protokoll ist der Unterschied zwischen einem Leck,
- * das auffällt, und einem, das nicht auffällt.
- *
- * Zehn Sekunden, nicht zwei: Mit zwei Sekunden zog die Frist in einem vollen
- * Durchlauf einmal, und zwar an der Stelle, an der der Astro-Bau der Vorschau
- * läuft — eine ehrlich lange Anfrage, kein Leck. Ein echtes Leck bliebe stehen
- * und meldete sich bei **jedem** folgenden Reset; einmal heisst, jemand hat
- * gearbeitet. Die Frist muss darüber liegen, sonst schneidet sie genau das ab,
- * wofür sie gebaut ist.
- */
-async function drainRequests(graceMs: number): Promise<void> {
-  const deadline = Date.now() + graceMs;
-  while (holder.inFlight > 0) {
-    if (Date.now() >= deadline) {
-      console.warn(`[reset] ${holder.inFlight} Anfrage(n) noch offen nach ${graceMs}ms — es wird trotzdem zurückgesetzt`);
-      holder.inFlight = 0;
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 5));
-  }
-}
-
 export function getDeps(): AppDeps {
   if (!holder.deps) holder.deps = openDeps();
   return holder.deps;
+}
+
+/**
+ * Eine Verbindung aus dem Verkehr ziehen, ohne sie jemandem unter den Händen
+ * wegzureissen.
+ *
+ * Ein Route Handler holt seine Deps am Anfang und fasst die Datenbank erst am
+ * Ende wieder an — dazwischen rendert Typst, baut Astro, läuft eine Vorschau.
+ * Wurde sofort geschlossen, meldete `previewDraft` mitten darin
+ * `TypeError: The database connection is not open`.
+ *
+ * Mitzählen, wer gerade arbeitet, klingt naheliegend und trägt nicht: `after()`
+ * hängt an der Antwort, nicht am Handler. Bricht der Browser ab — beim Neuladen
+ * eines `<iframe>` mit der Vorschau ständig — gilt die Antwort als erledigt,
+ * während der Code weiterrechnet; gemessen am 14.09. begann `previewDraft` mit
+ * einem Zählerstand von null. Ein `try/finally` um jeden Handler träfe es, wäre
+ * aber eine Regel, an die siebzehn Routen und jede künftige denken müssten.
+ *
+ * Also gar keine Buchhaltung: Die Datei ist gelöscht, der neue Bestand steht
+ * woanders, und wer noch auf der alten Verbindung rechnet, rechnet auf einem
+ * Inode zu Ende, den niemand mehr liest. Geschlossen wird sie danach trotzdem —
+ * sonst bliebe je Reset ein Dateizeiger liegen, und ein Testlauf macht
+ * hundertfünfzig davon.
+ */
+function retire(deps: AppDeps | null, closeDelayMs: number): void {
+  if (!deps) return;
+  // `unref`, damit dieser Timer den Prozess nicht am Leben hält.
+  setTimeout(() => {
+    try {
+      deps.close();
+    } catch {
+      // War schon zu — etwa weil ein Test den Halter selbst geleert hat.
+    }
+  }, closeDelayMs).unref();
 }
 
 /**
@@ -121,7 +102,7 @@ export function getDeps(): AppDeps {
  * Der neue Bestand wird am Ende **ausdrücklich** gesetzt statt über `getDeps()`
  * geholt — das ist der Teil, der die Lücke schliesst.
  */
-export async function resetDeps(mode: 'empty' | 'seeded', graceMs = 10_000): Promise<void> {
+export async function resetDeps(mode: 'empty' | 'seeded', closeDelayMs = 30_000): Promise<void> {
   const env = readEnv();
   if (env.env !== 'test') throw new Error('resetDeps is only available in the test environment');
 
@@ -131,15 +112,13 @@ export async function resetDeps(mode: 'empty' | 'seeded', graceMs = 10_000): Pro
   const background = await import('./background');
   await background.stopBackgroundWork();
 
-  await drainRequests(graceMs);
-
   let done!: () => void;
   holder.resetting = new Promise<void>((resolve) => {
     done = resolve;
   });
   try {
     await resetMcpHandler();
-    holder.deps?.close();
+    retire(holder.deps, closeDelayMs);
     holder.deps = null;
     // Bestand weg, bereitgestelltes Material bleibt: Ohne die Unterscheidung
     // risse jeder Testlauf das Template aus dem Volume.
