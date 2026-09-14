@@ -1,6 +1,6 @@
 import { coreModule, defineModule, type ModuleManifest } from '@kompass/core';
 import { describe, expect, it } from 'vitest';
-import { activeRailKey, buildNavigation, buildRail, locate, type NavGroup, type NavItem } from '@/lib/navigation';
+import { activeRailKey, buildNavigation, buildRail, crumbsFor, locate, sectionsFor, type NavGroup, type NavItem } from '@/lib/navigation';
 
 const finance = defineModule({
   key: 'finance',
@@ -200,5 +200,68 @@ describe('buildRail', () => {
       { key: 'dms', labelKey: 'nav.groups.dms', disabled: false, items: [item('dms.list', '/dms', 'file')] },
     ];
     expect(buildRail(groups).map((e) => e.key)).toEqual(['home', 'dms']);
+  });
+});
+
+describe('sectionsFor', () => {
+  it('gives a module one section without heading, visible entries only', () => {
+    const groups: NavGroup[] = [{ ...FIXTURE[2]!, items: [...FIXTURE[2]!.items, item('site.publish', '/site/publish', 'upload', { visible: false })] }];
+    const sections = sectionsFor(groups, '/site/c/artikel');
+    expect(sections).toHaveLength(1);
+    expect(sections[0]!.labelKey).toBeUndefined();
+    expect(sections[0]!.items.map((i) => i.key)).toEqual(['site.template', 'site.c.artikel']);
+  });
+
+  it('gives settings two headed sections and drops an empty one', () => {
+    expect(sectionsFor(FIXTURE, '/admin/themes').map((s) => [s.key, s.labelKey, s.items.length])).toEqual([
+      ['admin', 'nav.groups.admin', 2],
+      ['config', 'nav.groups.config', 3],
+    ]);
+    const onlyConfig: NavGroup[] = [{ ...FIXTURE[0]!, items: [item('users', '/admin/users', 'users', { visible: false })] }, FIXTURE[1]!];
+    expect(sectionsFor(onlyConfig, '/admin/themes').map((s) => s.key)).toEqual(['config']);
+  });
+
+  it('is empty on the home page, the profile and unknown paths', () => {
+    expect(sectionsFor(FIXTURE, '/')).toEqual([]);
+    expect(sectionsFor(FIXTURE, '/profile')).toEqual([]);
+    expect(sectionsFor(FIXTURE, '/nirgends')).toEqual([]);
+  });
+});
+
+describe('crumbsFor', () => {
+  const t = (key: string) =>
+    ({
+      'nav.home': 'Startseite',
+      'nav.profile': 'Profil',
+      'nav.settingsArea': 'Einstellungen',
+      'nav.groups.admin': 'Verwaltung',
+      'nav.groups.config': 'Einrichtung',
+      'nav.groups.site': 'Webseite',
+      'nav.groups.dms': 'Akte',
+      'nav.themes': 'Themes',
+      'nav.site.template': 'Template',
+      'nav.dms.list': 'Akte',
+    })[key] ?? key;
+
+  it('names home and profile with one segment', () => {
+    expect(crumbsFor(FIXTURE, '/', t)).toEqual(['Startseite']);
+    expect(crumbsFor(FIXTURE, '/profile/tokens', t)).toEqual(['Profil']);
+  });
+
+  it('names module and page, using the data label when there is one', () => {
+    expect(crumbsFor(FIXTURE, '/site/template', t)).toEqual(['Webseite', 'Template']);
+    expect(crumbsFor(FIXTURE, '/site/c/artikel', t)).toEqual(['Webseite', 'Artikel']);
+  });
+
+  it('collapses module and page when they read the same', () => {
+    expect(crumbsFor(FIXTURE, '/dms/01J', t)).toEqual(['Akte']);
+  });
+
+  it('gives settings three segments', () => {
+    expect(crumbsFor(FIXTURE, '/admin/themes', t)).toEqual(['Einstellungen', 'Einrichtung', 'Themes']);
+  });
+
+  it('is empty when nothing matches', () => {
+    expect(crumbsFor(FIXTURE, '/nirgends', t)).toEqual([]);
   });
 });

@@ -185,3 +185,45 @@ export function buildRail(groups: NavGroup[]): RailEntry[] {
   if (settingsTarget) rail.push({ key: 'settings', href: settingsTarget.href, icon: 'settings', labelKey: 'nav.settingsArea' });
   return rail;
 }
+
+/** Ein Abschnitt der Zweitebene; die Überschrift fehlt, wenn ein Bereich nur einen hat. */
+export interface NavSection {
+  key: string;
+  labelKey?: string;
+  /** Nur sichtbare Einträge. */
+  items: NavItem[];
+}
+
+const visibleItems = (group: NavGroup): NavItem[] => group.items.filter((i) => i.visible);
+
+/**
+ * Die Abschnitte der Zweitebene zum Pfad: Einstellungen zeigt Verwaltung und
+ * Einrichtung mit Überschrift, ein Modul einen Abschnitt ohne. Leer heißt:
+ * keine Zweitebene, die Spalte entfällt.
+ */
+export function sectionsFor(groups: NavGroup[], pathname: string): NavSection[] {
+  const hit = locate(groups, pathname);
+  if (!hit) return [];
+  if (hit.area === 'settings') {
+    return ['admin', 'config']
+      .map((key) => groups.find((g) => g.key === key))
+      .filter((group): group is NavGroup => group !== undefined && visibleItems(group).length > 0)
+      .map((group) => ({ key: group.key, labelKey: group.labelKey, items: visibleItems(group) }));
+  }
+  return [{ key: hit.group.key, items: visibleItems(hit.group) }];
+}
+
+/**
+ * Die Brotkrume der Kopfleiste. Das letzte Segment ist das `<h1>` der Seite.
+ * Heißen Modul und Seite gleich (Kontakte / Kontakte), bleibt ein Segment.
+ */
+export function crumbsFor(groups: NavGroup[], pathname: string, t: (key: string) => string): string[] {
+  if (pathname === '/') return [t('nav.home')];
+  if (matches('/profile', pathname)) return [t('nav.profile')];
+  const hit = locate(groups, pathname);
+  if (!hit) return [];
+  const page = hit.item.label ?? t(hit.item.labelKey);
+  const area = t(hit.group.labelKey);
+  if (hit.area === 'settings') return [t('nav.settingsArea'), area, page];
+  return page === area ? [page] : [area, page];
+}
