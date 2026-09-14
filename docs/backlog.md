@@ -185,3 +185,41 @@ sagen, wo man die Wörter einträgt.
 **Wann:** Vor dem ersten Publish aus Prod, wenn Aluna einen alten
 Vereinsnamen oder Platzhalter sperren will — sonst mit dem nächsten
 Site-Vorhaben. Bis dahin steht die Liste leer und die Prüfung meldet nichts.
+
+## 24. Bildausschnitt und Fokuspunkt in der Mediathek
+
+**Was:** Ein hochgeladenes 16:9-Foto soll an einer Stelle als Hochformat
+erscheinen, etwa als Teamfoto oder Tierbild. Drei Zuschnitte, nach Aufwand:
+
+1. **Fokuspunkt am Medium** (klein): zwei Spalten x/y an `media_assets`, ein
+   Klick auf die Vorschau im Detail-Dialog, ein `media_*`-Werkzeug. Die
+   Pipeline reicht den Punkt nach `images.json` durch, die Templates setzen
+   `object-fit: cover` plus `object-position` und bestimmen den Rahmen selbst.
+   Ein Wert deckt alle Formate ab, keine neuen Dateien, aus dem Original
+   jederzeit neu berechenbar (Prinzip 5). Kein Zoom, keine pixelgenaue Wahl.
+2. **Ausschnitt als neue Datei** (mittel): Rahmen mit festem Verhältnis über
+   der Vorschau, `sharp.extract`, Ablage über den bestehenden Upload-Pfad,
+   optional mit Verweis auf das Original. Pipeline und Templates unberührt.
+   Füllt die Mediathek mit Varianten; jede Änderung heißt neu auswählen.
+3. **Zuschnitt je Verwendungsstelle** (groß): `asset({ ratio: '3:4' })` im
+   Feldhelfer, der Wert wird von einer ID zu ID plus Rechteck, Zuschneide-
+   Schritt im Auswahl-Dialog, Pipeline rendert je Kombination. Ändert den
+   Template-Vertrag samt Migration bestehender Inhalte und die Fotolisten von
+   Tieren und Projekten.
+
+Empfehlung: erst 1, weil sie den Fall löst, sobald das Template für den Platz
+ein Hochformat vorgibt; 2 lässt sich später billig dazustellen.
+
+**Warum:** `sharp` läuft schon in Vorschau und Website-Pipeline, das Schneiden
+selbst ist eine Zeile. Teuer ist die Entscheidung, ob der Ausschnitt ans Bild
+oder an die Stelle gehört — ein Bild hängt per ID an Tieren, Projekten,
+Template-Variablen, Sammlungen und dem Logo und wird inhaltlich dedupliziert.
+Heute kennt weder Schema noch Feldhelfer noch Pipeline einen Begriff von
+Seitenverhältnis oder Ausschnitt; nur der Hero hat `object-fit: cover`
+(Durchsicht 2026-09-14). Offen: Bedarf nur Website oder auch die App-Karten;
+pro Bild oder pro Stelle; reicht „der Kopf bleibt im Bild“ oder braucht es
+Zoom.
+
+**Wann:** Mit dem nächsten Schritt am Template-Vertrag, zusammen mit
+Nummer 21 — beide berühren `images.json` beziehungsweise `assets[]` und die
+Templates an denselben Stellen.
