@@ -79,14 +79,22 @@ Gleichgewicht.
 Läuft `after()` einmal nicht — ein abgebrochener Client ist der Verdachtsfall,
 `The destination stream closed early` steht in den Protokollen — leckt der
 Zähler und der Reset hinge unbegrenzt. Deshalb wartet `resetDeps()` höchstens
-zwei Sekunden und setzt danach trotzdem zurück. Im Normalfall ist die
+eine Frist ab und setzt danach trotzdem zurück. Im Normalfall ist die
 Fehlerklasse strukturell weg; im Leckfall degradiert das Verhalten auf das von
 heute, nicht auf schlechteres. Überschreitet der Reset die Frist, schreibt er
 eine Zeile ins Protokoll — sonst verschwindet ein Leck stillschweigend.
 
-**Offen bis zum ersten Test:** Ob `after()` bei einem abgebrochenen Client
-zuverlässig läuft, ist nicht aus der Dokumentation belegt. Der erste Test der
-Umsetzung klärt genau das (siehe Abschnitt 4).
+**Geklärt (14.09.):** Die Next-Dokumentation zu `after()` sagt zu, dass der
+Rückruf auch dann läuft, wenn die Antwort nicht sauber durchkommt — bei einer
+geworfenen Ausnahme ebenso wie bei `notFound()` und `redirect()`. Ein eigener
+Test dafür entfällt damit; die Frist bleibt als Absicherung und wird über den
+vollen Durchlauf beobachtet.
+
+**Die Frist beträgt zehn Sekunden, nicht zwei.** Mit zwei Sekunden zog sie in
+einem vollen Durchlauf einmal, und zwar am Astro-Bau der Vorschau — eine ehrlich
+lange Anfrage, kein Leck. Ein echtes Leck bliebe stehen und meldete sich bei
+jedem folgenden Reset; einmal heisst, jemand hat gearbeitet. Die Frist muss
+darüber liegen, sonst schneidet sie genau das ab, wofür sie gebaut ist.
 
 ## 3. A — Die Hydration gehört in eine Fixture
 
@@ -95,34 +103,48 @@ genau drei Zeilen benutzt, alle in `media.spec.ts`. Das ist der Grund, warum der
 Mechanismus weiterläuft: Er wird dort repariert, wo er gerade zugeschlagen hat.
 
 Statt 149 Tests einzeln nachzurüsten, wartet eine Playwright-Fixture, die
-`page.goto` umschliesst, nach jedem Seitenwechsel auf die Hydration. Tests, die
-bewusst den nicht hydrierten Zustand prüfen wollen, umgehen sie ausdrücklich.
+`page.goto` umschliesst, nach jedem Seitenwechsel auf die Hydration.
 `waitForHydration()` bleibt für Fälle, in denen mitten auf der Seite gewartet
 werden muss (Dialoge, nachgeladene Bereiche).
 
-Die vorhandene Warnung in `helpers.ts` gilt weiter: Nach einem Seitenwechsel
-gehört eine Prüfung auf die neue Adresse davor, sonst ist die Bedingung am alten
-Dokument sofort erfüllt.
+**Das Signal kommt aus der Anwendung.** Von aussen ist eine nicht hydrierte
+Seite nicht von einer fertigen zu unterscheiden, und die Abstände sind zu klein,
+um darauf zu bauen: an einer gebremsten Seite gemessen 1324 ms bis zum ersten
+hydrierten Element, 1376 ms bis zur Kopfleiste, die Effekte danach. Eine Fixture,
+die auf das erste `__reactProps$` wartete, war zweimal von dreimal rot. Deshalb
+setzt `HydrationMarker` als letztes Kind im Layout `data-hydrated`, sobald alle
+Effekte durch sind — React führt sie in Baumreihenfolge aus, dieser läuft also
+nach dem des `ShellFrame`, der auf die Taste `?` hört.
+
+Das ist Produktionscode für einen Testzweck, und die Abwägung fällt bewusst so
+aus: Die Alternative wäre, auf Zeitfenster von fünfzig Millisekunden zu bauen.
+
+Nicht jede Adresse führt in die Anwendung — `/site/preview` liefert die gebaute
+Website aus einem Route Handler, ganz ohne React. Die Fixture erkennt das am
+fehlenden Next-Skript im fertigen Dokument, statt fünf Sekunden ins Leere zu
+warten.
 
 ## 4. Tests
 
 Strikt testgetrieben, jeder Teil rot bevor er grün wird.
 
-**B:**
-1. Ein Test, der `after()` unter abgebrochenem Client beobachtet — er entscheidet,
-   ob die Frist aus Abschnitt 2 ein Randfall oder der Normalfall ist.
-2. Ein Test in `apps/kompass`, der eine lange laufende Anfrage startet, mitten
-   darin `resetDeps()` ruft und zusichert, dass die Anfrage ihre Antwort noch
-   erhält, statt an einer geschlossenen Datenbank zu scheitern. Rot vor der
-   Änderung — er stellt den heutigen Fehlschlag nach.
-3. Ein Test, der den Leckfall erzwingt (Zähler steht, `after()` läuft nicht) und
-   zusichert, dass der Reset nach der Frist trotzdem durchgeht und das Protokoll
-   die Zeile trägt.
+**B** (beide in `tests/deps-reset.test.ts`):
+1. Eine lange laufende Anfrage, mitten darin `resetDeps()` — sie muss ihre
+   Antwort noch erhalten, statt an einer geschlossenen Datenbank zu scheitern.
+   Vor der Änderung rot, und zwar mit genau der Meldung aus der CI
+   (`TypeError: The database connection is not open`).
+2. Der Leckfall: Der Zähler steht, die Abmeldung bleibt aus. Der Reset muss nach
+   der Frist trotzdem durchgehen.
 
 **A:**
-4. Ein E2E-Fall, der unter gebremster Navigation (nicht unter CPU-Last, siehe
-   `project_e2e_hydration_race_uploads`) belegt, dass eine Eingabe unmittelbar
-   nach `goto` ankommt.
+3. `e2e/hydration.spec.ts` löst den Wackler absichtlich aus. Zwei Wege dorthin
+   führten nicht zum Ziel und stehen in der Datei dokumentiert: Chunks bremsen
+   greift nicht, weil `goto` ohnehin auf `load` wartet (30 gebremste Anfragen,
+   Test blieb grün); den Renderer drosseln greift auch nicht, obwohl es das
+   Fenster nachweislich öffnet (0 ms ungedrosselt, 330 ms bei `rate: 20`) — die
+   Drosselung bremst den Tastendruck mit. Erst beides getrennt —
+   `waitUntil: 'commit'` und eine Bremse allein auf den Skripten — trifft die
+   Lage des Läufers, auf dem nur der Browser langsam ist.
 
 Danach: `pnpm verify` lokal, nicht auf die CI warten.
 
