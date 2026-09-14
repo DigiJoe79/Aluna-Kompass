@@ -150,3 +150,38 @@ export function activeRailKey(groups: NavGroup[], pathname: string): string | nu
   if (pathname === '/') return 'home';
   return locate(groups, pathname)?.area ?? null;
 }
+
+/** Ein Eintrag der Schiene: ein Bereich, nicht eine Seite. */
+export interface RailEntry {
+  /** Modul-Key, 'home' oder 'settings'. */
+  key: string;
+  href: string;
+  /** Key aus der ICONS-Whitelist in `rail.tsx`. */
+  icon: string;
+  /** 'nav.home' | 'nav.groups.<key>' | 'nav.settingsArea' */
+  labelKey: string;
+}
+
+const firstVisible = (group: NavGroup): NavItem | undefined => group.items.find((i) => i.visible);
+
+/**
+ * Eine Zeile je Bereich: Startseite, dann jedes Modul mit mindestens einem
+ * sichtbaren Eintrag, zuletzt Einstellungen — und die nur, wenn Verwaltung oder
+ * Einrichtung etwas Sichtbares haben. Kein festes `/admin`: Wer nur
+ * `media.upload` hat, landete sonst auf einer verbotenen Seite.
+ */
+export function buildRail(groups: NavGroup[]): RailEntry[] {
+  const rail: RailEntry[] = [{ key: 'home', href: '/', icon: 'home', labelKey: 'nav.home' }];
+  for (const group of groups) {
+    if (SETTINGS_GROUPS.has(group.key)) continue;
+    const first = firstVisible(group);
+    if (!first) continue;
+    rail.push({ key: group.key, href: first.href, icon: group.icon ?? first.icon, labelKey: group.labelKey });
+  }
+  const settingsTarget = ['admin', 'config']
+    .map((key) => groups.find((g) => g.key === key))
+    .map((group) => (group ? firstVisible(group) : undefined))
+    .find((entry) => entry !== undefined);
+  if (settingsTarget) rail.push({ key: 'settings', href: settingsTarget.href, icon: 'settings', labelKey: 'nav.settingsArea' });
+  return rail;
+}

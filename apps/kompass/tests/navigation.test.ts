@@ -1,6 +1,6 @@
 import { coreModule, defineModule, type ModuleManifest } from '@kompass/core';
 import { describe, expect, it } from 'vitest';
-import { activeRailKey, buildNavigation, locate, type NavGroup, type NavItem } from '@/lib/navigation';
+import { activeRailKey, buildNavigation, buildRail, locate, type NavGroup, type NavItem } from '@/lib/navigation';
 
 const finance = defineModule({
   key: 'finance',
@@ -163,5 +163,42 @@ describe('activeRailKey', () => {
     expect(activeRailKey(FIXTURE, '/site/c/artikel')).toBe('site');
     expect(activeRailKey(FIXTURE, '/admin/themes')).toBe('settings');
     expect(activeRailKey(FIXTURE, '/profile')).toBeNull();
+  });
+});
+
+describe('buildRail', () => {
+  it('lists home, one row per module, then settings behind them', () => {
+    expect(buildRail(FIXTURE).map((e) => [e.key, e.href, e.icon, e.labelKey])).toEqual([
+      ['home', '/', 'home', 'nav.home'],
+      ['site', '/site/template', 'globe', 'nav.groups.site'],
+      ['dms', '/dms', 'file', 'nav.groups.dms'],
+      ['settings', '/admin/users', 'settings', 'nav.settingsArea'],
+    ]);
+  });
+
+  it('falls back to the first visible item icon when the module names none', () => {
+    const groups: NavGroup[] = [{ key: 'dms', labelKey: 'nav.groups.dms', disabled: false, items: [item('dms.list', '/dms', 'file')] }];
+    expect(buildRail(groups).find((e) => e.key === 'dms')!.icon).toBe('file');
+  });
+
+  it('leaves out a module whose entries are all hidden, and points settings at the first visible entry', () => {
+    const groups: NavGroup[] = [
+      { key: 'admin', labelKey: 'nav.groups.admin', disabled: false, items: [item('users', '/admin/users', 'users', { visible: false }), item('media', '/admin/media', 'image')] },
+      { key: 'config', labelKey: 'nav.groups.config', disabled: false, items: [item('themes', '/admin/themes', 'droplet', { visible: false })] },
+      { key: 'dms', labelKey: 'nav.groups.dms', disabled: false, items: [item('dms.list', '/dms', 'file', { visible: false })] },
+    ];
+    expect(buildRail(groups).map((e) => [e.key, e.href])).toEqual([
+      ['home', '/'],
+      ['settings', '/admin/media'],
+    ]);
+  });
+
+  it('has no settings entry when neither admin nor config shows anything', () => {
+    const groups: NavGroup[] = [
+      { key: 'admin', labelKey: 'nav.groups.admin', disabled: false, items: [item('users', '/admin/users', 'users', { visible: false })] },
+      { key: 'config', labelKey: 'nav.groups.config', disabled: false, items: [] },
+      { key: 'dms', labelKey: 'nav.groups.dms', disabled: false, items: [item('dms.list', '/dms', 'file')] },
+    ];
+    expect(buildRail(groups).map((e) => e.key)).toEqual(['home', 'dms']);
   });
 });
