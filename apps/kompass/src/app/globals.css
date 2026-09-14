@@ -132,4 +132,8 @@
   .prose-preview .cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
   .prose-preview .card { border: 1px solid var(--line); border-radius: var(--radius-md); padding: 10px 12px; background: var(--surface-2); }
   .prose-preview a { color: var(--link); text-decoration: underline; }
+  .prose-preview img { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: var(--radius-md); margin: 0.5em 0 1em; }
+  .prose-preview h2 { font-size: 22px; }
+  .prose-preview h3 { font-size: 17px; margin-top: 1.4em; }
+  .prose-preview h4 { font-size: 15px; }
 }

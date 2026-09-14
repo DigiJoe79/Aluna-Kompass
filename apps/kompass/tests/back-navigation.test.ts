@@ -23,6 +23,10 @@ const NO_BACK_NEEDED = new Set([
   // Zeigt die Akte mit dem Ablegen-Dialog darüber: Der Ausgang ist das
   // Schliessen des Dialogs, dahinter steht die Liste schon.
   'dms/receive',
+  // Nicht aus einer Zeile geöffnet, sondern über das „?“ in jeder Kopfleiste
+  // und die Befehlspalette — beide immer erreichbar. Kein Formular, das
+  // etwas zu verlieren hätte; das Inhaltsverzeichnis links führt weiter.
+  'help/[[...doc]]',
 ]);
 
 /**

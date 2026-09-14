@@ -244,6 +244,7 @@
     "profile": "Profil",
     "settingsArea": "Einstellungen",
     "sectionAria": "Unternavigation",
+    "help": "Hilfe",
     "groups": {
       "admin": "Verwaltung",
       "config": "Einrichtung",
@@ -409,6 +410,10 @@
       "cta": "Publizieren öffnen",
       "never": "Noch nie publiziert"
     }
+  },
+  "help": {
+    "title": "Handbuch",
+    "toc": "Inhaltsverzeichnis"
   },
   "users": {
     "title": "Nutzer",
