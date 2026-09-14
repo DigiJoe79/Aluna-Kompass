@@ -42,7 +42,9 @@ describe('das Handbuch', () => {
   it('verweist nur auf Bilder und Seiten, die es gibt', () => {
     const missing: string[] = [];
     for (const doc of docs) {
-      const body = readHandbookPage(env, doc)!.body;
+      // Inline-Code (`…`) zeigt Schreibweise als Beispiel, kein echter Link — sonst
+      // schlägt `` `![Beschriftung](datei.png)` `` in brief-schreiben.md fälschlich an.
+      const body = readHandbookPage(env, doc)!.body.replace(/`[^`\n]*`/g, '');
       const dir = path.posix.dirname(doc);
       for (const [, target] of body.matchAll(/!\[[^\]]*\]\(([^)\s]+)\)|\[[^\]]*\]\(([^)\s#]+\.md)(?:#[^)]*)?\)/g).toArray().map((m) => [m[0], m[1] ?? m[2]] as const)) {
         if (!target) continue;
