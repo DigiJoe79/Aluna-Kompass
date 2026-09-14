@@ -156,3 +156,62 @@ describe('eine Anfrage mitten im Reset', () => {
     await spin;
   });
 });
+
+/**
+ * Der zweite Teil des Tores.
+ *
+ * `depsReady()` hält auf, wer während eines Resets **ankommt**. Wer schon durch
+ * ist, hielt bisher nichts auf: Eine Anfrage, die ihre Deps geholt hat und
+ * danach sekundenlang rechnet — Typst-Rendering, Draft-Vorschau, Astro-Build —
+ * verlor die Datenbank unter sich, sobald der nächste Test zurücksetzte.
+ *
+ * So entstanden die Protokollzeilen `TypeError: The database connection is not
+ * open` aus `previewDraft` und der ECONNRESET, der am 14.09. den `dms`-Fall
+ * rot machte. `apps/kompass/src/app/dms/[id]/preview/route.ts` ist der Beleg:
+ * Zeile 15 geht durch das Tor, Zeile 35 rechnet.
+ */
+describe('eine Anfrage, die schon durch das Tor ist', () => {
+  it('behält ihre Datenbank, bis sie fertig ist', async () => {
+    const { getDeps, resetDeps, depsReady, enterRequest, leaveRequest } = await import('@/lib/deps');
+
+    const deps = getDeps();
+
+    // Die Anfrage: durch das Tor, dann lange rechnen, dann erst die Datenbank
+    // anfassen — genau die Reihenfolge der Vorschau-Route.
+    await depsReady();
+    enterRequest();
+    let seen: unknown = null;
+    let failed: unknown = null;
+    const request = (async () => {
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        seen = deps.sqlite.prepare('SELECT 1 AS x').get();
+      } catch (error) {
+        failed = error;
+      } finally {
+        leaveRequest();
+      }
+    })();
+
+    await resetDeps('empty');
+    await request;
+
+    expect(failed).toBeNull();
+    expect(seen).toEqual({ x: 1 });
+  });
+
+  it('hält den Reset nicht länger auf als seine Frist', async () => {
+    const { getDeps, resetDeps, enterRequest } = await import('@/lib/deps');
+
+    getDeps();
+    // Eine Anfrage, die nie abmeldet: So sähe es aus, wenn `after()` einmal
+    // nicht liefe — ein abgebrochener Client ist der Verdachtsfall. Der Reset
+    // darf darüber nicht stehenbleiben, sondern verfällt auf das Verhalten von
+    // vorher.
+    enterRequest();
+
+    const started = Date.now();
+    await expect(resetDeps('empty', 20)).resolves.toBeUndefined();
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
+});
