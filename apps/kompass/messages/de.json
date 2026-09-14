@@ -299,7 +299,13 @@
     },
     "topbar": {
       "search": "Suchen",
-      "openNav": "Navigation öffnen"
+      "openNav": "Navigation öffnen",
+      "help": "Hilfe zu dieser Seite"
+    },
+    "help": {
+      "readAll": "Ganze Seite lesen",
+      "none": "Zu dieser Seite gibt es noch keine Hilfe.",
+      "unavailable": "Die Hilfe ist gerade nicht erreichbar."
     },
     "userMenu": {
       "aria": "Nutzermenü",
@@ -988,7 +994,8 @@
     "groups": {
       "navigation": "Navigation",
       "settings": "Einstellungen",
-      "actions": "Aktionen"
+      "actions": "Aktionen",
+      "help": "Hilfe"
     },
     "select": "wählen",
     "open": "öffnen",

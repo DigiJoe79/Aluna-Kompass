@@ -1,4 +1,4 @@
-import { enabledManifests, readSetting } from '@kompass/core';
+import { enabledManifests, parseHandbookIndex, readHandbookIndex, readSetting } from '@kompass/core';
 import type { ReactNode } from 'react';
 import { DateFormatProvider } from '@/components/date-format-provider';
 import { EnvBanner } from '@/components/shell/env-banner';
@@ -19,6 +19,8 @@ export default async function ShellLayout({ children }: { children: ReactNode })
     deps.registry.manifests.filter((m) => m.navigationFor).map((m) => [m.key, m.navigationFor!(deps)]),
   );
   const groups = buildNavigation({ manifests: deps.registry.manifests, enabledKeys: new Set(enabledManifests(deps).map((m) => m.key)), permissions: ctx.permissions, extraItems });
+  const helpChapters = parseHandbookIndex(readHandbookIndex(env));
+  const helpPages = helpChapters.flatMap((c) => c.pages.map((p) => ({ doc: p.doc, title: p.title, chapter: c.title })));
   const logoId = readSetting<string | null>(deps, 'branding.logoAssetId');
   // Feste Höhe, nicht „mindestens“: Gescrollt wird im Hauptbereich. Mit
   // `min-h-screen` konnte ein einzelner Bildschirm die Hülle aufblähen — der
@@ -26,7 +28,7 @@ export default async function ShellLayout({ children }: { children: ReactNode })
   return (
     <div className="flex h-dvh flex-col overflow-hidden">
       {banner ? <EnvBanner banner={banner} context={context} /> : null}
-      <ShellFrame organization={readSetting<string>(deps, 'organization.name')} logoUrl={logoId ? `/media/${logoId}` : null} groups={groups} build={buildId()} user={{ name: user.name, roleNames: user.roles.map((r) => r.name) }} permissions={[...ctx.permissions]}>
+      <ShellFrame organization={readSetting<string>(deps, 'organization.name')} logoUrl={logoId ? `/media/${logoId}` : null} groups={groups} build={buildId()} user={{ name: user.name, roleNames: user.roles.map((r) => r.name) }} permissions={[...ctx.permissions]} helpChapters={helpChapters} helpPages={helpPages}>
         <DateFormatProvider mode={readSetting<DateFormatMode>(deps, 'ui.dateFormat')}>{children}</DateFormatProvider>
       </ShellFrame>
     </div>

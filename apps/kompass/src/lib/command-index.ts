@@ -2,7 +2,7 @@ import type { NavGroup } from './navigation';
 
 export interface CommandEntry {
   id: string;
-  group: 'navigation' | 'settings' | 'actions';
+  group: 'navigation' | 'settings' | 'actions' | 'help';
   label: string;
   hint: string;
   href: string;
@@ -13,6 +13,7 @@ export function buildCommandIndex(input: {
   groups: NavGroup[];
   settingsFields: { key: string; tab: string }[];
   permissions: ReadonlySet<string>;
+  helpPages?: { doc: string; title: string; chapter: string }[];
   t: (key: string) => string;
 }): CommandEntry[] {
   const { t } = input;
@@ -42,6 +43,9 @@ export function buildCommandIndex(input: {
         permission: 'settings.manage',
       });
     }
+  }
+  for (const page of input.helpPages ?? []) {
+    entries.push({ id: `help:${page.doc}`, group: 'help', label: page.title, hint: page.chapter, href: `/help/${page.doc}` });
   }
   return entries;
 }

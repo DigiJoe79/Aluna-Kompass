@@ -9,7 +9,7 @@ import { buildCommandIndex } from '@/lib/command-index';
 import type { NavGroup } from '@/lib/navigation';
 import { SETTINGS_TABS } from '@/lib/settings-fields';
 
-export function CommandPalette({ groups, permissions }: { groups: NavGroup[]; permissions: string[] }) {
+export function CommandPalette({ groups, permissions, helpPages = [] }: { groups: NavGroup[]; permissions: string[]; helpPages?: { doc: string; title: string; chapter: string }[] }) {
   const t = useTranslations();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -19,9 +19,10 @@ export function CommandPalette({ groups, permissions }: { groups: NavGroup[]; pe
         groups,
         settingsFields: SETTINGS_TABS.flatMap((tab) => tab.fields.map((f) => ({ key: f.key, tab: tab.key }))),
         permissions: new Set(permissions),
+        helpPages,
         t,
       }),
-    [groups, permissions, t],
+    [groups, permissions, helpPages, t],
   );
 
   useEffect(() => {
@@ -45,7 +46,7 @@ export function CommandPalette({ groups, permissions }: { groups: NavGroup[]; pe
     };
   }, []);
 
-  const groupsOf = (g: 'navigation' | 'settings' | 'actions') => entries.filter((e) => e.group === g);
+  const groupsOf = (g: 'navigation' | 'settings' | 'actions' | 'help') => entries.filter((e) => e.group === g);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -55,7 +56,7 @@ export function CommandPalette({ groups, permissions }: { groups: NavGroup[]; pe
           <CommandInput placeholder={t('palette.placeholder')} />
           <CommandList>
             <CommandEmpty>{t('palette.empty')}</CommandEmpty>
-            {(['navigation', 'settings'] as const)
+            {(['navigation', 'settings', 'help'] as const)
               .filter((g) => groupsOf(g).length > 0)
               .map((g) => (
                 <CommandGroup key={g} heading={t(`palette.groups.${g}`)}>

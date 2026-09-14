@@ -22,4 +22,15 @@ describe('buildCommandIndex', () => {
     const index = buildCommandIndex({ groups: [], settingsFields: [{ key: 'organization.taxNumber', tab: 'tax' }], permissions: new Set(['settings.manage']), t });
     expect(index[0]).toMatchObject({ id: 'setting:organization.taxNumber', href: '/admin/settings?tab=tax', group: 'settings' });
   });
+
+  it('lists handbook pages as the help group with their chapter as hint', () => {
+    const entries = buildCommandIndex({
+      groups: [],
+      settingsFields: [],
+      permissions: new Set(),
+      helpPages: [{ doc: 'akte/post-ablegen', title: 'Post ablegen', chapter: 'Akte' }],
+      t: (k) => k,
+    });
+    expect(entries).toEqual([{ id: 'help:akte/post-ablegen', group: 'help', label: 'Post ablegen', hint: 'Akte', href: '/help/akte/post-ablegen' }]);
+  });
 });
