@@ -41,7 +41,7 @@ Modul eine **Seite** dazubekommt.
 | # | Entscheidung | Verworfen |
 |---|---|---|
 | 1 | **Zwei Ebenen:** eine Schiene mit einer Zeile je Bereich, daneben eine Zweitebene mit den Seiten des aktiven Bereichs. | Akkordeon mit nur einem offenen Modul (löst die Länge, nicht die Gleichrangigkeit). Module als Reiter in der Kopfleiste (neun beschriftete Reiter passen bei 1180 px nicht neben Logo, Suche und Nutzermenü; kein Drawer-Bild). |
-| 2 | **Schiene mit Icon und Wort, 80 px, fest.** Kein Klappzustand, keine Präferenz, kein `[`, keine Tooltips. Schiene 80 + Zweitebene 208 = 288 px, praktisch die Breite der heutigen Sidebar (248). | Handoff: Schiene 56 ↔ 248 px mit Knopf, Präferenz und Tooltips. Eine ganze Zustandsachse für ein Problem, das Beschriftungen unter den Icons lösen; der ausgeklappte Fall (456 px neben dem Inhalt, Handoff § 8) entfällt. Vor dem ersten Release billig, danach wegen gespeicherter Präferenzen nicht mehr. |
+| 2 | **Schiene mit Icon und Wort, 88 px, fest.** Kein Klappzustand, keine Präferenz, kein `[`, keine Tooltips. Schiene 88 + Zweitebene 208 = 296 px, knapp über der Breite der heutigen Sidebar (248). | Handoff: Schiene 56 ↔ 248 px mit Knopf, Präferenz und Tooltips. Eine ganze Zustandsachse für ein Problem, das Beschriftungen unter den Icons lösen; der ausgeklappte Fall (456 px neben dem Inhalt, Handoff § 8) entfällt. Vor dem ersten Release billig, danach wegen gespeicherter Präferenzen nicht mehr. |
 | 3 | **Einstellungen sind ein Bereich** am Fuß der Schiene, hinter einer Trennlinie; ihre Zweitebene zeigt `admin` und `config` als zwei Abschnitte VERWALTUNG und EINRICHTUNG. | Einstellungen im Nutzermenü verstecken (zu weit weg; der Vorstand pflegt Stammdaten regelmäßig). |
 | 4 | **Eine Ortsbestimmung** `locate()` liefert Bereich, Gruppe und Eintrag zum Pfad; Schiene, Zweitebene und Brotkrume leiten sich alle daraus ab. | Handoff: drei getrennte Regeln (`active` über `startsWith(href)` des Rail-Eintrags, `moduleNavFor`, `crumbsFor`). Sie liefen auseinander: auf `/site/c/artikel` war „Webseite" nicht markiert, auf `/admin/themes` nicht „Einstellungen", weil der Rail-`href` nur der erste Eintrag ist. |
 | 5 | **Die Zweitebene ist eine Liste von Abschnitten**, eine Render-Regel für Module und Einstellungen. Ein Modul hat heute einen Abschnitt ohne Überschrift; wenn ein Modul mehrere braucht (Finanzen: BUCHEN, BERICHTE), bekommt `NavigationItem` ein Feld `section`. | Zwei Sonderfälle (Module flach, Einstellungen mit Gruppenköpfen). |
@@ -60,7 +60,7 @@ Modul eine **Seite** dazubekommt.
 │      │            │                                                │
 │ Schi │ Zweitebene │ Inhalt                                         │
 │ ene  │  208 px    │ (main, scrollt)                                │
-│ 80px │            │                                                │
+│ 88px │            │                                                │
 │      │            │                                                │
 └──────┴────────────┴────────────────────────────────────────────────┘
 ```
@@ -89,19 +89,19 @@ export interface Location {
   item: NavItem;
 }
 
-/** Der längste sichtbare Eintrag, der auf die URL passt; null auf '/', '/profile' und ohne Treffer. */
-export function locate(groups: NavGroup[], pathname: string, search?: string): Location | null;
+/** Der längste sichtbare Eintrag, der auf den Pfad passt; null auf '/', '/profile' und ohne Treffer. */
+export function locate(groups: NavGroup[], pathname: string): Location | null;
 ```
 
 Regeln:
 
 - Kandidaten sind nur **sichtbare** Einträge aller Gruppen. Ein Modul ohne
   sichtbaren Eintrag ist nirgends aktiv — es steht auch nicht in der Schiene.
-- Ein `href` ohne Query passt, wenn `pathname === href` oder
+- Ein `href` ist ein Pfad. Er passt, wenn `pathname === href` oder
   `pathname.startsWith(href + '/')` — an der Segmentgrenze, nicht per rohem
-  `startsWith` (`/dms` darf `/dmsx` nicht treffen).
-- Ein `href` mit Query (`/dms?inbox=1`) passt, wenn der Pfad gleich ist und
-  jeder Parameter des `href` in `search` mit demselben Wert steht.
+  `startsWith` (`/dms` darf `/dmsx` nicht treffen). Query-Strings kennt die
+  Navigation nicht; kommt der erste Eintrag mit einem, bekommt diese Regel
+  einen Satz dazu und `locate` einen Vergleich.
 - Der längste passende `href` gewinnt. Bei Gleichstand der erste in
   Gruppenreihenfolge.
 - `area` ist `group.key`, außer `admin`/`config` → `'settings'`.
@@ -118,7 +118,7 @@ export interface RailEntry {
 export function buildRail(groups: NavGroup[]): RailEntry[];
 
 /** Welcher Rail-Eintrag aktiv ist: 'home' auf '/', sonst locate().area, sonst null. */
-export function activeRailKey(groups: NavGroup[], pathname: string, search?: string): string | null;
+export function activeRailKey(groups: NavGroup[], pathname: string): string | null;
 
 export interface NavSection {
   key: string;
@@ -126,9 +126,9 @@ export interface NavSection {
   labelKey?: string;
   items: NavItem[]; // nur sichtbare
 }
-export function sectionsFor(groups: NavGroup[], pathname: string, search?: string): NavSection[];
+export function sectionsFor(groups: NavGroup[], pathname: string): NavSection[];
 
-export function crumbsFor(groups: NavGroup[], pathname: string, search: string | undefined, t: (k: string) => string): string[];
+export function crumbsFor(groups: NavGroup[], pathname: string, t: (k: string) => string): string[];
 ```
 
 **`buildRail`**, in dieser Reihenfolge:
@@ -169,10 +169,10 @@ Einträge der Gruppe.
 `{ entries: RailEntry[]; active: string | null; variant: 'rail' | 'list';
 onClose?: () => void }`.
 
-- `<nav aria-label={t('nav.aria')}>`, `w-20 shrink-0 border-r border-line
+- `<nav aria-label={t('nav.aria')}>`, `w-[88px] shrink-0 border-r border-line
   bg-sidebar`, `flex flex-col gap-0.5 py-2`.
 - Zeile (`variant: 'rail'`): `<Link>` als `flex flex-col items-center
-  justify-center gap-1 rounded-md`, Breite `w-[68px] mx-auto`, Höhe
+  justify-center gap-1 rounded-md`, Breite `w-[76px] mx-auto`, Höhe
   `h-[52px]`, Icon `size-5`, Wort `text-[11px] leading-none`, Wort truncate.
   Trefferfläche ≥ 40 × 40 px.
 - Zeile (`variant: 'list'`, im Sheet): wie die heutige Sidebar-Zeile,
@@ -262,9 +262,10 @@ liegen und stören nicht; keine Migration.
 | `nav.settings` | bleibt „Verein" (war schon so; Handoff § 6 ist damit erledigt) |
 | `nav.groups.*` | unverändert, ab jetzt die Bereichsnamen in der Schiene — alle tragen („Akte", „Webseite", „Tiere" …) |
 
-Die Beschriftung unter dem Zahnrad ist „Einstellungen": bei 11 px rund 70 px
-in einer 68-px-Zeile mit `truncate`. Passt sie in der Umsetzung nicht, wird
-die Zeile 76 px und die Schiene 88 px; die Spec ändert sich dadurch nicht.
+Die Beschriftung unter dem Zahnrad ist „Einstellungen" — mit rund 70 px bei
+11 px das längste Wort der Schiene und der Grund für die 76-px-Zeile. Ein
+längerer Bereichsname aus `nav.groups.*` wird abgeschnitten (`truncate`);
+das ist ein Hinweis, den Namen zu kürzen, nicht die Schiene zu verbreitern.
 
 ## 10. Tests
 
@@ -274,8 +275,8 @@ TDD: erst die Tests, dann der Umbau.
 `buildNavigation` bleiben):
 
 - `locate`: Segmentgrenze (`/dms` trifft `/dms/abc`, nicht `/dmsx`); längster
-  Treffer (`/site/c/artikel` → Sammlung, nicht Template); Query exakt
-  (`/dms?inbox=1` trifft nur mit `inbox=1`); unsichtbarer Eintrag zählt nicht;
+  Treffer (`/site/c/artikel` → Sammlung, nicht Template); unsichtbarer
+  Eintrag zählt nicht;
   `admin`/`config` → `area: 'settings'`; `/` und `/profile` → null.
 - `buildRail`: Reihenfolge home, Module, settings; Modul ohne sichtbaren
   Eintrag fehlt; `moduleIcon` vor Item-Icon; settings-`href` ist der erste
@@ -368,8 +369,8 @@ bleibt gültig (die Schiene heißt weiter „Hauptnavigation").
 - [ ] Die Schiene zeigt je aktivem Modul genau eine Zeile mit Icon und Wort,
       „Startseite" oben, „Einstellungen" unten hinter einer Trennlinie. Kein
       Klappknopf, kein `[`.
-- [ ] Schiene 80 px und Zweitebene 208 px stehen fest; der Inhalt beginnt bei
-      288 px, auf Startseite und Profil bei 80 px.
+- [ ] Schiene 88 px und Zweitebene 208 px stehen fest; der Inhalt beginnt bei
+      296 px, auf Startseite und Profil bei 88 px.
 - [ ] Die Kopfleiste läuft über die volle Breite mit Logo, Vereinsname,
       Brotkrume, Suche und Nutzermenü; die Build-Zeile steht im Nutzermenü.
 - [ ] In einem Modul ist der Bereich in der Schiene markiert und die Seite in
@@ -390,10 +391,11 @@ bleibt gültig (die Schiene heißt weiter „Hauptnavigation").
 
 ## 15. Self-Review
 
-- Platzhalter: keine. Die Schienenbreite hat einen Entscheidungspfad (§ 9),
-  keine offene Stelle.
+- Platzhalter: keine. Die Schienenbreite ist mit 88 px entschieden (§ 2, § 5,
+  § 14); die Query-Regel für `locate` wurde gestrichen, weil kein Eintrag
+  einen Query-String hat (§ 4).
 - Konsistenz: `locate` ist die einzige Ortsbestimmung; § 4, § 5 (`active`),
-  § 6 (aktiver Eintrag) und § 7 (Krumen) verweisen darauf. Die Breite 288
+  § 6 (aktiver Eintrag) und § 7 (Krumen) verweisen darauf. Die Breite 296
   steht in § 2, § 3 und § 14 gleich. Aria-Namen: Schiene `nav.aria`
   („Hauptnavigation", unverändert), Zweitebene `nav.sectionAria` — § 5, § 6,
   § 9, § 10 stimmen überein.
