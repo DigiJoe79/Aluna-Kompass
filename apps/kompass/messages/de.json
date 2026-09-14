@@ -242,6 +242,8 @@
     "aria": "Hauptnavigation",
     "home": "Startseite",
     "profile": "Profil",
+    "settingsArea": "Einstellungen",
+    "sectionAria": "Unternavigation",
     "collapse": "Navigation einklappen",
     "groups": {
       "admin": "Verwaltung",

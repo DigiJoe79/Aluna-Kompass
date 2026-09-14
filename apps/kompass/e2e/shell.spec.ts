@@ -7,36 +7,82 @@ test.describe('app shell', () => {
     await loginAsAdmin(page);
   });
 
-  test('shows the environment banner, organisation name and admin navigation', async ({ page }) => {
+  test('shows one rail row per area, home on top and settings behind a line', async ({ page }) => {
     await expect(page.getByTestId('env-banner')).toContainText('TESTUMGEBUNG');
-    const nav = page.getByRole('navigation', { name: 'Hauptnavigation' });
-    await expect(nav.getByText('Musterverein e.V.')).toBeVisible();
-    // „Verein“ statt „Einstellungen“: Der Eintrag sitzt jetzt in der Gruppe
-    // „Einrichtung“ und trägt seinen Inhalt im Namen.
-    for (const label of ['Startseite', 'Nutzer', 'Rollen', 'Verein', 'Themes', 'Module', 'Änderungsprotokoll', 'Dokumente', 'Backup', 'Akte einrichten']) {
-      await expect(nav.getByRole('link', { name: label })).toBeVisible();
+    const rail = page.getByRole('navigation', { name: 'Hauptnavigation' });
+    await expect(rail.getByRole('link')).toHaveText(['Startseite', 'Webseite', 'Projekte', 'Tiere', 'Kontakte', 'Akte', 'Einstellungen']);
+    // Seiten stehen nicht in der Schiene — weder aus Verwaltung noch aus einem Modul.
+    await expect(rail.getByRole('link', { name: 'Nutzer' })).toHaveCount(0);
+    await expect(rail.getByRole('link', { name: 'Hunde' })).toHaveCount(0);
+    await expect(rail).toHaveCSS('width', '88px');
+    // Auf der Startseite gibt es keine Zweitebene.
+    await expect(page.getByRole('navigation', { name: 'Unternavigation' })).toHaveCount(0);
+  });
+
+  test('puts organisation, user menu and build into the top bar', async ({ page }) => {
+    const banner = page.getByRole('banner');
+    await expect(banner.getByText('Musterverein e.V.')).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Hauptnavigation' }).getByText('Musterverein e.V.')).toHaveCount(0);
+    await banner.getByRole('button', { name: 'Nutzermenü' }).click();
+    await expect(page.getByRole('menu').getByText(/^Build /)).toBeVisible();
+    await page.keyboard.press('Escape');
+  });
+
+  test('marks the area in the rail and the page in the second level', async ({ page }) => {
+    await page.goto('/animals');
+    const rail = page.getByRole('navigation', { name: 'Hauptnavigation' });
+    await expect(rail.getByRole('link', { name: 'Tiere' })).toHaveAttribute('aria-current', 'page');
+    await expect(rail.getByRole('link', { name: 'Startseite' })).not.toHaveAttribute('aria-current', 'page');
+    const sections = page.getByRole('navigation', { name: 'Unternavigation' });
+    await expect(sections).toHaveCSS('width', '208px');
+    await expect(sections.getByRole('link', { name: 'Hunde' })).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hunde');
+  });
+
+  test('keeps the module marked under a website collection', async ({ page }) => {
+    // Sammlungen gibt es erst mit eingelesenem Template — derselbe Weg wie in
+    // `site-template.spec.ts`; das Basis-Template bringt die Sammlung „Aktuelles“ mit.
+    await page.goto('/site/template');
+    await page.getByRole('button', { name: 'Template einlesen' }).click();
+    await expect(page.getByRole('region', { name: 'Befunde' })).toBeVisible();
+    await page.getByRole('button', { name: 'Übernehmen' }).click();
+    await expect(page.getByRole('status')).toContainText('eingelesen');
+
+    const sections = page.getByRole('navigation', { name: 'Unternavigation' });
+    await sections.getByRole('link', { name: 'Aktuelles' }).click();
+    await expect(page).toHaveURL('/site/c/news');
+    await expect(page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Webseite' })).toHaveAttribute('aria-current', 'page');
+    await expect(sections.getByRole('link', { name: 'Aktuelles' })).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Aktuelles');
+    await expect(page.getByRole('banner')).toContainText('Webseite');
+  });
+
+  test('opens settings as one area with two headed sections', async ({ page }) => {
+    await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Einstellungen' }).click();
+    await expect(page).toHaveURL('/admin/users');
+    const sections = page.getByRole('navigation', { name: 'Unternavigation' });
+    await expect(sections.getByText('Verwaltung')).toBeVisible();
+    await expect(sections.getByText('Einrichtung')).toBeVisible();
+    for (const label of ['Nutzer', 'Rollen', 'Änderungsprotokoll', 'Aufbewahrung', 'Mediathek', 'Backup', 'Verein', 'Sprachen', 'Themes', 'Module', 'Dokumente', 'Akte einrichten']) {
+      await expect(sections.getByRole('link', { name: label })).toBeVisible();
     }
-    await expect(nav.getByText(/^Build /)).toBeVisible();
+    await sections.getByRole('link', { name: 'Themes' }).click();
+    await expect(page.getByRole('banner')).toContainText('Einstellungen');
+    await expect(page.getByRole('banner')).toContainText('Einrichtung');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Themes');
+    await expect(page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Einstellungen' })).toHaveAttribute('aria-current', 'page');
   });
 
-  test('collapses a navigation group and remembers it', async ({ page }) => {
-    const nav = page.getByRole('navigation', { name: 'Hauptnavigation' });
-    await expect(nav.getByRole('link', { name: 'Nutzer' })).toBeVisible();
-    await nav.getByRole('button', { name: 'Verwaltung' }).click();
-    await expect(nav.getByRole('link', { name: 'Nutzer' })).toBeHidden();
-    await page.reload();
-    await expect(nav.getByRole('link', { name: 'Nutzer' })).toBeHidden();
-  });
-
-  test('collapses the sidebar with [ and remembers it', async ({ page }) => {
-    const nav = page.getByRole('navigation', { name: 'Hauptnavigation' });
-    await expect(nav).toHaveCSS('width', '248px');
-    await page.keyboard.press('[');
-    await expect(nav).toHaveCSS('width', '56px');
-    await page.reload();
-    await expect(nav).toHaveCSS('width', '56px');
-    await nav.getByRole('link', { name: 'Nutzer' }).hover();
-    await expect(page.getByRole('tooltip')).toContainText('Nutzer');
+  test('the command palette still finds pages of modules and settings', async ({ page }) => {
+    await expect(page.locator('body[data-command-palette="ready"]')).toBeAttached();
+    await page.keyboard.press('Control+k');
+    const palette = page.getByRole('dialog', { name: 'Befehlspalette' });
+    await palette.getByRole('combobox').fill('Hunde');
+    await expect(palette.getByRole('option', { name: /Hunde/ })).toBeVisible();
+    await palette.getByRole('combobox').fill('Themes');
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL('/admin/themes');
   });
 
   test('switches colour scheme from the user menu and logs out', async ({ page }) => {
@@ -48,12 +94,15 @@ test.describe('app shell', () => {
     await expect(page).toHaveURL('/login');
   });
 
-  test('turns into a drawer below 1180px', async ({ page }) => {
+  test('turns into a drawer below 1180px with labelled areas and the second level beneath', async ({ page }) => {
+    await page.goto('/animals');
     await page.setViewportSize({ width: 1024, height: 800 });
     await expect(page.getByRole('navigation', { name: 'Hauptnavigation' })).toBeHidden();
     await page.getByRole('button', { name: 'Navigation öffnen' }).click();
-    await expect(page.getByRole('dialog').getByRole('link', { name: 'Nutzer' })).toBeVisible();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Tiere' })).toBeVisible();
+    await expect(dialog.getByRole('navigation', { name: 'Unternavigation' }).getByRole('link', { name: 'Hunde' })).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(page.getByRole('dialog')).toBeHidden();
+    await expect(dialog).toBeHidden();
   });
 });
