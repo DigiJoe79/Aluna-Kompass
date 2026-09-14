@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { loginAsAdmin, resetDatabase } from './helpers';
 
 test('adds a locale, fills it, and sees what removing it would cost', async ({ page }) => {

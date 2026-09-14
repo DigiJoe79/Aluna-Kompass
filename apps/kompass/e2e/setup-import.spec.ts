@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { loginAsAdmin, resetDatabase } from './helpers';
 
 test('restores a backup from the setup page and signs in with its credentials', async ({ page }) => {

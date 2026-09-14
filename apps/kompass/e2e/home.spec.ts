@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { loginAsAdmin, resetDatabase } from './helpers';
 
 test('home page greets by first name and shows three progress cards', async ({ page }) => {

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { loginAsAdmin, resetDatabase } from './helpers';
 
 test.describe('command palette and error pages', () => {

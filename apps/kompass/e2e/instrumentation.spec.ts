@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 /**
  * Der Haken ist die einzige Zusicherung dieser Spec, die nicht aus einer

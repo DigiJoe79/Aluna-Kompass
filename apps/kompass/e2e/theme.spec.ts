@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 test('theme tokens reach computed styles and dark mode switches values', async ({ page }) => {
   await page.goto('/login');

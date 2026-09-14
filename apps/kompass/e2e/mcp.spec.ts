@@ -1,5 +1,5 @@
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { loginAsAdmin, resetDatabase } from './helpers';
 
 test('an API token created in the profile drives the MCP endpoint and is audited as channel MCP', async ({ page, baseURL }) => {
