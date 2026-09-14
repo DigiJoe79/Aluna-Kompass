@@ -64,6 +64,7 @@ ENV NODE_ENV=production \
     CACHE_PATH=/cache \
     KOMPASS_MIGRATIONS_DIR=/app/packages/core/src/db/migrations \
     KOMPASS_TEMPLATES_DIR=/app/packages/documents/templates \
+    KOMPASS_HANDBOOK_DIR=/app/docs/handbuch \
     KOMPASS_FONTS_DIR=/app/packages/documents/fonts \
     KOMPASS_DOCUMENT_TEMPLATES_DIR=/data/core/document-templates
 WORKDIR /app
@@ -72,6 +73,8 @@ COPY --from=build --chown=node:node /app/apps/kompass/.next/static ./apps/kompas
 # Das mitgelieferte Basis-Template und das Paket, das seine Deklaration liest.
 # Der Entrypoint kopiert das Template beim ersten Start ins Volume.
 COPY --from=build --chown=node:node /app/templates/verein-basis ./templates/verein-basis
+# Das Handbuch ist Teil der Auslieferung: die App rendert es als Hilfe.
+COPY --from=build --chown=node:node /app/docs/handbuch ./docs/handbuch
 COPY --from=build --chown=node:node /app/packages/site-template ./packages/site-template
 # Die tsconfig von packages/markdown erweitert die Basisdatei im Wurzel-
 # verzeichnis. Ohne sie bricht der Site-Build ab, sobald vite den Markdown-
