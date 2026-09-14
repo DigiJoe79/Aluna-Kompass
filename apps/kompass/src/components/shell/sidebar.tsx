@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, ChevronUp, Clock, Contact, Database, Droplet, Euro, File, FileText, Folder, Grid2x2, Home, Hourglass, Image, LayoutTemplate, Languages, List, PanelLeft, PawPrint, Shield, SlidersHorizontal, Upload, Users, X, type LucideIcon } from 'lucide-react';
+import { ChevronDown, Clock, Contact, Database, Droplet, Euro, File, FileText, Folder, Grid2x2, Home, Hourglass, Image, LayoutTemplate, Languages, List, PanelLeft, PawPrint, Shield, SlidersHorizontal, Upload, Users, X, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -135,12 +135,7 @@ export function Sidebar({ organization, logoUrl, groups, build, collapsed, onTog
         })}
       </div>
       <div className="border-t border-line p-2">
-        <UserMenu user={user} collapsed={collapsed} trigger={<ChevronUp className="size-3.5" aria-hidden />} />
-        {collapsed ? null : (
-          <p className="px-2 pt-1.5 text-[10px] text-muted-ink" title={t('app.name')}>
-            {t('shell.build', { id: build })}
-          </p>
-        )}
+        <UserMenu user={user} build={build} />
       </div>
     </nav>
   );

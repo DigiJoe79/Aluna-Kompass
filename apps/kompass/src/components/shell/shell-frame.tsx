@@ -50,7 +50,7 @@ export function ShellFrame({ organization, logoUrl, groups, build, user, permiss
   }, [collapsed, setCollapsed]);
 
   const { title, group } = titleFor(pathname, groups, t);
-  const breadcrumb = [organization, group].filter(Boolean).join(' / ');
+  const crumbs = [group, title].filter(Boolean);
   const openPalette = () => window.dispatchEvent(new CustomEvent('kompass:command-palette'));
 
   return (
@@ -68,7 +68,7 @@ export function ShellFrame({ organization, logoUrl, groups, build, user, permiss
           <Sidebar organization={organization} logoUrl={logoUrl} groups={groups} build={build} collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} user={user} collapsedGroups={collapsedGroups} onToggleGroup={toggleGroup} />
         )}
         <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar breadcrumb={breadcrumb} title={title} userName={user.name} collapsed={collapsed} drawer={drawer} onExpand={() => setCollapsed(false)} onOpenDrawer={() => setDrawerOpen(true)} onSearch={openPalette} />
+          <Topbar organization={organization} logoUrl={logoUrl} crumbs={crumbs} user={user} build={build} drawer={drawer} onOpenDrawer={() => setDrawerOpen(true)} onSearch={openPalette} />
           <main className="min-h-0 flex-1 overflow-auto p-6">{children}</main>
         </div>
       </div>
