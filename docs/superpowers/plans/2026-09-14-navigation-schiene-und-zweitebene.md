@@ -37,7 +37,7 @@
 - Consumes: `ModuleManifest`, `NavigationItem` aus `@kompass/core`; `defineModule`, `coreModule` (Tests).
 - Produces: `ModuleManifest.moduleIcon?: string`; `NavGroup.icon?: string`, von `buildNavigation` aus `moduleIcon` befüllt (nur bei Modulgruppen; `admin`/`config` ohne).
 
-- [ ] **Step 1: Test schreiben**
+- [x] **Step 1: Test schreiben**
 
 In `apps/kompass/tests/navigation.test.ts` am Ende von `describe('buildNavigation', …)` einfügen:
 
@@ -57,12 +57,12 @@ In `apps/kompass/tests/navigation.test.ts` am Ende von `describe('buildNavigatio
   });
 ```
 
-- [ ] **Step 2: Test laufen lassen — er muss rot sein**
+- [x] **Step 2: Test laufen lassen — er muss rot sein**
 
 Run: `cd apps/kompass && npx vitest run tests/navigation.test.ts`
 Expected: FAIL — Typfehler `moduleIcon` unbekannt bzw. `icon` ist `undefined` statt `'globe'`.
 
-- [ ] **Step 3: Manifest-Feld anlegen**
+- [x] **Step 3: Manifest-Feld anlegen**
 
 In `packages/core/src/modules/manifest.ts`, Interface `ModuleManifest`, direkt nach der Zeile `navigation?: readonly NavigationItem[];`:
 
@@ -75,7 +75,7 @@ In `packages/core/src/modules/manifest.ts`, Interface `ModuleManifest`, direkt n
   moduleIcon?: string;
 ```
 
-- [ ] **Step 4: `site` setzt das Symbol**
+- [x] **Step 4: `site` setzt das Symbol**
 
 In `packages/modules/site/src/manifest.ts` im `defineModule({ … })`-Objekt vor `navigation:`:
 
@@ -86,7 +86,7 @@ In `packages/modules/site/src/manifest.ts` im `defineModule({ … })`-Objekt vor
   moduleIcon: 'globe',
 ```
 
-- [ ] **Step 5: `NavGroup.icon` und Übernahme in `buildNavigation`**
+- [x] **Step 5: `NavGroup.icon` und Übernahme in `buildNavigation`**
 
 In `apps/kompass/src/lib/navigation.ts`:
 
@@ -109,12 +109,12 @@ Im `return`-Objekt der Modul-Map (`.map((m) => { … return { key: m.key, labelK
         icon: m.moduleIcon,
 ```
 
-- [ ] **Step 6: Test und Typecheck grün**
+- [x] **Step 6: Test und Typecheck grün**
 
 Run: `cd apps/kompass && npx vitest run tests/navigation.test.ts && cd ../.. && pnpm typecheck`
 Expected: alle Tests PASS, Typecheck ohne Fehler.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/core/src/modules/manifest.ts packages/modules/site/src/manifest.ts apps/kompass/src/lib/navigation.ts apps/kompass/tests/navigation.test.ts
@@ -139,7 +139,7 @@ git commit -m "feat(core): a module manifest may name its rail icon, and the nav
   ```
   `area` ist `group.key`, für `admin`/`config` `'settings'`. `activeRailKey` liefert `'home'` auf `/`.
 
-- [ ] **Step 1: Test-Fixture und Tests schreiben**
+- [x] **Step 1: Test-Fixture und Tests schreiben**
 
 In `apps/kompass/tests/navigation.test.ts` den Import erweitern:
 
@@ -218,12 +218,12 @@ describe('activeRailKey', () => {
 });
 ```
 
-- [ ] **Step 2: Rot**
+- [x] **Step 2: Rot**
 
 Run: `cd apps/kompass && npx vitest run tests/navigation.test.ts`
 Expected: FAIL — `locate` / `activeRailKey` nicht exportiert.
 
-- [ ] **Step 3: Implementieren**
+- [x] **Step 3: Implementieren**
 
 Am Ende von `apps/kompass/src/lib/navigation.ts`:
 
@@ -267,12 +267,12 @@ export function activeRailKey(groups: NavGroup[], pathname: string): string | nu
 }
 ```
 
-- [ ] **Step 4: Grün**
+- [x] **Step 4: Grün**
 
 Run: `cd apps/kompass && npx vitest run tests/navigation.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/kompass/src/lib/navigation.ts apps/kompass/tests/navigation.test.ts
@@ -296,7 +296,7 @@ git commit -m "feat(shell): locate() finds the longest visible navigation entry 
   ```
   Reihenfolge: `home`, Modulgruppen mit sichtbarem Eintrag, `settings`. `icon` für Module: `group.icon ?? erstes sichtbares Item-Icon`; `settings` hat `icon: 'settings'`, `labelKey: 'nav.settingsArea'`.
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 Import um `buildRail` ergänzen. Am Dateiende:
 
@@ -339,12 +339,12 @@ describe('buildRail', () => {
 });
 ```
 
-- [ ] **Step 2: Rot**
+- [x] **Step 2: Rot**
 
 Run: `cd apps/kompass && npx vitest run tests/navigation.test.ts`
 Expected: FAIL — `buildRail` nicht exportiert.
 
-- [ ] **Step 3: Implementieren**
+- [x] **Step 3: Implementieren**
 
 Am Ende von `navigation.ts`:
 
@@ -385,12 +385,12 @@ export function buildRail(groups: NavGroup[]): RailEntry[] {
 }
 ```
 
-- [ ] **Step 4: Grün**
+- [x] **Step 4: Grün**
 
 Run: `cd apps/kompass && npx vitest run tests/navigation.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/kompass/src/lib/navigation.ts apps/kompass/tests/navigation.test.ts
@@ -414,7 +414,7 @@ git commit -m "feat(shell): buildRail() turns the navigation groups into one rai
   export function crumbsFor(groups: NavGroup[], pathname: string, t: (key: string) => string): string[]
   ```
 
-- [ ] **Step 1: Tests schreiben**
+- [x] **Step 1: Tests schreiben**
 
 Import um `crumbsFor, sectionsFor` ergänzen. Am Dateiende:
 
@@ -483,12 +483,12 @@ describe('crumbsFor', () => {
 });
 ```
 
-- [ ] **Step 2: Rot**
+- [x] **Step 2: Rot**
 
 Run: `cd apps/kompass && npx vitest run tests/navigation.test.ts`
 Expected: FAIL — `sectionsFor` / `crumbsFor` nicht exportiert.
 
-- [ ] **Step 3: Implementieren**
+- [x] **Step 3: Implementieren**
 
 Am Ende von `navigation.ts`:
 
@@ -536,12 +536,12 @@ export function crumbsFor(groups: NavGroup[], pathname: string, t: (key: string)
 }
 ```
 
-- [ ] **Step 4: Grün und Typecheck**
+- [x] **Step 4: Grün und Typecheck**
 
 Run: `cd apps/kompass && npx vitest run tests/navigation.test.ts && cd ../.. && pnpm typecheck`
 Expected: PASS, kein Typfehler.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/kompass/src/lib/navigation.ts apps/kompass/tests/navigation.test.ts
@@ -559,7 +559,7 @@ git commit -m "feat(shell): sectionsFor() and crumbsFor() derive the second leve
 **Interfaces:**
 - Produces: Schlüssel `nav.settingsArea` = „Einstellungen", `nav.sectionAria` = „Unternavigation". Die E2E beschreibt den Zielzustand aus Spec § 14 und ist bis Task 9 rot — das ist gewollt; sie ist die Abnahme.
 
-- [ ] **Step 1: Schlüssel anlegen**
+- [x] **Step 1: Schlüssel anlegen**
 
 In `apps/kompass/messages/de.json`, im Objekt `"nav"`, direkt nach `"profile": "Profil",` einfügen:
 
@@ -570,7 +570,7 @@ In `apps/kompass/messages/de.json`, im Objekt `"nav"`, direkt nach `"profile": "
 
 `"collapse": "Navigation einklappen"` bleibt vorerst stehen (Sidebar benutzt es bis Task 9).
 
-- [ ] **Step 2: `shell.spec.ts` ersetzen**
+- [x] **Step 2: `shell.spec.ts` ersetzen**
 
 Gesamten Inhalt von `apps/kompass/e2e/shell.spec.ts` ersetzen durch:
 
@@ -687,12 +687,12 @@ test.describe('app shell', () => {
 
 Hinweis zur Reihenfolge der Schiene im ersten Test: Sie folgt der Reihenfolge der Manifeste in der Registry (`deps.registry.manifests`). Weicht die tatsächliche Reihenfolge ab, die Erwartung an die Registry anpassen — nicht die Registry.
 
-- [ ] **Step 3: Unit-Tests bleiben grün (die Sprachdatei wird geprüft)**
+- [x] **Step 3: Unit-Tests bleiben grün (die Sprachdatei wird geprüft)**
 
 Run: `cd apps/kompass && npx vitest run tests/message-keys.test.ts`
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/kompass/messages/de.json apps/kompass/e2e/shell.spec.ts
@@ -715,7 +715,7 @@ git commit -m "test(e2e): the shell spec describes the rail, the second level an
   ```
   `variant: 'rail'` = feste 88-px-Schiene mit Wort unter dem Icon; `'list'` = Zeilen mit Wort rechts (im Drawer).
 
-- [ ] **Step 1: Datei anlegen**
+- [x] **Step 1: Datei anlegen**
 
 `apps/kompass/src/components/shell/rail.tsx`:
 
@@ -808,12 +808,12 @@ export function Rail({ entries, active, variant, onClose }: RailProps) {
 }
 ```
 
-- [ ] **Step 2: Typecheck**
+- [x] **Step 2: Typecheck**
 
 Run: `pnpm typecheck`
 Expected: ohne Fehler. (`t(entry.labelKey)` ist ein dynamischer Schlüssel; `message-keys.test.ts` prüft nur feste.)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add apps/kompass/src/components/shell/rail.tsx
@@ -835,7 +835,7 @@ git commit -m "feat(shell): the rail — one labelled row per area, fixed at 88 
   ```
   Rendert `null` bei leeren `sections`. `activeHref` ist `locate(...)?.item.href`.
 
-- [ ] **Step 1: Datei anlegen**
+- [x] **Step 1: Datei anlegen**
 
 `apps/kompass/src/components/shell/section-nav.tsx`:
 
@@ -900,12 +900,12 @@ export function SectionNav({ sections, activeHref, variant, onClose }: SectionNa
 }
 ```
 
-- [ ] **Step 2: Typecheck**
+- [x] **Step 2: Typecheck**
 
 Run: `pnpm typecheck`
 Expected: ohne Fehler.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add apps/kompass/src/components/shell/section-nav.tsx
@@ -930,7 +930,7 @@ git commit -m "feat(shell): the second level — the pages of the active area as
   ```
   Bis Task 9 verwendet `sidebar.tsx` noch das alte `UserMenu` mit `collapsed`/`trigger` — deshalb wird `sidebar.tsx` in **diesem** Task ebenfalls auf die neue Signatur gebracht, damit der Typecheck zwischen den Tasks grün bleibt.
 
-- [ ] **Step 1: `user-menu.tsx` ersetzen**
+- [x] **Step 1: `user-menu.tsx` ersetzen**
 
 ```tsx
 'use client';
@@ -992,7 +992,7 @@ export function UserMenu({ user, build }: UserMenuProps) {
 }
 ```
 
-- [ ] **Step 2: `topbar.tsx` ersetzen**
+- [x] **Step 2: `topbar.tsx` ersetzen**
 
 ```tsx
 'use client';
@@ -1058,7 +1058,7 @@ export function Topbar({ organization, logoUrl, crumbs, user, build, drawer, onO
 }
 ```
 
-- [ ] **Step 3: `sidebar.tsx` übergangsweise an die neue `UserMenu`-Signatur anpassen**
+- [x] **Step 3: `sidebar.tsx` übergangsweise an die neue `UserMenu`-Signatur anpassen**
 
 In `apps/kompass/src/components/shell/sidebar.tsx` den Fuß-Block ersetzen. Alt:
 
@@ -1083,12 +1083,12 @@ Neu:
 
 Und `ChevronUp` aus dem `lucide-react`-Import der Datei entfernen. (Die Datei wird in Task 9 gelöscht; das hier hält nur den Typecheck grün.)
 
-- [ ] **Step 4: Typecheck und Schlüsseltest**
+- [x] **Step 4: Typecheck und Schlüsseltest**
 
 Run: `pnpm typecheck && cd apps/kompass && npx vitest run tests/message-keys.test.ts tests/no-hardcoded-ui-text.test.ts`
 Expected: ohne Fehler, beide PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/kompass/src/components/shell/topbar.tsx apps/kompass/src/components/shell/user-menu.tsx apps/kompass/src/components/shell/sidebar.tsx
@@ -1110,7 +1110,7 @@ git commit -m "feat(shell): the top bar carries logo, organisation, breadcrumb w
 - Consumes: `buildRail`, `activeRailKey`, `sectionsFor`, `crumbsFor`, `locate` (Tasks 2–4); `Rail` (6), `SectionNav` (7), `Topbar` (8).
 - Produces: `ShellFrame` mit unveränderter Props-Signatur (`layout.tsx` bleibt unberührt).
 
-- [ ] **Step 1: `shell-frame.tsx` ersetzen**
+- [x] **Step 1: `shell-frame.tsx` ersetzen**
 
 ```tsx
 'use client';
@@ -1181,13 +1181,13 @@ export function ShellFrame({ organization, logoUrl, groups, build, user, permiss
 
 `TooltipProvider` entfällt: Die Schiene hat keine Tooltips mehr, und außerhalb der Shell benutzt niemand `@/components/ui/tooltip` (geprüft am 2026-09-14). Die Datei `tooltip.tsx` bleibt liegen.
 
-- [ ] **Step 2: `sidebar.tsx` löschen**
+- [x] **Step 2: `sidebar.tsx` löschen**
 
 ```bash
 git rm apps/kompass/src/components/shell/sidebar.tsx
 ```
 
-- [ ] **Step 3: Präferenzen bereinigen**
+- [x] **Step 3: Präferenzen bereinigen**
 
 In `apps/kompass/src/lib/preferences.ts` aus `type Prefs` die Zeilen `sidebarCollapsed: boolean;` und `navCollapsedGroups: string[];` entfernen, aus `DEFAULTS` die Zeilen `sidebarCollapsed: false,` und `navCollapsedGroups: [],`. Ergebnis:
 
@@ -1212,21 +1212,21 @@ const DEFAULTS: Prefs = {
 
 Bereits gespeicherte Schlüssel `kompass.sidebarCollapsed` / `kompass.navCollapsedGroups` im `localStorage` bleiben liegen und stören nicht.
 
-- [ ] **Step 4: Alte Schlüssel aus der Sprachdatei entfernen**
+- [x] **Step 4: Alte Schlüssel aus der Sprachdatei entfernen**
 
 In `apps/kompass/messages/de.json`: die Zeile `"collapse": "Navigation einklappen",` im Objekt `nav` und die Zeile `"expandNav": "Navigation aufklappen"` im Objekt `shell.topbar` löschen. Achtung auf das Komma der vorangehenden Zeile in `shell.topbar` (`"openNav": "Navigation öffnen"` wird zur letzten Zeile — ohne Komma).
 
-- [ ] **Step 5: Typecheck und Unit-Tests**
+- [x] **Step 5: Typecheck und Unit-Tests**
 
 Run: `pnpm typecheck && cd apps/kompass && npx vitest run`
 Expected: ohne Fehler, alle Unit-Tests PASS (auch `message-keys`, `no-hardcoded-ui-text`).
 
-- [ ] **Step 6: Shell-E2E grün**
+- [x] **Step 6: Shell-E2E grün**
 
 Run: `cd apps/kompass && npx playwright test e2e/shell.spec.ts`
 Expected: alle acht Tests PASS. Schlägt der erste Test an der Reihenfolge der Schiene fehl, die Erwartung an die Registry-Reihenfolge anpassen (Hinweis in Task 5). Der Sammlungstest liest das Template selbst ein (wie `site-template.spec.ts`), weil der Seed das nicht tut.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/kompass/src/components/shell/shell-frame.tsx apps/kompass/src/lib/preferences.ts apps/kompass/messages/de.json
@@ -1247,7 +1247,7 @@ git commit -m "feat(shell): the frame is top bar over rail, second level and con
 **Interfaces:**
 - Consumes: Seed-Rolle „Kassenprüfer" (nur `backup.export`; `roles.spec.ts` verlässt sich darauf), den Nutzer-anlegen-Dialog (`/admin/users`, Muster aus `auth.spec.ts`).
 
-- [ ] **Step 1: `modules.spec.ts` — Schiene statt Sidebar-Link**
+- [x] **Step 1: `modules.spec.ts` — Schiene statt Sidebar-Link**
 
 Den Test `a deactivated module disappears from the sidebar` ersetzen:
 
@@ -1267,7 +1267,7 @@ test('a deactivated module disappears from the rail', async ({ page }) => {
 });
 ```
 
-- [ ] **Step 2: `dms.spec.ts` — „Akte einrichten" über Einstellungen**
+- [x] **Step 2: `dms.spec.ts` — „Akte einrichten" über Einstellungen**
 
 Im Test `verwaltet Dokumentarten und Regeln` die Zeile
 
@@ -1284,7 +1284,7 @@ ersetzen durch:
 
 Der Kommentar darüber („Über die Navigation, nicht über die URL …") bleibt.
 
-- [ ] **Step 3: Nutzer ohne Modulrechte in `shell.spec.ts`**
+- [x] **Step 3: Nutzer ohne Modulrechte in `shell.spec.ts`**
 
 Innerhalb von `test.describe('app shell', …)` als letzten Test einfügen:
 
@@ -1326,12 +1326,12 @@ Innerhalb von `test.describe('app shell', …)` als letzten Test einfügen:
 
 Trägt die Seed-Rolle „Kassenprüfer" in der Testumgebung mehr als `backup.export` (`roles.spec.ts`, Test „lists roles …", zeigt den Stand), die Erwartungen an `sections` entsprechend erweitern — die Erwartung an die Schiene (`['Startseite', 'Einstellungen']`) bleibt, solange die Rolle kein Modulrecht hat.
 
-- [ ] **Step 4: Die drei Specs laufen lassen**
+- [x] **Step 4: Die drei Specs laufen lassen**
 
 Run: `cd apps/kompass && npx playwright test e2e/shell.spec.ts e2e/modules.spec.ts e2e/dms.spec.ts e2e/palette-and-errors.spec.ts`
 Expected: alle PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/kompass/e2e/shell.spec.ts apps/kompass/e2e/modules.spec.ts apps/kompass/e2e/dms.spec.ts
@@ -1345,7 +1345,7 @@ git commit -m "test(e2e): modules and the dms admin reach their pages through ra
 **Files:**
 - Modify: `docs/superpowers/specs/2026-09-05-fundament-design.md` (Zeile 155 „App-Shell (Sidebar aus Manifesten …" und Zeile 188 „Shell-Maße (Sidebar 248/56 px …")
 
-- [ ] **Step 1: Ablösungsnotiz an beiden Stellen**
+- [x] **Step 1: Ablösungsnotiz an beiden Stellen**
 
 In Zeile 155 nach dem Klammerausdruck `… Module hängen später ihre Entitäten an)` einfügen:
 
@@ -1359,19 +1359,19 @@ In Zeile 188 nach `Shell-Maße (Sidebar 248/56 px, Topbar 56 px, Drawer unter 11
  — Sidebar-Maße abgelöst am 2026-09-14, siehe Navigations-Spec; Topbar und Drawer-Grenze gelten weiter
 ```
 
-- [ ] **Step 2: Volle Prüfung**
+- [x] **Step 2: Volle Prüfung**
 
 Run: `pnpm verify`
 Expected: Typecheck, alle Tests, E2E kalt gegen `next dev`, Image-Build und E2E gegen das Image — alles grün. Braucht Docker; etwa vier Minuten. Ein roter Lauf wird lokal reproduziert (`pnpm e2e:cold` bzw. `pnpm e2e:image`), nicht über die CI erraten.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add docs/superpowers/specs/2026-09-05-fundament-design.md
 git commit -m "docs(spec): the fundament spec points to the navigation spec where the sidebar is superseded"
 ```
 
-- [ ] **Step 4: Plan als erledigt markieren**
+- [x] **Step 4: Plan als erledigt markieren**
 
 Alle `- [ ]` dieses Plans auf `- [x]` setzen und committen:
 
