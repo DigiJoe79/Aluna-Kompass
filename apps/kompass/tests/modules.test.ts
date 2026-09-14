@@ -36,3 +36,25 @@ describe('installed modules', () => {
     expect([...registry.permissionKeys].filter((k) => k.startsWith('website.'))).toEqual([]);
   });
 });
+
+/**
+ * Unter Verwaltung → Module steht der Name aus der Sprachdatei; fehlt er,
+ * zeigt die Karte den blossen Schlüssel an (`module-card.tsx`). So standen
+ * dort bis zum 14.09. „site“, „contacts“ und „dms“ — und `names.website`
+ * gehörte zu einem Modul, das längst `site` heisst. Der Fallback verschweigt
+ * die Lücke, deshalb prüft der Test sie.
+ */
+describe('module names in the interface', () => {
+  const messages = JSON.parse(readFileSync(new URL('../messages/de.json', import.meta.url), 'utf8')) as {
+    modules: { names: Record<string, string>; descriptions: Record<string, string> };
+  };
+  const keys = [coreModule.key, ...installedModules.map((m) => m.key)];
+
+  it('gives every installed module a German name', () => {
+    expect(keys.filter((key) => !messages.modules.names[key])).toEqual([]);
+  });
+
+  it('gives every installed module a description', () => {
+    expect(keys.filter((key) => !messages.modules.descriptions[key])).toEqual([]);
+  });
+});

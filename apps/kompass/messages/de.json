@@ -880,15 +880,20 @@
       "finance": "Finanzen",
       "members": "Mitglieder",
       "animals": "Tiere",
-      "website": "Webseite",
-      "projects": "Projekte"
+      "projects": "Projekte",
+      "site": "Webseite",
+      "contacts": "Kontakte",
+      "dms": "Dokumentenmanagement"
     },
     "descriptions": {
       "core": "Anmeldung, Rollen, Einstellungen, Änderungsprotokoll, Dokumente und Backup.",
       "finance": "Konten, Buchungen, Rücklagen, Zuwendungsbestätigungen.",
       "members": "Mitgliederstamm, Beiträge, Versammlungen.",
       "animals": "Tiere, Vermittlung, Patenschaften.",
-      "website": "Inhalte und statischer Website-Build."
+      "site": "Inhalte der Webseite und ihr Aufbau als statische Seiten.",
+      "projects": "Projekte des Vereins und ihre Darstellung auf der Webseite.",
+      "contacts": "Personen und Organisationen, mit denen der Verein zu tun hat.",
+      "dms": "Posteingang, Schriftverkehr, Ablage und Wiedervorlagen."
     },
     "notes": {
       "finance": "Voraussetzung für Zuwendungsbestätigungen."
