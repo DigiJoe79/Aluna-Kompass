@@ -2,6 +2,11 @@ import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
 
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+  'base64',
+);
+
 test('publish page runs the checks and blocks on a blocked term', async ({ page }) => {
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
@@ -138,4 +143,57 @@ test('the check reports a stale reference as a warning, not as a block', async (
   await expect(stale).toContainText('variables.featuredProject');
   await expect(stale).toContainText('winterhilfe');
   await expect(page.getByRole('region', { name: 'Sperrworttreffer' })).toContainText('Keine Treffer');
+});
+
+/**
+ * Die gebaute Seite rechnet mit der Wurzel, ausgeliefert wird sie unter
+ * `/site/preview/`. Die Route schreibt die Pfade deshalb beim Ausliefern um —
+ * eine Textumformung, die genau die Attribute trifft, an die jemand gedacht
+ * hat. `srcset` fehlte, und das fiel niemandem auf: Wer daneben greift, landet
+ * nicht auf einem 404, sondern auf der Oberfläche von Kompass, die mit 200 und
+ * HTML antwortet. Im Browser blieb das Bild leer, im Protokoll stand nichts.
+ *
+ * Der Test prüft darum nicht ein Attribut, sondern die Regel: Kein absoluter
+ * Pfad zeigt an der Vorschau vorbei. Kommt eines Tages ein Attribut dazu,
+ * schlägt er fehl, statt still das Falsche auszuliefern.
+ */
+test('the preview rewrites every absolute path, srcset included', async ({ page }) => {
+  test.setTimeout(240_000);
+  await resetDatabase(page, 'seeded');
+  await loginAsAdmin(page);
+
+  // Nur Rasterbilder bekommen Varianten, und nur mit Varianten entsteht ein
+  // `srcset` — ein SVG liefe an diesem Test vorbei.
+  await page.goto('/admin/media');
+  await page.getByLabel('Datei hochladen').setInputFiles({ name: 'hero.png', mimeType: 'image/png', buffer: PNG });
+  await expect(page.getByRole('row', { name: /hero-/ })).toBeVisible();
+
+  await page.goto('/site/template');
+  await page.getByRole('button', { name: 'Template einlesen' }).click();
+  await page.getByRole('button', { name: 'Übernehmen' }).click();
+  await expect(page.getByRole('status')).toContainText('eingelesen');
+
+  await page.goto('/site/variables');
+  await page.getByRole('button', { name: 'Bild auf der Startseite: Wählen' }).click();
+  const chooser = page.getByRole('dialog', { name: 'Bild wählen' });
+  await chooser.getByRole('button', { name: /hero-/ }).click();
+  await expect(chooser).toBeHidden();
+  await page.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByRole('status')).toContainText('Gespeichert');
+
+  await page.goto('/site/publish');
+  await page.getByRole('button', { name: 'Vorschau bauen' }).click();
+  await expect(page.getByRole('region', { name: 'Änderungen gegenüber Live' })).toContainText('index.html', { timeout: 180_000 });
+
+  const html = await (await page.request.get('/site/preview/')).text();
+  const leftovers = [...html.matchAll(/(\w[\w-]*)="(\/(?!site\/preview)[^"]*)"/g)].map((m) => `${m[1]}="${m[2]}"`);
+  expect(leftovers).toEqual([]);
+
+  // Und die Adresse aus dem `srcset` liefert wirklich ein Bild. Auf den Status
+  // ist hier kein Verlass: Der ist auch im kaputten Zustand 200.
+  const srcset = /srcset="([^"]+)"/.exec(html)?.[1];
+  expect(srcset).toBeTruthy();
+  const first = srcset!.split(',')[0]!.trim().split(' ')[0]!;
+  const image = await page.request.get(first);
+  expect(image.headers()['content-type']).toBe('image/webp');
 });

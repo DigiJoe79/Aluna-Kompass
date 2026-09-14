@@ -2,7 +2,7 @@ import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { optionalSession } from '@/lib/request-context';
 import { siteEnv } from '@/lib/site-env';
-import { resolvePreviewFile } from '@/lib/site-preview';
+import { resolvePreviewFile, rewritePreviewHtml } from '@/lib/site-preview';
 
 const TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -33,11 +33,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ path?: str
   const ext = path.extname(target);
   let content: BodyInit = bytes;
   if (ext === '.html') {
-    let html = bytes.toString('utf8');
-    html = html.replace('<head>', '<head><base href="/site/preview/">');
-    html = html.replace(/href="\/(?!\/)/g, 'href="/site/preview/');
-    html = html.replace(/src="\/(?!\/)/g, 'src="/site/preview/');
-    content = html;
+    content = rewritePreviewHtml(bytes.toString('utf8'));
   }
   return new Response(content, {
     headers: {
