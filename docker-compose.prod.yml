@@ -25,6 +25,10 @@ services:
     pull_policy: always
     container_name: kompass-prod
     restart: unless-stopped
+    # Vor der Einrichtung nimmt Kompass den ersten Nutzer von jedem an, der die
+    # Adresse erreicht — vorher gibt es niemanden, an dem sich das pruefen liesse.
+    # Wer nicht ausschliessen kann, dass in dieser Zeit jemand anders zugreift,
+    # bindet den Port bis dahin lokal: ["127.0.0.1:3000:3000"]. Siehe betrieb.md.
     ports: ["3000:3000"]
     environment:
       APP_ENV: production

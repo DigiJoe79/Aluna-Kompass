@@ -223,3 +223,25 @@ Zoom.
 **Wann:** Mit dem nächsten Schritt am Template-Vertrag, zusammen mit
 Nummer 21 — beide berühren `images.json` beziehungsweise `assets[]` und die
 Templates an denselben Stellen.
+
+## 25. Einrichtungscode für das Fenster vor dem ersten Konto
+
+**Was:** Ein Code, den der Entrypoint beim ersten Start einmalig ins
+Containerprotokoll schreibt und den `/setup` verlangt — Muster wie
+`E2E_RESET_TOKEN` in `apps/kompass/src/app/__e2e/reset/route.ts`. Ohne ihn
+nimmt weder die Einrichtungsseite noch der Einrichtungs-Import etwas an.
+
+**Warum:** Solange kein Nutzer existiert, richtet sich Kompass für jeden ein,
+der die Adresse erreicht (`setup/import/upload/route.ts` prüft nur
+`isSetupRequired`, `importBackupForSetup` läuft ohne `CallContext`). Ein
+Angreifer braucht dafür kein fremdes Archiv — Kompass ist Open Source, ein
+eigenes ist in zehn Minuten erzeugt. Der Angriff ist allerdings laut: Der
+Vorstand findet eine fertige Installation vor, in die er nicht hineinkommt.
+Gestohlen wird nichts, gestört schon.
+
+**Wann:** Nicht vor dem ersten Release. Der Code kostet den Betreiber einen
+Blick ins Containerprotokoll, und das ist genau die Hürde, an der ein
+Vereinsvorstand ohne Administrationserfahrung stehenbleibt — für ein Risiko,
+das sich im Vereinsnetz mit einer Zeile im Compose schließen lässt (siehe
+`docs/handbuch/betrieb.md`, „Das Fenster bis zur Einrichtung"). Sobald jemand
+Kompass exponiert betreiben will, ändert sich die Rechnung.

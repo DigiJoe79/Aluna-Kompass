@@ -19,6 +19,27 @@ das NAS betreut.
 5. Anwendung starten. Test: `http://<nas>:3001`, Prod: `http://<nas>:3000`. Der erste Aufruf zeigt die Einrichtungsseite (genau einmal).
 6. Health: `http://<nas>:3000/api/health`.
 
+### Das Fenster bis zur Einrichtung
+
+Zwischen dem ersten Start und dem Anlegen des ersten Kontos nimmt Kompass die
+Einrichtung von jedem an, der die Adresse erreicht — auch das Einspielen eines
+Backups. Anders ginge es nicht: Vor dem ersten Konto gibt es niemanden, an dem
+sich eine Anmeldung prüfen ließe.
+
+Im Netz eines Vereins ist das in aller Regel unproblematisch, und das Fenster
+ist meist wenige Minuten lang. Wenn Sie in dieser Zeit nicht ausschließen
+können, dass jemand anders auf den Container zugreift — etwa weil das Netz
+einen Gastzugang hat, weil der Port schon nach außen freigegeben ist oder weil
+zwischen Start und Einrichtung längere Zeit liegt —, binden Sie ihn bis zum
+Abschluss der Einrichtung nur lokal. Im Compose:
+
+```yaml
+ports: ["127.0.0.1:3000:3000"]
+```
+
+Danach den Eintrag zurückändern und die Anwendung neu starten. Wer den Container
+ohnehin erst startet, wenn er direkt davorsitzt, braucht das nicht.
+
 ## Update
 
 1. In Prod ein Backup exportieren (Verwaltung → Backup → Export erstellen) und die Datei sichern.
