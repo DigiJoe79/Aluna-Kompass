@@ -3,6 +3,7 @@ import { newId, resolveSession, revokeSession, type CallContext, type ResolvedSe
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { depsReady, getDeps } from './deps';
+import { cookieShouldBeSecure } from './secure-cookie';
 
 export const SESSION_COOKIE = 'kompass_session';
 
@@ -41,8 +42,10 @@ export async function requireSession(opts: { allowPasswordChange?: boolean } = {
 
 export async function setSessionCookie(sessionId: string, expiresAt: string): Promise<void> {
   const store = await cookies();
-  // secure: false — die App läuft ausschließlich im LAN ohne TLS (Spec, Abschnitt 3 und 8).
-  store.set({ name: SESSION_COOKIE, value: sessionId, httpOnly: true, sameSite: 'lax', secure: false, path: '/', expires: new Date(expiresAt) });
+  // Im LAN ohne TLS bleibt das Cookie offen — anders kaeme es gar nicht an.
+  // Meldet ein Proxy TLS, gehoert es nicht mehr auf Klartext: `cookieShouldBeSecure`.
+  const secure = cookieShouldBeSecure((await headers()).get('x-forwarded-proto'));
+  store.set({ name: SESSION_COOKIE, value: sessionId, httpOnly: true, sameSite: 'lax', secure, path: '/', expires: new Date(expiresAt) });
 }
 
 export async function clearSessionCookie(): Promise<void> {
