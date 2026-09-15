@@ -23,3 +23,8 @@ apps/kompass/test-results-container/
 apps/kompass/.e2e-container/
 next-env.d.ts
 *.tsbuildinfo
+
+# Interne Notizen: bleiben ausserhalb des oeffentlichen Repos, weil dort
+# ungefixte Befunde mit Angriffsweg stehen. Eigenes privates Git, sobald
+# docs/intern/ mehr als eine Datei traegt (siehe Nordstern, Repo-Neustart).
+docs/intern/
