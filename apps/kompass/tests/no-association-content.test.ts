@@ -21,7 +21,10 @@ const ROOT = path.resolve(import.meta.dirname, '../../..');
 // „Einsortierhilfe“, und die Prüfung des Handbuchs (2026-09-15) meldete
 // prompt eine Zeile der Akte. In „aluna-tierhilfe.org“ steht der Bindestrich
 // davor und ist selbst eine Grenze — der echte Fall wird weiterhin gefunden.
-const FORBIDDEN = ['\\btierhilfe', '\\bzuhause-gesucht', '\\bhundeblicke\\.net', '\\bbetterplace'];
+// `1and1-data.host` ist kein Vereinsname, aber der konkrete Webspace des
+// Vereins — in einer Vorlage, die ein fremder Verein kopiert, so fehl am
+// Platz wie sein Name.
+const FORBIDDEN = ['\\btierhilfe', '\\bzuhause-gesucht', '\\bhundeblicke\\.net', '\\bbetterplace', '1and1-data\\.host'];
 
 const CODE = ['--include=*.ts', '--include=*.tsx', '--include=*.astro', '--include=*.json', '--include=*.css'];
 
@@ -54,6 +57,17 @@ describe('the product carries no association of its own', () => {
    */
   it('names no association in the handbook, which ships inside the image', () => {
     expect(search('docs/handbuch', ['--include=*.md'])).toEqual([]);
+  });
+
+  /**
+   * Die beiden `.env.*.example` sind das, was ein fremder Verein kopiert, um
+   * seine eigene Umgebung zu bauen — und zugleich die einzige Beschreibung
+   * der `SITE_*`-Variablen außerhalb des Handbuchs. Sie liegen im
+   * Wurzelverzeichnis und fielen deshalb durch das Raster oben, das nur
+   * `packages`, `apps` und `templates` kennt.
+   */
+  it('names no association in the env templates a new club copies', () => {
+    expect([...search('.env.prod.example', []), ...search('.env.test.example', [])]).toEqual([]);
   });
 
   /**

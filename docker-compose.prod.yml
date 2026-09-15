@@ -1,20 +1,21 @@
-# Produktionsumgebung für die Container Station (QNAP TS-873):
-# Container Station → Anwendung erstellen → diesen Inhalt einfügen.
+# Produktionsumgebung. Vorlage — die Pfade unten sind Beispiele und werden auf die
+# eigenen angepasst.
 #
-# Die Image-Suche der Oberfläche kennt nur Docker Hub; über eine Anwendung
-# wird jede Registry gezogen, und ghcr.io/digijoe79/aluna-kompass ist
-# öffentlich lesbar, also ohne Anmeldung.
+# Vorher anlegen: ein Verzeichnis für die Daten, eines für die Medien, die
+# Datei .env.prod (siehe .env.prod.example) und — nur wenn die Webseite von
+# hier aus veröffentlicht wird — secret/site.pw (Rechte 600, Besitzer 1000).
+# Das Verzeichnis `secret` liegt **neben** den Daten, nicht darin: Das Backup
+# bildet die Daten ab, und ein Geheimnis darf in kein Archiv geraten.
 #
-# Test und Prod sind bewusst getrennte Anwendungen: so lässt sich Test
-# aktualisieren, ohne Prod anzufassen, und die Validierung verlangt nicht
-# die Konfiguration der jeweils anderen Umgebung.
+# Test und Produktion sind bewusst getrennte Anwendungen: So lässt sich der
+# Test aktualisieren, ohne die Produktion anzufassen.
 #
-# Alle Pfade sind absolut, weil die Container Station das Compose nach /tmp
-# kopiert und relative env_file-Pfade dort ins Leere zeigen.
+# Die Pfade sind absolut. Manche Oberflächen — etwa die Container Station von
+# QNAP — kopieren das Compose vor dem Start nach /tmp, und ein relativer
+# `env_file`-Pfad zeigt dort ins Leere.
 #
-# Vorher anlegen: /share/Container/kompass-prod/{data,media},
-# die Datei .env.prod (siehe .env.prod.example) und secret/site.pw (Rechte 600,
-# Besitzer 1000).
+# `ghcr.io/digijoe79/aluna-kompass` ist öffentlich lesbar, eine Anmeldung an
+# der Registry ist also nicht nötig.
 services:
   kompass-prod:
     # Prod folgt dem main-Branch; das Tag latest entsteht erst beim
@@ -32,11 +33,11 @@ services:
     ports: ["3000:3000"]
     environment:
       APP_ENV: production
-    env_file: [/share/Container/kompass-prod/.env.prod]
+    env_file: [/pfad/zu/kompass-prod/.env.prod]
     volumes:
       # Ein Volume für alles, was gesichert wird: darunter liegt je Modul ein
       # Verzeichnis, `core` hält Datenbank, Mediathek und Basis-Vorlagen.
-      - /share/Container/kompass-prod/data:/data
+      - /pfad/zu/kompass-prod/data:/data
       # Geheimnisse ausdrücklich daneben, nie unter /data — das Backup bildet
       # /data ab und darf das Webspace-Passwort nicht mit ausliefern.
-      - /share/Container/kompass-prod/secret:/secret:ro
+      - /pfad/zu/kompass-prod/secret:/secret:ro
