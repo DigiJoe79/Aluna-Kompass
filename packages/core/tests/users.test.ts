@@ -4,7 +4,7 @@ import { START_PASSWORD_PATTERN, verifyPassword } from '../src/auth/password';
 import { auditLog, sessions, users } from '../src/db/schema';
 import { assignRole, createRole } from '../src/roles/service';
 import { unwrap } from '../src/result';
-import { createTestDeps, ctxWith, insertRole, insertUser } from '../src/testing';
+import { auditEntry, createTestDeps, ctxWith, insertRole, insertUser } from '../src/testing';
 import { createUser, listUsers, resetStartPassword, setUserActive, updateUser } from '../src/users/service';
 
 const admin = ctxWith(['users.manage', 'roles.manage']);
@@ -20,9 +20,10 @@ describe('users service', () => {
     expect(user).toMatchObject({ name: 'Peter Lang', email: 'peter.lang@example.org', status: 'firstLoginPending', mustChangePassword: true, roles: [{ id: role.id, name: 'Kassenprüfer' }] });
     const row = deps.db.select().from(users).where(eq(users.id, user.id)).get();
     expect(await verifyPassword(row!.passwordHash, startPassword)).toBe(true);
-    const audit = deps.db.select().from(auditLog).all().find((e) => e.action === 'users.create');
-    expect(audit?.after).not.toContain(startPassword);
-    expect(audit?.after).not.toContain('passwordHash');
+    const audit = auditEntry(deps, 'users.create');
+    expect(audit).toMatchObject({ entityType: 'user', entityId: user.id });
+    expect(audit.after).not.toContain(startPassword);
+    expect(audit.after).not.toContain('passwordHash');
   });
 
   it('rejects duplicate emails (case-insensitive), invalid emails, unknown roles and missing permission', async () => {
@@ -87,5 +88,9 @@ describe('users service', () => {
     expect(row?.mustChangePassword).toBe(true);
     expect(await verifyPassword(row!.passwordHash, startPassword)).toBe(true);
     expect(deps.db.select().from(sessions).all()).toHaveLength(0);
+    const entry = auditEntry(deps, 'users.resetStartPassword');
+    expect(entry).toMatchObject({ entityType: 'user', entityId: id });
+    // Das ausgegebene Startpasswort darf nirgends im Eintrag stehen.
+    expect(JSON.stringify(entry)).not.toContain(startPassword);
   });
 });

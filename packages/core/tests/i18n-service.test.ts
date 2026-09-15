@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { coreModule, schema, unwrap } from '../src';
-import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
+import { auditEntry, createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { addLocale, listLocales, previewLocaleRemoval, removeLocale, reorderLocales } from '../src/i18n/service';
 import { recordAudit } from '../src/audit/log';
 import { eq } from 'drizzle-orm';
@@ -17,6 +17,10 @@ describe('locale administration', () => {
     const ctx = ctxWith(['settings.manage']);
     unwrap(await addLocale(deps, ctx, { code: 'en' }));
     expect(unwrap(await listLocales(deps, ctx))).toEqual(['de', 'en']);
+    const entry = auditEntry(deps, 'locale.add');
+    expect(entry).toMatchObject({ entityType: 'locale', entityId: 'en' });
+    expect(JSON.parse(entry.before!)).toEqual(['de']);
+    expect(JSON.parse(entry.after!)).toEqual(['de', 'en']);
   });
 
   it('refuses an unknown shape, a duplicate, and the eleventh locale', async () => {
@@ -90,6 +94,10 @@ const probeTable = (deps: ReturnType<typeof setup>, name: Record<string, string>
     const reordered = unwrap(await reorderLocales(deps, ctx, { codes: ['en', 'de', 'fr'] }));
     expect(reordered).toEqual(['en', 'de', 'fr']);
     expect(unwrap(await listLocales(deps, ctx))).toEqual(['en', 'de', 'fr']);
+    const entry = auditEntry(deps, 'locale.reorder');
+    expect(entry).toMatchObject({ entityType: 'locale', entityId: 'en' });
+    expect(JSON.parse(entry.before!)).toEqual(['de', 'en', 'fr']);
+    expect(JSON.parse(entry.after!)).toEqual(['en', 'de', 'fr']);
 
     const bad = await reorderLocales(deps, ctx, { codes: ['en', 'de'] });
     expect(bad.ok === false && bad.error.type === 'conflict').toBe(true);

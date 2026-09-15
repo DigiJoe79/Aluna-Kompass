@@ -1,4 +1,4 @@
-import { ctxWith } from '@kompass/core/testing';
+import { auditEntry, ctxWith } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { countDocumentsByFolder, createDocumentFolder, deleteDocumentFolder, listDocumentFolders } from '../src/catalog';
 import { receiveDocument } from '../src/incoming';
@@ -12,6 +12,10 @@ describe('folders', () => {
     expect(created.ok).toBe(true);
     if (!created.ok) return;
     expect(created.value.path).toBe('Behoerden/Finanzamt');
+    const entry = auditEntry(deps, 'dms.folder.create');
+    // Im Protokoll steht der normalisierte Pfad, nicht die Eingabe.
+    expect(entry).toMatchObject({ entityType: 'documentFolder', entityId: 'Behoerden/Finanzamt' });
+    expect(JSON.parse(entry.after!)).toEqual({ path: 'Behoerden/Finanzamt' });
   });
 
   it('listet Ordner auf', async () => {

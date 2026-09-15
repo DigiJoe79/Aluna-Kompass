@@ -176,7 +176,8 @@ export async function reindexAllDocuments(deps: Deps, ctx: CallContext): Promise
       action: 'document.reindexRequested',
       entityType: 'document',
       entityId: 'all',
-      before: null,
+      // Kein `before: null` — das schriebe die Zeichenkette „null“ in die
+      // Spalte. Ein weggelassenes Feld bleibt leer, wie bei allen anderen.
       after: { queued: rows.length },
       summary: `${rows.length} Dokumente zum Neu-Lesen vorgemerkt`,
     });

@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { unwrap, writeSettingInternal, type CallContext } from '@kompass/core';
-import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
+import { auditEntry, createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { siteTemplateState } from '../src/schema';
 import { settleTemplateAfterImport, templateNeedsReview } from '../src/review';
@@ -93,6 +93,11 @@ describe('settling a template after an import', () => {
 
     expect(unwrap(settleTemplateAfterImport(deps, ctx, jetzt, vorher))).toBe('unchanged');
     expect(templateNeedsReview(deps)).toBe(false);
+    // Auch das stille Übernehmen steht im Protokoll: Sonst bliebe unsichtbar,
+    // dass die Prüfpflicht ohne menschliche Entscheidung erloschen ist.
+    const entry = auditEntry(deps, 'site.template.settled');
+    expect(entry).toMatchObject({ entityType: 'siteTemplate', entityId: 'current' });
+    expect(JSON.parse(entry.after!).digest).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it('keeps asking when a single file differs', () => {

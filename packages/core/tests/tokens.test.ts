@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { createApiToken, listApiTokens, resolveApiToken, revokeApiToken, tokenPrefixFor } from '../src/auth/tokens';
-import { apiTokens, auditLog, users } from '../src/db/schema';
+import { apiTokens, users } from '../src/db/schema';
 import { assignRole, createRole, setRolePermissions } from '../src/roles/service';
 import { unwrap } from '../src/result';
-import { createTestDeps, ctxWith, insertUser } from '../src/testing';
+import { auditEntry, createTestDeps, ctxWith, insertUser } from '../src/testing';
 
 const meta = { ipAddress: '10.0.0.7', requestId: 'REQ-MCP' };
 
@@ -22,7 +22,9 @@ describe('api tokens', () => {
     expect(record.prefix).toBe(token.slice(0, 12));
     const stored = deps.db.select().from(apiTokens).all()[0]!;
     expect(stored.tokenHash).not.toContain(token.slice(9));
-    expect(deps.db.select().from(auditLog).all().at(-1)?.after).not.toContain(token);
+    const created = auditEntry(deps, 'apiTokens.create');
+    expect(created).toMatchObject({ entityType: 'apiToken', entityId: record.id, userId });
+    expect(created.after).not.toContain(token);
 
     const ctx = resolveApiToken(deps, token, meta);
     expect(ctx).toMatchObject({ userId, channel: 'mcp', apiTokenId: record.id, ipAddress: '10.0.0.7', requestId: 'REQ-MCP' });
@@ -56,6 +58,7 @@ describe('api tokens', () => {
     const { record } = unwrap(await createApiToken(deps, ctxWith([], a), { name: 'A1' }));
     unwrap(await createApiToken(deps, ctxWith([], b), { name: 'B1' }));
     unwrap(await revokeApiToken(deps, ctxWith([], a), { id: record.id }));
+    expect(auditEntry(deps, 'apiTokens.revoke')).toMatchObject({ entityType: 'apiToken', entityId: record.id, userId: a });
     const list = unwrap(await listApiTokens(deps, ctxWith([], a)));
     expect(list.map((t) => [t.name, t.revokedAt !== null])).toEqual([['A1', true]]);
     const foreign = await revokeApiToken(deps, ctxWith([], b), { id: record.id });

@@ -1,5 +1,5 @@
-import { coreModule, readSetting, setModuleEnabled, unwrap } from '@kompass/core';
-import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
+import { coreModule, readSetting, schema, setModuleEnabled, unwrap } from '@kompass/core';
+import { auditEntry, createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { contactsModule } from '@kompass/module-contacts';
 import { describe, expect, it } from 'vitest';
 import { updateDocumentType } from '../src/catalog';
@@ -29,6 +29,9 @@ describe('Einschalten der Akte', () => {
     expect(types.find((t) => t.key === 'unclassified-out')?.prefix).toBe('AUS');
     // Der Ordnerbaum ist die Struktur des Vereins, nicht unsere.
     expect(deps.db.select().from(documentFolders).all()).toEqual([]);
+    const entry = auditEntry(deps, 'dms.install');
+    expect(entry).toMatchObject({ entityType: 'module', entityId: 'dms' });
+    expect(JSON.parse(entry.after!)).toEqual({ documentTypes: ['unclassified-in', 'unclassified-out'] });
   });
 
   it('zeigt mit den Vorgaben auf die beiden Arten', async () => {
@@ -50,9 +53,14 @@ describe('Einschalten der Akte', () => {
   it('legt beim zweiten Einschalten nichts doppelt an', async () => {
     const { deps, ctx } = setup();
     await enableDms(deps, ctx);
+    // Die Einrichtung schreibt mehrere Einträge unter diesem Namen: die beiden
+    // Vorgaben und die Einrichtung selbst. Gezählt wird deshalb, ob beim
+    // zweiten Mal noch etwas dazukommt.
+    const nachDemErstenMal = deps.db.select().from(schema.auditLog).all().filter((e) => e.action === 'dms.install').length;
     unwrap(await setModuleEnabled(deps, ctx, { key: 'dms', enabled: false }));
     unwrap(await setModuleEnabled(deps, ctx, { key: 'dms', enabled: true }));
     expect(deps.db.select().from(documentTypes).all()).toHaveLength(2);
+    expect(deps.db.select().from(schema.auditLog).all().filter((e) => e.action === 'dms.install')).toHaveLength(nachDemErstenMal);
   });
 
   it('lässt eine Art, die gerade Vorgabe ist, nicht stilllegen', async () => {

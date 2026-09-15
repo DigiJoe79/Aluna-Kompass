@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { fixedClock, type FixedClock } from '../clock';
 import type { CallContext } from '../context';
 import { coreModule } from '../core-module';
-import { roles, settings, users } from '../db/schema';
+import { auditLog, roles, settings, users } from '../db/schema';
 import type { AppEnv, Deps } from '../deps';
 import { newId } from '../ids';
 import { createMemoryFileStore } from '../files/store';
@@ -78,6 +78,24 @@ export function createTestDeps(
     locales: () => readLocales(deps),
   };
   return deps;
+}
+
+/**
+ * Der letzte Protokolleintrag zu einer Aktion — der Weg, auf dem ein
+ * Dienst-Test prüft, dass sein Vorgang im Änderungsprotokoll steht.
+ *
+ * Fehlt der Eintrag, wirft der Helfer und nennt, was stattdessen geschrieben
+ * wurde. Eine Zusicherung gegen `undefined` sagte nur „ist nicht das“; die
+ * Meldung soll aber zeigen, ob die Aktion anders heißt oder ganz ausbleibt.
+ */
+export function auditEntry(deps: Pick<Deps, 'db'>, action: string) {
+  const all = deps.db.select().from(auditLog).all();
+  const matching = all.filter((entry) => entry.action === action);
+  if (matching.length === 0) {
+    const recorded = [...new Set(all.map((entry) => entry.action))];
+    throw new Error(`no audit entry for "${action}" — recorded: ${recorded.join(', ') || '(none)'}`);
+  }
+  return matching[matching.length - 1]!;
 }
 
 export function ctxWith(permissions: readonly string[], userId: string | null = 'USER-TEST'): CallContext {

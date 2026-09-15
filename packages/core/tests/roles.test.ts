@@ -3,7 +3,7 @@ import { auditLog } from '../src/db/schema';
 import { countActiveProtectedHolders, getEffectivePermissions } from '../src/roles/effective';
 import { assignRole, createRole, listRoles, removeRole, setRolePermissions, updateRole } from '../src/roles/service';
 import { unwrap } from '../src/result';
-import { createTestDeps, ctxWith, insertRole, insertUser } from '../src/testing';
+import { auditEntry, createTestDeps, ctxWith, insertRole, insertUser } from '../src/testing';
 
 const admin = ctxWith(['roles.manage', 'users.manage']);
 
@@ -37,6 +37,17 @@ describe('roles service', () => {
     expect(entries.at(-1)).toMatchObject({ action: 'roles.setPermissions', before: '[]', after: '["audit.view","documents.export"]' });
   });
 
+  it('renames a role and audits both sides of the change', async () => {
+    const deps = createTestDeps();
+    const role = unwrap(await createRole(deps, admin, { name: 'Kassenprüfer', description: 'Belege' }));
+    const updated = unwrap(await updateRole(deps, admin, { id: role.id, name: 'Kassenprüfung', description: 'Belege und Kasse' }));
+    expect(updated).toMatchObject({ name: 'Kassenprüfung', description: 'Belege und Kasse' });
+    const entry = auditEntry(deps, 'roles.update');
+    expect(entry).toMatchObject({ entityType: 'role', entityId: role.id });
+    expect(JSON.parse(entry.before!)).toMatchObject({ name: 'Kassenprüfer', description: 'Belege' });
+    expect(JSON.parse(entry.after!)).toMatchObject({ name: 'Kassenprüfung', description: 'Belege und Kasse' });
+  });
+
   it('protected roles cannot be edited or re-permissioned', async () => {
     const deps = createTestDeps();
     const roleId = insertRole(deps, { name: 'Administration', isProtected: true });
@@ -58,8 +69,14 @@ describe('roles service', () => {
     unwrap(await assignRole(deps, admin, { userId, roleId: a.id }));
     unwrap(await assignRole(deps, admin, { userId, roleId: b.id }));
     expect([...getEffectivePermissions(deps.db, deps.registry, userId)].sort()).toEqual(['audit.view', 'documents.export']);
+    const assigned = auditEntry(deps, 'users.assignRole');
+    expect(assigned).toMatchObject({ entityType: 'user', entityId: userId });
+    expect(JSON.parse(assigned.after!)).toMatchObject({ roleId: b.id, roleName: 'B' });
     unwrap(await removeRole(deps, admin, { userId, roleId: b.id }));
     expect([...getEffectivePermissions(deps.db, deps.registry, userId)]).toEqual(['audit.view']);
+    const removed = auditEntry(deps, 'users.removeRole');
+    expect(removed).toMatchObject({ entityType: 'user', entityId: userId });
+    expect(JSON.parse(removed.before!)).toMatchObject({ roleId: b.id, roleName: 'B' });
 
     const adminRoleId = insertRole(deps, { name: 'Administration', isProtected: true });
     unwrap(await assignRole(deps, admin, { userId, roleId: adminRoleId }));

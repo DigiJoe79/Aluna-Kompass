@@ -1,5 +1,5 @@
 import { coreModule, fakeTextExtraction, queryAudit, systemContext, type Deps, type TextExtraction } from '@kompass/core';
-import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
+import { auditEntry, createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { contactsModule } from '@kompass/module-contacts';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
@@ -219,6 +219,10 @@ describe('extractDocumentText', () => {
     const row = deps.db.select().from(documents).where(eq(documents.id, documentId)).get();
     expect(row?.textStatus).toBe('pending');
     expect(row?.textAttempts).toBe(0);
+    // Ein Sammelvorgang gilt keinem einzelnen Dokument — `entityId` sagt das.
+    const entry = auditEntry(deps, 'document.reindexRequested');
+    expect(entry).toMatchObject({ entityType: 'document', entityId: 'all', before: null });
+    expect(JSON.parse(entry.after!)).toEqual({ queued: 1 });
   });
 
   it('verweigert das Neu-Lesen ohne dms.manage', async () => {

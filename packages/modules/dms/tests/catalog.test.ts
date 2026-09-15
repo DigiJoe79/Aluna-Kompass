@@ -1,4 +1,4 @@
-import { ctxWith } from '@kompass/core/testing';
+import { auditEntry, ctxWith } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import {
   createDocumentRule,
@@ -67,6 +67,10 @@ describe('document types', () => {
     if (!result.ok) return;
     expect(result.value.prefix).toBe('BRF');
     expect(result.value.label).toBe('Anschreiben');
+    const entry = auditEntry(deps, 'dms.type.update');
+    expect(entry).toMatchObject({ entityType: 'documentType', entityId: 'letter' });
+    expect(JSON.parse(entry.before!)).toMatchObject({ label: 'Brief' });
+    expect(JSON.parse(entry.after!)).toMatchObject({ label: 'Anschreiben', isActive: true });
   });
 
   it('stellt eine Art still, statt sie zu löschen', async () => {
@@ -108,6 +112,10 @@ describe('document rules', () => {
     expect(updated.ok).toBe(true);
     if (!updated.ok) return;
     expect(updated.value.matchContains).toBe('Finanzamt Bescheid');
+    const entry = auditEntry(deps, 'dms.rule.update');
+    expect(entry).toMatchObject({ entityType: 'documentRule', entityId: created.value.id });
+    expect(JSON.parse(entry.before!)).toMatchObject({ matchContains: 'Finanzamt' });
+    expect(JSON.parse(entry.after!)).toMatchObject({ matchContains: 'Finanzamt Bescheid' });
 
     const rules = await listDocumentRules(deps, ctx);
     expect(rules.ok).toBe(true);

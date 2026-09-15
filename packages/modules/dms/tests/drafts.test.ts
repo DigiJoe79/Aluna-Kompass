@@ -1,5 +1,5 @@
 import { coreModule, defineModule, schema } from '@kompass/core';
-import { createTestDeps, ctxWith, fakeDocumentEngine, insertUser } from '@kompass/core/testing';
+import { auditEntry, createTestDeps, ctxWith, fakeDocumentEngine, insertUser } from '@kompass/core/testing';
 import { contactsModule, createContact } from '@kompass/module-contacts';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
@@ -66,6 +66,10 @@ describe('updateDraft', () => {
     expect(updated.ok).toBe(true);
     if (!updated.ok) return;
     expect(updated.value.subject).toBe('Neu');
+    const entry = auditEntry(deps, 'dms.draft.update');
+    expect(entry).toMatchObject({ entityType: 'documentDraft', entityId: created.value.id });
+    expect(JSON.parse(entry.before!)).toEqual({ subject: 'Alt' });
+    expect(JSON.parse(entry.after!)).toEqual({ subject: 'Neu' });
   });
 });
 
@@ -106,6 +110,10 @@ describe('previewDraft', () => {
     if (!draft.ok) throw new Error('setup');
     await previewDraft(deps, ctx, { id: draft.value.id });
     expect(calls[0]?.slots.draft).toBe(true);
+    // Auch eine Vorschau, die nichts ablegt, ist ein Zugriff auf den Inhalt.
+    const entry = auditEntry(deps, 'dms.draft.preview');
+    expect(entry).toMatchObject({ entityType: 'documentDraft', entityId: draft.value.id });
+    expect(JSON.parse(entry.after!)).toMatchObject({ subject: 'Test' });
   });
 
   it('rendert eine Vorschau, ohne etwas abzulegen', async () => {

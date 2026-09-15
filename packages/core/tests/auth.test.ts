@@ -6,7 +6,7 @@ import { resolveSession, revokeSession } from '../src/auth/sessions';
 import { auditLog, sessions, users } from '../src/db/schema';
 import { assignRole, createRole, setRolePermissions } from '../src/roles/service';
 import { unwrap } from '../src/result';
-import { createTestDeps, ctxWith, insertUser } from '../src/testing';
+import { auditEntry, createTestDeps, ctxWith, insertUser } from '../src/testing';
 
 const meta = { ipAddress: '10.0.0.5', requestId: 'REQ-1' };
 const PASSWORD = 'wiese-kanu-73-lampe';
@@ -89,6 +89,11 @@ describe('login and sessions', () => {
     expect(short.ok === false && short.error.type === 'validation').toBe(true);
 
     expect((await changeOwnPassword(deps, ctx, first.sessionId, { currentPassword: PASSWORD, newPassword: 'neues-langes-passwort' })).ok).toBe(true);
+    const changed = auditEntry(deps, 'auth.changePassword');
+    expect(changed).toMatchObject({ entityType: 'user', entityId: userId });
+    // Weder das alte noch das neue Passwort darf im Protokoll landen.
+    expect(JSON.stringify(changed)).not.toContain('neues-langes-passwort');
+    expect(JSON.stringify(changed)).not.toContain(PASSWORD);
     expect(resolveSession(deps, first.sessionId, meta)?.mustChangePassword).toBe(false);
     expect(resolveSession(deps, other.sessionId, meta)).toBeNull();
     expect(deps.db.select().from(sessions).all()).toHaveLength(1);

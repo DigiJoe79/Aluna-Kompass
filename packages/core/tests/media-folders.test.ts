@@ -10,7 +10,7 @@ import {
 } from '../src/media/folders';
 import { storeMediaAsset } from '../src/media/service';
 import { unwrap } from '../src/result';
-import { createTestDeps, ctxWith, insertUser } from '../src/testing';
+import { auditEntry, createTestDeps, ctxWith, insertUser } from '../src/testing';
 
 const PNG = Uint8Array.from(
   Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64'),
@@ -73,6 +73,10 @@ describe('media folders — rename & delete', () => {
 
     expect(deps.db.select({ path: mediaFolders.path }).from(mediaFolders).all().map((r) => r.path).sort()).toEqual(['hunde', 'hunde/2024']);
     expect(deps.db.select({ folder: mediaAssets.folder }).from(mediaAssets).where(eq(mediaAssets.id, 'A1')).get()!.folder).toBe('hunde/2024');
+    const entry = auditEntry(deps, 'media.folder.rename');
+    expect(entry).toMatchObject({ entityType: 'mediaFolder', entityId: 'tiere' });
+    expect(JSON.parse(entry.before!)).toEqual({ path: 'tiere' });
+    expect(JSON.parse(entry.after!)).toEqual({ path: 'hunde' });
   });
 
   it('delete removes an empty folder, refuses one with an asset or a subfolder', async () => {

@@ -1,5 +1,5 @@
 import { coreModule, schema, unwrap, writeSettingInternal } from '@kompass/core';
-import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
+import { auditEntry, createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { contactsModule } from '../src/manifest';
 import { createContact, getContact, listContacts, setContactStatus, updateContact } from '../src/service';
@@ -79,6 +79,10 @@ describe('contacts service', () => {
     deps.clock.advance(1000);
     const archived = unwrap(await createContact(deps, ctx, { kind: 'person', lastName: 'Alt' }));
     unwrap(await setContactStatus(deps, ctx, { id: archived.id, status: 'archived' }));
+    const statusEntry = auditEntry(deps, 'contacts.setStatus');
+    expect(statusEntry).toMatchObject({ entityType: 'contact', entityId: archived.id });
+    expect(JSON.parse(statusEntry.before!)).toEqual({ status: 'active' });
+    expect(JSON.parse(statusEntry.after!)).toEqual({ status: 'archived' });
 
     const active = unwrap(await listContacts(deps, ctx, {}));
     expect(active.total).toBe(2);
@@ -126,6 +130,9 @@ describe('contact channels and roles', () => {
     const c = unwrap(await createContact(deps, ctx, anna));
     const withRole = unwrap(await addContactRole(deps, ctx, { id: c.id, role: 'interested', since: '2026-01-01' }));
     expect(withRole.roles.map((r) => [r.role, r.since, r.until])).toEqual([['interested', '2026-01-01', null]]);
+    const roleEntry = auditEntry(deps, 'contacts.addRole');
+    expect(roleEntry).toMatchObject({ entityType: 'contact', entityId: c.id });
+    expect(JSON.parse(roleEntry.after!)).toEqual({ role: 'interested', since: '2026-01-01' });
 
     const unknown = await addContactRole(deps, ctx, { id: c.id, role: 'erfunden', since: '2026-01-01' });
     expect(unknown.ok === false && unknown.error.type === 'validation' && unknown.error.issues[0]?.path === 'role').toBe(true);

@@ -1,5 +1,5 @@
 import { schema as core, unwrap } from '@kompass/core';
-import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
+import { auditEntry, createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
@@ -52,6 +52,9 @@ describe('site entries', () => {
     expect(created.sortOrder).toBe(0);
     const fetched = unwrap(await getEntry(deps, manage, created.id));
     expect(fetched.id).toBe(created.id);
+    const entry = auditEntry(deps, 'site.entry.create');
+    expect(entry).toMatchObject({ entityType: 'siteEntry', entityId: created.id });
+    expect(JSON.parse(entry.after!)).toMatchObject({ collection: 'notes' });
   });
 
   it('needs site.manage to write and site.view to read', async () => {
@@ -126,6 +129,10 @@ describe('site entries', () => {
 
     const reordered = unwrap(await reorderEntries(deps, manage, { collection: 'notes', ids: [c, a, b] }));
     expect(reordered.map((r) => r.id)).toEqual([c, a, b]);
+    // Die Reihenfolge gehört der Sammlung — deshalb steht sie, nicht ein Eintrag, als Gegenstand im Protokoll.
+    const entry = auditEntry(deps, 'site.entry.reorder');
+    expect(entry).toMatchObject({ entityType: 'siteCollection', entityId: 'notes' });
+    expect(JSON.parse(entry.after!)).toEqual([c, a, b]);
     expect(deps.db.select().from(siteEntries).where(eq(siteEntries.id, otherId)).get()).toEqual(otherBefore);
   });
 

@@ -1,5 +1,5 @@
 import { coreModule, schema as core, setSetting, unwrap } from '@kompass/core';
-import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
+import { auditEntry, createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { projectsModule } from '../src/manifest';
 import { createProject, getProject, listProjects, reorderProjects, setProjectPublished, updateProject } from '../src/service';
@@ -51,6 +51,10 @@ describe('projects service', () => {
     expect(updated).toMatchObject({ name: { de: 'Neu', en: 'New' }, status: 'completed', slug: 'grundversorgung' });
     expect(unwrap(await setProjectPublished(deps, manage(), { id: a.id, isPublished: true })).isPublished).toBe(true);
     unwrap(await reorderProjects(deps, manage(), { ids: [b.id, a.id] }));
+    const reordered = auditEntry(deps, 'projects.reorder');
+    // Eine Reihenfolge gilt der Liste, nicht einem Eintrag: `entityId` bleibt leer.
+    expect(reordered).toMatchObject({ entityType: 'project', entityId: null });
+    expect(JSON.parse(reordered.after!)).toEqual([b.id, a.id]);
     expect(unwrap(await listProjects(deps, ctxWith(['projects.view']))).map((p) => p.slug)).toEqual(['b', 'grundversorgung']);
     expect(unwrap(await getProject(deps, ctxWith(['projects.view']), a.id)).sortOrder).toBe(2);
     expect((await listProjects(deps, ctxWith([]))).ok).toBe(false);

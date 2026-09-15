@@ -1,5 +1,5 @@
 import { coreModule, schema, setSetting, storeMediaAsset, unwrap } from '@kompass/core';
-import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
+import { auditEntry, createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { animalsModule, createAnimal, getAnimal, listAnimals, publishedAnimals, setAnimalPhotos, setAnimalPublished, setAnimalStatus, setAnimalStory, updateAnimal } from '../src';
 
@@ -39,6 +39,10 @@ describe('animals module', () => {
     const pdf = unwrap(await storeMediaAsset(d, manage, { originalName: 'x.pdf', bytes: new TextEncoder().encode('%PDF-1.4\n%%EOF'), declaredMimeType: 'application/pdf' }));
     const withPhotos = unwrap(await setAnimalPhotos(d, manage, { id: a.id, photos: [{ assetId: p2.id, isPrimary: false }, { assetId: p1.id, isPrimary: true }] }));
     expect(withPhotos.photos.map((p) => [p.assetId, p.sortOrder, p.isPrimary])).toEqual([[p2.id, 1, false], [p1.id, 2, true]]);
+    const photoEntry = auditEntry(d, 'animals.setPhotos');
+    expect(photoEntry).toMatchObject({ entityType: 'animal', entityId: a.id });
+    expect(JSON.parse(photoEntry.before!)).toEqual([]);
+    expect(JSON.parse(photoEntry.after!).map((p: { assetId: string }) => p.assetId)).toEqual([p2.id, p1.id]);
     const bad = await setAnimalPhotos(d, manage, { id: a.id, photos: [{ assetId: pdf.id, isPrimary: true }] });
     expect(bad.ok === false && bad.error.type === 'validation' && bad.error.issues[0]?.message === 'notAnImage').toBe(true);
     const twoPrimary = await setAnimalPhotos(d, manage, { id: a.id, photos: [{ assetId: p1.id, isPrimary: true }, { assetId: p2.id, isPrimary: true }] });
@@ -55,6 +59,10 @@ describe('animals module', () => {
     expect(missingYear.ok === false && missingYear.error.type === 'validation').toBe(true);
     const adopted = unwrap(await setAnimalStatus(d, manage, { id: a.id, status: 'adopted', adoptedYear: 2026 }));
     expect(adopted.story).toMatchObject({ adoptedYear: 2026, family: '' });
+    const statusEntry = auditEntry(d, 'animals.setStatus');
+    expect(statusEntry).toMatchObject({ entityType: 'animal', entityId: a.id });
+    expect(JSON.parse(statusEntry.before!)).toEqual({ status: 'lookingForHome' });
+    expect(JSON.parse(statusEntry.after!)).toEqual({ status: 'adopted', adoptedYear: 2026 });
     const withStory = unwrap(await setAnimalStory(d, manage, { id: a.id, beforeAssetId: before.id, afterAssetId: before.id, quote: { de: 'Endlich zuhause.', en: 'Home at last.' }, family: 'Familie M.', adoptedYear: 2026 }));
     expect(withStory.story?.quote.en).toBe('Home at last.');
     expect(unwrap(await setAnimalStatus(d, manage, { id: a.id, status: 'reserved' })).status).toBe('reserved');
