@@ -120,6 +120,12 @@ jobs:
       - uses: actions/upload-artifact@v5
         if: failure()
         with: { name: playwright-report-container, path: apps/kompass/playwright-report-container, retention-days: 7 }
+      # Wer ein Paket ins Image nimmt, verteilt fremde Software mit. Die
+      # Aufstellung dazu wird erzeugt, nicht gepflegt; hier faellt auf, wenn
+      # sie nicht mehr zum Bild passt — vor dem Hochladen, nicht danach.
+      - name: Third-party notices match the image
+        run: scripts/third-party-notices.sh kompass-local --pruefen
+
       # Genau das geprüfte Bild bekommt die Namen und wird hochgeladen — kein
       # zweiter Bau, der sich vom getesteten unterscheiden koennte.
       - name: Push the tested image

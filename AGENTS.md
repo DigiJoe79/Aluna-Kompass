@@ -52,6 +52,7 @@ Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. J
 - `pnpm --filter verein-basis test` — Tests des Basis-Templates
 - `pnpm import:prototype` — Einmalige Übernahme der Tiere und Projekte aus dem Prototyp
 - `pnpm --filter @kompass/app mcp:check <url> [token]` — MCP-Endpunkt einer laufenden Instanz prüfen
+- `scripts/third-party-notices.sh [image] [--pruefen]` — erzeugt `THIRD-PARTY-NOTICES.md` aus einem gebauten Image (Vorgabe `kompass-local`). Die Datei wird **erzeugt, nicht gepflegt**: Wer ein `apt-get install` ins Dockerfile schreibt, lässt sie danach neu schreiben. `--pruefen` meldet Abweichungen, ohne zu schreiben — so läuft sie in der CI vor dem Hochladen des Images.
 - `pnpm dev:reset` — Entwicklungsdatenbank verwerfen und mit Seed **und** den Tieren und Projekten des Prototyps neu aufbauen (nur `APP_ENV=development`; Prototyp-Pfad über `PROTOTYPE_DIR`)
 - Texterkennung lokal: `brew install tesseract tesseract-lang poppler` — ohne sie meldet die Akte „Texterkennung nicht verfügbar", und `packages/text-extraction` überspringt seine Tests nicht, sondern schlägt fehl.
 - Betrieb: `docs/handbuch/betrieb.md` (NAS-Deployment, Backups, Updates); Compose-Vorlagen `docker-compose.test.yml` und `docker-compose.prod.yml`, CI `.github/workflows/ci.yml`
