@@ -152,6 +152,25 @@ main {
   }
 }
 
+/* Sprachumschalter ------------------------------------------------------- */
+.lang-switch {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.lang-switch a {
+  color: var(--color-muted);
+}
+
+/* Die gelesene Sprache steht da, ist aber kein Link — sie soll erkennbar sein,
+   ohne wie eine Schaltfläche auszusehen. */
+.lang-switch [aria-current="true"] {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
 /* Buttons --------------------------------------------------------------- */
 .btn {
   display: inline-block;

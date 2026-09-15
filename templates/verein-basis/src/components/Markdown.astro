@@ -1,7 +1,13 @@
 ---
 import { renderMarkdown } from '@kompass/markdown';
 
-const { markdown, class: cls = 'prose' } = Astro.props as { markdown: string; class?: string };
+/**
+ * `lang` zeichnet einen Text aus, der aus einer anderen Sprache stammt — etwa
+ * eine Meldung, die nur in der Vorgabesprache gepflegt ist. Ohne das Attribut
+ * liest ein Screenreader den deutschen Absatz mit englischer Aussprache vor,
+ * und Suchmaschinen halten die ganze Seite für einsprachig.
+ */
+const { markdown, class: cls = 'prose', lang } = Astro.props as { markdown: string; class?: string; lang?: string };
 const html = await renderMarkdown(markdown ?? '');
 ---
-{html && <div class={cls} set:html={html}></div>}
+{html && <div class={cls} lang={lang} set:html={html}></div>}

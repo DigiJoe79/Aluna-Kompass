@@ -1,21 +1,32 @@
 ---
 import '../styles/global.css';
-import { IS_STAGING, loadContent, PUBLIC_URL, t } from '../lib/content';
+import { IS_STAGING, loadContent, organizationOf, PUBLIC_URL } from '../lib/content';
 import { SITE } from '../lib/site';
-import { NAV, FOOTER_LINKS, pathFor, type Kind } from '../lib/routes';
+import { mailtoHref } from '../lib/mailto';
+import { alternatesFor, footerLinksFor, navFor, pathFor, type Kind } from '../lib/routes';
+import { ENDONYM, LOCALES, text, ui, type Locale } from '../lib/locale';
 
 const {
   title,
   description,
   active,
-} = Astro.props as { title?: string; description?: string; active?: Kind };
+  locale,
+  slug,
+} = Astro.props as { title?: string; description?: string; active?: Kind; locale: Locale; slug?: string };
 
 const content = await loadContent();
-const claim = t(content.variables.claim) || SITE.fallbackClaim;
-const donationAccount = content.variables.donationAccount ?? '';
+const org = organizationOf(content);
+const t = ui(locale);
+const nav = navFor(locale);
+const footerLinks = footerLinksFor(locale);
+/** Die Übersetzungen dieser Seite — für `hreflang` und den Umschalter. */
+const alternates = alternatesFor(active ?? 'home', slug);
+const claim = text(content.variables.claim, locale) || SITE.fallbackClaim[locale];
+/** Anschrift in einer Zeile — die Fußzeile hat keinen Platz für einen Block. */
+const addressLine = [org.street, [org.postalCode, org.city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
 
 const current = Astro.url.pathname.endsWith('/') ? Astro.url.pathname : `${Astro.url.pathname}/`;
-const fullTitle = title ? `${title} · ${SITE.name}` : `${SITE.name} — ${claim}`;
+const fullTitle = title ? `${title} · ${org.name}` : `${org.name} — ${claim}`;
 const desc = description ?? claim;
 const abs = (p: string) => new URL(p, PUBLIC_URL).href;
 
@@ -23,7 +34,7 @@ const isActive = (kind: Kind): boolean =>
   active === kind || (kind === 'news' && active === 'article');
 ---
 <!DOCTYPE html>
-<html lang="de">
+<html lang={locale}>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -31,25 +42,37 @@ const isActive = (kind: Kind): boolean =>
   <meta name="description" content={desc} />
   {IS_STAGING && <meta name="robots" content="noindex, nofollow" />}
   <link rel="canonical" href={abs(current)} />
+  {LOCALES.length > 1 && alternates.map((alt) => (
+    <link rel="alternate" hreflang={alt.locale} href={abs(alt.path)} />
+  ))}
   <meta property="og:title" content={fullTitle} />
   <meta property="og:description" content={desc} />
   <meta property="og:type" content="website" />
 </head>
 <body>
-  <a class="skip-link" href="#inhalt">Zum Inhalt springen</a>
+  <a class="skip-link" href="#inhalt">{t.misc.skip}</a>
   <header class="site-header">
     <div class="wrap header-wrap">
-      <p class="brand"><a href={pathFor('home')}>{SITE.name}</a></p>
-      <nav aria-label="Hauptmenü">
-        <button class="nav-toggle" aria-expanded="false" aria-controls="primary-nav">Menü</button>
+      <p class="brand"><a href={pathFor(locale, 'home')}>{org.name}</a></p>
+      <nav aria-label={t.misc.menu}>
+        <button class="nav-toggle" aria-expanded="false" aria-controls="primary-nav">{t.misc.menu}</button>
         <ul id="primary-nav" class="primary-nav">
-          {NAV.map((item) => (
+          {nav.map((item) => (
             <li>
-              <a href={pathFor(item.kind)} aria-current={isActive(item.kind) ? 'page' : undefined}>{item.label}</a>
+              <a href={pathFor(locale, item.kind)} aria-current={isActive(item.kind) ? 'page' : undefined}>{item.label}</a>
             </li>
           ))}
         </ul>
       </nav>
+      {LOCALES.length > 1 && (
+        <nav class="lang-switch" aria-label={t.misc.language}>
+          {alternates.map((alt) => (
+            alt.locale === locale
+              ? <span aria-current="true">{ENDONYM[alt.locale]}</span>
+              : <a href={alt.path} lang={alt.locale} hreflang={alt.locale}>{ENDONYM[alt.locale]}</a>
+          ))}
+        </nav>
+      )}
     </div>
   </header>
 
@@ -58,23 +81,24 @@ const isActive = (kind: Kind): boolean =>
   <footer class="site-footer">
     <div class="wrap footer-grid">
       <div>
-        <p class="footer-name">{SITE.name}</p>
-        <p>{SITE.address}</p>
-        <p><a href={`mailto:${SITE.email}`}>{SITE.email}</a></p>
+        <p class="footer-name">{org.name}</p>
+        {addressLine && <p>{addressLine}</p>}
+        {org.email && <p><a href={mailtoHref(org.email)}>{org.email}</a></p>}
+        {org.phone && <p>{org.phone}</p>}
       </div>
-      <nav aria-label="Rechtliches">
+      <nav aria-label={t.footer.imprint}>
         <ul class="footer-links">
-          {FOOTER_LINKS.map((item) => <li><a href={pathFor(item.kind)}>{item.label}</a></li>)}
+          {footerLinks.map((item) => <li><a href={pathFor(locale, item.kind)}>{item.label}</a></li>)}
         </ul>
       </nav>
-      {donationAccount && (
+      {org.iban && (
         <div>
-          <p class="footer-name">Bankverbindung</p>
-          <p>{donationAccount}</p>
+          <p class="footer-name">{t.footer.bank}</p>
+          <p>{org.name}<br />IBAN {org.iban}{org.bic && <><br />BIC {org.bic}</>}{org.bankName && <><br />{org.bankName}</>}</p>
         </div>
       )}
     </div>
-    <p class="footer-note wrap">{SITE.name} ist ein gemeinnütziger Verein und arbeitet nicht profitorientiert.</p>
+    <p class="footer-note wrap">{org.name} {t.footer.nonprofit}</p>
   </footer>
 
   <script>

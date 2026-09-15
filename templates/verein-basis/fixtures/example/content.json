@@ -1,35 +1,152 @@
 {
   "assets": [
-    { "id": "hero", "filename": "hero.jpg", "mimeType": "image/jpeg", "width": 1600, "height": 900 },
-    { "id": "news-1", "filename": "news-1.jpg", "mimeType": "image/jpeg", "width": 1600, "height": 1067 },
-    { "id": "team-1", "filename": "team-1.jpg", "mimeType": "image/jpeg", "width": 960, "height": 960 },
-    { "id": "doc-satzung", "filename": "satzung.pdf", "mimeType": "application/pdf", "width": null, "height": null }
+    {
+      "id": "hero",
+      "filename": "hero.jpg",
+      "mimeType": "image/jpeg",
+      "width": 1600,
+      "height": 900
+    },
+    {
+      "id": "news-1",
+      "filename": "news-1.jpg",
+      "mimeType": "image/jpeg",
+      "width": 1600,
+      "height": 1067
+    },
+    {
+      "id": "team-1",
+      "filename": "team-1.jpg",
+      "mimeType": "image/jpeg",
+      "width": 960,
+      "height": 960
+    },
+    {
+      "id": "doc-satzung",
+      "filename": "satzung.pdf",
+      "mimeType": "application/pdf",
+      "width": null,
+      "height": null
+    }
   ],
   "collections": {
     "documents": [
-      { "title": { "de": "Satzung" }, "file": "doc-satzung" },
-      { "title": { "de": "Beitragsordnung" }, "file": null }
+      {
+        "title": {
+          "de": "Satzung",
+          "en": "Statutes"
+        },
+        "file": "doc-satzung"
+      },
+      {
+        "title": {
+          "de": "Beitragsordnung",
+          "en": "Schedule of fees"
+        },
+        "file": null
+      }
     ],
     "faq": [
-      { "question": { "de": "Wie kann ich mithelfen?" }, "answer": { "de": "Schreib uns eine Nachricht oder komm zu einem unserer offenen Treffen. Wir freuen uns über jede Hand." }, "sortOrder": 0 },
-      { "question": { "de": "Ist meine Spende steuerlich absetzbar?" }, "answer": { "de": "Ja. Auf Wunsch stellen wir eine **Zuwendungsbestätigung** aus." }, "sortOrder": 1 }
+      {
+        "question": {
+          "de": "Wie kann ich mithelfen?",
+          "en": "How can I help?"
+        },
+        "answer": {
+          "de": "Schreib uns eine Nachricht oder komm zu einem unserer offenen Treffen. Wir freuen uns über jede Hand.",
+          "en": "Write us a message or come to one of our open meetings. Every pair of hands is welcome."
+        },
+        "sortOrder": 0
+      },
+      {
+        "question": {
+          "de": "Ist meine Spende steuerlich absetzbar?",
+          "en": "Is my donation tax-deductible?"
+        },
+        "answer": {
+          "de": "Ja. Auf Wunsch stellen wir eine **Zuwendungsbestätigung** aus.",
+          "en": "Yes. On request we issue a **donation receipt**."
+        },
+        "sortOrder": 1
+      }
     ],
     "news": [
-      { "slug": "jahresrueckblick", "title": { "de": "Unser Jahresrückblick" }, "body": { "de": "Ein ereignisreiches Jahr liegt hinter uns.\n\nDanke an alle, die uns begleitet haben — als Mitglied, als Spenderin, als Helfer.\n\n## Was ansteht\n\nIm kommenden Jahr wollen wir unsere Arbeit weiter ausbauen." }, "image": "news-1" },
-      { "slug": "neue-raeume", "title": { "de": "Wir haben neue Räume" }, "body": { "de": "Ab sofort sind wir in der Musterstraße zu finden. Kommt gern vorbei." }, "image": null }
+      {
+        "slug": "jahresrueckblick",
+        "title": {
+          "de": "Unser Jahresrückblick",
+          "en": "Our year in review"
+        },
+        "body": {
+          "de": "Ein ereignisreiches Jahr liegt hinter uns.\n\nDanke an alle, die uns begleitet haben — als Mitglied, als Spenderin, als Helfer.\n\n## Was ansteht\n\nIm kommenden Jahr wollen wir unsere Arbeit weiter ausbauen.",
+          "en": "An eventful year lies behind us.\n\nThank you to everyone who came along — as a member, as a donor, as a helper.\n\n## What is next\n\nIn the coming year we want to grow our work further."
+        },
+        "image": "news-1"
+      },
+      {
+        "slug": "neue-raeume",
+        "title": {
+          "de": "Wir haben neue Räume"
+        },
+        "body": {
+          "de": "Ab sofort sind wir in der Beispielstraße zu finden. Kommt gern vorbei."
+        },
+        "image": null
+      }
     ],
     "team": [
-      { "name": "Alex Beispiel", "role": { "de": "Vorsitz" }, "photo": "team-1", "sortOrder": 0 },
-      { "name": "Kim Muster", "role": { "de": "Kasse" }, "photo": null, "sortOrder": 1 }
+      {
+        "name": "Alex Beispiel",
+        "role": {
+          "de": "Vorsitz",
+          "en": "chair"
+        },
+        "photo": "team-1",
+        "sortOrder": 0
+      },
+      {
+        "name": "Kim Muster",
+        "role": {
+          "de": "Kasse",
+          "en": "treasurer"
+        },
+        "photo": null,
+        "sortOrder": 1
+      }
     ]
   },
   "variables": {
-    "claim": { "de": "Gemeinsam für unsere Sache." },
-    "donationAccount": "Musterverein · IBAN DE00 0000 0000 0000 0000 00 · GENODED1XXX · Musterbank",
+    "claim": {
+      "de": "Gemeinsam für unsere Sache.",
+      "en": "Together for our cause."
+    },
     "heroImage": "hero",
-    "intro": { "de": "Willkommen bei unserem Verein. Wir setzen uns Tag für Tag für unser gemeinsames Ziel ein — und freuen uns über jede Unterstützung.\n\nSchau dich um, lern uns kennen, mach mit." },
+    "intro": {
+      "de": "Willkommen bei unserem Verein. Wir setzen uns Tag für Tag für unser gemeinsames Ziel ein — und freuen uns über jede Unterstützung.\n\nSchau dich um, lern uns kennen, mach mit.",
+      "en": "Welcome to our association. Day after day we work towards our shared goal — and we are grateful for every bit of support.\n\nHave a look around, get to know us, join in."
+    },
     "memberFee": 60,
     "featuredProject": null
   },
-  "views": {}
+  "views": {
+    "organization": [
+      {
+        "name": "Beispielverein für Gutes e.V.",
+        "legalForm": "e.V.",
+        "foundedYear": "2019",
+        "street": "Beispielstraße 3",
+        "postalCode": "12345",
+        "city": "Beispielstadt",
+        "country": "Deutschland",
+        "email": "kontakt@beispielverein.example",
+        "phone": "0123 456789",
+        "website": "https://beispielverein.example",
+        "iban": "DE02 1203 0000 0000 2020 51",
+        "bic": "BYLADEM1001",
+        "bankName": "Beispielbank",
+        "registerCourt": "Amtsgericht Beispielstadt",
+        "registerNumber": "VR 4711"
+      }
+    ]
+  }
 }

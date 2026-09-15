@@ -2,12 +2,17 @@ import { asset, defineTemplate, markdown, number, reference, text } from '@kompa
 
 export default defineTemplate({
   name: 'Verein Basis',
-  locales: ['de'],
+  locales: ['de', 'en'],
+  /**
+   * Deklariert wird nur, was sich im Betrieb ändert. Die Vereinsstammdaten —
+   * Name, Anschrift, Kontakt, Bankverbindung, Registereintrag — liefert der
+   * Kern jedem Template von sich aus unter `views.organization`; sie hier als
+   * Variablen aufzuführen hieße, sie zweimal zu pflegen.
+   */
   variables: {
     claim: text({ max: 120, localized: true, label: 'Claim' }),
     intro: markdown({ max: 2000, localized: true, label: 'Text auf der Startseite' }),
     heroImage: asset({ label: 'Bild auf der Startseite' }),
-    donationAccount: text({ max: 200, localized: false, label: 'Hinweis zur Bankverbindung' }),
     memberFee: number({ min: 0, label: 'Mitgliedsbeitrag im Jahr (Euro)' }),
     /**
      * Ein Datensatz aus einem Modul als Variable: Die Auswahl in Kompass zeigt

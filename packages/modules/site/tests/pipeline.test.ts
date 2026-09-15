@@ -40,6 +40,14 @@ const PNG = Uint8Array.from(
   Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64'),
 );
 
+/**
+ * `verein-basis` fordert seit dem 2026-09-15 zwei Sprachen — das mitgelieferte
+ * Beispiel zeigt, wie ein zweisprachiges Template aussieht. Eine Installation,
+ * die nur Deutsch führt, weist das Template mit `localeMissing` ab; die
+ * Testinstallation richtet deshalb beide ein.
+ */
+const LOCALES = ['de', 'en'];
+
 /** `kompass.template.ts` von verein-basis nennt seit dem Projekt-Teaser `uses: ['projects']`. */
 const enableProjects = (deps: ReturnType<typeof createTestDeps>) => setModuleEnabled(deps, ctxWith(['modules.manage']), { key: 'projects', enabled: true });
 
@@ -111,7 +119,7 @@ describe('readSiteEnv', () => {
 
 describe('preview and publish against templates/verein-basis', () => {
   it('builds a preview from live content, publishes to a local target including images, and checks diff', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule] });
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: LOCALES });
     insertUser(deps, { id: 'USER-TEST' });
     unwrap(await enableProjects(deps));
     const manageCtx = ctxWith(['site.manage', 'site.view', 'media.upload']);
@@ -181,7 +189,7 @@ describe('preview and publish against templates/verein-basis', () => {
    * auf dem NAS wartet dabei ein Mensch.
    */
   it('publishes the preview it just built instead of building a second time', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule] });
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: LOCALES });
     insertUser(deps, { id: 'USER-TEST' });
     unwrap(await enableProjects(deps));
     const manageCtx = ctxWith(['site.manage', 'site.view', 'media.upload']);
@@ -213,7 +221,7 @@ describe('preview and publish against templates/verein-basis', () => {
   }, 240_000);
 
   it('refuses to publish without confirmation, without a target, in development, or with blocked terms', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule] });
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: LOCALES });
     insertUser(deps, { id: 'USER-TEST' });
     unwrap(await enableProjects(deps));
     const manageCtx = ctxWith(['site.manage', 'settings.manage']);
@@ -236,7 +244,7 @@ describe('preview and publish against templates/verein-basis', () => {
     const noTarget = await runPublish(deps, publishCtx, { ...base, deploy: null }, { confirm: true });
     expect(noTarget.ok === false && noTarget.error.type === 'conflict' && noTarget.error.code === 'publishTargetMissing').toBe(true);
 
-    const dev = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], env: 'development' });
+    const dev = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: LOCALES, env: 'development' });
     insertUser(dev, { id: 'USER-TEST' });
     unwrap(await enableProjects(dev));
     unwrap(await applyTemplateSync(dev, manageCtx, { dir: TEMPLATE_DIR, confirm: true }));
@@ -262,7 +270,7 @@ describe('checkDeployTarget', () => {
   });
 
   it('needs the publish permission and a configured target', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule] });
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: LOCALES });
     insertUser(deps, { id: 'USER-TEST' });
     const denied = await checkDeployTarget(deps, ctxWith(['site.view']), envFor(tmp()));
     expect(denied.ok === false && denied.error.type === 'forbidden').toBe(true);
@@ -271,7 +279,7 @@ describe('checkDeployTarget', () => {
   });
 
   it('reports what a publish would remove at the target and leaves every file in place', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule] });
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: LOCALES });
     insertUser(deps, { id: 'USER-TEST' });
     const target = tmp();
     writeFileSync(path.join(target, 'wp-config.php'), '<?php');
@@ -288,7 +296,7 @@ describe('checkDeployTarget', () => {
   });
 
   it('comes back empty when the path points nowhere', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule] });
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: LOCALES });
     insertUser(deps, { id: 'USER-TEST' });
     const missing = path.join(tmp(), 'vertippt');
     const result = unwrap(await checkDeployTarget(deps, ctxWith(['site.publish']), envFor(missing)));
@@ -296,7 +304,7 @@ describe('checkDeployTarget', () => {
   });
 
   it('reports unusable credentials instead of starting rsync', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule] });
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: LOCALES });
     insertUser(deps, { id: 'USER-TEST' });
     const env = { ...envFor(tmp()), deploy: { host: 'webhost', user: 'web', path: '/www', auth: { kind: 'key' as const, keyFile: '/gibt/es/nicht.key' } } };
     const result = await checkDeployTarget(deps, ctxWith(['site.publish']), env);
@@ -364,7 +372,7 @@ describe('rsyncCommand', () => {
 
 describe('one job at a time', () => {
   const setup = async () => {
-    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule] });
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: LOCALES });
     insertUser(deps, { id: 'USER-TEST' });
     unwrap(await enableProjects(deps));
     unwrap(await applyTemplateSync(deps, ctxWith(['site.manage']), { dir: TEMPLATE_DIR, confirm: true }));
@@ -407,7 +415,7 @@ describe('publish history', () => {
    * nichts publiziert wurde, fand nichts.
    */
   it('records an aborted attempt when the export refuses', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule] });
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: LOCALES });
     insertUser(deps, { id: 'USER-TEST' });
     unwrap(await applyTemplateSync(deps, ctxWith(['site.manage']), { dir: TEMPLATE_DIR, confirm: true }));
     // Ein Template-Verzeichnis, dessen Deklaration vom eingelesenen Stand abweicht.
@@ -438,7 +446,7 @@ describe('currentSiteJob', () => {
    * deshalb nach, was gerade laeuft und seit wann — auch nach dem Neuladen.
    */
   it('names the running job with its start, and is empty afterwards', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule] });
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: LOCALES });
     insertUser(deps, { id: 'USER-TEST' });
     unwrap(await enableProjects(deps));
     unwrap(await applyTemplateSync(deps, ctxWith(['site.manage']), { dir: TEMPLATE_DIR, confirm: true }));

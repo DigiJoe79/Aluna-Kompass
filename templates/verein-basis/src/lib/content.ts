@@ -4,26 +4,46 @@ import type { InferContent } from '@kompass/site-template';
 import template from '../../kompass.template';
 
 /**
- * Ein mehrsprachiges Feld ist ein Record über Sprachschlüssel, genau wie Kompass
- * es exportiert. Dieses Template rendert eine Sprache; welche, sagt `LOCALE`.
+ * Ein mehrsprachiges Feld ist ein Record über Sprachschlüssel, genau wie
+ * Kompass es exportiert. Welche Sprache eine Seite zeigt, entscheidet die
+ * Seite — seit dem 2026-09-15 baut ein Lauf alle Sprachen auf einmal, statt
+ * dass eine Umgebungsvariable die eine auswählt. Siehe `lib/locale.ts`.
  */
 export type { Localized } from '@kompass/site-template';
-import type { Localized } from '@kompass/site-template';
-
-export const LOCALE = process.env.SITE_LOCALE ?? 'de';
-
-/** Wert eines mehrsprachigen Feldes in der gerenderten Sprache, sonst leer. */
-export function t(field: Localized | string | undefined | null): string {
-  if (field == null) return '';
-  if (typeof field === 'string') return field;
-  return field[LOCALE] ?? Object.values(field)[0] ?? '';
-}
 
 /**
  * Die Form von content.json kommt aus der Deklaration, nicht aus einer zweiten
  * Abschrift: Wer in kompass.template.ts ein Feld umbenennt, bekommt hier einen
  * Typfehler statt einer leeren Seite.
  */
+/**
+ * Die Vereinsstammdaten, die Kompass jedem Template mitgibt, ohne dass es sie
+ * deklariert (`views.organization`). Anschrift, Bankverbindung und
+ * Registereintrag stehen damit genau einmal — in den Einstellungen.
+ */
+export interface Organization {
+  name: string;
+  legalForm: string;
+  foundedYear: string;
+  street: string;
+  postalCode: string;
+  city: string;
+  country: string;
+  email: string;
+  phone: string;
+  website: string;
+  iban: string;
+  bic: string;
+  bankName: string;
+  registerCourt: string;
+  registerNumber: string;
+}
+
+const NO_ORGANIZATION: Organization = {
+  name: '', legalForm: '', foundedYear: '', street: '', postalCode: '', city: '', country: '',
+  email: '', phone: '', website: '', iban: '', bic: '', bankName: '', registerCourt: '', registerNumber: '',
+};
+
 export type SiteContent = InferContent<typeof template>;
 export type Asset = SiteContent['assets'][number];
 export type Variables = SiteContent['variables'];
@@ -63,6 +83,17 @@ export function loadContent(): Promise<SiteContent> {
 }
 
 export const emptyContent = (): SiteContent => EMPTY;
+
+/**
+ * Die Stammdaten aus dem Inhalt. Fehlen sie — etwa in einer von Hand
+ * gebauten Fixture — bleibt jedes Feld leer, statt dass der Build wirft: Eine
+ * Seite ohne Anschrift ist ärgerlich, eine Seite, die gar nicht baut, hilft
+ * niemandem weiter.
+ */
+export function organizationOf(content: SiteContent): Organization {
+  const rows = (content.views as { organization?: Organization[] }).organization;
+  return rows?.[0] ?? NO_ORGANIZATION;
+}
 
 /** Ein URL-tauglicher Bezeichner aus einem Titel — für Sammlungen ohne eigenen Slug. */
 export function slugify(value: string): string {

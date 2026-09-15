@@ -1,12 +1,20 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { CONTENT_DIR, loadContent, slugify, t } from '../../lib/content';
+import { CONTENT_DIR, loadContent, slugify } from '../../lib/content';
+import { DEFAULT_LOCALE, text } from '../../lib/locale';
+
+/**
+ * Eine Datei trägt einen Namen, nicht je Sprache einen: Der Pfad entsteht
+ * immer aus dem Titel in der Vorgabesprache. Sonst zeigte die englische Seite
+ * auf `/dokumente/statutes.pdf`, während die Datei unter `satzung.pdf` liegt.
+ */
+export const documentSlug = (title: Parameters<typeof text>[0]): string => slugify(text(title, DEFAULT_LOCALE));
 
 export async function getStaticPaths() {
   const content = await loadContent();
   return content.collections.documents
     .filter((doc) => doc.file)
-    .map((doc) => ({ params: { slug: slugify(t(doc.title)) }, props: { assetId: doc.file as string } }));
+    .map((doc) => ({ params: { slug: documentSlug(doc.title) }, props: { assetId: doc.file as string } }));
 }
 
 export async function GET({ props }: { props: { assetId: string } }) {
