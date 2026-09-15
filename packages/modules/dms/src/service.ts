@@ -29,12 +29,20 @@ import { fulltextCondition, fulltextHits, type TextHit } from './search';
 import { deleteNotesFor, notesFor } from './notes';
 import { deleteRelationsFor, relationsFor, type DocumentRelationView } from './relations';
 
+/** Der Zustand der Datei eines Dokuments, ohne sie auszuliefern. */
+export type DocumentFileState = 'ok' | 'altered' | 'missing' | 'none';
+
 export type DocumentRecord = Omit<DocumentRow, 'inputSnapshot'> & {
   inputSnapshot: unknown;
   links: DocumentLinkRow[];
   relations: DocumentRelationView[];
   notes: DocumentNoteRow[];
   followUps: FollowUpRecord[];
+  /**
+   * Ob die Datei noch zur Prüfsumme passt. Nur `getDocumentRecord` füllt das —
+   * eine Liste kann es nicht, ohne jede Datei zu lesen; dort steht `undefined`.
+   */
+  fileState?: DocumentFileState;
 };
 
 export function toRecord(deps: Deps, row: DocumentRow, dbOrTx: DbOrTx = deps.db): DocumentRecord {
@@ -214,12 +222,73 @@ export async function listDocuments(
   });
 }
 
+/**
+ * Ein Dokument mit allem, was dazugehört — **einschließlich der Frage, ob
+ * seine Datei noch die festgeschriebene ist**.
+ *
+ * Der Zustand steht bewusst im Datensatz und nicht in einer eigenen Funktion:
+ * Sonst wüsste die Detailseite Bescheid und ein Agent über `dms_get` nicht.
+ * Wer über MCP fragt, ob ein Dokument vorliegt, soll dieselbe Antwort
+ * bekommen wie der Mensch vor dem Bildschirm.
+ *
+ * Nur hier, nicht in `listDocuments`: Für eine Liste müsste jede Datei
+ * gelesen werden, und die Liste soll schnell bleiben.
+ */
 export async function getDocumentRecord(deps: Deps, ctx: CallContext, id: string): Promise<Result<DocumentRecord>> {
   const denied = requirePermission(ctx, 'dms.view');
   if (denied) return denied;
   const row = deps.db.select().from(documents).where(eq(documents.id, id)).get();
   if (!row) return notFound('document', id);
-  return ok(toRecord(deps, row));
+  const fileState: DocumentFileState = row.fileName ? (await pruefeDatei(deps, ctx, row)).state : 'none';
+  return ok({ ...toRecord(deps, row), fileState });
+}
+
+/**
+ * Liest die Datei und hält sie gegen die gespeicherte Prüfsumme.
+ *
+ * Der Befund kommt ins Änderungsprotokoll — aber **einmal je Dokument und
+ * Ist-Summe**, nicht bei jedem Blick. Beim Nachstellen am 2026-09-15 standen
+ * nach einem einzigen Seitenaufruf drei Einträge da: Die Seite fragt den
+ * Zustand ab, der `<iframe>` holt die Datei, und jeder Neuaufbau zählte
+ * erneut. Das Protokoll soll den Befund festhalten, nicht die Zahl der Blicke
+ * darauf. Ändert sich die Datei ein zweites Mal, ist das ein neuer Befund und
+ * bekommt seinen Eintrag.
+ */
+async function pruefeDatei(
+  deps: Deps,
+  ctx: CallContext,
+  row: typeof documents.$inferSelect,
+): Promise<{ state: DocumentFileState; bytes?: Uint8Array; actual?: string }> {
+  let bytes: Uint8Array;
+  try {
+    bytes = await readDocumentFile(deps, row.fileName!);
+  } catch {
+    // Eine Datei, die gar nicht mehr da ist, ist kein Fälschungsverdacht.
+    return { state: 'missing' };
+  }
+  if (!row.fileChecksum) return { state: 'ok', bytes };
+
+  const actual = checksumOf(bytes);
+  if (actual === row.fileChecksum) return { state: 'ok', bytes };
+
+  const schonVermerkt = deps.db
+    .select()
+    .from(schema.auditLog)
+    .all()
+    .some((e) => e.action === 'dms.checksumMismatch' && e.entityId === row.id && typeof e.after === 'string' && e.after.includes(actual));
+  if (!schonVermerkt) {
+    deps.db.transaction((tx: DbOrTx) => {
+      recordAudit(tx, deps, ctx, {
+        action: 'dms.checksumMismatch',
+        entityType: 'document',
+        entityId: row.id,
+        before: { checksum: row.fileChecksum },
+        after: { expected: row.fileChecksum, actual },
+        summary: `Datei von Dokument ${row.number} stimmt nicht mehr mit der Prüfsumme überein`,
+      });
+    });
+  }
+  return { state: 'altered', actual };
 }
 
 /**
@@ -248,34 +317,13 @@ export async function getDocument(deps: Deps, ctx: CallContext, id: string): Pro
   if (!row) return notFound('document', id);
   if (!row.fileName) return notFound('documentFile', id);
 
-  let bytes: Uint8Array;
-  try {
-    bytes = await readDocumentFile(deps, row.fileName);
-  } catch {
-    // Eine Datei, die gar nicht mehr da ist, ist kein Fälschungsverdacht.
-    return notFound('documentFile', id);
+  const geprueft = await pruefeDatei(deps, ctx, row);
+  if (geprueft.state === 'missing') return notFound('documentFile', id);
+  if (geprueft.state === 'altered') {
+    return conflict('documentAltered', `Die Datei von Dokument ${row.number} stimmt nicht mehr mit der beim Festschreiben gebildeten Prüfsumme überein`);
   }
 
-  if (row.fileChecksum) {
-    const actual = checksumOf(bytes);
-    if (actual !== row.fileChecksum) {
-      // Jeder Fund kommt ins Protokoll, nicht nur der erste: Wer wann auf ein
-      // verändertes Dokument zugegriffen hat, gehört zur Aufklärung dazu.
-      deps.db.transaction((tx: DbOrTx) => {
-        recordAudit(tx, deps, ctx, {
-          action: 'dms.checksumMismatch',
-          entityType: 'document',
-          entityId: row.id,
-          before: { checksum: row.fileChecksum },
-          after: { expected: row.fileChecksum, actual },
-          summary: `Datei von Dokument ${row.number} stimmt nicht mehr mit der Prüfsumme überein`,
-        });
-      });
-      return conflict('documentAltered', `Die Datei von Dokument ${row.number} stimmt nicht mehr mit der beim Festschreiben gebildeten Prüfsumme überein`);
-    }
-  }
-
-  return ok({ record: toRecord(deps, row), bytes, filename: `${row.number}.pdf` });
+  return ok({ record: toRecord(deps, row), bytes: geprueft.bytes!, filename: `${row.number}.pdf` });
 }
 
 const voidSchema = z.object({ id: z.string().min(1), reason: z.string().trim().min(1).max(300) });

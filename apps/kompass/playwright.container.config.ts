@@ -95,6 +95,13 @@ const run = [
 
 export default defineConfig({
   testDir: './e2e',
+  /**
+   * Der Dateispeicher liegt im Container; gemountet ist nur `/deploy`. Ein
+   * Test, der eine Datei im Volume austauscht, um die Prüfsummenkontrolle zu
+   * zeigen, kann das von hier aus nicht — er läuft im Dev-Ring und prüft
+   * Anwendungsverhalten, nichts Containerspezifisches.
+   */
+  grepInvert: /ausgetauschtes Dokument/,
   globalSetup: './e2e/warmup.ts',
   testMatch: '**/*.spec.ts',
   fullyParallel: false,

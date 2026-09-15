@@ -1,3 +1,4 @@
+import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
@@ -1113,3 +1114,45 @@ test.describe('dms', () => {
 function samplePdf(): Buffer {
   return Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n');
 }
+
+/**
+ * Die Prüfsumme eines festgeschriebenen Dokuments wird vor jeder Ausgabe
+ * nachgerechnet (S6). Dieser Test tauscht die Datei so aus, wie es jemand mit
+ * Zugriff auf das Datenvolume täte — am Programm vorbei, direkt im
+ * Dateisystem — und prüft, dass die Akte das meldet, statt sie anzuzeigen.
+ */
+test('ein ausgetauschtes Dokument wird nicht angezeigt, sondern gemeldet', async ({ page }) => {
+  await resetDatabase(page, 'seeded');
+  await login(page);
+
+  await page.goto('/dms');
+  await page.getByRole('link', { name: /Einladung zur ordentlichen Mitgliederversammlung/ }).first().click();
+  await expect(page.getByRole('heading', { name: /Einladung zur ordentlichen/ })).toBeVisible();
+  // Solange die Datei stimmt, steht das PDF da und der Knopf führt hin.
+  await expect(page.locator('iframe')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'PDF öffnen' })).toBeVisible();
+
+  const id = new URL(page.url()).pathname.split('/').pop()!;
+  const datei = path.resolve(import.meta.dirname, '.tmp/data/dms', `${id.toLowerCase()}.pdf`);
+  // Der Reset stellt die Datenbank wieder her, nicht das Datenvolume: Ohne
+  // diese Sicherung liefe der nächste Test, der dieses Dokument liest, gegen
+  // eine ausgetauschte Datei — und schlüge scheinbar grundlos fehl.
+  const original = readFileSync(datei);
+  try {
+    writeFileSync(datei, '%PDF-1.4\n% ausgetauscht\n%%EOF\n');
+
+    await page.reload();
+
+    // Nicht `getByRole('alert')` allein: Next hängt seinen eigenen
+    // Route-Announcer mit derselben Rolle in jede Seite.
+    await expect(page.getByRole('alert').filter({ hasText: 'festgeschriebene' })).toBeVisible();
+    await expect(page.locator('iframe')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'PDF öffnen' })).toHaveCount(0);
+
+    // Und der Befund steht in der Akte des Vereins, nicht nur auf dem Bildschirm.
+    await page.goto('/admin/audit');
+    await expect(page.getByRole('cell', { name: 'dms.checksumMismatch' }).first()).toBeVisible();
+  } finally {
+    writeFileSync(datei, original);
+  }
+});

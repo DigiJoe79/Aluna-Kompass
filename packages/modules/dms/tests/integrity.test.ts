@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { schema as core } from '@kompass/core';
 import { auditEntry } from '@kompass/core/testing';
 import { documents } from '../src/schema';
-import { getDocument } from '../src/service';
+import { getDocumentRecord, getDocument } from '../src/service';
 import { createDraft, fileDocument } from '../src/drafts';
 import { DMS_MODULE_KEY } from '../src/storage';
 import { fileFixture, setupWithTypes } from './helpers';
@@ -24,6 +25,9 @@ import { fileFixture, setupWithTypes } from './helpers';
  * hantiert, geht ohnehin an der Anwendung vorbei; für die Prüfung zählt allein
  * der Zustand, den er hinterlässt.
  */
+const befunde = (deps: Parameters<typeof getDocument>[0]) =>
+  deps.db.select().from(core.auditLog).all().filter((e) => e.action === 'dms.checksumMismatch');
+
 async function tauscheDateiAus(deps: Parameters<typeof getDocument>[0], fileName: string, inhalt: string): Promise<void> {
   const store = deps.files(DMS_MODULE_KEY);
   await store.delete(fileName);
@@ -95,6 +99,54 @@ describe('Dokumente werden gegen ihre Prüfsumme gehalten', () => {
     // „keine Datei“ lautet und nicht „verändert“.
     const geholt = await getDocument(deps, ctx, entwurf.value.id);
     expect(geholt.ok === false && geholt.error.type).toBe('notFound');
+  });
+
+  /**
+   * Der Zustand steht im Datensatz, nicht in einer eigenen Funktion: Sonst
+   * wüsste die Detailseite Bescheid und ein Agent über `dms_get` nicht. Wer
+   * über MCP fragt, ob ein Dokument vorliegt, bekommt dieselbe Antwort wie der
+   * Mensch vor dem Bildschirm.
+   */
+  it('nennt den Zustand der Datei im Datensatz, ohne sie herauszugeben', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const doc = await fileFixture(deps, ctx);
+    const zustand = async () => {
+      const r = await getDocumentRecord(deps, ctx, doc.id);
+      return r.ok ? r.value.fileState : r.error.type;
+    };
+
+    expect(await zustand()).toBe('ok');
+
+    const row = deps.db.select().from(documents).all().find((d) => d.id === doc.id)!;
+    await tauscheDateiAus(deps, row.fileName!, '%PDF-1.4 anders\n%%EOF\n');
+    expect(await zustand()).toBe('altered');
+
+    await deps.files(DMS_MODULE_KEY).delete(row.fileName!);
+    expect(await zustand()).toBe('missing');
+  });
+
+  /**
+   * Beim Nachstellen am 2026-09-15 standen nach **einem** Seitenaufruf drei
+   * Einträge im Protokoll: Die Detailseite fragt den Zustand ab, der
+   * `<iframe>` holt die Datei, und jeder Neuaufbau zählte erneut. Das Protokoll
+   * hält den Befund fest, nicht jeden Blick darauf — ein Eintrag je Dokument
+   * und Ist-Summe. Ändert sich die Datei erneut, ist das ein neuer Befund.
+   */
+  it('schreibt denselben Befund nicht bei jedem Blick erneut ins Protokoll', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const doc = await fileFixture(deps, ctx);
+    const row = deps.db.select().from(documents).all().find((d) => d.id === doc.id)!;
+    await tauscheDateiAus(deps, row.fileName!, '%PDF-1.4 anders\n%%EOF\n');
+
+    await getDocumentRecord(deps, ctx, doc.id);
+    await getDocument(deps, ctx, doc.id);
+    await getDocumentRecord(deps, ctx, doc.id);
+    expect(befunde(deps)).toHaveLength(1);
+
+    // Ein zweiter Austausch ist ein zweiter Befund.
+    await tauscheDateiAus(deps, row.fileName!, '%PDF-1.4 noch einmal anders\n%%EOF\n');
+    await getDocument(deps, ctx, doc.id);
+    expect(befunde(deps)).toHaveLength(2);
   });
 
   /** Ein festgeschriebenes Dokument, dessen Datei fehlt, ist kein Fälschungsverdacht. */

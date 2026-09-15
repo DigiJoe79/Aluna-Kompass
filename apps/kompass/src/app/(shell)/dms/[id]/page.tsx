@@ -141,6 +141,7 @@ export default async function DocumentDetailPage(props: {
         canCreateContact={hasPermission(ctx, 'contacts.manage')}
         retentionInfo={retentionInfo}
         permissions={permissions}
+        fileState={doc.fileState ?? 'none'}
       />
     </>
   );

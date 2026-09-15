@@ -1608,6 +1608,14 @@
     "fileConfirmDescription": "Beim Festschreiben wird dem Dokument eine fortlaufende Nummer zugewiesen und der Inhalt wird unveränderlich eingefroren.",
     "fileConfirmSubmit": "Festschreiben bestätigen",
     "openPdf": "PDF öffnen",
+    "fileAltered": {
+      "title": "Diese Datei ist nicht mehr die festgeschriebene.",
+      "body": "Beim Festschreiben wurde eine Prüfsumme gebildet; die Datei im Speicher passt nicht mehr dazu. Kompass zeigt sie deshalb nicht an und gibt sie nicht heraus. Der Befund steht im Änderungsprotokoll. Wendet euch an die Person, die den Server betreut."
+    },
+    "fileMissing": {
+      "title": "Die Datei fehlt.",
+      "body": "Zu diesem Dokument gehört eine Datei, die im Speicher nicht mehr liegt. Das ist kein Hinweis auf eine Veränderung — vermutlich ist beim Einspielen eines Backups oder beim Verschieben etwas verloren gegangen."
+    },
     "deleteDraft": "Entwurf löschen",
     "deleteDraftConfirmTitle": "Entwurf verwerfen",
     "deleteDraftConfirmDescription": "Möchten Sie diesen Entwurf wirklich unwiderruflich löschen?",

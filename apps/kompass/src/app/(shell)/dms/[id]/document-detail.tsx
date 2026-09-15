@@ -69,6 +69,12 @@ export interface DocumentDetailProps {
     canEdit: boolean;
     canManage: boolean;
   };
+  /**
+   * Ob die Datei noch die ist, die festgeschrieben wurde. `altered` heißt: Sie
+   * wurde im Datenvolume ausgetauscht — dann wird weder angezeigt noch
+   * geöffnet, sondern gewarnt.
+   */
+  fileState: 'ok' | 'altered' | 'missing' | 'none';
 }
 
 export function DocumentDetail({
@@ -86,6 +92,7 @@ export function DocumentDetail({
   canCreateContact,
   retentionInfo,
   permissions,
+  fileState,
 }: DocumentDetailProps) {
   const t = useTranslations('dms');
   const tCommon = useTranslations('common');
@@ -165,14 +172,16 @@ export function DocumentDetail({
             </>
           ) : (
             <>
-              <a
-                href={`/dms/${doc.id}/file`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={buttonVariants({ variant: 'outline', size: 'sm' })}
-              >
-                {t('openPdf')}
-              </a>
+              {fileState === 'ok' && (
+                <a
+                  href={`/dms/${doc.id}/file`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                >
+                  {t('openPdf')}
+                </a>
+              )}
               {doc.status !== 'voided' && permissions.canVoid ? (
                 <>
                   <Button
@@ -241,13 +250,25 @@ export function DocumentDetail({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Left 2 columns: PDF preview */}
         <div className="lg:col-span-2">
-          <div className="overflow-hidden rounded-md border border-line bg-surface shadow-xs">
-            <iframe
-              src={doc.phase === 'draft' ? `/dms/${doc.id}/preview` : `/dms/${doc.id}/file`}
-              className="h-[720px] w-full border-none"
-              title={doc.subject}
-            />
-          </div>
+          {fileState === 'altered' || fileState === 'missing' ? (
+            /*
+             * Kein `<iframe>`: Er zeigte den Meldungstext der Route als rohen
+             * Fließtext in einem leeren Rahmen — sichtbar, aber nicht als
+             * Befund erkennbar. Und er holte die Datei ein zweites Mal.
+             */
+            <div className="rounded-md border border-destructive/40 bg-destructive/5 p-6" role="alert">
+              <p className="font-medium text-destructive">{t(fileState === 'altered' ? 'fileAltered.title' : 'fileMissing.title')}</p>
+              <p className="mt-2 text-sm text-muted-foreground">{t(fileState === 'altered' ? 'fileAltered.body' : 'fileMissing.body')}</p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-md border border-line bg-surface shadow-xs">
+              <iframe
+                src={doc.phase === 'draft' ? `/dms/${doc.id}/preview` : `/dms/${doc.id}/file`}
+                className="h-[720px] w-full border-none"
+                title={doc.subject}
+              />
+            </div>
+          )}
 
           <NotesPanel documentId={doc.id} notes={notes} canEdit={permissions.canEdit} canManage={permissions.canManage} />
         </div>
