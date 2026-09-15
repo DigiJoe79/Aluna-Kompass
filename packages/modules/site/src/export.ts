@@ -15,10 +15,11 @@ import {
 import { eq } from 'drizzle-orm';
 import type { FieldSchema } from './types';
 import { z } from 'zod';
-import { siteTemplateDir } from './env';
+import { previousTemplateDir, siteTemplateDir } from './env';
 import { checkReferenceValues } from './reference-fields';
 import { siteEntries } from './schema';
 import { activeTemplate, templateIsCurrent } from './service';
+import { settleTemplateAfterImport, templateNeedsReview } from './review';
 import { readValues } from './values';
 
 const LOCALE_KEY = /^[a-z]{2}(-[a-z]{2})?$/;
@@ -231,6 +232,17 @@ export async function exportSiteContent(deps: Deps, ctx: CallContext, input: unk
 
   const template = activeTemplate(deps);
   if (!template) return conflict('noTemplate', 'Es ist kein Template eingelesen');
+  // Vor `templateIsCurrent`, denn das lädt die Template-Datei — und genau das
+  // soll ein Template aus einem eingespielten Archiv nicht tun, bevor ein
+  // Mensch es angesehen hat. Siehe `review.ts`.
+  //
+  // Der Normalfall löst sich dabei von selbst: Wer sein eigenes Backup
+  // einspielt, bringt sein eigenes Template mit, und der Abgleich gegen den
+  // beiseitegeschobenen Stand nimmt die Prüfpflicht ohne Rückfrage weg.
+  settleTemplateAfterImport(deps, ctx, templateDir, previousTemplateDir());
+  if (templateNeedsReview(deps)) {
+    return conflict('templateNeedsReview', 'Das Template kam mit einem Backup; es muss erst eingelesen werden');
+  }
   if (!(await templateIsCurrent(deps, templateDir))) {
     return conflict('templateStale', 'Die Template-Datei weicht vom eingelesenen Stand ab; erst neu einlesen');
   }

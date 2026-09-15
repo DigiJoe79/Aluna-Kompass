@@ -7,6 +7,7 @@ export * from './mcp-tools';
 export * from './resync/plan';
 export * from './resync/apply';
 export * from './service';
+export { templateNeedsReview } from './review';
 export * from './values';
 export * from './entries';
 export * from './references';

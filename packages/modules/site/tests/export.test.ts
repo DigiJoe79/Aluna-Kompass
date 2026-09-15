@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { coreModule, setModuleEnabled, setSetting, storeMediaAsset, unwrap } from '@kompass/core';
+import { coreModule, setModuleEnabled, setSetting, storeMediaAsset, unwrap, writeSettingInternal } from '@kompass/core';
 import { animalsModule, createAnimal, setAnimalPublished, setAnimalStatus } from '@kompass/module-animals';
 import { createProject, projectsModule, setProjectPublished } from '@kompass/module-projects';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
@@ -99,6 +99,21 @@ describe('site export', () => {
     unwrap(await setProjectPublished(deps, admin, { id: project.id, isPublished: true }));
     const { content } = await readContent(deps, dir);
     expect(content.views.projects).toEqual([expect.objectContaining({ slug: 'hof', externalLinks: [{ label: 'Spenden', url: 'https://example.org/s' }] })]);
+  });
+
+  /**
+   * Das Template kommt mit dem Backup zurueck — verlieren soll es niemand.
+   * Ausgefuehrt wird es aber erst, wenn ein Mensch es eingelesen hat: Der
+   * Publish laedt es sonst (`astro build` baut das ganze Verzeichnis), und
+   * damit liefe Code aus einem Archiv, das jemand eingespielt hat.
+   */
+  it('refuses to publish a template that came with a backup and was not read since', async () => {
+    const { deps, dir } = await setup(GOOD);
+    deps.db.transaction((tx) =>
+      writeSettingInternal(tx, deps, ctxWith([]), 'system.lastImportAt', '2099-01-01T00:00:00.000Z', 'backup.import.mark'),
+    );
+    const result = await exportSiteContent(deps, publish, { jobDir: tmp('kompass-exp-job-'), templateDir: dir });
+    expect(result.ok === false && result.error.type === 'conflict' && result.error.code === 'templateNeedsReview').toBe(true);
   });
 
   it('reports a used view whose module is disabled instead of writing an empty list', async () => {

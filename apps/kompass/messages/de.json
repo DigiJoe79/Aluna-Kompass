@@ -1241,6 +1241,7 @@
       "title": "Template",
       "lastRead": "Zuletzt eingelesen: {when}",
       "neverRead": "Noch kein Template eingelesen.",
+      "needsReview": "Dieses Template kam mit einem eingespielten Backup und unterscheidet sich von dem, das zuvor lief. Ein Template ist ausführbarer Code: Es wird erst beim Einlesen ausgeführt und erst danach wieder publiziert. Lesen Sie es ein, wenn Sie wissen, woher das Backup stammt.",
       "read": "Template einlesen",
       "apply": "Übernehmen",
       "cancel": "Abbrechen",

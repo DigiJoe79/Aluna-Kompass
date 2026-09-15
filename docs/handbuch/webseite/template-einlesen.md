@@ -57,3 +57,23 @@ Kompass merkt sich eine Prüfsumme der eingelesenen Datei. Ändert jemand das
 Template im Verzeichnis, ohne neu einzulesen, verweigert das Publizieren mit
 dem Hinweis, erst einzulesen — sonst würde die Seite gegen Felder gebaut, die
 Kompass nicht kennt.
+
+## Nach einem eingespielten Backup
+
+Ein Template ist kein Text, sondern **ausführbarer Code**: Kompass führt es
+beim Einlesen aus, und beim Publizieren baut es die ganze Webseite. Deshalb
+gilt für Templates dasselbe wie für jedes Programm — spielen Sie nur eines
+ein, dessen Herkunft Sie kennen.
+
+Das Backup nimmt Ihr Template mit, Sie verlieren es also nicht. Nach dem
+Einspielen prüft Kompass, ob das Template aus dem Backup dasselbe ist, das
+vorher lief:
+
+- **Dasselbe Template** — der Normalfall, wenn Sie Ihr eigenes Backup
+  zurückspielen. Es geht ohne Zutun weiter, Sie merken nichts davon.
+- **Ein anderes Template** — dann steht auf dieser Seite ein Hinweis, und
+  Publizieren ist gesperrt, bis Sie es einlesen. Tun Sie das erst, wenn Sie
+  wissen, woher das Backup stammt.
+
+Kommt das Backup in eine frische Installation, in der noch nie ein Template
+lief, gibt es nichts zu vergleichen — dann fragt Kompass immer.

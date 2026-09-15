@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { readSetting, requirePermission } from '@kompass/core';
-import { activeTemplate, siteTemplateDir } from '@kompass/module-site';
+import { activeTemplate, siteTemplateDir, templateNeedsReview } from '@kompass/module-site';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
@@ -18,6 +18,7 @@ export default async function SiteTemplatePage() {
   const tSeed = await getTranslations('site.seed');
   const format = await getFormatter();
   const state = activeTemplate(deps);
+  const needsReview = templateNeedsReview(deps);
 
   const seedFile = path.join(siteTemplateDir(), 'seed', 'content.json');
   const seedAppliedAt = readSetting<string | null>(deps, 'site.seedAppliedAt');
@@ -30,6 +31,11 @@ export default async function SiteTemplatePage() {
         description={state ? t('lastRead', { when: format.dateTime(new Date(state.readAt), { dateStyle: 'medium', timeStyle: 'short' }) }) : t('neverRead')}
       />
       <div className="flex max-w-[880px] flex-col gap-4">
+        {needsReview ? (
+          <p className="rounded-lg border border-line bg-error-bg p-6 text-[14px] text-ink" role="status">
+            {t('needsReview')}
+          </p>
+        ) : null}
         <SyncClient name={state?.name ?? null} />
         {showSeedCard ? (
           seedAppliedAt ? (
