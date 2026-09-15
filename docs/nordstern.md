@@ -181,9 +181,17 @@ keine.
 
 ### Betrieb
 
-Ein Image für Dev, Test und Prod, Container auf dem NAS des Vereins, Backup
-vor jedem Update, Migrationen beim Start, CI, die gegen die ausgelieferte
-Fassung prüft. Kein Feature, aber die Bedingung für alle.
+Ein Image für Dev, Test und Prod, Container auf dem NAS des Vereins,
+Migrationen beim Start, CI, die gegen die ausgelieferte Fassung prüft. Kein
+Feature, aber die Bedingung für alle.
+
+Das Backup vor einem Update ist ein **Schritt in der Anleitung**, kein
+Mechanismus: `docs/handbuch/betrieb.md` stellt ihn an den Anfang des Updates,
+und weil Migrationen nur vorwärts laufen, ist er der einzige Rückweg. Ihn zu
+erzwingen würde bedeuten, dass der Container den Start verweigert, solange
+kein frisches Archiv daliegt — das wäre eine Hürde an der falschen Stelle.
+Wer ihn automatisieren will, tut das im Update-Ablauf, nicht in der
+Anwendung.
 
 Quellen: `docs/handbuch/betrieb.md`, `2026-09-08-pruefringe-design.md`.
 

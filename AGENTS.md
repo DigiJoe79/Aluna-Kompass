@@ -80,7 +80,25 @@ Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. J
 
 ## Quellen
 
-- Specs: `docs/superpowers/specs/` (Fundament: `2026-09-05-fundament-design.md`; Webseite als Template: `2026-09-07-site-template-design.md`; Prüfringe: `2026-09-08-pruefringe-design.md`; Löschbarkeit und Mediathek: `2026-09-09-loeschbarkeit-und-mediathek-design.md`; Dokument-Pipeline und Basis-Vorlagen: `2026-09-09-dokument-pipeline-und-basisvorlagen-design.md`; Kontakte: `2026-09-10-kontakte-design.md`; Dokumente und Korrespondenz: `2026-09-10-dokumente-und-korrespondenz-design.md`; Volltext und Texterkennung: `2026-09-11-volltext-und-texterkennung-design.md`; Akte fertig: `2026-09-12-akte-fertig-design.md`; Mediathek Auswahl und Vorschau: `2026-09-13-mediathek-auswahl-und-vorschau-design.md`)
+- Specs: `docs/superpowers/specs/` — chronologisch, jede nennt die Säule, zu der sie gehört. `apps/kompass/tests/spec-index.test.ts` hält die Liste vollständig.
+  - `2026-09-05-fundament-design.md` — Fundament: Nutzer, Rechte, Einstellungen, Protokoll, Module
+  - `2026-09-05-webseite-design.md` — **abgelöst** von der Template-Spec; das Tierprofil darin gilt weiter
+  - `2026-09-06-setup-import-design.md` — Ersteinrichtung und Backup-Import
+  - `2026-09-07-site-template-design.md` — die Webseite als Template des Vereins
+  - `2026-09-08-pruefringe-design.md` — die drei Prüfringe, `pnpm verify`
+  - `2026-09-08-site-seed-design.md` — Startinhalte aus einem Template
+  - `2026-09-09-dokument-pipeline-und-basisvorlagen-design.md` — Typst, Basis-Vorlagen
+  - `2026-09-09-loeschbarkeit-und-mediathek-design.md` — `deletionRules`, Mediathek
+  - `2026-09-10-kontakte-design.md` — Kontakte, Rollen über die Zeit, Aufbewahrung
+  - `2026-09-10-dokumente-und-korrespondenz-design.md` — die Akte
+  - `2026-09-11-volltext-und-texterkennung-design.md` — Volltext, OCR
+  - `2026-09-12-akte-fertig-design.md` — Bezüge, Versandvermerk, Wiedervorlage
+  - `2026-09-13-mediathek-auswahl-und-vorschau-design.md` — Auswahl-Dialog, Vorschau
+  - `2026-09-13-startseiten-referenzen-und-nacharbeiten-design.md` — Referenzfelder statt Kennzeichen
+  - `2026-09-13-uebersetzungen-ueber-mcp-design.md` — Lückenliste, `translations_*`
+  - `2026-09-14-e2e-zuverlaessigkeit-design.md` — Hydration, Reset, Wiederholungen
+  - `2026-09-14-handbuch-und-hilfe-design.md` — Handbuch im Image, Hilfe-Panel
+  - `2026-09-14-navigation-schiene-und-zweitebene-design.md` — Schiene und zweite Ebene
 - Pläne: `docs/superpowers/plans/`
 - Nordstern: `docs/nordstern.md` (Gesamtbild, Grenzen, Roadmap)
 - Backlog: `docs/backlog.md` (bewusst zurückgestellte Punkte mit Begründung)
