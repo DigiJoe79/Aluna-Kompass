@@ -14,8 +14,23 @@ describe('themeToCss', () => {
     expect(css).toContain('--color-primary:#74B4C0');
   });
 
-  it('escapes nothing dangerous: values with braces or semicolons are rejected', () => {
+  /**
+   * Seit dem 2026-09-15 weist `themeTokensSchema` solche Werte schon beim
+   * Schreiben ab. Hier bleibt der zweite Riegel, weil es einen Weg gibt, der
+   * an der Validierung vorbeiführt: Ein Backup-Import ersetzt die Datenbank
+   * als Datei, ohne ihren Inhalt zu prüfen.
+   *
+   * Werfen wäre dabei die falsche Antwort. Das `<style>` liegt im
+   * Wurzel-Layout, also auf jeder Seite — ein Wurf nähme die ganze Oberfläche
+   * mit, einschließlich der Themes-Seite, über die man den Wert zurücknehmen
+   * würde. Die Installation wäre nur noch über die Datenbank zu retten.
+   */
+  it('falls back to the default value instead of taking the whole interface down', () => {
     const theme = { ...DEFAULT_THEME, tokens: { ...DEFAULT_THEME.tokens, bg: { light: '#fff}body{color:red', dark: '#000' } } };
-    expect(() => themeToCss(theme)).toThrow(/invalid token value/);
+    const css = themeToCss(theme);
+    expect(css).not.toContain('body{color:red');
+    expect(css).toContain(`--bg:${DEFAULT_THEME.tokens.bg.light}`);
+    // Der Rest des Themes bleibt unberührt — nur der eine Wert fällt zurück.
+    expect(css).toContain(`--color-primary:${DEFAULT_THEME.tokens['color-primary'].light}`);
   });
 });

@@ -25,7 +25,22 @@ export const THEME_TOKENS = [
 
 export type ThemeToken = (typeof THEME_TOKENS)[number];
 
-const tokenValue = z.string().trim().min(1).max(160);
+/**
+ * Was in einem Token-Wert stehen darf.
+ *
+ * Der Wert landet als CSS-Deklaration im `<style>` des Wurzel-Layouts. Eine
+ * geschweifte Klammer oder ein Semikolon bricht dort aus der Deklaration aus,
+ * spitze Klammern aus dem Element. Weil das Layout auf **jeder** Seite liegt,
+ * nähme ein solcher Wert die ganze Oberfläche mit — einschließlich der
+ * Themes-Seite, über die man ihn zurücknehmen würde. Deshalb wird er beim
+ * Schreiben abgewiesen und nicht erst beim Rendern.
+ *
+ * Alles andere bleibt erlaubt: Klammern und Kommas für `rgb(…)` und
+ * `oklch(…)`, Anführungszeichen für Schriftnamen, Punkte und Einheiten.
+ */
+export const THEME_VALUE_PATTERN = /^[^{};<>]+$/;
+
+const tokenValue = z.string().trim().min(1).max(160).regex(THEME_VALUE_PATTERN);
 const pair = z.object({ light: tokenValue, dark: tokenValue }).strict();
 
 export const themeTokensSchema = z
