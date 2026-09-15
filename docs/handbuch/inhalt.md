@@ -32,4 +32,4 @@
   - [Dokumentvorlagen](einstellungen/dokumente.md)
   - [Akte einrichten](einstellungen/akte-einrichten.md)
 - [Profil](profil.md)
-- [Betrieb auf dem QNAP TS-873](betrieb.md)
+- [Betrieb](betrieb.md)

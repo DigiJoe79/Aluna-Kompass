@@ -55,7 +55,7 @@ Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. J
 - `scripts/third-party-notices.sh [image] [--pruefen]` — erzeugt `THIRD-PARTY-NOTICES.md` aus einem gebauten Image (Vorgabe `kompass-local`). Die Datei wird **erzeugt, nicht gepflegt**: Wer ein `apt-get install` ins Dockerfile schreibt, lässt sie danach neu schreiben. `--pruefen` meldet Abweichungen, ohne zu schreiben — so läuft sie in der CI vor dem Hochladen des Images.
 - `pnpm dev:reset` — Entwicklungsdatenbank verwerfen und mit Seed **und** den Tieren und Projekten des Prototyps neu aufbauen (nur `APP_ENV=development`; Prototyp-Pfad über `PROTOTYPE_DIR`)
 - Texterkennung lokal: `brew install tesseract tesseract-lang poppler` — ohne sie meldet die Akte „Texterkennung nicht verfügbar", und `packages/text-extraction` überspringt seine Tests nicht, sondern schlägt fehl.
-- Betrieb: `docs/handbuch/betrieb.md` (NAS-Deployment, Backups, Updates); Compose-Vorlagen `docker-compose.test.yml` und `docker-compose.prod.yml`, CI `.github/workflows/ci.yml`
+- Betrieb: `docs/handbuch/betrieb.md` — die allgemeine Anleitung, die mit jeder Installation ausgeliefert wird (Voraussetzungen, Erstinstallation, Update, Backup, Webseite). **Sie nennt keine Hardware, keinen Hoster und keinen Verein**; `apps/kompass/tests/no-association-content.test.ts` prüft das, weil `docs/handbuch` im Image liegt. Alunas konkreter Aufbau steht in `docs/intern/betrieb-aluna-qnap.md` (nicht im Repo). Compose-Vorlagen `docker-compose.test.yml` und `docker-compose.prod.yml`, CI `.github/workflows/ci.yml`
 
 ## Release
 

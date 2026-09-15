@@ -1,23 +1,50 @@
-# Betrieb auf dem QNAP TS-873
+# Betrieb
 
-Kompass läuft als ein Docker-Image auf dem NAS des Vereins, mit Test und Prod
-als getrennten Anwendungen. Diese Seite beschreibt Erstinstallation, Update,
-Backup und den Weg der Webseite vom NAS zum Webspace — für die Person, die
-das NAS betreut.
+Kompass läuft als ein Docker-Image auf einem Rechner im Netz des Vereins — ein
+NAS, ein kleiner Server, was vorhanden ist. Diese Seite beschreibt
+Erstinstallation, Update, Backup und den Weg der Webseite zum Hoster, für die
+Person, die diesen Rechner betreut.
+
+## Voraussetzungen
+
+- **Docker** mit Compose, auf amd64 oder arm64. Das veröffentlichte Image ist
+  für amd64 gebaut; auf anderer Architektur baut man es selbst (`pnpm image`).
+- **Platz:** rund 2 GB für das Image, dazu die Daten des Vereins. Die Datenbank
+  bleibt lange klein; den Ausschlag geben abgelegte Dokumente und Medien.
+- **Arbeitsspeicher:** 1 GB reicht im Alltag. Beim Bauen der Webseite und bei
+  der Texterkennung steigt der Bedarf kurzzeitig; auf einem Gerät mit 2 GB
+  läuft beides ohne Enge.
+- Ein Verzeichnis für die Daten, das Neustarts und Updates überlebt.
 
 ## Erstinstallation
-1. **Ordner anlegen**: `/share/Container/kompass-test/{data,media}` (Prod analog, erst wenn Test läuft).
-2. **`.env.test`** nach `/share/Container/kompass-test/` legen (Vorlage `.env.test.example`), mit `SESSION_SECRET=<48 zufällige Zeichen>`, z. B. `openssl rand -hex 24`. Je Umgebung ein eigener Wert, sonst gälten Sitzungen aus Test auch in Prod.
-3. **`secret/site.pw`** daneben: `mkdir -p secret && printf '%s' '<webspace-passwort>' > secret/site.pw && chmod 600 secret/site.pw && chown 1000:1000 secret/site.pw`. Das Verzeichnis `secret` liegt **neben** `data`, nicht darin: Das Backup bildet `/data` ab, und ein Geheimnis darf in kein Archiv geraten, das man herunterlädt und weitergibt. `printf` statt `echo`, sonst hängt ein Zeilenumbruch am Passwort.
-4. Container Station öffnen → **„Anwendung erstellen“** → Inhalt von `docker-compose.test.yml` einfügen. Für Prod später eine **zweite Anwendung** aus `docker-compose.prod.yml`.
 
-   Nicht über „Image erstellen“ gehen: die Image-Suche der Container Station bietet nur Docker Hub und die LXD-Registry an. Eine Anwendung zieht dagegen jede Registry, die im Compose steht. `ghcr.io/digijoe79/aluna-kompass` ist öffentlich lesbar, eine Anmeldung ist also nicht nötig.
+1. **Verzeichnisse anlegen** — eines für die Daten, eines für die Medien, zum
+   Beispiel `kompass/data` und `kompass/media`.
 
-   Die Pfade im Compose sind absolut. Die Container Station kopiert die Datei nach `/tmp`, wo ein relatives `env_file` ins Leere zeigt — der Fehler lautet dann `env file /tmp/.env.… not found`.
+2. **Umgebungsdatei** aus `.env.prod.example` erstellen. Pflicht ist
+   `SESSION_SECRET` mit mindestens 32 zufälligen Zeichen, etwa aus
+   `openssl rand -hex 24`. Wer Test und Produktion getrennt betreibt, gibt
+   jeder Umgebung einen eigenen Wert — sonst gälten Sitzungen aus der einen
+   auch in der anderen.
 
-   Bei einem privaten Paket wäre stattdessen einmalig ein Login über SSH nötig: `docker login ghcr.io -u <github-benutzer>` mit einem Token, das `read:packages` erlaubt.
-5. Anwendung starten. Test: `http://<nas>:3001`, Prod: `http://<nas>:3000`. Der erste Aufruf zeigt die Einrichtungsseite (genau einmal).
-6. Health: `http://<nas>:3000/api/health`.
+3. **Nur wenn die Webseite von hier aus veröffentlicht wird:** die
+   Zugangsdaten zum Hoster in eine Datei legen (siehe „Webseite“). Dieses
+   Verzeichnis liegt **neben** dem Datenverzeichnis, nicht darin: Das Backup
+   bildet die Daten ab, und ein Geheimnis darf in kein Archiv geraten, das man
+   herunterlädt und weitergibt.
+
+4. **Container starten**, mit `docker-compose.prod.yml` als Vorlage. Die Pfade
+   darin sind Beispiele und werden auf die eigenen angepasst.
+
+   ```
+   docker compose -f docker-compose.prod.yml up -d
+   ```
+
+5. **Aufrufen** — `http://<rechner>:3000`. Der erste Aufruf zeigt die
+   Einrichtungsseite, genau einmal: Vereinsname, erstes Konto, Sprachen.
+
+6. **Health prüfen** — `http://<rechner>:3000/api/health` nennt Fassung,
+   Umgebung und Migrationsstand.
 
 ### Das Fenster bis zur Einrichtung
 
@@ -37,157 +64,146 @@ Abschluss der Einrichtung nur lokal. Im Compose:
 ports: ["127.0.0.1:3000:3000"]
 ```
 
-Danach den Eintrag zurückändern und die Anwendung neu starten. Wer den Container
-ohnehin erst startet, wenn er direkt davorsitzt, braucht das nicht.
+Danach den Eintrag zurückändern und die Anwendung neu starten. Wer den
+Container ohnehin erst startet, wenn er direkt davorsitzt, braucht das nicht.
+
+## Zwei Umgebungen
+
+Wer vor einer Änderung ausprobieren will, wie sie sich auswirkt, betreibt eine
+zweite Installation als Testumgebung — eigener Port, eigene Verzeichnisse,
+eigene Umgebungsdatei mit `APP_ENV=test`. Außerhalb der Produktion zeigt
+Kompass einen Umgebungsbalken, damit niemand die beiden verwechselt.
+
+Daten aus der Produktion in den Test holen: dort exportieren, hier importieren
+(Verwaltung → Backup). Danach sind im Test alle Sitzungen beendet, die
+Anmeldung läuft mit den Zugangsdaten aus der Produktion. API-Tokens werden
+nicht mitkopiert.
+
+Der umgekehrte Weg ist keine gute Idee: Der Test enthält Probierdaten, und die
+gehören nicht in die Aufzeichnung, aus der der Verein Rechenschaft ablegt.
 
 ## Update
 
-1. In Prod ein Backup exportieren (Verwaltung → Backup → Export erstellen) und die Datei sichern.
-2. Anwendung neu bereitstellen — `kompass-test` folgt dem Tag `dev`, `kompass-prod` dem Tag `latest`. Zuerst Test, prüfen (Login, Startseite, Health), dann Prod.
+1. **Backup exportieren** (Verwaltung → Backup → Export erstellen) und die
+   Datei sichern. Kompass tut das nicht von selbst — der Schritt ist die
+   Rückfahrkarte, wenn eine Migration schiefgeht.
 
-   **Wichtig:** `dev` und `latest` sind bewegliche Tags. Ein Neustart oder ein Neuanlegen der Anwendung startet sonst weiter das lokal zwischengespeicherte Image. Die Compose-Dateien setzen deshalb `pull_policy: always`. Wenn die Container Station das ignoriert, hilft der Weg über SSH:
+2. **Neues Image holen und neu starten.**
 
    ```
-   docker compose -f docker-compose.test.yml pull
-   docker compose -f docker-compose.test.yml up -d
+   docker compose -f docker-compose.prod.yml pull
+   docker compose -f docker-compose.prod.yml up -d
    ```
 
-   Ob wirklich die neue Fassung läuft, verrät `/api/health` oder `docker image inspect ghcr.io/digijoe79/aluna-kompass:dev --format '{{.Id}}'` im Vergleich zur Ausgabe des CI-Laufs.
+   `latest` ist ein beweglicher Tag: Ohne `pull` startet weiter das lokal
+   zwischengespeicherte Image. Wer es eindeutig will, trägt statt `latest`
+   eine Version ein (`v0.1.0`) — dann ist jede Aktualisierung eine sichtbare
+   Änderung der Compose-Datei.
 
-   Wer es ganz eindeutig will, trägt statt `dev` den unveränderlichen Tag `sha-<commit>` ein — dann ist jede Aktualisierung eine sichtbare Änderung der Compose-Datei.
-3. Migrationen laufen beim Start automatisch; der Migrationsstand steht im Health-JSON und im Umgebungsbalken der Testumgebung.
-4. Die Bilder unter `:dev` und `:latest` sind vor dem Hochladen auf amd64 durchgetestet (siehe „Bauen und Prüfen“). Ein rotes CI-Ergebnis heißt deshalb: Es gibt kein neues Bild, nicht etwa ein ungeprüftes.
+3. **Migrationen** laufen beim Start automatisch. Schlägt eine fehl, startet
+   die Anwendung nicht — sie arbeitet nicht auf halb migrierten Daten. Der
+   erreichte Stand steht im Health-JSON.
 
-## Prod nach Test kopieren
-Export in Prod → Datei herunterladen → in Test unter Verwaltung → Backup importieren (Umgebungsname `test` eintippen). Danach sind in Test alle Sitzungen beendet; Anmeldung mit den Prod-Zugangsdaten. API-Tokens werden nicht mitkopiert.
+4. **Prüfen:** anmelden, Startseite, `/api/health`. Die Fassung dort sollte die
+   neue sein.
 
-## Medien
-- Die Dateien liegen flach im `media`-Verzeichnis. Die Ordner der Mediathek sind virtuell: Sie stehen nur in der Datenbank (Tabelle `media_folders`, Spalte `media_assets.folder`) und ändern nichts an der Ablage auf der Platte.
-- Neben jedem Rasterbild liegt eine Vorschau `<name>.preview.webp` (320 px breit). Sie ist ein Cache: Sie darf jederzeit gelöscht werden, der nächste Abruf in der Verwaltung baut sie neu. Backups nehmen sie mit; ein Backup ohne sie ist ebenfalls vollständig.
+**Wenn etwas schiefgeht:** Es gibt keinen Weg zurück in eine ältere Fassung der
+Datenbank — Migrationen laufen nur vorwärts. Der Rückweg ist das Backup aus
+Schritt 1: altes Image eintragen, Container starten, Backup einspielen.
+Deshalb Schritt 1 nicht überspringen.
 
 ## Backups
-- Anwendungs-Backup: Export-Datei (`kompass-backup-<env>-<datum>.tar.gz`) — enthält DB, Medien, Manifest; ohne Sitzungen und Tokens.
-- NAS-Ebene: Snapshots des Shared Folders `Container` zusätzlich aktivieren (Volume-Konsistenz: SQLite im WAL-Modus ist snapshot-sicher, das Backup-Export ist aber die verlässliche Form).
-- Nach einem Import bleiben die vorherigen Dateien als `kompass.db.before-import-<zeit>` und `media.before-import-<zeit>` liegen; nach Prüfung manuell löschen.
+
+- **Aus der Anwendung** (Verwaltung → Backup): eine Datei
+  `kompass-backup-<umgebung>-<datum>.tar.gz` mit Datenbank, Medien und
+  Manifest. Sitzungen und API-Tokens bleiben bewusst draußen.
+- **Auf Dateiebene:** Snapshots des Datenverzeichnisses sind eine sinnvolle
+  Ergänzung, ersetzen den Export aber nicht — er ist die Form, die Kompass
+  auch wieder einlesen kann.
+- Das Archiv enthält alle personenbezogenen Daten des Vereins. Es gehört an
+  einen Ort, der so geschützt ist wie die Anwendung selbst, und nicht
+  unverschlüsselt in einen geteilten Ordner.
+- Nach einem Import bleibt der vorherige Stand als `.before-import-<zeit>`
+  neben den Daten liegen. Nach der Prüfung kann er gelöscht werden.
+
+## Medien
+
+Die Dateien liegen flach im Medienverzeichnis. Die Ordner der Mediathek sind
+virtuell: Sie stehen nur in der Datenbank und ändern nichts an der Ablage auf
+der Platte. Neben jedem Rasterbild liegt eine Vorschau `<name>.preview.webp`;
+sie ist ein Zwischenspeicher und darf jederzeit gelöscht werden.
 
 ## Zugriff von außerhalb
-Nicht vorgesehen. Bei Bedarf QNAP-VPN (QVPN) verwenden; die App selbst bleibt LAN-only und ohne TLS.
 
-## Bauen und Prüfen
+Nicht vorgesehen. Kompass läuft im Netz des Vereins, ohne TLS. Wer von
+unterwegs arbeiten muss, nutzt ein VPN in dieses Netz.
 
-Drei Ringe, jeder prüft eine andere Schicht:
-
-| Ring | Befehl | Wogegen |
-|---|---|---|
-| Logik | `pnpm test` | Quellcode |
-| Abläufe | `pnpm --filter @kompass/app e2e` | `next dev` |
-| Verpackung | `pnpm e2e:image` | dem gebauten Image im Container |
-
-`pnpm verify` fährt alle drei plus den Image-Build und braucht rund zwei
-Minuten. **Vor jedem Push.**
-
-Der dritte Ring braucht Docker. Er startet `kompass-local` auf Port 3200 mit
-frischen Volumes und prüft, was nur im Container schiefgehen kann: gebündelter
-Code, `/data`, das mitgelieferte Template und die Modulauflösung aus dem
-Entrypoint. `/data` bekommt ein anonymes Volume, damit jeder Lauf
-eine Erstinbetriebnahme ist; eingehängt wird nur das Publish-Ziel unter
-`apps/kompass/.e2e-container/deploy`, weil der Test dort nachsieht.
-
-Für ein Ausprobieren von Hand gibt es `pnpm dev:image` — eine **stehende**
-Installation auf Port 3300 mit Daten, die Neustarts überleben, und mit
-demselben Verhalten wie der Testcontainer auf dem NAS. `pnpm dev:image down`
-beendet sie, `reset` verwirft auch die Daten.
-
-Die CI wiederholt Ring eins und zwei auf frischem Checkout und fährt Ring drei
-im `image`-Job gegen die **amd64**-Fassung, bevor sie hochgeladen wird — lokal
-baut ein Apple-Silicon-Rechner arm64, und `better-sqlite3`, `sharp` und Typst
-sind je Architektur andere Dateien. Sie lädt das gebaute Bild dafür erst in den
-lokalen Daemon und vergibt die Namen danach an genau dieses Bild. Damit gilt:
-
-> **Liegt ein Bild unter `:dev` oder `:latest`, sind seine Tests grün gelaufen
-> und es hat auf amd64 alle Browserfälle bestanden.**
-
-Laufzeiten: `pnpm verify` lokal rund zwei Minuten; die CI etwa neun Minuten,
-bei geänderten Abhängigkeiten etwa siebzehn — dann baut die Deps-Schicht des
-Images `better-sqlite3` und `sharp` neu. Die Begründung der Aufteilung steht in
-`docs/superpowers/specs/2026-09-08-pruefringe-design.md`.
-
-**Texterkennung im Image:** Das Container-Image bringt Tesseract 5.3, Poppler (`poppler-utils`) und die Sprachdaten für Deutsch und Englisch (`tesseract-ocr-deu`, `tesseract-ocr-eng`) mit (Zuwachs rund 117 MB aus Debian). Die Sprachwahl für die Erkennung erfolgt über die Einstellung `dms.ocrLanguages`.
+Wer die Anwendung dennoch über einen Reverse Proxy erreichbar macht, sollte
+TLS davorschalten. Meldet der Proxy das per `X-Forwarded-Proto`, setzt Kompass
+das Sitzungscookie von selbst auf `secure`.
 
 ## MCP
-Endpunkt `http://<nas>:3000/mcp` (Streamable HTTP), Authentifizierung mit einem persönlichen API-Token aus dem Profil (`Authorization: Bearer akx_live_…`). Tokens wirken mit den Rechten des Nutzers; jeder Vorgang steht im Änderungsprotokoll mit Kanal „MCP“.
 
-## Webseite (Test und Prod)
+Endpunkt `http://<rechner>:3000/mcp` (Streamable HTTP), Anmeldung mit einem
+persönlichen API-Token aus dem Profil (`Authorization: Bearer akx_…`). Ein
+Token wirkt mit den Rechten des Nutzers, dem es gehört; jeder Vorgang steht im
+Änderungsprotokoll mit dem Kanal „MCP“.
 
-**Das Template unter `/data/site/template`.** Kompass pflegt nicht die Seite,
+## Webseite
+
+**Das Template unter `<daten>/site/template`.** Kompass pflegt nicht die Seite,
 sondern die Inhalte, die ein Astro-Template deklariert. Beim ersten Start legt
-der Entrypoint das mitgelieferte Basis-Template dort ab; ein vorhandenes bleibt
+der Container das mitgelieferte Basis-Template dort ab; ein vorhandenes bleibt
 unberührt, auch bei einem Update. Der Verein ersetzt es durch sein eigenes und
 liest es unter Webseite → Template ein.
 
-**Startinhalte.** Bringt ein Template ein Verzeichnis `seed/` mit
-(`seed/content.json` plus `seed/assets/`), erscheint unter Webseite → Template
-der Knopf „Startinhalte“ — einmalig, solange die Webseite leer ist. Er legt die
-Variablen und Sammlungseinträge des Seeds an und lädt dessen Dateien hoch.
-Danach ist die Datenbank die Quelle; ein zweiter Lauf ist gesperrt
-(`site.seedAppliedAt`). Für einen erneuten Lauf braucht es eine frische
-Datenbank. Das mitgelieferte Basis-Template hat kein `seed/`.
+**Startinhalte.** Bringt ein Template ein Verzeichnis `seed/` mit, erscheint
+unter Webseite → Template der Knopf „Startinhalte“ — einmalig, solange die
+Webseite leer ist. Danach ist die Datenbank die Quelle. Das mitgelieferte
+Basis-Template hat kein `seed/`.
 
-Dieses Verzeichnis ist eine **Vertrauensgrenze**: Der Build führt den Code des
+**Dieses Verzeichnis ist eine Vertrauensgrenze.** Der Bau führt den Code des
 Templates aus, mit den Rechten des Containers. Wer dorthin schreiben darf, kann
-im Container Code ausführen. Es gehört deshalb `node` (UID 1000) und niemandem
-sonst, und es wird nicht über eine Freigabe geteilt.
+im Container Code ausführen. Es gehört deshalb dem Benutzer des Containers
+(UID 1000) und niemandem sonst, und es wird nicht über eine Netzwerkfreigabe
+geteilt. Mehr dazu unter [Template einlesen](webseite/template-einlesen.md).
 
-`node_modules` darin ist ein Symlink auf die Module des Images. Zeigt er ins
-Leere — etwa nach einem Update aus einer älteren Fassung —, erneuert ihn der
-Entrypoint beim nächsten Start selbst; ein Build meldete das vorher als
-„astro not installed“.
+**Veröffentlichen.** Kompass überträgt die gebaute Seite per `rsync` über SSH
+zum Hoster. Dafür braucht es die `SITE_*`-Variablen in der Umgebungsdatei
+(siehe `.env.prod.example`): Zieladresse, Benutzer, Zielverzeichnis und
+entweder einen Schlüssel (`SITE_DEPLOY_KEY_FILE`) oder ein Passwort in einer
+Datei (`SITE_DEPLOY_PASSWORD_FILE`). Ohne diese Variablen zeigt Kompass nur
+eine Vorschau und keinen Publish-Knopf.
 
-## Dokument-Basisvorlagen unter `/data/core/document-templates`
+Die Passwortdatei wird schreibgeschützt in den Container eingehängt, gehört dem
+Benutzer des Containers und hat die Rechte 600. Das Passwort steht damit nie in
+der Prozessliste.
 
-Die Seitenrahmen für erzeugte PDFs (Briefkopf, Berichtslayout, …). Kompass
-liefert die generischen Basen `a4-plain`, `a4-mit-briefkopf` und
+**Vor dem ersten Veröffentlichen:** Publizieren-Seite → „Verbindung testen“.
+Der Lauf meldet sich am Ziel an, überträgt nichts und listet auf, was dort
+liegt und ein Publish entfernen würde. Kommt die Liste leer zurück, zeigt das
+Zielverzeichnis ins Leere — ein vertippter Pfad lässt `rsync` nicht scheitern,
+er trifft nur nichts.
+
+Solange die Seite noch nicht öffentlich sein soll, hält `SITE_STAGING=1` sie
+aus den Suchmaschinen: `noindex`, `Disallow: /`, keine Sitemap.
+
+## Dokument-Basisvorlagen
+
+Unter `<daten>/core/document-templates` liegen die Seitenrahmen für erzeugte
+PDFs. Kompass liefert die generischen Basen `a4-plain`, `a4-mit-briefkopf` und
 `a4-ohne-briefkopf` mit; ein Verein legt hier eigene `.typ`-Dateien ab, um eine
-zu ergänzen oder zu ersetzen (gleiche ID gewinnt). Daneben optional `fonts/`
-(eigene `.ttf`/`.otf` als zusätzlicher Font-Pfad) und `assets/` (Grafiken, die
-eine Basis über `#image("/assets/…")` einbindet — das Vereinslogo kommt weiter
-aus den Einstellungen). Der Entrypoint legt das Verzeichnis beim ersten Start an,
-mit einem `README` und `bases.reference/` als Kopiervorlage. **Ein leeres
-Verzeichnis ist gültig** — dann gelten die mitgelieferten Basen; anders als
-`/data/site/template` muss hier nichts liegen.
+zu ergänzen oder zu ersetzen (gleiche Kennung gewinnt). Daneben optional
+`fonts/` für eigene Schriften und `assets/` für Grafiken, die eine Basis
+einbindet — das Vereinslogo kommt weiter aus den Einstellungen.
 
-Auch dies ist eine **Vertrauensgrenze**: Jede `.typ` läuft beim Rendern als Code
-im Container. Es gehört `node` und wird nicht über eine Freigabe geteilt.
+**Ein leeres Verzeichnis ist gültig** — dann gelten die mitgelieferten Basen.
+Auch dies ist eine Vertrauensgrenze: Jede `.typ` läuft beim Rendern als Code im
+Container.
 
-Beide Umgebungen liegen als Subdomains auf demselben IONOS-Webspace, die
-Hauptdomain bleibt bis zum Go-live auf WordPress.
+## Texterkennung
 
-| Umgebung | Subdomain | Verzeichnis | `SITE_STAGING` |
-|---|---|---|---|
-| Test | `test.aluna-tierhilfe.org` | `/kunden/homepages/<NN>/<dNNNNNNNNN>/htdocs/aluna-test` | `1` |
-| Prod | `prod.aluna-tierhilfe.org` | `/kunden/homepages/<NN>/<dNNNNNNNNN>/htdocs/aluna-prod` | `1` bis zum Go-live |
-
-1. Subdomains bei IONOS auf die beiden Verzeichnisse zeigen lassen, SSH-Zugang im Kundencenter aktivieren.
-2. **Anmeldung:** IONOS-Webhosting bietet keine SSH-Schlüssel, deshalb Passwort-Login. Das Webspace-Passwort in eine Datei `site.pw` schreiben (nur die Zeile mit dem Passwort, kein Zeilenumbruch nötig) und nach `/share/Container/kompass-test/secret/` **und** `/share/Container/kompass-prod/secret/` legen, Rechte 600, Besitzer UID 1000 (`node`):
-
-   ```
-   mkdir -p secret && printf '%s' '<webspace-passwort>' > secret/site.pw && chmod 600 secret/site.pw && chown 1000:1000 secret/site.pw
-   ```
-
-   Der `chown` ist nicht optional: der Container laeuft als UID 1000 (`node`), die Eigentuemerschaft kommt vom Wirtssystem, und die Datei ist schreibgeschuetzt eingehaengt. Gehoert sie `root`, kann Kompass sie nicht lesen. Pruefen mit:
-
-   ```
-   docker exec kompass-test sh -c 'ls -l /secret/site.pw; wc -c < /secret/site.pw'
-   ```
-
-   Kompass ruft `sshpass -f /secret/site.pw rsync -az --no-owner --no-group --no-perms --omit-dir-times --delete --checksum --delay-updates …` auf. `--delay-updates` legt alle Dateien erst in einem Zwischenverzeichnis am Ziel ab und tauscht sie am Ende auf einmal um; ein Abbruch mitten in der Übertragung lässt so keine halb alte, halb neue Seite stehen. Die vier `--no…`-Flaggen nehmen `-a` das, was es am **Zielverzeichnis selbst** setzen will: Besitzer, Gruppe, Rechte, Zeitstempel. Gehört das Verzeichnis jemand anderem oder ist es ein Einhängepunkt, bricht der Lauf sonst mit „Operation not permitted“ ab, obwohl jede Datei übertragen wurde. Zeitstempel und Symlinks der Dateien bleiben erhalten. das Passwort steht damit nie in der Prozessliste und nicht in `docker inspect`. Auf einem Hoster mit Schlüsselanmeldung stattdessen `SITE_DEPLOY_KEY_FILE` setzen — der Code beherrscht beides.
-3. `.env.test` und `.env.prod` um die `SITE_*`-Variablen ergänzen (siehe `.env.*.example`). Ohne diese Variablen zeigt Kompass nur „Vorschau“, keinen Publish-Knopf.
-4. **Prod trägt vorerst `SITE_STAGING=1`.** Ohne das wäre `prod.aluna-tierhilfe.org` indexierbar und stünde später in Konkurrenz zur echten Domain. Der Schalter setzt `noindex`, `Disallow: /` und lässt die Sitemap weg.
-5. **Vor dem ersten Publish:** Publizieren-Seite → „Verbindung testen“. Der Lauf meldet sich am Ziel an und überträgt nichts; er listet auf, was dort liegt und ein Publish entfernen würde. Steht die erwartete Installation darin, stimmt der Pfad. Kommt die Liste leer zurück, zeigt `SITE_DEPLOY_PATH` ins Leere — ein vertippter Pfad lässt rsync nicht scheitern, er trifft nur nichts.
-6. Erster Publish aus Test nach `…/aluna-test`, im Browser prüfen. Das ist zugleich der erste Lauf von rsync über SSH — bei Fehlern siehe Punkt 9. Danach dasselbe aus Prod nach `…/aluna-prod`.
-7. **Go-live** (nach der e.V.-Eintragung, wenn die Seite abgenommen ist): Hauptdomain von WordPress auf `…/aluna-prod` umstellen, in `.env.prod` `SITE_PUBLIC_URL=https://aluna-tierhilfe.org` setzen und `SITE_STAGING` entfernen, Container neu starten, einmal publizieren. Erst dann steht die Seite im Index. Das WordPress-Verzeichnis eine Woche aufbewahren, dann löschen.
-8. **Am 2026-09-06 manuell gegen `…/aluna-test` verifiziert:** Passwort-Login, rsync (hier openrsync, dort 3.4.1), Zielpfad, `--delete`, Auslieferung von HTML, `.woff2`, `.webp` und die `.htaccess`-Auswertung. Der Weg funktioniert also; im Container ändert sich nur, dass `sshpass` das Passwort aus `/secret/site.pw` liefert.
-9. Fehlersuche: erst „Verbindung testen“, dann Publizieren-Seite → Historie → Protokoll. Häufige Ursachen: Schlüsselrechte, falscher `SITE_DEPLOY_PATH`, Host-Key-Wechsel (dann `known_hosts` im Container löschen: `docker exec kompass-prod rm -f /home/node/.ssh/known_hosts`). Beim Nachstellen von Hand: rsync schweigt bei Erfolg — ohne `-v` sieht ein geglückter Lauf wie ein wirkungsloser aus.
-10. **MCP von der Kommandozeile nutzen:** `pnpm --filter @kompass/app mcp:call http://<nas>:3001 <token> <werkzeug> ['{"json":…}']` ruft ein einzelnes Werkzeug auf und gibt das Ergebnis aus — für Pflegearbeiten wie Einstellungen setzen oder Datensätze anlegen, ohne die Oberfläche. Am 2026-09-13 so die Vereinsstammdaten und die ersten Hunde in Test eingetragen.
-11. **MCP prüfen** (nach jedem Update sinnvoll): `pnpm --filter @kompass/app mcp:check http://<nas>:3001` meldet, ob der Endpunkt erreichbar ist und unangemeldete Anfragen ablehnt. Mit einem API-Token als zweitem Argument verbindet es sich, listet die Werkzeuge und ruft eines lesend auf — die Zahl der Werkzeuge zeigt zugleich, ob die Fachmodule aktiv sind. Das Token danach unter Profil → API-Token widerrufen.
-11. Bildcache: `/cache/site-build` darf jederzeit gelöscht werden; der nächste Build erzeugt ihn neu (dauert dann länger). `/cache` ist bewusst kein Volume — was dort liegt, ist jederzeit neu erzeugbar und gehört in kein Backup.
+Abgelegte PDFs werden im Hintergrund durchsuchbar gemacht; bei Scans über eine
+Texterkennung. Beides bringt das Image mit, es ist nichts zu installieren.
+Startet der Container mitten in einem Lauf neu, erkennt er die unterbrochene
+Arbeit beim nächsten Start und nimmt sie wieder auf.
