@@ -53,7 +53,7 @@ export function SetupForm() {
             <Input
               id="locale"
               name="locale"
-              placeholder="z. B. es"
+              placeholder={t('localePlaceholder')}
               required
               pattern="[a-z]{2}(-[a-z]{2})?"
               className="font-mono"

@@ -96,7 +96,7 @@ export function LocalesClient({ locales }: { locales: string[] }) {
               <Input
                 id="code"
                 name="code"
-                placeholder="z. B. fr"
+                placeholder={t('codePlaceholder')}
                 required
                 pattern="[a-z]{2}(-[a-z]{2})?"
                 className="font-mono"

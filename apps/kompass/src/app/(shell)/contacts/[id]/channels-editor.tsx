@@ -119,7 +119,7 @@ export function ChannelsEditor({
                         id="channel-label"
                         value={label}
                         onChange={(e) => setLabel(e.target.value)}
-                        placeholder="z. B. Privat, Büro"
+                        placeholder={t('channelLabelPlaceholder')}
                       />
                     </FormField>
 

@@ -5,11 +5,17 @@ export interface BannerContext {
   migrationCount: number;
 }
 
-export type Banner = { kind: 'test'; label: 'TESTUMGEBUNG' } | { kind: 'development'; label: 'ENTWICKLUNG' };
+/**
+ * Nur die Art, keine Beschriftung: Der sichtbare Text steht in
+ * `messages/de.json` unter `shell.envBanner`. Er stand bis zum 2026-09-15
+ * hier als Literal — in einer `.ts`, wo ihn weder der Wächter für
+ * Komponenten noch der für Server-Actions je gesucht hätte.
+ */
+export type Banner = { kind: 'test' | 'development' };
 
 export function bannerFor(env: AppEnv, _ctx: BannerContext): Banner | null {
   if (env === 'production') return null;
-  return env === 'test' ? { kind: 'test', label: 'TESTUMGEBUNG' } : { kind: 'development', label: 'ENTWICKLUNG' };
+  return { kind: env === 'test' ? 'test' : 'development' };
 }
 
 export function environmentConfirmationName(env: AppEnv): string {

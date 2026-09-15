@@ -17,7 +17,8 @@
       "added": "Sprache hinzugefügt.",
       "removed": "Sprache entfernt.",
       "duplicate": "Diese Sprache ist bereits eingerichtet.",
-      "lastLocale": "Die letzte verbleibende Sprache kann nicht entfernt werden."
+      "lastLocale": "Die letzte verbleibende Sprache kann nicht entfernt werden.",
+      "codePlaceholder": "z. B. fr"
     }
   },
   "common": {
@@ -295,7 +296,9 @@
     "envBanner": {
       "testContext": "Daten vom {date} · Änderungen hier haben keine Wirkung",
       "noImport": "kein Import",
-      "devContext": "localhost · Migrationsstand {migrations}"
+      "devContext": "localhost · Migrationsstand {migrations}",
+      "test": "TESTUMGEBUNG",
+      "development": "ENTWICKLUNG"
     },
     "topbar": {
       "search": "Suchen",
@@ -331,7 +334,8 @@
       "passwordHint": "Mindestens 12 Zeichen. Ein Merksatz ist besser als ein kurzes Sonderzeichen-Passwort.",
       "submit": "Konto anlegen und starten",
       "importLink": "Sie haben ein Backup? Bestand wiederherstellen",
-      "footer": "Dieses Konto erhält die Rolle „Administration“ mit allen Rechten. Weitere Rollen legen Sie später unter Verwaltung → Rollen an."
+      "footer": "Dieses Konto erhält die Rolle „Administration“ mit allen Rechten. Weitere Rollen legen Sie später unter Verwaltung → Rollen an.",
+      "localePlaceholder": "z. B. es"
     },
     "setupImport": {
       "title": "Bestand wiederherstellen",
@@ -465,7 +469,9 @@
       "text": "Geben Sie diese Zugangsdaten weiter. Das Startpasswort wird nach dem Schließen nicht mehr angezeigt; ein neues können Sie jederzeit setzen.",
       "copyBoth": "Beides kopieren",
       "info": "Beim ersten Login muss {name} ein eigenes Passwort setzen. Bis dahin steht in der Liste „Erstlogin offen“.",
-      "done": "Ich habe die Daten notiert"
+      "done": "Ich habe die Daten notiert",
+      "emailLabel": "E-MAIL",
+      "passwordLabel": "STARTPASSWORT"
     },
     "roles": {
       "title": "Rollen für {name}",
@@ -1047,7 +1053,8 @@
       "statutory6YHint": "§ 147 Abs. 1 Nr. 2, 3, 5 AO (z. B. empfangene Handels- und Geschäftsbriefe)",
       "consent": "Einwilligung / berechtigtes Interesse",
       "consentHint": "ohne gesetzliche Grundlage (z. B. Interessenten)",
-      "save": "Speichern"
+      "save": "Speichern",
+      "months": "Monate"
     }
   },
   "backup": {
@@ -1345,7 +1352,8 @@
           "record": "Protokollieren"
         },
         "cancel": "Abbrechen",
-        "published": "Publiziert"
+        "published": "Publiziert",
+        "title": "Publizieren"
       },
       "done": "Publiziert: {changed} geändert, {added} neu, {removed} entfallen.",
       "history": {
@@ -1367,7 +1375,8 @@
           "preview": "Vorschau",
           "publish": "Publish"
         }
-      }
+      },
+      "previewTitle": "Vorschau"
     },
     "previewFrame": {
       "title": "Webseiten-Vorschau",
@@ -1479,7 +1488,10 @@
       "delete": "Kontakt löschen",
       "deleteBlocked": "Solange etwas diesen Kontakt hält, kann er nicht gelöscht werden.",
       "unknown": "Für diesen Kontakt ist keine Frist nachgewiesen. Vergeben Sie eine Rolle oder archivieren Sie ihn."
-    }
+    },
+    "channelLabelPlaceholder": "z. B. Privat, Büro",
+    "legalFormPlaceholder": "z. B. e. V., GmbH",
+    "countryPlaceholder": "DE"
   },
   "dms": {
     "title": "Akte",
@@ -1926,7 +1938,10 @@
         "snippetUpdated": "Baustein geändert",
         "snippetDeleted": "Baustein gelöscht",
         "channelsSaved": "Versandwege gespeichert"
-      }
+      },
+      "folderPathPlaceholder": "z. B. behoerden/finanzamt",
+      "typeKeyPlaceholder": "z. B. notice",
+      "typeShortPlaceholder": "z. B. NOT"
     },
     "backToDocument": "Zurück zum Dokument"
   }

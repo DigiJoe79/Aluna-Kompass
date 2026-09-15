@@ -51,10 +51,10 @@ export function RetentionSettings({ statutory10Y, statutory6Y, consent, canManag
                   className="w-24 font-mono"
                   disabled={isPending}
                 />
-                <span className="text-[13px] text-muted-ink">Monate</span>
+                <span className="text-[13px] text-muted-ink">{t('months')}</span>
               </div>
             ) : (
-              <p className="font-mono text-[13px] text-ink">{statutory10Y} Monate</p>
+              <p className="font-mono text-[13px] text-ink">{statutory10Y} {t('months')}</p>
             )}
           </div>
 
@@ -74,10 +74,10 @@ export function RetentionSettings({ statutory10Y, statutory6Y, consent, canManag
                   className="w-24 font-mono"
                   disabled={isPending}
                 />
-                <span className="text-[13px] text-muted-ink">Monate</span>
+                <span className="text-[13px] text-muted-ink">{t('months')}</span>
               </div>
             ) : (
-              <p className="font-mono text-[13px] text-ink">{statutory6Y} Monate</p>
+              <p className="font-mono text-[13px] text-ink">{statutory6Y} {t('months')}</p>
             )}
           </div>
 
@@ -97,10 +97,10 @@ export function RetentionSettings({ statutory10Y, statutory6Y, consent, canManag
                   className="w-24 font-mono"
                   disabled={isPending}
                 />
-                <span className="text-[13px] text-muted-ink">Monate</span>
+                <span className="text-[13px] text-muted-ink">{t('months')}</span>
               </div>
             ) : (
-              <p className="font-mono text-[13px] text-ink">{consent} Monate</p>
+              <p className="font-mono text-[13px] text-ink">{consent} {t('months')}</p>
             )}
           </div>
         </div>

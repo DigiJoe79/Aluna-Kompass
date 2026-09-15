@@ -116,11 +116,11 @@ export function TypesPanel({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="create-key">{t('typeColumns.key')}</Label>
-                <Input id="create-key" name="key" placeholder="z. B. notice" required />
+                <Input id="create-key" name="key" placeholder={t('typeKeyPlaceholder')} required />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="create-prefix">{t('typeColumns.prefix')}</Label>
-                <Input id="create-prefix" name="prefix" placeholder="z. B. NOT" maxLength={3} required />
+                <Input id="create-prefix" name="prefix" placeholder={t('typeShortPlaceholder')} maxLength={3} required />
               </div>
             </div>
 

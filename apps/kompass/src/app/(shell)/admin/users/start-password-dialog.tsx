@@ -42,9 +42,9 @@ export function StartPasswordDialog({
         <DialogTitle className="font-heading text-[19px]">{t('title', { name })}</DialogTitle>
         <DialogDescription className="text-[14px] text-ink-2">{t('text')}</DialogDescription>
         <div className="rounded-md border border-line-strong bg-code p-3 font-mono">
-          <div className="text-[11px] font-semibold tracking-[.06em] text-muted-ink">E-MAIL</div>
+          <div className="text-[11px] font-semibold tracking-[.06em] text-muted-ink">{t('emailLabel')}</div>
           <div className="text-[13px]">{email}</div>
-          <div className="mt-2 text-[11px] font-semibold tracking-[.06em] text-muted-ink">STARTPASSWORT</div>
+          <div className="mt-2 text-[11px] font-semibold tracking-[.06em] text-muted-ink">{t('passwordLabel')}</div>
           <div data-testid="start-password" className="text-[15px] font-medium">{startPassword}</div>
         </div>
         <div className="flex gap-2">

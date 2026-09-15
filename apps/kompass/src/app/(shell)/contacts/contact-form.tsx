@@ -199,7 +199,7 @@ export function CreateContactDialog({
                         name="legalForm"
                         value={legalForm}
                         onChange={(e) => setLegalForm(e.target.value)}
-                        placeholder="z. B. e. V., GmbH"
+                        placeholder={t('legalFormPlaceholder')}
                       />
                     </FormField>
                   </>
@@ -249,7 +249,7 @@ export function CreateContactDialog({
                       name="country"
                       value={country}
                       onChange={(e) => setCountry(e.target.value)}
-                      placeholder="DE"
+                      placeholder={t('countryPlaceholder')}
                     />
                   </FormField>
                   <FormField id="notes" label={t('fields.notes')} error={errors.notes} className="col-span-2">

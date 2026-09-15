@@ -97,7 +97,7 @@ export function FoldersPanel({ folders }: { folders: string[] }) {
 
             <div className="space-y-1.5">
               <Label htmlFor="folder-path">{t('folderPath')}</Label>
-              <Input id="folder-path" name="path" placeholder="z. B. behoerden/finanzamt" required />
+              <Input id="folder-path" name="path" placeholder={t('folderPathPlaceholder')} required />
             </div>
 
             <DialogFooter>

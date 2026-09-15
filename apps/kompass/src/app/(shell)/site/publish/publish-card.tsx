@@ -33,7 +33,7 @@ export function PublishCard({
     <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-5">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-heading text-[18px]">Publizieren</h3>
+          <h3 className="font-heading text-[18px]">{t('title')}</h3>
           <p className="text-[13px] text-muted-ink">
             {isDev
               ? t('notHere')

@@ -29,7 +29,7 @@ export function PreviewCard({ onResult }: { onResult?: (data: PreviewData) => vo
   return (
     <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-5">
       <div className="flex items-center justify-between">
-        <h3 className="font-heading text-[18px]">Vorschau</h3>
+        <h3 className="font-heading text-[18px]">{t('previewTitle')}</h3>
         <div className="flex items-center gap-3">
           {data && (
             <Link
