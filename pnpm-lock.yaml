@@ -151,7 +151,7 @@ importers:
         specifier: ^19.2.7
         version: 19.2.7(@types/react@19.2.18)
       '@typescript-eslint/parser':
-        specifier: 8.69.0
+        specifier: ^8.69.0
         version: 8.69.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
       eslint:
         specifier: ^10.10.0
@@ -160,7 +160,7 @@ importers:
         specifier: ^16.3.4
         version: 16.3.4(@typescript-eslint/parser@8.69.0(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.10.0(jiti@2.7.0))(typescript@6.0.3)
       eslint-plugin-react-hooks:
-        specifier: 7.1.1
+        specifier: ^7.1.1
         version: 7.1.1(eslint@10.10.0(jiti@2.7.0))
       tailwindcss:
         specifier: ^4.3.3
