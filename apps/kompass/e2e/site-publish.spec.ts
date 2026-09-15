@@ -49,7 +49,10 @@ test('preview build, diff and publish to the local staging target', async ({ pag
   await page.locator('[name="title.de"]').fill('Sommerfest 2026');
   await page.getByRole('button', { name: 'Speichern' }).click();
   await expect(page).toHaveURL('/site/c/news');
-  const publish = page.getByRole('switch', { name: 'Veröffentlicht' });
+  // Der Schalter dieser einen Meldung, nicht irgendeiner: Seit die Webseite
+  // Entwicklungsdaten mitbringt (`seedSiteDevelopment`), stehen weitere
+  // Einträge in der Liste.
+  const publish = page.getByRole('row', { name: /Sommerfest 2026/ }).getByRole('switch', { name: 'Veröffentlicht' });
   await publish.click();
   await expect(publish).toBeChecked();
 

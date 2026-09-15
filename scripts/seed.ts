@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createDeps, readEnv, seedDevelopment, type AppEnv } from '@kompass/core';
@@ -22,6 +23,16 @@ export interface SeedOptions {
  * was da ist, bleibt. Läuft nur in `development`, wie `seedDevelopment` selbst.
  */
 export async function seedWithModules(opts: SeedOptions): Promise<{ adminEmail: string; adminPassword: string }> {
+  // Dasselbe Skript, das der Entrypoint im Container und `dev:reset` fahren:
+  // Ohne Template im Volume hat die Webseite keine Deklaration, und ihr Seed
+  // fände nichts zum Füllen. Idempotent — ein gepflegtes Template bleibt.
+  const root = path.resolve(import.meta.dirname, '..');
+  const basis = path.join(root, 'templates', 'verein-basis');
+  execFileSync('sh', [path.join(root, 'scripts', 'seed-site-template.sh'), basis, path.join(basis, 'node_modules')], {
+    env: { ...process.env, DATA_PATH: opts.dataPath },
+    stdio: 'inherit',
+  });
+
   const deps = createDeps({
     dataPath: opts.dataPath,
     env: opts.env,

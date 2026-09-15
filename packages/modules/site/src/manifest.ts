@@ -4,6 +4,7 @@ import { siteMediaReferences } from './references';
 import { SITE_SETTINGS } from './settings';
 import { activeTemplate } from './service';
 import { siteSetTranslations, siteTranslatables } from './translations';
+import { seedSiteDevelopment } from './dev-seed';
 
 export const SITE_PERMISSIONS = ['site.view', 'site.manage', 'site.publish'] as const;
 
@@ -51,6 +52,7 @@ export const siteModule: ModuleManifest = defineModule({
   ],
   navigationFor: siteNavigationFor,
   mcpTools: SITE_MCP_TOOLS,
+  seed: seedSiteDevelopment,
   mediaReferences: siteMediaReferences,
   deletionRules: [
     {
