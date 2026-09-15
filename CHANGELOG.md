@@ -36,7 +36,9 @@ kommen in späteren Fassungen (siehe `docs/nordstern.md`).
 - **Dokument-Pipeline** auf Typst, mit mitgelieferten Basis-Vorlagen.
 - **MCP-Server**: Dieselben Dienste wie die Oberfläche, für KI-Assistenten,
   mit den Rechten des Nutzers, dem das Token gehört, und im Protokoll als
-  eigener Kanal gekennzeichnet.
+  eigener Kanal gekennzeichnet. Vier Dinge bewusst nicht: Backup ein- und
+  ausspielen, Dateien abrufen, API-Token verwalten, das eigene Passwort
+  ändern.
 - **Module** lassen sich je Installation ein- und ausschalten.
 - **Aufbewahrung.** Personenbezogene Daten werden nach Ablauf der Frist zur
   Löschung fällig; ein Mensch bestätigt jede Löschung. Fristen werden
@@ -47,6 +49,9 @@ kommen in späteren Fassungen (siehe `docs/nordstern.md`).
 - **Kontakte** mit Rollen über die Zeit und berechneter Aufbewahrungsfrist.
 - **Ausgehende Post**: Entwurf, Vorschau, Festschreiben mit Nummer und
   Prüfsumme, Versandvermerk, Storno mit Ersatz statt Löschen.
+- Die **Prüfsumme wird vor jeder Ausgabe nachgerechnet**. Passt die Datei im
+  Speicher nicht mehr dazu, zeigt Kompass sie nicht an und gibt sie nicht
+  heraus, sondern meldet den Befund — auf der Seite und im Änderungsprotokoll.
 - **Eingehende Post**: Eingangskorb, Einsortierhilfe mit Regeln, Ordnerbaum.
 - **Bezüge** zwischen Dokumenten: Antwort auf, unterschriebene Fassung von,
   ersetzt.
@@ -59,6 +64,12 @@ kommen in späteren Fassungen (siehe `docs/nordstern.md`).
 - Die Webseite entsteht aus einem **Template, das der Verein mitbringt**, und
   aus Inhalten, die in Kompass gepflegt werden.
 - **Mehrsprachige Inhalte**, Sprachen je Installation einstellbar.
+- Mitgeliefert ist ein **Beispiel-Template** („Verein Basis“), zweisprachig und
+  zum Abwandeln gedacht. Es nimmt Anschrift, Kontakt, Bankverbindung und
+  Registereintrag aus den Vereinsdaten in Kompass — auch im Impressum, das
+  daraus entsteht. Nur der Vorstand steht im Template: Ämter führt Kompass
+  nicht. Wer einsprachig bleiben will, streicht die zweite Sprache in
+  `kompass.template.ts`.
 - **Vorschau** vor dem Publizieren, mit Unterschieden zum veröffentlichten
   Stand und einer Prüfung auf gesperrte Begriffe.
 - **Publizieren** als statische Seite zum Hoster. Im Internet liegen weder
