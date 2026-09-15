@@ -49,6 +49,24 @@ describe('third-party notices', () => {
     expect(rsync).toMatch(/GPL-3/);
   });
 
+  /**
+   * Erzeugt wird die Datei aus einem gebauten Image — lokal auf arm64, in der
+   * CI auf amd64. Beide unterscheiden sich in den Plattformpaketen
+   * (`…-linux-arm64-gnu` gegen `…-linux-x64-gnu`) und in den Rebuild-Suffixen
+   * von Debian (`1.09-1` gegen `1.09-1+b1`), nicht aber in den Lizenzen. Ohne
+   * Normalisierung wäre die Aufstellung für genau eine Bauarchitektur richtig
+   * und die Prüfung in der CI immer rot — so geschehen am 2026-09-15.
+   */
+  it('names no architecture, so one file fits every build', () => {
+    const notices = read('THIRD-PARTY-NOTICES.md');
+    // Nur die Tabellenzeilen: Der Erklärtext darüber nennt die Muster selbst.
+    const verraeterisch = notices
+      .split('\n')
+      .filter((zeile) => zeile.startsWith('| `'))
+      .filter((zeile) => /(linux|darwin|win32)-(arm64|x64|ia32)|\+b\d/.test(zeile));
+    expect(verraeterisch).toEqual([]);
+  });
+
   it('says where the source of the copylefted parts can be had', () => {
     const notices = read('THIRD-PARTY-NOTICES.md');
     // snapshot.debian.org haelt die exakte Paketfassung dauerhaft vor, anders

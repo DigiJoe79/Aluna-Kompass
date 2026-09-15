@@ -34,6 +34,11 @@ cat /etc/debian_version
 echo "@@DEBIAN_PAKETE"
 dpkg-query -W -f='${Package}\t${Version}\n' 2>/dev/null | sort | while IFS='	' read -r p v; do
   [ -z "$p" ] && continue
+  # `+bN` ist ein binaerer Rebuild derselben Quellversion, je Architektur
+  # verschieden. Fuer den Lizenzhinweis zaehlt die Quelle, nicht der Rebuild —
+  # und ohne das Abschneiden passte die Datei nur zu der Architektur, auf der
+  # sie erzeugt wurde.
+  v=$(printf '%s' "$v" | sed 's/+b[0-9][0-9]*$//')
   datei="/usr/share/doc/$p/copyright"
   lic=$(grep -h '^License:' "$datei" 2>/dev/null | sed 's/^License: //' | sort -u | paste -sd ',' -)
   # Ein Drittel der Pakete traegt die Lizenz noch als Fliesstext. Dort steht sie
@@ -64,7 +69,11 @@ node -e '
             : (pkg.license && pkg.license.type) ? pkg.license.type
             : Array.isArray(pkg.licenses) ? pkg.licenses.map((l) => l.type || l).join(" OR ")
             : "unbekannt";
-          gesehen.set(pkg.name + "\u0000" + pkg.version, lz);
+          // Ein Plattformpaket liegt je Architektur unter anderem Namen
+          // (…-linux-x64-gnu gegen …-linux-arm64-gnu), traegt aber dieselbe
+          // Lizenz. Zusammengefasst, damit eine Datei fuer jeden Bau passt.
+          const name = pkg.name.replace(/([-/])(linux|darwin|win32|freebsd|android)-(arm64|arm|x64|ia32|s390x|ppc64|riscv64)(-(gnu|musl|msvc|glibc|gnueabihf))?$/, "$1$2-<plattform>");
+          gesehen.set(name + "\u0000" + pkg.version, lz);
         }
       } catch {}
       lauf(path.join(p, "node_modules"), tiefe + 1);
@@ -112,6 +121,11 @@ scripts/third-party-notices.sh [image]
 \`\`\`
 
 Stand: Debian $DEBIAN_VERSION, $DEB_ANZAHL Systempakete, $NPM_ANZAHL npm-Pakete.
+
+Die Aufstellung gilt für jede Bauarchitektur: Pakete, die je Plattform unter
+eigenem Namen liegen, stehen zusammengefasst als \`…-<plattform>\`, und die
+Rebuild-Suffixe von Debian (\`+b1\`) sind abgeschnitten. Beides ändert die
+Lizenz nicht — nur die Datei, die sie nennt.
 
 ## 1. Quellcode
 
@@ -205,7 +219,7 @@ if [ "$MODUS" = "--pruefen" ]; then
     echo "THIRD-PARTY-NOTICES.md passt zum Image '$IMAGE'."
   else
     echo "THIRD-PARTY-NOTICES.md weicht vom Image '$IMAGE' ab:" >&2
-    diff "$ZIEL" "$TMP/neu.md" | head -40 >&2
+    diff "$ZIEL" "$TMP/neu.md" | head -120 >&2
     echo >&2
     echo "Erneuern mit: scripts/third-party-notices.sh $IMAGE" >&2
     exit 1

@@ -12,6 +12,11 @@ scripts/third-party-notices.sh [image]
 
 Stand: Debian 12.15, 167 Systempakete, 962 npm-Pakete.
 
+Die Aufstellung gilt für jede Bauarchitektur: Pakete, die je Plattform unter
+eigenem Namen liegen, stehen zusammengefasst als `…-<plattform>`, und die
+Rebuild-Suffixe von Debian (`+b1`) sind abgeschnitten. Beides ändert die
+Lizenz nicht — nur die Datei, die sie nennt.
+
 ## 1. Quellcode
 
 Ein Teil der enthaltenen Software steht unter GPL oder LGPL. Deren Quellcode
@@ -51,7 +56,7 @@ Image unter dem genannten Pfad.
 | `apt` | `2.6.1` | BSD-3-clause,Expat,GPL-2,GPL-2+ |
 | `base-files` | `12.4+deb12u15` | GPL |
 | `base-passwd` | `3.6.1` | GPL-2,public-domain |
-| `bash` | `5.2.15-2+b13` | BSD-4-clause-UC,BSD-4-clause-UC and MIT-like,GFDL-NIV-1.3,GPL-2+,GPL-3+,GPL-3+ with Bison exception,Latex2e,MIT-like,permissive |
+| `bash` | `5.2.15-2` | BSD-4-clause-UC,BSD-4-clause-UC and MIT-like,GFDL-NIV-1.3,GPL-2+,GPL-3+,GPL-3+ with Bison exception,Latex2e,MIT-like,permissive |
 | `bsdutils` | `1:2.38.1-5+deb12u3` | BSD-3-clause,BSD-4-clause,BSLA,GPL-2,GPL-2+,GPL-3+,LGPL,LGPL-2+,LGPL-2.1+,LGPL-3+,MIT,public-domain |
 | `ca-certificates` | `20250419~deb12u1` | GPL-2+,MPL-2.0 |
 | `coreutils` | `9.1-1` | BSD-4-clause-UC,FSFULLR,GFDL-NIV-1.3,GPL-3+,GPL-3+ and BSD-4-clause-UC,GPL-3+ and ISC,ISC |
@@ -61,7 +66,7 @@ Image unter dem genannten Pfad.
 | `debianutils` | `5.7-0.5~deb12u1` | GPL-2+,SMAIL-GPL,public-domain |
 | `diffutils` | `1:3.8-4` | FSFAP,FSFULLR,GFDL-NIV-1.3,GPL-2+,GPL-3+,GPL-3+ and FSFULLR,GPL-3+ with autoconf exception,GPL-3+ with texinfo exception,LGPL-2.0+,LGPL-2.1+,LGPL-3.0+,LGPL-3.0+ or GPL-2+,X11,public-domain |
 | `dpkg` | `1.21.23` | BSD-2-clause,GPL-2,GPL-2+,public-domain-s-s-d |
-| `e2fsprogs` | `1.47.0-2+b2` | Apache-2,BSD-3-Clause,GPL or MIT-US-export,GPL-2,GPL-2+ with Texinfo exception,ISC,Kazlib,LGPL-2,Latex2e |
+| `e2fsprogs` | `1.47.0-2` | Apache-2,BSD-3-Clause,GPL or MIT-US-export,GPL-2,GPL-2+ with Texinfo exception,ISC,Kazlib,LGPL-2,Latex2e |
 | `findutils` | `4.9.0-4` | BSD-3-clause,BSD-3-clause and/or GPL-3+,FSFAP,FSFULLR,GFDL-NIV-1.3+,GPL with automake exception,GPL-2+,GPL-2+ with Autoconf-data exception,GPL-3+,GPL-3+ with Autoconf-data exception,GPL-3+ with Bison-2.2 exception,ISC,ISC and/or LGPL-2.1+,LGPL-2+,LGPL-2.1+,LGPL-3,LGPL-3+,X11,public-domain |
 | `fontconfig` | `2.14.1-4` | siehe /usr/share/doc/fontconfig/copyright |
 | `fontconfig-config` | `2.14.1-4` | siehe /usr/share/doc/fontconfig-config/copyright |
@@ -80,27 +85,27 @@ Image unter dem genannten Pfad.
 | `libaudit-common` | `1:3.0.9-1` | GPL-2,LGPL-2.1 |
 | `libaudit1` | `1:3.0.9-1` | GPL-2,LGPL-2.1 |
 | `libblkid1` | `2.38.1-5+deb12u3` | BSD-3-clause,BSD-4-clause,BSLA,GPL-2,GPL-2+,GPL-3+,LGPL,LGPL-2+,LGPL-2.1+,LGPL-3+,MIT,public-domain |
-| `libbrotli1` | `1.0.9-2+b6` | MIT |
+| `libbrotli1` | `1.0.9-2` | MIT |
 | `libbsd0` | `0.11.7-2` | BSD-2-clause,BSD-2-clause-NetBSD,BSD-2-clause-author,BSD-2-clause-verbatim,BSD-3-clause,BSD-3-clause-John-Birrell,BSD-3-clause-Regents,BSD-3-clause-Regents and BSD-2-clause-NetBSD,BSD-3-clause-author,BSD-4-clause-Niels-Provos,Beerware,Expat,ISC,ISC-Original,libutil-David-Nugent,public-domain |
-| `libbz2-1.0` | `1.0.8-5+b1` | BSD-variant,GPL-2 |
+| `libbz2-1.0` | `1.0.8-5` | BSD-variant,GPL-2 |
 | `libc-bin` | `2.36-9+deb12u14` | GPL-2,LGPL-2.1 |
 | `libc6` | `2.36-9+deb12u14` | GPL-2,LGPL-2.1 |
 | `libcairo2` | `1.16.0-7` | LGPL-2.1 |
-| `libcap-ng0` | `0.8.3-1+b3` | GPL-2+,GPL-3,LGPL-2.1+ |
-| `libcap2` | `1:2.66-4+deb12u3+b1` | BSD-3-clause,BSD-3-clause or GPL-2,BSD-3-clause or GPL-2+,GPL-2,GPL-2+ |
-| `libcbor0.8` | `0.8.0-2+b1` | Expat |
-| `libcom-err2` | `1.47.0-2+b2` | Apache-2,BSD-3-Clause,GPL or MIT-US-export,GPL-2,GPL-2+ with Texinfo exception,ISC,Kazlib,LGPL-2,Latex2e |
+| `libcap-ng0` | `0.8.3-1` | GPL-2+,GPL-3,LGPL-2.1+ |
+| `libcap2` | `1:2.66-4+deb12u3` | BSD-3-clause,BSD-3-clause or GPL-2,BSD-3-clause or GPL-2+,GPL-2,GPL-2+ |
+| `libcbor0.8` | `0.8.0-2` | Expat |
+| `libcom-err2` | `1.47.0-2` | Apache-2,BSD-3-Clause,GPL or MIT-US-export,GPL-2,GPL-2+ with Texinfo exception,ISC,Kazlib,LGPL-2,Latex2e |
 | `libcrypt1` | `1:4.4.33-2` | siehe /usr/share/doc/libcrypt1/copyright |
 | `libcurl4` | `7.88.1-10+deb12u15` | BSD-3-Clause,BSD-3-clause,BSD-4-Clause-UC,FSFULLR,GPL-2+ with Autoconf-data exception,GPL-2+ with Libtool exception,GPL-3+ with Autoconf-data exception,ISC,OLDAP-2.8,X11,curl |
-| `libdatrie1` | `0.2.13-2+b1` | GPL-2+,LGPL-2.1+ |
+| `libdatrie1` | `0.2.13-2` | GPL-2+,LGPL-2.1+ |
 | `libdb5.3` | `5.3.28+dfsg2-1` | Artistic or BSD-3-clause,BSD-3-clause,BSD-3-clause-fjord,GPL,GPL or Artistic,GPL-3,MIT-old,Ms-PL,Sleepycat,Sleepycat and BSD-3-clause,TCL-like,X11,zlib |
 | `libdebconfclient0` | `0.270` | BSD-2-Clause,BSD-2-clause,GPL-2+ |
 | `libdeflate0` | `1.14-1` | Expat |
 | `libedit2` | `3.1-20221030-2` | BSD-3-clause |
 | `libexpat1` | `2.5.0-1+deb12u3` | MIT |
-| `libext2fs2` | `1.47.0-2+b2` | Apache-2,BSD-3-Clause,GPL or MIT-US-export,GPL-2,GPL-2+ with Texinfo exception,ISC,Kazlib,LGPL-2,Latex2e |
+| `libext2fs2` | `1.47.0-2` | Apache-2,BSD-3-Clause,GPL or MIT-US-export,GPL-2,GPL-2+ with Texinfo exception,ISC,Kazlib,LGPL-2,Latex2e |
 | `libffi8` | `3.4.4-1` | Expat,GPL,GPL-2+,GPL-3+,MPL-1.1 or GPL-2+ or LGPL-2.1+,X11,public-domain |
-| `libfido2-1` | `1.12.0-2+b1` | BSD-2-clause,ISC,ISC and BSD-2-clause,public-domain |
+| `libfido2-1` | `1.12.0-2` | BSD-2-clause,ISC,ISC and BSD-2-clause,public-domain |
 | `libfontconfig1` | `2.14.1-4` | siehe /usr/share/doc/libfontconfig1/copyright |
 | `libfreetype6` | `2.12.1+dfsg-5+deb12u4` | BSD-3-Clause,BSL-1.0,FSFAP,FTL,FTL and MIT,GPL-2+,GPL-3+,MIT,OpenGroup-BSD-like,Public-Domain,Zlib |
 | `libfribidi0` | `1.0.8-2.1` | LGPL-2.1+ |
@@ -117,7 +122,7 @@ Image unter dem genannten Pfad.
 | `libharfbuzz0b` | `6.0.0+dfsg-3` | Apache-2.0,CC0-1.0,Expat,FSFAP,FSFUL,FSFULLR,GPL-2+ with AutoConf exception,GPL-2+ with Font exception,GPL-2+ with LibTool exception,GPL-3+,GPL-3+ with AutoConf exception,ISC,LGPL-2.1+,MIT,Monotype,OFL-1.1,UFL-1.0,Unicode |
 | `libhogweed6` | `3.8.1-2` | Expat,GAP,GPL-2,GPL-2+,GPL-3+,GPL-3+ with Autoconf exception,LGPL-2+,LGPL-3+,LGPL-3+ or GPL-2+,public-domain |
 | `libicu72` | `72.1-3+deb12u1` | GPL-3,MIT |
-| `libidn2-0` | `2.3.3-1+b1` | GPL-2+,GPL-3+,LGPL-3+,LGPL-3+ or GPL-2+,Unicode |
+| `libidn2-0` | `2.3.3-1` | GPL-2+,GPL-3+,LGPL-3+,LGPL-3+ or GPL-2+,Unicode |
 | `libjbig0` | `2.1-6.1` | GPL-2+ |
 | `libjpeg62-turbo` | `1:2.1.5-2` | BSD-3-clause,BSD-BY-LC-NE,Expat,License:zlib,NTP,Zlib |
 | `libk5crypto3` | `1.20.1-2+deb12u5` | GPL-2 |
@@ -126,7 +131,7 @@ Image unter dem genannten Pfad.
 | `libkrb5support0` | `1.20.1-2+deb12u5` | GPL-2 |
 | `liblcms2-2` | `2.14-2+deb12u1` | GPL-2+,GPL-3,IJG,MIT |
 | `libldap-2.5-0` | `2.5.13+dfsg-5` | BSD-3-clause,BSD-3-clause-California,BSD-3-clause-variant,BSD-4-clause-California,Beerware,Expat,Expat-ISC,Expat-UNM,F5,FSF-unlimited,FSF-unlimited and GPL-2+ with Autoconf exception,FSF-unlimited and GPL-2+ with Libtool exception,FSF-unlimited and OpenLDAP-2.8,GPL-2+,GPL-2+ with Autoconf exception,GPL-2+ with Libtool exception,GPL-2+ with Libtool exception and GPL-3+ with Libtool exception and GPL-3+,GPL-3+,GPL-3+ with Autoconf exception,GPL-3+ with Libtool exception,JCG,MIT-XC,NeoSoft-permissive,OpenLDAP-2.8,OpenLDAP-2.8 and BSD-3-clause,OpenLDAP-2.8 and BSD-3-clause-variant,OpenLDAP-2.8 and BSD-4-clause-California,OpenLDAP-2.8 and Beerware,OpenLDAP-2.8 and Expat,OpenLDAP-2.8 and Expat-ISC,OpenLDAP-2.8 and Expat-UNM,OpenLDAP-2.8 and FSF-unlimited and GPL-2+ with Libtool exception,OpenLDAP-2.8 and JCG and UMich,OpenLDAP-2.8 and UMich,OpenLDAP-2.8 and UMich and F5,UMich,public-domain |
-| `liblept5` | `1.82.0-3+b3` | License: |
+| `liblept5` | `1.82.0-3` | License: |
 | `liblerc4` | `4.0.0+ds-2` | Apache-2.0 |
 | `liblz4-1` | `1.9.4-1` | BSD-2-clause,GPL-2+,GPL-2+ or BSD-2-clause |
 | `liblzma5` | `5.4.1-1+deb12u1` | Autoconf,GPL-2,GPL-2+,LGPL-2.1+,License:,PD,PD-debian,config-h,noderivs,none,permissive-fsf,permissive-nowarranty,probably-PD |
@@ -151,17 +156,17 @@ Image unter dem genannten Pfad.
 | `libpoppler126` | `22.12.0-2+deb12u3` | Apache-2.0,GPL-2,GPL-2 or GPL-3,GPL-3 |
 | `libpopt0` | `1.19+dfsg-1` | GPL-2+,expat |
 | `libpsl5` | `0.21.2-1` | Chromium,MIT,gnulib |
-| `librtmp1` | `2.4+20151223.gitfa8646d.1-2+b2` | GPL-2,LGPL-2.1 |
+| `librtmp1` | `2.4+20151223.gitfa8646d.1-2` | GPL-2,LGPL-2.1 |
 | `libsasl2-2` | `2.1.28+dfsg-10` | BSD-2-clause,BSD-2-clause and MIT-CMU,BSD-2.2-clause,BSD-3-clause,BSD-3-clause-JANET,BSD-3-clause-JANET and BSD-4-clause,BSD-3-clause-PADL,BSD-3-clause-PADL and MIT-OpenVision,BSD-4-clause,BSD-4-clause and BSD-4-clause-KTH,BSD-4-clause and IBM-as-is,BSD-4-clause and MIT-Export,BSD-4-clause-KTH,BSD-4-clause-UC,FSFULLR,FSFULLR and MIT-CMU,GPL-3,GPL-3+,IBM-as-is,MIT-CMU,MIT-Export,MIT-OpenVision,OpenLDAP,OpenSSL,OpenSSL and SSLeay,RSA-MD,SSLeay |
 | `libsasl2-modules-db` | `2.1.28+dfsg-10` | BSD-2-clause,BSD-2-clause and MIT-CMU,BSD-2.2-clause,BSD-3-clause,BSD-3-clause-JANET,BSD-3-clause-JANET and BSD-4-clause,BSD-3-clause-PADL,BSD-3-clause-PADL and MIT-OpenVision,BSD-4-clause,BSD-4-clause and BSD-4-clause-KTH,BSD-4-clause and IBM-as-is,BSD-4-clause and MIT-Export,BSD-4-clause-KTH,BSD-4-clause-UC,FSFULLR,FSFULLR and MIT-CMU,GPL-3,GPL-3+,IBM-as-is,MIT-CMU,MIT-Export,MIT-OpenVision,OpenLDAP,OpenSSL,OpenSSL and SSLeay,RSA-MD,SSLeay |
 | `libseccomp2` | `2.5.4-1+deb12u1` | LGPL-2.1 |
-| `libselinux1` | `3.4-1+b6` | GPL-2,LGPL-2.1 |
+| `libselinux1` | `3.4-1` | GPL-2,LGPL-2.1 |
 | `libsemanage-common` | `3.4-1` | GPL,LGPL |
-| `libsemanage2` | `3.4-1+b5` | GPL,LGPL |
+| `libsemanage2` | `3.4-1` | GPL,LGPL |
 | `libsepol2` | `3.4-2.1` | GPL-2,GPL-2+,LGPL-2.1+,Zlib |
 | `libsmartcols1` | `2.38.1-5+deb12u3` | BSD-3-clause,BSD-4-clause,BSLA,GPL-2,GPL-2+,GPL-3+,LGPL,LGPL-2+,LGPL-2.1+,LGPL-3+,MIT,public-domain |
 | `libsqlite3-0` | `3.40.1-2+deb12u2` | GPL-2+,public-domain |
-| `libss2` | `1.47.0-2+b2` | Apache-2,BSD-3-Clause,GPL or MIT-US-export,GPL-2,GPL-2+ with Texinfo exception,ISC,Kazlib,LGPL-2,Latex2e |
+| `libss2` | `1.47.0-2` | Apache-2,BSD-3-Clause,GPL or MIT-US-export,GPL-2,GPL-2+ with Texinfo exception,ISC,Kazlib,LGPL-2,Latex2e |
 | `libssh2-1` | `1.10.0-3+deb12u1` | BSD3 |
 | `libssl3` | `3.0.20-1~deb12u2` | Apache-2.0,Artistic,Artistic or GPL-1+,GPL-1+ |
 | `libstdc++6` | `12.2.0-14+deb12u1` | Artistic,GFDL-1.2,GPL,GPL-2,GPL-3,GPL.,LGPL. |
@@ -184,13 +189,13 @@ Image unter dem genannten Pfad.
 | `libxcb-shm0` | `1.15-1` | siehe /usr/share/doc/libxcb-shm0/copyright |
 | `libxcb1` | `1.15-1` | siehe /usr/share/doc/libxcb1/copyright |
 | `libxdmcp6` | `1:1.1.2-3` | siehe /usr/share/doc/libxdmcp6/copyright |
-| `libxext6` | `2:1.3.4-1+b1` | siehe /usr/share/doc/libxext6/copyright |
+| `libxext6` | `2:1.3.4-1` | siehe /usr/share/doc/libxext6/copyright |
 | `libxml2` | `2.9.14+dfsg-1.3~deb12u6` | ISC,MIT-1 |
 | `libxrender1` | `1:0.9.10-1.1` | siehe /usr/share/doc/libxrender1/copyright |
 | `libxxhash0` | `0.8.1-1` | BSD-2-clause,GPL-2 |
 | `libzstd1` | `1.5.4+dfsg2-5` | BSD-3-clause,BSD-3-clause or GPL-2,Expat,GPL-2,zlib |
 | `login` | `1:4.13+dfsg1-1+deb12u2` | BSD-3-clause,GPL-1,GPL-2+,public-domain |
-| `logsave` | `1.47.0-2+b2` | Apache-2,BSD-3-Clause,GPL or MIT-US-export,GPL-2,GPL-2+ with Texinfo exception,ISC,Kazlib,LGPL-2,Latex2e |
+| `logsave` | `1.47.0-2` | Apache-2,BSD-3-Clause,GPL or MIT-US-export,GPL-2,GPL-2+ with Texinfo exception,ISC,Kazlib,LGPL-2,Latex2e |
 | `mawk` | `1.3.4.20200120-3.1` | CC-BY-3.0,GPL-2,X11 |
 | `mount` | `2.38.1-5+deb12u3` | BSD-3-clause,BSD-4-clause,BSLA,GPL-2,GPL-2+,GPL-3+,LGPL,LGPL-2+,LGPL-2.1+,LGPL-3+,MIT,public-domain |
 | `ncurses-base` | `6.4-4` | BSD-3-clause,MIT/X11,X11 |
@@ -260,7 +265,7 @@ Die folgenden Pakete liegen im Image unter `/app/node_modules`.
 | `@astrojs/check` | `0.9.10` | MIT |
 | `@astrojs/compiler` | `2.13.1` | MIT |
 | `@astrojs/compiler-binding` | `0.4.0` | MIT |
-| `@astrojs/compiler-binding-linux-arm64-gnu` | `0.4.0` | MIT |
+| `@astrojs/compiler-binding-linux-<plattform>` | `0.4.0` | MIT |
 | `@astrojs/compiler-rs` | `0.4.0` | MIT |
 | `@astrojs/internal-helpers` | `0.11.0` | MIT |
 | `@astrojs/language-server` | `2.16.16` | MIT |
@@ -301,7 +306,7 @@ Die folgenden Pakete liegen im Image unter `/app/node_modules`.
 | `@base-ui/react` | `1.8.0` | MIT |
 | `@base-ui/utils` | `0.4.0` | MIT |
 | `@borewit/text-codec` | `0.2.2` | MIT |
-| `@bruits/satteri-linux-arm64-gnu` | `0.10.5` | MIT |
+| `@bruits/satteri-linux-<plattform>` | `0.10.5` | MIT |
 | `@cacheable/memory` | `2.2.0` | MIT |
 | `@cacheable/utils` | `2.5.0` | MIT |
 | `@capsizecss/unpack` | `4.0.1` | MIT |
@@ -322,9 +327,9 @@ Die folgenden Pakete liegen im Image unter `/app/node_modules`.
 | `@emmetio/stream-reader-utils` | `0.1.0` | MIT |
 | `@esbuild-kit/core-utils` | `3.3.2` | MIT |
 | `@esbuild-kit/esm-loader` | `2.6.5` | MIT |
-| `@esbuild/linux-arm64` | `0.18.20` | MIT |
-| `@esbuild/linux-arm64` | `0.25.12` | MIT |
-| `@esbuild/linux-arm64` | `0.28.2` | MIT |
+| `@esbuild/linux-<plattform>` | `0.18.20` | MIT |
+| `@esbuild/linux-<plattform>` | `0.25.12` | MIT |
+| `@esbuild/linux-<plattform>` | `0.28.2` | MIT |
 | `@eslint-community/eslint-utils` | `4.10.1` | MIT |
 | `@eslint-community/eslint-utils` | `4.9.1` | MIT |
 | `@eslint-community/regexpp` | `4.12.2` | MIT |
@@ -351,8 +356,8 @@ Die folgenden Pakete liegen im Image unter `/app/node_modules`.
 | `@humanwhocodes/module-importer` | `1.0.1` | Apache-2.0 |
 | `@humanwhocodes/retry` | `0.4.3` | Apache-2.0 |
 | `@img/colour` | `1.1.0` | MIT |
-| `@img/sharp-libvips-linux-arm64` | `1.3.3` | LGPL-3.0-or-later |
-| `@img/sharp-linux-arm64` | `0.35.4` | Apache-2.0 |
+| `@img/sharp-libvips-linux-<plattform>` | `1.3.3` | LGPL-3.0-or-later |
+| `@img/sharp-linux-<plattform>` | `0.35.4` | Apache-2.0 |
 | `@isaacs/fs-minipass` | `4.0.1` | ISC |
 | `@jridgewell/gen-mapping` | `0.3.13` | MIT |
 | `@jridgewell/remapping` | `2.3.5` | MIT |
@@ -370,9 +375,9 @@ Die folgenden Pakete liegen im Image unter `/app/node_modules`.
 | `@modelcontextprotocol/server` | `2.0.0` | MIT |
 | `@next/env` | `16.3.4` | MIT |
 | `@next/eslint-plugin-next` | `16.3.4` | MIT |
-| `@next/swc-linux-arm64-gnu` | `16.3.4` | MIT |
+| `@next/swc-linux-<plattform>` | `16.3.4` | MIT |
 | `@node-rs/argon2` | `2.2.0` | MIT |
-| `@node-rs/argon2-linux-arm64-gnu` | `2.2.0` | MIT |
+| `@node-rs/argon2-linux-<plattform>` | `2.2.0` | MIT |
 | `@nodelib/fs.scandir` | `2.1.5` | MIT |
 | `@nodelib/fs.stat` | `2.0.5` | MIT |
 | `@nodelib/fs.walk` | `1.2.8` | MIT |
@@ -380,7 +385,7 @@ Die folgenden Pakete liegen im Image unter `/app/node_modules`.
 | `@oslojs/encoding` | `1.1.0` | MIT |
 | `@oxc-project/types` | `0.148.0` | MIT |
 | `@parcel/watcher` | `2.6.0` | MIT |
-| `@parcel/watcher-linux-arm64-glibc` | `2.6.0` | MIT |
+| `@parcel/watcher-linux-<plattform>` | `2.6.0` | MIT |
 | `@playwright/test` | `1.63.0` | Apache-2.0 |
 | `@radix-ui/primitive` | `1.1.7` | MIT |
 | `@radix-ui/react-compose-refs` | `1.1.5` | MIT |
@@ -398,7 +403,7 @@ Die folgenden Pakete liegen im Image unter `/app/node_modules`.
 | `@radix-ui/react-use-controllable-state` | `1.2.6` | MIT |
 | `@radix-ui/react-use-effect-event` | `0.0.5` | MIT |
 | `@radix-ui/react-use-layout-effect` | `1.1.4` | MIT |
-| `@rolldown/binding-linux-arm64-gnu` | `1.2.7` | MIT |
+| `@rolldown/binding-linux-<plattform>` | `1.2.7` | MIT |
 | `@rolldown/pluginutils` | `1.0.1` | MIT |
 | `@rtsao/scc` | `1.1.0` | MIT |
 | `@schummar/icu-type-parser` | `1.21.5` | MIT |
@@ -413,13 +418,13 @@ Die folgenden Pakete liegen im Image unter `/app/node_modules`.
 | `@shikijs/vscode-textmate` | `10.0.2` | MIT |
 | `@sindresorhus/merge-streams` | `4.0.0` | MIT |
 | `@swc/core` | `1.16.1` | Apache-2.0 |
-| `@swc/core-linux-arm64-gnu` | `1.16.1` | Apache-2.0 AND MIT |
+| `@swc/core-linux-<plattform>` | `1.16.1` | Apache-2.0 AND MIT |
 | `@swc/counter` | `0.1.3` | Apache-2.0 |
 | `@swc/helpers` | `0.5.23` | Apache-2.0 |
 | `@swc/types` | `0.1.28` | Apache-2.0 |
 | `@tailwindcss/node` | `4.3.3` | MIT |
 | `@tailwindcss/oxide` | `4.3.3` | MIT |
-| `@tailwindcss/oxide-linux-arm64-gnu` | `4.3.3` | MIT |
+| `@tailwindcss/oxide-linux-<plattform>` | `4.3.3` | MIT |
 | `@tailwindcss/postcss` | `4.3.3` | MIT |
 | `@tokenizer/inflate` | `0.4.1` | MIT |
 | `@tokenizer/token` | `0.3.0` | MIT |
@@ -456,7 +461,7 @@ Die folgenden Pakete liegen im Image unter `/app/node_modules`.
 | `@typescript-eslint/utils` | `8.69.0` | MIT |
 | `@typescript-eslint/visitor-keys` | `8.69.0` | MIT |
 | `@ungap/structured-clone` | `1.4.0` | ISC |
-| `@unrs/resolver-binding-linux-arm64-gnu` | `1.12.2` | MIT |
+| `@unrs/resolver-binding-linux-<plattform>` | `1.12.2` | MIT |
 | `@vitest/mocker` | `5.0.0` | MIT |
 | `@vitest/spy` | `5.0.0` | MIT |
 | `@volar/kit` | `2.4.28` | MIT |
@@ -828,8 +833,8 @@ Die folgenden Pakete liegen im Image unter `/app/node_modules`.
 | `levn` | `0.4.1` | MIT |
 | `lightningcss` | `1.32.0` | MPL-2.0 |
 | `lightningcss` | `1.33.0` | MPL-2.0 |
-| `lightningcss-linux-arm64-gnu` | `1.32.0` | MPL-2.0 |
-| `lightningcss-linux-arm64-gnu` | `1.33.0` | MPL-2.0 |
+| `lightningcss-linux-<plattform>` | `1.32.0` | MPL-2.0 |
+| `lightningcss-linux-<plattform>` | `1.33.0` | MPL-2.0 |
 | `lines-and-columns` | `1.2.4` | MIT |
 | `locate-path` | `3.0.0` | MIT |
 | `locate-path` | `6.0.0` | MIT |
