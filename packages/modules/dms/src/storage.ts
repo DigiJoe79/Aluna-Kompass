@@ -8,6 +8,13 @@ export const DMS_MODULE_KEY = 'dms';
 /** Dieselbe Grenze wie in der Mediathek; ein eingescanntes Schreiben bleibt darunter. */
 export const DOCUMENT_MAX_BYTES = 10 * 1024 * 1024;
 
+/**
+ * Die Prüfsumme einer Datei. An einer Stelle, weil sie an zweien gebraucht
+ * wird: beim Ablegen und beim Ausliefern. Zwei Aufrufe von `createHash` wären
+ * zwei Gelegenheiten, verschieden zu rechnen.
+ */
+export const checksumOf = (bytes: Uint8Array): string => createHash('sha256').update(bytes).digest('hex');
+
 export interface StoredFile {
   fileName: string;
   fileChecksum: string;
@@ -40,7 +47,7 @@ export async function storeDocumentFile(deps: Deps, documentId: string, bytes: U
 
   return ok({
     fileName,
-    fileChecksum: createHash('sha256').update(bytes).digest('hex'),
+    fileChecksum: checksumOf(bytes),
     fileBytes: bytes.byteLength,
   });
 }

@@ -23,7 +23,7 @@ import {
 import { z } from 'zod';
 import { documentTypeFor } from './catalog';
 import { documentCounters, documentFolders, documentLinks, documentRelations, documents, type DocumentLinkRow, type DocumentNoteRow, type DocumentRow } from './schema';
-import { readDocumentFile, removeDocumentFile } from './storage';
+import { checksumOf, readDocumentFile, removeDocumentFile } from './storage';
 import { removeDocumentText } from './index-store';
 import { fulltextCondition, fulltextHits, type TextHit } from './search';
 import { deleteNotesFor, notesFor } from './notes';
@@ -222,13 +222,60 @@ export async function getDocumentRecord(deps: Deps, ctx: CallContext, id: string
   return ok(toRecord(deps, row));
 }
 
+/**
+ * Ein Dokument mit seiner Datei — und nur dann, wenn die Datei noch die ist,
+ * die festgeschrieben wurde.
+ *
+ * Die Prüfsumme wurde seit jeher gebildet, gespeichert und in der Akte
+ * angezeigt, aber bis zum 2026-09-15 nie nachgerechnet: Wer im Datenvolume
+ * eine PDF austauschte, bekam sie weiter ausgeliefert, mit der alten Summe
+ * daneben. Eine Prüfsumme, die niemand prüft, sieht aus wie ein Nachweis und
+ * ist keiner.
+ *
+ * Bei Abweichung wird **nicht** ausgeliefert. Das ist die unbequemere Antwort:
+ * Der Verein kommt an das Dokument durch die Anwendung nicht mehr heran. Aber
+ * ein festgeschriebenes Schreiben, dessen Inhalt sich geändert hat, als
+ * unverändert weiterzureichen, wäre die falsche Hilfe — und die Datei liegt
+ * weiter im Volume, für den, der sie prüfen muss.
+ *
+ * Ein Entwurf trägt keine Summe (`fileChecksum: null`): Seine Datei entsteht
+ * bei jeder Vorschau neu, das ist seine Natur und kein Vorfall.
+ */
 export async function getDocument(deps: Deps, ctx: CallContext, id: string): Promise<Result<{ record: DocumentRecord; bytes: Uint8Array; filename: string }>> {
   const denied = requirePermission(ctx, 'dms.view');
   if (denied) return denied;
   const row = deps.db.select().from(documents).where(eq(documents.id, id)).get();
   if (!row) return notFound('document', id);
   if (!row.fileName) return notFound('documentFile', id);
-  return ok({ record: toRecord(deps, row), bytes: await readDocumentFile(deps, row.fileName), filename: `${row.number}.pdf` });
+
+  let bytes: Uint8Array;
+  try {
+    bytes = await readDocumentFile(deps, row.fileName);
+  } catch {
+    // Eine Datei, die gar nicht mehr da ist, ist kein Fälschungsverdacht.
+    return notFound('documentFile', id);
+  }
+
+  if (row.fileChecksum) {
+    const actual = checksumOf(bytes);
+    if (actual !== row.fileChecksum) {
+      // Jeder Fund kommt ins Protokoll, nicht nur der erste: Wer wann auf ein
+      // verändertes Dokument zugegriffen hat, gehört zur Aufklärung dazu.
+      deps.db.transaction((tx: DbOrTx) => {
+        recordAudit(tx, deps, ctx, {
+          action: 'dms.checksumMismatch',
+          entityType: 'document',
+          entityId: row.id,
+          before: { checksum: row.fileChecksum },
+          after: { expected: row.fileChecksum, actual },
+          summary: `Datei von Dokument ${row.number} stimmt nicht mehr mit der Prüfsumme überein`,
+        });
+      });
+      return conflict('documentAltered', `Die Datei von Dokument ${row.number} stimmt nicht mehr mit der beim Festschreiben gebildeten Prüfsumme überein`);
+    }
+  }
+
+  return ok({ record: toRecord(deps, row), bytes, filename: `${row.number}.pdf` });
 }
 
 const voidSchema = z.object({ id: z.string().min(1), reason: z.string().trim().min(1).max(300) });
