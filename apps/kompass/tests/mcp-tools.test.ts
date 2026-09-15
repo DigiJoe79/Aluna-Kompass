@@ -2,6 +2,8 @@ import { coreModule, moduleMcpTools, type McpToolDefinition, type ModuleManifest
 import * as animalsPkg from '@kompass/module-animals';
 import * as contactsPkg from '@kompass/module-contacts';
 import * as dmsPkg from '@kompass/module-dms';
+import * as projectsPkg from '@kompass/module-projects';
+import * as corePkg from '@kompass/core';
 import * as sitePkg from '@kompass/module-site';
 import { createTestDeps } from '@kompass/core/testing';
 import { coreMcpTools } from '@kompass/mcp';
@@ -158,9 +160,12 @@ describe('registered mcp tools', () => {
  * Jede muss von einem Werkzeug als `service` genannt werden — sonst ist sie
  * über MCP unerreichbar, und Prinzip 8 („ein Weg zu den Daten“) ist verletzt.
  *
- * Der Kern bleibt beim Rechte-Test darüber: Seine Exporte umfassen Auth, Setup,
- * Backup und Rendering, die aus guten Gründen nicht über MCP laufen; eine
- * Ausnahmeliste dafür wäre länger als die Werkzeugliste.
+ * Der Kern war bis zum 2026-09-15 ausgenommen, mit der Begründung, eine
+ * Ausnahmeliste wäre länger als die Werkzeugliste. Nachgezählt: 22 von 60
+ * Kern-Diensten hatten kein Werkzeug, die Liste wäre also kürzer gewesen — und
+ * darunter waren Lücken, die niemand entschieden hatte. `README.md` verspricht
+ * „Alles, was die Oberfläche kann, kann auch ein KI-Assistent über MCP“; ein
+ * Wächter, der den Kern auslässt, kann das nicht halten.
  */
 const SERVICE_SIGNATURE = /^(?:async\s+)?function\s+\w+\s*\(\s*deps\s*,\s*ctx\b/;
 
@@ -180,9 +185,26 @@ const WITHOUT_TOOL: Record<string, string> = {
   'contacts.deleteContact': 'Löschung personenbezogener Daten bestätigt ein Mensch.',
   'contacts.seedContacts': 'Beispieldaten der Entwicklung.',
   'animals.seedAnimals': 'Beispieldaten der Entwicklung.',
+  'projects.seedProjects': 'Beispieldaten der Entwicklung.',
   'site.applySeed': 'Beispielinhalte des Templates; ein Mensch bestätigt sie in der Oberfläche.',
   'site.previewTemplateSync': 'Derselbe Vorgang wie site_template_sync ohne confirm; das Werkzeug nennt den anwendenden Zweig.',
   'site.recordPublish': 'Innenleben von site_publish: schreibt den Verlaufseintrag, den der Lauf erzeugt.',
+
+  // Kern. Seit dem 2026-09-15 mitgeprüft; was hier steht, ist entschieden.
+  'core.buildContext': 'Baut den Aufrufkontext; kein Vorgang, sondern seine Voraussetzung.',
+  'core.prepare': 'Innenleben des Dokument-Renderings; documents_render ruft es.',
+  'core.exportDocument': 'Liefert Bytes; ein Agent liest den Datensatz.',
+  'core.exportBackup': 'Ein Archiv von hunderten Megabyte durch JSON-RPC zu reichen, hilft niemandem.',
+  'core.importBackup': 'Ersetzt die Datenbank als Datei — das bestätigt ein Mensch vor sich, nicht ein Agent für ihn.',
+  'core.getMediaAsset': 'Liefert Bytes; media_list nennt die Datensätze.',
+  'core.getMediaPreview': 'Liefert Bytes einer Vorschau.',
+  'core.storeMediaInternal': 'Innenleben; media_upload ist der Weg von außen.',
+  'core.storeMediaAssetDetailed': 'Dieselbe Ablage wie media_upload, mit mehr Rückgabe für die Oberfläche.',
+  'core.changeOwnPassword': 'Das eigene Passwort ändert man dort, wo man sich anmeldet. Ein API-Token, das Passwörter setzen darf, wäre ein zweiter Anmeldeweg.',
+  'core.createApiToken': 'Ein Token, das Token ausstellt, hebelt die Rechtevergabe aus: Wer eines hat, verschafft sich beliebig weitere.',
+  'core.revokeApiToken': 'Gegenstück zu createApiToken — Token verwaltet man in der Oberfläche.',
+  'core.listApiTokens': 'Ebenso: Die Liste der eigenen Token gehört zur Kontoverwaltung.',
+  'core.listDueFollowUps': 'followups_list_due ruft listDueFollowUpsWithTargets — dieselbe Liste, dazu wohin jede Wiedervorlage zeigt.',
 };
 
 const servicesOf = (moduleKey: string, pkg: Record<string, unknown>) =>
@@ -218,9 +240,18 @@ function siteToolsWithTemplate(): readonly McpToolDefinition[] {
 }
 
 describe('every service has a tool', () => {
-  const packages: [string, Record<string, unknown>][] = [['contacts', contactsPkg], ['animals', animalsPkg], ['site', sitePkg], ['dms', dmsPkg]];
+  const packages: [string, Record<string, unknown>][] = [
+    ['contacts', contactsPkg],
+    ['animals', animalsPkg],
+    ['site', sitePkg],
+    ['dms', dmsPkg],
+    ['projects', projectsPkg],
+    ['core', corePkg],
+  ];
   const named = new Set(
-    [...registeredTools, ...siteToolsWithTemplate()].map((tool) => tool.service).filter((s): s is ServiceFn => typeof s === 'function'),
+    [...registeredTools, ...siteToolsWithTemplate(), ...coreMcpTools]
+      .map((tool) => tool.service)
+      .filter((s): s is ServiceFn => typeof s === 'function'),
   );
 
   it('names every module service from a tool, or explains why not', () => {

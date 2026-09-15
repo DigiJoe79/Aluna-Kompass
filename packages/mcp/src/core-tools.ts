@@ -5,6 +5,7 @@ import {
   getSetting, listRetentionDue, listRoles, listSettings, listThemes, listUsers, moveMediaAsset, queryAudit, removeLocale, removeRole, renameMediaFolder,
   reorderLocales, resetStartPassword, setModuleEnabled, setRolePermissions, setSetting, setUserActive, storeMediaAsset,
   updateRole, ok, invalid,
+  createTheme, deleteTheme, duplicateTheme, getUser, listMediaFolders, previewLocaleRemoval, themeSchema, updateTheme, updateUser,
   listTranslationGaps, setTranslations, translationGapsFilterSchema, translationsSetSchema,
   type McpToolDefinition,
 } from '@kompass/core';
@@ -47,6 +48,8 @@ export const coreMcpTools: McpToolDefinition[] = [
   t({ name: 'roles_remove', description: 'Remove a role from a user. Requires users.manage.', inputSchema: z.object({ userId: z.string(), roleId: z.string() }), handler: (deps, ctx, args) => removeRole(deps, ctx, args), service: removeRole }),
   t({ name: 'users_list', description: 'List users with roles and status. Requires users.manage.', inputSchema: z.object({}), handler: (deps, ctx) => listUsers(deps, ctx), service: listUsers }),
   t({ name: 'users_create', description: 'Create a user; returns the one-time start password. Requires users.manage.', inputSchema: z.object({ name: z.string(), email: z.string(), roleIds: z.array(z.string()).default([]) }), handler: (deps, ctx, args) => createUser(deps, ctx, args), service: createUser }),
+  t({ name: 'users_get', description: 'Read one user with roles and derived status. Requires users.manage.', inputSchema: z.object({ id: z.string() }), handler: (deps, ctx, { id }) => getUser(deps, ctx, id), service: getUser }),
+  t({ name: 'users_update', description: 'Change name and e-mail of a user. The e-mail must stay unique; roles are set with roles_assign and roles_remove. Requires users.manage. Audited.', inputSchema: z.object({ id: z.string(), name: z.string(), email: z.string() }), handler: (deps, ctx, args) => updateUser(deps, ctx, args), service: updateUser }),
   t({ name: 'users_set_active', description: 'Activate or deactivate a user. Requires users.manage.', inputSchema: z.object({ id: z.string(), isActive: z.boolean() }), handler: (deps, ctx, args) => setUserActive(deps, ctx, args), service: setUserActive }),
   t({ name: 'users_reset_start_password', description: 'Issue a new one-time start password. Requires users.manage.', inputSchema: z.object({ id: z.string() }), handler: (deps, ctx, args) => resetStartPassword(deps, ctx, args), service: resetStartPassword }),
   t({ name: 'audit_query', description: 'Query the immutable audit log. Requires audit.view.', inputSchema: z.object({ userId: z.string().optional(), channel: z.enum(['ui', 'mcp', 'system']).optional(), action: z.string().optional(), entityType: z.string().optional(), entityId: z.string().optional(), from: z.string().optional(), to: z.string().optional(), text: z.string().optional(), limit: z.number().int().optional(), offset: z.number().int().optional() }), handler: async (deps, ctx, args) => queryAudit(deps, ctx, args), service: queryAudit }),
@@ -57,6 +60,7 @@ export const coreMcpTools: McpToolDefinition[] = [
   t({ name: 'media_list', description: 'List media assets with size, type, folder and where each is used (label, entity, id, href). Filters: folder (omitted = all, null = root), query (case-insensitive, matches filename and usage labels), kind (image | pdf), sort (newest default | oldest | name | size). Requires media.upload.', inputSchema: mediaListFilterSchema, handler: (deps, ctx, args) => listMediaAssets(deps, ctx, args), service: listMediaAssets }),
   t({ name: 'media_delete', description: 'Delete a media asset. Refused while any record still references it (editorial content, audited). Requires media.upload.', inputSchema: z.object({ id: z.string() }), handler: (deps, ctx, args) => deleteMediaAsset(deps, ctx, args), service: deleteMediaAsset }),
   t({ name: 'media_move', description: 'Move a media asset into a folder (null = root). Requires media.upload.', inputSchema: z.object({ id: z.string(), folder: z.string().nullable() }), handler: (deps, ctx, args) => moveMediaAsset(deps, ctx, args), service: moveMediaAsset }),
+  t({ name: 'media_folder_list', description: 'List the media folders with the number of assets in each. Requires media.upload.', inputSchema: z.object({}), handler: (deps, ctx) => listMediaFolders(deps, ctx), service: listMediaFolders }),
   t({ name: 'media_folder_create', description: 'Create a virtual media folder; the parent must exist. Requires media.upload.', inputSchema: z.object({ path: z.string() }), handler: (deps, ctx, args) => createMediaFolder(deps, ctx, args), service: createMediaFolder }),
   t({ name: 'media_folder_rename', description: 'Rename a media folder; subfolders and assets move with it. Requires media.upload.', inputSchema: z.object({ from: z.string(), to: z.string() }), handler: (deps, ctx, args) => renameMediaFolder(deps, ctx, args), service: renameMediaFolder }),
   t({ name: 'media_folder_delete', description: 'Delete an empty media folder. Requires media.upload.', inputSchema: z.object({ path: z.string() }), handler: (deps, ctx, args) => deleteMediaFolder(deps, ctx, args), service: deleteMediaFolder }),
@@ -64,9 +68,19 @@ export const coreMcpTools: McpToolDefinition[] = [
   t({ name: 'modules_set_enabled', description: 'Enable or disable a module. Requires modules.manage.', inputSchema: z.object({ key: z.string(), enabled: z.boolean() }), handler: (deps, ctx, args) => setModuleEnabled(deps, ctx, args), service: setModuleEnabled }),
   t({ name: 'themes_list', description: 'List themes and the active theme key. Open to any signed-in user — the active theme is in every page anyway.', inputSchema: z.object({}), handler: async (deps) => ok(listThemes(deps)), service: listThemes }),
   t({ name: 'themes_activate', description: 'Activate a theme. Requires settings.manage.', inputSchema: z.object({ key: z.string() }), handler: (deps, ctx, args) => activateTheme(deps, ctx, args), service: activateTheme }),
+  /*
+   * Ein Theme trägt jeden Token für hell und dunkel. Das Schema ist deshalb
+   * dasselbe, das der Dienst prüft — eine Abschrift hier hinkte der ersten
+   * neuen Farbe hinterher.
+   */
+  t({ name: 'themes_create', description: 'Create a theme: key, name and every design token as a light/dark pair. Requires settings.manage. Audited.', inputSchema: themeSchema, handler: (deps, ctx, args) => createTheme(deps, ctx, args), service: createTheme }),
+  t({ name: 'themes_update', description: 'Replace name and tokens of an editable theme; the shipped default is read-only. Requires settings.manage. Audited.', inputSchema: themeSchema, handler: (deps, ctx, args) => updateTheme(deps, ctx, args), service: updateTheme }),
+  t({ name: 'themes_duplicate', description: 'Copy a theme under a new key and name — the way to start from the shipped default. Requires settings.manage. Audited.', inputSchema: z.object({ sourceKey: z.string(), key: z.string(), name: z.string() }), handler: (deps, ctx, args) => duplicateTheme(deps, ctx, args), service: duplicateTheme }),
+  t({ name: 'themes_delete', description: 'Delete a theme. Refused for the active one and for the shipped default. Requires settings.manage. Audited.', inputSchema: z.object({ key: z.string() }), handler: (deps, ctx, args) => deleteTheme(deps, ctx, args), service: deleteTheme }),
   t({ name: 'locales_list', description: 'List the locales this installation keeps, leading one first. Requires settings.manage.', inputSchema: z.object({}), handler: (deps, ctx) => listLocales(deps, ctx), service: listLocales }),
   t({ name: 'locales_add', description: 'Add a locale. Requires settings.manage.', inputSchema: z.object({ code: z.string() }), handler: (deps, ctx, args) => addLocale(deps, ctx, args), service: addLocale }),
   t({ name: 'locales_reorder', description: 'Reorder locales; the first is the leading locale. Requires settings.manage.', inputSchema: z.object({ codes: z.array(z.string()) }), handler: (deps, ctx, args) => reorderLocales(deps, ctx, args), service: reorderLocales }),
+  t({ name: 'locales_preview_removal', description: 'Count what removing a locale would strip: how many records and settings carry text in it. Read-only — locales_remove does the work. Requires settings.manage.', inputSchema: z.object({ code: z.string() }), handler: (deps, ctx, args) => previewLocaleRemoval(deps, ctx, args), service: previewLocaleRemoval }),
   t({ name: 'locales_remove', description: 'Remove a locale and strip it from all stored text. Requires settings.manage and confirm. Audited.', inputSchema: z.object({ code: z.string(), confirm: z.boolean() }), handler: (deps, ctx, args) => removeLocale(deps, ctx, args), service: removeLocale }),
   // Übersetzungen (Spec 2026-09-13-uebersetzungen-ueber-mcp). Kein eigenes
   // Recht: Die Module prüfen ihres im Haken, deshalb nennt die Beschreibung
