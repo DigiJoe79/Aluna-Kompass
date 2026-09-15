@@ -213,7 +213,7 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
                     }}
                     onClick={() => router.push(`/dms/${doc.id}`)}
                     className={cn(
-                      'h-[var(--row-h)] cursor-pointer hover:bg-row-hover',
+                      'h-row cursor-pointer hover:bg-row-hover',
                       hits?.[doc.id] ? 'border-b-0' : 'border-b border-line-2',
                       i % 2 === 1 && 'bg-zebra',
                     )}

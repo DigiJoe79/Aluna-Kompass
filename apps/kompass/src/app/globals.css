@@ -97,6 +97,15 @@
   --font-mono: var(--font-mono);
 }
 
+/*
+ * Die eine Stelle, an der Theme-Vorgabe und Nutzerdichte zusammenkommen.
+ * Steht als Utility da, weil `h-[var(--row-h-density,var(--row-h))]` sonst in
+ * jeder Tabelle stünde — und beim nächsten Umbau in einer davon nicht.
+ */
+@utility h-row {
+  height: var(--row-h-density, var(--row-h));
+}
+
 @layer base {
   * { border-color: var(--line); }
   html { color-scheme: light; }
@@ -117,13 +126,26 @@
    */
   :root { --field-h: 38px; }
   /*
-   * Die Zeilenhöhe hatte nur Werte für die beiden abweichenden Dichten und
-   * keinen für den Normalfall: `var(--row-h)` war ohne gesetzte Dichte
-   * undefiniert, und `height` fiel auf `auto` zurück.
+   * Zeilenhöhe: zwei Quellen, zwei Variablen.
+   *
+   * `--row-h` gehört dem Theme (`row-h` in THEME_TOKENS) und kommt aus dem
+   * `<style id="theme-tokens">` im Wurzel-Layout. Das steht dort ohne
+   * `@layer` — und ungelayertes CSS schlägt jede Regel in einem Layer,
+   * unabhängig von Spezifität und Reihenfolge. Als die Dichte hier ebenfalls
+   * `--row-h` setzte, gewann deshalb immer das Theme: Die Einstellung im
+   * Nutzermenü hatte keine sichtbare Wirkung, in keiner Stellung.
+   *
+   * Die Dichte schreibt darum eine eigene Variable, die das Theme nicht
+   * kennt. `h-row` (oben) liest `var(--row-h-density, var(--row-h))`: Ohne
+   * gewählte Dichte bleibt das Theme die Vorgabe für „normal“, und „Normale
+   * Zeilen“ setzt bewusst nichts, damit es das auch wieder wird.
+   *
+   * Der Wert hier ist nur das Netz für den Fall, dass das Theme-`<style>`
+   * fehlt — im Normalbetrieb überschreibt ihn das Theme.
    */
   :root { --row-h: 44px; }
-  [data-density="compact"] { --row-h: 36px; }
-  [data-density="comfortable"] { --row-h: 56px; }
+  [data-density="compact"] { --row-h-density: 36px; }
+  [data-density="comfortable"] { --row-h-density: 56px; }
 
   .prose-preview h1, .prose-preview h2, .prose-preview h3 { font-family: var(--font-heading); margin: 0.8em 0 0.3em; }
   .prose-preview h1 em, .prose-preview h2 em, .prose-preview h3 em { font-style: normal; color: var(--color-primary); }

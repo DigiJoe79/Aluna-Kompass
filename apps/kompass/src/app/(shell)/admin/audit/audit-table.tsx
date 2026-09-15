@@ -42,7 +42,7 @@ export async function AuditTable({
             <tr
               key={e.id}
               className={cn(
-                'group relative h-[var(--row-h)] border-b border-line-2 cursor-pointer hover:bg-row-hover',
+                'group relative h-row border-b border-line-2 cursor-pointer hover:bg-row-hover',
                 i % 2 === 1 && 'bg-zebra',
                 e.id === selectedId && 'bg-selected'
               )}

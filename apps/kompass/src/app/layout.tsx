@@ -14,6 +14,7 @@ import type { ReactNode } from 'react';
 import { HydrationMarker } from '@/components/hydration-marker';
 import { Toaster } from '@/components/ui/sonner';
 import { depsReady, getDeps } from '@/lib/deps';
+import { PREFERENCE_BOOTSTRAP } from '@/lib/preference-bootstrap';
 import { themeToCss } from '@/lib/theme-css';
 
 /**
@@ -27,8 +28,6 @@ export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('app');
   return { title: t('name') };
 }
-
-const PREFERENCE_BOOTSTRAP = `(function(){try{var s=localStorage.getItem('kompass.colorScheme');if(!s){s=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.setAttribute('data-color-scheme',s);var d=localStorage.getItem('kompass.density');if(d){document.documentElement.setAttribute('data-density',d)}}catch(e){}})();`;
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   await depsReady();

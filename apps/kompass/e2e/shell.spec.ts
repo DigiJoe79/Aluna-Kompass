@@ -98,6 +98,76 @@ test.describe('app shell', () => {
     await expect(page).toHaveURL('/login');
   });
 
+  /**
+   * Die Dichte war doppelt gebrochen: Das Theme setzt `--row-h` ungelayert,
+   * die Dichteregeln standen in `@layer base` und verloren damit jede
+   * Kaskade — und der Bootstrap schrieb den JSON-Wert mitsamt
+   * Anführungszeichen ins Attribut, sodass nach dem Neuladen ohnehin keine
+   * Regel mehr traf. Gemessen wird deshalb beides: die Variable und die
+   * Höhe, die tatsächlich auf dem Schirm steht, vor und nach dem Neuladen.
+   *
+   * Die Höhe wird in der Akte gemessen und nicht in der Nutzerliste. Dort
+   * tragen die Rollen-Marken die Zeile von sich aus auf 55px, und `height`
+   * ist auf einem `tr` nur eine Mindesthöhe — „kompakt“ bliebe unsichtbar.
+   * Das ist ein eigener Mangel (das Zellpolster hängt nicht an der Dichte)
+   * und nicht der, den dieser Test hütet.
+   */
+  test('applies the row density from the user menu and keeps it across a reload', async ({ page }) => {
+    await page.goto('/dms');
+    const rowHeight = () => page.locator('tbody tr').first().evaluate((el) => el.getBoundingClientRect().height);
+    const variable = () =>
+      page.evaluate(() => {
+        const style = getComputedStyle(document.documentElement);
+        return style.getPropertyValue('--row-h-density').trim() || style.getPropertyValue('--row-h').trim();
+      });
+    const setDensity = async (label: string) => {
+      await page.getByRole('button', { name: 'Nutzermenü' }).click();
+      await page.getByRole('menuitemradio', { name: label }).click();
+      await page.keyboard.press('Escape');
+    };
+
+    // Ohne eigene Wahl gilt der Wert aus dem Theme.
+    expect(await variable()).toBe('44px');
+    expect(await rowHeight()).toBe(44);
+
+    await setDensity('Kompakte Zeilen');
+    expect(await variable()).toBe('36px');
+    expect(await rowHeight()).toBeLessThan(44);
+
+    // Und der Wert übersteht das Neuladen — daran scheiterte er bisher.
+    await page.goto('/dms');
+    expect(await variable()).toBe('36px');
+    expect(await rowHeight()).toBeLessThan(44);
+
+    await setDensity('Komfortable Zeilen');
+    expect(await variable()).toBe('56px');
+    expect(await rowHeight()).toBe(56);
+
+    // „Normal“ setzt bewusst nichts, damit das Theme wieder die Vorgabe wird.
+    await setDensity('Normale Zeilen');
+    expect(await variable()).toBe('44px');
+    expect(await rowHeight()).toBe(44);
+  });
+
+  /**
+   * Derselbe Bootstrap-Fehler nahm den Dunkelmodus mit: gewählt blieb er nur
+   * bis zum nächsten Seitenaufruf. Der Test oben prüft das Umschalten, dieser
+   * das Bleiben.
+   */
+  test('keeps the dark colour scheme across a reload', async ({ page }) => {
+    await page.getByRole('button', { name: 'Nutzermenü' }).click();
+    await page.getByRole('menuitemcheckbox', { name: 'Dunkles Design' }).click();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
+
+    await page.goto('/admin/users');
+    await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
+    // Und das Menü zeigt danach immer noch das Häkchen.
+    await page.getByRole('button', { name: 'Nutzermenü' }).click();
+    await expect(page.getByRole('menuitemcheckbox', { name: 'Dunkles Design' })).toBeChecked();
+    await page.keyboard.press('Escape');
+  });
+
   test('turns into a drawer below 1180px with labelled areas and the second level beneath', async ({ page }) => {
     await page.goto('/admin/themes');
     await page.setViewportSize({ width: 1024, height: 800 });

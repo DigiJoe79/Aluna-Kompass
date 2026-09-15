@@ -81,7 +81,7 @@ export function DispatchChannelsPanel({
           </TableHeader>
           <TableBody>
             {channels.map((channel) => (
-              <TableRow key={channel.key} className="h-[var(--row-h)] border-b border-line-2">
+              <TableRow key={channel.key} className="h-row border-b border-line-2">
                 <TableCell className="px-4 font-mono text-[13px] text-ink-2">{channel.key}</TableCell>
                 <TableCell className="px-4 font-semibold text-ink">{channel.label}</TableCell>
                 <TableCell className="px-4 text-right">

@@ -67,7 +67,7 @@ export function UserTable({ users, roles }: { users: UserSummary[]; roles: { id:
           </TableHeader>
           <TableBody>
             {rows.map((u, i) => (
-              <TableRow key={u.id} className={cn('h-[var(--row-h)] hover:bg-row-hover', i % 2 === 1 && 'bg-zebra')}>
+              <TableRow key={u.id} className={cn('h-row hover:bg-row-hover', i % 2 === 1 && 'bg-zebra')}>
                 <TableCell className={cn('font-semibold', !u.isActive && 'text-disabled-ink')}>{u.name}</TableCell>
                 <TableCell className={cn('text-ink-2', !u.isActive && 'text-disabled-ink')}>{u.email}</TableCell>
                 <TableCell>

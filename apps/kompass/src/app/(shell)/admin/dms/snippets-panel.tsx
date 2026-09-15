@@ -76,7 +76,7 @@ export function SnippetsPanel({ snippets }: { snippets: SnippetRow[] }) {
               </TableRow>
             ) : (
               snippets.map((snippet) => (
-                <TableRow key={snippet.id} className="h-[var(--row-h)] border-b border-line-2">
+                <TableRow key={snippet.id} className="h-row border-b border-line-2">
                   <TableCell className="px-4 font-semibold text-ink">{snippet.name}</TableCell>
                   <TableCell className="px-4 text-ink-2">{snippet.subject ?? '—'}</TableCell>
                   <TableCell className="px-4 text-ink-2">{snippet.isActive ? tCommon('yes') : tCommon('no')}</TableCell>

@@ -134,7 +134,7 @@ export function LibraryClient({ query, folders, items }: { query: ListQuery; fol
             </thead>
             <tbody>
               {items.map((it) => (
-                <tr key={it.id} className="h-[var(--row-h)] cursor-pointer border-b border-line-2 hover:bg-row-hover" onClick={() => setDetailId(it.id)}>
+                <tr key={it.id} className="h-row cursor-pointer border-b border-line-2 hover:bg-row-hover" onClick={() => setDetailId(it.id)}>
                   <td className="py-2">
                     <button type="button" className="flex items-center gap-2 text-left" onClick={(e) => { e.stopPropagation(); setDetailId(it.id); }}>
                       {it.mimeType.startsWith('image/') ? (

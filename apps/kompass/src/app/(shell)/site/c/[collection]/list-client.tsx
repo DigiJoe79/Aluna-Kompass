@@ -29,7 +29,7 @@ export function ListClient({ collection, rows, publishable, sortable }: { collec
       <table className="w-full text-[14px]">
         <tbody>
           {rows.map((row, index) => (
-            <tr key={row.id} className={`h-[var(--row-h)] border-b border-line-2 hover:bg-row-hover ${index % 2 === 1 ? 'bg-zebra' : ''}`}>
+            <tr key={row.id} className={`h-row border-b border-line-2 hover:bg-row-hover ${index % 2 === 1 ? 'bg-zebra' : ''}`}>
               <td className="px-4 font-semibold">
                 <Link href={`/site/c/${collection}/${row.id}`} className="text-link underline">{row.label}</Link>
               </td>
