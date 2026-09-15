@@ -73,6 +73,15 @@ docs/                  Nordstern, Betrieb, Backlog, Hilfeseiten
 
 Regeln, Prinzipien und alle Befehle: [`AGENTS.md`](AGENTS.md). Die neun Prinzipien dort — generischer Kern, Konfiguration statt Konstanten, nichts Rechenschaftsrelevantes wird gelöscht, ein Weg zu den Daten, TDD ab der ersten Zeile — gelten für jeden Beitrag.
 
+## Fragen, Fehler und Sicherheit
+
+- **Fragen und Fehler** gehören in ein [Issue](https://github.com/DigiJoe79/Aluna-Kompass/issues).
+  Hilfreich: welche Fassung (Fuß der Seitenleiste oder `/api/health`) und was du erwartet hast.
+- **Sicherheitslücken** bitte **nicht** als Issue, sondern über den privaten
+  Meldekanal — der Weg steht in [`SECURITY.md`](SECURITY.md).
+- **Quellcode der mitgelieferten Fremdsoftware** (GPL/LGPL): ein Issue genügt.
+  Die Aufstellung steht in [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
+
 ## Lizenz
 
 Apache-2.0 — siehe [`LICENSE`](LICENSE) und [`NOTICE`](NOTICE).

@@ -129,9 +129,11 @@ Datei eingebunden und wird dynamisch geladen (\`libvips-cpp.so\`); sie lässt
 sich gegen eine selbst übersetzte Fassung austauschen.
 
 **Schriftliches Angebot.** Unabhängig davon: Wer eine Kopie des Quellcodes der
-hier aufgeführten GPL- und LGPL-Bestandteile wünscht, erhält sie auf Anfrage
-über die im Repository genannte Kontaktadresse, für **drei Jahre** ab
-Auslieferung der jeweiligen Fassung, zu den Selbstkosten des Datenträgers.
+hier aufgeführten GPL- und LGPL-Bestandteile wünscht, erhält sie auf Anfrage,
+für **drei Jahre** ab Auslieferung der jeweiligen Fassung, zu den Selbstkosten
+des Datenträgers. Den Weg dorthin nennt das README des Projekts im Abschnitt
+„Fragen, Fehler und Sicherheit"; eine solche Anfrage ist nicht vertraulich und
+gehört in ein gewöhnliches Issue.
 
 ## 2. Systempakete (Debian $DEBIAN_VERSION)
 

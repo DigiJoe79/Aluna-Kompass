@@ -62,6 +62,18 @@ describe('third-party notices', () => {
     expect(notices).toMatch(/drei Jahre/i);
   });
 
+  /**
+   * Das schriftliche Angebot taugt nur, solange der Weg dorthin existiert.
+   * Es verweist auf das README, das README auf SECURITY.md — faellt ein Glied
+   * weg, zeigt das Angebot ins Leere, ohne dass es jemandem auffiele.
+   */
+  it('offers a source contact the README actually names', () => {
+    expect(read('THIRD-PARTY-NOTICES.md')).toMatch(/README/);
+    const readme = read('README.md');
+    expect(readme).toMatch(/SECURITY\.md/);
+    expect(read('SECURITY.md')).toMatch(/Sicherheitslücke|Schwachstelle/);
+  });
+
   it('is announced in NOTICE, where Apache-2.0 expects it', () => {
     expect(read('NOTICE')).toContain('THIRD-PARTY-NOTICES');
   });
