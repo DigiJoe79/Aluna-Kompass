@@ -142,10 +142,17 @@
    *
    * Der Wert hier ist nur das Netz für den Fall, dass das Theme-`<style>`
    * fehlt — im Normalbetrieb überschreibt ihn das Theme.
+   *
+   * `--row-pad-density` stellt dasselbe für das senkrechte Zellpolster, denn
+   * `height` ist auf einem `tr` nur eine Mindesthöhe: Ohne kleineres Polster
+   * trägt sich die Zeile über den kompakten Wert hinweg. Es steht bewusst
+   * nur in `TableCell` und nicht auf jeder Zeile — die handgeschriebenen
+   * `<td>` der Prüfspur haben gar kein senkrechtes Polster, ein Wert von
+   * hier aus würde sie aufblähen statt stauchen.
    */
   :root { --row-h: 44px; }
-  [data-density="compact"] { --row-h-density: 36px; }
-  [data-density="comfortable"] { --row-h-density: 56px; }
+  [data-density="compact"] { --row-h-density: 36px; --row-pad-density: 4px; }
+  [data-density="comfortable"] { --row-h-density: 56px; --row-pad-density: 12px; }
 
   .prose-preview h1, .prose-preview h2, .prose-preview h3 { font-family: var(--font-heading); margin: 0.8em 0 0.3em; }
   .prose-preview h1 em, .prose-preview h2 em, .prose-preview h3 em { font-style: normal; color: var(--color-primary); }

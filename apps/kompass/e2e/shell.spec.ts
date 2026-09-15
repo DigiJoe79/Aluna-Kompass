@@ -132,12 +132,12 @@ test.describe('app shell', () => {
 
     await setDensity('Kompakte Zeilen');
     expect(await variable()).toBe('36px');
-    expect(await rowHeight()).toBeLessThan(44);
+    expect(await rowHeight()).toBe(36);
 
     // Und der Wert übersteht das Neuladen — daran scheiterte er bisher.
     await page.goto('/dms');
     expect(await variable()).toBe('36px');
-    expect(await rowHeight()).toBeLessThan(44);
+    expect(await rowHeight()).toBe(36);
 
     await setDensity('Komfortable Zeilen');
     expect(await variable()).toBe('56px');
@@ -147,6 +147,33 @@ test.describe('app shell', () => {
     await setDensity('Normale Zeilen');
     expect(await variable()).toBe('44px');
     expect(await rowHeight()).toBe(44);
+  });
+
+  /**
+   * Das Zellpolster hängt an der Dichte — aber nur dort, wo es eines gibt.
+   *
+   * Die Listen im Haus sind zweierlei: die `TableCell` aus dem Baukasten
+   * bringt `py-2` mit, die handgeschriebenen `<td>` der Prüfspur haben
+   * überhaupt kein senkrechtes Polster; ihre Höhe kommt aus einem
+   * umbrechenden Zeitstempel. Ein Polster auf `h-row` — also auf jeder Zeile
+   * — hätte der Prüfspur deshalb 16px *hinzugefügt* statt sie zu stauchen.
+   * Dieser Test hält den Hebel dort, wo er hingehört.
+   */
+  test('leaves a table without its own cell padding untouched', async ({ page }) => {
+    await page.goto('/admin/audit');
+    const rowHeight = () => page.locator('tbody tr').first().evaluate((el) => el.getBoundingClientRect().height);
+    const padding = () => page.locator('tbody tr').first().locator('td').first().evaluate((el) => getComputedStyle(el).paddingTop);
+
+    expect(await padding()).toBe('0px');
+    expect(await rowHeight()).toBe(44);
+
+    await page.getByRole('button', { name: 'Nutzermenü' }).click();
+    await page.getByRole('menuitemradio', { name: 'Kompakte Zeilen' }).click();
+    await page.keyboard.press('Escape');
+
+    // Kein Polster da, keines dazu — und die Zeile wächst nicht.
+    expect(await padding()).toBe('0px');
+    expect(await rowHeight()).toBeLessThanOrEqual(44);
   });
 
   /**
