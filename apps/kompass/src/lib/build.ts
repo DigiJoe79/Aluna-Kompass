@@ -10,3 +10,13 @@ export function buildId(): string {
   if (/^[0-9a-f]{7,40}$/i.test(sha)) return sha.slice(0, 7);
   return raw.slice(0, 16);
 }
+
+/**
+ * Die Fassung des Produkts. Steht als einzige Quelle in der `package.json` im
+ * Wurzelverzeichnis und wird von `next.config.ts` zur Bauzeit eingesetzt.
+ * Ohne Bau — etwa in einem Unit-Test — steht `0.0.0-dev`: erkennbar keine
+ * ausgelieferte Fassung, damit niemand sie fuer eine haelt.
+ */
+export function appVersion(): string {
+  return process.env.KOMPASS_VERSION?.trim() || '0.0.0-dev';
+}

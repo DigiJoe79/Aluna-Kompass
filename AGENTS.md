@@ -57,6 +57,27 @@ Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. J
 - Texterkennung lokal: `brew install tesseract tesseract-lang poppler` — ohne sie meldet die Akte „Texterkennung nicht verfügbar", und `packages/text-extraction` überspringt seine Tests nicht, sondern schlägt fehl.
 - Betrieb: `docs/handbuch/betrieb.md` (NAS-Deployment, Backups, Updates); Compose-Vorlagen `docker-compose.test.yml` und `docker-compose.prod.yml`, CI `.github/workflows/ci.yml`
 
+## Release
+
+- **Eine Fassung, eine Stelle.** Die Nummer steht in der `package.json` im
+  Wurzelverzeichnis; alle Pakete des Workspace tragen dieselbe.
+  `apps/kompass/next.config.ts` reicht sie zur Bauzeit weiter, `/api/health`
+  und der Fuß der Schiene zeigen sie. Nirgends ein zweites Mal hinschreiben —
+  `apps/kompass/tests/version.test.ts` wacht darüber.
+- **Kein Hochziehen ohne Eintrag.** `CHANGELOG.md` führt zuerst
+  „Unveröffentlicht"; beim Release wird daraus die Nummer. Der Eintrag ist für
+  den Betreiber geschrieben, nicht für Entwickler: was ein Verein davon merkt,
+  nicht welche Datei sich geändert hat. Derselbe Test verlangt zu jeder Nummer
+  einen Abschnitt.
+- **Ein Commit je Vorhaben.** Feature-Branches werden **als Sammelcommit**
+  nach `main` gebracht (Squash), nicht als Verlauf einzelner Schritte. Auf
+  `main` steht damit je Zeile ein abgeschlossenes Vorhaben.
+- **Der Tag sitzt auf `main`.** `vX.Y.Z` kommt auf den Sammelcommit, der die
+  Fassung ausmacht — nie auf einen Arbeitsstand. Erst dann erzeugt die CI aus
+  `type=semver` ein Registry-Tag; ohne Git-Tag entstehen nur `sha-*` und
+  `latest`.
+- **Der Push löst ein Mensch aus**, nach `pnpm verify`.
+
 ## Quellen
 
 - Specs: `docs/superpowers/specs/` (Fundament: `2026-09-05-fundament-design.md`; Webseite als Template: `2026-09-07-site-template-design.md`; Prüfringe: `2026-09-08-pruefringe-design.md`; Löschbarkeit und Mediathek: `2026-09-09-loeschbarkeit-und-mediathek-design.md`; Dokument-Pipeline und Basis-Vorlagen: `2026-09-09-dokument-pipeline-und-basisvorlagen-design.md`; Kontakte: `2026-09-10-kontakte-design.md`; Dokumente und Korrespondenz: `2026-09-10-dokumente-und-korrespondenz-design.md`; Volltext und Texterkennung: `2026-09-11-volltext-und-texterkennung-design.md`; Akte fertig: `2026-09-12-akte-fertig-design.md`; Mediathek Auswahl und Vorschau: `2026-09-13-mediathek-auswahl-und-vorschau-design.md`)

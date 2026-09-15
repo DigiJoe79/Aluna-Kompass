@@ -1,10 +1,18 @@
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { NextConfig } from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
 
 const withNextIntl = createNextIntlPlugin();
 
+// Die Fassung des Produkts steht an genau einer Stelle. Von hier reicht sie
+// der Bau weiter — an /api/health und in den Fuss der Schiene.
+const { version } = JSON.parse(
+  readFileSync(path.join(import.meta.dirname, '../../package.json'), 'utf8'),
+) as { version: string };
+
 const nextConfig: NextConfig = {
+  env: { KOMPASS_VERSION: version },
   transpilePackages: [
     '@kompass/core',
     '@kompass/documents',
