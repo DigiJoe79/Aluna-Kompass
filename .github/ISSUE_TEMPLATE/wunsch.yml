@@ -1,0 +1,28 @@
+name: Idee oder Wunsch
+description: Etwas fehlt oder ginge besser
+labels: [idee]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        `docs/nordstern.md` beschreibt in Abschnitt 2, was Kompass bewusst
+        **nicht** werden soll — ein Blick dorthin spart womöglich Zeit.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Welches Problem hast du?
+      description: Die Situation, nicht die Lösung — die finden wir gemeinsam.
+    validations: { required: true }
+  - type: textarea
+    id: heute
+    attributes:
+      label: Wie behilfst du dir heute?
+      description: Auch „gar nicht" ist eine Antwort.
+    validations: { required: false }
+  - type: input
+    id: verein
+    attributes:
+      label: Was für ein Verein?
+      description: Größe und Art helfen einzuschätzen, für wen die Funktion zählt.
+      placeholder: "Tierschutzverein, 30 Mitglieder"
+    validations: { required: false }

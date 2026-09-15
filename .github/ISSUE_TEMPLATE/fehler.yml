@@ -1,0 +1,37 @@
+name: Fehler melden
+description: Etwas funktioniert nicht wie erwartet
+labels: [fehler]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Keine Sicherheitslücken hier melden** — dafür gibt es den privaten
+        Weg in [SECURITY.md](../blob/main/SECURITY.md). Ein offenes Issue
+        macht die Lücke bekannt, bevor sie geschlossen ist.
+  - type: textarea
+    id: was
+    attributes:
+      label: Was ist passiert?
+      description: Und was hättest du stattdessen erwartet?
+    validations: { required: true }
+  - type: textarea
+    id: schritte
+    attributes:
+      label: Wie kommt man dorthin?
+      placeholder: |
+        1. Verwaltung → Nutzer öffnen
+        2. …
+    validations: { required: true }
+  - type: input
+    id: fassung
+    attributes:
+      label: Welche Fassung?
+      description: Steht im Fuß der Seitenleiste und unter /api/health.
+      placeholder: "0.1.0 (Build a1df4e8)"
+    validations: { required: true }
+  - type: textarea
+    id: sonst
+    attributes:
+      label: Sonst noch etwas?
+      description: Browser, Betriebssystem, Protokollauszug — was dir relevant scheint.
+    validations: { required: false }

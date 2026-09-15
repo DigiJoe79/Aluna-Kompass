@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Sicherheitslücke melden
+    url: https://github.com/DigiJoe79/Aluna-Kompass/security/advisories/new
+    about: Privat und nur für die Betreuer sichtbar — bitte nicht als Issue.
+  - name: Quellcode der mitgelieferten Fremdsoftware
+    url: https://github.com/DigiJoe79/Aluna-Kompass/blob/main/THIRD-PARTY-NOTICES.md
+    about: GPL- und LGPL-Bestandteile des Images, mit Quellen und Angebot.

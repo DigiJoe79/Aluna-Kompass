@@ -81,6 +81,8 @@ Regeln, Prinzipien und alle Befehle: [`AGENTS.md`](AGENTS.md). Die neun Prinzipi
   Meldekanal — der Weg steht in [`SECURITY.md`](SECURITY.md).
 - **Quellcode der mitgelieferten Fremdsoftware** (GPL/LGPL): ein Issue genügt.
   Die Aufstellung steht in [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
+- **Mitarbeiten**: [`CONTRIBUTING.md`](CONTRIBUTING.md) — was man zuerst wissen
+  muss; die Regeln selbst stehen in [`AGENTS.md`](AGENTS.md).
 
 ## Lizenz
 
