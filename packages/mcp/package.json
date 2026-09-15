@@ -5,6 +5,6 @@
   "type": "module",
   "exports": { ".": "./src/index.ts" },
   "scripts": { "test": "vitest run", "typecheck": "tsc --noEmit" },
-  "dependencies": { "@kompass/core": "workspace:*", "@modelcontextprotocol/server": "^2.0.0", "zod": "^4.5.4" },
-  "devDependencies": { "@modelcontextprotocol/client": "^2.0.0", "@types/node": "^26.4.1", "typescript": "^6.0.3", "vitest": "^5.0.0" }
+  "dependencies": { "@kompass/core": "workspace:*", "@modelcontextprotocol/server": "^2.0.0", "zod": "^4.6.2" },
+  "devDependencies": { "@modelcontextprotocol/client": "^2.0.0", "@types/node": "^26.5.1", "typescript": "^6.0.3", "vitest": "^5.0.0" }
 }
