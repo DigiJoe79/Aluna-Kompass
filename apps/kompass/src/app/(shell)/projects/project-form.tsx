@@ -2,7 +2,7 @@
 
 import type { ProjectRecord } from '@kompass/module-projects';
 import { useTranslations } from 'next-intl';
-import { useActionState, useEffect } from 'react';
+import { useActionState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { FormField } from '@/components/forms/form-field';
 import { LocalizedField } from '@/components/forms/localized-field';
@@ -21,7 +21,10 @@ export function ProjectForm({ project, locales }: { project: ProjectRecord | nul
   const c = useTranslations('content');
   const tCommon = useTranslations('common');
   const [state, action] = useActionState(saveProjectAction, idleState);
-  const errors = state.status === 'error' ? state.fieldErrors : {};
+  // `useMemo`, weil `errors` sonst bei jedem Render ein neues Objekt waere und
+  // der Effekt unten damit bei jedem Render feuerte statt nur bei einer
+  // Zustandsaenderung — der Toast erschiene mehrfach.
+  const errors = useMemo(() => (state.status === 'error' ? state.fieldErrors : {}), [state]);
   useEffect(() => { if (state.status === 'success') toast.success(state.message ?? ''); else if (state.status === 'error' && Object.keys(errors).length === 0) toast.error(state.message); }, [state, errors]);
   return (
     <form action={action} className="overflow-hidden rounded-lg border border-line bg-surface">

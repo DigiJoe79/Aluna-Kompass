@@ -5,7 +5,21 @@ on:
     tags: ['v*']
     # Greift nur, wenn *alle* geaenderten Dateien passen; ein gemischter
     # Commit baut weiterhin.
-    paths-ignore: ['**.md', 'docs/**', 'docker-compose.*.yml', '.env.*.example']
+    #
+    # `*.md` mit einem Stern trifft nur das Wurzelverzeichnis. `**.md` waere
+    # falsch: Es naehme auch `docs/handbuch/**` heraus, und das ist kein
+    # Arbeitsdokument, sondern Produktinhalt — der Dockerfile kopiert es ins
+    # Image, und `handbook-complete.test.ts` verlangt fuer jede Route eine
+    # Seite. Ein Commit, der nur das Handbuch anfasst, muss also bauen.
+    paths-ignore:
+      - '*.md'
+      - 'docs/nordstern.md'
+      - 'docs/backlog.md'
+      - 'docs/superpowers/**'
+      - 'docs/design/**'
+      - 'docs/design_handoff_akte_ablegen_entwurf/**'
+      - 'docker-compose.*.yml'
+      - '.env.*.example'
   pull_request:
 
 # Ein neuer Push verdraengt den laufenden Build desselben Branches, damit nie
@@ -35,6 +49,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng poppler-utils
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
+      - run: pnpm lint
       - run: pnpm test
       # Die Browser sind gross und aendern sich nur mit der Playwright-Version;
       # ohne Cache kostet jeder Lauf eine Minute Download.
@@ -63,7 +78,12 @@ jobs:
     # jeder Fehlschlag im zweiten Ring eine weitere Runde von einer
     # Viertelstunde, bevor der dritte überhaupt etwas sagen darf. Nur
     # hochgeladen wird das Bild dann nicht — siehe letzter Schritt.
-    if: ${{ !cancelled() && github.event_name == 'push' }}
+    #
+    # Auch bei einem Pull Request: Die Verpackung ist die Schicht, die am
+    # 7.9. drei von vier Fehlschlägen verursacht hat, und ein Beitrag von
+    # aussen waere sonst gruen, ohne dass je ein Image gebaut wurde. Der
+    # Push-Schritt am Ende bleibt auf `push` beschraenkt.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     permissions: { contents: read, packages: write }
     steps:
@@ -129,7 +149,7 @@ jobs:
       # Genau das geprüfte Bild bekommt die Namen und wird hochgeladen — kein
       # zweiter Bau, der sich vom getesteten unterscheiden koennte.
       - name: Push the tested image
-        if: needs.test.result == 'success'
+        if: ${{ needs.test.result == 'success' && github.event_name == 'push' }}
         run: |
           # GHCR nimmt gelegentlich alle Schichten an und lehnt danach das
           # Manifest mit „unknown blob“ ab: Die letzte, grosse Schicht ist

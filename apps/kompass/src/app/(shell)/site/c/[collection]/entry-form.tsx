@@ -2,7 +2,7 @@
 
 import type { FieldSchema } from '@kompass/module-site/client';
 import { useTranslations } from 'next-intl';
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import { FormField } from '@/components/forms/form-field';
 import { FormActionBar } from '@/components/forms/form-action-bar';
@@ -44,7 +44,10 @@ export function EntryForm({
     setSlug(loaded.slug);
   };
   const [state, action] = useActionState(saveEntryAction, idleState);
-  const errors = state.status === 'error' ? state.fieldErrors : {};
+  // `useMemo`, weil `errors` sonst bei jedem Render ein neues Objekt waere und
+  // der Effekt unten damit bei jedem Render feuerte statt nur bei einer
+  // Zustandsaenderung — der Toast erschiene mehrfach.
+  const errors = useMemo(() => (state.status === 'error' ? state.fieldErrors : {}), [state]);
 
   useEffect(() => {
     if (state.status === 'success') toast.success(state.message ?? '');

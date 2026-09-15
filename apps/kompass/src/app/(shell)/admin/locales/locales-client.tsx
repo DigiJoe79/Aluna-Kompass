@@ -2,7 +2,7 @@
 
 import type { LocaleRemovalPreview } from '@kompass/core';
 import { useTranslations } from 'next-intl';
-import { useActionState, useEffect, useRef, useState } from 'react';
+import { useActionState, useEffect, useRef, useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { FormField } from '@/components/forms/form-field';
@@ -18,7 +18,10 @@ export function LocalesClient({ locales }: { locales: string[] }) {
   const t = useTranslations('admin.locales');
   const [state, action] = useActionState(addLocaleAction, idleState);
   const formRef = useRef<HTMLFormElement>(null);
-  const errors = state.status === 'error' ? state.fieldErrors : {};
+  // `useMemo`, weil `errors` sonst bei jedem Render ein neues Objekt waere und
+  // der Effekt unten damit bei jedem Render feuerte statt nur bei einer
+  // Zustandsaenderung — der Toast erschiene mehrfach.
+  const errors = useMemo(() => (state.status === 'error' ? state.fieldErrors : {}), [state]);
 
   const [toRemove, setToRemove] = useState<string | null>(null);
   const [preview, setPreview] = useState<LocaleRemovalPreview | null>(null);
