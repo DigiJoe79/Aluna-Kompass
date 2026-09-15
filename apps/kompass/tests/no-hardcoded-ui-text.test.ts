@@ -42,7 +42,7 @@ const SICHTBARE_ATTRIBUTE = new Set(['placeholder', 'title', 'aria-label', 'alt'
  * - `AK`, `LOGO`: Platzhalter für eine fehlende Grafik — Initialen des
  *   Produkts und ein Kürzel, beide sprachneutral, das zweite `aria-hidden`.
  */
-const ERLAUBT = new Set(['px', 'PDF', 'esc', 'AK', 'LOGO']);
+const ERLAUBT = new Set(['px', 'PDF', 'esc', 'AK', 'LOGO', 'deg,']);
 
 /**
  * Der Name einer Sprache steht in dieser Sprache — „English“ bleibt
@@ -51,6 +51,26 @@ const ERLAUBT = new Set(['px', 'PDF', 'esc', 'AK', 'LOGO']);
  * Erkannt an der Form „Name (kürzel)“, wie sie die Sprachauswahl verwendet.
  */
 const ENDONYM = /^[^()]+ \([a-z]{2}(-[a-z]{2})?\)$/;
+
+/**
+ * Ein Satzteil aus einem Template-Literal: Buchstaben, Leerzeichen und
+ * Satzzeichen, wie sie in Prosa vorkommen. Alles Technische — `=`, `(`, `"`,
+ * `;`, `/`, `<`, `{` — schließt aus, denn dort stehen Query-Parameter,
+ * HTTP-Kopfzeilen und CSS-Funktionen.
+ */
+const PROSA = /^[\p{L}\p{M} ,.!?:–—„“»«×%'’-]+$/u;
+
+/** `t(\`filters.channels.${x}\`)` — ein Präfix, kein Text. */
+const istUebersetzungsschluessel = (teil: string) => teil.endsWith('.') && !teil.includes(' ');
+
+/** Steht dieses Literal in `className`? Dann ist es Gestaltung, kein Text. */
+function inKlassenAttribut(node: ts.Node): boolean {
+  for (let p = node.parent; p; p = p.parent) {
+    if (ts.isJsxAttribute(p)) return p.name.getText() === 'className';
+    if (ts.isJsxElement(p) || ts.isJsxSelfClosingElement(p)) return false;
+  }
+  return false;
+}
 
 /** Mindestens zwei zusammenhängende Buchstaben — sonst ist es ein Zeichen, keine Beschriftung. */
 const TRAEGT_TEXT = /\p{L}{2,}/u;
@@ -98,6 +118,26 @@ function offendersIn(file: string, source: string): string[] {
       if (ziel === 'toast' && ['success', 'error', 'info', 'warning', 'message'].includes(methode)) {
         for (const arg of node.arguments) {
           if (ts.isStringLiteral(arg) && TRAEGT_TEXT.test(arg.text)) found.push(`${zeile(node)}: toast.${methode}("${arg.text}")`);
+        }
+      }
+    }
+    /**
+     * Ein Template-Literal mit festem Text dazwischen. Sechs deutsche Sätze
+     * standen so in `site/template/sync-client.tsx` und beschrieben jeden
+     * Befund eines Template-Abgleichs — kein Wächter sah sie, weil beide nur
+     * einfache Zeichenketten prüften.
+     */
+    if (ts.isTemplateExpression(node) && !inKlassenAttribut(node)) {
+      for (const roh of [node.head.text, ...node.templateSpans.map((span) => span.literal.text)]) {
+        const teil = roh.trim();
+        if (teil.length < 3 || istUebersetzungsschluessel(teil) || !PROSA.test(teil) || ERLAUBT.has(teil)) continue;
+        const mehrereWoerter = teil.split(/\s+/).filter((w) => /\p{L}{2,}/u.test(w)).length >= 2;
+        // Ein einzelnes Wort zählt, wenn es an einen Platzhalter grenzt:
+        // `${lang} entfernen` ist ein Satz, `${a}${b}` nicht.
+        const grenztAnPlatzhalter = /^\s|\s$/.test(roh) && /\p{L}{3,}/u.test(teil);
+        if (mehrereWoerter || grenztAnPlatzhalter) {
+          found.push(`${zeile(node)}: \`…${teil}…\``);
+          break;
         }
       }
     }

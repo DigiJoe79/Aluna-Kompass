@@ -1259,7 +1259,17 @@
       "harmless": "Unkritisch:",
       "localesMissing": "Das Template fordert Sprachen, die nicht eingerichtet sind: {locales}. Legen Sie sie unter Sprachen an.",
       "readDone": "Template eingelesen.",
-      "name": "Name"
+      "name": "Name",
+      "finding": {
+        "added": "{name} wird leer angelegt",
+        "renamed": "{name} übernimmt den Inhalt von {from}",
+        "removed": "{name} entfällt",
+        "removedFilled": "{name} entfällt — {count}× gefüllt",
+        "retyped": "{name} wechselt den Typ ({from} → {to})",
+        "retypedLossy": "{name} wechselt den Typ ({from} → {to}) — Inhalt geht verloren",
+        "overLimit": "{name} hat {have} Einträge, erlaubt sind {max}",
+        "valueGone": "{name}: „{value}“ entfällt und wird zu „{replacement}“ ({count}×)"
+      }
     },
     "seed": {
       "title": "Startinhalte",
@@ -1353,7 +1363,8 @@
         },
         "cancel": "Abbrechen",
         "published": "Publiziert",
-        "title": "Publizieren"
+        "title": "Publizieren",
+        "target": "Ziel: {url}"
       },
       "done": "Publiziert: {changed} geändert, {added} neu, {removed} entfallen.",
       "history": {
@@ -1941,7 +1952,8 @@
       },
       "folderPathPlaceholder": "z. B. behoerden/finanzamt",
       "typeKeyPlaceholder": "z. B. notice",
-      "typeShortPlaceholder": "z. B. NOT"
+      "typeShortPlaceholder": "z. B. NOT",
+      "removeLanguage": "{lang} entfernen"
     },
     "backToDocument": "Zurück zum Dokument"
   }

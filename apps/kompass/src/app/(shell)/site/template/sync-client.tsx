@@ -7,21 +7,26 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { applySyncAction, previewSyncAction, type SyncPreviewState } from '../actions';
 
-function findingText(f: Finding): string {
+/**
+ * Der Satz zu einem Befund. Er stand bis zum 2026-09-15 als Template-Literal
+ * hier — sechs deutsche Sätze, die kein Wächter sah, weil er nur einfache
+ * Zeichenketten prüfte.
+ */
+function findingText(f: Finding, t: ReturnType<typeof useTranslations<'site.template'>>): string {
   const name = f.label ?? f.path;
   switch (f.kind) {
     case 'added':
-      return `${name} wird leer angelegt`;
+      return t('finding.added', { name });
     case 'renamed':
-      return `${name} übernimmt den Inhalt von ${f.from}`;
+      return t('finding.renamed', { name, from: f.from });
     case 'removed':
-      return `${name} entfällt${f.filled > 0 ? ` — ${f.filled}× gefüllt` : ''}`;
+      return f.filled > 0 ? t('finding.removedFilled', { name, count: f.filled }) : t('finding.removed', { name });
     case 'retyped':
-      return `${name} wechselt den Typ (${f.from} → ${f.to})${f.lossless ? '' : ' — Inhalt geht verloren'}`;
+      return t(f.lossless ? 'finding.retyped' : 'finding.retypedLossy', { name, from: f.from, to: f.to });
     case 'overLimit':
-      return `${name} hat ${f.have} Einträge, erlaubt sind ${f.max}`;
+      return t('finding.overLimit', { name, have: f.have, max: f.max });
     case 'valueGone':
-      return `${name}: „${f.value}“ entfällt und wird zu „${f.replacement}“ (${f.count}×)`;
+      return t('finding.valueGone', { name, value: f.value, replacement: f.replacement, count: f.count });
     default:
       return name;
   }
@@ -70,21 +75,21 @@ export function SyncClient({ name }: { name: string | null }) {
           {blocking.length > 0 ? (
             <div>
               <p className="text-[12px] font-semibold uppercase tracking-[.04em] text-error">{t('blocking')}</p>
-              <ul className="mt-1 list-disc pl-5 text-[13px]">{blocking.map((f, i) => <li key={i}>{findingText(f)}</li>)}</ul>
+              <ul className="mt-1 list-disc pl-5 text-[13px]">{blocking.map((f, i) => <li key={i}>{findingText(f, t)}</li>)}</ul>
             </div>
           ) : null}
 
           {lossy.length > 0 ? (
             <div>
               <p className="text-[12px] font-semibold uppercase tracking-[.04em] text-warning">{t('lossy')}</p>
-              <ul className="mt-1 list-disc pl-5 text-[13px]">{lossy.map((f, i) => <li key={i}>{findingText(f)}</li>)}</ul>
+              <ul className="mt-1 list-disc pl-5 text-[13px]">{lossy.map((f, i) => <li key={i}>{findingText(f, t)}</li>)}</ul>
             </div>
           ) : null}
 
           {harmless.length > 0 ? (
             <div>
               <p className="text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink">{t('harmless')}</p>
-              <ul className="mt-1 list-disc pl-5 text-[13px] text-ink-2">{harmless.map((f, i) => <li key={i}>{findingText(f)}</li>)}</ul>
+              <ul className="mt-1 list-disc pl-5 text-[13px] text-ink-2">{harmless.map((f, i) => <li key={i}>{findingText(f, t)}</li>)}</ul>
             </div>
           ) : null}
 

@@ -90,7 +90,7 @@ export function TextPanel({
                       type="button"
                       onClick={() => handleRemoveLanguage(lang)}
                       className="text-muted-ink hover:text-error"
-                      aria-label={`${lang} entfernen`}
+                      aria-label={t('removeLanguage', { lang })}
                     >
                       ×
                     </button>

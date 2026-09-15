@@ -41,7 +41,7 @@ export function PublishCard({
               ? t('noTarget')
               : hasViolations
               ? t('blocked')
-              : `Ziel: ${publicUrl ?? '—'}`}
+              : t('target', { url: publicUrl ?? '—' })}
           </p>
         </div>
 
