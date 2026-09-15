@@ -75,4 +75,9 @@ Regeln, Prinzipien und alle Befehle: [`AGENTS.md`](AGENTS.md). Die neun Prinzipi
 
 ## Lizenz
 
-MIT — siehe [`LICENSE`](LICENSE).
+Apache-2.0 — siehe [`LICENSE`](LICENSE) und [`NOTICE`](NOTICE).
+
+Die Lizenz erlaubt Nutzung, Änderung und Weitergabe, auch kommerziell.
+Sie gewährt ausdrücklich Patentrechte (§ 3), verlangt einen Hinweis auf
+geänderte Dateien (§ 4b) und räumt keine Rechte am Namen „Aluna Kompass“
+ein (§ 6).
