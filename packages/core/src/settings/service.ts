@@ -35,6 +35,38 @@ export function readAllSettings(deps: Deps): Record<string, unknown> {
 }
 
 /**
+ * Die beiden Lesehelfer oben tragen bewusst keine Rechteprüfung: Der halbe Kern
+ * liest damit seine eigene Konfiguration (Fristen, Sprachen, Theme, Modulliste),
+ * und dort gibt es keinen Aufrufer, dem etwas verweigert würde. Wer Einstellungen
+ * **für jemanden** liest — Oberfläche, MCP —, nimmt die beiden Dienste hier:
+ * Sie führen dieselbe Prüfung wie `setSetting`, weil derselbe Bestand dahinter
+ * liegt. Unter `organization.*` stehen Bankverbindung, Steuernummer und
+ * Registereintrag; das ist nichts, was jede Rolle sehen muss.
+ */
+export async function listSettings(deps: Deps, ctx: CallContext): Promise<Result<Record<string, unknown>>> {
+  const denied = requirePermission(ctx, 'settings.manage');
+  if (denied) return denied;
+  return ok(readAllSettings(deps));
+}
+
+const getSettingSchema = z.object({ key: z.string().min(1) });
+
+export async function getSetting(
+  deps: Deps,
+  ctx: CallContext,
+  input: unknown,
+): Promise<Result<{ key: string; value: unknown }>> {
+  const denied = requirePermission(ctx, 'settings.manage');
+  if (denied) return denied;
+  const parsed = validate(deps, getSettingSchema, input);
+  if (!parsed.ok) return parsed;
+  if (!deps.registry.settingDefinitions.has(parsed.value.key)) {
+    return invalid([{ path: 'key', message: 'unknownSetting' }]);
+  }
+  return ok({ key: parsed.value.key, value: readSetting(deps, parsed.value.key) });
+}
+
+/**
  * Schreibt ohne Rechteprüfung (für Setup, Import, Theme-Service), aber immer validiert
  * und protokolliert. Muss innerhalb einer Transaktion des Aufrufers laufen.
  */
