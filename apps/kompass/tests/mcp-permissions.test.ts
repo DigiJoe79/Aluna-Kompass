@@ -47,9 +47,13 @@ describe('reading tools check permissions too', () => {
     for (const tool of coreMcpTools) {
       if (OHNE_RECHT.has(tool.name)) continue;
       // Leere Argumente genuegen: Die Rechtepruefung steht vor der Validierung,
-      // ein Werkzeug ohne sie antwortet also auch ohne brauchbare Eingabe. Wirft
-      // eines davor (media_upload dekodiert erst, siehe Backlog), ist das kein
-      // Erfolg und damit kein Leck — hier geht es nur um herausgegebene Daten.
+      // ein Werkzeug ohne sie antwortet also auch ohne brauchbare Eingabe.
+      //
+      // Der direkte Aufruf umgeht die Schemapruefung, die das MCP-SDK sonst
+      // davorlegt — ein Werkzeug, das seine Argumente anfasst, bevor es den
+      // Dienst ruft (media_upload dekodiert Base64), wirft deshalb hier. Im
+      // Betrieb kommt dort nie eine ungueltige Eingabe an; ein Wurf ist kein
+      // Erfolg und damit kein Leck, und hier geht es nur um herausgegebene Daten.
       let ergebnis: { ok: boolean };
       try {
         ergebnis = await tool.handler(deps, ohneRechte, {} as never);
