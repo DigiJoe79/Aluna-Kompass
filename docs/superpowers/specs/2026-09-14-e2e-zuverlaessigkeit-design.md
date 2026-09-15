@@ -139,9 +139,16 @@ Danach: `pnpm verify` lokal, nicht auf die CI warten.
 Nicht Teil dieser Arbeit:
 
 - Die Ringstruktur (siehe Abschnitt 1, „Nicht die Ursache").
-- `retries` in den Playwright-Konfigurationen. Ein Wiederholungsversuch
-  verdeckt beide Mechanismen, statt sie zu beseitigen; die Frage wird erst nach
-  der Messung wieder gestellt.
+- ~~`retries` in den Playwright-Konfigurationen.~~ **Nachtrag 15.09.: umgesetzt,
+  die ursprüngliche Ablehnung war falsch.** Die Begründung — ein
+  Wiederholungsversuch verdecke die Mechanismen — stimmt, geht aber am Preis
+  vorbei: Bezahlt wird sie mit einem roten Lauf und einer Untersuchungsrunde je
+  Wackler. Der erste Lauf nach A und B fiel an einem **dritten** Mechanismus
+  (`dms.spec.ts:592`, der Empfangsdialog aus dem Befund vom 13.09.), und es
+  werden weitere auftauchen. `retries: process.env.CI ? 1 : 0` trennt „ein Test
+  wackelt" von „ein Push ist blockiert"; verdeckt wird nichts, weil Playwright
+  den Fall als `flaky` meldet und im Bericht führt. Belegt: ohne `CI` Exit 1
+  und `1 failed`, mit `CI=1` Exit 0 und `1 flaky`.
 - Die Lücke in `e2e/warmup.ts` (Route Handler und dynamische Segmente werden
   nicht vorgewärmt, Ursache des `dms`-Fehlschlags vom 14.09. im `test`-Ring).
   Eigener Befund, eigener Commit — er gehört zum dev-Ring, nicht zu A oder B.

@@ -99,7 +99,21 @@ export default defineConfig({
   testMatch: '**/*.spec.ts',
   fullyParallel: false,
   workers: 1,
-  retries: 0,
+  /**
+   * Online ein Wiederholungsversuch, lokal keiner.
+   *
+   * Das trennt zwei Dinge, die nichts miteinander zu tun haben: ob ein Test
+   * wackelt, und ob ein Push blockiert ist. Ohne diese Trennung kostete jeder
+   * Wackler einen roten Lauf und eine Untersuchungsrunde — bei einer Quote von
+   * jedem vierten Push am 14.09. Verdeckt wird dabei nichts: Playwright meldet
+   * einen Fall, der erst im zweiten Anlauf durchkommt, als `flaky`, und der
+   * Bericht führt ihn weiter auf.
+   *
+   * Lokal bleibt es bei null. Beim Entwickeln soll ein Wackler sofort
+   * auffallen, nicht weggebügelt werden — `pnpm verify` ist die Stelle, an der
+   * er ehrlich zuschlagen muss.
+   */
+  retries: process.env.CI ? 1 : 0,
   // Im Container läuft der Astro-Build gegen ein Volume und ohne warmen
   // Dev-Cache; 30 Sekunden wie im Entwicklungsmodus reichen dafür nicht.
   timeout: 240_000,
