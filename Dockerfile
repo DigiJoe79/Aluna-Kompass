@@ -6,9 +6,10 @@ ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH CI=true
 RUN npm install -g pnpm@11.25.0 && pnpm --version
 WORKDIR /app
 
-FROM base AS deps
+# Werkzeuge und Paketlisten, gemeinsam fuer beide Installationen darunter.
+FROM base AS manifests
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc .pnpmfile.cjs ./
 COPY apps/kompass/package.json apps/kompass/
 COPY packages/core/package.json packages/core/
 COPY packages/documents/package.json packages/documents/
@@ -22,6 +23,8 @@ COPY packages/modules/dms/package.json packages/modules/dms/
 COPY packages/modules/projects/package.json packages/modules/projects/
 COPY packages/modules/site/package.json packages/modules/site/
 COPY templates/verein-basis/package.json templates/verein-basis/
+
+FROM manifests AS deps
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
@@ -30,6 +33,14 @@ COPY . .
 # das readEnv() aufruft. Zur Bauzeit gibt es keine .env, deshalb ein
 # Platzhalter — zur Laufzeit wird die Umgebung erneut gelesen, aus env_file.
 RUN SESSION_SECRET=build-time-only-not-a-real-secret-0000000000 pnpm --filter @kompass/app build
+
+# Nur die Laufzeitabhaengigkeiten, fuer das Laufzeit-Image. Der Bau oben
+# braucht TypeScript, Tailwind und Co.; der Container braucht sie nicht, und
+# Playwright, vitest, eslint oder drizzle-kit wuerden nur mitverteilt (Q5).
+# Eine frische Installation, keine bereinigte: `--prod` ueber eine volle
+# node_modules entfernt nur die Verweise, die Pakete blieben unter .pnpm liegen.
+FROM manifests AS runtime-deps
+RUN pnpm install --frozen-lockfile --prod
 
 FROM node:26-bookworm-slim AS runner
 ARG TYPST_VERSION=0.15.1
@@ -84,7 +95,10 @@ COPY --from=build --chown=node:node /app/packages/markdown ./packages/markdown
 COPY --from=build --chown=node:node /app/packages/core/src/db/migrations ./packages/core/src/db/migrations
 COPY --from=build --chown=node:node /app/packages/documents/templates ./packages/documents/templates
 COPY --from=build --chown=node:node /app/packages/documents/fonts ./packages/documents/fonts
-COPY --from=build --chown=node:node /app/node_modules ./node_modules
+# Die node_modules aus runtime-deps, nicht aus dem Bau. Das Standalone-Paket
+# von Next bringt nur, was es beim Buendeln verfolgt; der Site-Build ruft Astro
+# und das Template laedt @kompass/site-template, beides ausserhalb dieser Spur.
+COPY --from=runtime-deps --chown=node:node /app/node_modules ./node_modules
 COPY --chown=node:node scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY --chown=node:node scripts/seed-site-template.sh /usr/local/bin/seed-site-template.sh
 COPY --chown=node:node scripts/seed-document-templates.sh /usr/local/bin/seed-document-templates.sh

@@ -13,11 +13,11 @@
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",
     "@kompass/markdown": "workspace:*",
+    "@kompass/site-template": "workspace:*",
     "astro": "^7.3.1"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
-    "@kompass/site-template": "workspace:*",
     "@types/node": "^26.4.1",
     "typescript": "^6.0.3",
     "vitest": "^5.0.0"

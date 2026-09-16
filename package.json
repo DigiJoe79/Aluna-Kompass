@@ -15,13 +15,17 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm --filter @kompass/app lint",
     "image": "docker build --build-arg KOMPASS_BUILD=$(git rev-parse --short HEAD 2>/dev/null || echo local) -t kompass-local .",
-    "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm e2e:cold && pnpm image && pnpm e2e:image",
+    "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm e2e:cold && pnpm image && pnpm image:check && pnpm e2e:image",
+    "image:check": "scripts/image-runtime-only.sh kompass-local && scripts/third-party-notices.sh kompass-local --pruefen",
     "import:prototype": "tsx scripts/import-prototype.ts",
     "dev:reset": "tsx scripts/dev-reset.ts",
     "seed": "tsx scripts/seed.ts",
     "image:release": "docker build --platform linux/amd64 --build-arg KOMPASS_BUILD=$(git rev-parse --short HEAD 2>/dev/null || echo local) -t kompass-local:amd64 .",
     "e2e:image": "pnpm --filter @kompass/app e2e:image",
     "e2e:cold": "rm -rf apps/kompass/.next && pnpm --filter @kompass/app e2e"
+  },
+  "dependencies": {
+    "@kompass/site-template": "workspace:*"
   },
   "devDependencies": {
     "@kompass/core": "workspace:*",
@@ -30,7 +34,6 @@
     "@kompass/module-contacts": "workspace:*",
     "@kompass/module-dms": "workspace:*",
     "@kompass/module-site": "workspace:*",
-    "@kompass/site-template": "workspace:*",
     "tsx": "^4.19.3",
     "@kompass/module-projects": "workspace:*"
   }

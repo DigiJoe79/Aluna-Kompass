@@ -145,6 +145,10 @@ jobs:
       # sie nicht mehr zum Bild passt — vor dem Hochladen, nicht danach.
       - name: Third-party notices match the image
         run: scripts/third-party-notices.sh kompass-local --pruefen
+      # Playwright, vitest, eslint und Co. laufen im Container nie; im Image
+      # waeren sie nur mitverteilte Angriffsflaeche (Q5).
+      - name: Image carries no development tools
+        run: scripts/image-runtime-only.sh kompass-local
 
       # Genau das geprüfte Bild bekommt die Namen und wird hochgeladen — kein
       # zweiter Bau, der sich vom getesteten unterscheiden koennte.

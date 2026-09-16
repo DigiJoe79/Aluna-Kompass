@@ -9,7 +9,7 @@ Person, die diesen Rechner betreut.
 
 - **Docker** mit Compose, auf amd64 oder arm64. Das veröffentlichte Image ist
   für amd64 gebaut; auf anderer Architektur baut man es selbst (`pnpm image`).
-- **Platz:** rund 2 GB für das Image, dazu die Daten des Vereins. Die Datenbank
+- **Platz:** rund 1,6 GB für das Image, dazu die Daten des Vereins. Die Datenbank
   bleibt lange klein; den Ausschlag geben abgelegte Dokumente und Medien.
 - **Arbeitsspeicher:** 1 GB reicht im Alltag. Beim Bauen der Webseite und bei
   der Texterkennung steigt der Bedarf kurzzeitig; auf einem Gerät mit 2 GB
