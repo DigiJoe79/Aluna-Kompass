@@ -16,7 +16,7 @@ import { StartPasswordDialog } from './start-password-dialog';
 
 type Created = { user: { name: string; email: string }; startPassword: string };
 
-export function CreateUserDialog({ roles }: { roles: { id: string; name: string }[] }) {
+export function CreateUserDialog({ roles }: { roles: { id: string; name: string; grantable: boolean }[] }) {
   const t = useTranslations('users.create');
   const c = useTranslations('common');
   const [open, setOpen] = useState(false);
@@ -50,7 +50,7 @@ export function CreateUserDialog({ roles }: { roles: { id: string; name: string 
                 <div className="flex flex-wrap gap-4">
                   {roles.map((role) => (
                     <div key={role.id} className="flex items-center gap-2">
-                      <Checkbox id={`role-${role.id}`} name="roleIds" value={role.id} />
+                      <Checkbox id={`role-${role.id}`} name="roleIds" value={role.id} disabled={!role.grantable} />
                       <Label htmlFor={`role-${role.id}`}>{role.name}</Label>
                     </div>
                   ))}

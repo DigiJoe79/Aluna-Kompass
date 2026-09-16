@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import { CORE_PERMISSIONS } from '../src/permissions/core';
 import { auditLog } from '../src/db/schema';
 import { countActiveProtectedHolders, getEffectivePermissions } from '../src/roles/effective';
 import { assignRole, createRole, listRoles, removeRole, setRolePermissions, updateRole } from '../src/roles/service';
 import { unwrap } from '../src/result';
 import { auditEntry, createTestDeps, ctxWith, insertRole, insertUser } from '../src/testing';
 
-const admin = ctxWith(['roles.manage', 'users.manage']);
+/** Administrator: Rollen und Konten mit allen Rechten vergibt nur, wer sie selbst hat. */
+const admin = ctxWith(CORE_PERMISSIONS);
 
 describe('roles service', () => {
   it('creates a role with no permissions and audits it', async () => {

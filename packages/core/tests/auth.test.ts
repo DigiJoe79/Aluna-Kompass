@@ -4,6 +4,7 @@ import { changeOwnPassword, LOCK_MINUTES, login, MAX_FAILED_LOGINS } from '../sr
 import { hashPassword } from '../src/auth/password';
 import { resolveSession, revokeSession } from '../src/auth/sessions';
 import { auditLog, sessions, users } from '../src/db/schema';
+import { CORE_PERMISSIONS } from '../src/permissions/core';
 import { assignRole, createRole, setRolePermissions } from '../src/roles/service';
 import { unwrap } from '../src/result';
 import { auditEntry, createTestDeps, ctxWith, insertUser } from '../src/testing';
@@ -19,7 +20,7 @@ describe('login and sessions', () => {
   it('logs in with correct credentials, creates a session and resolves it to a context with effective permissions', async () => {
     const deps = createTestDeps();
     const userId = await userWithPassword(deps);
-    const admin = ctxWith(['roles.manage', 'users.manage']);
+    const admin = ctxWith(CORE_PERMISSIONS);
     const role = unwrap(await createRole(deps, admin, { name: 'Prüfer' }));
     unwrap(await setRolePermissions(deps, admin, { roleId: role.id, permissionKeys: ['audit.view'] }));
     unwrap(await assignRole(deps, admin, { userId, roleId: role.id }));

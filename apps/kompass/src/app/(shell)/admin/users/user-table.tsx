@@ -1,6 +1,6 @@
 'use client';
 
-import type { UserSummary } from '@kompass/core';
+import type { ListedUser } from '@kompass/core';
 import { MoreHorizontal } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useMemo, useState, useTransition } from 'react';
@@ -19,14 +19,14 @@ import { cn } from '@/lib/utils';
 import { resetStartPasswordAction, setUserActiveAction, setUserRolesAction } from './actions';
 import { StartPasswordDialog } from './start-password-dialog';
 
-export function UserTable({ users, roles }: { users: UserSummary[]; roles: { id: string; name: string }[] }) {
+export function UserTable({ users, roles }: { users: ListedUser[]; roles: { id: string; name: string; grantable: boolean }[] }) {
   const t = useTranslations('users');
   const format = useFormatter();
   const [query, setQuery] = useState('');
   const [showInactive, setShowInactive] = useState(true);
-  const [confirm, setConfirm] = useState<UserSummary | null>(null);
-  const [reset, setReset] = useState<{ user: UserSummary; startPassword: string } | null>(null);
-  const [editRoles, setEditRoles] = useState<UserSummary | null>(null);
+  const [confirm, setConfirm] = useState<ListedUser | null>(null);
+  const [reset, setReset] = useState<{ user: ListedUser; startPassword: string } | null>(null);
+  const [editRoles, setEditRoles] = useState<ListedUser | null>(null);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [pending, start] = useTransition();
 
@@ -98,6 +98,7 @@ export function UserTable({ users, roles }: { users: UserSummary[]; roles: { id:
                     />
                     <DropdownMenuContent align="end" className="bg-surface shadow-md">
                       <DropdownMenuItem
+                        disabled={!u.controllable}
                         onSelect={() => {
                           setSelectedRoles(u.roles.map((r) => r.id));
                           setEditRoles(u);
@@ -106,6 +107,7 @@ export function UserTable({ users, roles }: { users: UserSummary[]; roles: { id:
                         {t('actions.roles')}
                       </DropdownMenuItem>
                       <DropdownMenuItem
+                        disabled={!u.controllable}
                         onSelect={() =>
                           start(async () => {
                             const s = await resetStartPasswordAction(u.id);
@@ -120,9 +122,10 @@ export function UserTable({ users, roles }: { users: UserSummary[]; roles: { id:
                         {t('actions.resetPassword')}
                       </DropdownMenuItem>
                       {u.isActive ? (
-                        <DropdownMenuItem onSelect={() => setConfirm(u)}>{t('actions.deactivate')}</DropdownMenuItem>
+                        <DropdownMenuItem disabled={!u.controllable} onSelect={() => setConfirm(u)}>{t('actions.deactivate')}</DropdownMenuItem>
                       ) : (
                         <DropdownMenuItem
+                          disabled={!u.controllable}
                           onSelect={() =>
                             start(async () => {
                               const s = await setUserActiveAction(u.id, true);
@@ -177,6 +180,7 @@ export function UserTable({ users, roles }: { users: UserSummary[]; roles: { id:
                 <div key={r.id} className="flex items-center gap-2">
                   <Checkbox
                     id={`edit-role-${r.id}`}
+                    disabled={!r.grantable}
                     checked={selectedRoles.includes(r.id)}
                     onCheckedChange={(c) => setSelectedRoles((prev) => (c ? [...prev, r.id] : prev.filter((x) => x !== r.id)))}
                   />

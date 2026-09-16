@@ -17,7 +17,18 @@ import type { PermissionGroup } from '@/lib/permission-groups';
 import { cn } from '@/lib/utils';
 import { createRoleAction, saveRoleAction } from './actions';
 
-export function RoleEditor({ roles, groups, allPermissionKeys }: { roles: Role[]; groups: PermissionGroup[]; allPermissionKeys: string[] }) {
+export function RoleEditor({
+  roles,
+  groups,
+  allPermissionKeys,
+  grantablePermissionKeys,
+}: {
+  roles: Role[];
+  groups: PermissionGroup[];
+  allPermissionKeys: string[];
+  /** Rechte, die der Aufrufer selbst hat. Nur diese lassen sich hinzufügen; was eine Rolle schon hat, lässt sich entfernen. */
+  grantablePermissionKeys: string[];
+}) {
   const tRoot = useTranslations();
   const t = useTranslations('roles');
   const p = useTranslations('permissions');
@@ -57,6 +68,9 @@ export function RoleEditor({ roles, groups, allPermissionKeys }: { roles: Role[]
       keys: d?.keys ?? new Set(selected.permissionKeys),
       ...patch,
     }));
+
+  const grantable = new Set(grantablePermissionKeys);
+  const canTick = (key: string) => grantable.has(key) || selected.permissionKeys.includes(key);
 
   const toggle = (key: string, on: boolean) => {
     const keys = new Set(effectiveKeys);
@@ -150,8 +164,8 @@ export function RoleEditor({ roles, groups, allPermissionKeys }: { roles: Role[]
                     onCheckedChange={(c) => {
                       const keys = new Set(effectiveKeys);
                       for (const k of group.keys) {
-                        if (c === true) keys.add(k);
-                        else keys.delete(k);
+                        if (c !== true) keys.delete(k);
+                        else if (canTick(k)) keys.add(k);
                       }
                       edit({ keys });
                     }}
@@ -171,7 +185,7 @@ export function RoleEditor({ roles, groups, allPermissionKeys }: { roles: Role[]
                     <Checkbox
                       aria-label={p(`keys.${key}.label`)}
                       checked={effectiveKeys.has(key)}
-                      disabled={selected.isProtected}
+                      disabled={selected.isProtected || !canTick(key)}
                       onCheckedChange={(c) => toggle(key, c === true)}
                     />
                     <span>

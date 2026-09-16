@@ -158,6 +158,7 @@
       "roleNameTaken": "Eine Rolle mit diesem Namen existiert bereits.",
       "roleProtected": "Die Rolle „Administration“ kann nicht geändert werden.",
       "lastAdministrator": "Mindestens ein aktiver Nutzer muss die Rolle „Administration“ behalten.",
+      "insufficientPrivileges": "Dafür fehlen Ihnen selbst Rechte. Rechte, die Sie nicht haben, können Sie nicht vergeben, und Konten mit mehr Rechten als Ihren eigenen nicht verwalten.",
       "settingSystemOnly": "Diese Einstellung setzt nur das System.",
       "themeKeyTaken": "Ein Theme mit diesem Schlüssel existiert bereits.",
       "themeReadOnly": "Das Default-Theme ist schreibgeschützt.",

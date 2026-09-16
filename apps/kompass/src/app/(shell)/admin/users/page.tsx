@@ -13,7 +13,7 @@ export default async function UsersPage() {
   const users = await listUsers(deps, ctx);
   const roles = await listRoles(deps, ctx);
   if (!users.ok || !roles.ok) return <ForbiddenCard permission="users.manage" />;
-  const roleOptions = roles.value.map((r) => ({ id: r.id, name: r.name }));
+  const roleOptions = roles.value.map((r) => ({ id: r.id, name: r.name, grantable: r.grantable }));
   return (
     <>
       <PageHeader title={t('title')} actions={<CreateUserDialog roles={roleOptions} />} />

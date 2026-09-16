@@ -9,7 +9,7 @@ async function connectAsAnimalManager() {
   const deps = createTestDeps({ manifests: [coreModule, animalsModule], locales: ['de', 'en'] });
   const handler = createKompassMcpHandler(deps, { extraTools: coreMcpTools });
   const userId = insertUser(deps, {});
-  const admin = ctxWith(['roles.manage', 'users.manage', 'modules.manage'], userId);
+  const admin = ctxWith([...deps.registry.permissionKeys], userId);
   unwrap(await setModuleEnabled(deps, admin, { key: 'animals', enabled: true }));
   const role = unwrap(await createRole(deps, admin, { name: 'Tierpflege' }));
   unwrap(await setRolePermissions(deps, admin, { roleId: role.id, permissionKeys: ['animals.manage', 'animals.view'] }));

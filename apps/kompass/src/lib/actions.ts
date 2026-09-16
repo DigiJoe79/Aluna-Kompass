@@ -24,6 +24,7 @@ const KNOWN_CONFLICTS = new Set([
   'roleNameTaken',
   'roleProtected',
   'lastAdministrator',
+  'insufficientPrivileges',
   'settingSystemOnly',
   'themeKeyTaken',
   'themeReadOnly',

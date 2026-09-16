@@ -20,7 +20,9 @@ kommen in späteren Fassungen (siehe `docs/nordstern.md`).
 ### Fundament
 
 - **Nutzer, Rollen und Rechte.** Rollen sind frei benennbar, Rechte fest je
-  Modul. Jede Rechteprüfung läuft serverseitig.
+  Modul. Jede Rechteprüfung läuft serverseitig. Niemand vergibt Rechte, die er
+  selbst nicht hat, und niemand verwaltet ein Konto mit mehr Rechten als den
+  eigenen — wer nur die Zugänge macht, kann sich nicht zum Administrator machen.
 - **Anmeldung** mit Argon2id, Sperre nach fünf Fehlversuchen, Startpasswort,
   das beim ersten Anmelden gewechselt werden muss.
 - **Änderungsprotokoll.** Jede schreibende Aktion hinterlässt einen Eintrag mit

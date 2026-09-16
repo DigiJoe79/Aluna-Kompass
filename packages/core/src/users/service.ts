@@ -11,6 +11,7 @@ import { newId } from '../ids';
 import { requirePermission } from '../permissions/check';
 import { conflict, notFound, ok, type Result } from '../result';
 import { countActiveProtectedHolders } from '../roles/effective';
+import { requireControllableUser, requireGrantableRole } from '../roles/privileges';
 import { validate } from '../validate';
 
 export type UserStatus = 'active' | 'firstLoginPending' | 'inactive';
@@ -62,6 +63,8 @@ export async function createUser(deps: Deps, ctx: CallContext, input: unknown): 
   if (emailTaken(deps.db, email)) return conflict('emailTaken', `E-Mail ${email} ist bereits vergeben`);
   for (const roleId of roleIds) {
     if (!deps.db.select({ id: roles.id }).from(roles).where(eq(roles.id, roleId)).get()) return notFound('role', roleId);
+    const escalation = requireGrantableRole(deps, ctx, roleId);
+    if (escalation) return escalation;
   }
   const startPassword = generateStartPassword();
   const passwordHash = await hashPassword(startPassword);
@@ -76,11 +79,16 @@ export async function createUser(deps: Deps, ctx: CallContext, input: unknown): 
   });
 }
 
-export async function listUsers(deps: Deps, ctx: CallContext): Promise<Result<UserSummary[]>> {
+/** Ein Konto aus Sicht des Aufrufers: `controllable` sagt, ob er darüber verfügen darf. */
+export interface ListedUser extends UserSummary {
+  controllable: boolean;
+}
+
+export async function listUsers(deps: Deps, ctx: CallContext): Promise<Result<ListedUser[]>> {
   const denied = requirePermission(ctx, 'users.manage');
   if (denied) return denied;
   const ids = deps.db.select({ id: users.id }).from(users).orderBy(sql`lower(${users.name})`).all();
-  return ok(ids.map(({ id }) => loadUserSummary(deps.db, id) as UserSummary));
+  return ok(ids.map(({ id }) => ({ ...(loadUserSummary(deps.db, id) as UserSummary), controllable: requireControllableUser(deps, ctx, id) === null })));
 }
 
 export async function getUser(deps: Deps, ctx: CallContext, id: string): Promise<Result<UserSummary>> {
@@ -100,6 +108,8 @@ export async function updateUser(deps: Deps, ctx: CallContext, input: unknown): 
   const { id, name, email } = parsed.value;
   const before = loadUserSummary(deps.db, id);
   if (!before) return notFound('user', id);
+  const escalation = requireControllableUser(deps, ctx, id);
+  if (escalation) return escalation;
   if (emailTaken(deps.db, email, id)) return conflict('emailTaken', `E-Mail ${email} ist bereits vergeben`);
   return deps.db.transaction((tx) => {
     tx.update(users).set({ name, email, updatedAt: isoNow(deps.clock) }).where(eq(users.id, id)).run();
@@ -119,6 +129,8 @@ export async function setUserActive(deps: Deps, ctx: CallContext, input: unknown
   const { id, isActive } = parsed.value;
   const before = loadUserSummary(deps.db, id);
   if (!before) return notFound('user', id);
+  const escalation = requireControllableUser(deps, ctx, id);
+  if (escalation) return escalation;
   if (!isActive && before.isActive && countActiveProtectedHolders(deps.db, { excludeUserId: id }) === 0 && countActiveProtectedHolders(deps.db) > 0) {
     return conflict('lastAdministrator', 'Der letzte aktive Administrator kann nicht deaktiviert werden');
   }
@@ -140,6 +152,8 @@ export async function resetStartPassword(deps: Deps, ctx: CallContext, input: un
   if (!parsed.ok) return parsed;
   const user = loadUserSummary(deps.db, parsed.value.id);
   if (!user) return notFound('user', parsed.value.id);
+  const escalation = requireControllableUser(deps, ctx, user.id);
+  if (escalation) return escalation;
   const startPassword = generateStartPassword();
   const passwordHash = await hashPassword(startPassword);
   return deps.db.transaction((tx) => {

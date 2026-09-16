@@ -25,6 +25,7 @@ describe('toActionState', () => {
       return state.status === 'error' ? state.message : null;
     };
     expect(getMsg(conflict('emailTaken', 'x'))).toBe('errors.conflict.emailTaken');
+    expect(getMsg(conflict('insufficientPrivileges', 'Dafür fehlen eigene Rechte: audit.view'))).toBe('errors.conflict.insufficientPrivileges');
     expect(getMsg(conflict('weird', 'Detail'))).toBe('errors.conflict.default:{"detail":"Detail"}');
     expect(getMsg(notFound('user', '1'))).toBe('errors.notFound');
     expect(getMsg(unauthorized('locked'))).toBe('errors.unauthorized');

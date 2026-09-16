@@ -32,6 +32,18 @@ Beisitz. Die Rolle „Administration“ hat alle Rechte und ist gesperrt. Eine
 Rolle wird nicht gelöscht; eine nicht mehr gebrauchte wird allen Nutzern
 entzogen und bleibt für das Protokoll stehen.
 
+## Niemand gibt mehr, als er hat
+
+Wer Nutzer und Rollen verwaltet, ist dadurch noch nicht Administrator. Kompass
+lässt niemanden ein Recht vergeben, das er selbst nicht hat — weder über eine
+Rolle an einen Nutzer noch als neues Recht an eine Rolle. Und niemand verwaltet
+ein Konto, das mehr Rechte hat als er selbst: Rollen ändern, neues
+Startpasswort, Deaktivieren sind dort ausgegraut. Was eine Rolle schon hat,
+darf man ihr trotzdem wegnehmen.
+
+Die Rolle „Administration“ vergibt also nur, wer alle Rechte hat. Zwei
+Administratoren können einander weiterhin bei allem helfen.
+
 ## Rechte gelten überall
 
 Ein Recht gilt für die Oberfläche und für MCP gleichermaßen — es gibt einen

@@ -75,4 +75,54 @@ test.describe('users', () => {
     await expect(page.getByText('403', { exact: true })).toBeVisible();
     await expect(page.getByText('users.manage')).toBeVisible();
   });
+
+  test('wer nur die Zugänge macht, sieht gesperrt, was über die eigenen Rechte hinausgeht', async ({ page }) => {
+    await page.goto('/admin/roles');
+    await page.getByRole('button', { name: 'Rolle anlegen' }).click();
+    await page.getByRole('dialog').getByLabel('Rollenname').fill('Zugänge');
+    await page.getByRole('dialog').getByRole('button', { name: 'Anlegen' }).click();
+    await page.getByRole('list', { name: 'Rollen' }).getByRole('button', { name: /Zugänge/ }).click();
+    await page.getByRole('checkbox', { name: 'Nutzer verwalten' }).check();
+    await page.getByRole('checkbox', { name: 'Rollen verwalten' }).check();
+    await page.getByRole('button', { name: 'Rolle speichern' }).click();
+    await expect(page.getByRole('status')).toContainText('Rolle gespeichert.');
+
+    await page.goto('/admin/users');
+    await page.getByRole('button', { name: 'Nutzer anlegen' }).click();
+    const create = page.getByRole('dialog');
+    await create.getByLabel('Name').fill('Ute Tor');
+    await create.getByLabel('E-Mail').fill('ute@example.org');
+    await create.getByLabel('Zugänge').check();
+    await create.getByRole('button', { name: 'Nutzer anlegen' }).click();
+    const startPassword = (await page.getByTestId('start-password').textContent())!.trim();
+    await page.getByRole('button', { name: 'Ich habe die Daten notiert' }).click();
+
+    await page.request.post('/logout');
+    await page.goto('/login');
+    await page.getByLabel('E-Mail').fill('ute@example.org');
+    await page.getByLabel('Passwort').fill(startPassword);
+    await page.getByRole('button', { name: 'Anmelden' }).click();
+    await page.getByLabel('Startpasswort').fill(startPassword);
+    await page.getByLabel('Neues Passwort', { exact: true }).fill('ute-macht-die-zugaenge');
+    await page.getByLabel('Passwort wiederholen').fill('ute-macht-die-zugaenge');
+    await page.getByRole('button', { name: 'Passwort setzen und fortfahren' }).click();
+    await expect(page).toHaveURL('/');
+
+    await page.goto('/admin/users');
+    await page.getByRole('button', { name: 'Nutzer anlegen' }).click();
+    await expect(page.getByRole('dialog').getByLabel('Administration')).toBeDisabled();
+    await expect(page.getByRole('dialog').getByLabel('Zugänge')).toBeEnabled();
+    await page.getByRole('dialog').getByRole('button', { name: 'Abbrechen' }).click();
+
+    await page.getByRole('row', { name: /Anna Berger/ }).getByRole('button', { name: 'Aktionen' }).click();
+    await expect(page.getByRole('menuitem', { name: 'Neues Startpasswort' })).toBeDisabled();
+    await page.keyboard.press('Escape');
+
+    await page.goto('/admin/roles');
+    await page.getByRole('list', { name: 'Rollen' }).getByRole('button', { name: /Kassenprüfer/ }).click();
+    await expect(page.getByRole('checkbox', { name: 'Nutzer verwalten' })).toBeEnabled();
+    await expect(page.getByRole('checkbox', { name: 'Einstellungen verwalten' })).toBeDisabled();
+    // Was die Rolle schon hat, darf auch entfernt werden, wer es selbst nicht hat.
+    await expect(page.getByRole('checkbox', { name: 'Änderungsprotokoll einsehen' })).toBeEnabled();
+  });
 });

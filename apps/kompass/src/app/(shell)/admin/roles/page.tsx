@@ -15,7 +15,7 @@ export default async function RolesPage() {
   return (
     <>
       <PageHeader title={t('title')} description={t('description')} />
-      <RoleEditor roles={roles.value} groups={groupPermissions(deps.registry.manifests)} allPermissionKeys={[...deps.registry.permissionKeys]} />
+      <RoleEditor roles={roles.value} groups={groupPermissions(deps.registry.manifests)} allPermissionKeys={[...deps.registry.permissionKeys]} grantablePermissionKeys={[...deps.registry.permissionKeys].filter((key) => ctx.permissions.has(key))} />
     </>
   );
 }

@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { createApiToken, listApiTokens, resolveApiToken, revokeApiToken, tokenPrefixFor } from '../src/auth/tokens';
 import { apiTokens, users } from '../src/db/schema';
+import { CORE_PERMISSIONS } from '../src/permissions/core';
 import { assignRole, createRole, setRolePermissions } from '../src/roles/service';
 import { unwrap } from '../src/result';
 import { auditEntry, createTestDeps, ctxWith, insertUser } from '../src/testing';
@@ -12,7 +13,7 @@ describe('api tokens', () => {
   it('creates a token shown once, stores only a hash, and resolves to an mcp context with the owner permissions', async () => {
     const deps = createTestDeps();
     const userId = insertUser(deps, {});
-    const admin = ctxWith(['roles.manage', 'users.manage']);
+    const admin = ctxWith(CORE_PERMISSIONS);
     const role = unwrap(await createRole(deps, admin, { name: 'Prüfer' }));
     unwrap(await setRolePermissions(deps, admin, { roleId: role.id, permissionKeys: ['audit.view'] }));
     unwrap(await assignRole(deps, admin, { userId, roleId: role.id }));

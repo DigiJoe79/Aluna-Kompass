@@ -11,6 +11,7 @@ import { requireAnyPermission, requirePermission } from '../permissions/check';
 import { conflict, invalid, notFound, ok, type Result } from '../result';
 import { validate } from '../validate';
 import { countActiveProtectedHolders } from './effective';
+import { requireControllableUser, requireGrantablePermissions, requireGrantableRole } from './privileges';
 
 export interface Role {
   id: string;
@@ -106,6 +107,8 @@ export async function setRolePermissions(deps: Deps, ctx: CallContext, input: un
   if (!before) return notFound('role', parsed.value.roleId);
   if (before.isProtected) return conflict('roleProtected', 'Geschützte Rolle hat immer alle Rechte');
   const next = [...new Set(parsed.value.permissionKeys)].sort();
+  const escalation = requireGrantablePermissions(deps, ctx, next.filter((key) => !before.permissionKeys.includes(key)));
+  if (escalation) return escalation;
   return deps.db.transaction((tx) => {
     tx.delete(rolePermissions).where(eq(rolePermissions.roleId, before.id)).run();
     if (next.length > 0) tx.insert(rolePermissions).values(next.map((permissionKey) => ({ roleId: before.id, permissionKey }))).run();
@@ -127,6 +130,8 @@ export async function assignRole(deps: Deps, ctx: CallContext, input: unknown): 
   if (!user) return notFound('user', userId);
   const role = loadRole(deps.db, roleId);
   if (!role) return notFound('role', roleId);
+  const escalation = requireGrantableRole(deps, ctx, roleId);
+  if (escalation) return escalation;
   return deps.db.transaction((tx) => {
     tx.insert(userRoles).values({ userId, roleId }).onConflictDoNothing().run();
     recordAudit(tx, deps, ctx, { action: 'users.assignRole', entityType: 'user', entityId: userId, after: { roleId, roleName: role.name }, summary: `Rolle „${role.name}“ an ${user.name} vergeben` });
@@ -144,6 +149,8 @@ export async function removeRole(deps: Deps, ctx: CallContext, input: unknown): 
   if (!user) return notFound('user', userId);
   const role = loadRole(deps.db, roleId);
   if (!role) return notFound('role', roleId);
+  const escalation = requireControllableUser(deps, ctx, userId);
+  if (escalation) return escalation;
   if (role.isProtected && countActiveProtectedHolders(deps.db, { excludeUserId: userId }) === 0) {
     return conflict('lastAdministrator', 'Mindestens ein aktiver Nutzer muss die geschützte Rolle behalten');
   }
@@ -154,9 +161,14 @@ export async function removeRole(deps: Deps, ctx: CallContext, input: unknown): 
   });
 }
 
-export async function listRoles(deps: Deps, ctx: CallContext): Promise<Result<Role[]>> {
+/** Eine Rolle aus Sicht des Aufrufers: `grantable` sagt, ob er sie vergeben darf. */
+export interface ListedRole extends Role {
+  grantable: boolean;
+}
+
+export async function listRoles(deps: Deps, ctx: CallContext): Promise<Result<ListedRole[]>> {
   const denied = requireAnyPermission(ctx, ['roles.manage', 'users.manage']);
   if (denied) return denied;
   const ids = deps.db.select({ id: roles.id }).from(roles).orderBy(roles.name).all();
-  return ok(ids.map(({ id }) => loadRole(deps.db, id) as Role));
+  return ok(ids.map(({ id }) => ({ ...(loadRole(deps.db, id) as Role), grantable: requireGrantableRole(deps, ctx, id) === null })));
 }

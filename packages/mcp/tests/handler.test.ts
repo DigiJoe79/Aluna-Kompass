@@ -16,7 +16,7 @@ async function connect(fetchImpl: (url: string | URL, init?: RequestInit) => Pro
 
 async function tokenFor(deps: ReturnType<typeof createTestDeps>, permissions: string[]) {
   const userId = insertUser(deps, {});
-  const admin = ctxWith(['roles.manage', 'users.manage'], userId);
+  const admin = ctxWith([...deps.registry.permissionKeys], userId);
   const role = unwrap(await createRole(deps, admin, { name: `R-${permissions.join('-') || 'none'}` }));
   unwrap(await setRolePermissions(deps, admin, { roleId: role.id, permissionKeys: permissions }));
   unwrap(await assignRole(deps, admin, { userId, roleId: role.id }));

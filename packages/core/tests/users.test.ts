@@ -2,12 +2,14 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { START_PASSWORD_PATTERN, verifyPassword } from '../src/auth/password';
 import { auditLog, sessions, users } from '../src/db/schema';
+import { CORE_PERMISSIONS } from '../src/permissions/core';
 import { assignRole, createRole } from '../src/roles/service';
 import { unwrap } from '../src/result';
 import { auditEntry, createTestDeps, ctxWith, insertRole, insertUser } from '../src/testing';
 import { createUser, listUsers, resetStartPassword, setUserActive, updateUser } from '../src/users/service';
 
-const admin = ctxWith(['users.manage', 'roles.manage']);
+/** Administrator: Rollen und Konten mit allen Rechten vergibt nur, wer sie selbst hat. */
+const admin = ctxWith(CORE_PERMISSIONS);
 
 describe('users service', () => {
   it('creates a user with a one-time start password, assigned roles and an audit entry without secrets', async () => {
