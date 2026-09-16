@@ -149,9 +149,11 @@ jobs:
         if: failure()
         with: { name: playwright-report-container, path: apps/kompass/playwright-report-container, retention-days: 7 }
       # Wer ein Paket ins Image nimmt, verteilt fremde Software mit. Die
-      # Aufstellung dazu wird erzeugt, nicht gepflegt; hier faellt auf, wenn
-      # sie nicht mehr zum Bild passt — vor dem Hochladen, nicht danach.
-      - name: Third-party notices match the image
+      # Aufstellung entsteht beim Bau im Image; hier faellt auf, wenn sie fehlt
+      # oder ein Paket eine Lizenz traegt, die niemand freigegeben hat — vor
+      # dem Hochladen, nicht danach. Kein Vergleich mit einer Datei im Repo:
+      # Ein Update aendert Versionen, keine Lizenzen.
+      - name: Third-party licences in the image are approved
         run: scripts/third-party-notices.sh kompass-local --pruefen
       # Playwright, vitest, eslint und Co. laufen im Container nie; im Image
       # waeren sie nur mitverteilte Angriffsflaeche (Q5).

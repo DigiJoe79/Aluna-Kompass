@@ -9,13 +9,12 @@ const read = (file: string): string => readFileSync(path.join(ROOT, file), 'utf8
  * Wer ein Paket ins Laufzeit-Image aufnimmt, verteilt fremde Software mit.
  * Die meisten Debian-Pakete stehen unter GPL oder LGPL, und beide verlangen,
  * dass der Empfaenger erfaehrt, was er bekommen hat und woher der Quellcode
- * kommt. Dieser Waechter haelt `THIRD-PARTY-NOTICES.md` an der Wirklichkeit:
- * Ein neues `apt-get install` ohne Eintrag wird rot.
+ * kommt. Dieser Waechter haelt die Uebersicht `THIRD-PARTY-NOTICES.md` an der
+ * Wirklichkeit: Ein neues `apt-get install` ohne Eintrag wird rot.
  *
- * Erzeugt wird die Datei von `scripts/third-party-notices.sh` aus dem
- * gebauten Image — hier wird nur geprueft, nicht gelesen, was im Image steht.
- * Die vollstaendige Liste umfasst alle 167 Pakete der Debian-Basis; dieser
- * Test deckt die ab, die das Dockerfile selbst nennt.
+ * Die vollstaendige Liste mit Versionen entsteht beim Bau im Image; ob sie
+ * dort liegt und jede npm-Lizenz freigegeben ist, prueft
+ * `scripts/third-party-notices.sh --pruefen` gegen das gebaute Image.
  */
 const runtimePackages = (): string[] => {
   const dockerfile = read('Dockerfile');
@@ -50,21 +49,29 @@ describe('third-party notices', () => {
   });
 
   /**
-   * Erzeugt wird die Datei aus einem gebauten Image — lokal auf arm64, in der
-   * CI auf amd64. Beide unterscheiden sich in den Plattformpaketen
-   * (`…-linux-arm64-gnu` gegen `…-linux-x64-gnu`) und in den Rebuild-Suffixen
-   * von Debian (`1.09-1` gegen `1.09-1+b1`), nicht aber in den Lizenzen. Ohne
-   * Normalisierung wäre die Aufstellung für genau eine Bauarchitektur richtig
-   * und die Prüfung in der CI immer rot — so geschehen am 2026-09-15.
+   * Die vollständige Aufstellung mit Versionen entsteht beim Bau im Image
+   * (`/app/THIRD-PARTY-NOTICES.md`). Stand sie mit Versionen im Repo, machte
+   * jedes Dependabot-Update sie falsch — und jeder seiner Pull Requests wurde
+   * an genau dieser Stelle rot, erstmals mit #5 am 2026-09-16. Die Datei im
+   * Repo ist deshalb eine Übersicht ohne Versionsnummern.
    */
-  it('names no architecture, so one file fits every build', () => {
+  it('carries no version numbers, so an update cannot make it stale', () => {
     const notices = read('THIRD-PARTY-NOTICES.md');
-    // Nur die Tabellenzeilen: Der Erklärtext darüber nennt die Muster selbst.
-    const verraeterisch = notices
-      .split('\n')
-      .filter((zeile) => zeile.startsWith('| `'))
-      .filter((zeile) => /(linux|darwin|win32)-(arm64|x64|ia32)|\+b\d/.test(zeile));
-    expect(verraeterisch).toEqual([]);
+    const mitVersion = notices.split('\n').filter((zeile) => /^\| `[^`]+` \| `[^`]*\d[^`]*` \|/.test(zeile));
+    expect(mitVersion).toEqual([]);
+  });
+
+  it('says where the complete list with versions lives', () => {
+    const notices = read('THIRD-PARTY-NOTICES.md');
+    expect(notices).toContain('/app/THIRD-PARTY-NOTICES.md');
+    // Und der Bau legt sie dort wirklich an.
+    expect(read('Dockerfile')).toMatch(/third-party-notices\.sh --erzeugen > \/app\/THIRD-PARTY-NOTICES\.md/);
+  });
+
+  /** Eigener Code ist keine Software Dritter und steht unter der Projektlizenz. */
+  it('does not list the project itself as third-party software', () => {
+    const notices = read('THIRD-PARTY-NOTICES.md');
+    expect(notices).not.toMatch(/\| `(@kompass\/[^`]+|verein-basis)` \|/);
   });
 
   it('says where the source of the copylefted parts can be had', () => {

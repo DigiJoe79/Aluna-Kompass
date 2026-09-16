@@ -104,6 +104,12 @@ COPY --chown=node:node scripts/seed-site-template.sh /usr/local/bin/seed-site-te
 COPY --chown=node:node scripts/seed-document-templates.sh /usr/local/bin/seed-document-templates.sh
 RUN mkdir -p /data /cache && chown node:node /data /cache \
  && chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/seed-site-template.sh /usr/local/bin/seed-document-templates.sh
+# Die Aufstellung der Software Dritter entsteht hier, aus genau dem, was im
+# Image liegt — und stimmt so fuer jede ausgelieferte Fassung, auch nach einem
+# Update, das nur Versionen aendert. `pnpm image:check` und die CI pruefen sie.
+COPY scripts/third-party-notices.sh /tmp/third-party-notices.sh
+RUN bash /tmp/third-party-notices.sh --erzeugen > /app/THIRD-PARTY-NOTICES.md \
+ && rm /tmp/third-party-notices.sh
 USER node
 VOLUME ["/data"]
 EXPOSE 3000
