@@ -1,36 +1,40 @@
-# Dependabot hält die Abhängigkeiten aktuell, indem es wöchentlich nachsieht,
-# was es Neues gibt, und die Aktualisierung als Pull Request vorschlägt. Die
-# CI prüft ihn wie jeden anderen — seit dem 2026-09-15 baut sie dabei auch das
-# Image und fährt den Containerring, ein Update kann also nicht an der
-# Verpackung scheitern, ohne dass es auffällt.
+# Dependabot hält die Abhängigkeiten aktuell und schlägt die Aktualisierung als
+# Pull Request vor. Die CI prüft ihn wie jeden anderen, samt Image und
+# Containerring — ein Update kann also nicht an der Verpackung scheitern, ohne
+# dass es auffällt.
+#
+# **Einmal im Monat, ein Pull Request für alles.** Jeder Vorschlag kostet zwei
+# volle CI-Läufe mit Image-Bau: einen als Pull Request, einen nach dem Merge auf
+# `dev`. Wöchentlich und je Ökosystem getrennt waren das bis zu sechs pro
+# Woche, für ein Projekt mit einer Person und sieben Tagen Abstand zu jeder
+# neuen Version — Rechenzeit ohne Gegenwert. Sicherheitsupdates betrifft das
+# nicht: Die kommen unabhängig von diesem Zeitplan sofort.
 version: 2
+
+multi-ecosystem-groups:
+  monthly:
+    schedule:
+      interval: monthly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Berlin
+    # Nur an der Gruppe erlaubt, nicht je Ökosystem.
+    commit-message:
+      prefix: build(deps)
+
 updates:
   # --- npm (der pnpm-Workspace) -------------------------------------------
   # Ein Eintrag genügt: Dependabot liest die Lockfile im Wurzelverzeichnis und
   # sieht darüber alle Pakete des Workspace.
   - package-ecosystem: npm
     directory: /
-    schedule:
-      interval: weekly
-      day: monday
-      time: "06:00"
-      timezone: Europe/Berlin
-    # Mehr als eine Handvoll offener Vorschläge liest ohnehin niemand.
-    open-pull-requests-limit: 5
-    # Eine Woche Abstand zur Veroeffentlichung: Kompromittierte Pakete fallen
+    multi-ecosystem-group: monthly
+    patterns: ['*']
+    # Eine Woche Abstand zur Veröffentlichung: Kompromittierte Pakete fallen
     # meist binnen Tagen auf, und bis dahin soll kein Vorschlag sie bringen.
+    # Dieselbe Frist setzt `minimumReleaseAge` in pnpm-workspace.yaml.
     cooldown:
       default-days: 7
-    commit-message:
-      prefix: build(deps)
-      prefix-development: build(deps-dev)
-    groups:
-      # Patch und Minor kommen als **ein** Pull Request. Einzeln wären es
-      # zwanzig Stück für dasselbe Ergebnis, und jeder davon kostet einen
-      # vollen CI-Lauf.
-      routine:
-        patterns: ['*']
-        update-types: [minor, patch]
     ignore:
       # TypeScript 7 ist nicht die nächste Fassung von 6, sondern die
       # Portierung nach Go — ein anderes Werkzeug mit eigenem Zeitplan. Der
@@ -41,41 +45,21 @@ updates:
 
   # --- GitHub Actions ------------------------------------------------------
   # Die `uses:`-Zeilen in den Workflows. Sie stehen auf Commit-Hashes mit der
-  # Fassung als Kommentar; Dependabot schlägt jede neue Fassung vor und
-  # aktualisiert Hash und Kommentar zusammen.
+  # Fassung als Kommentar; Dependabot aktualisiert Hash und Kommentar zusammen.
   - package-ecosystem: github-actions
     directory: /
-    schedule:
-      interval: weekly
-      day: monday
-      time: "06:00"
-      timezone: Europe/Berlin
-    open-pull-requests-limit: 3
-    # Eine Woche Abstand zur Veroeffentlichung: Kompromittierte Pakete fallen
-    # meist binnen Tagen auf, und bis dahin soll kein Vorschlag sie bringen.
+    multi-ecosystem-group: monthly
+    patterns: ['*']
     cooldown:
       default-days: 7
-    commit-message:
-      prefix: ci(deps)
-    groups:
-      actions:
-        patterns: ['*']
 
   # --- Das Basis-Image des Containers -------------------------------------
-  # `node:26-bookworm-slim` im Dockerfile. Ein Vorschlag hier ist immer ein
-  # Sprung auf die nächste Node-Hauptversion und gehört angesehen, nicht
+  # `node:26-bookworm-slim` im Dockerfile. Ein Vorschlag hier ist fast immer
+  # ein Sprung auf die nächste Node-Hauptversion und gehört angesehen, nicht
   # durchgewinkt.
   - package-ecosystem: docker
     directory: /
-    schedule:
-      interval: weekly
-      day: monday
-      time: "06:00"
-      timezone: Europe/Berlin
-    open-pull-requests-limit: 2
-    # Eine Woche Abstand zur Veroeffentlichung: Kompromittierte Pakete fallen
-    # meist binnen Tagen auf, und bis dahin soll kein Vorschlag sie bringen.
+    multi-ecosystem-group: monthly
+    patterns: ['*']
     cooldown:
       default-days: 7
-    commit-message:
-      prefix: build(image)

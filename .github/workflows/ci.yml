@@ -20,6 +20,10 @@ on:
       - 'docs/design_handoff_akte_ablegen_entwurf/**'
       - 'docker-compose.*.yml'
       - '.env.*.example'
+      # Konfiguration von GitHub, nicht des Produkts: Weder Dependabot noch die
+      # Issue-Vorlagen aendern, was gebaut oder getestet wird.
+      - '.github/dependabot.yml'
+      - '.github/ISSUE_TEMPLATE/**'
   pull_request:
 
 # Ein neuer Push verdraengt den laufenden Build desselben Branches, damit nie
