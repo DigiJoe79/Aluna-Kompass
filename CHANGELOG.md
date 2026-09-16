@@ -24,7 +24,9 @@ kommen in späteren Fassungen (siehe `docs/nordstern.md`).
   selbst nicht hat, und niemand verwaltet ein Konto mit mehr Rechten als den
   eigenen — wer nur die Zugänge macht, kann sich nicht zum Administrator machen.
 - **Anmeldung** mit Argon2id, Sperre nach fünf Fehlversuchen, Startpasswort,
-  das beim ersten Anmelden gewechselt werden muss.
+  das beim ersten Anmelden gewechselt werden muss. Die Meldung verrät nicht,
+  ob es ein Konto gibt; nach zwanzig Fehlversuchen in fünfzehn Minuten über
+  alle Konten pausiert die Anmeldung. Jeder Fehlversuch steht im Protokoll.
 - **Änderungsprotokoll.** Jede schreibende Aktion hinterlässt einen Eintrag mit
   Nutzer, Zeit, Kanal und Vorher/Nachher. Auf Datenbankebene gegen Ändern und
   Löschen gesperrt.

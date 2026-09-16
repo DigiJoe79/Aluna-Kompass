@@ -1,5 +1,13 @@
+import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { ADMIN, loginAsAdmin, resetDatabase } from './helpers';
+
+/** Jede Runde zeigt dieselbe Meldung — also auf die Antwort der Aktion warten, nicht auf den Text. */
+async function submitLogin(page: Page) {
+  const answered = page.waitForResponse((r) => r.request().method() === 'POST' && new URL(r.url()).pathname === '/login');
+  await page.getByRole('button', { name: 'Anmelden' }).click();
+  await answered;
+}
 
 test.describe('first run and login', () => {
   test('empty database redirects to setup, creates the admin and lands on the home page', async ({ page }) => {
@@ -22,20 +30,36 @@ test.describe('first run and login', () => {
     await expect(page).toHaveURL('/login');
   });
 
-  test('login rejects wrong credentials with remaining attempts and locks after five', async ({ page }) => {
+  test('login answers every wrong password alike and reveals the lock only to the right password', async ({ page }) => {
     await resetDatabase(page, 'seeded');
     await page.goto('/login');
     const alert = page.locator('form [role="alert"]');
-    for (let i = 4; i >= 1; i -= 1) {
+    for (let i = 1; i <= 5; i += 1) {
       await page.getByLabel('E-Mail').fill(ADMIN.email);
-      await page.getByLabel('Passwort').fill('falsch-falsch-00-falsch');
-      await page.getByRole('button', { name: 'Anmelden' }).click();
-      await expect(alert).toContainText('E-Mail oder Passwort stimmt nicht.');
-      await expect(alert).toContainText(`Noch ${i} Versuch`);
+      await page.getByLabel('Passwort').fill(`falsch-falsch-0${i}-falsch`);
+      await submitLogin(page);
+      await expect(alert).toHaveText('E-Mail oder Passwort stimmt nicht.');
     }
-    await page.getByLabel('Passwort').fill('falsch-falsch-00-falsch');
-    await page.getByRole('button', { name: 'Anmelden' }).click();
+    await page.getByLabel('E-Mail').fill(ADMIN.email);
+    await page.getByLabel('Passwort').fill(ADMIN.password);
+    await submitLogin(page);
     await expect(alert).toContainText('für 15 Minuten gesperrt');
+  });
+
+  test('login pauses for everyone after too many failures across accounts', async ({ page }) => {
+    await resetDatabase(page, 'seeded');
+    await page.goto('/login');
+    const alert = page.locator('form [role="alert"]');
+    for (let i = 0; i < 20; i += 1) {
+      await page.getByLabel('E-Mail').fill(`rate${i % 4}@example.org`);
+      await page.getByLabel('Passwort').fill(`falsch-falsch-${String(i).padStart(2, '0')}-falsch`);
+      await submitLogin(page);
+      await expect(alert).toHaveText('E-Mail oder Passwort stimmt nicht.');
+    }
+    await page.getByLabel('E-Mail').fill(ADMIN.email);
+    await page.getByLabel('Passwort').fill(ADMIN.password);
+    await submitLogin(page);
+    await expect(alert).toContainText('Zu viele fehlgeschlagene Anmeldungen');
   });
 
   test('a user with a start password must set a new one before seeing the shell', async ({ page }) => {

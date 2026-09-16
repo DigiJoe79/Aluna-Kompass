@@ -1,13 +1,13 @@
 export type ValidationIssue = { path: string; message: string };
 
-export type UnauthorizedReason = 'invalidCredentials' | 'locked' | 'inactive' | 'passwordChangeRequired';
+export type UnauthorizedReason = 'invalidCredentials' | 'locked' | 'inactive' | 'passwordChangeRequired' | 'throttled';
 
 export type ServiceError =
   | { type: 'forbidden'; permission: string }
   | { type: 'validation'; issues: ValidationIssue[] }
   | { type: 'notFound'; entity: string; id: string }
   | { type: 'conflict'; code: string; message: string }
-  | { type: 'unauthorized'; reason: UnauthorizedReason; attemptsLeft?: number; lockedUntil?: string };
+  | { type: 'unauthorized'; reason: UnauthorizedReason; lockedUntil?: string };
 
 export type Success<T> = { ok: true; value: T };
 export type Failure = { ok: false; error: ServiceError };
@@ -21,7 +21,7 @@ export const conflict = (code: string, message: string): Failure => fail({ type:
 export const invalid = (issues: ValidationIssue[]): Failure => fail({ type: 'validation', issues });
 export const unauthorized = (
   reason: UnauthorizedReason,
-  extra: { attemptsLeft?: number; lockedUntil?: string } = {},
+  extra: { lockedUntil?: string } = {},
 ): Failure => fail({ type: 'unauthorized', reason, ...extra });
 
 export function unwrap<T>(result: Result<T>): T {

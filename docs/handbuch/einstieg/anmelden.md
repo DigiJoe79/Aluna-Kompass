@@ -22,9 +22,17 @@ ersten Anmeldung.
 
 ## Sperre
 
-Nach mehreren falschen Passwörtern in Folge ist das Konto für fünfzehn
-Minuten gesperrt — auch mit dem richtigen Passwort. Warten Sie, dann geht es
-wieder. Die Sperre steht im Änderungsprotokoll.
+Nach fünf falschen Passwörtern ist das Konto für fünfzehn Minuten gesperrt.
+Die Meldung bleibt dabei „E-Mail oder Passwort stimmt nicht“: Dass das Konto
+gesperrt ist, zeigt Kompass erst, wenn Sie das richtige Passwort eingeben.
+So erfährt niemand beim Raten, welche Adressen es gibt. Warten Sie, oder
+lassen Sie sich ein neues Startpasswort geben, das hebt die Sperre auf.
+
+Scheitern innerhalb von fünfzehn Minuten zwanzig Anmeldungen, gleich bei
+welchen Konten, pausiert die Anmeldung für alle, bis das Zeitfenster
+verstrichen ist. Das hält jemanden auf, der wenige Passwörter gegen viele
+Adressen probiert. Jeder Fehlversuch, jede Sperre und jede Pause steht mit der
+Absenderadresse im Änderungsprotokoll.
 
 ## Abmelden
 

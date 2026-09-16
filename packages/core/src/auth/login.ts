@@ -1,9 +1,10 @@
-import { eq } from 'drizzle-orm';
+import { and, count, eq, gt } from 'drizzle-orm';
 import { z } from 'zod';
 import { recordAudit } from '../audit/log';
 import { isoNow } from '../clock';
 import { systemContext, type CallContext } from '../context';
-import { users } from '../db/schema';
+import { auditLog, users } from '../db/schema';
+import type { DbOrTx } from '../db/client';
 import type { Deps } from '../deps';
 import { ok, unauthorized, type Result } from '../result';
 import { normalizeEmail } from '../users/service';
@@ -13,6 +14,13 @@ import { createSession, revokeUserSessions, type RequestMeta } from './sessions'
 
 export const MAX_FAILED_LOGINS = 5;
 export const LOCK_MINUTES = 15;
+/**
+ * Fehlversuche über alle Konten im selben Zeitfenster, nach denen die Anmeldung
+ * für alle pausiert. Die Sperre je Konto hält Raten gegen ein Konto auf, nicht
+ * wenige Versuche gegen viele. Global statt je Absender, weil die Adresse aus
+ * einem Header kommt, den ohne Proxy jeder selbst setzt.
+ */
+export const MAX_FAILED_LOGINS_TOTAL = 20;
 
 const loginSchema = z.object({
   email: z.string().trim().min(1).transform(normalizeEmail),
@@ -28,39 +36,73 @@ export interface LoginResult {
   mustChangePassword: boolean;
 }
 
+function recentFailures(db: DbOrTx, since: string): number {
+  const row = db
+    .select({ n: count() })
+    .from(auditLog)
+    .where(and(eq(auditLog.action, 'auth.failed'), gt(auditLog.occurredAt, since)))
+    .get();
+  return row?.n ?? 0;
+}
+
+/**
+ * Jede Antwort auf ein falsches Passwort ist dieselbe, ob das Konto existiert,
+ * gesperrt oder deaktiviert ist. Sperre und Deaktivierung erfährt nur, wer das
+ * richtige Passwort kennt.
+ */
 export async function login(deps: Deps, input: unknown): Promise<Result<LoginResult>> {
   const parsed = validate(deps, loginSchema, input);
   if (!parsed.ok) return unauthorized('invalidCredentials');
   const { email, password, ipAddress, requestId } = parsed.value;
+  const now = isoNow(deps.clock);
+  const windowStart = new Date(deps.clock.now().getTime() - LOCK_MINUTES * 60_000).toISOString();
+  if (recentFailures(deps.db, windowStart) >= MAX_FAILED_LOGINS_TOTAL) return unauthorized('throttled');
+
+  const system: CallContext = { ...systemContext(requestId), ipAddress };
   const user = deps.db.select().from(users).where(eq(users.email, email)).get();
-  if (!user) {
-    await verifyPassword('$argon2id$v=19$m=19456,t=2,p=1$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', password); // gleiche Antwortzeit
+  const valid = user
+    ? await verifyPassword(user.passwordHash, password)
+    : await verifyPassword('$argon2id$v=19$m=19456,t=2,p=1$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', password); // gleiche Antwortzeit
+
+  if (!user || !valid) {
+    const isLocked = !!user?.lockedUntil && user.lockedUntil > now;
+    const failed = user && !isLocked ? user.failedLoginCount + 1 : 0;
+    deps.db.transaction((tx) => {
+      recordAudit(tx, deps, system, {
+        action: 'auth.failed',
+        entityType: 'user',
+        entityId: user?.id ?? null,
+        summary: `Anmeldung als ${email} fehlgeschlagen`,
+      });
+      if (user && !isLocked) {
+        if (failed >= MAX_FAILED_LOGINS) {
+          const lockedUntil = new Date(deps.clock.now().getTime() + LOCK_MINUTES * 60_000).toISOString();
+          tx.update(users).set({ failedLoginCount: 0, lockedUntil, updatedAt: now }).where(eq(users.id, user.id)).run();
+          recordAudit(tx, deps, system, {
+            action: 'auth.locked',
+            entityType: 'user',
+            entityId: user.id,
+            after: { lockedUntil },
+            summary: `Konto ${user.email} nach ${MAX_FAILED_LOGINS} Fehlversuchen gesperrt`,
+          });
+        } else {
+          tx.update(users).set({ failedLoginCount: failed, updatedAt: now }).where(eq(users.id, user.id)).run();
+        }
+      }
+      if (recentFailures(tx, windowStart) === MAX_FAILED_LOGINS_TOTAL) {
+        recordAudit(tx, deps, system, {
+          action: 'auth.throttled',
+          entityType: 'auth',
+          entityId: null,
+          summary: `Anmeldung nach ${MAX_FAILED_LOGINS_TOTAL} Fehlversuchen in ${LOCK_MINUTES} Minuten für alle pausiert`,
+        });
+      }
+    });
     return unauthorized('invalidCredentials');
   }
-  const now = isoNow(deps.clock);
+
   if (user.lockedUntil && user.lockedUntil > now) return unauthorized('locked', { lockedUntil: user.lockedUntil });
   if (!user.isActive) return unauthorized('inactive');
-
-  const valid = await verifyPassword(user.passwordHash, password);
-  if (!valid) {
-    const failed = user.failedLoginCount + 1;
-    if (failed >= MAX_FAILED_LOGINS) {
-      const lockedUntil = new Date(deps.clock.now().getTime() + LOCK_MINUTES * 60_000).toISOString();
-      deps.db.transaction((tx) => {
-        tx.update(users).set({ failedLoginCount: 0, lockedUntil, updatedAt: now }).where(eq(users.id, user.id)).run();
-        recordAudit(tx, deps, { ...systemContext(requestId), ipAddress }, {
-          action: 'auth.locked',
-          entityType: 'user',
-          entityId: user.id,
-          after: { lockedUntil },
-          summary: `Konto ${user.email} nach ${MAX_FAILED_LOGINS} Fehlversuchen gesperrt`,
-        });
-      });
-      return unauthorized('locked', { lockedUntil });
-    }
-    deps.db.update(users).set({ failedLoginCount: failed, updatedAt: now }).where(eq(users.id, user.id)).run();
-    return unauthorized('invalidCredentials', { attemptsLeft: MAX_FAILED_LOGINS - failed });
-  }
 
   return deps.db.transaction((tx) => {
     tx.update(users).set({ failedLoginCount: 0, lockedUntil: null, lastLoginAt: now, updatedAt: now }).where(eq(users.id, user.id)).run();

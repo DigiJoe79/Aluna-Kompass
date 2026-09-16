@@ -362,9 +362,9 @@
       "password": "Passwort",
       "submit": "Anmelden",
       "invalid": "E-Mail oder Passwort stimmt nicht.",
-      "attemptsLeft": "{count, plural, one {Noch # Versuch, danach ist das Konto für 15 Minuten gesperrt.} other {Noch # Versuche, danach ist das Konto für 15 Minuten gesperrt.}}",
       "locked": "Das Konto ist nach fünf Fehlversuchen für 15 Minuten gesperrt. Ein Admin kann ein neues Startpasswort setzen.",
       "inactive": "Dieses Konto ist deaktiviert.",
+      "throttled": "Zu viele fehlgeschlagene Anmeldungen in kurzer Zeit. Die Anmeldung ist für alle für einige Minuten pausiert.",
       "importedTitle": "Import abgeschlossen",
       "importedText": "Alle Sitzungen wurden beendet. Melden Sie sich mit den Zugangsdaten aus dem eingelesenen Bestand an.",
       "footer": "Zugänge werden vom Vorstand angelegt. Bei Problemen wendet man sich an die Administration des Vereins."

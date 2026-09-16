@@ -15,8 +15,8 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
     const error = result.error;
     if (error.type === 'unauthorized' && error.reason === 'locked') return { status: 'error', message: t('locked'), fieldErrors: {} };
     if (error.type === 'unauthorized' && error.reason === 'inactive') return { status: 'error', message: t('inactive'), fieldErrors: {} };
-    const attempts = error.type === 'unauthorized' && error.attemptsLeft !== undefined ? t('attemptsLeft', { count: error.attemptsLeft }) : '';
-    return { status: 'error', message: `${t('invalid')} ${attempts}`.trim(), fieldErrors: {} };
+    if (error.type === 'unauthorized' && error.reason === 'throttled') return { status: 'error', message: t('throttled'), fieldErrors: {} };
+    return { status: 'error', message: t('invalid'), fieldErrors: {} };
   }
   await setSessionCookie(result.value.sessionId, result.value.expiresAt);
   redirect(result.value.mustChangePassword ? '/password' : '/');

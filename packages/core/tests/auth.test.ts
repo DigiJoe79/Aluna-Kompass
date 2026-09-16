@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { changeOwnPassword, LOCK_MINUTES, login, MAX_FAILED_LOGINS } from '../src/auth/login';
+import { changeOwnPassword, LOCK_MINUTES, login, MAX_FAILED_LOGINS, MAX_FAILED_LOGINS_TOTAL } from '../src/auth/login';
 import { hashPassword } from '../src/auth/password';
 import { resolveSession, revokeSession } from '../src/auth/sessions';
 import { auditLog, sessions, users } from '../src/db/schema';
@@ -36,32 +36,61 @@ describe('login and sessions', () => {
     expect(deps.db.select().from(auditLog).all().some((e) => e.action === 'auth.login' && e.userId === userId)).toBe(true);
   });
 
-  it('returns invalidCredentials with attempts left and locks after five failures with a system audit entry', async () => {
+  const wrong = (email = 'anna@example.org') => ({ email, password: 'falsch-falsch-00-falsch', ...meta });
+  const isReason = (r: Awaited<ReturnType<typeof login>>, reason: string) =>
+    r.ok === false && r.error.type === 'unauthorized' && r.error.reason === reason && !('attemptsLeft' in r.error);
+
+  it('answers every wrong password the same way and locks after five failures with a system audit entry', async () => {
     const deps = createTestDeps();
     const userId = await userWithPassword(deps);
-    for (let attempt = 1; attempt < MAX_FAILED_LOGINS; attempt += 1) {
-      const r = await login(deps, { email: 'anna@example.org', password: 'falsch-falsch-00-falsch', ...meta });
-      expect(r.ok === false && r.error.type === 'unauthorized' && r.error.reason === 'invalidCredentials' && r.error.attemptsLeft === MAX_FAILED_LOGINS - attempt).toBe(true);
+    for (let attempt = 1; attempt <= MAX_FAILED_LOGINS; attempt += 1) {
+      expect(isReason(await login(deps, wrong()), 'invalidCredentials')).toBe(true);
     }
-    const fifth = await login(deps, { email: 'anna@example.org', password: 'falsch-falsch-00-falsch', ...meta });
-    expect(fifth.ok === false && fifth.error.type === 'unauthorized' && fifth.error.reason === 'locked').toBe(true);
     const locked = deps.db.select().from(auditLog).all().find((e) => e.action === 'auth.locked');
     expect(locked).toMatchObject({ channel: 'system', userId: null, entityType: 'user', entityId: userId });
 
-    const stillLocked = await login(deps, { email: 'anna@example.org', password: PASSWORD, ...meta });
-    expect(stillLocked.ok === false && stillLocked.error.type === 'unauthorized' && stillLocked.error.reason === 'locked').toBe(true);
+    // Die Sperre erfährt nur, wer das Passwort kennt — ein Rater sieht dieselbe Antwort wie bei einem fremden Konto.
+    expect(isReason(await login(deps, wrong()), 'invalidCredentials')).toBe(true);
+    expect(isReason(await login(deps, { email: 'anna@example.org', password: PASSWORD, ...meta }), 'locked')).toBe(true);
 
     deps.clock.advance((LOCK_MINUTES + 1) * 60_000);
     expect((await login(deps, { email: 'anna@example.org', password: PASSWORD, ...meta })).ok).toBe(true);
   });
 
-  it('does not reveal whether an email exists and refuses inactive users', async () => {
+  it('does not reveal whether an email exists or an account is inactive', async () => {
     const deps = createTestDeps();
-    const unknown = await login(deps, { email: 'nobody@example.org', password: PASSWORD, ...meta });
-    expect(unknown.ok === false && unknown.error.type === 'unauthorized' && unknown.error.reason === 'invalidCredentials' && unknown.error.attemptsLeft === undefined).toBe(true);
+    expect(isReason(await login(deps, { email: 'nobody@example.org', password: PASSWORD, ...meta }), 'invalidCredentials')).toBe(true);
     await userWithPassword(deps, { isActive: false });
-    const inactive = await login(deps, { email: 'anna@example.org', password: PASSWORD, ...meta });
-    expect(inactive.ok === false && inactive.error.type === 'unauthorized' && inactive.error.reason === 'inactive').toBe(true);
+    expect(isReason(await login(deps, wrong()), 'invalidCredentials')).toBe(true);
+    expect(isReason(await login(deps, { email: 'anna@example.org', password: PASSWORD, ...meta }), 'inactive')).toBe(true);
+  });
+
+  it('records every failed login with the address it came from, known account or not', async () => {
+    const deps = createTestDeps();
+    const userId = await userWithPassword(deps);
+    await login(deps, wrong());
+    await login(deps, wrong('nobody@example.org'));
+    const failed = deps.db.select().from(auditLog).all().filter((e) => e.action === 'auth.failed');
+    expect(failed).toEqual([
+      expect.objectContaining({ channel: 'system', userId: null, entityType: 'user', entityId: userId, ipAddress: '10.0.0.5' }),
+      expect.objectContaining({ channel: 'system', userId: null, entityType: 'user', entityId: null, ipAddress: '10.0.0.5' }),
+    ]);
+    expect(failed[1]!.summary).toContain('nobody@example.org');
+  });
+
+  it('pauses all logins after too many failures across accounts, and resumes when the window has passed', async () => {
+    const deps = createTestDeps();
+    await userWithPassword(deps);
+    // Passwort-Spraying: je Konto unter der Sperrgrenze, zusammen darüber.
+    for (let i = 0; i < MAX_FAILED_LOGINS_TOTAL; i += 1) await login(deps, wrong(`person${i % 10}@example.org`));
+    const paused = await login(deps, { email: 'anna@example.org', password: PASSWORD, ...meta });
+    expect(isReason(paused, 'throttled')).toBe(true);
+    expect(deps.db.select().from(auditLog).all().filter((e) => e.action === 'auth.throttled')).toHaveLength(1);
+    // Abgewiesene Versuche zählen nicht weiter, sonst hörte die Pause nie auf.
+    expect(deps.db.select().from(auditLog).all().filter((e) => e.action === 'auth.failed')).toHaveLength(MAX_FAILED_LOGINS_TOTAL);
+
+    deps.clock.advance((LOCK_MINUTES + 1) * 60_000);
+    expect((await login(deps, { email: 'anna@example.org', password: PASSWORD, ...meta })).ok).toBe(true);
   });
 
   it('expired or revoked sessions do not resolve', async () => {
