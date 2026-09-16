@@ -1,28 +1,34 @@
 #!/usr/bin/env bash
-# Erzeugt THIRD-PARTY-NOTICES.md aus einem gebauten Image.
+# Die Aufstellung der Software Dritter im Laufzeit-Image.
 #
-# Warum aus dem Image und nicht aus dem Quellbaum: Verteilt wird, was im Image
-# liegt — Debian-Pakete der Basis, die Laufzeitabhaengigkeiten aus npm, die
-# mitgelieferten Binaerdateien. Eine von Hand gepflegte Liste ist beim naechsten
-# Basis-Image still falsch; diese hier ist es nie.
+# Verteilt wird, was im Image liegt — Debian-Pakete der Basis, die
+# Laufzeitabhaengigkeiten aus npm, die mitgelieferten Binaerdateien. Deshalb
+# entsteht die vollstaendige Liste **beim Bau im Image** (`/app/THIRD-PARTY-
+# NOTICES.md`) und stimmt so fuer jede ausgelieferte Fassung. Im Repo steht mit
+# `THIRD-PARTY-NOTICES.md` nur eine Uebersicht ohne Versionen: Stand dort die
+# volle Liste, machte jedes Dependabot-Update sie falsch (#5, 2026-09-16).
 #
-#   scripts/third-party-notices.sh [image]        schreibt THIRD-PARTY-NOTICES.md
-#   scripts/third-party-notices.sh [image] --pruefen   meldet Abweichungen, schreibt nichts
+#   scripts/third-party-notices.sh --erzeugen          im Image: schreibt die Liste nach stdout (Dockerfile)
+#   scripts/third-party-notices.sh [image] --pruefen   Liste vorhanden, jede npm-Lizenz erlaubt (CI, verify)
+#   scripts/third-party-notices.sh [image]             gibt die Liste aus dem Image aus
 #
 # Vorgabe-Image: kompass-local (aus `pnpm image`).
 set -euo pipefail
 
-IMAGE="${1:-kompass-local}"
-MODUS="${2:-schreiben}"
-ZIEL="$(cd "$(dirname "$0")/.." && pwd)/THIRD-PARTY-NOTICES.md"
-
-if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
-  echo "Image '$IMAGE' gibt es nicht. Erst 'pnpm image' bauen." >&2
-  exit 1
+if [ "${1:-}" = "--erzeugen" ]; then
+  MODUS=erzeugen
+  IMAGE=""
+else
+  IMAGE="${1:-kompass-local}"
+  MODUS="${2:-ausgeben}"
+  if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+    echo "Image '$IMAGE' gibt es nicht. Erst 'pnpm image' bauen." >&2
+    exit 1
+  fi
 fi
 
-# Rohdaten im Container sammeln: dpkg fuer Debian, node fuer npm — beides ist
-# dort ohnehin vorhanden, also braucht es kein jq und keine Fremdwerkzeuge.
+# Rohdaten sammeln: dpkg fuer Debian, node fuer npm — beides ist im Image
+# ohnehin vorhanden, also braucht es kein jq und keine Fremdwerkzeuge.
 #
 # Das Programm steht in einem unquotierten Heredoc und wird als **ein** Argument
 # uebergeben. Zwischenschritt mit doppelten Anfuehrungszeichen waere falsch: die
@@ -64,7 +70,9 @@ node -e '
       if (e.name.startsWith("@") || e.name === "node_modules" || e.name === ".pnpm") { lauf(p, tiefe + 1); continue; }
       try {
         const pkg = JSON.parse(fs.readFileSync(path.join(p, "package.json"), "utf8"));
-        if (pkg.name && pkg.version) {
+        // Eigene Pakete des Workspace (`@kompass/*`, `verein-basis`) sind privat
+        // und keine Software Dritter; sie stehen unter der Projektlizenz.
+        if (pkg.name && pkg.version && !pkg.private) {
           const lz = typeof pkg.license === "string" ? pkg.license
             : (pkg.license && pkg.license.type) ? pkg.license.type
             : Array.isArray(pkg.licenses) ? pkg.licenses.map((l) => l.type || l).join(" OR ")
@@ -88,13 +96,62 @@ node -e '
 IM_CONTAINER
 )
 
-roh() {
-  docker run --rm --entrypoint sh "$IMAGE" -c "$CONTAINER_PROGRAMM"
-}
+if [ "$MODUS" != "erzeugen" ]; then
+  LISTE="$(docker run --rm --entrypoint cat "$IMAGE" /app/THIRD-PARTY-NOTICES.md 2>/dev/null || true)"
+  if [ -z "$LISTE" ]; then
+    echo "Das Image '$IMAGE' traegt keine /app/THIRD-PARTY-NOTICES.md." >&2
+    exit 1
+  fi
+  if [ "$MODUS" = "ausgeben" ]; then
+    printf '%s\n' "$LISTE"
+    exit 0
+  fi
+
+  # Lizenzen, die ein npm-Paket im Image tragen darf. Freizuegige Lizenzen,
+  # dazu MPL-2.0 (Datei-Copyleft, unveraendert mitgeliefert) und die
+  # Schriftlizenz OFL. Alles andere — AGPL, GPL, eine fehlende Angabe — soll
+  # jemand ansehen, bevor es verteilt wird. Die Pruefung vergleicht bewusst
+  # nicht mit einer Datei: Ein Update aendert Versionen, keine Lizenzen.
+  ERLAUBT='MIT ISC Apache-2.0 BSD-2-Clause BSD-3-Clause 0BSD BlueOak-1.0.0 CC0-1.0 CC-BY-4.0 Python-2.0 OFL-1.1 MPL-2.0 Unlicense'
+  # Einzeln angesehen: libvips, dynamisch geladen und austauschbar (NOTICE).
+  AUSNAHMEN='@img/sharp-libvips-*=LGPL-3.0-or-later'
+
+  verstoesse=$(printf '%s\n' "$LISTE" | awk '/^## 5\./{f=1} f && /^\| `/' | awk -F' \\| ' -v erlaubt="$ERLAUBT" -v ausnahmen="$AUSNAHMEN" '
+    BEGIN {
+      n = split(erlaubt, e, " "); for (i = 1; i <= n; i++) ok[e[i]] = 1
+      m = split(ausnahmen, a, " "); for (i = 1; i <= m; i++) { split(a[i], kv, "="); aus[kv[1]] = kv[2] }
+    }
+    {
+      name = $1; sub(/^\| `/, "", name); sub(/`$/, "", name)
+      lz = $3; sub(/ \|$/, "", lz); gsub(/[()]/, "", lz)
+      for (muster in aus) {
+        re = "^" muster; gsub(/\*/, ".*", re); gsub(/\//, "\\/", re)
+        if (name ~ re && lz == aus[muster]) next
+      }
+      if (lz ~ / OR /) {
+        k = split(lz, t, / OR /); gut = 0
+        for (i = 1; i <= k; i++) if (t[i] in ok) gut = 1
+      } else {
+        k = split(lz, t, / AND /); gut = 1
+        for (i = 1; i <= k; i++) if (!(t[i] in ok)) gut = 0
+      }
+      if (!gut) print "  " name ": " lz
+    }')
+
+  if [ -n "$verstoesse" ]; then
+    echo "Im Image '$IMAGE' liegen npm-Pakete mit einer Lizenz, die niemand freigegeben hat:" >&2
+    echo "$verstoesse" >&2
+    echo >&2
+    echo "Ansehen; passt sie, in ERLAUBT oder AUSNAHMEN in $0 aufnehmen." >&2
+    exit 1
+  fi
+  echo "Lizenzliste im Image '$IMAGE' vorhanden, jede npm-Lizenz freigegeben."
+  exit 0
+fi
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
-roh > "$TMP/roh.txt"
+sh -c "$CONTAINER_PROGRAMM" > "$TMP/roh.txt"
 
 abschnitt() { awk -v s="@@$1" -v e="@@$2" '$0==s{an=1;next} $0==e{an=0} an' "$TMP/roh.txt"; }
 
@@ -114,18 +171,12 @@ Aluna Kompass steht unter Apache-2.0 (siehe \`LICENSE\` und \`NOTICE\`). Das
 ausgelieferte Container-Image enthält darüber hinaus Software Dritter unter
 eigenen Bedingungen. Diese Datei führt sie auf.
 
-**Diese Datei wird erzeugt, nicht gepflegt.** Quelle ist das gebaute Image:
-
-\`\`\`
-scripts/third-party-notices.sh [image]
-\`\`\`
+**Diese Datei wird beim Bau des Images erzeugt, nicht gepflegt**
+(\`scripts/third-party-notices.sh --erzeugen\`). Sie gilt für genau das Image,
+in dem sie liegt.
 
 Stand: Debian $DEBIAN_VERSION, $DEB_ANZAHL Systempakete, $NPM_ANZAHL npm-Pakete.
 
-Die Aufstellung gilt für jede Bauarchitektur: Pakete, die je Plattform unter
-eigenem Namen liegen, stehen zusammengefasst als \`…-<plattform>\`, und die
-Rebuild-Suffixe von Debian (\`+b1\`) sind abgeschnitten. Beides ändert die
-Lizenz nicht — nur die Datei, die sie nennt.
 
 ## 1. Quellcode
 
@@ -212,19 +263,4 @@ Die folgenden Pakete liegen im Image unter `/app/node_modules`.
 MITTE
 
 awk -F'\t' '{gsub(/\|/,"\\|",$3); printf "| `%s` | `%s` | %s |\n", $1, $2, $3}' "$TMP/npm.tsv"
-} > "$TMP/neu.md"
-
-if [ "$MODUS" = "--pruefen" ]; then
-  if diff -q "$ZIEL" "$TMP/neu.md" >/dev/null 2>&1; then
-    echo "THIRD-PARTY-NOTICES.md passt zum Image '$IMAGE'."
-  else
-    echo "THIRD-PARTY-NOTICES.md weicht vom Image '$IMAGE' ab:" >&2
-    diff "$ZIEL" "$TMP/neu.md" | head -120 >&2
-    echo >&2
-    echo "Erneuern mit: scripts/third-party-notices.sh $IMAGE" >&2
-    exit 1
-  fi
-else
-  cp "$TMP/neu.md" "$ZIEL"
-  echo "THIRD-PARTY-NOTICES.md geschrieben: $DEB_ANZAHL Systempakete, $NPM_ANZAHL npm-Pakete."
-fi
+} 
