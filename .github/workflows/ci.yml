@@ -31,14 +31,18 @@ concurrency:
 env:
   TYPST_VERSION: 0.15.1
 
+# Actions haengen an Commit-Hashes, nicht an Tags: Ein Tag laesst sich
+# verschieben, ein Hash nicht. Wird ein Action-Repo uebernommen, liefe sonst
+# fremder Code mit dem Recht, Images nach GHCR zu schieben. Der Kommentar nennt
+# die Fassung; Dependabot aktualisiert Hash und Kommentar zusammen.
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with: { version: 11.25.0 }
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with: { node-version: 26, cache: pnpm }
       - name: Install Typst and rsync
         run: |
@@ -56,7 +60,7 @@ jobs:
       - id: playwright-version
         run: echo "value=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
         working-directory: apps/kompass
-      - uses: actions/cache@v6
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
@@ -68,7 +72,7 @@ jobs:
       - run: pnpm --filter @kompass/app e2e
       # Der Bericht entsteht nur, weil playwright.config.ts den HTML-Reporter
       # fuehrt; ohne ihn lud dieser Schritt ein leeres Artefakt hoch.
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: failure()
         with: { name: playwright-report, path: apps/kompass/playwright-report, retention-days: 7 }
 
@@ -87,15 +91,15 @@ jobs:
     runs-on: ubuntu-latest
     permissions: { contents: read, packages: write }
     steps:
-      - uses: actions/checkout@v7
-      - uses: docker/setup-buildx-action@v4
-      - uses: docker/login-action@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: meta
-        uses: docker/metadata-action@v6
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
           images: ghcr.io/${{ github.repository_owner }}/aluna-kompass
           tags: |
@@ -107,7 +111,7 @@ jobs:
       # den Container ist die einzige Stelle, an der die amd64-Fassung je
       # ausgefuehrt wird — lokal baut ein Apple-Silicon-Rechner arm64, und
       # `better-sqlite3`, `sharp` und Typst sind je Architektur andere Dateien.
-      - uses: docker/build-push-action@v7
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           platforms: linux/amd64
@@ -119,15 +123,15 @@ jobs:
             KOMPASS_BUILD=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with: { version: 11.25.0 }
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with: { node-version: 26, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - id: playwright-version
         run: echo "value=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
         working-directory: apps/kompass
-      - uses: actions/cache@v6
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
@@ -137,7 +141,7 @@ jobs:
       - run: pnpm --filter @kompass/app exec playwright install-deps chromium
         if: steps.playwright-cache.outputs.cache-hit == 'true'
       - run: pnpm e2e:image
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: failure()
         with: { name: playwright-report-container, path: apps/kompass/playwright-report-container, retention-days: 7 }
       # Wer ein Paket ins Image nimmt, verteilt fremde Software mit. Die

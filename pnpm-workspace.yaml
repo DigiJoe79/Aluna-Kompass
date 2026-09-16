@@ -12,6 +12,33 @@ allowBuilds:
   esbuild: true
   unrs-resolver: true
 
+# Lieferkette. Ein kompromittiertes Paket faellt meist binnen Tagen auf; wer
+# nicht sofort installiert, bekommt es selten.
+#
+# Frisch veroeffentlichte Versionen erst nach einer Woche — dieselbe Frist wie
+# der `cooldown` von Dependabot (pnpm 11 wartet von sich aus nur einen Tag).
+# Eine dringende Sicherheitskorrektur kommt ueber `minimumReleaseAgeExclude`.
+minimumReleaseAge: 10080
+# Nur direkte Abhaengigkeiten duerfen aus Git oder von einer URL kommen
+# (Vorgabe von pnpm 11, ausdruecklich hier, damit sie nicht still wegfaellt).
+blockExoticSubdeps: true
+# Eine Version, die schwaecher belegt veroeffentlicht wurde als ihre Vorgaenger
+# (etwa ohne Provenance, wo es vorher welche gab), bricht die Installation ab —
+# das typische Zeichen eines uebernommenen Veroeffentlichungskontos.
+trustPolicy: no-downgrade
+# Nur fuer frische Versionen: Eine Uebernahme ist binnen Tagen bekannt, danach
+# faengt `pnpm audit` sie. Ohne diese Grenze scheitern alte Backport-Releases
+# wie semver@6.3.1, die nach einer Hauptversion mit Provenance erschienen.
+trustPolicyIgnoreAfter: 43200
+
+# drizzle-kit laedt ueber @esbuild-kit noch esbuild 0.18, das GHSA-67mh-4wv8-2f99
+# traegt (Entwicklungsserver mit `Access-Control-Allow-Origin: *`). drizzle-kit
+# ruft `serve()` nie auf, ausnutzbar ist es hier nicht — aber jeder Scan meldet
+# es, und auch die aktuelle stabile drizzle-kit haengt noch daran. Die
+# Transform-API ist zwischen den Fassungen stabil; `db:generate` prueft es.
+overrides:
+  '@esbuild-kit/core-utils>esbuild': ^0.25.0
+
 minimumReleaseAgeExclude:
   - '@playwright/test@1.63.0'
   - playwright-core@1.63.0

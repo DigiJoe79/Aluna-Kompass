@@ -17,6 +17,10 @@ updates:
       timezone: Europe/Berlin
     # Mehr als eine Handvoll offener Vorschläge liest ohnehin niemand.
     open-pull-requests-limit: 5
+    # Eine Woche Abstand zur Veroeffentlichung: Kompromittierte Pakete fallen
+    # meist binnen Tagen auf, und bis dahin soll kein Vorschlag sie bringen.
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: build(deps)
       prefix-development: build(deps-dev)
@@ -36,9 +40,9 @@ updates:
         update-types: [version-update:semver-major]
 
   # --- GitHub Actions ------------------------------------------------------
-  # Die `uses:`-Zeilen in den Workflows. Sie stehen auf Haupt-Versionen
-  # (`@v7`), wandern also innerhalb einer Linie ohnehin mit; hier geht es um
-  # den Sprung auf die nächste.
+  # Die `uses:`-Zeilen in den Workflows. Sie stehen auf Commit-Hashes mit der
+  # Fassung als Kommentar; Dependabot schlägt jede neue Fassung vor und
+  # aktualisiert Hash und Kommentar zusammen.
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -47,6 +51,10 @@ updates:
       time: "06:00"
       timezone: Europe/Berlin
     open-pull-requests-limit: 3
+    # Eine Woche Abstand zur Veroeffentlichung: Kompromittierte Pakete fallen
+    # meist binnen Tagen auf, und bis dahin soll kein Vorschlag sie bringen.
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: ci(deps)
     groups:
@@ -65,5 +73,9 @@ updates:
       time: "06:00"
       timezone: Europe/Berlin
     open-pull-requests-limit: 2
+    # Eine Woche Abstand zur Veroeffentlichung: Kompromittierte Pakete fallen
+    # meist binnen Tagen auf, und bis dahin soll kein Vorschlag sie bringen.
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: build(image)
