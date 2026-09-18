@@ -1,0 +1,25 @@
+---
+/**
+ * Die Fehlerseite, einmal je Sprache eingebunden. Astro erzeugt `404.html`
+ * aus dem Dateinamen, nicht aus einer Route — deshalb steht der Inhalt hier
+ * und nicht in `[...path].astro`.
+ *
+ * Nur die Seite an der Wurzel wird zu `404.html`; die englische landet unter
+ * `/en/404/`. Ein Hoster liefert bei einem unbekannten Pfad in aller Regel
+ * `/404.html` aus, also die deutsche. Wer beide will, richtet beim Hoster eine
+ * sprachabhängige Fehlerseite ein.
+ */
+import Base from '../layouts/Base.astro';
+import { pathFor } from '../lib/routes';
+import { ui, type Locale } from '../lib/locale';
+
+const { locale } = Astro.props as { locale: Locale };
+const t = ui(locale).misc;
+---
+<Base title={t.notFound} locale={locale}>
+  <div class="wrap wrap-narrow section">
+    <h1>{t.notFound}</h1>
+    <p>{t.notFoundLede}</p>
+    <p><a href={pathFor(locale, 'home')}>{t.home}</a></p>
+  </div>
+</Base>

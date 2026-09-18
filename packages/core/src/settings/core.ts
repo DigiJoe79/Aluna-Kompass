@@ -1,0 +1,111 @@
+import { z } from 'zod';
+import type { SettingDefinition } from '../modules/manifest';
+import { RETENTION_DEFAULT_MONTHS } from '../retention/classes';
+import { DEFAULT_THEME } from '../themes/default-theme';
+import { themeSchema } from '../themes/tokens';
+
+const shortText = z.string().trim().max(200);
+const isoDateOrEmpty = z.union([z.literal(''), z.iso.date()]);
+
+const organization: SettingDefinition[] = [
+  { key: 'organization.name', schema: z.string().trim().min(1).max(200), default: 'Neuer Verein' },
+  {
+    key: 'organization.legalForm',
+    schema: z.enum(['registeredAssociation', 'unregisteredAssociation']),
+    default: 'registeredAssociation',
+  },
+  { key: 'organization.street', schema: shortText, default: '' },
+  { key: 'organization.postalCode', schema: z.string().trim().max(10), default: '' },
+  { key: 'organization.city', schema: shortText, default: '' },
+  { key: 'organization.country', schema: z.string().trim().length(2).toUpperCase(), default: 'DE' },
+  { key: 'organization.foundedYear', schema: z.union([z.literal(''), z.string().regex(/^(1[89]|20|21)\d{2}$/)]), default: '' },
+  { key: 'organization.registerCourt', schema: shortText, default: '' },
+  { key: 'organization.registerNumber', schema: shortText, default: '' },
+  { key: 'organization.taxNumber', schema: shortText, default: '' },
+  { key: 'organization.taxOffice', schema: shortText, default: '' },
+  {
+    key: 'organization.exemptionNoticeType',
+    schema: z.enum(['none', 'exemptionNotice', 'corporateTaxNoticeAttachment', 'section60a']),
+    default: 'none',
+  },
+  { key: 'organization.exemptionNoticeDate', schema: isoDateOrEmpty, default: '' },
+  { key: 'organization.statutoryPurpose', schema: z.string().trim().max(500), default: '' },
+  { key: 'organization.email', schema: z.union([z.literal(''), z.email()]), default: '' },
+  { key: 'organization.website', schema: z.union([z.literal(''), z.url()]), default: '' },
+  { key: 'organization.phone', schema: shortText, default: '' },
+  { key: 'organization.iban', schema: z.string().trim().max(34), default: '' },
+  { key: 'organization.bic', schema: z.string().trim().max(11), default: '' },
+  { key: 'organization.bankName', schema: shortText, default: '' },
+];
+
+const branding: SettingDefinition[] = [
+  { key: 'branding.logoAssetId', schema: z.string().nullable(), default: null },
+  {
+    key: 'branding.fontBody',
+    schema: z.enum(['source-sans-3', 'public-sans', 'atkinson-hyperlegible']),
+    default: 'source-sans-3',
+  },
+  { key: 'branding.fontHeading', schema: z.enum(['source-serif-4', 'same-as-body']), default: 'source-serif-4' },
+  { key: 'branding.activeTheme', schema: z.string().min(1), default: 'default' },
+];
+
+const themes: SettingDefinition[] = [
+  { key: 'themes', schema: z.array(themeSchema).min(1), default: [DEFAULT_THEME] },
+];
+
+/** Wie ein Datum auf dem Bildschirm aussieht (Befund 8, 2026-09-12): aus der Sprache, oder ISO 8601. */
+const ui: SettingDefinition[] = [
+  { key: 'ui.dateFormat', schema: z.enum(['locale', 'iso']), default: 'locale' },
+];
+
+const modules: SettingDefinition[] = [
+  { key: 'modules.enabled', schema: z.array(z.string()), default: [] },
+];
+
+const documentsSettings: SettingDefinition[] = [
+  // Dokumentart-Schlüssel → Basis-Vorlagen-ID. Leer = Vorgabe der Vorlage.
+  { key: 'documents.bases', schema: z.record(z.string(), z.string()), default: {} },
+];
+
+const i18n: SettingDefinition[] = [
+  { key: 'i18n.locales', schema: z.array(z.string().regex(/^[a-z]{2}(-[a-z]{2})?$/)).min(1).max(10), default: ['de'] },
+];
+
+const system: SettingDefinition[] = [
+  { key: 'system.lastImportAt', schema: z.string().nullable(), default: null, systemOnly: true },
+  { key: 'system.lastImportSource', schema: z.string().nullable(), default: null, systemOnly: true },
+  { key: 'system.lastExportAt', schema: z.string().nullable(), default: null, systemOnly: true },
+];
+
+/** Ab wann die Startseite ein Backup als veraltet meldet — eine Regel des Vereins, keine Vorliebe (Spec 2026-09-17, Entscheidung 13). */
+const backup: SettingDefinition[] = [
+  { key: 'backup.maxAgeDays', schema: z.number().int().min(1).max(365), default: 30 },
+];
+
+// `min(0)`: null ist ein gültiger Wert, etwa für `consent` — „löschen mit Ablauf
+// des Jahres, in dem der Zweck entfiel", ohne zusätzliche Monate obendrauf.
+const months = z.number().int().min(0).max(1200);
+
+/**
+ * Aufbewahrungsfristen in Monaten, aus `RETENTION_DEFAULT_MONTHS` abgeleitet statt
+ * von Hand dupliziert — eine neue Klasse dort erzwingt sonst nur einen Vorgabewert,
+ * hier aber keine Einstellung, und würde erst zur Laufzeit mit
+ * `unknown setting: retention.<x>` auffallen. Die Klasse `permanent` hat keine
+ * Länge und fehlt deshalb in `RETENTION_DEFAULT_MONTHS` und hier.
+ */
+const retention: SettingDefinition[] = Object.entries(RETENTION_DEFAULT_MONTHS).map(([cls, value]) => ({
+  key: `retention.${cls}`,
+  schema: months,
+  default: value,
+}));
+
+export const CORE_SETTINGS: SettingDefinition[] = [
+  ...organization,
+  ...branding,
+  ...themes,
+  ...modules,
+  ...documentsSettings,
+  ...i18n,
+  ...system,
+  ...backup,
+  ...retention, ...ui];

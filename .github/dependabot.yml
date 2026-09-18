@@ -1,0 +1,65 @@
+# Dependabot hält die Abhängigkeiten aktuell und schlägt die Aktualisierung als
+# Pull Request vor. Die CI prüft ihn wie jeden anderen, samt Image und
+# Containerring — ein Update kann also nicht an der Verpackung scheitern, ohne
+# dass es auffällt.
+#
+# **Einmal im Monat, ein Pull Request für alles.** Jeder Vorschlag kostet zwei
+# volle CI-Läufe mit Image-Bau: einen als Pull Request, einen nach dem Merge auf
+# `dev`. Wöchentlich und je Ökosystem getrennt waren das bis zu sechs pro
+# Woche, für ein Projekt mit einer Person und sieben Tagen Abstand zu jeder
+# neuen Version — Rechenzeit ohne Gegenwert. Sicherheitsupdates betrifft das
+# nicht: Die kommen unabhängig von diesem Zeitplan sofort.
+version: 2
+
+multi-ecosystem-groups:
+  monthly:
+    schedule:
+      interval: monthly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Berlin
+    # Nur an der Gruppe erlaubt, nicht je Ökosystem.
+    commit-message:
+      prefix: build(deps)
+
+updates:
+  # --- npm (der pnpm-Workspace) -------------------------------------------
+  # Ein Eintrag genügt: Dependabot liest die Lockfile im Wurzelverzeichnis und
+  # sieht darüber alle Pakete des Workspace.
+  - package-ecosystem: npm
+    directory: /
+    multi-ecosystem-group: monthly
+    patterns: ['*']
+    # Eine Woche Abstand zur Veröffentlichung: Kompromittierte Pakete fallen
+    # meist binnen Tagen auf, und bis dahin soll kein Vorschlag sie bringen.
+    # Dieselbe Frist setzt `minimumReleaseAge` in pnpm-workspace.yaml.
+    cooldown:
+      default-days: 7
+    ignore:
+      # TypeScript 7 ist nicht die nächste Fassung von 6, sondern die
+      # Portierung nach Go — ein anderes Werkzeug mit eigenem Zeitplan. Der
+      # Wechsel ist eine Entscheidung, kein Update. Patches auf der 6er-Linie
+      # kommen weiterhin.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+
+  # --- GitHub Actions ------------------------------------------------------
+  # Die `uses:`-Zeilen in den Workflows. Sie stehen auf Commit-Hashes mit der
+  # Fassung als Kommentar; Dependabot aktualisiert Hash und Kommentar zusammen.
+  - package-ecosystem: github-actions
+    directory: /
+    multi-ecosystem-group: monthly
+    patterns: ['*']
+    cooldown:
+      default-days: 7
+
+  # --- Das Basis-Image des Containers -------------------------------------
+  # `node:26-bookworm-slim` im Dockerfile. Ein Vorschlag hier ist fast immer
+  # ein Sprung auf die nächste Node-Hauptversion und gehört angesehen, nicht
+  # durchgewinkt.
+  - package-ecosystem: docker
+    directory: /
+    multi-ecosystem-group: monthly
+    patterns: ['*']
+    cooldown:
+      default-days: 7

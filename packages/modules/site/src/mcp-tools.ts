@@ -1,0 +1,143 @@
+import { type Deps, type McpToolDefinition } from '@kompass/core';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { z } from 'zod';
+import { siteTemplateDir } from './env';
+import { exportSiteContent } from './export';
+import {
+  createEntry,
+  deleteEntry,
+  entryDeletionPreview,
+  getEntry,
+  listEntries,
+  reorderEntries,
+  setEntryPublished,
+  updateEntry,
+} from './entries';
+import { schemaFor } from './field-schema';
+import type { TemplateSchema } from './load';
+import { activeTemplate, applyTemplateSync, previewTemplateSync, readActiveTemplate } from './service';
+import { getVariables, listReferenceOptions, setValues } from './values';
+import { readSiteEnv } from './pipeline/env';
+import { listPublishes } from './services/publishes';
+import { checkDeployTarget, runPreview, runPublish } from './pipeline/jobs';
+
+
+const tool = (
+  name: string,
+  description: string,
+  inputSchema: z.ZodType<unknown>,
+  handler: McpToolDefinition['handler'],
+  service: McpToolDefinition['service'],
+): McpToolDefinition => ({
+  name,
+  description,
+  inputSchema,
+  handler,
+  service,
+});
+
+const fieldShape = (fields: TemplateSchema['collections'][string]['fields']) =>
+  Object.fromEntries(Object.entries(fields).map(([key, field]) => [key, schemaFor(field).optional()]));
+
+function collectionTools(key: string, col: TemplateSchema['collections'][string]): McpToolDefinition[] {
+  const shape = fieldShape(col.fields);
+  const slug = col.slug ? { slug: z.string().optional() } : {};
+  const tools: McpToolDefinition[] = [
+    tool(`site_${key}_list`, `List the entries of the „${col.label}“ collection. Requires site.view.`, z.object({}), (deps, ctx) => listEntries(deps, ctx, key), listEntries),
+    tool(`site_${key}_get`, `Read one entry of „${col.label}“. Requires site.view.`, z.object({ id: z.string() }), (deps, ctx, args) => getEntry(deps, ctx, (args as { id: string }).id), getEntry),
+    tool(`site_${key}_create`, `Create an entry in „${col.label}“ against its declared fields. Requires site.manage.`, z.object({ ...slug, ...shape }), (deps, ctx, args) => {
+      const { slug: entrySlug, ...data } = args as Record<string, unknown>;
+      return createEntry(deps, ctx, { collection: key, slug: entrySlug, data });
+    }, createEntry),
+    tool(`site_${key}_update`, `Update an entry in „${col.label}“. Requires site.manage. Localized fields are replaced as a whole map; to change one locale use translations_set.`, z.object({ id: z.string(), ...slug, ...shape }), (deps, ctx, args) => {
+      const { id, slug: entrySlug, ...data } = args as Record<string, unknown> & { id: string };
+      return updateEntry(deps, ctx, { id, slug: entrySlug, data });
+    }, updateEntry),
+    tool(`site_${key}_deletion_preview`, `Tell whether an entry in „${col.label}“ can be deleted: still published, still referenced, and which media are used nowhere else. Call this before site_${key}_delete. Requires site.view.`, z.object({ id: z.string() }), (deps, ctx, args) => entryDeletionPreview(deps, ctx, (args as { id: string }).id), entryDeletionPreview),
+    tool(`site_${key}_delete`, `Delete an entry in „${col.label}“ (editorial content, audited). Two steps: a published entry must be withdrawn first. deleteOrphanedMedia also deletes media used nowhere else and needs media.upload. Requires site.manage.`, z.object({ id: z.string(), deleteOrphanedMedia: z.boolean().optional() }), (deps, ctx, args) => deleteEntry(deps, ctx, args), deleteEntry),
+  ];
+  if (col.publishable) {
+    tools.push(
+      tool(`site_${key}_set_published`, `Publish or withdraw an entry in „${col.label}“. Requires site.manage.`, z.object({ id: z.string(), isPublished: z.boolean() }), (deps, ctx, args) => setEntryPublished(deps, ctx, args), setEntryPublished),
+    );
+  }
+  if (col.sortable) {
+    tools.push(
+      tool(`site_${key}_reorder`, `Set the order of entries in „${col.label}“. Requires site.manage.`, z.object({ ids: z.array(z.string()) }), (deps, ctx, args) => reorderEntries(deps, ctx, { collection: key, ids: (args as { ids: string[] }).ids }), reorderEntries),
+    );
+  }
+  return tools;
+}
+
+const FIXED: McpToolDefinition[] = [
+  tool(
+    'site_template_read',
+    'Read the active template declaration: name, locales, variables and collections. Requires site.view.',
+    z.object({}),
+    (deps, ctx) => readActiveTemplate(deps, ctx),
+    readActiveTemplate,
+  ),
+  tool(
+    'site_template_sync',
+    'Re-read the template file from the volume. Without confirm it returns the findings; with confirm it applies them. Requires site.manage.',
+    z.object({ confirm: z.boolean().default(false) }),
+    (deps, ctx, args) => {
+      const dir = siteTemplateDir();
+      return (args as { confirm: boolean }).confirm
+        ? applyTemplateSync(deps, ctx, { dir, confirm: true })
+        : previewTemplateSync(deps, ctx, dir);
+    },
+    applyTemplateSync,
+  ),
+  tool('site_variables_get', 'Read all template variable values. Requires site.view.', z.object({}), (deps, ctx) => getVariables(deps, ctx), getVariables),
+  tool('site_variables_set', 'Write template variable values, checked against the template schema. Requires site.manage. Localized fields are replaced as a whole map; to change one locale use translations_set.', z.object({ values: z.record(z.string(), z.unknown()) }), (deps, ctx, args) => setValues(deps, ctx, args), setValues),
+  tool('site_variables_options', 'List the selectable records per reference variable (value and label), filtered by the declared condition. Requires site.view.', z.object({}), (deps, ctx) => listReferenceOptions(deps, ctx), listReferenceOptions),
+  tool('site_export_check', 'Build the content export into a throwaway directory without publishing, to check it is current and complete. Requires site.publish.', z.object({}), async (deps, ctx) => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'kompass-site-check-'));
+    try {
+      const result = await exportSiteContent(deps, ctx, { jobDir: dir });
+      return result.ok ? { ok: true as const, value: { contentHash: result.value.contentHash, assets: result.value.assets.length, gaps: result.value.gaps, violations: result.value.violations, stale: result.value.stale } } : result;
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, exportSiteContent),
+  tool(
+    'site_deploy_check',
+    'Dry run against the configured deploy target: signs in, transfers nothing, and lists the files a publish would remove there. Requires site.publish.',
+    z.object({}),
+    (deps, ctx) => checkDeployTarget(deps, ctx, readSiteEnv()),
+    checkDeployTarget,
+  ),
+  tool(
+    'site_preview_build',
+    'Build the preview of the site into the configured preview directory and report diff against the last publish. Requires site.publish.',
+    z.object({}),
+    (deps, ctx) => runPreview(deps, ctx, readSiteEnv()),
+    runPreview,
+  ),
+  tool(
+    'site_publish',
+    'Build and publish the site to the configured deploy target. Requires site.publish and confirm: true. Audited.',
+    z.object({ confirm: z.boolean() }),
+    (deps, ctx, args) => runPublish(deps, ctx, readSiteEnv(), args as { confirm: boolean }),
+    runPublish,
+  ),
+  // Wer veröffentlichen darf, soll nachsehen können, ob und wann zuletzt
+  // veröffentlicht wurde (Prinzip 8) — ein reiner Lesezugriff.
+  tool(
+    'site_publishes',
+    'List the publish history of an environment, newest first: when, by whom, with what result and how many pages changed. Requires site.view.',
+    z.object({ environment: z.string().min(1), limit: z.number().int().min(1).max(200).optional() }),
+    (deps, ctx, args) => listPublishes(deps, ctx, args as { environment: string; limit?: number }),
+    listPublishes,
+  ),
+];
+
+/** Die Werkzeuge des Moduls: feste plus je Sammlung des eingelesenen Templates. */
+export const SITE_MCP_TOOLS = (deps: Deps): readonly McpToolDefinition[] => {
+  const template = activeTemplate(deps);
+  const perCollection = Object.entries(template?.schema.collections ?? {}).flatMap(([key, col]) => collectionTools(key, col));
+  return [...FIXED, ...perCollection];
+};

@@ -1,0 +1,7 @@
+# Apache-Konfiguration der ausgelieferten Seite. Wird mitpubliziert.
+# Ohne ErrorDocument zeigt der Server bei unbekannten Pfaden eine leere
+# Seite, statt die von Astro erzeugte 404.html zu verwenden.
+ErrorDocument 404 /404.html
+
+# Kein Verzeichnislisting, sonst ist /images/ frei durchsuchbar.
+Options -Indexes

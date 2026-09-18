@@ -1,0 +1,16 @@
+{
+  "variables": {
+    "claim": { "de": "Wir helfen." },
+    "pct": 97.2
+  },
+  "collections": {
+    "notes": [
+      { "body": "Erste Notiz" },
+      { "body": "Zweite Notiz" }
+    ],
+    "posts": [
+      { "slug": "hallo", "title": "Hallo", "isPublished": true },
+      { "slug": "entwurf", "title": "Entwurf" }
+    ]
+  }
+}

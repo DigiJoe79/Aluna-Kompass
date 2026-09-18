@@ -1,0 +1,101 @@
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { coreModule, createDeps, readEnv, resetDataPath, seedDevelopment, setSetting, unwrap, type AppEnv, type CallContext } from '@kompass/core';
+import { coreDocumentTemplates, createDocumentEngine } from '@kompass/documents';
+import { animalsModule } from '@kompass/module-animals';
+import { contactsModule } from '@kompass/module-contacts';
+import { dmsModule } from '@kompass/module-dms';
+import { projectsModule } from '@kompass/module-projects';
+import { siteModule, siteTemplateDir } from '@kompass/module-site';
+import { importPrototype } from './import-prototype';
+
+const BASE_TEMPLATE = path.resolve(import.meta.dirname, '..', 'templates', 'verein-basis');
+
+/** Liest `site.name` aus den Prototyp-Daten; null, wenn die Datei fehlt oder keinen Namen trägt. */
+async function prototypeOrganizationName(prototypeDir: string): Promise<string | null> {
+  try {
+    const mod = (await import(pathToFileURL(path.join(prototypeDir, 'src/data/site.js')).href)) as {
+      site?: { name?: unknown };
+    };
+    const name = mod.site?.name;
+    return typeof name === 'string' && name.trim() ? name.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+export interface DevResetOptions {
+  env: AppEnv;
+  dataPath: string;
+  prototypeDir: string;
+  /** Das Template-Verzeichnis, das in der Entwicklung dem Volume entspricht. */
+  templateDir: string;
+}
+
+/**
+ * Verwirft die Entwicklungsdatenbank samt Medien und baut sie neu auf:
+ * Seed (Verein, Rollen, Nutzer, Module) plus die Inhalte aus dem Prototyp.
+ * Ausschliesslich für die Entwicklung — Test und Produktion sind gesperrt.
+ */
+export async function devReset(opts: DevResetOptions) {
+  if (opts.env !== 'development') {
+    throw new Error(`dev:reset runs only in the development environment, not in ${opts.env}`);
+  }
+  await resetDataPath(opts.dataPath, [coreModule, siteModule, projectsModule, animalsModule, contactsModule, dmsModule]);
+
+  // Dasselbe Skript, das der Entrypoint im Container fährt: Basis-Template
+  // hinein, wenn keins da ist, und die Modulauflösung setzen. Ohne diesen
+  // Schritt liest die Entwicklung, was zuletzt jemand hineinkopiert hat.
+  execFileSync('sh', [path.resolve(import.meta.dirname, 'seed-site-template.sh'), BASE_TEMPLATE, path.join(BASE_TEMPLATE, 'node_modules')], {
+    env: { ...process.env, SITE_TEMPLATE_DIR: opts.templateDir },
+    stdio: 'inherit',
+  });
+  const deps = createDeps({
+    dataPath: opts.dataPath,
+    env: opts.env,
+    modules: [siteModule, projectsModule, animalsModule, contactsModule, dmsModule],
+    coreTemplates: coreDocumentTemplates(),
+    documents: createDocumentEngine(),
+  });
+  try {
+    const { adminEmail, adminPassword } = await seedDevelopment(deps);
+    const ctx: CallContext = {
+      userId: null,
+      permissions: new Set(deps.registry.permissionKeys),
+      channel: 'system',
+      apiTokenId: null,
+      ipAddress: null,
+      requestId: 'DEV-RESET',
+    };
+    const counts = await importPrototype(deps, ctx, { prototypeDir: opts.prototypeDir });
+    // Der Vereinsname ist Stammdatum des Kerns, keine Webseiten-Einstellung; der
+    // Import lässt ihn deshalb in Ruhe. Für die Entwicklung ist der Name des
+    // Prototyps aber die brauchbarere Vorgabe als der des Musterverein-Seeds.
+    const organizationName = await prototypeOrganizationName(opts.prototypeDir);
+    if (organizationName) unwrap(await setSetting(deps, ctx, { key: 'organization.name', value: organizationName }));
+    return { adminEmail, adminPassword, counts, organizationName };
+  } finally {
+    deps.close();
+  }
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+  const root = path.resolve(import.meta.dirname, '..');
+  const runtime = readEnv({ SESSION_SECRET: 'dev-reset-only-not-a-real-secret-0000', ...process.env });
+  devReset({
+    env: runtime.env,
+    // Vorgabe ist das Datenverzeichnis der App; die liest es mit cwd apps/kompass als ./data.
+    dataPath: process.env.DATA_PATH ?? path.join(root, 'apps/kompass/data'),
+    prototypeDir: process.env.PROTOTYPE_DIR ?? '/Users/joe/Development/Aluna Tierhilfe e.V./Webseite/aluna-static',
+    templateDir: siteTemplateDir({ ...process.env, DATA_PATH: process.env.DATA_PATH ?? path.join(root, 'apps/kompass/data') }),
+  })
+    .then(({ adminEmail, adminPassword, counts }) => {
+      console.log('Zurückgesetzt und importiert:', counts);
+      console.log(`Login: ${adminEmail} / ${adminPassword}`);
+    })
+    .catch((error: unknown) => {
+      console.error(error instanceof Error ? error.message : error);
+      process.exit(1);
+    });
+}

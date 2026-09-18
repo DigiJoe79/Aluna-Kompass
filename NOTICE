@@ -1,0 +1,13 @@
+Aluna Kompass
+Copyright 2026 Jörg Wießner
+
+Dieses Produkt steht unter der Apache-Lizenz, Version 2.0 (siehe LICENSE).
+
+Das ausgelieferte Container-Image enthält Software Dritter unter eigenen
+Lizenzbedingungen — darunter LGPLv3-Bibliotheken (libvips und Abhängigkeiten,
+dynamisch gelinkt über sharp) sowie GPL-Programme, die als eigenständige
+Prozesse aufgerufen werden (poppler-utils, rsync, sshpass). Die vollständige
+Aufstellung steht in THIRD-PARTY-NOTICES.
+
+Die mitgelieferten Schriftarten tragen ihre eigenen Lizenzen unter
+packages/documents/fonts/.

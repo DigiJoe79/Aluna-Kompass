@@ -1,0 +1,9 @@
+---
+/** `lang` gilt nur der Überschrift: Sie kann aus der Vorgabesprache stammen, während Dachzeile und Vorspann übersetzt sind. */
+const { eyebrow, title, lede, lang } = Astro.props as { eyebrow?: string; title: string; lede?: string; lang?: string };
+---
+<header class="page-header">
+  {eyebrow && <p class="eyebrow">{eyebrow}</p>}
+  <h1 lang={lang}>{title}</h1>
+  {lede && <p class="lede">{lede}</p>}
+</header>

@@ -1,0 +1,20 @@
+---
+/**
+ * Die Fehlerseite jeder weiteren Sprache. Als dynamische Route und nicht als
+ * feste Datei `en/404.astro`: Eine Datei würde auch dann gebaut, wenn die
+ * Deklaration die Sprache gar nicht mehr nennt — ein einsprachiger Verein
+ * fände ein leeres `/en/` in seiner Ausgabe.
+ */
+import NotFound from '../../components/NotFound.astro';
+import { DEFAULT_LOCALE, LOCALES, type Locale } from '../../lib/locale';
+
+export function getStaticPaths() {
+  return LOCALES.filter((locale) => locale !== DEFAULT_LOCALE).map((locale) => ({
+    params: { locale },
+    props: { locale },
+  }));
+}
+
+const { locale } = Astro.props as { locale: Locale };
+---
+<NotFound locale={locale} />

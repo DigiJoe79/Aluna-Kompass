@@ -1,0 +1,226 @@
+---
+import Base from '../layouts/Base.astro';
+import PageHeader from '../components/PageHeader.astro';
+import Markdown from '../components/Markdown.astro';
+import { loadContent, organizationOf, slugify, type NewsEntry } from '../lib/content';
+import { loadImages, imageFor } from '../lib/images';
+import { pageFor } from '../content/pages';
+import { paramFor, pathFor, type Kind } from '../lib/routes';
+import { LOCALES, pick, text, ui, type Locale } from '../lib/locale';
+import { documentSlug } from './dokumente/[slug].pdf';
+import { imprintBody } from '../lib/imprint';
+import { mailtoHref } from '../lib/mailto';
+import { BOARD } from '../lib/site';
+
+/** Jede Seite in jeder Sprache — ein Lauf baut den ganzen Auftritt. */
+export async function getStaticPaths() {
+  const content = await loadContent();
+  const staticKinds: Kind[] = ['home', 'about', 'team', 'news', 'faq', 'donate', 'join', 'contact', 'imprint', 'privacy', 'statutes'];
+  type Entry = { params: { path: string | undefined }; props: { kind: Kind; locale: Locale; slug?: string } };
+  const paths: Entry[] = [];
+  for (const locale of LOCALES) {
+    for (const kind of staticKinds) {
+      paths.push({ params: { path: paramFor(pathFor(locale, kind)) }, props: { kind, locale } });
+    }
+    for (const entry of content.collections.news) {
+      paths.push({ params: { path: paramFor(pathFor(locale, 'article', entry.slug)) }, props: { kind: 'article', locale, slug: entry.slug } });
+    }
+  }
+  return paths;
+}
+
+const { kind, slug, locale } = Astro.props as { kind: Kind; slug?: string; locale: Locale };
+const ui_ = ui(locale);
+/** Kurzform für „Wert dieses Feldes in der Sprache dieser Seite“. */
+const t = (field: Parameters<typeof text>[0]): string => text(field, locale);
+const content = await loadContent();
+const images = await loadImages();
+const { variables } = content;
+
+const news = [...content.collections.news];
+const team = [...content.collections.team].sort((a, b) => a.sortOrder - b.sortOrder);
+const faq = [...content.collections.faq].sort((a, b) => a.sortOrder - b.sortOrder);
+const documents = content.collections.documents;
+
+/** Der Beitrag in der Schreibweise der gelesenen Sprache — 60 € oder €60. */
+const euro = (value: number | undefined): string =>
+  typeof value === 'number'
+    ? new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(value)
+    : '';
+
+const article: NewsEntry | undefined = kind === 'article' ? news.find((n) => n.slug === slug) : undefined;
+const page = pageFor(locale, kind);
+const org = organizationOf(content);
+
+/** Das Impressum entsteht aus den Vereinsdaten, alle anderen Seiten aus `pages.ts`. */
+const body = kind === 'imprint' ? imprintBody(org, BOARD, locale) : (page?.body ?? '');
+
+const heroImage = imageFor(images, variables.heroImage ?? null);
+---
+{kind === 'home' && (
+  <Base locale={locale}>
+    <section class="hero wrap">
+      <div class="hero-text">
+        <h1>{t(variables.claim) || 'Willkommen'}</h1>
+        {t(variables.intro) && <Markdown markdown={t(variables.intro)} class="prose hero-intro" />}
+        <p class="hero-actions">
+          <a class="btn btn-primary" href={pathFor(locale, 'donate')}>{ui_.home.donate}</a>
+          <a class="btn" href={pathFor(locale, 'join')}>{ui_.home.join}</a>
+        </p>
+      </div>
+      {heroImage && (
+        <img class="hero-image" src={heroImage.src} srcset={heroImage.srcset || undefined} sizes="(min-width: 800px) 480px, 100vw" width={heroImage.width} height={heroImage.height} alt="" />
+      )}
+    </section>
+
+    {news.length > 0 && (
+      <section class="wrap section">
+        <h2>{ui_.home.news}</h2>
+        <ul class="card-list">
+          {news.slice(0, 3).map((entry) => {
+            const title = pick(entry.title, locale);
+            const body = pick(entry.body, locale);
+            return (
+            <li class="card">
+              <h3 lang={title.fallback ?? undefined}><a href={pathFor(locale, 'article', entry.slug)}>{title.value}</a></h3>
+              <Markdown markdown={body.value.split('\n\n')[0] ?? ''} class="prose card-excerpt" lang={body.fallback ?? undefined} />
+            </li>
+            );
+          })}
+        </ul>
+        <p><a href={pathFor(locale, 'news')}>{ui_.home.allNews}</a></p>
+      </section>
+    )}
+  </Base>
+)}
+
+{kind === 'news' && (
+  <Base title={ui_.news.title} active="news" locale={locale}>
+    <div class="wrap wrap-narrow section">
+      <PageHeader eyebrow={ui_.news.eyebrow} title={ui_.news.title} lede={ui_.news.lede} />
+      {news.length === 0 ? (
+        <p>{ui_.news.empty}</p>
+      ) : (
+        <ul class="card-list">
+          {news.map((entry) => {
+            const title = pick(entry.title, locale);
+            const body = pick(entry.body, locale);
+            return (
+            <li class="card">
+              <h2 lang={title.fallback ?? undefined}><a href={pathFor(locale, 'article', entry.slug)}>{title.value}</a></h2>
+              <Markdown markdown={body.value.split('\n\n')[0] ?? ''} class="prose card-excerpt" lang={body.fallback ?? undefined} />
+              <p><a href={pathFor(locale, 'article', entry.slug)}>{ui_.news.back}</a></p>
+            </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  </Base>
+)}
+
+{kind === 'article' && article && (
+  <Base title={t(article.title)} description={t(article.body).slice(0, 160)} active="article" locale={locale} slug={article.slug}>
+    <article class="wrap wrap-narrow section">
+      <PageHeader eyebrow={ui_.news.title} title={t(article.title)} lang={pick(article.title, locale).fallback ?? undefined} />
+      {imageFor(images, article.image) && (
+        <img class="article-image" src={imageFor(images, article.image)!.src} srcset={imageFor(images, article.image)!.srcset || undefined} sizes="(min-width: 720px) 680px, 100vw" width={imageFor(images, article.image)!.width} height={imageFor(images, article.image)!.height} alt="" />
+      )}
+      <Markdown markdown={pick(article.body, locale).value} lang={pick(article.body, locale).fallback ?? undefined} />
+      <p><a href={pathFor(locale, 'news')}>{ui_.news.back}</a></p>
+    </article>
+  </Base>
+)}
+
+{kind === 'team' && (
+  <Base title={ui_.team.title} active="team" locale={locale}>
+    <div class="wrap section">
+      <PageHeader eyebrow={ui_.team.eyebrow} title={ui_.team.title} lede={ui_.team.lede} />
+      {team.length === 0 ? (
+        <p>{ui_.team.empty}</p>
+      ) : (
+        <ul class="team-grid">
+          {team.map((member) => {
+            const photo = imageFor(images, member.photo);
+            return (
+              <li class="team-member">
+                {photo && <img src={photo.src} srcset={photo.srcset || undefined} sizes="220px" width={photo.width} height={photo.height} alt="" />}
+                <p class="team-name">{member.name}</p>
+                {pick(member.role, locale).value && <p class="team-role" lang={pick(member.role, locale).fallback ?? undefined}>{pick(member.role, locale).value}</p>}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  </Base>
+)}
+
+{kind === 'faq' && (
+  <Base title={ui_.faq.title} active="faq" locale={locale}>
+    <div class="wrap wrap-narrow section">
+      <PageHeader eyebrow={ui_.faq.eyebrow} title={ui_.faq.title} lede={ui_.faq.lede} />
+      {faq.length === 0 ? (
+        <p>{ui_.faq.empty}</p>
+      ) : (
+        <dl class="faq-list">
+          {faq.map((item) => (
+            <div class="faq-item">
+              <dt lang={pick(item.question, locale).fallback ?? undefined}>{pick(item.question, locale).value}</dt>
+              <dd><Markdown markdown={pick(item.answer, locale).value} lang={pick(item.answer, locale).fallback ?? undefined} /></dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
+  </Base>
+)}
+
+{page && kind !== 'statutes' && (
+  <Base title={page.title} description={page.lede} active={kind} locale={locale}>
+    <div class="wrap wrap-narrow section">
+      <PageHeader eyebrow={page.eyebrow} title={page.title} lede={page.lede} />
+      {body && <Markdown markdown={body} />}
+      {kind === 'contact' && (
+        <div class="callout">
+          <p class="callout-title">{ui_.misc.contactBox}</p>
+          {org.email && <p><a href={mailtoHref(org.email, { subject: `${ui_.misc.mailSubject} ${org.name}` })}>{org.email}</a></p>}
+          {org.phone && <p>{org.phone}</p>}
+          <p>{org.name}<br />{org.street}<br />{org.postalCode} {org.city}</p>
+        </div>
+      )}
+      {kind === 'donate' && org.iban && (
+        <div class="callout">
+          <p class="callout-title">{ui_.footer.bank}</p>
+          <p>{org.name}<br />IBAN {org.iban}{org.bic && <><br />BIC {org.bic}</>}{org.bankName && <><br />{org.bankName}</>}</p>
+        </div>
+      )}
+      {kind === 'join' && euro(variables.memberFee) && (
+        <div class="callout">
+          <p class="callout-title">{ui_.misc.fee}</p>
+          <p>{euro(variables.memberFee)} {ui_.misc.feeSuffix}</p>
+        </div>
+      )}
+    </div>
+  </Base>
+)}
+
+{kind === 'statutes' && page && (
+  <Base title={page.title} description={page.lede} active="statutes" locale={locale}>
+    <div class="wrap wrap-narrow section">
+      <PageHeader eyebrow={page.eyebrow} title={page.title} lede={page.lede} />
+      <Markdown markdown={page.body} />
+      {documents.length > 0 && (
+        <ul class="download-list">
+          {documents.map((doc) => (
+            <li>
+              {doc.file
+                ? <a href={`/dokumente/${documentSlug(doc.title)}.pdf`} lang={pick(doc.title, locale).fallback ?? undefined}>{t(doc.title)} ({ui_.misc.pdf})</a>
+                : <span lang={pick(doc.title, locale).fallback ?? undefined}>{t(doc.title)}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  </Base>
+)}

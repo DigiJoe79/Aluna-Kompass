@@ -1,0 +1,38 @@
+.DS_Store
+node_modules/
+dist/
+.next/
+*.db
+*.db-wal
+*.db-shm
+data/
+/media/
+apps/kompass/media/
+.env
+.env.*
+!.env.example
+!.env.*.example
+coverage/
+# Von Astro selbst generiert (Typen, Content-Cache, Zwischenstand des Builds);
+# entsteht bei jedem `astro sync`/Build neu.
+templates/*/.astro/
+apps/kompass/e2e/.tmp/
+apps/kompass/test-results/
+apps/kompass/playwright-report/
+apps/kompass/playwright-report-container/
+apps/kompass/test-results-container/
+apps/kompass/.e2e-container/
+next-env.d.ts
+*.tsbuildinfo
+
+# Werkzeuge der Entwicklungsumgebung (Skill-Verwaltung), kein Produkt.
+.agents/
+.claude/
+.superpowers/
+skills-lock.json
+
+# Arbeitsdokumente (Specs, Plaene, Design-Handoff, Alunas Betrieb, Release-
+# Befunde): bleiben ausserhalb des oeffentlichen Repos, weil dort ungefixte
+# Befunde mit Angriffsweg und Infrastrukturdetails des Vereins stehen. Das
+# Verzeichnis ist ein eigenes privates Git (seit 2026-09-16).
+docs/intern/

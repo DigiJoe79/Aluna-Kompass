@@ -1,0 +1,23 @@
+node_modules
+**/node_modules
+**/.next
+**/dist
+**/e2e/.tmp
+**/test-results
+**/playwright-report
+# Laufzeitverzeichnisse, verankert: ein unverankertes **/media schloss
+# packages/core/src/media und apps/kompass/src/app/media mit aus.
+/data
+/media
+apps/kompass/data
+apps/kompass/media
+.git
+# Arbeitsdokumente (Release-Befunde, Specs, Betrieb) -- niemals in eine
+# Docker-Schicht, sonst landen sie ueber den Build-Cache im (oeffentlichen)
+# GitHub-Actions-Cache, auch wenn das fertige Image sie nie kopiert.
+docs/intern
+*.db
+*.db-wal
+*.db-shm
+.env
+.env.*

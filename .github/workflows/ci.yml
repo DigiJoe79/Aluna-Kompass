@@ -1,0 +1,191 @@
+name: CI
+on:
+  push:
+    branches: [main, dev]
+    tags: ['v*']
+    # Greift nur, wenn *alle* geaenderten Dateien passen; ein gemischter
+    # Commit baut weiterhin.
+    #
+    # `*.md` mit einem Stern trifft nur das Wurzelverzeichnis. `**.md` waere
+    # falsch: Es naehme auch `docs/handbuch/**` heraus, und das ist kein
+    # Arbeitsdokument, sondern Produktinhalt — der Dockerfile kopiert es ins
+    # Image, und `handbook-complete.test.ts` verlangt fuer jede Route eine
+    # Seite. Ein Commit, der nur das Handbuch anfasst, muss also bauen.
+    paths-ignore:
+      - '*.md'
+      - 'docs/nordstern.md'
+      - 'docker-compose.*.yml'
+      - '.env.*.example'
+      # Konfiguration von GitHub, nicht des Produkts: Weder Dependabot noch die
+      # Issue-Vorlagen aendern, was gebaut oder getestet wird.
+      - '.github/dependabot.yml'
+      - '.github/ISSUE_TEMPLATE/**'
+  pull_request:
+
+# Ein neuer Push verdraengt den laufenden Build desselben Branches, damit nie
+# ein aelterer Lauf ein neueres Image unter demselben Tag ueberschreibt.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TYPST_VERSION: 0.15.1
+
+# Actions haengen an Commit-Hashes, nicht an Tags: Ein Tag laesst sich
+# verschieben, ein Hash nicht. Wird ein Action-Repo uebernommen, liefe sonst
+# fremder Code mit dem Recht, Images nach GHCR zu schieben. Der Kommentar nennt
+# die Fassung; Dependabot aktualisiert Hash und Kommentar zusammen.
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with: { version: 11.25.0 }
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { node-version: 26, cache: pnpm }
+      - name: Install Typst and rsync
+        run: |
+          curl -sSL "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-x86_64-unknown-linux-musl.tar.xz" | tar -xJ
+          sudo mv typst-x86_64-unknown-linux-musl/typst /usr/local/bin/typst && typst --version
+          sudo apt-get update && sudo apt-get install -y rsync
+      - name: Texterkennung installieren
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng poppler-utils
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      # Die Browser sind gross und aendern sich nur mit der Playwright-Version;
+      # ohne Cache kostet jeder Lauf eine Minute Download.
+      - id: playwright-version
+        run: echo "value=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+        working-directory: apps/kompass
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.value }}
+      - run: pnpm --filter @kompass/app exec playwright install --with-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+      - run: pnpm --filter @kompass/app exec playwright install-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+      - run: pnpm --filter @kompass/app e2e
+      # Der Bericht entsteht nur, weil playwright.config.ts den HTML-Reporter
+      # fuehrt; ohne ihn lud dieser Schritt ein leeres Artefakt hoch.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with: { name: playwright-report, path: apps/kompass/playwright-report, retention-days: 7 }
+
+  image:
+    needs: test
+    # Auch bei rotem `test` bauen und gegen den Container prüfen: Sonst kostet
+    # jeder Fehlschlag im zweiten Ring eine weitere Runde von einer
+    # Viertelstunde, bevor der dritte überhaupt etwas sagen darf. Nur
+    # hochgeladen wird das Bild dann nicht — siehe letzter Schritt.
+    #
+    # Auch bei einem Pull Request: Die Verpackung ist die Schicht, die am
+    # 7.9. drei von vier Fehlschlägen verursacht hat, und ein Beitrag von
+    # aussen waere sonst gruen, ohne dass je ein Image gebaut wurde. Der
+    # Push-Schritt am Ende bleibt auf `push` beschraenkt.
+    #
+    # Nicht bei einem Push auf `main`: main bekommt Commits nur per
+    # Squash-Merge aus einem PR, der diesen Ring schon durchlaufen hat —
+    # ein zweiter, identischer Bau direkt danach prüft nichts Neues. Der
+    # Ring läuft für main-Änderungen stattdessen am Release-Tag, der
+    # tatsächlich ein Image ausliefert (`latest` unten).
+    if: ${{ !cancelled() && !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+    runs-on: ubuntu-latest
+    permissions: { contents: read, packages: write }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/aluna-kompass
+          tags: |
+            type=sha
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            # `latest` entsteht am Release-Tag, nicht am main-Push: Dieser Job
+            # läuft für main-Änderungen nur noch dort (siehe `if` oben), und
+            # der Tag sitzt immer auf demselben Commit wie main's Stand.
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+      # Erst in den lokalen Daemon laden, nicht sofort pushen: Der Ring gegen
+      # den Container ist die einzige Stelle, an der die amd64-Fassung je
+      # ausgefuehrt wird — lokal baut ein Apple-Silicon-Rechner arm64, und
+      # `better-sqlite3`, `sharp` und Typst sind je Architektur andere Dateien.
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: kompass-local
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            TYPST_VERSION=${{ env.TYPST_VERSION }}
+            KOMPASS_BUILD=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with: { version: 11.25.0 }
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { node-version: 26, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - id: playwright-version
+        run: echo "value=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+        working-directory: apps/kompass
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.value }}
+      - run: pnpm --filter @kompass/app exec playwright install --with-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+      - run: pnpm --filter @kompass/app exec playwright install-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+      - run: pnpm e2e:image
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with: { name: playwright-report-container, path: apps/kompass/playwright-report-container, retention-days: 7 }
+      # Wer ein Paket ins Image nimmt, verteilt fremde Software mit. Die
+      # Aufstellung entsteht beim Bau im Image; hier faellt auf, wenn sie fehlt
+      # oder ein Paket eine Lizenz traegt, die niemand freigegeben hat — vor
+      # dem Hochladen, nicht danach. Kein Vergleich mit einer Datei im Repo:
+      # Ein Update aendert Versionen, keine Lizenzen.
+      - name: Third-party licences in the image are approved
+        run: scripts/third-party-notices.sh kompass-local --pruefen
+      # Playwright, vitest, eslint und Co. laufen im Container nie; im Image
+      # waeren sie nur mitverteilte Angriffsflaeche (Q5).
+      - name: Image carries no development tools
+        run: scripts/image-runtime-only.sh kompass-local
+
+      # Genau das geprüfte Bild bekommt die Namen und wird hochgeladen — kein
+      # zweiter Bau, der sich vom getesteten unterscheiden koennte.
+      - name: Push the tested image
+        if: ${{ needs.test.result == 'success' && github.event_name == 'push' }}
+        run: |
+          # GHCR nimmt gelegentlich alle Schichten an und lehnt danach das
+          # Manifest mit „unknown blob“ ab: Die letzte, grosse Schicht ist
+          # hochgeladen, aber noch nicht verknuepft. Am Bild liegt das nicht —
+          # es ist dasselbe, das der Containerring eben geprueft hat. Ein
+          # zweiter Anlauf traegt; nach dem dritten bleibt es rot, damit ein
+          # echter Fehler nicht in einer Schleife verschwindet.
+          push() {
+            for attempt in 1 2 3; do
+              docker push "$1" && return 0
+              echo "Hochladen von $1 fehlgeschlagen (Anlauf $attempt) — neuer Versuch in 15s"
+              sleep 15
+            done
+            return 1
+          }
+          echo "${{ steps.meta.outputs.tags }}" | while read -r tag; do
+            [ -z "$tag" ] && continue
+            docker tag kompass-local "$tag"
+            push "$tag" || exit 1
+          done

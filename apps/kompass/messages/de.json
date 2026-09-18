@@ -1,0 +1,2059 @@
+{
+  "app": {
+    "name": "Aluna Kompass"
+  },
+  "admin": {
+    "locales": {
+      "title": "Sprachen",
+      "description": "Verwalten Sie die Sprachen, in denen Inhalte für Webseite und Dokumente gepflegt werden.",
+      "code": "Sprachcode",
+      "codeHint": "BCP-47-Sprachcode (z. B. de, en, fr, nl, es, pt-br).",
+      "add": "Sprache hinzufügen",
+      "leading": "Leitsprache",
+      "remove": "{code} entfernen",
+      "removeTitle": "Sprache „{code}“ entfernen",
+      "removeWarning": "{count, plural, =0 {In keinem Feld steht Text auf {locale}.} one {In # Feld steht Text auf {locale}. Beim Entfernen geht er verloren.} other {In # Feldern steht Text auf {locale}. Beim Entfernen geht er verloren.}}",
+      "removeConfirm": "Sprache unwiderruflich entfernen",
+      "added": "Sprache hinzugefügt.",
+      "removed": "Sprache entfernt.",
+      "duplicate": "Diese Sprache ist bereits eingerichtet.",
+      "lastLocale": "Die letzte verbleibende Sprache kann nicht entfernt werden.",
+      "codePlaceholder": "z. B. fr"
+    }
+  },
+  "common": {
+    "sortBy": "Sortieren nach {column}",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "discard": "Verwerfen",
+    "close": "Schließen",
+    "copy": "Kopieren",
+    "copied": "Kopiert",
+    "copyFailed": "Kopieren hat nicht geklappt. Bitte den Text von Hand markieren und kopieren.",
+    "loading": "Wird geladen …",
+    "yes": "Ja",
+    "no": "Nein",
+    "none": "—",
+    "changesPending": "{count, plural, one {# Änderung noch nicht gespeichert} other {# Änderungen noch nicht gespeichert}}",
+    "lastSaved": "zuletzt gespeichert am {date} von {name}",
+    "audited": "Wird protokolliert.",
+    "backToList": "Zurück zur Übersicht",
+    "requiredLegend": "* Pflichtfeld",
+    "fieldsInvalid": "{count, plural, one {Ein Feld braucht noch eine Angabe.} other {# Felder brauchen noch eine Angabe.}}",
+    "tabInvalid": "Enthält einen Fehler"
+  },
+  "media": {
+    "title": "Mediathek",
+    "empty": "Keine Dateien in diesem Ordner.",
+    "columns": {
+      "file": "Datei",
+      "folder": "Ordner",
+      "size": "Größe",
+      "uploadedAt": "Hochgeladen",
+      "usage": "Verwendung"
+    },
+    "unused": "nicht verwendet",
+    "used": "verwendet",
+    "view": {
+      "list": "Liste",
+      "grid": "Grid"
+    },
+    "type": "Typ",
+    "dimensions": "Maße",
+    "folder": "Ordner",
+    "uploadedAt": "Hochgeladen am",
+    "uploadedBy": "Hochgeladen von",
+    "upload": "Datei hochladen",
+    "uploaded": "Datei hochgeladen.",
+    "uploading": "Datei wird hochgeladen …",
+    "alreadyStored": "Diese Datei gibt es schon: „{filename}“ im Ordner „{folder}“.",
+    "noFolder": "Ohne Ordner",
+    "filter": "Filtern",
+    "kind": {
+      "label": "Typ",
+      "all": "Alle",
+      "image": "Bilder",
+      "pdf": "PDF"
+    },
+    "open": "Öffnen",
+    "delete": "Löschen",
+    "confirmDelete": "Diese Datei löschen?",
+    "confirmDeleteBody": "Die Datei wird entfernt. Der Löschvorgang steht im Änderungsprotokoll.",
+    "deleted": "Datei gelöscht.",
+    "inUse": "In Verwendung — kann nicht gelöscht werden.",
+    "move": "Verschieben nach",
+    "movedToast": "Datei verschoben.",
+    "root": "Alle Dateien",
+    "newFolder": "Neuer Ordner",
+    "newFolderName": "Ordnername",
+    "renameFolder": "Umbenennen",
+    "deleteFolder": "Ordner löschen",
+    "folderDeleted": "Ordner gelöscht.",
+    "created": "Ordner angelegt.",
+    "renamed": "Ordner umbenannt.",
+    "emptyTitle": "Keine Dateien",
+    "search": "Suchen",
+    "searchPlaceholder": "Dateiname oder Verwendung",
+    "sort": {
+      "label": "Sortierung",
+      "newest": "Neueste zuerst",
+      "oldest": "Älteste zuerst",
+      "name": "Name",
+      "size": "Größe"
+    },
+    "chooser": {
+      "titleImage": "Bild wählen",
+      "titlePdf": "Datei wählen",
+      "titleMultiple": "Bilder wählen",
+      "upload": "Hochladen",
+      "confirm": "Übernehmen",
+      "cancel": "Abbrechen",
+      "selectedCount": "{count, plural, =0 {Nichts ausgewählt} one {# ausgewählt} other {# ausgewählt}}",
+      "emptyTitle": "Keine passende Datei",
+      "empty": "Laden Sie eine Datei hoch oder ändern Sie Suche und Ordner.",
+      "loadFailed": "Die Mediathek konnte nicht geladen werden.",
+      "select": "Auswählen",
+      "selected": "Ausgewählt"
+    }
+  },
+  "content": {
+    "preview": "Vorschau",
+    "previewEmpty": "Noch kein Text.",
+    "untranslated": "unübersetzt",
+    "published": "Veröffentlicht",
+    "unpublished": "Nicht veröffentlicht",
+    "moveUp": "Nach oben",
+    "moveDown": "Nach unten",
+    "choose": "Wählen",
+    "removeImage": "Bild entfernen",
+    "noFile": "Bitte eine Datei auswählen.",
+    "gaps": "{count, plural, =0 {Alle Übersetzungen vorhanden} one {# Übersetzung offen} other {# Übersetzungen offen}}",
+    "moduleInactiveTitle": "Modul Webseite ist nicht aktiv",
+    "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Inhalte bleiben erhalten.",
+    "openModules": "Module öffnen",
+    "save": "Speichern",
+    "saved": "Gespeichert.",
+    "create": "Anlegen",
+    "back": "Zurück zur Liste",
+    "slug": "Slug (URL-Teil)",
+    "slugHint": "Kleinbuchstaben, Ziffern, Bindestrich. Sprachneutral."
+  },
+  "errors": {
+    "forbidden": "Dafür fehlt Ihrer Rolle das Recht {permission}.",
+    "validation": "Bitte prüfen Sie die markierten Felder.",
+    "notFound": "Der Eintrag wurde nicht gefunden.",
+    "unauthorized": "Bitte melden Sie sich erneut an.",
+    "technical": "Der Vorgang wurde abgebrochen. Es wurde nichts gespeichert.",
+    "conflict": {
+      "documentIsDraft": "Das ist noch ein Entwurf.",
+      "notOutgoing": "Eingegangene Post wird nicht versandt.",
+      "notDispatched": "Es gibt keinen Versandvermerk.",
+      "relationSelf": "Ein Dokument kann sich nicht auf sich selbst beziehen.",
+      "relationExists": "Dieser Bezug besteht bereits.",
+      "snippetExists": "Ein Baustein mit diesem Namen existiert bereits.",
+      "documentNotVoided": "Ein Ersatz gibt es nur für ein storniertes Dokument.",
+      "followUpDone": "Die Wiedervorlage ist bereits erledigt.",
+      "followUpOpen": "Die Wiedervorlage ist noch offen.",
+      "linkExists": "Dieser Bezug besteht bereits.",
+      "emailTaken": "Diese E-Mail-Adresse ist bereits vergeben.",
+      "roleNameTaken": "Eine Rolle mit diesem Namen existiert bereits.",
+      "roleProtected": "Die Rolle „Administration“ kann nicht geändert werden.",
+      "lastAdministrator": "Mindestens ein aktiver Nutzer muss die Rolle „Administration“ behalten.",
+      "insufficientPrivileges": "Dafür fehlen Ihnen selbst Rechte. Rechte, die Sie nicht haben, können Sie nicht vergeben, und Konten mit mehr Rechten als Ihren eigenen nicht verwalten.",
+      "settingSystemOnly": "Diese Einstellung setzt nur das System.",
+      "themeKeyTaken": "Ein Theme mit diesem Schlüssel existiert bereits.",
+      "themeReadOnly": "Das Default-Theme ist schreibgeschützt.",
+      "themeActive": "Das aktive Theme kann nicht gelöscht werden.",
+      "moduleLocked": "Der Kern kann nicht deaktiviert werden.",
+      "moduleDependencyInactive": "Benötigte Module sind nicht aktiv: {detail}",
+      "moduleRequiredByOthers": "Wird von aktiven Modulen benötigt: {detail}",
+      "setupAlreadyDone": "Die Einrichtung wurde bereits abgeschlossen.",
+      "publicUrlMissing": "SITE_PUBLIC_URL ist nicht gesetzt.",
+      "publishTargetMissing": "Kein Publish-Ziel konfiguriert.",
+      "publishNotAllowedHere": "Aus der Entwicklungsumgebung wird nicht publiziert.",
+      "blockedTermsPresent": "Sperrworttreffer: {detail}",
+      "siteBuildFailed": "Der Build ist fehlgeschlagen: {detail}",
+      "publishFailed": "Die Übertragung ist fehlgeschlagen: {detail}",
+      "siteJobRunning": "Es läuft bereits ein Vorschau- oder Publish-Lauf. Bitte warten Sie, bis er fertig ist.",
+      "duplicateLocale": "Diese Sprache ist bereits eingerichtet.",
+      "tooManyLocales": "Höchstens zehn Sprachen können eingerichtet werden.",
+      "lastLocale": "Die letzte verbleibende Sprache kann nicht entfernt werden.",
+      "unknownLocale": "Diese Sprache ist nicht eingerichtet.",
+      "mediaAssetInUse": "{detail}",
+      "folderNotEmpty": "{detail}",
+      "folderExists": "Ein Ordner mit diesem Namen existiert bereits.",
+      "folderParentMissing": "Der übergeordnete Ordner fehlt.",
+      "folderNotFound": "Der Zielordner existiert nicht.",
+      "retentionHoldActive": "Der Kontakt wird noch durch aktive Aufbewahrungsfristen gehalten.",
+      "retentionUnknown": "Für diesen Kontakt ist keine Frist nachgewiesen.",
+      "stillPublished": "Das ist noch veröffentlicht. Ziehen Sie es erst zurück, dann lässt es sich löschen.",
+      "recordHeld": "Noch gehalten von: {detail}",
+      "stillReferenced": "Es zeigt noch etwas darauf: {detail}. Lösen Sie erst den Bezug.",
+      "belongsToNotAnOrganization": "Ein Kontakt kann nur einer Organisation zugeordnet werden.",
+      "multiplePrimaryChannels": "Es kann nur ein Hauptkontaktweg festgelegt werden.",
+      "roleAlreadyRunning": "Diese Rolle ist für diesen Kontakt bereits aktiv.",
+      "unknownView": "Das Template verweist auf eine Sicht, die es nicht gibt: {detail}",
+      "unknownViewField": "Das Template nennt ein Feld, das die Sicht nicht hat: {detail}",
+      "default": "Der Vorgang ist nicht möglich: {detail}"
+    },
+    "fields": {
+      "unknownDispatchChannel": "Unbekannter Versandweg.",
+      "sentBeforeDocumentDate": "Der Versand liegt vor dem Datum des Dokuments.",
+      "sentInFuture": "Der Versand liegt in der Zukunft.",
+      "required": "Pflichtfeld.",
+      "email": "Bitte eine gültige E-Mail-Adresse eingeben.",
+      "passwordTooShort": "Mindestens 12 Zeichen.",
+      "unknownPermission": "Unbekanntes Recht.",
+      "unknownSetting": "Unbekannte Einstellung.",
+      "unknownLocale": "Diese Sprache ist nicht eingerichtet.",
+      "invalid": "Ungültiger Wert.",
+      "unsupportedMediaType": "Dateityp nicht unterstützt (PNG, JPEG, WebP, SVG, PDF).",
+      "notAPdf": "Nur PDF. Schriftverkehr wird als PDF abgelegt, damit er in zehn Jahren noch lesbar ist.",
+      "fileTooLarge": "Datei größer als 10 MB.",
+      "svgContainsScript": "SVG enthält Skripte und wird abgelehnt.",
+      "confirmationMismatch": "Der Umgebungsname stimmt nicht.",
+      "backupFormatUnsupported": "Diese Datei ist kein Kompass-Backup oder hat ein unbekanntes Format.",
+      "backupNewerThanApp": "Das Backup stammt aus einer neueren Version. Bitte zuerst die App aktualisieren.",
+      "backupCorrupt": "Die Datenbank im Backup ist beschädigt.",
+      "backupWithoutUsers": "Dieses Backup enthält keine Nutzer. Damit ließe sich die Installation nicht mehr benutzen.",
+      "referenceNotFound": "Dieser Datensatz steht nicht (mehr) zur Auswahl. Bitte leeren oder neu wählen.",
+      "duplicateReference": "Derselbe Datensatz ist zweimal gewählt."
+    },
+    "pages": {
+      "forbidden": {
+        "kicker": "Kein Recht",
+        "title": "Diese Seite ist für Ihre Rolle nicht freigegeben.",
+        "text": "Das nötige Recht steht unten. Damit kann die Administration Ihre Rolle anpassen.",
+        "home": "Zurück zur Startseite",
+        "footnote": "Rechte ändert die Administration unter Rollen."
+      },
+      "notFound": {
+        "kicker": "Nicht gefunden",
+        "title": "Diesen Eintrag gibt es nicht mehr.",
+        "text": "Protokollierte Daten werden nicht gelöscht — wenn Sie einen Vorgang suchen, hilft das Änderungsprotokoll.",
+        "home": "Startseite",
+        "audit": "Protokoll öffnen"
+      },
+      "technical": {
+        "kicker": "Technischer Fehler",
+        "title": "Der Vorgang wurde abgebrochen.",
+        "text": "Es wurde nichts gespeichert. Die Vorgangsnummer erscheint identisch im Serverprotokoll.",
+        "retry": "Erneut versuchen",
+        "home": "Startseite",
+        "login": "Zur Anmeldung"
+      }
+    }
+  },
+  "nav": {
+    "aria": "Hauptnavigation",
+    "home": "Startseite",
+    "profile": "Profil",
+    "settingsArea": "Einstellungen",
+    "sectionAria": "Unternavigation",
+    "help": "Hilfe",
+    "groups": {
+      "admin": "Verwaltung",
+      "config": "Einrichtung",
+      "finance": "Finanzen",
+      "members": "Mitglieder",
+      "animals": "Tiere",
+      "contacts": "Kontakte",
+      "site": "Webseite",
+      "dms": "Akte",
+      "core": "Verein",
+      "projects": "Projekte",
+      "media": "Mediathek"
+    },
+    "users": "Nutzer",
+    "roles": "Rollen",
+    "settings": "Stammdaten",
+    "locales": "Sprachen",
+    "themes": "Erscheinungsbild",
+    "modules": "Module",
+    "audit": "Änderungsprotokoll",
+    "retention": "Aufbewahrung",
+    "documents": "Dokumentvorlagen",
+    "backup": "Backup",
+    "logoAlt": "Vereinslogo",
+    "animals": {
+      "list": "Hunde"
+    },
+    "contacts": {
+      "list": "Kontakte"
+    },
+    "dms": {
+      "list": "Akte",
+      "manage": "Stammdaten",
+      "admin": "Akte einrichten"
+    },
+    "site": {
+      "template": "Template",
+      "variables": "Variablen",
+      "publish": "Publizieren"
+    },
+    "projects": {
+      "list": "Projekte"
+    },
+    "media": "Mediathek"
+  },
+  "shell": {
+    "build": "Build {id}",
+    "envBanner": {
+      "testContext": "Daten vom {date} · Änderungen hier haben keine Wirkung",
+      "noImport": "kein Import",
+      "devContext": "localhost · Migrationsstand {migrations}",
+      "test": "TESTUMGEBUNG",
+      "development": "ENTWICKLUNG"
+    },
+    "topbar": {
+      "search": "Suchen",
+      "openNav": "Navigation öffnen",
+      "help": "Hilfe zu dieser Seite"
+    },
+    "help": {
+      "readAll": "Ganze Seite lesen",
+      "none": "Zu dieser Seite gibt es noch keine Hilfe.",
+      "unavailable": "Die Hilfe ist gerade nicht erreichbar."
+    },
+    "userMenu": {
+      "aria": "Nutzermenü",
+      "profile": "Profil",
+      "dark": "Dunkles Design",
+      "densityCompact": "Kompakte Zeilen",
+      "densityDefault": "Normale Zeilen",
+      "densityComfortable": "Komfortable Zeilen",
+      "logout": "Abmelden",
+      "noRole": "Keine Rolle"
+    }
+  },
+  "auth": {
+    "setup": {
+      "title": "Erste Einrichtung",
+      "intro": "Legen Sie das erste Vorstandskonto an. Danach werden weitere Nutzer in der Verwaltung angelegt — dieser Schritt erscheint nicht wieder.",
+      "organizationName": "Vereinsname",
+      "locale": "Sprache der Webseite und Oberfläche",
+      "localeOther": "Andere Sprache …",
+      "name": "Ihr Name",
+      "email": "E-Mail",
+      "password": "Passwort",
+      "passwordHint": "Mindestens 12 Zeichen. Ein Merksatz ist besser als ein kurzes Sonderzeichen-Passwort.",
+      "submit": "Konto anlegen und starten",
+      "importLink": "Sie haben ein Backup? Bestand wiederherstellen",
+      "footer": "Dieses Konto erhält die Rolle „Administration“ mit allen Rechten. Weitere Rollen legen Sie später unter Verwaltung → Rollen an.",
+      "localePlaceholder": "z. B. es"
+    },
+    "setupImport": {
+      "title": "Bestand wiederherstellen",
+      "intro": "Spielen Sie ein Backup ein, statt neu zu beginnen. Die Datenbank ist noch leer, es geht nichts verloren.",
+      "file": "Backup-Datei",
+      "uploading": "Wird geprüft …",
+      "manifestTitle": "Inhalt des Archivs",
+      "environment": "Umgebung",
+      "createdAt": "Erstellt am",
+      "users": "Nutzer",
+      "documents": "Dokumente",
+      "mediaAssets": "Medien",
+      "credentialWarning": "Nach dem Einspielen melden Sie sich mit den Zugangsdaten aus diesem Backup an. Ohne diese kommen Sie nicht mehr hinein.",
+      "confirm": "Diesen Bestand einspielen",
+      "running": "Wird eingespielt …",
+      "back": "Zurück zur Einrichtung",
+      "tooLarge": "Die Datei ist größer als 2 GB.",
+      "unreadable": "Die Datei ist kein Kompass-Backup."
+    },
+    "login": {
+      "title": "Anmelden",
+      "email": "E-Mail",
+      "password": "Passwort",
+      "submit": "Anmelden",
+      "invalid": "E-Mail oder Passwort stimmt nicht.",
+      "locked": "Das Konto ist nach fünf Fehlversuchen für 15 Minuten gesperrt. Ein Admin kann ein neues Startpasswort setzen.",
+      "inactive": "Dieses Konto ist deaktiviert.",
+      "throttled": "Zu viele fehlgeschlagene Anmeldungen in kurzer Zeit. Die Anmeldung ist für alle für einige Minuten pausiert.",
+      "importedTitle": "Import abgeschlossen",
+      "importedText": "Alle Sitzungen wurden beendet. Melden Sie sich mit den Zugangsdaten aus dem eingelesenen Bestand an.",
+      "footer": "Zugänge werden vom Vorstand angelegt. Bei Problemen wendet man sich an die Administration des Vereins."
+    },
+    "password": {
+      "title": "Neues Passwort festlegen",
+      "intro": "Sie haben sich mit einem Startpasswort angemeldet. Legen Sie ein eigenes fest, um fortzufahren.",
+      "current": "Startpasswort",
+      "new": "Neues Passwort",
+      "repeat": "Passwort wiederholen",
+      "strength": "{count} Zeichen — mindestens 12 sind nötig.",
+      "mismatch": "Die Passwörter stimmen nicht überein.",
+      "submit": "Passwort setzen und fortfahren",
+      "footer": "Kein Überspringen, kein Abmelden-Knopf: ohne eigenes Passwort gibt es keinen Zugang. Der Wechsel wird protokolliert."
+    }
+  },
+  "home": {
+    "greeting": "Guten Tag, {name}.",
+    "customize": "Anpassen",
+    "noTiles": "Keine Kacheln eingeschaltet. Über „Anpassen“ wählen Sie, was hier steht."
+  },
+  "dashboard": {
+    "tileError": "Diese Kachel konnte nicht geladen werden.",
+    "showAll": "Alle {count} anzeigen",
+    "complete": "{title} erledigen",
+    "completed": "Wiedervorlage erledigt",
+    "customize": {
+      "title": "Startseite anpassen",
+      "hint": "Was hier steht, sehen nur Sie. Jede Änderung wird sofort gespeichert.",
+      "show": "Kachel „{title}“ anzeigen",
+      "off": "Ausgeschaltet",
+      "reset": "Vorgabe wiederherstellen",
+      "resetDone": "Startseite auf die Vorgabe zurückgesetzt"
+    },
+    "tiles": {
+      "core": {
+        "followUps": {
+          "title": "Fällig",
+          "empty": "Nichts fällig.",
+          "open": "Alle Wiedervorlagen",
+          "options": {
+            "horizonDays": { "label": "Zeitraum", "values": { "7": "7 Tage", "14": "14 Tage", "30": "30 Tage" } },
+            "onlyMine": { "label": "Nur meine" }
+          }
+        },
+        "setup": {
+          "title": "Einrichtung",
+          "empty": "Der Verein ist eingerichtet.",
+          "open": "Zu den Einstellungen",
+          "messages": {
+            "settingName": "Vereinsname fehlt",
+            "settingStreet": "Straße fehlt",
+            "settingPostalCode": "Postleitzahl fehlt",
+            "settingCity": "Ort fehlt",
+            "settingRegisterCourt": "Registergericht fehlt",
+            "settingRegisterNumber": "Registernummer fehlt",
+            "settingTaxNumber": "Steuernummer fehlt",
+            "settingTaxOffice": "Finanzamt fehlt",
+            "settingExemptionNoticeType": "Art des Freistellungsbescheids fehlt",
+            "settingExemptionNoticeDate": "Datum des Freistellungsbescheids fehlt",
+            "noRole": "Keine Rolle neben „Administration“ — für Kassenprüfung und Schriftführung sind eigene Rollen sinnvoll",
+            "noModule": "Kein Fachmodul eingeschaltet"
+          }
+        },
+        "backup": {
+          "title": "Backup",
+          "empty": "",
+          "open": "Zum Backup",
+          "messages": {
+            "never": "Noch kein Backup erstellt. Der erste Export dauert unter einer Minute.",
+            "stale": "Das letzte Backup ist {days, plural, one {# Tag} other {# Tage}} alt — älter als die eingestellte Frist.",
+            "recent": "Letztes Backup vor {days, plural, =0 {weniger als einem Tag} one {# Tag} other {# Tagen}}."
+          }
+        },
+        "accounts": { "title": "Konten", "empty": "Alle Konten sind eingerichtet.", "open": "Zu den Nutzern" },
+        "retention": { "title": "Löschfällig", "empty": "Nichts zur Löschung fällig.", "open": "Zur Aufbewahrung" },
+        "translations": { "title": "Übersetzungslücken", "empty": "Alles übersetzt.", "open": "Zu den Sprachen" }
+      },
+      "dms": {
+        "inbox": {
+          "title": "Eingangskorb",
+          "empty": "Keine Post im Eingangskorb.",
+          "open": "Zum Eingangskorb",
+          "options": { "rows": { "label": "Zeilen" } }
+        },
+        "drafts": {
+          "title": "Entwürfe",
+          "empty": "Keine offenen Entwürfe.",
+          "open": "Zu den Entwürfen",
+          "options": { "onlyMine": { "label": "Nur meine" } }
+        },
+        "unsent": { "title": "Unversandt", "empty": "Alles versandt.", "open": "Zur Akte" },
+        "textFailed": { "title": "Texterkennung", "empty": "Keine fehlgeschlagene Texterkennung.", "open": "Zur Akte" }
+      },
+      "site": {
+        "site": {
+          "title": "Webseite",
+          "empty": "",
+          "open": "Zum Publizieren",
+          "messages": {
+            "templateUnreviewed": "Das Template ist seit dem Import ungeprüft. Der Publish ist gesperrt, bis es eingelesen wurde.",
+            "lastFailed": "Der letzte Publish ist fehlgeschlagen.",
+            "changed": "{count, plural, one {# Änderung} other {# Änderungen}} seit dem letzten Publish.",
+            "never": "Noch nie publiziert.",
+            "current": "Stand vom {date}. Keine Änderungen seither."
+          }
+        }
+      }
+    }
+  },
+  "help": {
+    "title": "Handbuch",
+    "toc": "Inhaltsverzeichnis"
+  },
+  "users": {
+    "title": "Nutzer",
+    "filter": {
+      "search": "Name oder E-Mail",
+      "showInactive": "Inaktive anzeigen",
+      "count": "{count} Nutzer, davon {inactive} inaktiv"
+    },
+    "columns": {
+      "name": "Name",
+      "email": "E-Mail",
+      "roles": "Rollen",
+      "status": "Status",
+      "lastLogin": "Letzte Anmeldung"
+    },
+    "status": {
+      "active": "Aktiv",
+      "firstLoginPending": "Erstlogin offen",
+      "inactive": "Inaktiv"
+    },
+    "actions": {
+      "menu": "Aktionen",
+      "roles": "Rollen ändern",
+      "resetPassword": "Neues Startpasswort",
+      "deactivate": "Deaktivieren",
+      "activate": "Aktivieren"
+    },
+    "deactivate": {
+      "title": "Nutzer deaktivieren?",
+      "text": "{name} kann sich danach nicht mehr anmelden. Bereits protokollierte Vorgänge bleiben erhalten und bleiben ihm zugeordnet."
+    },
+    "create": {
+      "button": "Nutzer anlegen",
+      "title": "Nutzer anlegen",
+      "subtitle": "Nach dem Anlegen zeigt das System einmalig ein Startpasswort. Der Nutzer muss es beim ersten Login ändern.",
+      "roles": "Rollen",
+      "name": "Name",
+      "email": "E-Mail",
+      "submit": "Nutzer anlegen"
+    },
+    "startPassword": {
+      "title": "Nutzer „{name}“ angelegt",
+      "text": "Geben Sie diese Zugangsdaten weiter. Das Startpasswort wird nach dem Schließen nicht mehr angezeigt; ein neues können Sie jederzeit setzen.",
+      "copyBoth": "Beides kopieren",
+      "info": "Beim ersten Login muss {name} ein eigenes Passwort setzen. Bis dahin steht in der Liste „Erstlogin offen“.",
+      "done": "Ich habe die Daten notiert",
+      "emailLabel": "E-MAIL",
+      "passwordLabel": "STARTPASSWORT"
+    },
+    "roles": {
+      "title": "Rollen für {name}",
+      "cancel": "Abbrechen",
+      "save": "Rollen speichern"
+    },
+    "toast": {
+      "activated": "Nutzer aktiviert.",
+      "deactivated": "Nutzer deaktiviert.",
+      "saved": "Nutzer gespeichert.",
+      "rolesSaved": "Rollen gespeichert."
+    }
+  },
+  "roles": {
+    "title": "Rollen",
+    "description": "Rollennamen sind freier Text. Rechte werden je Rolle vergeben; Nutzer erhalten die Vereinigung ihrer Rollen.",
+    "listAria": "Rollen",
+    "meta": {
+      "protected": "Alle Rechte · {users, plural, one {# Nutzer} other {# Nutzer}} · gesperrt",
+      "normal": "{permissions, plural, one {# Recht} other {# Rechte}} · {users, plural, one {# Nutzer} other {# Nutzer}}"
+    },
+    "noDelete": "Löschen gibt es nicht — eine nicht mehr benötigte Rolle wird von allen Nutzern entfernt und bleibt leer stehen.",
+    "fields": {
+      "name": "Rollenname",
+      "description": "Beschreibung"
+    },
+    "groupCount": "{active} von {total} aktiv",
+    "save": "Rolle speichern",
+    "create": {
+      "button": "Rolle anlegen",
+      "title": "Rolle anlegen",
+      "submit": "Anlegen"
+    },
+    "toast": {
+      "created": "Rolle angelegt.",
+      "saved": "Rolle gespeichert."
+    }
+  },
+  "permissions": {
+    "groups": {
+      "core": {
+        "admin": "Kern — Verwaltung",
+        "accountability": "Kern — Rechenschaft",
+        "data": "Kern — Erzeugen und Daten",
+        "followUps": "Kern — Wiedervorlagen"
+      },
+      "finance": "Finanzen",
+      "members": "Mitglieder",
+      "animals": "Tiere",
+      "contacts": "Kontakte",
+      "site": "Webseite",
+      "dms": "Akte",
+      "projects": "Projekte"
+    },
+    "keys": {
+      "users": {
+        "manage": {
+          "label": "Nutzer verwalten",
+          "description": "Nutzer anlegen, bearbeiten, deaktivieren und Rollen zuweisen."
+        }
+      },
+      "roles": {
+        "manage": {
+          "label": "Rollen verwalten",
+          "description": "Rollen anlegen und deren Rechte ändern."
+        }
+      },
+      "settings": {
+        "manage": {
+          "label": "Einstellungen verwalten",
+          "description": "Vereinsdaten, Steuerangaben, Bankverbindung und Branding ändern."
+        }
+      },
+      "modules": {
+        "manage": {
+          "label": "Module verwalten",
+          "description": "Module aktivieren und deaktivieren."
+        }
+      },
+      "audit": {
+        "view": {
+          "label": "Änderungsprotokoll einsehen",
+          "description": "Alle protokollierten Vorgänge lesen und als PDF exportieren."
+        }
+      },
+      "documents": {
+        "export": {
+          "label": "Auszüge ziehen",
+          "description": "Auszüge wie das Änderungsprotokoll als PDF herunterladen. Sie bekommen keine Nummer und werden nicht abgelegt."
+        }
+      },
+      "followUps": {
+        "view": {
+          "label": "Wiedervorlagen sehen",
+          "description": "Offene und erledigte Wiedervorlagen an Vorgängen lesen und die fälligen auf der Startseite sehen."
+        },
+        "manage": {
+          "label": "Wiedervorlagen pflegen",
+          "description": "Wiedervorlagen anlegen, abhaken, wieder öffnen und löschen."
+        }
+      },
+      "media": {
+        "upload": {
+          "label": "Dateien hochladen",
+          "description": "Logo, Anhänge und Belege in die Mediathek legen."
+        }
+      },
+      "backup": {
+        "export": {
+          "label": "Backup exportieren",
+          "description": "Vollständigen Datenexport herunterladen."
+        },
+        "import": {
+          "label": "Backup importieren",
+          "description": "Ersetzt den gesamten Bestand samt Änderungsprotokoll. Nur an Personen vergeben, denen Sie auch den Zugang zum Server geben würden."
+        }
+      },
+      "site": {
+        "view": {
+          "label": "Webseite ansehen",
+          "description": "Template-Variablen und Sammlungseinträge einsehen."
+        },
+        "manage": {
+          "label": "Webseite verwalten",
+          "description": "Template einlesen, Variablen und Sammlungseinträge pflegen."
+        },
+        "publish": {
+          "label": "Webseite publizieren",
+          "description": "Inhalt exportieren und die Veröffentlichung starten."
+        }
+      },
+      "animals": {
+        "view": {
+          "label": "Tiere ansehen",
+          "description": "Tierprofile, Fotos und Geschichten einsehen."
+        },
+        "manage": {
+          "label": "Tiere verwalten",
+          "description": "Tierprofile anlegen, bearbeiten, Fotos zuordnen und Status ändern."
+        }
+      },
+      "projects": {
+        "view": {
+          "label": "Projekte ansehen",
+          "description": "Projekte des Vereins lesen."
+        },
+        "manage": {
+          "label": "Projekte verwalten",
+          "description": "Projekte anlegen, bearbeiten, sortieren und veröffentlichen."
+        }
+      },
+      "retention": {
+        "view": {
+          "label": "Aufbewahrung einsehen",
+          "description": "Fällige Löschfristen über alle Module einsehen."
+        }
+      },
+      "contacts": {
+        "view": {
+          "label": "Kontakte ansehen",
+          "description": "Kontakte, Rollen und Kommunikationswege einsehen."
+        },
+        "manage": {
+          "label": "Kontakte verwalten",
+          "description": "Kontakte anlegen, bearbeiten, Rollen und Kommunikationswege pflegen und löschen."
+        }
+      },
+      "dms": {
+        "view": {
+          "label": "Akte ansehen",
+          "description": "Dokumente der Akte öffnen, herunterladen und durchsuchen."
+        },
+        "create": {
+          "label": "Dokumente anlegen",
+          "description": "Entwürfe schreiben, eingegangene Post ablegen, einsortieren und verknüpfen."
+        },
+        "file": {
+          "label": "Dokumente festschreiben",
+          "description": "Einen Entwurf festschreiben: Er bekommt seine Nummer und ist danach unveränderlich."
+        },
+        "void": {
+          "label": "Dokumente stornieren",
+          "description": "Ein festgeschriebenes Dokument stornieren. Die Nummer bleibt vergeben."
+        },
+        "deleteDraft": {
+          "label": "Entwürfe verwerfen",
+          "description": "Einen noch nicht festgeschriebenen Entwurf wegwerfen."
+        },
+        "manage": {
+          "label": "Akte verwalten",
+          "description": "Dokumentarten, Ordner und Einsortierregeln pflegen; fällige Löschungen bestätigen."
+        }
+      }
+    }
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "tabs": {
+      "organization": "Verein",
+      "tax": "Steuer & Bescheide",
+      "bank": "Bank",
+      "branding": "Branding",
+      "display": "Darstellung"
+    },
+    "tabInvalid": "Enthält Fehler",
+    "counter": "{count} von {max} Zeichen",
+    "taxIncomplete": "{count, plural, one {# Angabe ist unvollständig.} other {# Angaben sind unvollständig.}}",
+    "taxIncompleteText": "Ohne Steuernummer und Freistellungsbescheid lassen sich keine Zuwendungsbestätigungen erzeugen.",
+    "fields": {
+      "organization": {
+        "name": "Vereinsname",
+        "legalForm": "Rechtsform",
+        "street": "Straße und Hausnummer",
+        "postalCode": "PLZ",
+        "city": "Ort",
+        "country": "Land",
+        "foundedYear": "Gründungsjahr",
+        "registerCourt": "Registergericht",
+        "registerNumber": "Registernummer",
+        "email": "Kontakt-E-Mail",
+        "phone": "Telefon",
+        "website": "Webseite",
+        "taxNumber": "Steuernummer",
+        "taxOffice": "Finanzamt",
+        "exemptionNoticeType": "Art des Bescheids",
+        "exemptionNoticeDate": "Datum des Bescheids",
+        "statutoryPurpose": "Satzungszweck",
+        "iban": "IBAN",
+        "bic": "BIC",
+        "bankName": "Bankname"
+      },
+      "branding": {
+        "logoAssetId": "Logo",
+        "fontBody": "Schrift Fließtext",
+        "fontHeading": "Schrift Überschriften",
+        "activeTheme": "Aktives Theme"
+      },
+      "ui": {
+        "dateFormat": "Datumsformat"
+      }
+    },
+    "hints": {
+      "registerNumberHint": "Erscheint im Briefbogen-Fuß.",
+      "statutoryPurposeHint": "Wird wörtlich in Zuwendungsbestätigungen übernommen.",
+      "logoHint": "Logo-Upload folgt mit der Mediathek.",
+      "themeHint": "Themes werden unter Einrichtung → Erscheinungsbild bearbeitet."
+    },
+    "options": {
+      "ui": {
+        "dateFormat": {
+          "locale": "Aus der Sprache (12.09.2026)",
+          "iso": "ISO 8601 (2026-09-12)"
+        }
+      },
+      "organization": {
+        "legalForm": {
+          "registeredAssociation": "Eingetragener Verein (e.V.)",
+          "unregisteredAssociation": "Nicht eingetragener Verein"
+        },
+        "exemptionNoticeType": {
+          "none": "Noch kein Bescheid",
+          "exemptionNotice": "Freistellungsbescheid",
+          "corporateTaxNoticeAttachment": "Anlage zum Körperschaftsteuerbescheid",
+          "section60a": "Feststellung nach § 60a AO"
+        }
+      },
+      "branding": {
+        "fontBody": {
+          "source-sans-3": "Source Sans 3 (Standard)",
+          "public-sans": "Public Sans",
+          "atkinson-hyperlegible": "Atkinson Hyperlegible"
+        },
+        "fontHeading": {
+          "source-serif-4": "Source Serif 4 (Standard)",
+          "same-as-body": "Wie Fließtext"
+        }
+      }
+    },
+    "toast": {
+      "saved": "Einstellungen gespeichert. Änderungen sind im Protokoll vermerkt."
+    },
+    "logo": {
+      "label": "Logo",
+      "hint": "PNG oder SVG, mindestens 256 px. Erscheint in Sidebar, Login und Briefkopf."
+    }
+  },
+  "themes": {
+    "title": "Erscheinungsbild",
+    "listAria": "Themes",
+    "active": "Aktiv",
+    "readOnly": "Schreibgeschützt",
+    "deleteHint": "Themes dürfen gelöscht werden — außer dem aktiven und dem Default. Module werden nie gelöscht, nur deaktiviert.",
+    "name": "Name",
+    "key": "Schlüssel",
+    "keyHint": "Kleinbuchstaben, Ziffern und Bindestrich.",
+    "duplicate": "Duplizieren",
+    "delete": "Löschen",
+    "activate": "Aktivieren",
+    "save": "Theme speichern",
+    "duplicateTitle": "„{name}“ duplizieren",
+    "deleteTitle": "Theme „{name}“ löschen?",
+    "deleteText": "Das Theme wird entfernt. Es ist weder aktiv noch das Default-Theme.",
+    "noInheritance": "Jedes Theme enthält alle Tokens vollständig — keine Vererbung, damit eine Änderung am Default kein anderes Theme verschiebt. „Duplizieren“ füllt die Werte des Ausgangsthemes vor.",
+    "contrastTitle": "Kontrast unter AA: {ratio}:1",
+    "contrastPair": "{fg} auf {bg} ({mode}): {ratio}:1, nötig {minimum}:1",
+    "mode": {
+      "light": "Hell",
+      "dark": "Dunkel"
+    },
+    "columns": {
+      "token": "Token"
+    },
+    "preview": {
+      "title": "Live-Vorschau",
+      "group": "Verwaltung",
+      "activeItem": "Nutzer",
+      "item": "Rollen",
+      "primary": "Speichern",
+      "secondary": "Abbrechen",
+      "destructive": "Widerrufen",
+      "badgeActive": "Aktiv",
+      "badgeOpen": "Offen",
+      "badgeError": "Fehler",
+      "badgeInactive": "Inaktiv",
+      "inputValue": "Musterverein e.V.",
+      "col1": "Position",
+      "col2": "Betrag",
+      "row": "Zeile"
+    },
+    "toast": {
+      "saved": "Theme gespeichert.",
+      "duplicated": "Theme dupliziert.",
+      "deleted": "Theme gelöscht.",
+      "activated": "Theme aktiviert."
+    },
+    "tokens": {
+      "color-primary": "Primäre Aktion, aktiver Navigationseintrag",
+      "color-primary-ink": "Hover/Pressed auf Primary, Text auf -soft",
+      "color-primary-soft": "Aktive Nav-Fläche, Rollen-Badge, Auswahl",
+      "color-accent": "Zweitakzent: MCP-Badge, Akzentflächen",
+      "color-accent-deep": "Text auf color-accent-soft",
+      "color-accent-soft": "Hintergrund für Akzentflächen",
+      "color-success": "Aktiv, gespeichert, erfolgreicher Export",
+      "color-success-bg": "Fläche hinter Erfolg",
+      "color-warning": "Unvollständig, Kontrast unter AA, Import",
+      "color-warning-bg": "Fläche hinter Warnung",
+      "color-error": "Validierungsfehler, destruktive Aktion",
+      "color-error-bg": "Fläche hinter Fehler, fehlerhaftes Feld",
+      "color-info": "Neutrale Hinweise, Kanal Oberfläche",
+      "color-info-bg": "Fläche hinter Hinweis",
+      "bg": "Fensterhintergrund, Login, Inhaltsbereich",
+      "surface": "Karte, Tabelle, Dialog",
+      "surface-2": "Speicherleiste, eingebettete Blöcke",
+      "sidebar-bg": "Sidebar",
+      "topbar-bg": "Topbar",
+      "ink": "Primärtext, Titel",
+      "ink-2": "Labels, Sekundärtext",
+      "muted": "Hilfetext, Tabellenkopf",
+      "muted-2": "Nur Icons, Trennzeichen — nicht für Text",
+      "on-primary": "Text/Icon auf Primary",
+      "on-primary-muted": "Sekundärtext auf Primary-Flächen",
+      "line": "Standardrahmen",
+      "line-2": "Zeilentrenner",
+      "line-strong": "Feldrahmen, sekundärer Button, Switch aus",
+      "focus-ring": "Fokusring, getrennt von Primary",
+      "hover-surface": "Hover auf Nav, Menü, sekundärem Button",
+      "active-surface": "Gedrückter Zustand",
+      "selected-bg": "Ausgewählter Listeneintrag/Zeile",
+      "selected-ink": "Text in der Auswahl",
+      "link": "Inline-Link",
+      "link-hover": "Link-Hover",
+      "disabled-ink": "Deaktivierte Texte und Steuerelemente",
+      "disabled-bg": "Fläche deaktivierter Steuerelemente",
+      "table-head-bg": "Tabellenkopf",
+      "table-zebra": "Zebrastreifen",
+      "table-row-hover": "Zeilen-Hover",
+      "input-bg": "Feldfläche",
+      "input-placeholder": "Platzhaltertext",
+      "code-bg": "Permission-Keys, IBAN, Token-Klartext, Diff-Werte",
+      "neutral-badge-bg": "Neutrales Badge",
+      "neutral-badge-ink": "Text im neutralen Badge",
+      "tooltip-bg": "Tooltip-Fläche",
+      "tooltip-ink": "Tooltip-Text",
+      "overlay": "Abdunklung hinter Dialog und Drawer",
+      "shadow-sm": "Leichter Schatten",
+      "shadow-md": "Dialog, Toast, Menü, Seitenleiste",
+      "font-body": "Fließtext und Oberfläche",
+      "font-heading": "Überschriften",
+      "font-mono": "Beträge, IBAN, Keys, Zeitstempel",
+      "radius-sm": "Badge, Checkbox, Farbfeld",
+      "radius-md": "Feld, Button, Tabellenrahmen",
+      "radius-lg": "Karte, Dialog",
+      "radius-full": "Switch, Avatar, Balken",
+      "row-h": "Tabellenzeilenhöhe"
+    }
+  },
+  "modules": {
+    "title": "Module",
+    "count": "{active} von {total} aktiv",
+    "hint": "Beim Deaktivieren bleiben alle Daten des Moduls erhalten. Die Navigationsgruppe verschwindet, Berichte und protokollierte Vorgänge bleiben lesbar. Aktivieren stellt den Zustand unverändert wieder her.",
+    "alwaysActive": "Immer aktiv",
+    "enabled": "Aktiv",
+    "disabled": "Inaktiv",
+    "locked": "Gesperrt",
+    "meta": "Version {version}",
+    "dependsOn": "benötigt {list}",
+    "toggle": "{name} aktivieren oder deaktivieren",
+    "coreNote": "Ein Verein ohne Kern hätte keine Anmeldung.",
+    "noDescription": "Keine Beschreibung hinterlegt.",
+    "names": {
+      "core": "Kern",
+      "finance": "Finanzen",
+      "members": "Mitglieder",
+      "animals": "Tiere",
+      "projects": "Projekte",
+      "site": "Webseite",
+      "contacts": "Kontakte",
+      "dms": "Dokumentenmanagement"
+    },
+    "descriptions": {
+      "core": "Anmeldung, Rollen, Einstellungen, Änderungsprotokoll, Dokumente und Backup.",
+      "finance": "Konten, Buchungen, Rücklagen, Zuwendungsbestätigungen.",
+      "members": "Mitgliederstamm, Beiträge, Versammlungen.",
+      "animals": "Tiere, Vermittlung, Patenschaften.",
+      "site": "Inhalte der Webseite und ihr Aufbau als statische Seiten.",
+      "projects": "Projekte des Vereins und ihre Darstellung auf der Webseite.",
+      "contacts": "Personen und Organisationen, mit denen der Verein zu tun hat.",
+      "dms": "Posteingang, Schriftverkehr, Ablage und Wiedervorlagen."
+    },
+    "notes": {
+      "finance": "Voraussetzung für Zuwendungsbestätigungen."
+    },
+    "toast": {
+      "enabled": "Modul aktiviert.",
+      "disabled": "Modul deaktiviert."
+    }
+  },
+  "audit": {
+    "title": "Änderungsprotokoll",
+    "export": "Als PDF exportieren",
+    "range": "{from}–{to} von {total}",
+    "prev": "Zurück",
+    "next": "Weiter",
+    "columns": {
+      "time": "Zeitpunkt",
+      "user": "Nutzer",
+      "channel": "Kanal",
+      "action": "Aktion",
+      "entity": "Objekt",
+      "summary": "Zusammenfassung"
+    },
+    "filters": {
+      "text": "Objekt oder Wert",
+      "user": "Nutzer",
+      "allUsers": "Alle Nutzer",
+      "channel": "Kanal",
+      "allChannels": "Alle Kanäle",
+      "action": "Aktion",
+      "allActions": "Alle Aktionen",
+      "from": "Von",
+      "to": "Bis",
+      "count": "{count, plural, one {# Eintrag} other {# Einträge}}",
+      "channels": {
+        "ui": "Oberfläche",
+        "mcp": "MCP",
+        "system": "System"
+      }
+    },
+    "detail": {
+      "before": "vorher",
+      "after": "nachher",
+      "noDiff": "Kein Feld-Diff für diesen Eintrag.",
+      "user": "Nutzer",
+      "channel": "Kanal",
+      "origin": "Herkunft",
+      "request": "Vorgang",
+      "environment": "Umgebung",
+      "summary": "Zusammenfassung",
+      "immutable": "Einträge können nicht geändert werden."
+    },
+    "empty": {
+      "title": "Keine Einträge",
+      "text": "Zu diesem Filter gibt es nichts. Protokolliert wird jede schreibende Aktion — vielleicht ist der Zeitraum zu eng oder der Nutzer war nicht beteiligt."
+    }
+  },
+  "profile": {
+    "title": "Profil",
+    "identityHint": "Name und E-Mail ändert die Administration unter Verwaltung → Nutzer.",
+    "password": {
+      "title": "Passwort ändern",
+      "current": "Aktuelles Passwort",
+      "new": "Neues Passwort",
+      "repeat": "Passwort wiederholen",
+      "strength": "{count} Zeichen — mindestens 12 sind nötig.",
+      "submit": "Passwort ändern",
+      "footnote": "Alle anderen Sitzungen werden abgemeldet, API-Tokens bleiben gültig.",
+      "changed": "Passwort geändert.",
+      "wrongCurrent": "Das aktuelle Passwort stimmt nicht."
+    },
+    "tokens": {
+      "title": "API-Tokens (MCP-Zugang)",
+      "intro": "Ein Token wirkt mit Ihren Rechten. Vorgänge über MCP erscheinen im Änderungsprotokoll mit dem Kanal „MCP“ und dem Namen des Tokens.",
+      "create": "Token erstellen",
+      "createTitle": "Token erstellen",
+      "name": "Name",
+      "nameHint": "Wofür das Token verwendet wird, z. B. „Buchhaltung Skript“.",
+      "createSubmit": "Erstellen",
+      "columns": {
+        "name": "Name",
+        "created": "Erstellt",
+        "lastUsed": "Zuletzt genutzt"
+      },
+      "neverUsed": "noch nie genutzt",
+      "lastUsedDays": "{days, plural, =0 {heute} one {vor # Tag} other {vor # Tagen}}",
+      "revokedAt": "widerrufen {date}",
+      "revoke": "Widerrufen",
+      "revokeTitle": "Token „{name}“ widerrufen?",
+      "revokeText": "Aufrufe mit diesem Token werden sofort abgewiesen. Der Eintrag bleibt mit Datum in der Liste.",
+      "revoked": "Token widerrufen.",
+      "createdTitle": "Token „{name}“ erstellt",
+      "createdText": "Kopieren Sie das Token jetzt. Es wird nach dem Schließen dieses Dialogs nicht mehr angezeigt und kann nur widerrufen und neu erstellt werden.",
+      "createdInfo": "Gültig ohne Ablauf, Rechte wie Ihr Konto. Bei Verdacht auf Weitergabe sofort widerrufen.",
+      "createdDone": "Ich habe das Token gespeichert",
+      "footnote": "Widerrufene Tokens bleiben mit Datum in der Liste, damit Protokolleinträge zuordenbar bleiben."
+    }
+  },
+  "palette": {
+    "aria": "Befehlspalette",
+    "placeholder": "Seite, Einstellung oder Aktion suchen …",
+    "empty": "Keine Treffer.",
+    "groups": {
+      "navigation": "Navigation",
+      "settings": "Einstellungen",
+      "actions": "Aktionen",
+      "help": "Hilfe"
+    },
+    "select": "wählen",
+    "open": "öffnen",
+    "close": "schließen",
+    "permissionsOnly": "Nur Einträge, für die Sie Rechte haben."
+  },
+  "placeholders": {},
+  "documents": {
+    "title": "Dokumentvorlagen",
+    "description": "Woraus Briefe und Ausdrucke gebaut werden: die Basis-Vorlagen und die Vorlage je Dokumentart. Die Dokumente selbst liegen in der Akte.",
+    "bases": {
+      "title": "Basis-Vorlagen",
+      "ready": "bereit",
+      "broken": "fehlerhaft",
+      "useDefault": "Vorgabe der Vorlage",
+      "saved": "Basis-Vorlage gesetzt."
+    },
+    "create": {
+      "templates": {
+        "letterhead": "Briefbogen",
+        "audit-log-export": "Änderungsprotokoll-Export",
+        "letter": "Brief"
+      }
+    }
+  },
+  "retention": {
+    "title": "Aufbewahrung und Löschfristen",
+    "description": "Was zur Löschung ansteht, weil die gesetzliche Aufbewahrung abgelaufen ist.",
+    "empty": {
+      "title": "Nichts fällig",
+      "text": "Zurzeit steht keine Löschung an."
+    },
+    "dueSince": "fällig seit {date}",
+    "entities": {
+      "contact": "Kontakte",
+      "document": "Dokumente"
+    },
+    "footnote": "Gelöscht wird auf der Seite des jeweiligen Eintrags — dort steht, was dabei verschwindet.",
+    "settings": {
+      "title": "Fristen",
+      "statutory10Y": "Gesetzliche Aufbewahrung 10 Jahre",
+      "statutory10YHint": "§ 147 Abs. 1 Nr. 1, 4, 4a AO (z. B. Buchungsbelege, Jahresabschlüsse)",
+      "statutory6Y": "Gesetzliche Aufbewahrung 6 Jahre",
+      "statutory6YHint": "§ 147 Abs. 1 Nr. 2, 3, 5 AO (z. B. empfangene Handels- und Geschäftsbriefe)",
+      "consent": "Einwilligung / berechtigtes Interesse",
+      "consentHint": "ohne gesetzliche Grundlage (z. B. Interessenten)",
+      "save": "Speichern",
+      "months": "Monate"
+    }
+  },
+  "backup": {
+    "title": "Backup",
+    "export": {
+      "title": "Export erstellen",
+      "text": "Vollständiger Datenbestand samt Dokumenten, Protokoll und Einstellungen als eine Datei. Themes und Module sind enthalten, Sitzungen und API-Tokens nicht.",
+      "last": "Letzter Export",
+      "button": "Export erstellen",
+      "running": "Export läuft …",
+      "duration": "Dauert etwa 40 Sekunden.",
+      "failed": "Export fehlgeschlagen."
+    },
+    "import": {
+      "title": "Import",
+      "badge": "Überschreibt alles",
+      "warning": "Der Import ersetzt den gesamten Bestand dieser Umgebung, einschließlich Änderungsprotokoll. Erstellen Sie vorher einen Export. Der Vorgang selbst wird im neuen Bestand als Systemeintrag protokolliert.",
+      "file": "Backup-Datei",
+      "noFile": "Bitte eine Backup-Datei auswählen.",
+      "prepare": "Import vorbereiten",
+      "confirmTitle": "Bestand der Umgebung „{env}“ überschreiben?",
+      "confirmText": "{users} Nutzer, {audit} Protokolleinträge und {documents} Dokumente aus dem Backup ({source}) ersetzen den aktuellen Bestand. Dieser Schritt lässt sich nicht rückgängig machen.",
+      "confirmLabel": "Tippen Sie zur Bestätigung den Umgebungsnamen",
+      "notConfirmed": "Noch nicht bestätigt.",
+      "confirm": "Bestand überschreiben",
+      "steps": {
+        "writing": "Bestand wird ersetzt …",
+        "sessions": "Sitzungen werden beendet"
+      },
+      "noAbort": "Fenster nicht schließen. Ab hier lässt sich der Vorgang nicht mehr abbrechen; danach werden alle Sitzungen abgemeldet."
+    },
+    "settings": {
+      "title": "Frist",
+      "maxAgeDays": "Warnen, wenn das letzte Backup älter ist als",
+      "maxAgeDaysHint": "Die Startseite meldet ein Backup als veraltet, sobald es diese Zahl von Tagen überschreitet.",
+      "days": "Tage",
+      "saved": "Frist gespeichert"
+    }
+  },
+  "projects": {
+    "title": "Projekte",
+    "create": "Projekt anlegen",
+    "emptyTitle": "Noch keine Projekte",
+    "emptyText": "Dauer- und Kurzzeitprojekte mit ihrer öffentlichen Seite.",
+    "columns": {
+      "name": "Projekt",
+      "type": "Typ",
+      "status": "Status",
+      "links": "Verweise"
+    },
+    "types": {
+      "ongoing": "Dauerprojekt",
+      "shortTerm": "Kurzzeitprojekt"
+    },
+    "form": {
+      "tabs": {
+        "public": "Webseite",
+        "finance": "Finanzen"
+      },
+      "name": "Name",
+      "summary": "Kurztext",
+      "body": "Langtext",
+      "image": "Bild",
+      "type": "Typ",
+      "status": "Status",
+      "types": {
+        "ongoing": "Dauerprojekt",
+        "shortTerm": "Kurzzeitprojekt"
+      },
+      "statuses": {
+        "active": "Aktiv",
+        "completed": "Abgeschlossen"
+      },
+      "financeLater": "Konten, Buchungen und Rücklagen: Finanzen folgen in einer späteren Stufe.",
+      "links": {
+        "title": "Verweise nach außen",
+        "hint": "Spendenseite, Bericht, Partner — Bezeichnung und Adresse. Was die Webseite daraus macht, entscheidet das Template.",
+        "label": "Bezeichnung",
+        "url": "Adresse (https://…)",
+        "add": "Verweis hinzufügen",
+        "remove": "Verweis entfernen",
+        "empty": "Noch keine Verweise."
+      }
+    },
+    "delete": {
+      "button": "Projekt löschen",
+      "title": "{name} löschen?",
+      "hint": "Ein Projekt ist Webseiteninhalt. Hängt ein Dokument oder eine Wiedervorlage daran, bleibt es."
+    }
+  },
+  "animals": {
+    "common": {
+      "moduleInactiveTitle": "Modul Tiere ist nicht aktiv",
+      "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Daten bleiben erhalten.",
+      "openModules": "Module öffnen"
+    },
+    "list": {
+      "title": "Hunde",
+      "create": "Hund anlegen",
+      "emptyTitle": "Noch keine Hunde",
+      "emptyText": "Jeder Hund bekommt ein Profil mit Fotos, Status und Texten in Deutsch und Englisch.",
+      "columns": {
+        "animal": "Hund",
+        "status": "Status",
+        "flags": "Kennzeichen",
+        "location": "Aufenthalt",
+        "published": "Webseite"
+      },
+      "filter": {
+        "all": "Alle",
+        "label": "Status"
+      },
+      "emergency": "Notfall",
+      "sponsorable": "Patentier"
+    },
+    "form": {
+      "tabs": {
+        "profile": "Steckbrief",
+        "texts": "Texte",
+        "photos": "Fotos",
+        "story": "Geschichte"
+      },
+      "name": "Name",
+      "sex": "Geschlecht",
+      "sexes": {
+        "female": "Hündin",
+        "male": "Rüde"
+      },
+      "location": "Aufenthalt",
+      "locations": {
+        "shelter": "im Shelter",
+        "germany": "in Deutschland"
+      },
+      "sizeCm": "Größe in cm (für den Filter)",
+      "sizeText": "Größe als Text",
+      "birthText": "Geburtsangabe",
+      "externalProfileUrl": "Externes Profil (URL)",
+      "externalHint": "Trägt ein Hund diesen Link, laufen Anfragen auf der Webseite über den Partner statt per E-Mail an den Verein. Ohne Link erscheint das E-Mail-Formular.",
+      "isEmergency": "Notfall",
+      "isSponsorable": "Patentier",
+      "summary": "Kurztext",
+      "body": "Beschreibung",
+      "traits": "Wesensmerkmale",
+      "traitsHint": "Kommagetrennt, z. B. ruhig, verträglich, verspielt",
+      "status": {
+        "lookingForHome": "Sucht ein Zuhause",
+        "reserved": "Reserviert",
+        "adopted": "Vermittelt"
+      }
+    },
+    "status": {
+      "change": "Status ändern",
+      "title": "Status ändern",
+      "next": "Neuer Status",
+      "values": {
+        "lookingForHome": "Sucht ein Zuhause",
+        "reserved": "Reserviert",
+        "adopted": "Vermittelt"
+      },
+      "year": "Vermittlungsjahr",
+      "yearHint": "Erscheint bei den Glücklichen Vermittlungen.",
+      "submit": "Status setzen",
+      "saved": "Status gesetzt."
+    },
+    "photos": {
+      "choose": "Fotos wählen",
+      "primary": "Hauptfoto",
+      "remove": "Entfernen",
+      "save": "Fotos speichern",
+      "saved": "Fotos gespeichert."
+    },
+    "story": {
+      "locked": "Erst nach der Vermittlung: Setzen Sie den Status auf „Vermittelt“, dann lässt sich die Erfolgsgeschichte pflegen.",
+      "before": "Vorher-Bild",
+      "after": "Nachher-Bild",
+      "quote": "Zitat der Familie",
+      "family": "Familie",
+      "year": "Vermittlungsjahr",
+      "save": "Geschichte speichern",
+      "saved": "Geschichte gespeichert.",
+      "beforeCaption": "Unterschrift unter dem Vorher-Bild",
+      "afterCaption": "Unterschrift unter dem Nachher-Bild",
+      "captionHint": "Leer heißt: keine Ortsangabe unter dem Bild."
+    },
+    "delete": {
+      "button": "Tierprofil löschen",
+      "title": "{name} löschen?",
+      "hint": "Ein Profil ist Webseiteninhalt. Hängt ein Dokument oder eine Wiedervorlage daran, bleibt es."
+    }
+  },
+  "site": {
+    "form": {
+      "add": "Hinzufügen",
+      "remove": "Entfernen",
+      "moveUp": "Nach oben",
+      "moveDown": "Nach unten",
+      "preview": "Vorschau",
+      "edit": "Bearbeiten",
+      "atMost": "höchstens {max}",
+      "untranslated": "noch nicht übersetzt",
+      "empty": "noch nichts angelegt",
+      "noChoice": "Keine Auswahl – das Template entscheidet",
+      "slot": "Platz {n}",
+      "staleReference": "„{value}“ steht nicht mehr zur Auswahl.",
+      "clearReference": "Leeren"
+    },
+    "template": {
+      "title": "Template",
+      "lastRead": "Zuletzt eingelesen: {when}",
+      "neverRead": "Noch kein Template eingelesen.",
+      "needsReview": "Dieses Template kam mit einem eingespielten Backup und unterscheidet sich von dem, das zuvor lief. Ein Template ist ausführbarer Code: Es wird erst beim Einlesen ausgeführt und erst danach wieder publiziert. Lesen Sie es ein, wenn Sie wissen, woher das Backup stammt.",
+      "read": "Template einlesen",
+      "apply": "Übernehmen",
+      "cancel": "Abbrechen",
+      "findings": "Befunde",
+      "noFindings": "Keine Änderungen gegenüber dem eingelesenen Stand.",
+      "blocking": "Blockiert — erst aufräumen:",
+      "lossy": "Kostet Inhalt:",
+      "harmless": "Unkritisch:",
+      "localesMissing": "Das Template fordert Sprachen, die nicht eingerichtet sind: {locales}. Legen Sie sie unter Sprachen an.",
+      "readDone": "Template eingelesen.",
+      "name": "Name",
+      "finding": {
+        "added": "{name} wird leer angelegt",
+        "renamed": "{name} übernimmt den Inhalt von {from}",
+        "removed": "{name} entfällt",
+        "removedFilled": "{name} entfällt — {count}× gefüllt",
+        "retyped": "{name} wechselt den Typ ({from} → {to})",
+        "retypedLossy": "{name} wechselt den Typ ({from} → {to}) — Inhalt geht verloren",
+        "overLimit": "{name} hat {have} Einträge, erlaubt sind {max}",
+        "valueGone": "{name}: „{value}“ entfällt und wird zu „{replacement}“ ({count}×)"
+      }
+    },
+    "seed": {
+      "title": "Startinhalte",
+      "intro": "Das Template bringt Startinhalte mit. Einmalig übernehmbar, solange die Webseite leer ist.",
+      "preview": "Vorschau",
+      "apply": "Übernehmen",
+      "cancel": "Abbrechen",
+      "report": "{variables} Variablen, {entries} Einträge, {assets} Dateien",
+      "done": "Startinhalte übernommen am {when}.",
+      "applied": "Startinhalte übernommen."
+    },
+    "variables": {
+      "title": "Variablen",
+      "save": "Speichern",
+      "saved": "Gespeichert."
+    },
+    "entries": {
+      "new": "Neu",
+      "save": "Speichern",
+      "saved": "Gespeichert.",
+      "published": "Veröffentlicht",
+      "delete": "Löschen",
+      "deleteTitle": "„{label}“ löschen?",
+      "count": "{n, plural, =0 {keine Einträge} one {ein Eintrag} other {# Einträge}}"
+    },
+    "publish": {
+      "title": "Publizieren",
+      "target": {
+        "development": "Ziel: keine Veröffentlichung in der Entwicklungsumgebung",
+        "test": "Ziel: Staging",
+        "production": "Ziel: Live-Webseite"
+      },
+      "state": {
+        "title": "Stand",
+        "last": "Letzter Publish: {date} ({status})",
+        "never": "Noch nie publiziert."
+      },
+      "check": {
+        "title": "Prüfen",
+        "intro": "Prüft alle Inhalte auf Sperrwörter und Übersetzungslücken. Ändert nichts.",
+        "run": "Prüfen",
+        "running": "Prüfung läuft …",
+        "hash": "Inhalts-Hash {hash}",
+        "violationsTitle": "Sperrworttreffer",
+        "noViolations": "Keine Treffer.",
+        "gapsTitle": "Übersetzungslücken",
+        "noGaps": "Alle Übersetzungen vorhanden.",
+        "staleTitle": "Veraltete Verweise",
+        "noStale": "Alle Verweise gültig.",
+        "staleHint": "Wird im Export leer ausgeliefert; das Template zeigt dann seine Automatik."
+      },
+      "preview": {
+        "run": "Vorschau bauen",
+        "running": "Build läuft …",
+        "open": "Vorschau öffnen",
+        "built": "Vorschau gebaut."
+      },
+      "connection": {
+        "title": "Verbindung testen",
+        "intro": "Meldet sich am Publish-Ziel an, überträgt aber nichts. Zeigt, was dort liegt und ein Publish entfernen würde.",
+        "run": "Verbindung testen",
+        "running": "Test läuft …",
+        "target": "Ziel: {target}",
+        "resultTitle": "Verbindungstest",
+        "ok": "Verbindung steht. Am Ziel liegen {count} Dateien, die ein Publish entfernen würde.",
+        "empty": "Verbindung steht, aber am Ziel liegt keine einzige Datei. Prüfen Sie SITE_DEPLOY_PATH — zeigt der Pfad wirklich auf das Webverzeichnis?",
+        "filesTitle": "Dateien am Ziel",
+        "logTitle": "Protokoll"
+      },
+      "diff": {
+        "title": "Änderungen gegenüber Live",
+        "changed": "Geändert",
+        "added": "Neu",
+        "removed": "Entfallen",
+        "none": "Keine Änderungen gegenüber dem letzten Publish."
+      },
+      "publishCard": {
+        "staging": "Nach Staging publizieren",
+        "live": "Live publizieren",
+        "noTarget": "Kein Publish-Ziel konfiguriert (SITE_DEPLOY_*).",
+        "notHere": "Aus der Entwicklungsumgebung wird nicht publiziert.",
+        "blocked": "Sperrworttreffer — Publish nicht möglich.",
+        "confirmTitle": "Webseite publizieren?",
+        "confirmText": "Ziel: {url}. {changed} geändert, {added} neu, {removed} entfallen. Die Seite wird frisch gebaut und übertragen.",
+        "stalePreview": "Die Vorschau ist nicht mehr aktuell — seitdem hat sich der Inhalt geändert. Bitte zuerst erneut „Vorschau bauen“, damit die Zahlen oben stimmen.",
+        "confirm": "Jetzt publizieren",
+        "steps": {
+          "build": "Bauen",
+          "transfer": "Übertragen",
+          "record": "Protokollieren"
+        },
+        "cancel": "Abbrechen",
+        "published": "Publiziert",
+        "title": "Publizieren",
+        "target": "Ziel: {url}"
+      },
+      "done": "Publiziert: {changed} geändert, {added} neu, {removed} entfallen.",
+      "history": {
+        "title": "Publish-Historie",
+        "columns": {
+          "time": "Zeitpunkt",
+          "status": "Status",
+          "hash": "Inhalts-Hash",
+          "changes": "Änderungen",
+          "by": "Auslöser"
+        },
+        "log": "Protokoll",
+        "empty": "Bislang keine Veröffentlichungen."
+      },
+      "previewExplainer": "Baut die vollständige Webseite als statische Vorschau und vergleicht den Stand mit der Live-Version.",
+      "job": {
+        "running": "{name} läuft seit {duration}",
+        "names": {
+          "preview": "Vorschau",
+          "publish": "Publish"
+        }
+      },
+      "previewTitle": "Vorschau"
+    },
+    "previewFrame": {
+      "title": "Webseiten-Vorschau",
+      "description": "Vollständige Vorschau der statischen Webseite unter dem aktuellen Kompass-Datenstand.",
+      "frameTitle": "Vorschau",
+      "widths": {
+        "label": "Breite",
+        "mobile": "Mobil",
+        "tablet": "Tablet",
+        "desktop": "Desktop"
+      }
+    }
+  },
+  "contacts": {
+    "picker": {
+      "placeholder": "Name eingeben …",
+      "empty": "Kein Kontakt gefunden.",
+      "clear": "— Kein Kontakt —",
+      "create": "Neu anlegen …",
+      "searching": "Suche …"
+    },
+    "roleNames": {
+      "interested": "Interessiert",
+      "partner": "Partner",
+      "authority": "Behörde",
+      "service": "Dienstleister"
+    },
+    "title": "Kontakte",
+    "description": "Personen und Organisationen, ihre Rollen und Kommunikationswege.",
+    "empty": {
+      "title": "Keine Kontakte",
+      "text": "Es wurden noch keine Kontakte angelegt."
+    },
+    "search": "Suche",
+    "allKinds": "Alle Arten",
+    "filterRole": "Rolle",
+    "allRoles": "Alle Rollen",
+    "includeArchived": "Auch archivierte",
+    "archived": "Archiviert",
+    "preview": "So fällt die Anschrift",
+    "previewPlaceholder": "Anschrift wird hier als Vorschau angezeigt…",
+    "create": {
+      "trigger": "Kontakt anlegen",
+      "title": "Kontakt anlegen",
+      "description": "Legen Sie eine Person oder Organisation an.",
+      "submit": "Anlegen"
+    },
+    "toast": {
+      "created": "Kontakt angelegt",
+      "updated": "Kontakt gespeichert",
+      "deleted": "Kontakt gelöscht",
+      "roleAdded": "Rolle hinzugefügt",
+      "roleEnded": "Rolle beendet",
+      "channelsSaved": "Kommunikationswege gespeichert"
+    },
+    "columns": {
+      "name": "Name",
+      "kind": "Art",
+      "roles": "Rollen",
+      "city": "Ort",
+      "contact": "Kontaktweg"
+    },
+    "fields": {
+      "kind": "Art",
+      "person": "Person",
+      "organization": "Organisation",
+      "salutation": "Anrede",
+      "firstName": "Vorname",
+      "lastName": "Nachname",
+      "name": "Name",
+      "legalForm": "Rechtsform",
+      "street": "Straße",
+      "postalCode": "PLZ",
+      "city": "Ort",
+      "country": "Land",
+      "addressExtra": "Adresszusatz",
+      "notes": "Notizen"
+    },
+    "roles": {
+      "title": "Rollen",
+      "add": "Rolle hinzufügen",
+      "submit": "Übernehmen",
+      "field": "Rolle",
+      "since": "Seit",
+      "until": "Bis",
+      "end": "Beenden"
+    },
+    "channels": {
+      "title": "Kommunikationswege",
+      "add": "Weg hinzufügen",
+      "save": "Speichern",
+      "kind": "Typ",
+      "value": "Wert",
+      "label": "Bezeichnung",
+      "isPrimary": "Hauptkontaktweg",
+      "kinds": {
+        "email": "E-Mail",
+        "phone": "Telefon",
+        "mobile": "Mobil",
+        "fax": "Fax",
+        "web": "Webseite"
+      }
+    },
+    "retention": {
+      "title": "Aufbewahrung",
+      "roleHold": "Rolle {role}",
+      "heldUntil": "gehalten bis {date}",
+      "heldPermanently": "dauerhaft gehalten",
+      "delete": "Kontakt löschen",
+      "deleteBlocked": "Solange etwas diesen Kontakt hält, kann er nicht gelöscht werden.",
+      "unknown": "Für diesen Kontakt ist keine Frist nachgewiesen. Vergeben Sie eine Rolle oder archivieren Sie ihn."
+    },
+    "channelLabelPlaceholder": "z. B. Privat, Büro",
+    "legalFormPlaceholder": "z. B. e. V., GmbH",
+    "countryPlaceholder": "DE"
+  },
+  "deletion": {
+    "loading": "Es wird geprüft, ob etwas dagegen spricht …",
+    "failed": "Die Prüfung ist fehlgeschlagen. Bitte schließen Sie den Dialog und versuchen Sie es erneut.",
+    "published": "Das ist noch veröffentlicht. Ziehen Sie es erst zurück — danach lässt es sich löschen.",
+    "unpublish": "Zurückziehen",
+    "blocked": "Das lässt sich noch nicht löschen, weil etwas daran hängt:",
+    "blockedHint": "Lösen Sie erst den Bezug in der Akte oder haken Sie die Wiedervorlage ab.",
+    "heldUntil": "{label} — gehalten bis {date}",
+    "heldPermanently": "{label} — dauerhaft gehalten",
+    "confirm": "Der Inhalt wird entfernt. Der Löschvorgang steht im Änderungsprotokoll.",
+    "withMedia": "{count, plural, one {Das eine Foto, das nur hier verwendet wird, mitlöschen} other {Die # Fotos, die nur hier verwendet werden, mitlöschen}}",
+    "sharedMedia": "Bleibt in der Mediathek, weil auch verwendet bei {places}:",
+    "delete": "Löschen",
+    "deleted": "Gelöscht.",
+    "deletedWithMedia": "{count, plural, =0 {Gelöscht.} one {Gelöscht, samt einem Foto.} other {Gelöscht, samt # Fotos.}}"
+  },
+  "dms": {
+    "title": "Akte",
+    "description": "Schriftverkehr und Dokumente des Vereins",
+    "inbox": "Eingangskorb",
+    "folders": "Ordner",
+    "noFolder": "Kein Ordner",
+    "allDocuments": "Alle Dokumente",
+    "newDraft": "Neuer Entwurf",
+    "receivePost": "Post ablegen",
+    "searchPlaceholder": "Betreff, Nummer oder Inhalt",
+    "searchTooShort": "Für die Suche im Inhalt braucht es mindestens drei Zeichen. Gesucht wurde nur in Betreff und Nummer.",
+    "hitOnPage": "Seite {page}",
+    "textPending": "Der Inhalt wird noch gelesen",
+    "allDirections": "Alle Richtungen",
+    "allTypes": "Alle Arten",
+    "allPhases": "Alle Zustände",
+    "columns": {
+      "number": "Nummer",
+      "subject": "Betreff",
+      "type": "Art",
+      "date": "Datum",
+      "folder": "Ordner",
+      "direction": "Richtung",
+      "status": "Zustand"
+    },
+    "directions": {
+      "incoming": "Eingang",
+      "outgoing": "Ausgang"
+    },
+    "phases": {
+      "draft": "Entwurf",
+      "issued": "Festgeschrieben"
+    },
+    "statuses": {
+      "draft": "Entwurf",
+      "issued": "Festgeschrieben",
+      "voided": "Storniert"
+    },
+    "empty": {
+      "title": "Keine Dokumente gefunden",
+      "text": "In dieser Ansicht liegen keine Dokumente vor."
+    },
+    "newDraftDescription": "Verfassen Sie ein Schreiben mit Briefkopf auf Basis der Vorlagen.",
+    "receiveDescription": "Legen Sie eingehende Schreiben ab. Einsortierregeln belegen Art, Ordner und Datum automatisch vor.",
+    "receiveSubmit": "Ablegen",
+    "fileHint": "Nur PDF, höchstens 10 MB.",
+    "upload": {
+      "dropTitle": "PDF hierher ziehen",
+      "dropBrowse": "oder <a>Datei auswählen</a>",
+      "meta": "PDF · {size}",
+      "ocrPending": "Texterkennung läuft nach dem Ablegen.",
+      "view": "Ansehen",
+      "replace": "Ersetzen"
+    },
+    "suggest": {
+      "fromFilename": "aus dem Dateinamen",
+      "fromRuleFilename": "Regel: „{term}“ im Namen",
+      "fromRuleSender": "Regel: „{term}“ im Absender",
+      "fromSender": "wie zuletzt bei diesem Absender",
+      "fromDrop": "hierauf gezogen",
+      "fromContactPage": "von der Kontaktseite",
+      "fromEntityPage": "von der Seite des Bezugs"
+    },
+    "drop": {
+      "overlayTitle": "{count, plural, one {# Datei ablegen} other {# Dateien ablegen}}",
+      "overlayHint": "Auf einen Ordner ziehen, um dort einzusortieren — oder hier loslassen für den Eingangskorb.",
+      "notPdf": "{count, plural, one {Nur PDF möglich — eine Datei übersprungen.} other {Nur PDF möglich — # Dateien übersprungen.}}",
+      "queueBadge": "{current} von {total}",
+      "queueHint": "Gezogen auf {folder}. Nach dem Ablegen folgt die nächste Datei.",
+      "queueHintInbox": "Nach dem Ablegen folgt die nächste Datei.",
+      "discardTitle": "Warteschlange verwerfen?",
+      "discardDescription": "{count, plural, one {Eine Datei ist noch nicht abgelegt.} other {# Dateien sind noch nicht abgelegt.}} Sie bleiben ungespeichert.",
+      "discardConfirm": "Verwerfen"
+    },
+    "number": {
+      "pending": "Die Nummer <mono>{number}</mono> wird beim Ablegen gezogen. Danach steht die Dokumentart fest."
+    },
+    "saveDraft": "Entwurf speichern",
+    "edit": "Bearbeiten",
+    "editDraft": "Entwurf bearbeiten",
+    "editDraftDescription": "Solange nichts festgeschrieben ist, lässt sich jeder Teil des Schreibens ändern.",
+    "saveChanges": "Änderungen speichern",
+    "typeFixedHint": "Die Dokumentart steht seit dem Anlegen fest — sie bestimmt Nummernkreis und Aufbewahrung.",
+    "preview": "Vorschau",
+    "draft": {
+      "saveAndPreview": "Speichern und Vorschau aktualisieren",
+      "tabForm": "Formular",
+      "insertSnippet": "Baustein einfügen",
+      "insertSnippetNone": "Baustein einfügen …"
+    },
+    "previewPane": {
+      "none": "Die Vorschau entsteht beim ersten Speichern.",
+      "pageCount": "{count, plural, one {# Seite} other {# Seiten}}",
+      "current": "Vorschau aktuell — gespeichert {time}",
+      "stale": "Vorschau veraltet — Stand von {time}",
+      "rendering": "Vorschau wird gerendert …",
+      "failed": "Vorschau konnte nicht erzeugt werden",
+      "retry": "Erneut versuchen"
+    },
+    "file": "Festschreiben",
+    "fileConfirmTitle": "Dokument festschreiben",
+    "fileConfirmDescription": "Beim Festschreiben wird dem Dokument eine fortlaufende Nummer zugewiesen und der Inhalt wird unveränderlich eingefroren.",
+    "fileConfirmSubmit": "Festschreiben bestätigen",
+    "openPdf": "PDF öffnen",
+    "fileAltered": {
+      "title": "Diese Datei ist nicht mehr die festgeschriebene.",
+      "body": "Beim Festschreiben wurde eine Prüfsumme gebildet; die Datei im Speicher passt nicht mehr dazu. Kompass zeigt sie deshalb nicht an und gibt sie nicht heraus. Der Befund steht im Änderungsprotokoll. Wendet euch an die Person, die den Server betreut."
+    },
+    "fileMissing": {
+      "title": "Die Datei fehlt.",
+      "body": "Zu diesem Dokument gehört eine Datei, die im Speicher nicht mehr liegt. Das ist kein Hinweis auf eine Veränderung — vermutlich ist beim Einspielen eines Backups oder beim Verschieben etwas verloren gegangen."
+    },
+    "deleteDraft": "Entwurf löschen",
+    "deleteDraftConfirmTitle": "Entwurf verwerfen",
+    "deleteDraftConfirmDescription": "Möchten Sie diesen Entwurf wirklich unwiderruflich löschen?",
+    "deleteDraftConfirmSubmit": "Entwurf löschen",
+    "void": "Stornieren",
+    "voidConfirmTitle": "Dokument stornieren",
+    "voidConfirmDescription": "Geben Sie einen Grund für die Stornierung an. Die vergebene Nummer bleibt erhalten.",
+    "voidConfirmSubmit": "Stornieren bestätigen",
+    "deleteDocument": "Endgültig löschen",
+    "deleteDocumentBlocked": "Löschen ist erst nach Ablauf der Aufbewahrungsfrist möglich.",
+    "deleteDocumentConfirmTitle": "Dokument endgültig löschen?",
+    "deleteDocumentConfirmDescription": "Die Datei, die Metadaten und alle Bezüge verschwinden. Im Änderungsprotokoll bleibt festgehalten, wer wann welches Dokument gelöscht hat. Dieser Schritt lässt sich nicht rückgängig machen.",
+    "deleteDocumentConfirmSubmit": "Löschung bestätigen",
+    "detailsTitle": "Details",
+    "retentionTitle": "Aufbewahrung",
+    "retentionPermanent": "Dieses Dokument unterliegt der dauerhaften Aufbewahrung.",
+    "retentionUntil": "Aufbewahrungsfrist endet am {date}.",
+    "retentionRunning": "Aufbewahrungsfrist läuft.",
+    "text": {
+      "heading": "Volltext",
+      "pending": "Wartet auf Erkennung",
+      "running": "Wird gelesen",
+      "done": "Gelesen am {date}",
+      "failed": "Fehlgeschlagen: {reason}",
+      "unavailable": "Texterkennung nicht verfügbar",
+      "unavailableHint": "Die Werkzeuge fehlen in dieser Umgebung. Sobald sie da sind, wird das Dokument von selbst gelesen.",
+      "reread": "Neu lesen",
+      "rereadQueued": "Das Dokument wurde zum Neu-Lesen vorgemerkt."
+    },
+    "linksTitle": "Bezüge",
+    "roles": {
+      "sender": "Absender",
+      "recipient": "Empfänger",
+      "about": "Betrifft"
+    },
+    "entities": {
+      "contact": "Kontakt",
+      "animal": "Tier",
+      "project": "Projekt"
+    },
+    "folderSave": "Ordner speichern",
+    "related": {
+      "title": "Dokumente",
+      "none": "Noch kein Dokument mit Bezug hierher.",
+      "writeLetter": "Brief schreiben",
+      "receivePost": "Post ablegen",
+      "draft": "Entwurf",
+      "roles": {
+        "sender": "Absender",
+        "recipient": "Empfänger",
+        "about": "Betrifft"
+      }
+    },
+    "followUpBadge": "Wiedervorlage {date}",
+    "filters": {
+      "dispatch": "Versand",
+      "dispatchAll": "Versand: alle",
+      "unsent": "nicht versandt",
+      "followUp": "Wiedervorlage",
+      "followUpAll": "Wiedervorlage: alle",
+      "followUpOpen": "offen"
+    },
+    "voidWithReplacement": "Ersatz als Entwurf anlegen",
+    "dispatch": {
+      "title": "Versand",
+      "none": "Noch nicht versandt.",
+      "description": "Wann und auf welchem Weg das Dokument das Haus verlassen hat.",
+      "record": "Als versandt vermerken",
+      "change": "Ändern",
+      "clear": "Vermerk entfernen",
+      "clearTitle": "Versandvermerk entfernen",
+      "clearDescription": "Der Vermerk wird entfernt; das Protokoll behält ihn.",
+      "clearConfirm": "Entfernen",
+      "sentAt": "Versandt am",
+      "sentVia": "Weg",
+      "note": "Bemerkung",
+      "cancel": "Abbrechen",
+      "submit": "Vermerken",
+      "unsentBadge": "nicht versandt"
+    },
+    "followUps": {
+      "title": "Wiedervorlagen",
+      "none": "Keine offenen Wiedervorlagen.",
+      "add": "Neue Wiedervorlage",
+      "addDescription": "Ein Datum und ein Anlass; die Startseite erinnert daran.",
+      "dueAt": "Fällig am",
+      "titleField": "Anlass",
+      "assignee": "Zuständig",
+      "everyone": "— Alle —",
+      "cancel": "Abbrechen",
+      "submit": "Anlegen",
+      "complete": "{title} erledigen",
+      "reopen": "{title} wieder öffnen",
+      "doneLabel": "Erledigt",
+      "overdue": "überfällig"
+    },
+    "notes": {
+      "title": "Notizen",
+      "none": "Noch keine Notiz.",
+      "add": "Notiz anfügen",
+      "submit": "Anfügen",
+      "delete": "Notiz löschen",
+      "deleteTitle": "Notiz löschen",
+      "deleteDescription": "Die Notiz wird entfernt; das Protokoll behält den Vorgang.",
+      "deleteConfirm": "Löschen",
+      "hint": "Notizen stehen nie im Dokument, nie im Volltext, nie in einem Export."
+    },
+    "picker": {
+      "placeholder": "Nummer oder Betreff …",
+      "empty": "Kein Dokument gefunden.",
+      "draft": "Entwurf",
+      "searching": "Suche …"
+    },
+    "links": {
+      "none": "Noch kein Bezug.",
+      "add": "Bezug hinzufügen",
+      "addTitle": "Bezug hinzufügen",
+      "addDescription": "Ein Kontakt, Tier oder Projekt, zu dem dieses Dokument gehört.",
+      "entityType": "Art des Bezugs",
+      "contact": "Kontakt",
+      "choose": "— Bitte wählen —",
+      "role": "Rolle",
+      "cancel": "Abbrechen",
+      "submit": "Hinzufügen",
+      "remove": "Entfernen"
+    },
+    "relations": {
+      "title": "Dokumentbezüge",
+      "none": "Noch kein Dokumentbezug.",
+      "add": "Dokumentbezug hinzufügen",
+      "addDescription": "Ein anderes Dokument der Akte, zu dem dieses gehört.",
+      "kind": "Art",
+      "document": "Dokument",
+      "cancel": "Abbrechen",
+      "submit": "Hinzufügen",
+      "remove": "Entfernen",
+      "kinds": {
+        "repliesTo": {
+          "out": "Antwort auf",
+          "in": "beantwortet durch"
+        },
+        "signedCopyOf": {
+          "out": "unterschriebene Fassung von",
+          "in": "unterschrieben zurück als"
+        },
+        "replaces": {
+          "out": "ersetzt",
+          "in": "ersetzt durch"
+        },
+        "attachmentOf": {
+          "out": "Anlage zu",
+          "in": "Anlage:"
+        }
+      },
+      "kindLabels": {
+        "repliesTo": "Antwort auf",
+        "signedCopyOf": "Unterschriebene Fassung von",
+        "replaces": "Ersetzt",
+        "attachmentOf": "Anlage zu"
+      }
+    },
+    "linkMissing": "Nicht mehr vorhanden",
+    "linkForbidden": "Name nicht sichtbar",
+    "voidReasonTitle": "Stornierungsgrund",
+    "fields": {
+      "file": "Datei",
+      "documentDate": "Datum auf dem Dokument",
+      "subject": "Betreff",
+      "body": "Text",
+      "bodyHint": "Markdown: **fett**, _kursiv_, ## Überschrift, - Liste, > Hinweis, | Tabelle |. Bilder, Fußnoten und HTML erscheinen nicht im PDF.",
+      "type": "Dokumentart",
+      "folder": "Ordner",
+      "recipient": "Empfänger",
+      "noRecipient": "— Kein Empfänger —",
+      "sender": "Absender",
+      "noSender": "— Kein Absender —",
+      "repliesTo": "Antwort auf",
+      "noRepliesTo": "— Kein Bezug —",
+      "about": "Betrifft",
+      "voidReason": "Grund für die Stornierung",
+      "voidReasonPlaceholder": "z. B. Falsche Anschrift oder fehlerhafter Inhalt"
+    },
+    "errors": {
+      "noFile": "Bitte wählen Sie eine Datei aus."
+    },
+    "toast": {
+      "draftUpdated": "Entwurf gespeichert",
+      "filed": "Dokument festgeschrieben",
+      "voided": "Dokument storniert",
+      "moved": "Dokument verschoben",
+      "dispatched": "Versand vermerkt",
+      "dispatchCleared": "Versandvermerk entfernt",
+      "followUpCreated": "Wiedervorlage angelegt",
+      "noteAdded": "Notiz angefügt",
+      "noteDeleted": "Notiz gelöscht",
+      "linked": "Bezug angelegt",
+      "unlinked": "Bezug entfernt",
+      "related": "Dokumentbezug angelegt",
+      "unrelated": "Dokumentbezug entfernt"
+    },
+    "admin": {
+      "title": "Akte – Stammdaten",
+      "description": "Dokumentarten, Ordnerstruktur und Einsortierregeln der Sachakte",
+      "typesTitle": "Dokumentarten",
+      "typesDescription": "Verwalten Sie die Dokumentarten für Vorlagen, Nummernkreis-Präfixe und Aufbewahrungsfristen.",
+      "createType": "Dokumentart anlegen",
+      "createTypeTitle": "Neue Dokumentart",
+      "createTypeDescription": "Legen Sie eine neue Dokumentart fest. Das Präfix und der Schlüssel können später nicht mehr geändert werden.",
+      "editTypeTitle": "Dokumentart bearbeiten",
+      "editTypeDescription": "Passen Sie Bezeichnung, Richtung, Aufbewahrungsfrist oder Standardordner an.",
+      "typeImmutableHint": "Schlüssel und Präfix sind unveränderlich, damit bestehende Dokumentnummern konsistent bleiben.",
+      "typeColumns": {
+        "prefix": "Präfix",
+        "label": "Bezeichnung",
+        "key": "Schlüssel",
+        "direction": "Richtung",
+        "retention": "Aufbewahrung",
+        "folder": "Standardordner",
+        "status": "Status",
+        "actions": "Aktionen"
+      },
+      "retentionClasses": {
+        "statutory10Y": "10 Jahre (Handels-/Steuerrecht)",
+        "statutory6Y": "6 Jahre",
+        "permanent": "Dauerhaft",
+        "consent": "Einwilligung"
+      },
+      "foldersTitle": "Ordner",
+      "foldersDescription": "Strukturieren Sie die Ablage in Ordnerpfaden.",
+      "createFolder": "Ordner anlegen",
+      "createFolderTitle": "Neuen Ordner anlegen",
+      "createFolderDescription": "Geben Sie den relativen Ordnerpfad an (z. B. „behoerden/finanzamt“).",
+      "folderPath": "Ordnerpfad",
+      "folderColumns": {
+        "path": "Pfad",
+        "actions": "Aktionen"
+      },
+      "snippetsTitle": "Textbausteine",
+      "snippetsDescription": "Absätze und Standardbriefe, die der Editor auf Wunsch einfügt. Ohne Platzhalter.",
+      "createSnippet": "Baustein anlegen",
+      "createSnippetTitle": "Baustein anlegen",
+      "editSnippetTitle": "Baustein bearbeiten",
+      "snippetColumns": {
+        "name": "Name",
+        "subject": "Betreff",
+        "active": "Aktiv",
+        "actions": "Aktionen"
+      },
+      "snippetFields": {
+        "name": "Name",
+        "subject": "Betreff (optional)",
+        "body": "Text",
+        "sortOrder": "Reihenfolge"
+      },
+      "deleteSnippetTitle": "Baustein löschen",
+      "deleteSnippetDescription": "„{name}“ wird gelöscht. Briefe, die ihn benutzt haben, behalten ihren Text.",
+      "deleteSnippetConfirm": "Löschen",
+      "emptySnippets": "Noch kein Baustein.",
+      "channelsTitle": "Versandwege",
+      "channelsDescription": "Die Wege, die ein Versandvermerk kennt. Ein entfernter Weg bleibt an alten Vermerken lesbar.",
+      "createChannel": "Versandweg anlegen",
+      "createChannelTitle": "Versandweg anlegen",
+      "renameChannelTitle": "Versandweg umbenennen",
+      "channelFields": {
+        "key": "Schlüssel",
+        "label": "Beschriftung"
+      },
+      "channelColumns": {
+        "key": "Schlüssel",
+        "label": "Beschriftung",
+        "actions": "Aktionen"
+      },
+      "removeChannelTitle": "Versandweg entfernen",
+      "removeChannelDescription": "„{label}“ steht danach nicht mehr zur Wahl.",
+      "removeChannelConfirm": "Entfernen",
+      "lastChannel": "Mindestens ein Weg muss bleiben.",
+      "deleteFolderTitle": "Ordner löschen",
+      "deleteFolderDescription": "Möchten Sie den Ordner „{path}“ wirklich löschen? Nur leere Ordner können gelöscht werden.",
+      "deleteFolderConfirm": "Ordner löschen",
+      "emptyFolders": "Noch keine Ordner vorhanden.",
+      "rulesTitle": "Einsortierregeln",
+      "rulesDescription": "Automatische Erkennung und Zuordnung von Dokumentart und Ordner beim Ablegen eingehender Post.",
+      "createRule": "Regel anlegen",
+      "createRuleTitle": "Neue Einsortierregel",
+      "createRuleDescription": "Definieren Sie ein Erkennungsmerkmal für eingehende Post.",
+      "editRuleTitle": "Regel bearbeiten",
+      "editRuleDescription": "Passen Sie die Kriterien oder Zielzuordnungen an.",
+      "deleteRuleTitle": "Regel löschen",
+      "deleteRuleDescription": "Möchten Sie diese Einsortierregel wirklich löschen?",
+      "deleteRuleConfirm": "Regel löschen",
+      "emptyRules": "Noch keine Einsortierregeln vorhanden.",
+      "ruleColumns": {
+        "matchField": "Prüffeld",
+        "matchContains": "Suchbegriff",
+        "thenType": "Dokumentart",
+        "thenFolder": "Ordner",
+        "status": "Status",
+        "actions": "Aktionen"
+      },
+      "ruleFields": {
+        "matchField": "Feld",
+        "filename": "Dateiname",
+        "senderName": "Absendername",
+        "matchContains": "Muss enthalten",
+        "matchContainsPlaceholder": "z. B. Finanzamt oder Rechnung",
+        "thenType": "Ziel-Dokumentart",
+        "noType": "— Keine Änderung —",
+        "thenFolder": "Ziel-Ordner",
+        "noFolder": "— Keine Änderung —",
+        "sortOrder": "Reihenfolge",
+        "activeCheckbox": "Regel ist aktiv"
+      },
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "activeCheckbox": "Dokumentart ist aktiv",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "save": "Speichern",
+      "textPanel": {
+        "heading": "Volltext",
+        "description": "Liest alle abgelegten Dokumente erneut ein. Das geschieht im Hintergrund, eins nach dem anderen; die Suche bleibt währenddessen benutzbar.",
+        "languages": "Sprachen der Texterkennung",
+        "reindex": "Alles neu lesen",
+        "queued": "{count} Dokumente wurden zum Neu-Lesen vorgemerkt.",
+        "open": "{count} warten noch",
+        "languageMissing": "{lang} ist in dieser Umgebung nicht installiert.",
+        "addLanguage": "+ Sprache auswählen…"
+      },
+      "toast": {
+        "typeCreated": "Dokumentart angelegt",
+        "typeUpdated": "Dokumentart aktualisiert",
+        "folderCreated": "Ordner angelegt",
+        "folderDeleted": "Ordner gelöscht",
+        "ruleCreated": "Regel angelegt",
+        "ruleUpdated": "Regel aktualisiert",
+        "ruleDeleted": "Regel gelöscht",
+        "languagesSaved": "Sprachen gespeichert",
+        "snippetCreated": "Baustein angelegt",
+        "snippetUpdated": "Baustein geändert",
+        "snippetDeleted": "Baustein gelöscht",
+        "channelsSaved": "Versandwege gespeichert"
+      },
+      "folderPathPlaceholder": "z. B. behoerden/finanzamt",
+      "typeKeyPlaceholder": "z. B. notice",
+      "typeShortPlaceholder": "z. B. NOT",
+      "removeLanguage": "{lang} entfernen"
+    },
+    "backToDocument": "Zurück zum Dokument"
+  }
+}

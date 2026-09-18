@@ -1,0 +1,168 @@
+@import "tailwindcss";
+
+/*
+ * Tailwind-Standardpalette entfernen: es gibt keine bg-red-500 mehr.
+ * Alle Utilities unten verweisen auf Theme-Tokens, die das Root-Layout
+ * zur Laufzeit aus dem aktiven Theme in :root injiziert (siehe lib/theme-css.ts).
+ */
+@theme {
+  --color-*: initial;
+  --shadow-*: initial;
+  --radius-*: initial;
+  --font-*: initial;
+}
+
+@theme inline reference {
+  /* App-Namen (eigene Utilities) */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-sidebar: var(--sidebar-bg);
+  --color-topbar: var(--topbar-bg);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted-ink: var(--muted);
+  --color-muted-ink-2: var(--muted-2);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-line-strong: var(--line-strong);
+  --color-brand: var(--color-primary);
+  --color-brand-ink: var(--color-primary-ink);
+  --color-brand-soft: var(--color-primary-soft);
+  --color-on-brand: var(--on-primary);
+  --color-on-brand-muted: var(--on-primary-muted);
+  --color-brand-accent: var(--color-accent);
+  --color-brand-accent-deep: var(--color-accent-deep);
+  --color-brand-accent-soft: var(--color-accent-soft);
+  --color-success: var(--color-success);
+  --color-success-bg: var(--color-success-bg);
+  --color-warning: var(--color-warning);
+  --color-warning-bg: var(--color-warning-bg);
+  --color-error: var(--color-error);
+  --color-error-bg: var(--color-error-bg);
+  --color-info: var(--color-info);
+  --color-info-bg: var(--color-info-bg);
+  --color-hover: var(--hover-surface);
+  --color-active: var(--active-surface);
+  --color-selected: var(--selected-bg);
+  --color-selected-ink: var(--selected-ink);
+  --color-link: var(--link);
+  --color-link-hover: var(--link-hover);
+  --color-disabled: var(--disabled-bg);
+  --color-disabled-ink: var(--disabled-ink);
+  --color-table-head: var(--table-head-bg);
+  --color-zebra: var(--table-zebra);
+  --color-row-hover: var(--table-row-hover);
+  --color-field: var(--input-bg);
+  --color-placeholder: var(--input-placeholder);
+  --color-code: var(--code-bg);
+  --color-badge: var(--neutral-badge-bg);
+  --color-badge-ink: var(--neutral-badge-ink);
+  --color-tooltip: var(--tooltip-bg);
+  --color-tooltip-ink: var(--tooltip-ink);
+  --color-focus: var(--focus-ring);
+  /* Papier ist weiss, auch im Dunkelmodus — es ist ja Papier. */
+  --color-paper: white;
+  --color-overlay: var(--overlay);
+
+  /* shadcn-Namen (von den generierten Komponenten erwartet) */
+  --color-background: var(--bg);
+  --color-foreground: var(--ink);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--ink);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--ink);
+  --color-primary: var(--color-primary);
+  --color-primary-foreground: var(--on-primary);
+  --color-secondary: var(--surface-2);
+  --color-secondary-foreground: var(--ink-2);
+  --color-muted: var(--surface-2);
+  --color-muted-foreground: var(--muted);
+  --color-accent: var(--hover-surface);
+  --color-accent-foreground: var(--ink);
+  --color-destructive: var(--color-error);
+  --color-destructive-foreground: var(--on-primary);
+  --color-border: var(--line);
+  --color-input: var(--line-strong);
+  --color-ring: var(--focus-ring);
+
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-full: var(--radius-full);
+  --font-body: var(--font-body);
+  --font-heading: var(--font-heading);
+  --font-mono: var(--font-mono);
+}
+
+/*
+ * Die eine Stelle, an der Theme-Vorgabe und Nutzerdichte zusammenkommen.
+ * Steht als Utility da, weil `h-[var(--row-h-density,var(--row-h))]` sonst in
+ * jeder Tabelle stünde — und beim nächsten Umbau in einer davon nicht.
+ */
+@utility h-row {
+  height: var(--row-h-density, var(--row-h));
+}
+
+@layer base {
+  * { border-color: var(--line); }
+  html { color-scheme: light; }
+  html[data-color-scheme="dark"] { color-scheme: dark; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  h1, h2, h3 { font-family: var(--font-heading); line-height: 1.2; }
+  :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+  ::placeholder { color: var(--input-placeholder); }
+  /*
+   * Eine Feldhöhe für Eingabe-, Auswahl- und Knopfelemente. Steht hier und
+   * sonst nirgends, damit in einer Formularzeile nichts mehr springt.
+   */
+  :root { --field-h: 38px; }
+  /*
+   * Zeilenhöhe: zwei Quellen, zwei Variablen.
+   *
+   * `--row-h` gehört dem Theme (`row-h` in THEME_TOKENS) und kommt aus dem
+   * `<style id="theme-tokens">` im Wurzel-Layout. Das steht dort ohne
+   * `@layer` — und ungelayertes CSS schlägt jede Regel in einem Layer,
+   * unabhängig von Spezifität und Reihenfolge. Als die Dichte hier ebenfalls
+   * `--row-h` setzte, gewann deshalb immer das Theme: Die Einstellung im
+   * Nutzermenü hatte keine sichtbare Wirkung, in keiner Stellung.
+   *
+   * Die Dichte schreibt darum eine eigene Variable, die das Theme nicht
+   * kennt. `h-row` (oben) liest `var(--row-h-density, var(--row-h))`: Ohne
+   * gewählte Dichte bleibt das Theme die Vorgabe für „normal“, und „Normale
+   * Zeilen“ setzt bewusst nichts, damit es das auch wieder wird.
+   *
+   * Der Wert hier ist nur das Netz für den Fall, dass das Theme-`<style>`
+   * fehlt — im Normalbetrieb überschreibt ihn das Theme.
+   *
+   * `--row-pad-density` stellt dasselbe für das senkrechte Zellpolster, denn
+   * `height` ist auf einem `tr` nur eine Mindesthöhe: Ohne kleineres Polster
+   * trägt sich die Zeile über den kompakten Wert hinweg. Es steht bewusst
+   * nur in `TableCell` und nicht auf jeder Zeile — die handgeschriebenen
+   * `<td>` der Prüfspur haben gar kein senkrechtes Polster, ein Wert von
+   * hier aus würde sie aufblähen statt stauchen.
+   */
+  :root { --row-h: 44px; }
+  [data-density="compact"] { --row-h-density: 36px; --row-pad-density: 4px; }
+  [data-density="comfortable"] { --row-h-density: 56px; --row-pad-density: 12px; }
+
+  .prose-preview h1, .prose-preview h2, .prose-preview h3 { font-family: var(--font-heading); margin: 0.8em 0 0.3em; }
+  .prose-preview h1 em, .prose-preview h2 em, .prose-preview h3 em { font-style: normal; color: var(--color-primary); }
+  .prose-preview p, .prose-preview ul, .prose-preview ol { margin: 0 0 0.75em; }
+  .prose-preview .note { border-left: 3px solid var(--color-warning); background: var(--color-warning-bg); padding: 8px 12px; border-radius: var(--radius-sm); }
+  .prose-preview .cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+  .prose-preview .card { border: 1px solid var(--line); border-radius: var(--radius-md); padding: 10px 12px; background: var(--surface-2); }
+  .prose-preview a { color: var(--link); text-decoration: underline; }
+  .prose-preview img { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: var(--radius-md); margin: 0.5em 0 1em; }
+  .prose-preview h2 { font-size: 22px; }
+  .prose-preview h3 { font-size: 17px; margin-top: 1.4em; }
+  .prose-preview h4 { font-size: 15px; }
+}

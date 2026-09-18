@@ -1,0 +1,115 @@
+import { execFileSync } from 'node:child_process';
+import { existsSync, lstatSync, mkdtempSync, mkdirSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
+
+const SCRIPT = path.resolve(import.meta.dirname, '../../../scripts/seed-site-template.sh');
+const TEMPLATE_SRC = path.resolve(import.meta.dirname, '../../../templates/verein-basis');
+
+const tmpDirs: string[] = [];
+afterEach(() => {
+  for (const d of tmpDirs.splice(0)) rmSync(d, { recursive: true, force: true });
+});
+
+const workspace = () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'kompass-entrypoint-'));
+  tmpDirs.push(dir);
+  return dir;
+};
+
+/** Führt seed-site-template.sh gegen ein isoliertes „Volume“ aus. */
+const run = (opts: { templateDir: string; nodeModules: string; source?: string }) =>
+  execFileSync('sh', [SCRIPT, opts.source ?? TEMPLATE_SRC, opts.nodeModules], {
+    env: { ...process.env, SITE_TEMPLATE_DIR: opts.templateDir },
+    encoding: 'utf8',
+  });
+
+describe('seed-site-template.sh', () => {
+  it('copies the base template into an empty volume and links the module resolution', () => {
+    const root = workspace();
+    const templateDir = path.join(root, 'site-template');
+    const nodeModules = path.join(root, 'node_modules');
+    mkdirSync(nodeModules);
+
+    run({ templateDir, nodeModules });
+
+    expect(existsSync(path.join(templateDir, 'kompass.template.ts'))).toBe(true);
+    expect(existsSync(path.join(templateDir, 'src/pages/[...path].astro'))).toBe(true);
+    const link = path.join(templateDir, 'node_modules');
+    expect(lstatSync(link).isSymbolicLink()).toBe(true);
+    expect(readlinkSync(link)).toBe(nodeModules);
+  });
+
+  it('leaves an existing template untouched — an update must never overwrite it', () => {
+    const root = workspace();
+    const templateDir = path.join(root, 'site-template');
+    const nodeModules = path.join(root, 'node_modules');
+    mkdirSync(nodeModules);
+    mkdirSync(templateDir, { recursive: true });
+    writeFileSync(path.join(templateDir, 'kompass.template.ts'), '// vom Verein gepflegt\n');
+
+    run({ templateDir, nodeModules });
+
+    expect(readFileSync(path.join(templateDir, 'kompass.template.ts'), 'utf8')).toBe('// vom Verein gepflegt\n');
+  });
+
+  /**
+   * Der Symlink überlebt ein Update. Zeigt er noch auf die node_modules einer
+   * früheren Fassung, findet der Build kein Astro und bricht ab — das lässt
+   * sich hier richten, statt es im Container von Hand zu löschen.
+   */
+  it('repoints a stale link whose target holds no astro', () => {
+    const root = workspace();
+    const templateDir = path.join(root, 'site-template');
+    const nodeModules = path.join(root, 'node_modules');
+    mkdirSync(path.join(nodeModules, 'astro'), { recursive: true });
+    const stale = path.join(root, 'alt');
+    mkdirSync(stale);
+    mkdirSync(templateDir, { recursive: true });
+    writeFileSync(path.join(templateDir, 'kompass.template.ts'), '// vom Verein gepflegt\n');
+    symlinkSync(stale, path.join(templateDir, 'node_modules'));
+
+    run({ templateDir, nodeModules });
+
+    expect(readlinkSync(path.join(templateDir, 'node_modules'))).toBe(nodeModules);
+  });
+
+  it('is idempotent — a second run changes nothing and does not fail on the existing link', () => {
+    const root = workspace();
+    const templateDir = path.join(root, 'site-template');
+    const nodeModules = path.join(root, 'node_modules');
+    mkdirSync(nodeModules);
+
+    run({ templateDir, nodeModules });
+    expect(() => run({ templateDir, nodeModules })).not.toThrow();
+    expect(lstatSync(path.join(templateDir, 'node_modules')).isSymbolicLink()).toBe(true);
+  });
+});
+
+const DOC_SCRIPT = path.resolve(import.meta.dirname, '../../../scripts/seed-document-templates.sh');
+const DOC_BASES_SRC = path.resolve(import.meta.dirname, '../../../packages/documents/templates/bases');
+
+describe('seed-document-templates.sh', () => {
+  it('creates an empty volume with a README and reference bases', () => {
+    const root = workspace();
+    const dir = path.join(root, 'document-templates');
+    execFileSync('sh', [DOC_SCRIPT, DOC_BASES_SRC], { env: { ...process.env, KOMPASS_DOCUMENT_TEMPLATES_DIR: dir }, encoding: 'utf8' });
+
+    expect(existsSync(path.join(dir, 'README.md'))).toBe(true);
+    expect(existsSync(path.join(dir, 'bases.reference/a4-plain.typ'))).toBe(true);
+    expect(readFileSync(path.join(dir, 'README.md'), 'utf8')).toContain('Vertrauensgrenze');
+  });
+
+  it('leaves an existing volume untouched', () => {
+    const root = workspace();
+    const dir = path.join(root, 'document-templates');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, 'a4-mit-briefkopf.typ'), '#let base(payload, slots, body) = body\n');
+
+    execFileSync('sh', [DOC_SCRIPT, DOC_BASES_SRC], { env: { ...process.env, KOMPASS_DOCUMENT_TEMPLATES_DIR: dir }, encoding: 'utf8' });
+
+    expect(readFileSync(path.join(dir, 'a4-mit-briefkopf.typ'), 'utf8')).toBe('#let base(payload, slots, body) = body\n');
+    expect(existsSync(path.join(dir, 'README.md'))).toBe(false);
+  });
+});

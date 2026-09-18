@@ -1,0 +1,95 @@
+import { validate } from '@kompass/core';
+import { createTestDeps } from '@kompass/core/testing';
+import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
+import { markdown, number, reference, references, select, text } from '@kompass/site-template';
+import { blankValue, schemaFor, widgetOf } from '../src/field-schema';
+import type { FieldSchema } from '../src/types';
+
+const asJson = (s: unknown) => z.toJSONSchema(s as z.ZodType, { io: 'input' }) as FieldSchema;
+
+describe('schemaFor', () => {
+  it('rebuilds bounds from the stored json schema', () => {
+    const n = schemaFor(asJson(number({ min: 0, max: 100, label: 'N' })));
+    expect(n.safeParse(50).success).toBe(true);
+    expect(n.safeParse(200).success).toBe(false);
+    expect(n.safeParse(-1).success).toBe(false);
+
+    const t = schemaFor(asJson(text({ max: 5, label: 'T' })));
+    expect(t.safeParse('abcde').success).toBe(true);
+    expect(t.safeParse('abcdef').success).toBe(false);
+
+    const m = schemaFor(asJson(markdown({ max: 4, label: 'M' })));
+    expect(m.safeParse('####').success).toBe(true);
+    expect(m.safeParse('#####').success).toBe(false);
+  });
+
+  it('accepts any locale key and leaves the locale check to the core', () => {
+    const loc = schemaFor(asJson(text({ localized: true, label: 'T' })));
+    expect(loc.safeParse({ de: 'hallo', xx: 'ignored by zod' }).success).toBe(true);
+    // Erst validate() aus dem Kern schlägt bei einer fremden Sprache an.
+    const deps = createTestDeps({ locales: ['de'] });
+    const result = validate(deps, loc, { de: 'hallo', xx: 'x' });
+    expect(result.ok === false && result.error.type === 'validation' && result.error.issues[0]?.message === 'unknownLocale').toBe(true);
+  });
+
+  it('takes a select back to an enum', () => {
+    const s = schemaFor(asJson(select(['narrow', 'wide'], { label: 'S' })));
+    expect(s.safeParse('narrow').success).toBe(true);
+    expect(s.safeParse('huge').success).toBe(false);
+  });
+});
+
+describe('blankValue', () => {
+  it('gives each widget its empty value', () => {
+    expect(blankValue(asJson(text({ localized: true })))).toEqual({});
+    expect(blankValue(asJson(text({})))).toBe('');
+    expect(blankValue(asJson(number({})))).toBe(0);
+    expect(blankValue(asJson(select(['a', 'b'])))).toBe('a');
+  });
+});
+
+describe('object lists', () => {
+  const links = {
+    widget: 'objectList',
+    type: 'array',
+    maxItems: 5,
+    items: { type: 'object', properties: { label: { widget: 'text', type: 'string', label: 'Name' }, href: { widget: 'text', type: 'string', label: 'Adresse' } } },
+  } as unknown as FieldSchema;
+
+  it('is recognised as its own widget, not as a string list', () => {
+    expect(widgetOf(links)).toBe('objectList');
+  });
+
+  it('starts empty, like any list', () => {
+    expect(blankValue(links)).toEqual([]);
+  });
+
+  it('validates each entry against its fields', () => {
+    const schema = schemaFor(links);
+    expect(schema.safeParse([{ label: 'Mastodon', href: 'https://example.org' }]).success).toBe(true);
+    expect(schema.safeParse([{ label: 'Mastodon' }]).success).toBe(false);
+    expect(schema.safeParse([{}, {}, {}, {}, {}, {}]).success).toBe(false);
+  });
+});
+
+describe('reference widgets', () => {
+  it('reference accepts a string or null and blanks to null', () => {
+    const field = asJson(reference({ view: 'animals', label: 'Hund' }));
+    expect(widgetOf(field)).toBe('reference');
+    const s = schemaFor(field);
+    expect(s.parse('chiara')).toBe('chiara');
+    expect(s.parse(null)).toBe(null);
+    expect(s.safeParse(42).success).toBe(false);
+    expect(blankValue(field)).toBe(null);
+  });
+
+  it('references accepts up to maxItems strings and blanks to an empty list', () => {
+    const field = asJson(references({ view: 'projects', max: 2, label: 'Projekte' }));
+    expect(widgetOf(field)).toBe('references');
+    const s = schemaFor(field);
+    expect(s.parse(['a'])).toEqual(['a']);
+    expect(s.safeParse(['a', 'b', 'c']).success).toBe(false);
+    expect(blankValue(field)).toEqual([]);
+  });
+});
