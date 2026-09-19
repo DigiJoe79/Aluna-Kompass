@@ -90,7 +90,8 @@ Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. J
    die **Vorabnummer** `x.y.z-dev`: So zeigt die Testinstanz „Version
    0.1.1-dev (…)“ und nicht die alte Fassung.
 2. **Ein Commit je Aufgabe**, der CHANGELOG-Eintrag unter „Unveröffentlicht“
-   im selben Commit. Ein Fehler in einem eigenen, noch nicht gepushten Commit
+   im selben Commit — der erste Eintrag eines Zyklus legt die Überschrift an;
+   leer steht sie nie da. Ein Fehler in einem eigenen, noch nicht gepushten Commit
    wird per `git commit --fixup` und `git rebase --autosquash` eingefaltet,
    nicht als eigener Commit angehängt. Gepushte Commits bleiben, wie sie sind.
 3. **Abnahme auf der Testinstanz**, gegen eine frische Kopie der Produktion.

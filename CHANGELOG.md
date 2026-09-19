@@ -9,8 +9,6 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 1.0.0 kann jede Minor-Fassung Brüche enthalten — was bricht, steht unter
 **Geändert** mit dem, was zu tun ist.
 
-## [Unveröffentlicht]
-
 ## [0.1.1] - 2026-09-19
 
 Fehlerbehebungen aus den ersten Tagen im Betrieb, dazu drei kleine Funktionen:
