@@ -1,4 +1,6 @@
 import {
+  conflict,
+  expectedVersionField,
   invalid,
   isoNow,
   newId,
@@ -6,6 +8,9 @@ import {
   ok,
   recordAudit,
   requirePermission,
+  retentionEnd,
+  retentionMonths,
+  staleVersion,
   validate,
   type CallContext,
   type DbOrTx,
@@ -15,9 +20,9 @@ import {
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { documentTypeFor } from './catalog';
-import { RELATION_KINDS, documentLinks, documentRelations, documents } from './schema';
+import { RELATION_KINDS, documentFormerNumbers, documentLinks, documentRelations, documents, type DocumentRow, type DocumentTypeRow } from './schema';
 import { removeDocumentFile, storeDocumentFile } from './storage';
-import { allocateDocumentNumber, linkInputSchema, resolveFolder, toRecord, type DocumentRecord } from './service';
+import { allocateDocumentNumber, linkInputSchema, peekDocumentNumber, resolveFolder, toRecord, type DocumentRecord } from './service';
 
 /**
  * Was jede Ablage eingehender Post beschreibt — unabhängig davon, woher die
@@ -169,4 +174,141 @@ export async function receiveDocument(
     await removeDocumentFile(deps, stored.value.fileName);
     throw error;
   }
+}
+
+/**
+ * Eingang umklassifizieren (Spec 2026-09-19): Art, Betreff und Datum eines
+ * abgelegten eingehenden Dokuments nachträglich ändern. Die Datei bleibt, wie
+ * sie ist. Wechselt die Art, zieht das Dokument eine neue Nummer aus deren
+ * Präfix, im Jahr seiner Ablage; die alte bleibt in `document_former_numbers`
+ * vermerkt. Ausgehende Dokumente bleiben unveränderlich — ihre Nummer steht im
+ * verschickten PDF.
+ */
+export const reclassifySchema = z.object({
+  id: z.string().min(1),
+  typeKey: z.string().min(1).optional(),
+  subject: receiveFields.subject.optional(),
+  documentDate: receiveFields.documentDate.optional(),
+  /** Ladestand (`updatedAt`); veraltet → `staleVersion` (Backlog 20). */
+  expectedVersion: expectedVersionField,
+});
+
+/** Das Jahr der Ablage — daraus kam die erste Nummer, daraus kommt jede weitere. */
+const filingYear = (row: DocumentRow) => Number(row.createdAt.slice(0, 4));
+
+function loadIncoming(deps: Deps, id: string): Result<DocumentRow> {
+  const row = deps.db.select().from(documents).where(eq(documents.id, id)).get();
+  if (!row) return notFound('document', id);
+  if (row.direction !== 'incoming') return conflict('notIncoming', `Dokument ${row.number ?? row.id} ist ausgehend; seine Nummer steht im verschickten PDF`);
+  if (row.status === 'voided') return conflict('documentVoided', `Dokument ${row.number ?? row.id} ist storniert`);
+  return ok(row);
+}
+
+function targetType(deps: Deps, key: string): Result<DocumentTypeRow> {
+  const docType = documentTypeFor(deps.db, key);
+  if (!docType) return notFound('documentType', key);
+  if (!docType.isActive) return conflict('documentTypeInactive', `Dokumentart „${docType.label}“ ist abgeschaltet`);
+  return ok(docType);
+}
+
+export async function reclassifyDocument(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DocumentRecord>> {
+  const denied = requirePermission(ctx, 'dms.create');
+  if (denied) return denied;
+  const parsed = validate(deps, reclassifySchema, input);
+  if (!parsed.ok) return parsed;
+  const { id, typeKey, subject, documentDate, expectedVersion } = parsed.value;
+
+  const loaded = loadIncoming(deps, id);
+  if (!loaded.ok) return loaded;
+  const before = loaded.value;
+  const stale = staleVersion(expectedVersion, before.updatedAt);
+  if (stale) return stale;
+
+  let newType: DocumentTypeRow | null = null;
+  if (typeKey !== undefined && typeKey !== before.typeKey) {
+    const found = targetType(deps, typeKey);
+    if (!found.ok) return found;
+    newType = found.value;
+  }
+  const nextSubject = subject !== undefined && subject !== before.subject ? subject : null;
+  const nextDate = documentDate !== undefined && documentDate !== before.documentDate ? documentDate : null;
+  // Nichts geändert: kein Fehler, aber auch kein Eintrag im Protokoll.
+  if (!newType && nextSubject === null && nextDate === null) return ok(toRecord(deps, before));
+
+  return deps.db.transaction((tx: DbOrTx) => {
+    const now = isoNow(deps.clock);
+    let number = before.number;
+    if (newType && before.number) {
+      tx.insert(documentFormerNumbers).values({ documentId: id, number: before.number, replacedAt: now }).run();
+      number = allocateDocumentNumber(tx, newType.prefix, filingYear(before));
+    }
+    tx.update(documents)
+      .set({
+        typeKey: newType?.key ?? before.typeKey,
+        number,
+        subject: nextSubject ?? before.subject,
+        documentDate: nextDate ?? before.documentDate,
+        updatedAt: now,
+      })
+      .where(eq(documents.id, id))
+      .run();
+    const after = tx.select().from(documents).where(eq(documents.id, id)).get()!;
+    const pick = (row: DocumentRow) => ({ typeKey: row.typeKey, number: row.number, subject: row.subject, documentDate: row.documentDate });
+    recordAudit(tx, deps, ctx, {
+      action: 'dms.reclassify',
+      entityType: 'document',
+      entityId: id,
+      before: pick(before),
+      after: pick(after),
+      summary: newType ? `${before.number} → ${after.number} umklassifiziert` : `Angaben zu ${after.number} berichtigt`,
+    });
+    return ok(toRecord(deps, after, tx));
+  });
+}
+
+export const reclassifyPreviewSchema = z.object({
+  id: z.string().min(1),
+  typeKey: z.string().min(1),
+  documentDate: receiveFields.documentDate,
+});
+
+export interface RetentionView {
+  retentionClass: DocumentTypeRow['retentionClass'];
+  /** Letzter Tag der Aufbewahrung; `null` bei dauerhafter oder nicht eingestellter Frist. */
+  until: string | null;
+}
+
+export interface ReclassificationPreview {
+  number: { current: string | null; next: string | null };
+  retention: { current: RetentionView; next: RetentionView };
+}
+
+function retentionOf(deps: Deps, docType: DocumentTypeRow, documentDate: string): RetentionView {
+  if (docType.retentionClass === 'permanent') return { retentionClass: docType.retentionClass, until: null };
+  const months = retentionMonths(deps, docType.retentionClass);
+  return { retentionClass: docType.retentionClass, until: months === null ? null : retentionEnd(documentDate, months) };
+}
+
+/**
+ * Was ein Umklassifizieren bewirken würde — für den Dialog, bevor jemand
+ * bestätigt. Liest nur. Die Nummer ist ein Blick wie bei `previewNextNumber`:
+ * Gezogen wird sie erst beim Speichern.
+ */
+export async function previewReclassification(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ReclassificationPreview>> {
+  const denied = requirePermission(ctx, 'dms.view');
+  if (denied) return denied;
+  const parsed = validate(deps, reclassifyPreviewSchema, input);
+  if (!parsed.ok) return parsed;
+  const loaded = loadIncoming(deps, parsed.value.id);
+  if (!loaded.ok) return loaded;
+  const row = loaded.value;
+  const currentType = documentTypeFor(deps.db, row.typeKey);
+  if (!currentType) return notFound('documentType', row.typeKey);
+  const changes = parsed.value.typeKey !== row.typeKey;
+  const found = changes ? targetType(deps, parsed.value.typeKey) : ok(currentType);
+  if (!found.ok) return found;
+  return ok({
+    number: { current: row.number, next: changes ? peekDocumentNumber(deps.db, found.value.prefix, filingYear(row)) : null },
+    retention: { current: retentionOf(deps, currentType, row.documentDate), next: retentionOf(deps, found.value, parsed.value.documentDate) },
+  });
 }

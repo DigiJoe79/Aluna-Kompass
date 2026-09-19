@@ -107,6 +107,22 @@ export const documents = sqliteTable(
   ],
 );
 
+/**
+ * Nummern, die ein Dokument einmal trug, bevor es umklassifiziert wurde
+ * (Spec 2026-09-19). Eindeutig auf `number`: Eine Nummer bezeichnet genau ein
+ * Dokument, ob aktuell oder früher — der Zähler vergibt sie ohnehin nie zweimal.
+ * Die Zeilen gehören zum Dokument und gehen mit ihm.
+ */
+export const documentFormerNumbers = sqliteTable(
+  'document_former_numbers',
+  {
+    documentId: text('document_id').notNull().references(() => documents.id),
+    number: text('number').notNull(),
+    replacedAt: text('replaced_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.documentId, t.number] }), uniqueIndex('document_former_numbers_number_idx').on(t.number)],
+);
+
 /** Mehrere Bezüge je Dokument, jeder mit Rolle (Entscheidung 6). */
 export const documentLinks = sqliteTable(
   'document_links',

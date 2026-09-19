@@ -16,6 +16,7 @@ import { Select } from '@/components/ui/select';
 import { idleState } from '@/lib/actions';
 import { cn } from '@/lib/utils';
 import { completeFollowUpAction, createFollowUpAction, reopenFollowUpAction } from '../actions';
+import { ActionForm } from '@/components/forms/action-form';
 
 export interface FollowUpView {
   id: string;
@@ -131,7 +132,7 @@ export function FollowUpsPanel({
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="w-full sm:max-w-[480px] bg-surface p-6 shadow-md">
-          <form action={action}>
+          <ActionForm action={action} state={state}>
             <DialogTitle className="font-heading text-[19px]">{t('add')}</DialogTitle>
             <DialogDescription className="text-[13px] text-muted-ink">{t('addDescription')}</DialogDescription>
 
@@ -177,7 +178,7 @@ export function FollowUpsPanel({
               </Button>
               <SubmitButton>{t('submit')}</SubmitButton>
             </DialogFooter>
-          </form>
+          </ActionForm>
         </DialogContent>
       </Dialog>
     </section>

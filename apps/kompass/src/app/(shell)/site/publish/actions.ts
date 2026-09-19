@@ -1,6 +1,6 @@
 'use server';
 
-import { checkDeployTarget, exportSiteContent, runPreview, runPublish } from '@kompass/module-site';
+import { checkDeployTarget, exportSiteContent, runPreview, runPublish, setBlockedTerms } from '@kompass/module-site';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -55,4 +55,13 @@ export async function runPublishAction(confirm: boolean): Promise<ActionState> {
     }),
     data: result.value.diff,
   };
+}
+
+export async function saveBlockedTermsAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const terms = String(formData.get('terms') ?? '').split('\n');
+  const result = await setBlockedTerms(deps, ctx, { terms });
+  revalidatePath('/site/publish');
+  return toActionState(result, t, t('site.publish.blockedTerms.saved'));
 }

@@ -15,6 +15,7 @@ import { idleState } from '@/lib/actions';
 import { saveProjectAction } from './actions';
 import { ExternalLinksField } from './external-links-field';
 import { Select } from '@/components/ui/select';
+import { ActionForm } from '@/components/forms/action-form';
 
 export function ProjectForm({ project, locales }: { project: ProjectRecord | null; locales: string[] }) {
   const t = useTranslations('projects.form');
@@ -27,8 +28,10 @@ export function ProjectForm({ project, locales }: { project: ProjectRecord | nul
   const errors = useMemo(() => (state.status === 'error' ? state.fieldErrors : {}), [state]);
   useEffect(() => { if (state.status === 'success') toast.success(state.message ?? ''); else if (state.status === 'error' && Object.keys(errors).length === 0) toast.error(state.message); }, [state, errors]);
   return (
-    <form action={action} className="overflow-hidden rounded-lg border border-line bg-surface">
+    <ActionForm action={action} state={state} className="overflow-hidden rounded-lg border border-line bg-surface">
       {project ? <input type="hidden" name="id" value={project.id} /> : null}
+      {/* Ladestand: Hat inzwischen jemand anderes gespeichert, weist der Dienst ab (Backlog 20). */}
+      {project ? <input type="hidden" name="expectedVersion" value={project.updatedAt} /> : null}
       <FormErrorSummary errors={errors} />
       <Tabs defaultValue="public">
         <TabsList className="border-b border-line bg-surface px-6"><TabsTrigger value="public" className="gap-2">{t('tabs.public')}{Object.keys(errors).length > 0 ? <TabInvalidDot label={tCommon('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="finance" disabled>{t('tabs.finance')}</TabsTrigger></TabsList>
@@ -46,6 +49,6 @@ export function ProjectForm({ project, locales }: { project: ProjectRecord | nul
         <TabsContent value="finance" className="p-6 text-[13px] text-muted-ink">{t('financeLater')}</TabsContent>
       </Tabs>
       <p className="border-t border-line bg-surface-2 px-6 py-2 text-[12px] text-muted-ink">{t('financeLater')}</p>
-    </form>
+    </ActionForm>
   );
 }

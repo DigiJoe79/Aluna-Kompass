@@ -26,8 +26,8 @@ test.describe('home', () => {
     await page.getByRole('button', { name: 'Anpassen' }).click();
     const sheet = page.getByTestId('dashboard-customize');
     // Base UI verdrahtet den Schalter per `aria-labelledby` mit dem sichtbaren
-    // Titel — das eigene `aria-label` „Kachel „…“ anzeigen“ bleibt im Markup,
-    // zählt aber nicht zum zugänglichen Namen (aria-labelledby geht vor).
+    // Titel; der ist sein Name. Ein eigenes `aria-label` stand hier bis
+    // 0.1.1 und wirkte nie (aria-labelledby geht vor).
     await sheet.getByRole('switch', { name: 'Unversandt' }).click();
     await expect(page.getByTestId('dashboard-tile-dms-unsent')).toHaveCount(0);
 

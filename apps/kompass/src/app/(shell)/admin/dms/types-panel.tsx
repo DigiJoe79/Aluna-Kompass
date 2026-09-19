@@ -12,6 +12,7 @@ import { idleState } from '@/lib/actions';
 import { cn } from '@/lib/utils';
 import { createDocumentTypeAction, updateDocumentTypeAction } from './actions';
 import { Select } from '@/components/ui/select';
+import { ActionForm } from '@/components/forms/action-form';
 
 export interface DocumentTypeItem {
   key: string;
@@ -105,7 +106,7 @@ export function TypesPanel({
       {/* Dialog: Create Type */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="bg-surface shadow-md sm:max-w-[500px]">
-          <form action={createAction} className="space-y-4">
+          <ActionForm action={createAction} state={createState} className="space-y-4">
             <DialogTitle className="font-heading text-[19px]">{t('createTypeTitle')}</DialogTitle>
             <DialogDescription className="text-[13px] text-muted-ink">{t('createTypeDescription')}</DialogDescription>
 
@@ -181,7 +182,7 @@ export function TypesPanel({
                 {t('save')}
               </Button>
             </DialogFooter>
-          </form>
+          </ActionForm>
         </DialogContent>
       </Dialog>
 
@@ -189,7 +190,7 @@ export function TypesPanel({
       <Dialog open={Boolean(editingType)} onOpenChange={(open) => !open && setEditingType(null)}>
         <DialogContent className="bg-surface shadow-md sm:max-w-[500px]">
           {editingType && (
-            <form action={editAction} className="space-y-4">
+            <ActionForm action={editAction} state={editState} className="space-y-4">
               <DialogTitle className="font-heading text-[19px]">{t('editTypeTitle')}</DialogTitle>
               <DialogDescription className="text-[13px] text-muted-ink">{t('editTypeDescription')}</DialogDescription>
 
@@ -279,7 +280,7 @@ export function TypesPanel({
                   {t('save')}
                 </Button>
               </DialogFooter>
-            </form>
+            </ActionForm>
           )}
         </DialogContent>
       </Dialog>

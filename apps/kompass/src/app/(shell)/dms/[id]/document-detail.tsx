@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { deleteDocumentAction, deleteDraftAction, rereadDocumentAction, voidDocumentAction } from '../actions';
 import { FileDialog } from './file-dialog';
 import { FolderPanel } from './folder-panel';
+import { ReclassifyDialog } from './reclassify-dialog';
 import { LinksPanel, type ResolvedLink } from './links-panel';
 import { DispatchPanel } from './dispatch-panel';
 import { FollowUpsPanel, type FollowUpView } from './follow-ups-panel';
@@ -45,6 +46,10 @@ export interface DocumentDetailProps {
     sentAt: string | null;
     sentVia: string | null;
     sentNote: string | null;
+    /** Nummern vor einem Umklassifizieren, die älteste zuerst. */
+    formerNumbers: string[];
+    /** Ladestand für den Dialog „Angaben ändern“. */
+    updatedAt: string;
   };
   followUps: FollowUpView[];
   notes: NoteView[];
@@ -57,6 +62,8 @@ export interface DocumentDetailProps {
   animals: { id: string; name: string }[];
   projects: { id: string; name: string }[];
   canCreateContact: boolean;
+  /** Die aktiven Arten — gefüllt nur, wo umklassifiziert werden darf. */
+  reclassifyTypes: { key: string; label: string }[] | null;
   retentionInfo: {
     retentionClass: string;
     until: string | null;
@@ -90,6 +97,7 @@ export function DocumentDetail({
   animals,
   projects,
   canCreateContact,
+  reclassifyTypes,
   retentionInfo,
   permissions,
   fileState,
@@ -120,6 +128,9 @@ export function DocumentDetail({
           {/* Der Rückweg steht am `PageHeader`, wie auf jeder Seite abseits der Navigation. */}
           {doc.number ? (
             <span className="font-mono text-[16px] font-bold text-ink">{doc.number}</span>
+          ) : null}
+          {doc.formerNumbers.length > 0 ? (
+            <span className="font-mono text-[12px] text-muted-ink">{t('formerNumbers', { numbers: doc.formerNumbers.join(', ') })}</span>
           ) : null}
           {doc.status === 'voided' ? (
             <StatusBadge tone="error">{t('statuses.voided')}</StatusBadge>
@@ -182,6 +193,12 @@ export function DocumentDetail({
                   {t('openPdf')}
                 </a>
               )}
+              {reclassifyTypes ? (
+                <ReclassifyDialog
+                  document={{ id: doc.id, typeKey: doc.typeKey, subject: doc.subject, documentDate: doc.documentDate, updatedAt: doc.updatedAt }}
+                  types={reclassifyTypes}
+                />
+              ) : null}
               {doc.status !== 'voided' && permissions.canVoid ? (
                 <>
                   <Button

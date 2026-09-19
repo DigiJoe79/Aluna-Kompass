@@ -1,7 +1,7 @@
-import { hasPermission, isModuleEnabled, requirePermission, retentionEnd, retentionMonths, schema } from '@kompass/core';
+import { activeUserChoices, hasPermission, isModuleEnabled, requirePermission, retentionEnd, retentionMonths, userNamesFor } from '@kompass/core';
 import { listProjects } from '@kompass/module-projects';
 import { listAnimals } from '@kompass/module-animals';
-import { dispatchChannels, documentTypeFor, getDocumentRecord, listDocumentFolders } from '@kompass/module-dms';
+import { dispatchChannels, documentTypeFor, getDocumentRecord, listDocumentFolders, listDocumentTypes } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
@@ -62,17 +62,12 @@ export default async function DocumentDetailPage(props: {
 
   /**
    * Die Namen der Kolleginnen sind keine Verwaltungsdaten: Ohne sie ließe sich
-   * keine Zuständigkeit setzen und keine Notiz einem Menschen zuordnen. Die
-   * Abfrage steht hier und nicht in einem Service, weil sie keinen Vorgang
-   * abbildet.
+   * keine Zuständigkeit setzen und keine Notiz einem Menschen zuordnen. Beides
+   * kommt aus dem Kern (`users/names.ts`), ohne Rechteprüfung.
    */
-  const users = deps.db
-    .select({ id: schema.users.id, name: schema.users.name, isActive: schema.users.isActive })
-    .from(schema.users)
-    .all()
-    .filter((u) => u.isActive)
-    .map((u) => ({ id: u.id, name: u.name }));
-  const nameOf = new Map(users.map((u) => [u.id, u.name]));
+  const users = activeUserChoices(deps);
+  // Auch deaktivierte: Eine alte Notiz behält ihren Autor.
+  const nameOf = userNamesFor(deps, [...doc.notes.map((n) => n.createdByUserId), ...doc.followUps.map((f) => f.assigneeUserId)]);
 
   const canSeeFollowUps = hasPermission(ctx, 'followUps.view');
   const followUps = canSeeFollowUps
@@ -101,6 +96,11 @@ export default async function DocumentDetailPage(props: {
     canManage: hasPermission(ctx, 'dms.manage'),
   };
 
+  // Umklassifizieren nur am abgelegten, nicht stornierten Eingang (Spec 2026-09-19).
+  const canReclassify = doc.direction === 'incoming' && doc.phase === 'issued' && doc.status !== 'voided' && permissions.canEdit;
+  const typesRes = canReclassify ? await listDocumentTypes(deps, ctx) : null;
+  const reclassifyTypes = typesRes?.ok ? typesRes.value.map((type) => ({ key: type.key, label: type.label })) : null;
+
   return (
     <>
       <PageHeader title={doc.subject} back={{ href: '/dms', label: tCommon('backToList') }} />
@@ -127,6 +127,8 @@ export default async function DocumentDetailPage(props: {
           sentAt: doc.sentAt,
           sentVia: doc.sentVia,
           sentNote: doc.sentNote,
+          formerNumbers: doc.formerNumbers,
+          updatedAt: doc.updatedAt,
         }}
         followUps={followUps}
         notes={notes}
@@ -139,6 +141,7 @@ export default async function DocumentDetailPage(props: {
         animals={animals}
         projects={projects}
         canCreateContact={hasPermission(ctx, 'contacts.manage')}
+        reclassifyTypes={reclassifyTypes}
         retentionInfo={retentionInfo}
         permissions={permissions}
         fileState={doc.fileState ?? 'none'}

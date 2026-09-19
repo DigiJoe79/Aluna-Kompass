@@ -36,6 +36,10 @@ Nummern werden **nie wiedervergeben** — ein stornierter Brief behält seine,
 und der nächste bekommt die nächste. Die Lücke ist kein Fehler; sie ist der
 Beleg, dass nichts verschwunden ist.
 
+Bekommt ein Eingang nachträglich eine andere Art, zieht er eine neue Nummer;
+die alte bleibt als „Früher: …“ am Dokument und bleibt auffindbar — siehe
+[Post ablegen](post-ablegen.md#angaben-nachträglich-ändern).
+
 ## Das Dokument
 
 Die Detailseite zeigt links die Vorschau des PDFs und rechts, was dazugehört:

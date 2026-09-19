@@ -1,5 +1,5 @@
 import { requirePermission } from '@kompass/core';
-import { activeTemplate, listPublishes } from '@kompass/module-site';
+import { activeTemplate, getBlockedTerms, listPublishes } from '@kompass/module-site';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/page-header';
 import { runtimeEnv } from '@/lib/deps';
 import { requireSession } from '@/lib/request-context';
 import { siteEnv } from '@/lib/site-env';
+import { BlockedTermsCard } from './blocked-terms-card';
 import { PublishClient } from './publish-client';
 
 export default async function PublishPage() {
@@ -30,6 +31,7 @@ export default async function PublishPage() {
   const historyRes = await listPublishes(deps, ctx, { environment: env });
   const history = historyRes.ok ? historyRes.value : [];
   const last = history[0];
+  const terms = await getBlockedTerms(deps, ctx);
 
   return (
     <>
@@ -55,6 +57,7 @@ export default async function PublishPage() {
           hasDeploy={se.deploy !== null}
           history={history}
         />
+        <BlockedTermsCard terms={terms.ok ? terms.value : []} />
       </div>
     </>
   );

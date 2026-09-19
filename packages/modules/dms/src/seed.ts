@@ -5,7 +5,8 @@ import { EXAMPLE_DOCUMENT_TYPES } from './catalog';
 import { recordDispatch } from './dispatch';
 import { createDocumentFollowUp } from './follow-ups';
 import { createDraft, fileDocument } from './drafts';
-import { receiveDocument } from './incoming';
+import { receiveDocument, reclassifyDocument } from './incoming';
+import { DEFAULT_TYPE_INCOMING } from './install';
 import { addNote } from './notes';
 import { relateDocuments } from './relations';
 import { documentFolders, documentRules, documentSnippets, documents, documentTypes } from './schema';
@@ -131,4 +132,21 @@ export async function seedDms(deps: Deps, ctx: CallContext): Promise<void> {
   unwrap(await createDocumentFollowUp(deps, ctx, { documentId: draft.id, dueAt: addDays(deps, 5), title: 'Antwort abwarten' }));
   const done = unwrap(await createDocumentFollowUp(deps, ctx, { documentId: draft.id, dueAt: addDays(deps, -3), title: 'Unterlagen beilegen' }));
   unwrap(await completeFollowUp(deps, ctx, { id: done.id }));
+
+  // 8. Ein Eingang, erst ohne passende Art abgelegt und dann umklassifiziert
+  // (Spec 2026-09-19): Die Detailseite zeigt „Früher: …“, die Suche findet
+  // ihn auch unter der alten Nummer. Die Art „unklassifiziert“ legt die
+  // Installation an; fehlt sie, wird mit der ersten Eingangsart abgelegt.
+  const firstType = deps.db.select().from(documentTypes).where(eq(documentTypes.key, DEFAULT_TYPE_INCOMING)).get()?.key ?? 'authority';
+  const lease = unwrap(
+    await receiveDocument(deps, ctx, {
+      filename: '2026-01-20 Mietvertrag Lager.pdf',
+      bytes: textPdf(['Mietvertrag', '', 'über den Lagerraum im Hof, Beginn 1. Februar 2026.']),
+      typeKey: firstType,
+      subject: 'Mietvertrag Lagerraum',
+      documentDate: '2026-01-20',
+      folder: 'vertraege',
+    }),
+  );
+  unwrap(await reclassifyDocument(deps, ctx, { id: lease.id, typeKey: 'contract' }));
 }

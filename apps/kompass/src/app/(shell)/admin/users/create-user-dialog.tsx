@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { idleState } from '@/lib/actions';
 import { createUserAction } from './actions';
 import { StartPasswordDialog } from './start-password-dialog';
+import { ActionForm } from '@/components/forms/action-form';
 
 type Created = { user: { name: string; email: string }; startPassword: string };
 
@@ -36,7 +37,7 @@ export function CreateUserDialog({ roles }: { roles: { id: string; name: string;
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger render={<Button><Plus className="size-3.5" aria-hidden />{t('button')}</Button>} />
         <DialogContent className="w-[560px] bg-surface p-0 shadow-md">
-          <form action={action}>
+          <ActionForm action={action} state={state}>
             <div className="p-6">
               <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
               <DialogDescription className="text-[13px] text-muted-ink">{t('subtitle')}</DialogDescription>
@@ -72,7 +73,7 @@ export function CreateUserDialog({ roles }: { roles: { id: string; name: string;
               </Button>
               <SubmitButton>{t('submit')}</SubmitButton>
             </DialogFooter>
-          </form>
+          </ActionForm>
         </DialogContent>
       </Dialog>
       {created ? (

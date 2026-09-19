@@ -145,6 +145,7 @@
     "unauthorized": "Bitte melden Sie sich erneut an.",
     "technical": "Der Vorgang wurde abgebrochen. Es wurde nichts gespeichert.",
     "conflict": {
+      "staleVersion": "Inzwischen wurde dieser Eintrag an anderer Stelle geändert — etwa über MCP oder in einem zweiten Fenster. Gespeichert wurde nichts; Ihre Eingaben stehen noch in der Maske. Kopieren Sie, was Sie behalten wollen, laden Sie die Seite neu und tragen Sie es auf dem aktuellen Stand erneut ein.",
       "documentIsDraft": "Das ist noch ein Entwurf.",
       "notOutgoing": "Eingegangene Post wird nicht versandt.",
       "notDispatched": "Es gibt keinen Versandvermerk.",
@@ -194,7 +195,10 @@
       "roleAlreadyRunning": "Diese Rolle ist für diesen Kontakt bereits aktiv.",
       "unknownView": "Das Template verweist auf eine Sicht, die es nicht gibt: {detail}",
       "unknownViewField": "Das Template nennt ein Feld, das die Sicht nicht hat: {detail}",
-      "default": "Der Vorgang ist nicht möglich: {detail}"
+      "default": "Der Vorgang ist nicht möglich: {detail}",
+      "notIncoming": "Nur eingehende Post lässt sich nachträglich umklassifizieren — die Nummer eines ausgehenden Dokuments steht im verschickten PDF.",
+      "documentVoided": "Das Dokument ist storniert und lässt sich nicht mehr ändern.",
+      "documentTypeInactive": "Diese Dokumentart ist abgeschaltet."
     },
     "fields": {
       "unknownDispatchChannel": "Unbekannter Versandweg.",
@@ -297,7 +301,7 @@
     "media": "Mediathek"
   },
   "shell": {
-    "build": "Build {id}",
+    "version": "Version {version} ({build})",
     "envBanner": {
       "testContext": "Daten vom {date} · Änderungen hier haben keine Wirkung",
       "noImport": "kein Import",
@@ -398,7 +402,6 @@
     "customize": {
       "title": "Startseite anpassen",
       "hint": "Was hier steht, sehen nur Sie. Jede Änderung wird sofort gespeichert.",
-      "show": "Kachel „{title}“ anzeigen",
       "off": "Ausgeschaltet",
       "reset": "Vorgabe wiederherstellen",
       "resetDone": "Startseite auf die Vorgabe zurückgesetzt"
@@ -1396,6 +1399,14 @@
         "noStale": "Alle Verweise gültig.",
         "staleHint": "Wird im Export leer ausgeliefert; das Template zeigt dann seine Automatik."
       },
+      "blockedTerms": {
+        "title": "Sperrwörter",
+        "intro": "Begriffe, die nie auf der Webseite erscheinen dürfen — etwa ein alter Vereinsname oder ein Platzhalter aus der Einrichtung. „Prüfen“ meldet jeden Treffer, und solange einer da ist, lässt sich nicht publizieren.",
+        "label": "Begriffe, einer je Zeile",
+        "hint": "2 bis 80 Zeichen je Begriff, höchstens 50. Groß- und Kleinschreibung zählt nicht; Leerzeichen, Bindestrich und Unterstrich gelten als gleich.",
+        "save": "Sperrwörter speichern",
+        "saved": "Sperrwörter gespeichert."
+      },
       "preview": {
         "run": "Vorschau bauen",
         "running": "Build läuft …",
@@ -1660,6 +1671,7 @@
     },
     "drop": {
       "overlayTitle": "{count, plural, one {# Datei ablegen} other {# Dateien ablegen}}",
+      "overlayTitleUnknown": "Dateien ablegen",
       "overlayHint": "Auf einen Ordner ziehen, um dort einzusortieren — oder hier loslassen für den Eingangskorb.",
       "notPdf": "{count, plural, one {Nur PDF möglich — eine Datei übersprungen.} other {Nur PDF möglich — # Dateien übersprungen.}}",
       "queueBadge": "{current} von {total}",
@@ -1670,7 +1682,7 @@
       "discardConfirm": "Verwerfen"
     },
     "number": {
-      "pending": "Die Nummer <mono>{number}</mono> wird beim Ablegen gezogen. Danach steht die Dokumentart fest."
+      "pending": "Die Nummer <mono>{number}</mono> wird beim Ablegen gezogen. Wählen Sie später eine andere Art, bekommt das Dokument eine neue Nummer, und die bisherige bleibt vermerkt."
     },
     "saveDraft": "Entwurf speichern",
     "edit": "Bearbeiten",
@@ -2054,6 +2066,22 @@
       "typeShortPlaceholder": "z. B. NOT",
       "removeLanguage": "{lang} entfernen"
     },
-    "backToDocument": "Zurück zum Dokument"
+    "backToDocument": "Zurück zum Dokument",
+    "formerNumbers": "Früher: {numbers}",
+    "reclassify": {
+      "open": "Angaben ändern",
+      "title": "Angaben ändern",
+      "description": "Art, Betreff und Datum dieses Eingangs. Die Datei bleibt, wie sie ist. Eine andere Art bringt eine neue Nummer; die bisherige bleibt am Dokument vermerkt und auffindbar.",
+      "type": "Art",
+      "subject": "Betreff",
+      "date": "Datum auf dem Dokument",
+      "newNumber": "Neue Nummer: {next} (bisher {current})",
+      "sameNumber": "Die Nummer bleibt {current}.",
+      "retentionChange": "Aufbewahrung: bisher {current} — künftig {next}",
+      "retentionUntil": "{label} bis {date}",
+      "cancel": "Abbrechen",
+      "save": "Angaben speichern",
+      "saved": "Angaben gespeichert."
+    }
   }
 }

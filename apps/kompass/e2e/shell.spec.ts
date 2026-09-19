@@ -19,12 +19,13 @@ test.describe('app shell', () => {
     await expect(page.getByRole('navigation', { name: 'Unternavigation' })).toHaveCount(0);
   });
 
-  test('puts organisation, user menu and build into the top bar', async ({ page }) => {
+  test('puts organisation, user menu and version with build into the top bar', async ({ page }) => {
     const banner = page.getByRole('banner');
     await expect(banner.getByText('Musterverein e.V.')).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Hauptnavigation' }).getByText('Musterverein e.V.')).toHaveCount(0);
     await banner.getByRole('button', { name: 'Nutzermenü' }).click();
-    await expect(page.getByRole('menu').getByText(/^Build /)).toBeVisible();
+    // Fassung und Build in einer Zeile: „Version 0.1.1 (46535d6)“, unter `next dev` „(dev)“.
+    await expect(page.getByRole('menu').getByText(/^Version \d+\.\d+\.\d+\S* \((dev|[0-9a-f]{7}|[\w.-]+)\)$/)).toBeVisible();
     await page.keyboard.press('Escape');
   });
 

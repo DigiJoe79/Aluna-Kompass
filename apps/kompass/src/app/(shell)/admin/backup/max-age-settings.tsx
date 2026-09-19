@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { ActionState } from '@/lib/actions';
 import { saveSettingsAction } from '../settings/actions';
+import { ActionForm } from '@/components/forms/action-form';
 
 /** Die Frist, ab der die Startseite ein Backup als veraltet meldet (`backup.maxAgeDays`). */
 export function MaxAgeSettings({ maxAgeDays, canManage }: { maxAgeDays: number; canManage: boolean }) {
@@ -23,7 +24,7 @@ export function MaxAgeSettings({ maxAgeDays, canManage }: { maxAgeDays: number; 
   return (
     <section className="rounded-lg border border-line bg-surface p-5">
       <h3 className="font-heading text-[18px]">{t('title')}</h3>
-      <form action={formAction} className="mt-3 flex flex-col gap-3">
+      <ActionForm action={formAction} state={state} className="mt-3 flex flex-col gap-3">
         <label htmlFor="backup-max-age" className="text-[13px] font-medium text-ink">{t('maxAgeDays')}</label>
         <p className="text-[11px] text-muted-ink">{t('maxAgeDaysHint')}</p>
         {canManage ? (
@@ -37,7 +38,7 @@ export function MaxAgeSettings({ maxAgeDays, canManage }: { maxAgeDays: number; 
         )}
         {state.status === 'success' && state.message ? <p className="text-[13px] text-ink-2">{state.message}</p> : null}
         {state.status === 'error' ? <p className="text-[13px] text-error">{state.message}</p> : null}
-      </form>
+      </ActionForm>
     </section>
   );
 }

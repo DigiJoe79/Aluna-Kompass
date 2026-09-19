@@ -16,6 +16,7 @@ import { idleState } from '@/lib/actions';
 import type { PermissionGroup } from '@/lib/permission-groups';
 import { cn } from '@/lib/utils';
 import { createRoleAction, saveRoleAction } from './actions';
+import { ActionForm } from '@/components/forms/action-form';
 
 export function RoleEditor({
   roles,
@@ -110,7 +111,7 @@ export function RoleEditor({
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger render={<Button variant="outline" className="mt-auto border-dashed">{t('create.button')}</Button>} />
           <DialogContent className="bg-surface shadow-md">
-            <form action={createAction} className="flex flex-col gap-4">
+            <ActionForm action={createAction} state={createState} className="flex flex-col gap-4">
               <DialogTitle className="font-heading text-[19px]">{t('create.title')}</DialogTitle>
               {createState.status === 'error' ? (
                 <p role="alert" className="rounded-md border border-error bg-error-bg p-3 text-[13px] text-error">
@@ -126,7 +127,7 @@ export function RoleEditor({
               <DialogFooter>
                 <SubmitButton>{t('create.submit')}</SubmitButton>
               </DialogFooter>
-            </form>
+            </ActionForm>
           </DialogContent>
         </Dialog>
       </aside>

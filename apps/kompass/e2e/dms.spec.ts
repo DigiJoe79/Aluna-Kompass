@@ -586,6 +586,46 @@ test.describe('dms', () => {
     await expect(dialog.getByLabel('Ordner')).toHaveValue('');
   });
 
+  test('nennt beim Ziehen die Zahl der Dateien, wenn der Browser sie kennt', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+    await expect(page.locator('[data-drop="ready"]')).toBeAttached();
+
+    await page.evaluate(() => {
+      const transfer = new DataTransfer();
+      for (const name of ['Eins.pdf', 'Zwei.pdf']) transfer.items.add(new File(['%PDF-1.4'], name, { type: 'application/pdf' }));
+      document.querySelector('main')!.dispatchEvent(new DragEvent('dragenter', { dataTransfer: transfer, bubbles: true, cancelable: true }));
+    });
+
+    await expect(page.getByText('2 Dateien ablegen', { exact: true })).toBeVisible();
+  });
+
+  /**
+   * Safari verrät beim Ziehen aus dem Finder nur, dass Dateien kommen, nicht wie
+   * viele: `types` enthält „Files“, `items` ist leer, erst `drop` bringt die
+   * Dateien. Das Overlay behauptete deshalb „0 Dateien ablegen“ (2026-09-19).
+   */
+  test('behauptet beim Ziehen in Safari keine Zahl und nimmt die Dateien trotzdem an', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+    await expect(page.locator('[data-drop="ready"]')).toBeAttached();
+
+    await page.evaluate(() => {
+      const event = new DragEvent('dragenter', { bubbles: true, cancelable: true });
+      const hidden = { types: ['Files'], items: { length: 0 }, files: { length: 0 } };
+      Object.defineProperty(event, 'dataTransfer', { value: hidden });
+      document.querySelector('main')!.dispatchEvent(event);
+    });
+
+    await expect(page.getByText('Dateien ablegen', { exact: true })).toBeVisible();
+    await expect(page.getByText(/\d+ Dateien? ablegen/)).toHaveCount(0);
+
+    await dropFiles(page, 'main', ['Aus Safari.pdf']);
+    const dialog = receiveDialog(page);
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText('Aus Safari.pdf')).toBeVisible();
+  });
+
   test('arbeitet mehrere gezogene Dateien der Reihe nach ab', async ({ page }) => {
     await login(page);
     await page.goto('/dms');
@@ -974,6 +1014,41 @@ test.describe('dms', () => {
     await dialog.getByRole('button', { name: 'Stornieren bestätigen' }).click();
     await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}\/edit$/);
     await expect(page.getByLabel('Betreff')).toHaveValue('Einladung zur ordentlichen Mitgliederversammlung');
+  });
+
+  /**
+   * Spec 2026-09-19: Ein abgelegter Eingang bekommt nachträglich eine andere
+   * Art. Er zieht eine neue Nummer, die alte bleibt vermerkt und auffindbar.
+   * Ein ausgehendes Dokument bietet das nicht an.
+   */
+  test('klassifiziert einen Eingang um und findet ihn unter der alten Nummer', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+    await page.getByRole('row').filter({ hasText: 'Freistellungsbescheid' }).getByRole('link').first().click();
+    await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}$/);
+    const oldNumber = (await page.getByText(/^BEH-\d{4}-\d{3}$/).first().textContent())!.trim();
+
+    await page.getByRole('button', { name: 'Angaben ändern' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Angaben ändern' });
+    await dialog.getByLabel('Art').selectOption({ label: 'Vertrag' });
+    await expect(dialog.getByText(/Neue Nummer: VER-\d{4}-\d{3}/)).toBeVisible();
+    await expect(dialog.getByText(new RegExp(`bisher ${oldNumber}`))).toBeVisible();
+    await dialog.getByRole('button', { name: 'Angaben speichern' }).click();
+
+    await expect(page.getByText(/^VER-\d{4}-\d{3}$/).first()).toBeVisible();
+    await expect(page.getByText(`Früher: ${oldNumber}`)).toBeVisible();
+
+    await page.goto(`/dms?text=${encodeURIComponent(oldNumber)}`);
+    await expect(page.getByRole('row').filter({ hasText: 'Freistellungsbescheid' })).toHaveCount(1);
+  });
+
+  test('bietet am ausgehenden Dokument kein Umklassifizieren an', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+    await page.getByRole('row').filter({ hasText: 'Einladung zur ordentlichen Mitgliederversammlung' }).getByRole('link').first().click();
+    await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}$/);
+    await expect(page.getByRole('heading', { name: 'Einladung zur ordentlichen Mitgliederversammlung' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Angaben ändern' })).toHaveCount(0);
   });
 
   test('zieht eine Zeile der Liste auf einen Ordner und verschiebt sie', async ({ page }) => {

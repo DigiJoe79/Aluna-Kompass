@@ -6,6 +6,8 @@ import {
   type MediaCleanup,
   type Result,
   buildDeletionPreview,
+  expectedVersionField,
+  staleVersion,
   conflict,
   deleteUnreferencedMedia,
   deletionConflict,
@@ -57,6 +59,8 @@ export const projectUpdateSchema = z.object({
   body: projectFields.body.optional(),
   imageAssetId: projectFields.imageAssetId.removeDefault().optional(),
   externalLinks: projectFields.externalLinks.removeDefault().optional(),
+  /** Ladestand der Maske (`updatedAt`); veraltet → `staleVersion`. */
+  expectedVersion: expectedVersionField,
 });
 
 function load(db: DbOrTx, id: string): ProjectRecord | null {
@@ -96,9 +100,11 @@ export async function updateProject(deps: Deps, ctx: CallContext, input: unknown
   if (denied) return denied;
   const parsed = validate(deps, projectUpdateSchema, input);
   if (!parsed.ok) return parsed;
-  const { id, ...changes } = parsed.value;
+  const { id, expectedVersion, ...changes } = parsed.value;
   const before = load(deps.db, id);
   if (!before) return notFound('project', id);
+  const stale = staleVersion(expectedVersion, before.updatedAt);
+  if (stale) return stale;
   if (changes.slug && slugTaken(deps.db, changes.slug, id)) return conflict('slugTaken', `Slug ${changes.slug} ist bereits vergeben`);
   if (changes.imageAssetId !== undefined && !assetExists(deps.db, changes.imageAssetId)) return notFound('mediaAsset', changes.imageAssetId ?? '');
   return deps.db.transaction((tx) => {

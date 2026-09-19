@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { saveSettingsAction } from '../settings/actions';
 import type { ActionState } from '@/lib/actions';
+import { ActionForm } from '@/components/forms/action-form';
 
 interface Props {
   statutory10Y: number;
@@ -33,7 +34,7 @@ export function RetentionSettings({ statutory10Y, statutory6Y, consent, canManag
   return (
     <section className="mb-6 rounded-md border border-line bg-surface p-4">
       <h2 className="mb-3 text-[14px] font-semibold text-ink">{t('title')}</h2>
-      <form action={formAction} className="space-y-4">
+      <ActionForm action={formAction} state={state} className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
             <label htmlFor="statutory10Y" className="block text-[13px] font-medium text-ink">
@@ -114,7 +115,7 @@ export function RetentionSettings({ statutory10Y, statutory6Y, consent, canManag
             {state.status === 'error' && <span className="text-[12px] text-destructive">{state.message}</span>}
           </div>
         )}
-      </form>
+      </ActionForm>
     </section>
   );
 }

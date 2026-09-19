@@ -16,6 +16,8 @@ interface Entry {
   id: string;
   slug: string | null;
   data: Record<string, unknown>;
+  /** Ladestand (`updatedAt`) — der Dienst weist ein Speichern auf altem Stand ab. */
+  updatedAt: string;
 }
 
 export function EntryForm({
@@ -58,6 +60,7 @@ export function EntryForm({
     <form action={action} className="flex flex-col gap-6 rounded-lg border border-line bg-surface p-6">
       <input type="hidden" name="collection" value={collection} />
       {entry ? <input type="hidden" name="id" value={entry.id} /> : null}
+      {entry ? <input type="hidden" name="expectedVersion" value={entry.updatedAt} /> : null}
       <input type="hidden" name="payload" value={JSON.stringify({ slug: hasSlug ? slug : undefined, data })} />
       {hasSlug ? (
         <FormField id="slug" label={c('slug')} error={errors.slug}>

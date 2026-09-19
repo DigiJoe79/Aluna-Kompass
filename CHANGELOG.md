@@ -11,6 +11,77 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 
 ## [Unveröffentlicht]
 
+## [0.1.1] - 2026-09-19
+
+Fehlerbehebungen aus den ersten Tagen im Betrieb, dazu drei kleine Funktionen:
+Eingegangene Post lässt sich umklassifizieren, die Sperrwörter der Webseite
+sind pflegbar, und Medien lassen sich über MCP herunterladen. Diese Fassung
+bringt eine Datenbank-Migration mit, die beim Start von selbst läuft — vor
+dem Update wie immer ein Backup exportieren.
+
+### Neu
+
+- **Medien lassen sich über MCP herunterladen.** Das Werkzeug `media_get`
+  liefert eine Datei aus der Mediathek samt ihren Angaben, mit denselben
+  Rechten wie die Oberfläche. Damit lassen sich etwa Bilder zwischen zwei
+  Installationen übertragen, ohne den Umweg über den Browser.
+- **Sperrwörter der Webseite lassen sich pflegen.** Unter Webseite →
+  Publizieren steht die Liste der Begriffe, die nie auf der Seite erscheinen
+  dürfen; ein Treffer sperrt den Publish. Bisher gab es die Prüfung, aber
+  keinen Ort, die Begriffe einzutragen. Pflegen darf sie, wer publizieren
+  darf; über MCP geht dasselbe.
+- **Eingegangene Post lässt sich umklassifizieren.** Unter „Angaben ändern“
+  auf der Detailseite bekommen Art, Betreff und Datum eines abgelegten Eingangs
+  neue Werte. Eine andere Art bringt eine neue Nummer aus ihrem Präfix; die
+  bisherige bleibt als „Früher: …“ am Dokument und wird von der Suche
+  gefunden. Der Dialog zeigt vorher, wie sich Nummer und Aufbewahrung ändern.
+  Ausgehende Dokumente bleiben unveränderlich.
+
+  Diese Fassung bringt dafür eine Datenbank-Migration mit, die beim Start von
+  selbst läuft.
+- **Das Nutzermenü nennt die Fassung.** Statt „Build 46535d6“ steht dort
+  „Version 0.1.1 (46535d6)“.
+
+### Behoben
+
+- **Die Datenbank wird beim Beenden geschlossen.** Bisher blieb beim Stoppen
+  des Containers alles seit dem letzten Abgleich nur in der Nebendatei
+  `kompass.db-wal` stehen, die Hauptdatei `kompass.db` war unter Umständen
+  fast leer. Solange beide Dateien zusammen gesichert wurden — wie beim
+  Backup-Export oder einem Snapshot des ganzen Datenverzeichnisses — ging
+  nichts verloren; wer nur `kompass.db` kopierte, hatte einen alten Stand. Ab
+  jetzt steht nach jedem Stopp alles in `kompass.db`. Einmal neu starten
+  genügt, um eine bestehende Installation aufzuräumen.
+- **Safari: Beim Ziehen von Dateien in die Akte stand „0 Dateien ablegen“.**
+  Safari verrät erst beim Loslassen, wie viele Dateien es sind. Die Anzeige
+  sagt dort jetzt einfach „Dateien ablegen“; abgelegt wurde auch vorher schon
+  richtig.
+- **Eine offene Maske überschreibt keine Änderung mehr, die inzwischen
+  woanders gespeichert wurde.** Wer ein Tier, ein Projekt, einen Eintrag der
+  Webseite oder die Variablen der Webseite bearbeitet, während jemand anders —
+  in einem zweiten Fenster oder über MCP, etwa beim Übersetzen — denselben
+  Datensatz speichert, bekam bisher dessen Änderung still zurückgedreht. Jetzt
+  wird das Speichern abgewiesen, mit dem Hinweis, die Seite neu zu laden.
+  MCP-Werkzeuge können dasselbe über `expectedVersion` nutzen.
+- **Masken behalten ihre Eingaben, wenn das Speichern scheitert.** Bisher
+  sprangen bei einem abgelehnten Speichern — etwa einem schon vergebenen Slug —
+  alle einfachen Felder auf den Stand beim Öffnen zurück, darunter Name und
+  Angaben bei Tieren, Projekten und Kontakten, Wiedervorlagen, Versandvermerke
+  und die Masken der Verwaltung. Jetzt bleibt stehen, was getippt wurde.
+- **KI-Assistenten können Tiere, Projekte und Webseiten-Einträge wieder über
+  MCP anlegen und ändern.** Die Beschreibung dieser Werkzeuge verletzte den
+  JSON-Schema-Standard, sobald ein Feld mehrsprachig war; strenge Clients wie
+  Claude Code blendeten sie deshalb ganz aus. Lesen, Veröffentlichen und
+  Löschen waren nicht betroffen.
+- **Ändern über MCP löscht keine Felder mehr, die der Aufruf nicht nennt.**
+  Ein Update eines Webseiten-Eintrags ohne das Bild- oder Dateifeld setzte
+  dieses auf leer, und eine Erfolgsgeschichte ohne Bildunterschriften verlor
+  beide. Jetzt bleibt stehen, was ein Aufruf nicht erwähnt. Wer Einträge über
+  MCP geändert hat, sollte Bilder und Downloads einmal prüfen.
+- **Notizen deaktivierter Nutzer zeigen wieder den Namen.** In der Akte stand
+  bei einer Notiz oder Wiedervorlage einer inzwischen deaktivierten Person
+  deren interne Kennung statt ihres Namens.
+
 ## [0.1.0] - 2026-09-18
 
 Die erste Fassung. Ein Verein kann damit seine Post führen, seine Kontakte
@@ -136,5 +207,6 @@ kommen in späteren Fassungen (siehe `docs/nordstern.md`).
   einer Sandbox ausgeliefert.
 - Meldeweg für Schwachstellen: siehe [`SECURITY.md`](SECURITY.md).
 
-[Unveröffentlicht]: https://github.com/DigiJoe79/Aluna-Kompass/compare/v0.1.0...HEAD
+[Unveröffentlicht]: https://github.com/DigiJoe79/Aluna-Kompass/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/DigiJoe79/Aluna-Kompass/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/DigiJoe79/Aluna-Kompass/releases/tag/v0.1.0

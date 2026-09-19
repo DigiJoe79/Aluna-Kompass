@@ -53,6 +53,10 @@ const KNOWN_CONFLICTS = new Set([
   'multiplePrimaryChannels',
   'roleAlreadyRunning',
   'stillPublished',
+  'staleVersion',
+  'notIncoming',
+  'documentVoided',
+  'documentTypeInactive',
 ]);
 
 const CONFLICTS_WITH_DETAIL = new Set([

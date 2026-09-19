@@ -31,7 +31,8 @@ export async function saveAnimalAction(_prev: ActionState, formData: FormData): 
     summary: localizedFromForm(formData, 'summary', deps.locales()),
     body: localizedFromForm(formData, 'body', deps.locales()),
   };
-  const result = id ? await updateAnimal(deps, ctx, { id, ...fields }) : await createAnimal(deps, ctx, fields);
+  const expectedVersion = String(formData.get('expectedVersion') ?? '') || undefined;
+  const result = id ? await updateAnimal(deps, ctx, { id, expectedVersion, ...fields }) : await createAnimal(deps, ctx, fields);
   revalidatePath('/animals');
   if (!result.ok) return toActionState(result, t);
   if (!id) redirect(`/animals/${result.value.id}`);
@@ -66,6 +67,7 @@ export async function saveAnimalStoryAction(_prev: ActionState, formData: FormDa
     adoptedYear: Number(formData.get('adoptedYear') ?? 0),
     beforeCaption: localizedFromForm(formData, 'beforeCaption', deps.locales()),
     afterCaption: localizedFromForm(formData, 'afterCaption', deps.locales()),
+    expectedVersion: String(formData.get('expectedVersion') ?? '') || undefined,
   });
   revalidatePath('/animals');
   return toActionState(result, t, t('animals.story.saved'));

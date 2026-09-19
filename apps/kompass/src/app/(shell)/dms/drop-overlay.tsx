@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
  * die sagt, wie viele Dateien in der Hand liegen und was mit ihnen passiert.
  * Die Ordnerspalte liegt darüber und bleibt hell — sie ist das Ziel.
  */
-export function DropOverlay({ count }: { count: number }) {
+export function DropOverlay({ count }: { count: number | null }) {
   const t = useTranslations('dms');
   return (
     <div className="absolute inset-0 z-2 flex items-center justify-center rounded-md bg-overlay">
@@ -23,7 +23,7 @@ export function DropOverlay({ count }: { count: number }) {
             </span>
           ))}
         </div>
-        <p className="text-[15px] font-bold text-ink">{t('drop.overlayTitle', { count })}</p>
+        <p className="text-[15px] font-bold text-ink">{count === null ? t('drop.overlayTitleUnknown') : t('drop.overlayTitle', { count })}</p>
         <p className="mt-1 text-[13px] leading-relaxed text-ink-2">{t('drop.overlayHint')}</p>
       </div>
     </div>

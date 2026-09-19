@@ -3,12 +3,15 @@ import {
   type Deps,
   type Result,
   conflict,
+  expectedVersionField,
   invalid,
   isoNow,
   ok,
   recordAudit,
   requirePermission,
+  staleVersion,
   validate,
+  versionOf,
 } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -17,7 +20,19 @@ import { checkReferenceValues, duplicateReferences, referenceMetaOf, resolveRefe
 import { siteValues } from './schema';
 import { activeTemplate } from './service';
 
-const setInput = z.object({ values: z.record(z.string(), z.unknown()) });
+const setInput = z.object({
+  values: z.record(z.string(), z.unknown()),
+  /** Ladestand der Maske (`valuesVersion`); veraltet → `staleVersion`. */
+  expectedVersion: expectedVersionField,
+});
+
+/**
+ * Der Stand aller gespeicherten Variablen. Aus dem Inhalt berechnet, nicht aus
+ * `updatedAt`: Wer ein Feld leert, löscht dessen Zeile samt Zeitstempel.
+ */
+export function valuesVersion(deps: Deps): string {
+  return versionOf(Object.fromEntries(deps.db.select().from(siteValues).all().map((r) => [r.key, r.value])));
+}
 
 /** Alle Variablenwerte des aktiven Templates; fehlende Schlüssel mit ihrem Leerwert. */
 export function readValues(deps: Deps): Record<string, unknown> {
@@ -45,7 +60,9 @@ export async function setValues(deps: Deps, ctx: CallContext, raw: unknown): Pro
   if (!parsedInput.success) {
     return invalid(parsedInput.error.issues.map((i) => ({ path: i.path.map(String).join('.'), message: i.message })));
   }
-  const { values } = parsedInput.data;
+  const { values, expectedVersion } = parsedInput.data;
+  const outdated = staleVersion(expectedVersion, valuesVersion(deps));
+  if (outdated) return outdated;
 
   const template = activeTemplate(deps);
   if (!template) return conflict('noTemplate', 'Es ist kein Template eingelesen');

@@ -196,7 +196,6 @@ const WITHOUT_TOOL: Record<string, string> = {
   'core.exportDocument': 'Liefert Bytes; ein Agent liest den Datensatz.',
   'core.exportBackup': 'Ein Archiv von hunderten Megabyte durch JSON-RPC zu reichen, hilft niemandem.',
   'core.importBackup': 'Ersetzt die Datenbank als Datei — das bestätigt ein Mensch vor sich, nicht ein Agent für ihn.',
-  'core.getMediaAsset': 'Liefert Bytes; media_list nennt die Datensätze.',
   'core.getMediaPreview': 'Liefert Bytes einer Vorschau.',
   'core.storeMediaInternal': 'Innenleben; media_upload ist der Weg von außen.',
   'core.storeMediaAssetDetailed': 'Dieselbe Ablage wie media_upload, mit mehr Rückgabe für die Oberfläche.',

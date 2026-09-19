@@ -6,7 +6,7 @@ import { readTextLayer } from '@kompass/text-extraction';
 import { describe, expect, it } from 'vitest';
 import { countDocumentText } from '../src/index-store';
 import { dmsModule } from '../src/manifest';
-import { documentFolders, documents, documentTypes } from '../src/schema';
+import { documentFolders, documentFormerNumbers, documents, documentTypes } from '../src/schema';
 import { seedDms } from '../src/seed';
 import { getDocument } from '../src/service';
 import { ALL_DMS } from './helpers';
@@ -30,6 +30,16 @@ describe('seedDms', () => {
     expect(docs.some((d) => d.phase === 'draft')).toBe(true);
     expect(docs.some((d) => d.phase === 'issued' && d.direction === 'outgoing')).toBe(true);
     expect(docs.some((d) => d.direction === 'incoming' && d.folder === null)).toBe(true);
+  });
+
+  it('bringt einen umklassifizierten Eingang mit früherer Nummer (Spec 2026-09-19)', async () => {
+    const { deps, ctx } = setup();
+    await seedDms(deps, ctx);
+    const former = deps.db.select().from(documentFormerNumbers).all();
+    expect(former).toHaveLength(1);
+    const doc = deps.db.select().from(documents).all().find((d) => d.id === former[0]!.documentId)!;
+    expect(doc).toMatchObject({ direction: 'incoming', typeKey: 'contract' });
+    expect(former[0]!.number).toMatch(/^[A-Z]{3}-\d{4}-\d{3}$/);
   });
 
   it('läuft zweimal, ohne zu verdoppeln', async () => {

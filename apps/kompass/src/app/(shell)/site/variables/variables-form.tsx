@@ -13,11 +13,14 @@ import { saveVariablesAction } from '../actions';
 export function VariablesForm({
   schema,
   value,
+  version,
   locales,
   options,
 }: {
   schema: Record<string, FieldSchema>;
   value: Record<string, unknown>;
+  /** Ladestand (`valuesVersion`) — der Dienst weist ein Speichern auf altem Stand ab. */
+  version: string;
   locales: string[];
   options: Record<string, { value: string; label: string }[]>;
 }) {
@@ -40,6 +43,7 @@ export function VariablesForm({
 
   return (
     <form action={action} className="flex flex-col gap-6 rounded-lg border border-line bg-surface p-6">
+      <input type="hidden" name="expectedVersion" value={version} />
       <input type="hidden" name="payload" value={JSON.stringify(changedValues(loaded, current))} />
       <SchemaForm schema={schema} value={current} errors={errors} locales={locales} onChange={setCurrent} options={options} />
       <FormActionBar count={changedCount} onDiscard={() => setCurrent(loaded)} />

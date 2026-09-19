@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { coreModule, setModuleEnabled, storeMediaAsset, unwrap } from '@kompass/core';
+import { coreModule, readSetting, setModuleEnabled, storeMediaAsset, unwrap, writeSettingInternal } from '@kompass/core';
 import { projectsModule } from '@kompass/module-projects';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -101,6 +101,23 @@ describe('seedSiteDevelopment', () => {
 
     await seedSiteDevelopment(deps, ctx);
     expect(deps.db.select().from(siteEntries).all()).toEqual(first);
+  });
+
+  /**
+   * Sperrwörter (Backlog 23) hängen nicht am Template: Auch ohne eines zeigt die
+   * Publizieren-Seite in der Entwicklung eine gefüllte Liste. Eine gepflegte
+   * Liste bleibt, wie sie ist.
+   */
+  it('legt Beispiel-Sperrwörter an, ohne eine gepflegte Liste zu überschreiben', async () => {
+    process.env.SITE_TEMPLATE_DIR = path.join(tmpdir(), 'kein-template-hier');
+    const { deps, ctx } = await setup();
+    await seedSiteDevelopment(deps, ctx);
+    const seeded = readSetting<string[]>(deps, 'site.blockedTerms');
+    expect(seeded.length).toBeGreaterThan(0);
+
+    writeSettingInternal(deps.db, deps, ctx, 'site.blockedTerms', ['Eigener Begriff']);
+    await seedSiteDevelopment(deps, ctx);
+    expect(readSetting(deps, 'site.blockedTerms')).toEqual(['Eigener Begriff']);
   });
 
   /** Ohne Template im Volume gibt es nichts zu füllen — und keinen Grund zu scheitern. */

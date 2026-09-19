@@ -9,6 +9,7 @@ import {
   conflict,
   deleteUnreferencedMedia,
   deletionConflict,
+  expectedVersionField,
   invalid,
   isoNow,
   newId,
@@ -16,6 +17,7 @@ import {
   ok,
   recordAudit,
   requirePermission,
+  staleVersion,
   validate,
 } from '@kompass/core';
 import { and, asc, eq } from 'drizzle-orm';
@@ -40,6 +42,8 @@ const updateInput = z.object({
   id: z.string().min(1),
   slug: z.string().optional(),
   data: z.record(z.string(), z.unknown()).optional(),
+  /** Ladestand der Maske (`updatedAt`); veraltet → `staleVersion`. */
+  expectedVersion: expectedVersionField,
 });
 const deleteInput = z.object({ id: z.string().min(1), deleteOrphanedMedia: z.boolean().default(false) });
 const reorderInput = z.object({ collection: z.string().min(1), ids: z.array(z.string().min(1)) });
@@ -123,10 +127,12 @@ export async function updateEntry(deps: Deps, ctx: CallContext, raw: unknown): P
   if (denied) return denied;
   const parsed = updateInput.safeParse(raw);
   if (!parsed.success) return invalid(parsed.error.issues.map((i) => ({ path: i.path.map(String).join('.'), message: i.message })));
-  const { id, slug, data } = parsed.data;
+  const { id, slug, data, expectedVersion } = parsed.data;
 
   const before = deps.db.select().from(siteEntries).where(eq(siteEntries.id, id)).get();
   if (!before) return notFound('siteEntry', id);
+  const stale = staleVersion(expectedVersion, before.updatedAt);
+  if (stale) return stale;
   const col = collectionOf(deps, before.collection);
   if (!col) return notFound('siteCollection', before.collection);
 

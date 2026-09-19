@@ -15,6 +15,7 @@ import { idleState } from '@/lib/actions';
 import { copyToClipboard } from '@/lib/clipboard';
 import { cn } from '@/lib/utils';
 import { createTokenAction, revokeTokenAction } from './actions';
+import { ActionForm } from '@/components/forms/action-form';
 
 export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
   const t = useTranslations('profile.tokens');
@@ -43,7 +44,7 @@ export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
         <Button onClick={() => setOpen(true)}>{t('create')}</Button>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent className="bg-surface shadow-md">
-            <form action={action} className="flex flex-col gap-4">
+            <ActionForm action={action} state={state} className="flex flex-col gap-4">
               <DialogTitle className="font-heading text-[19px]">{t('createTitle')}</DialogTitle>
               {state.status === 'error' ? (
                 <p role="alert" className="rounded-md border border-error bg-error-bg p-3 text-[13px] text-error">
@@ -56,7 +57,7 @@ export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
               <DialogFooter>
                 <SubmitButton>{t('createSubmit')}</SubmitButton>
               </DialogFooter>
-            </form>
+            </ActionForm>
           </DialogContent>
         </Dialog>
       </div>

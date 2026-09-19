@@ -4,8 +4,8 @@
 # dass es auffällt.
 #
 # **Einmal im Monat, ein Pull Request für alles.** Jeder Vorschlag kostet zwei
-# volle CI-Läufe mit Image-Bau: einen als Pull Request, einen nach dem Merge auf
-# `dev`. Wöchentlich und je Ökosystem getrennt waren das bis zu sechs pro
+# volle CI-Läufe mit Image-Bau: einen als Pull Request, einen nach der Übernahme
+# in den laufenden Arbeitsbranch `dev-x.y.z`. Wöchentlich und je Ökosystem getrennt waren das bis zu sechs pro
 # Woche, für ein Projekt mit einer Person und sieben Tagen Abstand zu jeder
 # neuen Version — Rechenzeit ohne Gegenwert. Sicherheitsupdates betrifft das
 # nicht: Die kommen unabhängig von diesem Zeitplan sofort.

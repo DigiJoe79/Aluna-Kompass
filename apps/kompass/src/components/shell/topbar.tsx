@@ -12,6 +12,7 @@ export interface TopbarProps {
   crumbs: string[];
   user: UserMenuProps['user'];
   build: string;
+  version: string;
   drawer: boolean;
   onOpenDrawer: () => void;
   onSearch: () => void;
@@ -23,7 +24,7 @@ export interface TopbarProps {
  * Vereinsname, Nutzermenü. Der Menüknopf erscheint nur im Drawer-Modus — im
  * festen Rahmen gibt es nichts zu klappen.
  */
-export function Topbar({ organization, logoUrl, crumbs, user, build, drawer, onOpenDrawer, onSearch, onHelp }: TopbarProps) {
+export function Topbar({ organization, logoUrl, crumbs, user, build, version, drawer, onOpenDrawer, onSearch, onHelp }: TopbarProps) {
   const t = useTranslations();
   return (
     <header className="flex h-14 shrink-0 items-center gap-3.5 border-b border-line bg-topbar px-4">
@@ -59,7 +60,7 @@ export function Topbar({ organization, logoUrl, crumbs, user, build, drawer, onO
       <button type="button" onClick={onHelp} aria-label={t('shell.topbar.help')} className="flex size-[30px] shrink-0 items-center justify-center rounded-sm text-muted-ink hover:bg-hover hover:text-ink">
         <CircleQuestionMark className="size-[18px]" aria-hidden />
       </button>
-      <UserMenu user={user} build={build} />
+      <UserMenu user={user} build={build} version={version} />
     </header>
   );
 }

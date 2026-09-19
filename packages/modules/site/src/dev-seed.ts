@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { type CallContext, type Deps, readLocales, schema as core, unwrap } from '@kompass/core';
+import { type CallContext, type Deps, readLocales, readSetting, schema as core, unwrap, writeSettingInternal } from '@kompass/core';
 import { siteTemplateDir } from './env';
 import { widgetOf } from './field-schema';
 import { createEntry, setEntryPublished } from './entries';
@@ -28,6 +28,12 @@ import type { FieldSchema } from './types';
  * Webseite erscheint.
  */
 export async function seedSiteDevelopment(deps: Deps, ctx: CallContext): Promise<void> {
+  // Sperrwörter hängen nicht am Template (Backlog 23). Erfunden und so gewählt,
+  // dass sie in keinem erfundenen Inhalt vorkommen — sonst sperrte der Seed den
+  // Publish, den die E2E-Suite gleich danach probt.
+  if (readSetting<string[]>(deps, 'site.blockedTerms').length === 0) {
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctx, 'site.blockedTerms', ['Alter Beispielname e.V.', 'TODO-Platzhalter'], 'site.blockedTerms.set'));
+  }
   if (deps.db.select().from(siteEntries).get() || deps.db.select().from(siteValues).get()) return;
 
   const dir = siteTemplateDir();

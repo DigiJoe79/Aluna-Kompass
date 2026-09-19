@@ -35,7 +35,8 @@ export async function saveProjectAction(_prev: ActionState, formData: FormData):
     imageAssetId: String(formData.get('imageAssetId') ?? '') || null,
     externalLinks: externalLinksFromForm(formData),
   };
-  const result = id ? await updateProject(deps, ctx, { id, ...fields }) : await createProject(deps, ctx, fields);
+  const expectedVersion = String(formData.get('expectedVersion') ?? '') || undefined;
+  const result = id ? await updateProject(deps, ctx, { id, expectedVersion, ...fields }) : await createProject(deps, ctx, fields);
   revalidatePath('/projects');
   if (!result.ok) return toActionState(result, t);
   if (!id) redirect(`/projects/${result.value.id}`);

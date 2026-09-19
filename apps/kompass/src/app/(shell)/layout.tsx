@@ -4,7 +4,7 @@ import { DateFormatProvider } from '@/components/date-format-provider';
 import { EnvBanner } from '@/components/shell/env-banner';
 import type { DateFormatMode } from '@/lib/dates';
 import { ShellFrame } from '@/components/shell/shell-frame';
-import { buildId } from '@/lib/build';
+import { appVersion, buildId } from '@/lib/build';
 import { runtimeEnv } from '@/lib/deps';
 import { bannerFor } from '@/lib/env-banner';
 import { buildNavigation } from '@/lib/navigation';
@@ -28,7 +28,7 @@ export default async function ShellLayout({ children }: { children: ReactNode })
   return (
     <div className="flex h-dvh flex-col overflow-hidden">
       {banner ? <EnvBanner banner={banner} context={context} /> : null}
-      <ShellFrame organization={readSetting<string>(deps, 'organization.name')} logoUrl={logoId ? `/media/${logoId}` : null} groups={groups} build={buildId()} user={{ name: user.name, roleNames: user.roles.map((r) => r.name) }} permissions={[...ctx.permissions]} helpChapters={helpChapters} helpPages={helpPages}>
+      <ShellFrame organization={readSetting<string>(deps, 'organization.name')} logoUrl={logoId ? `/media/${logoId}` : null} groups={groups} build={buildId()} version={appVersion()} user={{ name: user.name, roleNames: user.roles.map((r) => r.name) }} permissions={[...ctx.permissions]} helpChapters={helpChapters} helpPages={helpPages}>
         <DateFormatProvider mode={readSetting<DateFormatMode>(deps, 'ui.dateFormat')}>{children}</DateFormatProvider>
       </ShellFrame>
     </div>

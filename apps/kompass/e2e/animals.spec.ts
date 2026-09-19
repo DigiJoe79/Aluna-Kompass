@@ -71,6 +71,70 @@ test.describe('animals', () => {
     await expect(page.locator('[name="afterCaption.de"]')).toHaveValue('Zuhause in Köln');
   });
 
+  /**
+   * Backlog 20: Am 13.09. drehte eine offene Maske sechs Texte zurück, die ein
+   * Agent zwei Minuten vorher über MCP geschrieben hatte. Nachgestellt mit zwei
+   * Fenstern: Das zweite speichert dazwischen, das erste wird abgewiesen.
+   */
+  test('weist ein Speichern auf veraltetem Stand ab und lässt die Änderung dazwischen stehen', async ({ page }) => {
+    await page.goto('/animals/new');
+    await page.getByLabel('Slug (URL-Teil)').fill('mira');
+    await page.getByLabel('Name').fill('Mira');
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page).toHaveURL(/\/animals\/[A-Z0-9]+$/);
+    const url = page.url();
+    await page.reload();
+    // `reload` wartet nicht auf die Hydration wie `goto` über die Fixture; ein
+    // Klick auf einen Reiter davor verpufft (lokal so am 2026-09-19 grün
+    // gelaufen, im CI rot).
+    await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
+
+    const other = await page.context().newPage();
+    await other.goto(url);
+    await other.getByRole('tab', { name: 'Texte' }).click();
+    await other.locator('[name="summary.de"]').fill('Aus dem zweiten Fenster.');
+    await other.getByRole('button', { name: 'Speichern' }).click();
+    await expect(other.getByText('Gespeichert').first()).toBeVisible();
+
+    await page.getByLabel('Name').fill('Mira aus dem ersten Fenster');
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByText('Inzwischen wurde dieser Eintrag an anderer Stelle geändert')).toBeVisible();
+    await expect(page.getByLabel('Name')).toHaveValue('Mira aus dem ersten Fenster');
+
+    await page.reload();
+    await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
+    await expect(page.getByLabel('Name')).toHaveValue('Mira');
+    await page.getByRole('tab', { name: 'Texte' }).click();
+    await expect(page.locator('[name="summary.de"]')).toHaveValue('Aus dem zweiten Fenster.');
+
+    await page.getByRole('tab', { name: 'Steckbrief' }).click();
+    await page.getByLabel('Name').fill('Mira, frisch geladen');
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByText('Gespeichert').first()).toBeVisible();
+    await other.close();
+  });
+
+  test('behält die Eingaben, wenn das Speichern scheitert', async ({ page }) => {
+    await page.goto('/animals/new');
+    await page.getByLabel('Slug (URL-Teil)').fill('doppelt');
+    await page.getByLabel('Name').fill('Erster');
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page).toHaveURL(/\/animals\/[A-Z0-9]+$/);
+
+    await page.goto('/animals/new');
+    // Derselbe Slug: Der Server lehnt ab, der Browser lässt es durch.
+    await page.getByLabel('Slug (URL-Teil)').fill('doppelt');
+    await page.getByLabel('Name').fill('Zweiter, mühsam getippt');
+    await page.getByRole('tab', { name: 'Texte' }).click();
+    await page.locator('[name="summary.de"]').fill('Ein Text, der nicht verloren gehen darf.');
+    await page.getByRole('button', { name: 'Speichern' }).click();
+
+    await expect(page.getByText('bereits vergeben').first()).toBeVisible();
+    await expect(page.locator('[name="summary.de"]')).toHaveValue('Ein Text, der nicht verloren gehen darf.');
+    await page.getByRole('tab', { name: 'Steckbrief' }).click();
+    await expect(page.getByLabel('Name')).toHaveValue('Zweiter, mühsam getippt');
+  });
+
   test('the story tab is locked until the dog is adopted', async ({ page }) => {
     await page.goto('/animals/new');
     await page.getByLabel('Slug (URL-Teil)').fill('bruno');

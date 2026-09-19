@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { idleState } from '@/lib/actions';
 import { createContactAction } from './actions';
 import { Select } from '@/components/ui/select';
+import { ActionForm } from '@/components/forms/action-form';
 
 /**
  * Dasselbe Formular an zwei Stellen: als eigener Knopf auf der Kontaktseite,
@@ -116,7 +117,7 @@ export function CreateContactDialog({
         />
       ) : null}
       <DialogContent className="w-full sm:max-w-[840px] bg-surface p-0 shadow-md">
-        <form action={action}>
+        <ActionForm action={action} state={state}>
           <div className="p-6">
             <DialogTitle className="font-heading text-[19px]">{t('create.title')}</DialogTitle>
             <DialogDescription className="text-[13px] text-muted-ink">{t('create.description')}</DialogDescription>
@@ -279,7 +280,7 @@ export function CreateContactDialog({
             </Button>
             <SubmitButton>{t('create.submit')}</SubmitButton>
           </DialogFooter>
-        </form>
+        </ActionForm>
       </DialogContent>
     </Dialog>
   );

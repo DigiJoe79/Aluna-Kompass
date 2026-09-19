@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { createDocumentRuleAction, deleteDocumentRuleAction, updateDocumentRuleAction } from './actions';
 import type { DocumentTypeItem } from './types-panel';
 import { Select } from '@/components/ui/select';
+import { ActionForm } from '@/components/forms/action-form';
 
 export interface DocumentRuleItem {
   id: string;
@@ -142,7 +143,7 @@ export function RulesPanel({
       {/* Dialog: Create Rule */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="bg-surface shadow-md sm:max-w-[500px]">
-          <form action={createAction} className="space-y-4">
+          <ActionForm action={createAction} state={createState} className="space-y-4">
             <DialogTitle className="font-heading text-[19px]">{t('createRuleTitle')}</DialogTitle>
             <DialogDescription className="text-[13px] text-muted-ink">{t('createRuleDescription')}</DialogDescription>
 
@@ -214,7 +215,7 @@ export function RulesPanel({
                 {t('save')}
               </Button>
             </DialogFooter>
-          </form>
+          </ActionForm>
         </DialogContent>
       </Dialog>
 
@@ -222,7 +223,7 @@ export function RulesPanel({
       <Dialog open={Boolean(editingRule)} onOpenChange={(open) => !open && setEditingRule(null)}>
         <DialogContent className="bg-surface shadow-md sm:max-w-[500px]">
           {editingRule && (
-            <form action={editAction} className="space-y-4">
+            <ActionForm action={editAction} state={editState} className="space-y-4">
               <DialogTitle className="font-heading text-[19px]">{t('editRuleTitle')}</DialogTitle>
               <DialogDescription className="text-[13px] text-muted-ink">{t('editRuleDescription')}</DialogDescription>
 
@@ -307,7 +308,7 @@ export function RulesPanel({
                   {t('save')}
                 </Button>
               </DialogFooter>
-            </form>
+            </ActionForm>
           )}
         </DialogContent>
       </Dialog>

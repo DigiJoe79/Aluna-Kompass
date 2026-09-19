@@ -2,7 +2,7 @@ import {
   activateTheme, addLocale, assignRole, completeFollowUp, createFollowUp, deleteFollowUp, followUpCreateSchema,
   followUpDueSchema, followUpIdSchema, followUpListSchema, listDueFollowUpsWithTargets, listFollowUps, reopenFollowUp,
   dashboardLayoutSchema, getDashboardLayout, listDashboardTiles, readDashboard, resetDashboardLayout, setDashboardLayout,
-  createMediaFolder, createRole, createUser, deleteMediaAsset, deleteMediaFolder, getAuditEntry, listDocumentBases, listLocales, listMediaAssets, listModules, mediaListFilterSchema,
+  createMediaFolder, createRole, createUser, deleteMediaAsset, getMediaAsset, deleteMediaFolder, getAuditEntry, listDocumentBases, listLocales, listMediaAssets, listModules, mediaListFilterSchema,
   getSetting, listRetentionDue, listRoles, listSettings, listThemes, listUsers, moveMediaAsset, queryAudit, removeLocale, removeRole, renameMediaFolder,
   reorderLocales, resetStartPassword, setModuleEnabled, setRolePermissions, setSetting, setUserActive, storeMediaAsset,
   updateRole, ok, invalid,
@@ -37,6 +37,17 @@ export const coreMcpTools: McpToolDefinition[] = [
       return storeMediaAsset(deps, ctx, { originalName: filename, bytes, folder: folder ?? null });
     },
     service: storeMediaAsset,
+  }),
+  t({
+    name: 'media_get',
+    description: 'Download a media asset: its record plus the content as base64 (no data-URL prefix) — the counterpart of media_upload, e.g. to copy images between installations. Needs a signed-in user; an asset used by a record also needs the view right of that record (animals.view, projects.view, site.view, …), like the UI. At most 10 MB, the upload limit.',
+    inputSchema: z.object({ id: z.string() }),
+    handler: async (deps, ctx, { id }) => {
+      const result = await getMediaAsset(deps, ctx, id);
+      if (!result.ok) return result;
+      return ok({ record: result.value.record, contentBase64: Buffer.from(result.value.bytes).toString('base64') });
+    },
+    service: getMediaAsset,
   }),
   t({ name: 'settings_list', description: 'Read all registered settings with their current values. Requires settings.manage.', inputSchema: z.object({}), handler: (deps, ctx) => listSettings(deps, ctx), service: listSettings }),
   t({ name: 'settings_get', description: 'Read one setting by key, e.g. organization.name. Requires settings.manage.', inputSchema: z.object({ key: z.string() }), handler: (deps, ctx, args) => getSetting(deps, ctx, args), service: getSetting }),

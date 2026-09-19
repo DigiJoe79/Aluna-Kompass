@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase, setE2ESetting, waitForHydration } from './helpers';
+import { loginAsAdmin, resetDatabase, waitForHydration } from './helpers';
 
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
@@ -16,7 +16,15 @@ test('publish page runs the checks and blocks on a blocked term', async ({ page 
   await page.getByRole('button', { name: 'Übernehmen' }).click();
   await expect(page.getByRole('status')).toContainText('eingelesen');
 
-  await setE2ESetting(page, 'site.blockedTerms', ['Popescu']);
+  // Über die Karte auf der Publizieren-Seite, nicht über die Hintertür: Bis
+  // 0.1.1 ließ sich die Liste nirgends pflegen (Backlog 23).
+  await page.goto('/site/publish');
+  const terms = page.getByRole('region', { name: 'Sperrwörter' });
+  await terms.getByLabel('Begriffe, einer je Zeile').fill('Popescu\nLorem ipsum');
+  await terms.getByRole('button', { name: 'Sperrwörter speichern' }).click();
+  await expect(page.getByRole('status')).toContainText('Sperrwörter gespeichert');
+  await page.reload();
+  await expect(page.getByRole('region', { name: 'Sperrwörter' }).getByLabel('Begriffe, einer je Zeile')).toHaveValue('Popescu\nLorem ipsum');
 
   await page.goto('/site/variables');
   await page.locator('[name="claim.de"]').fill('Frau Popescu betreibt den Verein.');

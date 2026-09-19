@@ -131,7 +131,7 @@ export function DashboardCustomize({ layout, available }: { layout: DashboardLay
               return (
                 <li key={id(tile)} className="flex flex-col gap-2 py-3">
                   <div className="flex items-center gap-2">
-                    <Switch id={`tile-${id(tile)}`} checked disabled={pending} aria-label={t('customize.show', { title: title(tile) })} onCheckedChange={() => toggle(def, false)} />
+                    <Switch id={`tile-${id(tile)}`} checked disabled={pending} onCheckedChange={() => toggle(def, false)} />
                     <Label htmlFor={`tile-${id(tile)}`} className="flex-1 cursor-pointer text-[14px]">{title(tile)}</Label>
                     <Button variant="ghost" size="icon-sm" aria-label={tContent('moveUp')} disabled={pending || index === 0} onClick={() => move(index, -1)}><ArrowUp className="size-4" /></Button>
                     <Button variant="ghost" size="icon-sm" aria-label={tContent('moveDown')} disabled={pending || index === tiles.length - 1} onClick={() => move(index, 1)}><ArrowDown className="size-4" /></Button>
@@ -142,7 +142,7 @@ export function DashboardCustomize({ layout, available }: { layout: DashboardLay
             })}
             {off.map((tile) => (
               <li key={id(tile)} className="flex items-center gap-2 py-3 opacity-60">
-                <Switch id={`tile-${id(tile)}`} checked={false} disabled={pending} aria-label={t('customize.show', { title: title(tile) })} onCheckedChange={() => toggle(tile, true)} />
+                <Switch id={`tile-${id(tile)}`} checked={false} disabled={pending} onCheckedChange={() => toggle(tile, true)} />
                 <Label htmlFor={`tile-${id(tile)}`} className="flex-1 cursor-pointer text-[14px]">{title(tile)}</Label>
                 <span className="text-[12px] text-muted-ink">{t('customize.off')}</span>
               </li>

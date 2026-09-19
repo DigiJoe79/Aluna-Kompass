@@ -1,4 +1,5 @@
-import { type Deps, type McpToolDefinition } from '@kompass/core';
+import { expectedVersionField, type Deps, type McpToolDefinition } from '@kompass/core';
+import { blockedTermsSchema, getBlockedTerms, setBlockedTerms } from './blocked-terms';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -41,6 +42,16 @@ const tool = (
 const fieldShape = (fields: TemplateSchema['collections'][string]['fields']) =>
   Object.fromEntries(Object.entries(fields).map(([key, field]) => [key, schemaFor(field).optional()]));
 
+/**
+ * Beim Update ohne Vorgabewerte: Ein Asset-Feld trägt `.default(null)`, und Zod
+ * 4 wendet das auch hinter `.optional()` an. Ein Update, das das Feld nicht
+ * nannte, schrieb deshalb `null` und löschte Bild oder Datei (2026-09-19). Ein
+ * Update nennt nur, was sich ändert — was fehlt, bleibt.
+ */
+const withoutDefault = (schema: z.ZodType): z.ZodType => (schema instanceof z.ZodDefault ? (schema.removeDefault() as z.ZodType) : schema);
+const updateShape = (fields: TemplateSchema['collections'][string]['fields']) =>
+  Object.fromEntries(Object.entries(fields).map(([key, field]) => [key, withoutDefault(schemaFor(field)).optional()]));
+
 function collectionTools(key: string, col: TemplateSchema['collections'][string]): McpToolDefinition[] {
   const shape = fieldShape(col.fields);
   const slug = col.slug ? { slug: z.string().optional() } : {};
@@ -51,9 +62,9 @@ function collectionTools(key: string, col: TemplateSchema['collections'][string]
       const { slug: entrySlug, ...data } = args as Record<string, unknown>;
       return createEntry(deps, ctx, { collection: key, slug: entrySlug, data });
     }, createEntry),
-    tool(`site_${key}_update`, `Update an entry in „${col.label}“. Requires site.manage. Localized fields are replaced as a whole map; to change one locale use translations_set.`, z.object({ id: z.string(), ...slug, ...shape }), (deps, ctx, args) => {
-      const { id, slug: entrySlug, ...data } = args as Record<string, unknown> & { id: string };
-      return updateEntry(deps, ctx, { id, slug: entrySlug, data });
+    tool(`site_${key}_update`, `Update an entry in „${col.label}“. Requires site.manage. Localized fields are replaced as a whole map; to change one locale use translations_set. Pass expectedVersion (the updatedAt you last read) to be rejected with staleVersion instead of overwriting a change made in between.`, z.object({ id: z.string(), ...slug, ...updateShape(col.fields), expectedVersion: expectedVersionField }), (deps, ctx, args) => {
+      const { id, slug: entrySlug, expectedVersion, ...data } = args as Record<string, unknown> & { id: string; expectedVersion?: string };
+      return updateEntry(deps, ctx, { id, slug: entrySlug, data, expectedVersion });
     }, updateEntry),
     tool(`site_${key}_deletion_preview`, `Tell whether an entry in „${col.label}“ can be deleted: still published, still referenced, and which media are used nowhere else. Call this before site_${key}_delete. Requires site.view.`, z.object({ id: z.string() }), (deps, ctx, args) => entryDeletionPreview(deps, ctx, (args as { id: string }).id), entryDeletionPreview),
     tool(`site_${key}_delete`, `Delete an entry in „${col.label}“ (editorial content, audited). Two steps: a published entry must be withdrawn first. deleteOrphanedMedia also deletes media used nowhere else and needs media.upload. Requires site.manage.`, z.object({ id: z.string(), deleteOrphanedMedia: z.boolean().optional() }), (deps, ctx, args) => deleteEntry(deps, ctx, args), deleteEntry),
@@ -94,6 +105,8 @@ const FIXED: McpToolDefinition[] = [
   tool('site_variables_get', 'Read all template variable values. Requires site.view.', z.object({}), (deps, ctx) => getVariables(deps, ctx), getVariables),
   tool('site_variables_set', 'Write template variable values, checked against the template schema. Requires site.manage. Localized fields are replaced as a whole map; to change one locale use translations_set.', z.object({ values: z.record(z.string(), z.unknown()) }), (deps, ctx, args) => setValues(deps, ctx, args), setValues),
   tool('site_variables_options', 'List the selectable records per reference variable (value and label), filtered by the declared condition. Requires site.view.', z.object({}), (deps, ctx) => listReferenceOptions(deps, ctx), listReferenceOptions),
+  tool('site_blocked_terms_get', 'Read the blocked terms: words that must never appear on the website; a hit blocks publishing. Requires site.view.', z.object({}), (deps, ctx) => getBlockedTerms(deps, ctx), getBlockedTerms),
+  tool('site_blocked_terms_set', 'Replace the list of blocked terms (2–80 characters each, at most 50; blank lines and duplicates are dropped). Requires site.publish. Audited.', blockedTermsSchema, (deps, ctx, args) => setBlockedTerms(deps, ctx, args), setBlockedTerms),
   tool('site_export_check', 'Build the content export into a throwaway directory without publishing, to check it is current and complete. Requires site.publish.', z.object({}), async (deps, ctx) => {
     const dir = await mkdtemp(path.join(tmpdir(), 'kompass-site-check-'));
     try {

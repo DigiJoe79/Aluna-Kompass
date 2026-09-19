@@ -11,12 +11,31 @@ interface Holder {
   deps: AppDeps | null;
   /** Läuft gerade ein Reset, steht hier sein Versprechen. Siehe `depsReady`. */
   resetting: Promise<void> | null;
+  /** Ob `closeOnExit` schon am Prozess hängt — genau einmal je Prozess. */
+  exitHooked?: boolean;
 }
 
 const holder: Holder = ((globalThis as unknown as { __kompass?: Holder }).__kompass ??= {
   deps: null,
   resetting: null,
 });
+
+/**
+ * Beim Beenden die Datenbank schliessen.
+ *
+ * Next beantwortet ein `SIGTERM` (`docker stop`) selbst mit `process.exit`. Ohne
+ * `close()` überträgt SQLite die WAL-Datei nie in die Hauptdatei — am 19.09.
+ * stand in Prod der ganze Bestand in `kompass.db-wal`. Im `exit`-Ereignis läuft
+ * nur noch synchroner Code; `better-sqlite3` ist synchron, das reicht.
+ */
+function closeOnExit(): void {
+  try {
+    holder.deps?.close();
+  } catch {
+    // War schon zu.
+  }
+  holder.deps = null;
+}
 
 export function runtimeEnv() {
   return readEnv();
@@ -49,6 +68,10 @@ export async function depsReady(): Promise<void> {
 
 export function getDeps(): AppDeps {
   if (!holder.deps) holder.deps = openDeps();
+  if (!holder.exitHooked) {
+    holder.exitHooked = true;
+    process.once('exit', closeOnExit);
+  }
   return holder.deps;
 }
 

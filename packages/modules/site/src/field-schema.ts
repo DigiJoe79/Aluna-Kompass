@@ -31,7 +31,7 @@ export function schemaFor(field: FieldSchema): z.ZodType<unknown> {
       const inner = z.string().trim().max(boundNumber(field) ?? 20_000);
       // Beliebige Sprachschlüssel: ob sie zu den gepflegten Sprachen passen,
       // prüft `validate` im Kern.
-      return z.record(z.string().regex(LOCALE_KEY), inner).meta({ localized: true, required: false });
+      return z.record(z.string().regex(LOCALE_KEY), inner).meta({ localized: true, leadingRequired: false });
     }
     case 'markdown':
       return z.string().max(boundNumber(field) ?? 20_000);

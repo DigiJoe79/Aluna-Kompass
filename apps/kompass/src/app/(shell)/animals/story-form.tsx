@@ -11,6 +11,7 @@ import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Input } from '@/components/ui/input';
 import { idleState } from '@/lib/actions';
 import { saveAnimalStoryAction } from './actions';
+import { ActionForm } from '@/components/forms/action-form';
 
 export function StoryForm({ animal, locales }: { animal: AnimalRecord; locales: string[] }) {
   const t = useTranslations('animals.story');
@@ -19,8 +20,9 @@ export function StoryForm({ animal, locales }: { animal: AnimalRecord; locales: 
   if (animal.status !== 'adopted') return <p className="rounded-md border border-line bg-surface-2 p-4 text-[13px] text-ink-2">{t('locked')}</p>;
   const story = animal.story;
   return (
-    <form action={action} className="grid gap-4 md:grid-cols-2">
+    <ActionForm action={action} state={state} className="grid gap-4 md:grid-cols-2">
       <input type="hidden" name="id" value={animal.id} />
+      <input type="hidden" name="expectedVersion" value={animal.updatedAt} />
       <div><MediaPicker name="beforeAssetId" value={story?.beforeAssetId ?? null} label={t('before')} /></div>
       <div><MediaPicker name="afterAssetId" value={story?.afterAssetId ?? null} label={t('after')} /></div>
       <LocalizedField name="quote" label={t('quote')} kind="textarea" rows={3} value={story?.quote ?? {}} locales={locales} />
@@ -29,6 +31,6 @@ export function StoryForm({ animal, locales }: { animal: AnimalRecord; locales: 
       <FormField id="family" label={t('family')}><Input id="family" name="family" defaultValue={story?.family ?? ''} /></FormField>
       <FormField id="adoptedYear" label={t('year')}><Input id="adoptedYear" name="adoptedYear" type="number" defaultValue={story?.adoptedYear ?? new Date().getFullYear()} className="font-mono" /></FormField>
       <div className="md:col-span-2"><FormActionBar saveLabel={t('save')} /></div>
-    </form>
+    </ActionForm>
   );
 }

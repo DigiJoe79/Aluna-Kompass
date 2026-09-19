@@ -23,6 +23,7 @@ describe('database', () => {
       'dashboard_layouts',
       'document_counters',
       'document_folders',
+      'document_former_numbers',
       'document_links',
       'document_notes',
       'document_relations',

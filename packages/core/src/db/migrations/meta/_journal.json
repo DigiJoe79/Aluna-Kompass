@@ -15,6 +15,13 @@
       "when": 1789646410902,
       "tag": "0001_dashboard_layouts",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789812019786,
+      "tag": "0002_document_former_numbers",
+      "breakpoints": true
     }
   ]
 }

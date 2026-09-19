@@ -14,7 +14,7 @@ import { Topbar } from './topbar';
 
 export const DRAWER_BREAKPOINT = 1180;
 
-export function ShellFrame({ organization, logoUrl, groups, build, user, permissions, helpChapters, helpPages, children }: { organization: string; logoUrl: string | null; groups: NavGroup[]; build: string; user: { name: string; roleNames: string[] }; permissions: string[]; helpChapters: HandbookChapter[]; helpPages: { doc: string; title: string; chapter: string }[]; children: ReactNode }) {
+export function ShellFrame({ organization, logoUrl, groups, build, version, user, permissions, helpChapters, helpPages, children }: { organization: string; logoUrl: string | null; groups: NavGroup[]; build: string; version: string; user: { name: string; roleNames: string[] }; permissions: string[]; helpChapters: HandbookChapter[]; helpPages: { doc: string; title: string; chapter: string }[]; children: ReactNode }) {
   const t = useTranslations();
   const pathname = usePathname();
   const [drawer, setDrawer] = useState(false);
@@ -56,7 +56,7 @@ export function ShellFrame({ organization, logoUrl, groups, build, user, permiss
       <CommandPalette groups={groups} permissions={permissions} helpPages={helpPages} />
       <HelpPanel open={helpOpen} onOpenChange={setHelpOpen} pathname={pathname} />
       <div className="flex min-h-0 flex-1 flex-col">
-        <Topbar organization={organization} logoUrl={logoUrl} crumbs={crumbs} user={user} build={build} drawer={drawer} onOpenDrawer={() => setDrawerOpen(true)} onSearch={openPalette} onHelp={() => setHelpOpen(true)} />
+        <Topbar organization={organization} logoUrl={logoUrl} crumbs={crumbs} user={user} build={build} version={version} drawer={drawer} onOpenDrawer={() => setDrawerOpen(true)} onSearch={openPalette} onHelp={() => setHelpOpen(true)} />
         <div className="flex min-h-0 flex-1">
           {drawer ? (
             <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>

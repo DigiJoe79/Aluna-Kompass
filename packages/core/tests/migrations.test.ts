@@ -35,15 +35,22 @@ describe('the first migration', () => {
 
 /**
  * Eine Fassung, höchstens eine Migration (Prod-Spec 2026-09-16, Entscheidung 9).
- * Das Dashboard bringt die erste nach `0000_init`; wer eine dritte anlegt,
- * ohne dass 0.2.0 ausgeliefert ist, sieht es hier. 0.1.0 startet mit beiden
- * (Prod-Spec, Nachtrag 9a vom 2026-09-17).
+ * Das Dashboard bringt die erste nach `0000_init`; 0.1.0 startet mit beiden
+ * (Prod-Spec, Nachtrag 9a vom 2026-09-17). 0.1.1 bringt
+ * `document_former_numbers` fürs Umklassifizieren (Spec 2026-09-19). Wer eine
+ * weitere anlegt, ohne dass 0.1.1 ausgeliefert ist, sieht es hier.
  */
 describe('the migrations of this version', () => {
   const files = readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith('.sql')).sort();
 
-  it('are exactly init and dashboard_layouts', () => {
-    expect(files).toEqual(['0000_init.sql', '0001_dashboard_layouts.sql']);
+  it('are init, dashboard_layouts and — with 0.1.1 — document_former_numbers', () => {
+    expect(files).toEqual(['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql']);
+  });
+
+  it('keep a former document number unique across documents', () => {
+    const sql = readFileSync(path.join(MIGRATIONS_DIR, '0002_document_former_numbers.sql'), 'utf8');
+    expect(sql).toContain('CREATE TABLE `document_former_numbers`');
+    expect(sql).toContain('CREATE UNIQUE INDEX `document_former_numbers_number_idx`');
   });
 
   it('create the dashboard layout table keyed by user', () => {

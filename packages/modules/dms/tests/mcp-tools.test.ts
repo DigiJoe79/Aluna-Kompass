@@ -53,3 +53,16 @@ describe('DMS-Werkzeuge', () => {
     expect(DMS_MCP_TOOLS.filter((t) => typeof t.service !== 'function').map((t) => t.name)).toEqual([]);
   });
 });
+
+describe('Umklassifizieren über MCP (Spec 2026-09-19)', () => {
+  it('dms_reclassify ruft den Dienst, nennt dms.create und nimmt den Ladestand', async () => {
+    const { reclassifyDocument, previewReclassification } = await import('../src/incoming');
+    expect(tool('dms_reclassify').service).toBe(reclassifyDocument);
+    expect(tool('dms_reclassify').description).toContain('dms.create');
+    expect(Object.keys((tool('dms_reclassify').inputSchema as unknown as { shape: Record<string, unknown> }).shape)).toEqual(
+      expect.arrayContaining(['id', 'typeKey', 'subject', 'documentDate', 'expectedVersion']),
+    );
+    expect(tool('dms_preview_reclassification').service).toBe(previewReclassification);
+    expect(tool('dms_preview_reclassification').description).toContain('dms.view');
+  });
+});

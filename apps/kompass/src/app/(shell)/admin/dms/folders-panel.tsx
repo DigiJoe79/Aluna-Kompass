@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { idleState } from '@/lib/actions';
 import { cn } from '@/lib/utils';
 import { createDocumentFolderAction, deleteDocumentFolderAction } from './actions';
+import { ActionForm } from '@/components/forms/action-form';
 
 export function FoldersPanel({ folders }: { folders: string[] }) {
   const t = useTranslations('dms.admin');
@@ -87,7 +88,7 @@ export function FoldersPanel({ folders }: { folders: string[] }) {
       {/* Dialog: Create Folder */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="bg-surface shadow-md sm:max-w-[440px]">
-          <form action={createAction} className="space-y-4">
+          <ActionForm action={createAction} state={createState} className="space-y-4">
             <DialogTitle className="font-heading text-[19px]">{t('createFolderTitle')}</DialogTitle>
             <DialogDescription className="text-[13px] text-muted-ink">{t('createFolderDescription')}</DialogDescription>
 
@@ -108,7 +109,7 @@ export function FoldersPanel({ folders }: { folders: string[] }) {
                 {t('save')}
               </Button>
             </DialogFooter>
-          </form>
+          </ActionForm>
         </DialogContent>
       </Dialog>
 

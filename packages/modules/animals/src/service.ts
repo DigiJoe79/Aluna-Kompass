@@ -1,4 +1,4 @@
-import { buildDeletionPreview, conflict, deleteUnreferencedMedia, deletionConflict, emptyLocalized, invalid, isoNow, localizedList as coreLocalizedList, localizedText, newId, notFound, ok, recordAudit, requirePermission, schema as core, validate, type CallContext, type DbOrTx, type DeletionPreview, type Deps, type LocalizedText, type MediaCleanup, type Result } from '@kompass/core';
+import { buildDeletionPreview, conflict, expectedVersionField, staleVersion, deleteUnreferencedMedia, deletionConflict, emptyLocalized, invalid, isoNow, localizedList as coreLocalizedList, localizedText, newId, notFound, ok, recordAudit, requirePermission, schema as core, validate, type CallContext, type DbOrTx, type DeletionPreview, type Deps, type LocalizedText, type MediaCleanup, type Result } from '@kompass/core';
 import { and, asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { animalPhotos, animalStories, animals, type LocalizedList } from './schema';
@@ -44,6 +44,8 @@ export const animalUpdateSchema = z.object({
   externalProfileUrl: fields.externalProfileUrl.removeDefault().optional(),
   summary: fields.summary.optional(),
   body: fields.body.optional(),
+  /** Ladestand der Maske (`updatedAt`); veraltet → `staleVersion`. */
+  expectedVersion: expectedVersionField,
 });
 
 export function loadAnimal(db: DbOrTx, id: string): AnimalRecord | null {
@@ -78,9 +80,11 @@ export async function updateAnimal(deps: Deps, ctx: CallContext, input: unknown)
   if (denied) return denied;
   const parsed = validate(deps, animalUpdateSchema, input);
   if (!parsed.ok) return parsed;
-  const { id, ...changes } = parsed.value;
+  const { id, expectedVersion, ...changes } = parsed.value;
   const before = loadAnimal(deps.db, id);
   if (!before) return notFound('animal', id);
+  const stale = staleVersion(expectedVersion, before.updatedAt);
+  if (stale) return stale;
   if (changes.slug && slugTaken(deps.db, changes.slug, id)) return conflict('slugTaken', `Slug ${changes.slug} ist bereits vergeben`);
   return deps.db.transaction((tx) => {
     tx.update(animals).set({ ...changes, updatedAt: isoNow(deps.clock) }).where(eq(animals.id, id)).run();
@@ -144,9 +148,13 @@ export const animalStorySchema = z.object({
   quote: localizedText({ max: 600 }),
   family: z.string().trim().max(120),
   adoptedYear: z.number().int().min(2000).max(2100),
-  // Vorgabe leer: `animals_set_story` und ältere Aufrufer kennen die Felder nicht.
-  beforeCaption: localizedText({ max: 200 }).default({}),
-  afterCaption: localizedText({ max: 200 }).default({}),
+  // Ohne Vorgabe: Wer die Bildunterschriften nicht nennt — ältere Aufrufer,
+  // ein Agent, der nur das Zitat ändert —, lässt sie stehen. Mit `.default({})`
+  // leerte jeder solche Aufruf beide (2026-09-19, tests/mcp-schemas.test.ts).
+  beforeCaption: localizedText({ max: 200 }).optional(),
+  afterCaption: localizedText({ max: 200 }).optional(),
+  /** Ladestand des Tiers (`updatedAt`); veraltet → `staleVersion`. */
+  expectedVersion: expectedVersionField,
 });
 
 export async function setAnimalStory(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AnimalRecord>> {
@@ -154,10 +162,17 @@ export async function setAnimalStory(deps: Deps, ctx: CallContext, input: unknow
   if (denied) return denied;
   const parsed = validate(deps, animalStorySchema, input);
   if (!parsed.ok) return parsed;
-  const { id, ...story } = parsed.value;
+  const { id, expectedVersion, beforeCaption, afterCaption, ...rest } = parsed.value;
   const before = loadAnimal(deps.db, id);
   if (!before) return notFound('animal', id);
+  const stale = staleVersion(expectedVersion, before.updatedAt);
+  if (stale) return stale;
   if (before.status !== 'adopted') return conflict('animalNotAdopted', 'Eine Erfolgsgeschichte gibt es nur für vermittelte Tiere');
+  const story = {
+    ...rest,
+    beforeCaption: beforeCaption ?? before.story?.beforeCaption ?? {},
+    afterCaption: afterCaption ?? before.story?.afterCaption ?? {},
+  };
   for (const assetId of [story.beforeAssetId, story.afterAssetId]) {
     if (!assetId) continue;
     const state = imageMime(deps.db, assetId);

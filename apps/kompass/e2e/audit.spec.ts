@@ -13,12 +13,17 @@ test.describe('audit log', () => {
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByRole('status')).toContainText('gespeichert');
     await page.goto('/admin/audit');
+    // Erst auf die Oberfläche filtern: Nach dem Reset liest der Hintergrund-
+    // dienst die Seed-PDFs und schreibt „Volltext gelesen“ ins Protokoll —
+    // womöglich nach der Änderung oben. Neueste zuerst gilt trotzdem, nur ist
+    // die oberste Zeile ohne Filter nicht zwingend die eigene.
+    await page.getByLabel('Kanal').selectOption('ui');
     const rows = page.getByRole('table').getByRole('row');
     await expect(rows.nth(1)).toContainText('settings.update');
     await expect(rows.nth(1)).toContainText('Oberfläche');
     await page.getByLabel('Kanal').selectOption('system');
     await expect(page.getByRole('table').getByRole('row').nth(1)).toContainText('System');
-    await page.getByLabel('Kanal').selectOption('');
+    await page.getByLabel('Kanal').selectOption('ui');
     await expect(page.getByRole('table').getByRole('row').nth(1)).toContainText('settings.update');
     await rows.nth(1).click();
     const detail = page.getByRole('dialog');

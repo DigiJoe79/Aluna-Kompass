@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { idleState } from '@/lib/actions';
 import { clearDispatchAction, recordDispatchAction } from '../actions';
+import { ActionForm } from '@/components/forms/action-form';
 
 /**
  * Der Versandvermerk steht neben dem Dokument, nicht darin: Er ändert nichts
@@ -104,7 +105,7 @@ export function DispatchPanel({
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="w-full sm:max-w-[480px] bg-surface p-6 shadow-md">
-          <form action={action}>
+          <ActionForm action={action} state={state}>
             <DialogTitle className="font-heading text-[19px]">{t('record')}</DialogTitle>
             <DialogDescription className="text-[13px] text-muted-ink">{t('description')}</DialogDescription>
 
@@ -148,7 +149,7 @@ export function DispatchPanel({
               </Button>
               <SubmitButton>{t('submit')}</SubmitButton>
             </DialogFooter>
-          </form>
+          </ActionForm>
         </DialogContent>
       </Dialog>
 

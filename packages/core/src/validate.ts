@@ -13,7 +13,7 @@ function unwrapSchema(schema: z.ZodType<unknown>): any {
   return schema;
 }
 
-function getFieldMeta(field: z.ZodType<unknown>): { localized?: boolean; required?: boolean } | undefined {
+function getFieldMeta(field: z.ZodType<unknown>): { localized?: boolean; leadingRequired?: boolean } | undefined {
   let curr: any = field;
   while (curr) {
     const meta = curr.meta?.();
@@ -49,7 +49,7 @@ function checkValue(schema: z.ZodType<unknown>, value: unknown, path: string, lo
       if (!locales.includes(key)) issues.push({ path: `${path}.${key}`, message: 'unknownLocale' });
     }
     const leading = locales[0]!;
-    if ((required || meta.required) && String(text[leading] ?? '').length === 0) {
+    if ((required || meta.leadingRequired) && String(text[leading] ?? '').length === 0) {
       issues.push({ path: `${path}.${leading}`, message: 'required' });
     }
     return issues;

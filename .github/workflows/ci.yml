@@ -1,7 +1,9 @@
 name: CI
 on:
   push:
-    branches: [main, dev]
+    # Je Fassung ein Arbeitsbranch `dev-x.y.z`; aus jedem Push entsteht das
+    # Image `:dev-x.y.z` fuer die Testinstanz (AGENTS.md, Abschnitt Release).
+    branches: [main, 'dev-*']
     tags: ['v*']
     # Greift nur, wenn *alle* geaenderten Dateien passen; ein gemischter
     # Commit baut weiterhin.

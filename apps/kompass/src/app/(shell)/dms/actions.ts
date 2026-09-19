@@ -20,6 +20,9 @@ import {
   fileDocument,
   receiveDocument,
   previewNextNumber,
+  previewReclassification,
+  reclassifyDocument,
+  type ReclassificationPreview,
   suggestClassification,
   updateDraft,
   voidDocument,
@@ -391,4 +394,26 @@ export async function deleteNoteAction(id: string, noteId: string): Promise<Acti
   const result = await deleteNote(deps, ctx, { id: noteId });
   revalidatePath(`/dms/${id}`);
   return toActionState(result, t, t('dms.toast.noteDeleted'));
+}
+
+/** Was ein Umklassifizieren bewirken würde — für den Dialog, liest nur (Spec 2026-09-19). */
+export async function previewReclassificationAction(id: string, typeKey: string, documentDate: string): Promise<ReclassificationPreview | null> {
+  const { deps, ctx } = await requireSession();
+  const result = await previewReclassification(deps, ctx, { id, typeKey, documentDate });
+  return result.ok ? result.value : null;
+}
+
+export async function reclassifyDocumentAction(id: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await reclassifyDocument(deps, ctx, {
+    id,
+    typeKey: String(formData.get('typeKey') ?? ''),
+    subject: String(formData.get('subject') ?? ''),
+    documentDate: String(formData.get('documentDate') ?? ''),
+    expectedVersion: String(formData.get('expectedVersion') ?? '') || undefined,
+  });
+  revalidatePath(`/dms/${id}`);
+  revalidatePath('/dms');
+  return toActionState(result, t, t('dms.reclassify.saved'));
 }

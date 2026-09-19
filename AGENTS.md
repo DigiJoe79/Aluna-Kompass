@@ -31,6 +31,8 @@ Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. J
 - Seed-Daten für jedes Modul und jede neue Fachfunktion. Ein neues Modul bringt einen `seed`-Haken im Manifest mit, Kern-Funktionen einen Block unter `packages/core/src/seed/`; beide laufen über `seedDevelopment`. Regeln: frei erfundene Beispiele (das Repo ist öffentlich, `no-association-content.test.ts`), idempotent (kein Lauf, wenn schon Zeilen da sind), mit Varianten der wichtigen Zustände, und ein Test wie `…/tests/seed.test.ts`. Muster: `packages/modules/contacts/src/seed.ts`, `packages/modules/animals/src/seed.ts`, `packages/modules/dms/src/seed.ts`, `packages/modules/projects/src/seed.ts`. In `development` liegen sie neben den Prototyp-Daten von `dev:reset`; NAS-Test bleibt Aluna-only, weil dort `seedDevelopment` nicht läuft.
 - Migrationen: `pnpm --filter @kompass/core db:generate` nach jeder Schema-Änderung; erzeugte SQL-Dateien werden committet und nie nachträglich editiert.
 - Keine Löschfunktionen außer den in den `deletionRules` des eigenen Manifests als `deletable: true` geführten (Kern: `packages/core/src/deletion-policy.ts`; `defineModule` prüft jede Regel, `apps/kompass/tests/deletion-policy.test.ts` die Summe) — jede mit Eintrag im Änderungsprotokoll. Flüchtige Infrastruktur (Sitzungen löschen, Tokens widerrufen) steht dort nicht, weil sie keinen Vereinsvorgang abbildet.
+- Eigene Kennzeichen in `.meta()` nie mit reservierten JSON-Schema-Namen (`required`, `type`, `properties`, `items`, `default`, `enum`, `format` …): Zod 4 schreibt `.meta()` ungefiltert ins JSON-Schema, das MCP-Clients zu sehen bekommen, und ein strenger Client verwirft das ganze Werkzeug. `apps/kompass/tests/mcp-schemas.test.ts` prüft jedes ausgelieferte Werkzeugschema gegen das Metaschema.
+- Masken mit ungesteuerten Feldern (`defaultValue`) nutzen `ActionForm` (`apps/kompass/src/components/forms/action-form.tsx`) statt `<form action>`: React 19 setzt ein `<form action>` nach jedem Durchlauf zurück, auch nach einem abgelehnten Speichern, und die Eingaben wären weg. Ausnahmen sind Anmeldung, Passwort und Einrichtung, wo ein falsches Passwort ruhig verschwinden soll.
 - Handbuch: Jede neue Seite der Oberfläche bringt ihre Handbuchseite unter `docs/handbuch/` und ihren `help`-Eintrag mit (Modul: im Manifest; Kern: `apps/kompass/src/lib/help.ts`). Eine Seite beginnt mit `# Titel` und einem Kurzabsatz; `apps/kompass/tests/handbook-complete.test.ts` prüft Vollständigkeit und Form. Spec: `2026-09-14-handbuch-und-hilfe-design.md`.
 - Ein Modul, das Vorgänge an fremden Datensätzen führt (Buchungen an Projekten, Bestandsbuch an Tieren, Dokumente an allem), meldet sie über `retentionHolds` **und** `recordReferences`. Der erste Haken sichert die Rechenschaft, der zweite die Integrität; wer nur einen bedient, gibt trotzdem nichts frei, weil beide geprüft werden (`buildDeletionPreview` in `packages/core/src/deletion-guards.ts`).
 
@@ -62,7 +64,7 @@ Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. J
 - **Eine Fassung, eine Stelle.** Die Nummer steht in der `package.json` im
   Wurzelverzeichnis; alle Pakete des Workspace tragen dieselbe.
   `apps/kompass/next.config.ts` reicht sie zur Bauzeit weiter, `/api/health`
-  und der Fuß der Schiene zeigen sie. Nirgends ein zweites Mal hinschreiben —
+  und das Nutzermenü („Version 0.1.1 (46535d6)“) zeigen sie. Nirgends ein zweites Mal hinschreiben —
   `apps/kompass/tests/version.test.ts` wacht darüber.
 - **Kein Hochziehen ohne Eintrag.** `CHANGELOG.md` führt zuerst
   „Unveröffentlicht"; beim Release wird daraus die Nummer. Der Eintrag ist für
@@ -77,6 +79,41 @@ Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. J
   `type=semver` ein Registry-Tag; ohne Git-Tag entstehen nur `sha-*` und
   `latest`.
 - **Der Push löst ein Mensch aus**, nach `pnpm verify`.
+
+### Ablauf einer Fassung
+
+1. **Je Fassung ein Branch von `main`**, benannt nach der Nummer, die er
+   ausliefert: `dev-0.1.1` für Fehlerbehebungen, `dev-0.2.0` für ein neues
+   Modul. Jeder Push darauf baut, prüft und lädt `:dev-x.y.z` samt `sha-*` hoch
+   (`ci.yml`, `branches: [main, 'dev-*']`) — dieses Bild läuft auf der
+   Testinstanz. Der erste Commit setzt die Nummer in allen `package.json` auf
+   die **Vorabnummer** `x.y.z-dev`: So zeigt die Testinstanz „Version
+   0.1.1-dev (…)“ und nicht die alte Fassung.
+2. **Ein Commit je Aufgabe**, der CHANGELOG-Eintrag unter „Unveröffentlicht“
+   im selben Commit. Ein Fehler in einem eigenen, noch nicht gepushten Commit
+   wird per `git commit --fixup` und `git rebase --autosquash` eingefaltet,
+   nicht als eigener Commit angehängt. Gepushte Commits bleiben, wie sie sind.
+3. **Abnahme auf der Testinstanz**, gegen eine frische Kopie der Produktion.
+   Eine Testinstanz läuft nur vorwärts: Ihr Schema ist so neu wie die jüngste
+   Fassung, die je auf ihr lief. Vor dem Wechsel auf eine ältere Fassung
+   werden ihre Daten deshalb neu aus der Produktion gezogen.
+4. **Release**: im letzten Commit des Branches `-dev` von der Nummer streichen
+   (alle `package.json`) und „Unveröffentlicht“ zur Nummer mit Datum machen. Nach lokalem
+   `pnpm verify` und grünem Job `test` des Branch-Laufs lokal nach `main`
+   squashen (`git merge --squash dev-x.y.z`), `vX.Y.Z` auf den Sammelcommit
+   setzen, `main` und den Tag einzeln pushen — nie `git push --tags`, lokale
+   Tags bleiben lokal. Auf den Job `image` des Branches wird nicht gewartet:
+   Der Tag-Lauf wiederholt den Image-Ring und lädt `x.y.z` und `latest` nur bei
+   Grün hoch. Ein roter Tag-Lauf veröffentlicht nichts; der Tag wird dann
+   gelöscht und nach dem Fix neu gesetzt.
+5. **Aufräumen**: Branch lokal und auf GitHub löschen, die Registry-Tags
+   `dev-x.y.z` und die zugehörigen `sha-*` entfernen. `x.y.z` und `latest`
+   bleiben.
+6. **Laufen zwei Branches parallel** (etwa ein `dev-0.1.2` während `dev-0.2.0`),
+   wird nach jedem Release der andere auf das neue `main` rebased.
+7. **Dependabot** stellt seine Pull Requests gegen `main`. Sie werden nicht dort
+   gemergt, sondern in den laufenden Branch übernommen und dann geschlossen —
+   so läuft jede Aktualisierung vor dem Release über die Testinstanz.
 
 ## Quellen
 

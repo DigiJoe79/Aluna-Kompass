@@ -10,14 +10,16 @@ import { initials } from '@/lib/utils';
 export interface UserMenuProps {
   user: { name: string; roleNames: string[] };
   build: string;
+  /** Die Fassung aus der Wurzel-`package.json` (`appVersion`). */
+  version: string;
 }
 
 /**
- * Sitzt rechts in der Kopfleiste und klappt nach unten. Die Build-Zeile steht
- * als letzte, nicht klickbare Zeile hier, weil der Sidebar-Fuß, der sie trug,
- * entfallen ist.
+ * Sitzt rechts in der Kopfleiste und klappt nach unten. Fassung und Build
+ * stehen als letzte, nicht klickbare Zeile hier („Version 0.1.1 (46535d6)“),
+ * weil der Sidebar-Fuß, der sie trug, entfallen ist.
  */
-export function UserMenu({ user, build }: UserMenuProps) {
+export function UserMenu({ user, build, version }: UserMenuProps) {
   const t = useTranslations('shell.userMenu');
   const shell = useTranslations('shell');
   const [scheme, setScheme] = usePreference('colorScheme');
@@ -50,7 +52,7 @@ export function UserMenu({ user, build }: UserMenuProps) {
           <DropdownMenuItem nativeButton render={<button type="submit" className="w-full text-left" />}>{t('logout')}</DropdownMenuItem>
         </form>
         <DropdownMenuSeparator />
-        <p className="px-2 py-1.5 text-[10px] text-muted-ink">{shell('build', { id: build })}</p>
+        <p className="px-2 py-1.5 text-[10px] text-muted-ink">{shell('version', { version, build })}</p>
       </DropdownMenuContent>
     </DropdownMenu>
   );

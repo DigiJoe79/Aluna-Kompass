@@ -22,7 +22,7 @@ import {
 } from '@kompass/core';
 import { z } from 'zod';
 import { documentTypeFor } from './catalog';
-import { documentCounters, documentFolders, documentLinks, documentRelations, documents, type DocumentLinkRow, type DocumentNoteRow, type DocumentRow } from './schema';
+import { documentCounters, documentFolders, documentFormerNumbers, documentLinks, documentRelations, documents, type DocumentLinkRow, type DocumentNoteRow, type DocumentRow } from './schema';
 import { checksumOf, readDocumentFile, removeDocumentFile } from './storage';
 import { removeDocumentText } from './index-store';
 import { fulltextCondition, fulltextHits, type TextHit } from './search';
@@ -38,6 +38,8 @@ export type DocumentRecord = Omit<DocumentRow, 'inputSnapshot'> & {
   relations: DocumentRelationView[];
   notes: DocumentNoteRow[];
   followUps: FollowUpRecord[];
+  /** Nummern vor einem Umklassifizieren, die älteste zuerst (Spec 2026-09-19). */
+  formerNumbers: string[];
   /**
    * Ob die Datei noch zur Prüfsumme passt. Nur `getDocumentRecord` füllt das —
    * eine Liste kann es nicht, ohne jede Datei zu lesen; dort steht `undefined`.
@@ -53,6 +55,13 @@ export function toRecord(deps: Deps, row: DocumentRow, dbOrTx: DbOrTx = deps.db)
     links,
     relations: relationsFor(dbOrTx, row.id),
     notes: notesFor(dbOrTx, row.id),
+    formerNumbers: dbOrTx
+      .select({ number: documentFormerNumbers.number })
+      .from(documentFormerNumbers)
+      .where(eq(documentFormerNumbers.documentId, row.id))
+      .orderBy(asc(documentFormerNumbers.replacedAt), sql`rowid`)
+      .all()
+      .map((r) => r.number),
     // Direkt gelesen, ohne Rechteprüfung: Die Akte liest ihre eigenen
     // Anhängsel — wer das Dokument sehen darf, sieht seine Wiedervorlagen.
     followUps: dbOrTx
@@ -171,7 +180,10 @@ export async function listDocuments(
   if (q.text) {
     const inFulltext = fulltextCondition(q.text);
     fulltextTooShort = inFulltext === null;
-    const byText = or(like(documents.subject, `%${q.text}%`), like(documents.number, `%${q.text}%`));
+    // Auch frühere Nummern: Wer eine Nummer vor dem Umklassifizieren notiert
+    // hat, soll trotzdem beim Dokument landen (Spec 2026-09-19).
+    const byFormerNumber = sql`${documents.id} IN (SELECT document_id FROM document_former_numbers WHERE number LIKE ${`%${q.text}%`})`;
+    const byText = or(like(documents.subject, `%${q.text}%`), like(documents.number, `%${q.text}%`), byFormerNumber);
     // Der Volltext erweitert die Treffermenge, nicht die Reihenfolge
     // (Entscheidung 31): Die Liste bleibt chronologisch, `total`, `limit` und
     // `offset` bleiben, wie sie waren.
@@ -571,6 +583,7 @@ export async function deleteDocument(
     });
 
     tx.delete(documentLinks).where(eq(documentLinks.documentId, doc.id)).run();
+    tx.delete(documentFormerNumbers).where(eq(documentFormerNumbers.documentId, doc.id)).run();
     tx.delete(documents).where(eq(documents.id, doc.id)).run();
   });
 

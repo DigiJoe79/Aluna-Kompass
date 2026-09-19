@@ -14,6 +14,19 @@ Suchindex steht —, die **Live-Webseite** aus Prod. Aus der
 Entwicklungsumgebung wird nicht publiziert. Darunter der letzte Publish mit
 Datum und Ergebnis.
 
+## Sperrwörter
+
+Die Karte „Sperrwörter“ auf dieser Seite hält die Begriffe, die nie auf der
+Webseite erscheinen dürfen — etwa einen alten Vereinsnamen oder einen
+Platzhalter aus der Einrichtung. Ein Begriff je Zeile, 2 bis 80 Zeichen,
+höchstens 50. Groß- und Kleinschreibung zählt nicht, und Leerzeichen,
+Bindestrich und Unterstrich gelten als gleich: „alter-name“ trifft auch
+„Alter Name“. Leere Zeilen und doppelte Einträge fallen beim Speichern weg.
+
+Pflegen darf die Liste, wer publizieren darf (`site.publish`); jede Änderung
+steht im Änderungsprotokoll. Über MCP gehen dasselbe `site_blocked_terms_get`
+und `site_blocked_terms_set`.
+
 ## Prüfen
 
 „Prüfen“ geht über alle Inhalte, ändert nichts und meldet drei Dinge:

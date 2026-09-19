@@ -72,7 +72,8 @@ export function DmsWorkspace({
   const [dragging, setDragging] = useState(false);
   const [, startMove] = useTransition();
   const [over, setOver] = useState<string | null>(null);
-  const [files, setFiles] = useState(0);
+  /** Wie viele Dateien in der Hand liegen — `null`, wenn der Browser es nicht verrät. */
+  const [files, setFiles] = useState<number | null>(null);
   const [ready, setReady] = useState(false);
   const depth = useRef(0);
   const drops = useRef(0);
@@ -118,7 +119,9 @@ export function DmsWorkspace({
       // Überfahren von Kindelementen paarweise durcheinander, und ein einfaches
       // Flag lässt das Overlay flackern.
       depth.current += 1;
-      setFiles(e.dataTransfer?.items.length ?? 1);
+      // Safari verrät beim Ziehen nur, dass Dateien kommen, nicht wie viele:
+      // `items` ist leer, erst `drop` bringt sie. Eine 0 heisst also „unbekannt“.
+      setFiles(e.dataTransfer?.items.length || null);
       setDragging(true);
     };
     const onLeave = (e: DragEvent) => {

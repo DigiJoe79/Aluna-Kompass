@@ -14,6 +14,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ActionForm } from '@/components/forms/action-form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { idleState } from '@/lib/actions';
 import { setAnimalPublishedAction, saveAnimalAction } from './actions';
@@ -57,8 +58,10 @@ export function AnimalForm({ animal, locales }: { animal: AnimalRecord | null; l
       <FormErrorSummary errors={errors} />
       <Tabs defaultValue="profile" className="overflow-hidden rounded-lg border border-line bg-surface">
         <TabsList className="border-b border-line bg-surface px-6"><TabsTrigger value="profile" className="gap-2">{t('tabs.profile')}{broken.has('profile') ? <TabInvalidDot label={tCommon('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="texts" className="gap-2">{t('tabs.texts')}{broken.has('texts') ? <TabInvalidDot label={tCommon('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="photos" disabled={!animal}>{t('tabs.photos')}</TabsTrigger><TabsTrigger value="story" disabled={!animal}>{t('tabs.story')}</TabsTrigger></TabsList>
-        <form action={action}>
+        <ActionForm action={action} state={state}>
           {animal ? <input type="hidden" name="id" value={animal.id} /> : null}
+          {/* Ladestand: Hat inzwischen jemand anderes gespeichert, weist der Dienst ab (Backlog 20). */}
+          {animal ? <input type="hidden" name="expectedVersion" value={animal.updatedAt} /> : null}
           <TabsContent keepMounted value="profile" className="grid gap-4 p-6 md:grid-cols-2">
             <FormField id="slug" label={c('slug')} hint={c('slugHint')} error={errors.slug} required><Input id="slug" name="slug" defaultValue={animal?.slug ?? ''} required pattern="[a-z0-9][a-z0-9-]{0,80}" className="font-mono" /></FormField>
             <FormField id="name" label={t('name')} error={errors.name} required><Input id="name" name="name" defaultValue={animal?.name ?? ''} required /></FormField>
@@ -77,7 +80,7 @@ export function AnimalForm({ animal, locales }: { animal: AnimalRecord | null; l
             <LocalizedField name="traits__text" label={t('traits')} hint={t('traitsHint')} value={Object.fromEntries(locales.map((l) => [l, ((animal?.traits as Record<string, string[]> | undefined)?.[l] ?? []).join(', ')]))} locales={locales} />
           </TabsContent>
           <FormActionBar back={{ href: '/animals', label: tCommon('backToList') }} />
-        </form>
+        </ActionForm>
         <TabsContent value="photos" className="p-6">{animal ? <PhotosEditor animalId={animal.id} initial={animal.photos} /> : null}</TabsContent>
         <TabsContent value="story" className="p-6">{animal ? <StoryForm animal={animal} locales={locales} /> : null}</TabsContent>
       </Tabs>

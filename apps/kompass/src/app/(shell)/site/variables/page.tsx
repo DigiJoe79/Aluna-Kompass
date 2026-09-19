@@ -1,5 +1,5 @@
 import { requirePermission } from '@kompass/core';
-import { activeTemplate, listReferenceOptions, readValues } from '@kompass/module-site';
+import { activeTemplate, listReferenceOptions, readValues, valuesVersion } from '@kompass/module-site';
 import { getTranslations } from 'next-intl/server';
 import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
@@ -20,7 +20,7 @@ export default async function SiteVariablesPage() {
     <>
       <PageHeader title={t('title')} />
       {template && Object.keys(template.schema.variables).length > 0 ? (
-        <VariablesForm schema={template.schema.variables} value={readValues(deps)} locales={deps.locales()} options={options?.ok ? options.value : {}} />
+        <VariablesForm schema={template.schema.variables} value={readValues(deps)} version={valuesVersion(deps)} locales={deps.locales()} options={options?.ok ? options.value : {}} />
       ) : (
         <EmptyState title={t('title')} text={tpl('neverRead')} />
       )}

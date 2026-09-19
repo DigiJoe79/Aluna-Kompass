@@ -10,6 +10,7 @@ export * from './resync/apply';
 export * from './service';
 export { templateNeedsReview } from './review';
 export * from './values';
+export * from './blocked-terms';
 export * from './entries';
 export * from './references';
 export * from './reference-fields';

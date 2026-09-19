@@ -41,6 +41,26 @@ Dokument später auf seinen Ordner oder öffnen es und setzen den Ordner in der
 Detailansicht. Ein Dokument im Eingang ist bereits abgelegt und nummeriert —
 es ist nur noch nicht einsortiert.
 
+## Angaben nachträglich ändern
+
+Art, Betreff oder Datum eines abgelegten Eingangs lassen sich auf der
+Detailseite unter **„Angaben ändern“** berichtigen — etwa wenn Sie eine neue
+Dokumentart angelegt haben, zu der ein schon abgelegtes Schreiben besser passt.
+Die Datei bleibt dabei, wie sie ist.
+
+- **Eine andere Art bringt eine neue Nummer** aus deren Präfix, im Jahr der
+  Ablage: Aus `VER-2026-004` wird zum Beispiel `BEH-2026-011`. Die bisherige
+  Nummer bleibt am Dokument als „Früher: VER-2026-004“ stehen, und die Suche
+  findet das Dokument auch unter ihr.
+- **Die Aufbewahrung folgt der neuen Art und dem neuen Datum.** Der Dialog
+  zeigt vor dem Speichern, wie sich Nummer und Frist ändern.
+- Jede Änderung steht im Änderungsprotokoll, mit Art, Nummer, Betreff und
+  Datum davor und danach.
+
+Das gilt nur für eingehende Post. Die Nummer eines ausgehenden Dokuments steht
+in dem PDF, das verschickt wurde; dort bleibt der Weg Storno mit Ersatz. Ein
+storniertes Dokument lässt sich nicht mehr ändern.
+
 ## Danach
 
 Kompass liest den Text jedes PDFs im Hintergrund; hat eine Seite keinen Text,

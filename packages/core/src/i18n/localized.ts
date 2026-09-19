@@ -13,7 +13,10 @@ export function localizedText(opts: { required?: boolean; max?: number } = {}): 
   const max = opts.max ?? 20_000;
   return z
     .record(z.string().regex(/^[a-z]{2}(-[a-z]{2})?$/), z.string().trim().max(max))
-    .meta({ localized: true, required: opts.required ?? false, max }) as unknown as z.ZodType<LocalizedText>;
+    // `leadingRequired`, nicht `required`: Zod schreibt `.meta()` ungefiltert ins
+    // JSON-Schema, und dort ist `required` eine Liste von Feldnamen. Ein Boolean
+    // machte jedes Werkzeug mit diesem Feld ungültig (tests/mcp-schemas.test.ts).
+    .meta({ localized: true, leadingRequired: opts.required ?? false, max }) as unknown as z.ZodType<LocalizedText>;
 }
 
 /** Wie `localizedText`, nur trägt jede Sprache eine Liste kurzer Begriffe. */
@@ -21,7 +24,7 @@ export function localizedList(opts: { max?: number; itemMax?: number } = {}): z.
   const item = z.string().trim().min(1).max(opts.itemMax ?? 40);
   return z
     .record(z.string().regex(/^[a-z]{2}(-[a-z]{2})?$/), z.array(item).max(opts.max ?? 12))
-    .meta({ localized: true, required: false, list: true }) as unknown as z.ZodType<Record<string, string[]>>;
+    .meta({ localized: true, leadingRequired: false, list: true }) as unknown as z.ZodType<Record<string, string[]>>;
 }
 
 export const emptyLocalized = (locales: readonly string[]): LocalizedText =>

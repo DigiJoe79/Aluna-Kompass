@@ -41,7 +41,7 @@ export default async function EntryPage(props: { params: Promise<{ collection: s
         collection={collection}
         fields={col.fields}
         hasSlug={col.slug}
-        entry={{ id: result.value.id, slug: result.value.slug, data: result.value.data as Record<string, unknown> }}
+        entry={{ id: result.value.id, slug: result.value.slug, data: result.value.data as Record<string, unknown>, updatedAt: result.value.updatedAt }}
         locales={locales}
       />
     </>

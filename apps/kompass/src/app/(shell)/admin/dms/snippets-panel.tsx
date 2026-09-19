@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { idleState, type ActionState } from '@/lib/actions';
 import { createSnippetAction, deleteSnippetAction, updateSnippetAction } from './actions';
+import { ActionForm } from '@/components/forms/action-form';
 
 export interface SnippetRow {
   id: string;
@@ -105,7 +106,7 @@ export function SnippetsPanel({ snippets }: { snippets: SnippetRow[] }) {
         }}
       >
         <DialogContent className="w-full sm:max-w-[640px] bg-surface p-6 shadow-md">
-          <form action={action}>
+          <ActionForm action={action} state={state}>
             <DialogTitle className="font-heading text-[19px]">
               {editing ? t('editSnippetTitle') : t('createSnippetTitle')}
             </DialogTitle>
@@ -167,7 +168,7 @@ export function SnippetsPanel({ snippets }: { snippets: SnippetRow[] }) {
               </Button>
               <SubmitButton>{tCommon('save')}</SubmitButton>
             </DialogFooter>
-          </form>
+          </ActionForm>
         </DialogContent>
       </Dialog>
 

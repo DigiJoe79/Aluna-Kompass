@@ -1,4 +1,4 @@
-import { listMediaAssets, listMediaFolders, mediaListFilterSchema, requirePermission, schema, unwrap } from '@kompass/core';
+import { listMediaAssets, listMediaFolders, mediaListFilterSchema, requirePermission, unwrap, userNamesFor } from '@kompass/core';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
@@ -22,16 +22,17 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
   const t = await getTranslations('media');
   const query = readQuery(await searchParams);
 
-  const names = new Map(deps.db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).all().map((u) => [u.id, u.name]));
   const folders = unwrap(await listMediaFolders(deps, ctx));
-  const items = unwrap(
+  const listed = unwrap(
     await listMediaAssets(deps, ctx, {
       ...(query.folder !== null ? { folder: query.folder } : {}),
       ...(query.q ? { query: query.q } : {}),
       ...(query.kind !== 'all' ? { kind: query.kind } : {}),
       sort: query.sort,
     }),
-  ).map((it) => ({
+  );
+  const names = userNamesFor(deps, listed.map((it) => it.record.uploadedByUserId));
+  const items = listed.map((it) => ({
     id: it.record.id,
     filename: it.record.filename,
     mimeType: it.record.mimeType,

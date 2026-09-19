@@ -76,7 +76,7 @@ export async function saveVariablesAction(_prev: ActionState, formData: FormData
   const t = await getTranslations();
   const { deps, ctx } = await requireSession();
   const values = JSON.parse(String(formData.get('payload') ?? '{}')) as Record<string, unknown>;
-  const result = await setValues(deps, ctx, { values });
+  const result = await setValues(deps, ctx, { values, expectedVersion: String(formData.get('expectedVersion') ?? '') || undefined });
   revalidatePath('/site/variables');
   return toActionState(result, t, t('site.variables.saved'));
 }
@@ -88,7 +88,7 @@ export async function saveEntryAction(_prev: ActionState, formData: FormData): P
   const id = String(formData.get('id') ?? '');
   const payload = JSON.parse(String(formData.get('payload') ?? '{}')) as { slug?: string; data: Record<string, unknown> };
   const result = id
-    ? await updateEntry(deps, ctx, { id, slug: payload.slug, data: payload.data })
+    ? await updateEntry(deps, ctx, { id, slug: payload.slug, data: payload.data, expectedVersion: String(formData.get('expectedVersion') ?? '') || undefined })
     : await createEntry(deps, ctx, { collection, slug: payload.slug, data: payload.data });
   revalidatePath(`/site/c/${collection}`);
   if (!result.ok) return toActionState(result, t);

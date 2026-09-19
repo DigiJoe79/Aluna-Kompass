@@ -69,6 +69,32 @@ describe('media_upload', () => {
   });
 });
 
+/**
+ * Das Gegenstück zu `media_upload` (Backlog 27): Beim Übertrag von Test nach
+ * Prod am 18.09. mussten acht Bilder über eine Browsersitzung geholt werden,
+ * weil `/media/<id>` nur das Sitzungs-Cookie nimmt und MCP nur hochladen konnte.
+ */
+describe('media_get', () => {
+  it('is registered and names its service', () => {
+    expect(tool('media_get').service).toBe(getMediaAsset);
+  });
+
+  it('returns the record and the content as base64, byte for byte', async () => {
+    const deps = setup();
+    const ctx = ctxWith(['media.upload']);
+    const stored = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'punkt.png', bytes: new Uint8Array(Buffer.from(PNG_BASE64, 'base64')) }));
+    const got = unwrap(await tool('media_get').handler(deps, ctxWith([]), { id: stored.id })) as { record: { id: string; mimeType: string }; contentBase64: string };
+    expect(got.record).toMatchObject({ id: stored.id, mimeType: 'image/png' });
+    expect(got.contentBase64).toBe(PNG_BASE64);
+    expect(got).not.toHaveProperty('bytes');
+  });
+
+  it('reports an unknown id as notFound', async () => {
+    const result = await tool('media_get').handler(setup(), ctxWith([]), { id: '01J00000000000000000000000' });
+    expect(result.ok === false && result.error.type).toBe('notFound');
+  });
+});
+
 describe('media_list', () => {
   it('shows the four filter fields and passes them to the service', async () => {
     const deps = setup();

@@ -1,4 +1,4 @@
-import { inArray } from 'drizzle-orm';
+import { asc, eq, inArray } from 'drizzle-orm';
 import { users } from '../db/schema';
 import type { Deps } from '../deps';
 
@@ -11,4 +11,13 @@ export function userNamesFor(deps: Deps, ids: readonly (string | null | undefine
   const unique = [...new Set(ids.filter((id): id is string => typeof id === 'string' && id.length > 0))];
   if (unique.length === 0) return new Map();
   return new Map(deps.db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, unique)).all().map((u) => [u.id, u.name]));
+}
+
+/**
+ * Wen man zuständig machen kann: die aktiven Nutzer, nach Namen. Ohne
+ * Rechteprüfung aus demselben Grund wie oben — ohne die Namen der Kolleginnen
+ * ließe sich keine Zuständigkeit setzen.
+ */
+export function activeUserChoices(deps: Deps): { id: string; name: string }[] {
+  return deps.db.select({ id: users.id, name: users.name }).from(users).where(eq(users.isActive, true)).orderBy(asc(users.name)).all();
 }

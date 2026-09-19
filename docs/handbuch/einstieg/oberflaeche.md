@@ -33,7 +33,9 @@ Die Brotkrume nennt Bereich und Seite, auf der Sie stehen. Das Suchfeld
 den Namen einer Seite, einer Einstellung oder einer Handbuchseite, und Enter
 bringt Sie hin. Das **?** öffnet die Hilfe zur aktuellen Seite; die Taste `?`
 tut dasselbe. Rechts das Nutzermenü: Profil, dunkles Design, Zeilendichte,
-Abmelden.
+Abmelden. Ganz unten steht, welche Fassung läuft, etwa „Version 0.1.1
+(46535d6)“ — die Zahl in Klammern ist der Build. Beides hilft, wenn Sie einen
+Fehler melden.
 
 ## Auf dem Tablet
 

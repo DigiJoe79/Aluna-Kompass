@@ -56,11 +56,23 @@ describe('the product version', () => {
    * Eine Fassung ohne Eintrag ist fuer den Betreiber eine Fassung ohne Grund:
    * Er soll vor einem Update lesen koennen, was sich aendert. Der Eintrag
    * entsteht deshalb mit der Nummer, nicht danach.
+   *
+   * Waehrend eines Zyklus traegt der Branch eine Vorabnummer (`0.1.1-dev`),
+   * damit die Testinstanz nicht die alte Fassung zu sein scheint (gefunden bei
+   * der Abnahme von 0.1.1). Ihr Eintrag steht unter „Unveröffentlicht“; eine
+   * Abschnittsnummer bekommt erst die ausgelieferte Fassung.
    */
   it('has a changelog entry under its own number', () => {
     const changelog = readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8');
-    expect(changelog).toContain(`## [${paket('.').version}]`);
+    const version = paket('.').version!;
+    if (version.includes('-')) {
+      expect(changelog).toContain('## [Unveröffentlicht]');
+      expect(changelog, 'eine Vorabnummer ist nie ausgeliefert').not.toContain(`## [${version}]`);
+    } else {
+      expect(changelog).toContain(`## [${version}]`);
+    }
   });
+
 
   /**
    * Der Health-Endpunkt trug die Nummer als Zeichenkette im Code. Beides war

@@ -1,6 +1,7 @@
 export const CORE_VERSION = '0.1.0';
 
 export * from './result';
+export * from './concurrency';
 export * from './clock';
 export { newId, ID_PATTERN } from './ids';
 export * from './context';
