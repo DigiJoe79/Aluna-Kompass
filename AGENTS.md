@@ -107,14 +107,27 @@ Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. J
    Der Tag-Lauf wiederholt den Image-Ring und lädt `x.y.z` und `latest` nur bei
    Grün hoch. Ein roter Tag-Lauf veröffentlicht nichts; der Tag wird dann
    gelöscht und nach dem Fix neu gesetzt.
-5. **Aufräumen**: Branch lokal und auf GitHub löschen, die Registry-Tags
-   `dev-x.y.z` und die zugehörigen `sha-*` entfernen. `x.y.z` und `latest`
-   bleiben.
+5. **Aufräumen**: `scripts/zyklus-aufraeumen.sh x.y.z` (erst mit `-n`). Es
+   setzt das lokale Archiv-Tag `archiv/x.y.z`, löscht die Registry-Tags
+   `dev-x.y.z` und die `sha-*` der Branch-Commits, die Actions-Caches von
+   Branch und Tag, die Läufe des Branches und den Branch selbst. `x.y.z`,
+   `latest` und der Tag-Lauf bleiben. Danach die Testinstanz auf `latest`.
 6. **Laufen zwei Branches parallel** (etwa ein `dev-0.1.2` während `dev-0.2.0`),
    wird nach jedem Release der andere auf das neue `main` rebased.
-7. **Dependabot** stellt seine Pull Requests gegen `main`. Sie werden nicht dort
-   gemergt, sondern in den laufenden Branch übernommen und dann geschlossen —
-   so läuft jede Aktualisierung vor dem Release über die Testinstanz.
+7. **Dependabot** stellt seine Pull Requests gegen `main`; sein CI-Lauf prüft
+   sie samt Image-Ring. Was damit geschieht, hängt davon ab, ob ein Zyklus
+   offen ist:
+   - **Ein `dev-x.y.z` läuft:** Der PR wird in den Branch übernommen
+     (`git merge --squash`) und dann geschlossen — die Aktualisierung kommt
+     mit der nächsten Fassung und läuft vorher über die Testinstanz.
+   - **Kein Zyklus offen** (Pause): Der PR wird zur **Wartungsfassung**.
+     Nach grünem PR-Lauf squashen nach `main`, im selben Zug Patchnummer hoch
+     und ein CHANGELOG-Abschnitt „Abhängigkeiten aktualisiert“, Tag `vx.y.z+1`.
+     Eine Abnahme auf der Testinstanz nur, wenn Sichtbares betroffen ist
+     (React, Next, UI-Bibliotheken) — dann den PR stattdessen in einen kurzen
+     `dev-x.y.z+1` übernehmen, der das Test-Image baut.
+   Sicherheitsupdates kommen außerhalb des Monatsplans und werden genauso,
+   aber ohne Aufschub behandelt.
 
 ## Quellen
 
