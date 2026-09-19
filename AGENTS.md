@@ -85,7 +85,7 @@ Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. J
 1. **Je Fassung ein Branch von `main`**, benannt nach der Nummer, die er
    ausliefert: `dev-0.1.1` für Fehlerbehebungen, `dev-0.2.0` für ein neues
    Modul. Jeder Push darauf baut, prüft und lädt `:dev-x.y.z` samt `sha-*` hoch
-   (`ci.yml`, `branches: [main, 'dev-*']`) — dieses Bild läuft auf der
+   (`ci.yml`, `branches: ['dev-*']`; ein Push auf `main` startet keinen Lauf, das tut erst der Release-Tag) — dieses Bild läuft auf der
    Testinstanz. Der erste Commit setzt die Nummer in allen `package.json` auf
    die **Vorabnummer** `x.y.z-dev`: So zeigt die Testinstanz „Version
    0.1.1-dev (…)“ und nicht die alte Fassung.

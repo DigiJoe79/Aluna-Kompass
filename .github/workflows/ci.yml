@@ -3,7 +3,13 @@ on:
   push:
     # Je Fassung ein Arbeitsbranch `dev-x.y.z`; aus jedem Push entsteht das
     # Image `:dev-x.y.z` fuer die Testinstanz (AGENTS.md, Abschnitt Release).
-    branches: [main, 'dev-*']
+    #
+    # `main` steht bewusst nicht hier: Dort landet nur der Squash eines Branches,
+    # dessen Inhalt schon getestet ist, und direkt danach kommt der Release-Tag,
+    # der alles noch einmal prueft, bevor ein Image entsteht. Mit `main` lief
+    # bei 0.1.1 der test-Job zweimal auf demselben Commit. Beitraege von aussen
+    # und Dependabot laufen ueber `pull_request`.
+    branches: ['dev-*']
     tags: ['v*']
     # Greift nur, wenn *alle* geaenderten Dateien passen; ein gemischter
     # Commit baut weiterhin.
@@ -90,12 +96,7 @@ jobs:
     # aussen waere sonst gruen, ohne dass je ein Image gebaut wurde. Der
     # Push-Schritt am Ende bleibt auf `push` beschraenkt.
     #
-    # Nicht bei einem Push auf `main`: main bekommt Commits nur per
-    # Squash-Merge aus einem PR, der diesen Ring schon durchlaufen hat —
-    # ein zweiter, identischer Bau direkt danach prüft nichts Neues. Der
-    # Ring läuft für main-Änderungen stattdessen am Release-Tag, der
-    # tatsächlich ein Image ausliefert (`latest` unten).
-    if: ${{ !cancelled() && !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     permissions: { contents: read, packages: write }
     steps:
@@ -114,9 +115,9 @@ jobs:
             type=sha
             type=ref,event=branch
             type=semver,pattern={{version}}
-            # `latest` entsteht am Release-Tag, nicht am main-Push: Dieser Job
-            # läuft für main-Änderungen nur noch dort (siehe `if` oben), und
-            # der Tag sitzt immer auf demselben Commit wie main's Stand.
+            # `latest` entsteht am Release-Tag: Ein Push auf `main` loest die
+            # CI nicht aus (siehe `on` oben), und der Tag sitzt immer auf dem
+            # Commit, der main's Stand ist.
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
       # Erst in den lokalen Daemon laden, nicht sofort pushen: Der Ring gegen
       # den Container ist die einzige Stelle, an der die amd64-Fassung je
