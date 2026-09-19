@@ -117,13 +117,11 @@ Datenschutzerklärung) entstehen im Template aus den Vereinsdaten in Kompass.
 Der Grundsatz „eine Quelle" reicht damit bis in die Pflichtangaben: Anschrift,
 Vorstand und Registereintrag stehen nirgends ein zweites Mal.
 
-**Stand: steht, Prod offen.** Test läuft mit Alunas Template und echten
-Inhalten; Publish aus Test ist seit dem 2026-09-13 der Arbeitsweg der
-Inhaltspflege (Template per Sync-Skript aus dem Vereinsrepo, Stammdaten,
-Hunde und Projekte über MCP eingetragen). Offen: der erste Publish aus Prod,
-und die Dummy-Register- und Bankdaten auf Test, die vorher durch echte
-ersetzt werden. Projekte sind seit dem 2026-09-12 ein eigenes Modul; der Kern
-kennt keine Spendenplattform mehr.
+**Stand: steht.** Alunas Seite wird seit dem 2026-09-19 aus Prod publiziert
+und steht unter der eigenen Domain; das frühere CMS ist abgeschaltet. Test
+bleibt der Weg, auf dem Inhalte und Template vorher abgenommen werden.
+Projekte sind seit dem 2026-09-12 ein eigenes Modul; der Kern kennt keine
+Spendenplattform.
 
 ### Korrespondenz und Akte
 
@@ -148,7 +146,7 @@ Mittelverwendungsrechnung, Kassenprüfungsunterlagen.
 
 Spec: noch keine.
 
-**Stand: offen.** Schritt 3 der Roadmap.
+**Stand: in Arbeit.** Schritt 3 der Roadmap, Fassung 0.2.0.
 
 ### Mitglieder und Gremien
 
@@ -271,14 +269,23 @@ Akte läuft weiter, gehört aber nicht mehr zu diesem Schritt.
   Projekte erweitert.
 - Erledigt am 2026-09-13: Referenzfelder in der Deklaration; Startseitenplätze
   sind Template-Variablen mit Auswahl, nicht Kennzeichen am Tier.
-- Browsertest bei Handybreite (Backlog 3).
+- Browsertest bei Handybreite (Backlog 3): für Alunas Seite im Vereinsrepo
+  (`mobile.e2e.ts`, 390 px); für das mitgelieferte Basis-Template offen.
 
 **Fertig, wenn:** Alunas Seite aus Prod publiziert wird, WordPress abgeschaltet
 ist und im Kern kein Feld mehr steht, bei dem ein anderer Verein stutzt.
 
+**Abgeschlossen am 2026-09-19** mit Fassung 0.1.1. Woran erkannt: Alunas
+Seite wird aus Prod publiziert und steht unter der eigenen Domain, das frühere
+CMS ist abgeschaltet, und der Kern kennt weder Spendenplattform noch
+Vereinsnamen (`no-association-content.test.ts`). Der Handybreite-Test des
+Basis-Templates bleibt als Backlog-Punkt, nicht als Bedingung.
+
 ### Schritt 3: Finanzen
 
-Eigene Spec, eigenes Brainstorming. Was heute schon feststeht:
+**Fassung 0.2.0, vollständig** — nicht auf Teilfassungen verteilt; was
+dazwischen kommt, wird als 0.1.x eingeschoben. Eigene Spec, eigenes
+Brainstorming. Was heute schon feststeht:
 
 - Konten, Buchungen nach Sphären, Belege als Bezug in die Akte, Storno statt
   Löschen. Projekte bekommen ihre Finanzfelder. Finanzen meldet sich als
