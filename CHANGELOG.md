@@ -16,6 +16,13 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 - **Bibliotheken aktualisiert**, darunter React 19.3 und Next.js 16.3.5. Für
   den Betrieb ändert sich nichts.
 
+### Behoben
+
+- **Die Vorschau der Webseite öffnet in einem eigenen Tab.** Bisher öffnete
+  „Vorschau öffnen“ unter Webseite → Publizieren im selben Tab, und wer
+  zurückging, fand Prüfergebnis und gebaute Vorschau leer vor und musste beides
+  neu anstoßen. Die Vorschauseite hat außerdem einen Weg zurück zu Publizieren.
+
 ## [0.1.1] - 2026-09-19
 
 Fehlerbehebungen aus den ersten Tagen im Betrieb, dazu drei kleine Funktionen:

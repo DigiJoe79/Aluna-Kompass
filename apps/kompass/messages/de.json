@@ -1478,6 +1478,7 @@
     "previewFrame": {
       "title": "Webseiten-Vorschau",
       "description": "Vollständige Vorschau der statischen Webseite unter dem aktuellen Kompass-Datenstand.",
+      "back": "Zurück zu Publizieren",
       "frameTitle": "Vorschau",
       "widths": {
         "label": "Breite",
