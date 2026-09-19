@@ -17,18 +17,18 @@
   },
   "dependencies": {
     "@kompass/markdown": "workspace:*",
-    "@node-rs/argon2": "^2.2.0",
+    "@node-rs/argon2": "^2.2.1",
     "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.45.2",
-    "file-type": "^22.0.2",
+    "file-type": "^22.1.0",
     "sharp": "^0.35.4",
     "tar": "^7.5.22",
     "ulid": "^3.0.2",
-    "zod": "^4.5.4"
+    "zod": "^4.6.2"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",
-    "@types/node": "^26.5.0",
+    "@types/node": "^26.5.1",
     "drizzle-kit": "^0.31.10",
     "tsx": "^4.23.13",
     "typescript": "^6.0.3",
