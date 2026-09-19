@@ -15,13 +15,13 @@
     "@kompass/core": "workspace:*",
     "@kompass/module-contacts": "workspace:*",
     "drizzle-orm": "^0.45.2",
-    "file-type": "^22.0.2",
-    "zod": "^4.5.4"
+    "file-type": "^22.1.0",
+    "zod": "^4.6.2"
   },
   "devDependencies": {
     "@kompass/text-extraction": "workspace:*",
     "@types/better-sqlite3": "^9.6.0",
-    "@types/node": "^26.5.0",
+    "@types/node": "^26.5.1",
     "better-sqlite3": "^13.0.3",
     "typescript": "^6.0.3",
     "vitest": "^5.0.0"
