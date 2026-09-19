@@ -21,6 +21,10 @@ test('an API token created in the profile drives the MCP endpoint and is audited
   await client.close();
 
   await page.goto('/admin/audit');
+  // Auf MCP filtern: Nach dem Reset liest der Hintergrunddienst die Seed-PDFs
+  // und protokolliert das, womöglich nach dem Aufruf oben — im Container-Ring
+  // des Tag-Laufs von 0.1.1 stand so „Volltext gelesen“ zuoberst.
+  await page.getByLabel('Kanal').selectOption('mcp');
   const row = page.getByRole('table').getByRole('row').nth(1);
   await expect(row).toContainText('settings.update');
   await expect(row).toContainText('MCP');
