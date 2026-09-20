@@ -51,6 +51,7 @@ export async function prepare(
   deps: Deps,
   ctx: CallContext,
   parsedInput: z.infer<typeof renderSchema>,
+  render?: { number: string; issuedOn?: string },
 ): Promise<Result<{ template: DocumentTemplate; data: unknown; built: DocumentBuildResult; baseId: string; base: { checksum: string }; bodyTypst: string }>> {
   const template = deps.registry.documentTemplates.get(parsedInput.templateKey) as DocumentTemplate | undefined;
   if (!template) return notFound('documentTemplate', parsedInput.templateKey);
@@ -61,7 +62,10 @@ export async function prepare(
   const data = validate(deps, template.schema, parsedInput.input);
   if (!data.ok) return data;
 
-  const built = template.build(data.value, await buildContext(deps, ctx, 'PENDING'));
+  // Ohne `render` ist es die Vorprüfung oder ein Brief: Die Basis zeichnet die
+  // Nummer. Ein Modul, dessen Körper die Nummer druckt, ruft je Anlauf der
+  // Nummernschleife mit der angesehenen Nummer.
+  const built = template.build(data.value, await buildContext(deps, ctx, render?.number ?? 'PENDING', render?.issuedOn));
   const baseId = resolveBaseId(deps, template, built.base);
   const base = deps.documents.base(baseId);
   if (!base) return conflict('documentBaseUnavailable', `Basis-Vorlage „${baseId}“ ist nicht verfügbar`);

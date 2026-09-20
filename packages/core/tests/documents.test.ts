@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { auditLog, mediaFolders } from '../src/db/schema';
-import { buildContext, exportDocument, listDocumentBases } from '../src/documents/service';
+import { buildContext, exportDocument, listDocumentBases, prepare } from '../src/documents/service';
 import type { DocumentTemplate } from '../src/modules/manifest';
 import { unwrap } from '../src/result';
 import { createTestDeps, ctxWith, insertUser } from '../src/testing';
@@ -96,6 +96,15 @@ describe('documents service', () => {
     expect(noExtra.ok === false && noExtra.error.type === 'forbidden').toBe(true);
     const bad = await exportDocument(deps, ctxWith(['documents.export', 'audit.view'], userId), { templateKey: 'test-excerpt', input: { title: '' } });
     expect(bad.ok === false && bad.error.type === 'validation').toBe(true);
+  });
+
+  it('builds the body with the number and date it is given', async () => {
+    const template = { key: 'numbered', type: 'numbered', schema: z.object({}), base: 'a4-plain', filed: false, build: (_d: unknown, c: { number: string; issuedAt: string }) => ({ slots: { kind: 'plain' as const }, body: { typst: `${c.number}|${c.issuedAt.slice(0, 10)}` } }) };
+    const deps = createTestDeps({ coreTemplates: [template] });
+    const pending = unwrap(await prepare(deps, ctxWith([]), { templateKey: 'numbered', input: {} }));
+    const drawn = unwrap(await prepare(deps, ctxWith([]), { templateKey: 'numbered', input: {} }, { number: 'NTZ-2026-001', issuedOn: '2026-03-15' }));
+    expect(pending.bodyTypst.startsWith('PENDING|')).toBe(true);
+    expect(drawn.bodyTypst).toBe('NTZ-2026-001|2026-03-15');
   });
 });
 
