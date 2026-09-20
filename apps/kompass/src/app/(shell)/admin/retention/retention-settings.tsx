@@ -10,20 +10,23 @@ import { ActionForm } from '@/components/forms/action-form';
 
 interface Props {
   statutory10Y: number;
+  statutory8Y: number;
   statutory6Y: number;
   consent: number;
   canManage: boolean;
 }
 
-export function RetentionSettings({ statutory10Y, statutory6Y, consent, canManage }: Props) {
+export function RetentionSettings({ statutory10Y, statutory8Y, statutory6Y, consent, canManage }: Props) {
   const t = useTranslations('retention.settings');
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
     async (_prev, formData) => {
       const v10 = parseInt(String(formData.get('retention.statutory10Y')), 10);
+      const v8 = parseInt(String(formData.get('retention.statutory8Y')), 10);
       const v6 = parseInt(String(formData.get('retention.statutory6Y')), 10);
       const vc = parseInt(String(formData.get('retention.consent')), 10);
       return saveSettingsAction({
         'retention.statutory10Y': isNaN(v10) ? statutory10Y : v10,
+        'retention.statutory8Y': isNaN(v8) ? statutory8Y : v8,
         'retention.statutory6Y': isNaN(v6) ? statutory6Y : v6,
         'retention.consent': isNaN(vc) ? consent : vc,
       });
@@ -35,7 +38,7 @@ export function RetentionSettings({ statutory10Y, statutory6Y, consent, canManag
     <section className="mb-6 rounded-md border border-line bg-surface p-4">
       <h2 className="mb-3 text-[14px] font-semibold text-ink">{t('title')}</h2>
       <ActionForm action={formAction} state={state} className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-4">
           <div>
             <label htmlFor="statutory10Y" className="block text-[13px] font-medium text-ink">
               {t('statutory10Y')}
@@ -56,6 +59,29 @@ export function RetentionSettings({ statutory10Y, statutory6Y, consent, canManag
               </div>
             ) : (
               <p className="font-mono text-[13px] text-ink">{statutory10Y} {t('months')}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="statutory8Y" className="block text-[13px] font-medium text-ink">
+              {t('statutory8Y')}
+            </label>
+            <p className="mb-1.5 text-[11px] text-muted-ink">{t('statutory8YHint')}</p>
+            {canManage ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  id="statutory8Y"
+                  name="retention.statutory8Y"
+                  type="number"
+                  min={0}
+                  defaultValue={statutory8Y}
+                  className="w-24 font-mono"
+                  disabled={isPending}
+                />
+                <span className="text-[13px] text-muted-ink">{t('months')}</span>
+              </div>
+            ) : (
+              <p className="font-mono text-[13px] text-ink">{statutory8Y} {t('months')}</p>
             )}
           </div>
 

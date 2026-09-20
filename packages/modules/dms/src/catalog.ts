@@ -181,7 +181,7 @@ export const documentTypeCreateSchema = z.object({
   label: z.string().trim().min(1).max(120),
   prefix: z.string().trim().regex(/^[A-Z]{3}$/),
   defaultDirection: z.enum(['outgoing', 'incoming']),
-  retentionClass: z.enum(['permanent', 'statutory10Y', 'statutory6Y', 'consent']),
+  retentionClass: z.enum(['permanent', 'statutory10Y', 'statutory8Y', 'statutory6Y', 'consent']),
   defaultFolder: z.string().trim().min(1).nullable().optional(),
   sortOrder: z.number().int().min(0).default(0),
 });
@@ -190,7 +190,7 @@ export const documentTypeUpdateSchema = z.object({
   key: z.string().min(1),
   label: z.string().trim().min(1).max(120).optional(),
   defaultDirection: z.enum(['outgoing', 'incoming']).optional(),
-  retentionClass: z.enum(['permanent', 'statutory10Y', 'statutory6Y', 'consent']).optional(),
+  retentionClass: z.enum(['permanent', 'statutory10Y', 'statutory8Y', 'statutory6Y', 'consent']).optional(),
   defaultFolder: z.string().trim().min(1).nullable().optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().min(0).optional(),

@@ -30,7 +30,11 @@ describe('retentionEnd', () => {
   });
 
   it('names a default length for every class except permanent', () => {
-    expect(RETENTION_DEFAULT_MONTHS).toEqual({ statutory10Y: 120, statutory6Y: 72, consent: 24 });
+    expect(RETENTION_DEFAULT_MONTHS).toEqual({ statutory10Y: 120, statutory8Y: 96, statutory6Y: 72, consent: 24 });
+  });
+
+  it('eight years for vouchers end with the calendar year (BEG IV)', () => {
+    expect(retentionEnd('2026-03-15', RETENTION_DEFAULT_MONTHS.statutory8Y)).toBe('2034-12-31');
   });
 });
 
@@ -43,6 +47,11 @@ describe('retentionMonths', () => {
 
     unwrap(await setSetting(deps, ctxWith(['settings.manage']), { key: 'retention.consent', value: 18 }));
     expect(retentionMonths(deps, 'consent')).toBe(18);
+  });
+
+  it('reads the eight-year class from its setting', async () => {
+    const deps = createTestDeps();
+    expect(retentionMonths(deps, 'statutory8Y')).toBe(96);
   });
 });
 

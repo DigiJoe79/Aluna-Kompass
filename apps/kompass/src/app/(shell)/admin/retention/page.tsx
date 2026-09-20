@@ -22,6 +22,7 @@ export default async function RetentionPage() {
   if (!result.ok) return <ForbiddenCard permission="retention.view" />;
 
   const statutory10Y = readSetting<number>(deps, 'retention.statutory10Y');
+  const statutory8Y = readSetting<number>(deps, 'retention.statutory8Y');
   const statutory6Y = readSetting<number>(deps, 'retention.statutory6Y');
   const consent = readSetting<number>(deps, 'retention.consent');
   const canManageSettings = hasPermission(ctx, 'settings.manage');
@@ -34,6 +35,7 @@ export default async function RetentionPage() {
       <PageHeader title={t('title')} description={t('description')} />
       <RetentionSettings
         statutory10Y={statutory10Y}
+        statutory8Y={statutory8Y}
         statutory6Y={statutory6Y}
         consent={consent}
         canManage={canManageSettings}

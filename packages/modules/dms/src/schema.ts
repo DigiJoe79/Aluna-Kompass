@@ -10,7 +10,7 @@ export const documentTypes = sqliteTable('document_types', {
   label: text('label').notNull(),
   prefix: text('prefix').notNull(), // drei Großbuchstaben
   defaultDirection: text('default_direction', { enum: ['outgoing', 'incoming'] }).notNull(),
-  retentionClass: text('retention_class', { enum: ['permanent', 'statutory10Y', 'statutory6Y', 'consent'] }).notNull(),
+  retentionClass: text('retention_class', { enum: ['permanent', 'statutory10Y', 'statutory8Y', 'statutory6Y', 'consent'] }).notNull(),
   defaultFolder: text('default_folder'),
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
   sortOrder: integer('sort_order').notNull().default(0),

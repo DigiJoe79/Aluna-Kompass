@@ -1109,7 +1109,9 @@
     "settings": {
       "title": "Fristen",
       "statutory10Y": "Gesetzliche Aufbewahrung 10 Jahre",
-      "statutory10YHint": "§ 147 Abs. 1 Nr. 1, 4, 4a AO (z. B. Buchungsbelege, Jahresabschlüsse)",
+      "statutory10YHint": "§ 147 Abs. 1 Nr. 1, 4a AO (z. B. Bücher, Aufzeichnungen, Jahresabschlüsse)",
+      "statutory8Y": "Gesetzliche Aufbewahrung 8 Jahre",
+      "statutory8YHint": "§ 147 Abs. 3 AO (Buchungsbelege, seit 2025)",
       "statutory6Y": "Gesetzliche Aufbewahrung 6 Jahre",
       "statutory6YHint": "§ 147 Abs. 1 Nr. 2, 3, 5 AO (z. B. empfangene Handels- und Geschäftsbriefe)",
       "consent": "Einwilligung / berechtigtes Interesse",
@@ -1943,6 +1945,7 @@
       },
       "retentionClasses": {
         "statutory10Y": "10 Jahre (Handels-/Steuerrecht)",
+        "statutory8Y": "8 Jahre (Buchungsbelege)",
         "statutory6Y": "6 Jahre",
         "permanent": "Dauerhaft",
         "consent": "Einwilligung"

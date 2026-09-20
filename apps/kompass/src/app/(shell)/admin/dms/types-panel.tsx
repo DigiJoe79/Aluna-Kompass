@@ -151,6 +151,7 @@ export function TypesPanel({
                   defaultValue="statutory10Y"
                 >
                   <option value="statutory10Y">{t('retentionClasses.statutory10Y')}</option>
+                  <option value="statutory8Y">{t('retentionClasses.statutory8Y')}</option>
                   <option value="statutory6Y">{t('retentionClasses.statutory6Y')}</option>
                   <option value="permanent">{t('retentionClasses.permanent')}</option>
                   <option value="consent">{t('retentionClasses.consent')}</option>
@@ -236,6 +237,7 @@ export function TypesPanel({
                     defaultValue={editingType.retentionClass}
                   >
                     <option value="statutory10Y">{t('retentionClasses.statutory10Y')}</option>
+                    <option value="statutory8Y">{t('retentionClasses.statutory8Y')}</option>
                     <option value="statutory6Y">{t('retentionClasses.statutory6Y')}</option>
                     <option value="permanent">{t('retentionClasses.permanent')}</option>
                     <option value="consent">{t('retentionClasses.consent')}</option>

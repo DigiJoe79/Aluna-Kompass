@@ -11,6 +11,11 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 
 ## [Unveröffentlicht]
 
+### Neu
+
+- **Aufbewahrungsfrist 8 Jahre.** Für Buchungsbelege gibt es eine eigene Frist
+  (Verwaltung → Aufbewahrung). Bestehende Dokumentarten ändern sich nicht.
+
 ### Geändert
 
 - **Bibliotheken aktualisiert**, darunter React 19.3 und Next.js 16.3.5. Für
