@@ -19,6 +19,7 @@ import { revalidatePath } from 'next/cache';
 import { toActionState, type ActionState } from '@/lib/actions';
 import { textWorker } from '@/lib/background';
 import { requireSession } from '@/lib/request-context';
+import { readProtectionArea } from './protection-area';
 
 const orNull = (value: FormDataEntryValue | null): string | null => {
   const text = String(value ?? '').trim();
@@ -36,6 +37,7 @@ export async function createDocumentTypeAction(_prev: ActionState, formData: For
   const retentionClass = String(formData.get('retentionClass') ?? 'statutory10Y') as any;
   const defaultFolder = orNull(formData.get('defaultFolder'));
   const sortOrder = Number(formData.get('sortOrder') ?? 0);
+  const protectionArea = readProtectionArea(formData);
 
   const result = await createDocumentType(deps, ctx, {
     key,
@@ -45,6 +47,7 @@ export async function createDocumentTypeAction(_prev: ActionState, formData: For
     retentionClass,
     defaultFolder,
     sortOrder,
+    ...(protectionArea !== undefined ? { protectionArea } : {}),
   });
 
   revalidatePath('/admin/dms');
@@ -66,6 +69,7 @@ export async function updateDocumentTypeAction(key: string, _prev: ActionState, 
   const isActiveRaw = formData.get('isActive');
   const isActive = isActiveRaw !== null ? (isActiveRaw === 'on' || isActiveRaw === 'true') : undefined;
   const sortOrder = formData.get('sortOrder') !== null ? Number(formData.get('sortOrder')) : undefined;
+  const protectionArea = readProtectionArea(formData);
 
   const result = await updateDocumentType(deps, ctx, {
     key,
@@ -76,6 +80,7 @@ export async function updateDocumentTypeAction(key: string, _prev: ActionState, 
     defaultFolder,
     ...(isActive !== undefined ? { isActive } : {}),
     ...(sortOrder !== undefined ? { sortOrder } : {}),
+    ...(protectionArea !== undefined ? { protectionArea } : {}),
   });
 
   revalidatePath('/admin/dms');

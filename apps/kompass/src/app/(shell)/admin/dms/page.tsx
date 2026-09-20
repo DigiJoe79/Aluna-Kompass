@@ -1,5 +1,5 @@
 import { hasPermission, readSetting, requirePermission } from '@kompass/core';
-import { countUnreadDocuments, dispatchChannels, listDocumentFolders, listDocumentRules, listDocumentTypes, listSnippets } from '@kompass/module-dms';
+import { countDocumentsOfType, countUnreadDocuments, dispatchChannels, listDocumentAreas, listDocumentFolders, listDocumentRules, listDocumentTypes, listSnippets } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
@@ -36,7 +36,19 @@ export default async function AdminDmsPage() {
   const snippets = snippetsRes.ok ? snippetsRes.value : [];
   const channels = dispatchChannels(deps);
 
-  const types = typesRes.ok ? typesRes.value : [];
+  const rawTypes = typesRes.ok ? typesRes.value : [];
+
+  // Die Auswahl „Schutzbereich“ gibt es nur, wenn ein Modul einen Bereich anmeldet.
+  // Das Panel bekommt einfache Daten: Bereiche, und je Art die Zahl der Dokumente,
+  // die ein Wechsel betrifft (`null`, wenn der Aufrufer sie nicht zählen darf).
+  const areasRes = await listDocumentAreas(deps, ctx);
+  const areas = areasRes.ok ? areasRes.value.map(({ key, permission, held }) => ({ key, permission, held })) : [];
+  const types = await Promise.all(
+    rawTypes.map(async (type) => {
+      const counted = areas.length > 0 || type.protectionArea ? await countDocumentsOfType(deps, ctx, { key: type.key }) : null;
+      return { ...type, areaCount: counted?.ok ? counted.value.count : null };
+    }),
+  );
   const selectableTypes = selectableTypesRes.ok ? selectableTypesRes.value : [];
   const folders = foldersRes.ok ? foldersRes.value.map((f) => f.path) : [];
   const rules = rulesRes.ok
@@ -55,7 +67,7 @@ export default async function AdminDmsPage() {
     <>
       <PageHeader title={t('title')} description={t('description')} />
       <div className="space-y-6">
-        <TypesPanel types={types} folders={folders} />
+        <TypesPanel types={types} folders={folders} areas={areas} />
         <RulesPanel rules={rules} types={selectableTypes} folders={folders} />
         <FoldersPanel folders={folders} />
         <SnippetsPanel snippets={snippets} />

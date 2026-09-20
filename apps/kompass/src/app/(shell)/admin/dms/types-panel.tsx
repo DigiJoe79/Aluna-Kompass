@@ -24,21 +24,40 @@ export interface DocumentTypeItem {
   isActive: boolean;
   sortOrder: number;
   ownerModule?: string | null;
+  protectionArea?: string | null;
+  /** Wie viele Dokumente die Art hat; `null`, wenn der Aufrufer sie nicht zählen darf. */
+  areaCount?: number | null;
+}
+
+/** Ein Schutzbereich, den ein Modul anmeldet — einfache Daten, kein Dienst (Client-Grenze). */
+export interface AreaItem {
+  key: string;
+  permission: string;
+  /** Ob der Aufrufer das Recht des Bereichs selbst hat. */
+  held: boolean;
 }
 
 export function TypesPanel({
   types,
   folders,
+  areas = [],
 }: {
   types: DocumentTypeItem[];
   folders: string[];
+  areas?: AreaItem[];
 }) {
   const t = useTranslations('dms.admin');
   const tDms = useTranslations('dms');
   const tCommon = useTranslations('common');
+  const tPerm = useTranslations('permissions.keys');
+  // Das Label eines Bereichs bringt das Modul mit, das ihn anmeldet (`dms.areas.<key>`); ohne fällt es auf den Schlüssel zurück.
+  const areaLabel = (key: string) => (tDms.has(`areas.${key}`) ? tDms(`areas.${key}`) : key);
+  const permissionLabel = (permission: string) => (tPerm.has(`${permission}.label`) ? tPerm(`${permission}.label`) : permission);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editingType, setEditingType] = useState<DocumentTypeItem | null>(null);
+  // Der gewählte Bereich im Bearbeiten-Dialog — für den Hinweis vor dem Speichern.
+  const [areaValue, setAreaValue] = useState('');
 
   const [createState, createAction, createPending] = useActionState(async (prev: any, formData: FormData) => {
     const res = await createDocumentTypeAction(prev, formData);
@@ -52,6 +71,56 @@ export function TypesPanel({
     if (res.status === 'success') setEditingType(null);
     return res;
   }, idleState);
+
+  /**
+   * Die Auswahl „Schutzbereich“ im Bearbeiten-Dialog. Als Funktion, nicht als
+   * eigene Komponente: Sonst würde der Dialog bei jedem Tastendruck neu
+   * aufgebaut. Ohne angemeldeten Bereich (und ohne gesetzten) gibt es sie nicht.
+   */
+  const areaField = (type: DocumentTypeItem) => {
+    const current = type.protectionArea ?? null;
+    if (areas.length === 0 && current === null) return null;
+
+    // Modul-eigene Arten: nur Anzeige, der Bereich ist fest.
+    if (type.ownerModule) {
+      return current ? (
+        <p className="text-[13px] text-muted-ink">
+          {t('area')}: {areaLabel(current)}
+        </p>
+      ) : null;
+    }
+
+    const currentArea = current === null ? null : areas.find((area) => area.key === current);
+    if (current !== null && !currentArea) {
+      return <p className="rounded-md bg-error-bg p-2.5 text-[13px] text-error">{t('areaUnknown', { key: current })}</p>;
+    }
+
+    // Ändern darf nur, wer das Recht des jetzigen Bereichs selbst hat; die anderen stehen ausgegraut in der Liste.
+    const locked = currentArea ? !currentArea.held : false;
+    const chosen = areas.find((area) => area.key === areaValue);
+    const changed = areaValue !== (current ?? '');
+    const count = type.areaCount ?? 0;
+    return (
+      <div className="space-y-1.5">
+        <Label htmlFor="edit-area">{t('area')}</Label>
+        <Select id="edit-area" name="protectionArea" value={areaValue} onChange={(e) => setAreaValue(e.target.value)} disabled={locked}>
+          <option value="">{t('areaNone')}</option>
+          {areas.map((area) => (
+            <option key={area.key} value={area.key} disabled={!area.held}>
+              {areaLabel(area.key)}
+            </option>
+          ))}
+        </Select>
+        {locked && currentArea ? <p className="text-[12px] text-muted-ink">{t('areaNotHeld', { permission: permissionLabel(currentArea.permission) })}</p> : null}
+        {!locked && changed ? (
+          <div className="space-y-1 rounded-md bg-info-bg px-3 py-2.5 text-[12px] text-ink-2" data-testid="area-hint">
+            <p>{chosen ? t('areaSetHint', { count, permission: permissionLabel(chosen.permission) }) : t('areaRemoveHint', { count })}</p>
+            <p>{t('areaExceptions')}</p>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
 
   return (
     <section className="space-y-4 rounded-md border border-line bg-surface p-5">
@@ -94,7 +163,14 @@ export function TypesPanel({
                   </StatusBadge>
                 </TableCell>
                 <TableCell className="px-4 text-right">
-                  <Button variant="ghost" size="sm" onClick={() => setEditingType(row)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setAreaValue(row.protectionArea ?? '');
+                      setEditingType(row);
+                    }}
+                  >
                     {t('edit')}
                   </Button>
                 </TableCell>
@@ -175,6 +251,20 @@ export function TypesPanel({
                 ))}
               </Select>
             </div>
+
+            {areas.length > 0 ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="create-area">{t('area')}</Label>
+                <Select id="create-area" name="protectionArea" defaultValue="">
+                  <option value="">{t('areaNone')}</option>
+                  {areas.map((area) => (
+                    <option key={area.key} value={area.key} disabled={!area.held}>
+                      {areaLabel(area.key)}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            ) : null}
 
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
@@ -294,6 +384,8 @@ export function TypesPanel({
                   ))}
                 </Select>
               </div>
+
+              {areaField(editingType)}
 
               <DialogFooter>
                 <Button type="button" variant="ghost" onClick={() => setEditingType(null)}>

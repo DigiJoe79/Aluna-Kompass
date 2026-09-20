@@ -1696,6 +1696,7 @@
       "discardConfirm": "Verwerfen"
     },
     "filedProtected": "Abgelegt als {number}. Die Dokumentart ist geschützt; Sie sehen das Dokument hier nicht.",
+    "areas": {},
     "number": {
       "pending": "Die Nummer <mono>{number}</mono> wird beim Ablegen gezogen. Wählen Sie später eine andere Art, bekommt das Dokument eine neue Nummer, und die bisherige bleibt vermerkt.",
       "numberOnFiling": "Die Nummer wird beim Ablegen gezogen."
@@ -1948,6 +1949,13 @@
       "editTypeDescription": "Passen Sie Bezeichnung, Richtung, Aufbewahrungsfrist oder Standardordner an.",
       "typeImmutableHint": "Der Schlüssel ist unveränderlich.",
       "prefixHint": "Änderbar, solange die Art noch kein Dokument hat.",
+      "area": "Schutzbereich",
+      "areaNone": "keiner",
+      "areaUnknown": "Bereich „{key}“ nicht angemeldet – die Dokumente dieser Art sind für alle gesperrt, bis das Modul wieder da ist.",
+      "areaNotHeld": "Ändern kann den Schutzbereich nur, wer selbst das Recht „{permission}“ hat.",
+      "areaSetHint": "Danach sehen {count, plural, =0 {Dokumente dieser Art} one {das eine Dokument dieser Art} other {die # Dokumente dieser Art}} nur noch Personen mit dem Recht „{permission}“ und die Administration. Das Recht „Akte lesen“ allein genügt nicht mehr.",
+      "areaRemoveHint": "Danach {count, plural, =0 {sind Dokumente dieser Art} one {ist das eine Dokument dieser Art} other {sind die # Dokumente dieser Art}} für alle mit dem Recht „Akte lesen“ sichtbar.",
+      "areaExceptions": "Zwei Ausnahmen: Das Backup enthält alles. Und ältere Einträge im Änderungsprotokoll nennen weiter Betreff und Beteiligte – erst ab jetzt steht dort nur noch die Nummer.",
       "ownedByModule": "gehört dem Modul {module}",
       "typeColumns": {
         "prefix": "Präfix",
