@@ -6,6 +6,7 @@ import {
   createDocumentFollowUp,
   createDraft,
   createReplacementDraft,
+  canReadDocumentType,
   defaultTypeKey,
   deleteNote,
   recordDispatch,
@@ -255,6 +256,9 @@ export async function receiveDocumentAction(_prev: ActionState, formData: FormDa
   textWorker()?.wake();
 
   revalidatePath('/dms');
+  // Wer in eine geschützte Art ablegt, sieht das Dokument danach nicht mehr —
+  // die Detailseite zeigte ihm „kein Zugriff“. Er bekommt die Nummer und die Liste.
+  if (!canReadDocumentType(deps, ctx, result.value.typeKey)) redirect(`/dms?filed=${encodeURIComponent(result.value.number ?? '')}`);
   // Aus einer Warteschlange heraus führt kein Weg zum einzelnen Dokument: Die
   // nächste Datei wartet schon, und ein Sprung dorthin verlöre sie.
   if (formData.get('queued')) return { status: 'success' };
@@ -416,5 +420,8 @@ export async function reclassifyDocumentAction(id: string, _prev: ActionState, f
   });
   revalidatePath(`/dms/${id}`);
   revalidatePath('/dms');
+  // Umklassifiziert in eine geschützte Art: Die Detailseite zeigte „kein Zugriff“ —
+  // der Aufrufer bekommt die Nummer und die Liste, wie beim Ablegen.
+  if (result.ok && !canReadDocumentType(deps, ctx, result.value.typeKey)) redirect(`/dms?filed=${encodeURIComponent(result.value.number ?? '')}`);
   return toActionState(result, t, t('dms.reclassify.saved'));
 }

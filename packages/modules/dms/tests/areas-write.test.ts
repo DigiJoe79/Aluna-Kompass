@@ -87,6 +87,7 @@ describe('write services and protected document types', () => {
       issueGeneratedDocument: 'legt an, unter dem Recht der Vorlage',
       storeIncoming: 'Innenleben der beiden Eingänge',
       requireDmsGate: 'Rechteprüfung für die Seiten der Akte, kein Dienst',
+      canReadDocumentType: 'Rechteprüfung für die Seiten der Akte, kein Dienst',
       seedDms: 'seed-Haken',
       extractDocumentText: 'gibt keinen Inhalt aus; der Text-Worker könnte geschützte Dokumente sonst nie indizieren',
       reindexAllDocuments: 'läuft über manageableTypeFilter (VP3a)',
@@ -96,5 +97,35 @@ describe('write services and protected document types', () => {
     const services = Object.entries(dms).filter(([, v]) => typeof v === 'function' && /^(async\s+)?function\s*\w*\s*\(\s*deps\s*,\s*ctx\b/.test(String(v))).map(([name]) => name);
     const unknown = services.filter((name) => !(name in WRITES) && !READS.includes(name) && !(name in EXEMPT));
     expect(unknown).toEqual([]);
+  });
+});
+
+describe('creating without the area permission', () => {
+  it('a draft in a protected type asks for the area permission', async () => {
+    const { deps, viewer } = await setupWithArea();
+    deps.db.update(documentTypes).set({ defaultDirection: 'outgoing' }).where(eq(documentTypes.key, 'secret')).run();
+    const res = await createDraft(deps, viewer, { typeKey: 'secret', subject: 'x', body: '' });
+    expect(res.ok ? 'ok' : res.error).toEqual({ type: 'forbidden', permission: 'probe.read' });
+  });
+
+  it('filing into a protected type is allowed — and the document is gone from the filer’s sight', async () => {
+    const { deps, viewer } = await setupWithArea();
+    const filed = unwrap(await receiveDocument(deps, viewer, { filename: 'r.pdf', typeKey: 'secret', subject: 'Rechnung', documentDate: '2026-09-01', folder: null, bytes: pdfBytes() }));
+    expect(filed.number).toMatch(/^GEH-/);
+    expect(unwrap(await dms.listDocuments(deps, viewer, {})).documents.map((d) => d.id)).not.toContain(filed.id);
+  });
+
+  it('reclassifying into a protected type is allowed, out of one it is not', async () => {
+    const { deps, viewer } = await setupWithArea();
+    const open = unwrap(await receiveDocument(deps, viewer, { filename: 'r.pdf', typeKey: INCOMING_OPEN_TYPE, subject: 'Rechnung', documentDate: '2026-09-01', folder: null, bytes: pdfBytes() }));
+    const moved = unwrap(await reclassifyDocument(deps, viewer, { id: open.id, typeKey: 'secret', subject: 'Rechnung', documentDate: '2026-09-01', expectedVersion: open.updatedAt }));
+    expect(moved.number).toMatch(/^GEH-/);
+    const back = await reclassifyDocument(deps, viewer, { id: open.id, typeKey: INCOMING_OPEN_TYPE, subject: 'Rechnung', documentDate: '2026-09-01' });
+    expect(back.ok ? 'ok' : back.error).toEqual({ type: 'forbidden', permission: 'probe.read' });
+  });
+
+  it('canReadDocumentType tells the pages whether the caller will see what they filed', async () => {
+    const { deps, viewer, auditor } = await setupWithArea();
+    expect([dms.canReadDocumentType(deps, viewer, 'secret'), dms.canReadDocumentType(deps, auditor, 'secret'), dms.canReadDocumentType(deps, viewer, INCOMING_OPEN_TYPE), dms.canReadDocumentType(deps, viewer, 'nope')]).toEqual([false, true, true, false]);
   });
 });

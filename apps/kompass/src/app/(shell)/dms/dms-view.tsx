@@ -10,6 +10,7 @@ import {
   listDocumentTypes,
   requireDmsGate,
 } from '@kompass/module-dms';
+import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { requireSession } from '@/lib/request-context';
 import { DmsWorkspace } from './dms-workspace';
@@ -49,6 +50,8 @@ export interface DmsQuery {
   sender?: string;
   /** Von der Seite eines Bezugs: `<entityType>:<entityId>`. */
   about?: string;
+  /** Nach dem Ablegen in eine geschützte Art: die Nummer, die das Dokument bekam. */
+  filed?: string;
 }
 
 /** Die Spalten, nach denen die Liste sortieren darf — mehr nimmt der Service nicht. */
@@ -118,6 +121,11 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
 
   const canCreate = hasPermission(ctx, 'dms.create');
 
+  // Nach dem Ablegen in eine geschützte Art: die Nummer, sonst nichts. Sie kommt
+  // aus der Adresszeile und wird deshalb nur ausgegeben, wenn sie wie eine aussieht.
+  const t = await getTranslations('dms');
+  const filedNumber = query.filed && /^[A-Z]{3}-\d{4}-\d+$/.test(query.filed) ? query.filed : null;
+
   // Vorbelegungen aus der Adresszeile: Wer von einer Kontakt-, Tier- oder
   // Projektseite kommt, findet den Bezug schon gesetzt.
   const senderRes = query.sender ? await getContact(deps, ctx, query.sender) : null;
@@ -150,6 +158,11 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
       initialAbout={initialAbout}
       receiveOpen={receive || Boolean(initialSender) || Boolean(initialAbout)}
     >
+      {filedNumber ? (
+        <p data-testid="filed-protected" className="mb-3 rounded-md bg-info-bg px-3.5 py-3 text-[13px] text-ink-2">
+          {t('filedProtected', { number: filedNumber })}
+        </p>
+      ) : null}
       <DocumentList
         documents={rows}
         types={types.map((type) => ({ key: type.key, label: type.label }))}

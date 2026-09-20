@@ -112,6 +112,11 @@ export async function createDraft(deps: Deps, ctx: CallContext, input: unknown):
   const owned = refuseModuleOwned(docType);
   if (owned) return owned;
 
+  // Ein Entwurf, den sein Autor nach dem Speichern nicht mehr sähe, wäre eine
+  // Falle. Der Eingang ist anders: Dort ist das Dokument mit dem Ablegen fertig.
+  const unreadable = requireAreaAccess(deps, ctx, { typeKey: docType.key });
+  if (unreadable) return unreadable;
+
   const id = newId();
   const now = isoNow(deps.clock);
   const documentDate = parsed.value.documentDate ?? now.slice(0, 10);

@@ -35,6 +35,12 @@ export function canReadType(deps: Deps, ctx: CallContext, docType: Area): boolea
   return permission !== null && hasPermission(ctx, permission);
 }
 
+/** Für die Seiten: Wird der Aufrufer sehen, was er in diese Art ablegt? */
+export function canReadDocumentType(deps: Deps, ctx: CallContext, typeKey: string): boolean {
+  const docType = deps.db.select().from(documentTypes).all().find((t) => t.key === typeKey);
+  return docType !== undefined && canReadType(deps, ctx, docType);
+}
+
 export function readableTypeKeys(deps: Deps, ctx: CallContext, db: DbOrTx = deps.db): string[] {
   return db.select().from(documentTypes).all().filter((t) => canReadType(deps, ctx, t)).map((t) => t.key);
 }

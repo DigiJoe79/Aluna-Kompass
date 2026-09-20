@@ -1,4 +1,4 @@
-export { dmsGatePermissions, requireDmsGate, isProtectedType } from './access';
+export { canReadDocumentType, dmsGatePermissions, isProtectedType, requireDmsGate } from './access';
 export * from './catalog';
 export * from './classification';
 export * from './dashboard';
