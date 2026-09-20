@@ -57,7 +57,8 @@ const allocationLineSchema = z.object({
   addsToAssets: z.boolean().optional(),
 });
 
-const saveDraftSchema = z.object({
+/** Auch von `bookEntry` (finalize.ts) benutzt — dort ohne `id`/`expectedVersion`. */
+export const entryLinesSchema = z.object({
   id: z.string().min(1).optional(),
   expectedVersion: expectedVersionField,
   entryDate: z.string().date(),
@@ -65,7 +66,7 @@ const saveDraftSchema = z.object({
   moneyLines: z.array(moneyLineSchema),
   allocationLines: z.array(allocationLineSchema),
 });
-type SaveDraftInput = z.infer<typeof saveDraftSchema>;
+export type EntryLinesInput = z.infer<typeof entryLinesSchema>;
 
 const idSchema = z.object({ id: z.string().min(1) });
 
@@ -169,12 +170,11 @@ function contactExists(db: DbOrTx, id: string): boolean {
 }
 
 /** Prüft, was eine Buchung ansteuert; ansonsten unverändert von `input`. Erst das Festschreiben prüft, ob es auch aktiv ist. */
-function checkReferences(deps: Deps, input: SaveDraftInput): Failure | null {
+function checkReferences(deps: Deps, input: EntryLinesInput): Failure | null {
   const accounts = accountsById(deps.db, input.moneyLines.map((l) => l.accountId));
   for (const line of input.moneyLines) {
     if (!accounts.has(line.accountId)) return notFound('financeAccount', line.accountId);
   }
-  if ([...accounts.values()].some((a) => a.kind === 'cash')) return financeConflict('cashDraftNotAllowed');
 
   const categories = categoriesById(deps.db, input.allocationLines.map((l) => l.categoryId));
   for (const line of input.allocationLines) {
@@ -186,7 +186,14 @@ function checkReferences(deps: Deps, input: SaveDraftInput): Failure | null {
   return null;
 }
 
-function resolvedLines(deps: Deps, input: SaveDraftInput): { moneyLines: MoneyLineWrite[]; allocationLines: AllocationLineWrite[] } {
+/** Bargeld wird am selben Tag festgehalten: Ein Entwurf auf einem Barkonto lässt sich nicht parken (Spec 5.4). Nur `saveDraft` fragt das — `bookEntry` ist der Weg dafür. */
+function cashLineProblem(deps: Deps, moneyLines: readonly { accountId: string }[]): Failure | null {
+  const accounts = accountsById(deps.db, moneyLines.map((l) => l.accountId));
+  if ([...accounts.values()].some((a) => a.kind === 'cash')) return financeConflict('cashDraftNotAllowed');
+  return null;
+}
+
+function resolvedLines(deps: Deps, input: EntryLinesInput): { moneyLines: MoneyLineWrite[]; allocationLines: AllocationLineWrite[] } {
   const categories = categoriesById(deps.db, input.allocationLines.map((l) => l.categoryId));
   return {
     moneyLines: input.moneyLines.map((l) => ({ accountId: l.accountId, amountCents: l.amountCents })),
@@ -208,11 +215,18 @@ function resolvedLines(deps: Deps, input: SaveDraftInput): { moneyLines: MoneyLi
   };
 }
 
+/** Für `bookEntry` (finalize.ts): dieselbe Prüfung und Vorbelegung wie `saveDraft`, ohne die Bargeld-Sperre — Bargeld bucht `bookEntry` gerade deshalb in einem Zug. */
+export function resolveEntryLines(deps: Deps, input: EntryLinesInput): Result<{ moneyLines: MoneyLineWrite[]; allocationLines: AllocationLineWrite[] }> {
+  const problem = checkReferences(deps, input);
+  if (problem) return problem;
+  return ok(resolvedLines(deps, input));
+}
+
 /** `finance.entriesWrite`: Entwurf anlegen (ohne `id`) oder als Ganzes ersetzen (mit `id`). Ein Entwurf darf unausgeglichen und leer sein. */
 export async function saveDraft(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<EntryView>> {
   const denied = requirePermission(ctx, 'finance.entriesWrite');
   if (denied) return denied;
-  const parsed = validate(deps, saveDraftSchema, input);
+  const parsed = validate(deps, entryLinesSchema, input);
   if (!parsed.ok) return parsed;
   const v = parsed.value;
 
@@ -225,9 +239,11 @@ export async function saveDraft(deps: Deps, ctx: CallContext, input: unknown): P
     if (before.status !== 'draft') return financeConflict('entryNotDraft', { number: before.number ?? before.id });
   }
 
-  const refProblem = checkReferences(deps, v);
-  if (refProblem) return refProblem;
-  const lines = resolvedLines(deps, v);
+  const cashProblem = cashLineProblem(deps, v.moneyLines);
+  if (cashProblem) return cashProblem;
+  const resolved = resolveEntryLines(deps, v);
+  if (!resolved.ok) return resolved;
+  const lines = resolved.value;
 
   return deps.db.transaction((tx: DbOrTx) => {
     const now = isoNow(deps.clock);

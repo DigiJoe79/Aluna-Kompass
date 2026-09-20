@@ -2,8 +2,9 @@ import { unwrap } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
+import { bookEntry } from '../src/ledger/finalize';
 import { financeModule } from '../src/manifest';
-import { setupFinance } from './helpers';
+import { ledgerFixture, setupFinance } from './helpers';
 
 describe('finance module', () => {
   it('has the key finance, stores files, and depends on contacts, the file module and projects', () => {
@@ -55,5 +56,12 @@ describe('finance module', () => {
   it('can be switched off as long as nothing is finalized', () => {
     const { deps } = setupFinance();
     expect(financeModule.canDisable!(deps)).toBeNull();
+  });
+
+  it('can no longer be switched off once an entry is finalized', async () => {
+    const f = await ledgerFixture();
+    expect(financeModule.canDisable!(f.deps)).toBeNull();
+    unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'Spende', moneyLines: [{ accountId: f.bank.id, amountCents: 5000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 5000 }] }));
+    expect(financeModule.canDisable!(f.deps)).toBe('hasFinalRecords');
   });
 });

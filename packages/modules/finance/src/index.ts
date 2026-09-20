@@ -77,16 +77,20 @@ export { DATED_SERIES, type DatedValueKey } from './ledger/dated-series';
 export { listDatedValues, removeDatedValue, setDatedValue, valueAt, type DatedValueListEntry } from './ledger/dated-values';
 export { closePurpose, deleteMasterData, readMasterData, saveMasterData, setMasterDataActive } from './ledger/master-data';
 export { firstNegativeCashDay, formatEuro } from './ledger/cash-check';
+export { abortFinalize, bookEntry, finalizeEntry, finalizeInternal, finalizeReviewed, FinalizeAborted } from './ledger/finalize';
 export {
   deleteDraft,
+  entryLinesSchema,
   entryViewInternal,
   getEntry,
   listEntries,
+  resolveEntryLines,
   saveDraft,
   setReviewed,
   writeLinesInternal,
   type AllocationLineView,
   type AllocationLineWrite,
+  type EntryLinesInput,
   type EntryView,
   type MoneyLineView,
   type MoneyLineWrite,

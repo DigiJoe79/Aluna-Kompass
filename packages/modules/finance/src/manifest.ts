@@ -5,7 +5,7 @@ import { requireFinanceRead } from './ledger/access';
 import { installFinance } from './install';
 import { FINANCE_MCP_TOOLS } from './mcp-tools';
 import { seedFinance } from './seed';
-import { financeFiscalYears } from './schema';
+import { financeEntries, financeFiscalYears } from './schema';
 
 /**
  * Alle Einstellungen der Spec (5.1), auch die erst spätere Pläne lesen — eine
@@ -71,8 +71,11 @@ export const financeModule: ModuleManifest = defineModule({
     { entity: 'financeFiscalYear', deletable: false, reason: 'Geschäftsjahre und ihre Abschlüsse sind die Gliederung der Rechenschaft. Personenbezogene Inhalte eines Jahres werden nach Ablauf der Frist anonymisiert, nicht gelöscht.' },
     { entity: 'financePeriodEvent', deletable: false, reason: 'Geschäftsjahre und ihre Abschlüsse sind die Gliederung der Rechenschaft. Personenbezogene Inhalte eines Jahres werden nach Ablauf der Frist anonymisiert, nicht gelöscht.' },
   ],
-  // F2a ergänzt: ablehnen (`hasFinalRecords`), sobald es eine festgeschriebene Buchung gibt — Finanzen hält Kontakte, Belege und Projekte.
-  canDisable: () => null,
+  // Sobald eine Buchung festgeschrieben ist, hält Finanzen Kontakte, Belege und Projekte — dann bleibt das Modul an.
+  canDisable: (deps) => {
+    const hasFinal = !!deps.db.select({ id: financeEntries.id }).from(financeEntries).where(eq(financeEntries.status, 'final')).limit(1).get();
+    return hasFinal ? 'hasFinalRecords' : null;
+  },
   mcpTools: FINANCE_MCP_TOOLS,
   followUpTargets: (deps, entityType, id) => {
     if (entityType !== 'financeFiscalYear') return null;
