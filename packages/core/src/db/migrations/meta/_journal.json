@@ -29,6 +29,13 @@
       "when": 1789917716023,
       "tag": "0003_module_provisions",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1789922226581,
+      "tag": "0004_document_type_owner",
+      "breakpoints": true
     }
   ]
 }

@@ -1,3 +1,4 @@
+import { unwrap } from '@kompass/core';
 import { auditEntry, ctxWith } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import {
@@ -44,6 +45,12 @@ describe('document types', () => {
     if (!created.ok) return;
     expect(created.value.prefix).toBe('ZUW');
     expect(auditActions(deps)).toContain('dms.type.create');
+  });
+
+  it('a type created by the association belongs to no module and has no protection area', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const created = unwrap(await createDocumentType(deps, ctx, { key: 'memo', label: 'Vermerk', prefix: 'VMK', defaultDirection: 'outgoing', retentionClass: 'statutory6Y' }));
+    expect([created.ownerModule, created.protectionArea]).toEqual([null, null]);
   });
 
   it('lehnt ein Präfix ab, das nicht aus drei Großbuchstaben besteht', async () => {
