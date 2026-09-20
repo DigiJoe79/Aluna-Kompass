@@ -109,6 +109,14 @@ export interface RecordLabel {
   label: string;
   href: string | null;
   state: RecordLabelState;
+  /**
+   * Freitext zu diesem Datensatz gehört nicht ins Änderungsprotokoll — es ist
+   * unlöschbar und mit `audit.view` durchsuchbar. Gilt für jeden Aufrufer; der
+   * Kern lässt dann den Titel einer Wiedervorlage aus seinem Eintrag.
+   */
+  sensitive?: boolean;
+  /** Wie das Protokoll den Datensatz nennt, wenn er heikel ist — nie mit Betreff oder Namen. Fehlt es, gilt `label`. */
+  auditLabel?: string;
 }
 
 /** Eine Kontaktrolle, die ein Modul beisteuert, samt ihrer Aufbewahrungsklasse. */

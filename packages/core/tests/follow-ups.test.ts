@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { auditLog, followUps } from '../src/db/schema';
+import { coreModule } from '../src/core-module';
+import { auditLog, followUps, settings } from '../src/db/schema';
+import { defineModule } from '../src/modules/manifest';
+import { unwrap } from '../src/result';
 import {
   completeFollowUp,
   createFollowUp,
@@ -9,7 +12,7 @@ import {
   listFollowUps,
   reopenFollowUp,
 } from '../src/follow-ups/service';
-import { createTestDeps, ctxWith, insertUser } from '../src/testing';
+import { createTestDeps, ctxWith, insertUser, TEST_NOW } from '../src/testing';
 
 const ALL = ['followUps.view', 'followUps.manage'];
 
@@ -148,5 +151,22 @@ describe('deleteFollowUp / deleteFollowUpsFor', () => {
     expect(removed).toBe(2);
     expect(deps.db.select().from(followUps).all().map((f) => f.title)).toEqual(['bleibt']);
     expect(actions(deps).length).toBe(before);
+  });
+});
+
+describe('Wiedervorlagen an heiklen Datensätzen', () => {
+  it('keeps the title out of the audit log when the record says it is sensitive', async () => {
+    const probe = defineModule({ key: 'probe', version: '0', permissions: [], recordLabels: (_d, _c, type, id) => (type === 'thing' ? { label: `T-${id}`, href: null, state: 'ok', sensitive: true } : null) });
+    const deps = createTestDeps({ manifests: [coreModule, probe] });
+    deps.db.insert(settings).values({ key: 'modules.enabled', value: JSON.stringify(['probe']), updatedAt: TEST_NOW }).run();
+    const ctx = ctxWith(['followUps.manage', 'followUps.view']);
+    const created = unwrap(await createFollowUp(deps, ctx, { entityType: 'thing', entityId: '7', dueAt: '2026-10-01', title: 'Müller anrufen' }));
+    unwrap(await completeFollowUp(deps, ctx, { id: created.id }));
+    unwrap(await reopenFollowUp(deps, ctx, { id: created.id }));
+    unwrap(await deleteFollowUp(deps, ctx, { id: created.id }));
+    const log = JSON.stringify(deps.db.select().from(auditLog).all());
+    expect(log).not.toContain('Müller');
+    expect(log).toContain('Wiedervorlage zu T-7');
+    expect(created.title).toBe('Müller anrufen'); // im Fachdatensatz bleibt er
   });
 });

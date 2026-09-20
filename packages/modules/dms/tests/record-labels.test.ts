@@ -12,8 +12,8 @@ describe('dmsRecordLabels', () => {
   it('labels a filed document for a reader, and only its number for anyone else', async () => {
     const { deps, ctx } = setupWithTypes();
     const doc = await fileFixture(deps, ctx);
-    expect(dmsRecordLabels(deps, ctxWith(['dms.view']), 'document', doc.id)).toEqual({ label: `${doc.number} · ${doc.subject}`, href: `/dms/${doc.id}`, state: 'ok' });
-    expect(dmsRecordLabels(deps, ctxWith([]), 'document', doc.id)).toEqual({ label: `${doc.number}, geschützt`, href: null, state: 'forbidden' });
+    expect(dmsRecordLabels(deps, ctxWith(['dms.view']), 'document', doc.id)).toEqual({ label: `${doc.number} · ${doc.subject}`, href: `/dms/${doc.id}`, state: 'ok', sensitive: false, auditLabel: doc.number });
+    expect(dmsRecordLabels(deps, ctxWith([]), 'document', doc.id)).toEqual({ label: `${doc.number}, geschützt`, href: null, state: 'forbidden', sensitive: false, auditLabel: doc.number });
   });
 
   it('says missing for an unknown id', () => {
