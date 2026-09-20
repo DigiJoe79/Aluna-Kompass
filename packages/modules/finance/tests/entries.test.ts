@@ -1,8 +1,8 @@
 import { schema, unwrap } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
-import { deleteDraft, getEntry, listEntries, saveDraft } from '../src/ledger/entries';
-import { ledgerFixture } from './helpers';
+import { deleteDraft, getEntry, listEntries, saveDraft, setReviewed } from '../src/ledger/entries';
+import { allowHumanOnlyOverMcp, ledgerFixture } from './helpers';
 
 const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
 
@@ -64,5 +64,29 @@ describe('drafts', () => {
     expect(log).toContain('finance.entry.draftDelete');
     expect(log).not.toContain('Erika');
     expect(log).not.toContain(f.donor.id);
+  });
+});
+
+describe('reviewed', () => {
+  const draftInput = (f: Awaited<ReturnType<typeof ledgerFixture>>) => ({ entryDate: '2026-03-01', text: 'Spende', moneyLines: [{ accountId: f.bank.id, amountCents: 5000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 5000 }] });
+
+  it('is set by a person with their name and time, and cleared by any change to the draft', async () => {
+    const f = await ledgerFixture();
+    const draft = unwrap(await saveDraft(f.deps, f.ctx, draftInput(f)));
+    const reviewed = unwrap(await setReviewed(f.deps, f.ctx, { id: draft.id, reviewed: true }));
+    expect(reviewed).toMatchObject({ reviewedByUserId: f.userId });
+    expect(reviewed.reviewedAt).not.toBeNull();
+    const changed = unwrap(await saveDraft(f.deps, f.ctx, { ...draftInput(f), id: draft.id, text: 'Spende, korrigiert' }));
+    expect([changed.reviewedAt, changed.reviewedByUserId]).toEqual([null, null]);
+  });
+
+  it('an agent prepares, a person reviews: over MCP it is refused until the association allows it at the screen', async () => {
+    const f = await ledgerFixture();
+    const agent = { ...f.ctx, channel: 'mcp' as const };
+    const draft = unwrap(await saveDraft(f.deps, agent, draftInput(f)));
+    expect(draft.createdChannel).toBe('mcp');
+    expect(err(await setReviewed(f.deps, agent, { id: draft.id, reviewed: true }))).toMatchObject({ type: 'conflict', code: 'humanOnly' });
+    allowHumanOnlyOverMcp(f.deps);
+    expect((await setReviewed(f.deps, agent, { id: draft.id, reviewed: true })).ok).toBe(true);
   });
 });

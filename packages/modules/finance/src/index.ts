@@ -82,6 +82,7 @@ export {
   getEntry,
   listEntries,
   saveDraft,
+  setReviewed,
   writeLinesInternal,
   type AllocationLineView,
   type AllocationLineWrite,

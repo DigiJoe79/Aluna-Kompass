@@ -1,4 +1,4 @@
-import { expectedVersionField, isoNow, newId, notFound, ok, requirePermission, staleVersion, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
+import { expectedVersionField, isoNow, newId, notFound, ok, requireHumanChannel, requirePermission, staleVersion, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
 import { contacts } from '@kompass/module-contacts';
 import { projects } from '@kompass/module-projects';
 import { and, asc, desc, eq, gte, inArray, lte, type SQL } from 'drizzle-orm';
@@ -68,6 +68,8 @@ const saveDraftSchema = z.object({
 type SaveDraftInput = z.infer<typeof saveDraftSchema>;
 
 const idSchema = z.object({ id: z.string().min(1) });
+
+const reviewSchema = z.object({ id: z.string().min(1), reviewed: z.boolean(), expectedVersion: expectedVersionField });
 
 const listSchema = z.object({
   status: z.enum(['draft', 'final']).optional(),
@@ -298,5 +300,35 @@ export async function deleteDraft(deps: Deps, ctx: CallContext, input: unknown):
     tx.delete(financeEntries).where(eq(financeEntries.id, before.id)).run();
     financeAudit(tx, deps, ctx, { action: 'finance.entry.draftDelete', entity: 'financeEntry', id: before.id, before: auditSnapshot(before, ctx), summary: `Buchungsentwurf ${before.id} gelöscht` });
     return ok({ id: before.id });
+  });
+}
+
+/**
+ * `finance.entriesWrite`, **`humanOnly`**: Ein Mensch bestätigt den Entwurf.
+ * Ein Agent bereitet vor, ein Mensch prüft — über MCP verweigert, bis der
+ * Verein `finance.mcpHumanOnlyAllowed` an der Oberfläche gesetzt hat (E10).
+ */
+export async function setReviewed(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<EntryView>> {
+  const denied = requirePermission(ctx, 'finance.entriesWrite');
+  if (denied) return denied;
+  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  if (humanOnly) return humanOnly;
+  const parsed = validate(deps, reviewSchema, input);
+  if (!parsed.ok) return parsed;
+  const before = entryViewInternal(deps.db, parsed.value.id);
+  if (!before) return notFound('financeEntry', parsed.value.id);
+  if (before.status !== 'draft') return financeConflict('entryNotDraft', { number: before.number ?? before.id });
+  const stale = staleVersion(parsed.value.expectedVersion, before.updatedAt);
+  if (stale) return stale;
+
+  return deps.db.transaction((tx: DbOrTx) => {
+    const now = isoNow(deps.clock);
+    tx.update(financeEntries)
+      .set({ reviewedAt: parsed.value.reviewed ? now : null, reviewedByUserId: parsed.value.reviewed ? ctx.userId : null, updatedAt: now })
+      .where(eq(financeEntries.id, before.id))
+      .run();
+    const after = entryViewInternal(tx, before.id)!;
+    financeAudit(tx, deps, ctx, { action: 'finance.entry.review', entity: 'financeEntry', id: before.id, after: { ...auditSnapshot(after, ctx), reviewed: parsed.value.reviewed }, summary: `Buchungsentwurf ${before.id} ${parsed.value.reviewed ? 'geprüft' : 'Prüfung zurückgenommen'}` });
+    return ok(after);
   });
 }
