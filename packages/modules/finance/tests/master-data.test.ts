@@ -23,8 +23,10 @@ describe('master data over one door', () => {
     expect((await readMasterData(deps, ctx, { kind: 'entry' })).ok).toBe(false);
   });
 
-  it('every tool names its permission and is described in English', () => {
-    for (const tool of FINANCE_MCP_TOOLS) expect(tool.description, tool.name).toMatch(/Requires finance\.(setup|overview|read)/);
-    expect(FINANCE_MCP_TOOLS.map((t) => t.name)).toEqual(['finance_master_data', 'finance_master_data_save', 'finance_master_data_set_active', 'finance_master_data_delete', 'finance_fiscal_year_create_first', 'finance_fiscal_year_update', 'finance_purpose_close', 'finance_dated_value_set', 'finance_dated_value_remove']);
+  it('every master-data tool names its permission and is described in English', () => {
+    // F2a fügt eigene Werkzeuge für die Buchung hinzu (tests/mcp-tools.test.ts) — hier bleiben die neun der Stammdaten.
+    const masterDataTools = FINANCE_MCP_TOOLS.filter((t) => t.name.startsWith('finance_master_data') || t.name.startsWith('finance_fiscal_year') || t.name === 'finance_purpose_close' || t.name.startsWith('finance_dated_value'));
+    for (const tool of masterDataTools) expect(tool.description, tool.name).toMatch(/Requires finance\.(setup|overview|read)/);
+    expect(masterDataTools.map((t) => t.name)).toEqual(['finance_master_data', 'finance_master_data_save', 'finance_master_data_set_active', 'finance_master_data_delete', 'finance_fiscal_year_create_first', 'finance_fiscal_year_update', 'finance_purpose_close', 'finance_dated_value_set', 'finance_dated_value_remove']);
   });
 });

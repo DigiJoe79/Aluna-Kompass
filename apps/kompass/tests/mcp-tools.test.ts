@@ -36,8 +36,6 @@ const WITHOUT_MCP = new Set([
   'backup.export', 'backup.import',
   // Finanzen: Rechte stehen ab F1 im Manifest (Rollenvorschläge werden nie nachgefüllt),
   // ihre Werkzeuge kommen mit den genannten Plänen. Jeder Plan streicht seine Zeile.
-  'finance.entriesWrite',     // F2a
-  'finance.entriesFinalize',  // F2a
   'finance.periodClose',      // F2c
   'finance.expensesSubmit',   // F8a
   'finance.approve',          // F8a
