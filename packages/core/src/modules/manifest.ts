@@ -90,6 +90,8 @@ export interface DueItem {
   label: string;
   /** ISO-Datum, seit wann fällig. */
   dueSince: string;
+  /** Wohin der Fristenbildschirm führt — die Seite, auf der gelöscht wird. Ohne Angabe steht der Eintrag ohne Link da. */
+  href?: string;
 }
 
 /** Wie ein Modul eine Entität für die Wiedervorlage-Liste beschriftet. */

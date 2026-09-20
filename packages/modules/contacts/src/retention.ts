@@ -32,7 +32,7 @@ export function contactsRetentionDue(deps: Deps): DueItem[] {
     const holds = holdsFor(deps, 'contact', row.id);
     if (holds.length === 0) continue; // ohne Halter ist nichts nachgewiesen — siehe `retentionUnknown`
     const until = dueUntil(holds);
-    if (until !== null && until < today) due.push({ entity: 'contact', id: row.id, label: displayName(row), dueSince: until });
+    if (until !== null && until < today) due.push({ entity: 'contact', id: row.id, label: displayName(row), dueSince: until, href: `/contacts/${row.id}` });
   }
   return due;
 }

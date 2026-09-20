@@ -110,6 +110,7 @@ describe('contact retention and deletion', () => {
     const due = unwrap(await listDueContacts(deps, ctx));
     expect(due.map((d) => d.id)).toEqual([c.id]);
     expect(due[0]!.dueSince).toBe('2023-12-31');
+    expect(due[0]!.href).toBe(`/contacts/${c.id}`);
     expect((await listDueContacts(deps, ctxWith(['contacts.view']))).ok).toBe(false);
   });
 

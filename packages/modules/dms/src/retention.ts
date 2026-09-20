@@ -70,6 +70,7 @@ export function dmsRetentionDue(deps: Deps): DueItem[] {
         id: doc.id,
         label: `Dokument ${doc.number ?? doc.subject}`,
         dueSince: until,
+        href: `/dms/${doc.id}`,
       });
     }
   }
