@@ -144,6 +144,7 @@
     "notFound": "Der Eintrag wurde nicht gefunden.",
     "unauthorized": "Bitte melden Sie sich erneut an.",
     "technical": "Der Vorgang wurde abgebrochen. Es wurde nichts gespeichert.",
+    "humanOnly": "Diese Aktion ist über MCP gesperrt. Ein Mensch löst sie in der Oberfläche aus.",
     "conflict": {
       "staleVersion": "Inzwischen wurde dieser Eintrag an anderer Stelle geändert — etwa über MCP oder in einem zweiten Fenster. Gespeichert wurde nichts; Ihre Eingaben stehen noch in der Maske. Kopieren Sie, was Sie behalten wollen, laden Sie die Seite neu und tragen Sie es auf dem aktuellen Stand erneut ein.",
       "documentIsDraft": "Das ist noch ein Entwurf.",

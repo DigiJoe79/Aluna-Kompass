@@ -103,6 +103,7 @@ function errorMessage(error: ServiceError, t: Translate): string {
     case 'unauthorized':
       return t('errors.unauthorized');
     case 'conflict': {
+      if (error.code === 'humanOnly') return t('errors.humanOnly');
       if (error.code === 'moduleRefusesDisable') {
         const key = `modules.cannotDisable.${error.message}`;
         return (t.has?.(key) ?? false) ? t(key) : t('modules.cannotDisable.generic');

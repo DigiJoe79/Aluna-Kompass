@@ -14,6 +14,7 @@ export type { Db, DbOrTx } from './db/client';
 export { openDatabase, runMigrations } from './db/client';
 export * from './permissions/core';
 export * from './permissions/check';
+export * from './permissions/human';
 export * from './modules/manifest';
 export * from './modules/registry';
 export * from './modules/service';
