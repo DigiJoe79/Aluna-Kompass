@@ -17,6 +17,7 @@ export * from './permissions/check';
 export * from './modules/manifest';
 export * from './modules/registry';
 export * from './modules/service';
+export * from './modules/provisions';
 export { coreModule } from './core-module';
 export * from './audit/log';
 export * from './audit/query';

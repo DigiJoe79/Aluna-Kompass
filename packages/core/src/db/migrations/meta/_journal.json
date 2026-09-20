@@ -22,6 +22,13 @@
       "when": 1789812019786,
       "tag": "0002_document_former_numbers",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1789917716023,
+      "tag": "0003_module_provisions",
+      "breakpoints": true
     }
   ]
 }

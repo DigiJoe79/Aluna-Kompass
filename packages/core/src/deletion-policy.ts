@@ -88,6 +88,16 @@ export const CORE_DELETION_RULES: readonly DeletionRule[] = [
     deletable: false,
     reason: 'Module werden deaktiviert; ihre Datenspuren bleiben.',
   },
+  {
+    entity: 'moduleProvision',
+    deletable: false,
+    reason: 'Der Vermerk, was ein Modul je ausgeliefert hat, verhindert, dass Gelöschtes oder Entzogenes beim nächsten Start zurückkommt.',
+  },
+  {
+    entity: 'moduleProvisionError',
+    deletable: false,
+    reason: 'Ein Fehler des Nachlaufs wird nicht gelöscht, sondern mit resolvedAt als behoben vermerkt.',
+  },
 
   // Arbeitsmaterial — löschbar, mit Protokolleintrag
   {

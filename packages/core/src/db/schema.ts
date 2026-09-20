@@ -45,13 +45,19 @@ export const apiTokens = sqliteTable(
   (t) => [uniqueIndex('api_tokens_hash_idx').on(t.tokenHash), index('api_tokens_user_idx').on(t.userId)],
 );
 
-export const roles = sqliteTable('roles', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull().unique(),
-  description: text('description').notNull().default(''),
-  isProtected: integer('is_protected', { mode: 'boolean' }).notNull().default(false),
-  createdAt: text('created_at').notNull(),
-});
+export const roles = sqliteTable(
+  'roles',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull().unique(),
+    description: text('description').notNull().default(''),
+    isProtected: integer('is_protected', { mode: 'boolean' }).notNull().default(false),
+    /** Von einem Modul ausgeliefert, z. B. `finance:treasurer` — zum Wiederfinden nach dem Umbenennen. */
+    originKey: text('origin_key'),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [uniqueIndex('roles_origin_key_idx').on(t.originKey)],
+);
 
 export const rolePermissions = sqliteTable(
   'role_permissions',
@@ -167,4 +173,30 @@ export const dashboardLayouts = sqliteTable('dashboard_layouts', {
   /** JSON: `[{ module, key, options }]` in Reihenfolge. */
   tiles: text('tiles').notNull(),
   updatedAt: text('updated_at').notNull(),
+});
+
+/**
+ * Was ein Modul je ausgeliefert hat. Ein Teil wird nur angelegt, wenn sein
+ * Schlüssel hier fehlt — so entsteht nach dem Umbenennen nichts doppelt, und
+ * was der Verein gelöscht oder entzogen hat, kommt nie zurück.
+ */
+export const moduleProvisions = sqliteTable(
+  'module_provisions',
+  {
+    module: text('module').notNull(),
+    kind: text('kind').notNull(),
+    key: text('key').notNull(),
+    outcome: text('outcome', { enum: ['created', 'skipped'] }).notNull(),
+    provisionedAt: text('provisioned_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.module, t.kind, t.key] })],
+);
+
+/** Fehler des `install`-Nachlaufs. Nichts wird gelöscht; ein fehlerfreier Lauf setzt `resolvedAt`. */
+export const moduleProvisionErrors = sqliteTable('module_provisions_errors', {
+  id: text('id').primaryKey(),
+  module: text('module').notNull(),
+  message: text('message').notNull(),
+  at: text('at').notNull(),
+  resolvedAt: text('resolved_at'),
 });
