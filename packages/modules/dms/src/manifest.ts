@@ -11,6 +11,7 @@ import { dmsRetentionDue, dmsRetentionHolds } from './retention';
 import { documents } from './schema';
 import { seedDms } from './seed';
 import { letterTemplate } from './templates';
+import { bundleIndexTemplate } from './bundle-index';
 
 /** Prinzip 3 für die Akte: Arbeitsmaterial neben dem Dokument ist löschbar, das Dokument selbst erst nach seiner Frist. */
 const DMS_DELETION_RULES: readonly DeletionRule[] = [
@@ -85,7 +86,7 @@ export const dmsModule: ModuleManifest = defineModule({
   settings: DMS_SETTINGS,
   install: installDms,
   permissions: ['dms.view', 'dms.create', 'dms.file', 'dms.void', 'dms.deleteDraft', 'dms.manage'],
-  documentTemplates: [letterTemplate],
+  documentTemplates: [letterTemplate, bundleIndexTemplate],
   // Zur Laufzeit, nicht fest: Welche Bereichsrechte die Akte öffnen, steht in den
   // Manifesten der anderen Module (Vorarbeiten-Spec V13).
   navigationFor: (deps) => [{ key: 'dms.list', href: '/dms', icon: 'file', group: 'dms', permission: dmsGatePermissions(deps) }],
