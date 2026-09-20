@@ -20,6 +20,7 @@ import {
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { documentTypeFor } from './catalog';
+import { refuseModuleOwned } from './owned';
 import { RELATION_KINDS, documentFormerNumbers, documentLinks, documentRelations, documents, type DocumentRow, type DocumentTypeRow } from './schema';
 import { removeDocumentFile, storeDocumentFile } from './storage';
 import { allocateDocumentNumber, linkInputSchema, peekDocumentNumber, resolveFolder, toRecord, type DocumentRecord } from './service';
@@ -77,6 +78,9 @@ export async function receiveDocument(
 
   const docType = documentTypeFor(deps.db, parsed.value.typeKey);
   if (!docType) return notFound('documentType', parsed.value.typeKey);
+
+  const owned = refuseModuleOwned(docType);
+  if (owned) return owned;
 
   let bytes = parsed.value.bytes;
   if (!bytes && parsed.value.contentBase64) {
@@ -201,6 +205,9 @@ function loadIncoming(deps: Deps, id: string): Result<DocumentRow> {
   if (!row) return notFound('document', id);
   if (row.direction !== 'incoming') return conflict('notIncoming', `Dokument ${row.number ?? row.id} ist ausgehend; seine Nummer steht im verschickten PDF`);
   if (row.status === 'voided') return conflict('documentVoided', `Dokument ${row.number ?? row.id} ist storniert`);
+  const own = documentTypeFor(deps.db, row.typeKey);
+  const owned = own ? refuseModuleOwned(own) : null;
+  if (owned) return owned;
   return ok(row);
 }
 
@@ -208,6 +215,8 @@ function targetType(deps: Deps, key: string): Result<DocumentTypeRow> {
   const docType = documentTypeFor(deps.db, key);
   if (!docType) return notFound('documentType', key);
   if (!docType.isActive) return conflict('documentTypeInactive', `Dokumentart „${docType.label}“ ist abgeschaltet`);
+  const owned = refuseModuleOwned(docType);
+  if (owned) return owned;
   return ok(docType);
 }
 

@@ -17,6 +17,7 @@ import {
 } from '@kompass/core';
 import { asc, count, eq, isNotNull, like } from 'drizzle-orm';
 import { z } from 'zod';
+import { refuseModuleOwned } from './owned';
 import {
   documentFolders,
   documentRules,
@@ -60,7 +61,10 @@ export function isDefaultType(deps: Deps, key: string): boolean {
   return defaultTypeKey(deps, 'incoming') === key || defaultTypeKey(deps, 'outgoing') === key;
 }
 
-export const documentTypeListSchema = z.object({ includeInactive: z.boolean().default(false) });
+export const documentTypeListSchema = z.object({
+  includeInactive: z.boolean().default(false),
+  selectable: z.boolean().default(false),
+});
 
 export async function listDocumentTypes(deps: Deps, ctx: CallContext, input: unknown = {}): Promise<Result<DocumentTypeRow[]>> {
   const denied = requirePermission(ctx, 'dms.view');
@@ -68,6 +72,7 @@ export async function listDocumentTypes(deps: Deps, ctx: CallContext, input: unk
   const parsed = validate(deps, documentTypeListSchema, input ?? {});
   if (!parsed.ok) return parsed;
   const rows = deps.db.select().from(documentTypes).orderBy(asc(documentTypes.sortOrder), asc(documentTypes.key)).all();
+  if (parsed.value.selectable) return ok(rows.filter((row) => row.isActive && !row.ownerModule));
   return ok(parsed.value.includeInactive ? rows : rows.filter((row) => row.isActive));
 }
 
@@ -261,6 +266,10 @@ export async function updateDocumentType(
   const existing = documentTypeFor(deps.db, parsed.value.key);
   if (!existing) return notFound('documentType', parsed.value.key);
 
+  if (existing.ownerModule && (parsed.value.defaultDirection !== undefined || parsed.value.retentionClass !== undefined || parsed.value.isActive !== undefined || parsed.value.prefix !== undefined)) {
+    return refuseModuleOwned(existing)!;
+  }
+
   if (parsed.value.prefix !== undefined && parsed.value.prefix !== existing.prefix) {
     // Die Nummer steht in jedem Dokument der Art. Ein Präfix lässt sich nur
     // ändern, solange es noch keines gibt — Entwürfe eingeschlossen, denn sie
@@ -343,6 +352,8 @@ export async function createDocumentRule(
   if (parsed.value.thenTypeKey) {
     const docType = documentTypeFor(deps.db, parsed.value.thenTypeKey);
     if (!docType) return notFound('documentType', parsed.value.thenTypeKey);
+    const owned = refuseModuleOwned(docType);
+    if (owned) return owned;
   }
 
   const id = newId();
@@ -393,6 +404,8 @@ export async function updateDocumentRule(
   if (parsed.value.thenTypeKey) {
     const docType = documentTypeFor(deps.db, parsed.value.thenTypeKey);
     if (!docType) return notFound('documentType', parsed.value.thenTypeKey);
+    const owned = refuseModuleOwned(docType);
+    if (owned) return owned;
   }
 
   const updates: Partial<typeof documentRules.$inferInsert> = {};

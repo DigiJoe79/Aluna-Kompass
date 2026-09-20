@@ -1945,6 +1945,7 @@
       "editTypeDescription": "Passen Sie Bezeichnung, Richtung, Aufbewahrungsfrist oder Standardordner an.",
       "typeImmutableHint": "Der Schlüssel ist unveränderlich.",
       "prefixHint": "Änderbar, solange die Art noch kein Dokument hat.",
+      "ownedByModule": "gehört dem Modul {module}",
       "typeColumns": {
         "prefix": "Präfix",
         "label": "Bezeichnung",

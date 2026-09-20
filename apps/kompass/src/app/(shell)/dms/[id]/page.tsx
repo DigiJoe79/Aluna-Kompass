@@ -98,7 +98,7 @@ export default async function DocumentDetailPage(props: {
 
   // Umklassifizieren nur am abgelegten, nicht stornierten Eingang (Spec 2026-09-19).
   const canReclassify = doc.direction === 'incoming' && doc.phase === 'issued' && doc.status !== 'voided' && permissions.canEdit;
-  const typesRes = canReclassify ? await listDocumentTypes(deps, ctx) : null;
+  const typesRes = canReclassify ? await listDocumentTypes(deps, ctx, { selectable: true }) : null;
   const reclassifyTypes = typesRes?.ok ? typesRes.value.map((type) => ({ key: type.key, label: type.label })) : null;
 
   return (

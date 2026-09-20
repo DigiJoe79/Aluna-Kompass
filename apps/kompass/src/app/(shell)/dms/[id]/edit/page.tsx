@@ -20,7 +20,7 @@ export default async function EditDraftPage(props: { params: Promise<{ id: strin
 
   const t = await getTranslations('dms');
 
-  const typesRes = await listDocumentTypes(deps, ctx, { includeInactive: false });
+  const typesRes = await listDocumentTypes(deps, ctx, { selectable: true });
   const types = typesRes.ok ? typesRes.value : [];
 
   const foldersRes = await listDocumentFolders(deps, ctx);

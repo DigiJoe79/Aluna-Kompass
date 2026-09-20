@@ -23,6 +23,7 @@ import {
 } from '@kompass/core';
 import { z } from 'zod';
 import { documentTypeFor } from './catalog';
+import { refuseModuleOwned } from './owned';
 import { documentCounters, documentFolders, documentFormerNumbers, documentLinks, documentRelations, documents, type DocumentLinkRow, type DocumentNoteRow, type DocumentRow } from './schema';
 import { checksumOf, readDocumentFile, removeDocumentFile } from './storage';
 import { removeDocumentText } from './index-store';
@@ -127,6 +128,9 @@ export async function previewNextNumber(
 
   const docType = documentTypeFor(deps.db, parsed.value.typeKey);
   if (!docType) return notFound('documentType', parsed.value.typeKey);
+
+  const owned = refuseModuleOwned(docType);
+  if (owned) return owned;
 
   const year = deps.clock.now().getUTCFullYear();
   return ok({ number: peekDocumentNumber(deps.db, docType.prefix, year) });
@@ -355,6 +359,10 @@ export async function voidDocument(deps: Deps, ctx: CallContext, input: unknown)
   if (!row) return notFound('document', parsed.value.id);
   if (row.phase !== 'issued') return conflict('documentIsDraft', `Entwurf „${row.subject}“ kann nicht storniert werden — nur verworfen`);
   if (row.status === 'voided') return conflict('documentAlreadyVoided', `Dokument ${row.number} ist bereits storniert`);
+
+  const docType = documentTypeFor(deps.db, row.typeKey);
+  const owned = docType ? refuseModuleOwned(docType) : null;
+  if (owned) return owned;
   return deps.db.transaction((tx: DbOrTx) => {
     tx.update(documents).set({ status: 'voided', voidedAt: isoNow(deps.clock), voidedByUserId: ctx.userId, voidReason: parsed.value.reason }).where(eq(documents.id, row.id)).run();
     const after = tx.select().from(documents).where(eq(documents.id, row.id)).get()!;

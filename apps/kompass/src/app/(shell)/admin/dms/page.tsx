@@ -17,8 +17,9 @@ export default async function AdminDmsPage() {
 
   const t = await getTranslations('dms.admin');
 
-  const [typesRes, foldersRes, rulesRes, probe] = await Promise.all([
+  const [typesRes, selectableTypesRes, foldersRes, rulesRes, probe] = await Promise.all([
     listDocumentTypes(deps, ctx, { includeInactive: true }),
+    listDocumentTypes(deps, ctx, { selectable: true }),
     listDocumentFolders(deps, ctx),
     listDocumentRules(deps, ctx, { includeInactive: true }),
     deps.textExtraction.probe(),
@@ -36,6 +37,7 @@ export default async function AdminDmsPage() {
   const channels = dispatchChannels(deps);
 
   const types = typesRes.ok ? typesRes.value : [];
+  const selectableTypes = selectableTypesRes.ok ? selectableTypesRes.value : [];
   const folders = foldersRes.ok ? foldersRes.value.map((f) => f.path) : [];
   const rules = rulesRes.ok
     ? rulesRes.value.map((r) => ({
@@ -54,7 +56,7 @@ export default async function AdminDmsPage() {
       <PageHeader title={t('title')} description={t('description')} />
       <div className="space-y-6">
         <TypesPanel types={types} folders={folders} />
-        <RulesPanel rules={rules} types={types} folders={folders} />
+        <RulesPanel rules={rules} types={selectableTypes} folders={folders} />
         <FoldersPanel folders={folders} />
         <SnippetsPanel snippets={snippets} />
         <DispatchChannelsPanel channels={channels} canManageSettings={canManageSettings} />

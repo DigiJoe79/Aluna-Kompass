@@ -63,8 +63,12 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
   const { deps, ctx } = await requireSession();
   if (requirePermission(ctx, 'dms.view')) return <ForbiddenCard permission="dms.view" />;
 
-  const typesRes = await listDocumentTypes(deps, ctx, { includeInactive: false });
+  const [typesRes, selectableTypesRes] = await Promise.all([
+    listDocumentTypes(deps, ctx, { includeInactive: false }),
+    listDocumentTypes(deps, ctx, { selectable: true }),
+  ]);
   const types = typesRes.ok ? typesRes.value : [];
+  const selectableTypes = selectableTypesRes.ok ? selectableTypesRes.value : [];
   const typesMap = new Map(types.map((type) => [type.key, type.label]));
 
   const foldersRes = await listDocumentFolders(deps, ctx);
@@ -125,9 +129,9 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
       : null;
 
   // Eingehende Arten zuerst: Wer Post ablegt, sucht sie oben.
-  const incomingFirst = types
+  const incomingFirst = selectableTypes
     .filter((type) => type.defaultDirection === 'incoming')
-    .concat(types.filter((type) => type.defaultDirection !== 'incoming'))
+    .concat(selectableTypes.filter((type) => type.defaultDirection !== 'incoming'))
     .map((type) => ({ key: type.key, label: type.label }));
 
 

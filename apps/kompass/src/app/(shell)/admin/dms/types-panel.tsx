@@ -23,6 +23,7 @@ export interface DocumentTypeItem {
   defaultFolder: string | null;
   isActive: boolean;
   sortOrder: number;
+  ownerModule?: string | null;
 }
 
 export function TypesPanel({
@@ -207,15 +208,21 @@ export function TypesPanel({
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="edit-prefix">{t('typeColumns.prefix')}</Label>
-                  <Input
-                    id="edit-prefix"
-                    name="prefix"
-                    maxLength={3}
-                    className="w-20 font-mono uppercase"
-                    defaultValue={editingType.prefix}
-                    required
-                  />
-                  <p className="text-[12px] text-muted-ink">{t('prefixHint')}</p>
+                  {editingType.ownerModule ? (
+                    <Input id="edit-prefix" value={editingType.prefix} disabled />
+                  ) : (
+                    <>
+                      <Input
+                        id="edit-prefix"
+                        name="prefix"
+                        maxLength={3}
+                        className="w-20 font-mono uppercase"
+                        defaultValue={editingType.prefix}
+                        required
+                      />
+                      <p className="text-[12px] text-muted-ink">{t('prefixHint')}</p>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -224,34 +231,53 @@ export function TypesPanel({
                 <Input id="edit-label" name="label" defaultValue={editingType.label} required />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="edit-direction">{t('typeColumns.direction')}</Label>
-                  <Select
-                    id="edit-direction"
-                    name="defaultDirection"
-                    defaultValue={editingType.defaultDirection}
-                  >
-                    <option value="incoming">{tDms('directions.incoming')}</option>
-                    <option value="outgoing">{tDms('directions.outgoing')}</option>
-                  </Select>
-                </div>
+              {editingType.ownerModule ? (
+                <p className="text-[13px] text-muted-ink">{t('ownedByModule', { module: editingType.ownerModule })}</p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-direction">{t('typeColumns.direction')}</Label>
+                      <Select
+                        id="edit-direction"
+                        name="defaultDirection"
+                        defaultValue={editingType.defaultDirection}
+                      >
+                        <option value="incoming">{tDms('directions.incoming')}</option>
+                        <option value="outgoing">{tDms('directions.outgoing')}</option>
+                      </Select>
+                    </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="edit-retention">{t('typeColumns.retention')}</Label>
-                  <Select
-                    id="edit-retention"
-                    name="retentionClass"
-                    defaultValue={editingType.retentionClass}
-                  >
-                    <option value="statutory10Y">{t('retentionClasses.statutory10Y')}</option>
-                    <option value="statutory8Y">{t('retentionClasses.statutory8Y')}</option>
-                    <option value="statutory6Y">{t('retentionClasses.statutory6Y')}</option>
-                    <option value="permanent">{t('retentionClasses.permanent')}</option>
-                    <option value="consent">{t('retentionClasses.consent')}</option>
-                  </Select>
-                </div>
-              </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-retention">{t('typeColumns.retention')}</Label>
+                      <Select
+                        id="edit-retention"
+                        name="retentionClass"
+                        defaultValue={editingType.retentionClass}
+                      >
+                        <option value="statutory10Y">{t('retentionClasses.statutory10Y')}</option>
+                        <option value="statutory8Y">{t('retentionClasses.statutory8Y')}</option>
+                        <option value="statutory6Y">{t('retentionClasses.statutory6Y')}</option>
+                        <option value="permanent">{t('retentionClasses.permanent')}</option>
+                        <option value="consent">{t('retentionClasses.consent')}</option>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      type="checkbox"
+                      id="edit-active"
+                      name="isActive"
+                      defaultChecked={editingType.isActive}
+                      className="size-4 rounded border-line"
+                    />
+                    <Label htmlFor="edit-active" className="cursor-pointer text-[13px]">
+                      {t('activeCheckbox')}
+                    </Label>
+                  </div>
+                </>
+              )}
 
               <div className="space-y-1.5">
                 <Label htmlFor="edit-folder">{t('typeColumns.folder')}</Label>
@@ -267,19 +293,6 @@ export function TypesPanel({
                     </option>
                   ))}
                 </Select>
-              </div>
-
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="edit-active"
-                  name="isActive"
-                  defaultChecked={editingType.isActive}
-                  className="size-4 rounded border-line"
-                />
-                <Label htmlFor="edit-active" className="cursor-pointer text-[13px]">
-                  {t('activeCheckbox')}
-                </Label>
               </div>
 
               <DialogFooter>

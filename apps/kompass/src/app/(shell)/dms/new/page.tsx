@@ -13,7 +13,7 @@ export default async function NewDraftPage(props: { searchParams: Promise<{ reci
   const t = await getTranslations('dms');
   const tCommon = await getTranslations('common');
 
-  const typesRes = await listDocumentTypes(deps, ctx, { includeInactive: false });
+  const typesRes = await listDocumentTypes(deps, ctx, { selectable: true });
   const types = typesRes.ok ? typesRes.value : [];
 
   const foldersRes = await listDocumentFolders(deps, ctx);

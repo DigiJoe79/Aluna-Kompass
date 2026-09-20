@@ -18,6 +18,7 @@ import {
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { documentTypeFor } from './catalog';
+import { refuseModuleOwned } from './owned';
 import { resolveRecipient } from './recipients';
 import { documentLinks, documents } from './schema';
 import { storeDocumentFile } from './storage';
@@ -102,6 +103,9 @@ export async function createDraft(deps: Deps, ctx: CallContext, input: unknown):
 
   const docType = documentTypeFor(deps.db, parsed.value.typeKey);
   if (!docType) return notFound('documentType', parsed.value.typeKey);
+
+  const owned = refuseModuleOwned(docType);
+  if (owned) return owned;
 
   const id = newId();
   const now = isoNow(deps.clock);

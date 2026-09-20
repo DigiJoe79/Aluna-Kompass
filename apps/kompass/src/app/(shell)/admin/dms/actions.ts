@@ -58,21 +58,24 @@ export async function updateDocumentTypeAction(key: string, _prev: ActionState, 
   const label = String(formData.get('label') ?? '').trim();
   const prefixRaw = formData.get('prefix');
   const prefix = prefixRaw !== null && prefixRaw !== undefined ? String(prefixRaw).trim().toUpperCase() : undefined;
-  const defaultDirection = String(formData.get('defaultDirection') ?? 'incoming') as 'incoming' | 'outgoing';
-  const retentionClass = String(formData.get('retentionClass') ?? 'statutory10Y') as any;
+  const defaultDirectionRaw = formData.get('defaultDirection');
+  const defaultDirection = defaultDirectionRaw ? (String(defaultDirectionRaw) as 'incoming' | 'outgoing') : undefined;
+  const retentionClassRaw = formData.get('retentionClass');
+  const retentionClass = retentionClassRaw ? (String(retentionClassRaw) as any) : undefined;
   const defaultFolder = orNull(formData.get('defaultFolder'));
-  const isActive = formData.get('isActive') === 'on' || formData.get('isActive') === 'true';
-  const sortOrder = Number(formData.get('sortOrder') ?? 0);
+  const isActiveRaw = formData.get('isActive');
+  const isActive = isActiveRaw !== null ? (isActiveRaw === 'on' || isActiveRaw === 'true') : undefined;
+  const sortOrder = formData.get('sortOrder') !== null ? Number(formData.get('sortOrder')) : undefined;
 
   const result = await updateDocumentType(deps, ctx, {
     key,
     label,
     ...(prefix !== undefined ? { prefix } : {}),
-    defaultDirection,
-    retentionClass,
+    ...(defaultDirection !== undefined ? { defaultDirection } : {}),
+    ...(retentionClass !== undefined ? { retentionClass } : {}),
     defaultFolder,
-    isActive,
-    sortOrder,
+    ...(isActive !== undefined ? { isActive } : {}),
+    ...(sortOrder !== undefined ? { sortOrder } : {}),
   });
 
   revalidatePath('/admin/dms');
