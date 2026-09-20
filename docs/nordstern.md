@@ -113,6 +113,11 @@ auf der jeder sieht, was für ihn ansteht. Jedes Modul steuert seine Kacheln
 am 2026-09-17, vor Finanzen, damit Finanzen seine Kacheln gleich mitbringt.
 
 **Stand: steht.** Offen im Backlog: Backup-Upload über einen Route Handler.
+Mit den Vorarbeiten für Fachmodule (0.2.0) liefert ein Modul seine
+Grundausstattung bei jedem Start nach, ohne wiederherzustellen, was der Verein
+geändert hat; neue Haken beschriften fremde Datensätze, räumen Anhängsel mit
+und lassen ein Modul sein Ausschalten ablehnen; „nur ein Mensch über die
+Oberfläche" ist ein Helfer des Kerns.
 
 ### Öffentlichkeit
 
@@ -147,8 +152,11 @@ jeder Vorgang eine Spur hinterlässt.
 
 Spec: mehrere, siehe `docs/intern/specs/`.
 
-**Stand: steht, Ausbau läuft.** Was zu „fertig" fehlt, steht in Schritt 1 der
-Roadmap.
+**Stand: steht.** Schritt 1 der Roadmap ist abgeschlossen. Mit den Vorarbeiten
+für Fachmodule (Fassung 0.2.0) kommen Schutzbereiche an der Dokumentart — ein
+Modul meldet einen Bereich mit seinem Recht an, und wer nur dieses Recht hat,
+sieht in der Akte genau diese Dokumente —, das Ausstellen von Dokumenten aus
+Modulen und der Aktenexport.
 
 ### Finanzen
 
@@ -315,6 +323,12 @@ Basis-Templates bleibt als Backlog-Punkt, nicht als Bedingung.
 dazwischen kommt, wird als 0.1.x eingeschoben. Eigene Spec, eigenes
 Brainstorming. Was heute schon feststeht:
 
+- **Zuerst die Vorarbeiten** (eigene Spec, Pläne VP1–VP5): Schutzbereiche und
+  Ausstelldienst der Akte, `install` bei jedem Start, Nutzer-Kontakt-Verknüpfung,
+  Kontaktrollen ohne eigenen Halter, „nur ein Mensch über die Oberfläche" als
+  Kernhelfer. Sie gehören zu Fundament und Akte, nicht zu den Finanzen, und
+  Schritt 4 braucht sie genauso.
+
 - Konten, Buchungen nach Sphären, Belege als Bezug in die Akte, Storno statt
   Löschen. Projekte bekommen ihre Finanzfelder. Finanzen meldet sich als
   Halter und Verweis für jedes Projekt, an dem eine Buchung hängt; ein
@@ -359,6 +373,9 @@ Eigene Spec, eigenes Brainstorming. Was heute feststeht:
 - Die Kontaktrollen für Organmitglieder und Nahestehende, die Finanzen für
   seine Prüfliste mitbringt, gehen an die Gremien über. Entlastung und
   Prüfbericht hängen am Geschäftsjahr.
+- Das Gremien-Modul meldet den Schutzbereich für Vorstands- und
+  Mitgliedersachen an (Protokolle, Aufnahmeanträge, Ausschlussverfahren); die
+  Nutzer-Kontakt-Verknüpfung aus den Vorarbeiten trägt Mitglieder mit Zugang.
 - Satzung und Beitragsordnung mit Ständen, ab der Gründungsfassung.
 - Mitgliederversammlung: Einladung mit Frist, Anwesenheit, Protokoll.
   Vorstandssitzungen und Beschlüsse.
