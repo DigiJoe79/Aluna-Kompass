@@ -1,9 +1,10 @@
-import { coreModule } from '@kompass/core';
-import { createTestDeps } from '@kompass/core/testing';
+import { coreModule, schema, unwrap } from '@kompass/core';
+import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { contactsModule } from '../src/manifest';
 import { contactUserLinks } from '../src/schema';
-import { contactIdForUserInternal, userIdForContactInternal, userLinkChangesInternal } from '../src/user-links';
+import { createContact } from '../src/service';
+import { contactIdForUserInternal, getUserLink, linkUserToContact, listUserLinkChanges, unlinkUser, userIdForContactInternal, userLinkChangesInternal } from '../src/user-links';
 
 const row = (over: Partial<typeof contactUserLinks.$inferInsert>) => ({ id: 'L1', userId: 'U1', contactId: 'C1', linkedAt: '2026-02-01T10:00:00.000Z', linkedByUserId: 'U9', unlinkedAt: null, unlinkedByUserId: null, ...over });
 
@@ -33,5 +34,60 @@ describe('contacts_user_links', () => {
     deps.db.insert(contactUserLinks).values(row({ id: 'OUT', userId: 'U4', contactId: 'C4', linkedAt: '2024-01-01T00:00:00.000Z' })).run();
     const changes = userLinkChangesInternal(deps.db, { from: '2026-01-01', to: '2026-12-31' });
     expect(changes.map((c) => [c.id, c.selfLinked])).toEqual([['OLD', false], ['SELF', true]]);
+  });
+});
+
+const code = (r: { ok: boolean; error?: { type: string; code?: string } }) => (r.ok ? 'ok' : r.error!.type === 'conflict' ? r.error!.code : r.error!.type);
+
+async function world() {
+  const deps = createTestDeps({ manifests: [coreModule, contactsModule] });
+  const adminId = insertUser(deps, { name: 'Admin', email: 'admin@kompass.local' });
+  const helperId = insertUser(deps, { name: 'Helferin', email: 'helferin@kompass.local' });
+  const admin = ctxWith(['users.manage', 'contacts.view', 'contacts.manage'], adminId);
+  const mk = async (lastName: string) => unwrap(await createContact(deps, admin, { kind: 'person', firstName: 'Erika', lastName })).id;
+  return { deps, admin, adminId, helperId, c1: await mk('Eins'), c2: await mk('Zwei') };
+}
+
+describe('linking a user account to a contact', () => {
+  it('needs users.manage, an existing account and an existing contact', async () => {
+    const { deps, admin, helperId, c1 } = await world();
+    expect(code(await linkUserToContact(deps, ctxWith(['contacts.manage']), { userId: helperId, contactId: c1 }))).toBe('forbidden');
+    expect(code(await linkUserToContact(deps, admin, { userId: 'nobody', contactId: c1 }))).toBe('notFound');
+    expect(code(await linkUserToContact(deps, admin, { userId: helperId, contactId: 'nothing' }))).toBe('notFound');
+  });
+
+  it('links, reads back, refuses a second open link on either side, and logs without names', async () => {
+    const { deps, admin, adminId, helperId, c1, c2 } = await world();
+    const link = unwrap(await linkUserToContact(deps, admin, { userId: helperId, contactId: c1 }));
+    expect(link).toMatchObject({ userId: helperId, contactId: c1, linkedByUserId: adminId, unlinkedAt: null });
+    expect(unwrap(await getUserLink(deps, admin, { userId: helperId }))).toMatchObject({ link: { id: link.id }, contactName: 'Erika Eins' });
+    expect(code(await linkUserToContact(deps, admin, { userId: helperId, contactId: c2 }))).toBe('userAlreadyLinked');
+    expect(code(await linkUserToContact(deps, admin, { userId: adminId, contactId: c1 }))).toBe('contactAlreadyLinked');
+    const entry = deps.db.select().from(schema.auditLog).all().at(-1)!;
+    expect(entry.action).toBe('contacts.userLink.create');
+    expect(`${entry.summary}${entry.after}`).not.toMatch(/Erika|Eins|Helferin/);
+  });
+
+  it('unlinking ends the row and keeps it; the account can be linked again', async () => {
+    const { deps, admin, adminId, helperId, c1, c2 } = await world();
+    unwrap(await linkUserToContact(deps, admin, { userId: helperId, contactId: c1 }));
+    const ended = unwrap(await unlinkUser(deps, admin, { userId: helperId }));
+    expect(ended).toMatchObject({ unlinkedByUserId: adminId });
+    expect(ended.unlinkedAt).not.toBeNull();
+    expect(code(await unlinkUser(deps, admin, { userId: helperId }))).toBe('userNotLinked');
+    unwrap(await linkUserToContact(deps, admin, { userId: helperId, contactId: c2 }));
+    expect(unwrap(await listUserLinkChanges(deps, admin, { from: '2026-01-01', to: '2026-12-31' }))).toHaveLength(2);
+  });
+
+  it('one may set one’s own link once — never change or remove it', async () => {
+    const { deps, admin, adminId, c1, c2 } = await world();
+    const own = unwrap(await linkUserToContact(deps, admin, { userId: adminId, contactId: c1 }));
+    expect(own.linkedByUserId).toBe(adminId);
+    expect(unwrap(await listUserLinkChanges(deps, admin, { from: '2026-01-01', to: '2026-12-31' }))[0]!.selfLinked).toBe(true);
+    expect(code(await unlinkUser(deps, admin, { userId: adminId }))).toBe('ownLinkNeedsSecondPerson');
+    // Eine zweite Person löst — danach darf man sich trotzdem nicht selbst neu verknüpfen.
+    const secondId = insertUser(deps, { name: 'Zweite', email: 'zweite@kompass.local' });
+    unwrap(await unlinkUser(deps, ctxWith(['users.manage'], secondId), { userId: adminId }));
+    expect(code(await linkUserToContact(deps, admin, { userId: adminId, contactId: c2 }))).toBe('ownLinkNeedsSecondPerson');
   });
 });

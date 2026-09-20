@@ -5,6 +5,7 @@ import {
   contactRoleAddSchema, contactRoleEndSchema, contactStatusSchema, contactUpdateSchema, createContact,
   endContactRole, getContact, listContacts, listDueContacts, setContactChannels, setContactStatus, updateContact,
 } from './service';
+import { linkUserToContact, listUserLinkChanges, unlinkUser, userIdSchema, userLinkRangeSchema, userLinkSchema } from './user-links';
 
 const t = (name: string, description: string, inputSchema: z.ZodType<unknown>, handler: McpToolDefinition['handler'], service: McpToolDefinition['service']): McpToolDefinition => ({ name, description, inputSchema, handler, service });
 
@@ -19,4 +20,7 @@ export const CONTACTS_MCP_TOOLS: McpToolDefinition[] = [
   t('contacts_end_role', 'End a role of a contact without deleting it. Requires contacts.manage.', contactRoleEndSchema, (deps, ctx, args) => endContactRole(deps, ctx, args), endContactRole),
   t('contacts_set_status', 'Archive or reactivate a contact. Requires contacts.manage.', contactStatusSchema, (deps, ctx, args) => setContactStatus(deps, ctx, args), setContactStatus),
   t('contacts_due', 'List contacts whose retention has run out and that are due for deletion. Requires contacts.manage.', z.object({}), (deps, ctx) => listDueContacts(deps, ctx), listDueContacts),
+  t('contacts_link_user', 'Link a user account to the contact that is the same person. History is kept: a link is ended, never deleted. You may set your own link once; any later change to your own account needs a second person. Requires users.manage.', userLinkSchema, (deps, ctx, args) => linkUserToContact(deps, ctx, args), linkUserToContact),
+  t('contacts_unlink_user', 'End the link between a user account and its contact. Not for your own account. Requires users.manage.', userIdSchema, (deps, ctx, args) => unlinkUser(deps, ctx, args), unlinkUser),
+  t('contacts_user_link_changes', 'List every link between user accounts and contacts that began or ended within a period, with who set it and whether the account linked itself. Requires users.manage.', userLinkRangeSchema, (deps, ctx, args) => listUserLinkChanges(deps, ctx, args), listUserLinkChanges),
 ];

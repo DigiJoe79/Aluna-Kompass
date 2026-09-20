@@ -190,6 +190,7 @@ const WITHOUT_TOOL: Record<string, string> = {
   'dms.canReadDocumentType': 'Rechteprüfung für die Seiten der Akte, kein Dienst.',
   'contacts.deleteContact': 'Löschung personenbezogener Daten bestätigt ein Mensch.',
   'contacts.seedContacts': 'Beispieldaten der Entwicklung.',
+  'contacts.getUserLink': 'Lesehilfe der Nutzerverwaltung; über MCP liefert contacts_user_link_changes dasselbe mit Verlauf.',
   'animals.seedAnimals': 'Beispieldaten der Entwicklung.',
   'projects.seedProjects': 'Beispieldaten der Entwicklung.',
   'site.applySeed': 'Beispielinhalte des Templates; ein Mensch bestätigt sie in der Oberfläche.',
