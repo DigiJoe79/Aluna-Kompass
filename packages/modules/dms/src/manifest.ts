@@ -1,4 +1,5 @@
 import { defineModule, type DeletionRule, type ModuleManifest } from '@kompass/core';
+import { eq } from 'drizzle-orm';
 import { DMS_DASHBOARD_TILES } from './dashboard';
 import { dmsFollowUpTargets } from './follow-ups';
 import { DMS_SETTINGS, installDms } from './install';
@@ -6,6 +7,7 @@ import { DMS_MCP_TOOLS } from './mcp-tools';
 import { dmsRecordLabels } from './record-labels';
 import { dmsRecordReferences } from './record-references';
 import { dmsRetentionDue, dmsRetentionHolds } from './retention';
+import { documents } from './schema';
 import { seedDms } from './seed';
 import { letterTemplate } from './templates';
 
@@ -98,6 +100,9 @@ export const dmsModule: ModuleManifest = defineModule({
   followUpTargets: dmsFollowUpTargets,
   dashboardTiles: DMS_DASHBOARD_TILES,
   deletionRules: DMS_DELETION_RULES,
+  // Ein ausgeschaltetes Modul schweigt als Halter: Kontakte, die nur ein
+  // Dokument hält, würden löschbar. Entwürfe zählen nicht — sie halten nichts.
+  canDisable: (deps) => (deps.db.select({ id: documents.id }).from(documents).where(eq(documents.phase, 'issued')).get() ? 'hasFinalRecords' : null),
   mcpTools: DMS_MCP_TOOLS,
   seed: seedDms,
 });
