@@ -1,7 +1,7 @@
-import { activeUserChoices, hasPermission, isModuleEnabled, requirePermission, retentionEnd, retentionMonths, userNamesFor } from '@kompass/core';
+import { activeUserChoices, hasPermission, isModuleEnabled, retentionEnd, retentionMonths, userNamesFor } from '@kompass/core';
 import { listProjects } from '@kompass/module-projects';
 import { listAnimals } from '@kompass/module-animals';
-import { dispatchChannels, documentTypeFor, getDocumentRecord, listDocumentFolders, listDocumentTypes } from '@kompass/module-dms';
+import { dispatchChannels, documentTypeFor, getDocumentRecord, listDocumentFolders, listDocumentTypes, requireDmsGate } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
@@ -15,11 +15,12 @@ export default async function DocumentDetailPage(props: {
 }) {
   const { deps, ctx } = await requireSession();
   const tCommon = await getTranslations('common');
-  if (requirePermission(ctx, 'dms.view')) return <ForbiddenCard permission="dms.view" />;
+  if (requireDmsGate(deps, ctx)) return <ForbiddenCard permission="dms.view" />;
 
   const { id } = await props.params;
   const result = await getDocumentRecord(deps, ctx, id);
   if (!result.ok) {
+    if (result.error.type === 'forbidden') return <ForbiddenCard permission={result.error.permission} />;
     notFound();
   }
 

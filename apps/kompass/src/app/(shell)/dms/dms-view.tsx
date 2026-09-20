@@ -1,4 +1,4 @@
-import { hasPermission, requirePermission, type CallContext, type Deps } from '@kompass/core';
+import { hasPermission, type CallContext, type Deps } from '@kompass/core';
 import { getProject } from '@kompass/module-projects';
 import { getAnimal } from '@kompass/module-animals';
 import { displayName, getContact } from '@kompass/module-contacts';
@@ -8,6 +8,7 @@ import {
   listDocumentFolders,
   listDocuments,
   listDocumentTypes,
+  requireDmsGate,
 } from '@kompass/module-dms';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { requireSession } from '@/lib/request-context';
@@ -61,7 +62,7 @@ const SORTABLE = ['number', 'subject', 'documentDate', 'typeKey', 'folder', 'cre
  */
 export async function DmsView({ query, receive }: { query: DmsQuery; receive?: boolean }) {
   const { deps, ctx } = await requireSession();
-  if (requirePermission(ctx, 'dms.view')) return <ForbiddenCard permission="dms.view" />;
+  if (requireDmsGate(deps, ctx)) return <ForbiddenCard permission="dms.view" />;
 
   const [typesRes, selectableTypesRes] = await Promise.all([
     listDocumentTypes(deps, ctx, { includeInactive: false }),

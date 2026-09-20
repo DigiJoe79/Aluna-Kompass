@@ -1,5 +1,6 @@
 import { defineModule, type DeletionRule, type ModuleManifest } from '@kompass/core';
 import { eq } from 'drizzle-orm';
+import { dmsGatePermissions } from './access';
 import { DMS_DASHBOARD_TILES } from './dashboard';
 import { dmsFollowUpTargets } from './follow-ups';
 import { DMS_SETTINGS, installDms } from './install';
@@ -85,7 +86,9 @@ export const dmsModule: ModuleManifest = defineModule({
   install: installDms,
   permissions: ['dms.view', 'dms.create', 'dms.file', 'dms.void', 'dms.deleteDraft', 'dms.manage'],
   documentTemplates: [letterTemplate],
-  navigation: [{ key: 'dms.list', href: '/dms', icon: 'file', group: 'dms', permission: 'dms.view' }],
+  // Zur Laufzeit, nicht fest: Welche Bereichsrechte die Akte öffnen, steht in den
+  // Manifesten der anderen Module (Vorarbeiten-Spec V13).
+  navigationFor: (deps) => [{ key: 'dms.list', href: '/dms', icon: 'file', group: 'dms', permission: dmsGatePermissions(deps) }],
   adminNavigation: [{ key: 'dms.admin', href: '/admin/dms', icon: 'folder', permission: 'dms.manage' }],
   help: [
     { href: '/dms', doc: 'akte/dokumente-und-ordner' },

@@ -1,4 +1,5 @@
 import { coreModule, defineModule, type HandbookChapter, type ModuleManifest } from '@kompass/core';
+import { dmsModule } from '@kompass/module-dms';
 import { describe, expect, it } from 'vitest';
 import { activeRailKey, buildNavigation, buildRail, crumbsFor, locate, sectionsFor, type NavGroup, type NavItem } from '@/lib/navigation';
 
@@ -175,6 +176,11 @@ describe('locate', () => {
     const m = defineModule({ key: 'm', version: '0', permissions: ['m.view', 'm.area'], navigation: [{ key: 'm.list', href: '/m', icon: 'file', permission: ['m.view', 'm.area'] }] });
     const item = (perms: string[]) => buildNavigation({ manifests: [m], enabledKeys: new Set(['m']), permissions: new Set(perms) }).find((g) => g.key === 'm')!.items[0]!;
     expect([item(['m.area']).visible, item([]).visible]).toEqual([true, false]);
+  });
+
+  it('shows the file module to someone who holds only an area permission', () => {
+    const groups = buildNavigation({ manifests: [coreModule, dmsModule], enabledKeys: new Set(['dms']), permissions: new Set(['probe.read']), extraItems: { dms: [{ key: 'dms.list', href: '/dms', icon: 'file', group: 'dms', permission: ['dms.view', 'probe.read'] }] } });
+    expect(groups.find((g) => g.key === 'dms')!.items[0]!.visible).toBe(true);
   });
 });
 
