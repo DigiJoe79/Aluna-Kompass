@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { requireFinanceRead } from './ledger/access';
 import { installFinance } from './install';
+import { FINANCE_MCP_TOOLS } from './mcp-tools';
 import { financeFiscalYears } from './schema';
 
 /**
@@ -73,6 +74,7 @@ export const financeModule: ModuleManifest = defineModule({
   ],
   // F2a ergänzt: ablehnen (`hasFinalRecords`), sobald es eine festgeschriebene Buchung gibt — Finanzen hält Kontakte, Belege und Projekte.
   canDisable: () => null,
+  mcpTools: FINANCE_MCP_TOOLS,
   followUpTargets: (deps, entityType, id) => {
     if (entityType !== 'financeFiscalYear') return null;
     const year = deps.db.select({ designation: financeFiscalYears.designation }).from(financeFiscalYears).where(eq(financeFiscalYears.id, id)).get();

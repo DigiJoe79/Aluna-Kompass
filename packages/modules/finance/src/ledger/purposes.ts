@@ -161,6 +161,26 @@ export async function reopenPurpose(deps: Deps, ctx: CallContext, input: unknown
   });
 }
 
+const purposeActiveSchema = z.object({ id: z.string().min(1), isActive: z.boolean(), expectedVersion: expectedVersionField });
+
+/** Muster wie `setAccountActive`/`setCategoryActive` — die drei Stammdatenarten des Verteilers `finance_master_data*` teilen die Form. */
+export async function setPurposeActive(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<PurposeView>> {
+  const denied = requirePermission(ctx, 'finance.setup');
+  if (denied) return denied;
+  const parsed = validate(deps, purposeActiveSchema, input);
+  if (!parsed.ok) return parsed;
+  const before = load(deps.db, parsed.value.id);
+  if (!before) return notFound('financePurpose', parsed.value.id);
+  const stale = staleVersion(parsed.value.expectedVersion, before.updatedAt);
+  if (stale) return stale;
+  return deps.db.transaction((tx: DbOrTx) => {
+    const after = { ...before, isActive: parsed.value.isActive, updatedAt: isoNow(deps.clock) };
+    tx.update(financePurposes).set({ isActive: after.isActive, updatedAt: after.updatedAt }).where(eq(financePurposes.id, before.id)).run();
+    financeAudit(tx, deps, ctx, { action: 'finance.purpose.setActive', entity: 'financePurpose', id: before.id, before, after, summary: `Zweck ${before.id} ${after.isActive ? 'aktiviert' : 'stillgelegt'}` });
+    return ok(after);
+  });
+}
+
 const deleteSchema = z.object({ id: z.string().min(1) });
 
 export async function deletePurpose(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ id: string }>> {

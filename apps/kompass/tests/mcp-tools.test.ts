@@ -36,9 +36,6 @@ const WITHOUT_MCP = new Set([
   'backup.export', 'backup.import',
   // Finanzen: Rechte stehen ab F1 im Manifest (Rollenvorschläge werden nie nachgefüllt),
   // ihre Werkzeuge kommen mit den genannten Plänen. Jeder Plan streicht seine Zeile.
-  'finance.read',             // F1 (Task 11)
-  'finance.overview',         // F1 (Task 11)
-  'finance.setup',            // F1 (Task 11)
   'finance.entriesWrite',     // F2a
   'finance.entriesFinalize',  // F2a
   'finance.periodClose',      // F2c
@@ -232,6 +229,29 @@ const WITHOUT_TOOL: Record<string, string> = {
   'core.requireHumanChannel': 'Prüft den Aufrufkanal; Helfer für Dienste, kein eigener Vorgang.',
   'core.resolveRecordLabel': 'Hakenverteiler für Datensatzbeschriftungen, kein eigener Dienst.',
   'core.withTarget': 'Reichert Wiedervorlagen mit Zielbeschriftung an; Innenleben von listDueFollowUpsWithTargets.',
+
+  // Finanzen: Stammdaten je Art laufen über die Verteilerdienste finance_master_data*
+  // (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).
+  'finance.createAccount': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.updateAccount': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.setAccountActive': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.deleteAccount': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.listAccounts': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.createCategory': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.updateCategory': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.setCategoryActive': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.deleteCategory': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.listCategories': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.createPurpose': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.updatePurpose': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.setPurposeActive': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.deletePurpose': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.listPurposes': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.fulfillPurpose': 'Erreichbar über finance_purpose_close.',
+  'finance.dissolvePurpose': 'Erreichbar über finance_purpose_close.',
+  'finance.reopenPurpose': 'Erreichbar über finance_purpose_close.',
+  'finance.listFiscalYears': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.listDatedValues': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
 };
 
 const servicesOf = (moduleKey: string, pkg: Record<string, unknown>) =>
