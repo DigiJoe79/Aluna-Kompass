@@ -1,7 +1,9 @@
 import { and, asc, count, desc, eq, inArray, isNull, like, or, sql, type SQL } from 'drizzle-orm';
 import {
+  blockingHolds,
   conflict,
   deleteFollowUpsFor,
+  findModuleRecordReferences,
   invalid,
   isoNow,
   linkedAccess,
@@ -631,6 +633,15 @@ export async function deleteDocument(
   if (until >= today) {
     return conflict('retentionRunning', `Aufbewahrungsfrist für Dokument ${doc.number ?? doc.id} läuft noch bis ${until}`);
   }
+
+  // Die Frist der Dokumentart ist nur die eigene. Ein Modul kann länger halten
+  // (die Buchung ihren Beleg) — und solange eines darauf zeigt, bleibt es.
+  // Ein Modul lässt seinen Verweis mit seinem Halter enden; sonst wäre ein
+  // Beleg nie löschbar.
+  const holds = blockingHolds(deps, 'document', doc.id);
+  if (holds.length > 0) return conflict('recordHeld', `Noch gehalten von: ${holds.map((h) => `${h.label}${h.until ? ` (bis ${h.until})` : ' (dauerhaft)'}`).join('; ')}`);
+  const references = findModuleRecordReferences(deps, 'document', doc.id);
+  if (references.length > 0) return conflict('stillReferenced', `Es zeigt noch darauf: ${references.map((r) => r.label).join('; ')}`);
 
   deps.db.transaction((tx: DbOrTx) => {
     // Was mit dem Dokument verschwindet, steht im Protokoll — als Zahl, nicht

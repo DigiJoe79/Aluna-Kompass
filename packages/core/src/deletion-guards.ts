@@ -3,7 +3,7 @@ import { followUps } from './db/schema';
 import type { Deps } from './deps';
 import { describeMediaUsage, type MediaUsage } from './media/service';
 import type { RecordReference, RetentionHold } from './modules/manifest';
-import { enabledManifests } from './modules/service';
+import { CORE_MODULE_KEY, enabledManifests } from './modules/service';
 import { conflict, type Failure } from './result';
 import { holdsFor } from './retention/service';
 
@@ -28,6 +28,16 @@ export function coreRecordReferences(deps: Deps, entityType: string, id: string)
  */
 export function findRecordReferences(deps: Deps, entityType: string, id: string): RecordReference[] {
   return enabledManifests(deps).flatMap((m) => [...(m.recordReferences?.(deps, entityType, id) ?? [])]);
+}
+
+/**
+ * Wie `findRecordReferences`, ohne die Verweise des Kerns. Für Datensätze, die
+ * ihre Wiedervorlagen beim Löschen selbst mitnehmen (die Akte): Dort hindert
+ * eine offene Wiedervorlage nicht (Akte-fertig-Spec § 4.2), ein Verweis eines
+ * Moduls — eine Buchung auf ihren Beleg — aber schon.
+ */
+export function findModuleRecordReferences(deps: Deps, entityType: string, id: string): RecordReference[] {
+  return enabledManifests(deps).filter((m) => m.key !== CORE_MODULE_KEY).flatMap((m) => [...(m.recordReferences?.(deps, entityType, id) ?? [])]);
 }
 
 /**
