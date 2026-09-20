@@ -14,7 +14,7 @@ import {
 } from '@kompass/core';
 import { and, count, eq, isNotNull, isNull, ne, or } from 'drizzle-orm';
 import { z } from 'zod';
-import { readableTypeFilter, requireDmsGate, requireReadable } from './access';
+import { manageableTypeFilter, readableTypeFilter, requireDmsGate, requireReadable } from './access';
 import { documents } from './schema';
 import { readDocumentFile } from './storage';
 import { readDocumentText, replaceDocumentText } from './index-store';
@@ -163,7 +163,11 @@ export async function reindexAllDocuments(deps: Deps, ctx: CallContext): Promise
   const denied = requirePermission(ctx, 'dms.manage');
   if (denied) return denied;
 
-  const rows = deps.db.select({ id: documents.id }).from(documents).where(isNotNull(documents.fileName)).all();
+  // Nur was der Aufrufer lesen darf: Die Zahl steht in der Antwort und im
+  // Protokoll und verriete sonst den geschützten Bestand. Ungeschütztes liest
+  // weiter, wer `dms.manage` hat, so wie bisher; die Administration hat jedes
+  // Bereichsrecht und liest deshalb alles neu.
+  const rows = deps.db.select({ id: documents.id }).from(documents).where(and(isNotNull(documents.fileName), manageableTypeFilter(deps, ctx))).all();
 
   return deps.db.transaction((tx: DbOrTx) => {
     for (const row of rows) {

@@ -1,10 +1,14 @@
 import { unwrap, type Deps } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
+import { eq } from 'drizzle-orm';
+import { documents } from '../src/schema';
 import { describe, expect, it } from 'vitest';
+import { countDocumentsByFolder, createDocumentFolder, deleteDocumentFolder, listDocumentFolders, listDocumentTypes } from '../src/catalog';
+import { DMS_DASHBOARD_TILES } from '../src/dashboard';
 import { replaceDocumentText } from '../src/index-store';
 import { relateDocuments } from '../src/relations';
-import { getDocument, getDocumentRecord, listDocuments } from '../src/service';
-import { countUnreadDocuments, getDocumentText } from '../src/text';
+import { getDocument, getDocumentRecord, listDocuments, moveDocument } from '../src/service';
+import { countUnreadDocuments, getDocumentText, reindexAllDocuments } from '../src/text';
 import { setupWithArea } from './helpers';
 
 const denied = (r: { ok: boolean; error?: unknown }) => (r.ok ? null : r.error);
@@ -74,5 +78,54 @@ describe('the other end of a relation', () => {
     // und vom geschützten Ende aus sieht der Prüfer das offene Ende nicht im Klartext
     const [fromSecret] = unwrap(await getDocumentRecord(deps, auditor, secretId)).relations;
     expect(fromSecret).toMatchObject({ otherId: openId, otherSubject: '', otherProtected: true });
+  });
+});
+
+describe('types, folders and counts', () => {
+  async function withFolders() {
+    const s = await setupWithArea();
+    for (const path of ['Offen', 'Tresor', 'Tresor/2026']) unwrap(await createDocumentFolder(s.deps, s.all, { path }));
+    unwrap(await moveDocument(s.deps, s.all, { id: s.openId, folder: 'Offen' }));
+    unwrap(await moveDocument(s.deps, s.all, { id: s.secretId, folder: 'Tresor/2026' }));
+    return s;
+  }
+
+  it('with only an area permission one sees the readable types and the folders that hold such documents', async () => {
+    const { deps, viewer, auditor } = await withFolders();
+    expect(unwrap(await listDocumentTypes(deps, auditor, {})).map((t) => t.key)).toEqual(['secret']);
+    expect(unwrap(await listDocumentTypes(deps, viewer, {})).map((t) => t.key)).toContain('secret');
+    expect(unwrap(await listDocumentFolders(deps, auditor)).map((f) => f.path)).toEqual(['Tresor', 'Tresor/2026']);
+    expect(unwrap(await listDocumentFolders(deps, viewer)).map((f) => f.path)).toEqual(['Offen', 'Tresor', 'Tresor/2026']);
+  });
+
+  it('folder counts count only what the caller may read', async () => {
+    const { deps, viewer, auditor } = await withFolders();
+    expect(unwrap(await countDocumentsByFolder(deps, viewer))).toEqual({ Offen: 1 });
+    expect(unwrap(await countDocumentsByFolder(deps, auditor))).toEqual({ 'Tresor/2026': 1 });
+  });
+
+  it('a folder holding only protected documents says so instead of claiming to be not empty', async () => {
+    const { deps, viewer } = await withFolders();
+    const res = await deleteDocumentFolder(deps, viewer, { path: 'Tresor/2026' });
+    expect(res.ok ? null : res.error).toMatchObject({ type: 'conflict', code: 'folderHasProtectedDocuments' });
+  });
+
+  it('re-indexing queues and reports only what the caller may read', async () => {
+    const { deps, viewer } = await withFolders();
+    expect(unwrap(await reindexAllDocuments(deps, viewer)).queued).toBe(1);
+  });
+});
+
+describe('management without dms.view', () => {
+  // Wer nur `dms.manage` hat, verwaltet weiter wie bisher — aber ein geschützter Bereich bleibt zu.
+  it('re-indexing and the failed-text tile still cover unprotected documents, and never a protected one', async () => {
+    const { deps, secretId, openId } = await setupWithArea();
+    const manager = ctxWith(['dms.manage']);
+    deps.db.update(documents).set({ textStatus: 'failed' }).where(eq(documents.id, secretId)).run();
+    deps.db.update(documents).set({ textStatus: 'failed' }).where(eq(documents.id, openId)).run();
+    expect(unwrap(await reindexAllDocuments(deps, manager)).queued).toBe(1);
+    deps.db.update(documents).set({ textStatus: 'failed' }).where(eq(documents.id, openId)).run();
+    const tile = DMS_DASHBOARD_TILES.find((t) => t.key === 'textFailed')!;
+    expect(await tile.load(deps, manager, {})).toMatchObject({ kind: 'count', count: 1 });
   });
 });

@@ -49,6 +49,16 @@ export function readableTypeFilter(deps: Deps, ctx: CallContext, db: DbOrTx = de
   return inArray(documents.typeKey, keys.length > 0 ? keys : ['__none__']);
 }
 
+/**
+ * Für Verwaltungsvorgänge, die kein `dms.view` voraussetzen (Neu-Lesen, Kachel
+ * „Text nicht gelesen“): Ungeschütztes wie bisher, Geschütztes nur mit dem Recht
+ * seines Bereichs — sonst verriete die Zahl den geschützten Bestand.
+ */
+export function manageableTypeFilter(deps: Deps, ctx: CallContext, db: DbOrTx = deps.db): SQL {
+  const keys = db.select().from(documentTypes).all().filter((t) => !isProtectedType(t) || canReadType(deps, ctx, t)).map((t) => t.key);
+  return inArray(documents.typeKey, keys.length > 0 ? keys : ['__none__']);
+}
+
 /** Am einzelnen Dokument. `forbidden`, nicht `notFound`: Dass es das Dokument gibt, darf man wissen (V12). */
 export function requireReadable(deps: Deps, ctx: CallContext, row: Pick<DocumentRow, 'typeKey'>, db: DbOrTx = deps.db): Failure | null {
   const docType = db.select().from(documentTypes).all().find((t) => t.key === row.typeKey);

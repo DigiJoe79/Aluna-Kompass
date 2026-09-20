@@ -8,6 +8,7 @@ import {
   parseFolderPath,
   readSetting,
   recordAudit,
+  hasPermission,
   requirePermission,
   validate,
   type CallContext,
@@ -15,8 +16,9 @@ import {
   type Deps,
   type Result,
 } from '@kompass/core';
-import { asc, count, eq, isNotNull, like } from 'drizzle-orm';
+import { and, asc, count, eq, isNotNull, like } from 'drizzle-orm';
 import { z } from 'zod';
+import { canReadType, readableTypeFilter, requireDmsGate } from './access';
 import { refuseModuleOwned } from './owned';
 import {
   documentFolders,
@@ -67,11 +69,14 @@ export const documentTypeListSchema = z.object({
 });
 
 export async function listDocumentTypes(deps: Deps, ctx: CallContext, input: unknown = {}): Promise<Result<DocumentTypeRow[]>> {
-  const denied = requirePermission(ctx, 'dms.view');
+  const denied = requireDmsGate(deps, ctx);
   if (denied) return denied;
   const parsed = validate(deps, documentTypeListSchema, input ?? {});
   if (!parsed.ok) return parsed;
-  const rows = deps.db.select().from(documentTypes).orderBy(asc(documentTypes.sortOrder), asc(documentTypes.key)).all();
+  const all = deps.db.select().from(documentTypes).orderBy(asc(documentTypes.sortOrder), asc(documentTypes.key)).all();
+  // Mit `dms.view` alle Arten: Wer ablegt, muss eine geschützte Art wählen können.
+  // Nur mit einem Bereichsrecht: die Arten, die man lesen darf.
+  const rows = hasPermission(ctx, 'dms.view') ? all : all.filter((row) => canReadType(deps, ctx, row));
   if (parsed.value.selectable) return ok(rows.filter((row) => row.isActive && !row.ownerModule));
   return ok(parsed.value.includeInactive ? rows : rows.filter((row) => row.isActive));
 }
@@ -116,11 +121,16 @@ export async function listDocumentFolders(
   deps: Deps,
   ctx: CallContext,
 ): Promise<Result<DocumentFolderRow[]>> {
-  const denied = requirePermission(ctx, 'dms.view');
+  const denied = requireDmsGate(deps, ctx);
   if (denied) return denied;
 
   const rows = deps.db.select().from(documentFolders).orderBy(asc(documentFolders.path)).all();
-  return ok(rows);
+  if (hasPermission(ctx, 'dms.view')) return ok(rows);
+
+  // Nur mit Bereichsrecht: die Ordner, in denen etwas Lesbares liegt, und der Weg dorthin.
+  const used = deps.db.select({ folder: documents.folder }).from(documents).where(and(isNotNull(documents.folder), readableTypeFilter(deps, ctx))).groupBy(documents.folder).all().map((r) => r.folder!);
+  const shown = new Set(used.flatMap((path) => path.split('/').map((_, i, parts) => parts.slice(0, i + 1).join('/'))));
+  return ok(rows.filter((row) => shown.has(row.path)));
 }
 
 /**
@@ -132,13 +142,13 @@ export async function countDocumentsByFolder(
   deps: Deps,
   ctx: CallContext,
 ): Promise<Result<Record<string, number>>> {
-  const denied = requirePermission(ctx, 'dms.view');
+  const denied = requireDmsGate(deps, ctx);
   if (denied) return denied;
 
   const rows = deps.db
     .select({ folder: documents.folder, count: count() })
     .from(documents)
-    .where(isNotNull(documents.folder))
+    .where(and(isNotNull(documents.folder), readableTypeFilter(deps, ctx)))
     .groupBy(documents.folder)
     .all();
 
@@ -170,9 +180,11 @@ export async function deleteDocumentFolder(
   const existing = deps.db.select().from(documentFolders).where(eq(documentFolders.path, path)).get();
   if (!existing) return notFound('documentFolder', path);
 
-  const hasDoc = deps.db.select({ id: documents.id }).from(documents).where(eq(documents.folder, path)).get();
+  const readableDoc = deps.db.select({ id: documents.id }).from(documents).where(and(eq(documents.folder, path), readableTypeFilter(deps, ctx))).get();
+  const anyDoc = deps.db.select({ id: documents.id }).from(documents).where(eq(documents.folder, path)).get();
   const hasChild = deps.db.select({ path: documentFolders.path }).from(documentFolders).where(like(documentFolders.path, `${path}/%`)).get();
-  if (hasDoc || hasChild) return conflict('folderNotEmpty', `Der Ordner „${path}“ ist nicht leer`);
+  if (readableDoc || hasChild) return conflict('folderNotEmpty', `Der Ordner „${path}“ ist nicht leer`);
+  if (anyDoc) return conflict('folderHasProtectedDocuments', `Der Ordner „${path}“ enthält geschützte Dokumente`);
 
   return deps.db.transaction((tx: DbOrTx) => {
     tx.delete(documentFolders).where(eq(documentFolders.path, path)).run();
