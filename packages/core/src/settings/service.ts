@@ -115,5 +115,7 @@ export async function setSetting(
   const def = deps.registry.settingDefinitions.get(parsed.value.key);
   if (!def) return invalid([{ path: 'key', message: 'unknownSetting' }]);
   if (def.systemOnly) return conflict('settingSystemOnly', `${def.key} wird nur vom System gesetzt`);
+  if (def.uiOnly && ctx.channel === 'mcp') return conflict('settingUiOnly', def.key);
+  if (def.managedBy && readSetting<string[]>(deps, 'modules.enabled').includes(def.managedBy)) return conflict('settingManaged', def.managedBy);
   return deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctx, def.key, parsed.value.value));
 }

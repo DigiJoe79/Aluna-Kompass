@@ -6,7 +6,7 @@ import { defineModule } from '../src/modules/manifest';
 import { requireHumanChannel } from '../src/permissions/human';
 import { createTestDeps, ctxWith, systemContext, TEST_NOW } from '../src/testing';
 
-const demo = defineModule({ key: 'demo', version: '0', permissions: [], settings: [{ key: 'demo.mcpHumanOnlyAllowed', schema: z.boolean(), default: false }] });
+const demo = defineModule({ key: 'demo', version: '0', permissions: [], settings: [{ key: 'demo.mcpHumanOnlyAllowed', schema: z.boolean(), default: false, uiOnly: true }] });
 const mcp = { ...ctxWith([]), channel: 'mcp' as const };
 
 describe('requireHumanChannel', () => {

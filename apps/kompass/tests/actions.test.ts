@@ -31,6 +31,8 @@ describe('toActionState', () => {
     expect(getMsg(conflict('recordHeld', 'Noch gehalten von: Vertrag V-1 (bis 2036-12-31)'))).toBe('errors.conflict.recordHeld:{"detail":"Vertrag V-1 (bis 2036-12-31)"}');
     expect(getMsg(conflict('stillReferenced', 'Es zeigt noch darauf: Dokument X'))).toBe('errors.conflict.stillReferenced:{"detail":"Dokument X"}');
     expect(getMsg(conflict('humanOnly', 'demo.mcpHumanOnlyAllowed'))).toBe('errors.humanOnly');
+    expect(getMsg(conflict('settingManaged', 'finance'))).toBe('errors.settingManaged:{"module":"finance"}');
+    expect(getMsg(conflict('settingUiOnly', 'host.allowRobots'))).toBe('errors.settingUiOnly');
     expect(getMsg(conflict('moduleRefusesDisable', 'hasFinalRecords'))).toBe('modules.cannotDisable.generic');
     const tWithHas = Object.assign(
       (key: string, values?: Record<string, unknown>) => (values ? `${key}:${JSON.stringify(values)}` : key),

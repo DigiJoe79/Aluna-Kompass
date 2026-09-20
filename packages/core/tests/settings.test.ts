@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
+import { coreModule } from '../src/core-module';
 import { auditLog } from '../src/db/schema';
-import { readAllSettings, readSetting, setSetting } from '../src/settings/service';
+import { defineModule } from '../src/modules/manifest';
+import { readAllSettings, readSetting, setSetting, writeSettingInternal } from '../src/settings/service';
 import { createTestDeps, ctxWith } from '../src/testing';
 
 describe('settings service', () => {
@@ -79,5 +82,40 @@ describe('organization.foundedYear', () => {
     }
     // Leer bleibt erlaubt: der Verein muss das Jahr nicht pflegen.
     expect((await setSetting(deps, ctx, { key: 'organization.foundedYear', value: '' })).ok).toBe(true);
+  });
+});
+
+describe('managedBy and uiOnly', () => {
+  const owner = defineModule({ key: 'owner', version: '0', permissions: [] });
+  const host = defineModule({
+    key: 'host',
+    version: '0',
+    permissions: [],
+    settings: [
+      { key: 'host.taxOffice', schema: z.string(), default: '', managedBy: 'owner' },
+      { key: 'host.allowRobots', schema: z.boolean(), default: false, uiOnly: true },
+    ],
+  });
+  const admin = ctxWith(['settings.manage']);
+  const enable = (deps: ReturnType<typeof createTestDeps>, keys: string[]) =>
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, admin, 'modules.enabled', keys, 'test.enable'));
+
+  it('refuses a managed setting while the managing module is on, and only then', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, owner, host] });
+    enable(deps, ['host']);
+    expect((await setSetting(deps, admin, { key: 'host.taxOffice', value: 'Jülich' })).ok).toBe(true);
+    enable(deps, ['host', 'owner']);
+    const res = await setSetting(deps, admin, { key: 'host.taxOffice', value: 'Aachen' });
+    expect(res.ok ? null : res.error).toEqual({ type: 'conflict', code: 'settingManaged', message: 'owner' });
+    const internal = deps.db.transaction((tx) => writeSettingInternal(tx, deps, admin, 'host.taxOffice', 'Düren'));
+    expect(internal.ok).toBe(true);
+  });
+
+  it('refuses a uiOnly setting over mcp and accepts it over ui and system', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, host] });
+    const viaMcp = await setSetting(deps, { ...admin, channel: 'mcp' }, { key: 'host.allowRobots', value: true });
+    expect(viaMcp.ok ? null : viaMcp.error).toEqual({ type: 'conflict', code: 'settingUiOnly', message: 'host.allowRobots' });
+    expect((await setSetting(deps, admin, { key: 'host.allowRobots', value: true })).ok).toBe(true);
+    expect((await setSetting(deps, { ...admin, channel: 'system' }, { key: 'host.allowRobots', value: false })).ok).toBe(true);
   });
 });

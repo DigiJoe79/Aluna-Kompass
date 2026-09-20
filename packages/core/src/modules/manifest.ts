@@ -39,6 +39,10 @@ export interface SettingDefinition<T = unknown> {
   default: T;
   /** Nur vom System schreibbar (Import, Export); im Admin lesbar, nicht editierbar. */
   systemOnly?: boolean;
+  /** Ist dieses Modul eingeschaltet, führt es den Wert: `setSetting` lehnt ab, nur `writeSettingInternal` schreibt. */
+  managedBy?: string;
+  /** Nur über die Kanäle `ui` und `system` änderbar, nie über `mcp`. */
+  uiOnly?: boolean;
 }
 
 export interface MediaReference {
