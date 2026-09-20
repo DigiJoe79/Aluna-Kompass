@@ -30,6 +30,9 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
   Dokumente einer Art nur Personen mit dem Recht dieses Bereichs — in Liste,
   Suche, Datei, Startseite und MCP. Bereiche bringt ein Modul mit (zuerst:
   Finanzen); bis dahin ändert sich nichts.
+- **Ordner und Jahrgänge als Bündel.** Die Akte packt einen Ordner oder einen
+  Jahrgang als ZIP: PDFs, Inhaltsverzeichnis als PDF und CSV mit Prüfsummen.
+  Jede Datei wird dabei gegen ihre Prüfsumme geprüft.
 
 ### Geändert
 

@@ -61,3 +61,16 @@ wer die Akte verwaltet.
 Ein festgeschriebenes Dokument lässt sich nicht löschen — nur
 [stornieren](festschreiben-und-versand.md). Löschen lässt sich ein Entwurf,
 der nie festgeschrieben wurde, und auch das steht im Änderungsprotokoll.
+
+## Ordner und Jahrgänge als Bündel
+
+Für die Kassenprüfung, den Steuerberater oder das eigene Archiv lässt sich ein Teil der Akte als ZIP-Datei herunterladen: über der Dokumentliste „Bündel exportieren“, dann den gewählten Ordner (samt Unterordnern) oder einen Jahrgang — das Jahr des Dokumentdatums. Sie brauchen dafür das Recht „Dokumente exportieren“.
+
+Im Bündel liegen die PDFs unter ihrer Nummer, ein **Inhaltsverzeichnis als PDF** und dasselbe als **CSV** mit Nummer, Datum, Art, Betreff, Prüfsumme (SHA-256) und Status.
+
+- **Jede Datei wird vor dem Einpacken geprüft.** Passt eine nicht mehr zu ihrer Prüfsumme, liegt sie nicht bei; im Verzeichnis steht „Datei verändert“.
+- **Stornierte Dokumente** liegen bei und sind als storniert vermerkt.
+- **Was Sie nicht lesen dürfen**, steht nur mit seiner Nummer im Verzeichnis („geschützt“ oder „kein Zugriff“) — so sehen Sie, dass das Bündel nicht vollständig ist.
+- **Entwürfe** sind nie dabei.
+
+Ein Bündel fasst höchstens 500 Dokumente und 500 MB; darüber nennt Kompass die Zahl und bittet um einen Unterordner oder ein einzelnes Jahr. Das Bündel wird nicht in der Akte abgelegt. Im Änderungsprotokoll steht, wer wann welche Nummern gezogen hat.
