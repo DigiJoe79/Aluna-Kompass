@@ -76,3 +76,40 @@ export const financePurposes = sqliteTable(
   (t) => [index('finance_purposes_project_idx').on(t.projectId)],
 );
 export type FinancePurposeRow = typeof financePurposes.$inferSelect;
+
+export const financeFiscalYears = sqliteTable(
+  'finance_fiscal_years',
+  {
+    id: text('id').primaryKey(),
+    startsOn: text('starts_on').notNull(),
+    endsOn: text('ends_on').notNull(),
+    /** Steht in jeder Buchungsnummer — ab der ersten vergebenen Nummer unveränderlich. */
+    designation: text('designation').notNull(),
+    taxReturnFiledOn: text('tax_return_filed_on'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [uniqueIndex('finance_fiscal_years_designation_idx').on(t.designation), uniqueIndex('finance_fiscal_years_start_idx').on(t.startsOn)],
+);
+export type FinanceFiscalYearRow = typeof financeFiscalYears.$inferSelect;
+
+/** Abschließen und Wiederöffnen sind Ereignisse, kein Feld: Der Status ist das jüngste. Nie gelöscht. Dienste ab F2c. */
+export const financePeriodEvents = sqliteTable(
+  'finance_period_events',
+  {
+    id: text('id').primaryKey(),
+    fiscalYearId: text('fiscal_year_id').notNull().references(() => financeFiscalYears.id),
+    kind: text('kind', { enum: ['closed', 'reopened'] }).notNull(),
+    at: text('at').notNull(),
+    byUserId: text('by_user_id').notNull(),
+    reason: text('reason'),
+  },
+  (t) => [index('finance_period_events_year_idx').on(t.fiscalYearId, t.at)],
+);
+export type FinancePeriodEventRow = typeof financePeriodEvents.$inferSelect;
+
+/** Der Zähler ist Zustand: Eine Nummer kommt nie wieder. Muster `document_counters` der Akte. */
+export const financeEntryCounters = sqliteTable('finance_entry_counters', {
+  fiscalYearId: text('fiscal_year_id').primaryKey().references(() => financeFiscalYears.id),
+  last: integer('last').notNull(),
+});

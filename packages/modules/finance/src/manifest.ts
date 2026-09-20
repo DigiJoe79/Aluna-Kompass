@@ -1,5 +1,8 @@
 import { defineModule, type ModuleManifest } from '@kompass/core';
+import { eq } from 'drizzle-orm';
+import { requireFinanceRead } from './ledger/access';
 import { installFinance } from './install';
+import { financeFiscalYears } from './schema';
 
 /**
  * Alle zehn Rechte stehen von Anfang an hier, auch die, deren Dienste erst
@@ -36,4 +39,20 @@ export const financeModule: ModuleManifest = defineModule({
   // AGENTS.md verlangt den Haken für jedes Modul von Anfang an.
   seed: async () => {},
   install: installFinance,
+  followUpTargets: (deps, entityType, id) => {
+    if (entityType !== 'financeFiscalYear') return null;
+    const year = deps.db.select({ designation: financeFiscalYears.designation }).from(financeFiscalYears).where(eq(financeFiscalYears.id, id)).get();
+    if (!year) return null;
+    // Eine Seite gibt es erst mit F3; dort wird der Link nachgetragen.
+    return { label: `Geschäftsjahr ${year.designation}`, href: null };
+  },
+  recordLabels: (deps, ctx, entityType, id) => {
+    if (entityType !== 'financeFiscalYear') return null;
+    const year = deps.db.select({ designation: financeFiscalYears.designation }).from(financeFiscalYears).where(eq(financeFiscalYears.id, id)).get();
+    if (!year) return { label: '', href: null, state: 'missing' };
+    const label = `Geschäftsjahr ${year.designation}`;
+    const denied = requireFinanceRead(ctx, 'overview');
+    // Das Label bleibt auch ohne Recht stehen — eine Jahresbezeichnung verrät nichts.
+    return { label, href: null, state: denied ? 'forbidden' : 'ok' };
+  },
 });

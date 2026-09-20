@@ -1,5 +1,9 @@
+import { unwrap } from '@kompass/core';
+import { ctxWith } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
+import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
 import { financeModule } from '../src/manifest';
+import { setupFinance } from './helpers';
 
 describe('finance module', () => {
   it('has the key finance, stores files, and depends on contacts, the file module and projects', () => {
@@ -24,5 +28,22 @@ describe('finance module', () => {
 
   it('brings five contact roles, none of which holds a contact by itself', () => {
     expect(financeModule.contactRoles).toEqual(['donor', 'grant-recipient', 'claimant', 'board-member', 'related-party'].map((key) => ({ key, retention: 'none' })));
+  });
+
+  it('labels a fiscal year for follow-ups and links from the file module', async () => {
+    const { deps, ctx } = setupFinance();
+    const year = unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-01-01', endsOn: '2026-12-31' }));
+    expect(financeModule.recordLabels!(deps, ctx, 'financeFiscalYear', year.id)).toMatchObject({ label: 'Geschäftsjahr 2026', state: 'ok' });
+    expect(financeModule.recordLabels!(deps, ctxWith([]), 'financeFiscalYear', year.id)).toMatchObject({ state: 'forbidden', label: 'Geschäftsjahr 2026' });
+    expect(financeModule.recordLabels!(deps, ctx, 'financeFiscalYear', 'nope')).toMatchObject({ state: 'missing' });
+    expect(financeModule.recordLabels!(deps, ctx, 'contact', 'x')).toBeNull();
+  });
+
+  it('offers a follow-up target for a fiscal year, without a page yet', async () => {
+    const { deps, ctx } = setupFinance();
+    const year = unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-01-01', endsOn: '2026-12-31' }));
+    expect(financeModule.followUpTargets!(deps, 'financeFiscalYear', year.id)).toEqual({ label: 'Geschäftsjahr 2026', href: null });
+    expect(financeModule.followUpTargets!(deps, 'financeFiscalYear', 'nope')).toBeNull();
+    expect(financeModule.followUpTargets!(deps, 'contact', 'x')).toBeNull();
   });
 });
