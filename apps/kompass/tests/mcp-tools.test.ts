@@ -187,8 +187,6 @@ const WITHOUT_TOOL: Record<string, string> = {
   'dms.receiveGeneratedUpload': 'Baustein für Module: nimmt einen Callback; das Werkzeug ist der Dienst des Moduls (z. B. Auslage einreichen).',
   'dms.storeIncoming': 'Innenleben von dms_receive und receiveGeneratedUpload.',
   'dms.requireDmsGate': 'Rechteprüfung für die Seiten der Akte, kein Dienst.',
-  'dms.toRecord': 'Innenleben der Dienste; verlässt mit Task 8 die Exporte der Akte.',
-  'dms.relationsFor': 'Innenleben von toRecord; verlässt mit Task 8 die Exporte der Akte.',
   'contacts.deleteContact': 'Löschung personenbezogener Daten bestätigt ein Mensch.',
   'contacts.seedContacts': 'Beispieldaten der Entwicklung.',
   'animals.seedAnimals': 'Beispieldaten der Entwicklung.',

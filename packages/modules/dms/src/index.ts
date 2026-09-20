@@ -9,22 +9,47 @@ export * from './incoming';
 export * from './install';
 export * from './issue';
 export * from './linked';
-export * from './index-store';
 export * from './manifest';
 export * from './mcp-tools';
-export * from './notes';
+export { addNote, deleteNote, deleteNotesFor, noteAddSchema, noteIdSchema } from './notes';
 export * from './owned';
 export * from './provision';
-export * from './recipients';
 export * from './record-references';
-export * from './relations';
+export { deleteRelationsFor, relateDocuments, relateSchema, unrelateDocuments, unrelateSchema } from './relations';
+export type { DocumentRelationView } from './relations';
 export * from './retention';
 export * from './schema';
-export * from './search';
+export { MIN_FULLTEXT_CHARS, SNIPPET_MARK_END, SNIPPET_MARK_START, SNIPPET_TOKENS } from './search';
+export type { TextHit } from './search';
 export * from './seed';
-export * from './service';
+export {
+  allocateDocumentNumber,
+  deleteDocument,
+  deleteDocumentSchema,
+  documentListSchema,
+  getDocument,
+  getDocumentRecord,
+  linkDocument,
+  linkInputSchema,
+  linkSchema,
+  listDocuments,
+  moveDocument,
+  moveDocumentSchema,
+  peekDocumentNumber,
+  previewNextNumber,
+  previewNumberSchema,
+  readLinkedDocument,
+  refuseReservedLinks,
+  resolveFolder,
+  unlinkDocument,
+  unlinkSchema,
+  voidDocument,
+  voidDocumentInternal,
+} from './service';
+export type { DocumentFileState, DocumentRecord } from './service';
 export * from './snippets';
-export * from './storage';
+export { checksumOf, DMS_MODULE_KEY, DOCUMENT_MAX_BYTES } from './storage';
+export type { StoredFile } from './storage';
 export * from './templates';
 export * from './text';
 export * from './worker';
