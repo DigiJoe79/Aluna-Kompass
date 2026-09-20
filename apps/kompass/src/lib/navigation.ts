@@ -1,4 +1,9 @@
-import type { HandbookChapter, ModuleManifest, NavigationItem } from '@kompass/core';
+import type { HandbookChapter, ModuleManifest, NavigationItem, PermissionSpec } from '@kompass/core';
+
+export function hasAnyOf(permissions: ReadonlySet<string>, spec?: PermissionSpec): boolean {
+  if (spec === undefined) return true;
+  return typeof spec === 'string' ? permissions.has(spec) : spec.some((key) => permissions.has(key));
+}
 
 export interface NavItem {
   key: string;
@@ -7,7 +12,7 @@ export interface NavItem {
   labelKey: string;
   /** Beschriftung aus Daten; hat Vorrang vor `labelKey`. */
   label?: string;
-  permission?: string;
+  permission?: PermissionSpec;
   disabled: boolean;
   visible: boolean;
   /** Trennlinie oberhalb dieses Eintrags. */
@@ -27,7 +32,7 @@ export interface NavGroup {
  * Arbeitsflächen: Dinge, die man benutzt. Elf Einträge in einer Gruppe waren zu
  * viel, und die Hälfte davon stellt man einmal ein, statt damit zu arbeiten.
  */
-const CORE_ADMIN: { key: string; href: string; icon: string; permission?: string }[] = [
+const CORE_ADMIN: { key: string; href: string; icon: string; permission?: PermissionSpec }[] = [
   { key: 'users', href: '/admin/users', icon: 'users', permission: 'users.manage' },
   { key: 'roles', href: '/admin/roles', icon: 'shield', permission: 'roles.manage' },
   { key: 'audit', href: '/admin/audit', icon: 'clock', permission: 'audit.view' },
@@ -36,7 +41,7 @@ const CORE_ADMIN: { key: string; href: string; icon: string; permission?: string
 ];
 
 /** Einrichtung: Dinge, die man einstellt. Module hängen ihre Stammdaten hier ein. */
-const CORE_CONFIG: { key: string; href: string; icon: string; permission?: string }[] = [
+const CORE_CONFIG: { key: string; href: string; icon: string; permission?: PermissionSpec }[] = [
   { key: 'settings', href: '/admin/settings', icon: 'sliders', permission: 'settings.manage' },
   { key: 'locales', href: '/admin/locales', icon: 'languages', permission: 'settings.manage' },
   { key: 'themes', href: '/admin/themes', icon: 'droplet', permission: 'settings.manage' },
@@ -51,7 +56,7 @@ export function buildNavigation(input: {
   /** Zur Laufzeit ermittelte Einträge je Modul-Key — etwa je Sammlung eines Templates. */
   extraItems?: Record<string, NavigationItem[]>;
 }): NavGroup[] {
-  const visible = (permission?: string) => !permission || input.permissions.has(permission);
+  const visible = (permission?: PermissionSpec) => hasAnyOf(input.permissions, permission);
   const admin: NavGroup = {
     key: 'admin',
     labelKey: 'nav.groups.admin',

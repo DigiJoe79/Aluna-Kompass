@@ -14,3 +14,11 @@ export function requireAnyPermission(ctx: CallContext, keys: readonly string[]):
   if (keys.some((key) => hasPermission(ctx, key))) return null;
   return forbidden(keys[0] ?? '');
 }
+
+export type PermissionSpec = string | readonly string[];
+
+/** Ohne Angabe: erlaubt. Mit Liste: eines genügt; eine leere Liste erlaubt niemandem etwas. */
+export function hasAnyOf(permissions: ReadonlySet<string>, spec?: PermissionSpec): boolean {
+  if (spec === undefined) return true;
+  return typeof spec === 'string' ? permissions.has(spec) : spec.some((key) => permissions.has(key));
+}

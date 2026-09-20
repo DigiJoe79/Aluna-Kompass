@@ -170,6 +170,12 @@ describe('locate', () => {
     expect(locate(FIXTURE, '/')).toBeNull();
     expect(locate(FIXTURE, '/profile')).toBeNull();
   });
+
+  it('shows an item when one of several permissions is held', () => {
+    const m = defineModule({ key: 'm', version: '0', permissions: ['m.view', 'm.area'], navigation: [{ key: 'm.list', href: '/m', icon: 'file', permission: ['m.view', 'm.area'] }] });
+    const item = (perms: string[]) => buildNavigation({ manifests: [m], enabledKeys: new Set(['m']), permissions: new Set(perms) }).find((g) => g.key === 'm')!.items[0]!;
+    expect([item(['m.area']).visible, item([]).visible]).toEqual([true, false]);
+  });
 });
 
 describe('activeRailKey', () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { systemContext } from '../src/context';
 import { CORE_PERMISSIONS } from '../src/permissions/core';
-import { hasPermission, requireAnyPermission, requirePermission } from '../src/permissions/check';
+import { hasAnyOf, hasPermission, requireAnyPermission, requirePermission } from '../src/permissions/check';
 import { ctxWith } from '../src/testing';
 
 describe('permissions', () => {
@@ -48,4 +48,11 @@ describe('permissions', () => {
     expect(ctx.permissions.size).toBe(0);
     expect(ctx.requestId).toBe('req-1');
   });
+});
+
+describe('hasAnyOf', () => {
+  const mine = new Set(['finance.read']);
+  it('allows when nothing is required', () => expect(hasAnyOf(mine)).toBe(true));
+  it('takes a single key', () => expect([hasAnyOf(mine, 'finance.read'), hasAnyOf(mine, 'dms.view')]).toEqual([true, false]));
+  it('takes a list — one is enough', () => expect([hasAnyOf(mine, ['dms.view', 'finance.read']), hasAnyOf(mine, ['dms.view']), hasAnyOf(mine, [])]).toEqual([true, false, false]));
 });

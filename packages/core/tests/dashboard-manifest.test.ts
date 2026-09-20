@@ -67,4 +67,10 @@ describe('defineModule with dashboardTiles', () => {
   it('lehnt ein Optionsschema ohne Vorgabe ab', () => {
     expect(() => module([tile({ options: z.object({ a: z.boolean() }) })])).toThrow(/without default/);
   });
+
+  it('accepts a list of permissions on a tile and rejects a foreign one inside it', () => {
+    const tile = (permission: string | string[]) => ({ key: 'demo', permission, kind: 'count' as const, defaultOn: false, options: z.object({}), load: () => ({ kind: 'count' as const, count: 0, href: null }) });
+    expect(() => defineModule({ key: 'm', version: '0', permissions: ['m.view'], dashboardTiles: [tile(['m.view', 'settings.manage'])] })).not.toThrow();
+    expect(() => defineModule({ key: 'm', version: '0', permissions: ['m.view'], dashboardTiles: [tile(['m.view', 'other.view'])] })).toThrow(/foreign permission: other.view/);
+  });
 });

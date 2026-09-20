@@ -5,6 +5,7 @@ import type { DbOrTx } from '../db/client';
 import { validateDeletionRules, type DeletionRule } from '../deletion-policy';
 import type { Deps } from '../deps';
 import { CORE_PERMISSIONS } from '../permissions/core';
+import type { PermissionSpec } from '../permissions/check';
 import type { Result } from '../result';
 import { RETENTION_CLASSES, type RetentionClass } from '../retention/classes';
 import type { Theme } from '../themes/tokens';
@@ -122,8 +123,8 @@ export interface NavigationItem {
   icon: string;
   /** Gruppen-Key; ohne Gruppe erscheint der Eintrag ungruppiert oben. */
   group?: string;
-  /** Recht, das zum Anzeigen nötig ist. */
-  permission?: string;
+  /** Recht, das zum Anzeigen nötig ist — bei einer Liste genügt eines. */
+  permission?: PermissionSpec;
   /** Beschriftung aus Daten. Fehlt sie, kommt der Text aus `nav.<key>`. */
   label?: string;
   /** Trennlinie oberhalb dieses Eintrags — teilt eine Gruppe in Abschnitte. */
@@ -374,9 +375,11 @@ export function defineModule(manifest: ModuleManifest): ModuleManifest {
     if (seenTiles.has(tile.key)) throw new Error(`duplicate dashboard tile: ${manifest.key}/${tile.key}`);
     seenTiles.add(tile.key);
     if (!TILE_KINDS.has(tile.kind)) throw new Error(`invalid dashboard tile kind: ${tile.kind}`);
-    const own = manifest.permissions.includes(tile.permission);
-    const core = (CORE_PERMISSIONS as readonly string[]).includes(tile.permission);
-    if (!own && !core) throw new Error(`dashboard tile ${manifest.key}/${tile.key} names a foreign permission: ${tile.permission}`);
+    for (const permission of typeof tile.permission === 'string' ? [tile.permission] : tile.permission) {
+      const own = manifest.permissions.includes(permission);
+      const core = (CORE_PERMISSIONS as readonly string[]).includes(permission);
+      if (!own && !core) throw new Error(`dashboard tile ${manifest.key}/${tile.key} names a foreign permission: ${permission}`);
+    }
     dashboardOptionFields(tile.options); // wirft bei unzulässigem Schema
   }
   return manifest;
