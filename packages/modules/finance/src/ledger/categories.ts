@@ -3,7 +3,7 @@ import { asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
-import { financeCategories, type FinanceCategoryRow } from '../schema';
+import { financeAllocationLines, financeCategories, type FinanceCategoryRow } from '../schema';
 import { requireFinanceRead } from './access';
 import { ALLOWANCE_KINDS, CERTIFIABLE_INCOME_KINDS, COST_FUNCTIONS, DIRECTIONS, INCOME_KINDS, INPUT_TAX, SPHERES, TAX_CODES } from './codes';
 
@@ -63,9 +63,9 @@ const categoryUpdateSchema = categoryBase
 
 export type CategoryView = FinanceCategoryRow;
 
-/** F1 kennt noch keine Buchungszeilen. F2a ergänzt hier die Abfrage. */
-export function categoryInUseInternal(_db: DbOrTx, _categoryId: string): boolean {
-  return false;
+/** Auch der Entwurf einer Zuordnungszeile belegt die Kategorie. */
+export function categoryInUseInternal(db: DbOrTx, categoryId: string): boolean {
+  return !!db.select({ id: financeAllocationLines.id }).from(financeAllocationLines).where(eq(financeAllocationLines.categoryId, categoryId)).get();
 }
 
 function keyTaken(db: DbOrTx, key: string): boolean {

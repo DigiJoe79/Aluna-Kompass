@@ -4,7 +4,7 @@ import { asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
-import { financePurposes, type FinancePurposeRow } from '../schema';
+import { financeAllocationLines, financePurposes, type FinancePurposeRow } from '../schema';
 import { requireFinanceRead } from './access';
 
 const base = z.object({
@@ -30,9 +30,9 @@ const purposeUpdateSchema = base.partial().extend({ id: z.string().min(1), expec
 /** Wie `FinancePurposeRow`, nur dass die Liste den Freitext ohne `finance.read` auf `null` setzt. */
 export type PurposeView = Omit<FinancePurposeRow, 'description'> & { description: string | null };
 
-/** F1 kennt noch keine Buchungszeilen. F2a/F2c ergänzen hier die Abfrage. */
-export function purposeInUseInternal(_db: DbOrTx, _purposeId: string): boolean {
-  return false;
+/** Auch der Entwurf einer Zuordnungszeile belegt den Zweck. */
+export function purposeInUseInternal(db: DbOrTx, purposeId: string): boolean {
+  return !!db.select({ id: financeAllocationLines.id }).from(financeAllocationLines).where(eq(financeAllocationLines.purposeId, purposeId)).get();
 }
 
 function projectExists(db: DbOrTx, id: string): boolean {

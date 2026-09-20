@@ -2,6 +2,7 @@ import { readSetting, schema, unwrap } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { createAccount, deleteAccount, listAccounts, setAccountActive, updateAccount } from '../src/ledger/accounts';
+import { financeEntries, financeMoneyLines } from '../src/schema';
 import { setupFinance } from './helpers';
 
 const BANK = { name: 'Vereinskonto', kind: 'bank' as const, iban: 'DE02 1203 0000 0000 2020 51', bic: 'BYLADEM1001', bankName: 'Beispielbank', isMain: true };
@@ -65,5 +66,14 @@ describe('money accounts', () => {
     expect(log.map((e) => e.action)).toEqual(['finance.account.create', 'finance.account.update', 'finance.account.delete']);
     expect(JSON.stringify(log)).not.toMatch(/Vereinskonto|Anders|DE02|AT61|Beispielbank|BYLADEM/);
     expect(JSON.parse(log[1]!.after as string)).toMatchObject({ bankDetailsChanged: true });
+  });
+
+  it('cannot be deleted once a line points at it — even a draft’s', async () => {
+    const { deps, ctx } = setupFinance();
+    const account = unwrap(await createAccount(deps, ctx, { ...BANK, isMain: false }));
+    const now = '2026-03-01T10:00:00.000Z';
+    deps.db.insert(financeEntries).values({ id: 'E1', number: null, entryDate: '2026-03-01', text: 'Test', status: 'draft', createdByUserId: 'U1', createdChannel: 'ui', createdAt: now, updatedAt: now }).run();
+    deps.db.insert(financeMoneyLines).values({ id: 'M1', entryId: 'E1', position: 0, accountId: account.id, amountCents: 1 }).run();
+    expect(err(await deleteAccount(deps, ctx, { id: account.id }))).toMatchObject({ type: 'conflict', code: 'accountInUse' });
   });
 });

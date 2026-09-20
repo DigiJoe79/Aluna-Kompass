@@ -1,16 +1,22 @@
 export { financeModule, FINANCE_PERMISSIONS } from './manifest';
 export {
   financeAccounts,
+  financeAllocationLines,
   financeCategories,
   financeDatedValues,
+  financeEntries,
   financeEntryCounters,
   financeFiscalYears,
+  financeMoneyLines,
   financePeriodEvents,
   financePurposes,
   type FinanceAccountRow,
+  type FinanceAllocationLineRow,
   type FinanceCategoryRow,
   type FinanceDatedValueRow,
+  type FinanceEntryRow,
   type FinanceFiscalYearRow,
+  type FinanceMoneyLineRow,
   type FinancePeriodEventRow,
   type FinancePurposeRow,
 } from './schema';
@@ -70,6 +76,19 @@ export {
 export { DATED_SERIES, type DatedValueKey } from './ledger/dated-series';
 export { listDatedValues, removeDatedValue, setDatedValue, valueAt, type DatedValueListEntry } from './ledger/dated-values';
 export { closePurpose, deleteMasterData, readMasterData, saveMasterData, setMasterDataActive } from './ledger/master-data';
+export {
+  deleteDraft,
+  entryViewInternal,
+  getEntry,
+  listEntries,
+  saveDraft,
+  writeLinesInternal,
+  type AllocationLineView,
+  type AllocationLineWrite,
+  type EntryView,
+  type MoneyLineView,
+  type MoneyLineWrite,
+} from './ledger/entries';
 
 export { AUDIT_FIELDS, financeAudit, type FinanceEntity } from './audit';
 export { installFinance } from './install';

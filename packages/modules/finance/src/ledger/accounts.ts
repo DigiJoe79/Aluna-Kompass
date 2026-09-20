@@ -3,7 +3,7 @@ import { asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
-import { financeAccounts, type FinanceAccountRow } from '../schema';
+import { financeAccounts, financeMoneyLines, type FinanceAccountRow } from '../schema';
 import { requireFinanceRead } from './access';
 import { isValidIban, normalizeIban } from './iban';
 
@@ -34,9 +34,9 @@ export const accountUpdateSchema = base.partial().extend({ id: z.string().min(1)
 
 export type AccountView = FinanceAccountRow;
 
-/** F1 kennt noch keine Geldzeilen. F2a ergänzt hier die Abfrage — die eine Stelle, die „benutzt“ entscheidet. */
-export function accountInUseInternal(_db: DbOrTx, _accountId: string): boolean {
-  return false;
+/** Auch der Entwurf einer Geldzeile belegt das Konto — die eine Stelle, die „benutzt“ entscheidet. */
+export function accountInUseInternal(db: DbOrTx, accountId: string): boolean {
+  return !!db.select({ id: financeMoneyLines.id }).from(financeMoneyLines).where(eq(financeMoneyLines.accountId, accountId)).get();
 }
 
 /** E22 — eine Quelle: Das Hauptkonto schreibt die Bankdaten des Vereins nach; in den Vereinsdaten sind sie dann nur lesbar. */

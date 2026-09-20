@@ -3,7 +3,9 @@ import { ctxWith } from '@kompass/core/testing';
 import { createProject } from '@kompass/module-projects';
 import { describe, expect, it } from 'vitest';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
+import { createCategory } from '../src/ledger/categories';
 import { createPurpose, deletePurpose, dissolvePurpose, fulfillPurpose, listPurposes, reopenPurpose, updatePurpose } from '../src/ledger/purposes';
+import { financeAllocationLines, financeEntries } from '../src/schema';
 import { setupFinance } from './helpers';
 
 const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
@@ -49,5 +51,15 @@ describe('purposes', () => {
     const log = JSON.stringify(deps.db.select().from(schema.auditLog).all().filter((e) => e.action.startsWith('finance.purpose.')));
     expect(log).not.toMatch(/Dachsanierung|Muster/);
     expect(log).toContain('finance.purpose.delete');
+  });
+
+  it('cannot be deleted once a line points at it — even a draft’s', async () => {
+    const { deps, ctx } = setupFinance();
+    const purpose = unwrap(await createPurpose(deps, ctx, { name: 'Dach' }));
+    const category = unwrap(await createCategory(deps, ctx, { key: 'raffle', name: 'Tombola', direction: 'income', sphere: 'business', incomeKind: 'sales' }));
+    const now = '2026-03-01T10:00:00.000Z';
+    deps.db.insert(financeEntries).values({ id: 'E1', number: null, entryDate: '2026-03-01', text: 'Test', status: 'draft', createdByUserId: 'U1', createdChannel: 'ui', createdAt: now, updatedAt: now }).run();
+    deps.db.insert(financeAllocationLines).values({ id: 'L1', entryId: 'E1', position: 0, categoryId: category.id, purposeId: purpose.id, amountCents: 1, taxCode: 'none', rateKind: 'standard', abroad: false, addsToAssets: false }).run();
+    expect(err(await deletePurpose(deps, ctx, { id: purpose.id }))).toMatchObject({ type: 'conflict', code: 'purposeInUse' });
   });
 });

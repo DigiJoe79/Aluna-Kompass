@@ -1,11 +1,13 @@
 import { unwrap } from '@kompass/core';
 import { describe, expect, it } from 'vitest';
 import { createCategory, deleteCategory, listCategories, updateCategory } from '../src/ledger/categories';
+import { financeAllocationLines, financeEntries } from '../src/schema';
 import { setupFinance } from './helpers';
 
 const income = { key: 'raffle', name: 'Tombola', direction: 'income' as const, sphere: 'business' as const, incomeKind: 'sales' as const };
 const expense = { key: 'rent', name: 'Miete', direction: 'expense' as const, sphere: 'ideal' as const, costFunction: 'administration' as const };
 const issues = (r: { ok: boolean; error?: { type: string; issues?: { path: string; message: string }[] } }) => (r.ok ? [] : (r.error!.issues ?? []).map((i) => i.message));
+const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
 
 describe('categories', () => {
   it('creates with sensible defaults', async () => {
@@ -43,5 +45,14 @@ describe('categories', () => {
     expect(again.ok ? null : again.error).toMatchObject({ type: 'conflict', code: 'categoryKeyTaken' });
     expect((await deleteCategory(deps, ctx, { id: row.id })).ok).toBe(true);
     expect(unwrap(await listCategories(deps, ctx, {}))).toEqual([]);
+  });
+
+  it('cannot be deleted once a line points at it — even a draft’s', async () => {
+    const { deps, ctx } = setupFinance();
+    const row = unwrap(await createCategory(deps, ctx, income));
+    const now = '2026-03-01T10:00:00.000Z';
+    deps.db.insert(financeEntries).values({ id: 'E1', number: null, entryDate: '2026-03-01', text: 'Test', status: 'draft', createdByUserId: 'U1', createdChannel: 'ui', createdAt: now, updatedAt: now }).run();
+    deps.db.insert(financeAllocationLines).values({ id: 'L1', entryId: 'E1', position: 0, categoryId: row.id, amountCents: 1, taxCode: 'none', rateKind: 'standard', abroad: false, addsToAssets: false }).run();
+    expect(err(await deleteCategory(deps, ctx, { id: row.id }))).toMatchObject({ type: 'conflict', code: 'categoryInUse' });
   });
 });
