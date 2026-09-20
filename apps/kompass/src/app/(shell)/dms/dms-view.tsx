@@ -120,6 +120,9 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
   }));
 
   const canCreate = hasPermission(ctx, 'dms.create');
+  const canExport = hasPermission(ctx, 'documents.export');
+  const currentFolder = isInbox ? null : query.folder || null;
+  const currentYear = deps.clock.now().getUTCFullYear();
 
   // Nach dem Ablegen in eine geschützte Art: die Nummer, sonst nichts. Sie kommt
   // aus der Adresszeile und wird deshalb nur ausgegeben, wenn sie wie eine aussieht.
@@ -151,6 +154,9 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
       inboxCount={inboxCount}
       total={total}
       canCreate={canCreate}
+      canExport={canExport}
+      currentFolder={currentFolder}
+      currentYear={currentYear}
       types={incomingFirst}
       canCreateContact={hasPermission(ctx, 'contacts.manage')}
       defaultTypeKey={defaultTypeKey(deps, 'incoming')}

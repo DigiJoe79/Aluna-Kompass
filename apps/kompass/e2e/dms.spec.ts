@@ -1227,3 +1227,19 @@ test('ein ausgetauschtes Dokument wird nicht angezeigt, sondern gemeldet', async
     writeFileSync(datei, original);
   }
 });
+
+/**
+ * Der Aktenexport bündelt einen Jahrgang als ZIP (Vorarbeiten-Spec § 7). Der
+ * Seed trägt festgeschriebene Dokumente des laufenden Jahres — das
+ * vorbelegte Jahr trifft also, ohne dass der Test ein Datum nachtragen muss.
+ */
+test('exports a folder as a bundle', async ({ page }) => {
+  await resetDatabase(page, 'seeded');
+  await login(page);
+  await page.goto('/dms');
+  await page.getByRole('button', { name: 'Bündel exportieren' }).click();
+  await page.getByLabel('Einen Jahrgang').check();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Bündel herunterladen' }).click();
+  expect((await download).suggestedFilename()).toMatch(/^Akte-Jahrgang-\d{4}-.*\.zip$/);
+});

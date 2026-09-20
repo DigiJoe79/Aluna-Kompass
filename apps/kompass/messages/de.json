@@ -1646,6 +1646,18 @@
     "allDocuments": "Alle Dokumente",
     "newDraft": "Neuer Entwurf",
     "receivePost": "Post ablegen",
+    "export": {
+      "open": "Bündel exportieren",
+      "title": "Dokumente als Bündel",
+      "thisFolder": "Diesen Ordner: {folder} (samt Unterordnern)",
+      "year": "Einen Jahrgang",
+      "yearLabel": "Jahr des Dokumentdatums",
+      "submit": "Bündel herunterladen",
+      "working": "Bündel wird gepackt …",
+      "hint": "Das Bündel ist eine ZIP-Datei mit den PDFs, einem Inhaltsverzeichnis als PDF und als CSV mit den Prüfsummen. Dokumente, die Sie nicht lesen dürfen, stehen nur mit ihrer Nummer im Verzeichnis. Entwürfe sind nicht dabei.",
+      "forbidden": "Zum Exportieren brauchen Sie das Recht „Dokumente exportieren“.",
+      "failed": "Das Bündel konnte nicht erzeugt werden."
+    },
     "searchPlaceholder": "Betreff, Nummer oder Inhalt",
     "searchTooShort": "Für die Suche im Inhalt braucht es mindestens drei Zeichen. Gesucht wurde nur in Betreff und Nummer.",
     "hitOnPage": "Seite {page}",
