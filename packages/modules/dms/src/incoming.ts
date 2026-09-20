@@ -19,6 +19,7 @@ import {
 } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { canReadType, requireDmsGate, requireReadable } from './access';
 import { documentTypeFor } from './catalog';
 import { refuseModuleOwned } from './owned';
 import { RELATION_KINDS, documentFormerNumbers, documentLinks, documentRelations, documents, type DocumentRow, type DocumentTypeRow } from './schema';
@@ -269,7 +270,8 @@ export interface RetentionView {
 }
 
 export interface ReclassificationPreview {
-  number: { current: string | null; next: string | null };
+  /** `next` ist auch `null`, wenn der Aufrufer die Zielart nicht lesen darf — dann ist `numberHidden` gesetzt. */
+  number: { current: string | null; next: string | null; numberHidden: boolean };
   retention: { current: RetentionView; next: RetentionView };
 }
 
@@ -285,20 +287,23 @@ function retentionOf(deps: Deps, docType: DocumentTypeRow, documentDate: string)
  * Gezogen wird sie erst beim Speichern.
  */
 export async function previewReclassification(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ReclassificationPreview>> {
-  const denied = requirePermission(ctx, 'dms.view');
+  const denied = requireDmsGate(deps, ctx);
   if (denied) return denied;
   const parsed = validate(deps, reclassifyPreviewSchema, input);
   if (!parsed.ok) return parsed;
   const loaded = loadIncoming(deps, parsed.value.id);
   if (!loaded.ok) return loaded;
   const row = loaded.value;
+  const unreadable = requireReadable(deps, ctx, row);
+  if (unreadable) return unreadable;
   const currentType = documentTypeFor(deps.db, row.typeKey);
   if (!currentType) return notFound('documentType', row.typeKey);
   const changes = parsed.value.typeKey !== row.typeKey;
   const found = changes ? targetType(deps, parsed.value.typeKey) : ok(currentType);
   if (!found.ok) return found;
+  const numberVisible = changes && canReadType(deps, ctx, found.value);
   return ok({
-    number: { current: row.number, next: changes ? peekDocumentNumber(deps.db, found.value.prefix, filingYear(row)) : null },
+    number: { current: row.number, next: numberVisible ? peekDocumentNumber(deps.db, found.value.prefix, filingYear(row)) : null, numberHidden: changes && !numberVisible },
     retention: { current: retentionOf(deps, currentType, row.documentDate), next: retentionOf(deps, found.value, parsed.value.documentDate) },
   });
 }

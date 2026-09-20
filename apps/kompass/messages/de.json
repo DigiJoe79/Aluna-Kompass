@@ -1696,7 +1696,8 @@
       "discardConfirm": "Verwerfen"
     },
     "number": {
-      "pending": "Die Nummer <mono>{number}</mono> wird beim Ablegen gezogen. Wählen Sie später eine andere Art, bekommt das Dokument eine neue Nummer, und die bisherige bleibt vermerkt."
+      "pending": "Die Nummer <mono>{number}</mono> wird beim Ablegen gezogen. Wählen Sie später eine andere Art, bekommt das Dokument eine neue Nummer, und die bisherige bleibt vermerkt.",
+      "numberOnFiling": "Die Nummer wird beim Ablegen gezogen."
     },
     "saveDraft": "Entwurf speichern",
     "edit": "Bearbeiten",
@@ -2095,6 +2096,7 @@
       "date": "Datum auf dem Dokument",
       "newNumber": "Neue Nummer: {next} (bisher {current})",
       "sameNumber": "Die Nummer bleibt {current}.",
+      "numberOnFiling": "Die neue Nummer wird beim Speichern gezogen (bisher {current}).",
       "retentionChange": "Aufbewahrung: bisher {current} — künftig {next}",
       "retentionUntil": "{label} bis {date}",
       "cancel": "Abbrechen",

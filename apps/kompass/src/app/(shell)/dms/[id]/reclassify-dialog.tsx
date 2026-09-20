@@ -91,7 +91,9 @@ export function ReclassifyDialog({
                 <p>
                   {preview.number.next
                     ? t('newNumber', { next: preview.number.next, current: preview.number.current ?? '' })
-                    : t('sameNumber', { current: preview.number.current ?? '' })}
+                    : preview.number.numberHidden
+                      ? t('numberOnFiling', { current: preview.number.current ?? '' })
+                      : t('sameNumber', { current: preview.number.current ?? '' })}
                 </p>
                 {retentionChanges ? (
                   <p>{t('retentionChange', { current: retention(preview.retention.current), next: retention(preview.retention.next) })}</p>

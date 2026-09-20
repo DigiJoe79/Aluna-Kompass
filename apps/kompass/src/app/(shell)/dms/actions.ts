@@ -196,12 +196,13 @@ export async function suggestClassificationAction(
 /**
  * Die Nummer, die das nächste Dokument dieser Art bekäme. Nur zum Ansehen —
  * gezogen wird sie beim Ablegen, und zwischen beidem kann jemand anders
- * schneller sein.
+ * schneller sein. `number: null` heißt: Die Art darf der Aufrufer nicht lesen,
+ * die Nummer erfährt er erst mit der Bestätigung; `null` heißt: keine Antwort.
  */
-export async function previewNumberAction(typeKey: string): Promise<string | null> {
+export async function previewNumberAction(typeKey: string): Promise<{ number: string | null } | null> {
   const { deps, ctx } = await requireSession();
   const result = await previewNextNumber(deps, ctx, { typeKey });
-  return result.ok ? result.value.number : null;
+  return result.ok ? result.value : null;
 }
 
 export async function receiveDocumentAction(_prev: ActionState, formData: FormData): Promise<ActionState> {

@@ -6,10 +6,14 @@ import { describe, expect, it } from 'vitest';
 import { countDocumentsByFolder, createDocumentFolder, deleteDocumentFolder, listDocumentFolders, listDocumentTypes } from '../src/catalog';
 import { DMS_DASHBOARD_TILES } from '../src/dashboard';
 import { replaceDocumentText } from '../src/index-store';
+import { previewReclassification, receiveDocument } from '../src/incoming';
 import { relateDocuments } from '../src/relations';
-import { getDocument, getDocumentRecord, listDocuments, moveDocument } from '../src/service';
+import { getDocument, getDocumentRecord, listDocuments, moveDocument, previewNextNumber } from '../src/service';
 import { countUnreadDocuments, getDocumentText, reindexAllDocuments } from '../src/text';
-import { setupWithArea } from './helpers';
+import { pdfBytes, setupWithArea } from './helpers';
+
+/** Der Schlüssel der eingehenden Beispielart aus `seedTypes`. */
+const INCOMING_OPEN_TYPE = 'authority';
 
 const denied = (r: { ok: boolean; error?: unknown }) => (r.ok ? null : r.error);
 
@@ -127,5 +131,27 @@ describe('management without dms.view', () => {
     deps.db.update(documents).set({ textStatus: 'failed' }).where(eq(documents.id, openId)).run();
     const tile = DMS_DASHBOARD_TILES.find((t) => t.key === 'textFailed')!;
     expect(await tile.load(deps, manager, {})).toMatchObject({ kind: 'count', count: 1 });
+  });
+});
+
+describe('number preview', () => {
+  it('gives no number for a type the caller may not read', async () => {
+    const { deps, viewer, auditor } = await setupWithArea();
+    expect(unwrap(await previewNextNumber(deps, viewer, { typeKey: 'secret' }))).toEqual({ number: null });
+    expect(unwrap(await previewNextNumber(deps, auditor, { typeKey: 'secret' })).number).toMatch(/^GEH-\d{4}-002$/);
+  });
+
+  it('reclassifying into such a type previews the retention, not the number', async () => {
+    const { deps, all, viewer } = await setupWithArea();
+    const doc = unwrap(await receiveDocument(deps, all, { filename: 'x.pdf', typeKey: INCOMING_OPEN_TYPE, subject: 'x', documentDate: '2026-09-01', folder: null, bytes: pdfBytes() }));
+    const preview = unwrap(await previewReclassification(deps, viewer, { id: doc.id, typeKey: 'secret', documentDate: '2026-09-01' }));
+    expect(preview.number).toMatchObject({ next: null, numberHidden: true });
+    expect(preview.retention.next).toBeTruthy();
+  });
+
+  it('cannot be asked about a document the caller may not read', async () => {
+    const { deps, viewer, secretId } = await setupWithArea();
+    const res = await previewReclassification(deps, viewer, { id: secretId, typeKey: INCOMING_OPEN_TYPE, documentDate: '2026-09-01' });
+    expect(res.ok ? null : res.error).toEqual({ type: 'forbidden', permission: 'probe.read' });
   });
 });

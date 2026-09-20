@@ -27,7 +27,7 @@ import {
   type Result,
 } from '@kompass/core';
 import { z } from 'zod';
-import { isProtectedType, readableTypeFilter, requireDmsGate, requireReadable } from './access';
+import { canReadType, isProtectedType, readableTypeFilter, requireDmsGate, requireReadable } from './access';
 import { documentTypeFor } from './catalog';
 import { refuseModuleOwned } from './owned';
 import { documentCounters, documentFolders, documentFormerNumbers, documentLinks, documentRelations, documents, documentTypes, type DocumentLinkRow, type DocumentNoteRow, type DocumentRow } from './schema';
@@ -125,8 +125,8 @@ export async function previewNextNumber(
   deps: Deps,
   ctx: CallContext,
   input: unknown,
-): Promise<Result<{ number: string }>> {
-  const denied = requirePermission(ctx, 'dms.view');
+): Promise<Result<{ number: string | null }>> {
+  const denied = requireDmsGate(deps, ctx);
   if (denied) return denied;
 
   const parsed = validate(deps, previewNumberSchema, input);
@@ -137,6 +137,11 @@ export async function previewNextNumber(
 
   const owned = refuseModuleOwned(docType);
   if (owned) return owned;
+
+  // Die nächste Nummer ist ein Zähler im Klartext: wie viele Dokumente dieser
+  // Art es dieses Jahr gibt. Wer die Art nicht lesen darf, legt trotzdem hinein
+  // ab — und erfährt die Nummer mit der Bestätigung.
+  if (!canReadType(deps, ctx, docType)) return ok({ number: null });
 
   const year = deps.clock.now().getUTCFullYear();
   return ok({ number: peekDocumentNumber(deps.db, docType.prefix, year) });
