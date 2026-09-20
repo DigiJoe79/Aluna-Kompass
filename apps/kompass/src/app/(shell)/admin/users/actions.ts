@@ -1,6 +1,7 @@
 'use server';
 
 import { assignRole, createUser, removeRole, resetStartPassword, setUserActive, updateUser } from '@kompass/core';
+import { linkUserToContact, unlinkUser } from '@kompass/module-contacts';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { toActionState, type ActionState } from '@/lib/actions';
@@ -58,4 +59,21 @@ export async function setUserRolesAction(userId: string, roleIds: string[], prev
   }
   revalidatePath('/admin/users');
   return { status: 'success', message: t('users.toast.rolesSaved') };
+}
+
+/** Verknüpft ein Konto mit dem gewählten Kontakt — der Dienst prüft Recht, Regeln und die eigene Verknüpfung. */
+export async function linkUserAction(userId: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await linkUserToContact(deps, ctx, { userId, contactId: String(formData.get('contactId') ?? '') });
+  revalidatePath('/admin/users');
+  return toActionState(result, t, t('users.contactLink.saved'));
+}
+
+export async function unlinkUserAction(userId: string): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await unlinkUser(deps, ctx, { userId });
+  revalidatePath('/admin/users');
+  return toActionState(result, t, t('users.contactLink.ended'));
 }

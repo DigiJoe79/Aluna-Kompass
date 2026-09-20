@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { contactsModule } from '../src/manifest';
 import { contacts, contactUserLinks } from '../src/schema';
 import { addContactRole, createContact, deleteContact, endContactRole } from '../src/service';
-import { contactIdForUserInternal, getUserLink, linkUserToContact, listUserLinkChanges, unlinkUser, userIdForContactInternal, userLinkChangesInternal } from '../src/user-links';
+import { contactIdForUserInternal, getUserLink, hasLinkHistoryInternal, linkUserToContact, listUserLinkChanges, unlinkUser, userIdForContactInternal, userLinkChangesInternal } from '../src/user-links';
 
 const row = (over: Partial<typeof contactUserLinks.$inferInsert>) => ({ id: 'L1', userId: 'U1', contactId: 'C1', linkedAt: '2026-02-01T10:00:00.000Z', linkedByUserId: 'U9', unlinkedAt: null, unlinkedByUserId: null, ...over });
 
@@ -119,5 +119,16 @@ describe('a linked contact', () => {
     await makeDue(deps, admin, c1);
     expect((await deleteContact(deps, admin, { id: c1 })).ok).toBe(true);
     expect(userLinkChangesInternal(deps.db, { from: '2026-01-01', to: '2026-12-31' })).toHaveLength(1);
+  });
+});
+
+describe('hasLinkHistoryInternal', () => {
+  it('is true once an account has ever been linked — open or ended — and false before', async () => {
+    const { deps, admin, helperId, c1 } = await world();
+    expect(hasLinkHistoryInternal(deps.db, helperId)).toBe(false);
+    unwrap(await linkUserToContact(deps, admin, { userId: helperId, contactId: c1 }));
+    expect(hasLinkHistoryInternal(deps.db, helperId)).toBe(true);
+    unwrap(await unlinkUser(deps, admin, { userId: helperId }));
+    expect(hasLinkHistoryInternal(deps.db, helperId)).toBe(true);
   });
 });

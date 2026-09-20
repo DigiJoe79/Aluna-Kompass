@@ -25,6 +25,11 @@ export function userIdForContactInternal(db: DbOrTx, contactId: string): string 
   return db.select({ userId: contactUserLinks.userId }).from(contactUserLinks).where(and(eq(contactUserLinks.contactId, contactId), isNull(contactUserLinks.unlinkedAt))).get()?.userId ?? null;
 }
 
+/** Hat es für dieses Konto je eine Verknüpfung gegeben — offen oder beendet? Für die eigene Verknüpfung, die man nur einmal selbst setzt. */
+export function hasLinkHistoryInternal(db: DbOrTx, userId: string): boolean {
+  return db.select({ id: contactUserLinks.id }).from(contactUserLinks).where(eq(contactUserLinks.userId, userId)).get() !== undefined;
+}
+
 /** Jede Zeile, die im Zeitraum begann oder endete (Tagesgrenzen einschließlich), die älteste zuerst. */
 export function userLinkChangesInternal(db: DbOrTx, range: { from: string; to: string }): UserLinkChange[] {
   const start = `${range.from}T00:00:00.000Z`;

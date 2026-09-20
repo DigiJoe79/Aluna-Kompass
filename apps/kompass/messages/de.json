@@ -189,6 +189,10 @@
       "folderParentMissing": "Der übergeordnete Ordner fehlt.",
       "folderNotFound": "Der Zielordner existiert nicht.",
       "retentionHoldActive": "Der Kontakt wird noch durch aktive Aufbewahrungsfristen gehalten.",
+      "userAlreadyLinked": "Dieses Nutzerkonto ist schon mit einem Kontakt verknüpft. Lösen Sie die Verknüpfung zuerst.",
+      "contactAlreadyLinked": "Dieser Kontakt ist schon mit einem Nutzerkonto verknüpft.",
+      "userNotLinked": "Dieses Nutzerkonto ist mit keinem Kontakt verknüpft.",
+      "ownLinkNeedsSecondPerson": "Die eigene Verknüpfung ändert nur eine zweite Person mit dem Recht, Nutzer zu verwalten.",
       "retentionUnknown": "Für diesen Kontakt ist keine Frist nachgewiesen.",
       "stillPublished": "Das ist noch veröffentlicht. Ziehen Sie es erst zurück, dann lässt es sich löschen.",
       "recordHeld": "Noch gehalten von: {detail}",
@@ -499,6 +503,19 @@
       "search": "Name oder E-Mail",
       "showInactive": "Inaktive anzeigen",
       "count": "{count} Nutzer, davon {inactive} inaktiv"
+    },
+    "contactLink": {
+      "column": "Kontakt",
+      "none": "nicht verknüpft",
+      "link": "Verknüpfen",
+      "unlink": "Lösen",
+      "choose": "Kontakt wählen",
+      "saved": "Verknüpfung gespeichert.",
+      "ended": "Verknüpfung gelöst. Der Verlauf bleibt erhalten.",
+      "linkedWithoutView": "verknüpft",
+      "needsContactsView": "Zum Verknüpfen brauchen Sie das Recht, Kontakte zu sehen.",
+      "ownNeedsSecondPerson": "Ihre eigene Verknüpfung ändert nur eine zweite Person mit dem Recht, Nutzer zu verwalten.",
+      "ownOnce": "Sie verknüpfen Ihr eigenes Konto. Das geht einmal; ändern kann es danach nur eine zweite Person."
     },
     "columns": {
       "name": "Name",
