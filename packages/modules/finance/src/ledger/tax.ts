@@ -1,3 +1,5 @@
+import type { DbOrTx } from '@kompass/core';
+import { valueAt } from './dated-values';
 import type { TAX_CODES } from './codes';
 
 export type Taxation = 'smallBusiness' | 'regular';
@@ -78,4 +80,18 @@ export function taxOf(input: TaxInput): TaxResult {
   // `none`, `exemptCounted`, `exemptNotCounted`: alles 0, Netto = Zeilenbetrag.
 
   return { outputTaxCents, reverseChargeTaxCents, inputTaxCents, inputTaxMemoCents, netCents: sign * netAbs };
+}
+
+/**
+ * Besteuerungsform und beide Sätze, wie sie an diesem Buchungstag gelten
+ * (`valueAt`, Finanz-Spec 5.1). `null`, wenn für das Datum nichts hinterlegt
+ * ist — der Aufrufer entscheidet dann, ob das am Entwurf hingenommen wird
+ * (ja) oder das Festschreiben ablehnt (`noTaxRateForDate`).
+ */
+export function taxContextAt(db: DbOrTx, date: string): { taxation: Taxation; rates: { standard: number; reduced: number } } | null {
+  const taxation = valueAt(db, 'taxation', date);
+  const standard = valueAt(db, 'vatStandard', date);
+  const reduced = valueAt(db, 'vatReduced', date);
+  if (taxation === null || standard === null || reduced === null) return null;
+  return { taxation: taxation as Taxation, rates: { standard: standard as number, reduced: reduced as number } };
 }

@@ -1,8 +1,15 @@
 import { schema, unwrap } from '@kompass/core';
-import { ctxWith } from '@kompass/core/testing';
+import { ctxWith, systemContext } from '@kompass/core/testing';
+import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
+import { createAccount } from '../src/ledger/accounts';
+import { setDatedValue } from '../src/ledger/dated-values';
 import { deleteDraft, getEntry, listEntries, saveDraft, setReviewed } from '../src/ledger/entries';
-import { allowHumanOnlyOverMcp, ledgerFixture } from './helpers';
+import { finalizeEntry } from '../src/ledger/finalize';
+import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
+import { installFinance } from '../src/install';
+import { financeCategories } from '../src/schema';
+import { allowHumanOnlyOverMcp, ledgerFixture, setupFinance } from './helpers';
 
 const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
 
@@ -88,5 +95,28 @@ describe('reviewed', () => {
     expect(err(await setReviewed(f.deps, agent, { id: draft.id, reviewed: true }))).toMatchObject({ type: 'conflict', code: 'humanOnly' });
     allowHumanOnlyOverMcp(f.deps);
     expect((await setReviewed(f.deps, agent, { id: draft.id, reviewed: true })).ok).toBe(true);
+  });
+});
+
+describe('tax on the entry', () => {
+  it('shows the tax of each line by the rules of the entry date — the taxation form changes to the day', async () => {
+    const f = await ledgerFixture();
+    unwrap(await setDatedValue(f.deps, f.ctx, { key: 'taxation', validFrom: '2026-10-14', value: 'regular' }));
+    const line = { categoryId: f.purposeIncome.id, amountCents: 35000, taxCode: 'reduced' as const };
+    const before = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-10-13', text: 'Entgelt', moneyLines: [{ accountId: f.bank.id, amountCents: 35000 }], allocationLines: [line] }));
+    const after = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-10-14', text: 'Entgelt', moneyLines: [{ accountId: f.bank.id, amountCents: 35000 }], allocationLines: [line] }));
+    expect(before.taxTotals.outputTaxCents).toBe(0);
+    expect(after.taxTotals.outputTaxCents).toBe(2290);
+    expect(after.allocationLines[0]!.tax).toMatchObject({ netCents: 32710 });
+  });
+
+  it('refuses to finalize a taxed line for a date without a rate', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+    const bank = unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE02120300000000202051', isMain: true }));
+    const category = deps.db.select().from(financeCategories).where(eq(financeCategories.key, 'purpose-income')).get()!;
+    unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2006-01-01', endsOn: '2006-12-31' }));
+    const d = unwrap(await saveDraft(deps, ctx, { entryDate: '2006-06-01', text: 'x', moneyLines: [{ accountId: bank.id, amountCents: 100 }], allocationLines: [{ categoryId: category.id, amountCents: 100, taxCode: 'reduced' }] }));
+    expect(err(await finalizeEntry(deps, ctx, { id: d.id }))).toMatchObject({ type: 'conflict', code: 'noTaxRateForDate' });
   });
 });

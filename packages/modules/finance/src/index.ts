@@ -77,6 +77,7 @@ export { DATED_SERIES, type DatedValueKey } from './ledger/dated-series';
 export { listDatedValues, removeDatedValue, setDatedValue, valueAt, type DatedValueListEntry } from './ledger/dated-values';
 export { closePurpose, deleteMasterData, readMasterData, saveMasterData, setMasterDataActive } from './ledger/master-data';
 export { firstNegativeCashDay, formatEuro } from './ledger/cash-check';
+export { taxContextAt, taxOf, type Taxation, type TaxCode, type TaxInput, type TaxResult } from './ledger/tax';
 export { abortFinalize, bookEntry, finalizeEntry, finalizeInternal, finalizeReviewed, FinalizeAborted, type FinalizeOptions } from './ledger/finalize';
 export { reverseEntry, reverseInternal } from './ledger/reverse';
 export {

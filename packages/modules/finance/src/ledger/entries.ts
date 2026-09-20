@@ -8,16 +8,20 @@ import { financeConflict } from '../errors';
 import { financeAccounts, financeAllocationLines, financeCategories, financeEntries, financeMoneyLines, financePurposes, type FinanceAllocationLineRow, type FinanceEntryRow, type FinanceMoneyLineRow } from '../schema';
 import { requireFinanceRead } from './access';
 import { TAX_CODES } from './codes';
-import type { TaxCode } from './tax';
+import { taxContextAt, taxOf, type TaxCode, type TaxResult } from './tax';
 
 export type MoneyLineView = FinanceMoneyLineRow;
-export type AllocationLineView = FinanceAllocationLineRow;
+export type AllocationLineView = FinanceAllocationLineRow & {
+  /** Nach den Werten des Buchungstags berechnet — nie gespeichert. `null`, wenn dafür kein Satz hinterlegt ist. */
+  tax: TaxResult | null;
+};
 
 export interface EntryView extends FinanceEntryRow {
   moneyLines: MoneyLineView[];
   allocationLines: AllocationLineView[];
   /** Σ Geldzeilen − Σ Zuordnungszeilen; 0 = ausgeglichen. „Noch 37,20 € zu verteilen.“ */
   remainderCents: number;
+  taxTotals: { outputTaxCents: number; reverseChargeTaxCents: number; inputTaxCents: number; inputTaxMemoCents: number };
 }
 
 /** Zeilen, wie `saveDraft`, `finalize.ts` und `reverse.ts` sie an die Datenbank geben — Vorbelegung ist schon aufgelöst. */
@@ -110,14 +114,29 @@ export function writeLinesInternal(tx: DbOrTx, entryId: string, lines: { moneyLi
   });
 }
 
+const EMPTY_TAX_TOTALS = { outputTaxCents: 0, reverseChargeTaxCents: 0, inputTaxCents: 0, inputTaxMemoCents: 0 };
+
 export function entryViewInternal(db: DbOrTx, id: string): EntryView | null {
   const row = db.select().from(financeEntries).where(eq(financeEntries.id, id)).get();
   if (!row) return null;
   const moneyLines = db.select().from(financeMoneyLines).where(eq(financeMoneyLines.entryId, id)).orderBy(asc(financeMoneyLines.position)).all();
-  const allocationLines = db.select().from(financeAllocationLines).where(eq(financeAllocationLines.entryId, id)).orderBy(asc(financeAllocationLines.position)).all();
+  const allocationLineRows = db.select().from(financeAllocationLines).where(eq(financeAllocationLines.entryId, id)).orderBy(asc(financeAllocationLines.position)).all();
   const moneySum = moneyLines.reduce((s, l) => s + l.amountCents, 0);
-  const allocationSum = allocationLines.reduce((s, l) => s + l.amountCents, 0);
-  return { ...row, moneyLines, allocationLines, remainderCents: moneySum - allocationSum };
+  const allocationSum = allocationLineRows.reduce((s, l) => s + l.amountCents, 0);
+
+  // Immer berechnet, nie gespeichert (Spec 5.2): eine nachträglich richtig datierte Besteuerungsform macht alte Buchungen richtig.
+  const context = taxContextAt(db, row.entryDate);
+  const categories = categoriesById(db, allocationLineRows.map((l) => l.categoryId));
+  const allocationLines: AllocationLineView[] = allocationLineRows.map((l) => ({
+    ...l,
+    tax: context ? taxOf({ amountCents: l.amountCents, taxCode: l.taxCode as TaxCode, rateKind: l.rateKind as 'standard' | 'reduced', taxation: context.taxation, inputTaxDeductible: categories.get(l.categoryId)?.inputTaxDeductible ?? 'no', rates: context.rates }) : null,
+  }));
+  const taxTotals = allocationLines.reduce((acc, l) => {
+    if (!l.tax) return acc;
+    return { outputTaxCents: acc.outputTaxCents + l.tax.outputTaxCents, reverseChargeTaxCents: acc.reverseChargeTaxCents + l.tax.reverseChargeTaxCents, inputTaxCents: acc.inputTaxCents + l.tax.inputTaxCents, inputTaxMemoCents: acc.inputTaxMemoCents + l.tax.inputTaxMemoCents };
+  }, EMPTY_TAX_TOTALS);
+
+  return { ...row, moneyLines, allocationLines, remainderCents: moneySum - allocationSum, taxTotals };
 }
 
 /** Nur Nummern und Zähler — nie Text, nie Kontakt (Spec 10.3). */
