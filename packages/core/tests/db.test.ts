@@ -20,6 +20,7 @@ describe('database', () => {
       'contact_channels',
       'contact_roles',
       'contacts',
+      'contacts_user_links',
       'dashboard_layouts',
       'document_counters',
       'document_folders',
