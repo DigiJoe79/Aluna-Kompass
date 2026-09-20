@@ -1,10 +1,17 @@
-import { unwrap } from '@kompass/core';
+import { schema, unwrap } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
+import { eq } from 'drizzle-orm';
+import { unzipSync } from 'fflate';
+import { mkdtempSync, readFileSync, readdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { BUNDLE_MAX_DOCUMENTS, resolveBundle } from '../src/bundle';
+import { BUNDLE_MAX_DOCUMENTS, exportBundle, resolveBundle } from '../src/bundle';
 import { createDocumentFolder } from '../src/catalog';
 import { linkDocumentInternal } from '../src/linked';
-import { moveDocument } from '../src/service';
+import { documents } from '../src/schema';
+import { moveDocument, voidDocument } from '../src/service';
+import { DMS_MODULE_KEY } from '../src/storage';
 import { fileFixture, setupWithArea } from './helpers';
 
 const withExport = <T extends { permissions: ReadonlySet<string> }>(ctx: T): T => ({ ...ctx, permissions: new Set([...ctx.permissions, 'documents.export']) });
@@ -80,5 +87,67 @@ describe('resolveBundle', () => {
     await fileFixture(deps, all);
     const byNumber = unwrap(resolveBundle(deps, all, { year: 2026 })).rows.map((r) => r.row.number);
     expect(byNumber).toEqual([...byNumber].sort());
+  });
+});
+
+const workDir = () => mkdtempSync(path.join(tmpdir(), 'kompass-bundle-'));
+const open = (archivePath: string) => unzipSync(new Uint8Array(readFileSync(archivePath)));
+const text = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
+
+describe('exportBundle', () => {
+  it('writes a zip with the files, the index as PDF and as CSV — and logs the numbers, not the subjects', async () => {
+    const { deps, all, openId, secretId } = await world();
+    const dir = workDir();
+    const res = unwrap(await exportBundle(deps, all, { folder: 'Finanzen', workDir: dir }));
+    expect(res).toMatchObject({ included: 2, listedOnly: 0 });
+    expect(res.filename).toMatch(/^Akte-Ordner-Finanzen-\d{4}-\d{2}-\d{2}\.zip$/);
+    const zip = open(res.archivePath);
+    const numbers = deps.db.select().from(documents).all().filter((d) => [openId, secretId].includes(d.id)).map((d) => d.number!);
+    expect(Object.keys(zip).sort()).toEqual(['Inhaltsverzeichnis.pdf', 'inhaltsverzeichnis.csv', ...numbers.map((n) => `${n}.pdf`)].sort());
+    expect(text(zip['inhaltsverzeichnis.csv']!)).toContain('Streng geheimer Betreff');
+    expect(text(zip[`${numbers[0]}.pdf`]!).startsWith('%PDF')).toBe(true);
+
+    const entry = deps.db.select().from(schema.auditLog).all().at(-1)!;
+    expect(entry.action).toBe('dms.export');
+    expect(JSON.parse(entry.after as string).numbers.sort()).toEqual(numbers.sort());
+    expect(`${entry.summary}${entry.after}`).not.toContain('Streng geheimer Betreff');
+  });
+
+  it('lists what the caller may not read with its number only, and leaves the file out', async () => {
+    const { deps, viewer } = await world();
+    const res = unwrap(await exportBundle(deps, viewer, { folder: 'Finanzen', workDir: workDir() }));
+    expect(res).toMatchObject({ included: 1, listedOnly: 1 });
+    const zip = open(res.archivePath);
+    const csv = text(zip['inhaltsverzeichnis.csv']!);
+    expect(csv).toMatch(/GEH-\d{4}-001;;;;;geschützt;\r\n/);
+    expect(csv).not.toContain('Streng geheimer Betreff');
+    expect(Object.keys(zip).some((name) => name.startsWith('GEH-'))).toBe(false);
+  });
+
+  it('checks every file against its checksum and says so instead of enclosing a changed file', async () => {
+    const { deps, all, openId } = await world();
+    const row = deps.db.select().from(documents).where(eq(documents.id, openId)).get()!;
+    const store = deps.files(DMS_MODULE_KEY);
+    await store.delete(row.fileName!);
+    await store.write(row.fileName!, new TextEncoder().encode('%PDF-1.4 manipuliert'));
+    const res = unwrap(await exportBundle(deps, all, { documentIds: [openId], workDir: workDir() }));
+    expect(res).toMatchObject({ included: 0, listedOnly: 1 });
+    expect(text(open(res.archivePath)['inhaltsverzeichnis.csv']!)).toContain('Datei verändert – nicht beigelegt');
+  });
+
+  it('marks a voided document and still encloses it', async () => {
+    const { deps, all, openId } = await world();
+    unwrap(await voidDocument(deps, { ...all, permissions: new Set([...all.permissions, 'dms.void']) }, { id: openId, reason: 'Test' }));
+    const res = unwrap(await exportBundle(deps, all, { documentIds: [openId], workDir: workDir() }));
+    expect(res.included).toBe(1);
+    expect(text(open(res.archivePath)['inhaltsverzeichnis.csv']!)).toContain(';storniert;');
+  });
+
+  it('leaves nothing behind when it fails', async () => {
+    const { deps, all } = await world();
+    const dir = workDir();
+    const res = await exportBundle(deps, all, { year: 1999, workDir: dir });
+    expect(res.ok).toBe(false);
+    expect(readdirSync(dir)).toEqual([]);
   });
 });

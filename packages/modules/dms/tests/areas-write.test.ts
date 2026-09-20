@@ -79,7 +79,7 @@ describe('write services and protected document types', () => {
   });
 
   it('the list above is complete: every exported service is a read, a write, or exempt with a reason', () => {
-    const READS = ['listDocuments', 'getDocumentRecord', 'getDocument', 'getDocumentText', 'countUnreadDocuments', 'previewDraft', 'previewNextNumber', 'previewReclassification', 'listDocumentTypes', 'listDocumentFolders', 'countDocumentsByFolder', 'listDocumentRules', 'listSnippets', 'suggestClassification', 'readLinkedDocument', 'listDocumentAreas', 'countDocumentsOfType'];
+    const READS = ['listDocuments', 'getDocumentRecord', 'getDocument', 'getDocumentText', 'countUnreadDocuments', 'previewDraft', 'previewNextNumber', 'previewReclassification', 'listDocumentTypes', 'listDocumentFolders', 'countDocumentsByFolder', 'listDocumentRules', 'listSnippets', 'suggestClassification', 'readLinkedDocument', 'listDocumentAreas', 'countDocumentsOfType', 'exportBundle', 'resolveBundle'];
     const EXEMPT: Record<string, string> = {
       createDraft: 'legt an; verlangt bei geschützter Art das Bereichsrecht (Task 4)',
       receiveDocument: 'legt an; Ablegen in eine geschützte Art ist erlaubt (Task 4)',

@@ -15,6 +15,7 @@
     "@kompass/core": "workspace:*",
     "@kompass/module-contacts": "workspace:*",
     "drizzle-orm": "^0.45.2",
+    "fflate": "0.8.3",
     "file-type": "^22.1.0",
     "zod": "^4.6.2"
   },

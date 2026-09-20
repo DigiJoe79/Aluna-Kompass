@@ -1,4 +1,5 @@
 export { canReadDocumentType, dmsGatePermissions, isProtectedType, requireDmsGate } from './access';
+export { exportBundle, resolveBundle, BUNDLE_MAX_DOCUMENTS, BUNDLE_MAX_BYTES, bundleSelectionSchema, type BundleSelection } from './bundle';
 export * from './catalog';
 export * from './classification';
 export * from './dashboard';
