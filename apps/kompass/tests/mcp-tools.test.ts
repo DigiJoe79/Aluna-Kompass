@@ -2,6 +2,7 @@ import { coreModule, moduleMcpTools, type McpToolDefinition, type ModuleManifest
 import * as animalsPkg from '@kompass/module-animals';
 import * as contactsPkg from '@kompass/module-contacts';
 import * as dmsPkg from '@kompass/module-dms';
+import * as financePkg from '@kompass/module-finance';
 import * as projectsPkg from '@kompass/module-projects';
 import * as corePkg from '@kompass/core';
 import * as sitePkg from '@kompass/module-site';
@@ -31,7 +32,21 @@ const modulesWithTools: [ModuleManifest, readonly McpToolDefinition[]][] = [
  * entscheidet bewusst; wer ein Recht ergänzt, ohne es hier oder in einem
  * Werkzeug zu nennen, bekommt einen roten Test.
  */
-const WITHOUT_MCP = new Set(['backup.export', 'backup.import']);
+const WITHOUT_MCP = new Set([
+  'backup.export', 'backup.import',
+  // Finanzen: Rechte stehen ab F1 im Manifest (Rollenvorschläge werden nie nachgefüllt),
+  // ihre Werkzeuge kommen mit den genannten Plänen. Jeder Plan streicht seine Zeile.
+  'finance.read',             // F1 (Task 11)
+  'finance.overview',         // F1 (Task 11)
+  'finance.setup',            // F1 (Task 11)
+  'finance.entriesWrite',     // F2a
+  'finance.entriesFinalize',  // F2a
+  'finance.periodClose',      // F2c
+  'finance.expensesSubmit',   // F8a
+  'finance.approve',          // F8a
+  'finance.donationsIssue',   // F6a
+  'finance.reportsFinalize',  // F9a
+]);
 
 /** Rechte, die kein Werkzeug nennt, als `modul: recht`. */
 const uncoveredPermissions = (pairs: [ModuleManifest, readonly McpToolDefinition[]][]) =>
@@ -257,6 +272,7 @@ describe('every service has a tool', () => {
     ['animals', animalsPkg],
     ['site', sitePkg],
     ['dms', dmsPkg],
+    ['finance', financePkg],
     ['projects', projectsPkg],
     ['core', corePkg],
   ];

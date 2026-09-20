@@ -33,6 +33,7 @@
     "@kompass/module-animals": "workspace:*",
     "@kompass/module-contacts": "workspace:*",
     "@kompass/module-dms": "workspace:*",
+    "@kompass/module-finance": "workspace:*",
     "@kompass/module-site": "workspace:*",
     "tsx": "^4.19.3",
     "@kompass/module-projects": "workspace:*"

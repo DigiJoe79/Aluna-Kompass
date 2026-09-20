@@ -1,0 +1,24 @@
+import { defineModule, type ModuleManifest } from '@kompass/core';
+
+/**
+ * Alle zehn Rechte stehen von Anfang an hier, auch die, deren Dienste erst
+ * spätere Pläne bringen: Rollenvorschläge werden einmal ausgeliefert und nie
+ * nachgefüllt (Vorarbeiten-Spec V4) — ein Recht, das erst mit F6a erschiene,
+ * fehlte dem Schatzmeister für immer.
+ */
+export const FINANCE_PERMISSIONS = [
+  'finance.read', 'finance.overview', 'finance.entriesWrite', 'finance.entriesFinalize', 'finance.periodClose',
+  'finance.setup', 'finance.expensesSubmit', 'finance.approve', 'finance.donationsIssue', 'finance.reportsFinalize',
+] as const;
+
+export const financeModule: ModuleManifest = defineModule({
+  key: 'finance',
+  version: '0.1.0',
+  // Hart, nicht optional: Spender sind Kontakte, Belege liegen in der Akte, Projekte sind Kostenstellen.
+  dependsOn: ['contacts', 'dms', 'projects'],
+  files: true,
+  permissions: [...FINANCE_PERMISSIONS],
+  // Platzhalter, bis Task 12 (`seedFinance`) das erfundene Vereinsjahr liefert —
+  // AGENTS.md verlangt den Haken für jedes Modul von Anfang an.
+  seed: async () => {},
+});

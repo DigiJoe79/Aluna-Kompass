@@ -749,6 +749,48 @@
           "label": "Akte verwalten",
           "description": "Dokumentarten, Ordner und Einsortierregeln pflegen; fällige Löschungen bestätigen."
         }
+      },
+      "finance": {
+        "read": {
+          "label": "Finanzen lesen",
+          "description": "Finanzen lesen – alles, mit Namen"
+        },
+        "overview": {
+          "label": "Finanzen im Überblick",
+          "description": "Finanzen im Überblick – Stände und Berichte ohne Personenbezug"
+        },
+        "entriesWrite": {
+          "label": "Buchungen vorbereiten",
+          "description": "Buchungen vorbereiten – Entwürfe, Import, Belege, Vorgänge anlegen"
+        },
+        "entriesFinalize": {
+          "label": "Buchungen festschreiben",
+          "description": "Buchungen festschreiben und stornieren"
+        },
+        "periodClose": {
+          "label": "Geschäftsjahr abschließen",
+          "description": "Geschäftsjahr abschließen und wieder öffnen"
+        },
+        "setup": {
+          "label": "Finanzen einrichten",
+          "description": "Finanzen einrichten – Konten, Kategorien, Zwecke, Werte"
+        },
+        "expensesSubmit": {
+          "label": "Auslagen einreichen",
+          "description": "Eigene Auslagen einreichen"
+        },
+        "approve": {
+          "label": "Freigeben",
+          "description": "Freigeben – Auslagen, Partnerzahlungen, Umwidmungen; nie die eigenen"
+        },
+        "donationsIssue": {
+          "label": "Zuwendungsbestätigungen ausstellen",
+          "description": "Zuwendungsbestätigungen ausstellen"
+        },
+        "reportsFinalize": {
+          "label": "Berichte festschreiben",
+          "description": "Berichte festschreiben, Prüfpaket erstellen"
+        }
       }
     }
   },

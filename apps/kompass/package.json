@@ -27,6 +27,7 @@
     "@kompass/module-animals": "workspace:*",
     "@kompass/module-contacts": "workspace:*",
     "@kompass/module-dms": "workspace:*",
+    "@kompass/module-finance": "workspace:*",
     "@kompass/module-projects": "workspace:*",
     "@kompass/module-site": "workspace:*",
     "@kompass/site-template": "workspace:*",
