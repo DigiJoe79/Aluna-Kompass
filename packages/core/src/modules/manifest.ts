@@ -137,6 +137,12 @@ export interface PublishedView<T = unknown> {
   load(deps: Deps): T[];
 }
 
+/** Ein Schutzbereich für Dokumentarten der Akte: ein fester Schlüssel und das Recht, das ihn öffnet. */
+export interface DocumentArea {
+  key: string;
+  permission: string;
+}
+
 /** Zu welchen seiner Vorgänge ein Modul Dokumente der Akte ausliefert und ablegt — und unter welchem seiner Rechte. */
 export interface LinkedDocumentAccess {
   entityType: string;
@@ -267,6 +273,13 @@ export interface ModuleManifest {
    * ist reserviert: Nur sein Modul setzt und löst solche Bezüge.
    */
   linkedDocumentAccess?: readonly LinkedDocumentAccess[];
+  /**
+   * Schutzbereiche, die dieses Modul für Dokumentarten anmeldet (Vorarbeiten-Spec
+   * V1). Eine Art mit Bereich zeigt ihre Dokumente nur dem, der **genau** dieses
+   * Recht hat. Aufgelöst wird registry-weit, auch bei ausgeschaltetem Modul —
+   * sonst öffnete das Ausschalten den Bereich (V15). Label: `dms.areas.<key>`.
+   */
+  documentAreas?: readonly DocumentArea[];
   /**
    * Ein fremder Datensatz wurde gelöscht — in dieser Transaktion. Das Modul
    * räumt mit, was nur an ihm hing (Finanzfelder eines Projekts ohne Buchung),
@@ -402,6 +415,9 @@ export function defineModule(manifest: ModuleManifest): ModuleManifest {
     for (const permission of [access.readPermission, access.receivePermission]) {
       if (permission && !manifest.permissions.includes(permission)) throw new Error(`linked document access ${manifest.key}/${access.entityType} names a foreign permission: ${permission}`);
     }
+  }
+  for (const area of manifest.documentAreas ?? []) {
+    if (!manifest.permissions.includes(area.permission)) throw new Error(`document area ${manifest.key}/${area.key} names a foreign permission: ${area.permission}`);
   }
   return manifest;
 }

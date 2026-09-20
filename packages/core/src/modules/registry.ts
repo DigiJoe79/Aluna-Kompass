@@ -17,6 +17,7 @@ export function createRegistry(
   const settingDefinitions = new Map<string, SettingDefinition>();
   const ruledEntities = new Set<string>();
   const linkedTypes = new Set<string>();
+  const areaKeys = new Set<string>();
 
   for (const manifest of manifests) {
     if (byKey.has(manifest.key)) throw new Error(`duplicate module key: ${manifest.key}`);
@@ -36,6 +37,10 @@ export function createRegistry(
     for (const access of manifest.linkedDocumentAccess ?? []) {
       if (linkedTypes.has(access.entityType)) throw new Error(`duplicate linked document type: ${access.entityType}`);
       linkedTypes.add(access.entityType);
+    }
+    for (const area of manifest.documentAreas ?? []) {
+      if (areaKeys.has(area.key)) throw new Error(`duplicate document area: ${area.key}`);
+      areaKeys.add(area.key);
     }
   }
 
