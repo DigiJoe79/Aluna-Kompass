@@ -61,8 +61,11 @@ Dokument, nicht die Spec eines Moduls.
   besser können, und verliert seinen Kern.
 - **Keine qualifizierte elektronische Signatur.** Sie ersetzt die
   eigenhändige Unterschrift nur, wo das Gesetz Schriftform verlangt, und das
-  ist im Vereinsalltag fast nie der Fall: Zuwendungsbestätigungen dürfen
-  maschinell ohne Unterschrift erstellt werden, Registeranmeldungen beglaubigt
+  ist im Vereinsalltag fast nie der Fall: Zuwendungsbestätigungen über Geld
+  dürfen maschinell mit eingeblendetem Faksimile erstellt werden, wenn das
+  Verfahren dem Finanzamt angezeigt ist (R 10b.1 Abs. 4 EStR); Sach- und
+  Aufwandsspenden brauchen die eigenhändige Unterschrift auf Papier, die als
+  Eingang in die Akte kommt. Registeranmeldungen beglaubigt
   der Notar, Verträge und Mitgliedsanträge sind formfrei. Was der Verein
   braucht, ist der Nachweis, dass ein Dokument seit dem Festschreiben
   unverändert ist, und den liefern Prüfsumme und Änderungsprotokoll. Ein
@@ -139,12 +142,17 @@ Roadmap.
 ### Finanzen
 
 Konten, Buchungen mit Zuordnung zu den vier Sphären, Belege aus der Akte,
-Bankimport, Rücklagen nach § 62 AO, Zuwendungsbestätigungen nach amtlichem
-Muster, Kostenerstattungen, Mittelweitergabe an Partner, Projekte mit
-Finanzseite. Am Ende: Einnahmen-Überschuss-Rechnung, Vermögensübersicht,
-Mittelverwendungsrechnung, Kassenprüfungsunterlagen.
+Bankimport, Zweckbindung als eigene Dimension neben dem Projekt, Rücklagen
+nach § 62 AO, Zuwendungsbestätigungen nach amtlichem Muster,
+Kostenerstattungen mit Freigabe durch eine zweite Person, Mittelweitergabe an
+Partner mit Nachweisakte, Projekte mit Finanzseite. Am Ende:
+Einnahmen-Überschuss-Rechnung, Vermögensübersicht, Mittelverwendungsrechnung,
+Kassenprüfungsunterlagen. Das Modell ist ein Einnahmen-Ausgaben-Journal mit
+ausgeglichenen Zeilen, keine doppelte Buchführung; Vereine mit
+Bilanzierungspflicht sind nicht die Zielgruppe.
 
-Spec: noch keine.
+Spec: `2026-09-20-finanzen-design.md` in `docs/intern/specs/`, eine für das
+ganze Modul, umgesetzt in zehn Plänen.
 
 **Stand: in Arbeit.** Schritt 3 der Roadmap, Fassung 0.2.0.
 
