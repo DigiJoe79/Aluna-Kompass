@@ -1,9 +1,10 @@
-import { coreModule, schema, unwrap } from '@kompass/core';
+import { coreModule, holdsFor, schema, unwrap, writeSettingInternal, type CallContext, type Deps } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
+import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { contactsModule } from '../src/manifest';
-import { contactUserLinks } from '../src/schema';
-import { createContact } from '../src/service';
+import { contacts, contactUserLinks } from '../src/schema';
+import { addContactRole, createContact, deleteContact, endContactRole } from '../src/service';
 import { contactIdForUserInternal, getUserLink, linkUserToContact, listUserLinkChanges, unlinkUser, userIdForContactInternal, userLinkChangesInternal } from '../src/user-links';
 
 const row = (over: Partial<typeof contactUserLinks.$inferInsert>) => ({ id: 'L1', userId: 'U1', contactId: 'C1', linkedAt: '2026-02-01T10:00:00.000Z', linkedByUserId: 'U9', unlinkedAt: null, unlinkedByUserId: null, ...over });
@@ -41,6 +42,8 @@ const code = (r: { ok: boolean; error?: { type: string; code?: string } }) => (r
 
 async function world() {
   const deps = createTestDeps({ manifests: [coreModule, contactsModule] });
+  // Das Modul muss eingeschaltet sein: Halter und Rollen kennt der Kern nur von eingeschalteten Modulen.
+  deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['contacts'], 'test.enable'));
   const adminId = insertUser(deps, { name: 'Admin', email: 'admin@kompass.local' });
   const helperId = insertUser(deps, { name: 'Helferin', email: 'helferin@kompass.local' });
   const admin = ctxWith(['users.manage', 'contacts.view', 'contacts.manage'], adminId);
@@ -89,5 +92,32 @@ describe('linking a user account to a contact', () => {
     const secondId = insertUser(deps, { name: 'Zweite', email: 'zweite@kompass.local' });
     unwrap(await unlinkUser(deps, ctxWith(['users.manage'], secondId), { userId: adminId }));
     expect(code(await linkUserToContact(deps, admin, { userId: adminId, contactId: c2 }))).toBe('ownLinkNeedsSecondPerson');
+  });
+});
+
+/** Den Kontakt fällig machen: eine längst beendete Rolle mit Frist, Anlage im Jahr 2000. */
+async function makeDue(deps: Deps, ctx: CallContext, contactId: string) {
+  const added = unwrap(await addContactRole(deps, ctx, { id: contactId, role: 'interested', since: '2000-01-01' }));
+  unwrap(await endContactRole(deps, ctx, { roleId: added.roles[0]!.id, until: '2001-01-01' }));
+  deps.db.update(contacts).set({ createdAt: '2000-01-01T00:00:00.000Z' }).where(eq(contacts.id, contactId)).run();
+}
+
+describe('a linked contact', () => {
+  it('is held permanently while the link is open, and released when it ends', async () => {
+    const { deps, admin, helperId, c1 } = await world();
+    unwrap(await linkUserToContact(deps, admin, { userId: helperId, contactId: c1 }));
+    expect(holdsFor(deps, 'contact', c1)).toContainEqual(expect.objectContaining({ entity: 'contactUserLink', until: null }));
+    expect(code(await deleteContact(deps, admin, { id: c1 }))).toBe('retentionHoldActive');
+    unwrap(await unlinkUser(deps, admin, { userId: helperId }));
+    expect(holdsFor(deps, 'contact', c1).filter((h) => h.entity === 'contactUserLink')).toEqual([]);
+  });
+
+  it('a contact with only ended links can be deleted; the history stays', async () => {
+    const { deps, admin, helperId, c1 } = await world();
+    unwrap(await linkUserToContact(deps, admin, { userId: helperId, contactId: c1 }));
+    unwrap(await unlinkUser(deps, admin, { userId: helperId }));
+    await makeDue(deps, admin, c1);
+    expect((await deleteContact(deps, admin, { id: c1 })).ok).toBe(true);
+    expect(userLinkChangesInternal(deps.db, { from: '2026-01-01', to: '2026-12-31' })).toHaveLength(1);
   });
 });

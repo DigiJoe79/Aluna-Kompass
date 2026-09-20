@@ -36,6 +36,12 @@ export const contactsModule: ModuleManifest = defineModule({
       guard: 'Erst wenn kein Halter mehr läuft — geprüft über retentionHolds aller aktiven Module. Ohne nachgewiesene Frist bleibt der Kontakt bestehen.',
       auditAction: 'contacts.delete',
     },
+    {
+      entity: 'contactUserLink',
+      deletable: false,
+      reason:
+        'Die Verknüpfung von Nutzerkonto und Kontakt ist ein Verlauf: Ein Fachmodul muss später sagen können, wer wann mit wem verknüpft war. Lösen heißt beenden, die Zeile bleibt.',
+    },
   ],
   mcpTools: CONTACTS_MCP_TOOLS,
   seed: seedContacts,

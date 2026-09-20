@@ -1,8 +1,8 @@
 import { dueUntil, holdsFor, retentionEnd, retentionMonths, type Deps, type DueItem, type RetentionHold } from '@kompass/core';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { displayName } from './address';
 import { contactRoleDefinitions } from './roles';
-import { contactRoles, contacts } from './schema';
+import { contactRoles, contacts, contactUserLinks } from './schema';
 
 /**
  * Die Rollen eines Kontakts als Halter. Eine laufende Rolle (`until === null`)
@@ -37,6 +37,11 @@ export function contactsRetentionHolds(deps: Deps, entityType: string, id: strin
       holds.push({ label: 'Grundfrist (Rollen ohne eigene Frist)', until: retentionEnd(from, months), entity: 'contact', id });
     }
   }
+
+  // Eine offene Verknüpfung mit einem Nutzerkonto hält dauerhaft: Ein Fachmodul
+  // fände sonst zu einem Konto keine Person mehr. Wer löschen will, löst sie erst.
+  const open = deps.db.select({ id: contactUserLinks.id }).from(contactUserLinks).where(and(eq(contactUserLinks.contactId, id), isNull(contactUserLinks.unlinkedAt))).get();
+  if (open) holds.push({ label: 'Verknüpfung mit einem Nutzerkonto (dauerhaft, bis sie gelöst wird)', until: null, entity: 'contactUserLink', id: open.id });
   return holds;
 }
 
