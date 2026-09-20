@@ -184,6 +184,8 @@ const WITHOUT_TOOL: Record<string, string> = {
   'dms.seedDms': 'Beispieldaten der Entwicklung; laufen über seedDevelopment, nie über MCP.',
   'dms.issueGeneratedDocument': 'Baustein für Module: nimmt einen Callback und stellt unter dem Recht der Vorlage aus; das Werkzeug ist der Dienst des Moduls (z. B. Bestätigung ausstellen).',
   'dms.readLinkedDocument': 'Liefert Bytes, und nur über die Seiten des Moduls, dem der Vorgang gehört.',
+  'dms.receiveGeneratedUpload': 'Baustein für Module: nimmt einen Callback; das Werkzeug ist der Dienst des Moduls (z. B. Auslage einreichen).',
+  'dms.storeIncoming': 'Innenleben von dms_receive und receiveGeneratedUpload.',
   'contacts.deleteContact': 'Löschung personenbezogener Daten bestätigt ein Mensch.',
   'contacts.seedContacts': 'Beispieldaten der Entwicklung.',
   'animals.seedAnimals': 'Beispieldaten der Entwicklung.',

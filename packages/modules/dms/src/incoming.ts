@@ -100,6 +100,31 @@ export async function receiveDocument(
     if (!other) return notFound('document', relation.relatedDocumentId);
   }
 
+  return storeIncoming(
+    deps, ctx, bytes,
+    { docType, subject: parsed.value.subject, documentDate: parsed.value.documentDate, folder, links: parsed.value.links, relations: parsed.value.relations, audit: { after: { subject: parsed.value.subject, relations: parsed.value.relations.length }, summary: (number) => `Dokument ${number} („${parsed.value.subject}“) eingegangen` } },
+    (tx, doc) => toRecord(deps, tx.select().from(documents).where(eq(documents.id, doc.id)).get()!, tx),
+  );
+}
+
+export interface IncomingFields {
+  docType: DocumentTypeRow;
+  subject: string;
+  documentDate: string;
+  folder: string | null;
+  links: { entityType: string; entityId: string; role: 'sender' | 'recipient' | 'about' }[];
+  relations: { relatedDocumentId: string; kind: (typeof RELATION_KINDS)[number] }[];
+  /** Was im Protokoll steht. Der freie Eingang nennt den Betreff; ein Modul nie. */
+  audit: { after: Record<string, unknown>; summary: (number: string) => string };
+}
+
+/**
+ * Datei schreiben, Nummer ziehen, Zeile und Bezüge anlegen, protokollieren —
+ * gemeinsam für den freien Eingang und den Eingang im Namen eines Vorgangs.
+ * `inTx` läuft in derselben Transaktion; wirft es, verschwindet alles, auch
+ * die Datei.
+ */
+export async function storeIncoming<T>(deps: Deps, ctx: CallContext, bytes: Uint8Array, fields: IncomingFields, inTx: (tx: DbOrTx, doc: { id: string; number: string; fileChecksum: string }) => T): Promise<Result<T>> {
   const id = newId();
   const now = isoNow(deps.clock);
   const year = deps.clock.now().getUTCFullYear();
@@ -111,71 +136,24 @@ export async function receiveDocument(
 
   try {
     return deps.db.transaction((tx: DbOrTx) => {
-      const number = allocateDocumentNumber(tx, docType.prefix, year);
+      const number = allocateDocumentNumber(tx, fields.docType.prefix, year);
       tx.insert(documents)
         .values({
-          id,
-          phase: 'issued',
-          direction: 'incoming',
-          sourceKind: 'uploaded',
-          typeKey: docType.key,
-          number,
-          subject: parsed.value.subject,
-          documentDate: parsed.value.documentDate,
-          folder,
-          draftBody: null,
-          templateKey: null,
-          inputSnapshot: null,
-          fileName: stored.value.fileName,
-          fileChecksum: stored.value.fileChecksum,
-          fileBytes: stored.value.fileBytes,
-          textStatus: 'pending',
-          textAttempts: 0,
-          textError: null,
-          textExtractedAt: null,
-          status: 'issued',
-          createdByUserId: ctx.userId ?? 'system',
-          createdAt: now,
-          updatedAt: now,
+          id, phase: 'issued', direction: 'incoming', sourceKind: 'uploaded', typeKey: fields.docType.key, number,
+          subject: fields.subject, documentDate: fields.documentDate, folder: fields.folder, draftBody: null, templateKey: null, inputSnapshot: null,
+          fileName: stored.value.fileName, fileChecksum: stored.value.fileChecksum, fileBytes: stored.value.fileBytes,
+          textStatus: 'pending', textAttempts: 0, textError: null, textExtractedAt: null,
+          status: 'issued', createdByUserId: ctx.userId ?? 'system', createdAt: now, updatedAt: now,
         })
         .run();
-
-      for (const link of parsed.value.links) {
-        tx.insert(documentLinks)
-          .values({
-            id: newId(),
-            documentId: id,
-            entityType: link.entityType,
-            entityId: link.entityId,
-            role: link.role,
-            createdAt: now,
-          })
-          .run();
+      for (const link of fields.links) {
+        tx.insert(documentLinks).values({ id: newId(), documentId: id, entityType: link.entityType, entityId: link.entityId, role: link.role, createdAt: now }).run();
       }
-
-      for (const relation of parsed.value.relations) {
-        tx.insert(documentRelations)
-          .values({
-            id: newId(),
-            documentId: id,
-            relatedDocumentId: relation.relatedDocumentId,
-            kind: relation.kind,
-            createdByUserId: ctx.userId ?? 'system',
-            createdAt: now,
-          })
-          .run();
+      for (const relation of fields.relations) {
+        tx.insert(documentRelations).values({ id: newId(), documentId: id, relatedDocumentId: relation.relatedDocumentId, kind: relation.kind, createdByUserId: ctx.userId ?? 'system', createdAt: now }).run();
       }
-
-      recordAudit(tx, deps, ctx, {
-        action: 'dms.receive',
-        entityType: 'document',
-        entityId: id,
-        after: { number, typeKey: docType.key, subject: parsed.value.subject, relations: parsed.value.relations.length },
-        summary: `Dokument ${number} („${parsed.value.subject}“) eingegangen`,
-      });
-
-      const row = tx.select().from(documents).where(eq(documents.id, id)).get()!;
-      return ok(toRecord(deps, row, tx));
+      recordAudit(tx, deps, ctx, { action: 'dms.receive', entityType: 'document', entityId: id, after: { number, typeKey: fields.docType.key, ...fields.audit.after }, summary: fields.audit.summary(number) });
+      return ok(inTx(tx, { id, number, fileChecksum: stored.value.fileChecksum }));
     });
   } catch (error) {
     await removeDocumentFile(deps, stored.value.fileName);

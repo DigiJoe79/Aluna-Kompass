@@ -1,12 +1,12 @@
-import { unwrap } from '@kompass/core';
+import { conflict, unwrap } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { createDraft } from '../src/drafts';
-import { linkDocumentInternal, unlinkDocumentInternal } from '../src/linked';
-import { documentLinks } from '../src/schema';
+import { abortReceive, linkDocumentInternal, receiveGeneratedUpload, unlinkDocumentInternal } from '../src/linked';
+import { documentLinks, documents } from '../src/schema';
 import { linkDocument, readLinkedDocument, unlinkDocument } from '../src/service';
-import { fileFixture, setupWithProbe } from './helpers';
+import { fileFixture, pdfBytes, setupWithProbe } from './helpers';
 
 const code = (r: { ok: boolean; error?: { type: string; code?: string } }) => (r.ok ? 'ok' : r.error!.type === 'conflict' ? r.error!.code : r.error!.type);
 
@@ -62,4 +62,36 @@ describe('readLinkedDocument', () => {
     expect(code(await readLinkedDocument(deps, reader, { documentId: doc.id, entityType: 'contact', entityId: 'C1' }))).toBe('notFound');
   });
 });
+
+describe('receiveGeneratedUpload', () => {
+  const upload = { bytes: pdfBytes(), typeKey: 'invoice', subject: 'Beleg zu Vorgang T1', documentDate: '2026-09-01', links: [{ entityType: 'probeThing', entityId: 'T1' as const }] };
+
+  it('files in the name of the record — with the module’s permission and without dms.create', async () => {
+    const { deps } = setupWithProbe();
+    const { document } = unwrap(await receiveGeneratedUpload(deps, ctxWith(['probe.issue'], 'U-HELPER'), upload));
+    expect(deps.db.select().from(documents).where(eq(documents.id, document.id)).get()).toMatchObject({ phase: 'issued', direction: 'incoming', sourceKind: 'uploaded', number: document.number, documentDate: '2026-09-01', textStatus: 'pending', createdByUserId: 'U-HELPER' });
+    expect(code(await readLinkedDocument(deps, ctxWith(['probe.read']), { documentId: document.id, entityType: 'probeThing', entityId: 'T1' }))).toBe('ok');
+  });
+
+  it('checks the receive permission itself and wants a registered record', async () => {
+    const { deps } = setupWithProbe();
+    const denied = await receiveGeneratedUpload(deps, ctxWith(['dms.create']), upload);
+    expect(denied.ok ? null : denied.error).toEqual({ type: 'forbidden', permission: 'probe.issue' });
+    expect(code(await receiveGeneratedUpload(deps, ctxWith(['probe.issue']), { ...upload, links: [{ entityType: 'contact', entityId: 'C1' }] }))).toBe('noLinkedRecord');
+  });
+
+  it('runs afterReceive in the transaction; abortReceive leaves neither row nor file nor number', async () => {
+    const { deps } = setupWithProbe();
+    const res = await receiveGeneratedUpload(deps, ctxWith(['probe.issue']), { ...upload, afterReceive: () => abortReceive(conflict('claimClosed', 'Antrag ist abgeschlossen')) });
+    expect(code(res)).toBe('claimClosed');
+    expect(deps.db.select().from(documents).all()).toHaveLength(0);
+  });
+
+  it('takes no photo', async () => {
+    const { deps } = setupWithProbe();
+    const res = await receiveGeneratedUpload(deps, ctxWith(['probe.issue']), { ...upload, bytes: new Uint8Array([0xff, 0xd8, 0xff, 0xe0]) });
+    expect(res.ok ? null : res.error).toMatchObject({ type: 'validation', issues: [{ path: 'file', message: 'notAPdf' }] });
+  });
+});
+
 
