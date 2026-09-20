@@ -1,9 +1,9 @@
 import type { McpToolDefinition } from '@kompass/core';
 import { z } from 'zod';
 import {
-  createDocumentFolder, createDocumentRule, createDocumentType, deleteDocumentFolder, deleteDocumentRule, documentFolderCreateSchema, documentFolderDeleteSchema,
-  documentRuleCreateSchema, documentRuleDeleteSchema, documentRuleListSchema, documentRuleUpdateSchema, documentTypeCreateSchema, documentTypeListSchema, documentTypeUpdateSchema,
-  listDocumentFolders, listDocumentRules, listDocumentTypes, updateDocumentRule, updateDocumentType,
+  countDocumentsOfType, createDocumentFolder, createDocumentRule, createDocumentType, deleteDocumentFolder, deleteDocumentRule, documentFolderCreateSchema, documentFolderDeleteSchema,
+  documentRuleCreateSchema, documentRuleDeleteSchema, documentRuleListSchema, documentRuleUpdateSchema, documentTypeCountSchema, documentTypeCreateSchema, documentTypeListSchema, documentTypeUpdateSchema,
+  listDocumentAreas, listDocumentFolders, listDocumentRules, listDocumentTypes, updateDocumentRule, updateDocumentType,
 } from './catalog';
 import { suggestClassification, suggestSchema } from './classification';
 import { clearDispatch, dispatchClearSchema, dispatchSchema, recordDispatch } from './dispatch';
@@ -57,8 +57,10 @@ export const DMS_MCP_TOOLS: McpToolDefinition[] = [
   t({ name: 'dms_create_follow_up', description: 'Create a follow-up on a document: due date, title, optional assignee. Requires dms.create and followUps.manage.', inputSchema: documentFollowUpSchema, handler: (deps, ctx, args) => createDocumentFollowUp(deps, ctx, args), service: createDocumentFollowUp }),
 
   // Stammdaten
-  t({ name: 'dms_create_type', description: 'Create a document type with prefix, direction and retention class. Requires dms.manage.', inputSchema: documentTypeCreateSchema, handler: (deps, ctx, args) => createDocumentType(deps, ctx, args), service: createDocumentType }),
-  t({ name: 'dms_update_type', description: 'Change a document type (label, direction, retention class, default folder, active, order; the prefix only while the type has no document). Requires dms.manage.', inputSchema: documentTypeUpdateSchema, handler: (deps, ctx, args) => updateDocumentType(deps, ctx, args), service: updateDocumentType }),
+  t({ name: 'dms_create_type', description: 'Create a document type with prefix, direction and retention class. protectionArea (a key from dms_areas, or null) needs dms.manage and the permission of the area. Requires dms.manage.', inputSchema: documentTypeCreateSchema, handler: (deps, ctx, args) => createDocumentType(deps, ctx, args), service: createDocumentType }),
+  t({ name: 'dms_update_type', description: 'Change a document type (label, direction, retention class, default folder, active, order; the prefix only while the type has no document; protectionArea, a key from dms_areas or null, needs the permission of the old and the new area). Requires dms.manage.', inputSchema: documentTypeUpdateSchema, handler: (deps, ctx, args) => updateDocumentType(deps, ctx, args), service: updateDocumentType }),
+  t({ name: 'dms_areas', description: 'List the protection areas modules register for document types, with the permission each asks for and whether you hold it. A type with an area shows its documents only to holders of exactly that permission. Requires dms.manage.', inputSchema: z.object({}), handler: (deps, ctx) => listDocumentAreas(deps, ctx), service: listDocumentAreas }),
+  t({ name: 'dms_count_type', description: 'Count the documents of one type — what setting or removing a protection area would hide or reveal. Requires dms.manage and the permission of the type’s area.', inputSchema: documentTypeCountSchema, handler: (deps, ctx, args) => countDocumentsOfType(deps, ctx, args), service: countDocumentsOfType }),
   t({ name: 'dms_create_folder', description: 'Create a folder in the subject tree. Requires dms.manage.', inputSchema: documentFolderCreateSchema, handler: (deps, ctx, args) => createDocumentFolder(deps, ctx, args), service: createDocumentFolder }),
   t({ name: 'dms_delete_folder', description: 'Delete an empty folder. Requires dms.manage.', inputSchema: documentFolderDeleteSchema, handler: (deps, ctx, args) => deleteDocumentFolder(deps, ctx, args), service: deleteDocumentFolder }),
   t({ name: 'dms_create_rule', description: 'Create a filing rule. Requires dms.manage.', inputSchema: documentRuleCreateSchema, handler: (deps, ctx, args) => createDocumentRule(deps, ctx, args), service: createDocumentRule }),

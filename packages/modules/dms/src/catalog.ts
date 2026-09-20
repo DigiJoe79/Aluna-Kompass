@@ -1,5 +1,7 @@
 import {
   conflict,
+  documentArea,
+  forbidden,
   invalid,
   isoNow,
   newId,
@@ -14,11 +16,12 @@ import {
   type CallContext,
   type DbOrTx,
   type Deps,
+  type Failure,
   type Result,
 } from '@kompass/core';
 import { and, asc, count, eq, isNotNull, like } from 'drizzle-orm';
 import { z } from 'zod';
-import { canReadType, manageableTypeFilter, readableTypeFilter, requireDmsGate } from './access';
+import { canReadType, manageableTypeFilter, readableTypeFilter, requireAreaAccess, requireDmsGate, typePermission } from './access';
 import { refuseModuleOwned } from './owned';
 import {
   documentFolders,
@@ -207,6 +210,8 @@ export const documentTypeCreateSchema = z.object({
   retentionClass: z.enum(['permanent', 'statutory10Y', 'statutory8Y', 'statutory6Y', 'consent']),
   defaultFolder: z.string().trim().min(1).nullable().optional(),
   sortOrder: z.number().int().min(0).default(0),
+  /** Ein Schlüssel aus `listDocumentAreas`, oder `null` für keinen Schutz. */
+  protectionArea: z.string().trim().min(1).nullable().optional(),
 });
 
 export const documentTypeUpdateSchema = z.object({
@@ -218,7 +223,27 @@ export const documentTypeUpdateSchema = z.object({
   defaultFolder: z.string().trim().min(1).nullable().optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().min(0).optional(),
+  protectionArea: z.string().trim().min(1).nullable().optional(),
 });
+
+/**
+ * V14 — niemand ändert einen Schutz, den er nicht durchschauen darf: Setzen,
+ * Wechseln und Entfernen verlangt neben `dms.manage` das Recht des alten und
+ * des neuen Bereichs. Sonst entfernte ein Verwalter den Bereich, läse, und
+ * setzte ihn wieder.
+ */
+function requireAreaChange(deps: Deps, ctx: CallContext, from: string | null, to: string | null): Failure | null {
+  if (from === to) return null;
+  if (to !== null && !documentArea(deps, to)) return conflict('unknownDocumentArea', `Den Schutzbereich „${to}“ meldet kein Modul an`);
+  for (const area of [from, to]) {
+    if (area === null) continue;
+    const permission = typePermission(deps, { protectionArea: area });
+    if (permission === null) return forbidden(`dms.area:${area}`);
+    const denied = requirePermission(ctx, permission);
+    if (denied) return denied;
+  }
+  return null;
+}
 
 export async function createDocumentType(
   deps: Deps,
@@ -237,6 +262,10 @@ export async function createDocumentType(
   const holder = prefixTaken(deps.db, parsed.value.prefix);
   if (holder) return conflict('documentTypePrefixTaken', `Präfix ${parsed.value.prefix} trägt schon die Dokumentart „${holder.label}“`);
 
+  const protectionArea = parsed.value.protectionArea ?? null;
+  const areaDenied = requireAreaChange(deps, ctx, null, protectionArea);
+  if (areaDenied) return areaDenied;
+
   return deps.db.transaction((tx: DbOrTx) => {
     tx.insert(documentTypes)
       .values({
@@ -248,6 +277,7 @@ export async function createDocumentType(
         defaultFolder: parsed.value.defaultFolder ?? null,
         isActive: true,
         sortOrder: parsed.value.sortOrder,
+        protectionArea,
       })
       .run();
 
@@ -255,7 +285,7 @@ export async function createDocumentType(
       action: 'dms.type.create',
       entityType: 'documentType',
       entityId: parsed.value.key,
-      after: { key: parsed.value.key, label: parsed.value.label, prefix: parsed.value.prefix },
+      after: { key: parsed.value.key, label: parsed.value.label, prefix: parsed.value.prefix, ...(protectionArea ? { protectionArea } : {}) },
       summary: `Dokumentart „${parsed.value.label}“ angelegt`,
     });
 
@@ -278,8 +308,13 @@ export async function updateDocumentType(
   const existing = documentTypeFor(deps.db, parsed.value.key);
   if (!existing) return notFound('documentType', parsed.value.key);
 
-  if (existing.ownerModule && (parsed.value.defaultDirection !== undefined || parsed.value.retentionClass !== undefined || parsed.value.isActive !== undefined || parsed.value.prefix !== undefined)) {
+  if (existing.ownerModule && (parsed.value.defaultDirection !== undefined || parsed.value.retentionClass !== undefined || parsed.value.isActive !== undefined || parsed.value.prefix !== undefined || parsed.value.protectionArea !== undefined)) {
     return refuseModuleOwned(existing)!;
+  }
+
+  if (parsed.value.protectionArea !== undefined) {
+    const areaDenied = requireAreaChange(deps, ctx, existing.protectionArea, parsed.value.protectionArea);
+    if (areaDenied) return areaDenied;
   }
 
   if (parsed.value.prefix !== undefined && parsed.value.prefix !== existing.prefix) {
@@ -306,6 +341,7 @@ export async function updateDocumentType(
   if (parsed.value.defaultFolder !== undefined) updates.defaultFolder = parsed.value.defaultFolder;
   if (parsed.value.isActive !== undefined) updates.isActive = parsed.value.isActive;
   if (parsed.value.sortOrder !== undefined) updates.sortOrder = parsed.value.sortOrder;
+  if (parsed.value.protectionArea !== undefined) updates.protectionArea = parsed.value.protectionArea;
 
   return deps.db.transaction((tx: DbOrTx) => {
     tx.update(documentTypes).set(updates).where(eq(documentTypes.key, existing.key)).run();
@@ -315,13 +351,44 @@ export async function updateDocumentType(
       action: 'dms.type.update',
       entityType: 'documentType',
       entityId: existing.key,
-      before: { label: existing.label, prefix: existing.prefix, isActive: existing.isActive },
-      after: { label: after.label, prefix: after.prefix, isActive: after.isActive },
+      before: { label: existing.label, prefix: existing.prefix, isActive: existing.isActive, protectionArea: existing.protectionArea },
+      after: { label: after.label, prefix: after.prefix, isActive: after.isActive, protectionArea: after.protectionArea },
       summary: `Dokumentart „${after.label}“ geändert`,
     });
 
     return ok(after);
   });
+}
+
+export interface DocumentAreaView {
+  key: string;
+  module: string;
+  permission: string;
+  /** Ob der Aufrufer das Recht des Bereichs selbst hat — nur dann darf er ihn setzen oder lösen. */
+  held: boolean;
+}
+
+/** Die Schutzbereiche, die Module anmelden — registry-weit, auch die ausgeschalteter Module. */
+export async function listDocumentAreas(deps: Deps, ctx: CallContext): Promise<Result<DocumentAreaView[]>> {
+  const denied = requirePermission(ctx, 'dms.manage');
+  if (denied) return denied;
+  return ok(deps.registry.manifests.flatMap((m) => (m.documentAreas ?? []).map((a) => ({ key: a.key, module: m.key, permission: a.permission, held: hasPermission(ctx, a.permission) }))));
+}
+
+export const documentTypeCountSchema = z.object({ key: z.string().min(1) });
+
+/** Wie viele Dokumente eine Art hat — was das Setzen oder Lösen eines Bereichs verbergen oder zeigen würde. */
+export async function countDocumentsOfType(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ count: number }>> {
+  const denied = requirePermission(ctx, 'dms.manage');
+  if (denied) return denied;
+  const parsed = validate(deps, documentTypeCountSchema, input);
+  if (!parsed.ok) return parsed;
+  const docType = documentTypeFor(deps.db, parsed.value.key);
+  if (!docType) return notFound('documentType', parsed.value.key);
+  const unreadable = requireAreaAccess(deps, ctx, { typeKey: docType.key });
+  if (unreadable) return unreadable;
+  const row = deps.db.select({ n: count() }).from(documents).where(eq(documents.typeKey, docType.key)).get();
+  return ok({ count: row?.n ?? 0 });
 }
 
 export const documentRuleCreateSchema = z.object({
