@@ -15,6 +15,8 @@ nicht gelöscht, sondern deaktiviert — ihre Nummern bleiben vergeben.
 
 Jedes Präfix gibt es nur einmal. Ändern lässt es sich, solange die Art noch kein Dokument hat — danach steht es in den Nummern und bleibt. Braucht ein Modul ein Präfix, das eine Ihrer Arten trägt, meldet die Startseite das unter „Einrichtung“; geben Sie dann der eigenen, noch unbenutzten Art ein anderes Präfix.
 
+Eine Art kann außerdem einen **Schutzbereich** tragen, sobald ein Modul einen anbietet — ihre Dokumente sehen dann nur Personen mit dem Recht dieses Bereichs. Was das bedeutet und wer es ändern darf, steht unter [Schutzbereiche](schutzbereiche.md).
+
 ## Ordner
 
 Ordner sind Pfade: „Behörden“, „Behörden/Finanzamt“, „Verträge/2026“. Sie

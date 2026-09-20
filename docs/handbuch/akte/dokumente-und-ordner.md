@@ -28,6 +28,8 @@ Das Suchfeld sucht in Betreff, Nummer und, ab drei Zeichen, im Inhalt der
 Dokumente ([Volltext](volltext.md)). Filter: Art, Richtung, Zeitraum,
 „nicht versandt“, „mit offener Wiedervorlage“.
 
+Dokumente geschützter Arten sehen Sie nur mit dem Recht ihres Bereichs; ein Ordner kann deshalb mehr enthalten, als Sie sehen, und lässt sich dann nicht löschen. Mehr unter [Schutzbereiche](../einstellungen/schutzbereiche.md).
+
 ## Nummern
 
 Jedes festgeschriebene Dokument hat eine Nummer aus Präfix der Art, Jahr und
