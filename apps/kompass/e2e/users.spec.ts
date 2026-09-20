@@ -81,7 +81,7 @@ test.describe('users', () => {
   });
 
   test('is forbidden for a role without users.manage', async ({ page }) => {
-    // Mira Klein (Kassenprüfer) hat nur audit.view; Startpasswort per Reset holen.
+    // Mira Klein (Interne Revision) hat nur audit.view; Startpasswort per Reset holen.
     await page.getByRole('row', { name: /Mira Klein/ }).getByRole('button', { name: 'Aktionen' }).click();
     await page.getByRole('menuitem', { name: 'Neues Startpasswort' }).click();
     const startPassword = (await page.getByTestId('start-password').textContent())!.trim();
@@ -144,7 +144,7 @@ test.describe('users', () => {
     await page.keyboard.press('Escape');
 
     await page.goto('/admin/roles');
-    await page.getByRole('list', { name: 'Rollen' }).getByRole('button', { name: /Kassenprüfer/ }).click();
+    await page.getByRole('list', { name: 'Rollen' }).getByRole('button', { name: /Interne Revision/ }).click();
     await expect(page.getByRole('checkbox', { name: 'Nutzer verwalten' })).toBeEnabled();
     await expect(page.getByRole('checkbox', { name: 'Einstellungen verwalten' })).toBeDisabled();
     // Was die Rolle schon hat, darf auch entfernt werden, wer es selbst nicht hat.

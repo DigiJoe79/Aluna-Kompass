@@ -10,7 +10,7 @@ test.describe('roles', () => {
 
   test('lists roles with counts and shows the protected role locked', async ({ page }) => {
     const list = page.getByRole('list', { name: 'Rollen' });
-    await expect(list.getByRole('listitem')).toHaveCount(4);
+    await expect(list.getByRole('listitem')).toHaveCount(9);
     await expect(list.getByRole('listitem', { name: /Administration/ })).toContainText('Alle Rechte');
     await list.getByRole('button', { name: /Administration/ }).click();
     await expect(page.getByLabel('Rollenname')).toBeDisabled();
@@ -18,7 +18,7 @@ test.describe('roles', () => {
   });
 
   test('edits permissions with a pending counter and saves', async ({ page }) => {
-    await page.getByRole('button', { name: /Kassenprüfer/ }).click();
+    await page.getByRole('button', { name: /Interne Revision/ }).click();
     await expect(page.getByRole('checkbox', { name: 'Änderungsprotokoll einsehen' })).toBeChecked();
     await page.getByRole('checkbox', { name: 'Backup exportieren' }).check();
     await page.getByRole('checkbox', { name: 'Auszüge ziehen' }).uncheck();
@@ -26,7 +26,7 @@ test.describe('roles', () => {
     await page.getByRole('button', { name: 'Rolle speichern' }).click();
     await expect(page.getByRole('status')).toContainText('Rolle gespeichert.');
     await page.reload();
-    await page.getByRole('button', { name: /Kassenprüfer/ }).click();
+    await page.getByRole('button', { name: /Interne Revision/ }).click();
     await expect(page.getByRole('checkbox', { name: 'Backup exportieren' })).toBeChecked();
     await expect(page.getByRole('checkbox', { name: 'Auszüge ziehen' })).not.toBeChecked();
     await expect(page.getByText('backup.export')).toBeVisible();

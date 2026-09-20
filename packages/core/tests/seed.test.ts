@@ -13,7 +13,7 @@ describe('seedDevelopment', () => {
     const first = await seedDevelopment(deps);
     const second = await seedDevelopment(deps);
     expect(second).toEqual(first);
-    expect(deps.db.select().from(roles).all().map((r) => r.name).sort()).toEqual(['Administration', 'Kassenprüfer', 'Schatzmeisterin', 'Schriftführung']);
+    expect(deps.db.select().from(roles).all().map((r) => r.name).sort()).toEqual(['Administration', 'Interne Revision', 'Schatzmeisterin', 'Schriftführung']);
     expect(deps.db.select().from(users).all()).toHaveLength(4);
     const session = await login(deps, { email: first.adminEmail, password: first.adminPassword, ipAddress: null, requestId: 'R' });
     expect(session.ok).toBe(true);

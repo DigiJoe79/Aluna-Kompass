@@ -16,13 +16,16 @@ export const SEED_ADMIN_PASSWORD = 'kompass-entwicklung-2026';
 
 const EXAMPLE_ROLES: { name: string; description: string; permissions: string[] }[] = [
   { name: 'Schatzmeisterin', description: 'Finanzen und Dokumente', permissions: ['documents.export', 'media.upload', 'audit.view', 'backup.export', 'followUps.view', 'followUps.manage', 'dms.view'] },
-  { name: 'Kassenprüfer', description: 'Nur lesen', permissions: ['audit.view', 'documents.export'] },
+  // Nicht „Kassenprüfer“: Das Finanzmodul liefert ab F1 eine eigene Rolle
+  // dieses Namens (Spec 10.1); zwei Rollen mit demselben Namen ließen sich
+  // sonst über `nameTaken` nicht beide anlegen.
+  { name: 'Interne Revision', description: 'Nur lesen', permissions: ['audit.view', 'documents.export'] },
   { name: 'Schriftführung', description: 'Dokumente erzeugen', permissions: ['documents.export'] },
 ];
 
 const EXAMPLE_USERS: { name: string; email: string; role: string }[] = [
   { name: 'Jonas Feld', email: 'jonas@kompass.local', role: 'Schatzmeisterin' },
-  { name: 'Mira Klein', email: 'mira@kompass.local', role: 'Kassenprüfer' },
+  { name: 'Mira Klein', email: 'mira@kompass.local', role: 'Interne Revision' },
   { name: 'Peter Lang', email: 'peter@kompass.local', role: 'Schriftführung' },
 ];
 

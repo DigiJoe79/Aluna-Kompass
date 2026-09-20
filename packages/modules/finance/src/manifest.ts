@@ -1,4 +1,5 @@
 import { defineModule, type ModuleManifest } from '@kompass/core';
+import { installFinance } from './install';
 
 /**
  * Alle zehn Rechte stehen von Anfang an hier, auch die, deren Dienste erst
@@ -34,4 +35,5 @@ export const financeModule: ModuleManifest = defineModule({
   // Platzhalter, bis Task 12 (`seedFinance`) das erfundene Vereinsjahr liefert —
   // AGENTS.md verlangt den Haken für jedes Modul von Anfang an.
   seed: async () => {},
+  install: installFinance,
 });
