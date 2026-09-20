@@ -279,7 +279,7 @@ export async function getDocumentRecord(deps: Deps, ctx: CallContext, id: string
   if (!row) return notFound('document', id);
   const unreadable = requireReadable(deps, ctx, row);
   if (unreadable) return unreadable;
-  const fileState: DocumentFileState = row.fileName ? (await pruefeDatei(deps, ctx, row)).state : 'none';
+  const fileState: DocumentFileState = row.fileName ? (await checkDocumentFile(deps, ctx, row)).state : 'none';
   return ok({ ...toRecord(deps, ctx, row), fileState });
 }
 
@@ -294,7 +294,7 @@ export async function getDocumentRecord(deps: Deps, ctx: CallContext, id: string
  * darauf. Ändert sich die Datei ein zweites Mal, ist das ein neuer Befund und
  * bekommt seinen Eintrag.
  */
-async function pruefeDatei(
+export async function checkDocumentFile(
   deps: Deps,
   ctx: CallContext,
   row: typeof documents.$inferSelect,
@@ -359,7 +359,7 @@ export async function getDocument(deps: Deps, ctx: CallContext, id: string): Pro
   if (unreadable) return unreadable;
   if (!row.fileName) return notFound('documentFile', id);
 
-  const geprueft = await pruefeDatei(deps, ctx, row);
+  const geprueft = await checkDocumentFile(deps, ctx, row);
   if (geprueft.state === 'missing') return notFound('documentFile', id);
   if (geprueft.state === 'altered') {
     return conflict('documentAltered', `Die Datei von Dokument ${row.number} stimmt nicht mehr mit der beim Festschreiben gebildeten Prüfsumme überein`);
@@ -393,7 +393,7 @@ export async function readLinkedDocument(deps: Deps, ctx: CallContext, input: un
   const row = deps.db.select().from(documents).where(eq(documents.id, documentId)).get();
   if (!row || !row.fileName) return unknown;
 
-  const checked = await pruefeDatei(deps, ctx, row);
+  const checked = await checkDocumentFile(deps, ctx, row);
   if (checked.state === 'missing') return notFound('documentFile', documentId);
   if (checked.state === 'altered') return conflict('documentAltered', `Die Datei von Dokument ${row.number} stimmt nicht mehr mit der beim Festschreiben gebildeten Prüfsumme überein`);
   return ok({ record: { id: row.id, number: row.number, subject: row.subject, typeKey: row.typeKey, documentDate: row.documentDate, status: row.status }, bytes: checked.bytes!, filename: `${row.number}.pdf` });
