@@ -4,6 +4,7 @@ import {
   deleteFollowUpsFor,
   invalid,
   isoNow,
+  linkedAccess,
   newId,
   notFound,
   notifyRecordDeleted,
@@ -350,6 +351,37 @@ export async function getDocument(deps: Deps, ctx: CallContext, id: string): Pro
   }
 
   return ok({ record: toRecord(deps, row), bytes: geprueft.bytes!, filename: `${row.number}.pdf` });
+}
+
+const linkedDocumentSchema = z.object({ documentId: z.string().min(1), entityType: z.string().min(1), entityId: z.string().min(1) });
+
+/**
+ * Der Bezug als Berechtigung: genau dieses Dokument, für den, der den Vorgang
+ * lesen darf — die Helferin ihren Auslagenbeleg, der Kassenprüfer den Beschluss
+ * zur Rücklage. Kein Weg in die Akte. Recht **und** Bezug prüft dieser Dienst;
+ * dem aufrufenden Modul bleibt nur die Frage, ob der Vorgang dem Aufrufer
+ * gehört („eigener Antrag“).
+ */
+export async function readLinkedDocument(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ record: { id: string; number: string | null; subject: string; typeKey: string; documentDate: string; status: 'issued' | 'voided' }; bytes: Uint8Array; filename: string }>> {
+  const parsed = validate(deps, linkedDocumentSchema, input);
+  if (!parsed.ok) return parsed;
+  const { documentId, entityType, entityId } = parsed.value;
+  const unknown = notFound('linkedDocument', documentId);
+
+  const access = linkedAccess(deps, entityType);
+  if (!access) return unknown;
+  const denied = requirePermission(ctx, access.readPermission);
+  if (denied) return denied;
+
+  const link = deps.db.select({ id: documentLinks.id }).from(documentLinks).where(and(eq(documentLinks.documentId, documentId), eq(documentLinks.entityType, entityType), eq(documentLinks.entityId, entityId))).get();
+  if (!link) return unknown;
+  const row = deps.db.select().from(documents).where(eq(documents.id, documentId)).get();
+  if (!row || !row.fileName) return unknown;
+
+  const checked = await pruefeDatei(deps, ctx, row);
+  if (checked.state === 'missing') return notFound('documentFile', documentId);
+  if (checked.state === 'altered') return conflict('documentAltered', `Die Datei von Dokument ${row.number} stimmt nicht mehr mit der beim Festschreiben gebildeten Prüfsumme überein`);
+  return ok({ record: { id: row.id, number: row.number, subject: row.subject, typeKey: row.typeKey, documentDate: row.documentDate, status: row.status }, bytes: checked.bytes!, filename: `${row.number}.pdf` });
 }
 
 /**
