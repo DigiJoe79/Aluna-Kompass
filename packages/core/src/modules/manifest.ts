@@ -99,6 +99,15 @@ export interface FollowUpTarget {
   href: string | null;
 }
 
+export type RecordLabelState = 'ok' | 'forbidden' | 'missing';
+/** Beschriftung eines fremden Datensatzes für den, der fragt. */
+export interface RecordLabel {
+  /** Bei `forbidden` neutral („Kontakt (kein Zugriff)“, „ZWB-2026-0007, geschützt“), bei `missing` leer. */
+  label: string;
+  href: string | null;
+  state: RecordLabelState;
+}
+
 /** Eine Kontaktrolle, die ein Modul beisteuert, samt ihrer Aufbewahrungsklasse. */
 export interface ContactRoleDefinition {
   key: string;
@@ -272,6 +281,16 @@ export interface ModuleManifest {
    * nicht meine Entität.
    */
   followUpTargets?: (deps: Deps, entityType: string, id: string) => FollowUpTarget | null;
+  /**
+   * Beschriftung und Link für einen Datensatz dieses Moduls — **mit `ctx`**
+   * (wie `translatables`): Wer ihn nicht lesen darf, bekommt `forbidden` und
+   * eine neutrale Beschriftung. `null` heißt: nicht meine Entität. Der Kern
+   * fragt diesen Haken auch für Wiedervorlagen; `followUpTargets` bleibt als
+   * Rückfall für Module, die ihn noch nicht bedienen. Nicht aus dem
+   * `index.ts` des Moduls exportieren — der MCP-Paritätswächter hielte die
+   * Funktion für einen Dienst.
+   */
+  recordLabels?: (deps: Deps, ctx: CallContext, entityType: string, id: string) => RecordLabel | null;
   /**
    * Die mehrsprachigen Datensätze dieses Moduls, Entwürfe eingeschlossen.
    * Richtung Kern → Modul wie `followUpTargets`. Prüft das Ansichtsrecht des

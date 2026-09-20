@@ -1,5 +1,6 @@
 import { defineModule, type ModuleManifest } from '@kompass/core';
 import { CONTACTS_MCP_TOOLS } from './mcp-tools';
+import { contactsRecordLabels } from './record-labels';
 import { contactsRetentionDue, contactsRetentionHolds } from './retention';
 import { seedContacts } from './seed';
 
@@ -23,6 +24,7 @@ export const contactsModule: ModuleManifest = defineModule({
     { key: 'authority', retention: 'permanent' },
     { key: 'service', retention: 'consent' },
   ],
+  recordLabels: contactsRecordLabels,
   retentionHolds: contactsRetentionHolds,
   retentionDue: contactsRetentionDue,
   deletionRules: [

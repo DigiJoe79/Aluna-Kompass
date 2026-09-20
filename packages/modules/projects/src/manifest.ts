@@ -1,6 +1,7 @@
 import { defineModule, type ModuleManifest } from '@kompass/core';
 import { PROJECTS_MCP_TOOLS } from './mcp-tools';
 import { projectsMediaReferences } from './references';
+import { projectsRecordLabels } from './record-labels';
 import { seedProjects } from './seed';
 import { projectsSetTranslations, projectsTranslatables } from './translations';
 import { publishedProjects } from './views';
@@ -28,6 +29,7 @@ export const projectsModule: ModuleManifest = defineModule({
   publishedViews: [publishedProjects],
   mcpTools: PROJECTS_MCP_TOOLS,
   mediaReferences: projectsMediaReferences,
+  recordLabels: projectsRecordLabels,
   translatables: projectsTranslatables,
   setTranslations: projectsSetTranslations,
   seed: seedProjects,

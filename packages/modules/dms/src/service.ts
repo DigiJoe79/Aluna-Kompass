@@ -70,7 +70,8 @@ export function toRecord(deps: Deps, row: DocumentRow, dbOrTx: DbOrTx = deps.db)
       .from(schema.followUps)
       .where(and(eq(schema.followUps.entityType, 'document'), eq(schema.followUps.entityId, row.id)))
       .orderBy(asc(schema.followUps.dueAt))
-      .all(),
+      .all()
+      .map((f) => ({ ...f, titleHidden: false })),
   };
 }
 

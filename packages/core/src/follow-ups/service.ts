@@ -11,7 +11,16 @@ import { requirePermission } from '../permissions/check';
 import { conflict, notFound, ok, type Result } from '../result';
 import { validate } from '../validate';
 
-export type FollowUpRecord = typeof followUps.$inferSelect;
+import { resolveRecordLabel } from '../modules/record-hooks';
+
+export type FollowUpRecord = typeof followUps.$inferSelect & { titleHidden: boolean };
+
+function toRecord(row: typeof followUps.$inferSelect): FollowUpRecord {
+  return { ...row, titleHidden: false };
+}
+
+const hideTitleIfForbidden = (deps: Deps, ctx: CallContext, row: FollowUpRecord): FollowUpRecord =>
+  resolveRecordLabel(deps, ctx, row.entityType, row.entityId)?.state === 'forbidden' ? { ...row, title: '', titleHidden: true } : row;
 
 const ENTITY = z.string().trim().min(1).max(60);
 
@@ -37,7 +46,8 @@ export const followUpDueSchema = z.object({
 });
 
 function load(db: DbOrTx, id: string): FollowUpRecord | null {
-  return db.select().from(followUps).where(eq(followUps.id, id)).get() ?? null;
+  const row = db.select().from(followUps).where(eq(followUps.id, id)).get();
+  return row ? toRecord(row) : null;
 }
 
 /**
@@ -165,10 +175,10 @@ export async function listFollowUps(deps: Deps, ctx: CallContext, input: unknown
   if (!parsed.ok) return parsed;
   const q = parsed.value;
   const scope = and(eq(followUps.entityType, q.entityType), eq(followUps.entityId, q.entityId));
-  const open = deps.db.select().from(followUps).where(and(scope, isNull(followUps.doneAt))).orderBy(asc(followUps.dueAt), asc(followUps.createdAt)).all();
-  if (!q.includeDone) return ok(open);
-  const done = deps.db.select().from(followUps).where(and(scope, sql`${followUps.doneAt} is not null`)).orderBy(desc(followUps.doneAt)).all();
-  return ok([...open, ...done]);
+  const open = deps.db.select().from(followUps).where(and(scope, isNull(followUps.doneAt))).orderBy(asc(followUps.dueAt), asc(followUps.createdAt)).all().map(toRecord);
+  if (!q.includeDone) return ok(open.map((r) => hideTitleIfForbidden(deps, ctx, r)));
+  const done = deps.db.select().from(followUps).where(and(scope, sql`${followUps.doneAt} is not null`)).orderBy(desc(followUps.doneAt)).all().map(toRecord);
+  return ok([...open, ...done].map((r) => hideTitleIfForbidden(deps, ctx, r)));
 }
 
 export async function listDueFollowUps(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<FollowUpRecord[]>> {
@@ -180,7 +190,7 @@ export async function listDueFollowUps(deps: Deps, ctx: CallContext, input: unkn
   const conditions = [isNull(followUps.doneAt), lte(followUps.dueAt, q.until)];
   if (q.assigneeUserId) conditions.push(eq(followUps.assigneeUserId, q.assigneeUserId));
   const rows = deps.db.select().from(followUps).where(and(...conditions)).orderBy(asc(followUps.dueAt), asc(followUps.createdAt)).all();
-  return ok(rows);
+  return ok(rows.map(toRecord));
 }
 
 /**

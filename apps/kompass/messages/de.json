@@ -415,6 +415,9 @@
           "title": "Fällig",
           "empty": "Nichts fällig.",
           "open": "Alle Wiedervorlagen",
+          "messages": {
+            "protectedTitle": "Wiedervorlage an einem geschützten Datensatz"
+          },
           "options": {
             "horizonDays": { "label": "Zeitraum", "values": { "7": "7 Tage", "14": "14 Tage", "30": "30 Tage" } },
             "onlyMine": { "label": "Nur meine" }

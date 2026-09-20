@@ -3,6 +3,7 @@ import { DMS_DASHBOARD_TILES } from './dashboard';
 import { dmsFollowUpTargets } from './follow-ups';
 import { DMS_SETTINGS, installDms } from './install';
 import { DMS_MCP_TOOLS } from './mcp-tools';
+import { dmsRecordLabels } from './record-labels';
 import { dmsRecordReferences } from './record-references';
 import { dmsRetentionDue, dmsRetentionHolds } from './retention';
 import { seedDms } from './seed';
@@ -93,6 +94,7 @@ export const dmsModule: ModuleManifest = defineModule({
   retentionHolds: dmsRetentionHolds,
   recordReferences: dmsRecordReferences,
   retentionDue: dmsRetentionDue,
+  recordLabels: dmsRecordLabels,
   followUpTargets: dmsFollowUpTargets,
   dashboardTiles: DMS_DASHBOARD_TILES,
   deletionRules: DMS_DELETION_RULES,

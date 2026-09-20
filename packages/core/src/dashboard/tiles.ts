@@ -49,6 +49,7 @@ const followUpsTile: DashboardTile<{ horizonDays: '7' | '14' | '30'; onlyMine: b
   kind: 'list',
   defaultOn: true,
   options: z.object({ horizonDays: z.enum(['7', '14', '30']).default('7'), onlyMine: z.boolean().default(false) }),
+  messageKeys: ['protectedTitle'],
   async load(deps, ctx, o) {
     const now = deps.clock.now().getTime();
     const today = isoDay(now);
@@ -58,7 +59,9 @@ const followUpsTile: DashboardTile<{ horizonDays: '7' | '14' | '30'; onlyMine: b
     if (!res.ok) return { kind: 'list', lines: [], total: 0, href: null };
     const names = userNamesFor(deps, res.value.map((r) => r.assigneeUserId));
     const lines: DashboardLine[] = res.value.slice(0, 10).map((r) => {
-      const line: DashboardLine = { date: r.dueAt, title: r.title, overdue: r.dueAt < today, action: { kind: 'completeFollowUp', followUpId: r.id } };
+      const line: DashboardLine = r.titleHidden
+        ? { date: r.dueAt, titleKey: 'protectedTitle', overdue: r.dueAt < today }
+        : { date: r.dueAt, title: r.title, overdue: r.dueAt < today, action: { kind: 'completeFollowUp', followUpId: r.id } };
       if (r.target) line.link = { label: r.target.label, href: r.target.href };
       const name = r.assigneeUserId ? names.get(r.assigneeUserId) : undefined;
       if (name) line.extra = name;

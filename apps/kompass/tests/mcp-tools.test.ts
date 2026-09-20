@@ -205,6 +205,9 @@ const WITHOUT_TOOL: Record<string, string> = {
   'core.listApiTokens': 'Ebenso: Die Liste der eigenen Token gehört zur Kontoverwaltung.',
   'core.listDueFollowUps': 'followups_list_due ruft listDueFollowUpsWithTargets — dieselbe Liste, dazu wohin jede Wiedervorlage zeigt.',
   'core.deleteUnreferencedMedia': 'Innenleben der Löschfunktionen; erreichbar über deren Schalter deleteOrphanedMedia, ruft sich nicht selbst über MCP.',
+  'core.requireHumanChannel': 'Prüft den Aufrufkanal; Helfer für Dienste, kein eigener Vorgang.',
+  'core.resolveRecordLabel': 'Hakenverteiler für Datensatzbeschriftungen, kein eigener Dienst.',
+  'core.withTarget': 'Reichert Wiedervorlagen mit Zielbeschriftung an; Innenleben von listDueFollowUpsWithTargets.',
 };
 
 const servicesOf = (moduleKey: string, pkg: Record<string, unknown>) =>
