@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { abortIssue, issueGeneratedDocument } from '../src/issue';
 import { documentCounters, documentLinks, documents } from '../src/schema';
-import { listDocuments, voidDocument } from '../src/service';
+import { listDocuments, voidDocument, voidDocumentInternal } from '../src/service';
 import { readDocumentFile } from '../src/storage';
 import { setupWithProbe } from './helpers';
 
@@ -64,5 +64,26 @@ describe('issueGeneratedDocument', () => {
     const { document } = unwrap(await issueGeneratedDocument(deps, ctx, NOTE));
     expect(unwrap(await listDocuments(deps, ctx, { unsent: true })).total).toBe(0);
     expect(code(await voidDocument(deps, ctx, { id: document.id, reason: 'Test' }))).toBe('documentTypeOwnedByModule');
+  });
+});
+
+describe('voidDocumentInternal', () => {
+  it('voids a module-owned document inside the caller’s transaction and keeps the reason out of the audit log', async () => {
+    const { deps, ctx } = setupWithProbe();
+    const { document } = unwrap(await issueGeneratedDocument(deps, ctx, NOTE));
+    const res = deps.db.transaction((tx) => voidDocumentInternal(tx, deps, ctx, { id: document.id, reason: 'Spender Müller hat widerrufen' }));
+    expect(unwrap(res).number).toBe('NTZ-2026-001');
+    const row = deps.db.select().from(documents).where(eq(documents.id, document.id)).get()!;
+    expect(row).toMatchObject({ status: 'voided', voidReason: 'Spender Müller hat widerrufen' });
+    const entry = auditEntry(deps, 'dms.void');
+    expect(`${entry.summary}${entry.after}`).not.toContain('Müller');
+  });
+
+  it('says so when the document is a draft or already voided', async () => {
+    const { deps, ctx } = setupWithProbe();
+    const { document } = unwrap(await issueGeneratedDocument(deps, ctx, NOTE));
+    deps.db.transaction((tx) => voidDocumentInternal(tx, deps, ctx, { id: document.id, reason: 'x' }));
+    const again = deps.db.transaction((tx) => voidDocumentInternal(tx, deps, ctx, { id: document.id, reason: 'x' }));
+    expect(code(again)).toBe('documentAlreadyVoided');
   });
 });

@@ -350,6 +350,23 @@ export async function getDocument(deps: Deps, ctx: CallContext, id: string): Pro
   return ok({ record: toRecord(deps, row), bytes: geprueft.bytes!, filename: `${row.number}.pdf` });
 }
 
+/**
+ * Storno in einer fremden Transaktion — für Module, die ihr eigenes Dokument
+ * stornieren (Bestätigung, Bericht). Ohne Rechteprüfung und ohne die Sperre für
+ * modul-eigene Arten: Beides prüft der Dienst des Moduls. Der Grund steht am
+ * Dokument, nicht im Protokoll — er ist frei getippt, und das Protokoll ist
+ * unlöschbar.
+ */
+export function voidDocumentInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, input: { id: string; reason: string }): Result<{ id: string; number: string | null }> {
+  const row = tx.select().from(documents).where(eq(documents.id, input.id)).get();
+  if (!row) return notFound('document', input.id);
+  if (row.phase !== 'issued') return conflict('documentIsDraft', 'Ein Entwurf kann nicht storniert werden — nur verworfen');
+  if (row.status === 'voided') return conflict('documentAlreadyVoided', `Dokument ${row.number} ist bereits storniert`);
+  tx.update(documents).set({ status: 'voided', voidedAt: isoNow(deps.clock), voidedByUserId: ctx.userId, voidReason: input.reason }).where(eq(documents.id, row.id)).run();
+  recordAudit(tx, deps, ctx, { action: 'dms.void', entityType: 'document', entityId: row.id, before: { status: 'issued' }, after: { status: 'voided' }, summary: `Dokument ${row.number} storniert` });
+  return ok({ id: row.id, number: row.number });
+}
+
 const voidSchema = z.object({ id: z.string().min(1), reason: z.string().trim().min(1).max(300) });
 
 export async function voidDocument(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DocumentRecord>> {
