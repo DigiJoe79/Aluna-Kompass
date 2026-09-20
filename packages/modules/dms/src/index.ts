@@ -10,6 +10,7 @@ export * from './index-store';
 export * from './manifest';
 export * from './mcp-tools';
 export * from './notes';
+export * from './provision';
 export * from './recipients';
 export * from './record-references';
 export * from './relations';
