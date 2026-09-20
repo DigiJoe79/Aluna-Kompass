@@ -1,8 +1,9 @@
-import { conflict, expectedVersionField, isoNow, newId, notFound, ok, requirePermission, staleVersion, validate, hasPermission, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { expectedVersionField, isoNow, newId, notFound, ok, requirePermission, staleVersion, validate, hasPermission, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { projects } from '@kompass/module-projects';
 import { asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
+import { financeConflict } from '../errors';
 import { financePurposes, type FinancePurposeRow } from '../schema';
 import { requireFinanceRead } from './access';
 
@@ -76,7 +77,7 @@ function load(db: DbOrTx, id: string): FinancePurposeRow | null {
   return db.select().from(financePurposes).where(eq(financePurposes.id, id)).get() ?? null;
 }
 
-const closedConflict = () => conflict('purposeClosed', 'Der Zweck ist erfüllt oder aufgelöst. Öffnen Sie ihn wieder, bevor Sie ihn ändern.');
+const closedConflict = () => financeConflict('purposeClosed');
 
 export async function updatePurpose(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<PurposeView>> {
   const denied = requirePermission(ctx, 'finance.setup');
@@ -190,7 +191,7 @@ export async function deletePurpose(deps: Deps, ctx: CallContext, input: unknown
   if (!parsed.ok) return parsed;
   const before = load(deps.db, parsed.value.id);
   if (!before) return notFound('financePurpose', parsed.value.id);
-  if (purposeInUseInternal(deps.db, before.id)) return conflict('purposeInUse', 'Auf diesen Zweck ist gebucht. Er lässt sich stilllegen, nicht löschen.');
+  if (purposeInUseInternal(deps.db, before.id)) return financeConflict('purposeInUse');
   return deps.db.transaction((tx: DbOrTx) => {
     tx.delete(financePurposes).where(eq(financePurposes.id, before.id)).run();
     financeAudit(tx, deps, ctx, { action: 'finance.purpose.delete', entity: 'financePurpose', id: before.id, before, summary: `Zweck ${before.id} gelöscht` });

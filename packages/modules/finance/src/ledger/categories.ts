@@ -1,7 +1,8 @@
-import { conflict, expectedVersionField, isoNow, newId, notFound, ok, requirePermission, staleVersion, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { expectedVersionField, isoNow, newId, notFound, ok, requirePermission, staleVersion, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
+import { financeConflict } from '../errors';
 import { financeCategories, type FinanceCategoryRow } from '../schema';
 import { requireFinanceRead } from './access';
 import { ALLOWANCE_KINDS, CERTIFIABLE_INCOME_KINDS, COST_FUNCTIONS, DIRECTIONS, INCOME_KINDS, INPUT_TAX, SPHERES, TAX_CODES } from './codes';
@@ -105,7 +106,7 @@ export async function createCategory(deps: Deps, ctx: CallContext, input: unknow
   if (denied) return denied;
   const parsed = validate(deps, categoryFieldsSchema, input);
   if (!parsed.ok) return parsed;
-  if (keyTaken(deps.db, parsed.value.key)) return conflict('categoryKeyTaken', `Der Schlüssel ${parsed.value.key} ist bereits vergeben.`);
+  if (keyTaken(deps.db, parsed.value.key)) return financeConflict('categoryKeyTaken', { key: parsed.value.key });
   return deps.db.transaction((tx: DbOrTx) => ok(createCategoryInternal(tx, deps, ctx, parsed.value)));
 }
 
@@ -175,7 +176,7 @@ export async function deleteCategory(deps: Deps, ctx: CallContext, input: unknow
   if (!parsed.ok) return parsed;
   const before = deps.db.select().from(financeCategories).where(eq(financeCategories.id, parsed.value.id)).get();
   if (!before) return notFound('financeCategory', parsed.value.id);
-  if (categoryInUseInternal(deps.db, before.id)) return conflict('categoryInUse', 'Auf diese Kategorie ist gebucht. Sie lässt sich stilllegen, nicht löschen.');
+  if (categoryInUseInternal(deps.db, before.id)) return financeConflict('categoryInUse');
   return deps.db.transaction((tx: DbOrTx) => {
     tx.delete(financeCategories).where(eq(financeCategories.id, before.id)).run();
     financeAudit(tx, deps, ctx, { action: 'finance.category.delete', entity: 'financeCategory', id: before.id, before, summary: `Kategorie ${before.key} gelöscht` });

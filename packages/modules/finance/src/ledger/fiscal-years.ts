@@ -1,7 +1,8 @@
-import { conflict, expectedVersionField, invalid, isoNow, newId, notFound, ok, requirePermission, staleVersion, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { expectedVersionField, invalid, isoNow, newId, notFound, ok, requirePermission, staleVersion, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { and, desc, eq, gte, lte } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
+import { financeConflict } from '../errors';
 import { financeEntryCounters, financeFiscalYears, financePeriodEvents, type FinanceFiscalYearRow } from '../schema';
 import { requireFinanceRead } from './access';
 
@@ -83,7 +84,7 @@ export async function createFirstFiscalYear(deps: Deps, ctx: CallContext, input:
   if (denied) return denied;
   const parsed = validate(deps, rangeSchema, input);
   if (!parsed.ok) return parsed;
-  if (hasAnyFiscalYear(deps.db)) return conflict('fiscalYearExists', 'Es gibt bereits ein Geschäftsjahr. Legen Sie weitere über die Buchung an.');
+  if (hasAnyFiscalYear(deps.db)) return financeConflict('fiscalYearExists');
 
   return deps.db.transaction((tx: DbOrTx) => {
     const now = isoNow(deps.clock);
@@ -111,7 +112,7 @@ export async function updateFiscalYear(deps: Deps, ctx: CallContext, input: unkn
   const stale = staleVersion(parsed.value.expectedVersion, before.updatedAt);
   if (stale) return stale;
   if (parsed.value.designation !== undefined && parsed.value.designation !== before.designation && hasEntryNumbers(deps.db, before.id)) {
-    return conflict('designationLocked', 'Die Bezeichnung steht bereits in vergebenen Buchungsnummern und ist unveränderlich.');
+    return financeConflict('designationLocked');
   }
   return deps.db.transaction((tx: DbOrTx) => {
     const after: FinanceFiscalYearRow = {

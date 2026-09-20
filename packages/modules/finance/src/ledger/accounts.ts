@@ -1,7 +1,8 @@
-import { conflict, expectedVersionField, isoNow, newId, notFound, ok, requirePermission, staleVersion, validate, writeSettingInternal, hasPermission, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { expectedVersionField, isoNow, newId, notFound, ok, requirePermission, staleVersion, validate, writeSettingInternal, hasPermission, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
+import { financeConflict } from '../errors';
 import { financeAccounts, type FinanceAccountRow } from '../schema';
 import { requireFinanceRead } from './access';
 import { isValidIban, normalizeIban } from './iban';
@@ -51,7 +52,7 @@ export async function createAccount(deps: Deps, ctx: CallContext, input: unknown
   const parsed = validate(deps, accountCreateSchema, input);
   if (!parsed.ok) return parsed;
   const v = parsed.value;
-  if (v.isMain && v.kind !== 'bank') return conflict('mainAccountMustBeBank', 'Hauptkonto kann nur ein Bankkonto sein – seine IBAN steht auf den Zuwendungsbestätigungen.');
+  if (v.isMain && v.kind !== 'bank') return financeConflict('mainAccountMustBeBank');
 
   return deps.db.transaction((tx: DbOrTx) => {
     const id = newId();
@@ -80,8 +81,8 @@ export async function updateAccount(deps: Deps, ctx: CallContext, input: unknown
   const merged = { ...before, ...Object.fromEntries(Object.entries(changes).filter(([, val]) => val !== undefined)) };
   const rechecked = validate(deps, accountCreateSchema, { name: merged.name, kind: merged.kind, iban: merged.iban, bic: merged.bic, bankName: merged.bankName, openingBalanceCents: merged.openingBalanceCents, openingDate: merged.openingDate, importFormat: merged.importFormat, isMain: merged.isMain });
   if (!rechecked.ok) return rechecked;
-  if (merged.isMain && merged.kind !== 'bank') return conflict('mainAccountMustBeBank', 'Hauptkonto kann nur ein Bankkonto sein – seine IBAN steht auf den Zuwendungsbestätigungen.');
-  if (merged.isMain && !before.isActive) return conflict('mainAccountMustStayActive', 'Ein stillgelegtes Konto kann nicht Hauptkonto sein.');
+  if (merged.isMain && merged.kind !== 'bank') return financeConflict('mainAccountMustBeBank');
+  if (merged.isMain && !before.isActive) return financeConflict('mainAccountMustStayActive');
 
   return deps.db.transaction((tx: DbOrTx) => {
     const now = isoNow(deps.clock);
@@ -106,7 +107,7 @@ export async function setAccountActive(deps: Deps, ctx: CallContext, input: unkn
   if (!before) return notFound('financeAccount', parsed.value.id);
   const stale = staleVersion(parsed.value.expectedVersion, before.updatedAt);
   if (stale) return stale;
-  if (before.isMain && !parsed.value.isActive) return conflict('mainAccountMustStayActive', 'Das Hauptkonto lässt sich nicht stilllegen. Machen Sie zuerst ein anderes Konto zum Hauptkonto.');
+  if (before.isMain && !parsed.value.isActive) return financeConflict('mainAccountMustStayActive');
   return deps.db.transaction((tx: DbOrTx) => {
     const after = { ...before, isActive: parsed.value.isActive, updatedAt: isoNow(deps.clock) };
     tx.update(financeAccounts).set({ isActive: after.isActive, updatedAt: after.updatedAt }).where(eq(financeAccounts.id, before.id)).run();
@@ -124,8 +125,8 @@ export async function deleteAccount(deps: Deps, ctx: CallContext, input: unknown
   if (!parsed.ok) return parsed;
   const before = deps.db.select().from(financeAccounts).where(eq(financeAccounts.id, parsed.value.id)).get();
   if (!before) return notFound('financeAccount', parsed.value.id);
-  if (before.isMain) return conflict('mainAccountMustStayActive', 'Das Hauptkonto lässt sich nicht löschen. Machen Sie zuerst ein anderes Konto zum Hauptkonto.');
-  if (accountInUseInternal(deps.db, before.id)) return conflict('accountInUse', 'Auf dieses Konto ist gebucht. Es lässt sich stilllegen, nicht löschen.');
+  if (before.isMain) return financeConflict('mainAccountMustStayActive');
+  if (accountInUseInternal(deps.db, before.id)) return financeConflict('accountInUse');
   return deps.db.transaction((tx: DbOrTx) => {
     tx.delete(financeAccounts).where(eq(financeAccounts.id, before.id)).run();
     financeAudit(tx, deps, ctx, { action: 'finance.account.delete', entity: 'financeAccount', id: before.id, before, summary: `Geldkonto ${before.id} gelöscht` });
