@@ -74,3 +74,4 @@ export { closePurpose, deleteMasterData, readMasterData, saveMasterData, setMast
 export { AUDIT_FIELDS, financeAudit, type FinanceEntity } from './audit';
 export { installFinance } from './install';
 export { FINANCE_MCP_TOOLS } from './mcp-tools';
+export { seedFinance } from './seed';

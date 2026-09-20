@@ -40,9 +40,9 @@ export function accountInUseInternal(_db: DbOrTx, _accountId: string): boolean {
 
 /** E22 — eine Quelle: Das Hauptkonto schreibt die Bankdaten des Vereins nach; in den Vereinsdaten sind sie dann nur lesbar. */
 function publishMainAccount(tx: DbOrTx, deps: Deps, ctx: CallContext, row: Pick<FinanceAccountRow, 'iban' | 'bic' | 'bankName'>): void {
-  writeSettingInternal(tx, deps, ctx, 'organization.iban', row.iban ?? '', 'finance.account.main');
-  writeSettingInternal(tx, deps, ctx, 'organization.bic', row.bic ?? '', 'finance.account.main');
-  writeSettingInternal(tx, deps, ctx, 'organization.bankName', row.bankName ?? '', 'finance.account.main');
+  writeSettingInternal(tx, deps, ctx, 'organization.iban', row.iban ?? '', 'settings.financeMainAccount');
+  writeSettingInternal(tx, deps, ctx, 'organization.bic', row.bic ?? '', 'settings.financeMainAccount');
+  writeSettingInternal(tx, deps, ctx, 'organization.bankName', row.bankName ?? '', 'settings.financeMainAccount');
 }
 
 export async function createAccount(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AccountView>> {

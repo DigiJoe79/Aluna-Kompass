@@ -252,6 +252,7 @@ const WITHOUT_TOOL: Record<string, string> = {
   'finance.reopenPurpose': 'Erreichbar über finance_purpose_close.',
   'finance.listFiscalYears': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
   'finance.listDatedValues': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.seedFinance': 'Beispieldaten der Entwicklung.',
 };
 
 const servicesOf = (moduleKey: string, pkg: Record<string, unknown>) =>

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { requireFinanceRead } from './ledger/access';
 import { installFinance } from './install';
 import { FINANCE_MCP_TOOLS } from './mcp-tools';
+import { seedFinance } from './seed';
 import { financeFiscalYears } from './schema';
 
 /**
@@ -60,9 +61,7 @@ export const financeModule: ModuleManifest = defineModule({
     { key: 'donor', retention: 'none' }, { key: 'grant-recipient', retention: 'none' }, { key: 'claimant', retention: 'none' },
     { key: 'board-member', retention: 'none' }, { key: 'related-party', retention: 'none' },
   ],
-  // Platzhalter, bis Task 12 (`seedFinance`) das erfundene Vereinsjahr liefert —
-  // AGENTS.md verlangt den Haken für jedes Modul von Anfang an.
-  seed: async () => {},
+  seed: seedFinance,
   install: installFinance,
   deletionRules: [
     { entity: 'financeAccount', deletable: true, reason: 'Arbeitsmaterial der Stammdaten.', guard: 'nur unbenutzt; sonst stilllegen', auditAction: 'finance.account.delete' },
