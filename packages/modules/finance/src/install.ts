@@ -1,4 +1,8 @@
-import { createRoleInternal, type CallContext, type DbOrTx, type Deps } from '@kompass/core';
+import { createRoleInternal, provisionOnce, type CallContext, type DbOrTx, type Deps } from '@kompass/core';
+import { eq } from 'drizzle-orm';
+import { categoryFieldsSchema, createCategoryInternal } from './ledger/categories';
+import { START_PLAN } from './ledger/start-plan';
+import { financeCategories } from './schema';
 
 const F = (...keys: string[]) => keys.map((k) => `finance.${k}`);
 
@@ -17,4 +21,13 @@ const ROLES = [
  */
 export function installFinance(tx: DbOrTx, deps: Deps, ctx: CallContext): void {
   for (const role of ROLES) createRoleInternal(tx, deps, ctx, { module: 'finance', ...role });
+
+  // Der Startplan ist ein Vorschlag je Schlüssel: gelöscht bleibt gelöscht, geändert bleibt geändert.
+  for (const category of START_PLAN) {
+    provisionOnce(tx, deps, { module: 'finance', kind: 'category', key: category.key }, () => {
+      if (tx.select({ id: financeCategories.id }).from(financeCategories).where(eq(financeCategories.key, category.key)).get()) return 'skipped';
+      createCategoryInternal(tx, deps, ctx, categoryFieldsSchema.parse(category));
+      return 'created';
+    });
+  }
 }

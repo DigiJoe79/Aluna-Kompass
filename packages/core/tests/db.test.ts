@@ -39,6 +39,7 @@ describe('database', () => {
       'document_types',
       'documents',
       'finance_accounts',
+      'finance_categories',
       'follow_ups',
       'media_assets',
       'media_folders',

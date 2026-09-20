@@ -1,2 +1,2 @@
 export { financeModule, FINANCE_PERMISSIONS } from './manifest';
-export { financeAccounts, type FinanceAccountRow } from './schema';
+export { financeAccounts, financeCategories, type FinanceAccountRow, type FinanceCategoryRow } from './schema';
