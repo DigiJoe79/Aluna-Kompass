@@ -15,6 +15,7 @@ import {
 } from '@kompass/core';
 import { asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { requireAreaAccess } from './access';
 import { auditDocumentRef } from './audit-ref';
 import { documentNotes, documents, type DocumentNoteRow } from './schema';
 
@@ -32,6 +33,8 @@ export async function addNote(deps: Deps, ctx: CallContext, input: unknown): Pro
   if (!parsed.ok) return parsed;
   const doc = deps.db.select({ id: documents.id, number: documents.number, subject: documents.subject, typeKey: documents.typeKey }).from(documents).where(eq(documents.id, parsed.value.documentId)).get();
   if (!doc) return notFound('document', parsed.value.documentId);
+  const unreadable = requireAreaAccess(deps, ctx, doc);
+  if (unreadable) return unreadable;
 
   return deps.db.transaction((tx: DbOrTx) => {
     const id = newId();
@@ -52,6 +55,11 @@ export async function deleteNote(deps: Deps, ctx: CallContext, input: unknown): 
   if (!parsed.ok) return parsed;
   const row = deps.db.select().from(documentNotes).where(eq(documentNotes.id, parsed.value.id)).get();
   if (!row) return notFound('documentNote', parsed.value.id);
+  const doc = deps.db.select({ typeKey: documents.typeKey }).from(documents).where(eq(documents.id, row.documentId)).get();
+  if (doc) {
+    const unreadable = requireAreaAccess(deps, ctx, doc);
+    if (unreadable) return unreadable;
+  }
   if (row.createdByUserId !== ctx.userId && !hasPermission(ctx, 'dms.manage')) return forbidden('dms.manage');
 
   return deps.db.transaction((tx: DbOrTx) => {

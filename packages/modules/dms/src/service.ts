@@ -27,7 +27,7 @@ import {
   type Result,
 } from '@kompass/core';
 import { z } from 'zod';
-import { canReadType, isProtectedType, readableTypeFilter, requireDmsGate, requireReadable } from './access';
+import { canReadType, isProtectedType, readableTypeFilter, requireAreaAccess, requireDmsGate, requireReadable } from './access';
 import { auditDocumentRef } from './audit-ref';
 import { documentTypeFor } from './catalog';
 import { refuseModuleOwned } from './owned';
@@ -425,6 +425,8 @@ export async function voidDocument(deps: Deps, ctx: CallContext, input: unknown)
   if (!parsed.ok) return parsed;
   const row = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
   if (!row) return notFound('document', parsed.value.id);
+  const unreadable = requireAreaAccess(deps, ctx, row);
+  if (unreadable) return unreadable;
   if (row.phase !== 'issued') return conflict('documentIsDraft', `Entwurf „${row.subject}“ kann nicht storniert werden — nur verworfen`);
   if (row.status === 'voided') return conflict('documentAlreadyVoided', `Dokument ${row.number} ist bereits storniert`);
 
@@ -481,6 +483,8 @@ export async function moveDocument(
 
   const doc = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
   if (!doc) return notFound('document', parsed.value.id);
+  const unreadable = requireAreaAccess(deps, ctx, doc);
+  if (unreadable) return unreadable;
 
   const resolved = resolveFolder(deps.db, parsed.value.folder, null);
   if (!resolved.ok) return resolved;
@@ -538,6 +542,8 @@ export async function linkDocument(
 
   const doc = deps.db.select().from(documents).where(eq(documents.id, parsed.value.documentId)).get();
   if (!doc) return notFound('document', parsed.value.documentId);
+  const unreadable = requireAreaAccess(deps, ctx, doc);
+  if (unreadable) return unreadable;
 
   const id = newId();
   const now = isoNow(deps.clock);
@@ -603,6 +609,10 @@ export async function unlinkDocument(
   if (reservedHit) return reservedHit;
 
   const doc = deps.db.select().from(documents).where(eq(documents.id, link.documentId)).get();
+  if (doc) {
+    const unreadable = requireAreaAccess(deps, ctx, doc);
+    if (unreadable) return unreadable;
+  }
   return deps.db.transaction((tx: DbOrTx) => {
     tx.delete(documentLinks).where(eq(documentLinks.id, link.id)).run();
 
@@ -641,6 +651,9 @@ export async function deleteDocument(
 
   const doc = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
   if (!doc) return notFound('document', parsed.value.id);
+  // Vor der Fristprüfung: Sonst verriete die Meldung die Frist eines Dokuments, das man nicht sehen darf.
+  const unreadable = requireAreaAccess(deps, ctx, doc);
+  if (unreadable) return unreadable;
   if (doc.phase !== 'issued') return conflict('documentIsDraft', `Entwurf „${doc.subject}“ unterliegt keiner Frist — Entwürfe werden verworfen`);
 
   const docType = documentTypeFor(deps.db, doc.typeKey);

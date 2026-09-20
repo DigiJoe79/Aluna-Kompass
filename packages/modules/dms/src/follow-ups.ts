@@ -1,7 +1,7 @@
 import { createFollowUp, notFound, requirePermission, validate, type CallContext, type Deps, type FollowUpRecord, type FollowUpTarget, type Result } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { isProtectedType } from './access';
+import { isProtectedType, requireAreaAccess } from './access';
 import { documentTypeFor } from './catalog';
 import { documents } from './schema';
 
@@ -22,8 +22,10 @@ export async function createDocumentFollowUp(deps: Deps, ctx: CallContext, input
   if (denied) return denied;
   const parsed = validate(deps, documentFollowUpSchema, input);
   if (!parsed.ok) return parsed;
-  const doc = deps.db.select({ id: documents.id }).from(documents).where(eq(documents.id, parsed.value.documentId)).get();
+  const doc = deps.db.select({ id: documents.id, typeKey: documents.typeKey }).from(documents).where(eq(documents.id, parsed.value.documentId)).get();
   if (!doc) return notFound('document', parsed.value.documentId);
+  const unreadable = requireAreaAccess(deps, ctx, doc);
+  if (unreadable) return unreadable;
   const { documentId, ...rest } = parsed.value;
   return createFollowUp(deps, ctx, { entityType: 'document', entityId: documentId, ...rest });
 }

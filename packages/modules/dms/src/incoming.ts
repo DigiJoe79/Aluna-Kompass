@@ -19,7 +19,7 @@ import {
 } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { canReadType, isProtectedType, requireDmsGate, requireReadable } from './access';
+import { canReadType, isProtectedType, requireAreaAccess, requireDmsGate, requireReadable } from './access';
 import { auditDocumentRef } from './audit-ref';
 import { documentTypeFor } from './catalog';
 import { refuseModuleOwned } from './owned';
@@ -98,8 +98,11 @@ export async function receiveDocument(
   const folder = folderRes.value;
 
   for (const relation of parsed.value.relations) {
-    const other = deps.db.select({ id: documents.id }).from(documents).where(eq(documents.id, relation.relatedDocumentId)).get();
+    const other = deps.db.select({ id: documents.id, typeKey: documents.typeKey }).from(documents).where(eq(documents.id, relation.relatedDocumentId)).get();
     if (!other) return notFound('document', relation.relatedDocumentId);
+    // Ein Bezug auf ein Dokument, das der Aufrufer nicht lesen darf, verriete dessen Nummer und Art.
+    const unreadable = requireAreaAccess(deps, ctx, other);
+    if (unreadable) return unreadable;
   }
 
   return storeIncoming(
@@ -219,6 +222,8 @@ export async function reclassifyDocument(deps: Deps, ctx: CallContext, input: un
   const loaded = loadIncoming(deps, id);
   if (!loaded.ok) return loaded;
   const before = loaded.value;
+  const unreadable = requireAreaAccess(deps, ctx, before);
+  if (unreadable) return unreadable;
   const stale = staleVersion(expectedVersion, before.updatedAt);
   if (stale) return stale;
 

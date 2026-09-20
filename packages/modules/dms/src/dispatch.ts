@@ -15,6 +15,7 @@ import {
 } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { requireAreaAccess } from './access';
 import { auditDocumentRef } from './audit-ref';
 import type { DispatchChannel } from './install';
 import { documents } from './schema';
@@ -47,6 +48,8 @@ export async function recordDispatch(deps: Deps, ctx: CallContext, input: unknow
 
   const row = deps.db.select().from(documents).where(eq(documents.id, v.id)).get();
   if (!row) return notFound('document', v.id);
+  const unreadable = requireAreaAccess(deps, ctx, row);
+  if (unreadable) return unreadable;
   if (row.phase !== 'issued') return conflict('documentIsDraft', `Entwurf „${row.subject}“ wurde noch nicht festgeschrieben`);
   if (row.direction !== 'outgoing') return conflict('notOutgoing', `Dokument ${row.number} ist eingegangen, nicht versandt`);
 
@@ -79,6 +82,8 @@ export async function clearDispatch(deps: Deps, ctx: CallContext, input: unknown
   if (!parsed.ok) return parsed;
   const row = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
   if (!row) return notFound('document', parsed.value.id);
+  const unreadable = requireAreaAccess(deps, ctx, row);
+  if (unreadable) return unreadable;
   if (!row.sentAt) return conflict('notDispatched', `Dokument ${row.number} trägt keinen Versandvermerk`);
 
   return deps.db.transaction((tx: DbOrTx) => {

@@ -17,7 +17,7 @@ import {
 } from '@kompass/core';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { requireDmsGate, requireReadable } from './access';
+import { requireAreaAccess, requireDmsGate, requireReadable } from './access';
 import { auditDocumentRef } from './audit-ref';
 import { documentTypeFor } from './catalog';
 import { refuseModuleOwned } from './owned';
@@ -180,6 +180,8 @@ export async function updateDraft(deps: Deps, ctx: CallContext, input: unknown):
 
   const row = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
   if (!row) return notFound('document', parsed.value.id);
+  const unreadable = requireAreaAccess(deps, ctx, row);
+  if (unreadable) return unreadable;
 
   if (row.phase !== 'draft') {
     return conflict('documentIsFiled', `Dokument ${row.number ?? row.id} ist bereits festgeschrieben`);
@@ -243,6 +245,8 @@ export async function deleteDraft(deps: Deps, ctx: CallContext, input: unknown):
 
   const row = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
   if (!row) return notFound('document', parsed.value.id);
+  const unreadable = requireAreaAccess(deps, ctx, row);
+  if (unreadable) return unreadable;
 
   if (row.phase === 'issued') {
     return conflict('documentIsFiled', `Dokument ${row.number ?? row.id} ist bereits festgeschrieben`);
@@ -330,6 +334,8 @@ export async function fileDocument(deps: Deps, ctx: CallContext, input: unknown)
 
   const row = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
   if (!row) return notFound('document', parsed.value.id);
+  const unreadable = requireAreaAccess(deps, ctx, row);
+  if (unreadable) return unreadable;
 
   if (row.phase === 'issued') {
     return conflict('documentIsFiled', `Dokument ${row.number ?? row.id} ist bereits festgeschrieben`);
@@ -424,6 +430,8 @@ export async function createReplacementDraft(deps: Deps, ctx: CallContext, input
   if (!parsed.ok) return parsed;
   const old = deps.db.select().from(documents).where(eq(documents.id, parsed.value.voidedId)).get();
   if (!old) return notFound('document', parsed.value.voidedId);
+  const unreadable = requireAreaAccess(deps, ctx, old);
+  if (unreadable) return unreadable;
   if (old.status !== 'voided') return conflict('documentNotVoided', `Dokument ${old.number ?? old.subject} ist nicht storniert`);
 
   const snapshot = old.inputSnapshot ? (JSON.parse(old.inputSnapshot) as { input?: { body?: string } }) : null;

@@ -59,6 +59,18 @@ export function manageableTypeFilter(deps: Deps, ctx: CallContext, db: DbOrTx = 
   return inArray(documents.typeKey, keys.length > 0 ? keys : ['__none__']);
 }
 
+/**
+ * Für Schreibdienste: Das Recht zum Schreiben prüft der Dienst selbst
+ * (`dms.create`, `dms.manage` …) und setzt kein `dms.view` voraus. Hier kommt
+ * nur der Schutzbereich dazu — Ungeschütztes wie bisher, Geschütztes nur mit
+ * dem Recht seines Bereichs, ein unbekannter Bereich für niemanden.
+ */
+export function requireAreaAccess(deps: Deps, ctx: CallContext, row: Pick<DocumentRow, 'typeKey'>, db: DbOrTx = deps.db): Failure | null {
+  const docType = db.select().from(documentTypes).all().find((t) => t.key === row.typeKey);
+  if (!docType || !isProtectedType(docType)) return null;
+  return requireReadable(deps, ctx, row, db);
+}
+
 /** Am einzelnen Dokument. `forbidden`, nicht `notFound`: Dass es das Dokument gibt, darf man wissen (V12). */
 export function requireReadable(deps: Deps, ctx: CallContext, row: Pick<DocumentRow, 'typeKey'>, db: DbOrTx = deps.db): Failure | null {
   const docType = db.select().from(documentTypes).all().find((t) => t.key === row.typeKey);

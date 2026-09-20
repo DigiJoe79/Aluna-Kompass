@@ -14,7 +14,7 @@ import {
 } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { requireReadable } from './access';
+import { requireAreaAccess, requireReadable } from './access';
 import { auditDocumentRef } from './audit-ref';
 import { RELATION_KINDS, documentRelations, documents, type DocumentRelationRow, type RelationKind } from './schema';
 
@@ -71,6 +71,10 @@ export async function relateDocuments(deps: Deps, ctx: CallContext, input: unkno
   );
   if (!doc) return notFound('document', v.documentId);
   if (!related) return notFound('document', v.relatedDocumentId);
+  for (const end of [doc, related]) {
+    const unreadable = requireAreaAccess(deps, ctx, end);
+    if (unreadable) return unreadable;
+  }
 
   const id = newId();
   try {
@@ -103,6 +107,12 @@ export async function unrelateDocuments(deps: Deps, ctx: CallContext, input: unk
   if (!parsed.ok) return parsed;
   const row = deps.db.select().from(documentRelations).where(eq(documentRelations.id, parsed.value.id)).get();
   if (!row) return notFound('documentRelation', parsed.value.id);
+  // Beide Enden: Wer eines nicht lesen darf, löst den Bezug nicht.
+  for (const documentId of [row.documentId, row.relatedDocumentId]) {
+    const end = deps.db.select({ typeKey: documents.typeKey }).from(documents).where(eq(documents.id, documentId)).get();
+    const unreadable = end ? requireAreaAccess(deps, ctx, end) : null;
+    if (unreadable) return unreadable;
+  }
   return deps.db.transaction((tx: DbOrTx) => {
     tx.delete(documentRelations).where(eq(documentRelations.id, row.id)).run();
     recordAudit(tx, deps, ctx, { action: 'dms.unrelate', entityType: 'documentRelation', entityId: row.id, before: row, summary: `Bezug ${row.id} gelöst` });

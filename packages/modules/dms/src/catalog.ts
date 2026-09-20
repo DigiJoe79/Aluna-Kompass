@@ -18,7 +18,7 @@ import {
 } from '@kompass/core';
 import { and, asc, count, eq, isNotNull, like } from 'drizzle-orm';
 import { z } from 'zod';
-import { canReadType, readableTypeFilter, requireDmsGate } from './access';
+import { canReadType, manageableTypeFilter, readableTypeFilter, requireDmsGate } from './access';
 import { refuseModuleOwned } from './owned';
 import {
   documentFolders,
@@ -180,7 +180,7 @@ export async function deleteDocumentFolder(
   const existing = deps.db.select().from(documentFolders).where(eq(documentFolders.path, path)).get();
   if (!existing) return notFound('documentFolder', path);
 
-  const readableDoc = deps.db.select({ id: documents.id }).from(documents).where(and(eq(documents.folder, path), readableTypeFilter(deps, ctx))).get();
+  const readableDoc = deps.db.select({ id: documents.id }).from(documents).where(and(eq(documents.folder, path), manageableTypeFilter(deps, ctx))).get();
   const anyDoc = deps.db.select({ id: documents.id }).from(documents).where(eq(documents.folder, path)).get();
   const hasChild = deps.db.select({ path: documentFolders.path }).from(documentFolders).where(like(documentFolders.path, `${path}/%`)).get();
   if (readableDoc || hasChild) return conflict('folderNotEmpty', `Der Ordner „${path}“ ist nicht leer`);
