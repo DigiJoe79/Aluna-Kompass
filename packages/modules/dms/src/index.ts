@@ -1,3 +1,4 @@
+export { dmsGatePermissions, requireDmsGate, isProtectedType } from './access';
 export * from './catalog';
 export * from './classification';
 export * from './dashboard';

@@ -1,9 +1,10 @@
-import { coreModule, defineModule, schema, writeSettingInternal, type CallContext, type Deps } from '@kompass/core';
+import { coreModule, defineModule, schema, unwrap, writeSettingInternal, type CallContext, type Deps } from '@kompass/core';
 import { createTestDeps, ctxWith, fakeDocumentEngine, insertUser, systemContext } from '@kompass/core/testing';
 import { z } from 'zod';
 import { contactsModule } from '@kompass/module-contacts';
 import { dmsModule } from '../src/manifest';
 import { EXAMPLE_DOCUMENT_TYPES } from '../src/catalog';
+import { receiveDocument } from '../src/incoming';
 import { ensureDocumentType } from '../src/provision';
 import { documentTypes } from '../src/schema';
 
@@ -51,6 +52,7 @@ export const probeModule = defineModule({
   version: '0.0.0',
   permissions: ['probe.read', 'probe.issue'],
   linkedDocumentAccess: [{ entityType: 'probeThing', readPermission: 'probe.read', receivePermission: 'probe.issue' }],
+  documentAreas: [{ key: 'probe', permission: 'probe.read' }],
   documentTemplates: [
     {
       key: 'probe-note',
@@ -74,4 +76,20 @@ export function setupWithProbe(permissions: readonly string[] = [...ALL_DMS, 'pr
   deps.db.transaction((tx) => ensureDocumentType(tx, deps, systemContext(), { module: 'probe', key: 'probe-note', label: 'Notiz', prefix: 'NTZ', defaultDirection: 'outgoing', retentionClass: 'statutory10Y', owned: true }));
   const userId = insertUser(deps, { name: 'Test', email: 'test@kompass.local' });
   return { deps, ctx: ctxWith(permissions, userId), userId };
+}
+
+/**
+ * Eine Akte mit einer geschützten Vereinsart. Drei Aufrufer:
+ * `all` darf alles, `viewer` hat die Rechte der Akte ohne das Bereichsrecht,
+ * `auditor` hat **nur** das Bereichsrecht.
+ * Den Bereich setzt der Helfer direkt in der Tabelle — der Dienst dafür kommt mit VP3b.
+ */
+export async function setupWithArea() {
+  const { deps, ctx: all } = setupWithProbe();
+  deps.db.insert(documentTypes).values({ key: 'secret', label: 'Geheimsache', prefix: 'GEH', defaultDirection: 'incoming', retentionClass: 'statutory10Y', defaultFolder: null, isActive: true, sortOrder: 90, ownerModule: null, protectionArea: 'probe' }).run();
+  const viewerId = insertUser(deps, { name: 'Viewer', email: 'viewer@kompass.local' });
+  const auditorId = insertUser(deps, { name: 'Auditor', email: 'auditor@kompass.local' });
+  const secret = unwrap(await receiveDocument(deps, all, { filename: 'g.pdf', typeKey: 'secret', subject: 'Streng geheimer Betreff', documentDate: '2026-09-01', folder: null, bytes: pdfBytes() }));
+  const open = await fileFixture(deps, all);
+  return { deps, all, viewer: ctxWith(ALL_DMS, viewerId), auditor: ctxWith(['probe.read'], auditorId), secretId: secret.id, openId: open.id };
 }

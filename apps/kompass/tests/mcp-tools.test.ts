@@ -186,6 +186,7 @@ const WITHOUT_TOOL: Record<string, string> = {
   'dms.readLinkedDocument': 'Liefert Bytes, und nur über die Seiten des Moduls, dem der Vorgang gehört.',
   'dms.receiveGeneratedUpload': 'Baustein für Module: nimmt einen Callback; das Werkzeug ist der Dienst des Moduls (z. B. Auslage einreichen).',
   'dms.storeIncoming': 'Innenleben von dms_receive und receiveGeneratedUpload.',
+  'dms.requireDmsGate': 'Rechteprüfung für die Seiten der Akte, kein Dienst.',
   'contacts.deleteContact': 'Löschung personenbezogener Daten bestätigt ein Mensch.',
   'contacts.seedContacts': 'Beispieldaten der Entwicklung.',
   'animals.seedAnimals': 'Beispieldaten der Entwicklung.',
