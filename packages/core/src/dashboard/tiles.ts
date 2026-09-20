@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { roles, users } from '../db/schema';
 import { listDueFollowUpsWithTargets } from '../follow-ups/targets';
 import { listTranslationGaps } from '../i18n/translations';
+import { listOpenInstallErrors } from '../modules/installs';
 import { listModules } from '../modules/service';
 import { collectRetentionDue } from '../retention/service';
 import { readAllSettings, readSetting } from '../settings/service';
@@ -73,7 +74,7 @@ const setupTile: DashboardTile<Record<string, never>> = {
   kind: 'list',
   defaultOn: true,
   options: z.object({}),
-  messageKeys: [...REQUIRED_SETTINGS.map(settingMessageKey), 'noRole', 'noModule'],
+  messageKeys: [...REQUIRED_SETTINGS.map(settingMessageKey), 'noRole', 'noModule', 'installError'],
   load(deps) {
     const all = readAllSettings(deps);
     const lines: DashboardLine[] = REQUIRED_SETTINGS.filter((key) => !filled(key, all[key])).map((key) => ({ titleKey: settingMessageKey(key), href: '/admin/settings' }));
@@ -81,6 +82,7 @@ const setupTile: DashboardTile<Record<string, never>> = {
     if (others.length === 0) lines.push({ titleKey: 'noRole', href: '/admin/roles' });
     const modules = listModules(deps).filter((m) => m.key !== 'core');
     if (modules.length > 0 && !modules.some((m) => m.enabled)) lines.push({ titleKey: 'noModule', href: '/admin/modules' });
+    for (const e of listOpenInstallErrors(deps)) lines.push({ titleKey: 'installError', values: { module: e.module, message: e.message }, href: '/admin/modules' });
     return { kind: 'list', lines, total: lines.length, href: null };
   },
 };

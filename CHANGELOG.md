@@ -13,6 +13,10 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 
 ### Neu
 
+- **Grundausstattung kommt beim Update von selbst.** Was ein Modul mitbringt —
+  Rollenvorschläge, Kategorien, Dokumentarten —, legt Kompass bei jedem Start
+  nach, falls es fehlt. Was Sie gelöscht, umbenannt oder einer Rolle entzogen
+  haben, kommt dabei nie zurück.
 - **Aufbewahrungsfrist 8 Jahre.** Für Buchungsbelege gibt es eine eigene Frist
   (Verwaltung → Aufbewahrung). Bestehende Dokumentarten ändern sich nicht.
 

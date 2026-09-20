@@ -18,6 +18,7 @@ export * from './modules/manifest';
 export * from './modules/registry';
 export * from './modules/service';
 export * from './modules/provisions';
+export * from './modules/installs';
 export { coreModule } from './core-module';
 export * from './audit/log';
 export * from './audit/query';

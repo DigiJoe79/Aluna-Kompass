@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { coreModule } from '../src/core-module';
 import { CORE_DASHBOARD_TILES } from '../src/dashboard/tiles';
 import type { DashboardTile } from '../src/dashboard/types';
+import * as schema from '../src/db/schema';
 import { users } from '../src/db/schema';
 import { createFollowUp } from '../src/follow-ups/service';
 import { defineModule } from '../src/modules/manifest';
@@ -114,6 +115,14 @@ describe('setup tile', () => {
     const t = tile('setup');
     const content = await t.load(deps, ctx, options(t));
     expect(content.kind === 'list' && content.lines.some((l) => l.titleKey === 'noModule')).toBe(false);
+  });
+
+  it('setup tile names an open install error', async () => {
+    const deps = createTestDeps();
+    deps.db.insert(schema.moduleProvisionErrors).values({ id: 'E1', module: 'demo', message: 'kaputt', at: TEST_NOW, resolvedAt: null }).run();
+    const tile = CORE_DASHBOARD_TILES.find((t) => t.key === 'setup')!;
+    const content = await tile.load(deps, ctxWith(['settings.manage']), {});
+    expect(content.kind === 'list' && content.lines.some((l) => l.titleKey === 'installError' && l.values?.module === 'demo')).toBe(true);
   });
 });
 

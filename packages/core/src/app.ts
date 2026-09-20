@@ -11,6 +11,7 @@ import { createFileStore, type FileStore } from './files/store';
 import type { DocumentTemplate, ModuleManifest } from './modules/manifest';
 import { createRegistry } from './modules/registry';
 import { readLocales } from './i18n/locales';
+import { runModuleInstalls } from './modules/installs';
 import { noopTextExtraction, type TextExtraction } from './text/extraction';
 
 export interface CreateDepsOptions {
@@ -30,6 +31,12 @@ export interface CreateDepsOptions {
   /** Ohne Angabe ist Texterkennung nicht eingerichtet (Skripte, Tests ohne Modul). */
   textExtraction?: TextExtraction;
   clock?: Clock;
+  /**
+   * Grundausstattung der eingeschalteten Module beim Öffnen nachliefern
+   * (Vorgabe: ja). `createTestDeps` baut seine Deps selbst und ist nicht
+   * betroffen; Skripte, die eine halbfertige Datenbank öffnen, schalten es ab.
+   */
+  runInstalls?: boolean;
 }
 
 export type AppDeps = Deps & {
@@ -89,9 +96,11 @@ export function createDeps(opts: CreateDepsOptions): AppDeps {
       deps.db = handle.db;
       deps.sqlite = handle.sqlite;
       deps.migrationCount = countMigrations();
+      if (opts.runInstalls !== false) runModuleInstalls(deps);
     },
     close: () => handle.sqlite.close(),
   };
+  if (opts.runInstalls !== false) runModuleInstalls(deps);
   return deps;
 }
 

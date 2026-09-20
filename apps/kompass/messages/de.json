@@ -433,7 +433,8 @@
             "settingExemptionNoticeType": "Art des Freistellungsbescheids fehlt",
             "settingExemptionNoticeDate": "Datum des Freistellungsbescheids fehlt",
             "noRole": "Keine Rolle neben „Administration“ — für Kassenprüfung und Schriftführung sind eigene Rollen sinnvoll",
-            "noModule": "Kein Fachmodul eingeschaltet"
+            "noModule": "Kein Fachmodul eingeschaltet",
+            "installError": "Grundausstattung von „{module}“ unvollständig: {message}"
           }
         },
         "backup": {

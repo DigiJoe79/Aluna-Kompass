@@ -40,6 +40,8 @@ describe('database', () => {
       'follow_ups',
       'media_assets',
       'media_folders',
+      'module_provisions',
+      'module_provisions_errors',
       'projects',
       'role_permissions',
       'roles',
