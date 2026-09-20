@@ -58,7 +58,10 @@ Dokument, nicht die Spec eines Moduls.
   Kontakt, einer Buchung, einer Versammlung.
 - **Kein Aufgabenmanager.** Dieselbe Grenze: Wiedervorlage am Vorgang ja,
   freie Aufgabenlisten nein. Sonst konkurriert Kompass mit Werkzeugen, die das
-  besser können, und verliert seinen Kern.
+  besser können, und verliert seinen Kern. Ein fester, im Code stehender
+  Ablauf an einem Vorgang — der Jahresabschluss am Geschäftsjahr, die
+  Amtsübergabe — ist keine Aufgabenliste: keine freien Aufgaben, keine
+  Zuweisung, keine Termine.
 - **Keine qualifizierte elektronische Signatur.** Sie ersetzt die
   eigenhändige Unterschrift nur, wo das Gesetz Schriftform verlangt, und das
   ist im Vereinsalltag fast nie der Fall: Zuwendungsbestätigungen über Geld
@@ -153,16 +156,19 @@ Konten, Buchungen mit Zuordnung zu den vier Sphären, Belege aus der Akte,
 Bankimport, Zweckbindung als eigene Dimension neben dem Projekt, Rücklagen
 nach § 62 AO, Zuwendungsbestätigungen nach amtlichem Muster,
 Kostenerstattungen mit Freigabe durch eine zweite Person, Mittelweitergabe an
-Partner mit Nachweisakte, Projekte mit Finanzseite. Am Ende:
+Partner und Aufträge an Hilfspersonen mit Nachweisakte, Projekte mit
+Finanzseite. Am Ende:
 Einnahmen-Überschuss-Rechnung, Vermögensübersicht, Mittelverwendungsrechnung,
 Kassenprüfungsunterlagen. Das Modell ist ein Einnahmen-Ausgaben-Journal mit
 ausgeglichenen Zeilen, keine doppelte Buchführung; Vereine mit
 Bilanzierungspflicht sind nicht die Zielgruppe.
 
 Spec: `2026-09-20-finanzen-design.md` in `docs/intern/specs/`, eine für das
-ganze Modul, umgesetzt in sechzehn Plänen. Festgeschriebenes wird nie
-gelöscht; nach Ablauf der Aufbewahrung verschwindet der Personenbezug, nicht
-die Buchung.
+ganze Modul, umgesetzt in neunzehn Plänen; davor
+`2026-09-20-vorarbeiten-fachmodule-design.md` mit dem, was Kern, Akte und
+Kontakte dafür lernen müssen — und was Schritt 4 genauso braucht.
+Festgeschriebenes wird nie gelöscht; nach Ablauf der Aufbewahrung verschwindet
+der Personenbezug, nicht die Buchung.
 
 **Stand: in Arbeit.** Schritt 3 der Roadmap, Fassung 0.2.0.
 
@@ -420,16 +426,27 @@ die Säulen stehen.
 - **Agent schlägt vor, der Mensch schreibt fest.** Post wird abgelegt, ein
   Agent schlägt Art, Betreff, Bezüge und Frist aus dem Volltext vor. Die
   Schnittstelle dafür steht (Services über MCP); die Treffsicherheit braucht
-  den Volltext, den es jetzt gibt.
+  den Volltext, den es jetzt gibt. Für Finanzen mit 0.2.0 eingelöst: Der Agent
+  sortiert Kontoumsätze vor, und was festschreibt, freigibt, abschließt oder
+  ausstellt, ist über MCP gesperrt, bis ein Verein es bewusst freigibt. Offen
+  bleibt die Akte.
 - **Einsortierregeln auf dem Volltext** (Backlog 5), als Teil desselben
   Vorgangs.
 - **Freigabe-Schritt vor dem Festschreiben** (Vier-Augen-Prinzip), als
   Rechte-Frage, nicht als Signatur. Für Finanzen mit 0.2.0 eingelöst
-  (Erstattungen, Partnerzahlungen, Umwidmungen; Festschreiben über MCP per
-  Einstellung gesperrt); offen bleibt die Akte.
-- **Finanzen, Phase zwei:** DATEV-Buchungsstapel, Anlagenverzeichnis,
-  Haushaltsplan, Transparenzzahlen für die Webseite, Verwendungsnachweis nach
-  Kostenplan, elektronische Zuwendungsmeldung, sobald das Verfahren steht.
+  (Erstattungen, Partnerzahlungen, Umwidmungen); offen bleibt die Akte.
+- **Finanzen, Phase zwei:** der Dienst, der nach Fristablauf den Personenbezug
+  aus den Finanzdaten entfernt (frühestens 2035 nötig; Regeln und Protokoll
+  stehen seit 0.2.0), DATEV-Buchungsstapel, Anlagenverzeichnis, Haushaltsplan,
+  Transparenzzahlen für die Webseite, Verwendungsnachweis nach Kostenplan,
+  elektronische Zuwendungsmeldung, sobald das Verfahren steht.
+- **Mobiler Beleg-Client.** Belege am Telefon scannen und offenen oder neuen
+  Vorgängen zuordnen. Gescannt wird auf dem Gerät, Kompass bekommt ein PDF —
+  die Grenze „kein Bildeingang" bleibt. Er verschiebt zwei andere Dinge und
+  ist deshalb eine Entscheidung an diesem Dokument: einen schlanken
+  HTTP-Zugang mit Token neben MCP (Prinzip 8 gilt weiter: dieselben Dienste),
+  und die Frage, wie ein Telefon unterwegs eine Installation erreicht, die
+  nur im eigenen Netz steht.
 - **Editor für Basis-Vorlagen** in der Oberfläche (Pipeline-Spec,
   Entscheidung 7).
 - **Spendenplattform-Abgleich** als vereinsspezifisches Modul.

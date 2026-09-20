@@ -20,7 +20,7 @@ Der Kern ist generisch und für jeden Verein gleich. Was ein Verein braucht und 
 | **Projekte, Tiere** | Vereinsspezifische Module — heute mit ihrem öffentlichen Teil für die Webseite. |
 | **MCP** | Was die Oberfläche kann, kann auch ein KI-Assistent über MCP — dieselben Dienste, dieselben Rechte, dasselbe Protokoll. Vier Dinge bewusst nicht: Backup ein- und ausspielen, Dateien abrufen, API-Token verwalten, das eigene Passwort ändern. Ein Test hält die Liste vollständig. |
 
-Was als Nächstes kommt — Finanzen, Mitglieder und Gremien, das Tiermodul in seiner Vollstufe — und warum in dieser Reihenfolge, steht in [`docs/nordstern.md`](docs/nordstern.md). Dort steht auch, was Kompass **nicht** ist: kein Newsletter, kein Mailprogramm, kein Kalender, kein Aufgabenmanager, kein Webseiten-Baukasten, kein Multi-Tenant.
+Was als Nächstes kommt — Finanzen, Mitglieder und Gremien, das Tiermodul in seiner Vollstufe — und warum in dieser Reihenfolge, steht in [`docs/nordstern.md`](docs/nordstern.md). Dort steht auch, was Kompass **nicht** ist: kein Newsletter, kein Mailprogramm, kein Kalender, kein Aufgabenmanager, keine Finanzbuchhaltung für Bilanzierer und keine Übermittlung ans Finanzamt, kein Webseiten-Baukasten, kein Multi-Tenant.
 
 ## Warum die Webseite so gebaut ist
 
