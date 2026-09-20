@@ -40,6 +40,7 @@ describe('database', () => {
       'documents',
       'finance_accounts',
       'finance_categories',
+      'finance_dated_values',
       'finance_entry_counters',
       'finance_fiscal_years',
       'finance_period_events',

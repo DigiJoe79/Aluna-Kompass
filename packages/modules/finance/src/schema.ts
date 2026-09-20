@@ -2,7 +2,7 @@
 // im Kern: `../modules/*/src/schema.ts`). Tabellen kommen mit den Tasks, die
 // sie brauchen.
 import { sql } from 'drizzle-orm';
-import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 /** Beträge sind ganzzahlige Cent. Spendendosen sind keine Konten, sondern ein Zugang zur Barkasse. */
 export const financeAccounts = sqliteTable(
@@ -113,3 +113,18 @@ export const financeEntryCounters = sqliteTable('finance_entry_counters', {
   fiscalYearId: text('fiscal_year_id').primaryKey().references(() => financeFiscalYears.id),
   last: integer('last').notNull(),
 });
+
+/** Nur die Überschreibungen des Vereins. Die ausgelieferte Reihe ist Code (`dated-series.ts`) und wächst mit Updates. */
+export const financeDatedValues = sqliteTable(
+  'finance_dated_values',
+  {
+    key: text('key').notNull(),
+    validFrom: text('valid_from').notNull(),
+    /** JSON: eine Zahl, oder bei `taxation` eine Zeichenkette. */
+    value: text('value').notNull(),
+    updatedAt: text('updated_at').notNull(),
+    updatedByUserId: text('updated_by_user_id'),
+  },
+  (t) => [primaryKey({ columns: [t.key, t.validFrom] })],
+);
+export type FinanceDatedValueRow = typeof financeDatedValues.$inferSelect;
