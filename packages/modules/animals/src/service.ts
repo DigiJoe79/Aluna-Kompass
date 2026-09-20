@@ -1,4 +1,4 @@
-import { buildDeletionPreview, conflict, expectedVersionField, staleVersion, deleteUnreferencedMedia, deletionConflict, emptyLocalized, invalid, isoNow, localizedList as coreLocalizedList, localizedText, newId, notFound, ok, recordAudit, requirePermission, schema as core, validate, type CallContext, type DbOrTx, type DeletionPreview, type Deps, type LocalizedText, type MediaCleanup, type Result } from '@kompass/core';
+import { buildDeletionPreview, conflict, expectedVersionField, staleVersion, deleteUnreferencedMedia, deletionConflict, emptyLocalized, invalid, isoNow, localizedList as coreLocalizedList, localizedText, newId, notFound, notifyRecordDeleted, ok, recordAudit, requirePermission, schema as core, validate, type CallContext, type DbOrTx, type DeletionPreview, type Deps, type LocalizedText, type MediaCleanup, type Result } from '@kompass/core';
 import { and, asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { animalPhotos, animalStories, animals, type LocalizedList } from './schema';
@@ -256,6 +256,7 @@ export async function deleteAnimal(deps: Deps, ctx: CallContext, input: unknown)
     tx.delete(animalPhotos).where(eq(animalPhotos.animalId, before.id)).run();
     tx.delete(animalStories).where(eq(animalStories.animalId, before.id)).run();
     tx.delete(animals).where(eq(animals.id, before.id)).run();
+    notifyRecordDeleted(tx, deps, ctx, 'animal', before.id);
     recordAudit(tx, deps, ctx, { action: 'animals.delete', entityType: 'animal', entityId: before.id, before, summary: `Tier ${before.name} gelöscht` });
   });
   if (!parsed.value.deleteOrphanedMedia) return ok({ deletedMedia: [], keptMedia: [] });

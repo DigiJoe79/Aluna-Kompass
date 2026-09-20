@@ -236,6 +236,14 @@ export interface ModuleManifest {
    *  `retentionHolds` fragt der Haken nicht nach Fristen: Jeder Verweis zählt. */
   recordReferences?: (deps: Deps, entityType: string, id: string) => readonly RecordReference[];
   /**
+   * Ein fremder Datensatz wurde gelöscht — in dieser Transaktion. Das Modul
+   * räumt mit, was nur an ihm hing (Finanzfelder eines Projekts ohne Buchung),
+   * und protokolliert es. Richtung Kern → Modul, nur eingeschaltete Module.
+   * **Was ein Modul hier mitlöscht, meldet es nicht über `recordReferences`**:
+   * Ein Verweis blockiert das Löschen, dann käme dieser Haken nie an die Reihe.
+   */
+  recordDeleted?: (tx: DbOrTx, deps: Deps, ctx: CallContext, entityType: string, id: string) => void;
+  /**
    * Dieses Modul legt eigene Dateien ab. Es bekommt dann `<dataPath>/<key>`
    * über `deps.files(key)`. Die Anmeldung ist nicht Form, sondern Zweck: Das
    * Backup sichert genau die angemeldeten Verzeichnisse.

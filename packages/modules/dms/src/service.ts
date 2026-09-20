@@ -6,6 +6,7 @@ import {
   isoNow,
   newId,
   notFound,
+  notifyRecordDeleted,
   ok,
   parseFolderPath,
   recordAudit,
@@ -585,6 +586,7 @@ export async function deleteDocument(
     tx.delete(documentLinks).where(eq(documentLinks.documentId, doc.id)).run();
     tx.delete(documentFormerNumbers).where(eq(documentFormerNumbers.documentId, doc.id)).run();
     tx.delete(documents).where(eq(documents.id, doc.id)).run();
+    notifyRecordDeleted(tx, deps, ctx, 'document', doc.id);
   });
 
   removeDocumentText(deps, doc.id);

@@ -7,6 +7,7 @@ import { animalDeletionPreview, animalPhotos, animalStories, animals, animalsMod
 const PNG = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64'));
 const png = (n: number) => new Uint8Array([...PNG, ...Array(n).fill(0)]);
 
+const deleted: string[] = [];
 /** Hält jedes Tier mit Slug „gehalten“ fest und zeigt auf jedes mit Slug „verwiesen“. */
 const probe = defineModule({
   key: 'probe',
@@ -20,6 +21,7 @@ const probe = defineModule({
     entityType === 'animal' && deps.db.select().from(animals).where(eq(animals.id, id)).get()?.slug === 'verwiesen'
       ? [{ label: 'Dokument „Anfrage Tierarzt“ (Entwurf)', entity: 'document', id: 'D2', href: '/dms/D2' }]
       : [],
+  recordDeleted: (_tx, _deps, _ctx, entityType, id) => void deleted.push(`${entityType}:${id}`),
 });
 
 const manage = ctxWith(['animals.manage', 'animals.view', 'media.upload']);
@@ -125,5 +127,13 @@ describe('deleteAnimal', () => {
     expect((await deleteAnimal(deps, manage, { id: held.id })).ok).toBe(false);
     expect(unwrap(await animalDeletionPreview(deps, manage, free.id)).deletable).toBe(true);
     expect((await deleteAnimal(deps, manage, { id: free.id })).ok).toBe(true);
+  });
+
+  it('sagt den anderen Modulen, dass das Tier weg ist', async () => {
+    const deps = await setup();
+    const a = unwrap(await createAnimal(deps, manage, { ...base, slug: 'weg' }));
+    deleted.length = 0;
+    expect(unwrap(await deleteAnimal(deps, manage, { id: a.id }))).toEqual({ deletedMedia: [], keptMedia: [] });
+    expect(deleted).toEqual([`animal:${a.id}`]);
   });
 });

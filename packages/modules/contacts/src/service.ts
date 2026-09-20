@@ -1,5 +1,5 @@
 import {
-  conflict, isoNow, newId, notFound, ok, recordAudit, requirePermission, validate,
+  conflict, isoNow, newId, notFound, notifyRecordDeleted, ok, recordAudit, requirePermission, validate,
   type CallContext, type DbOrTx, type Deps, type Result,
 } from '@kompass/core';
 import { and, asc, count, desc, eq, inArray, isNull, like, or, sql, type SQL, type SQLWrapper } from 'drizzle-orm';
@@ -349,6 +349,7 @@ export async function deleteContact(deps: Deps, ctx: CallContext, input: unknown
     tx.delete(contactChannels).where(eq(contactChannels.contactId, contact.id)).run();
     tx.delete(contactRoles).where(eq(contactRoles.contactId, contact.id)).run();
     tx.delete(contacts).where(eq(contacts.id, contact.id)).run();
+    notifyRecordDeleted(tx, deps, ctx, 'contact', contact.id);
     recordAudit(tx, deps, ctx, { action: 'contacts.delete', entityType: 'contact', entityId: contact.id, before: { name: displayName(contact), until }, summary: `Kontakt ${displayName(contact)} nach Fristablauf gelöscht` });
     return ok({ id: contact.id });
   });

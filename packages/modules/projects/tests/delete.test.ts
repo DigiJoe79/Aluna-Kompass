@@ -8,6 +8,7 @@ import { createProject, deleteProject, projectDeletionPreview, setProjectPublish
 
 const PNG = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64'));
 
+const deleted: string[] = [];
 const slugOf = (deps: Deps, id: string) => deps.db.select().from(projects).where(eq(projects.id, id)).get()?.slug;
 const probe = defineModule({
   key: 'probe',
@@ -15,6 +16,7 @@ const probe = defineModule({
   permissions: [],
   retentionHolds: (deps, entityType, id) => (entityType === 'project' && slugOf(deps, id) === 'gehalten' ? [{ label: 'Zuwendungsbescheid ZB-2026-0003', until: null, entity: 'document', id: 'D1' }] : []),
   recordReferences: (deps, entityType, id) => (entityType === 'project' && slugOf(deps, id) === 'verwiesen' ? [{ label: 'Wiedervorlage „Partner anrufen“', entity: 'followUp', id: 'F1' }] : []),
+  recordDeleted: (_tx, _deps, _ctx, entityType, id) => void deleted.push(`${entityType}:${id}`),
 });
 
 const manage = ctxWith(['projects.manage', 'projects.view', 'media.upload']);
@@ -79,5 +81,13 @@ describe('deleteProject', () => {
     expect(deps.db.select().from(projects).all()).toHaveLength(1);
     expect(code(await deleteProject(deps, manage, { id: 'MISSING' }))).toBe('notFound');
     expect(code(await projectDeletionPreview(deps, ctxWith([]), p.id))).toBe('forbidden');
+  });
+
+  it('sagt den anderen Modulen, dass das Projekt weg ist', async () => {
+    const deps = await setup();
+    const p = unwrap(await createProject(deps, manage, { ...base, slug: 'weg' }));
+    deleted.length = 0;
+    expect(code(await deleteProject(deps, manage, { id: p.id }))).toBe('ok');
+    expect(deleted).toEqual([`project:${p.id}`]);
   });
 });
