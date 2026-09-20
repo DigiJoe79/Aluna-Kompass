@@ -1,6 +1,6 @@
 # Nordstern
 
-Stand 2026-09-18. Das Gesamtbild von Aluna Kompass und die Reihenfolge, in der
+Stand 2026-09-20. Das Gesamtbild von Aluna Kompass und die Reihenfolge, in der
 es entsteht. Regeln stehen in `AGENTS.md`, das Was einzelner Vorhaben in
 `docs/intern/specs/`, bewusst zurückgestellte Kleinigkeiten in
 `docs/intern/backlog.md` (beides Arbeitsdokumente, nicht im öffentlichen
@@ -71,6 +71,14 @@ Dokument, nicht die Spec eines Moduls.
   unverändert ist, und den liefern Prüfsumme und Änderungsprotokoll. Ein
   Vereinssiegel bei einem Vertrauensdiensteanbieter kostet laufend Geld für
   einen Vorgang, den es nicht gibt.
+- **Keine Finanzbuchhaltung für Bilanzierer, keine Übermittlung.** Kompass
+  führt eine Einnahmen-Überschuss-Rechnung nach deutschem
+  Gemeinnützigkeitsrecht. Keine Bilanz, keine Lohnabrechnung, keine
+  Umsatzsteuer-Voranmeldung, keine Übermittlung an ELSTER — Kompass liefert
+  die Zahlen, ein Mensch reicht sie ein. Keine direkte Bankanbindung:
+  Kontoumsätze kommen als Datei, weil eine Bankschnittstelle im eigenen Netz
+  ein Betriebs- und Zulassungsrisiko wäre. Keine ausgehenden E-Rechnungen.
+  Wer darüber hinauswächst, übergibt per Export an eine Finanzbuchhaltung.
 - **Kein Multi-Tenant.** Eine Installation je Verein. Kein Mandantenfeld,
   keine geteilte Datenbank.
 - **Kein Bildeingang, keine Handschrifterkennung.** Die Akte nimmt PDF. Die
@@ -152,7 +160,9 @@ ausgeglichenen Zeilen, keine doppelte Buchführung; Vereine mit
 Bilanzierungspflicht sind nicht die Zielgruppe.
 
 Spec: `2026-09-20-finanzen-design.md` in `docs/intern/specs/`, eine für das
-ganze Modul, umgesetzt in zehn Plänen.
+ganze Modul, umgesetzt in sechzehn Plänen. Festgeschriebenes wird nie
+gelöscht; nach Ablauf der Aufbewahrung verschwindet der Personenbezug, nicht
+die Buchung.
 
 **Stand: in Arbeit.** Schritt 3 der Roadmap, Fassung 0.2.0.
 
@@ -224,6 +234,10 @@ Ebenfalls keine eigene Säule. Der Kern kennt Aufbewahrungsfristen und eine
 Fälligkeitsliste; jede Säule bringt ihre Fristen und ihre Wiedervorlagen mit:
 die Akte „Antwort erwartet bis", Finanzen die Abgabefristen, Gremien die
 Einladungsfristen. Eine Frist hängt immer an einem Vorgang, nie in der Luft.
+Was sich aus Daten berechnen lässt — der Ablauf eines Bescheids, ein fälliger
+Nachweis —, ist eine berechnete Liste und keine gespeicherte Wiedervorlage:
+Sie verschwindet erst, wenn der Grund verschwindet, nicht wenn jemand sie
+abhakt.
 Sichtbar wird das auf der Startseite: Jede Säule bringt dort ihre Kacheln
 mit — die Akte den Eingangskorb, Finanzen später die Umsätze ohne Zuordnung,
 Gremien die Einladungsfristen — und der Nutzer wählt, was er sehen will.
@@ -305,7 +319,12 @@ Brainstorming. Was heute schon feststeht:
   eingebettetem XML ist und damit in die Akte passt; Kompass liest das XML und
   belegt die Buchung vor. XRechnung (reines XML) bleibt offen, bis ein
   Lieferant eine schickt.
-- Rücklagen nach § 62 AO, Kostenerstattungen, Mittelweitergabe an Partner.
+- Rücklagen nach § 62 AO, Kostenerstattungen mit Freigabe durch eine zweite
+  Person, Mittelweitergabe an Partner und Aufträge an Hilfspersonen mit
+  Nachweisakte.
+- Zweckbindung als eigene Dimension der Buchung, mit Umwidmung als
+  dokumentiertem Vorgang. Der Spendenstand je Projekt als veröffentlichte
+  Sicht für die Webseite.
 - Zuwendungsbestätigungen nach amtlichem Muster, einzeln und als
   Serienerzeugung zum Jahresende.
 - Aktenexport für Prüfer: ein Ordner oder Jahrgang als Bündel aus PDFs mit
@@ -313,18 +332,27 @@ Brainstorming. Was heute schon feststeht:
   Schritt 1, weil der Prüfer die Belege dazu will.
 - Rechenschaft: EÜR, Vermögensübersicht, Mittelverwendungsrechnung,
   Kassenprüfungsunterlagen.
-- Fristen: Steuererklärung, Freistellungsbescheid.
+- Fristen: Steuererklärung, Freistellungsbescheid. Dazu Schwellenwächter
+  (zeitnahe Mittelverwendung, Freigrenze, Kleinunternehmer), ein geführter
+  Jahresabschluss, ein Lesezugang für Kassenprüfer und ein Datenexport.
 
 **Fertig, wenn:** ein Geschäftsjahr vollständig in Kompass gebucht ist und
 die Kassenprüfung ihre Unterlagen aus Kompass bekommt, ohne dass jemand etwas
-nachträgt.
+nachträgt. Das liegt zwangsläufig nach dem Release: Die Fassung 0.2.0 ist
+auslieferbar, wenn ihre Prüfsteine grün sind; der Schritt ist abgeschlossen
+mit dem ersten echten Prüfpaket.
 
 ### Schritt 4: Mitglieder und Gremien
 
 Eigene Spec, eigenes Brainstorming. Was heute feststeht:
 
 - Mitglieder sind Kontakte mit einer Rolle und einem Beitrag; Beiträge sind
-  Buchungen.
+  Buchungen. Seit 0.2.0 ist der Beitrag eine Einnahmeart; hier kommen
+  Beitragssoll, Mahnlauf und SEPA-Lastschrift dazu, die Forderung je Mitglied
+  als offener Posten der Finanzen.
+- Die Kontaktrollen für Organmitglieder und Nahestehende, die Finanzen für
+  seine Prüfliste mitbringt, gehen an die Gremien über. Entlastung und
+  Prüfbericht hängen am Geschäftsjahr.
 - Satzung und Beitragsordnung mit Ständen, ab der Gründungsfassung.
 - Mitgliederversammlung: Einladung mit Frist, Anwesenheit, Protokoll.
   Vorstandssitzungen und Beschlüsse.
@@ -396,7 +424,12 @@ die Säulen stehen.
 - **Einsortierregeln auf dem Volltext** (Backlog 5), als Teil desselben
   Vorgangs.
 - **Freigabe-Schritt vor dem Festschreiben** (Vier-Augen-Prinzip), als
-  Rechte-Frage, nicht als Signatur.
+  Rechte-Frage, nicht als Signatur. Für Finanzen mit 0.2.0 eingelöst
+  (Erstattungen, Partnerzahlungen, Umwidmungen; Festschreiben über MCP per
+  Einstellung gesperrt); offen bleibt die Akte.
+- **Finanzen, Phase zwei:** DATEV-Buchungsstapel, Anlagenverzeichnis,
+  Haushaltsplan, Transparenzzahlen für die Webseite, Verwendungsnachweis nach
+  Kostenplan, elektronische Zuwendungsmeldung, sobald das Verfahren steht.
 - **Editor für Basis-Vorlagen** in der Oberfläche (Pipeline-Spec,
   Entscheidung 7).
 - **Spendenplattform-Abgleich** als vereinsspezifisches Modul.
