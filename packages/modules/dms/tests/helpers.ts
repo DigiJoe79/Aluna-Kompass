@@ -1,4 +1,4 @@
-import { coreModule, defineModule, schema, type CallContext, type Deps } from '@kompass/core';
+import { coreModule, defineModule, schema, writeSettingInternal, type CallContext, type Deps } from '@kompass/core';
 import { createTestDeps, ctxWith, fakeDocumentEngine, insertUser, systemContext } from '@kompass/core/testing';
 import { z } from 'zod';
 import { contactsModule } from '@kompass/module-contacts';
@@ -50,6 +50,7 @@ export const probeModule = defineModule({
   key: 'probe',
   version: '0.0.0',
   permissions: ['probe.read', 'probe.issue'],
+  linkedDocumentAccess: [{ entityType: 'probeThing', readPermission: 'probe.read', receivePermission: 'probe.issue' }],
   documentTemplates: [
     {
       key: 'probe-note',
@@ -69,6 +70,7 @@ export function setupWithProbe(permissions: readonly string[] = [...ALL_DMS, 'pr
     documents: fakeDocumentEngine({ render: async ({ bodyTypst }) => ({ bytes: new TextEncoder().encode(`%PDF-1.4\n${bodyTypst}\n%%EOF\n`), pages: 1 }) }),
   });
   seedTypes(deps);
+  deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'modules.enabled', ['contacts', 'dms', 'probe'], 'test.enable'));
   deps.db.transaction((tx) => ensureDocumentType(tx, deps, systemContext(), { module: 'probe', key: 'probe-note', label: 'Notiz', prefix: 'NTZ', defaultDirection: 'outgoing', retentionClass: 'statutory10Y', owned: true }));
   const userId = insertUser(deps, { name: 'Test', email: 'test@kompass.local' });
   return { deps, ctx: ctxWith(permissions, userId), userId };

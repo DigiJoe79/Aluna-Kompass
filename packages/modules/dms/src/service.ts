@@ -11,6 +11,7 @@ import {
   parseFolderPath,
   recordAudit,
   requirePermission,
+  reservedLinkTypes,
   retentionEnd,
   retentionMonths,
   schema,
@@ -18,6 +19,7 @@ import {
   type CallContext,
   type DbOrTx,
   type Deps,
+  type Failure,
   type FollowUpRecord,
   type Result,
 } from '@kompass/core';
@@ -446,6 +448,13 @@ export async function moveDocument(
   });
 }
 
+/** Bezugstypen, die ein Modul über `linkedDocumentAccess` anmeldet, setzt und löst nur dieses Modul. */
+export function refuseReservedLinks(deps: Deps, links: readonly { entityType: string }[]): Failure | null {
+  const reserved = reservedLinkTypes(deps);
+  const hit = links.find((link) => reserved.has(link.entityType));
+  return hit ? conflict('linkTypeReserved', `Bezüge auf „${hit.entityType}“ setzt und löst nur das Modul, dem dieser Vorgang gehört`) : null;
+}
+
 export const linkInputSchema = z.object({
   entityType: z.string().trim().min(1).max(60),
   entityId: z.string().trim().min(1),
@@ -466,6 +475,9 @@ export async function linkDocument(
 
   const parsed = validate(deps, linkSchema, input);
   if (!parsed.ok) return parsed;
+
+  const reservedHit = refuseReservedLinks(deps, [parsed.value]);
+  if (reservedHit) return reservedHit;
 
   const doc = deps.db.select().from(documents).where(eq(documents.id, parsed.value.documentId)).get();
   if (!doc) return notFound('document', parsed.value.documentId);
@@ -527,6 +539,9 @@ export async function unlinkDocument(
 
   const link = deps.db.select().from(documentLinks).where(eq(documentLinks.id, parsed.value.id)).get();
   if (!link) return notFound('documentLink', parsed.value.id);
+
+  const reservedHit = refuseReservedLinks(deps, [link]);
+  if (reservedHit) return reservedHit;
 
   return deps.db.transaction((tx: DbOrTx) => {
     tx.delete(documentLinks).where(eq(documentLinks.id, link.id)).run();

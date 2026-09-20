@@ -23,7 +23,7 @@ import { documentTypeFor } from './catalog';
 import { refuseModuleOwned } from './owned';
 import { RELATION_KINDS, documentFormerNumbers, documentLinks, documentRelations, documents, type DocumentRow, type DocumentTypeRow } from './schema';
 import { removeDocumentFile, storeDocumentFile } from './storage';
-import { allocateDocumentNumber, linkInputSchema, peekDocumentNumber, resolveFolder, toRecord, type DocumentRecord } from './service';
+import { allocateDocumentNumber, linkInputSchema, peekDocumentNumber, refuseReservedLinks, resolveFolder, toRecord, type DocumentRecord } from './service';
 
 /**
  * Was jede Ablage eingehender Post beschreibt — unabhängig davon, woher die
@@ -75,6 +75,9 @@ export async function receiveDocument(
 
   const parsed = validate(deps, receiveDocumentSchema, input);
   if (!parsed.ok) return parsed;
+
+  const reservedHit = refuseReservedLinks(deps, parsed.value.links);
+  if (reservedHit) return reservedHit;
 
   const docType = documentTypeFor(deps.db, parsed.value.typeKey);
   if (!docType) return notFound('documentType', parsed.value.typeKey);

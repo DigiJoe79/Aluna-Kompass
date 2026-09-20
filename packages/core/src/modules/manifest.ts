@@ -137,6 +137,14 @@ export interface PublishedView<T = unknown> {
   load(deps: Deps): T[];
 }
 
+/** Zu welchen seiner Vorgänge ein Modul Dokumente der Akte ausliefert und ablegt — und unter welchem seiner Rechte. */
+export interface LinkedDocumentAccess {
+  entityType: string;
+  readPermission: string;
+  /** Fehlt es, legt das Modul zu diesem Vorgang nichts ab. */
+  receivePermission?: string;
+}
+
 export interface DocumentRenderContext {
   number: string;
   issuedAt: string;
@@ -251,6 +259,14 @@ export interface ModuleManifest {
    *  ohne Rechteprüfung. Befragt vor dem Löschen des Datensatzes. Anders als
    *  `retentionHolds` fragt der Haken nicht nach Fristen: Jeder Verweis zählt. */
   recordReferences?: (deps: Deps, entityType: string, id: string) => readonly RecordReference[];
+  /**
+   * Der Bezug als Berechtigung (Vorarbeiten-Spec V2): Wer ein hier genanntes
+   * Recht hat, bekommt über die Seiten dieses Moduls genau die Dokumente, die
+   * mit dessen Vorgängen verknüpft sind — ohne `dms.view`. **Die Akte prüft**
+   * Recht und Bezug, nie das Modul (Prinzip 6). Ein so angemeldeter Bezugstyp
+   * ist reserviert: Nur sein Modul setzt und löst solche Bezüge.
+   */
+  linkedDocumentAccess?: readonly LinkedDocumentAccess[];
   /**
    * Ein fremder Datensatz wurde gelöscht — in dieser Transaktion. Das Modul
    * räumt mit, was nur an ihm hing (Finanzfelder eines Projekts ohne Buchung),
@@ -381,6 +397,11 @@ export function defineModule(manifest: ModuleManifest): ModuleManifest {
       if (!own && !core) throw new Error(`dashboard tile ${manifest.key}/${tile.key} names a foreign permission: ${permission}`);
     }
     dashboardOptionFields(tile.options); // wirft bei unzulässigem Schema
+  }
+  for (const access of manifest.linkedDocumentAccess ?? []) {
+    for (const permission of [access.readPermission, access.receivePermission]) {
+      if (permission && !manifest.permissions.includes(permission)) throw new Error(`linked document access ${manifest.key}/${access.entityType} names a foreign permission: ${permission}`);
+    }
   }
   return manifest;
 }

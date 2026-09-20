@@ -22,7 +22,7 @@ import { refuseModuleOwned } from './owned';
 import { resolveRecipient } from './recipients';
 import { documentLinks, documents } from './schema';
 import { storeDocumentFile } from './storage';
-import { allocateDocumentNumber, getDocumentRecord, peekDocumentNumber, resolveFolder, toRecord, type DocumentRecord } from './service';
+import { allocateDocumentNumber, getDocumentRecord, peekDocumentNumber, refuseReservedLinks, resolveFolder, toRecord, type DocumentRecord } from './service';
 import { removeDocumentText } from './index-store';
 import { deleteNotesFor } from './notes';
 import { deleteRelationsFor, relateDocuments } from './relations';
@@ -100,6 +100,9 @@ export async function createDraft(deps: Deps, ctx: CallContext, input: unknown):
 
   const parsed = validate(deps, draftCreateSchema, input);
   if (!parsed.ok) return parsed;
+
+  const reservedHit = refuseReservedLinks(deps, parsed.value.links);
+  if (reservedHit) return reservedHit;
 
   const docType = documentTypeFor(deps.db, parsed.value.typeKey);
   if (!docType) return notFound('documentType', parsed.value.typeKey);

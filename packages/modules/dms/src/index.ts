@@ -7,6 +7,7 @@ export * from './follow-ups';
 export * from './incoming';
 export * from './install';
 export * from './issue';
+export * from './linked';
 export * from './index-store';
 export * from './manifest';
 export * from './mcp-tools';

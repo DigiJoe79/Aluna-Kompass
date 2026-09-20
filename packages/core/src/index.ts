@@ -21,6 +21,7 @@ export * from './modules/service';
 export * from './modules/provisions';
 export * from './modules/installs';
 export * from './modules/record-hooks';
+export * from './modules/linked-access';
 export { coreModule } from './core-module';
 export * from './audit/log';
 export * from './audit/query';
