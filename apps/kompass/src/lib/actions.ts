@@ -7,7 +7,9 @@ export type ActionState =
 
 export const idleState: ActionState = { status: 'idle' };
 
-type Translate = (key: string, values?: any) => string;
+type Translate = ((key: string, values?: any) => string) & {
+  has?: (key: string) => boolean;
+};
 
 const KNOWN_CONFLICTS = new Set([
   'documentIsDraft',
@@ -101,6 +103,10 @@ function errorMessage(error: ServiceError, t: Translate): string {
     case 'unauthorized':
       return t('errors.unauthorized');
     case 'conflict': {
+      if (error.code === 'moduleRefusesDisable') {
+        const key = `modules.cannotDisable.${error.message}`;
+        return (t.has?.(key) ?? false) ? t(key) : t('modules.cannotDisable.generic');
+      }
       const detail = error.message.includes(':') ? error.message.slice(error.message.indexOf(':') + 1).trim() : error.message;
       if (CONFLICTS_WITH_DETAIL.has(error.code)) {
         return t(`errors.conflict.${error.code}`, { detail });

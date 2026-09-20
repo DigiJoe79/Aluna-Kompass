@@ -30,6 +30,14 @@ describe('toActionState', () => {
     expect(getMsg(conflict('stillPublished', 'Der Datensatz ist veröffentlicht. Ziehen Sie ihn erst zurück.'))).toBe('errors.conflict.stillPublished');
     expect(getMsg(conflict('recordHeld', 'Noch gehalten von: Vertrag V-1 (bis 2036-12-31)'))).toBe('errors.conflict.recordHeld:{"detail":"Vertrag V-1 (bis 2036-12-31)"}');
     expect(getMsg(conflict('stillReferenced', 'Es zeigt noch darauf: Dokument X'))).toBe('errors.conflict.stillReferenced:{"detail":"Dokument X"}');
+    expect(getMsg(conflict('moduleRefusesDisable', 'hasFinalRecords'))).toBe('modules.cannotDisable.generic');
+    const tWithHas = Object.assign(
+      (key: string, values?: Record<string, unknown>) => (values ? `${key}:${JSON.stringify(values)}` : key),
+      { has: (key: string) => key === 'modules.cannotDisable.hasFinalRecords' },
+    );
+    const customState = toActionState(conflict('moduleRefusesDisable', 'hasFinalRecords'), tWithHas);
+    expect(customState.status === 'error' ? customState.message : null).toBe('modules.cannotDisable.hasFinalRecords');
+    expect(notFound('user', '1')).toBeDefined();
     expect(getMsg(notFound('user', '1'))).toBe('errors.notFound');
     expect(getMsg(unauthorized('locked'))).toBe('errors.unauthorized');
   });

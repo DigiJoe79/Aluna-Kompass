@@ -72,4 +72,14 @@ describe('modules service', () => {
       }),
     ).toThrow(/invalid document type/);
   });
+
+  it('lets a module refuse to be switched off', async () => {
+    const stubborn = defineModule({ key: 'stubborn', version: '0', permissions: [], canDisable: () => 'hasFinalRecords' });
+    const deps = createTestDeps({ manifests: [coreModule, stubborn] });
+    const admin = ctxWith(['modules.manage']);
+    unwrap(await setModuleEnabled(deps, admin, { key: 'stubborn', enabled: true }));
+    const res = await setModuleEnabled(deps, admin, { key: 'stubborn', enabled: false });
+    expect(res.ok ? null : res.error).toEqual({ type: 'conflict', code: 'moduleRefusesDisable', message: 'hasFinalRecords' });
+    expect(isModuleEnabled(deps, 'stubborn')).toBe(true);
+  });
 });

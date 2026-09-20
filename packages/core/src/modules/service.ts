@@ -67,6 +67,8 @@ export async function setModuleEnabled(deps: Deps, ctx: CallContext, input: unkn
   } else {
     const dependents = deps.registry.manifests.filter((m) => current.has(m.key) && (m.dependsOn ?? []).includes(key));
     if (dependents.length > 0) return conflict('moduleRequiredByOthers', `Wird benötigt von: ${dependents.map((m) => m.key).join(', ')}`);
+    const refusal = manifest.canDisable?.(deps) ?? null;
+    if (refusal) return conflict('moduleRefusesDisable', refusal);
   }
   const next = [...current].filter((k) => k !== CORE_MODULE_KEY && k !== key);
   if (enabled) next.push(key);

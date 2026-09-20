@@ -969,6 +969,10 @@
     "toast": {
       "enabled": "Modul aktiviert.",
       "disabled": "Modul deaktiviert."
+    },
+    "cannotDisable": {
+      "generic": "Dieses Modul lässt sich nicht ausschalten, solange es Vorgänge führt.",
+      "hasFinalRecords": "Dieses Modul führt festgeschriebene Vorgänge. Ausgeschaltet würde es nichts mehr festhalten, was daran hängt — deshalb bleibt es an."
     }
   },
   "audit": {

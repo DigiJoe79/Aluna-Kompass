@@ -284,6 +284,12 @@ export interface ModuleManifest {
   /** Kontaktrollen, die dieses Modul beisteuert. */
   contactRoles?: readonly ContactRoleDefinition[];
   /**
+   * Darf dieses Modul gerade ausgeschaltet werden? Ein ausgeschaltetes Modul
+   * schweigt als Halter — wer festgeschriebene Vorgänge führt, lehnt deshalb
+   * ab. Rückgabe: Meldungsschlüssel unter `modules.cannotDisable.*`, oder `null`.
+   */
+  canDisable?: (deps: Deps) => string | null;
+  /**
    * Was von den Entitäten dieses Moduls gelöscht werden darf, und warum
    * (nicht). Prinzip 3 als Daten: `deletionPolicy(registry)` bündelt Kern und
    * Module, `defineModule` prüft jede Regel, die Registry lehnt eine Entität
