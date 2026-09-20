@@ -12,6 +12,7 @@ import {
   updateDocumentRule,
   updateDocumentType,
 } from '../src/catalog';
+import { createDraft } from '../src/drafts';
 import { documentTypes } from '../src/schema';
 import { ALL_DMS, auditActions, setupWithTypes } from './helpers';
 
@@ -132,6 +133,31 @@ describe('document rules', () => {
     const deleted = await deleteDocumentRule(deps, ctx, { id: created.value.id });
     expect(deleted.ok).toBe(true);
     expect(auditActions(deps)).toContain('dms.rule.delete');
+  });
+
+  describe('prefix', () => {
+    const memo = { key: 'memo', label: 'Vermerk', defaultDirection: 'outgoing' as const, retentionClass: 'statutory6Y' as const };
+    const code = (r: { ok: boolean; error?: { type: string; code?: string } }) => (r.ok ? 'ok' : r.error!.type === 'conflict' ? r.error!.code : r.error!.type);
+
+    it('is unique across document types', async () => {
+      const { deps, ctx } = setupWithTypes();
+      unwrap(await createDocumentType(deps, ctx, { ...memo, prefix: 'VMK' }));
+      expect(code(await createDocumentType(deps, ctx, { ...memo, key: 'memo2', prefix: 'VMK' }))).toBe('documentTypePrefixTaken');
+    });
+
+    it('can be changed while the type has no document, and never afterwards', async () => {
+      const { deps, ctx } = setupWithTypes();
+      unwrap(await createDocumentType(deps, ctx, { ...memo, prefix: 'VMK' }));
+      expect(unwrap(await updateDocumentType(deps, ctx, { key: 'memo', prefix: 'VMN' })).prefix).toBe('VMN');
+      unwrap(await createDraft(deps, ctx, { typeKey: 'memo', subject: 'x', body: '' }));
+      expect(code(await updateDocumentType(deps, ctx, { key: 'memo', prefix: 'VMX' }))).toBe('documentTypeInUse');
+    });
+
+    it('cannot be changed to a prefix another type holds', async () => {
+      const { deps, ctx } = setupWithTypes();
+      unwrap(await createDocumentType(deps, ctx, { ...memo, prefix: 'VMK' }));
+      expect(code(await updateDocumentType(deps, ctx, { key: 'memo', prefix: 'BRF' }))).toBe('documentTypePrefixTaken');
+    });
   });
 });
 

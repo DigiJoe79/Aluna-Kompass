@@ -4,6 +4,7 @@ import { contactsModule } from '@kompass/module-contacts';
 import { isNotNull } from 'drizzle-orm';
 import { readTextLayer } from '@kompass/text-extraction';
 import { describe, expect, it } from 'vitest';
+import { EXAMPLE_DOCUMENT_TYPES } from '../src/catalog';
 import { countDocumentText } from '../src/index-store';
 import { dmsModule } from '../src/manifest';
 import { documentFolders, documentFormerNumbers, documents, documentTypes } from '../src/schema';
@@ -21,6 +22,11 @@ function setup() {
 }
 
 describe('seedDms', () => {
+  it('the example document types carry distinct prefixes', () => {
+    const prefixes = EXAMPLE_DOCUMENT_TYPES.map((t) => t.prefix);
+    expect(new Set(prefixes).size).toBe(prefixes.length);
+  });
+
   it('legt Arten, Ordner und Beispieldokumente an', async () => {
     const { deps, ctx } = setup();
     await seedDms(deps, ctx);

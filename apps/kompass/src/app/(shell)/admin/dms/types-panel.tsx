@@ -203,13 +203,21 @@ export function TypesPanel({
                 <div className="space-y-1.5">
                   <Label htmlFor="edit-key">{t('typeColumns.key')}</Label>
                   <Input id="edit-key" value={editingType.key} disabled />
+                  <p className="text-[12px] text-muted-ink">{t('typeImmutableHint')}</p>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="edit-prefix">{t('typeColumns.prefix')}</Label>
-                  <Input id="edit-prefix" value={editingType.prefix} disabled />
+                  <Input
+                    id="edit-prefix"
+                    name="prefix"
+                    maxLength={3}
+                    className="w-20 font-mono uppercase"
+                    defaultValue={editingType.prefix}
+                    required
+                  />
+                  <p className="text-[12px] text-muted-ink">{t('prefixHint')}</p>
                 </div>
               </div>
-              <p className="text-[12px] text-muted-ink">{t('typeImmutableHint')}</p>
 
               <div className="space-y-1.5">
                 <Label htmlFor="edit-label">{t('typeColumns.label')}</Label>

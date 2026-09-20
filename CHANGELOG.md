@@ -19,6 +19,8 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
   haben, kommt dabei nie zurück.
 - **Aufbewahrungsfrist 8 Jahre.** Für Buchungsbelege gibt es eine eigene Frist
   (Verwaltung → Aufbewahrung). Bestehende Dokumentarten ändern sich nicht.
+- **Präfixe von Dokumentarten sind eindeutig** und lassen sich ändern, solange
+  die Art noch kein Dokument hat (Verwaltung → Akte).
 - **Ein Modul kann sein Ausschalten ablehnen**, sobald es festgeschriebene
   Vorgänge führt — ausgeschaltet würde es nichts mehr vor dem Löschen schützen.
 

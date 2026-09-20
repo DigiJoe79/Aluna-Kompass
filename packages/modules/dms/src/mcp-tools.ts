@@ -58,7 +58,7 @@ export const DMS_MCP_TOOLS: McpToolDefinition[] = [
 
   // Stammdaten
   t({ name: 'dms_create_type', description: 'Create a document type with prefix, direction and retention class. Requires dms.manage.', inputSchema: documentTypeCreateSchema, handler: (deps, ctx, args) => createDocumentType(deps, ctx, args), service: createDocumentType }),
-  t({ name: 'dms_update_type', description: 'Change a document type (label, direction, retention class, default folder, active, order). Requires dms.manage.', inputSchema: documentTypeUpdateSchema, handler: (deps, ctx, args) => updateDocumentType(deps, ctx, args), service: updateDocumentType }),
+  t({ name: 'dms_update_type', description: 'Change a document type (label, direction, retention class, default folder, active, order; the prefix only while the type has no document). Requires dms.manage.', inputSchema: documentTypeUpdateSchema, handler: (deps, ctx, args) => updateDocumentType(deps, ctx, args), service: updateDocumentType }),
   t({ name: 'dms_create_folder', description: 'Create a folder in the subject tree. Requires dms.manage.', inputSchema: documentFolderCreateSchema, handler: (deps, ctx, args) => createDocumentFolder(deps, ctx, args), service: createDocumentFolder }),
   t({ name: 'dms_delete_folder', description: 'Delete an empty folder. Requires dms.manage.', inputSchema: documentFolderDeleteSchema, handler: (deps, ctx, args) => deleteDocumentFolder(deps, ctx, args), service: deleteDocumentFolder }),
   t({ name: 'dms_create_rule', description: 'Create a filing rule. Requires dms.manage.', inputSchema: documentRuleCreateSchema, handler: (deps, ctx, args) => createDocumentRule(deps, ctx, args), service: createDocumentRule }),

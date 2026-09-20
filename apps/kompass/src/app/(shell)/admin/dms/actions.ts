@@ -56,6 +56,8 @@ export async function updateDocumentTypeAction(key: string, _prev: ActionState, 
   const { deps, ctx } = await requireSession();
 
   const label = String(formData.get('label') ?? '').trim();
+  const prefixRaw = formData.get('prefix');
+  const prefix = prefixRaw !== null && prefixRaw !== undefined ? String(prefixRaw).trim().toUpperCase() : undefined;
   const defaultDirection = String(formData.get('defaultDirection') ?? 'incoming') as 'incoming' | 'outgoing';
   const retentionClass = String(formData.get('retentionClass') ?? 'statutory10Y') as any;
   const defaultFolder = orNull(formData.get('defaultFolder'));
@@ -65,6 +67,7 @@ export async function updateDocumentTypeAction(key: string, _prev: ActionState, 
   const result = await updateDocumentType(deps, ctx, {
     key,
     label,
+    ...(prefix !== undefined ? { prefix } : {}),
     defaultDirection,
     retentionClass,
     defaultFolder,

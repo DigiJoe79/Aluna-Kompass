@@ -13,6 +13,8 @@ Fristklasse aus der [Aufbewahrung](aufbewahrung.md). Kompass bringt fünf
 mit: Brief, Behördenschreiben, Vertrag, Rechnung, Protokoll. Eine Art wird
 nicht gelöscht, sondern deaktiviert — ihre Nummern bleiben vergeben.
 
+Jedes Präfix gibt es nur einmal. Ändern lässt es sich, solange die Art noch kein Dokument hat — danach steht es in den Nummern und bleibt. Braucht ein Modul ein Präfix, das eine Ihrer Arten trägt, meldet die Startseite das unter „Einrichtung“; geben Sie dann der eigenen, noch unbenutzten Art ein anderes Präfix.
+
 ## Ordner
 
 Ordner sind Pfade: „Behörden“, „Behörden/Finanzamt“, „Verträge/2026“. Sie

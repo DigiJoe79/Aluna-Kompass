@@ -1943,7 +1943,8 @@
       "createTypeDescription": "Legen Sie eine neue Dokumentart fest. Das Präfix und der Schlüssel können später nicht mehr geändert werden.",
       "editTypeTitle": "Dokumentart bearbeiten",
       "editTypeDescription": "Passen Sie Bezeichnung, Richtung, Aufbewahrungsfrist oder Standardordner an.",
-      "typeImmutableHint": "Schlüssel und Präfix sind unveränderlich, damit bestehende Dokumentnummern konsistent bleiben.",
+      "typeImmutableHint": "Der Schlüssel ist unveränderlich.",
+      "prefixHint": "Änderbar, solange die Art noch kein Dokument hat.",
       "typeColumns": {
         "prefix": "Präfix",
         "label": "Bezeichnung",

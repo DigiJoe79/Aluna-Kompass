@@ -45,6 +45,12 @@ export function documentTypeFor(db: DbOrTx, key: string): DocumentTypeRow | null
   return db.select().from(documentTypes).where(eq(documentTypes.key, key)).get() ?? null;
 }
 
+/** Wer dieses Präfix schon trägt. Geprüft im Dienst, nicht als Index: Ein Index bräche den Start einer Installation mit Dubletten. */
+export function prefixTaken(db: DbOrTx, prefix: string, exceptKey?: string): DocumentTypeRow | null {
+  const row = db.select().from(documentTypes).where(eq(documentTypes.prefix, prefix)).get() ?? null;
+  return row && row.key !== exceptKey ? row : null;
+}
+
 /** Die Vorgabeart je Richtung — woraus die Formulare ihre Vorbelegung nehmen. */
 export function defaultTypeKey(deps: Deps, direction: 'incoming' | 'outgoing'): string {
   return readSetting<string>(deps, direction === 'incoming' ? 'dms.defaultTypeIncoming' : 'dms.defaultTypeOutgoing');
@@ -189,6 +195,7 @@ export const documentTypeCreateSchema = z.object({
 export const documentTypeUpdateSchema = z.object({
   key: z.string().min(1),
   label: z.string().trim().min(1).max(120).optional(),
+  prefix: z.string().trim().regex(/^[A-Z]{3}$/).optional(),
   defaultDirection: z.enum(['outgoing', 'incoming']).optional(),
   retentionClass: z.enum(['permanent', 'statutory10Y', 'statutory8Y', 'statutory6Y', 'consent']).optional(),
   defaultFolder: z.string().trim().min(1).nullable().optional(),
@@ -209,6 +216,9 @@ export async function createDocumentType(
 
   const existing = documentTypeFor(deps.db, parsed.value.key);
   if (existing) return conflict('documentTypeExists', `Dokumentart „${parsed.value.key}“ existiert bereits`);
+
+  const holder = prefixTaken(deps.db, parsed.value.prefix);
+  if (holder) return conflict('documentTypePrefixTaken', `Präfix ${parsed.value.prefix} trägt schon die Dokumentart „${holder.label}“`);
 
   return deps.db.transaction((tx: DbOrTx) => {
     tx.insert(documentTypes)
@@ -251,6 +261,16 @@ export async function updateDocumentType(
   const existing = documentTypeFor(deps.db, parsed.value.key);
   if (!existing) return notFound('documentType', parsed.value.key);
 
+  if (parsed.value.prefix !== undefined && parsed.value.prefix !== existing.prefix) {
+    // Die Nummer steht in jedem Dokument der Art. Ein Präfix lässt sich nur
+    // ändern, solange es noch keines gibt — Entwürfe eingeschlossen, denn sie
+    // ziehen ihre Nummer beim Festschreiben aus dem Kreis des Präfixes.
+    const used = deps.db.select({ id: documents.id }).from(documents).where(eq(documents.typeKey, existing.key)).get();
+    if (used) return conflict('documentTypeInUse', `Dokumentart „${existing.label}“ hat schon Dokumente; ihr Präfix ${existing.prefix} steht in deren Nummern`);
+    const holder = prefixTaken(deps.db, parsed.value.prefix, existing.key);
+    if (holder) return conflict('documentTypePrefixTaken', `Präfix ${parsed.value.prefix} trägt schon die Dokumentart „${holder.label}“`);
+  }
+
   // Eine Art, auf die eine Vorgabe zeigt, darf nicht verschwinden — sonst steht
   // man beim nächsten Entwurf wieder vor einer leeren Auswahl.
   if (parsed.value.isActive === false && isDefaultType(deps, existing.key)) {
@@ -259,6 +279,7 @@ export async function updateDocumentType(
 
   const updates: Partial<typeof documentTypes.$inferInsert> = {};
   if (parsed.value.label !== undefined) updates.label = parsed.value.label;
+  if (parsed.value.prefix !== undefined) updates.prefix = parsed.value.prefix;
   if (parsed.value.defaultDirection !== undefined) updates.defaultDirection = parsed.value.defaultDirection;
   if (parsed.value.retentionClass !== undefined) updates.retentionClass = parsed.value.retentionClass;
   if (parsed.value.defaultFolder !== undefined) updates.defaultFolder = parsed.value.defaultFolder;
@@ -273,8 +294,8 @@ export async function updateDocumentType(
       action: 'dms.type.update',
       entityType: 'documentType',
       entityId: existing.key,
-      before: { label: existing.label, isActive: existing.isActive },
-      after: { label: after.label, isActive: after.isActive },
+      before: { label: existing.label, prefix: existing.prefix, isActive: existing.isActive },
+      after: { label: after.label, prefix: after.prefix, isActive: after.isActive },
       summary: `Dokumentart „${after.label}“ geändert`,
     });
 
