@@ -165,7 +165,7 @@ export async function createDraft(deps: Deps, ctx: CallContext, input: unknown):
     });
 
     const row = tx.select().from(documents).where(eq(documents.id, id)).get()!;
-    return ok(toRecord(deps, row, tx));
+    return ok(toRecord(deps, ctx, row, tx));
   });
 }
 
@@ -227,7 +227,7 @@ export async function updateDraft(deps: Deps, ctx: CallContext, input: unknown):
       summary: `Entwurf „${after.subject}“ geändert`,
     });
 
-    return ok(toRecord(deps, after, tx));
+    return ok(toRecord(deps, ctx, after, tx));
   });
 }
 
@@ -394,7 +394,7 @@ export async function fileDocument(deps: Deps, ctx: CallContext, input: unknown)
           after: { number, templateKey, base: baseId },
           summary: `Dokument ${number} festgeschrieben`,
         });
-        return ok(toRecord(deps, after, tx));
+        return ok(toRecord(deps, ctx, after, tx));
       });
     } catch (error) {
       if (!(error instanceof NumberMovedOn)) throw error;

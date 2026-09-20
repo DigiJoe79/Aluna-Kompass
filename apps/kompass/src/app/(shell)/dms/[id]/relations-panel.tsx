@@ -24,6 +24,7 @@ export interface RelationView {
   otherNumber: string | null;
   otherSubject: string;
   otherPhase: 'draft' | 'issued';
+  otherProtected: boolean;
 }
 
 /**
@@ -92,7 +93,7 @@ export function RelationsPanel({
               <span className="flex-1">
                 {t(`kinds.${relation.kind}.${relation.direction}`)}{' '}
                 <Link href={`/dms/${relation.otherId}`} className="underline underline-offset-2">
-                  {relation.otherNumber ?? relation.otherSubject}
+                  {relation.otherNumber ?? (relation.otherProtected ? t('protected') : relation.otherSubject)}
                 </Link>
               </span>
               {canEdit ? (

@@ -14,6 +14,7 @@ import {
 } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { requireReadable } from './access';
 import { RELATION_KINDS, documentRelations, documents, type DocumentRelationRow, type RelationKind } from './schema';
 
 export interface DocumentRelationView {
@@ -25,6 +26,8 @@ export interface DocumentRelationView {
   otherNumber: string | null;
   otherSubject: string;
   otherPhase: 'draft' | 'issued';
+  /** Der Aufrufer darf das andere Ende nicht lesen: Es bleibt die Nummer, `otherSubject` ist leer. */
+  otherProtected: boolean;
 }
 
 export const relateSchema = z.object({
@@ -35,14 +38,19 @@ export const relateSchema = z.object({
 
 export const unrelateSchema = z.object({ id: z.string().min(1) });
 
-/** Beide Richtungen, jede Zeile mit Nummer, Betreff und Phase des anderen Endes. */
-export function relationsFor(db: DbOrTx, documentId: string): DocumentRelationView[] {
-  const other = (id: string) => db.select({ number: documents.number, subject: documents.subject, phase: documents.phase }).from(documents).where(eq(documents.id, id)).get();
+/**
+ * Beide Richtungen, jede Zeile mit Nummer, Betreff und Phase des anderen Endes.
+ * Darf der Aufrufer das andere Ende nicht lesen, bleibt die Nummer (V12) und der
+ * Betreff ist leer.
+ */
+export function relationsFor(deps: Deps, ctx: CallContext, db: DbOrTx, documentId: string): DocumentRelationView[] {
+  const other = (id: string) => db.select({ number: documents.number, subject: documents.subject, phase: documents.phase, typeKey: documents.typeKey }).from(documents).where(eq(documents.id, id)).get();
   const view = (row: DocumentRelationRow, direction: 'out' | 'in'): DocumentRelationView | null => {
     const otherId = direction === 'out' ? row.relatedDocumentId : row.documentId;
     const doc = other(otherId);
     if (!doc) return null;
-    return { id: row.id, kind: row.kind, direction, otherId, otherNumber: doc.number, otherSubject: doc.subject, otherPhase: doc.phase };
+    const hidden = requireReadable(deps, ctx, doc, db) !== null;
+    return { id: row.id, kind: row.kind, direction, otherId, otherNumber: doc.number, otherSubject: hidden ? '' : doc.subject, otherPhase: doc.phase, otherProtected: hidden };
   };
   const out = db.select().from(documentRelations).where(eq(documentRelations.documentId, documentId)).all().map((r) => view(r, 'out'));
   const inbound = db.select().from(documentRelations).where(eq(documentRelations.relatedDocumentId, documentId)).all().map((r) => view(r, 'in'));

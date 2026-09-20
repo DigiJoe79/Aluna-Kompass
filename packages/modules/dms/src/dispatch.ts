@@ -65,7 +65,7 @@ export async function recordDispatch(deps: Deps, ctx: CallContext, input: unknow
       after: { sentAt: after.sentAt, sentVia: after.sentVia, sentNote: after.sentNote },
       summary: `Dokument ${row.number} als versandt vermerkt: ${v.sentAt} per ${v.sentVia}`,
     });
-    return ok(toRecord(deps, after, tx));
+    return ok(toRecord(deps, ctx, after, tx));
   });
 }
 
@@ -89,6 +89,6 @@ export async function clearDispatch(deps: Deps, ctx: CallContext, input: unknown
       after: { sentAt: null, sentVia: null, sentNote: null },
       summary: `Versandvermerk an Dokument ${row.number} entfernt`,
     });
-    return ok(toRecord(deps, after, tx));
+    return ok(toRecord(deps, ctx, after, tx));
   });
 }

@@ -21,7 +21,7 @@ describe('createReplacementDraft', () => {
     if (!replacement.ok) return;
     expect(replacement.value).toMatchObject({ phase: 'draft', typeKey: 'letter', subject: 'Einladung', draftBody: 'Liebe Mitglieder,' });
     expect(replacement.value.links).toEqual([expect.objectContaining({ entityType: 'contact', entityId: 'C1', role: 'recipient' })]);
-    expect(relationsFor(deps.db, filed.value.id)).toEqual([expect.objectContaining({ kind: 'replaces', direction: 'in', otherId: replacement.value.id })]);
+    expect(relationsFor(deps, ctx, deps.db, filed.value.id)).toEqual([expect.objectContaining({ kind: 'replaces', direction: 'in', otherId: replacement.value.id })]);
   });
 
   it('bei eingegangener Post gibt es keinen Text zu übernehmen — der Entwurf ist leer', async () => {

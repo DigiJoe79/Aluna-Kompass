@@ -96,7 +96,7 @@ export async function issueGeneratedDocument<T = undefined>(deps: Deps, ctx: Cal
           recordAudit(tx, deps, ctx, { action: 'dms.issue', entityType: 'document', entityId: id, after: { number, templateKey: template.key, typeKey: docType.key }, summary: `Dokument ${number} ausgestellt` });
           const after = input.afterIssue?.(tx, { id, number, fileChecksum: stored.value.fileChecksum });
           const row = tx.select().from(documents).where(eq(documents.id, id)).get()!;
-          return ok({ document: toRecord(deps, row, tx), after });
+          return ok({ document: toRecord(deps, ctx, row, tx), after });
         });
       } catch (error) {
         if (error instanceof NumberMovedOn) continue; // der nächste Anlauf überschreibt die Datei

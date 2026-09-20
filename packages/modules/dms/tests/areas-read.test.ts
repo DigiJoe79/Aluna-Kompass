@@ -2,6 +2,7 @@ import { unwrap, type Deps } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { replaceDocumentText } from '../src/index-store';
+import { relateDocuments } from '../src/relations';
 import { getDocument, getDocumentRecord, listDocuments } from '../src/service';
 import { countUnreadDocuments, getDocumentText } from '../src/text';
 import { setupWithArea } from './helpers';
@@ -58,5 +59,20 @@ describe('a protected document type — reading', () => {
     const { deps, viewer, auditor } = await setupWithArea();
     expect(unwrap(countUnreadDocuments(deps, viewer))).toBe(1);
     expect(unwrap(countUnreadDocuments(deps, auditor))).toBe(1);
+  });
+});
+
+describe('the other end of a relation', () => {
+  it('shows only its number when the caller may not read it', async () => {
+    const { deps, all, viewer, auditor, secretId, openId } = await setupWithArea();
+    unwrap(await relateDocuments(deps, all, { documentId: openId, relatedDocumentId: secretId, kind: 'repliesTo' }));
+    const [seen] = unwrap(await getDocumentRecord(deps, viewer, openId)).relations;
+    expect(seen).toMatchObject({ otherId: secretId, otherSubject: '', otherProtected: true });
+    expect(seen!.otherNumber).toMatch(/^GEH-/);
+    const [full] = unwrap(await getDocumentRecord(deps, all, openId)).relations;
+    expect(full).toMatchObject({ otherSubject: 'Streng geheimer Betreff', otherProtected: false });
+    // und vom geschützten Ende aus sieht der Prüfer das offene Ende nicht im Klartext
+    const [fromSecret] = unwrap(await getDocumentRecord(deps, auditor, secretId)).relations;
+    expect(fromSecret).toMatchObject({ otherId: openId, otherSubject: '', otherProtected: true });
   });
 });

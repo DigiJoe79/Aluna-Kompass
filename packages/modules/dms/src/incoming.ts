@@ -103,7 +103,7 @@ export async function receiveDocument(
   return storeIncoming(
     deps, ctx, bytes,
     { docType, subject: parsed.value.subject, documentDate: parsed.value.documentDate, folder, links: parsed.value.links, relations: parsed.value.relations, audit: { after: { subject: parsed.value.subject, relations: parsed.value.relations.length }, summary: (number) => `Dokument ${number} („${parsed.value.subject}“) eingegangen` } },
-    (tx, doc) => toRecord(deps, tx.select().from(documents).where(eq(documents.id, doc.id)).get()!, tx),
+    (tx, doc) => toRecord(deps, ctx, tx.select().from(documents).where(eq(documents.id, doc.id)).get()!, tx),
   );
 }
 
@@ -223,7 +223,7 @@ export async function reclassifyDocument(deps: Deps, ctx: CallContext, input: un
   const nextSubject = subject !== undefined && subject !== before.subject ? subject : null;
   const nextDate = documentDate !== undefined && documentDate !== before.documentDate ? documentDate : null;
   // Nichts geändert: kein Fehler, aber auch kein Eintrag im Protokoll.
-  if (!newType && nextSubject === null && nextDate === null) return ok(toRecord(deps, before));
+  if (!newType && nextSubject === null && nextDate === null) return ok(toRecord(deps, ctx, before));
 
   return deps.db.transaction((tx: DbOrTx) => {
     const now = isoNow(deps.clock);
@@ -252,7 +252,7 @@ export async function reclassifyDocument(deps: Deps, ctx: CallContext, input: un
       after: pick(after),
       summary: newType ? `${before.number} → ${after.number} umklassifiziert` : `Angaben zu ${after.number} berichtigt`,
     });
-    return ok(toRecord(deps, after, tx));
+    return ok(toRecord(deps, ctx, after, tx));
   });
 }
 

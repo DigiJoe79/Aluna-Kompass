@@ -55,13 +55,13 @@ export type DocumentRecord = Omit<DocumentRow, 'inputSnapshot'> & {
   fileState?: DocumentFileState;
 };
 
-export function toRecord(deps: Deps, row: DocumentRow, dbOrTx: DbOrTx = deps.db): DocumentRecord {
+export function toRecord(deps: Deps, ctx: CallContext, row: DocumentRow, dbOrTx: DbOrTx = deps.db): DocumentRecord {
   const links = dbOrTx.select().from(documentLinks).where(eq(documentLinks.documentId, row.id)).all();
   return {
     ...row,
     inputSnapshot: row.inputSnapshot ? JSON.parse(row.inputSnapshot) : null,
     links,
-    relations: relationsFor(dbOrTx, row.id),
+    relations: relationsFor(deps, ctx, dbOrTx, row.id),
     notes: notesFor(dbOrTx, row.id),
     formerNumbers: dbOrTx
       .select({ number: documentFormerNumbers.number })
@@ -247,7 +247,7 @@ export async function listDocuments(
   const hits = q.text ? fulltextHits(deps, rows.map((r) => r.id), q.text) : new Map<string, TextHit>();
 
   return ok({
-    documents: rows.map((row) => toRecord(deps, row)),
+    documents: rows.map((row) => toRecord(deps, ctx, row)),
     total,
     fulltextTooShort,
     hits: Object.fromEntries(hits),
@@ -274,7 +274,7 @@ export async function getDocumentRecord(deps: Deps, ctx: CallContext, id: string
   const unreadable = requireReadable(deps, ctx, row);
   if (unreadable) return unreadable;
   const fileState: DocumentFileState = row.fileName ? (await pruefeDatei(deps, ctx, row)).state : 'none';
-  return ok({ ...toRecord(deps, row), fileState });
+  return ok({ ...toRecord(deps, ctx, row), fileState });
 }
 
 /**
@@ -359,7 +359,7 @@ export async function getDocument(deps: Deps, ctx: CallContext, id: string): Pro
     return conflict('documentAltered', `Die Datei von Dokument ${row.number} stimmt nicht mehr mit der beim Festschreiben gebildeten Prüfsumme überein`);
   }
 
-  return ok({ record: toRecord(deps, row), bytes: geprueft.bytes!, filename: `${row.number}.pdf`, protected: isProtectedType(documentTypeFor(deps.db, row.typeKey)) });
+  return ok({ record: toRecord(deps, ctx, row), bytes: geprueft.bytes!, filename: `${row.number}.pdf`, protected: isProtectedType(documentTypeFor(deps.db, row.typeKey)) });
 }
 
 const linkedDocumentSchema = z.object({ documentId: z.string().min(1), entityType: z.string().min(1), entityId: z.string().min(1) });
@@ -429,7 +429,7 @@ export async function voidDocument(deps: Deps, ctx: CallContext, input: unknown)
     tx.update(documents).set({ status: 'voided', voidedAt: isoNow(deps.clock), voidedByUserId: ctx.userId, voidReason: parsed.value.reason }).where(eq(documents.id, row.id)).run();
     const after = tx.select().from(documents).where(eq(documents.id, row.id)).get()!;
     recordAudit(tx, deps, ctx, { action: 'dms.void', entityType: 'document', entityId: row.id, before: { status: 'issued' }, after: { status: 'voided', reason: parsed.value.reason }, summary: `Dokument ${row.number} storniert: ${parsed.value.reason}` });
-    return ok(toRecord(deps, after));
+    return ok(toRecord(deps, ctx, after));
   });
 }
 
@@ -485,7 +485,7 @@ export async function moveDocument(
     });
 
     const after = tx.select().from(documents).where(eq(documents.id, doc.id)).get()!;
-    return ok(toRecord(deps, after, tx));
+    return ok(toRecord(deps, ctx, after, tx));
   });
 }
 

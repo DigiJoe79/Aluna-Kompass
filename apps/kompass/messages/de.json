@@ -1869,6 +1869,7 @@
       "cancel": "Abbrechen",
       "submit": "Hinzufügen",
       "remove": "Entfernen",
+      "protected": "geschützt",
       "kinds": {
         "repliesTo": {
           "out": "Antwort auf",
