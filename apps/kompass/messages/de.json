@@ -1572,7 +1572,12 @@
       "interested": "Interessiert",
       "partner": "Partner",
       "authority": "Behörde",
-      "service": "Dienstleister"
+      "service": "Dienstleister",
+      "donor": "Spender",
+      "grant-recipient": "Zuwendungsempfänger",
+      "claimant": "Antragsteller (Auslagen)",
+      "board-member": "Vorstandsmitglied",
+      "related-party": "Nahestehende Person"
     },
     "title": "Kontakte",
     "description": "Personen und Organisationen, ihre Rollen und Kommunikationswege.",
@@ -1767,7 +1772,9 @@
       "discardConfirm": "Verwerfen"
     },
     "filedProtected": "Abgelegt als {number}. Die Dokumentart ist geschützt; Sie sehen das Dokument hier nicht.",
-    "areas": {},
+    "areas": {
+      "finance": "Finanzen"
+    },
     "number": {
       "pending": "Die Nummer <mono>{number}</mono> wird beim Ablegen gezogen. Wählen Sie später eine andere Art, bekommt das Dokument eine neue Nummer, und die bisherige bleibt vermerkt.",
       "numberOnFiling": "Die Nummer wird beim Ablegen gezogen."

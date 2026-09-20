@@ -18,6 +18,19 @@ export const financeModule: ModuleManifest = defineModule({
   dependsOn: ['contacts', 'dms', 'projects'],
   files: true,
   permissions: [...FINANCE_PERMISSIONS],
+  // Dokumentarten mit diesem Bereich sieht nur, wer Finanzen mit Namen lesen darf — nicht jeder mit `dms.view`.
+  documentAreas: [{ key: 'finance', permission: 'finance.read' }],
+  /**
+   * Alle `none`: Finanzen hält seine Kontakte über Buchungen und Bestätigungen
+   * (ab F2c), nicht über die Rolle — eine laufende Rolle rechnete „ab heute“
+   * und hielte für immer. `donor`, `grant-recipient`, `claimant` setzen die
+   * Dienste beim ersten Vorgang; `board-member` und `related-party` pflegt ein
+   * Mensch mit Zeitraum. Lieferanten nutzen die allgemeine Rolle `service`.
+   */
+  contactRoles: [
+    { key: 'donor', retention: 'none' }, { key: 'grant-recipient', retention: 'none' }, { key: 'claimant', retention: 'none' },
+    { key: 'board-member', retention: 'none' }, { key: 'related-party', retention: 'none' },
+  ],
   // Platzhalter, bis Task 12 (`seedFinance`) das erfundene Vereinsjahr liefert —
   // AGENTS.md verlangt den Haken für jedes Modul von Anfang an.
   seed: async () => {},

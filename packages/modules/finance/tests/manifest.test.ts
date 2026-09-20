@@ -17,4 +17,12 @@ describe('finance module', () => {
   it('has no navigation yet — the surface comes with plan F3', () => {
     expect(financeModule.navigation ?? []).toEqual([]);
   });
+
+  it('registers the protection area finance, opened by finance.read', () => {
+    expect(financeModule.documentAreas).toEqual([{ key: 'finance', permission: 'finance.read' }]);
+  });
+
+  it('brings five contact roles, none of which holds a contact by itself', () => {
+    expect(financeModule.contactRoles).toEqual(['donor', 'grant-recipient', 'claimant', 'board-member', 'related-party'].map((key) => ({ key, retention: 'none' })));
+  });
 });
