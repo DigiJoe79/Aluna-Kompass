@@ -20,7 +20,9 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
     headers: {
       'content-type': 'application/pdf',
       'content-disposition': `inline; filename="${result.value.filename}"`,
-      'cache-control': 'private, max-age=3600',
+      // Eine geschützte Datei bleibt nicht eine Stunde im Browser liegen: Wem
+      // das Recht entzogen wird, der soll sie beim nächsten Klick nicht mehr sehen.
+      'cache-control': result.value.protected ? 'private, no-store' : 'private, max-age=3600',
       'content-length': String(result.value.bytes.byteLength),
     },
   });

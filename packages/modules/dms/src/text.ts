@@ -14,6 +14,7 @@ import {
 } from '@kompass/core';
 import { and, count, eq, isNotNull, isNull, ne, or } from 'drizzle-orm';
 import { z } from 'zod';
+import { readableTypeFilter, requireDmsGate, requireReadable } from './access';
 import { documents } from './schema';
 import { readDocumentFile } from './storage';
 import { readDocumentText, replaceDocumentText } from './index-store';
@@ -190,13 +191,13 @@ export async function reindexAllDocuments(deps: Deps, ctx: CallContext): Promise
  * Wie viele Dokumente mit Datei noch nicht fertig gelesen sind.
  */
 export function countUnreadDocuments(deps: Deps, ctx: CallContext): Result<number> {
-  const denied = requirePermission(ctx, 'dms.view');
+  const denied = requireDmsGate(deps, ctx);
   if (denied) return denied;
 
   const row = deps.db
     .select({ value: count() })
     .from(documents)
-    .where(and(isNotNull(documents.fileName), or(isNull(documents.textStatus), ne(documents.textStatus, 'done'))))
+    .where(and(readableTypeFilter(deps, ctx), isNotNull(documents.fileName), or(isNull(documents.textStatus), ne(documents.textStatus, 'done'))))
     .get();
 
   return ok(row?.value ?? 0);
@@ -214,12 +215,14 @@ export async function getDocumentText(
   ctx: CallContext,
   input: unknown,
 ): Promise<Result<{ textStatus: string | null; textError: string | null; pages: { page: number; text: string }[] }>> {
-  const denied = requirePermission(ctx, 'dms.view');
+  const denied = requireDmsGate(deps, ctx);
   if (denied) return denied;
   const parsed = validate(deps, documentTextSchema, input);
   if (!parsed.ok) return parsed;
-  const row = deps.db.select({ textStatus: documents.textStatus, textError: documents.textError }).from(documents).where(eq(documents.id, parsed.value.documentId)).get();
+  const row = deps.db.select({ textStatus: documents.textStatus, textError: documents.textError, typeKey: documents.typeKey }).from(documents).where(eq(documents.id, parsed.value.documentId)).get();
   if (!row) return notFound('document', parsed.value.documentId);
+  const unreadable = requireReadable(deps, ctx, row);
+  if (unreadable) return unreadable;
   const pages = row.textStatus === 'done' ? readDocumentText(deps, parsed.value.documentId) : [];
   return ok({ textStatus: row.textStatus, textError: row.textError, pages });
 }

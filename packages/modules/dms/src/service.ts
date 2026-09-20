@@ -27,6 +27,7 @@ import {
   type Result,
 } from '@kompass/core';
 import { z } from 'zod';
+import { isProtectedType, readableTypeFilter, requireDmsGate, requireReadable } from './access';
 import { documentTypeFor } from './catalog';
 import { refuseModuleOwned } from './owned';
 import { documentCounters, documentFolders, documentFormerNumbers, documentLinks, documentRelations, documents, documentTypes, type DocumentLinkRow, type DocumentNoteRow, type DocumentRow } from './schema';
@@ -172,12 +173,14 @@ export async function listDocuments(
   ctx: CallContext,
   input: unknown,
 ): Promise<Result<{ documents: DocumentRecord[]; total: number; fulltextTooShort: boolean; hits: Record<string, TextHit> }>> {
-  const denied = requirePermission(ctx, 'dms.view');
+  const denied = requireDmsGate(deps, ctx);
   if (denied) return denied;
   const parsed = validate(deps, documentListSchema, input);
   if (!parsed.ok) return parsed;
   const q = parsed.value;
-  const conditions: SQL[] = [];
+  // Was der Aufrufer lesen darf, steht als eigene UND-Bedingung ganz vorn —
+  // nie im `or(…)` der Textsuche, sonst fände der Volltext, was die Liste verbirgt.
+  const conditions: SQL[] = [readableTypeFilter(deps, ctx)];
   if (q.direction) conditions.push(eq(documents.direction, q.direction));
   if (q.phase) conditions.push(eq(documents.phase, q.phase));
   if (q.typeKey) conditions.push(eq(documents.typeKey, q.typeKey));
@@ -264,10 +267,12 @@ export async function listDocuments(
  * gelesen werden, und die Liste soll schnell bleiben.
  */
 export async function getDocumentRecord(deps: Deps, ctx: CallContext, id: string): Promise<Result<DocumentRecord>> {
-  const denied = requirePermission(ctx, 'dms.view');
+  const denied = requireDmsGate(deps, ctx);
   if (denied) return denied;
   const row = deps.db.select().from(documents).where(eq(documents.id, id)).get();
   if (!row) return notFound('document', id);
+  const unreadable = requireReadable(deps, ctx, row);
+  if (unreadable) return unreadable;
   const fileState: DocumentFileState = row.fileName ? (await pruefeDatei(deps, ctx, row)).state : 'none';
   return ok({ ...toRecord(deps, row), fileState });
 }
@@ -339,11 +344,13 @@ async function pruefeDatei(
  * Ein Entwurf trägt keine Summe (`fileChecksum: null`): Seine Datei entsteht
  * bei jeder Vorschau neu, das ist seine Natur und kein Vorfall.
  */
-export async function getDocument(deps: Deps, ctx: CallContext, id: string): Promise<Result<{ record: DocumentRecord; bytes: Uint8Array; filename: string }>> {
-  const denied = requirePermission(ctx, 'dms.view');
+export async function getDocument(deps: Deps, ctx: CallContext, id: string): Promise<Result<{ record: DocumentRecord; bytes: Uint8Array; filename: string; protected: boolean }>> {
+  const denied = requireDmsGate(deps, ctx);
   if (denied) return denied;
   const row = deps.db.select().from(documents).where(eq(documents.id, id)).get();
   if (!row) return notFound('document', id);
+  const unreadable = requireReadable(deps, ctx, row);
+  if (unreadable) return unreadable;
   if (!row.fileName) return notFound('documentFile', id);
 
   const geprueft = await pruefeDatei(deps, ctx, row);
@@ -352,7 +359,7 @@ export async function getDocument(deps: Deps, ctx: CallContext, id: string): Pro
     return conflict('documentAltered', `Die Datei von Dokument ${row.number} stimmt nicht mehr mit der beim Festschreiben gebildeten Prüfsumme überein`);
   }
 
-  return ok({ record: toRecord(deps, row), bytes: geprueft.bytes!, filename: `${row.number}.pdf` });
+  return ok({ record: toRecord(deps, row), bytes: geprueft.bytes!, filename: `${row.number}.pdf`, protected: isProtectedType(documentTypeFor(deps.db, row.typeKey)) });
 }
 
 const linkedDocumentSchema = z.object({ documentId: z.string().min(1), entityType: z.string().min(1), entityId: z.string().min(1) });

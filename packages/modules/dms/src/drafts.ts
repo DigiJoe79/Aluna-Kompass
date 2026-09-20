@@ -17,6 +17,7 @@ import {
 } from '@kompass/core';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { requireDmsGate, requireReadable } from './access';
 import { documentTypeFor } from './catalog';
 import { refuseModuleOwned } from './owned';
 import { resolveRecipient } from './recipients';
@@ -271,7 +272,7 @@ export async function previewDraft(
   ctx: CallContext,
   input: unknown,
 ): Promise<Result<{ bytes: Uint8Array; filename: string; mimeType: string; pages: number | null }>> {
-  const denied = requirePermission(ctx, 'dms.view');
+  const denied = requireDmsGate(deps, ctx);
   if (denied) return denied;
 
   const parsed = validate(deps, draftPreviewSchema, input);
@@ -279,6 +280,8 @@ export async function previewDraft(
 
   const row = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
   if (!row) return notFound('document', parsed.value.id);
+  const unreadable = requireReadable(deps, ctx, row);
+  if (unreadable) return unreadable;
 
   const recipient = resolveRecipient(deps, row.id);
   const templateKey = row.templateKey ?? FALLBACK_TEMPLATE_KEY;
