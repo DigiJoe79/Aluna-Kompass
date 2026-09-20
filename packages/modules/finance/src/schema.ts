@@ -51,3 +51,28 @@ export const financeCategories = sqliteTable(
   (t) => [uniqueIndex('finance_categories_key_idx').on(t.key)],
 );
 export type FinanceCategoryRow = typeof financeCategories.$inferSelect;
+
+export const financePurposes = sqliteTable(
+  'finance_purposes',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    description: text('description').notNull().default(''),
+    /** Kein Fremdschlüssel: Projekte gehören einem anderen Modul. Den Halter dazu meldet Finanzen ab F2c. */
+    projectId: text('project_id'),
+    referenceNote: text('reference_note'),
+    targetCents: integer('target_cents'),
+    abroad: integer('abroad', { mode: 'boolean' }).notNull().default(false),
+    carryForwardCents: integer('carry_forward_cents'),
+    carryForwardDate: text('carry_forward_date'),
+    fulfilledAt: text('fulfilled_at'),
+    fulfilledByUserId: text('fulfilled_by_user_id'),
+    dissolvedAt: text('dissolved_at'),
+    dissolvedByUserId: text('dissolved_by_user_id'),
+    isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [index('finance_purposes_project_idx').on(t.projectId)],
+);
+export type FinancePurposeRow = typeof financePurposes.$inferSelect;

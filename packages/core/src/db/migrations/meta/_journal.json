@@ -57,6 +57,13 @@
       "when": 1789934582192,
       "tag": "0007_finance_categories",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1789934830392,
+      "tag": "0008_finance_purposes",
+      "breakpoints": true
     }
   ]
 }

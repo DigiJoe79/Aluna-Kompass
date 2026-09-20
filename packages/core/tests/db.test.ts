@@ -40,6 +40,7 @@ describe('database', () => {
       'documents',
       'finance_accounts',
       'finance_categories',
+      'finance_purposes',
       'follow_ups',
       'media_assets',
       'media_folders',
