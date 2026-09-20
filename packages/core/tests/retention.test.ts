@@ -246,6 +246,11 @@ describe('defineModule validates contactRoles (Fix 5)', () => {
     ).toThrow(/retention/);
   });
 
+  it('accepts a contact role without a retention of its own', () => {
+    expect(() => defineModule({ key: 'm', version: '0', permissions: [], contactRoles: [{ key: 'donor', retention: 'none' }] })).not.toThrow();
+    expect(() => defineModule({ key: 'm', version: '0', permissions: [], contactRoles: [{ key: 'donor', retention: 'nope' as never }] })).toThrow(/invalid contact role retention class/);
+  });
+
   it('accepts a well-formed contact role', () => {
     expect(() =>
       defineModule({

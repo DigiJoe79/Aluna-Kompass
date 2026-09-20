@@ -13,15 +13,31 @@ export function contactsRetentionHolds(deps: Deps, entityType: string, id: strin
   if (entityType !== 'contact') return [];
   const definitions = contactRoleDefinitions(deps);
   const rows = deps.db.select().from(contactRoles).where(eq(contactRoles.contactId, id)).all();
-  return rows.flatMap((row): RetentionHold[] => {
+  const holds = rows.flatMap((row): RetentionHold[] => {
     const definition = definitions.get(row.role);
-    if (!definition) return [];
+    if (!definition || definition.retention === 'none') return [];
     if (definition.retention === 'permanent') return [{ label: `Rolle ${row.role} (dauerhaft)`, until: null, entity: 'contactRole', id: row.id }];
     const months = retentionMonths(deps, definition.retention);
     if (months === null) return [];
     const from = row.until ?? deps.clock.now().toISOString();
     return [{ label: `Rolle ${row.role}`, until: retentionEnd(from, months), entity: 'contactRole', id: row.id }];
   });
+
+  // Rollen ohne eigene Frist halten nicht — aber ihr Kontakt darf deshalb nicht
+  // ohne jeden Halter dastehen: Dann wäre „keine Frist nachgewiesen“, und er
+  // würde nie fällig. Das ist der Spender, dessen Buchungen abgelaufen sind.
+  // Grundfrist: `consent` ab dem Ende der letzten solchen Rolle, mindestens ab
+  // dem Anlagejahr. Hält ein Modul länger, sticht sein Halter.
+  const unheld = rows.filter((row) => definitions.get(row.role)?.retention === 'none');
+  if (unheld.length > 0) {
+    const months = retentionMonths(deps, 'consent');
+    const contact = deps.db.select({ createdAt: contacts.createdAt }).from(contacts).where(eq(contacts.id, id)).get();
+    if (months !== null && contact) {
+      const from = [contact.createdAt, ...unheld.map((row) => row.until).filter((u): u is string => u !== null)].sort().at(-1)!;
+      holds.push({ label: 'Grundfrist (Rollen ohne eigene Frist)', until: retentionEnd(from, months), entity: 'contact', id });
+    }
+  }
+  return holds;
 }
 
 /** Kontakte, deren sämtliche Halter abgelaufen sind. */

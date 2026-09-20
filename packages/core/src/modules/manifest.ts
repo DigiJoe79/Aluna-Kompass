@@ -119,10 +119,18 @@ export interface RecordLabel {
   auditLabel?: string;
 }
 
+/**
+ * `none`: Die Rolle hält ihren Kontakt nicht selbst — das Modul, das sie
+ * mitbringt, hält ihn über seine Vorgänge (Buchungen, Bestätigungen). Eine
+ * Klasse wäre hier falsch: Eine laufende Rolle rechnet „ab heute“ und hielte
+ * für immer (Vorarbeiten-Spec V6).
+ */
+export type ContactRoleRetention = RetentionClass | 'none';
+
 /** Eine Kontaktrolle, die ein Modul beisteuert, samt ihrer Aufbewahrungsklasse. */
 export interface ContactRoleDefinition {
   key: string;
-  retention: RetentionClass;
+  retention: ContactRoleRetention;
 }
 
 export interface NavigationItem {
@@ -404,7 +412,7 @@ export function defineModule(manifest: ModuleManifest): ModuleManifest {
   validateDeletionRules(manifest.key, manifest.deletionRules ?? []);
   for (const role of manifest.contactRoles ?? []) {
     if (!ROLE_KEY.test(role.key)) throw new Error(`invalid contact role key: ${role.key}`);
-    if (!RETENTION_CLASSES.includes(role.retention)) throw new Error(`invalid contact role retention class: ${role.retention}`);
+    if (role.retention !== 'none' && !RETENTION_CLASSES.includes(role.retention)) throw new Error(`invalid contact role retention class: ${role.retention}`);
   }
   const seenTiles = new Set<string>();
   for (const tile of manifest.dashboardTiles ?? []) {
