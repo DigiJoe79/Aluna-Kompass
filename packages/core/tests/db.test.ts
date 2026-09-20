@@ -38,6 +38,7 @@ describe('database', () => {
       'document_text_idx',
       'document_types',
       'documents',
+      'finance_accounts',
       'follow_ups',
       'media_assets',
       'media_folders',

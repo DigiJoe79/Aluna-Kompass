@@ -33,9 +33,11 @@ const organization: SettingDefinition[] = [
   { key: 'organization.email', schema: z.union([z.literal(''), z.email()]), default: '' },
   { key: 'organization.website', schema: z.union([z.literal(''), z.url()]), default: '' },
   { key: 'organization.phone', schema: shortText, default: '' },
-  { key: 'organization.iban', schema: z.string().trim().max(34), default: '' },
-  { key: 'organization.bic', schema: z.string().trim().max(11), default: '' },
-  { key: 'organization.bankName', schema: shortText, default: '' },
+  // Ist das Finanzmodul eingeschaltet, führt das Hauptkonto diese drei Werte (E22) —
+  // in den Vereinsdaten sind sie dann nur noch lesbar.
+  { key: 'organization.iban', schema: z.string().trim().max(34), default: '', managedBy: 'finance' },
+  { key: 'organization.bic', schema: z.string().trim().max(11), default: '', managedBy: 'finance' },
+  { key: 'organization.bankName', schema: shortText, default: '', managedBy: 'finance' },
 ];
 
 const branding: SettingDefinition[] = [

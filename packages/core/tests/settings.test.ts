@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { coreModule } from '../src/core-module';
 import { auditLog } from '../src/db/schema';
 import { defineModule } from '../src/modules/manifest';
+import { CORE_SETTINGS } from '../src/settings/core';
 import { readAllSettings, readSetting, setSetting, writeSettingInternal } from '../src/settings/service';
 import { createTestDeps, ctxWith } from '../src/testing';
 
@@ -82,6 +83,12 @@ describe('organization.foundedYear', () => {
     }
     // Leer bleibt erlaubt: der Verein muss das Jahr nicht pflegen.
     expect((await setSetting(deps, ctx, { key: 'organization.foundedYear', value: '' })).ok).toBe(true);
+  });
+});
+
+describe('bank details managed by finance', () => {
+  it('the bank details of the association are managed by the finance module once it is on', () => {
+    for (const key of ['organization.iban', 'organization.bic', 'organization.bankName']) expect(CORE_SETTINGS.find((s) => s.key === key)).toMatchObject({ managedBy: 'finance' });
   });
 });
 
