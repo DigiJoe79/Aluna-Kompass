@@ -43,12 +43,24 @@ export function abortFinalize(failure: Failure): never {
   throw new FinalizeAborted(failure);
 }
 
+export interface FinalizeOptions {
+  /**
+   * `refuse` (Vorgabe): eine Kassenprüfung mit negativem Ergebnis lehnt ab
+   * (`cashWouldGoNegative`). `reasonGiven`: `reverse.ts` hat die Prüfung
+   * bereits selbst gemacht und eine Begründung eingeholt — hier wird nicht
+   * erneut geprüft.
+   */
+  cashCheck?: 'refuse' | 'reasonGiven';
+  /** Der Buchungstext, gebildet aus der erst hier vergebenen Nummer (Storno: `Storno ${number}`). */
+  textFromNumber?: (number: string) => string;
+}
+
 /**
  * Die sieben Prüfungen des Festschreibens, in einer bereits offenen
  * Transaktion (Finanz-Spec 5.4). Für `finalizeEntry`, `finalizeReviewed`,
- * `bookEntry` und (ab F2a Task 8) `reverse.ts`.
+ * `bookEntry` und `reverse.ts`.
  */
-export function finalizeInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, entryId: string): Result<EntryView> {
+export function finalizeInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, entryId: string, opts: FinalizeOptions = {}): Result<EntryView> {
   const entry = entryViewInternal(tx, entryId);
   if (!entry) return notFound('financeEntry', entryId);
   if (entry.status !== 'draft') return financeConflict('entryNotDraft', { number: entry.number ?? entry.id });
@@ -84,17 +96,19 @@ export function finalizeInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, entry
   const needsRate = entry.allocationLines.some((l) => RATE_REQUIRING_CODES.has(l.taxCode as TaxCode));
   if (needsRate && !hasTaxRate(tx, entry.entryDate)) return financeConflict('noTaxRateForDate', { date: entry.entryDate });
 
-  for (const [accountId, account] of accounts) {
-    if (account.kind !== 'cash') continue;
-    const extra = entry.moneyLines.filter((l) => l.accountId === accountId).map((l) => ({ date: entry.entryDate, amountCents: l.amountCents }));
-    const negative = firstNegativeCashDay(tx, account, entry.entryDate, extra);
-    if (negative) return financeConflict('cashWouldGoNegative', { account: account.name, date: negative.date, amount: formatEuro(negative.balanceCents) });
+  if ((opts.cashCheck ?? 'refuse') === 'refuse') {
+    for (const [accountId, account] of accounts) {
+      if (account.kind !== 'cash') continue;
+      const extra = entry.moneyLines.filter((l) => l.accountId === accountId).map((l) => ({ date: entry.entryDate, amountCents: l.amountCents }));
+      const negative = firstNegativeCashDay(tx, account, entry.entryDate, extra);
+      if (negative) return financeConflict('cashWouldGoNegative', { account: account.name, date: negative.date, amount: formatEuro(negative.balanceCents) });
+    }
   }
 
   const number = allocateEntryNumber(tx, year.id);
   const now = isoNow(deps.clock);
   tx.update(financeEntries)
-    .set({ status: 'final', number, finalizedAt: now, finalizedByUserId: ctx.userId, finalizedChannel: ctx.channel, fiscalYearId: year.id, updatedAt: now })
+    .set({ status: 'final', number, finalizedAt: now, finalizedByUserId: ctx.userId, finalizedChannel: ctx.channel, fiscalYearId: year.id, updatedAt: now, ...(opts.textFromNumber ? { text: opts.textFromNumber(number) } : {}) })
     .where(eq(financeEntries.id, entryId))
     .run();
   const after = entryViewInternal(tx, entryId)!;
