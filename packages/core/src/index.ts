@@ -37,6 +37,7 @@ export * from './auth/sessions';
 export * from './auth/login';
 export * from './auth/tokens';
 export * from './roles/service';
+export * from './roles/provision';
 export * from './roles/effective';
 export * from './users/service';
 export * from './themes/tokens';
