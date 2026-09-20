@@ -23,6 +23,9 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
   die Art noch kein Dokument hat (Verwaltung → Akte).
 - **Ein Modul kann sein Ausschalten ablehnen**, sobald es festgeschriebene
   Vorgänge führt — ausgeschaltet würde es nichts mehr vor dem Löschen schützen.
+- **Nutzerkonten lassen sich mit Kontakten verknüpfen** (Verwaltung → Nutzer).
+  Der Verlauf bleibt erhalten; das eigene Konto verknüpft man einmal selbst,
+  ändern kann es danach nur eine zweite Person.
 - **Dokumentarten können geschützt werden.** Ein Schutzbereich zeigt die
   Dokumente einer Art nur Personen mit dem Recht dieses Bereichs — in Liste,
   Suche, Datei, Startseite und MCP. Bereiche bringt ein Modul mit (zuerst:

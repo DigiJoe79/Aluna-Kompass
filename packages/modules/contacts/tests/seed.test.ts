@@ -2,7 +2,7 @@ import { coreModule, seedDevelopment } from '@kompass/core';
 import { createTestDeps } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { contactsModule } from '../src/manifest';
-import { contactRoles, contacts } from '../src/schema';
+import { contactRoles, contacts, contactUserLinks } from '../src/schema';
 import { contactsRetentionDue } from '../src/retention';
 
 describe('contacts seed', () => {
@@ -28,5 +28,14 @@ describe('contacts seed', () => {
     const deps = createTestDeps({ manifests: [coreModule, contactsModule], env: 'development', now: '2026-09-17T08:00:00.000Z' });
     await seedDevelopment(deps);
     expect(contactsRetentionDue(deps).map((d) => d.label)).toEqual(['Lena Vogt']);
+  });
+
+  it('links one seeded user account to a seeded contact, once', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, contactsModule], env: 'development' });
+    await seedDevelopment(deps);
+    await seedDevelopment(deps);
+    const open = deps.db.select().from(contactUserLinks).all().filter((l) => l.unlinkedAt === null);
+    expect(open).toHaveLength(1);
+    expect(open[0]!.linkedByUserId).not.toBe(open[0]!.userId); // nicht selbst gesetzt
   });
 });

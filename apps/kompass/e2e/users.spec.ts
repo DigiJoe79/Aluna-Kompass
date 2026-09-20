@@ -41,6 +41,23 @@ test.describe('users', () => {
     await expect(row).toContainText('Kassenprüfer');
   });
 
+  test('verknüpft ein Konto mit einem Kontakt und löst die Verknüpfung wieder', async ({ page }) => {
+    // Peter Lang ist im Seed schon verknüpft, Mira Klein nicht.
+    await expect(page.getByRole('row', { name: /Peter Lang/ }).getByRole('link', { name: 'Peter Lang' })).toBeVisible();
+    const row = page.getByRole('row', { name: /Mira Klein/ });
+    await expect(row).toContainText('nicht verknüpft');
+    await row.getByRole('button', { name: 'Verknüpfen' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('combobox', { name: 'Kontakt wählen' }).click();
+    const option = page.getByTestId('contact-option').filter({ hasText: 'Tomas Leitner' });
+    await expect(option).toBeVisible();
+    await option.click();
+    await dialog.getByRole('button', { name: 'Verknüpfen' }).click();
+    await expect(page.getByRole('row', { name: /Mira Klein/ }).getByRole('link', { name: 'Tomas Leitner' })).toBeVisible();
+    await page.getByRole('row', { name: /Mira Klein/ }).getByRole('button', { name: 'Lösen' }).click();
+    await expect(page.getByRole('row', { name: /Mira Klein/ })).toContainText('nicht verknüpft');
+  });
+
   test('rejects a duplicate e-mail inside the dialog', async ({ page }) => {
     await page.getByRole('button', { name: 'Nutzer anlegen' }).click();
     const dialog = page.getByRole('dialog');

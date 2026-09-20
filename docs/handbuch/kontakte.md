@@ -47,6 +47,10 @@ Frist beginnt mit dem Ende des Kalenderjahres, wie das Steuerrecht es
 verlangt; die Dauer je Fristklasse steht unter [Einstellungen →
 Aufbewahrung](einstellungen/aufbewahrung.md).
 
+Manche Rollen, die ein Modul mitbringt, haben **keine eigene Frist** — das Modul hält den Kontakt dann über seine Vorgänge, etwa Buchungen. Sind die abgelaufen, gilt für den Kontakt die Frist der Einwilligung ab dem Ende der letzten solchen Rolle.
+
+Ein Kontakt, der mit einem Nutzerkonto verknüpft ist, bleibt, solange die Verknüpfung besteht — sie zu lösen ist Sache der [Nutzerverwaltung](einstellungen/nutzer-und-rollen.md#konto-und-kontakt-verknüpfen).
+
 Solange irgendetwas den Kontakt hält, ist „Kontakt löschen“ gesperrt und
 sagt, was. Ist alles abgelaufen, wird der Kontakt unter Aufbewahrung als
 fällig gelistet — gelöscht wird er erst, wenn ein Mensch es hier bestätigt.
