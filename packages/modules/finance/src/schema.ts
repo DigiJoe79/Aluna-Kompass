@@ -128,3 +128,91 @@ export const financeDatedValues = sqliteTable(
   (t) => [primaryKey({ columns: [t.key, t.validFrom] })],
 );
 export type FinanceDatedValueRow = typeof financeDatedValues.$inferSelect;
+
+/** Der Kopf einer Buchung. `final` ist unveränderlich — das sichern Trigger, nicht der Dienst (Spec 5.2). */
+export const financeEntries = sqliteTable(
+  'finance_entries',
+  {
+    id: text('id').primaryKey(),
+    /** `<Jahresbezeichnung>-NNNN`, vergeben beim Festschreiben. */
+    number: text('number'),
+    entryDate: text('entry_date').notNull(),
+    text: text('text').notNull(),
+    status: text('status', { enum: ['draft', 'final'] }).notNull().default('draft'),
+    fiscalYearId: text('fiscal_year_id').references(() => financeFiscalYears.id),
+    reviewedAt: text('reviewed_at'),
+    reviewedByUserId: text('reviewed_by_user_id'),
+    finalizedAt: text('finalized_at'),
+    finalizedByUserId: text('finalized_by_user_id'),
+    finalizedChannel: text('finalized_channel'),
+    reversesEntryId: text('reverses_entry_id'),
+    reversedByEntryId: text('reversed_by_entry_id'),
+    correctionOfEntryId: text('correction_of_entry_id'),
+    /** Pflichtbegründung, wenn ein Storno ein Barkonto zeitweise ins Minus bringt; steht im Prüfpaket. */
+    cashWarningReason: text('cash_warning_reason'),
+    createdByUserId: text('created_by_user_id').notNull(),
+    createdChannel: text('created_channel').notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('finance_entries_number_idx').on(t.number),
+    index('finance_entries_date_idx').on(t.entryDate),
+    index('finance_entries_status_idx').on(t.status),
+  ],
+);
+export type FinanceEntryRow = typeof financeEntries.$inferSelect;
+
+/** Betrag in Cent, + = Zufluss aufs Konto. Storno-Zeilen tragen nie einen Rohumsatz. */
+export const financeMoneyLines = sqliteTable(
+  'finance_money_lines',
+  {
+    id: text('id').primaryKey(),
+    entryId: text('entry_id').notNull().references(() => financeEntries.id),
+    position: integer('position').notNull(),
+    accountId: text('account_id').notNull().references(() => financeAccounts.id),
+    amountCents: integer('amount_cents').notNull(),
+    /** Ab F4. Auch ein Entwurf belegt den Rohumsatz („vorgeschlagen“); das Storno gibt ihn frei. Kein Fremdschlüssel: `import` kennt `ledger`, nicht umgekehrt. */
+    rawTransactionId: text('raw_transaction_id'),
+    rawReleasedAt: text('raw_released_at'),
+  },
+  (t) => [
+    index('finance_money_lines_entry_idx').on(t.entryId),
+    index('finance_money_lines_account_idx').on(t.accountId),
+    uniqueIndex('finance_money_lines_raw_idx').on(t.rawTransactionId).where(sql`${t.rawReleasedAt} is null and ${t.rawTransactionId} is not null`),
+  ],
+);
+export type FinanceMoneyLineRow = typeof financeMoneyLines.$inferSelect;
+
+/** Betrag brutto in Cent, + = Einnahme, − = Ausgabe. */
+export const financeAllocationLines = sqliteTable(
+  'finance_allocation_lines',
+  {
+    id: text('id').primaryKey(),
+    entryId: text('entry_id').notNull().references(() => financeEntries.id),
+    position: integer('position').notNull(),
+    categoryId: text('category_id').notNull().references(() => financeCategories.id),
+    amountCents: integer('amount_cents').notNull(),
+    taxCode: text('tax_code').notNull().default('none'),
+    /** Nur bei `rc13b` und `icAcquisition` von Bedeutung: voller (Vorgabe) oder ermäßigter Satz. */
+    rateKind: text('rate_kind', { enum: ['standard', 'reduced'] }).notNull().default('standard'),
+    /** Kein Fremdschlüssel: Projekte gehören einem anderen Modul. */
+    projectId: text('project_id'),
+    purposeId: text('purpose_id').references(() => financePurposes.id),
+    /** Kein Fremdschlüssel: Kontakte gehören einem anderen Modul; das Protokoll nennt nie diese ID. */
+    contactId: text('contact_id'),
+    abroad: integer('abroad', { mode: 'boolean' }).notNull().default(false),
+    /** Rücklastschrift und Rückzahlung zeigen auf die Zeile, die sie zurücknehmen. */
+    originLineId: text('origin_line_id'),
+    /** „Zuführung zum Vermögen“ (§ 62 Abs. 3 AO) — bei Erbschaften vorbelegt. */
+    addsToAssets: integer('adds_to_assets', { mode: 'boolean' }).notNull().default(false),
+  },
+  (t) => [
+    index('finance_allocation_lines_entry_idx').on(t.entryId),
+    index('finance_allocation_lines_category_idx').on(t.categoryId),
+    index('finance_allocation_lines_contact_idx').on(t.contactId),
+    index('finance_allocation_lines_purpose_idx').on(t.purposeId),
+    index('finance_allocation_lines_project_idx').on(t.projectId),
+  ],
+);
+export type FinanceAllocationLineRow = typeof financeAllocationLines.$inferSelect;

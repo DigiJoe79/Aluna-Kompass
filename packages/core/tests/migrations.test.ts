@@ -35,6 +35,12 @@ describe('hand-written SQL survives', () => {
   it('creates the full-text index of the file', () => {
     expect(allSql).toMatch(/CREATE VIRTUAL TABLE `document_text` USING fts5/);
   });
+
+  it('locks finalized finance entries and their lines', () => {
+    for (const name of ['finance_entries_final_no_update', 'finance_entries_final_no_delete', 'finance_money_lines_final_no_update', 'finance_money_lines_final_raw_once', 'finance_money_lines_final_no_delete', 'finance_money_lines_final_no_insert', 'finance_allocation_lines_final_no_update', 'finance_allocation_lines_final_no_delete', 'finance_allocation_lines_final_no_insert']) {
+      expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
+    }
+  });
 });
 
 describe('the migrations of this version', () => {
