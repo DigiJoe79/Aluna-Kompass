@@ -75,7 +75,7 @@ export const fileDocumentSchema = z.object({
  * gerenderten PDF steht. Das Werfen rollt zurück; der nächste Anlauf rendert
  * neu. Eine eigene Klasse, damit der Fang nicht an einer Fehlermeldung hängt.
  */
-class NumberMovedOn extends Error {
+export class NumberMovedOn extends Error {
   constructor() {
     super('number moved on between peek and draw');
     this.name = 'NumberMovedOn';

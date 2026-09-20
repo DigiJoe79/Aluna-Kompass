@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, like, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, like, or, sql, type SQL } from 'drizzle-orm';
 import {
   conflict,
   deleteFollowUpsFor,
@@ -24,7 +24,7 @@ import {
 import { z } from 'zod';
 import { documentTypeFor } from './catalog';
 import { refuseModuleOwned } from './owned';
-import { documentCounters, documentFolders, documentFormerNumbers, documentLinks, documentRelations, documents, type DocumentLinkRow, type DocumentNoteRow, type DocumentRow } from './schema';
+import { documentCounters, documentFolders, documentFormerNumbers, documentLinks, documentRelations, documents, documentTypes, type DocumentLinkRow, type DocumentNoteRow, type DocumentRow } from './schema';
 import { checksumOf, readDocumentFile, removeDocumentFile } from './storage';
 import { removeDocumentText } from './index-store';
 import { fulltextCondition, fulltextHits, type TextHit } from './search';
@@ -207,6 +207,8 @@ export async function listDocuments(
   }
   if (q.unsent) {
     conditions.push(eq(documents.direction, 'outgoing'), eq(documents.phase, 'issued'), sql`${documents.sentAt} is null`);
+    // Was ein Modul ausstellt, verschickt es nach eigenen Regeln (Serienlauf, Bericht) — es stünde hier ewig.
+    conditions.push(inArray(documents.typeKey, deps.db.select({ key: documentTypes.key }).from(documentTypes).where(isNull(documentTypes.ownerModule))));
   }
   if (q.relatedTo) {
     const ids = new Set<string>();

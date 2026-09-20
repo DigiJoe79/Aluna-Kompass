@@ -182,6 +182,7 @@ const WITHOUT_TOOL: Record<string, string> = {
   'dms.countUnreadDocuments': 'Ein Zähler für die Verwaltungsseite.',
   'dms.countDocumentsByFolder': 'Die Zahlen neben den Ordnern; die Liste selbst ist dms_list.',
   'dms.seedDms': 'Beispieldaten der Entwicklung; laufen über seedDevelopment, nie über MCP.',
+  'dms.issueGeneratedDocument': 'Baustein für Module: nimmt einen Callback und stellt unter dem Recht der Vorlage aus; das Werkzeug ist der Dienst des Moduls (z. B. Bestätigung ausstellen).',
   'contacts.deleteContact': 'Löschung personenbezogener Daten bestätigt ein Mensch.',
   'contacts.seedContacts': 'Beispieldaten der Entwicklung.',
   'animals.seedAnimals': 'Beispieldaten der Entwicklung.',

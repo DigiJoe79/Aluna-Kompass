@@ -6,6 +6,7 @@ export * from './drafts';
 export * from './follow-ups';
 export * from './incoming';
 export * from './install';
+export * from './issue';
 export * from './index-store';
 export * from './manifest';
 export * from './mcp-tools';
