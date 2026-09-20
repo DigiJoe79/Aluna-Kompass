@@ -28,6 +28,7 @@ import {
 } from '@kompass/core';
 import { z } from 'zod';
 import { canReadType, isProtectedType, readableTypeFilter, requireDmsGate, requireReadable } from './access';
+import { auditDocumentRef } from './audit-ref';
 import { documentTypeFor } from './catalog';
 import { refuseModuleOwned } from './owned';
 import { documentCounters, documentFolders, documentFormerNumbers, documentLinks, documentRelations, documents, documentTypes, type DocumentLinkRow, type DocumentNoteRow, type DocumentRow } from './schema';
@@ -433,7 +434,16 @@ export async function voidDocument(deps: Deps, ctx: CallContext, input: unknown)
   return deps.db.transaction((tx: DbOrTx) => {
     tx.update(documents).set({ status: 'voided', voidedAt: isoNow(deps.clock), voidedByUserId: ctx.userId, voidReason: parsed.value.reason }).where(eq(documents.id, row.id)).run();
     const after = tx.select().from(documents).where(eq(documents.id, row.id)).get()!;
-    recordAudit(tx, deps, ctx, { action: 'dms.void', entityType: 'document', entityId: row.id, before: { status: 'issued' }, after: { status: 'voided', reason: parsed.value.reason }, summary: `Dokument ${row.number} storniert: ${parsed.value.reason}` });
+    // Der Grund ist frei getippt und das Protokoll unlöschbar: Bei einer geschützten Art bleibt er am Dokument.
+    const ref = auditDocumentRef(tx, row);
+    recordAudit(tx, deps, ctx, {
+      action: 'dms.void',
+      entityType: 'document',
+      entityId: row.id,
+      before: { status: 'issued' },
+      after: ref.hidden ? { status: 'voided' } : { status: 'voided', reason: parsed.value.reason },
+      summary: ref.hidden ? `Dokument ${row.number} storniert` : `Dokument ${row.number} storniert: ${parsed.value.reason}`,
+    });
     return ok(toRecord(deps, ctx, after));
   });
 }
@@ -480,13 +490,14 @@ export async function moveDocument(
     const now = isoNow(deps.clock);
     tx.update(documents).set({ folder: targetFolder, updatedAt: now }).where(eq(documents.id, doc.id)).run();
 
+    const ref = auditDocumentRef(tx, doc);
     recordAudit(tx, deps, ctx, {
       action: 'dms.move',
       entityType: 'document',
       entityId: doc.id,
       before: { folder: doc.folder },
       after: { folder: targetFolder },
-      summary: `Dokument ${doc.number ?? doc.subject} nach „${targetFolder ?? 'Eingangskorb'}“ verschoben`,
+      summary: `Dokument ${ref.hidden ? ref.name : (doc.number ?? doc.subject)} nach „${targetFolder ?? 'Eingangskorb'}“ verschoben`,
     });
 
     const after = tx.select().from(documents).where(eq(documents.id, doc.id)).get()!;
@@ -544,6 +555,8 @@ export async function linkDocument(
         })
         .run();
 
+      // Bei einer geschützten Art nennt das Protokoll nicht, mit wem oder was sie verknüpft ist.
+      const ref = auditDocumentRef(tx, doc);
       recordAudit(tx, deps, ctx, {
         action: 'dms.link',
         entityType: 'documentLink',
@@ -551,10 +564,10 @@ export async function linkDocument(
         after: {
           documentId: parsed.value.documentId,
           entityType: parsed.value.entityType,
-          entityId: parsed.value.entityId,
+          ...(ref.hidden ? {} : { entityId: parsed.value.entityId }),
           role: parsed.value.role,
         },
-        summary: `Bezug zu ${parsed.value.entityType}:${parsed.value.entityId} angelegt`,
+        summary: ref.hidden ? `Bezug an ${ref.name} angelegt` : `Bezug zu ${parsed.value.entityType}:${parsed.value.entityId} angelegt`,
       });
 
       const row = tx.select().from(documentLinks).where(eq(documentLinks.id, id)).get()!;
@@ -589,9 +602,11 @@ export async function unlinkDocument(
   const reservedHit = refuseReservedLinks(deps, [link]);
   if (reservedHit) return reservedHit;
 
+  const doc = deps.db.select().from(documents).where(eq(documents.id, link.documentId)).get();
   return deps.db.transaction((tx: DbOrTx) => {
     tx.delete(documentLinks).where(eq(documentLinks.id, link.id)).run();
 
+    const ref = doc ? auditDocumentRef(tx, doc) : null;
     recordAudit(tx, deps, ctx, {
       action: 'dms.unlink',
       entityType: 'documentLink',
@@ -599,7 +614,7 @@ export async function unlinkDocument(
       before: {
         documentId: link.documentId,
         entityType: link.entityType,
-        entityId: link.entityId,
+        ...(ref?.hidden ? {} : { entityId: link.entityId }),
         role: link.role,
       },
       summary: `Bezug ${link.id} gelöscht`,
@@ -664,6 +679,7 @@ export async function deleteDocument(
       followUps: deleteFollowUpsFor(tx, 'document', doc.id),
     };
 
+    const ref = auditDocumentRef(tx, doc);
     recordAudit(tx, deps, ctx, {
       action: 'dms.delete',
       entityType: 'document',
@@ -671,14 +687,14 @@ export async function deleteDocument(
       before: {
         id: doc.id,
         number: doc.number,
-        subject: doc.subject,
+        ...ref.subject,
         typeKey: doc.typeKey,
         documentDate: doc.documentDate,
         folder: doc.folder,
         fileChecksum: doc.fileChecksum,
         removed,
       },
-      summary: `Dokument ${doc.number ?? doc.subject} gelöscht`,
+      summary: `Dokument ${ref.hidden ? ref.name : (doc.number ?? doc.subject)} gelöscht`,
     });
 
     tx.delete(documentLinks).where(eq(documentLinks.documentId, doc.id)).run();

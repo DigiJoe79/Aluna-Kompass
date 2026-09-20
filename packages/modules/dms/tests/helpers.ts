@@ -93,3 +93,6 @@ export async function setupWithArea() {
   const open = await fileFixture(deps, all);
   return { deps, all, viewer: ctxWith(ALL_DMS, viewerId), auditor: ctxWith(['probe.read'], auditorId), secretId: secret.id, openId: open.id };
 }
+
+/** Der Schlüssel der eingehenden Beispielart aus `seedTypes` — eine Art ohne Bereich. */
+export const INCOMING_OPEN_TYPE = 'authority';

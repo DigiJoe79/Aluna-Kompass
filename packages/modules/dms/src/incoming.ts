@@ -19,7 +19,8 @@ import {
 } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { canReadType, requireDmsGate, requireReadable } from './access';
+import { canReadType, isProtectedType, requireDmsGate, requireReadable } from './access';
+import { auditDocumentRef } from './audit-ref';
 import { documentTypeFor } from './catalog';
 import { refuseModuleOwned } from './owned';
 import { RELATION_KINDS, documentFormerNumbers, documentLinks, documentRelations, documents, type DocumentRow, type DocumentTypeRow } from './schema';
@@ -103,7 +104,13 @@ export async function receiveDocument(
 
   return storeIncoming(
     deps, ctx, bytes,
-    { docType, subject: parsed.value.subject, documentDate: parsed.value.documentDate, folder, links: parsed.value.links, relations: parsed.value.relations, audit: { after: { subject: parsed.value.subject, relations: parsed.value.relations.length }, summary: (number) => `Dokument ${number} („${parsed.value.subject}“) eingegangen` } },
+    {
+      docType, subject: parsed.value.subject, documentDate: parsed.value.documentDate, folder, links: parsed.value.links, relations: parsed.value.relations,
+      // Ist die Art geschützt, steht der Betreff nicht im Protokoll — nur die Nummer.
+      audit: isProtectedType(docType)
+        ? { after: { relations: parsed.value.relations.length }, summary: (number) => `Dokument ${number} eingegangen` }
+        : { after: { subject: parsed.value.subject, relations: parsed.value.relations.length }, summary: (number) => `Dokument ${number} („${parsed.value.subject}“) eingegangen` },
+    },
     (tx, doc) => toRecord(deps, ctx, tx.select().from(documents).where(eq(documents.id, doc.id)).get()!, tx),
   );
 }
@@ -244,7 +251,9 @@ export async function reclassifyDocument(deps: Deps, ctx: CallContext, input: un
       .where(eq(documents.id, id))
       .run();
     const after = tx.select().from(documents).where(eq(documents.id, id)).get()!;
-    const pick = (row: DocumentRow) => ({ typeKey: row.typeKey, number: row.number, subject: row.subject, documentDate: row.documentDate });
+    // Ist die alte oder die neue Art geschützt, steht der Betreff nicht im Protokoll.
+    const ref = auditDocumentRef(tx, before, newType?.key);
+    const pick = (row: DocumentRow) => ({ typeKey: row.typeKey, number: row.number, ...(ref.hidden ? {} : { subject: row.subject }), documentDate: row.documentDate });
     recordAudit(tx, deps, ctx, {
       action: 'dms.reclassify',
       entityType: 'document',

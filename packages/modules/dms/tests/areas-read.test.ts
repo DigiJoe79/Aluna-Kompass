@@ -10,10 +10,7 @@ import { previewReclassification, receiveDocument } from '../src/incoming';
 import { relateDocuments } from '../src/relations';
 import { getDocument, getDocumentRecord, listDocuments, moveDocument, previewNextNumber } from '../src/service';
 import { countUnreadDocuments, getDocumentText, reindexAllDocuments } from '../src/text';
-import { pdfBytes, setupWithArea } from './helpers';
-
-/** Der Schlüssel der eingehenden Beispielart aus `seedTypes`. */
-const INCOMING_OPEN_TYPE = 'authority';
+import { INCOMING_OPEN_TYPE, pdfBytes, setupWithArea } from './helpers';
 
 const denied = (r: { ok: boolean; error?: unknown }) => (r.ok ? null : r.error);
 

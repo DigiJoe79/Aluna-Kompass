@@ -15,6 +15,7 @@ import {
 } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { auditDocumentRef } from './audit-ref';
 import type { DispatchChannel } from './install';
 import { documents } from './schema';
 import { toRecord, type DocumentRecord } from './service';
@@ -57,12 +58,14 @@ export async function recordDispatch(deps: Deps, ctx: CallContext, input: unknow
     const now = isoNow(deps.clock);
     tx.update(documents).set({ sentAt: v.sentAt, sentVia: v.sentVia, sentNote: v.note ?? null, updatedAt: now }).where(eq(documents.id, row.id)).run();
     const after = tx.select().from(documents).where(eq(documents.id, row.id)).get()!;
+    // Die Anmerkung ist frei getippt: Bei einer geschützten Art bleibt sie am Dokument.
+    const hidden = auditDocumentRef(tx, row).hidden;
     recordAudit(tx, deps, ctx, {
       action: 'dms.dispatch',
       entityType: 'document',
       entityId: row.id,
-      before: { sentAt: row.sentAt, sentVia: row.sentVia, sentNote: row.sentNote },
-      after: { sentAt: after.sentAt, sentVia: after.sentVia, sentNote: after.sentNote },
+      before: { sentAt: row.sentAt, sentVia: row.sentVia, ...(hidden ? {} : { sentNote: row.sentNote }) },
+      after: { sentAt: after.sentAt, sentVia: after.sentVia, ...(hidden ? {} : { sentNote: after.sentNote }) },
       summary: `Dokument ${row.number} als versandt vermerkt: ${v.sentAt} per ${v.sentVia}`,
     });
     return ok(toRecord(deps, ctx, after, tx));
@@ -81,12 +84,13 @@ export async function clearDispatch(deps: Deps, ctx: CallContext, input: unknown
   return deps.db.transaction((tx: DbOrTx) => {
     tx.update(documents).set({ sentAt: null, sentVia: null, sentNote: null, updatedAt: isoNow(deps.clock) }).where(eq(documents.id, row.id)).run();
     const after = tx.select().from(documents).where(eq(documents.id, row.id)).get()!;
+    const hidden = auditDocumentRef(tx, row).hidden;
     recordAudit(tx, deps, ctx, {
       action: 'dms.dispatch.clear',
       entityType: 'document',
       entityId: row.id,
-      before: { sentAt: row.sentAt, sentVia: row.sentVia, sentNote: row.sentNote },
-      after: { sentAt: null, sentVia: null, sentNote: null },
+      before: { sentAt: row.sentAt, sentVia: row.sentVia, ...(hidden ? {} : { sentNote: row.sentNote }) },
+      after: { sentAt: null, sentVia: null, ...(hidden ? {} : { sentNote: null }) },
       summary: `Versandvermerk an Dokument ${row.number} entfernt`,
     });
     return ok(toRecord(deps, ctx, after, tx));

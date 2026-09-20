@@ -15,6 +15,7 @@ import {
 } from '@kompass/core';
 import { asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { auditDocumentRef } from './audit-ref';
 import { documentNotes, documents, type DocumentNoteRow } from './schema';
 
 export const noteAddSchema = z.object({ documentId: z.string().min(1), body: z.string().trim().min(1).max(4000) });
@@ -29,7 +30,7 @@ export async function addNote(deps: Deps, ctx: CallContext, input: unknown): Pro
   if (denied) return denied;
   const parsed = validate(deps, noteAddSchema, input);
   if (!parsed.ok) return parsed;
-  const doc = deps.db.select({ id: documents.id, number: documents.number, subject: documents.subject }).from(documents).where(eq(documents.id, parsed.value.documentId)).get();
+  const doc = deps.db.select({ id: documents.id, number: documents.number, subject: documents.subject, typeKey: documents.typeKey }).from(documents).where(eq(documents.id, parsed.value.documentId)).get();
   if (!doc) return notFound('document', parsed.value.documentId);
 
   return deps.db.transaction((tx: DbOrTx) => {
@@ -37,7 +38,8 @@ export async function addNote(deps: Deps, ctx: CallContext, input: unknown): Pro
     tx.insert(documentNotes).values({ id, documentId: doc.id, body: parsed.value.body, createdByUserId: ctx.userId ?? 'system', createdAt: isoNow(deps.clock) }).run();
     // Der Text der Notiz steht nicht im Protokoll: Sie ist Arbeitsmaterial,
     // und ihr Inhalt geht mit ihr (wie beim Entwurf, Entscheidung 4).
-    recordAudit(tx, deps, ctx, { action: 'dms.note.add', entityType: 'documentNote', entityId: id, after: { documentId: doc.id }, summary: `Notiz an ${doc.number ?? doc.subject} angefügt` });
+    const ref = auditDocumentRef(tx, doc);
+    recordAudit(tx, deps, ctx, { action: 'dms.note.add', entityType: 'documentNote', entityId: id, after: { documentId: doc.id }, summary: `Notiz an ${ref.hidden ? ref.name : (doc.number ?? doc.subject)} angefügt` });
     return ok(tx.select().from(documentNotes).where(eq(documentNotes.id, id)).get()!);
   });
 }

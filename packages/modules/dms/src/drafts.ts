@@ -18,6 +18,7 @@ import {
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { requireDmsGate, requireReadable } from './access';
+import { auditDocumentRef } from './audit-ref';
 import { documentTypeFor } from './catalog';
 import { refuseModuleOwned } from './owned';
 import { resolveRecipient } from './recipients';
@@ -156,15 +157,16 @@ export async function createDraft(deps: Deps, ctx: CallContext, input: unknown):
         .run();
     }
 
+    const row = tx.select().from(documents).where(eq(documents.id, id)).get()!;
+    const ref = auditDocumentRef(tx, row);
     recordAudit(tx, deps, ctx, {
       action: 'dms.draft.create',
       entityType: 'documentDraft',
       entityId: id,
-      after: { typeKey: docType.key, subject: parsed.value.subject },
-      summary: `Entwurf „${parsed.value.subject}“ angelegt`,
+      after: { typeKey: docType.key, ...ref.subject },
+      summary: ref.hidden ? `${ref.name} angelegt` : `Entwurf „${parsed.value.subject}“ angelegt`,
     });
 
-    const row = tx.select().from(documents).where(eq(documents.id, id)).get()!;
     return ok(toRecord(deps, ctx, row, tx));
   });
 }
@@ -218,13 +220,14 @@ export async function updateDraft(deps: Deps, ctx: CallContext, input: unknown):
 
     const after = tx.select().from(documents).where(eq(documents.id, row.id)).get()!;
 
+    const ref = auditDocumentRef(tx, after);
     recordAudit(tx, deps, ctx, {
       action: 'dms.draft.update',
       entityType: 'documentDraft',
       entityId: row.id,
-      before: { subject: row.subject },
-      after: { subject: after.subject },
-      summary: `Entwurf „${after.subject}“ geändert`,
+      before: ref.hidden ? {} : { subject: row.subject },
+      after: ref.hidden ? {} : { subject: after.subject },
+      summary: ref.hidden ? `${ref.name} geändert` : `Entwurf „${after.subject}“ geändert`,
     });
 
     return ok(toRecord(deps, ctx, after, tx));
@@ -254,12 +257,13 @@ export async function deleteDraft(deps: Deps, ctx: CallContext, input: unknown):
     tx.delete(documentLinks).where(eq(documentLinks.documentId, row.id)).run();
     tx.delete(documents).where(eq(documents.id, row.id)).run();
 
+    const ref = auditDocumentRef(tx, row);
     recordAudit(tx, deps, ctx, {
       action: 'dms.draft.delete',
       entityType: 'documentDraft',
       entityId: row.id,
-      before: { subject: row.subject, typeKey: row.typeKey, removed },
-      summary: `Entwurf „${row.subject}“ gelöscht`,
+      before: { ...ref.subject, typeKey: row.typeKey, removed },
+      summary: ref.hidden ? `${ref.name} gelöscht` : `Entwurf „${row.subject}“ gelöscht`,
     });
   });
 
@@ -304,12 +308,13 @@ export async function previewDraft(
   const filename = `${(row.subject || 'Entwurf').replace(/[^\p{L}\p{N} _-]/gu, '').trim() || 'Entwurf'}-Vorschau.pdf`;
 
   deps.db.transaction((tx: DbOrTx) => {
+    const ref = auditDocumentRef(tx, row);
     recordAudit(tx, deps, ctx, {
       action: 'dms.draft.preview',
       entityType: 'documentDraft',
       entityId: row.id,
-      after: { templateKey, subject: row.subject },
-      summary: `Vorschau für Entwurf „${row.subject}“ erzeugt`,
+      after: { templateKey, ...ref.subject },
+      summary: ref.hidden ? `Vorschau für ${ref.name} erzeugt` : `Vorschau für Entwurf „${row.subject}“ erzeugt`,
     });
   });
 
