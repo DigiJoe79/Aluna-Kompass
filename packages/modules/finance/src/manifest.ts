@@ -1,8 +1,31 @@
-import { defineModule, type ModuleManifest } from '@kompass/core';
+import { defineModule, type ModuleManifest, type SettingDefinition } from '@kompass/core';
 import { eq } from 'drizzle-orm';
+import { z } from 'zod';
 import { requireFinanceRead } from './ledger/access';
 import { installFinance } from './install';
 import { financeFiscalYears } from './schema';
+
+/**
+ * Alle Einstellungen der Spec (5.1), auch die erst spätere Pläne lesen — eine
+ * Einstellung nachzureichen kostet nichts, aber die Liste an einer Stelle zu
+ * haben, erspart die Suche.
+ */
+const FINANCE_SETTINGS: readonly SettingDefinition[] = [
+  // E10: Ein Agent darf humanOnly-Dienste erst freigeschaltet über MCP nutzen — und das nur ein Mensch am Bildschirm.
+  { key: 'finance.mcpHumanOnlyAllowed', schema: z.boolean(), default: false, uiOnly: true },
+  { key: 'finance.membershipFeesCertifiable', schema: z.boolean(), default: true },
+  { key: 'finance.expenseWaiversEnabled', schema: z.boolean(), default: true },
+  { key: 'finance.isEntrepreneurOrHasVatId', schema: z.boolean(), default: false },
+  { key: 'finance.proofGraceDays', schema: z.number().int().min(0).max(365), default: 30 },
+  { key: 'finance.statementSufficesBelowCents', schema: z.number().int().min(0), default: 0 },
+  { key: 'finance.cashDonationAlertCents', schema: z.number().int().min(0), default: 100000 },
+  { key: 'finance.roundAmountFromCents', schema: z.number().int().min(0), default: 50000 },
+  { key: 'finance.batchMinimumCents', schema: z.number().int().min(0), default: 0 },
+  { key: 'finance.noticeExpiryWarnMonths', schema: z.number().int().min(1).max(24), default: 6 },
+  { key: 'finance.uploadLimitMb', schema: z.number().int().min(1).max(10), default: 5 },
+  { key: 'finance.lastStatementWarnDays', schema: z.number().int().min(1).max(365), default: 35 },
+  { key: 'finance.voucherTypes', schema: z.array(z.string()), default: ['voucher-own', 'voucher-invoice', 'voucher-receipt', 'bank-statement'] },
+];
 
 /**
  * Alle zehn Rechte stehen von Anfang an hier, auch die, deren Dienste erst
@@ -22,6 +45,7 @@ export const financeModule: ModuleManifest = defineModule({
   dependsOn: ['contacts', 'dms', 'projects'],
   files: true,
   permissions: [...FINANCE_PERMISSIONS],
+  settings: FINANCE_SETTINGS,
   // Dokumentarten mit diesem Bereich sieht nur, wer Finanzen mit Namen lesen darf — nicht jeder mit `dms.view`.
   documentAreas: [{ key: 'finance', permission: 'finance.read' }],
   /**
@@ -39,6 +63,16 @@ export const financeModule: ModuleManifest = defineModule({
   // AGENTS.md verlangt den Haken für jedes Modul von Anfang an.
   seed: async () => {},
   install: installFinance,
+  deletionRules: [
+    { entity: 'financeAccount', deletable: true, reason: 'Arbeitsmaterial der Stammdaten.', guard: 'nur unbenutzt; sonst stilllegen', auditAction: 'finance.account.delete' },
+    { entity: 'financeCategory', deletable: true, reason: 'Arbeitsmaterial der Stammdaten.', guard: 'nur unbenutzt; sonst stilllegen', auditAction: 'finance.category.delete' },
+    { entity: 'financePurpose', deletable: true, reason: 'Arbeitsmaterial der Stammdaten.', guard: 'nur unbenutzt; sonst stilllegen', auditAction: 'finance.purpose.delete' },
+    { entity: 'financeDatedValue', deletable: true, reason: 'Nur die eigene Überschreibung; die ausgelieferte Reihe ist Code.', guard: 'nur die Überschreibung des Vereins', auditAction: 'finance.datedValue.remove' },
+    { entity: 'financeFiscalYear', deletable: false, reason: 'Geschäftsjahre und ihre Abschlüsse sind die Gliederung der Rechenschaft. Personenbezogene Inhalte eines Jahres werden nach Ablauf der Frist anonymisiert, nicht gelöscht.' },
+    { entity: 'financePeriodEvent', deletable: false, reason: 'Geschäftsjahre und ihre Abschlüsse sind die Gliederung der Rechenschaft. Personenbezogene Inhalte eines Jahres werden nach Ablauf der Frist anonymisiert, nicht gelöscht.' },
+  ],
+  // F2a ergänzt: ablehnen (`hasFinalRecords`), sobald es eine festgeschriebene Buchung gibt — Finanzen hält Kontakte, Belege und Projekte.
+  canDisable: () => null,
   followUpTargets: (deps, entityType, id) => {
     if (entityType !== 'financeFiscalYear') return null;
     const year = deps.db.select({ designation: financeFiscalYears.designation }).from(financeFiscalYears).where(eq(financeFiscalYears.id, id)).get();

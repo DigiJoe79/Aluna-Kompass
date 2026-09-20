@@ -46,4 +46,14 @@ describe('finance module', () => {
     expect(financeModule.followUpTargets!(deps, 'financeFiscalYear', 'nope')).toBeNull();
     expect(financeModule.followUpTargets!(deps, 'contact', 'x')).toBeNull();
   });
+
+  it('states for every entity whether it can be deleted, and never lets the history go', () => {
+    const rules = Object.fromEntries((financeModule.deletionRules ?? []).map((r) => [r.entity, r.deletable]));
+    expect(rules).toEqual({ financeAccount: true, financeCategory: true, financePurpose: true, financeDatedValue: true, financeFiscalYear: false, financePeriodEvent: false });
+  });
+
+  it('can be switched off as long as nothing is finalized', () => {
+    const { deps } = setupFinance();
+    expect(financeModule.canDisable!(deps)).toBeNull();
+  });
 });
