@@ -51,6 +51,7 @@ export const financeModule: ModuleManifest = defineModule({
     { href: '/finance/entries', doc: 'finanzen/buchen' },
     { href: '/finance/accounts', doc: 'finanzen/konten-und-offene-zahlungen' },
     { href: '/finance/open-items', doc: 'finanzen/konten-und-offene-zahlungen' },
+    { href: '/finance/cash', doc: 'finanzen/barkasse' },
     { href: '/admin/finance', doc: 'finanzen/einrichten' },
   ],
   navigation: [

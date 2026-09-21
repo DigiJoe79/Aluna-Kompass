@@ -33,6 +33,26 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 - **Ordner und Jahrgänge als Bündel.** Die Akte packt einen Ordner oder einen
   Jahrgang als ZIP: PDFs, Inhaltsverzeichnis als PDF und CSV mit Prüfsummen.
   Jede Datei wird dabei gegen ihre Prüfsumme geprüft.
+- **Finanzen: Buchen von Hand.** Wer möchte, führt die Vereinskasse jetzt in
+  Kompass: Geschäftsjahr, Bankkonten und Kassen mit Anfangsbestand, Kategorien
+  und Steuerliches in einer Checkliste einrichten; Einnahmen, Ausgaben,
+  Umbuchungen und Sachspenden buchen, auf mehrere Kategorien oder Zwecke
+  aufteilen, Belege anhängen und festgeschriebene Buchungen korrigieren. Die
+  Barkasse zählt sich zu zweit mit einem eigenen Zählprotokoll; Bankkonten
+  und Kassen zeigen ihren Bestand, offene Zahlungen lassen sich anlegen und
+  mit einem Klick begleichen. Die Startseite zeigt unter „Finanzen: zu tun“,
+  was ansteht, und jedes Projekt bekommt einen eigenen Finanzabschnitt mit
+  Zielbetrag, Einnahmen, Ausgaben und Ergebnis.
+- **Neue Dokumentart „Zählprotokoll“** (Präfix `KZP`) hält das Ergebnis jeder
+  Kassenzählung fest. Trägt eine eigene Dokumentart Ihres Vereins das Präfix
+  `KZP` bereits, meldet der Start einen Fehler — benennen Sie das Präfix
+  dieser Art vor dem Update um.
+- **Sieben neue Theme-Tokens** für die Finanzoberfläche. Ein gespeichertes
+  Theme, das sie noch nicht kennt — jede Installation vor diesem Update —,
+  übernimmt beim Start automatisch die Vorgabewerte; eigene Anpassungen an
+  den übrigen Tokens bleiben unangetastet.
+- Diese Fassung bringt mehrere Datenbank-Migrationen mit, die beim Start von
+  selbst laufen — vor dem Update wie immer ein Backup exportieren.
 
 ### Geändert
 

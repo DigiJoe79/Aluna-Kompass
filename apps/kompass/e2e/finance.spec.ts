@@ -317,7 +317,7 @@ test.describe('finance', () => {
     await expect(page.getByText('Rest 70,00 €')).toBeVisible();
   });
 
-  test('ein Teilbetrag über dem Betrag der Geldzeile wird am Feld abgewiesen', async ({ page }) => {
+  test('ein Teilbetrag über dem Betrag des Kontos wird am Feld abgewiesen', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/entries/new?template=expense');
     await page.getByLabel('Text').fill('Testausgabe Teilbetrag zu hoch');
@@ -327,7 +327,7 @@ test.describe('finance', () => {
     await accountCard.getByRole('button', { name: 'begleicht offene Zahlung' }).click();
     await accountCard.getByRole('button').filter({ hasText: 'RE-2026-041' }).click();
     await accountCard.getByLabel('Teilbetrag').fill('999,00');
-    await expect(page.getByText('Der Teilbetrag übersteigt den Betrag der Geldzeile.')).toBeVisible();
+    await expect(page.getByText('Der Teilbetrag übersteigt den Betrag des Kontos.')).toBeVisible();
   });
 
   test('Betragsfeld: 12,5 wird 12,50; 12.50 wird als Format abgelehnt', async ({ page }) => {

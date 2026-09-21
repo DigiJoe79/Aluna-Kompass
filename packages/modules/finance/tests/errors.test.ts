@@ -22,4 +22,46 @@ describe('finance errors', () => {
     const offenders = files(SRC).filter((f) => f.endsWith('.ts') && !f.endsWith(`${path.sep}errors.ts`)).filter((f) => /\bconflict\(/.test(readFileSync(f, 'utf8')));
     expect(offenders.map((f) => path.relative(SRC, f))).toEqual([]);
   });
+
+  /**
+   * Grund und Abhilfe landen wörtlich in der Oberfläche (F3b Task 7,
+   * Spec 2026-09-20 § 10.5 „Modell → Oberfläche“). Dieselbe Verbotsliste wie
+   * `apps/kompass/tests/finance-wording.test.ts`, hier gegen `FINANCE_ERRORS`
+   * statt `de.json`.
+   */
+  it('speaks the surface language: none of the model words appears in reason or remedy', () => {
+    const FORBIDDEN: { pattern: RegExp; word: string }[] = [
+      { pattern: /\bSoll\b/, word: 'Soll' },
+      { pattern: /\bHaben\b/, word: 'Haben' },
+      { pattern: /\bStorno\w*/, word: 'Storno' },
+      { pattern: /\bstornier\w*/, word: 'stornier' },
+      { pattern: /\bPeriode\w*/, word: 'Periode' },
+      { pattern: /\bGeldkonto\w*/, word: 'Geldkonto' },
+      { pattern: /\bGeldzeile\w*/, word: 'Geldzeile' },
+      { pattern: /\bZuordnungszeile\w*/, word: 'Zuordnungszeile' },
+      { pattern: /\bRohumsatz\w*/, word: 'Rohumsatz' },
+      { pattern: /\bImportlauf\w*/, word: 'Importlauf' },
+      { pattern: /\bSphäre\w*/, word: 'Sphäre' },
+      { pattern: /\bSteuerkennzeichen\w*/, word: 'Steuerkennzeichen' },
+      { pattern: /[Oo]ffener?\s+Posten/, word: 'offener/offene Posten' },
+      { pattern: /\bDurchlaufposten\w*/, word: 'Durchlaufposten' },
+      { pattern: /\bRücklastschrift\w*/, word: 'Rücklastschrift' },
+      { pattern: /\bPartnerzahlung\w*/, word: 'Partnerzahlung' },
+      { pattern: /\bEmpfängerprofil\w*/, word: 'Empfängerprofil' },
+      { pattern: /\bDatierte Werte\b/, word: 'Datierte Werte' },
+      { pattern: /\bDoppel\b/, word: 'Doppel' },
+      { pattern: /\btransit\b/, word: 'transit' },
+    ];
+
+    const hits: string[] = [];
+    for (const [code, { reason, remedy }] of Object.entries(FINANCE_ERRORS)) {
+      for (const field of ['reason', 'remedy'] as const) {
+        const text = field === 'reason' ? reason : remedy;
+        for (const { pattern, word } of FORBIDDEN) {
+          if (pattern.test(text)) hits.push(`${code}.${field}: Modellwort „${word}“ in "${text}"`);
+        }
+      }
+    }
+    expect(hits).toEqual([]);
+  });
 });

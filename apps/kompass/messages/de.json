@@ -2343,7 +2343,7 @@
     },
     "amount": {
       "format": "Bitte einen Betrag wie 12,50 eingeben",
-      "exceeds": "Der Teilbetrag übersteigt den Betrag der Geldzeile.",
+      "exceeds": "Der Teilbetrag übersteigt den Betrag des Kontos.",
       "directionGroup": "Richtung",
       "direction": {
         "in": "Eingang",
@@ -2567,7 +2567,7 @@
       "open": "ansehen",
       "related": {
         "title": "Hängt zusammen mit",
-        "unnamedItem": "offener Posten",
+        "unnamedItem": "offene Zahlung",
         "settlement": "{amount} beglichen · Rest {rest}"
       },
       "history": {

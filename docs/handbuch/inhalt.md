@@ -23,6 +23,7 @@
 - Finanzen
   - [Finanzen einrichten](finanzen/einrichten.md)
   - [Buchen von Hand](finanzen/buchen.md)
+  - [Barkasse](finanzen/barkasse.md)
   - [Konten und offene Zahlungen](finanzen/konten-und-offene-zahlungen.md)
 - Einstellungen
   - [Stammdaten](einstellungen/verein.md)
