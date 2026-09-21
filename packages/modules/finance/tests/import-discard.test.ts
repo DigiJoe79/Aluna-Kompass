@@ -5,6 +5,7 @@ import { auditEntry, ctxWith, systemContext } from '@kompass/core/testing';
 import { documents } from '@kompass/module-dms';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
+import { decideCandidate } from '../src/import/candidates';
 import { previewDiscardRun, discardRun } from '../src/import/discard';
 import { importStatement } from '../src/import/runs';
 import { createAccount } from '../src/ledger/accounts';
@@ -99,6 +100,27 @@ describe('discardRun', () => {
 
     unwrap(await discardRun(f.deps, f.ctx, { id: heldRun.runs[0]!.id, note: 'War ebenfalls falsch' }));
     expect(f.deps.db.select().from(financeImportCandidates).where(eq(financeImportCandidates.runId, heldRun.runs[0]!.id)).all()).toHaveLength(0);
+  });
+
+  it('severs the reference of a decided candidate in another, surviving run — its decision stays, only the matched raw transaction is cleared', async () => {
+    const f = await discardFixture();
+    // earlierRun (Juni) traegt einen eigenen Rohumsatz; laterRun (September, nicht ueberlappend) haelt
+    // einen Kandidaten, der ihn als „bereits vorhanden“ zeigt (matchesRawTransactionId). Dieser Kandidat
+    // gehoert laterRun, nicht earlierRun — genau der Fall, der nur den Bezug verliert, nicht die Zeile.
+    const earlierRun = unwrap(await importStatement(f.deps, f.ctx, { accountId: f.account.id, fileName: 'juni.xml', bytes: bytes('ohne-referenz.xml') })).runs[0]!;
+    const laterRun = unwrap(await importStatement(f.deps, f.ctx, { accountId: f.account.id, fileName: 'september.xml', bytes: bytes('ohne-referenz-nicht-ueberlappend.xml') })).runs[0]!;
+    const candidate = f.deps.db.select().from(financeImportCandidates).where(eq(financeImportCandidates.runId, laterRun.id)).get()!;
+    expect(candidate.matchesRawTransactionId).not.toBeNull();
+
+    // Entschieden — der Trigger sperrt raw_transaction_id danach, aber nicht matches_raw_transaction_id.
+    unwrap(await decideCandidate(f.deps, f.ctx, { id: candidate.id, decision: 'same' }));
+
+    unwrap(await discardRun(f.deps, f.ctx, { id: earlierRun.id, note: 'Falscher Auszug' }));
+
+    const after = f.deps.db.select().from(financeImportCandidates).where(eq(financeImportCandidates.id, candidate.id)).get()!;
+    expect(after.decision).toBe('same'); // die Entscheidung bleibt stehen
+    expect(after.matchesRawTransactionId).toBeNull(); // der Bezug auf den geloeschten Rohumsatz ist geloest
+    expect(f.deps.db.select().from(financeRawTransactions).where(eq(financeRawTransactions.runId, earlierRun.id)).all()).toHaveLength(0);
   });
 
   it('keeps the run as a fact with checksum, counters, who and why', async () => {
