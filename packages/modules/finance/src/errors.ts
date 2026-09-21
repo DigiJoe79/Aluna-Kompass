@@ -33,6 +33,10 @@ export const FINANCE_ERRORS = {
   entryLocked: { reason: 'Buchung {number} lässt sich nicht stornieren: {reason}', remedy: 'Lösen Sie zuerst, was darauf aufbaut.' },
   notReviewed: { reason: '{count} der gewählten Entwürfe sind nicht geprüft.', remedy: 'Der Sammellauf nimmt nur geprüfte Entwürfe: Prüfen Sie sie zuerst, oder schreiben Sie sie einzeln fest.' },
   noTaxRateForDate: { reason: 'Für den {date} ist kein Umsatzsteuersatz hinterlegt.', remedy: 'Tragen Sie den Satz unter „Finanzen einrichten → Werte“ mit seinem Stichtag ein.' },
+  voucherTypeNotAllowed: { reason: 'Die Art „{type}“ gilt beim Verein nicht als Finanzbeleg.', remedy: 'Wählen Sie eine der hinterlegten Belegarten, oder tragen Sie die Art unter „Finanzen einrichten“ nach.' },
+  documentNotFinal: { reason: 'Das Dokument ist noch ein Entwurf.', remedy: 'Ein Beleg braucht ein festgeschriebenes Dokument der Akte.' },
+  documentVoided: { reason: 'Das Dokument ist storniert.', remedy: 'Verknüpfen Sie ein gültiges Dokument als Beleg.' },
+  voucherAlreadyLinked: { reason: 'Dieses Dokument hängt schon als Beleg an der Buchung.', remedy: 'Verknüpfen Sie es nicht ein zweites Mal.' },
 } as const satisfies Record<string, { reason: string; remedy: string }>;
 
 export type FinanceErrorCode = keyof typeof FINANCE_ERRORS;

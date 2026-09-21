@@ -5,11 +5,17 @@ import { dmsModule } from '@kompass/module-dms';
 import { projectsModule } from '@kompass/module-projects';
 import { eq } from 'drizzle-orm';
 import { createAccount } from '../src/ledger/accounts';
+import { bookEntry } from '../src/ledger/finalize';
 import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
 import { createPurpose } from '../src/ledger/purposes';
 import { installFinance } from '../src/install';
 import { FINANCE_PERMISSIONS, financeModule } from '../src/manifest';
 import { financeCategories, type FinanceCategoryRow } from '../src/schema';
+
+/** Ein minimales, gültiges PDF — wie in den Tests der Akte (`packages/modules/dms/tests/helpers.ts`). */
+export function pdfBytes(): Uint8Array {
+  return new TextEncoder().encode('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n');
+}
 
 /** Das Modul ist **eingeschaltet** — sonst kennt der Kern weder seine Rollen noch seine Haken. */
 export function setupFinance(permissions: readonly string[] = FINANCE_PERMISSIONS) {
@@ -52,5 +58,8 @@ export async function ledgerFixture() {
   const donorCtx: CallContext = { ...systemContext(), permissions: new Set(['contacts.manage']) };
   const donor = unwrap(await createContact(deps, donorCtx, { kind: 'person', lastName: 'Musterspenderin' }));
 
-  return { deps, ctx, userId, bank, cash, year, donations, fees, programCosts, purposeIncome, abroadPurpose, donor };
+  /** Eine ausgeglichene, festgeschriebene Spende — Ausgangslage für Beleg- und Postentests. */
+  const finalEntry = async () => bookEntry(deps, ctx, { entryDate: '2026-03-01', text: 'Spende', moneyLines: [{ accountId: bank.id, amountCents: 5000 }], allocationLines: [{ categoryId: donations.id, amountCents: 5000 }] }).then(unwrap);
+
+  return { deps, ctx, userId, bank, cash, year, donations, fees, programCosts, purposeIncome, abroadPurpose, donor, finalEntry };
 }
