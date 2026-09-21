@@ -120,6 +120,13 @@
       "when": 1789977103963,
       "tag": "0016_finance_project_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1789992754466,
+      "tag": "0017_finance_cash_counts",
+      "breakpoints": true
     }
   ]
 }

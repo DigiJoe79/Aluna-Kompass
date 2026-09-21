@@ -60,6 +60,12 @@ export const FINANCE_ERRORS = {
   fiscalYearNotEnded: { reason: 'Das Geschäftsjahr {year} ist noch nicht zu Ende.', remedy: 'Ein Geschäftsjahr lässt sich frühestens nach seinem Enddatum abschließen.' },
   fiscalYearNotClosed: { reason: 'Das Geschäftsjahr {year} ist nicht abgeschlossen.', remedy: 'Nur ein abgeschlossenes Geschäftsjahr lässt sich wieder öffnen.' },
   laterYearClosed: { reason: 'Ein späteres Geschäftsjahr ist bereits abgeschlossen.', remedy: 'Öffnen Sie zuerst das spätere Geschäftsjahr wieder — Jahre öffnen in umgekehrter Reihenfolge.' },
+  cashCountNeedsNote: { reason: 'Bei einem Fehlbetrag ist ein Satz zur Erklärung Pflicht.', remedy: 'Tragen Sie ein, was fehlt oder wo der Betrag geblieben ist.' },
+  cashCountSameCounter: { reason: 'Die beiden Zählenden müssen unterschiedliche Personen sein.', remedy: 'Wählen Sie eine zweite Person.' },
+  cashCountCounterNotPerson: { reason: 'Zählende sind Personen, keine Organisationen.', remedy: 'Wählen Sie einen Kontakt der Art Person.' },
+  cashCountNotCash: { reason: 'Das Konto {account} ist kein Barkonto.', remedy: 'Zählen lässt sich nur eine Kasse oder Spendendose.' },
+  cashCountInFuture: { reason: 'Das Zähldatum liegt in der Zukunft.', remedy: 'Wählen Sie den heutigen Tag oder einen vergangenen.' },
+  cashMoveNeedsOneCash: { reason: 'Eine Bargeldbewegung braucht genau ein Barkonto — das andere ist ein Bankkonto.', remedy: 'Wählen Sie ein Bankkonto und ein Barkonto.' },
 } as const satisfies Record<string, { reason: string; remedy: string }>;
 
 export type FinanceErrorCode = keyof typeof FINANCE_ERRORS;

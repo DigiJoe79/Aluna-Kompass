@@ -1,9 +1,10 @@
 import { isoNow, retentionEnd, retentionMonths, type CallContext, type Deps, type DbOrTx, type DueItem, type RecordReference, type RetentionHold } from '@kompass/core';
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, or } from 'drizzle-orm';
 import { financeAudit } from '../audit';
 import {
   financeAllocationCorrections,
   financeAllocationLines,
+  financeCashCounts,
   financeEntries,
   financeEntryDocuments,
   financeFiscalYears,
@@ -93,6 +94,13 @@ function contactHolds(deps: Deps, contactId: string): RetentionHold[] {
   const openItems = deps.db.select().from(financeOpenItems).where(eq(financeOpenItems.contactId, contactId)).all();
   for (const item of openItems) {
     holds.push({ label: `Offener Posten ${item.id}`, until: openItemHoldUntil(deps, item.itemDate), entity: 'financeOpenItem', id: item.id });
+  }
+
+  // Wem der Verein Geld anvertraut, den führt er als Kontakt (Entschieden 1, F3b Task 1) — derselbe Anker wie eine Buchungszeile.
+  const counts = deps.db.select().from(financeCashCounts).where(or(eq(financeCashCounts.counterOneContactId, contactId), eq(financeCashCounts.counterTwoContactId, contactId))).all();
+  for (const count of counts) {
+    const fiscalYearId = fiscalYearForInternal(deps.db, count.countedOn)?.id ?? null;
+    holds.push({ label: `Kassenzählung ${count.documentNumber}`, until: contactHoldUntil(deps, fiscalYearId), entity: 'financeCashCount', id: count.id });
   }
   return holds;
 }
@@ -228,6 +236,8 @@ export function financeRecordDeleted(tx: DbOrTx, deps: Deps, ctx: CallContext, e
     }
     tx.update(financeOpenItems).set({ documentId: null }).where(eq(financeOpenItems.documentId, id)).run();
     tx.update(financeAllocationCorrections).set({ proofDocumentId: null }).where(eq(financeAllocationCorrections.proofDocumentId, id)).run();
+    // Ein Zählprotokoll behält Nummer und Prüfsumme als Grabstein (Muster financeEntryDocuments) — nur die Dokument-ID verschwindet.
+    tx.update(financeCashCounts).set({ documentId: null }).where(eq(financeCashCounts.documentId, id)).run();
     return;
   }
   if (entityType === 'project') {

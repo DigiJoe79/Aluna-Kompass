@@ -49,4 +49,8 @@ export function installFinance(tx: DbOrTx, deps: Deps, ctx: CallContext): void {
   for (const type of VOUCHER_TYPES) {
     ensureDocumentType(tx, deps, ctx, { module: 'finance', key: type.key, label: type.label, prefix: type.prefix, defaultDirection: 'incoming', retentionClass: 'statutory8Y', owned: false, protectionArea: 'finance' });
   }
+
+  // Modul-eigen: Das Zählprotokoll braucht das Modul zum Arbeiten (Spec 4.4). Trägt eine
+  // andere Art das Präfix KZP schon, meldet der Start einen Fehler (Vorarbeiten-Spec § 4).
+  ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'finance-cash-count', label: 'Kassenzählung', prefix: 'KZP', defaultDirection: 'outgoing', retentionClass: 'statutory10Y', owned: true, protectionArea: 'finance' });
 }

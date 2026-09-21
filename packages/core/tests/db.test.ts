@@ -41,6 +41,7 @@ describe('database', () => {
       'finance_accounts',
       'finance_allocation_corrections',
       'finance_allocation_lines',
+      'finance_cash_counts',
       'finance_categories',
       'finance_dated_values',
       'finance_entries',

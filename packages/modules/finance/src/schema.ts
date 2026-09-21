@@ -328,6 +328,44 @@ export const financeEntryJustifications = sqliteTable('finance_entry_justificati
 });
 export type FinanceEntryJustificationRow = typeof financeEntryJustifications.$inferSelect;
 
+/**
+ * Eine Kassenzählung ist eine gespeicherte Tatsache (Spec 5.5) — nie
+ * geändert, nie gelöscht; Trigger sichern das auf Datenbankebene (Ausnahme:
+ * `document_id` darf beim Grabstein des Dokuments auf `null` fallen). Die
+ * Zählenden sind Kontakte, kein Fremdschlüssel (Muster `contacts_user_links`
+ * — Kontakte gehören einem anderen Modul); ihr Anzeigename zum Zeitpunkt der
+ * Zählung steht zusätzlich hier, damit das Protokoll auch nach einer
+ * Anonymisierung des Kontakts lesbar bleibt.
+ */
+export const financeCashCounts = sqliteTable(
+  'finance_cash_counts',
+  {
+    id: text('id').primaryKey(),
+    accountId: text('account_id').notNull().references(() => financeAccounts.id),
+    countedOn: text('counted_on').notNull(),
+    countedCents: integer('counted_cents').notNull(),
+    bookCents: integer('book_cents').notNull(),
+    /** = countedCents − bookCents. */
+    differenceCents: integer('difference_cents').notNull(),
+    counterOneContactId: text('counter_one_contact_id').notNull(),
+    counterTwoContactId: text('counter_two_contact_id').notNull(),
+    counterOneName: text('counter_one_name').notNull(),
+    counterTwoName: text('counter_two_name').notNull(),
+    /** Pflicht bei differenceCents < 0 — nie im Änderungsprotokoll. */
+    note: text('note'),
+    /** JSON: Stückzahlen je Nennwert, oder `null` ohne Zählhilfe. */
+    denominations: text('denominations'),
+    documentId: text('document_id'),
+    documentNumber: text('document_number').notNull(),
+    /** `null`, wenn differenceCents = 0 — dann entsteht keine Buchung. */
+    entryId: text('entry_id').references(() => financeEntries.id),
+    createdByUserId: text('created_by_user_id').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [index('finance_cash_counts_account_idx').on(t.accountId, t.countedOn)],
+);
+export type FinanceCashCountRow = typeof financeCashCounts.$inferSelect;
+
 /** Finanzfelder eines Projekts — kein Fremdschlüssel: Projekte gehören einem anderen Modul. Ohne Zeile gelten die Vorgaben aus `projectFinanceInternal`. */
 export const financeProjectSettings = sqliteTable('finance_project_settings', {
   projectId: text('project_id').primaryKey(),

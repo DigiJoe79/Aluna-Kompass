@@ -2,6 +2,7 @@ import { defineModule, type ModuleManifest, type SettingDefinition } from '@komp
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { requireFinanceRead } from './ledger/access';
+import { cashCountTemplate } from './ledger/cash-count-template';
 import { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds } from './ledger/holds';
 import { installFinance } from './install';
 import { FINANCE_MCP_TOOLS } from './mcp-tools';
@@ -58,7 +59,10 @@ export const financeModule: ModuleManifest = defineModule({
   linkedDocumentAccess: [
     { entityType: 'financeEntry', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
     { entityType: 'financeOpenItem', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
+    // Das Zählprotokoll (Task 1) — lesbar für alle mit finance.read, ausgestellt nur beim Festschreiben.
+    { entityType: 'financeCashCount', readPermission: 'finance.read', receivePermission: 'finance.entriesFinalize' },
   ],
+  documentTemplates: [cashCountTemplate],
   /**
    * Alle `none`: Finanzen hält seine Kontakte über Buchungen und Bestätigungen
    * (ab F2c), nicht über die Rolle — eine laufende Rolle rechnete „ab heute“
@@ -110,6 +114,11 @@ export const financeModule: ModuleManifest = defineModule({
       reason: 'Festgeschriebenes wird nie gelöscht. Nach Ablauf der Frist werden die personenbezogenen Inhalte des Geschäftsjahres entfernt — Kontakt, Freitext —; Datum, Betrag, Nummer und Kategorie bleiben als Rechenschaft.',
     },
     { entity: 'financeProjectSettings', deletable: true, reason: 'Geht mit dem Projekt — kein eigener Nachweis.', guard: 'keiner; verschwindet mit dem Projekt', auditAction: 'finance.projectSettings.delete' },
+    {
+      entity: 'financeCashCount',
+      deletable: false,
+      reason: 'Eine Kassenzählung ist eine gespeicherte Tatsache für die Kontenabstimmung (Spec 5.5) und wird nie gelöscht.',
+    },
     {
       entity: 'financeYearPersonalData',
       deletable: true,

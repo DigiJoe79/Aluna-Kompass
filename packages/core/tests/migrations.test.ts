@@ -59,6 +59,12 @@ describe('hand-written SQL survives', () => {
       expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
     }
   });
+
+  it('keeps a cash count permanent — undeletable, unchangeable except the document gravestone', () => {
+    for (const name of ['finance_cash_counts_no_update', 'finance_cash_counts_document_only_cleared', 'finance_cash_counts_no_delete']) {
+      expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
+    }
+  });
 });
 
 describe('the migrations of this version', () => {

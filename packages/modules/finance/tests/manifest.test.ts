@@ -32,7 +32,13 @@ describe('finance module', () => {
     expect(financeModule.linkedDocumentAccess).toEqual([
       { entityType: 'financeEntry', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
       { entityType: 'financeOpenItem', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
+      { entityType: 'financeCashCount', readPermission: 'finance.read', receivePermission: 'finance.entriesFinalize' },
     ]);
+  });
+
+  it('registers the cash count template under finance.entriesFinalize', () => {
+    const template = (financeModule.documentTemplates ?? []).find((t) => t.key === 'finance-cash-count');
+    expect(template).toMatchObject({ key: 'finance-cash-count', type: 'finance-cash-count', permission: 'finance.entriesFinalize' });
   });
 
   it('brings five contact roles, none of which holds a contact by itself', () => {
@@ -61,7 +67,7 @@ describe('finance module', () => {
     expect(rules).toEqual({
       financeAccount: true, financeCategory: true, financePurpose: true, financeDatedValue: true, financeFiscalYear: false, financePeriodEvent: false,
       financeEntryDraft: true, financeEntry: false, financeOpenItem: false, financeAllocationCorrection: false, financeEntryDocument: false, financeEntryJustification: false,
-      financeProjectSettings: true, financeYearPersonalData: true,
+      financeProjectSettings: true, financeYearPersonalData: true, financeCashCount: false,
     });
   });
 

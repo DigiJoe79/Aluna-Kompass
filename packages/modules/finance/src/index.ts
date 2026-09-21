@@ -2,6 +2,7 @@ export { financeModule, FINANCE_PERMISSIONS } from './manifest';
 export {
   financeAccounts,
   financeAllocationLines,
+  financeCashCounts,
   financeCategories,
   financeDatedValues,
   financeEntries,
@@ -19,6 +20,7 @@ export {
   type FinanceAccountRow,
   type FinanceAllocationCorrectionRow,
   type FinanceAllocationLineRow,
+  type FinanceCashCountRow,
   type FinanceCategoryRow,
   type FinanceDatedValueRow,
   type FinanceEntryDocumentRow,
@@ -89,6 +91,8 @@ export { DATED_SERIES, type DatedValueKey } from './ledger/dated-series';
 export { listDatedValues, removeDatedValue, setDatedValue, valueAt, type DatedValueListEntry } from './ledger/dated-values';
 export { closePurpose, deleteMasterData, readMasterData, saveMasterData, setMasterDataActive } from './ledger/master-data';
 export { firstNegativeCashDay, formatEuro } from './ledger/cash-check';
+export { countCash, emptyDonationBox, lastCountInternal, listCashCounts, moveCash, type CashCountKind, type CashCountView, type CountCashResult, type EmptyDonationBoxResult } from './ledger/cash';
+export { cashCountTemplate, type CashCountTemplateInput } from './ledger/cash-count-template';
 export { taxContextAt, taxOf, type Taxation, type TaxCode, type TaxInput, type TaxResult } from './ledger/tax';
 export { abortFinalize, bookEntry, finalizeEntry, finalizeInternal, finalizeReviewed, FinalizeAborted, type FinalizeOptions } from './ledger/finalize';
 export { reverseEntry, reverseInternal } from './ledger/reverse';

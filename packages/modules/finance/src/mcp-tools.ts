@@ -2,6 +2,7 @@ import { invalid, readSetting, type McpToolDefinition } from '@kompass/core';
 import { z } from 'zod';
 import { closePurpose, deleteMasterData, readMasterData, saveMasterData, setMasterDataActive } from './ledger/master-data';
 import { decideAllocationCorrection, listAllocationCorrections, requestAllocationCorrection } from './ledger/corrections';
+import { countCash, emptyDonationBox, listCashCounts, moveCash } from './ledger/cash';
 import { createFirstFiscalYear, updateFiscalYear } from './ledger/fiscal-years';
 import { removeDatedValue, setDatedValue } from './ledger/dated-values';
 import { TAX_CODES } from './ledger/codes';
@@ -128,6 +129,27 @@ const getBalancesMcpSchema = z.object({ date: z.string().optional() });
 const getIncomeStatementMcpSchema = z.object({ fiscalYearId: z.string().optional(), from: z.string().optional(), to: z.string().optional() });
 const getProjectFinanceMcpSchema = z.object({ projectId: z.string() });
 const setProjectFinanceMcpSchema = z.object({ projectId: z.string(), targetCents: z.number().int().nullable().optional(), defaultPurposeId: z.string().nullable().optional(), abroad: z.boolean().optional(), publishDonationStatus: z.boolean().optional() });
+
+const countCashMcpSchema = z.object({
+  accountId: z.string(),
+  countedOn: z.string(),
+  countedCents: z.number().int(),
+  counterOneContactId: z.string(),
+  counterTwoContactId: z.string(),
+  note: z.string().optional(),
+  denominations: z.record(z.string(), z.number().int()).optional(),
+});
+const emptyDonationBoxMcpSchema = z.object({
+  accountId: z.string(),
+  date: z.string(),
+  amountCents: z.number().int(),
+  counterOneContactId: z.string(),
+  counterTwoContactId: z.string(),
+  categoryId: z.string().optional(),
+  boxLabel: z.string(),
+});
+const moveCashMcpSchema = z.object({ fromAccountId: z.string(), toAccountId: z.string(), date: z.string(), amountCents: z.number().int(), text: z.string().optional() });
+const listCashCountsMcpSchema = z.object({ accountId: z.string().optional(), limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() });
 
 const previewPeriodMcpSchema = z.object({ id: z.string(), action: z.enum(['close', 'reopen']) });
 const closeFiscalYearMcpSchema = z.object({ id: z.string() });
@@ -256,4 +278,26 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
     service: reopenFiscalYear,
   }),
   t({ name: 'finance_entry_justify', description: 'State why a finalized entry has no voucher; needed to close the year. Requires finance.periodClose.', inputSchema: justifyUndocumentedEntryMcpSchema, handler: (deps, ctx, args) => justifyUndocumentedEntry(deps, ctx, args), service: justifyUndocumentedEntry }),
+  t({
+    name: 'finance_cash_count',
+    description: 'Count a cash box or donation box: stores the count, issues the protocol as a filed document and books the difference (cash-surplus or cash-shortage, note required for a shortage). Counters are two different person contacts. Human only: refused over MCP unless the association has set finance.mcpHumanOnlyAllowed at the screen. Requires finance.entriesFinalize.',
+    inputSchema: countCashMcpSchema,
+    handler: (deps, ctx, args) => countCash(deps, ctx, args),
+    service: countCash,
+  }),
+  t({
+    name: 'finance_donation_box_empty',
+    description: 'Book an emptied donation box as income without a contact into a cash account, and issue its protocol like a cash count. Human only: refused over MCP unless the association has set finance.mcpHumanOnlyAllowed at the screen. Requires finance.entriesFinalize.',
+    inputSchema: emptyDonationBoxMcpSchema,
+    handler: (deps, ctx, args) => emptyDonationBox(deps, ctx, args),
+    service: emptyDonationBox,
+  }),
+  t({
+    name: 'finance_cash_move',
+    description: 'Move cash between a bank account and a cash box as a transfer entry, finalized at once. Exactly one of the two accounts must be a cash account. Human only: refused over MCP unless the association has set finance.mcpHumanOnlyAllowed at the screen. Requires finance.entriesWrite and finance.entriesFinalize.',
+    inputSchema: moveCashMcpSchema,
+    handler: (deps, ctx, args) => moveCash(deps, ctx, args),
+    service: moveCash,
+  }),
+  t({ name: 'finance_cash_counts_list', description: 'List stored cash counts, newest first, optionally filtered by account. Requires finance.read.', inputSchema: listCashCountsMcpSchema, handler: (deps, ctx, args) => listCashCounts(deps, ctx, args), service: listCashCounts }),
 ];

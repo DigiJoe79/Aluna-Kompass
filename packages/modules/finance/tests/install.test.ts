@@ -75,3 +75,11 @@ describe('installFinance — voucher types', () => {
     expect(documentTypeFor(deps.db, 'voucher-own')).not.toBeNull();
   });
 });
+
+describe('installFinance — cash count document type', () => {
+  it('provisions the module-owned document type finance-cash-count with prefix KZP in area finance', () => {
+    const { deps } = setupFinance();
+    run(deps);
+    expect(documentTypeFor(deps.db, 'finance-cash-count')).toMatchObject({ prefix: 'KZP', protectionArea: 'finance', retentionClass: 'statutory10Y', ownerModule: 'finance', defaultDirection: 'outgoing' });
+  });
+});
