@@ -25,7 +25,7 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   financeDatedValue: ['key', 'validFrom', 'value'],
   // Nie Text, nie Kontakt-ID (Spec 10.3): `channel`, `reviewed` und `cashWarning`
   // sind bewusst so benannt, dass der Verbotstest oben sie nicht trifft.
-  financeEntry: ['status', 'number', 'entryDate', 'fiscalYearId', 'moneyLineCount', 'allocationLineCount', 'totalCents', 'reviewed', 'reversesEntryId', 'reversedByEntryId', 'correctionOfEntryId', 'channel', 'cashWarning'],
+  financeEntry: ['status', 'number', 'entryDate', 'fiscalYearId', 'moneyLineCount', 'allocationLineCount', 'totalCents', 'reviewed', 'reversesEntryId', 'reversedByEntryId', 'correctionOfEntryId', 'channel', 'cashWarning', 'entryId', 'linkCount'],
   // Nur IDs und Zählwerte (Spec 10.3): nie ein Dokumenttitel, nie eine Begründung.
   financeEntryDocument: ['entryId', 'documentId', 'viaUpload', 'withReplacement'],
   // Nie die Zahlungsreferenz, nie die Notiz, nie der Kontakt (Spec 10.3).

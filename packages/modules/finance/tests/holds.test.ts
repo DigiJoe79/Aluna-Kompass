@@ -1,16 +1,19 @@
-import { holdsFor, unwrap } from '@kompass/core';
+import { holdsFor, schema, unwrap } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
 import { deleteContact } from '@kompass/module-contacts';
+import { deleteDocument } from '@kompass/module-dms';
 import { createProject } from '@kompass/module-projects';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { approveAllocationCorrection, requestAllocationCorrection } from '../src/ledger/corrections';
 import { bookEntry } from '../src/ledger/finalize';
-import { financeRetentionHolds, yearAnchorInternal } from '../src/ledger/holds';
+import { financeRecordDeleted, financeRecordReferences, financeRetentionHolds, yearAnchorInternal } from '../src/ledger/holds';
 import { saveDraft } from '../src/ledger/entries';
-import { reopenFiscalYear } from '../src/ledger/period';
+import { closeFiscalYear, reopenFiscalYear } from '../src/ledger/period';
+import { createPurpose } from '../src/ledger/purposes';
 import { revokeVoucher, uploadVoucher } from '../src/ledger/vouchers';
-import { financeAllocationLines } from '../src/schema';
+import { FINANCE_PERMISSIONS } from '../src/manifest';
+import { financeAllocationLines, financeEntryDocuments } from '../src/schema';
 import { allowHumanOnlyOverMcp, ledgerFixture, pdfBytes } from './helpers';
 
 const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
@@ -133,5 +136,79 @@ describe('what finance holds, and until when', () => {
     expect(financeRetentionHolds(f.deps, 'animal', 'A1')).toEqual([]);
     expect(financeRetentionHolds(f.deps, 'nonsense-entity', 'X')).toEqual([]);
     expect(() => financeRetentionHolds(f.deps, 'animal', 'A1')).not.toThrow();
+  });
+});
+
+describe('references and what happens when something is deleted', () => {
+  it('a project is referenced by lines — also of drafts — and by purposes', async () => {
+    const f = await ledgerFixture();
+    const project = await seedProject(f.deps, f.userId, 'testprojekt');
+    expect(financeRecordReferences(f.deps, 'project', project.id)).toEqual([]);
+
+    const draft = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-02-01', text: 'x', moneyLines: [{ accountId: f.bank.id, amountCents: 1000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 1000, projectId: project.id }] }));
+    expect(financeRecordReferences(f.deps, 'project', project.id)).toEqual([{ label: `Buchung ${draft.id}`, entity: 'financeEntry', id: draft.id }]);
+
+    const project2 = await seedProject(f.deps, f.userId, 'testprojekt-2');
+    unwrap(await createPurpose(f.deps, f.ctx, { name: 'Zweck mit Projekt', projectId: project2.id }));
+    expect(financeRecordReferences(f.deps, 'project', project2.id)).toHaveLength(1);
+    expect(financeRecordReferences(f.deps, 'project', project2.id)[0]!.entity).toBe('financePurpose');
+  });
+
+  it('a voucher is referenced while its hold runs, and no longer afterwards', async () => {
+    const f = await ledgerFixture();
+    const entry = unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-01-15', text: 'Bar-Ausgabe', moneyLines: [{ accountId: f.bank.id, amountCents: -1500 }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -1500 }] }));
+    const voucher = unwrap(await uploadVoucher(f.deps, f.ctx, { entryId: entry.id, bytes: pdfBytes(), typeKey: 'voucher-own', documentDate: '2026-01-15' }));
+    expect(financeRecordReferences(f.deps, 'document', voucher.documentId)).toHaveLength(1);
+
+    f.deps.clock.set('2035-06-01T00:00:00.000Z'); // 8 Jahre nach Ende des Geschäftsjahres 2026 sind um.
+    expect(financeRecordReferences(f.deps, 'document', voucher.documentId)).toEqual([]);
+  });
+
+  it('contacts are never referenced, only held', async () => {
+    const f = await ledgerFixture();
+    await f.finalDonation({ date: '2026-02-01', cents: 5000, contactId: f.donor.id });
+    expect(financeRecordReferences(f.deps, 'contact', f.donor.id)).toEqual([]);
+  });
+
+  it('the file module refuses to delete a voucher while finance holds it, and lets it go afterwards', async () => {
+    const f = await ledgerFixture();
+    const entry = unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-01-15', text: 'Bar-Ausgabe', moneyLines: [{ accountId: f.bank.id, amountCents: -1500 }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -1500 }] }));
+    // Die Dokumentart selbst wäre 2026 längst verjährt (documentDate 2010) — was blockiert, ist der Halter der Finanzen.
+    const voucher = unwrap(await uploadVoucher(f.deps, f.ctx, { entryId: entry.id, bytes: pdfBytes(), typeKey: 'voucher-own', documentDate: '2010-01-15' }));
+    const manage = ctxWith([...FINANCE_PERMISSIONS, 'dms.manage'], f.userId);
+
+    const refused = await deleteDocument(f.deps, manage, { id: voucher.documentId });
+    expect(refused).toMatchObject({ ok: false, error: { type: 'conflict', code: 'recordHeld' } });
+
+    f.deps.clock.set('2035-06-01T00:00:00.000Z');
+    const allowed = await deleteDocument(f.deps, manage, { id: voucher.documentId });
+    expect(allowed.ok).toBe(true);
+  });
+
+  it('when the file module deletes a voucher, the link keeps its gravestone: number and checksum, no document id', async () => {
+    const f = await ledgerFixture();
+    const entry = unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-01-15', text: 'Bar-Ausgabe', moneyLines: [{ accountId: f.bank.id, amountCents: -1500 }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -1500 }] }));
+    const voucher = unwrap(await uploadVoucher(f.deps, f.ctx, { entryId: entry.id, bytes: pdfBytes(), typeKey: 'voucher-own', documentDate: '2010-01-15' }));
+    const before = f.deps.db.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.id, voucher.linkId)).get()!;
+
+    f.deps.clock.set('2035-06-01T00:00:00.000Z');
+    const manage = ctxWith([...FINANCE_PERMISSIONS, 'dms.manage'], f.userId);
+    unwrap(await deleteDocument(f.deps, manage, { id: voucher.documentId }));
+
+    const after = f.deps.db.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.id, voucher.linkId)).get()!;
+    expect(after.documentId).toBeNull();
+    expect(after.documentDeletedAt).not.toBeNull();
+    expect(after.documentNumber).toBe(before.documentNumber);
+    expect(after.documentChecksum).toBe(before.documentChecksum);
+
+    const log = f.deps.db.select().from(schema.auditLog).all().filter((e) => e.action === 'finance.entry.documentGone');
+    expect(log).toHaveLength(1);
+    expect(JSON.parse(log[0]!.after!)).toEqual({ entryId: entry.id, linkCount: 1 });
+  });
+
+  it('never throws on unknown entity types', async () => {
+    const f = await ledgerFixture();
+    expect(financeRecordReferences(f.deps, 'bogus-entity', 'X')).toEqual([]);
+    expect(() => f.deps.db.transaction((tx) => financeRecordDeleted(tx, f.deps, f.ctx, 'bogus-entity', 'X'))).not.toThrow();
   });
 });

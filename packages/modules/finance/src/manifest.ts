@@ -2,7 +2,7 @@ import { defineModule, type ModuleManifest, type SettingDefinition } from '@komp
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { requireFinanceRead } from './ledger/access';
-import { financeRetentionHolds } from './ledger/holds';
+import { financeRecordDeleted, financeRecordReferences, financeRetentionHolds } from './ledger/holds';
 import { installFinance } from './install';
 import { FINANCE_MCP_TOOLS } from './mcp-tools';
 import { seedFinance } from './seed';
@@ -70,6 +70,8 @@ export const financeModule: ModuleManifest = defineModule({
   seed: seedFinance,
   install: installFinance,
   retentionHolds: financeRetentionHolds,
+  recordReferences: financeRecordReferences,
+  recordDeleted: financeRecordDeleted,
   deletionRules: [
     { entity: 'financeAccount', deletable: true, reason: 'Arbeitsmaterial der Stammdaten.', guard: 'nur unbenutzt; sonst stilllegen', auditAction: 'finance.account.delete' },
     { entity: 'financeCategory', deletable: true, reason: 'Arbeitsmaterial der Stammdaten.', guard: 'nur unbenutzt; sonst stilllegen', auditAction: 'finance.category.delete' },

@@ -1,5 +1,6 @@
-import { retentionEnd, retentionMonths, type Deps, type DbOrTx, type RetentionHold } from '@kompass/core';
+import { isoNow, retentionEnd, retentionMonths, type CallContext, type Deps, type DbOrTx, type RecordReference, type RetentionHold } from '@kompass/core';
 import { and, desc, eq, inArray } from 'drizzle-orm';
+import { financeAudit } from '../audit';
 import {
   financeAllocationCorrections,
   financeAllocationLines,
@@ -8,6 +9,7 @@ import {
   financeFiscalYears,
   financeOpenItems,
   financePeriodEvents,
+  financePurposes,
   type FinanceEntryRow,
 } from '../schema';
 import { fiscalYearForInternal, fiscalYearStatusInternal } from './fiscal-years';
@@ -148,4 +150,83 @@ export function financeRetentionHolds(deps: Deps, entityType: string, id: string
   if (entityType === 'document') return documentHolds(deps, id);
   if (entityType === 'project') return projectHolds(deps, id);
   return [];
+}
+
+/** Ob irgendein Halter aus `financeRetentionHolds` gerade läuft (dauerhaft oder bis mindestens heute). */
+function anyHoldRunning(deps: Deps, entityType: string, id: string): boolean {
+  const today = isoNow(deps.clock).slice(0, 10);
+  return financeRetentionHolds(deps, entityType, id).some((h) => h.until === null || h.until >= today);
+}
+
+/**
+ * Projekt: solange eine Zeile — auch eines Entwurfs — oder ein Zweck darauf
+ * zeigt. Die Finanzfelder des Projekts sind kein Verweis (die räumt
+ * `recordDeleted` mit, ab F2c Task 7 — dort entsteht die Tabelle).
+ */
+function projectReferences(deps: Deps, projectId: string): RecordReference[] {
+  const lines = deps.db.select({ entryId: financeAllocationLines.entryId }).from(financeAllocationLines).where(eq(financeAllocationLines.projectId, projectId)).all();
+  const entryIds = [...new Set(lines.map((l) => l.entryId))];
+  const refs: RecordReference[] = entryIds.map((entryId) => {
+    const entry = deps.db.select().from(financeEntries).where(eq(financeEntries.id, entryId)).get()!;
+    return { label: `Buchung ${entry.number ?? entry.id}`, entity: 'financeEntry', id: entry.id };
+  });
+  const purposes = deps.db.select({ id: financePurposes.id }).from(financePurposes).where(eq(financePurposes.projectId, projectId)).all();
+  for (const purpose of purposes) refs.push({ label: `Zweck ${purpose.id}`, entity: 'financePurpose', id: purpose.id });
+  return refs;
+}
+
+/**
+ * Dokument: solange der Halter läuft, oder solange es an einem Entwurf
+ * hängt. Mit dem Halter endet der Verweis — sonst wäre ein Beleg nie
+ * löschbar (Spec 10.3).
+ */
+function documentReferences(deps: Deps, documentId: string): RecordReference[] {
+  const refs: RecordReference[] = [];
+  if (anyHoldRunning(deps, 'document', documentId)) {
+    refs.push({ label: 'Beleg (Halter läuft)', entity: 'financeEntryDocument', id: documentId });
+  }
+  const draftLinks = deps.db
+    .select({ entryId: financeEntryDocuments.entryId })
+    .from(financeEntryDocuments)
+    .innerJoin(financeEntries, eq(financeEntryDocuments.entryId, financeEntries.id))
+    .where(and(eq(financeEntryDocuments.documentId, documentId), eq(financeEntries.status, 'draft')))
+    .all();
+  for (const link of draftLinks) refs.push({ label: `Buchungsentwurf ${link.entryId}`, entity: 'financeEntry', id: link.entryId });
+  return refs;
+}
+
+/**
+ * Wo Finanzen auf einen fremden Datensatz zeigt (Spec 10.3). Für Kontakte
+ * nie — dort zählen nur Halter (V7); ohne Rechteprüfung, wirft nie.
+ */
+export function financeRecordReferences(deps: Deps, entityType: string, id: string): RecordReference[] {
+  if (entityType === 'project') return projectReferences(deps, id);
+  if (entityType === 'document') return documentReferences(deps, id);
+  return [];
+}
+
+/** Nur Zählwerte und IDs (Spec 10.3) — nie ein Dokumenttitel. */
+function documentGoneAuditFields(entryId: string): Record<string, unknown> {
+  return { entryId, linkCount: 1 };
+}
+
+/**
+ * Ein Dokument wurde gelöscht: Der Bezug bleibt als Grabstein (Nummer,
+ * Prüfsumme), nur `documentId` wird geleert — sonst wäre ein einmal
+ * verknüpfter Beleg nach seiner Frist nie aufräumbar. Ebenso an offenen
+ * Posten und an Korrekturen. Andere Entitätstypen: kein Vorgang von
+ * Finanzen, also nichts zu tun.
+ */
+export function financeRecordDeleted(tx: DbOrTx, deps: Deps, ctx: CallContext, entityType: string, id: string): void {
+  if (entityType !== 'document') return;
+  const now = isoNow(deps.clock);
+
+  const links = tx.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.documentId, id)).all();
+  for (const link of links) {
+    tx.update(financeEntryDocuments).set({ documentId: null, documentDeletedAt: now }).where(eq(financeEntryDocuments.id, link.id)).run();
+    financeAudit(tx, deps, ctx, { action: 'finance.entry.documentGone', entity: 'financeEntry', id: link.entryId, after: documentGoneAuditFields(link.entryId), summary: `Beleg an Buchung ${link.entryId} entfernt` });
+  }
+
+  tx.update(financeOpenItems).set({ documentId: null }).where(eq(financeOpenItems.documentId, id)).run();
+  tx.update(financeAllocationCorrections).set({ proofDocumentId: null }).where(eq(financeAllocationCorrections.proofDocumentId, id)).run();
 }
