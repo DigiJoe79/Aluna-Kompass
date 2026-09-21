@@ -44,6 +44,19 @@ gleichmäßig auf oder trägt den verbleibenden Rest in eine gewählte Zeile
 ein — solange oben „Noch … zu verteilen“ steht, ist die Buchung noch nicht
 ausgeglichen.
 
+## Eine offene Zahlung begleichen
+
+Zahlt der Verein eine offene Rechnung oder geht eine erwartete Zahlung
+ein, lässt sich das direkt an der Geldzeile vermerken: „begleicht offene
+Zahlung“ öffnet eine Suche über die offenen Posten, die zur Richtung der
+Zeile passen — eine Ausgabe zeigt, was der Verein noch schuldet, eine
+Einnahme, was er noch erwartet. Zur Auswahl stehen Zahlungsreferenz oder
+Kontakt und der jeweilige Restbetrag; mehrere Posten lassen sich in einer
+Buchung begleichen, je mit einem eigenen Teilbetrag. Ein zu hoher
+Teilbetrag wird am Feld abgewiesen. Bleibt nach dem Festschreiben ein Rest
+offen, steht er an der Buchung unter „Hängt zusammen mit“ — dort auch die
+übrigen Bezüge, etwa eine Gegenbuchung oder eine vorangegangene Buchung.
+
 ## Beleg anhängen
 
 Ein Beleg lässt sich auf die Buchung ziehen oder aus der Akte auswählen.
@@ -78,6 +91,29 @@ danach den passenden Weg vor:
 
 Sind beide Arten von Änderungen nötig, gilt immer der zweite Weg — er
 kann alles.
+
+Trägt eine Buchung mehr als eine Aufteilungszeile, fragt der Dialog
+zuerst, welche davon gemeint ist — Kategorie, Betrag, Spender oder
+Empfänger und Zweck stehen zur Wahl. Eine Zeile, deren Änderung schon auf
+Freigabe wartet, lässt sich nicht ein zweites Mal auswählen.
+
+### Wann ein Dokument nötig ist, wann eine zweite Person
+
+Ändert sich bei einer Spende der **Zweck**, verlangt Kompass ein
+Dokument, das belegt, was die Spenderin ursprünglich bestimmt hat — ein
+PDF lässt sich dafür ablegen oder aus der Akte wählen. Ohne ein solches
+Dokument ist es keine Korrektur mehr, sondern eine Umwidmung; die
+entsprechende Seite kommt mit einer späteren Fassung.
+
+Ist für das betroffene Geschäftsjahr die Steuererklärung bereits
+abgegeben, verlangt eine Änderung an Spender, Auslandsbezug oder Zweck
+zusätzlich eine ausdrückliche Kenntnisnahme: Eine solche Korrektur kann
+eine Berichtigung nach § 153 AO nötig machen. Erst mit dem angehakten
+Kästchen lässt sich die Änderung erneut absenden.
+
+In einem bereits abgeschlossenen Geschäftsjahr wirkt eine Zuordnungsänderung
+nie sofort — sie wartet auf die Freigabe einer zweiten Person mit dem
+Recht „Freigeben“. Der Dialog nennt dabei, wer das erledigen kann.
 
 ## Was ein Agent darf
 
