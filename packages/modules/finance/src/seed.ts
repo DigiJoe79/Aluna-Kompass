@@ -86,6 +86,11 @@ function firstAllocationLineOf(deps: Deps, entryId: string) {
   return row;
 }
 
+/** Alle Aufteilungszeilen einer Buchung, in ihrer Reihenfolge — für F3a-N: „Korrigieren“ erreicht jede Zeile. */
+function allocationLinesOf(deps: Deps, entryId: string) {
+  return deps.db.select().from(financeAllocationLines).where(eq(financeAllocationLines.entryId, entryId)).orderBy(asc(financeAllocationLines.position)).all();
+}
+
 /** Belegt eine Buchung nur, wenn sie noch keinen Beleg trägt — idempotent über `uploadVoucher` hinweg. */
 async function ensureVoucher(deps: Deps, ctx: CallContext, entry: { id: string }, typeKey: string, documentDate: string, title?: string): Promise<{ linkId: string; documentId: string } | null> {
   const existing = deps.db.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, entry.id)).all();
@@ -202,6 +207,20 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   );
   await ensureEntry(deps, 'Büromaterial Altjahr', () =>
     bookEntry(deps, ctx, { entryDate: `${previousYear}-05-20`, text: 'Büromaterial Altjahr', moneyLines: [{ accountId: bank.id, amountCents: -3200 }], allocationLines: [{ categoryId: officeCat.id, amountCents: -3200 }] }).then(unwrap),
+  );
+
+  // F3a-N Task 1: eine festgeschriebene, geteilte Buchung im Vorjahr — nach dessen Abschluss wartet die
+  // Korrektur einer ihrer beiden Zeilen auf Freigabe, die andere bleibt wählbar.
+  await ensureEntry(deps, 'Sponsoring Altjahr', () =>
+    bookEntry(deps, ctx, {
+      entryDate: `${previousYear}-06-01`,
+      text: 'Sponsoring Altjahr',
+      moneyLines: [{ accountId: bank.id, amountCents: 9000 }],
+      allocationLines: [
+        { categoryId: donationsCat.id, amountCents: 6000 },
+        { categoryId: donationsCat.id, amountCents: 3000 },
+      ],
+    }).then(unwrap),
   );
 
   await ensureEntry(deps, 'Spende mit Zweck', () =>
@@ -382,6 +401,9 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
       // „Spende Altjahr“ bleibt bewusst ohne Beleg (siehe oben) — der Abschluss verlangt dafür eine Begründung.
       const spendeAltjahrForJustify = entryByText(deps, 'Spende Altjahr');
       unwrap(await justifyUndocumentedEntry(deps, ctx, { entryId: spendeAltjahrForJustify.id, note: 'Kleinbetrag bar erhalten, kein Beleg ausgestellt' }));
+      // F3a-N Task 1: „Sponsoring Altjahr“ bleibt ebenfalls ohne Beleg — nur ihre geteilte Zuordnung zählt hier.
+      const sponsoringAltjahrForJustify = entryByText(deps, 'Sponsoring Altjahr');
+      unwrap(await justifyUndocumentedEntry(deps, ctx, { entryId: sponsoringAltjahrForJustify.id, note: 'Sponsoringzusage ohne Rechnung erhalten' }));
       unwrap(await closeFiscalYear(deps, ctx, { id: previousFiscalYear.id }));
     }
 
@@ -390,6 +412,24 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
     await ensureCorrection(deps, spendeAltjahrLine.id, () =>
       requestAllocationCorrection(deps, ctx, { lineId: spendeAltjahrLine.id, changes: { contactId: donorA.id }, note: 'Spenderin nachträglich zugeordnet' }).then(unwrap),
     );
+
+    // F3a-N Task 1: von den zwei Zeilen der „Sponsoring Altjahr“ wartet nur die erste auf Freigabe — die
+    // zweite bleibt im Korrigieren-Dialog wählbar. Nur ein Projektwechsel: er löst nie § 153 aus, egal ob
+    // eine Steuererklärung schon als abgegeben gilt (F3a-N Task 2 setzt das am selben Vorjahr).
+    if (existingProject) {
+      const sponsoringAltjahr = entryByText(deps, 'Sponsoring Altjahr');
+      const sponsoringLines = allocationLinesOf(deps, sponsoringAltjahr.id);
+      const sponsoringFirstLine = sponsoringLines[0];
+      if (sponsoringFirstLine) {
+        await ensureCorrection(deps, sponsoringFirstLine.id, () =>
+          requestAllocationCorrection(deps, ctx, {
+            lineId: sponsoringFirstLine.id,
+            changes: { projectId: existingProject.id },
+            note: 'Projektzuordnung nachträglich korrigieren',
+          }).then(unwrap),
+        );
+      }
+    }
   }
 
   // F3a: „Mira Klein“ aus dem Kernseed (Rolle „Interne Revision“, kein Finanzrecht) bekommt zusätzlich

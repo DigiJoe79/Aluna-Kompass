@@ -95,7 +95,7 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
             {t('reverses')} <Link className="underline" href={`/finance/entries/${entry.reversesEntryId}`}>{t('open')}</Link>
           </p>
         ) : null}
-        {!reversed && canCorrect ? <CorrectDialog entry={entry} purposes={purposes} projects={projects} contactNames={contactNames} /> : null}
+        {!reversed && canCorrect ? <CorrectDialog entry={entry} purposes={purposes} projects={projects} contactNames={contactNames} categoryNames={categoryNames} /> : null}
       </section>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
@@ -118,7 +118,7 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
 
           <section className="space-y-2 rounded-md border border-line bg-surface p-4">
             <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('allocation')}</h3>
-            <table className="w-full text-[13px]">
+            <table data-testid="finance-allocation-table" className="w-full text-[13px]">
               <tbody>
                 {entry.allocationLines.map((line) => (
                   <tr key={line.id} className="border-b border-line-2 last:border-0">

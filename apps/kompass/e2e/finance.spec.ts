@@ -259,6 +259,7 @@ test.describe('finance', () => {
     await page.goto('/finance/entries');
     await page.locator('tr', { hasText: 'Auszahlung Spendenplattform' }).click();
     await page.getByRole('button', { name: 'Korrigieren' }).click();
+    await page.getByRole('button').filter({ hasText: 'Wagner' }).click();
     await page.getByRole('checkbox', { name: 'Spender/Empfänger' }).check();
     await expect(page.getByText('Das ändert die Zuordnung.')).toBeVisible();
     await page.getByRole('combobox', { name: 'Spender/Empfänger' }).fill('Kruse');
@@ -288,6 +289,54 @@ test.describe('finance', () => {
     await page.getByRole('checkbox', { name: 'Projekt' }).check();
     await page.getByRole('checkbox', { name: 'Betrag' }).check();
     await expect(page.getByText('Das nimmt die Buchung zurück.')).toBeVisible();
+  });
+
+  test('Korrigieren an einer geteilten Buchung: die dritte Aufteilung bekommt ein anderes Projekt, die übrigen bleiben', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries');
+    await page.locator('tr', { hasText: 'Auszahlung Spendenplattform' }).click();
+    await page.getByRole('button', { name: 'Korrigieren' }).click();
+    await page.getByRole('button').filter({ hasText: '100,00' }).click();
+    await page.getByRole('checkbox', { name: 'Projekt' }).check();
+    await expect(page.getByText('Das ändert die Zuordnung.')).toBeVisible();
+    await page.getByRole('combobox', { name: 'Projekt' }).selectOption({ index: 1 });
+    await page.getByLabel('Begründung').fill('Testkorrektur Projekt der dritten Zeile');
+    await page.getByRole('button', { name: 'Zuordnung ändern' }).click();
+    await expect(page.getByText('Die Zuordnung wurde sofort geändert.')).toBeVisible();
+    await expect(page.getByTestId('finance-allocation-table').getByText('Zuordnung geändert')).toHaveCount(1);
+    await expect(page.getByText(/Zuordnung geändert von/)).toBeVisible();
+  });
+
+  test('eine Aufteilung, deren Änderung auf Freigabe wartet, lässt sich nicht erneut wählen', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries');
+    await page.locator('tr', { hasText: 'Sponsoring Altjahr' }).click();
+    await page.getByRole('button', { name: 'Korrigieren' }).click();
+    const pendingRow = page.getByRole('button').filter({ hasText: 'wartet auf Freigabe' });
+    await expect(pendingRow).toBeVisible();
+    await expect(pendingRow).toBeDisabled();
+    const selectableRow = page.getByRole('button').filter({ hasText: '30,00' });
+    await expect(selectableRow).toBeEnabled();
+  });
+
+  test('bei nur einer Aufteilung gibt es keinen Auswahlschritt', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries');
+    await page.locator('tr', { hasText: 'Bar-Ausgabe Fahrtkosten' }).click();
+    await page.getByRole('button', { name: 'Korrigieren' }).click();
+    await expect(page.getByText('Welche Aufteilung?')).toHaveCount(0);
+    await expect(page.getByText('Die Zuordnung')).toBeVisible();
+  });
+
+  test('wer nichts ändert, kann nicht absenden', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries');
+    await page.locator('tr', { hasText: 'Bar-Ausgabe Fahrtkosten' }).click();
+    await page.getByRole('button', { name: 'Korrigieren' }).click();
+    await page.getByRole('checkbox', { name: 'wird im Ausland verwendet' }).check();
+    await page.getByLabel('Begründung').fill('Testkorrektur ohne Änderung');
+    await expect(page.getByRole('button', { name: 'Zuordnung ändern' })).toBeDisabled();
+    await expect(page.getByText('Ändern Sie mindestens ein Feld.')).toBeVisible();
   });
 
   test('Beleg nachreichen an einer festgeschriebenen Buchung; der Beleg lässt sich ansehen', async ({ page }) => {

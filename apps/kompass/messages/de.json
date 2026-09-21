@@ -2503,6 +2503,11 @@
         "pathAllocation": "Das ändert die Zuordnung.",
         "pathReverse": "Das nimmt die Buchung zurück.",
         "currentlyValue": "bisher: {value}",
+        "pickLine": {
+          "title": "Welche Aufteilung?",
+          "pending": "wartet auf Freigabe"
+        },
+        "nothingChanged": "Ändern Sie mindestens ein Feld.",
         "noteLabel": "Begründung",
         "cancel": "Abbrechen",
         "submitAllocation": "Zuordnung ändern",

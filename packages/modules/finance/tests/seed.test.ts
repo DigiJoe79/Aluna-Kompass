@@ -90,6 +90,8 @@ describe('seedFinance', () => {
       // F2c: Begründung zum Periodenabschluss, neue Buchungstexte und Zwecke.
       'Kleinbetrag bar erhalten, kein Beleg ausgestellt',
       'Spende Flutlicht', 'Ausgabe Sommerfest', 'Sommerfest',
+      // F3a-N Task 1: geteilte Buchung im Vorjahr mit einer wartenden Korrektur.
+      'Sponsoring Altjahr', 'Sponsoringzusage ohne Rechnung erhalten', 'Projektzuordnung nachträglich korrigieren',
     ]) {
       expect(log, secret).not.toContain(secret);
     }
@@ -143,8 +145,8 @@ describe('seedFinance', () => {
     const entries = deps.db.select().from(financeEntries).all();
     const byText = new Map(entries.map((e) => [e.text, e]));
 
-    // Vorjahr: drei festgeschriebene Buchungen — kein Duplikat beim zweiten Lauf.
-    for (const text of ['Spende Altjahr', 'Bankgebühr Altjahr', 'Büromaterial Altjahr']) {
+    // Vorjahr: vier festgeschriebene Buchungen — kein Duplikat beim zweiten Lauf.
+    for (const text of ['Spende Altjahr', 'Bankgebühr Altjahr', 'Büromaterial Altjahr', 'Sponsoring Altjahr']) {
       expect(entries.filter((e) => e.text === text), text).toHaveLength(1);
       expect(byText.get(text), text).toMatchObject({ status: 'final' });
     }
