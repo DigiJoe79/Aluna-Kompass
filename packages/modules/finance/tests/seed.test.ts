@@ -80,7 +80,7 @@ describe('seedFinance', () => {
     expect(log.length).toBeGreaterThan(100);
     for (const secret of [
       'Vereinskonto', 'Barkasse', 'Spendenplattform', 'Sparbuch', 'Beispielbank', 'DE0212', 'AT6119', 'Dachsanierung', 'Jugendfreizeit', 'Flutlicht', 'Erika', 'Beispiel über', 'Raumvermietung',
-      'Spende Altjahr', 'Bankgebühr Altjahr', 'Büromaterial Altjahr', 'Spende mit Zweck', 'Auszahlung Spendenplattform', 'Abhebung Barkasse', 'Bar-Ausgabe Fahrtkosten', 'Sachspende Werkzeug', 'Fehlerhafte Spendenbuchung', 'Entwurf geprüft', 'Entwurf ungeprüft', 'Entwurf vom Agenten',
+      'Spende Altjahr', 'Bankgebühr Altjahr', 'Büromaterial Altjahr', 'Spende mit Zweck', 'Auszahlung Spendenplattform', 'Abhebung Barkasse', 'Bar-Ausgabe Fahrtkosten', 'Sachspende Werkzeug', 'Fehlerhafte Spendenbuchung', 'Entwurf geprüft', 'Entwurf ungeprüft', 'Entwurf ungeprüft zwei', 'Entwurf vom Agenten',
       'Wagner', 'Kruse',
       // F2b: Belege, offene Posten, Zuordnungskorrektur.
       'Rechnung Büromaterial', 'Falscher Anhang hochgeladen, richtige Quittung liegt vor',
@@ -165,6 +165,10 @@ describe('seedFinance', () => {
     expect(byText.get('Entwurf geprüft')).toMatchObject({ status: 'draft' });
     expect(byText.get('Entwurf geprüft')!.reviewedAt).not.toBeNull();
     expect(byText.get('Entwurf ungeprüft')).toMatchObject({ status: 'draft', reviewedAt: null });
+    // F3a: ein zweiter ausgeglichener, ungeprüfter Entwurf — die Mehrfachauswahl des Journals braucht zwei.
+    expect(byText.get('Entwurf ungeprüft zwei')).toMatchObject({ status: 'draft', reviewedAt: null });
+    const secondDraft = byText.get('Entwurf ungeprüft zwei')!;
+    expect(unwrap(await getEntry(deps, ctx, { id: secondDraft.id })).remainderCents).toBe(0);
     const agentDraft = byText.get('Entwurf vom Agenten')!;
     expect(agentDraft).toMatchObject({ status: 'draft', createdChannel: 'mcp' });
     expect(unwrap(await getEntry(deps, ctx, { id: agentDraft.id })).remainderCents).not.toBe(0);

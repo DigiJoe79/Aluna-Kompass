@@ -290,6 +290,11 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
     saveDraft(deps, ctx, { entryDate: `${currentYear}-03-06`, text: 'Entwurf ungeprüft', moneyLines: [{ accountId: bank.id, amountCents: 1800 }], allocationLines: [{ categoryId: donationsCat.id, amountCents: 1800 }] }).then(unwrap),
   );
 
+  // F3a: ein zweiter ausgeglichener, ungeprüfter Entwurf — das Journal braucht zwei für die Mehrfachauswahl.
+  await ensureEntry(deps, 'Entwurf ungeprüft zwei', () =>
+    saveDraft(deps, ctx, { entryDate: `${currentYear}-03-09`, text: 'Entwurf ungeprüft zwei', moneyLines: [{ accountId: bank.id, amountCents: 2200 }], allocationLines: [{ categoryId: donationsCat.id, amountCents: 2200 }] }).then(unwrap),
+  );
+
   // Unausgeglichen: der Agent hat die Zuordnung noch nicht vollständig — ein Mensch prüft und ergänzt sie.
   await ensureEntry(deps, 'Entwurf vom Agenten', () =>
     saveDraft(deps, { ...ctx, channel: 'mcp' as const }, { entryDate: `${currentYear}-03-07`, text: 'Entwurf vom Agenten', moneyLines: [{ accountId: bank.id, amountCents: 4000 }], allocationLines: [{ categoryId: donationsCat.id, amountCents: 3500 }] }).then(unwrap),

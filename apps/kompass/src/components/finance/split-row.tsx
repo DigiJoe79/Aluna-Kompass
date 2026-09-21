@@ -7,6 +7,7 @@ import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { formatEuro } from '@/lib/finance/amount';
 import { cn } from '@/lib/utils';
@@ -93,14 +94,13 @@ export function SplitRow({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1.2fr_repeat(3,1fr)_auto] sm:items-start">
         <div className="space-y-1">
           <Label htmlFor={`${value.key}-category`}>{t('category')}</Label>
-          <select
+          <Select
             id={`${value.key}-category`}
             name={`${value.key}-category`}
             required
             disabled={value.locked}
             value={value.categoryId}
             onChange={(e) => set({ categoryId: e.target.value })}
-            className="h-[var(--field-h)] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px]"
           >
             <option value="" disabled>
               {t('categoryPlaceholder')}
@@ -115,7 +115,7 @@ export function SplitRow({
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </optgroup>
-          </select>
+          </Select>
           {category ? (
             <p className="text-[11px] text-muted-ink">
               {t(`sphere.${category.sphere}`)}
@@ -129,19 +129,18 @@ export function SplitRow({
         {showTax ? (
           <div className="space-y-1">
             <Label htmlFor={`${value.key}-tax`}>{t('tax')}</Label>
-            <select
+            <Select
               id={`${value.key}-tax`}
               name={`${value.key}-tax`}
               value={value.taxCode ?? ''}
               disabled={value.locked}
               onChange={(e) => set({ taxCode: e.target.value || undefined })}
-              className="h-[var(--field-h)] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px]"
             >
               <option value="">{t('taxNone')}</option>
               {taxCodeOptions.map((code) => (
                 <option key={code} value={code}>{t(`taxCode.${code}`)}</option>
               ))}
-            </select>
+            </Select>
           </div>
         ) : null}
 
@@ -155,19 +154,18 @@ export function SplitRow({
 
         <div className="space-y-1">
           <Label htmlFor={`${value.key}-project`}>{t('project')}</Label>
-          <select
+          <Select
             id={`${value.key}-project`}
             name={`${value.key}-project`}
             value={value.projectId ?? ''}
             disabled={value.locked}
             onChange={(e) => set({ projectId: e.target.value || null })}
-            className="h-[var(--field-h)] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px]"
           >
             <option value="">{t('none')}</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
-          </select>
+          </Select>
         </div>
 
         {value.locked ? null : (
@@ -193,18 +191,17 @@ export function SplitRow({
           {purposes.length > 0 ? (
             <div className="space-y-1">
               <Label htmlFor={`${value.key}-purpose`}>{purposeLabel}</Label>
-              <select
+              <Select
                 id={`${value.key}-purpose`}
                 name={`${value.key}-purpose`}
                 value={value.purposeId ?? ''}
                 onChange={(e) => set({ purposeId: e.target.value || null })}
-                className="h-[var(--field-h)] w-full rounded-md border border-line-strong bg-field px-2.5 text-[13px]"
               >
                 <option value="">{t('none')}</option>
                 {purposes.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
-              </select>
+              </Select>
             </div>
           ) : null}
           <label className="flex items-center gap-2 pt-6 text-[13px]">

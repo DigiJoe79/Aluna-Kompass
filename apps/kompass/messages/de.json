@@ -2302,6 +2302,103 @@
       "addsToAssets": "Zuführung zum Vermögen",
       "purposeOverspent": "Dieser Zweck ist im Minus.",
       "freeFundsRemainder": "Rest aus freien Mitteln"
+    },
+    "journal": {
+      "title": "Journal",
+      "notSetUp": {
+        "title": "Finanzen sind noch nicht eingerichtet.",
+        "text": "Es fehlt ein Geschäftsjahr oder ein aktives Konto.",
+        "textWithNames": "Es fehlt ein Geschäftsjahr oder ein aktives Konto. Das kann erledigen: {names}."
+      },
+      "accountsCount": "{count} Konten",
+      "allocationsCount": "{count} Aufteilungen",
+      "contactsCount": "{count} Personen",
+      "selectRow": "Buchung {number} auswählen",
+      "reversedByLink": "zurückgenommen durch {number}",
+      "reversesLink": "nimmt zurück: {number}",
+      "standing": {
+        "text": "festgeschrieben bis {date} · {count, plural, one {# Entwurf} other {# Entwürfe}}, davon {reviewed} geprüft",
+        "textUnfinalized": "noch nichts festgeschrieben · {count, plural, one {# Entwurf} other {# Entwürfe}}, davon {reviewed} geprüft"
+      },
+      "actions": {
+        "new": "Neue Buchung",
+        "finalizeReviewed": "Geprüfte festschreiben ({count})"
+      },
+      "empty": {
+        "title": "Noch keine Buchung.",
+        "text": "Beginnen Sie mit dem Anfangsbestand Ihres Kontos oder der ersten Einnahme."
+      },
+      "columns": {
+        "number": "Nummer",
+        "date": "Datum",
+        "text": "Text",
+        "account": "Konto",
+        "allocation": "Wofür",
+        "contact": "Spender/Empfänger",
+        "amount": "Betrag",
+        "voucher": "Beleg",
+        "state": "Zustand"
+      },
+      "voucher": {
+        "voucher": "Belegt.",
+        "statementSuffices": "Der Kontoauszug genügt für diese Kategorien.",
+        "missing": "Beleg fehlt."
+      },
+      "totals": {
+        "label": "Summe über die gefilterten {count} Buchungen",
+        "income": "Einnahmen {amount}",
+        "expense": "Ausgaben {amount}",
+        "result": "Ergebnis {amount}"
+      },
+      "selection": {
+        "count": "{count, plural, one {# Buchung ausgewählt} other {# Buchungen ausgewählt}}",
+        "markReviewed": "als geprüft markieren",
+        "finalize": "festschreiben",
+        "delete": "löschen"
+      },
+      "confirmFinalize": {
+        "title": "Geprüfte festschreiben",
+        "description": "Danach sind die Buchungen nicht mehr änderbar."
+      },
+      "confirmDelete": {
+        "title": "Entwürfe löschen",
+        "description": "Die ausgewählten Entwürfe werden gelöscht. Festgeschriebenes ist davon nie betroffen."
+      },
+      "toast": {
+        "reviewed": "Als geprüft markiert.",
+        "finalized": "Festgeschrieben: {numbers}."
+      },
+      "filters": {
+        "textLabel": "Suche",
+        "textPlaceholder": "Text, Nummer oder Betrag",
+        "state": {
+          "label": "Zustand",
+          "all": "Alle Zustände",
+          "draft": "Entwurf",
+          "reviewed": "geprüft",
+          "final": "festgeschrieben",
+          "reversed": "zurückgenommen"
+        },
+        "account": "Konto",
+        "accountAll": "Alle Konten",
+        "category": "Kategorie",
+        "categoryAll": "Alle Kategorien",
+        "withoutVoucher": "ohne Beleg",
+        "agentPrepared": "vom Agenten vorbereitet"
+      },
+      "sidePanel": {
+        "title": "Bestände und vorläufige Summen",
+        "collapse": "Einklappen",
+        "expand": "Ausklappen",
+        "withReviewed": "einschließlich geprüfter Entwürfe: {amount}",
+        "preliminary": "vorläufig",
+        "sphere": {
+          "ideal": "Ideeller Bereich",
+          "assetManagement": "Vermögensverwaltung",
+          "purposeOperation": "Zweckbetrieb",
+          "business": "Wirtschaftlicher Geschäftsbetrieb"
+        }
+      }
     }
   }
 }
