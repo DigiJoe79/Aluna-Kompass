@@ -4,7 +4,7 @@ import { unwrap } from '@kompass/core';
 import { auditEntry, ctxWith } from '@kompass/core/testing';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
-import { createAccount } from '../src/ledger/accounts';
+import { createAccount, setAccountActive } from '../src/ledger/accounts';
 import { getImportRun, importStatement, listImportRuns } from '../src/import/runs';
 import { financeAccounts, financeImportRuns, financeRawTransactions, financeImportCandidates } from '../src/schema';
 import { setupFinance } from './helpers';
@@ -204,6 +204,14 @@ describe('importStatement', () => {
     const f = await importFixture();
     const res = await importStatement(f.deps, f.ctx, { accountId: f.cash.id, fileName: 'a.xml', bytes: bytes('einfach-001-02.xml') });
     expect(code(res)).toBe('statementAccountNotBank');
+  });
+
+  it('refuses an inactive account', async () => {
+    const f = await importFixture();
+    const other = unwrap(await createAccount(f.deps, f.ctx, { name: 'Stillgelegtes Konto', kind: 'bank', iban: VEREIN_IBAN }));
+    unwrap(await setAccountActive(f.deps, f.ctx, { id: other.id, isActive: false, expectedVersion: other.updatedAt }));
+    const res = await importStatement(f.deps, f.ctx, { accountId: other.id, fileName: 'a.xml', bytes: bytes('einfach-001-02.xml') });
+    expect(code(res)).toBe('accountInactive');
   });
 });
 
