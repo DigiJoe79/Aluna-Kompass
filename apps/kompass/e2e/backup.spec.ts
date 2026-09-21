@@ -14,7 +14,7 @@ test('exports a backup and imports it back, ending all sessions', async ({ page,
   await page.getByRole('button', { name: 'Import vorbereiten' }).click();
   const confirm = page.getByRole('alertdialog');
   await expect(confirm).toContainText('Bestand der Umgebung „test“ überschreiben?');
-  await expect(confirm).toContainText('4 Nutzer');
+  await expect(confirm).toContainText('5 Nutzer');
   await expect(confirm.getByRole('button', { name: 'Bestand überschreiben' })).toBeDisabled();
   await confirm.getByLabel('Tippen Sie zur Bestätigung den Umgebungsnamen').fill('test');
   await confirm.getByRole('button', { name: 'Bestand überschreiben' }).click();

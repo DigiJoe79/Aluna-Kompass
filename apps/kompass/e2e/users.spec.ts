@@ -10,11 +10,11 @@ test.describe('users', () => {
 
   test('lists seeded users with roles and status', async ({ page }) => {
     const table = page.getByRole('table');
-    await expect(table.getByRole('row')).toHaveCount(5); // Kopf + 4
+    await expect(table.getByRole('row')).toHaveCount(6); // Kopf + 5
     const jonas = table.getByRole('row', { name: /Jonas Feld/ });
     await expect(jonas).toContainText('Schatzmeisterin');
     await expect(jonas).toContainText('Aktiv');
-    await expect(page.getByText('4 Nutzer, davon 0 inaktiv')).toBeVisible();
+    await expect(page.getByText('5 Nutzer, davon 0 inaktiv')).toBeVisible();
   });
 
   test('creates a user, shows the start password once and marks first login pending', async ({ page, context }) => {

@@ -10,7 +10,7 @@ test.describe('roles', () => {
 
   test('lists roles with counts and shows the protected role locked', async ({ page }) => {
     const list = page.getByRole('list', { name: 'Rollen' });
-    await expect(list.getByRole('listitem')).toHaveCount(9);
+    await expect(list.getByRole('listitem')).toHaveCount(10);
     await expect(list.getByRole('listitem', { name: /Administration/ })).toContainText('Alle Rechte');
     await list.getByRole('button', { name: /Administration/ }).click();
     await expect(page.getByLabel('Rollenname')).toBeDisabled();

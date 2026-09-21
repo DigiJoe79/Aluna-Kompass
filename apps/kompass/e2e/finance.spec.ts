@@ -552,6 +552,8 @@ test.describe('finance', () => {
     await expect(card.getByText(/^[\d.,]+\s?€$/).first()).toBeVisible();
     // „Entwurf geprüft“ liegt im Seed geprüft auf dem Vereinskonto — Bestand und geprüfter Stand weichen ab.
     await expect(card.getByText(/einschließlich geprüfter Entwürfe:/)).toBeVisible();
+    // Die Zeile „Auszug“ bleibt stehen (Platzhalter für den Import, Phase 2).
+    await expect(card.getByText(/kommt mit dem Import/)).toBeVisible();
     // Navigationseinträge im Abschnitt „Buchungen“ (Task 3).
     const sectionNav = page.getByRole('navigation', { name: 'Unternavigation' });
     await expect(sectionNav.getByRole('link', { name: 'Bankkonten und Kassen' })).toBeVisible();
@@ -628,6 +630,8 @@ test.describe('finance', () => {
     await expect(row).toBeVisible();
     await expect(row).toContainText('überfällig');
     await expect(row).toContainText('Mira Sandberg');
+    // Das Datum ist gefärbt, wenn der Posten überfällig ist.
+    await expect(row.getByText('2026-01-20')).toHaveClass(/text-error/);
 
     // Zwei Reiter in der URL: unter „Wir erwarten“ steht der neue Posten nicht.
     await page.getByRole('tab', { name: 'Wir erwarten' }).click();
@@ -636,6 +640,16 @@ test.describe('finance', () => {
     await page.getByRole('tab', { name: 'Wir zahlen noch' }).click();
     await expect(page).toHaveURL(/tab=payable/);
     await expect(page.getByRole('row', { name: /RE-2026-999/ })).toBeVisible();
+
+    // Anlegen/Ändern-Dialog: derselbe Dialog ändert einen vorhandenen Posten.
+    await row.click();
+    await page.getByRole('button', { name: 'Ändern' }).click();
+    const editDialog = page.getByRole('dialog');
+    await editDialog.getByLabel('Betrag', { exact: true }).fill('90,00');
+    await editDialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByText('Offene Zahlung geändert.')).toBeVisible();
+    // Die Seitenleiste bleibt offen und verdeckt die Tabelle für Hilfstechnik — der neue Betrag steht dort.
+    await expect(page.getByRole('dialog', { name: 'RE-2026-999' })).toContainText('90,00 €');
   });
 
   test('der Überweisungsblock kopiert den Verwendungszweck und zeigt keinen QR-Code', async ({ page, context }) => {
@@ -669,10 +683,15 @@ test.describe('finance', () => {
     await page.getByRole('button', { name: 'Festschreiben', exact: true }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Festschreiben' }).click();
     await expect(page).toHaveURL(/\/finance\/entries\/[^/]+$/);
+    const bookedNumber = (await page.getByTestId('entry-number').textContent())!.trim();
 
     await page.goto('/finance/open-items');
     const row = page.getByRole('row', { name: /RE-2026-041/ });
     await expect(row).toContainText('erledigt');
+
+    // „Wird beglichen durch“ nennt die Buchungsnummer als Link.
+    await row.click();
+    await expect(page.getByRole('link', { name: bookedNumber })).toBeVisible();
   });
 
   test('„Erledigt ohne Zahlung“ verlangt eine Notiz und nennt die Folgen', async ({ page }) => {
