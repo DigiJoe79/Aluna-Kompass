@@ -1,14 +1,29 @@
-import type { McpToolDefinition } from '@kompass/core';
+import { invalid, readSetting, type McpToolDefinition } from '@kompass/core';
 import { z } from 'zod';
 import { closePurpose, deleteMasterData, readMasterData, saveMasterData, setMasterDataActive } from './ledger/master-data';
+import { decideAllocationCorrection, listAllocationCorrections, requestAllocationCorrection } from './ledger/corrections';
 import { createFirstFiscalYear, updateFiscalYear } from './ledger/fiscal-years';
 import { removeDatedValue, setDatedValue } from './ledger/dated-values';
 import { TAX_CODES } from './ledger/codes';
 import { deleteDraft, getEntry, listEntries, saveDraft, setReviewed } from './ledger/entries';
 import { bookEntry, finalizeEntry, finalizeReviewed } from './ledger/finalize';
+import { cancelOpenItem, listOpenItems, saveOpenItem } from './ledger/open-items';
 import { reverseEntry } from './ledger/reverse';
+import { attachDocument, revokeVoucher, uploadVoucher } from './ledger/vouchers';
 
 const t = <T>(def: McpToolDefinition<T>): McpToolDefinition => def as McpToolDefinition;
+
+/**
+ * Base64 ohne Data-URL-Präfix — wie `media_upload` (`packages/mcp/src/core-tools.ts`).
+ * Node's `Buffer.from(…, 'base64')` verwirft fremde Zeichen still; ein Agent
+ * bekäme dann ein leeres oder verstümmeltes PDF ohne Fehler.
+ */
+const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;
+function decodeBase64(text: string): Uint8Array | null {
+  const compact = text.replace(/\s+/g, '');
+  if (compact.length === 0 || compact.length % 4 !== 0 || !BASE64.test(compact)) return null;
+  return new Uint8Array(Buffer.from(compact, 'base64'));
+}
 
 const readMasterDataSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('account'), includeInactive: z.boolean().optional() }),
@@ -59,6 +74,37 @@ const setReviewedMcpSchema = z.object({ id: z.string(), reviewed: z.boolean(), e
 const finalizeEntryMcpSchema = z.object({ id: z.string(), expectedVersion: z.string().optional() });
 const finalizeReviewedMcpSchema = z.object({ ids: z.array(z.string()).min(1) });
 const reverseEntryMcpSchema = z.object({ id: z.string(), cashWarningReason: z.string().optional(), withCorrectionDraft: z.boolean().optional() });
+
+const uploadVoucherMcpSchema = z.object({ entryId: z.string(), contentBase64: z.string().min(1), typeKey: z.string(), title: z.string().optional(), documentDate: z.string() });
+const attachDocumentMcpSchema = z.object({ entryId: z.string(), documentId: z.string() });
+const revokeVoucherMcpSchema = z.object({ linkId: z.string(), note: z.string(), replacementDocumentId: z.string().optional() });
+
+const saveOpenItemMcpSchema = z.object({
+  id: z.string().optional(),
+  expectedVersion: z.string().optional(),
+  kind: z.enum(['receivable', 'payable']).optional(),
+  itemDate: z.string().optional(),
+  contactId: z.string().nullable().optional(),
+  amountCents: z.number().int().optional(),
+  dueOn: z.string().nullable().optional(),
+  documentId: z.string().nullable().optional(),
+  originType: z.string().nullable().optional(),
+  originId: z.string().nullable().optional(),
+  paymentReference: z.string().nullable().optional(),
+  lineTemplate: z.array(z.record(z.string(), z.unknown())).nullable().optional(),
+});
+const cancelOpenItemMcpSchema = z.object({ id: z.string(), note: z.string() });
+const listOpenItemsMcpSchema = z.object({ kind: z.enum(['receivable', 'payable']).optional(), state: z.enum(['open', 'settled', 'overpaid', 'cancelled', 'all']).optional(), limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() });
+
+const requestCorrectionMcpSchema = z.object({
+  lineId: z.string(),
+  changes: z.object({ contactId: z.string().nullable().optional(), projectId: z.string().nullable().optional(), purposeId: z.string().nullable().optional(), abroad: z.boolean().optional() }),
+  note: z.string(),
+  proofDocumentId: z.string().optional(),
+  acknowledgeSection153: z.boolean().optional(),
+});
+const decideCorrectionMcpSchema = z.object({ id: z.string(), decision: z.enum(['approve', 'reject']), note: z.string().optional() });
+const listCorrectionsMcpSchema = z.object({ state: z.enum(['pending', 'applied', 'rejected']).optional(), entryId: z.string().optional(), limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() });
 
 /** Verteilerdienste (Spec 10.2): ein Werkzeug je Tätigkeit statt zwanzig, mit `kind` als Discriminator. */
 export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
@@ -116,4 +162,43 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
     handler: (deps, ctx, args) => reverseEntry(deps, ctx, args),
     service: reverseEntry,
   }),
+  t({
+    name: 'finance_voucher_upload',
+    description: 'File a PDF voucher (base64, at most finance.uploadLimitMb) in the name of an entry. The title must not name a person. Allowed at any time, also after the year is closed. Requires finance.entriesWrite.',
+    inputSchema: uploadVoucherMcpSchema,
+    handler: (deps, ctx, { contentBase64, ...rest }) => {
+      const bytes = decodeBase64(contentBase64);
+      if (!bytes) return Promise.resolve(invalid([{ path: 'contentBase64', message: 'invalidBase64' }]));
+      const limitBytes = readSetting<number>(deps, 'finance.uploadLimitMb') * 1024 * 1024;
+      if (bytes.byteLength > limitBytes) return Promise.resolve(invalid([{ path: 'contentBase64', message: 'fileTooLarge' }]));
+      return uploadVoucher(deps, ctx, { ...rest, bytes });
+    },
+    service: uploadVoucher,
+  }),
+  t({ name: 'finance_voucher_attach', description: 'Link a filed document you may read to an entry. Requires finance.entriesWrite.', inputSchema: attachDocumentMcpSchema, handler: (deps, ctx, args) => attachDocument(deps, ctx, args), service: attachDocument }),
+  t({
+    name: 'finance_voucher_revoke',
+    description: 'Revoke a voucher link; the file module’s link stays, the auditor still sees what was revoked. In a closed year only with a replacement document. Human only: refused over MCP unless the association has set finance.mcpHumanOnlyAllowed at the screen. Requires finance.entriesFinalize.',
+    inputSchema: revokeVoucherMcpSchema,
+    handler: (deps, ctx, args) => revokeVoucher(deps, ctx, args),
+    service: revokeVoucher,
+  }),
+  t({ name: 'finance_open_item_save', description: 'Create or update a receivable or payable (id present updates, absent creates). Outside the journal - the income and expense statement never sees it. Requires finance.entriesWrite.', inputSchema: saveOpenItemMcpSchema, handler: (deps, ctx, args) => saveOpenItem(deps, ctx, args), service: saveOpenItem }),
+  t({ name: 'finance_open_item_cancel', description: 'Close a mistaken open item without payment, with a note. Only possible while nothing finalized is settled against it. Requires finance.entriesWrite.', inputSchema: cancelOpenItemMcpSchema, handler: (deps, ctx, args) => cancelOpenItem(deps, ctx, args), service: cancelOpenItem }),
+  t({ name: 'finance_open_items_list', description: 'List receivables and payables by kind or state, with their open amount. Requires finance.read.', inputSchema: listOpenItemsMcpSchema, handler: (deps, ctx, args) => listOpenItems(deps, ctx, args), service: listOpenItems }),
+  t({
+    name: 'finance_correction_request',
+    description: 'Correct donor, project, purpose or the abroad switch of a finalized line - not amount, date, account or category (reverse the entry for those). Human only: refused over MCP unless the association has set finance.mcpHumanOnlyAllowed at the screen. In a closed year it waits for a second person. Requires finance.entriesFinalize.',
+    inputSchema: requestCorrectionMcpSchema,
+    handler: (deps, ctx, args) => requestAllocationCorrection(deps, ctx, args),
+    service: requestAllocationCorrection,
+  }),
+  t({
+    name: 'finance_correction_decide',
+    description: 'Approve or reject a pending allocation correction - never your own request. Human only: refused over MCP unless the association has set finance.mcpHumanOnlyAllowed at the screen. Requires finance.approve.',
+    inputSchema: decideCorrectionMcpSchema,
+    handler: (deps, ctx, args) => decideAllocationCorrection(deps, ctx, args),
+    service: decideAllocationCorrection,
+  }),
+  t({ name: 'finance_corrections_list', description: 'List allocation corrections by state or entry. Requires finance.read.', inputSchema: listCorrectionsMcpSchema, handler: (deps, ctx, args) => listAllocationCorrections(deps, ctx, args), service: listAllocationCorrections }),
 ];

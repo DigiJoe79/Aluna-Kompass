@@ -261,3 +261,14 @@ export async function listAllocationCorrections(deps: Deps, ctx: CallContext, in
   const items = rows.slice(f.offset, f.offset + f.limit);
   return ok({ items, total });
 }
+
+const decideSchema = z.object({ id: z.string().min(1), decision: z.enum(['approve', 'reject']), note: z.string().trim().min(1).max(500).optional() });
+
+/** `finance_correction_decide` (Spec 10.2): ein Verteiler statt zweier Werkzeuge — nie die eigene Korrektur, **`humanOnly`** (über die beiden gerufenen Dienste). */
+export async function decideAllocationCorrection(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<CorrectionView>> {
+  const parsed = validate(deps, decideSchema, input);
+  if (!parsed.ok) return parsed;
+  const { id, decision, note } = parsed.value;
+  if (decision === 'approve') return approveAllocationCorrection(deps, ctx, { id });
+  return rejectAllocationCorrection(deps, ctx, { id, note: note ?? '' });
+}

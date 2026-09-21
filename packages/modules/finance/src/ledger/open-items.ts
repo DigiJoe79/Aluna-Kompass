@@ -220,3 +220,9 @@ export async function listOpenItems(deps: Deps, ctx: CallContext, input: unknown
   const items = views.slice(f.offset, f.offset + f.limit);
   return ok({ items, total });
 }
+
+/** `finance_open_item_save` (Spec 10.2): ein Verteiler statt zweier Werkzeuge — `id` dabei entscheidet. */
+export async function saveOpenItem(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<OpenItemView>> {
+  const hasId = typeof input === 'object' && input !== null && typeof (input as Record<string, unknown>).id === 'string';
+  return hasId ? updateOpenItem(deps, ctx, input) : createOpenItem(deps, ctx, input);
+}

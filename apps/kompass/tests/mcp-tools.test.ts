@@ -38,7 +38,6 @@ const WITHOUT_MCP = new Set([
   // ihre Werkzeuge kommen mit den genannten Plänen. Jeder Plan streicht seine Zeile.
   'finance.periodClose',      // F2c
   'finance.expensesSubmit',   // F8a
-  'finance.approve',          // F8a
   'finance.donationsIssue',   // F6a
   'finance.reportsFinalize',  // F9a
 ]);
@@ -251,6 +250,11 @@ const WITHOUT_TOOL: Record<string, string> = {
   'finance.listFiscalYears': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
   'finance.listDatedValues': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
   'finance.seedFinance': 'Beispieldaten der Entwicklung.',
+  'finance.readVoucher': 'Liefert Bytes, über die Seiten des Moduls (ab F3).',
+  'finance.createOpenItem': 'Erreichbar über finance_open_item_save (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.updateOpenItem': 'Erreichbar über finance_open_item_save (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.approveAllocationCorrection': 'Erreichbar über finance_correction_decide (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.rejectAllocationCorrection': 'Erreichbar über finance_correction_decide (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
 };
 
 const servicesOf = (moduleKey: string, pkg: Record<string, unknown>) =>

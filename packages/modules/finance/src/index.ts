@@ -110,8 +110,8 @@ export {
 } from './ledger/entries';
 
 export { attachDocument, readVoucher, revokeVoucher, uploadVoucher, type VoucherLinkResult } from './ledger/vouchers';
-export { cancelOpenItem, createOpenItem, listOpenItems, openCentsInternal, openItemsAtInternal, updateOpenItem, type OpenItemView } from './ledger/open-items';
-export { applyCorrectionInternal, approveAllocationCorrection, listAllocationCorrections, rejectAllocationCorrection, requestAllocationCorrection, type CorrectionView } from './ledger/corrections';
+export { cancelOpenItem, createOpenItem, listOpenItems, openCentsInternal, openItemsAtInternal, saveOpenItem, updateOpenItem, type OpenItemView } from './ledger/open-items';
+export { applyCorrectionInternal, approveAllocationCorrection, decideAllocationCorrection, listAllocationCorrections, rejectAllocationCorrection, requestAllocationCorrection, type CorrectionView } from './ledger/corrections';
 
 export { AUDIT_FIELDS, financeAudit, type FinanceEntity } from './audit';
 export { installFinance } from './install';
