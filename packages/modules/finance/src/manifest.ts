@@ -52,7 +52,10 @@ export const financeModule: ModuleManifest = defineModule({
   settings: FINANCE_SETTINGS,
   moduleIcon: 'euro',
   help: [{ href: '/finance/entries', doc: 'finanzen/buchen' }],
-  navigation: [{ key: 'finance.entries', href: '/finance/entries', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' }],
+  navigation: [
+    { key: 'finance.entries', href: '/finance/entries', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
+    { key: 'finance.cash', href: '/finance/cash', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
+  ],
   // Dokumentarten mit diesem Bereich sieht nur, wer Finanzen mit Namen lesen darf — nicht jeder mit `dms.view`.
   documentAreas: [{ key: 'finance', permission: 'finance.read' }],
   // Der Bezug als Berechtigung (VP2): Die Buchhalterin legt Belege im Namen einer Buchung ab, ohne dms.view.

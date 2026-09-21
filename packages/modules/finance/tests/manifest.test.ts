@@ -19,8 +19,11 @@ describe('finance module', () => {
     ]);
   });
 
-  it('puts the journal into the rail with the euro icon, readable with finance.read', () => {
-    expect(financeModule.navigation).toEqual([{ key: 'finance.entries', href: '/finance/entries', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' }]);
+  it('puts the journal and the cash box into the rail with the euro icon, readable with finance.read, in the same section', () => {
+    expect(financeModule.navigation).toEqual([
+      { key: 'finance.entries', href: '/finance/entries', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
+      { key: 'finance.cash', href: '/finance/cash', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
+    ]);
     expect(financeModule.moduleIcon).toBe('euro');
   });
 

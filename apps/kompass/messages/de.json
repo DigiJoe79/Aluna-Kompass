@@ -316,7 +316,8 @@
       "list": "Projekte"
     },
     "finance": {
-      "entries": "Journal"
+      "entries": "Journal",
+      "cash": "Barkasse"
     },
     "sections": {
       "finance": {
@@ -2554,6 +2555,86 @@
           "pending": "Die Änderung wartet auf die Freigabe einer zweiten Person.",
           "pendingWithNames": "Die Änderung wartet auf die Freigabe einer zweiten Person — freigeben kann: {names}."
         }
+      }
+    },
+    "cash": {
+      "title": "Barkasse",
+      "noAccount": {
+        "title": "Noch keine Barkasse",
+        "text": "Für die Barkasse ist noch kein Konto eingerichtet."
+      },
+      "noRight": {
+        "title": "Kein Recht zum Festschreiben",
+        "text": "Zählen und Bewegen darf nur, wer Buchungen festschreiben darf.",
+        "textWithNames": "Zählen und Bewegen darf nur, wer Buchungen festschreiben darf — das können: {names}."
+      },
+      "noContactsView": {
+        "title": "Kein Recht, Kontakte zu lesen",
+        "text": "Die Zählenden wählt man aus den Kontakten; dafür fehlt das Recht „Kontakte lesen“.",
+        "textWithNames": "Die Zählenden wählt man aus den Kontakten; dafür fehlt das Recht „Kontakte lesen“ — vergeben kann es: {names}."
+      },
+      "lastMovements": {
+        "title": "Letzte Kassenbewegungen",
+        "toJournal": "Zum Journal",
+        "empty": "Noch keine Bewegung."
+      },
+      "counts": {
+        "title": "Zählungen",
+        "empty": "Noch keine Zählung."
+      },
+      "count": {
+        "trigger": "Kasse oder Dose gezählt",
+        "modeGroup": "Kasse oder Dose",
+        "mode": {
+          "cash": "Kasse",
+          "box": "Dose"
+        },
+        "account": "Kasse",
+        "boxLabel": "Bezeichnung der Dose",
+        "date": "Datum",
+        "countedAmount": "Gezählter Betrag",
+        "helper": {
+          "title": "Zählhilfe",
+          "use": "Stückzahlen eintragen"
+        },
+        "counterOne": "Erste zählende Person",
+        "counterTwo": "Zweite zählende Person",
+        "sameCounter": "Bitte zwei unterschiedliche Personen wählen.",
+        "resultLine": "Buchbestand {book} · gezählt {counted}",
+        "kind": {
+          "surplus": "Kassendifferenz",
+          "shortage": "Kassenfehlbetrag"
+        },
+        "noteLabel": "Erklärung zum Fehlbetrag",
+        "shortageHint": "Bitte kurz erklären, wo der Betrag geblieben ist.",
+        "cancel": "Abbrechen",
+        "submit": "Zählung speichern",
+        "toast": {
+          "done": "Zählprotokoll {number} erstellt."
+        }
+      },
+      "move": {
+        "trigger": "Bargeld zur Bank gebracht / abgehoben",
+        "directionGroup": "Richtung",
+        "direction": {
+          "toBank": "Zur Bank gebracht",
+          "toCash": "Abgehoben"
+        },
+        "bankAccount": "Bankkonto",
+        "date": "Datum",
+        "amount": "Betrag",
+        "cancel": "Abbrechen",
+        "submit": "Buchen",
+        "toast": {
+          "done": "Bargeldbewegung gebucht."
+        }
+      },
+      "paid": {
+        "trigger": "Bar bezahlt",
+        "question": "Aus der Vereinskasse oder aus eigener Tasche?",
+        "fromCash": "Aus der Vereinskasse",
+        "fromPocket": "Aus eigener Tasche",
+        "pocketHint": "Auslagen reichen Sie künftig selbst ein; bis dahin bucht die Schatzmeisterin die Erstattung als Ausgabe. Es wurde nichts angelegt."
       }
     }
   }

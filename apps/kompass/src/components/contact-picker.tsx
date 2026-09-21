@@ -31,6 +31,7 @@ export function ContactPicker({
   required,
   canCreate,
   hint,
+  kind,
 }: {
   id: string;
   name: string;
@@ -40,6 +41,8 @@ export function ContactPicker({
   required?: boolean;
   canCreate?: boolean;
   hint?: string;
+  /** Nur Personen oder nur Organisationen anbieten (z. B. Zählende an der Barkasse). */
+  kind?: 'person' | 'organization';
 }) {
   const t = useTranslations('contacts.picker');
   const [query, setQuery] = useState(value?.name ?? '');
@@ -64,13 +67,13 @@ export function ContactPicker({
     setLoaded(false);
     const run = ++latest.current;
     const handle = setTimeout(async () => {
-      const found = await searchContactsAction(query);
+      const found = await searchContactsAction(query, kind);
       if (run !== latest.current) return;
       setOptions(found);
       setLoaded(true);
     }, 150);
     return () => clearTimeout(handle);
-  }, [query, open]);
+  }, [query, open, kind]);
 
   const pick = (contact: PickedContact | null) => {
     onChange(contact);

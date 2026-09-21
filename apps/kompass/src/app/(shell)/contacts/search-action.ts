@@ -3,11 +3,11 @@
 import { displayName, listContacts } from '@kompass/module-contacts';
 import { requireSession } from '@/lib/request-context';
 
-/** Bis zu zwanzig Treffer für ein Suchfeld — mehr sieht in einer Liste niemand an. */
-export async function searchContactsAction(text: string): Promise<{ id: string; name: string; city: string | null }[]> {
+/** Bis zu zwanzig Treffer für ein Suchfeld — mehr sieht in einer Liste niemand an. `kind`: nur Personen oder nur Organisationen (z. B. Zählende an der Barkasse — Finanz-Spec 5.5). */
+export async function searchContactsAction(text: string, kind?: 'person' | 'organization'): Promise<{ id: string; name: string; city: string | null }[]> {
   const { deps, ctx } = await requireSession();
   const trimmed = text.trim();
-  const res = await listContacts(deps, ctx, trimmed ? { text: trimmed, limit: 20 } : { limit: 20 });
+  const res = await listContacts(deps, ctx, { ...(trimmed ? { text: trimmed } : {}), ...(kind ? { kind } : {}), limit: 20 });
   if (!res.ok) return [];
   // Der Ort steht dabei, weil die Suche ihn mit trifft: Wer „Mus“ tippt und drei
   // Treffer sieht, soll sehen, dass alle in Musterstadt wohnen.

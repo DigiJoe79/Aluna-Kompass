@@ -1,6 +1,6 @@
 import { isoNow, newId, notFound, ok, requireHumanChannel, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { contacts, displayName, type ContactRow } from '@kompass/module-contacts';
-import { abortIssue, issueGeneratedDocument } from '@kompass/module-dms';
+import { abortIssue, issueGeneratedDocument, readLinkedDocument } from '@kompass/module-dms';
 import { asc, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
@@ -320,4 +320,21 @@ export async function listCashCounts(deps: Deps, ctx: CallContext, input: unknow
 export function lastCountInternal(db: DbOrTx, accountId: string): { countedOn: string; countedCents: number } | null {
   const row = db.select().from(financeCashCounts).where(eq(financeCashCounts.accountId, accountId)).orderBy(desc(financeCashCounts.countedOn), desc(financeCashCounts.createdAt)).limit(1).get();
   return row ? { countedOn: row.countedOn, countedCents: row.countedCents } : null;
+}
+
+const readCashCountProtocolSchema = z.object({ countId: z.string().min(1) });
+
+/**
+ * Das Zählprotokoll selbst — über den Bezug als Berechtigung der Akte (Muster `readVoucher`):
+ * `finance.read` genügt, ohne `dms.view`. Bytes: kein MCP-Werkzeug (Muster `readVoucher`).
+ */
+export async function readCashCountProtocol(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ bytes: Uint8Array; filename: string; number: string | null }>> {
+  const parsed = validate(deps, readCashCountProtocolSchema, input);
+  if (!parsed.ok) return parsed;
+  const row = deps.db.select().from(financeCashCounts).where(eq(financeCashCounts.id, parsed.value.countId)).get();
+  if (!row) return notFound('financeCashCount', parsed.value.countId);
+  if (!row.documentId) return notFound('document', row.documentNumber);
+  const result = await readLinkedDocument(deps, ctx, { documentId: row.documentId, entityType: 'financeCashCount', entityId: row.id });
+  if (!result.ok) return result;
+  return ok({ bytes: result.value.bytes, filename: result.value.filename, number: result.value.record.number });
 }

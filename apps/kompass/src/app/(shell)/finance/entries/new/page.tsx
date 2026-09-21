@@ -9,7 +9,7 @@ import { requireSession } from '@/lib/request-context';
 import { emptyForm, type EntryTemplate } from '@/lib/finance/entry-form';
 import { EntryForm } from '../entry-form';
 
-export default async function NewFinanceEntryPage({ searchParams }: { searchParams: Promise<{ template?: string }> }) {
+export default async function NewFinanceEntryPage({ searchParams }: { searchParams: Promise<{ template?: string; account?: string }> }) {
   const { deps, ctx } = await requireSession();
   if (!hasPermission(ctx, 'finance.entriesWrite')) return <ForbiddenCard permission="finance.entriesWrite" />;
 
@@ -36,11 +36,16 @@ export default async function NewFinanceEntryPage({ searchParams }: { searchPara
   const t = await getTranslations('finance.entryForm');
   const openItems = (openItemsRes.ok ? openItemsRes.value.items : []).map((i) => ({ id: i.id, kind: i.kind as 'receivable' | 'payable', label: i.paymentReference ?? t('settlement.unnamed', { date: i.itemDate }), openCents: i.openCents }));
 
+  // `?account=` belegt das Konto der ersten Geldzeile vor — von der Barkasse aus „Bar bezahlt“ (F3b Task 2).
+  const initial = emptyForm(template, today);
+  const accountId = query.account && accounts.some((a) => a.id === query.account) ? query.account : null;
+  if (accountId && initial.moneyRows[0]) initial.moneyRows[0] = { ...initial.moneyRows[0], accountId };
+
   return (
     <>
       <PageHeader title={t('newTitle')} back={{ href: '/finance/entries', label: t('cancel') }} />
       <EntryForm
-        initial={emptyForm(template, today)}
+        initial={initial}
         accounts={accounts}
         categories={categories}
         purposes={purposes}

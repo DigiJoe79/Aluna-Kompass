@@ -25,7 +25,7 @@ describe('seedFinance', () => {
     await seedFinance(deps, ctx);
     await seedFinance(deps, ctx);
     const accounts = unwrap(await listAccounts(deps, ctx, { includeInactive: true }));
-    expect(accounts.map((a) => a.kind).sort()).toEqual(['bank', 'bank', 'cash', 'paymentService']);
+    expect(accounts.map((a) => a.kind).sort()).toEqual(['bank', 'bank', 'cash', 'cash', 'paymentService']);
     expect(accounts.filter((a) => a.isMain)).toHaveLength(1);
     expect(accounts.some((a) => !a.isActive)).toBe(true);
     expect(unwrap(await listFiscalYears(deps, ctx))).toHaveLength(2);
@@ -79,7 +79,7 @@ describe('seedFinance', () => {
     const log = JSON.stringify(deps.db.select().from(schema.auditLog).all().filter((e) => e.action.startsWith('finance.')));
     expect(log.length).toBeGreaterThan(100);
     for (const secret of [
-      'Vereinskonto', 'Barkasse', 'Spendenplattform', 'Sparbuch', 'Beispielbank', 'DE0212', 'AT6119', 'Dachsanierung', 'Jugendfreizeit', 'Flutlicht', 'Erika', 'Beispiel über', 'Raumvermietung',
+      'Vereinskonto', 'Barkasse', 'Zählkasse', 'Spendenplattform', 'Sparbuch', 'Beispielbank', 'DE0212', 'AT6119', 'Dachsanierung', 'Jugendfreizeit', 'Flutlicht', 'Erika', 'Beispiel über', 'Raumvermietung',
       'Spende Altjahr', 'Bankgebühr Altjahr', 'Büromaterial Altjahr', 'Spende mit Zweck', 'Auszahlung Spendenplattform', 'Abhebung Barkasse', 'Bar-Ausgabe Fahrtkosten', 'Sachspende Werkzeug', 'Fehlerhafte Spendenbuchung', 'Entwurf geprüft', 'Entwurf ungeprüft', 'Entwurf ungeprüft zwei', 'Entwurf vom Agenten',
       'Wagner', 'Kruse',
       // F2b: Belege, offene Posten, Zuordnungskorrektur.

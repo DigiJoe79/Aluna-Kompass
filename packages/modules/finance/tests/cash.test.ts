@@ -6,7 +6,7 @@ import { documents } from '@kompass/module-dms';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { bookEntry } from '../src/ledger/finalize';
-import { countCash, emptyDonationBox, lastCountInternal, listCashCounts, moveCash } from '../src/ledger/cash';
+import { countCash, emptyDonationBox, lastCountInternal, listCashCounts, moveCash, readCashCountProtocol } from '../src/ledger/cash';
 import { financeRetentionHolds } from '../src/ledger/holds';
 import { financeAllocationLines, financeCashCounts, financeEntries, financeMoneyLines } from '../src/schema';
 import { allowHumanOnlyOverMcp, ledgerFixture } from './helpers';
@@ -189,6 +189,20 @@ describe('moveCash', () => {
     const secondBank = unwrap(await createAccount(f.deps, f.ctx, { name: 'Zweitkonto', kind: 'bank', iban: 'AT611904300234573201' }));
     const res = await moveCash(f.deps, f.ctx, { fromAccountId: f.bank.id, toAccountId: secondBank.id, date: '2026-03-10', amountCents: 100 });
     expect(res).toMatchObject({ ok: false, error: { type: 'conflict', code: 'cashMoveNeedsOneCash' } });
+  });
+});
+
+describe('readCashCountProtocol', () => {
+  it('reads the protocol bytes over finance.read, the same way as readVoucher', async () => {
+    const f = await fixtureWithCashBalance();
+    const res = unwrap(await countCash(f.deps, f.ctx, { accountId: f.cash.id, countedOn: '2026-03-10', countedCents: 21450, counterOneContactId: f.donor.id, counterTwoContactId: f.wrongDonor.id }));
+    const reader = ctxWith(['finance.read'], f.userId);
+    const protocol = unwrap(await readCashCountProtocol(f.deps, reader, { countId: res.count.id }));
+    expect(protocol.number).toBe(res.documentNumber);
+    expect(protocol.bytes.byteLength).toBeGreaterThan(0);
+
+    const noRight = await readCashCountProtocol(f.deps, ctxWith([], f.userId), { countId: res.count.id });
+    expect(noRight).toMatchObject({ ok: false, error: { type: 'forbidden' } });
   });
 });
 
