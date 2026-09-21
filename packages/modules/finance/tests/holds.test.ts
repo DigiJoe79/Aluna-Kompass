@@ -6,6 +6,7 @@ import { createProject, deleteProject } from '@kompass/module-projects';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { approveAllocationCorrection, requestAllocationCorrection } from '../src/ledger/corrections';
+import { countCash } from '../src/ledger/cash';
 import { bookEntry } from '../src/ledger/finalize';
 import { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds, yearAnchorInternal } from '../src/ledger/holds';
 import { createOpenItem } from '../src/ledger/open-items';
@@ -15,7 +16,7 @@ import { setProjectFinance } from '../src/ledger/project-settings';
 import { createPurpose } from '../src/ledger/purposes';
 import { revokeVoucher, uploadVoucher } from '../src/ledger/vouchers';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
-import { financeAllocationCorrections, financeAllocationLines, financeEntryDocuments, financeProjectSettings } from '../src/schema';
+import { financeAllocationCorrections, financeAllocationLines, financeCashCounts, financeEntryDocuments, financeProjectSettings } from '../src/schema';
 import { allowHumanOnlyOverMcp, ledgerFixture, pdfBytes } from './helpers';
 
 const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
@@ -292,6 +293,25 @@ describe('references and what happens when something is deleted', () => {
       .run();
     f.deps.clock.set('2035-06-01T00:00:00.000Z');
     expect(financeRecordReferences(f.deps, 'document', 'DOC-COR-2')).toEqual([]);
+  });
+
+  it('when the file module deletes a cash count protocol, the count keeps its gravestone: id cleared, number kept', async () => {
+    const f = await ledgerFixture();
+    unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'Anfangsbestand Kasse', moneyLines: [{ accountId: f.cash.id, amountCents: 21450 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 21450 }] }));
+    const res = unwrap(await countCash(f.deps, f.ctx, { accountId: f.cash.id, countedOn: '2026-03-10', countedCents: 21450, counterOneContactId: f.donor.id, counterTwoContactId: f.wrongDonor.id }));
+    const before = f.deps.db.select().from(financeCashCounts).where(eq(financeCashCounts.id, res.count.id)).get()!;
+    expect(before.documentId).not.toBeNull();
+
+    // Das Zählprotokoll ist ein Dokument der Art `finance-cash-count` (statutory10Y ab 2026-03-10 = bis 2036-12-31) —
+    // erst danach lässt die Akte es überhaupt löschen (kein Halter von Finanzen blockiert es selbst).
+    f.deps.clock.set('2037-01-01T00:00:00.000Z');
+    const manage = ctxWith([...FINANCE_PERMISSIONS, 'dms.manage'], f.userId);
+    unwrap(await deleteDocument(f.deps, manage, { id: before.documentId! }));
+
+    const after = f.deps.db.select().from(financeCashCounts).where(eq(financeCashCounts.id, res.count.id)).get()!;
+    expect(after.documentId).toBeNull();
+    expect(after.documentNumber).toBe(before.documentNumber);
+    expect(after.countedCents).toBe(before.countedCents);
   });
 });
 

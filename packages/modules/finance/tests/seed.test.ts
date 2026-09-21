@@ -228,4 +228,22 @@ describe('seedFinance', () => {
     const permissions = getEffectivePermissions(deps.db, deps.registry, jonas.id);
     expect(permissions.has('finance.approve')).toBe(true);
   });
+
+  it('invents a cash-only person with finance.entriesFinalize but no contacts.view (F3b Schritt 0)', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+    await seedFinance(deps, ctx);
+    await seedFinance(deps, ctx); // idempotent
+
+    const ines = deps.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, 'ines@kompass.local')).get()!;
+    expect(ines).toBeDefined();
+    const permissions = getEffectivePermissions(deps.db, deps.registry, ines.id);
+    expect(permissions.has('finance.read')).toBe(true);
+    expect(permissions.has('finance.entriesFinalize')).toBe(true);
+    expect(permissions.has('contacts.view')).toBe(false);
+
+    // Die Rolle ist ad hoc angelegt, nicht Teil der fünf Rollenvorschläge aus `installFinance`.
+    const role = deps.db.select().from(schema.roles).where(eq(schema.roles.name, 'Kassenassistenz')).get()!;
+    expect(role.originKey).toBeNull();
+  });
 });

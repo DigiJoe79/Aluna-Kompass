@@ -1,4 +1,4 @@
-import { assignRole, schema, unwrap, type CallContext, type Deps } from '@kompass/core';
+import { assignRole, createRole, createUser, schema, setRolePermissions, unwrap, type CallContext, type Deps } from '@kompass/core';
 import { addContactRole, contactRoles, createContact } from '@kompass/module-contacts';
 import { textPdf } from '@kompass/module-dms';
 import { projects } from '@kompass/module-projects';
@@ -460,6 +460,13 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   // `finance.approve`, und der Korrigieren-Dialog könnte nie zeigen, wer eine wartende Änderung freigeben
   // kann.
   await grantApproverRoleToJonasFeld(deps, ctx);
+
+  // F3b Schritt 0: eine erfundene Person mit `finance.entriesFinalize`, aber ohne `contacts.view` — an ihr
+  // zeigt sich, dass die Barkasse statt des Zähl-Dialogs den Sperrzustand mit dem fehlenden Recht und
+  // seinen Vergebern nennt. Keiner der drei Kernseed-Nutzer eignet sich: Jede/r trägt in einem anderen
+  // Modultest schon die Rolle „ohne X“ oder „mit contacts.view“ — eine eigene, ad-hoc angelegte Rolle
+  // (nicht Grundausstattung, `installFinance` liefert genau fünf) hält das getrennt.
+  await ensureCashOnlyPerson(deps, ctx);
 }
 
 async function grantAuditorRoleToMiraKlein(deps: Deps, ctx: CallContext): Promise<void> {
@@ -492,4 +499,29 @@ async function grantApproverRoleToJonasFeld(deps: Deps, ctx: CallContext): Promi
   if (already) return;
   const usersCtx: CallContext = { ...ctx, permissions: new Set(deps.registry.permissionKeys) };
   unwrap(await assignRole(deps, usersCtx, { userId: jonas.id, roleId: approverRole.id }));
+}
+
+/**
+ * F3b Schritt 0: „Ines Brandt“ mit einer eigens angelegten, generischen Rolle
+ * „Kassenassistenz“ (`finance.read`, `finance.entriesFinalize` — bewusst
+ * ohne `contacts.view`). Idempotent über Name der Rolle und E-Mail der
+ * Person, wie `grantAuditorRoleToMiraKlein`.
+ */
+async function ensureCashOnlyPerson(deps: Deps, ctx: CallContext): Promise<void> {
+  const usersCtx: CallContext = { ...ctx, permissions: new Set(deps.registry.permissionKeys) };
+  let role = deps.db.select({ id: schema.roles.id }).from(schema.roles).where(eq(schema.roles.name, 'Kassenassistenz')).get();
+  if (!role) {
+    const created = unwrap(await createRole(deps, usersCtx, { name: 'Kassenassistenz', description: 'Zählt und bewegt Bargeld, ohne Kontakte einzusehen.' }));
+    unwrap(await setRolePermissions(deps, usersCtx, { roleId: created.id, permissionKeys: ['finance.read', 'finance.entriesFinalize'] }));
+    role = { id: created.id };
+  }
+  let person = deps.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, 'ines@kompass.local')).get();
+  if (!person) {
+    const created = unwrap(await createUser(deps, usersCtx, { name: 'Ines Brandt', email: 'ines@kompass.local', roleIds: [role.id] }));
+    person = { id: created.user.id };
+    return;
+  }
+  const already = deps.db.select({ userId: schema.userRoles.userId }).from(schema.userRoles).where(and(eq(schema.userRoles.userId, person.id), eq(schema.userRoles.roleId, role.id))).get();
+  if (already) return;
+  unwrap(await assignRole(deps, usersCtx, { userId: person.id, roleId: role.id }));
 }

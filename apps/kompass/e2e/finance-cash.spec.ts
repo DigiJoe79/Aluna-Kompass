@@ -154,6 +154,35 @@ test.describe('finance cash', () => {
     await expect(page.getByRole('button', { name: 'Kasse oder Dose gezählt' })).toHaveCount(0);
   });
 
+  test('ohne contacts.view steht statt des Zähl-Dialogs, welches Recht fehlt und wer es vergeben kann', async ({ page }) => {
+    // „Ines Brandt“ (Finanz-Seed, F3b Schritt 0): Rolle „Kassenassistenz“ mit finance.read und
+    // finance.entriesFinalize, bewusst ohne contacts.view.
+    await page.goto('/admin/users');
+    await page.getByRole('row', { name: /Ines Brandt/ }).getByRole('button', { name: 'Aktionen' }).click();
+    await page.getByRole('menuitem', { name: 'Neues Startpasswort' }).click();
+    const startPassword = (await page.getByTestId('start-password').textContent())!.trim();
+    await page.getByRole('button', { name: 'Ich habe die Daten notiert' }).click();
+    await page.request.post('/logout');
+    await page.goto('/login');
+    await page.getByLabel('E-Mail').fill('ines@kompass.local');
+    await page.getByLabel('Passwort').fill(startPassword);
+    await page.getByRole('button', { name: 'Anmelden' }).click();
+    await page.getByLabel('Startpasswort').fill(startPassword);
+    await page.getByLabel('Neues Passwort', { exact: true }).fill('ines-hat-ein-neues-passwort');
+    await page.getByLabel('Passwort wiederholen').fill('ines-hat-ein-neues-passwort');
+    await page.getByRole('button', { name: 'Passwort setzen und fortfahren' }).click();
+    await expect(page).toHaveURL('/');
+
+    await page.goto('/finance/cash');
+    await expect(page.getByText('Kein Recht, Kontakte zu lesen')).toBeVisible();
+    await expect(page.getByText(/„Kontakte lesen“/)).toBeVisible();
+    await expect(page.getByText('Anna Berger')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Kasse oder Dose gezählt' })).toHaveCount(0);
+    // Die zwei anderen Karten (kein Bezug zu contacts.view) bleiben verfügbar.
+    await expect(page.getByRole('button', { name: 'Bargeld zur Bank gebracht / abgehoben' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Bar bezahlt' })).toBeVisible();
+  });
+
   test('eine geleerte Spendendose wird eine Einnahme ohne Spender', async ({ page }) => {
     await openCashPage(page);
     await page.getByRole('button', { name: 'Kasse oder Dose gezählt' }).click();
