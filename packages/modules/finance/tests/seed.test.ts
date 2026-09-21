@@ -6,10 +6,12 @@ import { describe, expect, it } from 'vitest';
 import { installFinance } from '../src/install';
 import { listAccounts } from '../src/ledger/accounts';
 import { listCategories } from '../src/ledger/categories';
+import { listAllocationCorrections } from '../src/ledger/corrections';
 import { getEntry } from '../src/ledger/entries';
 import { listFiscalYears } from '../src/ledger/fiscal-years';
+import { listOpenItems } from '../src/ledger/open-items';
 import { listPurposes } from '../src/ledger/purposes';
-import { financeEntries } from '../src/schema';
+import { financeEntries, financeEntryDocuments } from '../src/schema';
 import { seedFinance } from '../src/seed';
 import { setupFinance } from './helpers';
 
@@ -47,9 +49,54 @@ describe('seedFinance', () => {
       'Vereinskonto', 'Barkasse', 'Spendenplattform', 'Sparbuch', 'Beispielbank', 'DE0212', 'AT6119', 'Dachsanierung', 'Jugendfreizeit', 'Flutlicht', 'Erika', 'Beispiel über', 'Raumvermietung',
       'Spende Altjahr', 'Bankgebühr Altjahr', 'Büromaterial Altjahr', 'Spende mit Zweck', 'Auszahlung Spendenplattform', 'Abhebung Barkasse', 'Bar-Ausgabe Fahrtkosten', 'Sachspende Werkzeug', 'Fehlerhafte Spendenbuchung', 'Entwurf geprüft', 'Entwurf ungeprüft', 'Entwurf vom Agenten',
       'Wagner', 'Kruse',
+      // F2b: Belege, offene Posten, Zuordnungskorrektur.
+      'Rechnung Büromaterial', 'Falscher Anhang hochgeladen, richtige Quittung liegt vor',
+      'RE-2026-041', 'RE-2026-055', 'SP-2026-003', 'RE-2026-060', 'Doppelt erfasst, storniert vor Zahlung',
+      'Teilzahlung Lieferant', 'Ausgleich Forderung',
+      'Auslandsbezug bei der Erfassung übersehen', 'Spenderin nachträglich zugeordnet',
     ]) {
       expect(log, secret).not.toContain(secret);
     }
+  });
+
+  it('files a voucher on three entries, revokes and replaces one, and leaves one deliberately without', async () => {
+    const { deps, ctx } = setupFinance();
+    await seedFinance(deps, ctx);
+    await seedFinance(deps, ctx);
+
+    const byText = (text: string) => deps.db.select().from(financeEntries).where(eq(financeEntries.text, text)).get()!;
+    const linksFor = (entryId: string) => deps.db.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, entryId)).all();
+
+    expect(linksFor(byText('Büromaterial Altjahr').id)).toHaveLength(1);
+    expect(linksFor(byText('Bar-Ausgabe Fahrtkosten').id)).toHaveLength(1);
+    const bankgebuehrLinks = linksFor(byText('Bankgebühr Altjahr').id);
+    expect(bankgebuehrLinks).toHaveLength(2);
+    expect(bankgebuehrLinks.some((l) => l.revokedAt !== null && l.replacedByLinkId !== null)).toBe(true);
+    expect(linksFor(byText('Spende Altjahr').id)).toHaveLength(0);
+  });
+
+  it('seeds open items in every state: open, partially paid, settled, and cancelled without payment', async () => {
+    const { deps, ctx } = setupFinance();
+    await seedFinance(deps, ctx);
+    await seedFinance(deps, ctx);
+
+    const items = unwrap(await listOpenItems(deps, ctx, { state: 'all' })).items;
+    const byRef = new Map(items.map((i) => [i.paymentReference, i]));
+    expect(byRef.get('RE-2026-041')).toMatchObject({ state: 'open', settledCents: 0 });
+    expect(byRef.get('RE-2026-055')?.state).toBe('open');
+    expect(byRef.get('RE-2026-055')?.settledCents).toBeGreaterThan(0);
+    expect(byRef.get('SP-2026-003')).toMatchObject({ state: 'settled' });
+    expect(byRef.get('RE-2026-060')).toMatchObject({ state: 'cancelled' });
+  });
+
+  it('seeds an applied correction in the running year and a pending one in the closed previous year, and is idempotent', async () => {
+    const { deps, ctx } = setupFinance();
+    await seedFinance(deps, ctx);
+    await seedFinance(deps, ctx);
+
+    const corrections = unwrap(await listAllocationCorrections(deps, ctx, {})).items;
+    expect(corrections.filter((c) => c.state === 'applied').length).toBe(1);
+    expect(corrections.filter((c) => c.state === 'pending').length).toBe(1);
   });
 
   it('books an entry in every state of a booking year, and is idempotent', async () => {

@@ -23,6 +23,8 @@ export * from './schema';
 export { MIN_FULLTEXT_CHARS, SNIPPET_MARK_END, SNIPPET_MARK_START, SNIPPET_TOKENS } from './search';
 export type { TextHit } from './search';
 export * from './seed';
+/** Für Module, die eine erfundene, lesbare PDF für ihre eigenen Entwicklungsdaten brauchen (Muster: Finanzen F2b). */
+export { textPdf } from './seed-pdf';
 export {
   allocateDocumentNumber,
   deleteDocument,

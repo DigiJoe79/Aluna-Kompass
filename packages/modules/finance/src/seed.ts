@@ -1,17 +1,32 @@
-import { unwrap, type CallContext, type Deps } from '@kompass/core';
+import { newId, unwrap, type CallContext, type Deps } from '@kompass/core';
 import { addContactRole, contactRoles, createContact } from '@kompass/module-contacts';
+import { textPdf } from '@kompass/module-dms';
 import { projects } from '@kompass/module-projects';
-import { eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { createAccount, setAccountActive } from './ledger/accounts';
 import { createCategory } from './ledger/categories';
+import { requestAllocationCorrection } from './ledger/corrections';
 import { saveDraft, setReviewed } from './ledger/entries';
 import { bookEntry } from './ledger/finalize';
 import { createFirstFiscalYear, ensureFiscalYearFor } from './ledger/fiscal-years';
+import { cancelOpenItem, createOpenItem } from './ledger/open-items';
 import { createPurpose, fulfillPurpose } from './ledger/purposes';
 import { reverseEntry } from './ledger/reverse';
+import { uploadVoucher, revokeVoucher } from './ledger/vouchers';
 import { setDatedValue } from './ledger/dated-values';
 import { installFinance } from './install';
-import { financeAccounts, financeCategories, financeEntries, financeFiscalYears, financePurposes } from './schema';
+import {
+  financeAccounts,
+  financeAllocationCorrections,
+  financeAllocationLines,
+  financeCategories,
+  financeEntries,
+  financeEntryDocuments,
+  financeFiscalYears,
+  financeOpenItems,
+  financePeriodEvents,
+  financePurposes,
+} from './schema';
 
 const isoDate = (d: Date): string => d.toISOString().slice(0, 10);
 
@@ -56,6 +71,40 @@ async function ensureEntry(deps: Deps, text: string, create: () => Promise<unkno
   const exists = deps.db.select({ id: financeEntries.id }).from(financeEntries).where(eq(financeEntries.text, text)).get();
   if (exists) return;
   await create();
+}
+
+function entryByText(deps: Deps, text: string) {
+  const row = deps.db.select().from(financeEntries).where(eq(financeEntries.text, text)).get();
+  if (!row) throw new Error(`Buchung fehlt: ${text}`);
+  return row;
+}
+
+function firstAllocationLineOf(deps: Deps, entryId: string) {
+  const row = deps.db.select().from(financeAllocationLines).where(eq(financeAllocationLines.entryId, entryId)).orderBy(asc(financeAllocationLines.position)).get();
+  if (!row) throw new Error(`Zuordnungszeile fehlt: ${entryId}`);
+  return row;
+}
+
+/** Belegt eine Buchung nur, wenn sie noch keinen Beleg trägt — idempotent über `uploadVoucher` hinweg. */
+async function ensureVoucher(deps: Deps, ctx: CallContext, entry: { id: string }, typeKey: string, documentDate: string, title?: string): Promise<{ linkId: string; documentId: string } | null> {
+  const existing = deps.db.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, entry.id)).all();
+  if (existing.length > 0) return { linkId: existing[0]!.id, documentId: existing[0]!.documentId ?? '' };
+  const res = unwrap(await uploadVoucher(deps, ctx, { entryId: entry.id, bytes: textPdf(['Beleg', '', 'Erfundenes Beispiel für die Entwicklung.']), typeKey, documentDate, title }));
+  return { linkId: res.linkId, documentId: res.documentId };
+}
+
+/** Ein offener Posten je Zahlungsreferenz — idempotent, `paymentReference` dient als Fundstelle. */
+async function ensureOpenItem(deps: Deps, ctx: CallContext, paymentReference: string, input: Record<string, unknown>): Promise<{ id: string } | null> {
+  const existing = deps.db.select({ id: financeOpenItems.id }).from(financeOpenItems).where(eq(financeOpenItems.paymentReference, paymentReference)).get();
+  if (existing) return existing;
+  return unwrap(await createOpenItem(deps, ctx, { paymentReference, ...input }));
+}
+
+/** Eine Zuordnungskorrektur je Zeile — idempotent, egal ob sie wartet oder schon entschieden ist. */
+async function ensureCorrection(deps: Deps, lineId: string, request: () => Promise<unknown>): Promise<void> {
+  const existing = deps.db.select({ id: financeAllocationCorrections.id }).from(financeAllocationCorrections).where(eq(financeAllocationCorrections.lineId, lineId)).get();
+  if (existing) return;
+  await request();
 }
 
 /**
@@ -230,4 +279,92 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   await ensureEntry(deps, 'Entwurf vom Agenten', () =>
     saveDraft(deps, { ...ctx, channel: 'mcp' as const }, { entryDate: `${currentYear}-03-07`, text: 'Entwurf vom Agenten', moneyLines: [{ accountId: bank.id, amountCents: 4000 }], allocationLines: [{ categoryId: donationsCat.id, amountCents: 3500 }] }).then(unwrap),
   );
+
+  // --- Belege (F2b, Spec 5.2): drei festgeschriebene Buchungen mit hochgeladenem PDF; eine davon
+  // widerrufen und ersetzt; „Spende Altjahr“ bleibt bewusst ohne Beleg (der Rohumsatz allein reicht
+  // für Spenden erst mit F4/F5).
+  const bueromaterial = entryByText(deps, 'Büromaterial Altjahr');
+  const fahrtkosten = entryByText(deps, 'Bar-Ausgabe Fahrtkosten');
+  const bankgebuehr = entryByText(deps, 'Bankgebühr Altjahr');
+
+  await ensureVoucher(deps, ctx, bueromaterial, 'voucher-invoice', `${previousYear}-05-20`, 'Rechnung Büromaterial');
+  const fahrtkostenVoucher = await ensureVoucher(deps, ctx, fahrtkosten, 'voucher-receipt', `${currentYear}-02-20`);
+  const bankgebuehrVoucher = await ensureVoucher(deps, ctx, bankgebuehr, 'voucher-own', `${previousYear}-04-15`);
+
+  if (bankgebuehrVoucher && fahrtkostenVoucher) {
+    // Erst nach dem zweiten Beleg kann es zwei Zeilen geben; ohne Sortiergarantie der Datenbank
+    // zählt für die Wiederholbarkeit nur, ob überhaupt schon einmal widerrufen wurde — nicht, welche
+    // der Zeilen `ensureVoucher` zufällig zuerst zurückgab.
+    const bankgebuehrLinks = deps.db.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, bankgebuehr.id)).all();
+    if (!bankgebuehrLinks.some((l) => l.revokedAt !== null)) {
+      unwrap(
+        await revokeVoucher(deps, ctx, {
+          linkId: bankgebuehrVoucher.linkId,
+          note: 'Falscher Anhang hochgeladen, richtige Quittung liegt vor',
+          replacementDocumentId: fahrtkostenVoucher.documentId,
+        }),
+      );
+    }
+  }
+
+  // --- Offene Posten (F2b, Spec 5.3): außerhalb des Journals — eine Verbindlichkeit offen, eine
+  // teilbezahlt, eine Forderung erledigt, ein Posten ohne Zahlung erledigt.
+  const payableOpen = await ensureOpenItem(deps, ctx, 'RE-2026-041', { kind: 'payable', itemDate: `${currentYear}-01-10`, amountCents: 12000, dueOn: `${currentYear}-02-10` });
+  const payablePartial = await ensureOpenItem(deps, ctx, 'RE-2026-055', { kind: 'payable', itemDate: `${currentYear}-01-15`, amountCents: 20000, dueOn: `${currentYear}-02-15` });
+  const receivableSettled = await ensureOpenItem(deps, ctx, 'SP-2026-003', { kind: 'receivable', itemDate: `${currentYear}-01-20`, amountCents: 5000, dueOn: `${currentYear}-02-20` });
+  const payableCancelled = await ensureOpenItem(deps, ctx, 'RE-2026-060', { kind: 'payable', itemDate: `${currentYear}-01-25`, amountCents: 3000 });
+  void payableOpen; // bleibt bewusst unbeglichen — nichts weiter zu tun.
+
+  if (payablePartial) {
+    await ensureEntry(deps, 'Teilzahlung Lieferant', () =>
+      bookEntry(deps, ctx, {
+        entryDate: `${currentYear}-02-01`,
+        text: 'Teilzahlung Lieferant',
+        moneyLines: [{ accountId: bank.id, amountCents: -8000, settlements: [{ openItemId: payablePartial.id, amountCents: 8000 }] }],
+        allocationLines: [{ categoryId: programCostsCat.id, amountCents: -8000 }],
+      }).then(unwrap),
+    );
+  }
+  if (receivableSettled) {
+    await ensureEntry(deps, 'Ausgleich Forderung', () =>
+      bookEntry(deps, ctx, {
+        entryDate: `${currentYear}-02-05`,
+        text: 'Ausgleich Forderung',
+        moneyLines: [{ accountId: bank.id, amountCents: 5000, settlements: [{ openItemId: receivableSettled.id, amountCents: 5000 }] }],
+        allocationLines: [{ categoryId: donationsCat.id, amountCents: 5000 }],
+      }).then(unwrap),
+    );
+  }
+  if (payableCancelled) {
+    const row = deps.db.select().from(financeOpenItems).where(eq(financeOpenItems.id, payableCancelled.id)).get();
+    if (row && row.cancelledAt === null) {
+      unwrap(await cancelOpenItem(deps, ctx, { id: payableCancelled.id, note: 'Doppelt erfasst, storniert vor Zahlung' }));
+    }
+  }
+
+  // --- Zuordnungskorrektur (F2b, Spec 5.4, E18): eine angewandte im laufenden Jahr, eine wartende
+  // im abgeschlossenen Vorjahr.
+  const spendeMitZweck = entryByText(deps, 'Spende mit Zweck');
+  const spendeMitZweckLine = firstAllocationLineOf(deps, spendeMitZweck.id);
+  await ensureCorrection(deps, spendeMitZweckLine.id, () =>
+    requestAllocationCorrection(deps, ctx, { lineId: spendeMitZweckLine.id, changes: { abroad: true }, note: 'Auslandsbezug bei der Erfassung übersehen' }).then(unwrap),
+  );
+
+  const previousFiscalYear = deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.designation, String(previousYear))).get();
+  if (previousFiscalYear) {
+    const alreadyClosed = deps.db
+      .select({ id: financePeriodEvents.id })
+      .from(financePeriodEvents)
+      .where(and(eq(financePeriodEvents.fiscalYearId, previousFiscalYear.id), eq(financePeriodEvents.kind, 'closed')))
+      .get();
+    if (!alreadyClosed) {
+      deps.db.insert(financePeriodEvents).values({ id: newId(), fiscalYearId: previousFiscalYear.id, kind: 'closed', at: `${previousFiscalYear.endsOn}T23:59:59.000Z`, byUserId: ctx.userId ?? 'system', reason: null }).run();
+    }
+
+    const spendeAltjahr = entryByText(deps, 'Spende Altjahr');
+    const spendeAltjahrLine = firstAllocationLineOf(deps, spendeAltjahr.id);
+    await ensureCorrection(deps, spendeAltjahrLine.id, () =>
+      requestAllocationCorrection(deps, ctx, { lineId: spendeAltjahrLine.id, changes: { contactId: donorA.id }, note: 'Spenderin nachträglich zugeordnet' }).then(unwrap),
+    );
+  }
 }
