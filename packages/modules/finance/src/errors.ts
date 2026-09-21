@@ -67,6 +67,13 @@ export const FINANCE_ERRORS = {
   cashCountInFuture: { reason: 'Das Zähldatum liegt in der Zukunft.', remedy: 'Wählen Sie den heutigen Tag oder einen vergangenen.' },
   cashMoveNeedsOneCash: { reason: 'Eine Bargeldbewegung braucht genau ein Barkonto — das andere ist ein Bankkonto.', remedy: 'Wählen Sie ein Bankkonto und ein Barkonto.' },
   switchUiOnly: { reason: 'Dieser Schalter lässt sich nur am Bildschirm ändern.', remedy: 'Melden Sie sich an und ändern Sie ihn dort.' },
+  // F4 Task 3 — der Lauf.
+  statementAccountNotBank: { reason: 'Ein Kontoauszug lässt sich nur für ein Bankkonto oder einen Zahlungsdienst laden.', remedy: 'Wählen Sie ein passendes Konto.' },
+  statementTooLarge: { reason: 'Die Datei ist größer als das eingestellte Limit von {limit} MB.', remedy: 'Prüfen Sie die Datei, oder erhöhen Sie das Limit unter „Finanzen einrichten“.' },
+  statementUnreadable: { reason: 'Der Auszug lässt sich nicht lesen{location}.', remedy: 'Prüfen Sie die Datei, oder laden Sie den Auszug erneut aus dem Online-Banking herunter.' },
+  statementIbanMismatch: { reason: 'Die IBAN im Auszug passt nicht zum Konto {account}.', remedy: 'Wählen Sie das passende Konto, oder tragen Sie die richtige IBAN am Konto ein.' },
+  statementFormatChange: { reason: 'Für {account} war bisher ein anderes Auszugsformat hinterlegt; nach dem Wechsel gibt es mehr Zweifelsfälle.', remedy: 'Bestätigen Sie den Wechsel, wenn Sie ihn wirklich wollen.' },
+  statementAlreadyImported: { reason: 'Dieser Auszug wurde für das Konto {account} bereits geladen.', remedy: 'Nichts zu tun — oder verwerfen Sie den vorhandenen Auszug zuerst, wenn er falsch war.' },
 } as const satisfies Record<string, { reason: string; remedy: string }>;
 
 export type FinanceErrorCode = keyof typeof FINANCE_ERRORS;

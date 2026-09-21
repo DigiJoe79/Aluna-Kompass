@@ -1,5 +1,6 @@
 import { invalid, readSetting, type McpToolDefinition } from '@kompass/core';
 import { z } from 'zod';
+import { getImportRun, importStatement, listImportRuns } from './import/runs';
 import { closePurpose, deleteMasterData, readMasterData, saveMasterData, setMasterDataActive } from './ledger/master-data';
 import { decideAllocationCorrection, listAllocationCorrections, requestAllocationCorrection } from './ledger/corrections';
 import { countCash, emptyDonationBox, listCashCounts, moveCash } from './ledger/cash';
@@ -157,6 +158,10 @@ const confirmSetupStepMcpSchema = z.object({ step: z.enum(['categories', 'tax'])
 const setFinanceSwitchMcpSchema = z.object({ key: z.enum(['finance.isEntrepreneurOrHasVatId', 'finance.membershipFeesCertifiable', 'finance.expenseWaiversEnabled', 'finance.mcpHumanOnlyAllowed']), value: z.boolean() });
 const setFinanceLimitMcpSchema = z.object({ key: z.enum(['finance.statementSufficesBelowCents', 'finance.cashDonationAlertCents', 'finance.roundAmountFromCents']), cents: z.number().int().min(0) });
 
+const importStatementMcpSchema = z.object({ accountId: z.string(), fileName: z.string(), contentBase64: z.string().min(1), confirmFormatChange: z.boolean().optional() });
+const listImportRunsMcpSchema = z.object({ accountId: z.string().optional(), limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() });
+const getImportRunMcpSchema = z.object({ id: z.string() });
+
 const previewPeriodMcpSchema = z.object({ id: z.string(), action: z.enum(['close', 'reopen']) });
 const closeFiscalYearMcpSchema = z.object({ id: z.string() });
 const reopenFiscalYearMcpSchema = z.object({ id: z.string(), note: z.string() });
@@ -313,4 +318,17 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
   t({ name: 'finance_permission_matrix', description: 'Read the "who may do what" matrix: the ten finance activities mapped to their permission, and per role its granted activities, visible finance navigation entries and active holders (names, no e-mail). Requires finance.setup.', inputSchema: z.object({}), handler: (deps, ctx) => getPermissionMatrix(deps, ctx), service: getPermissionMatrix }),
   t({ name: 'finance_setup_switch', description: 'Set one of the four setup switches: the three tax defaults, or whether an agent may finalize over MCP. The last one stays bound to the screen - refused over MCP. Requires finance.setup.', inputSchema: setFinanceSwitchMcpSchema, handler: (deps, ctx, args) => setFinanceSwitch(deps, ctx, args), service: setFinanceSwitch }),
   t({ name: 'finance_setup_limit', description: 'Set one of the three setup limits, as whole cents: below which a bank statement suffices as proof, from which a cash donation is flagged, and from which an amount is round-number-suspicious. Requires finance.setup.', inputSchema: setFinanceLimitMcpSchema, handler: (deps, ctx, args) => setFinanceLimit(deps, ctx, args), service: setFinanceLimit }),
+  t({
+    name: 'finance_import_statement',
+    description: 'Import a CAMT.053 bank statement (base64, at most finance.uploadLimitMb) for a bank or payment-service account: one run per Stmt in the file, all or nothing. Sets the account import format to camt053 on first use; a change from csv needs confirmFormatChange. Refuses a mismatched IBAN, an already-imported file, or a cash account. An unreadable file is recorded as a failed run and answered with statementUnreadable. Not human only - an agent may import, never finalize. Requires finance.entriesWrite.',
+    inputSchema: importStatementMcpSchema,
+    handler: (deps, ctx, { contentBase64, ...rest }) => {
+      const bytes = decodeBase64(contentBase64);
+      if (!bytes) return Promise.resolve(invalid([{ path: 'contentBase64', message: 'invalidBase64' }]));
+      return importStatement(deps, ctx, { ...rest, bytes });
+    },
+    service: importStatement,
+  }),
+  t({ name: 'finance_import_runs_list', description: 'List import runs (statement uploads), optionally filtered by account, newest first. Counterparty, iban and purpose never appear here - only counts and balances. Requires finance.read.', inputSchema: listImportRunsMcpSchema, handler: (deps, ctx, args) => listImportRuns(deps, ctx, args), service: listImportRuns }),
+  t({ name: 'finance_import_run_get', description: 'Read one import run with its raw transactions (counterparty, iban, purpose included). Requires finance.read.', inputSchema: getImportRunMcpSchema, handler: (deps, ctx, args) => getImportRun(deps, ctx, args), service: getImportRun }),
 ];

@@ -134,6 +134,21 @@ export async function deleteAccount(deps: Deps, ctx: CallContext, input: unknown
   });
 }
 
+/**
+ * F4 Task 3: setzt das Importformat eines Kontos **innerhalb einer schon
+ * laufenden Transaktion** (der Import selbst) — der einzige Weg, der dabei
+ * auch protokolliert, statt am Audit von `updateAccount` vorbei roh zu
+ * schreiben. Reine Feldänderung, keine eigenen Prüfungen: Der Aufrufer hat
+ * das Konto schon geladen und geprüft.
+ */
+export function setImportFormatInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, account: FinanceAccountRow, format: 'camt053' | 'csv'): FinanceAccountRow {
+  const now = isoNow(deps.clock);
+  tx.update(financeAccounts).set({ importFormat: format, updatedAt: now }).where(eq(financeAccounts.id, account.id)).run();
+  const after = { ...account, importFormat: format, updatedAt: now };
+  financeAudit(tx, deps, ctx, { action: 'finance.account.update', entity: 'financeAccount', id: account.id, before: account, after, summary: `Geldkonto ${account.id} geändert` });
+  return after;
+}
+
 export const accountListSchema = z.object({ includeInactive: z.boolean().default(false) });
 
 export async function listAccounts(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AccountView[]>> {
