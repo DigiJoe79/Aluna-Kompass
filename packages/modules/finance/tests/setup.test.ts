@@ -4,7 +4,7 @@ import { createContact, linkUserToContact } from '@kompass/module-contacts';
 import { describe, expect, it } from 'vitest';
 import { createAccount } from '../src/ledger/accounts';
 import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
-import { applyTaxDefaults, confirmSetupStep, getPermissionMatrix, getSetupStatus, setFinanceSwitch } from '../src/ledger/setup';
+import { applyTaxDefaults, confirmSetupStep, getPermissionMatrix, getSetupStatus, setFinanceLimit, setFinanceSwitch } from '../src/ledger/setup';
 import { installFinance } from '../src/install';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
 import { setupFinance } from './helpers';
@@ -165,6 +165,21 @@ describe('finance setup status', () => {
 
     const readerCtx = ctxWith(['finance.read'], 'READER');
     expect(await setFinanceSwitch(deps, readerCtx, { key: 'finance.isEntrepreneurOrHasVatId', value: false })).toMatchObject({ ok: false, error: { type: 'forbidden', permission: 'finance.setup' } });
+  });
+
+  it('sets one of the three finance limits with finance.setup, refuses other keys and negative amounts', async () => {
+    const { deps, ctx } = setupFinance();
+    unwrap(await setFinanceLimit(deps, ctx, { key: 'finance.statementSufficesBelowCents', cents: 5000 }));
+    expect(readSetting(deps, 'finance.statementSufficesBelowCents')).toBe(5000);
+
+    const unknownKey = await setFinanceLimit(deps, ctx, { key: 'finance.uploadLimitMb', cents: 5 });
+    expect(unknownKey.ok).toBe(false);
+
+    const negative = await setFinanceLimit(deps, ctx, { key: 'finance.cashDonationAlertCents', cents: -100 });
+    expect(negative.ok).toBe(false);
+
+    const readerCtx = ctxWith(['finance.read'], 'READER');
+    expect(await setFinanceLimit(deps, readerCtx, { key: 'finance.roundAmountFromCents', cents: 10000 })).toMatchObject({ ok: false, error: { type: 'forbidden', permission: 'finance.setup' } });
   });
 
   it('never writes user names into the audit log', async () => {

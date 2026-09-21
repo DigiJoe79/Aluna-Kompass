@@ -173,6 +173,31 @@ test.describe('finance setup', () => {
     await expect(page.getByText('Vom Verein überschrieben')).not.toBeVisible();
   });
 
+  test('die Grenze „Kontoauszug genügt bis“ lässt sich setzen und wirkt in der Buchungsmaske', async ({ page }) => {
+    // „Wirkt“ heißt hier: Die Einstellung, die der Beleg-Block einer Buchung
+    // liest (`documentationOf`, `packages/modules/finance/src/ledger/entries.ts`),
+    // übernimmt den neuen Wert sofort — ohne Neustart, ohne zweite Ablage. Die
+    // Anzeige „Der Kontoauszug genügt …“ selbst verlangt zusätzlich einen
+    // Rohumsatz (einen importierten Kontoauszug, F4/F4b) — das bringt erst ein
+    // späterer Plan; bis dahin ist der Effekt in `tests/vouchers.test.ts`
+    // bewiesen (Dienst `setFinanceLimit` statt direktem Einstellungs-Schreiben).
+    const row = page.getByTestId('tax-limit-statement-suffices');
+    try {
+      await page.goto('/admin/finance?panel=tax');
+      await row.getByLabel('Bis zu welchem Betrag genügt der Kontoauszug als Beleg?').fill('50,00');
+      await row.getByRole('button', { name: 'Speichern' }).click();
+      await expect(page.getByText('Grenze gespeichert.')).toBeVisible();
+
+      await page.reload();
+      await expect(page.getByTestId('tax-limit-statement-suffices').getByLabel('Bis zu welchem Betrag genügt der Kontoauszug als Beleg?')).toHaveValue('50,00');
+    } finally {
+      await page.goto('/admin/finance?panel=tax');
+      await row.getByLabel('Bis zu welchem Betrag genügt der Kontoauszug als Beleg?').fill('0,00');
+      await row.getByRole('button', { name: 'Speichern' }).click();
+      await expect(page.getByText('Grenze gespeichert.')).toBeVisible();
+    }
+  });
+
   test('die Matrix nennt je Rolle, wer sie trägt, und „niemand“ als Wort', async ({ page }) => {
     await page.goto('/admin/finance?panel=permissions');
     const treasurer = page.getByTestId('permission-role-Schatzmeister');

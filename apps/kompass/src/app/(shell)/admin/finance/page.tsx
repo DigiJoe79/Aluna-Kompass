@@ -73,6 +73,11 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
           expenseWaiversEnabled: readSetting<boolean>(deps, 'finance.expenseWaiversEnabled'),
           mcpHumanOnlyAllowed: readSetting<boolean>(deps, 'finance.mcpHumanOnlyAllowed'),
         }}
+        limits={{
+          statementSufficesBelowCents: readSetting<number>(deps, 'finance.statementSufficesBelowCents'),
+          cashDonationAlertCents: readSetting<number>(deps, 'finance.cashDonationAlertCents'),
+          roundAmountFromCents: readSetting<number>(deps, 'finance.roundAmountFromCents'),
+        }}
         confirmedAt={readSetting<string | null>(deps, 'finance.setupTaxConfirmedAt')}
       />
     );

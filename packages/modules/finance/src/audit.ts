@@ -38,7 +38,8 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   // Nie die Zählenden, nie ihre Erklärung (Spec 10.3, Entschieden 1): nur, *dass* und *wie viel* abweicht.
   financeCashCount: ['accountId', 'countedOn', 'kind', 'differenceCents', 'documentNumber', 'entryId'],
   // Task 4/5 — nur, *dass* ein Einrichtungsschritt bestätigt oder ein Schalter gesetzt wurde, nie Namen.
-  financeSetup: ['step', 'confirmedAt', 'applied'],
+  // `key`/`cents` (Nachtrag B): nur Schlüssel und Zahl der Grenze, nie ein Begründungstext.
+  financeSetup: ['step', 'confirmedAt', 'applied', 'key', 'cents'],
 };
 
 const pick = (entity: FinanceEntity, data?: Record<string, unknown>) => (data ? Object.fromEntries(Object.entries(data).filter(([field]) => AUDIT_FIELDS[entity].includes(field))) : undefined);

@@ -14,7 +14,18 @@ import { revokeVoucherAction, uploadVoucherAction } from '../actions';
  * geht immer, auch im abgeschlossenen Jahr — dort verlangt Widerrufen einen
  * Ersatz.
  */
-export function EntryVouchers({ entryId, vouchers: initial, closedYear }: { entryId: string; vouchers: ReceiptListItem[]; closedYear: boolean }) {
+export function EntryVouchers({
+  entryId,
+  vouchers: initial,
+  closedYear,
+  documentationState,
+}: {
+  entryId: string;
+  vouchers: ReceiptListItem[];
+  closedYear: boolean;
+  /** Spec 5.2 — nur ohne Beleg zeigt „statementSuffices“ etwas an; mit Beleg oder fehlendem Nachweis bleibt der Hinweis stumm. */
+  documentationState?: 'voucher' | 'statementSuffices' | 'missing';
+}) {
   const t = useTranslations('finance.entryView.vouchers');
   const router = useRouter();
   const [vouchers, setVouchers] = useState(initial);
@@ -38,6 +49,7 @@ export function EntryVouchers({ entryId, vouchers: initial, closedYear }: { entr
   return (
     <section className="space-y-3 rounded-md border border-line bg-surface p-4">
       <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('title')}</h3>
+      {vouchers.length === 0 && documentationState === 'statementSuffices' ? <p className="text-[13px] text-ink-2">{t('statementSuffices')}</p> : null}
       <ReceiptList items={vouchers} onRevoke={(linkId) => setRevokeTarget(linkId)} />
       <ReceiptDrop onFiles={(files) => void uploadFiles(files)} />
 

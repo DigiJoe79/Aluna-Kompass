@@ -245,6 +245,25 @@ export async function setFinanceSwitch(deps: Deps, ctx: CallContext, input: unkn
   });
 }
 
+/** Die drei Grenzen der Einrichtung (H7 Spec/Briefing): Auszug genügt bis …, Barspenden melden ab …, runder Betrag ab … */
+const FINANCE_LIMIT_KEYS = ['finance.statementSufficesBelowCents', 'finance.cashDonationAlertCents', 'finance.roundAmountFromCents'] as const;
+
+const limitSchema = z.object({ key: z.enum(FINANCE_LIMIT_KEYS), cents: z.number().int().min(0) });
+
+/** Setzt eine der drei Grenzen (ganzzahlige Cent-Beträge) — nur diese drei Schlüssel, nie negativ. */
+export async function setFinanceLimit(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ key: string; cents: number }>> {
+  const denied = requirePermission(ctx, 'finance.setup');
+  if (denied) return denied;
+  const parsed = validate(deps, limitSchema, input);
+  if (!parsed.ok) return parsed;
+  return deps.db.transaction((tx: DbOrTx) => {
+    const written = writeSettingInternal(tx, deps, ctx, parsed.value.key, parsed.value.cents, 'finance.setup.limit');
+    if (!written.ok) return written;
+    financeAudit(tx, deps, ctx, { action: 'finance.setup.limit', entity: 'financeSetup', id: parsed.value.key, after: { key: parsed.value.key, cents: parsed.value.cents }, summary: `Grenze ${parsed.value.key} gesetzt` });
+    return ok({ key: parsed.value.key, cents: parsed.value.cents });
+  });
+}
+
 export interface PermissionMatrixActivity {
   key: string;
   permission: string;

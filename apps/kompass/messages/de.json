@@ -2552,6 +2552,7 @@
       "vouchers": {
         "title": "Belege",
         "type": "Beleg",
+        "statementSuffices": "Der Kontoauszug genügt für diese Kategorien.",
         "revoke": {
           "title": "Beleg widerrufen",
           "description": "Der Beleg wird durchgestrichen und bleibt sichtbar.",
@@ -3055,7 +3056,14 @@
         "membershipFeesCertifiable": "Sind Mitgliedsbeiträge bescheinigungsfähig?",
         "expenseWaiversEnabled": "Werden Aufwandsspenden angeboten?",
         "mcpHumanOnlyAllowed": "Darf ein Agent festschreiben?",
-        "mcpHumanOnlyAllowedHint": "Dieser Schalter lässt sich nur hier am Bildschirm ändern — nie über einen Agenten."
+        "mcpHumanOnlyAllowedHint": "Dieser Schalter lässt sich nur hier am Bildschirm ändern — nie über einen Agenten.",
+        "limits": {
+          "statementSufficesBelowCents": "Bis zu welchem Betrag genügt der Kontoauszug als Beleg?",
+          "cashDonationAlertCents": "Ab welchem Betrag soll eine Barspende auffallen?",
+          "roundAmountFromCents": "Ab welchem Betrag ist ein runder Betrag auffällig?",
+          "save": "Speichern",
+          "saved": "Grenze gespeichert."
+        }
       },
       "permissions": {
         "title": "Wer darf was",

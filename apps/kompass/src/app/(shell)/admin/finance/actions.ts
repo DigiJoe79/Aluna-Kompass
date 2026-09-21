@@ -14,6 +14,7 @@ import {
   setAccountActive,
   setCategoryActive,
   setDatedValue,
+  setFinanceLimit,
   setFinanceSwitch,
   setPurposeActive,
   updateAccount,
@@ -56,6 +57,15 @@ export async function setFinanceSwitchAction(key: string, value: boolean): Promi
   const result = await setFinanceSwitch(deps, ctx, { key, value });
   revalidateFinanceAdmin();
   return toActionState(result, t);
+}
+
+export async function setFinanceLimitAction(key: string, cents: number): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await setFinanceLimit(deps, ctx, { key, cents });
+  revalidateFinanceAdmin();
+  if (!result.ok) return toActionState(result, t);
+  return toActionState(result, t, t('finance.admin.tax.limits.saved'));
 }
 
 export interface AccountInput {

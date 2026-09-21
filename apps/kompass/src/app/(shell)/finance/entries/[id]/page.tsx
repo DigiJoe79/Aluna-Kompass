@@ -177,7 +177,7 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
           <EntryHistory events={events} />
         </div>
 
-        <EntryVouchers entryId={id} vouchers={vouchers} closedYear={closedYear} />
+        <EntryVouchers entryId={id} vouchers={vouchers} closedYear={closedYear} documentationState={entry.documentation.state} />
       </div>
     </div>
   );

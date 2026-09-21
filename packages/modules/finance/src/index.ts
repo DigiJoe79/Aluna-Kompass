@@ -98,6 +98,7 @@ export {
   confirmSetupStep,
   getPermissionMatrix,
   getSetupStatus,
+  setFinanceLimit,
   setFinanceSwitch,
   type PermissionMatrixActivity,
   type PermissionMatrixRole,

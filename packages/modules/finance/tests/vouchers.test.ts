@@ -5,6 +5,7 @@ import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { getEntry, saveDraft } from '../src/ledger/entries';
 import { bookEntry } from '../src/ledger/finalize';
+import { setFinanceLimit } from '../src/ledger/setup';
 import { attachDocument, readVoucher, revokeVoucher, uploadVoucher } from '../src/ledger/vouchers';
 import { financeEntryDocuments, financeMoneyLines, financePeriodEvents } from '../src/schema';
 import { allowHumanOnlyOverMcp, ledgerFixture, pdfBytes } from './helpers';
@@ -231,6 +232,17 @@ describe('documentation of an entry', () => {
 
     f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.statementSufficesBelowCents', 0, 'test.setLimit'));
     expect(unwrap(await getEntry(f.deps, f.ctx, { id: high.id })).documentation).toMatchObject({ warnExpenseAboveLimit: false });
+  });
+
+  it('a limit set through setFinanceLimit (H7) reaches the same computation as the raw setting write above', async () => {
+    const f = await ledgerFixture();
+    unwrap(await setFinanceLimit(f.deps, f.ctx, { key: 'finance.statementSufficesBelowCents', cents: 3000 }));
+
+    const high = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'Gebühr über der Grenze', moneyLines: [{ accountId: f.bank.id, amountCents: -3500 }], allocationLines: [{ categoryId: f.fees.id, amountCents: -3500 }] }));
+    f.deps.db.update(financeMoneyLines).set({ rawTransactionId: 'R6' }).where(eq(financeMoneyLines.entryId, high.id)).run();
+    expect(unwrap(await getEntry(f.deps, f.ctx, { id: high.id })).documentation).toMatchObject({ state: 'statementSuffices', warnExpenseAboveLimit: true });
+
+    unwrap(await setFinanceLimit(f.deps, f.ctx, { key: 'finance.statementSufficesBelowCents', cents: 0 }));
   });
 });
 
