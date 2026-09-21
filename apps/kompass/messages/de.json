@@ -2234,7 +2234,9 @@
     },
     "channel": {
       "ui": "Oberfläche",
-      "mcp": "Agenten-Schnittstelle"
+      "mcp": "Agenten-Schnittstelle",
+      "system": "System",
+      "unknown": "unbekannt"
     },
     "lockLine": {
       "text": "festgeschrieben am {date} um {time} von {name} ({channel})",

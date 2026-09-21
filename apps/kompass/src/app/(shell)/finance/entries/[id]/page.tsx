@@ -83,7 +83,7 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
         </div>
         <p className="text-[15px] text-ink">{entry.text}</p>
         {finalizedEvent && finalizedEvent.kind === 'finalized' ? (
-          <LockLine at={finalizedEvent.at} userName={finalizedEvent.userName} channel={finalizedEvent.channel === 'mcp' ? 'mcp' : 'ui'} />
+          <LockLine at={finalizedEvent.at} userName={finalizedEvent.userName} channel={finalizedEvent.channel} />
         ) : null}
         {reversed && entry.reversedByEntryId ? (
           <p className="text-[13px] text-ink-2">

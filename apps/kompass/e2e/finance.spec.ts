@@ -254,6 +254,14 @@ test.describe('finance', () => {
     await expect(page.getByText(/festgeschrieben am \d{2}\.\d{2}\.\d{4} um \d{2}:\d{2} von .+\(.+\)/)).toBeVisible();
   });
 
+  test('eine Buchung aus dem Seed nennt als Weg „System“, nicht „Oberfläche“', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries');
+    await page.locator('tr', { hasText: 'Bar-Ausgabe Fahrtkosten' }).click();
+    await expect(page.getByText(/\(System\)/)).toBeVisible();
+    await expect(page.getByText(/\(Oberfläche\)/)).toHaveCount(0);
+  });
+
   test('Zuordnung ändern im offenen Jahr wirkt sofort und steht mit Vorher → Nachher im Verlauf', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/entries');
