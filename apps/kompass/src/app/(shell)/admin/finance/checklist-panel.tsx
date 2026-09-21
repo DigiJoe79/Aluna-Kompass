@@ -9,7 +9,7 @@ import { RequirementList, type RequirementListItem } from '@/components/requirem
 import { applyTaxDefaultsAction, confirmSetupStepAction } from './actions';
 
 export interface ChecklistStep {
-  key: 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax';
+  key: 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax' | 'importFormat';
   done: boolean;
   blocked: boolean;
   detail: Record<string, string | number>;
@@ -24,6 +24,8 @@ const STEP_HREF: Record<ChecklistStep['key'], string> = {
   roles: '/admin/roles',
   categories: '/admin/finance?panel=categories',
   tax: '/admin/finance?panel=tax',
+  // F4 Task 6: das Auszugsformat setzt sich am Konto selbst — beim ersten Import automatisch, hier nur als Einstieg.
+  importFormat: '/admin/finance?panel=accounts',
 };
 
 /** H1 — Einstieg: erledigte Zeilen bleiben stehen, blockierte nennen ihre Abhängigkeit. */

@@ -1,8 +1,9 @@
 import { ok, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
-import { and, desc, eq, isNull, type SQL } from 'drizzle-orm';
+import { and, desc, eq, gte, isNotNull, isNull, lte, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { requireFinanceRead } from '../ledger/access';
-import { financeEntries, financeMoneyLines, financeRawTransactions, type FinanceRawTransactionRow } from '../schema';
+import { accountBalancesAt } from '../ledger/queries';
+import { financeEntries, financeImportRuns, financeMoneyLines, financeRawTransactions, type FinanceRawTransactionRow } from '../schema';
 
 /**
  * Ein Kontoumsatz, wie ihn beide Seiten sehen: die Liste „Hochgeladene
@@ -106,4 +107,70 @@ export async function listRawTransactions(deps: Deps, ctx: CallContext, input: u
   const total = views.length;
   const items = views.slice(v.offset, v.offset + v.limit);
   return ok({ items, total });
+}
+
+/**
+ * Anzahl der offenen Kontoumsätze — für die Kacheln (Task 6, Spec 9.7):
+ * „Umsätze ohne Zuordnung“. Klein genug, um im Speicher zu prüfen (Vereinsbuchhaltung).
+ */
+export function countOpenRawTransactionsInternal(db: DbOrTx, accountId?: string): number {
+  const where = accountId ? eq(financeRawTransactions.accountId, accountId) : undefined;
+  const rows = db.select({ id: financeRawTransactions.id }).from(financeRawTransactions).where(where).all();
+  return rows.filter((r) => rawStateInternal(db, r.id) === 'open').length;
+}
+
+/**
+ * „Importiert bis“ (Task 6, Spec 6.1, 9.7): das Ende des jüngsten fertigen,
+ * nicht verworfenen Laufs eines Kontos — `null`, solange nie importiert wurde.
+ */
+export function importedThroughInternal(db: DbOrTx, accountId: string): string | null {
+  const row = db
+    .select({ periodTo: financeImportRuns.periodTo })
+    .from(financeImportRuns)
+    .where(and(eq(financeImportRuns.accountId, accountId), isNotNull(financeImportRuns.finishedAt), isNull(financeImportRuns.discardedAt)))
+    .orderBy(desc(financeImportRuns.periodTo))
+    .limit(1)
+    .get();
+  return row?.periodTo ?? null;
+}
+
+export interface BankReconciliation {
+  state: 'matches' | 'differs' | 'noStatement';
+  statementDate: string | null;
+  bookCents: number;
+  statementCents: number | null;
+  differenceCents: number | null;
+  /** Rechnet immer mit dem festgeschriebenen Buchbestand — nie mit geprüften Entwürfen (Spec 9.3). */
+  basis: 'finalized';
+}
+
+/**
+ * Kontenabstimmung `bank`/`paymentService` (Task 6, Spec 9.3): der
+ * festgeschriebene Buchbestand zum Stichtag gegen den Endsaldo des Laufs,
+ * dessen Zeitraum den Stichtag deckt — `noStatement`, wenn keiner ihn deckt.
+ */
+export function reconcileBankInternal(db: DbOrTx, accountId: string, date: string): BankReconciliation {
+  const bookCents = accountBalancesAt(db, date).find((a) => a.accountId === accountId)?.balanceCents ?? 0;
+
+  const covering = db
+    .select({ periodTo: financeImportRuns.periodTo, closingCents: financeImportRuns.closingCents })
+    .from(financeImportRuns)
+    .where(
+      and(
+        eq(financeImportRuns.accountId, accountId),
+        isNotNull(financeImportRuns.finishedAt),
+        isNull(financeImportRuns.discardedAt),
+        lte(financeImportRuns.periodFrom, date),
+        gte(financeImportRuns.periodTo, date),
+      ),
+    )
+    .orderBy(desc(financeImportRuns.startedAt))
+    .limit(1)
+    .get();
+
+  if (!covering || covering.closingCents === null) return { state: 'noStatement', statementDate: null, bookCents, statementCents: null, differenceCents: null, basis: 'finalized' };
+
+  const statementCents = covering.closingCents;
+  const differenceCents = bookCents - statementCents;
+  return { state: differenceCents === 0 ? 'matches' : 'differs', statementDate: covering.periodTo, bookCents, statementCents, differenceCents, basis: 'finalized' };
 }

@@ -554,7 +554,9 @@
           "messages": {
             "reviewedNotFinal": "{count, plural, one {# geprüfte, noch nicht festgeschriebene Buchung} other {# geprüfte, noch nicht festgeschriebene Buchungen}}",
             "withoutVoucher": "{count, plural, one {# festgeschriebene Buchung ohne Beleg} other {# festgeschriebene Buchungen ohne Beleg}}",
-            "overdueItems": "{count, plural, one {# überfällige offene Zahlung} other {# überfällige offene Zahlungen}}, zusammen {sum}"
+            "overdueItems": "{count, plural, one {# überfällige offene Zahlung} other {# überfällige offene Zahlungen}}, zusammen {sum}",
+            "rawOpen": "{count, plural, one {# Kontoumsatz ohne Zuordnung} other {# Kontoumsätze ohne Zuordnung}}",
+            "lastStatement": "Letzter Auszug vor {days, plural, one {einem Tag} other {# Tagen}}"
           }
         },
         "withoutVoucher": {
@@ -584,6 +586,29 @@
           "messages": {
             "incomplete": "{count, plural, one {# Schritt offen} other {# Schritte offen}}",
             "complete": "Die Einrichtung ist vollständig."
+          }
+        },
+        "rawOpen": {
+          "title": "Umsätze ohne Zuordnung",
+          "empty": "Keine Kontoumsätze ohne Zuordnung.",
+          "open": "Zu den hochgeladenen Auszügen"
+        },
+        "balanceDifference": {
+          "title": "Saldodifferenz",
+          "empty": "Keine Kontoauszüge geladen.",
+          "open": "Zu den hochgeladenen Auszügen",
+          "messages": {
+            "ok": "Alle Kontostände stimmen mit dem Auszug überein.",
+            "differs": "{count, plural, one {# Konto weicht vom Auszug ab} other {# Konten weichen vom Auszug ab}}"
+          }
+        },
+        "lastStatement": {
+          "title": "Letzter Auszug",
+          "empty": "Keine Kontoauszüge geladen.",
+          "open": "Zu den hochgeladenen Auszügen",
+          "messages": {
+            "ok": "Die Kontoauszüge sind aktuell.",
+            "stale": "{count, plural, one {# Konto ohne aktuellen Auszug} other {# Konten ohne aktuellen Auszug}}"
           }
         }
       },
@@ -2875,12 +2900,14 @@
           "account": "Bankkonto oder Kasse mit Anfangsbestand anlegen",
           "roles": "Wer welche Rolle trägt",
           "categories": "Kategorien durchsehen",
-          "tax": "Steuerliches bestätigen"
+          "tax": "Steuerliches bestätigen",
+          "importFormat": "Auszugsformat je Bankkonto (optional bis zum ersten Auszug)"
         },
         "open": "Erledigen",
         "done": "Erledigt",
         "blocked": {
-          "account": "wartet auf ein Geschäftsjahr"
+          "account": "wartet auf ein Geschäftsjahr",
+          "importFormat": "wartet auf ein Bankkonto"
         },
         "detail": {
           "account": "{accounts} Konten, {withoutOpening} ohne Anfangsbestand",

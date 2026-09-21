@@ -2,7 +2,7 @@ import { roleIdByOrigin, schema, unwrap, readSetting } from '@kompass/core';
 import { auditEntry, ctxWith, insertRole, insertUser, systemContext } from '@kompass/core/testing';
 import { createContact, linkUserToContact } from '@kompass/module-contacts';
 import { describe, expect, it } from 'vitest';
-import { createAccount } from '../src/ledger/accounts';
+import { createAccount, setAccountActive } from '../src/ledger/accounts';
 import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
 import { applyTaxDefaults, confirmSetupStep, getPermissionMatrix, getSetupStatus, setFinanceLimit, setFinanceSwitch } from '../src/ledger/setup';
 import { installFinance } from '../src/install';
@@ -16,13 +16,21 @@ describe('finance setup status', () => {
     const { deps, ctx } = setupFinance();
     const status = unwrap(await getSetupStatus(deps, ctx));
     expect(status.complete).toBe(false);
-    expect(status.steps.map((s) => s.key)).toEqual(['fiscalYear', 'account', 'roles', 'categories', 'tax']);
-    for (const step of status.steps) expect(step.done, step.key).toBe(false);
+    expect(status.steps.map((s) => s.key)).toEqual(['fiscalYear', 'account', 'roles', 'categories', 'tax', 'importFormat']);
+    // importFormat ist ohne Bankkonto vakuos erfüllt (nichts, was ein Format bräuchte) — die übrigen fünf sind offen.
+    for (const step of status.steps.filter((s) => s.key !== 'importFormat')) expect(step.done, step.key).toBe(false);
     const account = status.steps.find((s) => s.key === 'account')!;
     expect(account.dependsOn).toBe('fiscalYear');
     expect(account.blocked).toBe(true);
     const fiscalYear = status.steps.find((s) => s.key === 'fiscalYear')!;
     expect(fiscalYear.blocked).toBe(false);
+
+    // F4 Task 6: importFormat ist der einzige optionale Schritt — hängt an account, nicht an fiscalYear.
+    const importFormat = status.steps.find((s) => s.key === 'importFormat')!;
+    expect(importFormat.required).toBe(false);
+    expect(importFormat.dependsOn).toBe('account');
+    expect(importFormat.blocked).toBe(true);
+    for (const step of status.steps.filter((s) => s.key !== 'importFormat')) expect(step.required, step.key).toBe(true);
   });
 
   it('counts an account only with an opening balance', async () => {
@@ -37,6 +45,24 @@ describe('finance setup status', () => {
     const withOpening = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'account')!;
     expect(withOpening.done).toBe(true);
     expect(withOpening.detail).toEqual({ accounts: 2, withoutOpening: 1 });
+  });
+
+  it('adds the optional import format step, done when every active bank account has a format, without touching completeness', async () => {
+    const { deps, ctx } = setupFinance();
+    unwrap(await createAccount(deps, ctx, { name: 'Barkasse', kind: 'cash' }));
+    const importFormatWithOnlyCash = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'importFormat')!;
+    expect(importFormatWithOnlyCash.required).toBe(false);
+    expect(importFormatWithOnlyCash.done).toBe(true); // eine Barkasse braucht kein Auszugsformat
+
+    const main = unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE02120300000000202051', isMain: true, importFormat: 'camt053' }));
+    const formatlos = unwrap(await createAccount(deps, ctx, { name: 'Zweitkonto', kind: 'bank', iban: 'DE12999999990000112233' }));
+    void main;
+    const withUnsetFormat = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'importFormat')!;
+    expect(withUnsetFormat.done).toBe(false); // ein Bankkonto hat noch kein Format
+
+    unwrap(await setAccountActive(deps, ctx, { id: formatlos.id, isActive: false, expectedVersion: formatlos.updatedAt }));
+    const afterDeactivating = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'importFormat')!;
+    expect(afterDeactivating.done).toBe(true); // nur aktive Bankkonten zaehlen
   });
 
   it('reports roles done only when each finance role has an active user and every finance user is linked to a contact', async () => {
@@ -99,7 +125,7 @@ describe('finance setup status', () => {
     expect(afterTax.steps.find((s) => s.key === 'tax')!.done).toBe(true);
   });
 
-  it('is complete when all five are done', async () => {
+  it('is complete when all five required steps are done, even while the optional importFormat step is still open', async () => {
     const { deps, ctx } = setupFinance();
     deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
     unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-01-01', endsOn: '2026-12-31' }));
@@ -119,7 +145,9 @@ describe('finance setup status', () => {
 
     const status = unwrap(await getSetupStatus(deps, ctx));
     expect(status.complete).toBe(true);
-    expect(status.steps.every((s) => s.done)).toBe(true);
+    expect(status.steps.filter((s) => s.required).every((s) => s.done)).toBe(true);
+    // Das angelegte Bankkonto hat noch kein Auszugsformat — der optionale Schritt bleibt offen, ohne complete zu kippen.
+    expect(status.steps.find((s) => s.key === 'importFormat')!.done).toBe(false);
   });
 
   it('lets finance.read see the status but not confirm', async () => {

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { newId, holdsFor, schema, unwrap } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
 import { deleteContact } from '@kompass/module-contacts';
@@ -5,8 +7,10 @@ import { deleteDocument, documentTypes, documents } from '@kompass/module-dms';
 import { createProject, deleteProject } from '@kompass/module-projects';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { approveAllocationCorrection, requestAllocationCorrection } from '../src/ledger/corrections';
+import { importStatement } from '../src/import/runs';
+import { createAccount } from '../src/ledger/accounts';
 import { countCash } from '../src/ledger/cash';
+import { approveAllocationCorrection, requestAllocationCorrection } from '../src/ledger/corrections';
 import { bookEntry } from '../src/ledger/finalize';
 import { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds, yearAnchorInternal } from '../src/ledger/holds';
 import { createOpenItem } from '../src/ledger/open-items';
@@ -18,6 +22,9 @@ import { revokeVoucher, uploadVoucher } from '../src/ledger/vouchers';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
 import { financeAllocationCorrections, financeAllocationLines, financeCashCounts, financeEntryDocuments, financeProjectSettings } from '../src/schema';
 import { allowHumanOnlyOverMcp, ledgerFixture, pdfBytes } from './helpers';
+
+const FIXTURES = path.resolve(import.meta.dirname, 'fixtures/camt');
+const camtBytes = (name: string) => new Uint8Array(readFileSync(path.join(FIXTURES, name)));
 
 const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
 
@@ -333,5 +340,27 @@ describe('retention due — personal data of a closed year', () => {
     f.closeYear(f.years['2010']!.id);
     unwrap(await reopenFiscalYear(f.deps, f.ctx, { id: f.years['2010']!.id, note: 'x' }));
     expect(financeRetentionDue(f.deps)).toEqual([]);
+  });
+});
+
+describe('retention due — imported bank data (F4 Task 6)', () => {
+  it('reports a fiscal year with imported transactions as due eight years after its end, regardless of the closed status', async () => {
+    const f = await ledgerFixture();
+    const account = unwrap(await createAccount(f.deps, f.ctx, { name: 'Auszugskonto', kind: 'bank', iban: 'DE60999999990201051234' }));
+    unwrap(await importStatement(f.deps, f.ctx, { accountId: account.id, fileName: 'maerz.xml', bytes: camtBytes('einfach-001-02.xml') })); // Umsaetze im Maerz 2026
+
+    f.deps.clock.set('2026-09-05T08:00:00.000Z');
+    expect(financeRetentionDue(f.deps).filter((d) => d.entity === 'financeImportPersonalData')).toEqual([]);
+
+    f.deps.clock.set('2035-01-01T00:00:00.000Z'); // acht Jahre nach Jahresende 2026-12-31 sind um
+    const due = financeRetentionDue(f.deps).filter((d) => d.entity === 'financeImportPersonalData');
+    expect(due).toEqual([{ entity: 'financeImportPersonalData', id: f.year.id, label: `Finanzen ${f.year.designation}: importierte Kontoumsätze`, dueSince: '2034-12-31' }]);
+    expect(due[0]).not.toHaveProperty('href');
+  });
+
+  it('ignores a fiscal year without any imported transaction', async () => {
+    const f = await ledgerFixture();
+    f.deps.clock.set('2040-01-01T00:00:00.000Z');
+    expect(financeRetentionDue(f.deps).filter((d) => d.entity === 'financeImportPersonalData')).toEqual([]);
   });
 });

@@ -1,24 +1,35 @@
-import type { DashboardLine, DashboardTile } from '@kompass/core';
-import { and, eq, isNull, lt } from 'drizzle-orm';
+import { readSetting, type DashboardLine, type DashboardTile } from '@kompass/core';
+import { and, eq, isNull, lt, or } from 'drizzle-orm';
 import { z } from 'zod';
+import { countOpenRawTransactionsInternal, importedThroughInternal, reconcileBankInternal } from './import/queries';
 import { formatEuro } from './ledger/cash-check';
 import { getSetupStatus } from './ledger/setup';
 import { listEntries } from './ledger/entries';
 import { openCentsInternal } from './ledger/open-items';
 import { purposeBalancesAt } from './ledger/queries';
-import { financeEntries, financeOpenItems, type FinanceOpenItemRow } from './schema';
+import { financeAccounts, financeEntries, financeOpenItems, type FinanceAccountRow, type FinanceOpenItemRow } from './schema';
 
 /**
- * Die sechs Kacheln der Startseite (F3b Task 6, Spec 9.7): je genau ein
- * Recht. `finance.todo` und `finance.setupIncomplete` sind in der Vorgabe an
- * — die Einzelkacheln des Schatzmeisters (Beleg, Entwürfe, offene Zahlungen,
- * Zwecke) bleiben aus, weil die Sammelkachel sie trägt.
+ * Die neun Kacheln der Startseite (F3b Task 6, F4 Task 6, Spec 9.7): je genau
+ * ein Recht. `finance.todo` und `finance.setupIncomplete` sind in der
+ * Vorgabe an — die übrigen Einzelkacheln (Beleg, Entwürfe, offene Zahlungen,
+ * Zwecke, Import) bleiben aus, weil die Sammelkachel sie trägt.
  */
 
 const isoDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
 /** Entwürfe ab 14 Tagen sind „zu alt“ (Entschieden 3, F3b) — ab Tag 15, fester Wert. */
 const STALE_DRAFT_DAYS = 14;
+
+/** Ganze Tage zwischen zwei Datumsangaben (`YYYY-MM-DD`), für „letzter Auszug vor N Tagen“ (F4 Task 6). */
+function daysBetween(today: string, date: string): number {
+  return Math.round((Date.parse(`${today}T00:00:00.000Z`) - Date.parse(`${date}T00:00:00.000Z`)) / 86_400_000);
+}
+
+/** Aktive Bank- und Zahlungsdienstkonten — nur diese kennen einen Auszug (Spec 9.3, 9.7). */
+function activeReconcilableAccounts(deps: Parameters<DashboardTile['load']>[0]): FinanceAccountRow[] {
+  return deps.db.select().from(financeAccounts).where(and(eq(financeAccounts.isActive, true), or(eq(financeAccounts.kind, 'bank'), eq(financeAccounts.kind, 'paymentService')))).all();
+}
 
 /**
  * Überfällige offene Zahlungen, ohne Rechteprüfung — für die Kachel unter
@@ -41,7 +52,7 @@ const todoTile: DashboardTile<Record<string, never>> = {
   kind: 'list',
   defaultOn: true,
   options: z.object({}),
-  messageKeys: ['reviewedNotFinal', 'withoutVoucher', 'overdueItems'],
+  messageKeys: ['reviewedNotFinal', 'withoutVoucher', 'overdueItems', 'rawOpen', 'lastStatement'],
   async load(deps, ctx) {
     const today = isoDay(deps.clock.now().getTime());
     const lines: DashboardLine[] = [];
@@ -66,6 +77,23 @@ const todoTile: DashboardTile<Record<string, never>> = {
     if (overdue.length > 0) {
       const sumCents = overdue.reduce((s, i) => s + i.openCents, 0);
       lines.push({ titleKey: 'overdueItems', values: { count: overdue.length, sum: formatEuro(sumCents) }, href: '/finance/open-items?tab=payable' });
+    }
+
+    // F4 Task 6: Kontoumsätze ohne Zuordnung — ohne Namen, nur die Zahl.
+    const openRaw = countOpenRawTransactionsInternal(deps.db);
+    if (openRaw > 0) lines.push({ titleKey: 'rawOpen', values: { count: openRaw }, href: '/finance/imports' });
+
+    // F4 Task 6: der älteste noch ausstehende Auszug — nur ein Konto, das schon einmal importiert
+    // hat, kennt ein „vor N Tagen“; ein Konto ohne jeden Import zeigt die Checkliste, nicht diese Zeile.
+    const warnDays = readSetting<number>(deps, 'finance.lastStatementWarnDays');
+    const daysSinceOldestStatement = activeReconcilableAccounts(deps).reduce<number | null>((max, a) => {
+      const through = importedThroughInternal(deps.db, a.id);
+      if (through === null) return max;
+      const days = daysBetween(today, through);
+      return max === null || days > max ? days : max;
+    }, null);
+    if (daysSinceOldestStatement !== null && daysSinceOldestStatement >= warnDays) {
+      lines.push({ titleKey: 'lastStatement', values: { days: daysSinceOldestStatement }, href: '/finance/imports' });
     }
 
     return { kind: 'list', lines, total: lines.length, href: '/finance/entries' };
@@ -139,9 +167,58 @@ const setupIncompleteTile: DashboardTile<Record<string, never>> = {
   messageKeys: ['incomplete', 'complete'],
   async load(deps, ctx) {
     const res = await getSetupStatus(deps, ctx);
-    const open = res.ok ? res.value.steps.filter((s) => !s.done).length : 0;
+    // F4 Task 6: ein offener optionaler Schritt (`importFormat`) zaehlt hier nicht mit.
+    const open = res.ok ? res.value.steps.filter((s) => s.required && !s.done).length : 0;
     if (open === 0) return { kind: 'status', tone: 'neutral', messageKey: 'complete', href: '/admin/finance?panel=checklist' };
     return { kind: 'status', tone: 'warning', messageKey: 'incomplete', values: { count: open }, href: '/admin/finance?panel=checklist' };
+  },
+};
+
+/** F4 Task 6, Spec 9.7 „Umsätze ohne Zuordnung“. */
+const rawOpenTile: DashboardTile<Record<string, never>> = {
+  key: 'rawOpen',
+  permission: 'finance.read',
+  kind: 'count',
+  defaultOn: false,
+  options: z.object({}),
+  load(deps) {
+    return { kind: 'count', count: countOpenRawTransactionsInternal(deps.db), href: '/finance/imports' };
+  },
+};
+
+/** F4 Task 6, Spec 9.7 „Saldodifferenz“ — warnt, sobald ein Konto vom Auszug abweicht. */
+const balanceDifferenceTile: DashboardTile<Record<string, never>> = {
+  key: 'balanceDifference',
+  permission: 'finance.read',
+  kind: 'status',
+  defaultOn: false,
+  options: z.object({}),
+  messageKeys: ['ok', 'differs'],
+  load(deps) {
+    const today = isoDay(deps.clock.now().getTime());
+    const differing = activeReconcilableAccounts(deps).filter((a) => reconcileBankInternal(deps.db, a.id, today).state === 'differs');
+    if (differing.length === 0) return { kind: 'status', tone: 'neutral', messageKey: 'ok', href: '/finance/imports' };
+    return { kind: 'status', tone: 'warning', messageKey: 'differs', values: { count: differing.length }, href: '/finance/imports' };
+  },
+};
+
+/** F4 Task 6, Spec 9.7 „letzter Auszug“ — warnt ab `finance.lastStatementWarnDays`, auch für ein Konto ohne jeden Import. */
+const lastStatementTile: DashboardTile<Record<string, never>> = {
+  key: 'lastStatement',
+  permission: 'finance.read',
+  kind: 'status',
+  defaultOn: false,
+  options: z.object({}),
+  messageKeys: ['ok', 'stale'],
+  load(deps) {
+    const today = isoDay(deps.clock.now().getTime());
+    const warnDays = readSetting<number>(deps, 'finance.lastStatementWarnDays');
+    const stale = activeReconcilableAccounts(deps).filter((a) => {
+      const through = importedThroughInternal(deps.db, a.id);
+      return through === null || daysBetween(today, through) >= warnDays;
+    });
+    if (stale.length === 0) return { kind: 'status', tone: 'neutral', messageKey: 'ok', href: '/finance/imports' };
+    return { kind: 'status', tone: 'warning', messageKey: 'stale', values: { count: stale.length }, href: '/finance/imports' };
   },
 };
 
@@ -152,4 +229,7 @@ export const FINANCE_DASHBOARD_TILES: readonly DashboardTile[] = [
   overdueItemsTile as DashboardTile,
   purposesNegativeTile as DashboardTile,
   setupIncompleteTile as DashboardTile,
+  rawOpenTile as DashboardTile,
+  balanceDifferenceTile as DashboardTile,
+  lastStatementTile as DashboardTile,
 ];

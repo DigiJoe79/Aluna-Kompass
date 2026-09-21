@@ -1,5 +1,5 @@
 import { isoNow, retentionEnd, retentionMonths, type CallContext, type Deps, type DbOrTx, type DueItem, type RecordReference, type RetentionHold } from '@kompass/core';
-import { and, desc, eq, inArray, or } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lte, or } from 'drizzle-orm';
 import { financeAudit } from '../audit';
 import {
   financeAllocationCorrections,
@@ -12,7 +12,9 @@ import {
   financePeriodEvents,
   financeProjectSettings,
   financePurposes,
+  financeRawTransactions,
   type FinanceEntryRow,
+  type FinanceFiscalYearRow,
 } from '../schema';
 import { fiscalYearForInternal, fiscalYearStatusInternal } from './fiscal-years';
 
@@ -251,21 +253,51 @@ export function financeRecordDeleted(tx: DbOrTx, deps: Deps, ctx: CallContext, e
 }
 
 /**
+ * Ob ein Geschäftsjahr importierte Kontoumsätze trägt (Umsatzdatum im
+ * Zeitraum des Jahres) — reine Tabellenabfrage, kein Wissen über den
+ * Laufdienst nötig (F4 Task 6, Spec 10.3: `financeImportPersonalData`).
+ */
+function hasImportedTransactionsInYear(db: DbOrTx, year: Pick<FinanceFiscalYearRow, 'startsOn' | 'endsOn'>): boolean {
+  return !!db
+    .select({ id: financeRawTransactions.id })
+    .from(financeRawTransactions)
+    .where(and(gte(financeRawTransactions.bookingDate, year.startsOn), lte(financeRawTransactions.bookingDate, year.endsOn)))
+    .limit(1)
+    .get();
+}
+
+/**
  * Je abgeschlossenem Geschäftsjahr, dessen Anker plus zehn Jahre abgelaufen
- * ist: ein Posten für den Fristenbildschirm — ohne `href`, der Dienst, der
- * anonymisiert, kommt erst nach 0.2.0 (Spec 10.3).
+ * ist: ein Posten für den Fristenbildschirm (`financeYearPersonalData`) —
+ * dazu, unabhängig vom Abschlussstand, je Geschäftsjahr mit importierten
+ * Kontoumsätzen acht Jahre ab Jahresende (`financeImportPersonalData`, F4
+ * Task 6, Spec 10.3). Ohne `href` — der Dienst, der anonymisiert, kommt erst
+ * nach 0.2.0.
  */
 export function financeRetentionDue(deps: Deps): DueItem[] {
   const today = isoNow(deps.clock).slice(0, 10);
-  const months = retentionMonths(deps, 'statutory10Y');
-  if (months === null) return [];
   const due: DueItem[] = [];
-  for (const year of deps.db.select().from(financeFiscalYears).all()) {
-    if (fiscalYearStatusInternal(deps.db, year.id) !== 'closed') continue;
-    const anchor = yearAnchorInternal(deps.db, year.id);
-    if (anchor === null) continue;
-    const dueSince = retentionEnd(anchor, months);
-    if (dueSince < today) due.push({ entity: 'financeYearPersonalData', id: year.id, label: `Finanzen ${year.designation}: personenbezogene Inhalte`, dueSince });
+  const years = deps.db.select().from(financeFiscalYears).all();
+
+  const months10 = retentionMonths(deps, 'statutory10Y');
+  if (months10 !== null) {
+    for (const year of years) {
+      if (fiscalYearStatusInternal(deps.db, year.id) !== 'closed') continue;
+      const anchor = yearAnchorInternal(deps.db, year.id);
+      if (anchor === null) continue;
+      const dueSince = retentionEnd(anchor, months10);
+      if (dueSince < today) due.push({ entity: 'financeYearPersonalData', id: year.id, label: `Finanzen ${year.designation}: personenbezogene Inhalte`, dueSince });
+    }
   }
+
+  const months8 = retentionMonths(deps, 'statutory8Y');
+  if (months8 !== null) {
+    for (const year of years) {
+      if (!hasImportedTransactionsInYear(deps.db, year)) continue;
+      const dueSince = retentionEnd(year.endsOn, months8);
+      if (dueSince < today) due.push({ entity: 'financeImportPersonalData', id: year.id, label: `Finanzen ${year.designation}: importierte Kontoumsätze`, dueSince });
+    }
+  }
+
   return due;
 }

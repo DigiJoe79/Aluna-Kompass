@@ -72,7 +72,7 @@ describe('finance module', () => {
     expect(rules).toEqual({
       financeAccount: true, financeCategory: true, financePurpose: true, financeDatedValue: true, financeFiscalYear: false, financePeriodEvent: false,
       financeEntryDraft: true, financeEntry: false, financeOpenItem: false, financeAllocationCorrection: false, financeEntryDocument: false, financeEntryJustification: false,
-      financeProjectSettings: true, financeYearPersonalData: true, financeCashCount: false,
+      financeProjectSettings: true, financeYearPersonalData: true, financeImportPersonalData: true, financeCashCount: false,
     });
   });
 
@@ -86,6 +86,11 @@ describe('finance module', () => {
   it('rules the personal data of a year as one logical entity, ten years, with its own audit action', () => {
     const rule = (financeModule.deletionRules ?? []).find((r) => r.entity === 'financeYearPersonalData')!;
     expect(rule).toMatchObject({ deletable: true, retentionClass: 'statutory10Y', auditAction: 'finance.personalData.redact' });
+  });
+
+  it('rules the personal data of imported bank statements as its own logical entity, eight years, with its own audit action', () => {
+    const rule = (financeModule.deletionRules ?? []).find((r) => r.entity === 'financeImportPersonalData')!;
+    expect(rule).toMatchObject({ deletable: true, retentionClass: 'statutory8Y', auditAction: 'finance.importData.redact' });
   });
 
   it('the reason for “not deletable” tells what happens instead', () => {

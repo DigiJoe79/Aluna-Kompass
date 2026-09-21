@@ -137,6 +137,15 @@ export const financeModule: ModuleManifest = defineModule({
       auditAction: 'finance.personalData.redact',
       retentionClass: 'statutory10Y',
     },
+    {
+      entity: 'financeImportPersonalData',
+      deletable: true,
+      reason: 'Personenbezug importierter Kontoumsätze eines Geschäftsjahres wird nach Ablauf der gesetzlichen Frist entfernt (DSGVO Art. 17); Datum, Betrag, Zähler und Prüfsumme bleiben als Rechenschaft.',
+      guard:
+        'Anker ist das Ende des Geschäftsjahres des Umsatzdatums, unabhängig vom Abschlussstand. Entfernt Gegenpartei, IBAN, Verwendungszweck, Rohdaten und die Originaldatei; der Dublettenschlüssel wird durch einen nicht rückrechenbaren Wert ersetzt.',
+      auditAction: 'finance.importData.redact',
+      retentionClass: 'statutory8Y',
+    },
   ],
   // Sobald eine Buchung festgeschrieben ist, hält Finanzen Kontakte, Belege und Projekte — dann bleibt das Modul an.
   canDisable: (deps) => {

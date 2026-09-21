@@ -1,8 +1,11 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { roleIdByOrigin, schema, unwrap } from '@kompass/core';
 import { ctxWith, insertUser, systemContext } from '@kompass/core/testing';
 import { createContact, linkUserToContact } from '@kompass/module-contacts';
 import { describe, expect, it } from 'vitest';
 import { FINANCE_DASHBOARD_TILES } from '../src/dashboard';
+import { importStatement } from '../src/import/runs';
 import { createAccount } from '../src/ledger/accounts';
 import { saveDraft, setReviewed } from '../src/ledger/entries';
 import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
@@ -10,6 +13,10 @@ import { createOpenItem } from '../src/ledger/open-items';
 import { applyTaxDefaults, confirmSetupStep } from '../src/ledger/setup';
 import { installFinance } from '../src/install';
 import { ledgerFixture, setupFinance } from './helpers';
+
+const FIXTURES = path.resolve(import.meta.dirname, 'fixtures/camt');
+const camtBytes = (name: string) => new Uint8Array(readFileSync(path.join(FIXTURES, name)));
+const VEREIN_IBAN = 'DE60999999990201051234';
 
 const FINANCE_ROLE_ORIGIN_KEYS = ['finance:treasurer', 'finance:approver', 'finance:clerk', 'finance:auditor', 'finance:agent'];
 
@@ -20,9 +27,11 @@ function tileByKey(key: string) {
 }
 
 describe('finance dashboard tiles', () => {
-  it('registers six tiles, two of them on by default, each under exactly one permission', () => {
-    expect(FINANCE_DASHBOARD_TILES).toHaveLength(6);
-    expect(FINANCE_DASHBOARD_TILES.map((t) => t.key).sort()).toEqual(['overdueItems', 'purposesNegative', 'setupIncomplete', 'staleDrafts', 'todo', 'withoutVoucher']);
+  it('registers nine tiles, two of them on by default, each under exactly one permission', () => {
+    expect(FINANCE_DASHBOARD_TILES).toHaveLength(9);
+    expect(FINANCE_DASHBOARD_TILES.map((t) => t.key).sort()).toEqual([
+      'balanceDifference', 'lastStatement', 'overdueItems', 'purposesNegative', 'rawOpen', 'setupIncomplete', 'staleDrafts', 'todo', 'withoutVoucher',
+    ]);
     expect(FINANCE_DASHBOARD_TILES.filter((t) => t.defaultOn).map((t) => t.key).sort()).toEqual(['setupIncomplete', 'todo']);
     for (const tile of FINANCE_DASHBOARD_TILES) expect(typeof tile.permission).toBe('string');
   });
@@ -135,5 +144,52 @@ describe('finance dashboard tiles', () => {
 
     const complete = await tile.load(deps, ctx, {});
     expect(complete).toMatchObject({ kind: 'status', tone: 'neutral', messageKey: 'complete' });
+  });
+
+  /** Nur ein Bankkonto, mit passender IBAN für die CAMT-Fixtures — anders als `ledgerFixture` kein zweites, nie importiertes Konto, das die Tages-Kacheln unten stumm auf „stale“ zöge. */
+  async function importDashboardFixture() {
+    const { deps, ctx } = setupFinance();
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+    const account = unwrap(await createAccount(deps, ctx, { name: 'Auszugskonto', kind: 'bank', iban: VEREIN_IBAN, isMain: true }));
+    return { deps, ctx, account };
+  }
+
+  it('counts open raw transactions, warns about a balance difference and about a stale statement from the configured day on', async () => {
+    const f = await importDashboardFixture();
+    f.deps.clock.set('2026-03-20T00:00:00.000Z'); // innerhalb des Auszugszeitraums (01.–31.03.)
+    unwrap(await importStatement(f.deps, f.ctx, { accountId: f.account.id, fileName: 'maerz.xml', bytes: camtBytes('einfach-001-02.xml') }));
+
+    const rawOpen = tileByKey('rawOpen');
+    expect(await rawOpen.load(f.deps, f.ctx, {})).toMatchObject({ kind: 'count', count: 3, href: '/finance/imports' });
+
+    // Kein Buchbestand gebucht — der Buchbestand (0) weicht vom Endsaldo des Auszugs (1153,00 €) ab.
+    const balanceDifference = tileByKey('balanceDifference');
+    expect(await balanceDifference.load(f.deps, f.ctx, {})).toMatchObject({ kind: 'status', tone: 'warning', messageKey: 'differs', values: { count: 1 } });
+
+    const lastStatement = tileByKey('lastStatement');
+    expect(await lastStatement.load(f.deps, f.ctx, {})).toMatchObject({ kind: 'status', tone: 'neutral', messageKey: 'ok' });
+
+    f.deps.clock.set('2026-05-20T00:00:00.000Z'); // 50 Tage nach dem Auszugsende (31.03.) — ueber der Vorgabe von 35 Tagen
+    expect(await lastStatement.load(f.deps, f.ctx, {})).toMatchObject({ kind: 'status', tone: 'warning', messageKey: 'stale', values: { count: 1 } });
+  });
+
+  it('adds the two import lines to the to-do tile without any name', async () => {
+    const f = await importDashboardFixture();
+    f.deps.clock.set('2026-04-05T00:00:00.000Z');
+    unwrap(await importStatement(f.deps, f.ctx, { accountId: f.account.id, fileName: 'maerz.xml', bytes: camtBytes('einfach-001-02.xml') }));
+
+    const todo = tileByKey('todo');
+    const fresh = await todo.load(f.deps, f.ctx, {});
+    if (fresh.kind !== 'list') throw new Error('expected list');
+    expect(fresh.lines.find((l) => l.titleKey === 'rawOpen')).toMatchObject({ values: { count: 3 }, href: '/finance/imports' });
+    expect(fresh.lines.find((l) => l.titleKey === 'lastStatement')).toBeUndefined(); // noch keine 35 Tage her
+
+    f.deps.clock.set('2026-05-20T00:00:00.000Z');
+    const later = await todo.load(f.deps, f.ctx, {});
+    if (later.kind !== 'list') throw new Error('expected list');
+    expect(later.lines.find((l) => l.titleKey === 'lastStatement')).toMatchObject({ values: { days: 50 }, href: '/finance/imports' });
+
+    const serialized = JSON.stringify(later);
+    expect(serialized).not.toMatch(/Erika|Beispiel|Musterspenderin/);
   });
 });

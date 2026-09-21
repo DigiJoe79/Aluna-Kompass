@@ -22,11 +22,12 @@ import { financeConflict } from '../errors';
 import { FINANCE_PERMISSIONS } from '../permissions';
 import { financeAccounts, financeFiscalYears } from '../schema';
 
-export type SetupStepKey = 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax';
+export type SetupStepKey = 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax' | 'importFormat';
 
 export interface SetupStep {
   key: SetupStepKey;
-  required: true;
+  /** F4 Task 6: `importFormat` ist der erste optionale Schritt — `complete` zählt nur Pflichtschritte. */
+  required: boolean;
   done: boolean;
   dependsOn: SetupStepKey | null;
   /** Die Abhängigkeit ist offen — der Schritt lässt sich noch nicht sinnvoll erledigen. */
@@ -76,6 +77,17 @@ function accountStepDetail(db: DbOrTx): { accounts: number; withoutOpening: numb
   return { accounts: rows.length, withoutOpening: rows.filter((r) => r.openingBalanceCents === null).length };
 }
 
+/**
+ * F4 Task 6 — der erste **optionale** Schritt: fertig, wenn jedes aktive
+ * Bankkonto ein Auszugsformat trägt (ohne aktives Bankkonto vakuos erfüllt —
+ * nichts, was ein Format bräuchte). „Optional bis zum ersten Auszug“: Ein
+ * Verein kann Finanzen ohne CAMT-Import führen.
+ */
+function importFormatStepDone(db: DbOrTx): boolean {
+  const rows = db.select({ importFormat: financeAccounts.importFormat }).from(financeAccounts).where(and(eq(financeAccounts.isActive, true), eq(financeAccounts.kind, 'bank'))).all();
+  return rows.every((r) => r.importFormat !== null);
+}
+
 /** Aktive Nutzer, die irgendein Finanzrecht tragen — geschützte Rollen eingeschlossen (Vorarbeiten-Spec VP4). */
 function activeFinanceUsers(deps: Deps): { id: string; name: string }[] {
   const activeUsers = deps.db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).where(eq(schema.users.isActive, true)).all();
@@ -119,6 +131,7 @@ export async function getSetupStatus(deps: Deps, ctx: CallContext): Promise<Resu
 
   const fiscalYearDone = hasAnyFiscalYear(deps.db);
   const account = accountStepDetail(deps.db);
+  const accountDone = account.accounts - account.withoutOpening > 0;
   const roles = rolesStepDetail(deps);
   const categoriesConfirmedAt = readSetting<string | null>(deps, 'finance.setupCategoriesConfirmedAt');
   const taxConfirmedAt = readSetting<string | null>(deps, 'finance.setupTaxConfirmedAt');
@@ -128,7 +141,7 @@ export async function getSetupStatus(deps: Deps, ctx: CallContext): Promise<Resu
     {
       key: 'account',
       required: true,
-      done: account.accounts - account.withoutOpening > 0,
+      done: accountDone,
       dependsOn: 'fiscalYear',
       blocked: !fiscalYearDone,
       detail: account,
@@ -156,8 +169,19 @@ export async function getSetupStatus(deps: Deps, ctx: CallContext): Promise<Resu
       permission: 'finance.setup',
       canDo: listUserNamesWithPermission(deps, 'finance.setup'),
     },
+    {
+      key: 'importFormat',
+      required: false,
+      done: importFormatStepDone(deps.db),
+      dependsOn: 'account',
+      blocked: !accountDone,
+      detail: {},
+      permission: 'finance.setup',
+      canDo: listUserNamesWithPermission(deps, 'finance.setup'),
+    },
   ];
-  return ok({ steps, complete: steps.every((s) => s.done) });
+  // Task 6: „complete“ zählt nur Pflichtschritte — ein offener optionaler Schritt kippt die Einrichtung nicht.
+  return ok({ steps, complete: steps.filter((s) => s.required).every((s) => s.done) });
 }
 
 const STEP_SETTING: Record<'categories' | 'tax', string> = {
