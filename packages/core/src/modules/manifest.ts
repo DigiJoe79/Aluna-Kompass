@@ -145,6 +145,8 @@ export interface NavigationItem {
   label?: string;
   /** Trennlinie oberhalb dieses Eintrags — teilt eine Gruppe in Abschnitte. */
   sectionBreak?: boolean;
+  /** Abschnitt der Zweitebene; Beschriftung aus `nav.sections.<section>`. Ohne Abschnitt: kopflos, oben. */
+  section?: string;
 }
 
 export interface PublishedView<T = unknown> {

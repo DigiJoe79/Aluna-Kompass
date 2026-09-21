@@ -17,6 +17,8 @@ export interface NavItem {
   visible: boolean;
   /** Trennlinie oberhalb dieses Eintrags. */
   sectionBreak?: boolean;
+  /** Abschnitt der Zweitebene; Beschriftung aus `nav.sections.<section>`. Ohne Abschnitt: kopflos, oben. */
+  section?: string;
 }
 
 export interface NavGroup {
@@ -105,6 +107,7 @@ export function buildNavigation(input: {
         disabled: false,
         visible: visible(item.permission),
         sectionBreak: item.sectionBreak ?? false,
+        section: item.section,
       });
       return {
         key: m.key,
@@ -216,6 +219,28 @@ const visibleItems = (group: NavGroup): NavItem[] => group.items.filter((i) => i
  * Einrichtung mit Überschrift, ein Modul einen Abschnitt ohne. Leer heißt:
  * keine Zweitebene, die Spalte entfällt.
  */
+/**
+ * Gruppiert die sichtbaren Einträge eines Moduls nach `section`, in der
+ * Reihenfolge ihres ersten Auftretens. Einträge ohne Abschnitt bilden einen
+ * kopflosen Abschnitt (Schlüssel des Bereichs selbst, keine Beschriftung).
+ */
+function sectionsByGroup(group: NavGroup): NavSection[] {
+  const items = visibleItems(group);
+  const order: string[] = [];
+  const bucket = new Map<string, NavItem[]>();
+  for (const item of items) {
+    const sectionKey = item.section ?? '';
+    if (!bucket.has(sectionKey)) {
+      bucket.set(sectionKey, []);
+      order.push(sectionKey);
+    }
+    bucket.get(sectionKey)!.push(item);
+  }
+  return order.map((sectionKey) =>
+    sectionKey === '' ? { key: group.key, items: bucket.get(sectionKey)! } : { key: sectionKey, labelKey: `nav.sections.${sectionKey}`, items: bucket.get(sectionKey)! },
+  );
+}
+
 export function sectionsFor(groups: NavGroup[], pathname: string): NavSection[] {
   const hit = locate(groups, pathname);
   if (!hit) return [];
@@ -225,7 +250,7 @@ export function sectionsFor(groups: NavGroup[], pathname: string): NavSection[] 
           .map((key) => groups.find((g) => g.key === key))
           .filter((group): group is NavGroup => group !== undefined && visibleItems(group).length > 0)
           .map((group) => ({ key: group.key, labelKey: group.labelKey, items: visibleItems(group) }))
-      : [{ key: hit.group.key, items: visibleItems(hit.group) }];
+      : sectionsByGroup(hit.group);
   // Ein einzelner Eintrag wiederholt nur die Schiene und kostet 208 px. Erst
   // ab zwei gibt es etwas zu wählen — die Spalte erscheint, wenn ein Bereich wächst.
   const count = sections.reduce((n, section) => n + section.items.length, 0);

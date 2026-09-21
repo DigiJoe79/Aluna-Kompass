@@ -182,6 +182,13 @@ describe('locate', () => {
     const groups = buildNavigation({ manifests: [coreModule, dmsModule], enabledKeys: new Set(['dms']), permissions: new Set(['probe.read']), extraItems: { dms: [{ key: 'dms.list', href: '/dms', icon: 'file', group: 'dms', permission: ['dms.view', 'probe.read'] }] } });
     expect(groups.find((g) => g.key === 'dms')!.items[0]!.visible).toBe(true);
   });
+
+  it('maps a new booking and a single booking to the journal entry, not by raw prefix', () => {
+    const groups: NavGroup[] = [{ key: 'finance', labelKey: 'nav.groups.finance', disabled: false, items: [item('finance.entries', '/finance/entries', 'euro')] }];
+    expect(locate(groups, '/finance/entries/new')!.item.key).toBe('finance.entries');
+    expect(locate(groups, '/finance/entries/01J9X')!.item.key).toBe('finance.entries');
+    expect(locate(groups, '/finance/entriesx')).toBeNull();
+  });
 });
 
 describe('activeRailKey', () => {
@@ -277,6 +284,80 @@ describe('sectionsFor', () => {
       { ...FIXTURE[1]!, items: [item('themes', '/admin/themes', 'droplet', { visible: false })] },
     ];
     expect(sectionsFor(oneRight, '/admin/backup')).toEqual([]);
+  });
+
+  it('groups a module’s entries by section, in order of first appearance, headed by nav.sections.<key>', () => {
+    const groups: NavGroup[] = [
+      {
+        key: 'finance',
+        labelKey: 'nav.groups.finance',
+        disabled: false,
+        items: [
+          item('finance.entries', '/finance/entries', 'euro', { section: 'finance.entries' }),
+          item('finance.accounts', '/finance/accounts', 'euro', { section: 'finance.entries' }),
+          item('finance.reports', '/finance/reports', 'euro', { section: 'finance.more' }),
+        ],
+      },
+    ];
+    expect(sectionsFor(groups, '/finance/entries').map((s) => [s.key, s.labelKey, s.items.map((i) => i.key)])).toEqual([
+      ['finance.entries', 'nav.sections.finance.entries', ['finance.entries', 'finance.accounts']],
+      ['finance.more', 'nav.sections.finance.more', ['finance.reports']],
+    ]);
+  });
+
+  it('keeps entries without a section in one headless section on top', () => {
+    const groups: NavGroup[] = [
+      {
+        key: 'finance',
+        labelKey: 'nav.groups.finance',
+        disabled: false,
+        items: [item('finance.entries', '/finance/entries', 'euro'), item('finance.reports', '/finance/reports', 'euro', { section: 'finance.more' })],
+      },
+    ];
+    const sections = sectionsFor(groups, '/finance/entries');
+    expect(sections.map((s) => [s.key, s.labelKey, s.items.map((i) => i.key)])).toEqual([
+      ['finance', undefined, ['finance.entries']],
+      ['finance.more', 'nav.sections.finance.more', ['finance.reports']],
+    ]);
+  });
+
+  it('drops a section whose entries are all invisible', () => {
+    const groups: NavGroup[] = [
+      {
+        key: 'finance',
+        labelKey: 'nav.groups.finance',
+        disabled: false,
+        items: [
+          item('finance.entries', '/finance/entries', 'euro', { section: 'finance.entries' }),
+          item('finance.accounts', '/finance/accounts', 'euro', { section: 'finance.entries' }),
+          item('finance.reports', '/finance/reports', 'euro', { section: 'finance.more', visible: false }),
+        ],
+      },
+    ];
+    expect(sectionsFor(groups, '/finance/entries').map((s) => s.key)).toEqual(['finance.entries']);
+  });
+
+  it('still shows no second level below two visible entries, sections or not', () => {
+    const groups: NavGroup[] = [
+      {
+        key: 'finance',
+        labelKey: 'nav.groups.finance',
+        disabled: false,
+        items: [item('finance.entries', '/finance/entries', 'euro', { section: 'finance.entries' }), item('finance.reports', '/finance/reports', 'euro', { section: 'finance.more', visible: false })],
+      },
+    ];
+    expect(sectionsFor(groups, '/finance/entries')).toEqual([]);
+  });
+
+  it('carries section from the manifest into the NavItem', () => {
+    const financeModule = defineModule({
+      key: 'finance',
+      version: '0.1.0',
+      permissions: ['finance.read'],
+      navigation: [{ key: 'finance.entries', href: '/finance/entries', icon: 'euro', group: 'finance', permission: 'finance.read', section: 'finance.entries' }],
+    });
+    const groups = buildNavigation({ manifests: [coreModule, financeModule], enabledKeys: new Set(['core', 'finance']), permissions: new Set(['finance.read']) });
+    expect(groups.find((g) => g.key === 'finance')!.items[0]!.section).toBe('finance.entries');
   });
 });
 

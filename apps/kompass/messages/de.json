@@ -305,6 +305,14 @@
     "projects": {
       "list": "Projekte"
     },
+    "finance": {
+      "entries": "Journal"
+    },
+    "sections": {
+      "finance": {
+        "entries": "Buchungen"
+      }
+    },
     "media": "Mediathek"
   },
   "shell": {

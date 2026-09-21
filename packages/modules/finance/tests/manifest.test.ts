@@ -19,8 +19,9 @@ describe('finance module', () => {
     ]);
   });
 
-  it('has no navigation yet — the surface comes with plan F3', () => {
-    expect(financeModule.navigation ?? []).toEqual([]);
+  it('puts the journal into the rail with the euro icon, readable with finance.read', () => {
+    expect(financeModule.navigation).toEqual([{ key: 'finance.entries', href: '/finance/entries', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' }]);
+    expect(financeModule.moduleIcon).toBe('euro');
   });
 
   it('registers the protection area finance, opened by finance.read', () => {
