@@ -4,7 +4,7 @@ import { createProject } from '@kompass/module-projects';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { updateAccount } from '../src/ledger/accounts';
-import { saveDraft } from '../src/ledger/entries';
+import { saveDraft, setReviewed } from '../src/ledger/entries';
 import { bookEntry } from '../src/ledger/finalize';
 import { createOpenItem } from '../src/ledger/open-items';
 import { createPurpose } from '../src/ledger/purposes';
@@ -204,5 +204,17 @@ describe('queries', () => {
     const before = accountBalancesAt(f.deps.db, '2026-02-02');
     expect(before.find((a) => a.accountId === bank.id)?.balanceCents).toBe(100000 + 25000 - 490);
     expect(before.find((a) => a.accountId === cash.id)?.balanceCents).toBe(0);
+  });
+
+  it('includeReviewedDrafts adds reviewed drafts to the balance, never a plain draft', async () => {
+    const { f, bank, donations } = await buildMainScenario();
+    const reviewed = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-02', text: 'Geprueft', moneyLines: [{ accountId: bank.id, amountCents: 1000 }], allocationLines: [{ categoryId: donations.id, amountCents: 1000 }] }));
+    unwrap(await setReviewed(f.deps, f.ctx, { id: reviewed.id, reviewed: true, expectedVersion: reviewed.updatedAt }));
+    unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-03', text: 'Unbestaetigt', moneyLines: [{ accountId: bank.id, amountCents: 500 }], allocationLines: [{ categoryId: donations.id, amountCents: 500 }] }));
+
+    const plain = accountBalancesAt(f.deps.db, '2026-03-05');
+    const withReviewed = accountBalancesAt(f.deps.db, '2026-03-05', { includeReviewedDrafts: true });
+    const plainBank = plain.find((a) => a.accountId === bank.id)!.balanceCents;
+    expect(withReviewed.find((a) => a.accountId === bank.id)?.balanceCents).toBe(plainBank + 1000);
   });
 });

@@ -2,6 +2,7 @@ import { unwrap } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { updateAccount } from '../src/ledger/accounts';
+import { saveDraft, setReviewed } from '../src/ledger/entries';
 import { bookEntry } from '../src/ledger/finalize';
 import { getBalances, getIncomeStatement } from '../src/ledger/overview';
 import { createPurpose, fulfillPurpose } from '../src/ledger/purposes';
@@ -77,5 +78,28 @@ describe('overview services', () => {
     unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-02-01', text: 'Spende', moneyLines: [{ accountId: f.bank.id, amountCents: 5000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 5000 }] }));
     const result = unwrap(await getIncomeStatement(f.deps, f.ctx, { fiscalYearId: f.year.id }));
     expect(result.categoryNames[f.donations.id]).toBe(f.donations.name);
+  });
+
+  it('adds reviewed drafts to withReviewedCents but never to balanceCents', async () => {
+    const f = await ledgerFixture();
+    unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-02-01', text: 'Spende', moneyLines: [{ accountId: f.bank.id, amountCents: 5000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 5000 }] }));
+    const draft = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-02-02', text: 'Geprueft', moneyLines: [{ accountId: f.bank.id, amountCents: 2000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 2000 }] }));
+    unwrap(await setReviewed(f.deps, f.ctx, { id: draft.id, reviewed: true, expectedVersion: draft.updatedAt }));
+
+    const result = unwrap(await getBalances(f.deps, f.ctx, {}));
+    const account = result.accounts.find((a) => a.accountId === f.bank.id)!;
+    expect(account.balanceCents).toBe(5000);
+    expect(account.withReviewedCents).toBe(7000);
+  });
+
+  it('ignores unreviewed drafts in both', async () => {
+    const f = await ledgerFixture();
+    unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-02-01', text: 'Spende', moneyLines: [{ accountId: f.bank.id, amountCents: 5000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 5000 }] }));
+    unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-02-02', text: 'Unbestaetigt', moneyLines: [{ accountId: f.bank.id, amountCents: 2000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 2000 }] }));
+
+    const result = unwrap(await getBalances(f.deps, f.ctx, {}));
+    const account = result.accounts.find((a) => a.accountId === f.bank.id)!;
+    expect(account.balanceCents).toBe(5000);
+    expect(account.withReviewedCents).toBe(5000);
   });
 });

@@ -70,15 +70,20 @@ export interface Standing {
  * Kontostand am Stichtag: Anfangsbestand (ab seinem Stichtag) + Σ Geldzeilen
  * festgeschriebener Buchungen mit Datum ≤ Stichtag. Reine Abfrage, ohne
  * Rechteprüfung — für F2c und ihre Verbraucher (`getBalances`,
- * Vermögensübersicht, Kassenprüfung).
+ * Vermögensübersicht, Kassenprüfung). `includeReviewedDrafts`: zählt zusätzlich
+ * Entwürfe mit `reviewedAt` — für die vorläufige Summe „einschließlich
+ * geprüfter Entwürfe“ (F3a); ein Entwurf ohne Prüfung zählt nie mit.
  */
-export function accountBalancesAt(db: DbOrTx, date: string): AccountBalance[] {
+export function accountBalancesAt(db: DbOrTx, date: string, opts: { includeReviewedDrafts?: boolean } = {}): AccountBalance[] {
   const accounts = db.select().from(financeAccounts).all();
+  const statusCondition = opts.includeReviewedDrafts
+    ? sql`(${financeEntries.status} = 'final' or (${financeEntries.status} = 'draft' and ${financeEntries.reviewedAt} is not null))`
+    : eq(financeEntries.status, 'final');
   const sums = db
     .select({ accountId: financeMoneyLines.accountId, sumCents: sql<number>`coalesce(sum(${financeMoneyLines.amountCents}), 0)` })
     .from(financeMoneyLines)
     .innerJoin(financeEntries, eq(financeMoneyLines.entryId, financeEntries.id))
-    .where(and(eq(financeEntries.status, 'final'), lte(financeEntries.entryDate, date)))
+    .where(and(statusCondition, lte(financeEntries.entryDate, date)))
     .groupBy(financeMoneyLines.accountId)
     .all();
   const sumByAccount = new Map(sums.map((s) => [s.accountId, s.sumCents]));

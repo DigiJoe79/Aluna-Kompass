@@ -8,7 +8,7 @@ import { financeAccounts, financeCategories, financeFiscalYears, financePurposes
 
 export interface BalancesView {
   date: string;
-  accounts: { accountId: string; name: string; kind: 'bank' | 'cash' | 'paymentService'; balanceCents: number }[];
+  accounts: { accountId: string; name: string; kind: 'bank' | 'cash' | 'paymentService'; balanceCents: number; withReviewedCents: number }[];
   purposes: { purposeId: string; name: string; balanceCents: number; targetCents: number | null; negative: boolean; fulfilledWithRest: boolean }[];
   assets: AssetOverview;
   standing: Standing;
@@ -30,7 +30,8 @@ export async function getBalances(deps: Deps, ctx: CallContext, input: unknown):
 
   const accountRows = deps.db.select().from(financeAccounts).all();
   const accountNames = new Map(accountRows.map((a) => [a.id, a.name]));
-  const accounts = accountBalancesAt(deps.db, date).map((a) => ({ accountId: a.accountId, name: accountNames.get(a.accountId) ?? '', kind: a.kind, balanceCents: a.balanceCents }));
+  const withReviewedByAccount = new Map(accountBalancesAt(deps.db, date, { includeReviewedDrafts: true }).map((a) => [a.accountId, a.balanceCents]));
+  const accounts = accountBalancesAt(deps.db, date).map((a) => ({ accountId: a.accountId, name: accountNames.get(a.accountId) ?? '', kind: a.kind, balanceCents: a.balanceCents, withReviewedCents: withReviewedByAccount.get(a.accountId) ?? a.balanceCents }));
 
   const purposeRows = deps.db.select().from(financePurposes).all();
   const purposeInfo = new Map(purposeRows.map((p) => [p.id, p]));
