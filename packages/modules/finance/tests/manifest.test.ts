@@ -57,7 +57,30 @@ describe('finance module', () => {
 
   it('states for every entity whether it can be deleted, and never lets the history go', () => {
     const rules = Object.fromEntries((financeModule.deletionRules ?? []).map((r) => [r.entity, r.deletable]));
-    expect(rules).toEqual({ financeAccount: true, financeCategory: true, financePurpose: true, financeDatedValue: true, financeFiscalYear: false, financePeriodEvent: false });
+    expect(rules).toEqual({
+      financeAccount: true, financeCategory: true, financePurpose: true, financeDatedValue: true, financeFiscalYear: false, financePeriodEvent: false,
+      financeEntryDraft: true, financeEntry: false, financeOpenItem: false, financeAllocationCorrection: false, financeEntryDocument: false, financeEntryJustification: false,
+      financeProjectSettings: true, financeYearPersonalData: true,
+    });
+  });
+
+  it('never lets finalized records go: entries, open items, corrections, voucher links, justifications', () => {
+    const rules = Object.fromEntries((financeModule.deletionRules ?? []).map((r) => [r.entity, r.deletable]));
+    for (const entity of ['financeEntry', 'financeOpenItem', 'financeAllocationCorrection', 'financeEntryDocument', 'financeEntryJustification']) {
+      expect(rules[entity], entity).toBe(false);
+    }
+  });
+
+  it('rules the personal data of a year as one logical entity, ten years, with its own audit action', () => {
+    const rule = (financeModule.deletionRules ?? []).find((r) => r.entity === 'financeYearPersonalData')!;
+    expect(rule).toMatchObject({ deletable: true, retentionClass: 'statutory10Y', auditAction: 'finance.personalData.redact' });
+  });
+
+  it('the reason for “not deletable” tells what happens instead', () => {
+    for (const entity of ['financeEntry', 'financeOpenItem', 'financeAllocationCorrection', 'financeEntryDocument', 'financeEntryJustification']) {
+      const rule = (financeModule.deletionRules ?? []).find((r) => r.entity === entity)!;
+      expect(rule.reason, entity).toMatch(/Anonymisierung|entfernt/);
+    }
   });
 
   it('can be switched off as long as nothing is finalized', () => {

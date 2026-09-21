@@ -1,4 +1,4 @@
-import { isoNow, retentionEnd, retentionMonths, type CallContext, type Deps, type DbOrTx, type RecordReference, type RetentionHold } from '@kompass/core';
+import { isoNow, retentionEnd, retentionMonths, type CallContext, type Deps, type DbOrTx, type DueItem, type RecordReference, type RetentionHold } from '@kompass/core';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { financeAudit } from '../audit';
 import {
@@ -9,6 +9,7 @@ import {
   financeFiscalYears,
   financeOpenItems,
   financePeriodEvents,
+  financeProjectSettings,
   financePurposes,
   type FinanceEntryRow,
 } from '../schema';
@@ -218,15 +219,43 @@ function documentGoneAuditFields(entryId: string): Record<string, unknown> {
  * Finanzen, also nichts zu tun.
  */
 export function financeRecordDeleted(tx: DbOrTx, deps: Deps, ctx: CallContext, entityType: string, id: string): void {
-  if (entityType !== 'document') return;
-  const now = isoNow(deps.clock);
-
-  const links = tx.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.documentId, id)).all();
-  for (const link of links) {
-    tx.update(financeEntryDocuments).set({ documentId: null, documentDeletedAt: now }).where(eq(financeEntryDocuments.id, link.id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.entry.documentGone', entity: 'financeEntry', id: link.entryId, after: documentGoneAuditFields(link.entryId), summary: `Beleg an Buchung ${link.entryId} entfernt` });
+  if (entityType === 'document') {
+    const now = isoNow(deps.clock);
+    const links = tx.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.documentId, id)).all();
+    for (const link of links) {
+      tx.update(financeEntryDocuments).set({ documentId: null, documentDeletedAt: now }).where(eq(financeEntryDocuments.id, link.id)).run();
+      financeAudit(tx, deps, ctx, { action: 'finance.entry.documentGone', entity: 'financeEntry', id: link.entryId, after: documentGoneAuditFields(link.entryId), summary: `Beleg an Buchung ${link.entryId} entfernt` });
+    }
+    tx.update(financeOpenItems).set({ documentId: null }).where(eq(financeOpenItems.documentId, id)).run();
+    tx.update(financeAllocationCorrections).set({ proofDocumentId: null }).where(eq(financeAllocationCorrections.proofDocumentId, id)).run();
+    return;
   }
+  if (entityType === 'project') {
+    // Die Finanzfelder eines Projekts sind kein Verweis (Task 6) — ohne Buchung geht das Projekt frei; seine Zeile räumt sich mit.
+    const settings = tx.select().from(financeProjectSettings).where(eq(financeProjectSettings.projectId, id)).get();
+    if (!settings) return;
+    tx.delete(financeProjectSettings).where(eq(financeProjectSettings.projectId, id)).run();
+    financeAudit(tx, deps, ctx, { action: 'finance.projectSettings.delete', entity: 'financeProjectSettings', id, before: settings, summary: `Finanzfelder von Projekt ${id} gelöscht` });
+    return;
+  }
+}
 
-  tx.update(financeOpenItems).set({ documentId: null }).where(eq(financeOpenItems.documentId, id)).run();
-  tx.update(financeAllocationCorrections).set({ proofDocumentId: null }).where(eq(financeAllocationCorrections.proofDocumentId, id)).run();
+/**
+ * Je abgeschlossenem Geschäftsjahr, dessen Anker plus zehn Jahre abgelaufen
+ * ist: ein Posten für den Fristenbildschirm — ohne `href`, der Dienst, der
+ * anonymisiert, kommt erst nach 0.2.0 (Spec 10.3).
+ */
+export function financeRetentionDue(deps: Deps): DueItem[] {
+  const today = isoNow(deps.clock).slice(0, 10);
+  const months = retentionMonths(deps, 'statutory10Y');
+  if (months === null) return [];
+  const due: DueItem[] = [];
+  for (const year of deps.db.select().from(financeFiscalYears).all()) {
+    if (fiscalYearStatusInternal(deps.db, year.id) !== 'closed') continue;
+    const anchor = yearAnchorInternal(deps.db, year.id);
+    if (anchor === null) continue;
+    const dueSince = retentionEnd(anchor, months);
+    if (dueSince < today) due.push({ entity: 'financeYearPersonalData', id: year.id, label: `Finanzen ${year.designation}: personenbezogene Inhalte`, dueSince });
+  }
+  return due;
 }

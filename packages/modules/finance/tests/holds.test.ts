@@ -2,18 +2,19 @@ import { holdsFor, schema, unwrap } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
 import { deleteContact } from '@kompass/module-contacts';
 import { deleteDocument } from '@kompass/module-dms';
-import { createProject } from '@kompass/module-projects';
+import { createProject, deleteProject } from '@kompass/module-projects';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { approveAllocationCorrection, requestAllocationCorrection } from '../src/ledger/corrections';
 import { bookEntry } from '../src/ledger/finalize';
-import { financeRecordDeleted, financeRecordReferences, financeRetentionHolds, yearAnchorInternal } from '../src/ledger/holds';
+import { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds, yearAnchorInternal } from '../src/ledger/holds';
 import { saveDraft } from '../src/ledger/entries';
 import { closeFiscalYear, reopenFiscalYear } from '../src/ledger/period';
+import { setProjectFinance } from '../src/ledger/project-settings';
 import { createPurpose } from '../src/ledger/purposes';
 import { revokeVoucher, uploadVoucher } from '../src/ledger/vouchers';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
-import { financeAllocationLines, financeEntryDocuments } from '../src/schema';
+import { financeAllocationLines, financeEntryDocuments, financeProjectSettings } from '../src/schema';
 import { allowHumanOnlyOverMcp, ledgerFixture, pdfBytes } from './helpers';
 
 const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
@@ -210,5 +211,37 @@ describe('references and what happens when something is deleted', () => {
     const f = await ledgerFixture();
     expect(financeRecordReferences(f.deps, 'bogus-entity', 'X')).toEqual([]);
     expect(() => f.deps.db.transaction((tx) => financeRecordDeleted(tx, f.deps, f.ctx, 'bogus-entity', 'X'))).not.toThrow();
+  });
+
+  it('when a project without entries is deleted, its finance settings go with it', async () => {
+    const f = await ledgerFixture();
+    const project = await seedProject(f.deps, f.userId, 'projekt-ohne-buchung');
+    unwrap(await setProjectFinance(f.deps, f.ctx, { projectId: project.id, targetCents: 5000 }));
+    expect(f.deps.db.select().from(financeProjectSettings).where(eq(financeProjectSettings.projectId, project.id)).all()).toHaveLength(1);
+
+    const manage = ctxWith(['projects.manage'], f.userId);
+    unwrap(await deleteProject(f.deps, manage, { id: project.id }));
+    expect(f.deps.db.select().from(financeProjectSettings).where(eq(financeProjectSettings.projectId, project.id)).all()).toEqual([]);
+  });
+});
+
+describe('retention due — personal data of a closed year', () => {
+  it('reports a closed year as due ten years after its anchor — one item per year, no link yet', async () => {
+    const f = await ledgerFixture({ years: ['2010'] });
+    f.deps.clock.set('2010-06-01T10:00:00.000Z');
+    await f.finalDonation({ date: '2010-06-01', cents: 5000, contactId: f.donor.id });
+    f.closeYear(f.years['2010']!.id); // at = 2010-12-31T23:59:59.000Z
+    f.deps.clock.set('2026-09-05T08:00:00.000Z');
+    const due = financeRetentionDue(f.deps);
+    expect(due).toEqual([{ entity: 'financeYearPersonalData', id: f.years['2010']!.id, label: `Finanzen ${f.years['2010']!.designation}: personenbezogene Inhalte`, dueSince: '2020-12-31' }]);
+    expect(due[0]).not.toHaveProperty('href');
+  });
+
+  it('reports nothing for an open or reopened year', async () => {
+    const f = await ledgerFixture({ years: ['2010'] });
+    expect(financeRetentionDue(f.deps)).toEqual([]);
+    f.closeYear(f.years['2010']!.id);
+    unwrap(await reopenFiscalYear(f.deps, f.ctx, { id: f.years['2010']!.id, note: 'x' }));
+    expect(financeRetentionDue(f.deps)).toEqual([]);
   });
 });

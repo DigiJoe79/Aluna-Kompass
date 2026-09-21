@@ -143,7 +143,7 @@ export {
   type PeriodClosePreview,
   type UndocumentedEntryPreview,
 } from './ledger/period';
-export { financeRecordDeleted, financeRecordReferences, financeRetentionHolds, yearAnchorInternal } from './ledger/holds';
+export { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds, yearAnchorInternal } from './ledger/holds';
 export { getProjectFinance, projectFinanceInternal, setProjectFinance, type ProjectFinanceSettings } from './ledger/project-settings';
 export { cancelOpenItem, createOpenItem, listOpenItems, openCentsInternal, openItemsAtInternal, saveOpenItem, updateOpenItem, type OpenItemView } from './ledger/open-items';
 export { applyCorrectionInternal, approveAllocationCorrection, decideAllocationCorrection, listAllocationCorrections, rejectAllocationCorrection, requestAllocationCorrection, type CorrectionView } from './ledger/corrections';

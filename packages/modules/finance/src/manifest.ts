@@ -2,7 +2,7 @@ import { defineModule, type ModuleManifest, type SettingDefinition } from '@komp
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { requireFinanceRead } from './ledger/access';
-import { financeRecordDeleted, financeRecordReferences, financeRetentionHolds } from './ledger/holds';
+import { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds } from './ledger/holds';
 import { installFinance } from './install';
 import { FINANCE_MCP_TOOLS } from './mcp-tools';
 import { seedFinance } from './seed';
@@ -72,6 +72,7 @@ export const financeModule: ModuleManifest = defineModule({
   retentionHolds: financeRetentionHolds,
   recordReferences: financeRecordReferences,
   recordDeleted: financeRecordDeleted,
+  retentionDue: financeRetentionDue,
   deletionRules: [
     { entity: 'financeAccount', deletable: true, reason: 'Arbeitsmaterial der Stammdaten.', guard: 'nur unbenutzt; sonst stilllegen', auditAction: 'finance.account.delete' },
     { entity: 'financeCategory', deletable: true, reason: 'Arbeitsmaterial der Stammdaten.', guard: 'nur unbenutzt; sonst stilllegen', auditAction: 'finance.category.delete' },
@@ -79,6 +80,42 @@ export const financeModule: ModuleManifest = defineModule({
     { entity: 'financeDatedValue', deletable: true, reason: 'Nur die eigene Überschreibung; die ausgelieferte Reihe ist Code.', guard: 'nur die Überschreibung des Vereins', auditAction: 'finance.datedValue.remove' },
     { entity: 'financeFiscalYear', deletable: false, reason: 'Geschäftsjahre und ihre Abschlüsse sind die Gliederung der Rechenschaft. Personenbezogene Inhalte eines Jahres werden nach Ablauf der Frist anonymisiert, nicht gelöscht.' },
     { entity: 'financePeriodEvent', deletable: false, reason: 'Geschäftsjahre und ihre Abschlüsse sind die Gliederung der Rechenschaft. Personenbezogene Inhalte eines Jahres werden nach Ablauf der Frist anonymisiert, nicht gelöscht.' },
+    { entity: 'financeEntryDraft', deletable: true, reason: 'Arbeitsmaterial ohne Nummer — erst das Festschreiben macht eine Buchung rechenschaftsrelevant.', guard: 'nur solange status = draft', auditAction: 'finance.entry.draftDelete' },
+    {
+      entity: 'financeEntry',
+      deletable: false,
+      reason: 'Festgeschriebenes wird nie gelöscht. Nach Ablauf der Frist werden die personenbezogenen Inhalte des Geschäftsjahres entfernt — Kontakt, Freitext —; Datum, Betrag, Nummer und Kategorie bleiben als Rechenschaft.',
+    },
+    {
+      entity: 'financeOpenItem',
+      deletable: false,
+      reason: 'Festgeschriebenes wird nie gelöscht. Nach Ablauf der Frist werden die personenbezogenen Inhalte des Geschäftsjahres entfernt — Kontakt, Freitext —; Datum, Betrag, Nummer und Kategorie bleiben als Rechenschaft.',
+    },
+    {
+      entity: 'financeAllocationCorrection',
+      deletable: false,
+      reason: 'Festgeschriebenes wird nie gelöscht. Nach Ablauf der Frist werden die personenbezogenen Inhalte des Geschäftsjahres entfernt — Kontakt, Freitext —; Datum, Betrag, Nummer und Kategorie bleiben als Rechenschaft.',
+    },
+    {
+      entity: 'financeEntryDocument',
+      deletable: false,
+      reason: 'Festgeschriebenes wird nie gelöscht. Nach Ablauf der Frist werden die personenbezogenen Inhalte des Geschäftsjahres entfernt — Kontakt, Freitext —; Datum, Betrag, Nummer und Kategorie bleiben als Rechenschaft.',
+    },
+    {
+      entity: 'financeEntryJustification',
+      deletable: false,
+      reason: 'Festgeschriebenes wird nie gelöscht. Nach Ablauf der Frist werden die personenbezogenen Inhalte des Geschäftsjahres entfernt — Kontakt, Freitext —; Datum, Betrag, Nummer und Kategorie bleiben als Rechenschaft.',
+    },
+    { entity: 'financeProjectSettings', deletable: true, reason: 'Geht mit dem Projekt — kein eigener Nachweis.', guard: 'keiner; verschwindet mit dem Projekt', auditAction: 'finance.projectSettings.delete' },
+    {
+      entity: 'financeYearPersonalData',
+      deletable: true,
+      reason: 'Personenbezug eines Geschäftsjahres wird nach Ablauf der gesetzlichen Frist entfernt (DSGVO Art. 17); die Buchungen selbst bleiben als Rechenschaft.',
+      guard:
+        'Anker ist der spätere aus Periodenabschluss und jüngstem Vorgang an Zeilen des Jahres. Entfernt Kontakt, Freitext und Sachspendendetails — nie Beträge. Vor dem Entfernen fragt Kompass, ob für das Jahr ein Bescheid offen oder angefochten ist (§ 147 Abs. 3 S. 5 AO).',
+      auditAction: 'finance.personalData.redact',
+      retentionClass: 'statutory10Y',
+    },
   ],
   // Sobald eine Buchung festgeschrieben ist, hält Finanzen Kontakte, Belege und Projekte — dann bleibt das Modul an.
   canDisable: (deps) => {
