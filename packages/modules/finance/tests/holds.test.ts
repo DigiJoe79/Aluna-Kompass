@@ -1,23 +1,40 @@
-import { holdsFor, schema, unwrap } from '@kompass/core';
+import { newId, holdsFor, schema, unwrap } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
 import { deleteContact } from '@kompass/module-contacts';
-import { deleteDocument } from '@kompass/module-dms';
+import { deleteDocument, documentTypes, documents } from '@kompass/module-dms';
 import { createProject, deleteProject } from '@kompass/module-projects';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { approveAllocationCorrection, requestAllocationCorrection } from '../src/ledger/corrections';
 import { bookEntry } from '../src/ledger/finalize';
 import { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds, yearAnchorInternal } from '../src/ledger/holds';
+import { createOpenItem } from '../src/ledger/open-items';
 import { saveDraft } from '../src/ledger/entries';
 import { closeFiscalYear, reopenFiscalYear } from '../src/ledger/period';
 import { setProjectFinance } from '../src/ledger/project-settings';
 import { createPurpose } from '../src/ledger/purposes';
 import { revokeVoucher, uploadVoucher } from '../src/ledger/vouchers';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
-import { financeAllocationLines, financeEntryDocuments, financeProjectSettings } from '../src/schema';
+import { financeAllocationCorrections, financeAllocationLines, financeEntryDocuments, financeProjectSettings } from '../src/schema';
 import { allowHumanOnlyOverMcp, ledgerFixture, pdfBytes } from './helpers';
 
 const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
+
+/** Ein festgeschriebenes Dokument der Art `letter`, direkt eingefügt — wie in `vouchers.test.ts`. */
+function seedLetter(deps: Awaited<ReturnType<typeof ledgerFixture>>['deps'], id: string) {
+  const now = '2026-03-01T10:00:00.000Z';
+  if (!deps.db.select({ key: documentTypes.key }).from(documentTypes).where(eq(documentTypes.key, 'letter')).get()) {
+    deps.db.insert(documentTypes).values({ key: 'letter', label: 'Brief', prefix: 'BRF', defaultDirection: 'outgoing', retentionClass: 'statutory6Y', defaultFolder: null, isActive: true, sortOrder: 0, ownerModule: null, protectionArea: null }).run();
+  }
+  deps.db
+    .insert(documents)
+    .values({
+      id, phase: 'issued', direction: 'outgoing', sourceKind: 'uploaded', typeKey: 'letter', number: `BRF-2026-${id}`, subject: 'Brief', documentDate: '2026-03-01', folder: null,
+      draftBody: null, fileName: 'x', fileChecksum: 'abc', fileBytes: 1, textStatus: 'unavailable', textAttempts: 0, textError: null, textExtractedAt: null,
+      status: 'issued', createdByUserId: 'U1', createdAt: now, updatedAt: now,
+    })
+    .run();
+}
 
 /** Ein Projekt anlegen, ohne dass `f.ctx` `projects.manage` braucht (Muster corrections.test.ts). */
 async function seedProject(deps: Awaited<ReturnType<typeof ledgerFixture>>['deps'], userId: string, slug: string) {
@@ -222,6 +239,59 @@ describe('references and what happens when something is deleted', () => {
     const manage = ctxWith(['projects.manage'], f.userId);
     unwrap(await deleteProject(f.deps, manage, { id: project.id }));
     expect(f.deps.db.select().from(financeProjectSettings).where(eq(financeProjectSettings.projectId, project.id)).all()).toEqual([]);
+  });
+
+  it('names an open item as reference of its document while the hold runs', async () => {
+    const f = await ledgerFixture();
+    seedLetter(f.deps, 'DOC-OI-1');
+    const viewer = ctxWith([...FINANCE_PERMISSIONS, 'dms.view'], f.userId); // getDocumentRecord verlangt dms.view, um ein bestehendes Dokument anzuhängen.
+    const item = unwrap(await createOpenItem(f.deps, viewer, { kind: 'receivable', itemDate: '2026-03-01', amountCents: 5000, documentId: 'DOC-OI-1' }));
+    const refs = financeRecordReferences(f.deps, 'document', item.documentId!);
+    expect(refs).toEqual([{ label: 'Beleg (Halter läuft)', entity: 'financeEntryDocument', id: item.documentId }]);
+    expect(JSON.stringify(refs)).not.toContain('Brief');
+  });
+
+  it('stops naming the open item once its hold has ended', async () => {
+    const f = await ledgerFixture();
+    seedLetter(f.deps, 'DOC-OI-2');
+    const viewer = ctxWith([...FINANCE_PERMISSIONS, 'dms.view'], f.userId);
+    const item = unwrap(await createOpenItem(f.deps, viewer, { kind: 'receivable', itemDate: '2026-03-01', amountCents: 5000, documentId: 'DOC-OI-2' }));
+    f.deps.clock.set('2035-06-01T00:00:00.000Z'); // 8 Jahre nach Ende des Geschäftsjahres 2026 sind um.
+    expect(financeRecordReferences(f.deps, 'document', item.documentId!)).toEqual([]);
+  });
+
+  it('names a correction as reference of its proof document while the hold runs', async () => {
+    const f = await ledgerFixture();
+    seedLetter(f.deps, 'DOC-COR-1');
+    const entry = await f.finalDonation({ date: '2026-03-01', cents: 5000, contactId: f.donor.id });
+    const line = f.deps.db.select().from(financeAllocationLines).where(eq(financeAllocationLines.entryId, entry.id)).get()!;
+    f.deps.db
+      .insert(financeAllocationCorrections)
+      .values({
+        id: newId(), lineId: line.id, entryId: entry.id, state: 'applied', before: JSON.stringify({ purposeId: null }), after: JSON.stringify({ purposeId: f.abroadPurpose.id }),
+        note: 'Zweck ergänzt', proofDocumentId: 'DOC-COR-1', section153: false, requestedByUserId: f.userId, requestedAt: '2026-03-02T10:00:00.000Z',
+        approvedByUserId: f.userId, approvedAt: '2026-03-02T10:00:00.000Z', rejectedByUserId: null, rejectedAt: null, rejectNote: null,
+      })
+      .run();
+    const refs = financeRecordReferences(f.deps, 'document', 'DOC-COR-1');
+    expect(refs).toEqual([{ label: 'Beleg (Halter läuft)', entity: 'financeEntryDocument', id: 'DOC-COR-1' }]);
+  });
+
+  it('stops naming the correction once its hold has ended', async () => {
+    const f = await ledgerFixture();
+    seedLetter(f.deps, 'DOC-COR-2');
+    const entry = await f.finalDonation({ date: '2026-03-01', cents: 5000, contactId: f.donor.id });
+    const line = f.deps.db.select().from(financeAllocationLines).where(eq(financeAllocationLines.entryId, entry.id)).get()!;
+    f.deps.db
+      .insert(financeAllocationCorrections)
+      .values({
+        id: newId(), lineId: line.id, entryId: entry.id, state: 'applied', before: JSON.stringify({ purposeId: null }), after: JSON.stringify({ purposeId: f.abroadPurpose.id }),
+        note: 'Zweck ergänzt', proofDocumentId: 'DOC-COR-2', section153: false, requestedByUserId: f.userId, requestedAt: '2026-03-02T10:00:00.000Z',
+        approvedByUserId: f.userId, approvedAt: '2026-03-02T10:00:00.000Z', rejectedByUserId: null, rejectedAt: null, rejectNote: null,
+      })
+      .run();
+    f.deps.clock.set('2035-06-01T00:00:00.000Z');
+    expect(financeRecordReferences(f.deps, 'document', 'DOC-COR-2')).toEqual([]);
   });
 });
 
