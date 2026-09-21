@@ -1,5 +1,6 @@
 import { schema, unwrap } from '@kompass/core';
 import { systemContext } from '@kompass/core/testing';
+import { documentTypeFor, documentTypes } from '@kompass/module-dms';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { installFinance } from '../src/install';
@@ -53,5 +54,24 @@ describe('installFinance — start plan', () => {
     unwrap(await deleteCategory(deps, ctx, { id: fees.id }));
     run(deps);
     expect(unwrap(await listCategories(deps, ctx, { includeInactive: true })).map((c) => c.key)).not.toContain('bank-fees');
+  });
+});
+
+describe('installFinance — voucher types', () => {
+  it('proposes four voucher types in the protection area finance, kept eight years', () => {
+    const { deps } = setupFinance();
+    run(deps);
+    for (const [key, prefix] of [['voucher-own', 'EBL'], ['voucher-invoice', 'ERE'], ['voucher-receipt', 'QTG'], ['bank-statement', 'KTO']] as const) {
+      expect(documentTypeFor(deps.db, key), key).toMatchObject({ prefix, protectionArea: 'finance', retentionClass: 'statutory8Y', ownerModule: null, defaultDirection: 'incoming' });
+    }
+  });
+
+  it('leaves alone what the association already has — a taken key or prefix skips the proposal for good', () => {
+    const { deps } = setupFinance();
+    // wie bei Aluna: eine eigene Art `bank-statement` mit KTO, ohne Bereich
+    deps.db.insert(documentTypes).values({ key: 'bank-statement', label: 'Kontoauszug', prefix: 'KTO', defaultDirection: 'incoming', retentionClass: 'statutory10Y', defaultFolder: null, isActive: true, sortOrder: 50, ownerModule: null, protectionArea: null }).run();
+    run(deps);
+    expect(documentTypeFor(deps.db, 'bank-statement')).toMatchObject({ retentionClass: 'statutory10Y', protectionArea: null });
+    expect(documentTypeFor(deps.db, 'voucher-own')).not.toBeNull();
   });
 });

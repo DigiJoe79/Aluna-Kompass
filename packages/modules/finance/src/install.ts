@@ -1,10 +1,24 @@
 import { createRoleInternal, provisionOnce, type CallContext, type DbOrTx, type Deps } from '@kompass/core';
+import { ensureDocumentType } from '@kompass/module-dms';
 import { eq } from 'drizzle-orm';
 import { categoryFieldsSchema, createCategoryInternal } from './ledger/categories';
 import { START_PLAN } from './ledger/start-plan';
 import { financeCategories } from './schema';
 
 const F = (...keys: string[]) => keys.map((k) => `finance.${k}`);
+
+/**
+ * Belegarten als Vorschlag **für den Verein** (nicht modul-eigen): Ist Schlüssel
+ * oder Präfix vergeben, hat der Verein schon entschieden — übersprungen, für
+ * immer (Vorarbeiten-Spec § 4). Die Einrichtung (F3) nennt Arten, die als
+ * Finanzbeleg gelten und keinen Bereich tragen.
+ */
+const VOUCHER_TYPES = [
+  { key: 'voucher-own', label: 'Eigenbeleg', prefix: 'EBL' },
+  { key: 'voucher-invoice', label: 'Eingangsrechnung', prefix: 'ERE' },
+  { key: 'voucher-receipt', label: 'Quittung', prefix: 'QTG' },
+  { key: 'bank-statement', label: 'Kontoauszug', prefix: 'KTO' },
+] as const;
 
 /** Rollenvorschläge (Spec 10.1). Namen sind Nutzdaten des Vereins und umbenennbar; wiedergefunden wird über `originKey`. */
 const ROLES = [
@@ -29,5 +43,10 @@ export function installFinance(tx: DbOrTx, deps: Deps, ctx: CallContext): void {
       createCategoryInternal(tx, deps, ctx, categoryFieldsSchema.parse(category));
       return 'created';
     });
+  }
+
+  // Vier Belegarten als Vorschlag; vorhandene Arten des Vereins fasst Finanzen nie an.
+  for (const type of VOUCHER_TYPES) {
+    ensureDocumentType(tx, deps, ctx, { module: 'finance', key: type.key, label: type.label, prefix: type.prefix, defaultDirection: 'incoming', retentionClass: 'statutory8Y', owned: false, protectionArea: 'finance' });
   }
 }

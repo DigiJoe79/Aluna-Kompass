@@ -50,6 +50,11 @@ export const financeModule: ModuleManifest = defineModule({
   settings: FINANCE_SETTINGS,
   // Dokumentarten mit diesem Bereich sieht nur, wer Finanzen mit Namen lesen darf — nicht jeder mit `dms.view`.
   documentAreas: [{ key: 'finance', permission: 'finance.read' }],
+  // Der Bezug als Berechtigung (VP2): Die Buchhalterin legt Belege im Namen einer Buchung ab, ohne dms.view.
+  linkedDocumentAccess: [
+    { entityType: 'financeEntry', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
+    { entityType: 'financeOpenItem', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
+  ],
   /**
    * Alle `none`: Finanzen hält seine Kontakte über Buchungen und Bestätigungen
    * (ab F2c), nicht über die Rolle — eine laufende Rolle rechnete „ab heute“

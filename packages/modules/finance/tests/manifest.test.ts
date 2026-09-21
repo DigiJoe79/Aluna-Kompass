@@ -27,6 +27,13 @@ describe('finance module', () => {
     expect(financeModule.documentAreas).toEqual([{ key: 'finance', permission: 'finance.read' }]);
   });
 
+  it('registers entries and open items with the file module: read with finance.read, file with finance.entriesWrite', () => {
+    expect(financeModule.linkedDocumentAccess).toEqual([
+      { entityType: 'financeEntry', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
+      { entityType: 'financeOpenItem', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
+    ]);
+  });
+
   it('brings five contact roles, none of which holds a contact by itself', () => {
     expect(financeModule.contactRoles).toEqual(['donor', 'grant-recipient', 'claimant', 'board-member', 'related-party'].map((key) => ({ key, retention: 'none' })));
   });
