@@ -90,7 +90,7 @@ export function SplitRow({
   const set = (patch: Partial<SplitRowValue>) => onChange({ ...value, ...patch });
 
   return (
-    <div className="space-y-3 rounded-md border border-line bg-surface-2 p-3">
+    <div data-testid="split-row" className="space-y-3 rounded-md border border-line bg-surface-2 p-3">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1.2fr_repeat(3,1fr)_auto] sm:items-start">
         <div className="space-y-1">
           <Label htmlFor={`${value.key}-category`}>{t('category')}</Label>
@@ -124,7 +124,10 @@ export function SplitRow({
           ) : null}
         </div>
 
-        <AmountField name={`${value.key}-amount`} value={value.amountText} onChange={(amountText) => set({ amountText })} allowNegative disabled={value.locked} required />
+        <div className="space-y-1">
+          <Label htmlFor={`${value.key}-amount`}>{t('amount')}</Label>
+          <AmountField id={`${value.key}-amount`} name={`${value.key}-amount`} value={value.amountText} onChange={(amountText) => set({ amountText })} allowNegative disabled={value.locked} required />
+        </div>
 
         {showTax ? (
           <div className="space-y-1">

@@ -62,6 +62,7 @@ export function ReceiptDrop({ onFiles, onPickFromArchive, disabled }: { onFiles:
         )}
         <input
           ref={inputRef}
+          data-testid="voucher-file-input"
           type="file"
           accept="application/pdf"
           className="hidden"

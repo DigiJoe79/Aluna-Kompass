@@ -121,3 +121,42 @@ describe('fromEntryView: guesses the template', () => {
     expect(state.template).toBe('income');
   });
 });
+
+describe('toServiceInput: settlements at a money row (Befund aus Teil 1)', () => {
+  const withSettlement = (state: EntryFormState, amountText: string): EntryFormState => ({
+    ...state,
+    moneyRows: [{ ...state.moneyRows[0]!, accountId: 'bank', amountText: '100,00', settlements: [{ openItemId: 'OI1', amountText }] }],
+  });
+
+  it('reports a field error instead of silently dropping an unreadable settlement amount', () => {
+    let state = emptyForm('income', '2026-03-01');
+    state = withSettlement({ ...state, text: 'Ausgleich' }, 'abc');
+    state = withSplitRow(state, 's1', 'donations', '100,00');
+
+    const result = toServiceInput(state);
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('expected error');
+    expect(result.fieldErrors['moneyRows.0.settlements.0.amountText']).toBe('format');
+  });
+
+  it('reports a field error when settlement amounts exceed the money row', () => {
+    let state = emptyForm('income', '2026-03-01');
+    state = { ...state, text: 'Ausgleich', moneyRows: [{ ...state.moneyRows[0]!, accountId: 'bank', amountText: '100,00', settlements: [{ openItemId: 'OI1', amountText: '80,00' }, { openItemId: 'OI2', amountText: '50,00' }] }] };
+    state = withSplitRow(state, 's1', 'donations', '100,00');
+
+    const result = toServiceInput(state);
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('expected error');
+    expect(result.fieldErrors['moneyRows.0.settlements.1.amountText']).toBe('exceeds');
+  });
+
+  it('still accepts readable settlements that do not exceed the row', () => {
+    let state = emptyForm('income', '2026-03-01');
+    state = { ...state, text: 'Ausgleich', moneyRows: [{ ...state.moneyRows[0]!, accountId: 'bank', amountText: '100,00', settlements: [{ openItemId: 'OI1', amountText: '60,00' }, { openItemId: 'OI2', amountText: '40,00' }] }] };
+    state = withSplitRow(state, 's1', 'donations', '100,00');
+
+    const result = toServiceInput(state);
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.input.moneyLines[0]!.settlements).toEqual([{ openItemId: 'OI1', amountCents: 6000 }, { openItemId: 'OI2', amountCents: 4000 }]);
+  });
+});

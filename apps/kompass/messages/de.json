@@ -2268,6 +2268,7 @@
     "splitRow": {
       "category": "Kategorie",
       "categoryPlaceholder": "Kategorie wählen",
+      "amount": "Betrag",
       "income": "Einnahmen",
       "expense": "Ausgaben",
       "sphere": {
@@ -2398,6 +2399,49 @@
           "purposeOperation": "Zweckbetrieb",
           "business": "Wirtschaftlicher Geschäftsbetrieb"
         }
+      }
+    },
+    "entryForm": {
+      "newTitle": "Neue Buchung",
+      "editTitle": "Buchung bearbeiten",
+      "date": "Datum",
+      "text": "Text",
+      "template": "Vorlage",
+      "templates": {
+        "income": "Einnahme",
+        "expense": "Ausgabe",
+        "transfer": "Umbuchung zwischen Konten",
+        "inKind": "Sachspende"
+      },
+      "accountCard": "Konto",
+      "account": "Konto",
+      "amount": "Betrag",
+      "accountPlaceholder": "Konto wählen",
+      "transferFrom": "Von Konto",
+      "transferTo": "Auf Konto",
+      "balanceHint": "Bestand {amount}",
+      "transferHint": "Eine Umbuchung ist weder Einnahme noch Ausgabe.",
+      "allocationCard": "Wofür?",
+      "addRow": "Zeile hinzufügen",
+      "voucherCard": "Beleg",
+      "pickFromArchive": "Aus der Akte wählen",
+      "voucherType": "Beleg",
+      "cashNote": "Bargeld wird am selben Tag festgehalten.",
+      "cancel": "Abbrechen",
+      "actions": {
+        "saveDraft": "Als Entwurf speichern",
+        "saveReviewed": "Speichern und als geprüft markieren",
+        "finalize": "Festschreiben"
+      },
+      "confirmFinalize": {
+        "title": "Buchung festschreiben",
+        "description": "Danach ist die Buchung nicht mehr änderbar."
+      },
+      "toast": {
+        "fieldsInvalid": "Bitte die markierten Felder prüfen.",
+        "draftSaved": "Als Entwurf gespeichert.",
+        "reviewedSaved": "Gespeichert und als geprüft markiert.",
+        "finalized": "Festgeschrieben: {number}."
       }
     }
   }

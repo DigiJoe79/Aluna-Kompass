@@ -134,9 +134,27 @@ export function toServiceInput(state: EntryFormState): { ok: true; input: EntryL
       fieldErrors[`moneyRows.${index}.accountId`] = 'required';
       return;
     }
-    const settlements = row.settlements
-      .map((s) => ({ openItemId: s.openItemId, amountCents: parseAmount(s.amountText) }))
-      .filter((s): s is { openItemId: string; amountCents: number } => s.amountCents !== null);
+    const settlements: { openItemId: string; amountCents: number }[] = [];
+    let settlementSum = 0;
+    let settlementProblem = false;
+    row.settlements.forEach((s, sIndex) => {
+      const settlementCents = parseAmount(s.amountText);
+      if (settlementCents === null) {
+        fieldErrors[`moneyRows.${index}.settlements.${sIndex}.amountText`] = 'format';
+        settlementProblem = true;
+        return;
+      }
+      settlementSum += settlementCents;
+      // Erst hinterher als „exceeds“ melden: Die Summe der Teilbeträge darf den Betrag der Geldzeile nicht übersteigen —
+      // am Feld, das den Rahmen sprengt, nicht an dem, das noch dazu passte.
+      if (settlementSum > parsed) {
+        fieldErrors[`moneyRows.${index}.settlements.${sIndex}.amountText`] = 'exceeds';
+        settlementProblem = true;
+        return;
+      }
+      settlements.push({ openItemId: s.openItemId, amountCents: settlementCents });
+    });
+    if (settlementProblem) return;
     moneyLines.push({ accountId: row.accountId, amountCents: row.direction === 'in' ? parsed : -parsed, settlements: settlements.length > 0 ? settlements : undefined });
   });
 
