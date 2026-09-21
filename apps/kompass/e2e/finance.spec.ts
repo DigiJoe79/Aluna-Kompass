@@ -971,6 +971,19 @@ test.describe('finance', () => {
     await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);
     await expect(page.getByTestId('project-finance-section')).toHaveCount(0);
   });
+
+  test('bei ausgeschaltetem Finanzmodul fehlt der Finanzabschnitt am Projekt', async ({ page }) => {
+    await loginAsAdmin(page);
+    await disableFinanceModuleSetting(page);
+    try {
+      await page.goto('/projects');
+      await page.getByRole('link', { name: 'Winterhilfe für Streuner' }).click();
+      await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);
+      await expect(page.getByTestId('project-finance-section')).toHaveCount(0);
+    } finally {
+      await setE2ESetting(page, 'modules.enabled', ['animals', 'contacts', 'dms', 'finance', 'projects', 'site']);
+    }
+  });
 });
 
 const PNG = Buffer.from(
