@@ -40,7 +40,17 @@
     "backToList": "Zurück zur Übersicht",
     "requiredLegend": "* Pflichtfeld",
     "fieldsInvalid": "{count, plural, one {Ein Feld braucht noch eine Angabe.} other {# Felder brauchen noch eine Angabe.}}",
-    "tabInvalid": "Enthält einen Fehler"
+    "tabInvalid": "Enthält einen Fehler",
+    "notice": {
+      "waysOut": "Das hilft weiter"
+    },
+    "blocked": {
+      "notPossible": "nicht möglich"
+    },
+    "beforeAfter": {
+      "before": "Vorher",
+      "after": "Nachher"
+    }
   },
   "media": {
     "title": "Mediathek",
