@@ -20,6 +20,8 @@
   - [Bezüge und Wiedervorlage](akte/bezuege-und-wiedervorlage.md)
   - [Volltext](akte/volltext.md)
 - [Mediathek](mediathek.md)
+- Finanzen
+  - [Buchen von Hand](finanzen/buchen.md)
 - Einstellungen
   - [Stammdaten](einstellungen/verein.md)
   - [Nutzer und Rollen](einstellungen/nutzer-und-rollen.md)
