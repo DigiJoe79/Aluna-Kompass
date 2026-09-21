@@ -1,3 +1,4 @@
+import { isModuleEnabled } from '@kompass/core';
 import { readCashCountProtocol } from '@kompass/module-finance';
 import { getDeps } from '@/lib/deps';
 import { optionalSession } from '@/lib/request-context';
@@ -10,8 +11,10 @@ import { optionalSession } from '@/lib/request-context';
 export async function GET(_request: Request, ctx: { params: Promise<{ countId: string }> }): Promise<Response> {
   const session = await optionalSession();
   if (!session) return new Response(null, { status: 401 });
+  const deps = getDeps();
+  if (!isModuleEnabled(deps, 'finance')) return new Response(null, { status: 404 });
   const { countId } = await ctx.params;
-  const result = await readCashCountProtocol(getDeps(), session.ctx, { countId });
+  const result = await readCashCountProtocol(deps, session.ctx, { countId });
   if (!result.ok) return new Response(null, { status: 404 });
   return new Response(Buffer.from(result.value.bytes), {
     headers: {

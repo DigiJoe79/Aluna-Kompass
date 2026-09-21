@@ -2268,6 +2268,11 @@
     }
   },
   "finance": {
+    "common": {
+      "moduleInactiveTitle": "Modul Finanzen ist nicht aktiv",
+      "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Daten bleiben erhalten.",
+      "openModules": "Module öffnen"
+    },
     "remedy": {
       "restIntoLastRow": "Rest in diese Zeile eintragen",
       "focusDate": "Datum prüfen",

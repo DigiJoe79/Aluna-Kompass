@@ -1,4 +1,4 @@
-import { hasPermission, readSetting } from '@kompass/core';
+import { hasPermission, isModuleEnabled, readSetting } from '@kompass/core';
 import {
   getPermissionMatrix,
   getSetupStatus,
@@ -10,6 +10,7 @@ import {
 } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { ModuleInactiveCard } from '@/components/module-inactive-card';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
 import { AccountsPanel } from './accounts-panel';
@@ -24,6 +25,7 @@ import { TaxPanel } from './tax-panel';
 
 export default async function AdminFinancePage({ searchParams }: { searchParams: Promise<{ panel?: string }> }) {
   const { deps, ctx } = await requireSession();
+  if (!isModuleEnabled(deps, 'finance')) return <ModuleInactiveCard namespace="finance.common" />;
   if (!hasPermission(ctx, 'finance.setup')) return <ForbiddenCard permission="finance.setup" />;
   const t = await getTranslations('finance.admin');
   const query = await searchParams;

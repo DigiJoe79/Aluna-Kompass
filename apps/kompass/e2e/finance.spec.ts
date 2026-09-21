@@ -599,7 +599,12 @@ test.describe('finance', () => {
     await page.getByRole('button', { name: 'Konto anlegen und starten' }).click();
     await expect(page).toHaveURL('/');
     await page.goto('/admin/modules');
-    await page.getByRole('switch', { name: 'Finanzen aktivieren oder deaktivieren' }).click();
+    // Finanzen hängt von contacts, dms und projects ab (`dependsOn`) — ohne sie
+    // lehnt das Einschalten mit `moduleDependencyInactive` ab.
+    for (const name of ['Kontakte aktivieren oder deaktivieren', 'Dokumentenmanagement aktivieren oder deaktivieren', 'Projekte aktivieren oder deaktivieren', 'Finanzen aktivieren oder deaktivieren']) {
+      await page.getByRole('switch', { name }).click();
+      await expect(page.getByRole('switch', { name })).toBeChecked();
+    }
     await page.goto('/finance/accounts');
     await expect(page.getByText('Noch keine Konten')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Bankkonten und Kassen einrichten' })).toBeVisible();
@@ -749,6 +754,10 @@ test.describe('finance', () => {
     // Statt einer leeren Installation (H2 — Konten anlegen — kommt erst mit Task 5): eine Suche ohne
     // Treffer zeigt denselben leeren Zustand; „Barkasse“ hat im Seed keinen Anfangsbestand.
     await loginAsAdmin(page);
+    // Der Seed schaltet Finanzen und seine Abhängigkeiten wirklich ein (nicht nur
+    // vorgetäuscht) — sonst zeigte die neue Sperre „Modul inaktiv“ statt des leeren Journals.
+    await page.goto('/admin/modules');
+    await expect(page.getByRole('switch', { name: 'Finanzen aktivieren oder deaktivieren' })).toBeChecked();
     await page.goto('/finance/entries?q=kein-treffer-fuer-diesen-text-xyz');
     await expect(page.getByText('Noch keine Buchung.')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Bankkonten und Kassen einrichten' })).toBeVisible();
@@ -772,6 +781,60 @@ test.describe('finance', () => {
     await page.goto('/finance/entries?q=kein-treffer-fuer-diesen-text-xyz');
     await expect(page.getByText('Noch keine Buchung.')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Bankkonten und Kassen einrichten' })).toHaveCount(0);
+  });
+
+  // Ist erst eine Buchung festgeschrieben, hält Finanzen Kontakte, Belege und
+  // Projekte — das Modul lässt sich dann nie mehr ausschalten (`canDisable`
+  // in manifest.ts). Der Seed hat solche Buchungen, darum schaltet dieser
+  // Test die Einstellung `modules.enabled` direkt (Muster: `setE2ESetting`,
+  // wie schon für andere Werte genutzt) statt über den Schalter in
+  // `/admin/modules` — geprüft wird hier nur, dass die Seiten das Fehlen des
+  // Schlüssels `finance` befolgen, nicht der Dienst `setModuleEnabled`.
+  async function disableFinanceModuleSetting(page: import('@playwright/test').Page): Promise<void> {
+    await setE2ESetting(page, 'modules.enabled', ['animals', 'contacts', 'dms', 'projects', 'site']);
+  }
+
+  test('bei ausgeschaltetem Finanzmodul zeigen die Finanzseiten die Sperre „Modul inaktiv“ und den Weg zu den Modulen', async ({ page }) => {
+    await loginAsAdmin(page);
+    await disableFinanceModuleSetting(page);
+
+    for (const path of ['/finance/entries', '/finance/accounts', '/finance/cash', '/finance/open-items', '/admin/finance']) {
+      await page.goto(path);
+      await expect(page.getByRole('heading', { name: 'Modul Finanzen ist nicht aktiv' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Module öffnen' })).toBeVisible();
+    }
+  });
+
+  test('ein Beleg-Download antwortet bei ausgeschaltetem Modul mit 404', async ({ page }) => {
+    await loginAsAdmin(page);
+
+    // Beleg an einer Buchung.
+    await page.goto('/finance/entries');
+    await page.locator('tr', { hasText: 'Spende Altjahr' }).click();
+    await page.getByTestId('voucher-file-input').setInputFiles({ name: 'beleg.pdf', mimeType: 'application/pdf', buffer: samplePdf() });
+    await expect(page.getByRole('link', { name: 'öffnen' })).toBeVisible();
+    const voucherHref = await page.getByRole('link', { name: 'öffnen' }).getAttribute('href');
+
+    // Zählprotokoll einer Kassenzählung ohne Abweichung.
+    await page.goto('/finance/cash');
+    await page.getByText('Zählkasse', { exact: true }).click();
+    await expect(page).toHaveURL(/account=/);
+    await page.getByRole('button', { name: 'Kasse oder Dose gezählt' }).click();
+    await page.getByLabel('Gezählter Betrag').fill('200,00');
+    await page.getByRole('combobox', { name: 'Erste zählende Person' }).fill('Sandberg');
+    await page.getByTestId('contact-option').filter({ hasText: 'Mira Sandberg' }).first().click();
+    await page.getByRole('combobox', { name: 'Zweite zählende Person' }).fill('Leitner');
+    await page.getByTestId('contact-option').filter({ hasText: 'Tomas Leitner' }).first().click();
+    await page.getByRole('button', { name: 'Zählung speichern' }).click();
+    await expect(page.getByText(/Zählprotokoll KZP-\S+ erstellt/)).toBeVisible();
+    const protocolHref = await page.getByRole('link', { name: /KZP-/ }).first().getAttribute('href');
+
+    await disableFinanceModuleSetting(page);
+
+    const voucherResponse = await page.request.get(voucherHref!);
+    expect(voucherResponse.status()).toBe(404);
+    const protocolResponse = await page.request.get(protocolHref!);
+    expect(protocolResponse.status()).toBe(404);
   });
 });
 
