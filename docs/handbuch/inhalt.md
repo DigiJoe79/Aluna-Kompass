@@ -21,6 +21,7 @@
   - [Volltext](akte/volltext.md)
 - [Mediathek](mediathek.md)
 - Finanzen
+  - [Finanzen einrichten](finanzen/einrichten.md)
   - [Buchen von Hand](finanzen/buchen.md)
   - [Konten und offene Zahlungen](finanzen/konten-und-offene-zahlungen.md)
 - Einstellungen

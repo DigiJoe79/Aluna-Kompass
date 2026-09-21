@@ -66,6 +66,7 @@ export const FINANCE_ERRORS = {
   cashCountNotCash: { reason: 'Das Konto {account} ist kein Barkonto.', remedy: 'Zählen lässt sich nur eine Kasse oder Spendendose.' },
   cashCountInFuture: { reason: 'Das Zähldatum liegt in der Zukunft.', remedy: 'Wählen Sie den heutigen Tag oder einen vergangenen.' },
   cashMoveNeedsOneCash: { reason: 'Eine Bargeldbewegung braucht genau ein Barkonto — das andere ist ein Bankkonto.', remedy: 'Wählen Sie ein Bankkonto und ein Barkonto.' },
+  switchUiOnly: { reason: 'Dieser Schalter lässt sich nur am Bildschirm ändern.', remedy: 'Melden Sie sich an und ändern Sie ihn dort.' },
 } as const satisfies Record<string, { reason: string; remedy: string }>;
 
 export type FinanceErrorCode = keyof typeof FINANCE_ERRORS;

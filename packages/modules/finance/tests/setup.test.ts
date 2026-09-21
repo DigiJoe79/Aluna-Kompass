@@ -4,7 +4,7 @@ import { createContact, linkUserToContact } from '@kompass/module-contacts';
 import { describe, expect, it } from 'vitest';
 import { createAccount } from '../src/ledger/accounts';
 import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
-import { applyTaxDefaults, confirmSetupStep, getPermissionMatrix, getSetupStatus } from '../src/ledger/setup';
+import { applyTaxDefaults, confirmSetupStep, getPermissionMatrix, getSetupStatus, setFinanceSwitch } from '../src/ledger/setup';
 import { installFinance } from '../src/install';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
 import { setupFinance } from './helpers';
@@ -149,6 +149,22 @@ describe('finance setup status', () => {
     deps.db.insert(schema.userRoles).values({ userId: holderId, roleId: treasurerRoleId }).run();
     const matrixAfter = unwrap(await getPermissionMatrix(deps, ctx));
     expect(matrixAfter.roles.find((r) => r.name === 'Schatzmeister')!.holders).toEqual(['Schatzmeister Person']);
+  });
+
+  it('sets a finance switch (H7) with finance.setup, refuses an unknown key, and keeps the mcp-only switch bound to the ui channel', async () => {
+    const { deps, ctx } = setupFinance();
+    unwrap(await setFinanceSwitch(deps, ctx, { key: 'finance.isEntrepreneurOrHasVatId', value: true }));
+    expect(readSetting(deps, 'finance.isEntrepreneurOrHasVatId')).toBe(true);
+
+    const invalid = await setFinanceSwitch(deps, ctx, { key: 'finance.uploadLimitMb', value: true });
+    expect(invalid.ok).toBe(false);
+
+    const agentCtx = { ...ctx, channel: 'mcp' as const };
+    const refused = await setFinanceSwitch(deps, agentCtx, { key: 'finance.mcpHumanOnlyAllowed', value: true });
+    expect(refused).toMatchObject({ ok: false, error: { type: 'conflict', code: 'switchUiOnly' } });
+
+    const readerCtx = ctxWith(['finance.read'], 'READER');
+    expect(await setFinanceSwitch(deps, readerCtx, { key: 'finance.isEntrepreneurOrHasVatId', value: false })).toMatchObject({ ok: false, error: { type: 'forbidden', permission: 'finance.setup' } });
   });
 
   it('never writes user names into the audit log', async () => {

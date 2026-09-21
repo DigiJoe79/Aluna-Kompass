@@ -50,7 +50,8 @@
     "beforeAfter": {
       "before": "Vorher",
       "after": "Nachher"
-    }
+    },
+    "edit": "Ändern"
   },
   "media": {
     "title": "Mediathek",
@@ -238,7 +239,16 @@
       "backupCorrupt": "Die Datenbank im Backup ist beschädigt.",
       "backupWithoutUsers": "Dieses Backup enthält keine Nutzer. Damit ließe sich die Installation nicht mehr benutzen.",
       "referenceNotFound": "Dieser Datensatz steht nicht (mehr) zur Auswahl. Bitte leeren oder neu wählen.",
-      "duplicateReference": "Derselbe Datensatz ist zweimal gewählt."
+      "duplicateReference": "Derselbe Datensatz ist zweimal gewählt.",
+      "sphereRequired": "Wählen Sie einen steuerlichen Bereich.",
+      "incomeKindRequired": "Wählen Sie eine Einnahmeart.",
+      "costFunctionRequired": "Wählen Sie eine Kostenfunktion.",
+      "costFunctionOnlyForExpense": "Eine Kostenfunktion gilt nur für Ausgaben.",
+      "incomeKindOnlyForIncome": "Eine Einnahmeart gilt nur für Einnahmen.",
+      "certifiableOnlyIdeal": "Spenden gibt es nur im ideellen Bereich.",
+      "allowanceOnlyForExpense": "Eine Aufwandsart gilt nur für Ausgaben.",
+      "inputTaxNotInIdeal": "Vorsteuerabzug gilt nicht im ideellen Bereich.",
+      "transitHasNoSphere": "Durchlauf hat keinen steuerlichen Bereich."
     },
     "pages": {
       "forbidden": {
@@ -319,7 +329,8 @@
       "entries": "Journal",
       "accounts": "Bankkonten und Kassen",
       "openItems": "Offene Zahlungen",
-      "cash": "Barkasse"
+      "cash": "Barkasse",
+      "admin": "Finanzen"
     },
     "sections": {
       "finance": {
@@ -444,8 +455,17 @@
             "protectedTitle": "Wiedervorlage an einem geschützten Datensatz"
           },
           "options": {
-            "horizonDays": { "label": "Zeitraum", "values": { "7": "7 Tage", "14": "14 Tage", "30": "30 Tage" } },
-            "onlyMine": { "label": "Nur meine" }
+            "horizonDays": {
+              "label": "Zeitraum",
+              "values": {
+                "7": "7 Tage",
+                "14": "14 Tage",
+                "30": "30 Tage"
+              }
+            },
+            "onlyMine": {
+              "label": "Nur meine"
+            }
           }
         },
         "setup": {
@@ -478,25 +498,53 @@
             "recent": "Letztes Backup vor {days, plural, =0 {weniger als einem Tag} one {# Tag} other {# Tagen}}."
           }
         },
-        "accounts": { "title": "Konten", "empty": "Alle Konten sind eingerichtet.", "open": "Zu den Nutzern" },
-        "retention": { "title": "Löschfällig", "empty": "Nichts zur Löschung fällig.", "open": "Zur Aufbewahrung" },
-        "translations": { "title": "Übersetzungslücken", "empty": "Alles übersetzt.", "open": "Zu den Sprachen" }
+        "accounts": {
+          "title": "Konten",
+          "empty": "Alle Konten sind eingerichtet.",
+          "open": "Zu den Nutzern"
+        },
+        "retention": {
+          "title": "Löschfällig",
+          "empty": "Nichts zur Löschung fällig.",
+          "open": "Zur Aufbewahrung"
+        },
+        "translations": {
+          "title": "Übersetzungslücken",
+          "empty": "Alles übersetzt.",
+          "open": "Zu den Sprachen"
+        }
       },
       "dms": {
         "inbox": {
           "title": "Eingangskorb",
           "empty": "Keine Post im Eingangskorb.",
           "open": "Zum Eingangskorb",
-          "options": { "rows": { "label": "Zeilen" } }
+          "options": {
+            "rows": {
+              "label": "Zeilen"
+            }
+          }
         },
         "drafts": {
           "title": "Entwürfe",
           "empty": "Keine offenen Entwürfe.",
           "open": "Zu den Entwürfen",
-          "options": { "onlyMine": { "label": "Nur meine" } }
+          "options": {
+            "onlyMine": {
+              "label": "Nur meine"
+            }
+          }
         },
-        "unsent": { "title": "Unversandt", "empty": "Alles versandt.", "open": "Zur Akte" },
-        "textFailed": { "title": "Texterkennung", "empty": "Keine fehlgeschlagene Texterkennung.", "open": "Zur Akte" }
+        "unsent": {
+          "title": "Unversandt",
+          "empty": "Alles versandt.",
+          "open": "Zur Akte"
+        },
+        "textFailed": {
+          "title": "Texterkennung",
+          "empty": "Keine fehlgeschlagene Texterkennung.",
+          "open": "Zur Akte"
+        }
       },
       "site": {
         "site": {
@@ -2739,6 +2787,289 @@
         "amount": "Betrag",
         "reference": "Verwendungszweck",
         "noIban": "Eine Bankverbindung ist hier noch nicht hinterlegt."
+      }
+    },
+    "admin": {
+      "title": "Finanzen einrichten",
+      "description": "Geschäftsjahr, Bankkonten und Kassen, wer welche Rolle trägt, Kategorien, Zwecke, Sätze und Grenzen sowie das Steuerliche.",
+      "tabs": {
+        "checklist": "Checkliste",
+        "accounts": "Bankkonten und Kassen",
+        "categories": "Kategorien",
+        "purposes": "Zwecke",
+        "fiscalYears": "Geschäftsjahre",
+        "datedValues": "Sätze und Grenzen",
+        "tax": "Steuerliches",
+        "permissions": "Wer darf was"
+      },
+      "checklist": {
+        "steps": {
+          "fiscalYear": "Geschäftsjahr anlegen",
+          "account": "Bankkonto oder Kasse mit Anfangsbestand anlegen",
+          "roles": "Wer welche Rolle trägt",
+          "categories": "Kategorien durchsehen",
+          "tax": "Steuerliches bestätigen"
+        },
+        "open": "Erledigen",
+        "done": "Erledigt",
+        "blocked": {
+          "account": "wartet auf ein Geschäftsjahr"
+        },
+        "detail": {
+          "account": "{accounts} Konten, {withoutOpening} ohne Anfangsbestand",
+          "rolesWithoutUser": "ohne aktiven Träger: {names}",
+          "usersWithoutContact": "{count} Nutzer ohne verknüpften Kontakt"
+        },
+        "canDo": "kann {names} erledigen",
+        "applyTaxDefaults": "Vorgaben übernehmen",
+        "reviewCategories": "Kategorien durchgesehen",
+        "completeHint": "Die Einrichtung ist vollständig.",
+        "toast": {
+          "confirmed": "Schritt bestätigt.",
+          "taxDefaultsApplied": "Steuer-Vorgaben übernommen."
+        }
+      },
+      "accounts": {
+        "title": "Bankkonten und Kassen",
+        "create": "Konto anlegen",
+        "edit": "Konto ändern",
+        "active": "Aktiv",
+        "inactiveState": "Stillgelegt",
+        "deactivate": "Stilllegen statt löschen",
+        "kind": {
+          "bank": "Bankkonto",
+          "cash": "Kasse",
+          "paymentService": "Zahlungsdienst"
+        },
+        "dialog": {
+          "name": "Name",
+          "kind": "Art",
+          "iban": "IBAN",
+          "ibanState": {
+            "valid": "IBAN ist gültig.",
+            "checksum": "Die Prüfziffer stimmt nicht.",
+            "length": "Die Länge passt nicht zum Land."
+          },
+          "bic": "BIC",
+          "bankName": "Bank",
+          "openingBalance": "Anfangsbestand",
+          "openingDate": "Stichtag",
+          "openingBoth": "Anfangsbestand und Stichtag gehören zusammen — beides oder keines.",
+          "isMain": "Hauptkonto",
+          "isMainHint": "Die IBAN des Hauptkontos steht auf den Zuwendungsbestätigungen und in den Vereinsdaten.",
+          "document": "Beleg zum Anfangsbestand",
+          "documentNoAccess": "Ein Beleg zum Anfangsbestand lässt sich nur mit Zugriff auf die Akte hinterlegen.",
+          "save": "Speichern"
+        },
+        "toast": {
+          "created": "Konto angelegt.",
+          "updated": "Konto geändert."
+        }
+      },
+      "categories": {
+        "title": "Kategorien",
+        "search": "Suchen",
+        "create": "Kategorie anlegen",
+        "edit": "Kategorie ändern",
+        "inactiveState": "Stillgelegt",
+        "explanation": "Erläuterung",
+        "sphere": "Steuerlicher Bereich",
+        "spherePlaceholder": "Bitte wählen",
+        "statementSuffices": "Kontoauszug genügt als Beleg",
+        "defaultTaxCode": "Übliche Umsatzsteuer",
+        "advanced": "Erweitert",
+        "incomeKind": "Einnahmeart",
+        "costFunction": "Kostenfunktion",
+        "allowanceKind": "Aufwandsart",
+        "inputTaxDeductible": "Vorsteuerabzug",
+        "countsTowardTurnover": "Zählt zum Umsatz",
+        "isAssetSale": "Verkauf aus dem Vermögen",
+        "externalAccountNumber": "Kontonummer der Buchhaltungssoftware",
+        "review": "Kategorien durchgesehen",
+        "reviewedAt": "Zuletzt durchgesehen am {date}.",
+        "notReviewed": "Noch nicht durchgesehen.",
+        "columns": {
+          "key": "Schlüssel",
+          "name": "Name",
+          "direction": "Richtung",
+          "statementSuffices": "Auszug genügt",
+          "active": "Aktiv"
+        },
+        "directions": {
+          "income": "Einnahme",
+          "expense": "Ausgabe",
+          "transit": "Durchlauf"
+        },
+        "sphereGroup": {
+          "ideal": "Ideeller Bereich",
+          "assetManagement": "Vermögensverwaltung",
+          "purposeOperation": "Zweckbetrieb",
+          "business": "Wirtschaftlicher Geschäftsbetrieb",
+          "transit": "Durchlauf",
+          "none": "Ohne Zuordnung"
+        },
+        "incomeKinds": {
+          "donation": "Spende",
+          "membershipFee": "Mitgliedsbeitrag",
+          "inKindDonation": "Sachspende",
+          "expenseWaiver": "Aufwandsspende",
+          "bodyGrant": "Zuschuss einer Körperschaft",
+          "publicGrant": "Öffentlicher Zuschuss",
+          "courtFine": "Gerichtliche Zuweisung",
+          "sponsoring": "Sponsoring",
+          "sales": "Verkaufserlös",
+          "fees": "Teilnahmegebühr",
+          "interest": "Zinsertrag",
+          "inheritance": "Erbschaft",
+          "other": "Sonstige Einnahme"
+        },
+        "costFunctions": {
+          "program": "Programm",
+          "administration": "Verwaltung",
+          "fundraising": "Mittelbeschaffung"
+        },
+        "allowanceKinds": {
+          "none": "Keine",
+          "volunteer": "Ehrenamtspauschale",
+          "trainer": "Übungsleiterpauschale"
+        },
+        "taxCodes": {
+          "none": "Keine",
+          "exemptCounted": "Steuerfrei, zählt zum Umsatz",
+          "exemptNotCounted": "Steuerfrei, zählt nicht zum Umsatz",
+          "reduced": "Ermäßigter Satz",
+          "standard": "Regelsatz",
+          "rc13b": "Reverse Charge § 13b",
+          "icAcquisition": "Innergemeinschaftlicher Erwerb"
+        },
+        "inputTax": {
+          "no": "Nein",
+          "yes": "Ja",
+          "partial": "Teilweise"
+        },
+        "toast": {
+          "created": "Kategorie angelegt.",
+          "updated": "Kategorie geändert."
+        }
+      },
+      "purposes": {
+        "title": "Zwecke",
+        "create": "Zweck anlegen",
+        "edit": "Zweck ändern",
+        "description": "Beschreibung",
+        "abroad": "Wird im Ausland verwendet",
+        "carryForward": "Vortrag",
+        "carryForwardDate": "Stichtag des Vortrags",
+        "columns": {
+          "name": "Name",
+          "target": "Zielbetrag",
+          "state": "Zustand"
+        },
+        "states": {
+          "open": "Offen",
+          "fulfilled": "Erfüllt",
+          "dissolved": "Aufgelöst"
+        },
+        "actions": {
+          "fulfill": "Erfüllt",
+          "dissolve": "Auflösen",
+          "reopen": "Wieder öffnen"
+        },
+        "toast": {
+          "created": "Zweck angelegt.",
+          "updated": "Zweck geändert."
+        }
+      },
+      "fiscalYears": {
+        "title": "Geschäftsjahre",
+        "createFirst": "Erstes Geschäftsjahr anlegen",
+        "createFirstHint": "Ein Geschäftsjahr, das nicht am 1. Januar beginnt oder nicht am 31. Dezember endet, ist ein Rumpfjahr.",
+        "edit": "Geschäftsjahr ändern",
+        "designation": "Bezeichnung",
+        "range": "Von – bis",
+        "status": "Zustand",
+        "taxReturnFiledOn": "Steuererklärung abgegeben am",
+        "startsOn": "Beginnt am",
+        "endsOn": "Endet am",
+        "statusValues": {
+          "open": "Offen",
+          "closed": "Abgeschlossen"
+        },
+        "toast": {
+          "created": "Geschäftsjahr angelegt."
+        }
+      },
+      "datedValues": {
+        "title": "Sätze und Grenzen",
+        "change": "Wert ab Stichtag ändern",
+        "changeTitle": "{name}: Wert ab Stichtag ändern",
+        "validFrom": "Gültig ab",
+        "value": "Wert",
+        "shipped": "Ausgeliefert",
+        "override": "Vom Verein überschrieben",
+        "revert": "Zurücknehmen",
+        "currentValue": "Aktuell: {display}",
+        "taxationHint": "Die Besteuerungsform gilt taggenau — eine Änderung wirkt ab dem gewählten Stichtag.",
+        "unitPercent": "{value} %",
+        "unitCentsPerKm": "{value} / km",
+        "unitMonths": "{value} Monate",
+        "unitDays": "{value} Tage",
+        "taxation": {
+          "smallBusiness": "Kleinunternehmer",
+          "regular": "Regelbesteuerung"
+        },
+        "keys": {
+          "thresholdTimelyUse": "Grenze zeitnahe Mittelverwendung",
+          "thresholdBusiness": "Grenze wirtschaftlicher Geschäftsbetrieb",
+          "smallBusinessPrevYear": "Kleinunternehmergrenze Vorjahr",
+          "smallBusinessCurrentYear": "Kleinunternehmergrenze laufendes Jahr",
+          "allowanceVolunteer": "Ehrenamtspauschale",
+          "allowanceTrainer": "Übungsleiterpauschale",
+          "simplifiedReceiptLimit": "Grenze vereinfachter Beleg",
+          "warnAtPercent": "Warnmarke",
+          "mileageRate": "Kilometerpauschale",
+          "vatStandard": "Umsatzsteuer Regelsatz",
+          "vatReduced": "Umsatzsteuer ermäßigter Satz",
+          "freeReserveAssetShare": "Freie Rücklage aus Vermögensumschichtung",
+          "freeReserveOtherShare": "Freie Rücklage aus sonstigen Mitteln",
+          "waiverClaimMonths": "Verzichtsfrist laufende Ansprüche",
+          "waiverOneOffMonths": "Verzichtsfrist einmalige Ansprüche",
+          "lateFinalizeCashDays": "Frist für spät festgeschriebenes Bargeld",
+          "taxation": "Besteuerungsform"
+        },
+        "toast": {
+          "set": "Wert gesetzt.",
+          "removed": "Überschreibung zurückgenommen."
+        }
+      },
+      "tax": {
+        "title": "Steuerliches",
+        "confirmedAt": "Zuletzt bestätigt am {date}.",
+        "notConfirmed": "Noch nicht bestätigt.",
+        "isEntrepreneurOrHasVatId": "Ist der Verein Unternehmer oder hat eine Umsatzsteuer-Identifikationsnummer?",
+        "membershipFeesCertifiable": "Sind Mitgliedsbeiträge bescheinigungsfähig?",
+        "expenseWaiversEnabled": "Werden Aufwandsspenden angeboten?",
+        "mcpHumanOnlyAllowed": "Darf ein Agent festschreiben?",
+        "mcpHumanOnlyAllowedHint": "Dieser Schalter lässt sich nur hier am Bildschirm ändern — nie über einen Agenten."
+      },
+      "permissions": {
+        "title": "Wer darf was",
+        "activity": "Tätigkeit",
+        "granted": "Erlaubt",
+        "yes": "Ja",
+        "navigation": "Sichtbare Navigationseinträge",
+        "navigationNone": "keine",
+        "holders": "Trägt diese Rolle",
+        "nobody": "niemand",
+        "navKeys": {
+          "finance": {
+            "entries": "Journal",
+            "accounts": "Bankkonten und Kassen",
+            "openItems": "Offene Zahlungen",
+            "cash": "Barkasse",
+            "admin": "Finanzen einrichten"
+          }
+        }
       }
     }
   }

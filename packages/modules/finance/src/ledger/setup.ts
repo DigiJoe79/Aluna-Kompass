@@ -18,6 +18,7 @@ import { contactIdForUserInternal } from '@kompass/module-contacts';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
+import { financeConflict } from '../errors';
 import { FINANCE_PERMISSIONS } from '../permissions';
 import { financeAccounts, financeFiscalYears } from '../schema';
 
@@ -214,6 +215,33 @@ export async function applyTaxDefaults(deps: Deps, ctx: CallContext): Promise<Re
       summary: 'Steuer-Vorgaben übernommen und Schritt bestätigt',
     });
     return ok({ applied });
+  });
+}
+
+/**
+ * Die vier Schalter der Einrichtung (H7): die drei Steuer-Schalter und
+ * „Darf ein Agent festschreiben?“ — bewusst über `finance.setup`, nicht über
+ * `settings.manage`: Das ist der Hebel der Finanzeinrichtung, nicht der
+ * allgemeinen Einstellungen. `finance.mcpHumanOnlyAllowed` bleibt zusätzlich
+ * an den Kanal gebunden (`uiOnly`) — hier stets erfüllt, weil der Aufruf aus
+ * der Oberfläche kommt, aber zur Sicherheit noch einmal geprüft.
+ */
+const FINANCE_SWITCH_KEYS = ['finance.isEntrepreneurOrHasVatId', 'finance.membershipFeesCertifiable', 'finance.expenseWaiversEnabled', 'finance.mcpHumanOnlyAllowed'] as const;
+
+const switchSchema = z.object({ key: z.enum(FINANCE_SWITCH_KEYS), value: z.boolean() });
+
+export async function setFinanceSwitch(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ key: string; value: boolean }>> {
+  const denied = requirePermission(ctx, 'finance.setup');
+  if (denied) return denied;
+  const parsed = validate(deps, switchSchema, input);
+  if (!parsed.ok) return parsed;
+  const def = deps.registry.settingDefinitions.get(parsed.value.key);
+  if (def?.uiOnly && ctx.channel === 'mcp') return financeConflict('switchUiOnly');
+  return deps.db.transaction((tx: DbOrTx) => {
+    const written = writeSettingInternal(tx, deps, ctx, parsed.value.key, parsed.value.value, 'finance.setup.switch');
+    if (!written.ok) return written;
+    financeAudit(tx, deps, ctx, { action: 'finance.setup.switch', entity: 'financeSetup', id: parsed.value.key, after: { step: parsed.value.key, confirmedAt: isoNow(deps.clock) }, summary: `Schalter ${parsed.value.key} gesetzt` });
+    return ok({ key: parsed.value.key, value: parsed.value.value });
   });
 }
 

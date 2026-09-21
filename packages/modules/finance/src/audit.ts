@@ -37,7 +37,7 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   financeProjectSettings: ['projectId', 'targetCents', 'defaultPurposeId', 'abroad', 'publishDonationStatus'],
   // Nie die Zählenden, nie ihre Erklärung (Spec 10.3, Entschieden 1): nur, *dass* und *wie viel* abweicht.
   financeCashCount: ['accountId', 'countedOn', 'kind', 'differenceCents', 'documentNumber', 'entryId'],
-  // Task 4 — nur, *dass* ein Einrichtungsschritt bestätigt wurde und welche Vorgaben dabei griffen, nie Namen.
+  // Task 4/5 — nur, *dass* ein Einrichtungsschritt bestätigt oder ein Schalter gesetzt wurde, nie Namen.
   financeSetup: ['step', 'confirmedAt', 'applied'],
 };
 

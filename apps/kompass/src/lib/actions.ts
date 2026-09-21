@@ -83,10 +83,24 @@ const BACKUP_FIELD_CODES = ['confirmationMismatch', 'backupFormatUnsupported', '
 /** Die drei Prüfungen des Versandvermerks — sie melden Codes, keine Zod-Texte. */
 const DISPATCH_FIELD_CODES = ['unknownDispatchChannel', 'sentBeforeDocumentDate', 'sentInFuture'];
 
+/** Die Regeltabelle einer Kategorie (Finanz-Spec 5.1, H3): Regelverstöße am Feld, nicht als Liste. */
+const FINANCE_CATEGORY_FIELD_CODES = [
+  'sphereRequired', 'incomeKindRequired', 'costFunctionRequired', 'costFunctionOnlyForExpense', 'incomeKindOnlyForIncome',
+  'certifiableOnlyIdeal', 'allowanceOnlyForExpense', 'inputTaxNotInIdeal', 'transitHasNoSphere',
+];
+
 export function fieldMessage(issueMessage: string, t: Translate): string {
   const lower = issueMessage.toLowerCase();
   if (issueMessage === 'confirmationRequired') return t('site.publish.publishCard.confirm');
-  if (issueMessage === 'passwordTooShort' || issueMessage === 'unknownPermission' || issueMessage === 'unknownSetting' || MEDIA_FIELD_CODES.includes(issueMessage) || BACKUP_FIELD_CODES.includes(issueMessage) || DISPATCH_FIELD_CODES.includes(issueMessage)) {
+  if (
+    issueMessage === 'passwordTooShort' ||
+    issueMessage === 'unknownPermission' ||
+    issueMessage === 'unknownSetting' ||
+    MEDIA_FIELD_CODES.includes(issueMessage) ||
+    BACKUP_FIELD_CODES.includes(issueMessage) ||
+    DISPATCH_FIELD_CODES.includes(issueMessage) ||
+    FINANCE_CATEGORY_FIELD_CODES.includes(issueMessage)
+  ) {
     return t(`errors.fields.${issueMessage}`);
   }
   if (lower.includes('email')) return t('errors.fields.email');
