@@ -8,6 +8,7 @@ import { TAX_CODES } from './ledger/codes';
 import { deleteDraft, getEntry, listEntries, saveDraft, setReviewed } from './ledger/entries';
 import { bookEntry, finalizeEntry, finalizeReviewed } from './ledger/finalize';
 import { cancelOpenItem, listOpenItems, saveOpenItem } from './ledger/open-items';
+import { getBalances, getIncomeStatement } from './ledger/overview';
 import { reverseEntry } from './ledger/reverse';
 import { attachDocument, revokeVoucher, uploadVoucher } from './ledger/vouchers';
 
@@ -106,6 +107,9 @@ const requestCorrectionMcpSchema = z.object({
 const decideCorrectionMcpSchema = z.object({ id: z.string(), decision: z.enum(['approve', 'reject']), note: z.string().optional() });
 const listCorrectionsMcpSchema = z.object({ state: z.enum(['pending', 'applied', 'rejected']).optional(), entryId: z.string().optional(), limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() });
 
+const getBalancesMcpSchema = z.object({ date: z.string().optional() });
+const getIncomeStatementMcpSchema = z.object({ fiscalYearId: z.string().optional(), from: z.string().optional(), to: z.string().optional() });
+
 /** Verteilerdienste (Spec 10.2): ein Werkzeug je Tätigkeit statt zwanzig, mit `kind` als Discriminator. */
 export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
   t({ name: 'finance_master_data', description: 'Read money accounts, categories, purposes, fiscal years or dated values. Requires finance.overview or finance.read; bank details and free-text descriptions only with finance.read.', inputSchema: readMasterDataSchema, handler: (deps, ctx, args) => readMasterData(deps, ctx, args), service: readMasterData }),
@@ -201,4 +205,6 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
     service: decideAllocationCorrection,
   }),
   t({ name: 'finance_corrections_list', description: 'List allocation corrections by state or entry. Requires finance.read.', inputSchema: listCorrectionsMcpSchema, handler: (deps, ctx, args) => listAllocationCorrections(deps, ctx, args), service: listAllocationCorrections }),
+  t({ name: 'finance_balances', description: 'Money account balances, purpose balances and the asset overview at a date (today by default). Requires finance.overview or finance.read.', inputSchema: getBalancesMcpSchema, handler: (deps, ctx, args) => getBalances(deps, ctx, args), service: getBalances }),
+  t({ name: 'finance_income_statement', description: 'Income and expense statement by sphere, for a fiscal year or a date range (never both, never neither). Marked preliminary while the fiscal year is open. Requires finance.overview or finance.read.', inputSchema: getIncomeStatementMcpSchema, handler: (deps, ctx, args) => getIncomeStatement(deps, ctx, args), service: getIncomeStatement }),
 ];
