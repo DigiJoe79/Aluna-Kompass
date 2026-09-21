@@ -5,15 +5,17 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import type { AllocationLineView } from '@kompass/module-finance';
+import { DocumentPicker } from '@/app/(shell)/dms/document-picker';
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
 import { Notice } from '@/components/notice';
+import { ReceiptDrop } from '@/components/finance/receipt-drop';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { Select } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { formatEuro } from '@/lib/finance/amount';
 import { changesOf, correctionPath, selectableLines, type CorrectableLine } from '@/lib/finance/correction';
-import { reverseEntryAction, requestCorrectionAction } from '../actions';
+import { reverseEntryAction, requestCorrectionAction, uploadCorrectionProofAction } from '../actions';
 
 type PartyGroup = { contact: boolean; project: boolean; purpose: boolean; abroad: boolean };
 type NumberGroup = { amount: boolean; date: boolean; account: boolean; category: boolean; vat: boolean };
@@ -50,6 +52,11 @@ export function CorrectDialog({
   const [withCorrectionDraft, setWithCorrectionDraft] = useState(true);
   const [cashReason, setCashReason] = useState<string | null>(null);
   const [cashReasonText, setCashReasonText] = useState('');
+  // F3a-N Task 2: die zwei Lagen, auf die `requestAllocationCorrection` mit einem Konflikt statt einem Feldfehler antwortet.
+  const [serverCode, setServerCode] = useState<string | null>(null);
+  const [proofDocumentId, setProofDocumentId] = useState<string | null>(null);
+  const [proofArchiveOpen, setProofArchiveOpen] = useState(false);
+  const [acknowledgeSection153, setAcknowledgeSection153] = useState(false);
 
   // Bei genau einer Aufteilungszeile entfällt der Auswahlschritt (Task 1).
   const autoPicked = entry.allocationLines.length === 1 ? entry.allocationLines[0]! : null;
@@ -83,12 +90,21 @@ export function CorrectDialog({
     setPurposeId('');
     setAbroad(false);
     setCashReason(null);
+    setServerCode(null);
+    setProofDocumentId(null);
+    setProofArchiveOpen(false);
+    setAcknowledgeSection153(false);
   };
 
-  const submitAllocation = async () => {
+  const runCorrection = async (proofId?: string, ack?: boolean) => {
     if (!pickedLine || nothingChanged) return;
-    const result = await requestCorrectionAction(pickedLine.id, changes, note);
+    const result = await requestCorrectionAction(pickedLine.id, changes, note, proofId, ack);
     if (result.status === 'error') {
+      // Zwei Lagen reagieren statt zu raten (Task 2): der Dialog bleibt offen, die Eingaben stehen noch da.
+      if (result.code === 'purposeChangeNeedsProof' || result.code === 'section153Unacknowledged') {
+        setServerCode(result.code);
+        return;
+      }
       toast.error(result.message);
       return;
     }
@@ -97,6 +113,29 @@ export function CorrectDialog({
       close();
       router.refresh();
     }
+  };
+
+  const submitAllocation = () => void runCorrection(proofDocumentId ?? undefined, acknowledgeSection153 || undefined);
+
+  const uploadProof = async (files: File[]) => {
+    const file = files[0];
+    if (!file) return;
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const result = await uploadCorrectionProofAction(entry.id, file.name, bytes);
+    if (result.status === 'error') {
+      toast.error(result.message);
+      return;
+    }
+    if (result.status !== 'success') return;
+    const data = result.data as { documentId: string };
+    setProofDocumentId(data.documentId);
+    await runCorrection(data.documentId, acknowledgeSection153 || undefined);
+  };
+
+  const pickProofFromArchive = async (documentId: string) => {
+    setProofDocumentId(documentId);
+    setProofArchiveOpen(false);
+    await runCorrection(documentId, acknowledgeSection153 || undefined);
   };
 
   const submitReversal = async (reason?: string) => {
@@ -225,6 +264,38 @@ export function CorrectDialog({
                     <textarea required value={note} onChange={(e) => setNote(e.target.value)} className="w-full rounded-sm border border-line-strong bg-field px-2.5 py-1.5 text-[13px]" rows={2} />
                   </label>
                   {nothingChanged ? <p className="text-[12px] text-muted-ink">{t('nothingChanged')}</p> : null}
+
+                  {serverCode === 'purposeChangeNeedsProof' ? (
+                    <div className="space-y-2 border-t border-line pt-3">
+                      <p className="text-[13px] font-semibold text-ink-2">{t('proof.label')}</p>
+                      <ReceiptDrop onFiles={(files) => void uploadProof(files)} onPickFromArchive={() => setProofArchiveOpen(true)} />
+                      {proofArchiveOpen ? (
+                        <DocumentPicker
+                          id="correction-proof-archive"
+                          name="correctionProofArchive"
+                          label={t('proof.label')}
+                          value={null}
+                          onChange={(doc) => doc && void pickProofFromArchive(doc.id)}
+                        />
+                      ) : null}
+                      {proofDocumentId ? <p className="text-[12px] text-success">{t('proof.attached')}</p> : null}
+                      <p className="text-[13px] text-ink-2">{t('proof.hint')}</p>
+                    </div>
+                  ) : null}
+
+                  {serverCode === 'section153Unacknowledged' ? (
+                    <Notice
+                      level="warn"
+                      action={
+                        <label className="flex items-center gap-2 text-[13px]">
+                          <input type="checkbox" checked={acknowledgeSection153} onChange={(e) => setAcknowledgeSection153(e.target.checked)} />
+                          {t('section153.label')}
+                        </label>
+                      }
+                    >
+                      {t('section153.notice')}
+                    </Notice>
+                  ) : null}
                 </div>
               ) : null}
 

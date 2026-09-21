@@ -1,6 +1,8 @@
 'use server';
 
+import { listUserNamesWithPermission } from '@kompass/core';
 import { attachDocument, bookEntry, deleteDraft, finalizeEntry, finalizeReviewed, listEntries, requestAllocationCorrection, reverseEntry, revokeVoucher, saveDraft, setReviewed, uploadVoucher, type EntryLinesInput } from '@kompass/module-finance';
+import { receiveGeneratedUpload } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { toActionState, type ActionState } from '@/lib/actions';
@@ -116,14 +118,39 @@ export interface CorrectionChanges {
   abroad?: boolean;
 }
 
-/** Zuordnung ändern (offenes Jahr: sofort; abgeschlossenes: wartet auf Freigabe). */
+/** Zuordnung ändern (offenes Jahr: sofort; abgeschlossenes: wartet auf Freigabe — nennt dann, wer freigeben kann). */
 export async function requestCorrectionAction(lineId: string, changes: CorrectionChanges, note: string, proofDocumentId?: string, acknowledgeSection153?: boolean): Promise<ActionState> {
   const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
+  const { deps, ctx, user } = await requireSession();
   const result = await requestAllocationCorrection(deps, ctx, { lineId, changes, note, proofDocumentId, acknowledgeSection153 });
   revalidatePath('/finance/entries');
   if (!result.ok) return toActionState(result, t);
-  return toActionState(result, t, result.value.applied ? t('finance.entryView.correct.toast.applied') : t('finance.entryView.correct.toast.pending'));
+  if (result.value.applied) return toActionState(result, t, t('finance.entryView.correct.toast.applied'));
+  const approvers = listUserNamesWithPermission(deps, 'finance.approve').filter((name) => name !== user.name);
+  const message = approvers.length > 0 ? t('finance.entryView.correct.toast.pendingWithNames', { names: approvers.join(', ') }) : t('finance.entryView.correct.toast.pending');
+  return toActionState(result, t, message);
+}
+
+/**
+ * Nachweisdokument für eine Zweckänderung im Namen der Buchung ablegen — wie
+ * `uploadVoucherAction`, aber **ohne** es als Beleg zu verknüpfen: Das
+ * übernimmt `requestAllocationCorrection` selbst, sobald die Korrektur die
+ * `documentId` als `proofDocumentId` mitbekommt (sonst hinge das Dokument
+ * doppelt an der Buchung).
+ */
+export async function uploadCorrectionProofAction(entryId: string, filename: string, bytes: Uint8Array): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const documentDate = deps.clock.now().toISOString().slice(0, 10);
+  const result = await receiveGeneratedUpload(deps, ctx, {
+    bytes,
+    typeKey: 'voucher-own',
+    subject: filename,
+    documentDate,
+    links: [{ entityType: 'financeEntry', entityId: entryId }],
+  });
+  if (!result.ok) return toActionState(result, t);
+  return { status: 'success', data: { documentId: result.value.document.id } };
 }
 
 /** Buchung zurücknehmen: Gegenbuchung, sofort festgeschrieben. */

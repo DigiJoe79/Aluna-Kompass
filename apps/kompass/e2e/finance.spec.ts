@@ -339,6 +339,61 @@ test.describe('finance', () => {
     await expect(page.getByText('Ändern Sie mindestens ein Feld.')).toBeVisible();
   });
 
+  test('den Zweck einer Spende ändern verlangt ein Dokument; mit PDF geht es durch', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries');
+    await page.locator('tr', { hasText: 'Spende mit Zweck' }).click();
+    await page.getByRole('button', { name: 'Korrigieren' }).click();
+    await page.getByRole('checkbox', { name: 'Zweck' }).check();
+    await page.getByRole('combobox', { name: 'Zweck' }).selectOption({ label: 'Flutlicht' });
+    await page.getByLabel('Begründung').fill('Testkorrektur Zweck mit Nachweis');
+    await page.getByRole('button', { name: 'Zuordnung ändern' }).click();
+    await expect(page.getByText('Dokument, das belegt, was die Spenderin bestimmt hat')).toBeVisible();
+    await page.getByRole('dialog').getByTestId('voucher-file-input').setInputFiles({ name: 'nachweis.pdf', mimeType: 'application/pdf', buffer: samplePdf() });
+    await expect(page.getByText('Die Zuordnung wurde sofort geändert.')).toBeVisible();
+  });
+
+  test('ohne Dokument bleibt der Dialog offen, nennt die Umwidmung, und die Eingaben stehen noch da', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries');
+    await page.locator('tr', { hasText: 'Spende mit Zweck' }).click();
+    await page.getByRole('button', { name: 'Korrigieren' }).click();
+    await page.getByRole('checkbox', { name: 'Zweck' }).check();
+    await page.getByRole('combobox', { name: 'Zweck' }).selectOption({ label: 'Flutlicht' });
+    await page.getByLabel('Begründung').fill('Testkorrektur Zweck ohne Nachweis');
+    await page.getByRole('button', { name: 'Zuordnung ändern' }).click();
+    await expect(page.getByText('Ohne ein solches Dokument ist es ein „Zweck ändern (Umwidmung)“.')).toBeVisible();
+    await expect(page.getByRole('checkbox', { name: 'Zweck' })).toBeChecked();
+    await expect(page.getByLabel('Begründung')).toHaveValue('Testkorrektur Zweck ohne Nachweis');
+  });
+
+  test('nach abgegebener Steuererklärung verlangt die Änderung die Kenntnisnahme zu § 153 AO', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries');
+    await page.locator('tr', { hasText: 'Bankgebühr Altjahr' }).click();
+    await page.getByRole('button', { name: 'Korrigieren' }).click();
+    await page.getByRole('checkbox', { name: 'wird im Ausland verwendet' }).check();
+    await page.getByRole('switch', { name: 'wird im Ausland verwendet' }).click();
+    await page.getByLabel('Begründung').fill('Testkorrektur Auslandsbezug nach Steuererklärung');
+    await page.getByRole('button', { name: 'Zuordnung ändern' }).click();
+    await expect(page.getByText('Ich habe zur Kenntnis genommen, dass eine Berichtigung nach § 153 AO nötig sein kann.')).toBeVisible();
+    await page.getByRole('checkbox', { name: /Kenntnis genommen/ }).check();
+    await page.getByRole('button', { name: 'Zuordnung ändern' }).click();
+    await expect(page.getByText(/wartet auf die Freigabe einer zweiten Person/)).toBeVisible();
+  });
+
+  test('im abgeschlossenen Jahr wartet die Änderung auf eine zweite Person, und der Dialog nennt, wer freigeben kann', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries');
+    await page.locator('tr', { hasText: 'Büromaterial Altjahr' }).click();
+    await page.getByRole('button', { name: 'Korrigieren' }).click();
+    await page.getByRole('checkbox', { name: 'Projekt' }).check();
+    await page.getByRole('combobox', { name: 'Projekt' }).selectOption({ index: 1 });
+    await page.getByLabel('Begründung').fill('Testkorrektur Projekt im geschlossenen Jahr');
+    await page.getByRole('button', { name: 'Zuordnung ändern' }).click();
+    await expect(page.getByText(/wartet auf die Freigabe einer zweiten Person — freigeben kann: .*Jonas Feld/)).toBeVisible();
+  });
+
   test('Beleg nachreichen an einer festgeschriebenen Buchung; der Beleg lässt sich ansehen', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/entries');

@@ -2519,9 +2519,19 @@
           "withDraft": "danach vorbelegten Entwurf öffnen",
           "cashReasonLabel": "Warum geht die Kasse ins Minus?"
         },
+        "proof": {
+          "label": "Dokument, das belegt, was die Spenderin bestimmt hat",
+          "hint": "Ohne ein solches Dokument ist es ein „Zweck ändern (Umwidmung)“.",
+          "attached": "Dokument angehängt."
+        },
+        "section153": {
+          "notice": "Für dieses Geschäftsjahr gilt die Steuererklärung als abgegeben.",
+          "label": "Ich habe zur Kenntnis genommen, dass eine Berichtigung nach § 153 AO nötig sein kann."
+        },
         "toast": {
           "applied": "Die Zuordnung wurde sofort geändert.",
-          "pending": "Die Änderung wartet auf die Freigabe einer zweiten Person."
+          "pending": "Die Änderung wartet auf die Freigabe einer zweiten Person.",
+          "pendingWithNames": "Die Änderung wartet auf die Freigabe einer zweiten Person — freigeben kann: {names}."
         }
       }
     }

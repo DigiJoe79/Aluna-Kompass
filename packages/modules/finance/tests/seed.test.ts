@@ -180,6 +180,30 @@ describe('seedFinance', () => {
     expect(donors.length).toBeGreaterThanOrEqual(2);
   });
 
+  it('seeds a finalized purpose-bound income in the open year for the proof case (F3a-N Task 2)', async () => {
+    const { deps, ctx } = setupFinance();
+    await seedFinance(deps, ctx);
+    const entry = deps.db.select().from(financeEntries).where(eq(financeEntries.text, 'Spende mit Zweck')).get()!;
+    expect(entry.status).toBe('final');
+    const view = unwrap(await getEntry(deps, ctx, { id: entry.id }));
+    expect(view.allocationLines).toHaveLength(1);
+    expect(view.allocationLines[0]!.purposeId).not.toBeNull();
+    expect(view.allocationLines[0]!.contactId).not.toBeNull();
+    const years = unwrap(await listFiscalYears(deps, ctx));
+    const openYear = years.find((y) => y.id === entry.fiscalYearId);
+    expect(openYear?.status).toBe('open');
+  });
+
+  it('seeds a closed year with a filed tax return and an entry in it for the section 153 case (F3a-N Task 2)', async () => {
+    const { deps, ctx } = setupFinance();
+    await seedFinance(deps, ctx);
+    const years = unwrap(await listFiscalYears(deps, ctx));
+    const closed = years.find((y) => y.status === 'closed')!;
+    expect(closed.taxReturnFiledOn).not.toBeNull();
+    const entriesInYear = deps.db.select().from(financeEntries).where(eq(financeEntries.fiscalYearId, closed.id)).all();
+    expect(entriesInYear.some((e) => e.status === 'final')).toBe(true);
+  });
+
   it('gives an existing „Mira Klein“ (Kernseed) finance.read without finance.entriesFinalize — for the missing „Korrigieren“ button', async () => {
     const { deps, ctx } = setupFinance();
     insertUser(deps, { name: 'Mira Klein', email: 'mira@kompass.local' });
@@ -191,5 +215,17 @@ describe('seedFinance', () => {
     const permissions = getEffectivePermissions(deps.db, deps.registry, mira.id);
     expect(permissions.has('finance.read')).toBe(true);
     expect(permissions.has('finance.entriesFinalize')).toBe(false);
+  });
+
+  it('gives an existing „Jonas Feld“ (Kernseed) finance.approve — so a waiting correction names someone besides the administration (F3a-N Task 2)', async () => {
+    const { deps, ctx } = setupFinance();
+    insertUser(deps, { name: 'Jonas Feld', email: 'jonas@kompass.local' });
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+    await seedFinance(deps, ctx);
+    await seedFinance(deps, ctx);
+
+    const jonas = deps.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, 'jonas@kompass.local')).get()!;
+    const permissions = getEffectivePermissions(deps.db, deps.registry, jonas.id);
+    expect(permissions.has('finance.approve')).toBe(true);
   });
 });

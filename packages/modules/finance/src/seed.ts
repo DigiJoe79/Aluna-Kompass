@@ -8,7 +8,7 @@ import { createCategory } from './ledger/categories';
 import { requestAllocationCorrection } from './ledger/corrections';
 import { saveDraft, setReviewed } from './ledger/entries';
 import { bookEntry } from './ledger/finalize';
-import { createFirstFiscalYear, ensureFiscalYearFor, fiscalYearStatusInternal } from './ledger/fiscal-years';
+import { createFirstFiscalYear, ensureFiscalYearFor, fiscalYearStatusInternal, updateFiscalYear } from './ledger/fiscal-years';
 import { cancelOpenItem, createOpenItem } from './ledger/open-items';
 import { closeFiscalYear, justifyUndocumentedEntry } from './ledger/period';
 import { setProjectFinance } from './ledger/project-settings';
@@ -430,6 +430,20 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
         );
       }
     }
+
+    // F3a-N Task 2: die Steuererklärung des Vorjahrs gilt als abgegeben — erst danach, damit die zwei
+    // wartenden Korrekturen oben ohne § 153 entstehen. Von hier an löst jede Partei-, Auslands- oder
+    // Zweckänderung in diesem Jahr die Kenntnisnahme nach § 153 AO aus.
+    const currentPreviousFiscalYear = deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.id, previousFiscalYear.id)).get()!;
+    if (!currentPreviousFiscalYear.taxReturnFiledOn) {
+      unwrap(
+        await updateFiscalYear(deps, ctx, {
+          id: previousFiscalYear.id,
+          taxReturnFiledOn: `${currentYear}-05-31`,
+          expectedVersion: currentPreviousFiscalYear.updatedAt,
+        }),
+      );
+    }
   }
 
   // F3a: „Mira Klein“ aus dem Kernseed (Rolle „Interne Revision“, kein Finanzrecht) bekommt zusätzlich
@@ -437,6 +451,12 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   // sich zeigt, dass „Korrigieren“ ohne das Recht fehlt. Existiert die Person nicht (isolierte
   // Modul-Tests, andere Installation), bleibt der Schritt aus — der Kern erfindet keine Nutzer.
   await grantAuditorRoleToMiraKlein(deps, ctx);
+
+  // F3a-N Task 2: „Jonas Feld“ (Kernseed-Rolle „Schatzmeisterin“, ohne Finanzrechte) bekommt zusätzlich
+  // die Finanzrolle „Freigeber Finanzen“ — sonst gibt es außer der geschützten Verwaltung niemanden mit
+  // `finance.approve`, und der Korrigieren-Dialog könnte nie zeigen, wer eine wartende Änderung freigeben
+  // kann.
+  await grantApproverRoleToJonasFeld(deps, ctx);
 }
 
 async function grantAuditorRoleToMiraKlein(deps: Deps, ctx: CallContext): Promise<void> {
@@ -454,4 +474,19 @@ async function grantAuditorRoleToMiraKlein(deps: Deps, ctx: CallContext): Promis
   // mitbringt — `users.manage` fürs Vergeben, alle Rechte der Rolle selbst (`requireGrantableRole`).
   const usersCtx: CallContext = { ...ctx, permissions: new Set(deps.registry.permissionKeys) };
   unwrap(await assignRole(deps, usersCtx, { userId: mira.id, roleId: auditorRole.id }));
+}
+
+async function grantApproverRoleToJonasFeld(deps: Deps, ctx: CallContext): Promise<void> {
+  const jonas = deps.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, 'jonas@kompass.local')).get();
+  if (!jonas) return;
+  const approverRole = deps.db.select({ id: schema.roles.id }).from(schema.roles).where(eq(schema.roles.name, 'Freigeber Finanzen')).get();
+  if (!approverRole) return;
+  const already = deps.db
+    .select({ userId: schema.userRoles.userId })
+    .from(schema.userRoles)
+    .where(and(eq(schema.userRoles.userId, jonas.id), eq(schema.userRoles.roleId, approverRole.id)))
+    .get();
+  if (already) return;
+  const usersCtx: CallContext = { ...ctx, permissions: new Set(deps.registry.permissionKeys) };
+  unwrap(await assignRole(deps, usersCtx, { userId: jonas.id, roleId: approverRole.id }));
 }
