@@ -1,0 +1,137 @@
+import { holdsFor, unwrap } from '@kompass/core';
+import { ctxWith } from '@kompass/core/testing';
+import { deleteContact } from '@kompass/module-contacts';
+import { createProject } from '@kompass/module-projects';
+import { eq } from 'drizzle-orm';
+import { describe, expect, it } from 'vitest';
+import { approveAllocationCorrection, requestAllocationCorrection } from '../src/ledger/corrections';
+import { bookEntry } from '../src/ledger/finalize';
+import { financeRetentionHolds, yearAnchorInternal } from '../src/ledger/holds';
+import { saveDraft } from '../src/ledger/entries';
+import { reopenFiscalYear } from '../src/ledger/period';
+import { revokeVoucher, uploadVoucher } from '../src/ledger/vouchers';
+import { financeAllocationLines } from '../src/schema';
+import { allowHumanOnlyOverMcp, ledgerFixture, pdfBytes } from './helpers';
+
+const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
+
+/** Ein Projekt anlegen, ohne dass `f.ctx` `projects.manage` braucht (Muster corrections.test.ts). */
+async function seedProject(deps: Awaited<ReturnType<typeof ledgerFixture>>['deps'], userId: string, slug: string) {
+  const manager = ctxWith(['projects.manage'], userId);
+  return unwrap(await createProject(deps, manager, { slug, name: { de: 'Testprojekt' }, type: 'ongoing' as const, summary: { de: '' }, body: { de: '' } }));
+}
+
+describe('what finance holds, and until when', () => {
+  it('a contact on a finalized line is held for good while the year was never closed', async () => {
+    const f = await ledgerFixture({ years: ['2025'] });
+    const entry = await f.finalDonation({ date: '2025-06-01', cents: 5000, contactId: f.donor.id });
+    const holds = financeRetentionHolds(f.deps, 'contact', f.donor.id);
+    expect(holds).toEqual([{ label: `Buchung ${entry.number}`, until: null, entity: 'financeEntry', id: entry.id }]);
+  });
+
+  it('once the year is closed, the hold ends ten years after the anchor — end of that calendar year', async () => {
+    const f = await ledgerFixture({ years: ['2025'] });
+    f.deps.clock.set('2025-06-01T10:00:00.000Z'); // vor dem Abschluss finalisiert — der Abschluss ist der spätere Vorgang.
+    await f.finalDonation({ date: '2025-06-01', cents: 5000, contactId: f.donor.id });
+    f.closeYear(f.years['2025']!.id); // setzt `at` auf 2025-12-31T23:59:59.000Z
+    const holds = financeRetentionHolds(f.deps, 'contact', f.donor.id);
+    expect(holds[0]!.until).toBe('2035-12-31');
+  });
+
+  it('the anchor is the later of closing and the latest activity: a correction applied later moves it', async () => {
+    const f = await ledgerFixture({ years: ['2025'] });
+    f.deps.clock.set('2025-06-01T10:00:00.000Z');
+    const entry = await f.finalDonation({ date: '2025-06-01', cents: 5000, contactId: f.donor.id });
+    f.closeYear(f.years['2025']!.id);
+    expect(financeRetentionHolds(f.deps, 'contact', f.donor.id)[0]!.until).toBe('2035-12-31');
+
+    f.deps.clock.set('2026-03-01T10:00:00.000Z'); // später als der Abschluss vom 31.12.2025.
+    const line = f.deps.db.select().from(financeAllocationLines).where(eq(financeAllocationLines.entryId, entry.id)).get()!;
+    const requested = unwrap(await requestAllocationCorrection(f.deps, f.ctx, { lineId: line.id, changes: { abroad: true }, note: 'Auslandsbezug nachgetragen' }));
+    expect(requested.applied).toBe(false); // Jahr ist geschlossen — wartet auf eine zweite Person.
+    unwrap(await approveAllocationCorrection(f.deps, f.secondPerson, { id: requested.correction.id }));
+
+    const holds = financeRetentionHolds(f.deps, 'contact', f.donor.id);
+    expect(holds[0]!.until).toBe('2036-12-31');
+  });
+
+  it('a reopened year holds for good again', async () => {
+    const f = await ledgerFixture({ years: ['2025'] });
+    f.deps.clock.set('2025-06-01T10:00:00.000Z');
+    await f.finalDonation({ date: '2025-06-01', cents: 5000, contactId: f.donor.id });
+    f.closeYear(f.years['2025']!.id);
+    expect(financeRetentionHolds(f.deps, 'contact', f.donor.id)[0]!.until).toBe('2035-12-31');
+    f.deps.clock.set('2026-01-15T09:00:00.000Z'); // nach dem Abschluss — sonst stünde das Öffnen zeitlich vor ihm.
+    unwrap(await reopenFiscalYear(f.deps, f.ctx, { id: f.years['2025']!.id, note: 'Fund im Kassenbericht' }));
+    expect(financeRetentionHolds(f.deps, 'contact', f.donor.id)[0]!.until).toBeNull();
+  });
+
+  it('a contact only on a draft is not held', async () => {
+    const f = await ledgerFixture();
+    unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'Spende', moneyLines: [{ accountId: f.bank.id, amountCents: 5000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 5000, contactId: f.donor.id }] }));
+    expect(financeRetentionHolds(f.deps, 'contact', f.donor.id)).toEqual([]);
+  });
+
+  it('a voucher is held eight years from the end of the entry’s fiscal year — also when revoked', async () => {
+    const f = await ledgerFixture({ years: ['2025'] });
+    const entry = unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2025-06-01', text: 'Bar-Ausgabe', moneyLines: [{ accountId: f.bank.id, amountCents: -1500 }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -1500 }] }));
+    const voucher = unwrap(await uploadVoucher(f.deps, f.ctx, { entryId: entry.id, bytes: pdfBytes(), typeKey: 'voucher-own', documentDate: '2025-06-01' }));
+    expect(financeRetentionHolds(f.deps, 'document', voucher.documentId)).toEqual([{ label: `Buchung ${entry.number}`, until: '2033-12-31', entity: 'financeEntry', id: entry.id }]);
+
+    unwrap(await revokeVoucher(f.deps, f.ctx, { linkId: voucher.linkId, note: 'Falscher Anhang' }));
+    expect(financeRetentionHolds(f.deps, 'document', voucher.documentId)).toEqual([{ label: `Buchung ${entry.number}`, until: '2033-12-31', entity: 'financeEntry', id: entry.id }]);
+  });
+
+  it('a voucher on a draft is not held', async () => {
+    const f = await ledgerFixture();
+    const draft = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'Spende', moneyLines: [{ accountId: f.bank.id, amountCents: 5000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 5000 }] }));
+    const voucher = unwrap(await uploadVoucher(f.deps, f.ctx, { entryId: draft.id, bytes: pdfBytes(), typeKey: 'voucher-own', documentDate: '2026-03-01' }));
+    expect(financeRetentionHolds(f.deps, 'document', voucher.documentId)).toEqual([]);
+  });
+
+  it('a project on a finalized line is held without end', async () => {
+    const f = await ledgerFixture();
+    const project = await seedProject(f.deps, f.userId, 'testprojekt');
+    const entry = unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-02-01', text: 'Spende', moneyLines: [{ accountId: f.bank.id, amountCents: 5000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 5000, projectId: project.id }] }));
+    expect(financeRetentionHolds(f.deps, 'project', project.id)).toEqual([{ label: `Buchung ${entry.number}`, until: null, entity: 'financeEntry', id: entry.id }]);
+  });
+
+  it('names entry numbers, never texts; one hold per entry even with three lines', async () => {
+    const f = await ledgerFixture();
+    const entry = unwrap(
+      await bookEntry(f.deps, f.ctx, {
+        entryDate: '2026-02-01',
+        text: 'Split-Spende — Kontaktname Musterspenderin',
+        moneyLines: [{ accountId: f.bank.id, amountCents: 300 }],
+        allocationLines: [
+          { categoryId: f.donations.id, amountCents: 100, contactId: f.donor.id },
+          { categoryId: f.donations.id, amountCents: 100, contactId: f.donor.id },
+          { categoryId: f.donations.id, amountCents: 100, contactId: f.donor.id },
+        ],
+      }),
+    );
+    const holds = financeRetentionHolds(f.deps, 'contact', f.donor.id);
+    expect(holds).toHaveLength(1);
+    expect(holds[0]!.label).toBe(`Buchung ${entry.number}`);
+    expect(JSON.stringify(holds)).not.toContain('Musterspenderin');
+  });
+
+  it('holdsFor of the core sees them: deleting such a contact is refused with the entry number', async () => {
+    const f = await ledgerFixture();
+    const entry = await f.finalDonation({ date: '2026-02-01', cents: 5000, contactId: f.donor.id });
+    const holds = holdsFor(f.deps, 'contact', f.donor.id);
+    expect(holds.some((h) => h.label === `Buchung ${entry.number}`)).toBe(true);
+
+    const manage = ctxWith(['contacts.manage'], f.userId);
+    const result = await deleteContact(f.deps, manage, { id: f.donor.id });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect((result.error as { message: string }).message).toContain(`Buchung ${entry.number}`);
+  });
+
+  it('answers nothing for entity types it does not know, and never throws', async () => {
+    const f = await ledgerFixture();
+    expect(financeRetentionHolds(f.deps, 'animal', 'A1')).toEqual([]);
+    expect(financeRetentionHolds(f.deps, 'nonsense-entity', 'X')).toEqual([]);
+    expect(() => financeRetentionHolds(f.deps, 'animal', 'A1')).not.toThrow();
+  });
+});

@@ -141,6 +141,7 @@ export {
   type PeriodClosePreview,
   type UndocumentedEntryPreview,
 } from './ledger/period';
+export { financeRetentionHolds, yearAnchorInternal } from './ledger/holds';
 export { cancelOpenItem, createOpenItem, listOpenItems, openCentsInternal, openItemsAtInternal, saveOpenItem, updateOpenItem, type OpenItemView } from './ledger/open-items';
 export { applyCorrectionInternal, approveAllocationCorrection, decideAllocationCorrection, listAllocationCorrections, rejectAllocationCorrection, requestAllocationCorrection, type CorrectionView } from './ledger/corrections';
 
