@@ -6,11 +6,11 @@ import { projectsModule } from '@kompass/module-projects';
 import { eq } from 'drizzle-orm';
 import { createAccount } from '../src/ledger/accounts';
 import { bookEntry } from '../src/ledger/finalize';
-import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
+import { createFirstFiscalYear, ensureFiscalYearFor, type FiscalYearView } from '../src/ledger/fiscal-years';
 import { createPurpose } from '../src/ledger/purposes';
 import { installFinance } from '../src/install';
 import { FINANCE_PERMISSIONS, financeModule } from '../src/manifest';
-import { financeCategories, type FinanceCategoryRow } from '../src/schema';
+import { financeCategories, type FinanceCategoryRow, type FinanceFiscalYearRow } from '../src/schema';
 
 /** Ein minimales, gültiges PDF — wie in den Tests der Akte (`packages/modules/dms/tests/helpers.ts`). */
 export function pdfBytes(): Uint8Array {
@@ -32,12 +32,17 @@ export function allowHumanOnlyOverMcp(deps: ReturnType<typeof setupFinance>['dep
 
 /**
  * Stammdaten für die Buchungsdienste: Startplan (`installFinance`), ein
- * Bankkonto, ein Barkonto, das Geschäftsjahr 2026, ein Auslandszweck und ein
- * erfundener Spender-Kontakt. `f.ctx` trägt alle Finanzrechte (Vorgabe von
+ * Bankkonto, ein Barkonto, ein Auslandszweck und ein erfundener
+ * Spender-Kontakt. `f.ctx` trägt alle Finanzrechte (Vorgabe von
  * `setupFinance`), aber kein `contacts.manage` — nur die Fixture selbst legt
  * den Kontakt intern über einen Systemkontext an.
+ *
+ * `years`: die Geschäftsjahre, älteste zuerst (Vorgabe `['2026']`). Das erste
+ * entsteht über `createFirstFiscalYear`, jedes weitere über
+ * `ensureFiscalYearFor` (nur der unmittelbare Nachfolger entsteht von
+ * selbst) — abrufbar über `years['2026']` usw.
  */
-export async function ledgerFixture() {
+export async function ledgerFixture(opts: { years?: readonly string[] } = {}) {
   const { deps, ctx, userId } = setupFinance();
   deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
 
@@ -49,7 +54,18 @@ export async function ledgerFixture() {
 
   const bank = unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE02120300000000202051', isMain: true }));
   const cash = unwrap(await createAccount(deps, ctx, { name: 'Barkasse', kind: 'cash' }));
-  const year = unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-01-01', endsOn: '2026-12-31' }));
+
+  const yearList = opts.years && opts.years.length > 0 ? opts.years : ['2026'];
+  const first = yearList[0]!;
+  const firstYear = unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: `${first}-01-01`, endsOn: `${first}-12-31` }));
+  const years: Record<string, FiscalYearView | FinanceFiscalYearRow> = { [first]: firstYear };
+  for (const y of yearList.slice(1)) {
+    const created = deps.db.transaction((tx) => ensureFiscalYearFor(tx, deps, ctx, `${y}-06-15`));
+    if (!created.ok) throw new Error(`ledgerFixture: Geschäftsjahr ${y} konnte nicht angelegt werden`);
+    years[y] = created.value;
+  }
+  const year = firstYear;
+
   const donations = categoryByKey('donations');
   const fees = categoryByKey('payment-fees');
   const programCosts = categoryByKey('program-costs');
@@ -61,5 +77,5 @@ export async function ledgerFixture() {
   /** Eine ausgeglichene, festgeschriebene Spende — Ausgangslage für Beleg- und Postentests. */
   const finalEntry = async () => bookEntry(deps, ctx, { entryDate: '2026-03-01', text: 'Spende', moneyLines: [{ accountId: bank.id, amountCents: 5000 }], allocationLines: [{ categoryId: donations.id, amountCents: 5000 }] }).then(unwrap);
 
-  return { deps, ctx, userId, bank, cash, year, donations, fees, programCosts, purposeIncome, abroadPurpose, donor, finalEntry };
+  return { deps, ctx, userId, bank, cash, year, years, donations, fees, programCosts, purposeIncome, abroadPurpose, donor, finalEntry };
 }

@@ -9,6 +9,8 @@ export {
   financeEntryDocuments,
   financeFiscalYears,
   financeMoneyLines,
+  financeOpenItems,
+  financeOpenItemSettlements,
   financePeriodEvents,
   financePurposes,
   type FinanceAccountRow,
@@ -19,6 +21,8 @@ export {
   type FinanceEntryRow,
   type FinanceFiscalYearRow,
   type FinanceMoneyLineRow,
+  type FinanceOpenItemRow,
+  type FinanceOpenItemSettlementRow,
   type FinancePeriodEventRow,
   type FinancePurposeRow,
 } from './schema';
@@ -104,6 +108,7 @@ export {
 } from './ledger/entries';
 
 export { attachDocument, readVoucher, revokeVoucher, uploadVoucher, type VoucherLinkResult } from './ledger/vouchers';
+export { cancelOpenItem, createOpenItem, listOpenItems, openCentsInternal, openItemsAtInternal, updateOpenItem, type OpenItemView } from './ledger/open-items';
 
 export { AUDIT_FIELDS, financeAudit, type FinanceEntity } from './audit';
 export { installFinance } from './install';

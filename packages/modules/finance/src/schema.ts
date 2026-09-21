@@ -253,3 +253,43 @@ export const financeEntryDocuments = sqliteTable(
   (t) => [uniqueIndex('finance_entry_documents_pair_idx').on(t.entryId, t.documentId), index('finance_entry_documents_document_idx').on(t.documentId)],
 );
 export type FinanceEntryDocumentRow = typeof financeEntryDocuments.$inferSelect;
+
+/** Forderung oder Verbindlichkeit — außerhalb des Journals; die EÜR sieht sie nie. */
+export const financeOpenItems = sqliteTable(
+  'finance_open_items',
+  {
+    id: text('id').primaryKey(),
+    kind: text('kind', { enum: ['receivable', 'payable'] }).notNull(),
+    itemDate: text('item_date').notNull(),
+    contactId: text('contact_id'),
+    amountCents: integer('amount_cents').notNull(),
+    dueOn: text('due_on'),
+    documentId: text('document_id'),
+    originType: text('origin_type'),
+    originId: text('origin_id'),
+    paymentReference: text('payment_reference'),
+    /** JSON: Zuordnungszeilen, die eine Zahlung dieses Postens vorbelegen. */
+    lineTemplate: text('line_template'),
+    cancelledAt: text('cancelled_at'),
+    cancelledByUserId: text('cancelled_by_user_id'),
+    cancelNote: text('cancel_note'),
+    createdByUserId: text('created_by_user_id').notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [index('finance_open_items_kind_idx').on(t.kind), index('finance_open_items_origin_idx').on(t.originType, t.originId), index('finance_open_items_contact_idx').on(t.contactId)],
+);
+export type FinanceOpenItemRow = typeof financeOpenItems.$inferSelect;
+
+/** Eine Geldzeile erledigt einen Posten ganz oder teilweise — Sammelüberweisung, Teil- und Überzahlung. Betrag immer > 0. */
+export const financeOpenItemSettlements = sqliteTable(
+  'finance_open_item_settlements',
+  {
+    id: text('id').primaryKey(),
+    moneyLineId: text('money_line_id').notNull().references(() => financeMoneyLines.id),
+    openItemId: text('open_item_id').notNull().references(() => financeOpenItems.id),
+    amountCents: integer('amount_cents').notNull(),
+  },
+  (t) => [uniqueIndex('finance_open_item_settlements_pair_idx').on(t.moneyLineId, t.openItemId), index('finance_open_item_settlements_item_idx').on(t.openItemId)],
+);
+export type FinanceOpenItemSettlementRow = typeof financeOpenItemSettlements.$inferSelect;

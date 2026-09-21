@@ -47,6 +47,8 @@ describe('database', () => {
       'finance_entry_documents',
       'finance_fiscal_years',
       'finance_money_lines',
+      'finance_open_item_settlements',
+      'finance_open_items',
       'finance_period_events',
       'finance_purposes',
       'follow_ups',

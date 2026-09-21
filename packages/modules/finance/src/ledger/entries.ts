@@ -6,12 +6,18 @@ import { and, asc, desc, eq, gte, inArray, lte, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
-import { financeAccounts, financeAllocationLines, financeCategories, financeEntries, financeEntryDocuments, financeMoneyLines, financePurposes, type FinanceAllocationLineRow, type FinanceEntryRow, type FinanceMoneyLineRow } from '../schema';
+import { financeAccounts, financeAllocationLines, financeCategories, financeEntries, financeEntryDocuments, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, financePurposes, type FinanceAllocationLineRow, type FinanceEntryRow, type FinanceMoneyLineRow } from '../schema';
 import { requireFinanceRead } from './access';
 import { TAX_CODES } from './codes';
 import { taxContextAt, taxOf, type TaxCode, type TaxResult } from './tax';
 
-export type MoneyLineView = FinanceMoneyLineRow;
+/** Eine Geldzeile erledigt einen offenen Posten ganz oder teilweise (Spec 5.3). */
+export interface MoneyLineSettlementView {
+  id: string;
+  openItemId: string;
+  amountCents: number;
+}
+export type MoneyLineView = FinanceMoneyLineRow & { settlements: MoneyLineSettlementView[] };
 export type AllocationLineView = FinanceAllocationLineRow & {
   /** Nach den Werten des Buchungstags berechnet — nie gespeichert. `null`, wenn dafür kein Satz hinterlegt ist. */
   tax: TaxResult | null;
@@ -48,6 +54,8 @@ export interface MoneyLineWrite {
   accountId: string;
   amountCents: number;
   rawTransactionId?: string | null;
+  /** Fehlt beim Storno (F2a) bewusst: Ein Storno kopiert keine Settlements. */
+  settlements?: readonly { openItemId: string; amountCents: number }[];
 }
 export interface AllocationLineWrite {
   categoryId: string;
@@ -62,9 +70,12 @@ export interface AllocationLineWrite {
   addsToAssets: boolean;
 }
 
+const settlementInputSchema = z.object({ openItemId: z.string().min(1), amountCents: z.number().int().positive() });
+
 const moneyLineSchema = z.object({
   accountId: z.string().min(1),
   amountCents: z.number().int().refine((v) => v !== 0, 'amountCentsRequired'),
+  settlements: z.array(settlementInputSchema).optional(),
 });
 
 const allocationLineSchema = z.object({
@@ -107,10 +118,17 @@ const listSchema = z.object({
 
 /** Für `finalize.ts` und `reverse.ts`: Zeilen einer Buchung als Ganzes ersetzen, solange ihr Kopf `draft` ist. */
 export function writeLinesInternal(tx: DbOrTx, entryId: string, lines: { moneyLines: readonly MoneyLineWrite[]; allocationLines: readonly AllocationLineWrite[] }): void {
+  // Alte Settlements zuerst: Der Fremdschlüssel auf die Geldzeile verbietet sonst deren Löschen.
+  const oldMoneyLineIds = tx.select({ id: financeMoneyLines.id }).from(financeMoneyLines).where(eq(financeMoneyLines.entryId, entryId)).all().map((r) => r.id);
+  if (oldMoneyLineIds.length > 0) tx.delete(financeOpenItemSettlements).where(inArray(financeOpenItemSettlements.moneyLineId, oldMoneyLineIds)).run();
   tx.delete(financeMoneyLines).where(eq(financeMoneyLines.entryId, entryId)).run();
   tx.delete(financeAllocationLines).where(eq(financeAllocationLines.entryId, entryId)).run();
   lines.moneyLines.forEach((line, position) => {
-    tx.insert(financeMoneyLines).values({ id: newId(), entryId, position, accountId: line.accountId, amountCents: line.amountCents, rawTransactionId: line.rawTransactionId ?? null, rawReleasedAt: null }).run();
+    const id = newId();
+    tx.insert(financeMoneyLines).values({ id, entryId, position, accountId: line.accountId, amountCents: line.amountCents, rawTransactionId: line.rawTransactionId ?? null, rawReleasedAt: null }).run();
+    for (const settlement of line.settlements ?? []) {
+      tx.insert(financeOpenItemSettlements).values({ id: newId(), moneyLineId: id, openItemId: settlement.openItemId, amountCents: settlement.amountCents }).run();
+    }
   });
   lines.allocationLines.forEach((line, position) => {
     tx.insert(financeAllocationLines)
@@ -174,7 +192,9 @@ export function documentationOf(db: DbOrTx, entryId: string, settings: { stateme
 export function entryViewInternal(db: DbOrTx, id: string): EntryView | null {
   const row = db.select().from(financeEntries).where(eq(financeEntries.id, id)).get();
   if (!row) return null;
-  const moneyLines = db.select().from(financeMoneyLines).where(eq(financeMoneyLines.entryId, id)).orderBy(asc(financeMoneyLines.position)).all();
+  const moneyLineRows = db.select().from(financeMoneyLines).where(eq(financeMoneyLines.entryId, id)).orderBy(asc(financeMoneyLines.position)).all();
+  const settlementRows = moneyLineRows.length > 0 ? db.select().from(financeOpenItemSettlements).where(inArray(financeOpenItemSettlements.moneyLineId, moneyLineRows.map((l) => l.id))).all() : [];
+  const moneyLines: MoneyLineView[] = moneyLineRows.map((l) => ({ ...l, settlements: settlementRows.filter((s) => s.moneyLineId === l.id).map((s) => ({ id: s.id, openItemId: s.openItemId, amountCents: s.amountCents })) }));
   const allocationLineRows = db.select().from(financeAllocationLines).where(eq(financeAllocationLines.entryId, id)).orderBy(asc(financeAllocationLines.position)).all();
   const moneySum = moneyLines.reduce((s, l) => s + l.amountCents, 0);
   const allocationSum = allocationLineRows.reduce((s, l) => s + l.amountCents, 0);
@@ -247,11 +267,34 @@ function contactExists(db: DbOrTx, id: string): boolean {
   return !!db.select({ id: contacts.id }).from(contacts).where(eq(contacts.id, id)).get();
 }
 
+/**
+ * Prüft die Settlements einer Geldzeile (Spec 5.3): Der Posten muss existieren
+ * und darf nicht ohne Zahlung erledigt sein, die Summe darf den Betrag der
+ * Zeile nicht übersteigen, und die Richtung muss stimmen — eine Verbindlichkeit
+ * wird durch eine Ausgabe beglichen, eine Forderung durch eine Einnahme.
+ */
+function checkSettlements(db: DbOrTx, line: { amountCents: number; settlements?: readonly { openItemId: string; amountCents: number }[] }): Failure | null {
+  const settlements = line.settlements ?? [];
+  if (settlements.length === 0) return null;
+  const sum = settlements.reduce((s, x) => s + x.amountCents, 0);
+  if (sum > Math.abs(line.amountCents)) return financeConflict('settlementExceedsLine');
+  for (const settlement of settlements) {
+    const item = db.select().from(financeOpenItems).where(eq(financeOpenItems.id, settlement.openItemId)).get();
+    if (!item) return notFound('financeOpenItem', settlement.openItemId);
+    if (item.cancelledAt !== null) return financeConflict('openItemCancelled');
+    if (item.kind === 'payable' && line.amountCents >= 0) return financeConflict('settlementWrongDirection');
+    if (item.kind === 'receivable' && line.amountCents <= 0) return financeConflict('settlementWrongDirection');
+  }
+  return null;
+}
+
 /** Prüft, was eine Buchung ansteuert; ansonsten unverändert von `input`. Erst das Festschreiben prüft, ob es auch aktiv ist. */
 function checkReferences(deps: Deps, input: EntryLinesInput): Failure | null {
   const accounts = accountsById(deps.db, input.moneyLines.map((l) => l.accountId));
   for (const line of input.moneyLines) {
     if (!accounts.has(line.accountId)) return notFound('financeAccount', line.accountId);
+    const settlementProblem = checkSettlements(deps.db, line);
+    if (settlementProblem) return settlementProblem;
   }
 
   const categories = categoriesById(deps.db, input.allocationLines.map((l) => l.categoryId));
@@ -274,7 +317,7 @@ function cashLineProblem(deps: Deps, moneyLines: readonly { accountId: string }[
 function resolvedLines(deps: Deps, input: EntryLinesInput): { moneyLines: MoneyLineWrite[]; allocationLines: AllocationLineWrite[] } {
   const categories = categoriesById(deps.db, input.allocationLines.map((l) => l.categoryId));
   return {
-    moneyLines: input.moneyLines.map((l) => ({ accountId: l.accountId, amountCents: l.amountCents })),
+    moneyLines: input.moneyLines.map((l) => ({ accountId: l.accountId, amountCents: l.amountCents, settlements: l.settlements })),
     allocationLines: input.allocationLines.map((l) => {
       const category = categories.get(l.categoryId)!;
       return {

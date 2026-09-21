@@ -39,6 +39,11 @@ export const FINANCE_ERRORS = {
   voucherAlreadyLinked: { reason: 'Dieses Dokument hängt schon als Beleg an der Buchung.', remedy: 'Verknüpfen Sie es nicht ein zweites Mal.' },
   voucherAlreadyRevoked: { reason: 'Dieser Beleg ist bereits widerrufen.', remedy: 'Ein Widerruf lässt sich nicht wiederholen.' },
   revokeNeedsReplacement: { reason: 'Das Geschäftsjahr {year} ist abgeschlossen.', remedy: 'Widerrufen Sie den Beleg, indem Sie ihn ersetzen: Geben Sie das richtige Dokument mit an.' },
+  settlementExceedsLine: { reason: 'Die Summe der Zuordnungen übersteigt den Betrag der Geldzeile.', remedy: 'Verringern Sie eine Zuordnung, oder teilen Sie die Zahlung auf mehrere Zeilen auf.' },
+  settlementWrongDirection: { reason: 'Eine Verbindlichkeit wird durch eine Ausgabe beglichen, eine Forderung durch eine Einnahme.', remedy: 'Prüfen Sie das Vorzeichen der Geldzeile oder wählen Sie den passenden Posten.' },
+  openItemCancelled: { reason: 'Der Posten ist ohne Zahlung erledigt.', remedy: 'Wählen Sie einen offenen Posten, oder legen Sie einen neuen an.' },
+  openItemInUse: { reason: 'Auf diesen Posten ist bereits eine Zahlung zugeordnet.', remedy: 'Ein zugeordneter Posten lässt sich nicht mehr ändern.' },
+  openItemHasPayments: { reason: 'Auf diesen Posten ist bereits eine festgeschriebene Zahlung zugeordnet.', remedy: 'Stornieren Sie zuerst die Zahlung, bevor Sie den Posten ohne Zahlung erledigen.' },
 } as const satisfies Record<string, { reason: string; remedy: string }>;
 
 export type FinanceErrorCode = keyof typeof FINANCE_ERRORS;

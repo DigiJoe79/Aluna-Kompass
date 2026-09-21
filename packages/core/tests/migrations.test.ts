@@ -47,6 +47,12 @@ describe('hand-written SQL survives', () => {
       expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
     }
   });
+
+  it('locks the settlements of a finalized finance entry', () => {
+    for (const name of ['finance_open_item_settlements_final_no_update', 'finance_open_item_settlements_final_no_delete', 'finance_open_item_settlements_final_no_insert']) {
+      expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
+    }
+  });
 });
 
 describe('the migrations of this version', () => {

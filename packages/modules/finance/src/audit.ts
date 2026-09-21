@@ -1,6 +1,6 @@
 import { recordAudit, type CallContext, type DbOrTx, type Deps } from '@kompass/core';
 
-export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument';
+export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument' | 'financeOpenItem';
 
 /**
  * Was vom Finanzmodul ins Änderungsprotokoll darf — je Entität eine Liste, und
@@ -28,6 +28,8 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   financeEntry: ['status', 'number', 'entryDate', 'fiscalYearId', 'moneyLineCount', 'allocationLineCount', 'totalCents', 'reviewed', 'reversesEntryId', 'reversedByEntryId', 'correctionOfEntryId', 'channel', 'cashWarning'],
   // Nur IDs und Zählwerte (Spec 10.3): nie ein Dokumenttitel, nie eine Begründung.
   financeEntryDocument: ['entryId', 'documentId', 'viaUpload', 'withReplacement'],
+  // Nie die Zahlungsreferenz, nie die Notiz, nie der Kontakt (Spec 10.3).
+  financeOpenItem: ['kind', 'itemDate', 'amountCents', 'dueOn', 'documentId', 'originType', 'originId', 'cancelled'],
 };
 
 const pick = (entity: FinanceEntity, data?: Record<string, unknown>) => (data ? Object.fromEntries(Object.entries(data).filter(([field]) => AUDIT_FIELDS[entity].includes(field))) : undefined);
