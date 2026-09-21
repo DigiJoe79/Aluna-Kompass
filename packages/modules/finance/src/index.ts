@@ -84,6 +84,7 @@ export { abortFinalize, bookEntry, finalizeEntry, finalizeInternal, finalizeRevi
 export { reverseEntry, reverseInternal } from './ledger/reverse';
 export {
   deleteDraft,
+  documentationOf,
   entryLinesSchema,
   entryViewInternal,
   getEntry,
@@ -94,13 +95,15 @@ export {
   writeLinesInternal,
   type AllocationLineView,
   type AllocationLineWrite,
+  type EntryDocumentationState,
   type EntryLinesInput,
   type EntryView,
   type MoneyLineView,
   type MoneyLineWrite,
+  type VoucherListEntry,
 } from './ledger/entries';
 
-export { attachDocument, uploadVoucher, type VoucherLinkResult } from './ledger/vouchers';
+export { attachDocument, readVoucher, revokeVoucher, uploadVoucher, type VoucherLinkResult } from './ledger/vouchers';
 
 export { AUDIT_FIELDS, financeAudit, type FinanceEntity } from './audit';
 export { installFinance } from './install';

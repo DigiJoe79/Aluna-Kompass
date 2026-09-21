@@ -27,7 +27,7 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   // sind bewusst so benannt, dass der Verbotstest oben sie nicht trifft.
   financeEntry: ['status', 'number', 'entryDate', 'fiscalYearId', 'moneyLineCount', 'allocationLineCount', 'totalCents', 'reviewed', 'reversesEntryId', 'reversedByEntryId', 'correctionOfEntryId', 'channel', 'cashWarning'],
   // Nur IDs und Zählwerte (Spec 10.3): nie ein Dokumenttitel, nie eine Begründung.
-  financeEntryDocument: ['entryId', 'documentId', 'viaUpload'],
+  financeEntryDocument: ['entryId', 'documentId', 'viaUpload', 'withReplacement'],
 };
 
 const pick = (entity: FinanceEntity, data?: Record<string, unknown>) => (data ? Object.fromEntries(Object.entries(data).filter(([field]) => AUDIT_FIELDS[entity].includes(field))) : undefined);

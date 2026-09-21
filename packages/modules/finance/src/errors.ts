@@ -37,6 +37,8 @@ export const FINANCE_ERRORS = {
   documentNotFinal: { reason: 'Das Dokument ist noch ein Entwurf.', remedy: 'Ein Beleg braucht ein festgeschriebenes Dokument der Akte.' },
   documentVoided: { reason: 'Das Dokument ist storniert.', remedy: 'Verknüpfen Sie ein gültiges Dokument als Beleg.' },
   voucherAlreadyLinked: { reason: 'Dieses Dokument hängt schon als Beleg an der Buchung.', remedy: 'Verknüpfen Sie es nicht ein zweites Mal.' },
+  voucherAlreadyRevoked: { reason: 'Dieser Beleg ist bereits widerrufen.', remedy: 'Ein Widerruf lässt sich nicht wiederholen.' },
+  revokeNeedsReplacement: { reason: 'Das Geschäftsjahr {year} ist abgeschlossen.', remedy: 'Widerrufen Sie den Beleg, indem Sie ihn ersetzen: Geben Sie das richtige Dokument mit an.' },
 } as const satisfies Record<string, { reason: string; remedy: string }>;
 
 export type FinanceErrorCode = keyof typeof FINANCE_ERRORS;

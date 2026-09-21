@@ -1,11 +1,12 @@
-import { isoNow, newId, notFound, ok, readSetting, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
-import { abortReceive, getDocumentRecord, linkDocumentInternal, receiveGeneratedUpload } from '@kompass/module-dms';
+import { isoNow, newId, notFound, ok, readSetting, requireHumanChannel, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { abortReceive, getDocumentRecord, linkDocumentInternal, readLinkedDocument, receiveGeneratedUpload } from '@kompass/module-dms';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
-import { financeEntryDocuments } from '../schema';
+import { financeEntryDocuments, financeFiscalYears } from '../schema';
 import { entryViewInternal } from './entries';
+import { fiscalYearStatusInternal } from './fiscal-years';
 
 export interface VoucherLinkResult {
   linkId: string;
@@ -88,6 +89,75 @@ export async function attachDocument(deps: Deps, ctx: CallContext, input: unknow
     linkDocumentInternal(tx, deps, { documentId: doc.id, entityType: 'financeEntry', entityId: entryId });
     return ok(written);
   });
+}
+
+const revokeVoucherSchema = z.object({ linkId: z.string().min(1), note: z.string().trim().min(1).max(500), replacementDocumentId: z.string().min(1).optional() });
+
+/**
+ * Beleg widerrufen — im offenen Jahr sofort, im abgeschlossenen nur als
+ * Ersetzen: Beide Zeilen zeigen dann aufeinander. Der Bezug in `document_links`
+ * bleibt auch nach dem Widerruf, der Prüfer muss sehen können, was widerrufen
+ * wurde. `finance.entriesFinalize`, **`humanOnly`**.
+ */
+export async function revokeVoucher(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ linkId: string; replacementLinkId: string | null }>> {
+  const denied = requirePermission(ctx, 'finance.entriesFinalize');
+  if (denied) return denied;
+  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  if (humanOnly) return humanOnly;
+  const parsed = validate(deps, revokeVoucherSchema, input);
+  if (!parsed.ok) return parsed;
+  const v = parsed.value;
+
+  const link = deps.db.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.id, v.linkId)).get();
+  if (!link) return notFound('financeEntryDocument', v.linkId);
+  if (link.revokedAt !== null) return financeConflict('voucherAlreadyRevoked');
+
+  const entry = entryViewInternal(deps.db, link.entryId);
+  if (!entry) return notFound('financeEntry', link.entryId);
+  const closed = entry.fiscalYearId !== null && fiscalYearStatusInternal(deps.db, entry.fiscalYearId) === 'closed';
+  if (closed && !v.replacementDocumentId) {
+    const year = deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.id, entry.fiscalYearId!)).get()!;
+    return financeConflict('revokeNeedsReplacement', { year: year.designation });
+  }
+
+  let replacementDoc: { id: string; number: string | null; fileChecksum: string | null } | null = null;
+  if (v.replacementDocumentId) {
+    const record = await getDocumentRecord(deps, ctx, v.replacementDocumentId);
+    if (!record.ok) return record;
+    const doc = record.value;
+    if (doc.phase !== 'issued') return financeConflict('documentNotFinal');
+    if (doc.status === 'voided') return financeConflict('documentVoided');
+    const already = deps.db.select({ id: financeEntryDocuments.id }).from(financeEntryDocuments).where(and(eq(financeEntryDocuments.entryId, link.entryId), eq(financeEntryDocuments.documentId, doc.id))).get();
+    if (already) return financeConflict('voucherAlreadyLinked');
+    replacementDoc = { id: doc.id, number: doc.number, fileChecksum: doc.fileChecksum };
+  }
+
+  return deps.db.transaction((tx: DbOrTx) => {
+    let replacementLinkId: string | null = null;
+    if (replacementDoc) {
+      const written = writeVoucherLink(tx, deps, ctx, { entryId: link.entryId, documentId: replacementDoc.id, documentNumber: replacementDoc.number ?? '', documentChecksum: replacementDoc.fileChecksum, viaUpload: false });
+      linkDocumentInternal(tx, deps, { documentId: replacementDoc.id, entityType: 'financeEntry', entityId: link.entryId });
+      replacementLinkId = written.linkId;
+    }
+    const now = isoNow(deps.clock);
+    tx.update(financeEntryDocuments).set({ revokedAt: now, revokedByUserId: ctx.userId, revokeNote: v.note, replacedByLinkId: replacementLinkId }).where(eq(financeEntryDocuments.id, v.linkId)).run();
+    financeAudit(tx, deps, ctx, { action: 'finance.entry.documentRevoke', entity: 'financeEntryDocument', id: v.linkId, after: { entryId: link.entryId, documentId: link.documentId, withReplacement: replacementLinkId !== null }, summary: `Beleg an Buchung ${link.entryId} widerrufen` });
+    return ok({ linkId: v.linkId, replacementLinkId });
+  });
+}
+
+const readVoucherSchema = z.object({ entryId: z.string().min(1), documentId: z.string().min(1) });
+
+/**
+ * Der Beleg selbst — über den Bezug als Berechtigung der Akte (`readLinkedDocument`):
+ * `finance.read` genügt, ohne `dms.view`. Bytes: kein MCP-Werkzeug.
+ */
+export async function readVoucher(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ bytes: Uint8Array; filename: string; number: string | null }>> {
+  const parsed = validate(deps, readVoucherSchema, input);
+  if (!parsed.ok) return parsed;
+  const result = await readLinkedDocument(deps, ctx, { documentId: parsed.value.documentId, entityType: 'financeEntry', entityId: parsed.value.entryId });
+  if (!result.ok) return result;
+  return ok({ bytes: result.value.bytes, filename: result.value.filename, number: result.value.record.number });
 }
 
 /** Die eigene Zeile — dieselbe für Hochladen und Verknüpfen, in derselben Transaktion wie die Akte. */

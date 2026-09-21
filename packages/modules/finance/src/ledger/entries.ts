@@ -1,4 +1,4 @@
-import { expectedVersionField, isoNow, newId, notFound, ok, requireHumanChannel, requirePermission, staleVersion, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
+import { expectedVersionField, isoNow, newId, notFound, ok, requireHumanChannel, requirePermission, schema, staleVersion, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
 import { contacts } from '@kompass/module-contacts';
 import { unlinkDocumentInternal } from '@kompass/module-dms';
 import { projects } from '@kompass/module-projects';
@@ -17,12 +17,30 @@ export type AllocationLineView = FinanceAllocationLineRow & {
   tax: TaxResult | null;
 };
 
+/** Ein Beleg in der Sicht der Buchung — Nummer und Prüfsumme bleiben auch nach Widerruf oder Grabstein (F2c) stehen. */
+export interface VoucherListEntry {
+  linkId: string;
+  documentId: string | null;
+  documentNumber: string;
+  documentDeletedAt: string | null;
+  addedAt: string;
+  revokedAt: string | null;
+  replacedByLinkId: string | null;
+}
+
+export interface EntryDocumentationState {
+  state: 'voucher' | 'statementSuffices' | 'missing';
+  warnExpenseAboveLimit: boolean;
+}
+
 export interface EntryView extends FinanceEntryRow {
   moneyLines: MoneyLineView[];
   allocationLines: AllocationLineView[];
   /** Σ Geldzeilen − Σ Zuordnungszeilen; 0 = ausgeglichen. „Noch 37,20 € zu verteilen.“ */
   remainderCents: number;
   taxTotals: { outputTaxCents: number; reverseChargeTaxCents: number; inputTaxCents: number; inputTaxMemoCents: number };
+  vouchers: VoucherListEntry[];
+  documentation: EntryDocumentationState;
 }
 
 /** Zeilen, wie `saveDraft`, `finalize.ts` und `reverse.ts` sie an die Datenbank geben — Vorbelegung ist schon aufgelöst. */
@@ -117,6 +135,42 @@ export function writeLinesInternal(tx: DbOrTx, entryId: string, lines: { moneyLi
 
 const EMPTY_TAX_TOTALS = { outputTaxCents: 0, reverseChargeTaxCents: 0, inputTaxCents: 0, inputTaxMemoCents: 0 };
 
+/**
+ * Direkt gelesen, ohne `deps`: `entryViewInternal` kennt nur `db`, nicht die
+ * volle `Deps` (es wird auch mit einer offenen Transaktion aufgerufen). Der
+ * Vorgabewert 0 stimmt mit dem Vorgabewert der Einstellung überein.
+ */
+function statementSufficesBelowCentsInternal(db: DbOrTx): number {
+  const row = db.select({ value: schema.settings.value }).from(schema.settings).where(eq(schema.settings.key, 'finance.statementSufficesBelowCents')).get();
+  return row ? (JSON.parse(row.value) as number) : 0;
+}
+
+/**
+ * Belegt (Spec 5.2): ein nicht widerrufener Beleg — oder, wenn keine Geldzeile
+ * auf einem Barkonto liegt, alle betroffenen Kategorien tragen „Auszug genügt“
+ * **und** eine Geldzeile hat einen Rohumsatz. Eine Umbuchung ohne
+ * Zuordnungszeilen erfüllt „alle Kategorien“ leer und damit trivial.
+ */
+export function documentationOf(db: DbOrTx, entryId: string, settings: { statementSufficesBelowCents: number }): EntryDocumentationState {
+  const voucherRows = db.select({ documentId: financeEntryDocuments.documentId, revokedAt: financeEntryDocuments.revokedAt }).from(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, entryId)).all();
+  if (voucherRows.some((v) => v.revokedAt === null)) return { state: 'voucher', warnExpenseAboveLimit: false };
+
+  const moneyLines = db.select().from(financeMoneyLines).where(eq(financeMoneyLines.entryId, entryId)).all();
+  const accounts = accountsById(db, moneyLines.map((l) => l.accountId));
+  const hasCash = [...accounts.values()].some((a) => a.kind === 'cash');
+  if (hasCash) return { state: 'missing', warnExpenseAboveLimit: false };
+
+  const allocationLines = db.select().from(financeAllocationLines).where(eq(financeAllocationLines.entryId, entryId)).all();
+  const categories = categoriesById(db, allocationLines.map((l) => l.categoryId));
+  const allSuffice = allocationLines.every((l) => categories.get(l.categoryId)?.statementSuffices === true);
+  const hasRaw = moneyLines.some((l) => l.rawTransactionId !== null);
+  if (!allSuffice || !hasRaw) return { state: 'missing', warnExpenseAboveLimit: false };
+
+  const limit = settings.statementSufficesBelowCents;
+  const warn = limit > 0 && allocationLines.some((l) => l.amountCents < 0 && Math.abs(l.amountCents) > limit);
+  return { state: 'statementSuffices', warnExpenseAboveLimit: warn };
+}
+
 export function entryViewInternal(db: DbOrTx, id: string): EntryView | null {
   const row = db.select().from(financeEntries).where(eq(financeEntries.id, id)).get();
   if (!row) return null;
@@ -137,7 +191,11 @@ export function entryViewInternal(db: DbOrTx, id: string): EntryView | null {
     return { outputTaxCents: acc.outputTaxCents + l.tax.outputTaxCents, reverseChargeTaxCents: acc.reverseChargeTaxCents + l.tax.reverseChargeTaxCents, inputTaxCents: acc.inputTaxCents + l.tax.inputTaxCents, inputTaxMemoCents: acc.inputTaxMemoCents + l.tax.inputTaxMemoCents };
   }, EMPTY_TAX_TOTALS);
 
-  return { ...row, moneyLines, allocationLines, remainderCents: moneySum - allocationSum, taxTotals };
+  const voucherRows = db.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, id)).all();
+  const vouchers: VoucherListEntry[] = voucherRows.map((v) => ({ linkId: v.id, documentId: v.documentId, documentNumber: v.documentNumber, documentDeletedAt: v.documentDeletedAt, addedAt: v.addedAt, revokedAt: v.revokedAt, replacedByLinkId: v.replacedByLinkId }));
+  const documentation = documentationOf(db, id, { statementSufficesBelowCents: statementSufficesBelowCentsInternal(db) });
+
+  return { ...row, moneyLines, allocationLines, remainderCents: moneySum - allocationSum, taxTotals, vouchers, documentation };
 }
 
 /** Nur Nummern und Zähler — nie Text, nie Kontakt (Spec 10.3). */

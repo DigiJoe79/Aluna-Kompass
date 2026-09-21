@@ -1,11 +1,13 @@
-import { newId, schema, unwrap } from '@kompass/core';
-import { ctxWith } from '@kompass/core/testing';
+import { newId, schema, unwrap, writeSettingInternal } from '@kompass/core';
+import { ctxWith, systemContext } from '@kompass/core/testing';
 import { documentLinks, documents, documentTypes, readLinkedDocument } from '@kompass/module-dms';
 import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { attachDocument, uploadVoucher } from '../src/ledger/vouchers';
-import { financeEntryDocuments, financePeriodEvents } from '../src/schema';
-import { ledgerFixture, pdfBytes } from './helpers';
+import { getEntry, saveDraft } from '../src/ledger/entries';
+import { bookEntry } from '../src/ledger/finalize';
+import { attachDocument, readVoucher, revokeVoucher, uploadVoucher } from '../src/ledger/vouchers';
+import { financeEntryDocuments, financeMoneyLines, financePeriodEvents } from '../src/schema';
+import { allowHumanOnlyOverMcp, ledgerFixture, pdfBytes } from './helpers';
 
 const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
 const now = '2026-03-01T10:00:00.000Z';
@@ -116,5 +118,132 @@ describe('vouchers', () => {
     expect(log).toContain(res.documentId);
     expect(log).not.toContain('Erika');
     expect(log).not.toContain('Rechnung von');
+  });
+});
+
+describe('revoking a voucher', () => {
+  it('marks the link, keeps it and keeps the file module’s link — the auditor still sees what was revoked', async () => {
+    const f = await ledgerFixture();
+    const entry = await f.finalEntry();
+    const voucher = unwrap(await uploadVoucher(f.deps, f.ctx, { entryId: entry.id, bytes: pdfBytes(), typeKey: 'voucher-invoice', documentDate: '2026-03-01' }));
+    const res = unwrap(await revokeVoucher(f.deps, f.ctx, { linkId: voucher.linkId, note: 'Falscher Beleg hochgeladen' }));
+    expect(res).toEqual({ linkId: voucher.linkId, replacementLinkId: null });
+    const link = f.deps.db.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.id, voucher.linkId)).get()!;
+    expect(link.revokedAt).not.toBeNull();
+    expect(link.revokedByUserId).toBe(f.userId);
+    expect(f.deps.db.select().from(documentLinks).where(and(eq(documentLinks.documentId, voucher.documentId), eq(documentLinks.entityType, 'financeEntry'), eq(documentLinks.entityId, entry.id))).all()).toHaveLength(1);
+  });
+
+  it('wants a note, keeps it on the record and out of the audit log', async () => {
+    const f = await ledgerFixture();
+    const entry = await f.finalEntry();
+    const voucher = unwrap(await uploadVoucher(f.deps, f.ctx, { entryId: entry.id, bytes: pdfBytes(), typeKey: 'voucher-invoice', documentDate: '2026-03-01' }));
+    expect(err(await revokeVoucher(f.deps, f.ctx, { linkId: voucher.linkId, note: '' }))).toMatchObject({ type: 'validation' });
+    unwrap(await revokeVoucher(f.deps, f.ctx, { linkId: voucher.linkId, note: 'Doppelt hochgeladen' }));
+    const link = f.deps.db.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.id, voucher.linkId)).get()!;
+    expect(link.revokeNote).toBe('Doppelt hochgeladen');
+    const log = JSON.stringify(f.deps.db.select().from(schema.auditLog).all().filter((e) => e.action.startsWith('finance.entry.document')));
+    expect(log).not.toContain('Doppelt hochgeladen');
+  });
+
+  it('needs finance.entriesFinalize and a person', async () => {
+    const f = await ledgerFixture();
+    const entry = await f.finalEntry();
+    const voucher = unwrap(await uploadVoucher(f.deps, f.ctx, { entryId: entry.id, bytes: pdfBytes(), typeKey: 'voucher-invoice', documentDate: '2026-03-01' }));
+    const writer = ctxWith(['finance.entriesWrite'], f.userId);
+    expect(err(await revokeVoucher(f.deps, writer, { linkId: voucher.linkId, note: 'x' }))).toEqual({ type: 'forbidden', permission: 'finance.entriesFinalize' });
+    const agent = { ...f.ctx, channel: 'mcp' as const };
+    expect(err(await revokeVoucher(f.deps, agent, { linkId: voucher.linkId, note: 'x' }))).toMatchObject({ type: 'conflict', code: 'humanOnly' });
+    allowHumanOnlyOverMcp(f.deps);
+    expect((await revokeVoucher(f.deps, agent, { linkId: voucher.linkId, note: 'x' })).ok).toBe(true);
+  });
+
+  it('in a closed year only as a replacement: both links point at each other', async () => {
+    const f = await ledgerFixture();
+    const entry = await f.finalEntry();
+    const voucher = unwrap(await uploadVoucher(f.deps, f.ctx, { entryId: entry.id, bytes: pdfBytes(), typeKey: 'voucher-invoice', documentDate: '2026-03-01' }));
+    f.deps.db.insert(financePeriodEvents).values({ id: newId(), fiscalYearId: entry.fiscalYearId!, kind: 'closed', at: '2026-04-01T00:00:00.000Z', byUserId: f.userId, reason: null }).run();
+
+    expect(err(await revokeVoucher(f.deps, f.ctx, { linkId: voucher.linkId, note: 'Falsch' }))).toMatchObject({ type: 'conflict', code: 'revokeNeedsReplacement' });
+
+    seedLetter(f.deps, 'REPL1');
+    const withDms = ctxWith([...f.ctx.permissions, 'dms.view'], f.userId);
+    const res = unwrap(await revokeVoucher(f.deps, withDms, { linkId: voucher.linkId, note: 'Falsch', replacementDocumentId: 'REPL1' }));
+    expect(res.replacementLinkId).not.toBeNull();
+    const original = f.deps.db.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.id, voucher.linkId)).get()!;
+    const replacement = f.deps.db.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.id, res.replacementLinkId!)).get()!;
+    expect(original.replacedByLinkId).toBe(replacement.id);
+    expect(replacement.documentId).toBe('REPL1');
+  });
+
+  it('cannot be revoked twice', async () => {
+    const f = await ledgerFixture();
+    const entry = await f.finalEntry();
+    const voucher = unwrap(await uploadVoucher(f.deps, f.ctx, { entryId: entry.id, bytes: pdfBytes(), typeKey: 'voucher-invoice', documentDate: '2026-03-01' }));
+    unwrap(await revokeVoucher(f.deps, f.ctx, { linkId: voucher.linkId, note: 'Falsch' }));
+    expect(err(await revokeVoucher(f.deps, f.ctx, { linkId: voucher.linkId, note: 'Nochmal' }))).toMatchObject({ type: 'conflict', code: 'voucherAlreadyRevoked' });
+  });
+});
+
+describe('documentation of an entry', () => {
+  it('a voucher documents it; a revoked voucher does not', async () => {
+    const f = await ledgerFixture();
+    const entry = await f.finalEntry();
+    expect(unwrap(await getEntry(f.deps, f.ctx, { id: entry.id })).documentation).toMatchObject({ state: 'missing' });
+    const voucher = unwrap(await uploadVoucher(f.deps, f.ctx, { entryId: entry.id, bytes: pdfBytes(), typeKey: 'voucher-invoice', documentDate: '2026-03-01' }));
+    expect(unwrap(await getEntry(f.deps, f.ctx, { id: entry.id })).documentation).toMatchObject({ state: 'voucher' });
+    unwrap(await revokeVoucher(f.deps, f.ctx, { linkId: voucher.linkId, note: 'x' }));
+    expect(unwrap(await getEntry(f.deps, f.ctx, { id: entry.id })).documentation).toMatchObject({ state: 'missing' });
+  });
+
+  it('the statement suffices when every category says so and a raw transaction is linked', async () => {
+    const f = await ledgerFixture();
+    const draft = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'Gebühr', moneyLines: [{ accountId: f.bank.id, amountCents: -250 }], allocationLines: [{ categoryId: f.fees.id, amountCents: -250 }] }));
+    f.deps.db.update(financeMoneyLines).set({ rawTransactionId: 'R1' }).where(eq(financeMoneyLines.entryId, draft.id)).run();
+    expect(unwrap(await getEntry(f.deps, f.ctx, { id: draft.id })).documentation).toMatchObject({ state: 'statementSuffices' });
+  });
+
+  it('one category that wants a voucher makes the whole entry want one', async () => {
+    const f = await ledgerFixture();
+    const draft = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'Gemischt', moneyLines: [{ accountId: f.bank.id, amountCents: -500 }], allocationLines: [{ categoryId: f.fees.id, amountCents: -250 }, { categoryId: f.programCosts.id, amountCents: -250 }] }));
+    f.deps.db.update(financeMoneyLines).set({ rawTransactionId: 'R2' }).where(eq(financeMoneyLines.entryId, draft.id)).run();
+    expect(unwrap(await getEntry(f.deps, f.ctx, { id: draft.id })).documentation).toMatchObject({ state: 'missing' });
+  });
+
+  it('cash always wants a voucher', async () => {
+    const f = await ledgerFixture();
+    const entry = unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'Bar-Spende', moneyLines: [{ accountId: f.cash.id, amountCents: 2000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 2000 }] }));
+    f.deps.db.update(financeMoneyLines).set({ rawTransactionId: 'R3' }).where(eq(financeMoneyLines.entryId, entry.id)).run();
+    expect(unwrap(await getEntry(f.deps, f.ctx, { id: entry.id })).documentation).toMatchObject({ state: 'missing' });
+  });
+
+  it('warns about an expense above the limit that rests on the statement alone', async () => {
+    const f = await ledgerFixture();
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.statementSufficesBelowCents', 5000, 'test.setLimit'));
+
+    const high = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'Gebühr hoch', moneyLines: [{ accountId: f.bank.id, amountCents: -6000 }], allocationLines: [{ categoryId: f.fees.id, amountCents: -6000 }] }));
+    f.deps.db.update(financeMoneyLines).set({ rawTransactionId: 'R4' }).where(eq(financeMoneyLines.entryId, high.id)).run();
+    expect(unwrap(await getEntry(f.deps, f.ctx, { id: high.id })).documentation).toMatchObject({ state: 'statementSuffices', warnExpenseAboveLimit: true });
+
+    const low = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'Gebühr niedrig', moneyLines: [{ accountId: f.bank.id, amountCents: -4000 }], allocationLines: [{ categoryId: f.fees.id, amountCents: -4000 }] }));
+    f.deps.db.update(financeMoneyLines).set({ rawTransactionId: 'R5' }).where(eq(financeMoneyLines.entryId, low.id)).run();
+    expect(unwrap(await getEntry(f.deps, f.ctx, { id: low.id })).documentation).toMatchObject({ state: 'statementSuffices', warnExpenseAboveLimit: false });
+
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.statementSufficesBelowCents', 0, 'test.setLimit'));
+    expect(unwrap(await getEntry(f.deps, f.ctx, { id: high.id })).documentation).toMatchObject({ warnExpenseAboveLimit: false });
+  });
+});
+
+describe('readVoucher', () => {
+  it('hands out the file through the file module’s check — finance.read is enough, a stranger gets nothing', async () => {
+    const f = await ledgerFixture();
+    const entry = await f.finalEntry();
+    const voucher = unwrap(await uploadVoucher(f.deps, f.ctx, { entryId: entry.id, bytes: pdfBytes(), typeKey: 'voucher-invoice', documentDate: '2026-03-01' }));
+    const reader = ctxWith(['finance.read']);
+    const res = unwrap(await readVoucher(f.deps, reader, { entryId: entry.id, documentId: voucher.documentId }));
+    expect(res.number).toBe(voucher.documentNumber);
+    expect(res.bytes.byteLength).toBeGreaterThan(0);
+    const stranger = ctxWith([]);
+    expect((await readVoucher(f.deps, stranger, { entryId: entry.id, documentId: voucher.documentId })).ok).toBe(false);
   });
 });
