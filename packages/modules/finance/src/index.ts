@@ -14,6 +14,7 @@ export {
   financeOpenItems,
   financeOpenItemSettlements,
   financePeriodEvents,
+  financeProjectSettings,
   financePurposes,
   type FinanceAccountRow,
   type FinanceAllocationCorrectionRow,
@@ -28,6 +29,7 @@ export {
   type FinanceOpenItemRow,
   type FinanceOpenItemSettlementRow,
   type FinancePeriodEventRow,
+  type FinanceProjectSettingsRow,
   type FinancePurposeRow,
 } from './schema';
 
@@ -142,6 +144,7 @@ export {
   type UndocumentedEntryPreview,
 } from './ledger/period';
 export { financeRecordDeleted, financeRecordReferences, financeRetentionHolds, yearAnchorInternal } from './ledger/holds';
+export { getProjectFinance, projectFinanceInternal, setProjectFinance, type ProjectFinanceSettings } from './ledger/project-settings';
 export { cancelOpenItem, createOpenItem, listOpenItems, openCentsInternal, openItemsAtInternal, saveOpenItem, updateOpenItem, type OpenItemView } from './ledger/open-items';
 export { applyCorrectionInternal, approveAllocationCorrection, decideAllocationCorrection, listAllocationCorrections, rejectAllocationCorrection, requestAllocationCorrection, type CorrectionView } from './ledger/corrections';
 

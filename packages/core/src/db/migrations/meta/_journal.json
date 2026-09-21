@@ -113,6 +113,13 @@
       "when": 1789976241944,
       "tag": "0015_finance_entry_justifications",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1789977103963,
+      "tag": "0016_finance_project_settings",
+      "breakpoints": true
     }
   ]
 }

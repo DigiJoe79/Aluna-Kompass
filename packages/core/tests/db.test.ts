@@ -52,6 +52,7 @@ describe('database', () => {
       'finance_open_item_settlements',
       'finance_open_items',
       'finance_period_events',
+      'finance_project_settings',
       'finance_purposes',
       'follow_ups',
       'media_assets',

@@ -9,6 +9,7 @@ import { financeConflict } from '../errors';
 import { financeAccounts, financeAllocationCorrections, financeAllocationLines, financeCategories, financeEntries, financeEntryDocuments, financeEntryJustifications, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, financePurposes, type FinanceAllocationLineRow, type FinanceEntryRow, type FinanceMoneyLineRow } from '../schema';
 import { requireFinanceRead } from './access';
 import { TAX_CODES } from './codes';
+import { projectFinanceInternal } from './project-settings';
 import { taxContextAt, taxOf, type TaxCode, type TaxResult } from './tax';
 
 /** Eine Geldzeile erledigt einen offenen Posten ganz oder teilweise (Spec 5.3). */
@@ -275,6 +276,11 @@ function purposeAbroad(db: DbOrTx, id: string): boolean {
   return db.select({ abroad: financePurposes.abroad }).from(financePurposes).where(eq(financePurposes.id, id)).get()?.abroad ?? false;
 }
 
+/** Finanzfelder eines Projekts, nur das Auslands-Flag — vorgabe `false` ohne Zeile (F2c Task 7). */
+function projectAbroad(db: DbOrTx, id: string): boolean {
+  return projectFinanceInternal(db, id).abroad;
+}
+
 function projectExists(db: DbOrTx, id: string): boolean {
   return !!db.select({ id: projects.id }).from(projects).where(eq(projects.id, id)).get();
 }
@@ -344,7 +350,7 @@ function resolvedLines(deps: Deps, input: EntryLinesInput): { moneyLines: MoneyL
         projectId: l.projectId ?? null,
         purposeId: l.purposeId ?? null,
         contactId: l.contactId ?? null,
-        abroad: l.abroad ?? (l.purposeId ? purposeAbroad(deps.db, l.purposeId) : false),
+        abroad: l.abroad ?? ((l.purposeId ? purposeAbroad(deps.db, l.purposeId) : false) || (l.projectId ? projectAbroad(deps.db, l.projectId) : false)),
         originLineId: l.originLineId ?? null,
         addsToAssets: l.addsToAssets ?? category.incomeKind === 'inheritance',
       };

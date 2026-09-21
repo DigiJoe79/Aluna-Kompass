@@ -9,6 +9,7 @@ import { deleteDraft, getEntry, listEntries, saveDraft, setReviewed } from './le
 import { bookEntry, finalizeEntry, finalizeReviewed } from './ledger/finalize';
 import { cancelOpenItem, listOpenItems, saveOpenItem } from './ledger/open-items';
 import { getBalances, getIncomeStatement } from './ledger/overview';
+import { getProjectFinance, setProjectFinance } from './ledger/project-settings';
 import { reverseEntry } from './ledger/reverse';
 import { attachDocument, revokeVoucher, uploadVoucher } from './ledger/vouchers';
 
@@ -109,6 +110,8 @@ const listCorrectionsMcpSchema = z.object({ state: z.enum(['pending', 'applied',
 
 const getBalancesMcpSchema = z.object({ date: z.string().optional() });
 const getIncomeStatementMcpSchema = z.object({ fiscalYearId: z.string().optional(), from: z.string().optional(), to: z.string().optional() });
+const getProjectFinanceMcpSchema = z.object({ projectId: z.string() });
+const setProjectFinanceMcpSchema = z.object({ projectId: z.string(), targetCents: z.number().int().nullable().optional(), defaultPurposeId: z.string().nullable().optional(), abroad: z.boolean().optional(), publishDonationStatus: z.boolean().optional() });
 
 /** Verteilerdienste (Spec 10.2): ein Werkzeug je Tätigkeit statt zwanzig, mit `kind` als Discriminator. */
 export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
@@ -207,4 +210,6 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
   t({ name: 'finance_corrections_list', description: 'List allocation corrections by state or entry. Requires finance.read.', inputSchema: listCorrectionsMcpSchema, handler: (deps, ctx, args) => listAllocationCorrections(deps, ctx, args), service: listAllocationCorrections }),
   t({ name: 'finance_balances', description: 'Money account balances, purpose balances and the asset overview at a date (today by default). Requires finance.overview or finance.read.', inputSchema: getBalancesMcpSchema, handler: (deps, ctx, args) => getBalances(deps, ctx, args), service: getBalances }),
   t({ name: 'finance_income_statement', description: 'Income and expense statement by sphere, for a fiscal year or a date range (never both, never neither). Marked preliminary while the fiscal year is open. Requires finance.overview or finance.read.', inputSchema: getIncomeStatementMcpSchema, handler: (deps, ctx, args) => getIncomeStatement(deps, ctx, args), service: getIncomeStatement }),
+  t({ name: 'finance_project_get', description: 'Read a project’s finance fields (target, default purpose, abroad, donation status published) and its summed result. Requires finance.overview or finance.read; carries no names.', inputSchema: getProjectFinanceMcpSchema, handler: (deps, ctx, args) => getProjectFinance(deps, ctx, args), service: getProjectFinance }),
+  t({ name: 'finance_project_set', description: 'Set a project’s finance fields. Requires finance.setup.', inputSchema: setProjectFinanceMcpSchema, handler: (deps, ctx, args) => setProjectFinance(deps, ctx, args), service: setProjectFinance }),
 ];

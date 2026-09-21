@@ -327,3 +327,14 @@ export const financeEntryJustifications = sqliteTable('finance_entry_justificati
   at: text('at').notNull(),
 });
 export type FinanceEntryJustificationRow = typeof financeEntryJustifications.$inferSelect;
+
+/** Finanzfelder eines Projekts — kein Fremdschlüssel: Projekte gehören einem anderen Modul. Ohne Zeile gelten die Vorgaben aus `projectFinanceInternal`. */
+export const financeProjectSettings = sqliteTable('finance_project_settings', {
+  projectId: text('project_id').primaryKey(),
+  targetCents: integer('target_cents'),
+  defaultPurposeId: text('default_purpose_id').references(() => financePurposes.id),
+  abroad: integer('abroad', { mode: 'boolean' }).notNull().default(false),
+  publishDonationStatus: integer('publish_donation_status', { mode: 'boolean' }).notNull().default(false),
+  updatedAt: text('updated_at').notNull(),
+});
+export type FinanceProjectSettingsRow = typeof financeProjectSettings.$inferSelect;
