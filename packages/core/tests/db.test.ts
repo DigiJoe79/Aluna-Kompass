@@ -39,6 +39,7 @@ describe('database', () => {
       'document_types',
       'documents',
       'finance_accounts',
+      'finance_allocation_corrections',
       'finance_allocation_lines',
       'finance_categories',
       'finance_dated_values',

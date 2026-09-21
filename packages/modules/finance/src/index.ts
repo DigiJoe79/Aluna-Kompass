@@ -6,6 +6,7 @@ export {
   financeDatedValues,
   financeEntries,
   financeEntryCounters,
+  financeAllocationCorrections,
   financeEntryDocuments,
   financeFiscalYears,
   financeMoneyLines,
@@ -14,6 +15,7 @@ export {
   financePeriodEvents,
   financePurposes,
   type FinanceAccountRow,
+  type FinanceAllocationCorrectionRow,
   type FinanceAllocationLineRow,
   type FinanceCategoryRow,
   type FinanceDatedValueRow,
@@ -109,6 +111,7 @@ export {
 
 export { attachDocument, readVoucher, revokeVoucher, uploadVoucher, type VoucherLinkResult } from './ledger/vouchers';
 export { cancelOpenItem, createOpenItem, listOpenItems, openCentsInternal, openItemsAtInternal, updateOpenItem, type OpenItemView } from './ledger/open-items';
+export { applyCorrectionInternal, approveAllocationCorrection, listAllocationCorrections, rejectAllocationCorrection, requestAllocationCorrection, type CorrectionView } from './ledger/corrections';
 
 export { AUDIT_FIELDS, financeAudit, type FinanceEntity } from './audit';
 export { installFinance } from './install';

@@ -44,6 +44,14 @@ export const FINANCE_ERRORS = {
   openItemCancelled: { reason: 'Der Posten ist ohne Zahlung erledigt.', remedy: 'Wählen Sie einen offenen Posten, oder legen Sie einen neuen an.' },
   openItemInUse: { reason: 'Auf diesen Posten ist bereits eine Zahlung zugeordnet.', remedy: 'Ein zugeordneter Posten lässt sich nicht mehr ändern.' },
   openItemHasPayments: { reason: 'Auf diesen Posten ist bereits eine festgeschriebene Zahlung zugeordnet.', remedy: 'Stornieren Sie zuerst die Zahlung, bevor Sie den Posten ohne Zahlung erledigen.' },
+  lineNotFinal: { reason: 'Die Zeile gehört zu einem Entwurf.', remedy: 'Ändern Sie den Entwurf direkt — eine Korrektur ist nur für festgeschriebene Zeilen.' },
+  correctionChangesNothing: { reason: 'Keines der angegebenen Felder weicht vom aktuellen Wert ab.', remedy: 'Geben Sie mindestens eine tatsächliche Änderung an.' },
+  purposeChangeNeedsProof: { reason: 'Der Zweck einer Einnahmezeile ändert sich nur mit einem Dokument, das die ursprüngliche Bestimmung des Spenders belegt.', remedy: 'Legen Sie ein festgeschriebenes Dokument als Nachweis mit an, oder buchen Sie eine Umwidmung.' },
+  ownCorrection: { reason: 'Eine Korrektur gibt nicht frei, wer sie angelegt hat.', remedy: 'Lassen Sie eine andere Person mit dem Recht „Freigeben“ die Korrektur bestätigen.' },
+  section153Unacknowledged: { reason: 'Für das Geschäftsjahr ist die Steuererklärung bereits abgegeben — die Änderung berührt § 153 AO.', remedy: 'Bestätigen Sie den Hinweis, um fortzufahren.' },
+  contactLocked: { reason: 'Der Kontakt ist gesperrt: {reason}', remedy: 'Lösen Sie zuerst, was die Sperre begründet.' },
+  correctionNotPending: { reason: 'Die Korrektur wartet nicht mehr auf eine Entscheidung.', remedy: 'Legen Sie bei Bedarf eine neue Korrektur an.' },
+  correctionPendingExists: { reason: 'Für diese Zeile wartet schon eine Korrektur auf Freigabe.', remedy: 'Entscheiden Sie zuerst über die wartende Korrektur.' },
 } as const satisfies Record<string, { reason: string; remedy: string }>;
 
 export type FinanceErrorCode = keyof typeof FINANCE_ERRORS;

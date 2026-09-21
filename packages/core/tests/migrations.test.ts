@@ -53,6 +53,12 @@ describe('hand-written SQL survives', () => {
       expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
     }
   });
+
+  it('keeps an allocation correction permanent — never deleted, its request never rewritten', () => {
+    for (const name of ['finance_allocation_corrections_no_delete', 'finance_allocation_corrections_request_immutable']) {
+      expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
+    }
+  });
 });
 
 describe('the migrations of this version', () => {

@@ -99,6 +99,13 @@
       "when": 1789972454147,
       "tag": "0013_finance_open_items",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1789972923799,
+      "tag": "0014_finance_allocation_corrections",
+      "breakpoints": true
     }
   ]
 }

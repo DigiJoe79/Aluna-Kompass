@@ -6,7 +6,7 @@ import { and, asc, desc, eq, gte, inArray, lte, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
-import { financeAccounts, financeAllocationLines, financeCategories, financeEntries, financeEntryDocuments, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, financePurposes, type FinanceAllocationLineRow, type FinanceEntryRow, type FinanceMoneyLineRow } from '../schema';
+import { financeAccounts, financeAllocationCorrections, financeAllocationLines, financeCategories, financeEntries, financeEntryDocuments, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, financePurposes, type FinanceAllocationLineRow, type FinanceEntryRow, type FinanceMoneyLineRow } from '../schema';
 import { requireFinanceRead } from './access';
 import { TAX_CODES } from './codes';
 import { taxContextAt, taxOf, type TaxCode, type TaxResult } from './tax';
@@ -21,6 +21,10 @@ export type MoneyLineView = FinanceMoneyLineRow & { settlements: MoneyLineSettle
 export type AllocationLineView = FinanceAllocationLineRow & {
   /** Nach den Werten des Buchungstags berechnet — nie gespeichert. `null`, wenn dafür kein Satz hinterlegt ist. */
   tax: TaxResult | null;
+  /** Es gibt eine angewandte Zuordnungskorrektur (E18). */
+  corrected: boolean;
+  /** Wartet eine Korrektur auf Freigabe im abgeschlossenen Jahr? */
+  pendingCorrectionId: string | null;
 };
 
 /** Ein Beleg in der Sicht der Buchung — Nummer und Prüfsumme bleiben auch nach Widerruf oder Grabstein (F2c) stehen. */
@@ -202,10 +206,19 @@ export function entryViewInternal(db: DbOrTx, id: string): EntryView | null {
   // Immer berechnet, nie gespeichert (Spec 5.2): eine nachträglich richtig datierte Besteuerungsform macht alte Buchungen richtig.
   const context = taxContextAt(db, row.entryDate);
   const categories = categoriesById(db, allocationLineRows.map((l) => l.categoryId));
-  const allocationLines: AllocationLineView[] = allocationLineRows.map((l) => ({
-    ...l,
-    tax: context ? taxOf({ amountCents: l.amountCents, taxCode: l.taxCode as TaxCode, rateKind: l.rateKind as 'standard' | 'reduced', taxation: context.taxation, inputTaxDeductible: categories.get(l.categoryId)?.inputTaxDeductible ?? 'no', rates: context.rates }) : null,
-  }));
+  const correctionRows =
+    allocationLineRows.length > 0
+      ? db.select({ lineId: financeAllocationCorrections.lineId, state: financeAllocationCorrections.state, id: financeAllocationCorrections.id }).from(financeAllocationCorrections).where(inArray(financeAllocationCorrections.lineId, allocationLineRows.map((l) => l.id))).all()
+      : [];
+  const allocationLines: AllocationLineView[] = allocationLineRows.map((l) => {
+    const own = correctionRows.filter((c) => c.lineId === l.id);
+    return {
+      ...l,
+      tax: context ? taxOf({ amountCents: l.amountCents, taxCode: l.taxCode as TaxCode, rateKind: l.rateKind as 'standard' | 'reduced', taxation: context.taxation, inputTaxDeductible: categories.get(l.categoryId)?.inputTaxDeductible ?? 'no', rates: context.rates }) : null,
+      corrected: own.some((c) => c.state === 'applied'),
+      pendingCorrectionId: own.find((c) => c.state === 'pending')?.id ?? null,
+    };
+  });
   const taxTotals = allocationLines.reduce((acc, l) => {
     if (!l.tax) return acc;
     return { outputTaxCents: acc.outputTaxCents + l.tax.outputTaxCents, reverseChargeTaxCents: acc.reverseChargeTaxCents + l.tax.reverseChargeTaxCents, inputTaxCents: acc.inputTaxCents + l.tax.inputTaxCents, inputTaxMemoCents: acc.inputTaxMemoCents + l.tax.inputTaxMemoCents };

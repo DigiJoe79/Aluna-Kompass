@@ -1,4 +1,4 @@
-import { unwrap, writeSettingInternal, coreModule, type CallContext } from '@kompass/core';
+import { newId, unwrap, writeSettingInternal, coreModule, type CallContext } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser, systemContext } from '@kompass/core/testing';
 import { contactsModule, createContact } from '@kompass/module-contacts';
 import { dmsModule } from '@kompass/module-dms';
@@ -10,7 +10,7 @@ import { createFirstFiscalYear, ensureFiscalYearFor, type FiscalYearView } from 
 import { createPurpose } from '../src/ledger/purposes';
 import { installFinance } from '../src/install';
 import { FINANCE_PERMISSIONS, financeModule } from '../src/manifest';
-import { financeCategories, type FinanceCategoryRow, type FinanceFiscalYearRow } from '../src/schema';
+import { financeCategories, financeFiscalYears, financePeriodEvents, type FinanceCategoryRow, type FinanceFiscalYearRow } from '../src/schema';
 
 /** Ein minimales, gültiges PDF — wie in den Tests der Akte (`packages/modules/dms/tests/helpers.ts`). */
 export function pdfBytes(): Uint8Array {
@@ -73,9 +73,25 @@ export async function ledgerFixture(opts: { years?: readonly string[] } = {}) {
   const abroadPurpose = unwrap(await createPurpose(deps, ctx, { name: 'Partnerprojekt Ausland', abroad: true }));
   const donorCtx: CallContext = { ...systemContext(), permissions: new Set(['contacts.manage']) };
   const donor = unwrap(await createContact(deps, donorCtx, { kind: 'person', lastName: 'Musterspenderin' }));
+  const wrongDonor = unwrap(await createContact(deps, donorCtx, { kind: 'person', lastName: 'Fehlspenderin' }));
+  const rightDonor = unwrap(await createContact(deps, donorCtx, { kind: 'person', lastName: 'Richtigspenderin' }));
+
+  /** Zweite Person mit allen Finanzrechten (u. a. `finance.approve`) — für die Freigabe im abgeschlossenen Jahr, nie der Anleger. */
+  const secondPersonId = insertUser(deps, { name: 'Zweite Person', email: 'zweite-person@kompass.local' });
+  const secondPerson = ctxWith(FINANCE_PERMISSIONS, secondPersonId);
 
   /** Eine ausgeglichene, festgeschriebene Spende — Ausgangslage für Beleg- und Postentests. */
   const finalEntry = async () => bookEntry(deps, ctx, { entryDate: '2026-03-01', text: 'Spende', moneyLines: [{ accountId: bank.id, amountCents: 5000 }], allocationLines: [{ categoryId: donations.id, amountCents: 5000 }] }).then(unwrap);
 
-  return { deps, ctx, userId, bank, cash, year, years, donations, fees, programCosts, purposeIncome, abroadPurpose, donor, finalEntry };
+  /** Eine festgeschriebene Spende mit Kontakt — Ausgangslage für die Zuordnungskorrektur. */
+  const finalDonation = async (opts: { date: string; cents: number; contactId: string }) =>
+    bookEntry(deps, ctx, { entryDate: opts.date, text: 'Spende', moneyLines: [{ accountId: bank.id, amountCents: opts.cents }], allocationLines: [{ categoryId: donations.id, amountCents: opts.cents, contactId: opts.contactId }] }).then(unwrap);
+
+  /** Schließt ein Geschäftsjahr — wie in `reverse.test.ts`, hier als Fixture-Helfer für die Korrektur-Tests. */
+  const closeYear = (yearId: string) => {
+    const row = deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.id, yearId)).get()!;
+    deps.db.insert(financePeriodEvents).values({ id: newId(), fiscalYearId: yearId, kind: 'closed', at: `${row.endsOn}T23:59:59.000Z`, byUserId: userId, reason: null }).run();
+  };
+
+  return { deps, ctx, userId, bank, cash, year, years, donations, fees, programCosts, purposeIncome, abroadPurpose, donor, wrongDonor, rightDonor, secondPerson, secondPersonId, finalEntry, finalDonation, closeYear };
 }

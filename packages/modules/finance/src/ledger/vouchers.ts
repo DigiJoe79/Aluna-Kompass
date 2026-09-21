@@ -160,8 +160,13 @@ export async function readVoucher(deps: Deps, ctx: CallContext, input: unknown):
   return ok({ bytes: result.value.bytes, filename: result.value.filename, number: result.value.record.number });
 }
 
-/** Die eigene Zeile — dieselbe für Hochladen und Verknüpfen, in derselben Transaktion wie die Akte. */
-function writeVoucherLink(tx: DbOrTx, deps: Deps, ctx: CallContext, input: { entryId: string; documentId: string; documentNumber: string; documentChecksum: string | null; viaUpload: boolean }): VoucherLinkResult {
+/**
+ * Die eigene Zeile — dieselbe für Hochladen und Verknüpfen, in derselben
+ * Transaktion wie die Akte. Auch von `corrections.ts` benutzt: Der
+ * Zweck-Nachweis einer Einnahmezeile hängt genauso an der Buchung wie ein
+ * gewöhnlicher Beleg.
+ */
+export function writeVoucherLink(tx: DbOrTx, deps: Deps, ctx: CallContext, input: { entryId: string; documentId: string; documentNumber: string; documentChecksum: string | null; viaUpload: boolean }): VoucherLinkResult {
   const linkId = newId();
   const now = isoNow(deps.clock);
   tx.insert(financeEntryDocuments)

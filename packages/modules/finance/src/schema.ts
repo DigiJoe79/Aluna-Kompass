@@ -293,3 +293,28 @@ export const financeOpenItemSettlements = sqliteTable(
   (t) => [uniqueIndex('finance_open_item_settlements_pair_idx').on(t.moneyLineId, t.openItemId), index('finance_open_item_settlements_item_idx').on(t.openItemId)],
 );
 export type FinanceOpenItemSettlementRow = typeof financeOpenItemSettlements.$inferSelect;
+
+/** E18: Vorher und Nachher einer Zuordnung — der Fachdatensatz, in dem stehen darf, was nie ins Protokoll kommt. Nie gelöscht. */
+export const financeAllocationCorrections = sqliteTable(
+  'finance_allocation_corrections',
+  {
+    id: text('id').primaryKey(),
+    lineId: text('line_id').notNull().references(() => financeAllocationLines.id),
+    entryId: text('entry_id').notNull().references(() => financeEntries.id),
+    state: text('state', { enum: ['pending', 'applied', 'rejected'] }).notNull(),
+    before: text('before').notNull(),
+    after: text('after').notNull(),
+    note: text('note').notNull(),
+    proofDocumentId: text('proof_document_id'),
+    section153: integer('section_153', { mode: 'boolean' }).notNull().default(false),
+    requestedByUserId: text('requested_by_user_id').notNull(),
+    requestedAt: text('requested_at').notNull(),
+    approvedByUserId: text('approved_by_user_id'),
+    approvedAt: text('approved_at'),
+    rejectedByUserId: text('rejected_by_user_id'),
+    rejectedAt: text('rejected_at'),
+    rejectNote: text('reject_note'),
+  },
+  (t) => [index('finance_allocation_corrections_line_idx').on(t.lineId), index('finance_allocation_corrections_entry_idx').on(t.entryId), index('finance_allocation_corrections_state_idx').on(t.state)],
+);
+export type FinanceAllocationCorrectionRow = typeof financeAllocationCorrections.$inferSelect;
