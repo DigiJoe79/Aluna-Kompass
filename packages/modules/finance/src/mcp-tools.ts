@@ -1,6 +1,8 @@
 import { invalid, readSetting, type McpToolDefinition } from '@kompass/core';
 import { z } from 'zod';
+import { decideCandidate, listCandidates } from './import/candidates';
 import { getImportRun, importStatement, listImportRuns } from './import/runs';
+import { listRawTransactions } from './import/queries';
 import { closePurpose, deleteMasterData, readMasterData, saveMasterData, setMasterDataActive } from './ledger/master-data';
 import { decideAllocationCorrection, listAllocationCorrections, requestAllocationCorrection } from './ledger/corrections';
 import { countCash, emptyDonationBox, listCashCounts, moveCash } from './ledger/cash';
@@ -54,7 +56,7 @@ const purposeCloseSchema = z.object({ id: z.string(), how: z.enum(['fulfilled', 
 const setDatedValueSchema = z.object({ key: z.string(), validFrom: z.string(), value: z.union([z.number(), z.string()]) });
 const removeDatedValueSchema = z.object({ key: z.string(), validFrom: z.string() });
 
-const moneyLineSchema = z.object({ accountId: z.string(), amountCents: z.number().int() });
+const moneyLineSchema = z.object({ accountId: z.string(), amountCents: z.number().int(), rawTransactionId: z.string().nullable().optional() });
 const allocationLineSchema = z.object({
   categoryId: z.string(),
   amountCents: z.number().int(),
@@ -161,6 +163,9 @@ const setFinanceLimitMcpSchema = z.object({ key: z.enum(['finance.statementSuffi
 const importStatementMcpSchema = z.object({ accountId: z.string(), fileName: z.string(), contentBase64: z.string().min(1), confirmFormatChange: z.boolean().optional() });
 const listImportRunsMcpSchema = z.object({ accountId: z.string().optional(), limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() });
 const getImportRunMcpSchema = z.object({ id: z.string() });
+const listCandidatesMcpSchema = z.object({ runId: z.string().optional(), open: z.boolean().optional() });
+const decideCandidateMcpSchema = z.object({ id: z.string(), decision: z.enum(['same', 'own']) });
+const listRawTransactionsMcpSchema = z.object({ accountId: z.string().optional(), runId: z.string().optional(), state: z.enum(['open', 'booked']).optional(), limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() });
 
 const previewPeriodMcpSchema = z.object({ id: z.string(), action: z.enum(['close', 'reopen']) });
 const closeFiscalYearMcpSchema = z.object({ id: z.string() });
@@ -331,4 +336,7 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
   }),
   t({ name: 'finance_import_runs_list', description: 'List import runs (statement uploads), optionally filtered by account, newest first. Counterparty, iban and purpose never appear here - only counts and balances. Requires finance.read.', inputSchema: listImportRunsMcpSchema, handler: (deps, ctx, args) => listImportRuns(deps, ctx, args), service: listImportRuns }),
   t({ name: 'finance_import_run_get', description: 'Read one import run with its raw transactions (counterparty, iban, purpose included). Requires finance.read.', inputSchema: getImportRunMcpSchema, handler: (deps, ctx, args) => getImportRun(deps, ctx, args), service: getImportRun }),
+  t({ name: 'finance_import_candidates_list', description: 'List import candidates - statement lines whose duplicate match is only probable, shown next to the existing raw transaction they might match. Requires finance.read.', inputSchema: listCandidatesMcpSchema, handler: (deps, ctx, args) => listCandidates(deps, ctx, args), service: listCandidates }),
+  t({ name: 'finance_import_candidate_decide', description: 'Decide an import candidate: "same" leaves it as is, "own" turns it into a new raw transaction. Decidable only once. Requires finance.entriesWrite.', inputSchema: decideCandidateMcpSchema, handler: (deps, ctx, args) => decideCandidate(deps, ctx, args), service: decideCandidate }),
+  t({ name: 'finance_raw_transactions_list', description: 'List raw transactions (bank statement lines already accepted), with counterparty, iban and purpose, filterable by account, run or state (open/booked). Requires finance.read.', inputSchema: listRawTransactionsMcpSchema, handler: (deps, ctx, args) => listRawTransactions(deps, ctx, args), service: listRawTransactions }),
 ];

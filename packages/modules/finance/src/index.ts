@@ -181,4 +181,5 @@ export { seedFinance } from './seed';
 export { parseCamt053, type CamtError, type CamtLine, type CamtStatement } from './import/camt';
 export { dedupKey, normalizePurpose } from './import/dedup';
 export { getImportRun, importStatement, listImportRuns, type ImportRunView } from './import/runs';
-export { rawTransactionViewInternal, rawTransactionsForRunInternal, type RawTransactionView } from './import/queries';
+export { decideCandidate, listCandidates, type CandidateView } from './import/candidates';
+export { listRawTransactions, rawStateInternal, rawTransactionViewInternal, rawTransactionsForRunInternal, type RawTransactionView } from './import/queries';

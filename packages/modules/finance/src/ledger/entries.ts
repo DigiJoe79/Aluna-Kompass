@@ -6,7 +6,7 @@ import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, like, lte, or, typ
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
-import { financeAccounts, financeAllocationCorrections, financeAllocationLines, financeCategories, financeEntries, financeEntryDocuments, financeEntryJustifications, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, financePurposes, type FinanceAllocationLineRow, type FinanceEntryRow, type FinanceMoneyLineRow } from '../schema';
+import { financeAccounts, financeAllocationCorrections, financeAllocationLines, financeCategories, financeEntries, financeEntryDocuments, financeEntryJustifications, financeImportRuns, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, financePurposes, financeRawTransactions, type FinanceAllocationLineRow, type FinanceEntryRow, type FinanceMoneyLineRow } from '../schema';
 import { requireFinanceRead } from './access';
 import { TAX_CODES } from './codes';
 import { projectFinanceInternal } from './project-settings';
@@ -83,6 +83,8 @@ const moneyLineSchema = z.object({
   accountId: z.string().min(1),
   amountCents: z.number().int().refine((v) => v !== 0, 'amountCentsRequired'),
   settlements: z.array(settlementInputSchema).optional(),
+  /** F4 Task 4: der Kontoumsatz, den diese Zeile bucht — geprüft in `checkRawTransaction`. */
+  rawTransactionId: z.string().min(1).nullable().optional(),
 });
 
 const allocationLineSchema = z.object({
@@ -357,6 +359,27 @@ function checkSettlements(db: DbOrTx, line: { amountCents: number; settlements?:
   return null;
 }
 
+/**
+ * F4 Task 4: der Kontoumsatz einer Geldzeile muss existieren, aus einem nicht
+ * verworfenen Auszug stammen, zu Konto, Vorzeichen und Betrag der Zeile
+ * passen und darf höchstens einer nicht zurückgenommenen Buchung gehören.
+ * `ownEntryId` ist die Buchung, die gerade gespeichert wird (beim erneuten
+ * Speichern desselben Entwurfs zählt ihre eigene, alte Bindung nicht als
+ * „bereits vergeben“) — bei `bookEntry` immer `undefined`, weil dort stets
+ * eine neue Buchung entsteht.
+ */
+function checkRawTransaction(db: DbOrTx, line: { accountId: string; amountCents: number; rawTransactionId?: string | null }, ownEntryId: string | undefined): Failure | null {
+  if (!line.rawTransactionId) return null;
+  const raw = db.select().from(financeRawTransactions).where(eq(financeRawTransactions.id, line.rawTransactionId)).get();
+  if (!raw) return notFound('financeRawTransaction', line.rawTransactionId);
+  if (raw.accountId !== line.accountId || raw.amountCents !== line.amountCents) return financeConflict('rawTransactionMismatch');
+  const run = db.select({ discardedAt: financeImportRuns.discardedAt }).from(financeImportRuns).where(eq(financeImportRuns.id, raw.runId)).get();
+  if (run?.discardedAt) return financeConflict('rawTransactionDiscarded');
+  const takenBy = db.select({ entryId: financeMoneyLines.entryId }).from(financeMoneyLines).where(and(eq(financeMoneyLines.rawTransactionId, raw.id), isNull(financeMoneyLines.rawReleasedAt))).get();
+  if (takenBy && takenBy.entryId !== ownEntryId) return financeConflict('rawTransactionTaken');
+  return null;
+}
+
 /** Prüft, was eine Buchung ansteuert; ansonsten unverändert von `input`. Erst das Festschreiben prüft, ob es auch aktiv ist. */
 function checkReferences(deps: Deps, input: EntryLinesInput): Failure | null {
   const accounts = accountsById(deps.db, input.moneyLines.map((l) => l.accountId));
@@ -364,6 +387,8 @@ function checkReferences(deps: Deps, input: EntryLinesInput): Failure | null {
     if (!accounts.has(line.accountId)) return notFound('financeAccount', line.accountId);
     const settlementProblem = checkSettlements(deps.db, line);
     if (settlementProblem) return settlementProblem;
+    const rawProblem = checkRawTransaction(deps.db, line, input.id);
+    if (rawProblem) return rawProblem;
   }
 
   const categories = categoriesById(deps.db, input.allocationLines.map((l) => l.categoryId));
@@ -386,7 +411,7 @@ function cashLineProblem(deps: Deps, moneyLines: readonly { accountId: string }[
 function resolvedLines(deps: Deps, input: EntryLinesInput): { moneyLines: MoneyLineWrite[]; allocationLines: AllocationLineWrite[] } {
   const categories = categoriesById(deps.db, input.allocationLines.map((l) => l.categoryId));
   return {
-    moneyLines: input.moneyLines.map((l) => ({ accountId: l.accountId, amountCents: l.amountCents, settlements: l.settlements })),
+    moneyLines: input.moneyLines.map((l) => ({ accountId: l.accountId, amountCents: l.amountCents, settlements: l.settlements, rawTransactionId: l.rawTransactionId ?? null })),
     allocationLines: input.allocationLines.map((l) => {
       const category = categories.get(l.categoryId)!;
       return {

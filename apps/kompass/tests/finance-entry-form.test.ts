@@ -92,6 +92,19 @@ describe('remainderCents', () => {
     expect(backToService.input.allocationLines[0]!.amountCents).toBe(-6000);
   });
 
+  it('carries the raw transaction of a money row through the form round trip', () => {
+    const roundTripped = fromEntryView({
+      id: 'E1', entryDate: '2026-03-01', text: 'Spende',
+      moneyLines: [{ accountId: 'bank', amountCents: 5000, rawTransactionId: 'RAW1' }],
+      allocationLines: [{ categoryId: 'donations', amountCents: 5000 }],
+    });
+    expect(roundTripped.moneyRows[0]).toMatchObject({ accountId: 'bank', rawTransactionId: 'RAW1' });
+
+    const result = toServiceInput(roundTripped);
+    if (!result.ok) throw new Error('expected ok');
+    expect(result.input.moneyLines[0]!.rawTransactionId).toBe('RAW1');
+  });
+
   it('puts the rest into the chosen row', () => {
     let state = emptyForm('income', '2026-03-01');
     state = { ...state, moneyRows: [{ ...state.moneyRows[0]!, accountId: 'bank', amountText: '485,00' }] };

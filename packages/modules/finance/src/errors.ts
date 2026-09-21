@@ -74,6 +74,11 @@ export const FINANCE_ERRORS = {
   statementIbanMismatch: { reason: 'Die IBAN im Auszug passt nicht zum Konto {account}.', remedy: 'Wählen Sie das passende Konto, oder tragen Sie die richtige IBAN am Konto ein.' },
   statementFormatChange: { reason: 'Für {account} war bisher ein anderes Auszugsformat hinterlegt; nach dem Wechsel gibt es mehr Zweifelsfälle.', remedy: 'Bestätigen Sie den Wechsel, wenn Sie ihn wirklich wollen.' },
   statementAlreadyImported: { reason: 'Dieser Auszug wurde für das Konto {account} bereits geladen.', remedy: 'Nichts zu tun — oder verwerfen Sie den vorhandenen Auszug zuerst, wenn er falsch war.' },
+  // F4 Task 4 — Kandidaten entscheiden, Rohumsatz an der Geldzeile.
+  rawTransactionMismatch: { reason: 'Der gewählte Kontoumsatz passt nicht zu Konto, Vorzeichen oder Betrag dieser Zeile.', remedy: 'Wählen Sie den passenden Kontoumsatz, oder lösen Sie die Verknüpfung.' },
+  rawTransactionTaken: { reason: 'Dieser Kontoumsatz ist bereits einer anderen Buchung zugeordnet.', remedy: 'Wählen Sie einen anderen Kontoumsatz, oder nehmen Sie zuerst die vorhandene Buchung zurück.' },
+  rawTransactionDiscarded: { reason: 'Der Auszug, aus dem dieser Kontoumsatz stammt, wurde verworfen.', remedy: 'Laden Sie den Auszug bei Bedarf erneut, oder lösen Sie die Verknüpfung.' },
+  candidateAlreadyDecided: { reason: 'Für diesen Kontoumsatz-Kandidaten steht die Entscheidung schon fest.', remedy: 'Nichts zu tun.' },
 } as const satisfies Record<string, { reason: string; remedy: string }>;
 
 export type FinanceErrorCode = keyof typeof FINANCE_ERRORS;

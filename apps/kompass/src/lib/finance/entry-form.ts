@@ -9,6 +9,8 @@ export interface MoneyRow {
   amountText: string;
   direction: 'in' | 'out';
   settlements: { openItemId: string; amountText: string }[];
+  /** F4 Task 4: der Kontoumsatz, den diese Zeile bucht — keine eigene Oberfläche dafür, kommt mit F5; nur durchgereicht, damit das Bearbeiten eines Entwurfs die Bindung nicht verliert. */
+  rawTransactionId?: string | null;
 }
 
 export interface SplitRowState {
@@ -42,7 +44,7 @@ export interface EntryViewLike {
   updatedAt?: string;
   entryDate: string;
   text: string;
-  moneyLines: { accountId: string; amountCents: number; settlements?: { openItemId: string; amountCents: number }[] }[];
+  moneyLines: { accountId: string; amountCents: number; settlements?: { openItemId: string; amountCents: number }[]; rawTransactionId?: string | null }[];
   allocationLines: {
     categoryId: string;
     amountCents: number;
@@ -155,7 +157,7 @@ export function toServiceInput(state: EntryFormState): { ok: true; input: EntryL
       settlements.push({ openItemId: s.openItemId, amountCents: settlementCents });
     });
     if (settlementProblem) return;
-    moneyLines.push({ accountId: row.accountId, amountCents: row.direction === 'in' ? parsed : -parsed, settlements: settlements.length > 0 ? settlements : undefined });
+    moneyLines.push({ accountId: row.accountId, amountCents: row.direction === 'in' ? parsed : -parsed, settlements: settlements.length > 0 ? settlements : undefined, rawTransactionId: row.rawTransactionId ?? undefined });
   });
 
   const allocationLines: EntryLinesInput['allocationLines'] = [];
@@ -201,6 +203,7 @@ export function fromEntryView(view: EntryViewLike): EntryFormState {
     direction: line.amountCents >= 0 ? 'in' : 'out',
     amountText: formatAmount(Math.abs(line.amountCents)),
     settlements: (line.settlements ?? []).map((s) => ({ openItemId: s.openItemId, amountText: formatAmount(s.amountCents) })),
+    rawTransactionId: line.rawTransactionId ?? null,
   }));
 
   const splitRows: SplitRowState[] = view.allocationLines.map((line, index) => ({
