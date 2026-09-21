@@ -1,11 +1,12 @@
 import { expectedVersionField, isoNow, newId, notFound, ok, requireHumanChannel, requirePermission, staleVersion, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
 import { contacts } from '@kompass/module-contacts';
+import { unlinkDocumentInternal } from '@kompass/module-dms';
 import { projects } from '@kompass/module-projects';
 import { and, asc, desc, eq, gte, inArray, lte, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
-import { financeAccounts, financeAllocationLines, financeCategories, financeEntries, financeMoneyLines, financePurposes, type FinanceAllocationLineRow, type FinanceEntryRow, type FinanceMoneyLineRow } from '../schema';
+import { financeAccounts, financeAllocationLines, financeCategories, financeEntries, financeEntryDocuments, financeMoneyLines, financePurposes, type FinanceAllocationLineRow, type FinanceEntryRow, type FinanceMoneyLineRow } from '../schema';
 import { requireFinanceRead } from './access';
 import { TAX_CODES } from './codes';
 import { taxContextAt, taxOf, type TaxCode, type TaxResult } from './tax';
@@ -330,6 +331,12 @@ export async function deleteDraft(deps: Deps, ctx: CallContext, input: unknown):
   if (before.status !== 'draft') return financeConflict('entryNotDraft', { number: before.number ?? before.id });
 
   return deps.db.transaction((tx: DbOrTx) => {
+    // Belegzeilen gehen mit dem Entwurf; der Bezug in der Akte wird gelöst, das Dokument selbst bleibt dort liegen.
+    const voucherLinks = tx.select({ documentId: financeEntryDocuments.documentId }).from(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, before.id)).all();
+    for (const link of voucherLinks) {
+      if (link.documentId) unlinkDocumentInternal(tx, { documentId: link.documentId, entityType: 'financeEntry', entityId: before.id });
+    }
+    tx.delete(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, before.id)).run();
     tx.delete(financeAllocationLines).where(eq(financeAllocationLines.entryId, before.id)).run();
     tx.delete(financeMoneyLines).where(eq(financeMoneyLines.entryId, before.id)).run();
     tx.delete(financeEntries).where(eq(financeEntries.id, before.id)).run();

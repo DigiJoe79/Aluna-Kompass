@@ -41,6 +41,12 @@ describe('hand-written SQL survives', () => {
       expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
     }
   });
+
+  it('locks a finance voucher link against retargeting, and against deletion once final', () => {
+    for (const name of ['finance_entry_documents_no_retarget', 'finance_entry_documents_document_only_cleared', 'finance_entry_documents_revoke_once', 'finance_entry_documents_final_no_delete']) {
+      expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
+    }
+  });
 });
 
 describe('the migrations of this version', () => {

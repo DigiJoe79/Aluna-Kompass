@@ -216,3 +216,40 @@ export const financeAllocationLines = sqliteTable(
   ],
 );
 export type FinanceAllocationLineRow = typeof financeAllocationLines.$inferSelect;
+
+/**
+ * Beleg an der Buchung — n:m, nur festgeschriebene Dokumente der Akte. Die Datei
+ * liegt dort; hier steht der Bezug, und derselbe Bezug steht in `document_links`
+ * (über ihn liefert die Akte aus). Widerrufen heißt kennzeichnen: Eine
+ * widerrufene Verknüpfung bleibt Halter und Verweis.
+ */
+export const financeEntryDocuments = sqliteTable(
+  'finance_entry_documents',
+  {
+    id: text('id').primaryKey(),
+    entryId: text('entry_id').notNull().references(() => financeEntries.id),
+    /**
+     * Kein Fremdschlüssel: Dokumente gehören der Akte. Wird `null`, wenn das
+     * Dokument nach seiner Frist gelöscht wird (F2c, `recordDeleted`) — dann
+     * bleibt der Grabstein aus Nummer und Prüfsumme.
+     */
+    documentId: text('document_id'),
+    /**
+     * Schon beim Verknüpfen kopiert, nicht erst beim Löschen: Die Akte meldet ein
+     * gelöschtes Dokument erst, nachdem seine Zeile weg ist — dann wäre nichts
+     * mehr zu lesen. Eine Nummer und eine Prüfsumme sind keine Personendaten.
+     */
+    documentNumber: text('document_number').notNull(),
+    documentChecksum: text('document_checksum'),
+    documentDeletedAt: text('document_deleted_at'),
+    addedAt: text('added_at').notNull(),
+    addedByUserId: text('added_by_user_id').notNull(),
+    revokedAt: text('revoked_at'),
+    revokedByUserId: text('revoked_by_user_id'),
+    /** Frei getippt — steht hier, nie im Protokoll. */
+    revokeNote: text('revoke_note'),
+    replacedByLinkId: text('replaced_by_link_id'),
+  },
+  (t) => [uniqueIndex('finance_entry_documents_pair_idx').on(t.entryId, t.documentId), index('finance_entry_documents_document_idx').on(t.documentId)],
+);
+export type FinanceEntryDocumentRow = typeof financeEntryDocuments.$inferSelect;

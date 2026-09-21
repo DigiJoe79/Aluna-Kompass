@@ -85,6 +85,13 @@
       "when": 1789939134283,
       "tag": "0011_finance_entries",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1789971432543,
+      "tag": "0012_finance_entry_documents",
+      "breakpoints": true
     }
   ]
 }

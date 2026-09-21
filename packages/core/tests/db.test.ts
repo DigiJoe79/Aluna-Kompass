@@ -44,6 +44,7 @@ describe('database', () => {
       'finance_dated_values',
       'finance_entries',
       'finance_entry_counters',
+      'finance_entry_documents',
       'finance_fiscal_years',
       'finance_money_lines',
       'finance_period_events',
