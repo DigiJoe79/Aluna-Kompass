@@ -79,6 +79,9 @@ export const FINANCE_ERRORS = {
   rawTransactionTaken: { reason: 'Dieser Kontoumsatz ist bereits einer anderen Buchung zugeordnet.', remedy: 'Wählen Sie einen anderen Kontoumsatz, oder nehmen Sie zuerst die vorhandene Buchung zurück.' },
   rawTransactionDiscarded: { reason: 'Der Auszug, aus dem dieser Kontoumsatz stammt, wurde verworfen.', remedy: 'Laden Sie den Auszug bei Bedarf erneut, oder lösen Sie die Verknüpfung.' },
   candidateAlreadyDecided: { reason: 'Für diesen Kontoumsatz-Kandidaten steht die Entscheidung schon fest.', remedy: 'Nichts zu tun.' },
+  // F4 Task 5 — Auszug verwerfen.
+  statementNotDiscardable: { reason: 'Dieser hochgeladene Auszug lässt sich nicht verwerfen.', remedy: 'Nur ein fertig geladener, noch nicht verworfener Auszug lässt sich verwerfen.' },
+  statementDiscardBlocked: { reason: 'Für diesen hochgeladenen Auszug gibt es noch festgeschriebene Buchungen.', remedy: 'Nehmen Sie die Buchungen zurück, dann lässt sich der Auszug verwerfen.' },
 } as const satisfies Record<string, { reason: string; remedy: string }>;
 
 export type FinanceErrorCode = keyof typeof FINANCE_ERRORS;

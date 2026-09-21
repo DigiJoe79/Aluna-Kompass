@@ -565,6 +565,26 @@ export async function listEntries(deps: Deps, ctx: CallContext, input: unknown):
   return ok({ entries, total, totals });
 }
 
+/**
+ * Die eigentliche Löschung eines Entwurfs, in einer bereits offenen
+ * Transaktion — von `deleteDraft` **und** vom Verwerfen eines Auszugs
+ * (`import/discard.ts`, F4 Task 5) genutzt: Ein verworfener Lauf löscht auch
+ * seine Entwürfe, auch geprüfte (Spec 6.1). Belegzeilen gehen mit dem
+ * Entwurf; der Bezug in der Akte wird gelöst, das Dokument selbst bleibt dort
+ * liegen.
+ */
+export function deleteDraftInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, before: EntryView): void {
+  const voucherLinks = tx.select({ documentId: financeEntryDocuments.documentId }).from(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, before.id)).all();
+  for (const link of voucherLinks) {
+    if (link.documentId) unlinkDocumentInternal(tx, { documentId: link.documentId, entityType: 'financeEntry', entityId: before.id });
+  }
+  tx.delete(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, before.id)).run();
+  tx.delete(financeAllocationLines).where(eq(financeAllocationLines.entryId, before.id)).run();
+  tx.delete(financeMoneyLines).where(eq(financeMoneyLines.entryId, before.id)).run();
+  tx.delete(financeEntries).where(eq(financeEntries.id, before.id)).run();
+  financeAudit(tx, deps, ctx, { action: 'finance.entry.draftDelete', entity: 'financeEntry', id: before.id, before: auditSnapshot(before, ctx), summary: `Buchungsentwurf ${before.id} gelöscht` });
+}
+
 /** `finance.entriesWrite`: ein Entwurf wird gelöscht, nicht storniert (Spec 5.4). */
 export async function deleteDraft(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ id: string }>> {
   const denied = requirePermission(ctx, 'finance.entriesWrite');
@@ -576,16 +596,7 @@ export async function deleteDraft(deps: Deps, ctx: CallContext, input: unknown):
   if (before.status !== 'draft') return financeConflict('entryNotDraft', { number: before.number ?? before.id });
 
   return deps.db.transaction((tx: DbOrTx) => {
-    // Belegzeilen gehen mit dem Entwurf; der Bezug in der Akte wird gelöst, das Dokument selbst bleibt dort liegen.
-    const voucherLinks = tx.select({ documentId: financeEntryDocuments.documentId }).from(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, before.id)).all();
-    for (const link of voucherLinks) {
-      if (link.documentId) unlinkDocumentInternal(tx, { documentId: link.documentId, entityType: 'financeEntry', entityId: before.id });
-    }
-    tx.delete(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, before.id)).run();
-    tx.delete(financeAllocationLines).where(eq(financeAllocationLines.entryId, before.id)).run();
-    tx.delete(financeMoneyLines).where(eq(financeMoneyLines.entryId, before.id)).run();
-    tx.delete(financeEntries).where(eq(financeEntries.id, before.id)).run();
-    financeAudit(tx, deps, ctx, { action: 'finance.entry.draftDelete', entity: 'financeEntry', id: before.id, before: auditSnapshot(before, ctx), summary: `Buchungsentwurf ${before.id} gelöscht` });
+    deleteDraftInternal(tx, deps, ctx, before);
     return ok({ id: before.id });
   });
 }

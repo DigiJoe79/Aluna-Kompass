@@ -35,7 +35,8 @@ function createdByUserName(db: DbOrTx, userId: string): string | null {
   return db.select({ name: schema.users.name }).from(schema.users).where(eq(schema.users.id, userId)).get()?.name ?? null;
 }
 
-function toRunView(db: DbOrTx, row: FinanceImportRunRow): ImportRunView {
+/** Auch von `import/discard.ts` genutzt (F4 Task 5) — dieselbe Sicht auf einen Lauf. */
+export function toRunView(db: DbOrTx, row: FinanceImportRunRow): ImportRunView {
   const state: ImportRunView['state'] = row.discardedAt !== null ? 'discarded' : row.failedAt !== null ? 'failed' : 'finished';
   return {
     id: row.id,
@@ -57,7 +58,8 @@ function toRunView(db: DbOrTx, row: FinanceImportRunRow): ImportRunView {
   };
 }
 
-function runRow(db: DbOrTx, id: string): FinanceImportRunRow | null {
+/** Auch von `import/discard.ts` genutzt (F4 Task 5). */
+export function importRunRowInternal(db: DbOrTx, id: string): FinanceImportRunRow | null {
   return db.select().from(financeImportRuns).where(eq(financeImportRuns.id, id)).get() ?? null;
 }
 
@@ -200,7 +202,7 @@ export async function importStatement(deps: Deps, ctx: CallContext, input: unkno
           summary: `Kontoauszug für Konto ${workingAccount.id} importiert`,
         });
 
-        runs.push(toRunView(tx, runRow(tx, runId)!));
+        runs.push(toRunView(tx, importRunRowInternal(tx, runId)!));
       }
 
       return ok({ runs });
@@ -314,7 +316,7 @@ export async function getImportRun(deps: Deps, ctx: CallContext, input: unknown)
   if (denied) return denied;
   const parsed = validate(deps, getImportRunSchema, input);
   if (!parsed.ok) return parsed;
-  const row = runRow(deps.db, parsed.value.id);
+  const row = importRunRowInternal(deps.db, parsed.value.id);
   if (!row) return notFound('financeImportRun', parsed.value.id);
   return ok({ ...toRunView(deps.db, row), rawTransactions: rawTransactionsForRunInternal(deps.db, row.id) });
 }
