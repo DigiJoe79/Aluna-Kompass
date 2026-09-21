@@ -1,6 +1,6 @@
 import { recordAudit, type CallContext, type DbOrTx, type Deps } from '@kompass/core';
 
-export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument' | 'financeOpenItem' | 'financeAllocationCorrection';
+export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument' | 'financeOpenItem' | 'financeAllocationCorrection' | 'financeEntryJustification';
 
 /**
  * Was vom Finanzmodul ins Änderungsprotokoll darf — je Entität eine Liste, und
@@ -32,6 +32,8 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   financeOpenItem: ['kind', 'itemDate', 'amountCents', 'dueOn', 'documentId', 'originType', 'originId', 'cancelled'],
   // Nie Kontakt-ID, nie Freitext (Spec 10.3, E18): nur, *dass* sich etwas ändert, nicht *worauf*.
   financeAllocationCorrection: ['entryId', 'lineId', 'state', 'partyChanged', 'projectChanged', 'purposeChanged', 'abroadChanged', 'withProof', 'section153'],
+  // Nie die Begründung selbst (Spec 5.4): sie steht am Datensatz, nie im Protokoll.
+  financeEntryJustification: ['entryId'],
 };
 
 const pick = (entity: FinanceEntity, data?: Record<string, unknown>) => (data ? Object.fromEntries(Object.entries(data).filter(([field]) => AUDIT_FIELDS[entity].includes(field))) : undefined);

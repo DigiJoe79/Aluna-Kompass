@@ -6,7 +6,7 @@ import { and, asc, desc, eq, gte, inArray, lte, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
-import { financeAccounts, financeAllocationCorrections, financeAllocationLines, financeCategories, financeEntries, financeEntryDocuments, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, financePurposes, type FinanceAllocationLineRow, type FinanceEntryRow, type FinanceMoneyLineRow } from '../schema';
+import { financeAccounts, financeAllocationCorrections, financeAllocationLines, financeCategories, financeEntries, financeEntryDocuments, financeEntryJustifications, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, financePurposes, type FinanceAllocationLineRow, type FinanceEntryRow, type FinanceMoneyLineRow } from '../schema';
 import { requireFinanceRead } from './access';
 import { TAX_CODES } from './codes';
 import { taxContextAt, taxOf, type TaxCode, type TaxResult } from './tax';
@@ -51,6 +51,8 @@ export interface EntryView extends FinanceEntryRow {
   taxTotals: { outputTaxCents: number; reverseChargeTaxCents: number; inputTaxCents: number; inputTaxMemoCents: number };
   vouchers: VoucherListEntry[];
   documentation: EntryDocumentationState;
+  /** Eine unbelegte, festgeschriebene Buchung trägt eine Begründung zum Periodenabschluss (F2c). */
+  justified: boolean;
 }
 
 /** Zeilen, wie `saveDraft`, `finalize.ts` und `reverse.ts` sie an die Datenbank geben — Vorbelegung ist schon aufgelöst. */
@@ -227,8 +229,9 @@ export function entryViewInternal(db: DbOrTx, id: string): EntryView | null {
   const voucherRows = db.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, id)).all();
   const vouchers: VoucherListEntry[] = voucherRows.map((v) => ({ linkId: v.id, documentId: v.documentId, documentNumber: v.documentNumber, documentDeletedAt: v.documentDeletedAt, addedAt: v.addedAt, revokedAt: v.revokedAt, replacedByLinkId: v.replacedByLinkId }));
   const documentation = documentationOf(db, id, { statementSufficesBelowCents: statementSufficesBelowCentsInternal(db) });
+  const justified = !!db.select({ entryId: financeEntryJustifications.entryId }).from(financeEntryJustifications).where(eq(financeEntryJustifications.entryId, id)).get();
 
-  return { ...row, moneyLines, allocationLines, remainderCents: moneySum - allocationSum, taxTotals, vouchers, documentation };
+  return { ...row, moneyLines, allocationLines, remainderCents: moneySum - allocationSum, taxTotals, vouchers, documentation, justified };
 }
 
 /** Nur Nummern und Zähler — nie Text, nie Kontakt (Spec 10.3). */

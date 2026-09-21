@@ -318,3 +318,12 @@ export const financeAllocationCorrections = sqliteTable(
   (t) => [index('finance_allocation_corrections_line_idx').on(t.lineId), index('finance_allocation_corrections_entry_idx').on(t.entryId), index('finance_allocation_corrections_state_idx').on(t.state)],
 );
 export type FinanceAllocationCorrectionRow = typeof financeAllocationCorrections.$inferSelect;
+
+/** Warum eine festgeschriebene Buchung ohne Beleg bleibt — eine Aussage des Schatzmeisters zum Jahresabschluss. Frei getippt, deshalb hier und nie im Protokoll. */
+export const financeEntryJustifications = sqliteTable('finance_entry_justifications', {
+  entryId: text('entry_id').primaryKey().references(() => financeEntries.id),
+  note: text('note').notNull(),
+  byUserId: text('by_user_id').notNull(),
+  at: text('at').notNull(),
+});
+export type FinanceEntryJustificationRow = typeof financeEntryJustifications.$inferSelect;

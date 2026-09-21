@@ -53,6 +53,11 @@ export const FINANCE_ERRORS = {
   contactLocked: { reason: 'Der Kontakt ist gesperrt: {reason}', remedy: 'Lösen Sie zuerst, was die Sperre begründet.' },
   correctionNotPending: { reason: 'Die Korrektur wartet nicht mehr auf eine Entscheidung.', remedy: 'Legen Sie bei Bedarf eine neue Korrektur an.' },
   correctionPendingExists: { reason: 'Für diese Zeile wartet schon eine Korrektur auf Freigabe.', remedy: 'Entscheiden Sie zuerst über die wartende Korrektur.' },
+  draftsInPeriod: { reason: 'In der Periode stehen noch {count} Entwürfe.', remedy: 'Schreiben Sie sie fest oder löschen Sie sie.' },
+  undocumentedEntries: { reason: 'In der Periode stehen {count} Buchungen ohne Beleg.', remedy: 'Reichen Sie den Beleg nach, legen Sie einen Eigenbeleg an, oder begründen Sie, warum es keinen gibt.' },
+  previousYearOpen: { reason: 'Das Vorjahr ist noch nicht abgeschlossen.', remedy: 'Geschäftsjahre schließen in ihrer Reihenfolge: Schließen Sie zuerst das Vorjahr.' },
+  fiscalYearAlreadyClosed: { reason: 'Das Geschäftsjahr {year} ist bereits abgeschlossen.', remedy: 'Öffnen Sie es bei Bedarf wieder (Recht „Geschäftsjahr abschließen“).' },
+  fiscalYearNotEnded: { reason: 'Das Geschäftsjahr {year} ist noch nicht zu Ende.', remedy: 'Ein Geschäftsjahr lässt sich frühestens nach seinem Enddatum abschließen.' },
 } as const satisfies Record<string, { reason: string; remedy: string }>;
 
 export type FinanceErrorCode = keyof typeof FINANCE_ERRORS;
