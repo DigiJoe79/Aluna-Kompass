@@ -29,9 +29,13 @@ export function TileLines({ ns, lines, canComplete }: { ns: string; lines: Dashb
       {lines.map((line, index) => {
         const title = titleOf(line);
         return (
-          <li key={`${index}-${title}`} className="flex items-center gap-3 py-2 text-[13px]">
+          <li
+            key={`${index}-${title}`}
+            className="flex min-h-[46px] flex-col flex-wrap items-start gap-x-3 gap-y-0.5 py-2 text-[13px] min-[391px]:flex-row min-[391px]:items-center"
+          >
             {line.action && canComplete ? (
               <Checkbox
+                className="order-1"
                 aria-label={t('complete', { title })}
                 onCheckedChange={() =>
                   start(async () => {
@@ -42,8 +46,8 @@ export function TileLines({ ns, lines, canComplete }: { ns: string; lines: Dashb
                 }
               />
             ) : null}
-            {line.date ? <span className={cn('font-mono text-[12px]', line.overdue ? 'text-warning' : 'text-ink-2')}>{fmt.date(line.date)}</span> : null}
-            <span className="flex min-w-0 flex-1 items-baseline gap-3">
+            {/* Bis 390 px (einschließlich) steht das Datum unter dem Satz (order 3 vs. 2); ab 391 px wieder davor (order 2 vs. 3) — das einzige responsive Verhalten dieser Komponente. */}
+            <span data-testid="tile-line-title" className="order-2 flex min-w-0 flex-1 items-baseline gap-3 min-[391px]:order-3">
               {line.href ? (
                 <Link href={line.href} className="truncate text-ink underline-offset-2 hover:underline">{title}</Link>
               ) : (
@@ -57,7 +61,10 @@ export function TileLines({ ns, lines, canComplete }: { ns: string; lines: Dashb
                 )
               ) : null}
             </span>
-            {line.extra ? <span className="text-[12px] text-muted-ink">{line.extra}</span> : null}
+            {line.date ? (
+              <span data-testid="tile-line-date" className={cn('order-3 font-mono text-[12px] min-[391px]:order-2', line.overdue ? 'text-warning' : 'text-ink-2')}>{fmt.date(line.date)}</span>
+            ) : null}
+            {line.extra ? <span className="order-4 text-[12px] text-muted-ink">{line.extra}</span> : null}
           </li>
         );
       })}

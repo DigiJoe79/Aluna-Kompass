@@ -25,8 +25,8 @@ describe('import direction between the areas of the finance module', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('the neutral ground imports no area — except manifest.ts, install.ts, seed.ts, mcp-tools.ts and index.ts, which wire them', () => {
-    const wiring = new Set(['manifest.ts', 'install.ts', 'seed.ts', 'mcp-tools.ts', 'index.ts']);
+  it('the neutral ground imports no area — except manifest.ts, install.ts, seed.ts, mcp-tools.ts, index.ts and dashboard.ts, which wire them', () => {
+    const wiring = new Set(['manifest.ts', 'install.ts', 'seed.ts', 'mcp-tools.ts', 'index.ts', 'dashboard.ts']);
     const offenders = readdirSync(SRC).filter((n) => n.endsWith('.ts') && !wiring.has(n)).filter((n) => /from '\.\/(ledger|import|donations|allocation|reporting)\//.test(readFileSync(path.join(SRC, n), 'utf8')));
     expect(offenders).toEqual([]);
   });

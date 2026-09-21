@@ -546,6 +546,47 @@
           "open": "Zur Akte"
         }
       },
+      "finance": {
+        "todo": {
+          "title": "Finanzen: zu tun",
+          "empty": "Nichts zu tun.",
+          "open": "Zum Journal",
+          "messages": {
+            "reviewedNotFinal": "{count, plural, one {# geprüfte, noch nicht festgeschriebene Buchung} other {# geprüfte, noch nicht festgeschriebene Buchungen}}",
+            "withoutVoucher": "{count, plural, one {# festgeschriebene Buchung ohne Beleg} other {# festgeschriebene Buchungen ohne Beleg}}",
+            "overdueItems": "{count, plural, one {# überfällige offene Zahlung} other {# überfällige offene Zahlungen}}, zusammen {sum}"
+          }
+        },
+        "withoutVoucher": {
+          "title": "Buchungen ohne Beleg",
+          "empty": "Keine festgeschriebene Buchung ohne Beleg.",
+          "open": "Zum Journal"
+        },
+        "staleDrafts": {
+          "title": "Entwürfe zu alt",
+          "empty": "Kein Entwurf älter als 14 Tage.",
+          "open": "Zum Journal"
+        },
+        "overdueItems": {
+          "title": "Überfällige offene Zahlungen",
+          "empty": "Keine überfällige offene Zahlung.",
+          "open": "Zu den offenen Zahlungen"
+        },
+        "purposesNegative": {
+          "title": "Zwecke im Minus",
+          "empty": "Kein Zweck im Minus.",
+          "open": "Zu den Zwecken"
+        },
+        "setupIncomplete": {
+          "title": "Einrichtung",
+          "empty": "",
+          "open": "Zur Einrichtung",
+          "messages": {
+            "incomplete": "{count, plural, one {# Schritt offen} other {# Schritte offen}}",
+            "complete": "Die Einrichtung ist vollständig."
+          }
+        }
+      },
       "site": {
         "site": {
           "title": "Webseite",
@@ -1320,8 +1361,7 @@
     },
     "form": {
       "tabs": {
-        "public": "Webseite",
-        "finance": "Finanzen"
+        "public": "Webseite"
       },
       "name": "Name",
       "summary": "Kurztext",
@@ -1337,7 +1377,6 @@
         "active": "Aktiv",
         "completed": "Abgeschlossen"
       },
-      "financeLater": "Konten, Buchungen und Rücklagen: Finanzen folgen in einer späteren Stufe.",
       "links": {
         "title": "Verweise nach außen",
         "hint": "Spendenseite, Bericht, Partner — Bezeichnung und Adresse. Was die Webseite daraus macht, entscheidet das Template.",
@@ -2793,6 +2832,28 @@
         "amount": "Betrag",
         "reference": "Verwendungszweck",
         "noIban": "Eine Bankverbindung ist hier noch nicht hinterlegt."
+      }
+    },
+    "projectSection": {
+      "title": "Finanzen",
+      "target": "Zielbetrag",
+      "income": "Einnahmen",
+      "expense": "Ausgaben",
+      "result": "Ergebnis",
+      "noTarget": "Kein Zielbetrag hinterlegt.",
+      "edit": "Ändern",
+      "dialog": {
+        "title": "Finanzfelder ändern",
+        "target": "Zielbetrag",
+        "purpose": "Standard-Zweck",
+        "purposeNone": "Kein Standard-Zweck",
+        "abroad": "Wird im Ausland verwendet",
+        "publishDonationStatus": "Spendenstand auf der Webseite zeigen",
+        "save": "Speichern",
+        "cancel": "Abbrechen"
+      },
+      "toast": {
+        "saved": "Finanzfelder geändert."
       }
     },
     "admin": {

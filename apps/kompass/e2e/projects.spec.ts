@@ -28,7 +28,6 @@ test.describe('projects', () => {
     await page.locator('[name="summary.de"]').fill('Futter, Wärme und tierärztliche Versorgung.');
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);
-    await expect(page.getByText('Finanzen folgen in einer späteren Stufe')).toBeVisible();
 
     await page.goto('/projects');
     const row = page.getByRole('row', { name: /Grundversorgung/ });

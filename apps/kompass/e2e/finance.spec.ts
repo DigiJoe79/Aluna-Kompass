@@ -870,6 +870,107 @@ test.describe('finance', () => {
     await expect(roles).toHaveAttribute('data-done', 'false');
     await expect(roles.getByTestId('requirement-roles-candoo')).toContainText('kann');
   });
+
+  test('die Startseite zeigt „Finanzen: zu tun“, und eine Zeile führt in den gefilterten Journal-Ausschnitt', async ({ page }) => {
+    await loginAsAdmin(page);
+    const tile = page.getByTestId('dashboard-tile-finance-todo');
+    await expect(tile.getByRole('heading', { name: 'Finanzen: zu tun' })).toBeVisible();
+    // Seed: eine geprüfte, noch nicht festgeschriebene Buchung — verlinkt den Journal-Ausschnitt „geprüft“.
+    const link = tile.getByRole('link', { name: /geprüfte, noch nicht festgeschriebene Buchung/ });
+    await expect(link).toBeVisible();
+    await link.click();
+    await expect(page).toHaveURL(/\/finance\/entries\?state=reviewed/);
+    await expect(page.getByRole('heading', { name: 'Journal' })).toBeVisible();
+  });
+
+  test('auf 390 px steht das Datum unter dem Satz und nichts läuft seitlich über', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    const tile = page.getByTestId('dashboard-tile-finance-todo');
+    const line = tile.locator('li').first();
+    const titleBox = (await line.getByTestId('tile-line-title').boundingBox())!;
+    const dateBox = (await line.getByTestId('tile-line-date').boundingBox())!;
+    // Unter 391 px steht das Datum unter dem Satz: seine Kante liegt tiefer, nicht daneben.
+    expect(dateBox.y).toBeGreaterThan(titleBox.y);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    expect(overflow).toBe(false);
+  });
+
+  test('die Projektseite zeigt Ziel, Einnahmen, Ausgaben und Ergebnis ohne Namen', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/projects');
+    await page.getByRole('link', { name: 'Winterhilfe für Streuner' }).click();
+    await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);
+    const section = page.getByTestId('project-finance-section');
+    await expect(section.getByText('Zielbetrag')).toBeVisible();
+    await expect(section).toContainText('2.500,00 €');
+    await expect(section.getByText('Einnahmen')).toBeVisible();
+    await expect(section.getByText('Ausgaben')).toBeVisible();
+    await expect(section.getByText('Ergebnis')).toBeVisible();
+    await expect(section).not.toContainText('Musterspenderin');
+    await expect(section).not.toContainText('Spenderin');
+  });
+
+  test('mit finance.setup lassen sich Zielbetrag und die beiden Schalter am Projekt ändern', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/projects');
+    await page.getByRole('link', { name: 'Winterhilfe für Streuner' }).click();
+    const section = page.getByTestId('project-finance-section');
+    await section.getByRole('button', { name: 'Ändern' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Zielbetrag').fill('3.000,00');
+    await dialog.getByLabel('Wird im Ausland verwendet').check();
+    await dialog.getByLabel('Spendenstand auf der Webseite zeigen').check();
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByText('Finanzfelder geändert.')).toBeVisible();
+    await expect(section).toContainText('3.000,00 €');
+
+    await section.getByRole('button', { name: 'Ändern' }).click();
+    const dialogAgain = page.getByRole('dialog');
+    await expect(dialogAgain.getByLabel('Wird im Ausland verwendet')).toBeChecked();
+    await expect(dialogAgain.getByLabel('Spendenstand auf der Webseite zeigen')).toBeChecked();
+  });
+
+  test('ohne Finanzrechte fehlt der Abschnitt am Projekt', async ({ page }) => {
+    await loginAsAdmin(page);
+    // Keine Seed-Rolle trägt `projects.view` ohne Finanzrecht (nur die Administration sieht
+    // die Projekte) — eine eigens angelegte Rolle hält die beiden Rechte sauber getrennt.
+    await page.goto('/admin/roles');
+    await page.getByRole('button', { name: 'Rolle anlegen' }).click();
+    await page.getByRole('dialog').getByLabel('Rollenname').fill('Nur Projekte');
+    await page.getByRole('dialog').getByRole('button', { name: 'Anlegen' }).click();
+    await page.getByRole('list', { name: 'Rollen' }).getByRole('button', { name: /Nur Projekte/ }).click();
+    await page.getByRole('checkbox', { name: 'Projekte ansehen' }).check();
+    await page.getByRole('button', { name: 'Rolle speichern' }).click();
+    await expect(page.getByRole('status')).toContainText('Rolle gespeichert.');
+
+    await page.goto('/admin/users');
+    await page.getByRole('button', { name: 'Nutzer anlegen' }).click();
+    const create = page.getByRole('dialog');
+    await create.getByLabel('Name').fill('Paula Projekt');
+    await create.getByLabel('E-Mail').fill('paula@example.org');
+    await create.getByLabel('Nur Projekte').check();
+    await create.getByRole('button', { name: 'Nutzer anlegen' }).click();
+    const startPassword = (await page.getByTestId('start-password').textContent())!.trim();
+    await page.getByRole('button', { name: 'Ich habe die Daten notiert' }).click();
+
+    await page.request.post('/logout');
+    await page.goto('/login');
+    await page.getByLabel('E-Mail').fill('paula@example.org');
+    await page.getByLabel('Passwort').fill(startPassword);
+    await page.getByRole('button', { name: 'Anmelden' }).click();
+    await page.getByLabel('Startpasswort').fill(startPassword);
+    await page.getByLabel('Neues Passwort', { exact: true }).fill('paula-hat-ein-neues-passwort');
+    await page.getByLabel('Passwort wiederholen').fill('paula-hat-ein-neues-passwort');
+    await page.getByRole('button', { name: 'Passwort setzen und fortfahren' }).click();
+    await expect(page).toHaveURL('/');
+
+    await page.goto('/projects');
+    await page.getByRole('link', { name: 'Winterhilfe für Streuner' }).click();
+    await expect(page).toHaveURL(/\/projects\/[A-Z0-9]+$/);
+    await expect(page.getByTestId('project-finance-section')).toHaveCount(0);
+  });
 });
 
 const PNG = Buffer.from(

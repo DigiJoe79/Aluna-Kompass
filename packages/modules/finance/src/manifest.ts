@@ -1,6 +1,7 @@
 import { defineModule, type ModuleManifest, type SettingDefinition } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { FINANCE_DASHBOARD_TILES } from './dashboard';
 import { requireFinanceRead } from './ledger/access';
 import { cashCountTemplate } from './ledger/cash-count-template';
 import { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds } from './ledger/holds';
@@ -142,6 +143,7 @@ export const financeModule: ModuleManifest = defineModule({
     return hasFinal ? 'hasFinalRecords' : null;
   },
   mcpTools: FINANCE_MCP_TOOLS,
+  dashboardTiles: FINANCE_DASHBOARD_TILES,
   followUpTargets: (deps, entityType, id) => {
     if (entityType !== 'financeFiscalYear') return null;
     const year = deps.db.select({ designation: financeFiscalYears.designation }).from(financeFiscalYears).where(eq(financeFiscalYears.id, id)).get();

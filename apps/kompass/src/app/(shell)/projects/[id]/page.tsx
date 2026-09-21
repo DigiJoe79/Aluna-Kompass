@@ -8,6 +8,7 @@ import { requireSession } from '@/lib/request-context';
 import { RelatedDocuments } from '@/components/related-documents';
 import { ProjectForm } from '../project-form';
 import { DeleteProject } from '../delete-project';
+import { ProjectFinanceSection } from './finance-section';
 
 export default async function ProjectEditPage(props: { params: Promise<{ id: string }> }) {
   const { deps, ctx } = await requireSession();
@@ -25,7 +26,8 @@ export default async function ProjectEditPage(props: { params: Promise<{ id: str
     <>
       <PageHeader title={project.value.name[leading] || project.value.slug} description={`/projekte/${project.value.slug}/`} back={back} />
       <ProjectForm project={project.value} locales={locales} />
-      <div className="mt-6">
+      <div className="mt-6 space-y-4">
+        <ProjectFinanceSection deps={deps} ctx={ctx} projectId={project.value.id} />
         <RelatedDocuments deps={deps} ctx={ctx} entityType="project" entityId={project.value.id} />
       </div>
       {requirePermission(ctx, 'projects.manage') ? null : <DeleteProject id={project.value.id} name={project.value.name[leading] || project.value.slug} />}
