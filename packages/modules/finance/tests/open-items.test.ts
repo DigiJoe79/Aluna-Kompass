@@ -8,7 +8,7 @@ import { bookEntry } from '../src/ledger/finalize';
 import { cancelOpenItem, createOpenItem, listOpenItems, openCentsInternal, openItemsAtInternal, updateOpenItem } from '../src/ledger/open-items';
 import { reverseEntry } from '../src/ledger/reverse';
 import { financeOpenItemSettlements } from '../src/schema';
-import { ledgerFixture } from './helpers';
+import { allowHumanOnlyOverMcp, ledgerFixture } from './helpers';
 
 const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
 const now = '2026-03-01T10:00:00.000Z';
@@ -128,6 +128,29 @@ describe('open items', () => {
     const overview = ctxWith(['finance.overview'], f.userId);
     expect(err(await createOpenItem(f.deps, overview, { kind: 'receivable', itemDate: '2026-03-01', amountCents: 5000 }))).toEqual({ type: 'forbidden', permission: 'finance.entriesWrite' });
     expect(err(await listOpenItems(f.deps, overview, {}))).toEqual({ type: 'forbidden', permission: 'finance.read' });
+  });
+
+  it('cancelling without payment is a final step: it needs finance.entriesFinalize, not just finance.entriesWrite', async () => {
+    const f = await ledgerFixture();
+    const item = unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'payable', itemDate: '2026-03-01', amountCents: 5000 }));
+    const writeOnly = ctxWith(['finance.entriesWrite'], f.userId);
+    expect(err(await cancelOpenItem(f.deps, writeOnly, { id: item.id, note: 'x' }))).toEqual({ type: 'forbidden', permission: 'finance.entriesFinalize' });
+  });
+
+  it('is human only, like finalizing: refused over MCP unless the association allowed it', async () => {
+    const f = await ledgerFixture();
+    const item = unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'payable', itemDate: '2026-03-01', amountCents: 5000 }));
+    const overMcp = { ...f.ctx, channel: 'mcp' as const };
+    expect(err(await cancelOpenItem(f.deps, overMcp, { id: item.id, note: 'x' }))).toMatchObject({ type: 'conflict', code: 'humanOnly' });
+    allowHumanOnlyOverMcp(f.deps);
+    const cancelled = unwrap(await cancelOpenItem(f.deps, overMcp, { id: item.id, note: 'x' }));
+    expect(cancelled.state).toBe('cancelled');
+  });
+
+  it('an item with an origin is never closed without payment this way — it is settled through its own process', async () => {
+    const f = await ledgerFixture();
+    const item = unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'payable', itemDate: '2026-03-01', amountCents: 5000, originType: 'expenseClaim', originId: 'CLAIM-1' }));
+    expect(err(await cancelOpenItem(f.deps, f.ctx, { id: item.id, note: 'x' }))).toMatchObject({ type: 'conflict', code: 'openItemHasOrigin' });
   });
 
   it('logs neither the payment reference nor the note nor the contact', async () => {

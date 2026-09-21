@@ -1,4 +1,4 @@
-import { expectedVersionField, isoNow, newId, notFound, ok, requirePermission, staleVersion, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { expectedVersionField, isoNow, newId, notFound, ok, requireHumanChannel, requirePermission, staleVersion, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { contacts } from '@kompass/module-contacts';
 import { getDocumentRecord, linkDocumentInternal } from '@kompass/module-dms';
 import { and, desc, eq, lte } from 'drizzle-orm';
@@ -180,14 +180,22 @@ export async function updateOpenItem(deps: Deps, ctx: CallContext, input: unknow
 
 const cancelSchema = z.object({ id: z.string().min(1), note: z.string().trim().min(1).max(500) });
 
-/** `finance.entriesWrite`: ein Irrtum wird ohne Zahlung erledigt, nie gelöscht — nur wenn nichts Festgeschriebenes daran hängt. */
+/**
+ * `finance.entriesFinalize`, **`humanOnly`**: ein Irrtum wird ohne Zahlung
+ * erledigt, nie gelöscht — ein endgültiger Schritt, wie das Festschreiben
+ * selbst. Nur wenn nichts Festgeschriebenes daran hängt, und nie für einen
+ * Posten mit Herkunft (`originType`) — der wird über seinen Vorgang erledigt.
+ */
 export async function cancelOpenItem(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<OpenItemView>> {
-  const denied = requirePermission(ctx, 'finance.entriesWrite');
+  const denied = requirePermission(ctx, 'finance.entriesFinalize');
   if (denied) return denied;
+  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  if (humanOnly) return humanOnly;
   const parsed = validate(deps, cancelSchema, input);
   if (!parsed.ok) return parsed;
   const before = deps.db.select().from(financeOpenItems).where(eq(financeOpenItems.id, parsed.value.id)).get();
   if (!before) return notFound('financeOpenItem', parsed.value.id);
+  if (before.originType !== null) return financeConflict('openItemHasOrigin');
   if (hasActiveSettlement(deps.db, before.id)) return financeConflict('openItemHasPayments');
 
   return deps.db.transaction((tx: DbOrTx) => {
