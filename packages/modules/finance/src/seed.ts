@@ -1,8 +1,8 @@
-import { unwrap, type CallContext, type Deps } from '@kompass/core';
+import { assignRole, schema, unwrap, type CallContext, type Deps } from '@kompass/core';
 import { addContactRole, contactRoles, createContact } from '@kompass/module-contacts';
 import { textPdf } from '@kompass/module-dms';
 import { projects } from '@kompass/module-projects';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { createAccount, setAccountActive } from './ledger/accounts';
 import { createCategory } from './ledger/categories';
 import { requestAllocationCorrection } from './ledger/corrections';
@@ -391,4 +391,27 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
       requestAllocationCorrection(deps, ctx, { lineId: spendeAltjahrLine.id, changes: { contactId: donorA.id }, note: 'Spenderin nachträglich zugeordnet' }).then(unwrap),
     );
   }
+
+  // F3a: „Mira Klein“ aus dem Kernseed (Rolle „Interne Revision“, kein Finanzrecht) bekommt zusätzlich
+  // die Rolle „Kassenprüfer“ (finance.read, finance.overview — nie entriesFinalize): eine Person, an der
+  // sich zeigt, dass „Korrigieren“ ohne das Recht fehlt. Existiert die Person nicht (isolierte
+  // Modul-Tests, andere Installation), bleibt der Schritt aus — der Kern erfindet keine Nutzer.
+  await grantAuditorRoleToMiraKlein(deps, ctx);
+}
+
+async function grantAuditorRoleToMiraKlein(deps: Deps, ctx: CallContext): Promise<void> {
+  const mira = deps.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, 'mira@kompass.local')).get();
+  if (!mira) return;
+  const auditorRole = deps.db.select({ id: schema.roles.id }).from(schema.roles).where(eq(schema.roles.name, 'Kassenprüfer')).get();
+  if (!auditorRole) return;
+  const already = deps.db
+    .select({ userId: schema.userRoles.userId })
+    .from(schema.userRoles)
+    .where(and(eq(schema.userRoles.userId, mira.id), eq(schema.userRoles.roleId, auditorRole.id)))
+    .get();
+  if (already) return;
+  // Wie `ensureDonors`: die nötigen Rechte lokal dazugeben, unabhängig davon, was der Aufrufer selbst
+  // mitbringt — `users.manage` fürs Vergeben, alle Rechte der Rolle selbst (`requireGrantableRole`).
+  const usersCtx: CallContext = { ...ctx, permissions: new Set(deps.registry.permissionKeys) };
+  unwrap(await assignRole(deps, usersCtx, { userId: mira.id, roleId: auditorRole.id }));
 }

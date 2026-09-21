@@ -1,6 +1,6 @@
 'use server';
 
-import { attachDocument, bookEntry, deleteDraft, finalizeEntry, finalizeReviewed, listEntries, saveDraft, setReviewed, uploadVoucher, type EntryLinesInput } from '@kompass/module-finance';
+import { attachDocument, bookEntry, deleteDraft, finalizeEntry, finalizeReviewed, listEntries, requestAllocationCorrection, reverseEntry, revokeVoucher, saveDraft, setReviewed, uploadVoucher, type EntryLinesInput } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { toActionState, type ActionState } from '@/lib/actions';
@@ -107,6 +107,40 @@ export async function finalizeAllReviewedAction(): Promise<ActionState> {
   if (!result.ok) return toActionState(result, t);
   const numbers = result.value.entries.map((e) => e.number).filter((n): n is string => !!n);
   return toActionState(result, t, t('finance.journal.toast.finalized', { numbers: numbers.join(', ') }));
+}
+
+export interface CorrectionChanges {
+  contactId?: string | null;
+  projectId?: string | null;
+  purposeId?: string | null;
+  abroad?: boolean;
+}
+
+/** Zuordnung ändern (offenes Jahr: sofort; abgeschlossenes: wartet auf Freigabe). */
+export async function requestCorrectionAction(lineId: string, changes: CorrectionChanges, note: string, proofDocumentId?: string, acknowledgeSection153?: boolean): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await requestAllocationCorrection(deps, ctx, { lineId, changes, note, proofDocumentId, acknowledgeSection153 });
+  revalidatePath('/finance/entries');
+  if (!result.ok) return toActionState(result, t);
+  return toActionState(result, t, result.value.applied ? t('finance.entryView.correct.toast.applied') : t('finance.entryView.correct.toast.pending'));
+}
+
+/** Buchung zurücknehmen: Gegenbuchung, sofort festgeschrieben. */
+export async function reverseEntryAction(id: string, withCorrectionDraft: boolean, cashWarningReason?: string): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await reverseEntry(deps, ctx, { id, withCorrectionDraft, cashWarningReason });
+  revalidatePath('/finance/entries');
+  return toActionState(result, t);
+}
+
+export async function revokeVoucherAction(linkId: string, note: string, replacementDocumentId?: string): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await revokeVoucher(deps, ctx, { linkId, note, replacementDocumentId });
+  revalidatePath('/finance/entries');
+  return toActionState(result, t);
 }
 
 export async function deleteDraftsAction(ids: string[]): Promise<ActionState> {

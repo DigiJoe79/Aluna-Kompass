@@ -237,6 +237,92 @@ test.describe('finance', () => {
     await amount.blur();
     await expect(page.getByText('Bitte einen Betrag wie 12,50 eingeben')).toBeVisible();
   });
+
+  test('eine festgeschriebene Buchung hat kein Eingabefeld und genau einen Knopf „Korrigieren“', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries');
+    await page.locator('tr', { hasText: 'Bar-Ausgabe Fahrtkosten' }).click();
+    await expect(page).toHaveURL(/\/finance\/entries\/[^/]+$/);
+    await expect(page.getByRole('textbox')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Korrigieren' })).toHaveCount(1);
+  });
+
+  test('die Schloss-Zeile nennt Datum, Person und Weg', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries');
+    await page.locator('tr', { hasText: 'Bar-Ausgabe Fahrtkosten' }).click();
+    await expect(page.getByText(/festgeschrieben am \d{2}\.\d{2}\.\d{4} um \d{2}:\d{2} von .+\(.+\)/)).toBeVisible();
+  });
+
+  test('Zuordnung ändern im offenen Jahr wirkt sofort und steht mit Vorher → Nachher im Verlauf', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries');
+    await page.locator('tr', { hasText: 'Auszahlung Spendenplattform' }).click();
+    await page.getByRole('button', { name: 'Korrigieren' }).click();
+    await page.getByRole('checkbox', { name: 'Spender/Empfänger' }).check();
+    await expect(page.getByText('Das ändert die Zuordnung.')).toBeVisible();
+    await page.getByRole('combobox', { name: 'Spender/Empfänger' }).fill('Kruse');
+    await page.getByTestId('contact-option').filter({ hasText: 'Kruse' }).click();
+    await page.getByLabel('Begründung').fill('Testkorrektur Spender');
+    await page.getByRole('button', { name: 'Zuordnung ändern' }).click();
+    await expect(page.getByText('Die Zuordnung wurde sofort geändert.')).toBeVisible();
+    await expect(page.getByText(/Zuordnung geändert von/)).toBeVisible();
+  });
+
+  test('Buchung zurücknehmen erzeugt die Gegenbuchung und öffnet den vorbelegten Entwurf', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries');
+    await page.locator('tr', { hasText: 'Ausgabe Sommerfest' }).click();
+    await page.getByRole('button', { name: 'Korrigieren' }).click();
+    await page.getByRole('checkbox', { name: 'Betrag' }).check();
+    await expect(page.getByText('Das nimmt die Buchung zurück.')).toBeVisible();
+    await page.getByRole('button', { name: 'Buchung zurücknehmen' }).click();
+    await expect(page).toHaveURL(/\/finance\/entries\/[^/]+\/edit$/);
+  });
+
+  test('wer „Betrag“ ankreuzt, bekommt „Buchung zurücknehmen“, auch wenn zusätzlich „Projekt“ angekreuzt ist', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries');
+    await page.locator('tr', { hasText: 'Bar-Ausgabe Fahrtkosten' }).click();
+    await page.getByRole('button', { name: 'Korrigieren' }).click();
+    await page.getByRole('checkbox', { name: 'Projekt' }).check();
+    await page.getByRole('checkbox', { name: 'Betrag' }).check();
+    await expect(page.getByText('Das nimmt die Buchung zurück.')).toBeVisible();
+  });
+
+  test('Beleg nachreichen an einer festgeschriebenen Buchung; der Beleg lässt sich ansehen', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries');
+    await page.locator('tr', { hasText: 'Spende Altjahr' }).click();
+    await page.getByTestId('voucher-file-input').setInputFiles({ name: 'beleg.pdf', mimeType: 'application/pdf', buffer: samplePdf() });
+    await expect(page.getByRole('link', { name: 'öffnen' })).toBeVisible();
+    const href = await page.getByRole('link', { name: 'öffnen' }).getAttribute('href');
+    expect(href).toMatch(/\/finance\/entries\/.+\/voucher\/.+/);
+    const response = await page.request.get(href!);
+    expect(response.ok()).toBe(true);
+  });
+
+  test('ohne finance.entriesFinalize fehlt der Knopf „Korrigieren“', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/admin/users');
+    await page.getByRole('row', { name: /Mira Klein/ }).getByRole('button', { name: 'Aktionen' }).click();
+    await page.getByRole('menuitem', { name: 'Neues Startpasswort' }).click();
+    const startPassword = (await page.getByTestId('start-password').textContent())!.trim();
+    await page.getByRole('button', { name: 'Ich habe die Daten notiert' }).click();
+    await page.request.post('/logout');
+    await page.goto('/login');
+    await page.getByLabel('E-Mail').fill('mira@kompass.local');
+    await page.getByLabel('Passwort').fill(startPassword);
+    await page.getByRole('button', { name: 'Anmelden' }).click();
+    await page.getByLabel('Startpasswort').fill(startPassword);
+    await page.getByLabel('Neues Passwort', { exact: true }).fill('mira-hat-ein-neues-passwort');
+    await page.getByLabel('Passwort wiederholen').fill('mira-hat-ein-neues-passwort');
+    await page.getByRole('button', { name: 'Passwort setzen und fortfahren' }).click();
+    await expect(page).toHaveURL('/');
+    await page.goto('/finance/entries');
+    await page.locator('tr', { hasText: 'Spende Altjahr' }).click();
+    await expect(page.getByRole('button', { name: 'Korrigieren' })).toHaveCount(0);
+  });
 });
 
 const PNG = Buffer.from(

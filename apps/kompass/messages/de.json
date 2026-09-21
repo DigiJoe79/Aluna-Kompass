@@ -2443,6 +2443,82 @@
         "reviewedSaved": "Gespeichert und als geprüft markiert.",
         "finalized": "Festgeschrieben: {number}."
       }
+    },
+    "entryView": {
+      "back": "Zurück zum Journal",
+      "account": "Konto",
+      "allocation": "Wofür?",
+      "corrected": "Zuordnung geändert",
+      "pendingCorrection": "wartet auf Freigabe",
+      "reversedBy": "Zurückgenommen durch die Gegenbuchung.",
+      "reverses": "Nimmt eine andere Buchung zurück.",
+      "open": "ansehen",
+      "history": {
+        "title": "Verlauf",
+        "changeLabel": "Zuordnung",
+        "unknownUser": "einer nicht mehr vorhandenen Person",
+        "events": {
+          "created": "angelegt von {name}",
+          "reviewed": "geprüft von {name}",
+          "finalized": "festgeschrieben von {name}",
+          "reversed": "zurückgenommen durch {number}",
+          "voucherAdded": "Beleg {number} abgelegt",
+          "voucherRevoked": "Beleg {number} widerrufen",
+          "allocationChanged": {
+            "applied": "Zuordnung geändert von {name}",
+            "pending": "Zuordnung geändert von {name}, wartet auf Freigabe",
+            "rejected": "Zuordnungsänderung von {name} abgelehnt"
+          }
+        }
+      },
+      "vouchers": {
+        "title": "Belege",
+        "type": "Beleg",
+        "revoke": {
+          "title": "Beleg widerrufen",
+          "description": "Der Beleg wird durchgestrichen und bleibt sichtbar.",
+          "descriptionClosed": "Das Geschäftsjahr ist abgeschlossen — ein Ersatzbeleg ist hier noch nicht vorgesehen.",
+          "confirm": "Widerrufen",
+          "noteLabel": "Warum wird der Beleg widerrufen?"
+        }
+      },
+      "correct": {
+        "trigger": "Korrigieren",
+        "title": "Was stimmt nicht?",
+        "groupParty": "Die Zuordnung",
+        "groupNumbers": "Die Zahlen",
+        "party": {
+          "contact": "Spender/Empfänger",
+          "project": "Projekt",
+          "purpose": "Zweck",
+          "abroad": "wird im Ausland verwendet"
+        },
+        "numbers": {
+          "amount": "Betrag",
+          "date": "Datum",
+          "account": "Konto",
+          "category": "Kategorie",
+          "vat": "Umsatzsteuer"
+        },
+        "pathAllocation": "Das ändert die Zuordnung.",
+        "pathReverse": "Das nimmt die Buchung zurück.",
+        "currentlyValue": "bisher: {value}",
+        "noteLabel": "Begründung",
+        "cancel": "Abbrechen",
+        "submitAllocation": "Zuordnung ändern",
+        "submitReverse": "Buchung zurücknehmen",
+        "reverse": {
+          "step1": "Diese Buchung wird zurückgenommen.",
+          "step2": "Eine Gegenbuchung mit den negierten Beträgen entsteht und wird sofort festgeschrieben.",
+          "step3": "Ein vorbelegter Entwurf mit den bisherigen Werten öffnet sich, wenn gewünscht.",
+          "withDraft": "danach vorbelegten Entwurf öffnen",
+          "cashReasonLabel": "Warum geht die Kasse ins Minus?"
+        },
+        "toast": {
+          "applied": "Die Zuordnung wurde sofort geändert.",
+          "pending": "Die Änderung wartet auf die Freigabe einer zweiten Person."
+        }
+      }
     }
   }
 }

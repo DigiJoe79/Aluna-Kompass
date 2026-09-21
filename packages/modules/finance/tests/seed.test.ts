@@ -1,5 +1,5 @@
-import { schema, unwrap } from '@kompass/core';
-import { systemContext } from '@kompass/core/testing';
+import { getEffectivePermissions, schema, unwrap } from '@kompass/core';
+import { insertUser, systemContext } from '@kompass/core/testing';
 import { contactRoles } from '@kompass/module-contacts';
 import { projects } from '@kompass/module-projects';
 import { eq } from 'drizzle-orm';
@@ -176,5 +176,18 @@ describe('seedFinance', () => {
     // Zwei erfundene Spender-Kontakte mit Rolle donor.
     const donors = deps.db.select().from(contactRoles).where(eq(contactRoles.role, 'donor')).all();
     expect(donors.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('gives an existing „Mira Klein“ (Kernseed) finance.read without finance.entriesFinalize — for the missing „Korrigieren“ button', async () => {
+    const { deps, ctx } = setupFinance();
+    insertUser(deps, { name: 'Mira Klein', email: 'mira@kompass.local' });
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+    await seedFinance(deps, ctx);
+    await seedFinance(deps, ctx);
+
+    const mira = deps.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, 'mira@kompass.local')).get()!;
+    const permissions = getEffectivePermissions(deps.db, deps.registry, mira.id);
+    expect(permissions.has('finance.read')).toBe(true);
+    expect(permissions.has('finance.entriesFinalize')).toBe(false);
   });
 });
