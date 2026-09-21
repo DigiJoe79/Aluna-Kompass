@@ -3,7 +3,7 @@ import type { Result, ServiceError } from '@kompass/core';
 export type ActionState =
   | { status: 'idle' }
   | { status: 'success'; message?: string; data?: unknown }
-  | { status: 'error'; message: string; fieldErrors: Record<string, string> };
+  | { status: 'error'; message: string; fieldErrors: Record<string, string>; code?: string; detail?: string };
 
 export const idleState: ActionState = { status: 'idle' };
 
@@ -96,6 +96,11 @@ export function fieldMessage(issueMessage: string, t: Translate): string {
   return t('errors.fields.invalid');
 }
 
+/** Der Teil einer Konfliktmeldung nach dem ersten Doppelpunkt — sonst die ganze Meldung (z. B. Finanzfehler, die keinen Doppelpunkt kennen). */
+function rawDetail(message: string): string {
+  return message.includes(':') ? message.slice(message.indexOf(':') + 1).trim() : message;
+}
+
 function errorMessage(error: ServiceError, t: Translate): string {
   switch (error.type) {
     case 'forbidden':
@@ -131,5 +136,6 @@ export function toActionState<T>(result: Result<T>, t: Translate, successMessage
       fieldErrors[issue.path] ??= fieldMessage(issue.message, t);
     }
   }
-  return { status: 'error', message: errorMessage(result.error, t), fieldErrors };
+  const conflictFields = result.error.type === 'conflict' ? { code: result.error.code, detail: rawDetail(result.error.message) } : {};
+  return { status: 'error', message: errorMessage(result.error, t), fieldErrors, ...conflictFields };
 }

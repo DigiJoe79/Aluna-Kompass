@@ -2205,5 +2205,12 @@
       "save": "Angaben speichern",
       "saved": "Angaben gespeichert."
     }
+  },
+  "finance": {
+    "remedy": {
+      "restIntoLastRow": "Rest in diese Zeile eintragen",
+      "focusDate": "Datum prüfen",
+      "cashTransferFirst": "„Bargeld abgehoben“ zuerst buchen"
+    }
   }
 }
