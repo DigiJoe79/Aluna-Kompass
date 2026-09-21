@@ -9,6 +9,7 @@ import { deleteDraft, getEntry, listEntries, saveDraft, setReviewed } from './le
 import { bookEntry, finalizeEntry, finalizeReviewed } from './ledger/finalize';
 import { cancelOpenItem, listOpenItems, saveOpenItem } from './ledger/open-items';
 import { getBalances, getIncomeStatement } from './ledger/overview';
+import { closeFiscalYear, justifyUndocumentedEntry, previewPeriod, reopenFiscalYear } from './ledger/period';
 import { getProjectFinance, setProjectFinance } from './ledger/project-settings';
 import { reverseEntry } from './ledger/reverse';
 import { attachDocument, revokeVoucher, uploadVoucher } from './ledger/vouchers';
@@ -113,6 +114,11 @@ const getIncomeStatementMcpSchema = z.object({ fiscalYearId: z.string().optional
 const getProjectFinanceMcpSchema = z.object({ projectId: z.string() });
 const setProjectFinanceMcpSchema = z.object({ projectId: z.string(), targetCents: z.number().int().nullable().optional(), defaultPurposeId: z.string().nullable().optional(), abroad: z.boolean().optional(), publishDonationStatus: z.boolean().optional() });
 
+const previewPeriodMcpSchema = z.object({ id: z.string(), action: z.enum(['close', 'reopen']) });
+const closeFiscalYearMcpSchema = z.object({ id: z.string() });
+const reopenFiscalYearMcpSchema = z.object({ id: z.string(), note: z.string() });
+const justifyUndocumentedEntryMcpSchema = z.object({ entryId: z.string(), note: z.string() });
+
 /** Verteilerdienste (Spec 10.2): ein Werkzeug je Tätigkeit statt zwanzig, mit `kind` als Discriminator. */
 export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
   t({ name: 'finance_master_data', description: 'Read money accounts, categories, purposes, fiscal years or dated values. Requires finance.overview or finance.read; bank details and free-text descriptions only with finance.read.', inputSchema: readMasterDataSchema, handler: (deps, ctx, args) => readMasterData(deps, ctx, args), service: readMasterData }),
@@ -212,4 +218,20 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
   t({ name: 'finance_income_statement', description: 'Income and expense statement by sphere, for a fiscal year or a date range (never both, never neither). Marked preliminary while the fiscal year is open. Requires finance.overview or finance.read.', inputSchema: getIncomeStatementMcpSchema, handler: (deps, ctx, args) => getIncomeStatement(deps, ctx, args), service: getIncomeStatement }),
   t({ name: 'finance_project_get', description: 'Read a project’s finance fields (target, default purpose, abroad, donation status published) and its summed result. Requires finance.overview or finance.read; carries no names.', inputSchema: getProjectFinanceMcpSchema, handler: (deps, ctx, args) => getProjectFinance(deps, ctx, args), service: getProjectFinance }),
   t({ name: 'finance_project_set', description: 'Set a project’s finance fields. Requires finance.setup.', inputSchema: setProjectFinanceMcpSchema, handler: (deps, ctx, args) => setProjectFinance(deps, ctx, args), service: setProjectFinance }),
+  t({ name: 'finance_period_preview', description: 'What stands in the way of closing a fiscal year, or what reopening it would undo (action: close or reopen). Requires finance.read.', inputSchema: previewPeriodMcpSchema, handler: (deps, ctx, args) => previewPeriod(deps, ctx, args), service: previewPeriod }),
+  t({
+    name: 'finance_period_close',
+    description: 'Close a fiscal year: no draft dated in it, every finalized entry documented or justified, the previous year closed, the year ended. Human only: refused over MCP unless the association has set finance.mcpHumanOnlyAllowed at the screen. Requires finance.periodClose.',
+    inputSchema: closeFiscalYearMcpSchema,
+    handler: (deps, ctx, args) => closeFiscalYear(deps, ctx, args),
+    service: closeFiscalYear,
+  }),
+  t({
+    name: 'finance_period_reopen',
+    description: 'Reopen the latest closed fiscal year, with a note. Try an allocation correction, or a correction in the current year, first. Human only: refused over MCP unless the association has set finance.mcpHumanOnlyAllowed at the screen. Requires finance.periodClose.',
+    inputSchema: reopenFiscalYearMcpSchema,
+    handler: (deps, ctx, args) => reopenFiscalYear(deps, ctx, args),
+    service: reopenFiscalYear,
+  }),
+  t({ name: 'finance_entry_justify', description: 'State why a finalized entry has no voucher; needed to close the year. Requires finance.periodClose.', inputSchema: justifyUndocumentedEntryMcpSchema, handler: (deps, ctx, args) => justifyUndocumentedEntry(deps, ctx, args), service: justifyUndocumentedEntry }),
 ];

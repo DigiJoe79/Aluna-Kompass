@@ -1,15 +1,17 @@
-import { newId, unwrap, type CallContext, type Deps } from '@kompass/core';
+import { unwrap, type CallContext, type Deps } from '@kompass/core';
 import { addContactRole, contactRoles, createContact } from '@kompass/module-contacts';
 import { textPdf } from '@kompass/module-dms';
 import { projects } from '@kompass/module-projects';
-import { and, asc, eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { createAccount, setAccountActive } from './ledger/accounts';
 import { createCategory } from './ledger/categories';
 import { requestAllocationCorrection } from './ledger/corrections';
 import { saveDraft, setReviewed } from './ledger/entries';
 import { bookEntry } from './ledger/finalize';
-import { createFirstFiscalYear, ensureFiscalYearFor } from './ledger/fiscal-years';
+import { createFirstFiscalYear, ensureFiscalYearFor, fiscalYearStatusInternal } from './ledger/fiscal-years';
 import { cancelOpenItem, createOpenItem } from './ledger/open-items';
+import { closeFiscalYear, justifyUndocumentedEntry } from './ledger/period';
+import { setProjectFinance } from './ledger/project-settings';
 import { createPurpose, fulfillPurpose } from './ledger/purposes';
 import { reverseEntry } from './ledger/reverse';
 import { uploadVoucher, revokeVoucher } from './ledger/vouchers';
@@ -24,7 +26,6 @@ import {
   financeEntryDocuments,
   financeFiscalYears,
   financeOpenItems,
-  financePeriodEvents,
   financePurposes,
 } from './schema';
 
@@ -169,11 +170,9 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   const existingProject = deps.db.select({ id: projects.id }).from(projects).limit(1).get();
   await ensurePurpose(deps, ctx, 'Jugendfreizeit', existingProject ? { projectId: existingProject.id } : {});
   await ensurePurpose(deps, ctx, 'Partnerprojekt Ausland', { abroad: true });
-  const floodlight = await ensurePurpose(deps, ctx, 'Flutlicht', {});
-  if (floodlight) {
-    const row = deps.db.select().from(financePurposes).where(eq(financePurposes.id, floodlight.id)).get();
-    if (row && !row.fulfilledAt) unwrap(await fulfillPurpose(deps, ctx, { id: floodlight.id }));
-  }
+  await ensurePurpose(deps, ctx, 'Flutlicht', {});
+  // F2c: ein Zweck im Minus — mehr Ausgaben, als je eingegangen ist (Spec 5.6, Warnung, keine Sperre).
+  await ensurePurpose(deps, ctx, 'Sommerfest', {});
 
   await ensureCategory(deps, ctx, 'room-rental', { name: 'Raumvermietung', direction: 'income', sphere: 'assetManagement', incomeKind: 'fees' });
 
@@ -255,6 +254,22 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
         { categoryId: inKindExpenseCat.id, amountCents: -6000 },
       ],
     }).then(unwrap),
+  );
+
+  // F2c: ein erfüllter Zweck, der noch Restmittel hält (Spec 5.6, Warnung „erfüllt mit Restmitteln“).
+  const floodlight = purposeByName(deps, 'Flutlicht');
+  await ensureEntry(deps, 'Spende Flutlicht', () =>
+    bookEntry(deps, ctx, { entryDate: `${currentYear}-02-12`, text: 'Spende Flutlicht', moneyLines: [{ accountId: bank.id, amountCents: 12000 }], allocationLines: [{ categoryId: donationsCat.id, amountCents: 12000, purposeId: floodlight.id }] }).then(unwrap),
+  );
+  {
+    const row = deps.db.select().from(financePurposes).where(eq(financePurposes.id, floodlight.id)).get();
+    if (row && !row.fulfilledAt) unwrap(await fulfillPurpose(deps, ctx, { id: floodlight.id }));
+  }
+
+  // F2c: ein Zweck im Minus — die Ausgabe übersteigt, was je für ihn einging.
+  const sommerfest = purposeByName(deps, 'Sommerfest');
+  await ensureEntry(deps, 'Ausgabe Sommerfest', () =>
+    bookEntry(deps, ctx, { entryDate: `${currentYear}-02-14`, text: 'Ausgabe Sommerfest', moneyLines: [{ accountId: bank.id, amountCents: -8000 }], allocationLines: [{ categoryId: programCostsCat.id, amountCents: -8000, purposeId: sommerfest.id }] }).then(unwrap),
   );
 
   await ensureEntry(deps, 'Fehlerhafte Spendenbuchung', async () => {
@@ -350,15 +365,19 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
     requestAllocationCorrection(deps, ctx, { lineId: spendeMitZweckLine.id, changes: { abroad: true }, note: 'Auslandsbezug bei der Erfassung übersehen' }).then(unwrap),
   );
 
+  // F2c: Finanzfelder eines vorhandenen Projekts aus dem Projekte-Seed.
+  if (existingProject) {
+    unwrap(await setProjectFinance(deps, ctx, { projectId: existingProject.id, targetCents: 250000, defaultPurposeId: dachsanierung.id }));
+  }
+
   const previousFiscalYear = deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.designation, String(previousYear))).get();
   if (previousFiscalYear) {
-    const alreadyClosed = deps.db
-      .select({ id: financePeriodEvents.id })
-      .from(financePeriodEvents)
-      .where(and(eq(financePeriodEvents.fiscalYearId, previousFiscalYear.id), eq(financePeriodEvents.kind, 'closed')))
-      .get();
+    const alreadyClosed = fiscalYearStatusInternal(deps.db, previousFiscalYear.id) === 'closed';
     if (!alreadyClosed) {
-      deps.db.insert(financePeriodEvents).values({ id: newId(), fiscalYearId: previousFiscalYear.id, kind: 'closed', at: `${previousFiscalYear.endsOn}T23:59:59.000Z`, byUserId: ctx.userId ?? 'system', reason: null }).run();
+      // „Spende Altjahr“ bleibt bewusst ohne Beleg (siehe oben) — der Abschluss verlangt dafür eine Begründung.
+      const spendeAltjahrForJustify = entryByText(deps, 'Spende Altjahr');
+      unwrap(await justifyUndocumentedEntry(deps, ctx, { entryId: spendeAltjahrForJustify.id, note: 'Kleinbetrag bar erhalten, kein Beleg ausgestellt' }));
+      unwrap(await closeFiscalYear(deps, ctx, { id: previousFiscalYear.id }));
     }
 
     const spendeAltjahr = entryByText(deps, 'Spende Altjahr');

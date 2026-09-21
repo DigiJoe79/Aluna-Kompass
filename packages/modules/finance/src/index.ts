@@ -135,6 +135,7 @@ export { getBalances, getIncomeStatement, type BalancesView } from './ledger/ove
 export {
   closeFiscalYear,
   justifyUndocumentedEntry,
+  previewPeriod,
   previewPeriodClose,
   previewPeriodReopen,
   previewReopenInternal,

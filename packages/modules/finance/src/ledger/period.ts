@@ -230,3 +230,17 @@ export async function reopenFiscalYear(deps: Deps, ctx: CallContext, input: unkn
   if (!parsed.ok) return parsed;
   return deps.db.transaction((tx: DbOrTx) => reopenInternal(tx, deps, ctx, parsed.value));
 }
+
+const previewPeriodSchema = z.object({ id: z.string().min(1), action: z.enum(['close', 'reopen']) });
+
+/**
+ * Verteiler für `finance_period_preview` (Spec 10.2): ein Werkzeug statt
+ * zweier — `action` entscheidet, was dem Abschluss im Weg steht oder was das
+ * Wiederöffnen führen würde.
+ */
+export async function previewPeriod(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<PeriodClosePreview | { consequences: string[]; laterYearClosed: boolean; taxReturnFiledOn: string | null }>> {
+  const parsed = validate(deps, previewPeriodSchema, input);
+  if (!parsed.ok) return parsed;
+  const { id, action } = parsed.value;
+  return action === 'close' ? previewPeriodClose(deps, ctx, { id }) : previewPeriodReopen(deps, ctx, { id });
+}

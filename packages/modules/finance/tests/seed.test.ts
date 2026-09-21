@@ -1,6 +1,7 @@
 import { schema, unwrap } from '@kompass/core';
 import { systemContext } from '@kompass/core/testing';
 import { contactRoles } from '@kompass/module-contacts';
+import { projects } from '@kompass/module-projects';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { installFinance } from '../src/install';
@@ -10,6 +11,8 @@ import { listAllocationCorrections } from '../src/ledger/corrections';
 import { getEntry } from '../src/ledger/entries';
 import { listFiscalYears } from '../src/ledger/fiscal-years';
 import { listOpenItems } from '../src/ledger/open-items';
+import { getBalances } from '../src/ledger/overview';
+import { getProjectFinance } from '../src/ledger/project-settings';
 import { listPurposes } from '../src/ledger/purposes';
 import { financeEntries, financeEntryDocuments } from '../src/schema';
 import { seedFinance } from '../src/seed';
@@ -27,9 +30,39 @@ describe('seedFinance', () => {
     expect(accounts.some((a) => !a.isActive)).toBe(true);
     expect(unwrap(await listFiscalYears(deps, ctx))).toHaveLength(2);
     const purposes = unwrap(await listPurposes(deps, ctx, { includeInactive: true }));
-    expect(purposes).toHaveLength(4);
+    expect(purposes).toHaveLength(5);
     expect(purposes.some((p) => p.abroad) && purposes.some((p) => p.fulfilledAt !== null)).toBe(true);
     expect(unwrap(await listCategories(deps, ctx, {})).map((c) => c.key)).toContain('room-rental');
+  });
+
+  it('closes the previous fiscal year — a booking without a voucher is justified, not blocking', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+    await seedFinance(deps, ctx);
+    await seedFinance(deps, ctx);
+    const years = unwrap(await listFiscalYears(deps, ctx));
+    const previous = years.find((y) => y.designation !== years.reduce((a, b) => (a.designation > b.designation ? a : b)).designation)!;
+    expect(previous.status).toBe('closed');
+  });
+
+  it('flags a purpose in the red and a purpose fulfilled with rest', async () => {
+    const { deps, ctx } = setupFinance();
+    await seedFinance(deps, ctx);
+    const balances = unwrap(await getBalances(deps, ctx, {}));
+    const sommerfest = balances.purposes.find((p) => p.negative);
+    expect(sommerfest).toBeTruthy();
+    const floodlight = balances.purposes.find((p) => p.fulfilledWithRest);
+    expect(floodlight).toBeTruthy();
+  });
+
+  it('gives an existing project finance fields', async () => {
+    const { deps, ctx } = setupFinance();
+    await seedFinance(deps, ctx);
+    const existingProject = deps.db.select({ id: projects.id }).from(projects).limit(1).get();
+    if (!existingProject) return; // Kein Projekte-Seed installiert — nichts zu prüfen.
+    const read = unwrap(await getProjectFinance(deps, ctx, { projectId: existingProject.id }));
+    expect(read.settings.targetCents).toBe(250000);
+    expect(read.settings.defaultPurposeId).not.toBeNull();
   });
 
   it('uses no animal and no association-specific wording', async () => {
@@ -54,6 +87,9 @@ describe('seedFinance', () => {
       'RE-2026-041', 'RE-2026-055', 'SP-2026-003', 'RE-2026-060', 'Doppelt erfasst, storniert vor Zahlung',
       'Teilzahlung Lieferant', 'Ausgleich Forderung',
       'Auslandsbezug bei der Erfassung übersehen', 'Spenderin nachträglich zugeordnet',
+      // F2c: Begründung zum Periodenabschluss, neue Buchungstexte und Zwecke.
+      'Kleinbetrag bar erhalten, kein Beleg ausgestellt',
+      'Spende Flutlicht', 'Ausgabe Sommerfest', 'Sommerfest',
     ]) {
       expect(log, secret).not.toContain(secret);
     }
