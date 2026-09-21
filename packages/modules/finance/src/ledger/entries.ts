@@ -2,7 +2,7 @@ import { expectedVersionField, isoNow, newId, notFound, ok, requireHumanChannel,
 import { contacts } from '@kompass/module-contacts';
 import { unlinkDocumentInternal } from '@kompass/module-dms';
 import { projects } from '@kompass/module-projects';
-import { and, asc, desc, eq, gte, inArray, lte, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, like, lte, or, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
@@ -114,6 +114,16 @@ const idSchema = z.object({ id: z.string().min(1) });
 const reviewSchema = z.object({ id: z.string().min(1), reviewed: z.boolean(), expectedVersion: expectedVersionField });
 
 const listSchema = z.object({
+  /** draft = ungeprüfter Entwurf; reviewed = Entwurf mit reviewedAt; final = festgeschrieben und nicht zurückgenommen; reversed = festgeschrieben mit reversedByEntryId. */
+  state: z.enum(['draft', 'reviewed', 'final', 'reversed']).optional(),
+  categoryId: z.string().min(1).optional(),
+  /** Teil des Buchungstexts oder der Nummer, oder ein Betrag ("12,50"/"1250" → Cent), trifft eine Geld- oder Zuordnungszeile. */
+  text: z.string().trim().min(1).optional(),
+  /** documentation.state === 'missing'. */
+  withoutVoucher: z.boolean().optional(),
+  /** createdChannel === 'mcp'. */
+  agentPrepared: z.boolean().optional(),
+  orderBy: z.object({ field: z.enum(['entryDate', 'number', 'text', 'amount']), direction: z.enum(['asc', 'desc']) }).optional(),
   status: z.enum(['draft', 'final']).optional(),
   fiscalYearId: z.string().min(1).optional(),
   accountId: z.string().min(1).optional(),
@@ -122,6 +132,43 @@ const listSchema = z.object({
   limit: z.number().int().min(1).max(200).default(50),
   offset: z.number().int().min(0).default(0),
 });
+
+/** '12,50' oder '1250' → 1250 Cent; sonst `null`. Eigener, kleiner Parser fürs Modul — die reiche Fassung fürs Formular steht in der App (Task 5). */
+function parseSearchAmountCents(raw: string): number | null {
+  const trimmed = raw.trim();
+  const comma = /^-?\d+,\d{1,2}$/.exec(trimmed);
+  if (comma) {
+    const negative = trimmed.startsWith('-');
+    const [intPart, fracPartRaw] = trimmed.replace('-', '').split(',') as [string, string];
+    const fracPart = fracPartRaw.length === 1 ? `${fracPartRaw}0` : fracPartRaw;
+    const cents = Number(intPart) * 100 + Number(fracPart);
+    return negative ? -cents : cents;
+  }
+  if (/^-?\d+$/.test(trimmed)) return Number(trimmed);
+  return null;
+}
+
+/** Σ Geldzeilen; ohne Geldzeile Σ der positiven Zuordnungszeilen — für die Sortierung nach Betrag. */
+function amountSortKey(view: EntryView): number {
+  if (view.moneyLines.length > 0) return view.moneyLines.reduce((s, l) => s + l.amountCents, 0);
+  return view.allocationLines.filter((l) => l.amountCents > 0).reduce((s, l) => s + l.amountCents, 0);
+}
+
+/** Summen über die gefilterte Menge (nicht nur die Seite): Zuordnungszeilen nach Richtung ihrer Kategorie; Umbuchungen (`transit`) tragen nichts bei. */
+function totalsOf(db: DbOrTx, entries: readonly EntryView[]): { incomeCents: number; expenseCents: number; resultCents: number } {
+  const categoryIds = [...new Set(entries.flatMap((e) => e.allocationLines.map((l) => l.categoryId)))];
+  const categories = categoriesById(db, categoryIds);
+  let incomeCents = 0;
+  let expenseCents = 0;
+  for (const entry of entries) {
+    for (const line of entry.allocationLines) {
+      const direction = categories.get(line.categoryId)?.direction;
+      if (direction === 'income') incomeCents += line.amountCents;
+      else if (direction === 'expense') expenseCents += -line.amountCents;
+    }
+  }
+  return { incomeCents, expenseCents, resultCents: incomeCents - expenseCents };
+}
 
 /** Für `finalize.ts` und `reverse.ts`: Zeilen einer Buchung als Ganzes ersetzen, solange ihr Kopf `draft` ist. */
 export function writeLinesInternal(tx: DbOrTx, entryId: string, lines: { moneyLines: readonly MoneyLineWrite[]; allocationLines: readonly AllocationLineWrite[] }): void {
@@ -419,7 +466,7 @@ export async function getEntry(deps: Deps, ctx: CallContext, input: unknown): Pr
   return ok(view);
 }
 
-export async function listEntries(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ entries: EntryView[]; total: number }>> {
+export async function listEntries(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ entries: EntryView[]; total: number; totals: { incomeCents: number; expenseCents: number; resultCents: number } }>> {
   const denied = requireFinanceRead(ctx, 'read');
   if (denied) return denied;
   const parsed = validate(deps, listSchema, input ?? {});
@@ -428,19 +475,69 @@ export async function listEntries(deps: Deps, ctx: CallContext, input: unknown):
 
   const conditions: SQL[] = [];
   if (f.status) conditions.push(eq(financeEntries.status, f.status));
+  if (f.state) {
+    if (f.state === 'draft') conditions.push(and(eq(financeEntries.status, 'draft'), isNull(financeEntries.reviewedAt))!);
+    else if (f.state === 'reviewed') conditions.push(and(eq(financeEntries.status, 'draft'), isNotNull(financeEntries.reviewedAt))!);
+    else if (f.state === 'final') conditions.push(and(eq(financeEntries.status, 'final'), isNull(financeEntries.reversedByEntryId))!);
+    else conditions.push(and(eq(financeEntries.status, 'final'), isNotNull(financeEntries.reversedByEntryId))!);
+  }
   if (f.fiscalYearId) conditions.push(eq(financeEntries.fiscalYearId, f.fiscalYearId));
   if (f.from) conditions.push(gte(financeEntries.entryDate, f.from));
   if (f.to) conditions.push(lte(financeEntries.entryDate, f.to));
+  if (f.agentPrepared) conditions.push(eq(financeEntries.createdChannel, 'mcp'));
   if (f.accountId) {
     const ids = deps.db.select({ id: financeMoneyLines.entryId }).from(financeMoneyLines).where(eq(financeMoneyLines.accountId, f.accountId)).all().map((r) => r.id);
+    conditions.push(inArray(financeEntries.id, ids.length > 0 ? ids : ['—']));
+  }
+  if (f.categoryId) {
+    const ids = deps.db.select({ id: financeAllocationLines.entryId }).from(financeAllocationLines).where(eq(financeAllocationLines.categoryId, f.categoryId)).all().map((r) => r.id);
     conditions.push(inArray(financeEntries.id, ids.length > 0 ? ids : ['—']));
   }
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   const allIds = deps.db.select({ id: financeEntries.id }).from(financeEntries).where(where).orderBy(desc(financeEntries.entryDate), desc(financeEntries.createdAt)).all().map((r) => r.id);
-  const total = allIds.length;
-  const entries = allIds.slice(f.offset, f.offset + f.limit).map((id) => entryViewInternal(deps.db, id)!);
-  return ok({ entries, total });
+  // Mengen sind klein (Vereinsbuchhaltung): Text-/Betrags- und Belegsuche laufen über die schon geladene Sicht, nicht über weitere SQL-Abfragen.
+  let views = allIds.map((id) => entryViewInternal(deps.db, id)!);
+
+  if (f.text) {
+    const q = f.text.toLowerCase();
+    const amountCents = parseSearchAmountCents(f.text);
+    views = views.filter((v) => {
+      if (v.text.toLowerCase().includes(q)) return true;
+      if (v.number?.toLowerCase().includes(q)) return true;
+      if (amountCents !== null) {
+        if (v.moneyLines.some((l) => Math.abs(l.amountCents) === amountCents)) return true;
+        if (v.allocationLines.some((l) => Math.abs(l.amountCents) === amountCents)) return true;
+      }
+      return false;
+    });
+  }
+  if (f.withoutVoucher) views = views.filter((v) => v.documentation.state === 'missing');
+
+  if (f.orderBy) {
+    const { field, direction } = f.orderBy;
+    const dir = direction === 'asc' ? 1 : -1;
+    if (field === 'number') {
+      // Entwürfe ohne Nummer sortieren immer zuletzt, unabhängig von der Richtung.
+      views = [...views].sort((a, b) => {
+        if (a.number === null && b.number === null) return 0;
+        if (a.number === null) return 1;
+        if (b.number === null) return -1;
+        return dir * a.number.localeCompare(b.number);
+      });
+    } else if (field === 'entryDate') {
+      views = [...views].sort((a, b) => dir * a.entryDate.localeCompare(b.entryDate));
+    } else if (field === 'text') {
+      views = [...views].sort((a, b) => dir * a.text.localeCompare(b.text));
+    } else {
+      views = [...views].sort((a, b) => dir * (amountSortKey(a) - amountSortKey(b)));
+    }
+  }
+
+  const total = views.length;
+  const totals = totalsOf(deps.db, views);
+  const entries = views.slice(f.offset, f.offset + f.limit);
+  return ok({ entries, total, totals });
 }
 
 /** `finance.entriesWrite`: ein Entwurf wird gelöscht, nicht storniert (Spec 5.4). */

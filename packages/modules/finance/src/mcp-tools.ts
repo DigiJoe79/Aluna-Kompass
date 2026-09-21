@@ -72,7 +72,21 @@ const saveDraftMcpSchema = z.object({
   allocationLines: z.array(allocationLineSchema),
 });
 const entryIdMcpSchema = z.object({ id: z.string() });
-const listEntriesMcpSchema = z.object({ status: z.enum(['draft', 'final']).optional(), fiscalYearId: z.string().optional(), accountId: z.string().optional(), from: z.string().optional(), to: z.string().optional(), limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() });
+const listEntriesMcpSchema = z.object({
+  state: z.enum(['draft', 'reviewed', 'final', 'reversed']).optional(),
+  categoryId: z.string().optional(),
+  text: z.string().optional(),
+  withoutVoucher: z.boolean().optional(),
+  agentPrepared: z.boolean().optional(),
+  orderBy: z.object({ field: z.enum(['entryDate', 'number', 'text', 'amount']), direction: z.enum(['asc', 'desc']) }).optional(),
+  status: z.enum(['draft', 'final']).optional(),
+  fiscalYearId: z.string().optional(),
+  accountId: z.string().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+  limit: z.number().int().min(1).max(200).optional(),
+  offset: z.number().int().min(0).optional(),
+});
 const setReviewedMcpSchema = z.object({ id: z.string(), reviewed: z.boolean(), expectedVersion: z.string().optional() });
 const finalizeEntryMcpSchema = z.object({ id: z.string(), expectedVersion: z.string().optional() });
 const finalizeReviewedMcpSchema = z.object({ ids: z.array(z.string()).min(1) });
@@ -138,7 +152,7 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
     service: saveDraft,
   }),
   t({ name: 'finance_entry_get', description: 'Read one booking entry with its lines and computed tax. Requires finance.read.', inputSchema: entryIdMcpSchema, handler: (deps, ctx, args) => getEntry(deps, ctx, args), service: getEntry }),
-  t({ name: 'finance_entries_list', description: 'List booking entries by status, fiscal year, account or date range. Paginated (limit <= 200). Requires finance.read.', inputSchema: listEntriesMcpSchema, handler: (deps, ctx, args) => listEntries(deps, ctx, args), service: listEntries }),
+  t({ name: 'finance_entries_list', description: 'List booking entries, filtered by state (draft, reviewed, final, reversed), category, free text or amount, without voucher, agent-prepared, fiscal year, account or date range; sortable. Paginated (limit <= 200). Returns totals (income, expense, result) over the whole filtered set, not just the page. Requires finance.read.', inputSchema: listEntriesMcpSchema, handler: (deps, ctx, args) => listEntries(deps, ctx, args), service: listEntries }),
   t({ name: 'finance_entry_delete_draft', description: 'Delete a draft entry; a finalized entry is reversed instead. Requires finance.entriesWrite.', inputSchema: entryIdMcpSchema, handler: (deps, ctx, args) => deleteDraft(deps, ctx, args), service: deleteDraft }),
   t({
     name: 'finance_entry_review',
