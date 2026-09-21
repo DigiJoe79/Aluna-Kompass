@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { CONTRAST_PAIRS, checkThemeContrast } from '../src/themes/contrast';
 import { DEFAULT_THEME } from '../src/themes/default-theme';
 import { themeTokensSchema } from '../src/themes/tokens';
 
@@ -28,5 +29,18 @@ describe('theme token values', () => {
   it('still refuses the empty value and the overly long one', () => {
     expect(themeTokensSchema.safeParse(mitWert('')).success).toBe(false);
     expect(themeTokensSchema.safeParse(mitWert('#'.repeat(161))).success).toBe(false);
+  });
+
+  it('carries the seven finance tokens in the default theme, light and dark', () => {
+    for (const token of ['color-final', 'color-final-bg', 'color-agent', 'color-agent-bg', 'color-amount-out', 'color-key-bg', 'color-key-ink'] as const) {
+      expect(DEFAULT_THEME.tokens[token].light).toMatch(/^#[0-9A-F]{6}$/i);
+      expect(DEFAULT_THEME.tokens[token].dark).toMatch(/^#[0-9A-F]{6}$/i);
+    }
+  });
+
+  it('checks the new ink/surface pairs for contrast', () => {
+    const pairs = CONTRAST_PAIRS.map((p) => `${p.fg}/${p.bg}`);
+    expect(pairs).toEqual(expect.arrayContaining(['color-final/color-final-bg', 'color-agent/color-agent-bg', 'color-amount-out/surface', 'color-amount-out/table-zebra', 'color-key-ink/color-key-bg']));
+    expect(checkThemeContrast(DEFAULT_THEME)).toEqual([]);
   });
 });

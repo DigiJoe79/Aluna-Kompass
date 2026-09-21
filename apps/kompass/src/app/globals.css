@@ -42,6 +42,13 @@
   --color-error-bg: var(--color-error-bg);
   --color-info: var(--color-info);
   --color-info-bg: var(--color-info-bg);
+  --color-final: var(--color-final);
+  --color-final-bg: var(--color-final-bg);
+  --color-agent: var(--color-agent);
+  --color-agent-bg: var(--color-agent-bg);
+  --color-amount-out: var(--color-amount-out);
+  --color-key: var(--color-key-bg);
+  --color-key-ink: var(--color-key-ink);
   --color-hover: var(--hover-surface);
   --color-active: var(--active-surface);
   --color-selected: var(--selected-bg);

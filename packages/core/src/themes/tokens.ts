@@ -7,6 +7,8 @@ export const THEME_TOKENS = [
   // Status
   'color-success', 'color-success-bg', 'color-warning', 'color-warning-bg',
   'color-error', 'color-error-bg', 'color-info', 'color-info-bg',
+  // Finanzen
+  'color-final', 'color-final-bg', 'color-agent', 'color-agent-bg', 'color-amount-out', 'color-key-bg', 'color-key-ink',
   // Flächen
   'bg', 'surface', 'surface-2', 'sidebar-bg', 'topbar-bg',
   // Schrift und Linien

@@ -6,8 +6,8 @@ import { readSetting } from '../src/settings/service';
 import { createTestDeps } from '../src/testing';
 
 describe('theme schema', () => {
-  it('defines 58 tokens including the design-round additions', () => {
-    expect(THEME_TOKENS).toHaveLength(58);
+  it('defines 65 tokens including the design-round and finance additions', () => {
+    expect(THEME_TOKENS).toHaveLength(65);
     for (const token of ['color-primary', 'focus-ring', 'table-zebra', 'input-bg', 'overlay', 'shadow-md', 'font-mono', 'radius-full', 'row-h']) {
       expect(THEME_TOKENS).toContain(token);
     }
