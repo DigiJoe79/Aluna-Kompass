@@ -366,6 +366,110 @@ export const financeCashCounts = sqliteTable(
 );
 export type FinanceCashCountRow = typeof financeCashCounts.$inferSelect;
 
+/**
+ * Ein CAMT.053-Lauf ist eine geschriebene Tatsache (Spec 6.1) — ganz oder
+ * gar nicht importiert, nie halb. Zähler und Abschlussfelder sind änderbar,
+ * bis `finishedAt`/`failedAt` gesetzt ist; danach nur `discardedAt`/
+ * `discardedByUserId`/`discardNote` (je einmal) und `fileKey` → `NULL` (je
+ * einmal, beim Verwerfen). Trigger sichern das auf Datenbankebene (von Hand
+ * angefügt, `0018_finance_import.sql`).
+ */
+export const financeImportRuns = sqliteTable(
+  'finance_import_runs',
+  {
+    id: text('id').primaryKey(),
+    accountId: text('account_id').notNull().references(() => financeAccounts.id),
+    format: text('format', { enum: ['camt053'] }).notNull(),
+    fileName: text('file_name').notNull(),
+    fileSha256: text('file_sha256').notNull(),
+    /** Modulspeicher-Schlüssel der Originaldatei — `NULL` nach dem Verwerfen. */
+    fileKey: text('file_key'),
+    periodFrom: text('period_from'),
+    periodTo: text('period_to'),
+    openingCents: integer('opening_cents'),
+    closingCents: integer('closing_cents'),
+    countNew: integer('count_new'),
+    countKnown: integer('count_known'),
+    countHeld: integer('count_held'),
+    countPendingSkipped: integer('count_pending_skipped'),
+    gapFrom: text('gap_from'),
+    gapTo: text('gap_to'),
+    startedAt: text('started_at').notNull(),
+    finishedAt: text('finished_at'),
+    failedAt: text('failed_at'),
+    failureCode: text('failure_code'),
+    failureLine: integer('failure_line'),
+    discardedAt: text('discarded_at'),
+    discardedByUserId: text('discarded_by_user_id'),
+    /** Frei getippt — steht hier, nie im Änderungsprotokoll. */
+    discardNote: text('discard_note'),
+    createdByUserId: text('created_by_user_id').notNull(),
+    createdChannel: text('created_channel').notNull(),
+  },
+  (t) => [index('finance_import_runs_account_idx').on(t.accountId)],
+);
+export type FinanceImportRunRow = typeof financeImportRuns.$inferSelect;
+
+/**
+ * Ein Kontoumsatz aus einem Auszug — unveränderlich ab dem Einlesen
+ * (Trigger `finance_raw_transactions_no_update`). Gegenpartei, IBAN und
+ * Verwendungszweck sind personenbezogen und stehen deshalb nie im
+ * Änderungsprotokoll (Spec 10.3).
+ */
+export const financeRawTransactions = sqliteTable(
+  'finance_raw_transactions',
+  {
+    id: text('id').primaryKey(),
+    runId: text('run_id').notNull().references(() => financeImportRuns.id),
+    accountId: text('account_id').notNull().references(() => financeAccounts.id),
+    bookingDate: text('booking_date').notNull(),
+    valueDate: text('value_date'),
+    amountCents: integer('amount_cents').notNull(),
+    counterpartyName: text('counterparty_name'),
+    counterpartyIban: text('counterparty_iban'),
+    purpose: text('purpose').notNull().default(''),
+    bankReference: text('bank_reference'),
+    endToEndId: text('end_to_end_id'),
+    returnCode: text('return_code'),
+    dedupKey: text('dedup_key').notNull(),
+    lineIndex: integer('line_index').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('finance_raw_transactions_reference_idx')
+      .on(t.accountId, t.bankReference)
+      .where(sql`${t.bankReference} is not null`),
+    index('finance_raw_transactions_dedup_idx').on(t.accountId, t.dedupKey),
+    index('finance_raw_transactions_run_idx').on(t.runId),
+  ],
+);
+export type FinanceRawTransactionRow = typeof financeRawTransactions.$inferSelect;
+
+/**
+ * Eine Zeile des Auszugs, deren Dublettenschlüssel nur wahrscheinlich trifft
+ * — zurückgehalten und entschieden mit „same“/„own“ (Spec 6.1, 6.3). `line`
+ * trägt die volle `CamtLine` als JSON und ist damit personenbezogen wie der
+ * Rohumsatz selbst.
+ */
+export const financeImportCandidates = sqliteTable(
+  'finance_import_candidates',
+  {
+    id: text('id').primaryKey(),
+    runId: text('run_id').notNull().references(() => financeImportRuns.id),
+    accountId: text('account_id').notNull().references(() => financeAccounts.id),
+    line: text('line').notNull(),
+    matchesRawTransactionId: text('matches_raw_transaction_id').references(() => financeRawTransactions.id),
+    dedupKey: text('dedup_key').notNull(),
+    decision: text('decision', { enum: ['same', 'own'] }),
+    decidedAt: text('decided_at'),
+    decidedByUserId: text('decided_by_user_id'),
+    /** Nur gesetzt bei `decision = 'own'`. */
+    rawTransactionId: text('raw_transaction_id').references(() => financeRawTransactions.id),
+  },
+  (t) => [index('finance_import_candidates_run_idx').on(t.runId)],
+);
+export type FinanceImportCandidateRow = typeof financeImportCandidates.$inferSelect;
+
 /** Finanzfelder eines Projekts — kein Fremdschlüssel: Projekte gehören einem anderen Modul. Ohne Zeile gelten die Vorgaben aus `projectFinanceInternal`. */
 export const financeProjectSettings = sqliteTable('finance_project_settings', {
   projectId: text('project_id').primaryKey(),

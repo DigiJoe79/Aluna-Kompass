@@ -127,6 +127,13 @@
       "when": 1789992754466,
       "tag": "0017_finance_cash_counts",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1790013137799,
+      "tag": "0018_finance_import",
+      "breakpoints": true
     }
   ]
 }

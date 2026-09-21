@@ -11,12 +11,15 @@ export {
   financeEntryDocuments,
   financeEntryJustifications,
   financeFiscalYears,
+  financeImportCandidates,
+  financeImportRuns,
   financeMoneyLines,
   financeOpenItems,
   financeOpenItemSettlements,
   financePeriodEvents,
   financeProjectSettings,
   financePurposes,
+  financeRawTransactions,
   type FinanceAccountRow,
   type FinanceAllocationCorrectionRow,
   type FinanceAllocationLineRow,
@@ -27,12 +30,15 @@ export {
   type FinanceEntryJustificationRow,
   type FinanceEntryRow,
   type FinanceFiscalYearRow,
+  type FinanceImportCandidateRow,
+  type FinanceImportRunRow,
   type FinanceMoneyLineRow,
   type FinanceOpenItemRow,
   type FinanceOpenItemSettlementRow,
   type FinancePeriodEventRow,
   type FinanceProjectSettingsRow,
   type FinancePurposeRow,
+  type FinanceRawTransactionRow,
 } from './schema';
 
 export { requireFinanceRead } from './ledger/access';
@@ -172,3 +178,4 @@ export { FINANCE_MCP_TOOLS } from './mcp-tools';
 export { seedFinance } from './seed';
 
 export { parseCamt053, type CamtError, type CamtLine, type CamtStatement } from './import/camt';
+export { dedupKey, normalizePurpose } from './import/dedup';

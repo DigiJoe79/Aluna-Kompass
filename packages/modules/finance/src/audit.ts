@@ -1,6 +1,6 @@
 import { recordAudit, type CallContext, type DbOrTx, type Deps } from '@kompass/core';
 
-export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument' | 'financeOpenItem' | 'financeAllocationCorrection' | 'financeEntryJustification' | 'financeProjectSettings' | 'financeCashCount' | 'financeSetup';
+export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument' | 'financeOpenItem' | 'financeAllocationCorrection' | 'financeEntryJustification' | 'financeProjectSettings' | 'financeCashCount' | 'financeSetup' | 'financeImportRun' | 'financeRawTransaction' | 'financeImportCandidate';
 
 /**
  * Was vom Finanzmodul ins Änderungsprotokoll darf — je Entität eine Liste, und
@@ -40,6 +40,11 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   // Task 4/5 — nur, *dass* ein Einrichtungsschritt bestätigt oder ein Schalter gesetzt wurde, nie Namen.
   // `key`/`cents` (Nachtrag B): nur Schlüssel und Zahl der Grenze, nie ein Begründungstext.
   financeSetup: ['step', 'confirmedAt', 'applied', 'key', 'cents'],
+  // F4 Task 2 — kein Dienst protokolliert hier schon (kommt mit Task 3/5); nur
+  // IDs, Zähler und Daten, nie Gegenpartei, IBAN, Verwendungszweck oder Dateiname (Spec 10.3, E-Global-Constraint).
+  financeImportRun: ['accountId', 'format', 'periodFrom', 'periodTo', 'openingCents', 'closingCents', 'countNew', 'countKnown', 'countHeld', 'countPendingSkipped', 'gapFrom', 'gapTo', 'failureCode', 'failureLine', 'discarded', 'fileKeyCleared'],
+  financeRawTransaction: ['runId', 'accountId', 'bookingDate', 'valueDate', 'amountCents', 'lineIndex'],
+  financeImportCandidate: ['runId', 'accountId', 'decision', 'matchesRawTransactionId', 'rawTransactionId'],
 };
 
 const pick = (entity: FinanceEntity, data?: Record<string, unknown>) => (data ? Object.fromEntries(Object.entries(data).filter(([field]) => AUDIT_FIELDS[entity].includes(field))) : undefined);

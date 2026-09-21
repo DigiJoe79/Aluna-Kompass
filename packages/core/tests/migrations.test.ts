@@ -65,6 +65,22 @@ describe('hand-written SQL survives', () => {
       expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
     }
   });
+
+  it('locks a raw transaction against update, and against deletion while a finalized entry books it', () => {
+    for (const name of ['finance_raw_transactions_no_update', 'finance_raw_transactions_booked_no_delete']) {
+      expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
+    }
+  });
+
+  it('freezes an import run — identity always, facts until finished/failed, then only discarding and the file key once', () => {
+    for (const name of ['finance_import_runs_identity_immutable', 'finance_import_runs_facts_immutable', 'finance_import_runs_file_key_only_cleared', 'finance_import_runs_discard_once', 'finance_import_runs_no_delete']) {
+      expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
+    }
+  });
+
+  it('lets an import candidate be decided only once', () => {
+    expect(allSql, 'finance_import_candidates_decide_once').toContain('CREATE TRIGGER finance_import_candidates_decide_once ');
+  });
 });
 
 describe('the migrations of this version', () => {
