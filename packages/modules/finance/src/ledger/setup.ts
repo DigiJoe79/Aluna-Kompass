@@ -1,0 +1,270 @@
+import {
+  getEffectivePermissions,
+  isoNow,
+  listUserNamesWithPermission,
+  ok,
+  readSetting,
+  requireAnyPermission,
+  requirePermission,
+  schema,
+  validate,
+  writeSettingInternal,
+  type CallContext,
+  type DbOrTx,
+  type Deps,
+  type Result,
+} from '@kompass/core';
+import { contactIdForUserInternal } from '@kompass/module-contacts';
+import { and, eq } from 'drizzle-orm';
+import { z } from 'zod';
+import { financeAudit } from '../audit';
+import { FINANCE_PERMISSIONS } from '../permissions';
+import { financeAccounts, financeFiscalYears } from '../schema';
+
+export type SetupStepKey = 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax';
+
+export interface SetupStep {
+  key: SetupStepKey;
+  required: true;
+  done: boolean;
+  dependsOn: SetupStepKey | null;
+  /** Die Abhängigkeit ist offen — der Schritt lässt sich noch nicht sinnvoll erledigen. */
+  blocked: boolean;
+  detail: Record<string, string | number>;
+  permission: string;
+  /** Namen aktiver Nutzer, die den Schritt erledigen können (ohne E-Mail). */
+  canDo: string[];
+}
+
+/**
+ * Die fünf Rollenvorschläge des Moduls (`install.ts`, `ROLES`) — hier nur
+ * `originKey` und der ausgelieferte Name als Rückfalltext, falls die Rolle
+ * fehlt (etwa auf einer Installation ohne `installFinance`-Lauf). Bewusst
+ * dupliziert statt aus `install.ts` importiert: `install.ts` bringt die
+ * Startplan-Kategorien mit, die dieser Dienst nicht braucht, und eine eigene,
+ * kleine Liste hält den Einrichtungsstand unabhängig vom Startplan.
+ */
+const FINANCE_ROLE_ORIGINS: readonly { originKey: string; name: string }[] = [
+  { originKey: 'finance:treasurer', name: 'Schatzmeister' },
+  { originKey: 'finance:approver', name: 'Freigeber Finanzen' },
+  { originKey: 'finance:clerk', name: 'Auslagen einreichen' },
+  { originKey: 'finance:auditor', name: 'Kassenprüfer' },
+  { originKey: 'finance:agent', name: 'Finanz-Agent' },
+];
+
+/**
+ * Die Finanz-Navigationseinträge des Moduls (`manifest.ts`: `navigation` und
+ * `adminNavigation`) — nur Schlüssel und Recht, für `getPermissionMatrix`.
+ * Muss mit `manifest.ts` übereinstimmen; `tests/setup.test.ts` prüft das
+ * gegen das echte Manifest, damit ein Auseinanderlaufen auffällt.
+ */
+const FINANCE_NAV_ENTRIES: readonly { key: string; permission: string }[] = [
+  { key: 'finance.entries', permission: 'finance.read' },
+  { key: 'finance.accounts', permission: 'finance.read' },
+  { key: 'finance.openItems', permission: 'finance.read' },
+  { key: 'finance.cash', permission: 'finance.read' },
+  { key: 'finance.admin', permission: 'finance.setup' },
+];
+
+function hasAnyFiscalYear(db: DbOrTx): boolean {
+  return !!db.select({ id: financeFiscalYears.id }).from(financeFiscalYears).limit(1).get();
+}
+
+function accountStepDetail(db: DbOrTx): { accounts: number; withoutOpening: number } {
+  const rows = db.select({ openingBalanceCents: financeAccounts.openingBalanceCents }).from(financeAccounts).where(eq(financeAccounts.isActive, true)).all();
+  return { accounts: rows.length, withoutOpening: rows.filter((r) => r.openingBalanceCents === null).length };
+}
+
+/** Aktive Nutzer, die irgendein Finanzrecht tragen — geschützte Rollen eingeschlossen (Vorarbeiten-Spec VP4). */
+function activeFinanceUsers(deps: Deps): { id: string; name: string }[] {
+  const activeUsers = deps.db.select({ id: schema.users.id, name: schema.users.name }).from(schema.users).where(eq(schema.users.isActive, true)).all();
+  return activeUsers.filter((u) => {
+    const held = getEffectivePermissions(deps.db, deps.registry, u.id);
+    return [...held].some((key) => key.startsWith('finance.'));
+  });
+}
+
+function rolesStepDetail(deps: Deps): { done: boolean; detail: Record<string, string | number> } {
+  const db = deps.db;
+  const rolesWithoutUser: string[] = [];
+  for (const origin of FINANCE_ROLE_ORIGINS) {
+    const roleRow = db.select({ id: schema.roles.id, name: schema.roles.name }).from(schema.roles).where(eq(schema.roles.originKey, origin.originKey)).get();
+    const hasActiveHolder = roleRow
+      ? !!db
+          .select({ id: schema.userRoles.userId })
+          .from(schema.userRoles)
+          .innerJoin(schema.users, eq(schema.users.id, schema.userRoles.userId))
+          .where(and(eq(schema.userRoles.roleId, roleRow.id), eq(schema.users.isActive, true)))
+          .limit(1)
+          .get()
+      : false;
+    if (!hasActiveHolder) rolesWithoutUser.push(roleRow?.name ?? origin.name);
+  }
+  const usersWithoutContact = activeFinanceUsers(deps).filter((u) => !contactIdForUserInternal(db, u.id)).length;
+  const detail: Record<string, string | number> = {};
+  if (rolesWithoutUser.length > 0) detail.rolesWithoutUser = rolesWithoutUser.join(', ');
+  if (usersWithoutContact > 0) detail.usersWithoutContact = usersWithoutContact;
+  return { done: rolesWithoutUser.length === 0 && usersWithoutContact === 0, detail };
+}
+
+/**
+ * Der Einrichtungsstand — komplett berechnet, nie gespeichert (Spec 10.5). Nur
+ * `categories` und `tax` sind Bestätigungen; ihr Zeitpunkt steht in den
+ * Einstellungen `finance.setupCategoriesConfirmedAt` / `…TaxConfirmedAt`.
+ */
+export async function getSetupStatus(deps: Deps, ctx: CallContext): Promise<Result<{ steps: SetupStep[]; complete: boolean }>> {
+  const denied = requireAnyPermission(ctx, ['finance.setup', 'finance.read']);
+  if (denied) return denied;
+
+  const fiscalYearDone = hasAnyFiscalYear(deps.db);
+  const account = accountStepDetail(deps.db);
+  const roles = rolesStepDetail(deps);
+  const categoriesConfirmedAt = readSetting<string | null>(deps, 'finance.setupCategoriesConfirmedAt');
+  const taxConfirmedAt = readSetting<string | null>(deps, 'finance.setupTaxConfirmedAt');
+
+  const steps: SetupStep[] = [
+    { key: 'fiscalYear', required: true, done: fiscalYearDone, dependsOn: null, blocked: false, detail: {}, permission: 'finance.setup', canDo: listUserNamesWithPermission(deps, 'finance.setup') },
+    {
+      key: 'account',
+      required: true,
+      done: account.accounts - account.withoutOpening > 0,
+      dependsOn: 'fiscalYear',
+      blocked: !fiscalYearDone,
+      detail: account,
+      permission: 'finance.setup',
+      canDo: listUserNamesWithPermission(deps, 'finance.setup'),
+    },
+    { key: 'roles', required: true, done: roles.done, dependsOn: null, blocked: false, detail: roles.detail, permission: 'users.manage', canDo: listUserNamesWithPermission(deps, 'users.manage') },
+    {
+      key: 'categories',
+      required: true,
+      done: categoriesConfirmedAt !== null,
+      dependsOn: null,
+      blocked: false,
+      detail: categoriesConfirmedAt !== null ? { confirmedAt: categoriesConfirmedAt } : {},
+      permission: 'finance.setup',
+      canDo: listUserNamesWithPermission(deps, 'finance.setup'),
+    },
+    {
+      key: 'tax',
+      required: true,
+      done: taxConfirmedAt !== null,
+      dependsOn: null,
+      blocked: false,
+      detail: taxConfirmedAt !== null ? { confirmedAt: taxConfirmedAt } : {},
+      permission: 'finance.setup',
+      canDo: listUserNamesWithPermission(deps, 'finance.setup'),
+    },
+  ];
+  return ok({ steps, complete: steps.every((s) => s.done) });
+}
+
+const STEP_SETTING: Record<'categories' | 'tax', string> = {
+  categories: 'finance.setupCategoriesConfirmedAt',
+  tax: 'finance.setupTaxConfirmedAt',
+};
+
+const confirmSchema = z.object({ step: z.enum(['categories', 'tax']) });
+
+/** Bestätigt einen der beiden Prüf-Schritte — kein Fachdatensatz ändert sich, nur der Zeitpunkt. */
+export async function confirmSetupStep(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ step: 'categories' | 'tax'; confirmedAt: string }>> {
+  const denied = requirePermission(ctx, 'finance.setup');
+  if (denied) return denied;
+  const parsed = validate(deps, confirmSchema, input);
+  if (!parsed.ok) return parsed;
+  return deps.db.transaction((tx: DbOrTx) => {
+    const confirmedAt = isoNow(deps.clock);
+    const written = writeSettingInternal(tx, deps, ctx, STEP_SETTING[parsed.value.step], confirmedAt, 'finance.setup.confirm');
+    if (!written.ok) return written;
+    financeAudit(tx, deps, ctx, {
+      action: 'finance.setup.confirm',
+      entity: 'financeSetup',
+      id: parsed.value.step,
+      after: { step: parsed.value.step, confirmedAt },
+      summary: `Einrichtungsschritt ${parsed.value.step} bestätigt`,
+    });
+    return ok({ step: parsed.value.step, confirmedAt });
+  });
+}
+
+/** Die drei Steuer-Schalter der Einrichtung (H7); `applyTaxDefaults` setzt sie auf ihre ausgelieferte Vorgabe zurück. */
+const TAX_DEFAULT_KEYS = ['finance.isEntrepreneurOrHasVatId', 'finance.membershipFeesCertifiable', 'finance.expenseWaiversEnabled'] as const;
+
+/** Setzt die Steuer-Schalter auf ihre Vorgabe und bestätigt `tax` in einem Zug. */
+export async function applyTaxDefaults(deps: Deps, ctx: CallContext): Promise<Result<{ applied: string[] }>> {
+  const denied = requirePermission(ctx, 'finance.setup');
+  if (denied) return denied;
+  return deps.db.transaction((tx: DbOrTx) => {
+    const applied: string[] = [];
+    for (const key of TAX_DEFAULT_KEYS) {
+      const def = deps.registry.settingDefinitions.get(key);
+      if (!def) continue;
+      const written = writeSettingInternal(tx, deps, ctx, key, def.default, 'finance.setup.applyTaxDefaults');
+      if (!written.ok) return written;
+      applied.push(key);
+    }
+    const confirmedAt = isoNow(deps.clock);
+    const confirmed = writeSettingInternal(tx, deps, ctx, STEP_SETTING.tax, confirmedAt, 'finance.setup.confirm');
+    if (!confirmed.ok) return confirmed;
+    financeAudit(tx, deps, ctx, {
+      action: 'finance.setup.applyTaxDefaults',
+      entity: 'financeSetup',
+      id: 'tax',
+      after: { step: 'tax', confirmedAt, applied },
+      summary: 'Steuer-Vorgaben übernommen und Schritt bestätigt',
+    });
+    return ok({ applied });
+  });
+}
+
+export interface PermissionMatrixActivity {
+  key: string;
+  permission: string;
+}
+
+export interface PermissionMatrixRole {
+  id: string;
+  name: string;
+  permissions: string[];
+  navigation: string[];
+  holders: string[];
+}
+
+/**
+ * Die Matrix „Wer darf was“ (H8): Tätigkeiten in fester Reihenfolge, je auf
+ * genau ein Recht abgebildet, dazu jede Rolle, die mindestens eines dieser
+ * Rechte trägt — mit ihren sichtbaren Finanz-Navigationseinträgen und ihren
+ * aktiven Trägern (Namen ohne E-Mail).
+ */
+export async function getPermissionMatrix(deps: Deps, ctx: CallContext): Promise<Result<{ activities: PermissionMatrixActivity[]; roles: PermissionMatrixRole[] }>> {
+  const denied = requirePermission(ctx, 'finance.setup');
+  if (denied) return denied;
+
+  const activities: PermissionMatrixActivity[] = FINANCE_PERMISSIONS.map((permission) => ({ key: permission.slice('finance.'.length), permission }));
+
+  const allRoles = deps.db.select().from(schema.roles).orderBy(schema.roles.name).all();
+  const roles: PermissionMatrixRole[] = [];
+  for (const role of allRoles) {
+    const grantedKeys = role.isProtected
+      ? [...FINANCE_PERMISSIONS]
+      : deps.db
+          .select({ key: schema.rolePermissions.permissionKey })
+          .from(schema.rolePermissions)
+          .where(eq(schema.rolePermissions.roleId, role.id))
+          .all()
+          .map((r) => r.key)
+          .filter((key): key is (typeof FINANCE_PERMISSIONS)[number] => (FINANCE_PERMISSIONS as readonly string[]).includes(key));
+    if (grantedKeys.length === 0) continue;
+    const navigation = FINANCE_NAV_ENTRIES.filter((entry) => grantedKeys.includes(entry.permission as (typeof FINANCE_PERMISSIONS)[number])).map((entry) => entry.key);
+    const holders = deps.db
+      .select({ name: schema.users.name })
+      .from(schema.userRoles)
+      .innerJoin(schema.users, eq(schema.users.id, schema.userRoles.userId))
+      .where(and(eq(schema.userRoles.roleId, role.id), eq(schema.users.isActive, true)))
+      .all()
+      .map((r) => r.name)
+      .sort((a, b) => a.localeCompare(b, 'de'));
+    roles.push({ id: role.id, name: role.name, permissions: [...grantedKeys], navigation, holders });
+  }
+  return ok({ activities, roles });
+}

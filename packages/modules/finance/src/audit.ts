@@ -1,6 +1,6 @@
 import { recordAudit, type CallContext, type DbOrTx, type Deps } from '@kompass/core';
 
-export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument' | 'financeOpenItem' | 'financeAllocationCorrection' | 'financeEntryJustification' | 'financeProjectSettings' | 'financeCashCount';
+export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument' | 'financeOpenItem' | 'financeAllocationCorrection' | 'financeEntryJustification' | 'financeProjectSettings' | 'financeCashCount' | 'financeSetup';
 
 /**
  * Was vom Finanzmodul ins Änderungsprotokoll darf — je Entität eine Liste, und
@@ -37,6 +37,8 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   financeProjectSettings: ['projectId', 'targetCents', 'defaultPurposeId', 'abroad', 'publishDonationStatus'],
   // Nie die Zählenden, nie ihre Erklärung (Spec 10.3, Entschieden 1): nur, *dass* und *wie viel* abweicht.
   financeCashCount: ['accountId', 'countedOn', 'kind', 'differenceCents', 'documentNumber', 'entryId'],
+  // Task 4 — nur, *dass* ein Einrichtungsschritt bestätigt wurde und welche Vorgaben dabei griffen, nie Namen.
+  financeSetup: ['step', 'confirmedAt', 'applied'],
 };
 
 const pick = (entity: FinanceEntity, data?: Record<string, unknown>) => (data ? Object.fromEntries(Object.entries(data).filter(([field]) => AUDIT_FIELDS[entity].includes(field))) : undefined);

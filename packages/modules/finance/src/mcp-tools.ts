@@ -14,6 +14,7 @@ import { getBalances, getIncomeStatement } from './ledger/overview';
 import { closeFiscalYear, justifyUndocumentedEntry, previewPeriod, reopenFiscalYear } from './ledger/period';
 import { getProjectFinance, setProjectFinance } from './ledger/project-settings';
 import { reverseEntry } from './ledger/reverse';
+import { applyTaxDefaults, confirmSetupStep, getPermissionMatrix, getSetupStatus } from './ledger/setup';
 import { attachDocument, revokeVoucher, uploadVoucher } from './ledger/vouchers';
 
 const t = <T>(def: McpToolDefinition<T>): McpToolDefinition => def as McpToolDefinition;
@@ -151,6 +152,8 @@ const emptyDonationBoxMcpSchema = z.object({
 });
 const moveCashMcpSchema = z.object({ fromAccountId: z.string(), toAccountId: z.string(), date: z.string(), amountCents: z.number().int(), text: z.string().optional() });
 const listCashCountsMcpSchema = z.object({ accountId: z.string().optional(), limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() });
+
+const confirmSetupStepMcpSchema = z.object({ step: z.enum(['categories', 'tax']) });
 
 const previewPeriodMcpSchema = z.object({ id: z.string(), action: z.enum(['close', 'reopen']) });
 const closeFiscalYearMcpSchema = z.object({ id: z.string() });
@@ -302,4 +305,8 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
     service: moveCash,
   }),
   t({ name: 'finance_cash_counts_list', description: 'List stored cash counts, newest first, optionally filtered by account. Requires finance.read.', inputSchema: listCashCountsMcpSchema, handler: (deps, ctx, args) => listCashCounts(deps, ctx, args), service: listCashCounts }),
+  t({ name: 'finance_setup_status', description: 'Read the computed setup checklist (fiscal year, account with opening balance, roles, categories reviewed, tax defaults applied) and whether it is complete. Requires finance.setup or finance.read.', inputSchema: z.object({}), handler: (deps, ctx) => getSetupStatus(deps, ctx), service: getSetupStatus }),
+  t({ name: 'finance_setup_confirm', description: 'Confirm the categories-reviewed or the tax-defaults setup step by hand. Requires finance.setup.', inputSchema: confirmSetupStepMcpSchema, handler: (deps, ctx, args) => confirmSetupStep(deps, ctx, args), service: confirmSetupStep }),
+  t({ name: 'finance_setup_tax_defaults', description: 'Apply the shipped defaults for the tax switches (entrepreneur status, membership fee certificates, expense waivers) and confirm the tax setup step in one step. Requires finance.setup.', inputSchema: z.object({}), handler: (deps, ctx) => applyTaxDefaults(deps, ctx), service: applyTaxDefaults }),
+  t({ name: 'finance_permission_matrix', description: 'Read the "who may do what" matrix: the ten finance activities mapped to their permission, and per role its granted activities, visible finance navigation entries and active holders (names, no e-mail). Requires finance.setup.', inputSchema: z.object({}), handler: (deps, ctx) => getPermissionMatrix(deps, ctx), service: getPermissionMatrix }),
 ];

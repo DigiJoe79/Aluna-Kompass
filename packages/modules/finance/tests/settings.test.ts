@@ -25,6 +25,8 @@ describe('finance settings', () => {
       'finance.noticeExpiryWarnMonths',
       'finance.proofGraceDays',
       'finance.roundAmountFromCents',
+      'finance.setupCategoriesConfirmedAt',
+      'finance.setupTaxConfirmedAt',
       'finance.statementSufficesBelowCents',
       'finance.uploadLimitMb',
       'finance.voucherTypes',

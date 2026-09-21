@@ -93,6 +93,16 @@ export { closePurpose, deleteMasterData, readMasterData, saveMasterData, setMast
 export { firstNegativeCashDay, formatEuro } from './ledger/cash-check';
 export { countCash, emptyDonationBox, lastCountInternal, listCashCounts, moveCash, readCashCountProtocol, type CashCountKind, type CashCountView, type CountCashResult, type EmptyDonationBoxResult } from './ledger/cash';
 export { cashCountTemplate, type CashCountTemplateInput } from './ledger/cash-count-template';
+export {
+  applyTaxDefaults,
+  confirmSetupStep,
+  getPermissionMatrix,
+  getSetupStatus,
+  type PermissionMatrixActivity,
+  type PermissionMatrixRole,
+  type SetupStep,
+  type SetupStepKey,
+} from './ledger/setup';
 export { taxContextAt, taxOf, type Taxation, type TaxCode, type TaxInput, type TaxResult } from './ledger/tax';
 export { abortFinalize, bookEntry, finalizeEntry, finalizeInternal, finalizeReviewed, FinalizeAborted, type FinalizeOptions } from './ledger/finalize';
 export { reverseEntry, reverseInternal } from './ledger/reverse';

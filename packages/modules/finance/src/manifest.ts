@@ -6,8 +6,11 @@ import { cashCountTemplate } from './ledger/cash-count-template';
 import { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds } from './ledger/holds';
 import { installFinance } from './install';
 import { FINANCE_MCP_TOOLS } from './mcp-tools';
+import { FINANCE_PERMISSIONS } from './permissions';
 import { seedFinance } from './seed';
 import { financeEntries, financeFiscalYears } from './schema';
+
+export { FINANCE_PERMISSIONS } from './permissions';
 
 /**
  * Alle Einstellungen der Spec (5.1), auch die erst spätere Pläne lesen — eine
@@ -29,18 +32,10 @@ const FINANCE_SETTINGS: readonly SettingDefinition[] = [
   { key: 'finance.uploadLimitMb', schema: z.number().int().min(1).max(10), default: 5 },
   { key: 'finance.lastStatementWarnDays', schema: z.number().int().min(1).max(365), default: 35 },
   { key: 'finance.voucherTypes', schema: z.array(z.string()), default: ['voucher-own', 'voucher-invoice', 'voucher-receipt', 'bank-statement'] },
+  // Task 4 (Einrichtungsstand): Zeitpunkt der Bestätigung, keine Freigabe — daher normale Einstellungen, kein `uiOnly`.
+  { key: 'finance.setupCategoriesConfirmedAt', schema: z.string().nullable(), default: null },
+  { key: 'finance.setupTaxConfirmedAt', schema: z.string().nullable(), default: null },
 ];
-
-/**
- * Alle zehn Rechte stehen von Anfang an hier, auch die, deren Dienste erst
- * spätere Pläne bringen: Rollenvorschläge werden einmal ausgeliefert und nie
- * nachgefüllt (Vorarbeiten-Spec V4) — ein Recht, das erst mit F6a erschiene,
- * fehlte dem Schatzmeister für immer.
- */
-export const FINANCE_PERMISSIONS = [
-  'finance.read', 'finance.overview', 'finance.entriesWrite', 'finance.entriesFinalize', 'finance.periodClose',
-  'finance.setup', 'finance.expensesSubmit', 'finance.approve', 'finance.donationsIssue', 'finance.reportsFinalize',
-] as const;
 
 export const financeModule: ModuleManifest = defineModule({
   key: 'finance',
