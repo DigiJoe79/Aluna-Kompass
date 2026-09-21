@@ -836,6 +836,40 @@ test.describe('finance', () => {
     const protocolResponse = await page.request.get(protocolHref!);
     expect(protocolResponse.status()).toBe(404);
   });
+
+  test('wer einen Schritt nicht selbst erledigen kann, liest in der Checkliste, wer es kann', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/admin/users');
+    await page.getByRole('row', { name: /Mira Klein/ }).getByRole('button', { name: 'Aktionen' }).click();
+    await page.getByRole('menuitem', { name: 'Neues Startpasswort' }).click();
+    const startPassword = (await page.getByTestId('start-password').textContent())!.trim();
+    await page.getByRole('button', { name: 'Ich habe die Daten notiert' }).click();
+    await page.request.post('/logout');
+    await page.goto('/login');
+    await page.getByLabel('E-Mail').fill('mira@kompass.local');
+    await page.getByLabel('Passwort').fill(startPassword);
+    await page.getByRole('button', { name: 'Anmelden' }).click();
+    await page.getByLabel('Startpasswort').fill(startPassword);
+    await page.getByLabel('Neues Passwort', { exact: true }).fill('mira-hat-noch-ein-neues-passwort');
+    await page.getByLabel('Passwort wiederholen').fill('mira-hat-noch-ein-neues-passwort');
+    await page.getByRole('button', { name: 'Passwort setzen und fortfahren' }).click();
+    await expect(page).toHaveURL('/');
+
+    // Mira Klein (Kassenprüfer) hat finance.read, aber weder finance.setup noch users.manage —
+    // der Seed bestätigt „Kategorien“ und „Steuerliches“ nie, beide Schritte bleiben offen.
+    await page.goto('/admin/finance?panel=checklist');
+    const categories = page.getByTestId('requirement-categories');
+    await expect(categories).toHaveAttribute('data-done', 'false');
+    await expect(categories).toHaveAttribute('data-blocked', 'false');
+    await expect(categories.getByTestId('requirement-categories-candoo')).toContainText('kann');
+    await expect(categories.getByTestId('requirement-categories-candoo')).toContainText('Anna Berger');
+    await expect(categories.getByRole('link', { name: 'Erledigen' })).toHaveCount(0);
+    await expect(categories.getByTestId('confirm-categories')).toHaveCount(0);
+
+    const roles = page.getByTestId('requirement-roles');
+    await expect(roles).toHaveAttribute('data-done', 'false');
+    await expect(roles.getByTestId('requirement-roles-candoo')).toContainText('kann');
+  });
 });
 
 const PNG = Buffer.from(

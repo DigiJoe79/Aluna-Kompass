@@ -26,7 +26,9 @@ import { TaxPanel } from './tax-panel';
 export default async function AdminFinancePage({ searchParams }: { searchParams: Promise<{ panel?: string }> }) {
   const { deps, ctx } = await requireSession();
   if (!isModuleEnabled(deps, 'finance')) return <ModuleInactiveCard namespace="finance.common" />;
-  if (!hasPermission(ctx, 'finance.setup')) return <ForbiddenCard permission="finance.setup" />;
+  // Die Checkliste (`getSetupStatus`) liest auch, wer nur `finance.read` trägt — die Seite
+  // sperrt deshalb nicht strenger als der Dienst, den sie zeigt.
+  if (!hasPermission(ctx, 'finance.setup') && !hasPermission(ctx, 'finance.read')) return <ForbiddenCard permission="finance.setup" />;
   const t = await getTranslations('finance.admin');
   const query = await searchParams;
   const panel = panelFromQuery(query.panel);

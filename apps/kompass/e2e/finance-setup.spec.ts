@@ -79,6 +79,111 @@ test.describe('finance setup', () => {
     await expect(dialog.getByText('Stilllegen statt löschen')).not.toBeVisible();
   });
 
+  test('ein Konto ohne Buchungen lässt sich über den Link „Stilllegen“ stilllegen und steht danach unter den stillgelegten', async ({ page }) => {
+    await page.goto('/admin/finance?panel=accounts');
+    await page.getByRole('button', { name: 'Konto anlegen' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Name').fill('Spendenkonto ohne Buchungen');
+    await dialog.getByLabel('IBAN').fill('DE02120300000000202051');
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByText('Konto angelegt.')).toBeVisible();
+
+    await page.getByTestId('account-row-Spendenkonto ohne Buchungen').getByRole('button', { name: 'Ändern' }).click();
+    const editDialog = page.getByRole('dialog');
+    await editDialog.getByRole('button', { name: 'Stilllegen statt löschen' }).click();
+    await expect(editDialog).toBeHidden();
+    await expect(page.getByTestId('account-row-Spendenkonto ohne Buchungen')).toContainText('Stillgelegt');
+
+    await page.goto('/finance/accounts');
+    await expect(page.locator('[role="link"]', { hasText: 'Spendenkonto ohne Buchungen' })).not.toBeVisible();
+    await page.getByText('Stillgelegt', { exact: false }).click();
+    await expect(page.locator('[role="link"]', { hasText: 'Spendenkonto ohne Buchungen' })).toBeVisible();
+  });
+
+  test('ohne dms.view fehlt im Konto-Dialog das Dokument zum Anfangsbestand', async ({ page }) => {
+    // Auf der frischen Installation gibt es außer Anna Berger (Administration, alle Rechte)
+    // niemanden — eine Rolle mit `finance.setup`, aber ohne jedes `dms.*`, entsteht deshalb hier.
+    await page.goto('/admin/roles');
+    await page.getByRole('button', { name: 'Rolle anlegen' }).click();
+    await page.getByRole('dialog').getByLabel('Rollenname').fill('Finanzen ohne Akte');
+    await page.getByRole('dialog').getByRole('button', { name: 'Anlegen' }).click();
+    await page.getByRole('list', { name: 'Rollen' }).getByRole('button', { name: /Finanzen ohne Akte/ }).click();
+    await page.getByRole('checkbox', { name: 'Finanzen lesen' }).check();
+    await page.getByRole('checkbox', { name: 'Finanzen einrichten' }).check();
+    await page.getByRole('button', { name: 'Rolle speichern' }).click();
+    await expect(page.getByRole('status')).toContainText('Rolle gespeichert.');
+
+    await page.goto('/admin/users');
+    await page.getByRole('button', { name: 'Nutzer anlegen' }).click();
+    const create = page.getByRole('dialog');
+    await create.getByLabel('Name').fill('Finn Ohneakte');
+    await create.getByLabel('E-Mail').fill('finn@example.org');
+    await create.getByLabel('Finanzen ohne Akte').check();
+    await create.getByRole('button', { name: 'Nutzer anlegen' }).click();
+    const startPassword = (await page.getByTestId('start-password').textContent())!.trim();
+    await page.getByRole('button', { name: 'Ich habe die Daten notiert' }).click();
+
+    await page.request.post('/logout');
+    await page.goto('/login');
+    await page.getByLabel('E-Mail').fill('finn@example.org');
+    await page.getByLabel('Passwort').fill(startPassword);
+    await page.getByRole('button', { name: 'Anmelden' }).click();
+    await page.getByLabel('Startpasswort').fill(startPassword);
+    await page.getByLabel('Neues Passwort', { exact: true }).fill('finn-ohne-akte-passwort');
+    await page.getByLabel('Passwort wiederholen').fill('finn-ohne-akte-passwort');
+    await page.getByRole('button', { name: 'Passwort setzen und fortfahren' }).click();
+    await expect(page).toHaveURL('/');
+
+    await page.goto('/admin/finance?panel=accounts');
+    await page.getByRole('button', { name: 'Konto anlegen' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByLabel('Beleg zum Anfangsbestand')).toHaveCount(0);
+    await expect(dialog.getByText('Ein Beleg zum Anfangsbestand lässt sich nur mit Zugriff auf die Akte hinterlegen.')).toBeVisible();
+  });
+
+  test('„Bankkonten und Kassen einrichten“ führt aus der Kontenübersicht in das Konten-Panel', async ({ page }) => {
+    await page.goto('/finance/accounts');
+    await page.getByRole('link', { name: 'Bankkonten und Kassen einrichten' }).click();
+    await expect(page).toHaveURL('/admin/finance?panel=accounts');
+    await expect(page.getByRole('button', { name: 'Konto anlegen' })).toBeVisible();
+  });
+
+  test('Zwecke: anlegen, als erfüllt markieren, wieder öffnen', async ({ page }) => {
+    await page.goto('/admin/finance?panel=purposes');
+    await page.getByRole('button', { name: 'Zweck anlegen' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Name').fill('Neues Katzenhaus');
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByText('Zweck angelegt.')).toBeVisible();
+
+    const row = page.locator('tr', { hasText: 'Neues Katzenhaus' });
+    await expect(row.getByText('Offen', { exact: true })).toBeVisible();
+    await row.getByRole('button', { name: 'Erfüllt' }).click();
+    await expect(row.getByText('Erfüllt', { exact: true })).toBeVisible();
+    await expect(row.getByRole('button', { name: 'Erfüllt' })).toHaveCount(0);
+    await expect(row.getByRole('button', { name: 'Auflösen' })).toHaveCount(0);
+    await row.getByRole('button', { name: 'Wieder öffnen' }).click();
+    await expect(row.getByText('Offen', { exact: true })).toBeVisible();
+    await expect(row.getByRole('button', { name: 'Wieder öffnen' })).toHaveCount(0);
+  });
+
+  test('die Besteuerungsform steht als Zeitreihe mit Erklärsatz unter „Sätze und Grenzen“', async ({ page }) => {
+    await page.goto('/admin/finance?panel=datedValues');
+    const panel = page.getByTestId('dated-values-panel');
+    await expect(panel.getByText('Besteuerungsform', { exact: true })).toBeVisible();
+    await expect(panel.getByText('Die Besteuerungsform gilt taggenau — eine Änderung wirkt ab dem gewählten Stichtag.')).toBeVisible();
+    await expect(panel.getByText(/Aktuell: (Kleinunternehmer|Regelbesteuerung)/)).toBeVisible();
+
+    await page.getByTestId('dated-value-edit-taxation').click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Gültig ab').fill('2030-01-01');
+    await dialog.getByLabel('Sätze und Grenzen').selectOption('regular');
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(panel.getByText('Vom Verein überschrieben')).toBeVisible();
+    await expect(panel.getByText('2030-01-01')).toBeVisible();
+  });
+
   test('Kategorie: „Spenden gibt es nur im ideellen Bereich“ erscheint am Feld', async ({ page }) => {
     await page.goto('/admin/finance?panel=categories');
     await page.getByRole('button', { name: 'Kategorie anlegen' }).click();
@@ -196,6 +301,18 @@ test.describe('finance setup', () => {
       await row.getByRole('button', { name: 'Speichern' }).click();
       await expect(page.getByText('Grenze gespeichert.')).toBeVisible();
     }
+  });
+
+  test('die Matrix nennt je Rolle die Navigationseinträge, die sie sieht', async ({ page }) => {
+    await page.goto('/admin/finance?panel=permissions');
+    const treasurer = page.getByTestId('permission-role-Schatzmeister');
+    await expect(treasurer.getByText(/^Sichtbare Navigationseinträge:/)).toHaveText('Sichtbare Navigationseinträge: Journal, Bankkonten und Kassen, Offene Zahlungen, Barkasse, Finanzen einrichten');
+
+    const auditor = page.getByTestId('permission-role-Kassenprüfer');
+    await expect(auditor.getByText(/^Sichtbare Navigationseinträge:/)).toHaveText('Sichtbare Navigationseinträge: Journal, Bankkonten und Kassen, Offene Zahlungen, Barkasse');
+
+    const clerk = page.getByTestId('permission-role-Auslagen einreichen');
+    await expect(clerk.getByText(/^Sichtbare Navigationseinträge:/)).toHaveText('Sichtbare Navigationseinträge: keine');
   });
 
   test('die Matrix nennt je Rolle, wer sie trägt, und „niemand“ als Wort', async ({ page }) => {

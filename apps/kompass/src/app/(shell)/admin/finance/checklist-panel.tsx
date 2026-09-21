@@ -62,11 +62,11 @@ export function ChecklistPanel({ steps, complete }: { steps: ChecklistStep[]; co
     const detail = step.key === 'account' && typeof step.detail.accounts === 'number' ? t('detail.account', { accounts: step.detail.accounts, withoutOpening: step.detail.withoutOpening ?? 0 }) : step.key === 'roles' && step.detail.rolesWithoutUser ? t('detail.rolesWithoutUser', { names: step.detail.rolesWithoutUser }) : step.key === 'roles' && step.detail.usersWithoutContact ? t('detail.usersWithoutContact', { count: step.detail.usersWithoutContact }) : undefined;
 
     const extra =
-      step.key === 'tax' && !step.done ? (
+      step.key === 'tax' && !step.done && canSelf ? (
         <button type="button" onClick={() => void applyDefaults()} disabled={pending} className="rounded-sm border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink hover:bg-surface-2" data-testid="apply-tax-defaults">
           {t('applyTaxDefaults')}
         </button>
-      ) : step.key === 'categories' && !step.done ? (
+      ) : step.key === 'categories' && !step.done && canSelf ? (
         <button type="button" onClick={() => void confirmCategories()} disabled={pending} className="rounded-sm border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink hover:bg-surface-2" data-testid="confirm-categories">
           {t('reviewCategories')}
         </button>
