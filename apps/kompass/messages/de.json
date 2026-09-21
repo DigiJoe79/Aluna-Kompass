@@ -2221,6 +2221,87 @@
       "restIntoLastRow": "Rest in diese Zeile eintragen",
       "focusDate": "Datum prüfen",
       "cashTransferFirst": "„Bargeld abgehoben“ zuerst buchen"
+    },
+    "state": {
+      "draft": "Entwurf",
+      "reviewed": "geprüft",
+      "final": "festgeschrieben",
+      "reversed": "zurückgenommen",
+      "agentPrepared": "vom Agenten vorbereitet"
+    },
+    "agent": {
+      "tooltip": "Festschreiben darf nur ein Mensch."
+    },
+    "channel": {
+      "ui": "Oberfläche",
+      "mcp": "Agenten-Schnittstelle"
+    },
+    "lockLine": {
+      "text": "festgeschrieben am {date} um {time} von {name} ({channel})",
+      "unknownUser": "einer nicht mehr vorhandenen Person"
+    },
+    "amount": {
+      "format": "Bitte einen Betrag wie 12,50 eingeben",
+      "directionGroup": "Richtung",
+      "direction": {
+        "in": "Eingang",
+        "out": "Ausgang"
+      }
+    },
+    "balanceIndicator": {
+      "balanced": "Ausgeglichen",
+      "detail": "{account} auf dem Konto, {allocated} verteilt.",
+      "remaining": "Noch {amount} zu verteilen",
+      "excess": "{amount} zu viel verteilt"
+    },
+    "receipt": {
+      "photo": "Das ist ein Foto. Kompass nimmt nur PDF — so machen Sie in einer Minute eins daraus: in der Scan-App oder Kamera-App „Als PDF speichern“ wählen, dann hier ablegen.",
+      "wrongType": "Kompass nimmt nur PDF-Dateien als Beleg.",
+      "dropHere": "Loslassen, um als Beleg anzuhängen",
+      "dragOrPick": "PDF hierher ziehen oder auswählen",
+      "pickFromArchive": "Aus der Akte wählen",
+      "none": "Noch kein Beleg.",
+      "open": "öffnen",
+      "remove": "entfernen",
+      "replacedBy": "ersetzt durch {number}"
+    },
+    "splitRow": {
+      "category": "Kategorie",
+      "categoryPlaceholder": "Kategorie wählen",
+      "income": "Einnahmen",
+      "expense": "Ausgaben",
+      "sphere": {
+        "ideal": "Ideeller Bereich",
+        "assetManagement": "Vermögensverwaltung",
+        "purposeOperation": "Zweckbetrieb",
+        "business": "Wirtschaftlicher Geschäftsbetrieb"
+      },
+      "tax": "Umsatzsteuer",
+      "taxNone": "keine Angabe",
+      "taxCode": {
+        "none": "keine Umsatzsteuer",
+        "exemptCounted": "steuerfrei, zählt zur Kleinunternehmergrenze",
+        "exemptNotCounted": "steuerfrei, zählt nicht zur Kleinunternehmergrenze",
+        "reduced": "ermäßigter Satz",
+        "standard": "regulärer Satz",
+        "rc13b": "Reverse Charge (§ 13b)",
+        "icAcquisition": "innergemeinschaftlicher Erwerb"
+      },
+      "contact": "Spender/Empfänger",
+      "project": "Projekt",
+      "none": "—",
+      "rowMenu": "Zeilenmenü",
+      "restIntoHereWithAmount": "Rest hierher — {amount}",
+      "restIntoHere": "Rest hierher",
+      "splitEvenly": "gleichmäßig auf {n} teilen",
+      "duplicate": "Zeile duplizieren",
+      "removeRow": "entfernen",
+      "purposePaidFrom": "bezahlt aus",
+      "purposeDeterminedBy": "Spender hat bestimmt für",
+      "abroad": "wird im Ausland verwendet",
+      "addsToAssets": "Zuführung zum Vermögen",
+      "purposeOverspent": "Dieser Zweck ist im Minus.",
+      "freeFundsRemainder": "Rest aus freien Mitteln"
     }
   }
 }
