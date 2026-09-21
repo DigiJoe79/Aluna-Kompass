@@ -179,6 +179,7 @@ export { FINANCE_MCP_TOOLS } from './mcp-tools';
 export { seedFinance } from './seed';
 
 export { parseCamt053, type CamtError, type CamtLine, type CamtStatement } from './import/camt';
+export { buildCamt053, buildCamt053Bytes, type CamtFixtureInput, type CamtFixtureLine } from './import/camt-fixture';
 export { dedupKey, normalizePurpose } from './import/dedup';
 export { getImportRun, importRunRowInternal, importStatement, listImportRuns, toRunView, type ImportRunView } from './import/runs';
 export { decideCandidate, listCandidates, type CandidateView } from './import/candidates';

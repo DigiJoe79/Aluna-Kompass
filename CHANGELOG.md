@@ -43,6 +43,21 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
   mit einem Klick begleichen. Die Startseite zeigt unter „Finanzen: zu tun“,
   was ansteht, und jedes Projekt bekommt einen eigenen Finanzabschnitt mit
   Zielbetrag, Einnahmen, Ausgaben und Ergebnis.
+- **Finanzen: Kontoauszüge laden.** Unter „Hochgeladene Auszüge“ lässt sich
+  der Kontoauszug eines Bankkontos oder Zahlungsdiensts als CAMT.053-Datei
+  hochladen — auch mehrere auf einmal, jede mit eigenem Ergebnis (neu /
+  bereits vorhanden / zurückgehalten). Ein bereits geladener Auszug wird
+  erkannt und nicht doppelt übernommen; Zweifelsfälle werden als Kandidaten
+  zurückgehalten und lassen sich mit „Dieselbe Zahlung“ oder „Eigene Zahlung“
+  entscheiden. Fehlt zwischen zwei Auszügen etwas, meldet Kompass die Lücke,
+  der Import gelingt trotzdem. Ein falsch geladener Auszug lässt sich mit
+  Ansage und Pflichtnotiz wieder verwerfen; festgeschriebene Buchungen darauf
+  sperren das Verwerfen. Jedes Bankkonto zeigt jetzt, bis wann es importiert
+  ist und ob Buchbestand und Auszug zusammenpassen. Ein Agent darf Auszüge
+  laden, nie festschreiben — das Handbuch erklärt, was das für den Einsatz
+  eines Cloud- oder eines lokal betriebenen Sprachmodells bedeutet. Neue
+  Abhängigkeit: `fast-xml-parser` (MIT). Diese Fassung bringt dafür eine
+  Datenbank-Migration mit, die beim Start von selbst läuft.
 - **Neue Dokumentart „Zählprotokoll“** (Präfix `KZP`) hält das Ergebnis jeder
   Kassenzählung fest. Trägt eine eigene Dokumentart Ihres Vereins das Präfix
   `KZP` bereits, meldet der Start einen Fehler — benennen Sie das Präfix

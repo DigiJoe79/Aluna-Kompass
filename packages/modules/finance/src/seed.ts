@@ -17,6 +17,9 @@ import { reverseEntry } from './ledger/reverse';
 import { uploadVoucher, revokeVoucher } from './ledger/vouchers';
 import { setDatedValue } from './ledger/dated-values';
 import { installFinance } from './install';
+import { buildCamt053Bytes } from './import/camt-fixture';
+import { discardRun } from './import/discard';
+import { importStatement } from './import/runs';
 import {
   financeAccounts,
   financeAllocationCorrections,
@@ -25,8 +28,10 @@ import {
   financeEntries,
   financeEntryDocuments,
   financeFiscalYears,
+  financeImportRuns,
   financeOpenItems,
   financePurposes,
+  financeRawTransactions,
 } from './schema';
 
 const isoDate = (d: Date): string => d.toISOString().slice(0, 10);
@@ -321,6 +326,109 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   await ensureEntry(deps, 'Entwurf vom Agenten', () =>
     saveDraft(deps, { ...ctx, channel: 'mcp' as const }, { entryDate: `${currentYear}-03-07`, text: 'Entwurf vom Agenten', moneyLines: [{ accountId: bank.id, amountCents: 4000 }], allocationLines: [{ categoryId: donationsCat.id, amountCents: 3500 }] }).then(unwrap),
   );
+
+  // --- Kontoauszüge (F4 Task 8, Spec 6.1): eigenes Konto „Importkonto“ mit erfundener IBAN
+  // (BLZ 99999999), damit kein anderer Test dieselben Kontoauszüge sieht. Zwei fertige Läufe
+  // (der zweite mit Lücke), ein offener Kandidat, ein verworfener und ein fehlgeschlagener Lauf;
+  // ein Kontoumsatz gebucht, mehrere offen. Über die Dienste, nicht per Insert — ein Lauf ist eine
+  // Tatsache, die nur `importStatement`/`discardRun` selbst herstellen dürfen.
+  const IMPORTKONTO_IBAN = 'DE60999999990201051234';
+  const importkonto = await ensureAccount(deps, ctx, 'Importkonto', { kind: 'bank', iban: IMPORTKONTO_IBAN, isMain: false, openingBalanceCents: 100000, openingDate: '2026-01-01' });
+  if (importkonto) {
+    const hasImportRuns = deps.db.select({ id: financeImportRuns.id }).from(financeImportRuns).where(eq(financeImportRuns.accountId, importkonto.id)).limit(1).get();
+    if (!hasImportRuns) {
+      // Lauf A: der erste Import, ohne Vorgänger — keine Lücke.
+      const runA = unwrap(
+        await importStatement(deps, ctx, {
+          accountId: importkonto.id,
+          fileName: 'kontoauszug-2026-01.xml',
+          bytes: buildCamt053Bytes({
+            iban: IMPORTKONTO_IBAN,
+            from: '2026-01-01',
+            to: '2026-01-31',
+            openingCents: 100000,
+            lines: [
+              { bookingDate: '2026-01-05', amountCents: 20000, counterpartyName: 'Erika Beispiel', counterpartyIban: 'DE66999999991234567890', purpose: 'Spende', bankReference: 'IMP-0001' },
+              { bookingDate: '2026-01-10', amountCents: -3500, counterpartyName: 'Buerobedarf Muster GmbH', counterpartyIban: 'DE12999999990000112233', purpose: 'Bueromaterial', bankReference: 'IMP-0002' },
+            ],
+          }),
+        }),
+      ).runs[0]!;
+
+      // Lauf B: ein zweiter Auszug, dessen Anfangsbestand nicht zum Ende von Lauf A passt — die Lücke.
+      unwrap(
+        await importStatement(deps, ctx, {
+          accountId: importkonto.id,
+          fileName: 'kontoauszug-2026-02.xml',
+          bytes: buildCamt053Bytes({
+            iban: IMPORTKONTO_IBAN,
+            from: '2026-02-10',
+            to: '2026-02-28',
+            openingCents: 130000,
+            lines: [{ bookingDate: '2026-02-15', amountCents: 5000, counterpartyName: 'Foerderverein Musterstadt e. V.', counterpartyIban: 'DE22999999995566778899', purpose: 'Zuschuss', bankReference: 'IMP-0003' }],
+          }),
+        }),
+      );
+
+      // Lauf C: ein neuer Umsatz und, ohne Bankreferenz, dieselben Kerndaten wie die Büromaterial-Zeile
+      // aus Lauf A in einem nicht überlappenden Zeitraum — ein Kandidat, kein sicherer Treffer (Spec 6.1/6.3).
+      unwrap(
+        await importStatement(deps, ctx, {
+          accountId: importkonto.id,
+          fileName: 'kontoauszug-2026-04.xml',
+          bytes: buildCamt053Bytes({
+            iban: IMPORTKONTO_IBAN,
+            from: '2026-04-01',
+            to: '2026-04-30',
+            openingCents: 135000,
+            lines: [
+              { bookingDate: '2026-04-05', amountCents: 7500, counterpartyName: 'Erika Beispiel', counterpartyIban: 'DE66999999991234567890', purpose: 'Spende April', bankReference: 'IMP-0004' },
+              { bookingDate: '2026-01-10', amountCents: -3500, counterpartyName: 'Buerobedarf Muster GmbH', counterpartyIban: 'DE12999999990000112233', purpose: 'Bueromaterial' },
+            ],
+          }),
+        }),
+      );
+
+      // Lauf D: ein Auszug, der versehentlich geladen und gleich wieder verworfen wird — bleibt als Tatsache stehen.
+      const runD = unwrap(
+        await importStatement(deps, ctx, {
+          accountId: importkonto.id,
+          fileName: 'kontoauszug-2026-05-versehentlich.xml',
+          bytes: buildCamt053Bytes({
+            iban: IMPORTKONTO_IBAN,
+            from: '2026-05-01',
+            to: '2026-05-31',
+            openingCents: 139000,
+            lines: [{ bookingDate: '2026-05-10', amountCents: 2000, counterpartyName: 'Erika Beispiel', counterpartyIban: 'DE66999999991234567890', purpose: 'Testbuchung falsch', bankReference: 'IMP-0005' }],
+          }),
+        }),
+      ).runs[0]!;
+      unwrap(await discardRun(deps, ctx, { id: runD.id, note: 'Versehentlich den falschen Auszug hochgeladen' }));
+
+      // Lauf E: eine Datei, deren Summenprobe nicht aufgeht — schreibt nur einen fehlgeschlagenen Lauf, keine Zeilen.
+      const failedResult = await importStatement(deps, ctx, {
+        accountId: importkonto.id,
+        fileName: 'kontoauszug-2026-06-kaputt.xml',
+        bytes: buildCamt053Bytes({ iban: IMPORTKONTO_IBAN, from: '2026-06-01', to: '2026-06-30', openingCents: 141000, closingCents: 999999, lines: [{ bookingDate: '2026-06-05', amountCents: 1000 }] }),
+      });
+      if (failedResult.ok) throw new Error('Seed: kontoauszug-2026-06-kaputt.xml haette als fehlgeschlagener Lauf enden muessen');
+
+      // Ein Kontoumsatz gebucht (die Spende aus Lauf A), die übrigen bleiben offen (E8).
+      const donationRaw = deps.db
+        .select()
+        .from(financeRawTransactions)
+        .where(and(eq(financeRawTransactions.runId, runA.id), eq(financeRawTransactions.amountCents, 20000)))
+        .get()!;
+      unwrap(
+        await bookEntry(deps, ctx, {
+          entryDate: '2026-01-06',
+          text: 'Spende aus Kontoauszug',
+          moneyLines: [{ accountId: importkonto.id, amountCents: 20000, rawTransactionId: donationRaw.id }],
+          allocationLines: [{ categoryId: donationsCat.id, amountCents: 20000 }],
+        }),
+      );
+    }
+  }
 
   // --- Belege (F2b, Spec 5.2): drei festgeschriebene Buchungen mit hochgeladenem PDF; eine davon
   // widerrufen und ersetzt; „Spende Altjahr“ bleibt bewusst ohne Beleg (der Rohumsatz allein reicht

@@ -563,11 +563,13 @@ test.describe('finance', () => {
   test('die IBAN ist maskiert und lässt sich aufdecken', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/accounts');
-    await expect(page.getByTestId('iban-value').first()).toHaveText('DE•• •••• •••• •••• ••20 51');
-    await page.getByRole('button', { name: 'IBAN aufdecken' }).first().click();
-    await expect(page.getByTestId('iban-value').first()).toHaveText('DE02120300000000202051');
-    await page.getByRole('button', { name: 'IBAN wieder verbergen' }).first().click();
-    await expect(page.getByTestId('iban-value').first()).toHaveText('DE•• •••• •••• •••• ••20 51');
+    // F4 Task 8: „Importkonto“ (Seed) steht alphabetisch vor „Vereinskonto“ — die Karte gezielt wählen statt `.first()`.
+    const card = page.locator('[role="link"]', { hasText: 'Vereinskonto' });
+    await expect(card.getByTestId('iban-value')).toHaveText('DE•• •••• •••• •••• ••20 51');
+    await card.getByRole('button', { name: 'IBAN aufdecken' }).click();
+    await expect(card.getByTestId('iban-value')).toHaveText('DE02120300000000202051');
+    await card.getByRole('button', { name: 'IBAN wieder verbergen' }).click();
+    await expect(card.getByTestId('iban-value')).toHaveText('DE•• •••• •••• •••• ••20 51');
   });
 
   test('eine Kasse nennt neutral, wann sie zuletzt gezählt wurde', async ({ page }) => {

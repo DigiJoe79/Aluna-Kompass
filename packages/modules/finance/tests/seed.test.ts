@@ -10,6 +10,9 @@ import { listCategories } from '../src/ledger/categories';
 import { listAllocationCorrections } from '../src/ledger/corrections';
 import { getEntry } from '../src/ledger/entries';
 import { listFiscalYears } from '../src/ledger/fiscal-years';
+import { listCandidates } from '../src/import/candidates';
+import { listImportRuns } from '../src/import/runs';
+import { listRawTransactions } from '../src/import/queries';
 import { listOpenItems } from '../src/ledger/open-items';
 import { getBalances } from '../src/ledger/overview';
 import { getProjectFinance } from '../src/ledger/project-settings';
@@ -25,7 +28,8 @@ describe('seedFinance', () => {
     await seedFinance(deps, ctx);
     await seedFinance(deps, ctx);
     const accounts = unwrap(await listAccounts(deps, ctx, { includeInactive: true }));
-    expect(accounts.map((a) => a.kind).sort()).toEqual(['bank', 'bank', 'cash', 'cash', 'paymentService']);
+    // F4 Task 8: „Importkonto“ kommt als drittes Bankkonto dazu (eigens für die Kontoauszug-Fixtures).
+    expect(accounts.map((a) => a.kind).sort()).toEqual(['bank', 'bank', 'bank', 'cash', 'cash', 'paymentService']);
     expect(accounts.filter((a) => a.isMain)).toHaveLength(1);
     expect(accounts.some((a) => !a.isActive)).toBe(true);
     expect(unwrap(await listFiscalYears(deps, ctx))).toHaveLength(2);
@@ -63,6 +67,39 @@ describe('seedFinance', () => {
     const read = unwrap(await getProjectFinance(deps, ctx, { projectId: existingProject.id }));
     expect(read.settings.targetCents).toBe(250000);
     expect(read.settings.defaultPurposeId).not.toBeNull();
+  });
+
+  it('seeds "Importkonto" with two finished runs (one with a gap), an open candidate, a discarded and a failed run, one booked and several open raw transactions', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+    await seedFinance(deps, ctx);
+    await seedFinance(deps, ctx); // idempotent: kein zweiter Satz Läufe.
+
+    const accounts = unwrap(await listAccounts(deps, ctx, { includeInactive: true }));
+    const importkonto = accounts.find((a) => a.name === 'Importkonto')!;
+    expect(importkonto).toBeTruthy();
+    expect(importkonto.iban).toBe('DE60999999990201051234');
+
+    const runs = unwrap(await listImportRuns(deps, ctx, { accountId: importkonto.id }));
+    expect(runs.total).toBe(5); // A, B, C fertig; D verworfen; E fehlgeschlagen.
+    expect(runs.runs.filter((r) => r.state === 'finished')).toHaveLength(3);
+    expect(runs.runs.filter((r) => r.state === 'discarded')).toHaveLength(1);
+    expect(runs.runs.some((r) => r.gap !== null)).toBe(true);
+
+    const failed = runs.runs.filter((r) => r.state === 'failed');
+    expect(failed).toHaveLength(1);
+    expect(failed[0]!.failure?.code).toBe('sumMismatch');
+
+    const candidates = unwrap(await listCandidates(deps, ctx, { open: true }));
+    expect(candidates.candidates.filter((c) => c.accountId === importkonto.id)).toHaveLength(1);
+
+    const raws = unwrap(await listRawTransactions(deps, ctx, { accountId: importkonto.id }));
+    expect(raws.items.filter((r) => r.state === 'booked')).toHaveLength(1);
+    expect(raws.items.filter((r) => r.state === 'open').length).toBeGreaterThanOrEqual(2);
+
+    // Zweiter Seed-Lauf legt nichts doppelt an (idempotent).
+    const runsAfterSecondSeed = unwrap(await listImportRuns(deps, ctx, { accountId: importkonto.id }));
+    expect(runsAfterSecondSeed.total).toBe(5);
   });
 
   it('uses no animal and no association-specific wording', async () => {
