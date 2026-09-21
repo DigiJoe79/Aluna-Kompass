@@ -2242,6 +2242,10 @@
       "text": "festgeschrieben am {date} um {time} von {name} ({channel})",
       "unknownUser": "einer nicht mehr vorhandenen Person"
     },
+    "taxText": {
+      "included": "darin {amount} Umsatzsteuer",
+      "reverseCharge": "Sie schulden {amount} Umsatzsteuer (§ 13b) — auch als Kleinunternehmer"
+    },
     "amount": {
       "format": "Bitte einen Betrag wie 12,50 eingeben",
       "directionGroup": "Richtung",
@@ -2455,6 +2459,11 @@
       "reversedBy": "Zurückgenommen durch die Gegenbuchung.",
       "reverses": "Nimmt eine andere Buchung zurück.",
       "open": "ansehen",
+      "related": {
+        "title": "Hängt zusammen mit",
+        "unnamedItem": "offener Posten",
+        "settlement": "{amount} beglichen · Rest {rest}"
+      },
       "history": {
         "title": "Verlauf",
         "changeLabel": "Zuordnung",

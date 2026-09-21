@@ -72,11 +72,13 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
   const validation = toServiceInput(state);
   const remainder = remainderCents(state);
 
-  const afterSuccess = (result: ActionState) => {
+  // Festschreiben führt auf die Buchung (Task 4) — Entwurf speichern/prüfen bleibt im Journal.
+  const afterSuccess = (result: ActionState, redirectTo: 'journal' | 'entry' = 'journal') => {
     setActionState(result);
     if (result.status === 'success') {
       if (result.message) toast.success(result.message);
-      router.push('/finance/entries');
+      const data = result.data as { id?: string } | undefined;
+      router.push(redirectTo === 'entry' && data?.id ? `/finance/entries/${data.id}` : '/finance/entries');
       router.refresh();
     } else if (result.status === 'error') {
       toast.error(result.message);
@@ -88,7 +90,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
       setActionState({ status: 'error', message: t('toast.fieldsInvalid'), fieldErrors: validation.fieldErrors });
       return;
     }
-    startTransition(async () => afterSuccess(await run(validation.input)));
+    startTransition(async () => afterSuccess(await run(validation.input), 'journal'));
   };
 
   const applyRemedy = (action: 'restIntoLastRow' | 'focusDate') => {
@@ -106,7 +108,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
       return;
     }
     // „führt restInto aus und schickt erneut ab“ (Plan) — derselbe Weg wie „Festschreiben“.
-    startTransition(async () => afterSuccess(await finalizeAction(nextValidation.input)));
+    startTransition(async () => afterSuccess(await finalizeAction(nextValidation.input), 'entry'));
   };
 
   const ensureSavedId = async (): Promise<string | null> => {
@@ -318,7 +320,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
         action={async () => {
           if (!validation.ok) return { status: 'error', message: t('toast.fieldsInvalid'), fieldErrors: validation.fieldErrors };
           const result = await finalizeAction(validation.input);
-          afterSuccess(result);
+          afterSuccess(result, 'entry');
           return result;
         }}
       />

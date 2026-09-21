@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase } from './helpers';
+import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
 
 test.describe('finance', () => {
   test.beforeEach(async ({ page }) => {
@@ -154,8 +154,8 @@ test.describe('finance', () => {
     await expect(page.getByText('Rest in diese Zeile eintragen')).toBeVisible();
 
     await page.getByRole('button', { name: 'Rest in diese Zeile eintragen' }).click();
-    await expect(page).toHaveURL('/finance/entries');
-    await expect(page.locator('tr', { hasText: 'Testausgabe unausgeglichen' }).getByRole('cell').nth(1)).toContainText(/\d{4}-\d+/);
+    await expect(page).toHaveURL(/\/finance\/entries\/[^/]+$/);
+    await expect(page.getByTestId('entry-number')).toContainText(/\d{4}-\d+/);
   });
 
   test('Umbuchung Bank → Kasse hat kein „Wofür?“ und sagt, dass sie weder Einnahme noch Ausgabe ist', async ({ page }) => {
@@ -221,6 +221,57 @@ test.describe('finance', () => {
 
     await page.getByTestId('voucher-file-input').setInputFiles({ name: 'beleg.pdf', mimeType: 'application/pdf', buffer: samplePdf() });
     await expect(page.getByRole('link', { name: 'öffnen' })).toBeVisible();
+  });
+
+  test('die Ansicht nennt die berechnete Umsatzsteuer je Aufteilung, wenn der Verein Unternehmer ist', async ({ page }) => {
+    await loginAsAdmin(page);
+    await setE2ESetting(page, 'finance.isEntrepreneurOrHasVatId', true);
+    try {
+      await page.goto('/finance/entries/new?template=expense');
+      await page.getByLabel('Text').fill('Testausgabe mit Reverse Charge');
+      const accountCard = page.getByTestId('finance-account-card');
+      await accountCard.getByLabel('Konto').selectOption({ label: 'Vereinskonto' });
+      await accountCard.getByLabel('Betrag').fill('100,00');
+      const allocationCard = page.getByTestId('finance-allocation-card');
+      const rows = allocationCard.getByTestId('split-row');
+      await allocationCard.getByRole('button', { name: 'Zeile hinzufügen' }).click();
+      await rows.nth(0).getByLabel('Kategorie').selectOption({ label: 'Büro, Porto, Telefon' });
+      await rows.nth(0).getByLabel('Betrag').fill('100,00');
+      await rows.nth(0).getByLabel('Umsatzsteuer').selectOption({ label: 'Reverse Charge (§ 13b)' });
+      await page.getByRole('button', { name: 'Festschreiben', exact: true }).click();
+      await page.getByRole('alertdialog').getByRole('button', { name: 'Festschreiben' }).click();
+      await expect(page).toHaveURL(/\/finance\/entries\/[^/]+$/);
+      await expect(page.getByText(/Sie schulden .* Umsatzsteuer \(§ 13b\) — auch als Kleinunternehmer/)).toBeVisible();
+    } finally {
+      await setE2ESetting(page, 'finance.isEntrepreneurOrHasVatId', false);
+    }
+  });
+
+  test('eine Buchung, die eine offene Zahlung begleicht, nennt sie unter „Hängt zusammen mit“', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries');
+    await page.locator('tr', { hasText: 'Teilzahlung Lieferant' }).click();
+    await expect(page.getByText('Hängt zusammen mit')).toBeVisible();
+    await expect(page.getByText(/RE-2026-055/)).toBeVisible();
+    await expect(page.getByText(/Rest 120,00 €/)).toBeVisible();
+  });
+
+  test('nach dem Festschreiben steht man auf der Buchung und sieht ihre Nummer', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries/new?template=expense');
+    await page.getByLabel('Text').fill('Testausgabe direkt festgeschrieben');
+    const accountCard = page.getByTestId('finance-account-card');
+    await accountCard.getByLabel('Konto').selectOption({ label: 'Vereinskonto' });
+    await accountCard.getByLabel('Betrag').fill('10,00');
+    const allocationCard = page.getByTestId('finance-allocation-card');
+    const rows = allocationCard.getByTestId('split-row');
+    await allocationCard.getByRole('button', { name: 'Zeile hinzufügen' }).click();
+    await rows.nth(0).getByLabel('Kategorie').selectOption({ label: 'Büro, Porto, Telefon' });
+    await rows.nth(0).getByLabel('Betrag').fill('10,00');
+    await page.getByRole('button', { name: 'Festschreiben', exact: true }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Festschreiben' }).click();
+    await expect(page).toHaveURL(/\/finance\/entries\/[^/]+$/);
+    await expect(page.getByTestId('entry-number')).toContainText(/\d{4}-\d+/);
   });
 
   test('Betragsfeld: 12,5 wird 12,50; 12.50 wird als Format abgelehnt', async ({ page }) => {
