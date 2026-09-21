@@ -10,7 +10,7 @@ test.describe('app shell', () => {
   test('shows one rail row per area, home on top and settings behind a line', async ({ page }) => {
     await expect(page.getByTestId('env-banner')).toContainText('TESTUMGEBUNG');
     const rail = page.getByRole('navigation', { name: 'Hauptnavigation' });
-    await expect(rail.getByRole('link')).toHaveText(['Startseite', 'Webseite', 'Projekte', 'Tiere', 'Kontakte', 'Akte', 'Mediathek', 'Einstellungen']);
+    await expect(rail.getByRole('link')).toHaveText(['Startseite', 'Webseite', 'Projekte', 'Tiere', 'Kontakte', 'Akte', 'Finanzen', 'Mediathek', 'Einstellungen']);
     // Seiten stehen nicht in der Schiene — weder aus Verwaltung noch aus einem Modul.
     await expect(rail.getByRole('link', { name: 'Nutzer' })).toHaveCount(0);
     await expect(rail.getByRole('link', { name: 'Hunde' })).toHaveCount(0);
