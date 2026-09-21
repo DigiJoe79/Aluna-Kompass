@@ -199,11 +199,14 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
     startTransition(async () => afterSuccess(await run(validation.input), 'journal'));
   };
 
-  const applyRemedy = (action: 'restIntoLastRow' | 'focusDate') => {
+  // Diese Maske kennt nur ihre eigenen zwei Ausweg-Aktionen — `focusAccount`/`confirmFormatChange`
+  // gehören zum Import (F4 Task 7) und laufen dort über ihre eigene Seite, nie hier.
+  const applyRemedy = (action: 'restIntoLastRow' | 'focusDate' | 'focusAccount' | 'confirmFormatChange') => {
     if (action === 'focusDate') {
       dateRef.current?.focus();
       return;
     }
+    if (action !== 'restIntoLastRow') return;
     const lastRow = state.splitRows.at(-1);
     if (!lastRow) return;
     const next = restInto(state, lastRow.key);

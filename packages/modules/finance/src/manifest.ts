@@ -48,6 +48,7 @@ export const financeModule: ModuleManifest = defineModule({
   settings: FINANCE_SETTINGS,
   moduleIcon: 'euro',
   help: [
+    { href: '/finance/imports', doc: 'finanzen/kontoauszug-laden' },
     { href: '/finance/entries', doc: 'finanzen/buchen' },
     { href: '/finance/accounts', doc: 'finanzen/konten-und-offene-zahlungen' },
     { href: '/finance/open-items', doc: 'finanzen/konten-und-offene-zahlungen' },
@@ -55,6 +56,8 @@ export const financeModule: ModuleManifest = defineModule({
     { href: '/admin/finance', doc: 'finanzen/einrichten' },
   ],
   navigation: [
+    // F4 Task 7: ein eigener Abschnitt „Arbeit“ über „Buchungen“ — F5 stellt die Arbeitsliste davor.
+    { key: 'finance.imports', href: '/finance/imports', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
     { key: 'finance.entries', href: '/finance/entries', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
     { key: 'finance.accounts', href: '/finance/accounts', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
     { key: 'finance.openItems', href: '/finance/open-items', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },

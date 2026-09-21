@@ -184,3 +184,4 @@ export { getImportRun, importRunRowInternal, importStatement, listImportRuns, to
 export { decideCandidate, listCandidates, type CandidateView } from './import/candidates';
 export { listRawTransactions, rawStateInternal, rawTransactionViewInternal, rawTransactionsForRunInternal, type RawTransactionView } from './import/queries';
 export { discardRun, previewDiscardRun, type DiscardBlockingEntry, type DiscardPreview } from './import/discard';
+export { getAccountStatements, type AccountStatementView } from './import/accounts';

@@ -305,11 +305,12 @@ test.describe('finance setup', () => {
 
   test('die Matrix nennt je Rolle die Navigationseinträge, die sie sieht', async ({ page }) => {
     await page.goto('/admin/finance?panel=permissions');
+    // F4 Task 7: „Hochgeladene Auszüge“ steht zuerst — der neue Abschnitt „Arbeit“ liegt über „Buchungen“.
     const treasurer = page.getByTestId('permission-role-Schatzmeister');
-    await expect(treasurer.getByText(/^Sichtbare Navigationseinträge:/)).toHaveText('Sichtbare Navigationseinträge: Journal, Bankkonten und Kassen, Offene Zahlungen, Barkasse, Finanzen einrichten');
+    await expect(treasurer.getByText(/^Sichtbare Navigationseinträge:/)).toHaveText('Sichtbare Navigationseinträge: Hochgeladene Auszüge, Journal, Bankkonten und Kassen, Offene Zahlungen, Barkasse, Finanzen einrichten');
 
     const auditor = page.getByTestId('permission-role-Kassenprüfer');
-    await expect(auditor.getByText(/^Sichtbare Navigationseinträge:/)).toHaveText('Sichtbare Navigationseinträge: Journal, Bankkonten und Kassen, Offene Zahlungen, Barkasse');
+    await expect(auditor.getByText(/^Sichtbare Navigationseinträge:/)).toHaveText('Sichtbare Navigationseinträge: Hochgeladene Auszüge, Journal, Bankkonten und Kassen, Offene Zahlungen, Barkasse');
 
     const clerk = page.getByTestId('permission-role-Auslagen einreichen');
     await expect(clerk.getByText(/^Sichtbare Navigationseinträge:/)).toHaveText('Sichtbare Navigationseinträge: keine');

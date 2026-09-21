@@ -51,6 +51,9 @@
       "before": "Vorher",
       "after": "Nachher"
     },
+    "consequenceList": {
+      "stays": "Was bleibt"
+    },
     "edit": "Ändern"
   },
   "media": {
@@ -326,6 +329,7 @@
       "list": "Projekte"
     },
     "finance": {
+      "imports": "Hochgeladene Auszüge",
       "entries": "Journal",
       "accounts": "Bankkonten und Kassen",
       "openItems": "Offene Zahlungen",
@@ -334,6 +338,7 @@
     },
     "sections": {
       "finance": {
+        "work": "Arbeit",
         "entries": "Buchungen"
       }
     },
@@ -2340,7 +2345,10 @@
     "remedy": {
       "restIntoLastRow": "Rest in diese Zeile eintragen",
       "focusDate": "Datum prüfen",
-      "cashTransferFirst": "„Bargeld abgehoben“ zuerst buchen"
+      "cashTransferFirst": "„Bargeld abgehoben“ zuerst buchen",
+      "chooseOtherAccount": "Anderes Konto wählen",
+      "goToExistingRun": "Zum vorhandenen Lauf",
+      "confirmFormatChange": "Wechsel bestätigen"
     },
     "state": {
       "draft": "Entwurf",
@@ -2768,7 +2776,14 @@
       "withReviewed": "einschließlich geprüfter Entwürfe: {amount}",
       "lastCount": "zuletzt gezählt am {date} · {amount}",
       "neverCounted": "noch nicht gezählt",
-      "statement": "Auszug — kommt mit dem Import",
+      "statementNone": "Noch kein Auszug geladen.",
+      "statementThrough": "Auszug importiert bis {date}",
+      "statementDaysAgo": "{days, plural, one {zuletzt vor # Tag} other {zuletzt vor # Tagen}}",
+      "reconciliation": {
+        "matches": "Stimmt mit dem Auszug vom {date} überein",
+        "differs": "Differenz zum Auszug vom {date}: {amount}",
+        "noStatement": "Kein Auszug für heute"
+      },
       "ibanReveal": "IBAN aufdecken",
       "ibanHide": "IBAN wieder verbergen",
       "inactive": "Stillgelegt",
@@ -2776,6 +2791,92 @@
         "title": "Noch keine Konten",
         "text": "Legen Sie mindestens ein Bankkonto oder eine Kasse an, um mit Finanzen zu beginnen.",
         "action": "Bankkonten und Kassen einrichten"
+      }
+    },
+    "imports": {
+      "title": "Hochgeladene Auszüge",
+      "empty": {
+        "title": "Kein Konto für den Import",
+        "text": "Legen Sie ein aktives Bankkonto oder einen Zahlungsdienst an, um Kontoauszüge zu laden."
+      },
+      "accountsSummary": {
+        "title": "Kontostand",
+        "through": "Auszug importiert bis {date}",
+        "none": "Noch kein Auszug geladen.",
+        "matches": "Stimmt mit dem Auszug vom {date} überein",
+        "differs": "Differenz zum Auszug vom {date}: {amount}",
+        "noStatement": "Kein Auszug für heute"
+      },
+      "upload": {
+        "accountLabel": "Konto",
+        "dragOrPick": "Kontoauszug hierher ziehen (CAMT, auch mehrere)",
+        "dropHere": "Datei hier ablegen",
+        "result": "{new} neu, {known} bereits vorhanden, {held} zurückgehalten"
+      },
+      "runs": {
+        "empty": "Noch keine Auszüge geladen.",
+        "period": "{from} – {to}",
+        "opening": "Anfang {amount}",
+        "closing": "Ende {amount}",
+        "counts": "{new} neu · {known} bereits vorhanden · {held} zurückgehalten",
+        "loadedBy": "geladen von {name} am {date}",
+        "loadedByUnknown": "geladen am {date}",
+        "state": {
+          "finished": "fertig",
+          "failed": "fehlgeschlagen",
+          "discarded": "verworfen"
+        },
+        "failure": {
+          "line": "Zeile {line} ist nicht lesbar.",
+          "codes": {
+            "notXml": "Die Datei ist kein gültiges XML.",
+            "doctypeRefused": "Die Datei enthält eine DOCTYPE- oder ENTITY-Deklaration und wird abgewiesen.",
+            "tooLarge": "Die Datei ist größer als das eingestellte Limit.",
+            "notCamt053": "Die Datei ist kein CAMT.053-Kontoauszug.",
+            "unsupportedVersion": "Die CAMT-Version wird nicht unterstützt.",
+            "currencyNotEur": "Der Auszug lautet nicht auf Euro.",
+            "noIban": "Im Auszug fehlt die IBAN.",
+            "noBalances": "Im Auszug fehlen die Salden.",
+            "sumMismatch": "Die Summe der Zeilen und Salden stimmt nicht."
+          }
+        },
+        "gap": "Es fehlen Umsätze zwischen {from} und {to}.",
+        "gapHint": "Die Reihenfolge ist Kompass gleich — laden Sie den fehlenden Auszug einfach nach.",
+        "detail": {
+          "trigger": "Kontoumsätze anzeigen",
+          "empty": "Keine Kontoumsätze.",
+          "state": {
+            "open": "offen"
+          }
+        },
+        "discard": "Verwerfen"
+      },
+      "discard": {
+        "title": "Auszug verwerfen",
+        "failed": "Die Folgen lassen sich gerade nicht ermitteln.",
+        "consequence": {
+          "rawTransactions": "{count, plural, one {# Kontoumsatz wird gelöscht} other {# Kontoumsätze werden gelöscht}}",
+          "drafts": "{count, plural, one {# Entwurf wird gelöscht} other {# Entwürfe werden gelöscht}} ({reviewed} geprüft)"
+        },
+        "stays": {
+          "vouchers": "{count, plural, one {# Beleg bleibt in der Akte} other {# Belege bleiben in der Akte}}"
+        },
+        "blocked": {
+          "title": "Festgeschriebene Buchungen sperren das Verwerfen.",
+          "goToJournal": "Buchungen zurücknehmen"
+        },
+        "noteLabel": "Notiz zum Verwerfen",
+        "toast": {
+          "done": "Auszug verworfen."
+        }
+      },
+      "candidates": {
+        "title": "Kandidaten",
+        "inStatement": "Im Auszug",
+        "existing": "Bereits vorhanden",
+        "existingOpen": "offen",
+        "same": "Dieselbe Zahlung — nicht übernehmen",
+        "own": "Eigene Zahlung — übernehmen"
       }
     },
     "openItems": {
@@ -3164,6 +3265,7 @@
         "nobody": "niemand",
         "navKeys": {
           "finance": {
+            "imports": "Hochgeladene Auszüge",
             "entries": "Journal",
             "accounts": "Bankkonten und Kassen",
             "openItems": "Offene Zahlungen",

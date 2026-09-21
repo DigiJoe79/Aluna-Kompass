@@ -552,8 +552,8 @@ test.describe('finance', () => {
     await expect(card.getByText(/^[\d.,]+\s?€$/).first()).toBeVisible();
     // „Entwurf geprüft“ liegt im Seed geprüft auf dem Vereinskonto — Bestand und geprüfter Stand weichen ab.
     await expect(card.getByText(/einschließlich geprüfter Entwürfe:/)).toBeVisible();
-    // Die Zeile „Auszug“ bleibt stehen (Platzhalter für den Import, Phase 2).
-    await expect(card.getByText(/kommt mit dem Import/)).toBeVisible();
+    // F4 Task 7: die Zeile „Auszug” zeigt jetzt echte Daten — das Vereinskonto hat im Seed keinen Import.
+    await expect(card.getByText('Noch kein Auszug geladen.')).toBeVisible();
     // Navigationseinträge im Abschnitt „Buchungen“ (Task 3).
     const sectionNav = page.getByRole('navigation', { name: 'Unternavigation' });
     await expect(sectionNav.getByRole('link', { name: 'Bankkonten und Kassen' })).toBeVisible();

@@ -13,4 +13,10 @@ describe('remediesFor', () => {
   it('returns nothing for an unknown code', () => {
     expect(remediesFor('somethingUnknown')).toEqual([]);
   });
+
+  it('offers a way out for the three import refusals (F4 Task 7)', () => {
+    expect(remediesFor('statementIbanMismatch')).toEqual([{ kind: 'action', action: 'focusAccount', labelKey: 'finance.remedy.chooseOtherAccount' }]);
+    expect(remediesFor('statementAlreadyImported')).toEqual([{ kind: 'link', href: '/finance/imports#runs', labelKey: 'finance.remedy.goToExistingRun' }]);
+    expect(remediesFor('statementFormatChange')).toEqual([{ kind: 'action', action: 'confirmFormatChange', labelKey: 'finance.remedy.confirmFormatChange' }]);
+  });
 });

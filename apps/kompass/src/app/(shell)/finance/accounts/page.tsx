@@ -1,5 +1,5 @@
-import { hasPermission } from '@kompass/core';
-import { getBalances, listAccounts } from '@kompass/module-finance';
+import { hasPermission, readSetting } from '@kompass/core';
+import { getAccountStatements, getBalances, listAccounts } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { AccountCard } from '@/components/finance/account-card';
@@ -15,12 +15,15 @@ export default async function FinanceAccountsPage() {
   const t = await getTranslations('finance.accounts');
   if (!hasPermission(ctx, 'finance.read')) return <ForbiddenCard permission="finance.read" />;
 
-  const [accountsRes, balancesRes] = await Promise.all([listAccounts(deps, ctx, { includeInactive: true }), getBalances(deps, ctx, {})]);
+  const [accountsRes, balancesRes, statementsRes] = await Promise.all([listAccounts(deps, ctx, { includeInactive: true }), getBalances(deps, ctx, {}), getAccountStatements(deps, ctx, {})]);
   if (!accountsRes.ok) return <ForbiddenCard permission="finance.read" />;
   const balanceById = new Map((balancesRes.ok ? balancesRes.value.accounts : []).map((a) => [a.accountId, a]));
+  const statementById = new Map((statementsRes.ok ? statementsRes.value.accounts : []).map((a) => [a.accountId, a]));
+  const warnDays = readSetting<number>(deps, 'finance.lastStatementWarnDays');
 
   const toCardData = (a: (typeof accountsRes.value)[number]) => {
     const balance = balanceById.get(a.id);
+    const statement = statementById.get(a.id);
     return {
       accountId: a.id,
       name: a.name,
@@ -29,6 +32,15 @@ export default async function FinanceAccountsPage() {
       balanceCents: balance?.balanceCents ?? 0,
       withReviewedCents: balance?.withReviewedCents ?? 0,
       lastCount: balance?.lastCount ?? null,
+      statement:
+        statement === undefined
+          ? null
+          : {
+              importedThrough: statement.importedThrough,
+              lastStatementDaysAgo: statement.lastStatementDaysAgo,
+              warnDays,
+              reconciliation: statement.reconciliation,
+            },
     };
   };
 

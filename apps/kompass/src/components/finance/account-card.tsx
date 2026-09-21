@@ -15,6 +15,14 @@ export interface AccountCardData {
   balanceCents: number;
   withReviewedCents: number;
   lastCount: { countedOn: string; countedCents: number } | null;
+  /** Nur `bank`/`paymentService` (F4 Task 7, Spec 9.3): `null` heißt „noch nie importiert“. */
+  statement: {
+    importedThrough: string | null;
+    lastStatementDaysAgo: number | null;
+    /** Ab diesem Wert gilt der letzte Auszug als überfällig (`finance.lastStatementWarnDays`). */
+    warnDays: number;
+    reconciliation: { state: 'matches' | 'differs' | 'noStatement'; statementDate: string | null; differenceCents: number | null } | null;
+  } | null;
 }
 
 /**
@@ -78,7 +86,27 @@ export function AccountCard({ account }: { account: AccountCardData }) {
         </p>
       ) : null}
 
-      <p className="mt-2 text-[12px] text-muted-ink">{t('statement')}</p>
+      {account.statement ? (
+        <div className="mt-2 space-y-0.5">
+          {account.statement.importedThrough === null ? (
+            <p className="text-[12px] text-muted-ink">{t('statementNone')}</p>
+          ) : (
+            <p className={account.statement.lastStatementDaysAgo !== null && account.statement.lastStatementDaysAgo >= account.statement.warnDays ? 'text-[12px] font-semibold text-warning' : 'text-[12px] text-muted-ink'}>
+              {t('statementThrough', { date: account.statement.importedThrough })}
+              {account.statement.lastStatementDaysAgo !== null ? ` · ${t('statementDaysAgo', { days: account.statement.lastStatementDaysAgo })}` : ''}
+            </p>
+          )}
+          {account.statement.reconciliation ? (
+            <p className={account.statement.reconciliation.state === 'differs' ? 'text-[12px] font-semibold text-warning' : 'text-[12px] text-muted-ink'}>
+              {account.statement.reconciliation.state === 'matches'
+                ? t('reconciliation.matches', { date: account.statement.reconciliation.statementDate ?? '' })
+                : account.statement.reconciliation.state === 'differs'
+                  ? t('reconciliation.differs', { date: account.statement.reconciliation.statementDate ?? '', amount: formatEuro(account.statement.reconciliation.differenceCents ?? 0) })
+                  : t('reconciliation.noStatement')}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
