@@ -53,6 +53,8 @@ export interface JournalProps {
   categories: { id: string; name: string }[];
   canWrite: boolean;
   canFinalize: boolean;
+  /** Zweiter Knopf im leeren Journal (Task 3): nur solange ein Konto ohne Anfangsbestand existiert und der Betrachter `finance.setup` hat. */
+  showSetupLink: boolean;
 }
 
 function VoucherIcon({ state }: { state: JournalRow['documentationState'] }) {
@@ -62,7 +64,7 @@ function VoucherIcon({ state }: { state: JournalRow['documentationState'] }) {
   return <FileWarning className="size-4 text-warning" aria-label={tv('missing')} />;
 }
 
-export function Journal({ rows, total, totals, standing, accounts, categories, canWrite, canFinalize }: JournalProps) {
+export function Journal({ rows, total, totals, standing, accounts, categories, canWrite, canFinalize, showSetupLink }: JournalProps) {
   const t = useTranslations('finance.journal');
   const router = useRouter();
   const fmt = useDateFormat();
@@ -148,7 +150,26 @@ export function Journal({ rows, total, totals, standing, accounts, categories, c
       <JournalFilters accounts={accounts} categories={categories} />
 
       {rows.length === 0 ? (
-        <EmptyState title={t('empty.title')} text={t('empty.text')} action={canWrite ? <Link href="/finance/entries/new" className={buttonVariants()}>{t('actions.new')}</Link> : undefined} />
+        <EmptyState
+          title={t('empty.title')}
+          text={t('empty.text')}
+          action={
+            canWrite || showSetupLink ? (
+              <>
+                {canWrite ? (
+                  <Link href="/finance/entries/new" className={buttonVariants()}>
+                    {t('actions.new')}
+                  </Link>
+                ) : null}
+                {showSetupLink ? (
+                  <Link href="/admin/finance?panel=accounts" className={buttonVariants({ variant: 'secondary' })}>
+                    {t('empty.setupAction')}
+                  </Link>
+                ) : null}
+              </>
+            ) : undefined
+          }
+        />
       ) : (
         <div className="mt-3 overflow-hidden rounded-md border border-line bg-surface">
           <Table>

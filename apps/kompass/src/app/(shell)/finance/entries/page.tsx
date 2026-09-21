@@ -129,6 +129,8 @@ export default async function FinanceEntriesPage({ searchParams }: { searchParam
 
   const canWrite = hasPermission(ctx, 'finance.entriesWrite');
   const canFinalize = hasPermission(ctx, 'finance.entriesFinalize');
+  // Zweiter Knopf im leeren Journal (Task 3): nur solange ein Konto ohne Anfangsbestand existiert und `finance.setup` gilt.
+  const showSetupLink = hasPermission(ctx, 'finance.setup') && accounts.some((a) => a.openingBalanceCents === null);
 
   return (
     <div className="flex gap-5">
@@ -144,6 +146,7 @@ export default async function FinanceEntriesPage({ searchParams }: { searchParam
           categories={categories.map((c) => ({ id: c.id, name: c.name }))}
           canWrite={canWrite}
           canFinalize={canFinalize}
+          showSetupLink={showSetupLink}
         />
       </div>
       {balancesRes.ok ? (

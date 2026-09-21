@@ -317,6 +317,8 @@
     },
     "finance": {
       "entries": "Journal",
+      "accounts": "Bankkonten und Kassen",
+      "openItems": "Offene Zahlungen",
       "cash": "Barkasse"
     },
     "sections": {
@@ -2335,7 +2337,8 @@
       },
       "empty": {
         "title": "Noch keine Buchung.",
-        "text": "Beginnen Sie mit dem Anfangsbestand Ihres Kontos oder der ersten Einnahme."
+        "text": "Beginnen Sie mit dem Anfangsbestand Ihres Kontos oder der ersten Einnahme.",
+        "setupAction": "Bankkonten und Kassen einrichten"
       },
       "columns": {
         "number": "Nummer",
@@ -2635,6 +2638,107 @@
         "fromCash": "Aus der Vereinskasse",
         "fromPocket": "Aus eigener Tasche",
         "pocketHint": "Auslagen reichen Sie künftig selbst ein; bis dahin bucht die Schatzmeisterin die Erstattung als Ausgabe. Es wurde nichts angelegt."
+      }
+    },
+    "accounts": {
+      "title": "Bankkonten und Kassen",
+      "kind": {
+        "bank": "Bankkonto",
+        "cash": "Kasse",
+        "paymentService": "Zahlungsdienst"
+      },
+      "withReviewed": "einschließlich geprüfter Entwürfe: {amount}",
+      "lastCount": "zuletzt gezählt am {date} · {amount}",
+      "neverCounted": "noch nicht gezählt",
+      "statement": "Auszug — kommt mit dem Import",
+      "ibanReveal": "IBAN aufdecken",
+      "ibanHide": "IBAN wieder verbergen",
+      "inactive": "Stillgelegt",
+      "empty": {
+        "title": "Noch keine Konten",
+        "text": "Legen Sie mindestens ein Bankkonto oder eine Kasse an, um mit Finanzen zu beginnen.",
+        "action": "Bankkonten und Kassen einrichten"
+      }
+    },
+    "openItems": {
+      "title": "Offene Zahlungen",
+      "new": "Offene Zahlung anlegen",
+      "tabsGroup": "Wir zahlen noch oder wir erwarten",
+      "tabs": {
+        "payable": "Wir zahlen noch",
+        "receivable": "Wir erwarten"
+      },
+      "columns": {
+        "dueOn": "Fällig am",
+        "contact": "Kontakt",
+        "amount": "Betrag",
+        "open": "Davon offen",
+        "origin": "Herkunft",
+        "reference": "Verwendungszweck",
+        "state": "Zustand"
+      },
+      "state": {
+        "open": "offen",
+        "partlyPaid": "teilweise bezahlt",
+        "settled": "erledigt",
+        "settledWithoutPayment": "erledigt ohne Zahlung"
+      },
+      "overdue": "überfällig",
+      "hasOrigin": "eigener Vorgang",
+      "empty": {
+        "title": "Noch keine offenen Zahlungen",
+        "text": "Hier stehen Forderungen und Verbindlichkeiten, die außerhalb des Journals geführt werden."
+      },
+      "dialog": {
+        "newTitle": "Offene Zahlung anlegen",
+        "editTitle": "Offene Zahlung ändern",
+        "kind": "Art",
+        "kindOptions": {
+          "payable": "Wir zahlen noch",
+          "receivable": "Wir erwarten"
+        },
+        "itemDate": "Datum",
+        "contact": "Kontakt",
+        "amount": "Betrag",
+        "dueOn": "Fällig am",
+        "reference": "Verwendungszweck",
+        "document": "Dokument",
+        "save": "Speichern",
+        "cancel": "Abbrechen",
+        "toast": {
+          "created": "Offene Zahlung angelegt.",
+          "updated": "Offene Zahlung geändert."
+        }
+      },
+      "detail": {
+        "unnamed": "Offene Zahlung",
+        "noRecipient": "Ohne Kontakt",
+        "ofTotal": "von {amount}",
+        "settledByTitle": "Wird beglichen durch",
+        "settledByEmpty": "Noch keine Zahlung.",
+        "bookNow": "Jetzt buchen",
+        "change": "Ändern",
+        "hasOriginText": "Was mit dem Vorgang geschieht, entscheidet sich an ihm selbst."
+      },
+      "settleWithoutPayment": {
+        "trigger": "Erledigt ohne Zahlung",
+        "title": "Ohne Zahlung erledigen?",
+        "description": "Es entsteht keine Buchung. Rückgängig geht das nur, indem Sie den Posten neu anlegen.",
+        "noteLabel": "Begründung",
+        "noRight": {
+          "title": "Kein Recht zum Erledigen",
+          "text": "Ohne Zahlung erledigen darf nur, wer Buchungen festschreiben darf.",
+          "textWithNames": "Ohne Zahlung erledigen darf nur, wer Buchungen festschreiben darf — das können: {names}."
+        },
+        "toast": {
+          "done": "Ohne Zahlung erledigt."
+        }
+      },
+      "transferBlock": {
+        "recipient": "Empfänger",
+        "amount": "Betrag",
+        "reference": "Verwendungszweck",
+        "noIban": "Eine Bankverbindung ist hier noch nicht hinterlegt."
       }
     }
   }

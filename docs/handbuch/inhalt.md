@@ -22,6 +22,7 @@
 - [Mediathek](mediathek.md)
 - Finanzen
   - [Buchen von Hand](finanzen/buchen.md)
+  - [Konten und offene Zahlungen](finanzen/konten-und-offene-zahlungen.md)
 - Einstellungen
   - [Stammdaten](einstellungen/verein.md)
   - [Nutzer und Rollen](einstellungen/nutzer-und-rollen.md)

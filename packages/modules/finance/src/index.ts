@@ -151,7 +151,7 @@ export {
 export { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds, yearAnchorInternal } from './ledger/holds';
 export { getEntryHistory, type EntryHistoryEvent } from './ledger/history';
 export { getProjectFinance, projectFinanceInternal, setProjectFinance, type ProjectFinanceSettings } from './ledger/project-settings';
-export { cancelOpenItem, createOpenItem, listOpenItems, openCentsInternal, openItemsAtInternal, saveOpenItem, updateOpenItem, type OpenItemView } from './ledger/open-items';
+export { cancelOpenItem, createOpenItem, listOpenItems, listOpenItemSettlements, openCentsInternal, openItemsAtInternal, saveOpenItem, updateOpenItem, type OpenItemSettlementView, type OpenItemView } from './ledger/open-items';
 export { applyCorrectionInternal, approveAllocationCorrection, decideAllocationCorrection, listAllocationCorrections, rejectAllocationCorrection, requestAllocationCorrection, type CorrectionView } from './ledger/corrections';
 
 export { AUDIT_FIELDS, financeAudit, type FinanceEntity } from './audit';

@@ -234,3 +234,42 @@ export async function saveOpenItem(deps: Deps, ctx: CallContext, input: unknown)
   const hasId = typeof input === 'object' && input !== null && typeof (input as Record<string, unknown>).id === 'string';
   return hasId ? updateOpenItem(deps, ctx, input) : createOpenItem(deps, ctx, input);
 }
+
+export interface OpenItemSettlementView {
+  entryId: string;
+  entryNumber: string | null;
+  amountCents: number;
+  entryDate: string;
+}
+
+const listSettlementsSchema = z.object({ openItemId: z.string().min(1) });
+
+/**
+ * `finance.read`: welche festgeschriebenen, nicht stornierten Buchungen
+ * einen offenen Posten begleichen — für „Wird beglichen durch“ (Task 3, A6).
+ * Dieselbe Auswahl wie `settledCentsFor`, hier mit Buchungsnummer statt nur
+ * der Summe.
+ */
+export async function listOpenItemSettlements(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<OpenItemSettlementView[]>> {
+  const denied = requireFinanceRead(ctx, 'read');
+  if (denied) return denied;
+  const parsed = validate(deps, listSettlementsSchema, input);
+  if (!parsed.ok) return parsed;
+  const item = deps.db.select({ id: financeOpenItems.id }).from(financeOpenItems).where(eq(financeOpenItems.id, parsed.value.openItemId)).get();
+  if (!item) return notFound('financeOpenItem', parsed.value.openItemId);
+
+  const rows = deps.db
+    .select({
+      entryId: financeEntries.id, entryNumber: financeEntries.number, entryDate: financeEntries.entryDate,
+      amountCents: financeOpenItemSettlements.amountCents, status: financeEntries.status, reversedByEntryId: financeEntries.reversedByEntryId,
+    })
+    .from(financeOpenItemSettlements)
+    .innerJoin(financeMoneyLines, eq(financeOpenItemSettlements.moneyLineId, financeMoneyLines.id))
+    .innerJoin(financeEntries, eq(financeMoneyLines.entryId, financeEntries.id))
+    .where(eq(financeOpenItemSettlements.openItemId, parsed.value.openItemId))
+    .all();
+  const settlements = rows
+    .filter((r) => r.status === 'final' && r.reversedByEntryId === null)
+    .map((r) => ({ entryId: r.entryId, entryNumber: r.entryNumber, amountCents: r.amountCents, entryDate: r.entryDate }));
+  return ok(settlements);
+}

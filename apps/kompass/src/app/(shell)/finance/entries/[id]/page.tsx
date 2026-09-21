@@ -158,7 +158,13 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
               <ul className="space-y-1.5 text-[13px]">
                 {settlements.map(({ settlement, item }) => (
                   <li key={settlement.id} className="flex items-center justify-between gap-2 border-b border-line-2 py-1 last:border-0">
-                    <span className="text-ink-2">{item?.paymentReference ?? t('related.unnamedItem')}</span>
+                    {item ? (
+                      <Link href={`/finance/open-items?tab=${item.kind}&item=${item.id}`} className="text-link underline">
+                        {item.paymentReference ?? t('related.unnamedItem')}
+                      </Link>
+                    ) : (
+                      <span className="text-ink-2">{t('related.unnamedItem')}</span>
+                    )}
                     <span className="font-mono tabular-nums text-ink-2">
                       {t('related.settlement', { amount: formatEuro(settlement.amountCents), rest: formatEuro(item?.openCents ?? 0) })}
                     </span>

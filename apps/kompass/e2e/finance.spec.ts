@@ -254,6 +254,9 @@ test.describe('finance', () => {
     await expect(page.getByText('Hängt zusammen mit')).toBeVisible();
     await expect(page.getByText(/RE-2026-055/)).toBeVisible();
     await expect(page.getByText(/Rest 120,00 €/)).toBeVisible();
+    // F3b Task 3 (A6): der Eintrag verlinkt jetzt auf die offene Zahlung.
+    await page.getByRole('link', { name: /RE-2026-055/ }).click();
+    await expect(page).toHaveURL(/\/finance\/open-items\?tab=payable&item=/);
   });
 
   test('nach dem Festschreiben steht man auf der Buchung und sieht ihre Nummer', async ({ page }) => {
@@ -538,6 +541,218 @@ test.describe('finance', () => {
     await page.goto('/finance/entries');
     await page.locator('tr', { hasText: 'Spende Altjahr' }).click();
     await expect(page.getByRole('button', { name: 'Korrigieren' })).toHaveCount(0);
+  });
+
+  // F3b Task 3 (A5, A6): Bankkonten und Kassen, offene Zahlungen mit Überweisungsblock.
+
+  test('Bankkonten und Kassen zeigen den festgeschriebenen Bestand und, wenn abweichend, den mit geprüften Entwürfen', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/accounts');
+    const card = page.locator('[role="link"]', { hasText: 'Vereinskonto' });
+    await expect(card.getByText(/^[\d.,]+\s?€$/).first()).toBeVisible();
+    // „Entwurf geprüft“ liegt im Seed geprüft auf dem Vereinskonto — Bestand und geprüfter Stand weichen ab.
+    await expect(card.getByText(/einschließlich geprüfter Entwürfe:/)).toBeVisible();
+    // Navigationseinträge im Abschnitt „Buchungen“ (Task 3).
+    const sectionNav = page.getByRole('navigation', { name: 'Unternavigation' });
+    await expect(sectionNav.getByRole('link', { name: 'Bankkonten und Kassen' })).toBeVisible();
+    await expect(sectionNav.getByRole('link', { name: 'Offene Zahlungen' })).toBeVisible();
+  });
+
+  test('die IBAN ist maskiert und lässt sich aufdecken', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/accounts');
+    await expect(page.getByTestId('iban-value').first()).toHaveText('DE•• •••• •••• •••• ••20 51');
+    await page.getByRole('button', { name: 'IBAN aufdecken' }).first().click();
+    await expect(page.getByTestId('iban-value').first()).toHaveText('DE02120300000000202051');
+    await page.getByRole('button', { name: 'IBAN wieder verbergen' }).first().click();
+    await expect(page.getByTestId('iban-value').first()).toHaveText('DE•• •••• •••• •••• ••20 51');
+  });
+
+  test('eine Kasse nennt neutral, wann sie zuletzt gezählt wurde', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/accounts');
+    const line = page.getByText('noch nicht gezählt').first();
+    await expect(line).toBeVisible();
+    // Neutral: kein Warnfarb-Token, kein Badge um den Satz.
+    await expect(line).not.toHaveClass(/warning/);
+  });
+
+  test('stillgelegte Konten stehen eingeklappt unter einer Aufklappliste', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/accounts');
+    // „Altes Sparbuch“ ist im Seed stillgelegt — <summary> hat in Playwright keine Rolle „button“, per Text ansteuern.
+    await expect(page.locator('[role="link"]', { hasText: 'Altes Sparbuch' })).not.toBeVisible();
+    await page.getByText('Stillgelegt', { exact: false }).click();
+    await expect(page.locator('[role="link"]', { hasText: 'Altes Sparbuch' })).toBeVisible();
+  });
+
+  test('ohne Konten zeigt die Seite einen leeren Zustand mit Knopf nur bei finance.setup', async ({ page }) => {
+    await resetDatabase(page, 'empty');
+    await page.goto('/login');
+    await expect(page).toHaveURL('/setup');
+    await page.getByLabel('Vereinsname').fill('Musterverein e.V.');
+    await page.getByLabel('Ihr Name').fill('Anna Berger');
+    await page.getByLabel('E-Mail').fill('anna@example.org');
+    await page.getByLabel('Passwort').fill('ein-langes-merkbares-passwort');
+    await page.getByRole('button', { name: 'Konto anlegen und starten' }).click();
+    await expect(page).toHaveURL('/');
+    await page.goto('/admin/modules');
+    await page.getByRole('switch', { name: 'Finanzen aktivieren oder deaktivieren' }).click();
+    await page.goto('/finance/accounts');
+    await expect(page.getByText('Noch keine Konten')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Bankkonten und Kassen einrichten' })).toBeVisible();
+  });
+
+  test('ein Klick auf das Konto öffnet das Journal gefiltert auf dieses Konto', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/accounts');
+    await page.locator('[role="link"]', { hasText: 'Vereinskonto' }).click();
+    await expect(page).toHaveURL(/\/finance\/entries\?account=/);
+    await expect(page.getByRole('heading', { name: 'Journal' })).toBeVisible();
+  });
+
+  test('offene Zahlung anlegen, im Reiter „Wir zahlen noch“ finden, überfällig steht als Wort da', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/open-items');
+    await page.getByRole('button', { name: 'Offene Zahlung anlegen' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Datum', { exact: true }).fill('2026-01-05');
+    await dialog.getByRole('combobox', { name: 'Kontakt' }).fill('Sandberg');
+    await dialog.getByTestId('contact-option').filter({ hasText: 'Mira Sandberg' }).first().click();
+    await dialog.getByLabel('Betrag', { exact: true }).fill('75,00');
+    await dialog.getByLabel('Fällig am').fill('2026-01-20');
+    await dialog.getByLabel('Verwendungszweck').fill('RE-2026-999');
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByText('Offene Zahlung angelegt.')).toBeVisible();
+    const row = page.getByRole('row', { name: /RE-2026-999/ });
+    await expect(row).toBeVisible();
+    await expect(row).toContainText('überfällig');
+    await expect(row).toContainText('Mira Sandberg');
+
+    // Zwei Reiter in der URL: unter „Wir erwarten“ steht der neue Posten nicht.
+    await page.getByRole('tab', { name: 'Wir erwarten' }).click();
+    await expect(page).toHaveURL(/tab=receivable/);
+    await expect(page.getByRole('row', { name: /RE-2026-999/ })).toHaveCount(0);
+    await page.getByRole('tab', { name: 'Wir zahlen noch' }).click();
+    await expect(page).toHaveURL(/tab=payable/);
+    await expect(page.getByRole('row', { name: /RE-2026-999/ })).toBeVisible();
+  });
+
+  test('der Überweisungsblock kopiert den Verwendungszweck und zeigt keinen QR-Code', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await loginAsAdmin(page);
+    await page.goto('/finance/open-items');
+    await page.getByRole('row', { name: /RE-2026-041/ }).click();
+    await expect(page).toHaveURL(/item=/);
+    await expect(page.getByText('Eine Bankverbindung ist hier noch nicht hinterlegt.')).toBeVisible();
+    await expect(page.getByAltText(/QR/i)).toHaveCount(0);
+    await page.getByRole('button', { name: 'Kopieren: Verwendungszweck' }).click();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('RE-2026-041');
+  });
+
+  test('„Jetzt buchen“ öffnet die Maske mit Rest und Begleichung; nach dem Festschreiben ist die Zahlung erledigt', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/open-items');
+    await page.getByRole('row', { name: /RE-2026-041/ }).click();
+    await page.getByRole('link', { name: 'Jetzt buchen' }).click();
+    await expect(page).toHaveURL(/\/finance\/entries\/new\?template=expense&settles=/);
+    await page.getByLabel('Text').fill('Rechnung RE-2026-041 beglichen');
+    const accountCard = page.getByTestId('finance-account-card');
+    await expect(accountCard.getByLabel('Betrag').first()).toHaveValue('120,00');
+    await expect(accountCard.getByText('RE-2026-041')).toBeVisible(); // Begleichung vorbelegt (MoneySettlements)
+    await accountCard.getByLabel('Konto').selectOption({ label: 'Vereinskonto' });
+    const allocationCard = page.getByTestId('finance-allocation-card');
+    const rows = allocationCard.getByTestId('split-row');
+    await allocationCard.getByRole('button', { name: 'Zeile hinzufügen' }).click();
+    await rows.nth(0).getByLabel('Kategorie').selectOption({ label: 'Büro, Porto, Telefon' });
+    await rows.nth(0).getByLabel('Betrag').fill('120,00');
+    await page.getByRole('button', { name: 'Festschreiben', exact: true }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Festschreiben' }).click();
+    await expect(page).toHaveURL(/\/finance\/entries\/[^/]+$/);
+
+    await page.goto('/finance/open-items');
+    const row = page.getByRole('row', { name: /RE-2026-041/ });
+    await expect(row).toContainText('erledigt');
+  });
+
+  test('„Erledigt ohne Zahlung“ verlangt eine Notiz und nennt die Folgen', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/open-items');
+    await page.getByRole('row', { name: /RE-2026-041/ }).click();
+    await page.getByRole('button', { name: 'Erledigt ohne Zahlung' }).click();
+    await expect(page.getByText(/Es entsteht keine Buchung/)).toBeVisible();
+    const alertDialog = page.getByRole('alertdialog');
+    const confirm = alertDialog.getByRole('button', { name: 'Erledigt ohne Zahlung' });
+    await expect(confirm).toBeDisabled();
+    await alertDialog.getByLabel('Begründung').fill('Kleinbetrag erlassen, Absprache mit dem Lieferanten');
+    await expect(confirm).toBeEnabled();
+    await confirm.click();
+    await expect(page.getByText('Ohne Zahlung erledigt.')).toBeVisible();
+    const row = page.getByRole('row', { name: /RE-2026-041/ });
+    await expect(row).toContainText('erledigt ohne Zahlung');
+  });
+
+  test('eine offene Zahlung mit Herkunft bietet „Erledigt ohne Zahlung“ nicht an', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/open-items');
+    await page.getByRole('row', { name: /ANT-2026-014/ }).click();
+    await expect(page).toHaveURL(/item=/);
+    await expect(page.getByRole('button', { name: 'Erledigt ohne Zahlung' })).toHaveCount(0);
+    await expect(page.getByText('Was mit dem Vorgang geschieht, entscheidet sich an ihm selbst.')).toBeVisible();
+  });
+
+  test('ohne finance.entriesFinalize steht dort, wer es erledigen kann', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/admin/users');
+    await page.getByRole('row', { name: /Mira Klein/ }).getByRole('button', { name: 'Aktionen' }).click();
+    await page.getByRole('menuitem', { name: 'Neues Startpasswort' }).click();
+    const startPassword = (await page.getByTestId('start-password').textContent())!.trim();
+    await page.getByRole('button', { name: 'Ich habe die Daten notiert' }).click();
+    await page.request.post('/logout');
+    await page.goto('/login');
+    await page.getByLabel('E-Mail').fill('mira@kompass.local');
+    await page.getByLabel('Passwort').fill(startPassword);
+    await page.getByRole('button', { name: 'Anmelden' }).click();
+    await page.getByLabel('Startpasswort').fill(startPassword);
+    await page.getByLabel('Neues Passwort', { exact: true }).fill('mira-hat-ein-neues-passwort');
+    await page.getByLabel('Passwort wiederholen').fill('mira-hat-ein-neues-passwort');
+    await page.getByRole('button', { name: 'Passwort setzen und fortfahren' }).click();
+    await expect(page).toHaveURL('/');
+
+    await page.goto('/finance/open-items');
+    await page.getByRole('row', { name: /RE-2026-041/ }).click();
+    await expect(page.getByText('Kein Recht zum Erledigen')).toBeVisible();
+    await expect(page.getByText('Anna Berger')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Erledigt ohne Zahlung' })).toHaveCount(0);
+  });
+
+  test('das leere Journal bietet den Weg zur Einrichtung nur, wenn ein Konto ohne Anfangsbestand existiert', async ({ page }) => {
+    // Statt einer leeren Installation (H2 — Konten anlegen — kommt erst mit Task 5): eine Suche ohne
+    // Treffer zeigt denselben leeren Zustand; „Barkasse“ hat im Seed keinen Anfangsbestand.
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries?q=kein-treffer-fuer-diesen-text-xyz');
+    await expect(page.getByText('Noch keine Buchung.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Bankkonten und Kassen einrichten' })).toBeVisible();
+
+    await page.goto('/admin/users');
+    await page.getByRole('row', { name: /Mira Klein/ }).getByRole('button', { name: 'Aktionen' }).click();
+    await page.getByRole('menuitem', { name: 'Neues Startpasswort' }).click();
+    const startPassword = (await page.getByTestId('start-password').textContent())!.trim();
+    await page.getByRole('button', { name: 'Ich habe die Daten notiert' }).click();
+    await page.request.post('/logout');
+    await page.goto('/login');
+    await page.getByLabel('E-Mail').fill('mira@kompass.local');
+    await page.getByLabel('Passwort').fill(startPassword);
+    await page.getByRole('button', { name: 'Anmelden' }).click();
+    await page.getByLabel('Startpasswort').fill(startPassword);
+    await page.getByLabel('Neues Passwort', { exact: true }).fill('mira-hat-ein-neues-passwort');
+    await page.getByLabel('Passwort wiederholen').fill('mira-hat-ein-neues-passwort');
+    await page.getByRole('button', { name: 'Passwort setzen und fortfahren' }).click();
+    await expect(page).toHaveURL('/');
+    // Mira Klein hat finance.read (Kassenprüfer), aber kein finance.setup.
+    await page.goto('/finance/entries?q=kein-treffer-fuer-diesen-text-xyz');
+    await expect(page.getByText('Noch keine Buchung.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Bankkonten und Kassen einrichten' })).toHaveCount(0);
   });
 });
 

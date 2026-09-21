@@ -355,6 +355,9 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   const payablePartial = await ensureOpenItem(deps, ctx, 'RE-2026-055', { kind: 'payable', itemDate: `${currentYear}-01-15`, amountCents: 20000, dueOn: `${currentYear}-02-15` });
   const receivableSettled = await ensureOpenItem(deps, ctx, 'SP-2026-003', { kind: 'receivable', itemDate: `${currentYear}-01-20`, amountCents: 5000, dueOn: `${currentYear}-02-20` });
   const payableCancelled = await ensureOpenItem(deps, ctx, 'RE-2026-060', { kind: 'payable', itemDate: `${currentYear}-01-25`, amountCents: 3000 });
+  // F3b Task 3 (A6): ein Posten mit Herkunft — „Erledigt ohne Zahlung“ bietet er nicht an, er verweist auf
+  // seinen Vorgang. `originType` ist erfunden (kein Fachmodul liefert vor F8a/F7 echte Vorgänge).
+  await ensureOpenItem(deps, ctx, 'ANT-2026-014', { kind: 'payable', itemDate: `${currentYear}-02-01`, amountCents: 4500, dueOn: `${currentYear}-03-01`, originType: 'demoProcess', originId: 'demo-1' });
   void payableOpen; // bleibt bewusst unbeglichen — nichts weiter zu tun.
 
   if (payablePartial) {

@@ -9,7 +9,7 @@ import { TAX_CODES } from './ledger/codes';
 import { deleteDraft, getEntry, listEntries, saveDraft, setReviewed } from './ledger/entries';
 import { bookEntry, finalizeEntry, finalizeReviewed } from './ledger/finalize';
 import { getEntryHistory } from './ledger/history';
-import { cancelOpenItem, listOpenItems, saveOpenItem } from './ledger/open-items';
+import { cancelOpenItem, listOpenItems, listOpenItemSettlements, saveOpenItem } from './ledger/open-items';
 import { getBalances, getIncomeStatement } from './ledger/overview';
 import { closeFiscalYear, justifyUndocumentedEntry, previewPeriod, reopenFiscalYear } from './ledger/period';
 import { getProjectFinance, setProjectFinance } from './ledger/project-settings';
@@ -114,6 +114,7 @@ const saveOpenItemMcpSchema = z.object({
 });
 const cancelOpenItemMcpSchema = z.object({ id: z.string(), note: z.string() });
 const listOpenItemsMcpSchema = z.object({ kind: z.enum(['receivable', 'payable']).optional(), state: z.enum(['open', 'settled', 'overpaid', 'cancelled', 'all']).optional(), limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() });
+const listOpenItemSettlementsMcpSchema = z.object({ openItemId: z.string() });
 
 const requestCorrectionMcpSchema = z.object({
   lineId: z.string(),
@@ -243,6 +244,7 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
   t({ name: 'finance_open_item_save', description: 'Create or update a receivable or payable (id present updates, absent creates). Outside the journal - the income and expense statement never sees it. Requires finance.entriesWrite.', inputSchema: saveOpenItemMcpSchema, handler: (deps, ctx, args) => saveOpenItem(deps, ctx, args), service: saveOpenItem }),
   t({ name: 'finance_open_item_cancel', description: 'Close a mistaken open item without payment, with a note - a final step. Only possible while nothing finalized is settled against it, and never for an item with an origin (it is settled through its own process). Human only: refused over MCP unless the association has set finance.mcpHumanOnlyAllowed at the screen. Requires finance.entriesFinalize.', inputSchema: cancelOpenItemMcpSchema, handler: (deps, ctx, args) => cancelOpenItem(deps, ctx, args), service: cancelOpenItem }),
   t({ name: 'finance_open_items_list', description: 'List receivables and payables by kind or state, with their open amount. Requires finance.read.', inputSchema: listOpenItemsMcpSchema, handler: (deps, ctx, args) => listOpenItems(deps, ctx, args), service: listOpenItems }),
+  t({ name: 'finance_open_item_settlements', description: 'List the finalized, unreversed entries that settle an open item, with their entry number - for "settled by". Requires finance.read.', inputSchema: listOpenItemSettlementsMcpSchema, handler: (deps, ctx, args) => listOpenItemSettlements(deps, ctx, args), service: listOpenItemSettlements }),
   t({
     name: 'finance_correction_request',
     description: 'Correct donor, project, purpose or the abroad switch of a finalized line - not amount, date, account or category (reverse the entry for those). Human only: refused over MCP unless the association has set finance.mcpHumanOnlyAllowed at the screen. In a closed year it waits for a second person. Requires finance.entriesFinalize.',

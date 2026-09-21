@@ -6,10 +6,11 @@ import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
+import { formatAmount } from '@/lib/finance/amount';
 import { emptyForm, type EntryTemplate } from '@/lib/finance/entry-form';
 import { EntryForm } from '../entry-form';
 
-export default async function NewFinanceEntryPage({ searchParams }: { searchParams: Promise<{ template?: string; account?: string }> }) {
+export default async function NewFinanceEntryPage({ searchParams }: { searchParams: Promise<{ template?: string; account?: string; settles?: string }> }) {
   const { deps, ctx } = await requireSession();
   if (!hasPermission(ctx, 'finance.entriesWrite')) return <ForbiddenCard permission="finance.entriesWrite" />;
 
@@ -40,6 +41,17 @@ export default async function NewFinanceEntryPage({ searchParams }: { searchPara
   const initial = emptyForm(template, today);
   const accountId = query.account && accounts.some((a) => a.id === query.account) ? query.account : null;
   if (accountId && initial.moneyRows[0]) initial.moneyRows[0] = { ...initial.moneyRows[0], accountId };
+
+  // `?settles=` — „Jetzt buchen“ von einer offenen Zahlung aus (F3b Task 3, A6): Richtung folgt schon aus
+  // der Vorlage (income/expense), Betrag und Begleichung sind der Rest des Postens.
+  const settlingItem = query.settles ? openItems.find((i) => i.id === query.settles) : undefined;
+  if (settlingItem && initial.moneyRows[0]) {
+    initial.moneyRows[0] = {
+      ...initial.moneyRows[0],
+      amountText: formatAmount(settlingItem.openCents),
+      settlements: [{ openItemId: settlingItem.id, amountText: formatAmount(settlingItem.openCents) }],
+    };
+  }
 
   return (
     <>

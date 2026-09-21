@@ -84,7 +84,7 @@ describe('seedFinance', () => {
       'Wagner', 'Kruse',
       // F2b: Belege, offene Posten, Zuordnungskorrektur.
       'Rechnung Büromaterial', 'Falscher Anhang hochgeladen, richtige Quittung liegt vor',
-      'RE-2026-041', 'RE-2026-055', 'SP-2026-003', 'RE-2026-060', 'Doppelt erfasst, storniert vor Zahlung',
+      'RE-2026-041', 'RE-2026-055', 'SP-2026-003', 'RE-2026-060', 'ANT-2026-014', 'Doppelt erfasst, storniert vor Zahlung',
       'Teilzahlung Lieferant', 'Ausgleich Forderung',
       'Auslandsbezug bei der Erfassung übersehen', 'Spenderin nachträglich zugeordnet',
       // F2c: Begründung zum Periodenabschluss, neue Buchungstexte und Zwecke.
@@ -125,6 +125,16 @@ describe('seedFinance', () => {
     expect(byRef.get('RE-2026-055')?.settledCents).toBeGreaterThan(0);
     expect(byRef.get('SP-2026-003')).toMatchObject({ state: 'settled' });
     expect(byRef.get('RE-2026-060')).toMatchObject({ state: 'cancelled' });
+  });
+
+  it('seeds an open item with an origin — F3b Task 3, A6 does not offer it "erledigt ohne Zahlung"', async () => {
+    const { deps, ctx } = setupFinance();
+    await seedFinance(deps, ctx);
+    await seedFinance(deps, ctx); // idempotent
+
+    const items = unwrap(await listOpenItems(deps, ctx, { state: 'all' })).items;
+    const withOrigin = items.find((i) => i.paymentReference === 'ANT-2026-014');
+    expect(withOrigin).toMatchObject({ originType: 'demoProcess', originId: 'demo-1', state: 'open' });
   });
 
   it('seeds an applied correction in the running year and a pending one in the closed previous year, and is idempotent', async () => {

@@ -5,7 +5,7 @@ import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { saveDraft } from '../src/ledger/entries';
 import { bookEntry } from '../src/ledger/finalize';
-import { cancelOpenItem, createOpenItem, listOpenItems, openCentsInternal, openItemsAtInternal, updateOpenItem } from '../src/ledger/open-items';
+import { cancelOpenItem, createOpenItem, listOpenItems, listOpenItemSettlements, openCentsInternal, openItemsAtInternal, updateOpenItem } from '../src/ledger/open-items';
 import { reverseEntry } from '../src/ledger/reverse';
 import { financeOpenItemSettlements } from '../src/schema';
 import { allowHumanOnlyOverMcp, ledgerFixture } from './helpers';
@@ -73,6 +73,26 @@ describe('open items', () => {
     unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-03-05', text: 'Sammelüberweisung', moneyLines: [{ accountId: f.bank.id, amountCents: -5000, settlements: [{ openItemId: item1.id, amountCents: 3000 }, { openItemId: item2.id, amountCents: 2000 }] }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -5000 }] }));
     expect(openCentsInternal(f.deps.db, item1.id)).toBe(0);
     expect(openCentsInternal(f.deps.db, item2.id)).toBe(0);
+  });
+
+  it('lists the finalized, unreversed entries that settle an item, with their number — for "settled by" (Task 3, A6)', async () => {
+    const f = await ledgerFixture();
+    const item = unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'receivable', itemDate: '2026-03-01', amountCents: 10000 }));
+    expect(unwrap(await listOpenItemSettlements(f.deps, f.ctx, { openItemId: item.id }))).toEqual([]);
+
+    const first = unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-03-05', text: 'Teilzahlung', moneyLines: [{ accountId: f.bank.id, amountCents: 6000, settlements: [{ openItemId: item.id, amountCents: 6000 }] }], allocationLines: [{ categoryId: f.donations.id, amountCents: 6000 }] }));
+    const second = unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-03-10', text: 'Restzahlung', moneyLines: [{ accountId: f.bank.id, amountCents: 4000, settlements: [{ openItemId: item.id, amountCents: 4000 }] }], allocationLines: [{ categoryId: f.donations.id, amountCents: 4000 }] }));
+    const settlements = unwrap(await listOpenItemSettlements(f.deps, f.ctx, { openItemId: item.id }));
+    expect(settlements).toHaveLength(2);
+    expect(settlements.map((s) => s.entryId).sort()).toEqual([first.id, second.id].sort());
+    expect(settlements.every((s) => s.entryNumber !== null)).toBe(true);
+
+    unwrap(await reverseEntry(f.deps, f.ctx, { id: second.id }));
+    const afterReverse = unwrap(await listOpenItemSettlements(f.deps, f.ctx, { openItemId: item.id }));
+    expect(afterReverse.map((s) => s.entryId)).toEqual([first.id]); // die Gegenbuchung selbst begleicht nichts, das Storno ist auch keine Zahlung mehr
+
+    expect(await listOpenItemSettlements(f.deps, f.ctx, { openItemId: 'nonexistent' })).toMatchObject({ ok: false, error: { type: 'notFound' } });
+    expect(await listOpenItemSettlements(f.deps, ctxWith([], f.userId), { openItemId: item.id })).toMatchObject({ ok: false, error: { type: 'forbidden' } });
   });
 
   it('reversing the payment opens the item again — nothing is deleted', async () => {
