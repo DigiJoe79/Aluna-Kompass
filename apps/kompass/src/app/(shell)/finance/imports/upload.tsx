@@ -4,9 +4,11 @@ import { FileUp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
+import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { Notice } from '@/components/notice';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import type { ActionState } from '@/lib/actions';
 import { remediesFor } from '@/lib/finance/remedies';
 import { cn } from '@/lib/utils';
 import { uploadStatementAction } from './actions';
@@ -29,8 +31,9 @@ interface UploadResult {
 /**
  * Die Ablagefläche „Kontoauszug hierher ziehen“ (F4 Task 7, HANDOFF § 12.4).
  * Mehrere Dateien laufen **nacheinander**, jede mit eigenem Ergebnis; das
- * Ergebnis steht in einer `aria-live`-Region. Ein Formatwechsel bietet den
- * Ausweg „Wechsel bestätigen“ und lädt dieselbe Datei erneut mit
+ * Ergebnis steht in einer `aria-live`-Region. Ein Formatwechsel öffnet einen
+ * Bestätigungsdialog mit dem Hinweis auf mehr Zweifelsfälle (Entschieden 1)
+ * und lädt erst nach Bestätigung dieselbe Datei erneut, mit
  * `confirmFormatChange: true`.
  */
 export function ImportUpload({ accounts, defaultAccountId }: { accounts: ImportAccountOption[]; defaultAccountId?: string }) {
@@ -41,6 +44,7 @@ export function ImportUpload({ accounts, defaultAccountId }: { accounts: ImportA
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [results, setResults] = useState<UploadResult[]>([]);
+  const [formatChangeTarget, setFormatChangeTarget] = useState<UploadResult | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const accountRef = useRef<HTMLSelectElement>(null);
 
@@ -67,12 +71,19 @@ export function ImportUpload({ accounts, defaultAccountId }: { accounts: ImportA
     setBusy(false);
   };
 
-  const retry = async (item: UploadResult, confirmFormatChange: boolean) => {
+  /**
+   * Der Formatwechsel-Ausweg (Entschieden 1, F4): kein sofortiger Retry aus
+   * der Meldung heraus, sondern ein eigener Bestätigungsdialog, der den
+   * Hinweis auf mehr Zweifelsfälle noch einmal ausdrücklich nennt.
+   */
+  const confirmFormatChangeAndRetry = async (): Promise<ActionState> => {
+    const target = formatChangeTarget!;
     setBusy(true);
-    const outcome = await runOne(item.file, confirmFormatChange);
-    setResults((prev) => prev.map((r) => (r.key === item.key ? outcome : r)));
+    const outcome = await runOne(target.file, true);
+    setResults((prev) => prev.map((r) => (r.key === target.key ? outcome : r)));
     router.refresh();
     setBusy(false);
+    return outcome.status === 'success' ? { status: 'success' } : { status: 'error', message: outcome.message ?? '', fieldErrors: {} };
   };
 
   return (
@@ -128,7 +139,7 @@ export function ImportUpload({ accounts, defaultAccountId }: { accounts: ImportA
         />
       </div>
 
-      <div aria-live="polite" className="space-y-2">
+      <div data-testid="import-upload-results" aria-live="polite" className="space-y-2">
         {results.map((r) =>
           r.status === 'success' ? (
             <p key={r.key} className="text-[13px] text-ink-2">
@@ -146,7 +157,7 @@ export function ImportUpload({ accounts, defaultAccountId }: { accounts: ImportA
                   ? {
                       onSelect: () => {
                         if (remedy.action === 'focusAccount') accountRef.current?.focus();
-                        else if (remedy.action === 'confirmFormatChange') void retry(r, true);
+                        else if (remedy.action === 'confirmFormatChange') setFormatChangeTarget(r);
                       },
                     }
                   : { href: remedy.href }),
@@ -157,6 +168,15 @@ export function ImportUpload({ accounts, defaultAccountId }: { accounts: ImportA
           ),
         )}
       </div>
+
+      <ConfirmDialog
+        open={formatChangeTarget !== null}
+        onOpenChange={(open) => !open && setFormatChangeTarget(null)}
+        title={t('formatChangeDialog.title')}
+        description={t('formatChangeDialog.description', { account: accounts.find((a) => a.id === accountId)?.name ?? '' })}
+        confirmLabel={t('formatChangeDialog.confirm')}
+        action={confirmFormatChangeAndRetry}
+      />
     </section>
   );
 }

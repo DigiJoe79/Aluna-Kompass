@@ -30,6 +30,10 @@ test.describe('finance import', () => {
     await openImports(page);
     await page.getByTestId('statement-file-input').setInputFiles(fixture('neuer-auszug.xml'));
     await expect(page.getByText(/1 neu, 1 bereits vorhanden, 1 zurückgehalten/)).toBeVisible();
+    // Das Ergebnis steht in einer aria-live-Region (HANDOFF § 12.6).
+    const results = page.getByTestId('import-upload-results');
+    await expect(results).toHaveAttribute('aria-live', 'polite');
+    await expect(results).toContainText('1 neu, 1 bereits vorhanden, 1 zurückgehalten');
     await expect(page.getByText(/Auszug importiert bis 2026-07-31/)).toBeVisible();
   });
 
@@ -74,6 +78,8 @@ test.describe('finance import', () => {
     // Der Seed selbst kennt schon eine Lücke (Lauf B) — deshalb der ganze Satz in einer Zusicherung,
     // damit nicht versehentlich die andere Lückenmeldung auf der Seite trifft.
     await expect(page.getByText(/Es fehlen Umsätze zwischen 2026-04-30 und 2026-08-01\. Die Reihenfolge ist Kompass gleich/)).toBeVisible();
+    // Eine Warnung, kein Textfeld — die Lückenmeldung verlangt keine Begründung.
+    await expect(page.getByRole('textbox')).toHaveCount(0);
   });
 
   test('ein Kandidat steht neben dem vorhandenen Umsatz; „Eigene Zahlung“ übernimmt ihn', async ({ page }) => {
@@ -141,6 +147,23 @@ test.describe('finance import', () => {
     await expect(page.getByTestId('import-run').first()).toBeVisible();
     await expect(page.getByTestId('statement-file-input')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Verwerfen' })).toHaveCount(0);
+    // Der Kandidat ist sichtbar (lesend, finance.read genügt), aber nicht entscheidbar.
+    await expect(page.getByRole('heading', { name: 'Kandidaten' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Eigene Zahlung — übernehmen' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Dieselbe Zahlung — nicht übernehmen' })).toHaveCount(0);
+  });
+
+  test('ein Formatwechsel verlangt einen Bestätigungsdialog mit dem Hinweis auf mehr Zweifelsfälle', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/imports');
+    await page.getByLabel('Konto', { exact: true }).selectOption({ label: 'Spendenplattform' });
+    await page.getByTestId('statement-file-input').setInputFiles(fixture('formatwechsel.xml'));
+    await expect(page.getByRole('button', { name: 'Format wechseln' })).toBeVisible();
+    await page.getByRole('button', { name: 'Format wechseln' }).click();
+    const dialog = page.getByRole('alertdialog', { name: 'Auszugsformat wechseln?' });
+    await expect(dialog.getByText(/mehr Zweifelsfälle|nicht mehr sicher/)).toBeVisible();
+    await dialog.getByRole('button', { name: 'Wechsel bestätigen' }).click();
+    await expect(page.getByText(/1 neu, 0 bereits vorhanden, 0 zurückgehalten/)).toBeVisible();
   });
 
   test('ein DOCTYPE im Auszug wird abgewiesen', async ({ page }) => {

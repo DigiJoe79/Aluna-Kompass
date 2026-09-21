@@ -172,7 +172,8 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   // Eigens für die Barkassen-E2E (F3b Task 2): Zählungen und Bargeldbewegungen laufen hier, nie auf „Barkasse“ —
   // sonst kippen die Bestände, die `finance.spec.ts` schon auf „Barkasse“ voraussetzt.
   await ensureAccount(deps, ctx, 'Zählkasse', { kind: 'cash', openingBalanceCents: 20000, openingDate: `${previousYear}-01-01` });
-  await ensureAccount(deps, ctx, 'Spendenplattform', { kind: 'paymentService', importFormat: 'csv' });
+  // IBAN erfunden (BLZ 99999999) — F4 Task 7: nur mit IBAN lässt sich der Formatwechsel csv -> camt053 überhaupt zeigen.
+  await ensureAccount(deps, ctx, 'Spendenplattform', { kind: 'paymentService', iban: 'DE32999999990301059999', importFormat: 'csv' });
   const oldSavings = await ensureAccount(deps, ctx, 'Altes Sparbuch', { kind: 'bank', iban: 'AT611904300234573201', isMain: false });
   if (oldSavings) {
     const row = deps.db.select().from(financeAccounts).where(eq(financeAccounts.id, oldSavings.id)).get();

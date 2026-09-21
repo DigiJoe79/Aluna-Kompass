@@ -2348,7 +2348,7 @@
       "cashTransferFirst": "„Bargeld abgehoben“ zuerst buchen",
       "chooseOtherAccount": "Anderes Konto wählen",
       "goToExistingRun": "Zum vorhandenen Lauf",
-      "confirmFormatChange": "Wechsel bestätigen"
+      "confirmFormatChange": "Format wechseln"
     },
     "state": {
       "draft": "Entwurf",
@@ -2811,7 +2811,12 @@
         "accountLabel": "Konto",
         "dragOrPick": "Kontoauszug hierher ziehen (CAMT, auch mehrere)",
         "dropHere": "Datei hier ablegen",
-        "result": "{new} neu, {known} bereits vorhanden, {held} zurückgehalten"
+        "result": "{new} neu, {known} bereits vorhanden, {held} zurückgehalten",
+        "formatChangeDialog": {
+          "title": "Auszugsformat wechseln?",
+          "description": "Für {account} war bisher ein anderes Auszugsformat hinterlegt. Nach dem Wechsel kommen mehr Zweifelsfälle vor.",
+          "confirm": "Wechsel bestätigen"
+        }
       },
       "runs": {
         "empty": "Noch keine Auszüge geladen.",

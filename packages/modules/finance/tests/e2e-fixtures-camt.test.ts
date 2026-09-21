@@ -60,6 +60,13 @@ describe('E2E-Fixtures unter apps/kompass/e2e/fixtures/camt', () => {
     expect(res.statements[0]!.openingCents).toBe(200000);
   });
 
+  it('formatwechsel.xml: liest sich, mit der IBAN der Spendenplattform (Seed, Format csv)', () => {
+    const res = parseCamt053(bytes('formatwechsel.xml'), { maxBytes: 1_000_000 });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.statements[0]!.iban).toBe('DE32999999990301059999');
+  });
+
   it('doctype.xml wird schon vor dem Parsen abgewiesen', () => {
     const res = parseCamt053(bytes('doctype.xml'), { maxBytes: 1_000_000 });
     expect(res).toMatchObject({ ok: false, error: { code: 'doctypeRefused' } });
