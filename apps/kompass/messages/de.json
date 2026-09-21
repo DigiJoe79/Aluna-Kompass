@@ -2248,6 +2248,7 @@
     },
     "amount": {
       "format": "Bitte einen Betrag wie 12,50 eingeben",
+      "exceeds": "Der Teilbetrag übersteigt den Betrag der Geldzeile.",
       "directionGroup": "Richtung",
       "direction": {
         "in": "Eingang",
@@ -2427,6 +2428,15 @@
       "transferTo": "Auf Konto",
       "balanceHint": "Bestand {amount}",
       "transferHint": "Eine Umbuchung ist weder Einnahme noch Ausgabe.",
+      "settlement": {
+        "toggle": "begleicht offene Zahlung",
+        "searchPlaceholder": "Zahlungsreferenz oder Kontakt suchen",
+        "remove": "entfernen",
+        "unnamed": "Posten vom {date}",
+        "amount": "Teilbetrag",
+        "rest": "Rest {amount}",
+        "noMatches": "Keine passende offene Zahlung."
+      },
       "allocationCard": "Wofür?",
       "addRow": "Zeile hinzufügen",
       "voucherCard": "Beleg",

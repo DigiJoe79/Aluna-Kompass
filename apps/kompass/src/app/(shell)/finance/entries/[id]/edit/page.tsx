@@ -1,6 +1,6 @@
 import { hasPermission, readSetting } from '@kompass/core';
 import type { LocalizedText } from '@kompass/core';
-import { getBalances, getEntry, listCategories, listPurposes, TAX_CODES } from '@kompass/module-finance';
+import { getBalances, getEntry, listCategories, listOpenItems, listPurposes, TAX_CODES } from '@kompass/module-finance';
 import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
@@ -22,11 +22,12 @@ export default async function EditFinanceEntryPage({ params }: { params: Promise
   // Eine festgeschriebene Buchung hat kein Eingabefeld (Global Constraint) — die Ansicht kommt mit Task 10.
   if (entry.status !== 'draft') redirect('/finance/entries');
 
-  const [balancesRes, categoriesRes, purposesRes, projectsRes] = await Promise.all([
+  const [balancesRes, categoriesRes, purposesRes, projectsRes, openItemsRes] = await Promise.all([
     getBalances(deps, ctx, {}),
     listCategories(deps, ctx, {}),
     listPurposes(deps, ctx, {}),
     listProjects(deps, ctx),
+    listOpenItems(deps, ctx, { state: 'open', limit: 200 }),
   ]);
 
   const accounts = (balancesRes.ok ? balancesRes.value.accounts : []).map((a) => ({ id: a.accountId, name: a.name, kind: a.kind, balanceCents: a.balanceCents }));
@@ -50,6 +51,7 @@ export default async function EditFinanceEntryPage({ params }: { params: Promise
   }));
 
   const t = await getTranslations('finance.entryForm');
+  const openItems = (openItemsRes.ok ? openItemsRes.value.items : []).map((i) => ({ id: i.id, kind: i.kind as 'receivable' | 'payable', label: i.paymentReference ?? t('settlement.unnamed', { date: i.itemDate }), openCents: i.openCents }));
 
   return (
     <>
@@ -65,6 +67,7 @@ export default async function EditFinanceEntryPage({ params }: { params: Promise
         canFinalize={hasPermission(ctx, 'finance.entriesFinalize')}
         voucherTypeKey="voucher-own"
         vouchers={vouchers}
+        openItems={openItems}
       />
     </>
   );

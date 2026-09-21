@@ -20,8 +20,9 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import type { ActionState } from '@/lib/actions';
 import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
-import { applyTemplate, remainderCents, restInto, toServiceInput, type EntryFormState, type EntryTemplate } from '@/lib/finance/entry-form';
+import { applyTemplate, remainderCents, restInto, toServiceInput, type EntryFormState, type EntryTemplate, type MoneyRow } from '@/lib/finance/entry-form';
 import { remediesFor } from '@/lib/finance/remedies';
+import { matchesDirection, suggestSettlementCents } from '@/lib/finance/settlement';
 import { splitEvenly } from '@/lib/finance/split';
 import { attachDocumentAction, finalizeAction, saveDraftAction, saveReviewedAction, uploadVoucherAction } from './actions';
 
@@ -35,6 +36,14 @@ export interface EntryFormAccount {
   balanceCents: number;
 }
 
+/** Ein offener Posten, wie ihn die Suche „begleicht offene Zahlung“ an einer Geldzeile anbietet (Task 5). */
+export interface EntryFormOpenItem {
+  id: string;
+  kind: 'receivable' | 'payable';
+  label: string;
+  openCents: number;
+}
+
 export interface EntryFormProps {
   initial: EntryFormState;
   accounts: EntryFormAccount[];
@@ -46,12 +55,109 @@ export interface EntryFormProps {
   canFinalize: boolean;
   voucherTypeKey: string;
   vouchers: ReceiptListItem[];
+  openItems: EntryFormOpenItem[];
 }
 
 const TEMPLATES: EntryTemplate[] = ['income', 'expense', 'transfer', 'inKind'];
 
+/**
+ * Die offenen Zahlungen, die zur Richtung einer Geldzeile passen und noch
+ * nicht an ihr hängen — Suche über Kontakt/Zahlungsreferenz, Restbetrag je
+ * Treffer (Task 5).
+ */
+function MoneySettlements({
+  row,
+  rowIndex,
+  openItems,
+  fieldErrors,
+  onChange,
+}: {
+  row: MoneyRow;
+  rowIndex: number;
+  openItems: EntryFormOpenItem[];
+  fieldErrors: Record<string, string>;
+  onChange: (settlements: MoneyRow['settlements']) => void;
+}) {
+  // Eigener Name statt `t`: Der Wächter `message-keys` liest Übersetzer-Namensräume je Datei, nicht je
+  // Funktion — ein zweites `const t = …` in derselben Datei würde seine Bindung überschreiben.
+  const ts = useTranslations('finance.entryForm.settlement');
+  const tAmount = useTranslations('finance.amount');
+  const [expanded, setExpanded] = useState(row.settlements.length > 0);
+  const [query, setQuery] = useState('');
+
+  const lineCents = parseAmount(row.amountText) ?? 0;
+  const alreadySettled = row.settlements.reduce((sum, s) => sum + (parseAmount(s.amountText) ?? 0), 0);
+  const chosenIds = new Set(row.settlements.map((s) => s.openItemId));
+  const candidates = openItems
+    .filter((item) => matchesDirection(item.kind, row.direction) && !chosenIds.has(item.id))
+    .filter((item) => query.trim().length === 0 || item.label.toLowerCase().includes(query.trim().toLowerCase()));
+
+  const add = (item: EntryFormOpenItem) => {
+    const suggestion = suggestSettlementCents({ openCents: item.openCents, lineCents, alreadySettledCents: alreadySettled });
+    onChange([...row.settlements, { openItemId: item.id, amountText: formatAmount(suggestion) }]);
+  };
+  const remove = (openItemId: string) => onChange(row.settlements.filter((s) => s.openItemId !== openItemId));
+  const setAmountText = (openItemId: string, amountText: string) => onChange(row.settlements.map((s) => (s.openItemId === openItemId ? { ...s, amountText } : s)));
+
+  return (
+    <div className="space-y-2 border-t border-line pt-2">
+      <button type="button" onClick={() => setExpanded((v) => !v)} className="text-[13px] font-semibold text-ink-2 underline underline-offset-2">
+        {ts('toggle')}
+      </button>
+      {expanded ? (
+        <div className="space-y-2">
+          {row.settlements.map((settlement, sIndex) => {
+            const item = openItems.find((o) => o.id === settlement.openItemId);
+            const errorCode = fieldErrors[`moneyRows.${rowIndex}.settlements.${sIndex}.amountText`];
+            return (
+              <div key={settlement.openItemId} className="flex items-center gap-2">
+                <span className="flex-1 truncate text-[13px] text-ink-2">{item?.label ?? settlement.openItemId}</span>
+                <div className="w-32">
+                  <Label htmlFor={`settlement-${rowIndex}-${sIndex}`} className="sr-only">
+                    {ts('amount')}
+                  </Label>
+                  <AmountField
+                    id={`settlement-${rowIndex}-${sIndex}`}
+                    name={`settlement-${rowIndex}-${sIndex}`}
+                    value={settlement.amountText}
+                    onChange={(text) => setAmountText(settlement.openItemId, text)}
+                    invalid={!!errorCode}
+                    errorText={errorCode ? tAmount(errorCode) : undefined}
+                  />
+                </div>
+                <Button type="button" variant="ghost" size="sm" onClick={() => remove(settlement.openItemId)}>
+                  {ts('remove')}
+                </Button>
+              </div>
+            );
+          })}
+          <Input placeholder={ts('searchPlaceholder')} value={query} onChange={(e) => setQuery(e.target.value)} />
+          {candidates.length > 0 ? (
+            <ul className="space-y-1">
+              {candidates.map((item) => (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => add(item)}
+                    className="flex w-full items-center justify-between gap-2 rounded-sm border border-line px-2.5 py-1.5 text-left text-[13px]"
+                  >
+                    <span>{item.label}</span>
+                    <span className="font-mono tabular-nums text-ink-2">{ts('rest', { amount: formatEuro(item.openCents) })}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-[12px] text-muted-ink">{ts('noMatches')}</p>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 /** Die Buchungsmaske (HANDOFF § 5.1): Karten Kopf · Konto · Wofür? · Beleg, Fußleiste klebt. */
-export function EntryForm({ initial, accounts, categories, purposes, projects, taxCodeOptions, showTax, canFinalize, voucherTypeKey, vouchers: initialVouchers }: EntryFormProps) {
+export function EntryForm({ initial, accounts, categories, purposes, projects, taxCodeOptions, showTax, canFinalize, voucherTypeKey, vouchers: initialVouchers, openItems }: EntryFormProps) {
   const t = useTranslations('finance.entryForm');
   // `remediesFor` liefert vollqualifizierte Schlüssel (`finance.remedy.*`) — ein eigener Übersetzer ohne Namensraum.
   const tRoot = useTranslations();
@@ -212,6 +318,13 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
                 onChange={(amountText) => setState((s) => ({ ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, amountText } : r)) }))}
                 required
                 balanceHint={accountsById.get(row.accountId) ? t('balanceHint', { amount: formatEuro(accountsById.get(row.accountId)!.balanceCents) }) : undefined}
+              />
+              <MoneySettlements
+                row={row}
+                rowIndex={index}
+                openItems={openItems}
+                fieldErrors={validation.ok ? {} : validation.fieldErrors}
+                onChange={(settlements) => setState((s) => ({ ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, settlements } : r)) }))}
               />
             </div>
           ))}

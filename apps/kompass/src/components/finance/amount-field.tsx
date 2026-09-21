@@ -21,6 +21,8 @@ export interface AmountFieldProps {
   required?: boolean;
   /** Für „Wofür?“-Zeilen: ein negativer Betrag ist dort gültig (Gebühr, Rückerstattung). */
   allowNegative?: boolean;
+  /** Ersetzt `finance.amount.format` — für einen Feldfehler, der kein Formatfehler ist (z. B. `exceeds`). */
+  errorText?: string;
 }
 
 /**
@@ -28,7 +30,7 @@ export interface AmountFieldProps {
  * formatiert erst beim Verlassen. Ein unlesbarer Text bleibt stehen; der
  * Fehlertext nennt das Format, nie „ungültig“.
  */
-export function AmountField({ name, id, value, onChange, direction, onDirectionChange, balanceHint, invalid, disabled, required, allowNegative }: AmountFieldProps) {
+export function AmountField({ name, id, value, onChange, direction, onDirectionChange, balanceHint, invalid, disabled, required, allowNegative, errorText }: AmountFieldProps) {
   const t = useTranslations('finance.amount');
   const [blurredInvalid, setBlurredInvalid] = useState(false);
   const fieldId = id ?? name;
@@ -88,7 +90,7 @@ export function AmountField({ name, id, value, onChange, direction, onDirectionC
       {balanceHint ? <p className="text-[12px] text-muted-ink">{balanceHint}</p> : null}
       {showError ? (
         <p id={errorId} role="alert" className="text-[12px] text-error">
-          {t('format')}
+          {errorText ?? t('format')}
         </p>
       ) : null}
     </div>

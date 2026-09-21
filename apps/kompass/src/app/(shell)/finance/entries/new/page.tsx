@@ -1,6 +1,6 @@
 import { hasPermission, readSetting } from '@kompass/core';
 import type { LocalizedText } from '@kompass/core';
-import { getBalances, listCategories, listPurposes, TAX_CODES } from '@kompass/module-finance';
+import { getBalances, listCategories, listOpenItems, listPurposes, TAX_CODES } from '@kompass/module-finance';
 import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
@@ -17,11 +17,12 @@ export default async function NewFinanceEntryPage({ searchParams }: { searchPara
   const template: EntryTemplate = (['income', 'expense', 'transfer', 'inKind'] as const).includes(query.template as never) ? (query.template as EntryTemplate) : 'expense';
   const today = deps.clock.now().toISOString().slice(0, 10);
 
-  const [balancesRes, categoriesRes, purposesRes, projectsRes] = await Promise.all([
+  const [balancesRes, categoriesRes, purposesRes, projectsRes, openItemsRes] = await Promise.all([
     getBalances(deps, ctx, {}),
     listCategories(deps, ctx, {}),
     listPurposes(deps, ctx, {}),
     listProjects(deps, ctx),
+    listOpenItems(deps, ctx, { state: 'open', limit: 200 }),
   ]);
 
   const accounts = (balancesRes.ok ? balancesRes.value.accounts : []).map((a) => ({ id: a.accountId, name: a.name, kind: a.kind, balanceCents: a.balanceCents }));
@@ -33,6 +34,7 @@ export default async function NewFinanceEntryPage({ searchParams }: { searchPara
   const projects = (projectsRes.ok ? projectsRes.value : []).map((p) => ({ id: p.id, name: (p.name as LocalizedText)[leading] || p.slug }));
   const showTax = readSetting<boolean>(deps, 'finance.isEntrepreneurOrHasVatId');
   const t = await getTranslations('finance.entryForm');
+  const openItems = (openItemsRes.ok ? openItemsRes.value.items : []).map((i) => ({ id: i.id, kind: i.kind as 'receivable' | 'payable', label: i.paymentReference ?? t('settlement.unnamed', { date: i.itemDate }), openCents: i.openCents }));
 
   return (
     <>
@@ -48,6 +50,7 @@ export default async function NewFinanceEntryPage({ searchParams }: { searchPara
         canFinalize={hasPermission(ctx, 'finance.entriesFinalize')}
         voucherTypeKey="voucher-own"
         vouchers={[]}
+        openItems={openItems}
       />
     </>
   );
