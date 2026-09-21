@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { unwrap } from '@kompass/core';
-import { systemContext } from '@kompass/core/testing';
+import { ctxWith, systemContext } from '@kompass/core/testing';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { importStatement } from '../src/import/runs';
-import { rawStateInternal } from '../src/import/queries';
+import { listRawTransactions, rawStateInternal } from '../src/import/queries';
 import { createAccount } from '../src/ledger/accounts';
 import { saveDraft } from '../src/ledger/entries';
 import { bookEntry } from '../src/ledger/finalize';
@@ -102,5 +102,29 @@ describe('a money line bound to a raw transaction', () => {
 
     const res = await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-06', text: 'x', moneyLines: [{ accountId: f.account.id, amountCents: 20000, rawTransactionId: f.donationRaw.id }], allocationLines: [{ categoryId: f.donations.id, amountCents: 20000 }] });
     expect(code(res)).toBe('rawTransactionDiscarded');
+  });
+
+  it('refuses a raw transaction that does not exist', async () => {
+    const f = await rawFixture();
+    const res = await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-06', text: 'x', moneyLines: [{ accountId: f.account.id, amountCents: 20000, rawTransactionId: 'NOPE' }], allocationLines: [{ categoryId: f.donations.id, amountCents: 20000 }] });
+    expect(res.ok ? null : res.error).toEqual({ type: 'notFound', entity: 'financeRawTransaction', id: 'NOPE' });
+  });
+});
+
+describe('listRawTransactions', () => {
+  it('lists raw transactions with counterparty, iban and purpose, filterable by account, run and state, requiring finance.read', async () => {
+    const f = await rawFixture();
+    const denied = await listRawTransactions(f.deps, ctxWith(['finance.overview']), {});
+    expect(denied.ok ? null : denied.error).toEqual({ type: 'forbidden', permission: 'finance.read' });
+
+    const all = unwrap(await listRawTransactions(f.deps, f.ctx, { accountId: f.account.id }));
+    expect(all.total).toBe(3);
+    expect(all.items.find((i) => i.id === f.donationRaw.id)).toMatchObject({ counterpartyName: 'Erika Beispiel', counterpartyIban: 'DE66999999991234567890', purpose: 'Spende', state: 'open' });
+
+    unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-03-06', text: 'Spende', moneyLines: [{ accountId: f.account.id, amountCents: 20000, rawTransactionId: f.donationRaw.id }], allocationLines: [{ categoryId: f.donations.id, amountCents: 20000 }] }));
+    const booked = unwrap(await listRawTransactions(f.deps, f.ctx, { state: 'booked' }));
+    expect(booked.items.map((i) => i.id)).toEqual([f.donationRaw.id]);
+    const open = unwrap(await listRawTransactions(f.deps, f.ctx, { state: 'open' }));
+    expect(open.total).toBe(2);
   });
 });
