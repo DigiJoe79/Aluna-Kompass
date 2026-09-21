@@ -21,7 +21,7 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   financeCategory: ['key', 'direction', 'sphere', 'incomeKind', 'costFunction', 'allowanceKind', 'statementSuffices', 'defaultTaxCode', 'inputTaxDeductible', 'countsTowardTurnover', 'isAssetSale', 'isActive'],
   financePurpose: ['projectId', 'targetCents', 'abroad', 'carryForwardCents', 'fulfilledAt', 'dissolvedAt', 'isActive'],
   financeFiscalYear: ['startsOn', 'endsOn', 'designation', 'taxReturnFiledOn'],
-  financePeriodEvent: ['fiscalYearId', 'kind'],
+  financePeriodEvent: ['fiscalYearId', 'kind', 'guardCount'],
   financeDatedValue: ['key', 'validFrom', 'value'],
   // Nie Text, nie Kontakt-ID (Spec 10.3): `channel`, `reviewed` und `cashWarning`
   // sind bewusst so benannt, dass der Verbotstest oben sie nicht trifft.

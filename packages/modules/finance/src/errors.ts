@@ -58,6 +58,8 @@ export const FINANCE_ERRORS = {
   previousYearOpen: { reason: 'Das Vorjahr ist noch nicht abgeschlossen.', remedy: 'Geschäftsjahre schließen in ihrer Reihenfolge: Schließen Sie zuerst das Vorjahr.' },
   fiscalYearAlreadyClosed: { reason: 'Das Geschäftsjahr {year} ist bereits abgeschlossen.', remedy: 'Öffnen Sie es bei Bedarf wieder (Recht „Geschäftsjahr abschließen“).' },
   fiscalYearNotEnded: { reason: 'Das Geschäftsjahr {year} ist noch nicht zu Ende.', remedy: 'Ein Geschäftsjahr lässt sich frühestens nach seinem Enddatum abschließen.' },
+  fiscalYearNotClosed: { reason: 'Das Geschäftsjahr {year} ist nicht abgeschlossen.', remedy: 'Nur ein abgeschlossenes Geschäftsjahr lässt sich wieder öffnen.' },
+  laterYearClosed: { reason: 'Ein späteres Geschäftsjahr ist bereits abgeschlossen.', remedy: 'Öffnen Sie zuerst das spätere Geschäftsjahr wieder — Jahre öffnen in umgekehrter Reihenfolge.' },
 } as const satisfies Record<string, { reason: string; remedy: string }>;
 
 export type FinanceErrorCode = keyof typeof FINANCE_ERRORS;

@@ -4,10 +4,11 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { getEntry, saveDraft } from '../src/ledger/entries';
 import { bookEntry } from '../src/ledger/finalize';
-import { fiscalYearStatusInternal } from '../src/ledger/fiscal-years';
-import { closeFiscalYear, justifyUndocumentedEntry, previewPeriodClose } from '../src/ledger/period';
+import { fiscalYearStatusInternal, updateFiscalYear } from '../src/ledger/fiscal-years';
+import { closeFiscalYear, justifyUndocumentedEntry, previewPeriodClose, previewPeriodReopen, previewReopenInternal, reopenFiscalYear, reopenInternal } from '../src/ledger/period';
 import { attachDocument, uploadVoucher } from '../src/ledger/vouchers';
 import { reverseEntry } from '../src/ledger/reverse';
+import type { PeriodReopenGuard } from '../src/locks';
 import { financeEntryJustifications, financeFiscalYears, financeMoneyLines, financePeriodEvents } from '../src/schema';
 import { allowHumanOnlyOverMcp, ledgerFixture, pdfBytes } from './helpers';
 
@@ -140,5 +141,94 @@ describe('justification bookkeeping', () => {
     unwrap(await justifyUndocumentedEntry(f.deps, f.ctx, { entryId: entry.id, note: 'Bar bezahlt, kein Beleg erhalten' }));
     const row = f.deps.db.select().from(financeEntryJustifications).where(eq(financeEntryJustifications.entryId, entry.id)).get();
     expect(row?.note).toBe('Bar bezahlt, kein Beleg erhalten');
+  });
+});
+
+/** Ein Jahr ohne eigene Buchungen abschließen: keine Entwürfe, nichts Unbelegtes. */
+async function closeCleanly(f: Awaited<ReturnType<typeof ledgerFixture>>, yearId: string) {
+  return unwrap(await closeFiscalYear(f.deps, f.ctx, { id: yearId }));
+}
+
+describe('reopening a fiscal year', () => {
+  it('wants a note, keeps it on the event and out of the audit log', async () => {
+    const f = await ledgerFixture({ years: ['2025'] });
+    const yearId = f.years['2025']!.id;
+    await closeCleanly(f, yearId);
+
+    expect(err(await reopenFiscalYear(f.deps, f.ctx, { id: yearId, note: '' }))).toMatchObject({ type: 'validation' });
+
+    unwrap(await reopenFiscalYear(f.deps, f.ctx, { id: yearId, note: 'Kassenprüfer hat einen Fehlbetrag gemeldet' }));
+    const event = f.deps.db.select().from(financePeriodEvents).where(eq(financePeriodEvents.fiscalYearId, yearId)).all().find((e) => e.kind === 'reopened');
+    expect(event?.reason).toBe('Kassenprüfer hat einen Fehlbetrag gemeldet');
+
+    const log = JSON.stringify(f.deps.db.select().from(schema.auditLog).all().filter((e) => e.action === 'finance.period.reopen'));
+    expect(log).not.toContain('Kassenprüfer hat einen Fehlbetrag gemeldet');
+  });
+
+  it('only the latest closed year can be reopened', async () => {
+    const f = await ledgerFixture({ years: ['2024', '2025'] });
+    await closeCleanly(f, f.years['2024']!.id);
+    await closeCleanly(f, f.years['2025']!.id);
+
+    expect(err(await reopenFiscalYear(f.deps, f.ctx, { id: f.years['2024']!.id, note: 'x' }))).toMatchObject({ type: 'conflict', code: 'laterYearClosed' });
+    unwrap(await reopenFiscalYear(f.deps, f.ctx, { id: f.years['2025']!.id, note: 'x' }));
+  });
+
+  it('refuses a year that is not closed', async () => {
+    const f = await ledgerFixture({ years: ['2025'] });
+    expect(err(await reopenFiscalYear(f.deps, f.ctx, { id: f.years['2025']!.id, note: 'x' }))).toMatchObject({ type: 'conflict', code: 'fiscalYearNotClosed' });
+  });
+
+  it('runs every guard inside its transaction: a guard that throws leaves the year closed', async () => {
+    const f = await ledgerFixture({ years: ['2025'] });
+    const yearId = f.years['2025']!.id;
+    await closeCleanly(f, yearId);
+
+    const throwingGuard: PeriodReopenGuard = { describe: () => 'wirft', onReopen: () => { throw new Error('boom'); } };
+    expect(() => f.deps.db.transaction((tx) => reopenInternal(tx, f.deps, f.ctx, { id: yearId, note: 'x' }, [throwingGuard]))).toThrow('boom');
+    expect(fiscalYearStatusInternal(f.deps.db, yearId)).toBe('closed');
+  });
+
+  it('the preview lists what the guards will do, and whether the tax return was filed', async () => {
+    const f = await ledgerFixture({ years: ['2025'] });
+    const yearId = f.years['2025']!.id;
+    unwrap(await updateFiscalYear(f.deps, f.ctx, { id: yearId, taxReturnFiledOn: '2026-05-01' }));
+    await closeCleanly(f, yearId);
+
+    const guard: PeriodReopenGuard = { describe: () => '3 festgeschriebene Berichte werden storniert', onReopen: () => {} };
+    expect(previewReopenInternal(f.deps.db, yearId, [guard]).consequences).toEqual(['3 festgeschriebene Berichte werden storniert']);
+
+    const preview = unwrap(await previewPeriodReopen(f.deps, f.ctx, { id: yearId }));
+    expect(preview.taxReturnFiledOn).toBe('2026-05-01');
+    expect(preview.laterYearClosed).toBe(false);
+    expect(preview.consequences).toEqual([]); // PERIOD_REOPEN_GUARDS ist in F2c leer.
+  });
+
+  it('after reopening, entries can be finalized into the year again, and closing it again writes a third event', async () => {
+    const f = await ledgerFixture({ years: ['2025'] });
+    const yearId = f.years['2025']!.id;
+    await closeCleanly(f, yearId);
+    unwrap(await reopenFiscalYear(f.deps, f.ctx, { id: yearId, note: 'Nacherfassung nötig' }));
+
+    const entry = unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2025-11-01', text: 'Bankgebühr', moneyLines: [{ accountId: f.bank.id, amountCents: -490 }], allocationLines: [{ categoryId: f.fees.id, amountCents: -490 }] }));
+    f.deps.db.update(financeMoneyLines).set({ rawTransactionId: 'R2' }).where(eq(financeMoneyLines.entryId, entry.id)).run();
+    expect(entry.fiscalYearId).toBe(yearId);
+
+    unwrap(await closeFiscalYear(f.deps, f.ctx, { id: yearId }));
+    expect(f.deps.db.select().from(financePeriodEvents).where(eq(financePeriodEvents.fiscalYearId, yearId)).all()).toHaveLength(3);
+  });
+
+  it('needs finance.periodClose and a person', async () => {
+    const f = await ledgerFixture({ years: ['2025'] });
+    const yearId = f.years['2025']!.id;
+    await closeCleanly(f, yearId);
+
+    const readOnly = ctxWith(['finance.read'], f.userId);
+    expect(err(await reopenFiscalYear(f.deps, readOnly, { id: yearId, note: 'x' }))).toEqual({ type: 'forbidden', permission: 'finance.periodClose' });
+
+    const overMcp = { ...f.ctx, channel: 'mcp' as const };
+    expect(err(await reopenFiscalYear(f.deps, overMcp, { id: yearId, note: 'x' }))).toMatchObject({ type: 'conflict', code: 'humanOnly' });
+    allowHumanOnlyOverMcp(f.deps);
+    unwrap(await reopenFiscalYear(f.deps, overMcp, { id: yearId, note: 'x' }));
   });
 });

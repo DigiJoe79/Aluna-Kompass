@@ -7,6 +7,7 @@ import { financeAllocationCorrections, financeEntries, financeEntryJustification
 import { requireFinanceRead } from './access';
 import { documentationOf } from './entries';
 import { ensureFiscalYearFor, fiscalYearStatusInternal, type FiscalYearView } from './fiscal-years';
+import { PERIOD_REOPEN_GUARDS, type PeriodReopenGuard } from '../locks';
 
 /** Ein Tag nach `iso` — der Startpunkt des Folgejahres, wenn `endsOn` sein letzter Tag ist. */
 function dayAfter(iso: string): string {
@@ -166,4 +167,66 @@ export async function closeFiscalYear(deps: Deps, ctx: CallContext, input: unkno
     financeAudit(tx, deps, ctx, { action: 'finance.period.close', entity: 'financePeriodEvent', id: eventId, after: { fiscalYearId: year.id, kind: 'closed' }, summary: `Geschäftsjahr ${year.designation} abgeschlossen` });
     return ok({ ...year, status: 'closed' as const });
   });
+}
+
+/** Gibt es ein anderes, jüngeres Geschäftsjahr, das abgeschlossen ist? Das Öffnen von `year` zöge dessen Vorträge weg. */
+function laterYearClosedThan(db: DbOrTx, year: FinanceFiscalYearRow): boolean {
+  return db
+    .select()
+    .from(financeFiscalYears)
+    .where(gte(financeFiscalYears.startsOn, year.startsOn))
+    .all()
+    .filter((y) => y.id !== year.id)
+    .some((y) => fiscalYearStatusInternal(db, y.id) === 'closed');
+}
+
+/** Die Sätze der Wächter, die das Wiederöffnen führen würde — für `previewPeriodReopen` und ihren Test mit eingereichten Wächtern. */
+export function previewReopenInternal(db: DbOrTx, yearId: string, guards: readonly PeriodReopenGuard[] = PERIOD_REOPEN_GUARDS): { consequences: string[] } {
+  return { consequences: guards.map((g) => g.describe(db, yearId)).filter((s): s is string => s !== null) };
+}
+
+const reopenPreviewSchema = z.object({ id: z.string().min(1) });
+
+/** `finance.read`. Der Dialog nennt zuerst die leichteren Wege (E7); diese Vorschau steht dahinter. */
+export async function previewPeriodReopen(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ consequences: string[]; laterYearClosed: boolean; taxReturnFiledOn: string | null }>> {
+  const denied = requireFinanceRead(ctx, 'read');
+  if (denied) return denied;
+  const parsed = validate(deps, reopenPreviewSchema, input);
+  if (!parsed.ok) return parsed;
+  const year = loadYear(deps.db, parsed.value.id);
+  if (!year) return notFound('financeFiscalYear', parsed.value.id);
+  return ok({ ...previewReopenInternal(deps.db, year.id), laterYearClosed: laterYearClosedThan(deps.db, year), taxReturnFiledOn: year.taxReturnFiledOn });
+}
+
+/**
+ * Die eigentliche Arbeit, in einer bereits offenen Transaktion — mit
+ * austauschbaren `guards` für den Test (Muster `reverseInternal`). Wirft ein
+ * Wächter, bleibt das Jahr abgeschlossen: der Wurf reißt die Transaktion mit.
+ */
+export function reopenInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, input: { id: string; note: string }, guards: readonly PeriodReopenGuard[] = PERIOD_REOPEN_GUARDS): Result<FiscalYearView> {
+  const year = loadYear(tx, input.id);
+  if (!year) return notFound('financeFiscalYear', input.id);
+  if (fiscalYearStatusInternal(tx, year.id) !== 'closed') return financeConflict('fiscalYearNotClosed', { year: year.designation });
+  if (laterYearClosedThan(tx, year)) return financeConflict('laterYearClosed');
+
+  for (const guard of guards) guard.onReopen(tx, deps, ctx, year.id, input.note);
+
+  const now = isoNow(deps.clock);
+  const eventId = newId();
+  tx.insert(financePeriodEvents).values({ id: eventId, fiscalYearId: year.id, kind: 'reopened', at: now, byUserId: ctx.userId ?? 'system', reason: input.note }).run();
+  financeAudit(tx, deps, ctx, { action: 'finance.period.reopen', entity: 'financePeriodEvent', id: eventId, after: { fiscalYearId: year.id, kind: 'reopened', guardCount: guards.length }, summary: `Geschäftsjahr ${year.designation} wieder geöffnet` });
+  return ok({ ...year, status: 'open' as const });
+}
+
+const reopenSchema = z.object({ id: z.string().min(1), note: z.string().trim().min(1).max(500) });
+
+/** `finance.periodClose`, **`humanOnly`**: nur das jüngste abgeschlossene Jahr, mit Begründung. */
+export async function reopenFiscalYear(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<FiscalYearView>> {
+  const denied = requirePermission(ctx, 'finance.periodClose');
+  if (denied) return denied;
+  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  if (humanOnly) return humanOnly;
+  const parsed = validate(deps, reopenSchema, input);
+  if (!parsed.ok) return parsed;
+  return deps.db.transaction((tx: DbOrTx) => reopenInternal(tx, deps, ctx, parsed.value));
 }

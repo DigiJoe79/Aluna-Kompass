@@ -130,7 +130,17 @@ export {
   type Standing,
 } from './ledger/queries';
 export { getBalances, getIncomeStatement, type BalancesView } from './ledger/overview';
-export { closeFiscalYear, justifyUndocumentedEntry, previewPeriodClose, type PeriodClosePreview, type UndocumentedEntryPreview } from './ledger/period';
+export {
+  closeFiscalYear,
+  justifyUndocumentedEntry,
+  previewPeriodClose,
+  previewPeriodReopen,
+  previewReopenInternal,
+  reopenFiscalYear,
+  reopenInternal,
+  type PeriodClosePreview,
+  type UndocumentedEntryPreview,
+} from './ledger/period';
 export { cancelOpenItem, createOpenItem, listOpenItems, openCentsInternal, openItemsAtInternal, saveOpenItem, updateOpenItem, type OpenItemView } from './ledger/open-items';
 export { applyCorrectionInternal, approveAllocationCorrection, decideAllocationCorrection, listAllocationCorrections, rejectAllocationCorrection, requestAllocationCorrection, type CorrectionView } from './ledger/corrections';
 
