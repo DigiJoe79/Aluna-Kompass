@@ -73,6 +73,8 @@ function collectFinanceSurfaceStrings(): Map<string, string> {
   collectStrings(at(messages, ['nav', 'finance']), 'nav.finance', strings);
   collectStrings(at(messages, ['nav', 'sections', 'finance']), 'nav.sections.finance', strings);
   collectStrings(at(messages, ['dashboard', 'tiles', 'finance']), 'dashboard.tiles.finance', strings);
+  // Auch die Beschreibungen der Finanzrechte liest ein Mensch — in der Rollenverwaltung.
+  collectStrings(at(messages, ['permissions', 'keys', 'finance']), 'permissions.keys.finance', strings);
 
   const fields = (at(messages, ['errors', 'fields']) ?? {}) as Record<string, string>;
   for (const key of FINANCE_ERROR_FIELDS) {

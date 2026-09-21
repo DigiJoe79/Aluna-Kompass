@@ -875,7 +875,7 @@
         },
         "entriesFinalize": {
           "label": "Buchungen festschreiben",
-          "description": "Buchungen festschreiben und stornieren"
+          "description": "Buchungen festschreiben und zurücknehmen"
         },
         "periodClose": {
           "label": "Geschäftsjahr abschließen",
@@ -891,7 +891,7 @@
         },
         "approve": {
           "label": "Freigeben",
-          "description": "Freigeben – Auslagen, Partnerzahlungen, Umwidmungen; nie die eigenen"
+          "description": "Freigeben – Auslagen, Zahlungen an Partner, Umwidmungen; nie die eigenen"
         },
         "donationsIssue": {
           "label": "Zuwendungsbestätigungen ausstellen",
