@@ -2621,6 +2621,7 @@
       "history": {
         "title": "Verlauf",
         "changeLabel": "Zuordnung",
+        "via": "über {channel}",
         "unknownUser": "einer nicht mehr vorhandenen Person",
         "events": {
           "created": "angelegt von {name}",

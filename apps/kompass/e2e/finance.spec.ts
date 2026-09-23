@@ -369,6 +369,16 @@ test.describe('finance', () => {
     await expect(page.getByText(/\(Oberfläche\)/)).toHaveCount(0);
   });
 
+  test('der Verlauf nennt, über welchen Kanal eine Buchung angelegt und festgeschrieben wurde', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries');
+    await page.locator('tr', { hasText: 'Spende Altjahr' }).click();
+    const history = page.locator('section', { has: page.getByRole('heading', { name: 'Verlauf' }) });
+    // Der Seed bucht mit Kanal `system` (`bookEntry`: anlegen und festschreiben in einem Zug).
+    await expect(history.getByText(/angelegt von .* über System/)).toBeVisible();
+    await expect(history.getByText(/festgeschrieben von .* über System/)).toBeVisible();
+  });
+
   test('Zuordnung ändern im offenen Jahr wirkt sofort und steht mit Vorher → Nachher im Verlauf', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/entries');

@@ -1,6 +1,7 @@
 import type { EntryHistoryEvent } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import { BeforeAfter } from '@/components/before-after';
+import { historyChannel } from '@/lib/finance/channel';
 
 function summaryOf(event: EntryHistoryEvent, t: Awaited<ReturnType<typeof getTranslations>>): string {
   switch (event.kind) {
@@ -24,28 +25,33 @@ function summaryOf(event: EntryHistoryEvent, t: Awaited<ReturnType<typeof getTra
 /** Der Verlauf einer Buchung, aus ihren Spalten (HANDOFF § 5.3) — nie aus dem Änderungsprotokoll. */
 export async function EntryHistory({ events }: { events: EntryHistoryEvent[] }) {
   const t = await getTranslations('finance.entryView.history');
+  const tc = await getTranslations('finance.channel');
   if (events.length === 0) return null;
 
   return (
     <section className="space-y-3 rounded-md border border-line bg-surface p-4">
       <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('title')}</h3>
       <ul className="space-y-3">
-        {events.map((event, index) => (
-          <li key={index} className="space-y-1.5 border-t border-line-2 pt-2 first:border-0 first:pt-0">
-            <p className="text-[13px]">
-              <span className="mr-2 font-mono text-[12px] text-muted-ink">{event.at.slice(0, 16).replace('T', ' ')}</span>
-              {summaryOf(event, t)}
-            </p>
-            {event.kind === 'allocationChanged' ? (
-              <>
-                <BeforeAfter
-                  rows={[{ label: t('changeLabel'), before: <span>{JSON.stringify(event.before)}</span>, after: <span>{JSON.stringify(event.after)}</span> }]}
-                />
-                <p className="text-[13px] italic text-ink-2">„{event.note}“</p>
-              </>
-            ) : null}
-          </li>
-        ))}
+        {events.map((event, index) => {
+          const channel = historyChannel(event);
+          return (
+            <li key={index} className="space-y-1.5 border-t border-line-2 pt-2 first:border-0 first:pt-0">
+              <p className="text-[13px]">
+                <span className="mr-2 font-mono text-[12px] text-muted-ink">{event.at.slice(0, 16).replace('T', ' ')}</span>
+                {summaryOf(event, t)}
+                {channel ? <span className="text-muted-ink"> {t('via', { channel: tc(channel) })}</span> : null}
+              </p>
+              {event.kind === 'allocationChanged' ? (
+                <>
+                  <BeforeAfter
+                    rows={[{ label: t('changeLabel'), before: <span>{JSON.stringify(event.before)}</span>, after: <span>{JSON.stringify(event.after)}</span> }]}
+                  />
+                  <p className="text-[13px] italic text-ink-2">„{event.note}“</p>
+                </>
+              ) : null}
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

@@ -10,3 +10,13 @@ export type ChannelKey = 'ui' | 'mcp' | 'system' | 'unknown';
 export function channelKey(channel: string | null | undefined): ChannelKey {
   return channel === 'ui' || channel === 'mcp' || channel === 'system' ? channel : 'unknown';
 }
+
+/**
+ * Der Kanal einer Verlaufszeile: Nur „angelegt“ und „festgeschrieben“ tragen
+ * einen (Spalten `created_channel`/`finalized_channel`). „geprüft“ ist
+ * humanOnly und hat keine Spalte — dort steht nichts, nicht „unbekannt“.
+ */
+export function historyChannel(event: { kind: string; channel?: string | null }): ChannelKey | null {
+  if (event.kind !== 'created' && event.kind !== 'finalized') return null;
+  return channelKey(event.channel);
+}
