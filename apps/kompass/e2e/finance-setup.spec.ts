@@ -141,6 +141,52 @@ test.describe('finance setup', () => {
     await expect(dialog.getByText('Ein Beleg zum Anfangsbestand lässt sich nur mit Zugriff auf die Akte hinterlegen.')).toBeVisible();
   });
 
+  test('nur mit finance.setup sieht man im Konten-Panel die Konten samt IBAN', async ({ page }) => {
+    // Befundliste 0.2.0, N3 (Joe, 2026-09-23): Wer pflegt, muss sehen, was er pflegt.
+    await page.goto('/admin/finance?panel=accounts');
+    await page.getByRole('button', { name: 'Konto anlegen' }).click();
+    const create = page.getByRole('dialog');
+    await create.getByLabel('Name').fill('Vereinskonto');
+    await create.getByLabel('IBAN').fill('DE23999999990000202051');
+    await create.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByText('Konto angelegt.')).toBeVisible();
+
+    await page.goto('/admin/roles');
+    await page.getByRole('button', { name: 'Rolle anlegen' }).click();
+    await page.getByRole('dialog').getByLabel('Rollenname').fill('Nur Einrichtung');
+    await page.getByRole('dialog').getByRole('button', { name: 'Anlegen' }).click();
+    await page.getByRole('list', { name: 'Rollen' }).getByRole('button', { name: /Nur Einrichtung/ }).click();
+    await page.getByRole('checkbox', { name: 'Finanzen einrichten' }).check();
+    await page.getByRole('button', { name: 'Rolle speichern' }).click();
+    await expect(page.getByRole('status')).toContainText('Rolle gespeichert.');
+
+    await page.goto('/admin/users');
+    await page.getByRole('button', { name: 'Nutzer anlegen' }).click();
+    const user = page.getByRole('dialog');
+    await user.getByLabel('Name').fill('Selma Setup');
+    await user.getByLabel('E-Mail').fill('selma@example.org');
+    await user.getByLabel('Nur Einrichtung').check();
+    await user.getByRole('button', { name: 'Nutzer anlegen' }).click();
+    const startPassword = (await page.getByTestId('start-password').textContent())!.trim();
+    await page.getByRole('button', { name: 'Ich habe die Daten notiert' }).click();
+
+    await page.request.post('/logout');
+    await page.goto('/login');
+    await page.getByLabel('E-Mail').fill('selma@example.org');
+    await page.getByLabel('Passwort').fill(startPassword);
+    await page.getByRole('button', { name: 'Anmelden' }).click();
+    await page.getByLabel('Startpasswort').fill(startPassword);
+    await page.getByLabel('Neues Passwort', { exact: true }).fill('selma-setup-passwort-lang');
+    await page.getByLabel('Passwort wiederholen').fill('selma-setup-passwort-lang');
+    await page.getByRole('button', { name: 'Passwort setzen und fortfahren' }).click();
+    await expect(page).toHaveURL('/');
+
+    await page.goto('/admin/finance?panel=accounts');
+    const row = page.getByTestId('account-row-Vereinskonto');
+    await expect(row).toBeVisible();
+    await expect(row.getByText('DE23999999990000202051')).toBeVisible();
+  });
+
   test('„Bankkonten und Kassen einrichten“ führt aus der Kontenübersicht in das Konten-Panel', async ({ page }) => {
     await page.goto('/finance/accounts');
     await page.getByRole('link', { name: 'Bankkonten und Kassen einrichten' }).click();

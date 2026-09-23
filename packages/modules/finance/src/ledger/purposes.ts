@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
 import { financeAllocationLines, financePurposes, type FinancePurposeRow } from '../schema';
-import { requireFinanceRead } from './access';
+import { requireMasterDataRead } from './access';
 
 const base = z.object({
   name: z.string().trim().min(1).max(120),
@@ -202,7 +202,7 @@ export async function deletePurpose(deps: Deps, ctx: CallContext, input: unknown
 const listSchema = z.object({ includeInactive: z.boolean().default(false) });
 
 export async function listPurposes(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<PurposeView[]>> {
-  const denied = requireFinanceRead(ctx, 'overview');
+  const denied = requireMasterDataRead(ctx).failure;
   if (denied) return denied;
   const parsed = validate(deps, listSchema, input ?? {});
   if (!parsed.ok) return parsed;

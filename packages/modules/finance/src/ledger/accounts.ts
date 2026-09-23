@@ -1,10 +1,10 @@
-import { expectedVersionField, isoNow, newId, notFound, ok, requirePermission, staleVersion, validate, writeSettingInternal, hasPermission, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { expectedVersionField, isoNow, newId, notFound, ok, requirePermission, staleVersion, validate, writeSettingInternal, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
 import { financeAccounts, financeMoneyLines, type FinanceAccountRow } from '../schema';
-import { requireFinanceRead } from './access';
+import { requireMasterDataRead } from './access';
 import { isValidIban, normalizeIban } from './iban';
 
 const base = z.object({
@@ -152,12 +152,11 @@ export function setImportFormatInternal(tx: DbOrTx, deps: Deps, ctx: CallContext
 export const accountListSchema = z.object({ includeInactive: z.boolean().default(false) });
 
 export async function listAccounts(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AccountView[]>> {
-  const denied = requireFinanceRead(ctx, 'overview');
-  if (denied) return denied;
+  const { failure, withBankDetails } = requireMasterDataRead(ctx);
+  if (failure) return failure;
   const parsed = validate(deps, accountListSchema, input ?? {});
   if (!parsed.ok) return parsed;
   const rows = deps.db.select().from(financeAccounts).orderBy(asc(financeAccounts.name)).all().filter((r) => parsed.value.includeInactive || r.isActive);
-  // Bankdaten sind personennah (ein Vereinskonto bei einer Privatperson, ein PayPal-Konto auf einen Namen): nur mit `finance.read`.
-  const full = hasPermission(ctx, 'finance.read');
-  return ok(full ? rows : rows.map((r) => ({ ...r, iban: null, bic: null, bankName: null })));
+  // Bankdaten sind personennah (ein Vereinskonto bei einer Privatperson, ein PayPal-Konto auf einen Namen): nur mit `finance.read` oder `finance.setup`.
+  return ok(withBankDetails ? rows : rows.map((r) => ({ ...r, iban: null, bic: null, bankName: null })));
 }

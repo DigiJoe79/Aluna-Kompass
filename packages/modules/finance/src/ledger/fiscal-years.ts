@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
 import { financeEntryCounters, financeFiscalYears, financePeriodEvents, type FinanceFiscalYearRow } from '../schema';
-import { requireFinanceRead } from './access';
+import { requireMasterDataRead } from './access';
 
 export type FiscalYearStatus = 'open' | 'closed';
 export type FiscalYearView = FinanceFiscalYearRow & { status: FiscalYearStatus };
@@ -128,7 +128,7 @@ export async function updateFiscalYear(deps: Deps, ctx: CallContext, input: unkn
 }
 
 export async function listFiscalYears(deps: Deps, ctx: CallContext): Promise<Result<FiscalYearView[]>> {
-  const denied = requireFinanceRead(ctx, 'overview');
+  const denied = requireMasterDataRead(ctx).failure;
   if (denied) return denied;
   const rows = deps.db.select().from(financeFiscalYears).orderBy(desc(financeFiscalYears.startsOn)).all();
   return ok(rows.map((row) => ({ ...row, status: fiscalYearStatusInternal(deps.db, row.id) })));

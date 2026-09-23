@@ -138,7 +138,14 @@ test.describe('finance import', () => {
     const dialog = page.getByRole('alertdialog');
     await expect(dialog.getByText('Festgeschriebene Buchungen sperren das Verwerfen.')).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Verwerfen' })).toHaveCount(0);
-    await expect(dialog.getByRole('link', { name: 'Buchungen zurücknehmen' })).toBeVisible();
+    // Joe, 2026-09-23: jede sperrende Buchung ist selbst der Weg — kein Umweg übers ganze Journal.
+    await expect(dialog.getByRole('link', { name: 'Buchungen zurücknehmen' })).toHaveCount(0);
+    await expect(dialog.getByText('Nehmen Sie diese Buchungen zurück; danach lässt sich der Auszug verwerfen.')).toBeVisible();
+    const blocking = dialog.getByRole('link', { name: /^\d{4}-\d{4} · / });
+    await expect(blocking.first()).toBeVisible();
+    await blocking.first().click();
+    await expect(page).toHaveURL(/\/finance\/entries\/[0-9A-Z]{26}$/);
+    await expect(page.getByRole('button', { name: 'Korrigieren' })).toBeVisible();
   });
 
   test('die Kontokarte nennt „importiert bis“ und den Abstimmstand', async ({ page }) => {

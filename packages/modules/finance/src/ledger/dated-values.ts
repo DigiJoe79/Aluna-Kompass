@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeDatedValues } from '../schema';
-import { requireFinanceRead } from './access';
+import { requireMasterDataRead } from './access';
 import { DATED_SERIES, type DatedValueKey } from './dated-series';
 
 type DatedValue = number | string;
@@ -75,7 +75,7 @@ export async function removeDatedValue(deps: Deps, ctx: CallContext, input: unkn
 export interface DatedValueListEntry { key: string; unit: (typeof DATED_SERIES)[DatedValueKey]['unit']; entries: { validFrom: string; value: DatedValue; source: 'shipped' | 'override' }[] }
 
 export async function listDatedValues(deps: Deps, ctx: CallContext): Promise<Result<DatedValueListEntry[]>> {
-  const denied = requireFinanceRead(ctx, 'overview');
+  const denied = requireMasterDataRead(ctx).failure;
   if (denied) return denied;
   const result = (Object.keys(DATED_SERIES) as DatedValueKey[]).map((key) => {
     const shipped = DATED_SERIES[key].series.map((e) => ({ validFrom: e.validFrom, value: e.value as DatedValue, source: 'shipped' as const }));

@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { ConsequenceList } from '@/components/consequence-list';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { formatEuro } from '@/lib/finance/amount';
 import { discardRunAction, previewDiscardRunAction } from './actions';
@@ -65,13 +65,13 @@ export function DiscardRunDialog({ open, onOpenChange, run }: { open: boolean; o
                 <ul className="space-y-1 text-[13px]">
                   {preview.blocking.map((b) => (
                     <li key={b.entryId}>
-                      {b.number} · {b.entryDate} · {formatEuro(b.amountCents)}
+                      <Link href={`/finance/entries/${b.entryId}`} className="text-link">
+                        {b.number} · {b.entryDate} · {formatEuro(b.amountCents)}
+                      </Link>
                     </li>
                   ))}
                 </ul>
-                <Link href={`/finance/entries?account=${run.accountId}`} className={buttonVariants({ variant: 'secondary' })}>
-                  {t('blocked.goToJournal')}
-                </Link>
+                <p className="text-[13px] text-ink-2">{t('blocked.hint')}</p>
               </div>
             ) : (
               <label className="block space-y-1 text-[13px]">

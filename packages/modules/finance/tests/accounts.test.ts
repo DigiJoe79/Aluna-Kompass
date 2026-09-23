@@ -9,10 +9,10 @@ const BANK = { name: 'Vereinskonto', kind: 'bank' as const, iban: 'DE23 9999 999
 const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
 
 describe('money accounts', () => {
-  it('needs finance.setup to write and an overview right to list', async () => {
+  it('needs finance.setup to write and a reading right (overview, read or setup) to list', async () => {
     const { deps } = setupFinance();
     expect(err(await createAccount(deps, ctxWith(['finance.read']), BANK))).toEqual({ type: 'forbidden', permission: 'finance.setup' });
-    expect(err(await listAccounts(deps, ctxWith(['finance.setup']), {}))).toEqual({ type: 'forbidden', permission: 'finance.overview' });
+    expect(err(await listAccounts(deps, ctxWith(['finance.entriesWrite']), {}))).toEqual({ type: 'forbidden', permission: 'finance.overview' });
   });
 
   it('stores the IBAN normalized, checks it, and wants one for a bank account and none for cash', async () => {

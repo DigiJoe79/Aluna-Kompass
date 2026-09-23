@@ -2884,7 +2884,7 @@
         },
         "blocked": {
           "title": "Festgeschriebene Buchungen sperren das Verwerfen.",
-          "goToJournal": "Buchungen zurücknehmen"
+          "hint": "Nehmen Sie diese Buchungen zurück; danach lässt sich der Auszug verwerfen."
         },
         "noteLabel": "Notiz zum Verwerfen",
         "toast": {

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
 import { financeAllocationLines, financeCategories, type FinanceCategoryRow } from '../schema';
-import { requireFinanceRead } from './access';
+import { requireMasterDataRead } from './access';
 import { ALLOWANCE_KINDS, CERTIFIABLE_INCOME_KINDS, COST_FUNCTIONS, DIRECTIONS, INCOME_KINDS, INPUT_TAX, SPHERES, TAX_CODES } from './codes';
 
 /** Plain fields, ohne die Regeltabelle — Grundlage für Erstellung, Update und Startplan. */
@@ -187,7 +187,7 @@ export async function deleteCategory(deps: Deps, ctx: CallContext, input: unknow
 const categoryListSchema = z.object({ includeInactive: z.boolean().default(false) });
 
 export async function listCategories(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<CategoryView[]>> {
-  const denied = requireFinanceRead(ctx, 'overview');
+  const denied = requireMasterDataRead(ctx).failure;
   if (denied) return denied;
   const parsed = validate(deps, categoryListSchema, input ?? {});
   if (!parsed.ok) return parsed;
