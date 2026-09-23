@@ -83,10 +83,23 @@ function collectFinanceSurfaceStrings(): Map<string, string> {
   return strings;
 }
 
+/**
+ * Einzige Ausnahme: Im CSV-Assistenten benennen „Soll“ und „Haben“ die Spalten
+ * der **Bankdatei**, nicht unser Buchungsmodell (Rückmeldung Phase 2, Punkt 3).
+ * Sie stehen dort in Klammern hinter der eigenen Sprache („Ausgang (Soll)“),
+ * damit der Nutzer die Spalte seiner Datei wiedererkennt. Nur diese Schlüssel,
+ * nur diese zwei Wörter.
+ */
+const BANK_COLUMN_EXCEPTIONS: { keys: string[]; words: string[] } = {
+  keys: ['finance.csvAssistant.columns.roles.debit', 'finance.csvAssistant.columns.roles.credit', 'finance.csvAssistant.columns.reasons.amountOrDebitCredit'],
+  words: ['Soll', 'Haben'],
+};
+
 function findHits(strings: Map<string, string>): string[] {
   const hits: string[] = [];
   for (const [key, value] of strings) {
     for (const { pattern, word } of FORBIDDEN) {
+      if (BANK_COLUMN_EXCEPTIONS.keys.includes(key) && BANK_COLUMN_EXCEPTIONS.words.includes(word)) continue;
       if (pattern.test(value)) hits.push(`${key}: Modellwort „${word}“ in "${value}"`);
     }
   }
@@ -97,6 +110,20 @@ describe('Verbotsliste der Modellwörter (Finanzen)', () => {
   it('kein Modellwort erscheint in den geprüften Namensräumen von de.json', () => {
     const hits = findHits(collectFinanceSurfaceStrings());
     expect(hits).toEqual([]);
+  });
+
+  it('nennt die Spalten der Bankdatei mit ihrem Wort, aber nur im CSV-Assistenten', () => {
+    const strings = collectFinanceSurfaceStrings();
+    expect(strings.get('finance.csvAssistant.columns.roles.debit')).toBe('Ausgang (Soll)');
+    expect(strings.get('finance.csvAssistant.columns.roles.credit')).toBe('Eingang (Haben)');
+    // Dieselben Wörter anderswo bleiben ein Verstoß — und auch ein anderes Modellwort an der Ausnahme.
+    strings.set('finance.__test.elsewhere', 'Soll und Haben');
+    strings.set('finance.csvAssistant.columns.roles.debit', 'Soll (Storno)');
+    expect(findHits(strings)).toEqual([
+      'finance.csvAssistant.columns.roles.debit: Modellwort „Storno“ in "Soll (Storno)"',
+      'finance.__test.elsewhere: Modellwort „Soll“ in "Soll und Haben"',
+      'finance.__test.elsewhere: Modellwort „Haben“ in "Soll und Haben"',
+    ]);
   });
 
   it('findet einen bekannten Verstoß, wenn einer eingeschmuggelt wird', () => {

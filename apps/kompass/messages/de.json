@@ -2877,7 +2877,9 @@
             "open": "offen"
           }
         },
-        "discard": "Verwerfen"
+        "discard": "Verwerfen",
+        "formatCamt": "CAMT.053",
+        "formatCsv": "CSV"
       },
       "discard": {
         "title": "Auszug verwerfen",
@@ -3302,6 +3304,137 @@
           }
         }
       }
+    },
+    "csvAssistant": {
+      "title": "CSV-Format einrichten",
+      "stepsLabel": "Schritte",
+      "steps": {
+        "1": "CAMT oder CSV",
+        "2": "Einstellungen",
+        "3": "Spalten",
+        "4": "Vorzeichen",
+        "5": "Probe"
+      },
+      "accountLabel": "Konto",
+      "camt": {
+        "title": "Bietet Ihre Bank CAMT.053 an? Dann nehmen Sie das.",
+        "text": "CAMT liest Kompass ohne Einrichtung und erkennt Zahlungen sicher wieder. Im Online-Banking heißt es meist „Umsätze exportieren“ oder „Kontoauszug als Datei“ mit dem Format CAMT.",
+        "link": "Wie Sie den Auszug bei der Bank holen",
+        "csvAnyway": "Trotzdem CSV einrichten"
+      },
+      "fileLabel": "CSV-Datei wählen",
+      "settings": {
+        "title": "Erkannte Einstellungen",
+        "text": "Kompass hat die Datei angesehen und schlägt diese Einstellungen vor. Stimmt die Vorschau im nächsten Schritt nicht, ändern Sie sie hier.",
+        "encoding": "Zeichensatz",
+        "encodings": {
+          "utf-8": "UTF-8",
+          "windows-1252": "Windows (ANSI)",
+          "iso-8859-1": "ISO-8859-1"
+        },
+        "delimiter": "Trennzeichen",
+        "delimiters": {
+          "semicolon": "Semikolon ;",
+          "comma": "Komma ,",
+          "tab": "Tabulator",
+          "pipe": "Senkrechter Strich |"
+        },
+        "headerRow": "Kopfzeile steht in Zeile",
+        "dateFormat": "Datumsformat",
+        "dateFormats": {
+          "dots": "TT.MM.JJJJ",
+          "dotsShort": "TT.MM.JJ",
+          "iso": "JJJJ-MM-TT",
+          "slashDayFirst": "TT/MM/JJJJ",
+          "slashMonthFirst": "MM/TT/JJJJ"
+        },
+        "decimal": "Dezimalzeichen",
+        "decimals": {
+          "comma": "Komma (1.234,56)",
+          "dot": "Punkt (1,234.56)"
+        },
+        "choose": "bitte wählen"
+      },
+      "columns": {
+        "title": "Welche Spalte ist was?",
+        "text": "Über jeder Spalte steht, wofür Kompass sie nimmt. Was Sie nicht brauchen, bleibt auf „ignorieren“.",
+        "roleLabel": "Rolle der Spalte „{column}“",
+        "roles": {
+          "ignore": "ignorieren",
+          "bookingDate": "Buchungstag",
+          "valueDate": "Wertstellung",
+          "amount": "Betrag mit Vorzeichen",
+          "debit": "Ausgang (Soll)",
+          "credit": "Eingang (Haben)",
+          "indicator": "Kennzeichen Ausgang/Eingang (S/H)",
+          "counterpartyName": "Name der Gegenseite",
+          "counterpartyIban": "IBAN der Gegenseite",
+          "purpose": "Verwendungszweck",
+          "reference": "Referenz des Dienstes",
+          "fee": "Gebühr",
+          "balance": "Kontostand nach der Zeile",
+          "currency": "Währung",
+          "pending": "Status (vorgemerkt)"
+        },
+        "indicatorValues": "Werte, die „Ausgang“ bedeuten (durch Komma getrennt)",
+        "pendingValues": "Werte, die „vorgemerkt“ bedeuten (durch Komma getrennt)",
+        "reasons": {
+          "settingsMissing": "Wählen Sie im Schritt davor Datumsformat und Dezimalzeichen.",
+          "dateMissing": "Wählen Sie die Spalte mit dem Buchungstag.",
+          "amountOrDebitCredit": "Wählen Sie entweder eine Spalte „Betrag mit Vorzeichen“ oder beide Spalten „Ausgang (Soll)“ und „Eingang (Haben)“.",
+          "nameOrPurpose": "Wählen Sie mindestens den Namen der Gegenseite oder den Verwendungszweck.",
+          "duplicateRole": "Jede Rolle passt nur zu einer Spalte.",
+          "indicatorValues": "Nennen Sie die Werte des Kennzeichens, die „Ausgang“ bedeuten.",
+          "pendingValues": "Nennen Sie die Werte der Statusspalte, die „vorgemerkt“ bedeuten."
+        }
+      },
+      "sign": {
+        "title": "Vorzeichen",
+        "question": "In der Datei steht {amount} bei {who}. Ist das eine Ausgabe?",
+        "yes": "Ja, Geld ging hinaus",
+        "no": "Nein, Geld kam herein",
+        "noLine": "Die Datei enthält keine Zeile mit einem Betrag."
+      },
+      "probe": {
+        "title": "So liest Kompass die erste Zeile",
+        "date": "Datum",
+        "counterparty": "Gegenseite",
+        "iban": "IBAN",
+        "purpose": "Verwendungszweck",
+        "amount": "Betrag",
+        "fee": "Gebühr",
+        "unreadable": "Mit diesen Einstellungen lässt sich die Datei nicht lesen",
+        "errors": {
+          "csvEmpty": "Die Datei enthält keine Umsätze.",
+          "csvHeaderMismatch": "Die Kopfzeile passt nicht zu den gewählten Spalten.",
+          "csvRowShape": "Zeile {line} hat nicht so viele Spalten wie die Kopfzeile.",
+          "csvDate": "Das Datum in Zeile {line} passt nicht zum Datumsformat.",
+          "csvAmount": "Der Betrag in Zeile {line} lässt sich nicht lesen.",
+          "csvCurrency": "Zeile {line} ist nicht in Euro — Kompass führt nur Euro-Konten.",
+          "csvBalanceMismatch": "Ab Zeile {line} passen die Kontostände nicht zu den Beträgen — vermutlich stimmt das Vorzeichen oder eine Spalte nicht."
+        },
+        "nameLabel": "Name des Formats",
+        "balanceLabel": "Kontostand laut Bank am {date} (freiwillig)",
+        "saveAndLoad": "Speichern und Auszug laden",
+        "saveOnly": "Nur speichern"
+      },
+      "back": "Zurück",
+      "next": "Weiter",
+      "switchDialog": {
+        "title": "Auszugsformat wechseln?",
+        "description": "Nach dem Wechsel erkennt Kompass schon geladene Zahlungen nicht mehr sicher wieder und legt Ihnen mehr Zweifelsfälle vor.",
+        "confirm": "Wechsel bestätigen"
+      },
+      "blocked": {
+        "title": "CSV-Format einrichten darf, wer „Finanzen einrichten“ darf",
+        "text": "Das können: {names}.",
+        "nobody": "Das darf derzeit niemand — vergeben Sie das Recht „Finanzen einrichten“ unter Verwaltung → Rollen."
+      },
+      "toast": {
+        "saved": "CSV-Format gespeichert.",
+        "savedAndLoaded": "CSV-Format gespeichert, Auszug geladen: {new} neu, {known} bereits vorhanden, {held} zurückgehalten."
+      },
+      "defaultName": "{account} CSV"
     }
   }
 }

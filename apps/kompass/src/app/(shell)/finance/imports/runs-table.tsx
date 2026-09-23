@@ -25,6 +25,9 @@ export interface RunRow {
   id: string;
   accountId: string;
   accountName: string;
+  /** F4b: mit welchem Format gelesen — der Verlauf, auch nach einem Wechsel. */
+  format: 'camt053' | 'csv';
+  formatName: string | null;
   periodFrom: string | null;
   periodTo: string | null;
   openingCents: number | null;
@@ -83,6 +86,7 @@ export function RunsTable({ runs, canDiscard }: { runs: RunRow[]; canDiscard: bo
                 {run.accountName}
               </button>
               <span className="text-ink-2">{run.periodFrom && run.periodTo ? t('period', { from: run.periodFrom, to: run.periodTo }) : '—'}</span>
+              <span data-testid="import-run-format" className="text-muted-ink">{run.format === 'csv' ? (run.formatName ?? t('formatCsv')) : t('formatCamt')}</span>
               <span className="font-mono tabular-nums text-ink-2">
                 {run.openingCents !== null ? t('opening', { amount: formatEuro(run.openingCents) }) : ''} {run.closingCents !== null ? t('closing', { amount: formatEuro(run.closingCents) }) : ''}
               </span>

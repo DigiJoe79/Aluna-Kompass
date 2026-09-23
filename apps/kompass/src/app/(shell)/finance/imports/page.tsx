@@ -45,6 +45,8 @@ export default async function FinanceImportsPage() {
         id: run.id,
         accountId: run.accountId,
         accountName: accountNameById.get(run.accountId) ?? '',
+        format: run.format,
+        formatName: run.formatName,
         periodFrom: run.periodFrom,
         periodTo: run.periodTo,
         openingCents: run.openingCents,
