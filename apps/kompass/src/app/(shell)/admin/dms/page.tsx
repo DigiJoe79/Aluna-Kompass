@@ -1,7 +1,8 @@
-import { hasPermission, readSetting, requirePermission } from '@kompass/core';
+import { hasPermission, isModuleEnabled, readSetting, requirePermission } from '@kompass/core';
 import { countDocumentsOfType, countUnreadDocuments, dispatchChannels, listDocumentAreas, listDocumentFolders, listDocumentRules, listDocumentTypes, listSnippets } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { ModuleInactiveCard } from '@/components/module-inactive-card';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
 import { DispatchChannelsPanel } from './dispatch-channels-panel';
@@ -13,6 +14,7 @@ import { TypesPanel } from './types-panel';
 
 export default async function AdminDmsPage() {
   const { deps, ctx } = await requireSession();
+  if (!isModuleEnabled(deps, 'dms')) return <ModuleInactiveCard namespace="dms.common" />;
   if (requirePermission(ctx, 'dms.manage')) return <ForbiddenCard permission="dms.manage" />;
 
   const t = await getTranslations('dms.admin');

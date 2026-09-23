@@ -1,3 +1,4 @@
+import { isModuleEnabled } from '@kompass/core';
 import { getDocument } from '@kompass/module-dms';
 import { getDeps } from '@/lib/deps';
 import { optionalSession } from '@/lib/request-context';
@@ -5,8 +6,10 @@ import { optionalSession } from '@/lib/request-context';
 export async function GET(_request: Request, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
   const session = await optionalSession();
   if (!session) return new Response(null, { status: 401 });
+  const deps = getDeps();
+  if (!isModuleEnabled(deps, 'dms')) return new Response(null, { status: 404 });
   const { id } = await ctx.params;
-  const result = await getDocument(getDeps(), session.ctx, id);
+  const result = await getDocument(deps, session.ctx, id);
   if (!result.ok) {
     // Ein Dokument, dessen Datei nicht mehr zu seiner Prüfsumme passt, ist
     // nicht „nicht gefunden“ — es ist da, und genau das ist das Problem. 409

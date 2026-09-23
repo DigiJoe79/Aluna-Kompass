@@ -1421,6 +1421,11 @@
       "button": "Projekt löschen",
       "title": "{name} löschen?",
       "hint": "Ein Projekt ist Webseiteninhalt. Hängt ein Dokument oder eine Wiedervorlage daran, bleibt es."
+    },
+    "common": {
+      "moduleInactiveTitle": "Modul Projekte ist nicht aktiv",
+      "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Daten bleiben erhalten.",
+      "openModules": "Module öffnen"
     }
   },
   "animals": {
@@ -1811,7 +1816,12 @@
     },
     "channelLabelPlaceholder": "z. B. Privat, Büro",
     "legalFormPlaceholder": "z. B. e. V., GmbH",
-    "countryPlaceholder": "DE"
+    "countryPlaceholder": "DE",
+    "common": {
+      "moduleInactiveTitle": "Modul Kontakte ist nicht aktiv",
+      "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Daten bleiben erhalten.",
+      "openModules": "Module öffnen"
+    }
   },
   "deletion": {
     "loading": "Es wird geprüft, ob etwas dagegen spricht …",
@@ -2334,6 +2344,11 @@
       "cancel": "Abbrechen",
       "save": "Angaben speichern",
       "saved": "Angaben gespeichert."
+    },
+    "common": {
+      "moduleInactiveTitle": "Modul Dokumentenmanagement ist nicht aktiv",
+      "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Daten bleiben erhalten.",
+      "openModules": "Module öffnen"
     }
   },
   "finance": {

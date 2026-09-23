@@ -1,3 +1,4 @@
+import { isModuleEnabled } from '@kompass/core';
 import { exportBundle } from '@kompass/module-dms';
 import { createReadStream } from 'node:fs';
 import { rm, stat } from 'node:fs/promises';
@@ -18,12 +19,14 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request): Promise<Response> {
   const session = await optionalSession();
   if (!session) return new Response(null, { status: 401 });
+  const deps = getDeps();
+  if (!isModuleEnabled(deps, 'dms')) return new Response(null, { status: 404 });
   const body: unknown = await request.json().catch(() => null);
   if (body === null || typeof body !== 'object') return new Response(null, { status: 400 });
 
   // Nur die drei Auswahlfelder: `linkedAccess` und `workDir` kommen nie vom Browser.
   const { folder, year, documentIds } = body as Record<string, unknown>;
-  const result = await exportBundle(getDeps(), session.ctx, { folder, year, documentIds, workDir: tmpdir() } as never);
+  const result = await exportBundle(deps, session.ctx, { folder, year, documentIds, workDir: tmpdir() } as never);
   if (!result.ok) return Response.json(result.error, { status: statusFor(result.error) });
 
   const { archivePath, filename } = result.value;

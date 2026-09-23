@@ -1,4 +1,5 @@
 import { pdfPageCount } from '@kompass/documents';
+import { isModuleEnabled } from '@kompass/core';
 import { getDocument, previewDraft } from '@kompass/module-dms';
 import { getDeps } from '@/lib/deps';
 import { optionalSession } from '@/lib/request-context';
@@ -16,6 +17,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
   if (!session) return new Response(null, { status: 401 });
   const { id } = await ctx.params;
   const deps = getDeps();
+  if (!isModuleEnabled(deps, 'dms')) return new Response(null, { status: 404 });
 
   // Ist es bereits festgeschrieben oder eine abgelegte Datei, liefern wir die Datei.
   const filed = await getDocument(deps, session.ctx, id);
