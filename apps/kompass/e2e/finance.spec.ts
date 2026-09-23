@@ -567,7 +567,7 @@ test.describe('finance', () => {
     const card = page.locator('[role="link"]', { hasText: 'Vereinskonto' });
     await expect(card.getByTestId('iban-value')).toHaveText('DE•• •••• •••• •••• ••20 51');
     await card.getByRole('button', { name: 'IBAN aufdecken' }).click();
-    await expect(card.getByTestId('iban-value')).toHaveText('DE02120300000000202051');
+    await expect(card.getByTestId('iban-value')).toHaveText('DE23999999990000202051');
     await card.getByRole('button', { name: 'IBAN wieder verbergen' }).click();
     await expect(card.getByTestId('iban-value')).toHaveText('DE•• •••• •••• •••• ••20 51');
   });

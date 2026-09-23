@@ -11,7 +11,7 @@ import { setupFinance } from './helpers';
 /** Wie in `entry-immutability.test.ts`: Konto und Kategorie entstehen über die F1-Dienste. */
 async function fixtures() {
   const { deps, ctx } = setupFinance();
-  const account = unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE02120300000000202051', isMain: true }));
+  const account = unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true }));
   const category = unwrap(await createCategory(deps, ctx, { key: 'donations', name: 'Spenden', direction: 'income', sphere: 'ideal', incomeKind: 'donation' }));
   return { deps, ctx, accountId: account.id, categoryId: category.id };
 }

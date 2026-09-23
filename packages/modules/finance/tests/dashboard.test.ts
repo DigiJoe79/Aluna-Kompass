@@ -128,7 +128,7 @@ describe('finance dashboard tiles', () => {
     if (incomplete.kind === 'status') expect((incomplete.values as { count: number }).count).toBeGreaterThan(0);
 
     unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-01-01', endsOn: '2026-12-31' }));
-    unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE02120300000000202051', isMain: true, openingBalanceCents: 10000, openingDate: '2026-01-01' }));
+    unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true, openingBalanceCents: 10000, openingDate: '2026-01-01' }));
 
     const holderId = insertUser(deps, { name: 'Rollen-Halterin' });
     for (const originKey of FINANCE_ROLE_ORIGIN_KEYS) {

@@ -11,7 +11,7 @@ const files = (dir: string): string[] => readdirSync(dir).flatMap((n) => { const
 describe('financeAudit', () => {
   it('writes only whitelisted fields — a name or an IBAN never reaches the log', () => {
     const { deps, ctx } = setupFinance();
-    deps.db.transaction((tx) => financeAudit(tx, deps, ctx, { action: 'finance.account.create', entity: 'financeAccount', id: 'A1', after: { kind: 'bank', isMain: true, name: 'Sparkasse Musterstadt', iban: 'DE02120300000000202051', openingBalanceCents: 5000 }, summary: 'Konto A1 angelegt' }));
+    deps.db.transaction((tx) => financeAudit(tx, deps, ctx, { action: 'finance.account.create', entity: 'financeAccount', id: 'A1', after: { kind: 'bank', isMain: true, name: 'Sparkasse Musterstadt', iban: 'DE23999999990000202051', openingBalanceCents: 5000 }, summary: 'Konto A1 angelegt' }));
     const entry = deps.db.select().from(schema.auditLog).all().at(-1)!;
     expect(JSON.parse(entry.after as string)).toEqual({ kind: 'bank', isMain: true, openingBalanceCents: 5000 });
     expect(`${entry.after}${entry.summary}`).not.toMatch(/Sparkasse|DE02/);

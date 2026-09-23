@@ -12,7 +12,7 @@ const setup = async () => {
     'organization.postalCode': '12345',
     'organization.city': 'Musterstadt',
     'organization.email': 'info@example.org',
-    'organization.iban': 'DE02120300000000202051',
+    'organization.iban': 'DE23999999990000202051',
     'organization.taxNumber': '203/5711/0815',
   })) {
     unwrap(await setSetting(deps, ctx, { key, value }));
@@ -28,7 +28,7 @@ describe('published organization view', () => {
   it('carries what an imprint needs', async () => {
     const deps = await setup();
     const [row] = publishedOrganization.load(deps) as { name: string; city: string; iban: string }[];
-    expect(row).toMatchObject({ name: 'Musterverein e.V.', city: 'Musterstadt', iban: 'DE02120300000000202051' });
+    expect(row).toMatchObject({ name: 'Musterverein e.V.', city: 'Musterstadt', iban: 'DE23999999990000202051' });
   });
 
   it('leaves out what is nobody business on a website', async () => {

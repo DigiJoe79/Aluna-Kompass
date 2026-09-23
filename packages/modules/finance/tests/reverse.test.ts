@@ -45,7 +45,7 @@ describe('reverseEntry', () => {
   it('Prüfstein 7: in a closed year the reversal is dated today and numbered in the current year', async () => {
     const { deps, ctx, userId } = setupFinance();
     deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
-    const bank = unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE02120300000000202051', isMain: true }));
+    const bank = unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true }));
     const donations = deps.db.select().from(financeCategories).where(eq(financeCategories.key, 'donations')).get()!;
     const year2025 = unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2025-01-01', endsOn: '2025-12-31' }));
 

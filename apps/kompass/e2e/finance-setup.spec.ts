@@ -55,9 +55,9 @@ test.describe('finance setup', () => {
     await page.getByRole('button', { name: 'Konto anlegen' }).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel('Name').fill('Vereinskonto');
-    await dialog.getByLabel('IBAN').fill('DE03120300000000202051');
+    await dialog.getByLabel('IBAN').fill('DE24999999990000202051');
     await expect(dialog.getByText('Die Prüfziffer stimmt nicht.')).toBeVisible();
-    await dialog.getByLabel('IBAN').fill('DE02120300000000202051');
+    await dialog.getByLabel('IBAN').fill('DE23999999990000202051');
     await expect(dialog.getByText('Die Prüfziffer stimmt nicht.')).not.toBeVisible();
     await dialog.getByLabel('Anfangsbestand').fill('100,00');
     await expect(dialog.getByText('Anfangsbestand und Stichtag gehören zusammen')).toBeVisible();
@@ -69,7 +69,7 @@ test.describe('finance setup', () => {
     await page.getByRole('button', { name: 'Konto anlegen' }).click();
     let dialog = page.getByRole('dialog');
     await dialog.getByLabel('Name').fill('Vereinskonto');
-    await dialog.getByLabel('IBAN').fill('DE02120300000000202051');
+    await dialog.getByLabel('IBAN').fill('DE23999999990000202051');
     await dialog.getByLabel('Hauptkonto').check();
     await dialog.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByText('Konto angelegt.')).toBeVisible();
@@ -84,7 +84,7 @@ test.describe('finance setup', () => {
     await page.getByRole('button', { name: 'Konto anlegen' }).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel('Name').fill('Spendenkonto ohne Buchungen');
-    await dialog.getByLabel('IBAN').fill('DE02120300000000202051');
+    await dialog.getByLabel('IBAN').fill('DE23999999990000202051');
     await dialog.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByText('Konto angelegt.')).toBeVisible();
 
@@ -228,7 +228,7 @@ test.describe('finance setup', () => {
     await page.getByRole('button', { name: 'Konto anlegen' }).click();
     dialog = page.getByRole('dialog');
     await dialog.getByLabel('Name').fill('Vereinskonto');
-    await dialog.getByLabel('IBAN').fill('DE02120300000000202051');
+    await dialog.getByLabel('IBAN').fill('DE23999999990000202051');
     await dialog.getByLabel('Anfangsbestand').fill('100,00');
     await dialog.getByLabel('Stichtag').fill('2026-01-01');
     await dialog.getByRole('button', { name: 'Speichern' }).click();

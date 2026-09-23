@@ -113,7 +113,7 @@ describe('tax on the entry', () => {
   it('refuses to finalize a taxed line for a date without a rate', async () => {
     const { deps, ctx } = setupFinance();
     deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
-    const bank = unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE02120300000000202051', isMain: true }));
+    const bank = unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true }));
     const category = deps.db.select().from(financeCategories).where(eq(financeCategories.key, 'purpose-income')).get()!;
     unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2006-01-01', endsOn: '2006-12-31' }));
     const d = unwrap(await saveDraft(deps, ctx, { entryDate: '2006-06-01', text: 'x', moneyLines: [{ accountId: bank.id, amountCents: 100 }], allocationLines: [{ categoryId: category.id, amountCents: 100, taxCode: 'reduced' }] }));

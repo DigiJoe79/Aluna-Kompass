@@ -21,7 +21,7 @@ describe('overview services', () => {
     const overviewCtx = ctxWith(['finance.overview'], f.userId);
     const result = unwrap(await getBalances(f.deps, overviewCtx, {}));
     const json = JSON.stringify(result);
-    expect(json).not.toContain('DE02120300000000202051'); // IBAN
+    expect(json).not.toContain('DE23999999990000202051'); // IBAN
     expect(json).not.toContain('Zusage von Frau Beispiel'); // Freitext der Zweckbeschreibung
     expect(json).not.toContain(f.donor.id); // Spender-Kontakt
     expect(result.accounts.some((a) => a.accountId === f.bank.id)).toBe(true);

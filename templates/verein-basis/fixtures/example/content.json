@@ -141,8 +141,8 @@
         "email": "kontakt@beispielverein.example",
         "phone": "0123 456789",
         "website": "https://beispielverein.example",
-        "iban": "DE02 1203 0000 0000 2020 51",
-        "bic": "BYLADEM1001",
+        "iban": "DE23 9999 9999 0000 2020 51",
+        "bic": "BEISDEX0XXX",
         "bankName": "Beispielbank",
         "registerCourt": "Amtsgericht Beispielstadt",
         "registerNumber": "VR 4711"

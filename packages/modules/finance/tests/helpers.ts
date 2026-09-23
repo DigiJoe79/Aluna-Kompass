@@ -52,7 +52,7 @@ export async function ledgerFixture(opts: { years?: readonly string[] } = {}) {
     return row;
   };
 
-  const bank = unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE02120300000000202051', isMain: true }));
+  const bank = unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true }));
   const cash = unwrap(await createAccount(deps, ctx, { name: 'Barkasse', kind: 'cash' }));
 
   const yearList = opts.years && opts.years.length > 0 ? opts.years : ['2026'];

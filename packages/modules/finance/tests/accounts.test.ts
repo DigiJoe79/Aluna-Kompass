@@ -5,7 +5,7 @@ import { createAccount, deleteAccount, listAccounts, setAccountActive, updateAcc
 import { financeEntries, financeMoneyLines } from '../src/schema';
 import { setupFinance } from './helpers';
 
-const BANK = { name: 'Vereinskonto', kind: 'bank' as const, iban: 'DE02 1203 0000 0000 2020 51', bic: 'BYLADEM1001', bankName: 'Beispielbank', isMain: true };
+const BANK = { name: 'Vereinskonto', kind: 'bank' as const, iban: 'DE23 9999 9999 0000 2020 51', bic: 'BEISDEX0XXX', bankName: 'Beispielbank', isMain: true };
 const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
 
 describe('money accounts', () => {
@@ -17,8 +17,8 @@ describe('money accounts', () => {
 
   it('stores the IBAN normalized, checks it, and wants one for a bank account and none for cash', async () => {
     const { deps, ctx } = setupFinance();
-    expect(unwrap(await createAccount(deps, ctx, BANK)).iban).toBe('DE02120300000000202051');
-    expect(err(await createAccount(deps, ctx, { ...BANK, name: 'Zweitkonto', isMain: false, iban: 'DE03120300000000202051' }))).toMatchObject({ type: 'validation', issues: [{ path: 'iban', message: 'invalidIban' }] });
+    expect(unwrap(await createAccount(deps, ctx, BANK)).iban).toBe('DE23999999990000202051');
+    expect(err(await createAccount(deps, ctx, { ...BANK, name: 'Zweitkonto', isMain: false, iban: 'DE24999999990000202051' }))).toMatchObject({ type: 'validation', issues: [{ path: 'iban', message: 'invalidIban' }] });
     expect(err(await createAccount(deps, ctx, { name: 'Ohne', kind: 'bank' }))).toMatchObject({ type: 'validation', issues: [{ path: 'iban', message: 'ibanRequiredForBank' }] });
     expect(err(await createAccount(deps, ctx, { name: 'Barkasse', kind: 'cash', iban: BANK.iban }))).toMatchObject({ type: 'validation' });
     expect(unwrap(await createAccount(deps, ctx, { name: 'Barkasse', kind: 'cash' })).iban).toBeNull();
@@ -33,7 +33,7 @@ describe('money accounts', () => {
   it('the main account writes the bank details of the association — one source', async () => {
     const { deps, ctx } = setupFinance();
     unwrap(await createAccount(deps, ctx, BANK));
-    expect([readSetting(deps, 'organization.iban'), readSetting(deps, 'organization.bic'), readSetting(deps, 'organization.bankName')]).toEqual(['DE02120300000000202051', 'BYLADEM1001', 'Beispielbank']);
+    expect([readSetting(deps, 'organization.iban'), readSetting(deps, 'organization.bic'), readSetting(deps, 'organization.bankName')]).toEqual(['DE23999999990000202051', 'BEISDEX0XXX', 'Beispielbank']);
   });
 
   it('there is one main account: a new one takes over, and only an active bank account can be it', async () => {
@@ -53,7 +53,7 @@ describe('money accounts', () => {
     unwrap(await createAccount(deps, ctx, BANK));
     const [forOverview] = unwrap(await listAccounts(deps, ctxWith(['finance.overview']), {}));
     expect(forOverview).toMatchObject({ name: 'Vereinskonto', kind: 'bank', iban: null, bic: null, bankName: null });
-    expect(unwrap(await listAccounts(deps, ctxWith(['finance.read']), {}))[0]!.iban).toBe('DE02120300000000202051');
+    expect(unwrap(await listAccounts(deps, ctxWith(['finance.read']), {}))[0]!.iban).toBe('DE23999999990000202051');
   });
 
   it('refuses a stale update, deletes an unused account, and logs neither name nor IBAN', async () => {
@@ -64,7 +64,7 @@ describe('money accounts', () => {
     unwrap(await deleteAccount(deps, ctx, { id: account.id }));
     const log = deps.db.select().from(schema.auditLog).all().filter((e) => e.action.startsWith('finance.account.'));
     expect(log.map((e) => e.action)).toEqual(['finance.account.create', 'finance.account.update', 'finance.account.delete']);
-    expect(JSON.stringify(log)).not.toMatch(/Vereinskonto|Anders|DE02|AT61|Beispielbank|BYLADEM/);
+    expect(JSON.stringify(log)).not.toMatch(/Vereinskonto|Anders|DE23|AT61|Beispielbank|BEISDEX0/);
     expect(JSON.parse(log[1]!.after as string)).toMatchObject({ bankDetailsChanged: true });
   });
 

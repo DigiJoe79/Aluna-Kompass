@@ -160,8 +160,8 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
 
   await ensureAccount(deps, ctx, 'Vereinskonto', {
     kind: 'bank',
-    iban: 'DE02120300000000202051',
-    bic: 'BYLADEM1001',
+    iban: 'DE23999999990000202051',
+    bic: 'BEISDEX0XXX',
     bankName: 'Beispielbank',
     isMain: true,
     openingBalanceCents: 125000,

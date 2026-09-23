@@ -41,7 +41,7 @@ describe('finance setup status', () => {
     expect(withoutOpening.done).toBe(false);
     expect(withoutOpening.detail).toEqual({ accounts: 1, withoutOpening: 1 });
 
-    unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE02120300000000202051', isMain: true, openingBalanceCents: 10000, openingDate: '2026-01-01' }));
+    unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true, openingBalanceCents: 10000, openingDate: '2026-01-01' }));
     const withOpening = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'account')!;
     expect(withOpening.done).toBe(true);
     expect(withOpening.detail).toEqual({ accounts: 2, withoutOpening: 1 });
@@ -54,7 +54,7 @@ describe('finance setup status', () => {
     expect(importFormatWithOnlyCash.required).toBe(false);
     expect(importFormatWithOnlyCash.done).toBe(true); // eine Barkasse braucht kein Auszugsformat
 
-    const main = unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE02120300000000202051', isMain: true, importFormat: 'camt053' }));
+    const main = unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true, importFormat: 'camt053' }));
     const formatlos = unwrap(await createAccount(deps, ctx, { name: 'Zweitkonto', kind: 'bank', iban: 'DE12999999990000112233' }));
     void main;
     const withUnsetFormat = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'importFormat')!;
@@ -129,7 +129,7 @@ describe('finance setup status', () => {
     const { deps, ctx } = setupFinance();
     deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
     unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-01-01', endsOn: '2026-12-31' }));
-    unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE02120300000000202051', isMain: true, openingBalanceCents: 10000, openingDate: '2026-01-01' }));
+    unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true, openingBalanceCents: 10000, openingDate: '2026-01-01' }));
 
     const holderId = insertUser(deps, { name: 'Rollen-Halterin' });
     for (const originKey of FINANCE_ROLE_ORIGIN_KEYS) {

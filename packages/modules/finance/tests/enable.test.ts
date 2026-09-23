@@ -30,7 +30,7 @@ describe('switching finance on, the way Verwaltung → Module would', () => {
     const categories = deps.db.select().from(financeCategories).all();
     expect(categories).toHaveLength(37);
 
-    const ibanChange = await setSetting(deps, admin, { key: 'organization.iban', value: 'DE02120300000000202051' });
+    const ibanChange = await setSetting(deps, admin, { key: 'organization.iban', value: 'DE23999999990000202051' });
     expect(ibanChange.ok ? null : ibanChange.error).toMatchObject({ type: 'conflict', code: 'settingManaged', message: 'finance' });
 
     const areas = await listDocumentAreas(deps, admin);

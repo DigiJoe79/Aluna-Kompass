@@ -14,7 +14,7 @@ describe('openItemState', () => {
 
 describe('maskIban', () => {
   it('masks an IBAN down to its last four digits, grouped', () => {
-    expect(maskIban('DE02120300000000202051')).toBe('DE•• •••• •••• •••• ••20 51');
-    expect(maskIban('DE02 1203 0000 0000 2020 51')).toBe('DE•• •••• •••• •••• ••20 51');
+    expect(maskIban('DE23999999990000202051')).toBe('DE•• •••• •••• •••• ••20 51');
+    expect(maskIban('DE23 9999 9999 0000 2020 51')).toBe('DE•• •••• •••• •••• ••20 51');
   });
 });
