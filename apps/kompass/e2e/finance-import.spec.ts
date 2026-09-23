@@ -91,6 +91,30 @@ test.describe('finance import', () => {
     await expect(page.getByRole('heading', { name: 'Kandidaten' })).toHaveCount(0);
   });
 
+  test('ein Lauf klappt auf und zeigt seine Kontoumsätze, und klappt wieder zu', async ({ page }) => {
+    await openImports(page);
+    const row = page.getByTestId('import-run').filter({ hasText: '2026-01-01 – 2026-01-31' });
+    const trigger = row.getByRole('button', { name: 'Kontoumsätze anzeigen' });
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await expect(row.getByText('Erika Beispiel')).toHaveCount(0);
+    await trigger.click();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    await expect(row.getByText('Erika Beispiel')).toBeVisible();
+    await expect(row.getByText('Buerobedarf Muster GmbH')).toBeVisible();
+    await trigger.click();
+    await expect(row.getByText('Erika Beispiel')).toHaveCount(0);
+  });
+
+  test('beim Kandidaten ist „Dieselbe Zahlung“ der primäre Knopf, „Eigene Zahlung“ der sekundäre', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/imports');
+    const same = page.getByRole('button', { name: 'Dieselbe Zahlung — nicht übernehmen' });
+    const own = page.getByRole('button', { name: 'Eigene Zahlung — übernehmen' });
+    await expect(same).toHaveClass(/(^|\s)bg-primary(\s|$)/);
+    await expect(own).toHaveClass(/(^|\s)bg-secondary(\s|$)/);
+    await expect(own).not.toHaveClass(/(^|\s)bg-primary(\s|$)/);
+  });
+
   test('Verwerfen nennt die Folgen in Zahlen, verlangt eine Notiz, und der Lauf bleibt als verworfen stehen', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/imports');
