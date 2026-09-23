@@ -3,7 +3,8 @@ import { addContactRole, contactRoles, createContact } from '@kompass/module-con
 import { textPdf } from '@kompass/module-dms';
 import { projects } from '@kompass/module-projects';
 import { and, asc, eq } from 'drizzle-orm';
-import { csvFormatSchema, headerSignature, type CsvFormat } from './import/csv';
+import { completeFormat, guessCsvFormat, type CsvFormat } from './import/csv';
+import { buildPaymentServiceCsv, buildSecondBankCsv } from './import/csv-fixture';
 import { saveImportProfile } from './import/profiles';
 import { createAccount, setAccountActive } from './ledger/accounts';
 import { createCategory } from './ledger/categories';
@@ -44,22 +45,18 @@ async function ensureAccount(deps: Deps, ctx: CallContext, name: string, input: 
   return unwrap(await createAccount(deps, ctx, { name, ...input }));
 }
 
-/** Gibt einem Konto einmal ein CSV-Format — über `saveImportProfile`, wie der Assistent (F4b). */
-async function ensureCsvFormat(
-  deps: Deps,
-  ctx: CallContext,
-  accountName: string,
-  name: string,
-  spec: { header: string[]; delimiter: CsvFormat['delimiter']; columns: Partial<CsvFormat['columns']> },
-): Promise<void> {
-  const account = accountByName(deps, accountName);
-  if (account.importProfileId) return;
-  const none = { valueDate: null, amount: null, debit: null, credit: null, debitCreditIndicator: null, counterpartyName: null, counterpartyIban: null, purpose: null, reference: null, fee: null, balance: null, currency: null, pending: null };
-  const format = csvFormatSchema.parse({
-    encoding: 'utf-8', delimiter: spec.delimiter, headerRow: 0, headerSignature: headerSignature(spec.header), dateFormat: 'DD.MM.YYYY', decimalSeparator: ',',
-    columns: { ...none, ...spec.columns }, invertSign: false,
-  });
-  unwrap(await saveImportProfile(deps, ctx, { accountId: account.id, name, format, confirmFormatChange: true }));
+/** Gibt einem Konto einmal ein CSV-Format — erraten wie im Assistenten, gespeichert über `saveImportProfile` — und lädt einmal einen Auszug (F4b). */
+async function ensureCsvAccountWithRun(deps: Deps, ctx: CallContext, accountName: string, formatName: string, fileName: string, bytes: Uint8Array): Promise<void> {
+  let account = accountByName(deps, accountName);
+  if (!account.importProfileId) {
+    const guess = guessCsvFormat(bytes);
+    const none: CsvFormat['columns'] = { bookingDate: '', valueDate: null, amount: null, debit: null, credit: null, debitCreditIndicator: null, counterpartyName: null, counterpartyIban: null, purpose: null, reference: null, fee: null, balance: null, currency: null, pending: null };
+    const format = completeFormat(guess, { columns: { ...none, ...guess.columns } as CsvFormat['columns'], invertSign: false, dateFormat: guess.dateFormat!, decimalSeparator: guess.decimalSeparator! });
+    unwrap(await saveImportProfile(deps, ctx, { accountId: account.id, name: formatName, format, confirmFormatChange: true }));
+    account = accountByName(deps, accountName);
+  }
+  const hasRun = deps.db.select({ id: financeImportRuns.id }).from(financeImportRuns).where(eq(financeImportRuns.accountId, account.id)).limit(1).get();
+  if (!hasRun) unwrap(await importStatement(deps, ctx, { accountId: account.id, fileName, bytes }));
 }
 
 async function ensurePurpose(deps: Deps, ctx: CallContext, name: string, input: Record<string, unknown>): Promise<{ id: string } | null> {
@@ -194,12 +191,11 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   await ensureAccount(deps, ctx, 'Zählkasse', { kind: 'cash', openingBalanceCents: 20000, openingDate: `${previousYear}-01-01` });
   // IBAN erfunden (BLZ 99999999) — F4 Task 7: nur mit IBAN lässt sich der Formatwechsel csv -> camt053 überhaupt zeigen.
   await ensureAccount(deps, ctx, 'Spendenplattform', { kind: 'paymentService', iban: 'DE32999999990301059999', importFormat: null });
-  // F4b: CSV entsteht nur über ein gespeichertes Format — auch im Seed derselbe Weg wie im Assistenten.
-  await ensureCsvFormat(deps, ctx, 'Spendenplattform', 'Spendenplattform CSV', {
-    header: ['Datum', 'Name', 'Status', 'Währung', 'Brutto', 'Gebühr', 'Netto', 'Transaktionscode', 'Guthaben', 'Betreff'],
-    delimiter: ',',
-    columns: { bookingDate: 'Datum', counterpartyName: 'Name', amount: 'Brutto', fee: 'Gebühr', reference: 'Transaktionscode', balance: 'Guthaben', currency: 'Währung', purpose: 'Betreff', pending: { column: 'Status', values: ['Ausstehend'] } },
-  });
+  // F4b: CSV entsteht nur über ein gespeichertes Format — auch im Seed derselbe Weg wie im Assistenten:
+  // Kompass errät das Format, der Mensch beantwortet nur das Vorzeichen, dann ein Auszug.
+  await ensureCsvAccountWithRun(deps, ctx, 'Spendenplattform', 'Spendenplattform CSV', 'aktivitaeten-2026-03.csv', buildPaymentServiceCsv());
+  await ensureAccount(deps, ctx, 'Zweitbank CSV', { kind: 'bank', iban: 'DE48999999990000404040', isMain: false });
+  await ensureCsvAccountWithRun(deps, ctx, 'Zweitbank CSV', 'Zweitbank CSV', 'umsaetze-2026-03.csv', buildSecondBankCsv());
   const oldSavings = await ensureAccount(deps, ctx, 'Altes Sparbuch', { kind: 'bank', iban: 'AT611904300234573201', isMain: false });
   if (oldSavings) {
     const row = deps.db.select().from(financeAccounts).where(eq(financeAccounts.id, oldSavings.id)).get();

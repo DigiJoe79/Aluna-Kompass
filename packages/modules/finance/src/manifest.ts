@@ -48,6 +48,7 @@ export const financeModule: ModuleManifest = defineModule({
   settings: FINANCE_SETTINGS,
   moduleIcon: 'euro',
   help: [
+    { href: '/finance/imports/format', doc: 'finanzen/csv-format-einrichten' },
     { href: '/finance/imports', doc: 'finanzen/kontoauszug-laden' },
     { href: '/finance/entries', doc: 'finanzen/buchen' },
     { href: '/finance/accounts', doc: 'finanzen/konten-und-offene-zahlungen' },

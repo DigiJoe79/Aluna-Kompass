@@ -11,6 +11,7 @@ import { listAllocationCorrections } from '../src/ledger/corrections';
 import { getEntry } from '../src/ledger/entries';
 import { listFiscalYears } from '../src/ledger/fiscal-years';
 import { listCandidates } from '../src/import/candidates';
+import { listImportProfiles } from '../src/import/profiles';
 import { listImportRuns } from '../src/import/runs';
 import { listRawTransactions } from '../src/import/queries';
 import { listOpenItems } from '../src/ledger/open-items';
@@ -28,8 +29,9 @@ describe('seedFinance', () => {
     await seedFinance(deps, ctx);
     await seedFinance(deps, ctx);
     const accounts = unwrap(await listAccounts(deps, ctx, { includeInactive: true }));
-    // F4 Task 8: „Importkonto“ kommt als drittes Bankkonto dazu (eigens für die Kontoauszug-Fixtures).
-    expect(accounts.map((a) => a.kind).sort()).toEqual(['bank', 'bank', 'bank', 'cash', 'cash', 'paymentService']);
+    // F4 Task 8: „Importkonto“ kommt als drittes Bankkonto dazu (eigens für die Kontoauszug-Fixtures);
+    // F4b: „Zweitbank CSV“ als viertes, mit selbst eingerichtetem CSV-Format.
+    expect(accounts.map((a) => a.kind).sort()).toEqual(['bank', 'bank', 'bank', 'bank', 'cash', 'cash', 'paymentService']);
     expect(accounts.filter((a) => a.isMain)).toHaveLength(1);
     expect(accounts.some((a) => !a.isActive)).toBe(true);
     expect(unwrap(await listFiscalYears(deps, ctx))).toHaveLength(2);
@@ -67,6 +69,25 @@ describe('seedFinance', () => {
     const read = unwrap(await getProjectFinance(deps, ctx, { projectId: existingProject.id }));
     expect(read.settings.targetCents).toBe(250000);
     expect(read.settings.defaultPurposeId).not.toBeNull();
+  });
+
+  it('seeds two CSV accounts, each with its format and one finished CSV run, idempotently (F4b)', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+    await seedFinance(deps, ctx);
+    await seedFinance(deps, ctx);
+    const accounts = unwrap(await listAccounts(deps, ctx, { includeInactive: true }));
+    const { profiles } = unwrap(await listImportProfiles(deps, ctx, {}));
+    for (const [name, formatName] of [['Spendenplattform', 'Spendenplattform CSV'], ['Zweitbank CSV', 'Zweitbank CSV']] as const) {
+      const account = accounts.find((a) => a.name === name)!;
+      expect(account, name).toMatchObject({ importFormat: 'csv' });
+      expect(profiles.find((p) => p.id === account.importProfileId), name).toMatchObject({ name: formatName, runCount: 1 });
+      const { runs } = unwrap(await listImportRuns(deps, ctx, { accountId: account.id }));
+      expect(runs, name).toHaveLength(1);
+      expect(runs[0], name).toMatchObject({ format: 'csv', formatName, state: 'finished' });
+    }
+    const service = unwrap(await listImportRuns(deps, ctx, { accountId: accounts.find((a) => a.name === 'Spendenplattform')!.id })).runs[0]!;
+    expect(service).toMatchObject({ openingCents: 10000, closingCents: 785, counts: { new: 5, known: 0, held: 0, pendingSkipped: 2 } });
   });
 
   it('seeds "Importkonto" with two finished runs (one with a gap), an open candidate, a discarded and a failed run, one booked and several open raw transactions', async () => {

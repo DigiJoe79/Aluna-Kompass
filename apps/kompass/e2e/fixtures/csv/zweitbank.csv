@@ -1,0 +1,7 @@
+Kontoinhaber;Musterverein e.V.
+IBAN;DE48999999990000404040
+Zeitraum;01.03.2026 - 31.03.2026
+
+Buchungstag;Wertstellung;Auftraggeber/Empfänger;Verwendungszweck;Soll;Haben
+03.03.2026;03.03.2026;Erika Beispiel;Mitgliedsbeitrag 2026;;60,00
+04.03.2026;04.03.2026;Druckerei Müller & Söhne;Rechnung 2026-17;45,90;

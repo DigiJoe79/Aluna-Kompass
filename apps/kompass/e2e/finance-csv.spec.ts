@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { loginAsAdmin, resetDatabase } from './helpers';
@@ -14,6 +15,9 @@ const BANK_CSV = [
   '05.03.2026;Druckerei Muster;Flyer;-20,00;1.030,00',
 ].join('\n');
 
+/** Kopien der Bauhelfer-Ausgabe (`packages/modules/finance/src/import/csv-fixture.ts`), Byte für Byte geprüft. */
+const FIXTURES = path.resolve(import.meta.dirname, 'fixtures/csv');
+
 const csvFile = (content = BANK_CSV, name = 'hausbank-maerz.csv') => ({ name, mimeType: 'text/csv', buffer: Buffer.from(content, 'utf8') });
 
 async function createBankAccount(page: Page, name: string, iban: string): Promise<void> {
@@ -27,7 +31,7 @@ async function createBankAccount(page: Page, name: string, iban: string): Promis
 }
 
 /** Bis Schritt 2: Konto wählen, CAMT-Empfehlung überspringen, Datei wählen. */
-async function startAssistant(page: Page, account: string, file = csvFile()): Promise<void> {
+async function startAssistant(page: Page, account: string, file: ReturnType<typeof csvFile> | string = csvFile()): Promise<void> {
   await page.goto('/finance/imports/format');
   await page.getByLabel('Konto', { exact: true }).selectOption({ label: account });
   await page.getByRole('button', { name: 'Trotzdem CSV einrichten' }).click();
@@ -211,5 +215,24 @@ test.describe('finance csv', () => {
     await step.getByRole('link').click();
     await expect(page).toHaveURL(/\/finance\/imports\/format$/);
     await expect(page.getByRole('heading', { name: 'Bietet Ihre Bank CAMT.053 an? Dann nehmen Sie das.' })).toBeVisible();
+  });
+
+  test('Windows-Zeichensatz, Vorspann und getrennte Spalten für Aus- und Eingang erkennt der Assistent ohne Handarbeit', async ({ page }) => {
+    await createBankAccount(page, 'Drittbank CSV-Test', 'DE30999999990000505050');
+    await startAssistant(page, 'Drittbank CSV-Test', path.join(FIXTURES, 'zweitbank.csv'));
+    await expect(page.getByLabel('Zeichensatz')).toHaveValue('windows-1252');
+    await expect(page.getByLabel('Kopfzeile steht in Zeile')).toHaveValue('5');
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    await expect(page.getByLabel('Rolle der Spalte „Soll“')).toHaveValue('debit');
+    await expect(page.getByLabel('Rolle der Spalte „Haben“')).toHaveValue('credit');
+    await expect(page.getByTestId('csv-preview')).toContainText('Druckerei Müller & Söhne');
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    await page.getByRole('button', { name: 'Nein, Geld kam herein' }).click();
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    await page.getByRole('button', { name: 'Speichern und Auszug laden' }).click();
+    await expect(page).toHaveURL(/\/finance\/imports$/);
+    const run = page.getByTestId('import-run').filter({ hasText: 'Drittbank CSV-Test' });
+    await expect(run).toContainText('2026-03-03 – 2026-03-04');
+    await expect(run).toContainText('ohne Kontostand');
   });
 });

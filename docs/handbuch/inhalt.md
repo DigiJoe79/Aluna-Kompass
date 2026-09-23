@@ -24,6 +24,7 @@
   - [Finanzen einrichten](finanzen/einrichten.md)
   - [Auszug bei der Bank holen](finanzen/auszug-bei-der-bank-holen.md)
   - [Kontoauszug laden](finanzen/kontoauszug-laden.md)
+  - [CSV-Format einrichten](finanzen/csv-format-einrichten.md)
   - [Buchen von Hand](finanzen/buchen.md)
   - [Barkasse](finanzen/barkasse.md)
   - [Konten und offene Zahlungen](finanzen/konten-und-offene-zahlungen.md)

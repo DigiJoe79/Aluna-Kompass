@@ -58,6 +58,22 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
   eines Cloud- oder eines lokal betriebenen Sprachmodells bedeutet. Neue
   Abhängigkeit: `fast-xml-parser` (MIT). Diese Fassung bringt dafür eine
   Datenbank-Migration mit, die beim Start von selbst läuft.
+- **Finanzen: Kontoauszüge als CSV.** Liefert eine Bank oder ein
+  Zahlungsdienst kein CAMT, richtet ein Assistent einmal ein CSV-Format für
+  das Konto ein: Er rät zuerst zu CAMT, schlägt Zeichensatz, Trennzeichen,
+  Kopfzeile, Datums- und Zahlenformat vor, legt die Spaltenauswahl über eine
+  Vorschau der Datei, fragt das Vorzeichen an einer echten Zeile und zeigt
+  zum Schluss die erste Zeile als fertigen Kontoumsatz. Danach laden
+  CSV-Auszüge wie CAMT — ganz oder gar nicht, mit demselben Schutz vor
+  doppelten Zahlungen. Eine Gebührenspalte wird ein eigener Kontoumsatz; mit
+  einer Kontostandspalte prüft Kompass, ob die Datei in sich stimmt. Ein Konto
+  hat ein Auszugsformat; eine Datei mit anderer Kopfzeile wird nie still
+  falsch gelesen, sondern führt zum Formatwechsel mit Bestätigung. Ohne neue
+  Abhängigkeit; eine weitere Datenbank-Migration läuft beim Start von selbst.
+- **Finanzen einrichten:** Wer nur „Finanzen einrichten“ darf, sieht jetzt
+  auch die Konten (samt IBAN), Kategorien, Zwecke und Geschäftsjahre, die er
+  pflegt. Sperren festgeschriebene Buchungen das Verwerfen eines Auszugs,
+  führt der Dialog direkt zu jeder dieser Buchungen.
 - **Neue Dokumentart „Zählprotokoll“** (Präfix `KZP`) hält das Ergebnis jeder
   Kassenzählung fest. Trägt eine eigene Dokumentart Ihres Vereins das Präfix
   `KZP` bereits, meldet der Start einen Fehler — benennen Sie das Präfix

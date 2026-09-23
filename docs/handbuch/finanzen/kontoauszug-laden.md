@@ -12,6 +12,10 @@ unter „Kontoauszug (XML)“ oder ähnlich benannt). Wo die Datei im
 Online-Banking zu finden ist, steht auf der Seite [Auszug bei der Bank
 holen](auszug-bei-der-bank-holen.md).
 
+Liefert Ihre Bank oder Ihr Zahlungsdienst nur CSV, richten Sie einmal ein
+[CSV-Format](csv-format-einrichten.md) ein; danach lädt man CSV-Auszüge
+genauso wie CAMT.
+
 Ein Konto trägt genau **ein** Auszugsformat. Beim ersten Laden setzt Kompass
 es automatisch; ein späterer Wechsel verlangt eine ausdrückliche
 Bestätigung, weil danach mehr Zweifelsfälle auftreten können.
