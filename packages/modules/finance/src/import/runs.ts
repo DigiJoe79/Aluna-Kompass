@@ -159,7 +159,7 @@ export async function importStatement(deps: Deps, ctx: CallContext, input: unkno
   try {
     return deps.db.transaction((tx: DbOrTx) => {
       // NULL -> erste Wahl; 'csv' -> die Bestätigung liegt schon vor (sonst kämen wir nicht hierher) — E1: ein aktives Format je Konto.
-      const workingAccount: FinanceAccountRow = account.importFormat !== 'camt053' ? setImportFormatInternal(tx, deps, ctx, account, 'camt053') : account;
+      const workingAccount: FinanceAccountRow = account.importFormat !== 'camt053' ? setImportFormatInternal(tx, deps, ctx, account, 'camt053', null) : account;
 
       const ordered = [...statements].sort((a, b) => a.from.localeCompare(b.from));
       const runs: ImportRunView[] = [];

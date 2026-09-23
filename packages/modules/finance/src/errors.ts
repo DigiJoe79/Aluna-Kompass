@@ -73,6 +73,8 @@ export const FINANCE_ERRORS = {
   statementUnreadable: { reason: 'Der Auszug lässt sich nicht lesen{location}.', remedy: 'Prüfen Sie die Datei, oder laden Sie den Auszug erneut aus dem Online-Banking herunter.' },
   statementIbanMismatch: { reason: 'Die IBAN im Auszug passt nicht zum Konto {account}.', remedy: 'Wählen Sie das passende Konto, oder tragen Sie die richtige IBAN am Konto ein.' },
   statementFormatChange: { reason: 'Für {account} war bisher ein anderes Auszugsformat hinterlegt; nach dem Wechsel gibt es mehr Zweifelsfälle.', remedy: 'Bestätigen Sie den Wechsel, wenn Sie ihn wirklich wollen.' },
+  // F4b — ein CSV-Format entsteht nur über den Assistenten (bzw. `saveImportProfile`), nie als bloßes Feld am Konto.
+  accountCsvNeedsFormat: { reason: 'Ein Konto liest CSV erst, wenn sein CSV-Format eingerichtet ist.', remedy: 'Richten Sie das CSV-Format unter „Hochgeladene Auszüge“ mit dem Assistenten ein.' },
   statementAlreadyImported: { reason: 'Dieser Auszug wurde für das Konto {account} bereits geladen.', remedy: 'Nichts zu tun — oder verwerfen Sie den vorhandenen Auszug zuerst, wenn er falsch war.' },
   // F4 Task 4 — Kandidaten entscheiden, Rohumsatz an der Geldzeile.
   rawTransactionMismatch: { reason: 'Der gewählte Kontoumsatz passt nicht zu Konto, Vorzeichen oder Betrag dieser Zeile.', remedy: 'Wählen Sie den passenden Kontoumsatz, oder lösen Sie die Verknüpfung.' },

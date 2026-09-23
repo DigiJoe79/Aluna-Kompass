@@ -51,6 +51,7 @@ export async function createAccount(deps: Deps, ctx: CallContext, input: unknown
   if (denied) return denied;
   const parsed = validate(deps, accountCreateSchema, input);
   if (!parsed.ok) return parsed;
+  if (parsed.value.importFormat === 'csv') return financeConflict('accountCsvNeedsFormat');
   const v = parsed.value;
   if (v.isMain && v.kind !== 'bank') return financeConflict('mainAccountMustBeBank');
 
@@ -58,7 +59,7 @@ export async function createAccount(deps: Deps, ctx: CallContext, input: unknown
     const id = newId();
     const now = isoNow(deps.clock);
     if (v.isMain) tx.update(financeAccounts).set({ isMain: false, updatedAt: now }).where(eq(financeAccounts.isMain, true)).run();
-    const row = { id, name: v.name, kind: v.kind, iban: v.iban ? normalizeIban(v.iban) : null, bic: v.bic || null, bankName: v.bankName || null, openingBalanceCents: v.openingBalanceCents ?? null, openingDate: v.openingDate ?? null, importFormat: v.importFormat ?? null, isMain: v.isMain, isActive: true, createdAt: now, updatedAt: now };
+    const row = { id, name: v.name, kind: v.kind, iban: v.iban ? normalizeIban(v.iban) : null, bic: v.bic || null, bankName: v.bankName || null, openingBalanceCents: v.openingBalanceCents ?? null, openingDate: v.openingDate ?? null, importFormat: v.importFormat ?? null, importProfileId: null, isMain: v.isMain, isActive: true, createdAt: now, updatedAt: now };
     tx.insert(financeAccounts).values(row).run();
     if (row.isMain) publishMainAccount(tx, deps, ctx, row);
     financeAudit(tx, deps, ctx, { action: 'finance.account.create', entity: 'financeAccount', id, after: row, summary: `Geldkonto ${id} angelegt` });
@@ -76,6 +77,7 @@ export async function updateAccount(deps: Deps, ctx: CallContext, input: unknown
   if (!before) return notFound('financeAccount', id);
   const stale = staleVersion(expectedVersion, before.updatedAt);
   if (stale) return stale;
+  if (changes.importFormat === 'csv' && before.importFormat !== 'csv') return financeConflict('accountCsvNeedsFormat');
 
   // Die Regeln gelten für das Ergebnis, nicht für die Änderung: erst mischen, dann prüfen.
   const merged = { ...before, ...Object.fromEntries(Object.entries(changes).filter(([, val]) => val !== undefined)) };
@@ -87,7 +89,8 @@ export async function updateAccount(deps: Deps, ctx: CallContext, input: unknown
   return deps.db.transaction((tx: DbOrTx) => {
     const now = isoNow(deps.clock);
     if (merged.isMain && !before.isMain) tx.update(financeAccounts).set({ isMain: false, updatedAt: now }).where(eq(financeAccounts.isMain, true)).run();
-    const after = { ...merged, iban: merged.iban ? normalizeIban(merged.iban) : null, updatedAt: now };
+    // F4b: Ohne CSV kein CSV-Format — beides in einer Anweisung (Trigger `finance_accounts_profile_matches_format_update`).
+    const after = { ...merged, iban: merged.iban ? normalizeIban(merged.iban) : null, importProfileId: merged.importFormat === 'csv' ? before.importProfileId : null, updatedAt: now };
     tx.update(financeAccounts).set(after).where(eq(financeAccounts.id, id)).run();
     if (after.isMain) publishMainAccount(tx, deps, ctx, after);
     // `bankDetailsChanged` statt `ibanChanged`: der Verbotstest von audit.ts greift auf jede Zeichenfolge mit „iban“.
@@ -139,12 +142,14 @@ export async function deleteAccount(deps: Deps, ctx: CallContext, input: unknown
  * laufenden Transaktion** (der Import selbst) — der einzige Weg, der dabei
  * auch protokolliert, statt am Audit von `updateAccount` vorbei roh zu
  * schreiben. Reine Feldänderung, keine eigenen Prüfungen: Der Aufrufer hat
- * das Konto schon geladen und geprüft.
+ * das Konto schon geladen und geprüft. F4b: `profileId` gehört zu `csv`, sonst `null`.
  */
-export function setImportFormatInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, account: FinanceAccountRow, format: 'camt053' | 'csv'): FinanceAccountRow {
+export function setImportFormatInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, account: FinanceAccountRow, format: 'camt053' | 'csv', profileId: string | null): FinanceAccountRow {
   const now = isoNow(deps.clock);
-  tx.update(financeAccounts).set({ importFormat: format, updatedAt: now }).where(eq(financeAccounts.id, account.id)).run();
-  const after = { ...account, importFormat: format, updatedAt: now };
+  // Format und CSV-Format in **einer** Anweisung: Der Trigger prüft jede Anweisung einzeln (F4b).
+  const importProfileId = format === 'csv' ? profileId : null;
+  tx.update(financeAccounts).set({ importFormat: format, importProfileId, updatedAt: now }).where(eq(financeAccounts.id, account.id)).run();
+  const after = { ...account, importFormat: format, importProfileId, updatedAt: now };
   financeAudit(tx, deps, ctx, { action: 'finance.account.update', entity: 'financeAccount', id: account.id, before: account, after, summary: `Geldkonto ${account.id} geändert` });
   return after;
 }

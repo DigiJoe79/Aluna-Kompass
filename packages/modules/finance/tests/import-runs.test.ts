@@ -1,3 +1,5 @@
+import { csvFormatSchema, headerSignature } from '../src/import/csv';
+import { saveImportProfile } from '../src/import/profiles';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { unwrap } from '@kompass/core';
@@ -47,13 +49,19 @@ describe('importStatement', () => {
     unwrap(await importStatement(f.deps, f.ctx, { accountId: f.account.id, fileName: 'a.xml', bytes: bytes('einfach-001-02.xml') }));
     expect((f.deps.db.select().from(financeAccounts).where(eq(financeAccounts.id, f.account.id)).get()!).importFormat).toBe('camt053');
 
-    const csvAccount = unwrap(await createAccount(f.deps, f.ctx, { name: 'Zweitkonto', kind: 'bank', iban: VEREIN_IBAN, importFormat: 'csv' }));
+    // F4b: CSV entsteht nur über ein gespeichertes Format, nie als bloßes Feld.
+    const csvAccount = unwrap(await createAccount(f.deps, f.ctx, { name: 'Zweitkonto', kind: 'bank', iban: VEREIN_IBAN }));
+    unwrap(await saveImportProfile(f.deps, f.ctx, { accountId: csvAccount.id, name: 'Zweitkonto CSV', format: csvFormatSchema.parse({
+      encoding: 'utf-8', delimiter: ';', headerRow: 0, headerSignature: headerSignature(['Datum', 'Betrag', 'Name']), dateFormat: 'DD.MM.YYYY', decimalSeparator: ',',
+      columns: { bookingDate: 'Datum', valueDate: null, amount: 'Betrag', debit: null, credit: null, debitCreditIndicator: null, counterpartyName: 'Name', counterpartyIban: null, purpose: null, reference: null, fee: null, balance: null, currency: null, pending: null },
+      invertSign: false,
+    }) }));
     const refused = await importStatement(f.deps, f.ctx, { accountId: csvAccount.id, fileName: 'b.xml', bytes: bytes('folgeauszug.xml') });
     expect(code(refused)).toBe('statementFormatChange');
 
     const confirmed = await importStatement(f.deps, f.ctx, { accountId: csvAccount.id, fileName: 'b.xml', bytes: bytes('folgeauszug.xml'), confirmFormatChange: true });
     expect(code(confirmed)).toBe('ok');
-    expect((f.deps.db.select().from(financeAccounts).where(eq(financeAccounts.id, csvAccount.id)).get()!).importFormat).toBe('camt053');
+    expect(f.deps.db.select().from(financeAccounts).where(eq(financeAccounts.id, csvAccount.id)).get()!).toMatchObject({ importFormat: 'camt053', importProfileId: null });
   });
 
   it('refuses a statement whose iban is not the account’s, and an account without iban, each naming the remedy', async () => {

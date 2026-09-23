@@ -50,6 +50,7 @@ describe('database', () => {
       'finance_entry_justifications',
       'finance_fiscal_years',
       'finance_import_candidates',
+      'finance_import_profiles',
       'finance_import_runs',
       'finance_money_lines',
       'finance_open_item_settlements',

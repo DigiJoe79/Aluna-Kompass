@@ -134,6 +134,13 @@
       "when": 1790013137799,
       "tag": "0018_finance_import",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1790191664760,
+      "tag": "0019_finance_import_profiles",
+      "breakpoints": true
     }
   ]
 }

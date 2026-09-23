@@ -75,6 +75,7 @@ describe('finance module', () => {
       financeAccount: true, financeCategory: true, financePurpose: true, financeDatedValue: true, financeFiscalYear: false, financePeriodEvent: false,
       financeEntryDraft: true, financeEntry: false, financeOpenItem: false, financeAllocationCorrection: false, financeEntryDocument: false, financeEntryJustification: false,
       financeProjectSettings: true, financeYearPersonalData: true, financeImportPersonalData: true, financeCashCount: false,
+      financeImportProfile: false,
     });
   });
 

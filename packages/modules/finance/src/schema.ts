@@ -17,6 +17,12 @@ export const financeAccounts = sqliteTable(
     openingBalanceCents: integer('opening_balance_cents'),
     openingDate: text('opening_date'),
     importFormat: text('import_format', { enum: ['camt053', 'csv'] }),
+    /**
+     * Das eine aktive CSV-Format des Kontos (F4b). Ohne Fremdschlüssel wie
+     * `raw_transaction_id`: Ein Fremdschlüssel ließe drizzle-kit die Tabelle
+     * neu anlegen. Die Invariante „csv ⇔ Format gesetzt“ sichern Trigger.
+     */
+    importProfileId: text('import_profile_id'),
     isMain: integer('is_main', { mode: 'boolean' }).notNull().default(false),
     isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
     createdAt: text('created_at').notNull(),
@@ -367,6 +373,25 @@ export const financeCashCounts = sqliteTable(
 export type FinanceCashCountRow = typeof financeCashCounts.$inferSelect;
 
 /**
+ * Ein CSV-Format (F4b; Spec 6.2 „Profil“) — unveränderlich: Eine Änderung ist
+ * ein neues Format, das Konto zeigt dann auf das neue, alte Läufe behalten
+ * ihres. Trigger `finance_import_profiles_no_update` und
+ * `…_no_delete_used` (von Hand angefügt).
+ */
+export const financeImportProfiles = sqliteTable('finance_import_profiles', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  /** `CsvFormat` als JSON, beim Schreiben mit `csvFormatSchema` geprüft. */
+  format: text('format').notNull(),
+  headerSignature: text('header_signature').notNull(),
+  builtinKey: text('builtin_key'),
+  createdAt: text('created_at').notNull(),
+  createdByUserId: text('created_by_user_id').notNull(),
+  createdChannel: text('created_channel').notNull(),
+});
+export type FinanceImportProfileRow = typeof financeImportProfiles.$inferSelect;
+
+/**
  * Ein CAMT.053-Lauf ist eine geschriebene Tatsache (Spec 6.1) — ganz oder
  * gar nicht importiert, nie halb. Zähler und Abschlussfelder sind änderbar,
  * bis `finishedAt`/`failedAt` gesetzt ist; danach nur `discardedAt`/
@@ -379,7 +404,11 @@ export const financeImportRuns = sqliteTable(
   {
     id: text('id').primaryKey(),
     accountId: text('account_id').notNull().references(() => financeAccounts.id),
-    format: text('format', { enum: ['camt053'] }).notNull(),
+    format: text('format', { enum: ['camt053', 'csv'] }).notNull(),
+    /** F4b: mit welchem CSV-Format gelesen — Verlauf, auch wenn das Konto später wechselt. */
+    profileId: text('profile_id'),
+    /** Name des Formats beim Lesen (Schnappschuss). */
+    profileName: text('profile_name'),
     fileName: text('file_name').notNull(),
     fileSha256: text('file_sha256').notNull(),
     /** Modulspeicher-Schlüssel der Originaldatei — `NULL` nach dem Verwerfen. */

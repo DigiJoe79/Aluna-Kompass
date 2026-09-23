@@ -1,6 +1,6 @@
 import { recordAudit, type CallContext, type DbOrTx, type Deps } from '@kompass/core';
 
-export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument' | 'financeOpenItem' | 'financeAllocationCorrection' | 'financeEntryJustification' | 'financeProjectSettings' | 'financeCashCount' | 'financeSetup' | 'financeImportRun' | 'financeRawTransaction' | 'financeImportCandidate';
+export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument' | 'financeOpenItem' | 'financeAllocationCorrection' | 'financeEntryJustification' | 'financeProjectSettings' | 'financeCashCount' | 'financeSetup' | 'financeImportRun' | 'financeRawTransaction' | 'financeImportCandidate' | 'financeImportProfile';
 
 /**
  * Was vom Finanzmodul ins Änderungsprotokoll darf — je Entität eine Liste, und
@@ -17,7 +17,7 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   // `bankDetailsChanged` statt `ibanChanged`: Der Verbotstest dieser Datei
   // greift auf jede Zeichenfolge, die „iban“ enthält — auch als Teilstring
   // eines Flags, das selbst keine IBAN trägt.
-  financeAccount: ['kind', 'isMain', 'isActive', 'importFormat', 'openingBalanceCents', 'openingDate', 'bankDetailsChanged'],
+  financeAccount: ['kind', 'isMain', 'isActive', 'importFormat', 'importProfileId', 'openingBalanceCents', 'openingDate', 'bankDetailsChanged'],
   financeCategory: ['key', 'direction', 'sphere', 'incomeKind', 'costFunction', 'allowanceKind', 'statementSuffices', 'defaultTaxCode', 'inputTaxDeductible', 'countsTowardTurnover', 'isAssetSale', 'isActive'],
   financePurpose: ['projectId', 'targetCents', 'abroad', 'carryForwardCents', 'fulfilledAt', 'dissolvedAt', 'isActive'],
   financeFiscalYear: ['startsOn', 'endsOn', 'designation', 'taxReturnFiledOn'],
@@ -42,9 +42,11 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   financeSetup: ['step', 'confirmedAt', 'applied', 'key', 'cents'],
   // F4 Task 2 — kein Dienst protokolliert hier schon (kommt mit Task 3/5); nur
   // IDs, Zähler und Daten, nie Gegenpartei, IBAN, Verwendungszweck oder Dateiname (Spec 10.3, E-Global-Constraint).
-  financeImportRun: ['accountId', 'format', 'periodFrom', 'periodTo', 'openingCents', 'closingCents', 'countNew', 'countKnown', 'countHeld', 'countPendingSkipped', 'gapFrom', 'gapTo', 'failureCode', 'failureLine', 'discarded', 'fileKeyCleared'],
+  financeImportRun: ['accountId', 'format', 'profileId', 'periodFrom', 'periodTo', 'openingCents', 'closingCents', 'countNew', 'countKnown', 'countHeld', 'countPendingSkipped', 'gapFrom', 'gapTo', 'failureCode', 'failureLine', 'discarded', 'fileKeyCleared'],
   financeRawTransaction: ['runId', 'accountId', 'bookingDate', 'valueDate', 'amountCents', 'lineIndex'],
   financeImportCandidate: ['runId', 'accountId', 'decision', 'matchesRawTransactionId', 'rawTransactionId'],
+  // F4b — nie Spaltennamen (Kopfzeilen können Namen tragen), nie der frei getippte Formatname; die Kopfzeile nur als Prüfsumme.
+  financeImportProfile: ['accountId', 'encoding', 'delimiter', 'headerChecksum', 'switched', 'builtinKey'],
 };
 
 const pick = (entity: FinanceEntity, data?: Record<string, unknown>) => (data ? Object.fromEntries(Object.entries(data).filter(([field]) => AUDIT_FIELDS[entity].includes(field))) : undefined);

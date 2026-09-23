@@ -186,3 +186,4 @@ export { decideCandidate, listCandidates, type CandidateView } from './import/ca
 export { listRawTransactions, rawStateInternal, rawTransactionViewInternal, rawTransactionsForRunInternal, type RawTransactionView } from './import/queries';
 export { discardRun, previewDiscardRun, type DiscardBlockingEntry, type DiscardPreview } from './import/discard';
 export { getAccountStatements, type AccountStatementView } from './import/accounts';
+export { activeProfileInternal, listImportProfiles, profileFormatInternal, saveImportProfile, type ImportProfileView } from './import/profiles';

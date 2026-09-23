@@ -97,6 +97,7 @@ export const financeModule: ModuleManifest = defineModule({
     { entity: 'financeCategory', deletable: true, reason: 'Arbeitsmaterial der Stammdaten.', guard: 'nur unbenutzt; sonst stilllegen', auditAction: 'finance.category.delete' },
     { entity: 'financePurpose', deletable: true, reason: 'Arbeitsmaterial der Stammdaten.', guard: 'nur unbenutzt; sonst stilllegen', auditAction: 'finance.purpose.delete' },
     { entity: 'financeDatedValue', deletable: true, reason: 'Nur die eigene Überschreibung; die ausgelieferte Reihe ist Code.', guard: 'nur die Überschreibung des Vereins', auditAction: 'finance.datedValue.remove' },
+    { entity: 'financeImportProfile', deletable: false, reason: 'Läufe zeigen darauf; ein CSV-Format ist unveränderlich, eine Änderung ist ein neues Format.' },
     { entity: 'financeFiscalYear', deletable: false, reason: 'Geschäftsjahre und ihre Abschlüsse sind die Gliederung der Rechenschaft. Personenbezogene Inhalte eines Jahres werden nach Ablauf der Frist anonymisiert, nicht gelöscht.' },
     { entity: 'financePeriodEvent', deletable: false, reason: 'Geschäftsjahre und ihre Abschlüsse sind die Gliederung der Rechenschaft. Personenbezogene Inhalte eines Jahres werden nach Ablauf der Frist anonymisiert, nicht gelöscht.' },
     { entity: 'financeEntryDraft', deletable: true, reason: 'Arbeitsmaterial ohne Nummer — erst das Festschreiben macht eine Buchung rechenschaftsrelevant.', guard: 'nur solange status = draft', auditAction: 'finance.entry.draftDelete' },

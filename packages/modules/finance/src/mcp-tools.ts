@@ -5,6 +5,7 @@ import { discardRun, previewDiscardRun } from './import/discard';
 import { getImportRun, importStatement, listImportRuns } from './import/runs';
 import { listRawTransactions } from './import/queries';
 import { getAccountStatements } from './import/accounts';
+import { listImportProfiles, saveImportProfile } from './import/profiles';
 import { closePurpose, deleteMasterData, readMasterData, saveMasterData, setMasterDataActive } from './ledger/master-data';
 import { decideAllocationCorrection, listAllocationCorrections, requestAllocationCorrection } from './ledger/corrections';
 import { countCash, emptyDonationBox, listCashCounts, moveCash } from './ledger/cash';
@@ -163,6 +164,9 @@ const setFinanceSwitchMcpSchema = z.object({ key: z.enum(['finance.isEntrepreneu
 const setFinanceLimitMcpSchema = z.object({ key: z.enum(['finance.statementSufficesBelowCents', 'finance.cashDonationAlertCents', 'finance.roundAmountFromCents']), cents: z.number().int().min(0) });
 
 const importStatementMcpSchema = z.object({ accountId: z.string(), fileName: z.string(), contentBase64: z.string().min(1), confirmFormatChange: z.boolean().optional() });
+// F4b: `format` ist ein CsvFormat-Objekt; der Dienst prüft es mit `csvFormatSchema` (Feldfehler kommen von dort).
+const saveImportProfileMcpSchema = z.object({ accountId: z.string(), name: z.string(), format: z.record(z.string(), z.unknown()), builtinKey: z.string().nullable().optional(), confirmFormatChange: z.boolean().optional() });
+const listImportProfilesMcpSchema = z.object({});
 const listImportRunsMcpSchema = z.object({ accountId: z.string().optional(), limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() });
 const getImportRunMcpSchema = z.object({ id: z.string() });
 const listCandidatesMcpSchema = z.object({ runId: z.string().optional(), open: z.boolean().optional() });
@@ -339,6 +343,8 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
     },
     service: importStatement,
   }),
+  t({ name: 'finance_import_profile_save', description: 'Save a new CSV import format for a bank or payment-service account and make it the only active format of that account. Formats are immutable; saving again creates a new one. Switching from camt053, or to a format with a different header, needs confirmFormatChange (more doubtful duplicates afterwards). The format names header columns for date, amount (or debit/credit), counterparty, purpose, and optionally value date, iban, reference, fee, balance, currency and pending status. Requires finance.setup.', inputSchema: saveImportProfileMcpSchema, handler: (deps, ctx, args) => saveImportProfile(deps, ctx, args), service: saveImportProfile }),
+  t({ name: 'finance_import_profiles_list', description: 'List the saved CSV import formats with the accounts each is active for and the number of runs read with it. Requires finance.setup or finance.read.', inputSchema: listImportProfilesMcpSchema, handler: (deps, ctx) => listImportProfiles(deps, ctx, {}), service: listImportProfiles }),
   t({ name: 'finance_import_runs_list', description: 'List import runs (statement uploads), optionally filtered by account, newest first. Counterparty, iban and purpose never appear here - only counts and balances. Requires finance.read.', inputSchema: listImportRunsMcpSchema, handler: (deps, ctx, args) => listImportRuns(deps, ctx, args), service: listImportRuns }),
   t({ name: 'finance_import_run_get', description: 'Read one import run with its raw transactions (counterparty, iban, purpose included). Requires finance.read.', inputSchema: getImportRunMcpSchema, handler: (deps, ctx, args) => getImportRun(deps, ctx, args), service: getImportRun }),
   t({ name: 'finance_import_candidates_list', description: 'List import candidates - statement lines whose duplicate match is only probable, shown next to the existing raw transaction they might match. Requires finance.read.', inputSchema: listCandidatesMcpSchema, handler: (deps, ctx, args) => listCandidates(deps, ctx, args), service: listCandidates }),

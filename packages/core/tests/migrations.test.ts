@@ -81,6 +81,18 @@ describe('hand-written SQL survives', () => {
   it('lets an import candidate be decided only once', () => {
     expect(allSql, 'finance_import_candidates_decide_once').toContain('CREATE TRIGGER finance_import_candidates_decide_once ');
   });
+
+  it('keeps a CSV format immutable, an account consistent with its format, and the format of a run fixed (F4b)', () => {
+    for (const name of [
+      'finance_import_profiles_no_update',
+      'finance_import_profiles_no_delete_used',
+      'finance_accounts_profile_matches_format_insert',
+      'finance_accounts_profile_matches_format_update',
+      'finance_import_runs_profile_immutable',
+    ]) {
+      expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
+    }
+  });
 });
 
 describe('the migrations of this version', () => {
