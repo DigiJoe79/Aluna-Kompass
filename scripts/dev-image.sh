@@ -19,6 +19,9 @@ name="${KOMPASS_DEV_CONTAINER:-kompass-dev}"
 # stehende Umgebung soll davon nicht verdraengt werden und umgekehrt.
 port="${KOMPASS_DEV_PORT:-3300}"
 image="${KOMPASS_DEV_IMAGE:-kompass-local}"
+# Schlüssel für `seed`: Die Reset-Route antwortet nur mit APP_ENV=test und
+# genau diesem Wert im Kopf `x-e2e-token`.
+token="${KOMPASS_DEV_RESET_TOKEN:-lokal-seed}"
 root="$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
 
 case "${1:-up}" in
@@ -30,8 +33,11 @@ case "${1:-up}" in
     # Benannte Volumes statt eines Wirtsverzeichnisses: Unter Linux behielte ein
     # eingehängtes Verzeichnis seinen Besitzer, und der Container läuft als
     # `node`. Docker legt benannte Volumes mit den Rechten aus dem Image an.
-    docker run -d --name "$name" -p "$port:3000" \
+    # Nur auf localhost: Hier liegt mitunter ein eingespieltes Prod-Backup.
+    # Wer den Container im LAN zeigen will, startet ihn selbst.
+    docker run -d --name "$name" -p "127.0.0.1:$port:3000" \
       -e APP_ENV=test \
+      -e E2E_RESET_TOKEN="$token" \
       -e SESSION_SECRET="${KOMPASS_DEV_SECRET:-lokale-testumgebung-kein-echtes-geheimnis-01}" \
       -e SITE_PUBLIC_URL="http://localhost:$port" \
       -e SITE_STAGING=1 \
@@ -55,7 +61,7 @@ case "${1:-up}" in
       exit 1
     fi
     echo "Läuft: http://localhost:$port  (Protokoll: docker logs -f $name)"
-    echo "Beenden: pnpm dev:image down   ·   Daten verwerfen: pnpm dev:image reset"
+    echo "Beenden: pnpm dev:image down   ·   Daten verwerfen: pnpm dev:image reset   ·   Seed-Daten: pnpm dev:image seed"
     ;;
   down)
     docker rm -f "$name" >/dev/null 2>&1 || true
@@ -66,8 +72,15 @@ case "${1:-up}" in
     docker volume rm "${name}-data" "${name}-media" >/dev/null 2>&1 || true
     echo 'Container und Daten verworfen. Der naechste Start beginnt wieder bei der Erstinbetriebnahme.'
     ;;
+  seed)
+    # Verwirft ALLE Daten im Container (auch ein eingespieltes Backup) und
+    # füllt ihn mit den Entwicklungsdaten — derselbe Weg wie die E2E-Tests.
+    # Braucht einen Container, den dieses Skript gestartet hat (Token).
+    curl -fsS -X POST -H "x-e2e-token: $token" "http://127.0.0.1:$port/__e2e/reset?mode=seeded" >/dev/null
+    echo "Seed-Daten eingespielt: http://localhost:$port  (admin@kompass.local)"
+    ;;
   *)
-    echo "Aufruf: pnpm dev:image [up|down|reset]" >&2
+    echo "Aufruf: pnpm dev:image [up|down|reset|seed]" >&2
     exit 1
     ;;
 esac
