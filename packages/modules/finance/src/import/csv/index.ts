@@ -6,3 +6,5 @@ export { decodeCsv, type CsvEncoding } from './decode';
 export { tokenizeCsv } from './tokenize';
 export { csvFormatSchema, headerSignature, normalizeHeaderCell, type CsvFormat } from './format';
 export { parseCsvAmount, parseCsvDate, readCsv, type CsvErrorCode, type CsvLine, type CsvReadResult, type CsvStatement } from './read';
+export { BUILTIN_FORMATS, type BuiltinFormatKey } from './builtin';
+export { completeFormat, guessCsvFormat, type CsvGuess } from './guess';
