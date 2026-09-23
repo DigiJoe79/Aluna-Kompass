@@ -163,7 +163,7 @@ const confirmSetupStepMcpSchema = z.object({ step: z.enum(['categories', 'tax'])
 const setFinanceSwitchMcpSchema = z.object({ key: z.enum(['finance.isEntrepreneurOrHasVatId', 'finance.membershipFeesCertifiable', 'finance.expenseWaiversEnabled', 'finance.mcpHumanOnlyAllowed']), value: z.boolean() });
 const setFinanceLimitMcpSchema = z.object({ key: z.enum(['finance.statementSufficesBelowCents', 'finance.cashDonationAlertCents', 'finance.roundAmountFromCents']), cents: z.number().int().min(0) });
 
-const importStatementMcpSchema = z.object({ accountId: z.string(), fileName: z.string(), contentBase64: z.string().min(1), confirmFormatChange: z.boolean().optional() });
+const importStatementMcpSchema = z.object({ accountId: z.string(), fileName: z.string(), contentBase64: z.string().min(1), confirmFormatChange: z.boolean().optional(), closingBalanceCents: z.number().int().optional() });
 // F4b: `format` ist ein CsvFormat-Objekt; der Dienst prüft es mit `csvFormatSchema` (Feldfehler kommen von dort).
 const saveImportProfileMcpSchema = z.object({ accountId: z.string(), name: z.string(), format: z.record(z.string(), z.unknown()), builtinKey: z.string().nullable().optional(), confirmFormatChange: z.boolean().optional() });
 const listImportProfilesMcpSchema = z.object({});
@@ -334,7 +334,7 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
   t({ name: 'finance_setup_limit', description: 'Set one of the three setup limits, as whole cents: below which a bank statement suffices as proof, from which a cash donation is flagged, and from which an amount is round-number-suspicious. Requires finance.setup.', inputSchema: setFinanceLimitMcpSchema, handler: (deps, ctx, args) => setFinanceLimit(deps, ctx, args), service: setFinanceLimit }),
   t({
     name: 'finance_import_statement',
-    description: 'Import a CAMT.053 bank statement (base64, at most finance.uploadLimitMb) for a bank or payment-service account: one run per Stmt in the file, all or nothing. Sets the account import format to camt053 on first use; a change from csv needs confirmFormatChange. Refuses a mismatched IBAN, an already-imported file, or a cash account. An unreadable file is recorded as a failed run and answered with statementUnreadable. Not human only - an agent may import, never finalize. Requires finance.entriesWrite.',
+    description: 'Import a bank statement (base64, at most finance.uploadLimitMb) for a bank or payment-service account, all or nothing. CAMT.053 (a file starting with "<"): one run per Stmt, sets the account format to camt053 on first use, a change from csv needs confirmFormatChange, refuses a mismatched IBAN. CSV (anything else): read with the one CSV format of the account (set it up first with finance_import_profile_save, else statementNeedsCsvFormat); a file with another header is refused as statementCsvFormatMismatch without a run; closingBalanceCents answers "balance at the bank" for a CSV without a balance column. Refuses an already-imported file or a cash account. An unreadable file is recorded as a failed run and answered with statementUnreadable naming the line. Not human only - an agent may import, never finalize. Requires finance.entriesWrite.',
     inputSchema: importStatementMcpSchema,
     handler: (deps, ctx, { contentBase64, ...rest }) => {
       const bytes = decodeBase64(contentBase64);

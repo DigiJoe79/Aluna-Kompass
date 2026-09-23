@@ -2858,7 +2858,14 @@
             "currencyNotEur": "Der Auszug lautet nicht auf Euro.",
             "noIban": "Im Auszug fehlt die IBAN.",
             "noBalances": "Im Auszug fehlen die Salden.",
-            "sumMismatch": "Die Summe der Zeilen und Salden stimmt nicht."
+            "sumMismatch": "Die Summe der Zeilen und Salden stimmt nicht.",
+            "csvEmpty": "Die Datei enthält keine Umsätze.",
+            "csvHeaderMismatch": "Die Kopfzeile passt nicht zum CSV-Format des Kontos.",
+            "csvRowShape": "Eine Zeile hat nicht so viele Spalten wie die Kopfzeile.",
+            "csvDate": "Ein Datum passt nicht zum CSV-Format.",
+            "csvAmount": "Ein Betrag lässt sich nicht lesen.",
+            "csvCurrency": "Eine Zeile ist nicht in Euro — Kompass führt nur Euro-Konten.",
+            "csvBalanceMismatch": "Die Salden passen nicht zu den Beträgen — vermutlich stimmt das Vorzeichen oder eine Spaltenzuordnung nicht."
           }
         },
         "gap": "Es fehlen Umsätze zwischen {from} und {to}.",
