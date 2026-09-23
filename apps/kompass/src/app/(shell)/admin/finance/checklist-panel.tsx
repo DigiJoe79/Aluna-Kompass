@@ -24,8 +24,8 @@ const STEP_HREF: Record<ChecklistStep['key'], string> = {
   roles: '/admin/roles',
   categories: '/admin/finance?panel=categories',
   tax: '/admin/finance?panel=tax',
-  // F4 Task 6: das Auszugsformat setzt sich am Konto selbst — beim ersten Import automatisch, hier nur als Einstieg.
-  importFormat: '/admin/finance?panel=accounts',
+  // F4b: der Assistent — sein erster Schritt rät zu CAMT, das sich beim ersten Import von selbst setzt.
+  importFormat: '/finance/imports/format',
 };
 
 /** H1 — Einstieg: erledigte Zeilen bleiben stehen, blockierte nennen ihre Abhängigkeit. */
@@ -61,7 +61,7 @@ export function ChecklistPanel({ steps, complete }: { steps: ChecklistStep[]; co
   const items: RequirementListItem[] = steps.map((step) => {
     const canSelf = step.canSelf;
     const blockedText = step.blocked ? t(`blocked.${step.key}`) : undefined;
-    const detail = step.key === 'account' && typeof step.detail.accounts === 'number' ? t('detail.account', { accounts: step.detail.accounts, withoutOpening: step.detail.withoutOpening ?? 0 }) : step.key === 'roles' && step.detail.rolesWithoutUser ? t('detail.rolesWithoutUser', { names: step.detail.rolesWithoutUser }) : step.key === 'roles' && step.detail.usersWithoutContact ? t('detail.usersWithoutContact', { count: step.detail.usersWithoutContact }) : undefined;
+    const detail = step.key === 'account' && typeof step.detail.accounts === 'number' ? t('detail.account', { accounts: step.detail.accounts, withoutOpening: step.detail.withoutOpening ?? 0 }) : step.key === 'roles' && step.detail.rolesWithoutUser ? t('detail.rolesWithoutUser', { names: step.detail.rolesWithoutUser }) : step.key === 'roles' && step.detail.usersWithoutContact ? t('detail.usersWithoutContact', { count: step.detail.usersWithoutContact }) : step.key === 'importFormat' && typeof step.detail.missing === 'number' && step.detail.missing > 0 ? t('detail.importFormat', { missing: step.detail.missing }) : undefined;
 
     const extra =
       step.key === 'tax' && !step.done && canSelf ? (

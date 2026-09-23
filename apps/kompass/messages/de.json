@@ -2363,7 +2363,10 @@
       "cashTransferFirst": "„Bargeld abgehoben“ zuerst buchen",
       "chooseOtherAccount": "Anderes Konto wählen",
       "goToExistingRun": "Zum vorhandenen Lauf",
-      "confirmFormatChange": "Format wechseln"
+      "confirmFormatChange": "Format wechseln",
+      "setUpCsvFormat": "CSV-Format einrichten",
+      "fetchUsualFormat": "Datei im gewohnten Format holen",
+      "newCsvFormat": "Neues CSV-Format einrichten"
     },
     "state": {
       "draft": "Entwurf",
@@ -2825,7 +2828,7 @@
       },
       "upload": {
         "accountLabel": "Konto",
-        "dragOrPick": "Kontoauszug hierher ziehen (CAMT, auch mehrere)",
+        "dragOrPick": "Kontoauszug hierher ziehen (CAMT oder CSV, auch mehrere)",
         "dropHere": "Datei hier ablegen",
         "result": "{new} neu, {known} bereits vorhanden, {held} zurückgehalten",
         "formatChangeDialog": {
@@ -2879,7 +2882,8 @@
         },
         "discard": "Verwerfen",
         "formatCamt": "CAMT.053",
-        "formatCsv": "CSV"
+        "formatCsv": "CSV",
+        "noBalance": "ohne Kontostand"
       },
       "discard": {
         "title": "Auszug verwerfen",
@@ -3032,7 +3036,7 @@
           "roles": "Wer welche Rolle trägt",
           "categories": "Kategorien durchsehen",
           "tax": "Steuerliches bestätigen",
-          "importFormat": "Auszugsformat je Bankkonto (optional bis zum ersten Auszug)"
+          "importFormat": "Auszugsformat je Bank- und Zahlungsdienstkonto (optional bis zum ersten Auszug)"
         },
         "open": "Erledigen",
         "done": "Erledigt",
@@ -3043,7 +3047,8 @@
         "detail": {
           "account": "{accounts} Konten, {withoutOpening} ohne Anfangsbestand",
           "rolesWithoutUser": "ohne aktiven Träger: {names}",
-          "usersWithoutContact": "{count} Nutzer ohne verknüpften Kontakt"
+          "usersWithoutContact": "{count} Nutzer ohne verknüpften Kontakt",
+          "importFormat": "{missing, plural, one {# Konto} other {# Konten}} ohne Auszugsformat — nehmen Sie CAMT, wenn die Bank es anbietet, sonst richten Sie das CSV-Format ein."
         },
         "canDo": "kann {names} erledigen",
         "applyTaxDefaults": "Vorgaben übernehmen",

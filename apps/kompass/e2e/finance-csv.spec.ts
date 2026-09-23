@@ -153,4 +153,63 @@ test.describe('finance csv', () => {
     await expect(page.getByText(/Anna Berger/)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Trotzdem CSV einrichten' })).toHaveCount(0);
   });
+
+  test('die Ablagefläche nimmt CAMT oder CSV an, ohne Format-Wähler', async ({ page }) => {
+    await page.goto('/finance/imports');
+    await expect(page.getByText('Kontoauszug hierher ziehen (CAMT oder CSV, auch mehrere)')).toBeVisible();
+    await expect(page.getByTestId('statement-file-input')).toHaveAttribute('accept', /\.csv/);
+    await expect(page.getByLabel(/Format/)).toHaveCount(0);
+  });
+
+  test('eine CSV auf ein Konto ohne CSV-Format führt über „CSV-Format einrichten“ in den Assistenten für dieses Konto', async ({ page }) => {
+    await createBankAccount(page, 'Hausbank CSV-Test', 'DE66999999990000303030');
+    await page.goto('/finance/imports');
+    await page.getByLabel('Konto', { exact: true }).selectOption({ label: 'Hausbank CSV-Test' });
+    await page.getByTestId('statement-file-input').setInputFiles(csvFile());
+    await expect(page.getByText('Für Hausbank CSV-Test ist noch kein CSV-Format eingerichtet.')).toBeVisible();
+    await page.getByRole('button', { name: 'CSV-Format einrichten' }).click();
+    await expect(page).toHaveURL(/\/finance\/imports\/format\?account=/);
+    await expect(page.getByLabel('Konto', { exact: true })).toHaveValue(new URL(page.url()).searchParams.get('account')!);
+    await expect(page.getByLabel('Konto', { exact: true }).locator('option:checked')).toHaveText('Hausbank CSV-Test');
+  });
+
+  test('eine CSV mit fremder Kopfzeile bietet die gewohnte Datei oder ein neues Format an und legt keinen Lauf an', async ({ page }) => {
+    await page.goto('/finance/imports');
+    await page.getByLabel('Konto', { exact: true }).selectOption({ label: 'Spendenplattform' });
+    const before = await page.getByTestId('import-run').count();
+    await page.getByTestId('statement-file-input').setInputFiles(csvFile());
+    await expect(page.getByText(/passt nicht zum CSV-Format von Spendenplattform \(Spendenplattform CSV\)/)).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Datei im gewohnten Format holen' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Neues CSV-Format einrichten' })).toBeVisible();
+    await expect(page.getByTestId('import-run')).toHaveCount(before);
+  });
+
+  test('ein CSV-Auszug ohne Saldospalte lädt ohne Rückfrage und steht als „ohne Kontostand“ in der Liste', async ({ page }) => {
+    const noBalance = ['Buchungstag;Empfänger;Verwendungszweck;Betrag', '02.03.2026;Erika Beispiel;Spende März;50,00', '05.03.2026;Druckerei Muster;Flyer;-20,00'].join('\n');
+    await createBankAccount(page, 'Hausbank CSV-Test', 'DE66999999990000303030');
+    await startAssistant(page, 'Hausbank CSV-Test', csvFile(noBalance, 'ohne-saldo.csv'));
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    await page.getByRole('button', { name: 'Nein, Geld kam herein' }).click();
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    await page.getByRole('button', { name: 'Nur speichern' }).click();
+    await expect(page).toHaveURL(/\/finance\/imports$/);
+
+    await page.getByLabel('Konto', { exact: true }).selectOption({ label: 'Hausbank CSV-Test' });
+    await page.getByTestId('statement-file-input').setInputFiles(csvFile(noBalance, 'ohne-saldo.csv'));
+    await expect(page.getByText(/ohne-saldo\.csv: 2 neu, 0 bereits vorhanden, 0 zurückgehalten/)).toBeVisible();
+    const run = page.getByTestId('import-run').filter({ hasText: 'Hausbank CSV-Test' });
+    await expect(run).toContainText('ohne Kontostand');
+  });
+
+  test('die Checkliste nennt Konten ohne Auszugsformat und führt in den Assistenten', async ({ page }) => {
+    await createBankAccount(page, 'Hausbank CSV-Test', 'DE66999999990000303030');
+    await page.goto('/admin/finance?panel=checklist');
+    const step = page.getByTestId('requirement-importFormat');
+    await expect(step).toHaveAttribute('data-done', 'false');
+    await expect(step).toContainText('1 Konto ohne Auszugsformat');
+    await step.getByRole('link').click();
+    await expect(page).toHaveURL(/\/finance\/imports\/format$/);
+    await expect(page.getByRole('heading', { name: 'Bietet Ihre Bank CAMT.053 an? Dann nehmen Sie das.' })).toBeVisible();
+  });
 });

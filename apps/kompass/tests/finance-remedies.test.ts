@@ -19,4 +19,12 @@ describe('remediesFor', () => {
     expect(remediesFor('statementAlreadyImported')).toEqual([{ kind: 'link', href: '/finance/imports#runs', labelKey: 'finance.remedy.goToExistingRun' }]);
     expect(remediesFor('statementFormatChange')).toEqual([{ kind: 'action', action: 'confirmFormatChange', labelKey: 'finance.remedy.confirmFormatChange' }]);
   });
+
+  it('offers the CSV assistant when an account has no CSV format, and the usual file or a new format when the header does not match (F4b)', () => {
+    expect(remediesFor('statementNeedsCsvFormat')).toEqual([{ kind: 'action', action: 'openCsvAssistant', labelKey: 'finance.remedy.setUpCsvFormat' }]);
+    expect(remediesFor('statementCsvFormatMismatch')).toEqual([
+      { kind: 'link', href: '/help/finanzen/auszug-bei-der-bank-holen', labelKey: 'finance.remedy.fetchUsualFormat' },
+      { kind: 'action', action: 'openCsvAssistant', labelKey: 'finance.remedy.newCsvFormat' },
+    ]);
+  });
 });

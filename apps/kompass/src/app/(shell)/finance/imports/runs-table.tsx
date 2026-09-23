@@ -88,6 +88,7 @@ export function RunsTable({ runs, canDiscard }: { runs: RunRow[]; canDiscard: bo
               <span className="text-ink-2">{run.periodFrom && run.periodTo ? t('period', { from: run.periodFrom, to: run.periodTo }) : '—'}</span>
               <span data-testid="import-run-format" className="text-muted-ink">{run.format === 'csv' ? (run.formatName ?? t('formatCsv')) : t('formatCamt')}</span>
               <span className="font-mono tabular-nums text-ink-2">
+                {run.state === 'finished' && run.openingCents === null && run.closingCents === null ? t('noBalance') : null}
                 {run.openingCents !== null ? t('opening', { amount: formatEuro(run.openingCents) }) : ''} {run.closingCents !== null ? t('closing', { amount: formatEuro(run.closingCents) }) : ''}
               </span>
               <span className="text-ink-2">{t('counts', { new: run.counts.new, known: run.counts.known, held: run.counts.held })}</span>

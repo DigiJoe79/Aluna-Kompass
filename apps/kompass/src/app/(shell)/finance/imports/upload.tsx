@@ -128,7 +128,7 @@ export function ImportUpload({ accounts, defaultAccountId }: { accounts: ImportA
           ref={inputRef}
           data-testid="statement-file-input"
           type="file"
-          accept=".xml,text/xml,application/xml"
+          accept=".xml,text/xml,application/xml,.csv,text/csv,.txt,text/plain"
           multiple
           className="hidden"
           disabled={busy}
@@ -158,6 +158,7 @@ export function ImportUpload({ accounts, defaultAccountId }: { accounts: ImportA
                       onSelect: () => {
                         if (remedy.action === 'focusAccount') accountRef.current?.focus();
                         else if (remedy.action === 'confirmFormatChange') setFormatChangeTarget(r);
+                        else if (remedy.action === 'openCsvAssistant') router.push(`/finance/imports/format?account=${encodeURIComponent(accountId)}`);
                       },
                     }
                   : { href: remedy.href }),

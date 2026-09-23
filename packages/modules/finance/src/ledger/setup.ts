@@ -84,9 +84,10 @@ function accountStepDetail(db: DbOrTx): { accounts: number; withoutOpening: numb
  * nichts, was ein Format bräuchte). „Optional bis zum ersten Auszug“: Ein
  * Verein kann Finanzen ohne CAMT-Import führen.
  */
-function importFormatStepDone(db: DbOrTx): boolean {
-  const rows = db.select({ importFormat: financeAccounts.importFormat }).from(financeAccounts).where(and(eq(financeAccounts.isActive, true), eq(financeAccounts.kind, 'bank'))).all();
-  return rows.every((r) => r.importFormat !== null);
+function accountsWithoutImportFormat(db: DbOrTx): number {
+  // F4b: auch Zahlungsdienst-Konten brauchen ein Format — sie liefern meist CSV.
+  const rows = db.select({ kind: financeAccounts.kind, importFormat: financeAccounts.importFormat }).from(financeAccounts).where(eq(financeAccounts.isActive, true)).all();
+  return rows.filter((r) => (r.kind === 'bank' || r.kind === 'paymentService') && r.importFormat === null).length;
 }
 
 /** Aktive Nutzer, die irgendein Finanzrecht tragen — geschützte Rollen eingeschlossen (Vorarbeiten-Spec VP4). */
@@ -132,6 +133,7 @@ export async function getSetupStatus(deps: Deps, ctx: CallContext): Promise<Resu
 
   const fiscalYearDone = hasAnyFiscalYear(deps.db);
   const account = accountStepDetail(deps.db);
+  const missingImportFormats = accountsWithoutImportFormat(deps.db);
   const accountDone = account.accounts - account.withoutOpening > 0;
   const roles = rolesStepDetail(deps);
   const categoriesConfirmedAt = readSetting<string | null>(deps, 'finance.setupCategoriesConfirmedAt');
@@ -173,10 +175,10 @@ export async function getSetupStatus(deps: Deps, ctx: CallContext): Promise<Resu
     {
       key: 'importFormat',
       required: false,
-      done: importFormatStepDone(deps.db),
+      done: missingImportFormats === 0,
       dependsOn: 'account',
       blocked: !accountDone,
-      detail: {},
+      detail: { missing: missingImportFormats },
       permission: 'finance.setup',
       canDo: listUserNamesWithPermission(deps, 'finance.setup'),
     },

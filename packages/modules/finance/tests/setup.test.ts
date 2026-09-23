@@ -1,3 +1,5 @@
+import { csvFormatSchema, headerSignature } from '../src/import/csv';
+import { saveImportProfile } from '../src/import/profiles';
 import { roleIdByOrigin, schema, unwrap, readSetting } from '@kompass/core';
 import { auditEntry, ctxWith, insertRole, insertUser, systemContext } from '@kompass/core/testing';
 import { createContact, linkUserToContact } from '@kompass/module-contacts';
@@ -31,6 +33,25 @@ describe('finance setup status', () => {
     expect(importFormat.dependsOn).toBe('account');
     expect(importFormat.blocked).toBe(true);
     for (const step of status.steps.filter((s) => s.key !== 'importFormat')) expect(step.required, step.key).toBe(true);
+  });
+
+  it('the import format step counts bank and payment-service accounts and names how many lack a format (F4b)', async () => {
+    const { deps, ctx } = setupFinance();
+    unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-01-01', endsOn: '2026-12-31' }));
+    unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true, importFormat: 'camt053' }));
+    const service = unwrap(await createAccount(deps, ctx, { name: 'Zahlungsdienst', kind: 'paymentService' }));
+    const open = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'importFormat')!;
+    expect(open.done).toBe(false);
+    expect(open.detail).toEqual({ missing: 1 });
+
+    unwrap(await saveImportProfile(deps, ctx, { accountId: service.id, name: 'Zahlungsdienst CSV', format: csvFormatSchema.parse({
+      encoding: 'utf-8', delimiter: ',', headerRow: 0, headerSignature: headerSignature(['Datum', 'Brutto', 'Name']), dateFormat: 'DD.MM.YYYY', decimalSeparator: ',',
+      columns: { bookingDate: 'Datum', valueDate: null, amount: 'Brutto', debit: null, credit: null, debitCreditIndicator: null, counterpartyName: 'Name', counterpartyIban: null, purpose: null, reference: null, fee: null, balance: null, currency: null, pending: null },
+      invertSign: false,
+    }) }));
+    const done = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'importFormat')!;
+    expect(done.done).toBe(true);
+    expect(done.detail).toEqual({ missing: 0 });
   });
 
   it('counts an account only with an opening balance', async () => {

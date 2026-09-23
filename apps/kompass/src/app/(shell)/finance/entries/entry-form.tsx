@@ -21,7 +21,7 @@ import { Select } from '@/components/ui/select';
 import type { ActionState } from '@/lib/actions';
 import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
 import { applyTemplate, remainderCents, restInto, toServiceInput, type EntryFormState, type EntryTemplate, type MoneyRow } from '@/lib/finance/entry-form';
-import { remediesFor } from '@/lib/finance/remedies';
+import { remediesFor, type RemedyAction } from '@/lib/finance/remedies';
 import { matchesDirection, suggestSettlementCents } from '@/lib/finance/settlement';
 import { splitEvenly } from '@/lib/finance/split';
 import { attachDocumentAction, finalizeAction, saveDraftAction, saveReviewedAction, uploadVoucherAction } from './actions';
@@ -201,7 +201,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
 
   // Diese Maske kennt nur ihre eigenen zwei Ausweg-Aktionen — `focusAccount`/`confirmFormatChange`
   // gehören zum Import (F4 Task 7) und laufen dort über ihre eigene Seite, nie hier.
-  const applyRemedy = (action: 'restIntoLastRow' | 'focusDate' | 'focusAccount' | 'confirmFormatChange') => {
+  const applyRemedy = (action: RemedyAction) => {
     if (action === 'focusDate') {
       dateRef.current?.focus();
       return;
