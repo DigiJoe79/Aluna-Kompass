@@ -22,6 +22,7 @@ const nextConfig: NextConfig = {
     '@kompass/module-contacts',
     '@kompass/module-dms',
     '@kompass/module-finance',
+    '@kompass/module-projects',
     '@kompass/markdown',
     '@kompass/text-extraction',
   ],
