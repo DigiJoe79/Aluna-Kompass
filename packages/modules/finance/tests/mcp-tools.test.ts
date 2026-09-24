@@ -73,6 +73,7 @@ describe('finance MCP tools', () => {
       'finance_foreign_money_list', 'finance_import_rule_save', 'finance_import_rules_list', 'finance_import_rule_delete', 'finance_import_rule_preview',
       'finance_contact_iban_link', 'finance_contact_iban_unlink', 'finance_contact_ibans_list', 'finance_contact_create_from_transaction',
       'finance_batch_finalize_preview', 'finance_voucher_search', 'finance_voucher_upload_to_transaction', 'finance_vouchers_without_entry',
+      'finance_raw_transaction_get',
     ];
     const tool = (name: string) => FINANCE_MCP_TOOLS.find((t) => t.name === name)!;
     for (const name of names) expect(FINANCE_MCP_TOOLS.some((t) => t.name === name), name).toBe(true);

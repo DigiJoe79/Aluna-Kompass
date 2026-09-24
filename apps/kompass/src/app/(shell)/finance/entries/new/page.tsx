@@ -1,6 +1,6 @@
 import { hasPermission, readSetting } from '@kompass/core';
 import type { LocalizedText } from '@kompass/core';
-import { getBalances, listCategories, listOpenItems, listPurposes, listRawTransactions, suggestForTransaction, TAX_CODES, type RawTransactionView } from '@kompass/module-finance';
+import { getBalances, getRawTransaction, listCategories, listOpenItems, listPurposes, suggestForTransaction, TAX_CODES } from '@kompass/module-finance';
 import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
@@ -56,7 +56,9 @@ export default async function NewFinanceEntryPage({ searchParams }: { searchPara
 
   // `?raw=` — „Ändern“ aus der Arbeitsliste (F5 Task 7): Konto, Betrag, Richtung und Bindung aus dem
   // Kontoumsatz, Text und Aufteilung aus seinem Vorschlag. `?back=work` führt nach dem Speichern zurück.
-  const raw = query.raw ? await openRawTransaction(deps, ctx, query.raw) : null;
+  const rawRes = query.raw ? await getRawTransaction(deps, ctx, { id: query.raw }) : null;
+  // Ein gebundener oder unbekannter Kontoumsatz belegt nichts vor.
+  const raw = rawRes?.ok && rawRes.value.state === 'open' ? rawRes.value : null;
   if (raw) {
     const suggestion = await suggestForTransaction(deps, ctx, { rawTransactionId: raw.id });
     initial = formFromTransaction(raw, suggestion.ok ? suggestion.value.draft : null);
@@ -82,15 +84,4 @@ export default async function NewFinanceEntryPage({ searchParams }: { searchPara
       />
     </>
   );
-}
-
-/** Der offene Kontoumsatz zu `?raw=` — ein gebundener oder unbekannter belegt nichts vor. */
-async function openRawTransaction(deps: Parameters<typeof listRawTransactions>[0], ctx: Parameters<typeof listRawTransactions>[1], id: string): Promise<RawTransactionView | null> {
-  for (let offset = 0; ; offset += 200) {
-    const page = await listRawTransactions(deps, ctx, { state: 'open', limit: 200, offset });
-    if (!page.ok) return null;
-    const found = page.value.items.find((r) => r.id === id);
-    if (found) return found;
-    if (offset + 200 >= page.value.total) return null;
-  }
 }

@@ -5,7 +5,7 @@ import { ctxWith, systemContext } from '@kompass/core/testing';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { importStatement } from '../src/import/runs';
-import { listRawTransactions, rawStateInternal } from '../src/import/queries';
+import { getRawTransaction, listRawTransactions, rawStateInternal } from '../src/import/queries';
 import { createAccount } from '../src/ledger/accounts';
 import { saveDraft } from '../src/ledger/entries';
 import { bookEntry } from '../src/ledger/finalize';
@@ -126,5 +126,19 @@ describe('listRawTransactions', () => {
     expect(booked.items.map((i) => i.id)).toEqual([f.donationRaw.id]);
     const open = unwrap(await listRawTransactions(f.deps, f.ctx, { state: 'open' }));
     expect(open.total).toBe(2);
+  });
+});
+
+describe('getRawTransaction', () => {
+  it('reads one raw transaction with its state, requiring finance.read; an unknown id is notFound', async () => {
+    const f = await rawFixture();
+    const denied = await getRawTransaction(f.deps, ctxWith(['finance.overview']), { id: f.donationRaw.id });
+    expect(denied.ok ? null : denied.error).toEqual({ type: 'forbidden', permission: 'finance.read' });
+    expect(code(await getRawTransaction(f.deps, f.ctx, {}))).toBe('validation');
+    expect(code(await getRawTransaction(f.deps, f.ctx, { id: 'unknown' }))).toBe('notFound');
+
+    expect(unwrap(await getRawTransaction(f.deps, f.ctx, { id: f.donationRaw.id }))).toMatchObject({ id: f.donationRaw.id, counterpartyName: 'Erika Beispiel', amountCents: 20000, state: 'open', entryId: null });
+    const entry = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-06', text: 'Spende', moneyLines: [{ accountId: f.account.id, amountCents: 20000, rawTransactionId: f.donationRaw.id }], allocationLines: [{ categoryId: f.donations.id, amountCents: 20000 }] }));
+    expect(unwrap(await getRawTransaction(f.deps, f.ctx, { id: f.donationRaw.id }))).toMatchObject({ state: 'booked', entryId: entry.id, entryStatus: 'draft' });
   });
 });

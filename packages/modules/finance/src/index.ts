@@ -187,7 +187,7 @@ export { buildCamt053, buildCamt053Bytes, type CamtFixtureInput, type CamtFixtur
 export { dedupKey, normalizePurpose } from './import/dedup';
 export { getImportRun, importRunRowInternal, importStatement, listImportRuns, toRunView, type ImportRunView } from './import/runs';
 export { decideCandidate, listCandidates, type CandidateView } from './import/candidates';
-export { listRawTransactions, rawStateInternal, rawTransactionViewInternal, rawTransactionsForRunInternal, type RawTransactionView } from './import/queries';
+export { getRawTransaction, listRawTransactions, rawStateInternal, rawTransactionViewInternal, rawTransactionsForRunInternal, type RawTransactionView } from './import/queries';
 export { discardRun, previewDiscardRun, type DiscardBlockingEntry, type DiscardPreview } from './import/discard';
 export { getAccountStatements, type AccountStatementView } from './import/accounts';
 export { activeProfileInternal, listImportProfiles, profileFormatInternal, saveImportProfile, type ImportProfileView } from './import/profiles';

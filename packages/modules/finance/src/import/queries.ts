@@ -1,4 +1,4 @@
-import { ok, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { notFound, ok, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { and, desc, eq, gte, isNotNull, isNull, lte, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { requireFinanceRead } from '../ledger/access';
@@ -107,6 +107,19 @@ export async function listRawTransactions(deps: Deps, ctx: CallContext, input: u
   const total = views.length;
   const items = views.slice(v.offset, v.offset + v.limit);
   return ok({ items, total });
+}
+
+const getRawTransactionSchema = z.object({ id: z.string().min(1) });
+
+/** Ein Kontoumsatz mit seinem Zustand — `finance.read` wie die Liste (Spec 10.1). */
+export async function getRawTransaction(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<RawTransactionView>> {
+  const denied = requireFinanceRead(ctx, 'read');
+  if (denied) return denied;
+  const parsed = validate(deps, getRawTransactionSchema, input);
+  if (!parsed.ok) return parsed;
+  const row = deps.db.select().from(financeRawTransactions).where(eq(financeRawTransactions.id, parsed.value.id)).get();
+  if (!row) return notFound('financeRawTransaction', parsed.value.id);
+  return ok(rawTransactionViewInternal(deps.db, row));
 }
 
 /**
