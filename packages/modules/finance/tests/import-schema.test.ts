@@ -1,9 +1,9 @@
 import { newId, unwrap } from '@kompass/core';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { createAccount } from '../src/ledger/accounts';
 import { createCategory } from '../src/ledger/categories';
-import { financeAllocationLines, financeEntries, financeImportCandidates, financeImportRuns, financeMoneyLines, financeRawTransactions } from '../src/schema';
+import { financeAllocationLines, financeContactBankAccounts, financeEntries, financeImportCandidates, financeImportRules, financeImportRuns, financeMoneyLines, financeRawTransactions } from '../src/schema';
 import { setupFinance } from './helpers';
 
 /**
@@ -174,5 +174,64 @@ describe('finance_import_candidates', () => {
 
     deps.db.update(financeImportCandidates).set({ decision: 'same', decidedAt: '2026-03-06T00:00:00.000Z', decidedByUserId: 'U1' }).where(eq(financeImportCandidates.id, candidateId)).run();
     expect(() => deps.db.update(financeImportCandidates).set({ decision: 'own' }).where(eq(financeImportCandidates.id, candidateId)).run()).toThrow(/permanent|immutable|once/);
+  });
+});
+
+/**
+ * F5 Task 1 — Regeln und Kontakt-IBANs sind Arbeitsmaterial: änderbar und
+ * löschbar, aber eine Regel ohne jede Bedingung träfe jeden Umsatz. Das
+ * sichert ein von Hand angefügter Trigger, nicht nur der Dienst.
+ */
+describe('finance_import_rules and finance_contact_bank_accounts', () => {
+  const columns = (deps: Awaited<ReturnType<typeof fixtures>>['deps'], table: string) =>
+    deps.db.all<{ name: string }>(sql.raw(`select name from pragma_table_info('${table}') order by cid`)).map((r) => r.name);
+  const indexes = (deps: Awaited<ReturnType<typeof fixtures>>['deps'], table: string) =>
+    deps.db.all<{ name: string; unique: number }>(sql.raw(`select name, "unique" from pragma_index_list('${table}') where origin = 'c' order by name`));
+  const foreignTables = (deps: Awaited<ReturnType<typeof fixtures>>['deps'], table: string) =>
+    deps.db.all<{ table: string }>(sql.raw(`select "table" from pragma_foreign_key_list('${table}')`)).map((r) => r.table).sort();
+
+  it('has the rules and contact bank account tables with their indexes', async () => {
+    const { deps } = await fixtures();
+    expect(columns(deps, 'finance_import_rules')).toEqual([
+      'id', 'name', 'sort_order', 'is_active',
+      'account_id', 'direction', 'counterparty_iban', 'text_contains', 'amount_min_cents', 'amount_max_cents',
+      'category_id', 'project_id', 'purpose_id', 'contact_id', 'tax_code', 'entry_text',
+      'created_at', 'created_by_user_id', 'updated_at',
+    ]);
+    expect(columns(deps, 'finance_contact_bank_accounts')).toEqual(['id', 'contact_id', 'iban', 'created_at', 'created_by_user_id']);
+    expect(indexes(deps, 'finance_contact_bank_accounts')).toEqual([
+      { name: 'finance_contact_bank_accounts_iban_idx', unique: 0 },
+      { name: 'finance_contact_bank_accounts_pair_idx', unique: 1 },
+    ]);
+    expect(indexes(deps, 'finance_import_rules')).toEqual([{ name: 'finance_import_rules_order_idx', unique: 0 }]);
+    // Nie auf Kontoumsätze oder Kontakte (F4b-Lehre; Kontakte gehören einem anderen Modul); nur Kategorie und Zweck.
+    expect(foreignTables(deps, 'finance_import_rules')).toEqual(['finance_categories', 'finance_purposes']);
+    expect(foreignTables(deps, 'finance_contact_bank_accounts')).toEqual([]);
+
+    const now = '2026-03-01T09:00:00.000Z';
+    deps.db.insert(financeContactBankAccounts).values({ id: newId(), contactId: 'C1', iban: 'DE66999999991234567890', createdAt: now, createdByUserId: 'U1' }).run();
+    expect(() => deps.db.insert(financeContactBankAccounts).values({ id: newId(), contactId: 'C1', iban: 'DE66999999991234567890', createdAt: now, createdByUserId: 'U1' }).run()).toThrow(/UNIQUE/);
+    deps.db.insert(financeContactBankAccounts).values({ id: newId(), contactId: 'C2', iban: 'DE66999999991234567890', createdAt: now, createdByUserId: 'U1' }).run();
+    deps.db.delete(financeContactBankAccounts).where(eq(financeContactBankAccounts.contactId, 'C2')).run();
+  });
+
+  it('refuses a rule without any condition on insert and on update (trigger)', async () => {
+    const { deps, accountId, categoryId } = await fixtures();
+    const now = '2026-03-01T09:00:00.000Z';
+    const bare = { name: 'Alles', categoryId, createdAt: now, createdByUserId: 'U1', updatedAt: now };
+    expect(() => deps.db.insert(financeImportRules).values({ id: newId(), ...bare }).run()).toThrow(/at least one condition/);
+
+    // Jede Bedingung reicht für sich allein.
+    for (const condition of [{ accountId }, { direction: 'in' as const }, { counterpartyIban: 'DE66999999991234567890' }, { textContains: 'bueromaterial' }, { amountMinCents: 100 }, { amountMaxCents: 900 }]) {
+      deps.db.insert(financeImportRules).values({ id: newId(), ...bare, ...condition }).run();
+    }
+
+    const id = newId();
+    deps.db.insert(financeImportRules).values({ id, ...bare, textContains: 'spende', amountMinCents: 100 }).run();
+    deps.db.update(financeImportRules).set({ textContains: null }).where(eq(financeImportRules.id, id)).run();
+    expect(() => deps.db.update(financeImportRules).set({ amountMinCents: null }).where(eq(financeImportRules.id, id)).run()).toThrow(/at least one condition/);
+    // Arbeitsmaterial: änderbar und löschbar.
+    deps.db.update(financeImportRules).set({ name: 'Spenden', isActive: false }).where(eq(financeImportRules.id, id)).run();
+    deps.db.delete(financeImportRules).where(eq(financeImportRules.id, id)).run();
   });
 });

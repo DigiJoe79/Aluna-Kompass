@@ -30,6 +30,11 @@ describe('finance settings', () => {
       'finance.statementSufficesBelowCents',
       'finance.uploadLimitMb',
       'finance.voucherTypes',
+      // F5 — Vorschläge der Arbeitsliste.
+      'finance.pairMatchDays',
+      'finance.pairFeeToleranceCents',
+      'finance.matchEntryDays',
+      'finance.cashKeywords',
     ].sort());
     expect(financeModule.settings!.find((s) => s.key === 'finance.mcpHumanOnlyAllowed')).toMatchObject({ default: false, uiOnly: true });
   });

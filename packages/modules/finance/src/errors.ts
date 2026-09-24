@@ -86,6 +86,16 @@ export const FINANCE_ERRORS = {
   // F4 Task 5 — Auszug verwerfen.
   statementNotDiscardable: { reason: 'Dieser hochgeladene Auszug lässt sich nicht verwerfen.', remedy: 'Nur ein fertig geladener, noch nicht verworfener Auszug lässt sich verwerfen.' },
   statementDiscardBlocked: { reason: 'Für diesen hochgeladenen Auszug gibt es noch festgeschriebene Buchungen.', remedy: 'Nehmen Sie die Buchungen zurück, dann lässt sich der Auszug verwerfen.' },
+  // F5 — Arbeitsliste, Regeln, Kontakt über IBAN.
+  ruleNeedsCondition: { reason: 'Eine Regel braucht mindestens eine Bedingung.', remedy: 'Wählen Sie Konto, Richtung, IBAN, einen Textteil oder einen Betragsbereich — sonst träfe die Regel jeden Kontoumsatz.' },
+  ruleCategoryInactive: { reason: 'Die Regel „{name}“ bucht auf eine stillgelegte Kategorie.', remedy: 'Aktivieren Sie die Kategorie unter „Finanzen einrichten“, oder ändern Sie die Regel.' },
+  suggestionStale: { reason: 'Der Kontoumsatz ist inzwischen zugeordnet.', remedy: 'Laden Sie die Liste neu — der Vorschlag gilt nicht mehr.' },
+  transactionAlreadyBooked: { reason: 'Dieser Kontoumsatz gehört schon zu einer Buchung.', remedy: 'Öffnen Sie die Buchung, oder nehmen Sie sie zurück, wenn sie falsch ist.' },
+  entryLineNotBindable: { reason: 'Diese Buchung hat keine passende Zeile auf diesem Konto ohne Kontoumsatz.', remedy: 'Wählen Sie eine Buchung mit demselben Konto und Betrag, oder buchen Sie den Kontoumsatz neu.' },
+  foreignNeedsHolder: { reason: 'Sagen Sie, für wen das Geld ist.', remedy: 'Tragen Sie ein, wem das Geld gehört — der Satz steht im Buchungstext.' },
+  contactIbanTaken: { reason: 'Diese IBAN gehört bereits zum Kontakt {contact}.', remedy: 'Lösen Sie zuerst die vorhandene Zuordnung, wenn die IBAN jetzt jemand anderem gehört.' },
+  voucherSearchNeedsRead: { reason: 'Die Suche nach Belegen braucht das Recht, Finanzen mit Namen zu lesen.', remedy: 'Bitten Sie eine Person mit dem Recht „Finanzen lesen“, den Beleg zuzuordnen.' },
+  batchNothingReviewed: { reason: 'Es gibt keine geprüften Entwürfe zum Festschreiben.', remedy: 'Prüfen Sie zuerst Entwürfe in der Arbeitsliste, dann lassen sie sich gemeinsam festschreiben.' },
 } as const satisfies Record<string, { reason: string; remedy: string }>;
 
 export type FinanceErrorCode = keyof typeof FINANCE_ERRORS;

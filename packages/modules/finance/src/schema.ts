@@ -509,3 +509,59 @@ export const financeProjectSettings = sqliteTable('finance_project_settings', {
   updatedAt: text('updated_at').notNull(),
 });
 export type FinanceProjectSettingsRow = typeof financeProjectSettings.$inferSelect;
+
+/**
+ * Eine Regel für Kontoumsätze (F5, Spec 6.4 Vorschlag 4): Bedingungen →
+ * Ergebnis. Arbeitsmaterial — änderbar und löschbar; sie wirkt nur nach vorn.
+ * Mindestens eine Bedingung ist gesetzt (Trigger
+ * `finance_import_rules_needs_condition_insert`/`…_update`, von Hand
+ * angefügt). Kein Fremdschlüssel auf Konto, Kontakt oder Projekt: Ein
+ * Fremdschlüssel aufs Konto hielte ein unbenutztes Konto fest, Kontakte und
+ * Projekte gehören anderen Modulen. Name und Textbedingung sind Freitext und
+ * stehen nie im Änderungsprotokoll.
+ */
+export const financeImportRules = sqliteTable(
+  'finance_import_rules',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    sortOrder: integer('sort_order').notNull().default(0),
+    isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+    // Bedingungen — alle optional, mindestens eine.
+    accountId: text('account_id'),
+    direction: text('direction', { enum: ['in', 'out'] }),
+    counterpartyIban: text('counterparty_iban'),
+    textContains: text('text_contains'),
+    amountMinCents: integer('amount_min_cents'),
+    amountMaxCents: integer('amount_max_cents'),
+    // Ergebnis.
+    categoryId: text('category_id').notNull().references(() => financeCategories.id),
+    projectId: text('project_id'),
+    purposeId: text('purpose_id').references(() => financePurposes.id),
+    contactId: text('contact_id'),
+    taxCode: text('tax_code'),
+    entryText: text('entry_text'),
+    createdAt: text('created_at').notNull(),
+    createdByUserId: text('created_by_user_id').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [index('finance_import_rules_order_idx').on(t.sortOrder)],
+);
+export type FinanceImportRuleRow = typeof financeImportRules.$inferSelect;
+
+/**
+ * Kontakt ↔ IBAN (F5): gelernt aus Handlungen, nie rückwirkend. Arbeitsmaterial,
+ * löschbar. Kein Fremdschlüssel: Kontakte gehören einem anderen Modul.
+ */
+export const financeContactBankAccounts = sqliteTable(
+  'finance_contact_bank_accounts',
+  {
+    id: text('id').primaryKey(),
+    contactId: text('contact_id').notNull(),
+    iban: text('iban').notNull(),
+    createdAt: text('created_at').notNull(),
+    createdByUserId: text('created_by_user_id').notNull(),
+  },
+  (t) => [uniqueIndex('finance_contact_bank_accounts_pair_idx').on(t.contactId, t.iban), index('finance_contact_bank_accounts_iban_idx').on(t.iban)],
+);
+export type FinanceContactBankAccountRow = typeof financeContactBankAccounts.$inferSelect;

@@ -93,6 +93,12 @@ describe('hand-written SQL survives', () => {
       expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
     }
   });
+
+  it('refuses an import rule without any condition, on insert and on update (F5)', () => {
+    for (const name of ['finance_import_rules_needs_condition_insert', 'finance_import_rules_needs_condition_update']) {
+      expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
+    }
+  });
 });
 
 describe('the migrations of this version', () => {

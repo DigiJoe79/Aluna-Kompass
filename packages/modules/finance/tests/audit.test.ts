@@ -18,6 +18,24 @@ describe('financeAudit', () => {
     expect(entry).toMatchObject({ action: 'finance.account.create', entityType: 'financeAccount', entityId: 'A1' });
   });
 
+  it('never lets a rule name, text condition, iban or contact id into the audit log', () => {
+    const { deps, ctx } = setupFinance();
+    const rule = {
+      name: 'Bürobedarf Erika Beispiel', textContains: 'bueromaterial', counterpartyIban: 'DE66999999991234567890', contactId: 'CONTACT-1', entryText: 'Büromaterial',
+      accountId: 'A1', direction: 'out', categoryId: 'CAT1', projectId: null, purposeId: null, taxCode: 'none', isActive: true, sortOrder: 2,
+      hasBankDetailsCondition: true, hasWordCondition: true, hasAmountCondition: false, partySet: true,
+    };
+    deps.db.transaction((tx) => financeAudit(tx, deps, ctx, { action: 'finance.importRule.save', entity: 'financeImportRule', id: 'R1', after: rule, summary: 'Regel R1 gespeichert' }));
+    deps.db.transaction((tx) => financeAudit(tx, deps, ctx, { action: 'finance.contactIban.link', entity: 'financeContactBankAccount', id: 'CB1', after: { contactId: 'CONTACT-1', iban: 'DE66999999991234567890', learnedFrom: 'manual' }, summary: 'Zuordnung CB1 angelegt' }));
+    const [ruleEntry, ibanEntry] = deps.db.select().from(schema.auditLog).all().slice(-2);
+    expect(JSON.parse(ruleEntry!.after as string)).toEqual({
+      accountId: 'A1', direction: 'out', categoryId: 'CAT1', projectId: null, purposeId: null, taxCode: 'none', isActive: true, sortOrder: 2,
+      hasBankDetailsCondition: true, hasWordCondition: true, hasAmountCondition: false, partySet: true,
+    });
+    expect(JSON.parse(ibanEntry!.after as string)).toEqual({ learnedFrom: 'manual' });
+    expect(JSON.stringify([ruleEntry, ibanEntry])).not.toMatch(/Erika|Büro|bueromaterial|DE66|CONTACT-1/);
+  });
+
   it('never lists a field that could carry a person, free text or a bank detail', () => {
     const forbidden = /name|label|title|description|note|text|reason|iban|bic|holder|purposeLine|contact|subject|email/i;
     const offenders = Object.entries(AUDIT_FIELDS).flatMap(([entity, fields]) => fields.filter((f) => forbidden.test(f)).map((f) => `${entity}.${f}`));

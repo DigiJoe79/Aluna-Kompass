@@ -18,6 +18,17 @@ describe('finance errors', () => {
     expect(financeConflict('cashWouldGoNegative', { account: 'K1', date: '2026-03-04', amount: '-12,50 €' })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'cashWouldGoNegative', message: expect.stringMatching(/2026-03-04.*-12,50 €.*\. .+/) } });
   });
 
+  it('knows the errors of the work list, rules and contact ibans (F5)', () => {
+    for (const code of ['ruleNeedsCondition', 'ruleCategoryInactive', 'suggestionStale', 'transactionAlreadyBooked', 'entryLineNotBindable', 'foreignNeedsHolder', 'contactIbanTaken', 'voucherSearchNeedsRead', 'batchNothingReviewed']) {
+      expect(Object.keys(FINANCE_ERRORS), code).toContain(code);
+    }
+    expect(financeConflict('ruleCategoryInactive', { name: 'Büromaterial' })).toMatchObject({ error: { code: 'ruleCategoryInactive', message: expect.stringContaining('Büromaterial') } });
+    expect(financeConflict('contactIbanTaken', { contact: 'Erika Beispiel' })).toMatchObject({ error: { code: 'contactIbanTaken', message: expect.stringContaining('Erika Beispiel') } });
+    expect(FINANCE_ERRORS.suggestionStale.reason).toBe('Der Kontoumsatz ist inzwischen zugeordnet.');
+    expect(FINANCE_ERRORS.entryLineNotBindable.reason).toBe('Diese Buchung hat keine passende Zeile auf diesem Konto ohne Kontoumsatz.');
+    expect(FINANCE_ERRORS.foreignNeedsHolder.reason).toBe('Sagen Sie, für wen das Geld ist.');
+  });
+
   it('is the only way the module raises a conflict', () => {
     const offenders = files(SRC).filter((f) => f.endsWith('.ts') && !f.endsWith(`${path.sep}errors.ts`)).filter((f) => /\bconflict\(/.test(readFileSync(f, 'utf8')));
     expect(offenders.map((f) => path.relative(SRC, f))).toEqual([]);

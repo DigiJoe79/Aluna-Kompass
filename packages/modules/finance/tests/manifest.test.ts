@@ -75,8 +75,30 @@ describe('finance module', () => {
       financeAccount: true, financeCategory: true, financePurpose: true, financeDatedValue: true, financeFiscalYear: false, financePeriodEvent: false,
       financeEntryDraft: true, financeEntry: false, financeOpenItem: false, financeAllocationCorrection: false, financeEntryDocument: false, financeEntryJustification: false,
       financeProjectSettings: true, financeYearPersonalData: true, financeImportPersonalData: true, financeCashCount: false,
-      financeImportProfile: false,
+      financeImportProfile: false, financeImportRule: true, financeContactBankAccount: true,
     });
+  });
+
+  it('ships the four suggestion settings with their defaults and the two new deletion rules', () => {
+    const setting = (key: string) => (financeModule.settings ?? []).find((s) => s.key === key)!;
+    expect(setting('finance.pairMatchDays').default).toBe(3);
+    expect(setting('finance.pairFeeToleranceCents').default).toBe(500);
+    expect(setting('finance.matchEntryDays').default).toBe(5);
+    expect(setting('finance.cashKeywords').default).toEqual(['Bareinzahlung', 'Barauszahlung', 'Einzahlung Bargeld', 'Auszahlung Bargeld', 'Geldautomat']);
+    for (const key of ['finance.pairMatchDays', 'finance.matchEntryDays']) {
+      expect(setting(key).schema.safeParse(30).success, key).toBe(true);
+      expect(setting(key).schema.safeParse(31).success, key).toBe(false);
+      expect(setting(key).schema.safeParse(-1).success, key).toBe(false);
+      expect(setting(key).schema.safeParse(1.5).success, key).toBe(false);
+    }
+    expect(setting('finance.pairFeeToleranceCents').schema.safeParse(0).success).toBe(true);
+    expect(setting('finance.pairFeeToleranceCents').schema.safeParse(-1).success).toBe(false);
+    expect(setting('finance.cashKeywords').schema.safeParse(['Einzahlung']).success).toBe(true);
+    expect(setting('finance.cashKeywords').schema.safeParse('Einzahlung').success).toBe(false);
+
+    const rule = (entity: string) => (financeModule.deletionRules ?? []).find((r) => r.entity === entity)!;
+    expect(rule('financeImportRule')).toMatchObject({ deletable: true, reason: 'Arbeitsmaterial: Eine Regel wirkt nur nach vorn.', auditAction: 'finance.importRule.delete' });
+    expect(rule('financeContactBankAccount')).toMatchObject({ deletable: true, reason: 'Arbeitsmaterial: die Zuordnung IBAN → Kontakt.', auditAction: 'finance.contactIban.delete' });
   });
 
   it('never lets finalized records go: entries, open items, corrections, voucher links, justifications', () => {

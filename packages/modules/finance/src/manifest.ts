@@ -36,6 +36,11 @@ const FINANCE_SETTINGS: readonly SettingDefinition[] = [
   // Task 4 (Einrichtungsstand): Zeitpunkt der Bestätigung, keine Freigabe — daher normale Einstellungen, kein `uiOnly`.
   { key: 'finance.setupCategoriesConfirmedAt', schema: z.string().nullable(), default: null },
   { key: 'finance.setupTaxConfirmedAt', schema: z.string().nullable(), default: null },
+  // F5 — Vorschläge der Arbeitsliste (Spec 6.4): Paar-Erkennung, Gebührentoleranz, Fenster für „passt zu einer Buchung“, Bar-Kennung.
+  { key: 'finance.pairMatchDays', schema: z.number().int().min(0).max(30), default: 3 },
+  { key: 'finance.pairFeeToleranceCents', schema: z.number().int().min(0), default: 500 },
+  { key: 'finance.matchEntryDays', schema: z.number().int().min(0).max(30), default: 5 },
+  { key: 'finance.cashKeywords', schema: z.array(z.string()), default: ['Bareinzahlung', 'Barauszahlung', 'Einzahlung Bargeld', 'Auszahlung Bargeld', 'Geldautomat'] },
 ];
 
 export const financeModule: ModuleManifest = defineModule({
@@ -98,6 +103,8 @@ export const financeModule: ModuleManifest = defineModule({
     { entity: 'financeCategory', deletable: true, reason: 'Arbeitsmaterial der Stammdaten.', guard: 'nur unbenutzt; sonst stilllegen', auditAction: 'finance.category.delete' },
     { entity: 'financePurpose', deletable: true, reason: 'Arbeitsmaterial der Stammdaten.', guard: 'nur unbenutzt; sonst stilllegen', auditAction: 'finance.purpose.delete' },
     { entity: 'financeDatedValue', deletable: true, reason: 'Nur die eigene Überschreibung; die ausgelieferte Reihe ist Code.', guard: 'nur die Überschreibung des Vereins', auditAction: 'finance.datedValue.remove' },
+    { entity: 'financeImportRule', deletable: true, reason: 'Arbeitsmaterial: Eine Regel wirkt nur nach vorn.', guard: 'keiner', auditAction: 'finance.importRule.delete' },
+    { entity: 'financeContactBankAccount', deletable: true, reason: 'Arbeitsmaterial: die Zuordnung IBAN → Kontakt.', guard: 'keiner', auditAction: 'finance.contactIban.delete' },
     { entity: 'financeImportProfile', deletable: false, reason: 'Läufe zeigen darauf; ein CSV-Format ist unveränderlich, eine Änderung ist ein neues Format.' },
     { entity: 'financeFiscalYear', deletable: false, reason: 'Geschäftsjahre und ihre Abschlüsse sind die Gliederung der Rechenschaft. Personenbezogene Inhalte eines Jahres werden nach Ablauf der Frist anonymisiert, nicht gelöscht.' },
     { entity: 'financePeriodEvent', deletable: false, reason: 'Geschäftsjahre und ihre Abschlüsse sind die Gliederung der Rechenschaft. Personenbezogene Inhalte eines Jahres werden nach Ablauf der Frist anonymisiert, nicht gelöscht.' },

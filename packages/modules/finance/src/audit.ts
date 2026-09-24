@@ -1,6 +1,6 @@
 import { recordAudit, type CallContext, type DbOrTx, type Deps } from '@kompass/core';
 
-export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument' | 'financeOpenItem' | 'financeAllocationCorrection' | 'financeEntryJustification' | 'financeProjectSettings' | 'financeCashCount' | 'financeSetup' | 'financeImportRun' | 'financeRawTransaction' | 'financeImportCandidate' | 'financeImportProfile';
+export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument' | 'financeOpenItem' | 'financeAllocationCorrection' | 'financeEntryJustification' | 'financeProjectSettings' | 'financeCashCount' | 'financeSetup' | 'financeImportRun' | 'financeRawTransaction' | 'financeImportCandidate' | 'financeImportProfile' | 'financeImportRule' | 'financeContactBankAccount';
 
 /**
  * Was vom Finanzmodul ins Änderungsprotokoll darf — je Entität eine Liste, und
@@ -47,6 +47,12 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   financeImportCandidate: ['runId', 'accountId', 'decision', 'matchesRawTransactionId', 'rawTransactionId'],
   // F4b — nie Spaltennamen (Kopfzeilen können Namen tragen), nie der frei getippte Formatname; die Kopfzeile nur als Prüfsumme.
   financeImportProfile: ['accountId', 'encoding', 'delimiter', 'headerChecksum', 'switched', 'builtinKey'],
+  // F5 — nie der Regelname, nie die Textbedingung, nie die IBAN, nie die Kontakt-ID (Spec 10.3).
+  // Die Flags heißen `hasBankDetailsCondition`/`hasWordCondition`/`partySet` statt
+  // `hasIbanCondition`/`hasTextCondition`/`contactSet`: Der Verbotstest greift auf „iban“, „text“ und „contact“ als Teilstring.
+  financeImportRule: ['accountId', 'direction', 'categoryId', 'projectId', 'purposeId', 'taxCode', 'isActive', 'sortOrder', 'hasBankDetailsCondition', 'hasWordCondition', 'hasAmountCondition', 'partySet'],
+  // Nur woher die Zuordnung stammt: 'booking' | 'contactCreate' | 'manual'.
+  financeContactBankAccount: ['learnedFrom'],
 };
 
 const pick = (entity: FinanceEntity, data?: Record<string, unknown>) => (data ? Object.fromEntries(Object.entries(data).filter(([field]) => AUDIT_FIELDS[entity].includes(field))) : undefined);
