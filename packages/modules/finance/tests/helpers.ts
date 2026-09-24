@@ -10,7 +10,7 @@ import { createFirstFiscalYear, ensureFiscalYearFor, type FiscalYearView } from 
 import { createPurpose } from '../src/ledger/purposes';
 import { installFinance } from '../src/install';
 import { FINANCE_PERMISSIONS, financeModule } from '../src/manifest';
-import { financeCategories, financeFiscalYears, financePeriodEvents, type FinanceCategoryRow, type FinanceFiscalYearRow } from '../src/schema';
+import { financeCategories, financeFiscalYears, financeImportRuns, financePeriodEvents, financeRawTransactions, type FinanceCategoryRow, type FinanceFiscalYearRow } from '../src/schema';
 
 /** Ein minimales, gültiges PDF — wie in den Tests der Akte (`packages/modules/dms/tests/helpers.ts`). */
 export function pdfBytes(): Uint8Array {
@@ -94,4 +94,38 @@ export async function ledgerFixture(opts: { years?: readonly string[] } = {}) {
   };
 
   return { deps, ctx, userId, bank, cash, year, years, donations, fees, programCosts, purposeIncome, abroadPurpose, donor, wrongDonor, rightDonor, secondPerson, secondPersonId, finalEntry, finalDonation, closeYear };
+}
+
+type LedgerFixture = Awaited<ReturnType<typeof ledgerFixture>>;
+
+/** Ein fertig geladener Auszug (F5-Tests) — direkt eingefügt, ohne Datei; `discarded` verwirft ihn. */
+export function insertRun(f: Pick<LedgerFixture, 'deps' | 'userId'>, accountId: string, opts: { discarded?: boolean; closingCents?: number | null; periodTo?: string | null } = {}): string {
+  const id = newId();
+  f.deps.db
+    .insert(financeImportRuns)
+    .values({
+      id, accountId, format: 'camt053', fileName: 'auszug.xml', fileSha256: id.padEnd(64, '0'), fileKey: null, periodFrom: '2026-01-01', periodTo: opts.periodTo === undefined ? '2026-12-31' : opts.periodTo,
+      closingCents: opts.closingCents ?? null, startedAt: '2026-03-01T09:00:00.000Z', finishedAt: '2026-03-01T09:01:00.000Z', createdByUserId: f.userId, createdChannel: 'ui',
+      ...(opts.discarded ? { discardedAt: '2026-03-02T00:00:00.000Z', discardedByUserId: f.userId, discardNote: 'falsch' } : {}),
+    })
+    .run();
+  return id;
+}
+
+/** Ein Kontoumsatz in einem Auszug (F5-Tests) — erfundene Gegenpartei, IBAN mit BLZ 99999999. */
+export function insertRaw(
+  f: Pick<LedgerFixture, 'deps'>,
+  runId: string,
+  o: { accountId: string; amountCents: number; purpose?: string; name?: string | null; iban?: string | null; date?: string; returnCode?: string | null },
+): string {
+  const id = newId();
+  f.deps.db
+    .insert(financeRawTransactions)
+    .values({
+      id, runId, accountId: o.accountId, bookingDate: o.date ?? '2026-03-05', valueDate: null, amountCents: o.amountCents,
+      counterpartyName: o.name === undefined ? 'Erika Beispiel' : o.name, counterpartyIban: o.iban === undefined ? 'DE66999999991234567890' : o.iban, purpose: o.purpose ?? 'Zahlung',
+      bankReference: null, endToEndId: null, returnCode: o.returnCode ?? null, dedupKey: `k-${id}`, lineIndex: 1, createdAt: '2026-03-05T09:00:00.000Z',
+    })
+    .run();
+  return id;
 }
