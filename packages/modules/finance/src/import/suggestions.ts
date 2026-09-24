@@ -4,9 +4,9 @@ import { z } from 'zod';
 import { financeConflict } from '../errors';
 import { requireFinanceRead } from '../ledger/access';
 import type { EntryLinesInput } from '../ledger/entries';
-import { openCentsInternal, openItemHasAnySettlementInternal } from '../ledger/open-items';
+import { openCentsInternal } from '../ledger/open-items';
 import {
-  financeAccounts, financeAllocationLines, financeCategories, financeEntries, financeImportRuns, financeMoneyLines, financeOpenItems, financePurposes, financeRawTransactions,
+  financeAccounts, financeAllocationLines, financeCategories, financeEntries, financeImportRuns, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, financePurposes, financeRawTransactions,
   type FinanceAllocationLineRow, type FinanceCategoryRow, type FinanceImportRuleRow, type FinanceOpenItemRow, type FinancePurposeRow, type FinanceRawTransactionRow,
 } from '../schema';
 import { contactForIbanInternal } from './contact-ibans';
@@ -157,8 +157,27 @@ function claimLinesInternal(openRaws: readonly FinanceRawTransactionRow[], lines
   return claims;
 }
 
+/**
+ * Offene Zahlungen, die ein **Entwurf** schon begleicht — die sind vergeben.
+ * Festgeschriebene Teilzahlungen dagegen stecken schon in `openCentsInternal`;
+ * der Rest bleibt vorschlagbar (Nachtrag Lauf 4).
+ */
+function draftSettledItemIdsInternal(db: DbOrTx): Set<string> {
+  return new Set(
+    db
+      .select({ id: financeOpenItemSettlements.openItemId })
+      .from(financeOpenItemSettlements)
+      .innerJoin(financeMoneyLines, eq(financeMoneyLines.id, financeOpenItemSettlements.moneyLineId))
+      .innerJoin(financeEntries, eq(financeEntries.id, financeMoneyLines.entryId))
+      .where(eq(financeEntries.status, 'draft'))
+      .all()
+      .map((r) => r.id),
+  );
+}
+
 function loadSuggestionDataInternal(deps: Deps): SuggestionData {
   const db = deps.db;
+  const draftSettled = draftSettledItemIdsInternal(db);
   const settings = {
     matchDays: readSetting<number>(deps, 'finance.pairMatchDays'),
     feeToleranceCents: readSetting<number>(deps, 'finance.pairFeeToleranceCents'),
@@ -177,8 +196,8 @@ function loadSuggestionDataInternal(deps: Deps): SuggestionData {
       .where(isNull(financeOpenItems.cancelledAt))
       .orderBy(asc(financeOpenItems.itemDate), asc(financeOpenItems.id))
       .all()
-      // Hängt schon ein Settlement daran — auch an einem Entwurf —, ist die Zahlung vergeben (Nachtrag Lauf 2).
-      .filter((row) => !openItemHasAnySettlementInternal(db, row.id))
+      // Begleicht ein Entwurf sie schon, ist die Zahlung vergeben; festgeschriebene Raten stecken in openCents.
+      .filter((row) => !draftSettled.has(row.id))
       .map((row) => ({ row, openCents: openCentsInternal(db, row.id) }))
       .filter((i) => i.openCents > 0),
     rules: activeImportRulesInternal(db),

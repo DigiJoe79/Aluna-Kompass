@@ -193,6 +193,20 @@ describe('suggestForTransaction — (3) open items', () => {
     expect(suggestion.kind).not.toBe('openItem');
     expect(JSON.stringify(suggestion)).not.toContain(invoice.id);
   });
+
+  it('still proposes the remainder of a partially settled open item', async () => {
+    const f = await ledgerFixture();
+    const run = insertRun(f, f.bank.id);
+    const invoice = unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'payable', itemDate: '2026-02-20', amountCents: 23800, paymentReference: 'RE-4711', lineTemplate: [{ categoryId: f.programCosts.id, amountCents: -23800 }] }));
+    // Eine erste Rate ist festgeschrieben — sie steckt schon in openCents; der Rest bleibt offen.
+    unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'Rate 1', moneyLines: [{ accountId: f.bank.id, amountCents: -10000, settlements: [{ openItemId: invoice.id, amountCents: 10000 }] }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -10000 }] }));
+    const paid = insertRaw(f, run, { accountId: f.bank.id, amountCents: -13800, purpose: 'Rechnung RE-4711 Restbetrag', iban: null, date: '2026-03-20' });
+    expect(await suggest(f, paid)).toMatchObject({
+      kind: 'openItem', confidence: 'sure',
+      reasons: [{ kind: 'paymentReference', openItemId: invoice.id }],
+      draft: { moneyLines: [{ accountId: f.bank.id, amountCents: -13800, rawTransactionId: paid, settlements: [{ openItemId: invoice.id, amountCents: 13800 }] }] },
+    });
+  });
 });
 
 describe('suggestForTransaction — (4) rules', () => {

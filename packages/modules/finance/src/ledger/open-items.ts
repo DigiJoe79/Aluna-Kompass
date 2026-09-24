@@ -39,9 +39,8 @@ function settledCentsFor(db: DbOrTx, itemId: string, asOf?: string): number {
 
 /**
  * Ob irgendein Settlement existiert — egal, ob an einem Entwurf oder
- * festgeschrieben: die Ändern-Sperre, und für die Vorschläge der Arbeitsliste
- * (F5) „schon vergeben“ — eine Zahlung, die ein Entwurf begleicht, wird kein
- * zweites Mal vorgeschlagen.
+ * festgeschrieben: die Ändern-Sperre. (Die Vorschläge der Arbeitsliste
+ * prüfen enger — nur Entwürfe vergeben eine Zahlung, `import/suggestions.ts`.)
  */
 export function openItemHasAnySettlementInternal(db: DbOrTx, itemId: string): boolean {
   return !!db.select({ id: financeOpenItemSettlements.id }).from(financeOpenItemSettlements).where(eq(financeOpenItemSettlements.openItemId, itemId)).get();
