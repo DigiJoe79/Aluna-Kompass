@@ -128,7 +128,8 @@ function readTxDtls(node: Record<string, unknown>, direction: 'CRDT' | 'DBIT'): 
   return {
     amountText: typeof amt === 'string' ? amt : typeof amt === 'object' ? textOf(amt) ?? undefined : undefined,
     bankReference: (typeof refs.AcctSvcrRef === 'string' ? refs.AcctSvcrRef : null),
-    endToEndId: typeof refs.EndToEndId === 'string' ? refs.EndToEndId : null,
+    // `NOTPROVIDED` ist der CAMT-Platzhalter für „keine Referenz“ — als Referenz geführt, hielte die Dubletten-Erkennung fremde Zeilen für gleich.
+    endToEndId: typeof refs.EndToEndId === 'string' && refs.EndToEndId.trim() !== 'NOTPROVIDED' ? refs.EndToEndId : null,
     counterpartyName: party && typeof party.Nm === 'string' ? party.Nm : null,
     counterpartyIban: acct ? textOf((acct.Id as Record<string, unknown> | undefined)?.IBAN) : null,
     purpose: joinUstrd((node.RmtInf as Record<string, unknown> | undefined)?.Ustrd),

@@ -67,6 +67,15 @@ describe('parseCamt053', () => {
     expect(result.statements[0]!.lines[0]).toMatchObject({ returnCode: 'MD01', amountCents: -2500 });
   });
 
+  it('drops the placeholder NOTPROVIDED instead of keeping it as a reference', () => {
+    const xml = readFileSync(path.join(FIXTURES, 'einfach-001-02.xml'), 'utf8').replace('<EndToEndId>E2E-0001</EndToEndId>', '<EndToEndId>NOTPROVIDED</EndToEndId>');
+    const result = parseCamt053(new TextEncoder().encode(xml), MAX);
+    if (!result.ok) throw new Error(JSON.stringify(result.error));
+    const lines = result.statements[0]!.lines;
+    expect(lines[0]!.endToEndId).toBeNull();
+    expect(lines[1]!.endToEndId).toBe('E2E-0002');
+  });
+
   it('marks pending entries', () => {
     const result = parseCamt053(bytes('vorgemerkt.xml'), MAX);
     if (!result.ok) throw new Error(JSON.stringify(result.error));
