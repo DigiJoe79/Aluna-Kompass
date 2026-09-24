@@ -5,9 +5,9 @@ import { countOpenRawTransactionsInternal, importedThroughInternal, reconcileBan
 import { formatEuro } from './ledger/cash-check';
 import { getSetupStatus } from './ledger/setup';
 import { listEntries } from './ledger/entries';
-import { openCentsInternal } from './ledger/open-items';
+import { overdueOpenItemsInternal } from './ledger/open-items';
 import { purposeBalancesAt } from './ledger/queries';
-import { financeAccounts, financeEntries, financeOpenItems, type FinanceAccountRow, type FinanceOpenItemRow } from './schema';
+import { financeAccounts, financeEntries, type FinanceAccountRow } from './schema';
 
 /**
  * Die neun Kacheln der Startseite (F3b Task 6, F4 Task 6, Spec 9.7): je genau
@@ -29,21 +29,6 @@ function daysBetween(today: string, date: string): number {
 /** Aktive Bank- und Zahlungsdienstkonten — nur diese kennen einen Auszug (Spec 9.3, 9.7). */
 function activeReconcilableAccounts(deps: Parameters<DashboardTile['load']>[0]): FinanceAccountRow[] {
   return deps.db.select().from(financeAccounts).where(and(eq(financeAccounts.isActive, true), or(eq(financeAccounts.kind, 'bank'), eq(financeAccounts.kind, 'paymentService')))).all();
-}
-
-/**
- * Überfällige offene Zahlungen, ohne Rechteprüfung — für die Kachel unter
- * `finance.overview` (Stufe unter `finance.read`, das `listOpenItems`
- * verlangt): nicht stornierte Posten mit Fälligkeit vor `today` und noch
- * offenem Betrag (`openCentsInternal`, Spec 5.6 — nie gespeichert).
- */
-function overdueOpenItemsInternal(deps: Parameters<DashboardTile['load']>[0], today: string, kind?: 'receivable' | 'payable'): (FinanceOpenItemRow & { openCents: number })[] {
-  const where = kind ? and(isNull(financeOpenItems.cancelledAt), eq(financeOpenItems.kind, kind)) : isNull(financeOpenItems.cancelledAt);
-  const rows = deps.db.select().from(financeOpenItems).where(where).all();
-  return rows
-    .filter((r) => r.dueOn !== null && r.dueOn < today)
-    .map((r) => ({ ...r, openCents: openCentsInternal(deps.db, r.id) }))
-    .filter((r) => r.openCents !== 0);
 }
 
 const todoTile: DashboardTile<Record<string, never>> = {
@@ -73,7 +58,7 @@ const todoTile: DashboardTile<Record<string, never>> = {
 
     // Überfällige offene Zahlungen — hier nur „Wir zahlen noch“ (payable): die Vereinspflicht, die zählt
     // als „zu tun“. Überfällige Forderungen (receivable) zeigt die eigene Kachel `finance.overdueItems`.
-    const overdue = overdueOpenItemsInternal(deps, today, 'payable');
+    const overdue = overdueOpenItemsInternal(deps.db, today, 'payable');
     if (overdue.length > 0) {
       const sumCents = overdue.reduce((s, i) => s + i.openCents, 0);
       lines.push({ titleKey: 'overdueItems', values: { count: overdue.length, sum: formatEuro(sumCents) }, href: '/finance/open-items?tab=payable' });
@@ -140,7 +125,7 @@ const overdueItemsTile: DashboardTile<Record<string, never>> = {
   options: z.object({}),
   load(deps) {
     const today = isoDay(deps.clock.now().getTime());
-    const overdue = overdueOpenItemsInternal(deps, today);
+    const overdue = overdueOpenItemsInternal(deps.db, today);
     return { kind: 'count', count: overdue.length, href: '/finance/open-items' };
   },
 };

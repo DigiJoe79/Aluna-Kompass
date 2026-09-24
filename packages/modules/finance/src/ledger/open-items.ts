@@ -1,7 +1,7 @@
 import { expectedVersionField, isoNow, newId, notFound, ok, requireHumanChannel, requirePermission, staleVersion, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { contacts } from '@kompass/module-contacts';
 import { getDocumentRecord, linkDocumentInternal } from '@kompass/module-dms';
-import { and, desc, eq, lte } from 'drizzle-orm';
+import { and, desc, eq, isNull, lte } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
@@ -60,6 +60,22 @@ export function openItemsAtInternal(db: DbOrTx, date: string): { id: string; kin
   return items
     .filter((item) => item.cancelledAt === null)
     .map((item) => ({ id: item.id, kind: item.kind as 'receivable' | 'payable', openCents: item.amountCents - settledCentsFor(db, item.id, date) }))
+    .filter((r) => r.openCents !== 0);
+}
+
+/**
+ * Überfällige offene Zahlungen, ohne Rechteprüfung — für die Kachel unter
+ * `finance.overview` (Stufe unter `finance.read`, das `listOpenItems`
+ * verlangt) und den Reiter „Fällig“ der Arbeitsliste (F5): nicht stornierte
+ * Posten mit Fälligkeit vor `today` und noch offenem Betrag
+ * (`openCentsInternal`, Spec 5.6 — nie gespeichert).
+ */
+export function overdueOpenItemsInternal(db: DbOrTx, today: string, kind?: 'receivable' | 'payable'): (FinanceOpenItemRow & { openCents: number })[] {
+  const where = kind ? and(isNull(financeOpenItems.cancelledAt), eq(financeOpenItems.kind, kind)) : isNull(financeOpenItems.cancelledAt);
+  const rows = db.select().from(financeOpenItems).where(where).all();
+  return rows
+    .filter((r) => r.dueOn !== null && r.dueOn < today)
+    .map((r) => ({ ...r, openCents: openCentsInternal(db, r.id) }))
     .filter((r) => r.openCents !== 0);
 }
 

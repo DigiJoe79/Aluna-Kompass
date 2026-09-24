@@ -116,7 +116,7 @@ export function insertRun(f: Pick<LedgerFixture, 'deps' | 'userId'>, accountId: 
 export function insertRaw(
   f: Pick<LedgerFixture, 'deps'>,
   runId: string,
-  o: { accountId: string; amountCents: number; purpose?: string; name?: string | null; iban?: string | null; date?: string; returnCode?: string | null },
+  o: { accountId: string; amountCents: number; purpose?: string; name?: string | null; iban?: string | null; date?: string; returnCode?: string | null; lineIndex?: number },
 ): string {
   const id = newId();
   f.deps.db
@@ -124,7 +124,7 @@ export function insertRaw(
     .values({
       id, runId, accountId: o.accountId, bookingDate: o.date ?? '2026-03-05', valueDate: null, amountCents: o.amountCents,
       counterpartyName: o.name === undefined ? 'Erika Beispiel' : o.name, counterpartyIban: o.iban === undefined ? 'DE66999999991234567890' : o.iban, purpose: o.purpose ?? 'Zahlung',
-      bankReference: null, endToEndId: null, returnCode: o.returnCode ?? null, dedupKey: `k-${id}`, lineIndex: 1, createdAt: '2026-03-05T09:00:00.000Z',
+      bankReference: null, endToEndId: null, returnCode: o.returnCode ?? null, dedupKey: `k-${id}`, lineIndex: o.lineIndex ?? 1, createdAt: '2026-03-05T09:00:00.000Z',
     })
     .run();
   return id;
