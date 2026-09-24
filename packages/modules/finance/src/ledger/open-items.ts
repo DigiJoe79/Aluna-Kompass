@@ -37,8 +37,13 @@ function settledCentsFor(db: DbOrTx, itemId: string, asOf?: string): number {
     .reduce((s, r) => s + r.amountCents, 0);
 }
 
-/** Ob irgendein Settlement existiert — egal, ob an einem Entwurf oder festgeschrieben (Ändern-Sperre). */
-function hasAnySettlementRow(db: DbOrTx, itemId: string): boolean {
+/**
+ * Ob irgendein Settlement existiert — egal, ob an einem Entwurf oder
+ * festgeschrieben: die Ändern-Sperre, und für die Vorschläge der Arbeitsliste
+ * (F5) „schon vergeben“ — eine Zahlung, die ein Entwurf begleicht, wird kein
+ * zweites Mal vorgeschlagen.
+ */
+export function openItemHasAnySettlementInternal(db: DbOrTx, itemId: string): boolean {
   return !!db.select({ id: financeOpenItemSettlements.id }).from(financeOpenItemSettlements).where(eq(financeOpenItemSettlements.openItemId, itemId)).get();
 }
 
@@ -167,7 +172,7 @@ export async function updateOpenItem(deps: Deps, ctx: CallContext, input: unknow
   if (!before) return notFound('financeOpenItem', v.id);
   const stale = staleVersion(v.expectedVersion, before.updatedAt);
   if (stale) return stale;
-  if (hasAnySettlementRow(deps.db, before.id)) return financeConflict('openItemInUse');
+  if (openItemHasAnySettlementInternal(deps.db, before.id)) return financeConflict('openItemInUse');
   if (v.contactId !== undefined && v.contactId !== null && !contactExists(deps.db, v.contactId)) return notFound('contact', v.contactId);
   const doc = v.documentId !== undefined ? await checkOptionalDocument(deps, ctx, v.documentId) : ok(null);
   if (!doc.ok) return doc;

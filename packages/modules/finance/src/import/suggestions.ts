@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { financeConflict } from '../errors';
 import { requireFinanceRead } from '../ledger/access';
 import type { EntryLinesInput } from '../ledger/entries';
-import { openCentsInternal } from '../ledger/open-items';
+import { openCentsInternal, openItemHasAnySettlementInternal } from '../ledger/open-items';
 import {
   financeAccounts, financeAllocationLines, financeCategories, financeEntries, financeImportRuns, financeMoneyLines, financeOpenItems, financePurposes, financeRawTransactions,
   type FinanceAllocationLineRow, type FinanceCategoryRow, type FinanceImportRuleRow, type FinanceOpenItemRow, type FinancePurposeRow, type FinanceRawTransactionRow,
@@ -177,6 +177,8 @@ function loadSuggestionDataInternal(deps: Deps): SuggestionData {
       .where(isNull(financeOpenItems.cancelledAt))
       .orderBy(asc(financeOpenItems.itemDate), asc(financeOpenItems.id))
       .all()
+      // Hängt schon ein Settlement daran — auch an einem Entwurf —, ist die Zahlung vergeben (Nachtrag Lauf 2).
+      .filter((row) => !openItemHasAnySettlementInternal(db, row.id))
       .map((row) => ({ row, openCents: openCentsInternal(db, row.id) }))
       .filter((i) => i.openCents > 0),
     rules: activeImportRulesInternal(db),

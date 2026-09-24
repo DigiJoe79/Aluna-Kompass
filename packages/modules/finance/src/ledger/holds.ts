@@ -1,10 +1,11 @@
-import { isoNow, retentionEnd, retentionMonths, type CallContext, type Deps, type DbOrTx, type DueItem, type RecordReference, type RetentionHold } from '@kompass/core';
+import { isoNow, retentionEnd, retentionMonths, schema, type CallContext, type Deps, type DbOrTx, type DueItem, type RecordReference, type RetentionHold } from '@kompass/core';
 import { and, desc, eq, gte, inArray, lte, or } from 'drizzle-orm';
 import { financeAudit } from '../audit';
 import {
   financeAllocationCorrections,
   financeAllocationLines,
   financeCashCounts,
+  financeContactBankAccounts,
   financeEntries,
   financeEntryDocuments,
   financeFiscalYears,
@@ -222,11 +223,27 @@ function documentGoneAuditFields(entryId: string): Record<string, unknown> {
 }
 
 /**
+ * Woher eine Kontakt-IBAN stammt, steht nicht an der Zeile, sondern nur im
+ * Protokoll ihres Anlegens (`finance.contactIban.link`) — von dort gelesen,
+ * damit das Löschen dasselbe Feld nennt. `null`, wenn kein Eintrag zu finden ist.
+ */
+function learnedFromInternal(db: DbOrTx, bankAccountId: string): string | null {
+  const row = db
+    .select({ after: schema.auditLog.after })
+    .from(schema.auditLog)
+    .where(and(eq(schema.auditLog.entityType, 'financeContactBankAccount'), eq(schema.auditLog.entityId, bankAccountId), eq(schema.auditLog.action, 'finance.contactIban.link')))
+    .get();
+  if (!row?.after) return null;
+  const learnedFrom = (JSON.parse(row.after) as { learnedFrom?: unknown }).learnedFrom;
+  return typeof learnedFrom === 'string' ? learnedFrom : null;
+}
+
+/**
  * Ein Dokument wurde gelöscht: Der Bezug bleibt als Grabstein (Nummer,
  * Prüfsumme), nur `documentId` wird geleert — sonst wäre ein einmal
  * verknüpfter Beleg nach seiner Frist nie aufräumbar. Ebenso an offenen
- * Posten und an Korrekturen. Andere Entitätstypen: kein Vorgang von
- * Finanzen, also nichts zu tun.
+ * Posten und an Korrekturen. Ein Kontakt nimmt seine gelernten IBANs mit
+ * (F5). Andere Entitätstypen: kein Vorgang von Finanzen, also nichts zu tun.
  */
 export function financeRecordDeleted(tx: DbOrTx, deps: Deps, ctx: CallContext, entityType: string, id: string): void {
   if (entityType === 'document') {
@@ -240,6 +257,16 @@ export function financeRecordDeleted(tx: DbOrTx, deps: Deps, ctx: CallContext, e
     tx.update(financeAllocationCorrections).set({ proofDocumentId: null }).where(eq(financeAllocationCorrections.proofDocumentId, id)).run();
     // Ein Zählprotokoll behält Nummer und Prüfsumme als Grabstein (Muster financeEntryDocuments) — nur die Dokument-ID verschwindet.
     tx.update(financeCashCounts).set({ documentId: null }).where(eq(financeCashCounts.documentId, id)).run();
+    return;
+  }
+  if (entityType === 'contact') {
+    // Die gelernten IBANs (F5) sind Arbeitsmaterial ohne eigenen Nachweis — sie gehen mit dem Kontakt.
+    const rows = tx.select().from(financeContactBankAccounts).where(eq(financeContactBankAccounts.contactId, id)).all();
+    for (const row of rows) {
+      tx.delete(financeContactBankAccounts).where(eq(financeContactBankAccounts.id, row.id)).run();
+      const learnedFrom = learnedFromInternal(tx, row.id);
+      financeAudit(tx, deps, ctx, { action: 'finance.contactIban.delete', entity: 'financeContactBankAccount', id: row.id, before: learnedFrom ? { learnedFrom } : undefined, summary: `Kontakt-IBAN ${row.id} mit dem Kontakt gelöscht` });
+    }
     return;
   }
   if (entityType === 'project') {

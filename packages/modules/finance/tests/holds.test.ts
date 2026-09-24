@@ -7,6 +7,7 @@ import { deleteDocument, documentTypes, documents } from '@kompass/module-dms';
 import { createProject, deleteProject } from '@kompass/module-projects';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
+import { learnContactIbanInternal, linkContactIban } from '../src/import/contact-ibans';
 import { importStatement } from '../src/import/runs';
 import { createAccount } from '../src/ledger/accounts';
 import { countCash } from '../src/ledger/cash';
@@ -20,7 +21,7 @@ import { setProjectFinance } from '../src/ledger/project-settings';
 import { createPurpose } from '../src/ledger/purposes';
 import { revokeVoucher, uploadVoucher } from '../src/ledger/vouchers';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
-import { financeAllocationCorrections, financeAllocationLines, financeCashCounts, financeEntryDocuments, financeProjectSettings } from '../src/schema';
+import { financeAllocationCorrections, financeAllocationLines, financeCashCounts, financeContactBankAccounts, financeEntryDocuments, financeProjectSettings } from '../src/schema';
 import { allowHumanOnlyOverMcp, ledgerFixture, pdfBytes } from './helpers';
 
 const FIXTURES = path.resolve(import.meta.dirname, 'fixtures/camt');
@@ -236,6 +237,24 @@ describe('references and what happens when something is deleted', () => {
     const f = await ledgerFixture();
     expect(financeRecordReferences(f.deps, 'bogus-entity', 'X')).toEqual([]);
     expect(() => f.deps.db.transaction((tx) => financeRecordDeleted(tx, f.deps, f.ctx, 'bogus-entity', 'X'))).not.toThrow();
+  });
+
+  it('removes the learned ibans of a deleted contact', async () => {
+    const f = await ledgerFixture();
+    const manage = ctxWith(['contacts.manage', 'finance.entriesWrite'], f.userId);
+    unwrap(await linkContactIban(f.deps, manage, { contactId: f.wrongDonor.id, iban: 'DE66999999991234567890' }));
+    f.deps.db.transaction((tx) => learnContactIbanInternal(tx, f.deps, f.ctx, { contactId: f.wrongDonor.id, iban: 'DE75999999990000303062', learnedFrom: 'booking' }));
+    unwrap(await linkContactIban(f.deps, manage, { contactId: f.rightDonor.id, iban: 'DE23999999990000202051' }));
+
+    // Der Kern ruft den Haken, wenn die Kontakte den Datensatz löschen (`notifyRecordDeleted`).
+    f.deps.db.transaction((tx) => financeRecordDeleted(tx, f.deps, manage, 'contact', f.wrongDonor.id));
+    const rows = f.deps.db.select().from(financeContactBankAccounts).all();
+    expect(rows.map((r) => r.contactId)).toEqual([f.rightDonor.id]);
+    const log = f.deps.db.select().from(schema.auditLog).all().filter((e) => e.action === 'finance.contactIban.delete');
+    expect(log.map((e) => JSON.parse(e.before!)).sort((a, b) => a.learnedFrom.localeCompare(b.learnedFrom))).toEqual([{ learnedFrom: 'booking' }, { learnedFrom: 'manual' }]);
+    expect(JSON.stringify(log)).not.toMatch(/DE66|DE75/);
+    expect(JSON.stringify(log)).not.toContain(f.wrongDonor.id);
+    for (const entry of log) expect(entry.entityType).toBe('financeContactBankAccount');
   });
 
   it('when a project without entries is deleted, its finance settings go with it', async () => {

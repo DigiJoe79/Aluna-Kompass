@@ -7,7 +7,7 @@ import { financeAccounts, financeCategories, financeEntries, type FinanceAccount
 import { firstNegativeCashDay, formatEuro } from './cash-check';
 import { valueAt } from './dated-values';
 import { entryLinesSchema, entryViewInternal, resolveEntryLines, writeLinesInternal, type EntryView } from './entries';
-import { allocateEntryNumber, ensureFiscalYearFor, fiscalYearStatusInternal } from './fiscal-years';
+import { allocateEntryNumber, ensureFiscalYearFor, fiscalYearForInternal, fiscalYearStatusInternal } from './fiscal-years';
 import type { TaxCode } from './tax';
 
 const RATE_REQUIRING_CODES = new Set<TaxCode>(['reduced', 'standard', 'rc13b', 'icAcquisition']);
@@ -56,11 +56,15 @@ export interface FinalizeOptions {
 }
 
 /**
- * Die sieben Prüfungen des Festschreibens, in einer bereits offenen
- * Transaktion (Finanz-Spec 5.4). Für `finalizeEntry`, `finalizeReviewed`,
- * `bookEntry` und `reverse.ts`.
+ * Die Prüfungen des Festschreibens, die nichts schreiben (Finanz-Spec 5.4):
+ * Entwurf, nicht leer, ausgeglichen, Konten und Kategorien aktiv, das
+ * Geschäftsjahr — soweit es schon existiert — nicht abgeschlossen, ein
+ * Steuersatz für den Tag. `finalizeInternal` ruft sie zuerst; die Vorschau
+ * des Sammel-Festschreibens (`import/batch.ts`, F5) ruft sie allein. Was nur
+ * mit Schreiben geht — das Geschäftsjahr anlegen — und die Kassenprüfung, die
+ * vom Aufrufer abhängt, bleiben in `finalizeInternal`.
  */
-export function finalizeInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, entryId: string, opts: FinalizeOptions = {}): Result<EntryView> {
+export function checkFinalizableInternal(tx: DbOrTx, entryId: string): Failure | null {
   const entry = entryViewInternal(tx, entryId);
   if (!entry) return notFound('financeEntry', entryId);
   if (entry.status !== 'draft') return financeConflict('entryNotDraft', { number: entry.number ?? entry.id });
@@ -72,11 +76,7 @@ export function finalizeInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, entry
     return financeConflict('entryUnbalanced', { rest: formatEuro(moneySum - allocationSum), money: formatEuro(moneySum), allocated: formatEuro(allocationSum) });
   }
 
-  const accounts = new Map<string, FinanceAccountRow>();
-  for (const line of entry.moneyLines) {
-    if (!accounts.has(line.accountId)) accounts.set(line.accountId, tx.select().from(financeAccounts).where(eq(financeAccounts.id, line.accountId)).get()!);
-  }
-  for (const account of accounts.values()) {
+  for (const account of accountsOf(tx, entry).values()) {
     if (!account.isActive) return financeConflict('accountInactive', { account: account.name });
   }
 
@@ -88,16 +88,39 @@ export function finalizeInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, entry
     if (!category.isActive) return financeConflict('categoryInactive', { category: category.name });
   }
 
-  const yearResult = ensureFiscalYearFor(tx, deps, ctx, entry.entryDate);
-  if (!yearResult.ok) return yearResult;
-  const year = yearResult.value;
-  if (fiscalYearStatusInternal(tx, year.id) === 'closed') return financeConflict('fiscalYearClosed', { year: year.designation });
+  const year = fiscalYearForInternal(tx, entry.entryDate);
+  if (year && fiscalYearStatusInternal(tx, year.id) === 'closed') return financeConflict('fiscalYearClosed', { year: year.designation });
 
   const needsRate = entry.allocationLines.some((l) => RATE_REQUIRING_CODES.has(l.taxCode as TaxCode));
   if (needsRate && !hasTaxRate(tx, entry.entryDate)) return financeConflict('noTaxRateForDate', { date: entry.entryDate });
+  return null;
+}
+
+function accountsOf(tx: DbOrTx, entry: EntryView): Map<string, FinanceAccountRow> {
+  const accounts = new Map<string, FinanceAccountRow>();
+  for (const line of entry.moneyLines) {
+    if (!accounts.has(line.accountId)) accounts.set(line.accountId, tx.select().from(financeAccounts).where(eq(financeAccounts.id, line.accountId)).get()!);
+  }
+  return accounts;
+}
+
+/**
+ * Die Prüfungen des Festschreibens, in einer bereits offenen Transaktion
+ * (Finanz-Spec 5.4): erst `checkFinalizableInternal`, dann das Geschäftsjahr
+ * (legt den Nachfolger bei Bedarf an) und die Kassenprüfung. Für
+ * `finalizeEntry`, `finalizeReviewed`, `bookEntry` und `reverse.ts`.
+ */
+export function finalizeInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, entryId: string, opts: FinalizeOptions = {}): Result<EntryView> {
+  const problem = checkFinalizableInternal(tx, entryId);
+  if (problem) return problem;
+  const entry = entryViewInternal(tx, entryId)!;
+
+  const yearResult = ensureFiscalYearFor(tx, deps, ctx, entry.entryDate);
+  if (!yearResult.ok) return yearResult;
+  const year = yearResult.value;
 
   if ((opts.cashCheck ?? 'refuse') === 'refuse') {
-    for (const [accountId, account] of accounts) {
+    for (const [accountId, account] of accountsOf(tx, entry)) {
       if (account.kind !== 'cash') continue;
       const extra = entry.moneyLines.filter((l) => l.accountId === accountId).map((l) => ({ date: entry.entryDate, amountCents: l.amountCents }));
       const negative = firstNegativeCashDay(tx, account, entry.entryDate, extra);

@@ -181,6 +181,18 @@ describe('suggestForTransaction — (3) open items', () => {
     const outgoing = insertRaw(f, run, { accountId: f.bank.id, amountCents: -5000, purpose: 'Beitrag' });
     expect((await suggest(f, outgoing)).kind).not.toBe('openItem');
   });
+
+  it('does not propose an open item that a draft already settles', async () => {
+    const f = await ledgerFixture();
+    const run = insertRun(f, f.bank.id);
+    const invoice = unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'payable', itemDate: '2026-02-20', amountCents: 23800, paymentReference: 'RE-4711', lineTemplate: [{ categoryId: f.programCosts.id, amountCents: -23800 }] }));
+    // Ein Entwurf (von Hand, noch ohne Kontoumsatz) begleicht die Rechnung schon.
+    unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'Rechnung', moneyLines: [{ accountId: f.bank.id, amountCents: -23800, settlements: [{ openItemId: invoice.id, amountCents: 23800 }] }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -23800 }] }));
+    const paid = insertRaw(f, run, { accountId: f.bank.id, amountCents: -23800, purpose: 'Rechnung RE-4711 vom Februar', iban: null, date: '2026-03-20' });
+    const suggestion = await suggest(f, paid);
+    expect(suggestion.kind).not.toBe('openItem');
+    expect(JSON.stringify(suggestion)).not.toContain(invoice.id);
+  });
 });
 
 describe('suggestForTransaction — (4) rules', () => {
