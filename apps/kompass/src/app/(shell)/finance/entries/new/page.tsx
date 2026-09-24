@@ -1,16 +1,17 @@
 import { hasPermission, readSetting } from '@kompass/core';
 import type { LocalizedText } from '@kompass/core';
-import { getBalances, listCategories, listOpenItems, listPurposes, TAX_CODES } from '@kompass/module-finance';
+import { getBalances, listCategories, listOpenItems, listPurposes, listRawTransactions, suggestForTransaction, TAX_CODES, type RawTransactionView } from '@kompass/module-finance';
 import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
 import { formatAmount } from '@/lib/finance/amount';
-import { emptyForm, type EntryTemplate } from '@/lib/finance/entry-form';
+import { emptyForm, type EntryFormState, type EntryTemplate } from '@/lib/finance/entry-form';
+import { formFromTransaction } from '@/lib/finance/work';
 import { EntryForm } from '../entry-form';
 
-export default async function NewFinanceEntryPage({ searchParams }: { searchParams: Promise<{ template?: string; account?: string; settles?: string }> }) {
+export default async function NewFinanceEntryPage({ searchParams }: { searchParams: Promise<{ template?: string; account?: string; settles?: string; raw?: string; back?: string }> }) {
   const { deps, ctx } = await requireSession();
   if (!hasPermission(ctx, 'finance.entriesWrite')) return <ForbiddenCard permission="finance.entriesWrite" />;
 
@@ -38,7 +39,7 @@ export default async function NewFinanceEntryPage({ searchParams }: { searchPara
   const openItems = (openItemsRes.ok ? openItemsRes.value.items : []).map((i) => ({ id: i.id, kind: i.kind as 'receivable' | 'payable', label: i.paymentReference ?? t('settlement.unnamed', { date: i.itemDate }), openCents: i.openCents }));
 
   // `?account=` belegt das Konto der ersten Geldzeile vor — von der Barkasse aus „Bar bezahlt“ (F3b Task 2).
-  const initial = emptyForm(template, today);
+  let initial: EntryFormState = emptyForm(template, today);
   const accountId = query.account && accounts.some((a) => a.id === query.account) ? query.account : null;
   if (accountId && initial.moneyRows[0]) initial.moneyRows[0] = { ...initial.moneyRows[0], accountId };
 
@@ -53,9 +54,18 @@ export default async function NewFinanceEntryPage({ searchParams }: { searchPara
     };
   }
 
+  // `?raw=` — „Ändern“ aus der Arbeitsliste (F5 Task 7): Konto, Betrag, Richtung und Bindung aus dem
+  // Kontoumsatz, Text und Aufteilung aus seinem Vorschlag. `?back=work` führt nach dem Speichern zurück.
+  const raw = query.raw ? await openRawTransaction(deps, ctx, query.raw) : null;
+  if (raw) {
+    const suggestion = await suggestForTransaction(deps, ctx, { rawTransactionId: raw.id });
+    initial = formFromTransaction(raw, suggestion.ok ? suggestion.value.draft : null);
+  }
+  const returnTo = query.back === 'work' ? '/finance/work' : '/finance/entries';
+
   return (
     <>
-      <PageHeader title={t('newTitle')} back={{ href: '/finance/entries', label: t('cancel') }} />
+      <PageHeader title={t('newTitle')} back={{ href: returnTo, label: t('cancel') }} />
       <EntryForm
         initial={initial}
         accounts={accounts}
@@ -68,7 +78,19 @@ export default async function NewFinanceEntryPage({ searchParams }: { searchPara
         voucherTypeKey="voucher-own"
         vouchers={[]}
         openItems={openItems}
+        returnTo={returnTo}
       />
     </>
   );
+}
+
+/** Der offene Kontoumsatz zu `?raw=` — ein gebundener oder unbekannter belegt nichts vor. */
+async function openRawTransaction(deps: Parameters<typeof listRawTransactions>[0], ctx: Parameters<typeof listRawTransactions>[1], id: string): Promise<RawTransactionView | null> {
+  for (let offset = 0; ; offset += 200) {
+    const page = await listRawTransactions(deps, ctx, { state: 'open', limit: 200, offset });
+    if (!page.ok) return null;
+    const found = page.value.items.find((r) => r.id === id);
+    if (found) return found;
+    if (offset + 200 >= page.value.total) return null;
+  }
 }

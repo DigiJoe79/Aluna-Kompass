@@ -1,6 +1,6 @@
 import { getEffectivePermissions, schema, unwrap } from '@kompass/core';
 import { insertUser, systemContext } from '@kompass/core/testing';
-import { contactRoles } from '@kompass/module-contacts';
+import { contactRoles, contacts } from '@kompass/module-contacts';
 import { projects } from '@kompass/module-projects';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
@@ -13,6 +13,9 @@ import { listFiscalYears } from '../src/ledger/fiscal-years';
 import { listCandidates } from '../src/import/candidates';
 import { listImportProfiles } from '../src/import/profiles';
 import { listImportRuns } from '../src/import/runs';
+import { listImportRules } from '../src/import/rules';
+import { listContactIbans } from '../src/import/contact-ibans';
+import { listWorkItems } from '../src/import/work';
 import { listRawTransactions } from '../src/import/queries';
 import { listOpenItems } from '../src/ledger/open-items';
 import { getBalances } from '../src/ledger/overview';
@@ -115,12 +118,45 @@ describe('seedFinance', () => {
     expect(candidates.candidates.filter((c) => c.accountId === importkonto.id)).toHaveLength(1);
 
     const raws = unwrap(await listRawTransactions(deps, ctx, { accountId: importkonto.id }));
-    expect(raws.items.filter((r) => r.state === 'booked')).toHaveLength(1);
+    // Gebucht: die Spende aus Lauf A; gebunden an den Agenten-Entwurf (F5): „Spende April“.
+    expect(raws.items.filter((r) => r.state === 'booked')).toHaveLength(2);
     expect(raws.items.filter((r) => r.state === 'open').length).toBeGreaterThanOrEqual(2);
 
     // Zweiter Seed-Lauf legt nichts doppelt an (idempotent).
     const runsAfterSecondSeed = unwrap(await listImportRuns(deps, ctx, { accountId: importkonto.id }));
     expect(runsAfterSecondSeed.total).toBe(5);
+  });
+
+  it('seeds the work list on "Importkonto": two rules (one with an inactive category), a contact iban, a hand draft without a transaction and an agent draft (F5, idempotent)', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+    await seedFinance(deps, ctx);
+    await seedFinance(deps, ctx); // idempotent
+
+    const importkonto = unwrap(await listAccounts(deps, ctx, { includeInactive: true })).find((a) => a.name === 'Importkonto')!;
+    const { rules } = unwrap(await listImportRules(deps, ctx, {}));
+    expect(rules).toHaveLength(2);
+    // Zuerst die enge Regel mit stillgelegter Kategorie (Review Focus 2) — sie trifft nur den Dezember-Auszug der E2E.
+    expect(rules[0]).toMatchObject({ name: 'Bürobedarf Dezember', accountId: importkonto.id, textContains: 'dezember', categoryInactive: true });
+    expect(rules[1]).toMatchObject({ name: 'Büromaterial', accountId: importkonto.id, textContains: 'bueromaterial', categoryInactive: false });
+
+    const erika = deps.db.select().from(contacts).where(eq(contacts.lastName, 'Beispiel')).all();
+    expect(erika).toHaveLength(1);
+    const ibans = unwrap(await listContactIbans(deps, ctx, { contactId: erika[0]!.id }));
+    expect(ibans.items.map((i) => i.iban)).toEqual(['DE66999999991234567890']);
+
+    // Die Handbuchung ohne Kontoumsatz: Entwurf, auf den der Zuschuss aus Lauf B passt (Vorschlag 0).
+    const work = unwrap(await listWorkItems(deps, ctx, { tab: 'open', accountId: importkonto.id, limit: 50, offset: 0 }));
+    const kinds = work.items.map((i) => (i.type === 'transaction' ? [i.transaction.purpose, i.suggestion.kind] : null));
+    expect(kinds).toEqual([['Bueromaterial', 'rule'], ['Zuschuss', 'linkEntry']]);
+    const handDrafts = deps.db.select().from(financeEntries).where(eq(financeEntries.text, 'Zuschuss')).all();
+    expect(handDrafts).toHaveLength(1);
+    expect(handDrafts[0]!.status).toBe('draft');
+
+    // Der Agenten-Entwurf: über MCP angelegt, bindet „Spende April“, ungeprüft.
+    const agent = unwrap(await listWorkItems(deps, ctx, { tab: 'agent', accountId: importkonto.id, limit: 50, offset: 0 }));
+    expect(agent.items).toHaveLength(1);
+    expect(agent.items[0]).toMatchObject({ type: 'entry', entry: { text: 'Spende April', createdChannel: 'mcp', reviewedAt: null } });
   });
 
   it('uses no animal and no association-specific wording', async () => {

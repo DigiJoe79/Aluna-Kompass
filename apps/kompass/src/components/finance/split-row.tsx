@@ -61,8 +61,10 @@ export interface SplitRowProps {
 
 /**
  * Die Aufteilungszeile (HANDOFF § 2.4, Baustein 3): eine Karte mit bis zu
- * neun Feldern, zwei Reihen. `density="narrow"` ist ab jetzt Teil der Signatur
- * (F5), gebaut wird hier nur `default`.
+ * neun Feldern, zwei Reihen. `density="narrow"` (F5, HANDOFF § 12.2) für die
+ * Mini-Maske der Arbeitsliste: gleiche Felder, gleiche Reihenfolge, gleiches
+ * Zeilenmenü — nur umgebrochen (Kategorie; Betrag und Umsatzsteuer; Empfänger;
+ * Projekt; abgesetzt Zweck und Ausland). Die Erklärzeilen bleiben sichtbar.
  */
 export function SplitRow({
   value,
@@ -83,16 +85,16 @@ export function SplitRow({
   onFreeFundsRemainder,
 }: SplitRowProps) {
   const t = useTranslations('finance.splitRow');
-  void density;
+  const narrow = density === 'narrow';
   const category = categories.find((c) => c.id === value.categoryId) ?? null;
   const purposeLabel = category?.direction === 'expense' ? t('purposePaidFrom') : t('purposeDeterminedBy');
 
   const set = (patch: Partial<SplitRowValue>) => onChange({ ...value, ...patch });
 
   return (
-    <div data-testid="split-row" className="space-y-3 rounded-md border border-line bg-surface-2 p-3">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1.2fr_repeat(3,1fr)_auto] sm:items-start">
-        <div className="space-y-1">
+    <div data-testid="split-row" data-density={density} className="space-y-3 rounded-md border border-line bg-surface-2 p-3">
+      <div className={cn('grid gap-3', narrow ? 'grid-cols-[1fr_1fr_auto] items-start' : 'grid-cols-1 sm:grid-cols-[2fr_1.2fr_repeat(3,1fr)_auto] sm:items-start')}>
+        <div className={cn('space-y-1', narrow && 'col-span-2')}>
           <Label htmlFor={`${value.key}-category`}>{t('category')}</Label>
           <Select
             id={`${value.key}-category`}
@@ -124,13 +126,13 @@ export function SplitRow({
           ) : null}
         </div>
 
-        <div className="space-y-1">
+        <div className={cn('space-y-1', narrow && !showTax && 'col-span-2', narrow && 'row-start-2')}>
           <Label htmlFor={`${value.key}-amount`}>{t('amount')}</Label>
           <AmountField id={`${value.key}-amount`} name={`${value.key}-amount`} value={value.amountText} onChange={(amountText) => set({ amountText })} allowNegative disabled={value.locked} required />
         </div>
 
         {showTax ? (
-          <div className="space-y-1">
+          <div className={cn('space-y-1', narrow && 'row-start-2')}>
             <Label htmlFor={`${value.key}-tax`}>{t('tax')}</Label>
             <Select
               id={`${value.key}-tax`}
@@ -147,6 +149,7 @@ export function SplitRow({
           </div>
         ) : null}
 
+        <div className={cn(narrow && 'col-span-2')}>
         <ContactPicker
           id={`${value.key}-contact`}
           name={`${value.key}-contact`}
@@ -154,8 +157,9 @@ export function SplitRow({
           value={value.contactId ? { id: value.contactId, name: value.contactName ?? '' } : null}
           onChange={(contact: PickedContact | null) => set({ contactId: contact?.id ?? null, contactName: contact?.name ?? null })}
         />
+        </div>
 
-        <div className="space-y-1">
+        <div className={cn('space-y-1', narrow && 'col-span-2')}>
           <Label htmlFor={`${value.key}-project`}>{t('project')}</Label>
           <Select
             id={`${value.key}-project`}
@@ -173,7 +177,7 @@ export function SplitRow({
 
         {value.locked ? null : (
           <DropdownMenu>
-            <DropdownMenuTrigger aria-label={t('rowMenu')} className="mt-6 flex size-[var(--field-h)] items-center justify-center rounded-md border border-line-strong text-ink-2">
+            <DropdownMenuTrigger aria-label={t('rowMenu')} className={cn('mt-6 flex size-[var(--field-h)] items-center justify-center rounded-md border border-line-strong text-ink-2', narrow && 'col-start-3 row-start-1')}>
               <MoreVertical className="size-4" aria-hidden />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-surface shadow-md">
@@ -190,7 +194,7 @@ export function SplitRow({
       </div>
 
       {purposes.length > 0 || allowsAddsToAssets ? (
-        <div className={cn('grid grid-cols-1 gap-3 border-t border-line pt-3 sm:grid-cols-3')}>
+        <div className={cn('grid grid-cols-1 gap-3 border-t border-line pt-3', !narrow && 'sm:grid-cols-3')}>
           {purposes.length > 0 ? (
             <div className="space-y-1">
               <Label htmlFor={`${value.key}-purpose`}>{purposeLabel}</Label>
@@ -207,7 +211,7 @@ export function SplitRow({
               </Select>
             </div>
           ) : null}
-          <label className="flex items-center gap-2 pt-6 text-[13px]">
+          <label className={cn('flex items-center gap-2 text-[13px]', narrow ? 'pt-0' : 'pt-6')}>
             <Switch checked={value.abroad} onCheckedChange={(checked) => set({ abroad: checked === true })} />
             {t('abroad')}
           </label>

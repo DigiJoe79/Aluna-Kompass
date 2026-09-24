@@ -1,13 +1,15 @@
 import { assignRole, createRole, createUser, schema, setRolePermissions, unwrap, type CallContext, type Deps } from '@kompass/core';
-import { addContactRole, contactRoles, createContact } from '@kompass/module-contacts';
+import { addContactRole, contactRoles, contacts, createContact } from '@kompass/module-contacts';
 import { textPdf } from '@kompass/module-dms';
 import { projects } from '@kompass/module-projects';
 import { and, asc, eq } from 'drizzle-orm';
 import { completeFormat, guessCsvFormat, type CsvFormat } from './import/csv';
 import { buildPaymentServiceCsv, buildSecondBankCsv } from './import/csv-fixture';
 import { saveImportProfile } from './import/profiles';
+import { linkContactIban } from './import/contact-ibans';
+import { saveImportRule } from './import/rules';
 import { createAccount, setAccountActive } from './ledger/accounts';
-import { createCategory } from './ledger/categories';
+import { createCategory, setCategoryActive } from './ledger/categories';
 import { requestAllocationCorrection } from './ledger/corrections';
 import { saveDraft, setReviewed } from './ledger/entries';
 import { bookEntry } from './ledger/finalize';
@@ -31,7 +33,9 @@ import {
   financeEntries,
   financeEntryDocuments,
   financeFiscalYears,
+  financeImportRules,
   financeImportRuns,
+  financeMoneyLines,
   financeOpenItems,
   financePurposes,
   financeRawTransactions,
@@ -453,6 +457,9 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
     }
   }
 
+  // --- Arbeitsliste (F5, aus Task 9 vorgezogen für die E2E von Task 7): alles auf „Importkonto“.
+  if (importkonto) await seedWorkList(deps, ctx, importkonto.id);
+
   // --- Belege (F2b, Spec 5.2): drei festgeschriebene Buchungen mit hochgeladenem PDF; eine davon
   // widerrufen und ersetzt; „Spende Altjahr“ bleibt bewusst ohne Beleg (der Rohumsatz allein reicht
   // für Spenden erst mit F4/F5).
@@ -658,4 +665,58 @@ async function ensureCashOnlyPerson(deps: Deps, ctx: CallContext): Promise<void>
   const already = deps.db.select({ userId: schema.userRoles.userId }).from(schema.userRoles).where(and(eq(schema.userRoles.userId, person.id), eq(schema.userRoles.roleId, role.id))).get();
   if (already) return;
   unwrap(await assignRole(deps, usersCtx, { userId: person.id, roleId: role.id }));
+}
+
+/**
+ * Die Arbeitsliste (F5) auf „Importkonto“: eine Regel für die Büromaterial-Zeile
+ * aus Lauf A, die IBAN von „Erika Beispiel“ an einem Kontakt, eine Handbuchung
+ * ohne Kontoumsatz (Entwurf „Zuschuss“, einen Tag vor dem Zuschuss aus Lauf B —
+ * Vorschlag 0 „passt zu Ihrer Buchung“) und ein Entwurf, den ein Agent über MCP
+ * vorbereitet hat und der „Spende April“ bindet. Über die Dienste, jeder
+ * Schritt für sich idempotent.
+ */
+async function seedWorkList(deps: Deps, ctx: CallContext, importkontoId: string): Promise<void> {
+  const contactCtx: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, 'contacts.manage']) };
+  let erika = deps.db.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.firstName, 'Erika'), eq(contacts.lastName, 'Beispiel'))).get();
+  if (!erika) erika = { id: unwrap(await createContact(deps, contactCtx, { kind: 'person', firstName: 'Erika', lastName: 'Beispiel' })).id };
+  unwrap(await linkContactIban(deps, ctx, { contactId: erika.id, iban: 'DE66999999991234567890' }));
+
+  const ruleExists = (name: string) => !!deps.db.select({ id: financeImportRules.id }).from(financeImportRules).where(eq(financeImportRules.name, name)).get();
+  if (!ruleExists('Büromaterial')) {
+    unwrap(await saveImportRule(deps, ctx, { name: 'Büromaterial', sortOrder: 2, accountId: importkontoId, direction: 'out', textContains: 'bueromaterial', categoryId: categoryByKey(deps, 'office').id, entryText: 'Büromaterial' }));
+  }
+  // Review Focus 2: eine Regel, deren Kategorie inzwischen stillgelegt ist. Sie greift vor „Büromaterial“,
+  // trifft aber keinen Umsatz des Seeds — nur den Dezember-Auszug, den die E2E selbst lädt.
+  await ensureCategory(deps, ctx, 'postage-old', { name: 'Porto (alt)', direction: 'expense', sphere: 'ideal', costFunction: 'administration' });
+  if (!ruleExists('Bürobedarf Dezember')) {
+    unwrap(await saveImportRule(deps, ctx, { name: 'Bürobedarf Dezember', sortOrder: 1, accountId: importkontoId, direction: 'out', textContains: 'dezember', categoryId: categoryByKey(deps, 'postage-old').id }));
+  }
+  const postageOld = categoryByKey(deps, 'postage-old');
+  if (postageOld.isActive) unwrap(await setCategoryActive(deps, ctx, { id: postageOld.id, isActive: false, expectedVersion: postageOld.updatedAt }));
+
+  await ensureEntry(deps, 'Zuschuss', async () =>
+    unwrap(
+      await saveDraft(deps, ctx, {
+        entryDate: '2026-02-14',
+        text: 'Zuschuss',
+        moneyLines: [{ accountId: importkontoId, amountCents: 5000 }],
+        allocationLines: [{ categoryId: categoryByKey(deps, 'public-grants').id, amountCents: 5000 }],
+      }),
+    ),
+  );
+
+  const april = deps.db.select().from(financeRawTransactions).where(and(eq(financeRawTransactions.accountId, importkontoId), eq(financeRawTransactions.bankReference, 'IMP-0004'))).get();
+  const aprilBound = april ? deps.db.select({ id: financeMoneyLines.id }).from(financeMoneyLines).where(eq(financeMoneyLines.rawTransactionId, april.id)).get() : undefined;
+  if (april && !aprilBound) {
+    await ensureEntry(deps, 'Spende April', async () =>
+      unwrap(
+        await saveDraft(deps, { ...ctx, channel: 'mcp' as const }, {
+          entryDate: april.bookingDate,
+          text: 'Spende April',
+          moneyLines: [{ accountId: importkontoId, amountCents: april.amountCents, rawTransactionId: april.id }],
+          allocationLines: [{ categoryId: categoryByKey(deps, 'donations').id, amountCents: april.amountCents, contactId: erika.id }],
+        }),
+      ),
+    );
+  }
 }

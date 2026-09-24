@@ -2372,7 +2372,10 @@
       "confirmFormatChange": "Format wechseln",
       "setUpCsvFormat": "CSV-Format einrichten",
       "fetchUsualFormat": "Datei im gewohnten Format holen",
-      "newCsvFormat": "Neues CSV-Format einrichten"
+      "newCsvFormat": "Neues CSV-Format einrichten",
+      "reloadWork": "Liste neu laden",
+      "openJournal": "Zum Journal",
+      "setUpCategories": "Kategorien einrichten"
     },
     "state": {
       "draft": "Entwurf",
@@ -2611,7 +2614,9 @@
         "draftSaved": "Als Entwurf gespeichert.",
         "reviewedSaved": "Gespeichert und als geprüft markiert.",
         "finalized": "Festgeschrieben: {number}."
-      }
+      },
+      "boundLine": "Kontoumsatz vom {date} · {amount}",
+      "boundLineNoDate": "Kontoumsatz · {amount}"
     },
     "entryView": {
       "back": "Zurück zum Journal",
@@ -3450,6 +3455,149 @@
         "savedAndLoaded": "CSV-Format gespeichert, Auszug geladen: {new} neu, {known} bereits vorhanden, {held} zurückgehalten."
       },
       "defaultName": "{account} CSV"
+    },
+    "work": {
+      "title": "Arbeitsliste",
+      "description": "Kontoumsätze mit ihrem Vorschlag — mit der Tastatur abzuarbeiten.",
+      "accountFilter": "Liste für Konto",
+      "allAccounts": "Alle Konten",
+      "tabsGroup": "Reiter der Arbeitsliste",
+      "tabs": {
+        "open": "Zuzuordnen",
+        "unsure": "Unsicher",
+        "agent": "Vom Agenten vorbereitet",
+        "reviewed": "Geprüft, nicht festgeschrieben",
+        "due": "Fällig"
+      },
+      "held": "{count, plural, one {# zurückgehaltene Zeile wartet} other {# zurückgehaltene Zeilen warten}} unter",
+      "heldLink": "Hochgeladene Auszüge",
+      "reviewedLine": "{count} geprüft, noch nicht festgeschrieben",
+      "finalize": "Festschreiben",
+      "comingNext": "kommt mit dem nächsten Schritt",
+      "live": {
+        "waiting": "{count, plural, one {# Umsatz wartet} other {# Umsätze warten}} auf Zuordnung"
+      },
+      "list": {
+        "label": "Kontoumsätze",
+        "empty": "Hier wartet kein Kontoumsatz.",
+        "emptyText": "Laden Sie einen Kontoauszug, oder wechseln Sie den Reiter."
+      },
+      "rowState": {
+        "open": "offen",
+        "proposed": "vorgeschlagen",
+        "booked": "gebucht"
+      },
+      "origin": {
+        "linkEntry": "passt zu einer Buchung",
+        "pair": "Umbuchung zwischen eigenen Konten",
+        "cashKeyword": "Umbuchung mit der Barkasse",
+        "returnCode": "zurückgegebene Zahlung",
+        "paymentReference": "offene Zahlung",
+        "amountAndContact": "offene Zahlung",
+        "rule": "Regel",
+        "contactIban": "Kontakt über IBAN"
+      },
+      "keys": {
+        "label": "Tastenkürzel",
+        "move": "wählen",
+        "accept": "übernehmen und geprüft",
+        "edit": "ändern",
+        "skip": "überspringen",
+        "up": "Pfeil nach oben",
+        "down": "Pfeil nach unten",
+        "right": "Pfeil nach rechts",
+        "enterKey": "Enter"
+      },
+      "detail": {
+        "label": "Kontoumsatz",
+        "none": "Wählen Sie links einen Kontoumsatz.",
+        "loading": "Der Vorschlag wird geladen …",
+        "fields": {
+          "account": "Konto",
+          "bookingDate": "Buchungstag",
+          "valueDate": "Wertstellung",
+          "amount": "Betrag",
+          "counterparty": "Gegenpartei",
+          "iban": "IBAN",
+          "purpose": "Verwendungszweck",
+          "bankReference": "Bankreferenz",
+          "endToEndId": "Ende-zu-Ende-Referenz",
+          "returnCode": "Rückgabe-Code"
+        }
+      },
+      "suggestion": {
+        "because": "Vorschlag, weil:",
+        "unsure": "unsicher",
+        "none": "Kein Vorschlag — ordnen Sie den Umsatz selbst zu.",
+        "linkEntry": "Dieser Umsatz passt zu Ihrer Buchung {number} vom {date}.",
+        "linkDraft": "Dieser Umsatz passt zu Ihrem Entwurf vom {date}.",
+        "link": "Verknüpfen",
+        "openEntry": "Buchung ansehen",
+        "problems": {
+          "categoryInactive": "Die Kategorie dieses Vorschlags ist stillgelegt. Übernehmen gelingt erst mit einer aktiven Kategorie.",
+          "purposeClosed": "Der Zweck dieses Vorschlags ist abgeschlossen. Wählen Sie einen anderen Zweck."
+        },
+        "foreignIban": "Die IBAN ist ausländisch. Eine Zahlung an Partner lässt sich erst mit Partnern und Zweckmitteln eigens erfassen.",
+        "readOnly": "Übernehmen braucht das Recht „Buchungen vorbereiten“.",
+        "summaryLine": "{category}: {amount}"
+      },
+      "reasons": {
+        "linkEntry": "passt zu Buchung {number} vom {date}",
+        "linkDraft": "passt zu Ihrem Entwurf vom {date}",
+        "pair": "passender Umsatz auf {account} — Umbuchung zwischen eigenen Konten",
+        "cashKeyword": "Bargeld im Verwendungszweck — Umbuchung mit {account}",
+        "returnCode": "zurückgegebene Zahlung zu Buchung {number}",
+        "paymentReference": "offene Zahlung {reference}",
+        "amountAndContact": "Betrag und Kontakt {contact} passen zu einer offenen Zahlung",
+        "rule": "Regel „{name}“",
+        "contactIban": "IBAN gehört zu Kontakt {contact}",
+        "hiddenContact": "(ohne Leserecht für Kontakte)",
+        "noNumber": "ohne Nummer"
+      },
+      "mini": {
+        "label": "Buchung aus dem Kontoumsatz",
+        "date": "Datum",
+        "text": "Text",
+        "addRow": "Zeile hinzufügen",
+        "transferLine": "Gegenbuchung auf {account}: {amount}",
+        "cashLine": "Gegenbuchung in der Kasse {account}: {amount}",
+        "settles": "begleicht eine offene Zahlung: {amount}"
+      },
+      "actions": {
+        "accept": "Übernehmen und geprüft",
+        "edit": "Ändern",
+        "skip": "Überspringen",
+        "rule": "Künftig immer so?",
+        "foreign": "Gehört nicht dem Verein",
+        "createContact": "Kontakt anlegen",
+        "partner": "Als Zahlung an Partner erfassen (kommt mit Partnern und Zweckmitteln)"
+      },
+      "entries": {
+        "label": "Entwürfe",
+        "empty": "Hier liegt kein Entwurf.",
+        "view": "Ansehen",
+        "review": "Geprüft",
+        "delete": "Löschen",
+        "deleteTitle": "Entwurf löschen?",
+        "deleteText": "Der Entwurf verschwindet; ein gebundener Kontoumsatz wartet danach wieder auf Zuordnung."
+      },
+      "due": {
+        "label": "Überfällige offene Zahlungen",
+        "empty": "Keine offene Zahlung ist überfällig.",
+        "receivable": "Wir erwarten",
+        "payable": "Wir zahlen noch",
+        "dueOn": "fällig seit {date}",
+        "open": "Ansehen",
+        "noReference": "ohne Zahlungsreferenz"
+      },
+      "toast": {
+        "booked": "Übernommen und als geprüft markiert.",
+        "bookedFinal": "Übernommen und festgeschrieben: {number}.",
+        "linked": "Kontoumsatz verknüpft.",
+        "reviewed": "Als geprüft markiert.",
+        "deleted": "Entwurf gelöscht.",
+        "fieldsInvalid": "Bitte die markierten Felder prüfen."
+      }
     }
   }
 }

@@ -27,4 +27,10 @@ describe('remediesFor', () => {
       { kind: 'action', action: 'openCsvAssistant', labelKey: 'finance.remedy.newCsvFormat' },
     ]);
   });
+
+  it('offers the work list its ways out: reload after a stale suggestion, the journal for a booked transaction, the set-up for an inactive category (F5 Task 7)', () => {
+    expect(remediesFor('suggestionStale')).toEqual([{ kind: 'action', action: 'reloadWork', labelKey: 'finance.remedy.reloadWork' }]);
+    expect(remediesFor('transactionAlreadyBooked')).toEqual([{ kind: 'link', href: '/finance/entries', labelKey: 'finance.remedy.openJournal' }]);
+    expect(remediesFor('categoryInactive')).toEqual([{ kind: 'link', href: '/admin/finance?panel=categories', labelKey: 'finance.remedy.setUpCategories' }]);
+  });
 });

@@ -1,5 +1,5 @@
 /** Ein Ausweg aus einer Ablehnung (Finanz-Spec 5.4: „Fehlerbilder mit Grund **und** Abhilfe“). */
-export type RemedyAction = 'restIntoLastRow' | 'focusDate' | 'focusAccount' | 'confirmFormatChange' | 'openCsvAssistant';
+export type RemedyAction = 'restIntoLastRow' | 'focusDate' | 'focusAccount' | 'confirmFormatChange' | 'openCsvAssistant' | 'reloadWork';
 export type Remedy = { labelKey: string } & ({ kind: 'action'; action: RemedyAction } | { kind: 'link'; href: string });
 
 const REMEDIES: Record<string, Remedy[]> = {
@@ -18,6 +18,11 @@ const REMEDIES: Record<string, Remedy[]> = {
     { kind: 'link', href: '/help/finanzen/auszug-bei-der-bank-holen', labelKey: 'finance.remedy.fetchUsualFormat' },
     { kind: 'action', action: 'openCsvAssistant', labelKey: 'finance.remedy.newCsvFormat' },
   ],
+  // F5 Task 7: die Arbeitsliste. Ein veralteter Vorschlag verschwindet mit dem Neuladen; eine stillgelegte Kategorie
+  // wird in der Einrichtung wieder aktiv (oder in der Maske ersetzt).
+  suggestionStale: [{ kind: 'action', action: 'reloadWork', labelKey: 'finance.remedy.reloadWork' }],
+  transactionAlreadyBooked: [{ kind: 'link', href: '/finance/entries', labelKey: 'finance.remedy.openJournal' }],
+  categoryInactive: [{ kind: 'link', href: '/admin/finance?panel=categories', labelKey: 'finance.remedy.setUpCategories' }],
 };
 
 /** 1–3 Auswege je Fehlerschlüssel; ein unbekannter Code liefert keinen. */

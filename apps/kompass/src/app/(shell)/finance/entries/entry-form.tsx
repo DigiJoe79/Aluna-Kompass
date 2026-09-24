@@ -56,6 +56,8 @@ export interface EntryFormProps {
   voucherTypeKey: string;
   vouchers: ReceiptListItem[];
   openItems: EntryFormOpenItem[];
+  /** Wohin „Abbrechen“ und das Speichern eines Entwurfs führen — `/finance/work` aus der Arbeitsliste (F5). */
+  returnTo?: string;
 }
 
 const TEMPLATES: EntryTemplate[] = ['income', 'expense', 'transfer', 'inKind'];
@@ -157,7 +159,7 @@ function MoneySettlements({
 }
 
 /** Die Buchungsmaske (HANDOFF § 5.1): Karten Kopf · Konto · Wofür? · Beleg, Fußleiste klebt. */
-export function EntryForm({ initial, accounts, categories, purposes, projects, taxCodeOptions, showTax, canFinalize, voucherTypeKey, vouchers: initialVouchers, openItems }: EntryFormProps) {
+export function EntryForm({ initial, accounts, categories, purposes, projects, taxCodeOptions, showTax, canFinalize, voucherTypeKey, vouchers: initialVouchers, openItems, returnTo = '/finance/entries' }: EntryFormProps) {
   const t = useTranslations('finance.entryForm');
   // `remediesFor` liefert vollqualifizierte Schlüssel (`finance.remedy.*`) — ein eigener Übersetzer ohne Namensraum.
   const tRoot = useTranslations();
@@ -174,6 +176,8 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
   const accountsById = new Map(accounts.map((a) => [a.id, a]));
   const chosenAccount = state.moneyRows.length === 1 ? accountsById.get(state.moneyRows[0]!.accountId) : undefined;
   const isCash = chosenAccount?.kind === 'cash';
+  // Eine Zeile, die einen Kontoumsatz bindet, hat Konto und Betrag aus der Bank — die Vorlage wechselt dann nicht mehr (F5).
+  const bound = state.moneyRows.some((r) => !!r.rawTransactionId);
 
   const validation = toServiceInput(state);
   const remainder = remainderCents(state);
@@ -184,7 +188,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
     if (result.status === 'success') {
       if (result.message) toast.success(result.message);
       const data = result.data as { id?: string } | undefined;
-      router.push(redirectTo === 'entry' && data?.id ? `/finance/entries/${data.id}` : '/finance/entries');
+      router.push(redirectTo === 'entry' && data?.id ? `/finance/entries/${data.id}` : returnTo);
       router.refresh();
     } else if (result.status === 'error') {
       toast.error(result.message);
@@ -290,6 +294,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
               type="button"
               role="radio"
               aria-checked={state.template === template}
+              disabled={bound && state.template !== template}
               onClick={() => setState((s) => applyTemplate(s, template))}
               className={`h-[var(--field-h)] rounded-md border px-3 text-[13px] font-semibold ${state.template === template ? 'border-selected bg-selected text-selected-ink' : 'border-line-strong bg-surface-2 text-ink-2'}`}
             >
@@ -304,8 +309,16 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
           <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('accountCard')}</h3>
           {state.moneyRows.map((row, index) => (
             <div key={row.key} className="space-y-1.5">
+              {row.rawTransactionId ? (
+                <p data-testid="bound-money-line" className="rounded-sm border border-line bg-surface-2 px-2.5 py-1.5 font-mono text-[13px] tabular-nums text-ink">
+                  {(() => {
+                    const cents = (parseAmount(row.amountText) ?? 0) * (row.direction === 'out' ? -1 : 1);
+                    return row.rawBookingDate ? t('boundLine', { date: row.rawBookingDate, amount: formatEuro(cents) }) : t('boundLineNoDate', { amount: formatEuro(cents) });
+                  })()}
+                </p>
+              ) : null}
               <Label htmlFor={`account-${row.key}`}>{state.template === 'transfer' ? t(row.direction === 'out' ? 'transferFrom' : 'transferTo') : t('account')}</Label>
-              <Select id={`account-${row.key}`} value={row.accountId} onChange={(e) => setState((s) => ({ ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, accountId: e.target.value } : r)) }))} required>
+              <Select id={`account-${row.key}`} value={row.accountId} disabled={!!row.rawTransactionId} onChange={(e) => setState((s) => ({ ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, accountId: e.target.value } : r)) }))} required>
                 <option value="" disabled>
                   {t('accountPlaceholder')}
                 </option>
@@ -319,6 +332,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
                 name={`amount-${row.key}`}
                 value={row.amountText}
                 onChange={(amountText) => setState((s) => ({ ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, amountText } : r)) }))}
+                disabled={!!row.rawTransactionId}
                 required
                 balanceHint={accountsById.get(row.accountId) ? t('balanceHint', { amount: formatEuro(accountsById.get(row.accountId)!.balanceCents) }) : undefined}
               />
@@ -408,7 +422,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
       ) : null}
 
       <FormActionBar
-        back={{ href: '/finance/entries', label: t('cancel') }}
+        back={{ href: returnTo, label: t('cancel') }}
         count={0}
         note={isCash ? t('cashNote') : undefined}
         extraActions={

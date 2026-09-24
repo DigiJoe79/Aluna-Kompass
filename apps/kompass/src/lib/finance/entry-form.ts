@@ -11,6 +11,8 @@ export interface MoneyRow {
   settlements: { openItemId: string; amountText: string }[];
   /** F4 Task 4: der Kontoumsatz, den diese Zeile bucht — keine eigene Oberfläche dafür, kommt mit F5; nur durchgereicht, damit das Bearbeiten eines Entwurfs die Bindung nicht verliert. */
   rawTransactionId?: string | null;
+  /** F5: das Buchungsdatum des gebundenen Kontoumsatzes — nur zur Anzeige („Kontoumsatz vom …“), wenn es bekannt ist. */
+  rawBookingDate?: string;
 }
 
 export interface SplitRowState {
