@@ -1,11 +1,13 @@
-import { activeUserChoices, hasPermission, isModuleEnabled, retentionEnd, retentionMonths, userNamesFor } from '@kompass/core';
+import { activeUserChoices, hasPermission, isModuleEnabled, readSetting, retentionEnd, retentionMonths, userNamesFor } from '@kompass/core';
 import { listProjects } from '@kompass/module-projects';
 import { listAnimals } from '@kompass/module-animals';
 import { dispatchChannels, documentTypeFor, getDocumentRecord, listDocumentFolders, listDocumentTypes, requireDmsGate } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
+import { buttonVariants } from '@/components/ui/button';
 import { requireSession } from '@/lib/request-context';
 import { DocumentDetail } from './document-detail';
 import { resolveLinks } from './links';
@@ -102,9 +104,29 @@ export default async function DocumentDetailPage(props: {
   const typesRes = canReclassify ? await listDocumentTypes(deps, ctx, { selectable: true }) : null;
   const reclassifyTypes = typesRes?.ok ? typesRes.value.map((type) => ({ key: type.key, label: type.label })) : null;
 
+  // „Zu Buchung machen“ (Finanzen F5): ein Finanzbeleg, der noch an keiner Buchung hängt — nur, wer Buchungen vorbereiten darf.
+  const canMakeEntry =
+    isModuleEnabled(deps, 'finance') &&
+    hasPermission(ctx, 'finance.entriesWrite') &&
+    doc.phase === 'issued' &&
+    doc.status !== 'voided' &&
+    readSetting<string[]>(deps, 'finance.voucherTypes').includes(doc.typeKey) &&
+    !doc.links.some((link) => link.entityType === 'financeEntry');
+  const tWork = await getTranslations('finance.work');
+
   return (
     <>
-      <PageHeader title={doc.subject} back={{ href: '/dms', label: tCommon('backToList') }} />
+      <PageHeader
+        title={doc.subject}
+        back={{ href: '/dms', label: tCommon('backToList') }}
+        actions={
+          canMakeEntry ? (
+            <Link href={`/finance/entries/new?voucher=${doc.id}`} className={buttonVariants({ size: 'sm' })}>
+              {tWork('toEntry')}
+            </Link>
+          ) : undefined
+        }
+      />
       <DocumentDetail
         document={{
           id: doc.id,

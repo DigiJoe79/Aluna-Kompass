@@ -131,6 +131,8 @@ const listSchema = z.object({
   accountId: z.string().min(1).optional(),
   from: z.string().date().optional(),
   to: z.string().date().optional(),
+  /** Genau diese Buchungen — der Link aus der Vorschau einer Regel auf die „anders gebuchten“ (F5). */
+  ids: z.array(z.string().min(1)).min(1).max(200).optional(),
   limit: z.number().int().min(1).max(200).default(50),
   offset: z.number().int().min(0).default(0),
 });
@@ -510,6 +512,7 @@ export async function listEntries(deps: Deps, ctx: CallContext, input: unknown):
   if (f.from) conditions.push(gte(financeEntries.entryDate, f.from));
   if (f.to) conditions.push(lte(financeEntries.entryDate, f.to));
   if (f.agentPrepared) conditions.push(eq(financeEntries.createdChannel, 'mcp'));
+  if (f.ids) conditions.push(inArray(financeEntries.id, f.ids));
   if (f.accountId) {
     const ids = deps.db.select({ id: financeMoneyLines.entryId }).from(financeMoneyLines).where(eq(financeMoneyLines.accountId, f.accountId)).all().map((r) => r.id);
     conditions.push(inArray(financeEntries.id, ids.length > 0 ? ids : ['—']));

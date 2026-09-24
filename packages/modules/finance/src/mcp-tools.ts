@@ -90,6 +90,7 @@ const saveDraftMcpSchema = z.object({
 });
 const entryIdMcpSchema = z.object({ id: z.string() });
 const listEntriesMcpSchema = z.object({
+  ids: z.array(z.string()).optional(),
   state: z.enum(['draft', 'reviewed', 'final', 'reversed']).optional(),
   categoryId: z.string().optional(),
   text: z.string().optional(),
@@ -279,7 +280,7 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
     handler: (deps, ctx, args) => getEntryHistory(deps, ctx, args),
     service: getEntryHistory,
   }),
-  t({ name: 'finance_entries_list', description: 'List booking entries, filtered by state (draft, reviewed, final, reversed), category, free text or amount, without voucher, agent-prepared, fiscal year, account or date range; sortable. Paginated (limit <= 200). Returns totals (income, expense, result) over the whole filtered set, not just the page. Requires finance.read.', inputSchema: listEntriesMcpSchema, handler: (deps, ctx, args) => listEntries(deps, ctx, args), service: listEntries }),
+  t({ name: 'finance_entries_list', description: 'List booking entries, filtered by ids, state (draft, reviewed, final, reversed), category, free text or amount, without voucher, agent-prepared, fiscal year, account or date range; sortable. Paginated (limit <= 200). Returns totals (income, expense, result) over the whole filtered set, not just the page. Requires finance.read.', inputSchema: listEntriesMcpSchema, handler: (deps, ctx, args) => listEntries(deps, ctx, args), service: listEntries }),
   t({ name: 'finance_entry_delete_draft', description: 'Delete a draft entry; a finalized entry is reversed instead. Requires finance.entriesWrite.', inputSchema: entryIdMcpSchema, handler: (deps, ctx, args) => deleteDraft(deps, ctx, args), service: deleteDraft }),
   t({
     name: 'finance_entry_review',

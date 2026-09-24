@@ -58,6 +58,16 @@ export interface EntryFormProps {
   openItems: EntryFormOpenItem[];
   /** Wohin „Abbrechen“ und das Speichern eines Entwurfs führen — `/finance/work` aus der Arbeitsliste (F5). */
   returnTo?: string;
+  /** `?voucher=` („Zu Buchung machen“, F5): ein Beleg der Akte, der nach dem ersten Speichern verknüpft wird. */
+  pendingVoucher?: PendingVoucher | null;
+}
+
+export interface PendingVoucher {
+  documentId: string;
+  number: string | null;
+  subject: string;
+  typeLabel: string;
+  date: string;
 }
 
 const TEMPLATES: EntryTemplate[] = ['income', 'expense', 'transfer', 'inKind'];
@@ -159,7 +169,7 @@ function MoneySettlements({
 }
 
 /** Die Buchungsmaske (HANDOFF § 5.1): Karten Kopf · Konto · Wofür? · Beleg, Fußleiste klebt. */
-export function EntryForm({ initial, accounts, categories, purposes, projects, taxCodeOptions, showTax, canFinalize, voucherTypeKey, vouchers: initialVouchers, openItems, returnTo = '/finance/entries' }: EntryFormProps) {
+export function EntryForm({ initial, accounts, categories, purposes, projects, taxCodeOptions, showTax, canFinalize, voucherTypeKey, vouchers: initialVouchers, openItems, returnTo = '/finance/entries', pendingVoucher: initialPending = null }: EntryFormProps) {
   const t = useTranslations('finance.entryForm');
   // `remediesFor` liefert vollqualifizierte Schlüssel (`finance.remedy.*`) — ein eigener Übersetzer ohne Namensraum.
   const tRoot = useTranslations();
@@ -170,6 +180,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
   const [vouchers, setVouchers] = useState<ReceiptListItem[]>(initialVouchers);
   const [confirmFinalize, setConfirmFinalize] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const [pendingVoucher, setPendingVoucher] = useState<PendingVoucher | null>(initialPending);
   const [actionState, setActionState] = useState<ActionState>({ status: 'idle' });
   const dateRef = useRef<HTMLInputElement>(null);
 
@@ -183,9 +194,19 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
   const remainder = remainderCents(state);
 
   // Festschreiben führt auf die Buchung (Task 4) — Entwurf speichern/prüfen bleibt im Journal.
-  const afterSuccess = (result: ActionState, redirectTo: 'journal' | 'entry' = 'journal') => {
+  /** Der Beleg aus `?voucher=` hängt sich an, sobald die Buchung eine ID hat — einmal. */
+  const attachPending = async (id: string) => {
+    if (!pendingVoucher) return;
+    const attached = await attachDocumentAction(id, pendingVoucher.documentId);
+    if (attached.status === 'error') toast.error(attached.message);
+    else setPendingVoucher(null);
+  };
+
+  const afterSuccess = async (result: ActionState, redirectTo: 'journal' | 'entry' = 'journal') => {
     setActionState(result);
     if (result.status === 'success') {
+      const saved = result.data as { id?: string } | undefined;
+      if (saved?.id) await attachPending(saved.id);
       if (result.message) toast.success(result.message);
       const data = result.data as { id?: string } | undefined;
       router.push(redirectTo === 'entry' && data?.id ? `/finance/entries/${data.id}` : returnTo);
@@ -236,6 +257,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
       return null;
     }
     const data = saved.data as { id: string; expectedVersion: string };
+    await attachPending(data.id);
     setEntryId(data.id);
     setState((s) => ({ ...s, id: data.id, expectedVersion: data.expectedVersion }));
     return data.id;
@@ -406,6 +428,15 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
         <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('voucherCard')}</h3>
         <ReceiptDrop onFiles={(files) => void uploadFiles(files)} onPickFromArchive={() => setArchiveOpen(true)} />
         {archiveOpen ? <DocumentPicker id="voucher-archive" name="voucherArchive" label={t('pickFromArchive')} value={null} onChange={(doc) => doc && void pickFromArchive(doc.id)} /> : null}
+        {pendingVoucher ? (
+          <p data-testid="pending-voucher" className="flex flex-wrap items-center gap-2 rounded-sm border border-line bg-surface-2 px-2.5 py-1.5 text-[13px]">
+            <span className="font-mono text-[12px]">{pendingVoucher.number}</span>
+            <span className="min-w-0 flex-1 truncate">{pendingVoucher.subject}</span>
+            <span className="text-[12px] text-muted-ink">{pendingVoucher.typeLabel}</span>
+            <span className="font-mono text-[12px] text-muted-ink">{pendingVoucher.date}</span>
+            <span className="text-[12px] font-semibold text-ink-2">{t('pendingVoucher')}</span>
+          </p>
+        ) : null}
         <ReceiptList items={vouchers} />
       </section>
 
@@ -450,7 +481,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
         action={async () => {
           if (!validation.ok) return { status: 'error', message: t('toast.fieldsInvalid'), fieldErrors: validation.fieldErrors };
           const result = await finalizeAction(validation.input);
-          afterSuccess(result, 'entry');
+          await afterSuccess(result, 'entry');
           return result;
         }}
       />

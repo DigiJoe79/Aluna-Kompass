@@ -15,6 +15,8 @@ import { listImportProfiles } from '../src/import/profiles';
 import { listImportRuns } from '../src/import/runs';
 import { listImportRules } from '../src/import/rules';
 import { listContactIbans } from '../src/import/contact-ibans';
+import { listForeignMoney } from '../src/import/transit';
+import { listVouchersWithoutEntry } from '../src/ledger/vouchers';
 import { listWorkItems } from '../src/import/work';
 import { listRawTransactions } from '../src/import/queries';
 import { listOpenItems } from '../src/ledger/open-items';
@@ -105,8 +107,8 @@ describe('seedFinance', () => {
     expect(importkonto.iban).toBe('DE60999999990201051234');
 
     const runs = unwrap(await listImportRuns(deps, ctx, { accountId: importkonto.id }));
-    expect(runs.total).toBe(5); // A, B, C fertig; D verworfen; E fehlgeschlagen.
-    expect(runs.runs.filter((r) => r.state === 'finished')).toHaveLength(3);
+    expect(runs.total).toBe(6); // A, B, C fertig; D verworfen; E fehlgeschlagen; dazu der Juli-Auszug (F5 Task 8).
+    expect(runs.runs.filter((r) => r.state === 'finished')).toHaveLength(4);
     expect(runs.runs.filter((r) => r.state === 'discarded')).toHaveLength(1);
     expect(runs.runs.some((r) => r.gap !== null)).toBe(true);
 
@@ -118,13 +120,14 @@ describe('seedFinance', () => {
     expect(candidates.candidates.filter((c) => c.accountId === importkonto.id)).toHaveLength(1);
 
     const raws = unwrap(await listRawTransactions(deps, ctx, { accountId: importkonto.id }));
-    // Gebucht: die Spende aus Lauf A; gebunden an den Agenten-Entwurf (F5): „Spende April“.
-    expect(raws.items.filter((r) => r.state === 'booked')).toHaveLength(2);
+    // Gebucht: die Spende aus Lauf A; gebunden an den Agenten-Entwurf (F5): „Spende April“; das fremde Geld aus dem Juli.
+    expect(raws.items.filter((r) => r.state === 'booked')).toHaveLength(3);
     expect(raws.items.filter((r) => r.state === 'open').length).toBeGreaterThanOrEqual(2);
 
     // Zweiter Seed-Lauf legt nichts doppelt an (idempotent).
     const runsAfterSecondSeed = unwrap(await listImportRuns(deps, ctx, { accountId: importkonto.id }));
-    expect(runsAfterSecondSeed.total).toBe(5);
+    // Fünf aus F4, dazu der Juli-Auszug mit dem fremden Geld (F5 Task 8).
+    expect(runsAfterSecondSeed.total).toBe(6);
   });
 
   it('seeds the work list on "Importkonto": two rules (one with an inactive category), a contact iban, a hand draft without a transaction and an agent draft (F5, idempotent)', async () => {
@@ -157,6 +160,25 @@ describe('seedFinance', () => {
     const agent = unwrap(await listWorkItems(deps, ctx, { tab: 'agent', accountId: importkonto.id, limit: 50, offset: 0 }));
     expect(agent.items).toHaveLength(1);
     expect(agent.items[0]).toMatchObject({ type: 'entry', entry: { text: 'Spende April', createdChannel: 'mcp', reviewedAt: null } });
+  });
+
+  it('seeds money that does not belong to the association and a voucher without an entry (F5 Task 8, idempotent)', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+    await seedFinance(deps, ctx);
+    await seedFinance(deps, ctx); // idempotent
+
+    // Ein Eingang über 120,00 € für den Nachbarverein, noch nicht weitergegeben.
+    const foreign = unwrap(await listForeignMoney(deps, ctx));
+    expect(foreign.items).toHaveLength(1);
+    expect(foreign.items[0]).toMatchObject({ amountCents: 12000, holderText: 'Nachbarverein Beispielstadt', entryDate: '2026-07-06' });
+    const importkonto = unwrap(await listAccounts(deps, ctx, { includeInactive: true })).find((a) => a.name === 'Importkonto')!;
+    const raws = unwrap(await listRawTransactions(deps, ctx, { accountId: importkonto.id, limit: 200 }));
+    expect(raws.items.find((r) => r.purpose === 'Sammelbestellung Futter, für Nachbarverein')).toMatchObject({ amountCents: 12000, state: 'booked' });
+
+    // Eine Eingangsrechnung ohne Buchung — „Beleg suchen“ findet sie über den Betrag der Büromaterial-Zeile (−35,00 €).
+    const vouchers = unwrap(await listVouchersWithoutEntry(deps, ctx, {}));
+    expect(vouchers.documents.map((d) => [d.subject, d.typeKey])).toEqual([['Rechnung Büromaterial über 35,00 €', 'voucher-invoice']]);
   });
 
   it('uses no animal and no association-specific wording', async () => {

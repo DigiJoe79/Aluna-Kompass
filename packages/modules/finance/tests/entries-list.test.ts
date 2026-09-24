@@ -28,6 +28,16 @@ describe('listEntries: filters, sorting and totals over the filtered set', () =>
     expect(unwrap(await listEntries(f.deps, f.ctx, { state: 'reversed' })).entries.map((e) => e.id)).toEqual([toReverse.id]);
   });
 
+  it('filters by a list of ids — the link from a rule preview to the entries booked differently', async () => {
+    const f = await ledgerFixture();
+    const a = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'A', moneyLines: [{ accountId: f.bank.id, amountCents: 1000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 1000 }] }));
+    unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-02', text: 'B', moneyLines: [{ accountId: f.bank.id, amountCents: 2000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 2000 }] }));
+    const c = unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-03-03', text: 'C', moneyLines: [{ accountId: f.bank.id, amountCents: 3000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 3000 }] }));
+    expect(unwrap(await listEntries(f.deps, f.ctx, { ids: [a.id, c.id] })).entries.map((e) => e.id).sort()).toEqual([a.id, c.id].sort());
+    expect(unwrap(await listEntries(f.deps, f.ctx, { ids: ['unknown'] })).total).toBe(0);
+    expect(err(await listEntries(f.deps, f.ctx, { ids: [] }))).toMatchObject({ type: 'validation' });
+  });
+
   it('filters by category across split lines', async () => {
     const f = await ledgerFixture();
     const split = unwrap(

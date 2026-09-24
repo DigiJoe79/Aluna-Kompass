@@ -11,9 +11,14 @@ import { Button } from '@/components/ui/button';
 import type { ActionState } from '@/lib/actions';
 import { formatEuro, parseAmount } from '@/lib/finance/amount';
 import { remediesFor, type Remedy } from '@/lib/finance/remedies';
-import { miniFormFromSuggestion, miniFormToBookInput, type MiniFormState } from '@/lib/finance/work';
+import { miniFormFromSuggestion, miniFormToBookInput, type BookFromTransactionInput, type MiniFormState } from '@/lib/finance/work';
+import { ruleFormFromTransaction, type RuleFormState } from '@/lib/finance/work-dialogs';
 import { bookFromTransactionAction, linkTransactionAction } from './actions';
+import { ContactDialog } from './contact-dialog';
+import { ForeignDialog } from './foreign-dialog';
 import { MiniEntryForm } from './mini-entry-form';
+import { RuleDialog } from './rule-dialog';
+import { VoucherPanel } from './voucher-panel';
 import type { WorkDetailData, WorkFormOptions } from './work-detail';
 
 /**
@@ -51,6 +56,23 @@ export function SuggestionCard({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [refusal, setRefusal] = useState<Extract<ActionState, { status: 'error' }> | null>(null);
   const linkEntry = suggestion?.kind === 'linkEntry' ? suggestion.linkEntry : null;
+  const [dialog, setDialog] = useState<'rule' | 'foreign' | 'contact' | null>(null);
+  const [ruleInitial, setRuleInitial] = useState<RuleFormState | null>(null);
+
+  const openRule = () => {
+    setRuleInitial(ruleFormFromTransaction(raw, linkEntry ? null : mini));
+    setDialog('rule');
+  };
+
+  /** Für „Verknüpfen“ eines Belegs ohne vorhandenen Entwurf: die Mini-Maske, so weit sie lesbar ist — sonst nur die Geldzeile. */
+  const draftForLink = (): Omit<BookFromTransactionInput, 'reviewed'> => {
+    const built = linkEntry ? null : miniFormToBookInput(mini, raw.id, suggestion?.draft ?? null);
+    if (built?.ok) {
+      const { reviewed: _reviewed, ...rest } = built.input;
+      return rest;
+    }
+    return { rawTransactionId: raw.id, entryDate: mini.entryDate || raw.bookingDate, text: mini.text.trim() || raw.purpose || raw.bookingDate, allocationLines: [] };
+  };
 
   const finish = (result: ActionState) => {
     if (result.status === 'success') {
@@ -89,6 +111,7 @@ export function SuggestionCard({
   });
 
   return (
+    <>
     <section className="space-y-3 rounded-md border border-line bg-surface p-4">
       {suggestion && suggestion.kind !== 'none' ? (
         <div data-testid="suggestion-reasons" className="rounded-md bg-agent-bg px-3 py-2 text-[13px] text-agent">
@@ -165,11 +188,15 @@ export function SuggestionCard({
             </Button>
           </div>
           <p className="flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
-            {(['rule', 'foreign', 'createContact'] as const).map((key) => (
-              <button key={key} type="button" disabled title={t('comingNext')} className="text-muted-ink underline underline-offset-2">
-                {t(`actions.${key}`)}
-              </button>
-            ))}
+            <button type="button" onClick={openRule} className="font-semibold text-ink underline underline-offset-2">
+              {t('actions.rule')}
+            </button>
+            <button type="button" onClick={() => setDialog('foreign')} className="font-semibold text-ink underline underline-offset-2">
+              {t('actions.foreign')}
+            </button>
+            <button type="button" onClick={() => setDialog('contact')} className="font-semibold text-ink underline underline-offset-2">
+              {t('actions.createContact')}
+            </button>
             <span className="text-muted-ink">{t('actions.partner')}</span>
           </p>
         </div>
@@ -177,5 +204,22 @@ export function SuggestionCard({
         <p className="text-[12px] text-muted-ink">{t('suggestion.readOnly')}</p>
       )}
     </section>
+    {canWrite ? (
+      <>
+        <VoucherPanel raw={raw} voucherTypes={form.voucherTypes} draftForLink={draftForLink} entryTextIfNew={mini.text} onDone={onDone} />
+        {ruleInitial ? <RuleDialog open={dialog === 'rule'} onOpenChange={(open) => setDialog(open ? 'rule' : null)} initial={ruleInitial} mode="create" options={form.rule} onSaved={onReload} /> : null}
+        <ForeignDialog open={dialog === 'foreign'} onOpenChange={(open) => setDialog(open ? 'foreign' : null)} rawTransactionId={raw.id} outgoing={raw.amountCents < 0} returnOptions={detail.foreignReturnOptions} onDone={() => onDone(raw.id)} />
+        <ContactDialog
+          open={dialog === 'contact'}
+          onOpenChange={(open) => setDialog(open ? 'contact' : null)}
+          rawTransactionId={raw.id}
+          counterpartyName={raw.counterpartyName}
+          canCreate={form.canCreateContact}
+          grantNames={form.contactGrantNames}
+          onDone={onReload}
+        />
+      </>
+    ) : null}
+    </>
   );
 }

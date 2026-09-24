@@ -1,6 +1,6 @@
 import { assignRole, createRole, createUser, schema, setRolePermissions, unwrap, type CallContext, type Deps } from '@kompass/core';
 import { addContactRole, contactRoles, contacts, createContact } from '@kompass/module-contacts';
-import { textPdf } from '@kompass/module-dms';
+import { documents as dmsDocuments, receiveDocument, textPdf } from '@kompass/module-dms';
 import { projects } from '@kompass/module-projects';
 import { and, asc, eq } from 'drizzle-orm';
 import { completeFormat, guessCsvFormat, type CsvFormat } from './import/csv';
@@ -8,6 +8,7 @@ import { buildPaymentServiceCsv, buildSecondBankCsv } from './import/csv-fixture
 import { saveImportProfile } from './import/profiles';
 import { linkContactIban } from './import/contact-ibans';
 import { saveImportRule } from './import/rules';
+import { markTransactionForeign } from './import/transit';
 import { createAccount, setAccountActive } from './ledger/accounts';
 import { createCategory, setCategoryActive } from './ledger/categories';
 import { requestAllocationCorrection } from './ledger/corrections';
@@ -705,6 +706,8 @@ async function seedWorkList(deps: Deps, ctx: CallContext, importkontoId: string)
     ),
   );
 
+  await seedForeignMoneyAndVoucher(deps, ctx, importkontoId);
+
   const april = deps.db.select().from(financeRawTransactions).where(and(eq(financeRawTransactions.accountId, importkontoId), eq(financeRawTransactions.bankReference, 'IMP-0004'))).get();
   const aprilBound = april ? deps.db.select({ id: financeMoneyLines.id }).from(financeMoneyLines).where(eq(financeMoneyLines.rawTransactionId, april.id)).get() : undefined;
   if (april && !aprilBound) {
@@ -717,6 +720,53 @@ async function seedWorkList(deps: Deps, ctx: CallContext, importkontoId: string)
           allocationLines: [{ categoryId: categoryByKey(deps, 'donations').id, amountCents: april.amountCents, contactId: erika.id }],
         }),
       ),
+    );
+  }
+}
+
+/**
+ * F5 Task 8 (aus Task 9 vorgezogen): ein Juli-Auszug auf „Importkonto“ mit
+ * einem Eingang, der dem Verein nicht gehört — eine Sammelbestellung Futter,
+ * die für den Nachbarverein bezahlt wurde und noch weitergegeben werden muss —,
+ * und eine Eingangsrechnung über 35,00 € in der Akte, noch ohne Buchung
+ * („Beleg suchen“ findet sie über den Betrag der Büromaterial-Zeile). Jeder
+ * Schritt über seinen Dienst und für sich idempotent.
+ */
+async function seedForeignMoneyAndVoucher(deps: Deps, ctx: CallContext, importkontoId: string): Promise<void> {
+  const JULY_FILE = 'kontoauszug-2026-07.xml';
+  const hasJuly = deps.db.select({ id: financeImportRuns.id }).from(financeImportRuns).where(and(eq(financeImportRuns.accountId, importkontoId), eq(financeImportRuns.fileName, JULY_FILE))).get();
+  if (!hasJuly) {
+    unwrap(
+      await importStatement(deps, ctx, {
+        accountId: importkontoId,
+        fileName: JULY_FILE,
+        bytes: buildCamt053Bytes({
+          iban: 'DE60999999990201051234',
+          from: '2026-07-01',
+          to: '2026-07-31',
+          openingCents: 139000,
+          lines: [{ bookingDate: '2026-07-06', amountCents: 12000, counterpartyName: 'Max Muster', counterpartyIban: 'DE12999999990000112233', purpose: 'Sammelbestellung Futter, für Nachbarverein', bankReference: 'IMP-0007' }],
+        }),
+      }),
+    );
+  }
+  const foreignRaw = deps.db.select().from(financeRawTransactions).where(and(eq(financeRawTransactions.accountId, importkontoId), eq(financeRawTransactions.bankReference, 'IMP-0007'))).get();
+  const foreignBound = foreignRaw ? deps.db.select({ id: financeMoneyLines.id }).from(financeMoneyLines).where(eq(financeMoneyLines.rawTransactionId, foreignRaw.id)).get() : undefined;
+  if (foreignRaw && !foreignBound) unwrap(await markTransactionForeign(deps, ctx, { rawTransactionId: foreignRaw.id, holder: 'Nachbarverein Beispielstadt', reviewed: false }));
+
+  const INVOICE_SUBJECT = 'Rechnung Büromaterial über 35,00 €';
+  const hasInvoice = deps.db.select({ id: dmsDocuments.id }).from(dmsDocuments).where(eq(dmsDocuments.subject, INVOICE_SUBJECT)).get();
+  if (!hasInvoice) {
+    const dmsCtx: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, 'dms.view', 'dms.create']) };
+    unwrap(
+      await receiveDocument(deps, dmsCtx, {
+        filename: '2026-01-08 Rechnung Buerobedarf.pdf',
+        bytes: textPdf(['Buerobedarf Muster GmbH', 'Rechnung Nr. 2026-0042', '', 'Bueromaterial (Ordner, Papier, Stifte)', 'Rechnungsbetrag: 35,00 EUR']),
+        typeKey: 'voucher-invoice',
+        subject: INVOICE_SUBJECT,
+        documentDate: '2026-01-08',
+        folder: null,
+      }),
     );
   }
 }

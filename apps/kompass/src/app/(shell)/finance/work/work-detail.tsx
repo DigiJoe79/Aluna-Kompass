@@ -5,7 +5,10 @@ import type { MutableRefObject } from 'react';
 import type { RawTransactionView, SuggestionView } from '@kompass/module-finance';
 import type { SplitRowCategoryOption, SplitRowOption } from '@/components/finance/split-row';
 import { formatEuro } from '@/lib/finance/amount';
+import type { ForeignReturnOption } from './foreign-dialog';
+import type { RuleDialogOptions } from './rule-dialog';
 import { SuggestionCard } from './suggestion-card';
+import type { VoucherTypeOption } from './voucher-panel';
 
 /** Was der Server zum gewählten Kontoumsatz liefert — Namen schon aufgelöst, Gründe schon als Sätze. */
 export interface WorkDetailData {
@@ -18,6 +21,8 @@ export interface WorkDetailData {
       })
     | null;
   contactNames: Record<string, string>;
+  /** Nur bei einem Ausgang: frühere Eingänge fremden Gelds, die er zurückzahlen kann. */
+  foreignReturnOptions: ForeignReturnOption[];
 }
 
 /** Auswahllisten der Mini-Maske — dieselben wie in der vollen Maske. */
@@ -29,6 +34,13 @@ export interface WorkFormOptions {
   projects: SplitRowOption[];
   taxCodeOptions: string[];
   showTax: boolean;
+  /** Auswahllisten des Regel-Dialogs. */
+  rule: RuleDialogOptions;
+  /** Die Arten aus `finance.voucherTypes` mit ihrem Namen. */
+  voucherTypes: VoucherTypeOption[];
+  canCreateContact: boolean;
+  /** Wer `contacts.manage` vergeben kann — für den Hinweis ohne Recht. */
+  contactGrantNames: string[];
 }
 
 /** Die rechte Seite (420 px): der Kontoumsatz im Klartext mit allen Bankfeldern, darunter sein Vorschlag. */

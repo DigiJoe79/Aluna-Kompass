@@ -100,9 +100,14 @@ export async function finalizeReviewedAction(ids: string[]): Promise<ActionState
 export async function finalizeAllReviewedAction(): Promise<ActionState> {
   const t = await getTranslations();
   const { deps, ctx } = await requireSession();
-  const reviewed = await listEntries(deps, ctx, { state: 'reviewed', limit: 500 });
-  if (!reviewed.ok) return toActionState(reviewed, t);
-  const ids = reviewed.value.entries.map((e) => e.id);
+  // Seitenweise: `listEntries` liefert höchstens 200 je Aufruf (vorher `limit: 500` — scheiterte immer an der Validierung).
+  const ids: string[] = [];
+  for (let offset = 0; ; offset += 200) {
+    const reviewed = await listEntries(deps, ctx, { state: 'reviewed', limit: 200, offset });
+    if (!reviewed.ok) return toActionState(reviewed, t);
+    ids.push(...reviewed.value.entries.map((e) => e.id));
+    if (offset + 200 >= reviewed.value.total) break;
+  }
   if (ids.length === 0) return { status: 'success' };
   const result = await finalizeReviewed(deps, ctx, { ids });
   revalidatePath('/finance/entries');

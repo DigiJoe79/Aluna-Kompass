@@ -1,6 +1,7 @@
 import { hasPermission, readSetting } from '@kompass/core';
 import type { LocalizedText } from '@kompass/core';
 import { getBalances, getRawTransaction, listCategories, listOpenItems, listPurposes, suggestForTransaction, TAX_CODES } from '@kompass/module-finance';
+import { documentTypeFor, getDocumentRecord } from '@kompass/module-dms';
 import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
@@ -9,9 +10,9 @@ import { requireSession } from '@/lib/request-context';
 import { formatAmount } from '@/lib/finance/amount';
 import { emptyForm, type EntryFormState, type EntryTemplate } from '@/lib/finance/entry-form';
 import { formFromTransaction } from '@/lib/finance/work';
-import { EntryForm } from '../entry-form';
+import { EntryForm, type PendingVoucher } from '../entry-form';
 
-export default async function NewFinanceEntryPage({ searchParams }: { searchParams: Promise<{ template?: string; account?: string; settles?: string; raw?: string; back?: string }> }) {
+export default async function NewFinanceEntryPage({ searchParams }: { searchParams: Promise<{ template?: string; account?: string; settles?: string; raw?: string; back?: string; voucher?: string }> }) {
   const { deps, ctx } = await requireSession();
   if (!hasPermission(ctx, 'finance.entriesWrite')) return <ForbiddenCard permission="finance.entriesWrite" />;
 
@@ -65,6 +66,18 @@ export default async function NewFinanceEntryPage({ searchParams }: { searchPara
   }
   const returnTo = query.back === 'work' ? '/finance/work' : '/finance/entries';
 
+  // `?voucher=` — „Zu Buchung machen“ aus der Akte oder der Liste „Belege ohne Buchung“ (F5 Task 8): Der Beleg
+  // steht in der Maske und wird nach dem Speichern verknüpft. Was die Akte nicht herausgibt, belegt nichts vor;
+  // ob er sich verknüpfen lässt, sagt `attachDocument`.
+  let pendingVoucher: PendingVoucher | null = null;
+  if (query.voucher) {
+    const doc = await getDocumentRecord(deps, ctx, query.voucher);
+    if (doc.ok) {
+      pendingVoucher = { documentId: doc.value.id, number: doc.value.number, subject: doc.value.subject, typeLabel: documentTypeFor(deps.db, doc.value.typeKey)?.label ?? doc.value.typeKey, date: doc.value.documentDate };
+      if (!initial.text) initial = { ...initial, text: doc.value.subject.slice(0, 300) };
+    }
+  }
+
   return (
     <>
       <PageHeader title={t('newTitle')} back={{ href: returnTo, label: t('cancel') }} />
@@ -81,6 +94,7 @@ export default async function NewFinanceEntryPage({ searchParams }: { searchPara
         vouchers={[]}
         openItems={openItems}
         returnTo={returnTo}
+        pendingVoucher={pendingVoucher}
       />
     </>
   );

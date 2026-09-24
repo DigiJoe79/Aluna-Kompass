@@ -1,6 +1,7 @@
-import { hasPermission, readSetting, type LocalizedText } from '@kompass/core';
+import { hasPermission, listUserNamesWithPermission, readSetting, type LocalizedText } from '@kompass/core';
 import { displayName, getContact } from '@kompass/module-contacts';
-import { getWorkCounts, listAccounts, listCategories, listPurposes, listWorkItems, suggestForTransaction, TAX_CODES, type SuggestionReason, type SuggestionView } from '@kompass/module-finance';
+import { documentTypeFor } from '@kompass/module-dms';
+import { getWorkCounts, listAccounts, listCategories, listForeignMoney, listPurposes, listWorkItems, suggestForTransaction, TAX_CODES, type SuggestionReason, type SuggestionView } from '@kompass/module-finance';
 import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -12,6 +13,7 @@ import { requireSession } from '@/lib/request-context';
 import { cn } from '@/lib/utils';
 import { ImportUpload } from '../imports/upload';
 import { AccountFilter } from './account-filter';
+import { BatchFinalizeDialog } from './batch-finalize-dialog';
 import type { WorkDetailData } from './work-detail';
 import { WorkEntries, WorkOpenItems, WorkTransactions, type WorkEntryRow, type WorkOpenItemRow, type WorkTransactionRow } from './work-list';
 
@@ -88,16 +90,25 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
         ...(suggestion?.draft?.allocationLines.map((l) => l.contactId).filter((id): id is string => !!id) ?? []),
       ]);
       const raw = selectedItem.transaction;
+      // „Rückzahlung von“ gibt es nur bei einem Ausgang — die Eingänge fremden Gelds, die noch nicht weitergegeben sind.
+      const foreignRes = raw.amountCents < 0 && canWrite ? await listForeignMoney(deps, ctx) : null;
       detail = {
         raw: { ...raw, accountName: accountName.get(raw.accountId) ?? '' },
         suggestion: suggestion ? await describeSuggestion(suggestion, accountName, contactNames) : null,
         contactNames: Object.fromEntries(contactNames),
+        foreignReturnOptions: (foreignRes?.ok ? foreignRes.value.items : []).map((item) => ({
+          lineId: item.lineId,
+          label: t('foreign.returnsOption', { date: item.entryDate, holder: item.holderText, amount: formatEuro(item.amountCents) }),
+        })),
       };
     }
 
     const [categoriesRes, purposesRes, projectsRes] = await Promise.all([listCategories(deps, ctx, { includeInactive: true }), listPurposes(deps, ctx, {}), listProjects(deps, ctx)]);
     const leading = deps.locales()[0] ?? 'de';
     const allCategories = categoriesRes.ok ? categoriesRes.value : [];
+    const purposeOptions = (purposesRes.ok ? purposesRes.value : []).map((p) => ({ id: p.id, name: p.name }));
+    const projectOptions = (projectsRes.ok ? projectsRes.value : []).map((p) => ({ id: p.id, name: (p.name as LocalizedText)[leading] || p.slug }));
+    const showTax = readSetting<boolean>(deps, 'finance.isEntrepreneurOrHasVatId');
     body = (
       <WorkTransactions
         key={`${tab}-${account ?? ''}`}
@@ -113,10 +124,21 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
             .filter((c): c is typeof c & { direction: 'income' | 'expense' } => c.isActive && (c.direction === 'income' || c.direction === 'expense'))
             .map((c) => ({ id: c.id, name: c.name, direction: c.direction, sphere: c.sphere ?? 'ideal', explanation: c.explanation || undefined })),
           categoryNames: Object.fromEntries(allCategories.map((c) => [c.id, c.name])),
-          purposes: (purposesRes.ok ? purposesRes.value : []).map((p) => ({ id: p.id, name: p.name })),
-          projects: (projectsRes.ok ? projectsRes.value : []).map((p) => ({ id: p.id, name: (p.name as LocalizedText)[leading] || p.slug })),
+          purposes: purposeOptions,
+          projects: projectOptions,
           taxCodeOptions: [...TAX_CODES],
-          showTax: readSetting<boolean>(deps, 'finance.isEntrepreneurOrHasVatId'),
+          showTax,
+          rule: {
+            accounts: filterAccounts,
+            categories: allCategories.filter((c) => c.isActive).map((c) => ({ id: c.id, name: c.name })),
+            projects: projectOptions,
+            purposes: purposeOptions,
+            taxCodeOptions: [...TAX_CODES],
+            showTax,
+          },
+          voucherTypes: readSetting<string[]>(deps, 'finance.voucherTypes').map((key) => ({ key, label: documentTypeFor(deps.db, key)?.label ?? key })),
+          canCreateContact: hasPermission(ctx, 'contacts.manage'),
+          contactGrantNames: hasPermission(ctx, 'contacts.manage') ? [] : listUserNamesWithPermission(deps, 'users.manage'),
         }}
       />
     );
@@ -191,11 +213,7 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
         {counts.reviewed > 0 ? (
           <div className="flex items-center justify-between gap-3 rounded-md border border-line bg-surface px-3 py-2 text-[13px]">
             <span className="text-ink-2">{t('reviewedLine', { count: counts.reviewed })}</span>
-            {hasPermission(ctx, 'finance.entriesFinalize') ? (
-              <button type="button" disabled title={t('comingNext')} className="rounded-md border border-line-strong px-3 py-1 text-[13px] font-semibold text-muted-ink">
-                {t('finalize')}
-              </button>
-            ) : null}
+            {hasPermission(ctx, 'finance.entriesFinalize') ? <BatchFinalizeDialog reviewedCount={counts.reviewed} /> : null}
           </div>
         ) : null}
       </div>

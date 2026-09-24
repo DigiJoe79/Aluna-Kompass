@@ -22,6 +22,8 @@ export interface EntriesQuery {
   sort?: string;
   dir?: string;
   page?: string;
+  /** Kommagetrennte IDs — der Link „anders gebuchte ansehen“ aus dem Regel-Dialog (F5). */
+  ids?: string;
 }
 
 const SORTABLE = ['entryDate', 'number', 'text', 'amount'] as const;
@@ -71,8 +73,10 @@ export default async function FinanceEntriesPage({ searchParams }: { searchParam
   const categoryNames = new Map(categories.map((c) => [c.id, c.name]));
 
   const page = Math.max(1, Number(query.page) || 1);
+  const idFilter = (query.ids ?? '').split(',').filter(Boolean).slice(0, 200);
   const entriesRes = await listEntries(deps, ctx, {
     fiscalYearId: query.year || undefined,
+    ids: idFilter.length > 0 ? idFilter : undefined,
     state: (['draft', 'reviewed', 'final', 'reversed'] as const).includes(query.state as never) ? query.state : undefined,
     accountId: query.account || undefined,
     categoryId: query.category || undefined,
