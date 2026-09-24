@@ -70,6 +70,36 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
   hat ein Auszugsformat; eine Datei mit anderer Kopfzeile wird nie still
   falsch gelesen, sondern führt zum Formatwechsel mit Bestätigung. Ohne neue
   Abhängigkeit; eine weitere Datenbank-Migration läuft beim Start von selbst.
+- **Finanzen: Arbeitsliste.** Unter Finanzen → Arbeitsliste wird aus jedem
+  geladenen Kontoumsatz eine Buchung. Kompass schlägt zu jedem Umsatz vor, wie
+  er zu buchen ist, und sagt unter „Vorschlag, weil:“, warum: passt zu einer
+  schon von Hand erfassten Buchung, Umbuchung zwischen eigenen Konten oder mit
+  der Barkasse, zurückgegebene Zahlung, offene Zahlung, eine Regel des Vereins
+  oder ein Kontakt, dem die IBAN gehört. Die Liste lässt sich ganz mit der
+  Tastatur abarbeiten — Enter übernimmt den Vorschlag als geprüften Entwurf,
+  E öffnet die volle Maske, Pfeiltasten wählen und überspringen. Reiter
+  trennen sichere von unsicheren Vorschlägen, Entwürfe eines Agenten,
+  geprüfte Entwürfe und überfällige offene Zahlungen.
+  - **Regeln:** „Künftig immer so?“ macht aus einer Zuordnung eine Regel und
+    zählt vorher, wie viele frühere Umsätze sie träfe und wie viele davon
+    anders gebucht sind. Regeln wirken nur für künftige Umsätze.
+  - **Geld, das dem Verein nicht gehört**, wird eigens gebucht und steht unter
+    „Fremdes Geld“, bis es weitergegeben ist.
+  - **Beleg von beiden Seiten:** ein PDF auf den Umsatz ziehen oder in der Akte
+    nach einem passenden Beleg suchen — oder umgekehrt einen Finanzbeleg in
+    der Akte mit „Zu Buchung machen“ buchen. „Belege ohne Buchung“ sammelt,
+    was noch fehlt.
+  - **Festschreiben gegen den Auszug:** Alle geprüften Entwürfe lassen sich
+    auf einmal festschreiben; vorher zeigt Kompass je Konto den Buchbestand
+    danach neben dem Endsaldo laut jüngstem Auszug.
+  - **Ein Agent bereitet vor, ein Mensch prüft.** Ein KI-Agent kann über MCP
+    Entwürfe zu Kontoumsätzen anlegen; sie stehen im Reiter „Vom Agenten
+    vorbereitet“. Prüfen und Festschreiben bleiben einem Menschen am
+    Bildschirm vorbehalten, solange der Verein es nicht unter Finanzen
+    einrichten ausdrücklich erlaubt.
+
+  Das Handbuch hat dafür die Seite „Arbeitsliste“. Eine weitere
+  Datenbank-Migration läuft beim Start von selbst.
 - **Finanzen einrichten:** Wer nur „Finanzen einrichten“ darf, sieht jetzt
   auch die Konten (samt IBAN), Kategorien, Zwecke und Geschäftsjahre, die er
   pflegt. Sperren festgeschriebene Buchungen das Verwerfen eines Auszugs,
@@ -96,6 +126,15 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
   „Vorschau öffnen“ unter Webseite → Publizieren im selben Tab, und wer
   zurückging, fand Prüfergebnis und gebaute Vorschau leer vor und musste beides
   neu anstoßen. Die Vorschauseite hat außerdem einen Weg zurück zu Publizieren.
+- **Finanzen einrichten: Kategorie ändern.** Eine bestehende Kategorie ließ
+  sich im Dialog „Ändern“ weder speichern noch stilllegen; beides geht jetzt.
+- **Journal: „Geprüfte festschreiben“** scheiterte, statt alle geprüften
+  Entwürfe festzuschreiben. Jetzt nimmt der Knopf alle, auch bei mehr als 200
+  Entwürfen.
+- **Kontoauszüge ohne Referenz der Bank.** Manche Banken schreiben statt einer
+  Referenz den Platzhalter „NOTPROVIDED“ in den CAMT-Auszug. Kompass führte
+  ihn als echte Referenz und hielt dadurch verschiedene Zahlungen für
+  dieselbe; jetzt zählt er als „keine Referenz“.
 
 ## [0.1.1] - 2026-09-19
 
