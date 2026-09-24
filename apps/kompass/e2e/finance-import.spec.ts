@@ -34,7 +34,8 @@ test.describe('finance import', () => {
     const results = page.getByTestId('import-upload-results');
     await expect(results).toHaveAttribute('aria-live', 'polite');
     await expect(results).toContainText('1 neu, 1 bereits vorhanden, 1 zurückgehalten');
-    await expect(page.getByText(/Auszug importiert bis 2026-07-31/)).toBeVisible();
+    // Der jüngste Auszug aus dem Seed reicht bis Ende August (F5 Task 9) — ein Juli-Auszug schiebt das nicht zurück.
+    await expect(page.getByText(/Auszug importiert bis 2026-08-31/)).toBeVisible();
   });
 
   test('denselben Auszug noch einmal laden wird abgelehnt und verlinkt den vorhandenen', async ({ page }) => {
@@ -75,10 +76,10 @@ test.describe('finance import', () => {
     await openImports(page);
     await page.getByTestId('statement-file-input').setInputFiles(fixture('luecke-neu.xml'));
     await expect(page.getByText(/1 neu, 0 bereits vorhanden, 0 zurückgehalten/)).toBeVisible();
-    // Vorgänger ist seit F5 Task 8 der Juli-Auszug aus dem Seed (fremdes Geld).
+    // Vorgänger ist seit F5 Task 9 der August-Auszug aus dem Seed (Bareinzahlung, zurückgegebene Zahlung).
     // Der Seed selbst kennt schon eine Lücke (Lauf B) — deshalb der ganze Satz in einer Zusicherung,
     // damit nicht versehentlich die andere Lückenmeldung auf der Seite trifft.
-    await expect(page.getByText(/Es fehlen Umsätze zwischen 2026-07-31 und 2026-08-01\. Die Reihenfolge ist Kompass gleich/)).toBeVisible();
+    await expect(page.getByText(/Es fehlen Umsätze zwischen 2026-08-31 und 2026-08-01\. Die Reihenfolge ist Kompass gleich/)).toBeVisible();
     // Eine Warnung, kein Textfeld — die Lückenmeldung verlangt keine Begründung.
     await expect(page.getByRole('textbox')).toHaveCount(0);
   });
@@ -153,7 +154,7 @@ test.describe('finance import', () => {
     await loginAsAdmin(page);
     await page.goto('/finance/accounts');
     const card = page.locator('[role="link"]', { hasText: 'Importkonto' });
-    await expect(card.getByText(/Auszug importiert bis 2026-07-31/)).toBeVisible();
+    await expect(card.getByText(/Auszug importiert bis 2026-08-31/)).toBeVisible();
     await expect(card.getByText(/Kein Auszug für heute|Stimmt mit dem Auszug|Differenz zum Auszug/)).toBeVisible();
   });
 

@@ -18,6 +18,7 @@ import { listContactIbans } from '../src/import/contact-ibans';
 import { listForeignMoney } from '../src/import/transit';
 import { listVouchersWithoutEntry } from '../src/ledger/vouchers';
 import { listWorkItems } from '../src/import/work';
+import { suggestForTransaction } from '../src/import/suggestions';
 import { listRawTransactions } from '../src/import/queries';
 import { listOpenItems } from '../src/ledger/open-items';
 import { getBalances } from '../src/ledger/overview';
@@ -107,8 +108,8 @@ describe('seedFinance', () => {
     expect(importkonto.iban).toBe('DE60999999990201051234');
 
     const runs = unwrap(await listImportRuns(deps, ctx, { accountId: importkonto.id }));
-    expect(runs.total).toBe(6); // A, B, C fertig; D verworfen; E fehlgeschlagen; dazu der Juli-Auszug (F5 Task 8).
-    expect(runs.runs.filter((r) => r.state === 'finished')).toHaveLength(4);
+    expect(runs.total).toBe(7); // A, B, C fertig; D verworfen; E fehlgeschlagen; dazu der Juli- und der August-Auszug (F5).
+    expect(runs.runs.filter((r) => r.state === 'finished')).toHaveLength(5);
     expect(runs.runs.filter((r) => r.state === 'discarded')).toHaveLength(1);
     expect(runs.runs.some((r) => r.gap !== null)).toBe(true);
 
@@ -120,14 +121,15 @@ describe('seedFinance', () => {
     expect(candidates.candidates.filter((c) => c.accountId === importkonto.id)).toHaveLength(1);
 
     const raws = unwrap(await listRawTransactions(deps, ctx, { accountId: importkonto.id }));
-    // Gebucht: die Spende aus Lauf A; gebunden an den Agenten-Entwurf (F5): „Spende April“; das fremde Geld aus dem Juli.
-    expect(raws.items.filter((r) => r.state === 'booked')).toHaveLength(3);
+    // Gebucht: die Spende aus Lauf A; gebunden an den Agenten-Entwurf (F5): „Spende April“; das fremde Geld aus dem Juli;
+    // der Mitgliedsbeitrag aus dem August, dessen Lastschrift zurückkommt (F5 Task 9).
+    expect(raws.items.filter((r) => r.state === 'booked')).toHaveLength(4);
     expect(raws.items.filter((r) => r.state === 'open').length).toBeGreaterThanOrEqual(2);
 
     // Zweiter Seed-Lauf legt nichts doppelt an (idempotent).
     const runsAfterSecondSeed = unwrap(await listImportRuns(deps, ctx, { accountId: importkonto.id }));
-    // Fünf aus F4, dazu der Juli-Auszug mit dem fremden Geld (F5 Task 8).
-    expect(runsAfterSecondSeed.total).toBe(6);
+    // Fünf aus F4, dazu der Juli-Auszug mit dem fremden Geld (F5 Task 8) und der August-Auszug (F5 Task 9).
+    expect(runsAfterSecondSeed.total).toBe(7);
   });
 
   it('seeds the work list on "Importkonto": two rules (one with an inactive category), a contact iban, a hand draft without a transaction and an agent draft (F5, idempotent)', async () => {
@@ -151,7 +153,12 @@ describe('seedFinance', () => {
     // Die Handbuchung ohne Kontoumsatz: Entwurf, auf den der Zuschuss aus Lauf B passt (Vorschlag 0).
     const work = unwrap(await listWorkItems(deps, ctx, { tab: 'open', accountId: importkonto.id, limit: 50, offset: 0 }));
     const kinds = work.items.map((i) => (i.type === 'transaction' ? [i.transaction.purpose, i.suggestion.kind] : null));
-    expect(kinds).toEqual([['Bueromaterial', 'rule'], ['Zuschuss', 'linkEntry']]);
+    expect(kinds).toEqual([
+      ['Bueromaterial', 'rule'],
+      ['Zuschuss', 'linkEntry'],
+      ['Bareinzahlung Spendendose', 'cashTransfer'],
+      ['Mitgliedsbeitrag August, Lastschrift zurueckgegeben', 'return'],
+    ]);
     const handDrafts = deps.db.select().from(financeEntries).where(eq(financeEntries.text, 'Zuschuss')).all();
     expect(handDrafts).toHaveLength(1);
     expect(handDrafts[0]!.status).toBe('draft');
@@ -179,6 +186,41 @@ describe('seedFinance', () => {
     // Eine Eingangsrechnung ohne Buchung — „Beleg suchen“ findet sie über den Betrag der Büromaterial-Zeile (−35,00 €).
     const vouchers = unwrap(await listVouchersWithoutEntry(deps, ctx, {}));
     expect(vouchers.documents.map((d) => [d.subject, d.typeKey])).toEqual([['Rechnung Büromaterial über 35,00 €', 'voucher-invoice']]);
+  });
+
+  it('seeds an August statement with a cash deposit and a returned payment on "Importkonto" (F5 Task 9, idempotent)', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+    await seedFinance(deps, ctx);
+    await seedFinance(deps, ctx); // idempotent
+
+    const accounts = unwrap(await listAccounts(deps, ctx, { includeInactive: true }));
+    const importkonto = accounts.find((a) => a.name === 'Importkonto')!;
+    const cash = accounts.find((a) => a.name === 'Barkasse')!;
+    const runs = unwrap(await listImportRuns(deps, ctx, { accountId: importkonto.id }));
+    const august = runs.runs.filter((r) => r.fileName === 'kontoauszug-2026-08.xml');
+    expect(august).toHaveLength(1);
+    // Schließt an den Juli-Auszug an — keine Lücke.
+    expect(august[0]).toMatchObject({ state: 'finished', gap: null });
+
+    const raws = unwrap(await listRawTransactions(deps, ctx, { accountId: importkonto.id, limit: 200 }));
+    const deposit = raws.items.find((r) => r.purpose === 'Bareinzahlung Spendendose')!;
+    expect(deposit).toMatchObject({ amountCents: 20000, state: 'open' });
+    const fee = raws.items.find((r) => r.purpose === 'Mitgliedsbeitrag August')!;
+    expect(fee).toMatchObject({ amountCents: 2500, state: 'booked' });
+    const returned = raws.items.find((r) => r.purpose === 'Mitgliedsbeitrag August, Lastschrift zurueckgegeben')!;
+    expect(returned).toMatchObject({ amountCents: -2500, state: 'open', returnCode: 'AC04' });
+
+    // Die Bar-Kennung schlägt die Umbuchung gegen die Barkasse vor, der Rückgabe-Code die zurückgegebene Zahlung.
+    const deposited = unwrap(await suggestForTransaction(deps, ctx, { rawTransactionId: deposit.id }));
+    expect(deposited).toMatchObject({ kind: 'cashTransfer', confidence: 'sure', reasons: [{ kind: 'cashKeyword', otherAccountId: cash.id }] });
+    expect(deposited.draft!.moneyLines).toEqual([
+      expect.objectContaining({ accountId: importkonto.id, amountCents: 20000, rawTransactionId: deposit.id }),
+      expect.objectContaining({ accountId: cash.id, amountCents: -20000 }),
+    ]);
+    const back = unwrap(await suggestForTransaction(deps, ctx, { rawTransactionId: returned.id }));
+    expect(back).toMatchObject({ kind: 'return', confidence: 'sure', reasons: [{ kind: 'returnCode' }] });
+    expect(back.draft!.allocationLines).toEqual([expect.objectContaining({ amountCents: -2500, originLineId: expect.any(String) })]);
   });
 
   it('uses no animal and no association-specific wording', async () => {

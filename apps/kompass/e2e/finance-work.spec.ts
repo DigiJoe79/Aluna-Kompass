@@ -304,8 +304,10 @@ test.describe('finance work list: rules, foreign money, vouchers, batch', () => 
     const dialog = page.getByRole('dialog', { name: 'Geprüfte Entwürfe festschreiben' });
     const importRow = dialog.getByRole('row', { name: /Importkonto/ });
     await expect(importRow).toContainText('−35,00 €');
-    await expect(importRow).toContainText('1.165,00 €');
-    await expect(importRow).toContainText('1.510,00 €');
+    // Buchbestand: 1.000,00 € Anfang + 200,00 € Spende + 25,00 € Mitgliedsbeitrag August (Seed) − 35,00 €.
+    await expect(importRow).toContainText('1.190,00 €');
+    // Endsaldo des August-Auszugs aus dem Seed (F5 Task 9).
+    await expect(importRow).toContainText('1.710,00 €');
     await expect(dialog.getByRole('status')).toContainText('Importkonto');
     await expect(dialog.getByRole('row', { name: /Vereinskonto/ })).toContainText('25,00 €');
     await expect(dialog.getByText('2 Nummern werden vergeben.')).toBeVisible();

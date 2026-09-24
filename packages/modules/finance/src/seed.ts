@@ -707,6 +707,7 @@ async function seedWorkList(deps: Deps, ctx: CallContext, importkontoId: string)
   );
 
   await seedForeignMoneyAndVoucher(deps, ctx, importkontoId);
+  await seedCashDepositAndReturn(deps, ctx, importkontoId);
 
   const april = deps.db.select().from(financeRawTransactions).where(and(eq(financeRawTransactions.accountId, importkontoId), eq(financeRawTransactions.bankReference, 'IMP-0004'))).get();
   const aprilBound = april ? deps.db.select({ id: financeMoneyLines.id }).from(financeMoneyLines).where(eq(financeMoneyLines.rawTransactionId, april.id)).get() : undefined;
@@ -766,6 +767,52 @@ async function seedForeignMoneyAndVoucher(deps: Deps, ctx: CallContext, importko
         subject: INVOICE_SUBJECT,
         documentDate: '2026-01-08',
         folder: null,
+      }),
+    );
+  }
+}
+
+/**
+ * F5 Task 9: ein August-Auszug auf „Importkonto“, der an den Juli anschließt.
+ * Darin eine Bareinzahlung aus der Spendendose (die Bar-Kennung schlägt die
+ * Umbuchung gegen die Barkasse vor — Prüfstein „Bareinzahlung bei der Bank“),
+ * ein Mitgliedsbeitrag per Lastschrift, der gleich festgeschrieben wird, und
+ * dessen Rückgabe mit Rückgabe-Code `AC04` (Vorschlag: zurückgegebene Zahlung
+ * mit `originLineId`). Der Lauf und die Buchung sind je für sich idempotent.
+ */
+async function seedCashDepositAndReturn(deps: Deps, ctx: CallContext, importkontoId: string): Promise<void> {
+  const AUGUST_FILE = 'kontoauszug-2026-08.xml';
+  const PAYER_IBAN = 'DE30999999990000505050';
+  const hasAugust = deps.db.select({ id: financeImportRuns.id }).from(financeImportRuns).where(and(eq(financeImportRuns.accountId, importkontoId), eq(financeImportRuns.fileName, AUGUST_FILE))).get();
+  if (!hasAugust) {
+    unwrap(
+      await importStatement(deps, ctx, {
+        accountId: importkontoId,
+        fileName: AUGUST_FILE,
+        bytes: buildCamt053Bytes({
+          iban: 'DE60999999990201051234',
+          from: '2026-08-01',
+          to: '2026-08-31',
+          // Endsaldo des Juli-Auszugs: 1.390,00 € + 120,00 € fremdes Geld.
+          openingCents: 151000,
+          lines: [
+            { bookingDate: '2026-08-04', amountCents: 2500, counterpartyName: 'Paula Probe', counterpartyIban: PAYER_IBAN, purpose: 'Mitgliedsbeitrag August', bankReference: 'IMP-0008' },
+            { bookingDate: '2026-08-10', amountCents: 20000, purpose: 'Bareinzahlung Spendendose', bankReference: 'IMP-0009' },
+            { bookingDate: '2026-08-20', amountCents: -2500, counterpartyName: 'Paula Probe', counterpartyIban: PAYER_IBAN, purpose: 'Mitgliedsbeitrag August, Lastschrift zurueckgegeben', bankReference: 'IMP-0010', returnCode: 'AC04' },
+          ],
+        }),
+      }),
+    );
+  }
+  const fee = deps.db.select().from(financeRawTransactions).where(and(eq(financeRawTransactions.accountId, importkontoId), eq(financeRawTransactions.bankReference, 'IMP-0008'))).get();
+  const feeBound = fee ? deps.db.select({ id: financeMoneyLines.id }).from(financeMoneyLines).where(eq(financeMoneyLines.rawTransactionId, fee.id)).get() : undefined;
+  if (fee && !feeBound) {
+    unwrap(
+      await bookEntry(deps, ctx, {
+        entryDate: fee.bookingDate,
+        text: 'Mitgliedsbeitrag August',
+        moneyLines: [{ accountId: importkontoId, amountCents: fee.amountCents, rawTransactionId: fee.id }],
+        allocationLines: [{ categoryId: categoryByKey(deps, 'membership-fees').id, amountCents: fee.amountCents }],
       }),
     );
   }
