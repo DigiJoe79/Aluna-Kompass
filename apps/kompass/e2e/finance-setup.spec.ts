@@ -243,6 +243,22 @@ test.describe('finance setup', () => {
     await expect(dialog.getByText('Spenden gibt es nur im ideellen Bereich.')).toBeVisible();
   });
 
+  test('eine bestehende Kategorie lässt sich ohne Änderung speichern und stilllegen', async ({ page }) => {
+    await page.goto('/admin/finance?panel=categories');
+    const row = page.getByTestId('category-row-office');
+    await row.getByRole('button', { name: 'Ändern' }).click();
+    let dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByText('Kategorie geändert.')).toBeVisible();
+    await expect(dialog).toBeHidden();
+    await row.getByRole('button', { name: 'Ändern' }).click();
+    dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Aktiv').uncheck();
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(row.getByText('Stillgelegt')).toBeVisible();
+  });
+
   test('„Kategorien durchgesehen“ hakt den Schritt ab', async ({ page }) => {
     await page.goto('/admin/finance?panel=categories');
     await expect(page.getByText('Noch nicht durchgesehen.')).toBeVisible();

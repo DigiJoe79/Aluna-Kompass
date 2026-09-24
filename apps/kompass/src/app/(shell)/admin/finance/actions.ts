@@ -123,8 +123,12 @@ export interface CategoryInput {
 export async function saveCategoryAction(input: CategoryInput): Promise<ActionState> {
   const t = await getTranslations();
   const { deps, ctx } = await requireSession();
-  const { id, expectedVersion, ...fields } = input;
-  const result = id ? await updateCategory(deps, ctx, { id, expectedVersion, ...fields }) : await createCategory(deps, ctx, fields);
+  // `isActive` kennt nur `setCategoryActive` — das Update-Schema ist `.strict()`.
+  const { id, expectedVersion, isActive, ...fields } = input;
+  let result = id ? await updateCategory(deps, ctx, { id, expectedVersion, ...fields }) : await createCategory(deps, ctx, fields);
+  if (result.ok && isActive !== undefined && result.value.isActive !== isActive) {
+    result = await setCategoryActive(deps, ctx, { id: result.value.id, isActive, expectedVersion: result.value.updatedAt });
+  }
   revalidateFinanceAdmin();
   if (!result.ok) return toActionState(result, t);
   return toActionState(result, t, t(id ? 'finance.admin.categories.toast.updated' : 'finance.admin.categories.toast.created'));
