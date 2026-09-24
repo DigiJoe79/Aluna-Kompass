@@ -40,7 +40,7 @@ export const bookFromTransactionSchema = z.object({
 const linkSchema = z.object({ rawTransactionId: z.string().min(1), entryId: z.string().min(1) });
 
 /** Die Buchung, die den Umsatz gerade bindet — auch ein Entwurf bindet (F4 Task 4). */
-function boundEntryIdInternal(db: DbOrTx, rawId: string): string | null {
+export function boundEntryIdInternal(db: DbOrTx, rawId: string): string | null {
   return db.select({ entryId: financeMoneyLines.entryId }).from(financeMoneyLines).where(and(eq(financeMoneyLines.rawTransactionId, rawId), isNull(financeMoneyLines.rawReleasedAt))).get()?.entryId ?? null;
 }
 

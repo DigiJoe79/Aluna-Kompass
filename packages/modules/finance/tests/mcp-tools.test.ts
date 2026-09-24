@@ -1,7 +1,7 @@
 import { unwrap } from '@kompass/core';
 import { describe, expect, it } from 'vitest';
 import { FINANCE_MCP_TOOLS } from '../src/mcp-tools';
-import { ledgerFixture } from './helpers';
+import { insertRaw, insertRun, ledgerFixture, pdfBytes } from './helpers';
 
 describe('finance MCP tools', () => {
   it('every human-only tool says so, and answers an agent with the way out', async () => {
@@ -65,5 +65,43 @@ describe('finance MCP tools', () => {
     const big = Buffer.alloc(6 * 1024 * 1024, 65).toString('base64');
     const res = await tool.handler(f.deps, f.ctx, { entryId: entry.id, contentBase64: big, typeKey: 'voucher-invoice', documentDate: '2026-03-01' });
     expect(res).toMatchObject({ ok: false, error: { type: 'validation' } });
+  });
+
+  it('registers the work list tools (F5); an argument-less tool takes (deps, ctx)', async () => {
+    const names = [
+      'finance_work_list', 'finance_work_counts', 'finance_suggestion_get', 'finance_transaction_book', 'finance_transaction_link_entry', 'finance_transaction_mark_foreign',
+      'finance_foreign_money_list', 'finance_import_rule_save', 'finance_import_rules_list', 'finance_import_rule_delete', 'finance_import_rule_preview',
+      'finance_contact_iban_link', 'finance_contact_iban_unlink', 'finance_contact_ibans_list', 'finance_contact_create_from_transaction',
+      'finance_batch_finalize_preview', 'finance_voucher_search', 'finance_voucher_upload_to_transaction', 'finance_vouchers_without_entry',
+    ];
+    const tool = (name: string) => FINANCE_MCP_TOOLS.find((t) => t.name === name)!;
+    for (const name of names) expect(FINANCE_MCP_TOOLS.some((t) => t.name === name), name).toBe(true);
+    for (const name of ['finance_work_counts', 'finance_foreign_money_list']) expect(tool(name).handler.length, name).toBe(2);
+    expect(tool('finance_transaction_book').description).toMatch(/reviewed:true is human only/);
+    expect(tool('finance_transaction_mark_foreign').description).toMatch(/reviewed:true is human only/);
+    expect(tool('finance_contact_create_from_transaction').description).toContain('contacts.manage');
+
+    const f = await ledgerFixture();
+    expect(unwrap(await tool('finance_work_counts').handler(f.deps, f.ctx, {}))).toMatchObject({ open: 0, unsure: 0 });
+    expect(unwrap(await tool('finance_foreign_money_list').handler(f.deps, f.ctx, {}))).toEqual({ items: [] });
+
+    // Ein Agent legt vor, prüft aber nicht.
+    const agent = { ...f.ctx, channel: 'mcp' as const };
+    const rawId = insertRaw(f, insertRun(f, f.bank.id), { accountId: f.bank.id, amountCents: -1990 });
+    const book = tool('finance_transaction_book');
+    const input = { rawTransactionId: rawId, text: 'Büromaterial', allocationLines: [{ categoryId: f.programCosts.id, amountCents: -1990 }] };
+    expect(await book.handler(f.deps, agent, { ...input, reviewed: true })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'humanOnly' } });
+    expect((await book.handler(f.deps, agent, { ...input, reviewed: false })).ok).toBe(true);
+  });
+
+  it('finance_voucher_upload_to_transaction takes base64 and the upload limit like finance_voucher_upload', async () => {
+    const f = await ledgerFixture();
+    const tool = FINANCE_MCP_TOOLS.find((t) => t.name === 'finance_voucher_upload_to_transaction')!;
+    const rawId = insertRaw(f, insertRun(f, f.bank.id), { accountId: f.bank.id, amountCents: -1990 });
+    expect(await tool.handler(f.deps, f.ctx, { rawTransactionId: rawId, contentBase64: 'kein base64!' })).toMatchObject({ ok: false, error: { type: 'validation' } });
+    const big = Buffer.alloc(6 * 1024 * 1024, 65).toString('base64');
+    expect(await tool.handler(f.deps, f.ctx, { rawTransactionId: rawId, contentBase64: big })).toMatchObject({ ok: false, error: { type: 'validation' } });
+    const res = unwrap(await tool.handler(f.deps, f.ctx, { rawTransactionId: rawId, contentBase64: Buffer.from(pdfBytes()).toString('base64') }));
+    expect(res).toMatchObject({ createdEntry: true });
   });
 });

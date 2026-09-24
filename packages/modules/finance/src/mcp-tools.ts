@@ -6,6 +6,14 @@ import { getImportRun, importStatement, listImportRuns } from './import/runs';
 import { listRawTransactions } from './import/queries';
 import { getAccountStatements } from './import/accounts';
 import { listImportProfiles, saveImportProfile } from './import/profiles';
+import { previewBatchFinalize } from './import/batch';
+import { bookFromTransaction, linkTransactionToEntry } from './import/book';
+import { createContactFromTransaction, linkContactIban, listContactIbans, unlinkContactIban } from './import/contact-ibans';
+import { deleteImportRule, listImportRules, previewImportRule, saveImportRule } from './import/rules';
+import { suggestForTransaction } from './import/suggestions';
+import { listForeignMoney, markTransactionForeign } from './import/transit';
+import { attachVoucherToTransaction, searchVouchersForTransaction } from './import/vouchers';
+import { getWorkCounts, listWorkItems } from './import/work';
 import { closePurpose, deleteMasterData, readMasterData, saveMasterData, setMasterDataActive } from './ledger/master-data';
 import { decideAllocationCorrection, listAllocationCorrections, requestAllocationCorrection } from './ledger/corrections';
 import { countCash, emptyDonationBox, listCashCounts, moveCash } from './ledger/cash';
@@ -21,7 +29,7 @@ import { closeFiscalYear, justifyUndocumentedEntry, previewPeriod, reopenFiscalY
 import { getProjectFinance, setProjectFinance } from './ledger/project-settings';
 import { reverseEntry } from './ledger/reverse';
 import { applyTaxDefaults, confirmSetupStep, getPermissionMatrix, getSetupStatus, setFinanceLimit, setFinanceSwitch } from './ledger/setup';
-import { attachDocument, revokeVoucher, uploadVoucher } from './ledger/vouchers';
+import { attachDocument, listVouchersWithoutEntry, revokeVoucher, uploadVoucher } from './ledger/vouchers';
 
 const t = <T>(def: McpToolDefinition<T>): McpToolDefinition => def as McpToolDefinition;
 
@@ -180,6 +188,70 @@ const previewPeriodMcpSchema = z.object({ id: z.string(), action: z.enum(['close
 const closeFiscalYearMcpSchema = z.object({ id: z.string() });
 const reopenFiscalYearMcpSchema = z.object({ id: z.string(), note: z.string() });
 const justifyUndocumentedEntryMcpSchema = z.object({ entryId: z.string(), note: z.string() });
+
+// F5 — Arbeitsliste, Regeln, Kontakt über IBAN, fremdes Geld, Beleg von beiden Seiten.
+const ruleConditionsMcp = {
+  accountId: z.string().nullable().optional(),
+  direction: z.enum(['in', 'out']).nullable().optional(),
+  counterpartyIban: z.string().nullable().optional(),
+  textContains: z.string().nullable().optional(),
+  amountMinCents: z.number().int().min(0).nullable().optional(),
+  amountMaxCents: z.number().int().min(0).nullable().optional(),
+};
+const saveImportRuleMcpSchema = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  sortOrder: z.number().int().min(0).optional(),
+  isActive: z.boolean().optional(),
+  ...ruleConditionsMcp,
+  categoryId: z.string(),
+  projectId: z.string().nullable().optional(),
+  purposeId: z.string().nullable().optional(),
+  contactId: z.string().nullable().optional(),
+  taxCode: z.enum(TAX_CODES).nullable().optional(),
+  entryText: z.string().nullable().optional(),
+});
+const listImportRulesMcpSchema = z.object({ includeInactive: z.boolean().optional() });
+const idMcpSchema = z.object({ id: z.string() });
+const previewImportRuleMcpSchema = z.object({ ...ruleConditionsMcp, categoryId: z.string() });
+const linkContactIbanMcpSchema = z.object({ contactId: z.string(), iban: z.string() });
+const listContactIbansMcpSchema = z.object({ contactId: z.string() });
+const createContactFromTransactionMcpSchema = z.object({
+  rawTransactionId: z.string(),
+  kind: z.enum(['person', 'organization']),
+  firstName: z.string().nullable().optional(),
+  lastName: z.string().nullable().optional(),
+  name: z.string().nullable().optional(),
+});
+const listWorkItemsMcpSchema = z.object({ tab: z.enum(['open', 'unsure', 'agent', 'reviewed', 'due']), accountId: z.string().optional(), limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() });
+const rawTransactionIdMcpSchema = z.object({ rawTransactionId: z.string() });
+const settlementMcpSchema = z.object({ openItemId: z.string(), amountCents: z.number().int() });
+const extraMoneyLineMcpSchema = z.object({ accountId: z.string(), amountCents: z.number().int(), rawTransactionId: z.string().nullable().optional(), settlements: z.array(settlementMcpSchema).optional() });
+const bookFromTransactionMcpSchema = z.object({
+  rawTransactionId: z.string(),
+  entryDate: z.string().optional(),
+  text: z.string(),
+  allocationLines: z.array(allocationLineSchema),
+  extraMoneyLines: z.array(extraMoneyLineMcpSchema).optional(),
+  settlements: z.array(settlementMcpSchema).optional(),
+  reviewed: z.boolean(),
+  expectedDraftId: z.string().optional(),
+});
+const linkTransactionMcpSchema = z.object({ rawTransactionId: z.string(), entryId: z.string() });
+const markForeignMcpSchema = z.object({ rawTransactionId: z.string(), holder: z.string(), returnsLineId: z.string().optional(), reviewed: z.boolean(), expectedDraftId: z.string().optional() });
+const batchPreviewMcpSchema = z.object({ ids: z.array(z.string()).min(1).optional() });
+const voucherSearchMcpSchema = z.object({ rawTransactionId: z.string(), limit: z.number().int().min(1).max(50).optional() });
+const voucherToTransactionMcpSchema = z.object({ rawTransactionId: z.string(), contentBase64: z.string().min(1), typeKey: z.string().optional(), title: z.string().optional(), documentDate: z.string().optional(), entryTextIfNew: z.string().optional() });
+const vouchersWithoutEntryMcpSchema = z.object({ limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() });
+
+/** Base64 prüfen und gegen `finance.uploadLimitMb` halten — wie `finance_voucher_upload`. */
+function voucherBytes(deps: Parameters<McpToolDefinition['handler']>[0], contentBase64: string): Uint8Array | ReturnType<typeof invalid> {
+  const bytes = decodeBase64(contentBase64);
+  if (!bytes) return invalid([{ path: 'contentBase64', message: 'invalidBase64' }]);
+  const limitBytes = readSetting<number>(deps, 'finance.uploadLimitMb') * 1024 * 1024;
+  if (bytes.byteLength > limitBytes) return invalid([{ path: 'contentBase64', message: 'fileTooLarge' }]);
+  return bytes;
+}
 
 /** Verteilerdienste (Spec 10.2): ein Werkzeug je Tätigkeit statt zwanzig, mit `kind` als Discriminator. */
 export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
@@ -353,4 +425,45 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
   t({ name: 'finance_import_run_discard_preview', description: 'Preview what discarding an uploaded statement run would do: counts of raw transactions, drafts (including reviewed ones) and vouchers that stay filed, plus any finalized entries that block it. A failed or already discarded run previews as all zeros with canDiscard false. Requires finance.read.', inputSchema: discardIdMcpSchema, handler: (deps, ctx, args) => previewDiscardRun(deps, ctx, args), service: previewDiscardRun }),
   t({ name: 'finance_import_run_discard', description: 'Discard an uploaded statement run: deletes its raw transactions, its file (unless a sibling run of the same upload still holds it), its open candidates and its drafts (documents stay filed, only the link is released). The run itself stays as a permanent record. Blocked by finalized, unreversed entries bound to it - take them back first. A note is required. Not human only - an agent may discard, never finalize. Requires finance.entriesWrite.', inputSchema: discardRunMcpSchema, handler: (deps, ctx, args) => discardRun(deps, ctx, args), service: discardRun }),
   t({ name: 'finance_account_statements', description: 'Per bank and payment-service account (today by default, or a given date): imported through, days since the last statement, and the reconciliation of the finalized book balance against the closing balance of the statement covering the date. Requires finance.overview or finance.read.', inputSchema: getAccountStatementsMcpSchema, handler: (deps, ctx, args) => getAccountStatements(deps, ctx, args), service: getAccountStatements }),
+  t({ name: 'finance_work_list', description: 'The work list of bank statement lines, by tab: open (sure suggestion), unsure (unsure or no suggestion), agent (unreviewed drafts prepared over MCP that bind a statement line), reviewed (reviewed drafts), due (overdue open items of both kinds). Statement lines come with a short suggestion (kind, confidence, reasons, problems, hints). Paginated (limit <= 200). Requires finance.read.', inputSchema: listWorkItemsMcpSchema, handler: (deps, ctx, args) => listWorkItems(deps, ctx, args), service: listWorkItems }),
+  t({ name: 'finance_work_counts', description: 'Counts of the five work list tabs, and how many doubtful duplicates wait under uploaded statements. Requires finance.read.', inputSchema: z.object({}), handler: (deps, ctx) => getWorkCounts(deps, ctx), service: getWorkCounts }),
+  t({ name: 'finance_suggestion_get', description: 'The suggestion for one open bank statement line, with its origin: (0) matches an existing entry (link it), (1) transfer between own accounts or against the cash box, (2) returned payment, (3) open item by payment reference (sure) or by amount and contact (unsure), (4) the first matching rule, (5) contact known from the iban (unsure). draft is ready for finance_transaction_book. A line bound meanwhile answers suggestionStale. Requires finance.read.', inputSchema: rawTransactionIdMcpSchema, handler: (deps, ctx, args) => suggestForTransaction(deps, ctx, args), service: suggestForTransaction }),
+  t({
+    name: 'finance_transaction_book',
+    description: 'Book a bank statement line: builds the money line from it (account, amount, binding), adds extraMoneyLines (the paired line of a transfer, the cash line) and saves a draft; reviewed:true also marks it reviewed. reviewed:true is human only: refused over MCP unless the association has set finance.mcpHumanOnlyAllowed at the screen - an agent books with reviewed:false and a person reviews. A cash line cannot be parked: with reviewed:true it is finalized at once (needs finance.entriesFinalize), with reviewed:false it is refused. Learns the iban of the line for every allocation with a contact. expectedDraftId replaces the draft the work list showed; a line bound elsewhere answers suggestionStale. Requires finance.entriesWrite.',
+    inputSchema: bookFromTransactionMcpSchema,
+    handler: (deps, ctx, args) => bookFromTransaction(deps, ctx, args),
+    service: bookFromTransaction,
+  }),
+  t({ name: 'finance_transaction_link_entry', description: 'Link a bank statement line to an existing entry - also a finalized one - that has exactly one money line on the same account with the same amount and no statement line yet (entryLineNotBindable otherwise). Requires finance.entriesWrite.', inputSchema: linkTransactionMcpSchema, handler: (deps, ctx, args) => linkTransactionToEntry(deps, ctx, args), service: linkTransactionToEntry }),
+  t({
+    name: 'finance_transaction_mark_foreign',
+    description: 'Mark a bank statement line as money that does not belong to the association: a draft on the category not-ours, with holder (for whom the money is, required) in the entry text - never in the audit log. returnsLineId links a payment back to the earlier receipt. reviewed:true is human only: refused over MCP unless the association has set finance.mcpHumanOnlyAllowed at the screen. Requires finance.entriesWrite.',
+    inputSchema: markForeignMcpSchema,
+    handler: (deps, ctx, args) => markTransactionForeign(deps, ctx, args),
+    service: markTransactionForeign,
+  }),
+  t({ name: 'finance_foreign_money_list', description: 'Money that does not belong to the association and is not passed on yet: receipts on a transit category without a payment pointing back to them. Requires finance.read.', inputSchema: z.object({}), handler: (deps, ctx) => listForeignMoney(deps, ctx), service: listForeignMoney }),
+  t({ name: 'finance_import_rule_save', description: 'Create or update a rule for bank statement lines (id present updates): conditions (account, direction, iban, text part, amount range - at least one) and result (category, project, purpose, contact, tax code, entry text). Rules apply in their order, the first match wins, and only to future lines. Audited without name, text condition, iban or contact. Requires finance.entriesWrite.', inputSchema: saveImportRuleMcpSchema, handler: (deps, ctx, args) => saveImportRule(deps, ctx, args), service: saveImportRule }),
+  t({ name: 'finance_import_rules_list', description: 'List the rules in their order, with category name, whether the category is inactive, and how many earlier lines each hits and how many of those were booked differently. Requires finance.read.', inputSchema: listImportRulesMcpSchema, handler: (deps, ctx, args) => listImportRules(deps, ctx, args), service: listImportRules }),
+  t({ name: 'finance_import_rule_delete', description: 'Delete a rule; it is working material and only ever applied forward. Requires finance.entriesWrite.', inputSchema: idMcpSchema, handler: (deps, ctx, args) => deleteImportRule(deps, ctx, args), service: deleteImportRule }),
+  t({ name: 'finance_import_rule_preview', description: 'Preview a rule before saving: how many earlier bank statement lines it hits, and which entries booked them to another category. Changes nothing. Requires finance.read.', inputSchema: previewImportRuleMcpSchema, handler: (deps, ctx, args) => previewImportRule(deps, ctx, args), service: previewImportRule }),
+  t({ name: 'finance_contact_iban_link', description: 'Link an iban to a contact by hand, so its bank statement lines suggest this contact. Idempotent; refused when another contact holds the iban (contactIbanTaken). Requires finance.entriesWrite.', inputSchema: linkContactIbanMcpSchema, handler: (deps, ctx, args) => linkContactIban(deps, ctx, args), service: linkContactIban }),
+  t({ name: 'finance_contact_iban_unlink', description: 'Remove a link between an iban and a contact. Requires finance.entriesWrite.', inputSchema: idMcpSchema, handler: (deps, ctx, args) => unlinkContactIban(deps, ctx, args), service: unlinkContactIban }),
+  t({ name: 'finance_contact_ibans_list', description: 'List the ibans linked to a contact. Requires finance.read.', inputSchema: listContactIbansMcpSchema, handler: (deps, ctx, args) => listContactIbans(deps, ctx, args), service: listContactIbans }),
+  t({ name: 'finance_contact_create_from_transaction', description: 'Create a contact (person or organization) from the counterparty of a bank statement line - missing name parts are taken from it - and link the iban of the line. Requires finance.entriesWrite and contacts.manage.', inputSchema: createContactFromTransactionMcpSchema, handler: (deps, ctx, args) => createContactFromTransaction(deps, ctx, args), service: createContactFromTransaction }),
+  t({ name: 'finance_batch_finalize_preview', description: 'Preview finalizing reviewed drafts (all of them, or ids): per account the sum, the finalized book balance before and after, and the closing balance of the latest statement with a match flag (a cash box has none); the numbers to be assigned; and every draft that cannot be finalized, with its reason code. Changes nothing - finalizing stays finance_entries_finalize_reviewed. Requires finance.read.', inputSchema: batchPreviewMcpSchema, handler: (deps, ctx, args) => previewBatchFinalize(deps, ctx, args), service: previewBatchFinalize }),
+  t({ name: 'finance_voucher_search', description: 'Search the file for vouchers matching a bank statement line - by its amount as written on invoices and by the counterparty name. Only voucher types (finance.voucherTypes), filed and not voided; documents without an entry first; only what the caller may read in the file. Requires finance.read.', inputSchema: voucherSearchMcpSchema, handler: (deps, ctx, args) => searchVouchersForTransaction(deps, ctx, args), service: searchVouchersForTransaction }),
+  t({
+    name: 'finance_voucher_upload_to_transaction',
+    description: 'File a PDF voucher (base64, at most finance.uploadLimitMb) for a bank statement line: attached to the draft or entry already bound to it, otherwise to a new unreviewed draft built from the suggestion. The title names the entry and its category, never a person. Requires finance.entriesWrite.',
+    inputSchema: voucherToTransactionMcpSchema,
+    handler: (deps, ctx, { contentBase64, ...rest }) => {
+      const bytes = voucherBytes(deps, contentBase64);
+      if (!(bytes instanceof Uint8Array)) return Promise.resolve(bytes);
+      return attachVoucherToTransaction(deps, ctx, { ...rest, bytes });
+    },
+    service: attachVoucherToTransaction,
+  }),
+  t({ name: 'finance_vouchers_without_entry', description: 'List filed documents of the voucher types (finance.voucherTypes) that no entry links yet, newest first - only what the caller may read in the file. Paginated (limit <= 200). Requires finance.read.', inputSchema: vouchersWithoutEntryMcpSchema, handler: (deps, ctx, args) => listVouchersWithoutEntry(deps, ctx, args), service: listVouchersWithoutEntry }),
 ];

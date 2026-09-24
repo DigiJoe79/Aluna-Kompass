@@ -1,7 +1,7 @@
 import { newId, unwrap, writeSettingInternal, coreModule, type CallContext } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser, systemContext } from '@kompass/core/testing';
 import { contactsModule, createContact } from '@kompass/module-contacts';
-import { dmsModule } from '@kompass/module-dms';
+import { dmsModule, documentLinks, documents, documentTypes } from '@kompass/module-dms';
 import { projectsModule } from '@kompass/module-projects';
 import { eq } from 'drizzle-orm';
 import { createAccount } from '../src/ledger/accounts';
@@ -127,5 +127,26 @@ export function insertRaw(
       bankReference: null, endToEndId: null, returnCode: o.returnCode ?? null, dedupKey: `k-${id}`, lineIndex: o.lineIndex ?? 1, createdAt: '2026-03-05T09:00:00.000Z',
     })
     .run();
+  return id;
+}
+
+const DOCUMENT_TIME = '2026-03-01T10:00:00.000Z';
+
+/** Ein festgeschriebenes Dokument der Akte (F5-Tests), direkt eingefügt — wie `seedLetter` in `vouchers.test.ts`; Vorgabe-Art `voucher-invoice`. */
+export function insertDocument(f: Pick<LedgerFixture, 'deps'>, o: { subject: string; typeKey?: string; voided?: boolean; linkedEntryId?: string; createdAt?: string }): string {
+  const id = newId();
+  if (o.typeKey === 'letter' && !f.deps.db.select({ key: documentTypes.key }).from(documentTypes).where(eq(documentTypes.key, 'letter')).get()) {
+    f.deps.db.insert(documentTypes).values({ key: 'letter', label: 'Brief', prefix: 'BRF', defaultDirection: 'outgoing', retentionClass: 'statutory6Y', defaultFolder: null, isActive: true, sortOrder: 0, ownerModule: null, protectionArea: null }).run();
+  }
+  f.deps.db
+    .insert(documents)
+    .values({
+      id, phase: 'issued', direction: 'incoming', sourceKind: 'uploaded', typeKey: o.typeKey ?? 'voucher-invoice', number: `DOC-2026-${id.slice(-6)}`, subject: o.subject, documentDate: '2026-03-01', folder: null,
+      draftBody: null, fileName: 'x', fileChecksum: 'abc', fileBytes: 1, textStatus: 'unavailable', textAttempts: 0, textError: null, textExtractedAt: null,
+      status: o.voided ? 'voided' : 'issued', voidedAt: o.voided ? DOCUMENT_TIME : null, voidedByUserId: o.voided ? 'U1' : null, voidReason: o.voided ? 'Widerrufen' : null,
+      createdByUserId: 'U1', createdAt: o.createdAt ?? DOCUMENT_TIME, updatedAt: DOCUMENT_TIME,
+    })
+    .run();
+  if (o.linkedEntryId) f.deps.db.insert(documentLinks).values({ id: newId(), documentId: id, entityType: 'financeEntry', entityId: o.linkedEntryId, role: 'about', createdAt: DOCUMENT_TIME }).run();
   return id;
 }

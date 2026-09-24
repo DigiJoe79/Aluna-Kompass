@@ -189,8 +189,8 @@ function loadSuggestionDataInternal(deps: Deps): SuggestionData {
   };
 }
 
-/** Buchungstext aus den Bankdaten: Gegenpartei und Verwendungszweck; ohne beides das Buchungsdatum. */
-function defaultText(raw: FinanceRawTransactionRow): string {
+/** Buchungstext aus den Bankdaten: Gegenpartei und Verwendungszweck; ohne beides das Buchungsdatum. Auch für den leeren Entwurf beim Beleg (`import/vouchers.ts`). */
+export function defaultText(raw: FinanceRawTransactionRow): string {
   const text = [raw.counterpartyName, raw.purpose].map((s) => (s ?? '').trim().replace(/\s+/g, ' ')).filter(Boolean).join(' · ');
   return (text || raw.bookingDate).slice(0, 300);
 }
@@ -363,6 +363,11 @@ function suggestInternal(deps: Deps, data: SuggestionData, raw: FinanceRawTransa
 export function openSuggestionsInternal(deps: Deps): { raw: FinanceRawTransactionRow; suggestion: SuggestionView }[] {
   const data = loadSuggestionDataInternal(deps);
   return data.openRaws.map((raw) => ({ raw, suggestion: suggestInternal(deps, data, raw) }));
+}
+
+/** Der Vorschlag für einen einzelnen Kontoumsatz, ohne Rechteprüfung — für `attachVoucherToTransaction`, das nur `finance.entriesWrite` verlangt. */
+export function suggestionForRawInternal(deps: Deps, raw: FinanceRawTransactionRow): SuggestionView {
+  return suggestInternal(deps, loadSuggestionDataInternal(deps), raw);
 }
 
 const suggestSchema = z.object({ rawTransactionId: z.string().min(1) });

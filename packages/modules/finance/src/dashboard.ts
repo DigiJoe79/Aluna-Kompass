@@ -2,11 +2,13 @@ import { readSetting, type DashboardLine, type DashboardTile } from '@kompass/co
 import { and, eq, isNull, lt, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { countOpenRawTransactionsInternal, importedThroughInternal, reconcileBankInternal } from './import/queries';
+import { listForeignMoney } from './import/transit';
 import { formatEuro } from './ledger/cash-check';
 import { getSetupStatus } from './ledger/setup';
 import { listEntries } from './ledger/entries';
 import { overdueOpenItemsInternal } from './ledger/open-items';
 import { purposeBalancesAt } from './ledger/queries';
+import { listVouchersWithoutEntry } from './ledger/vouchers';
 import { financeAccounts, financeEntries, type FinanceAccountRow } from './schema';
 
 /**
@@ -37,7 +39,7 @@ const todoTile: DashboardTile<Record<string, never>> = {
   kind: 'list',
   defaultOn: true,
   options: z.object({}),
-  messageKeys: ['reviewedNotFinal', 'withoutVoucher', 'overdueItems', 'rawOpen', 'lastStatement'],
+  messageKeys: ['reviewedNotFinal', 'withoutVoucher', 'overdueItems', 'rawOpen', 'foreignMoney', 'vouchersWithoutEntry', 'lastStatement'],
   async load(deps, ctx) {
     const today = isoDay(deps.clock.now().getTime());
     const lines: DashboardLine[] = [];
@@ -64,9 +66,17 @@ const todoTile: DashboardTile<Record<string, never>> = {
       lines.push({ titleKey: 'overdueItems', values: { count: overdue.length, sum: formatEuro(sumCents) }, href: '/finance/open-items?tab=payable' });
     }
 
-    // F4 Task 6: Kontoumsätze ohne Zuordnung — ohne Namen, nur die Zahl.
+    // F4 Task 6: Kontoumsätze ohne Zuordnung — ohne Namen, nur die Zahl. Seit F5 in die Arbeitsliste.
     const openRaw = countOpenRawTransactionsInternal(deps.db);
-    if (openRaw > 0) lines.push({ titleKey: 'rawOpen', values: { count: openRaw }, href: '/finance/imports' });
+    if (openRaw > 0) lines.push({ titleKey: 'rawOpen', values: { count: openRaw }, href: '/finance/work' });
+
+    // F5: Geld, das nicht dem Verein gehört und noch nicht weitergegeben ist — nur die Zahl, nie „für wen“.
+    const foreign = await listForeignMoney(deps, ctx);
+    if (foreign.ok && foreign.value.items.length > 0) lines.push({ titleKey: 'foreignMoney', values: { count: foreign.value.items.length }, href: '/finance/work/foreign' });
+
+    // F5: Finanzbelege der Akte ohne Buchung — was der Aufrufer in der Akte nicht lesen darf, zählt die Akte nicht mit.
+    const vouchers = await listVouchersWithoutEntry(deps, ctx, { limit: 1 });
+    if (vouchers.ok && vouchers.value.total > 0) lines.push({ titleKey: 'vouchersWithoutEntry', values: { count: vouchers.value.total }, href: '/finance/work/vouchers' });
 
     // F4 Task 6: der älteste noch ausstehende Auszug — nur ein Konto, das schon einmal importiert
     // hat, kennt ein „vor N Tagen“; ein Konto ohne jeden Import zeigt die Checkliste, nicht diese Zeile.

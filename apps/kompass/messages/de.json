@@ -329,6 +329,10 @@
       "list": "Projekte"
     },
     "finance": {
+      "work": "Arbeitsliste",
+      "workForeign": "Fremdes Geld",
+      "workVouchers": "Belege ohne Buchung",
+      "rules": "Regeln",
       "imports": "Hochgeladene Auszüge",
       "entries": "Journal",
       "accounts": "Bankkonten und Kassen",
@@ -561,6 +565,8 @@
             "withoutVoucher": "{count, plural, one {# festgeschriebene Buchung ohne Beleg} other {# festgeschriebene Buchungen ohne Beleg}}",
             "overdueItems": "{count, plural, one {# überfällige offene Zahlung} other {# überfällige offene Zahlungen}}, zusammen {sum}",
             "rawOpen": "{count, plural, one {# Kontoumsatz ohne Zuordnung} other {# Kontoumsätze ohne Zuordnung}}",
+            "foreignMoney": "{count, plural, one {# Zahlung gehört nicht dem Verein und ist noch nicht weitergegeben} other {# Zahlungen gehören nicht dem Verein und sind noch nicht weitergegeben}}",
+            "vouchersWithoutEntry": "{count, plural, one {# Finanzbeleg ohne Buchung} other {# Finanzbelege ohne Buchung}}",
             "lastStatement": "Letzter Auszug vor {days, plural, one {einem Tag} other {# Tagen}}"
           }
         },
@@ -3300,6 +3306,10 @@
         "nobody": "niemand",
         "navKeys": {
           "finance": {
+            "work": "Arbeitsliste",
+            "workForeign": "Fremdes Geld",
+            "workVouchers": "Belege ohne Buchung",
+            "rules": "Regeln",
             "imports": "Hochgeladene Auszüge",
             "entries": "Journal",
             "accounts": "Bankkonten und Kassen",

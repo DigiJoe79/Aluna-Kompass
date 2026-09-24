@@ -1,10 +1,11 @@
 import { isoNow, newId, notFound, ok, readSetting, requireHumanChannel, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
-import { abortReceive, getDocumentRecord, linkDocumentInternal, readLinkedDocument, receiveGeneratedUpload } from '@kompass/module-dms';
+import { abortReceive, getDocumentRecord, linkDocumentInternal, listDocuments, readLinkedDocument, receiveGeneratedUpload, type DocumentRecord } from '@kompass/module-dms';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
 import { financeEntryDocuments, financeFiscalYears } from '../schema';
+import { requireFinanceRead } from './access';
 import { entryViewInternal } from './entries';
 import { fiscalYearStatusInternal } from './fiscal-years';
 
@@ -177,4 +178,58 @@ export function writeVoucherLink(tx: DbOrTx, deps: Deps, ctx: CallContext, input
     .run();
   financeAudit(tx, deps, ctx, { action: 'finance.entry.documentAdd', entity: 'financeEntryDocument', id: linkId, after: { entryId: input.entryId, documentId: input.documentId, viaUpload: input.viaUpload }, summary: `Beleg an Buchung ${input.entryId} abgelegt` });
   return { linkId, documentId: input.documentId, documentNumber: input.documentNumber };
+}
+
+export interface VoucherWithoutEntry {
+  id: string;
+  number: string | null;
+  subject: string;
+  documentDate: string;
+  typeKey: string;
+}
+
+const listWithoutEntrySchema = z.object({ limit: z.number().int().min(1).max(200).default(50), offset: z.number().int().min(0).default(0) });
+
+/** Die Seitengröße, mit der die Akte gelesen wird — ihr Höchstwert. */
+const DMS_PAGE = 200;
+
+/**
+ * Alle festgeschriebenen, nicht widerrufenen Dokumente einer Art — über
+ * `listDocuments`, damit die Akte prüft, was der Aufrufer lesen darf
+ * (Prinzip 6). Eine Art ohne Leserecht liefert schlicht nichts.
+ */
+async function issuedDocumentsOfType(deps: Deps, ctx: CallContext, typeKey: string): Promise<Result<DocumentRecord[]>> {
+  const all: DocumentRecord[] = [];
+  for (let offset = 0; ; offset += DMS_PAGE) {
+    const page = await listDocuments(deps, ctx, { typeKey, phase: 'issued', limit: DMS_PAGE, offset });
+    if (!page.ok) return page;
+    all.push(...page.value.documents.filter((d) => d.status !== 'voided'));
+    if (offset + DMS_PAGE >= page.value.total) break;
+  }
+  return ok(all);
+}
+
+/**
+ * `finance.read` (F5, Beleg von beiden Seiten): Finanzbelege ohne Buchung —
+ * Dokumente der Arten aus `finance.voucherTypes`, festgeschrieben und nicht
+ * widerrufen, ohne Bezug `financeEntry`. Die jüngsten zuerst. Was der
+ * Aufrufer in der Akte nicht lesen darf, fehlt (die Akte prüft).
+ */
+export async function listVouchersWithoutEntry(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ documents: VoucherWithoutEntry[]; total: number }>> {
+  const denied = requireFinanceRead(ctx, 'read');
+  if (denied) return denied;
+  const parsed = validate(deps, listWithoutEntrySchema, input ?? {});
+  if (!parsed.ok) return parsed;
+  const found: DocumentRecord[] = [];
+  for (const typeKey of readSetting<string[]>(deps, 'finance.voucherTypes')) {
+    const docs = await issuedDocumentsOfType(deps, ctx, typeKey);
+    if (!docs.ok) return docs;
+    found.push(...docs.value.filter((d) => !d.links.some((l) => l.entityType === 'financeEntry')));
+  }
+  found.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || (b.number ?? '').localeCompare(a.number ?? ''));
+  const { limit, offset } = parsed.value;
+  return ok({
+    documents: found.slice(offset, offset + limit).map((d) => ({ id: d.id, number: d.number, subject: d.subject, documentDate: d.documentDate, typeKey: d.typeKey })),
+    total: found.length,
+  });
 }

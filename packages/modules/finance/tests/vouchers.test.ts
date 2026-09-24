@@ -6,9 +6,10 @@ import { describe, expect, it } from 'vitest';
 import { getEntry, saveDraft } from '../src/ledger/entries';
 import { bookEntry } from '../src/ledger/finalize';
 import { setFinanceLimit } from '../src/ledger/setup';
-import { attachDocument, readVoucher, revokeVoucher, uploadVoucher } from '../src/ledger/vouchers';
+import { attachDocument, listVouchersWithoutEntry, readVoucher, revokeVoucher, uploadVoucher } from '../src/ledger/vouchers';
+import { FINANCE_PERMISSIONS } from '../src/manifest';
 import { financeEntryDocuments, financeMoneyLines, financePeriodEvents } from '../src/schema';
-import { allowHumanOnlyOverMcp, ledgerFixture, pdfBytes } from './helpers';
+import { allowHumanOnlyOverMcp, insertDocument, ledgerFixture, pdfBytes } from './helpers';
 
 const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
 const now = '2026-03-01T10:00:00.000Z';
@@ -257,5 +258,28 @@ describe('readVoucher', () => {
     expect(res.bytes.byteLength).toBeGreaterThan(0);
     const stranger = ctxWith([]);
     expect((await readVoucher(f.deps, stranger, { entryId: entry.id, documentId: voucher.documentId })).ok).toBe(false);
+  });
+});
+
+describe('listVouchersWithoutEntry', () => {
+  it('lists voucher-type documents without an entry link', async () => {
+    const f = await ledgerFixture();
+    const reader = ctxWith([...FINANCE_PERMISSIONS, 'dms.view'], f.userId);
+    const entry = await f.finalEntry();
+    const filed = unwrap(await uploadVoucher(f.deps, f.ctx, { entryId: entry.id, bytes: pdfBytes(), typeKey: 'voucher-invoice', documentDate: '2026-03-01' }));
+    const invoice = insertDocument(f, { subject: 'Rechnung Futter', createdAt: '2026-03-03T10:00:00.000Z' });
+    const receipt = insertDocument(f, { subject: 'Quittung', typeKey: 'voucher-receipt', createdAt: '2026-03-02T10:00:00.000Z' });
+    insertDocument(f, { subject: 'Rechnung widerrufen', voided: true });
+    insertDocument(f, { subject: 'Brief', typeKey: 'letter' });
+
+    const res = unwrap(await listVouchersWithoutEntry(f.deps, reader, {}));
+    expect(res.total).toBe(2);
+    expect(res.documents.map((d) => d.id)).toEqual([invoice, receipt]);
+    expect(res.documents[0]).toEqual({ id: invoice, number: expect.stringMatching(/^DOC-/), subject: 'Rechnung Futter', documentDate: '2026-03-01', typeKey: 'voucher-invoice' });
+    expect(res.documents.map((d) => d.id)).not.toContain(filed.documentId);
+    expect(unwrap(await listVouchersWithoutEntry(f.deps, reader, { limit: 1, offset: 1 })).documents.map((d) => d.id)).toEqual([receipt]);
+
+    expect(await listVouchersWithoutEntry(f.deps, ctxWith(['finance.overview', 'dms.view']), {})).toMatchObject({ ok: false, error: { type: 'forbidden', permission: 'finance.read' } });
+    expect(await listVouchersWithoutEntry(f.deps, reader, { limit: 0 })).toMatchObject({ ok: false, error: { type: 'validation' } });
   });
 });

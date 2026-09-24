@@ -6,13 +6,15 @@ import { createContact, linkUserToContact } from '@kompass/module-contacts';
 import { describe, expect, it } from 'vitest';
 import { FINANCE_DASHBOARD_TILES } from '../src/dashboard';
 import { importStatement } from '../src/import/runs';
+import { markTransactionForeign } from '../src/import/transit';
+import { FINANCE_PERMISSIONS } from '../src/manifest';
 import { createAccount } from '../src/ledger/accounts';
 import { saveDraft, setReviewed } from '../src/ledger/entries';
 import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
 import { createOpenItem } from '../src/ledger/open-items';
 import { applyTaxDefaults, confirmSetupStep } from '../src/ledger/setup';
 import { installFinance } from '../src/install';
-import { ledgerFixture, setupFinance } from './helpers';
+import { insertDocument, insertRaw, insertRun, ledgerFixture, setupFinance } from './helpers';
 
 const FIXTURES = path.resolve(import.meta.dirname, 'fixtures/camt');
 const camtBytes = (name: string) => new Uint8Array(readFileSync(path.join(FIXTURES, name)));
@@ -181,7 +183,8 @@ describe('finance dashboard tiles', () => {
     const todo = tileByKey('todo');
     const fresh = await todo.load(f.deps, f.ctx, {});
     if (fresh.kind !== 'list') throw new Error('expected list');
-    expect(fresh.lines.find((l) => l.titleKey === 'rawOpen')).toMatchObject({ values: { count: 3 }, href: '/finance/imports' });
+    // F5: Die Zeile führt in die Arbeitsliste, nicht mehr zu den hochgeladenen Auszügen.
+    expect(fresh.lines.find((l) => l.titleKey === 'rawOpen')).toMatchObject({ values: { count: 3 }, href: '/finance/work' });
     expect(fresh.lines.find((l) => l.titleKey === 'lastStatement')).toBeUndefined(); // noch keine 35 Tage her
 
     f.deps.clock.set('2026-05-20T00:00:00.000Z');
@@ -191,5 +194,22 @@ describe('finance dashboard tiles', () => {
 
     const serialized = JSON.stringify(later);
     expect(serialized).not.toMatch(/Erika|Beispiel|Musterspenderin/);
+  });
+
+  it('adds foreign money and vouchers without entry to the to-do tile without names', async () => {
+    const f = await ledgerFixture();
+    const ctx = ctxWith([...FINANCE_PERMISSIONS, 'dms.view'], f.userId);
+    const rawId = insertRaw(f, insertRun(f, f.bank.id), { accountId: f.bank.id, amountCents: 12000, name: 'Erika Beispiel' });
+    unwrap(await markTransactionForeign(f.deps, f.ctx, { rawTransactionId: rawId, holder: 'Nachbarverein Tierfreunde', reviewed: false }));
+    insertDocument(f, { subject: 'Rechnung Futterhaus' });
+    insertDocument(f, { subject: 'Quittung Futterhaus', typeKey: 'voucher-receipt' });
+
+    const todo = tileByKey('todo');
+    expect(todo.messageKeys).toEqual(expect.arrayContaining(['foreignMoney', 'vouchersWithoutEntry']));
+    const result = await todo.load(f.deps, ctx, {});
+    if (result.kind !== 'list') throw new Error('expected list');
+    expect(result.lines.find((l) => l.titleKey === 'foreignMoney')).toEqual({ titleKey: 'foreignMoney', values: { count: 1 }, href: '/finance/work/foreign' });
+    expect(result.lines.find((l) => l.titleKey === 'vouchersWithoutEntry')).toEqual({ titleKey: 'vouchersWithoutEntry', values: { count: 2 }, href: '/finance/work/vouchers' });
+    expect(JSON.stringify(result)).not.toMatch(/Erika|Beispiel|Nachbarverein|Futterhaus/);
   });
 });

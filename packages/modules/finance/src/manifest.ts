@@ -53,6 +53,10 @@ export const financeModule: ModuleManifest = defineModule({
   settings: FINANCE_SETTINGS,
   moduleIcon: 'euro',
   help: [
+    { href: '/finance/work/foreign', doc: 'finanzen/arbeitsliste' },
+    { href: '/finance/work/vouchers', doc: 'finanzen/arbeitsliste' },
+    { href: '/finance/work/rules', doc: 'finanzen/arbeitsliste' },
+    { href: '/finance/work', doc: 'finanzen/arbeitsliste' },
     { href: '/finance/imports/format', doc: 'finanzen/csv-format-einrichten' },
     { href: '/finance/imports', doc: 'finanzen/kontoauszug-laden' },
     { href: '/finance/entries', doc: 'finanzen/buchen' },
@@ -63,6 +67,11 @@ export const financeModule: ModuleManifest = defineModule({
   ],
   navigation: [
     // F4 Task 7: ein eigener Abschnitt „Arbeit“ über „Buchungen“ — F5 stellt die Arbeitsliste davor.
+    // F5 Task 6: die Arbeitsliste führt den Abschnitt an, ihre drei Nebenlisten folgen.
+    { key: 'finance.work', href: '/finance/work', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
+    { key: 'finance.workForeign', href: '/finance/work/foreign', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
+    { key: 'finance.workVouchers', href: '/finance/work/vouchers', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
+    { key: 'finance.rules', href: '/finance/work/rules', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
     { key: 'finance.imports', href: '/finance/imports', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
     { key: 'finance.entries', href: '/finance/entries', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
     { key: 'finance.accounts', href: '/finance/accounts', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },

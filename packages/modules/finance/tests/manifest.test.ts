@@ -22,6 +22,11 @@ describe('finance module', () => {
   it('puts the journal, accounts, open items and the cash box into the rail with the euro icon, readable with finance.read, in the same section', () => {
     // F4 Task 7: „Hochgeladene Auszüge“ führt einen eigenen Abschnitt „Arbeit“ — über „Buchungen“.
     expect(financeModule.navigation).toEqual([
+      // F5 Task 6: die Arbeitsliste und ihre Nebenlisten stehen vor „Hochgeladene Auszüge“.
+      { key: 'finance.work', href: '/finance/work', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
+      { key: 'finance.workForeign', href: '/finance/work/foreign', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
+      { key: 'finance.workVouchers', href: '/finance/work/vouchers', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
+      { key: 'finance.rules', href: '/finance/work/rules', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
       { key: 'finance.imports', href: '/finance/imports', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
       { key: 'finance.entries', href: '/finance/entries', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
       { key: 'finance.accounts', href: '/finance/accounts', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
@@ -29,6 +34,12 @@ describe('finance module', () => {
       { key: 'finance.cash', href: '/finance/cash', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
     ]);
     expect(financeModule.moduleIcon).toBe('euro');
+  });
+
+  it('points the four work list routes at the handbook page of the work list', () => {
+    for (const href of ['/finance/work', '/finance/work/foreign', '/finance/work/vouchers', '/finance/work/rules']) {
+      expect(financeModule.help, href).toContainEqual({ href, doc: 'finanzen/arbeitsliste' });
+    }
   });
 
   it('registers the protection area finance, opened by finance.read', () => {
