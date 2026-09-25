@@ -3424,6 +3424,12 @@
           "roundAmountFromCents": "Ab welchem Betrag ist ein runder Betrag auffällig?",
           "save": "Speichern",
           "saved": "Grenze gespeichert."
+        },
+        "waiverBasis": {
+          "label": "Anspruchsgrundlage für Aufwandsspenden",
+          "hint": "Vereinbarung vom … / Satzung § … — ein Vertrag oder die Satzung. Ein Vorstandsbeschluss ohne Ermächtigung in der Satzung genügt nicht. Kompass kopiert den Text beim Einreichen an jeden Antrag mit Verzicht.",
+          "save": "Speichern",
+          "saved": "Anspruchsgrundlage gespeichert."
         }
       },
       "permissions": {
@@ -4593,7 +4599,9 @@
         },
         "waiver": {
           "label": "Auf die Erstattung verzichten",
-          "text": "Statt Geld bekommen Sie eine Zuwendungsbestätigung über den Betrag. Das geht nur, wenn Ihnen die Erstattung vorher zugesagt war."
+          "text": "Statt Geld bekommen Sie eine Zuwendungsbestätigung über den Betrag. Das geht nur, wenn Ihnen die Erstattung vorher zugesagt war.",
+          "recurring": "Regelmäßige Tätigkeit (gewöhnlich monatlich)",
+          "recurringHint": "Davon hängt die Frist für den Verzicht ab: bei einer einmaligen Auslage 3 Monate, bei einer regelmäßigen Tätigkeit 12 Monate (BMF-Schreiben vom 25.11.2014)."
         },
         "pdf": {
           "choose": "PDF wählen",

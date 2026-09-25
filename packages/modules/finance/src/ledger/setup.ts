@@ -344,6 +344,26 @@ export async function setFinanceLimit(deps: Deps, ctx: CallContext, input: unkno
   });
 }
 
+const waiverBasisSchema = z.object({ text: z.string().trim().max(500) });
+
+/**
+ * Die Anspruchsgrundlage des Vereins für Aufwandsspenden (F8a Annahme 9,
+ * Checklisten-Schritt `waiverBasis`): „Vereinbarung vom … / Satzung § …“.
+ * Leer ist erlaubt. Ins Protokoll nur der Schlüssel, nie der Wortlaut.
+ */
+export async function setExpenseWaiverBasisText(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ text: string }>> {
+  const denied = requirePermission(ctx, 'finance.setup');
+  if (denied) return denied;
+  const parsed = validate(deps, waiverBasisSchema, input);
+  if (!parsed.ok) return parsed;
+  return deps.db.transaction((tx: DbOrTx) => {
+    const written = writeSettingInternal(tx, deps, ctx, 'finance.expenseWaiverBasisText', parsed.value.text, 'finance.setup.waiverBasis');
+    if (!written.ok) return written;
+    financeAudit(tx, deps, ctx, { action: 'finance.setup.waiverBasis', entity: 'financeSetup', id: 'finance.expenseWaiverBasisText', after: { key: 'finance.expenseWaiverBasisText' }, summary: 'Anspruchsgrundlage für Aufwandsspenden gesetzt' });
+    return ok({ text: parsed.value.text });
+  });
+}
+
 export interface PermissionMatrixActivity {
   key: string;
   permission: string;

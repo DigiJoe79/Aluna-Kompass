@@ -73,6 +73,7 @@ describe('form state to service and back', () => {
     expect(input).toEqual({
       iban: 'DE66999999991234567890',
       waiver: false,
+      recurring: false,
       positions: [
         { kind: 'receipt', positionDate: '2026-08-20', amountCents: 1999, purpose: 'Futter', projectId: 'p1' },
         { kind: 'trip', positionDate: '2026-08-21', purpose: '', projectId: null, tripFrom: 'Musterstadt', tripTo: 'Beispielstadt', tripReason: 'Tierarzt', tripKm: 84 },
@@ -80,12 +81,20 @@ describe('form state to service and back', () => {
     });
 
     const empty = draftInput({ ...emptyExpenseForm(null), positions: [emptyPosition('x', '')] });
-    expect(empty.input).toEqual({ iban: null, waiver: false, positions: [{ kind: 'receipt', positionDate: null, amountCents: 0, purpose: '', projectId: null }] });
+    expect(empty.input).toEqual({ iban: null, waiver: false, recurring: false, positions: [{ kind: 'receipt', positionDate: null, amountCents: 0, purpose: '', projectId: null }] });
 
     // Ein unlesbarer Betrag geht als 0 an den Entwurf (nichts ist Pflicht), das Feld behält den Text.
     expect(draftInput({ ...form(), positions: [{ ...emptyPosition('y', '2026-08-20'), amountText: '12.5' }] }).input.positions[0]).toMatchObject({ amountCents: 0 });
     // Mit Verzicht gibt es nichts zu überweisen — die IBAN bleibt aus dem Entwurf.
     expect(draftInput({ ...form(), waiver: true }).input).toMatchObject({ iban: null, waiver: true });
+  });
+
+  it('sends "regular activity" only together with the waiver and brings it back from a saved draft', () => {
+    expect(emptyExpenseForm(null).recurring).toBe(false);
+    expect(draftInput({ ...form(), waiver: true, recurring: true }).input).toMatchObject({ waiver: true, recurring: true });
+    // Ohne Verzicht gibt es keine Verzichtsfrist — das Häkchen geht nicht mit.
+    expect(draftInput({ ...form(), waiver: false, recurring: true }).input).toMatchObject({ waiver: false, recurring: false });
+    expect(formFromClaim(saved({ waiver: true, recurring: true }))).toMatchObject({ waiver: true, recurring: true });
   });
 
   it('sends id and version once the draft exists', () => {

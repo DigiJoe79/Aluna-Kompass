@@ -14,6 +14,7 @@ import {
   setAccountActive,
   setCategoryActive,
   setDatedValue,
+  setExpenseWaiverBasisText,
   setFinanceLimit,
   setFinanceSwitch,
   setPurposeActive,
@@ -66,6 +67,15 @@ export async function setFinanceLimitAction(key: string, cents: number): Promise
   revalidateFinanceAdmin();
   if (!result.ok) return toActionState(result, t);
   return toActionState(result, t, t('finance.admin.tax.limits.saved'));
+}
+
+export async function setExpenseWaiverBasisAction(text: string): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await setExpenseWaiverBasisText(deps, ctx, { text });
+  revalidateFinanceAdmin();
+  if (!result.ok) return toActionState(result, t);
+  return toActionState(result, t, t('finance.admin.tax.waiverBasis.saved'));
 }
 
 export interface AccountInput {

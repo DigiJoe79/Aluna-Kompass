@@ -310,6 +310,15 @@ export function ExpenseForm({
               <Switch id="expense-waiver" aria-label={t('waiver.label')} checked={form.waiver} onCheckedChange={(waiver) => update((f) => ({ ...f, waiver }))} />
             </div>
             <p className="text-[13px] text-ink-2">{t('waiver.text')}</p>
+            {form.waiver ? (
+              <div className="space-y-1 border-t border-line pt-2">
+                <label htmlFor="expense-recurring" className="flex min-h-11 cursor-pointer items-center gap-3 text-[14px] text-ink">
+                  <input id="expense-recurring" type="checkbox" checked={form.recurring} onChange={(e) => update((f) => ({ ...f, recurring: e.target.checked }))} className="size-5 shrink-0 rounded border-line" />
+                  {t('waiver.recurring')}
+                </label>
+                <p className="text-[12px] text-muted-ink">{t('waiver.recurringHint')}</p>
+              </div>
+            ) : null}
           </div>
         ) : null}
 

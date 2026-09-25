@@ -8,7 +8,7 @@ import { createAccount, setAccountActive } from '../src/ledger/accounts';
 import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
 import { saveNotice } from '../src/donations/notices';
 import { saveSigner, uploadFacsimile } from '../src/donations/machine';
-import { applyTaxDefaults, confirmSetupStep, getPermissionMatrix, getSetupStatus, setFinanceLimit, setFinanceSwitch } from '../src/ledger/setup';
+import { applyTaxDefaults, confirmSetupStep, getPermissionMatrix, getSetupStatus, setExpenseWaiverBasisText, setFinanceLimit, setFinanceSwitch } from '../src/ledger/setup';
 import { installFinance } from '../src/install';
 import { financeModule, FINANCE_PERMISSIONS } from '../src/manifest';
 import { setupFinance } from './helpers';
@@ -301,6 +301,23 @@ describe('finance setup status', () => {
 
     const readerCtx = ctxWith(['finance.read'], 'READER');
     expect(await setFinanceLimit(deps, readerCtx, { key: 'finance.roundAmountFromCents', cents: 10000 })).toMatchObject({ ok: false, error: { type: 'forbidden', permission: 'finance.setup' } });
+  });
+
+  it('sets the association waiver basis text with finance.setup (the finance entry names only the key; the setting is logged like every setting), refuses without the right or beyond 500 characters', async () => {
+    const { deps, ctx } = setupFinance();
+    unwrap(await setExpenseWaiverBasisText(deps, ctx, { text: '  Vereinbarung vom 01.03.2026 / Satzung § 9  ' }));
+    expect(readSetting(deps, 'finance.expenseWaiverBasisText')).toBe('Vereinbarung vom 01.03.2026 / Satzung § 9');
+    const entry = auditEntry(deps, 'finance.setup.waiverBasis');
+    expect(entry.entityType).toBe('financeSetup');
+    expect(entry.after).not.toContain('Satzung');
+    expect(entry.summary).not.toContain('Satzung');
+
+    // Leeren ist erlaubt — der Schritt der Checkliste ist dann wieder offen.
+    unwrap(await setExpenseWaiverBasisText(deps, ctx, { text: '' }));
+    expect(readSetting(deps, 'finance.expenseWaiverBasisText')).toBe('');
+
+    expect(await setExpenseWaiverBasisText(deps, ctx, { text: 'x'.repeat(501) })).toMatchObject({ ok: false, error: { type: 'validation' } });
+    expect(await setExpenseWaiverBasisText(deps, ctxWith(['finance.read'], 'READER'), { text: 'Satzung § 9' })).toMatchObject({ ok: false, error: { type: 'forbidden', permission: 'finance.setup' } });
   });
 
   it('never writes user names into the audit log', async () => {

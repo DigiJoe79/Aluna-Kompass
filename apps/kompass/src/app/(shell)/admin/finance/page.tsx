@@ -81,6 +81,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
           roundAmountFromCents: readSetting<number>(deps, 'finance.roundAmountFromCents'),
         }}
         confirmedAt={readSetting<string | null>(deps, 'finance.setupTaxConfirmedAt')}
+        waiverBasisText={readSetting<string>(deps, 'finance.expenseWaiverBasisText')}
       />
     );
   } else if (panel === 'permissions') {

@@ -1,7 +1,6 @@
-import { hasPermission, type LocalizedText } from '@kompass/core';
+import { hasPermission } from '@kompass/core';
 import { DOCUMENT_MAX_BYTES } from '@kompass/module-dms';
 import { expenseFormStart, getExpenseClaim } from '@kompass/module-finance';
-import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -57,10 +56,6 @@ export default async function NewExpensePage({ searchParams }: { searchParams: P
   // Sind Aufwandsspenden inzwischen aus, gibt es keinen Verzicht mehr zu wählen — die IBAN kommt zurück.
   const initial = { ...base, waiver: base.waiver && start.value.waiversEnabled };
 
-  const leading = deps.locales()[0] ?? 'de';
-  const projectsRes = hasPermission(ctx, 'projects.view') ? await listProjects(deps, ctx) : null;
-  const projects = projectsRes?.ok ? projectsRes.value.map((p) => ({ id: p.id, name: (p.name as LocalizedText)[leading] || p.slug })) : null;
-
   return (
     <div className="max-w-[640px]">
       {header}
@@ -70,7 +65,7 @@ export default async function NewExpensePage({ searchParams }: { searchParams: P
         contactName={start.value.contactName}
         waiversEnabled={start.value.waiversEnabled}
         mileageRates={start.value.mileageRates}
-        projects={projects}
+        projects={start.value.projects}
         device={deviceFromUserAgent((await headers()).get('user-agent'))}
         maxBytes={DOCUMENT_MAX_BYTES}
         today={today}

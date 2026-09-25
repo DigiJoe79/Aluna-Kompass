@@ -78,6 +78,8 @@ export interface ExpenseForm {
   version: string | null;
   iban: string;
   waiver: boolean;
+  /** „Regelmäßige Tätigkeit“ — davon hängt die Verzichtsfrist ab (3 Monate einmalig, 12 Monate regelmäßig). Nur mit Verzicht. */
+  recurring: boolean;
   positions: PositionForm[];
 }
 
@@ -86,7 +88,7 @@ export function emptyPosition(key: string, today: string): PositionForm {
 }
 
 export function emptyExpenseForm(iban: string | null): ExpenseForm {
-  return { id: null, version: null, iban: iban ?? '', waiver: false, positions: [] };
+  return { id: null, version: null, iban: iban ?? '', waiver: false, recurring: false, positions: [] };
 }
 
 const blank = (s: string) => (s.trim() === '' ? null : s.trim());
@@ -104,7 +106,8 @@ export const totalCents = (form: ExpenseForm, rates: readonly MileageRate[]) => 
  * Der Formularzustand als Eingabe für `saveExpenseDraft` — dazu die
  * Schlüssel in der gesendeten Reihenfolge, damit `applySaved` die IDs der
  * Antwort den richtigen Karten zuordnet, auch wenn inzwischen weitergetippt
- * wurde. Mit Verzicht geht keine IBAN mit: Es gibt nichts zu überweisen.
+ * wurde. Mit Verzicht geht keine IBAN mit: Es gibt nichts zu überweisen;
+ * ohne Verzicht keine „regelmäßige Tätigkeit“: Es gibt keine Verzichtsfrist.
  */
 export function draftInput(form: ExpenseForm) {
   const positions = form.positions.map((p) => {
@@ -120,6 +123,7 @@ export function draftInput(form: ExpenseForm) {
     ...(form.version ? { expectedVersion: form.version } : {}),
     iban: form.waiver ? null : blank(form.iban),
     waiver: form.waiver,
+    recurring: form.waiver && form.recurring,
     positions,
   };
   return { input, keys: form.positions.map((p) => p.key) };
@@ -149,6 +153,7 @@ export function formFromClaim(view: ExpenseClaimView): ExpenseForm {
     version: view.version,
     iban: view.iban ?? '',
     waiver: view.waiver,
+    recurring: view.recurring,
     positions: view.positions.map((p) => ({
       key: p.id,
       id: p.id,

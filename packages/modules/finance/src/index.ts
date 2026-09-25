@@ -129,6 +129,7 @@ export {
   confirmSetupStep,
   getPermissionMatrix,
   getSetupStatus,
+  setExpenseWaiverBasisText,
   setFinanceLimit,
   setFinanceSwitch,
   type PermissionMatrixActivity,

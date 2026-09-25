@@ -163,8 +163,17 @@ test.describe('finance expenses — einreichen (D1)', () => {
     await expect(page.getByLabel('IBAN')).toBeVisible();
     const waiver = page.getByRole('switch', { name: 'Auf die Erstattung verzichten' });
     await expect(page.getByText('Statt Geld bekommen Sie eine Zuwendungsbestätigung über den Betrag.')).toBeVisible();
+    await expect(page.getByRole('checkbox', { name: 'Regelmäßige Tätigkeit (gewöhnlich monatlich)' })).toHaveCount(0);
     await waiver.click();
     await expect(page.getByLabel('IBAN')).toHaveCount(0);
+    // Nachtrag: die Verzichtsfrist hängt an „regelmäßig“ (3 Monate einmalig, 12 Monate regelmäßig).
+    const recurring = page.getByRole('checkbox', { name: 'Regelmäßige Tätigkeit (gewöhnlich monatlich)' });
+    await expect(recurring).not.toBeChecked();
+    await expect(page.getByText('bei einer einmaligen Auslage 3 Monate, bei einer regelmäßigen Tätigkeit 12 Monate')).toBeVisible();
+    await recurring.check();
+    await saved(page);
+    await page.reload();
+    await expect(page.getByRole('checkbox', { name: 'Regelmäßige Tätigkeit (gewöhnlich monatlich)' })).toBeChecked();
     await waiver.click();
     await expect(page.getByLabel('IBAN')).toBeVisible();
 

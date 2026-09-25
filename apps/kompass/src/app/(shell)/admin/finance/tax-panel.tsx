@@ -7,8 +7,9 @@ import { toast } from 'sonner';
 import { AmountField } from '@/components/finance/amount-field';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { formatAmount, parseAmount } from '@/lib/finance/amount';
-import { setFinanceLimitAction, setFinanceSwitchAction } from './actions';
+import { setExpenseWaiverBasisAction, setFinanceLimitAction, setFinanceSwitchAction } from './actions';
 
 export interface TaxSwitches {
   isEntrepreneurOrHasVatId: boolean;
@@ -62,8 +63,48 @@ function LimitRow({ id, label, cents, onSave }: { id: string; label: string; cen
   );
 }
 
+/**
+ * Die Anspruchsgrundlage des Vereins für Aufwandsspenden (Checklisten-Schritt
+ * `waiverBasis`, F8a) — nur, solange Aufwandsspenden eingeschaltet sind. Ein
+ * Vertrag oder die Satzung; ein Beschluss ohne Satzungsermächtigung reicht nicht.
+ */
+function WaiverBasisRow({ text }: { text: string }) {
+  const t = useTranslations('finance.admin.tax');
+  const router = useRouter();
+  const [value, setValue] = useState(text);
+  const [pending, setPending] = useState(false);
+  return (
+    <div className="space-y-1.5 py-2.5" data-testid="waiver-basis">
+      <Label htmlFor="tax-waiver-basis">{t('waiverBasis.label')}</Label>
+      <Textarea id="tax-waiver-basis" rows={2} maxLength={500} value={value} disabled={pending} aria-describedby="tax-waiver-basis-hint" onChange={(e) => setValue(e.target.value)} />
+      <p id="tax-waiver-basis-hint" className="text-[12px] text-muted-ink">
+        {t('waiverBasis.hint')}
+      </p>
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          disabled={pending || value.trim() === text.trim()}
+          onClick={async () => {
+            setPending(true);
+            const result = await setExpenseWaiverBasisAction(value);
+            setPending(false);
+            if (result.status === 'error') {
+              toast.error(result.message);
+              return;
+            }
+            if (result.status === 'success' && result.message) toast.success(result.message);
+            router.refresh();
+          }}
+        >
+          {t('waiverBasis.save')}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /** H7 — Steuerliches, Grenzen und Schalter; „Darf ein Agent festschreiben?“ deutlich abgesetzt. */
-export function TaxPanel({ switches, limits, confirmedAt }: { switches: TaxSwitches; limits: TaxLimits; confirmedAt: string | null }) {
+export function TaxPanel({ switches, limits, confirmedAt, waiverBasisText }: { switches: TaxSwitches; limits: TaxLimits; confirmedAt: string | null; waiverBasisText: string }) {
   const t = useTranslations('finance.admin.tax');
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -99,6 +140,7 @@ export function TaxPanel({ switches, limits, confirmedAt }: { switches: TaxSwitc
         <SwitchRow id="tax-entrepreneur" label={t('isEntrepreneurOrHasVatId')} checked={switches.isEntrepreneurOrHasVatId} disabled={pending} onToggle={(v) => void toggle('isEntrepreneurOrHasVatId', v)} />
         <SwitchRow id="tax-membership-fees" label={t('membershipFeesCertifiable')} checked={switches.membershipFeesCertifiable} disabled={pending} onToggle={(v) => void toggle('membershipFeesCertifiable', v)} />
         <SwitchRow id="tax-expense-waivers" label={t('expenseWaiversEnabled')} checked={switches.expenseWaiversEnabled} disabled={pending} onToggle={(v) => void toggle('expenseWaiversEnabled', v)} />
+        {switches.expenseWaiversEnabled ? <WaiverBasisRow key={waiverBasisText} text={waiverBasisText} /> : null}
       </div>
       <div className="divide-y divide-line-2 rounded-md border border-line bg-surface px-3.5" data-testid="tax-limits">
         <LimitRow id="tax-limit-statement-suffices" label={t('limits.statementSufficesBelowCents')} cents={limits.statementSufficesBelowCents} onSave={(cents) => saveLimit('statementSufficesBelowCents', cents)} />

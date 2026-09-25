@@ -22,7 +22,7 @@ import {
 } from '@kompass/core';
 import { addContactRole, contactIdForUserInternal, contactRoles, contacts, displayName, userIdForContactInternal } from '@kompass/module-contacts';
 import { abortReceive, DOCUMENT_MAX_BYTES, documentLinks, linkDocumentInternal, readLinkedDocument, receiveGeneratedUpload } from '@kompass/module-dms';
-import { projects } from '@kompass/module-projects';
+import { listProjects, projects } from '@kompass/module-projects';
 import { and, asc, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
@@ -575,6 +575,22 @@ export interface ExpenseFormStart {
   waiversEnabled: boolean;
   /** Die Stufen des Kilometersatzes (mitgeliefert und eigene), aufsteigend — die Oberfläche rechnet damit vor, der Dienst rechnet beim Sichern. */
   mileageRates: { validFrom: string; centsPerKm: number }[];
+  /** Die aktiven Projekte, nur ID und Name (in der ersten Sprache) — für das Feld „Projekt“ auch ohne `projects.view`. */
+  projects: { id: string; name: string }[];
+}
+
+/**
+ * Die Namen der aktiven Projekte für das Formular. Wer nur Auslagen einreicht,
+ * trägt `projects.view` nicht; Namen aktiver Projekte sind aber kein Geheimnis.
+ * Wie `readExpenseReceipt`: `listProjects` mit dem zusätzlichen Recht nur für
+ * diesen einen Aufruf, und hinaus gehen nur ID und Name.
+ */
+async function activeProjectNamesInternal(deps: Deps, ctx: CallContext): Promise<{ id: string; name: string }[]> {
+  const readCtx: CallContext = hasPermission(ctx, 'projects.view') ? ctx : { ...ctx, permissions: new Set([...ctx.permissions, 'projects.view']) };
+  const result = await listProjects(deps, readCtx);
+  if (!result.ok) return [];
+  const leading = deps.locales()[0] ?? 'de';
+  return result.value.filter((p) => p.status === 'active').map((p) => ({ id: p.id, name: (p.name as Record<string, string>)[leading] || p.slug }));
 }
 
 /**
@@ -613,7 +629,7 @@ export async function expenseFormStart(deps: Deps, ctx: CallContext, input: unkn
     .map((validFrom) => ({ validFrom, centsPerKm: valueAt(deps.db, 'mileageRate', validFrom) }))
     .filter((r): r is { validFrom: string; centsPerKm: number } => typeof r.centsPerKm === 'number');
 
-  return ok({ contactName: contact ? displayName(contact) : '', iban: lastClaimIban ?? knownIban ?? null, waiversEnabled: waiversEnabled(deps), mileageRates });
+  return ok({ contactName: contact ? displayName(contact) : '', iban: lastClaimIban ?? knownIban ?? null, waiversEnabled: waiversEnabled(deps), mileageRates, projects: await activeProjectNamesInternal(deps, ctx) });
 }
 
 const listSchema = z.object({

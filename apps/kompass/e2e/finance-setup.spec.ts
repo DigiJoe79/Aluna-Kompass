@@ -328,6 +328,26 @@ test.describe('finance setup', () => {
     await expect(row.getByRole('checkbox', { name: 'Darf ein Agent festschreiben?' })).not.toBeChecked();
   });
 
+  test('die Anspruchsgrundlage für Aufwandsspenden steht nur bei eingeschaltetem Schalter und hakt den Schritt der Checkliste ab', async ({ page }) => {
+    await page.goto('/admin/finance?panel=tax');
+    const panel = page.getByTestId('tax-panel');
+    await expect(panel.getByLabel('Anspruchsgrundlage für Aufwandsspenden')).toHaveCount(0);
+    // Der Schalter ist gesteuert: Er steht erst nach dem Speichern um — also klicken und warten.
+    await panel.getByRole('checkbox', { name: 'Werden Aufwandsspenden angeboten?' }).click();
+    await expect(panel.getByRole('checkbox', { name: 'Werden Aufwandsspenden angeboten?' })).toBeChecked();
+    const field = panel.getByLabel('Anspruchsgrundlage für Aufwandsspenden');
+    await expect(field).toBeVisible();
+    await expect(panel.getByTestId('waiver-basis')).toContainText('Vereinbarung vom … / Satzung § …');
+    await field.fill('Satzung § 9 Abs. 2');
+    await panel.getByTestId('waiver-basis').getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByText('Anspruchsgrundlage gespeichert.')).toBeVisible();
+
+    await page.goto('/admin/finance?panel=checklist');
+    await expect(page.getByTestId('requirement-waiverBasis')).toHaveAttribute('data-done', 'true');
+    await page.goto('/admin/finance?panel=tax');
+    await expect(page.getByTestId('tax-panel').getByLabel('Anspruchsgrundlage für Aufwandsspenden')).toHaveValue('Satzung § 9 Abs. 2');
+  });
+
   test('einen Satz ab Stichtag überschreiben und wieder zurücknehmen', async ({ page }) => {
     await page.goto('/admin/finance?panel=datedValues');
     await page.getByTestId('dated-value-edit-vatStandard').click();

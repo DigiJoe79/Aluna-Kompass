@@ -3,6 +3,7 @@ import { auditEntry, ctxWith, systemContext } from '@kompass/core/testing';
 import { contactRoles } from '@kompass/module-contacts';
 import { DOCUMENT_MAX_BYTES, documentLinks, documents } from '@kompass/module-dms';
 import { and, eq, isNull } from 'drizzle-orm';
+import { createProject, projects } from '@kompass/module-projects';
 import { describe, expect, it } from 'vitest';
 import {
   copyExpenseClaim,
@@ -184,6 +185,7 @@ describe('expenseFormStart', () => {
         { validFrom: '2026-01-01', centsPerKm: 30 },
         { validFrom: '2026-06-01', centsPerKm: 35 },
       ],
+      projects: [],
     });
     enableWaivers(f);
     expect(unwrap(await expenseFormStart(f.deps, f.hanna.ctx, {})).waiversEnabled).toBe(true);
@@ -202,6 +204,17 @@ describe('expenseFormStart', () => {
     unwrap(await saveExpenseDraft(f.deps, f.hanna.ctx, { waiver: false, iban: IBAN, positions: [] }));
     expect(unwrap(await expenseFormStart(f.deps, f.hanna.ctx, {})).iban).toBe(IBAN);
     expect(unwrap(await expenseFormStart(f.deps, f.otto.ctx, {})).iban).toBeNull();
+  });
+  it('names the active projects for a claimant without projects.view — id and name only, never a completed one', async () => {
+    const f = await expenseFixture();
+    const manage = ctxWith(['projects.manage'], f.userId);
+    const project = (slug: string, name: string) => createProject(f.deps, manage, { slug, name: { de: name }, type: 'ongoing' as const, summary: { de: '' }, body: { de: '' } });
+    const active = unwrap(await project('pflegestellen', 'Pflegestellen'));
+    const done = unwrap(await project('kastration-2025', 'Kastration 2025'));
+    f.deps.db.update(projects).set({ status: 'completed' }).where(eq(projects.id, done.id)).run();
+
+    expect(f.hanna.ctx.permissions.has('projects.view')).toBe(false);
+    expect(unwrap(await expenseFormStart(f.deps, f.hanna.ctx, {})).projects).toEqual([{ id: active.id, name: 'Pflegestellen' }]);
   });
 });
 
