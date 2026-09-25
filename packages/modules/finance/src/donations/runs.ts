@@ -1,6 +1,6 @@
 import { invalid, isoNow, newId, notFound, ok, readSetting, requireHumanChannel, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { contacts, displayName } from '@kompass/module-contacts';
-import { documentTypeFor, peekDocumentNumber } from '@kompass/module-dms';
+import { documentTypeFor, peekDocumentNumber, readLinkedDocument } from '@kompass/module-dms';
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
@@ -633,4 +633,54 @@ export async function dispatchRunConfirmations(deps: Deps, ctx: CallContext, inp
     financeAudit(tx, deps, ctx, { action: 'finance.confirmationRun.dispatch', entity: 'financeConfirmationRun', id: run.id, after: { dispatchedVia: v.sentVia }, summary: `Versand für ${dispatched} Bestätigungen des Serienlaufs ${run.year} vermerkt` });
     return ok(runViewInternal(tx, run.id)!);
   });
+}
+
+export const runBundleSchema = z.object({ runId: z.string().min(1), part: z.enum(['machine', 'signature']) });
+
+const BUNDLE_PART_LABEL: Record<z.infer<typeof runBundleSchema>['part'], string> = { machine: 'maschinell', signature: 'zum-unterschreiben' };
+
+/**
+ * Sammel-PDF eines Serienlaufs (F6b Task 4, Annahme 7) — `finance.read`. Die
+ * Exemplare der ausgestellten Posten in der Reihenfolge der Namen, über den
+ * Bezug der Akte (wie `readConfirmationCopy`), zu einem PDF gefügt.
+ * Aufgeteilt wird nach der ausgestellten Bestätigung (`machine`), nicht nach
+ * dem Schnappschuss beim Start; zurückgenommene bleiben draußen, sie gehen
+ * nicht mehr hinaus. Nichts wird abgelegt, nichts protokolliert — ein Lesen.
+ * Fehlt `pdfunite` (`ToolMissingError`), antwortet der Dienst mit Abhilfe;
+ * der Lauf selbst hängt nicht daran (Review Focus 5). Liefert Bytes: kein
+ * MCP-Werkzeug.
+ */
+export async function readRunBundle(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ bytes: Uint8Array; filename: string; count: number }>> {
+  const denied = requireFinanceRead(ctx, 'read');
+  if (denied) return denied;
+  const parsed = validate(deps, runBundleSchema, input);
+  if (!parsed.ok) return parsed;
+  const { runId, part } = parsed.value;
+
+  const run = deps.db.select().from(financeConfirmationRuns).where(eq(financeConfirmationRuns.id, runId)).get();
+  if (!run) return notFound('financeConfirmationRun', runId);
+  const issued = itemRowsInternal(deps.db, [run.id]).filter((i) => i.state === 'issued' && i.confirmationId !== null).sort(byRunOrder);
+  const confirmationIds = issued.map((i) => i.confirmationId!);
+  const confirmations = new Map(
+    (confirmationIds.length === 0 ? [] : deps.db.select().from(financeConfirmations).where(inArray(financeConfirmations.id, confirmationIds)).all()).map((c) => [c.id, c] as const),
+  );
+  const selected = issued
+    .map((i) => confirmations.get(i.confirmationId!))
+    .filter((c): c is NonNullable<typeof c> => c !== undefined && !c.voidedAt && c.machine === (part === 'machine'));
+  if (selected.length === 0) return financeConflict('bundleEmpty');
+
+  const files: Uint8Array[] = [];
+  for (const confirmation of selected) {
+    const copy = await readLinkedDocument(deps, ctx, { documentId: confirmation.documentId, entityType: 'financeConfirmation', entityId: confirmation.id });
+    if (!copy.ok) return copy;
+    files.push(copy.value.bytes);
+  }
+  let bytes: Uint8Array;
+  try {
+    bytes = await deps.pdf.merge(files);
+  } catch (error) {
+    if (error instanceof Error && error.name === 'ToolMissingError') return financeConflict('bundleToolsMissing');
+    throw error;
+  }
+  return ok({ bytes, filename: `Zuwendungsbestaetigungen-${run.year}-${BUNDLE_PART_LABEL[part]}.pdf`, count: files.length });
 }
