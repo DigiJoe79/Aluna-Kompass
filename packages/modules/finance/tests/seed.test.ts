@@ -1,4 +1,4 @@
-import { getEffectivePermissions, schema, unwrap } from '@kompass/core';
+import { fakeTextExtraction, getEffectivePermissions, schema, unwrap } from '@kompass/core';
 import { insertUser, systemContext } from '@kompass/core/testing';
 import { contactRoles, contacts } from '@kompass/module-contacts';
 import { projects } from '@kompass/module-projects';
@@ -20,6 +20,8 @@ import { listVouchersWithoutEntry } from '../src/ledger/vouchers';
 import { listWorkItems } from '../src/import/work';
 import { suggestForTransaction } from '../src/import/suggestions';
 import { listRawTransactions } from '../src/import/queries';
+import { buildInvoiceXml, OFFICE_INVOICE, VET_INVOICE } from '../src/import/zugferd-fixture';
+import { invoiceProposal } from '../src/import/zugferd/read';
 import { listOpenItems } from '../src/ledger/open-items';
 import { getBalances } from '../src/ledger/overview';
 import { getProjectFinance } from '../src/ledger/project-settings';
@@ -198,7 +200,34 @@ describe('seedFinance', () => {
 
     // Eine Eingangsrechnung ohne Buchung — „Beleg suchen“ findet sie über den Betrag der Büromaterial-Zeile (−35,00 €).
     const vouchers = unwrap(await listVouchersWithoutEntry(deps, ctx, {}));
-    expect(vouchers.documents.map((d) => [d.subject, d.typeKey])).toEqual([['Rechnung Büromaterial über 35,00 €', 'voucher-invoice']]);
+    expect(vouchers.documents.map((d) => [d.subject, d.typeKey])).toContainEqual(['Rechnung Büromaterial über 35,00 €', 'voucher-invoice']);
+  });
+
+  it('seeds two ZUGFeRD invoices without an entry — the vet invoice unpaid, the office invoice paid by the office-supply line on "Importkonto" (F5b, idempotent)', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+    await seedFinance(deps, ctx);
+    await seedFinance(deps, ctx); // idempotent
+
+    const vouchers = unwrap(await listVouchersWithoutEntry(deps, ctx, {})).documents;
+    const vet = vouchers.filter((d) => d.subject === 'Rechnung TM-2026-0042 Tierarztpraxis Muster');
+    const office = vouchers.filter((d) => d.subject === 'Rechnung BM-7781 Bürobedarf Muster GmbH');
+    expect(vet).toHaveLength(1);
+    expect(office).toHaveLength(1);
+    expect(vet[0]).toMatchObject({ typeKey: 'voucher-invoice', documentDate: '2026-04-01' });
+
+    // Die Anhänge liest in Unit-Tests eine Attrappe — sie liefert das XML, das im PDF steckt.
+    const withAttachment = (xml: string) => {
+      deps.textExtraction = fakeTextExtraction({ embedded: [{ name: 'factur-x.xml', bytes: new TextEncoder().encode(xml), mimeType: 'text/xml' }] });
+    };
+    withAttachment(buildInvoiceXml({ ...VET_INVOICE, taxes: [...VET_INVOICE.taxes] }));
+    expect(unwrap(await invoiceProposal(deps, ctx, { documentId: vet[0]!.id }))).toMatchObject({ kind: 'unpaid', existingOpenItemId: null, invoice: { grandTotalCents: 11900, dueDate: '2026-04-30' } });
+
+    withAttachment(buildInvoiceXml({ ...OFFICE_INVOICE, taxes: [...OFFICE_INVOICE.taxes] }));
+    const importkonto = unwrap(await listAccounts(deps, ctx, { includeInactive: true })).find((a) => a.name === 'Importkonto')!;
+    const officeLine = unwrap(await listRawTransactions(deps, ctx, { accountId: importkonto.id, limit: 200 })).items.find((r) => r.bankReference === 'IMP-0002')!;
+    expect(officeLine).toMatchObject({ amountCents: -3500, state: 'open' });
+    expect(unwrap(await invoiceProposal(deps, ctx, { documentId: office[0]!.id }))).toMatchObject({ kind: 'paid', rawTransactionId: officeLine.id, bookingDate: '2026-01-10' });
   });
 
   it('seeds an August statement with a cash deposit and a returned payment on "Importkonto" (F5 Task 9, idempotent)', async () => {

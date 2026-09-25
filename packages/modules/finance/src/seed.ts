@@ -24,6 +24,7 @@ import { uploadVoucher, revokeVoucher } from './ledger/vouchers';
 import { setDatedValue } from './ledger/dated-values';
 import { installFinance } from './install';
 import { buildCamt053Bytes } from './import/camt-fixture';
+import { buildOfficeInvoicePdf, buildVetInvoicePdf } from './import/zugferd-fixture';
 import { discardRun } from './import/discard';
 import { importStatement } from './import/runs';
 import {
@@ -708,6 +709,7 @@ async function seedWorkList(deps: Deps, ctx: CallContext, importkontoId: string)
   );
 
   await seedForeignMoneyAndVoucher(deps, ctx, importkontoId);
+  await seedZugferdInvoices(deps, ctx);
   await seedCashDepositAndReturn(deps, ctx, importkontoId);
 
   const april = deps.db.select().from(financeRawTransactions).where(and(eq(financeRawTransactions.accountId, importkontoId), eq(financeRawTransactions.bankReference, 'IMP-0004'))).get();
@@ -767,6 +769,36 @@ async function seedForeignMoneyAndVoucher(deps: Deps, ctx: CallContext, importko
         typeKey: 'voucher-invoice',
         subject: INVOICE_SUBJECT,
         documentDate: '2026-01-08',
+        folder: null,
+      }),
+    );
+  }
+}
+
+/**
+ * F5b: zwei Eingangsrechnungen mit eingebetteter ZUGFeRD-XML, beide als
+ * Finanzbeleg ohne Buchung — die Tierarzt-Rechnung über 119,00 € ist
+ * unbezahlt (Karte „Aus der Rechnung“: „Offene Zahlung anlegen“), die über
+ * 35,00 € von Bürobedarf Muster GmbH bezahlt: Ihre IBAN trägt die offene
+ * Büromaterial-Zeile vom 10.01.2026 auf „Importkonto“ (Lauf A). Je Rechnung
+ * idempotent über den Betreff.
+ */
+async function seedZugferdInvoices(deps: Deps, ctx: CallContext): Promise<void> {
+  const dmsCtx: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, 'dms.view', 'dms.create']) };
+  const invoices = [
+    { subject: 'Rechnung TM-2026-0042 Tierarztpraxis Muster', filename: '2026-04-01 Rechnung Tierarztpraxis.pdf', documentDate: '2026-04-01', bytes: buildVetInvoicePdf },
+    { subject: 'Rechnung BM-7781 Bürobedarf Muster GmbH', filename: '2026-01-08 Rechnung BM-7781.pdf', documentDate: '2026-01-08', bytes: buildOfficeInvoicePdf },
+  ];
+  for (const invoice of invoices) {
+    const exists = deps.db.select({ id: dmsDocuments.id }).from(dmsDocuments).where(eq(dmsDocuments.subject, invoice.subject)).get();
+    if (exists) continue;
+    unwrap(
+      await receiveDocument(deps, dmsCtx, {
+        filename: invoice.filename,
+        bytes: invoice.bytes(),
+        typeKey: 'voucher-invoice',
+        subject: invoice.subject,
+        documentDate: invoice.documentDate,
         folder: null,
       }),
     );

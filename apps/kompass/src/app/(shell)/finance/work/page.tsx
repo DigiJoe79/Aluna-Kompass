@@ -1,7 +1,7 @@
 import { hasPermission, listUserNamesWithPermission, readSetting, type LocalizedText } from '@kompass/core';
 import { displayName, getContact } from '@kompass/module-contacts';
 import { documentTypeFor } from '@kompass/module-dms';
-import { getWorkCounts, listAccounts, listCategories, listForeignMoney, listPurposes, listWorkItems, suggestForTransaction, TAX_CODES, type SuggestionReason, type SuggestionView } from '@kompass/module-finance';
+import { getWorkCounts, listAccounts, listCategories, listForeignMoney, listPurposes, listWorkItems, readInvoiceFromDocument, suggestForTransaction, TAX_CODES, type SuggestionReason, type SuggestionView } from '@kompass/module-finance';
 import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -21,6 +21,8 @@ export interface WorkQuery {
   tab?: string;
   account?: string;
   raw?: string;
+  /** Aus der Karte „Aus der Rechnung“ (F5b): dieses Dokument kommt nach dem Übernehmen als Beleg an den Entwurf. */
+  voucher?: string;
 }
 
 /**
@@ -92,10 +94,14 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
       const raw = selectedItem.transaction;
       // „Rückzahlung von“ gibt es nur bei einem Ausgang — die Eingänge fremden Gelds, die noch nicht weitergegeben sind.
       const foreignRes = raw.amountCents < 0 && canWrite ? await listForeignMoney(deps, ctx) : null;
+      // `?voucher=` gilt nur für den Umsatz, den die Karte gewählt hat; ein Wechsel der Auswahl lässt ihn fallen.
+      const invoiceRes = query.voucher && canWrite && raw.id === query.raw ? await readInvoiceFromDocument(deps, ctx, { documentId: query.voucher }) : null;
+      const invoice = invoiceRes?.ok ? invoiceRes.value : null;
       detail = {
         raw: { ...raw, accountName: accountName.get(raw.accountId) ?? '' },
         suggestion: suggestion ? await describeSuggestion(suggestion, accountName, contactNames) : null,
         contactNames: Object.fromEntries(contactNames),
+        pendingInvoice: invoice && query.voucher ? { documentId: query.voucher, number: invoice.invoiceNumber, seller: invoice.sellerName } : null,
         foreignReturnOptions: (foreignRes?.ok ? foreignRes.value.items : []).map((item) => ({
           lineId: item.lineId,
           label: t('foreign.returnsOption', { date: item.entryDate, holder: item.holderText, amount: formatEuro(item.amountCents) }),

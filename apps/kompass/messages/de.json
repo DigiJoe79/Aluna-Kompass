@@ -3613,7 +3613,8 @@
         "foreign": "Als fremdes Geld gebucht.",
         "contactCreated": "Kontakt {name} angelegt; die IBAN gehört jetzt zu ihm.",
         "voucherUploaded": "Beleg {number} im Namen der Buchung abgelegt.",
-        "voucherLinked": "Beleg {number} verknüpft."
+        "voucherLinked": "Beleg {number} verknüpft.",
+        "bookedWithInvoice": "Übernommen; Angaben aus der Rechnung {number} eingetragen."
       },
       "rule": {
         "title": "Künftig immer so?",
@@ -3777,7 +3778,49 @@
           }
         }
       },
-      "toEntry": "Zu Buchung machen"
+      "toEntry": "Zu Buchung machen",
+      "invoice": {
+        "title": "Aus der Rechnung",
+        "toggle": "Aus der Rechnung",
+        "loading": "Kompass liest die Rechnung aus dem PDF …",
+        "noInvoice": "Dieses PDF enthält keine elektronische Rechnung.",
+        "seller": "Lieferant",
+        "number": "Rechnungsnummer",
+        "date": "Rechnungsdatum",
+        "total": "Betrag",
+        "creditNote": "Gutschrift",
+        "tax": "Umsatzsteuer",
+        "taxLine": "{rate} %: {amount}",
+        "taxDifference": "Weicht um {cents} Cent vom berechneten Wert ab — wird nicht gespeichert.",
+        "due": "Fällig am",
+        "iban": "IBAN",
+        "contact": "Kontakt",
+        "noContact": "Zu dieser IBAN gibt es keinen Kontakt.",
+        "paid": "Bezahlt: Kontoumsatz vom {date}",
+        "bookToTransaction": "Zum Kontoumsatz buchen",
+        "possiblyPaid": "Möglicherweise bezahlt: Derselbe Betrag ging vom Konto ab. Wählen Sie den passenden Kontoumsatz.",
+        "candidatesLabel": "Kontoumsätze mit dem Rechnungsbetrag",
+        "candidate": "{date} · {account}",
+        "unpaid": "Nicht bezahlt: Kein Kontoumsatz passt zu dieser Rechnung.",
+        "contactPicker": "Kontakt der offenen Zahlung",
+        "createOpenItem": "Offene Zahlung anlegen",
+        "openItemCreated": "Offene Zahlung angelegt.",
+        "openItemExists": "Zu dieser Rechnung gibt es schon eine offene Zahlung.",
+        "toOpenItems": "Zu den offenen Zahlungen",
+        "bookedAs": "Gebucht als {number}.",
+        "draftVoucher": "Hängt als Beleg an einem Entwurf.",
+        "openEntry": "Buchung öffnen",
+        "toolsMissing": "Die Anhänge des PDFs lassen sich hier nicht lesen: Die Texterkennung ist nicht eingerichtet.",
+        "toolsRemedy": "Texterkennung einrichten",
+        "currencyUnsupported": "Die Rechnung lautet nicht auf Euro. Buchen Sie sie von Hand, mit dem Betrag, der vom Konto abging.",
+        "unreadable": "Der Rechnungsanhang des PDFs ist nicht lesbar. Buchen Sie die Rechnung von Hand; die Angaben stehen im PDF selbst.",
+        "pending": "Nach dem Übernehmen hängt Kompass die Rechnung {number} von {seller} als Beleg an und trägt Lieferant, Nummer und Steuer ein.",
+        "offer": "Das PDF enthält eine elektronische Rechnung: {summary}.",
+        "offerSummary": "{seller}, {number}, {amount}",
+        "apply": "Angaben aus der Rechnung übernehmen",
+        "skip": "Ohne Angaben weiter",
+        "applied": "Angaben aus der Rechnung übernommen."
+      }
     }
   }
 }

@@ -1,10 +1,12 @@
 import { activeUserChoices, hasPermission, isModuleEnabled, readSetting, retentionEnd, retentionMonths, userNamesFor } from '@kompass/core';
 import { listProjects } from '@kompass/module-projects';
 import { listAnimals } from '@kompass/module-animals';
+import { invoiceProposal } from '@kompass/module-finance';
 import { dispatchChannels, documentTypeFor, getDocumentRecord, listDocumentFolders, listDocumentTypes, requireDmsGate } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { InvoiceCard } from '@/components/finance/invoice-card';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
 import { buttonVariants } from '@/components/ui/button';
@@ -114,6 +116,15 @@ export default async function DocumentDetailPage(props: {
     !doc.links.some((link) => link.entityType === 'financeEntry');
   const tWork = await getTranslations('finance.work');
 
+  // „Aus der Rechnung“ (Finanzen F5b): nur an Finanzbelegen und nur mit `finance.read` — der Dienst prüft das Recht
+  // ohnehin, die Bedingung spart nur das Lesen der Anhänge. Ohne Rechnung im PDF bleibt die Karte weg.
+  const isFinanceVoucher = isModuleEnabled(deps, 'finance') && doc.phase === 'issued' && readSetting<string[]>(deps, 'finance.voucherTypes').includes(doc.typeKey);
+  const proposalRes = isFinanceVoucher && hasPermission(ctx, 'finance.read') ? await invoiceProposal(deps, ctx, { documentId: doc.id }) : null;
+  const invoicePanel =
+    proposalRes?.ok && proposalRes.value.kind !== 'noInvoice' ? (
+      <InvoiceCard documentId={doc.id} proposal={proposalRes.value} canWrite={hasPermission(ctx, 'finance.entriesWrite')} canCreateContact={hasPermission(ctx, 'contacts.manage')} />
+    ) : null;
+
   return (
     <>
       <PageHeader
@@ -168,6 +179,7 @@ export default async function DocumentDetailPage(props: {
         retentionInfo={retentionInfo}
         permissions={permissions}
         fileState={doc.fileState ?? 'none'}
+        invoicePanel={invoicePanel}
       />
     </>
   );

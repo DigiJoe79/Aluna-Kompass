@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import type { ActionState } from '@/lib/actions';
 import type { BookFromTransactionInput } from '@/lib/finance/work';
-import { linkVoucherAction, searchVouchersAction, uploadVoucherToTransactionAction } from './actions';
+import { applyInvoiceToDraftAction, linkVoucherAction, refreshWorkAction, searchVouchersAction, uploadVoucherToTransactionAction, type UploadedInvoiceOffer } from './actions';
 
 export interface VoucherTypeOption {
   key: string;
@@ -24,7 +24,9 @@ export interface VoucherTypeOption {
  * Beleg von beiden Seiten (F5 Task 8, Spec 6.5): ein PDF auf den Umsatz
  * ziehen — kurzer Bestätigungsschritt, dann legt der Dienst es im Namen der
  * Buchung ab — oder „Beleg suchen“: Treffer der Akte mit „Verknüpfen“ und
- * dem Weg in die Akte selbst.
+ * dem Weg in die Akte selbst. Trägt das abgelegte PDF eine ZUGFeRD-Rechnung
+ * (F5b), folgt „Angaben aus der Rechnung übernehmen“, bevor die Liste
+ * weiterspringt.
  */
 export function VoucherPanel({
   raw,
@@ -49,7 +51,9 @@ export function VoucherPanel({
   const [title, setTitle] = useState('');
   const [search, setSearch] = useState<{ state: 'idle' } | { state: 'loading' } | { state: 'ready'; hits: VoucherSearchHit[]; queries: string[] } | { state: 'failed' }>({ state: 'idle' });
   const [refusal, setRefusal] = useState<Extract<ActionState, { status: 'error' }> | null>(null);
+  const [offer, setOffer] = useState<UploadedInvoiceOffer | null>(null);
   const [pending, startTransition] = useTransition();
+  const tInvoice = useTranslations('finance.work.invoice');
 
   const finish = (result: ActionState) => {
     if (result.status === 'error') {
@@ -67,9 +71,34 @@ export function VoucherPanel({
     if (!file) return;
     startTransition(async () => {
       const bytes = new Uint8Array(await file.arrayBuffer());
-      finish(await uploadVoucherToTransactionAction({ rawTransactionId: raw.id, typeKey, documentDate, title: title.trim() || undefined, entryTextIfNew: entryTextIfNew.trim() || undefined, bytes }));
+      const result = await uploadVoucherToTransactionAction({ rawTransactionId: raw.id, typeKey, documentDate, title: title.trim() || undefined, entryTextIfNew: entryTextIfNew.trim() || undefined, bytes });
+      if (result.status === 'success' && result.invoice) {
+        // Abgelegt; die Liste springt erst weiter, wenn über das Angebot entschieden ist.
+        if (result.message) toast.success(result.message);
+        setRefusal(null);
+        setFile(null);
+        setOffer(result.invoice);
+        return;
+      }
+      finish(result);
     });
   };
+
+  const applyInvoice = () => {
+    if (!offer) return;
+    startTransition(async () => {
+      const result = await applyInvoiceToDraftAction(offer.entryId, offer.documentId);
+      if (result.status === 'success') setOffer(null);
+      finish(result);
+    });
+  };
+
+  const skipInvoice = () =>
+    startTransition(async () => {
+      await refreshWorkAction();
+      setOffer(null);
+      onDone(raw.id);
+    });
 
   const runSearch = () => {
     setSearch({ state: 'loading' });
@@ -83,7 +112,19 @@ export function VoucherPanel({
   return (
     <section aria-label={t('title')} className="space-y-3 rounded-md border border-line bg-surface p-4">
       <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('title')}</h3>
-      {file ? (
+      {offer ? (
+        <div data-testid="invoice-offer" className="space-y-2">
+          <Notice level="hint">{tInvoice('offer', { summary: offer.summary })}</Notice>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" onClick={applyInvoice} disabled={pending}>
+              {tInvoice('apply')}
+            </Button>
+            <Button type="button" variant="ghost" onClick={skipInvoice} disabled={pending}>
+              {tInvoice('skip')}
+            </Button>
+          </div>
+        </div>
+      ) : file ? (
         <div role="group" aria-label={t('confirm')} className="space-y-3 rounded-md border border-line bg-surface-2 p-3 text-[13px]">
           <p className="text-ink-2">{t('file', { name: file.name })}</p>
           <div className="grid grid-cols-2 gap-3">

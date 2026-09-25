@@ -5,6 +5,7 @@ import { receiveDocument } from '@kompass/module-dms';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { linkContactIban } from '../src/import/contact-ibans';
+import { buildInvoiceXml } from '../src/import/zugferd-fixture';
 import { applyInvoiceToDraft, createOpenItemFromInvoice, invoiceProposal, readInvoiceFromDocument } from '../src/import/zugferd/read';
 import { setDatedValue } from '../src/ledger/dated-values';
 import { getEntry, saveDraft } from '../src/ledger/entries';
@@ -21,54 +22,8 @@ type Fixture = Awaited<ReturnType<typeof ledgerFixture>>;
 const PAYEE_IBAN = 'DE25999999990000424242';
 const OTHER_IBAN = 'DE86999999990000777000';
 
-interface InvoiceSpec {
-  number?: string;
-  issue?: string;
-  seller?: string;
-  currency?: string;
-  typeCode?: string;
-  grand?: string;
-  due?: string;
-  taxTotal?: string;
-  taxes?: { rate: string; category: string; basis: string; tax: string }[];
-  dueDate?: string | null;
-  iban?: string | null;
-}
-
-/** Eine CII-Rechnung wie die EN16931-Fixture aus `zugferd-parse.test.ts` — hier mit wählbaren Feldern. */
-function invoiceXml(o: InvoiceSpec = {}): string {
-  const taxes = o.taxes ?? [{ rate: '19.00', category: 'S', basis: '100.00', tax: '19.00' }];
-  const dueDate = o.dueDate === undefined ? '20260430' : o.dueDate;
-  const iban = o.iban === undefined ? PAYEE_IBAN : o.iban;
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<rsm:CrossIndustryInvoice xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100" xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100" xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">
-  <rsm:ExchangedDocumentContext><ram:GuidelineSpecifiedDocumentContextParameter><ram:ID>urn:cen.eu:en16931:2017</ram:ID></ram:GuidelineSpecifiedDocumentContextParameter></rsm:ExchangedDocumentContext>
-  <rsm:ExchangedDocument>
-    <ram:ID>${o.number ?? 'TM-2026-0042'}</ram:ID>
-    <ram:TypeCode>${o.typeCode ?? '380'}</ram:TypeCode>
-    <ram:IssueDateTime><udt:DateTimeString format="102">${o.issue ?? '20260401'}</udt:DateTimeString></ram:IssueDateTime>
-  </rsm:ExchangedDocument>
-  <rsm:SupplyChainTradeTransaction>
-    <ram:ApplicableHeaderTradeAgreement>
-      <ram:SellerTradeParty><ram:Name>${o.seller ?? 'Tierarztpraxis Muster'}</ram:Name></ram:SellerTradeParty>
-      <ram:BuyerTradeParty><ram:Name>Beispielverein e.V.</ram:Name></ram:BuyerTradeParty>
-    </ram:ApplicableHeaderTradeAgreement>
-    <ram:ApplicableHeaderTradeDelivery/>
-    <ram:ApplicableHeaderTradeSettlement>
-      <ram:InvoiceCurrencyCode>${o.currency ?? 'EUR'}</ram:InvoiceCurrencyCode>
-      ${iban ? `<ram:SpecifiedTradeSettlementPaymentMeans><ram:TypeCode>58</ram:TypeCode><ram:PayeePartyCreditorFinancialAccount><ram:IBANID>${iban}</ram:IBANID></ram:PayeePartyCreditorFinancialAccount></ram:SpecifiedTradeSettlementPaymentMeans>` : ''}
-      ${taxes.map((t) => `<ram:ApplicableTradeTax><ram:CalculatedAmount>${t.tax}</ram:CalculatedAmount><ram:TypeCode>VAT</ram:TypeCode><ram:BasisAmount>${t.basis}</ram:BasisAmount><ram:CategoryCode>${t.category}</ram:CategoryCode><ram:RateApplicablePercent>${t.rate}</ram:RateApplicablePercent></ram:ApplicableTradeTax>`).join('\n      ')}
-      ${dueDate ? `<ram:SpecifiedTradePaymentTerms><ram:DueDateDateTime><udt:DateTimeString format="102">${dueDate}</udt:DateTimeString></ram:DueDateDateTime></ram:SpecifiedTradePaymentTerms>` : ''}
-      <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
-        <ram:TaxTotalAmount currencyID="${o.currency ?? 'EUR'}">${o.taxTotal ?? '19.00'}</ram:TaxTotalAmount>
-        <ram:GrandTotalAmount>${o.grand ?? '119.00'}</ram:GrandTotalAmount>
-        <ram:DuePayableAmount>${o.due ?? o.grand ?? '119.00'}</ram:DuePayableAmount>
-      </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
-    </ram:ApplicableHeaderTradeSettlement>
-  </rsm:SupplyChainTradeTransaction>
-</rsm:CrossIndustryInvoice>
-`;
-}
+/** Die Vorgaben von `buildInvoiceXml` sind die Tierarzt-Rechnung mit `PAYEE_IBAN`. */
+const invoiceXml = buildInvoiceXml;
 
 const attachment = (xml: string, name = 'factur-x.xml'): EmbeddedFile => ({ name, bytes: new TextEncoder().encode(xml), mimeType: 'application/xml' });
 

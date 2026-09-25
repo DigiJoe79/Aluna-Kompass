@@ -4,7 +4,7 @@ import { useDateFormat } from '@/components/date-format-provider';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState, useTransition, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { StatusBadge } from '@/components/status-badge';
@@ -82,6 +82,8 @@ export interface DocumentDetailProps {
    * geöffnet, sondern gewarnt.
    */
   fileState: 'ok' | 'altered' | 'missing' | 'none';
+  /** Die Karte „Aus der Rechnung“ des Finanzmoduls (F5b) — unter den Bezügen, nur an Finanzbelegen mit Rechnung im PDF. */
+  invoicePanel?: ReactNode;
 }
 
 export function DocumentDetail({
@@ -101,6 +103,7 @@ export function DocumentDetail({
   retentionInfo,
   permissions,
   fileState,
+  invoicePanel,
 }: DocumentDetailProps) {
   const t = useTranslations('dms');
   const tCommon = useTranslations('common');
@@ -423,6 +426,8 @@ export function DocumentDetail({
           />
 
           <RelationsPanel documentId={doc.id} relations={doc.relations} canEdit={permissions.canEdit} />
+
+          {invoicePanel}
         </div>
       </div>
     </div>

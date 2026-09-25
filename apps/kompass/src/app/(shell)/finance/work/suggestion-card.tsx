@@ -98,7 +98,7 @@ export function SuggestionCard({
       return;
     }
     setFieldErrors({});
-    startTransition(async () => finish(await bookFromTransactionAction(built.input)));
+    startTransition(async () => finish(await bookFromTransactionAction(built.input, detail.pendingInvoice?.documentId)));
   };
   // Enter in der Liste ruft, was hier der primäre Knopf tut — nach jedem Render mit dem aktuellen Stand der Maske.
   useEffect(() => {
@@ -135,6 +135,11 @@ export function SuggestionCard({
         </Notice>
       ))}
       {suggestion?.hints.includes('foreignIban') ? <p className="text-[12px] text-muted-ink">{t('suggestion.foreignIban')}</p> : null}
+      {detail.pendingInvoice && !linkEntry && canWrite ? (
+        <div data-testid="pending-invoice">
+          <Notice level="hint">{t('invoice.pending', { number: detail.pendingInvoice.number, seller: detail.pendingInvoice.seller })}</Notice>
+        </div>
+      ) : null}
 
       {linkEntry ? (
         <div className="space-y-2">

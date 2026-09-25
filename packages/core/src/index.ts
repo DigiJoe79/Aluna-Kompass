@@ -70,3 +70,4 @@ export * from './dashboard/service';
 export * from './dashboard/tiles';
 export * from './users/names';
 export * from './text/extraction';
+export { buildPdfWithAttachments, type PdfAttachment } from './text/pdf-with-attachments';

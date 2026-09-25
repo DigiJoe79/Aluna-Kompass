@@ -21,6 +21,8 @@ export interface WorkDetailData {
       })
     | null;
   contactNames: Record<string, string>;
+  /** Aus der Karte „Aus der Rechnung“ (`?voucher=`): nach dem Übernehmen kommen ihre Angaben und das PDF an den Entwurf. */
+  pendingInvoice: { documentId: string; number: string; seller: string } | null;
   /** Nur bei einem Ausgang: frühere Eingänge fremden Gelds, die er zurückzahlen kann. */
   foreignReturnOptions: ForeignReturnOption[];
 }
