@@ -34,6 +34,7 @@ export * from './media/folders';
 export * from './media/preview';
 export * from './documents/service';
 export * from './documents/engine';
+export * from './documents/images';
 export * from './backup';
 export * from './settings/service';
 export { CORE_SETTINGS } from './settings/core';

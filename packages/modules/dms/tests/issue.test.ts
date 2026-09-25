@@ -38,6 +38,19 @@ describe('issueGeneratedDocument', () => {
     expect(JSON.stringify(stored)).not.toContain('Hallo');
   });
 
+  it('hands the template images to the renderer and snapshots only their checksums', async () => {
+    const { deps, ctx } = setupWithProbe();
+    const png = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64'));
+    const seen: unknown[] = [];
+    const render = deps.documents.render;
+    deps.documents = { ...deps.documents, render: async (opts) => { seen.push(opts.images); return render(opts); } };
+    const { document } = unwrap(await issueGeneratedDocument(deps, ctx, { templateKey: 'probe-sealed', input: { text: 'Hallo', seal: { bytes: png, checksum: 'sha-seal' } }, subject: 'Siegel', documentDate: '2026-03-15' }));
+    expect(seen).toEqual([{ seal: { bytes: png, checksum: 'sha-seal' } }]);
+    const stored = JSON.parse(deps.db.select().from(documents).where(eq(documents.id, document.id)).get()!.inputSnapshot!);
+    expect(stored.images).toEqual({ seal: 'sha-seal' });
+    expect(stored.input).toEqual({ text: 'Hallo', seal: { checksum: 'sha-seal' } });
+  });
+
   it('runs afterIssue inside the transaction and hands back what it returns', async () => {
     const { deps, ctx } = setupWithProbe();
     const res = unwrap(await issueGeneratedDocument(deps, ctx, { ...NOTE, afterIssue: (tx, doc) => `${doc.number}:${tx.select().from(documents).where(eq(documents.id, doc.id)).get()!.phase}` }));

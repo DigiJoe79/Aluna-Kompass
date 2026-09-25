@@ -195,11 +195,25 @@ export interface DocumentSlots {
   subject?: string;
 }
 
+/** Ein Bild, das der Körper einbindet: Bytes und ihre Prüfsumme (SHA-256, vom Modul berechnet). */
+export interface DocumentImage {
+  bytes: Uint8Array;
+  checksum: string;
+}
+
 export interface DocumentBuildResult {
   /** Überschreibt die Vorgabe-Basis der Vorlage; sonst gilt `DocumentTemplate.base`. */
   base?: string;
   slots: DocumentSlots;
   body: DocumentBody;
+  /**
+   * Bilder für den Körper, je Schlüssel (`[a-z0-9-]+`). Der Renderer legt sie
+   * als `/images/<key>.<png|jpg>` in den Job — die Endung kommt aus den
+   * Magic Bytes (`documentImagePath`). `build` bleibt rein: Bytes und
+   * Prüfsumme löst das Modul vorher auf und gibt sie in der Eingabe mit. Im
+   * Snapshot steht je Bild nur die Prüfsumme.
+   */
+  images?: Record<string, DocumentImage>;
 }
 
 export interface DocumentTemplate<T = unknown> {

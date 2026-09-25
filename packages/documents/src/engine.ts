@@ -28,13 +28,14 @@ export function createDocumentEngine(opts: { documentTemplatesDir?: string | nul
       return b ? { id: b.id, label: b.label, kind: b.kind, checksum: b.checksum } : undefined;
     },
     probe: (baseId) => probeBase({ renderer, baseId, bases, fontPaths, assetsDir }),
-    render: async ({ baseId, bodyTypst, slots, context }) => {
+    render: async ({ baseId, bodyTypst, slots, context, images }) => {
       const bytes = await renderer.renderDocument({
         baseId,
         bases,
         bodyTypst,
         payload: { ...buildPayload(context), slots },
         logo: context.logo,
+        images,
         fontPaths,
         assetsDir,
       });

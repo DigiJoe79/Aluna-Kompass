@@ -191,9 +191,12 @@ aus den Suchmaschinen: `noindex`, `Disallow: /`, keine Sitemap.
 ## Dokument-Basisvorlagen
 
 Unter `<daten>/core/document-templates` liegen die Seitenrahmen für erzeugte
-PDFs. Kompass liefert die generischen Basen `a4-plain`, `a4-mit-briefkopf` und
-`a4-ohne-briefkopf` mit; ein Verein legt hier eigene `.typ`-Dateien ab, um eine
-zu ergänzen oder zu ersetzen (gleiche Kennung gewinnt). Daneben optional
+PDFs. Kompass liefert die generischen Basen `a4-plain`, `a4-mit-briefkopf`,
+`a4-ohne-briefkopf` und `a4-formular` mit; ein Verein legt hier eigene
+`.typ`-Dateien ab, um eine zu ergänzen oder zu ersetzen (gleiche Kennung
+gewinnt). `a4-formular` zeichnet nur Vereinskopf und Fußzeile: Wer sie ersetzt,
+ändert den Kopf eines Formulars wie der Zuwendungsbestätigung, nie dessen
+Wortlaut — der steht in der Vorlage des Moduls. Daneben optional
 `fonts/` für eigene Schriften und `assets/` für Grafiken, die eine Basis
 einbindet — das Vereinslogo kommt weiter aus den Einstellungen.
 

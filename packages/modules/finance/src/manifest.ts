@@ -4,6 +4,9 @@ import { z } from 'zod';
 import { FINANCE_DASHBOARD_TILES } from './dashboard';
 import { requireFinanceRead } from './ledger/access';
 import { cashCountTemplate } from './ledger/cash-count-template';
+import { collectiveConfirmationTemplate } from './donations/templates/collective';
+import { inKindConfirmationTemplate } from './donations/templates/in-kind';
+import { moneyConfirmationTemplate } from './donations/templates/money';
 import { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds } from './ledger/holds';
 import { installFinance } from './install';
 import { FINANCE_MCP_TOOLS } from './mcp-tools';
@@ -92,7 +95,7 @@ export const financeModule: ModuleManifest = defineModule({
     { entityType: 'financeConfirmation', readPermission: 'finance.read', receivePermission: 'finance.donationsIssue' },
     { entityType: 'financeNotice', readPermission: 'finance.read', receivePermission: 'finance.donationsIssue' },
   ],
-  documentTemplates: [cashCountTemplate],
+  documentTemplates: [cashCountTemplate, moneyConfirmationTemplate, inKindConfirmationTemplate, collectiveConfirmationTemplate],
   /**
    * Alle `none`: Finanzen hält seine Kontakte über Buchungen und Bestätigungen
    * (ab F2c), nicht über die Rolle — eine laufende Rolle rechnete „ab heute“

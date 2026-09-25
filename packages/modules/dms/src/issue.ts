@@ -1,4 +1,4 @@
-import { buildContext, conflict, isoNow, newId, notFound, ok, prepare, recordAudit, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
+import { buildContext, conflict, documentSnapshot, isoNow, newId, notFound, ok, prepare, recordAudit, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { documentTypeFor } from './catalog';
 import { NumberMovedOn } from './drafts';
@@ -66,15 +66,15 @@ export async function issueGeneratedDocument<T = undefined>(deps: Deps, ctx: Cal
       const expected = peekDocumentNumber(deps.db, docType.prefix, year);
       const prepared = await prepare(deps, ctx, { templateKey: input.templateKey, input: input.input }, { number: expected, issuedOn: input.documentDate });
       if (!prepared.ok) return prepared;
-      const { built, baseId, base, bodyTypst } = prepared.value;
+      const { built, baseId, bodyTypst, images } = prepared.value;
       const context = await buildContext(deps, ctx, expected, input.documentDate);
-      const { bytes } = await deps.documents.render({ baseId, bodyTypst, slots: built.slots, context });
+      const { bytes } = await deps.documents.render({ baseId, bodyTypst, slots: built.slots, context, images });
 
       const stored = await storeDocumentFile(deps, id, bytes);
       if (!stored.ok) return stored;
       fileName = stored.value.fileName;
 
-      const snapshot = { input: input.snapshot ?? prepared.value.data, slots: built.slots, base: baseId, baseChecksum: base.checksum };
+      const snapshot = documentSnapshot(prepared.value, input.snapshot);
       try {
         return deps.db.transaction((tx: DbOrTx) => {
           const number = allocateDocumentNumber(tx, docType.prefix, year);

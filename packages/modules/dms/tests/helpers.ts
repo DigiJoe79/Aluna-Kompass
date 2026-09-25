@@ -62,6 +62,15 @@ export const probeModule = defineModule({
       base: 'a4-plain',
       build: (data: { text: string }, c) => ({ slots: { kind: 'plain', title: 'Notiz' }, body: { typst: `NUMMER ${c.number} DATUM ${c.issuedAt.slice(0, 10)} ${data.text}` } }),
     },
+    {
+      // Wie eine Zuwendungsbestätigung mit Faksimile: das Bild kommt in der Eingabe, `build` reicht es durch.
+      key: 'probe-sealed',
+      type: 'probe-note',
+      schema: z.object({ text: z.string().min(1), seal: z.object({ bytes: z.instanceof(Uint8Array), checksum: z.string() }) }),
+      permission: 'probe.issue',
+      base: 'a4-plain',
+      build: (data: { text: string; seal: { bytes: Uint8Array; checksum: string } }) => ({ slots: { kind: 'form', title: 'Siegel' }, body: { typst: data.text }, images: { seal: data.seal } }),
+    },
   ],
 });
 
