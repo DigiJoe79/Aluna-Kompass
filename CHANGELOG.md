@@ -158,6 +158,24 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
   Bankkonten und Kassen. In den Stammdaten stehen sie nur noch lesbar, mit dem
   Hinweis, wo sie geführt werden. Wer die Finanzen einschaltet, erfasst den
   geltenden Bescheid einmal dort.
+- **Kontoauszug laden ohne Kontoauswahl.** Kompass erkennt das Konto eines
+  hochgeladenen Auszugs selbst — an der IBAN bei CAMT.053, am Format bei CSV.
+  Eine Rückfrage erscheint nur, wenn mehrere Konten infrage kommen, oder wenn
+  sich keines finden lässt.
+- **Zuwendungsbestätigung ausstellen: fester Kopf und feste Fußleiste.** Der
+  Ausstellen-Dialog scrollt nur noch in der Prüfliste; Titel, Betrag und der
+  Knopf „Ausstellen“ bleiben stehen. Die Prüfliste ist jetzt nach Zustand
+  gruppiert — was fehlt, was Sie ansehen sollten, was erfüllt oder was nicht
+  zutreffend ist — und eine fehlende Unterschrift steht als eigenes
+  Kennzeichen in der Liste der Bestätigungen.
+- **Geführte Felder in den Stammdaten** stehen jetzt als eigener Baustein da:
+  Wert, Kennzeichen „geführt“ und der Link, wo Sie ihn ändern — kein leeres
+  graues Eingabefeld mehr.
+- **Unterschrift für das maschinelle Verfahren** lässt sich jetzt wie ein
+  Beleg auf eine Ablagefläche ziehen, statt über ein einfaches Dateifeld.
+- **Datumsanzeige in Finanzen vereinheitlicht.** Kontokarte, Sätze und
+  Grenzen, offene Zahlungen und die Barkasse zeigen jetzt durchgängig das
+  eingestellte Datumsformat statt eines rohen ISO-Datums.
 
 ### Behoben
 
