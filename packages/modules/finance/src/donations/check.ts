@@ -18,11 +18,12 @@ import { CONFIRMATION_DOCUMENT_TYPE } from './templates/shared';
  * 3 „Kontakt vollständig“, 4 „nicht schon bestätigt“, 5 „Bescheid gültig“,
  * 6 „Betrag nach Rückläufern“, 7 „belegt“, 8 „Sachspende beschrieben“,
  * 9 „Dokumentart aktiv“ und „Unterzeichner“; dazu der Schalter der
- * Aufwandsspenden (E13). Eine Checkliste, kein Fehler: Jede Prüfung sagt, ob
+ * Aufwandsspenden (E13) und die Vereinsanschrift, die jede Bestätigung
+ * trägt — fehlt sie, soll die Prüfliste es sagen, nicht erst das Rendern. Eine Checkliste, kein Fehler: Jede Prüfung sagt, ob
  * sie erfüllt ist, ob sie sperrt und wo es weitergeht. Dieselbe Funktion läuft
  * vor dem Rendern und erneut in `afterIssue`.
  */
-export const CONFIRMATION_CHECK_KEYS = ['final', 'certifiable', 'contactComplete', 'notConfirmed', 'noticeValid', 'amountPositive', 'documented', 'inKindDetails', 'typeActive', 'signerValid', 'expenseWaiverEnabled'] as const;
+export const CONFIRMATION_CHECK_KEYS = ['final', 'certifiable', 'contactComplete', 'organizationAddress', 'notConfirmed', 'noticeValid', 'amountPositive', 'documented', 'inKindDetails', 'typeActive', 'signerValid', 'expenseWaiverEnabled'] as const;
 export type ConfirmationCheckKey = (typeof CONFIRMATION_CHECK_KEYS)[number];
 export type ConfirmationWarning = 'organization' | 'foreignCountry' | 'beforeOldestNotice';
 
@@ -199,6 +200,10 @@ export function checkConfirmableInternal(db: DbOrTx, deps: Deps, args: CheckConf
   }
   add('contactComplete', { done: missing.length === 0, detail: missing.length > 0 ? { missing: missing.join(',') } : {}, remedy: { href: `/contacts/${contactId}`, labelKey: 'completeAddress' }, warning: contactWarning });
 
+  // 3b. Name und Anschrift des Vereins — sie stehen auf jeder Bestätigung (Verwaltung → Stammdaten).
+  const organizationMissing = (['name', 'street', 'postalCode', 'city'] as const).filter((field) => !clean(readSetting<string>(deps, `organization.${field}`)));
+  add('organizationAddress', { done: organizationMissing.length === 0, detail: organizationMissing.length > 0 ? { missing: organizationMissing.join(',') } : {}, remedy: { href: '/admin/settings', labelKey: 'completeOrganization' } });
+
   // 4. In keiner gültigen Bestätigung (der partielle Unique-Index ist die letzte Wache).
   const open = openConfirmationsForLinesInternal(db, lineIds);
   const confirmed = lineIds.map((id) => open.get(id)).find((c) => c !== undefined);
@@ -282,6 +287,8 @@ export function checkFailure(result: ConfirmationCheckResult): Failure | null {
       return financeConflict('confirmationIncomeNotCertifiable', { category: String(d.category ?? '') });
     case 'contactComplete':
       return financeConflict('confirmationContactIncomplete');
+    case 'organizationAddress':
+      return financeConflict('confirmationOrganizationIncomplete');
     case 'notConfirmed':
       return financeConflict('confirmationLineAlreadyConfirmed', { number: String(d.number ?? '') });
     case 'noticeValid':

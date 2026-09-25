@@ -114,6 +114,7 @@ export const FINANCE_ERRORS = {
   confirmationLineReversed: { reason: 'Die Buchung dieser Zuwendung ist zurückgenommen.', remedy: 'Bestätigen Sie die neue Buchung, falls es eine gibt.' },
   confirmationIncomeNotCertifiable: { reason: 'Für die Kategorie „{category}“ gibt es keine Zuwendungsbestätigung.', remedy: 'Bestätigt werden nur Geldspenden, Mitgliedsbeiträge, Sachspenden und Aufwandsspenden — korrigieren Sie die Kategorie, wenn sie falsch ist.' },
   confirmationContactIncomplete: { reason: 'Name oder Anschrift des Empfängers sind unvollständig.', remedy: 'Ergänzen Sie Name, Straße, Postleitzahl und Ort am Kontakt.' },
+  confirmationOrganizationIncomplete: { reason: 'Name oder Anschrift des Vereins fehlen in den Vereinsdaten.', remedy: 'Ergänzen Sie Name, Straße, Postleitzahl und Ort unter Verwaltung → Stammdaten.' },
   confirmationLineAlreadyConfirmed: { reason: 'Für diese Zuwendung gibt es schon die Bestätigung {number}.', remedy: 'Nehmen Sie diese zuerst zurück, wenn eine neue nötig ist.' },
   confirmationAmountNotPositive: { reason: 'Nach Rückbuchungen bleibt von dieser Zuwendung kein Betrag übrig.', remedy: 'Es gibt nichts zu bestätigen.' },
   confirmationEntryUndocumented: { reason: 'Zu dieser Zuwendung fehlt der Beleg.', remedy: 'Reichen Sie den Beleg zur Buchung nach, dann lässt sich die Bestätigung ausstellen.' },

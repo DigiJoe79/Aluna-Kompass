@@ -4,7 +4,7 @@ import { createContact, updateContact } from '@kompass/module-contacts';
 import { documentTypes } from '@kompass/module-dms';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { checkConfirmable, checkConfirmableInternal, CONFIRMATION_CHECK_KEYS, type ConfirmationCheck, type ConfirmationCheckKey } from '../src/donations/check';
+import { checkConfirmable, checkConfirmableInternal, checkFailure, CONFIRMATION_CHECK_KEYS, type ConfirmationCheck, type ConfirmationCheckKey } from '../src/donations/check';
 import { createCategory } from '../src/ledger/categories';
 import { saveDraft } from '../src/ledger/entries';
 import { reverseEntry } from '../src/ledger/reverse';
@@ -108,6 +108,21 @@ describe('checkConfirmable', () => {
     const res = unwrap(await checkConfirmable(f.deps, f.ctx, { lineIds: [byOrg.line.id] }));
     expect(res.ok).toBe(true);
     expect(res.warnings).toEqual(['organization']);
+  });
+
+  it('blocks while the association has no address, naming the settings as remedy', async () => {
+    const f = await donationFixture();
+    const { line } = await f.donate();
+    expect(check(unwrap(await checkConfirmable(f.deps, f.ctx, { lineIds: [line.id] })), 'organizationAddress')).toMatchObject({ applies: true, done: true, blocked: false, remedy: null });
+
+    f.deps.db.transaction((tx) => {
+      writeSettingInternal(tx, f.deps, systemContext(), 'organization.street', '', 'test');
+      writeSettingInternal(tx, f.deps, systemContext(), 'organization.city', '', 'test');
+    });
+    const res = unwrap(await checkConfirmable(f.deps, f.ctx, { lineIds: [line.id] }));
+    expect(res.ok).toBe(false);
+    expect(check(res, 'organizationAddress')).toMatchObject({ applies: true, done: false, blocked: true, detail: { missing: 'street,city' }, remedy: { href: '/admin/settings', labelKey: 'completeOrganization' } });
+    expect(checkFailure(res)).toMatchObject({ ok: false, error: { type: 'conflict', code: 'confirmationOrganizationIncomplete' } });
   });
 
   it('checks the notice on the day of issue and warns about a donation before the oldest notice', async () => {

@@ -32,7 +32,7 @@ describe('finance errors', () => {
   it('knows the errors of notices and confirmations (F6a)', () => {
     const codes = [
       'noticeVoided', 'noticeSuperseded', 'noticeNotValidAt', 'noNoticeValidAt', 'noticeAfterExemption', 'confirmationLineNotFinal', 'confirmationLineReversed', 'confirmationIncomeNotCertifiable',
-      'confirmationContactIncomplete', 'confirmationLineAlreadyConfirmed', 'confirmationAmountNotPositive', 'confirmationEntryUndocumented', 'confirmationInKindDetailsMissing',
+      'confirmationContactIncomplete', 'confirmationOrganizationIncomplete', 'confirmationLineAlreadyConfirmed', 'confirmationAmountNotPositive', 'confirmationEntryUndocumented', 'confirmationInKindDetailsMissing',
       'confirmationInKindMixed', 'confirmationTypeInactive', 'confirmationExpenseWaiversDisabled', 'confirmationPreNoticeNeedsReason', 'confirmationAlreadyVoided', 'confirmationAlreadySent',
       'confirmationSignedAlready', 'signerOverlaps', 'facsimileTooLarge', 'facsimileNotImage', 'entryLockedByConfirmation', 'contactLockedByConfirmation', 'inKindLineOnly',
     ];
