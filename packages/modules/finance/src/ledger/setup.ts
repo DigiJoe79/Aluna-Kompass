@@ -20,10 +20,11 @@ import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
 import { FINANCE_PERMISSIONS } from '../permissions';
-import { financeAccounts, financeFiscalYears, financeNotices } from '../schema';
+import { financeAccounts, financeFiscalYears, financeNotices, financeSigners } from '../schema';
+import { machineStatusOf } from './machine-status';
 import { noticeValidAt } from './notice-validity';
 
-export type SetupStepKey = 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax' | 'importFormat' | 'notice';
+export type SetupStepKey = 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax' | 'importFormat' | 'notice' | 'machineProcedure';
 
 export interface SetupStep {
   key: SetupStepKey;
@@ -142,6 +143,8 @@ export async function getSetupStatus(deps: Deps, ctx: CallContext): Promise<Resu
   // F6a: optional — ohne Bescheid keine Bestätigungen, aber Finanzen lässt sich ohne führen.
   // Die Reihe liest der Schritt direkt: `ledger/` kennt `donations/` nicht (Richtung, Spec 4.1).
   const notice = noticeValidAt(deps.db.select().from(financeNotices).all(), isoNow(deps.clock).slice(0, 10));
+  // F6a Task 4: optional, nach dem Bescheid — sonst Unterschriftsfeld statt Faksimile. `missing` als Liste mit Komma (detail trägt nur Text und Zahlen).
+  const machine = machineStatusOf(deps.db.select().from(financeSigners).all(), isoNow(deps.clock).slice(0, 10));
 
   const steps: SetupStep[] = [
     { key: 'fiscalYear', required: true, done: fiscalYearDone, dependsOn: null, blocked: false, detail: {}, permission: 'finance.setup', canDo: listUserNamesWithPermission(deps, 'finance.setup') },
@@ -193,6 +196,16 @@ export async function getSetupStatus(deps: Deps, ctx: CallContext): Promise<Resu
       dependsOn: null,
       blocked: false,
       detail: notice ? { validUntil: notice.validUntil } : {},
+      permission: 'finance.donationsIssue',
+      canDo: listUserNamesWithPermission(deps, 'finance.donationsIssue'),
+    },
+    {
+      key: 'machineProcedure',
+      required: false,
+      done: machine.missing.length === 0,
+      dependsOn: 'notice',
+      blocked: notice === null,
+      detail: machine.missing.length > 0 ? { missing: machine.missing.join(',') } : {},
       permission: 'finance.donationsIssue',
       canDo: listUserNamesWithPermission(deps, 'finance.donationsIssue'),
     },

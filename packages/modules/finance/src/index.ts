@@ -219,3 +219,6 @@ export { applyInvoiceToDraft, createOpenItemFromInvoice, invoiceProposal, readIn
 export { NOTICE_KINDS, noticeValidAt, noticeValidUntil, type NoticeKind, type NoticeValidityInput } from './ledger/notice-validity';
 // Die Dienste selbst (saveNotice, supersedeNotice, voidNotice, listNotices) kommen mit ihren MCP-Werkzeugen (Task 6) — der Paritätswächter der App verlangt beides zugleich.
 export { certifiableLineExistsInternal, noticeExpiryInternal, noticeValidAtInternal, type NoticeView } from './donations/notices';
+// Maschinelles Verfahren (Task 4): nur `readFacsimile` (Route Handler, bewusst ohne MCP — Ausnahmeliste der App) und die internen Helfer; saveSigner, uploadFacsimile, getMachineProcedure und createNotificationLetterDraft kommen mit ihren Werkzeugen (Task 6).
+export { FACSIMILE_MAX_BYTES, machineProcedureStatusAt, readFacsimile, readFacsimileInternal, type MachineProcedureStatus, type SignerView } from './donations/machine';
+export { type MachineProcedureMissing } from './ledger/machine-status';

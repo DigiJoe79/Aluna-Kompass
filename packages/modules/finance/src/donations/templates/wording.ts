@@ -137,3 +137,53 @@ export const VALIDITY_NOTE =
 export function machineNote(taxOffice: string, notifiedOn: string): string {
   return `Diese Zuwendungsbestätigung wurde maschinell erstellt und ist ohne eigenhändige Unterschrift gültig. Die Anwendung des maschinellen Verfahrens wurde dem Finanzamt ${taxOffice} am ${notifiedOn} angezeigt.`;
 }
+
+// ── Anzeige des maschinellen Verfahrens ─────────────────────────────────────
+
+/** Wem die Anzeige gilt und von wem sie kommt — ohne sie spricht der Brief vom „Verein“ und lässt die Kopfzeilen weg. */
+export interface NotificationLetterContext {
+  organizationName: string;
+  taxOffice: string;
+  taxNumber: string;
+}
+
+/**
+ * KEIN MUSTERTEXT. Es gibt kein amtliches Muster für die Anzeige; dieser Brief
+ * ist ein Vorschlag des Moduls, den der Verein im Entwurf der Akte vor dem
+ * Festschreiben liest und anpasst. Er folgt R 10b.1 Abs. 4 EStR: Die
+ * Anwendung des maschinellen Verfahrens ist dem Finanzamt anzuzeigen; die
+ * Bestätigungen entsprechen dem amtlichen Muster, tragen den Hinweis auf die
+ * Anzeige, eine Unterschrift erscheint als Faksimile, das Verfahren ist gegen
+ * unbefugte Eingriffe gesichert, Buchung und Bestätigung hängen zusammen, und
+ * das Verfahren ist prüfbar.
+ *
+ * Markdown, wie der Text eines Briefentwurfs (`docs/handbuch/akte/brief-schreiben.md`).
+ * `notifiedOn` im Format TT.MM.JJJJ: Ist die Anzeige schon vermerkt, nennt
+ * der Brief ihr Datum (etwa bei einem neuen Unterzeichner).
+ */
+export function notificationLetter(signerName: string, notifiedOn?: string | null, context?: NotificationLetterContext): string {
+  const verein = context ? context.organizationName : 'unser Verein';
+  const head = context ? [`${context.taxOffice}  \nSteuernummer ${context.taxNumber}`, ''] : [];
+  const earlier = notifiedOn ? [`Die Anwendung des Verfahrens haben wir Ihnen bereits am ${notifiedOn} angezeigt; dieses Schreiben nennt den aktuellen Stand.`, ''] : [];
+  return [
+    ...head,
+    'Sehr geehrte Damen und Herren,',
+    '',
+    `hiermit zeigen wir Ihnen nach R 10b.1 Abs. 4 EStR an, dass ${verein} Zuwendungsbestätigungen über Geldzuwendungen, Mitgliedsbeiträge und Sachzuwendungen maschinell erstellt.`,
+    '',
+    ...earlier,
+    'Zum Verfahren:',
+    '',
+    '- Die Bestätigungen entsprechen dem amtlichen Muster und tragen den Hinweis, dass sie maschinell erstellt wurden und die Anwendung des Verfahrens dem Finanzamt angezeigt wurde.',
+    `- Statt einer eigenhändigen Unterschrift wird beim Erstellen das Faksimile der Unterschrift von ${signerName} eingedruckt, der oder die für den Verein zeichnungsberechtigt ist.`,
+    '- Das Verfahren ist gegen unbefugte Eingriffe gesichert: Bestätigungen stellen nur berechtigte Personen aus, jede Ausstellung steht im Änderungsprotokoll, und das Faksimile ist nur ihnen zugänglich.',
+    '- Die Bestätigungen entstehen aus den festgeschriebenen Buchungen der Finanzbuchhaltung; Buchung und Bestätigung sind miteinander verbunden, die Summen lassen sich abstimmen.',
+    '- Aufbau und Ablauf des Verfahrens sind dokumentiert und für Sie innerhalb angemessener Zeit prüfbar.',
+    '',
+    'Für Rückfragen stehen wir Ihnen gern zur Verfügung.',
+    '',
+    'Mit freundlichen Grüßen',
+    '',
+    signerName,
+  ].join('\n');
+}

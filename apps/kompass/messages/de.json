@@ -3062,20 +3062,28 @@
           "categories": "Kategorien durchsehen",
           "tax": "Steuerliches bestätigen",
           "importFormat": "Auszugsformat je Bank- und Zahlungsdienstkonto (optional bis zum ersten Auszug)",
-          "notice": "Bescheid des Finanzamts erfassen (optional — ohne Bescheid keine Zuwendungsbestätigungen)"
+          "notice": "Bescheid des Finanzamts erfassen (optional — ohne Bescheid keine Zuwendungsbestätigungen)",
+          "machineProcedure": "Maschinelles Verfahren einrichten (optional — sonst tragen Bestätigungen ein Unterschriftsfeld)"
         },
         "open": "Erledigen",
         "done": "Erledigt",
         "blocked": {
           "account": "wartet auf ein Geschäftsjahr",
-          "importFormat": "wartet auf ein Bankkonto"
+          "importFormat": "wartet auf ein Bankkonto",
+          "machineProcedure": "wartet auf einen gültigen Bescheid"
         },
         "detail": {
           "account": "{accounts} Konten, {withoutOpening} ohne Anfangsbestand",
           "rolesWithoutUser": "ohne aktiven Träger: {names}",
           "usersWithoutContact": "{count} Nutzer ohne verknüpften Kontakt",
           "importFormat": "{missing, plural, one {# Konto} other {# Konten}} ohne Auszugsformat — nehmen Sie CAMT, wenn die Bank es anbietet, sonst richten Sie das CSV-Format ein.",
-          "notice": "gültig bis {validUntil}"
+          "notice": "gültig bis {validUntil}",
+          "machineProcedure": "es fehlt: {missing}"
+        },
+        "machineMissing": {
+          "signer": "ein Unterzeichner für heute",
+          "facsimile": "das Bild der Unterschrift",
+          "notifiedOn": "der Tag der Anzeige beim Finanzamt"
         },
         "canDo": "kann {names} erledigen",
         "applyTaxDefaults": "Vorgaben übernehmen",

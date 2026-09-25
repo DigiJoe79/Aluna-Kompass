@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { createAccount, setAccountActive } from '../src/ledger/accounts';
 import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
 import { saveNotice } from '../src/donations/notices';
+import { saveSigner, uploadFacsimile } from '../src/donations/machine';
 import { applyTaxDefaults, confirmSetupStep, getPermissionMatrix, getSetupStatus, setFinanceLimit, setFinanceSwitch } from '../src/ledger/setup';
 import { installFinance } from '../src/install';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
@@ -19,7 +20,7 @@ describe('finance setup status', () => {
     const { deps, ctx } = setupFinance();
     const status = unwrap(await getSetupStatus(deps, ctx));
     expect(status.complete).toBe(false);
-    expect(status.steps.map((s) => s.key)).toEqual(['fiscalYear', 'account', 'roles', 'categories', 'tax', 'importFormat', 'notice']);
+    expect(status.steps.map((s) => s.key)).toEqual(['fiscalYear', 'account', 'roles', 'categories', 'tax', 'importFormat', 'notice', 'machineProcedure']);
     // importFormat ist ohne Bankkonto vakuos erfüllt (nichts, was ein Format bräuchte) — die übrigen sind offen.
     for (const step of status.steps.filter((s) => s.key !== 'importFormat')) expect(step.done, step.key).toBe(false);
     const account = status.steps.find((s) => s.key === 'account')!;
@@ -33,7 +34,7 @@ describe('finance setup status', () => {
     expect(importFormat.required).toBe(false);
     expect(importFormat.dependsOn).toBe('account');
     expect(importFormat.blocked).toBe(true);
-    for (const step of status.steps.filter((s) => s.key !== 'importFormat' && s.key !== 'notice')) expect(step.required, step.key).toBe(true);
+    for (const step of status.steps.filter((s) => s.key !== 'importFormat' && s.key !== 'notice' && s.key !== 'machineProcedure')) expect(step.required, step.key).toBe(true);
   });
 
   it('the import format step counts bank and payment-service accounts and names how many lack a format (F4b)', async () => {
@@ -130,6 +131,27 @@ describe('finance setup status', () => {
     const afterLink = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'roles')!;
     expect(afterLink.done).toBe(true);
     expect(afterLink.detail).toEqual({});
+  });
+
+  it('the checklist step follows the status and depends on the notice step', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.clock.set('2026-03-01T10:00:00.000Z');
+    const step = async () => unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'machineProcedure')!;
+    expect(await step()).toMatchObject({ required: false, done: false, dependsOn: 'notice', blocked: true, detail: { missing: 'signer' }, permission: 'finance.donationsIssue' });
+
+    unwrap(await saveNotice(deps, ctx, { kind: 'exemptionNotice', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2025-05-02', assessmentPeriod: '2023', purposesText: 'Tierschutz' }));
+    expect(await step()).toMatchObject({ done: false, blocked: false, detail: { missing: 'signer' } });
+
+    const signer = unwrap(await saveSigner(deps, ctx, { validFrom: '2026-01-01', signerName: 'Jonas Feld' }));
+    expect(await step()).toMatchObject({ done: false, detail: { missing: 'facsimile,notifiedOn' } });
+    const png = new Uint8Array(32).fill(1);
+    png.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    unwrap(await uploadFacsimile(deps, ctx, { signerId: signer.id, bytes: png, mimeType: 'image/png' }));
+    unwrap(await saveSigner(deps, ctx, { id: signer.id, validFrom: '2026-01-01', signerName: 'Jonas Feld', notifiedOn: '2026-02-01' }));
+    const done = await step();
+    expect(done).toMatchObject({ done: true, blocked: false, detail: {} });
+    // Optional: das Verfahren kippt die Einrichtung nicht.
+    expect(unwrap(await getSetupStatus(deps, ctx)).complete).toBe(false);
   });
 
   it('names who can do a step, without e-mail addresses', async () => {

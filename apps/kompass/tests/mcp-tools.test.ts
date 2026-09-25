@@ -251,6 +251,7 @@ const WITHOUT_TOOL: Record<string, string> = {
   'finance.seedFinance': 'Beispieldaten der Entwicklung.',
   'finance.readVoucher': 'Liefert Bytes, über die Seiten des Moduls (ab F3).',
   'finance.readCashCountProtocol': 'Liefert Bytes, über die Seiten des Moduls (F3b Task 2, Muster readVoucher).',
+  'finance.readFacsimile': 'Liefert die Bytes einer Unterschrift — sie gehören nie in den Modellkontext; nur der Route Handler der Bescheid-Seite liest sie (F6a, Annahme 8).',
   'finance.createOpenItem': 'Erreichbar über finance_open_item_save (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
   'finance.updateOpenItem': 'Erreichbar über finance_open_item_save (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
   'finance.approveAllocationCorrection': 'Erreichbar über finance_correction_decide (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
