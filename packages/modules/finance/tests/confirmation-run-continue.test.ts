@@ -215,6 +215,25 @@ describe('continueConfirmationRun', () => {
     expect(followUp.items.map((i) => [i.contactId, i.state])).toEqual([[nora.id, 'pending']]);
     expect(err(await startConfirmationRun(f.deps, f.ctx, { year: 2026, followUpOfRunId: 'fehlt' }))).toMatchObject({ type: 'notFound' });
   });
+
+  it('a follow-up run inherits the exclusions of its origin', async () => {
+    const f = await donationFixture({ machine: true });
+    const { bert } = await threeDonors(f);
+    const run = unwrap(await startConfirmationRun(f.deps, f.ctx, { year: 2026, excludedContactIds: [bert.id] }));
+    unwrap(await continueConfirmationRun(f.deps, f.ctx, { runId: run.id }));
+    // Anna und Erika sind schon bestätigt — offen wäre nur Bert, aber der Ursprungslauf schloss ihn aus.
+    expect(run.excludedContactIds).toEqual([bert.id]);
+
+    // Ohne eigene Ausschlüsse übernimmt die Vorschau die des Ursprungslaufs, ohne dass jemand sie erneut nennt.
+    const inherited = unwrap(await previewConfirmationRun(f.deps, f.ctx, { year: 2026, followUpOfRunId: run.id }));
+    expect(inherited.excludedContactIds).toEqual([bert.id]);
+    expect(inherited.items).toEqual([]);
+
+    // Ein ausdrücklich leeres Feld ist eine eigene Angabe — sie überschreibt die des Ursprungslaufs, statt sie zu ergänzen.
+    const own = unwrap(await previewConfirmationRun(f.deps, f.ctx, { year: 2026, followUpOfRunId: run.id, excludedContactIds: [] }));
+    expect(own.excludedContactIds).toEqual([]);
+    expect(own.items.map((i) => i.contactId)).toEqual([bert.id]);
+  });
 });
 
 describe('dispatchRunConfirmations', () => {

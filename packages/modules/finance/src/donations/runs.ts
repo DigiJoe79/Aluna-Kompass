@@ -256,7 +256,13 @@ export const runArgsSchema = z.object({
   followUpOfRunId: z.string().min(1).optional(),
 });
 
-/** `finance.read`: die Posten eines Serienlaufs, bevor er startet — Ausstellungstag heute. */
+/**
+ * `finance.read`: die Posten eines Serienlaufs, bevor er startet —
+ * Ausstellungstag heute. Ohne eigene `excludedContactIds` übernimmt die
+ * Nachzügler-Vorschau (`followUpOfRunId`) die Ausschlüsse des Ursprungslaufs
+ * — wer den Ursprungslauf ausgeschlossen hat, bleibt ohne weiteres Zutun
+ * draußen; ein ausdrücklich leeres Feld gilt als eigene Angabe.
+ */
 export async function previewConfirmationRun(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<RunPreview>> {
   const denied = requireFinanceRead(ctx, 'read');
   if (denied) return denied;
@@ -265,10 +271,13 @@ export async function previewConfirmationRun(deps: Deps, ctx: CallContext, input
   const v = parsed.value;
   const issuedOn = isoNow(deps.clock).slice(0, 10);
   if (v.year > Number(issuedOn.slice(0, 4))) return invalid([{ path: 'year', message: 'inFuture' }]);
-  if (v.followUpOfRunId && !deps.db.select({ id: financeConfirmationRuns.id }).from(financeConfirmationRuns).where(eq(financeConfirmationRuns.id, v.followUpOfRunId)).get()) {
-    return notFound('financeConfirmationRun', v.followUpOfRunId);
+  let origin: FinanceConfirmationRunRow | undefined;
+  if (v.followUpOfRunId) {
+    origin = deps.db.select().from(financeConfirmationRuns).where(eq(financeConfirmationRuns.id, v.followUpOfRunId)).get();
+    if (!origin) return notFound('financeConfirmationRun', v.followUpOfRunId);
   }
-  return ok(previewConfirmationRunInternal(deps.db, deps, v, issuedOn));
+  const excludedContactIds = v.excludedContactIds ?? (origin ? (JSON.parse(origin.excludedContactIds) as string[]) : undefined);
+  return ok(previewConfirmationRunInternal(deps.db, deps, { ...v, excludedContactIds }, issuedOn));
 }
 
 // ── Lauf: starten, fortsetzen, lesen, Versandvermerk für alle (F6b Task 3) ──
@@ -313,6 +322,8 @@ export interface RunSummary {
   year: number;
   minCents: number;
   excludedCount: number;
+  /** Nur lesend — die Kontakte selbst stehen nie im Protokoll, nur ihre Anzahl (`excludedCount`). */
+  excludedContactIds: string[];
   followUpOfRunId: string | null;
   startedOn: string;
   startedAt: string;
@@ -379,11 +390,13 @@ function runViewsInternal(db: DbOrTx, runs: readonly FinanceConfirmationRunRow[]
         if (!confirmation.voidedAt && !confirmation.signedDocumentId) counts.missingSignedVersion += 1;
       }
     }
+    const excludedContactIds = JSON.parse(run.excludedContactIds) as string[];
     return {
       id: run.id,
       year: run.year,
       minCents: run.minCents,
-      excludedCount: (JSON.parse(run.excludedContactIds) as string[]).length,
+      excludedCount: excludedContactIds.length,
+      excludedContactIds,
       followUpOfRunId: run.followUpOfRunId,
       startedOn: run.startedOn,
       startedAt: run.startedAt,

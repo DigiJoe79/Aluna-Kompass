@@ -87,19 +87,22 @@ export default async function DonationRunPage({ searchParams }: { searchParams: 
     );
   } else {
     const followUpRun = query.followUp ? await getConfirmationRun(deps, ctx, { id: query.followUp }) : null;
-    const followUp = followUpRun?.ok ? { id: followUpRun.value.id, startedOn: followUpRun.value.startedOn } : null;
+    const followUp = followUpRun?.ok ? { id: followUpRun.value.id, startedOn: followUpRun.value.startedOn, excludedContactIds: followUpRun.value.excludedContactIds } : null;
     const previewRes =
       query.year !== null
         ? await previewConfirmationRun(deps, ctx, {
             year: query.year,
             ...(query.minCents !== null ? { minCents: query.minCents } : {}),
-            excludedContactIds: query.excluded,
+            // Ohne eigene Angabe in der Adresse übernimmt der Dienst die Ausschlüsse des Ursprungslaufs (Nachtrag).
+            ...(query.excluded.length > 0 ? { excludedContactIds: query.excluded } : {}),
             ...(followUp ? { followUpOfRunId: followUp.id } : {}),
           })
         : null;
-    // Namen der Ausgeschlossenen für die Leiste — wer Kontakte nicht lesen darf, sieht einen Platzhalter.
+    // Namen der Ausgeschlossenen für die Leiste — die Vorschau kennt den wirksamen Stand (mit den
+    // geerbten Ausschlüssen eines Nachzügler-Laufs als Vorbelegung); wer Kontakte nicht lesen darf, sieht einen Platzhalter.
+    const excludedIds = previewRes?.ok ? previewRes.value.excludedContactIds : query.excluded.length > 0 ? query.excluded : (followUp?.excludedContactIds ?? []);
     const excluded = await Promise.all(
-      query.excluded.map(async (id) => {
+      excludedIds.map(async (id) => {
         const contact = await getContact(deps, ctx, id);
         return { id, name: contact.ok ? displayName(contact.value) : t('selection.unknownContact') };
       }),
