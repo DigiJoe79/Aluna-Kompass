@@ -4463,6 +4463,62 @@
           "noticeNotValidAt": "Bescheid gilt am Ausstellungstag nicht",
           "unknown": "Nicht ausgestellt ({code})"
         }
+      },
+      "book": {
+        "title": "Spendenbuch",
+        "description": "Alle Zuwendungen des Jahres mit dem Stand ihrer Bestätigung, dazu die Abstimmung gegen die ausgestellten Bestätigungen.",
+        "year": "Jahr",
+        "sums": {
+          "donation": "Geld",
+          "membershipFee": "Mitgliedsbeiträge",
+          "membershipFeeHint": "Mitgliedsbeiträge sind bescheinigungsfähig (Einstellung unter Verwaltung → Finanzen).",
+          "inKindDonation": "Sache",
+          "expenseWaiver": "Aufwandsspende",
+          "total": "Zusammen"
+        },
+        "columns": {
+          "date": "Datum",
+          "contact": "Spender",
+          "kind": "Art",
+          "amount": "Betrag",
+          "purpose": "Zweck",
+          "confirmed": "Bestätigt mit"
+        },
+        "anonymous": "anonym",
+        "noPurpose": "—",
+        "notConfirmed": "—",
+        "collectiveSuffix": "Sammel",
+        "filter": {
+          "anonymous": "Nur anonyme Zuwendungen.",
+          "clear": "Filter aufheben"
+        },
+        "empty": {
+          "title": "Noch keine Zuwendungen",
+          "text": "Für dieses Jahr stehen noch keine bescheinigungsfähigen Zuwendungen im Buch."
+        },
+        "reconciliation": {
+          "title": "Abstimmung: Zuwendungen ↔ Bestätigungen",
+          "donations": "Zuwendungen",
+          "confirmed": "Bestätigt",
+          "difference": "Differenz",
+          "reasonsTitle": "Differenz nach Gründen",
+          "reason": {
+            "belowMinimum": "Unter dem Mindestbetrag",
+            "addressMissing": "Anschrift fehlt",
+            "inKindUndescribed": "Sachspende nicht beschrieben",
+            "expenseWaiverUnconfirmed": "Aufwandsspende nicht bestätigt",
+            "anonymous": "Anonym, ohne Kontakt",
+            "other": "Sonstige"
+          },
+          "toCorrect": "Zu korrigieren",
+          "balanced": "Zuwendungen und Bestätigungen stimmen überein."
+        },
+        "simplified": {
+          "action": "Vereinfachter Nachweis (PDF)",
+          "hint": "Für Zuwendungen bis {limit} genügt der Bareinzahlungsbeleg oder die Buchungsbestätigung der Bank als Nachweis.",
+          "hintUnknown": "Die Grenze des vereinfachten Nachweises ist nicht hinterlegt.",
+          "failed": "Der vereinfachte Nachweis konnte nicht erstellt werden."
+        }
       }
     }
   }

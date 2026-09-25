@@ -121,6 +121,7 @@ describe('getDonationReconciliation', () => {
         { key: 'other', count: 2, cents: 3700, href: '/finance/donations/run?year=2026' },
       ],
       toCorrect: { count: 0, cents: 0, href: '/finance/donations?tab=toCorrect' },
+      simplifiedReceiptLimitCents: 30000,
     });
     expect(rec.reasons.reduce((s, r) => s + r.cents, 0) - rec.toCorrect.cents).toBe(rec.differenceCents);
   });

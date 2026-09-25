@@ -136,6 +136,8 @@ export interface DonationReconciliation {
   reasons: { key: ReconciliationReasonKey; count: number; cents: number; href: string }[];
   /** Bestätigungen, die mehr bescheinigen, als nach Rückgaben noch da ist (Prüfstein 6). */
   toCorrect: { count: number; cents: number; href: string };
+  /** Die heute geltende Grenze des vereinfachten Nachweises (`simplifiedReceiptLimit`) — `null`, wenn keine hinterlegt ist. */
+  simplifiedReceiptLimitCents: number | null;
 }
 
 const reasonHref = (key: ReconciliationReasonKey, year: number): string =>
@@ -149,7 +151,9 @@ const reasonHref = (key: ReconciliationReasonKey, year: number): string =>
  * Anschrift fehlt · Sachspende nicht beschrieben · Aufwandsspende nicht
  * bestätigt · sonst „sonstige“ (bescheinigbar, aber nicht bestätigt).
  * Übersteigt eine Bestätigung ihre Zeilen nach Rückgaben, steht der
- * Überhang unter „zu korrigieren“.
+ * Überhang unter „zu korrigieren“. Trägt zusätzlich die heute geltende
+ * Grenze des vereinfachten Nachweises mit — der Knopf im Spendenbuch
+ * braucht sie für den Satz dazu, ohne eine eigene Abfrage.
  */
 export async function getDonationReconciliation(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DonationReconciliation>> {
   const denied = requireFinanceRead(ctx, 'read');
@@ -214,7 +218,9 @@ export async function getDonationReconciliation(deps: Deps, ctx: CallContext, in
   if (explained !== differenceCents) add('other', differenceCents - explained, 0);
 
   const reasons = REASON_ORDER.filter((key) => tally.has(key)).map((key) => ({ key, ...tally.get(key)!, href: reasonHref(key, year) }));
-  return ok({ year, donationsCents, confirmedCents, differenceCents, reasons, toCorrect });
+  const limitValue = valueAt(db, 'simplifiedReceiptLimit', isoNow(deps.clock).slice(0, 10));
+  const simplifiedReceiptLimitCents = typeof limitValue === 'number' ? limitValue : null;
+  return ok({ year, donationsCents, confirmedCents, differenceCents, reasons, toCorrect, simplifiedReceiptLimitCents });
 }
 
 /**
