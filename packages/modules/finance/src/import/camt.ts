@@ -1,13 +1,12 @@
-import { XMLParser, XMLValidator } from 'fast-xml-parser';
+import { guardXml, secureXmlParser } from './xml';
 
 /**
  * Der reine Leser eines CAMT.053-Kontoauszugs (Spec 6.2). Keine Datenbank,
  * kein `deps`, keine Uhr — Bytes hinein, ein Auszug mit Zeilen oder ein
  * genannter Lesefehler heraus. Sicherheit zuerst, auf dem dekodierten Text,
  * vor jedem Parserlauf: Größenlimit, `<!DOCTYPE`/`<!ENTITY` verboten, nur
- * UTF-8/UTF-16 mit BOM-Erkennung. Der Parser selbst läuft zusätzlich mit
- * `processEntities: false` — die Ablehnung wäre also auch ohne die
- * Vorprüfung wirksam (siehe Bericht des Laufs).
+ * UTF-8/UTF-16 mit BOM-Erkennung — gemeinsam mit dem ZUGFeRD-Leser in
+ * `./xml.ts` (`guardXml`, `secureXmlParser` mit `processEntities: false`).
  */
 
 export interface CamtLine {
@@ -53,14 +52,6 @@ const NAMESPACE_VERSIONS: Record<string, '001.02' | '001.08'> = {
   'urn:iso:std:iso:20022:tech:xsd:camt.053.001.02': '001.02',
   'urn:iso:std:iso:20022:tech:xsd:camt.053.001.08': '001.08',
 };
-
-/** Erkennt die Kodierung über eine Byte-Order-Mark; ohne BOM wird UTF-8 angenommen (Spec 6.2). */
-function decodeText(bytes: Uint8Array): string {
-  if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) return new TextDecoder('utf-16le').decode(bytes.subarray(2));
-  if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) return new TextDecoder('utf-16be').decode(bytes.subarray(2));
-  if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) return new TextDecoder('utf-8').decode(bytes.subarray(3));
-  return new TextDecoder('utf-8').decode(bytes);
-}
 
 function fail(code: CamtError['code'], extra?: Partial<Omit<CamtError, 'code'>>): { ok: false; error: CamtError } {
   return { ok: false, error: { code, ...extra } };
@@ -138,26 +129,11 @@ function readTxDtls(node: Record<string, unknown>, direction: 'CRDT' | 'DBIT'): 
 }
 
 export function parseCamt053(bytes: Uint8Array, opts: { maxBytes: number }): ParseResult {
-  if (bytes.byteLength > opts.maxBytes) return fail('tooLarge');
+  const guarded = guardXml(bytes, opts);
+  if (!guarded.ok) return fail(guarded.code);
+  const text = guarded.text;
 
-  const text = decodeText(bytes);
-  if (!text.trimStart().startsWith('<')) return fail('notXml');
-  if (/<!DOCTYPE/i.test(text) || /<!ENTITY/i.test(text)) return fail('doctypeRefused');
-
-  const valid = XMLValidator.validate(text);
-  if (valid !== true) return fail('notXml');
-
-  const parser = new XMLParser({
-    processEntities: false,
-    ignoreAttributes: false,
-    parseTagValue: false,
-    parseAttributeValue: false,
-    removeNSPrefix: true,
-    attributeNamePrefix: '@_',
-    textNodeName: '#text',
-    trimValues: true,
-    isArray: (name) => name === 'Stmt' || name === 'Ntry' || name === 'TxDtls' || name === 'Bal',
-  });
+  const parser = secureXmlParser({ arrays: ['Stmt', 'Ntry', 'TxDtls', 'Bal'] });
 
   let parsed: Record<string, unknown>;
   try {
