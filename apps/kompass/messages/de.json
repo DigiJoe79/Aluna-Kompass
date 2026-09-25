@@ -569,7 +569,9 @@
             "vouchersWithoutEntry": "{count, plural, one {# Finanzbeleg ohne Buchung} other {# Finanzbelege ohne Buchung}}",
             "lastStatement": "Letzter Auszug vor {days, plural, one {einem Tag} other {# Tagen}}",
             "noticeExpiring": "{kind, select, section60a {Die vorläufige Feststellung} other {Der Bescheid}} des Finanzamts läuft {months, plural, =0 {in weniger als einem Monat} one {in einem Monat} other {in # Monaten}} ab",
-            "noNotice": "Kein gültiger Bescheid des Finanzamts — ohne Bescheid keine Zuwendungsbestätigungen"
+            "noNotice": "Kein gültiger Bescheid des Finanzamts — ohne Bescheid keine Zuwendungsbestätigungen",
+            "confirmationsToCorrect": "{count, plural, one {# Zuwendungsbestätigung zu korrigieren} other {# Zuwendungsbestätigungen zu korrigieren}}",
+            "confirmationsNeedSignature": "{count, plural, one {# Zuwendungsbestätigung ohne Unterschrift} other {# Zuwendungsbestätigungen ohne Unterschrift}}"
           }
         },
         "withoutVoucher": {
@@ -623,6 +625,11 @@
             "ok": "Die Kontoauszüge sind aktuell.",
             "stale": "{count, plural, one {# Konto ohne aktuellen Auszug} other {# Konten ohne aktuellen Auszug}}"
           }
+        },
+        "confirmationsToCorrect": {
+          "title": "Bestätigungen zu korrigieren",
+          "empty": "Keine Zuwendungsbestätigung zu korrigieren.",
+          "open": "Zu den Bestätigungen"
         }
       },
       "site": {

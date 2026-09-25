@@ -222,3 +222,11 @@ export { certifiableLineExistsInternal, noticeExpiryInternal, noticeValidAtInter
 // Maschinelles Verfahren (Task 4): nur `readFacsimile` (Route Handler, bewusst ohne MCP — Ausnahmeliste der App) und die internen Helfer; saveSigner, uploadFacsimile, getMachineProcedure und createNotificationLetterDraft kommen mit ihren Werkzeugen (Task 6).
 export { FACSIMILE_MAX_BYTES, machineProcedureStatusAt, readFacsimile, readFacsimileInternal, type MachineProcedureStatus, type SignerView } from './donations/machine';
 export { type MachineProcedureMissing } from './ledger/machine-status';
+// Bestätigung (Task 5): Prüfliste, Listen, „zu korrigieren“, Sperren — hier nur Internes und Typen. Die Dienste
+// (checkConfirmable, issueConfirmation, voidConfirmation, recordConfirmationDispatch, attachSignedConfirmation,
+// listConfirmations, listUncertifiedDonations, saveInKindDetails, getInKindDetails) kommen mit ihren Werkzeugen (Task 6).
+export { CONFIRMATION_CHECK_KEYS, checkConfirmableInternal, checkFailure, missingContactFields, type CheckConfirmableArgs, type ConfirmationCheck, type ConfirmationCheckKey, type ConfirmationCheckLine, type ConfirmationCheckResult, type ConfirmationWarning } from './donations/check';
+export { countNeedsSignatureInternal, type ConfirmationKind, type ConfirmationLineView, type ConfirmationList, type ConfirmationView, type UncertifiedGroup } from './donations/confirmations';
+export { countToCorrectInternal, toCorrectConfirmationsInternal, toCorrectReasonsInternal, type ToCorrectReason } from './donations/to-correct';
+export { confirmationContactLock, confirmationEntryLock } from './donations/locks';
+export { ENTRY_LOCKS, registerEntryLocks, type EntryLock } from './locks';

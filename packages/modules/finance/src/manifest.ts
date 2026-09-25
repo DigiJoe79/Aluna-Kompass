@@ -4,17 +4,23 @@ import { z } from 'zod';
 import { FINANCE_DASHBOARD_TILES } from './dashboard';
 import { requireFinanceRead } from './ledger/access';
 import { cashCountTemplate } from './ledger/cash-count-template';
+import { confirmationContactLock, confirmationEntryLock } from './donations/locks';
 import { collectiveConfirmationTemplate } from './donations/templates/collective';
 import { inKindConfirmationTemplate } from './donations/templates/in-kind';
 import { moneyConfirmationTemplate } from './donations/templates/money';
 import { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds } from './ledger/holds';
 import { installFinance } from './install';
+import { registerEntryLocks } from './locks';
 import { FINANCE_MCP_TOOLS } from './mcp-tools';
 import { FINANCE_PERMISSIONS } from './permissions';
 import { seedFinance } from './seed';
 import { financeEntries, financeFiscalYears } from './schema';
 
 export { FINANCE_PERMISSIONS } from './permissions';
+
+// F6a Task 5 (Spec 5.4): Eine gültige Bestätigung sperrt Storno und Kontaktkorrektur ihrer Buchung.
+// `ledger/` kennt `donations/` nicht — die Verdrahtung steht hier, wo jedes Bundle sie lädt.
+registerEntryLocks([confirmationEntryLock, confirmationContactLock]);
 
 /**
  * Alle Einstellungen der Spec (5.1), auch die erst spätere Pläne lesen — eine

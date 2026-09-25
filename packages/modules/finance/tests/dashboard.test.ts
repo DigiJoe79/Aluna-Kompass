@@ -5,7 +5,8 @@ import { ctxWith, insertUser, systemContext } from '@kompass/core/testing';
 import { createContact, linkUserToContact } from '@kompass/module-contacts';
 import { describe, expect, it } from 'vitest';
 import { FINANCE_DASHBOARD_TILES } from '../src/dashboard';
-import { saveNotice } from '../src/donations/notices';
+import { issueConfirmation } from '../src/donations/confirmations';
+import { saveNotice, supersedeNotice } from '../src/donations/notices';
 import { importStatement } from '../src/import/runs';
 import { markTransactionForeign } from '../src/import/transit';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
@@ -16,6 +17,7 @@ import { createOpenItem } from '../src/ledger/open-items';
 import { applyTaxDefaults, confirmSetupStep } from '../src/ledger/setup';
 import { installFinance } from '../src/install';
 import { insertDocument, insertRaw, insertRun, ledgerFixture, setupFinance } from './helpers';
+import { donationFixture, EXEMPTION } from './donation-fixture';
 
 const FIXTURES = path.resolve(import.meta.dirname, 'fixtures/camt');
 const camtBytes = (name: string) => new Uint8Array(readFileSync(path.join(FIXTURES, name)));
@@ -30,10 +32,10 @@ function tileByKey(key: string) {
 }
 
 describe('finance dashboard tiles', () => {
-  it('registers nine tiles, two of them on by default, each under exactly one permission', () => {
-    expect(FINANCE_DASHBOARD_TILES).toHaveLength(9);
+  it('registers ten tiles, two of them on by default, each under exactly one permission', () => {
+    expect(FINANCE_DASHBOARD_TILES).toHaveLength(10);
     expect(FINANCE_DASHBOARD_TILES.map((t) => t.key).sort()).toEqual([
-      'balanceDifference', 'lastStatement', 'overdueItems', 'purposesNegative', 'rawOpen', 'setupIncomplete', 'staleDrafts', 'todo', 'withoutVoucher',
+      'balanceDifference', 'confirmationsToCorrect', 'lastStatement', 'overdueItems', 'purposesNegative', 'rawOpen', 'setupIncomplete', 'staleDrafts', 'todo', 'withoutVoucher',
     ]);
     expect(FINANCE_DASHBOARD_TILES.filter((t) => t.defaultOn).map((t) => t.key).sort()).toEqual(['setupIncomplete', 'todo']);
     for (const tile of FINANCE_DASHBOARD_TILES) expect(typeof tile.permission).toBe('string');
@@ -244,5 +246,36 @@ describe('finance to-do tile — notices (F6a)', () => {
     f.deps.clock.set('2026-09-16T10:00:00.000Z');
     expect((await noticeLines()).map((l) => l.titleKey)).toEqual(['noNotice']);
     expect(JSON.stringify(await tile.load(f.deps, f.ctx, {}))).not.toMatch(/Musterspenderin|Musterstadt/);
+  });
+});
+
+describe('finance confirmations on the dashboard (F6a Task 5)', () => {
+  it('counts confirmations to correct under finance.read, off by default, and adds both confirmation lines to the to-do tile without names', async () => {
+    const f = await donationFixture({ machine: true });
+    const tile = tileByKey('confirmationsToCorrect');
+    expect(tile).toMatchObject({ permission: 'finance.read', kind: 'count', defaultOn: false });
+    const todo = tileByKey('todo');
+    expect(todo.messageKeys).toEqual(expect.arrayContaining(['confirmationsToCorrect', 'confirmationsNeedSignature']));
+    const confirmationLines = async () => {
+      const result = await todo.load(f.deps, f.ctx, {});
+      if (result.kind !== 'list') throw new Error('expected list');
+      return result.lines.filter((l) => l.titleKey === 'confirmationsToCorrect' || l.titleKey === 'confirmationsNeedSignature');
+    };
+
+    expect(await tile.load(f.deps, f.ctx, {})).toEqual({ kind: 'count', count: 0, href: '/finance/donations?tab=toCorrect' });
+    expect(await confirmationLines()).toEqual([]);
+
+    unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [(await f.donate()).line.id] }));
+    unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [(await f.waive()).line.id] }));
+    expect(await confirmationLines()).toEqual([{ titleKey: 'confirmationsNeedSignature', values: { count: 1 }, href: '/finance/donations?tab=needsSignature' }]);
+
+    unwrap(await saveNotice(f.deps, f.ctx, { ...EXEMPTION, noticeDate: '2026-03-20', assessmentPeriod: '2024' }));
+    unwrap(await supersedeNotice(f.deps, f.ctx, { id: f.notice!.id, supersededOn: '2026-03-20' }));
+    expect(await tile.load(f.deps, f.ctx, {})).toEqual({ kind: 'count', count: 2, href: '/finance/donations?tab=toCorrect' });
+    expect(await confirmationLines()).toEqual([
+      { titleKey: 'confirmationsToCorrect', values: { count: 2 }, href: '/finance/donations?tab=toCorrect' },
+      { titleKey: 'confirmationsNeedSignature', values: { count: 1 }, href: '/finance/donations?tab=needsSignature' },
+    ]);
+    expect(JSON.stringify(await todo.load(f.deps, f.ctx, {}))).not.toMatch(/Erika|Beispiel|Jonas/);
   });
 });

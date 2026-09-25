@@ -1,7 +1,9 @@
 import { readSetting, type DashboardLine, type DashboardTile } from '@kompass/core';
 import { and, eq, isNull, lt, or } from 'drizzle-orm';
 import { z } from 'zod';
+import { countNeedsSignatureInternal } from './donations/confirmations';
 import { certifiableLineExistsInternal, noticeExpiryInternal, noticeValidAtInternal } from './donations/notices';
+import { countToCorrectInternal } from './donations/to-correct';
 import { countOpenRawTransactionsInternal, importedThroughInternal, reconcileBankInternal } from './import/queries';
 import { listForeignMoney } from './import/transit';
 import { formatEuro } from './ledger/cash-check';
@@ -13,7 +15,7 @@ import { listVouchersWithoutEntry } from './ledger/vouchers';
 import { financeAccounts, financeEntries, type FinanceAccountRow } from './schema';
 
 /**
- * Die neun Kacheln der Startseite (F3b Task 6, F4 Task 6, Spec 9.7): je genau
+ * Die zehn Kacheln der Startseite (F3b Task 6, F4 Task 6, F6a Task 5, Spec 9.7): je genau
  * ein Recht. `finance.todo` und `finance.setupIncomplete` sind in der
  * Vorgabe an — die übrigen Einzelkacheln (Beleg, Entwürfe, offene Zahlungen,
  * Zwecke, Import) bleiben aus, weil die Sammelkachel sie trägt.
@@ -40,7 +42,7 @@ const todoTile: DashboardTile<Record<string, never>> = {
   kind: 'list',
   defaultOn: true,
   options: z.object({}),
-  messageKeys: ['reviewedNotFinal', 'withoutVoucher', 'overdueItems', 'rawOpen', 'foreignMoney', 'vouchersWithoutEntry', 'lastStatement', 'noticeExpiring', 'noNotice'],
+  messageKeys: ['reviewedNotFinal', 'withoutVoucher', 'overdueItems', 'rawOpen', 'foreignMoney', 'vouchersWithoutEntry', 'lastStatement', 'noticeExpiring', 'noNotice', 'confirmationsToCorrect', 'confirmationsNeedSignature'],
   async load(deps, ctx) {
     const today = isoDay(deps.clock.now().getTime());
     const lines: DashboardLine[] = [];
@@ -102,6 +104,12 @@ const todoTile: DashboardTile<Record<string, never>> = {
     if (!noticeValidAtInternal(deps.db, today) && certifiableLineExistsInternal(deps.db)) {
       lines.push({ titleKey: 'noNotice', values: {}, href: '/finance/donations/notices' });
     }
+
+    // F6a Task 5 (Spec 9.7): Bestätigungen zu korrigieren (berechnet) und ohne Unterschrift — nur Zahlen, nie Namen.
+    const toCorrect = countToCorrectInternal(deps.db);
+    if (toCorrect > 0) lines.push({ titleKey: 'confirmationsToCorrect', values: { count: toCorrect }, href: '/finance/donations?tab=toCorrect' });
+    const needsSignature = countNeedsSignatureInternal(deps.db);
+    if (needsSignature > 0) lines.push({ titleKey: 'confirmationsNeedSignature', values: { count: needsSignature }, href: '/finance/donations?tab=needsSignature' });
 
     return { kind: 'list', lines, total: lines.length, href: '/finance/entries' };
   },
@@ -229,6 +237,18 @@ const lastStatementTile: DashboardTile<Record<string, never>> = {
   },
 };
 
+/** F6a Task 5, Spec 9.7 „Bestätigungen zu korrigieren“ — berechnet, nie gespeichert. */
+const confirmationsToCorrectTile: DashboardTile<Record<string, never>> = {
+  key: 'confirmationsToCorrect',
+  permission: 'finance.read',
+  kind: 'count',
+  defaultOn: false,
+  options: z.object({}),
+  load(deps) {
+    return { kind: 'count', count: countToCorrectInternal(deps.db), href: '/finance/donations?tab=toCorrect' };
+  },
+};
+
 export const FINANCE_DASHBOARD_TILES: readonly DashboardTile[] = [
   todoTile as DashboardTile,
   withoutVoucherTile as DashboardTile,
@@ -239,4 +259,5 @@ export const FINANCE_DASHBOARD_TILES: readonly DashboardTile[] = [
   rawOpenTile as DashboardTile,
   balanceDifferenceTile as DashboardTile,
   lastStatementTile as DashboardTile,
+  confirmationsToCorrectTile as DashboardTile,
 ];

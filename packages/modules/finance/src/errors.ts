@@ -124,6 +124,7 @@ export const FINANCE_ERRORS = {
   confirmationPreNoticeNeedsReason: { reason: 'Die Zuwendung liegt vor dem ältesten erfassten Bescheid.', remedy: 'Begründen Sie, warum die Bestätigung trotzdem richtig ist — die Begründung bleibt am Datensatz.' },
   confirmationAlreadyVoided: { reason: 'Diese Bestätigung ist bereits zurückgenommen.', remedy: 'Nichts zu tun.' },
   confirmationAlreadySent: { reason: 'Der Versand dieser Bestätigung ist schon vermerkt.', remedy: 'Ein Versandvermerk lässt sich nicht überschreiben.' },
+  confirmationChangedMeanwhile: { reason: 'Während des Ausstellens hat sich an der Zuwendung, am Bescheid oder am Unterzeichner etwas geändert.', remedy: 'Prüfen Sie die Angaben und stellen Sie die Bestätigung erneut aus.' },
   confirmationSignedAlready: { reason: 'Die unterschriebene Fassung ist schon abgelegt.', remedy: 'Nichts zu tun — die abgelegte Fassung bleibt.' },
   signerOverlaps: { reason: 'Der Zeitraum überschneidet sich mit einem anderen Unterzeichner.', remedy: 'Beenden Sie zuerst den Zeitraum des bisherigen Unterzeichners.' },
   facsimileTooLarge: { reason: 'Das Bild der Unterschrift ist größer als 1 MB.', remedy: 'Verkleinern Sie das Bild und laden Sie es erneut hoch.' },
