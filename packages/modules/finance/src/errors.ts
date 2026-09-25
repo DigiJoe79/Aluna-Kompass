@@ -98,6 +98,12 @@ export const FINANCE_ERRORS = {
   foreignNeedsHolder: { reason: 'Sagen Sie, für wen das Geld ist.', remedy: 'Tragen Sie ein, wem das Geld gehört — der Satz steht im Buchungstext.' },
   contactIbanTaken: { reason: 'Diese IBAN gehört bereits zum Kontakt {contact}.', remedy: 'Lösen Sie zuerst die vorhandene Zuordnung, wenn die IBAN jetzt jemand anderem gehört.' },
   voucherSearchNeedsRead: { reason: 'Die Suche nach Belegen braucht das Recht, Finanzen mit Namen zu lesen.', remedy: 'Bitten Sie eine Person mit dem Recht „Finanzen lesen“, den Beleg zuzuordnen.' },
+  // F5b — Rechnungen mit ZUGFeRD/Factur-X.
+  openItemExistsForDocument: { reason: 'Zu dieser Rechnung gibt es schon eine offene Zahlung.', remedy: 'Öffnen Sie die vorhandene offene Zahlung, statt eine zweite anzulegen.' },
+  invoiceCurrencyUnsupported: { reason: 'Die Rechnung lautet auf {currency}, Kompass übernimmt nur Rechnungen in Euro.', remedy: 'Buchen Sie sie von Hand, mit dem Betrag, der vom Konto abging.' },
+  invoiceToolsMissing: { reason: 'Die Anhänge des PDFs lassen sich hier nicht lesen, weil die Texterkennung nicht eingerichtet ist.', remedy: 'Richten Sie die Texterkennung ein (poppler-utils mit pdfdetach), siehe Handbuch docs/handbuch/betrieb.md — bis dahin buchen Sie die Rechnung von Hand.' },
+  invoiceNotDraft: { reason: 'Die Angaben einer Rechnung lassen sich nur in einen Entwurf übernehmen.', remedy: 'Wählen Sie einen Entwurf, oder nehmen Sie die festgeschriebene Buchung zurück und buchen Sie neu.' },
+  invoiceUnreadable: { reason: 'Der Rechnungsanhang des PDFs ist keine lesbare ZUGFeRD-Rechnung ({code}).', remedy: 'Buchen Sie die Rechnung von Hand; die Angaben stehen im PDF selbst.' },
   batchNothingReviewed: { reason: 'Es gibt keine geprüften Entwürfe zum Festschreiben.', remedy: 'Prüfen Sie zuerst Entwürfe in der Arbeitsliste, dann lassen sie sich gemeinsam festschreiben.' },
 } as const satisfies Record<string, { reason: string; remedy: string }>;
 

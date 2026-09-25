@@ -79,6 +79,10 @@ describe('readEmbeddedFiles', () => {
     await expect(
       readEmbeddedFiles({ bytes: fixture('mit-anhang.pdf') }, { tmpRoot, bin: 'pdfdetach-does-not-exist' }),
     ).rejects.toBeInstanceOf(ToolMissingError);
+    // Am Namen erkennbar — das Finanzmodul importiert dieses Paket nicht und fragt `error.name`.
+    await expect(
+      readEmbeddedFiles({ bytes: fixture('mit-anhang.pdf') }, { tmpRoot, bin: 'pdfdetach-does-not-exist' }),
+    ).rejects.toMatchObject({ name: 'ToolMissingError' });
     expect(readdirSync(tmpRoot)).toEqual([]);
   });
 });

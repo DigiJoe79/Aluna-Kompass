@@ -14,6 +14,7 @@ import { suggestForTransaction } from './import/suggestions';
 import { listForeignMoney, markTransactionForeign } from './import/transit';
 import { attachVoucherToTransaction, searchVouchersForTransaction } from './import/vouchers';
 import { getWorkCounts, listWorkItems } from './import/work';
+import { applyInvoiceToDraft, createOpenItemFromInvoice, invoiceProposal, readInvoiceFromDocument } from './import/zugferd/read';
 import { closePurpose, deleteMasterData, readMasterData, saveMasterData, setMasterDataActive } from './ledger/master-data';
 import { decideAllocationCorrection, listAllocationCorrections, requestAllocationCorrection } from './ledger/corrections';
 import { countCash, emptyDonationBox, listCashCounts, moveCash } from './ledger/cash';
@@ -245,6 +246,9 @@ const batchPreviewMcpSchema = z.object({ ids: z.array(z.string()).min(1).optiona
 const voucherSearchMcpSchema = z.object({ rawTransactionId: z.string(), limit: z.number().int().min(1).max(50).optional() });
 const voucherToTransactionMcpSchema = z.object({ rawTransactionId: z.string(), contentBase64: z.string().min(1), typeKey: z.string().optional(), title: z.string().optional(), documentDate: z.string().optional(), entryTextIfNew: z.string().optional() });
 const vouchersWithoutEntryMcpSchema = z.object({ limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() });
+const invoiceDocumentMcpSchema = z.object({ documentId: z.string() });
+const openItemFromInvoiceMcpSchema = z.object({ documentId: z.string(), contactId: z.string().nullable().optional(), dueOn: z.string().nullable().optional() });
+const invoiceApplyMcpSchema = z.object({ entryId: z.string(), documentId: z.string() });
 
 /** Base64 prüfen und gegen `finance.uploadLimitMb` halten — wie `finance_voucher_upload`. */
 function voucherBytes(deps: Parameters<McpToolDefinition['handler']>[0], contentBase64: string): Uint8Array | ReturnType<typeof invalid> {
@@ -469,5 +473,9 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
     },
     service: attachVoucherToTransaction,
   }),
+  t({ name: 'finance_invoice_read', description: 'Read the ZUGFeRD/Factur-X invoice embedded in a filed PDF you may read: seller, number, dates, totals, tax rates, due date and payee iban, plus the tax code at the issue date, the cent difference between the invoice tax and the computed one (never stored) and the contact known for the iban. null when the PDF carries no invoice attachment. Read on demand, nothing is stored or audited. Requires finance.read.', inputSchema: invoiceDocumentMcpSchema, handler: (deps, ctx, args) => readInvoiceFromDocument(deps, ctx, args), service: readInvoiceFromDocument }),
+  t({ name: 'finance_invoice_proposal', description: 'What to do with the invoice of a filed PDF: noInvoice, unsupported (foreign currency, tools missing, unreadable xml), alreadyVoucher (with the entry), paid (one open bank statement line matches amount, date window and iban or invoice number), possiblyPaid (amount only - the candidates to choose from) or unpaid (with an existing open payment, if any). Changes nothing. Requires finance.read.', inputSchema: invoiceDocumentMcpSchema, handler: (deps, ctx, args) => invoiceProposal(deps, ctx, args), service: invoiceProposal }),
+  t({ name: 'finance_open_item_from_invoice', description: 'Create the open payment for an unpaid invoice of a filed PDF: issue date, amount due, due date, the document, the invoice number as payment reference and a line template with tax code and contact - never a category. One per document (openItemExistsForDocument); EUR only. contactId and dueOn override the invoice. Audited without seller, number or iban. Requires finance.entriesWrite.', inputSchema: openItemFromInvoiceMcpSchema, handler: (deps, ctx, args) => createOpenItemFromInvoice(deps, ctx, args), service: createOpenItemFromInvoice }),
+  t({ name: 'finance_invoice_apply_to_draft', description: 'Apply an invoice of a filed PDF to a draft entry: text from seller and invoice number, the contact of the payee iban on lines without a contact, the tax code on lines still carrying their category default, and the document attached as voucher unless it already is. Drafts only (invoiceNotDraft); EUR only. Requires finance.entriesWrite.', inputSchema: invoiceApplyMcpSchema, handler: (deps, ctx, args) => applyInvoiceToDraft(deps, ctx, args), service: applyInvoiceToDraft }),
   t({ name: 'finance_vouchers_without_entry', description: 'List filed documents of the voucher types (finance.voucherTypes) that no entry links yet, newest first - only what the caller may read in the file. Paginated (limit <= 200). Requires finance.read.', inputSchema: vouchersWithoutEntryMcpSchema, handler: (deps, ctx, args) => listVouchersWithoutEntry(deps, ctx, args), service: listVouchersWithoutEntry }),
 ];

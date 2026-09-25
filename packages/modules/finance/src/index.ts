@@ -202,3 +202,5 @@ export { bookFromTransaction, linkTransactionToEntry } from './import/book';
 export { listForeignMoney, markTransactionForeign, type ForeignMoneyItem } from './import/transit';
 export { previewBatchFinalize, type BatchAccountPreview, type BatchFinalizePreview } from './import/batch';
 export { amountSpellings, attachVoucherToTransaction, searchVouchersForTransaction, type VoucherSearchHit } from './import/vouchers';
+export { INVOICE_ATTACHMENT_NAMES, INVOICE_XML_MAX_BYTES, isInvoiceAttachmentName, parseFacturX, type InvoiceTax, type ParseInvoiceResult, type ParsedInvoice } from './import/zugferd/parse';
+export { applyInvoiceToDraft, createOpenItemFromInvoice, invoiceProposal, readInvoiceFromDocument, type InvoiceProposal, type InvoiceView } from './import/zugferd/read';
