@@ -242,6 +242,7 @@ export function checkConfirmableInternal(db: DbOrTx, deps: Deps, args: CheckConf
   add('typeActive', { done: typeActive, detail: typeActive ? {} : { type: CONFIRMATION_DOCUMENT_TYPE }, remedy: { href: '/admin/dms?panel=types', labelKey: 'activateType' } });
 
   // 9b. Unterzeichner — sperrt nie: Ohne vollständiges Verfahren entsteht die Bestätigung mit Unterschriftsfeld.
+  // R 10b.1 Abs. 4 S. 3 EStR: Die Regelung gilt nicht für Sach- und Aufwandsspenden.
   const expenseWaiver = lines.some((l) => l.incomeKind === 'expenseWaiver');
   const machine = machineProcedureStatusAt(db, args.issuedOn);
   const machineAllowed = kind === 'money' && !expenseWaiver;

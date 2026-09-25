@@ -45,6 +45,19 @@ describe('previewConfirmationRun', () => {
     ]);
   });
 
+  it('puts in-kind and expense-waiver items into needsSignature even with a complete machine procedure', async () => {
+    // R 10b.1 Abs. 4 S. 3 EStR: Die Regelung gilt nicht für Sach- und Aufwandsspenden.
+    const f = await donationFixture({ machine: true });
+    const waiver = await f.waive({ date: '2026-02-10', cents: 4200 });
+    const gift = await f.giveInKind({ date: '2026-02-20', cents: 25000 });
+    const proof = insertDocument(f, { subject: 'Rechnung der Transportbox' });
+    unwrap(await saveInKindDetails(f.deps, f.ctx, { lineId: gift.line.id, ...inKindDetails, proofDocumentId: proof }));
+
+    const preview = unwrap(await previewConfirmationRun(f.deps, f.ctx, { year: 2026 }));
+    expect(preview.items.find((i) => i.lineIds.includes(waiver.line.id))).toMatchObject({ kind: 'collectiveWaiver', group: 'needsSignature', signatureReason: 'expenseWaiver' });
+    expect(preview.items.find((i) => i.lineIds.includes(gift.line.id))).toMatchObject({ kind: 'inKind', group: 'needsSignature', signatureReason: 'inKind' });
+  });
+
   it('counts lines already confirmed singly and leaves them out', async () => {
     const f = await donationFixture();
     const single = await f.donate({ date: '2026-01-10', cents: 1000 });

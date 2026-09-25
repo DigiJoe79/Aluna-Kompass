@@ -184,6 +184,7 @@ export async function buildConfirmationInputInternal(deps: Deps, check: Confirma
   const contact = deps.db.select().from(contacts).where(eq(contacts.id, check.contactId)).get();
   if (!contact) return notFound('contact', check.contactId);
   const notice = deps.db.select().from(financeNotices).where(eq(financeNotices.id, check.notice.id)).get()!;
+  // R 10b.1 Abs. 4 S. 3 EStR: Die Regelung gilt nicht für Sach- und Aufwandsspenden.
   const machineAllowed = kind !== 'inKind' && !check.expenseWaiver;
   const signerRow = machineAllowed && check.machine.complete && check.machine.signer ? deps.db.select().from(financeSigners).where(eq(financeSigners.id, check.machine.signer.id)).get() : undefined;
   const facsimile = signerRow ? await readFacsimileInternal(deps, signerRow) : null;

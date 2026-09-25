@@ -204,6 +204,7 @@ export function previewConfirmationRunInternal(db: DbOrTx, deps: Deps, args: Run
           group = 'blocked';
           blockedBy = blocking[0]!.key;
         } else {
+          // R 10b.1 Abs. 4 S. 3 EStR: Die Regelung gilt nicht für Sach- und Aufwandsspenden.
           signatureReason = bucket.kind === 'collectiveWaiver' ? 'expenseWaiver' : bucket.kind === 'inKind' ? 'inKind' : checked.value.machine.complete ? null : 'machineIncomplete';
           group = signatureReason ? 'needsSignature' : 'ready';
           // Bereit wäre er — aber nur mit Begründung (Entscheidung zu Lauf 2); der Unterschriftsgrund bleibt für den Start stehen.

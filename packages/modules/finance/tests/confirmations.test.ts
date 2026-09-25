@@ -13,9 +13,10 @@ import {
   recordConfirmationDispatch,
   voidConfirmation,
 } from '../src/donations/confirmations';
+import { saveInKindDetails } from '../src/donations/in-kind';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
 import { financeConfirmationLines, financeConfirmations } from '../src/schema';
-import { allowHumanOnlyOverMcp, pdfBytes } from './helpers';
+import { allowHumanOnlyOverMcp, insertDocument, pdfBytes } from './helpers';
 import { donationFixture, err, type DonationFixture } from './donation-fixture';
 
 const auditOf = (f: DonationFixture, action: string) => f.deps.db.select().from(schema.auditLog).where(eq(schema.auditLog.action, action)).all();
@@ -82,12 +83,23 @@ describe('issueConfirmation', () => {
     expect(snapshot.input.facsimile).toBeUndefined();
   });
 
-  it('an expense waiver is always issued with a signature field, even with a complete machine procedure', async () => {
+  it('an expense waiver is always issued with a signature field, even with a complete machine procedure (R 10b.1 Abs. 4 S. 3 EStR)', async () => {
     const f = await donationFixture({ machine: true });
     const { line } = await f.waive();
     const confirmation = unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [line.id] }));
     expect(confirmation).toMatchObject({ kind: 'money', expenseWaiver: true, machine: false, signatureState: 'needsSignature' });
     expect(snapshotOf(f, confirmation.documentId).input).toMatchObject({ expenseWaiver: true, machine: false });
+  });
+
+  it('an in-kind confirmation is issued with a signature field even with a complete machine procedure (R 10b.1 Abs. 4 S. 3 EStR)', async () => {
+    const f = await donationFixture({ machine: true });
+    const gift = await f.giveInKind();
+    const proof = insertDocument(f, { subject: 'Rechnung der Transportbox' });
+    unwrap(await saveInKindDetails(f.deps, f.ctx, { lineId: gift.line.id, item: 'Transportbox aus Kunststoff', condition: 'gebraucht, guter Zustand', valuation: 'Kaufpreis laut Rechnung, abzüglich Gebrauch', origin: 'private', proofDocumentId: proof }));
+    const confirmation = unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [gift.line.id], kind: 'inKind' }));
+    expect(confirmation).toMatchObject({ kind: 'inKind', machine: false, signerId: null, facsimileChecksum: null, signatureState: 'needsSignature' });
+    expect(snapshotOf(f, confirmation.documentId).input).toMatchObject({ machine: false });
+    expect(snapshotOf(f, confirmation.documentId).images).toBeUndefined();
   });
 
   it('refuses a second confirmation on the same line inside afterIssue and leaves no document behind', async () => {
