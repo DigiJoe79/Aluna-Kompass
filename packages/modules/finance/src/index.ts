@@ -268,6 +268,8 @@ export {
   type UncertifiedGroup,
 } from './donations/confirmations';
 export { getInKindDetails, saveInKindDetails } from './donations/in-kind';
+// Serienlauf (F6b): Typen und die Vorschau ohne Rechteprüfung; die Dienste kommen mit ihren MCP-Werkzeugen (Task 6).
+export { previewConfirmationRunInternal, type RunBlocked, type RunItemKind, type RunPreview, type RunPreviewArgs, type RunPreviewGroup, type RunPreviewItem, type RunSignatureReason } from './donations/runs';
 export { countToCorrectInternal, toCorrectConfirmationsInternal, toCorrectReasonsInternal, type ToCorrectReason } from './donations/to-correct';
 export { confirmationContactLock, confirmationEntryLock } from './donations/locks';
 export { ENTRY_LOCKS, registerEntryLocks, type EntryLock } from './locks';
