@@ -2387,7 +2387,8 @@
       "newCsvFormat": "Neues CSV-Format einrichten",
       "reloadWork": "Liste neu laden",
       "openJournal": "Zum Journal",
-      "setUpCategories": "Kategorien einrichten"
+      "setUpCategories": "Kategorien einrichten",
+      "openConfirmations": "Zu den Bestätigungen"
     },
     "state": {
       "draft": "Entwurf",
@@ -2727,6 +2728,13 @@
           "applied": "Die Zuordnung wurde sofort geändert.",
           "pending": "Die Änderung wartet auf die Freigabe einer zweiten Person.",
           "pendingWithNames": "Die Änderung wartet auf die Freigabe einer zweiten Person — freigeben kann: {names}."
+        },
+        "confirmation": {
+          "intro": "Auf dieser Zeile liegt die Bestätigung {number}. Erst wird sie zurückgenommen, dann korrigiert, dann neu ausgestellt.",
+          "step1": "Bestätigung {number} zurücknehmen",
+          "step2": "Korrigieren",
+          "step3": "Neu ausstellen",
+          "noRight": "Zurücknehmen darf, wer Zuwendungsbestätigungen ausstellt."
         }
       }
     },
@@ -3844,6 +3852,257 @@
         "apply": "Angaben aus der Rechnung übernehmen",
         "skip": "Ohne Angaben weiter",
         "applied": "Angaben aus der Rechnung übernommen."
+      }
+    },
+    "donations": {
+      "title": "Zuwendungsbestätigungen",
+      "description": "Ausgestellte Bestätigungen, Zuwendungen ohne Bestätigung und was noch zu tun ist.",
+      "tabsGroup": "Ansicht",
+      "tabs": {
+        "issued": "Ausgestellt",
+        "uncertified": "Noch nicht bestätigt",
+        "toCorrect": "Zu korrigieren ({count})",
+        "needsSignature": "Unterschrift fehlt ({count})"
+      },
+      "columns": {
+        "number": "Nummer",
+        "issuedOn": "Datum",
+        "contact": "Spender",
+        "kind": "Art",
+        "amount": "Betrag",
+        "period": "Zeitraum",
+        "sent": "Versandt",
+        "state": "Zustand"
+      },
+      "kind": {
+        "money": "Geld",
+        "inKind": "Sache",
+        "collective": "Sammel"
+      },
+      "state": {
+        "valid": "gültig",
+        "voided": "zurückgenommen",
+        "toCorrect": "zu korrigieren"
+      },
+      "toCorrectReason": {
+        "noticeSuperseded": "Bescheid aufgehoben oder ersetzt",
+        "noticeVoided": "Bescheid irrtümlich erfasst",
+        "lineReversed": "Buchung zurückgenommen",
+        "lineReturned": "Zahlung zurückgegeben",
+        "contactChanged": "Spender geändert"
+      },
+      "sentVia": {
+        "post": "Post",
+        "email": "E-Mail",
+        "handed": "persönlich übergeben"
+      },
+      "sentValue": "{date} · {via}",
+      "noticeKind": {
+        "section60a": "vorläufige Anerkennung (§ 60a)",
+        "exemptionNotice": "Freistellungsbescheid",
+        "corporateTaxNoticeAttachment": "Anlage zum Körperschaftsteuerbescheid"
+      },
+      "empty": {
+        "issued": {
+          "title": "Noch keine Bestätigung ausgestellt",
+          "text": "Ausgestellt wird unter „Noch nicht bestätigt“ oder aus der Buchung heraus."
+        },
+        "toCorrect": {
+          "title": "Nichts zu korrigieren",
+          "text": "Wird ein Bescheid ersetzt oder eine bestätigte Buchung zurückgenommen, steht die Bestätigung hier."
+        },
+        "needsSignature": {
+          "title": "Keine Unterschrift offen",
+          "text": "Bestätigungen mit Unterschriftsfeld stehen hier, bis die unterschriebene Fassung abgelegt ist."
+        }
+      },
+      "detail": {
+        "lines": "Zuwendungen",
+        "notice": "Bescheid",
+        "noticeValue": "{kind} vom {date}",
+        "signature": "Unterschrift",
+        "machine": "maschinell erstellt",
+        "signed": "unterschriebene Fassung abgelegt",
+        "needsSignature": "Unterschrift fehlt",
+        "voidedOn": "Zurückgenommen am {date}.",
+        "copy": "Unser Exemplar (PDF)",
+        "dispatch": "Versand vermerken",
+        "void": "Bestätigung zurücknehmen"
+      },
+      "checks": {
+        "final": "Buchung festgeschrieben",
+        "certifiable": "Einnahme, für die es eine Bestätigung gibt",
+        "contactComplete": "Name und Anschrift des Spenders vollständig",
+        "organizationAddress": "Name und Anschrift des Vereins vollständig",
+        "notConfirmed": "Noch nicht bestätigt",
+        "noticeValid": "Gültiger Bescheid am Ausstellungstag",
+        "amountPositive": "Betrag nach Rückgaben über null",
+        "documented": "Buchung belegt",
+        "inKindDetails": "Sachspende beschrieben",
+        "typeActive": "Dokumentart für Bestätigungen aktiv",
+        "signerValid": "Maschinelles Verfahren",
+        "expenseWaiverEnabled": "Aufwandsspenden eingeschaltet"
+      },
+      "fields": {
+        "lastName": "Nachname",
+        "name": "Name",
+        "street": "Straße",
+        "postalCode": "Postleitzahl",
+        "city": "Ort",
+        "contact": "Kontakt",
+        "item": "Gegenstand",
+        "condition": "Zustand",
+        "valuation": "Wertermittlung",
+        "origin": "Herkunft",
+        "proofDocumentId": "Wertunterlage",
+        "withdrawalValueCents": "Entnahmewert",
+        "vatCents": "Umsatzsteuer"
+      },
+      "remedy": {
+        "finalizeEntry": "Buchung festschreiben",
+        "openEntry": "Buchung öffnen",
+        "fixCategory": "Kategorie prüfen",
+        "completeAddress": "Anschrift ergänzen",
+        "openConfirmation": "Bestätigung öffnen",
+        "recordNotice": "Bescheid erfassen",
+        "attachVoucher": "Beleg nachreichen",
+        "describeInKind": "Sachspende beschreiben",
+        "activateType": "Dokumentart aktivieren",
+        "setupMachine": "Maschinelles Verfahren einrichten",
+        "enableExpenseWaivers": "Aufwandsspenden einschalten",
+        "completeOrganization": "Vereinsdaten ergänzen"
+      },
+      "issue": {
+        "title": "Zuwendungsbestätigung ausstellen",
+        "loading": "Die Voraussetzungen werden geprüft …",
+        "requirements": "Voraussetzungen",
+        "done": "erfüllt",
+        "missing": "fehlt",
+        "detail": {
+          "notice": "{kind} vom {date}, gültig bis {until}",
+          "noNotice": "Am {date} trägt kein Bescheid.",
+          "missing": "Es fehlt: {fields}",
+          "confirmed": "Schon bestätigt mit {number}.",
+          "category": "Kategorie „{category}“",
+          "machine": "Die Bestätigung trägt das Faksimile und den Hinweis zum maschinellen Verfahren.",
+          "signatureField": "Die Bestätigung trägt ein Unterschriftsfeld und wird von Hand unterschrieben."
+        },
+        "warnings": {
+          "organization": "Bestätigungen an Organisationen sind selten; prüfen Sie den Empfänger.",
+          "foreignCountry": "Die Anschrift liegt im Ausland; prüfen Sie, ob die Bestätigung passt.",
+          "beforeOldestNotice": "Die Zuwendung liegt vor dem ältesten erfassten Bescheid.",
+          "preNoticeReason": "Warum ist die Bestätigung trotzdem richtig?"
+        },
+        "preview": "Vorschau",
+        "previewTitle": "Vorschau der Zuwendungsbestätigung",
+        "previewWaiting": "Die Vorschau erscheint, sobald keine Voraussetzung mehr fehlt.",
+        "previewLoading": "Die Vorschau wird erstellt …",
+        "previewFailed": "Die Vorschau ließ sich nicht erstellen: {message}",
+        "issuedOn": "Ausstellungsdatum",
+        "signatureLabel": "Unterschrift",
+        "signatureMode": {
+          "machine": "maschinell erstellt",
+          "signatureField": "mit Unterschriftsfeld"
+        },
+        "humanOnly": "Ausstellen kann nur ein Mensch — nicht über ein Werkzeug für Agenten.",
+        "cancel": "Abbrechen",
+        "submit": "Ausstellen",
+        "toast": {
+          "issued": "Bestätigung {number} ausgestellt"
+        }
+      },
+      "inKind": {
+        "title": "Angaben zur Sachspende",
+        "item": "Gegenstand",
+        "condition": "Zustand und Alter",
+        "value": "Wert",
+        "valueHint": "Aus der Buchung — geändert wird er dort.",
+        "valuation": "Wie wurde der Wert ermittelt?",
+        "origin": "Herkunft",
+        "originOptions": {
+          "private": "Privatvermögen",
+          "business": "Betriebsvermögen"
+        },
+        "withdrawalValue": "Entnahmewert",
+        "vat": "Umsatzsteuer",
+        "proof": "Wertunterlage",
+        "proofKept": "Eine Wertunterlage ist schon hinterlegt; sie bleibt, solange Sie keine andere wählen.",
+        "save": "Angaben speichern",
+        "toast": {
+          "saved": "Angaben zur Sachspende gespeichert"
+        }
+      },
+      "void": {
+        "title": "Bestätigung {number} zurücknehmen",
+        "reason": "Grund",
+        "alreadySent": "Bereits versandt?",
+        "trailHint": "Ist die Bestätigung schon beim Spender, gehört die Rückholspur dazu: Original zurückfordern und das Finanzamt informieren.",
+        "originalReturnedOn": "Original zurück am",
+        "taxOfficeInformedOn": "Finanzamt informiert am",
+        "consequences": {
+          "lines": "{count, plural, one {Zuwendung wird wieder bestätigbar} other {Zuwendungen werden wieder bestätigbar}}"
+        },
+        "stays": {
+          "copy": "Unser Exemplar bleibt in der Akte.",
+          "number": "Die Nummer {number} bleibt vergeben."
+        },
+        "cancel": "Abbrechen",
+        "submit": "Bestätigung zurücknehmen",
+        "toast": {
+          "done": "Bestätigung {number} zurückgenommen"
+        }
+      },
+      "dispatch": {
+        "title": "Versand von {number} vermerken",
+        "sentAt": "Versandt am",
+        "sentVia": "Weg",
+        "cancel": "Abbrechen",
+        "submit": "Vermerken",
+        "toast": {
+          "done": "Versand von {number} vermerkt"
+        }
+      },
+      "uncertified": {
+        "filterBefore": "Spenden ab",
+        "filterAfter": "ohne Bestätigung",
+        "apply": "Anwenden",
+        "reset": "Alle zeigen",
+        "sum": "Summe {amount}",
+        "addressMissing": "Anschrift fehlt",
+        "completeAddress": "Anschrift ergänzen",
+        "issue": "Ausstellen",
+        "empty": {
+          "title": "Alles bestätigt",
+          "text": "Es gibt keine festgeschriebene Zuwendung ohne gültige Bestätigung."
+        }
+      },
+      "signature": {
+        "done": "erledigt",
+        "open": "offen",
+        "steps": {
+          "created": "Bestätigung erzeugt",
+          "print": "Drucken und unterschreiben",
+          "printHint": "Unser Exemplar ausdrucken und von Hand unterschreiben lassen.",
+          "printAction": "Unser Exemplar öffnen",
+          "upload": "Unterschriebene Fassung als Eingang ablegen",
+          "linked": "Mit der Bestätigung verknüpft"
+        },
+        "empty": {
+          "title": "Keine Unterschrift offen",
+          "text": "Bestätigungen mit Unterschriftsfeld stehen hier, bis die unterschriebene Fassung abgelegt ist."
+        },
+        "toast": {
+          "done": "Unterschriebene Fassung {number} abgelegt",
+          "doneWithoutNumber": "Unterschriebene Fassung abgelegt"
+        }
+      },
+      "entrySection": {
+        "title": "Bestätigung",
+        "confirmed": "Bestätigung {number} vom {date}",
+        "none": "keine",
+        "noContact": "keine — ohne Spender nicht bestätigbar",
+        "noDonation": "keine — kein Spendeneingang",
+        "issue": "Ausstellen"
       }
     }
   }

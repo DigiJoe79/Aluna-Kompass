@@ -23,6 +23,9 @@ const REMEDIES: Record<string, Remedy[]> = {
   suggestionStale: [{ kind: 'action', action: 'reloadWork', labelKey: 'finance.remedy.reloadWork' }],
   transactionAlreadyBooked: [{ kind: 'link', href: '/finance/entries', labelKey: 'finance.remedy.openJournal' }],
   categoryInactive: [{ kind: 'link', href: '/admin/finance?panel=categories', labelKey: 'finance.remedy.setUpCategories' }],
+  // F6a Task 7: eine gültige Bestätigung sperrt Rücknahme und Kontaktkorrektur — zuerst sie zurücknehmen.
+  entryLockedByConfirmation: [{ kind: 'link', href: '/finance/donations', labelKey: 'finance.remedy.openConfirmations' }],
+  contactLockedByConfirmation: [{ kind: 'link', href: '/finance/donations', labelKey: 'finance.remedy.openConfirmations' }],
 };
 
 /** 1–3 Auswege je Fehlerschlüssel; ein unbekannter Code liefert keinen. */

@@ -1,12 +1,13 @@
 import { hasPermission } from '@kompass/core';
 import type { LocalizedText } from '@kompass/core';
 import { displayName, getContact } from '@kompass/module-contacts';
-import { getEntry, getEntryHistory, listAccounts, listCategories, listFiscalYears, listOpenItems, listPurposes } from '@kompass/module-finance';
+import { CERTIFIABLE_INCOME_KINDS, getEntry, getEntryHistory, listAccounts, listCategories, listConfirmations, listFiscalYears, listOpenItems, listPurposes } from '@kompass/module-finance';
 import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { AmountCell } from '@/components/finance/amount-cell';
+import { ConfirmationSection, type ConfirmationSectionLine } from '@/components/finance/confirmation-section';
 import { EntryStateBadge } from '@/components/finance/entry-state-badge';
 import { LockLine } from '@/components/finance/lock-line';
 import { ForbiddenCard } from '@/components/forbidden-card';
@@ -71,6 +72,28 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
   const openItemById = new Map((openItemsRes?.ok ? openItemsRes.value.items : []).filter((i) => settlementItemIds.has(i.id)).map((i) => [i.id, i]));
   const settlements = entry.moneyLines.flatMap((line) => line.settlements.map((s) => ({ settlement: s, item: openItemById.get(s.openItemId) })));
 
+  // Abschnitt „Bestätigung“ (F6a Task 7): je bescheinigungsfähiger Zeile die gültige Bestätigung, gelesen über die Liste des Kontakts.
+  const incomeKinds = new Map(categories.map((c) => [c.id, c.incomeKind]));
+  const certifiableLines = entry.allocationLines.filter((l) => l.amountCents > 0 && (CERTIFIABLE_INCOME_KINDS as readonly string[]).includes(incomeKinds.get(l.categoryId) ?? ''));
+  const confirmationByLine = new Map<string, { id: string; number: string; issuedOn: string }>();
+  const confirmationContacts = [...new Set(certifiableLines.map((l) => l.contactId).filter((v): v is string => !!v))];
+  const confirmationLists = await Promise.all(confirmationContacts.map((contactId) => listConfirmations(deps, ctx, { tab: 'issued', contactId, limit: 200 })));
+  for (const list of confirmationLists) {
+    if (!list.ok) continue;
+    for (const c of list.value.items) {
+      if (c.state !== 'valid') continue;
+      for (const l of c.lines) if (l.releasedAt === null) confirmationByLine.set(l.lineId, { id: c.id, number: c.documentNumber, issuedOn: c.issuedOn });
+    }
+  }
+  const confirmationLines: ConfirmationSectionLine[] = certifiableLines.map((l) => ({
+    lineId: l.id,
+    label: [categoryNames.get(l.categoryId) ?? l.categoryId, l.contactId ? (contactNames.get(l.contactId) ?? '') : null].filter((v): v is string => !!v).join(' · '),
+    amountCents: l.amountCents,
+    hasContact: l.contactId !== null,
+    confirmation: confirmationByLine.get(l.id) ?? null,
+  }));
+  const today = deps.clock.now().toISOString().slice(0, 10);
+
   const vouchers = entry.vouchers.map((v) => ({
     linkId: v.linkId,
     documentNumber: v.documentNumber,
@@ -104,7 +127,17 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
             {t('reverses')} <Link className="underline" href={`/finance/entries/${entry.reversesEntryId}`}>{t('open')}</Link>
           </p>
         ) : null}
-        {!reversed && canCorrect ? <CorrectDialog entry={entry} purposes={purposes} projects={projects} contactNames={contactNames} categoryNames={categoryNames} /> : null}
+        {!reversed && canCorrect ? (
+          <CorrectDialog
+            entry={entry}
+            purposes={purposes}
+            projects={projects}
+            contactNames={contactNames}
+            categoryNames={categoryNames}
+            confirmations={Object.fromEntries(confirmationByLine)}
+            canVoidConfirmation={hasPermission(ctx, 'finance.donationsIssue')}
+          />
+        ) : null}
       </section>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
@@ -172,6 +205,10 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
                 ))}
               </ul>
             </section>
+          ) : null}
+
+          {entry.status === 'final' && !entry.reversesEntryId ? (
+            <ConfirmationSection lines={confirmationLines} canIssue={!reversed && hasPermission(ctx, 'finance.donationsIssue')} canDescribe={hasPermission(ctx, 'finance.entriesWrite')} today={today} />
           ) : null}
 
           <EntryHistory events={events} />

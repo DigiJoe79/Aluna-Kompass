@@ -15,6 +15,7 @@ import { Select } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { formatEuro } from '@/lib/finance/amount';
 import { changesOf, correctionPath, selectableLines, type CorrectableLine } from '@/lib/finance/correction';
+import { VoidForm } from '@/app/(shell)/finance/donations/void-dialog';
 import { reverseEntryAction, requestCorrectionAction, uploadCorrectionProofAction } from '../actions';
 
 type PartyGroup = { contact: boolean; project: boolean; purpose: boolean; abroad: boolean };
@@ -31,12 +32,17 @@ export function CorrectDialog({
   projects,
   contactNames,
   categoryNames,
+  confirmations = {},
+  canVoidConfirmation = false,
 }: {
   entry: CorrectDialogEntry;
   purposes: { id: string; name: string }[];
   projects: { id: string; name: string }[];
   contactNames: Map<string, string>;
   categoryNames: Map<string, string>;
+  /** Gültige Bestätigungen je Zuordnungszeile (F6a Task 7) — auf einer solchen Zeile führt der Dialog den Dreischritt. */
+  confirmations?: Record<string, { id: string; number: string }>;
+  canVoidConfirmation?: boolean;
 }) {
   const t = useTranslations('finance.entryView.correct');
   const router = useRouter();
@@ -57,11 +63,14 @@ export function CorrectDialog({
   const [proofDocumentId, setProofDocumentId] = useState<string | null>(null);
   const [proofArchiveOpen, setProofArchiveOpen] = useState(false);
   const [acknowledgeSection153, setAcknowledgeSection153] = useState(false);
+  const [voidingConfirmation, setVoidingConfirmation] = useState(false);
 
   // Bei genau einer Aufteilungszeile entfällt der Auswahlschritt (Task 1).
   const autoPicked = entry.allocationLines.length === 1 ? entry.allocationLines[0]! : null;
   const needsPick = entry.allocationLines.length > 1;
   const pickedLine: CorrectableLine | null = autoPicked ?? entry.allocationLines.find((l) => l.id === pickedLineId) ?? null;
+  // Liegt eine gültige Bestätigung auf der Zeile, gibt es erst den Dreischritt: zurücknehmen → korrigieren → neu ausstellen.
+  const lineConfirmation = pickedLine ? (confirmations[pickedLine.id] ?? null) : null;
   const selectableIds = new Set(selectableLines(entry.allocationLines).map((l) => l.id));
 
   const allocationKeys = (Object.keys(party) as (keyof PartyGroup)[]).filter((k) => party[k]);
@@ -94,6 +103,7 @@ export function CorrectDialog({
     setProofDocumentId(null);
     setProofArchiveOpen(false);
     setAcknowledgeSection153(false);
+    setVoidingConfirmation(false);
   };
 
   const runCorrection = async (proofId?: string, ack?: boolean) => {
@@ -198,6 +208,40 @@ export function CorrectDialog({
                   );
                 })}
               </ul>
+            </div>
+          ) : pickedLine && lineConfirmation ? (
+            <div data-testid="correction-three-steps" className="space-y-3">
+              <p className="text-[13px] text-ink-2">{t('confirmation.intro', { number: lineConfirmation.number })}</p>
+              <ol className="space-y-2 text-[13px]">
+                <li className="flex flex-wrap items-center gap-2">
+                  <span className="flex size-6 items-center justify-center rounded-full bg-selected font-semibold text-selected-ink">1</span>
+                  {canVoidConfirmation ? (
+                    <Button type="button" variant="outline" size="sm" onClick={() => setVoidingConfirmation(true)}>
+                      {t('confirmation.step1', { number: lineConfirmation.number })}
+                    </Button>
+                  ) : (
+                    <span className="font-semibold text-ink">{t('confirmation.step1', { number: lineConfirmation.number })}</span>
+                  )}
+                </li>
+                <li className="flex items-center gap-2 text-ink-2">
+                  <span className="flex size-6 items-center justify-center rounded-full border border-line-strong font-semibold">2</span>
+                  {t('confirmation.step2')}
+                </li>
+                <li className="flex items-center gap-2 text-ink-2">
+                  <span className="flex size-6 items-center justify-center rounded-full border border-line-strong font-semibold">3</span>
+                  {t('confirmation.step3')}
+                </li>
+              </ol>
+              {!canVoidConfirmation ? <p className="text-[12px] text-muted-ink">{t('confirmation.noRight')}</p> : null}
+              {voidingConfirmation ? (
+                <div className="border-t border-line pt-3">
+                  <VoidForm
+                    confirmation={{ id: lineConfirmation.id, number: lineConfirmation.number, lineCount: 1, sent: false }}
+                    onDone={() => setVoidingConfirmation(false)}
+                    onCancel={() => setVoidingConfirmation(false)}
+                  />
+                </div>
+              ) : null}
             </div>
           ) : pickedLine ? (
             <>
@@ -324,7 +368,7 @@ export function CorrectDialog({
             <Button type="button" variant="ghost" onClick={close}>
               {t('cancel')}
             </Button>
-            {path === 'allocation' ? (
+            {lineConfirmation ? null : path === 'allocation' ? (
               <Button type="button" disabled={note.trim().length === 0 || nothingChanged} onClick={() => void submitAllocation()}>
                 {t('submitAllocation')}
               </Button>

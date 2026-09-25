@@ -33,4 +33,9 @@ describe('remediesFor', () => {
     expect(remediesFor('transactionAlreadyBooked')).toEqual([{ kind: 'link', href: '/finance/entries', labelKey: 'finance.remedy.openJournal' }]);
     expect(remediesFor('categoryInactive')).toEqual([{ kind: 'link', href: '/admin/finance?panel=categories', labelKey: 'finance.remedy.setUpCategories' }]);
   });
+
+  it('leads from a lock by a confirmation to the confirmations (F6a Task 7)', () => {
+    expect(remediesFor('entryLockedByConfirmation')).toEqual([{ kind: 'link', href: '/finance/donations', labelKey: 'finance.remedy.openConfirmations' }]);
+    expect(remediesFor('contactLockedByConfirmation')).toEqual([{ kind: 'link', href: '/finance/donations', labelKey: 'finance.remedy.openConfirmations' }]);
+  });
 });
