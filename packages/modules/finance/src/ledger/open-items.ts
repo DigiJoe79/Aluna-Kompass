@@ -278,7 +278,12 @@ export async function listOpenItemSettlements(deps: Deps, ctx: CallContext, inpu
   const item = deps.db.select({ id: financeOpenItems.id }).from(financeOpenItems).where(eq(financeOpenItems.id, parsed.value.openItemId)).get();
   if (!item) return notFound('financeOpenItem', parsed.value.openItemId);
 
-  const rows = deps.db
+  return ok(openItemSettlementsInternal(deps.db, parsed.value.openItemId));
+}
+
+/** Die festgeschriebenen, nicht stornierten Zahlungen eines Postens, ohne Rechteprüfung — für „ausgezahlt am“ der Auslagen (F8a). */
+export function openItemSettlementsInternal(db: DbOrTx, openItemId: string): OpenItemSettlementView[] {
+  const rows = db
     .select({
       entryId: financeEntries.id, entryNumber: financeEntries.number, entryDate: financeEntries.entryDate,
       amountCents: financeOpenItemSettlements.amountCents, status: financeEntries.status, reversedByEntryId: financeEntries.reversedByEntryId,
@@ -286,10 +291,9 @@ export async function listOpenItemSettlements(deps: Deps, ctx: CallContext, inpu
     .from(financeOpenItemSettlements)
     .innerJoin(financeMoneyLines, eq(financeOpenItemSettlements.moneyLineId, financeMoneyLines.id))
     .innerJoin(financeEntries, eq(financeMoneyLines.entryId, financeEntries.id))
-    .where(eq(financeOpenItemSettlements.openItemId, parsed.value.openItemId))
+    .where(eq(financeOpenItemSettlements.openItemId, openItemId))
     .all();
-  const settlements = rows
+  return rows
     .filter((r) => r.status === 'final' && r.reversedByEntryId === null)
     .map((r) => ({ entryId: r.entryId, entryNumber: r.entryNumber, amountCents: r.amountCents, entryDate: r.entryDate }));
-  return ok(settlements);
 }

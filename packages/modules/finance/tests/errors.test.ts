@@ -59,7 +59,7 @@ describe('finance errors', () => {
     const codes = [
       'expenseNeedsContactLink', 'expenseNotDraft', 'expenseNotSubmitted', 'expenseNothingToSubmit', 'expensePositionNeedsReceipt', 'expenseTripNeedsKm', 'expenseIbanOrWaiver',
       'expenseOwnClaim', 'expenseSameContact', 'expenseCategoryRequired', 'expenseWaiversDisabled', 'waiverAgreedAfterPosition', 'waiverLateNeedsReason', 'waiverFundsInsufficient',
-      'waiverDeclarationMissing', 'waiverNotConfirmed', 'expenseFileNotPdf', 'expenseFileTooLarge', 'expenseNotOwner',
+      'waiverDeclarationMissing', 'waiverNotConfirmed', 'expenseFileNotPdf', 'expenseFileTooLarge', 'expenseNotOwner', 'expenseNotRejected',
     ];
     for (const code of codes) expect(Object.keys(FINANCE_ERRORS), code).toContain(code);
     expect(financeConflict('expenseNeedsContactLink', { names: 'Jonas Feld, Erika Beispiel' })).toMatchObject({ error: { code: 'expenseNeedsContactLink', message: expect.stringContaining('Jonas Feld, Erika Beispiel') } });
