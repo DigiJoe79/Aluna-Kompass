@@ -161,7 +161,8 @@ test.describe('finance donation run', () => {
     await expect(issuedRow(page, 'Sportfreunde Beispieltal')).toContainText('Post');
     await expect(issuedRow(page, 'Henrik Brandt').filter({ hasText: 'Sammel' })).toContainText('Post');
     await expect(issuedRow(page, 'Lukas Hofmann').filter({ hasText: 'Sammel' })).not.toContainText('Post');
-    await expect(page.getByRole('tab', { name: 'Unterschrift fehlt (2)' })).toBeVisible();
+    // Dazu Sina Krügers Aufwandsspende aus dem Serienlauf des Vorjahrs — auch sie ohne Unterschrift.
+    await expect(page.getByRole('tab', { name: 'Unterschrift fehlt (3)' })).toBeVisible();
     await page.goto('/finance/donations?tab=needsSignature');
     await expect(page.getByTestId('signature-steps').filter({ hasText: '36,00 €' })).toBeVisible();
   });
@@ -191,8 +192,9 @@ test.describe('finance donation run', () => {
     await page.getByTestId('run-footer').getByRole('button', { name: '1 Bestätigung ausstellen' }).click();
     await expect(step(page, 'result')).toHaveAttribute('aria-current', 'step', { timeout: 20_000 });
     await expect(page.getByTestId('run-summary')).toHaveText('1 von 1 Bestätigung ausgestellt');
+    // Dazu der abgeschlossene Serienlauf des Vorjahrs aus dem Seed — eine Zeile, die hier immer mitzählt.
     const rows = page.getByTestId('run-row');
-    await expect(rows).toHaveCount(2);
+    await expect(rows).toHaveCount(3);
     await expect(rows.filter({ hasText: 'Nachzügler' })).toHaveCount(1);
   });
 
@@ -208,9 +210,11 @@ test.describe('finance donation run', () => {
     await expect(page.getByRole('button', { name: /ausstellen$/ })).toHaveCount(0);
     await expect(page.getByTestId('run-footer')).toContainText('Ausstellen braucht das Recht „Zuwendungsbestätigungen ausstellen“.');
 
+    // Dazu der abgeschlossene Serienlauf des Vorjahrs aus dem Seed — sein Versandvermerk („Post“) unterscheidet
+    // ihn von diesem Lauf, der noch keinen trägt.
     const row = page.getByTestId('run-row');
-    await expect(row).toHaveCount(1);
-    await row.getByRole('link', { name: 'Öffnen' }).click();
+    await expect(row).toHaveCount(2);
+    await row.filter({ hasNotText: 'Post' }).getByRole('link', { name: 'Öffnen' }).click();
     await expect(page.getByTestId('run-summary')).toHaveText('3 von 3 Bestätigungen ausgestellt');
     await expect(page.getByRole('button', { name: 'Maschinelle Bestätigungen (PDF) · 2' })).toBeEnabled();
     await expect(page.getByRole('button', { name: 'Versand für alle vermerken' })).toHaveCount(0);

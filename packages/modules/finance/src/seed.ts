@@ -28,6 +28,7 @@ import { attachSignedConfirmation, issueConfirmation, recordConfirmationDispatch
 import { saveInKindDetails } from './donations/in-kind';
 import { saveSigner, uploadFacsimile } from './donations/machine';
 import { saveNotice, supersedeNotice } from './donations/notices';
+import { continueConfirmationRun, dispatchRunConfirmations, startConfirmationRun } from './donations/runs';
 import { setFinanceSwitch } from './ledger/setup';
 import { buildCamt053Bytes } from './import/camt-fixture';
 import { buildOfficeInvoicePdf, buildVetInvoicePdf } from './import/zugferd-fixture';
@@ -46,6 +47,7 @@ import {
   financeMoneyLines,
   financeOpenItems,
   financeConfirmationLines,
+  financeConfirmationRuns,
   financeConfirmations,
   financeNotices,
   financePurposes,
@@ -555,6 +557,11 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   // belegt, solange das Jahr noch offen ist.
   await seedProvisionalNoticeDonation(deps, ctx);
 
+  // F6b Task 9: die Buchungen für den Serienlauf des Vorjahrs — vor dem Abschluss, solange das Jahr
+  // noch offen ist. Der Lauf selbst startet erst später (`seedConfirmationRun`), wenn Bescheid,
+  // Unterzeichner und Aufwandsspenden-Schalter stehen (aus `seedDonations`).
+  await seedRunDonationEntries(deps, ctx, previousYear);
+
   const previousFiscalYear = deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.designation, String(previousYear))).get();
   if (previousFiscalYear) {
     const alreadyClosed = fiscalYearStatusInternal(deps.db, previousFiscalYear.id) === 'closed';
@@ -565,6 +572,10 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
       // F3a-N Task 1: „Sponsoring Altjahr“ bleibt ebenfalls ohne Beleg — nur ihre geteilte Zuordnung zählt hier.
       const sponsoringAltjahrForJustify = entryByText(deps, 'Sponsoring Altjahr');
       unwrap(await justifyUndocumentedEntry(deps, ctx, { entryId: sponsoringAltjahrForJustify.id, note: 'Sponsoringzusage ohne Rechnung erhalten' }));
+      // F6b Task 9: „Spende Jan Moser Vorjahr“ bleibt ohne Anschrift und ohne Beleg — genau die Zeile, die
+      // der Serienlauf später als „Anschrift fehlt“ überspringt.
+      const janMoserForJustify = entryByText(deps, 'Spende Jan Moser Vorjahr');
+      unwrap(await justifyUndocumentedEntry(deps, ctx, { entryId: janMoserForJustify.id, note: 'Anschrift fehlt noch, Nachweis liegt bei den Unterlagen' }));
       unwrap(await closeFiscalYear(deps, ctx, { id: previousFiscalYear.id }));
     }
 
@@ -628,6 +639,10 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
 
   // F6a (aus Task 9 vorgezogen): Bescheid, maschinelles Verfahren, Bestätigungen in ihren Zuständen.
   await seedDonations(deps, ctx, currentYear);
+
+  // F6b Task 9: der abgeschlossene Serienlauf des Vorjahrs mit Versandvermerk, dazu die Rücklastschrift
+  // einer Spende, die in einer Sammelbestätigung stand (Prüfstein 6).
+  await seedConfirmationRun(deps, ctx, previousYear, currentYear);
 }
 
 async function grantAuditorRoleToMiraKlein(deps: Deps, ctx: CallContext): Promise<void> {
@@ -1059,4 +1074,105 @@ async function seedDonations(deps: Deps, ctx: CallContext, currentYear: number):
     if (!henrikConfirmation.sentAt) unwrap(await recordConfirmationDispatch(deps, ctx, { id: henrikConfirmation.id, sentAt: `${currentYear}-03-27`, sentVia: 'post' }));
     unwrap(await voidConfirmation(deps, ctx, { id: henrikConfirmation.id, note: 'Betrag doppelt bestätigt', alreadySent: true, originalReturnedOn: `${currentYear}-04-09` }));
   }
+}
+
+/**
+ * F6b Task 9: die Buchungen für den Serienlauf des Vorjahrs — zwei
+ * maschinelle Geldspenden (Nora Lehmann, Paul Winter), eine Aufwandsspende
+ * mit Unterschriftsfeld (Sina Krüger) und eine Spende ohne Anschrift (Jan
+ * Moser, bleibt „Anschrift fehlt“). Läuft vor dem Abschluss des Vorjahrs
+ * (`seedFinance`), solange darin noch gebucht werden darf; der Lauf selbst
+ * startet erst in `seedConfirmationRun`, wenn Bescheid, Unterzeichner und
+ * Aufwandsspenden-Schalter stehen.
+ */
+async function seedRunDonationEntries(deps: Deps, ctx: CallContext, previousYear: number): Promise<void> {
+  const bank = accountByName(deps, 'Vereinskonto');
+  const donations = categoryByKey(deps, 'donations');
+  const waivers = categoryByKey(deps, 'expense-waivers');
+  const travel = categoryByKey(deps, 'travel');
+
+  const nora = await ensureDonationContact(deps, ctx, { kind: 'person', firstName: 'Nora', lastName: 'Lehmann' }, { street: 'Kastanienweg 4', postalCode: '12341', city: 'Musterstadt' });
+  const paul = await ensureDonationContact(deps, ctx, { kind: 'person', firstName: 'Paul', lastName: 'Winter' }, { street: 'Ahornstraße 11', postalCode: '12342', city: 'Musterstadt' });
+  const sina = await ensureDonationContact(deps, ctx, { kind: 'person', firstName: 'Sina', lastName: 'Krüger' }, { street: 'Fliederweg 6', postalCode: '12346', city: 'Musterstadt' });
+  // Bewusst ohne Anschrift — der Serienlauf überspringt diese Zeile mit „Anschrift fehlt“.
+  const jan = await ensureDonationContact(deps, ctx, { kind: 'person', firstName: 'Jan', lastName: 'Moser' });
+
+  await ensureEntry(deps, 'Spende Nora Lehmann Vorjahr', () =>
+    bookEntry(deps, ctx, {
+      entryDate: `${previousYear}-09-10`,
+      text: 'Spende Nora Lehmann Vorjahr',
+      moneyLines: [{ accountId: bank.id, amountCents: 6000 }],
+      allocationLines: [{ categoryId: donations.id, amountCents: 6000, contactId: nora }],
+    }).then(unwrap),
+  );
+  await ensureVoucher(deps, ctx, entryByText(deps, 'Spende Nora Lehmann Vorjahr'), 'voucher-own', `${previousYear}-09-10`, 'Spendeneingang Nora Lehmann Vorjahr');
+
+  await ensureEntry(deps, 'Spende Paul Winter Vorjahr', () =>
+    bookEntry(deps, ctx, {
+      entryDate: `${previousYear}-10-02`,
+      text: 'Spende Paul Winter Vorjahr',
+      moneyLines: [{ accountId: bank.id, amountCents: 9000 }],
+      allocationLines: [{ categoryId: donations.id, amountCents: 9000, contactId: paul }],
+    }).then(unwrap),
+  );
+  await ensureVoucher(deps, ctx, entryByText(deps, 'Spende Paul Winter Vorjahr'), 'voucher-own', `${previousYear}-10-02`, 'Spendeneingang Paul Winter Vorjahr');
+
+  await ensureEntry(deps, 'Aufwandsspende Fahrtkosten Vorjahr', () =>
+    bookEntry(deps, ctx, {
+      entryDate: `${previousYear}-11-05`,
+      text: 'Aufwandsspende Fahrtkosten Vorjahr',
+      moneyLines: [],
+      allocationLines: [{ categoryId: waivers.id, amountCents: 3200, contactId: sina }, { categoryId: travel.id, amountCents: -3200 }],
+    }).then(unwrap),
+  );
+  await ensureVoucher(deps, ctx, entryByText(deps, 'Aufwandsspende Fahrtkosten Vorjahr'), 'voucher-own', `${previousYear}-11-05`, 'Verzichtserklärung Fahrtkosten Vorjahr');
+
+  // Ohne Anschrift, bewusst ohne Beleg — der Abschluss des Vorjahrs verlangt dafür eine Begründung (siehe `seedFinance`).
+  await ensureEntry(deps, 'Spende Jan Moser Vorjahr', () =>
+    bookEntry(deps, ctx, {
+      entryDate: `${previousYear}-11-20`,
+      text: 'Spende Jan Moser Vorjahr',
+      moneyLines: [{ accountId: bank.id, amountCents: 4500 }],
+      allocationLines: [{ categoryId: donations.id, amountCents: 4500, contactId: jan }],
+    }).then(unwrap),
+  );
+}
+
+/**
+ * F6b Task 9: der abgeschlossene Serienlauf des Vorjahrs — zwei maschinelle
+ * Bestätigungen, eine mit Unterschriftsfeld, eine übersprungen (Anschrift
+ * fehlt), mit Versandvermerk für die maschinellen Posten (Annahme 8). Läuft
+ * nach `seedDonations`, wenn Bescheid, Unterzeichner, Vereinsanschrift und
+ * Aufwandsspenden-Schalter stehen; die Buchungen dafür liefert
+ * `seedRunDonationEntries`, vor dem Abschluss des Vorjahrs. Dazu (Prüfstein
+ * 6, Annahme 11): eine Rücklastschrift auf Nora Lehmanns maschinell
+ * bestätigte Spende — ihre Sammelbestätigung steht danach „zu korrigieren“.
+ */
+async function seedConfirmationRun(deps: Deps, ctx: CallContext, previousYear: number, currentYear: number): Promise<void> {
+  if (!organizationAddressComplete(deps)) return;
+
+  let run = deps.db.select().from(financeConfirmationRuns).where(eq(financeConfirmationRuns.year, previousYear)).get();
+  if (!run) {
+    const started = unwrap(await startConfirmationRun(deps, ctx, { year: previousYear }));
+    run = deps.db.select().from(financeConfirmationRuns).where(eq(financeConfirmationRuns.id, started.id)).get()!;
+  }
+  if (!run.finishedAt) {
+    unwrap(await continueConfirmationRun(deps, ctx, { runId: run.id, max: 50 }));
+    run = deps.db.select().from(financeConfirmationRuns).where(eq(financeConfirmationRuns.id, run.id)).get()!;
+  }
+  if (!run.dispatchedAt) {
+    const sentAt = deps.clock.now().toISOString().slice(0, 10);
+    unwrap(await dispatchRunConfirmations(deps, ctx, { runId: run.id, sentAt, sentVia: 'post' }));
+  }
+
+  // Prüfstein 6: die Rücklastschrift auf Nora Lehmanns maschinell bestätigte Spende.
+  const noraLine = incomeLineOf(deps, 'Spende Nora Lehmann Vorjahr');
+  await ensureEntry(deps, 'Rücklastschrift Nora Lehmann Vorjahr', () =>
+    bookEntry(deps, ctx, {
+      entryDate: `${currentYear}-02-18`,
+      text: 'Rücklastschrift Nora Lehmann Vorjahr',
+      moneyLines: [{ accountId: accountByName(deps, 'Vereinskonto').id, amountCents: -6000 }],
+      allocationLines: [{ categoryId: categoryByKey(deps, 'donations').id, amountCents: -6000, contactId: noraLine.contactId!, originLineId: noraLine.id }],
+    }).then(unwrap),
+  );
 }

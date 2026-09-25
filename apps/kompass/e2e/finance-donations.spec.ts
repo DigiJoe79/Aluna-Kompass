@@ -110,7 +110,8 @@ test.describe('finance donations', () => {
   test('eine Bestätigung ohne maschinelles Verfahren entsteht mit Unterschriftsfeld; der Vierschritt nimmt die unterschriebene Fassung an', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/donations');
-    await expect(page.getByRole('tab', { name: 'Unterschrift fehlt (1)' })).toBeVisible();
+    // Dazu (Task 9) Sina Krügers Aufwandsspende aus dem Serienlauf des Vorjahrs — auch sie ohne Unterschrift.
+    await expect(page.getByRole('tab', { name: 'Unterschrift fehlt (2)' })).toBeVisible();
 
     const dialog = await openIssueDialog(page, 'Lukas Hofmann', '36,00 €');
     await expect(dialog.getByTestId('issue-signature-mode')).toHaveText('mit Unterschriftsfeld');
@@ -119,13 +120,13 @@ test.describe('finance donations', () => {
     await expect(page.getByText(/Bestätigung ZWB-\S+ ausgestellt/)).toBeVisible();
 
     await page.goto('/finance/donations?tab=needsSignature');
-    await expect(page.getByRole('tab', { name: 'Unterschrift fehlt (2)' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Unterschrift fehlt (3)' })).toBeVisible();
     const card = page.getByTestId('signature-steps').filter({ hasText: '36,00 €' });
     await expect(card.getByTestId('requirement-created')).toHaveAttribute('data-done', 'true');
     await expect(card.getByTestId('requirement-linked')).toHaveAttribute('data-done', 'false');
     await card.getByTestId('voucher-file-input').setInputFiles({ name: 'unterschrieben.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n') });
     await expect(page.getByText(/Unterschriebene Fassung ZWU-\S+ abgelegt/)).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Unterschrift fehlt (1)' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Unterschrift fehlt (2)' })).toBeVisible();
     await expect(page.getByTestId('signature-steps').filter({ hasText: '36,00 €' })).toHaveCount(0);
   });
 
@@ -210,7 +211,9 @@ test.describe('finance donations', () => {
   test('„Zu korrigieren“ zählt eine Bestätigung, deren Bescheid ersetzt wurde', async ({ page, baseURL }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/donations');
-    await expect(page.getByRole('tab', { name: 'Zu korrigieren (1)' })).toBeVisible();
+    // Dazu (Task 9, Prüfstein 6) Nora Lehmanns Sammelbestätigung aus dem Serienlauf des Vorjahrs — ihre
+    // Rücklastschrift zählt sie schon vor dem Ersetzen des Bescheids mit.
+    await expect(page.getByRole('tab', { name: 'Zu korrigieren (2)' })).toBeVisible();
     await expect(issuedRow(page, 'Greta Sommer')).toContainText('Bescheid aufgehoben oder ersetzt');
 
     const client = await mcpClient(page, baseURL);
@@ -221,9 +224,12 @@ test.describe('finance donations', () => {
     await callTool(client, 'finance_notice_supersede', { id: list[0]!.id, supersededOn: today });
     await client.close();
 
+    // Das Ersetzen des aktuell gültigen Bescheids trifft alle unter ihm ausgestellten, noch nicht
+    // zurückgenommenen Bestätigungen: Erika, Lukas, Clara und die drei des Serienlaufs — dazu Greta, die
+    // schon vorher „zu korrigieren“ war; Henrik bleibt draußen (zurückgenommen).
     await page.goto('/finance/donations?tab=toCorrect');
-    await expect(page.getByRole('tab', { name: 'Zu korrigieren (4)' })).toBeVisible();
-    await expect(page.getByTestId('confirmation-row')).toHaveCount(4);
+    await expect(page.getByRole('tab', { name: 'Zu korrigieren (7)' })).toBeVisible();
+    await expect(page.getByTestId('confirmation-row')).toHaveCount(7);
     await expect(issuedRow(page, 'Erika Beispiel')).toContainText('Bescheid aufgehoben oder ersetzt');
   });
 

@@ -372,10 +372,10 @@ test.describe('finance setup', () => {
     // Reihenfolge wie das Manifest: Abschnitt „Arbeit“ (F5: Arbeitsliste und Nebenlisten vor den Auszügen),
     // dann „Buchungen“, dann „Spenden“ (F6a), zuletzt die Verwaltung.
     const treasurer = page.getByTestId('permission-role-Schatzmeister');
-    await expect(treasurer.getByText(/^Sichtbare Navigationseinträge:/)).toHaveText('Sichtbare Navigationseinträge: Arbeitsliste, Fremdes Geld, Belege ohne Buchung, Regeln, Hochgeladene Auszüge, Journal, Bankkonten und Kassen, Offene Zahlungen, Barkasse, Bestätigungen, Bescheide, Finanzen einrichten');
+    await expect(treasurer.getByText(/^Sichtbare Navigationseinträge:/)).toHaveText('Sichtbare Navigationseinträge: Arbeitsliste, Fremdes Geld, Belege ohne Buchung, Regeln, Hochgeladene Auszüge, Journal, Bankkonten und Kassen, Offene Zahlungen, Barkasse, Bestätigungen, Serienlauf, Spendenbuch, Bescheide, Finanzen einrichten');
 
     const auditor = page.getByTestId('permission-role-Kassenprüfer');
-    await expect(auditor.getByText(/^Sichtbare Navigationseinträge:/)).toHaveText('Sichtbare Navigationseinträge: Arbeitsliste, Fremdes Geld, Belege ohne Buchung, Regeln, Hochgeladene Auszüge, Journal, Bankkonten und Kassen, Offene Zahlungen, Barkasse, Bestätigungen, Bescheide');
+    await expect(auditor.getByText(/^Sichtbare Navigationseinträge:/)).toHaveText('Sichtbare Navigationseinträge: Arbeitsliste, Fremdes Geld, Belege ohne Buchung, Regeln, Hochgeladene Auszüge, Journal, Bankkonten und Kassen, Offene Zahlungen, Barkasse, Bestätigungen, Serienlauf, Spendenbuch, Bescheide');
 
     const clerk = page.getByTestId('permission-role-Auslagen einreichen');
     await expect(clerk.getByText(/^Sichtbare Navigationseinträge:/)).toHaveText('Sichtbare Navigationseinträge: keine');

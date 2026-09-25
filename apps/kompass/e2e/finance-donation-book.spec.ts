@@ -1,7 +1,6 @@
-import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
+import { loginAsAdmin, resetDatabase } from './helpers';
 
 /**
  * F6b Task 8 — Oberfläche C4 „Spendenbuch“. Der Seed bringt im laufenden Jahr
@@ -9,9 +8,13 @@ import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
  * eine unbestätigte ohne Anschrift (Tobias Adler) — der Rest der Zeilen
  * kommt aus mehreren Modul-Seeds zusammen und wird hier nicht einzeln
  * nachgerechnet (das prüft `donation-book.test.ts`); die Prüfung hier gilt
- * der Oberfläche: dass Summen, Abstimmung und Sprung zueinander passen.
+ * der Oberfläche: dass Summen, Abstimmung und Sprung zueinander passen. Dazu
+ * (Task 9, Prüfstein 6) der abgeschlossene Serienlauf des Vorjahrs mit einer
+ * Rücklastschrift auf Nora Lehmanns Sammelbestätigung — gebucht in diesem
+ * Jahr, auf eine Zeile des Vorjahrs.
  */
 const YEAR = String(new Date().getUTCFullYear());
+const PREVIOUS_YEAR = String(new Date().getUTCFullYear() - 1);
 const MINUS = '−';
 
 /** „1.234,56 €“ oder „−12,00 €“ → Cent, für Rechenproben in der Oberfläche. */
@@ -20,24 +23,6 @@ function parseEuro(text: string): number {
   const negative = trimmed.startsWith(MINUS);
   const cents = Math.round(Number(trimmed.replace(/[^0-9,]/g, '').replace(',', '.')) * 100);
   return negative ? -cents : cents;
-}
-
-async function mcpClient(page: Page, baseURL: string | undefined): Promise<Client> {
-  await page.goto('/profile');
-  await page.getByRole('button', { name: 'Token erstellen' }).click();
-  await page.getByRole('dialog').getByLabel('Name').fill('Playwright Spendenbuch');
-  await page.getByRole('dialog').getByRole('button', { name: 'Erstellen' }).click();
-  const token = (await page.getByTestId('api-token-plaintext').textContent())!.trim();
-  await page.getByRole('button', { name: 'Ich habe das Token gespeichert' }).click();
-  const client = new Client({ name: 'e2e', version: '0' });
-  await client.connect(new StreamableHTTPClientTransport(new URL('/mcp', baseURL), { requestInit: { headers: { Authorization: `Bearer ${token}` } } }));
-  return client;
-}
-
-async function callTool<T>(client: Client, name: string, args: Record<string, unknown>): Promise<T> {
-  const result = await client.callTool({ name, arguments: args });
-  expect(result.isError, JSON.stringify(result.content)).toBeFalsy();
-  return (result.structuredContent ?? JSON.parse((result.content as { text: string }[])[0]!.text)) as T;
 }
 
 const bookRow = (page: Page, name: string) => page.getByTestId('book-row').filter({ hasText: name });
@@ -83,40 +68,18 @@ test.describe('finance donation book', () => {
     await expect(page).toHaveURL(`/finance/donations/run?year=${YEAR}`);
   });
 
-  test('eine zurückgegebene Spende steht negativ und ihre Bestätigung als zu korrigieren', async ({ page, baseURL }) => {
+  test('eine zurückgegebene Spende steht negativ und ihre Bestätigung als zu korrigieren', async ({ page }) => {
     await loginAsAdmin(page);
-    // Eine Rückgabe mit `originLineId` bucht noch kein Formular der Oberfläche (F6b Task 9 bringt sie in den Seed) —
-    // hier über MCP, wie in `finance-donations.spec.ts`. Das Buchen über MCP ist an sich `humanOnly`; ein Mensch
-    // erlaubt es für diesen Testlauf direkt über die Einstellung (wie der Schalter unter Verwaltung → Finanzen).
-    await setE2ESetting(page, 'finance.mcpHumanOnlyAllowed', true);
-
-    const client = await mcpClient(page, baseURL);
-    const book = await callTool<{ rows: { lineId: string; entryId: string; contactId: string | null; contactName: string | null; kind: string; amountCents: number }[] }>(
-      client,
-      'finance_donation_book',
-      { year: Number(YEAR) },
-    );
-    const erikaLine = book.rows.find((r) => r.contactName === 'Erika Beispiel' && r.kind === 'donation' && r.amountCents === 25000);
-    expect(erikaLine, JSON.stringify(book.rows)).toBeTruthy();
-    const entry = await callTool<{ moneyLines: { accountId: string }[]; allocationLines: { categoryId: string; contactId: string | null }[] }>(client, 'finance_entry_get', {
-      id: erikaLine!.entryId,
-    });
-    const accountId = entry.moneyLines[0]!.accountId;
-    const categoryId = entry.allocationLines.find((l) => l.contactId === erikaLine!.contactId)!.categoryId;
-    await callTool(client, 'finance_entry_book', {
-      entryDate: `${YEAR}-09-01`,
-      text: 'Rueckzahlung Erika Beispiel Juni',
-      moneyLines: [{ accountId, amountCents: -25000 }],
-      allocationLines: [{ categoryId, amountCents: -25000, contactId: erikaLine!.contactId, originLineId: erikaLine!.lineId }],
-    });
-    await client.close();
-
+    // Der Seed bringt die Rückgabe direkt mit (F6b Task 9, Prüfstein 6): eine Rücklastschrift auf Nora
+    // Lehmanns Sammelbestätigung aus dem Serienlauf des Vorjahrs, gebucht in diesem Jahr — die negative
+    // Zeile steht deshalb im Spendenbuch dieses Jahres, „zu korrigieren“ in dem des Vorjahrs.
     await page.goto(`/finance/donations/book?year=${YEAR}`);
-    await expect(bookRow(page, 'Erika Beispiel').filter({ hasText: `${MINUS}250,00 €` })).toHaveCount(1);
+    await expect(bookRow(page, 'Nora Lehmann').filter({ hasText: `${MINUS}60,00 €` })).toHaveCount(1);
 
+    await page.goto(`/finance/donations/book?year=${PREVIOUS_YEAR}`);
     const toCorrect = page.getByTestId('reconciliation-to-correct');
     await expect(toCorrect).toContainText('1');
-    await expect(toCorrect).toContainText('250,00 €');
+    await expect(toCorrect).toContainText('60,00 €');
     await toCorrect.getByRole('link', { name: 'Zu korrigieren' }).click();
     await expect(page).toHaveURL('/finance/donations?tab=toCorrect');
   });

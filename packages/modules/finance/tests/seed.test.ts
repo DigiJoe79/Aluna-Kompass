@@ -33,6 +33,8 @@ import { getInKindDetails } from '../src/donations/in-kind';
 import { listConfirmations, listUncertifiedDonations } from '../src/donations/confirmations';
 import { getMachineProcedure } from '../src/donations/machine';
 import { listNotices } from '../src/donations/notices';
+import { getDonationBook, getDonationReconciliation } from '../src/donations/book';
+import { listConfirmationRuns } from '../src/donations/runs';
 import { setupFinance } from './helpers';
 
 describe('seedFinance', () => {
@@ -492,8 +494,10 @@ describe('seedFinance', () => {
     it('issues a machine money confirmation, an expense waiver without signature and a signed in-kind confirmation — once', async () => {
       const { deps, ctx } = await seededWithAddress();
       const issued = unwrap(await listConfirmations(deps, ctx, { tab: 'issued' }));
-      expect(issued.total).toBe(5);
-      expect(issued.counts).toEqual({ issued: 5, toCorrect: 1, needsSignature: 1 });
+      // F6b Task 9: dazu der Serienlauf des Vorjahrs — zwei maschinelle Sammelbestätigungen (Nora Lehmann,
+      // Paul Winter) und eine mit Unterschriftsfeld (Sina Krüger); Jan Moser bleibt ohne Anschrift draußen.
+      expect(issued.total).toBe(8);
+      expect(issued.counts).toEqual({ issued: 8, toCorrect: 2, needsSignature: 2 });
       const byName = new Map(issued.items.map((c) => [c.contactName, c]));
       expect(byName.get('Erika Beispiel')).toMatchObject({ kind: 'money', machine: true, signatureState: 'machine', state: 'valid' });
       expect(byName.get('Lukas Hofmann')).toMatchObject({ kind: 'money', expenseWaiver: true, signatureState: 'needsSignature' });
@@ -502,15 +506,41 @@ describe('seedFinance', () => {
       const details = unwrap(await getInKindDetails(deps, ctx, { lineId: inKind.lines[0]!.lineId }));
       expect(details).toMatchObject({ origin: 'private' });
       expect(details?.proofDocumentId).toBeTruthy();
+      expect(byName.get('Nora Lehmann')).toMatchObject({ kind: 'collective', machine: true, signatureState: 'machine', state: 'valid' });
+      expect(byName.get('Paul Winter')).toMatchObject({ kind: 'collective', machine: true, signatureState: 'machine', state: 'valid' });
+      expect(byName.get('Sina Krüger')).toMatchObject({ kind: 'collective', expenseWaiver: true, signatureState: 'needsSignature' });
+      expect(byName.has('Jan Moser')).toBe(false);
     });
 
     it('marks the confirmation issued on the superseded section 60a notice as to be corrected', async () => {
       const { deps, ctx } = await seededWithAddress();
       const provisional = unwrap(await listNotices(deps, ctx, { includeInactive: true })).find((n) => n.kind === 'section60a')!;
       const toCorrect = unwrap(await listConfirmations(deps, ctx, { tab: 'toCorrect' }));
-      expect(toCorrect.items).toHaveLength(1);
-      expect(toCorrect.items[0]).toMatchObject({ contactName: 'Greta Sommer', noticeId: provisional.id, issuedOn: '2025-04-15', totalCents: 12000, state: 'valid' });
-      expect(toCorrect.items[0]!.toCorrect).toEqual(['noticeSuperseded']);
+      expect(toCorrect.items).toHaveLength(2);
+      const byName = new Map(toCorrect.items.map((c) => [c.contactName, c]));
+      expect(byName.get('Greta Sommer')).toMatchObject({ noticeId: provisional.id, issuedOn: '2025-04-15', totalCents: 12000, state: 'valid' });
+      expect(byName.get('Greta Sommer')!.toCorrect).toEqual(['noticeSuperseded']);
+      // Prüfstein 6: die Rücklastschrift auf Nora Lehmanns Sammelbestätigung des Serienlaufs.
+      expect(byName.get('Nora Lehmann')).toMatchObject({ kind: 'collective', totalCents: 6000, state: 'valid' });
+      expect(byName.get('Nora Lehmann')!.toCorrect).toEqual(['lineReturned']);
+    });
+
+    it('finishes a confirmation run for the previous year with a dispatch note, once (F6b Task 9)', async () => {
+      const { deps, ctx } = await seededWithAddress();
+      const previousYear = new Date().getUTCFullYear() - 1;
+      const runs = unwrap(await listConfirmationRuns(deps, ctx, {}));
+      expect(runs.items).toHaveLength(1);
+      const run = runs.items[0]!;
+      expect(run).toMatchObject({ year: previousYear, dispatchedVia: 'post' });
+      expect(run.finishedAt).not.toBeNull();
+      expect(run.dispatchedAt).not.toBeNull();
+      expect(run.counts).toMatchObject({ total: 4, issued: 3, skipped: 1, machine: 2, needsSignature: 1 });
+
+      const book = unwrap(await getDonationBook(deps, ctx, { year: previousYear }));
+      expect(book.rows.find((r) => r.contactName === 'Nora Lehmann')).toMatchObject({ amountCents: 6000, confirmation: { kind: 'collective' } });
+
+      const reconciliation = unwrap(await getDonationReconciliation(deps, ctx, { year: previousYear }));
+      expect(reconciliation.toCorrect).toMatchObject({ count: 1, cents: 6000 });
     });
 
     it('voids a dispatched confirmation with its retrieval trail; the line is uncertified again', async () => {
