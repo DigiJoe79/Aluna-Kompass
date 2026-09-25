@@ -4,7 +4,9 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useDateFormat } from '@/components/date-format-provider';
 import { formatEuro } from '@/lib/finance/amount';
+import { formatDateOrDash } from '@/lib/finance/dates';
 import { maskIban } from '@/lib/finance/open-item-state';
 
 export interface AccountCardData {
@@ -36,6 +38,7 @@ export interface AccountCardData {
 export function AccountCard({ account }: { account: AccountCardData }) {
   const t = useTranslations('finance.accounts');
   const router = useRouter();
+  const { date } = useDateFormat();
   const [revealed, setRevealed] = useState(false);
   const href = `/finance/entries?account=${account.accountId}`;
 
@@ -82,7 +85,7 @@ export function AccountCard({ account }: { account: AccountCardData }) {
 
       {account.kind === 'cash' ? (
         <p className="mt-2 text-[12px] text-muted-ink">
-          {account.lastCount ? t('lastCount', { date: account.lastCount.countedOn, amount: formatEuro(account.lastCount.countedCents) }) : t('neverCounted')}
+          {account.lastCount ? t('lastCount', { date: date(account.lastCount.countedOn), amount: formatEuro(account.lastCount.countedCents) }) : t('neverCounted')}
         </p>
       ) : null}
 
@@ -92,16 +95,16 @@ export function AccountCard({ account }: { account: AccountCardData }) {
             <p className="text-[12px] text-muted-ink">{t('statementNone')}</p>
           ) : (
             <p className={account.statement.lastStatementDaysAgo !== null && account.statement.lastStatementDaysAgo >= account.statement.warnDays ? 'text-[12px] font-semibold text-warning' : 'text-[12px] text-muted-ink'}>
-              {t('statementThrough', { date: account.statement.importedThrough })}
+              {t('statementThrough', { date: formatDateOrDash(date, account.statement.importedThrough) })}
               {account.statement.lastStatementDaysAgo !== null ? ` · ${t('statementDaysAgo', { days: account.statement.lastStatementDaysAgo })}` : ''}
             </p>
           )}
           {account.statement.reconciliation ? (
             <p className={account.statement.reconciliation.state === 'differs' ? 'text-[12px] font-semibold text-warning' : 'text-[12px] text-muted-ink'}>
               {account.statement.reconciliation.state === 'matches'
-                ? t('reconciliation.matches', { date: account.statement.reconciliation.statementDate ?? '' })
+                ? t('reconciliation.matches', { date: formatDateOrDash(date, account.statement.reconciliation.statementDate) })
                 : account.statement.reconciliation.state === 'differs'
-                  ? t('reconciliation.differs', { date: account.statement.reconciliation.statementDate ?? '', amount: formatEuro(account.statement.reconciliation.differenceCents ?? 0) })
+                  ? t('reconciliation.differs', { date: formatDateOrDash(date, account.statement.reconciliation.statementDate), amount: formatEuro(account.statement.reconciliation.differenceCents ?? 0) })
                   : t('reconciliation.noStatement')}
             </p>
           ) : null}

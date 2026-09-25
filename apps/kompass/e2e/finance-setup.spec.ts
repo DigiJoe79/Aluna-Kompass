@@ -227,7 +227,9 @@ test.describe('finance setup', () => {
     await dialog.getByRole('button', { name: 'Speichern' }).click();
     await expect(dialog).toBeHidden();
     await expect(panel.getByText('Vom Verein überschrieben')).toBeVisible();
-    await expect(panel.getByText('2030-01-01')).toBeVisible();
+    // N3 Nachtrag A: der Stichtag steht im deutschen Format, nicht mehr roh als ISO.
+    await expect(panel.getByText('01.01.2030')).toBeVisible();
+    await expect(panel).not.toContainText(/\d{4}-\d{2}-\d{2}/);
   });
 
   test('Kategorie: „Spenden gibt es nur im ideellen Bereich“ erscheint am Feld', async ({ page }) => {

@@ -5,12 +5,14 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { BlockedState } from '@/components/blocked-state';
+import { useDateFormat } from '@/components/date-format-provider';
 import { TransferBlock } from '@/components/finance/transfer-block';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { buttonVariants } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { formatEuro } from '@/lib/finance/amount';
+import { formatDateOrDash } from '@/lib/finance/dates';
 import { openItemState } from '@/lib/finance/open-item-state';
 import { cancelOpenItemAction } from './actions';
 import { ItemDialog, type OpenItemEditable } from './item-dialog';
@@ -61,6 +63,7 @@ export function DetailSheet({
 }) {
   const t = useTranslations('finance.openItems');
   const router = useRouter();
+  const { date } = useDateFormat();
   const pathname = usePathname();
   const params = useSearchParams();
   const [editOpen, setEditOpen] = useState(false);
@@ -103,7 +106,7 @@ export function DetailSheet({
               </div>
               <div className="flex justify-between gap-2">
                 <dt className="text-muted-ink">{t('columns.dueOn')}</dt>
-                <dd className={state.overdue ? 'font-semibold text-error' : undefined}>{item.dueOn ?? '—'}</dd>
+                <dd className={state.overdue ? 'font-semibold text-error' : undefined}>{formatDateOrDash(date, item.dueOn)}</dd>
               </div>
               <div className="flex justify-between gap-2">
                 <dt className="text-muted-ink">{t('columns.state')}</dt>

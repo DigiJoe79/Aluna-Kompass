@@ -4,11 +4,13 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useDateFormat } from '@/components/date-format-provider';
 import { EmptyState } from '@/components/empty-state';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatEuro } from '@/lib/finance/amount';
+import { formatDateOrDash } from '@/lib/finance/dates';
 import { ItemDialog } from './item-dialog';
 
 export interface OpenItemRow {
@@ -38,6 +40,7 @@ export function OpenItemsList({ rows, tab, canWrite, canCreateContact, today }: 
 }) {
   const t = useTranslations('finance.openItems');
   const router = useRouter();
+  const { date } = useDateFormat();
   const [newOpen, setNewOpen] = useState(false);
 
   const tabHref = (next: 'receivable' | 'payable') => `/finance/open-items?tab=${next}`;
@@ -96,7 +99,7 @@ export function OpenItemsList({ rows, tab, canWrite, canCreateContact, today }: 
                   }}
                   className="h-row cursor-pointer border-b border-line-2 hover:bg-row-hover"
                 >
-                  <TableCell className={row.overdue ? 'px-4 font-semibold text-error' : 'px-4'}>{row.dueOn ?? '—'}</TableCell>
+                  <TableCell className={row.overdue ? 'px-4 font-semibold text-error' : 'px-4'}>{formatDateOrDash(date, row.dueOn)}</TableCell>
                   <TableCell className="px-4">{row.contactLabel ?? '—'}</TableCell>
                   <TableCell className="px-4 font-mono tabular-nums">{formatEuro(row.amountCents)}</TableCell>
                   <TableCell className="px-4 font-mono tabular-nums">{formatEuro(row.openCents)}</TableCell>

@@ -647,8 +647,9 @@ test.describe('finance', () => {
     await expect(row).toBeVisible();
     await expect(row).toContainText('überfällig');
     await expect(row).toContainText('Mira Sandberg');
-    // Das Datum ist gefärbt, wenn der Posten überfällig ist.
-    await expect(row.getByText('2026-01-20')).toHaveClass(/text-error/);
+    // Das Datum ist gefärbt, wenn der Posten überfällig ist — deutsches Format, kein rohes ISO-Datum (N3 Nachtrag A).
+    await expect(row.getByText('20.01.2026')).toHaveClass(/text-error/);
+    await expect(row).not.toContainText(/\d{4}-\d{2}-\d{2}/);
 
     // Zwei Reiter in der URL: unter „Wir erwarten“ steht der neue Posten nicht.
     await page.getByRole('tab', { name: 'Wir erwarten' }).click();
@@ -660,6 +661,9 @@ test.describe('finance', () => {
 
     // Anlegen/Ändern-Dialog: derselbe Dialog ändert einen vorhandenen Posten.
     await row.click();
+    const sheet = page.getByRole('dialog', { name: 'RE-2026-999' });
+    await expect(sheet.getByText('20.01.2026')).toBeVisible();
+    await expect(sheet).not.toContainText(/\d{4}-\d{2}-\d{2}/);
     await page.getByRole('button', { name: 'Ändern' }).click();
     const editDialog = page.getByRole('dialog');
     await editDialog.getByLabel('Betrag', { exact: true }).fill('90,00');

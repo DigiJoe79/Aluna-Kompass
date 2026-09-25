@@ -44,6 +44,10 @@ test.describe('finance cash', () => {
     await page.getByRole('button', { name: 'Zählung speichern' }).click();
     await expect(page.getByText(/Zählprotokoll KZP-\S+ erstellt/)).toBeVisible();
     await expect(page.getByTestId('cash-balance')).toContainText('200,00 €');
+    // N3 Nachtrag A: „Zählungen“ zeigt das deutsche Format, kein rohes ISO-Datum.
+    const counts = page.getByRole('region', { name: 'Zählungen' });
+    await expect(counts.getByText(/^\d{2}\.\d{2}\.\d{4}$/).first()).toBeVisible();
+    await expect(counts).not.toContainText(/\d{4}-\d{2}-\d{2}/);
   });
 
   test('Zählung mit Fehlbetrag verlangt einen Satz; danach steht die Buchung „Kassenfehlbetrag“ im Journal und das Protokoll hängt als Beleg daran', async ({ page }) => {
@@ -109,6 +113,9 @@ test.describe('finance cash', () => {
     await page.getByRole('button', { name: 'Buchen' }).click();
     await expect(page.getByText('Bargeldbewegung gebucht.')).toBeVisible();
     await expect(page.getByTestId('cash-balance')).toContainText('150,00 €');
+    // N3 Nachtrag A: „Letzte Kassenbewegungen“ zeigt das Datum im deutschen Format, nicht mehr roh als ISO
+    // (der Buchungstext selbst kann eine ISO-Kennung tragen, z. B. „Bargeldbewegung 2026-09-25“ — eigener Fund).
+    await expect(page.getByRole('region', { name: 'Letzte Kassenbewegungen' }).getByText(/^\d{2}\.\d{2}\.\d{4} ·/).first()).toBeVisible();
   });
 
   test('Bar bezahlt aus der Vereinskasse öffnet die Buchungsmaske mit der Kasse und nur „Festschreiben“', async ({ page }) => {

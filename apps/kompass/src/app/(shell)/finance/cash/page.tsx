@@ -1,4 +1,4 @@
-import { hasPermission, listUserNamesWithPermission } from '@kompass/core';
+import { hasPermission, listUserNamesWithPermission, readSetting } from '@kompass/core';
 import { getBalances, listCashCounts, listEntries } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -6,6 +6,7 @@ import { BlockedState } from '@/components/blocked-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
+import { formatDate, type DateFormatMode } from '@/lib/dates';
 import { formatEuro } from '@/lib/finance/amount';
 import { CountDialog } from './count-dialog';
 import { MoveDialog } from './move-dialog';
@@ -20,6 +21,7 @@ export default async function FinanceCashPage({ searchParams }: { searchParams: 
   const t = await getTranslations('finance.cash');
   if (!hasPermission(ctx, 'finance.read')) return <ForbiddenCard permission="finance.read" />;
 
+  const dateMode = readSetting<DateFormatMode>(deps, 'ui.dateFormat');
   const query = await searchParams;
   const balancesRes = await getBalances(deps, ctx, {});
   if (!balancesRes.ok) return <ForbiddenCard permission="finance.overview" />;
@@ -111,7 +113,7 @@ export default async function FinanceCashPage({ searchParams }: { searchParams: 
               return (
                 <li key={entry.id} className="flex items-center justify-between px-3 py-2 text-[13px]">
                   <span>
-                    {entry.entryDate} · {entry.text}
+                    {formatDate(entry.entryDate, dateMode)} · {entry.text}
                   </span>
                   <span className="font-mono tabular-nums">{formatEuro(amount)}</span>
                 </li>
@@ -129,7 +131,7 @@ export default async function FinanceCashPage({ searchParams }: { searchParams: 
           <ul className="divide-y divide-line rounded-md border border-line">
             {countsRes.value.counts.map((count) => (
               <li key={count.id} className="flex items-center justify-between px-3 py-2 text-[13px]">
-                <span>{count.countedOn}</span>
+                <span>{formatDate(count.countedOn, dateMode)}</span>
                 <a href={`/finance/cash/${count.id}/protocol`} target="_blank" rel="noreferrer" className="text-link">
                   {count.documentNumber}
                 </a>

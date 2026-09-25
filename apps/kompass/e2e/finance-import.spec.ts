@@ -181,7 +181,9 @@ test.describe('finance import', () => {
     await loginAsAdmin(page);
     await page.goto('/finance/accounts');
     const card = page.locator('[role="link"]', { hasText: 'Importkonto' });
-    await expect(card.getByText(/Auszug importiert bis 2026-08-31/)).toBeVisible();
+    // N3 Nachtrag A: die Kontokarte zeigt das deutsche Format, kein rohes ISO-Datum mehr.
+    await expect(card.getByText(/Auszug importiert bis 31\.08\.2026/)).toBeVisible();
+    await expect(card).not.toContainText(/\d{4}-\d{2}-\d{2}/);
     await expect(card.getByText(/Kein Auszug für heute|Stimmt mit dem Auszug|Differenz zum Auszug/)).toBeVisible();
   });
 
