@@ -36,6 +36,21 @@ describe('financeAudit', () => {
     expect(JSON.stringify([ruleEntry, ibanEntry])).not.toMatch(/Erika|Büro|bueromaterial|DE66|CONTACT-1/);
   });
 
+  it('never lets a signer name, tax office, tax number, purposes, an item or a contact id of the donations into the log (F6a)', () => {
+    const { deps, ctx } = setupFinance();
+    const secret = { signerName: 'Jonas Feld', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', purposesText: 'Förderung des Tierschutzes', item: 'Kratzbaum', contactId: 'CONTACT-1', voidNote: 'Tippfehler', preNoticeReason: 'vorher' };
+    deps.db.transaction((tx) => {
+      financeAudit(tx, deps, ctx, { action: 'finance.notice.save', entity: 'financeNotice', id: 'N1', after: { ...secret, kind: 'exemptionNotice', noticeDate: '2025-05-02', assessmentPeriod: '2023', documentId: 'D1', supersededOn: null, supersededDocumentId: null, voided: false }, summary: 'Bescheid N1 gespeichert' });
+      financeAudit(tx, deps, ctx, { action: 'finance.confirmation.issue', entity: 'financeConfirmation', id: 'C1', after: { ...secret, kind: 'money', noticeId: 'N1', documentId: 'D2', documentNumber: 'ZWB-2026-0001', issuedOn: '2026-03-10', machine: true, signerId: 'S1', expenseWaiver: false, totalCents: 5000, lineCount: 1, channel: 'ui' }, summary: 'Bestätigung ZWB-2026-0001 ausgestellt' });
+      financeAudit(tx, deps, ctx, { action: 'finance.signer.save', entity: 'financeSigner', id: 'S1', after: { ...secret, validFrom: '2026-01-01', validTo: null, hasFacsimile: true, notifiedOn: '2026-02-01' }, summary: 'Unterzeichner S1 gespeichert' });
+      financeAudit(tx, deps, ctx, { action: 'finance.inKind.save', entity: 'financeInKindDetails', id: 'L1', after: { ...secret, lineId: 'L1', origin: 'business', withdrawalValueCents: 1000, vatCents: 190, proofDocumentId: 'D3' }, summary: 'Sachspende an Zeile L1 beschrieben' });
+    });
+    const entries = deps.db.select().from(schema.auditLog).all().slice(-4);
+    expect(entries.map((e) => e.entityType)).toEqual(['financeNotice', 'financeConfirmation', 'financeSigner', 'financeInKindDetails']);
+    expect(JSON.stringify(entries)).not.toMatch(/Jonas|Musterstadt|99\/999|Tierschutz|Kratzbaum|CONTACT-1|Tippfehler|vorher/);
+    expect(JSON.parse(entries[1]!.after as string)).toMatchObject({ documentNumber: 'ZWB-2026-0001', totalCents: 5000, lineCount: 1 });
+  });
+
   it('never lists a field that could carry a person, free text or a bank detail', () => {
     const forbidden = /name|label|title|description|note|text|reason|iban|bic|holder|purposeLine|contact|subject|email/i;
     const offenders = Object.entries(AUDIT_FIELDS).flatMap(([entity, fields]) => fields.filter((f) => forbidden.test(f)).map((f) => `${entity}.${f}`));

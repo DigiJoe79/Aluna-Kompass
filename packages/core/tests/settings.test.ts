@@ -90,6 +90,12 @@ describe('bank details managed by finance', () => {
   it('the bank details of the association are managed by the finance module once it is on', () => {
     for (const key of ['organization.iban', 'organization.bic', 'organization.bankName']) expect(CORE_SETTINGS.find((s) => s.key === key)).toMatchObject({ managedBy: 'finance' });
   });
+
+  it('the tax details and the notice of the association are managed by the finance module once it is on (E22, F6a)', () => {
+    for (const key of ['organization.taxOffice', 'organization.taxNumber', 'organization.exemptionNoticeType', 'organization.exemptionNoticeDate']) {
+      expect(CORE_SETTINGS.find((s) => s.key === key), key).toMatchObject({ managedBy: 'finance' });
+    }
+  });
 });
 
 describe('managedBy and uiOnly', () => {

@@ -29,6 +29,29 @@ describe('finance errors', () => {
     expect(FINANCE_ERRORS.foreignNeedsHolder.reason).toBe('Sagen Sie, für wen das Geld ist.');
   });
 
+  it('knows the errors of notices and confirmations (F6a)', () => {
+    const codes = [
+      'noticeVoided', 'noticeSuperseded', 'noticeNotValidAt', 'noNoticeValidAt', 'noticeAfterExemption', 'confirmationLineNotFinal', 'confirmationLineReversed', 'confirmationIncomeNotCertifiable',
+      'confirmationContactIncomplete', 'confirmationLineAlreadyConfirmed', 'confirmationAmountNotPositive', 'confirmationEntryUndocumented', 'confirmationInKindDetailsMissing',
+      'confirmationInKindMixed', 'confirmationTypeInactive', 'confirmationExpenseWaiversDisabled', 'confirmationPreNoticeNeedsReason', 'confirmationAlreadyVoided', 'confirmationAlreadySent',
+      'confirmationSignedAlready', 'signerOverlaps', 'facsimileTooLarge', 'facsimileNotImage', 'entryLockedByConfirmation', 'contactLockedByConfirmation', 'inKindLineOnly',
+    ];
+    for (const code of codes) expect(Object.keys(FINANCE_ERRORS), code).toContain(code);
+    expect(financeConflict('noNoticeValidAt', { date: '2026-03-10' })).toMatchObject({ error: { code: 'noNoticeValidAt', message: expect.stringMatching(/2026-03-10.*Spenden → Bescheide/) } });
+    expect(financeConflict('noticeNotValidAt', { date: '2026-03-10' })).toMatchObject({ error: { message: expect.stringContaining('2026-03-10') } });
+    expect(financeConflict('confirmationLineAlreadyConfirmed', { number: 'ZWB-2026-0007' })).toMatchObject({ error: { message: expect.stringContaining('ZWB-2026-0007') } });
+    expect(financeConflict('entryLockedByConfirmation', { number: 'ZWB-2026-0007' })).toMatchObject({ error: { message: expect.stringContaining('ZWB-2026-0007') } });
+    expect(financeConflict('contactLockedByConfirmation', { number: 'ZWB-2026-0007' })).toMatchObject({ error: { message: expect.stringContaining('ZWB-2026-0007') } });
+    expect(financeConflict('confirmationIncomeNotCertifiable', { category: 'Zuschüsse' })).toMatchObject({ error: { message: expect.stringContaining('Zuschüsse') } });
+  });
+
+  it('names the kinds of notice in everyday words, never in the words of the tax code (F6a)', () => {
+    const hits = Object.entries(FINANCE_ERRORS).flatMap(([code, { reason, remedy }]) =>
+      [/vorläufige Anerkennung/, /Freistellungsbescheid/, /Anlage zum Körperschaftsteuerbescheid/].filter((p) => p.test(`${reason} ${remedy}`)).map((p) => `${code}: ${p.source}`),
+    );
+    expect(hits).toEqual([]);
+  });
+
   it('is the only way the module raises a conflict', () => {
     const offenders = files(SRC).filter((f) => f.endsWith('.ts') && !f.endsWith(`${path.sep}errors.ts`)).filter((f) => /\bconflict\(/.test(readFileSync(f, 'utf8')));
     expect(offenders.map((f) => path.relative(SRC, f))).toEqual([]);

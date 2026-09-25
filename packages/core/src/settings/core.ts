@@ -21,14 +21,17 @@ const organization: SettingDefinition[] = [
   { key: 'organization.foundedYear', schema: z.union([z.literal(''), z.string().regex(/^(1[89]|20|21)\d{2}$/)]), default: '' },
   { key: 'organization.registerCourt', schema: shortText, default: '' },
   { key: 'organization.registerNumber', schema: shortText, default: '' },
-  { key: 'organization.taxNumber', schema: shortText, default: '' },
-  { key: 'organization.taxOffice', schema: shortText, default: '' },
+  // Ist das Finanzmodul eingeschaltet, führt die Reihe der Bescheide diese vier Werte (E22, F6a) —
+  // in den Vereinsdaten sind sie dann nur noch lesbar.
+  { key: 'organization.taxNumber', schema: shortText, default: '', managedBy: 'finance' },
+  { key: 'organization.taxOffice', schema: shortText, default: '', managedBy: 'finance' },
   {
     key: 'organization.exemptionNoticeType',
     schema: z.enum(['none', 'exemptionNotice', 'corporateTaxNoticeAttachment', 'section60a']),
     default: 'none',
+    managedBy: 'finance',
   },
-  { key: 'organization.exemptionNoticeDate', schema: isoDateOrEmpty, default: '' },
+  { key: 'organization.exemptionNoticeDate', schema: isoDateOrEmpty, default: '', managedBy: 'finance' },
   { key: 'organization.statutoryPurpose', schema: z.string().trim().max(500), default: '' },
   { key: 'organization.email', schema: z.union([z.literal(''), z.email()]), default: '' },
   { key: 'organization.website', schema: z.union([z.literal(''), z.url()]), default: '' },

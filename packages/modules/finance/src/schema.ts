@@ -565,3 +565,158 @@ export const financeContactBankAccounts = sqliteTable(
   (t) => [uniqueIndex('finance_contact_bank_accounts_pair_idx').on(t.contactId, t.iban), index('finance_contact_bank_accounts_iban_idx').on(t.iban)],
 );
 export type FinanceContactBankAccountRow = typeof financeContactBankAccounts.$inferSelect;
+
+/**
+ * Ein Bescheid des Vereins (F6a, Spec 7.1): § 60a, Freistellungsbescheid
+ * oder Anlage zum Körperschaftsteuerbescheid — eine datierte Reihe, nie
+ * gelöscht (Trigger `finance_notices_no_delete`). „Aufgehoben oder ersetzt
+ * am“ und „irrtümlich erfasst“ werden je einmal gesetzt (Trigger
+ * `…_supersede_once`, `…_void_once`); die Gültigkeit rechnet
+ * `ledger/notice-validity.ts`, sie steht nie hier. Finanzamt, Steuernummer,
+ * Zwecke und Begründung stehen nie im Änderungsprotokoll. Kein Fremdschlüssel
+ * auf Dokumente: die gehören der Akte.
+ */
+export const financeNotices = sqliteTable(
+  'finance_notices',
+  {
+    id: text('id').primaryKey(),
+    kind: text('kind', { enum: ['section60a', 'exemptionNotice', 'corporateTaxNoticeAttachment'] }).notNull(),
+    taxOffice: text('tax_office').notNull(),
+    taxNumber: text('tax_number').notNull(),
+    noticeDate: text('notice_date').notNull(),
+    /** „2023“ oder „2021–2023“ — beim § 60a-Bescheid leer. */
+    assessmentPeriod: text('assessment_period'),
+    /** Die begünstigten Zwecke im Wortlaut des Bescheids. */
+    purposesText: text('purposes_text').notNull(),
+    documentId: text('document_id'),
+    supersededOn: text('superseded_on'),
+    supersededDocumentId: text('superseded_document_id'),
+    voidedAt: text('voided_at'),
+    voidedByUserId: text('voided_by_user_id'),
+    /** Frei getippt — steht hier, nie im Protokoll. */
+    voidNote: text('void_note'),
+    createdAt: text('created_at').notNull(),
+    createdByUserId: text('created_by_user_id').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [index('finance_notices_date_idx').on(t.noticeDate)],
+);
+export type FinanceNoticeRow = typeof financeNotices.$inferSelect;
+
+/**
+ * Maschinelles Verfahren (F6a, Annahme 8): wer in welchem Zeitraum
+ * unterzeichnet, mit Faksimile im Modulspeicher (nie in der Mediathek) und dem
+ * Tag der Anzeige beim Finanzamt. Nie gelöscht; ein Amtsende ist `validTo`.
+ * Der Name steht nie im Protokoll.
+ */
+export const financeSigners = sqliteTable(
+  'finance_signers',
+  {
+    id: text('id').primaryKey(),
+    validFrom: text('valid_from').notNull(),
+    validTo: text('valid_to'),
+    signerName: text('signer_name').notNull(),
+    /** Schlüssel im Modulspeicher, `signature-<id>.png|jpg`. */
+    facsimileKey: text('facsimile_key'),
+    facsimileChecksum: text('facsimile_checksum'),
+    notifiedOn: text('notified_on'),
+    createdAt: text('created_at').notNull(),
+    createdByUserId: text('created_by_user_id').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [index('finance_signers_valid_from_idx').on(t.validFrom)],
+);
+export type FinanceSignerRow = typeof financeSigners.$inferSelect;
+
+/**
+ * Eine Zuwendungsbestätigung (F6a, Spec 7.2): unser Exemplar ist das
+ * ausgestellte Dokument der Akte (`documentId`, Art `finance-confirmation`).
+ * Nach dem Ausstellen unveränderlich (Trigger `finance_confirmations_immutable`);
+ * änderbar bleiben nur Versand, unterschriebene Fassung (einmal) und die
+ * Rücknahme mit Rückholspur (einmal). Nie gelöscht. Kein Fremdschlüssel auf
+ * Kontakt oder Dokument — sie gehören anderen Modulen.
+ */
+export const financeConfirmations = sqliteTable(
+  'finance_confirmations',
+  {
+    id: text('id').primaryKey(),
+    kind: text('kind', { enum: ['money', 'inKind', 'collective'] }).notNull(),
+    /** Nie im Protokoll. */
+    contactId: text('contact_id').notNull(),
+    noticeId: text('notice_id').notNull().references(() => financeNotices.id),
+    documentId: text('document_id').notNull(),
+    documentNumber: text('document_number').notNull(),
+    issuedOn: text('issued_on').notNull(),
+    issuedByUserId: text('issued_by_user_id').notNull(),
+    issuedChannel: text('issued_channel').notNull(),
+    machine: integer('machine', { mode: 'boolean' }).notNull().default(false),
+    signerId: text('signer_id').references(() => financeSigners.id),
+    facsimileChecksum: text('facsimile_checksum'),
+    expenseWaiver: integer('expense_waiver', { mode: 'boolean' }).notNull().default(false),
+    totalCents: integer('total_cents').notNull(),
+    periodFrom: text('period_from'),
+    periodTo: text('period_to'),
+    /** Pflicht, wenn die Zuwendung vor dem ältesten Bescheid liegt — nie im Protokoll. */
+    preNoticeReason: text('pre_notice_reason'),
+    signedDocumentId: text('signed_document_id'),
+    sentAt: text('sent_at'),
+    sentVia: text('sent_via', { enum: ['post', 'email', 'handed'] }),
+    voidedAt: text('voided_at'),
+    voidedByUserId: text('voided_by_user_id'),
+    /** Frei getippt — nie im Protokoll. */
+    voidNote: text('void_note'),
+    sentBeforeVoid: integer('sent_before_void', { mode: 'boolean' }),
+    originalReturnedOn: text('original_returned_on'),
+    taxOfficeInformedOn: text('tax_office_informed_on'),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [
+    index('finance_confirmations_contact_idx').on(t.contactId),
+    index('finance_confirmations_notice_idx').on(t.noticeId),
+    index('finance_confirmations_document_idx').on(t.documentId),
+    index('finance_confirmations_issued_idx').on(t.issuedOn),
+  ],
+);
+export type FinanceConfirmationRow = typeof financeConfirmations.$inferSelect;
+
+/**
+ * Welche Zuordnungszeile eine Bestätigung trägt. Eine Zeile steht in höchstens
+ * einer gültigen Bestätigung (partieller Unique-Index); die Rücknahme setzt
+ * `releasedAt` — die einzige änderbare Spalte, einmal (Spec 5.2). Nie gelöscht.
+ */
+export const financeConfirmationLines = sqliteTable(
+  'finance_confirmation_lines',
+  {
+    id: text('id').primaryKey(),
+    confirmationId: text('confirmation_id').notNull().references(() => financeConfirmations.id),
+    lineId: text('line_id').notNull().references(() => financeAllocationLines.id),
+    amountCents: integer('amount_cents').notNull(),
+    releasedAt: text('released_at'),
+  },
+  (t) => [
+    uniqueIndex('finance_confirmation_lines_line_idx').on(t.lineId).where(sql`${t.releasedAt} is null`),
+    index('finance_confirmation_lines_confirmation_idx').on(t.confirmationId),
+    index('finance_confirmation_lines_all_line_idx').on(t.lineId),
+  ],
+);
+export type FinanceConfirmationLineRow = typeof financeConfirmationLines.$inferSelect;
+
+/**
+ * Was eine Sachspende ist (Prüfstein 5, Annahme 11) — an der
+ * `inKindDonation`-Zeile. Gegenstand, Zustand und Wertermittlung sind
+ * Freitext und stehen nie im Protokoll; sie fallen mit dem Personenbezug des
+ * Jahres. Die Wertunterlage ist ein Dokument der Akte (kein Fremdschlüssel).
+ */
+export const financeInKindDetails = sqliteTable('finance_in_kind_details', {
+  lineId: text('line_id').primaryKey().references(() => financeAllocationLines.id),
+  item: text('item').notNull(),
+  condition: text('condition').notNull(),
+  valuation: text('valuation').notNull(),
+  origin: text('origin', { enum: ['private', 'business'] }).notNull(),
+  withdrawalValueCents: integer('withdrawal_value_cents'),
+  vatCents: integer('vat_cents'),
+  proofDocumentId: text('proof_document_id'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+export type FinanceInKindDetailsRow = typeof financeInKindDetails.$inferSelect;

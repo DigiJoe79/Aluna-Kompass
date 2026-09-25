@@ -1,6 +1,6 @@
 import { recordAudit, type CallContext, type DbOrTx, type Deps } from '@kompass/core';
 
-export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument' | 'financeOpenItem' | 'financeAllocationCorrection' | 'financeEntryJustification' | 'financeProjectSettings' | 'financeCashCount' | 'financeSetup' | 'financeImportRun' | 'financeRawTransaction' | 'financeImportCandidate' | 'financeImportProfile' | 'financeImportRule' | 'financeContactBankAccount';
+export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument' | 'financeOpenItem' | 'financeAllocationCorrection' | 'financeEntryJustification' | 'financeProjectSettings' | 'financeCashCount' | 'financeSetup' | 'financeImportRun' | 'financeRawTransaction' | 'financeImportCandidate' | 'financeImportProfile' | 'financeImportRule' | 'financeContactBankAccount' | 'financeNotice' | 'financeConfirmation' | 'financeSigner' | 'financeInKindDetails';
 
 /**
  * Was vom Finanzmodul ins Änderungsprotokoll darf — je Entität eine Liste, und
@@ -53,6 +53,14 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   financeImportRule: ['accountId', 'direction', 'categoryId', 'projectId', 'purposeId', 'taxCode', 'isActive', 'sortOrder', 'hasBankDetailsCondition', 'hasWordCondition', 'hasAmountCondition', 'partySet'],
   // Nur woher die Zuordnung stammt: 'booking' | 'contactCreate' | 'manual'.
   financeContactBankAccount: ['learnedFrom'],
+  // F6a — nie Finanzamt, Steuernummer, Zwecke im Wortlaut, Begründung (Spec 10.3): nur Art, Daten und Dokument-IDs.
+  financeNotice: ['kind', 'noticeDate', 'assessmentPeriod', 'documentId', 'supersededOn', 'supersededDocumentId', 'voided'],
+  // Nie Kontakt-ID, nie Name oder Anschrift, nie Begründung: Nummer, Daten, Beträge, Flags.
+  financeConfirmation: ['kind', 'noticeId', 'documentId', 'documentNumber', 'issuedOn', 'machine', 'signerId', 'expenseWaiver', 'totalCents', 'lineCount', 'channel', 'voided', 'sentBeforeVoid', 'sentVia', 'signedDocumentId', 'originalReturned', 'taxOfficeInformed'],
+  // Nie der Name, nie die Bytes der Unterschrift — nur, *dass* es ein Faksimile gibt.
+  financeSigner: ['validFrom', 'validTo', 'hasFacsimile', 'notifiedOn'],
+  // Nie Gegenstand, Zustand, Wertermittlung (Freitext).
+  financeInKindDetails: ['lineId', 'origin', 'withdrawalValueCents', 'vatCents', 'proofDocumentId'],
 };
 
 const pick = (entity: FinanceEntity, data?: Record<string, unknown>) => (data ? Object.fromEntries(Object.entries(data).filter(([field]) => AUDIT_FIELDS[entity].includes(field))) : undefined);

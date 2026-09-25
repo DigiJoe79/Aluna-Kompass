@@ -51,6 +51,9 @@ describe('finance module', () => {
       { entityType: 'financeEntry', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
       { entityType: 'financeOpenItem', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
       { entityType: 'financeCashCount', readPermission: 'finance.read', receivePermission: 'finance.entriesFinalize' },
+      // F6a: unser Exemplar und die unterschriebene Fassung einer Bestätigung, das Dokument eines Bescheids.
+      { entityType: 'financeConfirmation', readPermission: 'finance.read', receivePermission: 'finance.donationsIssue' },
+      { entityType: 'financeNotice', readPermission: 'finance.read', receivePermission: 'finance.donationsIssue' },
     ]);
   });
 
@@ -87,6 +90,7 @@ describe('finance module', () => {
       financeEntryDraft: true, financeEntry: false, financeOpenItem: false, financeAllocationCorrection: false, financeEntryDocument: false, financeEntryJustification: false,
       financeProjectSettings: true, financeYearPersonalData: true, financeImportPersonalData: true, financeCashCount: false,
       financeImportProfile: false, financeImportRule: true, financeContactBankAccount: true,
+      financeNotice: false, financeConfirmation: false, financeConfirmationLine: false, financeSigner: false, financeInKindDetails: false,
     });
   });
 
@@ -116,6 +120,14 @@ describe('finance module', () => {
     const rules = Object.fromEntries((financeModule.deletionRules ?? []).map((r) => [r.entity, r.deletable]));
     for (const entity of ['financeEntry', 'financeOpenItem', 'financeAllocationCorrection', 'financeEntryDocument', 'financeEntryJustification']) {
       expect(rules[entity], entity).toBe(false);
+    }
+  });
+
+  it('never lets notices, signers, confirmations, their lines or in-kind details go (F6a)', () => {
+    for (const entity of ['financeNotice', 'financeConfirmation', 'financeConfirmationLine', 'financeSigner', 'financeInKindDetails']) {
+      const rule = (financeModule.deletionRules ?? []).find((r) => r.entity === entity);
+      expect(rule, entity).toMatchObject({ deletable: false });
+      expect(rule!.reason.length, entity).toBeGreaterThan(20);
     }
   });
 

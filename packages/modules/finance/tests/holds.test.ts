@@ -21,7 +21,7 @@ import { setProjectFinance } from '../src/ledger/project-settings';
 import { createPurpose } from '../src/ledger/purposes';
 import { revokeVoucher, uploadVoucher } from '../src/ledger/vouchers';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
-import { financeAllocationCorrections, financeAllocationLines, financeCashCounts, financeContactBankAccounts, financeEntryDocuments, financeProjectSettings } from '../src/schema';
+import { financeAllocationCorrections, financeAllocationLines, financeCashCounts, financeConfirmations, financeContactBankAccounts, financeEntryDocuments, financeInKindDetails, financeNotices, financeProjectSettings } from '../src/schema';
 import { allowHumanOnlyOverMcp, ledgerFixture, pdfBytes } from './helpers';
 
 const FIXTURES = path.resolve(import.meta.dirname, 'fixtures/camt');
@@ -381,5 +381,64 @@ describe('retention due — imported bank data (F4 Task 6)', () => {
     const f = await ledgerFixture();
     f.deps.clock.set('2040-01-01T00:00:00.000Z');
     expect(financeRetentionDue(f.deps).filter((d) => d.entity === 'financeImportPersonalData')).toEqual([]);
+  });
+});
+
+describe('what finance holds for donations (F6a)', () => {
+  const T = '2026-03-10T10:00:00.000Z';
+  function insertNotice(f: Awaited<ReturnType<typeof ledgerFixture>>, o: Partial<typeof financeNotices.$inferInsert> = {}) {
+    const id = newId();
+    f.deps.db.insert(financeNotices).values({ id, kind: 'exemptionNotice', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2025-05-02', purposesText: 'Tierschutz', createdAt: T, createdByUserId: f.userId, updatedAt: T, ...o }).run();
+    return id;
+  }
+  function insertConfirmation(f: Awaited<ReturnType<typeof ledgerFixture>>, noticeId: string, o: Partial<typeof financeConfirmations.$inferInsert> = {}) {
+    const id = newId();
+    f.deps.db
+      .insert(financeConfirmations)
+      .values({ id, kind: 'money', contactId: f.donor.id, noticeId, documentId: 'DOC-COPY', documentNumber: 'ZWB-2025-0001', issuedOn: '2025-07-01', issuedByUserId: f.userId, issuedChannel: 'ui', totalCents: 5000, createdAt: T, ...o })
+      .run();
+    return id;
+  }
+
+  it('holds the contact of a confirmation — for good while its year is open, ten years from the anchor once closed', async () => {
+    const f = await ledgerFixture({ years: ['2025'] });
+    f.deps.clock.set('2025-07-01T10:00:00.000Z');
+    const id = insertConfirmation(f, insertNotice(f));
+    expect(financeRetentionHolds(f.deps, 'contact', f.donor.id)).toEqual([{ label: 'Bestätigung ZWB-2025-0001', until: null, entity: 'financeConfirmation', id }]);
+    f.closeYear(f.years['2025']!.id);
+    expect(financeRetentionHolds(f.deps, 'contact', f.donor.id)).toEqual([{ label: 'Bestätigung ZWB-2025-0001', until: '2035-12-31', entity: 'financeConfirmation', id }]);
+  });
+
+  it('holds our copy and the signed version ten years from the end of the year of issue', async () => {
+    const f = await ledgerFixture({ years: ['2025'] });
+    const id = insertConfirmation(f, insertNotice(f), { signedDocumentId: 'DOC-SIGNED' });
+    for (const documentId of ['DOC-COPY', 'DOC-SIGNED']) {
+      expect(financeRetentionHolds(f.deps, 'document', documentId), documentId).toEqual([{ label: 'Bestätigung ZWB-2025-0001', until: '2035-12-31', entity: 'financeConfirmation', id }]);
+    }
+  });
+
+  it('holds the document of a notice and of its superseding, ten years from the end of its validity', async () => {
+    const f = await ledgerFixture();
+    const id = insertNotice(f, { kind: 'section60a', noticeDate: '2024-02-29', documentId: 'DOC-NOTICE', supersededOn: '2025-01-10', supersededDocumentId: 'DOC-REPEAL' });
+    for (const documentId of ['DOC-NOTICE', 'DOC-REPEAL']) {
+      expect(financeRetentionHolds(f.deps, 'document', documentId), documentId).toEqual([{ label: 'Bescheid vom 2024-02-29', until: '2037-12-31', entity: 'financeNotice', id }]);
+    }
+  });
+
+  it('holds the valuation proof of an in-kind donation ten years from the end of the fiscal year of its entry', async () => {
+    const f = await ledgerFixture({ years: ['2025'] });
+    const entry = await f.finalDonation({ date: '2025-06-01', cents: 12000, contactId: f.donor.id });
+    const line = f.deps.db.select().from(financeAllocationLines).where(eq(financeAllocationLines.entryId, entry.id)).get()!;
+    f.deps.db.insert(financeInKindDetails).values({ lineId: line.id, item: 'Kratzbaum', condition: 'neu', valuation: 'Rechnung', origin: 'private', proofDocumentId: 'DOC-PROOF', createdAt: T, updatedAt: T }).run();
+    expect(financeRetentionHolds(f.deps, 'document', 'DOC-PROOF')).toEqual([{ label: `Buchung ${entry.number}`, until: '2035-12-31', entity: 'financeEntry', id: entry.id }]);
+  });
+
+  it('references those documents while their hold runs, and names nobody', async () => {
+    const f = await ledgerFixture({ years: ['2025'] });
+    insertConfirmation(f, insertNotice(f, { documentId: 'DOC-NOTICE' }));
+    expect(financeRecordReferences(f.deps, 'document', 'DOC-COPY')).toHaveLength(1);
+    expect(financeRecordReferences(f.deps, 'document', 'DOC-NOTICE')).toHaveLength(1);
+    expect(financeRecordReferences(f.deps, 'contact', f.donor.id)).toEqual([]);
+    expect(JSON.stringify(financeRetentionHolds(f.deps, 'contact', f.donor.id))).not.toMatch(/Musterspenderin|Musterstadt/);
   });
 });

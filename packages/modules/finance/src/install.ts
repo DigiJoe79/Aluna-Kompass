@@ -53,4 +53,10 @@ export function installFinance(tx: DbOrTx, deps: Deps, ctx: CallContext): void {
   // Modul-eigen: Das Zählprotokoll braucht das Modul zum Arbeiten (Spec 4.4). Trägt eine
   // andere Art das Präfix KZP schon, meldet der Start einen Fehler (Vorarbeiten-Spec § 4).
   ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'finance-cash-count', label: 'Kassenzählung', prefix: 'KZP', defaultDirection: 'outgoing', retentionClass: 'statutory10Y', owned: true, protectionArea: 'finance' });
+
+  // F6a — modul-eigen: unser Exemplar der Zuwendungsbestätigung (ein lückenloser Nummernkreis, den nur
+  // Finanzen zieht) und die unterschriebene Fassung, die als Eingang zurückkommt. Trägt eine Vereinsart
+  // ZWB oder ZWU schon, scheitert der Start, bis der Verein ihr ein anderes Präfix gibt (Befundliste § 5).
+  ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'finance-confirmation', label: 'Zuwendungsbestätigung', prefix: 'ZWB', defaultDirection: 'outgoing', retentionClass: 'statutory10Y', owned: true, protectionArea: 'finance' });
+  ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'finance-confirmation-signed', label: 'Zuwendungsbestätigung, unterschrieben', prefix: 'ZWU', defaultDirection: 'incoming', retentionClass: 'statutory10Y', owned: true, protectionArea: 'finance' });
 }

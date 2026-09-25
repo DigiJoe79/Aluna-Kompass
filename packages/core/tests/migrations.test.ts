@@ -107,6 +107,25 @@ describe('hand-written SQL survives', () => {
     }
   });
 
+  it('keeps notices, signers, confirmations and their lines permanent; a line is released once (F6a)', () => {
+    for (const name of [
+      'finance_notices_no_delete',
+      'finance_notices_supersede_once',
+      'finance_notices_void_once',
+      'finance_signers_no_delete',
+      'finance_confirmations_no_delete',
+      'finance_confirmations_immutable',
+      'finance_confirmations_void_once',
+      'finance_confirmations_trail_once',
+      'finance_confirmations_signed_once',
+      'finance_confirmation_lines_no_delete',
+      'finance_confirmation_lines_release_once',
+    ]) {
+      expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
+    }
+    expect(allSql).toContain('CREATE UNIQUE INDEX `finance_confirmation_lines_line_idx` ON `finance_confirmation_lines` (`line_id`) WHERE "finance_confirmation_lines"."released_at" is null');
+  });
+
   it('refuses an import rule without any condition, on insert and on update (F5)', () => {
     for (const name of ['finance_import_rules_needs_condition_insert', 'finance_import_rules_needs_condition_update']) {
       expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);

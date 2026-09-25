@@ -5,10 +5,13 @@ import {
   financeAllocationCorrections,
   financeAllocationLines,
   financeCashCounts,
+  financeConfirmations,
   financeContactBankAccounts,
   financeEntries,
   financeEntryDocuments,
   financeFiscalYears,
+  financeInKindDetails,
+  financeNotices,
   financeOpenItems,
   financePeriodEvents,
   financeProjectSettings,
@@ -18,6 +21,7 @@ import {
   type FinanceFiscalYearRow,
 } from '../schema';
 import { fiscalYearForInternal, fiscalYearStatusInternal } from './fiscal-years';
+import { noticeValidUntil } from './notice-validity';
 
 /**
  * Der Anker, ab dem die Frist eines Geschäftsjahres läuft: der spätere aus
@@ -79,6 +83,12 @@ function openItemHoldUntil(deps: Deps, itemDate: string): string | null {
   return retentionEnd(year ? year.endsOn : itemDate, months);
 }
 
+/** `statutory10Y` ab Ende des Kalenderjahres von `fromDate` — für Dokumente der Spenden (F6a). */
+function tenYearsFrom(deps: Deps, fromDate: string): string | null {
+  const months = retentionMonths(deps, 'statutory10Y');
+  return months === null ? null : retentionEnd(fromDate, months);
+}
+
 /** Kontakt: ein Halter je Buchung — nie je Zeile, nie mit Text. */
 function contactHolds(deps: Deps, contactId: string): RetentionHold[] {
   const lines = deps.db
@@ -104,6 +114,13 @@ function contactHolds(deps: Deps, contactId: string): RetentionHold[] {
   for (const count of counts) {
     const fiscalYearId = fiscalYearForInternal(deps.db, count.countedOn)?.id ?? null;
     holds.push({ label: `Kassenzählung ${count.documentNumber}`, until: contactHoldUntil(deps, fiscalYearId), entity: 'financeCashCount', id: count.id });
+  }
+
+  // F6a: je Bestätigung ein Halter — wie je Buchung, mit dem Anker des Geschäftsjahres des Ausstellungstags.
+  const confirmations = deps.db.select().from(financeConfirmations).where(eq(financeConfirmations.contactId, contactId)).all();
+  for (const confirmation of confirmations) {
+    const fiscalYearId = fiscalYearForInternal(deps.db, confirmation.issuedOn)?.id ?? null;
+    holds.push({ label: `Bestätigung ${confirmation.documentNumber}`, until: contactHoldUntil(deps, fiscalYearId), entity: 'financeConfirmation', id: confirmation.id });
   }
   return holds;
 }
@@ -132,6 +149,32 @@ function documentHolds(deps: Deps, documentId: string): RetentionHold[] {
     const entry = deps.db.select().from(financeEntries).where(eq(financeEntries.id, correction.entryId)).get();
     if (!entry) continue;
     holds.push({ label: `Buchung ${entry.number ?? entry.id}`, until: entryDocumentHoldUntil(deps, entry), entity: 'financeEntry', id: entry.id });
+  }
+
+  // F6a: unser Exemplar und die unterschriebene Fassung — zehn Jahre ab Ende des Ausstellungsjahres.
+  const confirmations = deps.db.select().from(financeConfirmations).where(or(eq(financeConfirmations.documentId, documentId), eq(financeConfirmations.signedDocumentId, documentId))).all();
+  for (const confirmation of confirmations) {
+    holds.push({ label: `Bestätigung ${confirmation.documentNumber}`, until: tenYearsFrom(deps, confirmation.issuedOn), entity: 'financeConfirmation', id: confirmation.id });
+  }
+
+  // Der Bescheid und sein Aufhebungs- oder Ersetzungsbescheid — zehn Jahre ab Ende seiner Gültigkeit (auch, wenn er früher ersetzt wurde).
+  const notices = deps.db.select().from(financeNotices).where(or(eq(financeNotices.documentId, documentId), eq(financeNotices.supersededDocumentId, documentId))).all();
+  for (const notice of notices) {
+    holds.push({ label: `Bescheid vom ${notice.noticeDate}`, until: tenYearsFrom(deps, noticeValidUntil(notice.kind, notice.noticeDate)), entity: 'financeNotice', id: notice.id });
+  }
+
+  // Die Wertunterlage einer Sachspende — zehn Jahre ab Ende des Geschäftsjahres ihrer Buchung.
+  const inKind = deps.db
+    .select({ entryId: financeAllocationLines.entryId })
+    .from(financeInKindDetails)
+    .innerJoin(financeAllocationLines, eq(financeInKindDetails.lineId, financeAllocationLines.id))
+    .where(eq(financeInKindDetails.proofDocumentId, documentId))
+    .all();
+  for (const entryId of new Set(inKind.map((r) => r.entryId))) {
+    const entry = deps.db.select().from(financeEntries).where(eq(financeEntries.id, entryId)).get();
+    if (!entry) continue;
+    const year = entry.fiscalYearId ? deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.id, entry.fiscalYearId)).get() : undefined;
+    holds.push({ label: `Buchung ${entry.number ?? entry.id}`, until: tenYearsFrom(deps, year?.endsOn ?? entry.entryDate), entity: 'financeEntry', id: entry.id });
   }
   return holds;
 }

@@ -88,6 +88,9 @@ export const financeModule: ModuleManifest = defineModule({
     { entityType: 'financeOpenItem', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
     // Das Zählprotokoll (Task 1) — lesbar für alle mit finance.read, ausgestellt nur beim Festschreiben.
     { entityType: 'financeCashCount', readPermission: 'finance.read', receivePermission: 'finance.entriesFinalize' },
+    // F6a: unser Exemplar und die unterschriebene Fassung einer Bestätigung, das Dokument eines Bescheids.
+    { entityType: 'financeConfirmation', readPermission: 'finance.read', receivePermission: 'finance.donationsIssue' },
+    { entityType: 'financeNotice', readPermission: 'finance.read', receivePermission: 'finance.donationsIssue' },
   ],
   documentTemplates: [cashCountTemplate],
   /**
@@ -148,6 +151,20 @@ export const financeModule: ModuleManifest = defineModule({
       entity: 'financeCashCount',
       deletable: false,
       reason: 'Eine Kassenzählung ist eine gespeicherte Tatsache für die Kontenabstimmung (Spec 5.5) und wird nie gelöscht.',
+    },
+    // F6a — Spenden (Spec 10.3, Annahme 14).
+    { entity: 'financeNotice', deletable: false, reason: 'Bescheide sind eine datierte Reihe: Bestätigungen berufen sich auf sie. Ein falscher Bescheid wird als irrtümlich erfasst gekennzeichnet, ein neuer ersetzt den alten.' },
+    { entity: 'financeSigner', deletable: false, reason: 'Wer maschinell erstellte Bestätigungen unterzeichnet hat, bleibt nachvollziehbar; ein Amtsende beendet den Zeitraum.' },
+    {
+      entity: 'financeConfirmation',
+      deletable: false,
+      reason: 'Eine ausgestellte Zuwendungsbestätigung wird nie gelöscht, nur zurückgenommen — mit Rückholspur. Nach Ablauf der Frist wird der Personenbezug des Geschäftsjahres entfernt; Nummer, Datum und Betrag bleiben.',
+    },
+    { entity: 'financeConfirmationLine', deletable: false, reason: 'Welche Zuwendung eine Bestätigung trägt, bleibt nachvollziehbar; eine Rücknahme gibt die Zeile frei, statt sie zu löschen.' },
+    {
+      entity: 'financeInKindDetails',
+      deletable: false,
+      reason: 'Die Angaben zur Sachspende hängen an einer festgeschriebenen Buchung. Nach Ablauf der Frist entfernt sie die Anonymisierung des Geschäftsjahres mit dem übrigen Freitext.',
     },
     {
       entity: 'financeYearPersonalData',

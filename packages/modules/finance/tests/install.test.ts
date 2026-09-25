@@ -83,3 +83,20 @@ describe('installFinance — cash count document type', () => {
     expect(documentTypeFor(deps.db, 'finance-cash-count')).toMatchObject({ prefix: 'KZP', protectionArea: 'finance', retentionClass: 'statutory10Y', ownerModule: 'finance', defaultDirection: 'outgoing' });
   });
 });
+
+describe('installFinance — donation confirmation document types (F6a)', () => {
+  it('creates finance-confirmation owned and protected', () => {
+    const { deps } = setupFinance();
+    run(deps);
+    expect(documentTypeFor(deps.db, 'finance-confirmation')).toMatchObject({ prefix: 'ZWB', protectionArea: 'finance', retentionClass: 'statutory10Y', ownerModule: 'finance', defaultDirection: 'outgoing' });
+    expect(documentTypeFor(deps.db, 'finance-confirmation-signed')).toMatchObject({ prefix: 'ZWU', protectionArea: 'finance', retentionClass: 'statutory10Y', ownerModule: 'finance', defaultDirection: 'incoming' });
+  });
+
+  it('refuses to install while another type holds ZWB', () => {
+    const { deps } = setupFinance();
+    // wie eine Vereinsart „Zuwendungsbestätigung“ aus der Zeit vor dem Finanzmodul
+    deps.db.insert(documentTypes).values({ key: 'donation-receipt', label: 'Zuwendungsbestätigung', prefix: 'ZWB', defaultDirection: 'outgoing', retentionClass: 'statutory10Y', defaultFolder: null, isActive: true, sortOrder: 50, ownerModule: null, protectionArea: null }).run();
+    expect(() => run(deps)).toThrow(/Präfix ZWB trägt schon die Dokumentart „Zuwendungsbestätigung“/);
+    expect(documentTypeFor(deps.db, 'finance-confirmation')).toBeNull();
+  });
+});
