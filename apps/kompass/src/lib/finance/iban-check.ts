@@ -42,3 +42,6 @@ export function checkIban(text: string): IbanCheckResult {
   if (!format || expectedLength === undefined || iban.length !== expectedLength) return { state: 'length', country };
   return { state: checksumOk(iban) ? 'valid' : 'checksum', country };
 }
+
+/** Zum Lesen in Vierergruppen — dieselbe Anzeige wie `formatIban` im Modul (Test). */
+export const groupIban = (iban: string): string => normalize(iban).replace(/(.{4})(?=.)/g, '$1 ');

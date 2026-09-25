@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { useDateFormat } from '@/components/date-format-provider';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import type { ActionState } from '@/lib/actions';
 import { formatEuro, parseAmount } from '@/lib/finance/amount';
+import { takeCsvHandoff, type CsvHandoff } from '@/lib/finance/csv-handoff';
 import {
   assistantFileKey,
   buildFormat,
@@ -61,7 +63,14 @@ function browserStorage(): Storage | null {
   }
 }
 
-const isoToGerman = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
+/** Wie `browserStorage`, für die Datei aus der Ablagefläche (N3, W-1) — sie überlebt nur den Wechsel in den Assistenten. */
+function sessionStore(): Storage | null {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Der CSV-Assistent (F4b Task 5, HANDOFF § 12.3): fünf Schritte, nichts
@@ -69,9 +78,12 @@ const isoToGerman = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${i
  * wird je Konto und Datei laufend gesichert — ohne die Bytes und ohne
  * `crypto.subtle`, das es über Klartext-HTTP nicht gibt.
  */
-export function CsvAssistant({ accounts, initialAccountId, canLoad }: { accounts: AssistantAccount[]; initialAccountId: string; canLoad: boolean }) {
+export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = false }: { accounts: AssistantAccount[]; initialAccountId: string; canLoad: boolean; reselect?: boolean }) {
   const t = useTranslations('finance.csvAssistant');
+  const { date } = useDateFormat();
   const router = useRouter();
+  /** Die Datei aus dem Zwischenschritt der Ablagefläche (N3, W-1): Konto wählen, dann mit ihr weiter. */
+  const [handoff, setHandoff] = useState<CsvHandoff | null>(null);
   const [accountId, setAccountId] = useState(initialAccountId);
   const [csvChosen, setCsvChosen] = useState(false);
   const [file, setFile] = useState<LoadedFile | null>(null);
@@ -83,6 +95,14 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad }: { accounts
 
   const account = accounts.find((a) => a.id === accountId) ?? null;
   const step: AssistantStep = state?.step ?? 1;
+
+  useEffect(() => {
+    const carried = takeCsvHandoff(sessionStore());
+    if (carried) {
+      setHandoff(carried);
+      setCsvChosen(true);
+    } else if (reselect) setCsvChosen(true);
+  }, [reselect]);
 
   useEffect(() => {
     if (file && state && account) saveState(browserStorage(), storageKey(account.id, file.key), state);
@@ -99,12 +119,16 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad }: { accounts
     update({ step: next });
   };
 
-  const chooseFile = async (chosen: File) => {
+  const openBytes = (name: string, bytes: Uint8Array) => {
     if (!account) return;
-    const bytes = new Uint8Array(await chosen.arrayBuffer());
-    const key = assistantFileKey(chosen.name, bytes);
-    setFile({ name: chosen.name, bytes, key });
+    const key = assistantFileKey(name, bytes);
+    setFile({ name, bytes, key });
     setState(loadState(browserStorage(), storageKey(account.id, key)) ?? initialState(bytes, t('defaultName', { account: account.name })));
+  };
+
+  const chooseFile = async (chosen: File) => {
+    setHandoff(null);
+    openBytes(chosen.name, new Uint8Array(await chosen.arrayBuffer()));
   };
 
   const needsSwitch = (): boolean => {
@@ -186,6 +210,16 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad }: { accounts
               {t('camt.link')}
             </Link>
           </div>
+          {handoff ? (
+            <div className="space-y-2 rounded-md border border-primary bg-brand-soft p-4 text-[14px]">
+              <p className="font-semibold text-ink">{t('handoff.text', { name: handoff.name })}</p>
+              <p className="text-ink-2">{t('handoff.hint')}</p>
+              <Button type="button" disabled={!account} onClick={() => openBytes(handoff.name, handoff.bytes)}>
+                {t('handoff.continue')}
+              </Button>
+            </div>
+          ) : null}
+          {reselect && !handoff ? <Notice level="hint">{t('handoff.lost')}</Notice> : null}
           {!csvChosen ? (
             <Button type="button" variant="secondary" onClick={() => setCsvChosen(true)}>
               {t('camt.csvAnyway')}
@@ -355,7 +389,7 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad }: { accounts
           {first ? (
             <dl data-testid="csv-probe" className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 rounded-md border border-line bg-surface p-4 text-[14px]">
               <dt className="text-muted-ink">{t('probe.date')}</dt>
-              <dd className="font-mono">{isoToGerman(first.bookingDate)}</dd>
+              <dd className="font-mono">{date(first.bookingDate)}</dd>
               <dt className="text-muted-ink">{t('probe.counterparty')}</dt>
               <dd>{first.counterpartyName ?? '—'}</dd>
               <dt className="text-muted-ink">{t('probe.iban')}</dt>
@@ -378,7 +412,7 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad }: { accounts
           </div>
           {!hasBalanceColumn && read?.ok ? (
             <div className="max-w-sm space-y-1.5">
-              <Label htmlFor="csv-balance">{t('probe.balanceLabel', { date: isoToGerman(read.statement.to) })}</Label>
+              <Label htmlFor="csv-balance">{t('probe.balanceLabel', { date: date(read.statement.to) })}</Label>
               <Input id="csv-balance" inputMode="decimal" value={balanceText} onChange={(e) => setBalanceText(e.target.value)} />
             </div>
           ) : null}

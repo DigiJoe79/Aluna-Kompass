@@ -166,27 +166,49 @@ test.describe('finance csv', () => {
     await expect(page.getByLabel(/Format/)).toHaveCount(0);
   });
 
-  test('eine CSV auf ein Konto ohne CSV-Format führt über „CSV-Format einrichten“ in den Assistenten für dieses Konto', async ({ page }) => {
+  test('passt eine CSV zu keinem Konto, führt der Zwischenschritt in den Assistenten', async ({ page }) => {
     await createBankAccount(page, 'Hausbank CSV-Test', 'DE66999999990000303030');
     await page.goto('/finance/imports');
-    await page.getByLabel('Konto', { exact: true }).selectOption({ label: 'Hausbank CSV-Test' });
-    await page.getByTestId('statement-file-input').setInputFiles(csvFile());
-    await expect(page.getByText('Für Hausbank CSV-Test ist noch kein CSV-Format eingerichtet.')).toBeVisible();
-    await page.getByRole('button', { name: 'CSV-Format einrichten' }).click();
-    await expect(page).toHaveURL(/\/finance\/imports\/format\?account=/);
-    await expect(page.getByLabel('Konto', { exact: true })).toHaveValue(new URL(page.url()).searchParams.get('account')!);
-    await expect(page.getByLabel('Konto', { exact: true }).locator('option:checked')).toHaveText('Hausbank CSV-Test');
-  });
-
-  test('eine CSV mit fremder Kopfzeile bietet die gewohnte Datei oder ein neues Format an und legt keinen Lauf an', async ({ page }) => {
-    await page.goto('/finance/imports');
-    await page.getByLabel('Konto', { exact: true }).selectOption({ label: 'Spendenplattform' });
     const before = await page.getByTestId('import-run').count();
     await page.getByTestId('statement-file-input').setInputFiles(csvFile());
-    await expect(page.getByText(/passt nicht zum CSV-Format von Spendenplattform \(Spendenplattform CSV\)/)).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Datei im gewohnten Format holen' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Neues CSV-Format einrichten' })).toBeVisible();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByText('hausbank-maerz.csv — kein Konto hat ein Format mit dieser Kopfzeile.')).toBeVisible();
+    await expect(dialog.getByText('Ist das ein neues Konto, oder hat die Bank ihr Format geändert?')).toBeVisible();
+    // Kein Lauf, bevor ein Mensch entschieden hat.
     await expect(page.getByTestId('import-run')).toHaveCount(before);
+    await dialog.getByRole('button', { name: 'Format für ein Konto einrichten' }).click();
+
+    // Der Assistent übernimmt die Datei; das Konto wählt man dort.
+    await expect(page).toHaveURL(/\/finance\/imports\/format$/);
+    await expect(page.getByText('Datei „hausbank-maerz.csv“ aus der Ablagefläche')).toBeVisible();
+    await page.getByLabel('Konto', { exact: true }).selectOption({ label: 'Hausbank CSV-Test' });
+    await page.getByRole('button', { name: 'Mit dieser Datei weiter' }).click();
+    await expect(page.getByRole('heading', { name: 'Erkannte Einstellungen' })).toBeVisible();
+  });
+
+  test('passen zwei Konten, fragt Kompass nach', async ({ page }) => {
+    // Ein zweites Konto mit demselben CSV-Format wie das Seed-Konto „Zweitbank CSV“ — eingerichtet über den Assistenten.
+    await createBankAccount(page, 'Drittbank CSV-Test', 'DE30999999990000505050');
+    await startAssistant(page, 'Drittbank CSV-Test', path.join(FIXTURES, 'zweitbank.csv'));
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    await page.getByRole('button', { name: 'Nein, Geld kam herein' }).click();
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    await page.getByRole('button', { name: 'Nur speichern' }).click();
+    await expect(page).toHaveURL(/\/finance\/imports$/);
+
+    await page.getByTestId('statement-file-input').setInputFiles(path.join(FIXTURES, 'zweitbank.csv'));
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByText('zweitbank.csv — 2 Konten haben ein Format mit dieser Kopfzeile. Welches ist es?')).toBeVisible();
+    await expect(dialog.getByRole('radio', { name: /Zweitbank CSV/ })).toBeVisible();
+    await expect(dialog.getByText('Format „Zweitbank CSV“ · importiert bis 04.03.2026')).toBeVisible();
+    await expect(dialog.getByText('Format „Drittbank CSV-Test CSV“ · noch kein Auszug')).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Einlesen' })).toBeDisabled();
+    await dialog.getByRole('radio', { name: /Drittbank CSV-Test/ }).check();
+    await dialog.getByRole('button', { name: 'Einlesen' }).click();
+
+    await expect(page.getByText(/zweitbank\.csv: 2 neu, 0 bereits vorhanden, 0 zurückgehalten/)).toBeVisible();
+    await expect(page.getByTestId('import-run').filter({ hasText: 'Drittbank CSV-Test' })).toHaveCount(1);
   });
 
   test('ein CSV-Auszug ohne Saldospalte lädt ohne Rückfrage und steht als „ohne Kontostand“ in der Liste', async ({ page }) => {
@@ -200,7 +222,6 @@ test.describe('finance csv', () => {
     await page.getByRole('button', { name: 'Nur speichern' }).click();
     await expect(page).toHaveURL(/\/finance\/imports$/);
 
-    await page.getByLabel('Konto', { exact: true }).selectOption({ label: 'Hausbank CSV-Test' });
     await page.getByTestId('statement-file-input').setInputFiles(csvFile(noBalance, 'ohne-saldo.csv'));
     await expect(page.getByText(/ohne-saldo\.csv: 2 neu, 0 bereits vorhanden, 0 zurückgehalten/)).toBeVisible();
     const run = page.getByTestId('import-run').filter({ hasText: 'Hausbank CSV-Test' });

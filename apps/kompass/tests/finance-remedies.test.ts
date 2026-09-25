@@ -38,4 +38,8 @@ describe('remediesFor', () => {
     expect(remediesFor('entryLockedByConfirmation')).toEqual([{ kind: 'link', href: '/finance/donations', labelKey: 'finance.remedy.openConfirmations' }]);
     expect(remediesFor('contactLockedByConfirmation')).toEqual([{ kind: 'link', href: '/finance/donations', labelKey: 'finance.remedy.openConfirmations' }]);
   });
+
+  it('a camt file for two accounts leads to the help page on fetching one file per account (N3, W-1)', () => {
+    expect(remediesFor('statementMultipleAccounts')).toEqual([{ kind: 'link', href: '/help/finanzen/auszug-bei-der-bank-holen', labelKey: 'finance.remedy.exportPerAccount' }]);
+  });
 });

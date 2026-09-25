@@ -56,7 +56,7 @@ export {
 } from './schema';
 
 export { requireFinanceRead } from './ledger/access';
-export { isValidIban, normalizeIban } from './ledger/iban';
+export { formatIban, isValidIban, normalizeIban } from './ledger/iban';
 export { ALLOWANCE_KINDS, CERTIFIABLE_INCOME_KINDS, COST_FUNCTIONS, DIRECTIONS, INCOME_KINDS, INPUT_TAX, SPHERES, TAX_CODES } from './ledger/codes';
 export {
   accountActiveSchema,
@@ -192,9 +192,10 @@ export { installFinance } from './install';
 export { FINANCE_MCP_TOOLS } from './mcp-tools';
 export { seedFinance } from './seed';
 
-export { parseCamt053, type CamtError, type CamtLine, type CamtStatement } from './import/camt';
+export { camtStatementIbans, parseCamt053, type CamtError, type CamtLine, type CamtStatement } from './import/camt';
 export { buildCamt053, buildCamt053Bytes, type CamtFixtureInput, type CamtFixtureLine } from './import/camt-fixture';
 export { dedupKey, normalizePurpose } from './import/dedup';
+export { detectStatementAccount, type DetectedAccount, type DetectedStatement } from './import/detect';
 export { getImportRun, importRunRowInternal, importStatement, listImportRuns, setRunClosingBalance, toRunView, type ImportRunView } from './import/runs';
 export { decideCandidate, listCandidates, type CandidateView } from './import/candidates';
 export { getRawTransaction, listRawTransactions, rawStateInternal, rawTransactionViewInternal, rawTransactionsForRunInternal, type RawTransactionView } from './import/queries';

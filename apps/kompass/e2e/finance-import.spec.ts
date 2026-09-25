@@ -23,8 +23,26 @@ test.describe('finance import', () => {
   async function openImports(page: import('@playwright/test').Page) {
     await loginAsAdmin(page);
     await page.goto('/finance/imports');
-    await page.getByLabel('Konto', { exact: true }).selectOption({ label: 'Importkonto' });
   }
+
+  test('ein Auszug wird ohne Kontoauswahl geladen, weil Kompass das Konto erkennt', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/imports');
+    await expect(page.getByLabel('Konto', { exact: true })).toHaveCount(0);
+    const importkontoRuns = page.getByTestId('import-run').filter({ hasText: 'Importkonto' });
+    const before = await importkontoRuns.count();
+
+    // Die Arbeitsliste zeigt alle Konten; die Ablagefläche fragt nicht nach dem Konto (N3, W-1).
+    await page.goto('/finance/work');
+    await expect(page.getByLabel('Liste für Konto')).toHaveValue('');
+    await expect(page.getByLabel('Konto', { exact: true })).toHaveCount(0);
+    await page.getByTestId('statement-file-input').setInputFiles(fixture('neuer-auszug.xml'));
+    await expect(page.getByText(/neuer-auszug\.xml: 1 neu, 1 bereits vorhanden, 1 zurückgehalten/)).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    await page.goto('/finance/imports');
+    await expect(importkontoRuns).toHaveCount(before + 1);
+  });
 
   test('einen Auszug laden: das Ergebnis nennt neu, bereits vorhanden und zurückgehalten, und das Konto ist „importiert bis“', async ({ page }) => {
     await openImports(page);
@@ -49,11 +67,19 @@ test.describe('finance import', () => {
     await expect(page.getByRole('link', { name: 'Zum vorhandenen Lauf' })).toBeVisible();
   });
 
-  test('ein Auszug mit fremder IBAN wird abgelehnt und nennt die Abhilfe', async ({ page }) => {
+  test('eine fremde IBAN führt zu „Konto einrichten“', async ({ page }) => {
     await openImports(page);
+    const before = await page.getByTestId('import-run').count();
     await page.getByTestId('statement-file-input').setInputFiles(fixture('fremde-iban.xml'));
-    await expect(page.getByText(/passt nicht zum Konto/)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Anderes Konto wählen' })).toBeVisible();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByText('fremde-iban.xml — die IBAN DE18 9999 9999 0000 7107 12 gehört zu keinem Konto.')).toBeVisible();
+    await expect(dialog.getByText('Kompass liest nur Auszüge von eingerichteten Konten.')).toBeVisible();
+    // Der alte Ausweg „Anderes Konto wählen“ gibt es nicht mehr — es gibt keine Kontoauswahl.
+    await expect(page.getByRole('button', { name: 'Anderes Konto wählen' })).toHaveCount(0);
+    await expect(dialog.getByRole('link', { name: 'Konto einrichten' })).toHaveAttribute('href', '/admin/finance?panel=accounts');
+    await dialog.getByRole('button', { name: 'Abbrechen' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.getByTestId('import-run')).toHaveCount(before);
   });
 
   test('ein unlesbarer Auszug steht als fehlgeschlagen in der Liste und nennt die Zeile', async ({ page }) => {
@@ -190,7 +216,6 @@ test.describe('finance import', () => {
   test('ein Formatwechsel verlangt einen Bestätigungsdialog mit dem Hinweis auf mehr Zweifelsfälle', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/imports');
-    await page.getByLabel('Konto', { exact: true }).selectOption({ label: 'Spendenplattform' });
     await page.getByTestId('statement-file-input').setInputFiles(fixture('formatwechsel.xml'));
     await expect(page.getByRole('button', { name: 'Format wechseln' })).toBeVisible();
     await page.getByRole('button', { name: 'Format wechseln' }).click();

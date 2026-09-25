@@ -190,7 +190,8 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
       <PageHeader title={t('title')} description={t('description')} />
 
       <div className="sticky top-0 z-10 space-y-3 bg-bg pb-2">
-        {canWrite && importable.length > 0 ? <ImportUpload accounts={importable} defaultAccountId={account && importable.some((a) => a.id === account) ? account : undefined} /> : null}
+        {/* N3, W-1: die Ablagefläche erkennt das Konto selbst — „Liste für Konto“ filtert nur die Liste. */}
+        {canWrite && importable.length > 0 ? <ImportUpload accounts={importable} /> : null}
 
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div role="tablist" aria-label={t('tabsGroup')} className="flex flex-wrap gap-1 border-b border-line">

@@ -10,9 +10,10 @@ import { CsvAssistant, type AssistantAccount } from './csv-assistant';
 /**
  * CSV-Format einrichten (F4b Task 5, B3). Einrichten darf, wer
  * `finance.setup` trägt (Rückmeldung Phase 2, Punkt 3); wer nur lesen darf,
- * sieht, wer es kann. `?account=` wählt das Konto vor.
+ * sieht, wer es kann. `?account=` wählt das Konto vor; `?reselect=1` sagt, dass die
+ * Datei aus der Ablagefläche nicht mitkam (N3, W-1) — man wählt sie hier erneut.
  */
-export default async function CsvFormatPage({ searchParams }: { searchParams: Promise<{ account?: string }> }) {
+export default async function CsvFormatPage({ searchParams }: { searchParams: Promise<{ account?: string; reselect?: string }> }) {
   const { deps, ctx } = await requireSession();
   const t = await getTranslations('finance.csvAssistant');
   const query = await searchParams;
@@ -40,7 +41,7 @@ export default async function CsvFormatPage({ searchParams }: { searchParams: Pr
   return (
     <div className="max-w-[1100px] space-y-6">
       <PageHeader title={t('title')} />
-      <CsvAssistant accounts={accounts} initialAccountId={accounts.some((a) => a.id === query.account) ? query.account! : (accounts[0]?.id ?? '')} canLoad={hasPermission(ctx, 'finance.entriesWrite')} />
+      <CsvAssistant accounts={accounts} initialAccountId={accounts.some((a) => a.id === query.account) ? query.account! : (accounts[0]?.id ?? '')} canLoad={hasPermission(ctx, 'finance.entriesWrite')} reselect={query.reselect === '1'} />
     </div>
   );
 }

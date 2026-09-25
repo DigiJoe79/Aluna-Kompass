@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { FINANCE_MCP_TOOLS } from '../src/mcp-tools';
 import { insertRaw, insertRun, ledgerFixture, pdfBytes } from './helpers';
 import { donationFixture, png } from './donation-fixture';
+import { buildCamt053 } from '../src/import/camt-fixture';
 
 describe('finance MCP tools', () => {
   it('every human-only tool says so, and answers an agent with the way out', async () => {
@@ -181,5 +182,23 @@ describe('finance MCP tools', () => {
       expect(await attach.handler(f.deps, f.ctx, { id: 'x', contentBase64: big })).toMatchObject({ ok: false, error: { type: 'validation' } });
       expect(await attach.handler(f.deps, f.ctx, { id: 'nope', contentBase64: Buffer.from(pdfBytes()).toString('base64') })).toMatchObject({ ok: false, error: { type: 'notFound' } });
     });
+  });
+
+  it('finance_statement_detect_account takes base64 like finance_import_statement and names both ibans of a file for two accounts (N3, W-1)', async () => {
+    const f = await ledgerFixture();
+    const tool = FINANCE_MCP_TOOLS.find((t) => t.name === 'finance_statement_detect_account')!;
+    expect(tool.description).toContain('finance.entriesWrite');
+    expect(tool.description).toMatch(/^[\x20-\x7e]+$/);
+    expect(await tool.handler(f.deps, f.ctx, { fileName: 'a.xml', contentBase64: 'kein base64!' })).toMatchObject({ ok: false, error: { type: 'validation' } });
+
+    const camt = (iban: string) => buildCamt053({ iban, from: '2026-03-01', to: '2026-03-31', openingCents: 0, lines: [] });
+    const own = Buffer.from(camt('DE23999999990000202051')).toString('base64');
+    expect(unwrap(await tool.handler(f.deps, f.ctx, { fileName: 'a.xml', contentBase64: own }))).toEqual({ kind: 'one', format: 'camt053', accountId: f.bank.id });
+
+    const first = camt('DE23999999990000202051');
+    const second = camt('DE12999999990000606060');
+    const two = first.replace('</Stmt>', `</Stmt>${second.slice(second.indexOf('<Stmt>'), second.indexOf('</Stmt>') + 7)}`);
+    const res = await tool.handler(f.deps, f.ctx, { fileName: 'q1.xml', contentBase64: Buffer.from(two).toString('base64') });
+    expect(res).toMatchObject({ ok: false, error: { type: 'conflict', code: 'statementMultipleAccounts', message: expect.stringMatching(/DE23 9999.*DE12 9999.*je Konto eine Datei/) } });
   });
 });

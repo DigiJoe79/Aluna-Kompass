@@ -9,3 +9,6 @@ export function isValidIban(input: string): boolean {
   for (const d of digits) rest = (rest * 10 + Number(d)) % 97;
   return rest === 1;
 }
+
+/** Zum Lesen in Vierergruppen — `DE60 9999 9999 0201 0512 34`. Nur Anzeige; gespeichert wird immer `normalizeIban`. */
+export const formatIban = (iban: string): string => normalizeIban(iban).replace(/(.{4})(?=.)/g, '$1 ');

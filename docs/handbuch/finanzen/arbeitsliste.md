@@ -8,8 +8,9 @@ ein Mensch prüft den Vorschlag und übernimmt ihn mit einem Tastendruck.
 
 Oben liegt die Ablagefläche für Kontoauszüge: Wer das Recht hat, Buchungen
 vorzubereiten, zieht hier dieselben Dateien hinein wie unter [Kontoauszug
-laden](kontoauszug-laden.md) beschrieben. Daneben wählt „Liste für Konto“,
-ob die Liste alle Konten zeigt oder nur eines.
+laden](kontoauszug-laden.md) beschrieben — das Konto erkennt Kompass am
+Auszug. Daneben wählt „Liste für Konto“, ob die Liste alle Konten zeigt oder
+nur eines; auf das Laden wirkt diese Auswahl nicht.
 
 Darunter stehen fünf Reiter, jeder mit der Zahl seiner Einträge:
 

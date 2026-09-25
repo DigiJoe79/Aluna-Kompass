@@ -2392,7 +2392,8 @@
       "reloadWork": "Liste neu laden",
       "openJournal": "Zum Journal",
       "setUpCategories": "Kategorien einrichten",
-      "openConfirmations": "Zu den Bestätigungen"
+      "openConfirmations": "Zu den Bestätigungen",
+      "exportPerAccount": "In der Banking-App je Konto eine Datei exportieren"
     },
     "state": {
       "draft": "Entwurf",
@@ -2864,7 +2865,6 @@
         "noStatement": "Kein Auszug für heute"
       },
       "upload": {
-        "accountLabel": "Konto",
         "dragOrPick": "Kontoauszug hierher ziehen (CAMT oder CSV, auch mehrere)",
         "dropHere": "Datei hier ablegen",
         "result": "{new} neu, {known} bereits vorhanden, {held} zurückgehalten",
@@ -2872,6 +2872,29 @@
           "title": "Auszugsformat wechseln?",
           "description": "Für {account} war bisher ein anderes Auszugsformat hinterlegt. Nach dem Wechsel kommen mehr Zweifelsfälle vor.",
           "confirm": "Wechsel bestätigen"
+        },
+        "unreadable": "Der Auszug lässt sich nicht lesen. Prüfen Sie die Datei, oder laden Sie den Auszug erneut aus dem Online-Banking herunter.",
+        "choose": {
+          "title": "Welches Konto?",
+          "questionCsv": "{file} — {count} Konten haben ein Format mit dieser Kopfzeile. Welches ist es?",
+          "questionCamt": "{file} — {count} Konten tragen die IBAN dieses Auszugs. Welches ist es?",
+          "accountsLabel": "Passende Konten",
+          "formatThrough": "Format „{format}“ · importiert bis {date}",
+          "formatNothingYet": "Format „{format}“ · noch kein Auszug",
+          "submit": "Einlesen"
+        },
+        "noneCsv": {
+          "title": "Kein passendes Konto",
+          "text": "{file} — kein Konto hat ein Format mit dieser Kopfzeile.",
+          "question": "Ist das ein neues Konto, oder hat die Bank ihr Format geändert?",
+          "setUp": "Format für ein Konto einrichten",
+          "setUpHint": "Öffnet den CSV-Assistenten mit dieser Datei."
+        },
+        "noneCamt": {
+          "title": "Kein passendes Konto",
+          "text": "{file} — die IBAN {iban} gehört zu keinem Konto.",
+          "hint": "Kompass liest nur Auszüge von eingerichteten Konten.",
+          "setUp": "Konto einrichten"
         }
       },
       "runs": {
@@ -3391,6 +3414,12 @@
         "csvAnyway": "Trotzdem CSV einrichten"
       },
       "fileLabel": "CSV-Datei wählen",
+      "handoff": {
+        "text": "Datei „{name}“ aus der Ablagefläche",
+        "hint": "Wählen Sie das Konto, zu dem die Datei gehört.",
+        "continue": "Mit dieser Datei weiter",
+        "lost": "Die Datei ließ sich nicht mitnehmen. Wählen Sie sie hier erneut."
+      },
       "settings": {
         "title": "Erkannte Einstellungen",
         "text": "Kompass hat die Datei angesehen und schlägt diese Einstellungen vor. Stimmt die Vorschau im nächsten Schritt nicht, ändern Sie sie hier.",

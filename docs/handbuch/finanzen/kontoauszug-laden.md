@@ -22,8 +22,10 @@ Bestätigung, weil danach mehr Zweifelsfälle auftreten können.
 
 ## Laden
 
-Auf der Seite „Hochgeladene Auszüge“ wählt man das Konto und zieht die Datei
-auf die Ablagefläche — auch mehrere auf einmal. Mehrere Dateien laufen
+Auf der Seite „Hochgeladene Auszüge“ (oder oben in der Arbeitsliste) zieht
+man die Datei auf die Ablagefläche — auch mehrere auf einmal. Ein Konto wählt
+man dafür nicht: Kompass erkennt es selbst, bei CAMT an der IBAN im Auszug,
+bei CSV an der Kopfzeile, weil jedes Konto genau ein CSV-Format hat. Mehrere Dateien laufen
 **nacheinander**, jede mit ihrem eigenen Ergebnis: „42 neu, 3 bereits
 vorhanden, 2 zurückgehalten“.
 
@@ -36,10 +38,23 @@ vorhanden, 2 zurückgehalten“.
   vorhanden“ auf derselben Seite; ein Mensch entscheidet mit „Dieselbe
   Zahlung — nicht übernehmen“ oder „Eigene Zahlung — übernehmen“.
 
-Ein Auszug, dessen IBAN nicht zum gewählten Konto passt, wird abgelehnt —
-mit dem Hinweis, ein anderes Konto zu wählen oder die IBAN am Konto
-nachzutragen. Derselbe Auszug lässt sich nicht zweimal laden; wurde er
-falsch geladen, hilft „Verwerfen“ weiter (siehe unten).
+Nur wenn das Konto nicht eindeutig ist, fragt Kompass nach dem Ziehen nach:
+
+- **Mehrere Konten passen** (etwa zwei Konten derselben Bank mit demselben
+  CSV-Format): Kompass zeigt die passenden Konten mit Format und „importiert
+  bis“; Sie wählen eines, dann wird geladen.
+- **Kein Konto passt, CSV**: Entweder ist es ein neues Konto, oder die Bank
+  hat ihr Format geändert. „Format für ein Konto einrichten“ öffnet den
+  [CSV-Assistenten](csv-format-einrichten.md) gleich mit dieser Datei.
+- **Kein Konto passt, CAMT**: Die IBAN im Auszug gehört zu keinem Konto.
+  „Konto einrichten“ führt zu den Konten unter „Finanzen einrichten“; ist
+  die IBAN am richtigen Konto nur falsch eingetragen, korrigieren Sie sie
+  dort.
+
+Eine CAMT-Datei mit Auszügen für zwei Konten lehnt Kompass ab: Exportieren
+Sie in der Banking-App je Konto eine eigene Datei. Derselbe Auszug lässt sich
+nicht zweimal laden; wurde er falsch geladen, hilft „Verwerfen“ weiter
+(siehe unten).
 
 ## Lücken zwischen zwei Auszügen
 

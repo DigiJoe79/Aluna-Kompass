@@ -34,11 +34,19 @@ describe('E2E-Fixtures unter apps/kompass/e2e/fixtures/camt', () => {
     expect(res.statements[0]).toMatchObject({ iban: IMPORTKONTO_IBAN, openingCents: 139000, closingCents: 140000 });
   });
 
-  it('fremde-iban.xml: liest sich, trägt aber nicht die IBAN des Importkontos', () => {
+  it('fremde-iban.xml: liest sich, trägt aber eine IBAN, die zu keinem Konto des Seeds gehört (N3, W-1: „Konto einrichten“)', () => {
     const res = parseCamt053(bytes('fremde-iban.xml'), { maxBytes: 1_000_000 });
     expect(res.ok).toBe(true);
     if (!res.ok) return;
-    expect(res.statements[0]!.iban).not.toBe(IMPORTKONTO_IBAN);
+    // Importkonto, Vereinskonto, Spendenplattform, Zweitbank CSV, Altes Sparbuch (`src/seed.ts`).
+    const seedIbans = [IMPORTKONTO_IBAN, 'DE23999999990000202051', 'DE32999999990301059999', 'DE48999999990000404040', 'AT939999900001234567'];
+    expect(seedIbans).not.toContain(res.statements[0]!.iban);
+  });
+
+  it('jede Fixture, die ohne Kontoauswahl laden soll, trägt die IBAN des Importkontos (N3, W-1)', () => {
+    for (const name of ['neuer-auszug.xml', 'duplikat.xml', 'kaputte-zeile.xml', 'mehrere-a.xml', 'mehrere-b.xml', 'luecke-neu.xml', 'arbeitsliste-futter.xml', 'arbeitsliste-weitergabe.xml']) {
+      expect(new TextDecoder().decode(bytes(name)), name).toContain(`<IBAN>${IMPORTKONTO_IBAN}</IBAN>`);
+    }
   });
 
   it('kaputte-zeile.xml: die zweite Zeile ist nicht lesbar', () => {

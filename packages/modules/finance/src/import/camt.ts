@@ -133,7 +133,8 @@ function readTxDtls(node: Record<string, unknown>, direction: 'CRDT' | 'DBIT'): 
   };
 }
 
-export function parseCamt053(bytes: Uint8Array, opts: { maxBytes: number }): ParseResult {
+/** Sicherheitsprüfung, Parserlauf, Wurzel und Fassung — gemeinsam für den Leser und das Erkennen des Kontos. */
+function readCamtDocument(bytes: Uint8Array, opts: { maxBytes: number }): { ok: true; stmtNodes: Record<string, unknown>[]; version: '001.02' | '001.08' } | { ok: false; error: CamtError } {
   const guarded = guardXml(bytes, opts);
   if (!guarded.ok) return fail(guarded.code);
   const text = guarded.text;
@@ -161,13 +162,40 @@ export function parseCamt053(bytes: Uint8Array, opts: { maxBytes: number }): Par
   const version = namespace ? NAMESPACE_VERSIONS[namespace] : undefined;
   if (!version) return fail('unsupportedVersion');
 
-  const stmtNodes = (bkToCstmrStmt.Stmt ?? []) as Record<string, unknown>[];
+  return { ok: true, stmtNodes: (bkToCstmrStmt.Stmt ?? []) as Record<string, unknown>[], version };
+}
+
+const stmtIban = (stmt: Record<string, unknown>): string | null => textOf(((stmt.Acct as Record<string, unknown> | undefined)?.Id as Record<string, unknown> | undefined)?.IBAN);
+
+/**
+ * Nur die IBAN je `Stmt` (Design-Nachtrag N3, W-1): Das Erkennen des Kontos
+ * braucht keine lesbaren Zeilen — eine kaputte Zeile soll der Lauf selbst als
+ * fehlgeschlagen festhalten, am richtigen Konto. Dieselbe Sicherheitsprüfung
+ * wie `parseCamt053`.
+ */
+export function camtStatementIbans(bytes: Uint8Array, opts: { maxBytes: number }): { ok: true; ibans: string[] } | { ok: false; error: CamtError } {
+  const doc = readCamtDocument(bytes, opts);
+  if (!doc.ok) return doc;
+  const ibans: string[] = [];
+  for (const stmt of doc.stmtNodes) {
+    const iban = stmtIban(stmt);
+    if (!iban) return fail('noIban');
+    ibans.push(iban);
+  }
+  if (ibans.length === 0) return fail('notCamt053');
+  return { ok: true, ibans };
+}
+
+export function parseCamt053(bytes: Uint8Array, opts: { maxBytes: number }): ParseResult {
+  const doc = readCamtDocument(bytes, opts);
+  if (!doc.ok) return doc;
+  const { stmtNodes, version } = doc;
   const statements: CamtStatement[] = [];
   let lineIndex = 1;
 
   for (const stmt of stmtNodes) {
     const acct = stmt.Acct as Record<string, unknown> | undefined;
-    const iban = textOf((acct?.Id as Record<string, unknown> | undefined)?.IBAN);
+    const iban = stmtIban(stmt);
     if (!iban) return fail('noIban');
 
     const currency = typeof acct?.Ccy === 'string' ? acct.Ccy : null;

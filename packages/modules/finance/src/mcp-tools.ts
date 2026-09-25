@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { decideCandidate, listCandidates } from './import/candidates';
 import { discardRun, previewDiscardRun } from './import/discard';
 import { getImportRun, importStatement, listImportRuns, setRunClosingBalance } from './import/runs';
+import { detectStatementAccount } from './import/detect';
 import { getRawTransaction, listRawTransactions } from './import/queries';
 import { getAccountStatements } from './import/accounts';
 import { listImportProfiles, saveImportProfile } from './import/profiles';
@@ -179,6 +180,7 @@ const confirmSetupStepMcpSchema = z.object({ step: z.enum(['categories', 'tax'])
 const setFinanceSwitchMcpSchema = z.object({ key: z.enum(['finance.isEntrepreneurOrHasVatId', 'finance.membershipFeesCertifiable', 'finance.expenseWaiversEnabled', 'finance.mcpHumanOnlyAllowed']), value: z.boolean() });
 const setFinanceLimitMcpSchema = z.object({ key: z.enum(['finance.statementSufficesBelowCents', 'finance.cashDonationAlertCents', 'finance.roundAmountFromCents']), cents: z.number().int().min(0) });
 
+const detectStatementAccountMcpSchema = z.object({ fileName: z.string(), contentBase64: z.string().min(1) });
 const importStatementMcpSchema = z.object({ accountId: z.string(), fileName: z.string(), contentBase64: z.string().min(1), confirmFormatChange: z.boolean().optional(), closingBalanceCents: z.number().int().optional() });
 // F4b: `format` ist ein CsvFormat-Objekt; der Dienst prüft es mit `csvFormatSchema` (Feldfehler kommen von dort).
 const saveImportProfileMcpSchema = z.object({ accountId: z.string(), name: z.string(), format: z.record(z.string(), z.unknown()), builtinKey: z.string().nullable().optional(), confirmFormatChange: z.boolean().optional() });
@@ -464,6 +466,17 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
       return importStatement(deps, ctx, { ...rest, bytes });
     },
     service: importStatement,
+  }),
+  t({
+    name: 'finance_statement_detect_account',
+    description: 'Detect which account a bank statement file belongs to (base64, at most finance.uploadLimitMb), before finance_import_statement. Only active bank and payment-service accounts count. CAMT.053 (a file starting with "<"): by the IBAN of every Stmt; a file with statements for two different IBANs is refused as statementMultipleAccounts naming both - export one file per account. CSV: by the header signature against the one active CSV format of each account. Returns kind one (accountId - import it), many (accounts with name, format label and imported through - ask which), none (the foreign iban for CAMT, the header signature for CSV - set up the account or its CSV format first) or unreadable (the read error code). Creates no run and writes no audit entry. Requires finance.entriesWrite.',
+    inputSchema: detectStatementAccountMcpSchema,
+    handler: (deps, ctx, { contentBase64, ...rest }) => {
+      const bytes = decodeBase64(contentBase64);
+      if (!bytes) return Promise.resolve(invalid([{ path: 'contentBase64', message: 'invalidBase64' }]));
+      return detectStatementAccount(deps, ctx, { ...rest, bytes });
+    },
+    service: detectStatementAccount,
   }),
   t({ name: 'finance_import_profile_save', description: 'Save a new CSV import format for a bank or payment-service account and make it the only active format of that account. Formats are immutable; saving again creates a new one. Switching from camt053, or to a format with a different header, needs confirmFormatChange (more doubtful duplicates afterwards). The format names header columns for date, amount (or debit/credit), counterparty, purpose, and optionally value date, iban, reference, fee, balance, currency and pending status. Requires finance.setup.', inputSchema: saveImportProfileMcpSchema, handler: (deps, ctx, args) => saveImportProfile(deps, ctx, args), service: saveImportProfile }),
   t({ name: 'finance_import_profiles_list', description: 'List the saved CSV import formats with the accounts each is active for and the number of runs read with it. Requires finance.setup or finance.read.', inputSchema: listImportProfilesMcpSchema, handler: (deps, ctx) => listImportProfiles(deps, ctx, {}), service: listImportProfiles }),

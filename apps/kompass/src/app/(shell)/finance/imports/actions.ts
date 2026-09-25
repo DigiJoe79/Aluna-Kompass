@@ -1,6 +1,6 @@
 'use server';
 
-import { decideCandidate, discardRun, importStatement, previewDiscardRun, setRunClosingBalance, type DiscardPreview } from '@kompass/module-finance';
+import { decideCandidate, detectStatementAccount, discardRun, importStatement, previewDiscardRun, setRunClosingBalance, type DiscardPreview } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { toActionState, type ActionState } from '@/lib/actions';
@@ -9,6 +9,13 @@ import { requireSession } from '@/lib/request-context';
 function revalidateImports(): void {
   revalidatePath('/finance/imports');
   revalidatePath('/finance/accounts');
+}
+
+/** Erkennt das Konto eines Auszugs (N3, W-1) — liest nur, legt keinen Lauf an; `data` ist ein `DetectedStatement`. */
+export async function detectStatementAccountAction(fileName: string, bytes: Uint8Array): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  return toActionState(await detectStatementAccount(deps, ctx, { fileName, bytes }), t);
 }
 
 /** Lädt einen Kontoauszug (F4 Task 7) — `finance.entriesWrite`, ein Aufruf je Datei; mehrere Dateien laufen nacheinander in der Oberfläche, nicht hier. */

@@ -18,6 +18,8 @@ const REMEDIES: Record<string, Remedy[]> = {
     { kind: 'link', href: '/help/finanzen/auszug-bei-der-bank-holen', labelKey: 'finance.remedy.fetchUsualFormat' },
     { kind: 'action', action: 'openCsvAssistant', labelKey: 'finance.remedy.newCsvFormat' },
   ],
+  // N3 (W-1): eine CAMT-Datei mit Auszügen für zwei Konten — der Weg ist die Banking-App, je Konto eine Datei.
+  statementMultipleAccounts: [{ kind: 'link', href: '/help/finanzen/auszug-bei-der-bank-holen', labelKey: 'finance.remedy.exportPerAccount' }],
   // F5 Task 7: die Arbeitsliste. Ein veralteter Vorschlag verschwindet mit dem Neuladen; eine stillgelegte Kategorie
   // wird in der Einrichtung wieder aktiv (oder in der Maske ersetzt).
   suggestionStale: [{ kind: 'action', action: 'reloadWork', labelKey: 'finance.remedy.reloadWork' }],

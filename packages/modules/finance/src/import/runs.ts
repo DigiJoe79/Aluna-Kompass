@@ -113,7 +113,7 @@ interface StatementForRun {
 }
 
 /** CAMT beginnt (nach BOM und Leerraum) mit `<`, alles andere liest Kompass als CSV (F4b, Regel 1). */
-function looksLikeXml(bytes: Uint8Array): boolean {
+export function looksLikeXml(bytes: Uint8Array): boolean {
   let i = bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf ? 3 : 0;
   while (i < bytes.length && (bytes[i] === 0x20 || bytes[i] === 0x09 || bytes[i] === 0x0a || bytes[i] === 0x0d)) i += 1;
   return bytes[i] === 0x3c;
