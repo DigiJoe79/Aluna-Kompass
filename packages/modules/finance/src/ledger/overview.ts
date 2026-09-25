@@ -1,4 +1,4 @@
-import { isoNow, ok, validate, type CallContext, type Deps, type Result } from '@kompass/core';
+import { isoNow, ok, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { requireFinanceRead } from './access';
@@ -104,4 +104,18 @@ export async function getIncomeStatement(deps: Deps, ctx: CallContext, input: un
     }
   }
   return ok({ ...statement, preliminary, categoryNames });
+}
+
+/**
+ * Frei verfügbare Mittel am Stichtag (F8a Annahme 9, „Verein hätte zahlen
+ * können“): Σ Geldkonten − zweckgebundene Bestände (Σ der positiven
+ * Zweckbestände, wie in der Vermögensübersicht) − Rücklagen (erst F8b, bis
+ * dahin 0). Ohne Rechteprüfung; berechnet, nie gespeichert — die Freigabe
+ * protokolliert den Wert am Antrag.
+ */
+export function freeFundsAtInternal(db: DbOrTx, date: string): number {
+  const money = accountBalancesAt(db, date).reduce((sum, a) => sum + a.balanceCents, 0);
+  const earmarked = purposeBalancesAt(db, date).filter((p) => p.balanceCents > 0).reduce((sum, p) => sum + p.balanceCents, 0);
+  const reserves = 0;
+  return money - earmarked - reserves;
 }

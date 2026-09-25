@@ -85,7 +85,7 @@ const today = (deps: Deps) => isoNow(deps.clock).slice(0, 10);
  * danach. So wechselt die Version mit jedem Speichern, und ein alter Stand
  * überschreibt nie einen neuen (Review Focus 5).
  */
-function nextVersion(deps: Deps, previous: string | undefined): string {
+export function nextVersion(deps: Deps, previous: string | undefined): string {
   const now = isoNow(deps.clock);
   if (previous === undefined || now > previous) return now;
   return new Date(Date.parse(previous) + 1).toISOString();
@@ -100,7 +100,7 @@ function ownContactInternal(deps: Deps, ctx: CallContext): Result<string> {
 }
 
 /** Ist der Aufrufer die antragstellende Person? Ohne Verknüpfung nie. */
-function isOwner(deps: Deps, ctx: CallContext, claim: FinanceExpenseClaimRow): boolean {
+export function isOwner(deps: Deps, ctx: CallContext, claim: FinanceExpenseClaimRow): boolean {
   return !!ctx.userId && contactIdForUserInternal(deps.db, ctx.userId) === claim.contactId;
 }
 
@@ -114,11 +114,11 @@ function loadOwnClaim(deps: Deps, ctx: CallContext, id: string): Result<FinanceE
   return ok(claim);
 }
 
-function positionsOf(db: DbOrTx, claimId: string): FinanceExpensePositionRow[] {
+export function positionsOf(db: DbOrTx, claimId: string): FinanceExpensePositionRow[] {
   return db.select().from(financeExpensePositions).where(eq(financeExpensePositions.claimId, claimId)).orderBy(asc(financeExpensePositions.sortOrder)).all();
 }
 
-const sumCents = (positions: readonly Pick<FinanceExpensePositionRow, 'amountCents'>[]) => positions.reduce((s, p) => s + p.amountCents, 0);
+export const sumCents = (positions: readonly Pick<FinanceExpensePositionRow, 'amountCents'>[]) => positions.reduce((s, p) => s + p.amountCents, 0);
 
 function userName(db: DbOrTx, userId: string | null): string | null {
   if (!userId) return null;
@@ -161,7 +161,7 @@ function claimAudit(claim: Pick<FinanceExpenseClaimRow, 'state' | 'waiver' | 're
   return { state: claim.state, positionCount: positions.length, totalCents: sumCents(positions), waiver: claim.waiver, recurring: claim.recurring };
 }
 
-const waiversEnabled = (deps: Deps) => readSetting<boolean>(deps, 'finance.expenseWaiversEnabled') === true;
+export const waiversEnabled = (deps: Deps) => readSetting<boolean>(deps, 'finance.expenseWaiversEnabled') === true;
 
 // ── Entwurf ─────────────────────────────────────────────────────────────────
 

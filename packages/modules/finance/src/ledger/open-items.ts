@@ -132,18 +132,29 @@ export async function createOpenItem(deps: Deps, ctx: CallContext, input: unknow
   if (!doc.ok) return doc;
 
   return deps.db.transaction((tx: DbOrTx) => {
-    const now = isoNow(deps.clock);
-    const row: FinanceOpenItemRow = {
-      id: newId(), kind: v.kind, itemDate: v.itemDate, contactId: v.contactId ?? null, amountCents: v.amountCents, dueOn: v.dueOn ?? null,
-      documentId: v.documentId ?? null, originType: v.originType ?? null, originId: v.originId ?? null, paymentReference: v.paymentReference ?? null,
-      lineTemplate: v.lineTemplate ? JSON.stringify(v.lineTemplate) : null, cancelledAt: null, cancelledByUserId: null, cancelNote: null,
-      createdByUserId: ctx.userId ?? 'system', createdAt: now, updatedAt: now,
-    };
-    tx.insert(financeOpenItems).values(row).run();
-    if (doc.value) linkDocumentInternal(tx, deps, { documentId: doc.value.id, entityType: 'financeOpenItem', entityId: row.id });
-    financeAudit(tx, deps, ctx, { action: 'finance.openItem.create', entity: 'financeOpenItem', id: row.id, after: auditFields(row), summary: `Posten ${row.id} angelegt` });
-    return ok(openItemViewOf(tx, row));
+    const view = createOpenItemInternal(tx, deps, ctx, v);
+    if (doc.value) linkDocumentInternal(tx, deps, { documentId: doc.value.id, entityType: 'financeOpenItem', entityId: view.id });
+    return ok(view);
   });
+}
+
+/**
+ * Einen Posten in einer bereits offenen Transaktion anlegen, ohne
+ * Rechteprüfung und ohne Dokumentprüfung — für `createOpenItem` und Vorgänge,
+ * die ihn im eigenen Namen anlegen (F8a: die Freigabe einer Auslage unter
+ * `finance.approve`). Protokolliert wie `createOpenItem`.
+ */
+export function createOpenItemInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, v: z.infer<typeof createSchema>): OpenItemView {
+  const now = isoNow(deps.clock);
+  const row: FinanceOpenItemRow = {
+    id: newId(), kind: v.kind, itemDate: v.itemDate, contactId: v.contactId ?? null, amountCents: v.amountCents, dueOn: v.dueOn ?? null,
+    documentId: v.documentId ?? null, originType: v.originType ?? null, originId: v.originId ?? null, paymentReference: v.paymentReference ?? null,
+    lineTemplate: v.lineTemplate ? JSON.stringify(v.lineTemplate) : null, cancelledAt: null, cancelledByUserId: null, cancelNote: null,
+    createdByUserId: ctx.userId ?? 'system', createdAt: now, updatedAt: now,
+  };
+  tx.insert(financeOpenItems).values(row).run();
+  financeAudit(tx, deps, ctx, { action: 'finance.openItem.create', entity: 'financeOpenItem', id: row.id, after: auditFields(row), summary: `Posten ${row.id} angelegt` });
+  return openItemViewOf(tx, row);
 }
 
 const updateSchema = z.object({

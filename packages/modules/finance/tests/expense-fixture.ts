@@ -1,6 +1,7 @@
-import { newId, schema, unwrap, type CallContext } from '@kompass/core';
+import { newId, schema, unwrap, writeSettingInternal, type CallContext } from '@kompass/core';
 import { ctxWith, insertRole, insertUser, systemContext } from '@kompass/core/testing';
 import { contactUserLinks, createContact } from '@kompass/module-contacts';
+import { saveExpenseDraft, submitExpenseClaim, uploadExpenseReceipt, type ExpenseClaimView } from '../src/allocation/expenses';
 import { ledgerFixture, pdfBytes } from './helpers';
 
 /**
@@ -40,3 +41,31 @@ export type ExpenseFixture = Awaited<ReturnType<typeof expenseFixture>>;
 
 /** Ein JPEG-Anfang — das Foto, das kein PDF ist. */
 export const jpegBytes = () => new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00]);
+
+export const EXPENSE_IBAN = 'DE66999999991234567890';
+
+/** Ein vollständiger Entwurf: ein Beleg (19,99 €, 2026-08-20) mit PDF und eine Fahrt (84 km, 2026-08-21), IBAN — bereit zum Einreichen. */
+export async function expenseReadyDraft(f: ExpenseFixture, who: ExpenseFixture['hanna'] = f.hanna, o: { iban?: string | null; waiver?: boolean; recurring?: boolean } = {}): Promise<ExpenseClaimView> {
+  const draft = unwrap(
+    await saveExpenseDraft(f.deps, who.ctx, {
+      iban: o.iban === undefined ? EXPENSE_IBAN : o.iban,
+      waiver: o.waiver ?? false,
+      recurring: o.recurring ?? false,
+      positions: [
+        { kind: 'receipt', positionDate: '2026-08-20', amountCents: 1999, purpose: 'Futter für die Pflegestelle' },
+        { kind: 'trip', positionDate: '2026-08-21', tripFrom: 'Musterstadt', tripTo: 'Beispielstadt', tripReason: 'Tierarztfahrt', tripKm: 84 },
+      ],
+    }),
+  );
+  return unwrap(await uploadExpenseReceipt(f.deps, who.ctx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: f.pdf(), fileName: 'rechnung.pdf' }));
+}
+
+/** Ein eingereichter Antrag aus `expenseReadyDraft` — 45,19 € (19,99 € + 84 km × 0,30 €). */
+export async function expenseSubmitted(f: ExpenseFixture, who: ExpenseFixture['hanna'] = f.hanna, o: { iban?: string | null; waiver?: boolean; recurring?: boolean } = {}): Promise<ExpenseClaimView> {
+  return unwrap(await submitExpenseClaim(f.deps, who.ctx, { id: (await expenseReadyDraft(f, who, o)).id }));
+}
+
+export const enableExpenseWaivers = (f: ExpenseFixture, on = true) => f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiversEnabled', on, 'test'));
+
+/** Freigeber ohne Buchungsrechte: nur `finance.approve` und `finance.read` — die Freigabe bucht im Namen des Vorgangs. */
+export const approverCtx = (f: ExpenseFixture) => ctxWith(['finance.approve', 'finance.read'], f.secondPersonId);

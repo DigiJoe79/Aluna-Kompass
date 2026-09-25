@@ -2,6 +2,7 @@ import { documentImagePath, type DocumentImage } from '@kompass/core';
 import { z } from 'zod';
 import { AMOUNT_IN_WORDS_MAX_CENTS, amountInWords } from '../../ledger/amount-in-words';
 import { NOTICE_KINDS } from '../../ledger/notice-validity';
+import { formatCents, germanDate, typstText } from '../../typst-pure';
 import * as W from './wording';
 
 /**
@@ -151,30 +152,9 @@ export type ConfirmationTemplateInput =
   | { templateKey: 'finance-confirmation-in-kind'; input: InKindConfirmationInput }
   | { templateKey: 'finance-confirmation-collective'; input: CollectiveConfirmationInput };
 
-// ── Formatierung ────────────────────────────────────────────────────────────
+// ── Formatierung (neutraler Boden: `typst-pure.ts`) ─────────────────────────
 
-/** ISO → TT.MM.JJJJ. */
-export function germanDate(iso: string): string {
-  const [y, m, d] = iso.slice(0, 10).split('-');
-  return `${d}.${m}.${y}`;
-}
-
-/** 123456 → „1.234,56 €“ — ohne Intl, damit das PDF nicht an der ICU-Fassung hängt. */
-export function formatCents(value: number): string {
-  const euros = String(Math.floor(value / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  return `${euros},${String(value % 100).padStart(2, '0')} €`;
-}
-
-// ── Typst-Bausteine ─────────────────────────────────────────────────────────
-
-/**
- * Freitext als Typst-String-Ausdruck: `#"…";`. Nichts darin wirkt als Markup
- * (kein `#`, `$`, `*`, keine Liste am Zeilenanfang); das Semikolon beendet den
- * Ausdruck, damit ein folgender Punkt kein Feldzugriff wird.
- */
-export function typstText(value: string): string {
-  return `#"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r?\n/g, '\\n')}";`;
-}
+export { formatCents, germanDate, typstText } from '../../typst-pure';
 
 const t = typstText;
 

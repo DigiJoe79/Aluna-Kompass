@@ -211,13 +211,7 @@ export async function bookEntry(deps: Deps, ctx: CallContext, input: unknown): P
 
   try {
     return deps.db.transaction((tx: DbOrTx) => {
-      const now = isoNow(deps.clock);
-      const id = newId();
-      tx.insert(financeEntries)
-        .values({ id, number: null, entryDate: parsed.value.entryDate, text: parsed.value.text, status: 'draft', createdByUserId: ctx.userId ?? 'system', createdChannel: ctx.channel, createdAt: now, updatedAt: now })
-        .run();
-      writeLinesInternal(tx, id, resolved.value);
-      const result = finalizeInternal(tx, deps, ctx, id);
+      const result = bookEntryInternal(tx, deps, ctx, { entryDate: parsed.value.entryDate, text: parsed.value.text, lines: resolved.value });
       if (!result.ok) abortFinalize(result);
       return result;
     });
@@ -225,4 +219,28 @@ export async function bookEntry(deps: Deps, ctx: CallContext, input: unknown): P
     if (error instanceof FinalizeAborted) return error.failure;
     throw error;
   }
+}
+
+/**
+ * Anlegen und Festschreiben in einer bereits offenen Transaktion, ohne
+ * Rechteprüfung — für `bookEntry` und Vorgänge, die im eigenen Namen buchen
+ * (F8a: die Aufwandsspende aus der Freigabe unter `finance.approve`).
+ * `beforeFinalize` hängt Belege an den Entwurf, bevor er festgeschrieben wird.
+ * Ein Fehler rollt nicht von selbst zurück: Der Aufrufer wirft
+ * (`abortFinalize` oder ein eigenes Muster).
+ */
+export function bookEntryInternal(
+  tx: DbOrTx,
+  deps: Deps,
+  ctx: CallContext,
+  input: { entryDate: string; text: string; lines: ReturnType<typeof resolveEntryLines> extends Result<infer L> ? L : never; beforeFinalize?: (entryId: string) => void },
+): Result<EntryView> {
+  const now = isoNow(deps.clock);
+  const id = newId();
+  tx.insert(financeEntries)
+    .values({ id, number: null, entryDate: input.entryDate, text: input.text, status: 'draft', createdByUserId: ctx.userId ?? 'system', createdChannel: ctx.channel, createdAt: now, updatedAt: now })
+    .run();
+  writeLinesInternal(tx, id, input.lines);
+  input.beforeFinalize?.(id);
+  return finalizeInternal(tx, deps, ctx, id);
 }

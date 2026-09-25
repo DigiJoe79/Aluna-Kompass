@@ -71,6 +71,9 @@ describe('finance errors', () => {
     for (const code of ['expenseFileNotPdf', 'expenseFileTooLarge'] as const) expect(FINANCE_ERRORS[code].remedy, code).toContain('Ihre Eingaben bleiben stehen');
     // Der Ausweg bei ausgeschalteten Aufwandsspenden: ohne Verzicht neu einreichen (Review Focus 3).
     expect(FINANCE_ERRORS.expenseWaiversDisabled.remedy).toContain('ohne Verzicht neu ein');
+    // Task 3: die Freigabe nennt beim eigenen Antrag, wer es erledigen kann; die unterschriebene Fassung nur einmal.
+    for (const code of ['expenseOwnClaim', 'expenseSameContact'] as const) expect(financeConflict(code, { names: 'Vera Verwalterin' })).toMatchObject({ error: { message: expect.stringContaining('Das kann erledigen: Vera Verwalterin') } });
+    for (const code of ['waiverSignedAlready', 'expenseWaiverCategoryMissing']) expect(Object.keys(FINANCE_ERRORS), code).toContain(code);
   });
 
   it('names the kinds of notice in everyday words, never in the words of the tax code (F6a)', () => {
