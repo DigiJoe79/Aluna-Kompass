@@ -35,4 +35,15 @@ describe('text extraction port', () => {
     expect(probe).toEqual({ ok: false, error: 'no text extraction configured' });
     await expect(noopTextExtraction.extract({ bytes: new Uint8Array(), languages: [] })).rejects.toThrow();
   });
+
+  it('liefert ohne Umsetzung keine eingebetteten Dateien', async () => {
+    expect(await noopTextExtraction.embeddedFiles({ bytes: new Uint8Array([1]) })).toEqual([]);
+  });
+
+  it('die Attrappe liefert die eingebetteten Dateien, die der Test vorgibt', async () => {
+    const file = { name: 'factur-x.xml', bytes: new Uint8Array([60, 97, 47, 62]), mimeType: 'application/xml' };
+
+    expect(await fakeTextExtraction().embeddedFiles({ bytes: new Uint8Array([1]) })).toEqual([]);
+    expect(await fakeTextExtraction({ embedded: [file] }).embeddedFiles({ bytes: new Uint8Array([1]) })).toEqual([file]);
+  });
 });

@@ -1,4 +1,5 @@
 import type { PageText, ProbeResult, TextExtraction } from '@kompass/core';
+import { readEmbeddedFiles } from './embedded';
 import { readTextLayer } from './layer';
 import { ocrPage } from './ocr';
 import { runTool, ToolMissingError } from './run';
@@ -69,6 +70,10 @@ export function createTextExtraction(): TextExtraction {
       }
 
       return pages;
+    },
+
+    embeddedFiles(opts) {
+      return readEmbeddedFiles(opts);
     },
   };
 }

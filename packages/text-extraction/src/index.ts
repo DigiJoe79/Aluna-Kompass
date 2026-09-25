@@ -1,3 +1,4 @@
+export * from './embedded';
 export * from './extraction';
 export * from './layer';
 export * from './ocr';

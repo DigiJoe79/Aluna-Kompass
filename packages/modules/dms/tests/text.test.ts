@@ -15,6 +15,7 @@ const pdf = () => new Uint8Array(Buffer.from('%PDF-1.4\n%fake\n', 'latin1'));
 
 /** Werkzeuge da, aber das Lesen scheitert — ein zerschossenes PDF. */
 const brokenExtraction = (): TextExtraction => ({
+  embeddedFiles: async () => [],
   probe: async () => ({ ok: true, languages: ['deu'] }),
   extract: async () => {
     throw new Error('Seite 1 liess sich nicht lesen');
@@ -85,6 +86,7 @@ describe('extractDocumentText', () => {
 
   it('zählt Versuche und bleibt beim dritten bei failed', async () => {
     const broken = {
+      embeddedFiles: async () => [],
       probe: async () => ({ ok: true as const, languages: ['deu'] }),
       extract: async () => {
         throw new Error('Seite 4 überschritt das Zeitlimit');
