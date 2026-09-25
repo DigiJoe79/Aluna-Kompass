@@ -1041,6 +1041,10 @@
     "logo": {
       "label": "Logo",
       "hint": "PNG oder SVG, mindestens 256 px. Erscheint in Sidebar, Login und Briefkopf."
+    },
+    "managedHint": {
+      "tax": "Wird unter Finanzen → Spenden → Bescheide geführt.",
+      "bank": "Wird unter Finanzen einrichten → Bankkonten und Kassen am Hauptkonto geführt."
     }
   },
   "themes": {
@@ -4103,6 +4107,146 @@
         "noContact": "keine — ohne Spender nicht bestätigbar",
         "noDonation": "keine — kein Spendeneingang",
         "issue": "Ausstellen"
+      },
+      "notices": {
+        "title": "Bescheide",
+        "description": "Die Bescheide des Finanzamts, auf die sich Zuwendungsbestätigungen berufen — gültig taggenau, nie gelöscht.",
+        "add": "Bescheid erfassen",
+        "tableLabel": "Bescheide des Finanzamts",
+        "columns": {
+          "kind": "Art",
+          "taxOffice": "Finanzamt",
+          "taxNumber": "Steuernummer",
+          "noticeDate": "Datum",
+          "assessmentPeriod": "Veranlagungszeitraum",
+          "validUntil": "gültig bis",
+          "document": "Dokument",
+          "state": "Zustand",
+          "actions": "Aktionen"
+        },
+        "state": {
+          "valid": "gültig",
+          "endsOn": "gültig — endet mit Ablauf des {date}",
+          "expired": "abgelaufen",
+          "superseded": "aufgehoben oder ersetzt am {date}",
+          "supersededByFinal": "durch den endgültigen Bescheid ersetzt",
+          "voided": "irrtümlich erfasst",
+          "future": "künftig"
+        },
+        "noDocument": "keins",
+        "empty": {
+          "title": "Noch kein Bescheid erfasst",
+          "text": "Ohne Bescheid des Finanzamts lassen sich keine Zuwendungsbestätigungen ausstellen."
+        },
+        "noValid": "Kein gültiger Bescheid — ohne Bescheid keine Zuwendungsbestätigungen.",
+        "expiring": "Der gültige Bescheid endet am {date}. Beantragen Sie rechtzeitig den nächsten und erfassen Sie ihn hier.",
+        "actions": {
+          "supersede": "Aufgehoben oder ersetzt am …",
+          "void": "Irrtümlich erfasst",
+          "attach": "Dokument nachreichen"
+        },
+        "dialog": {
+          "title": "Bescheid erfassen",
+          "kind": "Art des Bescheids",
+          "taxOffice": "Finanzamt",
+          "taxNumber": "Steuernummer",
+          "noticeDate": "Datum des Bescheids",
+          "assessmentPeriod": "Veranlagungszeitraum",
+          "assessmentPeriodHint": "Ein Jahr wie 2023 oder ein Zeitraum wie 2021–2023.",
+          "purposesText": "Begünstigte Zwecke im Wortlaut",
+          "purposesHint": "So, wie sie im Bescheid stehen — sie erscheinen wörtlich auf jeder Bestätigung.",
+          "section60aQuestion": "Wurde bereits ein Freistellungsbescheid erteilt?",
+          "yes": "Ja",
+          "no": "Nein",
+          "section60aRefused": "Dann erfassen Sie bitte den Freistellungsbescheid — nach ihm gilt die vorläufige Anerkennung (§ 60a) nicht mehr.",
+          "switchToExemption": "Freistellungsbescheid erfassen",
+          "save": "Speichern",
+          "cancel": "Abbrechen",
+          "documentTitle": "Dokument zum Bescheid",
+          "documentHint": "Reichen Sie den Bescheid als PDF nach — er wird in der Akte abgelegt und mit dem Bescheid verknüpft. Sie können das auch später tun.",
+          "pickFromArchive": "Oder aus der Akte wählen",
+          "done": "Fertig"
+        },
+        "supersede": {
+          "title": "Aufgehoben oder ersetzt",
+          "date": "Aufgehoben oder ersetzt am",
+          "hint": "Ab diesem Tag trägt der Bescheid nicht mehr. Bestätigungen, die sich auf ihn berufen und danach ausgestellt wurden, erscheinen unter „Zu korrigieren“.",
+          "document": "Schreiben des Finanzamts (optional)",
+          "save": "Speichern",
+          "cancel": "Abbrechen"
+        },
+        "void": {
+          "title": "Irrtümlich erfasst",
+          "reason": "Grund",
+          "hint": "Der Bescheid bleibt in der Liste, hat aber nie getragen. Der Grund steht nur hier, nicht im Änderungsprotokoll.",
+          "submit": "Irrtümlich erfasst",
+          "cancel": "Abbrechen"
+        },
+        "toast": {
+          "saved": "Bescheid gespeichert.",
+          "attached": "Bescheid als {number} in der Akte abgelegt.",
+          "attachedWithoutNumber": "Bescheid in der Akte abgelegt.",
+          "linked": "Dokument mit dem Bescheid verknüpft.",
+          "superseded": "Bescheid als aufgehoben oder ersetzt gekennzeichnet.",
+          "voided": "Bescheid als irrtümlich erfasst gekennzeichnet."
+        }
+      },
+      "machine": {
+        "title": "Maschinell erstellte Bestätigungen",
+        "intro": "Mit einem Unterzeichner, dem Bild seiner Unterschrift und der Anzeige beim Finanzamt entstehen Bestätigungen maschinell — ohne eigenhändige Unterschrift. Sonst tragen sie ein Unterschriftsfeld.",
+        "statusComplete": "Vollständig — Bestätigungen entstehen maschinell mit dem Bild der Unterschrift von {name}.",
+        "statusIncomplete": "Unvollständig — es fehlt: {missing}. Bis dahin tragen Bestätigungen ein Unterschriftsfeld.",
+        "missing": {
+          "signer": "ein Unterzeichner für heute",
+          "facsimile": "das Bild der Unterschrift",
+          "notifiedOn": "der Tag der Anzeige beim Finanzamt"
+        },
+        "tableLabel": "Unterzeichner",
+        "columns": {
+          "name": "Unterzeichner",
+          "period": "Zeitraum",
+          "notifiedOn": "angezeigt am",
+          "facsimile": "Unterschrift",
+          "actions": "Aktionen"
+        },
+        "period": "{from} bis {to}",
+        "openEnd": "offen",
+        "state": {
+          "current": "aktuell",
+          "past": "beendet",
+          "future": "künftig"
+        },
+        "notNotified": "noch nicht",
+        "noFacsimile": "kein Bild",
+        "facsimileAlt": "Unterschrift von {name}",
+        "facsimilePrivacy": "Das Bild der Unterschrift liegt nicht in der Mediathek. Sehen können es nur Personen, die Zuwendungsbestätigungen ausstellen dürfen.",
+        "upload": "Unterschrift als Bild hochladen",
+        "uploadHint": "PNG oder JPEG, höchstens 1 MB.",
+        "empty": "Noch kein Unterzeichner erfasst.",
+        "add": "Unterzeichner hinzufügen",
+        "edit": "Bearbeiten",
+        "dialog": {
+          "addTitle": "Unterzeichner hinzufügen",
+          "editTitle": "Unterzeichner bearbeiten",
+          "name": "Name",
+          "validFrom": "Gültig ab",
+          "validTo": "Gültig bis",
+          "validToHint": "Leer lassen, solange die Person unterzeichnet. Bei einer Amtsübergabe setzen Sie hier das Ende.",
+          "notifiedOn": "Angezeigt beim Finanzamt am",
+          "save": "Speichern",
+          "cancel": "Abbrechen"
+        },
+        "letter": "Anzeigeschreiben als Entwurf erzeugen",
+        "letterHint": "Das Schreiben an das Finanzamt entsteht als Entwurf in der Akte; Sie prüfen, drucken und versenden es dort.",
+        "letterBlockedTitle": "Das Anzeigeschreiben braucht die Akte",
+        "letterBlockedText": "Entwürfe in der Akte anlegen können: {names}.",
+        "letterBlockedNobody": "Entwürfe in der Akte anlegen kann derzeit niemand — das Recht vergibt die Verwaltung unter Rollen.",
+        "toast": {
+          "saved": "Unterzeichner gespeichert.",
+          "facsimile": "Bild der Unterschrift gespeichert.",
+          "letter": "Das Anzeigeschreiben liegt als Entwurf in der Akte."
+        },
+        "openDraft": "Entwurf öffnen"
       }
     }
   }

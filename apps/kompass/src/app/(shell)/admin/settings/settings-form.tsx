@@ -12,7 +12,7 @@ import { FormErrorSummary } from '@/components/forms/form-error-summary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { MediaPicker } from '@/components/forms/media-picker';
-import { SETTINGS_TABS, TAX_REQUIRED, type SettingsField } from '@/lib/settings-fields';
+import { managedHintKey, SETTINGS_TABS, TAX_REQUIRED, type SettingsField } from '@/lib/settings-fields';
 import { cn } from '@/lib/utils';
 import { saveSettingsAction } from './actions';
 
@@ -22,10 +22,13 @@ export function SettingsForm({
   initial,
   themes,
   lastSaved,
+  managed = [],
 }: {
   initial: Values;
   themes: { key: string; name: string }[];
   lastSaved: string | null;
+  /** Felder, die ein eingeschaltetes Modul führt (`managedSettings`): nur lesbar, mit dem Satz, wo sie gepflegt werden. */
+  managed?: string[];
 }) {
   const t = useTranslations('settings');
   const c = useTranslations('common');
@@ -56,7 +59,9 @@ export function SettingsForm({
     const value = values[field.key];
     const id = field.key.replace('.', '-');
     const common = { id, className: cn(field.kind === 'mono' && 'font-mono') };
-    const hint = field.hintKey ? t(`hints.${field.hintKey}`) : undefined;
+    const isManaged = managed.includes(field.key);
+    const managedKey = isManaged ? managedHintKey(field.key) : null;
+    const hint = managedKey ? t(managedKey) : field.hintKey ? t(`hints.${field.hintKey}`) : undefined;
     const wrap = (node: React.ReactNode, extraHint?: string) => (
       <FormField
         key={field.key}
@@ -89,7 +94,7 @@ export function SettingsForm({
       case 'font-body':
       case 'font-heading':
         return wrap(
-          <Select id={id} value={String(value ?? '')} onChange={(e) => set(field.key, e.target.value)}>
+          <Select id={id} value={String(value ?? '')} onChange={(e) => set(field.key, e.target.value)} disabled={isManaged}>
             {(field.options ?? []).map((o) => (
               <option key={o} value={o}>
                 {t(`options.${field.key}.${o}`)}
@@ -115,6 +120,7 @@ export function SettingsForm({
             type="date"
             value={String(value ?? '')}
             onChange={(e) => set(field.key, e.target.value)}
+            readOnly={isManaged}
             className="font-mono"
             aria-invalid={!!errors[field.key] || undefined}
           />
@@ -125,6 +131,7 @@ export function SettingsForm({
             {...common}
             value={value === null || value === undefined ? '' : String(value)}
             onChange={(e) => set(field.key, e.target.value)}
+            readOnly={isManaged}
             aria-invalid={!!errors[field.key] || undefined}
           />
         );

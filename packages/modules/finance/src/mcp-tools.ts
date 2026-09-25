@@ -36,7 +36,7 @@ import { checkConfirmable } from './donations/check';
 import { attachSignedConfirmation, issueConfirmation, listConfirmations, listUncertifiedDonations, recordConfirmationDispatch, voidConfirmation } from './donations/confirmations';
 import { getInKindDetails, saveInKindDetails } from './donations/in-kind';
 import { createNotificationLetterDraft, getMachineProcedure, saveSigner, uploadFacsimile } from './donations/machine';
-import { listNotices, saveNotice, supersedeNotice, voidNotice } from './donations/notices';
+import { attachNoticeDocument, listNotices, saveNotice, supersedeNotice, voidNotice } from './donations/notices';
 
 const t = <T>(def: McpToolDefinition<T>): McpToolDefinition => def as McpToolDefinition;
 
@@ -270,6 +270,7 @@ const saveNoticeMcpSchema = z.object({
 const supersedeNoticeMcpSchema = z.object({ id: z.string(), supersededOn: z.string(), documentId: z.string().nullable().optional() });
 const voidNoticeMcpSchema = z.object({ id: z.string(), note: z.string() });
 const listNoticesMcpSchema = z.object({ includeInactive: z.boolean().optional() });
+const noticeDocumentMcpSchema = z.object({ id: z.string(), contentBase64: z.string().min(1) });
 const saveSignerMcpSchema = z.object({ id: z.string().optional(), validFrom: z.string(), validTo: z.string().nullable().optional(), signerName: z.string(), notifiedOn: z.string().nullable().optional() });
 const facsimileUploadMcpSchema = z.object({ signerId: z.string(), contentBase64: z.string().min(1), mimeType: z.string().optional() });
 const signerIdMcpSchema = z.object({ signerId: z.string() });
@@ -526,6 +527,17 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
   t({ name: 'finance_notice_supersede', description: 'Mark a notice as revoked or replaced on a date, optionally with the filed document; one time only, the notice stops counting from that day. Confirmations issued on it become "to correct" (computed). Requires finance.donationsIssue.', inputSchema: supersedeNoticeMcpSchema, handler: (deps, ctx, args) => supersedeNotice(deps, ctx, args), service: supersedeNotice }),
   t({ name: 'finance_notice_void', description: 'Mark a notice as recorded in error; one time only, it never counted. The note stays on the record, never in the audit log. Requires finance.donationsIssue.', inputSchema: voidNoticeMcpSchema, handler: (deps, ctx, args) => voidNotice(deps, ctx, args), service: voidNotice }),
   t({ name: 'finance_notices_list', description: 'List the notices of the tax office, newest first, with computed valid-until date and state (valid, expired, superseded, voided, future) - only valid and future ones unless includeInactive. Requires finance.read.', inputSchema: listNoticesMcpSchema, handler: (deps, ctx, args) => listNotices(deps, ctx, args), service: listNotices }),
+  t({
+    name: 'finance_notice_attach_document',
+    description: 'File the notice itself (base64 PDF, at most finance.uploadLimitMb) as incoming document of the default incoming type, linked to the notice and set on it - no file right needed. Only while the notice is neither superseded nor voided. Requires finance.donationsIssue.',
+    inputSchema: noticeDocumentMcpSchema,
+    handler: (deps, ctx, { contentBase64, ...rest }) => {
+      const bytes = voucherBytes(deps, contentBase64);
+      if (!(bytes instanceof Uint8Array)) return Promise.resolve(bytes);
+      return attachNoticeDocument(deps, ctx, { ...rest, bytes });
+    },
+    service: attachNoticeDocument,
+  }),
   t({ name: 'finance_signer_save', description: 'Create or change a signer of machine-made confirmations: valid from/to (periods never overlap - signerOverlaps; set the end to hand over), name and the date the tax office was notified. The name is never audited. Requires finance.donationsIssue.', inputSchema: saveSignerMcpSchema, handler: (deps, ctx, args) => saveSigner(deps, ctx, args), service: saveSigner }),
   t({
     name: 'finance_facsimile_upload',

@@ -70,3 +70,17 @@ export const TAX_REQUIRED = [
   'organization.exemptionNoticeType',
   'organization.exemptionNoticeDate',
 ] as const;
+
+/**
+ * Der Satz, der unter einem Feld steht, das ein eingeschaltetes Modul führt
+ * (`managedBy`, `managedSettings` im Kern): je Reiter einer, weil der Reiter
+ * die Stelle bestimmt, an der die Werte gepflegt werden. `null` für Felder,
+ * die kein Modul führen kann.
+ */
+const MANAGEABLE = new Set([...TAX_REQUIRED, 'organization.iban', 'organization.bic', 'organization.bankName']);
+
+export function managedHintKey(key: string): string | null {
+  if (!MANAGEABLE.has(key)) return null;
+  const tab = SETTINGS_TABS.find((t) => t.fields.some((f) => f.key === key));
+  return tab ? `managedHint.${tab.key}` : null;
+}

@@ -1,5 +1,5 @@
 import { invalid, isoNow, newId, notFound, ok, readSetting, requirePermission, validate, writeSettingInternal, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
-import { documents, getDocumentRecord, linkDocumentInternal } from '@kompass/module-dms';
+import { abortReceive, documents, getDocumentRecord, linkDocumentInternal, receiveGeneratedUpload } from '@kompass/module-dms';
 import { and, eq, gt, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
@@ -8,6 +8,7 @@ import { requireFinanceRead } from '../ledger/access';
 import { CERTIFIABLE_INCOME_KINDS } from '../ledger/codes';
 import { NOTICE_KINDS, noticeValidAt, noticeValidUntil, type NoticeKind } from '../ledger/notice-validity';
 import { financeAllocationLines, financeCategories, financeEntries, financeNotices, type FinanceNoticeRow } from '../schema';
+import { germanDate } from './templates/shared';
 
 /**
  * Bescheide des Vereins (F6a Task 2, Spec 7.1): eine datierte Reihe, nie
@@ -206,6 +207,48 @@ export async function saveNotice(deps: Deps, ctx: CallContext, input: unknown): 
     financeAudit(tx, deps, ctx, { action: 'finance.notice.save', entity: 'financeNotice', id, before: before ? auditFields(before) : undefined, after: auditFields(after), summary: `Bescheid ${id} ${before ? 'geändert' : 'erfasst'}` });
     return ok(viewInternal(tx, id, today(deps)));
   });
+}
+
+const attachSchema = z.object({ id: z.string().min(1), bytes: z.instanceof(Uint8Array) });
+
+/** Der Betreff in der Akte: Art und Datum — nie Finanzamt oder Steuernummer. */
+const SUBJECT_KIND: Record<NoticeKind, string> = { section60a: 'Bescheid nach § 60a AO', exemptionNotice: 'Freistellungsbescheid', corporateTaxNoticeAttachment: 'Anlage zum Körperschaftsteuerbescheid' };
+
+/**
+ * Den Bescheid als PDF nachreichen — `finance.donationsIssue`, ohne ein Recht
+ * der Akte: abgelegt als Eingang der Vorgabe-Art (`dms.defaultTypeIncoming`)
+ * im Namen des Bescheids (`receiveGeneratedUpload`, Bezug `financeNotice`),
+ * gesetzt am Bescheid in derselben Transaktion. Nur solange der Bescheid
+ * weder ersetzt noch irrtümlich erfasst ist; die Aufbewahrung sichert der
+ * Halter „Bescheid-Dokument“.
+ */
+export async function attachNoticeDocument(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<NoticeView>> {
+  const denied = requirePermission(ctx, 'finance.donationsIssue');
+  if (denied) return denied;
+  const parsed = validate(deps, attachSchema, input);
+  if (!parsed.ok) return parsed;
+  const v = parsed.value;
+
+  const before = deps.db.select().from(financeNotices).where(eq(financeNotices.id, v.id)).get();
+  if (!before) return notFound('financeNotice', v.id);
+  if (before.voidedAt) return financeConflict('noticeVoided');
+  if (before.supersededOn) return financeConflict('noticeSuperseded');
+
+  const result = await receiveGeneratedUpload(deps, ctx, {
+    bytes: v.bytes,
+    typeKey: readSetting<string>(deps, 'dms.defaultTypeIncoming'),
+    subject: `${SUBJECT_KIND[before.kind]} vom ${germanDate(before.noticeDate)}`,
+    documentDate: before.noticeDate,
+    links: [{ entityType: 'financeNotice', entityId: before.id }],
+    afterReceive: (tx, doc) => {
+      const changed = tx.update(financeNotices).set({ documentId: doc.id, updatedAt: isoNow(deps.clock) }).where(and(eq(financeNotices.id, before.id), isNull(financeNotices.voidedAt), isNull(financeNotices.supersededOn))).run().changes;
+      if (changed !== 1) abortReceive(financeConflict('noticeVoided'));
+      financeAudit(tx, deps, ctx, { action: 'finance.notice.document', entity: 'financeNotice', id: before.id, after: { documentId: doc.id }, summary: `Dokument ${doc.number} zum Bescheid ${before.id} abgelegt` });
+      return null;
+    },
+  });
+  if (!result.ok) return result;
+  return ok(viewInternal(deps.db, before.id, today(deps)));
 }
 
 const supersedeSchema = z.object({ id: z.string().min(1), supersededOn: z.iso.date(), documentId: z.string().min(1).nullable().optional() });

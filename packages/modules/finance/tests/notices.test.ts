@@ -1,12 +1,12 @@
 import { readSetting, schema, setSetting, unwrap } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
-import { documentLinks } from '@kompass/module-dms';
+import { documentLinks, documents, documentTypes } from '@kompass/module-dms';
 import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { listNotices, noticeExpiryInternal, noticeValidAtInternal, saveNotice, supersedeNotice, voidNotice } from '../src/donations/notices';
+import { attachNoticeDocument, listNotices, noticeExpiryInternal, noticeValidAtInternal, saveNotice, supersedeNotice, voidNotice } from '../src/donations/notices';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
 import { financeNotices } from '../src/schema';
-import { insertDocument, ledgerFixture } from './helpers';
+import { insertDocument, ledgerFixture, pdfBytes } from './helpers';
 
 const exemption = { kind: 'exemptionNotice', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2025-05-02', assessmentPeriod: '2023', purposesText: 'Förderung des Tierschutzes (§ 52 Abs. 2 Nr. 14 AO)' } as const;
 const provisional = { kind: 'section60a', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99990', noticeDate: '2024-01-10', purposesText: 'Förderung des Tierschutzes' } as const;
@@ -105,6 +105,44 @@ describe('saveNotice', () => {
     for (const [key, value] of [['organization.taxOffice', 'Finanzamt Anderswo'], ['organization.taxNumber', '11/111/11111'], ['organization.exemptionNoticeType', 'section60a'], ['organization.exemptionNoticeDate', '2026-01-01']] as const) {
       expect(err(await setSetting(f.deps, admin, { key, value })), key).toEqual({ type: 'conflict', code: 'settingManaged', message: 'finance' });
     }
+  });
+});
+
+describe('attachNoticeDocument', () => {
+  /** Die Vorgabe-Art für Eingänge legt sonst die Installation der Akte an — die Fixture installiert nur Finanzen. */
+  const withIncomingType = (f: Awaited<ReturnType<typeof ledgerFixture>>) => {
+    f.deps.db.insert(documentTypes).values({ key: readSetting<string>(f.deps, 'dms.defaultTypeIncoming'), label: 'Eingang', prefix: 'EIN', defaultDirection: 'incoming', retentionClass: 'statutory10Y', defaultFolder: null, isActive: true, sortOrder: 0, ownerModule: null, protectionArea: null }).run();
+    return f;
+  };
+
+  it('files an uploaded notice as an incoming document of the file, links it and sets it on the notice — without dms rights', async () => {
+    const f = withIncomingType(await ledgerFixture());
+    f.deps.clock.set('2026-03-01T10:00:00.000Z');
+    const notice = unwrap(await saveNotice(f.deps, f.ctx, exemption));
+    const issuer = ctxWith(['finance.read', 'finance.donationsIssue'], f.userId);
+    const attached = unwrap(await attachNoticeDocument(f.deps, issuer, { id: notice.id, bytes: pdfBytes() }));
+    expect(attached.documentId).not.toBeNull();
+    expect(attached.documentNumber).toMatch(/^EIN-/);
+    const doc = f.deps.db.select().from(documents).where(eq(documents.id, attached.documentId!)).get()!;
+    expect(doc).toMatchObject({ direction: 'incoming', typeKey: readSetting<string>(f.deps, 'dms.defaultTypeIncoming') });
+    // Der Betreff nennt weder Finanzamt noch Steuernummer.
+    expect(doc.subject).not.toMatch(/Musterstadt|99\/999/);
+    const link = f.deps.db.select().from(documentLinks).where(and(eq(documentLinks.documentId, doc.id), eq(documentLinks.entityType, 'financeNotice'))).get();
+    expect(link?.entityId).toBe(notice.id);
+    const [entry] = auditOf(f.deps, 'finance.notice.document');
+    expect(JSON.parse(entry!.after as string)).toEqual({ documentId: doc.id });
+  });
+
+  it('needs finance.donationsIssue, a pdf and a notice that still counts', async () => {
+    const f = withIncomingType(await ledgerFixture());
+    f.deps.clock.set('2026-03-01T10:00:00.000Z');
+    const notice = unwrap(await saveNotice(f.deps, f.ctx, exemption));
+    expect(err(await attachNoticeDocument(f.deps, ctxWith(['finance.read'], f.userId), { id: notice.id, bytes: pdfBytes() }))).toMatchObject({ type: 'forbidden', permission: 'finance.donationsIssue' });
+    expect(err(await attachNoticeDocument(f.deps, f.ctx, { id: notice.id }))).toMatchObject({ type: 'validation' });
+    expect(err(await attachNoticeDocument(f.deps, f.ctx, { id: 'nope', bytes: pdfBytes() }))).toMatchObject({ type: 'notFound' });
+    unwrap(await voidNotice(f.deps, f.ctx, { id: notice.id, note: 'Falsch erfasst' }));
+    expect(err(await attachNoticeDocument(f.deps, f.ctx, { id: notice.id, bytes: pdfBytes() }))).toMatchObject({ type: 'conflict', code: 'noticeVoided' });
+    expect(f.deps.db.select().from(documentLinks).where(eq(documentLinks.entityType, 'financeNotice')).all()).toHaveLength(0);
   });
 });
 

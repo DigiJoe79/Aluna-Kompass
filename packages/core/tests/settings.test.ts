@@ -4,7 +4,7 @@ import { coreModule } from '../src/core-module';
 import { auditLog } from '../src/db/schema';
 import { defineModule } from '../src/modules/manifest';
 import { CORE_SETTINGS } from '../src/settings/core';
-import { readAllSettings, readSetting, setSetting, writeSettingInternal } from '../src/settings/service';
+import { managedSettings, readAllSettings, readSetting, setSetting, writeSettingInternal } from '../src/settings/service';
 import { createTestDeps, ctxWith } from '../src/testing';
 
 describe('settings service', () => {
@@ -122,6 +122,14 @@ describe('managedBy and uiOnly', () => {
     expect(res.ok ? null : res.error).toEqual({ type: 'conflict', code: 'settingManaged', message: 'owner' });
     const internal = deps.db.transaction((tx) => writeSettingInternal(tx, deps, admin, 'host.taxOffice', 'Düren'));
     expect(internal.ok).toBe(true);
+  });
+
+  it('names the settings a switched-on module manages, for a read-only field in the settings form', () => {
+    const deps = createTestDeps({ manifests: [coreModule, owner, host] });
+    enable(deps, ['host']);
+    expect(managedSettings(deps)).toEqual({});
+    enable(deps, ['host', 'owner']);
+    expect(managedSettings(deps)).toEqual({ 'host.taxOffice': 'owner' });
   });
 
   it('refuses a uiOnly setting over mcp and accepts it over ui and system', async () => {

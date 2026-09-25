@@ -101,6 +101,19 @@ export function writeSettingInternal(
   return ok({ key, value: parsed.value });
 }
 
+/**
+ * Die Einstellungen, die gerade ein eingeschaltetes Modul führt (`managedBy`),
+ * als Schlüssel → Modul. Dieselbe Bedingung, unter der `setSetting` mit
+ * `settingManaged` ablehnt — die Vereinsdaten zeigen diese Felder deshalb nur
+ * lesbar.
+ */
+export function managedSettings(deps: Deps): Record<string, string> {
+  const enabled = readSetting<string[]>(deps, 'modules.enabled');
+  const out: Record<string, string> = {};
+  for (const def of deps.registry.settingDefinitions.values()) if (def.managedBy && enabled.includes(def.managedBy)) out[def.key] = def.managedBy;
+  return out;
+}
+
 const setSettingSchema = z.object({ key: z.string().min(1), value: z.unknown() });
 
 export async function setSetting(
@@ -116,6 +129,6 @@ export async function setSetting(
   if (!def) return invalid([{ path: 'key', message: 'unknownSetting' }]);
   if (def.systemOnly) return conflict('settingSystemOnly', `${def.key} wird nur vom System gesetzt`);
   if (def.uiOnly && ctx.channel === 'mcp') return conflict('settingUiOnly', def.key);
-  if (def.managedBy && readSetting<string[]>(deps, 'modules.enabled').includes(def.managedBy)) return conflict('settingManaged', def.managedBy);
+  if (managedSettings(deps)[def.key]) return conflict('settingManaged', def.managedBy!);
   return deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctx, def.key, parsed.value.value));
 }

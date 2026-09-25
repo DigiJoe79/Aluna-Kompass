@@ -64,6 +64,15 @@ test.describe('settings', () => {
     await expect(page.getByText('26 von 500 Zeichen')).toBeVisible();
   });
 
+  test('Bank- und Steuerangaben sind bei eingeschalteten Finanzen nur lesbar und nennen, wo sie geführt werden', async ({ page }) => {
+    await page.getByRole('tab', { name: 'Bank' }).click();
+    for (const label of ['IBAN', 'BIC', 'Bankname']) await expect(page.getByLabel(label), label).not.toBeEditable();
+    await expect(page.getByText('Wird unter Finanzen einrichten → Bankkonten und Kassen am Hauptkonto geführt.')).toHaveCount(3);
+    await page.getByRole('tab', { name: 'Steuer & Bescheide' }).click();
+    await expect(page.getByLabel('Steuernummer')).not.toBeEditable();
+    await expect(page.getByText('Wird unter Finanzen → Spenden → Bescheide geführt.')).toHaveCount(4);
+  });
+
   test('the logo is chosen from the library and saved with the settings', async ({ page }) => {
     await page.goto('/admin/media');
     await page.getByLabel('Datei hochladen').setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: PNG });

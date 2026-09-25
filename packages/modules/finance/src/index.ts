@@ -217,7 +217,7 @@ export { applyInvoiceToDraft, createOpenItemFromInvoice, invoiceProposal, readIn
 
 // F6a — Spenden: Bescheide; Gültigkeit rein in `ledger/`, damit F7 sie für Empfängerbescheide nutzt.
 export { NOTICE_KINDS, noticeValidAt, noticeValidUntil, type NoticeKind, type NoticeValidityInput } from './ledger/notice-validity';
-export { certifiableLineExistsInternal, listNotices, noticeExpiryInternal, noticeValidAtInternal, saveNotice, supersedeNotice, voidNotice, type NoticeView } from './donations/notices';
+export { attachNoticeDocument, certifiableLineExistsInternal, listNotices, noticeExpiryInternal, noticeValidAtInternal, saveNotice, supersedeNotice, voidNotice, type NoticeView } from './donations/notices';
 // Maschinelles Verfahren: `readFacsimile` nur für den Route Handler (bewusst ohne MCP — Ausnahmeliste der App).
 export {
   createNotificationLetterDraft,

@@ -243,3 +243,168 @@ test.describe('finance donations', () => {
     await expect(page.getByTestId('confirmation-row')).toHaveCount(0);
   });
 });
+
+/**
+ * F6a Task 8 — Oberfläche C3 „Bescheide“ und das maschinelle Verfahren. Der
+ * Seed bringt den Freistellungsbescheid des Finanzamts Musterstadt vom
+ * 02.05.2025 und Jonas Feld als vollständigen Unterzeichner (seit 01.01.2025,
+ * mit Faksimile und Anzeige).
+ */
+const isoDay = (offsetDays = 0) => new Date(Date.now() + offsetDays * 86_400_000).toISOString().slice(0, 10);
+const germanDay = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
+const plusYears = (iso: string, years: number) => `${Number(iso.slice(0, 4)) + years}${iso.slice(4)}`;
+const PDF = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n');
+const SIGNATURE_PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+const noticeRow = (page: Page, text: string) => page.getByTestId('notice-row').filter({ hasText: text });
+
+test.describe('finance donation notices', () => {
+  test.beforeEach(async ({ page }) => {
+    await resetDatabase(page, 'seeded');
+    await loginAsAdmin(page);
+  });
+
+  test('ein Freistellungsbescheid wird erfasst, die Vereinsdaten zeigen Finanzamt, Steuernummer und Bescheid (E22) und lassen sich dort nicht ändern', async ({ page }) => {
+    const today = isoDay();
+    await page.goto('/finance/donations/notices');
+    await expect(noticeRow(page, 'Finanzamt Musterstadt').getByTestId('notice-state')).toHaveText('gültig');
+    await expect(noticeRow(page, 'Finanzamt Musterstadt')).toContainText('02.05.2030');
+
+    await page.getByRole('button', { name: 'Bescheid erfassen' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Art des Bescheids').selectOption({ label: 'Freistellungsbescheid' });
+    await dialog.getByLabel('Finanzamt').fill('Finanzamt Beispielstadt');
+    await dialog.getByLabel('Steuernummer').fill('11/222/33333');
+    await dialog.getByLabel('Datum des Bescheids').fill(today);
+    await dialog.getByLabel('Veranlagungszeitraum').fill('2022–2024');
+    await dialog.getByLabel('Begünstigte Zwecke im Wortlaut').fill('Förderung des Sports (§ 52 Abs. 2 Satz 1 Nr. 21 AO)');
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByText('Bescheid gespeichert.')).toBeVisible();
+
+    // Zweiter Schritt im selben Dialog: das Dokument nachreichen.
+    await expect(dialog.getByText('Reichen Sie den Bescheid als PDF nach')).toBeVisible();
+    await dialog.getByTestId('voucher-file-input').setInputFiles({ name: 'bescheid.pdf', mimeType: 'application/pdf', buffer: PDF });
+    await expect(page.getByText(/Bescheid als \S+ in der Akte abgelegt/)).toBeVisible();
+    await dialog.getByRole('button', { name: 'Fertig' }).click();
+    await expect(dialog).toBeHidden();
+
+    const row = noticeRow(page, 'Finanzamt Beispielstadt');
+    await expect(row).toContainText('Freistellungsbescheid');
+    await expect(row).toContainText('11/222/33333');
+    await expect(row).toContainText(germanDay(plusYears(today, 5)));
+    await expect(row.getByTestId('notice-state')).toHaveText('gültig');
+    await expect(row.getByTestId('notice-document')).toHaveText(/^EIN-/);
+
+    await page.goto('/admin/settings');
+    await page.getByRole('tab', { name: 'Steuer & Bescheide' }).click();
+    await expect(page.getByLabel('Finanzamt')).toHaveValue('Finanzamt Beispielstadt');
+    await expect(page.getByLabel('Steuernummer')).toHaveValue('11/222/33333');
+    await expect(page.getByLabel('Art des Bescheids')).toHaveValue('exemptionNotice');
+    await expect(page.getByLabel('Datum des Bescheids')).toHaveValue(today);
+    for (const label of ['Finanzamt', 'Steuernummer', 'Art des Bescheids', 'Datum des Bescheids']) await expect(page.getByLabel(label), label).not.toBeEditable();
+    await expect(page.getByText('Wird unter Finanzen → Spenden → Bescheide geführt.')).toHaveCount(4);
+    await expect(page.getByLabel('Satzungszweck')).toBeEditable();
+  });
+
+  test('ein § 60a-Bescheid nach einem Freistellungsbescheid wird abgelehnt', async ({ page }) => {
+    await page.goto('/finance/donations/notices');
+    await page.getByRole('button', { name: 'Bescheid erfassen' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Art des Bescheids').selectOption({ label: 'vorläufige Anerkennung (§ 60a)' });
+    await expect(dialog.getByLabel('Veranlagungszeitraum')).toHaveCount(0);
+    const question = dialog.getByRole('radiogroup', { name: 'Wurde bereits ein Freistellungsbescheid erteilt?' });
+    await question.getByLabel('Ja').check();
+    await expect(dialog.getByText('Dann erfassen Sie bitte den Freistellungsbescheid')).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Speichern' })).toBeDisabled();
+
+    await question.getByLabel('Nein').check();
+    await dialog.getByLabel('Finanzamt').fill('Finanzamt Musterstadt');
+    await dialog.getByLabel('Steuernummer').fill('99/999/99990');
+    await dialog.getByLabel('Datum des Bescheids').fill(isoDay());
+    await dialog.getByLabel('Begünstigte Zwecke im Wortlaut').fill('Förderung des Sports');
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByText(/Es gibt schon einen endgültigen Bescheid vom 2025-05-02/).first()).toBeVisible();
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Abbrechen' }).click();
+    await expect(page.getByTestId('notice-row')).toHaveCount(1);
+  });
+
+  test('Unterzeichner, Faksimile und Anzeige machen das Verfahren vollständig; die Checkliste zeigt beide Schritte', async ({ page }) => {
+    const today = isoDay();
+    await page.goto('/finance/donations/notices');
+    const panel = page.getByTestId('machine-panel');
+    const status = panel.getByTestId('machine-status');
+    await expect(status).toContainText('Vollständig');
+
+    // Amtsübergabe: Jonas Feld endet gestern, Mara Winter beginnt heute.
+    await panel.getByTestId('signer-row').filter({ hasText: 'Jonas Feld' }).getByRole('button', { name: 'Bearbeiten' }).click();
+    let dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Gültig bis').fill(isoDay(-1));
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(status).toContainText('es fehlt: ein Unterzeichner für heute');
+
+    await panel.getByRole('button', { name: 'Unterzeichner hinzufügen' }).click();
+    dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Name').fill('Mara Winter');
+    await dialog.getByLabel('Gültig ab').fill(today);
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(status).toContainText('es fehlt: das Bild der Unterschrift, der Tag der Anzeige beim Finanzamt');
+
+    const mara = panel.getByTestId('signer-row').filter({ hasText: 'Mara Winter' });
+    await expect(panel.getByText('Das Bild der Unterschrift liegt nicht in der Mediathek')).toBeVisible();
+    await mara.getByLabel('Unterschrift als Bild hochladen').setInputFiles({ name: 'unterschrift.png', mimeType: 'image/png', buffer: SIGNATURE_PNG });
+    await expect(page.getByText('Bild der Unterschrift gespeichert.')).toBeVisible();
+    const preview = mara.getByRole('img', { name: 'Unterschrift von Mara Winter' });
+    await expect(preview).toHaveAttribute('src', /^\/finance\/donations\/facsimile\?signerId=/);
+    await expect.poll(() => preview.evaluate((el: HTMLImageElement) => (el.complete ? el.naturalWidth : 0))).toBeGreaterThan(0);
+    await expect(status).toContainText('es fehlt: der Tag der Anzeige beim Finanzamt');
+
+    await panel.getByRole('button', { name: 'Anzeigeschreiben als Entwurf erzeugen' }).click();
+    await expect(page.getByText('Das Anzeigeschreiben liegt als Entwurf in der Akte.')).toBeVisible();
+
+    await page.goto('/admin/finance?panel=checklist');
+    await expect(page.getByTestId('requirement-notice')).toHaveAttribute('data-done', 'true');
+    const machineStep = page.getByTestId('requirement-machineProcedure');
+    await expect(machineStep).toHaveAttribute('data-done', 'false');
+    await expect(machineStep).toContainText('sonst tragen Bestätigungen ein Unterschriftsfeld');
+    await expect(machineStep.getByRole('link', { name: 'Erledigen' })).toHaveAttribute('href', '/finance/donations/notices');
+
+    await page.goto('/finance/donations/notices');
+    await page.getByTestId('machine-panel').getByTestId('signer-row').filter({ hasText: 'Mara Winter' }).getByRole('button', { name: 'Bearbeiten' }).click();
+    dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Angezeigt beim Finanzamt am').fill(today);
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByTestId('machine-status')).toContainText('Vollständig');
+
+    await page.goto('/admin/finance?panel=checklist');
+    await expect(page.getByTestId('requirement-notice')).toContainText('ohne Bescheid keine Zuwendungsbestätigungen');
+    await expect(page.getByTestId('requirement-machineProcedure')).toHaveAttribute('data-done', 'true');
+  });
+
+  test('„Aufgehoben oder ersetzt am“ beendet die Gültigkeit taggenau', async ({ page }) => {
+    const tomorrow = isoDay(1);
+    const today = isoDay();
+    await page.goto('/finance/donations/notices');
+    const row = noticeRow(page, 'Finanzamt Musterstadt');
+
+    // Ab morgen: heute trägt er noch.
+    await row.getByRole('button', { name: 'Aufgehoben oder ersetzt am …' }).click();
+    let dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Aufgehoben oder ersetzt am').fill(tomorrow);
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(row.getByTestId('notice-state')).toHaveText(`gültig — endet mit Ablauf des ${germanDay(today)}`);
+    await expect(row.getByRole('button', { name: 'Aufgehoben oder ersetzt am …' })).toHaveCount(0);
+
+    // Irrtümlich erfasst: trug nie.
+    await row.getByRole('button', { name: 'Irrtümlich erfasst' }).click();
+    dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Grund').fill('Falsches Finanzamt übernommen');
+    await dialog.getByRole('button', { name: 'Irrtümlich erfasst' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(row.getByTestId('notice-state')).toHaveText('irrtümlich erfasst');
+    await expect(page.getByText('Kein gültiger Bescheid — ohne Bescheid keine Zuwendungsbestätigungen.')).toBeVisible();
+  });
+});

@@ -113,6 +113,7 @@ describe('finance MCP tools', () => {
       finance_notice_supersede: 'finance.donationsIssue',
       finance_notice_void: 'finance.donationsIssue',
       finance_notices_list: 'finance.read',
+      finance_notice_attach_document: 'finance.donationsIssue',
       finance_signer_save: 'finance.donationsIssue',
       finance_facsimile_upload: 'finance.donationsIssue',
       finance_machine_procedure_get: 'finance.read',
@@ -129,7 +130,7 @@ describe('finance MCP tools', () => {
     } as const;
     const tool = (name: string) => FINANCE_MCP_TOOLS.find((t) => t.name === name)!;
 
-    it('registers seventeen donation tools, each naming its permission; the argument-less one takes (deps, ctx)', () => {
+    it('registers eighteen donation tools, each naming its permission; the argument-less one takes (deps, ctx)', () => {
       for (const [name, permission] of Object.entries(DONATION_TOOLS)) {
         expect(FINANCE_MCP_TOOLS.some((t) => t.name === name), name).toBe(true);
         expect(tool(name).description, name).toContain(permission);
@@ -161,6 +162,15 @@ describe('finance MCP tools', () => {
       expect(view).toMatchObject({ id: signer.id, hasFacsimile: true });
       expect(JSON.stringify(view)).not.toMatch(/bytes/);
       expect(unwrap(await tool('finance_machine_procedure_get').handler(f.deps, f.ctx, {}))).toMatchObject({ status: { complete: false, missing: ['notifiedOn'] } });
+    });
+
+    it('finance_notice_attach_document takes base64 within the upload limit', async () => {
+      const f = await donationFixture();
+      const attach = tool('finance_notice_attach_document');
+      expect(await attach.handler(f.deps, f.ctx, { id: 'x', contentBase64: 'kein base64!' })).toMatchObject({ ok: false, error: { type: 'validation' } });
+      const big = Buffer.alloc(6 * 1024 * 1024, 65).toString('base64');
+      expect(await attach.handler(f.deps, f.ctx, { id: 'x', contentBase64: big })).toMatchObject({ ok: false, error: { type: 'validation' } });
+      expect(await attach.handler(f.deps, f.ctx, { id: 'nope', contentBase64: Buffer.from(pdfBytes()).toString('base64') })).toMatchObject({ ok: false, error: { type: 'notFound' } });
     });
 
     it('finance_confirmation_attach_signed takes base64 within the upload limit', async () => {
