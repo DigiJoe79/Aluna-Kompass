@@ -4306,6 +4306,163 @@
           "letter": "Das Anzeigeschreiben liegt als Entwurf in der Akte."
         },
         "openDraft": "Entwurf öffnen"
+      },
+      "run": {
+        "title": "Serienlauf",
+        "description": "Alle Zuwendungsbestätigungen eines Jahres in einem Lauf: je Spender eine Sammelbestätigung, Aufwandsspenden gesondert, Sachspenden einzeln.",
+        "steps": {
+          "label": "Schritte des Serienlaufs",
+          "selection": "Auswahl",
+          "preview": "Vorschau",
+          "run": "Lauf",
+          "result": "Ergebnis"
+        },
+        "selection": {
+          "label": "Auswahl",
+          "year": "Jahr",
+          "minimum": "Mindestbetrag",
+          "minimumHint": "Summe je Spender im Jahr; darunter bleibt er draußen.",
+          "exclude": "Ausschließen",
+          "excluded": "Ausgeschlossen",
+          "include": "{name} wieder aufnehmen",
+          "unknownContact": "Kontakt ohne Leserecht",
+          "show": "Vorschau zeigen",
+          "apply": "Neu rechnen",
+          "followUp": "Nachzügler-Lauf zum Serienlauf vom {date} — die Vorschau zeigt nur, was noch fehlt."
+        },
+        "groups": {
+          "ready": "bereit",
+          "needsSignature": "braucht Unterschrift",
+          "beforeOldestNotice": "vor dem ältesten Bescheid",
+          "addressMissing": "Anschrift fehlt",
+          "blocked": "blockiert",
+          "heading": "{group} · {count, plural, one {# Bestätigung} other {# Bestätigungen}}"
+        },
+        "lines": "{count, plural, one {# Zuwendung} other {# Zuwendungen}}",
+        "linesWithSingly": "{count} von {all} Zuwendungen; {singly} bereits einzeln bestätigt",
+        "itemKind": {
+          "collective": "Sammelbestätigung",
+          "collectiveWaiver": "Sammelbestätigung Aufwandsspenden",
+          "inKind": "Sachspende, einzeln"
+        },
+        "signatureReason": {
+          "expenseWaiver": "Aufwandsspende — immer mit Unterschriftsfeld",
+          "inKind": "Sachspende — mit Unterschriftsfeld",
+          "machineIncomplete": "Maschinelles Verfahren unvollständig — mit Unterschriftsfeld"
+        },
+        "blockedBy": {
+          "final": "Buchung nicht festgeschrieben",
+          "certifiable": "Kategorie ohne Bestätigung",
+          "contactComplete": "Anschrift fehlt",
+          "organizationAddress": "Vereinsanschrift fehlt",
+          "notConfirmed": "Schon bestätigt",
+          "noticeValid": "Kein Bescheid",
+          "amountPositive": "Nach Rückgaben kein Betrag",
+          "documented": "Beleg fehlt",
+          "inKindDetails": "Sachspende nicht beschrieben",
+          "typeActive": "Dokumentart stillgelegt",
+          "signerValid": "Unterzeichner fehlt",
+          "expenseWaiverEnabled": "Aufwandsspenden ausgeschaltet",
+          "unknown": "Nicht bestätigbar"
+        },
+        "completeAddress": "Anschrift ergänzen",
+        "openUncertified": "Zu den offenen Zuwendungen",
+        "beforeOldestNotice": {
+          "text": "Diese Zuwendungen liegen vor dem ältesten erfassten Bescheid. Mit einer Begründung werden sie mitgezählt, ohne werden sie übersprungen.",
+          "reason": "Warum sind die Bestätigungen trotzdem richtig?"
+        },
+        "blockedRun": {
+          "title": "Der Serienlauf kann nicht starten",
+          "noNotice": "Am Ausstellungstag gilt kein Bescheid des Finanzamts — ohne Bescheid keine Zuwendungsbestätigungen.",
+          "organizationIncomplete": "Name oder Anschrift des Vereins fehlen."
+        },
+        "empty": {
+          "title": "Nichts zu bestätigen",
+          "text": "In diesem Jahr gibt es keine Zuwendung ohne Bestätigung — prüfen Sie Jahr, Mindestbetrag und Ausschlüsse."
+        },
+        "footer": {
+          "range": "Nummernbereich",
+          "rangeValue": "{from} bis {to}",
+          "rangeNone": "keine Nummer",
+          "issuedOn": "Ausstellungsdatum {date}",
+          "submit": "{count, plural, one {# Bestätigung ausstellen} other {# Bestätigungen ausstellen}}",
+          "noPermission": "Ausstellen braucht das Recht „Zuwendungsbestätigungen ausstellen“."
+        },
+        "progress": {
+          "title": "Der Lauf stellt aus",
+          "status": "{done} von {total, plural, one {# Bestätigung} other {# Bestätigungen}} ausgestellt",
+          "leave": "Der Lauf läuft weiter — Sie können die Seite verlassen. Beim nächsten Besuch dieser Seite geht er dort weiter, wo er stand.",
+          "stalled": "Der Lauf hält an. Laden Sie die Seite neu, um ihn fortzusetzen.",
+          "noPermission": "Fortsetzen kann nur, wer das Recht „Zuwendungsbestätigungen ausstellen“ hat."
+        },
+        "result": {
+          "summary": "{issued} von {total, plural, one {# Bestätigung} other {# Bestätigungen}} ausgestellt",
+          "startedOn": "Serienlauf {year}, ausgestellt am {date}",
+          "followUpOf": "Nachzügler-Lauf",
+          "bundles": "Zum Drucken",
+          "bundleMachine": "Maschinelle Bestätigungen (PDF) · {count}",
+          "bundleSignature": "Zum Unterschreiben (PDF) · {count}",
+          "bundleFailed": "Das Sammel-PDF ließ sich nicht erstellen.",
+          "dispatchAll": "Versand für alle vermerken",
+          "dispatched": "Versand vermerkt am {date} · {via}",
+          "missingSigned": "Unterschriebene Fassung fehlt · {count}",
+          "failed": "Nicht ausgestellt",
+          "skipped": "Übersprungen",
+          "missing": "{count, plural, one {# Spender fehlt noch} other {# Spender fehlen noch}}: {names}",
+          "missingNone": "Kein Spender fehlt mehr — alles bestätigt, was bestätigt werden kann.",
+          "followUpAction": "Nachzügler-Lauf vorbereiten",
+          "newPreview": "Neue Vorschau"
+        },
+        "dispatch": {
+          "title": "Versand für alle vermerken",
+          "text": "Ein Vermerk, kein Versand: Kompass verschickt nichts. Vermerkt wird der Versand der maschinellen Bestätigungen dieses Laufs; zu unterschreibende bekommen ihn erst mit der unterschriebenen Fassung.",
+          "sentAt": "Versandt am",
+          "sentVia": "Weg",
+          "cancel": "Abbrechen",
+          "submit": "Vermerken",
+          "toast": "Versand für die maschinellen Bestätigungen vermerkt"
+        },
+        "toast": {
+          "started": "Serienlauf gestartet"
+        },
+        "runs": {
+          "title": "Frühere Läufe",
+          "empty": "Noch kein Serienlauf.",
+          "columns": {
+            "year": "Jahr",
+            "startedOn": "Ausgestellt am",
+            "issued": "Ausgestellt",
+            "state": "Stand",
+            "dispatched": "Versand",
+            "open": "Lauf"
+          },
+          "issued": "{issued} von {total}",
+          "state": {
+            "running": "läuft",
+            "finished": "abgeschlossen",
+            "withFailures": "abgeschlossen, {count} nicht ausgestellt"
+          },
+          "followUp": "Nachzügler",
+          "open": "Öffnen"
+        },
+        "errorCode": {
+          "confirmationLineNotFinal": "Buchung nicht festgeschrieben",
+          "confirmationLineReversed": "Buchung zurückgenommen",
+          "confirmationIncomeNotCertifiable": "Kategorie ohne Bestätigung",
+          "confirmationContactIncomplete": "Anschrift fehlt",
+          "confirmationOrganizationIncomplete": "Vereinsanschrift fehlt",
+          "confirmationLineAlreadyConfirmed": "Schon anderweitig bestätigt",
+          "confirmationAmountNotPositive": "Nach Rückgaben kein Betrag",
+          "confirmationEntryUndocumented": "Beleg fehlt",
+          "confirmationInKindDetailsMissing": "Sachspende nicht beschrieben",
+          "confirmationTypeInactive": "Dokumentart stillgelegt",
+          "confirmationExpenseWaiversDisabled": "Aufwandsspenden ausgeschaltet",
+          "confirmationPreNoticeNeedsReason": "Vor dem ältesten Bescheid, ohne Begründung",
+          "confirmationChangedMeanwhile": "Während des Laufs geändert",
+          "noNoticeValidAt": "Kein gültiger Bescheid am Ausstellungstag",
+          "noticeNotValidAt": "Bescheid gilt am Ausstellungstag nicht",
+          "unknown": "Nicht ausgestellt ({code})"
+        }
       }
     }
   }
