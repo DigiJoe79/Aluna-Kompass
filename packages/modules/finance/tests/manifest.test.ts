@@ -34,13 +34,16 @@ describe('finance module', () => {
       { key: 'finance.cash', href: '/finance/cash', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
       // F6a Task 6: ein eigener Abschnitt „Spenden“ — Bestätigungen und Bescheide.
       { key: 'finance.donations', href: '/finance/donations', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
+      // F6b Task 6: Serienlauf und Spendenbuch zwischen Bestätigungen und Bescheiden.
+      { key: 'finance.donationRun', href: '/finance/donations/run', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
+      { key: 'finance.donationBook', href: '/finance/donations/book', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
       { key: 'finance.donationNotices', href: '/finance/donations/notices', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
     ]);
     expect(financeModule.moduleIcon).toBe('euro');
   });
 
-  it('points both donation routes at the handbook page on donations', () => {
-    for (const href of ['/finance/donations', '/finance/donations/notices']) expect(financeModule.help, href).toContainEqual({ href, doc: 'finanzen/spenden' });
+  it('points the donation routes at the handbook page on donations', () => {
+    for (const href of ['/finance/donations', '/finance/donations/notices', '/finance/donations/run', '/finance/donations/book']) expect(financeModule.help, href).toContainEqual({ href, doc: 'finanzen/spenden' });
   });
 
   it('points the four work list routes at the handbook page of the work list', () => {

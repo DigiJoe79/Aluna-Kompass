@@ -73,6 +73,8 @@ export const financeModule: ModuleManifest = defineModule({
     { href: '/finance/accounts', doc: 'finanzen/konten-und-offene-zahlungen' },
     { href: '/finance/open-items', doc: 'finanzen/konten-und-offene-zahlungen' },
     { href: '/finance/cash', doc: 'finanzen/barkasse' },
+    { href: '/finance/donations/run', doc: 'finanzen/spenden' },
+    { href: '/finance/donations/book', doc: 'finanzen/spenden' },
     { href: '/finance/donations/notices', doc: 'finanzen/spenden' },
     { href: '/finance/donations', doc: 'finanzen/spenden' },
     { href: '/admin/finance', doc: 'finanzen/einrichten' },
@@ -91,6 +93,9 @@ export const financeModule: ModuleManifest = defineModule({
     { key: 'finance.cash', href: '/finance/cash', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
     // F6a Task 6: ein eigener Abschnitt „Spenden“ — Bestätigungen und Bescheide.
     { key: 'finance.donations', href: '/finance/donations', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
+    // F6b Task 6: Serienlauf und Spendenbuch zwischen Bestätigungen und Bescheiden.
+    { key: 'finance.donationRun', href: '/finance/donations/run', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
+    { key: 'finance.donationBook', href: '/finance/donations/book', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
     { key: 'finance.donationNotices', href: '/finance/donations/notices', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
   ],
   // Task 5 — eine Seite mit Panels nach dem Muster von /admin/dms, ?panel= reitert.

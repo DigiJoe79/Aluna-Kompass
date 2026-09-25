@@ -250,7 +250,7 @@ describe('finance setup status', () => {
       expect([...role.navigation].sort(), role.name).toEqual(expected.sort());
     }
     const treasurer = matrix.roles.find((r) => r.name === 'Schatzmeister')!;
-    expect(treasurer.navigation).toEqual(expect.arrayContaining(['finance.work', 'finance.donations', 'finance.donationNotices']));
+    expect(treasurer.navigation).toEqual(expect.arrayContaining(['finance.work', 'finance.donations', 'finance.donationRun', 'finance.donationBook', 'finance.donationNotices']));
   });
 
   it('sets a finance switch (H7) with finance.setup, refuses an unknown key, and keeps the mcp-only switch bound to the ui channel', async () => {

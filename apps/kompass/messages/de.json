@@ -352,6 +352,8 @@
       "openItems": "Offene Zahlungen",
       "cash": "Barkasse",
       "donations": "Bestätigungen",
+      "donationRun": "Serienlauf",
+      "donationBook": "Spendenbuch",
       "donationNotices": "Bescheide",
       "admin": "Finanzen"
     },
@@ -3414,6 +3416,8 @@
             "openItems": "Offene Zahlungen",
             "cash": "Barkasse",
             "donations": "Bestätigungen",
+            "donationRun": "Serienlauf",
+            "donationBook": "Spendenbuch",
             "donationNotices": "Bescheide",
             "admin": "Finanzen einrichten"
           }

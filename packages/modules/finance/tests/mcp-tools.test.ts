@@ -184,6 +184,51 @@ describe('finance MCP tools', () => {
     });
   });
 
+  describe('confirmation runs and donation book (F6b)', () => {
+    const RUN_TOOLS = {
+      finance_confirmation_run_preview: 'finance.read',
+      finance_confirmation_run_start: 'finance.donationsIssue',
+      finance_confirmation_run_continue: 'finance.donationsIssue',
+      finance_confirmation_run_get: 'finance.read',
+      finance_confirmation_runs_list: 'finance.read',
+      finance_confirmation_run_dispatch: 'finance.donationsIssue',
+      finance_donation_book: 'finance.read',
+      finance_donation_reconciliation: 'finance.read',
+    } as const;
+    const tool = (name: string) => FINANCE_MCP_TOOLS.find((t) => t.name === name)!;
+
+    it('registers eight tools, each naming its permission; start and continue say human only, continue takes max', () => {
+      for (const [name, permission] of Object.entries(RUN_TOOLS)) {
+        expect(FINANCE_MCP_TOOLS.some((t) => t.name === name), name).toBe(true);
+        expect(tool(name).description, name).toContain(permission);
+        expect(tool(name).description, name).toMatch(/^[\x20-\x7e]+$/);
+      }
+      for (const name of ['finance_confirmation_run_start', 'finance_confirmation_run_continue']) expect(tool(name).description, name).toMatch(/Human only/);
+      for (const name of ['finance_confirmation_run_preview', 'finance_confirmation_run_get', 'finance_confirmation_runs_list', 'finance_confirmation_run_dispatch', 'finance_donation_book', 'finance_donation_reconciliation']) {
+        expect(tool(name).description, name).not.toMatch(/Human only/);
+      }
+      expect(Object.keys((tool('finance_confirmation_run_continue').inputSchema as unknown as { shape: Record<string, unknown> }).shape)).toEqual(['runId', 'max']);
+    });
+
+    it('refuses an agent to start or continue a run, lets it preview, read the runs, the book and the reconciliation', async () => {
+      const f = await donationFixture();
+      await f.donate({ date: '2026-02-01', cents: 5000 });
+      const agent = { ...f.ctx, channel: 'mcp' as const };
+      expect(await tool('finance_confirmation_run_start').handler(f.deps, agent, { year: 2026 })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'humanOnly' } });
+      expect(await tool('finance_confirmation_run_continue').handler(f.deps, agent, { runId: 'x', max: 5 })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'humanOnly' } });
+
+      expect(unwrap(await tool('finance_confirmation_run_preview').handler(f.deps, agent, { year: 2026 }))).toMatchObject({ counts: { ready: 0, needsSignature: 1 } });
+      const run = unwrap(await tool('finance_confirmation_run_start').handler(f.deps, f.ctx, { year: 2026 })) as { id: string };
+      unwrap(await tool('finance_confirmation_run_continue').handler(f.deps, f.ctx, { runId: run.id, max: 5 }));
+      expect(unwrap(await tool('finance_confirmation_run_get').handler(f.deps, agent, { id: run.id }))).toMatchObject({ id: run.id, counts: { issued: 1, pending: 0 } });
+      expect(unwrap(await tool('finance_confirmation_runs_list').handler(f.deps, agent, {}))).toMatchObject({ total: 1 });
+      expect(unwrap(await tool('finance_donation_book').handler(f.deps, agent, { year: 2026 }))).toMatchObject({ total: 1, sums: { total: 5000 } });
+      expect(unwrap(await tool('finance_donation_reconciliation').handler(f.deps, agent, { year: 2026 }))).toMatchObject({ donationsCents: 5000, confirmedCents: 5000, differenceCents: 0 });
+      // Der Versandvermerk für alle ist kein Ausstellen — ein Agent darf ihn setzen, nur maschinelle zählen.
+      expect(await tool('finance_confirmation_run_dispatch').handler(f.deps, agent, { runId: run.id, sentAt: '2026-03-20', sentVia: 'post' })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'dispatchNothingMachine' } });
+    });
+  });
+
   it('finance_statement_detect_account takes base64 like finance_import_statement and names both ibans of a file for two accounts (N3, W-1)', async () => {
     const f = await ledgerFixture();
     const tool = FINANCE_MCP_TOOLS.find((t) => t.name === 'finance_statement_detect_account')!;

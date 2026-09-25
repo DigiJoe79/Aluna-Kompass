@@ -73,6 +73,8 @@ const FINANCE_NAV_ENTRIES: readonly { key: string; permission: string }[] = [
   { key: 'finance.openItems', permission: 'finance.read' },
   { key: 'finance.cash', permission: 'finance.read' },
   { key: 'finance.donations', permission: 'finance.read' },
+  { key: 'finance.donationRun', permission: 'finance.read' },
+  { key: 'finance.donationBook', permission: 'finance.read' },
   { key: 'finance.donationNotices', permission: 'finance.read' },
   { key: 'finance.admin', permission: 'finance.setup' },
 ];
