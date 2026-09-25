@@ -39,11 +39,11 @@ describe('money accounts', () => {
   it('there is one main account: a new one takes over, and only an active bank account can be it', async () => {
     const { deps, ctx } = setupFinance();
     const first = unwrap(await createAccount(deps, ctx, BANK));
-    const second = unwrap(await createAccount(deps, ctx, { ...BANK, name: 'Neues Konto', iban: 'AT61 1904 3002 3457 3201', bic: 'BKAUATWW', bankName: 'Andere Bank' }));
+    const second = unwrap(await createAccount(deps, ctx, { ...BANK, name: 'Neues Konto', iban: 'AT93 9999 9000 0123 4567', bic: 'BKAUATWW', bankName: 'Andere Bank' }));
     const rows = unwrap(await listAccounts(deps, ctx, {}));
     expect(rows.find((a) => a.id === first.id)!.isMain).toBe(false);
     expect(rows.find((a) => a.id === second.id)!.isMain).toBe(true);
-    expect(readSetting(deps, 'organization.iban')).toBe('AT611904300234573201');
+    expect(readSetting(deps, 'organization.iban')).toBe('AT939999900001234567');
     expect(err(await createAccount(deps, ctx, { name: 'Barkasse', kind: 'cash', isMain: true }))).toMatchObject({ type: 'conflict', code: 'mainAccountMustBeBank' });
     expect(err(await setAccountActive(deps, ctx, { id: second.id, isActive: false }))).toMatchObject({ type: 'conflict', code: 'mainAccountMustStayActive' });
   });
@@ -60,11 +60,11 @@ describe('money accounts', () => {
     const { deps, ctx } = setupFinance();
     const account = unwrap(await createAccount(deps, ctx, { ...BANK, isMain: false }));
     expect(err(await updateAccount(deps, ctx, { id: account.id, name: 'Anders', expectedVersion: '2000-01-01T00:00:00.000Z' }))).toMatchObject({ type: 'conflict', code: 'staleVersion' });
-    unwrap(await updateAccount(deps, ctx, { id: account.id, name: 'Anders', iban: 'AT61 1904 3002 3457 3201', expectedVersion: account.updatedAt }));
+    unwrap(await updateAccount(deps, ctx, { id: account.id, name: 'Anders', iban: 'AT93 9999 9000 0123 4567', expectedVersion: account.updatedAt }));
     unwrap(await deleteAccount(deps, ctx, { id: account.id }));
     const log = deps.db.select().from(schema.auditLog).all().filter((e) => e.action.startsWith('finance.account.'));
     expect(log.map((e) => e.action)).toEqual(['finance.account.create', 'finance.account.update', 'finance.account.delete']);
-    expect(JSON.stringify(log)).not.toMatch(/Vereinskonto|Anders|DE23|AT61|Beispielbank|BEISDEX0/);
+    expect(JSON.stringify(log)).not.toMatch(/Vereinskonto|Anders|DE23|AT93|Beispielbank|BEISDEX0/);
     expect(JSON.parse(log[1]!.after as string)).toMatchObject({ bankDetailsChanged: true });
   });
 

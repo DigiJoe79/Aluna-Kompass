@@ -6,7 +6,7 @@ describe('IBAN', () => {
   it('accepts a valid check digit and refuses a wrong one', () => {
     expect(isValidIban('DE23999999990000202051')).toBe(true);
     expect(isValidIban('DE24999999990000202051')).toBe(false);
-    expect(isValidIban('AT611904300234573201')).toBe(true);
+    expect(isValidIban('AT939999900001234567')).toBe(true);
   });
   it('refuses nonsense', () => { for (const s of ['', 'DE', 'DE02 1203', '1234567890123456', 'DE02-1203-0000']) expect(isValidIban(s)).toBe(false); });
 });

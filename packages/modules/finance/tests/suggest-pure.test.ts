@@ -105,7 +105,7 @@ describe('findByReference', () => {
 
 describe('paymentServiceHint', () => {
   it('hints at a foreign iban, never at a German one or none', () => {
-    expect(paymentServiceHint('AT611904300234573201')).toBe('foreignIban');
+    expect(paymentServiceHint('AT939999900001234567')).toBe('foreignIban');
     expect(paymentServiceHint('de66 9999 9999 1234 5678 90')).toBeNull();
     expect(paymentServiceHint(null)).toBeNull();
     expect(paymentServiceHint('  ')).toBeNull();

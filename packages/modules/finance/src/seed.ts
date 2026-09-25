@@ -201,7 +201,8 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   await ensureCsvAccountWithRun(deps, ctx, 'Spendenplattform', 'Spendenplattform CSV', 'aktivitaeten-2026-03.csv', buildPaymentServiceCsv());
   await ensureAccount(deps, ctx, 'Zweitbank CSV', { kind: 'bank', iban: 'DE48999999990000404040', isMain: false });
   await ensureCsvAccountWithRun(deps, ctx, 'Zweitbank CSV', 'Zweitbank CSV', 'umsaetze-2026-03.csv', buildSecondBankCsv());
-  const oldSavings = await ensureAccount(deps, ctx, 'Altes Sparbuch', { kind: 'bank', iban: 'AT611904300234573201', isMain: false });
+  // IBAN erfunden (BLZ 99999) — N2: die frühere Beispielnummer trug die echte österreichische BLZ 19043.
+  const oldSavings = await ensureAccount(deps, ctx, 'Altes Sparbuch', { kind: 'bank', iban: 'AT939999900001234567', isMain: false });
   if (oldSavings) {
     const row = deps.db.select().from(financeAccounts).where(eq(financeAccounts.id, oldSavings.id)).get();
     if (row?.isActive) unwrap(await setAccountActive(deps, ctx, { id: oldSavings.id, isActive: false, expectedVersion: row.updatedAt }));

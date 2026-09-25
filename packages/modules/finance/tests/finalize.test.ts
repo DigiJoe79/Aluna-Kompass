@@ -50,7 +50,7 @@ describe('finalizing', () => {
     const empty = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'x', moneyLines: [], allocationLines: [] }));
     expect(err(await finalizeEntry(f.deps, f.ctx, { id: empty.id }))).toMatchObject({ type: 'conflict', code: 'entryEmpty' });
 
-    const inactiveAccount = unwrap(await createAccount(f.deps, f.ctx, { name: 'Stilles Konto', kind: 'bank', iban: 'AT611904300234573201' }));
+    const inactiveAccount = unwrap(await createAccount(f.deps, f.ctx, { name: 'Stilles Konto', kind: 'bank', iban: 'AT939999900001234567' }));
     unwrap(await setAccountActive(f.deps, f.ctx, { id: inactiveAccount.id, isActive: false }));
     const withInactiveAccount = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'x', moneyLines: [{ accountId: inactiveAccount.id, amountCents: 100 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 100 }] }));
     expect(err(await finalizeEntry(f.deps, f.ctx, { id: withInactiveAccount.id }))).toMatchObject({ type: 'conflict', code: 'accountInactive' });

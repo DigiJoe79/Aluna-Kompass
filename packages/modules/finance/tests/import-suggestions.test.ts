@@ -256,7 +256,7 @@ describe('suggestForTransaction — (5) contact over the iban, and hints', () =>
 
   it('hints at a foreign iban without proposing anything else', async () => {
     const f = await ledgerFixture();
-    const rawId = insertRaw(f, insertRun(f, f.bank.id), { accountId: f.bank.id, amountCents: -40000, iban: 'AT611904300234573201', name: 'Partnerverein', purpose: 'Futter' });
+    const rawId = insertRaw(f, insertRun(f, f.bank.id), { accountId: f.bank.id, amountCents: -40000, iban: 'AT939999900001234567', name: 'Partnerverein', purpose: 'Futter' });
     expect(await suggest(f, rawId)).toEqual({ rawTransactionId: rawId, kind: 'none', confidence: 'unsure', reasons: [], draft: null, linkEntry: null, problems: [], hints: ['foreignIban'] });
   });
 });

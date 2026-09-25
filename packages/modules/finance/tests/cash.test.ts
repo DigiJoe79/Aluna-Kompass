@@ -186,7 +186,7 @@ describe('moveCash', () => {
 
   it('refuses a move between two bank accounts here', async () => {
     const f = await fixtureWithCashBalance();
-    const secondBank = unwrap(await createAccount(f.deps, f.ctx, { name: 'Zweitkonto', kind: 'bank', iban: 'AT611904300234573201' }));
+    const secondBank = unwrap(await createAccount(f.deps, f.ctx, { name: 'Zweitkonto', kind: 'bank', iban: 'AT939999900001234567' }));
     const res = await moveCash(f.deps, f.ctx, { fromAccountId: f.bank.id, toAccountId: secondBank.id, date: '2026-03-10', amountCents: 100 });
     expect(res).toMatchObject({ ok: false, error: { type: 'conflict', code: 'cashMoveNeedsOneCash' } });
   });
