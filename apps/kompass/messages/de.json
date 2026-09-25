@@ -47,6 +47,10 @@
     "blocked": {
       "notPossible": "nicht möglich"
     },
+    "managedField": {
+      "badge": "geführt",
+      "linkText": "geführt unter {label}"
+    },
     "beforeAfter": {
       "before": "Vorher",
       "after": "Nachher"
@@ -1054,7 +1058,13 @@
     "managedHint": {
       "tax": "Wird unter Finanzen → Spenden → Bescheide geführt.",
       "bank": "Wird unter Finanzen einrichten → Bankkonten und Kassen am Hauptkonto geführt."
-    }
+    },
+    "managedTarget": {
+      "notices": "Bescheide",
+      "accounts": "Bankkonten"
+    },
+    "taxNoticeMissing": "Es ist noch kein Bescheid erfasst.",
+    "taxNoticeMissingLink": "Bescheid erfassen"
   },
   "themes": {
     "title": "Erscheinungsbild",

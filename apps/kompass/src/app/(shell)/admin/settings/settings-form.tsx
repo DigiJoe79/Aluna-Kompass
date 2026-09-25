@@ -2,17 +2,20 @@
 
 import { Info } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { useMemo, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { FormField } from '@/components/forms/form-field';
 import { SaveBar } from '@/components/forms/save-bar';
+import { ManagedField } from '@/components/managed-field';
+import { Notice } from '@/components/notice';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { FormErrorSummary } from '@/components/forms/form-error-summary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { MediaPicker } from '@/components/forms/media-picker';
-import { managedHintKey, SETTINGS_TABS, TAX_REQUIRED, type SettingsField } from '@/lib/settings-fields';
+import { managedHintKey, managedTarget, SETTINGS_TABS, TAX_REQUIRED, type SettingsField } from '@/lib/settings-fields';
 import { cn } from '@/lib/utils';
 import { saveSettingsAction } from './actions';
 
@@ -44,7 +47,9 @@ export function SettingsForm({
   const invalidTabs = new Set(
     SETTINGS_TABS.filter((tab) => tab.fields.some((f) => errors[f.key])).map((tab) => tab.key)
   );
-  const taxMissing = TAX_REQUIRED.filter((k) => !values[k] || values[k] === 'none').length;
+  // E-2: der Warnkasten zählt nur nicht geführte Felder; fehlen nur geführte, verweist stattdessen ein Hinweis auf die Bescheide.
+  const taxMissingUnmanaged = TAX_REQUIRED.filter((k) => !managed.includes(k) && (!values[k] || values[k] === 'none')).length;
+  const taxMissingManaged = TAX_REQUIRED.filter((k) => managed.includes(k) && (!values[k] || values[k] === 'none')).length;
 
   const set = (key: string, value: unknown) => {
     setValues((v) => ({ ...v, [key]: value }));
@@ -60,8 +65,19 @@ export function SettingsForm({
     const id = field.key.replace('.', '-');
     const common = { id, className: cn(field.kind === 'mono' && 'font-mono') };
     const isManaged = managed.includes(field.key);
-    const managedKey = isManaged ? managedHintKey(field.key) : null;
-    const hint = managedKey ? t(managedKey) : field.hintKey ? t(`hints.${field.hintKey}`) : undefined;
+    const target = isManaged ? managedTarget(field.key) : null;
+
+    // E-1: kein Eingabeelement für geführte Felder — Wert, Kennzeichen und der Weg dorthin, statt readOnly/disabled.
+    if (isManaged && target) {
+      const display = field.kind === 'select' && value ? t(`options.${field.key}.${String(value)}`) : value === null || value === undefined ? '' : String(value);
+      return (
+        <div key={field.key} className={field.span === 'full' ? 'md:col-span-2' : undefined}>
+          <ManagedField label={label} value={display} managedBy={{ label: t(`managedTarget.${target.targetKey}`), href: target.href }} />
+        </div>
+      );
+    }
+
+    const hint = field.hintKey ? t(`hints.${field.hintKey}`) : undefined;
     const wrap = (node: React.ReactNode, extraHint?: string) => (
       <FormField
         key={field.key}
@@ -94,7 +110,7 @@ export function SettingsForm({
       case 'font-body':
       case 'font-heading':
         return wrap(
-          <Select id={id} value={String(value ?? '')} onChange={(e) => set(field.key, e.target.value)} disabled={isManaged}>
+          <Select id={id} value={String(value ?? '')} onChange={(e) => set(field.key, e.target.value)}>
             {(field.options ?? []).map((o) => (
               <option key={o} value={o}>
                 {t(`options.${field.key}.${o}`)}
@@ -120,7 +136,6 @@ export function SettingsForm({
             type="date"
             value={String(value ?? '')}
             onChange={(e) => set(field.key, e.target.value)}
-            readOnly={isManaged}
             className="font-mono"
             aria-invalid={!!errors[field.key] || undefined}
           />
@@ -131,7 +146,6 @@ export function SettingsForm({
             {...common}
             value={value === null || value === undefined ? '' : String(value)}
             onChange={(e) => set(field.key, e.target.value)}
-            readOnly={isManaged}
             aria-invalid={!!errors[field.key] || undefined}
           />
         );
@@ -169,9 +183,13 @@ export function SettingsForm({
           </TabsTrigger>
         ))}
       </TabsList>
-      {SETTINGS_TABS.map((tab) => (
+      {SETTINGS_TABS.map((tab) => {
+        const tabManagedFields = tab.fields.filter((f) => managed.includes(f.key));
+        const tabManagedHintKey = tabManagedFields.length > 0 ? managedHintKey(tabManagedFields[0]!.key) : null;
+        return (
         <TabsContent key={tab.key} value={tab.key} className="p-6">
-          {tab.key === 'tax' && taxMissing > 0 ? (
+          {tabManagedHintKey ? <p className="mb-4 text-[13px] text-ink-2">{t(tabManagedHintKey)}</p> : null}
+          {tab.key === 'tax' && taxMissingUnmanaged > 0 ? (
             <p
               role="alert"
               className="mb-4 flex gap-2 rounded-md border border-warning bg-warning-bg p-3 text-[13px] text-ink-2"
@@ -179,11 +197,20 @@ export function SettingsForm({
               <Info className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
               <span>
                 <span className="font-semibold text-warning">
-                  {t('taxIncomplete', { count: taxMissing })}
+                  {t('taxIncomplete', { count: taxMissingUnmanaged })}
                 </span>{' '}
                 {t('taxIncompleteText')}
               </span>
             </p>
+          ) : tab.key === 'tax' && taxMissingManaged > 0 ? (
+            <div className="mb-4">
+              <Notice level="hint">
+                {t('taxNoticeMissing')}{' '}
+                <Link href="/finance/donations/notices" className="font-semibold text-ink underline underline-offset-2">
+                  {t('taxNoticeMissingLink')}
+                </Link>
+              </Notice>
+            </div>
           ) : null}
           {tab.key === 'branding' ? (
             <div className="mb-4 flex flex-col gap-1 rounded-lg border border-line bg-surface p-6">
@@ -200,7 +227,8 @@ export function SettingsForm({
             {tab.fields.map(render)}
           </div>
         </TabsContent>
-      ))}
+        );
+      })}
       <SaveBar
         pendingCount={pendingCount}
         saving={saving}

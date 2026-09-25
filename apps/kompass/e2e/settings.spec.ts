@@ -64,13 +64,42 @@ test.describe('settings', () => {
     await expect(page.getByText('26 von 500 Zeichen')).toBeVisible();
   });
 
-  test('Bank- und Steuerangaben sind bei eingeschalteten Finanzen nur lesbar und nennen, wo sie geführt werden', async ({ page }) => {
+  test('geführte Felder zeigen Wert, Kennzeichen und den Weg, kein Eingabefeld', async ({ page }) => {
     await page.getByRole('tab', { name: 'Bank' }).click();
-    for (const label of ['IBAN', 'BIC', 'Bankname']) await expect(page.getByLabel(label), label).not.toBeEditable();
-    await expect(page.getByText('Wird unter Finanzen einrichten → Bankkonten und Kassen am Hauptkonto geführt.')).toHaveCount(3);
+    await expect(page.getByText('Wird unter Finanzen einrichten → Bankkonten und Kassen am Hauptkonto geführt.')).toHaveCount(1);
+    for (const label of ['IBAN', 'BIC', 'Bankname']) await expect(page.getByLabel(label)).toHaveCount(0);
+    const bankValues = page.getByTestId('managed-field-value');
+    await expect(bankValues).toHaveCount(3);
+    for (const value of await bankValues.all()) await expect(value).not.toHaveText('');
+    const bankLinks = page.getByRole('link', { name: /^geführt unter Bankkonten$/ });
+    await expect(bankLinks).toHaveCount(3);
+    await expect(bankLinks.first()).toHaveAttribute('href', '/admin/finance?panel=accounts');
+
     await page.getByRole('tab', { name: 'Steuer & Bescheide' }).click();
-    await expect(page.getByLabel('Steuernummer')).not.toBeEditable();
-    await expect(page.getByText('Wird unter Finanzen → Spenden → Bescheide geführt.')).toHaveCount(4);
+    await expect(page.getByText('Wird unter Finanzen → Spenden → Bescheide geführt.')).toHaveCount(1);
+    await expect(page.getByLabel('Steuernummer')).toHaveCount(0);
+    const noticeLinks = page.getByRole('link', { name: /^geführt unter Bescheide$/ });
+    await expect(noticeLinks).toHaveCount(4);
+    await expect(noticeLinks.first()).toHaveAttribute('href', '/finance/donations/notices');
+  });
+
+  test('der Hinweis Steuer unvollständig zählt geführte Felder nicht', async ({ page }) => {
+    await page.goto('/finance/donations/notices');
+    const row = page.getByTestId('notice-row').filter({ hasText: 'Freistellungsbescheid' });
+    await row.getByRole('button', { name: 'Irrtümlich erfasst' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Grund').fill('Für die Prüfung zurückgenommen');
+    await dialog.getByRole('button', { name: 'Irrtümlich erfasst' }).click();
+    await expect(dialog).toBeHidden();
+
+    await page.goto('/admin/settings');
+    await page.getByRole('tab', { name: 'Steuer & Bescheide' }).click();
+    await expect(page.locator('main').getByRole('alert')).toHaveCount(0);
+    await expect(page.getByText('Es ist noch kein Bescheid erfasst.')).toBeVisible();
+    const link = page.getByRole('link', { name: 'Bescheid erfassen' });
+    await expect(link).toHaveAttribute('href', '/finance/donations/notices');
+    await link.click();
+    await expect(page).toHaveURL(/\/finance\/donations\/notices$/);
   });
 
   test('the logo is chosen from the library and saved with the settings', async ({ page }) => {

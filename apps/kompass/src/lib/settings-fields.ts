@@ -84,3 +84,23 @@ export function managedHintKey(key: string): string | null {
   const tab = SETTINGS_TABS.find((t) => t.fields.some((f) => f.key === key));
   return tab ? `managedHint.${tab.key}` : null;
 }
+
+/**
+ * Wo ein geführtes Feld gepflegt wird (E-1): der Weg (`href`) und ein
+ * Übersetzungsschlüssel unter `settings.managedTarget.*` für den kurzen Namen
+ * im Link „geführt unter …“. Finanzamt, Steuernummer, Art und Datum des
+ * Bescheids führen zu den Bescheiden; IBAN, BIC und Bankname zum Hauptkonto.
+ */
+const MANAGED_TARGET: Record<string, { href: string; targetKey: 'notices' | 'accounts' }> = {
+  'organization.taxNumber': { href: '/finance/donations/notices', targetKey: 'notices' },
+  'organization.taxOffice': { href: '/finance/donations/notices', targetKey: 'notices' },
+  'organization.exemptionNoticeType': { href: '/finance/donations/notices', targetKey: 'notices' },
+  'organization.exemptionNoticeDate': { href: '/finance/donations/notices', targetKey: 'notices' },
+  'organization.iban': { href: '/admin/finance?panel=accounts', targetKey: 'accounts' },
+  'organization.bic': { href: '/admin/finance?panel=accounts', targetKey: 'accounts' },
+  'organization.bankName': { href: '/admin/finance?panel=accounts', targetKey: 'accounts' },
+};
+
+export function managedTarget(key: string): { href: string; targetKey: 'notices' | 'accounts' } | null {
+  return MANAGED_TARGET[key] ?? null;
+}
