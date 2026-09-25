@@ -2,6 +2,7 @@ import { unwrap } from '@kompass/core';
 import { describe, expect, it } from 'vitest';
 import { FINANCE_MCP_TOOLS } from '../src/mcp-tools';
 import { insertRaw, insertRun, ledgerFixture, pdfBytes } from './helpers';
+import { donationFixture, png } from './donation-fixture';
 
 describe('finance MCP tools', () => {
   it('every human-only tool says so, and answers an agent with the way out', async () => {
@@ -104,5 +105,71 @@ describe('finance MCP tools', () => {
     expect(await tool.handler(f.deps, f.ctx, { rawTransactionId: rawId, contentBase64: big })).toMatchObject({ ok: false, error: { type: 'validation' } });
     const res = unwrap(await tool.handler(f.deps, f.ctx, { rawTransactionId: rawId, contentBase64: Buffer.from(pdfBytes()).toString('base64') }));
     expect(res).toMatchObject({ createdEntry: true });
+  });
+
+  describe('donations (F6a)', () => {
+    const DONATION_TOOLS = {
+      finance_notice_save: 'finance.donationsIssue',
+      finance_notice_supersede: 'finance.donationsIssue',
+      finance_notice_void: 'finance.donationsIssue',
+      finance_notices_list: 'finance.read',
+      finance_signer_save: 'finance.donationsIssue',
+      finance_facsimile_upload: 'finance.donationsIssue',
+      finance_machine_procedure_get: 'finance.read',
+      finance_notification_letter_draft: 'finance.donationsIssue',
+      finance_confirmation_check: 'finance.read',
+      finance_confirmation_issue: 'finance.donationsIssue',
+      finance_confirmation_void: 'finance.donationsIssue',
+      finance_confirmation_dispatch: 'finance.donationsIssue',
+      finance_confirmation_attach_signed: 'finance.donationsIssue',
+      finance_confirmations_list: 'finance.read',
+      finance_donations_uncertified: 'finance.read',
+      finance_in_kind_details_save: 'finance.entriesWrite',
+      finance_in_kind_details_get: 'finance.read',
+    } as const;
+    const tool = (name: string) => FINANCE_MCP_TOOLS.find((t) => t.name === name)!;
+
+    it('registers seventeen donation tools, each naming its permission; the argument-less one takes (deps, ctx)', () => {
+      for (const [name, permission] of Object.entries(DONATION_TOOLS)) {
+        expect(FINANCE_MCP_TOOLS.some((t) => t.name === name), name).toBe(true);
+        expect(tool(name).description, name).toContain(permission);
+        expect(tool(name).description, name).toMatch(/^[\x20-\x7e]+$/);
+      }
+      expect(tool('finance_machine_procedure_get').handler.length).toBe(2);
+      expect(tool('finance_notification_letter_draft').description).toContain('dms.create');
+    });
+
+    it('issue and void are human only and answer an agent with the way out', async () => {
+      const f = await donationFixture();
+      const { line } = await f.donate();
+      for (const name of ['finance_confirmation_issue', 'finance_confirmation_void']) expect(tool(name).description, name).toMatch(/Human only/);
+      const agent = { ...f.ctx, channel: 'mcp' as const };
+      expect(await tool('finance_confirmation_issue').handler(f.deps, agent, { lineIds: [line.id] })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'humanOnly' } });
+      expect(await tool('finance_confirmation_void').handler(f.deps, agent, { id: 'x', note: 'x', alreadySent: false })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'humanOnly' } });
+      // Lesen und prüfen darf ein Agent.
+      expect(unwrap(await tool('finance_confirmation_check').handler(f.deps, agent, { lineIds: [line.id] }))).toMatchObject({ ok: true, kind: 'money' });
+      expect(unwrap(await tool('finance_donations_uncertified').handler(f.deps, agent, {}))).toMatchObject({ total: 1 });
+    });
+
+    it('finance_facsimile_upload takes base64, never returns the bytes and says so', async () => {
+      const f = await donationFixture();
+      const upload = tool('finance_facsimile_upload');
+      expect(upload.description).toMatch(/bytes are never returned/);
+      const signer = unwrap(await tool('finance_signer_save').handler(f.deps, f.ctx, { validFrom: '2026-01-01', signerName: 'Jonas Feld' })) as { id: string };
+      expect(await upload.handler(f.deps, f.ctx, { signerId: signer.id, contentBase64: 'kein base64!' })).toMatchObject({ ok: false, error: { type: 'validation' } });
+      const view = unwrap(await upload.handler(f.deps, f.ctx, { signerId: signer.id, contentBase64: Buffer.from(png()).toString('base64') }));
+      expect(view).toMatchObject({ id: signer.id, hasFacsimile: true });
+      expect(JSON.stringify(view)).not.toMatch(/bytes/);
+      expect(unwrap(await tool('finance_machine_procedure_get').handler(f.deps, f.ctx, {}))).toMatchObject({ status: { complete: false, missing: ['notifiedOn'] } });
+    });
+
+    it('finance_confirmation_attach_signed takes base64 within the upload limit', async () => {
+      const f = await donationFixture();
+      const attach = tool('finance_confirmation_attach_signed');
+      expect(await attach.handler(f.deps, f.ctx, { id: 'x', contentBase64: 'kein base64!' })).toMatchObject({ ok: false, error: { type: 'validation' } });
+      const big = Buffer.alloc(6 * 1024 * 1024, 65).toString('base64');
+      expect(await attach.handler(f.deps, f.ctx, { id: 'x', contentBase64: big })).toMatchObject({ ok: false, error: { type: 'validation' } });
+      expect(await attach.handler(f.deps, f.ctx, { id: 'nope', contentBase64: Buffer.from(pdfBytes()).toString('base64') })).toMatchObject({ ok: false, error: { type: 'notFound' } });
+    });
   });
 });

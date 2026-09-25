@@ -338,12 +338,15 @@
       "accounts": "Bankkonten und Kassen",
       "openItems": "Offene Zahlungen",
       "cash": "Barkasse",
+      "donations": "Bestätigungen",
+      "donationNotices": "Bescheide",
       "admin": "Finanzen"
     },
     "sections": {
       "finance": {
         "work": "Arbeit",
-        "entries": "Buchungen"
+        "entries": "Buchungen",
+        "donations": "Spenden"
       }
     },
     "media": "Mediathek"
@@ -3351,6 +3354,8 @@
             "accounts": "Bankkonten und Kassen",
             "openItems": "Offene Zahlungen",
             "cash": "Barkasse",
+            "donations": "Bestätigungen",
+            "donationNotices": "Bescheide",
             "admin": "Finanzen einrichten"
           }
         }

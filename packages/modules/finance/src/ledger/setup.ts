@@ -63,11 +63,17 @@ const FINANCE_ROLE_ORIGINS: readonly { originKey: string; name: string }[] = [
  * gegen das echte Manifest, damit ein Auseinanderlaufen auffällt.
  */
 const FINANCE_NAV_ENTRIES: readonly { key: string; permission: string }[] = [
+  { key: 'finance.work', permission: 'finance.read' },
+  { key: 'finance.workForeign', permission: 'finance.read' },
+  { key: 'finance.workVouchers', permission: 'finance.read' },
+  { key: 'finance.rules', permission: 'finance.read' },
   { key: 'finance.imports', permission: 'finance.read' },
   { key: 'finance.entries', permission: 'finance.read' },
   { key: 'finance.accounts', permission: 'finance.read' },
   { key: 'finance.openItems', permission: 'finance.read' },
   { key: 'finance.cash', permission: 'finance.read' },
+  { key: 'finance.donations', permission: 'finance.read' },
+  { key: 'finance.donationNotices', permission: 'finance.read' },
   { key: 'finance.admin', permission: 'finance.setup' },
 ];
 

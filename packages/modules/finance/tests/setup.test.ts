@@ -10,7 +10,7 @@ import { saveNotice } from '../src/donations/notices';
 import { saveSigner, uploadFacsimile } from '../src/donations/machine';
 import { applyTaxDefaults, confirmSetupStep, getPermissionMatrix, getSetupStatus, setFinanceLimit, setFinanceSwitch } from '../src/ledger/setup';
 import { installFinance } from '../src/install';
-import { FINANCE_PERMISSIONS } from '../src/manifest';
+import { financeModule, FINANCE_PERMISSIONS } from '../src/manifest';
 import { setupFinance } from './helpers';
 
 const FINANCE_ROLE_ORIGIN_KEYS = ['finance:treasurer', 'finance:approver', 'finance:clerk', 'finance:auditor', 'finance:agent'];
@@ -238,6 +238,19 @@ describe('finance setup status', () => {
     deps.db.insert(schema.userRoles).values({ userId: holderId, roleId: treasurerRoleId }).run();
     const matrixAfter = unwrap(await getPermissionMatrix(deps, ctx));
     expect(matrixAfter.roles.find((r) => r.name === 'Schatzmeister')!.holders).toEqual(['Schatzmeister Person']);
+  });
+
+  it('shows every finance navigation entry of the manifest in the matrix, with its permission', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+    const matrix = unwrap(await getPermissionMatrix(deps, ctx));
+    const entries = [...(financeModule.navigation ?? []), ...(financeModule.adminNavigation ?? [])];
+    for (const role of matrix.roles) {
+      const expected = entries.filter((e) => role.permissions.includes(e.permission as never)).map((e) => e.key);
+      expect([...role.navigation].sort(), role.name).toEqual(expected.sort());
+    }
+    const treasurer = matrix.roles.find((r) => r.name === 'Schatzmeister')!;
+    expect(treasurer.navigation).toEqual(expect.arrayContaining(['finance.work', 'finance.donations', 'finance.donationNotices']));
   });
 
   it('sets a finance switch (H7) with finance.setup, refuses an unknown key, and keeps the mcp-only switch bound to the ui channel', async () => {

@@ -37,7 +37,6 @@ const WITHOUT_MCP = new Set([
   // Finanzen: Rechte stehen ab F1 im Manifest (Rollenvorschläge werden nie nachgefüllt),
   // ihre Werkzeuge kommen mit den genannten Plänen. Jeder Plan streicht seine Zeile.
   'finance.expensesSubmit',   // F8a
-  'finance.donationsIssue',   // F6a
   'finance.reportsFinalize',  // F9a
 ]);
 
@@ -252,6 +251,8 @@ const WITHOUT_TOOL: Record<string, string> = {
   'finance.readVoucher': 'Liefert Bytes, über die Seiten des Moduls (ab F3).',
   'finance.readCashCountProtocol': 'Liefert Bytes, über die Seiten des Moduls (F3b Task 2, Muster readVoucher).',
   'finance.readFacsimile': 'Liefert die Bytes einer Unterschrift — sie gehören nie in den Modellkontext; nur der Route Handler der Bescheid-Seite liest sie (F6a, Annahme 8).',
+  'finance.previewConfirmation': 'Liefert Bytes (Vorschau-PDF mit ENTWURF) für den Ausstellen-Dialog; ein Agent liest die Prüfliste über finance_confirmation_check (F6a).',
+  'finance.readConfirmationCopy': 'Liefert Bytes (unser Exemplar), über den Route Handler der Spenden-Seite (F6a, Muster readCashCountProtocol).',
   'finance.createOpenItem': 'Erreichbar über finance_open_item_save (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
   'finance.updateOpenItem': 'Erreichbar über finance_open_item_save (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
   'finance.approveAllocationCorrection': 'Erreichbar über finance_correction_decide (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',

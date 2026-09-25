@@ -9,6 +9,7 @@ import {
   issueConfirmation,
   listConfirmations,
   listUncertifiedDonations,
+  readConfirmationCopy,
   recordConfirmationDispatch,
   voidConfirmation,
 } from '../src/donations/confirmations';
@@ -303,5 +304,26 @@ describe('membership fees and the settings', () => {
     f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.membershipFeesCertifiable', false, 'test'));
     const confirmation = unwrap(await issueConfirmation(f.deps, ctxWith(FINANCE_PERMISSIONS, f.userId), { lineIds: [(await f.donate()).line.id] }));
     expect(snapshotOf(f, confirmation.documentId).input.membershipFeesCertifiable).toBe(false);
+  });
+});
+
+describe('readConfirmationCopy', () => {
+  it('delivers our copy through the link of the confirmation, with finance.read and without dms.view', async () => {
+    const f = await donationFixture();
+    const confirmation = unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [(await f.donate()).line.id] }));
+    const copy = unwrap(await readConfirmationCopy(f.deps, ctxWith(['finance.read'], f.userId), { id: confirmation.id }));
+    expect(copy).toMatchObject({ filename: `${confirmation.documentNumber}.pdf`, number: confirmation.documentNumber });
+    expect(new TextDecoder().decode(copy.bytes)).toMatch(/^%PDF/);
+
+    expect(err(await readConfirmationCopy(f.deps, ctxWith(['finance.overview'], f.userId), { id: confirmation.id }))).toMatchObject({ type: 'forbidden' });
+    expect(err(await readConfirmationCopy(f.deps, f.ctx, { id: 'nope' }))).toMatchObject({ type: 'notFound' });
+    expect(err(await readConfirmationCopy(f.deps, f.ctx, {}))).toMatchObject({ type: 'validation' });
+  });
+
+  it('still delivers our copy after the confirmation was taken back', async () => {
+    const f = await donationFixture();
+    const confirmation = unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [(await f.donate()).line.id] }));
+    unwrap(await voidConfirmation(f.deps, f.ctx, { id: confirmation.id, note: 'Betrag falsch', alreadySent: false }));
+    expect((await readConfirmationCopy(f.deps, f.ctx, { id: confirmation.id })).ok).toBe(true);
   });
 });

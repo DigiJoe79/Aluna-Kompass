@@ -31,6 +31,12 @@ import { getProjectFinance, setProjectFinance } from './ledger/project-settings'
 import { reverseEntry } from './ledger/reverse';
 import { applyTaxDefaults, confirmSetupStep, getPermissionMatrix, getSetupStatus, setFinanceLimit, setFinanceSwitch } from './ledger/setup';
 import { attachDocument, listVouchersWithoutEntry, revokeVoucher, uploadVoucher } from './ledger/vouchers';
+import { NOTICE_KINDS } from './ledger/notice-validity';
+import { checkConfirmable } from './donations/check';
+import { attachSignedConfirmation, issueConfirmation, listConfirmations, listUncertifiedDonations, recordConfirmationDispatch, voidConfirmation } from './donations/confirmations';
+import { getInKindDetails, saveInKindDetails } from './donations/in-kind';
+import { createNotificationLetterDraft, getMachineProcedure, saveSigner, uploadFacsimile } from './donations/machine';
+import { listNotices, saveNotice, supersedeNotice, voidNotice } from './donations/notices';
 
 const t = <T>(def: McpToolDefinition<T>): McpToolDefinition => def as McpToolDefinition;
 
@@ -249,6 +255,43 @@ const vouchersWithoutEntryMcpSchema = z.object({ limit: z.number().int().min(1).
 const invoiceDocumentMcpSchema = z.object({ documentId: z.string() });
 const openItemFromInvoiceMcpSchema = z.object({ documentId: z.string(), contactId: z.string().nullable().optional(), dueOn: z.string().nullable().optional() });
 const invoiceApplyMcpSchema = z.object({ entryId: z.string(), documentId: z.string() });
+
+// F6a — Spenden: Bescheide, maschinelles Verfahren, Bestätigungen, Sachspenden.
+const saveNoticeMcpSchema = z.object({
+  id: z.string().optional(),
+  kind: z.enum(NOTICE_KINDS),
+  taxOffice: z.string(),
+  taxNumber: z.string(),
+  noticeDate: z.string(),
+  assessmentPeriod: z.string().nullable().optional(),
+  purposesText: z.string(),
+  documentId: z.string().nullable().optional(),
+});
+const supersedeNoticeMcpSchema = z.object({ id: z.string(), supersededOn: z.string(), documentId: z.string().nullable().optional() });
+const voidNoticeMcpSchema = z.object({ id: z.string(), note: z.string() });
+const listNoticesMcpSchema = z.object({ includeInactive: z.boolean().optional() });
+const saveSignerMcpSchema = z.object({ id: z.string().optional(), validFrom: z.string(), validTo: z.string().nullable().optional(), signerName: z.string(), notifiedOn: z.string().nullable().optional() });
+const facsimileUploadMcpSchema = z.object({ signerId: z.string(), contentBase64: z.string().min(1), mimeType: z.string().optional() });
+const signerIdMcpSchema = z.object({ signerId: z.string() });
+const confirmationKindMcp = z.enum(['money', 'inKind', 'collective']);
+const confirmationCheckMcpSchema = z.object({ lineIds: z.array(z.string()).min(1), issuedOn: z.string().optional(), kind: confirmationKindMcp.optional() });
+const confirmationIssueMcpSchema = z.object({ lineIds: z.array(z.string()).min(1), issuedOn: z.string().optional(), kind: confirmationKindMcp.optional(), preNoticeReason: z.string().optional(), periodFrom: z.string().optional(), periodTo: z.string().optional() });
+const confirmationVoidMcpSchema = z.object({ id: z.string(), note: z.string(), alreadySent: z.boolean(), originalReturnedOn: z.string().optional(), taxOfficeInformedOn: z.string().optional() });
+const confirmationDispatchMcpSchema = z.object({ id: z.string(), sentAt: z.string(), sentVia: z.enum(['post', 'email', 'handed']) });
+const confirmationSignedMcpSchema = z.object({ id: z.string(), contentBase64: z.string().min(1), fileName: z.string().optional() });
+const confirmationsListMcpSchema = z.object({ tab: z.enum(['issued', 'toCorrect', 'needsSignature']), contactId: z.string().optional(), year: z.number().int().optional(), limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() });
+const uncertifiedMcpSchema = z.object({ minCents: z.number().int().min(0).optional(), year: z.number().int().optional(), limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() });
+const inKindSaveMcpSchema = z.object({
+  lineId: z.string(),
+  item: z.string(),
+  condition: z.string(),
+  valuation: z.string(),
+  origin: z.enum(['private', 'business']),
+  withdrawalValueCents: z.number().int().min(0).nullable().optional(),
+  vatCents: z.number().int().min(0).nullable().optional(),
+  proofDocumentId: z.string().nullable().optional(),
+});
+const lineIdMcpSchema = z.object({ lineId: z.string() });
 
 /** Base64 prüfen und gegen `finance.uploadLimitMb` halten — wie `finance_voucher_upload`. */
 function voucherBytes(deps: Parameters<McpToolDefinition['handler']>[0], contentBase64: string): Uint8Array | ReturnType<typeof invalid> {
@@ -478,4 +521,42 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
   t({ name: 'finance_open_item_from_invoice', description: 'Create the open payment for an unpaid invoice of a filed PDF: issue date, amount due, due date, the document, the invoice number as payment reference and a line template with tax code and contact - never a category. One per document (openItemExistsForDocument); EUR only. contactId and dueOn override the invoice. Audited without seller, number or iban. Requires finance.entriesWrite.', inputSchema: openItemFromInvoiceMcpSchema, handler: (deps, ctx, args) => createOpenItemFromInvoice(deps, ctx, args), service: createOpenItemFromInvoice }),
   t({ name: 'finance_invoice_apply_to_draft', description: 'Apply an invoice of a filed PDF to a draft entry: text from seller and invoice number, the contact of the payee iban on lines without a contact, the tax code on lines still carrying their category default, and the document attached as voucher unless it already is. Drafts only (invoiceNotDraft); EUR only. Requires finance.entriesWrite.', inputSchema: invoiceApplyMcpSchema, handler: (deps, ctx, args) => applyInvoiceToDraft(deps, ctx, args), service: applyInvoiceToDraft }),
   t({ name: 'finance_vouchers_without_entry', description: 'List filed documents of the voucher types (finance.voucherTypes) that no entry links yet, newest first - only what the caller may read in the file. Paginated (limit <= 200). Requires finance.read.', inputSchema: vouchersWithoutEntryMcpSchema, handler: (deps, ctx, args) => listVouchersWithoutEntry(deps, ctx, args), service: listVouchersWithoutEntry }),
+  // F6a — Spenden.
+  t({ name: 'finance_notice_save', description: 'Record or change a notice of the tax office (kind section60a, exemptionNotice or corporateTaxNoticeAttachment) with tax office, tax number, date, assessment period (required except for section60a), the favoured purposes as worded and optionally a filed document. Validity is computed day-exact, never stored. Only while neither superseded nor voided; a section60a notice is refused once a final notice exists up to its date. Writes tax office, tax number and notice type back to the association settings. Audited without tax office, tax number or purposes. Requires finance.donationsIssue.', inputSchema: saveNoticeMcpSchema, handler: (deps, ctx, args) => saveNotice(deps, ctx, args), service: saveNotice }),
+  t({ name: 'finance_notice_supersede', description: 'Mark a notice as revoked or replaced on a date, optionally with the filed document; one time only, the notice stops counting from that day. Confirmations issued on it become "to correct" (computed). Requires finance.donationsIssue.', inputSchema: supersedeNoticeMcpSchema, handler: (deps, ctx, args) => supersedeNotice(deps, ctx, args), service: supersedeNotice }),
+  t({ name: 'finance_notice_void', description: 'Mark a notice as recorded in error; one time only, it never counted. The note stays on the record, never in the audit log. Requires finance.donationsIssue.', inputSchema: voidNoticeMcpSchema, handler: (deps, ctx, args) => voidNotice(deps, ctx, args), service: voidNotice }),
+  t({ name: 'finance_notices_list', description: 'List the notices of the tax office, newest first, with computed valid-until date and state (valid, expired, superseded, voided, future) - only valid and future ones unless includeInactive. Requires finance.read.', inputSchema: listNoticesMcpSchema, handler: (deps, ctx, args) => listNotices(deps, ctx, args), service: listNotices }),
+  t({ name: 'finance_signer_save', description: 'Create or change a signer of machine-made confirmations: valid from/to (periods never overlap - signerOverlaps; set the end to hand over), name and the date the tax office was notified. The name is never audited. Requires finance.donationsIssue.', inputSchema: saveSignerMcpSchema, handler: (deps, ctx, args) => saveSigner(deps, ctx, args), service: saveSigner }),
+  t({
+    name: 'finance_facsimile_upload',
+    description: 'Upload the facsimile signature of a signer (base64, PNG or JPEG by its first bytes, at most 1 MB). Stored in the finance module storage, never in the media library and never in the audit log; the bytes are never returned by any tool. Replaces an earlier facsimile. Requires finance.donationsIssue.',
+    inputSchema: facsimileUploadMcpSchema,
+    handler: (deps, ctx, { contentBase64, ...rest }) => {
+      const bytes = decodeBase64(contentBase64);
+      if (!bytes) return Promise.resolve(invalid([{ path: 'contentBase64', message: 'invalidBase64' }]));
+      return uploadFacsimile(deps, ctx, { ...rest, bytes });
+    },
+    service: uploadFacsimile,
+  }),
+  t({ name: 'finance_machine_procedure_get', description: 'Read the signers of machine-made confirmations and today\'s status: complete only with a current signer, a facsimile and a notification date; otherwise confirmations get a signature field. No facsimile bytes. Requires finance.read.', inputSchema: z.object({}), handler: (deps, ctx) => getMachineProcedure(deps, ctx), service: getMachineProcedure }),
+  t({ name: 'finance_notification_letter_draft', description: 'Create the letter notifying the tax office of machine-made confirmations as a draft in the file (type letter), addressed to the tax office of the latest notice. Requires finance.donationsIssue and dms.create.', inputSchema: signerIdMcpSchema, handler: (deps, ctx, args) => createNotificationLetterDraft(deps, ctx, args), service: createNotificationLetterDraft }),
+  t({ name: 'finance_confirmation_check', description: 'The checklist before issuing a donation confirmation for one or more allocation lines of one contact: finalized, certifiable, contact complete, association address, not yet confirmed, notice valid on the issue date, amount after returns, documented, in-kind details, document type active, signer (never blocks - falls back to a signature field), expense waivers enabled. Each check says done, blocked and where to fix it; warnings never block. Changes nothing. Requires finance.read.', inputSchema: confirmationCheckMcpSchema, handler: (deps, ctx, args) => checkConfirmable(deps, ctx, args), service: checkConfirmable }),
+  t({ name: 'finance_confirmation_issue', description: 'Issue a donation confirmation after the official template (money, inKind or collective) as a filed document ZWB; refused with the first blocking check. Machine-made with facsimile only with a complete machine procedure, never for in-kind or expense waivers. preNoticeReason is required for a donation before the oldest notice. Human only: refused over MCP unless the association has set finance.mcpHumanOnlyAllowed at the screen. Requires finance.donationsIssue.', inputSchema: confirmationIssueMcpSchema, handler: (deps, ctx, args) => issueConfirmation(deps, ctx, args), service: issueConfirmation }),
+  t({ name: 'finance_confirmation_void', description: 'Take back a donation confirmation with the retrieval trail (note, already sent, original returned on, tax office informed on); its lines become confirmable again, our copy stays in the file. Human only: refused over MCP unless the association has set finance.mcpHumanOnlyAllowed at the screen. Requires finance.donationsIssue.', inputSchema: confirmationVoidMcpSchema, handler: (deps, ctx, args) => voidConfirmation(deps, ctx, args), service: voidConfirmation }),
+  t({ name: 'finance_confirmation_dispatch', description: 'Record that a confirmation was sent (date, post, email or handed); one time only. Kompass does not send anything itself. Requires finance.donationsIssue.', inputSchema: confirmationDispatchMcpSchema, handler: (deps, ctx, args) => recordConfirmationDispatch(deps, ctx, args), service: recordConfirmationDispatch }),
+  t({
+    name: 'finance_confirmation_attach_signed',
+    description: 'File the signed version of a confirmation (base64 PDF, at most finance.uploadLimitMb) as incoming document ZWU linked to it; one time only. Requires finance.donationsIssue.',
+    inputSchema: confirmationSignedMcpSchema,
+    handler: (deps, ctx, { contentBase64, ...rest }) => {
+      const bytes = voucherBytes(deps, contentBase64);
+      if (!(bytes instanceof Uint8Array)) return Promise.resolve(bytes);
+      return attachSignedConfirmation(deps, ctx, { ...rest, bytes });
+    },
+    service: attachSignedConfirmation,
+  }),
+  t({ name: 'finance_confirmations_list', description: 'List donation confirmations by tab: issued (valid and taken back, newest first), toCorrect (computed reasons: notice superseded or voided, line reversed or returned, contact changed) or needsSignature (neither machine-made nor signed version filed); with counts per tab. Paginated (limit <= 200). Requires finance.read.', inputSchema: confirmationsListMcpSchema, handler: (deps, ctx, args) => listConfirmations(deps, ctx, args), service: listConfirmations }),
+  t({ name: 'finance_donations_uncertified', description: 'Finalized certifiable allocation lines with a contact and without a valid confirmation, grouped by contact with the sum after returns and whether the address is complete; minCents filters the sum per contact. Paginated (limit <= 200). Requires finance.read.', inputSchema: uncertifiedMcpSchema, handler: (deps, ctx, args) => listUncertifiedDonations(deps, ctx, args), service: listUncertifiedDonations }),
+  t({ name: 'finance_in_kind_details_save', description: 'Record or change what an in-kind donation line is: item, condition, how the value was determined, origin (private or business - business needs withdrawal value and vat) and a filed valuation document, which is attached as voucher to the entry. Only in-kind lines, only while no valid confirmation holds the line. Audited without the free texts. Requires finance.entriesWrite.', inputSchema: inKindSaveMcpSchema, handler: (deps, ctx, args) => saveInKindDetails(deps, ctx, args), service: saveInKindDetails }),
+  t({ name: 'finance_in_kind_details_get', description: 'Read the in-kind details of an allocation line, or null. Requires finance.read.', inputSchema: lineIdMcpSchema, handler: (deps, ctx, args) => getInKindDetails(deps, ctx, args), service: getInKindDetails }),
 ];

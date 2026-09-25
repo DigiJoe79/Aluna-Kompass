@@ -1,6 +1,6 @@
-import { invalid, isoNow, newId, notFound, ok, readSetting, requireHumanChannel, requirePermission, systemContext, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { buildContext, invalid, isoNow, newId, notFound, ok, prepare, readSetting, requireHumanChannel, requirePermission, systemContext, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { addContactRole, contactRoles, contacts, displayName, type ContactRow } from '@kompass/module-contacts';
-import { abortIssue, abortReceive, issueGeneratedDocument, receiveGeneratedUpload } from '@kompass/module-dms';
+import { abortIssue, abortReceive, issueGeneratedDocument, readLinkedDocument, receiveGeneratedUpload } from '@kompass/module-dms';
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
@@ -129,6 +129,105 @@ const isConstraintError = (error: unknown) => typeof (error as { code?: unknown 
 
 const sumNet = (lines: readonly ConfirmationCheckLine[]) => lines.reduce((s, l) => s + l.netCents, 0);
 
+export interface ConfirmationInputOptions {
+  issuedOn: string;
+  kind?: ConfirmationKind;
+  periodFrom?: string;
+  periodTo?: string;
+}
+
+/** Was `buildConfirmationInputInternal` für Ausstellen und Vorschau aufbereitet. */
+export interface ConfirmationInputBuild {
+  kind: ConfirmationKind;
+  templateKey: ConfirmationTemplateKey;
+  /** Die Eingabe der Vorlage — mit den Bytes des Faksimiles; der Snapshot der Akte behält davon nur Prüfsumme und Typ. */
+  input: MoneyConfirmationInput | InKindConfirmationInput | CollectiveConfirmationInput;
+  noticeId: string;
+  /** Maschinell erlaubt: Geld, keine Aufwandsspende. */
+  machineAllowed: boolean;
+  /** Maschinell erstellt: erlaubt, Verfahren vollständig, Faksimile gelesen. */
+  machine: boolean;
+  signerId: string | null;
+  facsimileChecksum: string | null;
+  totalCents: number;
+  periodFrom: string | null;
+  periodTo: string | null;
+}
+
+/**
+ * Die Eingabe der Vorlage aus einer Prüfliste — eine Stelle für
+ * `issueConfirmation` und `previewConfirmation`, ohne Rechteprüfung und ohne
+ * Schreiben. Prüft, was die Prüfliste nicht weiß (Art zu den Zeilen,
+ * Ausstellungstag nach der Zuwendung, Sammelbestätigung in einem Jahr und
+ * ihr Zeitraum), dann die erste sperrende Prüfung, und liest das Faksimile
+ * nur, wo maschinell erlaubt und das Verfahren vollständig ist.
+ */
+export async function buildConfirmationInputInternal(deps: Deps, check: ConfirmationCheckResult, opts: ConfirmationInputOptions): Promise<Result<ConfirmationInputBuild>> {
+  const { issuedOn } = opts;
+  const kind: ConfirmationKind = opts.kind ?? (check.kind === 'inKind' ? 'inKind' : check.lines.length > 1 ? 'collective' : 'money');
+  if (kind !== 'collective' && check.lines.length > 1) return invalid([{ path: 'lineIds', message: 'singleLineOnly' }]);
+  const dates = check.lines.map((l) => l.entryDate).sort();
+  if (issuedOn < dates.at(-1)!) return invalid([{ path: 'issuedOn', message: 'beforeDonation' }]);
+  let periodFrom: string | null = null;
+  let periodTo: string | null = null;
+  if (kind === 'collective') {
+    if (new Set(dates.map((d) => d.slice(0, 4))).size > 1) return invalid([{ path: 'lineIds', message: 'linesOfDifferentYears' }]);
+    periodFrom = opts.periodFrom ?? dates[0]!;
+    periodTo = opts.periodTo ?? dates.at(-1)!;
+    if (periodFrom > dates[0]! || periodTo < dates.at(-1)!) return invalid([{ path: 'periodFrom', message: 'outsidePeriod' }]);
+  }
+
+  const failure = checkFailure(check);
+  if (failure) return failure;
+  if (!check.notice) return financeConflict('noNoticeValidAt', { date: issuedOn });
+
+  const contact = deps.db.select().from(contacts).where(eq(contacts.id, check.contactId)).get();
+  if (!contact) return notFound('contact', check.contactId);
+  const notice = deps.db.select().from(financeNotices).where(eq(financeNotices.id, check.notice.id)).get()!;
+  const machineAllowed = kind !== 'inKind' && !check.expenseWaiver;
+  const signerRow = machineAllowed && check.machine.complete && check.machine.signer ? deps.db.select().from(financeSigners).where(eq(financeSigners.id, check.machine.signer.id)).get() : undefined;
+  const facsimile = signerRow ? await readFacsimileInternal(deps, signerRow) : null;
+  const machine = !!signerRow && !!facsimile;
+  const signerName = check.machine.signer?.signerName ?? null;
+  const totalCents = sumNet(check.lines);
+
+  const common = {
+    organization: organizationParty(deps),
+    recipient: recipientParty(contact),
+    notice: noticeInput(notice),
+    place: clean(readSetting<string>(deps, 'organization.city')),
+    issuedOn,
+    machine,
+    signerName,
+    machineNotifiedOn: machine ? signerRow!.notifiedOn : null,
+    // Eine Kopie mit eigenem ArrayBuffer — das Eingabeschema der Vorlagen verlangt ihn.
+    ...(machine ? { facsimile: { ...facsimile!, bytes: new Uint8Array(facsimile!.bytes) } } : {}),
+  };
+  const membershipFeesCertifiable = readSetting<boolean>(deps, 'finance.membershipFeesCertifiable');
+  let input: MoneyConfirmationInput | InKindConfirmationInput | CollectiveConfirmationInput;
+  if (kind === 'money') {
+    const line = check.lines[0]!;
+    input = { ...common, membershipFeesCertifiable, amountCents: line.netCents, donatedOn: line.entryDate, expenseWaiver: check.expenseWaiver } satisfies MoneyConfirmationInput;
+  } else if (kind === 'inKind') {
+    const line = check.lines[0]!;
+    const details = deps.db.select().from(financeInKindDetails).where(eq(financeInKindDetails.lineId, line.lineId)).get()!;
+    input = {
+      ...common, amountCents: line.netCents, donatedOn: line.entryDate, item: details.item, condition: details.condition, valuation: details.valuation, origin: details.origin,
+      withdrawalValueCents: details.withdrawalValueCents, vatCents: details.vatCents,
+    } satisfies InKindConfirmationInput;
+  } else {
+    input = {
+      ...common, membershipFeesCertifiable, periodFrom: periodFrom!, periodTo: periodTo!,
+      lines: check.lines.map((l) => ({ donatedOn: l.entryDate, kind: l.incomeKind === 'membershipFee' ? ('membershipFee' as const) : ('donation' as const), expenseWaiver: l.incomeKind === 'expenseWaiver', amountCents: l.netCents })),
+    } satisfies CollectiveConfirmationInput;
+  }
+
+  return ok({
+    kind, templateKey: TEMPLATE_KEY[kind], input, noticeId: notice.id, machineAllowed, machine,
+    signerId: machine ? signerRow!.id : null, facsimileChecksum: machine ? facsimile!.checksum : null, totalCents, periodFrom, periodTo,
+  });
+}
+
 /**
  * Bestätigung ausstellen — `finance.donationsIssue`, **`humanOnly`**. Die
  * Prüfliste läuft vor dem Rendern und erneut in `afterIssue`; sperrt eine
@@ -154,69 +253,17 @@ export async function issueConfirmation(deps: Deps, ctx: CallContext, input: unk
   if (!checked.ok) return checked;
   const check = checked.value;
 
-  const kind: ConfirmationKind = v.kind ?? (check.kind === 'inKind' ? 'inKind' : check.lines.length > 1 ? 'collective' : 'money');
-  if (kind !== 'collective' && check.lines.length > 1) return invalid([{ path: 'lineIds', message: 'singleLineOnly' }]);
-  const dates = check.lines.map((l) => l.entryDate).sort();
-  if (issuedOn < dates.at(-1)!) return invalid([{ path: 'issuedOn', message: 'beforeDonation' }]);
-  let periodFrom: string | null = null;
-  let periodTo: string | null = null;
-  if (kind === 'collective') {
-    if (new Set(dates.map((d) => d.slice(0, 4))).size > 1) return invalid([{ path: 'lineIds', message: 'linesOfDifferentYears' }]);
-    periodFrom = v.periodFrom ?? dates[0]!;
-    periodTo = v.periodTo ?? dates.at(-1)!;
-    if (periodFrom > dates[0]! || periodTo < dates.at(-1)!) return invalid([{ path: 'periodFrom', message: 'outsidePeriod' }]);
-  }
-
-  const failure = checkFailure(check);
-  if (failure) return failure;
+  const prepared = await buildConfirmationInputInternal(deps, check, { issuedOn, kind: v.kind, periodFrom: v.periodFrom, periodTo: v.periodTo });
+  if (!prepared.ok) return prepared;
   if (check.warnings.includes('beforeOldestNotice') && !v.preNoticeReason) return financeConflict('confirmationPreNoticeNeedsReason');
-
-  const contact = deps.db.select().from(contacts).where(eq(contacts.id, check.contactId)).get()!;
-  const notice = deps.db.select().from(financeNotices).where(eq(financeNotices.id, check.notice!.id)).get()!;
-  const machineAllowed = kind !== 'inKind' && !check.expenseWaiver;
-  const signerRow = machineAllowed && check.machine.complete && check.machine.signer ? deps.db.select().from(financeSigners).where(eq(financeSigners.id, check.machine.signer.id)).get() : undefined;
-  const facsimile = signerRow ? await readFacsimileInternal(deps, signerRow) : null;
-  const machine = !!signerRow && !!facsimile;
-  const signerName = check.machine.signer?.signerName ?? null;
-  const totalCents = sumNet(check.lines);
-
-  const common = {
-    organization: organizationParty(deps),
-    recipient: recipientParty(contact),
-    notice: noticeInput(notice),
-    place: clean(readSetting<string>(deps, 'organization.city')),
-    issuedOn,
-    machine,
-    signerName,
-    machineNotifiedOn: machine ? signerRow!.notifiedOn : null,
-    // Eine Kopie mit eigenem ArrayBuffer — das Eingabeschema der Vorlagen verlangt ihn.
-    ...(machine ? { facsimile: { ...facsimile!, bytes: new Uint8Array(facsimile!.bytes) } } : {}),
-  };
-  const membershipFeesCertifiable = readSetting<boolean>(deps, 'finance.membershipFeesCertifiable');
-  let templateInput: MoneyConfirmationInput | InKindConfirmationInput | CollectiveConfirmationInput;
-  if (kind === 'money') {
-    const line = check.lines[0]!;
-    templateInput = { ...common, membershipFeesCertifiable, amountCents: line.netCents, donatedOn: line.entryDate, expenseWaiver: check.expenseWaiver } satisfies MoneyConfirmationInput;
-  } else if (kind === 'inKind') {
-    const line = check.lines[0]!;
-    const details = deps.db.select().from(financeInKindDetails).where(eq(financeInKindDetails.lineId, line.lineId)).get()!;
-    templateInput = {
-      ...common, amountCents: line.netCents, donatedOn: line.entryDate, item: details.item, condition: details.condition, valuation: details.valuation, origin: details.origin,
-      withdrawalValueCents: details.withdrawalValueCents, vatCents: details.vatCents,
-    } satisfies InKindConfirmationInput;
-  } else {
-    templateInput = {
-      ...common, membershipFeesCertifiable, periodFrom: periodFrom!, periodTo: periodTo!,
-      lines: check.lines.map((l) => ({ donatedOn: l.entryDate, kind: l.incomeKind === 'membershipFee' ? ('membershipFee' as const) : ('donation' as const), expenseWaiver: l.incomeKind === 'expenseWaiver', amountCents: l.netCents })),
-    } satisfies CollectiveConfirmationInput;
-  }
+  const { kind, templateKey, input: templateInput, noticeId, machineAllowed, machine, signerId, facsimileChecksum, totalCents, periodFrom, periodTo } = prepared.value;
 
   const confirmationId = newId();
   const entryIds = [...new Set(check.lines.map((l) => l.entryId))];
-  const unchanged = (fresh: ConfirmationCheckResult) => fresh.notice?.id === notice.id && sumNet(fresh.lines) === totalCents && (machineAllowed ? fresh.machine.complete === check.machine.complete && fresh.machine.signer?.id === check.machine.signer?.id : true);
+  const unchanged = (fresh: ConfirmationCheckResult) => fresh.notice?.id === noticeId && sumNet(fresh.lines) === totalCents && (machineAllowed ? fresh.machine.complete === check.machine.complete && fresh.machine.signer?.id === check.machine.signer?.id : true);
 
   const result = await issueGeneratedDocument<string>(deps, ctx, {
-    templateKey: TEMPLATE_KEY[kind],
+    templateKey,
     input: templateInput,
     subject: `Zuwendungsbestätigung ${KIND_LABEL[kind]} ${issuedOn}`,
     documentDate: issuedOn,
@@ -230,8 +277,8 @@ export async function issueConfirmation(deps: Deps, ctx: CallContext, input: unk
       if (!unchanged(fresh.value)) return abortIssue(financeConflict('confirmationChangedMeanwhile'));
 
       const row: FinanceConfirmationRow = {
-        id: confirmationId, kind, contactId: check.contactId, noticeId: notice.id, documentId: doc.id, documentNumber: doc.number, issuedOn,
-        issuedByUserId: ctx.userId ?? 'system', issuedChannel: ctx.channel, machine, signerId: machine ? signerRow!.id : null, facsimileChecksum: machine ? facsimile!.checksum : null,
+        id: confirmationId, kind, contactId: check.contactId, noticeId, documentId: doc.id, documentNumber: doc.number, issuedOn,
+        issuedByUserId: ctx.userId ?? 'system', issuedChannel: ctx.channel, machine, signerId, facsimileChecksum,
         expenseWaiver: check.expenseWaiver, totalCents, periodFrom, periodTo, preNoticeReason: check.warnings.includes('beforeOldestNotice') ? (v.preNoticeReason ?? null) : null,
         signedDocumentId: null, sentAt: null, sentVia: null, voidedAt: null, voidedByUserId: null, voidNote: null, sentBeforeVoid: null, originalReturnedOn: null, taxOfficeInformedOn: null,
         createdAt: isoNow(deps.clock),
@@ -265,6 +312,42 @@ async function ensureDonorRoleInternal(deps: Deps, contactId: string, since: str
   const running = deps.db.select({ id: contactRoles.id }).from(contactRoles).where(and(eq(contactRoles.contactId, contactId), eq(contactRoles.role, 'donor'), isNull(contactRoles.until))).get();
   if (running) return;
   await addContactRole(deps, { ...systemContext(), permissions: new Set(['contacts.manage']) }, { id: contactId, role: 'donor', since });
+}
+
+// ── Vorschau ────────────────────────────────────────────────────────────────
+
+/** Die Nummer auf der Vorschau — keine Nummer der Akte wird verbraucht. */
+export const PREVIEW_NUMBER = 'ENTWURF';
+
+/**
+ * Die Vorschau im Ausstellen-Dialog — `finance.donationsIssue`, nicht
+ * `humanOnly` (sie ändert nichts). Dieselbe Prüfliste und dieselbe Eingabe
+ * wie `issueConfirmation`, gerendert mit dem Wasserzeichen ENTWURF und der
+ * Nummer ENTWURF. Kein Akteneintrag, kein Protokoll. Liefert Bytes: kein
+ * MCP-Werkzeug — ein Agent liest die Prüfliste (`finance_confirmation_check`).
+ * `preNoticeReason` nimmt sie an und übergeht sie: Die Begründung steht nur
+ * am Datensatz, nie auf dem Papier.
+ */
+export async function previewConfirmation(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ bytes: Uint8Array; filename: string; mimeType: 'application/pdf' }>> {
+  const denied = requirePermission(ctx, 'finance.donationsIssue');
+  if (denied) return denied;
+  const parsed = validate(deps, issueSchema, input);
+  if (!parsed.ok) return parsed;
+  const v = parsed.value;
+
+  const issuedOn = v.issuedOn ?? today(deps);
+  if (issuedOn > today(deps)) return invalid([{ path: 'issuedOn', message: 'inFuture' }]);
+  const checked = checkConfirmableInternal(deps.db, deps, { lineIds: [...new Set(v.lineIds)], issuedOn, kind: v.kind });
+  if (!checked.ok) return checked;
+  const built = await buildConfirmationInputInternal(deps, checked.value, { issuedOn, kind: v.kind, periodFrom: v.periodFrom, periodTo: v.periodTo });
+  if (!built.ok) return built;
+
+  const prepared = await prepare(deps, ctx, { templateKey: built.value.templateKey, input: built.value.input }, { number: PREVIEW_NUMBER, issuedOn });
+  if (!prepared.ok) return prepared;
+  const { built: template, baseId, bodyTypst, images } = prepared.value;
+  const context = await buildContext(deps, ctx, PREVIEW_NUMBER, issuedOn);
+  const { bytes } = await deps.documents.render({ baseId, bodyTypst, slots: { ...template.slots, draft: true }, context, images });
+  return ok({ bytes, filename: 'Zuwendungsbestaetigung-Entwurf.pdf', mimeType: 'application/pdf' });
 }
 
 // ── zurücknehmen ────────────────────────────────────────────────────────────
@@ -384,6 +467,28 @@ export async function attachSignedConfirmation(deps: Deps, ctx: CallContext, inp
   });
   if (!result.ok) return result;
   return ok(viewInternal(deps.db, row.id)!);
+}
+
+// ── unser Exemplar ──────────────────────────────────────────────────────────
+
+const copySchema = z.object({ id: z.string().min(1) });
+
+/**
+ * Unser Exemplar als PDF — über den Bezug als Berechtigung der Akte
+ * (`financeConfirmation`, Recht `finance.read`), ohne `dms.view`; auch nach
+ * der Rücknahme, denn es bleibt als Beweis. Liefert Bytes: kein
+ * MCP-Werkzeug (Muster `readCashCountProtocol`).
+ */
+export async function readConfirmationCopy(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ bytes: Uint8Array; filename: string; number: string | null }>> {
+  const parsed = validate(deps, copySchema, input);
+  if (!parsed.ok) return parsed;
+  const denied = requireFinanceRead(ctx, 'read');
+  if (denied) return denied;
+  const row = deps.db.select().from(financeConfirmations).where(eq(financeConfirmations.id, parsed.value.id)).get();
+  if (!row) return notFound('financeConfirmation', parsed.value.id);
+  const result = await readLinkedDocument(deps, ctx, { documentId: row.documentId, entityType: 'financeConfirmation', entityId: row.id });
+  if (!result.ok) return result;
+  return ok({ bytes: result.value.bytes, filename: result.value.filename, number: result.value.record.number });
 }
 
 // ── Listen ──────────────────────────────────────────────────────────────────

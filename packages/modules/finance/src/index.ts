@@ -215,18 +215,58 @@ export { amountSpellings, attachVoucherToTransaction, searchVouchersForTransacti
 export { INVOICE_ATTACHMENT_NAMES, INVOICE_XML_MAX_BYTES, isInvoiceAttachmentName, parseFacturX, type InvoiceTax, type ParseInvoiceResult, type ParsedInvoice } from './import/zugferd/parse';
 export { applyInvoiceToDraft, createOpenItemFromInvoice, invoiceProposal, readInvoiceFromDocument, type InvoiceProposal, type InvoiceView } from './import/zugferd/read';
 
-// F6a — Spenden: Bescheide (Task 2); Gültigkeit rein in `ledger/`, damit F7 sie für Empfängerbescheide nutzt.
+// F6a — Spenden: Bescheide; Gültigkeit rein in `ledger/`, damit F7 sie für Empfängerbescheide nutzt.
 export { NOTICE_KINDS, noticeValidAt, noticeValidUntil, type NoticeKind, type NoticeValidityInput } from './ledger/notice-validity';
-// Die Dienste selbst (saveNotice, supersedeNotice, voidNotice, listNotices) kommen mit ihren MCP-Werkzeugen (Task 6) — der Paritätswächter der App verlangt beides zugleich.
-export { certifiableLineExistsInternal, noticeExpiryInternal, noticeValidAtInternal, type NoticeView } from './donations/notices';
-// Maschinelles Verfahren (Task 4): nur `readFacsimile` (Route Handler, bewusst ohne MCP — Ausnahmeliste der App) und die internen Helfer; saveSigner, uploadFacsimile, getMachineProcedure und createNotificationLetterDraft kommen mit ihren Werkzeugen (Task 6).
-export { FACSIMILE_MAX_BYTES, machineProcedureStatusAt, readFacsimile, readFacsimileInternal, type MachineProcedureStatus, type SignerView } from './donations/machine';
+export { certifiableLineExistsInternal, listNotices, noticeExpiryInternal, noticeValidAtInternal, saveNotice, supersedeNotice, voidNotice, type NoticeView } from './donations/notices';
+// Maschinelles Verfahren: `readFacsimile` nur für den Route Handler (bewusst ohne MCP — Ausnahmeliste der App).
+export {
+  createNotificationLetterDraft,
+  FACSIMILE_MAX_BYTES,
+  getMachineProcedure,
+  machineProcedureStatusAt,
+  readFacsimile,
+  readFacsimileInternal,
+  saveSigner,
+  uploadFacsimile,
+  type MachineProcedureStatus,
+  type SignerView,
+} from './donations/machine';
 export { type MachineProcedureMissing } from './ledger/machine-status';
-// Bestätigung (Task 5): Prüfliste, Listen, „zu korrigieren“, Sperren — hier nur Internes und Typen. Die Dienste
-// (checkConfirmable, issueConfirmation, voidConfirmation, recordConfirmationDispatch, attachSignedConfirmation,
-// listConfirmations, listUncertifiedDonations, saveInKindDetails, getInKindDetails) kommen mit ihren Werkzeugen (Task 6).
-export { CONFIRMATION_CHECK_KEYS, checkConfirmableInternal, checkFailure, missingContactFields, type CheckConfirmableArgs, type ConfirmationCheck, type ConfirmationCheckKey, type ConfirmationCheckLine, type ConfirmationCheckResult, type ConfirmationWarning } from './donations/check';
-export { countNeedsSignatureInternal, type ConfirmationKind, type ConfirmationLineView, type ConfirmationList, type ConfirmationView, type UncertifiedGroup } from './donations/confirmations';
+// Bestätigung: Prüfliste, Ausstellen, Rücknahme, Versand, unterschriebene Fassung, Listen, Vorschau (nur Route Handler), Sachspende.
+export {
+  checkConfirmable,
+  CONFIRMATION_CHECK_KEYS,
+  checkConfirmableInternal,
+  checkFailure,
+  missingContactFields,
+  type CheckConfirmableArgs,
+  type ConfirmationCheck,
+  type ConfirmationCheckKey,
+  type ConfirmationCheckLine,
+  type ConfirmationCheckResult,
+  type ConfirmationWarning,
+} from './donations/check';
+export {
+  attachSignedConfirmation,
+  buildConfirmationInputInternal,
+  countNeedsSignatureInternal,
+  issueConfirmation,
+  listConfirmations,
+  listUncertifiedDonations,
+  PREVIEW_NUMBER,
+  previewConfirmation,
+  readConfirmationCopy,
+  recordConfirmationDispatch,
+  voidConfirmation,
+  type ConfirmationInputBuild,
+  type ConfirmationInputOptions,
+  type ConfirmationKind,
+  type ConfirmationLineView,
+  type ConfirmationList,
+  type ConfirmationView,
+  type UncertifiedGroup,
+} from './donations/confirmations';
+export { getInKindDetails, saveInKindDetails } from './donations/in-kind';
 export { countToCorrectInternal, toCorrectConfirmationsInternal, toCorrectReasonsInternal, type ToCorrectReason } from './donations/to-correct';
 export { confirmationContactLock, confirmationEntryLock } from './donations/locks';
 export { ENTRY_LOCKS, registerEntryLocks, type EntryLock } from './locks';
