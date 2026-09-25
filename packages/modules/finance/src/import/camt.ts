@@ -1,4 +1,4 @@
-import { guardXml, secureXmlParser } from './xml';
+import { decodeXmlEntities, guardXml, secureXmlParser } from './xml';
 
 /**
  * Der reine Leser eines CAMT.053-Kontoauszugs (Spec 6.2). Keine Datenbank,
@@ -71,7 +71,7 @@ function joinUstrd(value: unknown): string {
   if (value === undefined || value === null) return '';
   const parts = Array.isArray(value) ? value : [value];
   return parts
-    .map((p) => textOf(p))
+    .map((p) => decodeXmlEntities(textOf(p) ?? ''))
     .join(' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -107,6 +107,11 @@ interface RawTx {
   returnCode: string | null;
 }
 
+/** Ein Textwert für Menschen oder Abgleich: vordefinierte Entitäten aufgelöst (der Parser läuft ohne, `./xml.ts`). */
+function decoded(value: string | null): string | null {
+  return value === null ? null : decodeXmlEntities(value);
+}
+
 function readTxDtls(node: Record<string, unknown>, direction: 'CRDT' | 'DBIT'): RawTx {
   const refs = (node.Refs ?? {}) as Record<string, unknown>;
   const partyTag = direction === 'CRDT' ? 'Dbtr' : 'Cdtr';
@@ -118,10 +123,10 @@ function readTxDtls(node: Record<string, unknown>, direction: 'CRDT' | 'DBIT'): 
   const amt = node.Amt as Record<string, unknown> | string | undefined;
   return {
     amountText: typeof amt === 'string' ? amt : typeof amt === 'object' ? textOf(amt) ?? undefined : undefined,
-    bankReference: (typeof refs.AcctSvcrRef === 'string' ? refs.AcctSvcrRef : null),
+    bankReference: typeof refs.AcctSvcrRef === 'string' ? decodeXmlEntities(refs.AcctSvcrRef) : null,
     // `NOTPROVIDED` ist der CAMT-Platzhalter für „keine Referenz“ — als Referenz geführt, hielte die Dubletten-Erkennung fremde Zeilen für gleich.
-    endToEndId: typeof refs.EndToEndId === 'string' && refs.EndToEndId.trim() !== 'NOTPROVIDED' ? refs.EndToEndId : null,
-    counterpartyName: party && typeof party.Nm === 'string' ? party.Nm : null,
+    endToEndId: typeof refs.EndToEndId === 'string' && refs.EndToEndId.trim() !== 'NOTPROVIDED' ? decodeXmlEntities(refs.EndToEndId) : null,
+    counterpartyName: party && typeof party.Nm === 'string' ? decodeXmlEntities(party.Nm) : null,
     counterpartyIban: acct ? textOf((acct.Id as Record<string, unknown> | undefined)?.IBAN) : null,
     purpose: joinUstrd((node.RmtInf as Record<string, unknown> | undefined)?.Ustrd),
     returnCode: rtrInf ? textOf((rtrInf.Rsn as Record<string, unknown> | undefined)?.Cd) : null,
@@ -197,7 +202,7 @@ export function parseCamt053(bytes: Uint8Array, opts: { maxBytes: number }): Par
       const pending = statusCode !== 'BOOK';
       const bookingDate = dateOf(ntry.BookgDt) ?? '';
       const valueDate = dateOf(ntry.ValDt);
-      const entryAcctSvcrRef = typeof ntry.AcctSvcrRef === 'string' ? ntry.AcctSvcrRef : null;
+      const entryAcctSvcrRef = decoded(typeof ntry.AcctSvcrRef === 'string' ? ntry.AcctSvcrRef : null);
       const entryReturnCode = textOf((ntry.RtrInf as Record<string, unknown> | undefined)?.Rsn as Record<string, unknown> | undefined) ?? textOf(((ntry.RtrInf as Record<string, unknown> | undefined)?.Rsn as Record<string, unknown> | undefined)?.Cd);
       const entryAmount = parseAmountCents(textOf(ntry.Amt) ?? '');
       if (entryAmount === null) return fail('lineUnreadable', { line: lineIndex });

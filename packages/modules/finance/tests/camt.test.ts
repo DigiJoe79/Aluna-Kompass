@@ -100,6 +100,23 @@ describe('parseCamt053', () => {
     expect(stmt.openingCents + sum).toBe(stmt.closingCents);
   });
 
+  it('decodes the predefined entities in counterparty and purpose', () => {
+    const text = new TextDecoder()
+      .decode(bytes('einfach-001-02.xml'))
+      .replace('<Nm>Erika Beispiel</Nm>', '<Nm>Erika &amp; Max Beispiel</Nm>')
+      .replace('<Ustrd>Spende</Ustrd>', '<Ustrd>Spende &quot;Tiere&quot; &lt;2026&gt;</Ustrd>')
+      .replace('<EndToEndId>E2E-0001</EndToEndId>', '<EndToEndId>E2E&amp;0001</EndToEndId>')
+      .replace('<AcctSvcrRef>REF-0001</AcctSvcrRef>', '<AcctSvcrRef>REF&amp;0001</AcctSvcrRef>');
+    const result = parseCamt053(new TextEncoder().encode(text), MAX);
+    if (!result.ok) throw new Error(JSON.stringify(result.error));
+    expect(result.statements[0]!.lines[0]).toMatchObject({
+      counterpartyName: 'Erika & Max Beispiel',
+      purpose: 'Spende "Tiere" <2026>',
+      endToEndId: 'E2E&0001',
+      bankReference: 'REF&0001',
+    });
+  });
+
   it('refuses a DOCTYPE and any ENTITY declaration before parsing', () => {
     const doctype = parseCamt053(bytes('doctype.xml'), MAX);
     expect(doctype.ok).toBe(false);
