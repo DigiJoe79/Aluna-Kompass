@@ -476,10 +476,13 @@ describe('seedFinance', () => {
       return f;
     }
 
-    it('records the exemption notice of the invented tax office and a complete machine procedure', async () => {
+    it('records the exemption notice of the invented tax office, the section 60a notice it superseded, and a complete machine procedure', async () => {
       const { deps, ctx } = await seededWithAddress();
       const notices = unwrap(await listNotices(deps, ctx, { includeInactive: true }));
-      expect(notices.map((n) => [n.kind, n.taxOffice, n.taxNumber, n.noticeDate, n.assessmentPeriod, n.state])).toEqual([['exemptionNotice', 'Finanzamt Musterstadt', '99/999/99999', '2025-05-02', '2023', 'valid']]);
+      expect(notices.map((n) => [n.kind, n.taxOffice, n.taxNumber, n.noticeDate, n.assessmentPeriod, n.supersededOn, n.state])).toEqual([
+        ['exemptionNotice', 'Finanzamt Musterstadt', '99/999/99999', '2025-05-02', '2023', null, 'valid'],
+        ['section60a', 'Finanzamt Musterstadt', '99/999/99999', '2024-03-01', null, '2025-05-02', 'superseded'],
+      ]);
       const machine = unwrap(await getMachineProcedure(deps, ctx));
       expect(machine.signers).toHaveLength(1);
       expect(machine.status.complete).toBe(true);
@@ -489,8 +492,8 @@ describe('seedFinance', () => {
     it('issues a machine money confirmation, an expense waiver without signature and a signed in-kind confirmation — once', async () => {
       const { deps, ctx } = await seededWithAddress();
       const issued = unwrap(await listConfirmations(deps, ctx, { tab: 'issued' }));
-      expect(issued.total).toBe(3);
-      expect(issued.counts).toEqual({ issued: 3, toCorrect: 0, needsSignature: 1 });
+      expect(issued.total).toBe(5);
+      expect(issued.counts).toEqual({ issued: 5, toCorrect: 1, needsSignature: 1 });
       const byName = new Map(issued.items.map((c) => [c.contactName, c]));
       expect(byName.get('Erika Beispiel')).toMatchObject({ kind: 'money', machine: true, signatureState: 'machine', state: 'valid' });
       expect(byName.get('Lukas Hofmann')).toMatchObject({ kind: 'money', expenseWaiver: true, signatureState: 'needsSignature' });
@@ -499,6 +502,26 @@ describe('seedFinance', () => {
       const details = unwrap(await getInKindDetails(deps, ctx, { lineId: inKind.lines[0]!.lineId }));
       expect(details).toMatchObject({ origin: 'private' });
       expect(details?.proofDocumentId).toBeTruthy();
+    });
+
+    it('marks the confirmation issued on the superseded section 60a notice as to be corrected', async () => {
+      const { deps, ctx } = await seededWithAddress();
+      const provisional = unwrap(await listNotices(deps, ctx, { includeInactive: true })).find((n) => n.kind === 'section60a')!;
+      const toCorrect = unwrap(await listConfirmations(deps, ctx, { tab: 'toCorrect' }));
+      expect(toCorrect.items).toHaveLength(1);
+      expect(toCorrect.items[0]).toMatchObject({ contactName: 'Greta Sommer', noticeId: provisional.id, issuedOn: '2025-04-15', totalCents: 12000, state: 'valid' });
+      expect(toCorrect.items[0]!.toCorrect).toEqual(['noticeSuperseded']);
+    });
+
+    it('voids a dispatched confirmation with its retrieval trail; the line is uncertified again', async () => {
+      const { deps, ctx } = await seededWithAddress();
+      const issued = unwrap(await listConfirmations(deps, ctx, { tab: 'issued' }));
+      const voided = issued.items.find((c) => c.contactName === 'Henrik Brandt')!;
+      expect(voided).toMatchObject({ state: 'voided', sentVia: 'post', sentBeforeVoid: true, voidNote: 'Betrag doppelt bestätigt' });
+      expect(voided.originalReturnedOn).toMatch(/^\d{4}-04-09$/);
+      expect(voided.taxOfficeInformedOn).toBeNull();
+      const groups = unwrap(await listUncertifiedDonations(deps, ctx, {})).groups;
+      expect(groups.find((g) => g.contactName === 'Henrik Brandt')?.lines.map((l) => l.netCents)).toEqual([7500]);
     });
 
     it('leaves a donation without address (blocked), an organization (warning), a second waiver and an undescribed in-kind donation unconfirmed', async () => {
@@ -526,6 +549,7 @@ describe('seedFinance', () => {
       await seedFinance(deps, ctx);
       expect(unwrap(await listConfirmations(deps, ctx, { tab: 'issued' })).total).toBe(0);
       expect(unwrap(await listNotices(deps, ctx, {}))).toHaveLength(1);
+      expect(unwrap(await listNotices(deps, ctx, { includeInactive: true }))).toHaveLength(2);
     });
   });
 });

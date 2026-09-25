@@ -24,10 +24,10 @@ import { uploadVoucher, revokeVoucher } from './ledger/vouchers';
 import { setDatedValue } from './ledger/dated-values';
 import { installFinance } from './install';
 import { checkConfirmable } from './donations/check';
-import { attachSignedConfirmation, issueConfirmation } from './donations/confirmations';
+import { attachSignedConfirmation, issueConfirmation, recordConfirmationDispatch, voidConfirmation } from './donations/confirmations';
 import { saveInKindDetails } from './donations/in-kind';
 import { saveSigner, uploadFacsimile } from './donations/machine';
-import { saveNotice } from './donations/notices';
+import { saveNotice, supersedeNotice } from './donations/notices';
 import { setFinanceSwitch } from './ledger/setup';
 import { buildCamt053Bytes } from './import/camt-fixture';
 import { buildOfficeInvoicePdf, buildVetInvoicePdf } from './import/zugferd-fixture';
@@ -551,6 +551,10 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
     unwrap(await setProjectFinance(deps, ctx, { projectId: existingProject.id, targetCents: 250000, defaultPurposeId: dachsanierung.id }));
   }
 
+  // F6a Task 9: eine Spende im Vorjahr, bestätigt auf dem später ersetzten § 60a-Bescheid — gebucht und
+  // belegt, solange das Jahr noch offen ist.
+  await seedProvisionalNoticeDonation(deps, ctx);
+
   const previousFiscalYear = deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.designation, String(previousYear))).get();
   if (previousFiscalYear) {
     const alreadyClosed = fiscalYearStatusInternal(deps.db, previousFiscalYear.id) === 'closed';
@@ -894,11 +898,69 @@ function incomeLineOf(deps: Deps, entryText: string) {
 }
 
 /** Eine Bestätigung nur, wenn auf der Zeile noch keine liegt und die Prüfliste nichts sperrt — idempotent. */
-async function ensureConfirmation(deps: Deps, ctx: CallContext, lineId: string): Promise<void> {
+async function ensureConfirmation(deps: Deps, ctx: CallContext, lineId: string, issuedOn?: string): Promise<void> {
   if (deps.db.select({ id: financeConfirmationLines.id }).from(financeConfirmationLines).where(eq(financeConfirmationLines.lineId, lineId)).get()) return;
-  const check = unwrap(await checkConfirmable(deps, ctx, { lineIds: [lineId] }));
+  const check = unwrap(await checkConfirmable(deps, ctx, { lineIds: [lineId], ...(issuedOn ? { issuedOn } : {}) }));
   if (!check.ok) return;
-  unwrap(await issueConfirmation(deps, ctx, { lineIds: [lineId] }));
+  unwrap(await issueConfirmation(deps, ctx, { lineIds: [lineId], ...(issuedOn ? { issuedOn } : {}) }));
+}
+
+/** Die Bestätigung, die auf einer Zeile liegt (auch eine zurückgenommene). */
+function confirmationOfLine(deps: Deps, lineId: string) {
+  return deps.db
+    .select()
+    .from(financeConfirmationLines)
+    .innerJoin(financeConfirmations, eq(financeConfirmationLines.confirmationId, financeConfirmations.id))
+    .where(eq(financeConfirmationLines.lineId, lineId))
+    .get()?.finance_confirmations;
+}
+
+const organizationAddressComplete = (deps: Deps) => (['street', 'postalCode', 'city'] as const).every((field) => String(readSetting(deps, `organization.${field}`) ?? '').trim());
+
+const NOTICE_TAX_OFFICE = { taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', purposesText: 'Förderung des Sports (§ 52 Abs. 2 Satz 1 Nr. 21 AO) und der Jugendhilfe (§ 52 Abs. 2 Satz 1 Nr. 4 AO)' } as const;
+/** Die Spende, die auf dem § 60a-Bescheid bestätigt wird — die Daten hängen an den festen Bescheiddaten, nicht am Kalender. */
+const PROVISIONAL_DONATION = { text: 'Spende Greta Sommer März', entryDate: '2025-03-14', issuedOn: '2025-04-15', amountCents: 12000 } as const;
+
+/**
+ * F6a Task 9: Greta Sommer spendet im März 2025 — das Jahr, in dem der
+ * Freistellungsbescheid den § 60a-Bescheid ablöst. Die Buchung entsteht nur,
+ * solange das Geschäftsjahr 2025 besteht und offen ist (bei einem Seed nach
+ * dem Abschluss oder in einem späteren Kalenderjahr bleibt sie aus).
+ */
+async function seedProvisionalNoticeDonation(deps: Deps, ctx: CallContext): Promise<void> {
+  const year = deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.designation, PROVISIONAL_DONATION.entryDate.slice(0, 4))).get();
+  if (!year || fiscalYearStatusInternal(deps.db, year.id) === 'closed') return;
+  const greta = await ensureDonationContact(deps, ctx, { kind: 'person', firstName: 'Greta', lastName: 'Sommer' }, { street: 'Lindenallee 23', postalCode: '12343', city: 'Musterstadt' });
+  const { text, entryDate, amountCents } = PROVISIONAL_DONATION;
+  await ensureEntry(deps, text, () =>
+    bookEntry(deps, ctx, { entryDate, text, moneyLines: [{ accountId: accountByName(deps, 'Vereinskonto').id, amountCents }], allocationLines: [{ categoryId: categoryByKey(deps, 'donations').id, amountCents, contactId: greta }] }).then(unwrap),
+  );
+  await ensureVoucher(deps, ctx, entryByText(deps, text), 'voucher-own', entryDate, `Spendeneingang ${text}`);
+}
+
+/**
+ * Die Bescheide in ihrer Geschichte: erst der § 60a-Bescheid vom 01.03.2024,
+ * darauf die Bestätigung für Greta Sommer (15.04.2025), dann der
+ * Freistellungsbescheid vom 02.05.2025, der den § 60a-Bescheid am selben Tag
+ * ersetzt — Gretas Bestätigung ist damit „zu korrigieren“. Nur beim ersten
+ * Lauf; die Reihenfolge ist Pflicht, weil ein § 60a-Bescheid nach einem
+ * Freistellungsbescheid abgelehnt wird.
+ */
+async function seedNotices(deps: Deps, ctx: CallContext): Promise<void> {
+  if (deps.db.select({ id: financeNotices.id }).from(financeNotices).get()) return;
+  const provisional = unwrap(await saveNotice(deps, ctx, { kind: 'section60a', ...NOTICE_TAX_OFFICE, noticeDate: '2024-03-01' }));
+  await ensureSigner(deps, ctx);
+  const greta = deps.db.select({ id: financeEntries.id }).from(financeEntries).where(eq(financeEntries.text, PROVISIONAL_DONATION.text)).get();
+  if (greta && organizationAddressComplete(deps)) await ensureConfirmation(deps, ctx, incomeLineOf(deps, PROVISIONAL_DONATION.text).id, PROVISIONAL_DONATION.issuedOn);
+  unwrap(await saveNotice(deps, ctx, { kind: 'exemptionNotice', ...NOTICE_TAX_OFFICE, noticeDate: '2025-05-02', assessmentPeriod: '2023' }));
+  unwrap(await supersedeNotice(deps, ctx, { id: provisional.id, supersededOn: '2025-05-02' }));
+}
+
+/** Jonas Feld als Unterzeichner mit Faksimile und Anzeige — nur, wenn noch keiner besteht. */
+async function ensureSigner(deps: Deps, ctx: CallContext): Promise<void> {
+  if (deps.db.select({ id: financeSigners.id }).from(financeSigners).get()) return;
+  const signer = unwrap(await saveSigner(deps, ctx, { validFrom: '2025-01-01', signerName: 'Jonas Feld', notifiedOn: '2025-06-02' }));
+  unwrap(await uploadFacsimile(deps, ctx, { signerId: signer.id, bytes: new Uint8Array(Buffer.from(SEED_FACSIMILE_PNG, 'base64')), mimeType: 'image/png' }));
 }
 
 /**
@@ -911,26 +973,13 @@ async function ensureConfirmation(deps: Deps, ctx: CallContext, lineId: string):
  * (warnt), eine zweite Aufwandsspende und eine Sachspende ohne Angaben. Die
  * Bestätigungen entstehen nur, wenn die Vereinsanschrift steht (sie kommt aus
  * dem Kern-Seed) — ein Modultest ohne sie bekommt Bescheid und Buchungen,
- * aber keine Bestätigung. „Zurückgenommen“ und „zu korrigieren“ folgen mit
- * Task 9.
+ * aber keine Bestätigung. Task 9 ergänzt „zu korrigieren“ (Greta Sommer, auf
+ * dem ersetzten § 60a-Bescheid, `seedNotices`) und „zurückgenommen“ mit
+ * Rückholspur (Henrik Brandt).
  */
 async function seedDonations(deps: Deps, ctx: CallContext, currentYear: number): Promise<void> {
-  if (!deps.db.select({ id: financeNotices.id }).from(financeNotices).get()) {
-    unwrap(
-      await saveNotice(deps, ctx, {
-        kind: 'exemptionNotice',
-        taxOffice: 'Finanzamt Musterstadt',
-        taxNumber: '99/999/99999',
-        noticeDate: '2025-05-02',
-        assessmentPeriod: '2023',
-        purposesText: 'Förderung des Sports (§ 52 Abs. 2 Satz 1 Nr. 21 AO) und der Jugendhilfe (§ 52 Abs. 2 Satz 1 Nr. 4 AO)',
-      }),
-    );
-  }
-  if (!deps.db.select({ id: financeSigners.id }).from(financeSigners).get()) {
-    const signer = unwrap(await saveSigner(deps, ctx, { validFrom: '2025-01-01', signerName: 'Jonas Feld', notifiedOn: '2025-06-02' }));
-    unwrap(await uploadFacsimile(deps, ctx, { signerId: signer.id, bytes: new Uint8Array(Buffer.from(SEED_FACSIMILE_PNG, 'base64')), mimeType: 'image/png' }));
-  }
+  await seedNotices(deps, ctx);
+  await ensureSigner(deps, ctx);
   if (!readSetting<boolean>(deps, 'finance.expenseWaiversEnabled')) unwrap(await setFinanceSwitch(deps, ctx, { key: 'finance.expenseWaiversEnabled', value: true }));
 
   const erika = await ensureDonationContact(deps, ctx, { kind: 'person', firstName: 'Erika', lastName: 'Beispiel' }, { street: 'Beispielstraße 7', postalCode: '54321', city: 'Beispielstadt' });
@@ -978,8 +1027,10 @@ async function seedDonations(deps: Deps, ctx: CallContext, currentYear: number):
   await withoutMoney('Sachspende Laptop', `${currentYear}-08-03`, 20000, clara, inKind, inKindExpense);
   await proof('Wertnachweis Laptop', `${currentYear}-08-21`);
 
-  const organizationComplete = (['street', 'postalCode', 'city'] as const).every((field) => String(readSetting(deps, `organization.${field}`) ?? '').trim());
-  if (!organizationComplete) return;
+  const henrik = await ensureDonationContact(deps, ctx, { kind: 'person', firstName: 'Henrik', lastName: 'Brandt' }, { street: 'Birkenstraße 9', postalCode: '12344', city: 'Musterstadt' });
+  await money('Spende Henrik Brandt März', `${currentYear}-03-20`, 7500, henrik);
+
+  if (!organizationAddressComplete(deps)) return;
 
   const beamer = incomeLineOf(deps, 'Sachspende Beamer');
   if (!deps.db.select({ id: financeConfirmationLines.id }).from(financeConfirmationLines).where(eq(financeConfirmationLines.lineId, beamer.id)).get()) {
@@ -997,5 +1048,15 @@ async function seedDonations(deps: Deps, ctx: CallContext, currentYear: number):
     .get();
   if (beamerConfirmation && !beamerConfirmation.signedDocumentId) {
     unwrap(await attachSignedConfirmation(deps, ctx, { id: beamerConfirmation.id, bytes: textPdf(['Zuwendungsbestätigung, unterschrieben', '', 'Erfundenes Beispiel für die Entwicklung.']), fileName: 'unterschrieben.pdf' }));
+  }
+
+  // Zurückgenommen mit Rückholspur: per Post versandt, das Original kam zurück. Die Zeile ist danach wieder
+  // bestätigbar und steht unter „Noch nicht bestätigt“.
+  const henrikLine = incomeLineOf(deps, 'Spende Henrik Brandt März');
+  await ensureConfirmation(deps, ctx, henrikLine.id);
+  const henrikConfirmation = confirmationOfLine(deps, henrikLine.id);
+  if (henrikConfirmation && !henrikConfirmation.voidedAt) {
+    if (!henrikConfirmation.sentAt) unwrap(await recordConfirmationDispatch(deps, ctx, { id: henrikConfirmation.id, sentAt: `${currentYear}-03-27`, sentVia: 'post' }));
+    unwrap(await voidConfirmation(deps, ctx, { id: henrikConfirmation.id, note: 'Betrag doppelt bestätigt', alreadySent: true, originalReturnedOn: `${currentYear}-04-09` }));
   }
 }

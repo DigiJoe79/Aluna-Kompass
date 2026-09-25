@@ -11,7 +11,10 @@ test.describe('home', () => {
     await expect(page.getByRole('heading', { name: 'Guten Tag, Anna.' })).toBeVisible();
     const inbox = page.getByTestId('dashboard-tile-dms-inbox');
     await expect(inbox.getByRole('heading', { name: 'Eingangskorb' })).toBeVisible();
-    await expect(inbox.getByRole('link', { name: 'Freistellungsbescheid' })).toBeVisible();
+    // Die Kachel zeigt die fünf ältesten Eingänge; welche das sind, verschiebt jeder Seed mit älteren Belegen
+    // (F6a: die Spende auf dem § 60a-Bescheid von 2025) — der Test prüft deshalb Form und Weg, keinen Betreff.
+    await expect(inbox.getByRole('listitem')).toHaveCount(5);
+    await expect(inbox.getByRole('link', { name: /^Alle \d+ anzeigen$/ })).toHaveAttribute('href', '/dms?inbox=1');
     await expect(page.getByTestId('dashboard-tile-core-followUps').getByText('Antwort abwarten')).toBeVisible();
     const setup = page.getByTestId('dashboard-tile-core-setup');
     // Steuernummer und Bescheid schreibt der Finanz-Seed über den Bescheid nach (E22), die Anschrift der Kern-Seed —

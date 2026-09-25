@@ -11,7 +11,10 @@ import { loginAsAdmin, resetDatabase } from './helpers';
  * Hofmann ohne unterschriebene Fassung, eine Sachspende von Clara Neumann mit
  * Bestätigung — und unbestätigt: eine Spende von Tobias Adler (ohne
  * Anschrift), eine zweite Aufwandsspende, eine zweite Sachspende ohne Angaben
- * und eine Spende der Sportfreunde Beispieltal (Organisation).
+ * und eine Spende der Sportfreunde Beispieltal (Organisation). Dazu (Task 9)
+ * eine Bestätigung für Greta Sommer auf dem ersetzten § 60a-Bescheid (zu
+ * korrigieren) und eine zurückgenommene für Henrik Brandt, dessen Spende
+ * wieder unter „Noch nicht bestätigt“ steht.
  */
 
 /** Ein API-Token aus dem Profil, damit der Test Dinge tun kann, für die es (noch) keine Oberfläche gibt. */
@@ -207,7 +210,8 @@ test.describe('finance donations', () => {
   test('„Zu korrigieren“ zählt eine Bestätigung, deren Bescheid ersetzt wurde', async ({ page, baseURL }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/donations');
-    await expect(page.getByRole('tab', { name: 'Zu korrigieren (0)' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Zu korrigieren (1)' })).toBeVisible();
+    await expect(issuedRow(page, 'Greta Sommer')).toContainText('Bescheid aufgehoben oder ersetzt');
 
     const client = await mcpClient(page, baseURL);
     const notices = await callTool<{ id: string }[] | { items: { id: string }[] }>(client, 'finance_notices_list', {});
@@ -218,8 +222,8 @@ test.describe('finance donations', () => {
     await client.close();
 
     await page.goto('/finance/donations?tab=toCorrect');
-    await expect(page.getByRole('tab', { name: 'Zu korrigieren (3)' })).toBeVisible();
-    await expect(page.getByTestId('confirmation-row')).toHaveCount(3);
+    await expect(page.getByRole('tab', { name: 'Zu korrigieren (4)' })).toBeVisible();
+    await expect(page.getByTestId('confirmation-row')).toHaveCount(4);
     await expect(issuedRow(page, 'Erika Beispiel')).toContainText('Bescheid aufgehoben oder ersetzt');
   });
 
@@ -247,7 +251,7 @@ test.describe('finance donations', () => {
 /**
  * F6a Task 8 — Oberfläche C3 „Bescheide“ und das maschinelle Verfahren. Der
  * Seed bringt den Freistellungsbescheid des Finanzamts Musterstadt vom
- * 02.05.2025 und Jonas Feld als vollständigen Unterzeichner (seit 01.01.2025,
+ * 02.05.2025, den § 60a-Bescheid vom 01.03.2024, den er ersetzt, und Jonas Feld als vollständigen Unterzeichner (seit 01.01.2025,
  * mit Faksimile und Anzeige).
  */
 const isoDay = (offsetDays = 0) => new Date(Date.now() + offsetDays * 86_400_000).toISOString().slice(0, 10);
@@ -256,6 +260,8 @@ const plusYears = (iso: string, years: number) => `${Number(iso.slice(0, 4)) + y
 const PDF = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n');
 const SIGNATURE_PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
 const noticeRow = (page: Page, text: string) => page.getByTestId('notice-row').filter({ hasText: text });
+/** Der Freistellungsbescheid aus dem Seed — dasselbe Finanzamt trägt auch den ersetzten § 60a-Bescheid. */
+const seededExemption = (page: Page) => noticeRow(page, 'Finanzamt Musterstadt').filter({ hasText: 'Freistellungsbescheid' });
 
 test.describe('finance donation notices', () => {
   test.beforeEach(async ({ page }) => {
@@ -266,8 +272,9 @@ test.describe('finance donation notices', () => {
   test('ein Freistellungsbescheid wird erfasst, die Vereinsdaten zeigen Finanzamt, Steuernummer und Bescheid (E22) und lassen sich dort nicht ändern', async ({ page }) => {
     const today = isoDay();
     await page.goto('/finance/donations/notices');
-    await expect(noticeRow(page, 'Finanzamt Musterstadt').getByTestId('notice-state')).toHaveText('gültig');
-    await expect(noticeRow(page, 'Finanzamt Musterstadt')).toContainText('02.05.2030');
+    await expect(seededExemption(page).getByTestId('notice-state')).toHaveText('gültig');
+    await expect(seededExemption(page)).toContainText('02.05.2030');
+    await expect(noticeRow(page, 'vorläufige Anerkennung (§ 60a)').getByTestId('notice-state')).toContainText('02.05.2025');
 
     await page.getByRole('button', { name: 'Bescheid erfassen' }).click();
     const dialog = page.getByRole('dialog');
@@ -325,7 +332,7 @@ test.describe('finance donation notices', () => {
     await expect(page.getByText(/Es gibt schon einen endgültigen Bescheid vom 2025-05-02/).first()).toBeVisible();
     await expect(dialog).toBeVisible();
     await dialog.getByRole('button', { name: 'Abbrechen' }).click();
-    await expect(page.getByTestId('notice-row')).toHaveCount(1);
+    await expect(page.getByTestId('notice-row')).toHaveCount(2);
   });
 
   test('Unterzeichner, Faksimile und Anzeige machen das Verfahren vollständig; die Checkliste zeigt beide Schritte', async ({ page }) => {
@@ -387,7 +394,7 @@ test.describe('finance donation notices', () => {
     const tomorrow = isoDay(1);
     const today = isoDay();
     await page.goto('/finance/donations/notices');
-    const row = noticeRow(page, 'Finanzamt Musterstadt');
+    const row = seededExemption(page);
 
     // Ab morgen: heute trägt er noch.
     await row.getByRole('button', { name: 'Aufgehoben oder ersetzt am …' }).click();
