@@ -1,5 +1,5 @@
-import { assignRole, createRole, createUser, readSetting, schema, setRolePermissions, unwrap, type CallContext, type Deps } from '@kompass/core';
-import { addContactRole, contactRoles, contacts, createContact, updateContact } from '@kompass/module-contacts';
+import { assignRole, createRole, createUser, getDashboardLayout, getEffectivePermissions, readSetting, schema, setDashboardLayout, setRolePermissions, unwrap, type CallContext, type Deps } from '@kompass/core';
+import { addContactRole, contactRoles, contacts, createContact, hasLinkHistoryInternal, linkUserToContact, updateContact } from '@kompass/module-contacts';
 import { documents as dmsDocuments, receiveDocument, textPdf } from '@kompass/module-dms';
 import { projects } from '@kompass/module-projects';
 import { and, asc, eq } from 'drizzle-orm';
@@ -29,7 +29,10 @@ import { saveInKindDetails } from './donations/in-kind';
 import { saveSigner, uploadFacsimile } from './donations/machine';
 import { saveNotice, supersedeNotice } from './donations/notices';
 import { continueConfirmationRun, dispatchRunConfirmations, startConfirmationRun } from './donations/runs';
-import { setFinanceSwitch } from './ledger/setup';
+import { setExpenseWaiverBasisText, setFinanceSwitch } from './ledger/setup';
+import { saveExpenseDraft, submitExpenseClaim, uploadExpenseReceipt } from './allocation/expenses';
+import { approveExpenseClaim, rejectExpenseClaim } from './allocation/approvals';
+import { attachSignedWaiver, createWaiverDeclaration } from './allocation/waiver';
 import { buildCamt053Bytes } from './import/camt-fixture';
 import { buildOfficeInvoicePdf, buildVetInvoicePdf } from './import/zugferd-fixture';
 import { discardRun } from './import/discard';
@@ -49,6 +52,7 @@ import {
   financeConfirmationLines,
   financeConfirmationRuns,
   financeConfirmations,
+  financeExpensePositions,
   financeNotices,
   financePurposes,
   financeRawTransactions,
@@ -643,6 +647,10 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   // F6b Task 9: der abgeschlossene Serienlauf des Vorjahrs mit Versandvermerk, dazu die Rücklastschrift
   // einer Spende, die in einer Sammelbestätigung stand (Prüfstein 6).
   await seedConfirmationRun(deps, ctx, previousYear, currentYear);
+
+  // F8a Task 7: Anträge in jedem Zustand — nach `seedDonations`, weil der Verzicht den eingeschalteten
+  // Aufwandsspenden-Schalter braucht, den `seedDonations` setzt.
+  await seedExpenseClaims(deps, ctx, currentYear);
 }
 
 async function grantAuditorRoleToMiraKlein(deps: Deps, ctx: CallContext): Promise<void> {
@@ -1175,4 +1183,167 @@ async function seedConfirmationRun(deps: Deps, ctx: CallContext, previousYear: n
       allocationLines: [{ categoryId: categoryByKey(deps, 'donations').id, amountCents: -6000, contactId: noraLine.contactId!, originLineId: noraLine.id }],
     }).then(unwrap),
   );
+}
+
+/**
+ * F8a Task 7: „Nadja Vogt“ — eigens erfunden fürs Einreichen von Auslagen,
+ * mit der mitgelieferten Rolle „Auslagen einreichen“ und einem eigenen,
+ * gleich verknüpften Kontakt. Bewusst **keine** der drei Kernseed-Personen:
+ * Peter Lang bleibt in `home.spec.ts` als „ohne jede Kachel“ geprüft, Jonas
+ * Feld trägt schon die Freigabe. Idempotent über die E-Mail-Adresse.
+ */
+async function ensureExpenseClerkPerson(deps: Deps, ctx: CallContext): Promise<string | null> {
+  const usersCtx: CallContext = { ...ctx, permissions: new Set(deps.registry.permissionKeys) };
+  const clerkRole = deps.db.select({ id: schema.roles.id }).from(schema.roles).where(eq(schema.roles.name, 'Auslagen einreichen')).get();
+  if (!clerkRole) return null;
+  let person = deps.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, 'nadja@kompass.local')).get();
+  if (!person) {
+    const created = unwrap(await createUser(deps, usersCtx, { name: 'Nadja Vogt', email: 'nadja@kompass.local', roleIds: [clerkRole.id] }));
+    person = { id: created.user.id };
+  } else {
+    const already = deps.db
+      .select({ userId: schema.userRoles.userId })
+      .from(schema.userRoles)
+      .where(and(eq(schema.userRoles.userId, person.id), eq(schema.userRoles.roleId, clerkRole.id)))
+      .get();
+    if (!already) unwrap(await assignRole(deps, usersCtx, { userId: person.id, roleId: clerkRole.id }));
+  }
+  if (!hasLinkHistoryInternal(deps.db, person.id)) {
+    const contactCtx: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, 'contacts.manage']) };
+    const existingContact = deps.db.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.firstName, 'Nadja'), eq(contacts.lastName, 'Vogt'))).get();
+    const contactId = existingContact?.id ?? unwrap(await createContact(deps, contactCtx, { kind: 'person', salutation: 'Frau', firstName: 'Nadja', lastName: 'Vogt', street: 'Ahornstraße 3', postalCode: '12348', city: 'Musterstadt' })).id;
+    unwrap(await linkUserToContact(deps, { ...usersCtx, userId: person.id }, { userId: person.id, contactId }));
+  }
+  return person.id;
+}
+
+/**
+ * F8a Task 7: Jonas Felds gespeicherte Startseiten-Anordnung (`seedDashboardLayout`
+ * im Kern, vor jedem Modul-Seed geschrieben) kennt die neue Kachel „Wartet auf
+ * Ihre Freigabe“ noch nicht — ohne diesen Nachtrag sieht er sie erst nach
+ * „Vorgabe wiederherstellen“. Ergänzt seine bestehenden Kacheln, ersetzt sie
+ * nicht; idempotent, ob die Kachel schon dabei ist.
+ */
+async function addApprovalsPendingTileForJonas(deps: Deps, ctx: CallContext, jonasUserId: string): Promise<void> {
+  const jonasCtx: CallContext = { ...ctx, userId: jonasUserId, permissions: getEffectivePermissions(deps.db, deps.registry, jonasUserId) };
+  const layout = unwrap(await getDashboardLayout(deps, jonasCtx));
+  if (layout.tiles.some((t) => t.module === 'finance' && t.key === 'approvalsPending')) return;
+  unwrap(await setDashboardLayout(deps, jonasCtx, { tiles: [...layout.tiles, { module: 'finance', key: 'approvalsPending', options: {} }] }));
+}
+
+/** Ob schon eine Auslage mit dieser (erfundenen, eindeutigen) Positions-Beschreibung besteht — Idempotenz ohne eigene Zähltabelle. */
+function expenseClaimSeeded(deps: Deps, marker: string): boolean {
+  return !!deps.db.select({ id: financeExpensePositions.id }).from(financeExpensePositions).where(eq(financeExpensePositions.purpose, marker)).get();
+}
+
+/**
+ * F8a Task 7 (Spec 11.3): Anträge in jedem Zustand — Entwurf ohne Beleg,
+ * eingereicht mit Beleg und Fahrt (die Büromaterial-Position trifft später
+ * den Kategorievorschlag über „Büromaterial Altjahr“, Annahme 8), freigegeben
+ * mit offener Zahlung, ausgezahlt, abgelehnt mit Grund, und ein Verzicht
+ * (Aufwandsspende) mit Verzichtserklärung und unterschriebener Fassung.
+ * „Nadja Vogt“ reicht ein, „Jonas Feld“ (schon `finance.approve`, Task 2)
+ * gibt frei oder lehnt ab — nie sich selbst, weil sein eigener Kontakt
+ * fehlt. Ohne Jonas Feld (ein isolierter Modultest) bleibt der Schritt aus;
+ * jeder Antrag ist über seine erfundene, eindeutige erste Position für sich
+ * idempotent.
+ */
+async function seedExpenseClaims(deps: Deps, ctx: CallContext, currentYear: number): Promise<void> {
+  const jonas = deps.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, 'jonas@kompass.local')).get();
+  if (!jonas) return;
+  const clerkUserId = await ensureExpenseClerkPerson(deps, ctx);
+  if (!clerkUserId) return;
+  await addApprovalsPendingTileForJonas(deps, ctx, jonas.id);
+
+  // Anspruchsgrundlage des Vereins für Aufwandsspenden — sonst scheitert das Erzeugen der
+  // Verzichtserklärung an `waiverBasisMissing` (BMF 25.11.2014: Vertrag oder Satzung).
+  if (!readSetting<string>(deps, 'finance.expenseWaiverBasisText')) {
+    const setupCtx: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, 'finance.setup']) };
+    unwrap(await setExpenseWaiverBasisText(deps, setupCtx, { text: 'Vereinbarung vom 02.01.2026 nach § 14 der Satzung' }));
+  }
+
+  const submitCtx: CallContext = { ...ctx, userId: clerkUserId, permissions: new Set([...ctx.permissions, 'finance.expensesSubmit']) };
+  const approveCtx: CallContext = { ...ctx, userId: jonas.id, permissions: new Set([...ctx.permissions, 'finance.approve']) };
+  const officeCat = categoryByKey(deps, 'office');
+  const travelCat = categoryByKey(deps, 'travel');
+  const bank = accountByName(deps, 'Vereinskonto');
+  const receiptBytes = () => textPdf(['Beleg', '', 'Erfundenes Beispiel für die Entwicklung.']);
+  const IBAN = 'DE93999999990000000001';
+
+  // 1) Entwurf ohne Beleg — unvollständig, wie ihn die laufende Sicherung zulässt.
+  if (!expenseClaimSeeded(deps, 'Deko für den Infoabend')) {
+    unwrap(await saveExpenseDraft(deps, submitCtx, { waiver: false, positions: [{ kind: 'receipt', purpose: 'Deko für den Infoabend' }] }));
+  }
+
+  // 2) Eingereicht, mit Beleg und Fahrt — bleibt in der Warteschlange (Kategorievorschlag, Annahme 8).
+  if (!expenseClaimSeeded(deps, 'Büromaterial für die Infotheke')) {
+    const draft = unwrap(
+      await saveExpenseDraft(deps, submitCtx, {
+        waiver: false,
+        iban: IBAN,
+        positions: [
+          { kind: 'receipt', positionDate: `${currentYear}-06-05`, amountCents: 1890, purpose: 'Büromaterial für die Infotheke' },
+          { kind: 'trip', positionDate: `${currentYear}-06-05`, tripFrom: 'Musterstadt', tripTo: 'Beispielstadt', tripReason: 'Infomaterial abgeholt', tripKm: 18 },
+        ],
+      }),
+    );
+    unwrap(await uploadExpenseReceipt(deps, submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: receiptBytes(), fileName: 'beleg-bueromaterial.pdf' }));
+    unwrap(await submitExpenseClaim(deps, submitCtx, { id: draft.id }));
+  }
+
+  // 3) Freigegeben, noch nicht ausgezahlt — offener Posten, Herkunft `financeExpenseClaim`.
+  if (!expenseClaimSeeded(deps, 'Getränke für die Versammlung')) {
+    const draft = unwrap(
+      await saveExpenseDraft(deps, submitCtx, { waiver: false, iban: IBAN, positions: [{ kind: 'receipt', positionDate: `${currentYear}-06-12`, amountCents: 4200, purpose: 'Getränke für die Versammlung' }] }),
+    );
+    unwrap(await uploadExpenseReceipt(deps, submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: receiptBytes(), fileName: 'beleg-getraenke.pdf' }));
+    const submitted = unwrap(await submitExpenseClaim(deps, submitCtx, { id: draft.id }));
+    unwrap(await approveExpenseClaim(deps, approveCtx, { claimId: submitted.id, positions: [{ positionId: submitted.positions[0]!.id, categoryId: officeCat.id }] }));
+  }
+
+  // 4) Freigegeben und ausgezahlt — die Überweisung begleicht den offenen Posten voll.
+  if (!expenseClaimSeeded(deps, 'Portokosten Mitgliederbrief')) {
+    const draft = unwrap(
+      await saveExpenseDraft(deps, submitCtx, { waiver: false, iban: IBAN, positions: [{ kind: 'receipt', positionDate: `${currentYear}-06-18`, amountCents: 2350, purpose: 'Portokosten Mitgliederbrief' }] }),
+    );
+    unwrap(await uploadExpenseReceipt(deps, submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: receiptBytes(), fileName: 'beleg-porto.pdf' }));
+    const submitted = unwrap(await submitExpenseClaim(deps, submitCtx, { id: draft.id }));
+    const approved = unwrap(await approveExpenseClaim(deps, approveCtx, { claimId: submitted.id, positions: [{ positionId: submitted.positions[0]!.id, categoryId: officeCat.id }] }));
+    unwrap(
+      await bookEntry(deps, ctx, {
+        entryDate: `${currentYear}-07-02`,
+        text: `Überweisung Auslage ${approved.number}`,
+        moneyLines: [{ accountId: bank.id, amountCents: -2350, settlements: [{ openItemId: approved.openItemId!, amountCents: 2350 }] }],
+        allocationLines: [{ categoryId: officeCat.id, amountCents: -2350 }],
+      }),
+    );
+  }
+
+  // 5) Abgelehnt, mit Grund — der Grund steht nur am Antrag, nie im Protokoll.
+  if (!expenseClaimSeeded(deps, 'Blumenstrauß zum Jubiläum')) {
+    const draft = unwrap(
+      await saveExpenseDraft(deps, submitCtx, { waiver: false, iban: IBAN, positions: [{ kind: 'receipt', positionDate: `${currentYear}-06-20`, amountCents: 3500, purpose: 'Blumenstrauß zum Jubiläum' }] }),
+    );
+    unwrap(await uploadExpenseReceipt(deps, submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: receiptBytes(), fileName: 'beleg-blumen.pdf' }));
+    const submitted = unwrap(await submitExpenseClaim(deps, submitCtx, { id: draft.id }));
+    unwrap(await rejectExpenseClaim(deps, approveCtx, { claimId: submitted.id, note: 'Kein Vereinszweck, bitte privat tragen' }));
+  }
+
+  // 6) Verzicht (Aufwandsspende) freigegeben — Verzichtserklärung erzeugt und unterschrieben zurück.
+  if (!expenseClaimSeeded(deps, 'Fahrtkosten Pflegestelle Juli')) {
+    const draft = unwrap(
+      await saveExpenseDraft(deps, submitCtx, { waiver: true, positions: [{ kind: 'receipt', positionDate: `${currentYear}-07-01`, amountCents: 1600, purpose: 'Fahrtkosten Pflegestelle Juli' }] }),
+    );
+    unwrap(await uploadExpenseReceipt(deps, submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: receiptBytes(), fileName: 'beleg-fahrtkosten.pdf' }));
+    const submitted = unwrap(await submitExpenseClaim(deps, submitCtx, { id: draft.id }));
+    unwrap(await createWaiverDeclaration(deps, approveCtx, { claimId: submitted.id, declaredOn: `${currentYear}-07-10` }));
+    unwrap(await attachSignedWaiver(deps, approveCtx, { claimId: submitted.id, bytes: textPdf(['Verzichtserklärung, unterschrieben', '', 'Erfundenes Beispiel für die Entwicklung.']) }));
+    unwrap(
+      await approveExpenseClaim(deps, approveCtx, {
+        claimId: submitted.id,
+        positions: [{ positionId: submitted.positions[0]!.id, categoryId: travelCat.id }],
+        waiver: { claimAgreedConfirmed: true, declaredOn: `${currentYear}-07-10` },
+      }),
+    );
+  }
 }

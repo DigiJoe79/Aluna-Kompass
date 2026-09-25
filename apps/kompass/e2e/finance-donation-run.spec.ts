@@ -7,10 +7,12 @@ import { loginAsAdmin, resetDatabase } from './helpers';
  * F6b Task 7 — Oberfläche C2 „Serienlauf“. Der Seed bringt im laufenden Jahr
  * unbestätigt: Henrik Brandt (seine Bestätigung ist zurückgenommen) und die
  * Sportfreunde Beispieltal — beide bereit, maschinell; die zweite
- * Aufwandsspende von Lukas Hofmann (braucht Unterschrift, die erste ist schon
- * einzeln bestätigt); Tobias Adler und die zwei Spender der Plattform-Auszahlung
- * ohne Anschrift; die Sachspende „Laptop“ von Clara Neumann ohne Angaben
- * (blockiert). Der Bescheid gilt, das maschinelle Verfahren ist vollständig.
+ * Aufwandsspende von Lukas Hofmann und (F8a Task 7) die Aufwandsspende aus
+ * der freigegebenen Verzicht-Auslage von Nadja Vogt (beide brauchen
+ * Unterschrift, Lukas' erste ist schon einzeln bestätigt); Tobias Adler und
+ * die zwei Spender der Plattform-Auszahlung ohne Anschrift; die Sachspende
+ * „Laptop“ von Clara Neumann ohne Angaben (blockiert). Der Bescheid gilt,
+ * das maschinelle Verfahren ist vollständig.
  */
 const YEAR = String(new Date().getUTCFullYear());
 
@@ -56,10 +58,10 @@ const step = (page: Page, key: string) => page.getByTestId(`guided-step-${key}`)
 const runItem = (page: Page, name: string) => page.getByTestId('run-item').filter({ hasText: name });
 const issuedRow = (page: Page, name: string) => page.getByTestId('confirmation-row').filter({ hasText: name });
 
-/** Die Vorschau des laufenden Jahres, drei Bestätigungen ausstellen, warten, bis das Ergebnis steht. */
+/** Die Vorschau des laufenden Jahres, vier Bestätigungen ausstellen, warten, bis das Ergebnis steht. */
 async function runToResult(page: Page): Promise<void> {
   await page.goto(`/finance/donations/run?year=${YEAR}`);
-  await page.getByTestId('run-footer').getByRole('button', { name: '3 Bestätigungen ausstellen' }).click();
+  await page.getByTestId('run-footer').getByRole('button', { name: '4 Bestätigungen ausstellen' }).click();
   await expect(step(page, 'result')).toHaveAttribute('aria-current', 'step', { timeout: 20_000 });
 }
 
@@ -83,9 +85,11 @@ test.describe('finance donation run', () => {
     await expect(runItem(page, 'Henrik Brandt')).toContainText('1 Zuwendung');
 
     const signature = page.getByTestId('run-group-needsSignature');
-    await expect(signature.getByRole('heading')).toHaveText('braucht Unterschrift · 1 Bestätigung');
+    await expect(signature.getByRole('heading')).toHaveText('braucht Unterschrift · 2 Bestätigungen');
     await expect(runItem(page, 'Lukas Hofmann')).toContainText('1 von 2 Zuwendungen; 1 bereits einzeln bestätigt');
     await expect(runItem(page, 'Lukas Hofmann')).toContainText('Aufwandsspende');
+    // F8a Task 7: die freigegebene Verzicht-Auslage von Nadja Vogt bucht ebenfalls eine Aufwandsspende.
+    await expect(runItem(page, 'Nadja Vogt')).toContainText('Aufwandsspende');
 
     const address = page.getByTestId('run-group-addressMissing');
     await expect(address.getByTestId('run-item')).toHaveCount(3);
@@ -95,18 +99,18 @@ test.describe('finance donation run', () => {
     const footer = page.getByTestId('run-footer');
     const range = (await footer.getByTestId('run-number-range').textContent())!.trim();
     const [, first, last] = /^ZWB-\d{4}-(\d{3}) bis ZWB-\d{4}-(\d{3})$/.exec(range) ?? [];
-    expect(Number(last) - Number(first), range).toBe(2);
+    expect(Number(last) - Number(first), range).toBe(3);
     await expect(footer).toContainText('Ausstellen kann nur ein Mensch');
-    await expect(footer.getByRole('button', { name: '3 Bestätigungen ausstellen' })).toBeEnabled();
+    await expect(footer.getByRole('button', { name: '4 Bestätigungen ausstellen' })).toBeEnabled();
 
     // Ausschließen rechnet neu und steht in der Adresse — ein Neuladen zeigt dieselbe Vorschau.
     await page.getByRole('combobox', { name: 'Ausschließen' }).fill('Sportfreunde');
     await page.getByRole('option', { name: /Sportfreunde Beispieltal/ }).click();
-    await expect(footer.getByRole('button', { name: '2 Bestätigungen ausstellen' })).toBeVisible();
+    await expect(footer.getByRole('button', { name: '3 Bestätigungen ausstellen' })).toBeVisible();
     await expect(page.getByTestId('run-excluded')).toContainText('Sportfreunde Beispieltal');
     await expect(page).toHaveURL(/exclude=/);
     await page.goto(page.url());
-    await expect(page.getByTestId('run-footer').getByRole('button', { name: '2 Bestätigungen ausstellen' })).toBeVisible();
+    await expect(page.getByTestId('run-footer').getByRole('button', { name: '3 Bestätigungen ausstellen' })).toBeVisible();
     await expect(page.getByTestId('run-excluded')).toContainText('Sportfreunde Beispieltal');
     await expect(runItem(page, 'Sportfreunde Beispieltal')).toHaveCount(0);
   });
@@ -117,13 +121,13 @@ test.describe('finance donation run', () => {
     const continueUrl = '**/finance/donations/run/*/continue';
     await page.route(continueUrl, (route) => route.fulfill({ status: 503, body: '' }));
     await page.goto(`/finance/donations/run?year=${YEAR}`);
-    await page.getByTestId('run-footer').getByRole('button', { name: '3 Bestätigungen ausstellen' }).click();
+    await page.getByTestId('run-footer').getByRole('button', { name: '4 Bestätigungen ausstellen' }).click();
     await expect(page).toHaveURL(/run=/);
     await expect(step(page, 'run')).toHaveAttribute('aria-current', 'step');
     const progress = page.getByTestId('run-progress');
-    await expect(progress.getByRole('progressbar')).toHaveAttribute('max', '3');
+    await expect(progress.getByRole('progressbar')).toHaveAttribute('max', '4');
     const status = progress.getByTestId('run-progress-status');
-    await expect(status).toHaveText('0 von 3 Bestätigungen ausgestellt');
+    await expect(status).toHaveText('0 von 4 Bestätigungen ausgestellt');
     await expect(status).toHaveAttribute('aria-live', 'polite');
     await expect(progress).toContainText('Sie können die Seite verlassen');
 
@@ -131,11 +135,11 @@ test.describe('finance donation run', () => {
     await page.goto(page.url());
     await expect(step(page, 'result')).toHaveAttribute('aria-current', 'step', { timeout: 20_000 });
     const result = page.getByTestId('run-result');
-    await expect(result.getByTestId('run-summary')).toHaveText('3 von 3 Bestätigungen ausgestellt');
+    await expect(result.getByTestId('run-summary')).toHaveText('4 von 4 Bestätigungen ausgestellt');
 
     const [machine] = await Promise.all([page.waitForEvent('download'), result.getByRole('button', { name: 'Maschinelle Bestätigungen (PDF) · 2' }).click()]);
     expect(machine.suggestedFilename()).toMatch(/maschinell\.pdf$/);
-    const [signature] = await Promise.all([page.waitForEvent('download'), result.getByRole('button', { name: 'Zum Unterschreiben (PDF) · 1' }).click()]);
+    const [signature] = await Promise.all([page.waitForEvent('download'), result.getByRole('button', { name: 'Zum Unterschreiben (PDF) · 2' }).click()]);
     expect(signature.suggestedFilename()).toMatch(/zum-unterschreiben\.pdf$/);
 
     await page.goto('/finance/donations');
@@ -146,7 +150,7 @@ test.describe('finance donation run', () => {
     await loginAsAdmin(page);
     await runToResult(page);
     const result = page.getByTestId('run-result');
-    await expect(result.getByRole('link', { name: 'Unterschriebene Fassung fehlt · 1' })).toHaveAttribute('href', '/finance/donations?tab=needsSignature');
+    await expect(result.getByRole('link', { name: 'Unterschriebene Fassung fehlt · 2' })).toHaveAttribute('href', '/finance/donations?tab=needsSignature');
 
     await result.getByRole('button', { name: 'Versand für alle vermerken' }).click();
     const dialog = page.getByRole('dialog');
@@ -161,8 +165,9 @@ test.describe('finance donation run', () => {
     await expect(issuedRow(page, 'Sportfreunde Beispieltal')).toContainText('Post');
     await expect(issuedRow(page, 'Henrik Brandt').filter({ hasText: 'Sammel' })).toContainText('Post');
     await expect(issuedRow(page, 'Lukas Hofmann').filter({ hasText: 'Sammel' })).not.toContainText('Post');
-    // Dazu Sina Krügers Aufwandsspende aus dem Serienlauf des Vorjahrs — auch sie ohne Unterschrift.
-    await expect(page.getByRole('tab', { name: 'Unterschrift fehlt (3)' })).toBeVisible();
+    // Dazu Sina Krügers Aufwandsspende aus dem Serienlauf des Vorjahrs und (F8a Task 7) Nadja Vogts
+    // freigegebene Verzicht-Auslage aus diesem Lauf — beide ebenfalls ohne Unterschrift.
+    await expect(page.getByRole('tab', { name: 'Unterschrift fehlt (4)' })).toBeVisible();
     await page.goto('/finance/donations?tab=needsSignature');
     await expect(page.getByTestId('signature-steps').filter({ hasText: '36,00 €' })).toBeVisible();
   });
@@ -215,7 +220,7 @@ test.describe('finance donation run', () => {
     const row = page.getByTestId('run-row');
     await expect(row).toHaveCount(2);
     await row.filter({ hasNotText: 'Post' }).getByRole('link', { name: 'Öffnen' }).click();
-    await expect(page.getByTestId('run-summary')).toHaveText('3 von 3 Bestätigungen ausgestellt');
+    await expect(page.getByTestId('run-summary')).toHaveText('4 von 4 Bestätigungen ausgestellt');
     await expect(page.getByRole('button', { name: 'Maschinelle Bestätigungen (PDF) · 2' })).toBeEnabled();
     await expect(page.getByRole('button', { name: 'Versand für alle vermerken' })).toHaveCount(0);
   });

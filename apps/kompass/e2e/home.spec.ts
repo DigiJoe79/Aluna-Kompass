@@ -93,9 +93,11 @@ test.describe('home', () => {
     await page.getByRole('button', { name: 'Passwort setzen und fortfahren' }).click();
     await expect(page).toHaveURL('/');
     // `evaluateAll` wartet nicht: Die URL steht, bevor der Seiteninhalt nachgeliefert ist.
-    await expect(page.locator('[data-testid^="dashboard-tile-"]')).toHaveCount(3);
+    // F8a Task 7: der Finanz-Seed ergänzt seine gespeicherte Anordnung um „Wartet auf Ihre
+    // Freigabe“ — sonst sähe er sie erst nach „Vorgabe wiederherstellen“.
+    await expect(page.locator('[data-testid^="dashboard-tile-"]')).toHaveCount(4);
     const ids = await page.locator('[data-testid^="dashboard-tile-"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')));
-    expect(ids).toEqual(['dashboard-tile-core-followUps', 'dashboard-tile-dms-unsent', 'dashboard-tile-core-backup']);
+    expect(ids).toEqual(['dashboard-tile-core-followUps', 'dashboard-tile-dms-unsent', 'dashboard-tile-core-backup', 'dashboard-tile-finance-approvalsPending']);
     await expect(page.getByTestId('dashboard-tile-core-setup')).toHaveCount(0);
     // Jeder Link der Startseite führt auf eine Seite, die Jonas sehen darf.
     const hrefs = await page.locator('[data-testid^="dashboard-tile-"] a[href]').evaluateAll((els) => els.map((a) => a.getAttribute('href')!));

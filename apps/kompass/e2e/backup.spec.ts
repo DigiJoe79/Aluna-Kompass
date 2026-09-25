@@ -14,7 +14,8 @@ test('exports a backup and imports it back, ending all sessions', async ({ page,
   await page.getByRole('button', { name: 'Import vorbereiten' }).click();
   const confirm = page.getByRole('alertdialog');
   await expect(confirm).toContainText('Bestand der Umgebung „test“ überschreiben?');
-  await expect(confirm).toContainText('5 Nutzer');
+  // 5 Kernseed-Personen + Nadja Vogt (F8a Task 7, Rolle „Auslagen einreichen“).
+  await expect(confirm).toContainText('6 Nutzer');
   await expect(confirm.getByRole('button', { name: 'Bestand überschreiben' })).toBeDisabled();
   await confirm.getByLabel('Tippen Sie zur Bestätigung den Umgebungsnamen').fill('test');
   await confirm.getByRole('button', { name: 'Bestand überschreiben' }).click();

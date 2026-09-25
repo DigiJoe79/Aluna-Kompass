@@ -1,4 +1,4 @@
-import { fakeTextExtraction, getEffectivePermissions, schema, unwrap, writeSettingInternal } from '@kompass/core';
+import { fakeTextExtraction, getDashboardLayout, getEffectivePermissions, readSetting, schema, unwrap, writeSettingInternal } from '@kompass/core';
 import { insertUser, systemContext } from '@kompass/core/testing';
 import { contactRoles, contacts } from '@kompass/module-contacts';
 import { projects } from '@kompass/module-projects';
@@ -26,8 +26,11 @@ import { listOpenItems } from '../src/ledger/open-items';
 import { getBalances } from '../src/ledger/overview';
 import { getProjectFinance } from '../src/ledger/project-settings';
 import { listPurposes } from '../src/ledger/purposes';
-import { financeEntries, financeEntryDocuments } from '../src/schema';
+import { financeCategories, financeEntries, financeEntryDocuments } from '../src/schema';
 import { seedFinance } from '../src/seed';
+import { listApprovals } from '../src/allocation/approvals';
+import { listMyExpenseClaims } from '../src/allocation/expenses';
+import { suggestExpenseCategories } from '../src/allocation/suggest';
 import { checkConfirmable } from '../src/donations/check';
 import { getInKindDetails } from '../src/donations/in-kind';
 import { listConfirmations, listUncertifiedDonations } from '../src/donations/confirmations';
@@ -582,6 +585,98 @@ describe('seedFinance', () => {
       expect(unwrap(await listConfirmations(deps, ctx, { tab: 'issued' })).total).toBe(0);
       expect(unwrap(await listNotices(deps, ctx, {}))).toHaveLength(1);
       expect(unwrap(await listNotices(deps, ctx, { includeInactive: true }))).toHaveLength(2);
+    });
+  });
+
+  describe('Auslagen (F8a Task 7)', () => {
+    async function seededWithClerkAndApprover() {
+      const f = setupFinance();
+      insertUser(f.deps, { name: 'Jonas Feld', email: 'jonas@kompass.local' });
+      f.deps.db.transaction((tx) => installFinance(tx, f.deps, systemContext()));
+      await seedFinance(f.deps, f.ctx);
+      await seedFinance(f.deps, f.ctx); // idempotent
+      const nadja = f.deps.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, 'nadja@kompass.local')).get()!;
+      const jonas = f.deps.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, 'jonas@kompass.local')).get()!;
+      return { ...f, nadja, jonas };
+    }
+
+    it('seeds a claim in every state — draft, submitted, approved unpaid, paid, rejected, waiver approved —, idempotently', async () => {
+      const { deps, ctx, nadja } = await seededWithClerkAndApprover();
+      const nadjaCtx = { ...ctx, userId: nadja.id, permissions: new Set([...ctx.permissions, 'finance.expensesSubmit']) };
+      const claims = unwrap(await listMyExpenseClaims(deps, nadjaCtx, { limit: 50, offset: 0 }));
+      expect(claims.total).toBe(6);
+
+      const draft = claims.items.find((c) => c.state === 'draft');
+      expect(draft).toMatchObject({ state: 'draft' });
+      expect(draft!.positions[0]!.documentId).toBeNull();
+
+      const submitted = claims.items.find((c) => c.state === 'submitted');
+      expect(submitted).toBeTruthy();
+      expect(submitted!.positions.some((p) => p.kind === 'trip' && p.amountCents > 0)).toBe(true);
+
+      const approvedUnpaid = claims.items.find((c) => c.stateLabelKey === 'approved' && !c.waiver);
+      expect(approvedUnpaid?.openItemId).toBeTruthy();
+      expect(approvedUnpaid?.paid?.state).toBe('unpaid');
+
+      const paid = claims.items.find((c) => c.stateLabelKey === 'paid');
+      expect(paid?.paid?.state).toBe('paid');
+
+      const rejected = claims.items.find((c) => c.state === 'rejected');
+      expect(rejected?.rejectNote).toBeTruthy();
+
+      const waiverClaim = claims.items.find((c) => c.waiver);
+      expect(waiverClaim).toMatchObject({ waiver: true, state: 'approved' });
+      expect(waiverClaim!.entryId).toBeTruthy();
+      expect(waiverClaim!.waiverDeclarationDocumentId).toBeTruthy();
+      expect(waiverClaim!.waiverSignedDocumentId).toBeTruthy();
+    });
+
+    it('gives Nadja Vogt (invented, not a Kernseed person) the role "Auslagen einreichen" — Jonas Feld keeps approving, never his own', async () => {
+      const { deps, nadja, jonas } = await seededWithClerkAndApprover();
+      const nadjaPermissions = getEffectivePermissions(deps.db, deps.registry, nadja.id);
+      expect(nadjaPermissions.has('finance.expensesSubmit')).toBe(true);
+      expect(nadjaPermissions.has('finance.approve')).toBe(false);
+      const jonasPermissions = getEffectivePermissions(deps.db, deps.registry, jonas.id);
+      expect(jonasPermissions.has('finance.approve')).toBe(true);
+    });
+
+    it('adds the "Wartet auf Ihre Freigabe" tile to Jonas Feld\'s saved layout, once', async () => {
+      const { deps, ctx, jonas } = await seededWithClerkAndApprover();
+      const jonasCtx = { ...ctx, userId: jonas.id, permissions: getEffectivePermissions(deps.db, deps.registry, jonas.id) };
+      const layout = unwrap(await getDashboardLayout(deps, jonasCtx));
+      expect(layout.tiles).toContainEqual({ module: 'finance', key: 'approvalsPending', options: {} });
+      expect(layout.tiles.filter((t) => t.module === 'finance' && t.key === 'approvalsPending')).toHaveLength(1);
+    });
+
+    it('sets the association-wide waiver basis text — otherwise creating a declaration fails with waiverBasisMissing', async () => {
+      const { deps } = await seededWithClerkAndApprover();
+      expect(readSetting<string>(deps, 'finance.expenseWaiverBasisText')).toBeTruthy();
+    });
+
+    it('suggests the category of the finalized "Büromaterial Altjahr" entry for the submitted claim, never as a must', async () => {
+      const { deps, ctx, jonas } = await seededWithClerkAndApprover();
+      const approveCtx = { ...ctx, userId: jonas.id, permissions: new Set([...ctx.permissions, 'finance.approve']) };
+      const queue = unwrap(await listApprovals(deps, approveCtx, {}));
+      expect(queue.items).toHaveLength(1); // nur der eingereichte Büromaterial-Antrag wartet noch.
+      const suggestions = unwrap(await suggestExpenseCategories(deps, approveCtx, { claimId: queue.items[0]!.claimId }));
+      const office = deps.db.select().from(financeCategories).where(eq(financeCategories.key, 'office')).get()!;
+      const buromaterialAltjahr = deps.db.select().from(financeEntries).where(eq(financeEntries.text, 'Büromaterial Altjahr')).get()!;
+      expect(suggestions).toContainEqual(expect.objectContaining({ categoryId: office.id, reason: { kind: 'similarEntry', entryNumber: buromaterialAltjahr.number } }));
+    });
+
+    it('leaves no purpose text, IBAN or rejection note of the seeded claims in the finance audit log', async () => {
+      const { deps } = await seededWithClerkAndApprover();
+      // `entityType: 'setting'` ausgenommen: Das ist der Kern-Weg (`writeSettingInternal`), der jede
+      // Einstellung im Klartext protokolliert — auch `finance.expenseWaiverBasisText`, das erste
+      // Textfeld dieser Art in Finanzen (Befundliste § 4, Fund „Protokoll des Kerns“). Hier zählt nur,
+      // was Finanzen selbst in `financeAudit` schreibt (`AUDIT_FIELDS`-Weißliste).
+      const log = JSON.stringify(deps.db.select().from(schema.auditLog).all().filter((e) => e.action.startsWith('finance.') && e.entityType !== 'setting'));
+      for (const secret of [
+        'Deko für den Infoabend', 'Büromaterial für die Infotheke', 'Getränke für die Versammlung', 'Portokosten Mitgliederbrief', 'Blumenstrauß zum Jubiläum', 'Fahrtkosten Pflegestelle Juli',
+        'Kein Vereinszweck, bitte privat tragen', 'DE93999999990000000001',
+      ]) {
+        expect(log, secret).not.toContain(secret);
+      }
     });
   });
 });
