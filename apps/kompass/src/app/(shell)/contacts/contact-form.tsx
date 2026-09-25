@@ -1,6 +1,6 @@
 'use client';
 
-import { formatPostalAddress } from '@kompass/module-contacts';
+import { formatPostalAddress } from '@kompass/module-contacts/address';
 import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useMemo, useState } from 'react';

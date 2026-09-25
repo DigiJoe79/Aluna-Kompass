@@ -1,5 +1,13 @@
 import type { ContactRow } from './schema';
 
+/**
+ * Reine Anschriftslogik (N3 Nachtrag B): keine Datenbank, kein `@kompass/core`
+ * — auch im Browser nutzbar über `@kompass/module-contacts/address`. Der
+ * Haupteinstieg `@kompass/module-contacts` exportiert zusätzlich den Dienst
+ * und zieht damit den Server-Graphen mit; eine `'use client'`-Datei importiert
+ * deshalb nur von hier (Wächter `apps/kompass/tests/client-imports.test.ts`).
+ */
+
 /** Der Ausschnitt aus einem Kontakt, den ein Anschriftsblock braucht. */
 export type PostalAddressInput = Pick<
   ContactRow,
