@@ -192,6 +192,17 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 - **Datumsanzeige in Finanzen vereinheitlicht.** Kontokarte, Sätze und
   Grenzen, offene Zahlungen und die Barkasse zeigen jetzt durchgängig das
   eingestellte Datumsformat statt eines rohen ISO-Datums.
+- **Zuwendungsbestätigungen im Wortlaut der amtlichen Muster.** Der Hinweis
+  zur Anerkennung spricht jetzt von der „Ausstellung des Bescheides“, die
+  Sammelbestätigung vom Mitgliedsbeitrag im Singular, und der vereinfachte
+  Nachweis nennt auch die tatsächliche Durchführung der Zahlung.
+- **Steuerbefreiung ab am Bescheid; Sperre statt Begründung.** Jeder Bescheid
+  trägt jetzt, ab wann er die Steuerbefreiung ausspricht. Für Zuwendungen
+  davor stellt Kompass keine Bestätigung mehr aus — auch nicht im Serienlauf,
+  wo sie als blockiert erscheinen; die frühere Begründung „vor dem ältesten
+  Bescheid“ entfällt. Das Update ergänzt die Datenbank (Migration 0025);
+  bereits erfasste Bescheide bekommen ihr Bescheiddatum als Beginn — prüfen
+  Sie unter Finanzen → Spenden → Bescheide, ob das stimmt.
 
 ### Behoben
 

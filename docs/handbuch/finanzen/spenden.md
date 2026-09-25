@@ -10,9 +10,19 @@ Exemplar in der Akte ab.
 
 Eine Zuwendungsbestätigung beruft sich immer auf einen Bescheid des
 Finanzamts. Unter Spenden → Bescheide erfassen Sie ihn mit Finanzamt,
-Steuernummer, Datum, bei endgültigen Bescheiden dem Veranlagungszeitraum und
-den begünstigten Zwecken im Wortlaut — so, wie sie im Bescheid stehen; sie
-erscheinen wörtlich auf jeder Bestätigung.
+Steuernummer, Datum, **Steuerbefreiung ab**, bei endgültigen Bescheiden dem
+Veranlagungszeitraum und den begünstigten Zwecken im Wortlaut — so, wie sie
+im Bescheid stehen; sie erscheinen wörtlich auf jeder Bestätigung.
+
+**Steuerbefreiung ab** ist der erste Tag des Veranlagungszeitraums, ab dem der
+Bescheid die Befreiung ausspricht — nicht das Datum des Bescheids. Eine
+vorläufige Anerkennung kann die Befreiung auch erst für das nächste Jahr
+vorsehen; ein Freistellungsbescheid gilt oft rückwirkend für ein früheres Jahr.
+Für Zuwendungen, die vor diesem Tag eingingen, sind sie nicht abziehbar, und
+eine Bestätigung darüber wäre unrichtig (BMF-Schreiben vom 7. November 2013,
+Nr. 14). Kompass stellt dafür deshalb keine Bestätigung aus. Maßgeblich ist
+der früheste Beginn aller Bescheide, die nicht irrtümlich erfasst sind; die
+Spalte „Befreiung ab“ zeigt ihn je Bescheid.
 
 Kompass kennt drei Arten:
 
@@ -76,7 +86,14 @@ Ausstellungstag ein Unterzeichner gilt, sein Bild hinterlegt und die Anzeige
 eingetragen ist, entstehen Geldbestätigungen maschinell — mit dem Bild der
 Unterschrift und dem Hinweis auf das maschinelle Verfahren. Sonst trägt die
 Bestätigung ein Unterschriftsfeld und wird von Hand unterschrieben (siehe
-„Unterschrift fehlt“). Die Checkliste unter Einstellungen → Finanzen führt
+„Unterschrift fehlt“).
+
+Sach- und Aufwandsspenden werden nie maschinell bestätigt, auch wenn das
+Verfahren vollständig eingerichtet ist: Die Regelung gilt nicht für Sach- und
+Aufwandsspenden (R 10b.1 Abs. 4 Satz 3 EStR). Ihre Bestätigungen tragen immer
+ein Unterschriftsfeld.
+
+Die Checkliste unter Einstellungen → Finanzen führt
 beide Schritte, Bescheid und maschinelles Verfahren, als optionale Schritte.
 
 ## Eine Bestätigung ausstellen
@@ -95,6 +112,9 @@ Ausrufezeichen und, wo etwas fehlt, einem Link, der es behebt:
   ebenso die des Vereins;
 - die Spende ist noch nicht bestätigt;
 - am Ausstellungstag trägt ein Bescheid („Bescheid erfassen“);
+- die Zuwendung liegt nicht vor dem Beginn der Steuerbefreiung („Bescheid und
+  Beginn der Befreiung prüfen“) — liegt sie davor, bleibt sie gesperrt, und
+  keine Begründung ändert das;
 - nach Rückgaben bleibt ein Betrag über null;
 - die Buchung ist belegt („Beleg nachreichen“);
 - eine Sachspende ist beschrieben;
@@ -102,9 +122,7 @@ Ausrufezeichen und, wo etwas fehlt, einem Link, der es behebt:
 - bei Aufwandsspenden: Aufwandsspenden sind eingeschaltet.
 
 Warnungen sperren nicht, verlangen aber einen Blick: eine Organisation als
-Spender, eine Anschrift im Ausland, eine Spende vor dem ältesten erfassten
-Bescheid — dann fragt der Dialog, warum die Bestätigung trotzdem richtig ist,
-und die Antwort steht an der Bestätigung.
+Spender oder eine Anschrift im Ausland.
 
 Rechts erscheint die Vorschau als PDF mit dem Wasserzeichen ENTWURF, sobald
 nichts mehr fehlt. Darunter stehen das Ausstellungsdatum (vorgegeben: heute)
@@ -279,8 +297,6 @@ und Bescheide selbst werden nie gelöscht.
 Kompass setzt um, was der Verein beschlossen hat; einige Punkte gehören
 vorher geklärt, am besten mit Ihrer Steuerberatung und im Vorstand:
 
-- ob Bestätigungen für Spenden ausgestellt werden, die vor dem Datum des
-  ältesten Bescheids eingingen;
 - ob und ab wann der Verein Bestätigungen maschinell erstellt und das dem
   Finanzamt anzeigt;
 - ein Vorstandsbeschluss, wer Bestätigungen ausstellt und unterzeichnet.
