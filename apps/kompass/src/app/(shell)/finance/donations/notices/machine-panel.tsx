@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { BlockedState } from '@/components/blocked-state';
 import { useDateFormat } from '@/components/date-format-provider';
 import { Notice } from '@/components/notice';
+import { ReceiptDrop } from '@/components/finance/receipt-drop';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
@@ -24,7 +25,7 @@ import { createNotificationLetterAction, saveSignerAction, uploadFacsimileAction
  * Mediathek), das Anzeigeschreiben als Entwurf der Akte und die Statuszeile.
  * Ohne `dms.create` steht statt des Knopfs, wer es kann (`BlockedState`).
  */
-export function MachinePanel({ signers, status, canIssue, canDraftLetter, draftNames }: { signers: SignerView[]; status: MachineProcedureStatus; canIssue: boolean; canDraftLetter: boolean; draftNames: string[] }) {
+export function MachinePanel({ signers, status, canIssue, canDraftLetter, draftNames, facsimileMaxBytes }: { signers: SignerView[]; status: MachineProcedureStatus; canIssue: boolean; canDraftLetter: boolean; draftNames: string[]; facsimileMaxBytes: number }) {
   const t = useTranslations('finance.donations.machine');
   const { date } = useDateFormat();
   const router = useRouter();
@@ -100,14 +101,17 @@ export function MachinePanel({ signers, status, canIssue, canDraftLetter, draftN
                 <TableCell className="font-mono tabular-nums">{signer.notifiedOn ? date(signer.notifiedOn) : <span className="font-sans text-muted-ink">{t('notNotified')}</span>}</TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-1.5">
-                    {signer.hasFacsimile && canIssue ? (
-                      // Kein next/image: Die Bytes kommen nur über den Handler mit `finance.donationsIssue`, nie zwischengespeichert.
-                      <img key={signer.facsimileChecksum ?? 'none'} src={`/finance/donations/facsimile?signerId=${encodeURIComponent(signer.id)}&v=${encodeURIComponent((signer.facsimileChecksum ?? '').slice(0, 12))}`} alt={t('facsimileAlt', { name: signer.signerName })} className="h-12 max-w-[180px] rounded-sm border border-line bg-surface object-contain p-1" />
-                    ) : signer.hasFacsimile ? null : (
-                      <span className="text-[13px] text-muted-ink">{t('noFacsimile')}</span>
-                    )}
+                    {!signer.hasFacsimile ? <span className="text-[13px] text-muted-ink">{t('noFacsimile')}</span> : null}
                     {canIssue ? (
-                      <input type="file" accept="image/png,image/jpeg" aria-label={t('upload')} title={t('upload')} disabled={pending} className="max-w-[220px] text-[12px] text-ink-2" onChange={(e) => { void upload(signer.id, e.target.files?.[0]); e.target.value = ''; }} />
+                      <ReceiptDrop
+                        key={signer.facsimileChecksum ?? 'none'}
+                        kind="image"
+                        maxBytes={facsimileMaxBytes}
+                        disabled={pending}
+                        previewSrc={signer.hasFacsimile ? `/finance/donations/facsimile?signerId=${encodeURIComponent(signer.id)}&v=${encodeURIComponent((signer.facsimileChecksum ?? '').slice(0, 12))}` : null}
+                        previewAlt={t('facsimileAlt', { name: signer.signerName })}
+                        onFiles={(files) => void upload(signer.id, files[0])}
+                      />
                     ) : null}
                   </div>
                 </TableCell>

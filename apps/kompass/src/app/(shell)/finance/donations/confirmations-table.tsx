@@ -82,7 +82,7 @@ export function ConfirmationsTable({ rows, canIssue, initialOpenId, today }: { r
   return (
     <div className="overflow-hidden rounded-md border border-line bg-surface">
       <Table>
-        <TableHeader className="bg-table-head text-left text-[11px] font-bold uppercase tracking-[.06em] text-muted-ink">
+        <TableHeader>
           <TableRow className="h-9">
             <TableHead className="px-4">{t('columns.number')}</TableHead>
             <TableHead className="px-4">{t('columns.issuedOn')}</TableHead>

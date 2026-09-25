@@ -33,7 +33,7 @@ export default async function FinanceForeignMoneyPage() {
       ) : (
         <div className="overflow-hidden rounded-md border border-line bg-surface">
           <Table>
-            <TableHeader className="bg-table-head text-left text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink">
+            <TableHeader>
               <TableRow className="h-9">
                 <TableHead className="px-4">{t('date')}</TableHead>
                 <TableHead className="px-4">{t('holder')}</TableHead>

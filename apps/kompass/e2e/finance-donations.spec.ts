@@ -360,12 +360,10 @@ test.describe('finance donation notices', () => {
 
     await page.goto('/admin/settings');
     await page.getByRole('tab', { name: 'Steuer & Bescheide' }).click();
-    await expect(page.getByLabel('Finanzamt')).toHaveValue('Finanzamt Beispielstadt');
-    await expect(page.getByLabel('Steuernummer')).toHaveValue('11/222/33333');
-    await expect(page.getByLabel('Art des Bescheids')).toHaveValue('exemptionNotice');
-    await expect(page.getByLabel('Datum des Bescheids')).toHaveValue(today);
-    for (const label of ['Finanzamt', 'Steuernummer', 'Art des Bescheids', 'Datum des Bescheids']) await expect(page.getByLabel(label), label).not.toBeEditable();
-    await expect(page.getByText('Wird unter Finanzen → Spenden → Bescheide geführt.')).toHaveCount(4);
+    const managedValues = page.getByTestId('managed-field-value');
+    await expect(managedValues).toHaveText(['11/222/33333', 'Finanzamt Beispielstadt', 'Freistellungsbescheid', today]);
+    for (const label of ['Finanzamt', 'Steuernummer', 'Art des Bescheids', 'Datum des Bescheids']) await expect(page.getByLabel(label)).toHaveCount(0);
+    await expect(page.getByText('Wird unter Finanzen → Spenden → Bescheide geführt.')).toHaveCount(1);
     await expect(page.getByLabel('Satzungszweck')).toBeEditable();
   });
 
@@ -417,7 +415,7 @@ test.describe('finance donation notices', () => {
 
     const mara = panel.getByTestId('signer-row').filter({ hasText: 'Mara Winter' });
     await expect(panel.getByText('Das Bild der Unterschrift liegt nicht in der Mediathek')).toBeVisible();
-    await mara.getByLabel('Unterschrift als Bild hochladen').setInputFiles({ name: 'unterschrift.png', mimeType: 'image/png', buffer: SIGNATURE_PNG });
+    await mara.getByTestId('voucher-file-input').setInputFiles({ name: 'unterschrift.png', mimeType: 'image/png', buffer: SIGNATURE_PNG });
     await expect(page.getByText('Bild der Unterschrift gespeichert.')).toBeVisible();
     const preview = mara.getByRole('img', { name: 'Unterschrift von Mara Winter' });
     await expect(preview).toHaveAttribute('src', /^\/finance\/donations\/facsimile\?signerId=/);
@@ -445,6 +443,33 @@ test.describe('finance donation notices', () => {
     await page.goto('/admin/finance?panel=checklist');
     await expect(page.getByTestId('requirement-notice')).toContainText('ohne Bescheid keine Zuwendungsbestätigungen');
     await expect(page.getByTestId('requirement-machineProcedure')).toHaveAttribute('data-done', 'true');
+  });
+
+  test('das Faksimile wird über die Ablagefläche hochgeladen, ein PDF wird am Feld abgelehnt', async ({ page }) => {
+    await page.goto('/finance/donations/notices');
+    // Jonas Feld trägt aus dem Seed schon ein Faksimile — die Fläche zeigt zuerst die Vorschau, „ersetzen“ öffnet die Ablage.
+    const jonas = page.getByTestId('machine-panel').getByTestId('signer-row').filter({ hasText: 'Jonas Feld' });
+    await jonas.getByRole('button', { name: 'ersetzen' }).click();
+
+    await jonas.getByTestId('voucher-file-input').setInputFiles({ name: 'bescheid.pdf', mimeType: 'application/pdf', buffer: PDF });
+    await expect(jonas.getByRole('alert')).toHaveText('Das ist ein PDF. Hier braucht es ein Bild der Unterschrift (PNG oder JPEG).');
+
+    await jonas.getByTestId('voucher-file-input').setInputFiles({ name: 'unterschrift.png', mimeType: 'image/png', buffer: SIGNATURE_PNG });
+    await expect(page.getByText('Bild der Unterschrift gespeichert.')).toBeVisible();
+    const preview = jonas.getByRole('img', { name: 'Unterschrift von Jonas Feld' });
+    await expect(preview).toHaveAttribute('src', /^\/finance\/donations\/facsimile\?signerId=/);
+  });
+
+  test('Tabellenkopf: Bescheide und Bestätigungen tragen denselben Hintergrund und dieselbe Schriftgröße', async ({ page }) => {
+    await page.goto('/finance/donations');
+    const confirmationsHead = page.locator('table thead').first();
+    const background = await confirmationsHead.evaluate((el) => getComputedStyle(el).backgroundColor);
+    const fontSize = await confirmationsHead.evaluate((el) => getComputedStyle(el).fontSize);
+
+    await page.goto('/finance/donations/notices');
+    const noticesHead = page.getByRole('table', { name: 'Bescheide des Finanzamts' }).locator('thead');
+    await expect(noticesHead).toHaveCSS('background-color', background);
+    await expect(noticesHead).toHaveCSS('font-size', fontSize);
   });
 
   test('„Aufgehoben oder ersetzt am“ beendet die Gültigkeit taggenau', async ({ page }) => {

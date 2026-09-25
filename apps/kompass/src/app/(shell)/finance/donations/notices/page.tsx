@@ -1,5 +1,5 @@
 import { hasPermission, isModuleEnabled, listUserNamesWithPermission, readSetting } from '@kompass/core';
-import { getMachineProcedure, listNotices, noticeExpiryInternal } from '@kompass/module-finance';
+import { FACSIMILE_MAX_BYTES, getMachineProcedure, listNotices, noticeExpiryInternal } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
@@ -53,7 +53,7 @@ export default async function FinanceDonationNoticesPage() {
         />
       )}
 
-      <MachinePanel signers={machineRes.value.signers} status={machineRes.value.status} canIssue={canIssue} canDraftLetter={canDraftLetter} draftNames={draftNames} />
+      <MachinePanel signers={machineRes.value.signers} status={machineRes.value.status} canIssue={canIssue} canDraftLetter={canDraftLetter} draftNames={draftNames} facsimileMaxBytes={FACSIMILE_MAX_BYTES} />
     </div>
   );
 }

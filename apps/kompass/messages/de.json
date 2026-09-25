@@ -2452,7 +2452,12 @@
       "none": "Noch kein Beleg.",
       "open": "öffnen",
       "remove": "entfernen",
-      "replacedBy": "ersetzt durch {number}"
+      "replacedBy": "ersetzt durch {number}",
+      "dragOrPickImage": "Unterschrift als Bild hierher ziehen oder auswählen",
+      "isPdf": "Das ist ein PDF. Hier braucht es ein Bild der Unterschrift (PNG oder JPEG).",
+      "wrongTypeImage": "Kompass nimmt nur PNG oder JPEG als Bild der Unterschrift.",
+      "tooLarge": "Diese Datei ist größer als {mb} MB.",
+      "replace": "ersetzen"
     },
     "splitRow": {
       "category": "Kategorie",
