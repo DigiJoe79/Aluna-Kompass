@@ -420,11 +420,21 @@ export async function recordConfirmationDispatch(deps: Deps, ctx: CallContext, i
   if (loaded.value.sentAt) return financeConflict('confirmationAlreadySent');
 
   return deps.db.transaction((tx: DbOrTx) => {
-    const changed = tx.update(financeConfirmations).set({ sentAt: v.sentAt, sentVia: v.sentVia }).where(and(eq(financeConfirmations.id, v.id), isNull(financeConfirmations.sentAt))).run().changes;
-    if (changed !== 1) return financeConflict('confirmationAlreadySent');
-    financeAudit(tx, deps, ctx, { action: 'finance.confirmation.dispatch', entity: 'financeConfirmation', id: v.id, after: { sentVia: v.sentVia }, summary: `Versand von ${loaded.value.documentNumber} vermerkt` });
+    if (!recordDispatchInternal(tx, deps, ctx, loaded.value, v.sentAt, v.sentVia)) return financeConflict('confirmationAlreadySent');
     return ok(viewInternal(tx, v.id)!);
   });
+}
+
+/**
+ * Den Versandvermerk einer Bestätigung setzen, in der offenen Transaktion —
+ * nur, wenn noch keiner steht; `false`, wenn ein anderer schneller war. Auch
+ * für den Versandvermerk für alle des Serienlaufs.
+ */
+export function recordDispatchInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, row: Pick<FinanceConfirmationRow, 'id' | 'documentNumber'>, sentAt: string, sentVia: 'post' | 'email' | 'handed'): boolean {
+  const changed = tx.update(financeConfirmations).set({ sentAt, sentVia }).where(and(eq(financeConfirmations.id, row.id), isNull(financeConfirmations.sentAt), isNull(financeConfirmations.voidedAt))).run().changes;
+  if (changed !== 1) return false;
+  financeAudit(tx, deps, ctx, { action: 'finance.confirmation.dispatch', entity: 'financeConfirmation', id: row.id, after: { sentVia }, summary: `Versand von ${row.documentNumber} vermerkt` });
+  return true;
 }
 
 const signedSchema = z.object({
