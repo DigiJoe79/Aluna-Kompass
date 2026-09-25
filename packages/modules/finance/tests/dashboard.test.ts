@@ -1,10 +1,11 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { roleIdByOrigin, schema, unwrap } from '@kompass/core';
+import { roleIdByOrigin, schema, unwrap, writeSettingInternal } from '@kompass/core';
 import { ctxWith, insertUser, systemContext } from '@kompass/core/testing';
 import { createContact, linkUserToContact } from '@kompass/module-contacts';
 import { describe, expect, it } from 'vitest';
 import { FINANCE_DASHBOARD_TILES } from '../src/dashboard';
+import { saveNotice } from '../src/donations/notices';
 import { importStatement } from '../src/import/runs';
 import { markTransactionForeign } from '../src/import/transit';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
@@ -211,5 +212,37 @@ describe('finance dashboard tiles', () => {
     expect(result.lines.find((l) => l.titleKey === 'foreignMoney')).toEqual({ titleKey: 'foreignMoney', values: { count: 1 }, href: '/finance/work/foreign' });
     expect(result.lines.find((l) => l.titleKey === 'vouchersWithoutEntry')).toEqual({ titleKey: 'vouchersWithoutEntry', values: { count: 2 }, href: '/finance/work/vouchers' });
     expect(JSON.stringify(result)).not.toMatch(/Erika|Beispiel|Nachbarverein|Futterhaus/);
+  });
+});
+
+describe('finance to-do tile — notices (F6a)', () => {
+  it('warns about an expiring notice from the configured months on, and about a missing notice only once certifiable lines exist', async () => {
+    const f = await ledgerFixture();
+    f.deps.clock.set('2026-03-01T10:00:00.000Z');
+    const tile = tileByKey('todo');
+    const noticeLines = async () => {
+      const result = await tile.load(f.deps, f.ctx, {});
+      if (result.kind !== 'list') throw new Error('expected list');
+      return result.lines.filter((l) => l.titleKey === 'noticeExpiring' || l.titleKey === 'noNotice');
+    };
+
+    // Ohne bescheinigungsfähige Zeile fehlt kein Bescheid — der Verein bucht vielleicht nur Zweckbetrieb.
+    expect(await noticeLines()).toEqual([]);
+    await f.finalDonation({ date: '2026-02-01', cents: 5000, contactId: f.donor.id });
+    expect(await noticeLines()).toEqual([{ titleKey: 'noNotice', values: {}, href: '/finance/donations/notices' }]);
+
+    unwrap(await saveNotice(f.deps, f.ctx, { kind: 'section60a', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2023-09-15', purposesText: 'Tierschutz' }));
+    expect(await noticeLines()).toEqual([]); // gültig bis 2026-09-15, sechs Monate Vorlauf beginnen am 2026-03-15
+
+    f.deps.clock.set('2026-04-01T10:00:00.000Z');
+    expect(await noticeLines()).toEqual([{ date: '2026-09-15', titleKey: 'noticeExpiring', values: { kind: 'section60a', months: 5 }, href: '/finance/donations/notices' }]);
+
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.noticeExpiryWarnMonths', 3, 'test'));
+    expect(await noticeLines()).toEqual([]);
+
+    // Abgelaufen: dann fehlt wieder ein Bescheid.
+    f.deps.clock.set('2026-09-16T10:00:00.000Z');
+    expect((await noticeLines()).map((l) => l.titleKey)).toEqual(['noNotice']);
+    expect(JSON.stringify(await tile.load(f.deps, f.ctx, {}))).not.toMatch(/Musterspenderin|Musterstadt/);
   });
 });

@@ -6,6 +6,7 @@ import { createContact, linkUserToContact } from '@kompass/module-contacts';
 import { describe, expect, it } from 'vitest';
 import { createAccount, setAccountActive } from '../src/ledger/accounts';
 import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
+import { saveNotice } from '../src/donations/notices';
 import { applyTaxDefaults, confirmSetupStep, getPermissionMatrix, getSetupStatus, setFinanceLimit, setFinanceSwitch } from '../src/ledger/setup';
 import { installFinance } from '../src/install';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
@@ -18,8 +19,8 @@ describe('finance setup status', () => {
     const { deps, ctx } = setupFinance();
     const status = unwrap(await getSetupStatus(deps, ctx));
     expect(status.complete).toBe(false);
-    expect(status.steps.map((s) => s.key)).toEqual(['fiscalYear', 'account', 'roles', 'categories', 'tax', 'importFormat']);
-    // importFormat ist ohne Bankkonto vakuos erfüllt (nichts, was ein Format bräuchte) — die übrigen fünf sind offen.
+    expect(status.steps.map((s) => s.key)).toEqual(['fiscalYear', 'account', 'roles', 'categories', 'tax', 'importFormat', 'notice']);
+    // importFormat ist ohne Bankkonto vakuos erfüllt (nichts, was ein Format bräuchte) — die übrigen sind offen.
     for (const step of status.steps.filter((s) => s.key !== 'importFormat')) expect(step.done, step.key).toBe(false);
     const account = status.steps.find((s) => s.key === 'account')!;
     expect(account.dependsOn).toBe('fiscalYear');
@@ -32,7 +33,7 @@ describe('finance setup status', () => {
     expect(importFormat.required).toBe(false);
     expect(importFormat.dependsOn).toBe('account');
     expect(importFormat.blocked).toBe(true);
-    for (const step of status.steps.filter((s) => s.key !== 'importFormat')) expect(step.required, step.key).toBe(true);
+    for (const step of status.steps.filter((s) => s.key !== 'importFormat' && s.key !== 'notice')) expect(step.required, step.key).toBe(true);
   });
 
   it('the import format step counts bank and payment-service accounts and names how many lack a format (F4b)', async () => {
@@ -84,6 +85,23 @@ describe('finance setup status', () => {
     unwrap(await setAccountActive(deps, ctx, { id: formatlos.id, isActive: false, expectedVersion: formatlos.updatedAt }));
     const afterDeactivating = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'importFormat')!;
     expect(afterDeactivating.done).toBe(true); // nur aktive Bankkonten zaehlen
+  });
+
+  it('adds the optional notice step, done while a notice is valid today', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.clock.set('2026-03-01T10:00:00.000Z');
+    const open = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'notice')!;
+    expect(open).toMatchObject({ required: false, done: false, dependsOn: null, blocked: false, detail: {}, permission: 'finance.donationsIssue' });
+
+    const notice = unwrap(await saveNotice(deps, ctx, { kind: 'section60a', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2023-09-15', purposesText: 'Tierschutz' }));
+    const status = unwrap(await getSetupStatus(deps, ctx));
+    expect(status.steps.find((s) => s.key === 'notice')).toMatchObject({ done: true, detail: { validUntil: '2026-09-15' } });
+
+    deps.clock.set('2026-09-16T10:00:00.000Z');
+    expect(unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'notice')).toMatchObject({ done: false, detail: {} });
+    void notice;
+    // Optional: ein offener Bescheid-Schritt kippt die Einrichtung nicht.
+    expect(status.complete).toBe(false);
   });
 
   it('reports roles done only when each finance role has an active user and every finance user is linked to a contact', async () => {

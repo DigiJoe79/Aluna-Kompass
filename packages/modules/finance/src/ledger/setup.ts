@@ -20,9 +20,10 @@ import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
 import { FINANCE_PERMISSIONS } from '../permissions';
-import { financeAccounts, financeFiscalYears } from '../schema';
+import { financeAccounts, financeFiscalYears, financeNotices } from '../schema';
+import { noticeValidAt } from './notice-validity';
 
-export type SetupStepKey = 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax' | 'importFormat';
+export type SetupStepKey = 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax' | 'importFormat' | 'notice';
 
 export interface SetupStep {
   key: SetupStepKey;
@@ -138,6 +139,9 @@ export async function getSetupStatus(deps: Deps, ctx: CallContext): Promise<Resu
   const roles = rolesStepDetail(deps);
   const categoriesConfirmedAt = readSetting<string | null>(deps, 'finance.setupCategoriesConfirmedAt');
   const taxConfirmedAt = readSetting<string | null>(deps, 'finance.setupTaxConfirmedAt');
+  // F6a: optional — ohne Bescheid keine Bestätigungen, aber Finanzen lässt sich ohne führen.
+  // Die Reihe liest der Schritt direkt: `ledger/` kennt `donations/` nicht (Richtung, Spec 4.1).
+  const notice = noticeValidAt(deps.db.select().from(financeNotices).all(), isoNow(deps.clock).slice(0, 10));
 
   const steps: SetupStep[] = [
     { key: 'fiscalYear', required: true, done: fiscalYearDone, dependsOn: null, blocked: false, detail: {}, permission: 'finance.setup', canDo: listUserNamesWithPermission(deps, 'finance.setup') },
@@ -181,6 +185,16 @@ export async function getSetupStatus(deps: Deps, ctx: CallContext): Promise<Resu
       detail: { missing: missingImportFormats },
       permission: 'finance.setup',
       canDo: listUserNamesWithPermission(deps, 'finance.setup'),
+    },
+    {
+      key: 'notice',
+      required: false,
+      done: notice !== null,
+      dependsOn: null,
+      blocked: false,
+      detail: notice ? { validUntil: notice.validUntil } : {},
+      permission: 'finance.donationsIssue',
+      canDo: listUserNamesWithPermission(deps, 'finance.donationsIssue'),
     },
   ];
   // Task 6: „complete“ zählt nur Pflichtschritte — ein offener optionaler Schritt kippt die Einrichtung nicht.

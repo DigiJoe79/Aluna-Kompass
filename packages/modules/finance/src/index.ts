@@ -4,6 +4,8 @@ export {
   financeAllocationLines,
   financeCashCounts,
   financeCategories,
+  financeConfirmationLines,
+  financeConfirmations,
   financeDatedValues,
   financeEntries,
   financeEntryCounters,
@@ -15,18 +17,23 @@ export {
   financeImportCandidates,
   financeImportRules,
   financeImportRuns,
+  financeInKindDetails,
   financeMoneyLines,
+  financeNotices,
   financeOpenItems,
   financeOpenItemSettlements,
   financePeriodEvents,
   financeProjectSettings,
   financePurposes,
   financeRawTransactions,
+  financeSigners,
   type FinanceAccountRow,
   type FinanceAllocationCorrectionRow,
   type FinanceAllocationLineRow,
   type FinanceCashCountRow,
   type FinanceCategoryRow,
+  type FinanceConfirmationLineRow,
+  type FinanceConfirmationRow,
   type FinanceDatedValueRow,
   type FinanceEntryDocumentRow,
   type FinanceEntryJustificationRow,
@@ -36,13 +43,16 @@ export {
   type FinanceImportCandidateRow,
   type FinanceImportRuleRow,
   type FinanceImportRunRow,
+  type FinanceInKindDetailsRow,
   type FinanceMoneyLineRow,
+  type FinanceNoticeRow,
   type FinanceOpenItemRow,
   type FinanceOpenItemSettlementRow,
   type FinancePeriodEventRow,
   type FinanceProjectSettingsRow,
   type FinancePurposeRow,
   type FinanceRawTransactionRow,
+  type FinanceSignerRow,
 } from './schema';
 
 export { requireFinanceRead } from './ledger/access';
@@ -204,3 +214,8 @@ export { previewBatchFinalize, type BatchAccountPreview, type BatchFinalizePrevi
 export { amountSpellings, attachVoucherToTransaction, searchVouchersForTransaction, type VoucherSearchHit } from './import/vouchers';
 export { INVOICE_ATTACHMENT_NAMES, INVOICE_XML_MAX_BYTES, isInvoiceAttachmentName, parseFacturX, type InvoiceTax, type ParseInvoiceResult, type ParsedInvoice } from './import/zugferd/parse';
 export { applyInvoiceToDraft, createOpenItemFromInvoice, invoiceProposal, readInvoiceFromDocument, type InvoiceProposal, type InvoiceView } from './import/zugferd/read';
+
+// F6a — Spenden: Bescheide (Task 2); Gültigkeit rein in `ledger/`, damit F7 sie für Empfängerbescheide nutzt.
+export { NOTICE_KINDS, noticeValidAt, noticeValidUntil, type NoticeKind, type NoticeValidityInput } from './ledger/notice-validity';
+// Die Dienste selbst (saveNotice, supersedeNotice, voidNotice, listNotices) kommen mit ihren MCP-Werkzeugen (Task 6) — der Paritätswächter der App verlangt beides zugleich.
+export { certifiableLineExistsInternal, noticeExpiryInternal, noticeValidAtInternal, type NoticeView } from './donations/notices';

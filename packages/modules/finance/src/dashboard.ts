@@ -1,6 +1,7 @@
 import { readSetting, type DashboardLine, type DashboardTile } from '@kompass/core';
 import { and, eq, isNull, lt, or } from 'drizzle-orm';
 import { z } from 'zod';
+import { certifiableLineExistsInternal, noticeExpiryInternal, noticeValidAtInternal } from './donations/notices';
 import { countOpenRawTransactionsInternal, importedThroughInternal, reconcileBankInternal } from './import/queries';
 import { listForeignMoney } from './import/transit';
 import { formatEuro } from './ledger/cash-check';
@@ -39,7 +40,7 @@ const todoTile: DashboardTile<Record<string, never>> = {
   kind: 'list',
   defaultOn: true,
   options: z.object({}),
-  messageKeys: ['reviewedNotFinal', 'withoutVoucher', 'overdueItems', 'rawOpen', 'foreignMoney', 'vouchersWithoutEntry', 'lastStatement'],
+  messageKeys: ['reviewedNotFinal', 'withoutVoucher', 'overdueItems', 'rawOpen', 'foreignMoney', 'vouchersWithoutEntry', 'lastStatement', 'noticeExpiring', 'noNotice'],
   async load(deps, ctx) {
     const today = isoDay(deps.clock.now().getTime());
     const lines: DashboardLine[] = [];
@@ -89,6 +90,17 @@ const todoTile: DashboardTile<Record<string, never>> = {
     }, null);
     if (daysSinceOldestStatement !== null && daysSinceOldestStatement >= warnDays) {
       lines.push({ titleKey: 'lastStatement', values: { days: daysSinceOldestStatement }, href: '/finance/imports' });
+    }
+
+    // F6a (Spec 9.7): der Bescheid läuft ab — ab `finance.noticeExpiryWarnMonths` vorher; die Art als Schlüssel, der Satz sagt sie in Alltagssprache.
+    const expiry = noticeExpiryInternal(deps.db, today, readSetting<number>(deps, 'finance.noticeExpiryWarnMonths'));
+    if (expiry) {
+      const kind = noticeValidAtInternal(deps.db, today)!.kind;
+      lines.push({ date: expiry.validUntil, titleKey: 'noticeExpiring', values: { kind, months: expiry.monthsLeft }, href: '/finance/donations/notices' });
+    }
+    // Kein Bescheid — erst eine Meldung, wenn es etwas zu bestätigen gäbe.
+    if (!noticeValidAtInternal(deps.db, today) && certifiableLineExistsInternal(deps.db)) {
+      lines.push({ titleKey: 'noNotice', values: {}, href: '/finance/donations/notices' });
     }
 
     return { kind: 'list', lines, total: lines.length, href: '/finance/entries' };

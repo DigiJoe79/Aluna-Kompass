@@ -567,7 +567,9 @@
             "rawOpen": "{count, plural, one {# Kontoumsatz ohne Zuordnung} other {# Kontoumsätze ohne Zuordnung}}",
             "foreignMoney": "{count, plural, one {# Zahlung gehört nicht dem Verein und ist noch nicht weitergegeben} other {# Zahlungen gehören nicht dem Verein und sind noch nicht weitergegeben}}",
             "vouchersWithoutEntry": "{count, plural, one {# Finanzbeleg ohne Buchung} other {# Finanzbelege ohne Buchung}}",
-            "lastStatement": "Letzter Auszug vor {days, plural, one {einem Tag} other {# Tagen}}"
+            "lastStatement": "Letzter Auszug vor {days, plural, one {einem Tag} other {# Tagen}}",
+            "noticeExpiring": "{kind, select, section60a {Die vorläufige Feststellung} other {Der Bescheid}} des Finanzamts läuft {months, plural, =0 {in weniger als einem Monat} one {in einem Monat} other {in # Monaten}} ab",
+            "noNotice": "Kein gültiger Bescheid des Finanzamts — ohne Bescheid keine Zuwendungsbestätigungen"
           }
         },
         "withoutVoucher": {
@@ -3059,7 +3061,8 @@
           "roles": "Wer welche Rolle trägt",
           "categories": "Kategorien durchsehen",
           "tax": "Steuerliches bestätigen",
-          "importFormat": "Auszugsformat je Bank- und Zahlungsdienstkonto (optional bis zum ersten Auszug)"
+          "importFormat": "Auszugsformat je Bank- und Zahlungsdienstkonto (optional bis zum ersten Auszug)",
+          "notice": "Bescheid des Finanzamts erfassen (optional — ohne Bescheid keine Zuwendungsbestätigungen)"
         },
         "open": "Erledigen",
         "done": "Erledigt",
@@ -3071,7 +3074,8 @@
           "account": "{accounts} Konten, {withoutOpening} ohne Anfangsbestand",
           "rolesWithoutUser": "ohne aktiven Träger: {names}",
           "usersWithoutContact": "{count} Nutzer ohne verknüpften Kontakt",
-          "importFormat": "{missing, plural, one {# Konto} other {# Konten}} ohne Auszugsformat — nehmen Sie CAMT, wenn die Bank es anbietet, sonst richten Sie das CSV-Format ein."
+          "importFormat": "{missing, plural, one {# Konto} other {# Konten}} ohne Auszugsformat — nehmen Sie CAMT, wenn die Bank es anbietet, sonst richten Sie das CSV-Format ein.",
+          "notice": "gültig bis {validUntil}"
         },
         "canDo": "kann {names} erledigen",
         "applyTaxDefaults": "Vorgaben übernehmen",

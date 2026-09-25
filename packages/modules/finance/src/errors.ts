@@ -109,7 +109,7 @@ export const FINANCE_ERRORS = {
   noticeSuperseded: { reason: 'Dieser Bescheid ist aufgehoben oder ersetzt.', remedy: 'Ein ersetzter Bescheid bleibt, wie er ist — erfassen Sie den neuen Bescheid.' },
   noticeNotValidAt: { reason: 'Der gewählte Bescheid gilt am {date} nicht.', remedy: 'Prüfen Sie das Datum, oder erfassen Sie den Bescheid, der an diesem Tag galt.' },
   noNoticeValidAt: { reason: 'Am {date} gilt kein Bescheid des Finanzamts — ohne Bescheid keine Zuwendungsbestätigung.', remedy: 'Erfassen Sie den Bescheid unter Spenden → Bescheide.' },
-  noticeAfterExemption: { reason: 'Es gibt schon einen späteren endgültigen Bescheid; eine vorläufige Feststellung gilt danach nicht mehr.', remedy: 'Erfassen Sie stattdessen den endgültigen Bescheid des Finanzamts.' },
+  noticeAfterExemption: { reason: 'Es gibt schon einen endgültigen Bescheid vom {date}; eine vorläufige Feststellung danach gibt es nicht.', remedy: 'Erfassen Sie stattdessen den neuen endgültigen Bescheid des Finanzamts.' },
   confirmationLineNotFinal: { reason: 'Die Zuwendung gehört zu einer Buchung, die noch nicht festgeschrieben ist.', remedy: 'Schreiben Sie die Buchung zuerst fest.' },
   confirmationLineReversed: { reason: 'Die Buchung dieser Zuwendung ist zurückgenommen.', remedy: 'Bestätigen Sie die neue Buchung, falls es eine gibt.' },
   confirmationIncomeNotCertifiable: { reason: 'Für die Kategorie „{category}“ gibt es keine Zuwendungsbestätigung.', remedy: 'Bestätigt werden nur Geldspenden, Mitgliedsbeiträge, Sachspenden und Aufwandsspenden — korrigieren Sie die Kategorie, wenn sie falsch ist.' },

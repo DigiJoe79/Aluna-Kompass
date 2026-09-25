@@ -9,7 +9,7 @@ import { RequirementList, type RequirementListItem } from '@/components/requirem
 import { applyTaxDefaultsAction, confirmSetupStepAction } from './actions';
 
 export interface ChecklistStep {
-  key: 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax' | 'importFormat';
+  key: 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax' | 'importFormat' | 'notice';
   done: boolean;
   blocked: boolean;
   detail: Record<string, string | number>;
@@ -26,6 +26,8 @@ const STEP_HREF: Record<ChecklistStep['key'], string> = {
   tax: '/admin/finance?panel=tax',
   // F4b: der Assistent — sein erster Schritt rät zu CAMT, das sich beim ersten Import von selbst setzt.
   importFormat: '/finance/imports/format',
+  // F6a: die Seite der Bescheide (Task 8).
+  notice: '/finance/donations/notices',
 };
 
 /** H1 — Einstieg: erledigte Zeilen bleiben stehen, blockierte nennen ihre Abhängigkeit. */
@@ -61,7 +63,7 @@ export function ChecklistPanel({ steps, complete }: { steps: ChecklistStep[]; co
   const items: RequirementListItem[] = steps.map((step) => {
     const canSelf = step.canSelf;
     const blockedText = step.blocked ? t(`blocked.${step.key}`) : undefined;
-    const detail = step.key === 'account' && typeof step.detail.accounts === 'number' ? t('detail.account', { accounts: step.detail.accounts, withoutOpening: step.detail.withoutOpening ?? 0 }) : step.key === 'roles' && step.detail.rolesWithoutUser ? t('detail.rolesWithoutUser', { names: step.detail.rolesWithoutUser }) : step.key === 'roles' && step.detail.usersWithoutContact ? t('detail.usersWithoutContact', { count: step.detail.usersWithoutContact }) : step.key === 'importFormat' && typeof step.detail.missing === 'number' && step.detail.missing > 0 ? t('detail.importFormat', { missing: step.detail.missing }) : undefined;
+    const detail = step.key === 'account' && typeof step.detail.accounts === 'number' ? t('detail.account', { accounts: step.detail.accounts, withoutOpening: step.detail.withoutOpening ?? 0 }) : step.key === 'roles' && step.detail.rolesWithoutUser ? t('detail.rolesWithoutUser', { names: step.detail.rolesWithoutUser }) : step.key === 'roles' && step.detail.usersWithoutContact ? t('detail.usersWithoutContact', { count: step.detail.usersWithoutContact }) : step.key === 'importFormat' && typeof step.detail.missing === 'number' && step.detail.missing > 0 ? t('detail.importFormat', { missing: step.detail.missing }) : step.key === 'notice' && typeof step.detail.validUntil === 'string' ? t('detail.notice', { validUntil: step.detail.validUntil }) : undefined;
 
     const extra =
       step.key === 'tax' && !step.done && canSelf ? (
