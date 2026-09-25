@@ -235,4 +235,24 @@ test.describe('finance csv', () => {
     await expect(run).toContainText('2026-03-03 – 2026-03-04');
     await expect(run).toContainText('ohne Kontostand');
   });
+
+  test('ein CSV-Auszug ohne Kontostand bekommt ihn nachträglich, und der Lauf zeigt Anfang und Ende', async ({ page }) => {
+    // Seed-Konto „Zweitbank CSV“ (F4b): der Auszug hat keine Saldospalte und wurde ohne Kontostand geladen.
+    await page.goto('/finance/imports');
+    const run = page.getByTestId('import-run').filter({ hasText: 'Zweitbank CSV' });
+    await expect(run).toContainText('ohne Kontostand');
+    await run.getByRole('button', { name: 'Kontostand nachtragen' }).click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByText('Kontostand laut Bank am 2026-03-04')).toBeVisible();
+    await dialog.getByLabel('Kontostand laut Bank am 2026-03-04').fill('1.030,00');
+    await dialog.getByRole('button', { name: 'Kontostand übernehmen' }).click();
+
+    await expect(page.getByText('Kontostand nachgetragen.')).toBeVisible();
+    await expect(run).not.toContainText('ohne Kontostand');
+    await expect(run).toContainText('Ende 1.030,00 €');
+
+    // Ein zweites Nachtragen ist nicht mehr möglich: der Knopf ist verschwunden.
+    await expect(run.getByRole('button', { name: 'Kontostand nachtragen' })).toHaveCount(0);
+  });
 });

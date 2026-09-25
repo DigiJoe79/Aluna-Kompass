@@ -127,7 +127,9 @@ describe('finance_import_runs', () => {
 
     // Danach: die Tatsachen stehen fest.
     expect(() => deps.db.update(financeImportRuns).set({ countNew: 2 }).where(eq(financeImportRuns.id, runId)).run()).toThrow(/permanent|immutable/);
-    expect(() => deps.db.update(financeImportRuns).set({ closingCents: 1 }).where(eq(financeImportRuns.id, runId)).run()).toThrow(/permanent|immutable/);
+    // Der Kontostand hat einen eigenen Trigger (N2 „Kontostand nachtragen“, Migration 0021): ein Lauf, der
+    // schon einen trägt, lässt sich nicht überschreiben — andere Meldung, dieselbe Endgültigkeit.
+    expect(() => deps.db.update(financeImportRuns).set({ closingCents: 1 }).where(eq(financeImportRuns.id, runId)).run()).toThrow(/set once/);
     expect(() => deps.db.update(financeImportRuns).set({ finishedAt: '2026-03-02T00:00:00.000Z' }).where(eq(financeImportRuns.id, runId)).run()).toThrow(/permanent|immutable/);
 
     // Danach aenderbar: nur discarded_* (einmal) und fileKey -> NULL (einmal).

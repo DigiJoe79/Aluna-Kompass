@@ -78,6 +78,19 @@ describe('hand-written SQL survives', () => {
     }
   });
 
+  it('lets a finished, non-discarded run without a closing balance receive one exactly once (Task 2 "Kontostand nachtragen")', () => {
+    const sql = readFileSync(path.join(MIGRATIONS_DIR, '0021_finance_import_runs_balance_once.sql'), 'utf8');
+    expect(sql).toContain('DROP TRIGGER finance_import_runs_facts_immutable');
+    // Die neu erzeugte Fassung des Sperr-Triggers lässt opening_cents/closing_cents aus —
+    // die stehen jetzt allein unter finance_import_runs_balance_once. Nur die Kopfzeile
+    // (die `UPDATE OF`-Spaltenliste) zählt, nicht der erklärende Kommentar darüber.
+    const headerStart = sql.indexOf('CREATE TRIGGER finance_import_runs_facts_immutable');
+    const header = sql.slice(headerStart, sql.indexOf('\n', headerStart));
+    expect(header).not.toContain('opening_cents');
+    expect(header).not.toContain('closing_cents');
+    expect(sql).toContain('CREATE TRIGGER finance_import_runs_balance_once ');
+  });
+
   it('lets an import candidate be decided only once', () => {
     expect(allSql, 'finance_import_candidates_decide_once').toContain('CREATE TRIGGER finance_import_candidates_decide_once ');
   });

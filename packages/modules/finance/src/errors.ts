@@ -78,6 +78,9 @@ export const FINANCE_ERRORS = {
   statementNeedsCsvFormat: { reason: 'Für {account} ist noch kein CSV-Format eingerichtet.', remedy: 'Richten Sie das CSV-Format einmal ein — der Assistent rät zuerst, ob Ihre Bank CAMT anbietet.' },
   statementCsvFormatMismatch: { reason: 'Die Datei passt nicht zum CSV-Format von {account} ({format}).', remedy: 'Laden Sie den Auszug im gewohnten Format, oder richten Sie ein neues Format ein — das ist ein Formatwechsel.' },
   statementAlreadyImported: { reason: 'Dieser Auszug wurde für das Konto {account} bereits geladen.', remedy: 'Nichts zu tun — oder verwerfen Sie den vorhandenen Auszug zuerst, wenn er falsch war.' },
+  // N2 — Kontostand nachtragen (genau einmal, Trigger finance_import_runs_balance_once).
+  runHasBalance: { reason: 'Dieser hochgeladene Auszug hat schon einen Kontostand.', remedy: 'Stimmt er nicht, verwerfen Sie den Auszug und laden Sie ihn mit dem richtigen Kontostand neu.' },
+  runNotAmendable: { reason: 'Nur ein fertig geladener, nicht verworfener Auszug bekommt einen Kontostand.', remedy: 'Laden Sie den Auszug zuerst vollständig — ein verworfener Auszug bekommt seinen Kontostand über einen neuen, richtigen Auszug.' },
   // F4 Task 4 — Kandidaten entscheiden, Rohumsatz an der Geldzeile.
   rawTransactionMismatch: { reason: 'Der gewählte Kontoumsatz passt nicht zu Konto, Vorzeichen oder Betrag dieser Zeile.', remedy: 'Wählen Sie den passenden Kontoumsatz, oder lösen Sie die Verknüpfung.' },
   rawTransactionTaken: { reason: 'Dieser Kontoumsatz ist bereits einer anderen Buchung zugeordnet.', remedy: 'Wählen Sie einen anderen Kontoumsatz, oder nehmen Sie zuerst die vorhandene Buchung zurück.' },

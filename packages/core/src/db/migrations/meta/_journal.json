@@ -148,6 +148,13 @@
       "when": 1790287260695,
       "tag": "0020_finance_import_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1790295409599,
+      "tag": "0021_finance_import_runs_balance_once",
+      "breakpoints": true
     }
   ]
 }

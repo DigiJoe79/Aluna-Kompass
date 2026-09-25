@@ -2894,9 +2894,19 @@
           }
         },
         "discard": "Verwerfen",
+        "amendBalance": "Kontostand nachtragen",
         "formatCamt": "CAMT.053",
         "formatCsv": "CSV",
         "noBalance": "ohne Kontostand"
+      },
+      "amendBalance": {
+        "title": "Kontostand nachtragen",
+        "label": "Kontostand laut Bank am {date}",
+        "labelNoDate": "Kontostand laut Bank",
+        "submit": "Kontostand übernehmen",
+        "toast": {
+          "done": "Kontostand nachgetragen."
+        }
       },
       "discard": {
         "title": "Auszug verwerfen",

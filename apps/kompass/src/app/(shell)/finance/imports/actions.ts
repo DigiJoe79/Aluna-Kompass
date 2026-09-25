@@ -1,6 +1,6 @@
 'use server';
 
-import { decideCandidate, discardRun, importStatement, previewDiscardRun, type DiscardPreview } from '@kompass/module-finance';
+import { decideCandidate, discardRun, importStatement, previewDiscardRun, setRunClosingBalance, type DiscardPreview } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { toActionState, type ActionState } from '@/lib/actions';
@@ -42,4 +42,13 @@ export async function discardRunAction(id: string, note: string): Promise<Action
   const result = await discardRun(deps, ctx, { id, note });
   revalidateImports();
   return toActionState(result, t, t('finance.imports.discard.toast.done'));
+}
+
+/** „Kontostand nachtragen“ (N2) — einmalig, an einem fertigen, nicht verworfenen Auszug ohne Kontostand. */
+export async function setRunClosingBalanceAction(runId: string, closingBalanceCents: number): Promise<ActionState> {
+  const t = await getTranslations();
+  const { deps, ctx } = await requireSession();
+  const result = await setRunClosingBalance(deps, ctx, { runId, closingBalanceCents });
+  revalidateImports();
+  return toActionState(result, t, t('finance.imports.amendBalance.toast.done'));
 }

@@ -4,10 +4,11 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { unwrap } from '@kompass/core';
 import { auditEntry, ctxWith } from '@kompass/core/testing';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNotNull } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
 import { createAccount, setAccountActive } from '../src/ledger/accounts';
-import { getImportRun, importStatement, listImportRuns } from '../src/import/runs';
+import { discardRun } from '../src/import/discard';
+import { getImportRun, importStatement, listImportRuns, setRunClosingBalance } from '../src/import/runs';
 import { financeAccounts, financeImportRuns, financeRawTransactions, financeImportCandidates } from '../src/schema';
 import { setupFinance } from './helpers';
 
@@ -239,5 +240,84 @@ describe('listImportRuns / getImportRun', () => {
     const single = unwrap(await getImportRun(f.deps, f.ctx, { id: runId }));
     expect(single.rawTransactions).toHaveLength(3);
     expect(single.rawTransactions[0]).toMatchObject({ counterpartyName: expect.any(String) });
+  });
+});
+
+describe('setRunClosingBalance ("Kontostand nachtragen")', () => {
+  const CSV_HEADER = 'Buchungstag;Name;Verwendungszweck;Betrag';
+  const CSV_ROWS = ['02.03.2026;Erika Beispiel;Spende;50,00', '05.03.2026;Druckerei Muster;Flyer;-20,00'];
+  const csvBytes = (rows: string[] = CSV_ROWS, header = CSV_HEADER) => new TextEncoder().encode([header, ...rows].join('\n'));
+
+  /** Ein CSV-Konto mit einem Format ohne Saldospalte — ein Lauf darauf hat nie einen Kontostand, bis er nachgetragen wird. */
+  async function csvRunWithoutBalanceFixture() {
+    const { deps, ctx, userId } = setupFinance();
+    const account = unwrap(await createAccount(deps, ctx, { name: 'Hausbank CSV', kind: 'bank', iban: VEREIN_IBAN }));
+    unwrap(await saveImportProfile(deps, ctx, { accountId: account.id, name: 'Hausbank CSV', format: csvFormatSchema.parse({
+      encoding: 'utf-8', delimiter: ';', headerRow: 0, headerSignature: headerSignature(CSV_HEADER.split(';')), dateFormat: 'DD.MM.YYYY', decimalSeparator: ',',
+      columns: { bookingDate: 'Buchungstag', valueDate: null, amount: 'Betrag', debit: null, credit: null, debitCreditIndicator: null, counterpartyName: 'Name', counterpartyIban: null, purpose: 'Verwendungszweck', reference: null, fee: null, balance: null, currency: null, pending: null },
+      invertSign: false,
+    }) }));
+    const imported = unwrap(await importStatement(deps, ctx, { accountId: account.id, fileName: 'ohne-saldo.csv', bytes: csvBytes() }));
+    const run = imported.runs[0]!;
+    expect(run).toMatchObject({ openingCents: null, closingCents: null, state: 'finished' });
+    return { deps, ctx, userId, account, run };
+  }
+
+  it('sets the closing balance once on a finished csv run without one and derives the opening balance', async () => {
+    const f = await csvRunWithoutBalanceFixture();
+    // 50,00 − 20,00 = 30,00 Umsatz in der Datei; Endsaldo 1.030,00 → Anfang 1.000,00.
+    const res = unwrap(await setRunClosingBalance(f.deps, f.ctx, { runId: f.run.id, closingBalanceCents: 103000 }));
+    expect(res).toMatchObject({ id: f.run.id, openingCents: 100000, closingCents: 103000 });
+    const row = f.deps.db.select().from(financeImportRuns).where(eq(financeImportRuns.id, f.run.id)).get()!;
+    expect(row).toMatchObject({ openingCents: 100000, closingCents: 103000 });
+  });
+
+  it('refuses a run that already has a closing balance', async () => {
+    const f = await csvRunWithoutBalanceFixture();
+    unwrap(await setRunClosingBalance(f.deps, f.ctx, { runId: f.run.id, closingBalanceCents: 103000 }));
+    const again = await setRunClosingBalance(f.deps, f.ctx, { runId: f.run.id, closingBalanceCents: 999900 });
+    expect(code(again)).toBe('runHasBalance');
+  });
+
+  it('refuses a discarded or failed run', async () => {
+    const f = await csvRunWithoutBalanceFixture();
+    unwrap(await discardRun(f.deps, f.ctx, { id: f.run.id, note: 'Testverwerfung' }));
+    const discarded = await setRunClosingBalance(f.deps, f.ctx, { runId: f.run.id, closingBalanceCents: 103000 });
+    expect(code(discarded)).toBe('runNotAmendable');
+
+    const failedImport = await importStatement(f.deps, f.ctx, { accountId: f.account.id, fileName: 'kaputt.csv', bytes: csvBytes(['31.02.2026;A;x;1,00']) });
+    expect(code(failedImport)).toBe('statementUnreadable');
+    const failedRun = f.deps.db.select().from(financeImportRuns).where(and(eq(financeImportRuns.accountId, f.account.id), isNotNull(financeImportRuns.failedAt))).get()!;
+    const failed = await setRunClosingBalance(f.deps, f.ctx, { runId: failedRun.id, closingBalanceCents: 103000 });
+    expect(code(failed)).toBe('runNotAmendable');
+  });
+
+  it('is possible exactly once and names the way out — a second update at the database itself is blocked by the trigger', async () => {
+    const f = await csvRunWithoutBalanceFixture();
+    unwrap(await setRunClosingBalance(f.deps, f.ctx, { runId: f.run.id, closingBalanceCents: 103000 }));
+    // Trigger-Test über den Query-Builder (F4b-Lehre), nicht db.run: ein zweites Setzen direkt an der Tabelle ist gesperrt.
+    expect(() => f.deps.db.update(financeImportRuns).set({ closingCents: 999900 }).where(eq(financeImportRuns.id, f.run.id)).run()).toThrow(/statement balance is set once/);
+    const err = await setRunClosingBalance(f.deps, f.ctx, { runId: f.run.id, closingBalanceCents: 999900 });
+    expect(code(err)).toBe('runHasBalance');
+    expect(!err.ok && err.error.type === 'conflict' && err.error.message).toContain('verwerfen');
+  });
+
+  it('needs finance.entriesWrite; validates its input; refuses an unknown run', async () => {
+    const f = await csvRunWithoutBalanceFixture();
+    const denied = await setRunClosingBalance(f.deps, ctxWith(['finance.read']), { runId: f.run.id, closingBalanceCents: 103000 });
+    expect(denied.ok ? null : denied.error).toEqual({ type: 'forbidden', permission: 'finance.entriesWrite' });
+
+    const invalid = await setRunClosingBalance(f.deps, f.ctx, { runId: f.run.id, closingBalanceCents: '103000' });
+    expect(invalid.ok ? null : invalid.error.type).toBe('validation');
+
+    const missing = await setRunClosingBalance(f.deps, f.ctx, { runId: 'unbekannt', closingBalanceCents: 103000 });
+    expect(missing.ok ? null : missing.error).toEqual({ type: 'notFound', entity: 'financeImportRun', id: 'unbekannt' });
+  });
+
+  it('records the audit entry with opening and closing cents, nothing else', async () => {
+    const f = await csvRunWithoutBalanceFixture();
+    unwrap(await setRunClosingBalance(f.deps, f.ctx, { runId: f.run.id, closingBalanceCents: 103000 }));
+    const entry = auditEntry(f.deps, 'finance.import.runBalance');
+    expect(JSON.parse(entry.after as string)).toEqual({ openingCents: 100000, closingCents: 103000 });
   });
 });

@@ -185,7 +185,7 @@ export { seedFinance } from './seed';
 export { parseCamt053, type CamtError, type CamtLine, type CamtStatement } from './import/camt';
 export { buildCamt053, buildCamt053Bytes, type CamtFixtureInput, type CamtFixtureLine } from './import/camt-fixture';
 export { dedupKey, normalizePurpose } from './import/dedup';
-export { getImportRun, importRunRowInternal, importStatement, listImportRuns, toRunView, type ImportRunView } from './import/runs';
+export { getImportRun, importRunRowInternal, importStatement, listImportRuns, setRunClosingBalance, toRunView, type ImportRunView } from './import/runs';
 export { decideCandidate, listCandidates, type CandidateView } from './import/candidates';
 export { getRawTransaction, listRawTransactions, rawStateInternal, rawTransactionViewInternal, rawTransactionsForRunInternal, type RawTransactionView } from './import/queries';
 export { discardRun, previewDiscardRun, type DiscardBlockingEntry, type DiscardPreview } from './import/discard';

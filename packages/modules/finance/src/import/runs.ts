@@ -407,3 +407,55 @@ export async function getImportRun(deps: Deps, ctx: CallContext, input: unknown)
   if (!row) return notFound('financeImportRun', parsed.value.id);
   return ok({ ...toRunView(deps.db, row), rawTransactions: rawTransactionsForRunInternal(deps.db, row.id) });
 }
+
+/** Summe der Beträge aller Rohumsätze eines Laufs — vorgemerkte Zeilen wurden nie als Rohumsatz angelegt (Spec 6.1). */
+function sumOfRawTransactionsInternal(db: DbOrTx, runId: string): number {
+  return db
+    .select({ amountCents: financeRawTransactions.amountCents })
+    .from(financeRawTransactions)
+    .where(eq(financeRawTransactions.runId, runId))
+    .all()
+    .reduce((sum, r) => sum + r.amountCents, 0);
+}
+
+const setRunClosingBalanceSchema = z.object({ runId: z.string().min(1), closingBalanceCents: z.number().int() });
+
+/**
+ * „Kontostand nachtragen“ (Plan finanzen-n2-kleinkram Task 2, Spec 6.1: „sonst
+ * fragt der Lauf optional ‚Kontostand laut Bank am …?‘“): ein fertig
+ * geladener, nicht verworfener Lauf ohne Kontostand bekommt einen — genau
+ * einmal (Trigger `finance_import_runs_balance_once`, Migration 0021). Der
+ * Anfangssaldo entsteht wie beim Import selbst: Endsaldo minus Summe der
+ * Rohumsätze des Laufs. Eine Lücke zum Vorlauf wird dabei **nicht**
+ * nachträglich geprüft — das bleibt Sache des Imports (Annahme 1 des Plans);
+ * die Kontenabstimmung nutzt den neuen Saldo ab sofort.
+ *
+ * `finance.entriesWrite` wie das Laden selbst, **nicht** `humanOnly` (Annahme
+ * 2 des Plans) — ein Agent darf den Kontostand nachtragen, nie festschreiben.
+ */
+export async function setRunClosingBalance(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ImportRunView>> {
+  const denied = requirePermission(ctx, 'finance.entriesWrite');
+  if (denied) return denied;
+  const parsed = validate(deps, setRunClosingBalanceSchema, input);
+  if (!parsed.ok) return parsed;
+  const v = parsed.value;
+
+  const before = importRunRowInternal(deps.db, v.runId);
+  if (!before) return notFound('financeImportRun', v.runId);
+  if (before.finishedAt === null || before.discardedAt !== null) return financeConflict('runNotAmendable');
+  if (before.closingCents !== null) return financeConflict('runHasBalance');
+
+  const openingCents = v.closingBalanceCents - sumOfRawTransactionsInternal(deps.db, before.id);
+
+  return deps.db.transaction((tx: DbOrTx) => {
+    tx.update(financeImportRuns).set({ openingCents, closingCents: v.closingBalanceCents }).where(eq(financeImportRuns.id, before.id)).run();
+    financeAudit(tx, deps, ctx, {
+      action: 'finance.import.runBalance',
+      entity: 'financeImportRun',
+      id: before.id,
+      after: { openingCents, closingCents: v.closingBalanceCents },
+      summary: `Kontostand für Kontoauszug ${before.id} nachgetragen`,
+    });
+    return ok(toRunView(tx, importRunRowInternal(tx, before.id)!));
+  });
+}

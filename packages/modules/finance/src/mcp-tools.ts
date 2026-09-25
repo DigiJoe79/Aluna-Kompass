@@ -2,7 +2,7 @@ import { invalid, readSetting, type McpToolDefinition } from '@kompass/core';
 import { z } from 'zod';
 import { decideCandidate, listCandidates } from './import/candidates';
 import { discardRun, previewDiscardRun } from './import/discard';
-import { getImportRun, importStatement, listImportRuns } from './import/runs';
+import { getImportRun, importStatement, listImportRuns, setRunClosingBalance } from './import/runs';
 import { getRawTransaction, listRawTransactions } from './import/queries';
 import { getAccountStatements } from './import/accounts';
 import { listImportProfiles, saveImportProfile } from './import/profiles';
@@ -178,6 +178,7 @@ const saveImportProfileMcpSchema = z.object({ accountId: z.string(), name: z.str
 const listImportProfilesMcpSchema = z.object({});
 const listImportRunsMcpSchema = z.object({ accountId: z.string().optional(), limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() });
 const getImportRunMcpSchema = z.object({ id: z.string() });
+const setRunClosingBalanceMcpSchema = z.object({ runId: z.string(), closingBalanceCents: z.number().int() });
 const listCandidatesMcpSchema = z.object({ runId: z.string().optional(), open: z.boolean().optional() });
 const decideCandidateMcpSchema = z.object({ id: z.string(), decision: z.enum(['same', 'own']) });
 const listRawTransactionsMcpSchema = z.object({ accountId: z.string().optional(), runId: z.string().optional(), state: z.enum(['open', 'booked']).optional(), limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() });
@@ -420,6 +421,7 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
   t({ name: 'finance_import_profiles_list', description: 'List the saved CSV import formats with the accounts each is active for and the number of runs read with it. Requires finance.setup or finance.read.', inputSchema: listImportProfilesMcpSchema, handler: (deps, ctx) => listImportProfiles(deps, ctx, {}), service: listImportProfiles }),
   t({ name: 'finance_import_runs_list', description: 'List import runs (statement uploads), optionally filtered by account, newest first. Counterparty, iban and purpose never appear here - only counts and balances. Requires finance.read.', inputSchema: listImportRunsMcpSchema, handler: (deps, ctx, args) => listImportRuns(deps, ctx, args), service: listImportRuns }),
   t({ name: 'finance_import_run_get', description: 'Read one import run with its raw transactions (counterparty, iban, purpose included). Requires finance.read.', inputSchema: getImportRunMcpSchema, handler: (deps, ctx, args) => getImportRun(deps, ctx, args), service: getImportRun }),
+  t({ name: 'finance_import_run_set_balance', description: 'Amend the closing balance of a finished, not discarded CSV run that has none yet - "balance at the bank on <date>", once. Derives the opening balance the same way a statement with a balance column does (closing minus the sum of the run\'s raw transactions). Refused as runHasBalance if the run already carries a balance (a mistake is undone by discarding the run and reimporting it correctly, not by amending again), or as runNotAmendable if the run is not finished or was discarded. Not human only - an agent may amend, never finalize. Requires finance.entriesWrite.', inputSchema: setRunClosingBalanceMcpSchema, handler: (deps, ctx, args) => setRunClosingBalance(deps, ctx, args), service: setRunClosingBalance }),
   t({ name: 'finance_import_candidates_list', description: 'List import candidates - statement lines whose duplicate match is only probable, shown next to the existing raw transaction they might match. Requires finance.read.', inputSchema: listCandidatesMcpSchema, handler: (deps, ctx, args) => listCandidates(deps, ctx, args), service: listCandidates }),
   t({ name: 'finance_import_candidate_decide', description: 'Decide an import candidate: "same" leaves it as is, "own" turns it into a new raw transaction. Decidable only once. Requires finance.entriesWrite.', inputSchema: decideCandidateMcpSchema, handler: (deps, ctx, args) => decideCandidate(deps, ctx, args), service: decideCandidate }),
   t({ name: 'finance_raw_transactions_list', description: 'List raw transactions (bank statement lines already accepted), with counterparty, iban and purpose, filterable by account, run or state (open/booked). Requires finance.read.', inputSchema: listRawTransactionsMcpSchema, handler: (deps, ctx, args) => listRawTransactions(deps, ctx, args), service: listRawTransactions }),

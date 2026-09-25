@@ -8,6 +8,7 @@ import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
 import { formatEuro } from '@/lib/finance/amount';
 import { cn } from '@/lib/utils';
+import { AmendBalanceDialog } from './amend-balance-dialog';
 import { DiscardRunDialog } from './discard-dialog';
 
 export interface RunRawTransaction {
@@ -54,6 +55,7 @@ export function RunsTable({ runs, canDiscard }: { runs: RunRow[]; canDiscard: bo
   const t = useTranslations('finance.imports.runs');
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [discardTarget, setDiscardTarget] = useState<RunRow | null>(null);
+  const [amendTarget, setAmendTarget] = useState<RunRow | null>(null);
 
   const toggle = (id: string) => {
     setOpen((prev) => {
@@ -94,6 +96,11 @@ export function RunsTable({ runs, canDiscard }: { runs: RunRow[]; canDiscard: bo
               <span className="text-ink-2">{t('counts', { new: run.counts.new, known: run.counts.known, held: run.counts.held })}</span>
               <span className="text-muted-ink">{run.createdByUserName ? t('loadedBy', { name: run.createdByUserName, date: run.startedAt.slice(0, 10) }) : t('loadedByUnknown', { date: run.startedAt.slice(0, 10) })}</span>
               <span className="ml-auto rounded-sm bg-badge px-1.5 py-0.5 text-[11px] font-semibold text-badge-ink">{t(`state.${run.state}`)}</span>
+              {canDiscard && run.state === 'finished' && run.openingCents === null && run.closingCents === null ? (
+                <Button type="button" variant="secondary" size="sm" onClick={() => setAmendTarget(run)}>
+                  {t('amendBalance')}
+                </Button>
+              ) : null}
               {canDiscard && run.state === 'finished' ? (
                 <Button type="button" variant="secondary" size="sm" onClick={() => setDiscardTarget(run)}>
                   {t('discard')}
@@ -147,6 +154,7 @@ export function RunsTable({ runs, canDiscard }: { runs: RunRow[]; canDiscard: bo
       })}
 
       <DiscardRunDialog open={discardTarget !== null} onOpenChange={(next) => !next && setDiscardTarget(null)} run={discardTarget} />
+      <AmendBalanceDialog open={amendTarget !== null} onOpenChange={(next) => !next && setAmendTarget(null)} run={amendTarget} />
     </div>
   );
 }
