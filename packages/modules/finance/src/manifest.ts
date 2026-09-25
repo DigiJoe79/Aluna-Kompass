@@ -174,6 +174,8 @@ export const financeModule: ModuleManifest = defineModule({
       deletable: false,
       reason: 'Eine ausgestellte Zuwendungsbestätigung wird nie gelöscht, nur zurückgenommen — mit Rückholspur. Nach Ablauf der Frist wird der Personenbezug des Geschäftsjahres entfernt; Nummer, Datum und Betrag bleiben.',
     },
+    { entity: 'financeConfirmationRun', deletable: false, reason: 'Der Lauf ist die Tatsache, wer wann was ausgestellt hat. Seine Bestätigungen werden einzeln zurückgenommen, der Lauf bleibt.' },
+    { entity: 'financeConfirmationRunItem', deletable: false, reason: 'Der Lauf ist die Tatsache, wer wann was ausgestellt hat — der Posten sagt, für wen was ausgestellt wurde oder warum nicht.' },
     { entity: 'financeConfirmationLine', deletable: false, reason: 'Welche Zuwendung eine Bestätigung trägt, bleibt nachvollziehbar; eine Rücknahme gibt die Zeile frei, statt sie zu löschen.' },
     {
       entity: 'financeInKindDetails',

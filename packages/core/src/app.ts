@@ -13,6 +13,7 @@ import { createRegistry } from './modules/registry';
 import { readLocales } from './i18n/locales';
 import { runModuleInstalls } from './modules/installs';
 import { noopTextExtraction, type TextExtraction } from './text/extraction';
+import { noopPdfTools, type PdfTools } from './pdf/tools';
 
 export interface CreateDepsOptions {
   /**
@@ -30,6 +31,8 @@ export interface CreateDepsOptions {
   documents?: DocumentEngine;
   /** Ohne Angabe ist Texterkennung nicht eingerichtet (Skripte, Tests ohne Modul). */
   textExtraction?: TextExtraction;
+  /** Ohne Angabe lassen sich keine PDFs zusammenfügen (Skripte, Tests ohne Modul). */
+  pdf?: PdfTools;
   clock?: Clock;
   /**
    * Grundausstattung der eingeschalteten Module beim Öffnen nachliefern
@@ -84,6 +87,7 @@ export function createDeps(opts: CreateDepsOptions): AppDeps {
     },
     documents: opts.documents ?? noopDocumentEngine,
     textExtraction: opts.textExtraction ?? noopTextExtraction,
+    pdf: opts.pdf ?? noopPdfTools,
     locales: () => readLocales(deps),
     dataPath: opts.dataPath,
     databasePath,

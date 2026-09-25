@@ -21,6 +21,7 @@ describe('Texterkennung ist verpackt', () => {
       pdftotext: 'poppler-utils',
       pdftoppm: 'poppler-utils',
       pdfdetach: 'poppler-utils',
+      pdfunite: 'poppler-utils',
       tesseract: 'tesseract-ocr',
     };
     const srcDir = 'packages/text-extraction/src';
@@ -30,7 +31,7 @@ describe('Texterkennung ist verpackt', () => {
         .flatMap((f) => [...read(`${srcDir}/${f}`).matchAll(/'(pdf[a-z]+|tesseract)'/g)].map((m) => m[1]!)),
     );
 
-    expect([...called].sort()).toEqual(['pdfdetach', 'pdftoppm', 'pdftotext', 'tesseract']);
+    expect([...called].sort()).toEqual(['pdfdetach', 'pdftoppm', 'pdftotext', 'pdfunite', 'tesseract']);
     const dockerfile = read('Dockerfile');
     const ci = read('.github/workflows/ci.yml');
     for (const bin of called) {
@@ -49,6 +50,9 @@ describe('Texterkennung ist verpackt', () => {
 
     expect(deps).toContain('createTextExtraction');
     expect(deps).not.toContain('noopTextExtraction');
+    // Sammel-PDFs (Finanzen F6b): ohne diese Zeile fiele `deps.pdf` auf die Attrappe, die wirft.
+    expect(deps).toContain('pdf: createPdfTools()');
+    expect(deps).not.toContain('noopPdfTools');
   });
 
   it('die CI installiert die Werkzeuge vor dem E2E-Lauf', () => {

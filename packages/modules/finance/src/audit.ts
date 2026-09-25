@@ -1,6 +1,6 @@
 import { recordAudit, type CallContext, type DbOrTx, type Deps } from '@kompass/core';
 
-export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument' | 'financeOpenItem' | 'financeAllocationCorrection' | 'financeEntryJustification' | 'financeProjectSettings' | 'financeCashCount' | 'financeSetup' | 'financeImportRun' | 'financeRawTransaction' | 'financeImportCandidate' | 'financeImportProfile' | 'financeImportRule' | 'financeContactBankAccount' | 'financeNotice' | 'financeConfirmation' | 'financeSigner' | 'financeInKindDetails';
+export type FinanceEntity = 'financeAccount' | 'financeCategory' | 'financePurpose' | 'financeFiscalYear' | 'financePeriodEvent' | 'financeDatedValue' | 'financeEntry' | 'financeEntryDocument' | 'financeOpenItem' | 'financeAllocationCorrection' | 'financeEntryJustification' | 'financeProjectSettings' | 'financeCashCount' | 'financeSetup' | 'financeImportRun' | 'financeRawTransaction' | 'financeImportCandidate' | 'financeImportProfile' | 'financeImportRule' | 'financeContactBankAccount' | 'financeNotice' | 'financeConfirmation' | 'financeSigner' | 'financeInKindDetails' | 'financeConfirmationRun' | 'financeConfirmationRunItem';
 
 /**
  * Was vom Finanzmodul ins Änderungsprotokoll darf — je Entität eine Liste, und
@@ -61,6 +61,9 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   financeSigner: ['validFrom', 'validTo', 'hasFacsimile', 'notifiedOn'],
   // Nie Gegenstand, Zustand, Wertermittlung (Freitext).
   financeInKindDetails: ['lineId', 'origin', 'withdrawalValueCents', 'vatCents', 'proofDocumentId'],
+  // F6b — der Lauf nur mit Parametern und Zählern (die Ausschlüsse als Zahl), der Posten nur mit IDs und Ausgang: nie Kontakt-ID, nie Sortierschlüssel.
+  financeConfirmationRun: ['year', 'minCents', 'excludedCount', 'followUpOfRunId', 'startedOn', 'itemCount', 'issuedCount', 'failedCount', 'finished', 'dispatchedVia', 'channel'],
+  financeConfirmationRunItem: ['runId', 'kind', 'state', 'confirmationId', 'errorCode', 'totalCents', 'lineCount'],
 };
 
 const pick = (entity: FinanceEntity, data?: Record<string, unknown>) => (data ? Object.fromEntries(Object.entries(data).filter(([field]) => AUDIT_FIELDS[entity].includes(field))) : undefined);

@@ -135,6 +135,14 @@ export const FINANCE_ERRORS = {
   entryLockedByConfirmation: { reason: 'Auf dieser Buchung liegt die Bestätigung {number}.', remedy: 'Nehmen Sie zuerst die Bestätigung zurück, dann die Buchung.' },
   contactLockedByConfirmation: { reason: 'Der Kontakt dieser Zeile steht in der Bestätigung {number}.', remedy: 'Nehmen Sie zuerst die Bestätigung zurück, korrigieren Sie dann und stellen Sie neu aus.' },
   inKindLineOnly: { reason: 'Angaben zur Sachspende gehören nur an eine Zeile der Art Sachspende.', remedy: 'Wählen Sie die Zeile mit der Sachspende, oder korrigieren Sie die Kategorie.' },
+  // F6b — Serienlauf, Sammel-PDFs, Versandvermerk für alle.
+  runNothingToIssue: { reason: 'In diesem Jahr gibt es nichts zu bestätigen.', remedy: 'Prüfen Sie Jahr, Mindestbetrag und ausgeschlossene Kontakte — oder alle Zuwendungen sind schon bestätigt.' },
+  runAlreadyFinished: { reason: 'Dieser Serienlauf ist schon abgeschlossen.', remedy: 'Starten Sie einen Nachzügler-Lauf, wenn noch Zuwendungen fehlen.' },
+  runBlocked: { reason: 'Der Serienlauf kann nicht starten: {reason}', remedy: 'Beheben Sie das zuerst, dann rechnet die Vorschau neu.' },
+  runItemNotPending: { reason: 'Dieser Posten des Serienlaufs ist schon erledigt.', remedy: 'Laden Sie die Seite neu — ein anderer Aufruf war schneller.' },
+  bundleToolsMissing: { reason: 'Die Sammel-PDFs lassen sich hier nicht zusammenfügen, weil das Werkzeug dafür fehlt.', remedy: 'Richten Sie poppler-utils mit pdfunite ein, siehe Handbuch docs/handbuch/betrieb.md — die einzelnen Bestätigungen stehen trotzdem in der Akte.' },
+  bundleEmpty: { reason: 'In diesem Teil des Serienlaufs gibt es keine ausgestellte Bestätigung.', remedy: 'Warten Sie, bis der Lauf Bestätigungen ausgestellt hat, oder wählen Sie den anderen Teil.' },
+  dispatchNothingMachine: { reason: 'In diesem Serienlauf gibt es keine maschinelle Bestätigung ohne Versandvermerk.', remedy: 'Zu unterschreibende Bestätigungen bekommen den Vermerk erst, wenn die unterschriebene Fassung abgelegt ist.' },
   batchNothingReviewed: { reason: 'Es gibt keine geprüften Entwürfe zum Festschreiben.', remedy: 'Prüfen Sie zuerst Entwürfe in der Arbeitsliste, dann lassen sie sich gemeinsam festschreiben.' },
 } as const satisfies Record<string, { reason: string; remedy: string }>;
 

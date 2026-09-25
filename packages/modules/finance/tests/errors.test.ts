@@ -45,6 +45,14 @@ describe('finance errors', () => {
     expect(financeConflict('confirmationIncomeNotCertifiable', { category: 'Zuschüsse' })).toMatchObject({ error: { message: expect.stringContaining('Zuschüsse') } });
   });
 
+  it('knows the errors of the confirmation run and its bundles (F6b)', () => {
+    for (const code of ['runNothingToIssue', 'runAlreadyFinished', 'runBlocked', 'runItemNotPending', 'bundleToolsMissing', 'bundleEmpty', 'dispatchNothingMachine']) {
+      expect(Object.keys(FINANCE_ERRORS), code).toContain(code);
+    }
+    expect(financeConflict('runBlocked', { reason: 'Am 2027-01-15 gilt kein Bescheid.' })).toMatchObject({ error: { code: 'runBlocked', message: expect.stringContaining('Am 2027-01-15 gilt kein Bescheid.') } });
+    expect(FINANCE_ERRORS.bundleToolsMissing.remedy).toContain('pdfunite');
+  });
+
   it('names the kinds of notice in everyday words, never in the words of the tax code (F6a)', () => {
     const hits = Object.entries(FINANCE_ERRORS).flatMap(([code, { reason, remedy }]) =>
       [/vorläufige Anerkennung/, /Freistellungsbescheid/, /Anlage zum Körperschaftsteuerbescheid/].filter((p) => p.test(`${reason} ${remedy}`)).map((p) => `${code}: ${p.source}`),

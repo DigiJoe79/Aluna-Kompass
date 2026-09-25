@@ -4,6 +4,7 @@ import type { Db } from './db/client';
 import type { DocumentEngine } from './documents/engine';
 import type { FileStore } from './files/store';
 import type { Registry } from './modules/registry';
+import type { PdfTools } from './pdf/tools';
 import type { TextExtraction } from './text/extraction';
 
 export type AppEnv = 'development' | 'test' | 'production';
@@ -28,6 +29,11 @@ export interface Deps {
    * selbst nie — heute benutzt es nur `dms`.
    */
   textExtraction: TextExtraction;
+  /**
+   * PDF-Werkzeuge des Containers (`pdfunite`), durchgereicht wie die
+   * Texterkennung. Der Kern ruft sie selbst nie — heute benutzt sie nur `finance`.
+   */
+  pdf: PdfTools;
   /** Gepflegte Sprachen, erste ist Leitsprache. Als Funktion, damit eine Änderung sofort wirkt. */
   locales: () => string[];
 }

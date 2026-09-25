@@ -98,6 +98,7 @@ describe('finance module', () => {
       financeProjectSettings: true, financeYearPersonalData: true, financeImportPersonalData: true, financeCashCount: false,
       financeImportProfile: false, financeImportRule: true, financeContactBankAccount: true,
       financeNotice: false, financeConfirmation: false, financeConfirmationLine: false, financeSigner: false, financeInKindDetails: false,
+      financeConfirmationRun: false, financeConfirmationRunItem: false,
     });
   });
 
@@ -135,6 +136,14 @@ describe('finance module', () => {
       const rule = (financeModule.deletionRules ?? []).find((r) => r.entity === entity);
       expect(rule, entity).toMatchObject({ deletable: false });
       expect(rule!.reason.length, entity).toBeGreaterThan(20);
+    }
+  });
+
+  it('never lets a confirmation run or its items go: the run is the fact of who issued what when (F6b)', () => {
+    for (const entity of ['financeConfirmationRun', 'financeConfirmationRunItem']) {
+      const rule = (financeModule.deletionRules ?? []).find((r) => r.entity === entity);
+      expect(rule, entity).toMatchObject({ deletable: false });
+      expect(rule!.reason, entity).toContain('Der Lauf ist die Tatsache, wer wann was ausgestellt hat');
     }
   });
 

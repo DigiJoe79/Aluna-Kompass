@@ -51,6 +51,26 @@ describe('financeAudit', () => {
     expect(JSON.parse(entries[1]!.after as string)).toMatchObject({ documentNumber: 'ZWB-2026-0001', totalCents: 5000, lineCount: 1 });
   });
 
+  it('logs a confirmation run by its counters and parameters, never a contact id or the sort key (F6b)', () => {
+    const { deps, ctx } = setupFinance();
+    deps.db.transaction((tx) => {
+      financeAudit(tx, deps, ctx, {
+        action: 'finance.confirmationRun.start', entity: 'financeConfirmationRun', id: 'R1',
+        after: { excludedContactIds: ['CONTACT-1'], contactId: 'CONTACT-2', year: 2026, minCents: 0, excludedCount: 1, followUpOfRunId: null, startedOn: '2027-01-15', itemCount: 3, issuedCount: 0, failedCount: 0, finished: false, dispatchedVia: null, channel: 'ui' },
+        summary: 'Serienlauf R1 gestartet',
+      });
+      financeAudit(tx, deps, ctx, {
+        action: 'finance.confirmationRun.item', entity: 'financeConfirmationRunItem', id: 'I1',
+        after: { contactId: 'CONTACT-2', sortKey: 'musterspenderin', lineIds: ['L1'], runId: 'R1', kind: 'collective', state: 'issued', confirmationId: 'C1', errorCode: null, totalCents: 5000, lineCount: 1 },
+        summary: 'Posten I1 ausgestellt',
+      });
+    });
+    const [run, item] = deps.db.select().from(schema.auditLog).all().slice(-2);
+    expect(JSON.parse(run!.after as string)).toEqual({ year: 2026, minCents: 0, excludedCount: 1, followUpOfRunId: null, startedOn: '2027-01-15', itemCount: 3, issuedCount: 0, failedCount: 0, finished: false, dispatchedVia: null, channel: 'ui' });
+    expect(JSON.parse(item!.after as string)).toEqual({ runId: 'R1', kind: 'collective', state: 'issued', confirmationId: 'C1', errorCode: null, totalCents: 5000, lineCount: 1 });
+    expect(JSON.stringify([run, item])).not.toMatch(/CONTACT-|musterspenderin|"L1"/);
+  });
+
   it('never lists a field that could carry a person, free text or a bank detail', () => {
     const forbidden = /name|label|title|description|note|text|reason|iban|bic|holder|purposeLine|contact|subject|email/i;
     const offenders = Object.entries(AUDIT_FIELDS).flatMap(([entity, fields]) => fields.filter((f) => forbidden.test(f)).map((f) => `${entity}.${f}`));

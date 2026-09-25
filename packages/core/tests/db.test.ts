@@ -44,6 +44,8 @@ describe('database', () => {
       'finance_cash_counts',
       'finance_categories',
       'finance_confirmation_lines',
+      'finance_confirmation_run_items',
+      'finance_confirmation_runs',
       'finance_confirmations',
       'finance_contact_bank_accounts',
       'finance_dated_values',

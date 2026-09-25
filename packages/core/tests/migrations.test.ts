@@ -126,6 +126,19 @@ describe('hand-written SQL survives', () => {
     expect(allSql).toContain('CREATE UNIQUE INDEX `finance_confirmation_lines_line_idx` ON `finance_confirmation_lines` (`line_id`) WHERE "finance_confirmation_lines"."released_at" is null');
   });
 
+  it('keeps confirmation runs and their items permanent; late facts and the outcome of an item are set once (F6b)', () => {
+    for (const name of [
+      'finance_confirmation_runs_no_delete',
+      'finance_confirmation_runs_immutable',
+      'finance_confirmation_run_items_no_delete',
+      'finance_confirmation_run_items_done_once',
+    ]) {
+      expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
+    }
+    expect(allSql).toContain('CREATE UNIQUE INDEX `finance_confirmation_run_items_key_idx` ON `finance_confirmation_run_items` (`run_id`,`contact_id`,`kind`,`in_kind_line_id`)');
+    expect(allSql).toContain('CREATE UNIQUE INDEX `finance_confirmation_run_items_collective_idx` ON `finance_confirmation_run_items` (`run_id`,`contact_id`,`kind`) WHERE "finance_confirmation_run_items"."in_kind_line_id" is null');
+  });
+
   it('refuses an import rule without any condition, on insert and on update (F5)', () => {
     for (const name of ['finance_import_rules_needs_condition_insert', 'finance_import_rules_needs_condition_update']) {
       expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);

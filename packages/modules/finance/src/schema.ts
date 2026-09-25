@@ -2,7 +2,7 @@
 // im Kern: `../modules/*/src/schema.ts`). Tabellen kommen mit den Tasks, die
 // sie brauchen.
 import { sql } from 'drizzle-orm';
-import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { index, integer, primaryKey, sqliteTable, text, uniqueIndex, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 
 /** Beträge sind ganzzahlige Cent. Spendendosen sind keine Konten, sondern ein Zugang zur Barkasse. */
 export const financeAccounts = sqliteTable(
@@ -720,3 +720,68 @@ export const financeInKindDetails = sqliteTable('finance_in_kind_details', {
   updatedAt: text('updated_at').notNull(),
 });
 export type FinanceInKindDetailsRow = typeof financeInKindDetails.$inferSelect;
+
+/**
+ * Ein Serienlauf (F6b, Spec 7.4): Parameter und Tatsachen des Starts, dazu
+ * drei späte Tatsachen — fertig, Versand vermerkt, Weg —, je einmal von leer
+ * auf Wert (Trigger `finance_confirmation_runs_immutable`). Nie gelöscht: Der
+ * Lauf ist die Tatsache, wer wann was ausgestellt hat. Die ausgeschlossenen
+ * Kontakte stehen hier als JSON-Liste, nie im Protokoll (dort nur ihre Zahl).
+ * Der Fortschritt ist berechnet — aus den Posten, nie hier gespeichert.
+ */
+export const financeConfirmationRuns = sqliteTable('finance_confirmation_runs', {
+  id: text('id').primaryKey(),
+  year: integer('year').notNull(),
+  minCents: integer('min_cents').notNull(),
+  /** JSON `string[]` — nie im Protokoll. */
+  excludedContactIds: text('excluded_contact_ids').notNull(),
+  followUpOfRunId: text('follow_up_of_run_id').references((): AnySQLiteColumn => financeConfirmationRuns.id),
+  /** Ausstellungstag aller Bestätigungen des Laufs. */
+  startedOn: text('started_on').notNull(),
+  startedAt: text('started_at').notNull(),
+  startedByUserId: text('started_by_user_id').notNull(),
+  startedChannel: text('started_channel').notNull(),
+  finishedAt: text('finished_at'),
+  dispatchedAt: text('dispatched_at'),
+  dispatchedVia: text('dispatched_via', { enum: ['post', 'email', 'handed'] }),
+  createdAt: text('created_at').notNull(),
+});
+export type FinanceConfirmationRunRow = typeof financeConfirmationRuns.$inferSelect;
+
+/**
+ * Ein Posten des Serienlaufs: Kontakt × Art (× Sachspendenzeile), beim Start
+ * als Schnappschuss angelegt und danach unveränderlich; nur der Ausgang —
+ * `state`, `confirmationId`, `errorCode`, `doneAt` — verlässt `pending`
+ * einmal (Trigger `…_done_once`). Eindeutig je Lauf, Kontakt, Art und
+ * Sachspendenzeile. Weil SQLite zwei NULL im Unique-Index für verschieden
+ * hält, trägt ein zweiter, partieller Index die Posten ohne Sachspendenzeile
+ * (`coalesce` im Index kann drizzle-kit nicht erzeugen). Kein Fremdschlüssel
+ * auf Kontakt oder Bestätigung —
+ * `contactId` und `sortKey` stehen nie im Protokoll.
+ */
+export const financeConfirmationRunItems = sqliteTable(
+  'finance_confirmation_run_items',
+  {
+    id: text('id').primaryKey(),
+    runId: text('run_id').notNull().references(() => financeConfirmationRuns.id),
+    /** Nie im Protokoll. */
+    contactId: text('contact_id').notNull(),
+    kind: text('kind', { enum: ['collective', 'collectiveWaiver', 'inKind'] }).notNull(),
+    inKindLineId: text('in_kind_line_id'),
+    /** JSON `string[]` der Zuordnungszeilen. */
+    lineIds: text('line_ids').notNull(),
+    totalCents: integer('total_cents').notNull(),
+    needsSignature: integer('needs_signature', { mode: 'boolean' }).notNull(),
+    state: text('state', { enum: ['pending', 'issued', 'failed', 'skipped'] }).notNull(),
+    confirmationId: text('confirmation_id'),
+    errorCode: text('error_code'),
+    doneAt: text('done_at'),
+    /** Kontaktname klein, für die Reihenfolge der Sammel-PDFs — nie im Protokoll. */
+    sortKey: text('sort_key').notNull(),
+  },
+  (t) => [
+    uniqueIndex('finance_confirmation_run_items_key_idx').on(t.runId, t.contactId, t.kind, t.inKindLineId),
+    uniqueIndex('finance_confirmation_run_items_collective_idx').on(t.runId, t.contactId, t.kind).where(sql`${t.inKindLineId} is null`),
+  ],
+);
+export type FinanceConfirmationRunItemRow = typeof financeConfirmationRunItems.$inferSelect;
