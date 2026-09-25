@@ -154,7 +154,7 @@ test.describe('finance', () => {
     await expect(page.getByText('Rest in diese Zeile eintragen')).toBeVisible();
 
     await page.getByRole('button', { name: 'Rest in diese Zeile eintragen' }).click();
-    await expect(page).toHaveURL(/\/finance\/entries\/[^/]+$/);
+    await expect(page).toHaveURL(/\/finance\/entries\/[0-9A-Z]{26}$/);
     await expect(page.getByTestId('entry-number')).toContainText(/\d{4}-\d+/);
   });
 
@@ -240,7 +240,7 @@ test.describe('finance', () => {
       await rows.nth(0).getByLabel('Umsatzsteuer').selectOption({ label: 'Reverse Charge (§ 13b)' });
       await page.getByRole('button', { name: 'Festschreiben', exact: true }).click();
       await page.getByRole('alertdialog').getByRole('button', { name: 'Festschreiben' }).click();
-      await expect(page).toHaveURL(/\/finance\/entries\/[^/]+$/);
+      await expect(page).toHaveURL(/\/finance\/entries\/[0-9A-Z]{26}$/);
       await expect(page.getByText(/Sie schulden .* Umsatzsteuer \(§ 13b\) — auch als Kleinunternehmer/)).toBeVisible();
     } finally {
       await setE2ESetting(page, 'finance.isEntrepreneurOrHasVatId', false);
@@ -273,7 +273,7 @@ test.describe('finance', () => {
     await rows.nth(0).getByLabel('Betrag').fill('10,00');
     await page.getByRole('button', { name: 'Festschreiben', exact: true }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Festschreiben' }).click();
-    await expect(page).toHaveURL(/\/finance\/entries\/[^/]+$/);
+    await expect(page).toHaveURL(/\/finance\/entries\/[0-9A-Z]{26}$/);
     await expect(page.getByTestId('entry-number')).toContainText(/\d{4}-\d+/);
   });
 
@@ -293,7 +293,7 @@ test.describe('finance', () => {
     await rows.nth(0).getByLabel('Betrag').fill('120,00');
     await page.getByRole('button', { name: 'Festschreiben', exact: true }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Festschreiben' }).click();
-    await expect(page).toHaveURL(/\/finance\/entries\/[^/]+$/);
+    await expect(page).toHaveURL(/\/finance\/entries\/[0-9A-Z]{26}$/);
     await expect(page.getByText('Rest 0,00 €')).toBeVisible();
   });
 
@@ -313,7 +313,7 @@ test.describe('finance', () => {
     await rows.nth(0).getByLabel('Betrag').fill('50,00');
     await page.getByRole('button', { name: 'Festschreiben', exact: true }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Festschreiben' }).click();
-    await expect(page).toHaveURL(/\/finance\/entries\/[^/]+$/);
+    await expect(page).toHaveURL(/\/finance\/entries\/[0-9A-Z]{26}$/);
     await expect(page.getByText('Rest 70,00 €')).toBeVisible();
   });
 
@@ -349,7 +349,7 @@ test.describe('finance', () => {
     await loginAsAdmin(page);
     await page.goto('/finance/entries');
     await page.locator('tr', { hasText: 'Bar-Ausgabe Fahrtkosten' }).click();
-    await expect(page).toHaveURL(/\/finance\/entries\/[^/]+$/);
+    await expect(page).toHaveURL(/\/finance\/entries\/[0-9A-Z]{26}$/);
     await expect(page.getByRole('textbox')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Korrigieren' })).toHaveCount(1);
   });
@@ -699,7 +699,7 @@ test.describe('finance', () => {
     await rows.nth(0).getByLabel('Betrag').fill('120,00');
     await page.getByRole('button', { name: 'Festschreiben', exact: true }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Festschreiben' }).click();
-    await expect(page).toHaveURL(/\/finance\/entries\/[^/]+$/);
+    await expect(page).toHaveURL(/\/finance\/entries\/[0-9A-Z]{26}$/);
     const bookedNumber = (await page.getByTestId('entry-number').textContent())!.trim();
 
     await page.goto('/finance/open-items');
