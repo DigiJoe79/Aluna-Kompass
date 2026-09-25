@@ -148,7 +148,9 @@ Wert selbst ändern Sie in der Buchung. Sachspenden bekommen die Bestätigung
 Verzichtet jemand auf die Erstattung einer Auslage, ist das eine
 Aufwandsspende. Sie wird wie eine Geldspende bestätigt, mit dem Satz zum
 Verzicht, aber immer mit Unterschriftsfeld. Aufwandsspenden schalten Sie
-unter Einstellungen → Finanzen im Schritt „Steuerliches“ ein.
+unter Einstellungen → Finanzen im Schritt „Steuerliches“ ein. Wie jemand
+beim Einreichen einer Auslage verzichtet und wie die Freigabe die vier
+Voraussetzungen dafür prüft, steht unter [Auslagen](auslagen.md).
 
 ## Unterschrift fehlt
 

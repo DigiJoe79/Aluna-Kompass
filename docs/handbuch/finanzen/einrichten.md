@@ -28,7 +28,9 @@ verschwindet aus der Liste:
    „Vorgaben übernehmen“ setzt die mitgelieferten Standardwerte in einem
    Zug; wer abweicht, ändert die einzelnen Felder danach von Hand.
    Aufwandsspenden sind in der Vorgabe aus: Ein Verein, der sie anbietet,
-   schaltet sie bewusst ein.
+   schaltet sie bewusst ein. Erst dann erscheint das Feld
+   „Anspruchsgrundlage für Aufwandsspenden“ — ein Vertrag oder die Satzung,
+   nie ein Vorstandsbeschluss allein (siehe [Auslagen](auslagen.md)).
 
 Wer einen Schritt nicht selbst erledigen kann, liest an ihm, wer es kann.
 

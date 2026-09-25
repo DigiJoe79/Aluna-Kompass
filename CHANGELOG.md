@@ -161,10 +161,43 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
   nicht bestätigt, anonym, sonstige) und, wo eine Bestätigung nach einer
   Rückgabe zu viel bescheinigt, als „zu korrigieren“. Für Kleinspenden druckt
   das Spendenbuch den vereinfachten Nachweis als PDF-Formular.
+- **Finanzen: Auslagen einreichen, freigeben, Verzicht.** Unter Finanzen →
+  Eigene Anträge reicht eine Person ihre Auslage ein — auch am Telefon:
+  Belege als PDF (mit einer Kurzanleitung, wie aus einem Foto eines wird)
+  oder eine Fahrt nach Kilometersatz. Die Eingaben werden laufend am Server
+  gesichert, Einreichen bleibt immer möglich — fehlt noch etwas, sagt
+  Kompass, was zu tun ist, mit einem Sprung zum Feld. Eigene Anträge zeigen
+  ihren Zustand in Alltagssprache; ein abgelehnter Antrag lässt sich mit
+  „Neu einreichen“ als Entwurf kopieren. Unter Finanzen → Freigaben wartet
+  die Warteschlange auf eine zweite Person — nie auf die anlegende Person
+  oder deren eigenen Kontakt —, schlägt schwach eine Kategorie vor und zeigt
+  nach der Freigabe die Überweisungsdaten mit Kopierknopf für die IBAN.
+  Verzichtet jemand stattdessen auf die Erstattung (Aufwandsspende), muss das
+  vorher vereinbart gewesen sein — durch einen Vertrag oder die Satzung, ein
+  bloßer Vorstandsbeschluss reicht nicht (BMF-Schreiben vom 25. November
+  2014); die Freigabe prüft vier Voraussetzungen (Anspruch vorab vereinbart,
+  Frist eingehalten, der Verein hätte zahlen können, Verzichtserklärung
+  liegt vor), erzeugt die Verzichtserklärung als Vordruck mit
+  Unterschriftsfeld und bucht danach eine Aufwandsspende ohne Geldfluss —
+  bestätigt wird sie wie jede andere Spende, nie maschinell. Unter
+  Einstellungen → Finanzen kommt dafür die Anspruchsgrundlage für
+  Aufwandsspenden dazu; der Schalter für Aufwandsspenden bleibt in der
+  Vorgabe aus. 18 neue MCP-Werkzeuge, darunter Freigeben nur für einen
+  Menschen. Das Handbuch hat dafür die Seite „Auslagen“. Diese Fassung
+  bringt dafür eine Datenbank-Migration mit, die beim Start von selbst
+  läuft.
 - Diese Fassung bringt mehrere Datenbank-Migrationen mit, die beim Start von
   selbst laufen — vor dem Update wie immer ein Backup exportieren.
 
 ### Geändert
+
+- **Verzichtsfristen für Aufwandsspenden richtiggestellt.** Ein Verzicht auf
+  die Erstattung ist bei einer einmaligen Auslage binnen drei Monaten
+  rechtzeitig, bei einer regelmäßigen Tätigkeit binnen zwölf Monaten (BMF-
+  Schreiben vom 25. November 2014). Betrifft nur diese neue Fassung.
+- **Touch-Maße für Formularfelder.** Auf einem Gerät mit Touch-Bedienung sind
+  Eingabefelder, Auswahlfelder und Knöpfe der Finanzformulare jetzt 46 Pixel
+  hoch mit größerer Schrift — leichter zu treffen auf dem Telefon.
 
 - **Bibliotheken aktualisiert**, darunter React 19.3 und Next.js 16.3.5. Für
   den Betrieb ändert sich nichts.

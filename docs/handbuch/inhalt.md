@@ -30,6 +30,7 @@
   - [Barkasse](finanzen/barkasse.md)
   - [Konten und offene Zahlungen](finanzen/konten-und-offene-zahlungen.md)
   - [Spenden](finanzen/spenden.md)
+  - [Auslagen](finanzen/auslagen.md)
 - Einstellungen
   - [Stammdaten](einstellungen/verein.md)
   - [Nutzer und Rollen](einstellungen/nutzer-und-rollen.md)

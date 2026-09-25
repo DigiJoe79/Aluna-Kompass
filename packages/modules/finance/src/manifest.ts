@@ -81,6 +81,9 @@ export const financeModule: ModuleManifest = defineModule({
     { href: '/finance/donations/book', doc: 'finanzen/spenden' },
     { href: '/finance/donations/notices', doc: 'finanzen/spenden' },
     { href: '/finance/donations', doc: 'finanzen/spenden' },
+    { href: '/finance/expenses/new', doc: 'finanzen/auslagen' },
+    { href: '/finance/expenses', doc: 'finanzen/auslagen' },
+    { href: '/finance/approvals', doc: 'finanzen/auslagen' },
     { href: '/admin/finance', doc: 'finanzen/einrichten' },
   ],
   navigation: [
