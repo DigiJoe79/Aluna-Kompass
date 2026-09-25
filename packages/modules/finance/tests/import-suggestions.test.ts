@@ -194,6 +194,25 @@ describe('suggestForTransaction — (3) open items', () => {
     expect(JSON.stringify(suggestion)).not.toContain(invoice.id);
   });
 
+  it('takes tax code and contact from a template line without category', async () => {
+    const f = await ledgerFixture();
+    const run = insertRun(f, f.bank.id);
+    // Wie `createOpenItemFromInvoice` (F5b): die Rechnung kennt keine Vereinskategorie.
+    const invoice = unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'payable', itemDate: '2026-02-20', amountCents: 11900, paymentReference: 'TM-2026-0042', lineTemplate: [{ taxCode: 'standard', contactId: f.donor.id }] }));
+    const paid = insertRaw(f, run, { accountId: f.bank.id, amountCents: -11900, purpose: 'Rechnung TM-2026-0042', iban: null });
+    const suggestion = await suggest(f, paid);
+    expect(suggestion).toMatchObject({
+      kind: 'openItem', confidence: 'sure',
+      reasons: [{ kind: 'paymentReference', openItemId: invoice.id }],
+      draft: {
+        moneyLines: [{ accountId: f.bank.id, amountCents: -11900, rawTransactionId: paid, settlements: [{ openItemId: invoice.id, amountCents: 11900 }] }],
+        allocationLines: [{ categoryId: '', amountCents: -11900, taxCode: 'standard', contactId: f.donor.id }],
+      },
+    });
+    // Die leere Kategorie wählt der Mensch — sie ist kein Problem „Kategorie stillgelegt“.
+    expect(suggestion.problems).toEqual([]);
+  });
+
   it('still proposes the remainder of a partially settled open item', async () => {
     const f = await ledgerFixture();
     const run = insertRun(f, f.bank.id);

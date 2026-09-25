@@ -225,7 +225,13 @@ function allocation(fields: { categoryId: string; amountCents: number; taxCode?:
   return line as AllocationInput;
 }
 
-/** Zeilenvorlage einer offenen Zahlung (JSON) → Zuordnungszeilen; eine einzelne Zeile bekommt den Betrag des Umsatzes. */
+/**
+ * Zeilenvorlage einer offenen Zahlung (JSON) → Zuordnungszeilen; eine einzelne
+ * Zeile bekommt den Betrag des Umsatzes. Trägt keine Vorlagenzeile eine
+ * Kategorie (die offene Zahlung aus einer Rechnung, F5b Annahme 4), belegt die
+ * erste Kennzeichen und Kontakt einer Zeile mit **leerer** Kategorie und dem
+ * ganzen Betrag vor — die Kategorie wählt der Mensch.
+ */
 function linesFromTemplate(item: FinanceOpenItemRow, amountCents: number): AllocationInput[] {
   if (!item.lineTemplate) return [];
   let parsed: unknown;
@@ -235,8 +241,14 @@ function linesFromTemplate(item: FinanceOpenItemRow, amountCents: number): Alloc
     return [];
   }
   if (!Array.isArray(parsed)) return [];
-  const records = parsed.filter((r): r is Record<string, unknown> => typeof r === 'object' && r !== null && typeof (r as Record<string, unknown>).categoryId === 'string');
+  const objects = parsed.filter((r): r is Record<string, unknown> => typeof r === 'object' && r !== null && !Array.isArray(r));
+  const records = objects.filter((r) => typeof r.categoryId === 'string' && r.categoryId !== '');
   const str = (v: unknown) => (typeof v === 'string' && v ? v : null);
+  if (records.length === 0) {
+    const first = objects[0];
+    if (!first) return [];
+    return [allocation({ categoryId: '', amountCents, taxCode: str(first.taxCode), contactId: str(first.contactId) ?? item.contactId })];
+  }
   return records.map((r) =>
     allocation({
       categoryId: r.categoryId as string,
@@ -263,7 +275,8 @@ function bookedRawsInternal(db: DbOrTx): (FinanceRawTransactionRow & { entryId: 
 function problemsOf(data: SuggestionData, draft: SuggestionDraft | null, extra: SuggestionView['problems'] = []): SuggestionView['problems'] {
   const problems = new Set(extra);
   for (const line of draft?.allocationLines ?? []) {
-    if (!data.categories.get(line.categoryId)?.isActive) problems.add('categoryInactive');
+    // Eine leere Kategorie (Zeilenvorlage ohne Kategorie) wählt der Mensch — kein Problem.
+    if (line.categoryId !== '' && !data.categories.get(line.categoryId)?.isActive) problems.add('categoryInactive');
     const purpose = line.purposeId ? data.purposes.get(line.purposeId) : undefined;
     if (purpose && (!purpose.isActive || purpose.fulfilledAt !== null || purpose.dissolvedAt !== null)) problems.add('purposeClosed');
   }

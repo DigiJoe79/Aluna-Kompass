@@ -133,7 +133,8 @@ export async function attachVoucherToTransaction(deps: Deps, ctx: CallContext, i
       deps,
       ctx,
       draft
-        ? { rawTransactionId: raw.id, entryDate: draft.entryDate, text: v.entryTextIfNew ?? draft.text, allocationLines: draft.allocationLines, extraMoneyLines: draft.moneyLines.slice(1), settlements: draft.moneyLines[0]?.settlements, reviewed: false }
+        ? // Eine Zeile mit leerer Kategorie (Zeilenvorlage ohne Kategorie) wählt erst der Mensch — der Entwurf bleibt ohne sie.
+          { rawTransactionId: raw.id, entryDate: draft.entryDate, text: v.entryTextIfNew ?? draft.text, allocationLines: draft.allocationLines.filter((l) => l.categoryId !== ''), extraMoneyLines: draft.moneyLines.slice(1), settlements: draft.moneyLines[0]?.settlements, reviewed: false }
         : { rawTransactionId: raw.id, text: v.entryTextIfNew ?? defaultText(raw), allocationLines: [], reviewed: false },
     );
     if (!booked.ok) return booked;

@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { saveImportRule } from '../src/import/rules';
 import { attachVoucherToTransaction, searchVouchersForTransaction } from '../src/import/vouchers';
 import { getEntry, saveDraft } from '../src/ledger/entries';
+import { createOpenItem } from '../src/ledger/open-items';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
 import { financeEntries, financeEntryDocuments } from '../src/schema';
 import { insertDocument, insertRaw, insertRun, ledgerFixture, pdfBytes } from './helpers';
@@ -77,6 +78,16 @@ describe('attachVoucherToTransaction', () => {
     expect(doc.subject).toContain(f.programCosts.name);
     expect(doc.subject).not.toMatch(/Erika|Beispiel/);
     expect(f.deps.db.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, entry.id)).all()).toHaveLength(1);
+  });
+
+  it('keeps the settlement but drops a template line without category when it creates the draft', async () => {
+    const f = await ledgerFixture();
+    const item = unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'payable', itemDate: '2026-02-20', amountCents: 11900, paymentReference: 'TM-2026-0042', lineTemplate: [{ taxCode: 'standard' }] }));
+    const rawId = insertRaw(f, insertRun(f, f.bank.id), { accountId: f.bank.id, amountCents: -11900, iban: null, purpose: 'Rechnung TM-2026-0042' });
+    const res = unwrap(await attachVoucherToTransaction(f.deps, f.ctx, { rawTransactionId: rawId, bytes: pdfBytes() }));
+    const entry = unwrap(await getEntry(f.deps, f.ctx, { id: res.entryId }));
+    expect(entry.allocationLines).toEqual([]);
+    expect(entry.moneyLines).toMatchObject([{ rawTransactionId: rawId, settlements: [{ openItemId: item.id, amountCents: 11900 }] }]);
   });
 
   it('files an incoming payment as a receipt, falls back to a bare draft without a suggestion, and keeps no draft when the file is refused', async () => {
