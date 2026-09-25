@@ -1,5 +1,5 @@
-import { assignRole, createRole, createUser, schema, setRolePermissions, unwrap, type CallContext, type Deps } from '@kompass/core';
-import { addContactRole, contactRoles, contacts, createContact } from '@kompass/module-contacts';
+import { assignRole, createRole, createUser, readSetting, schema, setRolePermissions, unwrap, type CallContext, type Deps } from '@kompass/core';
+import { addContactRole, contactRoles, contacts, createContact, updateContact } from '@kompass/module-contacts';
 import { documents as dmsDocuments, receiveDocument, textPdf } from '@kompass/module-dms';
 import { projects } from '@kompass/module-projects';
 import { and, asc, eq } from 'drizzle-orm';
@@ -23,6 +23,12 @@ import { reverseEntry } from './ledger/reverse';
 import { uploadVoucher, revokeVoucher } from './ledger/vouchers';
 import { setDatedValue } from './ledger/dated-values';
 import { installFinance } from './install';
+import { checkConfirmable } from './donations/check';
+import { attachSignedConfirmation, issueConfirmation } from './donations/confirmations';
+import { saveInKindDetails } from './donations/in-kind';
+import { saveSigner, uploadFacsimile } from './donations/machine';
+import { saveNotice } from './donations/notices';
+import { setFinanceSwitch } from './ledger/setup';
 import { buildCamt053Bytes } from './import/camt-fixture';
 import { buildOfficeInvoicePdf, buildVetInvoicePdf } from './import/zugferd-fixture';
 import { discardRun } from './import/discard';
@@ -39,8 +45,12 @@ import {
   financeImportRuns,
   financeMoneyLines,
   financeOpenItems,
+  financeConfirmationLines,
+  financeConfirmations,
+  financeNotices,
   financePurposes,
   financeRawTransactions,
+  financeSigners,
 } from './schema';
 
 const isoDate = (d: Date): string => d.toISOString().slice(0, 10);
@@ -611,6 +621,9 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   // Modultest schon die Rolle „ohne X“ oder „mit contacts.view“ — eine eigene, ad-hoc angelegte Rolle
   // (nicht Grundausstattung, `installFinance` liefert genau fünf) hält das getrennt.
   await ensureCashOnlyPerson(deps, ctx);
+
+  // F6a (aus Task 9 vorgezogen): Bescheid, maschinelles Verfahren, Bestätigungen in ihren Zuständen.
+  await seedDonations(deps, ctx, currentYear);
 }
 
 async function grantAuditorRoleToMiraKlein(deps: Deps, ctx: CallContext): Promise<void> {
@@ -848,5 +861,141 @@ async function seedCashDepositAndReturn(deps: Deps, ctx: CallContext, importkont
         allocationLines: [{ categoryId: categoryByKey(deps, 'membership-fees').id, amountCents: fee.amountCents }],
       }),
     );
+  }
+}
+
+/**
+ * Ein erfundenes Faksimile: eine Wellenlinie, 96 × 32 Pixel, Graustufen-PNG.
+ * Die Bytes stehen im Code, damit der Seed ohne Datei auskommt; die Vorlage
+ * bindet es wie jedes hochgeladene Faksimile ein.
+ */
+const SEED_FACSIMILE_PNG =
+  'iVBORw0KGgoAAAANSUhEUgAAAGAAAAAgCAAAAADIqyKIAAAAoUlEQVR42u2WUQ6AIAxD3/0vrSYashgoK8KX7BO7tsxtyrE42AJbICCvWCdACZcfj95USOIDzJLIGnqB0go3Oy5/WuGBMfCWrHtj2s/2RklkhL+vENtihL+nEBJVPWWt9TMyo0DPZcoYTR76dc4Yo8WE0SlyLhvAkRmvnlEHetOqthu1c8x9o3wxY2MqX0zZ+SKR718tnUfrvr7G/m35rcAJzhP2lpJRxHQAAAAASUVORK5CYII=';
+
+type SeedContact = { kind: 'person'; firstName: string; lastName: string } | { kind: 'organization'; name: string };
+
+/** Einen erfundenen Kontakt finden oder anlegen; die Anschrift nur, wo sie gegeben ist — sonst bleibt er „ohne Anschrift“. */
+async function ensureDonationContact(deps: Deps, ctx: CallContext, who: SeedContact, address?: { street: string; postalCode: string; city: string }): Promise<string> {
+  const contactCtx: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, 'contacts.manage']) };
+  const existing =
+    who.kind === 'person'
+      ? deps.db.select().from(contacts).where(and(eq(contacts.firstName, who.firstName), eq(contacts.lastName, who.lastName))).get()
+      : deps.db.select().from(contacts).where(eq(contacts.name, who.name)).get();
+  if (!existing) return unwrap(await createContact(deps, contactCtx, { ...who, ...(address ?? {}) })).id;
+  if (address && !existing.street) unwrap(await updateContact(deps, contactCtx, { id: existing.id, ...address }));
+  return existing.id;
+}
+
+/** Die Zeile mit dem positiven Betrag (Einnahme) einer Buchung — bei Sach- und Aufwandsspende steht daneben der Aufwand. */
+function incomeLineOf(deps: Deps, entryText: string) {
+  const line = allocationLinesOf(deps, entryByText(deps, entryText).id).find((l) => l.amountCents > 0);
+  if (!line) throw new Error(`Einnahmezeile fehlt: ${entryText}`);
+  return line;
+}
+
+/** Eine Bestätigung nur, wenn auf der Zeile noch keine liegt und die Prüfliste nichts sperrt — idempotent. */
+async function ensureConfirmation(deps: Deps, ctx: CallContext, lineId: string): Promise<void> {
+  if (deps.db.select({ id: financeConfirmationLines.id }).from(financeConfirmationLines).where(eq(financeConfirmationLines.lineId, lineId)).get()) return;
+  const check = unwrap(await checkConfirmable(deps, ctx, { lineIds: [lineId] }));
+  if (!check.ok) return;
+  unwrap(await issueConfirmation(deps, ctx, { lineIds: [lineId] }));
+}
+
+/**
+ * F6a (Spec 11.3, aus Task 9 vorgezogen für die E2E von Task 7): der
+ * Freistellungsbescheid eines erfundenen Finanzamts, Jonas Feld als
+ * Unterzeichner mit Faksimile und Anzeige, und Zuwendungen in jedem Zustand:
+ * gültig und maschinell (Erika Beispiel), „Unterschrift fehlt“ (eine
+ * Aufwandsspende), eine Sachspende mit Angaben und Bestätigung (Prüfstein 5);
+ * unbestätigt eine Spende ohne Anschrift (sperrt), eine einer Organisation
+ * (warnt), eine zweite Aufwandsspende und eine Sachspende ohne Angaben. Die
+ * Bestätigungen entstehen nur, wenn die Vereinsanschrift steht (sie kommt aus
+ * dem Kern-Seed) — ein Modultest ohne sie bekommt Bescheid und Buchungen,
+ * aber keine Bestätigung. „Zurückgenommen“ und „zu korrigieren“ folgen mit
+ * Task 9.
+ */
+async function seedDonations(deps: Deps, ctx: CallContext, currentYear: number): Promise<void> {
+  if (!deps.db.select({ id: financeNotices.id }).from(financeNotices).get()) {
+    unwrap(
+      await saveNotice(deps, ctx, {
+        kind: 'exemptionNotice',
+        taxOffice: 'Finanzamt Musterstadt',
+        taxNumber: '99/999/99999',
+        noticeDate: '2025-05-02',
+        assessmentPeriod: '2023',
+        purposesText: 'Förderung des Sports (§ 52 Abs. 2 Satz 1 Nr. 21 AO) und der Jugendhilfe (§ 52 Abs. 2 Satz 1 Nr. 4 AO)',
+      }),
+    );
+  }
+  if (!deps.db.select({ id: financeSigners.id }).from(financeSigners).get()) {
+    const signer = unwrap(await saveSigner(deps, ctx, { validFrom: '2025-01-01', signerName: 'Jonas Feld', notifiedOn: '2025-06-02' }));
+    unwrap(await uploadFacsimile(deps, ctx, { signerId: signer.id, bytes: new Uint8Array(Buffer.from(SEED_FACSIMILE_PNG, 'base64')), mimeType: 'image/png' }));
+  }
+  if (!readSetting<boolean>(deps, 'finance.expenseWaiversEnabled')) unwrap(await setFinanceSwitch(deps, ctx, { key: 'finance.expenseWaiversEnabled', value: true }));
+
+  const erika = await ensureDonationContact(deps, ctx, { kind: 'person', firstName: 'Erika', lastName: 'Beispiel' }, { street: 'Beispielstraße 7', postalCode: '54321', city: 'Beispielstadt' });
+  const lukas = await ensureDonationContact(deps, ctx, { kind: 'person', firstName: 'Lukas', lastName: 'Hofmann' }, { street: 'Ulmenweg 12', postalCode: '12345', city: 'Musterstadt' });
+  const clara = await ensureDonationContact(deps, ctx, { kind: 'person', firstName: 'Clara', lastName: 'Neumann' }, { street: 'Rosengasse 5', postalCode: '12347', city: 'Musterstadt' });
+  const tobias = await ensureDonationContact(deps, ctx, { kind: 'person', firstName: 'Tobias', lastName: 'Adler' });
+  const club = await ensureDonationContact(deps, ctx, { kind: 'organization', name: 'Sportfreunde Beispieltal e. V.' }, { street: 'Am Sportplatz 1', postalCode: '12349', city: 'Beispieltal' });
+
+  const bank = accountByName(deps, 'Vereinskonto');
+  const donations = categoryByKey(deps, 'donations');
+  const waivers = categoryByKey(deps, 'expense-waivers');
+  const travel = categoryByKey(deps, 'travel');
+  const inKind = categoryByKey(deps, 'in-kind-donations');
+  const inKindExpense = categoryByKey(deps, 'program-in-kind');
+
+  const money = async (text: string, date: string, cents: number, contactId: string) => {
+    await ensureEntry(deps, text, () => bookEntry(deps, ctx, { entryDate: date, text, moneyLines: [{ accountId: bank.id, amountCents: cents }], allocationLines: [{ categoryId: donations.id, amountCents: cents, contactId }] }).then(unwrap));
+    await ensureVoucher(deps, ctx, entryByText(deps, text), 'voucher-own', date, `Spendeneingang ${text}`);
+  };
+  const withoutMoney = async (text: string, date: string, cents: number, contactId: string, income: { id: string }, expense: { id: string }) => {
+    await ensureEntry(deps, text, () =>
+      bookEntry(deps, ctx, { entryDate: date, text, moneyLines: [], allocationLines: [{ categoryId: income.id, amountCents: cents, contactId }, { categoryId: expense.id, amountCents: -cents }] }).then(unwrap),
+    );
+  };
+
+  await money('Spende Erika Beispiel Juni', `${currentYear}-06-12`, 25000, erika);
+  await money('Spende Tobias Adler', `${currentYear}-06-20`, 5000, tobias);
+  await money('Spende Sportfreunde Beispieltal', `${currentYear}-07-05`, 10000, club);
+
+  await withoutMoney('Aufwandsspende Fahrtkosten Mai', `${currentYear}-05-20`, 4800, lukas, waivers, travel);
+  await ensureVoucher(deps, ctx, entryByText(deps, 'Aufwandsspende Fahrtkosten Mai'), 'voucher-own', `${currentYear}-05-20`, 'Verzichtserklärung Fahrtkosten Mai');
+  await withoutMoney('Aufwandsspende Fahrtkosten Juli', `${currentYear}-07-15`, 3600, lukas, waivers, travel);
+  await ensureVoucher(deps, ctx, entryByText(deps, 'Aufwandsspende Fahrtkosten Juli'), 'voucher-own', `${currentYear}-07-15`, 'Verzichtserklärung Fahrtkosten Juli');
+
+  // Prüfstein 5: Sachspenden ohne Geldfluss. Die Wertunterlage liegt als Dokument in der Akte; die des Beamers wird
+  // über die Angaben zum Beleg der Buchung, die des Laptops wartet — die E2E beschreibt ihn selbst.
+  const dmsCtx: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, 'dms.view', 'dms.create']) };
+  const proof = async (subject: string, date: string) => {
+    const found = deps.db.select({ id: dmsDocuments.id }).from(dmsDocuments).where(eq(dmsDocuments.subject, subject)).get();
+    if (found) return found.id;
+    return unwrap(await receiveDocument(deps, dmsCtx, { filename: `${date} ${subject}.pdf`, bytes: textPdf([subject, '', 'Erfundenes Beispiel für die Entwicklung.']), typeKey: 'voucher-own', subject, documentDate: date, folder: null })).id;
+  };
+  await withoutMoney('Sachspende Beamer', `${currentYear}-04-18`, 35000, clara, inKind, inKindExpense);
+  const beamerProof = await proof('Wertnachweis Beamer', `${currentYear}-08-20`);
+  await withoutMoney('Sachspende Laptop', `${currentYear}-08-03`, 20000, clara, inKind, inKindExpense);
+  await proof('Wertnachweis Laptop', `${currentYear}-08-21`);
+
+  const organizationComplete = (['street', 'postalCode', 'city'] as const).every((field) => String(readSetting(deps, `organization.${field}`) ?? '').trim());
+  if (!organizationComplete) return;
+
+  const beamer = incomeLineOf(deps, 'Sachspende Beamer');
+  if (!deps.db.select({ id: financeConfirmationLines.id }).from(financeConfirmationLines).where(eq(financeConfirmationLines.lineId, beamer.id)).get()) {
+    unwrap(await saveInKindDetails(deps, ctx, { lineId: beamer.id, item: 'Beamer mit Tasche und Fernbedienung', condition: 'gebraucht, zwei Jahre alt, voll funktionsfähig', valuation: 'Preis vergleichbarer gebrauchter Geräte laut Wertnachweis', origin: 'private', proofDocumentId: beamerProof }));
+  }
+  await ensureConfirmation(deps, ctx, incomeLineOf(deps, 'Spende Erika Beispiel Juni').id);
+  await ensureConfirmation(deps, ctx, incomeLineOf(deps, 'Aufwandsspende Fahrtkosten Mai').id);
+  await ensureConfirmation(deps, ctx, beamer.id);
+  // Die Sachspende ist unterschrieben zurück — so steht unter „Unterschrift fehlt“ nur die Aufwandsspende.
+  const beamerConfirmation = deps.db
+    .select({ id: financeConfirmations.id, signedDocumentId: financeConfirmations.signedDocumentId })
+    .from(financeConfirmationLines)
+    .innerJoin(financeConfirmations, eq(financeConfirmationLines.confirmationId, financeConfirmations.id))
+    .where(eq(financeConfirmationLines.lineId, beamer.id))
+    .get();
+  if (beamerConfirmation && !beamerConfirmation.signedDocumentId) {
+    unwrap(await attachSignedConfirmation(deps, ctx, { id: beamerConfirmation.id, bytes: textPdf(['Zuwendungsbestätigung, unterschrieben', '', 'Erfundenes Beispiel für die Entwicklung.']), fileName: 'unterschrieben.pdf' }));
   }
 }

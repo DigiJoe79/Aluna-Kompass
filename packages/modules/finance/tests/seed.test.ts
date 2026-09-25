@@ -1,4 +1,4 @@
-import { fakeTextExtraction, getEffectivePermissions, schema, unwrap } from '@kompass/core';
+import { fakeTextExtraction, getEffectivePermissions, schema, unwrap, writeSettingInternal } from '@kompass/core';
 import { insertUser, systemContext } from '@kompass/core/testing';
 import { contactRoles, contacts } from '@kompass/module-contacts';
 import { projects } from '@kompass/module-projects';
@@ -28,6 +28,11 @@ import { getProjectFinance } from '../src/ledger/project-settings';
 import { listPurposes } from '../src/ledger/purposes';
 import { financeEntries, financeEntryDocuments } from '../src/schema';
 import { seedFinance } from '../src/seed';
+import { checkConfirmable } from '../src/donations/check';
+import { getInKindDetails } from '../src/donations/in-kind';
+import { listConfirmations, listUncertifiedDonations } from '../src/donations/confirmations';
+import { getMachineProcedure } from '../src/donations/machine';
+import { listNotices } from '../src/donations/notices';
 import { setupFinance } from './helpers';
 
 describe('seedFinance', () => {
@@ -456,4 +461,72 @@ describe('seedFinance', () => {
     const role = deps.db.select().from(schema.roles).where(eq(schema.roles.name, 'Kassenassistenz')).get()!;
     expect(role.originKey).toBeNull();
   });
+
+  describe('Spenden (F6a, aus Task 9 vorgezogen)', () => {
+    async function seededWithAddress() {
+      const f = setupFinance();
+      // Die Vereinsanschrift kommt im echten Seed aus dem Kern (`seedDevelopment`); hier steht sie vorab.
+      f.deps.db.transaction((tx) => {
+        for (const [key, value] of [['organization.name', 'Musterverein e.V.'], ['organization.street', 'Vereinsweg 1'], ['organization.postalCode', '12345'], ['organization.city', 'Musterstadt']] as const) {
+          writeSettingInternal(tx, f.deps, systemContext(), key, value, 'test.organization');
+        }
+      });
+      await seedFinance(f.deps, f.ctx);
+      await seedFinance(f.deps, f.ctx);
+      return f;
+    }
+
+    it('records the exemption notice of the invented tax office and a complete machine procedure', async () => {
+      const { deps, ctx } = await seededWithAddress();
+      const notices = unwrap(await listNotices(deps, ctx, { includeInactive: true }));
+      expect(notices.map((n) => [n.kind, n.taxOffice, n.taxNumber, n.noticeDate, n.assessmentPeriod, n.state])).toEqual([['exemptionNotice', 'Finanzamt Musterstadt', '99/999/99999', '2025-05-02', '2023', 'valid']]);
+      const machine = unwrap(await getMachineProcedure(deps, ctx));
+      expect(machine.signers).toHaveLength(1);
+      expect(machine.status.complete).toBe(true);
+      expect(machine.status.signer?.signerName).toBe('Jonas Feld');
+    });
+
+    it('issues a machine money confirmation, an expense waiver without signature and a signed in-kind confirmation — once', async () => {
+      const { deps, ctx } = await seededWithAddress();
+      const issued = unwrap(await listConfirmations(deps, ctx, { tab: 'issued' }));
+      expect(issued.total).toBe(3);
+      expect(issued.counts).toEqual({ issued: 3, toCorrect: 0, needsSignature: 1 });
+      const byName = new Map(issued.items.map((c) => [c.contactName, c]));
+      expect(byName.get('Erika Beispiel')).toMatchObject({ kind: 'money', machine: true, signatureState: 'machine', state: 'valid' });
+      expect(byName.get('Lukas Hofmann')).toMatchObject({ kind: 'money', expenseWaiver: true, signatureState: 'needsSignature' });
+      const inKind = byName.get('Clara Neumann')!;
+      expect(inKind).toMatchObject({ kind: 'inKind', signatureState: 'signed' });
+      const details = unwrap(await getInKindDetails(deps, ctx, { lineId: inKind.lines[0]!.lineId }));
+      expect(details).toMatchObject({ origin: 'private' });
+      expect(details?.proofDocumentId).toBeTruthy();
+    });
+
+    it('leaves a donation without address (blocked), an organization (warning), a second waiver and an undescribed in-kind donation unconfirmed', async () => {
+      const { deps, ctx } = await seededWithAddress();
+      const groups = unwrap(await listUncertifiedDonations(deps, ctx, {})).groups;
+      const byName = new Map(groups.map((g) => [g.contactName, g]));
+      expect(byName.get('Tobias Adler')?.contactComplete).toBe(false);
+      expect(byName.get('Lukas Hofmann')?.lines.map((l) => l.netCents)).toEqual([3600]);
+      expect(byName.get('Clara Neumann')?.lines.map((l) => l.netCents)).toEqual([20000]);
+
+      const adler = unwrap(await checkConfirmable(deps, ctx, { lineIds: [byName.get('Tobias Adler')!.lines[0]!.lineId] }));
+      expect(adler.ok).toBe(false);
+      expect(adler.checks.filter((c) => c.blocked).map((c) => c.key)).toEqual(['contactComplete']);
+
+      const club = unwrap(await checkConfirmable(deps, ctx, { lineIds: [byName.get('Sportfreunde Beispieltal e. V.')!.lines[0]!.lineId] }));
+      expect(club.ok).toBe(true);
+      expect(club.warnings).toContain('organization');
+
+      const laptop = unwrap(await checkConfirmable(deps, ctx, { lineIds: [byName.get('Clara Neumann')!.lines[0]!.lineId] }));
+      expect(laptop.checks.filter((c) => c.blocked).map((c) => c.key).sort()).toEqual(['documented', 'inKindDetails']);
+    });
+
+    it('issues nothing without the address of the association — a module test without the core seed stays green', async () => {
+      const { deps, ctx } = setupFinance();
+      await seedFinance(deps, ctx);
+      expect(unwrap(await listConfirmations(deps, ctx, { tab: 'issued' })).total).toBe(0);
+      expect(unwrap(await listNotices(deps, ctx, {}))).toHaveLength(1);
+    });
+  });
 });
+

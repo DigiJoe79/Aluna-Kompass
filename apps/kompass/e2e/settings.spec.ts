@@ -33,7 +33,8 @@ test.describe('settings', () => {
 
   test('saves changed fields, shows the pending counter and audits', async ({ page }) => {
     await page.getByLabel('Vereinsname').fill('Aluna Musterverein e.V.');
-    await page.getByLabel('Ort').fill('Musterstadt');
+    // Der Seed trägt schon „Musterstadt“ ein (F6a) — eine Änderung braucht einen anderen Ort.
+    await page.getByLabel('Ort').fill('Beispielstadt');
     await expect(page.getByText('2 Änderungen noch nicht gespeichert')).toBeVisible();
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByRole('status')).toContainText('Einstellungen gespeichert');
@@ -54,9 +55,11 @@ test.describe('settings', () => {
     await expect(page.getByLabel('Kontakt-E-Mail')).toHaveValue('keine-mail');
   });
 
-  test('tax tab shows the incomplete alert and the purpose counter', async ({ page }) => {
+  test('tax tab shows no incomplete alert once finance records the notice, and the purpose counter', async ({ page }) => {
     await page.getByRole('tab', { name: 'Steuer & Bescheide' }).click();
-    await expect(page.locator('main').getByRole('alert')).toContainText('Zuwendungsbestätigungen');
+    // Seit F6a erfasst der Finanz-Seed den Freistellungsbescheid; Finanzamt, Steuernummer und Bescheid stehen damit (E22).
+    await expect(page.getByLabel('Satzungszweck')).toBeVisible();
+    await expect(page.locator('main').getByRole('alert')).toHaveCount(0);
     await page.getByLabel('Satzungszweck').fill('Förderung des Tierschutzes');
     await expect(page.getByText('26 von 500 Zeichen')).toBeVisible();
   });

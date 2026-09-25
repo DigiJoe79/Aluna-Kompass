@@ -4,7 +4,8 @@ import { coreModule, defineModule } from '../src';
 import { login } from '../src/auth/login';
 import { dashboardLayouts, rolePermissions, roles, users } from '../src/db/schema';
 import { seedDevelopment } from '../src/seed/seed';
-import { readSetting } from '../src/settings/service';
+import { readSetting, writeSettingInternal } from '../src/settings/service';
+import { systemContext } from '../src/testing';
 import { createTestDeps } from '../src/testing';
 
 describe('seedDevelopment', () => {
@@ -19,6 +20,20 @@ describe('seedDevelopment', () => {
     expect(session.ok).toBe(true);
   });
 
+
+  it('gives the invented association an address — every confirmation carries it (F6a)', async () => {
+    const deps = createTestDeps({ env: 'development' });
+    await seedDevelopment(deps);
+    expect([readSetting(deps, 'organization.street'), readSetting(deps, 'organization.postalCode'), readSetting(deps, 'organization.city')]).toEqual(['Vereinsweg 1', '12345', 'Musterstadt']);
+  });
+
+  it('keeps an address someone already entered', async () => {
+    const deps = createTestDeps({ env: 'development' });
+    await seedDevelopment(deps);
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'organization.city', 'Anderswo', 'test'));
+    await seedDevelopment(deps);
+    expect(readSetting(deps, 'organization.city')).toBe('Anderswo');
+  });
 
   it('refuses to run in production', async () => {
     const deps = createTestDeps({ env: 'production' });

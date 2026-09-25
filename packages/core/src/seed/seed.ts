@@ -6,7 +6,7 @@ import type { Deps } from '../deps';
 import { getEffectivePermissions } from '../roles/effective';
 import { unwrap } from '../result';
 import { createRole, setRolePermissions } from '../roles/service';
-import { writeSettingInternal } from '../settings/service';
+import { readSetting, writeSettingInternal } from '../settings/service';
 import { completeSetup, isSetupRequired } from '../setup/service';
 import { createUser } from '../users/service';
 import { seedMedia } from './media';
@@ -21,6 +21,12 @@ const EXAMPLE_ROLES: { name: string; description: string; permissions: string[] 
   // sonst über `nameTaken` nicht beide anlegen.
   { name: 'Interne Revision', description: 'Nur lesen', permissions: ['audit.view', 'documents.export'] },
   { name: 'Schriftführung', description: 'Dokumente erzeugen', permissions: ['documents.export'] },
+];
+
+const EXAMPLE_ADDRESS: [string, string][] = [
+  ['organization.street', 'Vereinsweg 1'],
+  ['organization.postalCode', '12345'],
+  ['organization.city', 'Musterstadt'],
 ];
 
 const EXAMPLE_USERS: { name: string; email: string; role: string }[] = [
@@ -46,6 +52,10 @@ export async function seedDevelopment(deps: Deps): Promise<{ adminEmail: string;
     // stünde die Entwicklung auf einem anderen Zustand als eine echte
     // Installation — und genau solche Unterschiede fallen zuletzt auf.
     for (const manifest of deps.registry.manifests) manifest.install?.(tx, deps, ctx);
+    // Eine erfundene Vereinsanschrift — jede Zuwendungsbestätigung trägt sie (F6a). Was schon eingetragen ist, bleibt.
+    for (const [key, value] of EXAMPLE_ADDRESS) {
+      if (!String(readSetting(deps, key) ?? '').trim()) writeSettingInternal(tx, deps, ctx, key, value, 'seed.organization');
+    }
   });
 
   const known = new Set(deps.registry.permissionKeys);

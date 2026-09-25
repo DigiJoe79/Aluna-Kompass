@@ -14,10 +14,13 @@ test.describe('home', () => {
     await expect(inbox.getByRole('link', { name: 'Freistellungsbescheid' })).toBeVisible();
     await expect(page.getByTestId('dashboard-tile-core-followUps').getByText('Antwort abwarten')).toBeVisible();
     const setup = page.getByTestId('dashboard-tile-core-setup');
-    await expect(setup.getByText('Steuernummer fehlt')).toBeVisible();
+    // Steuernummer und Bescheid schreibt der Finanz-Seed über den Bescheid nach (E22), die Anschrift der Kern-Seed —
+    // offen bleibt das Registergericht.
+    await expect(setup.getByText('Registergericht fehlt')).toBeVisible();
+    await expect(setup.getByText('Steuernummer fehlt')).toHaveCount(0);
     await expect(page.getByTestId('dashboard-tile-core-backup').getByText(/Noch kein Backup/)).toBeVisible();
     await expect(page.getByTestId('dashboard-tile-core-retention')).toContainText('1');
-    await setup.getByRole('link', { name: 'Steuernummer fehlt' }).click();
+    await setup.getByRole('link', { name: 'Registergericht fehlt' }).click();
     await expect(page).toHaveURL('/admin/settings');
   });
 
