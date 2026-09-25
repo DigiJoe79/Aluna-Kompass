@@ -100,6 +100,16 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 
   Das Handbuch hat dafür die Seite „Arbeitsliste“. Eine weitere
   Datenbank-Migration läuft beim Start von selbst.
+- **Finanzen: Rechnungen mit ZUGFeRD.** Trägt ein PDF-Beleg eine eingebettete
+  ZUGFeRD- oder Factur-X-Rechnung, zeigt Kompass Lieferant, Nummer, Datum,
+  Betrag, Umsatzsteuer, Fälligkeit und IBAN in der Karte „Aus der Rechnung“ —
+  unter „Belege ohne Buchung“, in der Akte und nach dem Ablegen in der
+  Arbeitsliste. Ist die Rechnung noch nicht bezahlt, wird daraus mit einem
+  Klick eine offene Zahlung; ist sie schon vom Konto abgegangen, führt die
+  Karte zum passenden Kontoumsatz, und der Entwurf bekommt Lieferant, Nummer,
+  Kontakt und Steuer aus der Rechnung. Gelesen wird bei jedem Öffnen,
+  gespeichert wird von der Rechnung nichts. Das Handbuch erklärt es auf der
+  Seite „Arbeitsliste“.
 - **Finanzen einrichten:** Wer nur „Finanzen einrichten“ darf, sieht jetzt
   auch die Konten (samt IBAN), Kategorien, Zwecke und Geschäftsjahre, die er
   pflegt. Sperren festgeschriebene Buchungen das Verwerfen eines Auszugs,

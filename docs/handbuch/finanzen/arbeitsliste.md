@@ -153,6 +153,58 @@ Ein Beleg findet seine Buchung auf zwei Wegen:
   Er öffnet die Buchungsmaske; der Beleg wird beim Speichern verknüpft.
   Alle solchen Belege stehen gesammelt unter „Belege ohne Buchung“.
 
+## Rechnungen mit ZUGFeRD
+
+Viele Lieferanten schicken Rechnungen als PDF mit einer eingebetteten
+elektronischen Rechnung (ZUGFeRD oder Factur-X, auch XRechnung im selben
+Format). Kompass liest daraus Lieferant, Rechnungsnummer, Rechnungsdatum,
+Betrag, Umsatzsteuer je Satz, Fälligkeit und die IBAN, an die gezahlt
+werden soll. Das PDF muss dafür nichts Besonderes können; ob es eine
+solche Rechnung trägt, sieht man ihm von außen nicht an.
+
+Die Karte **Aus der Rechnung** zeigt diese Angaben an drei Stellen:
+
+- unter **Belege ohne Buchung** — je Beleg aufklappbar mit „Aus der
+  Rechnung“;
+- in der Ansicht eines Finanzbelegs in der Akte, unter den Bezügen (nur,
+  wer Finanzen lesen darf);
+- in der Arbeitsliste, nachdem Sie ein PDF auf einen Umsatz gezogen haben:
+  **Angaben aus der Rechnung übernehmen** trägt Lieferant und Nummer als
+  Buchungstext ein, dazu Kontakt und Umsatzsteuer, und hängt das PDF an.
+
+Darunter sagt die Karte, was mit der Rechnung zu tun ist:
+
+- **Bezahlt** — auf einem Bank- oder Zahlungsdienstkonto ging genau der
+  Rechnungsbetrag ab, frühestens zehn Tage vor und spätestens 90 Tage nach
+  dem Rechnungsdatum, und die IBAN oder die Rechnungsnummer im
+  Verwendungszweck passt. **Zum Kontoumsatz buchen** öffnet diesen Umsatz
+  in der Arbeitsliste; nach dem Übernehmen trägt Kompass die Angaben der
+  Rechnung ein und hängt das PDF als Beleg an.
+- **Möglicherweise bezahlt** — nur der Betrag passt, oder mehrere Umsätze
+  passen gleich gut. Kompass wählt dann nicht selbst, sondern listet die
+  Umsätze; Sie entscheiden, welcher es war.
+- **Nicht bezahlt** — **Offene Zahlung anlegen** macht aus der Rechnung
+  eine offene Zahlung mit Betrag, Fälligkeit und der Rechnungsnummer als
+  Zahlungsreferenz. Kommt die Zahlung später mit dem Auszug, schlägt die
+  Arbeitsliste sie über diese Referenz vor. Je Rechnung gibt es höchstens
+  eine offene Zahlung; danach führt die Karte zu ihr.
+- **Gebucht als …** — die Rechnung hängt schon als Beleg an einer Buchung;
+  die Karte führt nur noch dorthin.
+
+Den Kontakt findet Kompass nur über die IBAN der Rechnung, nie über den
+Namen des Lieferanten. Eine Kategorie schlägt die Rechnung nicht vor — sie
+kennt die Kategorien des Vereins nicht; die wählen Sie beim Buchen, oder
+eine Regel tut es.
+
+**Was nie gespeichert wird:** Die Angaben werden bei jedem Öffnen der Karte
+neu aus dem PDF gelesen. Die Umsatzsteuer der Rechnung übernimmt Kompass
+nicht, sondern rechnet sie selbst aus dem Betrag; weicht der Betrag der
+Rechnung um einige Cent ab, nennt die Karte die Abweichung nur. Gelesen
+werden nur Rechnungen in Euro und nur die Summen, nicht die einzelnen
+Positionen. Lassen sich die Anhänge nicht lesen, weil die Werkzeuge der
+Texterkennung fehlen, sagt die Karte das und verweist auf die
+[Betriebsanleitung](../betrieb.md).
+
 ## Festschreiben gegen den Auszug
 
 Die Zeile „… geprüft, noch nicht festgeschrieben“ über der Liste hat den

@@ -205,5 +205,8 @@ Container.
 
 Abgelegte PDFs werden im Hintergrund durchsuchbar gemacht; bei Scans über eine
 Texterkennung. Beides bringt das Image mit, es ist nichts zu installieren.
+Eingebettete Rechnungen (ZUGFeRD) liest Kompass mit `pdfdetach`, das wie die
+Textebene zu poppler-utils gehört; wer außerhalb des Images betreibt, braucht
+dieses Paket vollständig.
 Startet der Container mitten in einem Lauf neu, erkennt er die unterbrochene
 Arbeit beim nächsten Start und nimmt sie wieder auf.
