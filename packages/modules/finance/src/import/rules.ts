@@ -6,7 +6,7 @@ import { requireFinanceRead } from '../ledger/access';
 import { TAX_CODES } from '../ledger/codes';
 import { isValidIban, normalizeIban } from '../ledger/iban';
 import { financeAccounts, financeAllocationLines, financeCategories, financeImportRules, financeImportRuns, financeMoneyLines, financePurposes, financeRawTransactions, type FinanceImportRuleRow } from '../schema';
-import { ruleMatches, type RuleConditions, type RuleTarget } from './suggest/rule';
+import { ruleMatches, type RuleConditions, type RuleTarget } from '../rules-pure';
 
 /**
  * Regeln für Kontoumsätze (F5, Spec 6.4 Vorschlag 4; HANDOFF § 12.8): eine

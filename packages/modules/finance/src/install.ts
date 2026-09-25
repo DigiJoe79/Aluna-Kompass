@@ -59,4 +59,9 @@ export function installFinance(tx: DbOrTx, deps: Deps, ctx: CallContext): void {
   // ZWB oder ZWU schon, scheitert der Start, bis der Verein ihr ein anderes Präfix gibt (Befundliste § 5).
   ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'finance-confirmation', label: 'Zuwendungsbestätigung', prefix: 'ZWB', defaultDirection: 'outgoing', retentionClass: 'statutory10Y', owned: true, protectionArea: 'finance' });
   ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'finance-confirmation-signed', label: 'Zuwendungsbestätigung, unterschrieben', prefix: 'ZWU', defaultDirection: 'incoming', retentionClass: 'statutory10Y', owned: true, protectionArea: 'finance' });
+
+  // F8a — modul-eigen: die Verzichtserklärung, die Finanzen zum Antrag erzeugt, und die unterschriebene Fassung, die als
+  // Eingang zurückkommt. Zehn Jahre wie die Zuwendungsbestätigung, die aus dem Verzicht entsteht.
+  ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'finance-waiver-declaration', label: 'Verzichtserklärung', prefix: 'VZE', defaultDirection: 'outgoing', retentionClass: 'statutory10Y', owned: true, protectionArea: 'finance' });
+  ensureDocumentType(tx, deps, ctx, { module: 'finance', key: 'finance-waiver-signed', label: 'Verzichtserklärung, unterschrieben', prefix: 'VZU', defaultDirection: 'incoming', retentionClass: 'statutory10Y', owned: true, protectionArea: 'finance' });
 }

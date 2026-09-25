@@ -64,6 +64,9 @@ describe('finance module', () => {
       // F6a: unser Exemplar und die unterschriebene Fassung einer Bestätigung, das Dokument eines Bescheids.
       { entityType: 'financeConfirmation', readPermission: 'finance.read', receivePermission: 'finance.donationsIssue' },
       { entityType: 'financeNotice', readPermission: 'finance.read', receivePermission: 'finance.donationsIssue' },
+      // F8a: Belege und Verzichtserklärung am Antrag — abgelegt von der einreichenden Person ohne Recht der Akte;
+      // lesen darf sie ihre eigenen über den Dienst (Eigentümer-Weg), alle anderen mit finance.read.
+      { entityType: 'financeExpenseClaim', readPermission: 'finance.read', receivePermission: 'finance.expensesSubmit' },
     ]);
   });
 
@@ -102,6 +105,7 @@ describe('finance module', () => {
       financeImportProfile: false, financeImportRule: true, financeContactBankAccount: true,
       financeNotice: false, financeConfirmation: false, financeConfirmationLine: false, financeSigner: false, financeInKindDetails: false,
       financeConfirmationRun: false, financeConfirmationRunItem: false,
+      financeExpenseClaimDraft: true, financeExpenseClaim: false, financeContactWaiverTerms: true,
     });
   });
 
@@ -148,6 +152,14 @@ describe('finance module', () => {
       expect(rule, entity).toMatchObject({ deletable: false });
       expect(rule!.reason, entity).toContain('Der Lauf ist die Tatsache, wer wann was ausgestellt hat');
     }
+  });
+
+  it('deletes an expense claim only as a draft; a submitted claim stays; waiver terms go with the contact (F8a)', () => {
+    const rule = (entity: string) => (financeModule.deletionRules ?? []).find((r) => r.entity === entity)!;
+    expect(rule('financeExpenseClaimDraft')).toMatchObject({ deletable: true, auditAction: 'finance.expenseClaim.draftDelete', guard: expect.stringContaining('draft') });
+    expect(rule('financeExpenseClaim')).toMatchObject({ deletable: false });
+    expect(rule('financeExpenseClaim').reason).toMatch(/eingereicht/);
+    expect(rule('financeContactWaiverTerms')).toMatchObject({ deletable: true, auditAction: 'finance.contactWaiverTerms.delete' });
   });
 
   it('rules the personal data of a year as one logical entity, ten years, with its own audit action', () => {

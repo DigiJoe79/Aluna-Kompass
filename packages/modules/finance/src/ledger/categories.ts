@@ -3,7 +3,7 @@ import { asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
-import { financeAllocationLines, financeCategories, financeImportRules, type FinanceCategoryRow } from '../schema';
+import { financeAllocationLines, financeCategories, financeExpensePositions, financeImportRules, type FinanceCategoryRow } from '../schema';
 import { requireMasterDataRead } from './access';
 import { ALLOWANCE_KINDS, CERTIFIABLE_INCOME_KINDS, COST_FUNCTIONS, DIRECTIONS, INCOME_KINDS, INPUT_TAX, SPHERES, TAX_CODES } from './codes';
 
@@ -63,11 +63,12 @@ const categoryUpdateSchema = categoryBase
 
 export type CategoryView = FinanceCategoryRow;
 
-/** Auch der Entwurf einer Zuordnungszeile belegt die Kategorie — und eine Regel für Kontoumsätze (F5, Fremdschlüssel). */
+/** Auch der Entwurf einer Zuordnungszeile belegt die Kategorie — und eine Regel für Kontoumsätze (F5) oder eine Auslagen-Position (F8a), beide mit Fremdschlüssel. */
 export function categoryInUseInternal(db: DbOrTx, categoryId: string): boolean {
   return (
     !!db.select({ id: financeAllocationLines.id }).from(financeAllocationLines).where(eq(financeAllocationLines.categoryId, categoryId)).get() ||
-    !!db.select({ id: financeImportRules.id }).from(financeImportRules).where(eq(financeImportRules.categoryId, categoryId)).get()
+    !!db.select({ id: financeImportRules.id }).from(financeImportRules).where(eq(financeImportRules.categoryId, categoryId)).get() ||
+    !!db.select({ id: financeExpensePositions.id }).from(financeExpensePositions).where(eq(financeExpensePositions.categoryId, categoryId)).get()
   );
 }
 

@@ -100,3 +100,12 @@ describe('installFinance — donation confirmation document types (F6a)', () => 
     expect(documentTypeFor(deps.db, 'finance-confirmation')).toBeNull();
   });
 });
+
+describe('installFinance — waiver declaration document types (F8a)', () => {
+  it('creates finance-waiver-declaration (VZE, outgoing) and finance-waiver-signed (VZU, incoming), owned and protected, kept ten years', () => {
+    const { deps } = setupFinance();
+    run(deps);
+    expect(documentTypeFor(deps.db, 'finance-waiver-declaration')).toMatchObject({ prefix: 'VZE', protectionArea: 'finance', retentionClass: 'statutory10Y', ownerModule: 'finance', defaultDirection: 'outgoing' });
+    expect(documentTypeFor(deps.db, 'finance-waiver-signed')).toMatchObject({ prefix: 'VZU', protectionArea: 'finance', retentionClass: 'statutory10Y', ownerModule: 'finance', defaultDirection: 'incoming' });
+  });
+});

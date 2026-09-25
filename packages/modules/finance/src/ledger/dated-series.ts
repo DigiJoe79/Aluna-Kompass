@@ -36,10 +36,10 @@ export const DATED_SERIES = {
   freeReserveAssetShare: { unit: 'percent', series: [{ validFrom: '2026-01-01', value: 33 }] },
   // § 62 Abs. 1 Nr. 3 AO
   freeReserveOtherShare: { unit: 'percent', series: [{ validFrom: '2026-01-01', value: 10 }] },
-  // Verzichtsfrist laufende Ansprüche (BMF 25.11.2014)
-  waiverClaimMonths: { unit: 'months', series: [{ validFrom: '2026-01-01', value: 3 }] },
-  // Verzichtsfrist einmalige Ansprüche
-  waiverOneOffMonths: { unit: 'months', series: [{ validFrom: '2026-01-01', value: 12 }] },
+  // Verzichtsfrist regelmäßige Ansprüche: ein Jahr nach Fälligkeit (BMF 25.11.2014 i. d. F. 24.08.2016, EStH Anhang 37 III)
+  waiverClaimMonths: { unit: 'months', series: [{ validFrom: '2026-01-01', value: 12 }] },
+  // Verzichtsfrist einmalige Ansprüche: drei Monate nach Fälligkeit (ebenda)
+  waiverOneOffMonths: { unit: 'months', series: [{ validFrom: '2026-01-01', value: 3 }] },
   // „spät festgeschrieben“, bar
   lateFinalizeCashDays: { unit: 'days', series: [{ validFrom: '2026-01-01', value: 1 }] },
   // Besteuerungsform, taggenau

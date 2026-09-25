@@ -789,3 +789,119 @@ export const financeConfirmationRunItems = sqliteTable(
   ],
 );
 export type FinanceConfirmationRunItemRow = typeof financeConfirmationRunItems.$inferSelect;
+
+/**
+ * Ein Antrag auf Erstattung einer Auslage (F8a, Spec 8.2). Der Entwurf ist
+ * Arbeitsmaterial — änderbar, löschbar; die Nummer `KE-<Jahr>-NNN` entsteht
+ * beim Einreichen. Danach ist der Antrag unveränderlich bis auf die
+ * Freigabefelder, und `state` verlässt `submitted` genau einmal (Trigger
+ * `finance_expense_claims_submitted_immutable`); gelöscht wird nur ein Entwurf
+ * (`…_no_delete_submitted`). „Ausgezahlt“ ist berechnet — aus dem offenen
+ * Posten, nie hier gespeichert. Kein Fremdschlüssel auf Kontakt oder Dokument:
+ * sie gehören anderen Modulen. IBAN, Anspruchsgrundlage, Begründung und
+ * Ablehnungsgrund stehen nie im Änderungsprotokoll.
+ */
+export const financeExpenseClaims = sqliteTable(
+  'finance_expense_claims',
+  {
+    id: text('id').primaryKey(),
+    number: text('number'),
+    /** Die antragstellende Person — nie im Protokoll. */
+    contactId: text('contact_id').notNull(),
+    /** Wer den Antrag angelegt hat (Anleger); die Freigabe prüft Freigebender ≠ Anleger. */
+    submittedByUserId: text('submitted_by_user_id').notNull(),
+    state: text('state', { enum: ['draft', 'submitted', 'approved', 'rejected'] }).notNull().default('draft'),
+    iban: text('iban'),
+    waiver: integer('waiver', { mode: 'boolean' }).notNull().default(false),
+    recurring: integer('recurring', { mode: 'boolean' }).notNull().default(false),
+    waiverBasisText: text('waiver_basis_text'),
+    waiverAgreedOn: text('waiver_agreed_on'),
+    waiverDeclaredOn: text('waiver_declared_on'),
+    waiverDeclarationDocumentId: text('waiver_declaration_document_id'),
+    waiverSignedDocumentId: text('waiver_signed_document_id'),
+    claimAgreedConfirmed: integer('claim_agreed_confirmed', { mode: 'boolean' }).notNull().default(false),
+    waiverLateReason: text('waiver_late_reason'),
+    waiverFreeFundsCents: integer('waiver_free_funds_cents'),
+    submittedAt: text('submitted_at'),
+    approvedAt: text('approved_at'),
+    approvedByUserId: text('approved_by_user_id'),
+    rejectedAt: text('rejected_at'),
+    rejectedByUserId: text('rejected_by_user_id'),
+    rejectNote: text('reject_note'),
+    openItemId: text('open_item_id').references(() => financeOpenItems.id),
+    entryId: text('entry_id').references(() => financeEntries.id),
+    copiedFromClaimId: text('copied_from_claim_id').references((): AnySQLiteColumn => financeExpenseClaims.id),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('finance_expense_claims_number_idx').on(t.number),
+    index('finance_expense_claims_contact_idx').on(t.contactId),
+    index('finance_expense_claims_state_idx').on(t.state, t.submittedAt),
+  ],
+);
+export type FinanceExpenseClaimRow = typeof financeExpenseClaims.$inferSelect;
+
+/**
+ * Eine Position des Antrags: ein Beleg (ein PDF der Akte) oder eine Fahrt
+ * nach Kilometersatz. Im Entwurf darf alles fehlen (laufende Sicherung);
+ * der Fahrtbetrag wird beim Speichern mit dem Satz von damals berechnet und
+ * **gespeichert** — eine Tatsache des Einreichens. Nach dem Einreichen ändern
+ * sich nur Kategorie und Zweck, solange der Antrag eingereicht ist; das
+ * Dokument wird höchstens geleert, wenn es nach seiner Frist gelöscht wird —
+ * die Nummer bleibt als Grabstein (Trigger `finance_expense_positions_*`).
+ * „Wofür“, Strecke und Anlass sind Freitext und stehen nie im Protokoll.
+ */
+export const financeExpensePositions = sqliteTable(
+  'finance_expense_positions',
+  {
+    id: text('id').primaryKey(),
+    claimId: text('claim_id').notNull().references(() => financeExpenseClaims.id),
+    sortOrder: integer('sort_order').notNull(),
+    kind: text('kind', { enum: ['receipt', 'trip'] }).notNull(),
+    positionDate: text('position_date'),
+    amountCents: integer('amount_cents').notNull().default(0),
+    /** „Wofür war das?“ — Freitext, nie im Protokoll. */
+    purpose: text('purpose').notNull().default(''),
+    projectId: text('project_id'),
+    documentId: text('document_id'),
+    documentNumber: text('document_number'),
+    tripFrom: text('trip_from'),
+    tripTo: text('trip_to'),
+    tripReason: text('trip_reason'),
+    tripKm: integer('trip_km'),
+    tripRateCentsPerKm: integer('trip_rate_cents_per_km'),
+    categoryId: text('category_id').references(() => financeCategories.id),
+    purposeId: text('purpose_id').references(() => financePurposes.id),
+  },
+  (t) => [index('finance_expense_positions_claim_idx').on(t.claimId, t.sortOrder), index('finance_expense_positions_project_idx').on(t.projectId), index('finance_expense_positions_document_idx').on(t.documentId)],
+);
+export type FinanceExpensePositionRow = typeof financeExpensePositions.$inferSelect;
+
+/** Der Zähler der Antragsnummern je Jahr des Einreichens — eine Nummer kommt nie wieder (Muster `finance_entry_counters`). */
+export const financeExpenseCounters = sqliteTable('finance_expense_counters', {
+  year: integer('year').primaryKey(),
+  last: integer('last').notNull(),
+});
+
+/**
+ * Die Anspruchsgrundlage einer Person für Aufwandsspenden (Spec 8.2) — sie
+ * überschreibt `finance.expenseWaiverBasisText` und belegt den Antrag vor.
+ * Arbeitsmaterial: Der Antrag trägt seine eigene Abschrift. Eine eigene ID
+ * statt der Kontakt-ID als Schlüssel, weil die ID ins Änderungsprotokoll
+ * geht und dort nie eine Kontakt-ID stehen darf (Spec 10.3); je Kontakt
+ * höchstens eine Zeile. Text nie im Protokoll.
+ */
+export const financeContactWaiverTerms = sqliteTable(
+  'finance_contact_waiver_terms',
+  {
+    id: text('id').primaryKey(),
+    contactId: text('contact_id').notNull(),
+    basisText: text('basis_text').notNull(),
+    agreedOn: text('agreed_on').notNull(),
+    updatedAt: text('updated_at').notNull(),
+    updatedByUserId: text('updated_by_user_id').notNull(),
+  },
+  (t) => [uniqueIndex('finance_contact_waiver_terms_contact_idx').on(t.contactId)],
+);
+export type FinanceContactWaiverTermsRow = typeof financeContactWaiverTerms.$inferSelect;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeText, ruleMatches, type RuleConditions, type RuleTarget } from '../src/import/suggest/rule';
+import { normalizeText, ruleMatches, type RuleConditions, type RuleTarget } from '../src/rules-pure';
 
 const NONE: RuleConditions = { accountId: null, direction: null, counterpartyIban: null, textContains: null, amountMinCents: null, amountMaxCents: null };
 const TARGET: RuleTarget = {

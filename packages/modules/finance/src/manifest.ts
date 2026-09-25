@@ -33,6 +33,9 @@ const FINANCE_SETTINGS: readonly SettingDefinition[] = [
   { key: 'finance.mcpHumanOnlyAllowed', schema: z.boolean(), default: false, uiOnly: true },
   { key: 'finance.membershipFeesCertifiable', schema: z.boolean(), default: true },
   { key: 'finance.expenseWaiversEnabled', schema: z.boolean(), default: true },
+  // F8a (Spec 8.2): Anspruchsgrundlage der Aufwandsspenden — ein Vertrag oder die Satzung (BMF 25.11.2014). Leer, bis der
+  // Verein sie hinterlegt; je Person überschreibbar (`finance_contact_waiver_terms`).
+  { key: 'finance.expenseWaiverBasisText', schema: z.string().max(500), default: '' },
   { key: 'finance.isEntrepreneurOrHasVatId', schema: z.boolean(), default: false },
   { key: 'finance.proofGraceDays', schema: z.number().int().min(0).max(365), default: 30 },
   { key: 'finance.statementSufficesBelowCents', schema: z.number().int().min(0), default: 0 },
@@ -111,6 +114,9 @@ export const financeModule: ModuleManifest = defineModule({
     // F6a: unser Exemplar und die unterschriebene Fassung einer Bestätigung, das Dokument eines Bescheids.
     { entityType: 'financeConfirmation', readPermission: 'finance.read', receivePermission: 'finance.donationsIssue' },
     { entityType: 'financeNotice', readPermission: 'finance.read', receivePermission: 'finance.donationsIssue' },
+    // F8a: Belege und Verzichtserklärung am Antrag — die einreichende Person legt ab, ohne Recht der Akte. Ihre eigenen
+    // liest sie über den Dienst (Eigentümer-Weg), alle anderen brauchen finance.read.
+    { entityType: 'financeExpenseClaim', readPermission: 'finance.read', receivePermission: 'finance.expensesSubmit' },
   ],
   // F6b: der vereinfachte Nachweis — `filed: false`, ein Vordruck auf Abruf.
   documentTemplates: [cashCountTemplate, moneyConfirmationTemplate, inKindConfirmationTemplate, collectiveConfirmationTemplate, simplifiedReceiptTemplate],
@@ -189,6 +195,14 @@ export const financeModule: ModuleManifest = defineModule({
       deletable: false,
       reason: 'Die Angaben zur Sachspende hängen an einer festgeschriebenen Buchung. Nach Ablauf der Frist entfernt sie die Anonymisierung des Geschäftsjahres mit dem übrigen Freitext.',
     },
+    // F8a — Auslagen (Spec 10.3, Annahme 14).
+    { entity: 'financeExpenseClaimDraft', deletable: true, reason: 'Arbeitsmaterial ohne Nummer — erst das Einreichen macht einen Antrag rechenschaftsrelevant.', guard: 'nur solange state = draft', auditAction: 'finance.expenseClaim.draftDelete' },
+    {
+      entity: 'financeExpenseClaim',
+      deletable: false,
+      reason: 'Ein eingereichter Antrag wird nie gelöscht — freigegeben, abgelehnt oder offen, er ist der Nachweis der Erstattung. Nach Ablauf der Frist wird der Personenbezug entfernt; Nummer, Datum und Betrag bleiben.',
+    },
+    { entity: 'financeContactWaiverTerms', deletable: true, reason: 'Arbeitsmaterial: Der Antrag trägt seine eigene Abschrift der Anspruchsgrundlage.', guard: 'keiner; geht mit dem Kontakt', auditAction: 'finance.contactWaiverTerms.delete' },
     {
       entity: 'financeYearPersonalData',
       deletable: true,

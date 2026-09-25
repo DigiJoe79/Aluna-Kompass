@@ -12,6 +12,10 @@ export {
   financeAllocationCorrections,
   financeEntryDocuments,
   financeEntryJustifications,
+  financeContactWaiverTerms,
+  financeExpenseClaims,
+  financeExpenseCounters,
+  financeExpensePositions,
   financeFiscalYears,
   financeContactBankAccounts,
   financeImportCandidates,
@@ -38,6 +42,9 @@ export {
   type FinanceEntryDocumentRow,
   type FinanceEntryJustificationRow,
   type FinanceEntryRow,
+  type FinanceContactWaiverTermsRow,
+  type FinanceExpenseClaimRow,
+  type FinanceExpensePositionRow,
   type FinanceFiscalYearRow,
   type FinanceContactBankAccountRow,
   type FinanceImportCandidateRow,
@@ -57,6 +64,9 @@ export {
 
 export { requireFinanceRead } from './ledger/access';
 export { formatIban, isValidIban, normalizeIban } from './ledger/iban';
+// F8a: die reinen Rechnungen der Auslagen — die Oberfläche zeigt dieselbe Fahrtrechnung und Frist wie der Dienst.
+export { tripAmountCents } from './ledger/trip-amount';
+export { waiverDeadline, waiverIsTimely } from './allocation/waiver-rules';
 export { ALLOWANCE_KINDS, CERTIFIABLE_INCOME_KINDS, COST_FUNCTIONS, DIRECTIONS, INCOME_KINDS, INPUT_TAX, SPHERES, TAX_CODES } from './ledger/codes';
 export {
   accountActiveSchema,
@@ -205,7 +215,7 @@ export { activeProfileInternal, listImportProfiles, profileFormatInternal, saveI
 
 // F5 — Arbeitsliste: Regeln, Kontakt über IBAN, Vorschläge, Handeln, fremdes Geld, Sammel-Festschreiben, Beleg von beiden Seiten.
 export { deleteImportRule, listImportRules, previewImportRule, saveImportRule, type ImportRuleView } from './import/rules';
-export { ruleMatches, normalizeText, type RuleConditions, type RuleTarget } from './import/suggest/rule';
+export { ruleMatches, normalizeText, type RuleConditions, type RuleTarget } from './rules-pure';
 export { contactForIbanInternal, createContactFromTransaction, learnContactIbanInternal, linkContactIban, listContactIbans, unlinkContactIban, type ContactIbanSource, type ContactIbanView } from './import/contact-ibans';
 export { openRawTransactionsInternal, suggestForTransaction, type SuggestionDraft, type SuggestionKind, type SuggestionReason, type SuggestionView } from './import/suggestions';
 export { getWorkCounts, listWorkItems, type SuggestionSummary, type WorkCounts, type WorkEntry, type WorkItem, type WorkOpenItem, type WorkTab } from './import/work';

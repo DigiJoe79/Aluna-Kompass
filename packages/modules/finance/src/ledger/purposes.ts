@@ -4,7 +4,7 @@ import { asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
-import { financeAllocationLines, financeImportRules, financePurposes, type FinancePurposeRow } from '../schema';
+import { financeAllocationLines, financeExpensePositions, financeImportRules, financePurposes, type FinancePurposeRow } from '../schema';
 import { requireMasterDataRead } from './access';
 
 const base = z.object({
@@ -30,11 +30,12 @@ const purposeUpdateSchema = base.partial().extend({ id: z.string().min(1), expec
 /** Wie `FinancePurposeRow`, nur dass die Liste den Freitext ohne `finance.read` auf `null` setzt. */
 export type PurposeView = Omit<FinancePurposeRow, 'description'> & { description: string | null };
 
-/** Auch der Entwurf einer Zuordnungszeile belegt den Zweck — und eine Regel für Kontoumsätze (F5, Fremdschlüssel). */
+/** Auch der Entwurf einer Zuordnungszeile belegt den Zweck — und eine Regel für Kontoumsätze (F5) oder eine Auslagen-Position (F8a), beide mit Fremdschlüssel. */
 export function purposeInUseInternal(db: DbOrTx, purposeId: string): boolean {
   return (
     !!db.select({ id: financeAllocationLines.id }).from(financeAllocationLines).where(eq(financeAllocationLines.purposeId, purposeId)).get() ||
-    !!db.select({ id: financeImportRules.id }).from(financeImportRules).where(eq(financeImportRules.purposeId, purposeId)).get()
+    !!db.select({ id: financeImportRules.id }).from(financeImportRules).where(eq(financeImportRules.purposeId, purposeId)).get() ||
+    !!db.select({ id: financeExpensePositions.id }).from(financeExpensePositions).where(eq(financeExpensePositions.purposeId, purposeId)).get()
   );
 }
 

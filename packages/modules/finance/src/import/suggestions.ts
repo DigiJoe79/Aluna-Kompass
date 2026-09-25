@@ -14,7 +14,7 @@ import { activeImportRulesInternal } from './rules';
 import { daysApart, findPair, isCashKeyword } from './suggest/pair';
 import { findByReference } from './suggest/reference';
 import { findReturnOrigin } from './suggest/return';
-import { ruleMatches } from './suggest/rule';
+import { ruleMatches } from '../rules-pure';
 import { paymentServiceHint } from './suggest/text';
 
 /**

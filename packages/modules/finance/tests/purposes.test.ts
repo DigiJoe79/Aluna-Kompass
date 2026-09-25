@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
 import { createCategory } from '../src/ledger/categories';
 import { createPurpose, deletePurpose, dissolvePurpose, fulfillPurpose, listPurposes, reopenPurpose, updatePurpose } from '../src/ledger/purposes';
-import { financeAllocationLines, financeEntries } from '../src/schema';
+import { financeAllocationLines, financeEntries, financeExpenseClaims, financeExpensePositions } from '../src/schema';
 import { setupFinance } from './helpers';
 
 const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
@@ -60,6 +60,15 @@ describe('purposes', () => {
     const now = '2026-03-01T10:00:00.000Z';
     deps.db.insert(financeEntries).values({ id: 'E1', number: null, entryDate: '2026-03-01', text: 'Test', status: 'draft', createdByUserId: 'U1', createdChannel: 'ui', createdAt: now, updatedAt: now }).run();
     deps.db.insert(financeAllocationLines).values({ id: 'L1', entryId: 'E1', position: 0, categoryId: category.id, purposeId: purpose.id, amountCents: 1, taxCode: 'none', rateKind: 'standard', abroad: false, addsToAssets: false }).run();
+    expect(err(await deletePurpose(deps, ctx, { id: purpose.id }))).toMatchObject({ type: 'conflict', code: 'purposeInUse' });
+  });
+
+  it('cannot be deleted once a position of an expense claim points at it (F8a)', async () => {
+    const { deps, ctx } = setupFinance();
+    const purpose = unwrap(await createPurpose(deps, ctx, { name: 'Dach' }));
+    const now = '2026-03-01T10:00:00.000Z';
+    deps.db.insert(financeExpenseClaims).values({ id: 'EC1', contactId: 'CONTACT-1', submittedByUserId: 'U1', createdAt: now, updatedAt: now }).run();
+    deps.db.insert(financeExpensePositions).values({ id: 'P1', claimId: 'EC1', sortOrder: 0, kind: 'receipt', purposeId: purpose.id }).run();
     expect(err(await deletePurpose(deps, ctx, { id: purpose.id }))).toMatchObject({ type: 'conflict', code: 'purposeInUse' });
   });
 });

@@ -71,6 +71,29 @@ describe('financeAudit', () => {
     expect(JSON.stringify([run, item])).not.toMatch(/CONTACT-|musterspenderin|"L1"/);
   });
 
+  it('logs an expense claim, its positions and waiver terms by numbers, never contact, iban, purpose, route, reason or note (F8a)', () => {
+    const { deps, ctx } = setupFinance();
+    const secret = { contactId: 'CONTACT-1', iban: 'DE66999999991234567890', purpose: 'Futter Erika', tripFrom: 'Musterstadt', tripTo: 'Beispielhausen', tripReason: 'Vorkontrolle', rejectNote: 'Beleg unleserlich', waiverLateReason: 'Urlaub', waiverBasisText: 'Satzung § 9', basisText: 'Vereinbarung Jonas' };
+    deps.db.transaction((tx) => {
+      financeAudit(tx, deps, ctx, {
+        action: 'finance.expenseClaim.submit', entity: 'financeExpenseClaim', id: 'EC1',
+        after: { ...secret, state: 'submitted', number: 'KE-2026-001', positionCount: 2, totalCents: 4520, waiver: false, recurring: false, submittedAt: '2026-03-02T10:00:00.000Z', approvedAt: null, rejected: false, openItemId: null, entryId: null, copiedFromClaimId: null, channel: 'ui', waiverFreeFundsCents: null },
+        summary: 'Antrag KE-2026-001 eingereicht',
+      });
+      financeAudit(tx, deps, ctx, {
+        action: 'finance.expenseClaim.approve', entity: 'financeExpensePosition', id: 'P1',
+        after: { ...secret, claimId: 'EC1', kind: 'trip', positionDate: '2026-02-20', amountCents: 2520, tripKm: 84, documentId: null, categoryId: 'CAT1', projectId: null, purposeId: null },
+        summary: 'Position P1 zugeordnet',
+      });
+      financeAudit(tx, deps, ctx, { action: 'finance.contactWaiverTerms.save', entity: 'financeContactWaiverTerms', id: 'WT1', after: { ...secret, agreedOn: '2026-01-02' }, summary: 'Anspruchsgrundlage gespeichert' });
+    });
+    const [claim, position, terms] = deps.db.select().from(schema.auditLog).all().slice(-3);
+    expect(JSON.parse(claim!.after as string)).toEqual({ state: 'submitted', number: 'KE-2026-001', positionCount: 2, totalCents: 4520, waiver: false, recurring: false, submittedAt: '2026-03-02T10:00:00.000Z', approvedAt: null, rejected: false, openItemId: null, entryId: null, copiedFromClaimId: null, channel: 'ui', waiverFreeFundsCents: null });
+    expect(JSON.parse(position!.after as string)).toEqual({ claimId: 'EC1', kind: 'trip', positionDate: '2026-02-20', amountCents: 2520, tripKm: 84, documentId: null, categoryId: 'CAT1', projectId: null, purposeId: null });
+    expect(JSON.parse(terms!.after as string)).toEqual({ agreedOn: '2026-01-02' });
+    expect(JSON.stringify([claim, position, terms].map((e) => e!.after))).not.toMatch(/CONTACT-1|DE66|Futter|Musterstadt|Beispielhausen|Vorkontrolle|unleserlich|Urlaub|Satzung|Jonas/);
+  });
+
   it('never lists a field that could carry a person, free text or a bank detail', () => {
     const forbidden = /name|label|title|description|note|text|reason|iban|bic|holder|purposeLine|contact|subject|email/i;
     const offenders = Object.entries(AUDIT_FIELDS).flatMap(([entity, fields]) => fields.filter((f) => forbidden.test(f)).map((f) => `${entity}.${f}`));

@@ -143,7 +143,27 @@ export const FINANCE_ERRORS = {
   bundleToolsMissing: { reason: 'Die Sammel-PDFs lassen sich hier nicht zusammenfügen, weil das Werkzeug dafür fehlt.', remedy: 'Richten Sie poppler-utils mit pdfunite ein, siehe Handbuch docs/handbuch/betrieb.md — die einzelnen Bestätigungen stehen trotzdem in der Akte.' },
   bundleEmpty: { reason: 'In diesem Teil des Serienlaufs gibt es keine ausgestellte Bestätigung.', remedy: 'Warten Sie, bis der Lauf Bestätigungen ausgestellt hat, oder wählen Sie den anderen Teil.' },
   dispatchNothingMachine: { reason: 'In diesem Serienlauf gibt es keine maschinelle Bestätigung ohne Versandvermerk.', remedy: 'Zu unterschreibende Bestätigungen bekommen den Vermerk erst, wenn die unterschriebene Fassung abgelegt ist.' },
-  batchNothingReviewed: { reason: 'Es gibt keine geprüften Entwürfe zum Festschreiben.', remedy: 'Prüfen Sie zuerst Entwürfe in der Arbeitsliste, dann lassen sie sich gemeinsam festschreiben.' },
+  // F8a — Auslagen: einreichen, freigeben, Verzicht (Spec 8.2).
+  expenseNeedsContactLink: { reason: 'Ihr Nutzerkonto ist mit keinem Kontakt verknüpft — ohne ihn weiß Kompass nicht, wem die Auslage erstattet wird.', remedy: 'Verknüpfen Sie Ihr Nutzerkonto einmal selbst mit Ihrem Kontakt, oder bitten Sie darum: {names}.' },
+  expenseNotDraft: { reason: 'Dieser Antrag ist schon eingereicht.', remedy: 'Ein eingereichter Antrag bleibt, wie er ist — nach einer Ablehnung reichen Sie ihn neu ein.' },
+  expenseNotSubmitted: { reason: 'Dieser Antrag wartet nicht mehr auf Freigabe.', remedy: 'Laden Sie die Seite neu — vermutlich hat ihn gerade jemand anderes freigegeben oder abgelehnt.' },
+  expenseNothingToSubmit: { reason: 'Der Antrag hat noch keine Position.', remedy: 'Fügen Sie mindestens einen Beleg oder eine Fahrt hinzu.' },
+  expensePositionNeedsReceipt: { reason: 'Position {position} fehlt noch der Beleg.', remedy: 'Wählen Sie das PDF für Position {position}, oder behalten Sie den Antrag als Entwurf.' },
+  expenseTripNeedsKm: { reason: 'Eine Fahrt braucht Kilometer, einen Anlass und einen Betrag über 0.', remedy: 'Tragen Sie Kilometer und Anlass der Fahrt ein.' },
+  expenseIbanOrWaiver: { reason: 'Es fehlt die IBAN, auf die erstattet wird.', remedy: 'Tragen Sie eine gültige IBAN ein — oder verzichten Sie auf die Erstattung, wenn der Verein das anbietet.' },
+  expenseOwnClaim: { reason: 'Sie haben diesen Antrag selbst angelegt.', remedy: 'Den eigenen Antrag gibt immer jemand anderes frei.' },
+  expenseSameContact: { reason: 'Sie sind die antragstellende Person.', remedy: 'Den eigenen Antrag gibt immer jemand anderes frei.' },
+  expenseCategoryRequired: { reason: 'Position {position} hat noch keine Kategorie.', remedy: 'Wählen Sie für jede Position eine Ausgabe-Kategorie, dann lässt sich freigeben.' },
+  expenseWaiversDisabled: { reason: 'Aufwandsspenden sind beim Verein ausgeschaltet.', remedy: 'Reichen Sie den Antrag ohne Verzicht neu ein, oder schalten Sie Aufwandsspenden unter „Finanzen einrichten“ ein.' },
+  waiverAgreedAfterPosition: { reason: 'Die Vereinbarung über den Erstattungsanspruch ist jünger als die früheste Position.', remedy: 'Ein Verzicht setzt einen vorher vereinbarten Anspruch voraus — begründen Sie die Abweichung, oder zahlen Sie die Auslage aus.' },
+  waiverLateNeedsReason: { reason: 'Der Verzicht kommt nach Ablauf der Frist.', remedy: 'Geben Sie eine Begründung an; sie steht am Antrag.' },
+  waiverFundsInsufficient: { reason: 'Am {date} hatte der Verein nur {free} frei verfügbar — weniger als die {amount} des Antrags.', remedy: 'Ein Verzicht setzt voraus, dass der Verein hätte zahlen können: Zahlen Sie die Auslage aus, statt den Verzicht anzunehmen.' },
+  waiverDeclarationMissing: { reason: 'Die Verzichtserklärung liegt noch nicht vor.', remedy: 'Erzeugen Sie die Verzichtserklärung und verknüpfen Sie sie mit dem Antrag.' },
+  waiverNotConfirmed: { reason: 'Es ist nicht bestätigt, dass der Anspruch vorab vereinbart war.', remedy: 'Prüfen Sie die Vereinbarung und setzen Sie das Häkchen „Anspruch vorab vereinbart“.' },
+  expenseFileNotPdf: { reason: 'Die Datei {file} ist kein PDF.', remedy: 'Wählen Sie ein PDF — Ihre Eingaben bleiben stehen.' },
+  expenseFileTooLarge: { reason: 'Die Datei {file} ist größer als {limit}.', remedy: 'Wählen Sie eine kleinere Datei — Ihre Eingaben bleiben stehen.' },
+  expenseNotOwner: { reason: 'Dieser Antrag gehört einer anderen Person.', remedy: 'Sie sehen und ändern nur Ihre eigenen Anträge.' },
+  batchNothingReviewed:{ reason: 'Es gibt keine geprüften Entwürfe zum Festschreiben.', remedy: 'Prüfen Sie zuerst Entwürfe in der Arbeitsliste, dann lassen sie sich gemeinsam festschreiben.' },
 } as const satisfies Record<string, { reason: string; remedy: string }>;
 
 export type FinanceErrorCode = keyof typeof FINANCE_ERRORS;

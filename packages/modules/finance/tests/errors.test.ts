@@ -55,6 +55,24 @@ describe('finance errors', () => {
     expect(FINANCE_ERRORS.bundleToolsMissing.remedy).toContain('pdfunite');
   });
 
+  it('knows the errors of expense claims, approvals and waivers (F8a)', () => {
+    const codes = [
+      'expenseNeedsContactLink', 'expenseNotDraft', 'expenseNotSubmitted', 'expenseNothingToSubmit', 'expensePositionNeedsReceipt', 'expenseTripNeedsKm', 'expenseIbanOrWaiver',
+      'expenseOwnClaim', 'expenseSameContact', 'expenseCategoryRequired', 'expenseWaiversDisabled', 'waiverAgreedAfterPosition', 'waiverLateNeedsReason', 'waiverFundsInsufficient',
+      'waiverDeclarationMissing', 'waiverNotConfirmed', 'expenseFileNotPdf', 'expenseFileTooLarge', 'expenseNotOwner',
+    ];
+    for (const code of codes) expect(Object.keys(FINANCE_ERRORS), code).toContain(code);
+    expect(financeConflict('expenseNeedsContactLink', { names: 'Jonas Feld, Erika Beispiel' })).toMatchObject({ error: { code: 'expenseNeedsContactLink', message: expect.stringContaining('Jonas Feld, Erika Beispiel') } });
+    expect(financeConflict('expensePositionNeedsReceipt', { position: 2 })).toMatchObject({ error: { message: expect.stringContaining('Position 2') } });
+    expect(financeConflict('expenseCategoryRequired', { position: 3 })).toMatchObject({ error: { message: expect.stringContaining('Position 3') } });
+    expect(financeConflict('waiverFundsInsufficient', { free: '120,00 €', amount: '250,00 €', date: '2026-03-05' })).toMatchObject({ error: { message: expect.stringMatching(/2026-03-05.*120,00 €.*250,00 €/) } });
+    expect(financeConflict('expenseFileTooLarge', { limit: '5 MB' })).toMatchObject({ error: { message: expect.stringContaining('5 MB') } });
+    // „Ihre Eingaben bleiben stehen“ (Annahme 5): Eine abgelehnte Datei kostet nichts von dem, was schon getippt ist.
+    for (const code of ['expenseFileNotPdf', 'expenseFileTooLarge'] as const) expect(FINANCE_ERRORS[code].remedy, code).toContain('Ihre Eingaben bleiben stehen');
+    // Der Ausweg bei ausgeschalteten Aufwandsspenden: ohne Verzicht neu einreichen (Review Focus 3).
+    expect(FINANCE_ERRORS.expenseWaiversDisabled.remedy).toContain('ohne Verzicht neu ein');
+  });
+
   it('names the kinds of notice in everyday words, never in the words of the tax code (F6a)', () => {
     const hits = Object.entries(FINANCE_ERRORS).flatMap(([code, { reason, remedy }]) =>
       [/vorläufige Anerkennung/, /Freistellungsbescheid/, /Anlage zum Körperschaftsteuerbescheid/].filter((p) => p.test(`${reason} ${remedy}`)).map((p) => `${code}: ${p.source}`),

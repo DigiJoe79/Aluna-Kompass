@@ -3368,7 +3368,7 @@
           "vatReduced": "Umsatzsteuer ermäßigter Satz",
           "freeReserveAssetShare": "Freie Rücklage aus Vermögensumschichtung",
           "freeReserveOtherShare": "Freie Rücklage aus sonstigen Mitteln",
-          "waiverClaimMonths": "Verzichtsfrist laufende Ansprüche",
+          "waiverClaimMonths": "Verzichtsfrist regelmäßige Ansprüche",
           "waiverOneOffMonths": "Verzichtsfrist einmalige Ansprüche",
           "lateFinalizeCashDays": "Frist für spät festgeschriebenes Bargeld",
           "taxation": "Besteuerungsform"

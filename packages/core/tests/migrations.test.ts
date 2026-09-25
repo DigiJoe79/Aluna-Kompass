@@ -154,6 +154,19 @@ describe('hand-written SQL survives', () => {
     expect(allSql).toContain('CREATE UNIQUE INDEX `finance_confirmation_run_items_collective_idx` ON `finance_confirmation_run_items` (`run_id`,`contact_id`,`kind`) WHERE "finance_confirmation_run_items"."in_kind_line_id" is null');
   });
 
+  it('keeps a submitted expense claim and its positions permanent; only approval fields move, state leaves submitted once (F8a)', () => {
+    for (const name of [
+      'finance_expense_claims_no_delete_submitted',
+      'finance_expense_claims_draft_only_submits',
+      'finance_expense_claims_submitted_immutable',
+      'finance_expense_positions_immutable_after_submit',
+      'finance_expense_positions_no_insert_after_submit',
+      'finance_expense_positions_no_delete_after_submit',
+    ]) {
+      expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
+    }
+  });
+
   it('refuses an import rule without any condition, on insert and on update (F5)', () => {
     for (const name of ['finance_import_rules_needs_condition_insert', 'finance_import_rules_needs_condition_update']) {
       expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);

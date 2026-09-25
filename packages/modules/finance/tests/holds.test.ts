@@ -21,7 +21,10 @@ import { setProjectFinance } from '../src/ledger/project-settings';
 import { createPurpose } from '../src/ledger/purposes';
 import { revokeVoucher, uploadVoucher } from '../src/ledger/vouchers';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
-import { financeAllocationCorrections, financeAllocationLines, financeCashCounts, financeConfirmations, financeContactBankAccounts, financeEntryDocuments, financeInKindDetails, financeNotices, financeProjectSettings } from '../src/schema';
+import {
+  financeAllocationCorrections, financeAllocationLines, financeCashCounts, financeConfirmations, financeContactBankAccounts, financeContactWaiverTerms, financeEntryDocuments, financeExpenseClaims,
+  financeExpensePositions, financeInKindDetails, financeNotices, financeProjectSettings,
+} from '../src/schema';
 import { allowHumanOnlyOverMcp, ledgerFixture, pdfBytes } from './helpers';
 
 const FIXTURES = path.resolve(import.meta.dirname, 'fixtures/camt');
@@ -440,5 +443,98 @@ describe('what finance holds for donations (F6a)', () => {
     expect(financeRecordReferences(f.deps, 'document', 'DOC-NOTICE')).toHaveLength(1);
     expect(financeRecordReferences(f.deps, 'contact', f.donor.id)).toEqual([]);
     expect(JSON.stringify(financeRetentionHolds(f.deps, 'contact', f.donor.id))).not.toMatch(/Musterspenderin|Musterstadt/);
+  });
+});
+
+describe('what finance holds for expense claims (F8a)', () => {
+  const T = '2026-03-02T10:00:00.000Z';
+  type F = Awaited<ReturnType<typeof ledgerFixture>>;
+  function insertClaim(f: F, o: Partial<typeof financeExpenseClaims.$inferInsert> = {}) {
+    const id = o.id ?? newId();
+    f.deps.db.insert(financeExpenseClaims).values({ id, contactId: f.donor.id, submittedByUserId: f.userId, state: 'draft', iban: 'DE23999999990000202051', createdAt: T, updatedAt: T, ...o }).run();
+    return id;
+  }
+  function insertPosition(f: F, claimId: string, o: Partial<typeof financeExpensePositions.$inferInsert> = {}) {
+    const id = o.id ?? newId();
+    f.deps.db.insert(financeExpensePositions).values({ id, claimId, sortOrder: 0, kind: 'receipt', positionDate: '2026-02-20', amountCents: 2520, purpose: 'Futter', documentId: 'DOC-RECEIPT', documentNumber: 'ERE-2026-0001', ...o }).run();
+    return id;
+  }
+  /** Ein eingereichter Antrag mit einer Belegposition — wie ihn `submitExpenseClaim` hinterlässt. */
+  function submittedClaim(f: F, o: Partial<typeof financeExpensePositions.$inferInsert> = {}) {
+    const id = insertClaim(f);
+    const positionId = insertPosition(f, id, o);
+    f.deps.db.update(financeExpenseClaims).set({ state: 'submitted', number: 'KE-2026-001', submittedAt: T }).where(eq(financeExpenseClaims.id, id)).run();
+    return { id, positionId };
+  }
+
+  it('holds the claimant of a submitted claim ten years from the end of the year of its number; a draft holds nobody', async () => {
+    const f = await ledgerFixture();
+    insertClaim(f);
+    expect(financeRetentionHolds(f.deps, 'contact', f.donor.id)).toEqual([]);
+    const { id } = submittedClaim(f);
+    expect(financeRetentionHolds(f.deps, 'contact', f.donor.id)).toEqual([{ label: 'Antrag KE-2026-001', until: '2036-12-31', entity: 'financeExpenseClaim', id }]);
+  });
+
+  it('holds a receipt eight years, the waiver declaration and its signed version ten years — from the end of the year of the number', async () => {
+    const f = await ledgerFixture();
+    const { id } = submittedClaim(f);
+    f.deps.db.update(financeExpenseClaims).set({ waiverDeclarationDocumentId: 'DOC-VZE', waiverSignedDocumentId: 'DOC-VZU' }).where(eq(financeExpenseClaims.id, id)).run();
+    expect(financeRetentionHolds(f.deps, 'document', 'DOC-RECEIPT')).toEqual([{ label: 'Antrag KE-2026-001', until: '2034-12-31', entity: 'financeExpenseClaim', id }]);
+    for (const documentId of ['DOC-VZE', 'DOC-VZU']) {
+      expect(financeRetentionHolds(f.deps, 'document', documentId), documentId).toEqual([{ label: 'Antrag KE-2026-001', until: '2036-12-31', entity: 'financeExpenseClaim', id }]);
+    }
+  });
+
+  it('a receipt of a draft is not held, but referenced — the draft still points at it', async () => {
+    const f = await ledgerFixture();
+    const id = insertClaim(f);
+    insertPosition(f, id, { documentId: 'DOC-DRAFT' });
+    expect(financeRetentionHolds(f.deps, 'document', 'DOC-DRAFT')).toEqual([]);
+    expect(financeRecordReferences(f.deps, 'document', 'DOC-DRAFT')).toEqual([{ label: `Auslage (Entwurf) ${id}`, entity: 'financeExpenseClaim', id }]);
+  });
+
+  it('references a project from the positions of any claim, and names the claim by number, never by person', async () => {
+    const f = await ledgerFixture();
+    const project = await seedProject(f.deps, f.userId, 'auslagen-projekt');
+    const draft = insertClaim(f);
+    insertPosition(f, draft, { projectId: project.id, documentId: null });
+    const { id } = submittedClaim(f, { projectId: project.id });
+    const refs = financeRecordReferences(f.deps, 'project', project.id);
+    expect(refs).toEqual(expect.arrayContaining([{ label: `Auslage (Entwurf) ${draft}`, entity: 'financeExpenseClaim', id: draft }, { label: 'Antrag KE-2026-001', entity: 'financeExpenseClaim', id }]));
+    expect(refs).toHaveLength(2);
+    expect(JSON.stringify(refs)).not.toMatch(/Musterspenderin|Futter/);
+  });
+
+  it('when a receipt or a waiver declaration is deleted after its time, the claim keeps its gravestone: number kept, id cleared', async () => {
+    const f = await ledgerFixture();
+    const { id, positionId } = submittedClaim(f);
+    f.deps.db.update(financeExpenseClaims).set({ state: 'approved', approvedAt: T, approvedByUserId: 'U2', waiverDeclarationDocumentId: 'DOC-VZE', waiverSignedDocumentId: 'DOC-VZU' }).where(eq(financeExpenseClaims.id, id)).run();
+    f.deps.db.transaction((tx) => {
+      for (const documentId of ['DOC-RECEIPT', 'DOC-VZE', 'DOC-VZU']) financeRecordDeleted(tx, f.deps, f.ctx, 'document', documentId);
+    });
+    expect(f.deps.db.select().from(financeExpensePositions).where(eq(financeExpensePositions.id, positionId)).get()).toMatchObject({ documentId: null, documentNumber: 'ERE-2026-0001' });
+    expect(f.deps.db.select().from(financeExpenseClaims).where(eq(financeExpenseClaims.id, id)).get()).toMatchObject({ waiverDeclarationDocumentId: null, waiverSignedDocumentId: null, number: 'KE-2026-001' });
+  });
+
+  it('a deleted contact takes its drafts and its waiver agreement along, logged without the contact id; submitted claims hold it', async () => {
+    const f = await ledgerFixture();
+    const draft = insertClaim(f);
+    insertPosition(f, draft);
+    f.deps.db.insert(financeContactWaiverTerms).values({ id: 'WT1', contactId: f.donor.id, basisText: 'Vereinbarung vom 02.01.2026', agreedOn: '2026-01-02', updatedAt: T, updatedByUserId: f.userId }).run();
+    f.deps.db.transaction((tx) => financeRecordDeleted(tx, f.deps, f.ctx, 'contact', f.donor.id));
+    expect(f.deps.db.select().from(financeExpenseClaims).all()).toEqual([]);
+    expect(f.deps.db.select().from(financeExpensePositions).all()).toEqual([]);
+    expect(f.deps.db.select().from(financeContactWaiverTerms).all()).toEqual([]);
+    const log = f.deps.db.select().from(schema.auditLog).all().filter((e) => ['finance.expenseClaim.draftDelete', 'finance.contactWaiverTerms.delete'].includes(e.action));
+    expect(log.map((e) => [e.action, e.entityId])).toEqual([['finance.expenseClaim.draftDelete', draft], ['finance.contactWaiverTerms.delete', 'WT1']]);
+    expect(JSON.stringify(log)).not.toContain(f.donor.id);
+
+    // Ein eingereichter Antrag hält den Kontakt fest — die Löschung wird verweigert, bevor `recordDeleted` läuft.
+    const g = await ledgerFixture();
+    const { id } = submittedClaim(g);
+    const denied = await deleteContact(g.deps, ctxWith(['contacts.manage', 'contacts.view'], g.userId), { id: g.donor.id });
+    expect(denied.ok).toBe(false);
+    expect(JSON.stringify(denied)).toContain('KE-2026-001');
+    expect(g.deps.db.select().from(financeExpenseClaims).where(eq(financeExpenseClaims.id, id)).get()).toBeDefined();
   });
 });

@@ -1,5 +1,5 @@
 import { isoNow, retentionEnd, retentionMonths, schema, type CallContext, type Deps, type DbOrTx, type DueItem, type RecordReference, type RetentionHold } from '@kompass/core';
-import { and, desc, eq, gte, inArray, lte, or } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lte, ne, or, type SQL } from 'drizzle-orm';
 import { financeAudit } from '../audit';
 import {
   financeAllocationCorrections,
@@ -7,8 +7,11 @@ import {
   financeCashCounts,
   financeConfirmations,
   financeContactBankAccounts,
+  financeContactWaiverTerms,
   financeEntries,
   financeEntryDocuments,
+  financeExpenseClaims,
+  financeExpensePositions,
   financeFiscalYears,
   financeInKindDetails,
   financeNotices,
@@ -18,6 +21,7 @@ import {
   financePurposes,
   financeRawTransactions,
   type FinanceEntryRow,
+  type FinanceExpenseClaimRow,
   type FinanceFiscalYearRow,
 } from '../schema';
 import { fiscalYearForInternal, fiscalYearStatusInternal } from './fiscal-years';
@@ -89,6 +93,20 @@ function tenYearsFrom(deps: Deps, fromDate: string): string | null {
   return months === null ? null : retentionEnd(fromDate, months);
 }
 
+/**
+ * F8a: Ein Antrag hält ab dem Einreichen, ab Ende des Jahres seiner Nummer
+ * (= Jahr des Einreichens, Annahme 1). Ein Entwurf hält nie — er ist Arbeitsmaterial.
+ */
+function claimHoldUntil(deps: Deps, claim: FinanceExpenseClaimRow, retentionClass: 'statutory8Y' | 'statutory10Y'): string | null {
+  const months = retentionMonths(deps, retentionClass);
+  return months === null || !claim.submittedAt ? null : retentionEnd(claim.submittedAt, months);
+}
+
+/** Die Beschriftung eines Antrags in Haltern und Verweisen: die Nummer, im Entwurf die ID — nie die Person. */
+function claimLabel(claim: Pick<FinanceExpenseClaimRow, 'id' | 'number'>): string {
+  return claim.number ? `Antrag ${claim.number}` : `Auslage (Entwurf) ${claim.id}`;
+}
+
 /** Kontakt: ein Halter je Buchung — nie je Zeile, nie mit Text. */
 function contactHolds(deps: Deps, contactId: string): RetentionHold[] {
   const lines = deps.db
@@ -122,6 +140,10 @@ function contactHolds(deps: Deps, contactId: string): RetentionHold[] {
     const fiscalYearId = fiscalYearForInternal(deps.db, confirmation.issuedOn)?.id ?? null;
     holds.push({ label: `Bestätigung ${confirmation.documentNumber}`, until: contactHoldUntil(deps, fiscalYearId), entity: 'financeConfirmation', id: confirmation.id });
   }
+
+  // F8a: je eingereichtem Antrag ein Halter — zehn Jahre ab Ende des Jahres seiner Nummer.
+  const claims = deps.db.select().from(financeExpenseClaims).where(and(eq(financeExpenseClaims.contactId, contactId), ne(financeExpenseClaims.state, 'draft'))).all();
+  for (const claim of claims) holds.push({ label: claimLabel(claim), until: claimHoldUntil(deps, claim, 'statutory10Y'), entity: 'financeExpenseClaim', id: claim.id });
   return holds;
 }
 
@@ -176,6 +198,20 @@ function documentHolds(deps: Deps, documentId: string): RetentionHold[] {
     const year = entry.fiscalYearId ? deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.id, entry.fiscalYearId)).get() : undefined;
     holds.push({ label: `Buchung ${entry.number ?? entry.id}`, until: tenYearsFrom(deps, year?.endsOn ?? entry.entryDate), entity: 'financeEntry', id: entry.id });
   }
+
+  // F8a: Belege eingereichter Anträge acht Jahre, Verzichtserklärung und unterschriebene Fassung zehn — ab Ende des Jahres der Nummer.
+  const receiptClaimIds = deps.db.select({ claimId: financeExpensePositions.claimId }).from(financeExpensePositions).where(eq(financeExpensePositions.documentId, documentId)).all().map((r) => r.claimId);
+  for (const claimId of new Set(receiptClaimIds)) {
+    const claim = deps.db.select().from(financeExpenseClaims).where(eq(financeExpenseClaims.id, claimId)).get();
+    if (!claim || claim.state === 'draft') continue;
+    holds.push({ label: claimLabel(claim), until: claimHoldUntil(deps, claim, 'statutory8Y'), entity: 'financeExpenseClaim', id: claim.id });
+  }
+  const waiverClaims = deps.db
+    .select()
+    .from(financeExpenseClaims)
+    .where(and(ne(financeExpenseClaims.state, 'draft'), or(eq(financeExpenseClaims.waiverDeclarationDocumentId, documentId), eq(financeExpenseClaims.waiverSignedDocumentId, documentId))))
+    .all();
+  for (const claim of waiverClaims) holds.push({ label: claimLabel(claim), until: claimHoldUntil(deps, claim, 'statutory10Y'), entity: 'financeExpenseClaim', id: claim.id });
   return holds;
 }
 
@@ -227,7 +263,19 @@ function projectReferences(deps: Deps, projectId: string): RecordReference[] {
   });
   const purposes = deps.db.select({ id: financePurposes.id }).from(financePurposes).where(eq(financePurposes.projectId, projectId)).all();
   for (const purpose of purposes) refs.push({ label: `Zweck ${purpose.id}`, entity: 'financePurpose', id: purpose.id });
+  // F8a: jede Position eines Antrags — auch im Entwurf —, einmal je Antrag.
+  refs.push(...claimReferences(deps, eq(financeExpensePositions.projectId, projectId)));
   return refs;
+}
+
+/** Die Anträge, deren Positionen die Bedingung erfüllen — je Antrag ein Verweis. */
+function claimReferences(deps: Deps, where: SQL, draftsOnly = false): RecordReference[] {
+  const claimIds = [...new Set(deps.db.select({ claimId: financeExpensePositions.claimId }).from(financeExpensePositions).where(where).all().map((r) => r.claimId))];
+  return claimIds.flatMap((claimId) => {
+    const claim = deps.db.select().from(financeExpenseClaims).where(eq(financeExpenseClaims.id, claimId)).get();
+    if (!claim || (draftsOnly && claim.state !== 'draft')) return [];
+    return [{ label: claimLabel(claim), entity: 'financeExpenseClaim', id: claim.id }];
+  });
 }
 
 /**
@@ -247,6 +295,8 @@ function documentReferences(deps: Deps, documentId: string): RecordReference[] {
     .where(and(eq(financeEntryDocuments.documentId, documentId), eq(financeEntries.status, 'draft')))
     .all();
   for (const link of draftLinks) refs.push({ label: `Buchungsentwurf ${link.entryId}`, entity: 'financeEntry', id: link.entryId });
+  // F8a: ein Beleg an einem Antragsentwurf — der Entwurf hält nicht, zeigt aber darauf.
+  refs.push(...claimReferences(deps, eq(financeExpensePositions.documentId, documentId), true));
   return refs;
 }
 
@@ -300,6 +350,10 @@ export function financeRecordDeleted(tx: DbOrTx, deps: Deps, ctx: CallContext, e
     tx.update(financeAllocationCorrections).set({ proofDocumentId: null }).where(eq(financeAllocationCorrections.proofDocumentId, id)).run();
     // Ein Zählprotokoll behält Nummer und Prüfsumme als Grabstein (Muster financeEntryDocuments) — nur die Dokument-ID verschwindet.
     tx.update(financeCashCounts).set({ documentId: null }).where(eq(financeCashCounts.documentId, id)).run();
+    // F8a: Die Position behält die Belegnummer als Grabstein; am Antrag verschwinden nur die IDs der Verzichtserklärung.
+    tx.update(financeExpensePositions).set({ documentId: null }).where(eq(financeExpensePositions.documentId, id)).run();
+    tx.update(financeExpenseClaims).set({ waiverDeclarationDocumentId: null }).where(eq(financeExpenseClaims.waiverDeclarationDocumentId, id)).run();
+    tx.update(financeExpenseClaims).set({ waiverSignedDocumentId: null }).where(eq(financeExpenseClaims.waiverSignedDocumentId, id)).run();
     return;
   }
   if (entityType === 'contact') {
@@ -309,6 +363,20 @@ export function financeRecordDeleted(tx: DbOrTx, deps: Deps, ctx: CallContext, e
       tx.delete(financeContactBankAccounts).where(eq(financeContactBankAccounts.id, row.id)).run();
       const learnedFrom = learnedFromInternal(tx, row.id);
       financeAudit(tx, deps, ctx, { action: 'finance.contactIban.delete', entity: 'financeContactBankAccount', id: row.id, before: learnedFrom ? { learnedFrom } : undefined, summary: `Kontakt-IBAN ${row.id} mit dem Kontakt gelöscht` });
+    }
+    // F8a: Entwürfe der Person sind Arbeitsmaterial ohne Nummer — sie gehen mit ihr. Eingereichte Anträge halten den
+    // Kontakt fest (`contactHolds`), bis hierher kommt es mit ihnen nicht.
+    const drafts = tx.select().from(financeExpenseClaims).where(and(eq(financeExpenseClaims.contactId, id), eq(financeExpenseClaims.state, 'draft'))).all();
+    for (const draft of drafts) {
+      const positionCount = tx.delete(financeExpensePositions).where(eq(financeExpensePositions.claimId, draft.id)).run().changes;
+      tx.delete(financeExpenseClaims).where(eq(financeExpenseClaims.id, draft.id)).run();
+      financeAudit(tx, deps, ctx, { action: 'finance.expenseClaim.draftDelete', entity: 'financeExpenseClaim', id: draft.id, before: { state: draft.state, positionCount }, summary: `Auslage (Entwurf) ${draft.id} mit dem Kontakt gelöscht` });
+    }
+    // Die Anspruchsgrundlage der Person — der Antrag trägt seine eigene Abschrift.
+    const terms = tx.select().from(financeContactWaiverTerms).where(eq(financeContactWaiverTerms.contactId, id)).get();
+    if (terms) {
+      tx.delete(financeContactWaiverTerms).where(eq(financeContactWaiverTerms.id, terms.id)).run();
+      financeAudit(tx, deps, ctx, { action: 'finance.contactWaiverTerms.delete', entity: 'financeContactWaiverTerms', id: terms.id, before: terms, summary: `Anspruchsgrundlage ${terms.id} mit dem Kontakt gelöscht` });
     }
     return;
   }
