@@ -37,12 +37,13 @@ test.describe('finance: Rechnungen mit ZUGFeRD', () => {
     await openCardInVouchers(page, /Rechnung TM-2026-0042/);
     await expect(card(page)).toContainText('Tierarztpraxis Muster');
     await expect(card(page)).toContainText('TM-2026-0042');
-    await expect(card(page)).toContainText('2026-04-01');
+    await expect(card(page)).toContainText('01.04.2026');
     await expect(card(page)).toContainText('119,00 €');
     await expect(card(page)).toContainText('19 %: 19,00 €');
-    await expect(card(page)).toContainText('2026-04-30');
+    await expect(card(page)).toContainText('30.04.2026');
     await expect(card(page)).toContainText('DE25999999990000424242');
     await expect(card(page)).toContainText('Nicht bezahlt');
+    await expect(card(page)).not.toContainText(/\d{4}-\d{2}-\d{2}/);
 
     await card(page).getByRole('button', { name: 'Offene Zahlung anlegen' }).click();
     await expect(page.getByText('Offene Zahlung angelegt.')).toBeVisible();
@@ -65,7 +66,8 @@ test.describe('finance: Rechnungen mit ZUGFeRD', () => {
     await loginAsAdmin(page);
     await openCardInVouchers(page, /Rechnung BM-7781/);
     await expect(card(page)).toContainText('Bürobedarf Muster GmbH');
-    await expect(card(page)).toContainText('Bezahlt: Kontoumsatz vom 2026-01-10');
+    await expect(card(page)).toContainText('Bezahlt: Kontoumsatz vom 10.01.2026');
+    await expect(card(page)).not.toContainText(/\d{4}-\d{2}-\d{2}/);
     await card(page).getByRole('link', { name: 'Zum Kontoumsatz buchen' }).click();
     await expect(page).toHaveURL(/\/finance\/work\?raw=[0-9A-Z]{26}&voucher=[0-9A-Z]{26}$/);
 

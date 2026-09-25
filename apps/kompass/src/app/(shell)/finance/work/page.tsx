@@ -7,7 +7,9 @@ import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
+import { formatDate, type DateFormatMode } from '@/lib/dates';
 import { formatEuro } from '@/lib/finance/amount';
+import { formatDateOrDash } from '@/lib/finance/dates';
 import { parseWorkTab, WORK_TABS, workHref } from '@/lib/finance/work';
 import { requireSession } from '@/lib/request-context';
 import { cn } from '@/lib/utils';
@@ -37,6 +39,8 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
   if (!hasPermission(ctx, 'finance.read')) return <ForbiddenCard permission="finance.read" />;
   const t = await getTranslations('finance.work');
   const canWrite = hasPermission(ctx, 'finance.entriesWrite');
+  const dateMode = readSetting<DateFormatMode>(deps, 'ui.dateFormat');
+  const fmtDate = (value: string | null | undefined) => formatDate(value, dateMode);
 
   const query = await searchParams;
   const tab = parseWorkTab(query.tab);
@@ -99,12 +103,12 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
       const invoice = invoiceRes?.ok ? invoiceRes.value : null;
       detail = {
         raw: { ...raw, accountName: accountName.get(raw.accountId) ?? '' },
-        suggestion: suggestion ? await describeSuggestion(suggestion, accountName, contactNames) : null,
+        suggestion: suggestion ? await describeSuggestion(suggestion, accountName, contactNames, fmtDate) : null,
         contactNames: Object.fromEntries(contactNames),
         pendingInvoice: invoice && query.voucher ? { documentId: query.voucher, number: invoice.invoiceNumber, seller: invoice.sellerName } : null,
         foreignReturnOptions: (foreignRes?.ok ? foreignRes.value.items : []).map((item) => ({
           lineId: item.lineId,
-          label: t('foreign.returnsOption', { date: item.entryDate, holder: item.holderText, amount: formatEuro(item.amountCents) }),
+          label: t('foreign.returnsOption', { date: fmtDate(item.entryDate), holder: item.holderText, amount: formatEuro(item.amountCents) }),
         })),
       };
     }
@@ -230,11 +234,16 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
 }
 
 /** Die Gründe als Sätze und die weiteren Geldzeilen als Text — die Namen löst der Server auf, der Client zeigt nur. */
-async function describeSuggestion(suggestion: SuggestionView, accountName: ReadonlyMap<string, string>, contactNames: ReadonlyMap<string, string>): Promise<NonNullable<WorkDetailData['suggestion']>> {
+async function describeSuggestion(
+  suggestion: SuggestionView,
+  accountName: ReadonlyMap<string, string>,
+  contactNames: ReadonlyMap<string, string>,
+  fmtDate: (value: string | null | undefined) => string,
+): Promise<NonNullable<WorkDetailData['suggestion']>> {
   const t = await getTranslations('finance.work');
   const contact = (id?: string) => (id ? (contactNames.get(id) ?? t('reasons.hiddenContact')) : t('reasons.hiddenContact'));
   const account = (id?: string) => (id ? (accountName.get(id) ?? '') : '');
-  const linkDate = suggestion.linkEntry?.entryDate ?? '';
+  const linkDate = formatDateOrDash(fmtDate, suggestion.linkEntry?.entryDate);
   const reasonText = (r: SuggestionReason): string => {
     switch (r.kind) {
       case 'linkEntry':

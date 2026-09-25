@@ -1,10 +1,12 @@
-import { hasPermission } from '@kompass/core';
+import { hasPermission, readSetting } from '@kompass/core';
 import { getAccountStatements, getImportRun, listAccounts, listCandidates, listImportRuns } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
+import { formatDate, type DateFormatMode } from '@/lib/dates';
 import { formatEuro } from '@/lib/finance/amount';
+import { formatDateOrDash } from '@/lib/finance/dates';
 import { requireSession } from '@/lib/request-context';
 import type { CandidateRow } from './candidates';
 import { CandidatesSection } from './candidates';
@@ -24,6 +26,8 @@ export default async function FinanceImportsPage() {
   const t = await getTranslations('finance.imports');
   if (!hasPermission(ctx, 'finance.read')) return <ForbiddenCard permission="finance.read" />;
   const canWrite = hasPermission(ctx, 'finance.entriesWrite');
+  const dateMode = readSetting<DateFormatMode>(deps, 'ui.dateFormat');
+  const fmtDate = (value: string | null | undefined) => formatDate(value, dateMode);
 
   const [accountsRes, statementsRes, runsRes, candidatesRes] = await Promise.all([
     listAccounts(deps, ctx, {}),
@@ -94,13 +98,13 @@ export default async function FinanceImportsPage() {
           return (
             <div key={a.id} className="rounded-md border border-line bg-surface p-3 text-[13px]">
               <p className="font-semibold text-ink">{a.name}</p>
-              <p className="text-ink-2">{s?.importedThrough ? t('accountsSummary.through', { date: s.importedThrough }) : t('accountsSummary.none')}</p>
+              <p className="text-ink-2">{s?.importedThrough ? t('accountsSummary.through', { date: fmtDate(s.importedThrough) }) : t('accountsSummary.none')}</p>
               <p className="text-muted-ink">
                 {!s?.reconciliation || s.reconciliation.state === 'noStatement'
                   ? t('accountsSummary.noStatement')
                   : s.reconciliation.state === 'matches'
-                    ? t('accountsSummary.matches', { date: s.reconciliation.statementDate ?? '' })
-                    : t('accountsSummary.differs', { date: s.reconciliation.statementDate ?? '', amount: formatEuro(s.reconciliation.differenceCents ?? 0) })}
+                    ? t('accountsSummary.matches', { date: formatDateOrDash(fmtDate, s.reconciliation.statementDate) })
+                    : t('accountsSummary.differs', { date: formatDateOrDash(fmtDate, s.reconciliation.statementDate), amount: formatEuro(s.reconciliation.differenceCents ?? 0) })}
               </p>
             </div>
           );

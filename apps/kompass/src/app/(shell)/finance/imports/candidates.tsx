@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { BeforeAfter } from '@/components/before-after';
+import { useDateFormat } from '@/components/date-format-provider';
 import { Button } from '@/components/ui/button';
 import { formatEuro } from '@/lib/finance/amount';
 import { decideCandidateAction } from './actions';
@@ -26,6 +27,7 @@ export interface CandidateRow {
  */
 export function CandidatesSection({ candidates, canDecide }: { candidates: CandidateRow[]; canDecide: boolean }) {
   const t = useTranslations('finance.imports.candidates');
+  const { date } = useDateFormat();
   const router = useRouter();
   const [pending, start] = useTransition();
   const [decidingId, setDecidingId] = useState<string | null>(null);
@@ -56,12 +58,12 @@ export function CandidatesSection({ candidates, canDecide }: { candidates: Candi
                 label: '',
                 before: (
                   <span>
-                    {c.line.bookingDate} · {c.line.counterpartyName ?? '—'} · {c.line.purpose || '—'} · <span className="font-mono tabular-nums">{formatEuro(c.line.amountCents)}</span>
+                    {date(c.line.bookingDate)} · {c.line.counterpartyName ?? '—'} · {c.line.purpose || '—'} · <span className="font-mono tabular-nums">{formatEuro(c.line.amountCents)}</span>
                   </span>
                 ),
                 after: c.existing ? (
                   <span>
-                    {c.existing.bookingDate} · {c.existing.counterpartyName ?? '—'} · {c.existing.purpose || '—'} · <span className="font-mono tabular-nums">{formatEuro(c.existing.amountCents)}</span> ·{' '}
+                    {date(c.existing.bookingDate)} · {c.existing.counterpartyName ?? '—'} · {c.existing.purpose || '—'} · <span className="font-mono tabular-nums">{formatEuro(c.existing.amountCents)}</span> ·{' '}
                     {c.existing.state === 'booked' && c.existing.entryId ? (
                       <Link href={`/finance/entries/${c.existing.entryId}`} className="text-link">
                         {c.existing.entryNumber}

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import type { EntryLinesInput } from '@kompass/module-finance';
 import { DocumentPicker } from '@/app/(shell)/dms/document-picker';
+import { useDateFormat } from '@/components/date-format-provider';
 import { AmountField } from '@/components/finance/amount-field';
 import { BalanceIndicator } from '@/components/finance/balance-indicator';
 import { ReceiptDrop } from '@/components/finance/receipt-drop';
@@ -173,6 +174,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
   const t = useTranslations('finance.entryForm');
   // `remediesFor` liefert vollqualifizierte Schlüssel (`finance.remedy.*`) — ein eigener Übersetzer ohne Namensraum.
   const tRoot = useTranslations();
+  const { date } = useDateFormat();
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [state, setState] = useState<EntryFormState>(initial);
@@ -335,7 +337,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
                 <p data-testid="bound-money-line" className="rounded-sm border border-line bg-surface-2 px-2.5 py-1.5 font-mono text-[13px] tabular-nums text-ink">
                   {(() => {
                     const cents = (parseAmount(row.amountText) ?? 0) * (row.direction === 'out' ? -1 : 1);
-                    return row.rawBookingDate ? t('boundLine', { date: row.rawBookingDate, amount: formatEuro(cents) }) : t('boundLineNoDate', { amount: formatEuro(cents) });
+                    return row.rawBookingDate ? t('boundLine', { date: date(row.rawBookingDate), amount: formatEuro(cents) }) : t('boundLineNoDate', { amount: formatEuro(cents) });
                   })()}
                 </p>
               ) : null}

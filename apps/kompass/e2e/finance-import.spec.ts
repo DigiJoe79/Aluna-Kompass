@@ -35,7 +35,8 @@ test.describe('finance import', () => {
     await expect(results).toHaveAttribute('aria-live', 'polite');
     await expect(results).toContainText('1 neu, 1 bereits vorhanden, 1 zurückgehalten');
     // Der jüngste Auszug aus dem Seed reicht bis Ende August (F5 Task 9) — ein Juli-Auszug schiebt das nicht zurück.
-    await expect(page.getByText(/Auszug importiert bis 2026-08-31/)).toBeVisible();
+    await expect(page.getByText(/Auszug importiert bis 31\.08\.2026/)).toBeVisible();
+    await expect(page.getByText(/Auszug importiert bis 2026-08-31/)).toHaveCount(0);
   });
 
   test('denselben Auszug noch einmal laden wird abgelehnt und verlinkt den vorhandenen', async ({ page }) => {
@@ -79,7 +80,7 @@ test.describe('finance import', () => {
     // Vorgänger ist seit F5 Task 9 der August-Auszug aus dem Seed (Bareinzahlung, zurückgegebene Zahlung).
     // Der Seed selbst kennt schon eine Lücke (Lauf B) — deshalb der ganze Satz in einer Zusicherung,
     // damit nicht versehentlich die andere Lückenmeldung auf der Seite trifft.
-    await expect(page.getByText(/Es fehlen Umsätze zwischen 2026-08-31 und 2026-08-01\. Die Reihenfolge ist Kompass gleich/)).toBeVisible();
+    await expect(page.getByText(/Es fehlen Umsätze zwischen 31\.08\.2026 und 01\.08\.2026\. Die Reihenfolge ist Kompass gleich/)).toBeVisible();
     // Eine Warnung, kein Textfeld — die Lückenmeldung verlangt keine Begründung.
     await expect(page.getByRole('textbox')).toHaveCount(0);
   });
@@ -95,7 +96,7 @@ test.describe('finance import', () => {
 
   test('ein Lauf klappt auf und zeigt seine Kontoumsätze, und klappt wieder zu', async ({ page }) => {
     await openImports(page);
-    const row = page.getByTestId('import-run').filter({ hasText: '2026-01-01 – 2026-01-31' });
+    const row = page.getByTestId('import-run').filter({ hasText: '01.01.2026 – 31.01.2026' });
     const trigger = row.getByRole('button', { name: 'Kontoumsätze anzeigen' });
     await expect(trigger).toHaveAttribute('aria-expanded', 'false');
     await expect(row.getByText('Erika Beispiel')).toHaveCount(0);
@@ -120,7 +121,7 @@ test.describe('finance import', () => {
   test('Verwerfen nennt die Folgen in Zahlen, verlangt eine Notiz, und der Lauf bleibt als verworfen stehen', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/imports');
-    const row = page.getByTestId('import-run').filter({ hasText: '2026-02-10 – 2026-02-28' });
+    const row = page.getByTestId('import-run').filter({ hasText: '10.02.2026 – 28.02.2026' });
     await row.getByRole('button', { name: 'Verwerfen' }).click();
     const dialog = page.getByRole('alertdialog');
     await expect(dialog.getByText(/Kontoumsatz wird gelöscht/)).toBeVisible();
@@ -135,7 +136,7 @@ test.describe('finance import', () => {
   test('eine festgeschriebene Buchung sperrt das Verwerfen und zeigt den Weg', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/imports');
-    const row = page.getByTestId('import-run').filter({ hasText: '2026-01-01 – 2026-01-31' });
+    const row = page.getByTestId('import-run').filter({ hasText: '01.01.2026 – 31.01.2026' });
     await row.getByRole('button', { name: 'Verwerfen' }).click();
     const dialog = page.getByRole('alertdialog');
     await expect(dialog.getByText('Festgeschriebene Buchungen sperren das Verwerfen.')).toBeVisible();

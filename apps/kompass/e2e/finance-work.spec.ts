@@ -79,7 +79,7 @@ test.describe('finance work list', () => {
     await option(page, 'Foerderverein Musterstadt e. V.').click();
     await expect(option(page, 'Foerderverein Musterstadt e. V.')).toHaveAttribute('aria-selected', 'true');
     const detail = page.getByTestId('work-detail');
-    await expect(detail.getByText('Dieser Umsatz passt zu Ihrem Entwurf vom 2026-02-14.')).toBeVisible();
+    await expect(detail.getByText('Dieser Umsatz passt zu Ihrem Entwurf vom 14.02.2026.')).toBeVisible();
     await expect(detail.getByRole('button', { name: /Übernehmen und geprüft/ })).toHaveCount(0);
     await expect(detail.getByTestId('split-row')).toHaveCount(0);
     await detail.getByRole('button', { name: 'Verknüpfen' }).click();
@@ -93,7 +93,8 @@ test.describe('finance work list', () => {
     await expect(option(page, 'Buerobedarf Muster GmbH')).toHaveAttribute('aria-selected', 'true');
     await page.keyboard.press('e');
     await expect(page).toHaveURL(/\/finance\/entries\/new\?raw=[0-9A-Z]{26}&back=work$/);
-    await expect(page.getByTestId('bound-money-line')).toHaveText('Kontoumsatz vom 2026-01-10 · −35,00 €');
+    await expect(page.getByTestId('bound-money-line')).toHaveText('Kontoumsatz vom 10.01.2026 · −35,00 €');
+    await expect(page.getByTestId('bound-money-line')).not.toContainText(/\d{4}-\d{2}-\d{2}/);
     await expect(page.getByLabel('Text', { exact: true })).toHaveValue('Büromaterial');
     await expect(page.getByRole('radio', { name: 'Ausgabe' })).toHaveAttribute('aria-checked', 'true');
     await expect(page.getByTestId('split-row').getByLabel('Kategorie')).toHaveValue(/.+/);
@@ -251,7 +252,7 @@ test.describe('finance work list: rules, foreign money, vouchers, batch', () => 
     await option(page, 'Weitergabe Sammelbestellung').click();
     await expect(option(page, 'Weitergabe Sammelbestellung')).toHaveAttribute('aria-selected', 'true');
     await page.getByTestId('work-detail').getByRole('button', { name: 'Gehört nicht dem Verein' }).click();
-    await dialog.getByLabel('Rückzahlung von').selectOption({ label: '2026-07-06 · Nachbarverein Beispielstadt · 120,00 €' });
+    await dialog.getByLabel('Rückzahlung von').selectOption({ label: '06.07.2026 · Nachbarverein Beispielstadt · 120,00 €' });
     await dialog.getByLabel('Für wen ist das Geld?').fill('Nachbarverein Beispielstadt');
     await dialog.getByRole('button', { name: 'Als fremdes Geld buchen' }).click();
     await expect(page.getByText('Als fremdes Geld gebucht.')).toBeVisible();

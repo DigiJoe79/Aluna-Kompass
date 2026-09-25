@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import type { SuggestionReason } from '@kompass/module-finance';
+import { useDateFormat } from '@/components/date-format-provider';
 import { AmountCell } from '@/components/finance/amount-cell';
 import { EntryStateBadge } from '@/components/finance/entry-state-badge';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
@@ -81,6 +82,7 @@ export function WorkTransactions({
   form: WorkFormOptions;
 }) {
   const t = useTranslations('finance.work');
+  const { date } = useDateFormat();
   const router = useRouter();
   const [selected, setSelected] = useState(selectedId);
   const [announce, setAnnounce] = useState(false);
@@ -147,7 +149,7 @@ export function WorkTransactions({
                   onClick={() => select(row.id)}
                   className={cn('flex cursor-pointer items-start gap-3 border-l-4 px-3 py-2.5 text-[13px]', isSelected ? 'border-l-primary bg-selected/40' : 'border-l-transparent hover:bg-row-hover')}
                 >
-                  <span className="w-[84px] shrink-0 font-mono text-[12px] tabular-nums text-ink-2">{row.bookingDate}</span>
+                  <span className="w-[84px] shrink-0 font-mono text-[12px] tabular-nums text-ink-2">{date(row.bookingDate)}</span>
                   <span className="min-w-0 flex-1 space-y-0.5">
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="font-semibold text-ink">{row.counterpartyName ?? row.purpose}</span>
@@ -228,6 +230,7 @@ export interface WorkEntryRow {
 /** Reiter „Vom Agenten vorbereitet“ und „Geprüft, nicht festgeschrieben“: Entwürfe, keine Umsätze (Annahme 11). */
 export function WorkEntries({ rows, tab, canWrite }: { rows: WorkEntryRow[]; tab: 'agent' | 'reviewed'; canWrite: boolean }) {
   const te = useTranslations('finance.work');
+  const { date } = useDateFormat();
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [deleting, setDeleting] = useState<WorkEntryRow | null>(null);
@@ -247,7 +250,7 @@ export function WorkEntries({ rows, tab, canWrite }: { rows: WorkEntryRow[]; tab
     <section aria-label={te('entries.label')} className="divide-y divide-line-2 rounded-md border border-line bg-surface">
       {rows.map((row) => (
         <div key={row.id} data-testid="work-entry" className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-[13px]">
-          <span className="w-[84px] shrink-0 font-mono text-[12px] tabular-nums text-ink-2">{row.entryDate}</span>
+          <span className="w-[84px] shrink-0 font-mono text-[12px] tabular-nums text-ink-2">{date(row.entryDate)}</span>
           <span className="min-w-0 flex-1 space-y-0.5">
             <span className="flex flex-wrap items-center gap-2">
               <span className="font-semibold text-ink">{row.text}</span>
@@ -308,12 +311,13 @@ export interface WorkOpenItemRow {
 /** Reiter „Fällig“: überfällige offene Zahlungen beider Richtungen, je mit dem Weg zur offenen Zahlung (Annahme 12). */
 export function WorkOpenItems({ rows }: { rows: WorkOpenItemRow[] }) {
   const td = useTranslations('finance.work');
+  const { date } = useDateFormat();
   if (rows.length === 0) return <EmptyState title={td('due.empty')} text={td('list.emptyText')} />;
   return (
     <section aria-label={td('due.label')} className="divide-y divide-line-2 rounded-md border border-line bg-surface">
       {rows.map((row) => (
         <div key={row.id} data-testid="work-open-item" className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-[13px]">
-          <span className="w-[120px] shrink-0 font-mono text-[12px] tabular-nums text-ink-2">{row.dueOn ? td('due.dueOn', { date: row.dueOn }) : ''}</span>
+          <span className="w-[120px] shrink-0 font-mono text-[12px] tabular-nums text-ink-2">{row.dueOn ? td('due.dueOn', { date: date(row.dueOn) }) : ''}</span>
           <span className="min-w-0 flex-1 space-y-0.5">
             <span className="flex flex-wrap items-center gap-2">
               <span className="font-semibold text-ink">{row.paymentReference ?? td('due.noReference')}</span>

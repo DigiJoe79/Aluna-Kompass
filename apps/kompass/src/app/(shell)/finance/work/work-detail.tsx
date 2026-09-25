@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import type { MutableRefObject } from 'react';
 import type { RawTransactionView, SuggestionView } from '@kompass/module-finance';
+import { useDateFormat } from '@/components/date-format-provider';
 import type { SplitRowCategoryOption, SplitRowOption } from '@/components/finance/split-row';
 import { formatEuro } from '@/lib/finance/amount';
 import type { ForeignReturnOption } from './foreign-dialog';
@@ -64,6 +65,7 @@ export function WorkDetail({
   onReload: () => void;
 }) {
   const t = useTranslations('finance.work.detail');
+  const { date } = useDateFormat();
   if (!detail) {
     acceptRef.current = null;
     return (
@@ -75,8 +77,8 @@ export function WorkDetail({
   const raw = detail.raw;
   const fields: [string, string | null][] = [
     ['account', raw.accountName],
-    ['bookingDate', raw.bookingDate],
-    ['valueDate', raw.valueDate],
+    ['bookingDate', date(raw.bookingDate)],
+    ['valueDate', raw.valueDate ? date(raw.valueDate) : null],
     ['amount', formatEuro(raw.amountCents)],
     ['counterparty', raw.counterpartyName],
     ['iban', raw.counterpartyIban],

@@ -4,11 +4,13 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { useDateFormat } from '@/components/date-format-provider';
 import { AmountField } from '@/components/finance/amount-field';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { parseAmount } from '@/lib/finance/amount';
+import { formatDateOrDash } from '@/lib/finance/dates';
 import { setRunClosingBalanceAction } from './actions';
 import type { RunRow } from './runs-table';
 
@@ -20,6 +22,7 @@ import type { RunRow } from './runs-table';
 export function AmendBalanceDialog({ open, onOpenChange, run }: { open: boolean; onOpenChange: (open: boolean) => void; run: RunRow | null }) {
   const t = useTranslations('finance.imports.amendBalance');
   const tCommon = useTranslations('common');
+  const { date } = useDateFormat();
   const router = useRouter();
   const [amountText, setAmountText] = useState('');
   const [pending, setPending] = useState(false);
@@ -55,7 +58,7 @@ export function AmendBalanceDialog({ open, onOpenChange, run }: { open: boolean;
         <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
         <div className="space-y-1.5">
           <Label htmlFor="amendBalanceAmount" required>
-            {run.periodTo ? t('label', { date: run.periodTo }) : t('labelNoDate')}
+            {run.periodTo ? t('label', { date: formatDateOrDash(date, run.periodTo) }) : t('labelNoDate')}
           </Label>
           <AmountField id="amendBalanceAmount" name="amendBalanceAmount" value={amountText} onChange={setAmountText} allowNegative required />
         </div>

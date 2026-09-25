@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
+import { useDateFormat } from '@/components/date-format-provider';
 import { ReceiptDrop } from '@/components/finance/receipt-drop';
 import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
@@ -43,6 +44,7 @@ export function VoucherPanel({
   onDone: (rawId: string) => void;
 }) {
   const t = useTranslations('finance.work.voucher');
+  const { date } = useDateFormat();
   const preferred = raw.amountCents < 0 ? 'voucher-invoice' : 'voucher-receipt';
   const defaultType = voucherTypes.find((v) => v.key === preferred)?.key ?? voucherTypes[0]?.key ?? '';
   const [file, setFile] = useState<File | null>(null);
@@ -182,7 +184,7 @@ export function VoucherPanel({
                 <span className="min-w-0 flex-1 space-y-0.5">
                   <span className="block font-semibold text-ink">{hit.subject}</span>
                   <span className="block font-mono text-[12px] text-ink-2">
-                    {hit.number} · {hit.documentDate}
+                    {hit.number} · {date(hit.documentDate)}
                   </span>
                   <span className="block text-[12px] text-muted-ink">{t('matchedBy', { what: matched(hit) })}</span>
                 </span>

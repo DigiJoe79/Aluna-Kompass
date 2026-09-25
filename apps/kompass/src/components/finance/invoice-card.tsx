@@ -7,6 +7,7 @@ import { useState, useTransition, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { createOpenItemFromInvoiceAction } from '@/app/(shell)/finance/work/actions';
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
+import { useDateFormat } from '@/components/date-format-provider';
 import { Notice } from '@/components/notice';
 import { Button, buttonVariants } from '@/components/ui/button';
 import type { ActionState } from '@/lib/actions';
@@ -27,6 +28,7 @@ const bookHref = (rawTransactionId: string, documentId: string): string => `/fin
  */
 export function InvoiceCard({ documentId, proposal, canWrite, canCreateContact }: { documentId: string; proposal: InvoiceProposal; canWrite: boolean; canCreateContact: boolean }) {
   const t = useTranslations('finance.work.invoice');
+  const { date } = useDateFormat();
   if (proposal.kind === 'noInvoice') return null;
 
   return (
@@ -46,7 +48,7 @@ export function InvoiceCard({ documentId, proposal, canWrite, canCreateContact }
           <InvoiceFacts invoice={proposal.invoice} />
           {proposal.kind === 'paid' ? (
             <div className="space-y-2 border-t border-line pt-3">
-              <p className="font-semibold text-ink">{t('paid', { date: proposal.bookingDate })}</p>
+              <p className="font-semibold text-ink">{t('paid', { date: date(proposal.bookingDate) })}</p>
               {canWrite ? (
                 <Link href={bookHref(proposal.rawTransactionId, documentId)} className={buttonVariants({ size: 'sm' })}>
                   {t('bookToTransaction')}
@@ -61,10 +63,10 @@ export function InvoiceCard({ documentId, proposal, canWrite, canCreateContact }
                   <li key={c.rawTransactionId}>
                     {canWrite ? (
                       <Link href={bookHref(c.rawTransactionId, documentId)} className="font-semibold underline underline-offset-2">
-                        {t('candidate', { date: c.bookingDate, account: c.accountName })}
+                        {t('candidate', { date: date(c.bookingDate), account: c.accountName })}
                       </Link>
                     ) : (
-                      t('candidate', { date: c.bookingDate, account: c.accountName })
+                      t('candidate', { date: date(c.bookingDate), account: c.accountName })
                     )}
                   </li>
                 ))}
@@ -94,10 +96,11 @@ function UnsupportedNotice({ code }: { code: Extract<InvoiceProposal, { kind: 'u
 /** Die Angaben der Rechnung — gelesen, nie gespeichert. */
 function InvoiceFacts({ invoice }: { invoice: InvoiceView }) {
   const t = useTranslations('finance.work.invoice');
+  const { date } = useDateFormat();
   const rows: [string, ReactNode][] = [
     [t('seller'), invoice.sellerName],
     [t('number'), <span key="number" className="font-mono">{invoice.invoiceNumber}</span>],
-    [t('date'), <span key="date" className="font-mono tabular-nums">{invoice.issueDate}</span>],
+    [t('date'), <span key="date" className="font-mono tabular-nums">{date(invoice.issueDate)}</span>],
     [
       t('total'),
       <span key="total" className="font-mono tabular-nums">
@@ -119,7 +122,7 @@ function InvoiceFacts({ invoice }: { invoice: InvoiceView }) {
       </span>,
     ]);
   }
-  if (invoice.dueDate) rows.push([t('due'), <span key="due" className="font-mono tabular-nums">{invoice.dueDate}</span>]);
+  if (invoice.dueDate) rows.push([t('due'), <span key="due" className="font-mono tabular-nums">{date(invoice.dueDate)}</span>]);
   if (invoice.payeeIban) {
     rows.push([t('iban'), <span key="iban" className="break-all font-mono">{invoice.payeeIban}</span>]);
     rows.push([t('contact'), invoice.contactName ?? <span key="contact" className="text-muted-ink">{t('noContact')}</span>]);

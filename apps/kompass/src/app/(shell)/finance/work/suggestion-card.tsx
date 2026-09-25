@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useEffect, useState, useTransition, type MutableRefObject } from 'react';
 import { toast } from 'sonner';
+import { useDateFormat } from '@/components/date-format-provider';
 import { KeyChip } from '@/components/key-chip';
 import { Notice } from '@/components/notice';
 import { StatusBadge } from '@/components/status-badge';
@@ -49,6 +50,7 @@ export function SuggestionCard({
   const t = useTranslations('finance.work');
   // `remediesFor` liefert vollqualifizierte Schlüssel (`finance.remedy.*`).
   const tRoot = useTranslations();
+  const { date } = useDateFormat();
   const [pending, startTransition] = useTransition();
   const raw = detail.raw;
   const suggestion = detail.suggestion;
@@ -144,7 +146,7 @@ export function SuggestionCard({
       {linkEntry ? (
         <div className="space-y-2">
           <p className="text-[13px] text-ink">
-            {linkEntry.number ? t('suggestion.linkEntry', { number: linkEntry.number, date: linkEntry.entryDate }) : t('suggestion.linkDraft', { date: linkEntry.entryDate })}
+            {linkEntry.number ? t('suggestion.linkEntry', { number: linkEntry.number, date: date(linkEntry.entryDate) }) : t('suggestion.linkDraft', { date: date(linkEntry.entryDate) })}
           </p>
           <Link href={`/finance/entries/${linkEntry.entryId}`} className="text-[13px] font-semibold underline underline-offset-2">
             {t('suggestion.openEntry')}

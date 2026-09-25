@@ -1,4 +1,4 @@
-import { hasPermission } from '@kompass/core';
+import { hasPermission, readSetting } from '@kompass/core';
 import { listForeignMoney } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { formatDate, type DateFormatMode } from '@/lib/dates';
 import { formatEuro } from '@/lib/finance/amount';
 import { requireSession } from '@/lib/request-context';
 import { PassedOnButton } from './passed-on-button';
@@ -19,6 +20,7 @@ export default async function FinanceForeignMoneyPage() {
   const { deps, ctx } = await requireSession();
   if (!hasPermission(ctx, 'finance.read')) return <ForbiddenCard permission="finance.read" />;
   const t = await getTranslations('finance.work.pages.foreign');
+  const dateMode = readSetting<DateFormatMode>(deps, 'ui.dateFormat');
   const result = await listForeignMoney(deps, ctx);
   if (!result.ok) return <ForbiddenCard permission="finance.read" />;
   const items = result.value.items;
@@ -43,7 +45,7 @@ export default async function FinanceForeignMoneyPage() {
             <TableBody>
               {items.map((item) => (
                 <TableRow key={item.lineId} className="h-11 border-b border-line-2">
-                  <TableCell className="px-4 font-mono text-[12px] tabular-nums text-ink-2">{item.entryDate}</TableCell>
+                  <TableCell className="px-4 font-mono text-[12px] tabular-nums text-ink-2">{formatDate(item.entryDate, dateMode)}</TableCell>
                   <TableCell className="px-4 font-medium text-ink">{item.holderText}</TableCell>
                   <TableCell className="px-4 text-right font-mono tabular-nums">{formatEuro(item.amountCents)}</TableCell>
                   <TableCell className="px-4">

@@ -5,6 +5,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { Fragment, useState } from 'react';
+import { useDateFormat } from '@/components/date-format-provider';
 import { InvoiceCard } from '@/components/finance/invoice-card';
 import { Notice } from '@/components/notice';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -29,6 +30,7 @@ type Loaded = { state: 'loading' } | { state: 'ready'; proposal: InvoiceProposal
  */
 export function VoucherRows({ rows, canOpenDocument, canWrite, canCreateContact }: { rows: VoucherRowData[]; canOpenDocument: boolean; canWrite: boolean; canCreateContact: boolean }) {
   const t = useTranslations('finance.work');
+  const { date } = useDateFormat();
   const [open, setOpen] = useState<Record<string, Loaded>>({});
 
   const toggle = (id: string) => {
@@ -59,7 +61,7 @@ export function VoucherRows({ rows, canOpenDocument, canWrite, canCreateContact 
                   doc.subject
                 )}
               </TableCell>
-              <TableCell className="px-4 font-mono text-[12px] tabular-nums text-ink-2">{doc.documentDate}</TableCell>
+              <TableCell className="px-4 font-mono text-[12px] tabular-nums text-ink-2">{date(doc.documentDate)}</TableCell>
               <TableCell className="px-4 text-ink-2">{doc.typeLabel}</TableCell>
               <TableCell className="px-4 text-right">
                 <span className="inline-flex items-center gap-2">

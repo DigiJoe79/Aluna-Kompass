@@ -6,10 +6,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { toast } from 'sonner';
+import { useDateFormat } from '@/components/date-format-provider';
 import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { formatEuro } from '@/lib/finance/amount';
+import { formatDateOrDash } from '@/lib/finance/dates';
 import { batchAccountState } from '@/lib/finance/work-dialogs';
 import { finalizeAllReviewedAction } from '../entries/actions';
 import { previewBatchFinalizeAction } from './actions';
@@ -28,6 +30,7 @@ const PROBLEM_KEYS = new Set(['accountInactive', 'categoryInactive', 'entryUnbal
 export function BatchFinalizeDialog({ reviewedCount }: { reviewedCount: number }) {
   const t = useTranslations('finance.work.batch');
   const tCommon = useTranslations('common');
+  const { date } = useDateFormat();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loaded, setLoaded] = useState<Loaded>({ state: 'loading' });
@@ -90,7 +93,7 @@ export function BatchFinalizeDialog({ reviewedCount }: { reviewedCount: number }
                             {state.state === 'noStatement' ? t('noStatement') : null}
                             {state.state === 'matches' || state.state === 'differs' ? (
                               <span className="font-mono tabular-nums">
-                                {t('statementOf', { amount: formatEuro(row.statementClosingCents ?? 0), date: row.statementDate ?? '' })}
+                                {t('statementOf', { amount: formatEuro(row.statementClosingCents ?? 0), date: formatDateOrDash(date, row.statementDate) })}
                                 {state.state === 'matches' ? <span className="ml-1 font-sans text-success">✓ {t('matches')}</span> : null}
                               </span>
                             ) : null}
@@ -104,7 +107,7 @@ export function BatchFinalizeDialog({ reviewedCount }: { reviewedCount: number }
                   const state = batchAccountState(row);
                   return state.state === 'differs' ? (
                     <Notice key={row.accountId} level="warn">
-                      {t('differs', { account: row.accountName, difference: formatEuro(state.differenceCents ?? 0), date: row.statementDate ?? '' })}
+                      {t('differs', { account: row.accountName, difference: formatEuro(state.differenceCents ?? 0), date: formatDateOrDash(date, row.statementDate) })}
                     </Notice>
                   ) : null;
                 })}

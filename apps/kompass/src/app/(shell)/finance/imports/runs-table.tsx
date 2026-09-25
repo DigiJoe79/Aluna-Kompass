@@ -4,6 +4,7 @@ import { ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useState } from 'react';
+import { useDateFormat } from '@/components/date-format-provider';
 import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
 import { formatEuro } from '@/lib/finance/amount';
@@ -53,6 +54,7 @@ const truncate = (text: string, max = 40): string => (text.length > max ? `${tex
  */
 export function RunsTable({ runs, canDiscard }: { runs: RunRow[]; canDiscard: boolean }) {
   const t = useTranslations('finance.imports.runs');
+  const { date } = useDateFormat();
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [discardTarget, setDiscardTarget] = useState<RunRow | null>(null);
   const [amendTarget, setAmendTarget] = useState<RunRow | null>(null);
@@ -87,14 +89,14 @@ export function RunsTable({ runs, canDiscard }: { runs: RunRow[]; canDiscard: bo
                 <ChevronRight className={cn('size-4 shrink-0 transition-transform', isOpen && 'rotate-90')} aria-hidden />
                 {run.accountName}
               </button>
-              <span className="text-ink-2">{run.periodFrom && run.periodTo ? t('period', { from: run.periodFrom, to: run.periodTo }) : '—'}</span>
+              <span className="text-ink-2">{run.periodFrom && run.periodTo ? t('period', { from: date(run.periodFrom), to: date(run.periodTo) }) : '—'}</span>
               <span data-testid="import-run-format" className="text-muted-ink">{run.format === 'csv' ? (run.formatName ?? t('formatCsv')) : t('formatCamt')}</span>
               <span className="font-mono tabular-nums text-ink-2">
                 {run.state === 'finished' && run.openingCents === null && run.closingCents === null ? t('noBalance') : null}
                 {run.openingCents !== null ? t('opening', { amount: formatEuro(run.openingCents) }) : ''} {run.closingCents !== null ? t('closing', { amount: formatEuro(run.closingCents) }) : ''}
               </span>
               <span className="text-ink-2">{t('counts', { new: run.counts.new, known: run.counts.known, held: run.counts.held })}</span>
-              <span className="text-muted-ink">{run.createdByUserName ? t('loadedBy', { name: run.createdByUserName, date: run.startedAt.slice(0, 10) }) : t('loadedByUnknown', { date: run.startedAt.slice(0, 10) })}</span>
+              <span className="text-muted-ink">{run.createdByUserName ? t('loadedBy', { name: run.createdByUserName, date: date(run.startedAt) }) : t('loadedByUnknown', { date: date(run.startedAt) })}</span>
               <span className="ml-auto rounded-sm bg-badge px-1.5 py-0.5 text-[11px] font-semibold text-badge-ink">{t(`state.${run.state}`)}</span>
               {canDiscard && run.state === 'finished' && run.openingCents === null && run.closingCents === null ? (
                 <Button type="button" variant="secondary" size="sm" onClick={() => setAmendTarget(run)}>
@@ -117,7 +119,7 @@ export function RunsTable({ runs, canDiscard }: { runs: RunRow[]; canDiscard: bo
             {run.gap ? (
               <div className="px-3 pb-3">
                 <Notice level="warn">
-                  {t('gap', { from: run.gap.from, to: run.gap.to })} {t('gapHint')}
+                  {t('gap', { from: date(run.gap.from), to: date(run.gap.to) })} {t('gapHint')}
                 </Notice>
               </div>
             ) : null}
@@ -130,7 +132,7 @@ export function RunsTable({ runs, canDiscard }: { runs: RunRow[]; canDiscard: bo
                   <ul className="divide-y divide-line text-[13px]">
                     {run.rawTransactions.map((raw) => (
                       <li key={raw.id} className="flex items-center justify-between gap-3 py-1.5">
-                        <span className="font-mono text-ink-2">{raw.bookingDate}</span>
+                        <span className="font-mono text-ink-2">{date(raw.bookingDate)}</span>
                         <span className="flex-1 truncate">{raw.counterpartyName ?? '—'}</span>
                         <span className="flex-1 truncate text-muted-ink">{truncate(raw.purpose)}</span>
                         <span className="font-mono tabular-nums">{formatEuro(raw.amountCents)}</span>

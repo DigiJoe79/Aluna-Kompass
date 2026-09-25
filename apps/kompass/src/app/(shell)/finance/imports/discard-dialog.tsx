@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { ConsequenceList } from '@/components/consequence-list';
+import { useDateFormat } from '@/components/date-format-provider';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { formatEuro } from '@/lib/finance/amount';
@@ -25,6 +26,7 @@ type Loaded = { state: 'loading' } | { state: 'failed' } | { state: 'ready'; pre
 export function DiscardRunDialog({ open, onOpenChange, run }: { open: boolean; onOpenChange: (open: boolean) => void; run: RunRow | null }) {
   const t = useTranslations('finance.imports.discard');
   const tCommon = useTranslations('common');
+  const { date } = useDateFormat();
   const router = useRouter();
   const [loaded, setLoaded] = useState<Loaded>({ state: 'loading' });
   const [note, setNote] = useState('');
@@ -66,7 +68,7 @@ export function DiscardRunDialog({ open, onOpenChange, run }: { open: boolean; o
                   {preview.blocking.map((b) => (
                     <li key={b.entryId}>
                       <Link href={`/finance/entries/${b.entryId}`} className="text-link">
-                        {b.number} · {b.entryDate} · {formatEuro(b.amountCents)}
+                        {b.number} · {date(b.entryDate)} · {formatEuro(b.amountCents)}
                       </Link>
                     </li>
                   ))}

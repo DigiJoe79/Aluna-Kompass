@@ -102,7 +102,8 @@ test.describe('finance csv', () => {
     await expect(page).toHaveURL(/\/finance\/imports$/);
     const run = page.getByTestId('import-run').filter({ hasText: 'Hausbank CSV-Test' });
     await expect(run).toContainText('Hausbank März-Format');
-    await expect(run).toContainText('2026-03-02 – 2026-03-05');
+    await expect(run).toContainText('02.03.2026 – 05.03.2026');
+    await expect(run).not.toContainText(/\d{4}-\d{2}-\d{2}/);
   });
 
   test('ein Neuladen mitten im Assistenten macht nach erneuter Dateiwahl beim gespeicherten Schritt weiter — auch ohne crypto.subtle', async ({ page }) => {
@@ -232,7 +233,7 @@ test.describe('finance csv', () => {
     await page.getByRole('button', { name: 'Speichern und Auszug laden' }).click();
     await expect(page).toHaveURL(/\/finance\/imports$/);
     const run = page.getByTestId('import-run').filter({ hasText: 'Drittbank CSV-Test' });
-    await expect(run).toContainText('2026-03-03 – 2026-03-04');
+    await expect(run).toContainText('03.03.2026 – 04.03.2026');
     await expect(run).toContainText('ohne Kontostand');
   });
 
@@ -244,8 +245,9 @@ test.describe('finance csv', () => {
     await run.getByRole('button', { name: 'Kontostand nachtragen' }).click();
 
     const dialog = page.getByRole('dialog');
-    await expect(dialog.getByText('Kontostand laut Bank am 2026-03-04')).toBeVisible();
-    await dialog.getByLabel('Kontostand laut Bank am 2026-03-04').fill('1.030,00');
+    await expect(dialog.getByText('Kontostand laut Bank am 04.03.2026')).toBeVisible();
+    await expect(dialog).not.toContainText(/\d{4}-\d{2}-\d{2}/);
+    await dialog.getByLabel('Kontostand laut Bank am 04.03.2026').fill('1.030,00');
     await dialog.getByRole('button', { name: 'Kontostand übernehmen' }).click();
 
     await expect(page.getByText('Kontostand nachgetragen.')).toBeVisible();
