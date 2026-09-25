@@ -202,6 +202,69 @@ steht an der Gruppe „Anschrift fehlt“ mit dem Link zum Kontakt. Der Filter
 **Spenden ab … ohne Bestätigung** zeigt nur Spender, deren Summe mindestens
 diesen Betrag erreicht; **Alle zeigen** hebt ihn wieder auf.
 
+## Serienlauf
+
+Statt jede Zuwendung einzeln auszustellen, erledigt der Serienlauf unter
+Spenden → Serienlauf ein ganzes Jahr auf einmal — der übliche Weg einmal im
+Jahr, meist zu Jahresbeginn für das abgelaufene Jahr. Er führt in vier
+Schritten:
+
+1. **Auswahl** — Jahr, ein Mindestbetrag je Spender (Vorgabe aus den
+   Einstellungen; darunter bleibt jemand draußen) und, wer ausdrücklich
+   ausgeschlossen werden soll. Ein Nachzügler-Lauf startet mit denselben
+   Angaben wie sein Ursprungslauf und zeigt von vornherein nur, was seither
+   noch fehlt.
+2. **Vorschau** — je Spender ein Posten: eine Sammelbestätigung über alle
+   Geldspenden und Mitgliedsbeiträge des Jahres, Aufwandsspenden gesondert
+   (immer mit Unterschriftsfeld), Sachspenden einzeln. Die Posten stehen in
+   drei Gruppen — **bereit**, **braucht Unterschrift**, **Anschrift fehlt** —
+   mit Link zum Kontakt, wo eine Anschrift fehlt. Ein Nummernbereich zeigt
+   vorab, welche Nummern der Lauf vergeben würde.
+3. **Lauf** — mit **Bestätigungen ausstellen** stellt Kompass Posten für
+   Posten aus; ein Fortschrittsbalken zeigt den Stand. Der Lauf läuft weiter,
+   auch wenn Sie die Seite verlassen — beim nächsten Besuch setzt er dort
+   fort, wo er stand. Ausstellen kann wie bei der Einzelbestätigung nur ein
+   Mensch, nie ein Werkzeug für Agenten.
+4. **Ergebnis** — zwei Sammel-PDFs zum Drucken, eines mit den maschinell
+   erstellten Bestätigungen, eines mit denen, die noch unterschrieben werden
+   müssen. **Versand für alle vermerken** setzt den Versandvermerk in einem
+   Zug für alle maschinellen Bestätigungen des Laufs (Datum und Weg — ein
+   Vermerk, kein Versand: Kompass verschickt nichts). Zu unterschreibende
+   bekommen ihren Vermerk erst, nachdem die unterschriebene Fassung abgelegt
+   ist (siehe „Unterschrift fehlt“). Fehlt danach noch jemand, bereitet
+   **Nachzügler-Lauf vorbereiten** den nächsten Lauf vor.
+
+Frühere Läufe stehen unterhalb der Seite mit Jahr, Ausstellungsdatum, Stand
+und Versand.
+
+## Spendenbuch und Abstimmung
+
+Spenden → Spendenbuch listet alle bescheinigungsfähigen Zuwendungen eines
+Jahres — Geld, Mitgliedsbeiträge (wenn eingeschaltet), Sachspenden und
+Aufwandsspenden — mit Datum, Spender oder „anonym“, Art, Betrag, Zweck und,
+sofern vorhanden, der Bestätigung, die sie trägt. Eine zurückgegebene Zahlung
+steht als eigene, negative Zeile. Am Kopf stehen die Summen je Art und
+zusammen.
+
+Darunter steht die **Abstimmung**: Zuwendungen minus gültige Bestätigungen
+ergibt eine Differenz, die Kompass nach Gründen aufschlüsselt — unter dem
+Mindestbetrag, Anschrift fehlt, Sachspende nicht beschrieben, Aufwandsspende
+nicht bestätigt, anonym oder sonstige. Jeder Grund verlinkt dorthin, wo sich
+etwas ergänzen lässt, meist in den Serienlauf. Bescheinigt eine Bestätigung
+mehr, als nach Rückgaben noch übrig ist — etwa nach einer Rücklastschrift —,
+steht der Überhang gesondert als „zu korrigieren“, mit Link zum gleichnamigen
+Reiter bei den Bestätigungen.
+
+## Vereinfachter Nachweis
+
+Für kleine Spenden reicht dem Finanzamt statt einer Zuwendungsbestätigung der
+Bareinzahlungsbeleg oder die Buchungsbestätigung der Bank, solange der Betrag
+unter der gesetzlichen Grenze liegt. **Vereinfachter Nachweis (PDF)** im
+Spendenbuch druckt dafür ein Formularblatt mit den Vereinsangaben, dem
+geltenden Bescheid und dem begünstigten Zweck — ohne Bezug zu einer
+bestimmten Spende oder einem bestimmten Spender; es entsteht kein
+Datensatz und kein Eintrag in der Akte.
+
 ## Unser Exemplar und Aufbewahrung
 
 Jede ausgestellte Bestätigung liegt als festgeschriebenes PDF in der Akte —

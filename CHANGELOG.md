@@ -133,7 +133,7 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
   gekennzeichnet, und sein PDF lässt sich nach dem Erfassen nachreichen. Aus
   einer festgeschriebenen Spende entsteht eine Zuwendungsbestätigung nach
   amtlichem Muster — für Geld und Mitgliedsbeiträge (auch Aufwandsspenden) und
-  für Sachzuwendungen; die Sammelbestätigung folgt mit der nächsten Fassung.
+  für Sachzuwendungen.
   Vor dem Ausstellen prüft eine Liste jede Voraussetzung und nennt, was fehlt,
   eine Vorschau zeigt das PDF; unser Exemplar liegt danach in der Akte
   (Präfix `ZWB`, zehn Jahre aufbewahrt). Sachspenden werden mit Gegenstand,
@@ -145,6 +145,22 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
   zeigt Bestätigungen, deren Bescheid ersetzt oder deren Spende geändert
   wurde, und die Startseite zählt sie. Ausstellen und zurücknehmen kann nur ein
   Mensch, kein Agent.
+- **Finanzen: Serienlauf, Spendenbuch und vereinfachter Nachweis.** Unter
+  Finanzen → Serienlauf stellt der Verein alle Zuwendungsbestätigungen eines
+  Jahres in einem Lauf aus: je Spender eine Sammelbestätigung über Geld und
+  Mitgliedsbeiträge, Aufwandsspenden gesondert (immer mit Unterschriftsfeld),
+  Sachspenden einzeln — mit Vorschau in drei Gruppen (bereit, braucht
+  Unterschrift, Anschrift fehlt), Fortschrittsanzeige und zwei Sammel-PDFs
+  zum Drucken (maschinell erstellt / zum Unterschreiben). Ein Versandvermerk
+  lässt sich für alle maschinellen Bestätigungen des Laufs auf einmal setzen,
+  ein Nachzügler-Lauf holt nach, was noch fehlt; Ausstellen bleibt wie bisher
+  einem Menschen vorbehalten. Unter Finanzen → Spendenbuch stehen alle
+  Zuwendungen eines Jahres mit ihrer Bestätigung, dazu die Abstimmung
+  „Zuwendungen ↔ Bestätigungen“ mit der Differenz nach Gründen (unter dem
+  Mindestbetrag, Anschrift fehlt, Sachspende nicht beschrieben, Aufwandsspende
+  nicht bestätigt, anonym, sonstige) und, wo eine Bestätigung nach einer
+  Rückgabe zu viel bescheinigt, als „zu korrigieren“. Für Kleinspenden druckt
+  das Spendenbuch den vereinfachten Nachweis als PDF-Formular.
 - Diese Fassung bringt mehrere Datenbank-Migrationen mit, die beim Start von
   selbst laufen — vor dem Update wie immer ein Backup exportieren.
 
