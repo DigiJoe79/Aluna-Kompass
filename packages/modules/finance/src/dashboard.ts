@@ -1,6 +1,8 @@
-import { readSetting, type DashboardLine, type DashboardTile } from '@kompass/core';
+import { listUserNamesWithPermission, readSetting, type DashboardLine, type DashboardTile } from '@kompass/core';
 import { and, eq, isNull, lt, or } from 'drizzle-orm';
 import { z } from 'zod';
+import { listApprovals } from './allocation/approvals';
+import { listMyExpenseClaims } from './allocation/expenses';
 import { countNeedsSignatureInternal } from './donations/confirmations';
 import { certifiableLineExistsInternal, noticeExpiryInternal, noticeValidAtInternal } from './donations/notices';
 import { countToCorrectInternal } from './donations/to-correct';
@@ -12,7 +14,7 @@ import { listEntries } from './ledger/entries';
 import { overdueOpenItemsInternal } from './ledger/open-items';
 import { purposeBalancesAt } from './ledger/queries';
 import { listVouchersWithoutEntry } from './ledger/vouchers';
-import { financeAccounts, financeEntries, type FinanceAccountRow } from './schema';
+import { financeAccounts, financeEntries, financeExpenseClaims, type FinanceAccountRow } from './schema';
 
 /**
  * Die zehn Kacheln der Startseite (F3b Task 6, F4 Task 6, F6a Task 5, Spec 9.7): je genau
@@ -36,13 +38,21 @@ function activeReconcilableAccounts(deps: Parameters<DashboardTile['load']>[0]):
   return deps.db.select().from(financeAccounts).where(and(eq(financeAccounts.isActive, true), or(eq(financeAccounts.kind, 'bank'), eq(financeAccounts.kind, 'paymentService')))).all();
 }
 
+/** F8a: alle eingereichten Anträge, unabhängig vom Betrachter — für die Zeile in `finance.todo`. */
+function pendingExpenseClaimsCount(deps: Parameters<DashboardTile['load']>[0]): number {
+  return deps.db.select({ id: financeExpenseClaims.id }).from(financeExpenseClaims).where(eq(financeExpenseClaims.state, 'submitted')).all().length;
+}
+
 const todoTile: DashboardTile<Record<string, never>> = {
   key: 'todo',
   permission: 'finance.read',
   kind: 'list',
   defaultOn: true,
   options: z.object({}),
-  messageKeys: ['reviewedNotFinal', 'withoutVoucher', 'overdueItems', 'rawOpen', 'foreignMoney', 'vouchersWithoutEntry', 'lastStatement', 'noticeExpiring', 'noNotice', 'confirmationsToCorrect', 'confirmationsNeedSignature'],
+  messageKeys: [
+    'reviewedNotFinal', 'withoutVoucher', 'overdueItems', 'rawOpen', 'foreignMoney', 'vouchersWithoutEntry', 'lastStatement', 'noticeExpiring', 'noNotice', 'confirmationsToCorrect',
+    'confirmationsNeedSignature', 'expenseClaimsPending',
+  ],
   async load(deps, ctx) {
     const today = isoDay(deps.clock.now().getTime());
     const lines: DashboardLine[] = [];
@@ -110,6 +120,11 @@ const todoTile: DashboardTile<Record<string, never>> = {
     if (toCorrect > 0) lines.push({ titleKey: 'confirmationsToCorrect', values: { count: toCorrect }, href: '/finance/donations?tab=toCorrect' });
     const needsSignature = countNeedsSignatureInternal(deps.db);
     if (needsSignature > 0) lines.push({ titleKey: 'confirmationsNeedSignature', values: { count: needsSignature }, href: '/finance/donations?tab=needsSignature' });
+
+    // F8a (Spec 9.7): wie viele Anträge insgesamt auf Freigabe warten — für jede und jeden mit finance.read,
+    // ohne Betrag oder Namen; die eigene Warteschlange (ohne die eigenen Anträge) zeigt die Kachel `approvalsPending`.
+    const pendingClaims = pendingExpenseClaimsCount(deps);
+    if (pendingClaims > 0) lines.push({ titleKey: 'expenseClaimsPending', values: { count: pendingClaims }, href: '/finance/approvals' });
 
     return { kind: 'list', lines, total: lines.length, href: '/finance/entries' };
   },
@@ -249,6 +264,50 @@ const confirmationsToCorrectTile: DashboardTile<Record<string, never>> = {
   },
 };
 
+/** F8a (Spec 9.7): die Warteschlange des Betrachters — ohne seine eigenen Anträge. Vorgabe an, wie `todo`. */
+const approvalsPendingTile: DashboardTile<Record<string, never>> = {
+  key: 'approvalsPending',
+  permission: 'finance.approve',
+  kind: 'count',
+  defaultOn: true,
+  options: z.object({}),
+  async load(deps, ctx) {
+    const res = await listApprovals(deps, ctx, { limit: 1 });
+    return { kind: 'count', count: res.ok ? res.value.total : 0, href: '/finance/approvals' };
+  },
+};
+
+/** F8a (Spec 9.7): die eigenen offenen Anträge mit Zustand — nie Beträge anderer, weil nur die eigenen erscheinen. */
+const myExpensesTile: DashboardTile<Record<string, never>> = {
+  key: 'myExpenses',
+  permission: 'finance.expensesSubmit',
+  kind: 'list',
+  defaultOn: true,
+  options: z.object({}),
+  messageKeys: ['draft', 'submitted', 'approved', 'paid', 'rejected'],
+  async load(deps, ctx) {
+    const res = await listMyExpenseClaims(deps, ctx, { state: 'open', limit: 10 });
+    if (!res.ok) return { kind: 'list', lines: [], total: 0, href: '/finance/expenses' };
+    const lines: DashboardLine[] = res.value.items.map((c) => ({ titleKey: c.stateLabelKey, values: { number: c.number ?? '—', amount: formatEuro(c.totalCents) }, href: `/finance/expenses/${c.id}` }));
+    return { kind: 'list', lines, total: res.value.total, href: '/finance/expenses' };
+  },
+};
+
+/** F8a (Spec 9.7): warnt, solange kein aktiver Nutzer `finance.approve` trägt — sonst bleibt jeder Antrag stecken. */
+const nobodyCanApproveTile: DashboardTile<Record<string, never>> = {
+  key: 'nobodyCanApprove',
+  permission: 'finance.setup',
+  kind: 'status',
+  defaultOn: true,
+  options: z.object({}),
+  messageKeys: ['ok', 'nobody'],
+  load(deps) {
+    const approvers = listUserNamesWithPermission(deps, 'finance.approve');
+    if (approvers.length === 0) return { kind: 'status', tone: 'warning', messageKey: 'nobody', href: '/admin/roles' };
+    return { kind: 'status', tone: 'neutral', messageKey: 'ok', href: '/admin/roles' };
+  },
+};
+
 export const FINANCE_DASHBOARD_TILES: readonly DashboardTile[] = [
   todoTile as DashboardTile,
   withoutVoucherTile as DashboardTile,
@@ -260,4 +319,7 @@ export const FINANCE_DASHBOARD_TILES: readonly DashboardTile[] = [
   balanceDifferenceTile as DashboardTile,
   lastStatementTile as DashboardTile,
   confirmationsToCorrectTile as DashboardTile,
+  approvalsPendingTile as DashboardTile,
+  myExpensesTile as DashboardTile,
+  nobodyCanApproveTile as DashboardTile,
 ];

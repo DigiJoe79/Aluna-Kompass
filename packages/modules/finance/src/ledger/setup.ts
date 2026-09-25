@@ -24,7 +24,7 @@ import { financeAccounts, financeFiscalYears, financeNotices, financeSigners } f
 import { machineStatusOf } from './machine-status';
 import { noticeValidAt } from './notice-validity';
 
-export type SetupStepKey = 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax' | 'importFormat' | 'notice' | 'machineProcedure';
+export type SetupStepKey = 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax' | 'importFormat' | 'notice' | 'machineProcedure' | 'waiverBasis';
 
 export interface SetupStep {
   key: SetupStepKey;
@@ -76,6 +76,9 @@ const FINANCE_NAV_ENTRIES: readonly { key: string; permission: string }[] = [
   { key: 'finance.donationRun', permission: 'finance.read' },
   { key: 'finance.donationBook', permission: 'finance.read' },
   { key: 'finance.donationNotices', permission: 'finance.read' },
+  // F8a Task 4.
+  { key: 'finance.expenses', permission: 'finance.expensesSubmit' },
+  { key: 'finance.approvals', permission: 'finance.approve' },
   { key: 'finance.admin', permission: 'finance.setup' },
 ];
 
@@ -218,6 +221,21 @@ export async function getSetupStatus(deps: Deps, ctx: CallContext): Promise<Resu
       canDo: listUserNamesWithPermission(deps, 'finance.donationsIssue'),
     },
   ];
+  // F8a Task 4: nur sichtbar, solange Aufwandsspenden eingeschaltet sind — sonst braucht es keine
+  // Anspruchsgrundlage. Direkt die Einstellung gelesen, nicht `waiversEnabled` aus `allocation/`:
+  // `ledger/` kennt `allocation/` nicht (Richtung, Spec 4.1).
+  if (readSetting<boolean>(deps, 'finance.expenseWaiversEnabled')) {
+    steps.push({
+      key: 'waiverBasis',
+      required: false,
+      done: readSetting<string>(deps, 'finance.expenseWaiverBasisText').trim() !== '',
+      dependsOn: null,
+      blocked: false,
+      detail: {},
+      permission: 'finance.setup',
+      canDo: listUserNamesWithPermission(deps, 'finance.setup'),
+    });
+  }
   // Task 6: „complete“ zählt nur Pflichtschritte — ein offener optionaler Schritt kippt die Einrichtung nicht.
   return ok({ steps, complete: steps.filter((s) => s.required).every((s) => s.done) });
 }

@@ -197,6 +197,24 @@ export { getProjectFinance, projectFinanceInternal, setProjectFinance, type Proj
 export { cancelOpenItem, createOpenItem, listOpenItems, listOpenItemSettlements, openCentsInternal, openItemHasAnySettlementInternal, openItemsAtInternal, overdueOpenItemsInternal, saveOpenItem, updateOpenItem, type OpenItemSettlementView, type OpenItemView } from './ledger/open-items';
 export { applyCorrectionInternal, approveAllocationCorrection, decideAllocationCorrection, listAllocationCorrections, rejectAllocationCorrection, requestAllocationCorrection, type CorrectionView } from './ledger/corrections';
 
+// F8a — Auslagen: einreichen, freigeben, Verzicht (allocation/).
+export {
+  copyExpenseClaim,
+  deleteExpenseDraft,
+  getExpenseClaim,
+  listMyExpenseClaims,
+  readExpenseReceipt,
+  saveExpenseDraft,
+  submitExpenseClaim,
+  uploadExpenseReceipt,
+  type ExpenseClaimPaid,
+  type ExpenseClaimView,
+  type ExpensePositionView,
+} from './allocation/expenses';
+export { approveExpenseClaim, getApproval, listApprovals, rejectExpenseClaim, waiverChecks, type ApprovalQueueItem, type ApprovalView } from './allocation/approvals';
+export { suggestExpenseCategories, type ExpenseCategorySuggestion } from './allocation/suggest';
+export { attachSignedWaiver, createWaiverDeclaration, saveContactWaiverTerms, type WaiverCheck, type WaiverCheckKey } from './allocation/waiver';
+
 export { AUDIT_FIELDS, financeAudit, type FinanceEntity } from './audit';
 export { installFinance } from './install';
 export { FINANCE_MCP_TOOLS } from './mcp-tools';

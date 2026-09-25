@@ -1,6 +1,6 @@
 import { csvFormatSchema, headerSignature } from '../src/import/csv';
 import { saveImportProfile } from '../src/import/profiles';
-import { roleIdByOrigin, schema, unwrap, readSetting } from '@kompass/core';
+import { roleIdByOrigin, schema, unwrap, readSetting, writeSettingInternal } from '@kompass/core';
 import { auditEntry, ctxWith, insertRole, insertUser, systemContext } from '@kompass/core/testing';
 import { createContact, linkUserToContact } from '@kompass/module-contacts';
 import { describe, expect, it } from 'vitest';
@@ -35,6 +35,24 @@ describe('finance setup status', () => {
     expect(importFormat.dependsOn).toBe('account');
     expect(importFormat.blocked).toBe(true);
     for (const step of status.steps.filter((s) => s.key !== 'importFormat' && s.key !== 'notice' && s.key !== 'machineProcedure')) expect(step.required, step.key).toBe(true);
+  });
+
+  it('shows the waiver basis step only while expense waivers are switched on, done once the association text is set (F8a Task 4)', async () => {
+    const { deps, ctx } = setupFinance();
+    expect(unwrap(await getSetupStatus(deps, ctx)).steps.map((s) => s.key)).not.toContain('waiverBasis');
+
+    await deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.expenseWaiversEnabled', true, 'test'));
+    const withWaivers = unwrap(await getSetupStatus(deps, ctx));
+    const step = withWaivers.steps.find((s) => s.key === 'waiverBasis')!;
+    expect(step).toBeDefined();
+    expect(step.required).toBe(false);
+    expect(step.done).toBe(false);
+
+    await deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.expenseWaiverBasisText', 'Satzung § 9', 'test'));
+    expect(unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'waiverBasis')!.done).toBe(true);
+
+    await deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.expenseWaiversEnabled', false, 'test'));
+    expect(unwrap(await getSetupStatus(deps, ctx)).steps.map((s) => s.key)).not.toContain('waiverBasis');
   });
 
   it('the import format step counts bank and payment-service accounts and names how many lack a format (F4b)', async () => {

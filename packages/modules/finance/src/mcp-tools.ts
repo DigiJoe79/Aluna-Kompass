@@ -1,5 +1,9 @@
 import { invalid, readSetting, type McpToolDefinition } from '@kompass/core';
 import { z } from 'zod';
+import { approveExpenseClaim, getApproval, listApprovals, rejectExpenseClaim, waiverChecks } from './allocation/approvals';
+import { copyExpenseClaim, deleteExpenseDraft, getExpenseClaim, listMyExpenseClaims, saveExpenseDraft, submitExpenseClaim, uploadExpenseReceipt } from './allocation/expenses';
+import { suggestExpenseCategories } from './allocation/suggest';
+import { attachSignedWaiver, createWaiverDeclaration, saveContactWaiverTerms } from './allocation/waiver';
 import { decideCandidate, listCandidates } from './import/candidates';
 import { discardRun, previewDiscardRun } from './import/discard';
 import { getImportRun, importStatement, listImportRuns, setRunClosingBalance } from './import/runs';
@@ -309,6 +313,45 @@ const inKindSaveMcpSchema = z.object({
 });
 const lineIdMcpSchema = z.object({ lineId: z.string() });
 
+// F8a — Auslagen (allocation): einreichen, freigeben, Verzicht.
+const expensePositionMcpSchema = z.object({
+  id: z.string().min(1).optional(),
+  kind: z.enum(['receipt', 'trip']),
+  positionDate: z.string().date().nullable().optional(),
+  amountCents: z.number().int().min(0).max(100_000_000).optional(),
+  purpose: z.string().trim().max(500).optional(),
+  projectId: z.string().min(1).nullable().optional(),
+  tripFrom: z.string().trim().max(200).nullable().optional(),
+  tripTo: z.string().trim().max(200).nullable().optional(),
+  tripReason: z.string().trim().max(200).nullable().optional(),
+  tripKm: z.number().int().min(0).max(100_000).nullable().optional(),
+});
+const saveExpenseDraftMcpSchema = z.object({
+  id: z.string().min(1).optional(),
+  expectedVersion: z.string().min(1).optional(),
+  iban: z.string().trim().max(50).nullable().optional(),
+  waiver: z.boolean(),
+  recurring: z.boolean().optional(),
+  positions: z.array(expensePositionMcpSchema).max(100),
+});
+const uploadExpenseReceiptMcpSchema = z.object({ claimId: z.string().min(1), positionId: z.string().min(1), contentBase64: z.string().min(1), fileName: z.string().trim().min(1).max(300) });
+const submitExpenseClaimMcpSchema = z.object({ id: z.string().min(1), expectedVersion: z.string().min(1).optional() });
+const expenseIdMcpSchema = z.object({ id: z.string().min(1) });
+const listMyExpenseClaimsMcpSchema = z.object({ state: z.enum(['open', 'done']).optional(), limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() });
+const listApprovalsMcpSchema = z.object({ limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() });
+const approvalClaimIdMcpSchema = z.object({ claimId: z.string().min(1) });
+const waiverChecksMcpSchema = z.object({ claimId: z.string().min(1), declaredOn: z.string().date().optional(), claimAgreedConfirmed: z.boolean().optional() });
+const approveExpenseClaimMcpSchema = z.object({
+  claimId: z.string().min(1),
+  expectedVersion: z.string().min(1).optional(),
+  positions: z.array(z.object({ positionId: z.string().min(1), categoryId: z.string().min(1), purposeId: z.string().min(1).nullable().optional() })).max(100),
+  waiver: z.object({ claimAgreedConfirmed: z.boolean(), declaredOn: z.string().date(), lateReason: z.string().trim().max(1000).optional() }).optional(),
+});
+const rejectExpenseClaimMcpSchema = z.object({ claimId: z.string().min(1), note: z.string().trim().min(1).max(1000) });
+const createWaiverDeclarationMcpSchema = z.object({ claimId: z.string().min(1), declaredOn: z.string().date() });
+const attachSignedWaiverMcpSchema = z.object({ claimId: z.string().min(1), contentBase64: z.string().min(1) });
+const saveContactWaiverTermsMcpSchema = z.object({ contactId: z.string().min(1), basisText: z.string().trim().min(1).max(500), agreedOn: z.string().date() });
+
 /** Base64 prüfen und gegen `finance.uploadLimitMb` halten — wie `finance_voucher_upload`. */
 function voucherBytes(deps: Parameters<McpToolDefinition['handler']>[0], contentBase64: string): Uint8Array | ReturnType<typeof invalid> {
   const bytes = decodeBase64(contentBase64);
@@ -606,4 +649,59 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
   t({ name: 'finance_confirmation_run_dispatch', description: 'Record dispatch for all machine-made, valid confirmations of a run without a dispatch note, in one transaction (date, post, email or handed); confirmations with a signature field get their note after the signed version. Kompass sends nothing itself. Requires finance.donationsIssue.', inputSchema: runDispatchMcpSchema, handler: (deps, ctx, args) => dispatchRunConfirmations(deps, ctx, args), service: dispatchRunConfirmations }),
   t({ name: 'finance_donation_book', description: 'The donation book of a year: finalized lines of the certifiable kinds (donation, membershipFee only while fees are certifiable, inKindDonation, expenseWaiver) with contact or null for anonymous, returns as negative rows, purpose and the valid confirmation holding the line; sums per kind over the whole year. Paginated (limit <= 500). Requires finance.read.', inputSchema: donationBookMcpSchema, handler: (deps, ctx, args) => getDonationBook(deps, ctx, args), service: getDonationBook }),
   t({ name: 'finance_donation_reconciliation', description: 'Reconcile the donations of a year against valid confirmations: the difference split by reason (belowMinimum, addressMissing, inKindUndescribed, expenseWaiverUnconfirmed, anonymous, other) with count, cents and a link each; confirmations above what is left after returns show as toCorrect. Also carries the limit of the simplified receipt (simplifiedReceiptLimit) valid today. Changes nothing. Requires finance.read.', inputSchema: donationReconciliationMcpSchema, handler: (deps, ctx, args) => getDonationReconciliation(deps, ctx, args), service: getDonationReconciliation }),
+  // F8a — Auslagen: einreichen, freigeben, Verzicht.
+  t({
+    name: 'finance_expense_draft_save',
+    description: 'Save an expense claim draft (create when id is absent), replacing all its positions at once - receipt or trip, the trip amount computed from km and the mileage rate at the position date. Nothing is required yet, incomplete positions are kept. Idempotent over id; expectedVersion refuses a stale autosave (staleVersion) and the result carries the current version. For the caller\'s own contact only. Requires finance.expensesSubmit - the one finance permission that needs no finance.read.',
+    inputSchema: saveExpenseDraftMcpSchema,
+    handler: (deps, ctx, args) => saveExpenseDraft(deps, ctx, args),
+    service: saveExpenseDraft,
+  }),
+  t({
+    name: 'finance_expense_receipt_upload',
+    description: 'File a PDF receipt (base64, at most finance.uploadLimitMb) for one draft position, in the name of the claim - no file permission needed. Refuses a file that is not a PDF or too large, naming it; a second upload replaces the receipt at the position, the earlier document stays filed. Draft only, owner only. Requires finance.expensesSubmit.',
+    inputSchema: uploadExpenseReceiptMcpSchema,
+    handler: (deps, ctx, { contentBase64, ...rest }) => {
+      const bytes = voucherBytes(deps, contentBase64);
+      if (!(bytes instanceof Uint8Array)) return Promise.resolve(bytes);
+      return uploadExpenseReceipt(deps, ctx, { ...rest, bytes });
+    },
+    service: uploadExpenseReceipt,
+  }),
+  t({
+    name: 'finance_expense_submit',
+    description: 'Submit an expense claim draft: needs at least one position, a filed PDF on every receipt position, kilometers and a reason on every trip position, and an iban or a waiver. Assigns the number KE-<year>-NNN (year of submission) and locks the claim except its approval fields. Owner only. Requires finance.expensesSubmit.',
+    inputSchema: submitExpenseClaimMcpSchema,
+    handler: (deps, ctx, args) => submitExpenseClaim(deps, ctx, args),
+    service: submitExpenseClaim,
+  }),
+  t({ name: 'finance_expense_draft_delete', description: 'Delete an own expense claim draft, only while it is a draft. Filed receipts stay in the file, only the link to the claim is removed. Owner only. Requires finance.expensesSubmit.', inputSchema: expenseIdMcpSchema, handler: (deps, ctx, args) => deleteExpenseDraft(deps, ctx, args), service: deleteExpenseDraft }),
+  t({ name: 'finance_expense_copy', description: 'Copy a rejected expense claim as a new draft with a reference to the original: the same receipts (relinked, not duplicated), category and purpose cleared, a waiver dropped if expense waivers have since been switched off. Owner only. Requires finance.expensesSubmit.', inputSchema: expenseIdMcpSchema, handler: (deps, ctx, args) => copyExpenseClaim(deps, ctx, args), service: copyExpenseClaim }),
+  t({ name: 'finance_expenses_mine', description: 'List the caller\'s own expense claims: state open (draft, submitted, approved and not yet paid) or done (paid or rejected), newest first. Requires finance.expensesSubmit.', inputSchema: listMyExpenseClaimsMcpSchema, handler: (deps, ctx, args) => listMyExpenseClaims(deps, ctx, args), service: listMyExpenseClaims }),
+  t({ name: 'finance_expense_get', description: 'Read one expense claim: the owning contact without finance.read, anyone else only with it. Requires finance.expensesSubmit or finance.read.', inputSchema: expenseIdMcpSchema, handler: (deps, ctx, args) => getExpenseClaim(deps, ctx, args), service: getExpenseClaim }),
+  t({ name: 'finance_approvals_list', description: 'The approval queue: submitted expense claims, oldest first, never the caller\'s own - neither submitted by the caller nor on the caller\'s own contact. Requires finance.approve.', inputSchema: listApprovalsMcpSchema, handler: (deps, ctx, args) => listApprovals(deps, ctx, args), service: listApprovals }),
+  t({ name: 'finance_approval_get', description: 'Read one expense claim for approval, with iban and receipts only if the caller also holds finance.read. Refused for the caller\'s own claim, naming who can decide it instead. Requires finance.approve.', inputSchema: approvalClaimIdMcpSchema, handler: (deps, ctx, args) => getApproval(deps, ctx, args), service: getApproval }),
+  t({ name: 'finance_expense_suggest_categories', description: 'Suggest an expense category per position of a claim, from the first matching import rule or the category of the most recent similar finalized line - never a must, nothing is stored. Requires finance.approve.', inputSchema: approvalClaimIdMcpSchema, handler: (deps, ctx, args) => suggestExpenseCategories(deps, ctx, args), service: suggestExpenseCategories }),
+  t({
+    name: 'finance_expense_approve',
+    description: 'Approve an expense claim: assigns an expense category per position (purpose optional) and either creates the payable open item (payment reference the claim number, due in 14 days) or, for a waiver, books the expense donation without a money line once the four checks pass (claim agreed in advance, waiver timely, the association could have paid, the declaration is filed). Refused for the caller\'s own claim. The state leaves submitted exactly once - a second concurrent approval is refused. Human only: refused over MCP unless the association has set finance.mcpHumanOnlyAllowed at the screen. Requires finance.approve.',
+    inputSchema: approveExpenseClaimMcpSchema,
+    handler: (deps, ctx, args) => approveExpenseClaim(deps, ctx, args),
+    service: approveExpenseClaim,
+  }),
+  t({ name: 'finance_expense_reject', description: 'Reject a submitted expense claim with a note kept on the record, never in the audit log; the owner may then resubmit it as a copy. Refused for the caller\'s own claim. Requires finance.approve.', inputSchema: rejectExpenseClaimMcpSchema, handler: (deps, ctx, args) => rejectExpenseClaim(deps, ctx, args), service: rejectExpenseClaim }),
+  t({ name: 'finance_waiver_checks', description: 'The four checks before approving an expense donation (waiver): claim agreed in advance, timely by the statutory deadline, the association\'s free funds at the declaration day against the claimed amount, and whether the declaration is filed. Changes nothing. Requires finance.approve.', inputSchema: waiverChecksMcpSchema, handler: (deps, ctx, args) => waiverChecks(deps, ctx, args), service: waiverChecks }),
+  t({ name: 'finance_waiver_declaration_create', description: 'Issue the waiver declaration as a filed document with a signature field, for a submitted claim, before approval. Requires finance.approve, or finance.expensesSubmit for the claim\'s own owner.', inputSchema: createWaiverDeclarationMcpSchema, handler: (deps, ctx, args) => createWaiverDeclaration(deps, ctx, args), service: createWaiverDeclaration }),
+  t({
+    name: 'finance_waiver_signed_attach',
+    description: 'File the signed waiver declaration (base64 PDF, at most finance.uploadLimitMb) as an incoming document, linked to the claim; one time only. Requires finance.approve, or finance.expensesSubmit for the claim\'s own owner.',
+    inputSchema: attachSignedWaiverMcpSchema,
+    handler: (deps, ctx, { contentBase64, ...rest }) => {
+      const bytes = voucherBytes(deps, contentBase64);
+      if (!(bytes instanceof Uint8Array)) return Promise.resolve(bytes);
+      return attachSignedWaiver(deps, ctx, { ...rest, bytes });
+    },
+    service: attachSignedWaiver,
+  }),
+  t({ name: 'finance_contact_waiver_terms_save', description: 'Record or change a contact\'s own basis for expense waivers (overrides the association\'s default), copied onto a claim when it is submitted. Requires finance.setup.', inputSchema: saveContactWaiverTermsMcpSchema, handler: (deps, ctx, args) => saveContactWaiverTerms(deps, ctx, args), service: saveContactWaiverTerms }),
 ];

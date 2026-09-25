@@ -9,7 +9,7 @@ import { RequirementList, type RequirementListItem } from '@/components/requirem
 import { applyTaxDefaultsAction, confirmSetupStepAction } from './actions';
 
 export interface ChecklistStep {
-  key: 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax' | 'importFormat' | 'notice' | 'machineProcedure';
+  key: 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax' | 'importFormat' | 'notice' | 'machineProcedure' | 'waiverBasis';
   done: boolean;
   blocked: boolean;
   detail: Record<string, string | number>;
@@ -30,6 +30,8 @@ const STEP_HREF: Record<ChecklistStep['key'], string> = {
   notice: '/finance/donations/notices',
   // F6a Task 4: das maschinelle Verfahren steht auf derselben Seite (Abschnitt, Task 8).
   machineProcedure: '/finance/donations/notices',
+  // F8a Task 4: die Einstellung steht beim Schalter „Aufwandsspenden“.
+  waiverBasis: '/admin/finance?panel=tax',
 };
 
 /** H1 — Einstieg: erledigte Zeilen bleiben stehen, blockierte nennen ihre Abhängigkeit. */

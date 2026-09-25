@@ -131,7 +131,18 @@
    * Eine Feldhöhe für Eingabe-, Auswahl- und Knopfelemente. Steht hier und
    * sonst nirgends, damit in einer Formularzeile nichts mehr springt.
    */
-  :root { --field-h: 38px; }
+  :root { --field-h: 38px; --field-font: 14px; }
+  /*
+   * F8a: Auf dem Telefon zoomt iOS beim Fokus in ein Feld unter 16 px, und ein
+   * Finger trifft ein 38-px-Feld schlechter als ein Mauszeiger. `pointer:
+   * coarse` erkennt Touch unabhängig von der Bildschirmbreite — ein externes
+   * Tastatur-iPad bleibt bei den kleineren Maßen. Gilt für jedes Formular über
+   * die Bausteine (`Input`, `Select`, `Textarea`, `AmountField`, `Button`),
+   * kein zweiter Baustein (Design-Referenz, „Änderungen an früheren Phasen“).
+   */
+  @media (pointer: coarse) {
+    :root { --field-h: 46px; --field-font: 16px; }
+  }
   /*
    * Zeilenhöhe: zwei Quellen, zwei Variablen.
    *

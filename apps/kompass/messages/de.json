@@ -355,13 +355,16 @@
       "donationRun": "Serienlauf",
       "donationBook": "Spendenbuch",
       "donationNotices": "Bescheide",
+      "expenses": "Eigene Anträge",
+      "approvals": "Freigaben",
       "admin": "Finanzen"
     },
     "sections": {
       "finance": {
         "work": "Arbeit",
         "entries": "Buchungen",
-        "donations": "Spenden"
+        "donations": "Spenden",
+        "expenses": "Auslagen"
       }
     },
     "media": "Mediathek"
@@ -589,7 +592,8 @@
             "noticeExpiring": "{kind, select, section60a {Die vorläufige Feststellung} other {Der Bescheid}} des Finanzamts läuft {months, plural, =0 {in weniger als einem Monat} one {in einem Monat} other {in # Monaten}} ab",
             "noNotice": "Kein gültiger Bescheid des Finanzamts — ohne Bescheid keine Zuwendungsbestätigungen",
             "confirmationsToCorrect": "{count, plural, one {# Zuwendungsbestätigung zu korrigieren} other {# Zuwendungsbestätigungen zu korrigieren}}",
-            "confirmationsNeedSignature": "{count, plural, one {# Zuwendungsbestätigung ohne Unterschrift} other {# Zuwendungsbestätigungen ohne Unterschrift}}"
+            "confirmationsNeedSignature": "{count, plural, one {# Zuwendungsbestätigung ohne Unterschrift} other {# Zuwendungsbestätigungen ohne Unterschrift}}",
+            "expenseClaimsPending": "{count, plural, one {# Antrag wartet auf Freigabe} other {# Anträge warten auf Freigabe}}"
           }
         },
         "withoutVoucher": {
@@ -648,6 +652,32 @@
           "title": "Bestätigungen zu korrigieren",
           "empty": "Keine Zuwendungsbestätigung zu korrigieren.",
           "open": "Zu den Bestätigungen"
+        },
+        "approvalsPending": {
+          "title": "Wartet auf Ihre Freigabe",
+          "empty": "Nichts wartet auf Ihre Freigabe.",
+          "open": "Zu den Freigaben"
+        },
+        "myExpenses": {
+          "title": "Ihre Auslagen",
+          "empty": "Noch kein Antrag.",
+          "open": "Zu Ihren Auslagen",
+          "messages": {
+            "draft": "{number} — Entwurf",
+            "submitted": "{number} · {amount} — wartet auf Freigabe",
+            "approved": "{number} · {amount} — wird überwiesen",
+            "paid": "{number} · {amount} — überwiesen",
+            "rejected": "{number} — abgelehnt"
+          }
+        },
+        "nobodyCanApprove": {
+          "title": "Niemand kann freigeben",
+          "empty": "",
+          "open": "Zu den Rollen",
+          "messages": {
+            "ok": "Mindestens eine Person kann Auslagen freigeben.",
+            "nobody": "Niemand trägt das Recht, Auslagen freizugeben."
+          }
         }
       },
       "site": {
@@ -3134,7 +3164,8 @@
           "tax": "Steuerliches bestätigen",
           "importFormat": "Auszugsformat je Bank- und Zahlungsdienstkonto (optional bis zum ersten Auszug)",
           "notice": "Bescheid des Finanzamts erfassen (optional — ohne Bescheid keine Zuwendungsbestätigungen)",
-          "machineProcedure": "Maschinelles Verfahren einrichten (optional — sonst tragen Bestätigungen ein Unterschriftsfeld)"
+          "machineProcedure": "Maschinelles Verfahren einrichten (optional — sonst tragen Bestätigungen ein Unterschriftsfeld)",
+          "waiverBasis": "Aufwandsspenden: Anspruchsgrundlage hinterlegt (optional — nur solange Aufwandsspenden eingeschaltet sind)"
         },
         "open": "Erledigen",
         "done": "Erledigt",
@@ -3419,6 +3450,8 @@
             "donationRun": "Serienlauf",
             "donationBook": "Spendenbuch",
             "donationNotices": "Bescheide",
+            "expenses": "Eigene Anträge",
+            "approvals": "Freigaben",
             "admin": "Finanzen einrichten"
           }
         }

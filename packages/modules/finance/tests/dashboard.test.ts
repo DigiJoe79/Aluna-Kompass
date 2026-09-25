@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { roleIdByOrigin, schema, unwrap, writeSettingInternal } from '@kompass/core';
-import { ctxWith, insertUser, systemContext } from '@kompass/core/testing';
+import { ctxWith, insertRole, insertUser, systemContext } from '@kompass/core/testing';
 import { createContact, linkUserToContact } from '@kompass/module-contacts';
 import { describe, expect, it } from 'vitest';
 import { FINANCE_DASHBOARD_TILES } from '../src/dashboard';
@@ -13,11 +13,13 @@ import { FINANCE_PERMISSIONS } from '../src/manifest';
 import { createAccount } from '../src/ledger/accounts';
 import { saveDraft, setReviewed } from '../src/ledger/entries';
 import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
+import { formatEuro } from '../src/ledger/cash-check';
 import { createOpenItem } from '../src/ledger/open-items';
 import { applyTaxDefaults, confirmSetupStep } from '../src/ledger/setup';
 import { installFinance } from '../src/install';
 import { insertDocument, insertRaw, insertRun, ledgerFixture, setupFinance } from './helpers';
 import { donationFixture, EXEMPTION } from './donation-fixture';
+import { approverCtx, expenseFixture, expenseSubmitted } from './expense-fixture';
 
 const FIXTURES = path.resolve(import.meta.dirname, 'fixtures/camt');
 const camtBytes = (name: string) => new Uint8Array(readFileSync(path.join(FIXTURES, name)));
@@ -32,12 +34,13 @@ function tileByKey(key: string) {
 }
 
 describe('finance dashboard tiles', () => {
-  it('registers ten tiles, two of them on by default, each under exactly one permission', () => {
-    expect(FINANCE_DASHBOARD_TILES).toHaveLength(10);
+  it('registers thirteen tiles, five of them on by default, each under exactly one permission', () => {
+    expect(FINANCE_DASHBOARD_TILES).toHaveLength(13);
     expect(FINANCE_DASHBOARD_TILES.map((t) => t.key).sort()).toEqual([
-      'balanceDifference', 'confirmationsToCorrect', 'lastStatement', 'overdueItems', 'purposesNegative', 'rawOpen', 'setupIncomplete', 'staleDrafts', 'todo', 'withoutVoucher',
+      'approvalsPending', 'balanceDifference', 'confirmationsToCorrect', 'lastStatement', 'myExpenses', 'nobodyCanApprove', 'overdueItems', 'purposesNegative', 'rawOpen', 'setupIncomplete',
+      'staleDrafts', 'todo', 'withoutVoucher',
     ]);
-    expect(FINANCE_DASHBOARD_TILES.filter((t) => t.defaultOn).map((t) => t.key).sort()).toEqual(['setupIncomplete', 'todo']);
+    expect(FINANCE_DASHBOARD_TILES.filter((t) => t.defaultOn).map((t) => t.key).sort()).toEqual(['approvalsPending', 'myExpenses', 'nobodyCanApprove', 'setupIncomplete', 'todo']);
     for (const tile of FINANCE_DASHBOARD_TILES) expect(typeof tile.permission).toBe('string');
   });
 
@@ -277,5 +280,55 @@ describe('finance confirmations on the dashboard (F6a Task 5)', () => {
       { titleKey: 'confirmationsNeedSignature', values: { count: 1 }, href: '/finance/donations?tab=needsSignature' },
     ]);
     expect(JSON.stringify(await todo.load(f.deps, f.ctx, {}))).not.toMatch(/Erika|Beispiel|Jonas/);
+  });
+});
+
+describe('finance expense dashboard tiles (F8a, Spec 9.7)', () => {
+  it('counts the approval queue for the approver, excluding the approver\'s own claims', async () => {
+    const f = await expenseFixture();
+    const approve = approverCtx(f);
+    const tile = tileByKey('approvalsPending');
+    expect(await tile.load(f.deps, approve, {})).toEqual({ kind: 'count', count: 0, href: '/finance/approvals' });
+    await expenseSubmitted(f, f.hanna);
+    expect(await tile.load(f.deps, approve, {})).toEqual({ kind: 'count', count: 1, href: '/finance/approvals' });
+  });
+
+  it('lists the caller\'s own open expense claims with their state, never the amounts of others', async () => {
+    const f = await expenseFixture();
+    const tile = tileByKey('myExpenses');
+    expect(await tile.load(f.deps, f.hanna.ctx, {})).toEqual({ kind: 'list', lines: [], total: 0, href: '/finance/expenses' });
+
+    const claim = await expenseSubmitted(f, f.hanna);
+    await expenseSubmitted(f, f.otto);
+    const result = await tile.load(f.deps, f.hanna.ctx, {});
+    expect(result.kind).toBe('list');
+    if (result.kind !== 'list') throw new Error('expected list');
+    expect(result.lines).toEqual([{ titleKey: 'submitted', values: { number: claim.number, amount: formatEuro(claim.totalCents) }, href: `/finance/expenses/${claim.id}` }]);
+  });
+
+  it('warns that nobody can approve until an active user holds finance.approve', async () => {
+    const f = await expenseFixture();
+    const tile = tileByKey('nobodyCanApprove');
+    expect(await tile.load(f.deps, f.ctx, {})).toEqual({ kind: 'status', tone: 'warning', messageKey: 'nobody', href: '/admin/roles' });
+
+    const role = insertRole(f.deps, { name: 'Freigeberin' });
+    f.deps.db.insert(schema.rolePermissions).values({ roleId: role, permissionKey: 'finance.approve' }).run();
+    const holderId = insertUser(f.deps, { name: 'Frieda Freigeberin' });
+    f.deps.db.insert(schema.userRoles).values({ userId: holderId, roleId: role }).run();
+    expect(await tile.load(f.deps, f.ctx, {})).toEqual({ kind: 'status', tone: 'neutral', messageKey: 'ok', href: '/admin/roles' });
+  });
+
+  it('adds a line for every submitted claim to finance.todo, without amount or name', async () => {
+    const f = await expenseFixture();
+    const todo = tileByKey('todo');
+    expect(await todo.load(f.deps, f.ctx, {})).toMatchObject({ lines: [] });
+
+    await expenseSubmitted(f, f.hanna);
+    await expenseSubmitted(f, f.otto);
+    const result = await todo.load(f.deps, f.ctx, {});
+    expect(result.kind).toBe('list');
+    if (result.kind !== 'list') throw new Error('expected list');
+    expect(result.lines.find((l) => l.titleKey === 'expenseClaimsPending')).toEqual({ titleKey: 'expenseClaimsPending', values: { count: 2 }, href: '/finance/approvals' });
+    expect(JSON.stringify(result)).not.toMatch(/Hanna|Otto|Helferin|Oftfahrer/);
   });
 });

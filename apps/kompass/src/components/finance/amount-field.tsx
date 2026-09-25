@@ -80,7 +80,7 @@ export function AmountField({ name, id, value, onChange, direction, onDirectionC
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onBlur={handleBlur}
-            className="w-full flex-1 bg-transparent px-2.5 text-right font-mono text-[14px] tabular-nums outline-none"
+            className="w-full flex-1 bg-transparent px-2.5 text-right font-mono text-[length:var(--field-font)] tabular-nums outline-none"
           />
           <span className="flex items-center border-l border-line bg-surface-2 px-2.5 text-[13px] text-muted-ink" aria-hidden>
             €
