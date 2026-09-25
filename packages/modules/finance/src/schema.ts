@@ -744,6 +744,8 @@ export const financeConfirmationRuns = sqliteTable('finance_confirmation_runs', 
   finishedAt: text('finished_at'),
   dispatchedAt: text('dispatched_at'),
   dispatchedVia: text('dispatched_via', { enum: ['post', 'email', 'handed'] }),
+  /** Pflichtbegründung für Zuwendungen vor dem ältesten Bescheid — gilt für alle betroffenen Posten des Laufs; steht nur hier, nie im Protokoll. */
+  preNoticeReason: text('pre_notice_reason'),
   createdAt: text('created_at').notNull(),
 });
 export type FinanceConfirmationRunRow = typeof financeConfirmationRuns.$inferSelect;

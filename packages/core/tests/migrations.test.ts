@@ -136,6 +136,8 @@ describe('hand-written SQL survives', () => {
       expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
     }
     expect(allSql).toContain('CREATE UNIQUE INDEX `finance_confirmation_run_items_key_idx` ON `finance_confirmation_run_items` (`run_id`,`contact_id`,`kind`,`in_kind_line_id`)');
+    // Die Begründung vor dem ältesten Bescheid (F6b Lauf 3) steht mit im Wächter des Laufs.
+    expect(allSql).toContain('OR NEW.pre_notice_reason IS NOT OLD.pre_notice_reason');
     expect(allSql).toContain('CREATE UNIQUE INDEX `finance_confirmation_run_items_collective_idx` ON `finance_confirmation_run_items` (`run_id`,`contact_id`,`kind`) WHERE "finance_confirmation_run_items"."in_kind_line_id" is null');
   });
 

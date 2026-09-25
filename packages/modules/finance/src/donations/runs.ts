@@ -25,6 +25,7 @@ import { CONFIRMATION_DOCUMENT_TYPE } from './templates/shared';
 export type RunItemKind = 'collective' | 'collectiveWaiver' | 'inKind';
 export type RunPreviewGroup = 'ready' | 'needsSignature' | 'addressMissing' | 'blocked';
 export type RunSignatureReason = 'expenseWaiver' | 'inKind' | 'machineIncomplete';
+export type RunBlockedBy = ConfirmationCheckKey | 'beforeOldestNotice';
 
 export interface RunPreviewItem {
   contactId: string;
@@ -38,8 +39,12 @@ export interface RunPreviewItem {
   /** Zeilen desselben Kontakts, Jahres und derselben Art, die schon in einer gültigen Einzelbestätigung stehen — „2 von 3 Zuwendungen; 1 bereits einzeln bestätigt“. */
   alreadyConfirmedSingly: number;
   group: RunPreviewGroup;
-  /** Die sperrende Prüfung (`contactComplete` bei *Anschrift fehlt*); `null`, wenn nichts sperrt. */
-  blockedBy: ConfirmationCheckKey | null;
+  /**
+   * Die sperrende Prüfung (`contactComplete` bei *Anschrift fehlt*); `null`, wenn nichts sperrt.
+   * `beforeOldestNotice`: eine Zuwendung liegt vor dem ältesten Bescheid — der Posten entsteht beim
+   * Start nur mit einer Begründung für den Lauf (`preNoticeReason`), sonst wird er übersprungen.
+   */
+  blockedBy: RunBlockedBy | null;
   signatureReason: RunSignatureReason | null;
 }
 
@@ -118,7 +123,8 @@ export function previewConfirmationRunInternal(db: DbOrTx, deps: Deps, args: Run
     .innerJoin(financeCategories, eq(financeAllocationLines.categoryId, financeCategories.id))
     .where(and(eq(financeEntries.status, 'final'), isNull(financeEntries.reversedByEntryId), isNull(financeEntries.reversesEntryId), inArray(financeCategories.incomeKind, [...kinds])))
     .all()
-    .filter((r) => r.amountCents > 0 && r.contactId !== null && !excluded.has(r.contactId) && r.entryDate.startsWith(`${args.year}-`));
+    // Was erst nach dem Ausstellungstag liegt, kann eine Bestätigung von diesem Tag nicht tragen.
+    .filter((r) => r.amountCents > 0 && r.contactId !== null && !excluded.has(r.contactId) && r.entryDate.startsWith(`${args.year}-`) && r.entryDate <= issuedOn);
 
   const candidateIds = candidates.map((r) => r.lineId);
   const confirmedKind = new Map<string, string>();
@@ -172,7 +178,7 @@ export function previewConfirmationRunInternal(db: DbOrTx, deps: Deps, args: Run
       const lineIds = bucket.lines.map((l) => l.lineId);
       const checked = checkConfirmableInternal(db, deps, { lineIds, issuedOn, kind: bucket.kind === 'inKind' ? 'inKind' : 'collective' });
       let group: RunPreviewGroup;
-      let blockedBy: ConfirmationCheckKey | null = null;
+      let blockedBy: RunBlockedBy | null = null;
       let signatureReason: RunSignatureReason | null = null;
       if (!checked.ok) {
         group = 'blocked';
@@ -187,6 +193,11 @@ export function previewConfirmationRunInternal(db: DbOrTx, deps: Deps, args: Run
         } else {
           signatureReason = bucket.kind === 'collectiveWaiver' ? 'expenseWaiver' : bucket.kind === 'inKind' ? 'inKind' : checked.value.machine.complete ? null : 'machineIncomplete';
           group = signatureReason ? 'needsSignature' : 'ready';
+          // Bereit wäre er — aber nur mit Begründung (Entscheidung zu Lauf 2); der Unterschriftsgrund bleibt für den Start stehen.
+          if (checked.value.warnings.includes('beforeOldestNotice')) {
+            group = 'blocked';
+            blockedBy = 'beforeOldestNotice';
+          }
         }
       }
       items.push({

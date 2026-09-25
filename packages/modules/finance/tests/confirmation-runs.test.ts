@@ -149,6 +149,30 @@ describe('previewConfirmationRun', () => {
     expect(f.deps.db.select().from(schema.auditLog).all()).toHaveLength(before);
   });
 
+  it('leaves out lines dated after the issue day', async () => {
+    const f = await donationFixture();
+    const early = await f.donate({ date: '2026-03-05', cents: 1000 });
+    await f.donate({ date: '2026-03-15', cents: 2000 });
+    // Gebucht ist schon, was erst nach dem Ausstellungstag liegt — es gehört nicht in eine Bestätigung von heute.
+    f.deps.clock.set('2026-03-10T10:00:00.000Z');
+
+    const preview = unwrap(await previewConfirmationRun(f.deps, f.ctx, { year: 2026 }));
+    expect(preview.issuedOn).toBe('2026-03-10');
+    expect(preview.items).toEqual([expect.objectContaining({ contactId: f.erika.id, lineIds: [early.line.id], totalCents: 1000, lineCount: 1 })]);
+  });
+
+  it('shows donations before the oldest notice as blocked by beforeOldestNotice', async () => {
+    const f = await donationFixture();
+    const early = await f.donate({ date: '2025-03-01', cents: 1000 });
+    const max = await person(f, 'Max', 'Probe');
+    await f.donate({ date: '2025-06-01', cents: 2000, contactId: max.id });
+
+    const preview = unwrap(await previewConfirmationRun(f.deps, f.ctx, { year: 2025 }));
+    expect(itemsOf(preview.items, f.erika.id)).toEqual([expect.objectContaining({ lineIds: [early.line.id], group: 'blocked', blockedBy: 'beforeOldestNotice', signatureReason: 'machineIncomplete' })]);
+    expect(itemsOf(preview.items, max.id)).toEqual([expect.objectContaining({ group: 'needsSignature', blockedBy: null })]);
+    expect(preview.counts).toEqual({ ready: 0, needsSignature: 1, addressMissing: 0, blocked: 1 });
+  });
+
   it('Prüfstein 2: three donors in one payout become three items; the fee line is no donation', async () => {
     const f = await donationFixture({ machine: true });
     const anna = await person(f, 'Anna', 'Alpha');
