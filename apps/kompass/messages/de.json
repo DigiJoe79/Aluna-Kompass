@@ -4553,6 +4553,105 @@
           "failed": "Der vereinfachte Nachweis konnte nicht erstellt werden."
         }
       }
+    },
+    "expenses": {
+      "new": {
+        "title": "Auslage einreichen",
+        "intro": "Kompass sichert Ihre Eingaben laufend. Sie können jederzeit aufhören und später weitermachen – auch an einem anderen Gerät.",
+        "back": "Eigene Anträge",
+        "forWhom": "Für wen?",
+        "positions": "Positionen",
+        "position": "Position {n}",
+        "kind": {
+          "group": "Art der Position {n}",
+          "receipt": "Beleg",
+          "trip": "Fahrt"
+        },
+        "date": "Datum",
+        "amount": "Betrag",
+        "purpose": "Wofür war das?",
+        "project": "Projekt",
+        "projectNone": "kein Projekt",
+        "optional": "optional",
+        "tripFrom": "Von",
+        "tripTo": "Nach",
+        "tripReason": "Anlass",
+        "km": "Kilometer",
+        "tripCalculation": "{km} km × {rate} = <b>{amount}</b>",
+        "tripNoRate": "Für dieses Datum ist kein Kilometersatz hinterlegt.",
+        "removePosition": "Position {n} entfernen",
+        "addPosition": "Weitere Position",
+        "total": "Summe",
+        "iban": "IBAN",
+        "ibanHint": "Auf dieses Konto wird erstattet.",
+        "ibanPrefilled": "bei uns hinterlegt",
+        "otherIban": "andere IBAN",
+        "ibanCheck": {
+          "valid": "Prüfziffer stimmt.",
+          "checksum": "Die Prüfziffer stimmt nicht – bitte vergleichen Sie die IBAN noch einmal.",
+          "length": "Die Länge passt nicht zu einer IBAN dieses Landes."
+        },
+        "waiver": {
+          "label": "Auf die Erstattung verzichten",
+          "text": "Statt Geld bekommen Sie eine Zuwendungsbestätigung über den Betrag. Das geht nur, wenn Ihnen die Erstattung vorher zugesagt war."
+        },
+        "pdf": {
+          "choose": "PDF wählen",
+          "replace": "ersetzen",
+          "uploading": "Wird abgelegt …",
+          "photo": "Das ist ein Foto. Kompass nimmt nur PDF.",
+          "notPdf": "Das ist kein PDF. Kompass nimmt nur PDF.",
+          "tooLarge": "Die Datei ist zu groß. Erlaubt sind höchstens {limit}.",
+          "file": "Datei: {name}",
+          "keep": "Ihre Eingaben bleiben stehen.",
+          "filed": "abgelegt als {number}"
+        },
+        "guide": {
+          "title": "So wird aus Papier ein PDF",
+          "ios": {
+            "tab": "iPhone",
+            "step1": "Öffnen Sie die App „Dateien“.",
+            "step2": "Tippen Sie oben rechts auf „…“ und dann auf „Dokumente scannen“.",
+            "step3": "Halten Sie das Telefon über den Beleg, sichern Sie den Scan – und wählen Sie ihn hier mit „PDF wählen“."
+          },
+          "android": {
+            "tab": "Android",
+            "step1": "Öffnen Sie Google Drive.",
+            "step2": "Tippen Sie auf „+“ und dann auf „Scannen“.",
+            "step3": "Sichern Sie den Scan als PDF – und wählen Sie ihn hier mit „PDF wählen“."
+          },
+          "more": "Mehr im Handbuch"
+        },
+        "save": {
+          "idle": "Noch nichts eingegeben.",
+          "saving": "Wird gespeichert …",
+          "saved": "Zwischenstand gespeichert · {time}",
+          "offline": "Nicht gespeichert – keine Verbindung. Ihre Eingaben bleiben auf diesem Gerät, bis die Verbindung wieder da ist.",
+          "failed": "Nicht gespeichert: {detail}"
+        },
+        "keepDraft": "Als Entwurf behalten",
+        "submit": "Einreichen",
+        "refuse": {
+          "title": "Noch nicht einreichbar",
+          "pickPdf": "PDF für Position {n} wählen"
+        },
+        "blocked": {
+          "step": "Auslage einreichen",
+          "title": "Ihr Nutzerkonto gehört noch zu keiner Person"
+        }
+      },
+      "submitted": {
+        "title": "Eingereicht",
+        "text": "Ihr Antrag {number} ist am {at} eingegangen.",
+        "amount": "Betrag",
+        "waiver": "Sie verzichten auf die Erstattung und bekommen dafür eine Zuwendungsbestätigung.",
+        "positions": "Positionen",
+        "trip": "Fahrt {from} – {to}, {km} km",
+        "approvers": "Freigeben kann: {names}",
+        "noApprover": "Zurzeit kann niemand außer Ihnen freigeben. Bitte sprechen Sie den Vorstand an.",
+        "toList": "Zu meinen Anträgen",
+        "another": "Weitere Auslage einreichen"
+      }
     }
   }
 }

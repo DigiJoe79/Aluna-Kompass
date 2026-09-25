@@ -201,6 +201,7 @@ export { applyCorrectionInternal, approveAllocationCorrection, decideAllocationC
 export {
   copyExpenseClaim,
   deleteExpenseDraft,
+  expenseFormStart,
   getExpenseClaim,
   listMyExpenseClaims,
   readExpenseReceipt,
@@ -209,6 +210,7 @@ export {
   uploadExpenseReceipt,
   type ExpenseClaimPaid,
   type ExpenseClaimView,
+  type ExpenseFormStart,
   type ExpensePositionView,
 } from './allocation/expenses';
 export { approveExpenseClaim, getApproval, listApprovals, rejectExpenseClaim, waiverChecks, type ApprovalQueueItem, type ApprovalView } from './allocation/approvals';

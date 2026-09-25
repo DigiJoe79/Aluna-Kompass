@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import {
   copyExpenseClaim,
   deleteExpenseDraft,
+  expenseFormStart,
   getExpenseClaim,
   listMyExpenseClaims,
   readExpenseReceipt,
@@ -19,7 +20,7 @@ import { setDatedValue } from '../src/ledger/dated-values';
 import { bookEntry } from '../src/ledger/finalize';
 import { financeRecordDeleted } from '../src/ledger/holds';
 import { createOpenItem } from '../src/ledger/open-items';
-import { financeContactWaiverTerms, financeExpenseClaims, financeExpensePositions } from '../src/schema';
+import { financeContactBankAccounts, financeContactWaiverTerms, financeExpenseClaims, financeExpensePositions } from '../src/schema';
 import { expenseFixture, jpegBytes, type ExpenseFixture } from './expense-fixture';
 
 /**
@@ -167,6 +168,40 @@ describe('uploadExpenseReceipt', () => {
     const draft = unwrap(await saveExpenseDraft(f.deps, f.hanna.ctx, { waiver: false, positions: [{ kind: 'receipt' }] }));
     const saved = unwrap(await uploadExpenseReceipt(f.deps, f.hanna.ctx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: f.pdf(), fileName: 'bon.pdf' }));
     expect(f.deps.db.select().from(documents).where(eq(documents.id, saved.positions[0]!.documentId!)).get()!.typeKey).toBe('voucher-receipt');
+  });
+});
+
+describe('expenseFormStart', () => {
+  it('starts the form for the own contact: name, the rate steps, whether waivers are offered — and refuses without a contact link', async () => {
+    const f = await expenseFixture();
+    unwrap(await setDatedValue(f.deps, f.ctx, { key: 'mileageRate', validFrom: '2026-06-01', value: 35 }));
+    const start = unwrap(await expenseFormStart(f.deps, f.hanna.ctx, {}));
+    expect(start).toEqual({
+      contactName: 'Hanna Helferin',
+      iban: null,
+      waiversEnabled: false,
+      mileageRates: [
+        { validFrom: '2026-01-01', centsPerKm: 30 },
+        { validFrom: '2026-06-01', centsPerKm: 35 },
+      ],
+    });
+    enableWaivers(f);
+    expect(unwrap(await expenseFormStart(f.deps, f.hanna.ctx, {})).waiversEnabled).toBe(true);
+
+    const refused = await expenseFormStart(f.deps, f.unlinked, {});
+    expect(err(refused)).toMatchObject({ type: 'conflict', code: 'expenseNeedsContactLink', message: expect.stringContaining('Vera Verwalterin') });
+    expect(err(await expenseFormStart(f.deps, ctxWith(['finance.read'], f.hanna.userId), {}))).toMatchObject({ type: 'forbidden', permission: 'finance.expensesSubmit' });
+    expect(err(await expenseFormStart(f.deps, f.hanna.ctx, { unexpected: true }))).toMatchObject({ type: 'validation' });
+  });
+
+  it('prefills the iban from the latest own claim, else from a known bank account of the contact — never from someone else', async () => {
+    const f = await expenseFixture();
+    f.deps.db.insert(financeContactBankAccounts).values({ id: 'cba-1', contactId: f.hanna.contactId, iban: 'DE93999999990000000001', createdAt: '2026-02-01T00:00:00.000Z', createdByUserId: f.userId }).run();
+    expect(unwrap(await expenseFormStart(f.deps, f.hanna.ctx, {})).iban).toBe('DE93999999990000000001');
+
+    unwrap(await saveExpenseDraft(f.deps, f.hanna.ctx, { waiver: false, iban: IBAN, positions: [] }));
+    expect(unwrap(await expenseFormStart(f.deps, f.hanna.ctx, {})).iban).toBe(IBAN);
+    expect(unwrap(await expenseFormStart(f.deps, f.otto.ctx, {})).iban).toBeNull();
   });
 });
 

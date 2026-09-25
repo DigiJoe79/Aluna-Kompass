@@ -1,7 +1,7 @@
 import { invalid, readSetting, type McpToolDefinition } from '@kompass/core';
 import { z } from 'zod';
 import { approveExpenseClaim, getApproval, listApprovals, rejectExpenseClaim, waiverChecks } from './allocation/approvals';
-import { copyExpenseClaim, deleteExpenseDraft, getExpenseClaim, listMyExpenseClaims, saveExpenseDraft, submitExpenseClaim, uploadExpenseReceipt } from './allocation/expenses';
+import { copyExpenseClaim, deleteExpenseDraft, expenseFormStart, getExpenseClaim, listMyExpenseClaims, saveExpenseDraft, submitExpenseClaim, uploadExpenseReceipt } from './allocation/expenses';
 import { suggestExpenseCategories } from './allocation/suggest';
 import { attachSignedWaiver, createWaiverDeclaration, saveContactWaiverTerms } from './allocation/waiver';
 import { decideCandidate, listCandidates } from './import/candidates';
@@ -338,6 +338,7 @@ const uploadExpenseReceiptMcpSchema = z.object({ claimId: z.string().min(1), pos
 const submitExpenseClaimMcpSchema = z.object({ id: z.string().min(1), expectedVersion: z.string().min(1).optional() });
 const expenseIdMcpSchema = z.object({ id: z.string().min(1) });
 const listMyExpenseClaimsMcpSchema = z.object({ state: z.enum(['open', 'done']).optional(), limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() });
+const expenseFormStartMcpSchema = z.object({}).strict();
 const listApprovalsMcpSchema = z.object({ limit: z.number().int().min(1).max(200).optional(), offset: z.number().int().min(0).optional() });
 const approvalClaimIdMcpSchema = z.object({ claimId: z.string().min(1) });
 const waiverChecksMcpSchema = z.object({ claimId: z.string().min(1), declaredOn: z.string().date().optional(), claimAgreedConfirmed: z.boolean().optional() });
@@ -677,6 +678,7 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
   }),
   t({ name: 'finance_expense_draft_delete', description: 'Delete an own expense claim draft, only while it is a draft. Filed receipts stay in the file, only the link to the claim is removed. Owner only. Requires finance.expensesSubmit.', inputSchema: expenseIdMcpSchema, handler: (deps, ctx, args) => deleteExpenseDraft(deps, ctx, args), service: deleteExpenseDraft }),
   t({ name: 'finance_expense_copy', description: 'Copy a rejected expense claim as a new draft with a reference to the original: the same receipts (relinked, not duplicated), category and purpose cleared, a waiver dropped if expense waivers have since been switched off. Owner only. Requires finance.expensesSubmit.', inputSchema: expenseIdMcpSchema, handler: (deps, ctx, args) => copyExpenseClaim(deps, ctx, args), service: copyExpenseClaim }),
+  t({ name: 'finance_expense_form_start', description: 'What a new expense claim starts with, without creating anything: the caller\'s own contact name, the iban to prefill (latest own claim, else a known bank account of the contact), whether expense waivers are offered, and the steps of the mileage rate (validFrom, centsPerKm). Refused without a link between the caller\'s user account and a contact, naming who can set it. Requires finance.expensesSubmit.', inputSchema: expenseFormStartMcpSchema, handler: (deps, ctx) => expenseFormStart(deps, ctx, {}), service: expenseFormStart }),
   t({ name: 'finance_expenses_mine', description: 'List the caller\'s own expense claims: state open (draft, submitted, approved and not yet paid) or done (paid or rejected), newest first. Requires finance.expensesSubmit.', inputSchema: listMyExpenseClaimsMcpSchema, handler: (deps, ctx, args) => listMyExpenseClaims(deps, ctx, args), service: listMyExpenseClaims }),
   t({ name: 'finance_expense_get', description: 'Read one expense claim: the owning contact without finance.read, anyone else only with it. Requires finance.expensesSubmit or finance.read.', inputSchema: expenseIdMcpSchema, handler: (deps, ctx, args) => getExpenseClaim(deps, ctx, args), service: getExpenseClaim }),
   t({ name: 'finance_approvals_list', description: 'The approval queue: submitted expense claims, oldest first, never the caller\'s own - neither submitted by the caller nor on the caller\'s own contact. Requires finance.approve.', inputSchema: listApprovalsMcpSchema, handler: (deps, ctx, args) => listApprovals(deps, ctx, args), service: listApprovals }),

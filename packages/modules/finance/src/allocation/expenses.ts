@@ -23,16 +23,19 @@ import {
 import { addContactRole, contactIdForUserInternal, contactRoles, contacts, displayName, userIdForContactInternal } from '@kompass/module-contacts';
 import { abortReceive, DOCUMENT_MAX_BYTES, documentLinks, linkDocumentInternal, readLinkedDocument, receiveGeneratedUpload } from '@kompass/module-dms';
 import { projects } from '@kompass/module-projects';
-import { and, asc, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
 import { valueAt } from '../ledger/dated-values';
+import { DATED_SERIES } from '../ledger/dated-series';
 import { isValidIban, maskIban, normalizeIban } from '../ledger/iban';
 import { openCentsInternal, openItemSettlementsInternal } from '../ledger/open-items';
 import { tripAmountCents } from '../ledger/trip-amount';
 import {
+  financeContactBankAccounts,
   financeContactWaiverTerms,
+  financeDatedValues,
   financeExpenseClaims,
   financeExpenseCounters,
   financeExpensePositions,
@@ -562,6 +565,56 @@ export async function copyExpenseClaim(deps: Deps, ctx: CallContext, input: unkn
 }
 
 // ── Lesen ───────────────────────────────────────────────────────────────────
+
+export interface ExpenseFormStart {
+  /** „Für wen?“ — der eigene Kontakt, nicht editierbar. */
+  contactName: string;
+  /** Vorbelegung: die IBAN des jüngsten eigenen Antrags, sonst eine bekannte Bankverbindung des Kontakts. */
+  iban: string | null;
+  /** Der Verzicht wird nur angeboten, wenn der Verein Aufwandsspenden führt (E13). */
+  waiversEnabled: boolean;
+  /** Die Stufen des Kilometersatzes (mitgeliefert und eigene), aufsteigend — die Oberfläche rechnet damit vor, der Dienst rechnet beim Sichern. */
+  mileageRates: { validFrom: string; centsPerKm: number }[];
+}
+
+/**
+ * Was das Formular „Auslage einreichen“ vor dem ersten Speichern braucht
+ * (F8a Task 5): legt nichts an. Ohne Kontaktverknüpfung dieselbe Meldung wie
+ * beim Sichern — die Oberfläche zeigt dann den Sperrzustand statt Feldern.
+ */
+export async function expenseFormStart(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ExpenseFormStart>> {
+  const denied = requirePermission(ctx, 'finance.expensesSubmit');
+  if (denied) return denied;
+  const parsed = validate(deps, z.object({}).strict(), input ?? {});
+  if (!parsed.ok) return parsed;
+  const own = ownContactInternal(deps, ctx);
+  if (!own.ok) return own;
+
+  const contact = deps.db.select().from(contacts).where(eq(contacts.id, own.value)).get();
+  const lastClaimIban = deps.db
+    .select({ iban: financeExpenseClaims.iban })
+    .from(financeExpenseClaims)
+    .where(and(eq(financeExpenseClaims.contactId, own.value), isNotNull(financeExpenseClaims.iban)))
+    .orderBy(desc(financeExpenseClaims.updatedAt))
+    .get()?.iban;
+  const knownIban = deps.db
+    .select({ iban: financeContactBankAccounts.iban })
+    .from(financeContactBankAccounts)
+    .where(eq(financeContactBankAccounts.contactId, own.value))
+    .orderBy(desc(financeContactBankAccounts.createdAt))
+    .get()?.iban;
+
+  const steps = new Set([
+    ...DATED_SERIES.mileageRate.series.map((e) => e.validFrom),
+    ...deps.db.select({ validFrom: financeDatedValues.validFrom }).from(financeDatedValues).where(eq(financeDatedValues.key, 'mileageRate')).all().map((r) => r.validFrom),
+  ]);
+  const mileageRates = [...steps]
+    .sort()
+    .map((validFrom) => ({ validFrom, centsPerKm: valueAt(deps.db, 'mileageRate', validFrom) }))
+    .filter((r): r is { validFrom: string; centsPerKm: number } => typeof r.centsPerKm === 'number');
+
+  return ok({ contactName: contact ? displayName(contact) : '', iban: lastClaimIban ?? knownIban ?? null, waiversEnabled: waiversEnabled(deps), mileageRates });
+}
 
 const listSchema = z.object({
   state: z.enum(['open', 'done']).optional(),
