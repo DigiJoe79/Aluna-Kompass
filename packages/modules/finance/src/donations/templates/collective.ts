@@ -41,7 +41,7 @@ export const collectiveConfirmationTemplate: DocumentTemplate<CollectiveConfirma
           headBlock(W.TITLE_COLLECTIVE, data),
           amountBlock(W.COLLECTIVE_AMOUNT_LABEL, total, W.PERIOD_LABEL, W.periodText(germanDate(data.periodFrom), germanDate(data.periodTo))),
           noticeBlock(data.notice),
-          membershipBlock(data.membershipFeesCertifiable, W.MEMBERSHIP_SENTENCE_COLLECTIVE),
+          membershipBlock(data.membershipFeesCertifiable, W.MEMBERSHIP_SENTENCE),
           `#par[${t(W.COLLECTIVE_NO_OTHER_CONFIRMATIONS)}]`,
           `#par[${t(W.COLLECTIVE_WAIVER_REFERENCE)}]`,
           signatureBlock(data),

@@ -61,6 +61,10 @@ describe('simplified receipt (§ 50 Abs. 4 EStDV)', () => {
     expect(calls[0]!.bodyTypst).toContain(typstText(W.simplifiedReceiptSentence('400,00 €')));
   });
 
+  it('names all elements of the booking confirmation from § 50 Abs. 4 S. 2 EStDV', () => {
+    expect(W.simplifiedReceiptSentence('300,00 €')).toContain('den Betrag, den Buchungstag sowie die tatsächliche Durchführung der Zahlung');
+  });
+
   it('refuses without a notice valid today, and without finance.read', async () => {
     const f = await donationFixture({ notice: false });
     expect(await readSimplifiedReceipt(f.deps, f.ctx)).toMatchObject({ ok: false, error: { type: 'conflict', code: 'noNoticeValidAt' } });

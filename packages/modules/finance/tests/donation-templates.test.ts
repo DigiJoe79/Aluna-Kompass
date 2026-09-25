@@ -201,7 +201,23 @@ describe('collective confirmation', () => {
 
   it('the membership sentence follows the switch in the collective confirmation too', () => {
     const lines = collective.lines.filter((l) => l.kind === 'donation');
-    expect(build(collectiveConfirmationTemplate, { ...collective, lines, membershipFeesCertifiable: false }).typst).toContain(t(W.MEMBERSHIP_SENTENCE_COLLECTIVE));
-    expect(build(collectiveConfirmationTemplate, collective).typst).not.toContain(t(W.MEMBERSHIP_SENTENCE_COLLECTIVE));
+    expect(build(collectiveConfirmationTemplate, { ...collective, lines, membershipFeesCertifiable: false }).typst).toContain(t(W.MEMBERSHIP_SENTENCE));
+    expect(build(collectiveConfirmationTemplate, collective).typst).not.toContain(t(W.MEMBERSHIP_SENTENCE));
+  });
+});
+
+describe('official wording', () => {
+  it('the validity note and the membership sentence follow the official templates (EStH 2020/2023, Anlagen 3, 4, 14)', () => {
+    const lines = collective.lines.filter((l) => l.kind === 'donation');
+    const collectiveText = build(collectiveConfirmationTemplate, { ...collective, lines, membershipFeesCertifiable: false }).typst;
+    // Teilstücke ohne Anführungszeichen: im Typst-Text stehen sie unverändert.
+    const texts = [build(moneyConfirmationTemplate, money).typst, build(inKindConfirmationTemplate, inKind).typst, collectiveText];
+    for (const text of texts) {
+      expect(text).toContain('länger als 3 Jahre seit Ausstellung des Bescheides zurückliegt (§ 63 Abs. 5 AO)');
+      expect(text).not.toContain('seit Ausstellung der Bestätigung');
+    }
+    // Sammelbestätigung mit nicht abziehbaren Mitgliedsbeiträgen: Anlage 14 hat den Singular.
+    expect(collectiveText).toContain('nicht um einen Mitgliedsbeitrag handelt, dessen Abzug nach § 10b Abs. 1 des Einkommensteuergesetzes ausgeschlossen ist');
+    expect(collectiveText).not.toContain('Mitgliedsbeiträge handelt, deren');
   });
 });

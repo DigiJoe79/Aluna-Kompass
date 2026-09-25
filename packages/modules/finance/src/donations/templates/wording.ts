@@ -1,8 +1,9 @@
 /**
  * Der amtliche Wortlaut der Zuwendungsbestätigungen — die eine Stelle dafür.
  *
- * WORTLAUT AUS DEM GEDÄCHTNIS; VOR DER ERSTEN ECHTEN BESTÄTIGUNG GEGEN DAS
- * BMF-MUSTER PRÜFEN (Befundliste § 1).
+ * Geprüft am 2026-09-25 gegen die Muster Anlagen 3, 4 und 14 (EStH 2020,
+ * Anlage 3 auch EStH 2023) und § 50 Abs. 4 EStDV; siehe
+ * `docs/intern/recherche/2026-09-25-steuerfragen-quellen.md` § 8.
  *
  * Quelle: BMF-Schreiben vom 7. November 2013, IV C 4 – S 2223/07/0018 :005,
  * Muster für Zuwendungsbestätigungen an eine der in § 5 Abs. 1 Nr. 9 KStG
@@ -91,16 +92,20 @@ export function usageSentence(purposesText: string): string {
 
 /** Überschrift vor dem Satz — gedruckt nur, wenn Mitgliedsbeiträge nicht abziehbar sind. */
 export const MEMBERSHIP_HEADING = 'Nur für steuerbegünstigte Einrichtungen, bei denen die Mitgliedsbeiträge steuerlich nicht abziehbar sind:';
+/** Auch die Sammelbestätigung druckt den Singular (Anlage 14 EStH 2020). */
 export const MEMBERSHIP_SENTENCE =
   'Es wird bestätigt, dass es sich nicht um einen Mitgliedsbeitrag handelt, dessen Abzug nach § 10b Abs. 1 des Einkommensteuergesetzes ausgeschlossen ist.';
-export const MEMBERSHIP_SENTENCE_COLLECTIVE =
-  'Es wird bestätigt, dass es sich nicht um Mitgliedsbeiträge handelt, deren Abzug nach § 10b Abs. 1 des Einkommensteuergesetzes ausgeschlossen ist.';
 
 // ── Sachzuwendung ───────────────────────────────────────────────────────────
 
 export const IN_KIND_ITEM_LABEL = 'Genaue Bezeichnung der Sachzuwendung mit Alter, Zustand, Kaufpreis usw.';
 export const IN_KIND_ORIGIN_BUSINESS =
   'Die Sachzuwendung stammt nach den Angaben des Zuwendenden aus dem Betriebsvermögen. Die Zuwendung wurde nach dem Wert der Entnahme (ggf. mit dem niedrigeren gemeinen Wert) und nach der Umsatzsteuer, die auf die Entnahme entfällt, bewertet.';
+/**
+ * Das Muster (Anlage 4) kennt einen dritten Herkunftssatz: „Der Zuwendende hat
+ * trotz Aufforderung keine Angaben zur Herkunft der Sachzuwendung gemacht.“
+ * `origin` kennt nur privat und betrieblich; der Satz wird deshalb nie gedruckt.
+ */
 export const IN_KIND_ORIGIN_PRIVATE = 'Die Sachzuwendung stammt nach den Angaben des Zuwendenden aus dem Privatvermögen.';
 export const IN_KIND_VALUATION_DOCUMENTS = 'Geeignete Unterlagen, die zur Wertermittlung gedient haben, z. B. Rechnung, Gutachten, liegen vor.';
 /** Kein Mustertext: die Werte, die der Betriebsvermögen-Satz nennt, ausgewiesen. Beträge schon formatiert. */
@@ -130,8 +135,13 @@ export const SIGNATURE_CAPTION = '(Ort, Datum und Unterschrift des Zuwendungsemp
 export const NOTE_HEADING = 'Hinweis:';
 export const LIABILITY_NOTE =
   'Wer vorsätzlich oder grob fahrlässig eine unrichtige Zuwendungsbestätigung erstellt oder veranlasst, dass Zuwendungen nicht zu den in der Zuwendungsbestätigung angegebenen steuerbegünstigten Zwecken verwendet werden, haftet für die entgangene Steuer (§ 10b Abs. 4 EStG, § 9 Abs. 3 KStG, § 9 Nr. 5 GewStG).';
+/**
+ * Fassung der Muster (Anlagen 3, 4, 12, 13, 14 EStH 2020, Anlage 3 EStH 2023):
+ * „seit Ausstellung des Bescheides“. „der Bestätigung“ war die Übergangsfassung
+ * aus BMF 2013 Nr. 13.
+ */
 export const VALIDITY_NOTE =
-  'Diese Bestätigung wird nicht als Nachweis für die steuerliche Berücksichtigung der Zuwendung anerkannt, wenn das Datum des Freistellungsbescheides länger als 5 Jahre bzw. das Datum der Feststellung der Einhaltung der satzungsmäßigen Voraussetzungen nach § 60a Abs. 1 AO länger als 3 Jahre seit Ausstellung der Bestätigung zurückliegt (§ 63 Abs. 5 AO).';
+  'Diese Bestätigung wird nicht als Nachweis für die steuerliche Berücksichtigung der Zuwendung anerkannt, wenn das Datum des Freistellungsbescheides länger als 5 Jahre bzw. das Datum der Feststellung der Einhaltung der satzungsmäßigen Voraussetzungen nach § 60a Abs. 1 AO länger als 3 Jahre seit Ausstellung des Bescheides zurückliegt (§ 63 Abs. 5 AO).';
 
 /** Maschinelles Verfahren (R 10b.1 Abs. 4 EStR): nur, wenn es vollständig eingerichtet und angezeigt ist. `notifiedOn` im Format TT.MM.JJJJ. */
 export function machineNote(taxOffice: string, notifiedOn: string): string {
@@ -197,15 +207,16 @@ export function notificationLetter(signerName: string, notifiedOn?: string | nul
  * und die Angabe, ob es sich um eine Spende oder einen Mitgliedsbeitrag
  * handelt, auf einem vom Empfänger hergestellten Beleg aufgedruckt sind. Den
  * Rest dieses Vordrucks — Überschrift und Erläuterung — schlägt das Modul vor.
- * VOR DEM ERSTEN AUSGEBEN GEGEN DEN GESETZESTEXT PRÜFEN (Befundliste § 1).
+ * Geprüft am 2026-09-25 gegen § 50 Abs. 4 EStDV; siehe
+ * `docs/intern/recherche/2026-09-25-steuerfragen-quellen.md` § 8.
  */
 export const SIMPLIFIED_TITLE = 'Vereinfachter Zuwendungsnachweis';
 export const SIMPLIFIED_DONATION_SENTENCE = 'Die Zuwendung ist eine Spende, kein Mitgliedsbeitrag.';
-/** KEIN MUSTERTEXT. `limit` schon formatiert („300,00 €“). */
+/** KEIN MUSTERTEXT. `limit` schon formatiert („300,00 €“). Die Elemente der Buchungsbestätigung nach § 50 Abs. 4 S. 2 EStDV. */
 export function simplifiedReceiptSentence(limit: string): string {
   return (
     `Für Zuwendungen bis ${limit} genügt als Nachweis für das Finanzamt dieser Beleg zusammen mit dem Bareinzahlungsbeleg ` +
     `oder der Buchungsbestätigung eines Kreditinstituts, etwa dem Kontoauszug (§ 50 Abs. 4 EStDV). Die Buchungsbestätigung muss ` +
-    `Name und Kontonummer oder ein sonstiges Identifizierungsmerkmal des Auftraggebers und des Empfängers, den Betrag und den Buchungstag erkennen lassen.`
+    `Name und Kontonummer oder ein sonstiges Identifizierungsmerkmal des Auftraggebers und des Empfängers, den Betrag, den Buchungstag sowie die tatsächliche Durchführung der Zahlung erkennen lassen.`
   );
 }
