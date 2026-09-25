@@ -181,7 +181,8 @@ describe('finance setup status', () => {
     expect(applied.applied).toEqual(['finance.isEntrepreneurOrHasVatId', 'finance.membershipFeesCertifiable', 'finance.expenseWaiversEnabled']);
     expect(readSetting(deps, 'finance.isEntrepreneurOrHasVatId')).toBe(false);
     expect(readSetting(deps, 'finance.membershipFeesCertifiable')).toBe(true);
-    expect(readSetting(deps, 'finance.expenseWaiversEnabled')).toBe(true);
+    // Spec E13: Aufwandsspende ist Schalter, Vorgabe aus.
+    expect(readSetting(deps, 'finance.expenseWaiversEnabled')).toBe(false);
     const afterTax = unwrap(await getSetupStatus(deps, ctx));
     expect(afterTax.steps.find((s) => s.key === 'tax')!.done).toBe(true);
   });

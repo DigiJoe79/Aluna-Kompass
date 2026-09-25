@@ -32,7 +32,7 @@ const FINANCE_SETTINGS: readonly SettingDefinition[] = [
   // E10: Ein Agent darf humanOnly-Dienste erst freigeschaltet über MCP nutzen — und das nur ein Mensch am Bildschirm.
   { key: 'finance.mcpHumanOnlyAllowed', schema: z.boolean(), default: false, uiOnly: true },
   { key: 'finance.membershipFeesCertifiable', schema: z.boolean(), default: true },
-  { key: 'finance.expenseWaiversEnabled', schema: z.boolean(), default: true },
+  { key: 'finance.expenseWaiversEnabled', schema: z.boolean(), default: false },
   // F8a (Spec 8.2): Anspruchsgrundlage der Aufwandsspenden — ein Vertrag oder die Satzung (BMF 25.11.2014). Leer, bis der
   // Verein sie hinterlegt; je Person überschreibbar (`finance_contact_waiver_terms`).
   { key: 'finance.expenseWaiverBasisText', schema: z.string().max(500), default: '' },

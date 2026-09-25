@@ -33,6 +33,8 @@ export async function donationFixture(opts: { notice?: boolean; machine?: boolea
     for (const [key, value] of [['organization.name', 'Musterverein e.V.'], ['organization.street', 'Musterweg 1'], ['organization.postalCode', '12345'], ['organization.city', 'Musterstadt']] as const) {
       writeSettingInternal(tx, f.deps, system, key, value, 'test.organization');
     }
+    // Spec E13: Aufwandsspenden sind ein Schalter mit Vorgabe aus — dieser Verein bietet sie an.
+    writeSettingInternal(tx, f.deps, system, 'finance.expenseWaiversEnabled', true, 'test.organization');
   });
 
   const manage: CallContext = { ...systemContext(), permissions: new Set(['contacts.manage']) };

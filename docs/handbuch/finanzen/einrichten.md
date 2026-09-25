@@ -27,6 +27,8 @@ verschwindet aus der Liste:
    bescheinigungsfähig, werden Aufwandsspenden angeboten. Ein Knopf
    „Vorgaben übernehmen“ setzt die mitgelieferten Standardwerte in einem
    Zug; wer abweicht, ändert die einzelnen Felder danach von Hand.
+   Aufwandsspenden sind in der Vorgabe aus: Ein Verein, der sie anbietet,
+   schaltet sie bewusst ein.
 
 Wer einen Schritt nicht selbst erledigen kann, liest an ihm, wer es kann.
 

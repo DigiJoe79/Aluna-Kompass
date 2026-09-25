@@ -13,6 +13,11 @@ describe('finance settings', () => {
     expect(unwrap(await setSetting(deps, { ...ctxWith(['settings.manage']), channel: 'ui' as const }, { key: 'finance.mcpHumanOnlyAllowed', value: true }))).toBeTruthy();
   });
 
+  it('offers expense waivers only after the association switches them on (Spec E13)', () => {
+    const def = (financeModule.settings ?? []).find((s) => s.key === 'finance.expenseWaiversEnabled');
+    expect(def?.default).toBe(false);
+  });
+
   it('declares every setting of the spec with a default', () => {
     expect((financeModule.settings ?? []).map((s) => s.key).sort()).toEqual([
       'finance.batchMinimumCents',
