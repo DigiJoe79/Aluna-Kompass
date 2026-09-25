@@ -1,4 +1,5 @@
 import type { ConfirmationCheck, ConfirmationCheckResult } from '@kompass/module-finance';
+import { groupOpenFirst, type RequirementGroup } from '@/lib/requirement-groups';
 
 /**
  * Zuwendungsbestätigungen in der Oberfläche (F6a Task 7). Nur Lesen aus dem
@@ -26,4 +27,13 @@ export function signatureMode(result: ConfirmationCheckResult): 'machine' | 'sig
 export function issueAllowed(result: ConfirmationCheckResult | null, preNoticeReason: string): boolean {
   if (!result || !result.ok) return false;
   return !result.warnings.includes('beforeOldestNotice') || preNoticeReason.trim().length > 0;
+}
+
+/**
+ * Die Prüfliste in vier Gruppen (N3, C1-2/C1-3): „Fehlt noch“ (sperrt),
+ * „Bitte ansehen“ (Warnung), „Erfüllt“, „Trifft nicht zu“ (`applies: false`,
+ * statt ausgeblendet). Dieselbe Regel wie `RequirementList grouping="open-first"`.
+ */
+export function groupChecks(checks: readonly ConfirmationCheck[]): { group: RequirementGroup; checks: ConfirmationCheck[] }[] {
+  return groupOpenFirst(checks).map(({ group, items }) => ({ group, checks: items }));
 }

@@ -18,6 +18,7 @@ export function Disclosure({
   alarm = false,
   defaultOpen = false,
   empty,
+  bounded = true,
   children,
 }: {
   label: string;
@@ -29,6 +30,8 @@ export function Disclosure({
   defaultOpen?: boolean;
   /** Text statt Inhalt, wenn es nichts zu zeigen gibt. */
   empty?: string;
+  /** Aufgeklappt höchstens 240 px hoch und selbst scrollend — aus, wo schon die Umgebung scrollt (sonst zwei Rollbalken ineinander). */
+  bounded?: boolean;
   children?: ReactNode;
 }) {
   const toneClass =
@@ -57,7 +60,7 @@ export function Disclosure({
             {suffix}
           </span>
         </summary>
-        <div className="max-h-[240px] overflow-auto px-3 pb-3">{children}</div>
+        <div className={bounded ? 'max-h-[240px] overflow-auto px-3 pb-3' : 'px-3 pb-3'}>{children}</div>
       </details>
     </section>
   );

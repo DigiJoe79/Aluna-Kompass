@@ -1,5 +1,6 @@
 'use client';
 
+import { PenLine } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -62,7 +63,18 @@ export function ConfirmationsTable({ rows, canIssue, initialOpenId, today }: { r
         </span>
       );
     }
-    return <StatusBadge tone="success">{t('state.valid')}</StatusBadge>;
+    // C1-5: „Unterschrift fehlt“ als zweites Badge neben „gültig“ — „unterschrieben“ und „maschinell“ bleiben Tatsachen der aufgeklappten Zeile.
+    return (
+      <span className="inline-flex flex-wrap items-center gap-1.5">
+        <StatusBadge tone="success">{t('state.valid')}</StatusBadge>
+        {row.signatureState === 'needsSignature' ? (
+          <StatusBadge tone="warning">
+            <PenLine className="size-3" aria-hidden />
+            {t('state.needsSignature')}
+          </StatusBadge>
+        ) : null}
+      </span>
+    );
   };
 
   const toggle = (id: string) => setOpenId((current) => (current === id ? null : id));
@@ -102,7 +114,7 @@ export function ConfirmationsTable({ rows, canIssue, initialOpenId, today }: { r
                 <TableCell className="px-4 text-right font-mono tabular-nums">{formatEuro(row.totalCents)}</TableCell>
                 <TableCell className="px-4">{row.periodFrom && row.periodTo ? `${date(row.periodFrom)} – ${date(row.periodTo)}` : '—'}</TableCell>
                 <TableCell className="px-4">{row.sentAt && row.sentVia ? t('sentValue', { date: date(row.sentAt), via: t(`sentVia.${row.sentVia}`) }) : '—'}</TableCell>
-                <TableCell className="px-4">{stateOf(row)}</TableCell>
+                <TableCell data-testid="confirmation-state" className="px-4">{stateOf(row)}</TableCell>
               </TableRow>
               {openId === row.id ? (
                 <TableRow className="border-b border-line-2 bg-surface-2">

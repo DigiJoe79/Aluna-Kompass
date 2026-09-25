@@ -227,6 +227,63 @@ test.describe('finance donations', () => {
     await expect(issuedRow(page, 'Erika Beispiel')).toContainText('Bescheid aufgehoben oder ersetzt');
   });
 
+  test('der Ausstellen-Knopf bleibt bei voller Prüfliste sichtbar; die Prüfliste zeigt „Fehlt noch“ und „Bitte ansehen“ nur, wenn es etwas gibt', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await loginAsAdmin(page);
+    // Henrik Brandt: Bestätigung zurückgenommen, die Spende steht wieder offen — nichts fehlt, nichts warnt.
+    let dialog = await openIssueDialog(page, 'Henrik Brandt', '75,00 €');
+    await expect(dialog.getByTestId('issue-dialog-head')).toContainText('Henrik Brandt');
+    await expect(dialog.getByTestId('issue-dialog-head')).toContainText('75,00 €');
+    await expect(dialog.getByRole('region', { name: 'Fehlt noch' })).toHaveCount(0);
+    await expect(dialog.getByRole('region', { name: 'Bitte ansehen' })).toHaveCount(0);
+    const done = dialog.getByRole('region', { name: 'Erfüllt' });
+    const notApplicable = dialog.getByRole('region', { name: 'Trifft nicht zu' });
+    await expect(done).toContainText('Erfüllt · 10');
+    await expect(notApplicable).toContainText('Trifft nicht zu · 2');
+    await done.getByText('Erfüllt · 10').click();
+    await notApplicable.getByText('Trifft nicht zu · 2').click();
+    await expect(notApplicable.getByTestId('requirement-inKindDetails')).toContainText('Sachspende beschrieben');
+    await expect(done.getByTestId('requirement-noticeValid')).toBeVisible();
+    const submit = dialog.getByRole('button', { name: 'Ausstellen', exact: true });
+    await expect(submit).toBeEnabled();
+    await expect(submit).toBeInViewport();
+    await expect(dialog.getByTestId('issue-signature-mode')).toHaveText('maschinell erstellt');
+    await dialog.getByRole('button', { name: 'Abbrechen' }).click();
+
+    // Eine Organisation warnt: „Bitte ansehen“ erscheint, „Fehlt noch“ nicht.
+    dialog = await openIssueDialog(page, 'Sportfreunde Beispieltal', '100,00 €');
+    await expect(dialog.getByRole('region', { name: 'Fehlt noch' })).toHaveCount(0);
+    await expect(dialog.getByRole('region', { name: 'Bitte ansehen' })).toContainText('Bestätigungen an Organisationen sind selten');
+    await expect(dialog.getByRole('button', { name: 'Ausstellen', exact: true })).toBeInViewport();
+  });
+
+  test('eine Abhilfe steht einmal je Zeile, nicht im Badge und auf dem Knopf', async ({ page }) => {
+    await loginAsAdmin(page);
+    const dialog = await openIssueDialog(page, 'Tobias Adler', '50,00 €');
+    const missing = dialog.getByRole('region', { name: 'Fehlt noch' });
+    const address = missing.getByTestId('requirement-contactComplete');
+    await expect(address.getByRole('link', { name: 'Anschrift ergänzen' })).toBeVisible();
+    await expect(address.getByText('Anschrift ergänzen')).toHaveCount(1);
+    await expect(dialog.getByRole('region', { name: 'Bitte ansehen' })).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Abbrechen' }).click();
+
+    // Dieselbe Zeile in der Einrichtungs-Checkliste (E-4): „Erledigen“ nur auf dem Knopf.
+    await page.goto('/admin/finance?panel=checklist');
+    const tax = page.getByTestId('requirement-tax');
+    await expect(tax).toHaveAttribute('data-done', 'false');
+    await expect(tax.getByRole('link', { name: 'Erledigen' })).toBeVisible();
+    await expect(tax.getByText('Erledigen', { exact: true })).toHaveCount(1);
+  });
+
+  test('„Unterschrift fehlt“ steht als Badge in der Liste', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/donations');
+    const lukas = issuedRow(page, 'Lukas Hofmann');
+    await expect(lukas.getByTestId('confirmation-state')).toContainText('gültig');
+    await expect(lukas.getByTestId('confirmation-state').getByText('Unterschrift fehlt', { exact: true })).toBeVisible();
+    await expect(issuedRow(page, 'Erika Beispiel').getByTestId('confirmation-state')).not.toContainText('Unterschrift fehlt');
+  });
+
   test('ohne finance.donationsIssue sieht man Listen, aber weder Ausstellen noch Zurücknehmen; ohne finance.read gar nichts', async ({ page }) => {
     // Mira Klein trägt die Rolle „Kassenprüfer“: lesen ja, ausstellen nein.
     await loginAs(page, 'Mira Klein', 'mira@kompass.local');

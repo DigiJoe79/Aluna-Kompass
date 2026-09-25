@@ -104,6 +104,7 @@ export function UncertifiedList({ groups, minCents, canIssue, canDescribe, today
       {issuing ? (
         <IssueDialog
           lineId={issuing}
+          contactName={groups.find((g) => g.lines.some((line) => line.lineId === issuing))?.contactName}
           open
           onOpenChange={(next) => {
             if (!next) setIssuing(null);

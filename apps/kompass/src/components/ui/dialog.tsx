@@ -44,11 +44,18 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  layout = "default",
   onEscapeKeyDown,
   onPointerDownOutside,
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
+  /**
+   * `fixed-footer` (N3, C1-1; HANDOFF § 13.2): höchstens 85 % der Höhe, Kopf
+   * (`DialogHeader`) und Fußleiste (`DialogFooter`) stehen, nur die Mitte
+   * (`DialogBody`) scrollt — die Hauptaktion bleibt bei jeder Länge sichtbar.
+   */
+  layout?: "default" | "fixed-footer"
   onEscapeKeyDown?: (e: React.KeyboardEvent | Event) => void
   onPointerDownOutside?: (e: Event) => void
 }) {
@@ -58,8 +65,10 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
+        data-layout={layout}
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "group/dialog fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          layout === "fixed-footer" && "flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0",
           className
         )}
         onKeyDown={(e) => {
@@ -96,7 +105,18 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn("flex flex-col gap-2", className)}
+      className={cn("flex flex-col gap-2 group-data-[layout=fixed-footer]/dialog:flex-none group-data-[layout=fixed-footer]/dialog:border-b group-data-[layout=fixed-footer]/dialog:border-line group-data-[layout=fixed-footer]/dialog:px-5 group-data-[layout=fixed-footer]/dialog:pt-4 group-data-[layout=fixed-footer]/dialog:pb-3 group-data-[layout=fixed-footer]/dialog:pr-12", className)}
+      {...props}
+    />
+  )
+}
+
+/** Die scrollende Mitte eines Dialogs mit `layout="fixed-footer"`. */
+function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="dialog-body"
+      className={cn("min-h-0 flex-1 overflow-auto px-5 py-4", className)}
       {...props}
     />
   )
@@ -115,7 +135,7 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end",
+        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end group-data-[layout=fixed-footer]/dialog:m-0 group-data-[layout=fixed-footer]/dialog:flex-none group-data-[layout=fixed-footer]/dialog:px-5 group-data-[layout=fixed-footer]/dialog:py-3",
         className
       )}
       {...props}
@@ -161,6 +181,7 @@ function DialogDescription({
 
 export {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,

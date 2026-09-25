@@ -54,7 +54,16 @@
     "consequenceList": {
       "stays": "Was bleibt"
     },
-    "edit": "Ändern"
+    "edit": "Ändern",
+    "requirements": {
+      "groups": {
+        "missing": "Fehlt noch",
+        "review": "Bitte ansehen",
+        "done": "Erfüllt",
+        "notApplicable": "Trifft nicht zu"
+      },
+      "open": "offen"
+    }
   },
   "media": {
     "title": "Mediathek",
@@ -3915,7 +3924,8 @@
       "state": {
         "valid": "gültig",
         "voided": "zurückgenommen",
-        "toCorrect": "zu korrigieren"
+        "toCorrect": "zu korrigieren",
+        "needsSignature": "Unterschrift fehlt"
       },
       "toCorrectReason": {
         "noticeSuperseded": "Bescheid aufgehoben oder ersetzt",
@@ -4042,7 +4052,8 @@
         "submit": "Ausstellen",
         "toast": {
           "issued": "Bestätigung {number} ausgestellt"
-        }
+        },
+        "headLines": "{count, plural, one {Buchung} other {Buchungen}} {numbers}"
       },
       "inKind": {
         "title": "Angaben zur Sachspende",

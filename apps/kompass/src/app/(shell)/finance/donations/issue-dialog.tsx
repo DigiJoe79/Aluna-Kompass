@@ -12,26 +12,27 @@ import { AmountField } from '@/components/finance/amount-field';
 import { Notice } from '@/components/notice';
 import { RequirementList, type RequirementListItem } from '@/components/requirement-list';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
-import { issueAllowed, signatureMode, visibleChecks } from '@/lib/finance/donations';
+import { issueAllowed, signatureMode } from '@/lib/finance/donations';
 import { issueConfirmationAction, loadIssueCheckAction, saveInKindDetailsAction } from './actions';
 
 type Loaded = { check: ConfirmationCheckResult; inKindDetails: FinanceInKindDetailsRow | null };
 type Preview = { state: 'idle' } | { state: 'loading' } | { state: 'ready'; url: string } | { state: 'failed'; message: string };
 
 /**
- * „Zuwendungsbestätigung ausstellen“ (C1, F6a Task 7): links die Prüfliste als
- * Checkliste mit Abhilfe, rechts die Vorschau als PDF mit Wasserzeichen
- * ENTWURF, unten Ausstellungsdatum, die Unterschrift (aus dem Stand des
- * maschinellen Verfahrens, nicht wählbar) und „Ausstellen“. Bei einer
- * Sachspende steht dazwischen das Formular ihrer Angaben. Aus der Liste
- * „Noch nicht bestätigt“ und aus der Buchungsansicht.
+ * „Zuwendungsbestätigung ausstellen“ (C1, F6a Task 7; N3 C1-1–C1-3): Kopf
+ * (Spender, Betrag, Buchungen) und Fußleiste (Ausstellungsdatum, die
+ * Unterschrift aus dem Stand des maschinellen Verfahrens — nicht wählbar —,
+ * „nur ein Mensch“, „Ausstellen“) stehen; links scrollt die Prüfliste in vier
+ * Gruppen, rechts steht die Vorschau als PDF mit Wasserzeichen ENTWURF (400 px).
+ * Bei einer Sachspende folgt unter der Liste das Formular ihrer Angaben. Aus
+ * der Liste „Noch nicht bestätigt“ und aus der Buchungsansicht.
  */
-export function IssueDialog({ lineId, open, onOpenChange, today, canDescribe }: { lineId: string; open: boolean; onOpenChange: (open: boolean) => void; today: string; canDescribe: boolean }) {
+export function IssueDialog({ lineId, contactName, open, onOpenChange, today, canDescribe }: { lineId: string; /** Im Kopf neben Betrag und Buchungen; die Buchungsansicht kennt ihn nicht einzeln. */ contactName?: string; open: boolean; onOpenChange: (open: boolean) => void; today: string; canDescribe: boolean }) {
   const t = useTranslations('finance.donations.issue');
   const tc = useTranslations('finance.donations');
   const { date } = useDateFormat();
@@ -135,77 +136,101 @@ export function IssueDialog({ lineId, open, onOpenChange, today, canDescribe }: 
     }
   };
 
+  const warningText = (c: ConfirmationCheck): string | null => {
+    if (c.warning === null) return null;
+    // Organisation und Ausland können beide zutreffen; der Dienst führt beide in `warnings`.
+    if (c.key === 'contactComplete') return (check?.warnings ?? []).filter((w) => w === 'organization' || w === 'foreignCountry').map((w) => t(`warnings.${w}`)).join(' ') || null;
+    if (c.warning === 'signatureField') return t('detail.signatureField');
+    return t(`warnings.${c.warning as 'organization' | 'foreignCountry' | 'beforeOldestNotice'}`);
+  };
+
   const items: RequirementListItem[] = check
-    ? visibleChecks(check).map((c) => ({
-        key: c.key,
-        title: tc(`checks.${c.key}`),
-        done: c.done,
-        blocked: false,
-        detail: detailOf(c),
-        canSelf: !!c.remedy?.href,
-        canDoNames: [],
-        canDoText: '',
-        href: c.remedy?.href ?? '',
-        actionLabel: c.remedy ? tc(`remedy.${c.remedy.labelKey}`) : t('missing'),
-        doneLabel: t('done'),
-      }))
+    ? check.checks.map((c) => {
+        const text = warningText(c);
+        return {
+          key: c.key,
+          title: tc(`checks.${c.key}`),
+          done: c.done,
+          blocked: c.blocked,
+          applies: c.applies,
+          warning: text ? { text, reason: c.warning === 'beforeOldestNotice' ? { name: 'preNoticeReason', value: reason, onChange: setReason, label: t('warnings.preNoticeReason') } : undefined } : undefined,
+          detail: detailOf(c),
+          canSelf: !!c.remedy?.href,
+          canDoNames: [],
+          canDoText: '',
+          href: c.remedy?.href ?? '',
+          actionLabel: c.remedy ? tc(`remedy.${c.remedy.labelKey}`) : t('missing'),
+          doneLabel: t('done'),
+        };
+      })
     : [];
 
   const mode = check ? signatureMode(check) : null;
-  const warnings = check?.warnings ?? [];
+  const netCents = check ? check.lines.reduce((sum, line) => sum + line.netCents, 0) : 0;
+  const entryNumbers = check ? check.lines.map((line) => line.entryNumber ?? line.entryId) : [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto bg-surface shadow-md sm:max-w-[1000px]">
-        <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
-        {loadError ? (
-          <Notice level="refuse">{loadError}</Notice>
-        ) : !check ? (
-          <p className="text-[13px] text-muted-ink">{t('loading')}</p>
-        ) : (
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-            <div className="space-y-4">
-              <h3 className="text-[12px] font-semibold uppercase tracking-wide text-muted-ink">{t('requirements')}</h3>
-              <RequirementList items={items} />
-              {warnings.includes('organization') ? <Notice level="warn">{t('warnings.organization')}</Notice> : null}
-              {warnings.includes('foreignCountry') ? <Notice level="warn">{t('warnings.foreignCountry')}</Notice> : null}
-              {warnings.includes('beforeOldestNotice') ? (
-                <Notice level="warn" reason={{ name: 'preNoticeReason', value: reason, onChange: setReason, label: t('warnings.preNoticeReason') }}>
-                  {t('warnings.beforeOldestNotice')}
-                </Notice>
-              ) : null}
-              {check.kind === 'inKind' ? (
-                <InKindForm lineId={lineId} valueCents={check.lines[0]?.amountCents ?? 0} details={loaded?.inKindDetails ?? null} canDescribe={canDescribe} onSaved={() => void load()} />
-              ) : null}
+      <DialogContent layout="fixed-footer" className="h-[85vh] bg-surface shadow-md sm:max-w-[1040px]">
+        <DialogHeader data-testid="issue-dialog-head">
+          <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
+          {check ? (
+            <p className="text-[13px] text-ink-2">
+              {contactName ? <span className="font-semibold text-ink">{contactName} · </span> : null}
+              <span className="font-mono tabular-nums text-ink">{formatEuro(netCents)}</span>
+              {entryNumbers.length > 0 ? <span> · {t('headLines', { count: entryNumbers.length, numbers: entryNumbers.join(', ') })}</span> : null}
+            </p>
+          ) : null}
+        </DialogHeader>
+        <DialogBody className="grid grid-cols-1 gap-0 p-0 lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-[minmax(0,1fr)] lg:overflow-hidden">
+          {loadError ? (
+            <div className="px-5 py-4 lg:col-span-2">
+              <Notice level="refuse">{loadError}</Notice>
             </div>
-            <div className="space-y-2">
-              <h3 className="text-[12px] font-semibold uppercase tracking-wide text-muted-ink">{t('preview')}</h3>
-              {preview.state === 'ready' ? (
-                <iframe data-testid="confirmation-preview" title={t('previewTitle')} src={preview.url} className="h-[560px] w-full rounded-md border border-line bg-surface-2" />
-              ) : (
-                <div className="flex h-[560px] items-center justify-center rounded-md border border-dashed border-line-strong bg-surface-2 p-6 text-center text-[13px] text-muted-ink">
-                  {preview.state === 'loading' ? t('previewLoading') : preview.state === 'failed' ? t('previewFailed', { message: preview.message }) : t('previewWaiting')}
-                </div>
-              )}
+          ) : !check ? (
+            <p className="px-5 py-4 text-[13px] text-muted-ink lg:col-span-2">{t('loading')}</p>
+          ) : (
+            <>
+              <div data-testid="issue-requirements" className="min-h-0 space-y-4 px-5 py-4 lg:overflow-auto">
+                <h3 className="text-[12px] font-semibold uppercase tracking-wide text-muted-ink">{t('requirements')}</h3>
+                <RequirementList items={items} grouping="open-first" />
+                {check.kind === 'inKind' ? (
+                  <InKindForm lineId={lineId} valueCents={check.lines[0]?.amountCents ?? 0} details={loaded?.inKindDetails ?? null} canDescribe={canDescribe} onSaved={() => void load()} />
+                ) : null}
+              </div>
+              <div className="flex min-h-[420px] flex-col gap-2 border-t border-line px-5 py-4 lg:min-h-0 lg:border-t-0 lg:border-l">
+                <h3 className="text-[12px] font-semibold uppercase tracking-wide text-muted-ink">{t('preview')}</h3>
+                {preview.state === 'ready' ? (
+                  <iframe data-testid="confirmation-preview" title={t('previewTitle')} src={preview.url} className="min-h-0 w-full flex-1 rounded-md border border-line bg-surface-2" />
+                ) : (
+                  <div className="flex min-h-0 flex-1 items-center justify-center rounded-md border border-dashed border-line-strong bg-surface-2 p-6 text-center text-[13px] text-muted-ink">
+                    {preview.state === 'loading' ? t('previewLoading') : preview.state === 'failed' ? t('previewFailed', { message: preview.message }) : t('previewWaiting')}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </DialogBody>
+        <DialogFooter className="sm:items-end sm:justify-between">
+          {check ? (
+            <div className="flex flex-wrap items-end gap-5">
+              <div className="space-y-1.5">
+                <Label htmlFor="issue-date" required>{t('issuedOn')}</Label>
+                <Input id="issue-date" type="date" value={issuedOn} max={today} onChange={(e) => setIssuedOn(e.target.value)} required />
+              </div>
+              <div className="space-y-1 text-[13px]">
+                <p className="text-[12px] font-semibold text-muted-ink">{t('signatureLabel')}</p>
+                <p data-testid="issue-signature-mode" className="font-semibold text-ink">{mode ? t(`signatureMode.${mode}`) : ''}</p>
+              </div>
+              <p className="max-w-[260px] text-[12px] text-muted-ink">{t('humanOnly')}</p>
             </div>
+          ) : (
+            <span />
+          )}
+          <div className="flex flex-col-reverse gap-2 sm:flex-row">
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t('cancel')}</Button>
+            <Button type="button" disabled={!allowed} onClick={() => void submit()}>{t('submit')}</Button>
           </div>
-        )}
-        {check ? (
-          <div className="flex flex-wrap items-end gap-5 border-t border-line pt-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="issue-date" required>{t('issuedOn')}</Label>
-              <Input id="issue-date" type="date" value={issuedOn} max={today} onChange={(e) => setIssuedOn(e.target.value)} required />
-            </div>
-            <div className="space-y-1 text-[13px]">
-              <p className="text-[12px] font-semibold text-muted-ink">{t('signatureLabel')}</p>
-              <p data-testid="issue-signature-mode" className="font-semibold text-ink">{mode ? t(`signatureMode.${mode}`) : ''}</p>
-            </div>
-            <p className="flex-1 text-[12px] text-muted-ink">{t('humanOnly')}</p>
-          </div>
-        ) : null}
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t('cancel')}</Button>
-          <Button type="button" disabled={!allowed} onClick={() => void submit()}>{t('submit')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
