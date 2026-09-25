@@ -19,13 +19,13 @@ import { noticeActions, noticeStateDisplay } from '@/lib/finance/notices';
 import { supersedeNoticeAction, voidNoticeAction } from './actions';
 import { NoticeDialog, type SavedNotice } from './notice-dialog';
 
-export type NoticeRow = Pick<NoticeView, 'id' | 'kind' | 'taxOffice' | 'taxNumber' | 'noticeDate' | 'assessmentPeriod' | 'purposesText' | 'validUntil' | 'state' | 'supersededOn' | 'voidedAt' | 'documentId' | 'documentNumber' | 'supersededDocumentNumber'>;
+export type NoticeRow = Pick<NoticeView, 'id' | 'kind' | 'taxOffice' | 'taxNumber' | 'noticeDate' | 'exemptFrom' | 'assessmentPeriod' | 'purposesText' | 'validUntil' | 'state' | 'supersededOn' | 'voidedAt' | 'documentId' | 'documentNumber' | 'supersededDocumentNumber'>;
 
 const TONE = { valid: 'success', endsOn: 'warning', expired: 'neutral', superseded: 'neutral', supersededByFinal: 'neutral', voided: 'neutral', future: 'neutral' } as const;
 
 /**
  * Die Reihe der Bescheide (C3): Art in Alltagssprache · Finanzamt ·
- * Steuernummer · Datum · Veranlagungszeitraum · gültig bis (taggenau) ·
+ * Steuernummer · Datum · Befreiung ab · Veranlagungszeitraum · gültig bis (taggenau) ·
  * Dokument · Zustand. Handeln mit `finance.donationsIssue`: aufgehoben oder
  * ersetzt am …, irrtümlich erfasst, Dokument nachreichen.
  */
@@ -46,6 +46,7 @@ export function NoticesTable({ rows, canIssue, canPickDocument }: { rows: Notice
             <TableHead>{t('columns.taxOffice')}</TableHead>
             <TableHead>{t('columns.taxNumber')}</TableHead>
             <TableHead>{t('columns.noticeDate')}</TableHead>
+            <TableHead>{t('columns.exemptFrom')}</TableHead>
             <TableHead>{t('columns.assessmentPeriod')}</TableHead>
             <TableHead>{t('columns.validUntil')}</TableHead>
             <TableHead>{t('columns.document')}</TableHead>
@@ -63,6 +64,7 @@ export function NoticesTable({ rows, canIssue, canPickDocument }: { rows: Notice
                 <TableCell>{row.taxOffice}</TableCell>
                 <TableCell className="font-mono">{row.taxNumber}</TableCell>
                 <TableCell className="font-mono tabular-nums">{date(row.noticeDate)}</TableCell>
+                <TableCell data-testid="notice-exempt-from" className="font-mono tabular-nums">{date(row.exemptFrom)}</TableCell>
                 <TableCell>{row.assessmentPeriod ?? '—'}</TableCell>
                 <TableCell className="font-mono tabular-nums">{date(row.validUntil)}</TableCell>
                 <TableCell data-testid="notice-document" className="font-mono">{row.documentNumber ?? <span className="font-sans text-muted-ink">{t('noDocument')}</span>}</TableCell>

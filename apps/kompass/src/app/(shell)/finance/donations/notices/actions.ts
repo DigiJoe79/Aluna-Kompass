@@ -25,6 +25,8 @@ export interface NoticeInput {
   taxOffice: string;
   taxNumber: string;
   noticeDate: string;
+  /** „Steuerbefreiung ab“ — Pflicht; leer bleibt es `undefined`, damit der Dienst „Pflichtfeld“ meldet. */
+  exemptFrom?: string;
   assessmentPeriod?: string | null;
   purposesText: string;
   documentId?: string | null;

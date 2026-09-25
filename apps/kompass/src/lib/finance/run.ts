@@ -9,35 +9,23 @@ export type RunStep = 'selection' | 'preview' | 'run' | 'result';
 export const RUN_STEPS: readonly RunStep[] = ['selection', 'preview', 'run', 'result'];
 
 /**
- * Die Gruppen der Vorschau. `beforeOldestNotice` ist im Dienst ein blockierter
- * Posten mit `blockedBy: 'beforeOldestNotice'` — die Oberfläche zeigt ihn
- * eigens, weil eine Begründung für den Lauf ihn mitnimmt.
+ * Die Gruppen der Vorschau, wie der Dienst sie bildet. Eine Zuwendung vor
+ * Beginn der Steuerbefreiung ist ein gewöhnlich blockierter Posten
+ * (`blockedBy: 'afterExemptionStart'`).
  */
-export type RunGroupKey = 'ready' | 'needsSignature' | 'beforeOldestNotice' | 'addressMissing' | 'blocked';
-const GROUP_ORDER: readonly RunGroupKey[] = ['ready', 'needsSignature', 'beforeOldestNotice', 'addressMissing', 'blocked'];
+export type RunGroupKey = RunPreviewItem['group'];
+const GROUP_ORDER: readonly RunGroupKey[] = ['ready', 'needsSignature', 'addressMissing', 'blocked'];
 
 type GroupedItem = Pick<RunPreviewItem, 'group' | 'blockedBy'>;
 
-export const isBeforeOldestNotice = (item: GroupedItem): boolean => item.group === 'blocked' && item.blockedBy === 'beforeOldestNotice';
-
-function groupKeyOf(item: GroupedItem): RunGroupKey {
-  return isBeforeOldestNotice(item) ? 'beforeOldestNotice' : item.group;
-}
-
 /** Die Posten je Gruppe in fester Reihenfolge; leere Gruppen fallen weg, die Reihenfolge der Posten bleibt die des Dienstes. */
 export function groupRunItems<T extends GroupedItem>(items: readonly T[]): { key: RunGroupKey; items: T[] }[] {
-  return GROUP_ORDER.map((key) => ({ key, items: items.filter((i) => groupKeyOf(i) === key) })).filter((g) => g.items.length > 0);
+  return GROUP_ORDER.map((key) => ({ key, items: items.filter((i) => i.group === key) })).filter((g) => g.items.length > 0);
 }
 
-/**
- * Wie viele Bestätigungen der Start ausstellen würde: der Nummernbereich des
- * Dienstes (bereit + braucht Unterschrift) — Posten vor dem ältesten Bescheid
- * erst, wenn eine Begründung dasteht (Befund Lauf 3: `numberRange.count`
- * zählt sie nicht).
- */
-export function runIssueCount(preview: Pick<RunPreview, 'numberRange' | 'items'>, preNoticeReason: string): number {
-  const early = preNoticeReason.trim() ? preview.items.filter(isBeforeOldestNotice).length : 0;
-  return preview.numberRange.count + early;
+/** Wie viele Bestätigungen der Start ausstellen würde: der Nummernbereich des Dienstes (bereit + braucht Unterschrift). */
+export function runIssueCount(preview: Pick<RunPreview, 'numberRange'>): number {
+  return preview.numberRange.count;
 }
 
 /** „ZWB-2026-004 bis ZWB-2026-047“: die erste und die letzte Nummer; bei einer Bestätigung nur die erste, bei keiner nichts. */

@@ -3998,6 +3998,7 @@
         "organizationAddress": "Name und Anschrift des Vereins vollständig",
         "notConfirmed": "Noch nicht bestätigt",
         "noticeValid": "Gültiger Bescheid am Ausstellungstag",
+        "afterExemptionStart": "Zuwendung nicht vor Beginn der Steuerbefreiung",
         "amountPositive": "Betrag nach Rückgaben über null",
         "documented": "Buchung belegt",
         "inKindDetails": "Sachspende beschrieben",
@@ -4027,6 +4028,7 @@
         "completeAddress": "Anschrift ergänzen",
         "openConfirmation": "Bestätigung öffnen",
         "recordNotice": "Bescheid erfassen",
+        "checkExemptionStart": "Bescheid und Beginn der Befreiung prüfen",
         "attachVoucher": "Beleg nachreichen",
         "describeInKind": "Sachspende beschreiben",
         "activateType": "Dokumentart aktivieren",
@@ -4046,14 +4048,13 @@
           "missing": "Es fehlt: {fields}",
           "confirmed": "Schon bestätigt mit {number}.",
           "category": "Kategorie „{category}“",
+          "beforeExemption": "Die Zuwendung vom {entryDate} liegt vor dem {exemptFrom}; dafür darf keine Bestätigung ausgestellt werden.",
           "machine": "Die Bestätigung trägt das Faksimile und den Hinweis zum maschinellen Verfahren.",
           "signatureField": "Die Bestätigung trägt ein Unterschriftsfeld und wird von Hand unterschrieben."
         },
         "warnings": {
           "organization": "Bestätigungen an Organisationen sind selten; prüfen Sie den Empfänger.",
-          "foreignCountry": "Die Anschrift liegt im Ausland; prüfen Sie, ob die Bestätigung passt.",
-          "beforeOldestNotice": "Die Zuwendung liegt vor dem ältesten erfassten Bescheid.",
-          "preNoticeReason": "Warum ist die Bestätigung trotzdem richtig?"
+          "foreignCountry": "Die Anschrift liegt im Ausland; prüfen Sie, ob die Bestätigung passt."
         },
         "preview": "Vorschau",
         "previewTitle": "Vorschau der Zuwendungsbestätigung",
@@ -4177,6 +4178,7 @@
           "taxOffice": "Finanzamt",
           "taxNumber": "Steuernummer",
           "noticeDate": "Datum",
+          "exemptFrom": "Befreiung ab",
           "assessmentPeriod": "Veranlagungszeitraum",
           "validUntil": "gültig bis",
           "document": "Dokument",
@@ -4210,6 +4212,8 @@
           "taxOffice": "Finanzamt",
           "taxNumber": "Steuernummer",
           "noticeDate": "Datum des Bescheids",
+          "exemptFrom": "Steuerbefreiung ab",
+          "exemptFromHint": "Erster Tag des Veranlagungszeitraums, ab dem der Bescheid die Befreiung ausspricht. Für Zuwendungen davor darf keine Bestätigung ausgestellt werden.",
           "assessmentPeriod": "Veranlagungszeitraum",
           "assessmentPeriodHint": "Ein Jahr wie 2023 oder ein Zeitraum wie 2021–2023.",
           "purposesText": "Begünstigte Zwecke im Wortlaut",
@@ -4333,7 +4337,6 @@
         "groups": {
           "ready": "bereit",
           "needsSignature": "braucht Unterschrift",
-          "beforeOldestNotice": "vor dem ältesten Bescheid",
           "addressMissing": "Anschrift fehlt",
           "blocked": "blockiert",
           "heading": "{group} · {count, plural, one {# Bestätigung} other {# Bestätigungen}}"
@@ -4357,6 +4360,7 @@
           "organizationAddress": "Vereinsanschrift fehlt",
           "notConfirmed": "Schon bestätigt",
           "noticeValid": "Kein Bescheid",
+          "afterExemptionStart": "Vor Beginn der Steuerbefreiung",
           "amountPositive": "Nach Rückgaben kein Betrag",
           "documented": "Beleg fehlt",
           "inKindDetails": "Sachspende nicht beschrieben",
@@ -4367,10 +4371,6 @@
         },
         "completeAddress": "Anschrift ergänzen",
         "openUncertified": "Zu den offenen Zuwendungen",
-        "beforeOldestNotice": {
-          "text": "Diese Zuwendungen liegen vor dem ältesten erfassten Bescheid. Mit einer Begründung werden sie mitgezählt, ohne werden sie übersprungen.",
-          "reason": "Warum sind die Bestätigungen trotzdem richtig?"
-        },
         "blockedRun": {
           "title": "Der Serienlauf kann nicht starten",
           "noNotice": "Am Ausstellungstag gilt kein Bescheid des Finanzamts — ohne Bescheid keine Zuwendungsbestätigungen.",
@@ -4457,7 +4457,7 @@
           "confirmationInKindDetailsMissing": "Sachspende nicht beschrieben",
           "confirmationTypeInactive": "Dokumentart stillgelegt",
           "confirmationExpenseWaiversDisabled": "Aufwandsspenden ausgeschaltet",
-          "confirmationPreNoticeNeedsReason": "Vor dem ältesten Bescheid, ohne Begründung",
+          "confirmationBeforeExemptionStart": "Vor Beginn der Steuerbefreiung",
           "confirmationChangedMeanwhile": "Während des Laufs geändert",
           "noNoticeValidAt": "Kein gültiger Bescheid am Ausstellungstag",
           "noticeNotValidAt": "Bescheid gilt am Ausstellungstag nicht",

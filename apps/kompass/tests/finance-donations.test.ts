@@ -38,13 +38,15 @@ describe('Zuwendungsbestätigungen in der Oberfläche (F6a Task 7)', () => {
     expect(signatureMode(field)).toBe('signatureField');
   });
 
-  it('allows issuing only when nothing blocks — and before the oldest notice only with a reason', () => {
-    expect(issueAllowed(check(), '')).toBe(true);
-    expect(issueAllowed(check({ ok: false }), '')).toBe(false);
-    const early = check({ warnings: ['beforeOldestNotice'] });
-    expect(issueAllowed(early, '  ')).toBe(false);
-    expect(issueAllowed(early, 'Zusage lag schriftlich vor')).toBe(true);
-    expect(issueAllowed(null, '')).toBe(false);
+  it('allows issuing only when nothing blocks — a donation before the start of the exemption never', () => {
+    expect(issueAllowed(check())).toBe(true);
+    expect(issueAllowed(check({ ok: false }))).toBe(false);
+    const early = check({
+      ok: false,
+      checks: [{ key: 'afterExemptionStart', applies: true, done: false, blocked: true, detail: { exemptFrom: '2025-04-01', entryDate: '2025-03-01' }, remedy: { href: '/finance/donations/notices', labelKey: 'checkExemptionStart' }, warning: null }],
+    });
+    expect(issueAllowed(early)).toBe(false);
+    expect(issueAllowed(null)).toBe(false);
   });
 
   describe('groupChecks (N3 C1-2/C1-3): Fehlt noch · Bitte ansehen · Erfüllt · Trifft nicht zu', () => {
@@ -68,7 +70,7 @@ describe('Zuwendungsbestätigungen in der Oberfläche (F6a Task 7)', () => {
         c('final'),
         c('contactComplete', { warning: 'organization' }),
         c('organizationAddress', { done: false, blocked: true, remedy: { href: '/admin/settings', labelKey: 'completeOrganization' } }),
-        c('noticeValid', { done: false, blocked: true, warning: 'beforeOldestNotice' }),
+        c('noticeValid', { done: false, blocked: true, warning: 'foreignCountry' }),
         c('signerValid', { done: false, warning: 'signatureField' }),
         c('inKindDetails', { applies: false }),
       ];

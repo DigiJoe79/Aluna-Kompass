@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { formatAmount, parseAmount } from '@/lib/finance/amount';
-import { isBeforeOldestNotice, numberRangeText, runIssueCount, runQueryString } from '@/lib/finance/run';
+import { numberRangeText, runIssueCount, runQueryString } from '@/lib/finance/run';
 import { previewConfirmationRunAction, startConfirmationRunAction } from './actions';
 import { PreviewGroups } from './preview-groups';
 import { RunSteps } from './run-steps';
@@ -48,7 +48,6 @@ export function RunSelection(props: RunSelectionProps) {
   const [excluded, setExcluded] = useState<PickedContact[]>(props.excluded);
   const [picker, setPicker] = useState<PickedContact | null>(null);
   const [preview, setPreview] = useState<RunPreview | null>(props.preview);
-  const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [starting, setStarting] = useState(false);
 
@@ -90,14 +89,12 @@ export function RunSelection(props: RunSelectionProps) {
 
   const start = async () => {
     if (!preview) return;
-    const early = preview.items.some(isBeforeOldestNotice) && reason.trim() ? reason.trim() : undefined;
     setStarting(true);
     const result = await startConfirmationRunAction({
       year: preview.year,
       minCents: preview.minCents,
       excludedContactIds: preview.excludedContactIds,
       ...(props.followUp ? { followUpOfRunId: props.followUp.id } : {}),
-      ...(early ? { preNoticeReason: early } : {}),
     });
     if (result.status === 'error') {
       setStarting(false);
@@ -110,7 +107,7 @@ export function RunSelection(props: RunSelectionProps) {
     }
   };
 
-  const count = preview ? runIssueCount(preview, reason) : 0;
+  const count = preview ? runIssueCount(preview) : 0;
   const range = preview ? numberRangeText(preview.numberRange.from, count) : null;
   const canStart = props.canIssue && preview !== null && preview.blockedRun === null && count > 0 && !starting && !loading;
 
@@ -179,7 +176,7 @@ export function RunSelection(props: RunSelectionProps) {
           {preview.items.length === 0 ? (
             <EmptyState title={t('empty.title')} text={t('empty.text')} />
           ) : (
-            <PreviewGroups items={preview.items} reason={reason} onReasonChange={setReason} canIssue={props.canIssue} />
+            <PreviewGroups items={preview.items} />
           )}
 
           <div data-testid="run-footer" className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-4 rounded-md border border-line bg-surface px-4 py-3 shadow-md">

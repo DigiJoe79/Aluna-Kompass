@@ -21,7 +21,7 @@ export type NoticeKind = NoticeInput['kind'];
 const KINDS: NoticeKind[] = ['exemptionNotice', 'corporateTaxNoticeAttachment', 'section60a'];
 
 /** Was der Dialog vom gespeicherten Bescheid braucht — für „Dokument nachreichen“ und die Auswahl aus der Akte. */
-export type SavedNotice = Pick<NoticeView, 'id' | 'kind' | 'taxOffice' | 'taxNumber' | 'noticeDate' | 'assessmentPeriod' | 'purposesText' | 'documentId' | 'documentNumber'>;
+export type SavedNotice = Pick<NoticeView, 'id' | 'kind' | 'taxOffice' | 'taxNumber' | 'noticeDate' | 'exemptFrom' | 'assessmentPeriod' | 'purposesText' | 'documentId' | 'documentNumber'>;
 
 /**
  * „Bescheid erfassen“ (C3, F6a Task 8) in zwei Schritten: erst die Angaben
@@ -56,6 +56,7 @@ function FormStep({ onSaved, onCancel }: { onSaved: (notice: SavedNotice) => voi
   const [taxOffice, setTaxOffice] = useState('');
   const [taxNumber, setTaxNumber] = useState('');
   const [noticeDate, setNoticeDate] = useState('');
+  const [exemptFrom, setExemptFrom] = useState('');
   const [assessmentPeriod, setAssessmentPeriod] = useState('');
   const [purposesText, setPurposesText] = useState('');
   const [hadExemption, setHadExemption] = useState<'yes' | 'no' | null>(null);
@@ -68,7 +69,7 @@ function FormStep({ onSaved, onCancel }: { onSaved: (notice: SavedNotice) => voi
 
   const submit = async () => {
     setPending(true);
-    const result = await saveNoticeAction({ kind, taxOffice, taxNumber, noticeDate, assessmentPeriod: provisional ? null : assessmentPeriod || null, purposesText });
+    const result = await saveNoticeAction({ kind, taxOffice, taxNumber, noticeDate, exemptFrom: exemptFrom || undefined, assessmentPeriod: provisional ? null : assessmentPeriod || null, purposesText });
     setPending(false);
     if (result.status === 'error') {
       setFieldErrors(result.fieldErrors);
@@ -88,7 +89,7 @@ function FormStep({ onSaved, onCancel }: { onSaved: (notice: SavedNotice) => voi
       <Label htmlFor={id} required>{label}</Label>
       {node}
       {hint ? <p className="text-[12px] text-muted-ink">{hint}</p> : null}
-      {error ? <p className="text-[12px] text-error">{error}</p> : null}
+      {error ? <p className="text-[12px] text-error" data-testid={`${id}-error`}>{error}</p> : null}
     </div>
   );
 
@@ -121,6 +122,7 @@ function FormStep({ onSaved, onCancel }: { onSaved: (notice: SavedNotice) => voi
         {field('notice-tax-office', t('taxOffice'), <Input id="notice-tax-office" value={taxOffice} onChange={(e) => setTaxOffice(e.target.value)} />, undefined, fieldErrors.taxOffice)}
         {field('notice-tax-number', t('taxNumber'), <Input id="notice-tax-number" className="font-mono" value={taxNumber} onChange={(e) => setTaxNumber(e.target.value)} />, undefined, fieldErrors.taxNumber)}
         {field('notice-date', t('noticeDate'), <Input id="notice-date" type="date" className="font-mono" value={noticeDate} onChange={(e) => setNoticeDate(e.target.value)} />, undefined, fieldErrors.noticeDate)}
+        {field('notice-exempt-from', t('exemptFrom'), <Input id="notice-exempt-from" type="date" className="font-mono" value={exemptFrom} onChange={(e) => setExemptFrom(e.target.value)} />, t('exemptFromHint'), fieldErrors.exemptFrom)}
         {provisional ? null : field('notice-period', t('assessmentPeriod'), <Input id="notice-period" value={assessmentPeriod} onChange={(e) => setAssessmentPeriod(e.target.value)} />, t('assessmentPeriodHint'), fieldErrors.assessmentPeriod)}
       </div>
       {field('notice-purposes', t('purposesText'), <Textarea id="notice-purposes" rows={3} value={purposesText} onChange={(e) => setPurposesText(e.target.value)} />, t('purposesHint'), fieldErrors.purposesText)}
@@ -165,8 +167,8 @@ function DocumentStep({ notice, canPickDocument, onChanged, onClose }: { notice:
     setPicked(doc);
     if (!doc) return;
     setPending(true);
-    const { id, kind, taxOffice, taxNumber, noticeDate, assessmentPeriod, purposesText } = notice;
-    finish(await saveNoticeAction({ id, kind, taxOffice, taxNumber, noticeDate, assessmentPeriod, purposesText, documentId: doc.id }));
+    const { id, kind, taxOffice, taxNumber, noticeDate, exemptFrom, assessmentPeriod, purposesText } = notice;
+    finish(await saveNoticeAction({ id, kind, taxOffice, taxNumber, noticeDate, exemptFrom, assessmentPeriod, purposesText, documentId: doc.id }));
   };
 
   return (

@@ -48,7 +48,7 @@ export async function saveInKindDetailsAction(input: InKindDetailsInput): Promis
   return toActionState(result, t, t('finance.donations.inKind.toast.saved'));
 }
 
-export async function issueConfirmationAction(input: { lineIds: string[]; issuedOn: string; preNoticeReason?: string }): Promise<ActionState> {
+export async function issueConfirmationAction(input: { lineIds: string[]; issuedOn: string }): Promise<ActionState> {
   const t = await getTranslations();
   const { deps, ctx } = await requireSession();
   const result = await issueConfirmation(deps, ctx, input);

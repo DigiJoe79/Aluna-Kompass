@@ -23,10 +23,9 @@ export function signatureMode(result: ConfirmationCheckResult): 'machine' | 'sig
   return signer && signer.applies && signer.warning === null ? 'machine' : 'signatureField';
 }
 
-/** Ausstellen geht, wenn nichts sperrt; liegt die Zuwendung vor dem ältesten Bescheid, erst mit Begründung. */
-export function issueAllowed(result: ConfirmationCheckResult | null, preNoticeReason: string): boolean {
-  if (!result || !result.ok) return false;
-  return !result.warnings.includes('beforeOldestNotice') || preNoticeReason.trim().length > 0;
+/** Ausstellen geht, wenn nichts sperrt — eine Zuwendung vor Beginn der Steuerbefreiung sperrt, keine Begründung heilt das. */
+export function issueAllowed(result: ConfirmationCheckResult | null): boolean {
+  return !!result && result.ok;
 }
 
 /**

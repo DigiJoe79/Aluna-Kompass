@@ -47,7 +47,7 @@ export default async function FinanceDonationNoticesPage() {
         <EmptyState title={t('empty.title')} text={t('empty.text')} />
       ) : (
         <NoticesTable
-          rows={notices.map(({ id, kind, taxOffice, taxNumber, noticeDate, assessmentPeriod, purposesText, validUntil, state, supersededOn, voidedAt, documentId, documentNumber, supersededDocumentNumber }) => ({ id, kind, taxOffice, taxNumber, noticeDate, assessmentPeriod, purposesText, validUntil, state, supersededOn, voidedAt, documentId, documentNumber, supersededDocumentNumber }))}
+          rows={notices.map(({ id, kind, taxOffice, taxNumber, noticeDate, exemptFrom, assessmentPeriod, purposesText, validUntil, state, supersededOn, voidedAt, documentId, documentNumber, supersededDocumentNumber }) => ({ id, kind, taxOffice, taxNumber, noticeDate, exemptFrom, assessmentPeriod, purposesText, validUntil, state, supersededOn, voidedAt, documentId, documentNumber, supersededDocumentNumber }))}
           canIssue={canIssue}
           canPickDocument={canPickDocument}
         />

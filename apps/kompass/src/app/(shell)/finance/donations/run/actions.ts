@@ -33,7 +33,7 @@ export async function previewConfirmationRunAction(input: RunSelectionInput): Pr
 }
 
 /** Den Lauf starten — `finance.donationsIssue`, nur ein Mensch. Ausgestellt wird danach über den Continue-Handler. */
-export async function startConfirmationRunAction(input: RunSelectionInput & { preNoticeReason?: string }): Promise<ActionState> {
+export async function startConfirmationRunAction(input: RunSelectionInput): Promise<ActionState> {
   const t = await getTranslations();
   const { deps, ctx } = await requireSession();
   const result = await startConfirmationRun(deps, ctx, input);

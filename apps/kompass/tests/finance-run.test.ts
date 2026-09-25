@@ -17,11 +17,11 @@ const item = (over: Partial<RunPreviewItem> = {}): RunPreviewItem => ({
   ...over,
 });
 
-const early = (over: Partial<RunPreviewItem> = {}) => item({ group: 'blocked', blockedBy: 'beforeOldestNotice', ...over });
+const early = (over: Partial<RunPreviewItem> = {}) => item({ group: 'blocked', blockedBy: 'afterExemptionStart', ...over });
 
 describe('Serienlauf in der Oberfläche (F6b Task 7)', () => {
   describe('groupRunItems', () => {
-    it('orders the groups ready · needs signature · before the oldest notice · address missing · blocked and leaves out empty ones', () => {
+    it('orders the groups ready · needs signature · address missing · blocked and leaves out empty ones — before the start of the exemption is blocked', () => {
       const items = [
         item({ contactId: 'A', group: 'addressMissing', blockedBy: 'contactComplete' }),
         item({ contactId: 'B', group: 'blocked', blockedBy: 'documented' }),
@@ -32,9 +32,8 @@ describe('Serienlauf in der Oberfläche (F6b Task 7)', () => {
       expect(groupRunItems(items).map((g) => [g.key, g.items.map((i) => i.contactId)])).toEqual([
         ['ready', ['E']],
         ['needsSignature', ['D']],
-        ['beforeOldestNotice', ['C']],
         ['addressMissing', ['A']],
-        ['blocked', ['B']],
+        ['blocked', ['B', 'C']],
       ]);
       expect(groupRunItems([item()]).map((g) => g.key)).toEqual(['ready']);
       expect(groupRunItems([])).toEqual([]);
@@ -42,11 +41,9 @@ describe('Serienlauf in der Oberfläche (F6b Task 7)', () => {
   });
 
   describe('runIssueCount', () => {
-    it('counts the number range — and the items before the oldest notice only once a reason is given', () => {
+    it('counts the number range — blocked items, those before the start of the exemption among them, never', () => {
       const preview = { numberRange: { from: 'ZWB-2026-004', count: 3 }, items: [item(), early({ contactId: 'X' }), early({ contactId: 'Y' })] };
-      expect(runIssueCount(preview, '')).toBe(3);
-      expect(runIssueCount(preview, '   ')).toBe(3);
-      expect(runIssueCount(preview, 'Zusage lag schriftlich vor')).toBe(5);
+      expect(runIssueCount(preview)).toBe(3);
     });
   });
 

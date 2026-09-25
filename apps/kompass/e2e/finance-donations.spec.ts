@@ -30,6 +30,8 @@ async function mcpClient(page: Page, baseURL: string | undefined): Promise<Clien
   return client;
 }
 
+type NoticeListed = { id: string; kind: string; taxOffice: string; taxNumber: string; noticeDate: string; assessmentPeriod: string | null; purposesText: string };
+
 async function callTool<T>(client: Client, name: string, args: Record<string, unknown>): Promise<T> {
   const result = await client.callTool({ name, arguments: args });
   expect(result.isError, JSON.stringify(result.content)).toBeFalsy();
@@ -233,6 +235,37 @@ test.describe('finance donations', () => {
     await expect(issuedRow(page, 'Erika Beispiel')).toContainText('Bescheid aufgehoben oder ersetzt');
   });
 
+  test('eine Zuwendung vor Beginn der Steuerbefreiung ist gesperrt — in der Prüfliste mit Sprung zu den Bescheiden und im Serienlauf', async ({ page, baseURL }) => {
+    await loginAsAdmin(page);
+    const year = new Date().getUTCFullYear();
+    // Die Befreiung beginnt erst am 01.04. dieses Jahres: der § 60a-Bescheid war irrtümlich erfasst, der Freistellungsbescheid gilt ab April.
+    const client = await mcpClient(page, baseURL);
+    const listed = await callTool<NoticeListed[] | { items: NoticeListed[] }>(client, 'finance_notices_list', { includeInactive: true });
+    const notices = Array.isArray(listed) ? listed : listed.items;
+    const provisional = notices.find((n) => n.kind === 'section60a')!;
+    const exemption = notices.find((n) => n.kind === 'exemptionNotice')!;
+    await callTool(client, 'finance_notice_void', { id: provisional.id, note: 'Irrtümlich erfasst (Test)' });
+    const { id, kind, taxOffice, taxNumber, noticeDate, assessmentPeriod, purposesText } = exemption;
+    await callTool(client, 'finance_notice_save', { id, kind, taxOffice, taxNumber, noticeDate, assessmentPeriod, purposesText, exemptFrom: `${year}-04-01` });
+    await client.close();
+
+    // Henrik Brandt spendete am 20.03. — davor.
+    const dialog = await openIssueDialog(page, 'Henrik Brandt', '75,00 €');
+    const missing = dialog.getByRole('region', { name: 'Fehlt noch' });
+    const row = missing.getByTestId('requirement-afterExemptionStart');
+    await expect(row).toContainText('Zuwendung nicht vor Beginn der Steuerbefreiung');
+    await expect(row).toContainText(`Die Zuwendung vom 20.03.${year} liegt vor dem 01.04.${year}; dafür darf keine Bestätigung ausgestellt werden.`);
+    await expect(row.getByRole('link', { name: 'Bescheid und Beginn der Befreiung prüfen' })).toHaveAttribute('href', '/finance/donations/notices');
+    await expect(dialog.getByRole('button', { name: 'Ausstellen', exact: true })).toBeDisabled();
+    await expect(dialog.getByRole('textbox', { name: /Begründung|trotzdem richtig/ })).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Abbrechen' }).click();
+
+    await page.goto(`/finance/donations/run?year=${year}`);
+    const blocked = page.getByTestId('run-group-blocked');
+    await expect(blocked.getByTestId('run-item').filter({ hasText: 'Henrik Brandt' })).toContainText('Vor Beginn der Steuerbefreiung');
+    await expect(page.getByTestId('run-group-beforeOldestNotice')).toHaveCount(0);
+  });
+
   test('der Ausstellen-Knopf bleibt bei voller Prüfliste sichtbar; die Prüfliste zeigt „Fehlt noch“ und „Bitte ansehen“ nur, wenn es etwas gibt', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await loginAsAdmin(page);
@@ -244,12 +277,13 @@ test.describe('finance donations', () => {
     await expect(dialog.getByRole('region', { name: 'Bitte ansehen' })).toHaveCount(0);
     const done = dialog.getByRole('region', { name: 'Erfüllt' });
     const notApplicable = dialog.getByRole('region', { name: 'Trifft nicht zu' });
-    await expect(done).toContainText('Erfüllt · 10');
+    await expect(done).toContainText('Erfüllt · 11');
     await expect(notApplicable).toContainText('Trifft nicht zu · 2');
-    await done.getByText('Erfüllt · 10').click();
+    await done.getByText('Erfüllt · 11').click();
     await notApplicable.getByText('Trifft nicht zu · 2').click();
     await expect(notApplicable.getByTestId('requirement-inKindDetails')).toContainText('Sachspende beschrieben');
     await expect(done.getByTestId('requirement-noticeValid')).toBeVisible();
+    await expect(done.getByTestId('requirement-afterExemptionStart')).toContainText('Zuwendung nicht vor Beginn der Steuerbefreiung');
     const submit = dialog.getByRole('button', { name: 'Ausstellen', exact: true });
     await expect(submit).toBeEnabled();
     await expect(submit).toBeInViewport();
@@ -337,6 +371,8 @@ test.describe('finance donation notices', () => {
     await page.goto('/finance/donations/notices');
     await expect(seededExemption(page).getByTestId('notice-state')).toHaveText('gültig');
     await expect(seededExemption(page)).toContainText('02.05.2030');
+    await expect(seededExemption(page).getByTestId('notice-exempt-from')).toHaveText('01.01.2023');
+    await expect(page.getByRole('table', { name: 'Bescheide des Finanzamts' }).getByRole('columnheader', { name: 'Befreiung ab' })).toBeVisible();
     await expect(noticeRow(page, 'vorläufige Anerkennung (§ 60a)').getByTestId('notice-state')).toContainText('02.05.2025');
 
     await page.getByRole('button', { name: 'Bescheid erfassen' }).click();
@@ -345,6 +381,7 @@ test.describe('finance donation notices', () => {
     await dialog.getByLabel('Finanzamt').fill('Finanzamt Beispielstadt');
     await dialog.getByLabel('Steuernummer').fill('11/222/33333');
     await dialog.getByLabel('Datum des Bescheids').fill(today);
+    await dialog.getByLabel('Steuerbefreiung ab').fill('2022-01-01');
     await dialog.getByLabel('Veranlagungszeitraum').fill('2022–2024');
     await dialog.getByLabel('Begünstigte Zwecke im Wortlaut').fill('Förderung des Sports (§ 52 Abs. 2 Satz 1 Nr. 21 AO)');
     await dialog.getByRole('button', { name: 'Speichern' }).click();
@@ -363,6 +400,7 @@ test.describe('finance donation notices', () => {
     await expect(row).toContainText(germanDay(plusYears(today, 5)));
     await expect(row.getByTestId('notice-state')).toHaveText('gültig');
     await expect(row.getByTestId('notice-document')).toHaveText(/^EIN-/);
+    await expect(row.getByTestId('notice-exempt-from')).toHaveText('01.01.2022');
 
     await page.goto('/admin/settings');
     await page.getByRole('tab', { name: 'Steuer & Bescheide' }).click();
@@ -371,6 +409,27 @@ test.describe('finance donation notices', () => {
     for (const label of ['Finanzamt', 'Steuernummer', 'Art des Bescheids', 'Datum des Bescheids']) await expect(page.getByLabel(label)).toHaveCount(0);
     await expect(page.getByText('Wird unter Finanzen → Spenden → Bescheide geführt.')).toHaveCount(1);
     await expect(page.getByLabel('Satzungszweck')).toBeEditable();
+  });
+
+  test('ohne „Steuerbefreiung ab“ wird kein Bescheid gespeichert', async ({ page }) => {
+    await page.goto('/finance/donations/notices');
+    await page.getByRole('button', { name: 'Bescheid erfassen' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByText('Erster Tag des Veranlagungszeitraums, ab dem der Bescheid die Befreiung ausspricht.')).toBeVisible();
+    await dialog.getByLabel('Finanzamt').fill('Finanzamt Beispielstadt');
+    await dialog.getByLabel('Steuernummer').fill('11/222/33333');
+    await dialog.getByLabel('Datum des Bescheids').fill(isoDay());
+    await dialog.getByLabel('Veranlagungszeitraum').fill('2024');
+    await dialog.getByLabel('Begünstigte Zwecke im Wortlaut').fill('Förderung des Sports');
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(dialog.getByTestId('notice-exempt-from-error')).toHaveText('Pflichtfeld.');
+    await expect(dialog.getByTestId('notice-form')).toBeVisible();
+
+    await dialog.getByLabel('Steuerbefreiung ab').fill('2024-01-01');
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByText('Bescheid gespeichert.')).toBeVisible();
+    await dialog.getByRole('button', { name: 'Fertig' }).click();
+    await expect(noticeRow(page, 'Finanzamt Beispielstadt').getByTestId('notice-exempt-from')).toHaveText('01.01.2024');
   });
 
   test('ein § 60a-Bescheid nach einem Freistellungsbescheid wird abgelehnt', async ({ page }) => {
@@ -388,6 +447,7 @@ test.describe('finance donation notices', () => {
     await dialog.getByLabel('Finanzamt').fill('Finanzamt Musterstadt');
     await dialog.getByLabel('Steuernummer').fill('99/999/99990');
     await dialog.getByLabel('Datum des Bescheids').fill(isoDay());
+    await dialog.getByLabel('Steuerbefreiung ab').fill(isoDay());
     await dialog.getByLabel('Begünstigte Zwecke im Wortlaut').fill('Förderung des Sports');
     await dialog.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByText(/Es gibt schon einen endgültigen Bescheid vom 2025-05-02/).first()).toBeVisible();

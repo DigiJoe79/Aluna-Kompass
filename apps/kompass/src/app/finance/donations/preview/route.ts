@@ -5,7 +5,7 @@ import { optionalSession } from '@/lib/request-context';
 
 /**
  * Die Vorschau im Ausstellen-Dialog: POST mit JSON
- * `{ lineIds, issuedOn?, kind?, preNoticeReason? }` → PDF mit Wasserzeichen
+ * `{ lineIds, issuedOn?, kind? }` → PDF mit Wasserzeichen
  * und Nummer ENTWURF. `finance.donationsIssue`; kein Akteneintrag, kein
  * Protokoll, nie zwischengespeichert. Ein Fachfehler der Prüfliste kommt als
  * 409 mit `{ code, message }` zurück, damit der Dialog ihn nennen kann.

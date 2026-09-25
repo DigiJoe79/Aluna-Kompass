@@ -41,7 +41,6 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [preview, setPreview] = useState<Preview>({ state: 'idle' });
-  const [reason, setReason] = useState('');
   const [pending, setPending] = useState(false);
 
   const load = useCallback(async () => {
@@ -88,12 +87,12 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
   }, [open, ready, lineId, issuedOn, loaded]);
 
   const check = loaded?.check ?? null;
-  const allowed = issueAllowed(check, reason) && !pending;
+  const allowed = issueAllowed(check) && !pending;
 
   const submit = async () => {
     if (!check) return;
     setPending(true);
-    const result = await issueConfirmationAction({ lineIds: [lineId], issuedOn, preNoticeReason: check.warnings.includes('beforeOldestNotice') ? reason.trim() : undefined });
+    const result = await issueConfirmationAction({ lineIds: [lineId], issuedOn });
     setPending(false);
     if (result.status === 'error') {
       toast.error(result.message);
@@ -129,6 +128,8 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
         return t('detail.confirmed', { number: String(c.detail.number ?? '') });
       case 'certifiable':
         return t('detail.category', { category: String(c.detail.category ?? '') });
+      case 'afterExemptionStart':
+        return t('detail.beforeExemption', { entryDate: date(String(c.detail.entryDate ?? '')), exemptFrom: date(String(c.detail.exemptFrom ?? '')) });
       case 'signerValid':
         return c.applies && c.warning === null ? t('detail.machine') : t('detail.signatureField');
       default:
@@ -141,7 +142,7 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
     // Organisation und Ausland können beide zutreffen; der Dienst führt beide in `warnings`.
     if (c.key === 'contactComplete') return (check?.warnings ?? []).filter((w) => w === 'organization' || w === 'foreignCountry').map((w) => t(`warnings.${w}`)).join(' ') || null;
     if (c.warning === 'signatureField') return t('detail.signatureField');
-    return t(`warnings.${c.warning as 'organization' | 'foreignCountry' | 'beforeOldestNotice'}`);
+    return t(`warnings.${c.warning as 'organization' | 'foreignCountry'}`);
   };
 
   const items: RequirementListItem[] = check
@@ -153,7 +154,7 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
           done: c.done,
           blocked: c.blocked,
           applies: c.applies,
-          warning: text ? { text, reason: c.warning === 'beforeOldestNotice' ? { name: 'preNoticeReason', value: reason, onChange: setReason, label: t('warnings.preNoticeReason') } : undefined } : undefined,
+          warning: text ? { text } : undefined,
           detail: detailOf(c),
           canSelf: !!c.remedy?.href,
           canDoNames: [],
