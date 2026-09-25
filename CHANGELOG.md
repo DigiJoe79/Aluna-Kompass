@@ -112,6 +112,9 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
   Theme, das sie noch nicht kennt — jede Installation vor diesem Update —,
   übernimmt beim Start automatisch die Vorgabewerte; eigene Anpassungen an
   den übrigen Tokens bleiben unangetastet.
+- **Kontostand nachtragen.** Ein hochgeladener Auszug ohne Kontostand (CSV
+  ohne Saldospalte) lässt sich jetzt in der Läufe-Tabelle einmalig um den
+  Kontostand laut Bank ergänzen — die Kontenabstimmung nutzt ihn danach sofort.
 - Diese Fassung bringt mehrere Datenbank-Migrationen mit, die beim Start von
   selbst laufen — vor dem Update wie immer ein Backup exportieren.
 
