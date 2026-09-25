@@ -125,6 +125,26 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 - **Kontostand nachtragen.** Ein hochgeladener Auszug ohne Kontostand (CSV
   ohne Saldospalte) lässt sich jetzt in der Läufe-Tabelle einmalig um den
   Kontostand laut Bank ergänzen — die Kontenabstimmung nutzt ihn danach sofort.
+- **Finanzen: Spenden und Zuwendungsbestätigungen.** Unter Finanzen → Spenden
+  → Bescheide führt der Verein die Bescheide seines Finanzamts —
+  vorläufige Anerkennung (§ 60a), Freistellungsbescheid, Anlage zum
+  Körperschaftsteuerbescheid — mit taggenauer Gültigkeit; ein Bescheid wird nie
+  gelöscht, sondern als aufgehoben oder ersetzt oder als irrtümlich erfasst
+  gekennzeichnet, und sein PDF lässt sich nach dem Erfassen nachreichen. Aus
+  einer festgeschriebenen Spende entsteht eine Zuwendungsbestätigung nach
+  amtlichem Muster — für Geld und Mitgliedsbeiträge (auch Aufwandsspenden) und
+  für Sachzuwendungen; die Sammelbestätigung folgt mit der nächsten Fassung.
+  Vor dem Ausstellen prüft eine Liste jede Voraussetzung und nennt, was fehlt,
+  eine Vorschau zeigt das PDF; unser Exemplar liegt danach in der Akte
+  (Präfix `ZWB`, zehn Jahre aufbewahrt). Sachspenden werden mit Gegenstand,
+  Zustand, Wertermittlung, Herkunft und Wertunterlage beschrieben. Mit einem
+  Unterzeichner, dem Bild seiner Unterschrift und der Anzeige beim Finanzamt
+  entstehen Bestätigungen maschinell; sonst tragen sie ein Unterschriftsfeld,
+  und die unterschriebene Fassung wird als Eingang abgelegt (`ZWU`). Eine
+  falsche Bestätigung wird mit Rückholspur zurückgenommen; „Zu korrigieren“
+  zeigt Bestätigungen, deren Bescheid ersetzt oder deren Spende geändert
+  wurde, und die Startseite zählt sie. Ausstellen und zurücknehmen kann nur ein
+  Mensch, kein Agent.
 - Diese Fassung bringt mehrere Datenbank-Migrationen mit, die beim Start von
   selbst laufen — vor dem Update wie immer ein Backup exportieren.
 
@@ -132,6 +152,12 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 
 - **Bibliotheken aktualisiert**, darunter React 19.3 und Next.js 16.3.5. Für
   den Betrieb ändert sich nichts.
+- **Stammdaten bei eingeschalteten Finanzen.** Finanzamt, Steuernummer, Art
+  und Datum des Bescheids werden dann unter Finanzen → Spenden → Bescheide
+  geführt, IBAN, BIC und Bank am Hauptkonto unter Finanzen einrichten →
+  Bankkonten und Kassen. In den Stammdaten stehen sie nur noch lesbar, mit dem
+  Hinweis, wo sie geführt werden. Wer die Finanzen einschaltet, erfasst den
+  geltenden Bescheid einmal dort.
 
 ### Behoben
 
