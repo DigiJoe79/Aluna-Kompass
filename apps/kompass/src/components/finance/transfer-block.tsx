@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { copyToClipboard } from '@/lib/clipboard';
 import { formatEuro } from '@/lib/finance/amount';
+import { groupIban } from '@/lib/finance/iban-check';
 
 function CopyField({ label, value }: { label: string; value: string }) {
   const c = useTranslations('common');
@@ -35,18 +36,20 @@ function CopyField({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * Der Überweisungsblock ohne IBAN (HANDOFF § 5.5, Task 3 — die IBAN kommt mit
- * F5/F8a): Empfänger, Betrag, Verwendungszweck je mit Kopierknopf; statt eines
- * QR-Codes der Satz, dass hier noch keine Bankverbindung hinterlegt ist.
+ * Der Überweisungsblock (HANDOFF § 5.5): Empfänger, IBAN, Betrag,
+ * Verwendungszweck je mit Kopierknopf. Ohne bekannte IBAN (offene Posten von
+ * Hand) steht statt ihrer der Satz, dass keine Bankverbindung hinterlegt ist;
+ * die Erstattung einer Auslage (F8a) bringt die IBAN des Antrags mit.
  */
-export function TransferBlock({ recipient, amountCents, reference }: { recipient: string; amountCents: number; reference: string }) {
+export function TransferBlock({ recipient, amountCents, reference, iban }: { recipient: string; amountCents: number; reference: string; iban?: string | null }) {
   const t = useTranslations('finance.openItems.transferBlock');
   return (
-    <div className="space-y-1 rounded-md border border-line bg-surface-2 p-3">
+    <div data-testid="transfer-block" className="space-y-1 rounded-md border border-line bg-surface-2 p-3">
       <CopyField label={t('recipient')} value={recipient} />
+      {iban ? <CopyField label={t('iban')} value={groupIban(iban)} /> : null}
       <CopyField label={t('amount')} value={formatEuro(amountCents)} />
       <CopyField label={t('reference')} value={reference} />
-      <p className="pt-2 text-[12px] text-muted-ink">{t('noIban')}</p>
+      {iban ? null : <p className="pt-2 text-[12px] text-muted-ink">{t('noIban')}</p>}
     </div>
   );
 }

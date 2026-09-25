@@ -3117,7 +3117,8 @@
         "recipient": "Empfänger",
         "amount": "Betrag",
         "reference": "Verwendungszweck",
-        "noIban": "Eine Bankverbindung ist hier noch nicht hinterlegt."
+        "noIban": "Eine Bankverbindung ist hier noch nicht hinterlegt.",
+        "iban": "IBAN"
       }
     },
     "projectSection": {
@@ -4646,7 +4647,8 @@
         "blocked": {
           "step": "Auslage einreichen",
           "title": "Ihr Nutzerkonto gehört noch zu keiner Person"
-        }
+        },
+        "copiedFrom": "Neu eingereicht aus dem abgelehnten Antrag {number}. Die Belege sind übernommen; Sie können alles ändern."
       },
       "submitted": {
         "title": "Eingereicht",
@@ -4659,6 +4661,163 @@
         "noApprover": "Zurzeit kann niemand außer Ihnen freigeben. Bitte sprechen Sie den Vorstand an.",
         "toList": "Zu meinen Anträgen",
         "another": "Weitere Auslage einreichen"
+      },
+      "state": {
+        "draft": "Entwurf",
+        "submitted": "eingereicht",
+        "approved": "freigegeben",
+        "paid": "ausgezahlt",
+        "rejected": "abgelehnt"
+      },
+      "sentence": {
+        "draft": "Entwurf vom {date} — noch nicht eingereicht",
+        "submitted": "am {date} — wartet auf Freigabe",
+        "approved": "freigegeben am {date} — wird überwiesen",
+        "paid": "überwiesen am {date}",
+        "rejected": "{note}"
+      },
+      "list": {
+        "title": "Eigene Anträge",
+        "intro": "Ihre Auslagen und was aus ihnen geworden ist.",
+        "new": "Auslage einreichen",
+        "open": "Offen",
+        "done": "Erledigt",
+        "draftNumber": "Entwurf",
+        "emptyTitle": "Noch kein Antrag",
+        "emptyText": "Was Sie für den Verein ausgelegt haben, reichen Sie hier ein – mit Beleg als PDF oder als Fahrt.",
+        "next": {
+          "draft": "Weiter ausfüllen und einreichen",
+          "submitted": "Freigeben kann: {names}",
+          "submittedNobody": "Zurzeit kann niemand außer Ihnen freigeben.",
+          "approved": "Die Überweisung folgt.",
+          "paid": "Erledigt.",
+          "rejected": "Sie können den Antrag neu einreichen."
+        },
+        "blocked": {
+          "step": "Eigene Anträge",
+          "title": "Ihr Nutzerkonto gehört noch zu keiner Person"
+        }
+      },
+      "detail": {
+        "back": "Eigene Anträge",
+        "title": "Antrag {number}",
+        "amount": "Betrag",
+        "waiver": "Sie verzichten auf die Erstattung und bekommen dafür eine Zuwendungsbestätigung.",
+        "hint": {
+          "submitted": "Ein eingereichter Antrag lässt sich nicht mehr ändern. Er wartet auf die Freigabe; bei Fragen wenden Sie sich an die Person, die freigibt.",
+          "approved": "Der Antrag ist freigegeben. Die Überweisung auf {iban} folgt.",
+          "approvedWaiver": "Der Antrag ist freigegeben. Ihre Zuwendungsbestätigung stellt der Verein aus.",
+          "paid": "Der Betrag ist überwiesen.",
+          "rejected": "Der Antrag ist abgelehnt. Sie können ihn als Entwurf kopieren, ändern und neu einreichen."
+        },
+        "reason": "Grund der Ablehnung",
+        "positions": "Positionen",
+        "trip": "Fahrt {from} – {to}, {km} km",
+        "openReceipt": "Beleg öffnen",
+        "history": "Verlauf",
+        "event": {
+          "created": "Angelegt",
+          "submitted": "Eingereicht",
+          "approved": "Freigegeben",
+          "paid": "Überwiesen",
+          "rejected": "Abgelehnt"
+        },
+        "approvers": "Freigeben kann: {names}",
+        "noApprover": "Zurzeit kann niemand außer Ihnen freigeben. Bitte sprechen Sie den Vorstand an.",
+        "copy": "Neu einreichen",
+        "copiedFrom": "Neu eingereicht aus {number}."
+      }
+    },
+    "approvals": {
+      "title": "Freigaben",
+      "intro": "Anträge, die auf Ihre Freigabe warten – die ältesten zuerst. Ihre eigenen stehen hier nie.",
+      "queue": {
+        "title": "Wartet auf Ihre Freigabe",
+        "empty": "Nichts wartet auf Ihre Freigabe.",
+        "since": "seit {date}",
+        "back": "Zur Warteschlange"
+      },
+      "kind": {
+        "expenseClaim": "Auslage",
+        "waiver": "Verzicht"
+      },
+      "head": {
+        "receivedAt": "eingegangen am {at}",
+        "iban": "Erstattung auf {iban}",
+        "noIban": "Verzicht – es wird nichts überwiesen."
+      },
+      "positions": "Positionen",
+      "position": "Position {n}",
+      "trip": "Fahrt {from} – {to}, {km} km",
+      "category": "Kategorie",
+      "categoryPlaceholder": "Kategorie wählen",
+      "paidFrom": "bezahlt aus",
+      "freeFunds": "freie Mittel",
+      "project": "Projekt: {name}",
+      "suggestion": {
+        "because": "Vorschlag, weil:",
+        "rule": "Regel „{name}“ passt",
+        "similarEntry": "wie in Buchung {number}",
+        "take": "übernehmen"
+      },
+      "receipt": {
+        "preview": "Beleg zu Position {n}",
+        "view": "Beleg ansehen",
+        "none": "Zu dieser Position gibt es keinen Beleg.",
+        "hidden": "Die Belege sehen Sie mit dem Recht, die Finanzen zu lesen."
+      },
+      "waiver": {
+        "title": "Voraussetzungen für den Verzicht",
+        "declaredOn": "Tag des Verzichts",
+        "agreed": "Anspruch vorab vereinbart",
+        "agreedDetail": "Anspruchsgrundlage: {basis}",
+        "agreedDetailDate": "Anspruchsgrundlage: {basis}, vereinbart am {date}",
+        "agreedLate": "Die Vereinbarung vom {agreedOn} ist jünger als die früheste Position vom {earliest}.",
+        "timely": "Verzicht rechtzeitig",
+        "timelyDetail": "Frist bis {deadline}",
+        "timelyLate": "Der Verzicht kommt nach Ablauf der Frist am {deadline}.",
+        "funds": "Verein hätte zahlen können",
+        "fundsDetail": "frei verfügbar am {date}: {free} ≥ {amount}",
+        "fundsShort": "frei verfügbar am {date}: nur {free} – weniger als {amount}",
+        "declaration": "Verzichtserklärung liegt vor",
+        "declarationCreate": "Verzichtserklärung erzeugen",
+        "signedUpload": "Unterschriebene Fassung ablegen",
+        "reasonLabel": "Begründung",
+        "open": "offen",
+        "done": "erfüllt",
+        "declarationOpen": "Verzichtserklärung öffnen",
+        "signedOpen": "Unterschriebene Fassung öffnen"
+      },
+      "footer": {
+        "payable": "Nach der Freigabe entsteht eine offene Zahlung an {name} über {amount}.",
+        "waiver": "Nach der Freigabe steht eine Aufwandsspende von {name} über {amount} als Buchung.",
+        "humanOnly": "Freigeben kann nur ein Mensch.",
+        "approve": "Freigeben",
+        "reject": "Ablehnen",
+        "refused": "Noch nicht freigegeben"
+      },
+      "reject": {
+        "title": "Antrag {number} ablehnen",
+        "who": "Den Grund liest {name} in den eigenen Anträgen.",
+        "reason": "Grund",
+        "required": "Bitte nennen Sie den Grund.",
+        "confirm": "Ablehnen",
+        "cancel": "Abbrechen"
+      },
+      "result": {
+        "approved": "freigegeben",
+        "rejected": "abgelehnt",
+        "payable": "Es ist eine offene Zahlung entstanden. Die Überweisungsdaten:",
+        "openItems": "Zu den offenen Zahlungen",
+        "waiver": "Es ist eine Aufwandsspende entstanden. Die Zuwendungsbestätigung stellen Sie unter Spenden aus.",
+        "entry": "Buchung ansehen",
+        "rejectedText": "Grund: {note}",
+        "next": "Zum nächsten Antrag",
+        "none": "Nichts wartet mehr auf Ihre Freigabe."
+      },
+      "blocked": {
+        "step": "Freigeben",
+        "title": "Diesen Antrag geben Sie nicht frei"
       }
     }
   }

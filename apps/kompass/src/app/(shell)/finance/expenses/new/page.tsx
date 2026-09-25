@@ -56,9 +56,17 @@ export default async function NewExpensePage({ searchParams }: { searchParams: P
   // Sind Aufwandsspenden inzwischen aus, gibt es keinen Verzicht mehr zu wählen — die IBAN kommt zurück.
   const initial = { ...base, waiver: base.waiver && start.value.waiversEnabled };
 
+  // „Neu einreichen“: der Verweis auf den abgelehnten Antrag, aus dem der Entwurf entstand.
+  const source = claim?.ok && claim.value.copiedFromClaimId ? await getExpenseClaim(deps, ctx, { id: claim.value.copiedFromClaimId }) : null;
+
   return (
     <div className="max-w-[640px]">
       {header}
+      {source?.ok ? (
+        <p data-testid="expense-copied-from" className="mb-4 rounded-md border border-line bg-surface-2 px-3 py-2 text-[13px] text-ink-2">
+          {t('copiedFrom', { number: source.value.number ?? '' })}
+        </p>
+      ) : null}
       <ExpenseForm
         initial={initial}
         prefilledIban={start.value.iban}

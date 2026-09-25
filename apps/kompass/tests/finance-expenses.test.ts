@@ -3,6 +3,12 @@ import { tripAmountCents as moduleTripAmount } from '@kompass/module-finance';
 import { describe, expect, it } from 'vitest';
 import {
   applySaved,
+  approveInput,
+  CLAIM_BADGE_TONE,
+  claimHistory,
+  claimHref,
+  claimSentence,
+  groupClaims,
   deviceFromUserAgent,
   draftInput,
   emptyExpenseForm,
@@ -167,5 +173,87 @@ describe('receipt field', () => {
     expect(formatFileSize(2.4 * MB)).toBe('2,4 MB');
     expect(formatFileSize(10 * MB)).toBe('10 MB');
     expect(formatFileSize(800)).toBe('1 KB');
+  });
+});
+
+/**
+ * F8a Task 6 — D2 „Eigene Anträge“ und D3 „Freigaben“: Zustandswort und Satz
+ * in Alltagssprache, Gruppen Offen/Erledigt, Verlauf, und die Eingabe der
+ * Freigabe aus den Entscheidungen am Bildschirm.
+ */
+describe('own claims (D2)', () => {
+  const claim = (over: Partial<ExpenseClaimView>): ExpenseClaimView =>
+    ({
+      id: 'c1',
+      state: 'submitted',
+      stateLabelKey: 'submitted',
+      createdAt: '2026-09-20T08:00:00.000Z',
+      submittedAt: '2026-09-25T19:14:00.000Z',
+      approvedAt: null,
+      rejectedAt: null,
+      rejectNote: null,
+      paid: null,
+      ...over,
+    }) as unknown as ExpenseClaimView;
+
+  it('gives every state its badge tone — rejected is never red', () => {
+    expect(CLAIM_BADGE_TONE).toEqual({ draft: 'warning', submitted: 'info', approved: 'success', paid: 'final', rejected: 'neutral' });
+  });
+
+  it('says in everyday words what is going on, with the date that matters', () => {
+    expect(claimSentence(claim({ state: 'draft', stateLabelKey: 'draft', submittedAt: null }))).toEqual({ key: 'draft', date: '2026-09-20T08:00:00.000Z' });
+    expect(claimSentence(claim({}))).toEqual({ key: 'submitted', date: '2026-09-25T19:14:00.000Z' });
+    expect(claimSentence(claim({ state: 'approved', stateLabelKey: 'approved', approvedAt: '2026-09-26T10:00:00.000Z' }))).toEqual({ key: 'approved', date: '2026-09-26T10:00:00.000Z' });
+    expect(claimSentence(claim({ state: 'approved', stateLabelKey: 'paid', paid: { settledCents: 4099, paidOn: '2026-10-02', state: 'paid' } }))).toEqual({ key: 'paid', date: '2026-10-02' });
+    // Abgelehnt: Der Grund ist der Satz.
+    expect(claimSentence(claim({ state: 'rejected', stateLabelKey: 'rejected', rejectedAt: '2026-09-26T10:00:00.000Z', rejectNote: 'Beleg ist nicht lesbar.' }))).toEqual({ key: 'rejected', date: '2026-09-26T10:00:00.000Z', note: 'Beleg ist nicht lesbar.' });
+  });
+
+  it('groups open (draft, submitted, approved) before done (paid, rejected), keeping the order', () => {
+    const items = [claim({ id: 'a', stateLabelKey: 'paid' }), claim({ id: 'b', stateLabelKey: 'draft' }), claim({ id: 'c', stateLabelKey: 'rejected' }), claim({ id: 'd', stateLabelKey: 'approved' }), claim({ id: 'e' })];
+    const groups = groupClaims(items);
+    expect(groups.open.map((c) => c.id)).toEqual(['b', 'd', 'e']);
+    expect(groups.done.map((c) => c.id)).toEqual(['a', 'c']);
+  });
+
+  it('opens a draft in the form and everything else in the detail', () => {
+    expect(claimHref({ id: 'c1', state: 'draft' })).toBe('/finance/expenses/new?id=c1');
+    expect(claimHref({ id: 'c1', state: 'rejected' })).toBe('/finance/expenses/c1');
+  });
+
+  it('lists the history in order: created, submitted, then approved and paid — or rejected', () => {
+    expect(claimHistory(claim({ state: 'approved', stateLabelKey: 'paid', approvedAt: '2026-09-26T10:00:00.000Z', paid: { settledCents: 4099, paidOn: '2026-10-02', state: 'paid' } }))).toEqual([
+      { key: 'created', at: '2026-09-20T08:00:00.000Z' },
+      { key: 'submitted', at: '2026-09-25T19:14:00.000Z' },
+      { key: 'approved', at: '2026-09-26T10:00:00.000Z' },
+      { key: 'paid', at: '2026-10-02' },
+    ]);
+    expect(claimHistory(claim({ state: 'rejected', stateLabelKey: 'rejected', rejectedAt: '2026-09-26T10:00:00.000Z' })).map((e) => e.key)).toEqual(['created', 'submitted', 'rejected']);
+    // Teilweise bezahlt ist noch nicht „überwiesen“.
+    expect(claimHistory(claim({ state: 'approved', stateLabelKey: 'approved', approvedAt: '2026-09-26T10:00:00.000Z', paid: { settledCents: 100, paidOn: '2026-10-02', state: 'partly' } })).map((e) => e.key)).toEqual(['created', 'submitted', 'approved']);
+  });
+});
+
+describe('approval input (D3)', () => {
+  const positions = [{ id: 'p1' }, { id: 'p2' }];
+
+  it('sends a category per decided position, "paid from" as null when empty, and leaves undecided positions out for the service to name', () => {
+    expect(approveInput({ claimId: 'c1', version: 'v3', positions, decisions: { p1: { categoryId: 'cat-office', purposeId: '' }, p2: { categoryId: 'cat-travel', purposeId: 'pur-1' } } })).toEqual({
+      claimId: 'c1',
+      expectedVersion: 'v3',
+      positions: [
+        { positionId: 'p1', categoryId: 'cat-office', purposeId: null },
+        { positionId: 'p2', categoryId: 'cat-travel', purposeId: 'pur-1' },
+      ],
+    });
+    expect(approveInput({ claimId: 'c1', version: 'v3', positions, decisions: { p2: { categoryId: 'cat-travel', purposeId: '' } } }).positions).toEqual([{ positionId: 'p2', categoryId: 'cat-travel', purposeId: null }]);
+  });
+
+  it('adds the waiver decision only for a waiver claim, with a reason only when one was typed', () => {
+    const waiver = { claimAgreedConfirmed: true, declaredOn: '2026-09-25', lateReason: '  ' };
+    expect(approveInput({ claimId: 'c1', version: 'v3', positions, decisions: {}, waiver })).toMatchObject({ waiver: { claimAgreedConfirmed: true, declaredOn: '2026-09-25' } });
+    expect(approveInput({ claimId: 'c1', version: 'v3', positions, decisions: {}, waiver }).waiver).not.toHaveProperty('lateReason');
+    expect(approveInput({ claimId: 'c1', version: 'v3', positions, decisions: {}, waiver: { ...waiver, lateReason: 'Krank gewesen' } }).waiver).toMatchObject({ lateReason: 'Krank gewesen' });
+    expect(approveInput({ claimId: 'c1', version: 'v3', positions, decisions: {} })).not.toHaveProperty('waiver');
   });
 });

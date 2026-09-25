@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { backToAdmin, EXPENSE_IBAN, linkOwnContact, mcpClient, PDF, PHONE, rejectInQueue, submitClaim, switchToJonas } from './expense-helpers';
 import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
 
 /**
@@ -11,20 +12,7 @@ import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
  * verknüpft sie ihr Konto einmal selbst mit Tomas Leitner.
  */
 
-const PHONE = { width: 390, height: 844 };
-const IBAN = 'DE93999999990000000001';
-const PDF = { name: 'rechnung.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n') };
-
-async function linkOwnContact(page: Page): Promise<void> {
-  await page.goto('/admin/users');
-  const row = page.getByRole('row', { name: /Anna Berger/ });
-  await row.getByRole('button', { name: 'Verknüpfen' }).click();
-  const dialog = page.getByRole('dialog');
-  await dialog.getByRole('combobox', { name: 'Kontakt wählen' }).click();
-  await page.getByTestId('contact-option').filter({ hasText: 'Tomas Leitner' }).click();
-  await dialog.getByRole('button', { name: 'Verknüpfen' }).click();
-  await expect(page.getByRole('row', { name: /Anna Berger/ }).getByRole('link', { name: 'Tomas Leitner' })).toBeVisible();
-}
+const IBAN = EXPENSE_IBAN;
 
 const card = (page: Page, n: number) => page.getByTestId('expense-position').nth(n - 1);
 const footer = (page: Page) => page.getByTestId('expense-footer');
@@ -182,6 +170,72 @@ test.describe('finance expenses — einreichen (D1)', () => {
     await expect(page.getByRole('heading', { name: 'Auslage einreichen' })).toBeVisible();
     await expect(page.getByRole('switch', { name: 'Auf die Erstattung verzichten' })).toHaveCount(0);
     await expect(page.getByLabel('IBAN')).toBeVisible();
+  });
+});
+
+test.describe('finance expenses — eigene Anträge (D2)', () => {
+  test.beforeEach(async ({ page }) => {
+    await resetDatabase(page, 'seeded');
+    await loginAsAdmin(page);
+  });
+
+  test('eigene Anträge stehen als Karten in Offen und Erledigt mit Satz in Alltagssprache; ein abgelehnter lässt sich neu einreichen', async ({ page, baseURL }) => {
+    await linkOwnContact(page);
+    await page.setViewportSize(PHONE);
+    await page.goto('/finance/expenses');
+    await expect(page.getByRole('heading', { name: 'Eigene Anträge', level: 2 })).toBeVisible();
+    await expect(page.getByText('Noch kein Antrag')).toBeVisible();
+    await expect(page.getByTestId('claims-empty').getByRole('link', { name: 'Auslage einreichen' })).toHaveAttribute('href', '/finance/expenses/new');
+
+    const client = await mcpClient(page, baseURL);
+    const waiting = await submitClaim(client, { purpose: 'Briefmarken', amountCents: 1250 });
+    const refused = await submitClaim(client, { purpose: 'Druckerpatronen', amountCents: 3000 });
+    await submitClaim(client, { purpose: 'Porto', amountCents: 300, submit: false });
+    await client.close();
+
+    await switchToJonas(page);
+    await rejectInQueue(page, refused.id, 'Beleg ist nicht lesbar.');
+    await backToAdmin(page);
+
+    await page.setViewportSize(PHONE);
+    await page.goto('/finance/expenses');
+    const open = page.getByTestId('claims-open');
+    const done = page.getByTestId('claims-done');
+    await expect(open.getByRole('heading', { name: 'Offen' })).toBeVisible();
+    await expect(open.getByTestId('claim-card')).toHaveCount(2);
+    const waitingCard = open.getByTestId('claim-card').filter({ hasText: waiting.number! });
+    await expect(waitingCard).toContainText('eingereicht');
+    await expect(waitingCard).toContainText('wartet auf Freigabe');
+    await expect(waitingCard).toContainText('12,50 €');
+    await expect(waitingCard).toContainText('Freigeben kann: Jonas Feld');
+    const draftCard = open.getByTestId('claim-card').filter({ hasText: 'Entwurf' });
+    await expect(draftCard).toContainText('3,00 €');
+    await expect(draftCard).toHaveAttribute('href', /\/finance\/expenses\/new\?id=/);
+
+    const refusedCard = done.getByTestId('claim-card');
+    await expect(refusedCard).toHaveCount(1);
+    await expect(refusedCard).toContainText(refused.number!);
+    await expect(refusedCard).toContainText('abgelehnt');
+    await expect(refusedCard).toContainText('Beleg ist nicht lesbar.');
+    // Die ganze Karte ist Trefferfläche, mindestens 64 px hoch.
+    const box = (await refusedCard.boundingBox())!;
+    expect(box.height).toBeGreaterThanOrEqual(64);
+
+    await refusedCard.click();
+    await expect(page).toHaveURL(`/finance/expenses/${refused.id}`);
+    const detail = page.getByTestId('claim-detail');
+    await expect(detail.getByTestId('claim-amount')).toHaveText('30,00 €');
+    await expect(detail.getByTestId('claim-reason')).toContainText('Beleg ist nicht lesbar.');
+    await expect(detail.getByTestId('claim-history')).toContainText('Abgelehnt');
+    await expect(detail.getByRole('link', { name: 'Beleg öffnen' })).toHaveAttribute('href', new RegExp(`/finance/expenses/${refused.id}/receipt/`));
+    const receipt = await page.request.get((await detail.getByRole('link', { name: 'Beleg öffnen' }).getAttribute('href'))!);
+    expect(receipt.headers()['content-type']).toBe('application/pdf');
+
+    await detail.getByRole('button', { name: 'Neu einreichen' }).click();
+    await expect(page).toHaveURL(/\/finance\/expenses\/new\?id=/);
+    await expect(page.getByTestId('expense-copied-from')).toContainText(refused.number!);
+    await expect(card(page, 1).getByLabel('Wofür war das?')).toHaveValue('Druckerpatronen');
+    await expect(card(page, 1).getByTestId('receipt-file')).toBeVisible();
   });
 });
 

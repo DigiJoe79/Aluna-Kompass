@@ -193,3 +193,93 @@ export function formatFileSize(bytes: number): string {
   const mb = Math.round((bytes / MB) * 10) / 10;
   return `${String(mb).replace('.', ',')} MB`;
 }
+
+// ── D2 „Eigene Anträge“ und D3 „Freigaben“ (F8a Task 6) ─────────────────────
+
+export type ClaimStateKey = ExpenseClaimView['stateLabelKey'];
+
+/** Zustandswörter der Auslage (Baustein 4): abgelehnt ist nie rot — der Grund ist ein Satz. */
+export const CLAIM_BADGE_TONE: Record<ClaimStateKey, 'warning' | 'info' | 'success' | 'final' | 'neutral'> = {
+  draft: 'warning',
+  submitted: 'info',
+  approved: 'success',
+  paid: 'final',
+  rejected: 'neutral',
+};
+
+type ClaimDates = Pick<ExpenseClaimView, 'stateLabelKey' | 'createdAt' | 'submittedAt' | 'approvedAt' | 'rejectedAt' | 'rejectNote' | 'paid'>;
+
+/** Der Satz in Alltagssprache neben dem Badge („am 25.09. — wartet auf Freigabe“) und das Datum, das er nennt. Abgelehnt: der Grund. */
+export function claimSentence(claim: ClaimDates): { key: ClaimStateKey; date: string | null; note?: string } {
+  switch (claim.stateLabelKey) {
+    case 'draft':
+      return { key: 'draft', date: claim.createdAt };
+    case 'submitted':
+      return { key: 'submitted', date: claim.submittedAt };
+    case 'approved':
+      return { key: 'approved', date: claim.approvedAt };
+    case 'paid':
+      return { key: 'paid', date: claim.paid?.paidOn ?? claim.approvedAt };
+    case 'rejected':
+      return { key: 'rejected', date: claim.rejectedAt, note: claim.rejectNote ?? '' };
+  }
+}
+
+const DONE: ReadonlySet<ClaimStateKey> = new Set(['paid', 'rejected']);
+
+/** Gruppen „Offen“ (Entwurf, eingereicht, freigegeben) und „Erledigt“ (ausgezahlt, abgelehnt); die Reihenfolge des Dienstes bleibt. */
+export function groupClaims<T extends Pick<ExpenseClaimView, 'stateLabelKey'>>(items: readonly T[]): { open: T[]; done: T[] } {
+  return { open: items.filter((c) => !DONE.has(c.stateLabelKey)), done: items.filter((c) => DONE.has(c.stateLabelKey)) };
+}
+
+/** Ein Entwurf öffnet das Formular, alles andere die Ansicht des Antrags. */
+export function claimHref(claim: Pick<ExpenseClaimView, 'id' | 'state'>): string {
+  return claim.state === 'draft' ? `/finance/expenses/new?id=${claim.id}` : `/finance/expenses/${claim.id}`;
+}
+
+export type ClaimHistoryKey = 'created' | 'submitted' | 'approved' | 'paid' | 'rejected';
+
+/** Der Verlauf des Antrags: angelegt, eingereicht, dann freigegeben und überwiesen — oder abgelehnt. Nur, was schon geschehen ist. */
+export function claimHistory(claim: ClaimDates): { key: ClaimHistoryKey; at: string }[] {
+  const events: { key: ClaimHistoryKey; at: string | null | undefined }[] = [
+    { key: 'created', at: claim.createdAt },
+    { key: 'submitted', at: claim.submittedAt },
+    { key: 'approved', at: claim.approvedAt },
+    { key: 'paid', at: claim.paid?.state === 'paid' ? claim.paid.paidOn : null },
+    { key: 'rejected', at: claim.rejectedAt },
+  ];
+  return events.filter((e): e is { key: ClaimHistoryKey; at: string } => !!e.at);
+}
+
+export interface ApprovalDecision {
+  categoryId: string;
+  /** „bezahlt aus“ — leer heißt freie Mittel. */
+  purposeId: string;
+}
+
+export interface WaiverDecision {
+  claimAgreedConfirmed: boolean;
+  declaredOn: string;
+  lateReason: string;
+}
+
+/**
+ * Die Eingabe für `approveExpenseClaim` aus den Entscheidungen am Bildschirm.
+ * Eine Position ohne Kategorie bleibt draußen — der Dienst nennt dann die
+ * erste, der sie fehlt („Position 2 hat noch keine Kategorie“).
+ */
+export function approveInput(o: { claimId: string; version: string; positions: readonly { id: string }[]; decisions: Record<string, ApprovalDecision | undefined>; waiver?: WaiverDecision }) {
+  const positions = o.positions.flatMap((p) => {
+    const d = o.decisions[p.id];
+    return d && d.categoryId ? [{ positionId: p.id, categoryId: d.categoryId, purposeId: d.purposeId || null }] : [];
+  });
+  const reason = o.waiver?.lateReason.trim();
+  return {
+    claimId: o.claimId,
+    expectedVersion: o.version,
+    positions,
+    ...(o.waiver ? { waiver: { claimAgreedConfirmed: o.waiver.claimAgreedConfirmed, declaredOn: o.waiver.declaredOn, ...(reason ? { lateReason: reason } : {}) } } : {}),
+  };
+}
+
+export type ApproveInput = ReturnType<typeof approveInput>;

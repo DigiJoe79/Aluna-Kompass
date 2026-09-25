@@ -1,11 +1,22 @@
 'use server';
 
 import type { Result } from '@kompass/core';
-import { saveExpenseDraft, submitExpenseClaim, uploadExpenseReceipt } from '@kompass/module-finance';
+import {
+  approveExpenseClaim,
+  attachSignedWaiver,
+  copyExpenseClaim,
+  createWaiverDeclaration,
+  deleteExpenseDraft,
+  rejectExpenseClaim,
+  saveExpenseDraft,
+  submitExpenseClaim,
+  uploadExpenseReceipt,
+  waiverChecks,
+} from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { toActionState, type ActionState } from '@/lib/actions';
-import type { ExpenseDraftInput } from '@/lib/finance/expenses';
+import type { ApproveInput, ExpenseDraftInput } from '@/lib/finance/expenses';
 import { requireSession } from '@/lib/request-context';
 
 /**
@@ -37,5 +48,65 @@ export async function submitExpenseClaimAction(id: string, expectedVersion: stri
   const { deps, ctx } = await requireSession();
   const result = await submitExpenseClaim(deps, ctx, { id, ...(expectedVersion ? { expectedVersion } : {}) });
   if (result.ok) revalidatePath('/finance/expenses');
+  return finish(result);
+}
+
+// ── D2 „Eigene Anträge“ ─────────────────────────────────────────────────────
+
+/** „Neu einreichen“: der abgelehnte Antrag als Entwurf mit Verweis — die Oberfläche öffnet ihn im Formular. */
+export async function copyExpenseClaimAction(id: string): Promise<ActionState> {
+  const { deps, ctx } = await requireSession();
+  const result = await copyExpenseClaim(deps, ctx, { id });
+  if (result.ok) revalidatePath('/finance/expenses');
+  return finish(result);
+}
+
+export async function deleteExpenseDraftAction(id: string): Promise<ActionState> {
+  const { deps, ctx } = await requireSession();
+  const result = await deleteExpenseDraft(deps, ctx, { id });
+  if (result.ok) revalidatePath('/finance/expenses');
+  return finish(result);
+}
+
+// ── D3 „Freigaben“ ──────────────────────────────────────────────────────────
+
+const revalidateApprovals = () => {
+  revalidatePath('/finance/approvals');
+  revalidatePath('/finance/expenses');
+  revalidatePath('/finance/open-items');
+};
+
+/** Freigeben (humanOnly im Dienst): je Position die Kategorie, bei Verzicht die Angaben der vier Prüfungen. */
+export async function approveExpenseClaimAction(input: ApproveInput): Promise<ActionState> {
+  const { deps, ctx } = await requireSession();
+  const result = await approveExpenseClaim(deps, ctx, input);
+  if (result.ok) revalidateApprovals();
+  return finish(result);
+}
+
+export async function rejectExpenseClaimAction(claimId: string, note: string): Promise<ActionState> {
+  const { deps, ctx } = await requireSession();
+  const result = await rejectExpenseClaim(deps, ctx, { claimId, note });
+  if (result.ok) revalidateApprovals();
+  return finish(result);
+}
+
+/** Die vier Prüfungen neu rechnen, wenn sich Verzichtstag oder Häkchen ändern — schreibt nichts. */
+export async function waiverChecksAction(claimId: string, declaredOn: string, claimAgreedConfirmed: boolean): Promise<ActionState> {
+  const { deps, ctx } = await requireSession();
+  return finish(await waiverChecks(deps, ctx, { claimId, declaredOn, claimAgreedConfirmed }));
+}
+
+export async function createWaiverDeclarationAction(claimId: string, declaredOn: string): Promise<ActionState> {
+  const { deps, ctx } = await requireSession();
+  const result = await createWaiverDeclaration(deps, ctx, { claimId, declaredOn });
+  if (result.ok) revalidateApprovals();
+  return finish(result);
+}
+
+export async function attachSignedWaiverAction(claimId: string, bytes: Uint8Array): Promise<ActionState> {
+  const { deps, ctx } = await requireSession();
+  const result = await attachSignedWaiver(deps, ctx, { claimId, bytes });
+  if (result.ok) revalidateApprovals();
   return finish(result);
 }
