@@ -27,6 +27,15 @@ const today = (deps: Deps) => isoNow(deps.clock).slice(0, 10);
 
 const allNotices = (db: DbOrTx) => db.select().from(financeNotices).all();
 
+/**
+ * Beginn der Steuerbefreiung: das kleinste „Steuerbefreiung ab“ über alle
+ * nicht irrtümlich erfassten Bescheide; `null` ohne Bescheid. Für Zuwendungen
+ * davor gibt es keine Bestätigung (BMF 07.11.2013 Nr. 14).
+ */
+export function exemptionStartInternal(db: DbOrTx): string | null {
+  return allNotices(db).filter((n) => n.voidedAt === null).map((n) => n.exemptFrom).sort()[0] ?? null;
+}
+
 /** Der jüngste Bescheid, der am Stichtag trägt — für die Bestätigung (Task 5) und F7. */
 export function noticeValidAtInternal(db: DbOrTx, date: string): FinanceNoticeRow | null {
   return noticeValidAt(allNotices(db), date)?.notice ?? null;
@@ -110,7 +119,7 @@ function viewInternal(db: DbOrTx, id: string, date: string): NoticeView {
 }
 
 const auditFields = (row: FinanceNoticeRow) => ({
-  kind: row.kind, noticeDate: row.noticeDate, assessmentPeriod: row.assessmentPeriod, documentId: row.documentId,
+  kind: row.kind, noticeDate: row.noticeDate, exemptFrom: row.exemptFrom, assessmentPeriod: row.assessmentPeriod, documentId: row.documentId,
   supersededOn: row.supersededOn, supersededDocumentId: row.supersededDocumentId, voided: row.voidedAt !== null,
 });
 
@@ -155,6 +164,8 @@ const saveNoticeSchema = z
     taxOffice: z.string().trim().min(1).max(200),
     taxNumber: z.string().trim().min(1).max(200),
     noticeDate: z.iso.date(),
+    /** Beginn des ersten Veranlagungszeitraums, für den der Bescheid die Befreiung ausspricht (BMF 07.11.2013 Nr. 14, § 60 Abs. 2 AO). Pflicht. */
+    exemptFrom: z.iso.date(),
     /** „2023“ oder „2021–2023“ — Pflicht beim endgültigen Bescheid, beim § 60a-Bescheid ohne Bedeutung. */
     assessmentPeriod: z.string().trim().min(1).max(20).nullable().optional(),
     purposesText: z.string().trim().min(1).max(2000),
@@ -196,7 +207,7 @@ export async function saveNotice(deps: Deps, ctx: CallContext, input: unknown): 
   return deps.db.transaction((tx: DbOrTx) => {
     const now = isoNow(deps.clock);
     const id = before?.id ?? newId();
-    const fields = { kind: v.kind as NoticeKind, taxOffice: v.taxOffice, taxNumber: v.taxNumber, noticeDate: v.noticeDate, assessmentPeriod: v.kind === 'section60a' ? null : (v.assessmentPeriod ?? null), purposesText: v.purposesText, documentId, updatedAt: now };
+    const fields = { kind: v.kind as NoticeKind, taxOffice: v.taxOffice, taxNumber: v.taxNumber, noticeDate: v.noticeDate, exemptFrom: v.exemptFrom, assessmentPeriod: v.kind === 'section60a' ? null : (v.assessmentPeriod ?? null), purposesText: v.purposesText, documentId, updatedAt: now };
     if (before) tx.update(financeNotices).set(fields).where(eq(financeNotices.id, id)).run();
     else tx.insert(financeNotices).values({ id, ...fields, createdAt: now, createdByUserId: ctx.userId ?? 'system' }).run();
     if (documentId) linkDocumentInternal(tx, deps, { documentId, entityType: 'financeNotice', entityId: id });

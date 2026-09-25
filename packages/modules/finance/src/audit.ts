@@ -54,7 +54,7 @@ export const AUDIT_FIELDS: Record<FinanceEntity, readonly string[]> = {
   // Nur woher die Zuordnung stammt: 'booking' | 'contactCreate' | 'manual'.
   financeContactBankAccount: ['learnedFrom'],
   // F6a — nie Finanzamt, Steuernummer, Zwecke im Wortlaut, Begründung (Spec 10.3): nur Art, Daten und Dokument-IDs.
-  financeNotice: ['kind', 'noticeDate', 'assessmentPeriod', 'documentId', 'supersededOn', 'supersededDocumentId', 'voided'],
+  financeNotice: ['kind', 'noticeDate', 'exemptFrom', 'assessmentPeriod', 'documentId', 'supersededOn', 'supersededDocumentId', 'voided'],
   // Nie Kontakt-ID, nie Name oder Anschrift, nie Begründung: Nummer, Daten, Beträge, Flags.
   financeConfirmation: ['kind', 'noticeId', 'documentId', 'documentNumber', 'issuedOn', 'machine', 'signerId', 'expenseWaiver', 'totalCents', 'lineCount', 'channel', 'voided', 'sentBeforeVoid', 'sentVia', 'signedDocumentId', 'originalReturned', 'taxOfficeInformed'],
   // Nie der Name, nie die Bytes der Unterschrift — nur, *dass* es ein Faksimile gibt.

@@ -42,7 +42,7 @@ describe('startConfirmationRun', () => {
 
     const preview = unwrap(await previewConfirmationRun(f.deps, f.ctx, { year: 2026, excludedContactIds: [bert.id] }));
     const run = unwrap(await startConfirmationRun(f.deps, f.ctx, { year: 2026, excludedContactIds: [bert.id] }));
-    expect(run).toMatchObject({ year: 2026, minCents: 0, excludedCount: 1, followUpOfRunId: null, startedOn: '2026-03-20', startedAt: '2026-03-20T10:00:00.000Z', finishedAt: null, dispatchedAt: null, dispatchedVia: null, preNoticeReason: null });
+    expect(run).toMatchObject({ year: 2026, minCents: 0, excludedCount: 1, followUpOfRunId: null, startedOn: '2026-03-20', startedAt: '2026-03-20T10:00:00.000Z', finishedAt: null, dispatchedAt: null, dispatchedVia: null });
     expect(run.counts).toEqual({ total: 3, pending: 2, issued: 0, failed: 0, skipped: 1, machine: 0, needsSignature: 0, missingSignedVersion: 0 });
     expect(run.items.map((i) => [i.contactName, i.kind, i.lineIds, i.totalCents, i.needsSignature, i.state, i.errorCode])).toEqual(
       preview.items.map((p) => [p.contactName, p.kind, p.lineIds, p.totalCents, false, p.group === 'addressMissing' ? 'skipped' : 'pending', p.group === 'addressMissing' ? 'confirmationContactIncomplete' : null]),
@@ -84,30 +84,24 @@ describe('startConfirmationRun', () => {
     expect(read.counts.total).toBe(2);
   });
 
-  it('issues donations before the oldest notice only with a reason for the run, and skips them otherwise', async () => {
+  it('skips donations before the start of the exemption, and a follow-up run still knows them as missing', async () => {
     const f = await donationFixture();
-    await f.donate({ date: '2025-03-01', cents: 1000 });
+    const early = await f.donate({ date: '2025-03-01', cents: 1000 });
     const max = await person(f, 'Max', 'Probe');
     await f.donate({ date: '2025-06-01', cents: 2000, contactId: max.id });
 
-    const without = unwrap(await startConfirmationRun(f.deps, f.ctx, { year: 2025 }));
-    expect(without.items.map((i) => [i.contactName, i.state, i.errorCode, i.needsSignature])).toEqual([
-      ['Erika Beispiel', 'skipped', 'confirmationPreNoticeNeedsReason', true],
+    const run = unwrap(await startConfirmationRun(f.deps, f.ctx, { year: 2025 }));
+    expect(run.items.map((i) => [i.contactName, i.state, i.errorCode, i.needsSignature])).toEqual([
+      ['Erika Beispiel', 'skipped', 'confirmationBeforeExemptionStart', false],
       ['Max Probe', 'pending', null, true],
     ]);
+    const done = unwrap(await continueConfirmationRun(f.deps, f.ctx, { runId: run.id }));
+    expect(done.items.map((i) => i.state)).toEqual(['skipped', 'issued']);
 
-    const g = await donationFixture();
-    const early = await g.donate({ date: '2025-03-01', cents: 1000 });
-    const reason = 'Der Bescheid gilt rückwirkend für das ganze Jahr 2025';
-    const run = unwrap(await startConfirmationRun(g.deps, g.ctx, { year: 2025, preNoticeReason: reason }));
-    expect(run.preNoticeReason).toBe(reason);
-    expect(run.items).toEqual([expect.objectContaining({ lineIds: [early.line.id], state: 'pending' })]);
-    const done = unwrap(await continueConfirmationRun(g.deps, g.ctx, { runId: run.id }));
-    expect(done.items[0]!.state).toBe('issued');
-    const confirmation = g.deps.db.select().from(financeConfirmations).where(eq(financeConfirmations.id, done.items[0]!.confirmationId!)).get()!;
-    expect(confirmation).toMatchObject({ preNoticeReason: reason, kind: 'collective', periodFrom: '2025-01-01', periodTo: '2025-12-31', issuedOn: '2026-03-20' });
-    // Die Begründung steht am Lauf und an der Bestätigung, nie im Protokoll.
-    expect(JSON.stringify(runAudit(g))).not.toContain('rückwirkend');
+    // Der Nachzügler-Lauf zeigt die frühe Zuwendung weiter — gesperrt, nie bestätigt.
+    const followUp = unwrap(await previewConfirmationRun(f.deps, f.ctx, { year: 2025, followUpOfRunId: run.id }));
+    expect(followUp.items).toEqual([expect.objectContaining({ contactId: f.erika.id, lineIds: [early.line.id], group: 'blocked', blockedBy: 'afterExemptionStart' })]);
+    expect(f.deps.db.select().from(financeConfirmations).all()).toHaveLength(1);
   });
 });
 
@@ -291,7 +285,7 @@ describe('access, validation, audit', () => {
     const overview = ctxWith(['finance.overview'], f.userId);
 
     expect(err(await startConfirmationRun(f.deps, reader, { year: 2026 }))).toEqual({ type: 'forbidden', permission: 'finance.donationsIssue' });
-    for (const input of [{}, { year: '2026' }, { year: 2026, minCents: -1 }, { year: 2026, preNoticeReason: '  ' }, { year: 2027 }]) {
+    for (const input of [{}, { year: '2026' }, { year: 2026, minCents: -1 }, { year: 2027 }]) {
       expect(err(await startConfirmationRun(f.deps, f.ctx, input)), JSON.stringify(input)).toMatchObject({ type: 'validation' });
     }
 

@@ -118,8 +118,6 @@ const issueSchema = z.object({
   lineIds: z.array(z.string().min(1)).min(1).max(1000),
   issuedOn: z.iso.date().optional(),
   kind: z.enum(['money', 'inKind', 'collective']).optional(),
-  /** Pflicht, wenn eine Zuwendung vor dem ältesten Bescheid liegt (Annahme 5) — steht am Datensatz, nie im Protokoll. */
-  preNoticeReason: z.string().trim().min(1).max(1000).optional(),
   /** Nur bei `collective`; Vorgabe: erster und letzter Zuwendungstag. */
   periodFrom: z.iso.date().optional(),
   periodTo: z.iso.date().optional(),
@@ -256,7 +254,6 @@ export async function issueConfirmation(deps: Deps, ctx: CallContext, input: unk
 
   const prepared = await buildConfirmationInputInternal(deps, check, { issuedOn, kind: v.kind, periodFrom: v.periodFrom, periodTo: v.periodTo });
   if (!prepared.ok) return prepared;
-  if (check.warnings.includes('beforeOldestNotice') && !v.preNoticeReason) return financeConflict('confirmationPreNoticeNeedsReason');
   const { kind, templateKey, input: templateInput, noticeId, machineAllowed, machine, signerId, facsimileChecksum, totalCents, periodFrom, periodTo } = prepared.value;
 
   const confirmationId = newId();
@@ -280,7 +277,7 @@ export async function issueConfirmation(deps: Deps, ctx: CallContext, input: unk
       const row: FinanceConfirmationRow = {
         id: confirmationId, kind, contactId: check.contactId, noticeId, documentId: doc.id, documentNumber: doc.number, issuedOn,
         issuedByUserId: ctx.userId ?? 'system', issuedChannel: ctx.channel, machine, signerId, facsimileChecksum,
-        expenseWaiver: check.expenseWaiver, totalCents, periodFrom, periodTo, preNoticeReason: check.warnings.includes('beforeOldestNotice') ? (v.preNoticeReason ?? null) : null,
+        expenseWaiver: check.expenseWaiver, totalCents, periodFrom, periodTo,
         signedDocumentId: null, sentAt: null, sentVia: null, voidedAt: null, voidedByUserId: null, voidNote: null, sentBeforeVoid: null, originalReturnedOn: null, taxOfficeInformedOn: null,
         createdAt: isoNow(deps.clock),
       };
@@ -326,8 +323,6 @@ export const PREVIEW_NUMBER = 'ENTWURF';
  * wie `issueConfirmation`, gerendert mit dem Wasserzeichen ENTWURF und der
  * Nummer ENTWURF. Kein Akteneintrag, kein Protokoll. Liefert Bytes: kein
  * MCP-Werkzeug — ein Agent liest die Prüfliste (`finance_confirmation_check`).
- * `preNoticeReason` nimmt sie an und übergeht sie: Die Begründung steht nur
- * am Datensatz, nie auf dem Papier.
  */
 export async function previewConfirmation(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ bytes: Uint8Array; filename: string; mimeType: 'application/pdf' }>> {
   const denied = requirePermission(ctx, 'finance.donationsIssue');

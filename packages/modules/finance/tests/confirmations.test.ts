@@ -56,17 +56,16 @@ describe('issueConfirmation', () => {
     expect(lineRows).toMatchObject([{ lineId: line.id, amountCents: 11919, releasedAt: null }]);
   });
 
-  it('writes an audit entry with number, dates and amounts, never contact, name or reason', async () => {
+  it('writes an audit entry with number, dates and amounts, never contact or name', async () => {
     const f = await donationFixture();
-    const early = await f.donate({ date: '2025-03-01', cents: 800 });
-    const confirmation = unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [early.line.id], preNoticeReason: 'Zuwendung aus der Gründungsphase, Bescheid gilt rückwirkend' }));
+    const donation = await f.donate({ date: '2025-06-01', cents: 800 });
+    const confirmation = unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [donation.line.id] }));
     const [entry] = auditOf(f, 'finance.confirmation.issue');
     expect(entry).toMatchObject({ entityType: 'financeConfirmation', entityId: confirmation.id });
     expect(JSON.parse(entry!.after as string)).toEqual({ kind: 'money', noticeId: f.notice!.id, documentId: confirmation.documentId, documentNumber: confirmation.documentNumber, issuedOn: '2026-03-20', machine: false, signerId: null, expenseWaiver: false, totalCents: 800, lineCount: 1, channel: 'ui' });
     const all = JSON.stringify(f.deps.db.select().from(schema.auditLog).all().filter((a) => a.action.startsWith('finance.')));
     expect(all).not.toContain(f.erika.id);
-    expect(all).not.toMatch(/Erika|Beispiel|Gründungsphase/);
-    expect(confirmation.preNoticeReason).toBe('Zuwendung aus der Gründungsphase, Bescheid gilt rückwirkend');
+    expect(all).not.toMatch(/Erika|Beispiel/);
   });
 
   it('falls back to a signature field when the machine procedure is incomplete', async () => {
@@ -130,7 +129,7 @@ describe('issueConfirmation', () => {
     const noVoucher = await f.donate({ documented: false });
     expect(err(await issueConfirmation(f.deps, f.ctx, { lineIds: [noVoucher.line.id] }))).toMatchObject({ type: 'conflict', code: 'confirmationEntryUndocumented' });
     const early = await f.donate({ date: '2025-03-01' });
-    expect(err(await issueConfirmation(f.deps, f.ctx, { lineIds: [early.line.id], issuedOn: '2025-04-01', preNoticeReason: 'x' }))).toMatchObject({ type: 'conflict', code: 'noNoticeValidAt' });
+    expect(err(await issueConfirmation(f.deps, f.ctx, { lineIds: [early.line.id], issuedOn: '2025-04-01' }))).toMatchObject({ type: 'conflict', code: 'noNoticeValidAt' });
     expect(confirmationDocuments(f)).toHaveLength(0);
   });
 
@@ -143,11 +142,11 @@ describe('issueConfirmation', () => {
     expect(err(await issueConfirmation(f.deps, f.ctx, { lineIds: [money.line.id, gift.line.id], kind: 'collective' }))).toMatchObject({ type: 'conflict', code: 'confirmationInKindMixed' });
   });
 
-  it('requires a reason when the donation predates the oldest notice', async () => {
+  it('refuses a donation before the start of the exemption (BMF 07.11.2013 Nr. 14)', async () => {
     const f = await donationFixture();
     const early = await f.donate({ date: '2025-03-01' });
-    expect(err(await issueConfirmation(f.deps, f.ctx, { lineIds: [early.line.id] }))).toMatchObject({ type: 'conflict', code: 'confirmationPreNoticeNeedsReason' });
-    expect(unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [early.line.id], preNoticeReason: 'Bescheid gilt für 2025 rückwirkend' })).preNoticeReason).toBe('Bescheid gilt für 2025 rückwirkend');
+    expect(err(await issueConfirmation(f.deps, f.ctx, { lineIds: [early.line.id] }))).toMatchObject({ type: 'conflict', code: 'confirmationBeforeExemptionStart' });
+    expect(confirmationDocuments(f)).toHaveLength(0);
   });
 
   it('issues a collective confirmation over several lines of one contact and year', async () => {
@@ -161,7 +160,7 @@ describe('issueConfirmation', () => {
       { donatedOn: '2026-03-01', kind: 'membershipFee', expenseWaiver: false, amountCents: 3600 },
     ]);
     const old = await f.donate({ date: '2025-12-01', cents: 100 });
-    expect(err(await issueConfirmation(f.deps, f.ctx, { lineIds: [old.line.id, (await f.donate()).line.id], preNoticeReason: 'x' }))).toMatchObject({ type: 'validation' });
+    expect(err(await issueConfirmation(f.deps, f.ctx, { lineIds: [old.line.id, (await f.donate()).line.id] }))).toMatchObject({ type: 'validation' });
     expect(err(await issueConfirmation(f.deps, f.ctx, { lineIds: [a.line.id], kind: 'money' }))).toMatchObject({ type: 'conflict', code: 'confirmationLineAlreadyConfirmed' });
   });
 

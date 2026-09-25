@@ -963,11 +963,11 @@ async function seedProvisionalNoticeDonation(deps: Deps, ctx: CallContext): Prom
  */
 async function seedNotices(deps: Deps, ctx: CallContext): Promise<void> {
   if (deps.db.select({ id: financeNotices.id }).from(financeNotices).get()) return;
-  const provisional = unwrap(await saveNotice(deps, ctx, { kind: 'section60a', ...NOTICE_TAX_OFFICE, noticeDate: '2024-03-01' }));
+  const provisional = unwrap(await saveNotice(deps, ctx, { kind: 'section60a', ...NOTICE_TAX_OFFICE, noticeDate: '2024-03-01', exemptFrom: '2024-01-01' }));
   await ensureSigner(deps, ctx);
   const greta = deps.db.select({ id: financeEntries.id }).from(financeEntries).where(eq(financeEntries.text, PROVISIONAL_DONATION.text)).get();
   if (greta && organizationAddressComplete(deps)) await ensureConfirmation(deps, ctx, incomeLineOf(deps, PROVISIONAL_DONATION.text).id, PROVISIONAL_DONATION.issuedOn);
-  unwrap(await saveNotice(deps, ctx, { kind: 'exemptionNotice', ...NOTICE_TAX_OFFICE, noticeDate: '2025-05-02', assessmentPeriod: '2023' }));
+  unwrap(await saveNotice(deps, ctx, { kind: 'exemptionNotice', ...NOTICE_TAX_OFFICE, noticeDate: '2025-05-02', exemptFrom: '2023-01-01', assessmentPeriod: '2023' }));
   unwrap(await supersedeNotice(deps, ctx, { id: provisional.id, supersededOn: '2025-05-02' }));
 }
 

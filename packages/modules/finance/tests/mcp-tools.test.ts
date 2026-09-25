@@ -26,6 +26,16 @@ describe('finance MCP tools', () => {
     expect(decideRes).toMatchObject({ ok: false, error: { type: 'conflict', code: 'humanOnly' } });
   });
 
+  it('the notice tool requires the start of the exemption; issuing and starting a run take no reason (N4)', () => {
+    const find = (name: string) => FINANCE_MCP_TOOLS.find((t) => t.name === name)!;
+    const shape = (name: string) => (find(name).inputSchema as unknown as { shape: Record<string, { safeParse: (v: unknown) => { success: boolean } }> }).shape;
+    expect(Object.keys(shape('finance_notice_save'))).toContain('exemptFrom');
+    expect(shape('finance_notice_save').exemptFrom!.safeParse(undefined).success).toBe(false);
+    expect(find('finance_notice_save').description).toMatch(/start of the tax exemption/);
+    expect(Object.keys(shape('finance_confirmation_issue'))).not.toContain('preNoticeReason');
+    expect(Object.keys(shape('finance_confirmation_run_start'))).not.toContain('preNoticeReason');
+  });
+
   it('registers nine new tools for vouchers, open items and the allocation correction', () => {
     const names = [
       'finance_voucher_upload', 'finance_voucher_attach', 'finance_voucher_revoke',

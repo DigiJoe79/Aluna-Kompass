@@ -5,6 +5,11 @@ import { MIGRATIONS_DIR } from '../src/db/client';
 
 const files = readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith('.sql')).sort();
 const allSql = files.map((f) => readFileSync(path.join(MIGRATIONS_DIR, f), 'utf8')).join('\n');
+/** Die zuletzt angelegte Fassung eines Triggers — bis zu seinem `END;`. */
+const lastTrigger = (name: string) => {
+  const at = allSql.lastIndexOf(`CREATE TRIGGER ${name} `);
+  return at < 0 ? '' : allSql.slice(at, allSql.indexOf('END;', at));
+};
 const rootVersion = (JSON.parse(readFileSync(path.join(__dirname, '../../../package.json'), 'utf8')) as { version: string }).version;
 
 /**
@@ -124,6 +129,11 @@ describe('hand-written SQL survives', () => {
       expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
     }
     expect(allSql).toContain('CREATE UNIQUE INDEX `finance_confirmation_lines_line_idx` ON `finance_confirmation_lines` (`line_id`) WHERE "finance_confirmation_lines"."released_at" is null');
+    // N4: Ein Neuaufbau von finance_notices (etwa beim Zusammenlegen) verwirft ihre Trigger — sie müssen danach neu dastehen.
+    const rebuild = allSql.lastIndexOf('`__new_finance_notices`');
+    for (const name of ['finance_notices_no_delete', 'finance_notices_supersede_once', 'finance_notices_void_once']) {
+      expect(allSql.lastIndexOf(`CREATE TRIGGER ${name} `), name).toBeGreaterThan(rebuild);
+    }
   });
 
   it('keeps confirmation runs and their items permanent; late facts and the outcome of an item are set once (F6b)', () => {
@@ -136,8 +146,11 @@ describe('hand-written SQL survives', () => {
       expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
     }
     expect(allSql).toContain('CREATE UNIQUE INDEX `finance_confirmation_run_items_key_idx` ON `finance_confirmation_run_items` (`run_id`,`contact_id`,`kind`,`in_kind_line_id`)');
-    // Die Begründung vor dem ältesten Bescheid (F6b Lauf 3) steht mit im Wächter des Laufs.
-    expect(allSql).toContain('OR NEW.pre_notice_reason IS NOT OLD.pre_notice_reason');
+    // N4: Die Begründung vor dem ältesten Bescheid ist entfallen — die jüngsten Wächter nennen die Spalte nicht mehr.
+    expect(lastTrigger('finance_confirmation_runs_immutable')).toContain('OR NEW.created_at IS NOT OLD.created_at');
+    expect(lastTrigger('finance_confirmation_runs_immutable')).not.toContain('pre_notice_reason');
+    expect(lastTrigger('finance_confirmations_immutable')).toContain('period_to, created_at ON finance_confirmations');
+    expect(lastTrigger('finance_confirmations_immutable')).not.toContain('pre_notice_reason');
     expect(allSql).toContain('CREATE UNIQUE INDEX `finance_confirmation_run_items_collective_idx` ON `finance_confirmation_run_items` (`run_id`,`contact_id`,`kind`) WHERE "finance_confirmation_run_items"."in_kind_line_id" is null');
   });
 

@@ -10,12 +10,14 @@ import { entryViewInternal } from '../ledger/entries';
 import { noticeValidAt } from '../ledger/notice-validity';
 import { financeAllocationLines, financeCategories, financeConfirmationLines, financeConfirmations, financeEntries, financeInKindDetails, financeNotices, type FinanceAllocationLineRow, type FinanceInKindDetailsRow } from '../schema';
 import { machineProcedureStatusAt, type MachineProcedureStatus } from './machine';
+import { exemptionStartInternal } from './notices';
 import { CONFIRMATION_DOCUMENT_TYPE } from './templates/shared';
 
 /**
  * Die Prüfliste vor dem Ausstellen (F6a Task 5, Spec 7.2): die neun Prüfungen
  * der Spec als elf Schlüssel — Nr. 1 „festgeschrieben“, 2 „bescheinigungsfähig“,
- * 3 „Kontakt vollständig“, 4 „nicht schon bestätigt“, 5 „Bescheid gültig“,
+ * 3 „Kontakt vollständig“, 4 „nicht schon bestätigt“, 5 „Bescheid gültig“
+ * und 5b „nicht vor Beginn der Steuerbefreiung“ (N4),
  * 6 „Betrag nach Rückläufern“, 7 „belegt“, 8 „Sachspende beschrieben“,
  * 9 „Dokumentart aktiv“ und „Unterzeichner“; dazu der Schalter der
  * Aufwandsspenden (E13) und die Vereinsanschrift, die jede Bestätigung
@@ -23,9 +25,9 @@ import { CONFIRMATION_DOCUMENT_TYPE } from './templates/shared';
  * sie erfüllt ist, ob sie sperrt und wo es weitergeht. Dieselbe Funktion läuft
  * vor dem Rendern und erneut in `afterIssue`.
  */
-export const CONFIRMATION_CHECK_KEYS = ['final', 'certifiable', 'contactComplete', 'organizationAddress', 'notConfirmed', 'noticeValid', 'amountPositive', 'documented', 'inKindDetails', 'typeActive', 'signerValid', 'expenseWaiverEnabled'] as const;
+export const CONFIRMATION_CHECK_KEYS = ['final', 'certifiable', 'contactComplete', 'organizationAddress', 'notConfirmed', 'noticeValid', 'afterExemptionStart', 'amountPositive', 'documented', 'inKindDetails', 'typeActive', 'signerValid', 'expenseWaiverEnabled'] as const;
 export type ConfirmationCheckKey = (typeof CONFIRMATION_CHECK_KEYS)[number];
-export type ConfirmationWarning = 'organization' | 'foreignCountry' | 'beforeOldestNotice';
+export type ConfirmationWarning = 'organization' | 'foreignCountry';
 
 export interface ConfirmationCheck {
   key: ConfirmationCheckKey;
@@ -36,7 +38,7 @@ export interface ConfirmationCheck {
   detail: Record<string, string | number | null>;
   /** Wo es weitergeht — `labelKey` ist ein Schlüssel der Oberfläche (F6a Task 7). */
   remedy: { href: string | null; labelKey: string } | null;
-  /** `organization` | `foreignCountry` | `beforeOldestNotice` | `signatureField` — ein Hinweis, der nie sperrt. */
+  /** `organization` | `foreignCountry` | `signatureField` — ein Hinweis, der nie sperrt. */
   warning: string | null;
 }
 
@@ -209,13 +211,15 @@ export function checkConfirmableInternal(db: DbOrTx, deps: Deps, args: CheckConf
   const confirmed = lineIds.map((id) => open.get(id)).find((c) => c !== undefined);
   add('notConfirmed', { done: !confirmed, detail: confirmed ? { number: confirmed.number, confirmationId: confirmed.confirmationId } : {}, remedy: confirmed ? { href: `/finance/donations?confirmation=${confirmed.confirmationId}`, labelKey: 'openConfirmation' } : null });
 
-  // 5. Am Ausstellungstag ein gültiger Bescheid; eine Zuwendung vor dem ältesten Bescheid warnt (Pflichtbegründung beim Ausstellen).
+  // 5. Am Ausstellungstag ein gültiger Bescheid.
   const notices = db.select().from(financeNotices).all();
   const valid = noticeValidAt(notices, args.issuedOn);
-  const oldest = notices.filter((n) => n.voidedAt === null).map((n) => n.noticeDate).sort()[0] ?? null;
-  const beforeOldest = oldest !== null && lines.some((l) => l.entryDate < oldest);
-  if (beforeOldest) warnings.push('beforeOldestNotice');
-  add('noticeValid', { done: valid !== null, detail: valid ? { noticeId: valid.notice.id, validUntil: valid.validUntil } : { date: args.issuedOn }, remedy: { href: NOTICES_HREF, labelKey: 'recordNotice' }, warning: beforeOldest ? 'beforeOldestNotice' : null });
+  add('noticeValid', { done: valid !== null, detail: valid ? { noticeId: valid.notice.id, validUntil: valid.validUntil } : { date: args.issuedOn }, remedy: { href: NOTICES_HREF, labelKey: 'recordNotice' } });
+
+  // 5b. Zuwendung nicht vor Beginn der Steuerbefreiung (BMF 07.11.2013 Nr. 14): sperrt, keine Begründung heilt das.
+  const exemptFrom = exemptionStartInternal(db);
+  const early = exemptFrom === null ? undefined : lines.find((l) => l.entryDate < exemptFrom);
+  add('afterExemptionStart', { done: !early, detail: early ? { exemptFrom, entryDate: early.entryDate } : {}, remedy: early ? { href: NOTICES_HREF, labelKey: 'checkExemptionStart' } : null });
 
   // 6. Betrag abzüglich Rückläufern > 0 — je Zeile.
   const returned = returnedCentsInternal(db, lineIds);
@@ -294,6 +298,8 @@ export function checkFailure(result: ConfirmationCheckResult): Failure | null {
       return financeConflict('confirmationLineAlreadyConfirmed', { number: String(d.number ?? '') });
     case 'noticeValid':
       return financeConflict('noNoticeValidAt', { date: String(d.date ?? '') });
+    case 'afterExemptionStart':
+      return financeConflict('confirmationBeforeExemptionStart', { entryDate: String(d.entryDate ?? ''), exemptFrom: String(d.exemptFrom ?? '') });
     case 'amountPositive':
       return financeConflict('confirmationAmountNotPositive');
     case 'documented':

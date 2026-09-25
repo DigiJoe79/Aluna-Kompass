@@ -94,7 +94,7 @@ describe('finance setup status', () => {
     const open = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'notice')!;
     expect(open).toMatchObject({ required: false, done: false, dependsOn: null, blocked: false, detail: {}, permission: 'finance.donationsIssue' });
 
-    const notice = unwrap(await saveNotice(deps, ctx, { kind: 'section60a', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2023-09-15', purposesText: 'Tierschutz' }));
+    const notice = unwrap(await saveNotice(deps, ctx, { kind: 'section60a', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2023-09-15', exemptFrom: '2023-01-01', purposesText: 'Tierschutz' }));
     const status = unwrap(await getSetupStatus(deps, ctx));
     expect(status.steps.find((s) => s.key === 'notice')).toMatchObject({ done: true, detail: { validUntil: '2026-09-15' } });
 
@@ -139,7 +139,7 @@ describe('finance setup status', () => {
     const step = async () => unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'machineProcedure')!;
     expect(await step()).toMatchObject({ required: false, done: false, dependsOn: 'notice', blocked: true, detail: { missing: 'signer' }, permission: 'finance.donationsIssue' });
 
-    unwrap(await saveNotice(deps, ctx, { kind: 'exemptionNotice', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2025-05-02', assessmentPeriod: '2023', purposesText: 'Tierschutz' }));
+    unwrap(await saveNotice(deps, ctx, { kind: 'exemptionNotice', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2025-05-02', exemptFrom: '2023-01-01', assessmentPeriod: '2023', purposesText: 'Tierschutz' }));
     expect(await step()).toMatchObject({ done: false, blocked: false, detail: { missing: 'signer' } });
 
     const signer = unwrap(await saveSigner(deps, ctx, { validFrom: '2026-01-01', signerName: 'Jonas Feld' }));

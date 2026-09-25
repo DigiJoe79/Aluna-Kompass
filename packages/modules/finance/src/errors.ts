@@ -124,7 +124,7 @@ export const FINANCE_ERRORS = {
   confirmationInKindMixed: { reason: 'Sachspenden und Geldzuwendungen stehen nie auf derselben Bestätigung.', remedy: 'Stellen Sie für die Sachspende eine eigene Bestätigung aus.' },
   confirmationTypeInactive: { reason: 'Die Dokumentart für Zuwendungsbestätigungen ist stillgelegt.', remedy: 'Aktivieren Sie sie in der Akte unter „Dokumentarten“.' },
   confirmationExpenseWaiversDisabled: { reason: 'Aufwandsspenden sind ausgeschaltet.', remedy: 'Schalten Sie sie unter „Finanzen einrichten → Steuerliches“ ein, wenn der Verein sie bestätigt.' },
-  confirmationPreNoticeNeedsReason: { reason: 'Die Zuwendung liegt vor dem ältesten erfassten Bescheid.', remedy: 'Begründen Sie, warum die Bestätigung trotzdem richtig ist — die Begründung bleibt am Datensatz.' },
+  confirmationBeforeExemptionStart: { reason: 'Die Zuwendung vom {entryDate} liegt vor dem Beginn der Steuerbefreiung am {exemptFrom}; dafür darf keine Bestätigung ausgestellt werden.', remedy: 'Prüfen Sie unter Spenden → Bescheide, ab wann der Bescheid die Befreiung ausspricht.' },
   confirmationAlreadyVoided: { reason: 'Diese Bestätigung ist bereits zurückgenommen.', remedy: 'Nichts zu tun.' },
   confirmationAlreadySent: { reason: 'Der Versand dieser Bestätigung ist schon vermerkt.', remedy: 'Ein Versandvermerk lässt sich nicht überschreiben.' },
   confirmationChangedMeanwhile: { reason: 'Während des Ausstellens hat sich an der Zuwendung, am Bescheid oder am Unterzeichner etwas geändert.', remedy: 'Prüfen Sie die Angaben und stellen Sie die Bestätigung erneut aus.' },

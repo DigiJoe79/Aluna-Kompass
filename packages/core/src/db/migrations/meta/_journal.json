@@ -176,6 +176,13 @@
       "when": 1790342289765,
       "tag": "0024_finance_confirmation_runs_pre_notice",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1790350281559,
+      "tag": "0025_finance_notices_exempt_from",
+      "breakpoints": true
     }
   ]
 }

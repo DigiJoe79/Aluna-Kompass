@@ -174,14 +174,14 @@ describe('previewConfirmationRun', () => {
     expect(preview.items).toEqual([expect.objectContaining({ contactId: f.erika.id, lineIds: [early.line.id], totalCents: 1000, lineCount: 1 })]);
   });
 
-  it('shows donations before the oldest notice as blocked by beforeOldestNotice', async () => {
+  it('shows donations before the start of the exemption as blocked by afterExemptionStart', async () => {
     const f = await donationFixture();
     const early = await f.donate({ date: '2025-03-01', cents: 1000 });
     const max = await person(f, 'Max', 'Probe');
     await f.donate({ date: '2025-06-01', cents: 2000, contactId: max.id });
 
     const preview = unwrap(await previewConfirmationRun(f.deps, f.ctx, { year: 2025 }));
-    expect(itemsOf(preview.items, f.erika.id)).toEqual([expect.objectContaining({ lineIds: [early.line.id], group: 'blocked', blockedBy: 'beforeOldestNotice', signatureReason: 'machineIncomplete' })]);
+    expect(itemsOf(preview.items, f.erika.id)).toEqual([expect.objectContaining({ lineIds: [early.line.id], group: 'blocked', blockedBy: 'afterExemptionStart', signatureReason: null })]);
     expect(itemsOf(preview.items, max.id)).toEqual([expect.objectContaining({ group: 'needsSignature', blockedBy: null })]);
     expect(preview.counts).toEqual({ ready: 0, needsSignature: 1, addressMissing: 0, blocked: 1 });
   });

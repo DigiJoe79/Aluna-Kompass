@@ -11,11 +11,12 @@ import { insertDocument, ledgerFixture } from './helpers';
 
 /**
  * Ausgangslage der Spenden-Tests (F6a Task 5): Vereinsanschrift, ein
- * Freistellungsbescheid vom 2025-05-02, eine vollständige Spenderin (erfunden)
+ * Freistellungsbescheid vom 2025-05-02 mit Steuerbefreiung ab 2025-04-01
+ * (eine Zuwendung vom 2025-03-01 liegt davor), eine vollständige Spenderin (erfunden)
  * und Helfer, die festgeschriebene, belegte Zuwendungen buchen. Heute ist der
  * 2026-03-20.
  */
-export const EXEMPTION = { kind: 'exemptionNotice', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2025-05-02', assessmentPeriod: '2023', purposesText: 'Förderung des Tierschutzes' } as const;
+export const EXEMPTION = { kind: 'exemptionNotice', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2025-05-02', exemptFrom: '2025-04-01', assessmentPeriod: '2023', purposesText: 'Förderung des Tierschutzes' } as const;
 
 /** Ein PNG-Kopf (Magic Bytes) — die Dienste prüfen den Anfang, nicht das Bild. */
 export const png = (size = 64) => {

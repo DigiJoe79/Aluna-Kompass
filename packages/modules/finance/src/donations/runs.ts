@@ -38,7 +38,7 @@ import { CONFIRMATION_DOCUMENT_TYPE } from './templates/shared';
 export type RunItemKind = 'collective' | 'collectiveWaiver' | 'inKind';
 export type RunPreviewGroup = 'ready' | 'needsSignature' | 'addressMissing' | 'blocked';
 export type RunSignatureReason = 'expenseWaiver' | 'inKind' | 'machineIncomplete';
-export type RunBlockedBy = ConfirmationCheckKey | 'beforeOldestNotice';
+export type RunBlockedBy = ConfirmationCheckKey;
 
 export interface RunPreviewItem {
   contactId: string;
@@ -54,8 +54,7 @@ export interface RunPreviewItem {
   group: RunPreviewGroup;
   /**
    * Die sperrende Prüfung (`contactComplete` bei *Anschrift fehlt*); `null`, wenn nichts sperrt.
-   * `beforeOldestNotice`: eine Zuwendung liegt vor dem ältesten Bescheid — der Posten entsteht beim
-   * Start nur mit einer Begründung für den Lauf (`preNoticeReason`), sonst wird er übersprungen.
+   * `afterExemptionStart`: eine Zuwendung liegt vor dem Beginn der Steuerbefreiung — gesperrt wie jede andere Prüfung.
    */
   blockedBy: RunBlockedBy | null;
   signatureReason: RunSignatureReason | null;
@@ -207,11 +206,6 @@ export function previewConfirmationRunInternal(db: DbOrTx, deps: Deps, args: Run
           // R 10b.1 Abs. 4 S. 3 EStR: Die Regelung gilt nicht für Sach- und Aufwandsspenden.
           signatureReason = bucket.kind === 'collectiveWaiver' ? 'expenseWaiver' : bucket.kind === 'inKind' ? 'inKind' : checked.value.machine.complete ? null : 'machineIncomplete';
           group = signatureReason ? 'needsSignature' : 'ready';
-          // Bereit wäre er — aber nur mit Begründung (Entscheidung zu Lauf 2); der Unterschriftsgrund bleibt für den Start stehen.
-          if (checked.value.warnings.includes('beforeOldestNotice')) {
-            group = 'blocked';
-            blockedBy = 'beforeOldestNotice';
-          }
         }
       }
       items.push({
@@ -331,7 +325,6 @@ export interface RunSummary {
   finishedAt: string | null;
   dispatchedAt: string | null;
   dispatchedVia: 'post' | 'email' | 'handed' | null;
-  preNoticeReason: string | null;
   counts: RunCounts;
 }
 
@@ -347,13 +340,13 @@ const SKIP_CODE: Record<RunBlockedBy, string> = {
   organizationAddress: 'confirmationOrganizationIncomplete',
   notConfirmed: 'confirmationLineAlreadyConfirmed',
   noticeValid: 'noNoticeValidAt',
+  afterExemptionStart: 'confirmationBeforeExemptionStart',
   amountPositive: 'confirmationAmountNotPositive',
   documented: 'confirmationEntryUndocumented',
   inKindDetails: 'confirmationInKindDetailsMissing',
   typeActive: 'confirmationTypeInactive',
   signerValid: 'confirmationChangedMeanwhile',
   expenseWaiverEnabled: 'confirmationExpenseWaiversDisabled',
-  beforeOldestNotice: 'confirmationPreNoticeNeedsReason',
 };
 
 const BLOCKED_RUN_TEXT: Record<RunBlocked['reason'], string> = {
@@ -404,7 +397,6 @@ function runViewsInternal(db: DbOrTx, runs: readonly FinanceConfirmationRunRow[]
       finishedAt: run.finishedAt,
       dispatchedAt: run.dispatchedAt,
       dispatchedVia: run.dispatchedVia,
-      preNoticeReason: run.preNoticeReason,
       counts,
       items: withItems
         ? rows.map((row) => {
@@ -440,19 +432,16 @@ const itemAudit = (row: Pick<FinanceConfirmationRunItemRow, 'runId' | 'kind' | '
   runId: row.runId, kind: row.kind, state: outcome.state, confirmationId: outcome.confirmationId, errorCode: outcome.errorCode, totalCents: row.totalCents, lineCount: (JSON.parse(row.lineIds) as string[]).length,
 });
 
-export const startRunSchema = runArgsSchema.extend({
-  /** Pflichtbegründung für alle Posten des Laufs mit Zuwendungen vor dem ältesten Bescheid — steht am Lauf, nie im Protokoll. */
-  preNoticeReason: z.string().trim().min(1).max(1000).optional(),
-});
+export const startRunSchema = runArgsSchema;
 
 /**
  * Serienlauf starten — `finance.donationsIssue`, **`humanOnly`** (E10). Die
  * Posten entstehen jetzt als Schnappschuss (Review Focus 3): dieselbe
  * Vorschau, heute gerechnet. *Bereit* und *braucht Unterschrift* werden
  * `pending`; *Anschrift fehlt* und *blockiert* stehen gleich als `skipped`
- * mit dem Fachfehler da, den das Ausstellen melden würde. Zuwendungen vor dem
- * ältesten Bescheid laufen nur mit `preNoticeReason` mit. Ausgestellt wird
- * erst in `continueConfirmationRun`.
+ * mit dem Fachfehler da, den das Ausstellen melden würde — auch Zuwendungen
+ * vor dem Beginn der Steuerbefreiung. Ausgestellt wird erst in
+ * `continueConfirmationRun`.
  */
 export async function startConfirmationRun(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<RunView>> {
   const denied = requirePermission(ctx, 'finance.donationsIssue');
@@ -475,7 +464,7 @@ export async function startConfirmationRun(deps: Deps, ctx: CallContext, input: 
     const runId = newId();
     const now = isoNow(deps.clock);
     const items: FinanceConfirmationRunItemRow[] = preview.items.map((item) => {
-      const pending = item.group === 'ready' || item.group === 'needsSignature' || (item.blockedBy === 'beforeOldestNotice' && v.preNoticeReason !== undefined);
+      const pending = item.group === 'ready' || item.group === 'needsSignature';
       return {
         id: newId(), runId, contactId: item.contactId, kind: item.kind, inKindLineId: item.inKindLineId, lineIds: JSON.stringify(item.lineIds), totalCents: item.totalCents,
         needsSignature: item.signatureReason !== null, state: pending ? 'pending' : 'skipped', confirmationId: null,
@@ -489,7 +478,7 @@ export async function startConfirmationRun(deps: Deps, ctx: CallContext, input: 
       .values({
         id: runId, year: v.year, minCents: preview.minCents, excludedContactIds: JSON.stringify(preview.excludedContactIds), followUpOfRunId: v.followUpOfRunId ?? null,
         startedOn: issuedOn, startedAt: now, startedByUserId: ctx.userId ?? 'system', startedChannel: ctx.channel, finishedAt: null, dispatchedAt: null, dispatchedVia: null,
-        preNoticeReason: v.preNoticeReason ?? null, createdAt: now,
+        createdAt: now,
       })
       .run();
     for (const item of items) tx.insert(financeConfirmationRunItems).values(item).run();
@@ -556,7 +545,6 @@ export async function continueConfirmationRun(deps: Deps, ctx: CallContext, inpu
     const issued = await issueConfirmation(deps, ctx, {
       lineIds, issuedOn: run.startedOn, kind: row.kind === 'inKind' ? 'inKind' : 'collective',
       ...(row.kind === 'inKind' ? {} : { periodFrom, periodTo }),
-      ...(run.preNoticeReason ? { preNoticeReason: run.preNoticeReason } : {}),
     });
     if (issued.ok) {
       settleItemInternal(deps, ctx, row, { state: 'issued', confirmationId: issued.value.id, errorCode: null });

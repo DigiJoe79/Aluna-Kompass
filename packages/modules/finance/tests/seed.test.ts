@@ -481,9 +481,9 @@ describe('seedFinance', () => {
     it('records the exemption notice of the invented tax office, the section 60a notice it superseded, and a complete machine procedure', async () => {
       const { deps, ctx } = await seededWithAddress();
       const notices = unwrap(await listNotices(deps, ctx, { includeInactive: true }));
-      expect(notices.map((n) => [n.kind, n.taxOffice, n.taxNumber, n.noticeDate, n.assessmentPeriod, n.supersededOn, n.state])).toEqual([
-        ['exemptionNotice', 'Finanzamt Musterstadt', '99/999/99999', '2025-05-02', '2023', null, 'valid'],
-        ['section60a', 'Finanzamt Musterstadt', '99/999/99999', '2024-03-01', null, '2025-05-02', 'superseded'],
+      expect(notices.map((n) => [n.kind, n.taxOffice, n.taxNumber, n.noticeDate, n.exemptFrom, n.assessmentPeriod, n.supersededOn, n.state])).toEqual([
+        ['exemptionNotice', 'Finanzamt Musterstadt', '99/999/99999', '2025-05-02', '2023-01-01', '2023', null, 'valid'],
+        ['section60a', 'Finanzamt Musterstadt', '99/999/99999', '2024-03-01', '2024-01-01', null, '2025-05-02', 'superseded'],
       ]);
       const machine = unwrap(await getMachineProcedure(deps, ctx));
       expect(machine.signers).toHaveLength(1);
@@ -520,6 +520,8 @@ describe('seedFinance', () => {
       const byName = new Map(toCorrect.items.map((c) => [c.contactName, c]));
       expect(byName.get('Greta Sommer')).toMatchObject({ noticeId: provisional.id, issuedOn: '2025-04-15', totalCents: 12000, state: 'valid' });
       expect(byName.get('Greta Sommer')!.toCorrect).toEqual(['noticeSuperseded']);
+      // Gretas Zuwendung liegt nach dem Beginn der Befreiung laut § 60a-Bescheid — sonst gäbe es keine Bestätigung.
+      expect(provisional.exemptFrom <= '2025-03-14').toBe(true);
       // Prüfstein 6: die Rücklastschrift auf Nora Lehmanns Sammelbestätigung des Serienlaufs.
       expect(byName.get('Nora Lehmann')).toMatchObject({ kind: 'collective', totalCents: 6000, state: 'valid' });
       expect(byName.get('Nora Lehmann')!.toCorrect).toEqual(['lineReturned']);

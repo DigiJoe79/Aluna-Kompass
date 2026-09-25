@@ -13,7 +13,7 @@ import { donationFixture, err } from './donation-fixture';
 const check = (r: { checks: ConfirmationCheck[] }, key: ConfirmationCheckKey): ConfirmationCheck => r.checks.find((c) => c.key === key)!;
 
 describe('checkConfirmable', () => {
-  it('checklist reports every one of the nine checks with a remedy and never throws', async () => {
+  it('checklist reports every one of the thirteen checks with a remedy and never throws', async () => {
     const f = await donationFixture({ notice: false });
     // Alles, was schiefgehen kann: Kontakt ohne Anschrift, kein Bescheid, kein Beleg.
     const { line } = await f.donate({ contactId: f.donor.id, documented: false });
@@ -30,7 +30,7 @@ describe('checkConfirmable', () => {
     expect(check(res, 'contactComplete').remedy!.href).toBe(`/contacts/${f.donor.id}`);
     expect(check(res, 'noticeValid').remedy!.href).toBe('/finance/donations/notices');
     expect(check(res, 'documented').remedy!.href).toBe(`/finance/entries/${line.entryId}`);
-    for (const key of ['final', 'certifiable', 'notConfirmed', 'amountPositive', 'typeActive'] as const) expect(check(res, key), key).toMatchObject({ done: true, blocked: false, remedy: null });
+    for (const key of ['final', 'certifiable', 'notConfirmed', 'afterExemptionStart', 'amountPositive', 'typeActive'] as const) expect(check(res, key), key).toMatchObject({ done: true, blocked: false, remedy: null });
     // Nicht zutreffend: Sachspende und Aufwandsspende bei einer Geldspende.
     expect(check(res, 'inKindDetails')).toMatchObject({ applies: false, done: true, blocked: false });
     expect(check(res, 'expenseWaiverEnabled')).toMatchObject({ applies: false, done: true, blocked: false });
@@ -125,14 +125,22 @@ describe('checkConfirmable', () => {
     expect(checkFailure(res)).toMatchObject({ ok: false, error: { type: 'conflict', code: 'confirmationOrganizationIncomplete' } });
   });
 
-  it('checks the notice on the day of issue and warns about a donation before the oldest notice', async () => {
+  it('blocks a donation before the start of the exemption with a remedy to the notices', async () => {
     const f = await donationFixture();
     const early = await f.donate({ date: '2025-03-01' });
     const res = unwrap(await checkConfirmable(f.deps, f.ctx, { lineIds: [early.line.id] }));
-    expect(res.ok).toBe(true);
-    expect(res.warnings).toEqual(['beforeOldestNotice']);
-    expect(check(res, 'noticeValid')).toMatchObject({ done: true, warning: 'beforeOldestNotice' });
+    expect(res.ok).toBe(false);
+    expect(check(res, 'afterExemptionStart')).toMatchObject({ done: false, blocked: true, detail: { exemptFrom: '2025-04-01', entryDate: '2025-03-01' }, remedy: { href: '/finance/donations/notices', labelKey: 'checkExemptionStart' } });
+    expect(check(res, 'noticeValid')).toMatchObject({ done: true, blocked: false, warning: null });
+    expect(res.warnings).toEqual([]);
+    expect(checkFailure(res)).toMatchObject({ ok: false, error: { type: 'conflict', code: 'confirmationBeforeExemptionStart' } });
+    // Ab dem ersten Tag der Befreiung ist die Zuwendung bestätigbar.
+    const first = await f.donate({ date: '2025-04-01' });
+    expect(check(unwrap(await checkConfirmable(f.deps, f.ctx, { lineIds: [first.line.id] })), 'afterExemptionStart')).toMatchObject({ done: true, blocked: false, detail: {}, remedy: null });
+  });
 
+  it('checks the notice on the day of issue', async () => {
+    const f = await donationFixture();
     const { line } = await f.donate();
     const before = unwrap(await checkConfirmable(f.deps, f.ctx, { lineIds: [line.id], issuedOn: '2025-04-01' }));
     expect(check(before, 'noticeValid')).toMatchObject({ blocked: true, detail: { date: '2025-04-01' } });

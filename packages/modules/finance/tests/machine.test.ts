@@ -20,7 +20,7 @@ const jpeg = (size = 64) => { const b = new Uint8Array(size).fill(2); b.set([0xf
 
 const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
 const auditOf = (f: Fixture, action: string) => f.deps.db.select().from(schema.auditLog).where(eq(schema.auditLog.action, action)).all();
-const exemption = { kind: 'exemptionNotice', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2025-05-02', assessmentPeriod: '2023', purposesText: 'Förderung des Tierschutzes' } as const;
+const exemption = { kind: 'exemptionNotice', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2025-05-02', exemptFrom: '2023-01-01', assessmentPeriod: '2023', purposesText: 'Förderung des Tierschutzes' } as const;
 
 /** Die Akte bringt die Art „Brief“ erst mit ihrer Grundausstattung — in den Tests legen wir sie an wie `insertDocument`. */
 function ensureLetterType(f: Fixture): void {

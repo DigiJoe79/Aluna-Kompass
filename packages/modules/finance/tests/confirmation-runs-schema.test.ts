@@ -38,7 +38,7 @@ describe('finance_confirmation_runs', () => {
     const id = insertRun(deps, { followUpOfRunId: null });
     expect(deps.db.select().from(financeConfirmationRuns).where(eq(financeConfirmationRuns.id, id)).get()).toEqual({
       id, year: 2026, minCents: 0, excludedContactIds: '[]', followUpOfRunId: null, startedOn: '2027-01-15', startedAt: '2027-01-15T09:00:00.000Z', startedByUserId: 'U1', startedChannel: 'ui',
-      finishedAt: null, dispatchedAt: null, dispatchedVia: null, preNoticeReason: null, createdAt: '2027-01-15T09:00:00.000Z',
+      finishedAt: null, dispatchedAt: null, dispatchedVia: null, createdAt: '2027-01-15T09:00:00.000Z',
     });
   });
 
@@ -52,7 +52,7 @@ describe('finance_confirmation_runs', () => {
     const { deps } = setupFinance();
     const first = insertRun(deps);
     const id = insertRun(deps);
-    for (const change of [{ year: 2025 }, { minCents: 1 }, { excludedContactIds: '["X"]' }, { followUpOfRunId: first }, { startedOn: '2027-01-16' }, { startedAt: 'x' }, { startedByUserId: 'U2' }, { startedChannel: 'mcp' }, { createdAt: 'x' }, { preNoticeReason: 'nachträglich' }]) {
+    for (const change of [{ year: 2025 }, { minCents: 1 }, { excludedContactIds: '["X"]' }, { followUpOfRunId: first }, { startedOn: '2027-01-16' }, { startedAt: 'x' }, { startedByUserId: 'U2' }, { startedChannel: 'mcp' }, { createdAt: 'x' }]) {
       expect(() => deps.db.update(financeConfirmationRuns).set(change).where(eq(financeConfirmationRuns.id, id)).run(), JSON.stringify(change)).toThrow(/permanent/);
     }
   });

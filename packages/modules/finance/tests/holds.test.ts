@@ -388,7 +388,7 @@ describe('what finance holds for donations (F6a)', () => {
   const T = '2026-03-10T10:00:00.000Z';
   function insertNotice(f: Awaited<ReturnType<typeof ledgerFixture>>, o: Partial<typeof financeNotices.$inferInsert> = {}) {
     const id = newId();
-    f.deps.db.insert(financeNotices).values({ id, kind: 'exemptionNotice', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2025-05-02', purposesText: 'Tierschutz', createdAt: T, createdByUserId: f.userId, updatedAt: T, ...o }).run();
+    f.deps.db.insert(financeNotices).values({ id, kind: 'exemptionNotice', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2025-05-02', exemptFrom: '2023-01-01', purposesText: 'Tierschutz', createdAt: T, createdByUserId: f.userId, updatedAt: T, ...o }).run();
     return id;
   }
   function insertConfirmation(f: Awaited<ReturnType<typeof ledgerFixture>>, noticeId: string, o: Partial<typeof financeConfirmations.$inferInsert> = {}) {

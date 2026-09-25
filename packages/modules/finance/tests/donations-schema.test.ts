@@ -1,5 +1,5 @@
 import { newId } from '@kompass/core';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { financeAllocationLines, financeConfirmationLines, financeConfirmations, financeInKindDetails, financeNotices, financeSigners } from '../src/schema';
 import { ledgerFixture } from './helpers';
@@ -22,7 +22,7 @@ function insertNotice(f: F, o: Partial<typeof financeNotices.$inferInsert> = {})
   f.deps.db
     .insert(financeNotices)
     .values({
-      id, kind: 'exemptionNotice', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2025-05-02', assessmentPeriod: '2023', purposesText: 'Förderung des Tierschutzes',
+      id, kind: 'exemptionNotice', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2025-05-02', exemptFrom: '2023-01-01', assessmentPeriod: '2023', purposesText: 'Förderung des Tierschutzes',
       createdAt: '2026-01-01T00:00:00.000Z', createdByUserId: 'U1', updatedAt: '2026-01-01T00:00:00.000Z', ...o,
     })
     .run();
@@ -54,6 +54,13 @@ function insertConfirmationLine(f: F, confirmationId: string, lineId: string) {
 }
 
 describe('finance_notices', () => {
+  it('requires the start of the exemption, and the triggers of 0022 still hold after 0025', async () => {
+    const f = await fixtures();
+    expect(() => insertNotice(f, { exemptFrom: null as unknown as string })).toThrow(/NOT NULL/);
+    const triggers = f.deps.db.all<{ name: string }>(sql`SELECT name FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'finance_notices' ORDER BY name`).map((t) => t.name);
+    expect(triggers).toEqual(['finance_notices_no_delete', 'finance_notices_supersede_once', 'finance_notices_void_once']);
+  });
+
   it('is never deleted', async () => {
     const f = await fixtures();
     const id = insertNotice(f);
@@ -94,7 +101,7 @@ describe('finance_confirmations', () => {
     const noticeId = insertNotice(f);
     const id = insertConfirmation(f, noticeId);
     expect(() => f.deps.db.delete(financeConfirmations).where(eq(financeConfirmations.id, id)).run()).toThrow(/permanent/);
-    for (const change of [{ totalCents: 1 }, { contactId: 'OTHER' }, { issuedOn: '2026-03-11' }, { documentNumber: 'ZWB-X' }, { noticeId: 'OTHER' }, { machine: true }, { preNoticeReason: 'nachträglich' }, { kind: 'inKind' as const }]) {
+    for (const change of [{ totalCents: 1 }, { contactId: 'OTHER' }, { issuedOn: '2026-03-11' }, { documentNumber: 'ZWB-X' }, { noticeId: 'OTHER' }, { machine: true }, { kind: 'inKind' as const }]) {
       expect(() => f.deps.db.update(financeConfirmations).set(change).where(eq(financeConfirmations.id, id)).run(), JSON.stringify(change)).toThrow(/permanent/);
     }
   });

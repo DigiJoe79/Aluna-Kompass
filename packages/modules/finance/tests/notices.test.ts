@@ -3,13 +3,15 @@ import { ctxWith } from '@kompass/core/testing';
 import { documentLinks, documents, documentTypes } from '@kompass/module-dms';
 import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { attachNoticeDocument, listNotices, noticeExpiryInternal, noticeValidAtInternal, saveNotice, supersedeNotice, voidNotice } from '../src/donations/notices';
+import { checkConfirmable } from '../src/donations/check';
+import { attachNoticeDocument, exemptionStartInternal, listNotices, noticeExpiryInternal, noticeValidAtInternal, saveNotice, supersedeNotice, voidNotice } from '../src/donations/notices';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
 import { financeNotices } from '../src/schema';
+import { donationFixture } from './donation-fixture';
 import { insertDocument, ledgerFixture, pdfBytes } from './helpers';
 
-const exemption = { kind: 'exemptionNotice', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2025-05-02', assessmentPeriod: '2023', purposesText: 'Förderung des Tierschutzes (§ 52 Abs. 2 Nr. 14 AO)' } as const;
-const provisional = { kind: 'section60a', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99990', noticeDate: '2024-01-10', purposesText: 'Förderung des Tierschutzes' } as const;
+const exemption = { kind: 'exemptionNotice', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2025-05-02', exemptFrom: '2023-01-01', assessmentPeriod: '2023', purposesText: 'Förderung des Tierschutzes (§ 52 Abs. 2 Nr. 14 AO)' } as const;
+const provisional = { kind: 'section60a', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99990', noticeDate: '2024-01-10', exemptFrom: '2024-01-01', purposesText: 'Förderung des Tierschutzes' } as const;
 
 const auditOf = (deps: Awaited<ReturnType<typeof ledgerFixture>>['deps'], action: string) => deps.db.select().from(schema.auditLog).where(eq(schema.auditLog.action, action)).all();
 /** Ein Dokument der Akte lesen darf nur, wer `dms.view` hat — wie in `vouchers.test.ts`. */
@@ -24,7 +26,7 @@ describe('saveNotice', () => {
     expect(notice).toMatchObject({ kind: 'exemptionNotice', noticeDate: '2025-05-02', validUntil: '2030-05-02', state: 'valid', documentNumber: null });
     const [entry] = auditOf(f.deps, 'finance.notice.save');
     expect(entry).toMatchObject({ entityType: 'financeNotice', entityId: notice.id });
-    expect(JSON.parse(entry!.after as string)).toEqual({ kind: 'exemptionNotice', noticeDate: '2025-05-02', assessmentPeriod: '2023', documentId: null, supersededOn: null, supersededDocumentId: null, voided: false });
+    expect(JSON.parse(entry!.after as string)).toEqual({ kind: 'exemptionNotice', noticeDate: '2025-05-02', exemptFrom: '2023-01-01', assessmentPeriod: '2023', documentId: null, supersededOn: null, supersededDocumentId: null, voided: false });
     expect(JSON.stringify(auditOf(f.deps, 'finance.notice.save'))).not.toMatch(/Musterstadt|99\/999|Tierschutz/);
   });
 
@@ -42,6 +44,39 @@ describe('saveNotice', () => {
     expect(err(await saveNotice(f.deps, f.ctx, { ...exemption, assessmentPeriod: null }))).toMatchObject({ type: 'validation' });
     // Ein § 60a-Bescheid hat keinen Veranlagungszeitraum.
     expect(unwrap(await saveNotice(f.deps, f.ctx, provisional)).assessmentPeriod).toBeNull();
+  });
+
+  it('stores the start of the exemption and refuses a notice without it', async () => {
+    const f = await ledgerFixture();
+    const notice = unwrap(await saveNotice(f.deps, f.ctx, exemption));
+    expect(notice.exemptFrom).toBe('2023-01-01');
+    expect(f.deps.db.select().from(financeNotices).where(eq(financeNotices.id, notice.id)).get()!.exemptFrom).toBe('2023-01-01');
+    const { exemptFrom: _, ...withoutStart } = exemption;
+    expect(err(await saveNotice(f.deps, f.ctx, withoutStart))).toMatchObject({ type: 'validation' });
+    expect(err(await saveNotice(f.deps, f.ctx, { ...exemption, exemptFrom: '01.01.2023' }))).toMatchObject({ type: 'validation' });
+    expect(err(await saveNotice(f.deps, f.ctx, { ...exemption, exemptFrom: null }))).toMatchObject({ type: 'validation' });
+    // Beginn der Befreiung: das kleinste „ab“ aller nicht irrtümlich erfassten Bescheide.
+    expect(exemptionStartInternal(f.deps.db)).toBe('2023-01-01');
+    const mistaken = unwrap(await saveNotice(f.deps, f.ctx, { ...provisional, noticeDate: '2023-06-01', exemptFrom: '2022-07-01' }));
+    expect(exemptionStartInternal(f.deps.db)).toBe('2022-07-01');
+    unwrap(await voidNotice(f.deps, f.ctx, { id: mistaken.id, note: 'Doppelt erfasst' }));
+    expect(exemptionStartInternal(f.deps.db)).toBe('2023-01-01');
+  });
+
+  it('a section 60a notice may start the exemption after its date', async () => {
+    const f = await donationFixture({ notice: false });
+    expect(exemptionStartInternal(f.deps.db)).toBeNull();
+    // Feststellung nach § 60a vom 01.03.2025, die Befreiung beginnt erst mit dem nächsten Veranlagungszeitraum.
+    const notice = unwrap(await saveNotice(f.deps, f.ctx, { ...provisional, noticeDate: '2025-03-01', exemptFrom: '2026-01-01' }));
+    expect(notice).toMatchObject({ state: 'valid', exemptFrom: '2026-01-01' });
+    const between = await f.donate({ date: '2025-06-01' });
+    const res = unwrap(await checkConfirmable(f.deps, f.ctx, { lineIds: [between.line.id] }));
+    // Der Bescheid trägt am Ausstellungstag — gesperrt ist die Zuwendung trotzdem.
+    expect(res.checks.find((c) => c.key === 'noticeValid')).toMatchObject({ done: true, blocked: false });
+    expect(res.checks.find((c) => c.key === 'afterExemptionStart')).toMatchObject({ done: false, blocked: true, detail: { exemptFrom: '2026-01-01', entryDate: '2025-06-01' } });
+    expect(res.ok).toBe(false);
+    const after = await f.donate({ date: '2026-01-02' });
+    expect(unwrap(await checkConfirmable(f.deps, f.ctx, { lineIds: [after.line.id] })).ok).toBe(true);
   });
 
   it('changes a notice while it is neither superseded nor voided', async () => {

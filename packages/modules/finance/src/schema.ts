@@ -584,6 +584,12 @@ export const financeNotices = sqliteTable(
     taxOffice: text('tax_office').notNull(),
     taxNumber: text('tax_number').notNull(),
     noticeDate: text('notice_date').notNull(),
+    /**
+     * Steuerbefreiung ab: Beginn des ersten Veranlagungszeitraums, für den der
+     * Bescheid die Befreiung ausspricht (BMF 07.11.2013 Nr. 14, § 60 Abs. 2 AO).
+     * Für Zuwendungen davor gibt es keine Bestätigung.
+     */
+    exemptFrom: text('exempt_from').notNull(),
     /** „2023“ oder „2021–2023“ — beim § 60a-Bescheid leer. */
     assessmentPeriod: text('assessment_period'),
     /** Die begünstigten Zwecke im Wortlaut des Bescheids. */
@@ -656,8 +662,6 @@ export const financeConfirmations = sqliteTable(
     totalCents: integer('total_cents').notNull(),
     periodFrom: text('period_from'),
     periodTo: text('period_to'),
-    /** Pflicht, wenn die Zuwendung vor dem ältesten Bescheid liegt — nie im Protokoll. */
-    preNoticeReason: text('pre_notice_reason'),
     signedDocumentId: text('signed_document_id'),
     sentAt: text('sent_at'),
     sentVia: text('sent_via', { enum: ['post', 'email', 'handed'] }),
@@ -744,8 +748,6 @@ export const financeConfirmationRuns = sqliteTable('finance_confirmation_runs', 
   finishedAt: text('finished_at'),
   dispatchedAt: text('dispatched_at'),
   dispatchedVia: text('dispatched_via', { enum: ['post', 'email', 'handed'] }),
-  /** Pflichtbegründung für Zuwendungen vor dem ältesten Bescheid — gilt für alle betroffenen Posten des Laufs; steht nur hier, nie im Protokoll. */
-  preNoticeReason: text('pre_notice_reason'),
   createdAt: text('created_at').notNull(),
 });
 export type FinanceConfirmationRunRow = typeof financeConfirmationRuns.$inferSelect;

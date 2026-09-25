@@ -33,7 +33,7 @@ describe('finance errors', () => {
     const codes = [
       'noticeVoided', 'noticeSuperseded', 'noticeNotValidAt', 'noNoticeValidAt', 'noticeAfterExemption', 'confirmationLineNotFinal', 'confirmationLineReversed', 'confirmationIncomeNotCertifiable',
       'confirmationContactIncomplete', 'confirmationOrganizationIncomplete', 'confirmationLineAlreadyConfirmed', 'confirmationAmountNotPositive', 'confirmationEntryUndocumented', 'confirmationInKindDetailsMissing',
-      'confirmationInKindMixed', 'confirmationTypeInactive', 'confirmationExpenseWaiversDisabled', 'confirmationPreNoticeNeedsReason', 'confirmationAlreadyVoided', 'confirmationAlreadySent',
+      'confirmationInKindMixed', 'confirmationTypeInactive', 'confirmationExpenseWaiversDisabled', 'confirmationBeforeExemptionStart', 'confirmationAlreadyVoided', 'confirmationAlreadySent',
       'confirmationSignedAlready', 'signerOverlaps', 'facsimileTooLarge', 'facsimileNotImage', 'entryLockedByConfirmation', 'contactLockedByConfirmation', 'inKindLineOnly',
     ];
     for (const code of codes) expect(Object.keys(FINANCE_ERRORS), code).toContain(code);
@@ -42,6 +42,8 @@ describe('finance errors', () => {
     expect(financeConflict('confirmationLineAlreadyConfirmed', { number: 'ZWB-2026-0007' })).toMatchObject({ error: { message: expect.stringContaining('ZWB-2026-0007') } });
     expect(financeConflict('entryLockedByConfirmation', { number: 'ZWB-2026-0007' })).toMatchObject({ error: { message: expect.stringContaining('ZWB-2026-0007') } });
     expect(financeConflict('contactLockedByConfirmation', { number: 'ZWB-2026-0007' })).toMatchObject({ error: { message: expect.stringContaining('ZWB-2026-0007') } });
+    expect(financeConflict('confirmationBeforeExemptionStart', { entryDate: '2025-03-01', exemptFrom: '2025-04-01' })).toMatchObject({ error: { message: expect.stringMatching(/2025-03-01.*2025-04-01.*Bescheide/) } });
+    expect(Object.keys(FINANCE_ERRORS)).not.toContain('confirmationPreNoticeNeedsReason');
     expect(financeConflict('confirmationIncomeNotCertifiable', { category: 'Zuschüsse' })).toMatchObject({ error: { message: expect.stringContaining('Zuschüsse') } });
   });
 
