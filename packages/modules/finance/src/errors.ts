@@ -164,7 +164,7 @@ export const FINANCE_ERRORS = {
   expenseFileTooLarge: { reason: 'Die Datei {file} ist größer als {limit}.', remedy: 'Wählen Sie eine kleinere Datei — Ihre Eingaben bleiben stehen.' },
   expenseNotOwner: { reason: 'Dieser Antrag gehört einer anderen Person.', remedy: 'Sie sehen und ändern nur Ihre eigenen Anträge.' },
   expenseNotRejected: { reason: 'Neu einreichen lässt sich nur ein abgelehnter Antrag.', remedy: 'Warten Sie die Entscheidung ab — ein Entwurf lässt sich weiter bearbeiten, ein eingereichter wird freigegeben oder abgelehnt.' },
-  batchNothingReviewed:{ reason: 'Es gibt keine geprüften Entwürfe zum Festschreiben.', remedy: 'Prüfen Sie zuerst Entwürfe in der Arbeitsliste, dann lassen sie sich gemeinsam festschreiben.' },
+  batchNothingReviewed: { reason: 'Es gibt keine geprüften Entwürfe zum Festschreiben.', remedy: 'Prüfen Sie zuerst Entwürfe in der Arbeitsliste, dann lassen sie sich gemeinsam festschreiben.' },
 } as const satisfies Record<string, { reason: string; remedy: string }>;
 
 export type FinanceErrorCode = keyof typeof FINANCE_ERRORS;

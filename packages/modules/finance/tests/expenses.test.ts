@@ -17,6 +17,7 @@ import {
 } from '../src/allocation/expenses';
 import { setDatedValue } from '../src/ledger/dated-values';
 import { bookEntry } from '../src/ledger/finalize';
+import { financeRecordDeleted } from '../src/ledger/holds';
 import { createOpenItem } from '../src/ledger/open-items';
 import { financeContactWaiverTerms, financeExpenseClaims, financeExpensePositions } from '../src/schema';
 import { expenseFixture, jpegBytes, type ExpenseFixture } from './expense-fixture';
@@ -354,6 +355,14 @@ describe('deleteExpenseDraft', () => {
     expect(f.deps.db.select().from(documents).all()).toHaveLength(1);
     expect(f.deps.db.select().from(documentLinks).where(eq(documentLinks.entityId, draft.id)).all()).toEqual([]);
     expect(JSON.parse(auditEntry(f.deps, 'finance.expenseClaim.draftDelete').before as string)).toEqual({ state: 'draft', positionCount: 2, totalCents: 1999 + 2520 });
+  });
+  it('a deleted contact takes the document links of its drafts along, the receipts stay', async () => {
+    const f = await expenseFixture();
+    const draft = await readyDraft(f);
+    f.deps.db.transaction((tx) => financeRecordDeleted(tx, f.deps, f.ctx, 'contact', f.hanna.contactId));
+    expect(f.deps.db.select().from(financeExpenseClaims).all()).toEqual([]);
+    expect(f.deps.db.select().from(documents).all()).toHaveLength(1);
+    expect(f.deps.db.select().from(documentLinks).where(eq(documentLinks.entityId, draft.id)).all()).toEqual([]);
   });
 });
 

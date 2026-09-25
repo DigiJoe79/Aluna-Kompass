@@ -1,4 +1,5 @@
 import { isoNow, retentionEnd, retentionMonths, schema, type CallContext, type Deps, type DbOrTx, type DueItem, type RecordReference, type RetentionHold } from '@kompass/core';
+import { documentLinks } from '@kompass/module-dms';
 import { and, desc, eq, gte, inArray, lte, ne, or, type SQL } from 'drizzle-orm';
 import { financeAudit } from '../audit';
 import {
@@ -365,10 +366,12 @@ export function financeRecordDeleted(tx: DbOrTx, deps: Deps, ctx: CallContext, e
       financeAudit(tx, deps, ctx, { action: 'finance.contactIban.delete', entity: 'financeContactBankAccount', id: row.id, before: learnedFrom ? { learnedFrom } : undefined, summary: `Kontakt-IBAN ${row.id} mit dem Kontakt gelöscht` });
     }
     // F8a: Entwürfe der Person sind Arbeitsmaterial ohne Nummer — sie gehen mit ihr. Eingereichte Anträge halten den
-    // Kontakt fest (`contactHolds`), bis hierher kommt es mit ihnen nicht.
+    // Kontakt fest (`contactHolds`), bis hierher kommt es mit ihnen nicht. Die Belege bleiben in der Akte, ihre Bezüge
+    // auf den Entwurf nicht (wie `deleteExpenseDraft`).
     const drafts = tx.select().from(financeExpenseClaims).where(and(eq(financeExpenseClaims.contactId, id), eq(financeExpenseClaims.state, 'draft'))).all();
     for (const draft of drafts) {
       const positionCount = tx.delete(financeExpensePositions).where(eq(financeExpensePositions.claimId, draft.id)).run().changes;
+      tx.delete(documentLinks).where(and(eq(documentLinks.entityType, 'financeExpenseClaim'), eq(documentLinks.entityId, draft.id))).run();
       tx.delete(financeExpenseClaims).where(eq(financeExpenseClaims.id, draft.id)).run();
       financeAudit(tx, deps, ctx, { action: 'finance.expenseClaim.draftDelete', entity: 'financeExpenseClaim', id: draft.id, before: { state: draft.state, positionCount }, summary: `Auslage (Entwurf) ${draft.id} mit dem Kontakt gelöscht` });
     }
