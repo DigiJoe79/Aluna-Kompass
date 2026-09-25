@@ -104,6 +104,21 @@ describe('donation confirmation templates render', () => {
     }
   });
 
+  it('renders the simplified receipt (F6b) on one page without a number, with notice sentence and limit', async () => {
+    const t = template('finance-simplified-receipt');
+    const parsed = t.schema.parse({ organization: common.organization, notice: common.notice, limitCents: 30000 });
+    const built: DocumentBuildResult = t.build(parsed, { ...context, number: '' });
+    const bodyTypst = 'typst' in built.body ? built.body.typst : '';
+    const out = await createDocumentEngine({ documentTemplatesDir: null }).render({ baseId: t.base, bodyTypst, slots: built.slots, context: { ...context, number: '' }, images: built.images });
+    expect(out.pages).toBe(1);
+    const text = pdfText(out.bytes);
+    expect(text).toContain('Vereinfachter Zuwendungsnachweis');
+    expect(text).toContain('nach dem Freistellungsbescheid des Finanzamtes Musterstadt-Nord');
+    expect(text).toContain('Für Zuwendungen bis 300,00 €');
+    expect(text).toContain('§ 50 Abs. 4 EStDV');
+    expect(text).not.toContain('ZWB-');
+  });
+
   it('builds with hostile names and texts', async () => {
     const hostile = 'Zusage; "Anführung" | #panic("x") $x$ @label [box] ~ C:\\temp *fett* _k_ <l>';
     const out = await render('finance-confirmation-in-kind', { ...inKind, recipient: { name: hostile, addressLines: ['- Liste', '= Titel', '1. Aufzählung'] }, item: hostile, condition: '/ term: x', valuation: '```code```' });

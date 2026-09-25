@@ -271,6 +271,9 @@ export { getInKindDetails, saveInKindDetails } from './donations/in-kind';
 // Serienlauf (F6b): Typen und die Vorschau ohne Rechteprüfung; die Dienste kommen mit ihren MCP-Werkzeugen (Task 6).
 // `readRunBundle` liefert Bytes und bleibt ohne Werkzeug — der Route Handler der Serienlauf-Seite braucht ihn schon jetzt.
 export { continueRunSchema, dispatchRunSchema, previewConfirmationRunInternal, readRunBundle, runArgsSchema, startRunSchema, type RunBlocked, type RunBlockedBy, type RunCounts, type RunItemKind, type RunItemState, type RunSummary, type RunView, type RunViewItem, type RunPreview, type RunPreviewArgs, type RunPreviewGroup, type RunPreviewItem, type RunSignatureReason } from './donations/runs';
+// Spendenbuch (F6b Task 5): Typen und der vereinfachte Nachweis (Bytes, nur Route Handler); Buch und Abstimmung kommen mit ihren MCP-Werkzeugen (Task 6).
+export { readSimplifiedReceipt, type DonationBook, type DonationBookKind, type DonationBookRow, type DonationBookSums, type DonationReconciliation, type ReconciliationReasonKey } from './donations/book';
+export { SIMPLIFIED_RECEIPT_TEMPLATE_KEY, simplifiedReceiptTemplate, type SimplifiedReceiptInput } from './donations/templates/simplified';
 export { countToCorrectInternal, toCorrectConfirmationsInternal, toCorrectReasonsInternal, type ToCorrectReason } from './donations/to-correct';
 export { confirmationContactLock, confirmationEntryLock } from './donations/locks';
 export { ENTRY_LOCKS, registerEntryLocks, type EntryLock } from './locks';

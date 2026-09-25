@@ -187,3 +187,25 @@ export function notificationLetter(signerName: string, notifiedOn?: string | nul
     signerName,
   ].join('\n');
 }
+
+// ── Vereinfachter Zuwendungsnachweis (§ 50 Abs. 4 EStDV) ────────────────────
+
+/**
+ * KEIN MUSTERTEXT. Für den vereinfachten Nachweis gibt es kein amtliches
+ * Muster; § 50 Abs. 4 Satz 1 Nr. 2 Buchst. b EStDV verlangt nur, dass der
+ * steuerbegünstigte Zweck, die Angaben über die Freistellung (Bescheid-Satz)
+ * und die Angabe, ob es sich um eine Spende oder einen Mitgliedsbeitrag
+ * handelt, auf einem vom Empfänger hergestellten Beleg aufgedruckt sind. Den
+ * Rest dieses Vordrucks — Überschrift und Erläuterung — schlägt das Modul vor.
+ * VOR DEM ERSTEN AUSGEBEN GEGEN DEN GESETZESTEXT PRÜFEN (Befundliste § 1).
+ */
+export const SIMPLIFIED_TITLE = 'Vereinfachter Zuwendungsnachweis';
+export const SIMPLIFIED_DONATION_SENTENCE = 'Die Zuwendung ist eine Spende, kein Mitgliedsbeitrag.';
+/** KEIN MUSTERTEXT. `limit` schon formatiert („300,00 €“). */
+export function simplifiedReceiptSentence(limit: string): string {
+  return (
+    `Für Zuwendungen bis ${limit} genügt als Nachweis für das Finanzamt dieser Beleg zusammen mit dem Bareinzahlungsbeleg ` +
+    `oder der Buchungsbestätigung eines Kreditinstituts, etwa dem Kontoauszug (§ 50 Abs. 4 EStDV). Die Buchungsbestätigung muss ` +
+    `Name und Kontonummer oder ein sonstiges Identifizierungsmerkmal des Auftraggebers und des Empfängers, den Betrag und den Buchungstag erkennen lassen.`
+  );
+}

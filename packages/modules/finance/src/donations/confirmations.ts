@@ -95,7 +95,7 @@ const auditOfIssue = (row: FinanceConfirmationRow, lineCount: number) => ({
 
 const clean = (v: string | null | undefined) => (v ?? '').trim();
 
-function organizationParty(deps: Deps): { name: string; addressLines: string[] } {
+export function organizationParty(deps: Deps): { name: string; addressLines: string[] } {
   const street = clean(readSetting<string>(deps, 'organization.street'));
   const cityLine = [clean(readSetting<string>(deps, 'organization.postalCode')), clean(readSetting<string>(deps, 'organization.city'))].filter(Boolean).join(' ');
   return { name: clean(readSetting<string>(deps, 'organization.name')), addressLines: [street, cityLine].filter(Boolean) };

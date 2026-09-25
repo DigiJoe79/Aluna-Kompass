@@ -8,6 +8,7 @@ import { confirmationContactLock, confirmationEntryLock } from './donations/lock
 import { collectiveConfirmationTemplate } from './donations/templates/collective';
 import { inKindConfirmationTemplate } from './donations/templates/in-kind';
 import { moneyConfirmationTemplate } from './donations/templates/money';
+import { simplifiedReceiptTemplate } from './donations/templates/simplified';
 import { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds } from './ledger/holds';
 import { installFinance } from './install';
 import { registerEntryLocks } from './locks';
@@ -106,7 +107,8 @@ export const financeModule: ModuleManifest = defineModule({
     { entityType: 'financeConfirmation', readPermission: 'finance.read', receivePermission: 'finance.donationsIssue' },
     { entityType: 'financeNotice', readPermission: 'finance.read', receivePermission: 'finance.donationsIssue' },
   ],
-  documentTemplates: [cashCountTemplate, moneyConfirmationTemplate, inKindConfirmationTemplate, collectiveConfirmationTemplate],
+  // F6b: der vereinfachte Nachweis — `filed: false`, ein Vordruck auf Abruf.
+  documentTemplates: [cashCountTemplate, moneyConfirmationTemplate, inKindConfirmationTemplate, collectiveConfirmationTemplate, simplifiedReceiptTemplate],
   /**
    * Alle `none`: Finanzen hält seine Kontakte über Buchungen und Bestätigungen
    * (ab F2c), nicht über die Rolle — eine laufende Rolle rechnete „ab heute“

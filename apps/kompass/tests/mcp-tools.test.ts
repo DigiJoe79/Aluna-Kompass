@@ -254,6 +254,7 @@ const WITHOUT_TOOL: Record<string, string> = {
   'finance.previewConfirmation': 'Liefert Bytes (Vorschau-PDF mit ENTWURF) für den Ausstellen-Dialog; ein Agent liest die Prüfliste über finance_confirmation_check (F6a).',
   'finance.readConfirmationCopy': 'Liefert Bytes (unser Exemplar), über den Route Handler der Spenden-Seite (F6a, Muster readCashCountProtocol).',
   'finance.readRunBundle': 'Liefert Bytes (Sammel-PDF eines Serienlaufs), über den Route Handler der Serienlauf-Seite; ein Agent liest den Lauf über finance_confirmation_run_get (F6b Task 4).',
+  'finance.readSimplifiedReceipt': 'Liefert Bytes (Vordruck des vereinfachten Nachweises ohne Personenbezug), über den Route Handler des Spendenbuchs (F6b Task 5, Muster readRunBundle).',
   'finance.createOpenItem': 'Erreichbar über finance_open_item_save (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
   'finance.updateOpenItem': 'Erreichbar über finance_open_item_save (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
   'finance.approveAllocationCorrection': 'Erreichbar über finance_correction_decide (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
