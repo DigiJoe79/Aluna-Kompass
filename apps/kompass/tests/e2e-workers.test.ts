@@ -65,15 +65,14 @@ describe('workerCount', () => {
   });
 
   /**
-   * Online ein Dev-Server, drei Container. Ein kalter `next dev` mit Warmup
-   * belegt in der Spitze knapp 10 GB (gemessen 26.09., zwei Server 19,5 GB);
-   * der Läufer hat 16 GB, und mit zwei Servern brach er den Job nach zwei
-   * Minuten ab (Lauf 36244325712). Ein Container mit Produktionsbuild braucht
-   * einen Bruchteil davon.
+   * Online einer, gleich welcher Art. Zwei kalte `next dev` sprengten mit
+   * 19,5 GB den 16-GB-Läufer (Lauf 36244325712); drei Container machten auf
+   * vier Kernen jeden Fall dreimal so langsam und trieben die Anmelde-Tests
+   * mit zwanzig Argon2id-Versuchen in die Frist (Lauf 36245267692).
    */
-  it('online: ein Dev-Server, drei Container', () => {
+  it('online: ein Server, gleich welcher Art', () => {
     expect(workerCount({ CI: 'true' }, 'dev')).toBe(1);
-    expect(workerCount({ CI: 'true' }, 'container')).toBe(3);
+    expect(workerCount({ CI: 'true' }, 'container')).toBe(1);
   });
 
   it('lehnt Unsinn ab, statt still mit einem Worker zu laufen', () => {
