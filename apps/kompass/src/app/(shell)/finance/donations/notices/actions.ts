@@ -41,10 +41,20 @@ export async function saveNoticeAction(input: NoticeInput): Promise<ActionState>
   return toActionState(result, t, t(input.documentId ? 'finance.donations.notices.toast.linked' : 'finance.donations.notices.toast.saved'));
 }
 
-/** Zweiter Schritt „Dokument nachreichen“: das PDF als Eingang der Akte im Namen des Bescheids. */
-export async function attachNoticeDocumentAction(id: string, bytes: Uint8Array): Promise<ActionState> {
+/**
+ * Zweiter Schritt „Dokument nachreichen“: das PDF als Eingang der Akte im
+ * Namen des Bescheids. `FormData` statt eines Uint8Array-Arguments (N9,
+ * Befundliste 0.2.0) — React begrenzt Typed-Array-Bytes in
+ * Server-Action-Argumenten auf rund 1 MB, die Bytes entstehen deshalb erst
+ * auf dem Server (Muster: `dms/actions.ts`).
+ */
+export async function attachNoticeDocumentAction(formData: FormData): Promise<ActionState> {
   const t = await getTranslations();
   const { deps, ctx } = await requireSession();
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) return { status: 'error', message: t('common.uploadFailed'), fieldErrors: {} };
+  const id = String(formData.get('id') ?? '');
+  const bytes = new Uint8Array(await file.arrayBuffer());
   const result = await attachNoticeDocument(deps, ctx, { id, bytes });
   revalidate();
   if (!result.ok) return toActionState(result, t);
@@ -87,10 +97,14 @@ export async function saveSignerAction(input: SignerInput): Promise<ActionState>
   return toActionState(result, t, t('finance.donations.machine.toast.saved'));
 }
 
-export async function uploadFacsimileAction(signerId: string, bytes: Uint8Array, mimeType: string): Promise<ActionState> {
+export async function uploadFacsimileAction(formData: FormData): Promise<ActionState> {
   const t = await getTranslations();
   const { deps, ctx } = await requireSession();
-  const result = await uploadFacsimile(deps, ctx, { signerId, bytes, mimeType });
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) return { status: 'error', message: t('common.uploadFailed'), fieldErrors: {} };
+  const signerId = String(formData.get('signerId') ?? '');
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const result = await uploadFacsimile(deps, ctx, { signerId, bytes, mimeType: file.type });
   revalidate();
   if (!result.ok) return toActionState(result, t);
   return toActionState(result, t, t('finance.donations.machine.toast.facsimile'));

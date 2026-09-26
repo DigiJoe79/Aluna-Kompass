@@ -84,8 +84,12 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
 
   const accountName = (id: string | undefined) => accounts.find((a) => a.id === id)?.name ?? '';
 
-  const runOne = async (file: File, bytes: Uint8Array, accountId: string, confirmFormatChange?: boolean): Promise<UploadResult> => {
-    const res = await uploadStatementAction(accountId, file.name, bytes, confirmFormatChange);
+  const runOne = async (file: File, accountId: string, confirmFormatChange?: boolean): Promise<UploadResult> => {
+    const formData = new FormData();
+    formData.append('accountId', accountId);
+    formData.append('file', file);
+    if (confirmFormatChange) formData.append('confirmFormatChange', 'true');
+    const res = await uploadStatementAction(formData);
     const key = newKey(file.name);
     if (res.status === 'success') {
       const runs = (res.data as { runs: { counts: { new: number; known: number; held: number } }[] } | undefined)?.runs ?? [];
@@ -108,7 +112,9 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
 
   /** Welches Konto? `null`: nicht laden (abgelehnt, abgebrochen oder zum Einrichten weitergeleitet). */
   const accountFor = async (file: File, bytes: Uint8Array): Promise<string | null> => {
-    const res = await detectStatementAccountAction(file.name, bytes);
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await detectStatementAccountAction(formData);
     if (res.status === 'error') {
       setResults((prev) => [...prev, { key: newKey(file.name), fileName: file.name, status: 'error', message: res.detail ?? res.message, code: res.code, file }]);
       return null;
@@ -129,12 +135,16 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
     stoppedRef.current = false;
     for (const file of files) {
       if (stoppedRef.current) break;
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      const accountId = await accountFor(file, bytes);
-      if (!accountId) continue;
-      const outcome = await runOne(file, bytes, accountId);
-      setResults((prev) => [...prev, outcome]);
-      router.refresh();
+      try {
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        const accountId = await accountFor(file, bytes);
+        if (!accountId) continue;
+        const outcome = await runOne(file, accountId);
+        setResults((prev) => [...prev, outcome]);
+        router.refresh();
+      } catch {
+        setResults((prev) => [...prev, { key: newKey(file.name), fileName: file.name, status: 'error', message: tRoot('common.uploadFailed'), file }]);
+      }
     }
     setBusy(false);
   };
@@ -155,11 +165,16 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
   const confirmFormatChangeAndRetry = async (): Promise<ActionState> => {
     const target = formatChangeTarget!;
     setBusy(true);
-    const outcome = await runOne(target.file, new Uint8Array(await target.file.arrayBuffer()), target.accountId!, true);
-    setResults((prev) => prev.map((r) => (r.key === target.key ? outcome : r)));
-    router.refresh();
-    setBusy(false);
-    return outcome.status === 'success' ? { status: 'success' } : { status: 'error', message: outcome.message ?? '', fieldErrors: {} };
+    try {
+      const outcome = await runOne(target.file, target.accountId!, true);
+      setResults((prev) => prev.map((r) => (r.key === target.key ? outcome : r)));
+      router.refresh();
+      return outcome.status === 'success' ? { status: 'success' } : { status: 'error', message: outcome.message ?? '', fieldErrors: {} };
+    } catch {
+      return { status: 'error', message: tRoot('common.uploadFailed'), fieldErrors: {} };
+    } finally {
+      setBusy(false);
+    }
   };
 
   const doubt = pending?.doubt ?? null;

@@ -269,14 +269,22 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
     const id = await ensureSavedId();
     if (!id) return;
     for (const file of files) {
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      const result = await uploadVoucherAction(id, voucherTypeKey, state.entryDate, file.name, bytes);
-      if (result.status !== 'success') {
-        if (result.status === 'error') toast.error(result.message);
-        continue;
+      try {
+        const formData = new FormData();
+        formData.append('entryId', id);
+        formData.append('typeKey', voucherTypeKey);
+        formData.append('documentDate', state.entryDate);
+        formData.append('file', file);
+        const result = await uploadVoucherAction(formData);
+        if (result.status !== 'success') {
+          if (result.status === 'error') toast.error(result.message);
+          continue;
+        }
+        const data = result.data as { linkId: string; documentId: string; documentNumber: string };
+        setVouchers((prev) => [...prev, { linkId: data.linkId, documentNumber: data.documentNumber, title: file.name, typeLabel: t('voucherType'), date: state.entryDate, viewHref: `/finance/entries/${id}/voucher/${data.documentId}`, revoked: false }]);
+      } catch {
+        toast.error(tRoot('common.uploadFailed'));
       }
-      const data = result.data as { linkId: string; documentId: string; documentNumber: string };
-      setVouchers((prev) => [...prev, { linkId: data.linkId, documentNumber: data.documentNumber, title: file.name, typeLabel: t('voucherType'), date: state.entryDate, viewHref: `/finance/entries/${id}/voucher/${data.documentId}`, revoked: false }]);
     }
   };
 

@@ -47,10 +47,17 @@ export async function finalizeAction(input: EntryLinesInput): Promise<ActionStat
   return toActionState(result, t, t('finance.entryForm.toast.finalized', { number: result.value.number ?? '' }));
 }
 
-export async function uploadVoucherAction(entryId: string, typeKey: string, documentDate: string, filename: string, bytes: Uint8Array): Promise<ActionState> {
+/** `FormData` statt eines Uint8Array-Arguments (N9) — sonst scheitert der Upload ab rund 1 MB stumm. */
+export async function uploadVoucherAction(formData: FormData): Promise<ActionState> {
   const t = await getTranslations();
   const { deps, ctx } = await requireSession();
-  const result = await uploadVoucher(deps, ctx, { entryId, typeKey, documentDate, title: filename, bytes });
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) return { status: 'error', message: t('common.uploadFailed'), fieldErrors: {} };
+  const entryId = String(formData.get('entryId') ?? '');
+  const typeKey = String(formData.get('typeKey') ?? '');
+  const documentDate = String(formData.get('documentDate') ?? '');
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const result = await uploadVoucher(deps, ctx, { entryId, typeKey, documentDate, title: file.name, bytes });
   revalidatePath('/finance/entries');
   return toActionState(result, t);
 }
@@ -143,14 +150,18 @@ export async function requestCorrectionAction(lineId: string, changes: Correctio
  * `documentId` als `proofDocumentId` mitbekommt (sonst hinge das Dokument
  * doppelt an der Buchung).
  */
-export async function uploadCorrectionProofAction(entryId: string, filename: string, bytes: Uint8Array): Promise<ActionState> {
+export async function uploadCorrectionProofAction(formData: FormData): Promise<ActionState> {
   const t = await getTranslations();
   const { deps, ctx } = await requireSession();
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) return { status: 'error', message: t('common.uploadFailed'), fieldErrors: {} };
+  const entryId = String(formData.get('entryId') ?? '');
+  const bytes = new Uint8Array(await file.arrayBuffer());
   const documentDate = deps.clock.now().toISOString().slice(0, 10);
   const result = await receiveGeneratedUpload(deps, ctx, {
     bytes,
     typeKey: 'voucher-own',
-    subject: filename,
+    subject: file.name,
     documentDate,
     links: [{ entityType: 'financeEntry', entityId: entryId }],
   });

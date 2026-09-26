@@ -53,6 +53,7 @@ export function ApprovalDetail({
   today: string;
 }) {
   const t = useTranslations('finance.approvals');
+  const tCommon = useTranslations('common');
   const tRow = useTranslations('finance.splitRow');
   const fmt = useDateFormat();
   const router = useRouter();
@@ -106,6 +107,8 @@ export function ApprovalDetail({
       const state = await fn();
       if (state.status === 'success') router.refresh();
       else if (state.status === 'error') setRefusal(state.message ?? '');
+    } catch {
+      setRefusal(tCommon('uploadFailed'));
     } finally {
       setBusy(false);
     }
@@ -262,7 +265,14 @@ export function ApprovalDetail({
                 signedHref: claim.waiverSignedDocumentId ? receiptHref(claim.waiverSignedDocumentId) : null,
               }}
               onCreateDeclaration={() => void run(() => createWaiverDeclarationAction(claim.id, waiver.declaredOn))}
-              onUploadSigned={(file) => void run(async () => attachSignedWaiverAction(claim.id, new Uint8Array(await file.arrayBuffer())))}
+              onUploadSigned={(file) =>
+                void run(async () => {
+                  const formData = new FormData();
+                  formData.append('claimId', claim.id);
+                  formData.append('file', file);
+                  return attachSignedWaiverAction(formData);
+                })
+              }
             />
           ) : undefined
         }

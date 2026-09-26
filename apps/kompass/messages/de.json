@@ -30,6 +30,7 @@
     "copy": "Kopieren",
     "copied": "Kopiert",
     "copyFailed": "Kopieren hat nicht geklappt. Bitte den Text von Hand markieren und kopieren.",
+    "uploadFailed": "Der Upload ist fehlgeschlagen. Bitte versuchen Sie es erneut.",
     "loading": "Wird geladen …",
     "yes": "Ja",
     "no": "Nein",

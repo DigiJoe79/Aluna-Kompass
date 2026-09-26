@@ -62,6 +62,7 @@ export function ExpenseForm({
   today: string;
 }) {
   const t = useTranslations('finance.expenses.new');
+  const tCommon = useTranslations('common');
   const router = useRouter();
   const [form, setForm] = useState<FormState>(initial);
   const formRef = useRef(form);
@@ -195,8 +196,11 @@ export function ExpenseForm({
       const saved = await flush();
       const position = saved?.positions.find((p) => p.key === key);
       if (!saved?.id || !position?.id) return;
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      const state = await uploadExpenseReceiptAction(saved.id, position.id, file.name, bytes);
+      const formData = new FormData();
+      formData.append('claimId', saved.id);
+      formData.append('positionId', position.id);
+      formData.append('file', file);
+      const state = await uploadExpenseReceiptAction(formData);
       if (state.status !== 'success') {
         setPdfErrors((all) => ({ ...all, [key]: { kind: 'server', detail: state.status === 'error' ? state.message : '' } }));
         return;
@@ -206,8 +210,10 @@ export function ExpenseForm({
       // Der Beleg ändert die Version nicht — kein neuer Entwurfsstand, nur die Dateizeile.
       commit({ ...formRef.current, positions: formRef.current.positions.map((p) => (p.key === key ? { ...p, documentNumber: filed?.documentNumber ?? null, fileName: file.name, fileSize: file.size } : p)) });
       setRefusal(null);
-    } catch {
-      setSave({ kind: 'offline' });
+    } catch (error) {
+      // Nur ein echter Netzwerkfehler ist „offline“ (Browser wirft dafür ein TypeError) — eine Ablehnung des Servers (500) ist ein Fehler, keine fehlende Verbindung.
+      if (error instanceof TypeError) setSave({ kind: 'offline' });
+      else setPdfErrors((all) => ({ ...all, [key]: { kind: 'server', detail: tCommon('uploadFailed') } }));
     } finally {
       setUploading(null);
     }

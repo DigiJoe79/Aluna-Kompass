@@ -27,6 +27,7 @@ export function EntryVouchers({
   documentationState?: 'voucher' | 'statementSuffices' | 'missing';
 }) {
   const t = useTranslations('finance.entryView.vouchers');
+  const tCommon = useTranslations('common');
   const router = useRouter();
   const [vouchers, setVouchers] = useState(initial);
   const [revokeTarget, setRevokeTarget] = useState<string | null>(null);
@@ -34,15 +35,23 @@ export function EntryVouchers({
 
   const uploadFiles = async (files: File[]) => {
     for (const file of files) {
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      const result = await uploadVoucherAction(entryId, 'voucher-own', new Date().toISOString().slice(0, 10), file.name, bytes);
-      if (result.status !== 'success') {
-        if (result.status === 'error') toast.error(result.message);
-        continue;
+      try {
+        const formData = new FormData();
+        formData.append('entryId', entryId);
+        formData.append('typeKey', 'voucher-own');
+        formData.append('documentDate', new Date().toISOString().slice(0, 10));
+        formData.append('file', file);
+        const result = await uploadVoucherAction(formData);
+        if (result.status !== 'success') {
+          if (result.status === 'error') toast.error(result.message);
+          continue;
+        }
+        const data = result.data as { linkId: string; documentId: string; documentNumber: string };
+        setVouchers((prev) => [...prev, { linkId: data.linkId, documentNumber: data.documentNumber, title: file.name, typeLabel: t('type'), date: new Date().toISOString().slice(0, 10), viewHref: `/finance/entries/${entryId}/voucher/${data.documentId}`, revoked: false }]);
+        router.refresh();
+      } catch {
+        toast.error(tCommon('uploadFailed'));
       }
-      const data = result.data as { linkId: string; documentId: string; documentNumber: string };
-      setVouchers((prev) => [...prev, { linkId: data.linkId, documentNumber: data.documentNumber, title: file.name, typeLabel: t('type'), date: new Date().toISOString().slice(0, 10), viewHref: `/finance/entries/${entryId}/voucher/${data.documentId}`, revoked: false }]);
-      router.refresh();
     }
   };
 

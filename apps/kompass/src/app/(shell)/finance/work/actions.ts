@@ -198,9 +198,21 @@ export interface UploadedInvoiceOffer {
  * übernehmen“ und die Liste wird noch **nicht** neu gelesen — sonst
  * verschwände der Umsatz samt Angebot, bevor jemand es annehmen kann.
  */
-export async function uploadVoucherToTransactionAction(input: { rawTransactionId: string; typeKey: string; documentDate: string; title?: string; entryTextIfNew?: string; bytes: Uint8Array }): Promise<ActionState & { invoice?: UploadedInvoiceOffer }> {
+export async function uploadVoucherToTransactionAction(formData: FormData): Promise<ActionState & { invoice?: UploadedInvoiceOffer }> {
   const t = await getTranslations();
   const { deps, ctx } = await requireSession();
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) return { status: 'error', message: t('common.uploadFailed'), fieldErrors: {} };
+  const title = formData.get('title');
+  const entryTextIfNew = formData.get('entryTextIfNew');
+  const input = {
+    rawTransactionId: String(formData.get('rawTransactionId') ?? ''),
+    typeKey: String(formData.get('typeKey') ?? ''),
+    documentDate: String(formData.get('documentDate') ?? ''),
+    title: typeof title === 'string' && title !== '' ? title : undefined,
+    entryTextIfNew: typeof entryTextIfNew === 'string' && entryTextIfNew !== '' ? entryTextIfNew : undefined,
+    bytes: new Uint8Array(await file.arrayBuffer()),
+  };
   const result = await attachVoucherToTransaction(deps, ctx, input);
   if (!result.ok) {
     revalidateWork();

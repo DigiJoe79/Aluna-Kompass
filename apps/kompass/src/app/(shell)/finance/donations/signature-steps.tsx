@@ -40,6 +40,7 @@ export function SignatureSteps({ rows, canIssue }: { rows: NeedsSignatureRow[]; 
 
 function SignatureCard({ row, canIssue }: { row: NeedsSignatureRow; canIssue: boolean }) {
   const t = useTranslations('finance.donations.signature');
+  const tCommon = useTranslations('common');
   const { date } = useDateFormat();
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -48,15 +49,23 @@ function SignatureCard({ row, canIssue }: { row: NeedsSignatureRow; canIssue: bo
     const file = files[0];
     if (!file) return;
     setPending(true);
-    const result = await attachSignedAction(row.id, file.name, new Uint8Array(await file.arrayBuffer()));
-    setPending(false);
-    if (result.status === 'error') {
-      toast.error(result.message);
-      return;
-    }
-    if (result.status === 'success') {
-      if (result.message) toast.success(result.message);
-      router.refresh();
+    try {
+      const formData = new FormData();
+      formData.append('id', row.id);
+      formData.append('file', file);
+      const result = await attachSignedAction(formData);
+      if (result.status === 'error') {
+        toast.error(result.message);
+        return;
+      }
+      if (result.status === 'success') {
+        if (result.message) toast.success(result.message);
+        router.refresh();
+      }
+    } catch {
+      toast.error(tCommon('uploadFailed'));
+    } finally {
+      setPending(false);
     }
   };
 

@@ -62,6 +62,11 @@ export function ReceiptDrop({
       setError(bad.type.startsWith('image/') ? t('photo') : t('wrongType'));
       return;
     }
+    const tooLarge = maxBytes ? list.find((f) => f.size > maxBytes) : undefined;
+    if (tooLarge) {
+      setError(t('tooLarge', { mb: Math.round((maxBytes! / (1024 * 1024)) * 10) / 10 }));
+      return;
+    }
     setError(null);
     onFiles(list);
   };

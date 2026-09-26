@@ -1,7 +1,11 @@
+import path from 'node:path';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { backToAdmin, callTool, linkOwnContact, mcpClient, PHONE, rejectInQueue, submitClaim, switchToJonas } from './expense-helpers';
 import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
+
+/** > 1 MB (N9, Befundliste 0.2.0) — erzeugt mit `docs/intern/recherche/2026-09-26-upload-repro/mkpdf.py`. */
+const BIG_PDF = path.resolve(import.meta.dirname, 'fixtures/beleg-1500k.pdf');
 
 /**
  * F8a Task 6 — D3 „Freigaben“ (`/finance/approvals`), Desktop zuerst, dazu
@@ -152,6 +156,22 @@ test.describe('finance approvals (D3)', () => {
     await page.goto('/finance/donations?tab=uncertified');
     const group = page.getByTestId('uncertified-group').filter({ hasText: 'Tomas Leitner' });
     await expect(group.getByTestId('uncertified-line').filter({ hasText: '25,20 €' })).toBeVisible();
+  });
+
+  test('eine unterschriebene Verzichtserklärung über 1 MB kommt an (N9)', async ({ page, baseURL }) => {
+    await setE2ESetting(page, 'finance.expenseWaiverBasisText', 'Satzung § 9 Abs. 2');
+    const client = await mcpClient(page, baseURL);
+    const claim = await submitClaim(client, { purpose: 'Kopierpapier', amountCents: 2520, waiver: true });
+    await client.close();
+
+    await switchToJonas(page);
+    await page.goto(`/finance/approvals?claim=${claim.id}`);
+    const checks = detail(page).getByTestId('waiver-checks');
+    await checks.getByRole('button', { name: 'Verzichtserklärung erzeugen' }).click();
+    await expect(checks.getByRole('link', { name: 'Verzichtserklärung öffnen' })).toBeVisible();
+
+    await checks.locator('input[type="file"]').setInputFiles(BIG_PDF);
+    await expect(checks.getByRole('link', { name: 'Unterschriebene Fassung öffnen' })).toBeVisible();
   });
 
   test('Ablehnen verlangt den Grund; die Antragstellerin sieht ihn', async ({ page, baseURL }) => {

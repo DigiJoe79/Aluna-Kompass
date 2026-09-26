@@ -293,6 +293,17 @@ test.describe('finance work list: rules, foreign money, vouchers, batch', () => 
     await expect(option(page, 'Futter Juli')).toHaveCount(0);
   });
 
+  test('ein Beleg über 1 MB in der Arbeitsliste kommt an (N9)', async ({ page }) => {
+    await loginAsAdmin(page);
+    await openImportAccount(page);
+    await expect(option(page, 'Buerobedarf Muster GmbH')).toHaveAttribute('aria-selected', 'true');
+    const detail = page.getByTestId('work-detail');
+    await detail.getByTestId('voucher-file-input').setInputFiles(path.resolve(import.meta.dirname, 'fixtures/beleg-1500k.pdf'));
+    const confirm = detail.getByRole('group', { name: 'Beleg ablegen' });
+    await confirm.getByRole('button', { name: 'Beleg ablegen' }).click();
+    await expect(page.getByText(/Beleg ERE-[\d-]+ im Namen der Buchung abgelegt\./)).toBeVisible();
+  });
+
   test('Sammel-Festschreiben zeigt je Konto den neuen Buchbestand gegen den Endsaldo laut Auszug und vergibt Nummern', async ({ page }) => {
     await loginAsAdmin(page);
     await openImportAccount(page);

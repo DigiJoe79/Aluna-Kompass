@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
@@ -324,6 +325,14 @@ test.describe('finance donations', () => {
     await expect(issuedRow(page, 'Erika Beispiel').getByTestId('confirmation-state')).not.toContainText('Unterschrift fehlt');
   });
 
+  test('eine unterschriebene Fassung über 1 MB kommt an (N9)', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/donations?tab=needsSignature');
+    const card = page.getByTestId('signature-steps').filter({ hasText: 'Lukas Hofmann' });
+    await card.getByTestId('voucher-file-input').setInputFiles(BIG_PDF);
+    await expect(page.getByText(/Unterschriebene Fassung \S+ abgelegt/)).toBeVisible();
+  });
+
   test('ohne finance.donationsIssue sieht man Listen, aber weder Ausstellen noch Zurücknehmen; ohne finance.read gar nichts', async ({ page }) => {
     // Mira Klein trägt die Rolle „Kassenprüfer“: lesen ja, ausstellen nein.
     await loginAs(page, 'Mira Klein', 'mira@kompass.local');
@@ -356,6 +365,10 @@ const germanDay = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso
 const plusYears = (iso: string, years: number) => `${Number(iso.slice(0, 4)) + years}${iso.slice(4)}`;
 const PDF = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n');
 const SIGNATURE_PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+/** N9/N11-Nachtrag (Befundliste 0.2.0): Dateien über 1 MB, erzeugt mit `docs/intern/recherche/2026-09-26-upload-repro/mkpdf.py`. */
+const BIG_PDF = path.resolve(import.meta.dirname, 'fixtures/beleg-1500k.pdf');
+/** Über 1 MB (dem Fund N9 entsprechend), unter `FACSIMILE_MAX_BYTES` (1 MiB). */
+const BIG_FACSIMILE_PNG = path.resolve(import.meta.dirname, 'fixtures/faksimile-1003k.png');
 const noticeRow = (page: Page, text: string) => page.getByTestId('notice-row').filter({ hasText: text });
 /** Der Freistellungsbescheid aus dem Seed — dasselbe Finanzamt trägt auch den ersetzten § 60a-Bescheid. */
 const seededExemption = (page: Page) => noticeRow(page, 'Finanzamt Musterstadt').filter({ hasText: 'Freistellungsbescheid' });
@@ -409,6 +422,24 @@ test.describe('finance donation notices', () => {
     for (const label of ['Finanzamt', 'Steuernummer', 'Art des Bescheids', 'Datum des Bescheids']) await expect(page.getByLabel(label)).toHaveCount(0);
     await expect(page.getByText('Wird unter Finanzen → Spenden → Bescheide geführt.')).toHaveCount(1);
     await expect(page.getByLabel('Satzungszweck')).toBeEditable();
+  });
+
+  test('ein Bescheid-Dokument über 1 MB kommt an (N9)', async ({ page }) => {
+    await page.goto('/finance/donations/notices');
+    await page.getByRole('button', { name: 'Bescheid erfassen' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Art des Bescheids').selectOption({ label: 'Freistellungsbescheid' });
+    await dialog.getByLabel('Finanzamt').fill('Finanzamt Großdatei');
+    await dialog.getByLabel('Steuernummer').fill('11/222/33344');
+    await dialog.getByLabel('Datum des Bescheids').fill(isoDay());
+    await dialog.getByLabel('Steuerbefreiung ab').fill('2022-01-01');
+    await dialog.getByLabel('Veranlagungszeitraum').fill('2022–2024');
+    await dialog.getByLabel('Begünstigte Zwecke im Wortlaut').fill('Förderung des Sports (§ 52 Abs. 2 Satz 1 Nr. 21 AO)');
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByText('Bescheid gespeichert.')).toBeVisible();
+
+    await dialog.getByTestId('voucher-file-input').setInputFiles(BIG_PDF);
+    await expect(page.getByText(/Bescheid als \S+ in der Akte abgelegt/)).toBeVisible();
   });
 
   test('ohne „Steuerbefreiung ab“ wird kein Bescheid gespeichert', async ({ page }) => {
@@ -524,6 +555,15 @@ test.describe('finance donation notices', () => {
     await expect(page.getByText('Bild der Unterschrift gespeichert.')).toBeVisible();
     const preview = jonas.getByRole('img', { name: 'Unterschrift von Jonas Feld' });
     await expect(preview).toHaveAttribute('src', /^\/finance\/donations\/facsimile\?signerId=/);
+  });
+
+  test('ein Faksimile über 1 MB kommt an (N9) — noch innerhalb der Grenze fürs Bild der Unterschrift', async ({ page }) => {
+    await page.goto('/finance/donations/notices');
+    const jonas = page.getByTestId('machine-panel').getByTestId('signer-row').filter({ hasText: 'Jonas Feld' });
+    await jonas.getByRole('button', { name: 'ersetzen' }).click();
+    await jonas.getByTestId('voucher-file-input').setInputFiles(BIG_FACSIMILE_PNG);
+    await expect(page.getByText('Bild der Unterschrift gespeichert.')).toBeVisible();
+    await expect(jonas.getByRole('alert')).toHaveCount(0);
   });
 
   test('Tabellenkopf: Bescheide und Bestätigungen tragen denselben Hintergrund und dieselbe Schriftgröße', async ({ page }) => {

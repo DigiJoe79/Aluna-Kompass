@@ -39,9 +39,17 @@ export async function saveExpenseDraftAction(input: ExpenseDraftInput): Promise<
   return finish(await saveExpenseDraft(deps, ctx, input));
 }
 
-export async function uploadExpenseReceiptAction(claimId: string, positionId: string, fileName: string, bytes: Uint8Array): Promise<ActionState> {
+export async function uploadExpenseReceiptAction(formData: FormData): Promise<ActionState> {
   const { deps, ctx } = await requireSession();
-  return finish(await uploadExpenseReceipt(deps, ctx, { claimId, positionId, fileName, bytes }));
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) {
+    const t = await getTranslations();
+    return { status: 'error', message: t('common.uploadFailed'), fieldErrors: {} };
+  }
+  const claimId = String(formData.get('claimId') ?? '');
+  const positionId = String(formData.get('positionId') ?? '');
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  return finish(await uploadExpenseReceipt(deps, ctx, { claimId, positionId, fileName: file.name, bytes }));
 }
 
 export async function submitExpenseClaimAction(id: string, expectedVersion: string | null): Promise<ActionState> {
@@ -104,8 +112,15 @@ export async function createWaiverDeclarationAction(claimId: string, declaredOn:
   return finish(result);
 }
 
-export async function attachSignedWaiverAction(claimId: string, bytes: Uint8Array): Promise<ActionState> {
+export async function attachSignedWaiverAction(formData: FormData): Promise<ActionState> {
   const { deps, ctx } = await requireSession();
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) {
+    const t = await getTranslations();
+    return { status: 'error', message: t('common.uploadFailed'), fieldErrors: {} };
+  }
+  const claimId = String(formData.get('claimId') ?? '');
+  const bytes = new Uint8Array(await file.arrayBuffer());
   const result = await attachSignedWaiver(deps, ctx, { claimId, bytes });
   if (result.ok) revalidateApprovals();
   return finish(result);

@@ -44,6 +44,7 @@ export function VoucherPanel({
   onDone: (rawId: string) => void;
 }) {
   const t = useTranslations('finance.work.voucher');
+  const tCommon = useTranslations('common');
   const { date } = useDateFormat();
   const preferred = raw.amountCents < 0 ? 'voucher-invoice' : 'voucher-receipt';
   const defaultType = voucherTypes.find((v) => v.key === preferred)?.key ?? voucherTypes[0]?.key ?? '';
@@ -72,17 +73,27 @@ export function VoucherPanel({
   const upload = () => {
     if (!file) return;
     startTransition(async () => {
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      const result = await uploadVoucherToTransactionAction({ rawTransactionId: raw.id, typeKey, documentDate, title: title.trim() || undefined, entryTextIfNew: entryTextIfNew.trim() || undefined, bytes });
-      if (result.status === 'success' && result.invoice) {
-        // Abgelegt; die Liste springt erst weiter, wenn über das Angebot entschieden ist.
-        if (result.message) toast.success(result.message);
-        setRefusal(null);
-        setFile(null);
-        setOffer(result.invoice);
-        return;
+      try {
+        const formData = new FormData();
+        formData.append('rawTransactionId', raw.id);
+        formData.append('typeKey', typeKey);
+        formData.append('documentDate', documentDate);
+        if (title.trim()) formData.append('title', title.trim());
+        if (entryTextIfNew.trim()) formData.append('entryTextIfNew', entryTextIfNew.trim());
+        formData.append('file', file);
+        const result = await uploadVoucherToTransactionAction(formData);
+        if (result.status === 'success' && result.invoice) {
+          // Abgelegt; die Liste springt erst weiter, wenn über das Angebot entschieden ist.
+          if (result.message) toast.success(result.message);
+          setRefusal(null);
+          setFile(null);
+          setOffer(result.invoice);
+          return;
+        }
+        finish(result);
+      } catch {
+        toast.error(tCommon('uploadFailed'));
       }
-      finish(result);
     });
   };
 

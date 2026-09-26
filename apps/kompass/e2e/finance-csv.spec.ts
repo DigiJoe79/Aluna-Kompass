@@ -15,6 +15,22 @@ const BANK_CSV = [
   '05.03.2026;Druckerei Muster;Flyer;-20,00;1.030,00',
 ].join('\n');
 
+/**
+ * > 1 MB (N9, Befundliste 0.2.0): dieselben Spalten wie `BANK_CSV`, aber mit
+ * einem langen, harmlosen Verwendungszweck, damit wenige Zeilen reichen.
+ * Ein Tag je Zeile, damit keine zwei Zeilen gleich aussehen.
+ */
+function bigBankCsv(rows = 55): string {
+  const padding = 'x'.repeat(20_000);
+  const lines = ['Buchungstag;Empfänger;Verwendungszweck;Betrag;Saldo'];
+  for (let i = 0; i < rows; i++) {
+    const day = String((i % 27) + 1).padStart(2, '0');
+    const month = String((i % 12) + 1).padStart(2, '0');
+    lines.push(`${day}.${month}.2026;Empfänger Großdatei;${padding};10,00;${(1000 + i * 10).toFixed(2).replace('.', ',')}`);
+  }
+  return lines.join('\n');
+}
+
 /** Kopien der Bauhelfer-Ausgabe (`packages/modules/finance/src/import/csv-fixture.ts`), Byte für Byte geprüft. */
 const FIXTURES = path.resolve(import.meta.dirname, 'fixtures/csv');
 
@@ -104,6 +120,21 @@ test.describe('finance csv', () => {
     await expect(run).toContainText('Hausbank März-Format');
     await expect(run).toContainText('02.03.2026 – 05.03.2026');
     await expect(run).not.toContainText(/\d{4}-\d{2}-\d{2}/);
+  });
+
+  test('ein Auszug über 1 MB kommt beim Speichern und Laden an (N9)', async ({ page }) => {
+    await createBankAccount(page, 'Hausbank Großdatei', 'DE48999999990000404040');
+    const file = { name: 'grossauszug.csv', mimeType: 'text/csv', buffer: Buffer.from(bigBankCsv(), 'utf8') };
+    expect(file.buffer.byteLength).toBeGreaterThan(1_000_001);
+    await startAssistant(page, 'Hausbank Großdatei', file);
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    await page.getByRole('button', { name: 'Nein, Geld kam herein' }).click();
+    await page.getByRole('button', { name: 'Weiter' }).click();
+    await expect(page.getByLabel('Name des Formats')).toBeVisible();
+    await page.getByRole('button', { name: 'Speichern und Auszug laden' }).click();
+    await expect(page).toHaveURL(/\/finance\/imports$/);
+    await expect(page.getByTestId('import-run').filter({ hasText: 'Hausbank Großdatei' })).toBeVisible();
   });
 
   test('ein Neuladen mitten im Assistenten macht nach erneuter Dateiwahl beim gespeicherten Schritt weiter — auch ohne crypto.subtle', async ({ page }) => {

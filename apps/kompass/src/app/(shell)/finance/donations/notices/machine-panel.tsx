@@ -27,6 +27,7 @@ import { createNotificationLetterAction, saveSignerAction, uploadFacsimileAction
  */
 export function MachinePanel({ signers, status, canIssue, canDraftLetter, draftNames, facsimileMaxBytes }: { signers: SignerView[]; status: MachineProcedureStatus; canIssue: boolean; canDraftLetter: boolean; draftNames: string[]; facsimileMaxBytes: number }) {
   const t = useTranslations('finance.donations.machine');
+  const tCommon = useTranslations('common');
   const { date } = useDateFormat();
   const router = useRouter();
   const [editing, setEditing] = useState<SignerView | 'new' | null>(null);
@@ -39,15 +40,23 @@ export function MachinePanel({ signers, status, canIssue, canDraftLetter, draftN
   const upload = async (signerId: string, file: File | undefined) => {
     if (!file) return;
     setPending(true);
-    const result = await uploadFacsimileAction(signerId, new Uint8Array(await file.arrayBuffer()), file.type);
-    setPending(false);
-    if (result.status === 'error') {
-      toast.error(result.message);
-      return;
-    }
-    if (result.status === 'success') {
-      if (result.message) toast.success(result.message);
-      router.refresh();
+    try {
+      const formData = new FormData();
+      formData.append('signerId', signerId);
+      formData.append('file', file);
+      const result = await uploadFacsimileAction(formData);
+      if (result.status === 'error') {
+        toast.error(result.message);
+        return;
+      }
+      if (result.status === 'success') {
+        if (result.message) toast.success(result.message);
+        router.refresh();
+      }
+    } catch {
+      toast.error(tCommon('uploadFailed'));
+    } finally {
+      setPending(false);
     }
   };
 

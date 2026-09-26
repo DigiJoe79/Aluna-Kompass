@@ -12,17 +12,25 @@ function revalidateImports(): void {
 }
 
 /** Erkennt das Konto eines Auszugs (N3, W-1) — liest nur, legt keinen Lauf an; `data` ist ein `DetectedStatement`. */
-export async function detectStatementAccountAction(fileName: string, bytes: Uint8Array): Promise<ActionState> {
+export async function detectStatementAccountAction(formData: FormData): Promise<ActionState> {
   const t = await getTranslations();
   const { deps, ctx } = await requireSession();
-  return toActionState(await detectStatementAccount(deps, ctx, { fileName, bytes }), t);
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) return { status: 'error', message: t('common.uploadFailed'), fieldErrors: {} };
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  return toActionState(await detectStatementAccount(deps, ctx, { fileName: file.name, bytes }), t);
 }
 
 /** Lädt einen Kontoauszug (F4 Task 7) — `finance.entriesWrite`, ein Aufruf je Datei; mehrere Dateien laufen nacheinander in der Oberfläche, nicht hier. */
-export async function uploadStatementAction(accountId: string, fileName: string, bytes: Uint8Array, confirmFormatChange?: boolean): Promise<ActionState> {
+export async function uploadStatementAction(formData: FormData): Promise<ActionState> {
   const t = await getTranslations();
   const { deps, ctx } = await requireSession();
-  const result = await importStatement(deps, ctx, { accountId, fileName, bytes, confirmFormatChange });
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) return { status: 'error', message: t('common.uploadFailed'), fieldErrors: {} };
+  const accountId = String(formData.get('accountId') ?? '');
+  const confirmFormatChange = formData.get('confirmFormatChange') === 'true';
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const result = await importStatement(deps, ctx, { accountId, fileName: file.name, bytes, confirmFormatChange });
   revalidateImports();
   if (!result.ok) return toActionState(result, t);
   return toActionState(result, t, undefined);

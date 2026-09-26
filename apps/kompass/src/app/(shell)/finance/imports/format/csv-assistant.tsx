@@ -80,6 +80,7 @@ function sessionStore(): Storage | null {
  */
 export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = false }: { accounts: AssistantAccount[]; initialAccountId: string; canLoad: boolean; reselect?: boolean }) {
   const t = useTranslations('finance.csvAssistant');
+  const tCommon = useTranslations('common');
   const { date } = useDateFormat();
   const router = useRouter();
   /** Die Datei aus dem Zwischenschritt der Ablagefläche (N3, W-1): Konto wählen, dann mit ihr weiter. */
@@ -141,13 +142,21 @@ export function CsvAssistant({ accounts, initialAccountId, canLoad, reselect = f
     setBusy(true);
     setError(null);
     const closingBalanceCents = balanceText.trim() !== '' ? (parseAmount(balanceText) ?? undefined) : undefined;
-    const result = await saveCsvFormatAction({
-      accountId: account.id,
-      name: state.name.trim(),
-      format: { ...built.format, invertSign: state.invertSign ?? false },
-      confirmFormatChange,
-      load: load ? { fileName: file.name, bytes: file.bytes, closingBalanceCents } : null,
-    });
+    let result: ActionState;
+    try {
+      const formData = new FormData();
+      formData.append('accountId', account.id);
+      formData.append('name', state.name.trim());
+      formData.append('format', JSON.stringify({ ...built.format, invertSign: state.invertSign ?? false }));
+      formData.append('confirmFormatChange', String(confirmFormatChange));
+      if (load) {
+        formData.append('file', new Blob([file.bytes as BlobPart]), file.name);
+        if (closingBalanceCents !== undefined) formData.append('closingBalanceCents', String(closingBalanceCents));
+      }
+      result = await saveCsvFormatAction(formData);
+    } catch {
+      result = { status: 'error', message: tCommon('uploadFailed'), fieldErrors: {} };
+    }
     setBusy(false);
     if (result.status === 'success') {
       try {

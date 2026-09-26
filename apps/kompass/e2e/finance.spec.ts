@@ -1,5 +1,9 @@
+import path from 'node:path';
 import { expect, test } from './fixtures';
 import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
+
+/** > 1 MB (N9, Befundliste 0.2.0) — erzeugt mit `docs/intern/recherche/2026-09-26-upload-repro/mkpdf.py`. */
+const BIG_PDF = path.resolve(import.meta.dirname, 'fixtures/beleg-1500k.pdf');
 
 test.describe('finance', () => {
   test.beforeEach(async ({ page }) => {
@@ -529,6 +533,14 @@ test.describe('finance', () => {
     expect(href).toMatch(/\/finance\/entries\/.+\/voucher\/.+/);
     const response = await page.request.get(href!);
     expect(response.ok()).toBe(true);
+  });
+
+  test('ein Beleg über 1 MB an einer festgeschriebenen Buchung kommt an (N9)', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries');
+    await page.locator('tr', { hasText: 'Spende Altjahr' }).click();
+    await page.getByTestId('voucher-file-input').setInputFiles(BIG_PDF);
+    await expect(page.getByRole('link', { name: 'öffnen' })).toBeVisible();
   });
 
   test('ohne finance.entriesFinalize fehlt der Knopf „Korrigieren“', async ({ page }) => {

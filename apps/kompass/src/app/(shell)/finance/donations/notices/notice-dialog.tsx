@@ -139,6 +139,7 @@ function FormStep({ onSaved, onCancel }: { onSaved: (notice: SavedNotice) => voi
 
 function DocumentStep({ notice, canPickDocument, onChanged, onClose }: { notice: SavedNotice; canPickDocument: boolean; onChanged: (notice: SavedNotice) => void; onClose: () => void }) {
   const t = useTranslations('finance.donations.notices.dialog');
+  const tCommon = useTranslations('common');
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [picked, setPicked] = useState<PickedDocument | null>(null);
@@ -160,7 +161,15 @@ function DocumentStep({ notice, canPickDocument, onChanged, onClose }: { notice:
     const file = files[0];
     if (!file) return;
     setPending(true);
-    finish(await attachNoticeDocumentAction(notice.id, new Uint8Array(await file.arrayBuffer())));
+    try {
+      const formData = new FormData();
+      formData.append('id', notice.id);
+      formData.append('file', file);
+      finish(await attachNoticeDocumentAction(formData));
+    } catch {
+      setPending(false);
+      toast.error(tCommon('uploadFailed'));
+    }
   };
 
   const pick = async (doc: PickedDocument | null) => {

@@ -1,7 +1,11 @@
+import path from 'node:path';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { backToAdmin, EXPENSE_IBAN, linkOwnContact, mcpClient, PDF, PHONE, rejectInQueue, submitClaim, switchToJonas } from './expense-helpers';
 import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
+
+/** > 1 MB, < 10 MB (N9, Befundliste 0.2.0) — erzeugt mit `docs/intern/recherche/2026-09-26-upload-repro/mkpdf.py`. */
+const BIG_PDF = path.resolve(import.meta.dirname, 'fixtures/beleg-1500k.pdf');
 
 /**
  * F8a Task 5 — D1 „Auslage einreichen“ (`/finance/expenses/new`), 390 px
@@ -133,6 +137,15 @@ test.describe('finance expenses — einreichen (D1)', () => {
     await expect(alert).toContainText('scan-gross.pdf');
     await expect(alert).toContainText('10 MB');
     await expect(alert).toContainText('Ihre Eingaben bleiben stehen.');
+  });
+
+  test('ein Beleg über 1 MB kommt an (N9) — der Upload läuft über FormData, nicht als Server-Action-Argument', async ({ page }) => {
+    await linkOwnContact(page);
+    await openForm(page);
+    await fillReceipt(page, 1, '19,99', 'Großer Scan');
+    await card(page, 1).getByTestId('receipt-file-input').setInputFiles(BIG_PDF);
+    await expect(card(page, 1).getByTestId('receipt-file')).toContainText('beleg-1500k.pdf');
+    await expect(card(page, 1).getByRole('alert')).toHaveCount(0);
   });
 
   test('ohne Kontaktverknüpfung erscheint der Sperrzustand mit dem, wer es erledigen kann', async ({ page }) => {

@@ -45,6 +45,7 @@ export function CorrectDialog({
   canVoidConfirmation?: boolean;
 }) {
   const t = useTranslations('finance.entryView.correct');
+  const tCommon = useTranslations('common');
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pickedLineId, setPickedLineId] = useState<string | null>(null);
@@ -130,16 +131,22 @@ export function CorrectDialog({
   const uploadProof = async (files: File[]) => {
     const file = files[0];
     if (!file) return;
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const result = await uploadCorrectionProofAction(entry.id, file.name, bytes);
-    if (result.status === 'error') {
-      toast.error(result.message);
-      return;
+    try {
+      const formData = new FormData();
+      formData.append('entryId', entry.id);
+      formData.append('file', file);
+      const result = await uploadCorrectionProofAction(formData);
+      if (result.status === 'error') {
+        toast.error(result.message);
+        return;
+      }
+      if (result.status !== 'success') return;
+      const data = result.data as { documentId: string };
+      setProofDocumentId(data.documentId);
+      await runCorrection(data.documentId, acknowledgeSection153 || undefined);
+    } catch {
+      toast.error(tCommon('uploadFailed'));
     }
-    if (result.status !== 'success') return;
-    const data = result.data as { documentId: string };
-    setProofDocumentId(data.documentId);
-    await runCorrection(data.documentId, acknowledgeSection153 || undefined);
   };
 
   const pickProofFromArchive = async (documentId: string) => {

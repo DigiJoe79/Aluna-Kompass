@@ -83,11 +83,19 @@ export async function recordDispatchAction(input: { id: string; sentAt: string; 
   return toActionState(result, t, t('finance.donations.dispatch.toast.done', { number: result.value.documentNumber }));
 }
 
-/** Vierschritt, Schritt 3: die unterschriebene Fassung als Eingang ablegen und verknüpfen. */
-export async function attachSignedAction(id: string, fileName: string, bytes: Uint8Array): Promise<ActionState> {
+/**
+ * Vierschritt, Schritt 3: die unterschriebene Fassung als Eingang ablegen und
+ * verknüpfen. `FormData` statt eines Uint8Array-Arguments (N9) — sonst
+ * scheitert der Upload ab rund 1 MB stumm.
+ */
+export async function attachSignedAction(formData: FormData): Promise<ActionState> {
   const t = await getTranslations();
   const { deps, ctx } = await requireSession();
-  const result = await attachSignedConfirmation(deps, ctx, { id, bytes, fileName });
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) return { status: 'error', message: t('common.uploadFailed'), fieldErrors: {} };
+  const id = String(formData.get('id') ?? '');
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const result = await attachSignedConfirmation(deps, ctx, { id, bytes, fileName: file.name });
   revalidate();
   if (!result.ok) return toActionState(result, t);
   // Die Nummer der abgelegten Fassung liest nur, wer die Akte sehen darf — sonst kommt die Rückmeldung ohne sie.
