@@ -13,6 +13,10 @@ passende Feld springt. Ein erledigter Schritt bleibt sichtbar — nichts
 verschwindet aus der Liste:
 
 1. **Geschäftsjahr anlegen** — der Rahmen, in dem alles Weitere steht.
+   Kompass schlägt als Bezeichnung das Jahr des Beginns vor; beginnt das
+   Jahr nicht am 1. Januar oder endet nicht am 31. Dezember (Rumpfjahr),
+   steht das als eigenes Kennzeichen mit Zeitraum daneben — nicht in der
+   Bezeichnung selbst.
 2. **Bankkonto oder Kasse mit Anfangsbestand anlegen** — ohne ein
    Geschäftsjahr wartet dieser Schritt.
 3. **Wer welche Rolle trägt** — jede Finanzrolle braucht einen aktiven

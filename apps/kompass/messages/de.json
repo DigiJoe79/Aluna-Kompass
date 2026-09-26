@@ -3359,7 +3359,8 @@
       "fiscalYears": {
         "title": "Geschäftsjahre",
         "createFirst": "Erstes Geschäftsjahr anlegen",
-        "createFirstHint": "Ein Geschäftsjahr, das nicht am 1. Januar beginnt oder nicht am 31. Dezember endet, ist ein Rumpfjahr.",
+        "createFirstHint": "Kompass schlägt als Bezeichnung das Jahr des Beginns vor; ein Rumpfjahr — beginnt nicht am 1. Januar oder endet nicht am 31. Dezember — erkennt man am Kennzeichen, nicht an der Bezeichnung.",
+        "shortYear": "Rumpfjahr ({from}–{to})",
         "edit": "Geschäftsjahr ändern",
         "designation": "Bezeichnung",
         "range": "Von – bis",

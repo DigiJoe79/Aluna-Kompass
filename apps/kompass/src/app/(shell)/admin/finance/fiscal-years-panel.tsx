@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { useDateFormat } from '@/components/date-format-provider';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -20,6 +21,8 @@ export interface FiscalYearRow {
   endsOn: string;
   status: 'open' | 'closed';
   taxReturnFiledOn: string | null;
+  /** Befund 15 (Weg 2): Kennzeichen statt Zusatz in der Bezeichnung. */
+  isShortYear: boolean;
 }
 
 /** H5 — Tabelle + „Erstes Geschäftsjahr anlegen“; die Bezeichnung ist nach der ersten Buchungsnummer gesperrt, der Grund steht am Feld. */
@@ -27,6 +30,7 @@ export function FiscalYearsPanel({ years }: { years: FiscalYearRow[] }) {
   const t = useTranslations('finance.admin.fiscalYears');
   const tCommon = useTranslations('common');
   const router = useRouter();
+  const { date } = useDateFormat();
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<FiscalYearRow | null>(null);
 
@@ -54,7 +58,14 @@ export function FiscalYearsPanel({ years }: { years: FiscalYearRow[] }) {
           <TableBody>
             {years.map((year) => (
               <TableRow key={year.id} className="h-12 border-b border-line-2">
-                <TableCell className="px-4 font-mono font-semibold text-ink">{year.designation}</TableCell>
+                <TableCell className="px-4">
+                  <span className="font-mono font-semibold text-ink">{year.designation}</span>
+                  {year.isShortYear ? (
+                    <StatusBadge tone="neutral" className="ml-2">
+                      {t('shortYear', { from: date(year.startsOn), to: date(year.endsOn) })}
+                    </StatusBadge>
+                  ) : null}
+                </TableCell>
                 <TableCell className="px-4 text-ink-2">
                   {year.startsOn} – {year.endsOn}
                 </TableCell>

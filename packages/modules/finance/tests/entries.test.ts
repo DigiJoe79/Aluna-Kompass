@@ -93,6 +93,19 @@ describe('drafts', () => {
   });
 });
 
+describe('numbering in a short fiscal year (Befund 15, Weg 2)', () => {
+  it('numbers entries 2026-0001, not "2026 (Rumpfjahr)-0001"', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+    const bank = unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true }));
+    const donations = deps.db.select().from(financeCategories).where(eq(financeCategories.key, 'donations')).get()!;
+    unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-03-15', endsOn: '2026-12-31' }));
+    const d = unwrap(await saveDraft(deps, ctx, { entryDate: '2026-06-01', text: 'Spende', moneyLines: [{ accountId: bank.id, amountCents: 5000 }], allocationLines: [{ categoryId: donations.id, amountCents: 5000 }] }));
+    const finalized = unwrap(await finalizeEntry(deps, ctx, { id: d.id }));
+    expect(finalized.number).toBe('2026-0001');
+  });
+});
+
 describe('reviewed', () => {
   const draftInput = (f: Awaited<ReturnType<typeof ledgerFixture>>) => ({ entryDate: '2026-03-01', text: 'Spende', moneyLines: [{ accountId: f.bank.id, amountCents: 5000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 5000 }] });
 

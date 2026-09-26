@@ -7,11 +7,17 @@ import { financeEntryCounters, financeFiscalYears, financePeriodEvents, type Fin
 import { requireMasterDataRead } from './access';
 
 export type FiscalYearStatus = 'open' | 'closed';
-export type FiscalYearView = FinanceFiscalYearRow & { status: FiscalYearStatus };
+/** Befund 15 (Entscheidung Joe, Weg 2): `isShortYear` ist das Kennzeichen „Rumpfjahr“ — nie Teil der Bezeichnung. */
+export type FiscalYearView = FinanceFiscalYearRow & { status: FiscalYearStatus; isShortYear: boolean };
 
 const dayAfter = (iso: string): string => { const d = new Date(`${iso}T00:00:00.000Z`); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); };
 /** Zwölf Monate ab `start`, letzter Tag eingeschlossen: 2027-07-01 → 2028-06-30. */
 const yearEnd = (start: string): string => { const d = new Date(`${start}T00:00:00.000Z`); d.setUTCFullYear(d.getUTCFullYear() + 1); d.setUTCDate(d.getUTCDate() - 1); return d.toISOString().slice(0, 10); };
+
+/** Kürzer als zwölf Monate — die Anzeige zeigt das als Kennzeichen (Befund 15), `designationOf` nie. */
+export function isShortFiscalYear(row: { startsOn: string; endsOn: string }): boolean {
+  return yearEnd(row.startsOn) !== row.endsOn;
+}
 
 export function fiscalYearForInternal(db: DbOrTx, date: string): FinanceFiscalYearRow | null {
   return db.select().from(financeFiscalYears).where(and(lte(financeFiscalYears.startsOn, date), gte(financeFiscalYears.endsOn, date))).get() ?? null;
@@ -78,9 +84,9 @@ function hasEntryNumbers(db: DbOrTx, yearId: string): boolean {
   return !!db.select({ y: financeEntryCounters.fiscalYearId }).from(financeEntryCounters).where(eq(financeEntryCounters.fiscalYearId, yearId)).get();
 }
 
-function designationOf(startsOn: string, endsOn: string): string {
-  const shortYear = yearEnd(startsOn) !== endsOn;
-  return shortYear ? `${startsOn.slice(0, 4)} (Rumpfjahr)` : startsOn.slice(0, 4);
+/** Vorschlag für die Bezeichnung (Befund 15, Entscheidung Joe: Weg 2) — nur das Jahr des Beginns; ein Rumpfjahr steht als Kennzeichen (`isShortFiscalYear`), nicht im Text. */
+function designationOf(startsOn: string): string {
+  return startsOn.slice(0, 4);
 }
 
 export async function createFirstFiscalYear(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<FiscalYearView>> {
@@ -92,10 +98,10 @@ export async function createFirstFiscalYear(deps: Deps, ctx: CallContext, input:
 
   return deps.db.transaction((tx: DbOrTx) => {
     const now = isoNow(deps.clock);
-    const row: FinanceFiscalYearRow = { id: newId(), startsOn: parsed.value.startsOn, endsOn: parsed.value.endsOn, designation: designationOf(parsed.value.startsOn, parsed.value.endsOn), taxReturnFiledOn: null, createdAt: now, updatedAt: now };
+    const row: FinanceFiscalYearRow = { id: newId(), startsOn: parsed.value.startsOn, endsOn: parsed.value.endsOn, designation: designationOf(parsed.value.startsOn), taxReturnFiledOn: null, createdAt: now, updatedAt: now };
     tx.insert(financeFiscalYears).values(row).run();
     financeAudit(tx, deps, ctx, { action: 'finance.fiscalYear.create', entity: 'financeFiscalYear', id: row.id, after: row, summary: `Geschäftsjahr ${row.designation} angelegt` });
-    return ok({ ...row, status: 'open' as const });
+    return ok({ ...row, status: 'open' as const, isShortYear: isShortFiscalYear(row) });
   });
 }
 
@@ -127,7 +133,7 @@ export async function updateFiscalYear(deps: Deps, ctx: CallContext, input: unkn
     };
     tx.update(financeFiscalYears).set(after).where(eq(financeFiscalYears.id, before.id)).run();
     financeAudit(tx, deps, ctx, { action: 'finance.fiscalYear.update', entity: 'financeFiscalYear', id: before.id, before, after, summary: `Geschäftsjahr ${after.designation} geändert` });
-    return ok({ ...after, status: fiscalYearStatusInternal(tx, before.id) });
+    return ok({ ...after, status: fiscalYearStatusInternal(tx, before.id), isShortYear: isShortFiscalYear(after) });
   });
 }
 
@@ -135,5 +141,5 @@ export async function listFiscalYears(deps: Deps, ctx: CallContext): Promise<Res
   const denied = requireMasterDataRead(ctx).failure;
   if (denied) return denied;
   const rows = deps.db.select().from(financeFiscalYears).orderBy(desc(financeFiscalYears.startsOn)).all();
-  return ok(rows.map((row) => ({ ...row, status: fiscalYearStatusInternal(deps.db, row.id) })));
+  return ok(rows.map((row) => ({ ...row, status: fiscalYearStatusInternal(deps.db, row.id), isShortYear: isShortFiscalYear(row) })));
 }

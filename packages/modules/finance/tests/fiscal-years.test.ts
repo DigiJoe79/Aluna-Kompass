@@ -2,16 +2,38 @@ import { schema, unwrap } from '@kompass/core';
 import { systemContext } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { allocateEntryNumber, createFirstFiscalYear, ensureFiscalYearFor, fiscalYearForInternal, fiscalYearStatusInternal, listFiscalYears, updateFiscalYear } from '../src/ledger/fiscal-years';
-import { financePeriodEvents } from '../src/schema';
+import { financeFiscalYears, financePeriodEvents } from '../src/schema';
 import { setupFinance } from './helpers';
 
 const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
 
 describe('fiscal years', () => {
-  it('the first year is set up by a person; a short one is named as such; a second "first" is refused', async () => {
+  it('the first year is set up by a person; a second "first" is refused', async () => {
     const { deps, ctx } = setupFinance();
-    expect(unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-09-01', endsOn: '2026-12-31' }))).toMatchObject({ designation: '2026 (Rumpfjahr)', status: 'open' });
+    expect(unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-09-01', endsOn: '2026-12-31' }))).toMatchObject({ designation: '2026', status: 'open' });
     expect(err(await createFirstFiscalYear(deps, ctx, { startsOn: '2027-01-01', endsOn: '2027-12-31' }))).toMatchObject({ type: 'conflict', code: 'fiscalYearExists' });
+  });
+
+  it('Befund 15 (Weg 2): suggests only the start year as designation for a short year, marked isShortYear in the view', async () => {
+    const { deps, ctx } = setupFinance();
+    const year = unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-09-01', endsOn: '2026-12-31' }));
+    expect(year).toMatchObject({ designation: '2026', isShortYear: true });
+  });
+
+  it('a full first year is not marked as a short year', async () => {
+    const { deps, ctx } = setupFinance();
+    const year = unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-01-01', endsOn: '2026-12-31' }));
+    expect(year).toMatchObject({ designation: '2026', isShortYear: false });
+  });
+
+  it('keeps -2 for a second year whose auto-created designation is already taken', async () => {
+    const { deps, ctx } = setupFinance();
+    unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-01-01', endsOn: '2026-12-31' }));
+    // Wie ein migriertes Altjahr: die Bezeichnung "2027" ist schon vergeben, obwohl es nicht das jüngste Jahr ist —
+    // der unmittelbare Nachfolger des echten Jahres 2026 würde sonst genauso "2027" heißen.
+    deps.db.insert(financeFiscalYears).values({ id: 'FY-MANUAL-2027', startsOn: '2020-01-01', endsOn: '2020-12-31', designation: '2027', taxReturnFiledOn: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' }).run();
+    const successor = unwrap(deps.db.transaction((tx) => ensureFiscalYearFor(tx, deps, ctx, '2027-03-01')));
+    expect(successor.designation).toBe('2027-2');
   });
 
   it('refuses more than twelve months and an end before the start', async () => {

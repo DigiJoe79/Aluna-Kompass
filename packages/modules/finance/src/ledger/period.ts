@@ -6,7 +6,7 @@ import { financeConflict } from '../errors';
 import { financeAllocationCorrections, financeEntries, financeEntryJustifications, financeFiscalYears, financePeriodEvents, type FinanceFiscalYearRow } from '../schema';
 import { requireFinanceRead } from './access';
 import { documentationOf } from './entries';
-import { ensureFiscalYearFor, fiscalYearStatusInternal, type FiscalYearView } from './fiscal-years';
+import { ensureFiscalYearFor, fiscalYearStatusInternal, isShortFiscalYear, type FiscalYearView } from './fiscal-years';
 import { PERIOD_REOPEN_GUARDS, type PeriodReopenGuard } from '../locks';
 
 /** Ein Tag nach `iso` — der Startpunkt des Folgejahres, wenn `endsOn` sein letzter Tag ist. */
@@ -165,7 +165,7 @@ export async function closeFiscalYear(deps: Deps, ctx: CallContext, input: unkno
     const nextYear = ensureFiscalYearFor(tx, deps, ctx, dayAfter(year.endsOn));
     void nextYear; // fehlschlagen darf hier nicht: der Nachfolger ist immer im gültigen Bereich.
     financeAudit(tx, deps, ctx, { action: 'finance.period.close', entity: 'financePeriodEvent', id: eventId, after: { fiscalYearId: year.id, kind: 'closed' }, summary: `Geschäftsjahr ${year.designation} abgeschlossen` });
-    return ok({ ...year, status: 'closed' as const });
+    return ok({ ...year, status: 'closed' as const, isShortYear: isShortFiscalYear(year) });
   });
 }
 
@@ -215,7 +215,7 @@ export function reopenInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, input: 
   const eventId = newId();
   tx.insert(financePeriodEvents).values({ id: eventId, fiscalYearId: year.id, kind: 'reopened', at: now, byUserId: ctx.userId ?? 'system', reason: input.note }).run();
   financeAudit(tx, deps, ctx, { action: 'finance.period.reopen', entity: 'financePeriodEvent', id: eventId, after: { fiscalYearId: year.id, kind: 'reopened', guardCount: guards.length }, summary: `Geschäftsjahr ${year.designation} wieder geöffnet` });
-  return ok({ ...year, status: 'open' as const });
+  return ok({ ...year, status: 'open' as const, isShortYear: isShortFiscalYear(year) });
 }
 
 const reopenSchema = z.object({ id: z.string().min(1), note: z.string().trim().min(1).max(500) });

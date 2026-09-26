@@ -321,6 +321,20 @@ test.describe('finance setup', () => {
     await expect(page.getByTestId('fiscal-year-designation-error')).toContainText('Bezeichnung');
   });
 
+  test('ein Rumpfjahr bekommt nur das Jahr des Beginns als Bezeichnung, mit dem Kennzeichen daneben (Befund 15)', async ({ page }) => {
+    await page.goto('/admin/finance?panel=fiscalYears');
+    await page.getByRole('button', { name: 'Erstes Geschäftsjahr anlegen' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Beginnt am').fill('2026-03-15');
+    await dialog.getByLabel('Endet am').fill('2026-12-31');
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByText('Geschäftsjahr angelegt.')).toBeVisible();
+
+    const row = page.getByRole('row', { name: /2026/ });
+    await expect(row.getByText('2026', { exact: true })).toBeVisible();
+    await expect(row.getByText('Rumpfjahr (15.03.2026–31.12.2026)')).toBeVisible();
+  });
+
   test('„Darf ein Agent festschreiben?“ ist aus und abgesetzt', async ({ page }) => {
     await page.goto('/admin/finance?panel=tax');
     const row = page.getByTestId('mcp-human-only-row');
