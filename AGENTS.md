@@ -42,7 +42,7 @@ Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. J
 - `pnpm test` — alle Tests; `pnpm --filter @kompass/core test` — nur Kern
 - `pnpm typecheck` — TypeScript
 - `pnpm --filter @kompass/app e2e` — Playwright-E2E (Start den Dev-Server auf Port 3100 selbst)
-- `pnpm verify` — **vor dem Push**: Typecheck, alle Tests, E2E gegen `next dev` **mit geleertem `.next`**, Image-Build und dieselbe E2E-Suite gegen den laufenden Container. Braucht Docker; rund vier Minuten.
+- `pnpm verify` — **vor dem Push**: Typecheck, alle Tests, E2E gegen `next dev` **mit geleertem `.next`**, Image-Build und dieselbe E2E-Suite gegen den laufenden Container. Braucht Docker. Die gemessenen Laufzeiten stehen in der Prüfringe-Spec (Nachtrag vom 26.09.); mit einer dreiviertel Stunde ist zu rechnen.
 - `pnpm e2e:cold` — nur der zweite Ring, und zwar kalt. Das Leeren ist kein Ritual: `next dev` übersetzt jede Route beim ersten Aufruf, und lokal liegen dafür zwei Gigabyte warm, die es auf einem CI-Läufer nie gibt. Wer warm prüft, prüft eine andere Anwendung — am 11.09. kostete das vier rote Online-Läufe hintereinander.
 - `pnpm image` — nur das Image bauen, für die eigene Architektur (schnell). `pnpm image:release` baut amd64 wie die CI.
 - `pnpm e2e:image` — die E2E-Suite gegen ein gebautes `kompass-local` auf Port 3200. Prüft die Verpackung: gebündelter Code, `/data`-Volume, mitgeliefertes Template, Modulauflösung.

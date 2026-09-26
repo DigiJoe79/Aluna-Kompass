@@ -1,6 +1,10 @@
-
+import { createHash } from 'node:crypto';
+import { rmSync } from 'node:fs';
+import { cp, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { coreDocumentTemplates, createDocumentEngine } from '@kompass/documents';
-import { coreModule, createDeps, readEnv, resetDataPath, seedDevelopment } from '@kompass/core';
+import { coreModule, createDeps, databasePathIn, isProvided, providedPaths, readEnv, resetDataPath, seedDevelopment } from '@kompass/core';
 import { createPdfTools, createTextExtraction } from '@kompass/text-extraction';
 import { installedModules } from '../modules';
 import { resetMcpHandler } from './mcp';
@@ -13,6 +17,8 @@ interface Holder {
   resetting: Promise<void> | null;
   /** Ob `closeOnExit` schon am Prozess hängt — genau einmal je Prozess. */
   exitHooked?: boolean;
+  /** Der fertig geseedete Datenpfad als Kopiervorlage; siehe `resetDeps`. */
+  seedSnapshot?: { dir: string; forDataPath: string };
 }
 
 const holder: Holder = ((globalThis as unknown as { __kompass?: Holder }).__kompass ??= {
@@ -35,6 +41,10 @@ function closeOnExit(): void {
     // War schon zu.
   }
   holder.deps = null;
+  if (holder.seedSnapshot) {
+    rmSync(holder.seedSnapshot.dir, { recursive: true, force: true });
+    holder.seedSnapshot = undefined;
+  }
 }
 
 export function runtimeEnv() {
@@ -111,6 +121,74 @@ function retire(deps: AppDeps | null, closeDelayMs: number): void {
 }
 
 /**
+ * Wo der Schnappschuss des geseedeten Datenpfads liegt.
+ *
+ * Im Temp-Verzeichnis, nicht neben `dataPath`: Im Container ist `/data` ein
+ * Volume, und ob `node` daneben schreiben darf, hängt vom Wirt ab. Prozess und
+ * Datenpfad stehen im Namen, damit sich zwei Server (Worker, Worktrees) nicht
+ * gegenseitig die Vorlage überschreiben.
+ */
+function seedSnapshotDir(dataPath: string): string {
+  const key = createHash('sha1').update(dataPath).digest('hex').slice(0, 12);
+  return path.join(os.tmpdir(), `kompass-seed-${process.pid}-${key}`);
+}
+
+/** Nur für Tests: die Datenbank innerhalb des Schnappschusses. */
+export function seedSnapshotDatabasePath(): string {
+  return databasePathIn(seedSnapshotDir(readEnv().dataPath));
+}
+
+/**
+ * Was der Schnappschuss enthält: den Bestand, sonst nichts.
+ *
+ * WAL und Shared-Memory bleiben draussen: Nach dem Checkpoint steht alles in
+ * der Hauptdatei, und eine mitkopierte `-shm` beschreibt einen Zustand, den es
+ * am Ziel nie gab. Bereitgestelltes Material (`providedFiles`, etwa das
+ * Template im Volume) bleibt draussen, weil `resetDataPath` es stehen lässt —
+ * und weil darin ein Symlink auf die Module des Images liegt, an dem `cp`
+ * beim Zurückkopieren mit EINVAL scheiterte (Container-Ring, 26.09.).
+ */
+function snapshotFilter(dataPath: string, snapshotDir: string): (source: string) => boolean {
+  const provided = providedPaths(dataPath, [coreModule, ...installedModules]);
+  const providedInSnapshot = providedPaths(snapshotDir, [coreModule, ...installedModules]);
+  return (source) =>
+    !/\.db-(wal|shm)$/.test(source) && !isProvided(source, provided) && !isProvided(source, providedInSnapshot);
+}
+
+/**
+ * Den Seed genau einmal je Prozess rechnen und danach nur noch kopieren.
+ *
+ * Gemessen am 26.09. (M5 Max): ein leerer Reset 0,02 s, ein geseedeter 0,89 s —
+ * die Differenz ist `seedDevelopment` für Kern und alle Module, und die
+ * E2E-Suite bezahlt sie vor jedem ihrer 359 Fälle. Der Seed selbst ist
+ * deterministisch und per `seed.test.ts` je Modul geprüft; hier ändert sich
+ * nicht, **was** ein Test vorfindet, sondern nur, wie es entsteht.
+ *
+ * Der Schnappschuss entsteht aus dem echten Datenpfad, nicht aus einem
+ * anderen Verzeichnis: So bleibt jeder Pfad, den der Seed womöglich ablegt,
+ * beim Zurückkopieren gültig. Er gilt für einen Prozess und einen Datenpfad;
+ * ein `next dev` lädt geänderten Seed-Code erst mit dem nächsten Start — für
+ * einen E2E-Lauf, der seinen Server selbst startet, ist das die Regel.
+ */
+async function seedFromSnapshot(deps: AppDeps, dataPath: string): Promise<AppDeps> {
+  const snapshot = holder.seedSnapshot;
+  const dir = seedSnapshotDir(dataPath);
+  const filter = snapshotFilter(dataPath, dir);
+  if (snapshot && snapshot.forDataPath === dataPath) {
+    deps.close();
+    await cp(snapshot.dir, dataPath, { recursive: true, force: true, filter });
+    return openDeps();
+  }
+  await seedDevelopment(deps);
+  // Alles in die Hauptdatei, damit die Kopie vollständig ist.
+  deps.sqlite.pragma('wal_checkpoint(TRUNCATE)');
+  await rm(dir, { recursive: true, force: true });
+  await cp(dataPath, dir, { recursive: true, filter });
+  holder.seedSnapshot = { dir, forDataPath: dataPath };
+  return deps;
+}
+
+/**
  * Nur für E2E-Tests (APP_ENV=test): Datenbank verwerfen und neu aufsetzen.
  *
  * Der Hintergrunddienst wird dabei angehalten, nicht nur angetippt. Seit der
@@ -147,8 +225,8 @@ export async function resetDeps(mode: 'empty' | 'seeded', closeDelayMs = 30_000)
     // Bestand weg, bereitgestelltes Material bleibt: Ohne die Unterscheidung
     // risse jeder Testlauf das Template aus dem Volume.
     await resetDataPath(env.dataPath, [coreModule, ...installedModules]);
-    const deps = openDeps();
-    if (mode === 'seeded') await seedDevelopment(deps);
+    let deps = openDeps();
+    if (mode === 'seeded') deps = await seedFromSnapshot(deps, env.dataPath);
     // Erst ganz zum Schluss sichtbar machen: Bis hierher soll niemand einen
     // halb eingerichteten Bestand zu sehen bekommen.
     holder.deps = deps;

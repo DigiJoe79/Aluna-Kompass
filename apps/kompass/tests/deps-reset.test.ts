@@ -224,3 +224,78 @@ describe('eine Anfrage, die beim Reset schon rechnet', () => {
     expect(() => before.sqlite.prepare('SELECT 1').get()).toThrow();
   });
 });
+
+/**
+ * Der geseedete Reset kostet fast nur den Seed: 0,89 s gegen 0,02 s für den
+ * leeren, gemessen am 26.09. auf einem M5 Max — und die E2E-Suite ruft ihn
+ * vor jedem ihrer 359 Fälle. Deshalb wird der Seed je Prozess genau einmal
+ * gerechnet und danach als Schnappschuss des Datenpfads kopiert. Der Bestand,
+ * den ein Test vorfindet, ist derselbe; nur der Weg dahin ist ein `cp`.
+ */
+describe('resetDeps(seeded) mit Schnappschuss', () => {
+  it('liefert beim zweiten Mal denselben Bestand wie beim ersten', async () => {
+    const { getDeps, resetDeps } = await import('@/lib/deps');
+    const users = (deps: { sqlite: { prepare(sql: string): { get(): unknown } } }) =>
+      (deps.sqlite.prepare('SELECT count(*) AS n FROM users').get() as { n: number }).n;
+
+    await resetDeps('seeded');
+    const first = users(getDeps());
+    expect(first).toBeGreaterThan(0);
+
+    getDeps().sqlite.exec(`CREATE TABLE ${MARKER} (x)`);
+    await resetDeps('seeded');
+
+    expect(hasMarker(getDeps().sqlite)).toBe(false);
+    expect(users(getDeps())).toBe(first);
+  });
+
+  it('kopiert den Schnappschuss, statt neu zu seeden', async () => {
+    const { getDeps, resetDeps, seedSnapshotDatabasePath } = await import('@/lib/deps');
+
+    await resetDeps('seeded');
+
+    // Eine Spur direkt im Schnappschuss hinterlassen: Kommt sie beim nächsten
+    // Reset im Bestand an, war es die Kopie — ein neuer Seed hätte sie nicht.
+    const sqlite = getDeps().sqlite;
+    sqlite.exec(`ATTACH DATABASE '${seedSnapshotDatabasePath()}' AS snapshot`);
+    sqlite.exec(`CREATE TABLE snapshot.${MARKER} (x)`);
+    sqlite.exec('DETACH DATABASE snapshot');
+
+    await resetDeps('seeded');
+    expect(hasMarker(getDeps().sqlite)).toBe(true);
+  });
+
+  it('lässt bereitgestelltes Material in Ruhe — auch einen Symlink im Template', async () => {
+    const { resetDeps } = await import('@/lib/deps');
+    const { mkdirSync, readlinkSync, symlinkSync, writeFileSync } = await import('node:fs');
+
+    // So legt es der Entrypoint ins Volume: das Template als Kopie, darin
+    // `node_modules` als Symlink auf die Module im Image. `resetDataPath` lässt
+    // beides stehen (`providedFiles` des Site-Moduls); der Schnappschuss muss
+    // es genauso — sonst scheitert `cp` am zweiten Reset am Symlink (EINVAL,
+    // Container-Ring am 26.09.: 151 rote Fälle).
+    const template = path.join(dataPath, 'site', 'template');
+    const modules = await mkdtemp(path.join(tmpdir(), 'kompass-modules-'));
+    // Mit Astro darin, sonst erneuert das Site-Modul den Link von sich aus.
+    mkdirSync(path.join(modules, 'astro'), { recursive: true });
+    mkdirSync(template, { recursive: true });
+    writeFileSync(path.join(template, 'kompass.template.ts'), 'export default {}');
+    symlinkSync(modules, path.join(template, 'node_modules'));
+
+    await resetDeps('seeded');
+    await expect(resetDeps('seeded')).resolves.toBeUndefined();
+
+    expect(readlinkSync(path.join(template, 'node_modules'))).toBe(modules);
+    await rm(modules, { recursive: true, force: true });
+  });
+
+  it('lässt den leeren Reset leer', async () => {
+    const { getDeps, resetDeps } = await import('@/lib/deps');
+
+    await resetDeps('seeded');
+    await resetDeps('empty');
+
+    const n = (getDeps().sqlite.prepare('SELECT count(*) AS n FROM users').get() as { n: number }).n;
+    expect(n).toBe(0);
+  });
+});

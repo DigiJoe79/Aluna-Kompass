@@ -14,12 +14,22 @@ import type { ModuleManifest } from '../modules/manifest';
  * Was bereitgestellt ist, sagt das Modul über `providedFiles` in seinem
  * Manifest — hier steht keine Liste von Modulnamen.
  */
-export async function resetDataPath(dataPath: string, manifests: readonly ModuleManifest[]): Promise<void> {
-  const keep = new Set(
+/** Die absoluten Pfade des bereitgestellten Materials unter `dataPath`. */
+export function providedPaths(dataPath: string, manifests: readonly ModuleManifest[]): Set<string> {
+  return new Set(
     manifests.flatMap((manifest) =>
       (manifest.providedFiles ?? []).map((relative) => path.join(dataPath, manifest.key, relative)),
     ),
   );
+}
+
+/** Ob `target` bereitgestellt ist oder darin liegt. */
+export function isProvided(target: string, provided: ReadonlySet<string>): boolean {
+  return provided.has(target) || [...provided].some((kept) => target.startsWith(`${kept}${path.sep}`));
+}
+
+export async function resetDataPath(dataPath: string, manifests: readonly ModuleManifest[]): Promise<void> {
+  const keep = providedPaths(dataPath, manifests);
 
   const removeExcept = async (dir: string): Promise<void> => {
     for (const entry of await readdir(dir).catch(() => [] as string[])) {
