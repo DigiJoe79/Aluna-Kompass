@@ -59,6 +59,7 @@ Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. J
 - `scripts/third-party-notices.sh [image] [--pruefen]` — die Aufstellung der Software Dritter entsteht beim Bau **im Image** (`--erzeugen` im Dockerfile, nach `/app/THIRD-PARTY-NOTICES.md`); ohne Flag gibt das Skript sie aus. `--pruefen` verlangt, dass sie da ist und jede npm-Lizenz auf der Positivliste steht — so läuft es in `pnpm image:check` und in der CI vor dem Hochladen. `THIRD-PARTY-NOTICES.md` im Repo ist eine Übersicht **ohne Versionen**; wer ein `apt-get install` ins Dockerfile schreibt, trägt das Paket dort ein (Test).
 - `pnpm dev:reset` — Entwicklungsdatenbank verwerfen und mit Seed **und** den Tieren und Projekten des Prototyps neu aufbauen (nur `APP_ENV=development`; Prototyp-Pfad über `PROTOTYPE_DIR`)
 - Texterkennung lokal: `brew install tesseract tesseract-lang poppler` — ohne sie meldet die Akte „Texterkennung nicht verfügbar", und `packages/text-extraction` überspringt seine Tests nicht, sondern schlägt fehl.
+- Statische Analyse: Job `semgrep` in `ci.yml` fährt `semgrep ci` je Push; Regeln und Blockier-Einstufung kommen aus der Policy im Semgrep-Konto, das Token liegt als Repo-Secret `SEMGREP_APP_TOKEN`. Lokal: `semgrep scan --config p/default --config p/secrets --metrics=off`. Ein Befund ist erst dann keiner, wenn er im Semgrep-Konto eingeordnet oder im Code mit `// nosemgrep: <regel>` und Begründung markiert ist.
 - Betrieb: `docs/handbuch/betrieb.md` — die allgemeine Anleitung, die mit jeder Installation ausgeliefert wird (Voraussetzungen, Erstinstallation, Update, Backup, Webseite). **Sie nennt keine Hardware, keinen Hoster und keinen Verein**; `apps/kompass/tests/no-association-content.test.ts` prüft das, weil `docs/handbuch` im Image liegt. Alunas konkreter Aufbau steht in `docs/intern/betrieb-aluna-qnap.md` (nicht im Repo). Compose-Vorlagen `docker-compose.test.yml` und `docker-compose.prod.yml`, CI `.github/workflows/ci.yml`
 
 ## Release
@@ -102,12 +103,12 @@ Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. J
    werden ihre Daten deshalb neu aus der Produktion gezogen.
 4. **Release**: vorher die Migrationen des Branches zu einer zusammenlegen und die Abnahme aus Schritt 3 auf einer frisch aus Prod gezogenen Testinstanz wiederholen. Dann im letzten Commit des Branches `-dev` von der Nummer streichen
    (alle `package.json`) und „Unveröffentlicht“ zur Nummer mit Datum machen. Nach lokalem
-   `pnpm verify` und grünem Job `test` des Branch-Laufs lokal nach `main`
+   `pnpm verify` und grünem Branch-Lauf (Job `test` für Typecheck, Lint und
+   Unit-Tests, Job `image` für Bau und Container-Ring) lokal nach `main`
    squashen (`git merge --squash dev-x.y.z`), `vX.Y.Z` auf den Sammelcommit
    setzen, `main` und den Tag einzeln pushen — nie `git push --tags`, lokale
-   Tags bleiben lokal. Auf den Job `image` des Branches wird nicht gewartet:
-   Der Tag-Lauf wiederholt den Image-Ring und lädt `x.y.z` und `latest` nur bei
-   Grün hoch. Ein roter Tag-Lauf veröffentlicht nichts; der Tag wird dann
+   Tags bleiben lokal. Der Tag-Lauf wiederholt Bau und Container-Ring und lädt `x.y.z` und `latest`
+   nur bei Grün hoch. Ein roter Tag-Lauf veröffentlicht nichts; der Tag wird dann
    gelöscht und nach dem Fix neu gesetzt.
 5. **Aufräumen**: `scripts/zyklus-aufraeumen.sh x.y.z` (erst mit `-n`). Es
    setzt das lokale Archiv-Tag `archiv/x.y.z`, löscht die Registry-Tags

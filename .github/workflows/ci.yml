@@ -63,29 +63,46 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
-      # Die Browser sind gross und aendern sich nur mit der Playwright-Version;
-      # ohne Cache kostet jeder Lauf eine Minute Download.
-      - id: playwright-version
-        run: echo "value=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-        working-directory: apps/kompass
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        id: playwright-cache
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.value }}
-      - run: pnpm --filter @kompass/app exec playwright install --with-deps chromium
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-      - run: pnpm --filter @kompass/app exec playwright install-deps chromium
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-      - run: pnpm --filter @kompass/app e2e
-      # Der Bericht entsteht nur, weil playwright.config.ts den HTML-Reporter
-      # fuehrt; ohne ihn lud dieser Schritt ein leeres Artefakt hoch.
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: failure()
-        with: { name: playwright-report, path: apps/kompass/playwright-report, retention-days: 7 }
+      # Kein Dev-Ring online (seit 26.09.): Er fuhr dieselbe Suite wie der
+      # Container-Ring, nur gegen `next dev` statt gegen den Produktionsbuild,
+      # den ein Verein je zu sehen bekommt. Was er fand, fand der dritte Ring
+      # auch; was nur in `next dev` bricht, ist ein Entwicklungsproblem und
+      # faellt lokal auf, wo jeder in `next dev` arbeitet. Gekostet hat er 54
+      # Minuten je Push und den Start des Image-Jobs, der an `needs: test`
+      # haengt — und zwei `next dev` nebeneinander sprengten mit 19 GB den
+      # Laeufer. Der Dev-Ring bleibt lokal (`pnpm verify`, `pnpm verify:modul`);
+      # online prueft die Suite den Container. Spec: Pruefringe, Nachtrag 26.09.
+
+  # Statische Analyse je Push, nicht erst auf `main`: Die Managed Scans der
+  # Semgrep-App sahen den Code bislang erst nach dem Squash, also nach dem
+  # Release. `semgrep ci` holt Regeln und Blockier-Einstufung aus der Policy im
+  # Semgrep-Konto, prueft als Diff gegen den Basis-Commit und meldet dorthin —
+  # was dort schon eingeordnet ist, bleibt still. Ohne Token (Pull Requests aus
+  # Forks bekommen keine Secrets) laeuft ein Scan mit festen Regelwerken, der
+  # meldet, aber nicht blockiert.
+  #
+  # Das Image ist mit Digest festgenagelt wie die Actions mit Hash, und nicht
+  # die juengste Fassung: 1.178.0 war beim Eintragen drei Tage alt, die
+  # Lieferkettenregel des Workspace wartet eine Woche (pnpm-workspace.yaml).
+  semgrep:
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep:1.177.0@sha256:acaac22ffc7b7cc5926de0751b223bce0b2491c33d18422fa72f632c78d81198
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Semgrep
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        run: |
+          if [ -n "$SEMGREP_APP_TOKEN" ]; then
+            semgrep ci
+          else
+            echo "Kein SEMGREP_APP_TOKEN (Fork?) — Scan mit festen Regelwerken, nur meldend."
+            semgrep scan --config p/default --config p/secrets --metrics=off
+          fi
 
   image:
-    needs: test
+    needs: [test, semgrep]
     # Auch bei rotem `test` bauen und gegen den Container prüfen: Sonst kostet
     # jeder Fehlschlag im zweiten Ring eine weitere Runde von einer
     # Viertelstunde, bevor der dritte überhaupt etwas sagen darf. Nur
@@ -171,7 +188,7 @@ jobs:
       # Genau das geprüfte Bild bekommt die Namen und wird hochgeladen — kein
       # zweiter Bau, der sich vom getesteten unterscheiden koennte.
       - name: Push the tested image
-        if: ${{ needs.test.result == 'success' && github.event_name == 'push' }}
+        if: ${{ needs.test.result == 'success' && needs.semgrep.result == 'success' && github.event_name == 'push' }}
         run: |
           # GHCR nimmt gelegentlich alle Schichten an und lehnt danach das
           # Manifest mit „unknown blob“ ab: Die letzte, grosse Schicht ist
