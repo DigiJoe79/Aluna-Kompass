@@ -273,6 +273,44 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 - **Faksimile der Unterschrift stand mittig statt über dem Namen** auf
   maschinell erstellten Zuwendungsbestätigungen. Es steht jetzt rechts, wie
   der Name darunter.
+- **Storno nannte die eigene Nummer statt der stornierten**, und ein
+  Stornopaar ohne Beleg zählte doppelt als „ohne Beleg“ — in der Kachel, im
+  Journal-Filter und in der Abschluss-Vorschau. Ein Original mit echtem Beleg
+  bleibt weiterhin belegt.
+- **Ein Entwurf vor dem ersten Geschäftsjahr wurde still angenommen** und
+  scheiterte erst beim Festschreiben. Jetzt weist schon das Speichern des
+  Entwurfs darauf hin, mit Datum und den Namen, wer ein Geschäftsjahr anlegen
+  kann.
+- **Ein Kontoauszug mit Umsätzen nach heute** kam ohne Hinweis durch, und die
+  Kontokarte zeigte „zuletzt vor -4 Tagen“. Kompass nimmt den Auszug weiterhin
+  an, warnt jetzt aber, und die Karte zeigt nie eine negative Zahl.
+- **Verzicht auf die Erstattung ohne hinterlegte Anspruchsgrundlage.** Der
+  Schalter für Aufwandsspenden allein reichte, um einen Verzicht einzureichen
+  und freizugeben — ohne Vertrag oder Satzungsstelle bei Person oder Verein.
+  Das Formular bietet den Verzicht jetzt nur mit einer Grundlage an, und
+  Einreichen wie Freigeben weisen ihn sonst ab.
+- **Geschäftsjahr-Bezeichnung eines Rumpfjahres trug einen Zusatz** („2026
+  (Rumpfjahr)“). Kompass schlägt jetzt nur das Jahr des Beginns vor; ein
+  Rumpfjahr steht als eigenes Kennzeichen mit Zeitraum daneben.
+- **Die Zeilenvorlage einer offenen Zahlung kam über MCP als Text**, nicht als
+  Liste. Sie kommt jetzt als Array.
+- **Die Menschen-Sperre für Agenten nannte nur ihren technischen Schlüssel**
+  (`finance.mcpHumanOnlyAllowed`). Die Meldung nennt jetzt den Grund und, wo
+  der Schalter dafür steht.
+- **Der Hinweis auf eine nichtdeutsche IBAN** erschien auch für die eigenen
+  Zahlungsdienst-Konten (die sitzen selten in Deutschland) und für Personen,
+  deren IBAN schon bekannt ist. Beide Fälle bleiben jetzt ohne Hinweis, und
+  der Wortlaut ist neutraler.
+
+### Neu
+
+- **Freigabe einer Auslage nennt eine IBAN, die für diese Person neu ist** —
+  weder gelernt noch aus einem früheren Antrag bekannt. Nur ein Hinweis, keine
+  Sperre.
+- **Eine offene Zahlung mit geplanter, aber noch nicht festgeschriebener
+  Zahlung** zeigt „Zahlung liegt als Entwurf vor“ statt einfach „überfällig“.
+- **Auslagen für eine Fahrt schlagen jetzt „Fahrt- und Reisekosten“ als
+  Kategorie vor**, wenn keine Regel zutrifft.
 
 ## [0.1.1] - 2026-09-19
 
