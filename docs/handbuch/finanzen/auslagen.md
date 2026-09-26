@@ -72,9 +72,10 @@ und sagt dazu „Vorschlag, weil: …“ — nie als Pflicht, Sie können jede a
 Kategorie wählen.
 
 Geben Sie frei, entsteht eine offene Zahlung an die antragstellende Person;
-Kompass zeigt gleich danach die Überweisungsdaten mit der IBAN und einem
-Kopierknopf. Möchten Sie stattdessen ablehnen, tragen Sie einen Grund ein —
-die antragstellende Person sieht ihn an ihrem Antrag.
+Kompass zeigt gleich danach die Überweisungsdaten mit der IBAN, einem
+Kopierknopf und einem QR-Code zum Scannen mit der Banking-App. Möchten Sie
+stattdessen ablehnen, tragen Sie einen Grund ein — die antragstellende
+Person sieht ihn an ihrem Antrag.
 
 ## Verzicht: Aufwandsspende
 

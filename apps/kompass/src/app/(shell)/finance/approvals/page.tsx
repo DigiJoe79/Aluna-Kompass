@@ -1,5 +1,5 @@
 import { hasPermission, readSetting, type LocalizedText } from '@kompass/core';
-import { getApproval, listApprovals, listCategories, listPurposes, suggestExpenseCategories, waiverChecks, type ApprovalView } from '@kompass/module-finance';
+import { epcQrPayload, getApproval, listApprovals, listCategories, listPurposes, suggestExpenseCategories, waiverChecks, type ApprovalView } from '@kompass/module-finance';
 import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -123,7 +123,13 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
         {approved && claim.openItemId ? (
           <div className="space-y-2">
             <Notice level="hint">{t('result.payable')}</Notice>
-            <TransferBlock recipient={claim.contactName} amountCents={claim.totalCents} reference={claim.number ?? ''} iban={claim.iban} />
+            <TransferBlock
+              recipient={claim.contactName}
+              amountCents={claim.totalCents}
+              reference={claim.number ?? ''}
+              iban={claim.iban}
+              epcPayload={epcQrPayload({ recipient: claim.contactName, iban: claim.iban ?? '', amountCents: claim.totalCents, reference: claim.number ?? '' })}
+            />
             <Link href="/finance/open-items" className="text-[13px] underline underline-offset-2 hover:text-link">
               {t('result.openItems')}
             </Link>

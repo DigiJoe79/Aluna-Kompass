@@ -3118,7 +3118,9 @@
         "amount": "Betrag",
         "reference": "Verwendungszweck",
         "noIban": "Eine Bankverbindung ist hier noch nicht hinterlegt.",
-        "iban": "IBAN"
+        "iban": "IBAN",
+        "qrCaption": "Mit der Banking-App scannen",
+        "qrAlt": "QR-Code für die Überweisung an {recipient}"
       }
     },
     "projectSection": {

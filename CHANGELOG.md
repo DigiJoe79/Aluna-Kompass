@@ -186,6 +186,10 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
   Menschen. Das Handbuch hat dafür die Seite „Auslagen“. Diese Fassung
   bringt dafür eine Datenbank-Migration mit, die beim Start von selbst
   läuft.
+- **Überweisungsdaten mit QR-Code für die Banking-App** (Freigaben, offene
+  Posten): Ist eine IBAN bekannt, zeigt der Überweisungsblock daneben einen
+  QR-Code („GiroCode“) zum Scannen — ohne IBAN bleibt es beim bisherigen
+  Hinweis. Neue Abhängigkeit: `qrcode-generator` (MIT).
 - Diese Fassung bringt mehrere Datenbank-Migrationen mit, die beim Start von
   selbst laufen — vor dem Update wie immer ein Backup exportieren.
 

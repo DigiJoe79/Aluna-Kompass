@@ -52,6 +52,8 @@ export function DetailSheet({
   finalizeNames,
   canCreateContact,
   today,
+  iban,
+  epcPayload,
 }: {
   item: OpenItemDetailData;
   settlements: SettlementRow[];
@@ -60,6 +62,8 @@ export function DetailSheet({
   finalizeNames: string[];
   canCreateContact: boolean;
   today: string;
+  iban?: string | null;
+  epcPayload?: string | null;
 }) {
   const t = useTranslations('finance.openItems');
   const router = useRouter();
@@ -117,7 +121,7 @@ export function DetailSheet({
               </div>
             </dl>
 
-            <TransferBlock recipient={item.contactLabel ?? t('detail.noRecipient')} amountCents={item.openCents} reference={item.paymentReference ?? ''} />
+            <TransferBlock recipient={item.contactLabel ?? t('detail.noRecipient')} amountCents={item.openCents} reference={item.paymentReference ?? ''} iban={iban} epcPayload={epcPayload} />
 
             <div>
               <h4 className="text-[12px] font-semibold uppercase tracking-wide text-muted-ink">{t('detail.settledByTitle')}</h4>

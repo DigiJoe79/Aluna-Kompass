@@ -681,8 +681,31 @@ test.describe('finance', () => {
     await expect(page).toHaveURL(/item=/);
     await expect(page.getByText('Eine Bankverbindung ist hier noch nicht hinterlegt.')).toBeVisible();
     await expect(page.getByAltText(/QR/i)).toHaveCount(0);
+    await expect(page.getByTestId('transfer-qr')).toHaveCount(0);
     await page.getByRole('button', { name: 'Kopieren: Verwendungszweck' }).click();
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('RE-2026-041');
+  });
+
+  test('N5: ein Posten an einem Kontakt mit gelernter IBAN zeigt den EPC-QR-Code', async ({ page }) => {
+    // „Erika Beispiel“ trägt aus dem Seed (F5, Arbeitsliste) eine gelernte, erfundene IBAN.
+    await loginAsAdmin(page);
+    await page.goto('/finance/open-items');
+    await page.getByRole('button', { name: 'Offene Zahlung anlegen' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Datum', { exact: true }).fill('2026-01-07');
+    await dialog.getByRole('combobox', { name: 'Kontakt' }).fill('Beispiel');
+    await dialog.getByTestId('contact-option').filter({ hasText: 'Erika Beispiel' }).first().click();
+    await dialog.getByLabel('Betrag', { exact: true }).fill('42,00');
+    await dialog.getByLabel('Verwendungszweck').fill('QR-2026-100');
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByText('Offene Zahlung angelegt.')).toBeVisible();
+
+    await page.getByRole('row', { name: /QR-2026-100/ }).click();
+    await expect(page).toHaveURL(/item=/);
+    await expect(page.getByText('Eine Bankverbindung ist hier noch nicht hinterlegt.')).toHaveCount(0);
+    const qr = page.getByTestId('transfer-qr');
+    await expect(qr).toBeVisible();
+    await expect(qr.getByRole('img', { name: 'QR-Code für die Überweisung an Erika Beispiel' })).toBeVisible();
   });
 
   test('„Jetzt buchen“ öffnet die Maske mit Rest und Begleichung; nach dem Festschreiben ist die Zahlung erledigt', async ({ page }) => {

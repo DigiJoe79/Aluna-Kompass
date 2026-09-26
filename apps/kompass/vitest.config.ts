@@ -10,5 +10,6 @@ export default defineConfig({
       'server-only': path.resolve(import.meta.dirname, 'tests/stubs/server-only.ts'),
     },
   },
-  test: { include: ['tests/**/*.test.ts'], environment: 'node' },
+  // N5: die erste .tsx-Testdatei (`qr-code.test.tsx`) rendert per `renderToStaticMarkup` — ohne jsdom, weiter im Node-Umfeld.
+  test: { include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'], environment: 'node' },
 });

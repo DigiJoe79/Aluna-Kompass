@@ -1,6 +1,6 @@
 import { hasPermission, listUserNamesWithPermission } from '@kompass/core';
 import { displayName, getContact } from '@kompass/module-contacts';
-import { listOpenItems, listOpenItemSettlements } from '@kompass/module-finance';
+import { epcQrPayload, listContactIbans, listOpenItems, listOpenItemSettlements } from '@kompass/module-finance';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { requireSession } from '@/lib/request-context';
 import { openItemState } from '@/lib/finance/open-item-state';
@@ -59,6 +59,20 @@ export default async function FinanceOpenItemsPage({ searchParams }: { searchPar
   const selected = query.item ? allItems.find((i) => i.id === query.item) : undefined;
   const settlementsRes = selected ? await listOpenItemSettlements(deps, ctx, { openItemId: selected.id }) : null;
 
+  // N5: die IBAN kommt aus der gelernten Zuordnung des Kontakts (`listContactIbans`) — der Posten selbst trägt keine.
+  // Die jüngste Zuordnung gewinnt (`listContactIbans` sortiert aufsteigend nach `createdAt`).
+  let contactIban: string | null = null;
+  if (selected?.contactId) {
+    const ibansRes = await listContactIbans(deps, ctx, { contactId: selected.contactId });
+    const ibans = ibansRes.ok ? ibansRes.value.items : [];
+    contactIban = ibans.length > 0 ? ibans[ibans.length - 1]!.iban : null;
+  }
+  const selectedLabel = selected?.contactId ? (contactNames.get(selected.contactId) ?? null) : null;
+  const epcPayload =
+    selected && contactIban
+      ? epcQrPayload({ recipient: selectedLabel ?? '', iban: contactIban, amountCents: selected.openCents, reference: selected.paymentReference ?? '' })
+      : null;
+
   return (
     <>
       <OpenItemsList rows={rows} tab={tab} canWrite={canWrite} canCreateContact={canCreateContact} today={today} />
@@ -70,7 +84,7 @@ export default async function FinanceOpenItemsPage({ searchParams }: { searchPar
             kind: selected.kind as 'receivable' | 'payable',
             itemDate: selected.itemDate,
             contactId: selected.contactId,
-            contactLabel: selected.contactId ? (contactNames.get(selected.contactId) ?? null) : null,
+            contactLabel: selectedLabel,
             amountCents: selected.amountCents,
             openCents: selected.openCents,
             dueOn: selected.dueOn,
@@ -84,6 +98,8 @@ export default async function FinanceOpenItemsPage({ searchParams }: { searchPar
           finalizeNames={finalizeNames}
           canCreateContact={canCreateContact}
           today={today}
+          iban={contactIban}
+          epcPayload={epcPayload}
         />
       ) : null}
     </>

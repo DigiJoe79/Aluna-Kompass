@@ -105,6 +105,10 @@ test.describe('finance approvals (D3)', () => {
     await expect(transfer).toContainText('DE93 9999 9999 0000 0000 01');
     await expect(transfer).toContainText('40,99 €');
     await expect(transfer).toContainText(claim.number!);
+    // N5: der EPC-QR steht neben den Feldern, mit dem Empfängernamen im aria-label.
+    const qr = transfer.getByTestId('transfer-qr');
+    await expect(qr).toBeVisible();
+    await expect(qr.getByRole('img', { name: 'QR-Code für die Überweisung an Tomas Leitner' })).toBeVisible();
     // Freigegeben verlässt die Schlange — der Seed-Antrag (Nadja Vogt) wartet dort weiter.
     await expect(queue(page)).not.toContainText(claim.number!);
 
@@ -197,7 +201,17 @@ test.describe('finance approvals (D3)', () => {
     await position(page, 1).getByLabel('Kategorie').selectOption({ label: 'Büro, Porto, Telefon' });
     await position(page, 2).getByLabel('Kategorie').selectOption({ label: 'Fahrt- und Reisekosten' });
     await footer(page).getByRole('button', { name: 'Freigeben' }).click();
-    await expect(page.getByTestId('approval-result')).toContainText('Es ist eine offene Zahlung entstanden');
+    const result = page.getByTestId('approval-result');
+    await expect(result).toContainText('Es ist eine offene Zahlung entstanden');
+
+    // Review Focus 4: unter 390 px liegt der QR unter den Feldern, nie daneben, und die Seite scrollt nicht seitlich.
+    const transfer = result.getByTestId('transfer-block');
+    const qr = transfer.getByTestId('transfer-qr');
+    await expect(qr).toBeVisible();
+    const fieldsBox = (await transfer.locator('> div').first().boundingBox())!;
+    const qrBox = (await qr.boundingBox())!;
+    expect(qrBox.y).toBeGreaterThanOrEqual(fieldsBox.y + fieldsBox.height - 1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 
   test('die Kacheln zeigen „Wartet auf Ihre Freigabe“ und „Ihre Auslagen“ ohne fremde Namen', async ({ page, baseURL }) => {

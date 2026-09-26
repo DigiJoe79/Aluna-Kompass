@@ -27,7 +27,8 @@ Ein Klick auf eine Zeile öffnet die Einzelheiten: den Überweisungsblock zum
 Kopieren (Empfänger, Betrag, Verwendungszweck), welche Buchungen sie schon
 begleicht, und den Weg „Jetzt buchen“ — er öffnet die Buchungsmaske mit dem
 verbleibenden Rest vorbelegt, sodass sich die Zahlung mit ein paar Klicks
-festschreiben lässt.
+festschreiben lässt. Ist eine IBAN zum Kontakt bekannt, steht daneben ein
+QR-Code zum Scannen mit der Banking-App.
 
 Muss ein Posten ohne tatsächliche Zahlung von der Liste, erledigt „Erledigt
 ohne Zahlung“ ihn: Es entsteht keine Buchung, und der Schritt lässt sich
