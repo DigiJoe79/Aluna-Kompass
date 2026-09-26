@@ -1,5 +1,18 @@
+import { readdirSync } from 'node:fs';
+import path from 'node:path';
 import { defineConfig } from '@playwright/test';
+import { KERN, installedModuleKeys, testMatchFor } from './e2e/projects';
 import { workerCount, type ServerKind } from './e2e/servers';
+
+/**
+ * Ein Projekt je Modul plus `kern` (`e2e/projects.ts`): `--project=finance
+ * --project=kern` prüft ein Modul samt dem, wohin es durchschlagen kann;
+ * ohne `--project` läuft alles. Die Muster entstehen aus den vorhandenen
+ * Dateien, damit kein Projekt eine Spec doppelt oder gar nicht fasst.
+ */
+const specs = readdirSync(path.join(import.meta.dirname, 'e2e')).filter((name) => name.endsWith('.spec.ts'));
+const modules = installedModuleKeys(import.meta.dirname);
+const projects = [KERN, ...modules].map((name) => ({ name, testMatch: testMatchFor(name, specs, modules) }));
 
 /**
  * Dieselbe Suite wie `playwright.config.ts`, nur gegen das gebaute Image
@@ -17,6 +30,7 @@ import { workerCount, type ServerKind } from './e2e/servers';
  */
 export default defineConfig<{ serverKind: ServerKind }>({
   testDir: './e2e',
+  projects,
   /**
    * Der Dateispeicher liegt im Container; gemountet ist nur `/deploy`. Ein
    * Test, der eine Datei im Volume austauscht, um die Prüfsummenkontrolle zu
@@ -24,7 +38,6 @@ export default defineConfig<{ serverKind: ServerKind }>({
    * Anwendungsverhalten, nichts Containerspezifisches.
    */
   grepInvert: /ausgetauschtes Dokument/,
-  testMatch: '**/*.spec.ts',
   fullyParallel: false,
   workers: workerCount(process.env),
   // Online ein Wiederholungsversuch, lokal keiner — Begründung in `playwright.config.ts`.

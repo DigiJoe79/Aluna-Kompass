@@ -1,5 +1,18 @@
+import { readdirSync } from 'node:fs';
+import path from 'node:path';
 import { defineConfig } from '@playwright/test';
+import { KERN, installedModuleKeys, testMatchFor } from './e2e/projects';
 import { workerCount, type ServerKind } from './e2e/servers';
+
+/**
+ * Ein Projekt je Modul plus `kern` (`e2e/projects.ts`): `--project=finance
+ * --project=kern` prüft ein Modul samt dem, wohin es durchschlagen kann;
+ * ohne `--project` läuft alles. Die Muster entstehen aus den vorhandenen
+ * Dateien, damit kein Projekt eine Spec doppelt oder gar nicht fasst.
+ */
+const specs = readdirSync(path.join(import.meta.dirname, 'e2e')).filter((name) => name.endsWith('.spec.ts'));
+const modules = installedModuleKeys(import.meta.dirname);
+const projects = [KERN, ...modules].map((name) => ({ name, testMatch: testMatchFor(name, specs, modules) }));
 
 /**
  * Kein `webServer` mehr: Jeder Worker startet seinen eigenen `next dev` auf
@@ -10,6 +23,7 @@ import { workerCount, type ServerKind } from './e2e/servers';
  */
 export default defineConfig<{ serverKind: ServerKind }>({
   testDir: './e2e',
+  projects,
   fullyParallel: false,
   workers: workerCount(process.env),
   /**
