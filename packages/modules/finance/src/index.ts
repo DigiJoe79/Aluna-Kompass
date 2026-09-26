@@ -63,6 +63,7 @@ export {
 } from './schema';
 
 export { requireFinanceRead } from './ledger/access';
+export { epcQrPayload, type EpcQrInput } from './ledger/epc-qr';
 export { formatIban, isValidIban, normalizeIban } from './ledger/iban';
 // F8a: die reinen Rechnungen der Auslagen — die Oberfläche zeigt dieselbe Fahrtrechnung und Frist wie der Dienst.
 export { tripAmountCents } from './ledger/trip-amount';
