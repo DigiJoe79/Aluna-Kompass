@@ -129,7 +129,7 @@ function retire(deps: AppDeps | null, closeDelayMs: number): void {
  * gegenseitig die Vorlage überschreiben.
  */
 function seedSnapshotDir(dataPath: string): string {
-  const key = createHash('sha1').update(dataPath).digest('hex').slice(0, 12);
+  const key = createHash('sha256').update(dataPath).digest('hex').slice(0, 12);
   return path.join(os.tmpdir(), `kompass-seed-${process.pid}-${key}`);
 }
 
