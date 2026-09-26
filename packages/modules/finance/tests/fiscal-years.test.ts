@@ -25,8 +25,9 @@ describe('fiscal years', () => {
     const first = unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-09-01', endsOn: '2026-12-31' }));
     const inTx = (date: string) => deps.db.transaction((tx) => ensureFiscalYearFor(tx, deps, ctx, date));
     expect(unwrap(inTx('2026-10-15')).id).toBe(first.id);
-    expect(err(inTx('2026-08-31'))).toMatchObject({ type: 'validation', issues: [{ path: 'date', message: 'noFiscalYearForDate' }] });
-    expect(err(inTx('2028-01-01'))).toMatchObject({ type: 'validation' });
+    // Befund 10 (Task 2): Grund und Abhilfe statt eines bloßen Codes — mit dem Datum und wer eines anlegen kann.
+    expect(err(inTx('2026-08-31'))).toMatchObject({ type: 'conflict', code: 'noFiscalYearForDate', message: expect.stringContaining('2026-08-31') });
+    expect(err(inTx('2028-01-01'))).toMatchObject({ type: 'conflict', code: 'noFiscalYearForDate' });
     const next = unwrap(inTx('2027-03-01'));
     expect(next).toMatchObject({ startsOn: '2027-01-01', endsOn: '2027-12-31', designation: '2027' });
     expect(unwrap(inTx('2027-12-31')).id).toBe(next.id);

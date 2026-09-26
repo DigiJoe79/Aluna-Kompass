@@ -8,6 +8,8 @@ const REMEDIES: Record<string, Remedy[]> = {
     { kind: 'action', action: 'focusDate', labelKey: 'finance.remedy.focusDate' },
     { kind: 'link', href: '/finance/entries/new?template=transfer', labelKey: 'finance.remedy.cashTransferFirst' },
   ],
+  // Befund 10: ein Entwurf vor dem ersten Geschäftsjahr — die Meldung nennt schon, wer eines anlegen kann.
+  noFiscalYearForDate: [{ kind: 'action', action: 'focusDate', labelKey: 'finance.remedy.focusDate' }],
   // F4 Task 7: die drei Ablehnungen beim Laden eines Kontoauszugs (Spec 6.1, Rückmeldung Phase 2).
   statementIbanMismatch: [{ kind: 'action', action: 'focusAccount', labelKey: 'finance.remedy.chooseOtherAccount' }],
   statementAlreadyImported: [{ kind: 'link', href: '/finance/imports#runs', labelKey: 'finance.remedy.goToExistingRun' }],

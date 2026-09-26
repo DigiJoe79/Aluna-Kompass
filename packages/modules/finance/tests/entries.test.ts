@@ -72,6 +72,25 @@ describe('drafts', () => {
     expect(log).not.toContain('Erika');
     expect(log).not.toContain(f.donor.id);
   });
+
+  it('refuses a draft dated outside every fiscal year and before the first, but creates the immediate next year', async () => {
+    const f = await ledgerFixture(); // Geschäftsjahr 2026-01-01..2026-12-31
+    expect(err(await saveDraft(f.deps, f.ctx, { entryDate: '2025-06-01', text: 'x', moneyLines: [{ accountId: f.bank.id, amountCents: 100 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 100 }] }))).toMatchObject({
+      type: 'conflict',
+      code: 'noFiscalYearForDate',
+      message: expect.stringContaining('2025-06-01'),
+    });
+
+    const nextYear = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2027-02-01', text: 'x', moneyLines: [{ accountId: f.bank.id, amountCents: 100 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 100 }] }));
+    expect(nextYear.status).toBe('draft');
+    expect(unwrap(await listEntries(f.deps, f.ctx, {})).entries.map((e) => e.id)).toContain(nextYear.id);
+
+    // Ein Tippfehler in einem fernen Jahr legt weiterhin nicht vierzig Jahre an.
+    expect(err(await saveDraft(f.deps, f.ctx, { entryDate: '2062-01-01', text: 'x', moneyLines: [{ accountId: f.bank.id, amountCents: 100 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 100 }] }))).toMatchObject({
+      type: 'conflict',
+      code: 'noFiscalYearForDate',
+    });
+  });
 });
 
 describe('reviewed', () => {

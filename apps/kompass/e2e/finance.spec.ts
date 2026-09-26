@@ -162,6 +162,26 @@ test.describe('finance', () => {
     await expect(page.getByTestId('entry-number')).toContainText(/\d{4}-\d+/);
   });
 
+  test('ein Entwurf vor dem ersten Geschäftsjahr wird am Datumsfeld abgewiesen und nennt, wer eines anlegen kann (Befund 10)', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries/new?template=expense');
+    await page.getByLabel('Text').fill('Testausgabe zu früh');
+    const accountCard = page.getByTestId('finance-account-card');
+    await accountCard.getByLabel('Konto').selectOption({ label: 'Vereinskonto' });
+    await accountCard.getByLabel('Betrag').fill('42,00');
+    const allocationCard = page.getByTestId('finance-allocation-card');
+    const rows = allocationCard.getByTestId('split-row');
+    await allocationCard.getByRole('button', { name: 'Zeile hinzufügen' }).click();
+    await rows.nth(0).getByLabel('Kategorie').selectOption({ label: 'Büro, Porto, Telefon' });
+    await rows.nth(0).getByLabel('Betrag').fill('42,00');
+    await page.getByLabel('Datum').fill('2000-01-01');
+
+    await page.getByRole('button', { name: 'Als Entwurf speichern' }).click();
+    await expect(page.getByText(/kein Geschäftsjahr/).first()).toBeVisible();
+    await expect(page.getByText(/anlegen kann/).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Datum prüfen' })).toBeVisible();
+  });
+
   test('Umbuchung Bank → Kasse hat kein „Wofür?“ und sagt, dass sie weder Einnahme noch Ausgabe ist', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/entries/new?template=transfer');

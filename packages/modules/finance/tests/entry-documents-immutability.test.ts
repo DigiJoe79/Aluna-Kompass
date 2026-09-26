@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { createAccount } from '../src/ledger/accounts';
 import { createCategory } from '../src/ledger/categories';
 import { deleteDraft, saveDraft } from '../src/ledger/entries';
+import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
 import { financeAllocationLines, financeEntries, financeEntryDocuments, financeMoneyLines } from '../src/schema';
 import { setupFinance } from './helpers';
 
@@ -13,6 +14,8 @@ async function fixtures() {
   const { deps, ctx } = setupFinance();
   const account = unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true }));
   const category = unwrap(await createCategory(deps, ctx, { key: 'donations', name: 'Spenden', direction: 'income', sphere: 'ideal', incomeKind: 'donation' }));
+  // Task 2 (Befund 10): `saveDraft` läuft seither durch `ensureFiscalYearFor` — dieses Modul braucht das Jahr also auch für die eine Fixture, die tatsächlich über den Dienst bucht.
+  unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-01-01', endsOn: '2026-12-31' }));
   return { deps, ctx, accountId: account.id, categoryId: category.id };
 }
 

@@ -9,6 +9,7 @@ import { financeConflict } from '../errors';
 import { financeAccounts, financeAllocationCorrections, financeAllocationLines, financeCategories, financeEntries, financeEntryDocuments, financeEntryJustifications, financeImportRuns, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, financePurposes, financeRawTransactions, type FinanceAllocationLineRow, type FinanceEntryRow, type FinanceMoneyLineRow } from '../schema';
 import { requireFinanceRead } from './access';
 import { TAX_CODES } from './codes';
+import { ensureFiscalYearFor } from './fiscal-years';
 import { projectFinanceInternal } from './project-settings';
 import { taxContextAt, taxOf, type TaxCode, type TaxResult } from './tax';
 
@@ -466,7 +467,12 @@ export async function saveDraft(deps: Deps, ctx: CallContext, input: unknown): P
   if (!resolved.ok) return resolved;
   const lines = resolved.value;
 
-  return deps.db.transaction((tx: DbOrTx) => {
+  return deps.db.transaction((tx: DbOrTx): Result<EntryView> => {
+    // Befund 10 (Task 2, Spec 5.1): ein Entwurf läuft wie das Festschreiben durch `ensureFiscalYearFor` —
+    // vor dem ersten Geschäftsjahr wird nichts gespeichert, im unmittelbaren Folgejahr entsteht es hier schon.
+    const yearResult = ensureFiscalYearFor(tx, deps, ctx, v.entryDate);
+    if (!yearResult.ok) return yearResult;
+
     const now = isoNow(deps.clock);
     const id = before?.id ?? newId();
     if (before) {

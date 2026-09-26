@@ -68,8 +68,11 @@ describe('finalizing', () => {
     expect(finalized.number).toBe('2027-0001');
     expect(unwrap(await listFiscalYears(f.deps, f.ctx)).map((y) => y.designation).sort()).toEqual(['2026', '2027']);
 
-    const tooEarly = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2025-06-01', text: 'x', moneyLines: [{ accountId: f.bank.id, amountCents: 100 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 100 }] }));
-    expect(err(await finalizeEntry(f.deps, f.ctx, { id: tooEarly.id }))).toMatchObject({ type: 'validation' });
+    // Seit Task 2 (Befund 10) prüft schon der Entwurf das Geschäftsjahr wie das Festschreiben — die Buchung entsteht gar nicht erst.
+    expect(err(await saveDraft(f.deps, f.ctx, { entryDate: '2025-06-01', text: 'x', moneyLines: [{ accountId: f.bank.id, amountCents: 100 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 100 }] }))).toMatchObject({
+      type: 'conflict',
+      code: 'noFiscalYearForDate',
+    });
   });
 
   it('refuses a closed year', async () => {
