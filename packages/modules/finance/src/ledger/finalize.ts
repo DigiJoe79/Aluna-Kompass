@@ -1,8 +1,8 @@
-import { isoNow, newId, notFound, ok, requireHumanChannel, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
+import { isoNow, newId, notFound, ok, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
-import { financeConflict } from '../errors';
+import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { financeAccounts, financeCategories, financeEntries, type FinanceAccountRow } from '../schema';
 import { firstNegativeCashDay, formatEuro } from './cash-check';
 import { valueAt } from './dated-values';
@@ -150,7 +150,7 @@ const finalizeEntrySchema = z.object({ id: z.string().min(1), expectedVersion: z
 export async function finalizeEntry(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<EntryView>> {
   const denied = requirePermission(ctx, 'finance.entriesFinalize');
   if (denied) return denied;
-  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  const humanOnly = requireHumanChannelFinance(deps, ctx);
   if (humanOnly) return humanOnly;
   const parsed = validate(deps, finalizeEntrySchema, input);
   if (!parsed.ok) return parsed;
@@ -165,7 +165,7 @@ const finalizeReviewedSchema = z.object({ ids: z.array(z.string().min(1)).min(1)
 export async function finalizeReviewed(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ entries: EntryView[]; sumsByAccount: { accountId: string; sumCents: number }[] }>> {
   const denied = requirePermission(ctx, 'finance.entriesFinalize');
   if (denied) return denied;
-  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  const humanOnly = requireHumanChannelFinance(deps, ctx);
   if (humanOnly) return humanOnly;
   const parsed = validate(deps, finalizeReviewedSchema, input);
   if (!parsed.ok) return parsed;
@@ -207,7 +207,7 @@ export async function bookEntry(deps: Deps, ctx: CallContext, input: unknown): P
   if (deniedWrite) return deniedWrite;
   const deniedFinalize = requirePermission(ctx, 'finance.entriesFinalize');
   if (deniedFinalize) return deniedFinalize;
-  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  const humanOnly = requireHumanChannelFinance(deps, ctx);
   if (humanOnly) return humanOnly;
   const parsed = validate(deps, entryLinesSchema, input);
   if (!parsed.ok) return parsed;

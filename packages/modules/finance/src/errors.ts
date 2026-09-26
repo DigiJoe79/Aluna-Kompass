@@ -1,4 +1,4 @@
-import { conflict, type Failure } from '@kompass/core';
+import { conflict, requireHumanChannel, type CallContext, type Deps, type Failure } from '@kompass/core';
 
 /**
  * Grund und Abhilfe je Fehlerschlüssel (Finanz-Spec 5.4: „Fehlerbilder sind
@@ -8,6 +8,8 @@ import { conflict, type Failure } from '@kompass/core';
  * die einen `conflict(…)` erzeugt (Wächter: `tests/errors.test.ts`).
  */
 export const FINANCE_ERRORS = {
+  // Befund 13: dieselbe Menschen-Sperre für jeden festschreibenden/freigebenden Dienst — Grund und Abhilfe statt des rohen Einstellungsschlüssels (Spec 10.2).
+  humanOnly: { reason: 'Diesen Schritt führt ein Mensch in der Oberfläche aus.', remedy: 'Der Verein kann ihn für MCP freigeben: Finanzen einrichten → Steuerliches → „Darf ein Agent festschreiben?“ einschalten.' },
   accountInUse: { reason: 'Auf dieses Konto ist bereits gebucht.', remedy: 'Das Konto lässt sich stilllegen, aber nicht löschen.' },
   mainAccountMustBeBank: { reason: 'Das Hauptkonto kann nur ein Bankkonto sein.', remedy: 'Seine IBAN steht auf den Zuwendungsbestätigungen — wählen Sie ein Bankkonto.' },
   mainAccountMustStayActive: { reason: 'Das Hauptkonto lässt sich nicht stilllegen oder löschen.', remedy: 'Machen Sie zuerst ein anderes Konto zum Hauptkonto.' },
@@ -181,4 +183,15 @@ function fill(template: string, params: Record<string, string | number> = {}): s
 export function financeConflict(code: FinanceErrorCode, params?: Record<string, string | number>): Failure {
   const { reason, remedy } = FINANCE_ERRORS[code];
   return conflict(code, `${fill(reason, params)} ${fill(remedy, params)}`);
+}
+
+/**
+ * Wie `requireHumanChannel` aus `@kompass/core`, aber die Ablehnung nennt
+ * Grund und Abhilfe statt des rohen Einstellungsschlüssels (Befund 13, Spec
+ * 10.2) — die einzige Einstellung des Moduls, `finance.mcpHumanOnlyAllowed`,
+ * gilt für jeden festschreibenden oder freigebenden Dienst gleich.
+ */
+export function requireHumanChannelFinance(deps: Deps, ctx: CallContext): Failure | null {
+  const denied = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  return denied ? financeConflict('humanOnly') : null;
 }

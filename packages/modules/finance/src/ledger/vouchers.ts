@@ -1,9 +1,9 @@
-import { isoNow, newId, notFound, ok, readSetting, requireHumanChannel, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { isoNow, newId, notFound, ok, readSetting, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { abortReceive, getDocumentRecord, linkDocumentInternal, listDocuments, readLinkedDocument, receiveGeneratedUpload, type DocumentRecord } from '@kompass/module-dms';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
-import { financeConflict } from '../errors';
+import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { financeEntryDocuments, financeFiscalYears } from '../schema';
 import { requireFinanceRead } from './access';
 import { entryViewInternal } from './entries';
@@ -103,7 +103,7 @@ const revokeVoucherSchema = z.object({ linkId: z.string().min(1), note: z.string
 export async function revokeVoucher(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ linkId: string; replacementLinkId: string | null }>> {
   const denied = requirePermission(ctx, 'finance.entriesFinalize');
   if (denied) return denied;
-  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  const humanOnly = requireHumanChannelFinance(deps, ctx);
   if (humanOnly) return humanOnly;
   const parsed = validate(deps, revokeVoucherSchema, input);
   if (!parsed.ok) return parsed;

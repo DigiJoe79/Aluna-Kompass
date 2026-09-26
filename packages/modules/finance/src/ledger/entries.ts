@@ -1,11 +1,11 @@
-import { expectedVersionField, isoNow, newId, notFound, ok, requireHumanChannel, requirePermission, schema, staleVersion, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
+import { expectedVersionField, isoNow, newId, notFound, ok, requirePermission, schema, staleVersion, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
 import { contacts } from '@kompass/module-contacts';
 import { unlinkDocumentInternal } from '@kompass/module-dms';
 import { projects } from '@kompass/module-projects';
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, like, lte, or, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
-import { financeConflict } from '../errors';
+import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { financeAccounts, financeAllocationCorrections, financeAllocationLines, financeCategories, financeEntries, financeEntryDocuments, financeEntryJustifications, financeImportRuns, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, financePurposes, financeRawTransactions, type FinanceAllocationLineRow, type FinanceEntryRow, type FinanceMoneyLineRow } from '../schema';
 import { requireFinanceRead } from './access';
 import { TAX_CODES } from './codes';
@@ -622,7 +622,7 @@ export async function deleteDraft(deps: Deps, ctx: CallContext, input: unknown):
 export async function setReviewed(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<EntryView>> {
   const denied = requirePermission(ctx, 'finance.entriesWrite');
   if (denied) return denied;
-  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  const humanOnly = requireHumanChannelFinance(deps, ctx);
   if (humanOnly) return humanOnly;
   const parsed = validate(deps, reviewSchema, input);
   if (!parsed.ok) return parsed;

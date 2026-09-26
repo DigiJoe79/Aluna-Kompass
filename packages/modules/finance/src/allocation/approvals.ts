@@ -1,28 +1,10 @@
-import {
-  expectedVersionField,
-  hasPermission,
-  invalid,
-  isoNow,
-  notFound,
-  ok,
-  requireHumanChannel,
-  requirePermission,
-  schema,
-  staleVersion,
-  validate,
-  type CallContext,
-  type DbOrTx,
-  type Deps,
-  type Failure,
-  type Result,
-  type ValidationIssue,
-} from '@kompass/core';
+import { expectedVersionField, hasPermission, invalid, isoNow, notFound, ok, requirePermission, schema, staleVersion, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result, type ValidationIssue } from '@kompass/core';
 import { contactIdForUserInternal } from '@kompass/module-contacts';
 import { documents, linkDocumentInternal } from '@kompass/module-dms';
 import { and, asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
-import { financeConflict } from '../errors';
+import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { formatEuro } from '../ledger/cash-check';
 import { resolveEntryLines } from '../ledger/entries';
 import { bookEntryInternal } from '../ledger/finalize';
@@ -239,7 +221,7 @@ function waiverCategory(db: DbOrTx): FinanceCategoryRow | null {
 export async function approveExpenseClaim(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ExpenseClaimView>> {
   const denied = requirePermission(ctx, 'finance.approve');
   if (denied) return denied;
-  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  const humanOnly = requireHumanChannelFinance(deps, ctx);
   if (humanOnly) return humanOnly;
   const parsed = validate(deps, approveSchema, input);
   if (!parsed.ok) return parsed;

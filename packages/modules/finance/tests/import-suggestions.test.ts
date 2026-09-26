@@ -278,6 +278,22 @@ describe('suggestForTransaction — (5) contact over the iban, and hints', () =>
     const rawId = insertRaw(f, insertRun(f, f.bank.id), { accountId: f.bank.id, amountCents: -40000, iban: 'AT939999900001234567', name: 'Partnerverein', purpose: 'Futter' });
     expect(await suggest(f, rawId)).toEqual({ rawTransactionId: rawId, kind: 'none', confidence: 'unsure', reasons: [], draft: null, linkEntry: null, problems: [], hints: ['foreignIban'] });
   });
+
+  it('gives no foreign-iban hint for payment-service accounts and words it neutrally (Befund 14)', async () => {
+    const f = await ledgerFixture();
+    const service = unwrap(await createAccount(f.deps, f.ctx, { name: 'Zahlungsdienst', kind: 'paymentService' }));
+    // PayPal selbst sitzt in Luxemburg — die eigene Auszahlung an sich hat keine deutsche IBAN.
+    const payout = insertRaw(f, insertRun(f, service.id), { accountId: service.id, amountCents: -3200, iban: 'LU280019400644750000', name: 'PayPal', purpose: 'Gebühr' });
+    expect((await suggest(f, payout)).hints).toEqual([]);
+  });
+
+  it('gives no foreign-iban hint when the counterparty iban belongs to a contact (Befund 14)', async () => {
+    const f = await ledgerFixture();
+    const foreignIban = 'AT939999900001234567';
+    unwrap(await linkContactIban(f.deps, f.ctx, { contactId: f.donor.id, iban: foreignIban }));
+    const rawId = insertRaw(f, insertRun(f, f.bank.id), { accountId: f.bank.id, amountCents: 2500, iban: foreignIban, name: 'Partnerverein', purpose: 'Danke' });
+    expect((await suggest(f, rawId)).hints).toEqual([]);
+  });
 });
 
 describe('suggestForTransaction — access and input', () => {

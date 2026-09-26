@@ -93,6 +93,7 @@ interface SuggestionData {
   categoriesByKey: Map<string, FinanceCategoryRow>;
   purposes: Map<string, FinancePurposeRow>;
   cashAccountIds: string[];
+  paymentServiceAccountIds: string[];
 }
 
 const byOrder = (a: FinanceRawTransactionRow, b: FinanceRawTransactionRow): number =>
@@ -205,6 +206,8 @@ function loadSuggestionDataInternal(deps: Deps): SuggestionData {
     categoriesByKey: new Map(categoryRows.map((c) => [c.key, c] as const)),
     purposes: new Map(db.select().from(financePurposes).all().map((p) => [p.id, p] as const)),
     cashAccountIds: db.select({ id: financeAccounts.id }).from(financeAccounts).where(and(eq(financeAccounts.kind, 'cash'), eq(financeAccounts.isActive, true))).orderBy(asc(financeAccounts.createdAt), asc(financeAccounts.id)).all().map((a) => a.id),
+    // Befund 14: ein Zahlungsdienst (PayPal etc.) hat selbst keine deutsche IBAN — kein Hinweis auf dem eigenen Konto.
+    paymentServiceAccountIds: db.select({ id: financeAccounts.id }).from(financeAccounts).where(eq(financeAccounts.kind, 'paymentService')).all().map((a) => a.id),
   };
 }
 
@@ -376,9 +379,19 @@ function proposeInternal(deps: Deps, data: SuggestionData, raw: FinanceRawTransa
   return { kind: 'none', confidence: 'unsure', reasons: [], draft: null };
 }
 
+/**
+ * Befund 14: kein Hinweis, wenn das eigene Konto selbst ein Zahlungsdienst
+ * ist (der sitzt ohnehin nicht in Deutschland) oder die Gegen-IBAN einem
+ * Kontakt gehört (dann ist sie schon eingeordnet, nicht bloß fremd).
+ */
+function suppressForeignIbanHint(deps: Deps, data: SuggestionData, raw: FinanceRawTransactionRow): boolean {
+  if (data.paymentServiceAccountIds.includes(raw.accountId)) return true;
+  return raw.counterpartyIban !== null && contactForIbanInternal(deps.db, raw.counterpartyIban) !== null;
+}
+
 function suggestInternal(deps: Deps, data: SuggestionData, raw: FinanceRawTransactionRow): SuggestionView {
   const p = proposeInternal(deps, data, raw);
-  const hint = paymentServiceHint(raw.counterpartyIban);
+  const hint = suppressForeignIbanHint(deps, data, raw) ? null : paymentServiceHint(raw.counterpartyIban);
   return {
     rawTransactionId: raw.id,
     kind: p.kind,

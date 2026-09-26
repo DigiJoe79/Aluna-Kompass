@@ -1,11 +1,11 @@
-import { isoNow, newId, notFound, ok, requireHumanChannel, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
+import { isoNow, newId, notFound, ok, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
 import { contacts } from '@kompass/module-contacts';
 import { getDocumentRecord, linkDocumentInternal } from '@kompass/module-dms';
 import { projects } from '@kompass/module-projects';
 import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
-import { financeConflict } from '../errors';
+import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { ENTRY_LOCKS, type EntryLock } from '../locks';
 import { financeAllocationCorrections, financeAllocationLines, financeCategories, financeFiscalYears, financePurposes, type FinanceAllocationCorrectionRow } from '../schema';
 import { requireFinanceRead } from './access';
@@ -115,7 +115,7 @@ const requestSchema = z.object({
 export async function requestAllocationCorrection(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ correction: CorrectionView; applied: boolean; notices: ('section153')[] }>> {
   const denied = requirePermission(ctx, 'finance.entriesFinalize');
   if (denied) return denied;
-  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  const humanOnly = requireHumanChannelFinance(deps, ctx);
   if (humanOnly) return humanOnly;
   const parsed = validate(deps, requestSchema, input);
   if (!parsed.ok) return parsed;
@@ -204,7 +204,7 @@ const idSchema = z.object({ id: z.string().min(1) });
 export async function approveAllocationCorrection(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<CorrectionView>> {
   const denied = requirePermission(ctx, 'finance.approve');
   if (denied) return denied;
-  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  const humanOnly = requireHumanChannelFinance(deps, ctx);
   if (humanOnly) return humanOnly;
   const parsed = validate(deps, idSchema, input);
   if (!parsed.ok) return parsed;
@@ -221,7 +221,7 @@ const rejectSchema = z.object({ id: z.string().min(1), note: z.string().trim().m
 export async function rejectAllocationCorrection(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<CorrectionView>> {
   const denied = requirePermission(ctx, 'finance.approve');
   if (denied) return denied;
-  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  const humanOnly = requireHumanChannelFinance(deps, ctx);
   if (humanOnly) return humanOnly;
   const parsed = validate(deps, rejectSchema, input);
   if (!parsed.ok) return parsed;

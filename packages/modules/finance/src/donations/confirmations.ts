@@ -1,10 +1,10 @@
-import { buildContext, invalid, isoNow, newId, notFound, ok, prepare, readSetting, requireHumanChannel, requirePermission, systemContext, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { buildContext, invalid, isoNow, newId, notFound, ok, prepare, readSetting, requirePermission, systemContext, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { addContactRole, contactRoles, contacts, displayName, type ContactRow } from '@kompass/module-contacts';
 import { abortIssue, abortReceive, issueGeneratedDocument, readLinkedDocument, receiveGeneratedUpload } from '@kompass/module-dms';
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
-import { financeConflict } from '../errors';
+import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { requireFinanceRead } from '../ledger/access';
 import { CERTIFIABLE_INCOME_KINDS } from '../ledger/codes';
 import {
@@ -238,7 +238,7 @@ export async function buildConfirmationInputInternal(deps: Deps, check: Confirma
 export async function issueConfirmation(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ConfirmationView>> {
   const denied = requirePermission(ctx, 'finance.donationsIssue');
   if (denied) return denied;
-  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  const humanOnly = requireHumanChannelFinance(deps, ctx);
   if (humanOnly) return humanOnly;
   const parsed = validate(deps, issueSchema, input);
   if (!parsed.ok) return parsed;
@@ -367,7 +367,7 @@ const voidSchema = z.object({
 export async function voidConfirmation(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ConfirmationView>> {
   const denied = requirePermission(ctx, 'finance.donationsIssue');
   if (denied) return denied;
-  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  const humanOnly = requireHumanChannelFinance(deps, ctx);
   if (humanOnly) return humanOnly;
   const parsed = validate(deps, voidSchema, input);
   if (!parsed.ok) return parsed;

@@ -182,4 +182,15 @@ describe('open items', () => {
     expect(log).not.toContain('Geheime Begründung');
     expect(log).not.toContain(f.donor.id);
   });
+
+  it('returns the line template as an array, not as its stored JSON text (Befund 12)', async () => {
+    const f = await ledgerFixture();
+    const template = [{ categoryId: f.programCosts.id, amountCents: -1999, taxCode: 'none', projectId: null, purposeId: null }];
+    const item = unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'payable', itemDate: '2026-03-01', amountCents: 1999, lineTemplate: template }));
+    expect(item.lineTemplate).toEqual(template);
+    const listed = unwrap(await listOpenItems(f.deps, f.ctx, {})).items.find((i) => i.id === item.id)!;
+    expect(listed.lineTemplate).toEqual(template);
+    const changed = unwrap(await updateOpenItem(f.deps, f.ctx, { id: item.id, expectedVersion: item.updatedAt, lineTemplate: null }));
+    expect(changed.lineTemplate).toBeNull();
+  });
 });

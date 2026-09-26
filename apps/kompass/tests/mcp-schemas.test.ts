@@ -90,4 +90,22 @@ describe('MCP-Werkzeugschemata', () => {
     );
     expect(withDefaults).toEqual([]);
   });
+
+  /**
+   * Prozesstest-Befund 11: der Agent sah beim Aufruf von `finance_master_data`
+   * angeblich nur `kind: account`, obwohl der Dienst alle fünf Arten kennt
+   * (`readMasterDataSchema`, eine `z.discriminatedUnion('kind', […])`). Der
+   * Verdacht war, die JSON-Schema-Ausgabe verliere die Union. Dieser Test
+   * liest das tatsächlich ausgelieferte Schema (wie oben, über einen echten
+   * MCP-Client) und prüft es direkt.
+   */
+  it('finance_master_data nennt alle fünf Arten im ausgelieferten Schema (Befund 11)', async () => {
+    const tools = await listAllTools();
+    const tool = tools.find((t) => t.name === 'finance_master_data');
+    expect(tool).toBeDefined();
+    const schemaText = JSON.stringify(tool!.inputSchema);
+    for (const kind of ['account', 'category', 'purpose', 'fiscalYear', 'datedValue']) {
+      expect(schemaText, kind).toContain(`"${kind}"`);
+    }
+  });
 });

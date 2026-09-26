@@ -1,10 +1,10 @@
-import { invalid, isoNow, newId, notFound, ok, readSetting, requireHumanChannel, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { invalid, isoNow, newId, notFound, ok, readSetting, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { contacts, displayName } from '@kompass/module-contacts';
 import { documentTypeFor, peekDocumentNumber, readLinkedDocument } from '@kompass/module-dms';
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
-import { financeConflict } from '../errors';
+import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { requireFinanceRead } from '../ledger/access';
 import { CERTIFIABLE_INCOME_KINDS } from '../ledger/codes';
 import {
@@ -446,7 +446,7 @@ export const startRunSchema = runArgsSchema;
 export async function startConfirmationRun(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<RunView>> {
   const denied = requirePermission(ctx, 'finance.donationsIssue');
   if (denied) return denied;
-  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  const humanOnly = requireHumanChannelFinance(deps, ctx);
   if (humanOnly) return humanOnly;
   const parsed = validate(deps, startRunSchema, input);
   if (!parsed.ok) return parsed;
@@ -525,7 +525,7 @@ function settleItemInternal(deps: Deps, ctx: CallContext, row: FinanceConfirmati
 export async function continueConfirmationRun(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<RunView>> {
   const denied = requirePermission(ctx, 'finance.donationsIssue');
   if (denied) return denied;
-  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  const humanOnly = requireHumanChannelFinance(deps, ctx);
   if (humanOnly) return humanOnly;
   const parsed = validate(deps, continueRunSchema, input);
   if (!parsed.ok) return parsed;

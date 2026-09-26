@@ -221,7 +221,8 @@ describe('createOpenItemFromInvoice', () => {
     const supplier = await supplierWithIban(f);
     const item = unwrap(await createOpenItemFromInvoice(f.deps, f.ctx, { documentId: f.documentId }));
     expect(item).toMatchObject({ kind: 'payable', itemDate: '2026-04-01', amountCents: 11900, dueOn: '2026-04-30', documentId: f.documentId, paymentReference: 'TM-2026-0042', contactId: supplier, state: 'open' });
-    expect(JSON.parse(item.lineTemplate!)).toEqual([{ taxCode: 'standard', contactId: supplier }]);
+    // Befund 12: die Sicht parst die Zeilenvorlage schon zum Array.
+    expect(item.lineTemplate).toEqual([{ taxCode: 'standard', contactId: supplier }]);
 
     expect(await createOpenItemFromInvoice(f.deps, f.ctx, { documentId: f.documentId })).toMatchObject({ ok: false, error: { type: 'conflict', code: 'openItemExistsForDocument' } });
     expect(f.deps.db.select().from(financeOpenItems).all()).toHaveLength(1);
@@ -231,7 +232,7 @@ describe('createOpenItemFromInvoice', () => {
     const other = g.donor;
     const own = unwrap(await createOpenItemFromInvoice(g.deps, g.ctx, { documentId: g.documentId, contactId: other.id, dueOn: '2026-05-15' }));
     expect(own).toMatchObject({ contactId: other.id, dueOn: '2026-05-15' });
-    expect(JSON.parse(own.lineTemplate!)).toEqual([{ taxCode: 'standard', contactId: other.id }]);
+    expect(own.lineTemplate).toEqual([{ taxCode: 'standard', contactId: other.id }]);
   });
 
   it('forbidden, validation, no invoice, and an audit entry without seller, number or iban', async () => {

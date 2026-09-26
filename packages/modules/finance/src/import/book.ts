@@ -1,8 +1,8 @@
-import { isoNow, notFound, ok, requireHumanChannel, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
+import { isoNow, notFound, ok, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
-import { financeConflict } from '../errors';
+import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { entryLinesSchema, entryViewInternal, saveDraft, setReviewed, type EntryLinesInput, type EntryView } from '../ledger/entries';
 import { bookEntry } from '../ledger/finalize';
 import { financeAccounts, financeCategories, financeEntries, financeImportRuns, financeMoneyLines, financeRawTransactions, type FinanceRawTransactionRow } from '../schema';
@@ -87,7 +87,7 @@ export async function bookFromTransaction(deps: Deps, ctx: CallContext, input: u
   if (!parsed.ok) return parsed;
   const v = parsed.value;
   if (v.reviewed) {
-    const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+    const humanOnly = requireHumanChannelFinance(deps, ctx);
     if (humanOnly) return humanOnly;
   }
 

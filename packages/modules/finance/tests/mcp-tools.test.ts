@@ -15,6 +15,13 @@ describe('finance MCP tools', () => {
     const BALANCED = { entryDate: '2026-03-01', text: 'Spende', moneyLines: [{ accountId: f.bank.id, amountCents: 5000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 5000 }] };
     const res = await FINANCE_MCP_TOOLS.find((t) => t.name === 'finance_entry_book')!.handler(f.deps, agent, BALANCED);
     expect(res).toMatchObject({ ok: false, error: { type: 'conflict', code: 'humanOnly' } });
+    // Befund 13 (Spec 10.2): Grund und Abhilfe statt des rohen Einstellungsschlüssels "finance.mcpHumanOnlyAllowed".
+    if (!res.ok && res.error.type === 'conflict') {
+      expect(res.error.message).not.toBe('finance.mcpHumanOnlyAllowed');
+      expect(res.error.message).toContain('ein Mensch');
+      expect(res.error.message).toContain('Finanzen einrichten');
+      expect(res.error.message).toContain('Darf ein Agent festschreiben?');
+    }
 
     const revokeRes = await FINANCE_MCP_TOOLS.find((t) => t.name === 'finance_voucher_revoke')!.handler(f.deps, agent, { linkId: 'x', note: 'x' });
     expect(revokeRes).toMatchObject({ ok: false, error: { type: 'conflict', code: 'humanOnly' } });

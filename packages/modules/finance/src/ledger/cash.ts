@@ -1,10 +1,10 @@
-import { isoNow, newId, notFound, ok, requireHumanChannel, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { isoNow, newId, notFound, ok, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { contacts, displayName, type ContactRow } from '@kompass/module-contacts';
 import { abortIssue, issueGeneratedDocument, readLinkedDocument } from '@kompass/module-dms';
 import { asc, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
-import { financeConflict } from '../errors';
+import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { financeAccounts, financeCashCounts, financeCategories, financeEntries, type FinanceCashCountRow } from '../schema';
 import { cashCountTemplate, type CashCountTemplateInput } from './cash-count-template';
 import { formatEuro } from './cash-check';
@@ -74,7 +74,7 @@ export interface CountCashResult {
 export async function countCash(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<CountCashResult>> {
   const denied = requirePermission(ctx, 'finance.entriesFinalize');
   if (denied) return denied;
-  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  const humanOnly = requireHumanChannelFinance(deps, ctx);
   if (humanOnly) return humanOnly;
   const parsed = validate(deps, countCashSchema, input);
   if (!parsed.ok) return parsed;
@@ -189,7 +189,7 @@ export interface EmptyDonationBoxResult {
 export async function emptyDonationBox(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<EmptyDonationBoxResult>> {
   const denied = requirePermission(ctx, 'finance.entriesFinalize');
   if (denied) return denied;
-  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  const humanOnly = requireHumanChannelFinance(deps, ctx);
   if (humanOnly) return humanOnly;
   const parsed = validate(deps, emptyDonationBoxSchema, input);
   if (!parsed.ok) return parsed;
@@ -275,7 +275,7 @@ export async function moveCash(deps: Deps, ctx: CallContext, input: unknown): Pr
   if (deniedWrite) return deniedWrite;
   const deniedFinalize = requirePermission(ctx, 'finance.entriesFinalize');
   if (deniedFinalize) return deniedFinalize;
-  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  const humanOnly = requireHumanChannelFinance(deps, ctx);
   if (humanOnly) return humanOnly;
   const parsed = validate(deps, moveCashSchema, input);
   if (!parsed.ok) return parsed;

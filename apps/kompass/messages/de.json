@@ -3690,7 +3690,7 @@
           "categoryInactive": "Die Kategorie dieses Vorschlags ist stillgelegt. Übernehmen gelingt erst mit einer aktiven Kategorie.",
           "purposeClosed": "Der Zweck dieses Vorschlags ist abgeschlossen. Wählen Sie einen anderen Zweck."
         },
-        "foreignIban": "Die IBAN ist ausländisch. Eine Zahlung an Partner lässt sich erst mit Partnern und Zweckmitteln eigens erfassen.",
+        "foreignIban": "Die IBAN ist nicht deutsch. Prüfen Sie, ob es eine Zahlung ins Ausland ist.",
         "readOnly": "Übernehmen braucht das Recht „Buchungen vorbereiten“.",
         "summaryLine": "{category}: {amount}"
       },

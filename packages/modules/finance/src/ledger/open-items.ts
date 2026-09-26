@@ -1,17 +1,22 @@
-import { expectedVersionField, isoNow, newId, notFound, ok, requireHumanChannel, requirePermission, staleVersion, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { expectedVersionField, isoNow, newId, notFound, ok, requirePermission, staleVersion, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { contacts } from '@kompass/module-contacts';
 import { getDocumentRecord, linkDocumentInternal } from '@kompass/module-dms';
 import { and, desc, eq, isNull, lte } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
-import { financeConflict } from '../errors';
+import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { financeEntries, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, type FinanceOpenItemRow } from '../schema';
 import { requireFinanceRead } from './access';
 
-export interface OpenItemView extends FinanceOpenItemRow {
+/** Eine Zeile der Zuordnungsvorlage — die Vorbelegung, mit der `bookFromTransaction` einen offenen Posten begleicht. */
+export type LineTemplateEntry = Record<string, unknown>;
+
+export interface OpenItemView extends Omit<FinanceOpenItemRow, 'lineTemplate'> {
   settledCents: number;
   openCents: number;
   state: 'open' | 'settled' | 'overpaid' | 'cancelled';
+  /** Befund 12: die Datenbank speichert JSON-Text; die Sicht liefert das schon geparste Array. */
+  lineTemplate: LineTemplateEntry[] | null;
 }
 
 function contactExists(db: DbOrTx, id: string): boolean {
@@ -83,11 +88,21 @@ export function overdueOpenItemsInternal(db: DbOrTx, today: string, kind?: 'rece
     .filter((r) => r.openCents !== 0);
 }
 
+function parsedLineTemplate(raw: string | null): LineTemplateEntry[] | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 function openItemViewOf(db: DbOrTx, row: FinanceOpenItemRow): OpenItemView {
   const settledCents = settledCentsFor(db, row.id);
   const openCents = row.amountCents - settledCents;
   const state: OpenItemView['state'] = row.cancelledAt !== null ? 'cancelled' : settledCents === row.amountCents ? 'settled' : settledCents > row.amountCents ? 'overpaid' : 'open';
-  return { ...row, settledCents, openCents, state };
+  return { ...row, settledCents, openCents, state, lineTemplate: parsedLineTemplate(row.lineTemplate) };
 }
 
 /** Nur Zählwerte und IDs (Spec 10.3): nie die Zahlungsreferenz, nie die Notiz, nie der Kontakt. */
@@ -220,7 +235,7 @@ const cancelSchema = z.object({ id: z.string().min(1), note: z.string().trim().m
 export async function cancelOpenItem(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<OpenItemView>> {
   const denied = requirePermission(ctx, 'finance.entriesFinalize');
   if (denied) return denied;
-  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  const humanOnly = requireHumanChannelFinance(deps, ctx);
   if (humanOnly) return humanOnly;
   const parsed = validate(deps, cancelSchema, input);
   if (!parsed.ok) return parsed;

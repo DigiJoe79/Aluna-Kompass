@@ -1,8 +1,8 @@
-import { isoNow, newId, notFound, ok, requireHumanChannel, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { isoNow, newId, notFound, ok, requirePermission, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
-import { financeConflict } from '../errors';
+import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { ENTRY_LOCKS, type EntryLock } from '../locks';
 import { financeAccounts, financeEntries, financeMoneyLines, type FinanceAccountRow } from '../schema';
 import { firstNegativeCashDay, formatEuro } from './cash-check';
@@ -153,7 +153,7 @@ const reverseSchema = z.object({ id: z.string().min(1), cashWarningReason: z.str
 export async function reverseEntry(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ reversal: EntryView; correctionDraft: EntryView | null }>> {
   const denied = requirePermission(ctx, 'finance.entriesFinalize');
   if (denied) return denied;
-  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  const humanOnly = requireHumanChannelFinance(deps, ctx);
   if (humanOnly) return humanOnly;
   const parsed = validate(deps, reverseSchema, input);
   if (!parsed.ok) return parsed;

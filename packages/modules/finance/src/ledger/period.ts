@@ -1,8 +1,8 @@
-import { isoNow, newId, notFound, ok, requireHumanChannel, requirePermission, schema, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { isoNow, newId, notFound, ok, requirePermission, schema, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { and, desc, eq, gte, lte } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
-import { financeConflict } from '../errors';
+import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { financeAllocationCorrections, financeEntries, financeEntryJustifications, financeFiscalYears, financePeriodEvents, type FinanceFiscalYearRow } from '../schema';
 import { requireFinanceRead } from './access';
 import { documentationOf } from './entries';
@@ -142,7 +142,7 @@ const closeSchema = z.object({ id: z.string().min(1) });
 export async function closeFiscalYear(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<FiscalYearView>> {
   const denied = requirePermission(ctx, 'finance.periodClose');
   if (denied) return denied;
-  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  const humanOnly = requireHumanChannelFinance(deps, ctx);
   if (humanOnly) return humanOnly;
   const parsed = validate(deps, closeSchema, input);
   if (!parsed.ok) return parsed;
@@ -224,7 +224,7 @@ const reopenSchema = z.object({ id: z.string().min(1), note: z.string().trim().m
 export async function reopenFiscalYear(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<FiscalYearView>> {
   const denied = requirePermission(ctx, 'finance.periodClose');
   if (denied) return denied;
-  const humanOnly = requireHumanChannel(deps, ctx, 'finance.mcpHumanOnlyAllowed');
+  const humanOnly = requireHumanChannelFinance(deps, ctx);
   if (humanOnly) return humanOnly;
   const parsed = validate(deps, reopenSchema, input);
   if (!parsed.ok) return parsed;
