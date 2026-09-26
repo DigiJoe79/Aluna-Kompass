@@ -118,7 +118,7 @@ export function reverseInternal(
     .run();
   writeLinesInternal(tx, reversalId, lines);
 
-  const result = finalizeInternal(tx, deps, ctx, reversalId, { cashCheck, textFromNumber: (number) => `Storno ${number}` });
+  const result = finalizeInternal(tx, deps, ctx, reversalId, { cashCheck, textFromNumber: () => `Storno ${original.number}` });
   if (!result.ok) abortFinalize(result);
   const reversal = result.value;
 

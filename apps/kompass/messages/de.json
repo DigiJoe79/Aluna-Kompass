@@ -2581,6 +2581,7 @@
       "voucher": {
         "voucher": "Belegt.",
         "statementSuffices": "Der Kontoauszug genügt für diese Kategorien.",
+        "notApplicable": "Entfällt (Gegenbuchung).",
         "missing": "Beleg fehlt."
       },
       "totals": {

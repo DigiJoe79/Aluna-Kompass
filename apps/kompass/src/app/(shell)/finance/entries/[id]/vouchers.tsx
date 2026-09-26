@@ -23,8 +23,8 @@ export function EntryVouchers({
   entryId: string;
   vouchers: ReceiptListItem[];
   closedYear: boolean;
-  /** Spec 5.2 — nur ohne Beleg zeigt „statementSuffices“ etwas an; mit Beleg oder fehlendem Nachweis bleibt der Hinweis stumm. */
-  documentationState?: 'voucher' | 'statementSuffices' | 'missing';
+  /** Spec 5.2 — nur ohne Beleg zeigt „statementSuffices“ etwas an; mit Beleg, Storno oder fehlendem Nachweis bleibt der Hinweis stumm. */
+  documentationState?: 'voucher' | 'statementSuffices' | 'notApplicable' | 'missing';
 }) {
   const t = useTranslations('finance.entryView.vouchers');
   const tCommon = useTranslations('common');

@@ -40,7 +40,8 @@ export interface VoucherListEntry {
 }
 
 export interface EntryDocumentationState {
-  state: 'voucher' | 'statementSuffices' | 'missing';
+  /** `notApplicable`: ein Storno oder eine stornierte Buchung — eine Gegenbuchung braucht nie einen eigenen Beleg (Prozesstest-Befund 2). */
+  state: 'voucher' | 'statementSuffices' | 'notApplicable' | 'missing';
   warnExpenseAboveLimit: boolean;
 }
 
@@ -230,6 +231,9 @@ function statementSufficesBelowCentsInternal(db: DbOrTx): number {
 export function documentationOf(db: DbOrTx, entryId: string, settings: { statementSufficesBelowCents: number }): EntryDocumentationState {
   const voucherRows = db.select({ documentId: financeEntryDocuments.documentId, revokedAt: financeEntryDocuments.revokedAt }).from(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, entryId)).all();
   if (voucherRows.some((v) => v.revokedAt === null)) return { state: 'voucher', warnExpenseAboveLimit: false };
+
+  const head = db.select({ reversesEntryId: financeEntries.reversesEntryId, reversedByEntryId: financeEntries.reversedByEntryId }).from(financeEntries).where(eq(financeEntries.id, entryId)).get();
+  if (head?.reversesEntryId || head?.reversedByEntryId) return { state: 'notApplicable', warnExpenseAboveLimit: false };
 
   const moneyLines = db.select().from(financeMoneyLines).where(eq(financeMoneyLines.entryId, entryId)).all();
   const accounts = accountsById(db, moneyLines.map((l) => l.accountId));

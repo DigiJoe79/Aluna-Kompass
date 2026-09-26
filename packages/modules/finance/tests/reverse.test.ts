@@ -25,13 +25,36 @@ describe('reverseEntry', () => {
     f.deps.db.update(financeMoneyLines).set({ rawTransactionId: 'R1' }).where(eq(financeMoneyLines.entryId, entry.id)).run();
 
     const res = unwrap(await reverseEntry(f.deps, f.ctx, { id: entry.id }));
-    expect(res.reversal).toMatchObject({ status: 'final', reversesEntryId: entry.id, text: `Storno ${res.reversal.number}` });
+    expect(res.reversal).toMatchObject({ status: 'final', reversesEntryId: entry.id, text: `Storno ${entry.number}` });
     expect(res.reversal.moneyLines[0]).toMatchObject({ accountId: f.bank.id, amountCents: -5000, rawTransactionId: null });
     expect(res.reversal.allocationLines[0]).toMatchObject({ categoryId: f.donations.id, amountCents: -5000 });
 
     const original = unwrap(await getEntry(f.deps, f.ctx, { id: entry.id }));
     expect(original.reversedByEntryId).toBe(res.reversal.id);
     expect(original.moneyLines[0]!.rawReleasedAt).not.toBeNull();
+  });
+
+  it('names the reversed entry in the reversal text, not its own number', async () => {
+    const f = await ledgerFixture();
+    const first = unwrap(await finalizeEntry(f.deps, f.ctx, { id: (await draft(f, 1000)).id }));
+    const second = unwrap(await finalizeEntry(f.deps, f.ctx, { id: (await draft(f, 2000)).id }));
+    const res = unwrap(await reverseEntry(f.deps, f.ctx, { id: second.id }));
+    expect(res.reversal.number).not.toBe(second.number);
+    expect(res.reversal.text).toBe(`Storno ${second.number}`);
+    void first;
+  });
+
+  it('treats a reversal pair as not needing a voucher, but keeps a real voucher on the original visible', async () => {
+    const f = await ledgerFixture();
+    const withoutVoucher = unwrap(await finalizeEntry(f.deps, f.ctx, { id: (await draft(f, 1000)).id }));
+    const withoutVoucherReversal = unwrap(await reverseEntry(f.deps, f.ctx, { id: withoutVoucher.id }));
+    const originalAfter = unwrap(await getEntry(f.deps, f.ctx, { id: withoutVoucher.id }));
+    expect(originalAfter.documentation.state).toBe('notApplicable');
+    expect(withoutVoucherReversal.reversal.documentation.state).toBe('notApplicable');
+
+    const listWithoutVoucher = unwrap(await listEntries(f.deps, f.ctx, { withoutVoucher: true }));
+    expect(listWithoutVoucher.entries.map((e) => e.id)).not.toContain(withoutVoucher.id);
+    expect(listWithoutVoucher.entries.map((e) => e.id)).not.toContain(withoutVoucherReversal.reversal.id);
   });
 
   it('keeps the original date while its year is open', async () => {

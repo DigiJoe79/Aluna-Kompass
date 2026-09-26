@@ -59,6 +59,17 @@ describe('closing a fiscal year', () => {
     expect(log).not.toContain('Keine Rechnung erhalten');
   });
 
+  it('leaves an unvouchered reversal pair out of the undocumented preview', async () => {
+    const f = await ledgerFixture({ years: ['2025'] });
+    const yearId = f.years['2025']!.id;
+    const entry = unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2025-06-01', text: 'Bar-Ausgabe', moneyLines: [{ accountId: f.bank.id, amountCents: -1500 }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -1500 }] }));
+    unwrap(await reverseEntry(f.deps, f.ctx, { id: entry.id }));
+
+    const preview = unwrap(await previewPeriodClose(f.deps, f.ctx, { id: yearId }));
+    expect(preview.undocumented).toEqual([]);
+    expect(preview.canClose).toBe(true);
+  });
+
   it('an entry the statement documents needs no justification', async () => {
     const f = await ledgerFixture({ years: ['2025'] });
     const yearId = f.years['2025']!.id;

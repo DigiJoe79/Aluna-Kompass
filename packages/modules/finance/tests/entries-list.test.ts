@@ -75,6 +75,19 @@ describe('listEntries: filters, sorting and totals over the filtered set', () =>
     expect(result.entries.map((e) => e.id)).toEqual([withoutVoucher.id]);
   });
 
+  it('keeps the voucher of a reversed original visible', async () => {
+    const f = await ledgerFixture();
+    const withVoucher = unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'Mit Beleg', moneyLines: [{ accountId: f.bank.id, amountCents: -1500 }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -1500 }] }));
+    unwrap(await uploadVoucher(f.deps, f.ctx, { entryId: withVoucher.id, bytes: pdfBytes(), typeKey: 'voucher-own', documentDate: '2026-03-01' }));
+    unwrap(await reverseEntry(f.deps, f.ctx, { id: withVoucher.id }));
+
+    const withoutVoucherList = unwrap(await listEntries(f.deps, f.ctx, { withoutVoucher: true }));
+    expect(withoutVoucherList.entries.map((e) => e.id)).not.toContain(withVoucher.id);
+    const stillVisible = unwrap(await listEntries(f.deps, f.ctx, { ids: [withVoucher.id] }));
+    expect(stillVisible.entries[0]!.documentation.state).toBe('voucher');
+    expect(stillVisible.entries[0]!.vouchers).toHaveLength(1);
+  });
+
   it('lists only entries an agent prepared', async () => {
     const f = await ledgerFixture();
     const agentDraft = unwrap(await saveDraft(f.deps, { ...f.ctx, channel: 'mcp' }, { entryDate: '2026-03-01', text: 'Von einem Agenten', moneyLines: [{ accountId: f.bank.id, amountCents: 1000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 1000 }] }));

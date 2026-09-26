@@ -15,6 +15,7 @@ import { saveDraft, setReviewed } from '../src/ledger/entries';
 import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
 import { formatEuro } from '../src/ledger/cash-check';
 import { createOpenItem } from '../src/ledger/open-items';
+import { reverseEntry } from '../src/ledger/reverse';
 import { applyTaxDefaults, confirmSetupStep } from '../src/ledger/setup';
 import { installFinance } from '../src/install';
 import { insertDocument, insertRaw, insertRun, ledgerFixture, setupFinance } from './helpers';
@@ -79,6 +80,16 @@ describe('finance dashboard tiles', () => {
     const overdueLine = result.lines.find((l) => l.titleKey === 'overdueItems')!;
     expect(overdueLine.href).toBe('/finance/open-items?tab=payable');
     expect(overdueLine.values).toMatchObject({ count: 1 });
+  });
+
+  it('does not count an unvouchered reversal pair in the withoutVoucher tile', async () => {
+    const f = await ledgerFixture();
+    const entry = await f.finalEntry(); // festgeschrieben, kein Beleg
+    unwrap(await reverseEntry(f.deps, f.ctx, { id: entry.id }));
+
+    const tile = tileByKey('withoutVoucher');
+    const result = await tile.load(f.deps, f.ctx, {});
+    expect(result).toMatchObject({ kind: 'count', count: 0 });
   });
 
   it('never names a contact in the to-do tile', async () => {

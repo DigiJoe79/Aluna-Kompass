@@ -51,7 +51,12 @@ export interface FinalizeOptions {
    * erneut geprüft.
    */
   cashCheck?: 'refuse' | 'reasonGiven';
-  /** Der Buchungstext, gebildet aus der erst hier vergebenen Nummer (Storno: `Storno ${number}`). */
+  /**
+   * Ersetzt den Buchungstext, sobald diese Buchung selbst ihre Nummer erhält
+   * (Storno: `Storno ${original.number}` — die Nummer der stornierten
+   * Buchung, aus `reverse.ts` schon im Aufschluss gebunden, nicht die eigene,
+   * hier erst vergebene Nummer).
+   */
   textFromNumber?: (number: string) => string;
 }
 

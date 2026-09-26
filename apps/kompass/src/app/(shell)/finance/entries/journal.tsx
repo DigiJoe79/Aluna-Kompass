@@ -1,6 +1,6 @@
 'use client';
 
-import { FileCheck2, FileStack, FileWarning } from 'lucide-react';
+import { FileCheck2, FileStack, FileWarning, FileX2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -32,7 +32,7 @@ export interface JournalRow {
   allocationLabel: string;
   contactLabel: string | null;
   amountCents: number;
-  documentationState: 'voucher' | 'statementSuffices' | 'missing';
+  documentationState: 'voucher' | 'statementSuffices' | 'notApplicable' | 'missing';
   status: 'draft' | 'final';
   reviewedAt: string | null;
   reversedByEntryId: string | null;
@@ -61,6 +61,7 @@ function VoucherIcon({ state }: { state: JournalRow['documentationState'] }) {
   const tv = useTranslations('finance.journal.voucher');
   if (state === 'voucher') return <FileCheck2 className="size-4 text-ink-2" aria-label={tv('voucher')} />;
   if (state === 'statementSuffices') return <FileStack className="size-4 text-ink-2" aria-label={tv('statementSuffices')} />;
+  if (state === 'notApplicable') return <FileX2 className="size-4 text-ink-2" aria-label={tv('notApplicable')} />;
   return <FileWarning className="size-4 text-warning" aria-label={tv('missing')} />;
 }
 
