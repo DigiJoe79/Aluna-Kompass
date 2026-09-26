@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs';
+import { accessSync, constants, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
 import { systemClock, type Clock } from './clock';
@@ -62,7 +62,25 @@ export function mediaPathIn(dataPath: string): string {
   return path.join(dataPath, CORE_MODULE_KEY, 'media');
 }
 
+/**
+ * Legt `dir` an, falls es fehlt, und prüft das Schreibrecht — beides sofort,
+ * nicht erst beim ersten Schreiben (Befundliste 0.2.0, N10:
+ * `createFileStore.write` legt seine Ablage sonst erst beim ersten Upload an
+ * und scheitert dort mit einem stillen `EACCES`, wenn `DATA_PATH` nicht der
+ * Container-UID gehört). Der Start bricht statt dessen mit einer Meldung ab,
+ * die den Pfad nennt.
+ */
+function ensureWritableDir(dir: string): void {
+  mkdirSync(dir, { recursive: true });
+  try {
+    accessSync(dir, constants.W_OK);
+  } catch {
+    throw new Error(`Datenverzeichnis nicht beschreibbar: ${dir}`);
+  }
+}
+
 export function createDeps(opts: CreateDepsOptions): AppDeps {
+  ensureWritableDir(opts.dataPath);
   const databasePath = databasePathIn(opts.dataPath);
   mkdirSync(path.dirname(databasePath), { recursive: true });
   let handle = openDatabase(databasePath);
@@ -71,15 +89,21 @@ export function createDeps(opts: CreateDepsOptions): AppDeps {
   const moduleStores = new Map<string, FileStore>(
     [coreModule, ...(opts.modules ?? [])]
       .filter((manifest) => manifest.files)
-      .map((manifest) => [manifest.key, createFileStore(path.join(opts.dataPath, manifest.key))]),
+      .map((manifest) => {
+        const dir = path.join(opts.dataPath, manifest.key);
+        ensureWritableDir(dir);
+        return [manifest.key, createFileStore(dir)] as const;
+      }),
   );
+  const mediaDir = mediaPathIn(opts.dataPath);
+  ensureWritableDir(mediaDir);
   const deps: AppDeps = {
     db: handle.db,
     sqlite: handle.sqlite,
     clock: opts.clock ?? systemClock,
     env: opts.env,
     registry: createRegistry([coreModule, ...(opts.modules ?? [])], { coreTemplates: opts.coreTemplates }),
-    media: createFileStore(mediaPathIn(opts.dataPath)),
+    media: createFileStore(mediaDir),
     files: (moduleKey) => {
       const store = moduleStores.get(moduleKey);
       if (!store) throw new Error(`module without files: true has no store: ${moduleKey}`);

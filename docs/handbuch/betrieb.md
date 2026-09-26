@@ -19,7 +19,17 @@ Person, die diesen Rechner betreut.
 ## Erstinstallation
 
 1. **Verzeichnisse anlegen** — eines für die Daten, eines für die Medien, zum
-   Beispiel `kompass/data` und `kompass/media`.
+   Beispiel `kompass/data` und `kompass/media`. **Datenverzeichnis gehört UID
+   1000:** Der Container schreibt als Benutzer 1000; `data/` selbst muss ihm
+   deshalb gehören — `chown 1000:1000 data` (**ohne** `-R`). Die Unterordner
+   je Modul (`core`, `finance`, `dms`, `site`, …) legt der Container beim
+   Start selbst an und prüft sie dabei auf Schreibbarkeit; ein `-R` wäre hier
+   unnötig und griffe in einen bind-gemounteten Ordner (etwa Medien) hinein,
+   dessen Besitz man gerade nicht ändern will. Fehlt der Besitz, bricht der
+   Start mit einer Meldung ab, die den Pfad nennt, statt erst beim ersten
+   Beleg mit einem stillen Fehler zu scheitern. Wer Daten von einer anderen
+   Instanz übernimmt, etwa mit `rsync -a`, übernimmt damit auch deren
+   Besitzer — den `chown` danach noch einmal ausführen.
 
 2. **Umgebungsdatei** aus `.env.prod.example` erstellen. Pflicht ist
    `SESSION_SECRET` mit mindestens 32 zufälligen Zeichen, etwa aus
