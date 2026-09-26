@@ -222,11 +222,12 @@ export function membershipBlock(certifiable: boolean, sentence: string): string 
  */
 export function signatureBlock(input: { place: string; issuedOn: string; machine: boolean; signerName: string | null; machineNotifiedOn: string | null; facsimile?: { bytes: Uint8Array } ; notice: { taxOffice: string } }): string {
   const placeDate = t(`${input.place}, ${germanDate(input.issuedOn)}`);
-  const signature = input.machine && input.facsimile ? `#image("${documentImagePath('signature', input.facsimile.bytes)}", height: 13mm)` : '#v(13mm)';
+  // N11 (Befundliste 0.2.0): rechtsbündig in der zweiten Spalte — dieselbe Kante wie der Name darunter (`#h(1fr)` in der Zeile mit `SIGNATURE_CAPTION`), sonst steht die Unterschrift optisch in der Seitenmitte statt über dem Namen.
+  const signature = input.machine && input.facsimile ? `#image("${documentImagePath('signature', input.facsimile.bytes)}", height: 16mm)` : '#v(16mm)';
   const out = [
     '#v(6mm)',
     '#block(breakable: false)[',
-    `  #grid(columns: (70mm, 1fr), align: (left + bottom, left + bottom), [${placeDate}], [${signature}])`,
+    `  #grid(columns: (70mm, 1fr), align: (left + bottom, right + bottom), [${placeDate}], [${signature}])`,
     '  #v(-2pt)',
     '  #line(length: 100%, stroke: 0.5pt)',
     `  ${small(t(W.SIGNATURE_CAPTION))}${input.signerName ? ` #h(1fr) ${small(t(input.signerName))}` : ''}`,

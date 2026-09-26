@@ -116,6 +116,12 @@ describe('money confirmation', () => {
     expect(auto.typst).toContain('#image("/images/signature.png"');
     expect(auto.typst).toContain(t(W.machineNote('Musterstadt-Nord', '10.01.2026')));
 
+    // N11 (Befundliste 0.2.0): das Faksimile steht rechts, über dem Namen — dieselbe Kante wie `#h(1fr)` vor dem Namen in der Zeile mit der Bildunterschrift.
+    expect(auto.typst).toContain('#grid(columns: (70mm, 1fr), align: (left + bottom, right + bottom)');
+    expect(auto.typst).not.toContain('align: (left + bottom, left + bottom)');
+    expect(auto.typst).toContain('#image("/images/signature.png", height: 16mm)');
+    expect(auto.typst).toContain('#h(1fr)');
+
     // Faksimile ohne maschinelles Verfahren, oder maschinell ohne Faksimile, Anzeige oder Unterzeichner: die Vorlage lehnt ab.
     expect(refuses(moneyConfirmationTemplate as DocumentTemplate<unknown>, { ...money, facsimile: FACSIMILE })).toBe(true);
     expect(refuses(moneyConfirmationTemplate as DocumentTemplate<unknown>, { ...money, ...machine, facsimile: undefined })).toBe(true);
