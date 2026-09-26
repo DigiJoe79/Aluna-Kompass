@@ -21,6 +21,8 @@ export interface AccountCardData {
   statement: {
     importedThrough: string | null;
     lastStatementDaysAgo: number | null;
+    /** Befund 5: der Auszug reicht über heute hinaus — statt „vor 0 Tagen“. */
+    lastStatementInFuture: boolean;
     /** Ab diesem Wert gilt der letzte Auszug als überfällig (`finance.lastStatementWarnDays`). */
     warnDays: number;
     reconciliation: { state: 'matches' | 'differs' | 'noStatement'; statementDate: string | null; differenceCents: number | null } | null;
@@ -96,7 +98,11 @@ export function AccountCard({ account }: { account: AccountCardData }) {
           ) : (
             <p className={account.statement.lastStatementDaysAgo !== null && account.statement.lastStatementDaysAgo >= account.statement.warnDays ? 'text-[12px] font-semibold text-warning' : 'text-[12px] text-muted-ink'}>
               {t('statementThrough', { date: formatDateOrDash(date, account.statement.importedThrough) })}
-              {account.statement.lastStatementDaysAgo !== null ? ` · ${t('statementDaysAgo', { days: account.statement.lastStatementDaysAgo })}` : ''}
+              {account.statement.lastStatementInFuture
+                ? ` · ${t('statementInFuture')}`
+                : account.statement.lastStatementDaysAgo !== null
+                  ? ` · ${t('statementDaysAgo', { days: account.statement.lastStatementDaysAgo })}`
+                  : ''}
             </p>
           )}
           {account.statement.reconciliation ? (

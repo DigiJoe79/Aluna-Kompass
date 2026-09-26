@@ -42,6 +42,16 @@ describe('getAccountStatements', () => {
     expect(bankView.reconciliation?.state).toBe('noStatement');
   });
 
+  it('never reports negative days when the statement reaches into the future (Befund 5)', async () => {
+    const f = await statementsFixture();
+    unwrap(await importStatement(f.deps, f.ctx, { accountId: f.bank.id, fileName: 'maerz.xml', bytes: bytes('einfach-001-02.xml') })); // periodTo 2026-03-31
+
+    const res = unwrap(await getAccountStatements(f.deps, f.ctx, { date: '2026-03-27' })); // vier Tage vor dem Ende des Auszugs
+    const bankView = res.accounts[0]!;
+    expect(bankView.lastStatementDaysAgo).toBe(0);
+    expect(bankView.lastStatementInFuture).toBe(true);
+  });
+
   it('reports null imported-through and no days for an account never imported', async () => {
     const f = await statementsFixture();
     const res = unwrap(await getAccountStatements(f.deps, f.ctx, { date: '2026-04-10' }));

@@ -30,9 +30,16 @@ export interface ImportRunView {
   gap: { from: string; to: string } | null;
   state: 'finished' | 'failed' | 'discarded';
   failure: { code: string; line: number | null } | null;
+  /** Befund 5: `futureDates`, wenn ein Umsatz nach dem Tag des Ladens buchte — angenommen, nur ein Hinweis. */
+  warnings: ('futureDates')[];
   startedAt: string;
   finishedAt: string | null;
   createdByUserName: string | null;
+}
+
+/** `financeImportRuns.warnings` ist `NULL` oder ein JSON-Array bekannter Codes — nie eine Ablehnung. */
+function parseWarnings(raw: string | null): ImportRunView['warnings'] {
+  return raw ? (JSON.parse(raw) as ImportRunView['warnings']) : [];
 }
 
 function createdByUserName(db: DbOrTx, userId: string): string | null {
@@ -57,6 +64,7 @@ export function toRunView(db: DbOrTx, row: FinanceImportRunRow): ImportRunView {
     gap: row.gapFrom !== null && row.gapTo !== null ? { from: row.gapFrom, to: row.gapTo } : null,
     state,
     failure: row.failedAt !== null ? { code: row.failureCode!, line: row.failureLine } : null,
+    warnings: parseWarnings(row.warnings),
     startedAt: row.startedAt,
     finishedAt: row.finishedAt,
     createdByUserName: createdByUserName(db, row.createdByUserId),
@@ -234,11 +242,15 @@ function writeRun(
   // Ohne eigenen Anfangssaldo (CSV ohne Saldo und ohne Antwort) lässt sich keine Lücke behaupten.
   const gap = prevRun && prevRun.closingCents !== null && prevRun.periodTo !== null && stmt.openingCents !== null && stmt.openingCents !== prevRun.closingCents ? { from: prevRun.periodTo, to: stmt.from } : null;
 
+  // Befund 5: ein Umsatztag nach heute ist angenommen, nur ein Hinweis — nie eine Ablehnung.
+  const today = isoNow(deps.clock).slice(0, 10);
+  const warnings: ImportRunView['warnings'] = stmt.lines.some((l) => l.bookingDate > today) ? ['futureDates'] : [];
+
   tx.update(financeImportRuns)
     .set({
       periodFrom: stmt.from, periodTo: stmt.to, openingCents: stmt.openingCents, closingCents: stmt.closingCents,
       countNew: counters.countNew, countKnown: counters.countKnown, countHeld: counters.countHeld, countPendingSkipped: counters.countPendingSkipped,
-      gapFrom: gap?.from ?? null, gapTo: gap?.to ?? null, finishedAt: isoNow(deps.clock),
+      gapFrom: gap?.from ?? null, gapTo: gap?.to ?? null, warnings: warnings.length > 0 ? JSON.stringify(warnings) : null, finishedAt: isoNow(deps.clock),
     })
     .where(eq(financeImportRuns.id, runId))
     .run();

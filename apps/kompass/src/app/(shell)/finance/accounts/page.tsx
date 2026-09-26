@@ -38,6 +38,7 @@ export default async function FinanceAccountsPage() {
           : {
               importedThrough: statement.importedThrough,
               lastStatementDaysAgo: statement.lastStatementDaysAgo,
+              lastStatementInFuture: statement.lastStatementInFuture,
               warnDays,
               reconciliation: statement.reconciliation,
             },

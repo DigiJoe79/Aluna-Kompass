@@ -2894,6 +2894,7 @@
       "statementNone": "Noch kein Auszug geladen.",
       "statementThrough": "Auszug importiert bis {date}",
       "statementDaysAgo": "{days, plural, one {zuletzt vor # Tag} other {zuletzt vor # Tagen}}",
+      "statementInFuture": "Auszug reicht bis in die Zukunft",
       "reconciliation": {
         "matches": "Stimmt mit dem Auszug vom {date} überein",
         "differs": "Differenz zum Auszug vom {date}: {amount}",
@@ -2991,6 +2992,9 @@
         },
         "gap": "Es fehlen Umsätze zwischen {from} und {to}.",
         "gapHint": "Die Reihenfolge ist Kompass gleich — laden Sie den fehlenden Auszug einfach nach.",
+        "warnings": {
+          "futureDates": "Dieser Auszug nennt Umsätze mit einem Buchungstag nach heute. Er wurde trotzdem angenommen — prüfen Sie, ob das Datum in der Datei stimmt."
+        },
         "detail": {
           "trigger": "Kontoumsätze anzeigen",
           "empty": "Keine Kontoumsätze.",

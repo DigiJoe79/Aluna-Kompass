@@ -57,6 +57,7 @@ export default async function FinanceImportsPage() {
         closingCents: run.closingCents,
         counts: run.counts,
         gap: run.gap,
+        warnings: run.warnings,
         state: run.state,
         failure: run.failure,
         startedAt: run.startedAt,

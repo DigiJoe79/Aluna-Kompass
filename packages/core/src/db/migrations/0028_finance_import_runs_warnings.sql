@@ -1,0 +1,1 @@
+ALTER TABLE `finance_import_runs` ADD `warnings` text;

@@ -423,6 +423,8 @@ export const financeImportRuns = sqliteTable(
     countPendingSkipped: integer('count_pending_skipped'),
     gapFrom: text('gap_from'),
     gapTo: text('gap_to'),
+    /** Prozesstest-Befund 5: JSON-Array bekannter Warncodes (bisher nur `futureDates`) — nie ein Ablehnungsgrund. */
+    warnings: text('warnings'),
     startedAt: text('started_at').notNull(),
     finishedAt: text('finished_at'),
     failedAt: text('failed_at'),

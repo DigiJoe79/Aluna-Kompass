@@ -38,6 +38,8 @@ export interface RunRow {
   gap: { from: string; to: string } | null;
   state: 'finished' | 'failed' | 'discarded';
   failure: { code: string; line: number | null } | null;
+  /** Befund 5: nur `futureDates` bisher — angenommen, kein Ablehnungsgrund. */
+  warnings: ('futureDates')[];
   startedAt: string;
   createdByUserName: string | null;
   rawTransactions: RunRawTransaction[];
@@ -121,6 +123,12 @@ export function RunsTable({ runs, canDiscard }: { runs: RunRow[]; canDiscard: bo
                 <Notice level="warn">
                   {t('gap', { from: date(run.gap.from), to: date(run.gap.to) })} {t('gapHint')}
                 </Notice>
+              </div>
+            ) : null}
+
+            {run.warnings.includes('futureDates') ? (
+              <div className="px-3 pb-3">
+                <Notice level="warn">{t('warnings.futureDates')}</Notice>
               </div>
             ) : null}
 

@@ -67,6 +67,23 @@ test.describe('finance import', () => {
     await expect(page.getByRole('link', { name: 'Zum vorhandenen Lauf' })).toBeVisible();
   });
 
+  test('ein Auszug mit Umsatztagen nach heute wird angenommen und zeigt eine Warnung (Befund 5)', async ({ page }) => {
+    await openImports(page);
+    await page.getByTestId('statement-file-input').setInputFiles(fixture('zukunft.xml'));
+    await expect(page.getByText(/1 neu, 0 bereits vorhanden, 0 zurückgehalten/)).toBeVisible();
+    await expect(page.getByText('Dieser Auszug nennt Umsätze mit einem Buchungstag nach heute. Er wurde trotzdem angenommen — prüfen Sie, ob das Datum in der Datei stimmt.')).toBeVisible();
+  });
+
+  test('die Kontokarte zeigt nie negative Tage, wenn der Auszug bis in die Zukunft reicht (Befund 5)', async ({ page }) => {
+    await openImports(page);
+    await page.getByTestId('statement-file-input').setInputFiles(fixture('zukunft.xml'));
+    await expect(page.getByText(/1 neu, 0 bereits vorhanden, 0 zurückgehalten/)).toBeVisible();
+    await page.goto('/finance/accounts');
+    const card = page.locator('[role="link"]', { hasText: 'Importkonto' });
+    await expect(card.getByText('Auszug reicht bis in die Zukunft')).toBeVisible();
+    await expect(card.getByText(/vor -\d+ Tag/)).toHaveCount(0);
+  });
+
   test('eine fremde IBAN führt zu „Konto einrichten“', async ({ page }) => {
     await openImports(page);
     const before = await page.getByTestId('import-run').count();

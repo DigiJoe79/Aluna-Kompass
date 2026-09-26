@@ -14,6 +14,8 @@ export interface AccountStatementView {
   accountId: string;
   importedThrough: string | null;
   lastStatementDaysAgo: number | null;
+  /** Befund 5: der letzte Auszug reicht über den Stichtag hinaus — die Karte sagt das, statt „vor 0 Tagen“. */
+  lastStatementInFuture: boolean;
   reconciliation: BankReconciliation | null;
 }
 
@@ -40,7 +42,9 @@ export async function getAccountStatements(deps: Deps, ctx: CallContext, input: 
     return {
       accountId: a.id,
       importedThrough: through,
-      lastStatementDaysAgo: through === null ? null : daysBetween(date, through),
+      // Befund 5: ein Auszug, der bis in die Zukunft reicht, zeigt nie negative Tage ("vor -4 Tagen").
+      lastStatementDaysAgo: through === null ? null : Math.max(0, daysBetween(date, through)),
+      lastStatementInFuture: through !== null && through > date,
       reconciliation: reconcileBankInternal(deps.db, a.id, date),
     };
   });

@@ -3,7 +3,8 @@ import { saveImportProfile } from '../src/import/profiles';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { unwrap } from '@kompass/core';
-import { auditEntry, ctxWith } from '@kompass/core/testing';
+import { auditEntry, ctxWith, TEST_NOW } from '@kompass/core/testing';
+import { buildCamt053Bytes } from '../src/import/camt-fixture';
 import { and, eq, isNotNull } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
 import { createAccount, setAccountActive } from '../src/ledger/accounts';
@@ -186,6 +187,26 @@ describe('importStatement', () => {
     expect(res.runs).toHaveLength(2);
     expect(res.runs[0]).toMatchObject({ periodFrom: '2026-03-01', periodTo: '2026-03-15', gap: null });
     expect(res.runs[1]).toMatchObject({ periodFrom: '2026-03-16', periodTo: '2026-03-31', gap: null });
+  });
+
+  it('has no warning on an ordinary statement, entirely in the past', async () => {
+    const f = await importFixture();
+    const res = unwrap(await importStatement(f.deps, f.ctx, { accountId: f.account.id, fileName: 'a.xml', bytes: bytes('einfach-001-02.xml') }));
+    expect(res.runs[0]!.warnings).toEqual([]);
+  });
+
+  it('accepts a statement with booking days after today and reports futureDates (Befund 5)', async () => {
+    const f = await importFixture();
+    const today = TEST_NOW.slice(0, 10); // 2026-09-05
+    const future = buildCamt053Bytes({
+      iban: VEREIN_IBAN, from: '2026-09-01', to: '2026-09-10', openingCents: 10000,
+      lines: [{ bookingDate: today, amountCents: 500 }, { bookingDate: '2026-09-10', amountCents: 700 }],
+    });
+    const res = unwrap(await importStatement(f.deps, f.ctx, { accountId: f.account.id, fileName: 'zukunft.xml', bytes: future }));
+    expect(res.runs).toHaveLength(1);
+    expect(res.runs[0]!.warnings).toEqual(['futureDates']);
+    const runRow = f.deps.db.select().from(financeImportRuns).where(eq(financeImportRuns.id, res.runs[0]!.id)).get()!;
+    expect(JSON.parse(runRow.warnings!)).toEqual(['futureDates']);
   });
 
   it('lets an agent import (entriesWrite over mcp) and refuses without the permission', async () => {

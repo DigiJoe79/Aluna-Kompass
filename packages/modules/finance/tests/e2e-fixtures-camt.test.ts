@@ -27,6 +27,16 @@ describe('E2E-Fixtures unter apps/kompass/e2e/fixtures/camt', () => {
     expect(stmt.lines.find((l) => l.bankReference === 'E2E-NEU-0001')).toBeTruthy();
   });
 
+  it('zukunft.xml: eine einzelne Zeile mit einem Buchungstag weit nach heute (Befund 5)', () => {
+    const res = parseCamt053(bytes('zukunft.xml'), { maxBytes: 1_000_000 });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const stmt = res.statements[0]!;
+    expect(stmt).toMatchObject({ iban: IMPORTKONTO_IBAN, from: '2036-01-01', to: '2036-01-31', openingCents: 0, closingCents: 2500 });
+    expect(stmt.lines).toHaveLength(1);
+    expect(stmt.lines[0]!.bookingDate).toBe('2036-01-15');
+  });
+
   it('duplikat.xml: eine einzelne, gültige Zeile', () => {
     const res = parseCamt053(bytes('duplikat.xml'), { maxBytes: 1_000_000 });
     expect(res.ok).toBe(true);
