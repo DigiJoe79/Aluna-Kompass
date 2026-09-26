@@ -82,18 +82,22 @@ export function workerEnvironment(kind: ServerKind, index: number, root: string)
 /**
  * Wie viele Server nebeneinander laufen.
  *
- * Vorgabe zwei online (vier Kerne, und `next dev` kompiliert je Worker seine
- * Routen selbst) und drei lokal. `E2E_WORKERS` übersteuert — nach oben für
+ * Lokal drei. Online ein Dev-Server und drei Container: Ein kalter `next dev`
+ * mit Warmup belegt in der Spitze knapp 10 GB, zwei zusammen 19,5 GB
+ * (gemessen 26.09.); der Läufer hat 16 GB und brach den Job mit zwei Servern
+ * nach zwei Minuten ab (Lauf 36244325712). Ein Container mit Produktionsbuild
+ * braucht einen Bruchteil davon. `E2E_WORKERS` übersteuert — nach oben für
  * `pnpm e2e:stress`, das Wettläufe absichtlich hervorlockt, nach unten, wenn
  * eine Maschine unter der Last Zeitüberschreitungen statt Fehler zeigt.
  */
-export function workerCount(env: Record<string, string | undefined>): number {
+export function workerCount(env: Record<string, string | undefined>, kind: ServerKind): number {
   if (env.E2E_WORKERS !== undefined) {
     const n = Number(env.E2E_WORKERS);
     if (!Number.isInteger(n) || n < 1) throw new Error(`E2E_WORKERS muss eine ganze Zahl ab 1 sein, nicht "${env.E2E_WORKERS}"`);
     return n;
   }
-  return env.CI ? 2 : 3;
+  if (!env.CI) return 3;
+  return kind === 'dev' ? 1 : 3;
 }
 
 export interface RunningServer {

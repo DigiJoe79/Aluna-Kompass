@@ -39,7 +39,7 @@ export default defineConfig<{ serverKind: ServerKind }>({
    */
   grepInvert: /ausgetauschtes Dokument/,
   fullyParallel: false,
-  workers: workerCount(process.env),
+  workers: workerCount(process.env, 'container'),
   // Online ein Wiederholungsversuch, lokal keiner — Begründung in `playwright.config.ts`.
   retries: process.env.CI ? 1 : 0,
   // Im Container läuft der Astro-Build gegen ein Volume und ohne warmen

@@ -25,7 +25,7 @@ export default defineConfig<{ serverKind: ServerKind }>({
   testDir: './e2e',
   projects,
   fullyParallel: false,
-  workers: workerCount(process.env),
+  workers: workerCount(process.env, 'dev'),
   /**
    * Online ein Wiederholungsversuch, lokal keiner.
    *

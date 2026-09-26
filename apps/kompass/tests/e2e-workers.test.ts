@@ -58,15 +58,27 @@ describe('workerEnvironment', () => {
 });
 
 describe('workerCount', () => {
-  it('nimmt E2E_WORKERS, sonst 2 online und 3 lokal', () => {
-    expect(workerCount({ E2E_WORKERS: '8' })).toBe(8);
-    expect(workerCount({ CI: 'true' })).toBe(2);
-    expect(workerCount({})).toBe(3);
+  it('nimmt E2E_WORKERS, sonst 3 lokal', () => {
+    expect(workerCount({ E2E_WORKERS: '8' }, 'dev')).toBe(8);
+    expect(workerCount({}, 'dev')).toBe(3);
+    expect(workerCount({}, 'container')).toBe(3);
+  });
+
+  /**
+   * Online ein Dev-Server, drei Container. Ein kalter `next dev` mit Warmup
+   * belegt in der Spitze knapp 10 GB (gemessen 26.09., zwei Server 19,5 GB);
+   * der Läufer hat 16 GB, und mit zwei Servern brach er den Job nach zwei
+   * Minuten ab (Lauf 36244325712). Ein Container mit Produktionsbuild braucht
+   * einen Bruchteil davon.
+   */
+  it('online: ein Dev-Server, drei Container', () => {
+    expect(workerCount({ CI: 'true' }, 'dev')).toBe(1);
+    expect(workerCount({ CI: 'true' }, 'container')).toBe(3);
   });
 
   it('lehnt Unsinn ab, statt still mit einem Worker zu laufen', () => {
-    expect(() => workerCount({ E2E_WORKERS: '0' })).toThrow();
-    expect(() => workerCount({ E2E_WORKERS: 'viele' })).toThrow();
+    expect(() => workerCount({ E2E_WORKERS: '0' }, 'dev')).toThrow();
+    expect(() => workerCount({ E2E_WORKERS: 'viele' }, 'dev')).toThrow();
   });
 });
 
