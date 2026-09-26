@@ -8,7 +8,7 @@ import { suggestExpenseCategories } from '../src/allocation/suggest';
 import { bookEntry } from '../src/ledger/finalize';
 import { openItemsAtInternal } from '../src/ledger/open-items';
 import { financeCategories, financeExpenseClaims, financeExpensePositions, financeImportRules, financeOpenItems } from '../src/schema';
-import { approverCtx, EXPENSE_IBAN, expenseFixture, expenseSubmitted, type ExpenseFixture } from './expense-fixture';
+import { approverCtx, enableExpenseWaivers, EXPENSE_IBAN, expenseFixture, expenseSubmitted, type ExpenseFixture } from './expense-fixture';
 import { allowHumanOnlyOverMcp } from './helpers';
 
 /**
@@ -177,6 +177,29 @@ describe('approveExpenseClaim', () => {
     expect(err(await approveExpenseClaim(f.deps, agent, { claimId: claim.id, positions: categorized(f, claim) }))).toMatchObject({ code: 'humanOnly' });
     allowHumanOnlyOverMcp(f.deps);
     expect(unwrap(await approveExpenseClaim(f.deps, agent, { claimId: claim.id, positions: categorized(f, claim) })).state).toBe('approved');
+  });
+
+  it('refuses approving a waiver claim whose basis is empty — a safety net for old data (Befund 8)', async () => {
+    const f = await expenseFixture();
+    enableExpenseWaivers(f);
+    // Ein Altbestand aus der Zeit vor dieser Prüfung: einreichen ohne Grundlage wird seit Befund 8 abgelehnt,
+    // also lässt es sich nicht mehr über den Dienst nachstellen — der Antrag steht direkt in der Datenbank,
+    // wie ein "submitted" aus der Zeit vor der Regel. `waiver`/`waiver_basis_text` sind nach dem Einreichen
+    // unveränderlich (Trigger), ein UPDATE ginge also ohnehin nicht.
+    const now = '2026-09-01T08:00:00.000Z';
+    const claimId = newId();
+    const positionId = newId();
+    // Zuerst als Entwurf anlegen (Trigger erlauben dort noch Positionen und den Wechsel nach "submitted"),
+    // dann festschreiben — waiver/waiverBasisText sind ab "submitted" unveraenderlich, ein direktes Einfuegen
+    // als "submitted" wuerde die Positionen-Trigger sperren.
+    f.deps.db
+      .insert(financeExpenseClaims)
+      .values({ id: claimId, number: null, contactId: f.hanna.contactId, submittedByUserId: f.hanna.userId, state: 'draft', iban: null, waiver: true, waiverBasisText: null, createdAt: now, updatedAt: now })
+      .run();
+    f.deps.db.insert(financeExpensePositions).values({ id: positionId, claimId, sortOrder: 0, kind: 'receipt', positionDate: '2025-06-01', amountCents: 1000, purpose: 'Altbestand', documentId: null }).run();
+    f.deps.db.update(financeExpenseClaims).set({ state: 'submitted', number: 'KE-2025-999', submittedAt: now }).where(eq(financeExpenseClaims.id, claimId)).run();
+
+    expect(err(await approveExpenseClaim(f.deps, approverCtx(f), { claimId, positions: [{ positionId, categoryId: f.programCosts.id }] }))).toMatchObject({ code: 'waiverBasisMissing' });
   });
 });
 

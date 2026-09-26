@@ -264,6 +264,8 @@ export async function approveExpenseClaim(deps: Deps, ctx: CallContext, input: u
   if (!claim.waiver && v.waiver) return invalid([{ path: 'waiver', message: 'notAWaiverClaim' }]);
   if (claim.waiver) {
     if (!waiversEnabled(deps)) return financeConflict('expenseWaiversDisabled');
+    // Befund 8, Sicherheitsnetz für Altbestände: die Grundlage steht schon auf dem Antrag (seit dem Einreichen) — ohne sie keine Freigabe.
+    if (!claim.waiverBasisText) return financeConflict('waiverBasisMissing');
     if (!v.waiver) return invalid([{ path: 'waiver', message: 'required' }]);
     if (v.waiver.declaredOn > approvedOn) return invalid([{ path: 'waiver.declaredOn', message: 'inFuture' }]);
     const reason = v.waiver.lateReason ? v.waiver.lateReason : null;

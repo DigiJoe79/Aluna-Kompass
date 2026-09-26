@@ -53,8 +53,8 @@ export default async function NewExpensePage({ searchParams }: { searchParams: P
 
   const today = deps.clock.now().toISOString().slice(0, 10);
   const base = claim?.ok ? formFromClaim(claim.value) : { ...emptyExpenseForm(start.value.iban), positions: [emptyPosition('p0', today)] };
-  // Sind Aufwandsspenden inzwischen aus, gibt es keinen Verzicht mehr zu wählen — die IBAN kommt zurück.
-  const initial = { ...base, waiver: base.waiver && start.value.waiversEnabled };
+  // Sind Aufwandsspenden inzwischen aus oder fehlt die Anspruchsgrundlage, gibt es keinen Verzicht mehr zu wählen — die IBAN kommt zurück.
+  const initial = { ...base, waiver: base.waiver && start.value.waiversEnabled && start.value.waiverAvailable };
 
   // „Neu einreichen“: der Verweis auf den abgelehnten Antrag, aus dem der Entwurf entstand.
   const source = claim?.ok && claim.value.copiedFromClaimId ? await getExpenseClaim(deps, ctx, { id: claim.value.copiedFromClaimId }) : null;
@@ -72,6 +72,8 @@ export default async function NewExpensePage({ searchParams }: { searchParams: P
         prefilledIban={start.value.iban}
         contactName={start.value.contactName}
         waiversEnabled={start.value.waiversEnabled}
+        waiverAvailable={start.value.waiverAvailable}
+        waiverUnavailableNames={start.value.waiverUnavailableNames}
         mileageRates={start.value.mileageRates}
         projects={start.value.projects}
         device={deviceFromUserAgent((await headers()).get('user-agent'))}

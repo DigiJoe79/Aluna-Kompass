@@ -413,6 +413,8 @@ function allocateClaimNumber(tx: DbOrTx, year: number): string {
  */
 function submitProblem(deps: Deps, claim: FinanceExpenseClaimRow, positions: readonly FinanceExpensePositionRow[]): Result<null> {
   if (claim.waiver && !waiversEnabled(deps)) return financeConflict('expenseWaiversDisabled');
+  // Befund 8: der Schalter allein reicht nicht — ohne Anspruchsgrundlage (Person oder Verein) wird kein Verzicht eingereicht.
+  if (claim.waiver && waiverBasisInternal(deps, deps.db, claim.contactId).waiverBasisText === null) return financeConflict('waiverBasisMissing');
   if (positions.length === 0) return financeConflict('expenseNothingToSubmit');
   const missing = positions.findIndex((p) => p.kind === 'receipt' && !p.documentId);
   if (missing >= 0) return financeConflict('expensePositionNeedsReceipt', { position: missing + 1 });
@@ -573,6 +575,11 @@ export interface ExpenseFormStart {
   iban: string | null;
   /** Der Verzicht wird nur angeboten, wenn der Verein Aufwandsspenden führt (E13). */
   waiversEnabled: boolean;
+  /** Befund 8: ohne Anspruchsgrundlage (Person oder Verein) bietet das Formular den Verzicht nicht an, auch wenn `waiversEnabled` gilt. */
+  waiverAvailable: boolean;
+  waiverUnavailableReason: 'basisMissing' | null;
+  /** Wer die Grundlage hinterlegen kann (`finance.setup`) — nur gefüllt, solange `waiverAvailable` false ist. */
+  waiverUnavailableNames: string[];
   /** Die Stufen des Kilometersatzes (mitgeliefert und eigene), aufsteigend — die Oberfläche rechnet damit vor, der Dienst rechnet beim Sichern. */
   mileageRates: { validFrom: string; centsPerKm: number }[];
   /** Die aktiven Projekte, nur ID und Name (in der ersten Sprache) — für das Feld „Projekt“ auch ohne `projects.view`. */
@@ -629,7 +636,18 @@ export async function expenseFormStart(deps: Deps, ctx: CallContext, input: unkn
     .map((validFrom) => ({ validFrom, centsPerKm: valueAt(deps.db, 'mileageRate', validFrom) }))
     .filter((r): r is { validFrom: string; centsPerKm: number } => typeof r.centsPerKm === 'number');
 
-  return ok({ contactName: contact ? displayName(contact) : '', iban: lastClaimIban ?? knownIban ?? null, waiversEnabled: waiversEnabled(deps), mileageRates, projects: await activeProjectNamesInternal(deps, ctx) });
+  const basis = waiverBasisInternal(deps, deps.db, own.value);
+  const waiverAvailable = basis.waiverBasisText !== null;
+  return ok({
+    contactName: contact ? displayName(contact) : '',
+    iban: lastClaimIban ?? knownIban ?? null,
+    waiversEnabled: waiversEnabled(deps),
+    waiverAvailable,
+    waiverUnavailableReason: waiverAvailable ? null : 'basisMissing',
+    waiverUnavailableNames: waiverAvailable ? [] : listUserNamesWithPermission(deps, 'finance.setup'),
+    mileageRates,
+    projects: await activeProjectNamesInternal(deps, ctx),
+  });
 }
 
 const listSchema = z.object({

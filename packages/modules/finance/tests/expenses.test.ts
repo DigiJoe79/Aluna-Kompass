@@ -181,6 +181,11 @@ describe('expenseFormStart', () => {
       contactName: 'Hanna Helferin',
       iban: null,
       waiversEnabled: false,
+      // Befund 8: ohne hinterlegte Anspruchsgrundlage bietet das Formular den Verzicht gar nicht erst an.
+      waiverAvailable: false,
+      waiverUnavailableReason: 'basisMissing',
+      // `f.ctx` traegt die Finanzrechte nur am Kontext, nicht ueber eine Rolle in der Datenbank — `listUserNamesWithPermission` findet daher niemanden.
+      waiverUnavailableNames: [],
       mileageRates: [
         { validFrom: '2026-01-01', centsPerKm: 30 },
         { validFrom: '2026-06-01', centsPerKm: 35 },
@@ -189,6 +194,10 @@ describe('expenseFormStart', () => {
     });
     enableWaivers(f);
     expect(unwrap(await expenseFormStart(f.deps, f.hanna.ctx, {})).waiversEnabled).toBe(true);
+    // Der Schalter allein reicht nicht — ohne Grundlage bleibt der Verzicht unverfügbar.
+    expect(unwrap(await expenseFormStart(f.deps, f.hanna.ctx, {}))).toMatchObject({ waiverAvailable: false, waiverUnavailableReason: 'basisMissing' });
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisText', 'Satzung § 7 Abs. 2', 'test'));
+    expect(unwrap(await expenseFormStart(f.deps, f.hanna.ctx, {}))).toMatchObject({ waiverAvailable: true, waiverUnavailableReason: null, waiverUnavailableNames: [] });
 
     const refused = await expenseFormStart(f.deps, f.unlinked, {});
     expect(err(refused)).toMatchObject({ type: 'conflict', code: 'expenseNeedsContactLink', message: expect.stringContaining('Vera Verwalterin') });
@@ -274,13 +283,16 @@ describe('submitExpenseClaim', () => {
     expect(f.deps.db.select().from(contactRoles).where(and(eq(contactRoles.contactId, f.hanna.contactId), eq(contactRoles.role, 'claimant'), isNull(contactRoles.until))).all()).toHaveLength(1);
   });
 
-  it('submits a waiver without iban while waivers are switched on, and never while they are off', async () => {
+  it('submits a waiver without iban while waivers are switched on and a basis exists, never while off or without one', async () => {
     const f = await expenseFixture();
     enableWaivers(f);
     const waived = await readyDraft(f, f.hanna, { iban: null, waiver: true });
     enableWaivers(f, false);
     expect(err(await submitExpenseClaim(f.deps, f.hanna.ctx, { id: waived.id }))).toMatchObject({ code: 'expenseWaiversDisabled' });
     enableWaivers(f);
+    // Befund 8: der Schalter allein reicht nicht — ohne hinterlegte Anspruchsgrundlage wird der Antrag abgelehnt.
+    expect(err(await submitExpenseClaim(f.deps, f.hanna.ctx, { id: waived.id }))).toMatchObject({ code: 'waiverBasisMissing' });
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisText', 'Satzung § 7 Abs. 2', 'test'));
     expect(unwrap(await submitExpenseClaim(f.deps, f.hanna.ctx, { id: waived.id }))).toMatchObject({ state: 'submitted', waiver: true, iban: null });
   });
 
@@ -384,6 +396,7 @@ describe('copyExpenseClaim', () => {
   it('drops the waiver from the copy while waivers are switched off', async () => {
     const f = await expenseFixture();
     enableWaivers(f);
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'finance.expenseWaiverBasisText', 'Satzung § 7 Abs. 2', 'test'));
     const claim = unwrap(await submitExpenseClaim(f.deps, f.hanna.ctx, { id: (await readyDraft(f, f.hanna, { iban: null, waiver: true })).id }));
     f.deps.db.update(financeExpenseClaims).set({ state: 'rejected', rejectedAt: '2026-09-06T10:00:00.000Z', rejectedByUserId: f.secondPersonId }).where(eq(financeExpenseClaims.id, claim.id)).run();
     enableWaivers(f, false);

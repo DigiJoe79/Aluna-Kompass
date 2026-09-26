@@ -4613,7 +4613,9 @@
           "label": "Auf die Erstattung verzichten",
           "text": "Statt Geld bekommen Sie eine Zuwendungsbestätigung über den Betrag. Das geht nur, wenn Ihnen die Erstattung vorher zugesagt war.",
           "recurring": "Regelmäßige Tätigkeit (gewöhnlich monatlich)",
-          "recurringHint": "Davon hängt die Frist für den Verzicht ab: bei einer einmaligen Auslage 3 Monate, bei einer regelmäßigen Tätigkeit 12 Monate (BMF-Schreiben vom 25.11.2014)."
+          "recurringHint": "Davon hängt die Frist für den Verzicht ab: bei einer einmaligen Auslage 3 Monate, bei einer regelmäßigen Tätigkeit 12 Monate (BMF-Schreiben vom 25.11.2014).",
+          "unavailable": "Ein Verzicht auf die Erstattung ist noch nicht möglich: Es fehlt eine Anspruchsgrundlage.",
+          "unavailableWithNames": "Ein Verzicht auf die Erstattung ist noch nicht möglich: Es fehlt eine Anspruchsgrundlage. Hinterlegen kann sie: {names}."
         },
         "pdf": {
           "choose": "PDF wählen",

@@ -86,13 +86,16 @@ Vorstandsbeschluss allein reicht dafür nicht, außer die Satzung ermächtigt
 den Vorstand ausdrücklich dazu (BMF-Schreiben vom 25. November 2014). Diese
 **Anspruchsgrundlage** hinterlegt der Verein unter Einstellungen → Finanzen
 (siehe „Einrichtung“ unten); Kompass kopiert ihren Wortlaut beim Einreichen
-in den Antrag.
+in den Antrag. Ohne eine solche Grundlage — weder beim Verein noch bei der
+Person selbst hinterlegt — bietet Kompass den Verzicht gar nicht erst an,
+weder beim Einreichen noch beim Freigeben.
 
 Beim Freigeben prüft Kompass vier Voraussetzungen:
 
 1. **Anspruch vorab vereinbart** — ein Kontrollkästchen; war die
    Vereinbarung jünger als die früheste Position des Antrags, braucht es
-   eine Begründung.
+   eine Begründung. Fehlt die Anspruchsgrundlage selbst, lehnt Kompass ab —
+   auch bei einem Antrag aus der Zeit vor dieser Prüfung.
 2. **Verzicht rechtzeitig** — bei einer **einmaligen** Auslage müssen Sie
    binnen **drei Monaten** verzichten, bei einer **regelmäßigen Tätigkeit**
    binnen **zwölf Monaten** (Häkchen „Regelmäßige Tätigkeit“ beim

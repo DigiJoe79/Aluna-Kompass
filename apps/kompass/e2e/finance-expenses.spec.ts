@@ -184,6 +184,20 @@ test.describe('finance expenses — einreichen (D1)', () => {
     await expect(page.getByRole('switch', { name: 'Auf die Erstattung verzichten' })).toHaveCount(0);
     await expect(page.getByLabel('IBAN')).toBeVisible();
   });
+
+  test('ohne Anspruchsgrundlage bleibt der Verzicht unverfügbar, mit einer erscheint er wieder (Befund 8)', async ({ page }) => {
+    await linkOwnContact(page);
+    // Der Seed hinterlegt schon eine Anspruchsgrundlage des Vereins (`seedExpenseClaims`) — hier gezielt entfernt.
+    await setE2ESetting(page, 'finance.expenseWaiverBasisText', '');
+    await openForm(page);
+    await expect(page.getByRole('switch', { name: 'Auf die Erstattung verzichten' })).toHaveCount(0);
+    await expect(page.getByText('Es fehlt eine Anspruchsgrundlage.')).toBeVisible();
+    await expect(page.getByLabel('IBAN')).toBeVisible();
+
+    await setE2ESetting(page, 'finance.expenseWaiverBasisText', 'Satzung § 7 Abs. 2');
+    await page.reload();
+    await expect(page.getByRole('switch', { name: 'Auf die Erstattung verzichten' })).toBeVisible();
+  });
 });
 
 test.describe('finance expenses — eigene Anträge (D2)', () => {

@@ -161,6 +161,7 @@ export const FINANCE_ERRORS = {
   waiverFundsInsufficient: { reason: 'Am {date} hatte der Verein nur {free} frei verfügbar — weniger als die {amount} des Antrags.', remedy: 'Ein Verzicht setzt voraus, dass der Verein hätte zahlen können: Zahlen Sie die Auslage aus, statt den Verzicht anzunehmen.' },
   waiverDeclarationMissing: { reason: 'Die Verzichtserklärung liegt noch nicht vor.', remedy: 'Erzeugen Sie die Verzichtserklärung und verknüpfen Sie sie mit dem Antrag.' },
   waiverNotConfirmed: { reason: 'Es ist nicht bestätigt, dass der Anspruch vorab vereinbart war.', remedy: 'Prüfen Sie die Vereinbarung und setzen Sie das Häkchen „Anspruch vorab vereinbart“.' },
+  waiverBasisMissing: { reason: 'Für den Verzicht fehlt eine Anspruchsgrundlage — weder bei der Person noch beim Verein.', remedy: 'Hinterlegen Sie eine Vereinbarung bei der Person oder den Vereinstext unter „Finanzen einrichten“, bevor Sie den Verzicht einreichen oder freigeben.' },
   expenseFileNotPdf: { reason: 'Die Datei {file} ist kein PDF.', remedy: 'Wählen Sie ein PDF — Ihre Eingaben bleiben stehen.' },
   expenseFileTooLarge: { reason: 'Die Datei {file} ist größer als {limit}.', remedy: 'Wählen Sie eine kleinere Datei — Ihre Eingaben bleiben stehen.' },
   expenseNotOwner: { reason: 'Dieser Antrag gehört einer anderen Person.', remedy: 'Sie sehen und ändern nur Ihre eigenen Anträge.' },

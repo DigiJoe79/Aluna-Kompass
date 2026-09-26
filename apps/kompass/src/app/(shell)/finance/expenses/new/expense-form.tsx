@@ -45,6 +45,8 @@ export function ExpenseForm({
   prefilledIban,
   contactName,
   waiversEnabled,
+  waiverAvailable,
+  waiverUnavailableNames,
   mileageRates,
   projects,
   device,
@@ -55,6 +57,9 @@ export function ExpenseForm({
   prefilledIban: string | null;
   contactName: string;
   waiversEnabled: boolean;
+  /** Befund 8: der Schalter allein reicht nicht — ohne Anspruchsgrundlage bleibt der Verzicht unverfügbar. */
+  waiverAvailable: boolean;
+  waiverUnavailableNames: string[];
   mileageRates: MileageRate[];
   projects: { id: string; name: string }[] | null;
   device: Device;
@@ -309,7 +314,7 @@ export function ExpenseForm({
           <span className="font-mono text-[22px] font-semibold tabular-nums">{formatEuro(totalCents(form, mileageRates))}</span>
         </div>
 
-        {waiversEnabled ? (
+        {waiversEnabled && waiverAvailable ? (
           <div className="space-y-1.5 rounded-md bg-surface-2 p-3">
             <div className="flex min-h-11 items-center justify-between gap-3">
               <Label htmlFor="expense-waiver">{t('waiver.label')}</Label>
@@ -326,6 +331,10 @@ export function ExpenseForm({
               </div>
             ) : null}
           </div>
+        ) : waiversEnabled ? (
+          <p className="text-[13px] text-ink-2">
+            {waiverUnavailableNames.length > 0 ? t('waiver.unavailableWithNames', { names: waiverUnavailableNames.join(', ') }) : t('waiver.unavailable')}
+          </p>
         ) : null}
 
         {form.waiver ? null : ibanLocked ? (
