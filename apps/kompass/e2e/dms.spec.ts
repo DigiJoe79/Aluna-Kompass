@@ -1204,7 +1204,8 @@ test('ein ausgetauschtes Dokument wird nicht angezeigt, sondern gemeldet', async
   await expect(page.getByRole('link', { name: 'PDF öffnen' })).toBeVisible();
 
   const id = new URL(page.url()).pathname.split('/').pop()!;
-  const datei = path.resolve(import.meta.dirname, '.tmp/data/dms', `${id.toLowerCase()}.pdf`);
+  // Der Datenpfad gehört dem Server dieses Workers (`fixtures.ts`).
+  const datei = path.join(process.env.E2E_DATA_PATH!, 'dms', `${id.toLowerCase()}.pdf`);
   // Der Reset stellt die Datenbank wieder her, nicht das Datenvolume: Ohne
   // diese Sicherung liefe der nächste Test, der dieses Dokument liest, gegen
   // eine ausgetauschte Datei — und schlüge scheinbar grundlos fehl.

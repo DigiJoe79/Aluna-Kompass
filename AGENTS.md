@@ -41,11 +41,12 @@ Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. J
 - `pnpm install` — Abhängigkeiten
 - `pnpm test` — alle Tests; `pnpm --filter @kompass/core test` — nur Kern
 - `pnpm typecheck` — TypeScript
-- `pnpm --filter @kompass/app e2e` — Playwright-E2E (Start den Dev-Server auf Port 3100 selbst)
+- `pnpm --filter @kompass/app e2e` — Playwright-E2E. Jeder Worker startet seinen eigenen Dev-Server auf 3100 + Platz mit eigenem Datenpfad und Build-Verzeichnis (`apps/kompass/e2e/servers.ts`); Vorgabe drei Worker lokal, zwei online, `E2E_WORKERS` übersteuert. `npx playwright test <datei>` für eine einzelne Spec.
 - `pnpm verify` — **vor dem Push**: Typecheck, alle Tests, E2E gegen `next dev` **mit geleertem `.next`**, Image-Build und dieselbe E2E-Suite gegen den laufenden Container. Braucht Docker. Die gemessenen Laufzeiten stehen in der Prüfringe-Spec (Nachtrag vom 26.09.); mit einer dreiviertel Stunde ist zu rechnen.
 - `pnpm e2e:cold` — nur der zweite Ring, und zwar kalt. Das Leeren ist kein Ritual: `next dev` übersetzt jede Route beim ersten Aufruf, und lokal liegen dafür zwei Gigabyte warm, die es auf einem CI-Läufer nie gibt. Wer warm prüft, prüft eine andere Anwendung — am 11.09. kostete das vier rote Online-Läufe hintereinander.
 - `pnpm image` — nur das Image bauen, für die eigene Architektur (schnell). `pnpm image:release` baut amd64 wie die CI.
-- `pnpm e2e:image` — die E2E-Suite gegen ein gebautes `kompass-local` auf Port 3200. Prüft die Verpackung: gebündelter Code, `/data`-Volume, mitgeliefertes Template, Modulauflösung.
+- `pnpm e2e:image` — die E2E-Suite gegen ein gebautes `kompass-local`, ein Container `kompass-e2e-<Platz>` je Worker ab Port 3200 (`E2E_IMAGE` für ein anderes Bild). Prüft die Verpackung: gebündelter Code, `/data`-Volume, mitgeliefertes Template, Modulauflösung.
+- `pnpm e2e:stress` — die Suite mit absichtlich vielen Workern (Vorgabe acht). Nicht Teil von `verify` und nicht in der CI: Sie macht die Fenster breit, in denen ein Wettlauf zuschlägt, und dient dazu, einen Wackler reproduzierbar zu machen. Zeitüberschreitungen unter dieser Last sind Sättigung, keine Fehler — dann die Worker-Zahl senken, keinen Test ändern.
 - `pnpm dev:image [up|down|reset|seed]` — eine **stehende** Testumgebung auf Port 3300 (nur localhost), mit Daten, die Neustarts überleben; `seed` verwirft alles darin und spielt die Entwicklungsdaten ein. Zum Anklicken, wenn die Frage „verhält es sich als Container auch so?" lautet. Der Alltag bleibt `pnpm dev`: Dort siehst du eine Änderung sofort, hier kostet sie einen Neubau.
 - `pnpm --filter @kompass/core db:generate` — Migration aus Schema erzeugen
 - `pnpm seed` — Entwicklungsdaten für Kern **und** alle Module, ohne etwas zu verwerfen (nur `APP_ENV=development`). `pnpm --filter @kompass/core seed` kennt nur den Kern und schaltet kein Modul ein.

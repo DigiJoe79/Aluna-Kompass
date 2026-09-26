@@ -1,5 +1,9 @@
+import path from 'node:path';
 import { test as base, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { startServer, warmUp, workerEnvironment, type RunningServer, type ServerKind } from './servers';
+
+const ROOT = path.resolve(import.meta.dirname, '..');
 
 /**
  * `page.goto` wartet, bis React die Seite übernommen hat.
@@ -42,7 +46,33 @@ async function waitForReact(page: Page): Promise<void> {
   }
 }
 
-export const test = base.extend({
+/**
+ * Ein Server je Worker (siehe `servers.ts`). `parallelIndex` statt
+ * `workerIndex`: Nach einem Fehlschlag ersetzt Playwright den Worker durch
+ * einen neuen mit höherem `workerIndex`, aber derselbe Platz — und damit
+ * derselbe Port — wird wieder frei, weil der alte Worker seinen Server beim
+ * Abbau stoppt.
+ */
+export const test = base.extend<Record<never, never>, { serverKind: ServerKind; server: RunningServer }>({
+  serverKind: ['dev', { scope: 'worker', option: true }],
+  server: [
+    async ({ serverKind }, use, workerInfo) => {
+      const w = workerEnvironment(serverKind, workerInfo.parallelIndex, ROOT);
+      // `site-publish.spec.ts` schaut auf dem Wirt nach, was publiziert wurde;
+      // `dms.spec.ts` tauscht eine Datei im Datenpfad aus (nur im Dev-Ring).
+      process.env.E2E_SITE_TARGET = w.siteTarget;
+      if (w.env.DATA_PATH) process.env.E2E_DATA_PATH = w.env.DATA_PATH;
+      else delete process.env.E2E_DATA_PATH;
+      const server = await startServer(w, { root: ROOT, image: process.env.E2E_IMAGE });
+      await warmUp(server.url, path.join(ROOT, 'src', 'app'));
+      await use(server);
+      await server.stop();
+    },
+    { scope: 'worker', timeout: 300_000 },
+  ],
+  baseURL: async ({ server }, use) => {
+    await use(server.url);
+  },
   page: async ({ page }, use) => {
     const goto = page.goto.bind(page);
     page.goto = async (...args: Parameters<Page['goto']>) => {

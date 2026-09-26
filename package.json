@@ -22,7 +22,8 @@
     "seed": "tsx scripts/seed.ts",
     "image:release": "docker build --platform linux/amd64 --build-arg KOMPASS_BUILD=$(git rev-parse --short HEAD 2>/dev/null || echo local) -t kompass-local:amd64 .",
     "e2e:image": "pnpm --filter @kompass/app e2e:image",
-    "e2e:cold": "rm -rf apps/kompass/.next && pnpm --filter @kompass/app e2e"
+    "e2e:cold": "rm -rf apps/kompass/.next && pnpm --filter @kompass/app e2e",
+    "e2e:stress": "E2E_WORKERS=${E2E_WORKERS:-8} pnpm --filter @kompass/app e2e"
   },
   "dependencies": {
     "@kompass/site-template": "workspace:*"
