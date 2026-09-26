@@ -14,6 +14,17 @@ Steuernummer, Datum, **Steuerbefreiung ab**, bei endgültigen Bescheiden dem
 Veranlagungszeitraum und den begünstigten Zwecken im Wortlaut — so, wie sie
 im Bescheid stehen; sie erscheinen wörtlich auf jeder Bestätigung.
 
+**Begünstigte Zwecke.** Das amtliche Muster setzt die Zwecke in zwei
+grammatischen Fällen ein: „Wir sind wegen Förderung *(Angabe der Zwecke)*“
+braucht den **Genitiv** — etwa „des Tierschutzes (§ 52 Abs. 2 Satz 1 Nr. 14
+AO)“, ohne das Wort „Förderung“ davor, das der Satz selbst schon setzt. Bei
+einer vorläufigen Anerkennung (§ 60a) kommt ein zweites Feld dazu: Der Satz
+„Wir fördern nach unserer Satzung *(Angabe der Zwecke)*“ braucht dieselben
+Zwecke im **Akkusativ** — „den Tierschutz (§ 52 Abs. 2 Satz 1 Nr. 14 AO)“.
+Der Dialog zeigt unter beiden Feldern eine Vorschau der fertigen Sätze; damit
+lässt sich die Form vor dem Speichern prüfen, ohne eine Bestätigung
+auszustellen.
+
 **Steuerbefreiung ab** ist der erste Tag des Veranlagungszeitraums, ab dem der
 Bescheid die Befreiung ausspricht — nicht das Datum des Bescheids. Eine
 vorläufige Anerkennung kann die Befreiung auch erst für das nächste Jahr

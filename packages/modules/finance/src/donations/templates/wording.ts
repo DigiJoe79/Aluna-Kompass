@@ -58,8 +58,21 @@ export interface NoticeWording {
   noticeDate: string;
   /** „2023“ oder „2021–2023“; bei § 60a leer. */
   assessmentPeriod: string | null;
-  /** Die begünstigten Zwecke im Wortlaut des Bescheids. */
+  /**
+   * Die begünstigten Zwecke im Wortlaut des Bescheids, im **Genitiv**, ohne
+   * „Förderung“ (z. B. „des Tierschutzes (§ 52 Abs. 2 Satz 1 Nr. 14 AO)“) —
+   * die Sätze „wegen Förderung …“ und „nur zur Förderung …“ setzen das Wort
+   * selbst davor.
+   */
   purposesText: string;
+  /**
+   * Dieselben Zwecke im **Akkusativ** (z. B. „den Tierschutz (§ 52 Abs. 2
+   * Satz 1 Nr. 14 AO)“) — nur der § 60a-Satz „Wir fördern nach unserer
+   * Satzung …“ braucht diese Form (Befundliste 0.2.0, N8: mit dem Genitiv
+   * wird dieser Satz falsch). Fehlt sie (ältere Daten), weicht der Satz auf
+   * den Genitiv aus statt leer zu bleiben.
+   */
+  purposesTextAccusative?: string | null;
 }
 
 /**
@@ -72,7 +85,7 @@ export function noticeSentence(n: NoticeWording): string {
     return (
       `Die Einhaltung der satzungsmäßigen Voraussetzungen nach den §§ 51, 59, 60 und 61 AO wurde vom Finanzamt ${n.taxOffice}, ` +
       `StNr. ${n.taxNumber}, mit Bescheid vom ${n.noticeDate} nach § 60a AO gesondert festgestellt. ` +
-      `Wir fördern nach unserer Satzung ${n.purposesText}.`
+      `Wir fördern nach unserer Satzung ${n.purposesTextAccusative ?? n.purposesText}.`
     );
   }
   const source = n.kind === 'exemptionNotice' ? 'nach dem Freistellungsbescheid' : 'nach der Anlage zum Körperschaftsteuerbescheid';

@@ -169,10 +169,13 @@ const saveNoticeSchema = z
     /** „2023“ oder „2021–2023“ — Pflicht beim endgültigen Bescheid, beim § 60a-Bescheid ohne Bedeutung. */
     assessmentPeriod: z.string().trim().min(1).max(20).nullable().optional(),
     purposesText: z.string().trim().min(1).max(2000),
+    /** Dieselben Zwecke im Akkusativ — Pflicht nur bei § 60a (N8): „Wir fördern nach unserer Satzung …“ braucht diese Form, sonst wird der Satz mit dem Genitiv falsch. */
+    purposesTextAccusative: z.string().trim().min(1).max(2000).nullable().optional(),
     documentId: z.string().min(1).nullable().optional(),
   })
   .superRefine((v, c) => {
     if (v.kind !== 'section60a' && !v.assessmentPeriod) c.addIssue({ code: 'custom', path: ['assessmentPeriod'], message: 'assessmentPeriodRequired' });
+    if (v.kind === 'section60a' && !v.purposesTextAccusative) c.addIssue({ code: 'custom', path: ['purposesTextAccusative'], message: 'purposesTextAccusativeRequired' });
   });
 
 /**
@@ -207,7 +210,18 @@ export async function saveNotice(deps: Deps, ctx: CallContext, input: unknown): 
   return deps.db.transaction((tx: DbOrTx) => {
     const now = isoNow(deps.clock);
     const id = before?.id ?? newId();
-    const fields = { kind: v.kind as NoticeKind, taxOffice: v.taxOffice, taxNumber: v.taxNumber, noticeDate: v.noticeDate, exemptFrom: v.exemptFrom, assessmentPeriod: v.kind === 'section60a' ? null : (v.assessmentPeriod ?? null), purposesText: v.purposesText, documentId, updatedAt: now };
+    const fields = {
+      kind: v.kind as NoticeKind,
+      taxOffice: v.taxOffice,
+      taxNumber: v.taxNumber,
+      noticeDate: v.noticeDate,
+      exemptFrom: v.exemptFrom,
+      assessmentPeriod: v.kind === 'section60a' ? null : (v.assessmentPeriod ?? null),
+      purposesText: v.purposesText,
+      purposesTextAccusative: v.kind === 'section60a' ? (v.purposesTextAccusative ?? null) : null,
+      documentId,
+      updatedAt: now,
+    };
     if (before) tx.update(financeNotices).set(fields).where(eq(financeNotices.id, id)).run();
     else tx.insert(financeNotices).values({ id, ...fields, createdAt: now, createdByUserId: ctx.userId ?? 'system' }).run();
     if (documentId) linkDocumentInternal(tx, deps, { documentId, entityType: 'financeNotice', entityId: id });

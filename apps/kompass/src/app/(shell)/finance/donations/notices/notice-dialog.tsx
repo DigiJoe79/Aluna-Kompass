@@ -1,6 +1,7 @@
 'use client';
 
 import type { NoticeView } from '@kompass/module-finance';
+import { noticeSentence, usageSentence } from '@kompass/module-finance/wording';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -21,7 +22,13 @@ export type NoticeKind = NoticeInput['kind'];
 const KINDS: NoticeKind[] = ['exemptionNotice', 'corporateTaxNoticeAttachment', 'section60a'];
 
 /** Was der Dialog vom gespeicherten Bescheid braucht — für „Dokument nachreichen“ und die Auswahl aus der Akte. */
-export type SavedNotice = Pick<NoticeView, 'id' | 'kind' | 'taxOffice' | 'taxNumber' | 'noticeDate' | 'exemptFrom' | 'assessmentPeriod' | 'purposesText' | 'documentId' | 'documentNumber'>;
+export type SavedNotice = Pick<NoticeView, 'id' | 'kind' | 'taxOffice' | 'taxNumber' | 'noticeDate' | 'exemptFrom' | 'assessmentPeriod' | 'purposesText' | 'purposesTextAccusative' | 'documentId' | 'documentNumber'>;
+
+/** TT.MM.JJJJ, wie es die amtlichen Sätze und die Vorschau zeigen — unabhängig von der persönlichen Datumseinstellung. */
+function germanDatePreview(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : '';
+}
 
 /**
  * „Bescheid erfassen“ (C3, F6a Task 8) in zwei Schritten: erst die Angaben
@@ -35,7 +42,8 @@ export function NoticeDialog({ open, onOpenChange, canPickDocument, attachTo }: 
   const t = useTranslations('finance.donations.notices.dialog');
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-surface shadow-md sm:max-w-[620px]">
+      {/* max-h/overflow: das zweite Wortlaut-Feld und die Vorschau (N8) lassen den Dialog beim § 60a-Bescheid höher werden, als mancher Bildschirm hoch ist. */}
+      <DialogContent className="max-h-[85vh] overflow-y-auto bg-surface shadow-md sm:max-w-[620px]">
         <DialogTitle className="font-heading text-[19px]">{attachTo ? t('documentTitle') : t('title')}</DialogTitle>
         {open ? <NoticeSteps key={attachTo?.id ?? 'new'} canPickDocument={canPickDocument} attachTo={attachTo} onClose={() => onOpenChange(false)} /> : null}
       </DialogContent>
@@ -59,6 +67,7 @@ function FormStep({ onSaved, onCancel }: { onSaved: (notice: SavedNotice) => voi
   const [exemptFrom, setExemptFrom] = useState('');
   const [assessmentPeriod, setAssessmentPeriod] = useState('');
   const [purposesText, setPurposesText] = useState('');
+  const [purposesTextAccusative, setPurposesTextAccusative] = useState('');
   const [hadExemption, setHadExemption] = useState<'yes' | 'no' | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [refusal, setRefusal] = useState<string | null>(null);
@@ -69,7 +78,16 @@ function FormStep({ onSaved, onCancel }: { onSaved: (notice: SavedNotice) => voi
 
   const submit = async () => {
     setPending(true);
-    const result = await saveNoticeAction({ kind, taxOffice, taxNumber, noticeDate, exemptFrom: exemptFrom || undefined, assessmentPeriod: provisional ? null : assessmentPeriod || null, purposesText });
+    const result = await saveNoticeAction({
+      kind,
+      taxOffice,
+      taxNumber,
+      noticeDate,
+      exemptFrom: exemptFrom || undefined,
+      assessmentPeriod: provisional ? null : assessmentPeriod || null,
+      purposesText,
+      purposesTextAccusative: provisional ? purposesTextAccusative : null,
+    });
     setPending(false);
     if (result.status === 'error') {
       setFieldErrors(result.fieldErrors);
@@ -126,6 +144,33 @@ function FormStep({ onSaved, onCancel }: { onSaved: (notice: SavedNotice) => voi
         {provisional ? null : field('notice-period', t('assessmentPeriod'), <Input id="notice-period" value={assessmentPeriod} onChange={(e) => setAssessmentPeriod(e.target.value)} />, t('assessmentPeriodHint'), fieldErrors.assessmentPeriod)}
       </div>
       {field('notice-purposes', t('purposesText'), <Textarea id="notice-purposes" rows={3} value={purposesText} onChange={(e) => setPurposesText(e.target.value)} />, t('purposesHint'), fieldErrors.purposesText)}
+      {provisional
+        ? field(
+            'notice-purposes-accusative',
+            t('purposesTextAccusative'),
+            <Textarea id="notice-purposes-accusative" rows={3} value={purposesTextAccusative} onChange={(e) => setPurposesTextAccusative(e.target.value)} />,
+            t('purposesTextAccusativeHint'),
+            fieldErrors.purposesTextAccusative,
+          )
+        : null}
+
+      {purposesText.trim() ? (
+        <div className="space-y-1.5 rounded-md border border-line bg-surface-2 p-3 text-[13px]" data-testid="notice-purposes-preview">
+          <p className="font-semibold text-ink">{t('previewTitle')}</p>
+          <p className="text-ink-2">
+            {noticeSentence({
+              kind,
+              taxOffice: taxOffice || '…',
+              taxNumber: taxNumber || '…',
+              noticeDate: noticeDate ? germanDatePreview(noticeDate) : '…',
+              assessmentPeriod: provisional ? null : assessmentPeriod || null,
+              purposesText,
+              purposesTextAccusative: provisional ? purposesTextAccusative || null : null,
+            })}
+          </p>
+          <p className="text-ink-2">{usageSentence(purposesText)}</p>
+        </div>
+      ) : null}
 
       {refusal ? <Notice level="refuse">{refusal}</Notice> : null}
 
@@ -176,8 +221,8 @@ function DocumentStep({ notice, canPickDocument, onChanged, onClose }: { notice:
     setPicked(doc);
     if (!doc) return;
     setPending(true);
-    const { id, kind, taxOffice, taxNumber, noticeDate, exemptFrom, assessmentPeriod, purposesText } = notice;
-    finish(await saveNoticeAction({ id, kind, taxOffice, taxNumber, noticeDate, exemptFrom, assessmentPeriod, purposesText, documentId: doc.id }));
+    const { id, kind, taxOffice, taxNumber, noticeDate, exemptFrom, assessmentPeriod, purposesText, purposesTextAccusative } = notice;
+    finish(await saveNoticeAction({ id, kind, taxOffice, taxNumber, noticeDate, exemptFrom, assessmentPeriod, purposesText, purposesTextAccusative, documentId: doc.id }));
   };
 
   return (

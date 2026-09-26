@@ -463,6 +463,32 @@ test.describe('finance donation notices', () => {
     await expect(noticeRow(page, 'Finanzamt Beispielstadt').getByTestId('notice-exempt-from')).toHaveText('01.01.2024');
   });
 
+  test('ein § 60a-Bescheid verlangt den Zweck zusätzlich im Akkusativ; die Vorschau zeigt beide Sätze (N8)', async ({ page }) => {
+    await page.goto('/finance/donations/notices');
+    await page.getByRole('button', { name: 'Bescheid erfassen' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Art des Bescheids').selectOption({ label: 'vorläufige Anerkennung (§ 60a)' });
+    await dialog.getByRole('radiogroup', { name: 'Wurde bereits ein Freistellungsbescheid erteilt?' }).getByLabel('Nein').check();
+    await dialog.getByLabel('Finanzamt').fill('Finanzamt Beispielstadt');
+    await dialog.getByLabel('Steuernummer').fill('22/333/44444');
+    // Vor dem endgültigen Freistellungsbescheid des Seeds (02.05.2025) — sonst greift die Ablehnung aus dem nächsten Test.
+    await dialog.getByLabel('Datum des Bescheids').fill('2024-06-01');
+    await dialog.getByLabel('Steuerbefreiung ab').fill('2024-01-01');
+    await dialog.getByLabel('Begünstigte Zwecke im Wortlaut').fill('des Tierschutzes (§ 52 Abs. 2 Satz 1 Nr. 14 AO)');
+
+    const preview = dialog.getByTestId('notice-purposes-preview');
+    await expect(preview).toContainText('nur zur Förderung des Tierschutzes (§ 52 Abs. 2 Satz 1 Nr. 14 AO)');
+
+    // Ohne den zweiten Wortlaut wird nicht gespeichert (N8 — sonst würde "Wir fördern nach unserer Satzung" den Genitiv tragen).
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(dialog.getByTestId('notice-purposes-accusative-error')).toHaveText('Pflichtfeld.');
+
+    await dialog.getByLabel('Begünstigte Zwecke, im Akkusativ (§ 60a)').fill('den Tierschutz (§ 52 Abs. 2 Satz 1 Nr. 14 AO)');
+    await expect(preview).toContainText('Wir fördern nach unserer Satzung den Tierschutz (§ 52 Abs. 2 Satz 1 Nr. 14 AO).');
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByText('Bescheid gespeichert.')).toBeVisible();
+  });
+
   test('ein § 60a-Bescheid nach einem Freistellungsbescheid wird abgelehnt', async ({ page }) => {
     await page.goto('/finance/donations/notices');
     await page.getByRole('button', { name: 'Bescheid erfassen' }).click();
@@ -479,7 +505,8 @@ test.describe('finance donation notices', () => {
     await dialog.getByLabel('Steuernummer').fill('99/999/99990');
     await dialog.getByLabel('Datum des Bescheids').fill(isoDay());
     await dialog.getByLabel('Steuerbefreiung ab').fill(isoDay());
-    await dialog.getByLabel('Begünstigte Zwecke im Wortlaut').fill('Förderung des Sports');
+    await dialog.getByLabel('Begünstigte Zwecke im Wortlaut').fill('des Sports');
+    await dialog.getByLabel('Begünstigte Zwecke, im Akkusativ (§ 60a)').fill('den Sport');
     await dialog.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByText(/Es gibt schon einen endgültigen Bescheid vom 2025-05-02/).first()).toBeVisible();
     await expect(dialog).toBeVisible();

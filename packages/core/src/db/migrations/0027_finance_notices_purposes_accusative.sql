@@ -1,0 +1,1 @@
+ALTER TABLE `finance_notices` ADD `purposes_text_accusative` text;

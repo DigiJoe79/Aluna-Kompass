@@ -29,6 +29,8 @@ export interface NoticeInput {
   exemptFrom?: string;
   assessmentPeriod?: string | null;
   purposesText: string;
+  /** Im Akkusativ; Pflicht nur bei § 60a (N8) — der Dienst prüft es. */
+  purposesTextAccusative?: string | null;
   documentId?: string | null;
 }
 

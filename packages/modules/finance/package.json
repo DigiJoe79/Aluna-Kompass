@@ -3,7 +3,7 @@
   "version": "0.2.0-dev",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts", "./csv": "./src/import/csv/index.ts" },
+  "exports": { ".": "./src/index.ts", "./csv": "./src/import/csv/index.ts", "./wording": "./src/donations/templates/wording.ts" },
   "scripts": { "test": "vitest run", "typecheck": "tsc --noEmit" },
   "dependencies": {
     "@kompass/core": "workspace:*",

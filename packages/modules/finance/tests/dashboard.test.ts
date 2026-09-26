@@ -236,7 +236,7 @@ describe('finance to-do tile — notices (F6a)', () => {
     await f.finalDonation({ date: '2026-02-01', cents: 5000, contactId: f.donor.id });
     expect(await noticeLines()).toEqual([{ titleKey: 'noNotice', values: {}, href: '/finance/donations/notices' }]);
 
-    unwrap(await saveNotice(f.deps, f.ctx, { kind: 'section60a', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2023-09-15', exemptFrom: '2023-01-01', purposesText: 'Tierschutz' }));
+    unwrap(await saveNotice(f.deps, f.ctx, { kind: 'section60a', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2023-09-15', exemptFrom: '2023-01-01', purposesText: 'des Tierschutzes', purposesTextAccusative: 'den Tierschutz' }));
     expect(await noticeLines()).toEqual([]); // gültig bis 2026-09-15, sechs Monate Vorlauf beginnen am 2026-03-15
 
     f.deps.clock.set('2026-04-01T10:00:00.000Z');

@@ -592,8 +592,10 @@ export const financeNotices = sqliteTable(
     exemptFrom: text('exempt_from').notNull(),
     /** „2023“ oder „2021–2023“ — beim § 60a-Bescheid leer. */
     assessmentPeriod: text('assessment_period'),
-    /** Die begünstigten Zwecke im Wortlaut des Bescheids. */
+    /** Die begünstigten Zwecke im Wortlaut des Bescheids, im Genitiv, ohne „Förderung“. */
     purposesText: text('purposes_text').notNull(),
+    /** Dieselben Zwecke im Akkusativ — Pflicht nur beim § 60a-Bescheid (Befundliste 0.2.0, N8). */
+    purposesTextAccusative: text('purposes_text_accusative'),
     documentId: text('document_id'),
     supersededOn: text('superseded_on'),
     supersededDocumentId: text('superseded_document_id'),

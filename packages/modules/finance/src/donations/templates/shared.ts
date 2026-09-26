@@ -35,10 +35,14 @@ export const confirmationNoticeSchema = z
     taxNumber: text(60),
     noticeDate: isoDate,
     assessmentPeriod: z.string().trim().min(1).max(40).nullable(),
+    /** Im Genitiv, ohne „Förderung“ — siehe `wording.ts`, `NoticeWording.purposesText`. */
     purposesText: text(2000),
+    /** Im Akkusativ; Pflicht nur bei § 60a (N8) — siehe `wording.ts`, `NoticeWording.purposesTextAccusative`. */
+    purposesTextAccusative: z.string().trim().min(1).max(2000).nullable().optional(),
   })
   .superRefine((n, c) => {
     if (n.kind !== 'section60a' && !n.assessmentPeriod) c.addIssue({ code: 'custom', path: ['assessmentPeriod'], message: 'assessmentPeriodRequired' });
+    if (n.kind === 'section60a' && !n.purposesTextAccusative) c.addIssue({ code: 'custom', path: ['purposesTextAccusative'], message: 'purposesTextAccusativeRequired' });
   });
 
 /** Das Faksimile aus dem Modulspeicher; nur die Prüfsumme wandert in den Snapshot. */

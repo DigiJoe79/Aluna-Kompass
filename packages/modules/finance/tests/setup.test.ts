@@ -112,7 +112,7 @@ describe('finance setup status', () => {
     const open = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'notice')!;
     expect(open).toMatchObject({ required: false, done: false, dependsOn: null, blocked: false, detail: {}, permission: 'finance.donationsIssue' });
 
-    const notice = unwrap(await saveNotice(deps, ctx, { kind: 'section60a', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2023-09-15', exemptFrom: '2023-01-01', purposesText: 'Tierschutz' }));
+    const notice = unwrap(await saveNotice(deps, ctx, { kind: 'section60a', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2023-09-15', exemptFrom: '2023-01-01', purposesText: 'des Tierschutzes', purposesTextAccusative: 'den Tierschutz' }));
     const status = unwrap(await getSetupStatus(deps, ctx));
     expect(status.steps.find((s) => s.key === 'notice')).toMatchObject({ done: true, detail: { validUntil: '2026-09-15' } });
 

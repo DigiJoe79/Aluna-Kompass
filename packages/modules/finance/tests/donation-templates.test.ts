@@ -89,9 +89,11 @@ describe('money confirmation', () => {
     expect(attachment).toContain('nach der Anlage zum Körperschaftsteuerbescheid des Finanzamtes Musterstadt-Nord');
     expect(attachment).not.toContain('Freistellungsbescheid des');
 
-    const provisional = build(moneyConfirmationTemplate, { ...money, notice: { ...common.notice, kind: 'section60a', assessmentPeriod: null } }).typst;
+    const provisional = build(moneyConfirmationTemplate, { ...money, notice: { ...common.notice, kind: 'section60a', assessmentPeriod: null, purposesTextAccusative: 'den Tierschutz' } }).typst;
     expect(provisional).toContain('mit Bescheid vom 30.06.2025 nach § 60a AO gesondert festgestellt');
-    expect(provisional).toContain('Wir fördern nach unserer Satzung des Tierschutzes');
+    // N8: der § 60a-Satz braucht den Akkusativ, nicht den Genitiv von `notice.purposesText`.
+    expect(provisional).toContain('Wir fördern nach unserer Satzung den Tierschutz');
+    expect(provisional).not.toContain('Wir fördern nach unserer Satzung des Tierschutzes');
   });
 
   it('expense waiver adds the waiver sentence', () => {
@@ -219,5 +221,36 @@ describe('official wording', () => {
     // Sammelbestätigung mit nicht abziehbaren Mitgliedsbeiträgen: Anlage 14 hat den Singular.
     expect(collectiveText).toContain('nicht um einen Mitgliedsbeitrag handelt, dessen Abzug nach § 10b Abs. 1 des Einkommensteuergesetzes ausgeschlossen ist');
     expect(collectiveText).not.toContain('Mitgliedsbeiträge handelt, deren');
+  });
+});
+
+describe('official wording: Zweck des Bescheids im Genitiv und im Akkusativ (N8, Befundliste 0.2.0)', () => {
+  const base = { taxOffice: 'Beispielstadt', taxNumber: '11/222/33333', noticeDate: '01.09.2026' };
+  const genitive = 'des Tierschutzes (§ 52 Abs. 2 Satz 1 Nr. 14 AO)';
+  const accusative = 'den Tierschutz (§ 52 Abs. 2 Satz 1 Nr. 14 AO)';
+
+  it('"Wir sind wegen Förderung (Angabe der Zwecke)" — Freistellungsbescheid, Genitiv', () => {
+    const sentence = W.noticeSentence({ ...base, kind: 'exemptionNotice', assessmentPeriod: '2023', purposesText: genitive });
+    expect(sentence).toContain(`Wir sind wegen Förderung ${genitive} nach dem Freistellungsbescheid`);
+  });
+
+  it('"Wir sind wegen Förderung (Angabe der Zwecke)" — Anlage zum Körperschaftsteuerbescheid, Genitiv', () => {
+    const sentence = W.noticeSentence({ ...base, kind: 'corporateTaxNoticeAttachment', assessmentPeriod: '2023', purposesText: genitive });
+    expect(sentence).toContain(`Wir sind wegen Förderung ${genitive} nach der Anlage zum Körperschaftsteuerbescheid`);
+  });
+
+  it('"Wir fördern nach unserer Satzung (Angabe der Zwecke)" — § 60a, Akkusativ (nicht der Genitiv)', () => {
+    const sentence = W.noticeSentence({ ...base, kind: 'section60a', assessmentPeriod: null, purposesText: genitive, purposesTextAccusative: accusative });
+    expect(sentence).toContain(`Wir fördern nach unserer Satzung ${accusative}.`);
+    expect(sentence).not.toContain(genitive);
+  });
+
+  it('§ 60a ohne Akkusativform (ältere Daten) weicht auf den Genitiv aus, statt leer zu bleiben', () => {
+    const sentence = W.noticeSentence({ ...base, kind: 'section60a', assessmentPeriod: null, purposesText: genitive });
+    expect(sentence).toContain(`Wir fördern nach unserer Satzung ${genitive}.`);
+  });
+
+  it('"…, dass die Zuwendung nur zur Förderung (Angabe der Zwecke) verwendet wird" — immer der Genitiv, auch bei § 60a', () => {
+    expect(W.usageSentence(genitive)).toBe(`Es wird bestätigt, dass die Zuwendung nur zur Förderung ${genitive} verwendet wird.`);
   });
 });

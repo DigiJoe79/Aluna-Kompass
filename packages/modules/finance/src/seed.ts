@@ -940,7 +940,13 @@ function confirmationOfLine(deps: Deps, lineId: string) {
 
 const organizationAddressComplete = (deps: Deps) => (['street', 'postalCode', 'city'] as const).every((field) => String(readSetting(deps, `organization.${field}`) ?? '').trim());
 
-const NOTICE_TAX_OFFICE = { taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', purposesText: 'Förderung des Sports (§ 52 Abs. 2 Satz 1 Nr. 21 AO) und der Jugendhilfe (§ 52 Abs. 2 Satz 1 Nr. 4 AO)' } as const;
+// N8 (Befundliste 0.2.0): Genitiv ohne „Förderung“ — die Sätze setzen das Wort selbst davor; § 60a braucht zusätzlich den Akkusativ.
+const NOTICE_TAX_OFFICE = {
+  taxOffice: 'Finanzamt Musterstadt',
+  taxNumber: '99/999/99999',
+  purposesText: 'des Sports (§ 52 Abs. 2 Satz 1 Nr. 21 AO) und der Jugendhilfe (§ 52 Abs. 2 Satz 1 Nr. 4 AO)',
+  purposesTextAccusative: 'den Sport (§ 52 Abs. 2 Satz 1 Nr. 21 AO) und die Jugendhilfe (§ 52 Abs. 2 Satz 1 Nr. 4 AO)',
+} as const;
 /** Die Spende, die auf dem § 60a-Bescheid bestätigt wird — die Daten hängen an den festen Bescheiddaten, nicht am Kalender. */
 const PROVISIONAL_DONATION = { text: 'Spende Greta Sommer März', entryDate: '2025-03-14', issuedOn: '2025-04-15', amountCents: 12000 } as const;
 

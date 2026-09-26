@@ -18,6 +18,7 @@ const SRC = path.resolve(import.meta.dirname, '../src');
  */
 const ALLOWED_VALUE_SUBPATHS = new Set([
   '@kompass/module-finance/csv',
+  '@kompass/module-finance/wording',
   '@kompass/module-site/client',
   '@kompass/module-contacts/address',
   '@kompass/core/themes',

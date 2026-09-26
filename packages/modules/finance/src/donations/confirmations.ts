@@ -109,7 +109,7 @@ function recipientParty(contact: ContactRow): { name: string; addressLines: stri
 }
 
 function noticeInput(notice: FinanceNoticeRow) {
-  return { kind: notice.kind, taxOffice: notice.taxOffice, taxNumber: notice.taxNumber, noticeDate: notice.noticeDate, assessmentPeriod: notice.assessmentPeriod, purposesText: notice.purposesText };
+  return { kind: notice.kind, taxOffice: notice.taxOffice, taxNumber: notice.taxNumber, noticeDate: notice.noticeDate, assessmentPeriod: notice.assessmentPeriod, purposesText: notice.purposesText, purposesTextAccusative: notice.purposesTextAccusative };
 }
 
 // ── ausstellen ──────────────────────────────────────────────────────────────

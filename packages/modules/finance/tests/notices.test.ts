@@ -11,7 +11,7 @@ import { donationFixture } from './donation-fixture';
 import { insertDocument, ledgerFixture, pdfBytes } from './helpers';
 
 const exemption = { kind: 'exemptionNotice', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2025-05-02', exemptFrom: '2023-01-01', assessmentPeriod: '2023', purposesText: 'Förderung des Tierschutzes (§ 52 Abs. 2 Nr. 14 AO)' } as const;
-const provisional = { kind: 'section60a', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99990', noticeDate: '2024-01-10', exemptFrom: '2024-01-01', purposesText: 'Förderung des Tierschutzes' } as const;
+const provisional = { kind: 'section60a', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99990', noticeDate: '2024-01-10', exemptFrom: '2024-01-01', purposesText: 'Förderung des Tierschutzes', purposesTextAccusative: 'den Tierschutz' } as const;
 
 const auditOf = (deps: Awaited<ReturnType<typeof ledgerFixture>>['deps'], action: string) => deps.db.select().from(schema.auditLog).where(eq(schema.auditLog.action, action)).all();
 /** Ein Dokument der Akte lesen darf nur, wer `dms.view` hat — wie in `vouchers.test.ts`. */
@@ -44,6 +44,17 @@ describe('saveNotice', () => {
     expect(err(await saveNotice(f.deps, f.ctx, { ...exemption, assessmentPeriod: null }))).toMatchObject({ type: 'validation' });
     // Ein § 60a-Bescheid hat keinen Veranlagungszeitraum.
     expect(unwrap(await saveNotice(f.deps, f.ctx, provisional)).assessmentPeriod).toBeNull();
+  });
+
+  it('requires purposesTextAccusative for a section 60a notice (N8) and clears it for the other kinds', async () => {
+    const f = await ledgerFixture();
+    const { purposesTextAccusative: _omitted, ...withoutAccusative } = provisional;
+    expect(err(await saveNotice(f.deps, f.ctx, withoutAccusative))).toMatchObject({ type: 'validation' });
+    expect(err(await saveNotice(f.deps, f.ctx, { ...provisional, purposesTextAccusative: ' ' }))).toMatchObject({ type: 'validation' });
+    const saved = unwrap(await saveNotice(f.deps, f.ctx, provisional));
+    expect(saved.purposesTextAccusative).toBe('den Tierschutz');
+    const final = unwrap(await saveNotice(f.deps, f.ctx, { ...exemption, purposesTextAccusative: 'den Tierschutz' }));
+    expect(final.purposesTextAccusative).toBeNull();
   });
 
   it('stores the start of the exemption and refuses a notice without it', async () => {
