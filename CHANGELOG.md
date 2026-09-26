@@ -256,6 +256,23 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
   Referenz den Platzhalter „NOTPROVIDED“ in den CAMT-Auszug. Kompass führte
   ihn als echte Referenz und hielt dadurch verschiedene Zahlungen für
   dieselbe; jetzt zählt er als „keine Referenz“.
+- **Belege über 1 MB kamen nicht an — ohne Meldung.** Ein Beleg, ein Bescheid,
+  eine unterschriebene Bestätigung oder ein Kontoauszug über rund 1 MB blieb
+  einfach hängen, ohne Fehlermeldung. Jetzt kommen auch größere Dateien an,
+  und scheitert ein Upload doch einmal, zeigt Kompass das an.
+- **Modul-Ablagen entstehen jetzt beim Start.** Fehlte dem Datenverzeichnis
+  auf einer frisch aufgesetzten Instanz das Schreibrecht, scheiterte der
+  erste Upload eines Moduls (z. B. das erste Faksimile bei Finanzen) mit
+  einer stillen Fehlermeldung. Kompass legt die Ablagen jetzt beim Start an
+  und meldet ein fehlendes Schreibrecht sofort, mit dem betroffenen Pfad.
+- **Zuwendungsbestätigung: Zweck des Bescheids.** Der Bescheidtext für die
+  vorläufige Anerkennung (§ 60a) verlangt eine andere grammatische Form der
+  begünstigten Zwecke als der Freistellungsbescheid. Bisher gab es nur ein
+  Feld dafür — jetzt fragt Kompass bei § 60a beide Formen ab und zeigt eine
+  Vorschau der fertigen Sätze.
+- **Faksimile der Unterschrift stand mittig statt über dem Namen** auf
+  maschinell erstellten Zuwendungsbestätigungen. Es steht jetzt rechts, wie
+  der Name darunter.
 
 ## [0.1.1] - 2026-09-19
 
