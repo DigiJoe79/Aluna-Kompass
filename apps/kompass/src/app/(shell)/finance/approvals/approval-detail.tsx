@@ -190,7 +190,11 @@ export function ApprovalDetail({
                 <p data-testid="category-suggestion" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-muted-ink">
                   <span>
                     {t('suggestion.because')}{' '}
-                    {suggestion.reason.kind === 'rule' ? t('suggestion.rule', { name: suggestion.reason.ruleName }) : t('suggestion.similarEntry', { number: suggestion.reason.entryNumber })}
+                    {suggestion.reason.kind === 'rule'
+                      ? t('suggestion.rule', { name: suggestion.reason.ruleName })
+                      : suggestion.reason.kind === 'trip'
+                        ? t('suggestion.trip')
+                        : t('suggestion.similarEntry', { number: suggestion.reason.entryNumber })}
                     {' → '}
                     {categoryName(suggestion.categoryId)}
                   </span>
@@ -278,6 +282,7 @@ export function ApprovalDetail({
         }
         footer={footer}
       >
+        {!claim.waiver && claim.ibanUnknown ? <Notice level="hint">{t('ibanUnknown')}</Notice> : null}
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           {positions}
           {receiptPane}

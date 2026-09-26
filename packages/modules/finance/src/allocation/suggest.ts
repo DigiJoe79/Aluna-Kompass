@@ -15,7 +15,8 @@ import { financeAllocationLines, financeCategories, financeEntries, financeExpen
 export type ExpenseCategorySuggestion = {
   positionId: string;
   categoryId: string;
-  reason: { kind: 'rule'; ruleName: string } | { kind: 'similarEntry'; entryNumber: string };
+  /** Befund 7: `trip` — eine Fahrtposition ohne Regeltreffer schlägt die Startplan-Kategorie „Fahrt- und Reisekosten“ vor. */
+  reason: { kind: 'rule'; ruleName: string } | { kind: 'similarEntry'; entryNumber: string } | { kind: 'trip' };
 };
 
 const schema = z.object({ claimId: z.string().min(1) });
@@ -31,6 +32,13 @@ function byRule(db: DbOrTx, p: FinanceExpensePositionRow, iban: string | null): 
   const target = { bookingDate: p.positionDate ?? '', accountId: '', amountCents: -p.amountCents, counterpartyName: null, counterpartyIban: iban, purpose: positionText(p) };
   const rule = rules.find((r) => ruleMatches(r, target));
   return rule ? { positionId: p.id, categoryId: rule.categoryId, reason: { kind: 'rule', ruleName: rule.name } } : null;
+}
+
+/** Befund 7: eine Fahrtposition ohne Regeltreffer schlägt die Startplan-Kategorie „Fahrt- und Reisekosten“ vor — nur wenn keine Regel trifft, nie Pflicht. */
+function byTrip(db: DbOrTx, p: FinanceExpensePositionRow): ExpenseCategorySuggestion | null {
+  if (p.kind !== 'trip') return null;
+  const category = db.select().from(financeCategories).where(and(eq(financeCategories.key, 'travel'), eq(financeCategories.isActive, true))).get();
+  return category ? { positionId: p.id, categoryId: category.id, reason: { kind: 'trip' } } : null;
 }
 
 function bySimilarEntry(db: DbOrTx, p: FinanceExpensePositionRow): ExpenseCategorySuggestion | null {
@@ -57,5 +65,5 @@ export async function suggestExpenseCategories(deps: Deps, ctx: CallContext, inp
   const claim = deps.db.select().from(financeExpenseClaims).where(eq(financeExpenseClaims.id, parsed.value.claimId)).get();
   if (!claim) return notFound('financeExpenseClaim', parsed.value.claimId);
   const positions = deps.db.select().from(financeExpensePositions).where(eq(financeExpensePositions.claimId, claim.id)).orderBy(asc(financeExpensePositions.sortOrder)).all();
-  return ok(positions.map((p) => byRule(deps.db, p, claim.iban) ?? bySimilarEntry(deps.db, p)).filter((s): s is ExpenseCategorySuggestion => s !== null));
+  return ok(positions.map((p) => byRule(deps.db, p, claim.iban) ?? byTrip(deps.db, p) ?? bySimilarEntry(deps.db, p)).filter((s): s is ExpenseCategorySuggestion => s !== null));
 }

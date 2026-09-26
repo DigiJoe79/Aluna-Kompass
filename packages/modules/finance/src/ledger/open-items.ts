@@ -17,6 +17,8 @@ export interface OpenItemView extends Omit<FinanceOpenItemRow, 'lineTemplate'> {
   state: 'open' | 'settled' | 'overpaid' | 'cancelled';
   /** Befund 12: die Datenbank speichert JSON-Text; die Sicht liefert das schon geparste Array. */
   lineTemplate: LineTemplateEntry[] | null;
+  /** Befund 6: Summe der Settlements an einem Entwurf — noch nicht "passiert", aber schon geplant. */
+  draftSettlementCents: number;
 }
 
 function contactExists(db: DbOrTx, id: string): boolean {
@@ -40,6 +42,18 @@ function settledCentsFor(db: DbOrTx, itemId: string, asOf?: string): number {
   return rows
     .filter((r) => r.status === 'final' && r.reversedByEntryId === null && (asOf === undefined || r.entryDate <= asOf))
     .reduce((s, r) => s + r.amountCents, 0);
+}
+
+/** Befund 6: Σ Settlements an einem Entwurf (noch nicht festgeschrieben) — „Zahlung liegt als Entwurf vor“ statt nur „überfällig“. */
+function draftSettlementCentsFor(db: DbOrTx, itemId: string): number {
+  const rows = db
+    .select({ amountCents: financeOpenItemSettlements.amountCents, status: financeEntries.status })
+    .from(financeOpenItemSettlements)
+    .innerJoin(financeMoneyLines, eq(financeOpenItemSettlements.moneyLineId, financeMoneyLines.id))
+    .innerJoin(financeEntries, eq(financeMoneyLines.entryId, financeEntries.id))
+    .where(eq(financeOpenItemSettlements.openItemId, itemId))
+    .all();
+  return rows.filter((r) => r.status === 'draft').reduce((s, r) => s + r.amountCents, 0);
 }
 
 /**
@@ -102,7 +116,7 @@ function openItemViewOf(db: DbOrTx, row: FinanceOpenItemRow): OpenItemView {
   const settledCents = settledCentsFor(db, row.id);
   const openCents = row.amountCents - settledCents;
   const state: OpenItemView['state'] = row.cancelledAt !== null ? 'cancelled' : settledCents === row.amountCents ? 'settled' : settledCents > row.amountCents ? 'overpaid' : 'open';
-  return { ...row, settledCents, openCents, state, lineTemplate: parsedLineTemplate(row.lineTemplate) };
+  return { ...row, settledCents, openCents, state, lineTemplate: parsedLineTemplate(row.lineTemplate), draftSettlementCents: draftSettlementCentsFor(db, row.id) };
 }
 
 /** Nur Zählwerte und IDs (Spec 10.3): nie die Zahlungsreferenz, nie die Notiz, nie der Kontakt. */

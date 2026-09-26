@@ -173,6 +173,19 @@ describe('open items', () => {
     expect(err(await cancelOpenItem(f.deps, f.ctx, { id: item.id, note: 'x' }))).toMatchObject({ type: 'conflict', code: 'openItemHasOrigin' });
   });
 
+  it('reports a draft settlement on an overdue item (Befund 6)', async () => {
+    const f = await ledgerFixture();
+    const item = unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'payable', itemDate: '2026-01-05', amountCents: 4000, dueOn: '2026-01-15', paymentReference: 'RE-1' }));
+    const before = unwrap(await listOpenItems(f.deps, f.ctx, {})).items.find((i) => i.id === item.id)!;
+    expect(before).toMatchObject({ draftSettlementCents: 0 });
+
+    // Ein Entwurf mit einer Zahlung an den Posten — noch nicht festgeschrieben, also noch nicht "passiert".
+    unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-10', text: 'Rechnung RE-1', moneyLines: [{ accountId: f.bank.id, amountCents: -4000, settlements: [{ openItemId: item.id, amountCents: 4000 }] }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -4000 }] }));
+
+    const after = unwrap(await listOpenItems(f.deps, f.ctx, {})).items.find((i) => i.id === item.id)!;
+    expect(after).toMatchObject({ openCents: 4000, draftSettlementCents: 4000 }); // weiterhin offen — nur ein Entwurf zahlt
+  });
+
   it('logs neither the payment reference nor the note nor the contact', async () => {
     const f = await ledgerFixture();
     const item = unwrap(await createOpenItem(f.deps, f.ctx, { kind: 'payable', itemDate: '2026-03-01', amountCents: 5000, paymentReference: 'KE-2026-012', contactId: f.donor.id }));

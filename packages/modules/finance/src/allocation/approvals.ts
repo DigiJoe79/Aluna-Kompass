@@ -1,7 +1,7 @@
 import { expectedVersionField, hasPermission, invalid, isoNow, notFound, ok, requirePermission, schema, staleVersion, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result, type ValidationIssue } from '@kompass/core';
 import { contactIdForUserInternal } from '@kompass/module-contacts';
 import { documents, linkDocumentInternal } from '@kompass/module-dms';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict, requireHumanChannelFinance } from '../errors';
@@ -10,7 +10,7 @@ import { resolveEntryLines } from '../ledger/entries';
 import { bookEntryInternal } from '../ledger/finalize';
 import { createOpenItemInternal } from '../ledger/open-items';
 import { writeVoucherLink } from '../ledger/vouchers';
-import { financeCategories, financeExpenseClaims, financeExpensePositions, financePurposes, type FinanceCategoryRow, type FinanceExpenseClaimRow, type FinanceExpensePositionRow } from '../schema';
+import { financeCategories, financeContactBankAccounts, financeExpenseClaims, financeExpensePositions, financePurposes, type FinanceCategoryRow, type FinanceExpenseClaimRow, type FinanceExpensePositionRow } from '../schema';
 import { expenseClaimViewInternal, nextVersion, positionsOf, sumCents, waiversEnabled, type ExpenseClaimView } from './expenses';
 import { evaluateWaiverInternal, type WaiverCheck } from './waiver';
 
@@ -112,6 +112,17 @@ const claimIdSchema = z.object({ claimId: z.string().min(1) });
 export interface ApprovalView extends ExpenseClaimView {
   /** Mit `finance.read`: volle IBAN und Belege. Ohne: maskierte IBAN, keine Dokument-IDs (Annahme 6). */
   receiptsVisible: boolean;
+  /** Befund 4: weder für den Kontakt gelernt noch in einem früheren Antrag verwendet — ein Hinweis, keine Sperre. */
+  ibanUnknown: boolean;
+}
+
+/** Weder als Kontakt-IBAN gelernt noch in einem früheren Antrag derselben Person verwendet. Ein Verzicht hat keine IBAN. */
+function ibanUnknownFor(db: DbOrTx, contactId: string, iban: string | null, ownClaimId: string): boolean {
+  if (!iban) return false;
+  const learned = db.select({ id: financeContactBankAccounts.id }).from(financeContactBankAccounts).where(and(eq(financeContactBankAccounts.contactId, contactId), eq(financeContactBankAccounts.iban, iban))).get();
+  if (learned) return false;
+  const earlier = db.select({ id: financeExpenseClaims.id }).from(financeExpenseClaims).where(and(eq(financeExpenseClaims.contactId, contactId), eq(financeExpenseClaims.iban, iban), ne(financeExpenseClaims.id, ownClaimId))).get();
+  return !earlier;
 }
 
 /** `finance.approve`: der Antrag für die gemeinsame Detailansicht; der eigene → `expenseOwnClaim`/`expenseSameContact` mit Namen. */
@@ -125,7 +136,8 @@ export async function getApproval(deps: Deps, ctx: CallContext, input: unknown):
   const own = ownClaimProblem(deps, ctx, loaded.value);
   if (own) return own;
   const view = expenseClaimViewInternal(deps, deps.db, loaded.value.id)!;
-  if (hasPermission(ctx, 'finance.read')) return ok({ ...view, receiptsVisible: true });
+  const ibanUnknown = ibanUnknownFor(deps.db, view.contactId, view.iban, view.id);
+  if (hasPermission(ctx, 'finance.read')) return ok({ ...view, receiptsVisible: true, ibanUnknown });
   return ok({
     ...view,
     iban: null,
@@ -133,6 +145,7 @@ export async function getApproval(deps: Deps, ctx: CallContext, input: unknown):
     waiverSignedDocumentId: null,
     positions: view.positions.map((p) => ({ ...p, documentId: null })),
     receiptsVisible: false,
+    ibanUnknown,
   });
 }
 

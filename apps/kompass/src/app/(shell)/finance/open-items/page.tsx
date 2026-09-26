@@ -48,6 +48,7 @@ export default async function FinanceOpenItemsPage({ searchParams }: { searchPar
         paymentReference: i.paymentReference,
         word: state.word,
         overdue: state.overdue,
+        draftSettlementCents: i.draftSettlementCents,
       };
     });
 
@@ -91,6 +92,7 @@ export default async function FinanceOpenItemsPage({ searchParams }: { searchPar
             paymentReference: selected.paymentReference,
             originType: selected.originType,
             cancelledAt: selected.cancelledAt,
+            draftSettlementCents: selected.draftSettlementCents,
           }}
           settlements={settlementsRes?.ok ? settlementsRes.value : []}
           canWrite={canWrite}

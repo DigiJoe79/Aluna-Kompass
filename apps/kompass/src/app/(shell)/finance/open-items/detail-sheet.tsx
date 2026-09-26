@@ -30,6 +30,8 @@ export interface OpenItemDetailData {
   paymentReference: string | null;
   originType: string | null;
   cancelledAt: string | null;
+  /** Befund 6: > 0, solange eine Zahlung dafür als Entwurf vorliegt — dann steht das statt „überfällig“. */
+  draftSettlementCents: number;
 }
 
 export interface SettlementRow {
@@ -116,7 +118,7 @@ export function DetailSheet({
                 <dt className="text-muted-ink">{t('columns.state')}</dt>
                 <dd>
                   {t(`state.${state.word}`)}
-                  {state.overdue ? ` · ${t('overdue')}` : ''}
+                  {state.overdue ? ` · ${item.draftSettlementCents > 0 ? t('draftSettlement') : t('overdue')}` : ''}
                 </dd>
               </div>
             </dl>

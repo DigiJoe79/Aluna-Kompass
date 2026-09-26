@@ -705,6 +705,39 @@ test.describe('finance', () => {
     await expect(page.getByRole('dialog', { name: 'RE-2026-999' })).toContainText('90,00 €');
   });
 
+  test('eine Zahlung als Entwurf an einer überfälligen Zahlung steht als eigenes Wort da, nicht nur „überfällig“ (Befund 6)', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/open-items');
+    await page.getByRole('button', { name: 'Offene Zahlung anlegen' }).click();
+    const createDialog = page.getByRole('dialog');
+    await createDialog.getByLabel('Datum', { exact: true }).fill('2026-01-05');
+    await createDialog.getByLabel('Betrag', { exact: true }).fill('60,00');
+    await createDialog.getByLabel('Fällig am').fill('2026-01-20');
+    await createDialog.getByLabel('Verwendungszweck').fill('RE-2026-998');
+    await createDialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByText('Offene Zahlung angelegt.')).toBeVisible();
+
+    await page.getByRole('row', { name: /RE-2026-998/ }).click();
+    await page.getByRole('link', { name: 'Jetzt buchen' }).click();
+    await expect(page).toHaveURL(/\/finance\/entries\/new\?template=expense&settles=/);
+    await page.getByLabel('Text').fill('Rechnung RE-2026-998, noch als Entwurf');
+    const accountCard = page.getByTestId('finance-account-card');
+    await accountCard.getByLabel('Konto').selectOption({ label: 'Vereinskonto' });
+    const allocationCard = page.getByTestId('finance-allocation-card');
+    const rows = allocationCard.getByTestId('split-row');
+    await allocationCard.getByRole('button', { name: 'Zeile hinzufügen' }).click();
+    await rows.nth(0).getByLabel('Kategorie').selectOption({ label: 'Büro, Porto, Telefon' });
+    await rows.nth(0).getByLabel('Betrag').fill('60,00');
+    // Als Entwurf speichern statt festschreiben — die Zahlung ist erst geplant, noch nicht "passiert".
+    await page.getByRole('button', { name: 'Als Entwurf speichern' }).click();
+    await expect(page).toHaveURL('/finance/entries');
+
+    await page.goto('/finance/open-items?tab=payable');
+    const row = page.getByRole('row', { name: /RE-2026-998/ });
+    await expect(row).toContainText('Zahlung liegt als Entwurf vor');
+    await expect(row).not.toContainText('überfällig');
+  });
+
   test('der Überweisungsblock kopiert den Verwendungszweck und zeigt keinen QR-Code', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await loginAsAdmin(page);

@@ -24,6 +24,8 @@ export interface OpenItemRow {
   paymentReference: string | null;
   word: 'open' | 'partlyPaid' | 'settled' | 'settledWithoutPayment';
   overdue: boolean;
+  /** Befund 6: > 0, solange eine Zahlung dafür als Entwurf vorliegt — dann steht das statt „überfällig“. */
+  draftSettlementCents: number;
 }
 
 /**
@@ -107,7 +109,7 @@ export function OpenItemsList({ rows, tab, canWrite, canCreateContact, today }: 
                   <TableCell className="px-4">{row.paymentReference ?? '—'}</TableCell>
                   <TableCell className="px-4">
                     {t(`state.${row.word}`)}
-                    {row.overdue ? ` · ${t('overdue')}` : ''}
+                    {row.overdue ? ` · ${row.draftSettlementCents > 0 ? t('draftSettlement') : t('overdue')}` : ''}
                   </TableCell>
                 </TableRow>
               ))}

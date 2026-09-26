@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { approveExpenseClaim, getApproval, listApprovals, rejectExpenseClaim } from '../src/allocation/approvals';
 import { getExpenseClaim } from '../src/allocation/expenses';
 import { suggestExpenseCategories } from '../src/allocation/suggest';
+import { linkContactIban } from '../src/import/contact-ibans';
 import { bookEntry } from '../src/ledger/finalize';
 import { openItemsAtInternal } from '../src/ledger/open-items';
 import { financeCategories, financeExpenseClaims, financeExpensePositions, financeImportRules, financeOpenItems } from '../src/schema';
@@ -85,6 +86,22 @@ describe('getApproval', () => {
     expect(unwrap(await getApproval(f.deps, approverCtx(f), { claimId: own.id }))).toMatchObject({ id: own.id, iban: EXPENSE_IBAN, receiptsVisible: true });
   });
 
+  it('flags an iban that is neither learned for the contact nor used in an earlier claim (Befund 4)', async () => {
+    const f = await expenseFixture();
+    const first = await expenseSubmitted(f, f.hanna); // erster Antrag mit EXPENSE_IBAN, nichts gelernt
+    expect(unwrap(await getApproval(f.deps, approverCtx(f), { claimId: first.id }))).toMatchObject({ ibanUnknown: true });
+
+    unwrap(await approveExpenseClaim(f.deps, approverCtx(f), { claimId: first.id, positions: categorized(f, first) }));
+    // Dieselbe IBAN, derselbe Kontakt, ein zweiter Antrag: nicht mehr neu.
+    const second = await expenseSubmitted(f, f.hanna);
+    expect(unwrap(await getApproval(f.deps, approverCtx(f), { claimId: second.id }))).toMatchObject({ ibanUnknown: false });
+
+    // Eine gelernte IBAN (Kontakt ↔ IBAN) gilt schon beim ersten Antrag nicht als neu.
+    unwrap(await linkContactIban(f.deps, f.ctx, { contactId: f.otto.contactId, iban: EXPENSE_IBAN }));
+    const third = await expenseSubmitted(f, f.otto);
+    expect(unwrap(await getApproval(f.deps, approverCtx(f), { claimId: third.id }))).toMatchObject({ ibanUnknown: false });
+  });
+
   it('shows the claim without iban and receipts to an approver without finance.read', async () => {
     const f = await expenseFixture();
     const claim = await expenseSubmitted(f);
@@ -107,10 +124,13 @@ describe('suggestExpenseCategories', () => {
 
     const claim = await expenseSubmitted(f);
     const suggestions = unwrap(await suggestExpenseCategories(f.deps, approverCtx(f), { claimId: claim.id }));
+    // Position 1 (Fahrt) hat keinen Regeltreffer ("Futter") — seit Befund 7 schlägt Kompass dafür die
+    // Fahrtkosten-Kategorie fest vor, nicht mehr die zufällig ähnliche festgeschriebene Buchung.
     expect(suggestions).toEqual([
       { positionId: claim.positions[0]!.id, categoryId: f.programCosts.id, reason: { kind: 'rule', ruleName: 'Futterkauf' } },
-      { positionId: claim.positions[1]!.id, categoryId: travel, reason: { kind: 'similarEntry', entryNumber: later.number } },
+      { positionId: claim.positions[1]!.id, categoryId: travel, reason: { kind: 'trip' } },
     ]);
+    void later;
     // Nur ein Vorschlag: Die Positionen bleiben ohne Kategorie, bis ein Mensch freigibt.
     expect(unwrap(await getExpenseClaim(f.deps, approverCtx(f), { id: claim.id })).positions.map((p) => p.categoryId)).toEqual([null, null]);
     // Ohne Treffer kein Vorschlag.

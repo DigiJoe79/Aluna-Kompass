@@ -1,7 +1,7 @@
 import path from 'node:path';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { backToAdmin, callTool, linkOwnContact, mcpClient, PHONE, rejectInQueue, submitClaim, switchToJonas } from './expense-helpers';
+import { backToAdmin, callTool, linkOwnContact, mcpClient, PDF, PHONE, rejectInQueue, submitClaim, switchToJonas } from './expense-helpers';
 import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
 
 /** > 1 MB (N9, Befundliste 0.2.0) — erzeugt mit `docs/intern/recherche/2026-09-26-upload-repro/mkpdf.py`. */
@@ -118,6 +118,31 @@ test.describe('finance approvals (D3)', () => {
 
     await page.goto('/finance/open-items');
     await expect(page.getByText(claim.number!)).toBeVisible();
+  });
+
+  test('eine Fahrtposition schlägt „Fahrt- und Reisekosten“ vor; eine neue IBAN steht als Hinweis, keine Sperre (Befunde 4, 7)', async ({ page, baseURL }) => {
+    const client = await mcpClient(page, baseURL);
+    // Eine erfundene, sicher unbekannte IBAN — nicht die feste EXPENSE_IBAN aus dem Seed-Muster.
+    const freshIban = 'DE23999999990000202051';
+    const draft = await callTool<{ id: string; positions: { id: string }[] }>(client, 'finance_expense_draft_save', {
+      waiver: false,
+      iban: freshIban,
+      positions: [
+        { kind: 'receipt', positionDate: new Date().toISOString().slice(0, 10), amountCents: 500, purpose: 'Portokosten' },
+        { kind: 'trip', positionDate: new Date().toISOString().slice(0, 10), tripFrom: 'Musterstadt', tripTo: 'Beispielstadt', tripReason: 'Pflegestelle besuchen', tripKm: 42 },
+      ],
+    });
+    await callTool(client, 'finance_expense_receipt_upload', { claimId: draft.id, positionId: draft.positions[0]!.id, fileName: 'rechnung.pdf', contentBase64: PDF.buffer.toString('base64') });
+    const claim = await callTool<{ id: string; number: string }>(client, 'finance_expense_submit', { id: draft.id });
+    await client.close();
+
+    await switchToJonas(page);
+    await page.goto(`/finance/approvals?claim=${claim.id}`);
+    await expect(detail(page)).toContainText('IBAN ist neu für diese Person.');
+    const tripSuggestion = position(page, 2).getByTestId('category-suggestion');
+    await expect(tripSuggestion).toContainText('es eine Fahrt ist');
+    await tripSuggestion.getByRole('button', { name: 'übernehmen' }).click();
+    await expect(position(page, 2).getByLabel('Kategorie')).not.toHaveValue('');
   });
 
   test('Verzicht: die vier Prüfungen als Checkliste; ohne Verzichtserklärung keine Freigabe; danach steht die Aufwandsspende als Buchung und ist bescheinigbar', async ({ page, baseURL }) => {

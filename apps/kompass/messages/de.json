@@ -3069,6 +3069,7 @@
         "settledWithoutPayment": "erledigt ohne Zahlung"
       },
       "overdue": "überfällig",
+      "draftSettlement": "Zahlung liegt als Entwurf vor",
       "hasOrigin": "eigener Vorgang",
       "empty": {
         "title": "Noch keine offenen Zahlungen",
@@ -4760,6 +4761,7 @@
         "iban": "Erstattung auf {iban}",
         "noIban": "Verzicht – es wird nichts überwiesen."
       },
+      "ibanUnknown": "IBAN ist neu für diese Person.",
       "positions": "Positionen",
       "position": "Position {n}",
       "trip": "Fahrt {from} – {to}, {km} km",
@@ -4772,6 +4774,7 @@
         "because": "Vorschlag, weil:",
         "rule": "Regel „{name}“ passt",
         "similarEntry": "wie in Buchung {number}",
+        "trip": "es eine Fahrt ist",
         "take": "übernehmen"
       },
       "receipt": {
