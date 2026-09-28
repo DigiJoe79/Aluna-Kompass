@@ -15,6 +15,7 @@ import {
   localizedText,
   newId,
   notFound,
+  notifyRecordDeleted,
   ok,
   recordAudit,
   requirePermission,
@@ -195,6 +196,7 @@ export async function deleteProject(deps: Deps, ctx: CallContext, input: unknown
 
   deps.db.transaction((tx) => {
     tx.delete(projects).where(eq(projects.id, before.id)).run();
+    notifyRecordDeleted(tx, deps, ctx, 'project', before.id);
     recordAudit(tx, deps, ctx, { action: 'projects.delete', entityType: 'project', entityId: before.id, before, summary: `Projekt ${before.slug} gelöscht` });
   });
   if (!parsed.value.deleteOrphanedMedia) return ok({ deletedMedia: [], keptMedia: [] });

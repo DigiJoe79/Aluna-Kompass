@@ -1,4 +1,5 @@
-import type { NavGroup } from './navigation';
+import type { PermissionSpec } from '@kompass/core';
+import { hasAnyOf, type NavGroup } from './navigation';
 
 export interface CommandEntry {
   id: string;
@@ -6,7 +7,7 @@ export interface CommandEntry {
   label: string;
   hint: string;
   href: string;
-  permission?: string;
+  permission?: PermissionSpec;
 }
 
 export function buildCommandIndex(input: {
@@ -21,7 +22,7 @@ export function buildCommandIndex(input: {
   for (const group of input.groups) {
     for (const item of group.items) {
       if (!item.visible) continue;
-      if (item.permission && !input.permissions.has(item.permission)) continue;
+      if (!hasAnyOf(input.permissions, item.permission)) continue;
       entries.push({
         id: `nav:${item.key}`,
         group: 'navigation',

@@ -19,6 +19,18 @@ anmelden, aber alles, was er getan hat, bleibt mit seinem Namen im
 Änderungsprotokoll. Den letzten Administrator lässt Kompass nicht
 deaktivieren.
 
+## Konto und Kontakt verknüpfen
+
+Ein Nutzerkonto ist ein Zugang, ein Kontakt eine Person in der Adressliste. Oft ist beides derselbe Mensch — die Helferin, die sich anmeldet, steht auch als Kontakt im Verein. Mit der Verknüpfung weiß Kompass das. Fachmodule bauen darauf: Wer eine Auslage einreicht, soll sie nicht selbst freigeben können.
+
+In der Nutzerverwaltung steht je Konto die Spalte „Kontakt“. „Verknüpfen“ öffnet die Kontaktauswahl (dafür brauchen Sie auch das Recht, Kontakte zu sehen); „Lösen“ beendet die Verknüpfung. Ein Konto hat höchstens einen Kontakt, ein Kontakt höchstens ein Konto.
+
+**Der Verlauf bleibt.** Eine gelöste Verknüpfung wird nicht gelöscht, sondern beendet — mit Datum und dem Namen dessen, der sie gelöst hat. So lässt sich später sagen, wer wann mit wem verknüpft war.
+
+**Das eigene Konto.** Ihr eigenes Konto dürfen Sie einmal selbst verknüpfen — sonst könnte ein Verein mit nur einem Verwalter es nie einrichten. Ändern oder lösen kann es danach nur eine zweite Person mit dem Recht, Nutzer zu verwalten.
+
+Ein verknüpfter Kontakt lässt sich nicht löschen, solange die Verknüpfung besteht.
+
 ## Rollen
 
 Eine Rolle hat einen Namen, eine Beschreibung und Rechte, gruppiert nach

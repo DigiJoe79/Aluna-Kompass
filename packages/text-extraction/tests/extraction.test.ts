@@ -13,9 +13,18 @@ describe('createTextExtraction', () => {
     if (probe.ok) expect(probe.languages).toContain('deu');
   });
 
+  it('meldet eine unvollständige Umgebung, wenn pdfdetach fehlt', async () => {
+    // Ohne pdfdetach liest die Akte Text, aber keine Rechnung aus dem PDF (F5b) —
+    // die Umgebung ist nicht vollständig, `probe()` sagt es.
+    const probe = await createTextExtraction({ pdfdetachBin: 'pdfdetach-does-not-exist' }).probe();
+
+    expect(probe.ok).toBe(false);
+    if (!probe.ok) expect(probe.error).toContain('pdfdetach-does-not-exist');
+  });
+
   it('fragt die Werkzeuge nicht bei jedem Dokument neu ab', async () => {
-    // `probe()` startet zwei Prozesse. Bei „Alles neu lesen“ über tausend
-    // Dokumente wären das zweitausend — für eine Antwort, die sich zwischen
+    // `probe()` startet drei Prozesse. Bei „Alles neu lesen“ über tausend
+    // Dokumente wären das dreitausend — für eine Antwort, die sich zwischen
     // zwei Dokumenten nicht ändert.
     const extraction = createTextExtraction();
 

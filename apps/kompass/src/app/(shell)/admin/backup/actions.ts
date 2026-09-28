@@ -1,5 +1,6 @@
 'use server';
 
+import { guardAction } from '@/lib/action-guard';
 import { importBackup, inspectBackup } from '@kompass/core';
 import { createWriteStream } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -25,33 +26,37 @@ async function stash(file: File): Promise<{ dir: string; archivePath: string }> 
 }
 
 export async function inspectBackupAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  await requireSession();
-  const file = formData.get('archive');
-  if (!(file instanceof File) || file.size === 0) return { status: 'error', message: t('backup.import.noFile'), fieldErrors: { archive: t('backup.import.noFile') } };
-  const { dir, archivePath } = await stash(file);
-  try {
-    const result = await inspectBackup({ archivePath, workDir: dir });
-    return toActionState(result, t);
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
+  return guardAction('(shell)/admin/backup/actions.ts#inspectBackupAction', async () => {
+    const t = await getTranslations();
+    await requireSession();
+    const file = formData.get('archive');
+    if (!(file instanceof File) || file.size === 0) return { status: 'error', message: t('backup.import.noFile'), fieldErrors: { archive: t('backup.import.noFile') } };
+    const { dir, archivePath } = await stash(file);
+    try {
+      const result = await inspectBackup({ archivePath, workDir: dir });
+      return toActionState(result, t);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
 }
 
 export async function importBackupAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const file = formData.get('archive');
-  if (!(file instanceof File) || file.size === 0) return { status: 'error', message: t('backup.import.noFile'), fieldErrors: { archive: t('backup.import.noFile') } };
-  const { dir, archivePath } = await stash(file);
-  let result;
-  try {
-    result = await importBackup(deps, ctx, { archivePath, workDir: dir, confirmation: String(formData.get('confirmation') ?? ''), environmentName: environmentConfirmationName(runtimeEnv().env) });
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
-  if (!result.ok) return toActionState(result, t);
-  await resetMcpHandler();
-  await clearSessionCookie();
-  redirect('/login?imported=1');
+  return guardAction('(shell)/admin/backup/actions.ts#importBackupAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const file = formData.get('archive');
+    if (!(file instanceof File) || file.size === 0) return { status: 'error', message: t('backup.import.noFile'), fieldErrors: { archive: t('backup.import.noFile') } };
+    const { dir, archivePath } = await stash(file);
+    let result;
+    try {
+      result = await importBackup(deps, ctx, { archivePath, workDir: dir, confirmation: String(formData.get('confirmation') ?? ''), environmentName: environmentConfirmationName(runtimeEnv().env) });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+    if (!result.ok) return toActionState(result, t);
+    await resetMcpHandler();
+    await clearSessionCookie();
+    redirect('/login?imported=1');
+  });
 }

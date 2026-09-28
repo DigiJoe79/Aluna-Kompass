@@ -3,10 +3,23 @@ import { expect, test } from './fixtures';
 import { ADMIN, loginAsAdmin, resetDatabase } from './helpers';
 
 /** Jede Runde zeigt dieselbe Meldung — also auf die Antwort der Aktion warten, nicht auf den Text. */
+/**
+ * Absenden und warten, bis die Maske wieder bereit ist.
+ *
+ * Die Antwort allein reicht nicht: React 19 setzt ein `<form action>` nach
+ * jeder Aktion zurück, auch nach einer abgelehnten Anmeldung. Füllt der Test
+ * die Felder, bevor dieser Reset kommt, sind sie beim nächsten Klick wieder
+ * leer, `required` hält den Browser vom Absenden ab, es gibt keinen POST —
+ * und `waitForResponse` wartet bis zur Frist. Lokal ist das Fenster zu klein,
+ * um es je zu treffen; auf dem Läufer kostete es am 26.09. vier Minuten je
+ * Treffer (Container-Frist), in zwei Läufen hintereinander. Deshalb gilt die
+ * Runde erst als beendet, wenn das Passwortfeld leer ist.
+ */
 async function submitLogin(page: Page) {
   const answered = page.waitForResponse((r) => r.request().method() === 'POST' && new URL(r.url()).pathname === '/login');
   await page.getByRole('button', { name: 'Anmelden' }).click();
   await answered;
+  await expect(page.getByLabel('Passwort')).toHaveValue('');
 }
 
 test.describe('first run and login', () => {

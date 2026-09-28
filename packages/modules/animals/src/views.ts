@@ -16,6 +16,7 @@ export const publishedAnimals = definePublishedView({
     sizeCm: z.number(),
     sizeText: L,
     location: z.enum(['shelter', 'germany']),
+    place: z.string(),
     status: z.enum(['lookingForHome', 'reserved', 'adopted']),
     isEmergency: z.boolean(),
     isSponsorable: z.boolean(),

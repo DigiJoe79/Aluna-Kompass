@@ -27,7 +27,40 @@ describe('contacts service', () => {
 
     const audit = deps.db.select().from(schema.auditLog).all().filter((e) => e.action === 'contacts.create');
     expect(audit).toHaveLength(1);
-    expect(audit[0]!.summary).toContain('Anna Berger');
+    // Das Protokoll ist unlöschbar: nur ID und Feldnamen, kein Name, keine Anschrift (Befund 48).
+    expect(audit[0]!.summary).toBe('Kontakt angelegt');
+    expect(JSON.parse(audit[0]!.after!)).toEqual({ kind: 'person', changedFields: ['salutation', 'firstName', 'lastName', 'street', 'postalCode', 'city'] });
+    expect(JSON.stringify(audit[0])).not.toMatch(/Anna|Berger|Musterweg|Musterstadt|12345/);
+  });
+
+  it('protokolliert Änderungen nur mit den Namen der geänderten Felder und Kurztext ohne Namen', async () => {
+    const { deps, ctx } = setup();
+    const created = unwrap(await createContact(deps, ctx, anna));
+    unwrap(await updateContact(deps, ctx, { id: created.id, street: 'Lindenallee 7', city: 'Neustadt', postalCode: '12345' }));
+    unwrap(await updateContact(deps, ctx, { id: created.id, firstName: 'Annette', notes: 'Ruft abends an' }));
+    unwrap(await setContactStatus(deps, ctx, { id: created.id, status: 'archived' }));
+    const log = deps.db.select().from(schema.auditLog).all().filter((e) => e.entityId === created.id);
+    const updates = log.filter((e) => e.action === 'contacts.update');
+    expect(updates.map((e) => [e.summary, e.before, JSON.parse(e.after!)])).toEqual([
+      ['Anschrift geändert', null, { changedFields: ['street', 'city'] }],
+      ['Kontakt geändert', null, { changedFields: ['firstName', 'notes'] }],
+    ]);
+    expect(log.find((e) => e.action === 'contacts.setStatus')!.summary).toBe('Kontakt archiviert');
+    expect(JSON.stringify(log)).not.toMatch(/Anna|Berger|Musterweg|Musterstadt|Lindenallee|Neustadt|Ruft abends/);
+  });
+
+  it('nennt eine reine Namensänderung „Name geändert“ — ohne den Namen (D7)', async () => {
+    const { deps, ctx } = setup();
+    const person = unwrap(await createContact(deps, ctx, anna));
+    const org = unwrap(await createContact(deps, ctx, { kind: 'organization', name: 'Beispielhilfe gGmbH' }));
+    unwrap(await updateContact(deps, ctx, { id: person.id, firstName: 'Annette', lastName: 'Bergmann' }));
+    unwrap(await updateContact(deps, ctx, { id: org.id, name: 'Beispielhilfe Nord gGmbH' }));
+    const updates = deps.db.select().from(schema.auditLog).all().filter((e) => e.action === 'contacts.update');
+    expect(updates.map((e) => [e.summary, JSON.parse(e.after!)])).toEqual([
+      ['Name geändert', { changedFields: ['firstName', 'lastName'] }],
+      ['Name geändert', { changedFields: ['name'] }],
+    ]);
+    expect(JSON.stringify(updates)).not.toMatch(/Annette|Bergmann|Beispielhilfe/);
   });
 
   it('requires a last name for a person and a name for an organisation', async () => {
@@ -53,6 +86,20 @@ describe('contacts service', () => {
     expect(deps.db.select().from(schema.auditLog).all().some((e) => e.action === 'contacts.update')).toBe(true);
     const missing = await updateContact(deps, ctx, { id: 'GIBTSNICHT', city: 'x' });
     expect(missing.ok === false && missing.error.type === 'notFound').toBe(true);
+  });
+
+  it('weist ein Speichern auf veraltetem Stand ab (expectedVersion) und speichert auf aktuellem', async () => {
+    const { deps, ctx } = setup();
+    const loaded = unwrap(await createContact(deps, ctx, anna));
+    deps.clock.advance(60_000);
+    unwrap(await updateContact(deps, ctx, { id: loaded.id, city: 'Neustadt' }));
+    deps.clock.advance(60_000);
+    const stale = await updateContact(deps, ctx, { id: loaded.id, city: 'Altstadt', expectedVersion: loaded.updatedAt });
+    expect(stale).toMatchObject({ ok: false, error: { type: 'conflict', code: 'staleVersion' } });
+    const current = unwrap(await getContact(deps, ctx, loaded.id));
+    expect(current.city).toBe('Neustadt');
+    const saved = unwrap(await updateContact(deps, ctx, { id: loaded.id, street: 'Neuer Weg 3', expectedVersion: current.updatedAt }));
+    expect(saved.street).toBe('Neuer Weg 3');
   });
 
   it('resolves belongsTo when a person sits at an organisation', async () => {
@@ -90,6 +137,11 @@ describe('contacts service', () => {
     expect(unwrap(await listContacts(deps, ctx, { kind: 'organization' })).total).toBe(1);
     expect(unwrap(await listContacts(deps, ctx, { text: 'berger' })).total).toBe(1);
     expect(unwrap(await listContacts(deps, ctx, { text: 'musterstadt' })).total).toBe(2);
+    // Befund 39 (Fund): der ganze Name trifft, in beiden Reihenfolgen — jedes Wort muss irgendwo passen.
+    expect(unwrap(await listContacts(deps, ctx, { text: 'Anna Berger' })).total).toBe(1);
+    expect(unwrap(await listContacts(deps, ctx, { text: 'berger, anna' })).total).toBe(1);
+    expect(unwrap(await listContacts(deps, ctx, { text: 'Anna Musterstadt' })).total).toBe(1);
+    expect(unwrap(await listContacts(deps, ctx, { text: 'Anna Sparkasse' })).total).toBe(0);
     expect(unwrap(await listContacts(deps, ctx, { includeArchived: true })).total).toBe(3);
     expect((await listContacts(deps, ctxWith([]), {})).ok).toBe(false);
   });

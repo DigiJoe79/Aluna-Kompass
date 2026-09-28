@@ -1,5 +1,6 @@
 'use server';
 
+import { guardAction } from '@/lib/action-guard';
 import { createProject, deleteProject, projectDeletionPreview, reorderProjects, setProjectPublished, updateProject } from '@kompass/module-projects';
 import { requirePermission, type MediaCleanup } from '@kompass/core';
 import { getTranslations } from 'next-intl/server';
@@ -22,41 +23,47 @@ function externalLinksFromForm(formData: FormData): { label: string; url: string
 }
 
 export async function saveProjectAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const id = String(formData.get('id') ?? '');
-  const fields = {
-    slug: String(formData.get('slug') ?? '').trim(),
-    name: localizedFromForm(formData, 'name', deps.locales()),
-    type: (formData.get('type') as 'ongoing' | 'shortTerm') ?? 'ongoing',
-    status: (formData.get('status') as 'active' | 'completed') ?? 'active',
-    summary: localizedFromForm(formData, 'summary', deps.locales()),
-    body: localizedFromForm(formData, 'body', deps.locales()),
-    imageAssetId: String(formData.get('imageAssetId') ?? '') || null,
-    externalLinks: externalLinksFromForm(formData),
-  };
-  const expectedVersion = String(formData.get('expectedVersion') ?? '') || undefined;
-  const result = id ? await updateProject(deps, ctx, { id, expectedVersion, ...fields }) : await createProject(deps, ctx, fields);
-  revalidatePath('/projects');
-  if (!result.ok) return toActionState(result, t);
-  if (!id) redirect(`/projects/${result.value.id}`);
-  return toActionState(result, t, t('content.saved'));
+  return guardAction('(shell)/projects/actions.ts#saveProjectAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const id = String(formData.get('id') ?? '');
+    const fields = {
+      slug: String(formData.get('slug') ?? '').trim(),
+      name: localizedFromForm(formData, 'name', deps.locales()),
+      type: (formData.get('type') as 'ongoing' | 'shortTerm') ?? 'ongoing',
+      status: (formData.get('status') as 'active' | 'completed') ?? 'active',
+      summary: localizedFromForm(formData, 'summary', deps.locales()),
+      body: localizedFromForm(formData, 'body', deps.locales()),
+      imageAssetId: String(formData.get('imageAssetId') ?? '') || null,
+      externalLinks: externalLinksFromForm(formData),
+    };
+    const expectedVersion = String(formData.get('expectedVersion') ?? '') || undefined;
+    const result = id ? await updateProject(deps, ctx, { id, expectedVersion, ...fields }) : await createProject(deps, ctx, fields);
+    revalidatePath('/projects');
+    if (!result.ok) return toActionState(result, t);
+    if (!id) redirect(`/projects/${result.value.id}`);
+    return toActionState(result, t, t('content.saved'));
+  });
 }
 
 export async function setProjectPublishedAction(id: string, isPublished: boolean): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await setProjectPublished(deps, ctx, { id, isPublished });
-  revalidatePath('/projects');
-  return toActionState(result, t);
+  return guardAction('(shell)/projects/actions.ts#setProjectPublishedAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await setProjectPublished(deps, ctx, { id, isPublished });
+    revalidatePath('/projects');
+    return toActionState(result, t);
+  });
 }
 
 export async function reorderProjectsAction(ids: string[]): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await reorderProjects(deps, ctx, { ids });
-  revalidatePath('/projects');
-  return toActionState(result, t);
+  return guardAction('(shell)/projects/actions.ts#reorderProjectsAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await reorderProjects(deps, ctx, { ids });
+    revalidatePath('/projects');
+    return toActionState(result, t);
+  });
 }
 
 export async function projectDeletionPreviewAction(id: string): Promise<DeletionPreviewView | null> {
@@ -66,9 +73,11 @@ export async function projectDeletionPreviewAction(id: string): Promise<Deletion
 }
 
 export async function deleteProjectAction(id: string, deleteOrphanedMedia: boolean): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await deleteProject(deps, ctx, { id, deleteOrphanedMedia });
-  revalidatePath('/projects');
-  return toActionState(result, t, result.ok ? t('deletion.deletedWithMedia', { count: (result.value as MediaCleanup).deletedMedia.length }) : undefined);
+  return guardAction('(shell)/projects/actions.ts#deleteProjectAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await deleteProject(deps, ctx, { id, deleteOrphanedMedia });
+    revalidatePath('/projects');
+    return toActionState(result, t, result.ok ? t('deletion.deletedWithMedia', { count: (result.value as MediaCleanup).deletedMedia.length }) : undefined);
+  });
 }

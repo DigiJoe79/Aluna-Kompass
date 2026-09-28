@@ -1,7 +1,7 @@
 # Module
 
 Kompass besteht aus einem Kern und Modulen — Webseite, Kontakte, Akte,
-Projekte, Tiere. Hier schalten Sie ein, was der Verein braucht. Ein
+Projekte, Tiere, Finanzen. Hier schalten Sie ein, was der Verein braucht. Ein
 ausgeschaltetes Modul verschwindet aus der Navigation; seine Daten bleiben
 erhalten und sind wieder da, sobald Sie es einschalten.
 
@@ -16,6 +16,10 @@ abhängige läuft.
 Beim Abschalten bleibt alles erhalten: Tabellen, Dateien, Protokoll. Die
 Seiten des Moduls sind nicht mehr erreichbar, seine Rechte bleiben an den
 Rollen, und ein Assistent über MCP sieht seine Werkzeuge nicht mehr.
+
+Ein neues Modul ist zunächst aus — bei der Erstinstallation wie nach einem
+Update, das es mitbringt. Kompass schaltet nie selbst etwas ein; ein Verein,
+der das Modul nutzen will, schaltet es hier bewusst ein.
 
 ## Was ein Modul mitbringt
 

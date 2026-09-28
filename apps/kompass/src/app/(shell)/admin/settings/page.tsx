@@ -1,4 +1,4 @@
-import { listThemes, readAllSettings, requirePermission } from '@kompass/core';
+import { listThemes, managedSettings, readAllSettings, requirePermission } from '@kompass/core';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
@@ -21,6 +21,7 @@ export default async function SettingsPage() {
           initial={editable}
           themes={listThemes(deps).themes.map((th) => ({ key: th.key, name: th.name }))}
           lastSaved={null}
+          managed={Object.keys(managedSettings(deps))}
         />
       </div>
     </>

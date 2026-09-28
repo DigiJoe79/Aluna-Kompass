@@ -1,0 +1,22 @@
+{
+  "name": "@kompass/module-finance",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts", "./csv": "./src/import/csv/index.ts", "./wording": "./src/donations/templates/wording.ts", "./evidence-rules": "./src/allocation/evidence-rules.ts" },
+  "scripts": { "test": "vitest run", "typecheck": "tsc --noEmit" },
+  "dependencies": {
+    "@kompass/core": "workspace:*",
+    "@kompass/module-contacts": "workspace:*",
+    "@kompass/module-dms": "workspace:*",
+    "@kompass/module-projects": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "fast-xml-parser": "5.11.1",
+    "zod": "^4.6.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.5.1",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.0"
+  }
+}

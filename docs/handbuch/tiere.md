@@ -16,10 +16,12 @@ reservierten und vermittelten. „Hund anlegen“ öffnet das Profil.
 Vier Reiter:
 
 - **Steckbrief** — Name, Geschlecht, Aufenthalt (im Shelter oder in
-  Deutschland), Größe und Geburtsangabe, Wesensmerkmale, die Kennzeichen
-  „Notfall“ und „Patentier“, und das externe Profil: Trägt ein Hund den Link
-  eines Partnervereins, laufen Anfragen auf der Webseite über den Partner,
-  nicht über Kompass.
+  Deutschland) mit dem Ort dazu — ein Freitext für Land und Stadt des
+  Shelters oder das Bundesland der Pflegestelle, für alle Sprachen gleich —,
+  Größe und Geburtsangabe, Wesensmerkmale, die Kennzeichen „Notfall“ und
+  „Patentier“, und das externe Profil: Trägt ein Hund den Link eines
+  Partnervereins, laufen Anfragen auf der Webseite über den Partner, nicht
+  über Kompass.
 - **Texte** — Kurztext und Beschreibung, je Sprache.
 - **Fotos** — aus der [Mediathek](mediathek.md), eines davon als Hauptfoto.
 - **Geschichte** — erst nach der Vermittlung: Vorher- und Nachher-Bild mit

@@ -7,8 +7,13 @@ import { execFile } from 'node:child_process';
  * Fehlt das Binary, ist das keine Ausnahme im Fachsinn, sondern eine Aussage
  * über die Umgebung — der Aufrufer übersetzt sie in `unavailable`.
  */
-export class ToolMissingError extends Error {}
-export class ToolTimeoutError extends Error {}
+export class ToolMissingError extends Error {
+  // Ausdrücklich gesetzt: Wer dieses Paket nicht importiert (das Finanzmodul), erkennt den Fehler am Namen — auch nach dem Bündeln.
+  override name = 'ToolMissingError';
+}
+export class ToolTimeoutError extends Error {
+  override name = 'ToolTimeoutError';
+}
 
 export function runTool(
   bin: string,

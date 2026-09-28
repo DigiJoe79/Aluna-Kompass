@@ -118,7 +118,7 @@ const FIXED: McpToolDefinition[] = [
   }, exportSiteContent),
   tool(
     'site_deploy_check',
-    'Dry run against the configured deploy target: signs in, transfers nothing, and lists the files a publish would remove there. Requires site.publish.',
+    'Checks the deploy target without transferring anything: lists the files found there (path check) and, from a fresh build like site_publish would transfer, what a publish would change, add and remove. Requires site.publish.',
     z.object({}),
     (deps, ctx) => checkDeployTarget(deps, ctx, readSiteEnv()),
     checkDeployTarget,

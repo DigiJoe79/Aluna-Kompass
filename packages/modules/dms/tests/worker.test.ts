@@ -42,6 +42,7 @@ async function setup(textExtraction?: TextExtraction) {
 function switchableExtraction(available: boolean): { available: boolean; extraction: TextExtraction } {
   let installed = available;
   const extraction: TextExtraction = {
+    embeddedFiles: async () => [],
     probe: async () =>
       installed
         ? { ok: true, languages: ['deu'] }
@@ -63,6 +64,7 @@ function switchableExtraction(available: boolean): { available: boolean; extract
 function failsOnFirstDocument(): TextExtraction {
   let seen = 0;
   return {
+    embeddedFiles: async () => [],
     probe: async () => ({ ok: true, languages: ['deu'] }),
     extract: async () => {
       seen += 1;
@@ -75,6 +77,7 @@ function failsOnFirstDocument(): TextExtraction {
 /** Werkzeuge da, aber das Lesen scheitert — ein zerschossenes PDF. */
 function brokenExtraction(): TextExtraction {
   return {
+    embeddedFiles: async () => [],
     probe: async () => ({ ok: true, languages: ['deu'] }),
     extract: async () => {
       throw new Error('Seite 1 liess sich nicht lesen');
@@ -245,6 +248,7 @@ describe('Worker', () => {
       release = resolve;
     });
     const slow: TextExtraction = {
+      embeddedFiles: async () => [],
       probe: async () => ({ ok: true, languages: ['deu'] }),
       extract: async () => {
         await gate;

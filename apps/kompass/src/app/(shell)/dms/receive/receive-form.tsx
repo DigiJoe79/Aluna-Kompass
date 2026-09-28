@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { FieldError } from '@/components/forms/field-error';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Input } from '@/components/ui/input';
@@ -146,7 +147,10 @@ export function ReceiveForm({
   }, [droppedFile]);
 
   useEffect(() => {
-    if (state.status === 'success') onFiled?.();
+    if (state.status === 'success') {
+      if (state.message) toast.warning(state.message);
+      onFiled?.();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
 

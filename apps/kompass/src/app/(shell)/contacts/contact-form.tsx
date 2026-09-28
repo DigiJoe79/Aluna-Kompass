@@ -1,7 +1,7 @@
 'use client';
 
-import { formatPostalAddress } from '@kompass/module-contacts';
-import { Plus } from 'lucide-react';
+import { formatPostalAddress } from '@kompass/module-contacts/address';
+import { Pencil, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useMemo, useState } from 'react';
 import { FormField } from '@/components/forms/form-field';
@@ -11,26 +11,50 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { idleState } from '@/lib/actions';
-import { createContactAction } from './actions';
+import { createContactAction, updateContactAction } from './actions';
 import { Select } from '@/components/ui/select';
 import { ActionForm } from '@/components/forms/action-form';
 
+/** Was die Maske zum Bearbeiten braucht: die Felder und den Ladestand. */
+export type EditableContact = {
+  id: string;
+  kind: 'person' | 'organization';
+  salutation: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  name: string | null;
+  legalForm: string | null;
+  addressExtra: string | null;
+  street: string | null;
+  postalCode: string | null;
+  city: string | null;
+  country: string | null;
+  notes: string | null;
+  updatedAt: string;
+};
+
+/** Neuere von zwei ISO-Zeitstempeln — der Stand aus der Antwort, bis der Refresh ihn nachreicht. */
+const newer = (a: string, b: string | null) => (b && b > a ? b : a);
+
 /**
- * Dasselbe Formular an zwei Stellen: als eigener Knopf auf der Kontaktseite,
- * und als Overlay aus dem Suchfeld heraus. Wer es von außen öffnet, gibt
- * `open`/`onOpenChange` mit und bekommt über `onCreated` den neuen Kontakt
- * zurück — ohne diese Angaben bleibt alles, wie es war.
+ * Dasselbe Formular an drei Stellen: als eigener Knopf auf der Kontaktseite,
+ * als Overlay aus dem Suchfeld heraus und — mit `contact` — zum Bearbeiten auf
+ * der Kontaktseite. Wer es von außen öffnet, gibt `open`/`onOpenChange` mit und
+ * bekommt über `onCreated` den neuen Kontakt zurück — ohne diese Angaben bleibt
+ * alles, wie es war.
  */
 export function CreateContactDialog({
   open: controlledOpen,
   onOpenChange,
   onCreated,
   withTrigger = true,
+  contact,
 }: {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   onCreated?: (contact: { id: string; name: string }) => void;
   withTrigger?: boolean;
+  contact?: EditableContact;
 } = {}) {
   const t = useTranslations('contacts');
   const c = useTranslations('common');
@@ -40,45 +64,61 @@ export function CreateContactDialog({
     setInnerOpen(next);
     onOpenChange?.(next);
   };
-  const [state, action] = useActionState(createContactAction, idleState);
+  const [state, action] = useActionState(contact ? updateContactAction : createContactAction, idleState);
+  const [savedVersion, setSavedVersion] = useState<string | null>(null);
 
-  const [kind, setKind] = useState<'person' | 'organization'>('person');
-  const [salutation, setSalutation] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [name, setName] = useState('');
-  const [legalForm, setLegalForm] = useState('');
-  const [addressExtra, setAddressExtra] = useState('');
-  const [street, setStreet] = useState('');
-  const [postalCode, setPostalCode] = useState('');
-  const [city, setCity] = useState('');
-  const [country, setCountry] = useState('');
-  const [notes, setNotes] = useState('');
+  const [kind, setKind] = useState<'person' | 'organization'>(contact?.kind ?? 'person');
+  const [salutation, setSalutation] = useState(contact?.salutation ?? '');
+  const [firstName, setFirstName] = useState(contact?.firstName ?? '');
+  const [lastName, setLastName] = useState(contact?.lastName ?? '');
+  const [name, setName] = useState(contact?.name ?? '');
+  const [legalForm, setLegalForm] = useState(contact?.legalForm ?? '');
+  const [addressExtra, setAddressExtra] = useState(contact?.addressExtra ?? '');
+  const [street, setStreet] = useState(contact?.street ?? '');
+  const [postalCode, setPostalCode] = useState(contact?.postalCode ?? '');
+  const [city, setCity] = useState(contact?.city ?? '');
+  const [country, setCountry] = useState(contact?.country ?? '');
+  const [notes, setNotes] = useState(contact?.notes ?? '');
 
+  // Beim Anlegen zurück auf leer, beim Bearbeiten zurück auf den geladenen Stand.
   const reset = () => {
-    setKind('person');
-    setSalutation('');
-    setFirstName('');
-    setLastName('');
-    setName('');
-    setLegalForm('');
-    setAddressExtra('');
-    setStreet('');
-    setPostalCode('');
-    setCity('');
-    setCountry('');
-    setNotes('');
+    setKind(contact?.kind ?? 'person');
+    setSalutation(contact?.salutation ?? '');
+    setFirstName(contact?.firstName ?? '');
+    setLastName(contact?.lastName ?? '');
+    setName(contact?.name ?? '');
+    setLegalForm(contact?.legalForm ?? '');
+    setAddressExtra(contact?.addressExtra ?? '');
+    setStreet(contact?.street ?? '');
+    setPostalCode(contact?.postalCode ?? '');
+    setCity(contact?.city ?? '');
+    setCountry(contact?.country ?? '');
+    setNotes(contact?.notes ?? '');
   };
+
+  // Kommt ein neuer Stand vom Server (Refresh nach dem Speichern oder einer
+  // Änderung anderswo), übernimmt die geschlossene Maske ihn.
+  useEffect(() => {
+    if (contact && !open) reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contact?.updatedAt]);
 
   useEffect(() => {
     if (state.status === 'success') {
-      const created = state.data as { id: string; name: string } | undefined;
-      if (created) onCreated?.(created);
+      const saved = state.data as { id: string; name: string; updatedAt?: string } | undefined;
+      if (contact) {
+        if (saved?.updatedAt) setSavedVersion(saved.updatedAt);
+        setOpen(false);
+        return;
+      }
+      if (saved) onCreated?.(saved);
       setOpen(false);
       reset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
+
+  const mode = contact ? 'edit' : 'create';
 
   const preview = useMemo(() => {
     return formatPostalAddress({
@@ -103,24 +143,40 @@ export function CreateContactDialog({
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) reset();
+        // Nach einem Speichern steht der gespeicherte Stand schon in der Maske;
+        // zurückgesetzt wird nur, was nicht gespeichert wurde.
+        if (!next && !(contact && state.status === 'success')) reset();
       }}
     >
       {withTrigger ? (
         <DialogTrigger
           render={
-            <Button>
-              <Plus className="size-3.5" aria-hidden />
-              {t('create.trigger')}
-            </Button>
+            contact ? (
+              <Button variant="outline">
+                <Pencil className="size-3.5" aria-hidden />
+                {t('edit.trigger')}
+              </Button>
+            ) : (
+              <Button>
+                <Plus className="size-3.5" aria-hidden />
+                {t('create.trigger')}
+              </Button>
+            )
           }
         />
       ) : null}
       <DialogContent className="w-full sm:max-w-[840px] bg-surface p-0 shadow-md">
         <ActionForm action={action} state={state}>
           <div className="p-6">
-            <DialogTitle className="font-heading text-[19px]">{t('create.title')}</DialogTitle>
-            <DialogDescription className="text-[13px] text-muted-ink">{t('create.description')}</DialogDescription>
+            <DialogTitle className="font-heading text-[19px]">{t(`${mode}.title`)}</DialogTitle>
+            <DialogDescription className="text-[13px] text-muted-ink">{t(`${mode}.description`)}</DialogDescription>
+            {contact ? (
+              <>
+                <input type="hidden" name="id" value={contact.id} />
+                <input type="hidden" name="expectedVersion" value={newer(contact.updatedAt, savedVersion)} />
+                <input type="hidden" name="kind" value={contact.kind} />
+              </>
+            ) : null}
 
             {state.status === 'error' && Object.keys(errors).length === 0 ? (
               <p role="alert" className="mt-3 rounded-md border border-error bg-error-bg p-3 text-[13px] text-error">
@@ -136,7 +192,8 @@ export function CreateContactDialog({
                   </Label>
                   <Select
                     id="kind"
-                    name="kind"
+                    name={contact ? undefined : 'kind'}
+                    disabled={Boolean(contact)}
                     value={kind}
                     onChange={(e) => setKind(e.target.value as 'person' | 'organization')}
                     className="w-auto"
@@ -278,7 +335,7 @@ export function CreateContactDialog({
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
               {c('cancel')}
             </Button>
-            <SubmitButton>{t('create.submit')}</SubmitButton>
+            <SubmitButton>{t(`${mode}.submit`)}</SubmitButton>
           </DialogFooter>
         </ActionForm>
       </DialogContent>

@@ -1,4 +1,4 @@
-import type { DocumentRenderContext, DocumentSlots } from '../modules/manifest';
+import type { DocumentImage, DocumentRenderContext, DocumentSlots } from '../modules/manifest';
 
 /**
  * Die Dokument-Engine, wie der Kern sie sieht. Die Umsetzung (Typst-Aufruf,
@@ -12,6 +12,8 @@ export interface DocumentBase {
   kind: string;
   /** SHA-256 der aufgelösten Basis-`.typ`; wandert in den Dokument-Snapshot. */
   checksum: string;
+  /** Ob die Installation die Basis selbst führt (Volume), statt der mitgelieferten. */
+  own: boolean;
 }
 
 export interface DocumentEngine {
@@ -31,6 +33,8 @@ export interface DocumentEngine {
     bodyTypst: string;
     slots: DocumentSlots;
     context: DocumentRenderContext;
+    /** Aus `DocumentBuildResult.images`; landen als `/images/<key>.<ext>` im Job. */
+    images?: Record<string, DocumentImage>;
   }): Promise<{ bytes: Uint8Array; pages: number | null }>;
 }
 

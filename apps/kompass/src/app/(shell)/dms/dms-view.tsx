@@ -1,4 +1,4 @@
-import { hasPermission, requirePermission, type CallContext, type Deps } from '@kompass/core';
+import { yearIn, hasPermission, todayIn, type CallContext, type Deps } from '@kompass/core';
 import { getProject } from '@kompass/module-projects';
 import { getAnimal } from '@kompass/module-animals';
 import { displayName, getContact } from '@kompass/module-contacts';
@@ -8,7 +8,9 @@ import {
   listDocumentFolders,
   listDocuments,
   listDocumentTypes,
+  requireDmsGate,
 } from '@kompass/module-dms';
+import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { requireSession } from '@/lib/request-context';
 import { DmsWorkspace } from './dms-workspace';
@@ -48,6 +50,8 @@ export interface DmsQuery {
   sender?: string;
   /** Von der Seite eines Bezugs: `<entityType>:<entityId>`. */
   about?: string;
+  /** Nach dem Ablegen in eine geschützte Art: die Nummer, die das Dokument bekam. */
+  filed?: string;
 }
 
 /** Die Spalten, nach denen die Liste sortieren darf — mehr nimmt der Service nicht. */
@@ -61,10 +65,14 @@ const SORTABLE = ['number', 'subject', 'documentDate', 'typeKey', 'folder', 'cre
  */
 export async function DmsView({ query, receive }: { query: DmsQuery; receive?: boolean }) {
   const { deps, ctx } = await requireSession();
-  if (requirePermission(ctx, 'dms.view')) return <ForbiddenCard permission="dms.view" />;
+  if (requireDmsGate(deps, ctx)) return <ForbiddenCard permission="dms.view" />;
 
-  const typesRes = await listDocumentTypes(deps, ctx, { includeInactive: false });
+  const [typesRes, selectableTypesRes] = await Promise.all([
+    listDocumentTypes(deps, ctx, { includeInactive: false }),
+    listDocumentTypes(deps, ctx, { selectable: true }),
+  ]);
   const types = typesRes.ok ? typesRes.value : [];
+  const selectableTypes = selectableTypesRes.ok ? selectableTypesRes.value : [];
   const typesMap = new Map(types.map((type) => [type.key, type.label]));
 
   const foldersRes = await listDocumentFolders(deps, ctx);
@@ -112,6 +120,14 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
   }));
 
   const canCreate = hasPermission(ctx, 'dms.create');
+  const canExport = hasPermission(ctx, 'documents.export');
+  const currentFolder = isInbox ? null : query.folder || null;
+  const currentYear = yearIn(deps);
+
+  // Nach dem Ablegen in eine geschützte Art: die Nummer, sonst nichts. Sie kommt
+  // aus der Adresszeile und wird deshalb nur ausgegeben, wenn sie wie eine aussieht.
+  const t = await getTranslations('dms');
+  const filedNumber = query.filed && /^[A-Z]{3}-\d{4}-\d+$/.test(query.filed) ? query.filed : null;
 
   // Vorbelegungen aus der Adresszeile: Wer von einer Kontakt-, Tier- oder
   // Projektseite kommt, findet den Bezug schon gesetzt.
@@ -125,9 +141,9 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
       : null;
 
   // Eingehende Arten zuerst: Wer Post ablegt, sucht sie oben.
-  const incomingFirst = types
+  const incomingFirst = selectableTypes
     .filter((type) => type.defaultDirection === 'incoming')
-    .concat(types.filter((type) => type.defaultDirection !== 'incoming'))
+    .concat(selectableTypes.filter((type) => type.defaultDirection !== 'incoming'))
     .map((type) => ({ key: type.key, label: type.label }));
 
 
@@ -138,6 +154,9 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
       inboxCount={inboxCount}
       total={total}
       canCreate={canCreate}
+      canExport={canExport}
+      currentFolder={currentFolder}
+      currentYear={currentYear}
       types={incomingFirst}
       canCreateContact={hasPermission(ctx, 'contacts.manage')}
       defaultTypeKey={defaultTypeKey(deps, 'incoming')}
@@ -145,12 +164,17 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
       initialAbout={initialAbout}
       receiveOpen={receive || Boolean(initialSender) || Boolean(initialAbout)}
     >
+      {filedNumber ? (
+        <p data-testid="filed-protected" className="mb-3 rounded-md bg-info-bg px-3.5 py-3 text-[13px] text-ink-2">
+          {t('filedProtected', { number: filedNumber })}
+        </p>
+      ) : null}
       <DocumentList
         documents={rows}
         types={types.map((type) => ({ key: type.key, label: type.label }))}
         folders={folders}
         inboxCount={inboxCount}
-        today={deps.clock.now().toISOString().slice(0, 10)}
+        today={todayIn(deps)}
         canMove={canCreate}
         hits={docsRes.value.hits}
         fulltextTooShort={docsRes.value.fulltextTooShort}

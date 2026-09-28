@@ -1,6 +1,7 @@
 import { CORE_SETTINGS } from '@kompass/core';
 import { describe, expect, it } from 'vitest';
-import { SETTINGS_TABS } from '@/lib/settings-fields';
+import messages from '../messages/de.json';
+import { managedHintKey, SETTINGS_TABS } from '@/lib/settings-fields';
 
 describe('SETTINGS_TABS', () => {
   it('covers every organization, branding and ui setting exactly once', () => {
@@ -19,5 +20,16 @@ describe('SETTINGS_TABS', () => {
       'organization.exemptionNoticeDate',
       'organization.statutoryPurpose',
     ]);
+  });
+  it('names, for every field a module may manage, where it is kept instead — one sentence per tab', () => {
+    const managed = CORE_SETTINGS.filter((s) => s.managedBy).map((s) => s.key);
+    for (const tab of SETTINGS_TABS) {
+      for (const field of tab.fields.filter((f) => managed.includes(f.key))) {
+        const key = managedHintKey(field.key);
+        expect(key, field.key).toBe(`managedHint.${tab.key}`);
+        expect((messages.settings.managedHint as Record<string, string>)[tab.key], field.key).toBeTruthy();
+      }
+    }
+    expect(managedHintKey('organization.name')).toBeNull();
   });
 });

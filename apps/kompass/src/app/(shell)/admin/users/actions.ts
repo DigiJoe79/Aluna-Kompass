@@ -1,61 +1,94 @@
 'use server';
 
+import { guardAction } from '@/lib/action-guard';
 import { assignRole, createUser, removeRole, resetStartPassword, setUserActive, updateUser } from '@kompass/core';
+import { linkUserToContact, unlinkUser } from '@kompass/module-contacts';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { toActionState, type ActionState } from '@/lib/actions';
 import { requireSession } from '@/lib/request-context';
 
 export async function createUserAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await createUser(deps, ctx, {
-    name: formData.get('name'),
-    email: formData.get('email'),
-    roleIds: formData.getAll('roleIds').map(String),
+  return guardAction('(shell)/admin/users/actions.ts#createUserAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await createUser(deps, ctx, {
+      name: formData.get('name'),
+      email: formData.get('email'),
+      roleIds: formData.getAll('roleIds').map(String),
+    });
+    revalidatePath('/admin/users');
+    return toActionState(result, t);
   });
-  revalidatePath('/admin/users');
-  return toActionState(result, t);
 }
 
 export async function setUserActiveAction(id: string, isActive: boolean): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await setUserActive(deps, ctx, { id, isActive });
-  revalidatePath('/admin/users');
-  return toActionState(result, t, t(isActive ? 'users.toast.activated' : 'users.toast.deactivated'));
+  return guardAction('(shell)/admin/users/actions.ts#setUserActiveAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await setUserActive(deps, ctx, { id, isActive });
+    revalidatePath('/admin/users');
+    return toActionState(result, t, t(isActive ? 'users.toast.activated' : 'users.toast.deactivated'));
+  });
 }
 
 export async function resetStartPasswordAction(id: string): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await resetStartPassword(deps, ctx, { id });
-  revalidatePath('/admin/users');
-  return toActionState(result, t);
+  return guardAction('(shell)/admin/users/actions.ts#resetStartPasswordAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await resetStartPassword(deps, ctx, { id });
+    revalidatePath('/admin/users');
+    return toActionState(result, t);
+  });
 }
 
 export async function updateUserAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await updateUser(deps, ctx, { id: formData.get('id'), name: formData.get('name'), email: formData.get('email') });
-  revalidatePath('/admin/users');
-  return toActionState(result, t, t('users.toast.saved'));
+  return guardAction('(shell)/admin/users/actions.ts#updateUserAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await updateUser(deps, ctx, { id: formData.get('id'), name: formData.get('name'), email: formData.get('email') });
+    revalidatePath('/admin/users');
+    return toActionState(result, t, t('users.toast.saved'));
+  });
 }
 
 /** Nur Differenzen schreiben: assignRole für neue, removeRole für entfernte Rollen — kein Protokoll-Rauschen. */
 export async function setUserRolesAction(userId: string, roleIds: string[], previousRoleIds: string[]): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const add = roleIds.filter((id) => !previousRoleIds.includes(id));
-  const remove = previousRoleIds.filter((id) => !roleIds.includes(id));
-  for (const roleId of add) {
-    const r = await assignRole(deps, ctx, { userId, roleId });
-    if (!r.ok) { revalidatePath('/admin/users'); return toActionState(r, t); }
-  }
-  for (const roleId of remove) {
-    const r = await removeRole(deps, ctx, { userId, roleId });
-    if (!r.ok) { revalidatePath('/admin/users'); return toActionState(r, t); }
-  }
-  revalidatePath('/admin/users');
-  return { status: 'success', message: t('users.toast.rolesSaved') };
+  return guardAction('(shell)/admin/users/actions.ts#setUserRolesAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const add = roleIds.filter((id) => !previousRoleIds.includes(id));
+    const remove = previousRoleIds.filter((id) => !roleIds.includes(id));
+    for (const roleId of add) {
+      const r = await assignRole(deps, ctx, { userId, roleId });
+      if (!r.ok) { revalidatePath('/admin/users'); return toActionState(r, t); }
+    }
+    for (const roleId of remove) {
+      const r = await removeRole(deps, ctx, { userId, roleId });
+      if (!r.ok) { revalidatePath('/admin/users'); return toActionState(r, t); }
+    }
+    revalidatePath('/admin/users');
+    return { status: 'success', message: t('users.toast.rolesSaved') };
+  });
+}
+
+/** Verknüpft ein Konto mit dem gewählten Kontakt — der Dienst prüft Recht, Regeln und die eigene Verknüpfung. */
+export async function linkUserAction(userId: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
+  return guardAction('(shell)/admin/users/actions.ts#linkUserAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await linkUserToContact(deps, ctx, { userId, contactId: String(formData.get('contactId') ?? '') });
+    revalidatePath('/admin/users');
+    return toActionState(result, t, t('users.contactLink.saved'));
+  });
+}
+
+export async function unlinkUserAction(userId: string): Promise<ActionState> {
+  return guardAction('(shell)/admin/users/actions.ts#unlinkUserAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await unlinkUser(deps, ctx, { userId });
+    revalidatePath('/admin/users');
+    return toActionState(result, t, t('users.contactLink.ended'));
+  });
 }

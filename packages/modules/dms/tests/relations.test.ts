@@ -21,14 +21,24 @@ describe('Dokumentbezüge', () => {
     expect(related.ok).toBe(true);
     expect(auditActions(deps)).toContain('dms.relate');
 
-    expect(relationsFor(deps.db, answer.id)).toEqual([
+    expect(relationsFor(deps, ctx, deps.db, answer.id)).toEqual([
       expect.objectContaining({ kind: 'repliesTo', direction: 'out', otherId: letter.id, otherNumber: letter.number, otherSubject: 'Fixture', otherPhase: 'issued' }),
     ]);
-    expect(relationsFor(deps.db, letter.id)).toEqual([
+    expect(relationsFor(deps, ctx, deps.db, letter.id)).toEqual([
       expect.objectContaining({ kind: 'repliesTo', direction: 'in', otherId: answer.id, otherSubject: 'Bescheid' }),
     ]);
     const record = await getDocumentRecord(deps, ctx, letter.id);
     expect(record.ok && record.value.relations).toHaveLength(1);
+  });
+
+  it('nennt die Bezüge in der Reihenfolge, in der sie entstanden — nicht nach der ID des anderen Dokuments (Teil C Task 2d)', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const answer = await incoming(deps, ctx, 'Antwort');
+    const older = await incoming(deps, ctx, 'Älteres');
+    const newer = await incoming(deps, ctx, 'Neueres');
+    await relateDocuments(deps, ctx, { documentId: answer.id, relatedDocumentId: newer.id, kind: 'repliesTo' });
+    await relateDocuments(deps, ctx, { documentId: answer.id, relatedDocumentId: older.id, kind: 'attachmentOf' });
+    expect(relationsFor(deps, ctx, deps.db, answer.id).map((r) => r.kind)).toEqual(['repliesTo', 'attachmentOf']);
   });
 
   it('kein Bezug auf sich selbst, kein Doppel, kein unbekanntes Ende', async () => {
@@ -51,9 +61,9 @@ describe('Dokumentbezüge', () => {
     if (!draft.ok) throw new Error('draft');
     const rel = await relateDocuments(deps, ctx, { documentId: draft.value.id, relatedDocumentId: inbound.id, kind: 'repliesTo' });
     expect(rel.ok).toBe(true);
-    expect(relationsFor(deps.db, inbound.id)).toHaveLength(1);
+    expect(relationsFor(deps, ctx, deps.db, inbound.id)).toHaveLength(1);
     await deleteDraft(deps, ctx, { id: draft.value.id });
-    expect(relationsFor(deps.db, inbound.id)).toHaveLength(0);
+    expect(relationsFor(deps, ctx, deps.db, inbound.id)).toHaveLength(0);
   });
 
   it('löst einen Bezug wieder, mit Protokoll, und braucht das Recht', async () => {

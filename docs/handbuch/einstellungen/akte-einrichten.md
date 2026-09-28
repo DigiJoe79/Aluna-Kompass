@@ -10,8 +10,17 @@ Briefe. Was hier steht, erscheint beim Ablegen als Vorschlag.
 Jede Art hat einen Namen, ein Präfix für die Nummer (`BRF` für Brief, `BEH`
 für Behördenschreiben, `RCH` für Rechnung), eine übliche Richtung und eine
 Fristklasse aus der [Aufbewahrung](aufbewahrung.md). Kompass bringt fünf
-mit: Brief, Behördenschreiben, Vertrag, Rechnung, Protokoll. Eine Art wird
-nicht gelöscht, sondern deaktiviert — ihre Nummern bleiben vergeben.
+mit: Brief, Behördenschreiben, Vertrag, Rechnung, Protokoll. Eine Art mit
+Dokumenten wird nicht gelöscht, sondern deaktiviert — ihre Nummern bleiben
+vergeben. Eine selbst angelegte Art ganz ohne Dokument lässt sich dagegen
+**löschen** — der Knopf steht nur dabei, wo es wirklich geht: nicht bei
+einer Art, die einem Modul gehört, die ein Modul als Vorschlag mitbringt
+(auch wenn Sie ihn übersprungen haben, weil Schlüssel oder Präfix schon
+vergeben waren), oder die als Vorgabeart je Richtung eingetragen ist.
+
+Jedes Präfix gibt es nur einmal. Ändern lässt es sich, solange die Art noch kein Dokument hat — danach steht es in den Nummern und bleibt. Braucht ein Modul ein Präfix, das eine Ihrer Arten trägt, meldet die Startseite das unter „Einrichtung“; geben Sie dann der eigenen, noch unbenutzten Art ein anderes Präfix.
+
+Eine Art kann außerdem einen **Schutzbereich** tragen, sobald ein Modul einen anbietet — ihre Dokumente sehen dann nur Personen mit dem Recht dieses Bereichs. Was das bedeutet und wer es ändern darf, steht unter [Schutzbereiche](schutzbereiche.md).
 
 ## Ordner
 

@@ -9,7 +9,141 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 1.0.0 kann jede Minor-Fassung Brüche enthalten — was bricht, steht unter
 **Geändert** mit dem, was zu tun ist.
 
-## [Unveröffentlicht]
+## [0.2.0] - 2026-09-28
+
+Kompass führt jetzt die Finanzen des Vereins: vom Kontoauszug über Belege und
+Buchungen bis zur Zuwendungsbestätigung nach amtlichem Muster, mit Auslagen,
+Freigaben durch eine zweite Person, Zahlungen an Partner, Zwecken und
+Rücklagen. Finanzen ist ein eigenes Modul und nach dem Update aus. Der
+Jahresabschluss — Einnahmen-Überschuss-Rechnung, Vermögensübersicht,
+Kassenbericht, Prüfpaket — kommt mit 0.3.0. Diese Fassung bringt eine
+Datenbank-Migration mit, die beim Start von selbst läuft — vor dem Update wie
+immer ein Backup exportieren.
+
+### Neu
+
+**Finanzen**
+
+- **Konten und Buchungen.** Bankkonten und Kassen mit Anfangsbestand;
+  Einnahmen, Ausgaben, Umbuchungen und Sachspenden, aufteilbar auf Kategorien,
+  Zwecke und Projekte, mit Belegen. Eine festgeschriebene Buchung wird nur noch
+  storniert, nie geändert. Das Journal zeigt je Konto ein Kontoblatt mit
+  laufendem Saldo, jedes Projekt seinen Finanzabschnitt.
+- **Kontoauszüge laden.** CAMT.053 oder, nach einmaliger Einrichtung, CSV
+  der eigenen Bank; ein schon geladener Auszug wird erkannt. Die Arbeitsliste
+  macht aus jedem Umsatz eine Buchung, schlägt vor, wie sie zu buchen ist, und
+  nennt den Grund. Regeln machen aus einer Zuordnung eine dauerhafte.
+- **Belege und Rechnungen.** Ein PDF lässt sich auf einen Umsatz ziehen oder
+  in der Akte suchen; „Belege ohne Buchung“ sammelt, was fehlt. Eine
+  eingebettete ZUGFeRD- oder Factur-X-Rechnung liefert Lieferant, Betrag,
+  Fälligkeit und IBAN; daraus wird eine offene Zahlung mit QR-Code für die
+  Banking-App.
+- **Barkasse** mit Zählung zu zweit und Zählprotokoll in der Akte.
+- **Spenden und Zuwendungsbestätigungen.** Die Bescheide des Finanzamts mit
+  taggenauer Gültigkeit; Bestätigungen nach amtlichem Muster für Geld-,
+  Mitgliedsbeitrags- und Sachzuwendungen, einzeln oder im Serienlauf mit
+  Sammelbestätigung; das Spendenbuch stimmt Spenden und Bestätigungen
+  gegeneinander ab. Ausstellen und Zurücknehmen bleibt einem Menschen
+  vorbehalten.
+- **Auslagen und Freigaben.** Jede Person reicht ihre Auslage ein, auch vom
+  Telefon, mit Belegfoto oder Kilometern; eine zweite Person gibt frei. Wer
+  auf die Erstattung verzichtet (Aufwandsspende), braucht eine vorher
+  vereinbarte Grundlage; die Freigabe prüft sie und erzeugt die
+  Verzichtserklärung. Aufwandsspenden sind in der Vorgabe ausgeschaltet.
+- **Zahlungen an Partner.** Förderung oder Auftrag an eine gemeinnützige
+  Organisation, eine öffentliche Stelle, eine Organisation im Ausland oder
+  eine Person im Auftrag des Vereins. Kompass verlangt je Art die passenden
+  Nachweise, Sachwerte immer mit Empfangsbestätigung; die Frist läuft in
+  Monaten ab der Zahlung. Freigabe und Anerkennung liegen bei einer zweiten
+  Person.
+- **Zwecke und Rücklagen.** Jeder Zweck mit Vortrag, Zugängen, Verwendung und
+  Bestand; „Zweck ändern“ mit Beschluss und Freigabe. Geht ein Zweck ins
+  Minus oder die freie Rücklage über ihren Höchstbetrag, fragt Kompass nach
+  einer Begründung.
+- **Personen.** Ehrenamts- und Übungsleiterpauschalen je Person und
+  Kalenderjahr gegen die Grenze, mit Warnung beim Überschreiten; Zahlungen an
+  Vorstand und Nahestehende je Geschäftsjahr gesondert.
+- **Einrichtung.** Eine Checkliste führt durch Geschäftsjahr, erstes Konto,
+  Finanzrollen, Kategorien und Steuerliches. Beim ersten Einschalten entstehen
+  fünf Rollen ohne Mitglieder: Schatzmeister, Freigeber Finanzen, Auslagen
+  einreichen, Kassenprüfer, Finanz-Agent.
+- **Startseite.** „Finanzen: zu tun“ und Kacheln zu Konten im Minus,
+  Bestätigungen zum Korrigieren, Zahlungen an Partner ohne Nachweis und
+  Zwecken im Minus.
+- **MCP.** Werkzeuge für alle Bereiche der Finanzen. Ein Agent bereitet vor;
+  Festschreiben, Freigeben und Ausstellen bleiben Menschen vorbehalten, solange
+  der Verein es nicht ausdrücklich erlaubt.
+
+**Kern und übrige Module**
+
+- **Nutzer und Kontakte verknüpfen** (Verwaltung → Nutzer). Die eigene
+  Verknüpfung setzt man einmal selbst, ändern kann sie danach nur eine zweite
+  Person.
+- **Kontakte lassen sich in der Oberfläche bearbeiten**, nicht mehr nur über
+  MCP.
+- **Schutzbereiche für Dokumentarten.** Dokumente einer geschützten Art sehen
+  nur Personen mit dem passenden Recht — in Liste, Suche, Datei, Startseite
+  und MCP.
+- **Akte als ZIP.** Ein Ordner oder Jahrgang lässt sich mit Inhaltsverzeichnis
+  und Prüfsummen herunterladen.
+- **Dokumentarten ändern und löschen.** Präfixe sind eindeutig und lassen sich
+  ändern, eine Art ohne Dokument lässt sich löschen.
+- **Fehlende eigene Basis-Vorlage wird gemeldet**, wenn ein Modul eine nutzt,
+  die die Installation nicht selbst führt.
+- **Zeitzone des Vereins** in den Vereinsdaten (Vorgabe Europe/Berlin).
+- **Tiere** haben ein Freitextfeld „Ort“.
+
+### Geändert
+
+- **Eine Datenbank-Migration für 0.2.0.** Sie läuft beim Start; schlägt sie
+  fehl, startet Kompass nicht auf halb migrierten Daten. Vorher ein Backup
+  exportieren (Verwaltung → Backup).
+- **Finanzen ist nach dem Update aus** und wird unter Einrichtung → Module
+  bewusst eingeschaltet. Die übrigen Module und Daten bleiben unberührt.
+- **Präfixe der Dokumentarten vor dem Einschalten prüfen.** Finanzen bringt
+  eigene Arten mit den Präfixen `KZP`, `ZWB`, `ZWU`, `VZE`, `VZU` und `PNW`.
+  Trägt eine Art des Vereins eines davon, auch eine stillgelegte, scheitert
+  das Einschalten; die Oberfläche zeigt dann nur „Technischer Fehler“, die
+  Ursache steht im Serverprotokoll, gespeichert wird nichts. Geben Sie dieser
+  Art vorher ein anderes Präfix oder löschen Sie sie. Die vorhandenen Arten
+  für Kontoauszüge (`KTO`) und Protokolle (`PRT`) übernimmt Finanzen.
+- **Eigene Dokument-Basen:** Wer eigene Basis-Vorlagen führt, legt auch
+  `a4-formular` an (Zuwendungsbestätigung, Verzichtserklärung) — sonst tragen
+  diese den mitgelieferten Kopf.
+- **Stammdaten, die jetzt die Finanzen führen** — Finanzamt, Steuernummer,
+  Bescheid, IBAN, BIC und Bank des Hauptkontos — stehen in den allgemeinen
+  Stammdaten bei eingeschalteten Finanzen nur noch lesbar, mit Verweis auf
+  ihren neuen Ort.
+- **Das Änderungsprotokoll zeigt Namen statt Kennungen** bei Tieren,
+  Projekten, Kontakten und Dokumenten; Gelöschtes erscheint als gelöscht.
+
+### Behoben
+
+- **Das Änderungsprotokoll speicherte bei Kontakten Namen und Anschriften.**
+  Neue Einträge nennen nur die geänderten Felder; den Namen zeigt die Ansicht
+  live aus dem Kontakt. Ältere Einträge bleiben, wie sie sind.
+- **„Heute“ galt in UTC.** Zwischen Mitternacht und ein bzw. zwei Uhr lag der
+  heutige Tag in der Zukunft, Fristen liefen eine Stunde versetzt, und am
+  1. Januar konnte ein Dokument die Nummer des Vorjahrs bekommen. Tag und
+  Nummernjahr gelten jetzt in der Zeitzone des Vereins.
+- **Ausgeschaltete Module waren über eine direkte Adresse erreichbar** — Akte,
+  Kontakte und Projekte samt Dateien und Export. Jetzt steht dort ein Hinweis.
+- **Die Bezüge eines Dokuments** stehen in der Reihenfolge, in der sie
+  angelegt wurden.
+- **Fehlendes Schreibrecht fiel erst beim ersten Upload auf**, mit einer
+  stillen Meldung. Kompass legt die Ablagen der Module beim Start an und
+  meldet den Pfad sofort.
+- **Regelverstöße der Datenbank** brachen die Oberfläche ab und kamen über MCP
+  als roher Text an. Jetzt steht dort ein verständlicher Satz.
+- **Prüfmeldungen** kamen über MCP auf Englisch und in der Oberfläche oft nur
+  als „Ungültiger Wert.“; jetzt nennen beide dieselbe deutsche Meldung.
+- **Das MCP-Werkzeug zum Anlegen von Kontakten** bot Agenten nur Personen an,
+  jetzt auch Organisationen.
+- **Der Verbindungstest vor dem Publizieren** zeigte jede Datei am Ziel als
+  „würde entfernt“. Jetzt trennt er, was am Ziel liegt und was ein Publish
+  ändern würde.
+- **„Vorschau öffnen“** unter Webseite → Publizieren öffnet einen eigenen Tab;
+  Prüfergebnis und Vorschau gehen beim Zurückgehen nicht mehr verloren.
 
 ## [0.1.1] - 2026-09-19
 

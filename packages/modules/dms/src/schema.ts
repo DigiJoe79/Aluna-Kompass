@@ -10,10 +10,14 @@ export const documentTypes = sqliteTable('document_types', {
   label: text('label').notNull(),
   prefix: text('prefix').notNull(), // drei Großbuchstaben
   defaultDirection: text('default_direction', { enum: ['outgoing', 'incoming'] }).notNull(),
-  retentionClass: text('retention_class', { enum: ['permanent', 'statutory10Y', 'statutory6Y', 'consent'] }).notNull(),
+  retentionClass: text('retention_class', { enum: ['permanent', 'statutory10Y', 'statutory8Y', 'statutory6Y', 'consent'] }).notNull(),
   defaultFolder: text('default_folder'),
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
   sortOrder: integer('sort_order').notNull().default(0),
+  /** Gehört die Art einem Modul, erzeugt und storniert nur dieses Modul ihre Dokumente (Vorarbeiten-Spec V3). */
+  ownerModule: text('owner_module'),
+  /** Schlüssel eines Schutzbereichs, den ein Modul anmeldet; durchgesetzt ab VP3a. */
+  protectionArea: text('protection_area'),
 });
 
 /** Ordnungsbaum der Sachakte. Pfadtabelle wie `media_folders`. */

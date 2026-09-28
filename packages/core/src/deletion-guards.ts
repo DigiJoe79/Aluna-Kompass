@@ -3,9 +3,11 @@ import { followUps } from './db/schema';
 import type { Deps } from './deps';
 import { describeMediaUsage, type MediaUsage } from './media/service';
 import type { RecordReference, RetentionHold } from './modules/manifest';
-import { enabledManifests } from './modules/service';
+import { withResolvedLabel } from './modules/record-hooks';
+import { CORE_MODULE_KEY, enabledManifests } from './modules/service';
 import { conflict, type Failure } from './result';
 import { holdsFor } from './retention/service';
+import { todayIn } from './today';
 
 /**
  * Die Verweise des Kerns selbst: offene Wiedervorlagen. `createFollowUp` prüft
@@ -27,7 +29,17 @@ export function coreRecordReferences(deps: Deps, entityType: string, id: string)
  * `holdsFor`): Ein defekter Haken darf nie als „zeigt nichts“ gelesen werden.
  */
 export function findRecordReferences(deps: Deps, entityType: string, id: string): RecordReference[] {
-  return enabledManifests(deps).flatMap((m) => [...(m.recordReferences?.(deps, entityType, id) ?? [])]);
+  return enabledManifests(deps).flatMap((m) => [...(m.recordReferences?.(deps, entityType, id) ?? [])].map((r) => withResolvedLabel(deps, r)));
+}
+
+/**
+ * Wie `findRecordReferences`, ohne die Verweise des Kerns. Für Datensätze, die
+ * ihre Wiedervorlagen beim Löschen selbst mitnehmen (die Akte): Dort hindert
+ * eine offene Wiedervorlage nicht (Akte-fertig-Spec § 4.2), ein Verweis eines
+ * Moduls — eine Buchung auf ihren Beleg — aber schon.
+ */
+export function findModuleRecordReferences(deps: Deps, entityType: string, id: string): RecordReference[] {
+  return enabledManifests(deps).filter((m) => m.key !== CORE_MODULE_KEY).flatMap((m) => [...(m.recordReferences?.(deps, entityType, id) ?? [])].map((r) => withResolvedLabel(deps, r)));
 }
 
 /**
@@ -37,7 +49,7 @@ export function findRecordReferences(deps: Deps, entityType: string, id: string)
  * personenbezogener Datensatz, der eine nachgewiesene Frist braucht.
  */
 export function blockingHolds(deps: Deps, entityType: string, id: string): RetentionHold[] {
-  const today = deps.clock.now().toISOString().slice(0, 10);
+  const today = todayIn(deps);
   return holdsFor(deps, entityType, id).filter((h) => h.until === null || h.until >= today);
 }
 

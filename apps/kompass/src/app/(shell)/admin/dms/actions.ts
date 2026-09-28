@@ -1,5 +1,6 @@
 'use server';
 
+import { guardAction } from '@/lib/action-guard';
 import { setSetting } from '@kompass/core';
 import {
   createDocumentFolder,
@@ -10,6 +11,7 @@ import {
   createDocumentType,
   deleteDocumentFolder,
   deleteDocumentRule,
+  deleteDocumentType,
   reindexAllDocuments,
   updateDocumentRule,
   updateDocumentType,
@@ -19,6 +21,7 @@ import { revalidatePath } from 'next/cache';
 import { toActionState, type ActionState } from '@/lib/actions';
 import { textWorker } from '@/lib/background';
 import { requireSession } from '@/lib/request-context';
+import { readProtectionArea } from './protection-area';
 
 const orNull = (value: FormDataEntryValue | null): string | null => {
   const text = String(value ?? '').trim();
@@ -26,229 +29,277 @@ const orNull = (value: FormDataEntryValue | null): string | null => {
 };
 
 export async function createDocumentTypeAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
+  return guardAction('(shell)/admin/dms/actions.ts#createDocumentTypeAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
 
-  const key = String(formData.get('key') ?? '').trim();
-  const label = String(formData.get('label') ?? '').trim();
-  const prefix = String(formData.get('prefix') ?? '').trim().toUpperCase();
-  const defaultDirection = String(formData.get('defaultDirection') ?? 'incoming') as 'incoming' | 'outgoing';
-  const retentionClass = String(formData.get('retentionClass') ?? 'statutory10Y') as any;
-  const defaultFolder = orNull(formData.get('defaultFolder'));
-  const sortOrder = Number(formData.get('sortOrder') ?? 0);
+    const key = String(formData.get('key') ?? '').trim();
+    const label = String(formData.get('label') ?? '').trim();
+    const prefix = String(formData.get('prefix') ?? '').trim().toUpperCase();
+    const defaultDirection = String(formData.get('defaultDirection') ?? 'incoming') as 'incoming' | 'outgoing';
+    const retentionClass = String(formData.get('retentionClass') ?? 'statutory10Y') as any;
+    const defaultFolder = orNull(formData.get('defaultFolder'));
+    const sortOrder = Number(formData.get('sortOrder') ?? 0);
+    const protectionArea = readProtectionArea(formData);
 
-  const result = await createDocumentType(deps, ctx, {
-    key,
-    label,
-    prefix,
-    defaultDirection,
-    retentionClass,
-    defaultFolder,
-    sortOrder,
+    const result = await createDocumentType(deps, ctx, {
+      key,
+      label,
+      prefix,
+      defaultDirection,
+      retentionClass,
+      defaultFolder,
+      sortOrder,
+      ...(protectionArea !== undefined ? { protectionArea } : {}),
+    });
+
+    revalidatePath('/admin/dms');
+    return toActionState(result, t, t('dms.admin.toast.typeCreated'));
   });
-
-  revalidatePath('/admin/dms');
-  return toActionState(result, t, t('dms.admin.toast.typeCreated'));
 }
 
 export async function updateDocumentTypeAction(key: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
+  return guardAction('(shell)/admin/dms/actions.ts#updateDocumentTypeAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
 
-  const label = String(formData.get('label') ?? '').trim();
-  const defaultDirection = String(formData.get('defaultDirection') ?? 'incoming') as 'incoming' | 'outgoing';
-  const retentionClass = String(formData.get('retentionClass') ?? 'statutory10Y') as any;
-  const defaultFolder = orNull(formData.get('defaultFolder'));
-  const isActive = formData.get('isActive') === 'on' || formData.get('isActive') === 'true';
-  const sortOrder = Number(formData.get('sortOrder') ?? 0);
+    const label = String(formData.get('label') ?? '').trim();
+    const prefixRaw = formData.get('prefix');
+    const prefix = prefixRaw !== null && prefixRaw !== undefined ? String(prefixRaw).trim().toUpperCase() : undefined;
+    const defaultDirectionRaw = formData.get('defaultDirection');
+    const defaultDirection = defaultDirectionRaw ? (String(defaultDirectionRaw) as 'incoming' | 'outgoing') : undefined;
+    const retentionClassRaw = formData.get('retentionClass');
+    const retentionClass = retentionClassRaw ? (String(retentionClassRaw) as any) : undefined;
+    const defaultFolder = orNull(formData.get('defaultFolder'));
+    const isActiveRaw = formData.get('isActive');
+    const isActive = isActiveRaw !== null ? (isActiveRaw === 'on' || isActiveRaw === 'true') : undefined;
+    const sortOrder = formData.get('sortOrder') !== null ? Number(formData.get('sortOrder')) : undefined;
+    const protectionArea = readProtectionArea(formData);
 
-  const result = await updateDocumentType(deps, ctx, {
-    key,
-    label,
-    defaultDirection,
-    retentionClass,
-    defaultFolder,
-    isActive,
-    sortOrder,
+    const result = await updateDocumentType(deps, ctx, {
+      key,
+      label,
+      ...(prefix !== undefined ? { prefix } : {}),
+      ...(defaultDirection !== undefined ? { defaultDirection } : {}),
+      ...(retentionClass !== undefined ? { retentionClass } : {}),
+      defaultFolder,
+      ...(isActive !== undefined ? { isActive } : {}),
+      ...(sortOrder !== undefined ? { sortOrder } : {}),
+      ...(protectionArea !== undefined ? { protectionArea } : {}),
+    });
+
+    revalidatePath('/admin/dms');
+    return toActionState(result, t, t('dms.admin.toast.typeUpdated'));
   });
+}
 
-  revalidatePath('/admin/dms');
-  return toActionState(result, t, t('dms.admin.toast.typeUpdated'));
+export async function deleteDocumentTypeAction(key: string): Promise<ActionState> {
+  return guardAction('(shell)/admin/dms/actions.ts#deleteDocumentTypeAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+
+    const result = await deleteDocumentType(deps, ctx, { key });
+
+    revalidatePath('/admin/dms');
+    return toActionState(result, t, t('dms.admin.toast.typeDeleted'));
+  });
 }
 
 export async function createDocumentFolderAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
+  return guardAction('(shell)/admin/dms/actions.ts#createDocumentFolderAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
 
-  const path = String(formData.get('path') ?? '').trim();
-  const result = await createDocumentFolder(deps, ctx, { path });
+    const path = String(formData.get('path') ?? '').trim();
+    const result = await createDocumentFolder(deps, ctx, { path });
 
-  revalidatePath('/admin/dms');
-  return toActionState(result, t, t('dms.admin.toast.folderCreated'));
+    revalidatePath('/admin/dms');
+    return toActionState(result, t, t('dms.admin.toast.folderCreated'));
+  });
 }
 
 export async function deleteDocumentFolderAction(path: string): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
+  return guardAction('(shell)/admin/dms/actions.ts#deleteDocumentFolderAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
 
-  const result = await deleteDocumentFolder(deps, ctx, { path });
+    const result = await deleteDocumentFolder(deps, ctx, { path });
 
-  revalidatePath('/admin/dms');
-  return toActionState(result, t, t('dms.admin.toast.folderDeleted'));
+    revalidatePath('/admin/dms');
+    return toActionState(result, t, t('dms.admin.toast.folderDeleted'));
+  });
 }
 
 export async function createDocumentRuleAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
+  return guardAction('(shell)/admin/dms/actions.ts#createDocumentRuleAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
 
-  const matchField = String(formData.get('matchField') ?? 'filename') as 'filename' | 'senderName';
-  const matchContains = String(formData.get('matchContains') ?? '').trim();
-  const thenTypeKey = orNull(formData.get('thenTypeKey'));
-  const thenFolder = orNull(formData.get('thenFolder'));
-  const sortOrder = Number(formData.get('sortOrder') ?? 0);
+    const matchField = String(formData.get('matchField') ?? 'filename') as 'filename' | 'senderName';
+    const matchContains = String(formData.get('matchContains') ?? '').trim();
+    const thenTypeKey = orNull(formData.get('thenTypeKey'));
+    const thenFolder = orNull(formData.get('thenFolder'));
+    const sortOrder = Number(formData.get('sortOrder') ?? 0);
 
-  const result = await createDocumentRule(deps, ctx, {
-    matchField,
-    matchContains,
-    thenTypeKey,
-    thenFolder,
-    sortOrder,
+    const result = await createDocumentRule(deps, ctx, {
+      matchField,
+      matchContains,
+      thenTypeKey,
+      thenFolder,
+      sortOrder,
+    });
+
+    revalidatePath('/admin/dms');
+    return toActionState(result, t, t('dms.admin.toast.ruleCreated'));
   });
-
-  revalidatePath('/admin/dms');
-  return toActionState(result, t, t('dms.admin.toast.ruleCreated'));
 }
 
 export async function updateDocumentRuleAction(id: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
+  return guardAction('(shell)/admin/dms/actions.ts#updateDocumentRuleAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
 
-  const matchField = String(formData.get('matchField') ?? 'filename') as 'filename' | 'senderName';
-  const matchContains = String(formData.get('matchContains') ?? '').trim();
-  const thenTypeKey = orNull(formData.get('thenTypeKey'));
-  const thenFolder = orNull(formData.get('thenFolder'));
-  const isActive = formData.get('isActive') === 'on' || formData.get('isActive') === 'true';
-  const sortOrder = Number(formData.get('sortOrder') ?? 0);
+    const matchField = String(formData.get('matchField') ?? 'filename') as 'filename' | 'senderName';
+    const matchContains = String(formData.get('matchContains') ?? '').trim();
+    const thenTypeKey = orNull(formData.get('thenTypeKey'));
+    const thenFolder = orNull(formData.get('thenFolder'));
+    const isActive = formData.get('isActive') === 'on' || formData.get('isActive') === 'true';
+    const sortOrder = Number(formData.get('sortOrder') ?? 0);
 
-  const result = await updateDocumentRule(deps, ctx, {
-    id,
-    matchField,
-    matchContains,
-    thenTypeKey,
-    thenFolder,
-    isActive,
-    sortOrder,
+    const result = await updateDocumentRule(deps, ctx, {
+      id,
+      matchField,
+      matchContains,
+      thenTypeKey,
+      thenFolder,
+      isActive,
+      sortOrder,
+    });
+
+    revalidatePath('/admin/dms');
+    return toActionState(result, t, t('dms.admin.toast.ruleUpdated'));
   });
-
-  revalidatePath('/admin/dms');
-  return toActionState(result, t, t('dms.admin.toast.ruleUpdated'));
 }
 
 export async function deleteDocumentRuleAction(id: string): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
+  return guardAction('(shell)/admin/dms/actions.ts#deleteDocumentRuleAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
 
-  const result = await deleteDocumentRule(deps, ctx, { id });
+    const result = await deleteDocumentRule(deps, ctx, { id });
 
-  revalidatePath('/admin/dms');
-  return toActionState(result, t, t('dms.admin.toast.ruleDeleted'));
+    revalidatePath('/admin/dms');
+    return toActionState(result, t, t('dms.admin.toast.ruleDeleted'));
+  });
 }
 
 export async function reindexAllDocumentsAction(): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
+  return guardAction('(shell)/admin/dms/actions.ts#reindexAllDocumentsAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
 
-  const result = await reindexAllDocuments(deps, ctx);
-  if (!result.ok) {
-    return toActionState(result, t);
-  }
+    const result = await reindexAllDocuments(deps, ctx);
+    if (!result.ok) {
+      return toActionState(result, t);
+    }
 
-  textWorker()?.wake();
+    textWorker()?.wake();
 
-  revalidatePath('/admin/dms');
-  revalidatePath('/dms');
-  return toActionState(result, t, t('dms.admin.textPanel.queued', { count: result.value.queued }));
+    revalidatePath('/admin/dms');
+    revalidatePath('/dms');
+    return toActionState(result, t, t('dms.admin.textPanel.queued', { count: result.value.queued }));
+  });
 }
 
 export async function updateOcrLanguagesAction(languages: string): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
+  return guardAction('(shell)/admin/dms/actions.ts#updateOcrLanguagesAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
 
-  const probe = await deps.textExtraction.probe();
-  if (!probe.ok) {
-    return {
-      status: 'error',
-      message: t('dms.text.unavailableHint'),
-      fieldErrors: {},
-    };
-  }
-
-  const list = languages.split('+').map((s) => s.trim()).filter(Boolean);
-  if (list.length === 0) {
-    return {
-      status: 'error',
-      message: t('errors.fields.required'),
-      fieldErrors: { languages: t('errors.fields.required') },
-    };
-  }
-
-  for (const lang of list) {
-    if (!probe.languages.includes(lang)) {
-      const missing = t('dms.admin.textPanel.languageMissing', { lang });
-      return { status: 'error', message: missing, fieldErrors: { languages: missing } };
+    const probe = await deps.textExtraction.probe();
+    if (!probe.ok) {
+      return {
+        status: 'error',
+        message: t('dms.text.unavailableHint'),
+        fieldErrors: {},
+      };
     }
-  }
 
-  const result = await setSetting(deps, ctx, { key: 'dms.ocrLanguages', value: list.join('+') });
-  if (!result.ok) {
-    return toActionState(result, t);
-  }
+    const list = languages.split('+').map((s) => s.trim()).filter(Boolean);
+    if (list.length === 0) {
+      return {
+        status: 'error',
+        message: t('errors.fields.required'),
+        fieldErrors: { languages: t('errors.fields.required') },
+      };
+    }
 
-  revalidatePath('/admin/dms');
-  return toActionState(result, t, t('dms.admin.toast.languagesSaved'));
+    for (const lang of list) {
+      if (!probe.languages.includes(lang)) {
+        const missing = t('dms.admin.textPanel.languageMissing', { lang });
+        return { status: 'error', message: missing, fieldErrors: { languages: missing } };
+      }
+    }
+
+    const result = await setSetting(deps, ctx, { key: 'dms.ocrLanguages', value: list.join('+') });
+    if (!result.ok) {
+      return toActionState(result, t);
+    }
+
+    revalidatePath('/admin/dms');
+    return toActionState(result, t, t('dms.admin.toast.languagesSaved'));
+  });
 }
 
 export async function createSnippetAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await createSnippet(deps, ctx, {
-    name: String(formData.get('name') ?? '').trim(),
-    subject: orNull(formData.get('subject')),
-    body: String(formData.get('body') ?? ''),
-    sortOrder: Number(formData.get('sortOrder') ?? 0),
+  return guardAction('(shell)/admin/dms/actions.ts#createSnippetAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await createSnippet(deps, ctx, {
+      name: String(formData.get('name') ?? '').trim(),
+      subject: orNull(formData.get('subject')),
+      body: String(formData.get('body') ?? ''),
+      sortOrder: Number(formData.get('sortOrder') ?? 0),
+    });
+    revalidatePath('/admin/dms');
+    return toActionState(result, t, t('dms.admin.toast.snippetCreated'));
   });
-  revalidatePath('/admin/dms');
-  return toActionState(result, t, t('dms.admin.toast.snippetCreated'));
 }
 
 export async function updateSnippetAction(id: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await updateSnippet(deps, ctx, {
-    id,
-    name: String(formData.get('name') ?? '').trim(),
-    subject: orNull(formData.get('subject')),
-    body: String(formData.get('body') ?? ''),
-    sortOrder: Number(formData.get('sortOrder') ?? 0),
-    isActive: formData.get('isActive') === 'on' || formData.get('isActive') === 'true',
+  return guardAction('(shell)/admin/dms/actions.ts#updateSnippetAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await updateSnippet(deps, ctx, {
+      id,
+      name: String(formData.get('name') ?? '').trim(),
+      subject: orNull(formData.get('subject')),
+      body: String(formData.get('body') ?? ''),
+      sortOrder: Number(formData.get('sortOrder') ?? 0),
+      isActive: formData.get('isActive') === 'on' || formData.get('isActive') === 'true',
+    });
+    revalidatePath('/admin/dms');
+    return toActionState(result, t, t('dms.admin.toast.snippetUpdated'));
   });
-  revalidatePath('/admin/dms');
-  return toActionState(result, t, t('dms.admin.toast.snippetUpdated'));
 }
 
 export async function deleteSnippetAction(id: string): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await deleteSnippet(deps, ctx, { id });
-  revalidatePath('/admin/dms');
-  return toActionState(result, t, t('dms.admin.toast.snippetDeleted'));
+  return guardAction('(shell)/admin/dms/actions.ts#deleteSnippetAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await deleteSnippet(deps, ctx, { id });
+    revalidatePath('/admin/dms');
+    return toActionState(result, t, t('dms.admin.toast.snippetDeleted'));
+  });
 }
 
 /** Die ganze Liste wird gesetzt — sie ist eine Einstellung, kein Datensatz je Zeile. */
 export async function saveDispatchChannelsAction(channels: { key: string; label: string }[]): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await setSetting(deps, ctx, { key: 'dms.dispatchChannels', value: channels });
-  revalidatePath('/admin/dms');
-  return toActionState(result, t, t('dms.admin.toast.channelsSaved'));
+  return guardAction('(shell)/admin/dms/actions.ts#saveDispatchChannelsAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await setSetting(deps, ctx, { key: 'dms.dispatchChannels', value: channels });
+    revalidatePath('/admin/dms');
+    return toActionState(result, t, t('dms.admin.toast.channelsSaved'));
+  });
 }

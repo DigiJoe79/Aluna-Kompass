@@ -1,0 +1,102 @@
+import { hasPermission, readSetting, todayIn } from '@kompass/core';
+import type { LocalizedText } from '@kompass/core';
+import { getBalances, getRawTransaction, listCategories, listOpenItems, listPurposes, suggestForTransaction, TAX_CODES } from '@kompass/module-finance';
+import { documentTypeFor, getDocumentRecord } from '@kompass/module-dms';
+import { listProjects } from '@kompass/module-projects';
+import { getTranslations } from 'next-intl/server';
+import { ForbiddenCard } from '@/components/forbidden-card';
+import { PageHeader } from '@/components/page-header';
+import { requireSession } from '@/lib/request-context';
+import { formatAmount } from '@/lib/finance/amount';
+import { emptyForm, type EntryFormState, type EntryTemplate } from '@/lib/finance/entry-form';
+import { formFromTransaction } from '@/lib/finance/work';
+import { EntryForm, type PendingVoucher } from '../entry-form';
+
+export default async function NewFinanceEntryPage({ searchParams }: { searchParams: Promise<{ template?: string; account?: string; settles?: string; raw?: string; back?: string; voucher?: string }> }) {
+  const { deps, ctx } = await requireSession();
+  if (!hasPermission(ctx, 'finance.entriesWrite')) return <ForbiddenCard permission="finance.entriesWrite" />;
+
+  const query = await searchParams;
+  const template: EntryTemplate = (['income', 'expense', 'transfer', 'inKind'] as const).includes(query.template as never) ? (query.template as EntryTemplate) : 'expense';
+  const today = todayIn(deps);
+
+  const [balancesRes, categoriesRes, purposesRes, projectsRes, openItemsRes] = await Promise.all([
+    getBalances(deps, ctx, {}),
+    listCategories(deps, ctx, {}),
+    listPurposes(deps, ctx, {}),
+    listProjects(deps, ctx),
+    listOpenItems(deps, ctx, { state: 'open', limit: 200 }),
+  ]);
+
+  const accounts = (balancesRes.ok ? balancesRes.value.accounts : []).map((a) => ({ id: a.accountId, name: a.name, kind: a.kind, balanceCents: a.balanceCents }));
+  const categories = (categoriesRes.ok ? categoriesRes.value : [])
+    .filter((c): c is typeof c & { direction: 'income' | 'expense' } => c.direction === 'income' || c.direction === 'expense')
+    .map((c) => ({ id: c.id, name: c.name, direction: c.direction, sphere: c.sphere ?? 'ideal', explanation: c.explanation || undefined }));
+  const purposes = (purposesRes.ok ? purposesRes.value : []).map((p) => ({ id: p.id, name: p.name }));
+  const leading = deps.locales()[0] ?? 'de';
+  const projects = (projectsRes.ok ? projectsRes.value : []).map((p) => ({ id: p.id, name: (p.name as LocalizedText)[leading] || p.slug }));
+  const showTax = readSetting<boolean>(deps, 'finance.isEntrepreneurOrHasVatId');
+  const t = await getTranslations('finance.entryForm');
+  const openItems = (openItemsRes.ok ? openItemsRes.value.items : []).map((i) => ({ id: i.id, kind: i.kind as 'receivable' | 'payable', label: i.paymentReference ?? t('settlement.unnamed', { date: i.itemDate }), openCents: i.openCents }));
+
+  // `?account=` belegt das Konto der ersten Geldzeile vor — von der Barkasse aus „Bar bezahlt“ (F3b Task 2).
+  let initial: EntryFormState = emptyForm(template, today);
+  const accountId = query.account && accounts.some((a) => a.id === query.account) ? query.account : null;
+  if (accountId && initial.moneyRows[0]) initial.moneyRows[0] = { ...initial.moneyRows[0], accountId };
+
+  // `?settles=` — „Jetzt buchen“ von einer offenen Zahlung aus (F3b Task 3, A6): Richtung folgt schon aus
+  // der Vorlage (income/expense), Betrag und Begleichung sind der Rest des Postens.
+  const settlingItem = query.settles ? openItems.find((i) => i.id === query.settles) : undefined;
+  if (settlingItem && initial.moneyRows[0]) {
+    initial.moneyRows[0] = {
+      ...initial.moneyRows[0],
+      amountText: formatAmount(settlingItem.openCents),
+      settlements: [{ openItemId: settlingItem.id, amountText: formatAmount(settlingItem.openCents) }],
+    };
+  }
+
+  // `?raw=` — „Ändern“ aus der Arbeitsliste (F5 Task 7): Konto, Betrag, Richtung und Bindung aus dem
+  // Kontoumsatz, Text und Aufteilung aus seinem Vorschlag. `?back=work` führt nach dem Speichern zurück.
+  const rawRes = query.raw ? await getRawTransaction(deps, ctx, { id: query.raw }) : null;
+  // Ein gebundener oder unbekannter Kontoumsatz belegt nichts vor.
+  const raw = rawRes?.ok && rawRes.value.state === 'open' ? rawRes.value : null;
+  if (raw) {
+    const suggestion = await suggestForTransaction(deps, ctx, { rawTransactionId: raw.id });
+    initial = formFromTransaction(raw, suggestion.ok ? suggestion.value.draft : null);
+  }
+  const returnTo = query.back === 'work' ? '/finance/work' : '/finance/entries';
+
+  // `?voucher=` — „Zu Buchung machen“ aus der Akte oder der Liste „Belege ohne Buchung“ (F5 Task 8): Der Beleg
+  // steht in der Maske und wird nach dem Speichern verknüpft. Was die Akte nicht herausgibt, belegt nichts vor;
+  // ob er sich verknüpfen lässt, sagt `attachDocument`.
+  let pendingVoucher: PendingVoucher | null = null;
+  if (query.voucher) {
+    const doc = await getDocumentRecord(deps, ctx, query.voucher);
+    if (doc.ok) {
+      pendingVoucher = { documentId: doc.value.id, number: doc.value.number, subject: doc.value.subject, typeLabel: documentTypeFor(deps.db, doc.value.typeKey)?.label ?? doc.value.typeKey, date: doc.value.documentDate };
+      if (!initial.text) initial = { ...initial, text: doc.value.subject.slice(0, 300) };
+    }
+  }
+
+  return (
+    <>
+      <PageHeader title={t('newTitle')} back={{ href: returnTo, label: t('cancel') }} />
+      <EntryForm
+        today={today}
+        initial={initial}
+        accounts={accounts}
+        categories={categories}
+        purposes={purposes}
+        projects={projects}
+        taxCodeOptions={[...TAX_CODES]}
+        showTax={showTax}
+        canFinalize={hasPermission(ctx, 'finance.entriesFinalize')}
+        voucherTypeKey="voucher-own"
+        vouchers={[]}
+        openItems={openItems}
+        returnTo={returnTo}
+        pendingVoucher={pendingVoucher}
+      />
+    </>
+  );
+}

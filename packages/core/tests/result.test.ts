@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { conflict, forbidden, invalid, notFound, ok, unauthorized, unwrap } from '../src/result';
+import { combineConflicts, conflict, forbidden, invalid, localizedConflict, notFound, ok, unauthorized, unwrap } from '../src/result';
 
 describe('result', () => {
   it('ok wraps a value', () => {
@@ -34,5 +34,16 @@ describe('result', () => {
   it('unwrap returns the value or throws on failure', () => {
     expect(unwrap(ok('x'))).toBe('x');
     expect(() => unwrap(forbidden('x'))).toThrow(/unexpected failure/);
+  });
+});
+
+describe('combineConflicts (N6)', () => {
+  it('keeps the first reason and hangs the further localized conflicts on it as also', () => {
+    expect(combineConflicts([])).toBeNull();
+    const one = localizedConflict('a', 'x.a');
+    expect(combineConflicts([one])).toBe(one);
+    expect(combineConflicts([one, localizedConflict('b', 'x.b', { n: 1 }), conflict('c', 'ohne Schlüssel')])).toEqual({ ok: false, error: { type: 'conflict', code: 'a', message: 'a', messageKey: 'x.a', params: {}, also: [{ code: 'b', messageKey: 'x.b', params: { n: 1 } }] } });
+    const denied = forbidden('p');
+    expect(combineConflicts([denied, one])).toBe(denied);
   });
 });

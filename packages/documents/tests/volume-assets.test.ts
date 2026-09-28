@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createTypstRenderer, resolveAssetDirs, resolveBases } from '../src';
+import { createDocumentEngine, createTypstRenderer, resolveAssetDirs, resolveBases } from '../src';
 
 const dirs: string[] = [];
 afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true })));
@@ -23,6 +23,17 @@ const payload = {
   issuedDate: '09.09.2026',
   slots: { kind: 'letter', title: 'X' },
 };
+
+describe('eigene Basen der Installation (Befund 51 b)', () => {
+  it('kennzeichnet, welche Basen die Installation selbst führt', () => {
+    const vol = tmp();
+    writeFileSync(path.join(vol, 'a4-mit-briefkopf.typ'), '#let base(payload, slots, body) = body');
+    const engine = createDocumentEngine({ documentTemplatesDir: vol });
+    const own = engine.bases().filter((b) => b.own).map((b) => b.id);
+    expect(own).toEqual(['a4-mit-briefkopf']);
+    expect(engine.bases().find((b) => b.id === 'a4-formular')?.own).toBe(false);
+  });
+});
 
 describe('volume fonts and assets', () => {
   it('renders a base that references a grafik from the volume via /assets/', async () => {

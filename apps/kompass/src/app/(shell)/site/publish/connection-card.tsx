@@ -11,6 +11,8 @@ import { runDeployCheckAction } from './actions';
 interface DeployCheck {
   target: string;
   filesAtTarget: string[];
+  publishWould: { changed: string[]; added: string[]; removed: string[] } | null;
+  build: { ok: boolean; reason?: string };
   log: string;
 }
 
@@ -22,6 +24,7 @@ export function ConnectionCard({ hasDeploy }: { hasDeploy: boolean }) {
   if (!hasDeploy) return null;
 
   const isEmpty = result !== null && result.filesAtTarget.length === 0;
+  const would = result?.publishWould ?? null;
 
   return (
     <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-5">
@@ -60,6 +63,29 @@ export function ConnectionCard({ hasDeploy }: { hasDeploy: boolean }) {
               </ul>
             </Disclosure>
           )}
+
+          <p className="text-[13px] text-ink-2">
+            {would ? t('would', { changed: would.changed.length, added: would.added.length, removed: would.removed.length }) : t('buildFailed')}
+          </p>
+          {would && would.removed.length > 0 && (
+            <Disclosure label={t('removedTitle')} count={would.removed.length} tone="warning">
+              <ul className="flex flex-col gap-1 font-mono text-[12px]">
+                {would.removed.map((f) => (
+                  <li key={f}>{f}</li>
+                ))}
+              </ul>
+            </Disclosure>
+          )}
+          {would && (would.changed.length > 0 || would.added.length > 0) && (
+            <Disclosure label={t('changedTitle')} count={would.changed.length + would.added.length}>
+              <ul className="flex flex-col gap-1 font-mono text-[12px]">
+                {[...would.changed, ...would.added].map((f) => (
+                  <li key={f}>{f}</li>
+                ))}
+              </ul>
+            </Disclosure>
+          )}
+
           <Disclosure label={t('logTitle')}>
             <pre className="font-mono text-[12px] whitespace-pre-wrap text-ink-2">{result.log}</pre>
           </Disclosure>

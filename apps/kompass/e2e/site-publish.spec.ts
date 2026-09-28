@@ -65,6 +65,8 @@ test('preview build, diff and publish to the local staging target', async ({ pag
   await expect(publish).toBeChecked();
 
   await page.goto('/site/publish');
+  await page.getByRole('button', { name: 'Prüfen' }).click();
+  await expect(page.getByRole('region', { name: 'Sperrworttreffer' })).toBeVisible();
   await page.getByRole('button', { name: 'Vorschau bauen' }).click();
   // Während des Baus meldet /site/job, was läuft und seit wann; die Seite
   // fragt das sekündlich ab. Warm baut das Basis-Template in unter einer
@@ -83,30 +85,38 @@ test('preview build, diff and publish to the local staging target', async ({ pag
   const preview = await page.request.get('/site/preview/aktuelles/sommerfest/');
   expect(preview.ok()).toBe(true);
   expect(await preview.text()).toContain('Sommerfest 2026');
-  await page.getByRole('link', { name: 'Vorschau öffnen' }).click();
-  await expect(page.getByTestId('env-banner')).toBeVisible();
+  // Die Vorschau öffnet einen eigenen Tab: Die Publizieren-Seite behält
+  // Prüfergebnis und gebaute Vorschau. Bis 0.2.0 öffnete sie im selben Tab,
+  // und wer zurückging, fand beides leer (2026-09-19).
+  const [tab] = await Promise.all([page.context().waitForEvent('page'), page.getByRole('link', { name: 'Vorschau öffnen' }).click()]);
+  await tab.waitForLoadState();
+  await expect(tab).toHaveURL(/\/site\/preview-frame$/);
+  await expect(tab.getByTestId('env-banner')).toBeVisible();
+  // Wer die Vorschauseite direkt aufruft, kommt zurück.
+  await expect(tab.getByRole('link', { name: 'Zurück zu Publizieren' })).toHaveAttribute('href', '/site/publish');
   // Die Vorschau lässt sich auf Telefon- und Tablet-Breite schalten.
-  const frame = page.getByTitle('Vorschau');
+  const frame = tab.getByTitle('Vorschau');
   await expect(frame).not.toHaveCSS('width', '390px');
-  await page.getByRole('button', { name: /Mobil/ }).click();
+  await tab.getByRole('button', { name: /Mobil/ }).click();
   await expect(frame).toHaveCSS('width', '390px');
-  await page.getByRole('button', { name: /Tablet/ }).click();
+  await tab.getByRole('button', { name: /Tablet/ }).click();
   await expect(frame).toHaveCSS('width', '820px');
 
-  // Die gebaute Seite selbst bei Handybreite: nichts ragt über den Rand, das Menü öffnet.
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/site/preview/');
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await page.getByRole('button', { name: 'Menü' }).click();
-  await expect(page.getByRole('link', { name: 'Aktuelles' })).toBeVisible();
-  await page.setViewportSize({ width: 1280, height: 800 });
+  // Der erste Tab steht unverändert: Prüfergebnis und Änderungen sind noch da.
+  // Zwei Treffer-Bereiche: der der Prüfung (oben) und der der Vorschau.
+  await expect(page).toHaveURL('/site/publish');
+  await expect(page.getByRole('region', { name: 'Sperrworttreffer' })).toHaveCount(2);
+  await expect(page.getByRole('region', { name: 'Änderungen gegenüber Live' })).toContainText('aktuelles/sommerfest/index.html');
 
-  // Der Sprung zur Vorschau und zurück verwirft die zuvor gebaute Vorschau im
-  // Client — publizieren verlangt deshalb einen frischen Lauf, auch wenn sich
-  // am Inhalt nichts geändert hat.
-  await page.goto('/site/publish');
-  await page.getByRole('button', { name: 'Vorschau bauen' }).click();
-  await expect(page.getByRole('region', { name: 'Änderungen gegenüber Live' })).toContainText('aktuelles/sommerfest/index.html', { timeout: 180_000 });
+  // Die gebaute Seite selbst bei Handybreite: nichts ragt über den Rand, das Menü öffnet.
+  await tab.setViewportSize({ width: 390, height: 844 });
+  await tab.goto('/site/preview/');
+  expect(await tab.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await tab.getByRole('button', { name: 'Menü' }).click();
+  await expect(tab.getByRole('link', { name: 'Aktuelles' })).toBeVisible();
+  await tab.close();
+
+  // Publiziert wird ohne neuen Vorschau-Lauf: Die Seite hat die Vorschau nicht vergessen.
   await page.getByRole('button', { name: 'Nach Staging publizieren' }).click();
   const confirmDialog = page.getByRole('alertdialog');
   await expect(confirmDialog.getByRole('button', { name: 'Jetzt publizieren' })).toBeEnabled();

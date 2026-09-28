@@ -1,5 +1,5 @@
 import { hasPermission, isModuleEnabled, readSetting, type CallContext, type Deps } from '@kompass/core';
-import { listDocuments } from '@kompass/module-dms';
+import { listDocuments, requireDmsGate } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { StatusBadge } from '@/components/status-badge';
@@ -23,7 +23,7 @@ export async function RelatedDocuments({
   entityType: 'contact' | 'animal' | 'project';
   entityId: string;
 }) {
-  if (!isModuleEnabled(deps, 'dms') || !hasPermission(ctx, 'dms.view')) return null;
+  if (!isModuleEnabled(deps, 'dms') || requireDmsGate(deps, ctx)) return null;
   const t = await getTranslations('dms.related');
   const res = await listDocuments(deps, ctx, { linkedTo: { entityType, entityId }, limit: 50 });
   if (!res.ok) return null;

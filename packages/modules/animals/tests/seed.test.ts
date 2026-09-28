@@ -31,6 +31,18 @@ describe('animals seed', () => {
     expect(stories.some((s) => Object.keys(s.beforeCaption).length === 0 && Object.keys(s.afterCaption).length === 0)).toBe(true);
   });
 
+  it('gives each example animal a place: shelter animals abroad, foster animals a German state', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, animalsModule], env: 'development' });
+    await seedDevelopment(deps);
+    const rows = deps.db.select().from(animals).all();
+    for (const a of rows) expect(a.place.length).toBeGreaterThan(0);
+    const bySlug = Object.fromEntries(rows.map((a) => [a.slug, a.place]));
+    expect(bySlug.baxter).toBe('Rumänien, Ploiești');
+    expect(bySlug.frida).toBe('Nordrhein-Westfalen');
+    expect(bySlug.nala).toBe('Rumänien, Cluj-Napoca');
+    expect(bySlug.juno).toBe('Baden-Württemberg');
+  });
+
   it('leaves one animal untranslated so translations_list_gaps has something to show', async () => {
     const deps = createTestDeps({ manifests: [coreModule, animalsModule], env: 'development' });
     await seedDevelopment(deps);

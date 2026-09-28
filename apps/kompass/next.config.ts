@@ -13,6 +13,10 @@ const { version } = JSON.parse(
 
 const nextConfig: NextConfig = {
   env: { KOMPASS_VERSION: version },
+  // Ein Build-Verzeichnis je E2E-Worker: Next 16 hält `.next/dev/lock`, und
+  // zwei `next dev` im selben Verzeichnis laufen nicht nebeneinander
+  // (`e2e/servers.ts`). Ohne die Variable bleibt es bei `.next`.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   transpilePackages: [
     '@kompass/core',
     '@kompass/documents',
@@ -21,6 +25,8 @@ const nextConfig: NextConfig = {
     '@kompass/module-animals',
     '@kompass/module-contacts',
     '@kompass/module-dms',
+    '@kompass/module-finance',
+    '@kompass/module-projects',
     '@kompass/markdown',
     '@kompass/text-extraction',
   ],

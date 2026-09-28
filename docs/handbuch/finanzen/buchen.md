@@ -1,0 +1,151 @@
+# Buchen von Hand
+
+Eine Buchung hält fest, was mit dem Geld des Vereins geschehen ist: von
+welchem Konto es kam oder wohin es ging, und wofür. Das Journal zeigt alle
+Buchungen; „Neue Buchung“ öffnet die Maske dafür.
+
+## Von welchem Konto? Und wofür?
+
+Jede Buchung hat zwei Seiten. Die Kontoseite sagt, welches Bankkonto oder
+welche Kasse betroffen ist und mit welchem Betrag. Die Seite „Wofür?“
+ordnet diesen Betrag einer oder mehreren Kategorien zu — Spenden,
+Büromaterial, Fahrtkosten und so weiter. Beide Seiten müssen sich zum
+gleichen Betrag summieren; ein Ausgleichsanzeiger zeigt am Fuß der
+Konto-Karte an, ob noch etwas fehlt oder zu viel verteilt ist.
+
+Vier Vorlagen legen die Richtung vor: **Einnahme**, **Ausgabe**,
+**Umbuchung zwischen Konten** und **Sachspende**. Eine Umbuchung — etwa
+Bargeld von der Bank abgehoben — hat kein „Wofür?“: Sie ist weder Einnahme
+noch Ausgabe, das Geld bleibt im Verein. Eine Sachspende hat kein Konto,
+weil kein Geld fließt; stattdessen tragen zwei Zuordnungszeilen denselben
+Betrag mit umgekehrtem Vorzeichen — die zweite folgt der ersten von
+selbst. Wie eine solche Umbuchung im Journal und mit Kontofilter im
+Kontoblatt erscheint, steht unter „Kontoblatt“ in
+[Konten und offene Zahlungen](konten-und-offene-zahlungen.md).
+
+## Entwurf, geprüft, festgeschrieben
+
+Eine neue Buchung ist zunächst ein **Entwurf**: Sie darf unausgeglichen
+sein und lässt sich jederzeit ändern oder löschen. Wer eine zweite Person
+kurz gegenlesen lässt, markiert den Entwurf als **geprüft** — das ist eine
+Vorstufe, noch keine endgültige Buchung. Erst **Festschreiben** vergibt
+eine Nummer und macht die Buchung unveränderlich; danach gibt es kein
+Eingabefeld mehr, nur noch „Korrigieren“.
+
+Eine unausgeglichene Buchung lässt sich nicht festschreiben — die
+Oberfläche nennt den Grund und bietet einen Ausweg an, etwa den Rest in
+die letzte Zeile einzutragen.
+
+Ein Entwurf mit einem Datum nach heute lässt sich speichern, warnt aber am
+Datumsfeld — festschreiben lässt sich das erst, sobald der Tag erreicht
+ist; heute selbst genügt bereits.
+
+Stünde ein Bank- oder Zahlungsdienstkonto nach dem Festschreiben im Minus,
+weist die Vorschau des Sammel-Festschreibens darauf hin — das sperrt nicht,
+meist fehlt nur noch ein Auszug; eine Barkasse lässt sich dagegen nie ins
+Minus bringen.
+
+## Eine Zahlung auf mehrere Zwecke aufteilen
+
+Zahlt eine Spendenplattform gesammelt aus, betrifft eine einzige
+Kontobewegung oft mehrere Spender oder Zwecke. Die Seite „Wofür?“ nimmt
+dafür mehrere Zeilen auf: eine je Spender oder Zweck, dazu bei Bedarf eine
+für die Gebühr des Zahlungsdiensts. Das Zeilenmenü teilt einen Betrag
+gleichmäßig auf oder trägt den verbleibenden Rest in eine gewählte Zeile
+ein — solange oben „Noch … zu verteilen“ steht, ist die Buchung noch nicht
+ausgeglichen.
+
+Was ein Zweck bekommen und verwendet hat, zeigt Finanzen → Zwecke; soll
+Geld später den Zweck wechseln, geht das nicht über eine neue Buchung,
+sondern über „Zweck ändern (Umwidmung)“ (siehe [Zwecke und zurückgelegtes
+Geld](zwecke-und-ruecklagen.md)).
+
+## Eine offene Zahlung begleichen
+
+Zahlt der Verein eine offene Rechnung oder geht eine erwartete Zahlung
+ein, lässt sich das direkt an der Geldzeile vermerken: „begleicht offene
+Zahlung“ öffnet eine Suche über die offenen Posten, die zur Richtung der
+Zeile passen — eine Ausgabe zeigt, was der Verein noch schuldet, eine
+Einnahme, was er noch erwartet. Zur Auswahl stehen Zahlungsreferenz oder
+Kontakt und der jeweilige Restbetrag; mehrere Posten lassen sich in einer
+Buchung begleichen, je mit einem eigenen Teilbetrag. Ein zu hoher
+Teilbetrag wird am Feld abgewiesen. Bleibt nach dem Festschreiben ein Rest
+offen, steht er an der Buchung unter „Hängt zusammen mit“ — dort auch die
+übrigen Bezüge, etwa eine Gegenbuchung oder eine vorangegangene Buchung.
+
+## Beleg anhängen
+
+Ein Beleg lässt sich auf die Buchung ziehen oder aus der Akte auswählen.
+Kompass nimmt dafür nur **PDF** — kein Foto. Wer nur eine Kamera zur Hand
+hat: Die Scan- oder Kamera-App der meisten Telefone kennt eine Funktion
+„Als PDF speichern“; das Ergebnis lässt sich wie gewohnt ablegen. Ein
+Beleg lässt sich jederzeit nachreichen, auch an einer bereits
+festgeschriebenen Buchung.
+
+Eine reine Umbuchung zwischen zwei eigenen Konten braucht keinen eigenen
+Beleg mehr, sobald die Bankseite einen Kontoumsatz aus einem Auszug trägt
+— der Auszug selbst belegt sie, auch wenn die andere Seite eine Kasse ist.
+Eine Bareinnahme oder Barausgabe mit eigener Zuordnung (etwa eine
+Spende oder eine Ausgabe) braucht dagegen weiterhin einen Beleg.
+
+## Bargeld
+
+Bei einer Kasse gibt es keinen Entwurf: Die Buchung wird sofort
+festgeschrieben, weil sich eine offene Kasse sonst nicht mehr nachvollziehen
+ließe. Deshalb braucht Bargeld immer das Recht zum Festschreiben — wer es
+nicht hat, sieht statt der Maske einen Hinweis, wer stattdessen bucht.
+
+## Korrigieren
+
+Eine festgeschriebene Buchung lässt sich nicht mehr bearbeiten, aber
+korrigieren. Der Dialog fragt zuerst, was nicht stimmt, und schlägt
+danach den passenden Weg vor:
+
+- Betrifft es nur die **Zuordnung** — Spender, Projekt, Zweck oder ob das
+  Geld im Ausland verwendet wird —, wirkt die Änderung im laufenden
+  Geschäftsjahr sofort. In einem bereits abgeschlossenen Jahr wartet sie
+  auf die Freigabe einer zweiten Person.
+- Betrifft es die **Zahlen** — Betrag, Datum, Konto, Kategorie oder
+  Umsatzsteuer — nimmt Kompass die Buchung zurück: Eine Gegenbuchung mit
+  den negierten Beträgen entsteht und wird sofort festgeschrieben; ein
+  vorbelegter Entwurf mit den bisherigen Werten öffnet sich danach, wenn
+  gewünscht, für die richtige Fassung.
+
+Sind beide Arten von Änderungen nötig, gilt immer der zweite Weg — er
+kann alles.
+
+Trägt eine Buchung mehr als eine Aufteilungszeile, fragt der Dialog
+zuerst, welche davon gemeint ist — Kategorie, Betrag, Spender oder
+Empfänger und Zweck stehen zur Wahl. Eine Zeile, deren Änderung schon auf
+Freigabe wartet, lässt sich nicht ein zweites Mal auswählen.
+
+### Wann ein Dokument nötig ist, wann eine zweite Person
+
+Ändert sich bei einer Spende der **Zweck**, verlangt Kompass ein
+Dokument, das belegt, was die Spenderin ursprünglich bestimmt hat — ein
+PDF lässt sich dafür ablegen oder aus der Akte wählen. Ohne ein solches
+Dokument ist es keine Korrektur mehr, sondern eine Umwidmung; die
+entsprechende Seite kommt mit einer späteren Fassung.
+
+Ist für das betroffene Geschäftsjahr die Steuererklärung bereits
+abgegeben, verlangt eine Änderung an Spender, Auslandsbezug oder Zweck
+zusätzlich eine ausdrückliche Kenntnisnahme: Eine solche Korrektur kann
+eine Berichtigung nach § 153 AO nötig machen. Erst mit dem angehakten
+Kästchen lässt sich die Änderung erneut absenden.
+
+In einem bereits abgeschlossenen Geschäftsjahr wirkt eine Zuordnungsänderung
+nie sofort — sie wartet auf die Freigabe einer zweiten Person mit dem
+Recht „Freigeben“. Der Dialog nennt dabei, wer das erledigen kann.
+
+Ein Geschäftsjahr lässt sich erst abschließen, wenn jede Zeile der
+Kontoauszüge des Jahres festgeschrieben gebucht ist und für jedes
+Bankkonto mindestens ein Auszug des Jahres vorliegt; die Vorschau des
+Abschlusses nennt offene Zeilen mit Konto, Datum und Betrag und die Konten
+ohne Auszug. Kassen und Zahlungsdienste ohne Auszugsformat brauchen keinen.
+
+## Was ein Agent darf
+
+Ein Agent über die Schnittstelle darf Buchungen anlegen und vorbereiten,
+aber nicht festschreiben — das bleibt einem Menschen am Bildschirm
+vorbehalten. Eine vom Agenten vorbereitete Buchung trägt im Journal ein
+eigenes Kennzeichen, damit erkennbar bleibt, wer sie angelegt hat.

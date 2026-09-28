@@ -10,7 +10,7 @@ test('module page shows the locked core and the count', async ({ page }) => {
   await expect(core).toContainText('Immer aktiv');
   await expect(core.getByRole('switch')).toBeDisabled();
   await expect(core).toContainText('core');
-  await expect(page.getByText('6 von 6 aktiv')).toBeVisible();
+  await expect(page.getByText('7 von 7 aktiv')).toBeVisible();
 });
 
 test('a deactivated module disappears from the rail', async ({ page }) => {
@@ -21,7 +21,7 @@ test('a deactivated module disappears from the rail', async ({ page }) => {
 
   await page.goto('/admin/modules');
   await page.getByRole('switch', { name: 'Tiere aktivieren oder deaktivieren' }).click();
-  await expect(page.getByText('5 von 6 aktiv')).toBeVisible();
+  await expect(page.getByText('6 von 7 aktiv')).toBeVisible();
 
   await page.goto('/');
   await expect(rail.getByRole('link', { name: 'Tiere' })).toHaveCount(0);

@@ -89,7 +89,7 @@ describe('verein-basis', () => {
     const statutes = readFileSync(path.join(out, 'satzung/index.html'), 'utf8');
     expect(statutes).toContain('/dokumente/satzung.pdf');
 
-    expect(readFileSync(path.join(out, 'spenden/index.html'), 'utf8')).toContain('IBAN DE02 1203 0000 0000 2020 51');
+    expect(readFileSync(path.join(out, 'spenden/index.html'), 'utf8')).toContain('IBAN DE23 9999 9999 0000 2020 51');
     const join = readFileSync(path.join(out, 'mitglied-werden/index.html'), 'utf8');
     expect(join).toContain('Jahresbeitrag');
     expect(join).toContain('60');
@@ -122,7 +122,7 @@ describe('verein-basis', () => {
     expect(imprint).not.toContain('VR 0000');
 
     const donate = readFileSync(path.join(out, 'spenden/index.html'), 'utf8');
-    expect(donate).toContain('DE02 1203 0000 0000 2020 51');
+    expect(donate).toContain('DE23 9999 9999 0000 2020 51');
     expect(donate).toContain('Beispielbank');
   });
 

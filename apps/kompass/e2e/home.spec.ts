@@ -11,13 +11,19 @@ test.describe('home', () => {
     await expect(page.getByRole('heading', { name: 'Guten Tag, Anna.' })).toBeVisible();
     const inbox = page.getByTestId('dashboard-tile-dms-inbox');
     await expect(inbox.getByRole('heading', { name: 'Eingangskorb' })).toBeVisible();
-    await expect(inbox.getByRole('link', { name: 'Freistellungsbescheid' })).toBeVisible();
+    // Die Kachel zeigt die fünf ältesten Eingänge; welche das sind, verschiebt jeder Seed mit älteren Belegen
+    // (F6a: die Spende auf dem § 60a-Bescheid von 2025) — der Test prüft deshalb Form und Weg, keinen Betreff.
+    await expect(inbox.getByRole('listitem')).toHaveCount(5);
+    await expect(inbox.getByRole('link', { name: /^Alle \d+ anzeigen$/ })).toHaveAttribute('href', '/dms?inbox=1');
     await expect(page.getByTestId('dashboard-tile-core-followUps').getByText('Antwort abwarten')).toBeVisible();
     const setup = page.getByTestId('dashboard-tile-core-setup');
-    await expect(setup.getByText('Steuernummer fehlt')).toBeVisible();
+    // Steuernummer und Bescheid schreibt der Finanz-Seed über den Bescheid nach (E22), die Anschrift der Kern-Seed —
+    // offen bleibt das Registergericht.
+    await expect(setup.getByText('Registergericht fehlt')).toBeVisible();
+    await expect(setup.getByText('Steuernummer fehlt')).toHaveCount(0);
     await expect(page.getByTestId('dashboard-tile-core-backup').getByText(/Noch kein Backup/)).toBeVisible();
     await expect(page.getByTestId('dashboard-tile-core-retention')).toContainText('1');
-    await setup.getByRole('link', { name: 'Steuernummer fehlt' }).click();
+    await setup.getByRole('link', { name: 'Registergericht fehlt' }).click();
     await expect(page).toHaveURL('/admin/settings');
   });
 
@@ -87,9 +93,11 @@ test.describe('home', () => {
     await page.getByRole('button', { name: 'Passwort setzen und fortfahren' }).click();
     await expect(page).toHaveURL('/');
     // `evaluateAll` wartet nicht: Die URL steht, bevor der Seiteninhalt nachgeliefert ist.
-    await expect(page.locator('[data-testid^="dashboard-tile-"]')).toHaveCount(3);
+    // F8a Task 7: der Finanz-Seed ergänzt seine gespeicherte Anordnung um „Wartet auf Ihre
+    // Freigabe“ — sonst sähe er sie erst nach „Vorgabe wiederherstellen“.
+    await expect(page.locator('[data-testid^="dashboard-tile-"]')).toHaveCount(4);
     const ids = await page.locator('[data-testid^="dashboard-tile-"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')));
-    expect(ids).toEqual(['dashboard-tile-core-followUps', 'dashboard-tile-dms-unsent', 'dashboard-tile-core-backup']);
+    expect(ids).toEqual(['dashboard-tile-core-followUps', 'dashboard-tile-dms-unsent', 'dashboard-tile-core-backup', 'dashboard-tile-finance-approvalsPending']);
     await expect(page.getByTestId('dashboard-tile-core-setup')).toHaveCount(0);
     // Jeder Link der Startseite führt auf eine Seite, die Jonas sehen darf.
     const hrefs = await page.locator('[data-testid^="dashboard-tile-"] a[href]').evaluateAll((els) => els.map((a) => a.getAttribute('href')!));

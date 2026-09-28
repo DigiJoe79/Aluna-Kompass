@@ -13,6 +13,9 @@ import { installedModules } from '@/modules';
  * Durchklicken am 2026-09-12 eine leere Akte hinterliess (Befund 5).
  */
 describe('scripts/seed', () => {
+  // F8a Task 7: der Finanz-Seed legt jetzt sechs Auslagen über mehrere Dienstaufrufe je Zustand an
+  // (Entwurf, Beleg, Einreichen, Freigeben/Ablehnen/Verzicht) — der volle Seed läuft hier zweimal
+  // hintereinander; unter Last reichte die vitest-Vorgabe von 5000 ms nicht mehr (isoliert ~3 s).
   it('schaltet die Module ein und lässt ihre Seeds laufen, ohne Vorhandenes zu verwerfen', async () => {
     const dataPath = mkdtempSync(path.join(tmpdir(), 'kompass-seed-'));
     try {
@@ -34,5 +37,5 @@ describe('scripts/seed', () => {
     } finally {
       rmSync(dataPath, { recursive: true, force: true });
     }
-  });
+  }, 30_000);
 });

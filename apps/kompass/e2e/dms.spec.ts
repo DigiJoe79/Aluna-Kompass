@@ -122,6 +122,34 @@ test.describe('dms', () => {
     await expect(page.getByText(/BEH-\d{4}-\d{3}/)).toBeVisible();
   });
 
+  test('dieselbe Datei ein zweites Mal: abgelegt, mit Hinweis und Weg zur ersten (Befund Z)', async ({ page }) => {
+    await login(page);
+    // Eigene Bytes, damit kein Seed-Dokument dieselbe Prüfsumme trägt.
+    const bytes = Buffer.from('%PDF-1.4\n% Befund Z doppelt\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n');
+    const numbers: string[] = [];
+    for (const name of ['2026-03-14 Rechnung.pdf', '2026-03-14 Rechnung nochmal.pdf']) {
+      await page.goto('/dms/receive');
+      const dialog = receiveDialog(page);
+      await dialog.getByLabel('Datei').setInputFiles({ name, mimeType: 'application/pdf', buffer: bytes });
+      await expect(dialog.getByLabel('Datum auf dem Dokument')).toHaveValue('2026-03-14', { timeout: 30_000 });
+      await dialog.getByLabel('Dokumentart').selectOption('authority');
+      await dialog.getByLabel('Betreff').fill('Doppelt abgelegt');
+      await expect(dialog.getByLabel('Betreff')).toHaveValue('Doppelt abgelegt');
+      await dialog.getByRole('button', { name: 'Ablegen' }).click();
+      await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}$/);
+      // Die eigene Nummer nur beim ersten Mal lesen: Beim zweiten nennt der Hinweis die erste.
+      if (numbers.length === 0) numbers.push((await page.getByText(/^BEH-\d{4}-\d{3}$/).first().textContent())!.trim());
+      else numbers.push(page.url());
+    }
+    const hint = () => page.getByRole('status').filter({ hasText: 'Dieselbe Datei liegt schon vor als' });
+    await expect(hint().getByRole('link', { name: numbers[0] })).toBeVisible();
+    await hint().getByRole('link', { name: numbers[0] }).click();
+    await expect(page).not.toHaveURL(numbers[1]!);
+    // Die erste zeigt den Hinweis in der Gegenrichtung.
+    await expect(hint().getByRole('link')).toHaveCount(1);
+    await expect(hint().getByRole('link')).not.toHaveText(numbers[0]!);
+  });
+
   test('behält die Eingaben, wenn das Speichern scheitert', async ({ page }) => {
     await login(page);
     await page.goto('/dms/new');
@@ -945,7 +973,9 @@ test.describe('dms', () => {
     await dialog.getByRole('button', { name: 'Hinzufügen' }).click();
     const relations = page.getByTestId('document-relations');
     await expect(relations.getByText('Anlage zu')).toBeVisible();
-    await relations.getByRole('link', { name: /BRF-/ }).last().click();
+    // Der Link im Eintrag „Anlage zu“, nicht der letzte BRF-Link: Daneben steht der Bezug „Antwort auf“ aus dem Seed,
+    // und welcher Brief zuerst gefunden wird, hängt davon ab, was vorher im selben Worker angelegt wurde (Teil C Task 2d).
+    await relations.getByRole('listitem').filter({ hasText: 'Anlage zu' }).getByRole('link', { name: /BRF-/ }).click();
     await expect(page.getByTestId('document-relations').getByText('Anlage:')).toBeVisible();
   });
 
@@ -1113,10 +1143,40 @@ test.describe('dms', () => {
     await expect(page.getByLabel('Betreff')).toHaveValue('Bitte um Rückmeldung');
     await expect(page.getByLabel('Text')).toHaveValue(/Rückmeldung/);
     const body = page.getByLabel('Text');
-    await body.fill('Anfang ');
+    // Wackler seit 2026-09-17 (Memory „DMS: fill-Wackler“): `fill` markiert erst alles und fügt dann ein — fällt ein
+    // React-Commit des ersten Bausteins dazwischen, landet die Markierung am Ende und `fill` hängt an. Deshalb: füllen,
+    // den Stand prüfen und, falls angehängt, erneut füllen, bis das Feld genau „Anfang “ trägt.
+    await expect(async () => {
+      await body.fill('Anfang ');
+      await expect(body).toHaveValue('Anfang ', { timeout: 500 });
+    }).toPass({ timeout: 10_000 });
     await body.evaluate((el: HTMLTextAreaElement) => { el.setSelectionRange(el.value.length, el.value.length); });
     await page.getByLabel('Baustein einfügen').selectOption({ label: 'Grußformel' });
     await expect(body).toHaveValue(/^Anfang Mit freundlichen Grüßen/);
+  });
+
+  test('löscht eine leere, selbst angelegte Dokumentart, aber nicht die mit Dokumenten (Task 4)', async ({ page }) => {
+    await login(page);
+    await page.goto('/admin/dms');
+    await page.getByRole('button', { name: 'Dokumentart anlegen' }).click();
+    const create = page.getByRole('dialog', { name: 'Neue Dokumentart' });
+    await create.getByLabel('Schlüssel').fill('probe-memo');
+    await create.getByLabel('Präfix').fill('PMO');
+    await create.getByLabel('Bezeichnung').fill('Probe-Vermerk');
+    await create.getByRole('button', { name: 'Speichern' }).click();
+    const newRow = page.getByRole('row').filter({ hasText: 'Probe-Vermerk' });
+    await expect(newRow).toBeVisible();
+
+    // Eine seedende Art mit Dokumenten (Brief, BRF) bietet „Löschen“ nicht an.
+    const letterRow = page.getByRole('row').filter({ hasText: 'Brief' }).filter({ hasText: 'BRF' });
+    await expect(letterRow.getByRole('button', { name: 'Löschen' })).not.toBeVisible();
+    await expect(letterRow.getByRole('button', { name: 'Bearbeiten', exact: true })).toBeVisible();
+
+    await newRow.getByRole('button', { name: 'Löschen' }).click();
+    const confirm = page.getByRole('dialog', { name: 'Dokumentart löschen' });
+    await expect(confirm).toContainText('Probe-Vermerk');
+    await confirm.getByRole('button', { name: 'Dokumentart löschen' }).click();
+    await expect(page.getByRole('row').filter({ hasText: 'Probe-Vermerk' })).toHaveCount(0);
   });
 
   test('verwaltet Textbausteine und Versandwege', async ({ page }) => {
@@ -1204,7 +1264,8 @@ test('ein ausgetauschtes Dokument wird nicht angezeigt, sondern gemeldet', async
   await expect(page.getByRole('link', { name: 'PDF öffnen' })).toBeVisible();
 
   const id = new URL(page.url()).pathname.split('/').pop()!;
-  const datei = path.resolve(import.meta.dirname, '.tmp/data/dms', `${id.toLowerCase()}.pdf`);
+  // Der Datenpfad gehört dem Server dieses Workers (`fixtures.ts`).
+  const datei = path.join(process.env.E2E_DATA_PATH!, 'dms', `${id.toLowerCase()}.pdf`);
   // Der Reset stellt die Datenbank wieder her, nicht das Datenvolume: Ohne
   // diese Sicherung liefe der nächste Test, der dieses Dokument liest, gegen
   // eine ausgetauschte Datei — und schlüge scheinbar grundlos fehl.
@@ -1226,4 +1287,20 @@ test('ein ausgetauschtes Dokument wird nicht angezeigt, sondern gemeldet', async
   } finally {
     writeFileSync(datei, original);
   }
+});
+
+/**
+ * Der Aktenexport bündelt einen Jahrgang als ZIP (Vorarbeiten-Spec § 7). Der
+ * Seed trägt festgeschriebene Dokumente des laufenden Jahres — das
+ * vorbelegte Jahr trifft also, ohne dass der Test ein Datum nachtragen muss.
+ */
+test('exports a folder as a bundle', async ({ page }) => {
+  await resetDatabase(page, 'seeded');
+  await login(page);
+  await page.goto('/dms');
+  await page.getByRole('button', { name: 'Bündel exportieren' }).click();
+  await page.getByLabel('Einen Jahrgang').check();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Bündel herunterladen' }).click();
+  expect((await download).suggestedFilename()).toMatch(/^Akte-Jahrgang-\d{4}-.*\.zip$/);
 });

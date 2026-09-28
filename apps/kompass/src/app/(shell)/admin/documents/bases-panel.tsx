@@ -21,7 +21,14 @@ interface TypeRow {
   isDefault: boolean;
 }
 
-export function BasesPanel({ bases, types, canManage }: { bases: Base[]; types: TypeRow[]; canManage: boolean }) {
+/** Eine vom Modul genutzte Basis, die die Installation nicht selbst führt (Befund 51 b). */
+interface Gap {
+  base: string;
+  label: string;
+  module: string;
+}
+
+export function BasesPanel({ bases, types, gaps = [], canManage }: { bases: Base[]; types: TypeRow[]; gaps?: Gap[]; canManage: boolean }) {
   const t = useTranslations('documents.bases');
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -29,6 +36,17 @@ export function BasesPanel({ bases, types, canManage }: { bases: Base[]; types: 
 
   return (
     <section className="mb-5 rounded-lg border border-line bg-surface">
+      {gaps.length > 0 ? (
+        <div role="note" data-testid="base-gaps" className="border-b border-line-2 bg-warning-bg px-4 py-3 text-[13px] text-ink">
+          <p className="font-semibold">{t('gapsTitle')}</p>
+          <p className="mt-1 text-ink-2">{t('gapsText')}</p>
+          <ul className="mt-1 list-disc pl-5">
+            {gaps.map((gap) => (
+              <li key={`${gap.module}-${gap.base}`}>{t('gap', { label: gap.label, base: gap.base, module: gap.module })}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <button type="button" onClick={() => setOpen(!open)} className="flex w-full items-center justify-between px-4 py-3 text-[14px] font-semibold">
         {t('title')}
         <span className="text-ink-2">{open ? '−' : '+'}</span>

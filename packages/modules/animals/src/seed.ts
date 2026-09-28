@@ -11,6 +11,7 @@ interface ExampleAnimal {
   sizeCm: number;
   sizeText: LocalizedText;
   location: 'shelter' | 'germany';
+  place: string;
   isEmergency: boolean;
   isSponsorable: boolean;
   traits: Record<string, string[]>;
@@ -37,6 +38,7 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
     sizeCm: 55,
     sizeText: { de: 'ca. 55 cm', en: 'approx. 55 cm' },
     location: 'shelter' as const,
+    place: 'Rumänien, Ploiești',
     isEmergency: true,
     isSponsorable: false,
     traits: { de: ['aufgeweckt', 'menschenbezogen'], en: ['lively', 'people-oriented'] },
@@ -53,6 +55,7 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
     sizeCm: 42,
     sizeText: { de: 'ca. 42 cm', en: 'approx. 42 cm' },
     location: 'germany' as const,
+    place: 'Nordrhein-Westfalen',
     isEmergency: false,
     isSponsorable: true,
     traits: { de: ['ruhig', 'verträglich'], en: ['calm', 'sociable'] },
@@ -70,6 +73,7 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
     sizeCm: 48,
     sizeText: { de: 'ca. 48 cm', en: 'approx. 48 cm' },
     location: 'shelter' as const,
+    place: 'Rumänien, Cluj-Napoca',
     isEmergency: false,
     isSponsorable: false,
     traits: { de: ['verschmust'], en: ['cuddly'] },
@@ -93,6 +97,7 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
     sizeCm: 52,
     sizeText: { de: 'ca. 52 cm', en: 'approx. 52 cm' },
     location: 'germany' as const,
+    place: 'Baden-Württemberg',
     isEmergency: false,
     isSponsorable: false,
     traits: { de: ['aufmerksam'], en: ['attentive'] },
@@ -123,6 +128,7 @@ export async function seedAnimals(deps: Deps, ctx: CallContext): Promise<void> {
         sizeCm: a.sizeCm,
         sizeText: a.sizeText,
         location: a.location,
+        place: a.place,
         isEmergency: a.isEmergency,
         isSponsorable: a.isSponsorable,
         traits: a.traits,

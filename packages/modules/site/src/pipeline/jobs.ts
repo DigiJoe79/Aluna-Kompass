@@ -254,20 +254,55 @@ export async function runPreview(deps: Deps, ctx: CallContext, env: SiteEnv): Pr
 export interface DeployCheckResult {
   /** Das Ziel, wie rsync es anspricht — user@host:pfad oder ein lokaler Pfad. */
   target: string;
-  /** Dateien, die am Ziel liegen und die ein Publish entfernen wuerde. */
+  /** Pfadpruefung: Dateien, die am Ziel liegen (gegen ein leeres Verzeichnis geprueft). */
   filesAtTarget: string[];
+  /**
+   * Was ein Publish aendern, hinzufuegen und entfernen wuerde — aus dem
+   * Trockenlauf gegen genau den Build, den `runPublish` uebertraegt. `null`,
+   * wenn der Build nicht zustande kam (siehe `build`).
+   */
+  publishWould: PublishDiff | null;
+  build: { ok: boolean; reason?: string };
   log: string;
 }
 
+/** Nur `>f…` (Datei) mit Aenderungscode; Verzeichniszeilen ("...d...", "/") bleiben aussen vor. */
+function parsePublishWould(log: string): PublishDiff {
+  const changed: string[] = [];
+  const added: string[] = [];
+  const removed: string[] = [];
+  for (const line of log.split('\n')) {
+    if (line.startsWith('*deleting ')) {
+      const entry = line.slice('*deleting '.length).trim();
+      if (entry.length > 0 && !entry.endsWith('/')) removed.push(entry);
+      continue;
+    }
+    // Die Breite der Kennung schwankt mit den uebersprungenen Merkmalen
+    // (--no-owner --no-group --no-perms lassen ihre Spalten ganz weg), darum
+    // nur auf "nur Pluszeichen" statt auf eine feste Laenge pruefen.
+    const match = /^>f(\S+) (.+)$/.exec(line);
+    if (!match || match[1] === undefined || match[2] === undefined) continue;
+    const code = match[1];
+    const entry = match[2];
+    if (entry.endsWith('/')) continue;
+    (/^\++$/.test(code) ? added : changed).push(entry);
+  }
+  return { changed, added, removed };
+}
+
 /**
- * Faehrt einen Trockenlauf gegen das eingestellte Ziel, ohne etwas zu
- * uebertragen: die Anmeldung wird wirklich versucht, und `--delete` listet
- * gegen ein leeres Quellverzeichnis auf, was dort liegt.
+ * Prueft den eingestellten Zielpfad und, was ein Publish dort aendern wuerde
+ * — ohne etwas zu uebertragen und ohne einen Publish zu protokollieren.
  *
- * Der Schutz, um den es geht, ist ein Tippfehler in SITE_DEPLOY_PATH — rsync
- * scheitert daran nicht, ein falscher Pfad zeigt einfach ins Leere. Die Liste
- * ist deshalb das Ergebnis: steht die erwartete Installation darin, stimmt der
- * Pfad; ist sie leer, zeigt er woandershin.
+ * Zwei getrennte Aussagen: (1) die **Pfadpruefung**, wie bisher ein
+ * Trockenlauf gegen ein leeres Quellverzeichnis — ihr Schutz ist ein
+ * Tippfehler in SITE_DEPLOY_PATH; rsync scheitert daran nicht, ein falscher
+ * Pfad zeigt einfach ins Leere, und die Liste zeigt, ob die erwartete
+ * Installation dort liegt. (2) **was ein Publish aendern wuerde** — dafuer
+ * baut dieser Check wie `runPublish` (dieselbe `exportAndBuild`, derselbe
+ * `exclusive`-Riegel, kein `recordPublish`) und vergleicht das Ziel mit
+ * genau diesem Build. Scheitert der Build oder hat der Export Sperrworttreffer,
+ * bleibt (2) `null`; (1) laeuft trotzdem.
  */
 export async function checkDeployTarget(deps: Deps, ctx: CallContext, env: SiteEnv): Promise<Result<DeployCheckResult>> {
   const denied = requirePermission(ctx, 'site.publish');
@@ -275,23 +310,45 @@ export async function checkDeployTarget(deps: Deps, ctx: CallContext, env: SiteE
   if (!env.deploy) return conflict('publishTargetMissing', 'SITE_DEPLOY_* ist nicht gesetzt');
   const credentialProblem = await checkDeployCredentials(env.deploy);
   if (credentialProblem) return conflict('deployCredentialsUnusable', credentialProblem);
-  const emptyDir = await mkdtemp(path.join(tmpdir(), 'kompass-deploy-check-'));
-  try {
-    const { log } = await rsyncPublish({ distDir: emptyDir, deploy: env.deploy, dryRun: true, timeoutMs: 60_000 });
-    return ok({
-      target: env.deploy.host ? `${env.deploy.user}@${env.deploy.host}:${env.deploy.path}` : env.deploy.path,
+  const deploy = env.deploy;
+  const target = deploy.host ? `${deploy.user}@${deploy.host}:${deploy.path}` : deploy.path;
+
+  return exclusive<DeployCheckResult>(deps, env, 'publish', async () => {
+    const emptyDir = await mkdtemp(path.join(tmpdir(), 'kompass-deploy-check-'));
+    let filesAtTarget: string[];
+    let pathCheckLog: string;
+    try {
+      const { log } = await rsyncPublish({ distDir: emptyDir, deploy, dryRun: true, timeoutMs: 60_000 });
+      pathCheckLog = log;
       // Verzeichniszeilen enden auf "/" und zaehlen nicht als Datei.
-      filesAtTarget: log
+      filesAtTarget = log
         .split('\n')
         .flatMap((line) => (line.startsWith('*deleting ') ? [line.slice('*deleting '.length).trim()] : []))
-        .filter((entry) => entry.length > 0 && !entry.endsWith('/')),
-      log,
-    });
-  } catch (error) {
-    return conflict('deployCheckFailed', (error instanceof Error ? error.message : String(error)).slice(0, 2000));
-  } finally {
-    await rm(emptyDir, { recursive: true, force: true });
-  }
+        .filter((entry) => entry.length > 0 && !entry.endsWith('/'));
+    } catch (error) {
+      return conflict('deployCheckFailed', (error instanceof Error ? error.message : String(error)).slice(0, 2000));
+    } finally {
+      await rm(emptyDir, { recursive: true, force: true });
+    }
+
+    const outDir = await mkdtemp(path.join(tmpdir(), 'kompass-deploy-check-build-'));
+    try {
+      const built = await exportAndBuild(deps, ctx, env, outDir);
+      if (!built.ok) {
+        const reason = built.error.type === 'conflict' ? built.error.code : built.error.type;
+        return ok({ target, filesAtTarget, publishWould: null, build: { ok: false, reason }, log: pathCheckLog });
+      }
+      if (built.value.exported.violations.length > 0) {
+        return ok({ target, filesAtTarget, publishWould: null, build: { ok: false, reason: 'blockedTermsPresent' }, log: pathCheckLog });
+      }
+      const { log: buildLog } = await rsyncPublish({ distDir: outDir, deploy, dryRun: true, timeoutMs: 60_000 });
+      return ok({ target, filesAtTarget, publishWould: parsePublishWould(buildLog), build: { ok: true }, log: `${pathCheckLog}\n${buildLog}` });
+    } catch (error) {
+      return conflict('deployCheckFailed', (error instanceof Error ? error.message : String(error)).slice(0, 2000));
+    } finally {
+      await rm(outDir, { recursive: true, force: true });
+    }
+  });
 }
 
 export async function runPublish(deps: Deps, ctx: CallContext, env: SiteEnv, opts: { confirm: boolean }): Promise<Result<PublishResult>> {

@@ -3,9 +3,11 @@ import { z } from 'zod';
 import { roles, users } from '../db/schema';
 import { listDueFollowUpsWithTargets } from '../follow-ups/targets';
 import { listTranslationGaps } from '../i18n/translations';
+import { listOpenInstallErrors } from '../modules/installs';
 import { listModules } from '../modules/service';
 import { collectRetentionDue } from '../retention/service';
 import { readAllSettings, readSetting } from '../settings/service';
+import { isoDayIn } from '../today';
 import { userNamesFor } from '../users/names';
 import type { DashboardLine, DashboardTile } from './types';
 
@@ -40,24 +42,25 @@ function filled(key: string, value: unknown): boolean {
   return typeof value === 'string' ? value.trim().length > 0 : value !== null && value !== undefined;
 }
 
-const isoDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
-
 const followUpsTile: DashboardTile<{ horizonDays: '7' | '14' | '30'; onlyMine: boolean }> = {
   key: 'followUps',
   permission: 'followUps.view',
   kind: 'list',
   defaultOn: true,
   options: z.object({ horizonDays: z.enum(['7', '14', '30']).default('7'), onlyMine: z.boolean().default(false) }),
+  messageKeys: ['protectedTitle'],
   async load(deps, ctx, o) {
     const now = deps.clock.now().getTime();
-    const today = isoDay(now);
-    const until = isoDay(now + Number(o.horizonDays) * 86_400_000);
+    const today = isoDayIn(deps, now);
+    const until = isoDayIn(deps, now + Number(o.horizonDays) * 86_400_000);
     const filter = o.onlyMine && ctx.userId ? { until, assigneeUserId: ctx.userId } : { until };
     const res = await listDueFollowUpsWithTargets(deps, ctx, filter);
     if (!res.ok) return { kind: 'list', lines: [], total: 0, href: null };
     const names = userNamesFor(deps, res.value.map((r) => r.assigneeUserId));
     const lines: DashboardLine[] = res.value.slice(0, 10).map((r) => {
-      const line: DashboardLine = { date: r.dueAt, title: r.title, overdue: r.dueAt < today, action: { kind: 'completeFollowUp', followUpId: r.id } };
+      const line: DashboardLine = r.titleHidden
+        ? { date: r.dueAt, titleKey: 'protectedTitle', overdue: r.dueAt < today }
+        : { date: r.dueAt, title: r.title, overdue: r.dueAt < today, action: { kind: 'completeFollowUp', followUpId: r.id } };
       if (r.target) line.link = { label: r.target.label, href: r.target.href };
       const name = r.assigneeUserId ? names.get(r.assigneeUserId) : undefined;
       if (name) line.extra = name;
@@ -73,7 +76,7 @@ const setupTile: DashboardTile<Record<string, never>> = {
   kind: 'list',
   defaultOn: true,
   options: z.object({}),
-  messageKeys: [...REQUIRED_SETTINGS.map(settingMessageKey), 'noRole', 'noModule'],
+  messageKeys: [...REQUIRED_SETTINGS.map(settingMessageKey), 'noRole', 'noModule', 'installError'],
   load(deps) {
     const all = readAllSettings(deps);
     const lines: DashboardLine[] = REQUIRED_SETTINGS.filter((key) => !filled(key, all[key])).map((key) => ({ titleKey: settingMessageKey(key), href: '/admin/settings' }));
@@ -81,6 +84,7 @@ const setupTile: DashboardTile<Record<string, never>> = {
     if (others.length === 0) lines.push({ titleKey: 'noRole', href: '/admin/roles' });
     const modules = listModules(deps).filter((m) => m.key !== 'core');
     if (modules.length > 0 && !modules.some((m) => m.enabled)) lines.push({ titleKey: 'noModule', href: '/admin/modules' });
+    for (const e of listOpenInstallErrors(deps)) lines.push({ titleKey: 'installError', values: { module: e.module, message: e.message }, href: '/admin/modules' });
     return { kind: 'list', lines, total: lines.length, href: null };
   },
 };

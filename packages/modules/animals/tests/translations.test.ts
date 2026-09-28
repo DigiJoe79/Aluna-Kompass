@@ -2,7 +2,7 @@ import { coreModule, schema, setSetting, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { animalsModule } from '../src/manifest';
-import { createAnimal, getAnimal, setAnimalStatus, setAnimalStory } from '../src/service';
+import { createAnimal, getAnimal, setAnimalStatus, setAnimalStory, updateAnimal } from '../src/service';
 import { animalsSetTranslations, animalsTranslatables } from '../src/translations';
 
 const manage = ctxWith(['animals.manage', 'animals.view']);
@@ -27,6 +27,13 @@ describe('animals translations', () => {
     const after = unwrap(animalsTranslatables(deps, view))[0]!;
     expect(Object.keys(after.fields)).toEqual(['birthText', 'sizeText', 'traits', 'summary', 'body', 'story.quote', 'story.beforeCaption', 'story.afterCaption']);
     expect(after.fields['story.quote']).toEqual({ de: 'Endlich daheim.', en: '' });
+  });
+
+  it('does not list place as translatable', async () => {
+    const { deps, id } = await setup();
+    unwrap(await updateAnimal(deps, manage, { id, place: 'Rumänien, Brașov' }));
+    const rows = unwrap(animalsTranslatables(deps, view));
+    expect(Object.keys(rows[0]!.fields)).not.toContain('place');
   });
 
   it('is forbidden without animals.view and ignores foreign entity types', async () => {

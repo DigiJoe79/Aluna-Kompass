@@ -2,6 +2,7 @@ import type { DashboardLine, DashboardTile } from '@kompass/core';
 import { contacts, displayName } from '@kompass/module-contacts';
 import { and, count, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
+import { manageableTypeFilter } from './access';
 import { documentLinks, documents } from './schema';
 import { listDocuments } from './service';
 
@@ -78,8 +79,8 @@ const textFailedTile: DashboardTile<Record<string, never>> = {
   kind: 'count',
   defaultOn: false,
   options: z.object({}),
-  load(deps) {
-    const row = deps.db.select({ n: count() }).from(documents).where(eq(documents.textStatus, 'failed')).get();
+  load(deps, ctx) {
+    const row = deps.db.select({ n: count() }).from(documents).where(and(eq(documents.textStatus, 'failed'), manageableTypeFilter(deps, ctx))).get();
     return { kind: 'count', count: row?.n ?? 0, href: '/dms' };
   },
 };

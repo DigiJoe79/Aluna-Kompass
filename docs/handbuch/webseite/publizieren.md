@@ -61,10 +61,12 @@ dort „Keine Änderungen“, würde ein Publish dasselbe noch einmal hochladen.
 ## Verbindung testen
 
 Vor dem ersten Publish und nach jeder Änderung am Webspace: „Verbindung
-testen“ meldet sich am Ziel an, überträgt nichts und listet, was dort liegt.
-Steht die erwartete Seite in der Liste, stimmt der Pfad. Kommt sie leer
-zurück, zeigt der Pfad ins Leere — ein Publish würde dann nichts entfernen,
-aber auch nichts sichtbar machen.
+testen“ meldet sich am Ziel an, überträgt nichts und zeigt zwei getrennte
+Dinge. Erstens die Pfadprüfung: was am Ziel liegt. Steht die erwartete Seite
+in der Liste, stimmt der Pfad; kommt sie leer zurück, zeigt der Pfad ins
+Leere. Zweitens, aus einem frischen Bau wie beim Publish, was ein Publish
+ändern, hinzufügen und entfernen würde — verglichen mit dem echten Ziel, nicht
+mit einem leeren Verzeichnis.
 
 ## Publizieren
 

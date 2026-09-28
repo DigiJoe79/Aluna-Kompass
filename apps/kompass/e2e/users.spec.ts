@@ -1,3 +1,4 @@
+import { callTool, mcpClient } from './expense-helpers';
 import { expect, test } from './fixtures';
 import { loginAsAdmin, resetDatabase } from './helpers';
 
@@ -10,11 +11,12 @@ test.describe('users', () => {
 
   test('lists seeded users with roles and status', async ({ page }) => {
     const table = page.getByRole('table');
-    await expect(table.getByRole('row')).toHaveCount(5); // Kopf + 4
+    // Kopf + 5 Kernseed-Personen + Nadja Vogt (F8a Task 7, Rolle „Auslagen einreichen“).
+    await expect(table.getByRole('row')).toHaveCount(7);
     const jonas = table.getByRole('row', { name: /Jonas Feld/ });
     await expect(jonas).toContainText('Schatzmeisterin');
     await expect(jonas).toContainText('Aktiv');
-    await expect(page.getByText('4 Nutzer, davon 0 inaktiv')).toBeVisible();
+    await expect(page.getByText('6 Nutzer, davon 0 inaktiv')).toBeVisible();
   });
 
   test('creates a user, shows the start password once and marks first login pending', async ({ page, context }) => {
@@ -41,6 +43,45 @@ test.describe('users', () => {
     await expect(row).toContainText('Kassenprüfer');
   });
 
+  test('verknüpft ein Konto mit einem Kontakt und löst die Verknüpfung wieder', async ({ page }) => {
+    // Peter Lang ist im Seed schon verknüpft, Mira Klein nicht.
+    await expect(page.getByRole('row', { name: /Peter Lang/ }).getByRole('link', { name: 'Peter Lang' })).toBeVisible();
+    const row = page.getByRole('row', { name: /Mira Klein/ });
+    await expect(row).toContainText('nicht verknüpft');
+    await row.getByRole('button', { name: 'Verknüpfen' }).click();
+    const dialog = page.getByRole('dialog');
+    // Getippt statt nur geöffnet (F7 Task 7): die ungefilterte Liste zeigt nur die ersten 20 Kontakte —
+    // seit dem Partner-Seed reicht das ohne Suchbegriff nicht mehr sicher bis „Tomas Leitner“.
+    await dialog.getByRole('combobox', { name: 'Kontakt wählen' }).fill('Leitner');
+    const option = page.getByTestId('contact-option').filter({ hasText: 'Tomas Leitner' });
+    await expect(option).toBeVisible();
+    await option.click();
+    await dialog.getByRole('button', { name: 'Verknüpfen' }).click();
+    await expect(page.getByRole('row', { name: /Mira Klein/ }).getByRole('link', { name: 'Tomas Leitner' })).toBeVisible();
+    await page.getByRole('row', { name: /Mira Klein/ }).getByRole('button', { name: 'Lösen' }).click();
+    await expect(page.getByRole('row', { name: /Mira Klein/ })).toContainText('nicht verknüpft');
+  });
+
+  test('Kontakt-Picker: ohne Suchbegriff sagt er, dass es mehr gibt; der ganze Name trifft (Befund 39)', async ({ page, baseURL }) => {
+    const client = await mcpClient(page, baseURL);
+    for (let i = 1; i <= 21; i++) await callTool(client, 'contacts_create', { kind: 'person', lastName: `Füllkontakt ${i}` });
+    await page.goto('/admin/users');
+    await page.getByRole('row', { name: /Mira Klein/ }).getByRole('button', { name: 'Verknüpfen' }).click();
+    const dialog = page.getByRole('dialog');
+    const picker = dialog.getByRole('combobox', { name: 'Kontakt wählen' });
+    await picker.click();
+    await expect(page.getByTestId('contact-option')).toHaveCount(20);
+    await expect(page.getByTestId('contact-more')).toHaveText('Weitere Treffer — bitte suchen.');
+    // Teil C Task 2: Der Hinweis wird auch angesagt — eine Live-Region, die schon vor dem Öffnen da ist.
+    const status = dialog.getByTestId('contact-picker-status');
+    await expect(status).toHaveAttribute('aria-live', 'polite');
+    await expect(status).toHaveText('Weitere Treffer — bitte suchen.');
+    await picker.fill('Tomas Leitner');
+    await expect(page.getByTestId('contact-option').filter({ hasText: 'Tomas Leitner' })).toBeVisible();
+    await expect(page.getByTestId('contact-more')).toHaveCount(0);
+    await expect(status).toHaveText('');
+  });
+
   test('rejects a duplicate e-mail inside the dialog', async ({ page }) => {
     await page.getByRole('button', { name: 'Nutzer anlegen' }).click();
     const dialog = page.getByRole('dialog');
@@ -64,7 +105,7 @@ test.describe('users', () => {
   });
 
   test('is forbidden for a role without users.manage', async ({ page }) => {
-    // Mira Klein (Kassenprüfer) hat nur audit.view; Startpasswort per Reset holen.
+    // Mira Klein (Interne Revision) hat nur audit.view; Startpasswort per Reset holen.
     await page.getByRole('row', { name: /Mira Klein/ }).getByRole('button', { name: 'Aktionen' }).click();
     await page.getByRole('menuitem', { name: 'Neues Startpasswort' }).click();
     const startPassword = (await page.getByTestId('start-password').textContent())!.trim();
@@ -127,7 +168,7 @@ test.describe('users', () => {
     await page.keyboard.press('Escape');
 
     await page.goto('/admin/roles');
-    await page.getByRole('list', { name: 'Rollen' }).getByRole('button', { name: /Kassenprüfer/ }).click();
+    await page.getByRole('list', { name: 'Rollen' }).getByRole('button', { name: /Interne Revision/ }).click();
     await expect(page.getByRole('checkbox', { name: 'Nutzer verwalten' })).toBeEnabled();
     await expect(page.getByRole('checkbox', { name: 'Einstellungen verwalten' })).toBeDisabled();
     // Was die Rolle schon hat, darf auch entfernt werden, wer es selbst nicht hat.

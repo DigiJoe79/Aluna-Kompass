@@ -105,6 +105,14 @@ describe('site mcp tools', () => {
     }
   });
 
+  it('describes the deploy check as two separate statements, not a removal list', () => {
+    const tools = Object.fromEntries(moduleMcpTools(createTestDeps(), siteModule).map((t) => [t.name, t]));
+    const description = tools.site_deploy_check?.description ?? '';
+    expect(description).toContain('site.publish');
+    expect(description).toMatch(/found there|path check/i);
+    expect(description).toMatch(/would (change|transfer)/i);
+  });
+
   it('site_variables_options calls listReferenceOptions', () => {
     const deps = withTemplate({});
     const tools = Object.fromEntries(moduleMcpTools(deps, siteModule).map((t) => [t.name, t]));

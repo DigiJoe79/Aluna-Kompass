@@ -6,7 +6,7 @@ export default async function PreviewFramePage() {
   const t = await getTranslations('site.previewFrame');
   return (
     <div className="space-y-6">
-      <PageHeader title={t('title')} description={t('description')} />
+      <PageHeader title={t('title')} description={t('description')} back={{ href: '/site/publish', label: t('back') }} />
       <PreviewFrameClient />
     </div>
   );

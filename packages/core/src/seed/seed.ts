@@ -6,7 +6,7 @@ import type { Deps } from '../deps';
 import { getEffectivePermissions } from '../roles/effective';
 import { unwrap } from '../result';
 import { createRole, setRolePermissions } from '../roles/service';
-import { writeSettingInternal } from '../settings/service';
+import { readSetting, writeSettingInternal } from '../settings/service';
 import { completeSetup, isSetupRequired } from '../setup/service';
 import { createUser } from '../users/service';
 import { seedMedia } from './media';
@@ -16,13 +16,22 @@ export const SEED_ADMIN_PASSWORD = 'kompass-entwicklung-2026';
 
 const EXAMPLE_ROLES: { name: string; description: string; permissions: string[] }[] = [
   { name: 'Schatzmeisterin', description: 'Finanzen und Dokumente', permissions: ['documents.export', 'media.upload', 'audit.view', 'backup.export', 'followUps.view', 'followUps.manage', 'dms.view'] },
-  { name: 'Kassenprüfer', description: 'Nur lesen', permissions: ['audit.view', 'documents.export'] },
+  // Nicht „Kassenprüfer“: Das Finanzmodul liefert ab F1 eine eigene Rolle
+  // dieses Namens (Spec 10.1); zwei Rollen mit demselben Namen ließen sich
+  // sonst über `nameTaken` nicht beide anlegen.
+  { name: 'Interne Revision', description: 'Nur lesen', permissions: ['audit.view', 'documents.export'] },
   { name: 'Schriftführung', description: 'Dokumente erzeugen', permissions: ['documents.export'] },
+];
+
+const EXAMPLE_ADDRESS: [string, string][] = [
+  ['organization.street', 'Vereinsweg 1'],
+  ['organization.postalCode', '12345'],
+  ['organization.city', 'Musterstadt'],
 ];
 
 const EXAMPLE_USERS: { name: string; email: string; role: string }[] = [
   { name: 'Jonas Feld', email: 'jonas@kompass.local', role: 'Schatzmeisterin' },
-  { name: 'Mira Klein', email: 'mira@kompass.local', role: 'Kassenprüfer' },
+  { name: 'Mira Klein', email: 'mira@kompass.local', role: 'Interne Revision' },
   { name: 'Peter Lang', email: 'peter@kompass.local', role: 'Schriftführung' },
 ];
 
@@ -43,6 +52,10 @@ export async function seedDevelopment(deps: Deps): Promise<{ adminEmail: string;
     // stünde die Entwicklung auf einem anderen Zustand als eine echte
     // Installation — und genau solche Unterschiede fallen zuletzt auf.
     for (const manifest of deps.registry.manifests) manifest.install?.(tx, deps, ctx);
+    // Eine erfundene Vereinsanschrift — jede Zuwendungsbestätigung trägt sie (F6a). Was schon eingetragen ist, bleibt.
+    for (const [key, value] of EXAMPLE_ADDRESS) {
+      if (!String(readSetting(deps, key) ?? '').trim()) writeSettingInternal(tx, deps, ctx, key, value, 'seed.organization');
+    }
   });
 
   const known = new Set(deps.registry.permissionKeys);

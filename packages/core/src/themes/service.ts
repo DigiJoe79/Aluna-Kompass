@@ -11,8 +11,13 @@ import { THEME_KEY_PATTERN, themeSchema, type Theme } from './tokens';
 
 const DEFAULT_KEY = 'default';
 
+/** Ein gespeichertes Theme kennt Tokens nicht, die nach ihm kamen. Fehlende kommen aus der Vorgabe — sonst wirft das Wurzel-Layout auf jeder Seite. */
+function withAllTokens(theme: Theme): Theme {
+  return { ...theme, tokens: { ...DEFAULT_THEME.tokens, ...theme.tokens } };
+}
+
 export function listThemes(deps: Deps): { themes: Theme[]; activeKey: string } {
-  return { themes: readSetting<Theme[]>(deps, 'themes'), activeKey: readSetting<string>(deps, 'branding.activeTheme') };
+  return { themes: readSetting<Theme[]>(deps, 'themes').map(withAllTokens), activeKey: readSetting<string>(deps, 'branding.activeTheme') };
 }
 
 export function resolveActiveTheme(deps: Deps): Theme {

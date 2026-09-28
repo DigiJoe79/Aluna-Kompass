@@ -1,7 +1,4 @@
-import {
-  conflict, isoNow, newId, notFound, ok, recordAudit, requirePermission, validate,
-  type CallContext, type DbOrTx, type Deps, type Result,
-} from '@kompass/core';
+import { conflict, expectedVersionField, isoNow, newId, notFound, notifyRecordDeleted, ok, recordAudit, requirePermission, staleVersion, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { and, asc, count, desc, eq, inArray, isNull, like, or, sql, type SQL, type SQLWrapper } from 'drizzle-orm';
 import { z } from 'zod';
 import { displayName } from './address';
@@ -66,6 +63,7 @@ export const contactUpdateSchema = z.object({
   name: z.string().trim().min(1).max(200).optional(),
   legalForm: z.string().trim().max(120).nullable().optional(),
   ...address,
+  expectedVersion: expectedVersionField,
 });
 
 export const contactStatusSchema = z.object({ id: z.string().min(1), status: z.enum(['active', 'archived']) });
@@ -90,6 +88,34 @@ function belongsToProblem(db: DbOrTx, belongsToId: string | null | undefined, se
   return null;
 }
 
+/**
+ * Das Protokoll ist unlöschbar, Personendaten sind es nicht (Befund 48): Kontakte
+ * schreiben dort nur ID, Art und die **Namen** der Felder, nie ihre Werte, und
+ * einen Kurztext ohne Namen. Den Namen löst die Protokollansicht live auf,
+ * solange der Kontakt existiert.
+ */
+const ADDRESS_FIELDS = new Set(['belongsToId', 'addressExtra', 'street', 'postalCode', 'city', 'country']);
+
+function filledFields(values: Record<string, unknown>): string[] {
+  return Object.entries(values)
+    .filter(([key, value]) => key !== 'kind' && value !== null && value !== undefined && value !== '')
+    .map(([key]) => key);
+}
+
+function changedFields(before: Record<string, unknown>, changes: Record<string, unknown>): string[] {
+  return Object.entries(changes)
+    .filter(([key, value]) => value !== undefined && (value ?? null) !== (before[key] ?? null))
+    .map(([key]) => key);
+}
+
+/** D7: die Felder, die den Namen eines Kontakts ausmachen — Person wie Organisation. */
+const NAME_FIELDS = new Set(['salutation', 'firstName', 'lastName', 'name']);
+
+function updateSummary(fields: string[]): string {
+  if (fields.length > 0 && fields.every((f) => NAME_FIELDS.has(f))) return 'Name geändert';
+  return fields.length > 0 && fields.every((f) => ADDRESS_FIELDS.has(f)) ? 'Anschrift geändert' : 'Kontakt geändert';
+}
+
 export async function createContact(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ContactRecord>> {
   const denied = requirePermission(ctx, 'contacts.manage');
   if (denied) return denied;
@@ -102,7 +128,7 @@ export async function createContact(deps: Deps, ctx: CallContext, input: unknown
     const now = isoNow(deps.clock);
     tx.insert(contacts).values({ id, ...parsed.value, status: 'active', createdAt: now, updatedAt: now }).run();
     const record = loadContact(tx, id)!;
-    recordAudit(tx, deps, ctx, { action: 'contacts.create', entityType: 'contact', entityId: id, after: record, summary: `Kontakt ${displayName(record)} angelegt` });
+    recordAudit(tx, deps, ctx, { action: 'contacts.create', entityType: 'contact', entityId: id, after: { kind: record.kind, changedFields: filledFields(parsed.value) }, summary: 'Kontakt angelegt' });
     return ok(record);
   });
 }
@@ -112,15 +138,18 @@ export async function updateContact(deps: Deps, ctx: CallContext, input: unknown
   if (denied) return denied;
   const parsed = validate(deps, contactUpdateSchema, input);
   if (!parsed.ok) return parsed;
-  const { id, ...changes } = parsed.value;
+  const { id, expectedVersion, ...changes } = parsed.value;
   const before = loadContact(deps.db, id);
   if (!before) return notFound('contact', id);
+  const stale = staleVersion(expectedVersion, before.updatedAt);
+  if (stale) return stale;
   const problem = belongsToProblem(deps.db, changes.belongsToId, id);
   if (problem) return problem as Result<ContactRecord>;
+  const fields = changedFields(before, changes);
   return deps.db.transaction((tx: DbOrTx) => {
     tx.update(contacts).set({ ...changes, updatedAt: isoNow(deps.clock) }).where(eq(contacts.id, id)).run();
     const after = loadContact(tx, id)!;
-    recordAudit(tx, deps, ctx, { action: 'contacts.update', entityType: 'contact', entityId: id, before, after, summary: `Kontakt ${displayName(after)} geändert` });
+    recordAudit(tx, deps, ctx, { action: 'contacts.update', entityType: 'contact', entityId: id, after: { changedFields: fields }, summary: updateSummary(fields) });
     return ok(after);
   });
 }
@@ -135,7 +164,7 @@ export async function setContactStatus(deps: Deps, ctx: CallContext, input: unkn
   return deps.db.transaction((tx: DbOrTx) => {
     tx.update(contacts).set({ status: parsed.value.status, updatedAt: isoNow(deps.clock) }).where(eq(contacts.id, parsed.value.id)).run();
     const after = loadContact(tx, parsed.value.id)!;
-    recordAudit(tx, deps, ctx, { action: 'contacts.setStatus', entityType: 'contact', entityId: after.id, before: { status: before.status }, after: { status: after.status }, summary: `Kontakt ${displayName(after)} ${after.status === 'archived' ? 'archiviert' : 'reaktiviert'}` });
+    recordAudit(tx, deps, ctx, { action: 'contacts.setStatus', entityType: 'contact', entityId: after.id, before: { status: before.status }, after: { status: after.status }, summary: after.status === 'archived' ? 'Kontakt archiviert' : 'Kontakt reaktiviert' });
     return ok(after);
   });
 }
@@ -159,20 +188,25 @@ export async function listContacts(deps: Deps, ctx: CallContext, input: unknown)
   if (q.kind) conditions.push(eq(contacts.kind, q.kind));
   if (q.text) {
     // SQLite `like` ist bei ASCII ohnehin case-insensitive; für Umlaute reicht
-    // das nicht, deshalb wird zusätzlich klein geschrieben verglichen.
-    const needle = `%${q.text.toLowerCase()}%`;
-    const hit = (col: SQLWrapper) => like(sqlLower(col), needle);
-    // Die Suche greift auch auf Kommunikationswege, damit „die mit der Nummer
-    // 0157…" auffindbar ist (Spec § 7).
-    const byChannel = deps.db
-      .select({ id: contactChannels.contactId })
-      .from(contactChannels)
-      .where(like(sqlLower(contactChannels.value), needle))
-      .all()
-      .map((r) => r.id);
-    const clauses: SQL[] = [hit(contacts.lastName), hit(contacts.firstName), hit(contacts.name), hit(contacts.city)];
-    if (byChannel.length > 0) clauses.push(inArray(contacts.id, byChannel));
-    conditions.push(or(...clauses)!);
+    // das nicht, deshalb wird zusätzlich klein geschrieben verglichen. Jedes
+    // Wort muss irgendwo treffen (Befund 39): „Tomas Leitner“ und „Leitner,
+    // Tomas“ finden dieselbe Person, obwohl Vor- und Nachname getrennt liegen.
+    const words = q.text.toLowerCase().split(/[\s,]+/).filter(Boolean);
+    for (const word of words) {
+      const needle = `%${word}%`;
+      const hit = (col: SQLWrapper) => like(sqlLower(col), needle);
+      // Die Suche greift auch auf Kommunikationswege, damit „die mit der Nummer
+      // 0157…" auffindbar ist (Spec § 7).
+      const byChannel = deps.db
+        .select({ id: contactChannels.contactId })
+        .from(contactChannels)
+        .where(like(sqlLower(contactChannels.value), needle))
+        .all()
+        .map((r) => r.id);
+      const clauses: SQL[] = [hit(contacts.lastName), hit(contacts.firstName), hit(contacts.name), hit(contacts.city)];
+      if (byChannel.length > 0) clauses.push(inArray(contacts.id, byChannel));
+      conditions.push(or(...clauses)!);
+    }
   }
   if (q.role) {
     // Nur laufende Rollen (`until IS NULL`) — die Liste zeigt auch nur diese.
@@ -242,7 +276,7 @@ export async function setContactChannels(deps: Deps, ctx: CallContext, input: un
         .run();
     });
     const after = loadContact(tx, before.id)!;
-    recordAudit(tx, deps, ctx, { action: 'contacts.setChannels', entityType: 'contact', entityId: after.id, before: before.channels, after: after.channels, summary: `Kommunikationswege von ${displayName(after)} geändert` });
+    recordAudit(tx, deps, ctx, { action: 'contacts.setChannels', entityType: 'contact', entityId: after.id, before: { kinds: before.channels.map((c) => c.kind) }, after: { kinds: after.channels.map((c) => c.kind), changedFields: ['channels'] }, summary: 'Kommunikationswege geändert' });
     return ok(after);
   });
 }
@@ -274,7 +308,7 @@ export async function addContactRole(deps: Deps, ctx: CallContext, input: unknow
   return deps.db.transaction((tx: DbOrTx) => {
     tx.insert(contactRoles).values({ id: newId(), contactId: contact.id, role: parsed.value.role, since: parsed.value.since, until: null, note: parsed.value.note ?? null }).run();
     const after = loadContact(tx, contact.id)!;
-    recordAudit(tx, deps, ctx, { action: 'contacts.addRole', entityType: 'contact', entityId: after.id, after: { role: parsed.value.role, since: parsed.value.since }, summary: `Rolle ${parsed.value.role} für ${displayName(after)} begonnen` });
+    recordAudit(tx, deps, ctx, { action: 'contacts.addRole', entityType: 'contact', entityId: after.id, after: { role: parsed.value.role, since: parsed.value.since }, summary: `Rolle ${parsed.value.role} begonnen` });
     return ok(after);
   });
 }
@@ -290,7 +324,7 @@ export async function endContactRole(deps: Deps, ctx: CallContext, input: unknow
   return deps.db.transaction((tx: DbOrTx) => {
     tx.update(contactRoles).set({ until: parsed.value.until }).where(eq(contactRoles.id, row.id)).run();
     const after = loadContact(tx, row.contactId)!;
-    recordAudit(tx, deps, ctx, { action: 'contacts.endRole', entityType: 'contact', entityId: after.id, before: { role: row.role, until: null }, after: { role: row.role, until: parsed.value.until }, summary: `Rolle ${row.role} für ${displayName(after)} beendet` });
+    recordAudit(tx, deps, ctx, { action: 'contacts.endRole', entityType: 'contact', entityId: after.id, before: { role: row.role, until: null }, after: { role: row.role, until: parsed.value.until }, summary: `Rolle ${row.role} beendet` });
     return ok(after);
   });
 }
@@ -310,7 +344,7 @@ export async function contactRetention(
   if (!contact) return notFound('contact', id);
   const holds = holdsFor(deps, 'contact', id);
   const until = dueUntil(holds);
-  const today = deps.clock.now().toISOString().slice(0, 10);
+  const today = todayIn(deps);
   return ok({ holds, until, due: holds.length > 0 && until !== null && until < today });
 }
 
@@ -340,7 +374,7 @@ export async function deleteContact(deps: Deps, ctx: CallContext, input: unknown
     return conflict('retentionUnknown', 'Für diesen Kontakt ist keine Frist nachgewiesen. Vergeben Sie eine Rolle oder archivieren Sie ihn.');
   }
   const until = dueUntil(holds);
-  const today = deps.clock.now().toISOString().slice(0, 10);
+  const today = todayIn(deps);
   if (until === null || until >= today) {
     return conflict('retentionHoldActive', `Noch gehalten von: ${holds.map((h) => `${h.label}${h.until ? ` (bis ${h.until})` : ' (dauerhaft)'}`).join('; ')}`);
   }
@@ -349,7 +383,8 @@ export async function deleteContact(deps: Deps, ctx: CallContext, input: unknown
     tx.delete(contactChannels).where(eq(contactChannels.contactId, contact.id)).run();
     tx.delete(contactRoles).where(eq(contactRoles.contactId, contact.id)).run();
     tx.delete(contacts).where(eq(contacts.id, contact.id)).run();
-    recordAudit(tx, deps, ctx, { action: 'contacts.delete', entityType: 'contact', entityId: contact.id, before: { name: displayName(contact), until }, summary: `Kontakt ${displayName(contact)} nach Fristablauf gelöscht` });
+    notifyRecordDeleted(tx, deps, ctx, 'contact', contact.id);
+    recordAudit(tx, deps, ctx, { action: 'contacts.delete', entityType: 'contact', entityId: contact.id, before: { until }, summary: 'Kontakt nach Fristablauf gelöscht' });
     return ok({ id: contact.id });
   });
 }

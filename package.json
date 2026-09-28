@@ -1,6 +1,6 @@
 {
   "name": "aluna-kompass",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "license": "Apache-2.0",
   "packageManager": "pnpm@11.25.0",
@@ -16,13 +16,15 @@
     "lint": "pnpm --filter @kompass/app lint",
     "image": "docker build --build-arg KOMPASS_BUILD=$(git rev-parse --short HEAD 2>/dev/null || echo local) -t kompass-local .",
     "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm e2e:cold && pnpm image && pnpm image:check && pnpm e2e:image",
+    "verify:modul": "pnpm --filter @kompass/app verify:modul",
     "image:check": "scripts/image-runtime-only.sh kompass-local && scripts/third-party-notices.sh kompass-local --pruefen",
     "import:prototype": "tsx scripts/import-prototype.ts",
     "dev:reset": "tsx scripts/dev-reset.ts",
     "seed": "tsx scripts/seed.ts",
     "image:release": "docker build --platform linux/amd64 --build-arg KOMPASS_BUILD=$(git rev-parse --short HEAD 2>/dev/null || echo local) -t kompass-local:amd64 .",
     "e2e:image": "pnpm --filter @kompass/app e2e:image",
-    "e2e:cold": "rm -rf apps/kompass/.next && pnpm --filter @kompass/app e2e"
+    "e2e:cold": "rm -rf apps/kompass/.next && pnpm --filter @kompass/app e2e",
+    "e2e:stress": "E2E_WORKERS=${E2E_WORKERS:-8} pnpm --filter @kompass/app e2e"
   },
   "dependencies": {
     "@kompass/site-template": "workspace:*"
@@ -33,6 +35,7 @@
     "@kompass/module-animals": "workspace:*",
     "@kompass/module-contacts": "workspace:*",
     "@kompass/module-dms": "workspace:*",
+    "@kompass/module-finance": "workspace:*",
     "@kompass/module-site": "workspace:*",
     "tsx": "^4.19.3",
     "@kompass/module-projects": "workspace:*"

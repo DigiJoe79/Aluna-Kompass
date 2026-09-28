@@ -1,4 +1,6 @@
+import { timeZoneOf } from '@kompass/core';
 import { getRequestConfig } from 'next-intl/server';
+import { getDeps } from '@/lib/deps';
 
 /**
  * Ein fehlender Schlüssel fällt sonst niemandem auf: next-intl meldet ihn im
@@ -21,7 +23,8 @@ import { getRequestConfig } from 'next-intl/server';
  */
 export default getRequestConfig(async () => ({
   locale: 'de',
-  timeZone: 'Europe/Berlin',
+  // A4: dieselbe Zeitzone wie „heute“ im Fachcode (`todayIn`) — die des Vereins.
+  timeZone: timeZoneOf(getDeps()),
   messages: (await import('../../messages/de.json')).default,
   onError(error: unknown) {
     if (process.env.APP_ENV === 'test') throw error;

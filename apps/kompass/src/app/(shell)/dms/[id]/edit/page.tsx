@@ -1,4 +1,4 @@
-import { hasPermission, requirePermission } from '@kompass/core';
+import { hasPermission, requirePermission, todayIn } from '@kompass/core';
 import { displayName, getContact } from '@kompass/module-contacts';
 import { defaultTypeKey, getDocumentRecord, listDocumentFolders, listDocumentTypes, listSnippets } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
@@ -20,7 +20,7 @@ export default async function EditDraftPage(props: { params: Promise<{ id: strin
 
   const t = await getTranslations('dms');
 
-  const typesRes = await listDocumentTypes(deps, ctx, { includeInactive: false });
+  const typesRes = await listDocumentTypes(deps, ctx, { selectable: true });
   const types = typesRes.ok ? typesRes.value : [];
 
   const foldersRes = await listDocumentFolders(deps, ctx);
@@ -46,7 +46,7 @@ export default async function EditDraftPage(props: { params: Promise<{ id: strin
       folders={folders}
       canCreateContact={hasPermission(ctx, 'contacts.manage')}
       snippets={snippets}
-      today={deps.clock.now().toISOString().slice(0, 10)}
+      today={todayIn(deps)}
       defaultTypeKey={defaultTypeKey(deps, 'outgoing')}
       draft={{
         id: doc.id,

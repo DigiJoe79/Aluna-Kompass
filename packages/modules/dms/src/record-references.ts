@@ -1,5 +1,7 @@
 import type { Deps, RecordReference } from '@kompass/core';
 import { and, eq } from 'drizzle-orm';
+import { isProtectedType } from './access';
+import { documentTypeFor } from './catalog';
 import { documentLinks, documents } from './schema';
 
 /**
@@ -20,9 +22,12 @@ export function dmsRecordReferences(deps: Deps, entityType: string, id: string):
   );
   const refs: RecordReference[] = [];
   for (const documentId of documentIds) {
-    const doc = deps.db.select({ number: documents.number, subject: documents.subject }).from(documents).where(eq(documents.id, documentId)).get();
+    const doc = deps.db.select({ number: documents.number, subject: documents.subject, typeKey: documents.typeKey }).from(documents).where(eq(documents.id, documentId)).get();
     if (!doc) continue;
-    refs.push({ label: doc.number ? `Dokument ${doc.number}` : `Dokument „${doc.subject}“ (Entwurf)`, entity: 'document', id: documentId, href: `/dms/${documentId}` });
+    const hidden = isProtectedType(documentTypeFor(deps.db, doc.typeKey));
+    // Der Haken weiß nicht, wer fragt — bei einer geschützten Art nennt er nie den Betreff.
+    const label = doc.number ? `Dokument ${doc.number}` : hidden ? 'Entwurf (geschützt)' : `Dokument „${doc.subject}“ (Entwurf)`;
+    refs.push({ label, entity: 'document', id: documentId, href: `/dms/${documentId}` });
   }
   return refs;
 }

@@ -1,10 +1,4 @@
-import {
-  retentionEnd,
-  retentionMonths,
-  type Deps,
-  type DueItem,
-  type RetentionHold,
-} from '@kompass/core';
+import { retentionEnd, retentionMonths, todayIn, type Deps, type DueItem, type RetentionHold } from '@kompass/core';
 import { and, eq } from 'drizzle-orm';
 import { documentTypeFor } from './catalog';
 import { documentLinks, documents } from './schema';
@@ -52,7 +46,7 @@ export function dmsRetentionHolds(deps: Deps, entityType: string, id: string): R
  * Festgeschriebene Dokumente, deren eigene Frist abgelaufen ist.
  */
 export function dmsRetentionDue(deps: Deps): DueItem[] {
-  const today = deps.clock.now().toISOString().slice(0, 10);
+  const today = todayIn(deps);
   const docs = deps.db.select().from(documents).where(eq(documents.phase, 'issued')).all();
   const due: DueItem[] = [];
 
@@ -70,6 +64,7 @@ export function dmsRetentionDue(deps: Deps): DueItem[] {
         id: doc.id,
         label: `Dokument ${doc.number ?? doc.subject}`,
         dueSince: until,
+        href: `/dms/${doc.id}`,
       });
     }
   }

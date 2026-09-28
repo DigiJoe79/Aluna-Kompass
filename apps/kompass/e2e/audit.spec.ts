@@ -1,4 +1,5 @@
 import { expect, test } from './fixtures';
+import { callTool, mcpClient } from './expense-helpers';
 import { loginAsAdmin, resetDatabase } from './helpers';
 
 test.describe('audit log', () => {
@@ -31,6 +32,22 @@ test.describe('audit log', () => {
     await expect(detail.getByText('Musterverein e.V.')).toHaveCSS('text-decoration-line', 'line-through');
     await expect(detail.getByText('Geänderter Verein e.V.')).toBeVisible();
     await expect(detail).toContainText('Einträge können nicht geändert werden.');
+  });
+
+  test('D7: eine Kontaktänderung zeigt die geänderten Felder mit Beschriftung, keinen Scheinwert', async ({ page, baseURL }) => {
+    const client = await mcpClient(page, baseURL);
+    const org = await callTool<{ id: string }>(client, 'contacts_create', { kind: 'organization', name: 'Vorher e.V.' });
+    await callTool(client, 'contacts_update', { id: org.id, name: 'Nachher e.V.' });
+    const { entries } = await callTool<{ entries: { id: string; entityId: string; summary: string }[] }>(client, 'audit_query', { entityType: 'contact', action: 'contacts.update', entityId: org.id });
+    const entry = entries[0]!;
+    expect(entry.summary).toBe('Name geändert');
+
+    await page.goto(`/admin/audit?entry=${entry.id}`);
+    const detail = page.getByRole('dialog');
+    await expect(detail).toContainText('Geänderte Felder: Name');
+    await expect(detail).toContainText('Bei Kontakten protokolliert Kompass keine Werte, nur die geänderten Felder.');
+    await expect(detail).not.toContainText('nachher');
+    await expect(detail).not.toContainText('["name"]');
   });
 
   test('requires audit.view', async ({ page }) => {

@@ -19,7 +19,17 @@ Person, die diesen Rechner betreut.
 ## Erstinstallation
 
 1. **Verzeichnisse anlegen** — eines für die Daten, eines für die Medien, zum
-   Beispiel `kompass/data` und `kompass/media`.
+   Beispiel `kompass/data` und `kompass/media`. **Datenverzeichnis gehört UID
+   1000:** Der Container schreibt als Benutzer 1000; `data/` selbst muss ihm
+   deshalb gehören — `chown 1000:1000 data` (**ohne** `-R`). Die Unterordner
+   je Modul (`core`, `finance`, `dms`, `site`, …) legt der Container beim
+   Start selbst an und prüft sie dabei auf Schreibbarkeit; ein `-R` wäre hier
+   unnötig und griffe in einen bind-gemounteten Ordner (etwa Medien) hinein,
+   dessen Besitz man gerade nicht ändern will. Fehlt der Besitz, bricht der
+   Start mit einer Meldung ab, die den Pfad nennt, statt erst beim ersten
+   Beleg mit einem stillen Fehler zu scheitern. Wer Daten von einer anderen
+   Instanz übernimmt, etwa mit `rsync -a`, übernimmt damit auch deren
+   Besitzer — den `chown` danach noch einmal ausführen.
 
 2. **Umgebungsdatei** aus `.env.prod.example` erstellen. Pflicht ist
    `SESSION_SECRET` mit mindestens 32 zufälligen Zeichen, etwa aus
@@ -107,6 +117,18 @@ gehören nicht in die Aufzeichnung, aus der der Verein Rechenschaft ablegt.
 4. **Prüfen:** anmelden, Startseite, `/api/health`. Die Fassung dort sollte die
    neue sein.
 
+### Von 0.1.x auf 0.2.0
+
+Die Fassung 0.2.0 bringt genau eine Migration mit (`0003_finance`). Sie läuft
+beim ersten Start des neuen Images von selbst, in einem Zug: Entweder ist sie
+danach ganz angewendet, oder die Datenbank bleibt, wie sie war, und die
+Anwendung startet nicht. Vorher wie bei jedem Update das Backup aus Schritt 1
+exportieren. Danach meldet `/api/health` `migrationCount: 4` statt `3`.
+
+Ein Backup aus 0.1.x lässt sich in 0.2.0 einspielen; es wird beim Einspielen
+auf den neuen Stand gebracht. Umgekehrt nicht: Ein Backup aus 0.2.0 weist eine
+Installation mit 0.1.x als „aus einer neueren Version“ zurück.
+
 **Wenn etwas schiefgeht:** Es gibt keinen Weg zurück in eine ältere Fassung der
 Datenbank — Migrationen laufen nur vorwärts. Der Rückweg ist das Backup aus
 Schritt 1: altes Image eintragen, Container starten, Backup einspielen.
@@ -191,9 +213,21 @@ aus den Suchmaschinen: `noindex`, `Disallow: /`, keine Sitemap.
 ## Dokument-Basisvorlagen
 
 Unter `<daten>/core/document-templates` liegen die Seitenrahmen für erzeugte
-PDFs. Kompass liefert die generischen Basen `a4-plain`, `a4-mit-briefkopf` und
-`a4-ohne-briefkopf` mit; ein Verein legt hier eigene `.typ`-Dateien ab, um eine
-zu ergänzen oder zu ersetzen (gleiche Kennung gewinnt). Daneben optional
+PDFs. Kompass liefert die generischen Basen `a4-plain`, `a4-mit-briefkopf`,
+`a4-ohne-briefkopf` und `a4-formular` mit; ein Verein legt hier eigene
+`.typ`-Dateien ab, um eine zu ergänzen oder zu ersetzen (gleiche Kennung
+gewinnt). `a4-formular` zeichnet Vereinskopf, Fußzeile und — wenn die Vorlage
+eine Anschrift liefert — auf Seite 1 das Anschriftfeld für den Fensterumschlag
+DIN lang (`slots.recipient`, darüber klein `slots.recipientLabel`, rechts
+`slots.infoBlock`; Lage nach DIN 5008 Form B: Anschriftfeld 45–90 mm von
+oben, Rücksendezeile unten in der Vermerkzone, Anschrift ab 62,7 mm, Text 25 mm
+von links, Informationsblock ab 125 mm; der Text beginnt dann bei 94 mm). Wer sie ersetzt, ändert den Kopf eines
+Formulars wie der Zuwendungsbestätigung, nie dessen Wortlaut — der steht in der
+Vorlage des Moduls. Zeichnet die eigene Fassung das Anschriftfeld, trägt sie im
+`bases.json` desselben Verzeichnisses das Kennzeichen
+`{ "id": "a4-formular", "label": "…", "kind": "form", "slots": ["recipient", "recipientLabel", "infoBlock"] }`;
+ohne Kennzeichen setzen die Vorlagen Anschrift und Aussteller wie bisher selbst
+in den Text. Daneben optional
 `fonts/` für eigene Schriften und `assets/` für Grafiken, die eine Basis
 einbindet — das Vereinslogo kommt weiter aus den Einstellungen.
 
@@ -205,5 +239,11 @@ Container.
 
 Abgelegte PDFs werden im Hintergrund durchsuchbar gemacht; bei Scans über eine
 Texterkennung. Beides bringt das Image mit, es ist nichts zu installieren.
+Eingebettete Rechnungen (ZUGFeRD) liest Kompass mit `pdfdetach`, das wie die
+Textebene zu poppler-utils gehört; wer außerhalb des Images betreibt, braucht
+dieses Paket vollständig. Die Sammel-PDFs des Serienlaufs bei den Spenden
+fügt Kompass mit `pdfunite` zusammen, ebenfalls aus poppler-utils — fehlt es,
+bleibt der Lauf selbst unberührt, nur der Sammeldruck weist auf das fehlende
+Werkzeug hin.
 Startet der Container mitten in einem Lauf neu, erkennt er die unterbrochene
 Arbeit beim nächsten Start und nimmt sie wieder auf.

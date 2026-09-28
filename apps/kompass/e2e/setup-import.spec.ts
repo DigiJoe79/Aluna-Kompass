@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase } from './helpers';
+import { loginAsAdmin, resetDatabase, waitForHydration } from './helpers';
 
 test('restores a backup from the setup page and signs in with its credentials', async ({ page }) => {
   // Erst einen Bestand erzeugen und exportieren.
@@ -17,6 +17,9 @@ test('restores a backup from the setup page and signs in with its credentials', 
   await page.goto('/setup');
   await page.getByRole('link', { name: /Bestand wiederherstellen/ }).click();
   await expect(page).toHaveURL(/\/setup\/import$/);
+  // W2: Der Link ist ein schlichtes <a> — die Seite lädt neu, und die Fixture wartet nur nach `goto` auf React.
+  // Wählt der Test die Datei vorher, hängt noch kein onChange am Feld: kein Hochladen, kein „Inhalt des Archivs“.
+  await waitForHydration(page, 'input[type="file"]');
 
   await page.getByLabel('Backup-Datei').setInputFiles(archivePath!);
   await expect(page.getByText('Inhalt des Archivs')).toBeVisible();

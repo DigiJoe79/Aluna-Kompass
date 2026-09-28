@@ -1,4 +1,4 @@
-import { hasPermission, listDocumentBases, readSetting, requirePermission } from '@kompass/core';
+import { documentBaseGaps, hasPermission, listDocumentBases, readSetting, requirePermission } from '@kompass/core';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
@@ -24,10 +24,17 @@ export default async function DocumentsPage() {
     base: configured[tpl.key] ?? tpl.base,
     isDefault: !configured[tpl.key],
   }));
+  // Befund 51 b: nur, wenn die Installation überhaupt eigene Basen führt.
+  const m = await getTranslations('modules.names');
+  const gaps = documentBaseGaps(deps).missing.map((gap) => ({
+    base: gap.base,
+    label: bases.find((b) => b.id === gap.base)?.label ?? gap.base,
+    module: m.has(gap.module) ? m(gap.module) : gap.module,
+  }));
   return (
     <>
       <PageHeader title={t('title')} description={t('description')} />
-      <BasesPanel bases={bases} types={baseTypes} canManage={hasPermission(ctx, 'settings.manage')} />
+      <BasesPanel bases={bases} types={baseTypes} gaps={gaps} canManage={hasPermission(ctx, 'settings.manage')} />
     </>
   );
 }

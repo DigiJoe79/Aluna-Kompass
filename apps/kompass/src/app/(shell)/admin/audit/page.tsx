@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { PageHeader } from '@/components/page-header';
 import { buttonVariants } from '@/components/ui/button';
+import { auditEntityLabels } from '@/lib/audit-entities';
 import { requireSession } from '@/lib/request-context';
 import { ExportButton } from './export-button';
 import { AuditDetail } from './audit-detail';
@@ -48,7 +49,12 @@ export default async function AuditPage(props: { searchParams: Promise<Record<st
           actions={actions}
           total={result.value.total}
         />
-        <AuditTable entries={result.value.entries} selectedId={sp.entry ?? null} query={query} />
+        <AuditTable
+          entries={result.value.entries}
+          selectedId={sp.entry ?? null}
+          query={query}
+          labels={auditEntityLabels(deps, ctx, result.value.entries)}
+        />
         <div className="flex items-center justify-between px-5 py-3 text-[13px] text-muted-ink">
           <span>
             {t('range', {

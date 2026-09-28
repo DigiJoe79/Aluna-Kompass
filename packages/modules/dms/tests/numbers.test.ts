@@ -17,6 +17,17 @@ describe('Nummern', () => {
     expect(deps.db.select().from(documentCounters).all()).toEqual([{ prefix: 'BRF', year: 2026, last: 2 }]);
   });
 
+  it('am 1.1. um 00:30 Uhr Ortszeit entsteht eine Nummer des neuen Jahres (Befund 46)', async () => {
+    const { deps, ctx } = setupWithTypes();
+    deps.clock.set('2026-12-31T23:30:00.000Z');
+    const received = await receiveDocument(deps, ctx, { filename: 'a.pdf', bytes: pdfBytes(), typeKey: 'invoice', subject: 'Neujahr', documentDate: '2026-12-30' });
+    expect(received.ok && received.value.number).toBe('RCH-2027-001');
+    const a = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'a', body: 'x' });
+    if (!a.ok) throw new Error('draft');
+    const filed = await fileDocument(deps, ctx, { id: a.value.id });
+    expect(filed.ok && filed.value.number).toMatch(/-2027-001$/);
+  });
+
   it('vergibt eine gelöschte Nummer nie wieder', async () => {
     const { deps, ctx } = setupWithTypes();
     deps.clock.set('2040-03-01T10:00:00.000Z');

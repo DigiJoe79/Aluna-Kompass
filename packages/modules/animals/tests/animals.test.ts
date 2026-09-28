@@ -111,6 +111,35 @@ describe('animals module', () => {
     expect(publishedAnimals.load(d)[0]!.traits).toEqual({ de: ['ruhig'] });
   });
 
+  it('stores and returns a non-localized place', async () => {
+    const d = await deps();
+    const a = unwrap(await createAnimal(d, manage, { ...chiara, place: 'Rumänien, Brașov' }));
+    expect(a.place).toBe('Rumänien, Brașov');
+    const updated = unwrap(await updateAnimal(d, manage, { id: a.id, place: 'Nordrhein-Westfalen' }));
+    expect(updated.place).toBe('Nordrhein-Westfalen');
+  });
+
+  it('trims and limits place to 120 characters', async () => {
+    const d = await deps();
+    const a = unwrap(await createAnimal(d, manage, { ...chiara, place: '  Brașov  ' }));
+    expect(a.place).toBe('Brașov');
+    const tooLong = await createAnimal(d, manage, { ...chiara, slug: 'lang', place: 'x'.repeat(121) });
+    expect(tooLong.ok === false && tooLong.error.type === 'validation').toBe(true);
+  });
+
+  it('defaults place to empty', async () => {
+    const d = await deps();
+    const a = unwrap(await createAnimal(d, manage, chiara));
+    expect(a.place).toBe('');
+  });
+
+  it('publishes place in the view', async () => {
+    const d = await deps();
+    const a = unwrap(await createAnimal(d, manage, { ...chiara, place: 'Rumänien, Brașov' }));
+    unwrap(await setAnimalPublished(d, manage, { id: a.id, isPublished: true }));
+    expect(publishedAnimals.load(d)[0]!.place).toBe('Rumänien, Brașov');
+  });
+
   it('a story carries captions per image, empty by default, and audits them', async () => {
     const d = await deps();
     const a = unwrap(await createAnimal(d, manage, chiara));

@@ -1,7 +1,8 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useActionState, useState } from 'react';
+import { useActionState, useState, useTransition } from 'react';
+import { toast } from 'sonner';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
@@ -10,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { idleState } from '@/lib/actions';
 import { cn } from '@/lib/utils';
-import { createDocumentTypeAction, updateDocumentTypeAction } from './actions';
+import { createDocumentTypeAction, deleteDocumentTypeAction, updateDocumentTypeAction } from './actions';
 import { Select } from '@/components/ui/select';
 import { ActionForm } from '@/components/forms/action-form';
 
@@ -23,21 +24,57 @@ export interface DocumentTypeItem {
   defaultFolder: string | null;
   isActive: boolean;
   sortOrder: number;
+  ownerModule?: string | null;
+  protectionArea?: string | null;
+  /** Wie viele Dokumente die Art hat; `null`, wenn der Aufrufer sie nicht zählen darf. */
+  areaCount?: number | null;
+  /** Task 4: ob `deleteDocumentType` bei dieser Art greifen würde — der Server prüft es vorab, damit der Knopf nichts verspricht, was scheitern würde. */
+  deletable?: boolean;
+}
+
+/** Ein Schutzbereich, den ein Modul anmeldet — einfache Daten, kein Dienst (Client-Grenze). */
+export interface AreaItem {
+  key: string;
+  permission: string;
+  /** Ob der Aufrufer das Recht des Bereichs selbst hat. */
+  held: boolean;
 }
 
 export function TypesPanel({
   types,
   folders,
+  areas = [],
 }: {
   types: DocumentTypeItem[];
   folders: string[];
+  areas?: AreaItem[];
 }) {
   const t = useTranslations('dms.admin');
   const tDms = useTranslations('dms');
   const tCommon = useTranslations('common');
+  const tPerm = useTranslations('permissions.keys');
+  // Das Label eines Bereichs bringt das Modul mit, das ihn anmeldet (`dms.areas.<key>`); ohne fällt es auf den Schlüssel zurück.
+  const areaLabel = (key: string) => (tDms.has(`areas.${key}`) ? tDms(`areas.${key}`) : key);
+  const permissionLabel = (permission: string) => (tPerm.has(`${permission}.label`) ? tPerm(`${permission}.label`) : permission);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editingType, setEditingType] = useState<DocumentTypeItem | null>(null);
+  // Der gewählte Bereich im Bearbeiten-Dialog — für den Hinweis vor dem Speichern.
+  const [areaValue, setAreaValue] = useState('');
+  const [typeToDelete, setTypeToDelete] = useState<DocumentTypeItem | null>(null);
+  const [deletePending, startDeleteTransition] = useTransition();
+
+  const handleDelete = (key: string) => {
+    startDeleteTransition(async () => {
+      const res = await deleteDocumentTypeAction(key);
+      if (res.status === 'success') {
+        setTypeToDelete(null);
+        if (res.message) toast.success(res.message);
+      } else if (res.status === 'error') {
+        toast.error(res.message);
+      }
+    });
+  };
 
   const [createState, createAction, createPending] = useActionState(async (prev: any, formData: FormData) => {
     const res = await createDocumentTypeAction(prev, formData);
@@ -51,6 +88,56 @@ export function TypesPanel({
     if (res.status === 'success') setEditingType(null);
     return res;
   }, idleState);
+
+  /**
+   * Die Auswahl „Schutzbereich“ im Bearbeiten-Dialog. Als Funktion, nicht als
+   * eigene Komponente: Sonst würde der Dialog bei jedem Tastendruck neu
+   * aufgebaut. Ohne angemeldeten Bereich (und ohne gesetzten) gibt es sie nicht.
+   */
+  const areaField = (type: DocumentTypeItem) => {
+    const current = type.protectionArea ?? null;
+    if (areas.length === 0 && current === null) return null;
+
+    // Modul-eigene Arten: nur Anzeige, der Bereich ist fest.
+    if (type.ownerModule) {
+      return current ? (
+        <p className="text-[13px] text-muted-ink">
+          {t('area')}: {areaLabel(current)}
+        </p>
+      ) : null;
+    }
+
+    const currentArea = current === null ? null : areas.find((area) => area.key === current);
+    if (current !== null && !currentArea) {
+      return <p className="rounded-md bg-error-bg p-2.5 text-[13px] text-error">{t('areaUnknown', { key: current })}</p>;
+    }
+
+    // Ändern darf nur, wer das Recht des jetzigen Bereichs selbst hat; die anderen stehen ausgegraut in der Liste.
+    const locked = currentArea ? !currentArea.held : false;
+    const chosen = areas.find((area) => area.key === areaValue);
+    const changed = areaValue !== (current ?? '');
+    const count = type.areaCount ?? 0;
+    return (
+      <div className="space-y-1.5">
+        <Label htmlFor="edit-area">{t('area')}</Label>
+        <Select id="edit-area" name="protectionArea" value={areaValue} onChange={(e) => setAreaValue(e.target.value)} disabled={locked}>
+          <option value="">{t('areaNone')}</option>
+          {areas.map((area) => (
+            <option key={area.key} value={area.key} disabled={!area.held}>
+              {areaLabel(area.key)}
+            </option>
+          ))}
+        </Select>
+        {locked && currentArea ? <p className="text-[12px] text-muted-ink">{t('areaNotHeld', { permission: permissionLabel(currentArea.permission) })}</p> : null}
+        {!locked && changed ? (
+          <div className="space-y-1 rounded-md bg-info-bg px-3 py-2.5 text-[12px] text-ink-2" data-testid="area-hint">
+            <p>{chosen ? t('areaSetHint', { count, permission: permissionLabel(chosen.permission) }) : t('areaRemoveHint', { count })}</p>
+            <p>{t('areaExceptions')}</p>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
 
   return (
     <section className="space-y-4 rounded-md border border-line bg-surface p-5">
@@ -93,9 +180,23 @@ export function TypesPanel({
                   </StatusBadge>
                 </TableCell>
                 <TableCell className="px-4 text-right">
-                  <Button variant="ghost" size="sm" onClick={() => setEditingType(row)}>
-                    {t('edit')}
-                  </Button>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setAreaValue(row.protectionArea ?? '');
+                        setEditingType(row);
+                      }}
+                    >
+                      {t('edit')}
+                    </Button>
+                    {row.deletable ? (
+                      <Button variant="ghost" size="sm" onClick={() => setTypeToDelete(row)}>
+                        {t('delete')}
+                      </Button>
+                    ) : null}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -151,6 +252,7 @@ export function TypesPanel({
                   defaultValue="statutory10Y"
                 >
                   <option value="statutory10Y">{t('retentionClasses.statutory10Y')}</option>
+                  <option value="statutory8Y">{t('retentionClasses.statutory8Y')}</option>
                   <option value="statutory6Y">{t('retentionClasses.statutory6Y')}</option>
                   <option value="permanent">{t('retentionClasses.permanent')}</option>
                   <option value="consent">{t('retentionClasses.consent')}</option>
@@ -173,6 +275,20 @@ export function TypesPanel({
                 ))}
               </Select>
             </div>
+
+            {areas.length > 0 ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="create-area">{t('area')}</Label>
+                <Select id="create-area" name="protectionArea" defaultValue="">
+                  <option value="">{t('areaNone')}</option>
+                  {areas.map((area) => (
+                    <option key={area.key} value={area.key} disabled={!area.held}>
+                      {areaLabel(area.key)}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            ) : null}
 
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
@@ -202,46 +318,80 @@ export function TypesPanel({
                 <div className="space-y-1.5">
                   <Label htmlFor="edit-key">{t('typeColumns.key')}</Label>
                   <Input id="edit-key" value={editingType.key} disabled />
+                  <p className="text-[12px] text-muted-ink">{t('typeImmutableHint')}</p>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="edit-prefix">{t('typeColumns.prefix')}</Label>
-                  <Input id="edit-prefix" value={editingType.prefix} disabled />
+                  {editingType.ownerModule ? (
+                    <Input id="edit-prefix" value={editingType.prefix} disabled />
+                  ) : (
+                    <>
+                      <Input
+                        id="edit-prefix"
+                        name="prefix"
+                        maxLength={3}
+                        className="w-20 font-mono uppercase"
+                        defaultValue={editingType.prefix}
+                        required
+                      />
+                      <p className="text-[12px] text-muted-ink">{t('prefixHint')}</p>
+                    </>
+                  )}
                 </div>
               </div>
-              <p className="text-[12px] text-muted-ink">{t('typeImmutableHint')}</p>
 
               <div className="space-y-1.5">
                 <Label htmlFor="edit-label">{t('typeColumns.label')}</Label>
                 <Input id="edit-label" name="label" defaultValue={editingType.label} required />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="edit-direction">{t('typeColumns.direction')}</Label>
-                  <Select
-                    id="edit-direction"
-                    name="defaultDirection"
-                    defaultValue={editingType.defaultDirection}
-                  >
-                    <option value="incoming">{tDms('directions.incoming')}</option>
-                    <option value="outgoing">{tDms('directions.outgoing')}</option>
-                  </Select>
-                </div>
+              {editingType.ownerModule ? (
+                <p className="text-[13px] text-muted-ink">{t('ownedByModule', { module: editingType.ownerModule })}</p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-direction">{t('typeColumns.direction')}</Label>
+                      <Select
+                        id="edit-direction"
+                        name="defaultDirection"
+                        defaultValue={editingType.defaultDirection}
+                      >
+                        <option value="incoming">{tDms('directions.incoming')}</option>
+                        <option value="outgoing">{tDms('directions.outgoing')}</option>
+                      </Select>
+                    </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="edit-retention">{t('typeColumns.retention')}</Label>
-                  <Select
-                    id="edit-retention"
-                    name="retentionClass"
-                    defaultValue={editingType.retentionClass}
-                  >
-                    <option value="statutory10Y">{t('retentionClasses.statutory10Y')}</option>
-                    <option value="statutory6Y">{t('retentionClasses.statutory6Y')}</option>
-                    <option value="permanent">{t('retentionClasses.permanent')}</option>
-                    <option value="consent">{t('retentionClasses.consent')}</option>
-                  </Select>
-                </div>
-              </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-retention">{t('typeColumns.retention')}</Label>
+                      <Select
+                        id="edit-retention"
+                        name="retentionClass"
+                        defaultValue={editingType.retentionClass}
+                      >
+                        <option value="statutory10Y">{t('retentionClasses.statutory10Y')}</option>
+                        <option value="statutory8Y">{t('retentionClasses.statutory8Y')}</option>
+                        <option value="statutory6Y">{t('retentionClasses.statutory6Y')}</option>
+                        <option value="permanent">{t('retentionClasses.permanent')}</option>
+                        <option value="consent">{t('retentionClasses.consent')}</option>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      type="checkbox"
+                      id="edit-active"
+                      name="isActive"
+                      defaultChecked={editingType.isActive}
+                      className="size-4 rounded border-line"
+                    />
+                    <Label htmlFor="edit-active" className="cursor-pointer text-[13px]">
+                      {t('activeCheckbox')}
+                    </Label>
+                  </div>
+                </>
+              )}
 
               <div className="space-y-1.5">
                 <Label htmlFor="edit-folder">{t('typeColumns.folder')}</Label>
@@ -259,18 +409,7 @@ export function TypesPanel({
                 </Select>
               </div>
 
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="edit-active"
-                  name="isActive"
-                  defaultChecked={editingType.isActive}
-                  className="size-4 rounded border-line"
-                />
-                <Label htmlFor="edit-active" className="cursor-pointer text-[13px]">
-                  {t('activeCheckbox')}
-                </Label>
-              </div>
+              {areaField(editingType)}
 
               <DialogFooter>
                 <Button type="button" variant="ghost" onClick={() => setEditingType(null)}>
@@ -282,6 +421,29 @@ export function TypesPanel({
               </DialogFooter>
             </ActionForm>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Confirm Delete Type */}
+      <Dialog open={Boolean(typeToDelete)} onOpenChange={(open) => !open && setTypeToDelete(null)}>
+        <DialogContent className="bg-surface shadow-md sm:max-w-[440px]">
+          <DialogTitle className="font-heading text-[19px]">{t('deleteTypeTitle')}</DialogTitle>
+          <DialogDescription className="text-[13px] text-muted-ink">
+            {typeToDelete ? t('deleteTypeDescription', { label: typeToDelete.label }) : ''}
+          </DialogDescription>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setTypeToDelete(null)}>
+              {tCommon('cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deletePending}
+              onClick={() => typeToDelete && handleDelete(typeToDelete.key)}
+            >
+              {t('deleteTypeConfirm')}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </section>

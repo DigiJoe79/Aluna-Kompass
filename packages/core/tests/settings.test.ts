@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
+import { coreModule } from '../src/core-module';
 import { auditLog } from '../src/db/schema';
-import { readAllSettings, readSetting, setSetting } from '../src/settings/service';
+import { defineModule } from '../src/modules/manifest';
+import { CORE_SETTINGS } from '../src/settings/core';
+import { managedSettings, readAllSettings, readSetting, setSetting, writeSettingInternal } from '../src/settings/service';
 import { createTestDeps, ctxWith } from '../src/testing';
 
 describe('settings service', () => {
@@ -79,5 +83,84 @@ describe('organization.foundedYear', () => {
     }
     // Leer bleibt erlaubt: der Verein muss das Jahr nicht pflegen.
     expect((await setSetting(deps, ctx, { key: 'organization.foundedYear', value: '' })).ok).toBe(true);
+  });
+});
+
+describe('bank details managed by finance', () => {
+  it('the bank details of the association are managed by the finance module once it is on', () => {
+    for (const key of ['organization.iban', 'organization.bic', 'organization.bankName']) expect(CORE_SETTINGS.find((s) => s.key === key)).toMatchObject({ managedBy: 'finance' });
+  });
+
+  it('the tax details and the notice of the association are managed by the finance module once it is on (E22, F6a)', () => {
+    for (const key of ['organization.taxOffice', 'organization.taxNumber', 'organization.exemptionNoticeType', 'organization.exemptionNoticeDate']) {
+      expect(CORE_SETTINGS.find((s) => s.key === key), key).toMatchObject({ managedBy: 'finance' });
+    }
+  });
+});
+
+describe('managedBy and uiOnly', () => {
+  const owner = defineModule({ key: 'owner', version: '0', permissions: [] });
+  const host = defineModule({
+    key: 'host',
+    version: '0',
+    permissions: [],
+    settings: [
+      { key: 'host.taxOffice', schema: z.string(), default: '', managedBy: 'owner' },
+      { key: 'host.allowRobots', schema: z.boolean(), default: false, uiOnly: true },
+    ],
+  });
+  const admin = ctxWith(['settings.manage']);
+  const enable = (deps: ReturnType<typeof createTestDeps>, keys: string[]) =>
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, admin, 'modules.enabled', keys, 'test.enable'));
+
+  it('refuses a managed setting while the managing module is on, and only then', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, owner, host] });
+    enable(deps, ['host']);
+    expect((await setSetting(deps, admin, { key: 'host.taxOffice', value: 'Jülich' })).ok).toBe(true);
+    enable(deps, ['host', 'owner']);
+    const res = await setSetting(deps, admin, { key: 'host.taxOffice', value: 'Aachen' });
+    expect(res.ok ? null : res.error).toEqual({ type: 'conflict', code: 'settingManaged', message: 'owner' });
+    const internal = deps.db.transaction((tx) => writeSettingInternal(tx, deps, admin, 'host.taxOffice', 'Düren'));
+    expect(internal.ok).toBe(true);
+  });
+
+  it('names the settings a switched-on module manages, for a read-only field in the settings form', () => {
+    const deps = createTestDeps({ manifests: [coreModule, owner, host] });
+    enable(deps, ['host']);
+    expect(managedSettings(deps)).toEqual({});
+    enable(deps, ['host', 'owner']);
+    expect(managedSettings(deps)).toEqual({ 'host.taxOffice': 'owner' });
+  });
+
+  it('refuses a uiOnly setting over mcp and accepts it over ui and system', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, host] });
+    const viaMcp = await setSetting(deps, { ...admin, channel: 'mcp' }, { key: 'host.allowRobots', value: true });
+    expect(viaMcp.ok ? null : viaMcp.error).toEqual({ type: 'conflict', code: 'settingUiOnly', message: 'host.allowRobots' });
+    expect((await setSetting(deps, admin, { key: 'host.allowRobots', value: true })).ok).toBe(true);
+    expect((await setSetting(deps, { ...admin, channel: 'system' }, { key: 'host.allowRobots', value: false })).ok).toBe(true);
+  });
+});
+
+describe('auditValue redact', () => {
+  const host = defineModule({
+    key: 'host',
+    version: '0',
+    permissions: [],
+    settings: [{ key: 'host.basisText', schema: z.string(), default: '', auditValue: 'redact' }],
+  });
+  const admin = ctxWith(['settings.manage']);
+
+  it('records only that a redacted setting changed', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, host] });
+    await setSetting(deps, admin, { key: 'host.basisText', value: 'Vereinbarung vom Frühjahr' });
+    const res = await setSetting(deps, admin, { key: 'host.basisText', value: 'Beschluss vom Sommer' });
+    expect(res.ok).toBe(true);
+    expect(readSetting(deps, 'host.basisText')).toBe('Beschluss vom Sommer');
+    const entries = deps.db.select().from(auditLog).all();
+    expect(entries).toHaveLength(2);
+    for (const entry of entries) {
+      expect(entry).toMatchObject({ entityType: 'setting', entityId: 'host.basisText', before: null, after: '{"changed":true}' });
+      expect(JSON.stringify(entry)).not.toMatch(/Vereinbarung|Beschluss/);
+    }
   });
 });

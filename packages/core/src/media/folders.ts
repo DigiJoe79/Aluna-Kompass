@@ -7,6 +7,7 @@ import { mediaAssets, mediaFolders } from '../db/schema';
 import type { Deps } from '../deps';
 import { requirePermission } from '../permissions/check';
 import { conflict, invalid, notFound, ok, type Result } from '../result';
+import { zodIssues } from '../validate';
 
 // Ein Ordnername ist eine Beschriftung, kein Slug: Groß-/Kleinschreibung und
 // Leerzeichen sind erlaubt. Verboten sind nur `/` (Pfadtrenner), `\` und
@@ -149,7 +150,7 @@ export async function moveMediaAsset(deps: Deps, ctx: CallContext, input: unknow
   const denied = requirePermission(ctx, 'media.upload');
   if (denied) return denied;
   const parsed = moveInput.safeParse(input);
-  if (!parsed.success) return invalid(parsed.error.issues.map((i) => ({ path: i.path.map(String).join('.'), message: i.message })));
+  if (!parsed.success) return invalid(zodIssues(parsed.error));
 
   const asset = deps.db.select().from(mediaAssets).where(eq(mediaAssets.id, parsed.data.id)).get();
   if (!asset) return notFound('mediaAsset', parsed.data.id);

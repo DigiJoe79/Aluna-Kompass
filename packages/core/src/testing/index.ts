@@ -12,9 +12,11 @@ import { createRegistry } from '../modules/registry';
 import { createTestDb } from './test-db';
 import { readLocales } from '../i18n/locales';
 import { fakeTextExtraction, type TextExtraction } from '../text/extraction';
+import { fakePdfTools, type PdfTools } from '../pdf/tools';
 
 export { systemContext } from '../context';
 export { loadAllViews } from './views';
+export { fakePdfTools } from '../pdf/tools';
 
 export const TEST_NOW = '2026-09-05T08:00:00.000Z';
 
@@ -23,12 +25,13 @@ export interface TestDeps extends Deps {
   sqlite: Database.Database;
 }
 
-/** Attrappe der Dokument-Engine für Kern-Tests: liefert Fake-PDF-Bytes, drei Basen. */
+/** Attrappe der Dokument-Engine für Kern-Tests: liefert Fake-PDF-Bytes, die vier mitgelieferten Basen. */
 export function fakeDocumentEngine(overrides: Partial<DocumentEngine> = {}): DocumentEngine {
   const bases = [
-    { id: 'a4-plain', label: 'A4 ohne Briefkopf', kind: 'report', checksum: 'a'.repeat(64) },
-    { id: 'a4-mit-briefkopf', label: 'A4 mit Briefkopf', kind: 'letter', checksum: 'b'.repeat(64) },
-    { id: 'a4-ohne-briefkopf', label: 'A4 Folgeblatt', kind: 'letter', checksum: 'c'.repeat(64) },
+    { id: 'a4-plain', label: 'A4 ohne Briefkopf', kind: 'report', checksum: 'a'.repeat(64), own: false },
+    { id: 'a4-mit-briefkopf', label: 'A4 mit Briefkopf', kind: 'letter', checksum: 'b'.repeat(64), own: false },
+    { id: 'a4-ohne-briefkopf', label: 'A4 Folgeblatt', kind: 'letter', checksum: 'c'.repeat(64), own: false },
+    { id: 'a4-formular', label: 'Formular mit Vereinskopf', kind: 'form', checksum: 'd'.repeat(64), own: false },
   ];
   return {
     bases: () => bases,
@@ -50,6 +53,7 @@ export function createTestDeps(
     coreTemplates?: DocumentTemplate[];
     documents?: DocumentEngine;
     textExtraction?: TextExtraction;
+    pdf?: PdfTools;
     locales?: string[];
   } = {},
 ): TestDeps {
@@ -75,6 +79,7 @@ export function createTestDeps(
     },
     documents: opts.documents ?? fakeDocumentEngine(),
     textExtraction: opts.textExtraction ?? fakeTextExtraction(),
+    pdf: opts.pdf ?? fakePdfTools(),
     locales: () => readLocales(deps),
   };
   return deps;

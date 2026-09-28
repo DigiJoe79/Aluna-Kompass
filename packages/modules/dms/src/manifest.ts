@@ -1,12 +1,17 @@
 import { defineModule, type DeletionRule, type ModuleManifest } from '@kompass/core';
+import { eq } from 'drizzle-orm';
+import { dmsGatePermissions } from './access';
 import { DMS_DASHBOARD_TILES } from './dashboard';
 import { dmsFollowUpTargets } from './follow-ups';
 import { DMS_SETTINGS, installDms } from './install';
 import { DMS_MCP_TOOLS } from './mcp-tools';
+import { dmsRecordLabels } from './record-labels';
 import { dmsRecordReferences } from './record-references';
 import { dmsRetentionDue, dmsRetentionHolds } from './retention';
+import { documents } from './schema';
 import { seedDms } from './seed';
 import { letterTemplate } from './templates';
+import { bundleIndexTemplate } from './bundle-index';
 
 /** Prinzip 3 für die Akte: Arbeitsmaterial neben dem Dokument ist löschbar, das Dokument selbst erst nach seiner Frist. */
 const DMS_DELETION_RULES: readonly DeletionRule[] = [
@@ -61,6 +66,13 @@ const DMS_DELETION_RULES: readonly DeletionRule[] = [
     auditAction: 'dms.snippet.delete',
   },
   {
+    entity: 'documentType',
+    deletable: true,
+    reason: 'Eine von Hand angelegte Dokumentart ohne Dokumente ist Einrichtung, kein Nachweis (Joe, 2026-09-26: „Aufräumen-Können statt Neuaufsetzen“).',
+    guard: 'nur ohne Dokumente, nicht modul-eigen, nicht von einem Modul vorgeschlagen (module_provisions), nicht Vorgabeart je Richtung',
+    auditAction: 'dms.type.delete',
+  },
+  {
     // Der Eintrag nennt statutory10Y als längste in der Praxis vorkommende Klasse; maßgeblich ist die Klasse an der Dokumentart.
     entity: 'document',
     deletable: true,
@@ -81,8 +93,11 @@ export const dmsModule: ModuleManifest = defineModule({
   settings: DMS_SETTINGS,
   install: installDms,
   permissions: ['dms.view', 'dms.create', 'dms.file', 'dms.void', 'dms.deleteDraft', 'dms.manage'],
-  documentTemplates: [letterTemplate],
-  navigation: [{ key: 'dms.list', href: '/dms', icon: 'file', group: 'dms', permission: 'dms.view' }],
+  documentTemplates: [letterTemplate, bundleIndexTemplate],
+  documentBases: ['a4-mit-briefkopf'],
+  // Zur Laufzeit, nicht fest: Welche Bereichsrechte die Akte öffnen, steht in den
+  // Manifesten der anderen Module (Vorarbeiten-Spec V13).
+  navigationFor: (deps) => [{ key: 'dms.list', href: '/dms', icon: 'file', group: 'dms', permission: dmsGatePermissions(deps) }],
   adminNavigation: [{ key: 'dms.admin', href: '/admin/dms', icon: 'folder', permission: 'dms.manage' }],
   help: [
     { href: '/dms', doc: 'akte/dokumente-und-ordner' },
@@ -93,9 +108,13 @@ export const dmsModule: ModuleManifest = defineModule({
   retentionHolds: dmsRetentionHolds,
   recordReferences: dmsRecordReferences,
   retentionDue: dmsRetentionDue,
+  recordLabels: dmsRecordLabels,
   followUpTargets: dmsFollowUpTargets,
   dashboardTiles: DMS_DASHBOARD_TILES,
   deletionRules: DMS_DELETION_RULES,
+  // Ein ausgeschaltetes Modul schweigt als Halter: Kontakte, die nur ein
+  // Dokument hält, würden löschbar. Entwürfe zählen nicht — sie halten nichts.
+  canDisable: (deps) => (deps.db.select({ id: documents.id }).from(documents).where(eq(documents.phase, 'issued')).get() ? 'hasFinalRecords' : null),
   mcpTools: DMS_MCP_TOOLS,
   seed: seedDms,
 });

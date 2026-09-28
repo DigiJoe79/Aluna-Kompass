@@ -12,7 +12,7 @@ function Select({ className, ...props }: React.ComponentProps<'select'>) {
     <select
       data-slot="select"
       className={cn(
-        'h-[var(--field-h)] w-full rounded-md border border-line-strong bg-field px-2.5 text-sm text-ink transition-colors',
+        'h-[var(--field-h)] w-full rounded-md border border-line-strong bg-field px-2.5 text-[length:var(--field-font)] text-ink transition-colors',
         'disabled:cursor-not-allowed disabled:bg-disabled disabled:text-disabled-ink',
         'aria-invalid:border-error',
         className

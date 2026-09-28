@@ -1,0 +1,212 @@
+import { unwrap } from '@kompass/core';
+import { ctxWith } from '@kompass/core/testing';
+import { describe, expect, it } from 'vitest';
+import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
+import { bookEntry } from '../src/ledger/finalize';
+import { financeModule } from '../src/manifest';
+import { ledgerFixture, setupFinance } from './helpers';
+
+describe('finance module', () => {
+  it('has the key finance, stores files, and depends on contacts, the file module and projects', () => {
+    expect(financeModule).toMatchObject({ key: 'finance', files: true });
+    expect([...(financeModule.dependsOn ?? [])].sort()).toEqual(['contacts', 'dms', 'projects']);
+  });
+
+  it('declares all ten permissions from the start — role proposals are never topped up later', () => {
+    expect(financeModule.permissions).toEqual([
+      'finance.read', 'finance.overview', 'finance.entriesWrite', 'finance.entriesFinalize', 'finance.periodClose',
+      'finance.setup', 'finance.expensesSubmit', 'finance.approve', 'finance.donationsIssue', 'finance.reportsFinalize',
+    ]);
+  });
+
+  it('puts the journal, accounts, open items and the cash box into the rail with the euro icon, readable with finance.read, in the same section', () => {
+    // F4 Task 7: „Hochgeladene Auszüge“ führt einen eigenen Abschnitt „Arbeit“ — über „Buchungen“.
+    expect(financeModule.navigation).toEqual([
+      // F5 Task 6: die Arbeitsliste und ihre Nebenlisten stehen vor „Hochgeladene Auszüge“.
+      { key: 'finance.work', href: '/finance/work', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
+      { key: 'finance.workForeign', href: '/finance/work/foreign', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
+      { key: 'finance.workVouchers', href: '/finance/work/vouchers', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
+      { key: 'finance.rules', href: '/finance/work/rules', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
+      { key: 'finance.imports', href: '/finance/imports', icon: 'euro', group: 'finance', section: 'finance.work', permission: 'finance.read' },
+      { key: 'finance.entries', href: '/finance/entries', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
+      { key: 'finance.accounts', href: '/finance/accounts', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
+      { key: 'finance.openItems', href: '/finance/open-items', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
+      { key: 'finance.cash', href: '/finance/cash', icon: 'euro', group: 'finance', section: 'finance.entries', permission: 'finance.read' },
+      // F6a Task 6: ein eigener Abschnitt „Spenden“ — Bestätigungen und Bescheide.
+      { key: 'finance.donations', href: '/finance/donations', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
+      // F6b Task 6: Serienlauf und Spendenbuch zwischen Bestätigungen und Bescheiden.
+      { key: 'finance.donationRun', href: '/finance/donations/run', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
+      { key: 'finance.donationBook', href: '/finance/donations/book', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
+      { key: 'finance.donationNotices', href: '/finance/donations/notices', icon: 'euro', group: 'finance', section: 'finance.donations', permission: 'finance.read' },
+      // F8a Task 4: ein eigener Abschnitt „Auslagen“ — eigene Anträge und die Freigaben.
+      { key: 'finance.expenses', href: '/finance/expenses', icon: 'euro', group: 'finance', section: 'finance.expenses', permission: 'finance.expensesSubmit' },
+      { key: 'finance.approvals', href: '/finance/approvals', icon: 'euro', group: 'finance', section: 'finance.expenses', permission: 'finance.approve' },
+      { key: 'finance.partners', href: '/finance/partners', icon: 'euro', group: 'finance', section: 'finance.allocation', permission: 'finance.read' },
+      // F8b Task 5 (Annahme 13): Zwecke reduziert offen für finance.overview; zurückgelegtes Geld und Personen unter finance.read.
+      { key: 'finance.purposes', href: '/finance/purposes', icon: 'euro', group: 'finance', section: 'finance.allocation', permission: ['finance.read', 'finance.overview'] },
+      { key: 'finance.reserves', href: '/finance/reserves', icon: 'euro', group: 'finance', section: 'finance.allocation', permission: 'finance.read' },
+      { key: 'finance.people', href: '/finance/people', icon: 'euro', group: 'finance', section: 'finance.allocation', permission: 'finance.read' },
+    ]);
+    expect(financeModule.moduleIcon).toBe('euro');
+  });
+
+  it('points the purposes and reserves routes at the same handbook page, people at its own', () => {
+    for (const href of ['/finance/purposes', '/finance/reserves']) expect(financeModule.help, href).toContainEqual({ href, doc: 'finanzen/zwecke-und-ruecklagen' });
+    expect(financeModule.help).toContainEqual({ href: '/finance/people', doc: 'finanzen/personen' });
+  });
+
+  it('points the donation routes at the handbook page on donations', () => {
+    for (const href of ['/finance/donations', '/finance/donations/notices', '/finance/donations/run', '/finance/donations/book']) expect(financeModule.help, href).toContainEqual({ href, doc: 'finanzen/spenden' });
+  });
+
+  it('points the four work list routes at the handbook page of the work list', () => {
+    for (const href of ['/finance/work', '/finance/work/foreign', '/finance/work/vouchers', '/finance/work/rules']) {
+      expect(financeModule.help, href).toContainEqual({ href, doc: 'finanzen/arbeitsliste' });
+    }
+  });
+
+  it('registers the protection area finance, opened by finance.read', () => {
+    expect(financeModule.documentAreas).toEqual([{ key: 'finance', permission: 'finance.read' }]);
+  });
+
+  it('registers entries and open items with the file module: read with finance.read, file with finance.entriesWrite', () => {
+    expect(financeModule.linkedDocumentAccess).toEqual([
+      { entityType: 'financeEntry', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
+      { entityType: 'financeOpenItem', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
+      { entityType: 'financeCashCount', readPermission: 'finance.read', receivePermission: 'finance.entriesFinalize' },
+      // F6a: unser Exemplar und die unterschriebene Fassung einer Bestätigung, das Dokument eines Bescheids.
+      { entityType: 'financeConfirmation', readPermission: 'finance.read', receivePermission: 'finance.donationsIssue' },
+      { entityType: 'financeNotice', readPermission: 'finance.read', receivePermission: 'finance.donationsIssue' },
+      // F8a: Belege und Verzichtserklärung am Antrag — abgelegt von der einreichenden Person ohne Recht der Akte;
+      // lesen darf sie ihre eigenen über den Dienst (Eigentümer-Weg), alle anderen mit finance.read.
+      { entityType: 'financeExpenseClaim', readPermission: 'finance.read', receivePermission: 'finance.expensesSubmit' },
+      { entityType: 'financePartner', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
+      { entityType: 'financePartnerPayment', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
+      { entityType: 'financeReserve', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
+      { entityType: 'financePurposeTransfer', readPermission: 'finance.read', receivePermission: 'finance.entriesWrite' },
+    ]);
+  });
+
+  it('registers the cash count template under finance.entriesFinalize', () => {
+    const template = (financeModule.documentTemplates ?? []).find((t) => t.key === 'finance-cash-count');
+    expect(template).toMatchObject({ key: 'finance-cash-count', type: 'finance-cash-count', permission: 'finance.entriesFinalize' });
+  });
+
+  it('brings five contact roles, none of which holds a contact by itself', () => {
+    expect(financeModule.contactRoles).toEqual(['donor', 'grant-recipient', 'claimant', 'board-member', 'related-party'].map((key) => ({ key, retention: 'none' })));
+  });
+
+  it('labels a fiscal year for follow-ups and links from the file module', async () => {
+    const { deps, ctx } = setupFinance();
+    const year = unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-01-01', endsOn: '2026-12-31' }));
+    expect(financeModule.recordLabels!(deps, ctx, 'financeFiscalYear', year.id)).toMatchObject({ label: { key: 'finance.records.fiscalYear', params: { designation: '2026' } }, state: 'ok' });
+    expect(financeModule.recordLabels!(deps, ctxWith([]), 'financeFiscalYear', year.id)).toMatchObject({ state: 'forbidden', label: { key: 'finance.records.fiscalYear', params: { designation: '2026' } } });
+    expect(financeModule.recordLabels!(deps, ctx, 'financeFiscalYear', 'nope')).toMatchObject({ state: 'missing' });
+    expect(financeModule.recordLabels!(deps, ctx, 'contact', 'x')).toBeNull();
+  });
+
+  it('offers a follow-up target for a fiscal year, without a page yet', async () => {
+    const { deps, ctx } = setupFinance();
+    const year = unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-01-01', endsOn: '2026-12-31' }));
+    expect(financeModule.followUpTargets!(deps, 'financeFiscalYear', year.id)).toEqual({ label: { key: 'finance.records.fiscalYear', params: { designation: '2026' } }, href: null });
+    expect(financeModule.followUpTargets!(deps, 'financeFiscalYear', 'nope')).toBeNull();
+    expect(financeModule.followUpTargets!(deps, 'contact', 'x')).toBeNull();
+  });
+
+  it('states for every entity whether it can be deleted, and never lets the history go', () => {
+    const rules = Object.fromEntries((financeModule.deletionRules ?? []).map((r) => [r.entity, r.deletable]));
+    expect(rules).toEqual({
+      financeAccount: true, financeCategory: true, financePurpose: true, financeDatedValue: true, financeFiscalYear: false, financePeriodEvent: false,
+      financeEntryDraft: true, financeEntry: false, financeOpenItem: false, financeAllocationCorrection: false, financeEntryDocument: false, financeEntryJustification: false, financeNotReturnMark: false,
+      financeProjectSettings: true, financeYearPersonalData: true, financeImportPersonalData: true, financeCashCount: false,
+      financeImportProfile: false, financeImportRule: true, financeContactBankAccount: true,
+      financeNotice: false, financeConfirmation: false, financeConfirmationLine: false, financeSigner: false, financeInKindDetails: false,
+      financeConfirmationRun: false, financeConfirmationRunItem: false,
+      financeExpenseClaimDraft: true, financeExpenseClaim: false, financeContactWaiverTerms: true,
+      financePartnerProfile: true, financePartnerNotice: false, financePartnerPaymentPosition: false, financePartnerPaymentDraft: true, financePartnerPayment: false, financePartnerEvidence: true,
+      financeReserve: true, financeReserveMovement: false, financePurposeTransfer: false,
+    });
+  });
+
+  it('ships the four suggestion settings with their defaults and the two new deletion rules', () => {
+    const setting = (key: string) => (financeModule.settings ?? []).find((s) => s.key === key)!;
+    expect(setting('finance.pairMatchDays').default).toBe(3);
+    expect(setting('finance.pairFeeToleranceCents').default).toBe(500);
+    expect(setting('finance.matchEntryDays').default).toBe(5);
+    expect(setting('finance.cashKeywords').default).toEqual(['Bareinzahlung', 'Barauszahlung', 'Einzahlung Bargeld', 'Auszahlung Bargeld', 'Geldautomat']);
+    for (const key of ['finance.pairMatchDays', 'finance.matchEntryDays']) {
+      expect(setting(key).schema.safeParse(30).success, key).toBe(true);
+      expect(setting(key).schema.safeParse(31).success, key).toBe(false);
+      expect(setting(key).schema.safeParse(-1).success, key).toBe(false);
+      expect(setting(key).schema.safeParse(1.5).success, key).toBe(false);
+    }
+    expect(setting('finance.pairFeeToleranceCents').schema.safeParse(0).success).toBe(true);
+    expect(setting('finance.pairFeeToleranceCents').schema.safeParse(-1).success).toBe(false);
+    expect(setting('finance.cashKeywords').schema.safeParse(['Einzahlung']).success).toBe(true);
+    expect(setting('finance.cashKeywords').schema.safeParse('Einzahlung').success).toBe(false);
+
+    const rule = (entity: string) => (financeModule.deletionRules ?? []).find((r) => r.entity === entity)!;
+    expect(rule('financeImportRule')).toMatchObject({ deletable: true, reason: 'Arbeitsmaterial: Eine Regel wirkt nur nach vorn.', auditAction: 'finance.importRule.delete' });
+    expect(rule('financeContactBankAccount')).toMatchObject({ deletable: true, reason: 'Arbeitsmaterial: die Zuordnung IBAN → Kontakt.', auditAction: 'finance.contactIban.delete' });
+  });
+
+  it('never lets finalized records go: entries, open items, corrections, voucher links, justifications', () => {
+    const rules = Object.fromEntries((financeModule.deletionRules ?? []).map((r) => [r.entity, r.deletable]));
+    for (const entity of ['financeEntry', 'financeOpenItem', 'financeAllocationCorrection', 'financeEntryDocument', 'financeEntryJustification', 'financeNotReturnMark']) {
+      expect(rules[entity], entity).toBe(false);
+    }
+  });
+
+  it('never lets notices, signers, confirmations, their lines or in-kind details go (F6a)', () => {
+    for (const entity of ['financeNotice', 'financeConfirmation', 'financeConfirmationLine', 'financeSigner', 'financeInKindDetails']) {
+      const rule = (financeModule.deletionRules ?? []).find((r) => r.entity === entity);
+      expect(rule, entity).toMatchObject({ deletable: false });
+      expect(rule!.reason.length, entity).toBeGreaterThan(20);
+    }
+  });
+
+  it('never lets a confirmation run or its items go: the run is the fact of who issued what when (F6b)', () => {
+    for (const entity of ['financeConfirmationRun', 'financeConfirmationRunItem']) {
+      const rule = (financeModule.deletionRules ?? []).find((r) => r.entity === entity);
+      expect(rule, entity).toMatchObject({ deletable: false });
+      expect(rule!.reason, entity).toContain('Der Lauf ist die Tatsache, wer wann was ausgestellt hat');
+    }
+  });
+
+  it('deletes an expense claim only as a draft; a submitted claim stays; waiver terms go with the contact (F8a)', () => {
+    const rule = (entity: string) => (financeModule.deletionRules ?? []).find((r) => r.entity === entity)!;
+    expect(rule('financeExpenseClaimDraft')).toMatchObject({ deletable: true, auditAction: 'finance.expenseClaim.draftDelete', guard: expect.stringContaining('draft') });
+    expect(rule('financeExpenseClaim')).toMatchObject({ deletable: false });
+    expect(rule('financeExpenseClaim').reason).toMatch(/eingereicht/);
+    expect(rule('financeContactWaiverTerms')).toMatchObject({ deletable: true, auditAction: 'finance.contactWaiverTerms.delete' });
+  });
+
+  it('rules the personal data of a year as one logical entity, ten years, with its own audit action', () => {
+    const rule = (financeModule.deletionRules ?? []).find((r) => r.entity === 'financeYearPersonalData')!;
+    expect(rule).toMatchObject({ deletable: true, retentionClass: 'statutory10Y', auditAction: 'finance.personalData.redact' });
+  });
+
+  it('rules the personal data of imported bank statements as its own logical entity, eight years, with its own audit action', () => {
+    const rule = (financeModule.deletionRules ?? []).find((r) => r.entity === 'financeImportPersonalData')!;
+    expect(rule).toMatchObject({ deletable: true, retentionClass: 'statutory8Y', auditAction: 'finance.importData.redact' });
+  });
+
+  it('the reason for “not deletable” tells what happens instead', () => {
+    for (const entity of ['financeEntry', 'financeOpenItem', 'financeAllocationCorrection', 'financeEntryDocument', 'financeEntryJustification', 'financeNotReturnMark']) {
+      const rule = (financeModule.deletionRules ?? []).find((r) => r.entity === entity)!;
+      expect(rule.reason, entity).toMatch(/Anonymisierung|entfernt/);
+    }
+  });
+
+  it('can be switched off as long as nothing is finalized', () => {
+    const { deps } = setupFinance();
+    expect(financeModule.canDisable!(deps)).toBeNull();
+  });
+
+  it('can no longer be switched off once an entry is finalized', async () => {
+    const f = await ledgerFixture();
+    expect(financeModule.canDisable!(f.deps)).toBeNull();
+    unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'Spende', moneyLines: [{ accountId: f.bank.id, amountCents: 5000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 5000 }] }));
+    expect(financeModule.canDisable!(f.deps)).toBe('hasFinalRecords');
+  });
+});

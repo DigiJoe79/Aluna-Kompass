@@ -10,6 +10,7 @@ import { mediaAssets } from '../db/schema';
 import type { Deps } from '../deps';
 import { newId } from '../ids';
 import { requirePermission } from '../permissions/check';
+import { zodIssues } from '../validate';
 import type { MediaReference } from '../modules/manifest';
 import { conflict, invalid, notFound, ok, unauthorized, type Result } from '../result';
 import { folderExists } from './folders';
@@ -227,7 +228,7 @@ export async function deleteMediaAsset(deps: Deps, ctx: CallContext, input: unkn
   const denied = requirePermission(ctx, 'media.upload');
   if (denied) return denied;
   const parsed = deleteInput.safeParse(input);
-  if (!parsed.success) return invalid(parsed.error.issues.map((i) => ({ path: i.path.map(String).join('.'), message: i.message })));
+  if (!parsed.success) return invalid(zodIssues(parsed.error));
 
   const record = deps.db.select().from(mediaAssets).where(eq(mediaAssets.id, parsed.data.id)).get();
   if (!record) return notFound('mediaAsset', parsed.data.id);

@@ -11,20 +11,31 @@ export interface ResolvedBase {
   checksum: string;
   label: string;
   kind: string;
+  /**
+   * Die optionalen Slots, die die Basis zeichnet — Kennzeichen `slots` im
+   * Manifest `bases.json`, z. B. `["recipient", "recipientLabel", "infoBlock"]`
+   * für die Anschriftzone des Formulars. Der Körper liest es beim Rendern als
+   * `payload.baseSlots` und fällt ohne Kennzeichen auf den eigenen Kopf zurück.
+   */
+  slots: string[];
+  /** Aus dem Volume der Installation, nicht mitgeliefert (Befund 51 b). */
+  own: boolean;
 }
 
-function readManifest(dir: string): Record<string, { label?: string; kind?: string }> {
+type ManifestEntry = { label?: string; kind?: string; slots?: string[] };
+
+function readManifest(dir: string): Record<string, ManifestEntry> {
   const file = path.join(dir, 'bases.json');
   if (!existsSync(file)) return {};
   try {
-    const list = JSON.parse(readFileSync(file, 'utf8')) as { id: string; label?: string; kind?: string }[];
-    return Object.fromEntries(list.map((b) => [b.id, { label: b.label, kind: b.kind }]));
+    const list = JSON.parse(readFileSync(file, 'utf8')) as ({ id: string } & ManifestEntry)[];
+    return Object.fromEntries(list.map((b) => [b.id, { label: b.label, kind: b.kind, slots: b.slots }]));
   } catch {
     return {};
   }
 }
 
-function readDir(dir: string): Map<string, ResolvedBase> {
+function readDir(dir: string, own: boolean): Map<string, ResolvedBase> {
   const out = new Map<string, ResolvedBase>();
   if (!existsSync(dir)) return out;
   const manifest = readManifest(dir);
@@ -39,6 +50,8 @@ function readDir(dir: string): Map<string, ResolvedBase> {
       checksum: createHash('sha256').update(typst).digest('hex'),
       label: manifest[id]?.label ?? id,
       kind: manifest[id]?.kind ?? 'plain',
+      slots: (manifest[id]?.slots ?? []).filter((slot): slot is string => typeof slot === 'string'),
+      own,
     });
   }
   return out;
@@ -46,9 +59,9 @@ function readDir(dir: string): Map<string, ResolvedBase> {
 
 /** Mitgeliefert (`<templatesDir>/bases`) plus Volume-Overlay; das Overlay gewinnt je ID. */
 export function resolveBases(dirs: { templatesDir: string; documentTemplatesDir: string | null }): Map<string, ResolvedBase> {
-  const bases = readDir(path.join(dirs.templatesDir, 'bases'));
+  const bases = readDir(path.join(dirs.templatesDir, 'bases'), false);
   if (dirs.documentTemplatesDir) {
-    for (const [id, base] of readDir(dirs.documentTemplatesDir)) bases.set(id, base);
+    for (const [id, base] of readDir(dirs.documentTemplatesDir, true)) bases.set(id, base);
   }
   return bases;
 }

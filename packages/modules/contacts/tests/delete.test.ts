@@ -16,7 +16,15 @@ const holdingModule: ModuleManifest = defineModule({
     entityType === 'contact' && id === 'HELD' ? [{ label: 'Zuwendungsbestätigung BST-2026-0042', until: '2036-12-31', entity: 'document', id: 'D1' }] : [],
 });
 
-function setup(manifests: ModuleManifest[] = [coreModule, contactsModule], enabled = ['contacts']) {
+const deleted: string[] = [];
+const probe = defineModule({
+  key: 'probe',
+  version: '0.0.0',
+  permissions: [],
+  recordDeleted: (_tx, _deps, _ctx, entityType, id) => void deleted.push(`${entityType}:${id}`),
+});
+
+function setup(manifests: ModuleManifest[] = [coreModule, contactsModule, probe], enabled = ['contacts', 'probe']) {
   const deps = createTestDeps({ manifests });
   const userId = insertUser(deps, {});
   const ctx = ctxWith(['contacts.view', 'contacts.manage', 'settings.manage'], userId);
@@ -83,7 +91,8 @@ describe('contact retention and deletion', () => {
     expect(deps.db.select().from(contactRoles).all()).toHaveLength(0);
     expect(deps.db.select().from(contactChannels).all()).toHaveLength(0);
     const entry = deps.db.select().from(schema.auditLog).all().find((e) => e.action === 'contacts.delete');
-    expect(entry?.summary).toContain('Anna Berger');
+    expect(entry?.summary).toBe('Kontakt nach Fristablauf gelöscht');
+    expect(JSON.stringify(entry)).not.toContain('Berger');
   });
 
   it('refuses to delete a contact that nothing holds at all, because nothing proves it may go', async () => {
@@ -102,6 +111,17 @@ describe('contact retention and deletion', () => {
     const due = unwrap(await listDueContacts(deps, ctx));
     expect(due.map((d) => d.id)).toEqual([c.id]);
     expect(due[0]!.dueSince).toBe('2023-12-31');
+    expect(due[0]!.href).toBe(`/contacts/${c.id}`);
     expect((await listDueContacts(deps, ctxWith(['contacts.view']))).ok).toBe(false);
+  });
+
+  it('sagt den anderen Modulen, dass der Kontakt weg ist', async () => {
+    const { deps, ctx } = setup();
+    const c = unwrap(await createContact(deps, ctx, anna));
+    const added = unwrap(await addContactRole(deps, ctx, { id: c.id, role: 'interested', since: '2020-01-01' }));
+    unwrap(await endContactRole(deps, ctx, { roleId: added.roles[0]!.id, until: '2021-01-01' }));
+    deleted.length = 0;
+    expect(unwrap(await deleteContact(deps, ctx, { id: c.id })).id).toBe(c.id);
+    expect(deleted).toEqual([`contact:${c.id}`]);
   });
 });

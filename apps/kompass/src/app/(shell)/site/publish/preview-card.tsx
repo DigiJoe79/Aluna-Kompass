@@ -32,8 +32,13 @@ export function PreviewCard({ onResult }: { onResult?: (data: PreviewData) => vo
         <h3 className="font-heading text-[18px]">{t('previewTitle')}</h3>
         <div className="flex items-center gap-3">
           {data && (
+            // Eigener Tab: Prüfergebnis und gebaute Vorschau leben nur im
+            // Zustand dieser Seite; wer im selben Tab zurückging, fand beides
+            // leer. Das Symbol daneben versprach den neuen Tab schon immer.
             <Link
               href="/site/preview-frame"
+              target="_blank"
+              rel="noopener"
               className="flex items-center gap-1 text-[13px] font-medium text-link underline"
             >
               {t('preview.open')}

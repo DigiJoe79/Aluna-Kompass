@@ -3,6 +3,7 @@ import type { SettingDefinition } from '../modules/manifest';
 import { RETENTION_DEFAULT_MONTHS } from '../retention/classes';
 import { DEFAULT_THEME } from '../themes/default-theme';
 import { themeSchema } from '../themes/tokens';
+import { DEFAULT_TIME_ZONE, isTimeZone } from '../today';
 
 const shortText = z.string().trim().max(200);
 const isoDateOrEmpty = z.union([z.literal(''), z.iso.date()]);
@@ -18,24 +19,31 @@ const organization: SettingDefinition[] = [
   { key: 'organization.postalCode', schema: z.string().trim().max(10), default: '' },
   { key: 'organization.city', schema: shortText, default: '' },
   { key: 'organization.country', schema: z.string().trim().length(2).toUpperCase(), default: 'DE' },
+  // A4: welcher Kalendertag „heute“ ist — Fristen, „liegt in der Zukunft“, Stichtage (`todayIn`).
+  { key: 'organization.timeZone', schema: z.string().trim().refine(isTimeZone, 'invalidTimeZone'), default: DEFAULT_TIME_ZONE },
   { key: 'organization.foundedYear', schema: z.union([z.literal(''), z.string().regex(/^(1[89]|20|21)\d{2}$/)]), default: '' },
   { key: 'organization.registerCourt', schema: shortText, default: '' },
   { key: 'organization.registerNumber', schema: shortText, default: '' },
-  { key: 'organization.taxNumber', schema: shortText, default: '' },
-  { key: 'organization.taxOffice', schema: shortText, default: '' },
+  // Ist das Finanzmodul eingeschaltet, führt die Reihe der Bescheide diese vier Werte (E22, F6a) —
+  // in den Vereinsdaten sind sie dann nur noch lesbar.
+  { key: 'organization.taxNumber', schema: shortText, default: '', managedBy: 'finance' },
+  { key: 'organization.taxOffice', schema: shortText, default: '', managedBy: 'finance' },
   {
     key: 'organization.exemptionNoticeType',
     schema: z.enum(['none', 'exemptionNotice', 'corporateTaxNoticeAttachment', 'section60a']),
     default: 'none',
+    managedBy: 'finance',
   },
-  { key: 'organization.exemptionNoticeDate', schema: isoDateOrEmpty, default: '' },
+  { key: 'organization.exemptionNoticeDate', schema: isoDateOrEmpty, default: '', managedBy: 'finance' },
   { key: 'organization.statutoryPurpose', schema: z.string().trim().max(500), default: '' },
   { key: 'organization.email', schema: z.union([z.literal(''), z.email()]), default: '' },
   { key: 'organization.website', schema: z.union([z.literal(''), z.url()]), default: '' },
   { key: 'organization.phone', schema: shortText, default: '' },
-  { key: 'organization.iban', schema: z.string().trim().max(34), default: '' },
-  { key: 'organization.bic', schema: z.string().trim().max(11), default: '' },
-  { key: 'organization.bankName', schema: shortText, default: '' },
+  // Ist das Finanzmodul eingeschaltet, führt das Hauptkonto diese drei Werte (E22) —
+  // in den Vereinsdaten sind sie dann nur noch lesbar.
+  { key: 'organization.iban', schema: z.string().trim().max(34), default: '', managedBy: 'finance' },
+  { key: 'organization.bic', schema: z.string().trim().max(11), default: '', managedBy: 'finance' },
+  { key: 'organization.bankName', schema: shortText, default: '', managedBy: 'finance' },
 ];
 
 const branding: SettingDefinition[] = [

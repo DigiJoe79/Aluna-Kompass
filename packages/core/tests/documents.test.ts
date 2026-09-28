@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { auditLog, mediaFolders } from '../src/db/schema';
-import { buildContext, exportDocument, listDocumentBases } from '../src/documents/service';
+import { buildContext, documentBaseGaps, exportDocument, listDocumentBases, prepare } from '../src/documents/service';
+import { defineModule } from '../src/modules/manifest';
+import { coreModule } from '../src/core-module';
+import { fakeDocumentEngine } from '../src/testing';
+import { writeSettingInternal } from '../src/settings/service';
+import { systemContext } from '../src/testing';
 import type { DocumentTemplate } from '../src/modules/manifest';
 import { unwrap } from '../src/result';
 import { createTestDeps, ctxWith, insertUser } from '../src/testing';
@@ -66,7 +71,7 @@ describe('documents service', () => {
   it('lists the document bases with their probe result', async () => {
     const { deps, ctx } = setup();
     const bases = unwrap(await listDocumentBases(deps, ctx));
-    expect(bases.map((b) => b.id)).toEqual(['a4-mit-briefkopf', 'a4-ohne-briefkopf', 'a4-plain']);
+    expect(bases.map((b) => b.id)).toEqual(['a4-formular', 'a4-mit-briefkopf', 'a4-ohne-briefkopf', 'a4-plain']);
     expect(bases.every((b) => b.ok)).toBe(true);
     expect((await listDocumentBases(deps, ctxWith([]))).ok).toBe(false);
   });
@@ -97,6 +102,15 @@ describe('documents service', () => {
     const bad = await exportDocument(deps, ctxWith(['documents.export', 'audit.view'], userId), { templateKey: 'test-excerpt', input: { title: '' } });
     expect(bad.ok === false && bad.error.type === 'validation').toBe(true);
   });
+
+  it('builds the body with the number and date it is given', async () => {
+    const template = { key: 'numbered', type: 'numbered', schema: z.object({}), base: 'a4-plain', filed: false, build: (_d: unknown, c: { number: string; issuedAt: string }) => ({ slots: { kind: 'plain' as const }, body: { typst: `${c.number}|${c.issuedAt.slice(0, 10)}` } }) };
+    const deps = createTestDeps({ coreTemplates: [template] });
+    const pending = unwrap(await prepare(deps, ctxWith([]), { templateKey: 'numbered', input: {} }));
+    const drawn = unwrap(await prepare(deps, ctxWith([]), { templateKey: 'numbered', input: {} }, { number: 'NTZ-2026-001', issuedOn: '2026-03-15' }));
+    expect(pending.bodyTypst.startsWith('PENDING|')).toBe(true);
+    expect(drawn.bodyTypst).toBe('NTZ-2026-001|2026-03-15');
+  });
 });
 
 describe('buildContext', () => {
@@ -107,5 +121,27 @@ describe('buildContext', () => {
     expect(fromClock.issuedAt).toBe('2026-09-12T10:00:00.000Z');
     const dated = await buildContext(deps, ctx, 'BRF-2026-001', '2026-02-10');
     expect(dated.issuedAt).toMatch(/^2026-02-10/);
+  });
+});
+
+describe('documentBaseGaps (Befund 51 b)', () => {
+  const formModule = defineModule({ key: 'formtest', name: 'Formtest', version: '1', permissions: [], documentBases: ['a4-formular', 'a4-mit-briefkopf'] } as Parameters<typeof defineModule>[0]);
+  const withOwn = (own: string[]) => {
+    const inner = fakeDocumentEngine();
+    return fakeDocumentEngine({ bases: () => inner.bases().map((b) => ({ ...b, own: own.includes(b.id) })) });
+  };
+  const deps = (own: string[]) => {
+    const d = createTestDeps({ manifests: [coreModule, formModule], documents: withOwn(own) });
+    d.db.transaction((tx) => writeSettingInternal(tx, d, systemContext(), 'modules.enabled', ['formtest'], 'test'));
+    return d;
+  };
+
+  it('meldet nichts, solange die Installation keine eigene Basis führt', () => {
+    expect(documentBaseGaps(deps([]))).toEqual({ hasOwnBases: false, missing: [] });
+  });
+
+  it('meldet jede vom Modul genutzte Basis, die die Installation nicht selbst führt', () => {
+    expect(documentBaseGaps(deps(['a4-mit-briefkopf', 'a4-plain']))).toEqual({ hasOwnBases: true, missing: [{ module: 'formtest', base: 'a4-formular' }] });
+    expect(documentBaseGaps(deps(['a4-mit-briefkopf', 'a4-formular']))).toEqual({ hasOwnBases: true, missing: [] });
   });
 });

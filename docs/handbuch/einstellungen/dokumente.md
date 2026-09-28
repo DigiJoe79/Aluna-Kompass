@@ -26,6 +26,26 @@ eine eigene. Prüfen Sie eine neue Basis, indem Sie einen Entwurf in der
 [Akte](../akte/brief-schreiben.md) anlegen — die Vorschau dort zeigt sie mit
 den echten Vereinsdaten, bevor ein Brief darauf festgeschrieben wird.
 
+## Eigene Basis fehlt
+
+Führt der Verein eigene Basis-Vorlagen, sollte er alle führen, die seine
+Module nutzen — sonst erscheint etwa die Zuwendungsbestätigung im
+mitgelieferten Standardkopf, während Briefe den Vereinskopf tragen. Kompass
+meldet deshalb oben auf dieser Seite jede genutzte Basis, die die
+Installation nicht selbst führt; die Checkliste der Finanzen nennt denselben
+Punkt als optionalen Schritt. Ohne eigene Basen gibt es keinen Hinweis — dann
+sieht alles einheitlich aus.
+
+| Dokument | Modul | Basis |
+| --- | --- | --- |
+| Brief, Inhaltsverzeichnis einer Mappe | Akte | `a4-mit-briefkopf` |
+| Zuwendungsbestätigung (Geld, Sachzuwendung, Sammelbestätigung), vereinfachter Zuwendungsnachweis | Finanzen | `a4-formular` |
+| Verzichtserklärung (Aufwandsspende) | Finanzen | `a4-formular` |
+| Kassenzählung | Finanzen | `a4-mit-briefkopf` |
+
+Die Basis je Dokumentart lässt sich oben umstellen; die Tabelle nennt die
+Vorgabe.
+
 ## Was hier nicht steht
 
 Die Dokumente selbst — die Briefe, die Post — liegen in der

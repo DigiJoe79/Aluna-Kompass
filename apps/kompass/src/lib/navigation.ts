@@ -1,4 +1,9 @@
-import type { HandbookChapter, ModuleManifest, NavigationItem } from '@kompass/core';
+import type { HandbookChapter, ModuleManifest, NavigationItem, PermissionSpec } from '@kompass/core';
+
+export function hasAnyOf(permissions: ReadonlySet<string>, spec?: PermissionSpec): boolean {
+  if (spec === undefined) return true;
+  return typeof spec === 'string' ? permissions.has(spec) : spec.some((key) => permissions.has(key));
+}
 
 export interface NavItem {
   key: string;
@@ -7,11 +12,13 @@ export interface NavItem {
   labelKey: string;
   /** Beschriftung aus Daten; hat Vorrang vor `labelKey`. */
   label?: string;
-  permission?: string;
+  permission?: PermissionSpec;
   disabled: boolean;
   visible: boolean;
   /** Trennlinie oberhalb dieses Eintrags. */
   sectionBreak?: boolean;
+  /** Abschnitt der Zweitebene; Beschriftung aus `nav.sections.<section>`. Ohne Abschnitt: kopflos, oben. */
+  section?: string;
 }
 
 export interface NavGroup {
@@ -27,7 +34,7 @@ export interface NavGroup {
  * Arbeitsflächen: Dinge, die man benutzt. Elf Einträge in einer Gruppe waren zu
  * viel, und die Hälfte davon stellt man einmal ein, statt damit zu arbeiten.
  */
-const CORE_ADMIN: { key: string; href: string; icon: string; permission?: string }[] = [
+const CORE_ADMIN: { key: string; href: string; icon: string; permission?: PermissionSpec }[] = [
   { key: 'users', href: '/admin/users', icon: 'users', permission: 'users.manage' },
   { key: 'roles', href: '/admin/roles', icon: 'shield', permission: 'roles.manage' },
   { key: 'audit', href: '/admin/audit', icon: 'clock', permission: 'audit.view' },
@@ -36,7 +43,7 @@ const CORE_ADMIN: { key: string; href: string; icon: string; permission?: string
 ];
 
 /** Einrichtung: Dinge, die man einstellt. Module hängen ihre Stammdaten hier ein. */
-const CORE_CONFIG: { key: string; href: string; icon: string; permission?: string }[] = [
+const CORE_CONFIG: { key: string; href: string; icon: string; permission?: PermissionSpec }[] = [
   { key: 'settings', href: '/admin/settings', icon: 'sliders', permission: 'settings.manage' },
   { key: 'locales', href: '/admin/locales', icon: 'languages', permission: 'settings.manage' },
   { key: 'themes', href: '/admin/themes', icon: 'droplet', permission: 'settings.manage' },
@@ -51,7 +58,7 @@ export function buildNavigation(input: {
   /** Zur Laufzeit ermittelte Einträge je Modul-Key — etwa je Sammlung eines Templates. */
   extraItems?: Record<string, NavigationItem[]>;
 }): NavGroup[] {
-  const visible = (permission?: string) => !permission || input.permissions.has(permission);
+  const visible = (permission?: PermissionSpec) => hasAnyOf(input.permissions, permission);
   const admin: NavGroup = {
     key: 'admin',
     labelKey: 'nav.groups.admin',
@@ -100,6 +107,7 @@ export function buildNavigation(input: {
         disabled: false,
         visible: visible(item.permission),
         sectionBreak: item.sectionBreak ?? false,
+        section: item.section,
       });
       return {
         key: m.key,
@@ -211,6 +219,28 @@ const visibleItems = (group: NavGroup): NavItem[] => group.items.filter((i) => i
  * Einrichtung mit Überschrift, ein Modul einen Abschnitt ohne. Leer heißt:
  * keine Zweitebene, die Spalte entfällt.
  */
+/**
+ * Gruppiert die sichtbaren Einträge eines Moduls nach `section`, in der
+ * Reihenfolge ihres ersten Auftretens. Einträge ohne Abschnitt bilden einen
+ * kopflosen Abschnitt (Schlüssel des Bereichs selbst, keine Beschriftung).
+ */
+function sectionsByGroup(group: NavGroup): NavSection[] {
+  const items = visibleItems(group);
+  const order: string[] = [];
+  const bucket = new Map<string, NavItem[]>();
+  for (const item of items) {
+    const sectionKey = item.section ?? '';
+    if (!bucket.has(sectionKey)) {
+      bucket.set(sectionKey, []);
+      order.push(sectionKey);
+    }
+    bucket.get(sectionKey)!.push(item);
+  }
+  return order.map((sectionKey) =>
+    sectionKey === '' ? { key: group.key, items: bucket.get(sectionKey)! } : { key: sectionKey, labelKey: `nav.sections.${sectionKey}`, items: bucket.get(sectionKey)! },
+  );
+}
+
 export function sectionsFor(groups: NavGroup[], pathname: string): NavSection[] {
   const hit = locate(groups, pathname);
   if (!hit) return [];
@@ -220,7 +250,7 @@ export function sectionsFor(groups: NavGroup[], pathname: string): NavSection[] 
           .map((key) => groups.find((g) => g.key === key))
           .filter((group): group is NavGroup => group !== undefined && visibleItems(group).length > 0)
           .map((group) => ({ key: group.key, labelKey: group.labelKey, items: visibleItems(group) }))
-      : [{ key: hit.group.key, items: visibleItems(hit.group) }];
+      : sectionsByGroup(hit.group);
   // Ein einzelner Eintrag wiederholt nur die Schiene und kostet 208 px. Erst
   // ab zwei gibt es etwas zu wählen — die Spalte erscheint, wenn ein Bereich wächst.
   const count = sections.reduce((n, section) => n + section.items.length, 0);

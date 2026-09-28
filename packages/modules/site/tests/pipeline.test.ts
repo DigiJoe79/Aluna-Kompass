@@ -270,6 +270,28 @@ describe('checkDeployTarget', () => {
     previewDir: tmp(),
   });
 
+  /** Baut und publiziert einmal echt, damit das Ziel dem letzten Stand entspricht. */
+  async function setupPublished() {
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: LOCALES });
+    insertUser(deps, { id: 'USER-TEST' });
+    unwrap(await enableProjects(deps));
+    const manageCtx = ctxWith(['site.manage', 'site.view', 'media.upload']);
+    const publishCtx = ctxWith(['site.publish', 'site.view']);
+    unwrap(await applyTemplateSync(deps, manageCtx, { dir: TEMPLATE_DIR, confirm: true }));
+    unwrap(await setValues(deps, manageCtx, { values: { claim: { de: 'Erster Stand' } } }));
+    const target = tmp();
+    const env = {
+      publicUrl: 'https://staging.example.org',
+      staging: true,
+      deploy: { host: '', user: '', path: target, auth: { kind: 'none' as const } },
+      templateDir: TEMPLATE_DIR,
+      cacheDir: tmp(),
+      previewDir: tmp(),
+    };
+    unwrap(await runPublish(deps, publishCtx, env, { confirm: true }));
+    return { deps, manageCtx, publishCtx, env, target };
+  }
+
   it('needs the publish permission and a configured target', async () => {
     const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: LOCALES });
     insertUser(deps, { id: 'USER-TEST' });
@@ -279,7 +301,15 @@ describe('checkDeployTarget', () => {
     expect(noTarget.ok === false && noTarget.error.type === 'conflict' && noTarget.error.code === 'publishTargetMissing').toBe(true);
   });
 
-  it('reports what a publish would remove at the target and leaves every file in place', async () => {
+  it('reports unusable credentials instead of starting rsync', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: LOCALES });
+    insertUser(deps, { id: 'USER-TEST' });
+    const env = { ...envFor(tmp()), deploy: { host: 'webhost', user: 'web', path: '/www', auth: { kind: 'key' as const, keyFile: '/gibt/es/nicht.key' } } };
+    const result = await checkDeployTarget(deps, ctxWith(['site.publish']), env);
+    expect(result.ok === false && result.error.type === 'conflict' && result.error.code === 'deployCredentialsUnusable').toBe(true);
+  });
+
+  it('keeps listing the files found at the target as the path check', async () => {
     const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: LOCALES });
     insertUser(deps, { id: 'USER-TEST' });
     const target = tmp();
@@ -294,23 +324,69 @@ describe('checkDeployTarget', () => {
     expect(result.log).toContain('--dry-run');
     expect(readFileSync(path.join(target, 'wp-config.php'), 'utf8')).toBe('<?php');
     expect(readFileSync(path.join(target, 'wp-content', 'logo.png'), 'utf8')).toBe('binary');
-  });
 
-  it('comes back empty when the path points nowhere', async () => {
-    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: LOCALES });
-    insertUser(deps, { id: 'USER-TEST' });
     const missing = path.join(tmp(), 'vertippt');
-    const result = unwrap(await checkDeployTarget(deps, ctxWith(['site.publish']), envFor(missing)));
-    expect(result.filesAtTarget).toEqual([]);
+    const empty = unwrap(await checkDeployTarget(deps, ctxWith(['site.publish']), envFor(missing)));
+    expect(empty.filesAtTarget).toEqual([]);
   });
 
-  it('reports unusable credentials instead of starting rsync', async () => {
+  it('reports no removals when the target matches a fresh build', async () => {
+    const { deps, publishCtx, env } = await setupPublished();
+    const result = unwrap(await checkDeployTarget(deps, publishCtx, env));
+    expect(result.build.ok).toBe(true);
+    expect(result.publishWould).toEqual({ changed: [], added: [], removed: [] });
+  }, 240_000);
+
+  it('reports exactly the page missing from the build as removed', async () => {
+    const { deps, publishCtx, env, target } = await setupPublished();
+    writeFileSync(path.join(target, 'alte-seite.html'), 'veraltet');
+
+    const result = unwrap(await checkDeployTarget(deps, publishCtx, env));
+
+    expect(result.publishWould).toEqual({ changed: [], added: [], removed: ['alte-seite.html'] });
+    expect(readFileSync(path.join(target, 'alte-seite.html'), 'utf8')).toBe('veraltet');
+  }, 240_000);
+
+  it('reports changed and added files from the build', async () => {
+    const { deps, manageCtx, publishCtx, env } = await setupPublished();
+    unwrap(await setValues(deps, manageCtx, { values: { claim: { de: 'Zweiter Stand' } } }));
+    const heroAsset = unwrap(await storeMediaAsset(deps, manageCtx, { originalName: 'hero.png', bytes: PNG }));
+    const newsEntry = unwrap(await createEntry(deps, manageCtx, {
+      collection: 'news',
+      slug: 'zweiter-beitrag',
+      data: { title: { de: 'Zweiter Beitrag' }, body: { de: 'Mehr Neuigkeiten.' }, image: heroAsset.id },
+    }));
+    unwrap(await setEntryPublished(deps, manageCtx, { id: newsEntry.id, isPublished: true }));
+
+    const result = unwrap(await checkDeployTarget(deps, publishCtx, env));
+
+    expect(result.build.ok).toBe(true);
+    expect(result.publishWould?.changed).toContain('index.html');
+    expect(result.publishWould?.added.length).toBeGreaterThan(0);
+    expect(readFileSync(path.join(env.deploy.path, 'index.html'), 'utf8')).toContain('Erster Stand');
+  }, 240_000);
+
+  it('reports a failed build instead of diffing against an empty directory', async () => {
     const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: LOCALES });
     insertUser(deps, { id: 'USER-TEST' });
-    const env = { ...envFor(tmp()), deploy: { host: 'webhost', user: 'web', path: '/www', auth: { kind: 'key' as const, keyFile: '/gibt/es/nicht.key' } } };
-    const result = await checkDeployTarget(deps, ctxWith(['site.publish']), env);
-    expect(result.ok === false && result.error.type === 'conflict' && result.error.code === 'deployCredentialsUnusable').toBe(true);
+    const target = tmp();
+    writeFileSync(path.join(target, 'wp-config.php'), '<?php');
+    const env = { ...envFor(target), publicUrl: '' };
+
+    const result = unwrap(await checkDeployTarget(deps, ctxWith(['site.publish']), env));
+
+    expect(result.build).toEqual({ ok: false, reason: 'publicUrlMissing' });
+    expect(result.publishWould).toBeNull();
+    // Die Pfadpruefung lief trotzdem, statt gegen ein leeres Verzeichnis zu vergleichen.
+    expect(result.filesAtTarget).toEqual(['wp-config.php']);
   });
+
+  it('never records a publish', async () => {
+    const { deps, publishCtx, env } = await setupPublished();
+    unwrap(await checkDeployTarget(deps, publishCtx, env));
+    const history = unwrap(await listPublishes(deps, publishCtx, { environment: 'test' }));
+    expect(history).toHaveLength(1);
+  }, 240_000);
 });
 
 describe('rsyncCommand', () => {

@@ -1,10 +1,10 @@
 # Aluna Kompass
 
-Vereinsverwaltung für gemeinnützige Vereine — eine Anwendung für Webseite, Dokumenten-Management, Kontakte und alles, was der Verein sonst führt. Läuft auf eigener Hardware im eigenen Netz, eine Installation je Verein.
+Vereinsverwaltung für gemeinnützige Vereine — eine Anwendung für Webseite, Dokumenten-Management, Kontakte, Finanzen und alles, was der Verein sonst führt. Läuft auf eigener Hardware im eigenen Netz, eine Installation je Verein.
 
 ## Worum es geht
 
-Ein gemeinnütziger Verein schuldet Rechenschaft: dem Finanzamt, dem Registergericht, dem Transparenzregister, den Mitgliedern und Spendern. Kompass ist der Ort, an dem jeder Vorgang genau einmal entsteht und bleibt — und aus dem alles erzeugt wird, was der Verein nach außen geben muss: Briefe, Protokolle, Zuwendungsbestätigungen, die öffentliche Webseite, später Jahresfinanzbericht und Kassenprüfungsunterlagen.
+Ein gemeinnütziger Verein schuldet Rechenschaft: dem Finanzamt, dem Registergericht, dem Transparenzregister, den Mitgliedern und Spendern. Kompass ist der Ort, an dem jeder Vorgang genau einmal entsteht und bleibt — und aus dem alles erzeugt wird, was der Verein nach außen geben muss: Briefe, Protokolle, Zuwendungsbestätigungen, die öffentliche Webseite, ab 0.3.0 auch Jahresabschluss und Kassenprüfungsunterlagen.
 
 Der Grundsatz dahinter: **ein Vorgang, eine Quelle.** Nichts wird abgetippt, kopiert oder nachträglich einsortiert. Jede Änderung steht im Änderungsprotokoll; Rechenschaftsrelevantes wird storniert, nie gelöscht.
 
@@ -17,10 +17,11 @@ Der Kern ist generisch und für jeden Verein gleich. Was ein Verein braucht und 
 | **Fundament** | Nutzer, Rollen und Rechte, Einstellungen statt Konstanten, Themes, Änderungsprotokoll, Backup und Import, Modul-System, Dokument-Pipeline mit Basis-Vorlagen, Mediathek |
 | **Webseite** | Die Vereinsseite wird in Kompass gepflegt und als statische Seite aus einem Template gebaut, das der Verein selbst mitbringt. Im Internet gibt es weder Datenbank noch Login. |
 | **Kontakte und Akte** | Kontakte mit Rollen über die Zeit und berechneter Aufbewahrungsfrist. Die Akte für ein- und ausgehende Post: Entwurf, Festschreiben, Nummer, Storno statt Löschen, Ordner, Bezüge, Wiedervorlage, Volltext mit Texterkennung. |
-| **Projekte, Tiere** | Vereinsspezifische Module — heute mit ihrem öffentlichen Teil für die Webseite. |
-| **MCP** | Was die Oberfläche kann, kann auch ein KI-Assistent über MCP — dieselben Dienste, dieselben Rechte, dasselbe Protokoll. Vier Dinge bewusst nicht: Backup ein- und ausspielen, Dateien abrufen, API-Token verwalten, das eigene Passwort ändern. Ein Test hält die Liste vollständig. |
+| **Finanzen** | Bankkonten und Kassen, Kontoauszüge (CAMT, CSV), Belege mit ZUGFeRD, Buchen und Festschreiben, Zuwendungsbestätigungen nach amtlichem Muster mit Serienlauf und Spendenbuch, Auslagen mit Freigabe durch eine zweite Person, Aufwandsspenden, Zahlungen an Partner mit Nachweisen, Zwecke und Rücklagen, Pauschalen je Person. Für Vereine mit Einnahmen-Überschuss-Rechnung, nicht für Bilanzierer. Jahresabschluss und Berichte folgen mit 0.3.0. |
+| **Projekte, Tiere** | Vereinsspezifische Module — mit ihrem öffentlichen Teil für die Webseite; Projekte haben dazu ihren Finanzabschnitt. |
+| **MCP** | Was die Oberfläche kann, kann auch ein KI-Assistent über MCP — dieselben Dienste, dieselben Rechte, dasselbe Protokoll. Vier Dinge bewusst nicht: Backup ein- und ausspielen, Dateien abrufen, API-Token verwalten, das eigene Passwort ändern. In den Finanzen bleiben Festschreiben, Freigeben und Ausstellen Menschen vorbehalten, solange der Verein es nicht ausdrücklich erlaubt. Ein Test hält die Liste vollständig. |
 
-Was als Nächstes kommt — Finanzen, Mitglieder und Gremien, das Tiermodul in seiner Vollstufe — und warum in dieser Reihenfolge, steht in [`docs/nordstern.md`](docs/nordstern.md). Dort steht auch, was Kompass **nicht** ist: kein Newsletter, kein Mailprogramm, kein Kalender, kein Aufgabenmanager, kein Webseiten-Baukasten, kein Multi-Tenant.
+Was als Nächstes kommt — Jahresabschluss und Berichte der Finanzen, Mitglieder und Gremien, das Tiermodul in seiner Vollstufe — und warum in dieser Reihenfolge, steht in [`docs/nordstern.md`](docs/nordstern.md). Dort steht auch, was Kompass **nicht** ist: kein Newsletter, kein Mailprogramm, kein Kalender, kein Aufgabenmanager, keine Finanzbuchhaltung für Bilanzierer und keine Übermittlung ans Finanzamt, kein Webseiten-Baukasten, kein Multi-Tenant.
 
 ## Warum die Webseite so gebaut ist
 
@@ -28,7 +29,7 @@ Die meisten Vereinsseiten laufen auf einem CMS wie WordPress: eine Anwendung mit
 
 Kompass dreht das um:
 
-- **Die Daten bleiben zu Hause.** Kontakte, Post, Mitglieder, Beschlüsse liegen auf dem NAS des Vereins, im eigenen Netz, hinter der eigenen Tür. Nichts davon steht im Internet.
+- **Die Daten bleiben zu Hause.** Kontakte, Post, Finanzen, Mitglieder, Beschlüsse liegen auf dem NAS des Vereins, im eigenen Netz, hinter der eigenen Tür. Nichts davon steht im Internet.
 - **Die Webseite ist fertige Dateien.** Kompass baut sie mit [Astro](https://astro.build) aus einem Template, das der Verein selbst mitbringt, und lädt HTML, Bilder und CSS auf einen gewöhnlichen Webspace. Dort läuft kein Programm, gibt es keine Datenbank, keine Anmeldung, nichts zu aktualisieren. Was nicht existiert, kann nicht übernommen werden.
 - **Nur Freigegebenes verlässt das Haus.** Die Seite liest ausschließlich Sichten, die ein Modul ausdrücklich veröffentlicht — ein Tier zeigt sein Profil, nicht seine Tierarztrechnungen. Interner Datensatz und öffentliche Sicht sind zwei Dinge (Prinzip 4 in [`AGENTS.md`](AGENTS.md)).
 - **Publizieren ist ein bewusster Schritt.** Nur aus der Prod-Instanz, mit Prüfung vor dem Hochladen, und der Publish steht wie alles andere im Änderungsprotokoll.
@@ -41,7 +42,7 @@ Kompass läuft als ein Docker-Image auf dem NAS oder Server des Vereins, mit Dev
 
 ## Entwicklung
 
-Voraussetzungen: Node 24 oder neuer, pnpm 11, Docker für die vollständige Prüfung. Für die Texterkennung lokal `tesseract`, `tesseract-lang` und `poppler`.
+Voraussetzungen: Node 24 oder neuer, pnpm 11, Docker für die vollständige Prüfung. Für die Texterkennung und das Lesen eingebetteter Rechnungen lokal `tesseract`, `tesseract-lang` und `poppler`.
 
 ```bash
 pnpm install
@@ -55,7 +56,7 @@ Prüfen, bevor etwas gepusht wird:
 ```bash
 pnpm typecheck
 pnpm test
-pnpm verify        # Typecheck, alle Tests, E2E kalt, Image-Build, E2E gegen das Image (~4 min, braucht Docker)
+pnpm verify        # Typecheck, alle Tests, E2E kalt, Image-Build, E2E gegen das Image (~15 min, braucht Docker)
 ```
 
 Aufbau des Repos:
@@ -63,8 +64,10 @@ Aufbau des Repos:
 ```
 apps/kompass/          Next.js-Anwendung: Oberfläche, MCP-Endpunkt, E2E-Tests
 packages/core/         Kern: Dienste, Datenbank, Rechte, Änderungsprotokoll, Modul-System
-packages/modules/      Fachmodule: animals, contacts, dms, projects, site
+packages/modules/      Fachmodule: animals, contacts, dms, finance, projects, site
 packages/documents/    Dokument-Pipeline (Markdown → Typst → PDF)
+packages/markdown/     Markdown für Dokumente, Webseite und Handbuch (Rendern, Bereinigen, Typst)
+packages/text-extraction/ Texterkennung und eingebettete Dateien aus PDFs (OCR, ZUGFeRD)
 packages/mcp/          MCP-Server über den Kerndiensten
 packages/site-template/ Vertrag zwischen Kompass und einem Webseiten-Template
 templates/verein-basis/ Mitgeliefertes Basis-Template für die Vereinsseite

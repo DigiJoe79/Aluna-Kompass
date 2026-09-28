@@ -1,6 +1,6 @@
 {
   "name": "@kompass/module-projects",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "exports": { ".": "./src/index.ts" },
@@ -8,10 +8,10 @@
   "dependencies": {
     "@kompass/core": "workspace:*",
     "drizzle-orm": "^0.45.2",
-    "zod": "^4.5.4"
+    "zod": "^4.6.2"
   },
   "devDependencies": {
-    "@types/node": "^26.5.0",
+    "@types/node": "^26.5.1",
     "typescript": "^6.0.3",
     "vitest": "^5.0.0"
   }

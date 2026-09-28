@@ -1,7 +1,8 @@
-import { hasPermission, readSetting, requirePermission } from '@kompass/core';
-import { countUnreadDocuments, dispatchChannels, listDocumentFolders, listDocumentRules, listDocumentTypes, listSnippets } from '@kompass/module-dms';
+import { hasPermission, isModuleEnabled, readSetting, requirePermission } from '@kompass/core';
+import { countDocumentsOfType, countUnreadDocuments, dispatchChannels, documentTypeProvisionedBy, isDefaultType, listDocumentAreas, listDocumentFolders, listDocumentRules, listDocumentTypes, listSnippets } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { ModuleInactiveCard } from '@/components/module-inactive-card';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
 import { DispatchChannelsPanel } from './dispatch-channels-panel';
@@ -13,12 +14,14 @@ import { TypesPanel } from './types-panel';
 
 export default async function AdminDmsPage() {
   const { deps, ctx } = await requireSession();
+  if (!isModuleEnabled(deps, 'dms')) return <ModuleInactiveCard namespace="dms.common" />;
   if (requirePermission(ctx, 'dms.manage')) return <ForbiddenCard permission="dms.manage" />;
 
   const t = await getTranslations('dms.admin');
 
-  const [typesRes, foldersRes, rulesRes, probe] = await Promise.all([
+  const [typesRes, selectableTypesRes, foldersRes, rulesRes, probe] = await Promise.all([
     listDocumentTypes(deps, ctx, { includeInactive: true }),
+    listDocumentTypes(deps, ctx, { selectable: true }),
     listDocumentFolders(deps, ctx),
     listDocumentRules(deps, ctx, { includeInactive: true }),
     deps.textExtraction.probe(),
@@ -35,7 +38,25 @@ export default async function AdminDmsPage() {
   const snippets = snippetsRes.ok ? snippetsRes.value : [];
   const channels = dispatchChannels(deps);
 
-  const types = typesRes.ok ? typesRes.value : [];
+  const rawTypes = typesRes.ok ? typesRes.value : [];
+
+  // Die Auswahl „Schutzbereich“ gibt es nur, wenn ein Modul einen Bereich anmeldet.
+  // Das Panel bekommt einfache Daten: Bereiche, und je Art die Zahl der Dokumente,
+  // die ein Wechsel betrifft (`null`, wenn der Aufrufer sie nicht zählen darf).
+  const areasRes = await listDocumentAreas(deps, ctx);
+  const areas = areasRes.ok ? areasRes.value.map(({ key, permission, held }) => ({ key, permission, held })) : [];
+  const types = await Promise.all(
+    rawTypes.map(async (type) => {
+      // Immer gezählt (nicht nur unter einem Bereich): „Löschen“ am Panel braucht die
+      // Zahl für jede Art, um den Knopf nur zu zeigen, wenn er wirklich greift (Task 4).
+      const counted = await countDocumentsOfType(deps, ctx, { key: type.key });
+      const areaCount = counted.ok ? counted.value.count : null;
+      // Die vier Sperren des Dienstes vorab geprüft, damit der Knopf nichts verspricht, was scheitern würde.
+      const deletable = areaCount === 0 && !type.ownerModule && !documentTypeProvisionedBy(deps.db, type.key) && !isDefaultType(deps, type.key);
+      return { ...type, areaCount, deletable };
+    }),
+  );
+  const selectableTypes = selectableTypesRes.ok ? selectableTypesRes.value : [];
   const folders = foldersRes.ok ? foldersRes.value.map((f) => f.path) : [];
   const rules = rulesRes.ok
     ? rulesRes.value.map((r) => ({
@@ -53,8 +74,8 @@ export default async function AdminDmsPage() {
     <>
       <PageHeader title={t('title')} description={t('description')} />
       <div className="space-y-6">
-        <TypesPanel types={types} folders={folders} />
-        <RulesPanel rules={rules} types={types} folders={folders} />
+        <TypesPanel types={types} folders={folders} areas={areas} />
+        <RulesPanel rules={rules} types={selectableTypes} folders={folders} />
         <FoldersPanel folders={folders} />
         <SnippetsPanel snippets={snippets} />
         <DispatchChannelsPanel channels={channels} canManageSettings={canManageSettings} />

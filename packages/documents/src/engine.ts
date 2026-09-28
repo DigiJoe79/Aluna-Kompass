@@ -22,19 +22,21 @@ export function createDocumentEngine(opts: { documentTemplatesDir?: string | nul
   const assetsDir = volumeDir ? path.join(volumeDir, 'assets') : null;
 
   return {
-    bases: () => list().map((b) => ({ id: b.id, label: b.label, kind: b.kind, checksum: b.checksum })),
+    bases: () => list().map((b) => ({ id: b.id, label: b.label, kind: b.kind, checksum: b.checksum, own: b.own })),
     base: (id) => {
       const b = bases.get(id);
-      return b ? { id: b.id, label: b.label, kind: b.kind, checksum: b.checksum } : undefined;
+      return b ? { id: b.id, label: b.label, kind: b.kind, checksum: b.checksum, own: b.own } : undefined;
     },
     probe: (baseId) => probeBase({ renderer, baseId, bases, fontPaths, assetsDir }),
-    render: async ({ baseId, bodyTypst, slots, context }) => {
+    render: async ({ baseId, bodyTypst, slots, context, images }) => {
       const bytes = await renderer.renderDocument({
         baseId,
         bases,
         bodyTypst,
-        payload: { ...buildPayload(context), slots },
+        // `baseSlots`: was die Basis laut Manifest zeichnet — der Körper fällt ohne Kennzeichen auf den eigenen Kopf zurück.
+        payload: { ...buildPayload(context), slots, baseSlots: bases.get(baseId)?.slots ?? [] },
         logo: context.logo,
+        images,
         fontPaths,
         assetsDir,
       });

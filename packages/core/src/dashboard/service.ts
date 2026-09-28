@@ -6,9 +6,9 @@ import type { CallContext } from '../context';
 import { dashboardLayouts } from '../db/schema';
 import type { Deps } from '../deps';
 import { enabledManifests } from '../modules/service';
-import { hasPermission } from '../permissions/check';
+import { hasAnyOf } from '../permissions/check';
 import { forbidden, invalid, ok, type Result, type ValidationIssue } from '../result';
-import { validate } from '../validate';
+import { validate, zodIssue } from '../validate';
 import { dashboardOptionFields, type DashboardContent, type DashboardKind, type DashboardOptionField, type DashboardTile } from './types';
 
 export interface AvailableTile {
@@ -61,7 +61,7 @@ interface Placed {
 /** Die Kacheln, die dieser Nutzer sehen darf: eingeschaltete Module, in Registry-Reihenfolge, gefiltert nach Recht. */
 function availableTiles(deps: Deps, ctx: CallContext): Placed[] {
   return enabledManifests(deps).flatMap((m) =>
-    (m.dashboardTiles ?? []).filter((tile) => hasPermission(ctx, tile.permission)).map((tile) => ({ module: m.key, tile })),
+    (m.dashboardTiles ?? []).filter((tile) => hasAnyOf(ctx.permissions, tile.permission)).map((tile) => ({ module: m.key, tile })),
   );
 }
 
@@ -159,7 +159,7 @@ export async function setDashboardLayout(deps: Deps, ctx: CallContext, input: un
     }
     const options = placed.tile.options.safeParse(entry.options);
     if (!options.success) {
-      for (const issue of options.error.issues) issues.push({ path: `tiles.${index}.options.${issue.path.join('.')}`, message: issue.message });
+      for (const issue of options.error.issues) issues.push(zodIssue(issue, `tiles.${index}.options`));
       return;
     }
     tiles.push({ module: placed.module, key: placed.tile.key, options: options.data as Record<string, unknown> });

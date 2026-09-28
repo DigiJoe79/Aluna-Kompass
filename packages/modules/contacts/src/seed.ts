@@ -1,6 +1,8 @@
-import { unwrap, type CallContext, type Deps } from '@kompass/core';
+import { schema, unwrap, type CallContext, type Deps } from '@kompass/core';
+import { eq } from 'drizzle-orm';
 import { contacts } from './schema';
 import { addContactRole, createContact, endContactRole, setContactChannels } from './service';
+import { hasLinkHistoryInternal, linkUserToContact } from './user-links';
 
 // Beispielkontakte: erfunden. Das Repo ist öffentlich; personenbezogene Daten
 // haben darin nichts verloren, auch keine harmlos wirkenden.
@@ -68,8 +70,24 @@ const EXAMPLE_CONTACTS: Array<{
 
 export async function seedContacts(deps: Deps, ctx: CallContext): Promise<void> {
   const existing = deps.db.select({ id: contacts.id }).from(contacts).all();
-  if (existing.length > 0) return;
+  if (existing.length === 0) await seedExampleContacts(deps, ctx);
+  await seedUserLink(deps, ctx);
+}
 
+/**
+ * Ein Beispielkonto (das keine Verwaltung ist) und sein Kontakt — damit die
+ * Spalte „Kontakt“ der Nutzerverwaltung nach dem Seed nicht leer ist. Gesetzt
+ * vom Seed-Verwalter, nicht selbst; nur einmal, auch nach einem zweiten Lauf.
+ */
+async function seedUserLink(deps: Deps, ctx: CallContext): Promise<void> {
+  const account = deps.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, 'peter@kompass.local')).get();
+  if (!account || hasLinkHistoryInternal(deps.db, account.id)) return;
+  const contact = unwrap(await createContact(deps, ctx, { kind: 'person', salutation: 'Herr', firstName: 'Peter', lastName: 'Lang', street: 'Kastanienweg 2', postalCode: '12345', city: 'Musterstadt' }));
+  unwrap(await addContactRole(deps, ctx, { id: contact.id, role: 'service', since: '2026-01-01' }));
+  unwrap(await linkUserToContact(deps, ctx, { userId: account.id, contactId: contact.id }));
+}
+
+async function seedExampleContacts(deps: Deps, ctx: CallContext): Promise<void> {
   for (const c of EXAMPLE_CONTACTS) {
     const input =
       c.kind === 'organization'

@@ -16,6 +16,8 @@ export const animals = sqliteTable(
     sizeCm: integer('size_cm').notNull().default(0),
     sizeText: localizedColumn('size_text'),
     location: text('location', { enum: ['shelter', 'germany'] }).notNull().default('shelter'),
+    /** Freitext, nicht lokalisiert: Land/Ort des Shelters oder Bundesland der Pflegestelle. */
+    place: text('place').notNull().default(''),
     status: text('status', { enum: ['lookingForHome', 'reserved', 'adopted'] }).notNull().default('lookingForHome'),
     isEmergency: integer('is_emergency', { mode: 'boolean' }).notNull().default(false),
     isSponsorable: integer('is_sponsorable', { mode: 'boolean' }).notNull().default(false),

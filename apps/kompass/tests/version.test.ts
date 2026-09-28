@@ -59,18 +59,31 @@ describe('the product version', () => {
    *
    * Waehrend eines Zyklus traegt der Branch eine Vorabnummer (`0.1.1-dev`),
    * damit die Testinstanz nicht die alte Fassung zu sein scheint (gefunden bei
-   * der Abnahme von 0.1.1). Ihr Eintrag steht unter „Unveröffentlicht“; eine
-   * Abschnittsnummer bekommt erst die ausgelieferte Fassung.
+   * der Abnahme von 0.1.1). Ihre Eintraege stehen unter „Unveröffentlicht“;
+   * eine Abschnittsnummer bekommt erst die ausgelieferte Fassung.
    */
   it('has a changelog entry under its own number', () => {
     const changelog = readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8');
     const version = paket('.').version!;
     if (version.includes('-')) {
-      expect(changelog).toContain('## [Unveröffentlicht]');
+      const target = version.slice(0, version.indexOf('-'));
       expect(changelog, 'eine Vorabnummer ist nie ausgeliefert').not.toContain(`## [${version}]`);
+      expect(changelog, `${target} ist noch nicht ausgeliefert`).not.toContain(`## [${target}]`);
     } else {
       expect(changelog).toContain(`## [${version}]`);
     }
+  });
+
+  /**
+   * Eine leere Überschrift „Unveröffentlicht“ direkt über der neuesten Fassung
+   * las sich, als stünde diese Fassung darunter — so am 2026-09-19 bei 0.1.1.
+   * Die Überschrift entsteht deshalb mit dem ersten Eintrag eines Zyklus und
+   * wird beim Release zur Nummer; leer steht sie nie da.
+   */
+  it('shows „Unveröffentlicht“ only with entries under it', () => {
+    const changelog = readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8');
+    const match = changelog.match(/## \[Unveröffentlicht\]\n([\s\S]*?)(?=\n## \[)/);
+    if (match) expect(match[1]!.trim(), 'leere Überschrift „Unveröffentlicht“').not.toBe('');
   });
 
 

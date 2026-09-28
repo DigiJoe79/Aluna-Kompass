@@ -8,4 +8,8 @@ describe('contacts manifest', () => {
     expect([...(contactsModule.dependsOn ?? [])]).toEqual([]);
     expect(contactsModule.navigation?.[0]).toMatchObject({ href: '/contacts', permission: 'contacts.view' });
   });
+
+  it('declares the user link as not deletable — it is ended, never removed', () => {
+    expect(contactsModule.deletionRules).toContainEqual(expect.objectContaining({ entity: 'contactUserLink', deletable: false }));
+  });
 });

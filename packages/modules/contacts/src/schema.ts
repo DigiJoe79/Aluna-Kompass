@@ -1,4 +1,5 @@
-import { index, integer, sqliteTable, text, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
+import { index, integer, sqliteTable, text, uniqueIndex, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 
 /**
  * Ein Kontakt ist entweder eine natürliche Person oder eine Organisation.
@@ -69,6 +70,36 @@ export const contactRoles = sqliteTable(
   (t) => [index('contact_roles_contact_idx').on(t.contactId), index('contact_roles_role_idx').on(t.role)],
 );
 
+/**
+ * Welches Nutzerkonto welcher Kontakt ist — als **Verlauf** (Vorarbeiten-Spec
+ * V5). Eine Zeile wird nie gelöscht und nie überschrieben: Lösen heißt beenden.
+ * Ein Fachmodul muss später sagen können, wer im März mit wem verknüpft war,
+ * als die Auslage freigegeben wurde.
+ *
+ * Bewusst ohne Fremdschlüssel: Der Verlauf überlebt den Kontakt. Ist ein
+ * Kontakt nach seiner Frist gelöscht, bleibt die beendete Zeile mit seiner ID
+ * stehen — sie trägt keine Personendaten, aber die Aussage „dieses Konto war
+ * bis dahin verknüpft“. Dass es Konto und Kontakt gibt, prüft der Dienst.
+ */
+export const contactUserLinks = sqliteTable(
+  'contacts_user_links',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    contactId: text('contact_id').notNull(),
+    linkedAt: text('linked_at').notNull(),
+    linkedByUserId: text('linked_by_user_id').notNull(),
+    unlinkedAt: text('unlinked_at'),
+    unlinkedByUserId: text('unlinked_by_user_id'),
+  },
+  (t) => [
+    // Eindeutig ist je Richtung nur die **offene** Zeile.
+    uniqueIndex('contacts_user_links_open_user_idx').on(t.userId).where(sql`${t.unlinkedAt} is null`),
+    uniqueIndex('contacts_user_links_open_contact_idx').on(t.contactId).where(sql`${t.unlinkedAt} is null`),
+  ],
+);
+
 export type ContactRow = typeof contacts.$inferSelect;
 export type ContactChannelRow = typeof contactChannels.$inferSelect;
 export type ContactRoleRow = typeof contactRoles.$inferSelect;
+export type ContactUserLinkRow = typeof contactUserLinks.$inferSelect;

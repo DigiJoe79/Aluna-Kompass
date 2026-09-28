@@ -1,0 +1,79 @@
+import { schema, unwrap } from '@kompass/core';
+import { ctxWith } from '@kompass/core/testing';
+import { createProject } from '@kompass/module-projects';
+import { describe, expect, it } from 'vitest';
+import { FINANCE_PERMISSIONS } from '../src/manifest';
+import { createCategory } from '../src/ledger/categories';
+import { createPurpose, deletePurpose, dissolvePurpose, fulfillPurpose, listPurposes, reopenPurpose, updatePurpose } from '../src/ledger/purposes';
+import { financeAllocationLines, financeEntries, financeExpenseClaims, financeExpensePositions } from '../src/schema';
+import { setupFinance } from './helpers';
+
+const err = (r: { ok: boolean; error?: unknown }) => (r.ok ? 'ok' : r.error);
+/** Kleinste gültige Eingabe von `createProject` (Muster projects.test.ts). */
+const PROJECT_INPUT = { slug: 'dach-projekt', name: { de: 'Dach-Projekt' }, type: 'ongoing' as const, summary: {}, body: {} };
+
+describe('purposes', () => {
+  it('needs finance.setup; the list needs an overview right and hides the free-text description and reference note from it (Designer-README 4c)', async () => {
+    const { deps, ctx } = setupFinance();
+    expect(err(await createPurpose(deps, ctxWith(['finance.read']), { name: 'Dach' }))).toEqual({ type: 'forbidden', permission: 'finance.setup' });
+    unwrap(await createPurpose(deps, ctx, { name: 'Dachsanierung', description: 'Zusage von Frau Muster', referenceNote: 'Zusage Herr Beispiel', targetCents: 500000, abroad: false }));
+    expect(unwrap(await listPurposes(deps, ctxWith(['finance.overview']), {}))[0]).toMatchObject({ name: 'Dachsanierung', description: null, referenceNote: null, targetCents: 500000 });
+    const full = unwrap(await listPurposes(deps, ctxWith(['finance.read']), {}))[0]!;
+    expect(full.description).toBe('Zusage von Frau Muster');
+    expect(full.referenceNote).toBe('Zusage Herr Beispiel');
+  });
+
+  it('points at a project that exists, without a foreign key', async () => {
+    const { deps, ctx } = setupFinance([...FINANCE_PERMISSIONS, 'projects.manage', 'projects.view']);
+    expect(err(await createPurpose(deps, ctx, { name: 'Dach', projectId: 'nope' }))).toEqual({ type: 'notFound', entity: 'project', id: 'nope' });
+    const project = unwrap(await createProject(deps, ctx, PROJECT_INPUT));
+    expect(unwrap(await createPurpose(deps, ctx, { name: 'Dach', projectId: project.id })).projectId).toBe(project.id);
+  });
+
+  it('takes a carry-forward only with its date', async () => {
+    const { deps, ctx } = setupFinance();
+    expect(err(await createPurpose(deps, ctx, { name: 'Dach', carryForwardCents: 12000 }))).toMatchObject({ type: 'validation', issues: [{ path: 'carryForwardDate', message: 'carryForwardDateRequired' }] });
+  });
+
+  it('is fulfilled or dissolved by a person, with date; a closed purpose takes no changes until reopened with a reason', async () => {
+    const { deps, ctx, userId } = setupFinance();
+    const purpose = unwrap(await createPurpose(deps, ctx, { name: 'Dach' }));
+    const done = unwrap(await fulfillPurpose(deps, ctx, { id: purpose.id }));
+    expect(done).toMatchObject({ fulfilledByUserId: userId, dissolvedAt: null, remainderCents: 0 });
+    expect(done.fulfilledAt).not.toBeNull();
+    expect(err(await updatePurpose(deps, ctx, { id: purpose.id, name: 'Anders' }))).toMatchObject({ type: 'conflict', code: 'purposeClosed' });
+    expect(err(await dissolvePurpose(deps, ctx, { id: purpose.id }))).toMatchObject({ type: 'conflict', code: 'purposeClosed' });
+    expect(err(await reopenPurpose(deps, ctx, { id: purpose.id }))).toMatchObject({ type: 'validation' });
+    const reopened = unwrap(await reopenPurpose(deps, ctx, { id: purpose.id, reason: 'Doch noch Bedarf' }));
+    expect(reopened).toMatchObject({ fulfilledAt: null, fulfilledByUserId: null, reopenNote: 'Doch noch Bedarf' });
+    expect(reopened.reopenedAt).not.toBeNull();
+  });
+
+  it('logs neither name nor description, and deletes an unused purpose', async () => {
+    const { deps, ctx } = setupFinance();
+    const purpose = unwrap(await createPurpose(deps, ctx, { name: 'Dachsanierung', description: 'Zusage von Frau Muster' }));
+    unwrap(await deletePurpose(deps, ctx, { id: purpose.id }));
+    const log = JSON.stringify(deps.db.select().from(schema.auditLog).all().filter((e) => e.action.startsWith('finance.purpose.')));
+    expect(log).not.toMatch(/Dachsanierung|Muster/);
+    expect(log).toContain('finance.purpose.delete');
+  });
+
+  it('cannot be deleted once a line points at it — even a draft’s', async () => {
+    const { deps, ctx } = setupFinance();
+    const purpose = unwrap(await createPurpose(deps, ctx, { name: 'Dach' }));
+    const category = unwrap(await createCategory(deps, ctx, { key: 'raffle', name: 'Tombola', direction: 'income', sphere: 'business', incomeKind: 'sales' }));
+    const now = '2026-03-01T10:00:00.000Z';
+    deps.db.insert(financeEntries).values({ id: 'E1', number: null, entryDate: '2026-03-01', text: 'Test', status: 'draft', createdByUserId: 'U1', createdChannel: 'ui', createdAt: now, updatedAt: now }).run();
+    deps.db.insert(financeAllocationLines).values({ id: 'L1', entryId: 'E1', position: 0, categoryId: category.id, purposeId: purpose.id, amountCents: 1, taxCode: 'none', rateKind: 'standard', abroad: false, addsToAssets: false }).run();
+    expect(err(await deletePurpose(deps, ctx, { id: purpose.id }))).toMatchObject({ type: 'conflict', code: 'purposeInUse' });
+  });
+
+  it('cannot be deleted once a position of an expense claim points at it (F8a)', async () => {
+    const { deps, ctx } = setupFinance();
+    const purpose = unwrap(await createPurpose(deps, ctx, { name: 'Dach' }));
+    const now = '2026-03-01T10:00:00.000Z';
+    deps.db.insert(financeExpenseClaims).values({ id: 'EC1', contactId: 'CONTACT-1', submittedByUserId: 'U1', createdAt: now, updatedAt: now }).run();
+    deps.db.insert(financeExpensePositions).values({ id: 'P1', claimId: 'EC1', sortOrder: 0, kind: 'receipt', purposeId: purpose.id }).run();
+    expect(err(await deletePurpose(deps, ctx, { id: purpose.id }))).toMatchObject({ type: 'conflict', code: 'purposeInUse' });
+  });
+});

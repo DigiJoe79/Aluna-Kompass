@@ -1,5 +1,6 @@
 import { defineModule, type ModuleManifest } from '@kompass/core';
 import { CONTACTS_MCP_TOOLS } from './mcp-tools';
+import { contactsRecordLabels } from './record-labels';
 import { contactsRetentionDue, contactsRetentionHolds } from './retention';
 import { seedContacts } from './seed';
 
@@ -23,6 +24,7 @@ export const contactsModule: ModuleManifest = defineModule({
     { key: 'authority', retention: 'permanent' },
     { key: 'service', retention: 'consent' },
   ],
+  recordLabels: contactsRecordLabels,
   retentionHolds: contactsRetentionHolds,
   retentionDue: contactsRetentionDue,
   deletionRules: [
@@ -33,6 +35,12 @@ export const contactsModule: ModuleManifest = defineModule({
         'Personenbezogene Daten sind nach Wegfall des Zwecks zu löschen (DSGVO Art. 17). Die gesetzliche Aufbewahrung sticht diese Pflicht nur, solange sie läuft.',
       guard: 'Erst wenn kein Halter mehr läuft — geprüft über retentionHolds aller aktiven Module. Ohne nachgewiesene Frist bleibt der Kontakt bestehen.',
       auditAction: 'contacts.delete',
+    },
+    {
+      entity: 'contactUserLink',
+      deletable: false,
+      reason:
+        'Die Verknüpfung von Nutzerkonto und Kontakt ist ein Verlauf: Ein Fachmodul muss später sagen können, wer wann mit wem verknüpft war. Lösen heißt beenden, die Zeile bleibt.',
     },
   ],
   mcpTools: CONTACTS_MCP_TOOLS,

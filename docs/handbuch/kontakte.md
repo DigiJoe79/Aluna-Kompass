@@ -10,7 +10,10 @@ Dokumente zu einem Kontakt.
 
 Die Liste zeigt Name, Art (Person oder Organisation), Rollen, Ort und den
 Hauptkontaktweg. Die Suche greift auf Name, Ort und alle Kontaktwege — wer
-nur eine Telefonnummer im Kopf hat, findet den Kontakt trotzdem. Filter
+nur eine Telefonnummer im Kopf hat, findet den Kontakt trotzdem. Mehrere
+Wörter müssen jedes für sich treffen: „Tomas Leitner“ findet dieselbe Person
+wie „Leitner, Tomas“. Wo ein Feld einen Kontakt wählen lässt, zeigt es ohne
+Suchbegriff die ersten zwanzig und sagt, wenn es mehr gibt. Filter
 nach Art und Rolle; archivierte Kontakte sind ausgeblendet, „Auch
 archivierte“ holt sie dazu.
 
@@ -18,6 +21,12 @@ archivierte“ holt sie dazu.
 Nachname; eine **Organisation** Name und Rechtsform. Beide haben eine
 Anschrift. Während Sie tippen, zeigt die Vorschau, wie die Anschrift in ein
 Fensterkuvert fällt — so, wie sie später im Brief steht.
+
+„Kontakt bearbeiten“ auf der Kontaktseite öffnet dieselbe Maske mit dem
+gespeicherten Stand — etwa um eine Anschrift zu ergänzen. Die Art lässt sich
+dort nicht mehr wechseln. Hat jemand den Kontakt geändert, während Ihre Maske
+offen war (in einem zweiten Fenster oder über MCP), speichert Kompass nichts
+und sagt es Ihnen; laden Sie dann die Seite neu.
 
 ## Kommunikationswege
 
@@ -47,11 +56,21 @@ Frist beginnt mit dem Ende des Kalenderjahres, wie das Steuerrecht es
 verlangt; die Dauer je Fristklasse steht unter [Einstellungen →
 Aufbewahrung](einstellungen/aufbewahrung.md).
 
+Manche Rollen, die ein Modul mitbringt, haben **keine eigene Frist** — das Modul hält den Kontakt dann über seine Vorgänge, etwa Buchungen. Sind die abgelaufen, gilt für den Kontakt die Frist der Einwilligung ab dem Ende der letzten solchen Rolle.
+
+Ein Kontakt, der mit einem Nutzerkonto verknüpft ist, bleibt, solange die Verknüpfung besteht — sie zu lösen ist Sache der [Nutzerverwaltung](einstellungen/nutzer-und-rollen.md#konto-und-kontakt-verknüpfen).
+
 Solange irgendetwas den Kontakt hält, ist „Kontakt löschen“ gesperrt und
 sagt, was. Ist alles abgelaufen, wird der Kontakt unter Aufbewahrung als
 fällig gelistet — gelöscht wird er erst, wenn ein Mensch es hier bestätigt.
 Der Löschvorgang steht im Änderungsprotokoll: was verschwindet, ist der
 Inhalt, nicht die Tatsache, dass jemand ihn entfernt hat.
+
+Das Änderungsprotokoll lässt sich nicht löschen, deshalb schreibt Kompass
+bei Kontakten keinen Namen, keine Anschrift und keinen Kontaktweg hinein —
+nur, welche Felder sich geändert haben („Anschrift geändert“). Den Namen
+zeigt das Protokoll live aus dem Kontakt, solange es ihn gibt; nach dem
+Löschen steht dort „gelöschter Kontakt“.
 
 Zeigt der Block „keine Frist nachgewiesen“, fehlt dem Kontakt eine Rolle.
 Vergeben Sie eine — sonst weiß Kompass nicht, wie lange er bleiben darf.

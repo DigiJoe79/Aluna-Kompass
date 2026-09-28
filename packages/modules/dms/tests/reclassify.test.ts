@@ -151,6 +151,6 @@ describe('previewReclassification', () => {
     const { deps, ctx } = setupWithTypes();
     const doc = await received(deps, ctx);
     const preview = unwrap(await previewReclassification(deps, ctx, { id: doc.id, typeKey: 'contract', documentDate: '2026-03-14' }));
-    expect(preview.number).toEqual({ current: 'VER-2026-001', next: null });
+    expect(preview.number).toEqual({ current: 'VER-2026-001', next: null, numberHidden: false });
   });
 });

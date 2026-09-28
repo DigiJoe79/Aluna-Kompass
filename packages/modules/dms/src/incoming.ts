@@ -1,4 +1,5 @@
 import {
+  yearIn,
   conflict,
   expectedVersionField,
   invalid,
@@ -19,10 +20,14 @@ import {
 } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { canReadType, isProtectedType, requireAreaAccess, requireDmsGate, requireReadable } from './access';
+import { auditDocumentRef } from './audit-ref';
 import { documentTypeFor } from './catalog';
+import { duplicatesOfInternal, type DuplicateRef } from './duplicates';
+import { refuseModuleOwned } from './owned';
 import { RELATION_KINDS, documentFormerNumbers, documentLinks, documentRelations, documents, type DocumentRow, type DocumentTypeRow } from './schema';
 import { removeDocumentFile, storeDocumentFile } from './storage';
-import { allocateDocumentNumber, linkInputSchema, peekDocumentNumber, resolveFolder, toRecord, type DocumentRecord } from './service';
+import { allocateDocumentNumber, linkInputSchema, peekDocumentNumber, refuseReservedLinks, resolveFolder, toRecord, type DocumentRecord } from './service';
 
 /**
  * Was jede Ablage eingehender Post beschreibt — unabhängig davon, woher die
@@ -41,7 +46,7 @@ const receiveFields = {
 };
 
 const oneSource = {
-  message: 'entweder bytes oder contentBase64',
+  message: 'exactlyOneSource',
 } as const;
 
 /**
@@ -68,15 +73,21 @@ export async function receiveDocument(
   deps: Deps,
   ctx: CallContext,
   input: unknown,
-): Promise<Result<DocumentRecord>> {
+): Promise<Result<DocumentRecord & { duplicateOf: DuplicateRef[] }>> {
   const denied = requirePermission(ctx, 'dms.create');
   if (denied) return denied;
 
   const parsed = validate(deps, receiveDocumentSchema, input);
   if (!parsed.ok) return parsed;
 
+  const reservedHit = refuseReservedLinks(deps, parsed.value.links);
+  if (reservedHit) return reservedHit;
+
   const docType = documentTypeFor(deps.db, parsed.value.typeKey);
   if (!docType) return notFound('documentType', parsed.value.typeKey);
+
+  const owned = refuseModuleOwned(docType);
+  if (owned) return owned;
 
   let bytes = parsed.value.bytes;
   if (!bytes && parsed.value.contentBase64) {
@@ -89,13 +100,48 @@ export async function receiveDocument(
   const folder = folderRes.value;
 
   for (const relation of parsed.value.relations) {
-    const other = deps.db.select({ id: documents.id }).from(documents).where(eq(documents.id, relation.relatedDocumentId)).get();
+    const other = deps.db.select({ id: documents.id, typeKey: documents.typeKey }).from(documents).where(eq(documents.id, relation.relatedDocumentId)).get();
     if (!other) return notFound('document', relation.relatedDocumentId);
+    // Ein Bezug auf ein Dokument, das der Aufrufer nicht lesen darf, verriete dessen Nummer und Art.
+    const unreadable = requireAreaAccess(deps, ctx, other);
+    if (unreadable) return unreadable;
   }
 
+  return storeIncoming(
+    deps, ctx, bytes,
+    {
+      docType, subject: parsed.value.subject, documentDate: parsed.value.documentDate, folder, links: parsed.value.links, relations: parsed.value.relations,
+      // Ist die Art geschützt, steht der Betreff nicht im Protokoll — nur die Nummer.
+      audit: isProtectedType(docType)
+        ? { after: { relations: parsed.value.relations.length }, summary: (number) => `Dokument ${number} eingegangen` }
+        : { after: { subject: parsed.value.subject, relations: parsed.value.relations.length }, summary: (number) => `Dokument ${number} („${parsed.value.subject}“) eingegangen` },
+    },
+    // Befund Z: dieselbe Datei liegt schon vor — ein Hinweis mit Nummer, kein Verbot.
+    (tx, doc) => ({ ...toRecord(deps, ctx, tx.select().from(documents).where(eq(documents.id, doc.id)).get()!, tx), duplicateOf: doc.duplicateOf }),
+  );
+}
+
+export interface IncomingFields {
+  docType: DocumentTypeRow;
+  subject: string;
+  documentDate: string;
+  folder: string | null;
+  links: { entityType: string; entityId: string; role: 'sender' | 'recipient' | 'about' }[];
+  relations: { relatedDocumentId: string; kind: (typeof RELATION_KINDS)[number] }[];
+  /** Was im Protokoll steht. Der freie Eingang nennt den Betreff; ein Modul nie. */
+  audit: { after: Record<string, unknown>; summary: (number: string) => string };
+}
+
+/**
+ * Datei schreiben, Nummer ziehen, Zeile und Bezüge anlegen, protokollieren —
+ * gemeinsam für den freien Eingang und den Eingang im Namen eines Vorgangs.
+ * `inTx` läuft in derselben Transaktion; wirft es, verschwindet alles, auch
+ * die Datei.
+ */
+export async function storeIncoming<T>(deps: Deps, ctx: CallContext, bytes: Uint8Array, fields: IncomingFields, inTx: (tx: DbOrTx, doc: { id: string; number: string; fileChecksum: string; duplicateOf: DuplicateRef[] }) => T): Promise<Result<T>> {
   const id = newId();
   const now = isoNow(deps.clock);
-  const year = deps.clock.now().getUTCFullYear();
+  const year = yearIn(deps);
 
   // Die Datei zuerst: Ihr Schreiben kann scheitern, und dann darf keine Zeile
   // da sein. Scheitert danach die Transaktion, wird sie wieder entfernt.
@@ -104,71 +150,26 @@ export async function receiveDocument(
 
   try {
     return deps.db.transaction((tx: DbOrTx) => {
-      const number = allocateDocumentNumber(tx, docType.prefix, year);
+      const number = allocateDocumentNumber(tx, fields.docType.prefix, year);
+      // Vor dem Einfügen gelesen: Das neue Dokument ist nie sein eigenes Doppel.
+      const duplicateOf = duplicatesOfInternal(deps, ctx, tx, stored.value.fileChecksum, id);
       tx.insert(documents)
         .values({
-          id,
-          phase: 'issued',
-          direction: 'incoming',
-          sourceKind: 'uploaded',
-          typeKey: docType.key,
-          number,
-          subject: parsed.value.subject,
-          documentDate: parsed.value.documentDate,
-          folder,
-          draftBody: null,
-          templateKey: null,
-          inputSnapshot: null,
-          fileName: stored.value.fileName,
-          fileChecksum: stored.value.fileChecksum,
-          fileBytes: stored.value.fileBytes,
-          textStatus: 'pending',
-          textAttempts: 0,
-          textError: null,
-          textExtractedAt: null,
-          status: 'issued',
-          createdByUserId: ctx.userId ?? 'system',
-          createdAt: now,
-          updatedAt: now,
+          id, phase: 'issued', direction: 'incoming', sourceKind: 'uploaded', typeKey: fields.docType.key, number,
+          subject: fields.subject, documentDate: fields.documentDate, folder: fields.folder, draftBody: null, templateKey: null, inputSnapshot: null,
+          fileName: stored.value.fileName, fileChecksum: stored.value.fileChecksum, fileBytes: stored.value.fileBytes,
+          textStatus: 'pending', textAttempts: 0, textError: null, textExtractedAt: null,
+          status: 'issued', createdByUserId: ctx.userId ?? 'system', createdAt: now, updatedAt: now,
         })
         .run();
-
-      for (const link of parsed.value.links) {
-        tx.insert(documentLinks)
-          .values({
-            id: newId(),
-            documentId: id,
-            entityType: link.entityType,
-            entityId: link.entityId,
-            role: link.role,
-            createdAt: now,
-          })
-          .run();
+      for (const link of fields.links) {
+        tx.insert(documentLinks).values({ id: newId(), documentId: id, entityType: link.entityType, entityId: link.entityId, role: link.role, createdAt: now }).run();
       }
-
-      for (const relation of parsed.value.relations) {
-        tx.insert(documentRelations)
-          .values({
-            id: newId(),
-            documentId: id,
-            relatedDocumentId: relation.relatedDocumentId,
-            kind: relation.kind,
-            createdByUserId: ctx.userId ?? 'system',
-            createdAt: now,
-          })
-          .run();
+      for (const relation of fields.relations) {
+        tx.insert(documentRelations).values({ id: newId(), documentId: id, relatedDocumentId: relation.relatedDocumentId, kind: relation.kind, createdByUserId: ctx.userId ?? 'system', createdAt: now }).run();
       }
-
-      recordAudit(tx, deps, ctx, {
-        action: 'dms.receive',
-        entityType: 'document',
-        entityId: id,
-        after: { number, typeKey: docType.key, subject: parsed.value.subject, relations: parsed.value.relations.length },
-        summary: `Dokument ${number} („${parsed.value.subject}“) eingegangen`,
-      });
-
-      const row = tx.select().from(documents).where(eq(documents.id, id)).get()!;
-      return ok(toRecord(deps, row, tx));
+      recordAudit(tx, deps, ctx, { action: 'dms.receive', entityType: 'document', entityId: id, after: { number, typeKey: fields.docType.key, ...fields.audit.after }, summary: fields.audit.summary(number) });
+      return ok(inTx(tx, { id, number, fileChecksum: stored.value.fileChecksum, duplicateOf }));
     });
   } catch (error) {
     await removeDocumentFile(deps, stored.value.fileName);
@@ -201,6 +202,9 @@ function loadIncoming(deps: Deps, id: string): Result<DocumentRow> {
   if (!row) return notFound('document', id);
   if (row.direction !== 'incoming') return conflict('notIncoming', `Dokument ${row.number ?? row.id} ist ausgehend; seine Nummer steht im verschickten PDF`);
   if (row.status === 'voided') return conflict('documentVoided', `Dokument ${row.number ?? row.id} ist storniert`);
+  const own = documentTypeFor(deps.db, row.typeKey);
+  const owned = own ? refuseModuleOwned(own) : null;
+  if (owned) return owned;
   return ok(row);
 }
 
@@ -208,6 +212,8 @@ function targetType(deps: Deps, key: string): Result<DocumentTypeRow> {
   const docType = documentTypeFor(deps.db, key);
   if (!docType) return notFound('documentType', key);
   if (!docType.isActive) return conflict('documentTypeInactive', `Dokumentart „${docType.label}“ ist abgeschaltet`);
+  const owned = refuseModuleOwned(docType);
+  if (owned) return owned;
   return ok(docType);
 }
 
@@ -221,6 +227,8 @@ export async function reclassifyDocument(deps: Deps, ctx: CallContext, input: un
   const loaded = loadIncoming(deps, id);
   if (!loaded.ok) return loaded;
   const before = loaded.value;
+  const unreadable = requireAreaAccess(deps, ctx, before);
+  if (unreadable) return unreadable;
   const stale = staleVersion(expectedVersion, before.updatedAt);
   if (stale) return stale;
 
@@ -233,7 +241,7 @@ export async function reclassifyDocument(deps: Deps, ctx: CallContext, input: un
   const nextSubject = subject !== undefined && subject !== before.subject ? subject : null;
   const nextDate = documentDate !== undefined && documentDate !== before.documentDate ? documentDate : null;
   // Nichts geändert: kein Fehler, aber auch kein Eintrag im Protokoll.
-  if (!newType && nextSubject === null && nextDate === null) return ok(toRecord(deps, before));
+  if (!newType && nextSubject === null && nextDate === null) return ok(toRecord(deps, ctx, before));
 
   return deps.db.transaction((tx: DbOrTx) => {
     const now = isoNow(deps.clock);
@@ -253,7 +261,9 @@ export async function reclassifyDocument(deps: Deps, ctx: CallContext, input: un
       .where(eq(documents.id, id))
       .run();
     const after = tx.select().from(documents).where(eq(documents.id, id)).get()!;
-    const pick = (row: DocumentRow) => ({ typeKey: row.typeKey, number: row.number, subject: row.subject, documentDate: row.documentDate });
+    // Ist die alte oder die neue Art geschützt, steht der Betreff nicht im Protokoll.
+    const ref = auditDocumentRef(tx, before, newType?.key);
+    const pick = (row: DocumentRow) => ({ typeKey: row.typeKey, number: row.number, ...(ref.hidden ? {} : { subject: row.subject }), documentDate: row.documentDate });
     recordAudit(tx, deps, ctx, {
       action: 'dms.reclassify',
       entityType: 'document',
@@ -262,7 +272,7 @@ export async function reclassifyDocument(deps: Deps, ctx: CallContext, input: un
       after: pick(after),
       summary: newType ? `${before.number} → ${after.number} umklassifiziert` : `Angaben zu ${after.number} berichtigt`,
     });
-    return ok(toRecord(deps, after, tx));
+    return ok(toRecord(deps, ctx, after, tx));
   });
 }
 
@@ -279,7 +289,8 @@ export interface RetentionView {
 }
 
 export interface ReclassificationPreview {
-  number: { current: string | null; next: string | null };
+  /** `next` ist auch `null`, wenn der Aufrufer die Zielart nicht lesen darf — dann ist `numberHidden` gesetzt. */
+  number: { current: string | null; next: string | null; numberHidden: boolean };
   retention: { current: RetentionView; next: RetentionView };
 }
 
@@ -295,20 +306,23 @@ function retentionOf(deps: Deps, docType: DocumentTypeRow, documentDate: string)
  * Gezogen wird sie erst beim Speichern.
  */
 export async function previewReclassification(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ReclassificationPreview>> {
-  const denied = requirePermission(ctx, 'dms.view');
+  const denied = requireDmsGate(deps, ctx);
   if (denied) return denied;
   const parsed = validate(deps, reclassifyPreviewSchema, input);
   if (!parsed.ok) return parsed;
   const loaded = loadIncoming(deps, parsed.value.id);
   if (!loaded.ok) return loaded;
   const row = loaded.value;
+  const unreadable = requireReadable(deps, ctx, row);
+  if (unreadable) return unreadable;
   const currentType = documentTypeFor(deps.db, row.typeKey);
   if (!currentType) return notFound('documentType', row.typeKey);
   const changes = parsed.value.typeKey !== row.typeKey;
   const found = changes ? targetType(deps, parsed.value.typeKey) : ok(currentType);
   if (!found.ok) return found;
+  const numberVisible = changes && canReadType(deps, ctx, found.value);
   return ok({
-    number: { current: row.number, next: changes ? peekDocumentNumber(deps.db, found.value.prefix, filingYear(row)) : null },
+    number: { current: row.number, next: numberVisible ? peekDocumentNumber(deps.db, found.value.prefix, filingYear(row)) : null, numberHidden: changes && !numberVisible },
     retention: { current: retentionOf(deps, currentType, row.documentDate), next: retentionOf(deps, found.value, parsed.value.documentDate) },
   });
 }

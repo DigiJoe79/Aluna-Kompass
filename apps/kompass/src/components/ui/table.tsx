@@ -22,7 +22,10 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("[&_tr]:border-b", className)}
+      className={cn(
+        "bg-table-head text-left text-[11px] font-bold uppercase tracking-[.06em] text-muted-ink [&_tr]:border-b",
+        className
+      )}
       {...props}
     />
   )

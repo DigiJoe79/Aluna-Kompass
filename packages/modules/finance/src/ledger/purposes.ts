@@ -1,0 +1,236 @@
+import { expectedVersionField, isoNow, newId, notFound, ok, requirePermission, staleVersion, validate, hasPermission, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { projects } from '@kompass/module-projects';
+import { asc, eq } from 'drizzle-orm';
+import { z } from 'zod';
+import { financeAudit } from '../audit';
+import { financeConflict } from '../errors';
+import { financeAllocationLines, financeExpensePositions, financeImportRules, financePurposeTransfers, financePurposes, financeReserves, type FinancePurposeRow } from '../schema';
+import { requireMasterDataRead } from './access';
+import { purposeBalancesAt } from './queries';
+
+const base = z.object({
+  name: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(2000).nullable().optional(),
+  projectId: z.string().min(1).nullable().optional(),
+  referenceNote: z.string().trim().max(120).nullable().optional(),
+  targetCents: z.number().int().nullable().optional(),
+  abroad: z.boolean().default(false),
+  carryForwardCents: z.number().int().nullable().optional(),
+  carryForwardDate: z.string().date().nullable().optional(),
+});
+type Fields = z.infer<typeof base>;
+
+function check(v: Pick<Fields, 'carryForwardCents' | 'carryForwardDate'>, c: z.RefinementCtx): void {
+  if ((v.carryForwardCents ?? null) !== null && !v.carryForwardDate) c.addIssue({ code: 'custom', path: ['carryForwardDate'], message: 'carryForwardDateRequired' });
+  if (v.carryForwardDate && (v.carryForwardCents ?? null) === null) c.addIssue({ code: 'custom', path: ['carryForwardCents'], message: 'carryForwardCentsRequired' });
+}
+
+export const purposeCreateSchema = base.superRefine(check);
+export const purposeUpdateSchema = base.partial().extend({ id: z.string().min(1), expectedVersion: expectedVersionField });
+
+/** Wie `FinancePurposeRow`, nur dass die Liste Freitext und Bezug ohne `finance.read` auf `null` setzt (Designer-README 4c). */
+export type PurposeView = Omit<FinancePurposeRow, 'description' | 'referenceNote'> & { description: string | null; referenceNote: string | null };
+
+/**
+ * Auch der Entwurf einer Zuordnungszeile belegt den Zweck — und eine Regel
+ * für Kontoumsätze (F5) oder eine Auslagen-Position (F8a), beide mit
+ * Fremdschlüssel. F8b Annahme 6: dazu jede Umwidmung (von/nach) und
+ * zurückgelegtes Geld mit Zweckbezug.
+ */
+export function purposeInUseInternal(db: DbOrTx, purposeId: string): boolean {
+  return (
+    !!db.select({ id: financeAllocationLines.id }).from(financeAllocationLines).where(eq(financeAllocationLines.purposeId, purposeId)).get() ||
+    !!db.select({ id: financeImportRules.id }).from(financeImportRules).where(eq(financeImportRules.purposeId, purposeId)).get() ||
+    !!db.select({ id: financeExpensePositions.id }).from(financeExpensePositions).where(eq(financeExpensePositions.purposeId, purposeId)).get() ||
+    !!db.select({ id: financePurposeTransfers.id }).from(financePurposeTransfers).where(eq(financePurposeTransfers.fromPurposeId, purposeId)).get() ||
+    !!db.select({ id: financePurposeTransfers.id }).from(financePurposeTransfers).where(eq(financePurposeTransfers.toPurposeId, purposeId)).get() ||
+    !!db.select({ id: financeReserves.id }).from(financeReserves).where(eq(financeReserves.purposeId, purposeId)).get()
+  );
+}
+
+function projectExists(db: DbOrTx, id: string): boolean {
+  return !!db.select({ id: projects.id }).from(projects).where(eq(projects.id, id)).get();
+}
+
+export async function createPurpose(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<PurposeView>> {
+  const denied = requirePermission(ctx, 'finance.setup');
+  if (denied) return denied;
+  const parsed = validate(deps, purposeCreateSchema, input);
+  if (!parsed.ok) return parsed;
+  if (parsed.value.projectId && !projectExists(deps.db, parsed.value.projectId)) return notFound('project', parsed.value.projectId);
+
+  return deps.db.transaction((tx: DbOrTx) => {
+    const id = newId();
+    const now = isoNow(deps.clock);
+    const row: FinancePurposeRow = {
+      id,
+      name: parsed.value.name,
+      description: parsed.value.description ?? '',
+      projectId: parsed.value.projectId ?? null,
+      referenceNote: parsed.value.referenceNote ?? null,
+      targetCents: parsed.value.targetCents ?? null,
+      abroad: parsed.value.abroad,
+      carryForwardCents: parsed.value.carryForwardCents ?? null,
+      carryForwardDate: parsed.value.carryForwardDate ?? null,
+      fulfilledAt: null,
+      fulfilledByUserId: null,
+      dissolvedAt: null,
+      dissolvedByUserId: null,
+      isActive: true,
+      reopenNote: null,
+      reopenedAt: null,
+      reopenedByUserId: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    tx.insert(financePurposes).values(row).run();
+    financeAudit(tx, deps, ctx, { action: 'finance.purpose.create', entity: 'financePurpose', id, after: row, summary: `Zweck ${id} angelegt` });
+    return ok(row);
+  });
+}
+
+function load(db: DbOrTx, id: string): FinancePurposeRow | null {
+  return db.select().from(financePurposes).where(eq(financePurposes.id, id)).get() ?? null;
+}
+
+const closedConflict = () => financeConflict('purposeClosed');
+
+export async function updatePurpose(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<PurposeView>> {
+  const denied = requirePermission(ctx, 'finance.setup');
+  if (denied) return denied;
+  const parsed = validate(deps, purposeUpdateSchema, input);
+  if (!parsed.ok) return parsed;
+  const { id, expectedVersion, ...changes } = parsed.value;
+  const before = load(deps.db, id);
+  if (!before) return notFound('financePurpose', id);
+  const stale = staleVersion(expectedVersion, before.updatedAt);
+  if (stale) return stale;
+  if (before.fulfilledAt || before.dissolvedAt) return closedConflict();
+
+  const merged = { ...before, ...Object.fromEntries(Object.entries(changes).filter(([, val]) => val !== undefined)) };
+  const rechecked = validate(deps, purposeCreateSchema, { name: merged.name, description: merged.description, projectId: merged.projectId, referenceNote: merged.referenceNote, targetCents: merged.targetCents, abroad: merged.abroad, carryForwardCents: merged.carryForwardCents, carryForwardDate: merged.carryForwardDate });
+  if (!rechecked.ok) return rechecked;
+  if (merged.projectId && !projectExists(deps.db, merged.projectId)) return notFound('project', merged.projectId);
+
+  return deps.db.transaction((tx: DbOrTx) => {
+    const after = { ...merged, updatedAt: isoNow(deps.clock) };
+    tx.update(financePurposes).set(after).where(eq(financePurposes.id, id)).run();
+    financeAudit(tx, deps, ctx, { action: 'finance.purpose.update', entity: 'financePurpose', id, before, after, summary: `Zweck ${id} geändert` });
+    return ok(after);
+  });
+}
+
+const idSchema = z.object({ id: z.string().min(1), expectedVersion: expectedVersionField });
+
+/** F8b Annahme 7: der Bestand am Tag des Erfüllens, für die Rest-Warnung der Oberfläche (Prüfstein 9). */
+export type FulfilledPurposeView = PurposeView & { remainderCents: number };
+
+export async function fulfillPurpose(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<FulfilledPurposeView>> {
+  const denied = requirePermission(ctx, 'finance.setup');
+  if (denied) return denied;
+  const parsed = validate(deps, idSchema, input);
+  if (!parsed.ok) return parsed;
+  const before = load(deps.db, parsed.value.id);
+  if (!before) return notFound('financePurpose', parsed.value.id);
+  const stale = staleVersion(parsed.value.expectedVersion, before.updatedAt);
+  if (stale) return stale;
+  if (before.fulfilledAt || before.dissolvedAt) return closedConflict();
+  return deps.db.transaction((tx: DbOrTx) => {
+    const now = isoNow(deps.clock);
+    const after = { ...before, fulfilledAt: now, fulfilledByUserId: ctx.userId, updatedAt: now };
+    tx.update(financePurposes).set({ fulfilledAt: after.fulfilledAt, fulfilledByUserId: after.fulfilledByUserId, updatedAt: after.updatedAt }).where(eq(financePurposes.id, before.id)).run();
+    financeAudit(tx, deps, ctx, { action: 'finance.purpose.fulfill', entity: 'financePurpose', id: before.id, before, after, summary: `Zweck ${before.id} erfüllt` });
+    const remainderCents = Math.max(0, purposeBalancesAt(tx, now.slice(0, 10)).find((b) => b.purposeId === before.id)?.balanceCents ?? 0);
+    return ok({ ...after, remainderCents });
+  });
+}
+
+export async function dissolvePurpose(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<PurposeView>> {
+  const denied = requirePermission(ctx, 'finance.setup');
+  if (denied) return denied;
+  const parsed = validate(deps, idSchema, input);
+  if (!parsed.ok) return parsed;
+  const before = load(deps.db, parsed.value.id);
+  if (!before) return notFound('financePurpose', parsed.value.id);
+  const stale = staleVersion(parsed.value.expectedVersion, before.updatedAt);
+  if (stale) return stale;
+  if (before.fulfilledAt || before.dissolvedAt) return closedConflict();
+  return deps.db.transaction((tx: DbOrTx) => {
+    const now = isoNow(deps.clock);
+    const after = { ...before, dissolvedAt: now, dissolvedByUserId: ctx.userId, updatedAt: now };
+    tx.update(financePurposes).set({ dissolvedAt: after.dissolvedAt, dissolvedByUserId: after.dissolvedByUserId, updatedAt: after.updatedAt }).where(eq(financePurposes.id, before.id)).run();
+    financeAudit(tx, deps, ctx, { action: 'finance.purpose.dissolve', entity: 'financePurpose', id: before.id, before, after, summary: `Zweck ${before.id} aufgelöst` });
+    return ok(after);
+  });
+}
+
+const reopenSchema = idSchema.extend({ reason: z.string().trim().min(1).max(1000) });
+
+/** F8b Annahme 7: Wiederöffnen verlangt eine Begründung — sie steht am Datensatz (jüngste), nie im Protokoll; ältere Begründungen bleiben nur als Zeitpunkt im Protokoll. */
+export async function reopenPurpose(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<PurposeView>> {
+  const denied = requirePermission(ctx, 'finance.setup');
+  if (denied) return denied;
+  const parsed = validate(deps, reopenSchema, input);
+  if (!parsed.ok) return parsed;
+  const before = load(deps.db, parsed.value.id);
+  if (!before) return notFound('financePurpose', parsed.value.id);
+  const stale = staleVersion(parsed.value.expectedVersion, before.updatedAt);
+  if (stale) return stale;
+  return deps.db.transaction((tx: DbOrTx) => {
+    const now = isoNow(deps.clock);
+    const after = { ...before, fulfilledAt: null, fulfilledByUserId: null, dissolvedAt: null, dissolvedByUserId: null, reopenNote: parsed.value.reason, reopenedAt: now, reopenedByUserId: ctx.userId, updatedAt: now };
+    tx.update(financePurposes).set({ fulfilledAt: null, fulfilledByUserId: null, dissolvedAt: null, dissolvedByUserId: null, reopenNote: parsed.value.reason, reopenedAt: now, reopenedByUserId: ctx.userId, updatedAt: now }).where(eq(financePurposes.id, before.id)).run();
+    financeAudit(tx, deps, ctx, { action: 'finance.purpose.reopen', entity: 'financePurpose', id: before.id, before, after: { ...after, reopenedAt: now }, summary: `Zweck ${before.id} wieder geöffnet` });
+    return ok(after);
+  });
+}
+
+const purposeActiveSchema = z.object({ id: z.string().min(1), isActive: z.boolean(), expectedVersion: expectedVersionField });
+
+/** Muster wie `setAccountActive`/`setCategoryActive` — die drei Stammdatenarten des Verteilers `finance_master_data*` teilen die Form. */
+export async function setPurposeActive(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<PurposeView>> {
+  const denied = requirePermission(ctx, 'finance.setup');
+  if (denied) return denied;
+  const parsed = validate(deps, purposeActiveSchema, input);
+  if (!parsed.ok) return parsed;
+  const before = load(deps.db, parsed.value.id);
+  if (!before) return notFound('financePurpose', parsed.value.id);
+  const stale = staleVersion(parsed.value.expectedVersion, before.updatedAt);
+  if (stale) return stale;
+  return deps.db.transaction((tx: DbOrTx) => {
+    const after = { ...before, isActive: parsed.value.isActive, updatedAt: isoNow(deps.clock) };
+    tx.update(financePurposes).set({ isActive: after.isActive, updatedAt: after.updatedAt }).where(eq(financePurposes.id, before.id)).run();
+    financeAudit(tx, deps, ctx, { action: 'finance.purpose.setActive', entity: 'financePurpose', id: before.id, before, after, summary: `Zweck ${before.id} ${after.isActive ? 'aktiviert' : 'stillgelegt'}` });
+    return ok(after);
+  });
+}
+
+const deleteSchema = z.object({ id: z.string().min(1) });
+
+export async function deletePurpose(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ id: string }>> {
+  const denied = requirePermission(ctx, 'finance.setup');
+  if (denied) return denied;
+  const parsed = validate(deps, deleteSchema, input);
+  if (!parsed.ok) return parsed;
+  const before = load(deps.db, parsed.value.id);
+  if (!before) return notFound('financePurpose', parsed.value.id);
+  if (purposeInUseInternal(deps.db, before.id)) return financeConflict('purposeInUse');
+  return deps.db.transaction((tx: DbOrTx) => {
+    tx.delete(financePurposes).where(eq(financePurposes.id, before.id)).run();
+    financeAudit(tx, deps, ctx, { action: 'finance.purpose.delete', entity: 'financePurpose', id: before.id, before, summary: `Zweck ${before.id} gelöscht` });
+    return ok({ id: before.id });
+  });
+}
+
+const listSchema = z.object({ includeInactive: z.boolean().default(false) });
+
+export async function listPurposes(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<PurposeView[]>> {
+  const denied = requireMasterDataRead(ctx).failure;
+  if (denied) return denied;
+  const parsed = validate(deps, listSchema, input ?? {});
+  if (!parsed.ok) return parsed;
+  const rows = deps.db.select().from(financePurposes).orderBy(asc(financePurposes.name)).all().filter((r) => parsed.value.includeInactive || r.isActive);
+  // Freitext und Bezug können Namen tragen („Zusage von Frau Muster“): nur mit `finance.read`.
+  const full = hasPermission(ctx, 'finance.read');
+  return ok<PurposeView[]>(full ? rows : rows.map((r) => ({ ...r, description: null, referenceNote: null })));
+}

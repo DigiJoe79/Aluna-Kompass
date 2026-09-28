@@ -1,5 +1,6 @@
 'use server';
 
+import { guardAction } from '@/lib/action-guard';
 import { completeSetup } from '@kompass/core';
 import { getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
@@ -8,17 +9,19 @@ import { getDeps } from '@/lib/deps';
 import { requestMeta, setSessionCookie } from '@/lib/request-context';
 
 export async function completeSetupAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  const meta = await requestMeta();
-  const result = await completeSetup(getDeps(), {
-    organizationName: formData.get('organizationName'),
-    locale: formData.get('locale'),
-    name: formData.get('name'),
-    email: formData.get('email'),
-    password: formData.get('password'),
-    ...meta,
+  return guardAction('setup/actions.ts#completeSetupAction', async () => {
+    const t = await getTranslations();
+    const meta = await requestMeta();
+    const result = await completeSetup(getDeps(), {
+      organizationName: formData.get('organizationName'),
+      locale: formData.get('locale'),
+      name: formData.get('name'),
+      email: formData.get('email'),
+      password: formData.get('password'),
+      ...meta,
+    });
+    if (!result.ok) return toActionState(result, t);
+    await setSessionCookie(result.value.sessionId, result.value.expiresAt);
+    redirect('/');
   });
-  if (!result.ok) return toActionState(result, t);
-  await setSessionCookie(result.value.sessionId, result.value.expiresAt);
-  redirect('/');
 }

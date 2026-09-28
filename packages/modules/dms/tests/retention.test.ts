@@ -60,6 +60,7 @@ describe('dmsRetentionDue', () => {
     const due = dmsRetentionDue(deps);
     expect(due).toHaveLength(1);
     expect(due[0]!.entity).toBe('document');
+    expect(due[0]!.href).toBe(`/dms/${due[0]!.id}`);
   });
 
   it('führt nichts auf, was noch läuft', async () => {

@@ -15,7 +15,7 @@ const tmp = () => {
 describe('document bases', () => {
   it('resolves the shipped bases and reports their checksum', () => {
     const bases = resolveBases(resolveAssetDirs({}));
-    expect([...bases.keys()].sort()).toEqual(['a4-mit-briefkopf', 'a4-ohne-briefkopf', 'a4-plain']);
+    expect([...bases.keys()].sort()).toEqual(['a4-formular', 'a4-mit-briefkopf', 'a4-ohne-briefkopf', 'a4-plain']);
     expect(bases.get('a4-plain')!.checksum).toMatch(/^[0-9a-f]{64}$/);
     expect(bases.get('a4-mit-briefkopf')!.label).toBe('A4 mit Briefkopf');
   });
@@ -25,7 +25,7 @@ describe('document bases', () => {
     writeFileSync(path.join(vol, 'a4-plain.typ'), '#let base(payload, slots, body) = { set document(date: none); body }');
     const bases = resolveBases(resolveAssetDirs({ KOMPASS_DOCUMENT_TEMPLATES_DIR: vol }));
     expect(bases.get('a4-plain')!.typst).toContain('set document(date: none); body');
-    expect([...bases.keys()].length).toBe(3);
+    expect([...bases.keys()].length).toBe(4);
   });
 
   it('probes a base and reports a broken one', async () => {

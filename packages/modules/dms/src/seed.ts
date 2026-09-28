@@ -1,4 +1,4 @@
-import { completeFollowUp, isoNow, newId, unwrap, type CallContext, type Deps } from '@kompass/core';
+import { completeFollowUp, isoDayIn, isoNow, newId, unwrap, type CallContext, type Deps } from '@kompass/core';
 import { contacts } from '@kompass/module-contacts';
 import { eq } from 'drizzle-orm';
 import { EXAMPLE_DOCUMENT_TYPES } from './catalog';
@@ -14,7 +14,7 @@ import { textPdf } from './seed-pdf';
 import { createSnippet } from './snippets';
 
 /** Tage relativ zum Seed-Lauf — die Beispiele sollen nie „schon vorbei“ wirken. */
-const addDays = (deps: Deps, days: number) => new Date(deps.clock.now().getTime() + days * 86_400_000).toISOString().slice(0, 10);
+const addDays = (deps: Deps, days: number) => isoDayIn(deps, deps.clock.now().getTime() + days * 86_400_000);
 
 export async function seedDms(deps: Deps, ctx: CallContext): Promise<void> {
   const existing = deps.db.select({ id: documents.id }).from(documents).all();

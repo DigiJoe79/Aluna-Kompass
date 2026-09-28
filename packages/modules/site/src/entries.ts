@@ -19,6 +19,7 @@ import {
   requirePermission,
   staleVersion,
   validate,
+  zodIssues,
 } from '@kompass/core';
 import { and, asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -89,7 +90,7 @@ export async function createEntry(deps: Deps, ctx: CallContext, raw: unknown): P
   const denied = requirePermission(ctx, 'site.manage');
   if (denied) return denied;
   const parsed = createInput.safeParse(raw);
-  if (!parsed.success) return invalid(parsed.error.issues.map((i) => ({ path: i.path.map(String).join('.'), message: i.message })));
+  if (!parsed.success) return invalid(zodIssues(parsed.error));
   const { collection, slug, data } = parsed.data;
 
   const col = collectionOf(deps, collection);
@@ -126,7 +127,7 @@ export async function updateEntry(deps: Deps, ctx: CallContext, raw: unknown): P
   const denied = requirePermission(ctx, 'site.manage');
   if (denied) return denied;
   const parsed = updateInput.safeParse(raw);
-  if (!parsed.success) return invalid(parsed.error.issues.map((i) => ({ path: i.path.map(String).join('.'), message: i.message })));
+  if (!parsed.success) return invalid(zodIssues(parsed.error));
   const { id, slug, data, expectedVersion } = parsed.data;
 
   const before = deps.db.select().from(siteEntries).where(eq(siteEntries.id, id)).get();
@@ -191,7 +192,7 @@ export async function deleteEntry(deps: Deps, ctx: CallContext, raw: unknown): P
   const denied = requirePermission(ctx, 'site.manage');
   if (denied) return denied;
   const parsed = deleteInput.safeParse(raw);
-  if (!parsed.success) return invalid(parsed.error.issues.map((i) => ({ path: i.path.map(String).join('.'), message: i.message })));
+  if (!parsed.success) return invalid(zodIssues(parsed.error));
   if (parsed.data.deleteOrphanedMedia) {
     const mediaDenied = requirePermission(ctx, 'media.upload');
     if (mediaDenied) return mediaDenied;
@@ -222,7 +223,7 @@ export async function reorderEntries(deps: Deps, ctx: CallContext, raw: unknown)
   const denied = requirePermission(ctx, 'site.manage');
   if (denied) return denied;
   const parsed = reorderInput.safeParse(raw);
-  if (!parsed.success) return invalid(parsed.error.issues.map((i) => ({ path: i.path.map(String).join('.'), message: i.message })));
+  if (!parsed.success) return invalid(zodIssues(parsed.error));
   const { collection, ids } = parsed.data;
 
   const col = collectionOf(deps, collection);
@@ -247,7 +248,7 @@ export async function setEntryPublished(deps: Deps, ctx: CallContext, raw: unkno
   const denied = requirePermission(ctx, 'site.manage');
   if (denied) return denied;
   const parsed = publishInput.safeParse(raw);
-  if (!parsed.success) return invalid(parsed.error.issues.map((i) => ({ path: i.path.map(String).join('.'), message: i.message })));
+  if (!parsed.success) return invalid(zodIssues(parsed.error));
   const { id, isPublished } = parsed.data;
 
   const before = deps.db.select().from(siteEntries).where(eq(siteEntries.id, id)).get();

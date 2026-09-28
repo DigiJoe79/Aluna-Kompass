@@ -10,6 +10,7 @@ import { PageHeader } from '@/components/page-header';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { moveDocumentAction } from './actions';
 import { DropOverlay } from './drop-overlay';
+import { ExportDialog } from './export-dialog';
 import { FolderColumn } from './folder-column';
 import { ReceiveDialog } from './receive/receive-dialog';
 
@@ -37,6 +38,9 @@ export function DmsWorkspace({
   inboxCount,
   total,
   canCreate,
+  canExport,
+  currentFolder,
+  currentYear,
   types,
   canCreateContact,
   initialSender,
@@ -50,6 +54,12 @@ export function DmsWorkspace({
   inboxCount: number;
   total: number;
   canCreate: boolean;
+  /** Nur mit `documents.export`: der Knopf zum Bündeln der Akte. */
+  canExport: boolean;
+  /** Der gerade angezeigte Ordner — Vorbelegung für „Diesen Ordner“. */
+  currentFolder: string | null;
+  /** Vorbelegung des Jahrgangs, von der Serveruhr. */
+  currentYear: number;
   types: { key: string; label: string }[];
   canCreateContact: boolean;
   /** Von der Kontaktseite vorbelegter Absender. */
@@ -186,19 +196,22 @@ export function DmsWorkspace({
         title={t('title')}
         description={t('description')}
         actions={
-          canCreate ? (
-            <>
-              {/* Der primäre Knopf schliesst die Gruppe ab. Und beides auf
-                  Feldhöhe: Es sind die Hauptwege des Bildschirms, keine
-                  Nebenaktionen. */}
-              <Button variant="outline" onClick={() => setOpen(true)}>
-                {t('receivePost')}
-              </Button>
-              <Link href="/dms/new" className={buttonVariants({ variant: 'default' })}>
-                {t('newDraft')}
-              </Link>
-            </>
-          ) : null
+          <>
+            {canExport ? <ExportDialog canExport={canExport} folder={currentFolder} currentYear={currentYear} /> : null}
+            {canCreate ? (
+              <>
+                {/* Der primäre Knopf schliesst die Gruppe ab. Und beides auf
+                    Feldhöhe: Es sind die Hauptwege des Bildschirms, keine
+                    Nebenaktionen. */}
+                <Button variant="outline" onClick={() => setOpen(true)}>
+                  {t('receivePost')}
+                </Button>
+                <Link href="/dms/new" className={buttonVariants({ variant: 'default' })}>
+                  {t('newDraft')}
+                </Link>
+              </>
+            ) : null}
+          </>
         }
       />
 

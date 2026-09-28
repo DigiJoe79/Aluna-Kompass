@@ -7,7 +7,20 @@ export interface DiffRow {
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const show = (v: unknown): string | null => (v === undefined || v === null ? null : typeof v === 'string' ? v : JSON.stringify(v));
 
+/**
+ * D7: Ein Modul, das keine Werte protokolliert (Kontakte, Befund 48), schreibt nur `after.changedFields` — die Namen
+ * der geänderten Felder. Das ist keine Vorher/Nachher-Zeile, sondern eine eigene Aussage; `null`, wenn es fehlt.
+ */
+export function changedFieldsOf(after: unknown): string[] | null {
+  if (!isObject(after) || !Array.isArray(after.changedFields)) return null;
+  return after.changedFields.filter((f): f is string => typeof f === 'string');
+}
+
 export function diffFields(before: unknown, after: unknown): DiffRow[] {
+  if (changedFieldsOf(after) !== null) {
+    const { changedFields: _names, ...rest } = after as Record<string, unknown>;
+    return Object.keys(rest).length === 0 && (before === undefined || before === null) ? [] : diffFields(before, rest);
+  }
   if (before === undefined && after === undefined) return [];
   if (!isObject(before) && !isObject(after)) {
     if (before === null && after === null) return [];

@@ -34,7 +34,7 @@ export function ProjectForm({ project, locales }: { project: ProjectRecord | nul
       {project ? <input type="hidden" name="expectedVersion" value={project.updatedAt} /> : null}
       <FormErrorSummary errors={errors} />
       <Tabs defaultValue="public">
-        <TabsList className="border-b border-line bg-surface px-6"><TabsTrigger value="public" className="gap-2">{t('tabs.public')}{Object.keys(errors).length > 0 ? <TabInvalidDot label={tCommon('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="finance" disabled>{t('tabs.finance')}</TabsTrigger></TabsList>
+        <TabsList className="border-b border-line bg-surface px-6"><TabsTrigger value="public" className="gap-2">{t('tabs.public')}{Object.keys(errors).length > 0 ? <TabInvalidDot label={tCommon('tabInvalid')} /> : null}</TabsTrigger></TabsList>
         <TabsContent value="public" className="grid gap-5 p-6 md:grid-cols-2">
           <FormField id="slug" label={c('slug')} hint={c('slugHint')} error={errors.slug} required><Input id="slug" name="slug" defaultValue={project?.slug ?? ''} required pattern="[a-z0-9][a-z0-9-]{0,80}" className="font-mono" /></FormField>
           <FormField id="type" label={t('type')}><Select id="type" name="type" defaultValue={project?.type ?? 'ongoing'} className="w-auto"><option value="ongoing">{t('types.ongoing')}</option><option value="shortTerm">{t('types.shortTerm')}</option></Select></FormField>
@@ -46,9 +46,7 @@ export function ProjectForm({ project, locales }: { project: ProjectRecord | nul
           <ExternalLinksField value={project?.externalLinks ?? []} errors={errors} />
           <div className="md:col-span-2"><FormActionBar back={{ href: '/projects', label: tCommon('backToList') }} /></div>
         </TabsContent>
-        <TabsContent value="finance" className="p-6 text-[13px] text-muted-ink">{t('financeLater')}</TabsContent>
       </Tabs>
-      <p className="border-t border-line bg-surface-2 px-6 py-2 text-[12px] text-muted-ink">{t('financeLater')}</p>
     </ActionForm>
   );
 }

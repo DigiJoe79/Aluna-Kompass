@@ -1,4 +1,5 @@
 import type { PageText, ProbeResult, TextExtraction } from '@kompass/core';
+import { readEmbeddedFiles } from './embedded';
 import { readTextLayer } from './layer';
 import { ocrPage } from './ocr';
 import { runTool, ToolMissingError } from './run';
@@ -22,14 +23,19 @@ function parseLanguages(out: string): string[] {
 }
 
 /**
- * Wie lange die Antwort von `probe()` gilt. Sie kostet zwei Prozessstarts und
+ * Wie lange die Antwort von `probe()` gilt. Sie kostet drei Prozessstarts und
  * ändert sich zwischen zwei Dokumenten nicht — bei „Alles neu lesen“ über
- * tausend Dokumente wären es zweitausend. Kurz genug bleibt die Frist trotzdem,
+ * tausend Dokumente wären es dreitausend. Kurz genug bleibt die Frist trotzdem,
  * damit frisch installierte Werkzeuge innerhalb eines Worker-Taktes auffallen.
  */
 export const PROBE_TTL_MS = 60_000;
 
-export function createTextExtraction(): TextExtraction {
+/**
+ * `pdfdetachBin` nur für Tests: ein Name, den es nicht gibt, zeigt, dass
+ * `probe()` auch das Werkzeug für eingebettete Dateien (F5b) verlangt.
+ */
+export function createTextExtraction(options: { pdfdetachBin?: string } = {}): TextExtraction {
+  const pdfdetach = options.pdfdetachBin ?? 'pdfdetach';
   let cached: { at: number; result: ProbeResult } | null = null;
 
   return {
@@ -39,6 +45,11 @@ export function createTextExtraction(): TextExtraction {
       const result = await (async (): Promise<ProbeResult> => {
         try {
           await runTool('pdftotext', ['-v'], { timeoutMs: 5_000 });
+          // Gehört wie pdftotext zu poppler-utils; ohne es liest der Kompass keine Rechnung aus dem PDF.
+          // `pdfdetach -v` endet je nach Fassung mit Code 99 — hier zählt nur, dass es da ist.
+          await runTool(pdfdetach, ['-v'], { timeoutMs: 5_000 }).catch((error: unknown) => {
+            if (error instanceof ToolMissingError) throw error;
+          });
           const langs = await runTool('tesseract', ['--list-langs'], { timeoutMs: 10_000 });
           return { ok: true, languages: parseLanguages(langs.toString('utf8')) };
         } catch (error) {
@@ -69,6 +80,10 @@ export function createTextExtraction(): TextExtraction {
       }
 
       return pages;
+    },
+
+    embeddedFiles(opts) {
+      return readEmbeddedFiles(opts, { bin: pdfdetach });
     },
   };
 }

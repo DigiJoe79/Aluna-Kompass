@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { CallContext } from '../context';
 import type { Deps } from '../deps';
+import type { PermissionSpec } from '../permissions/check';
 
 /**
  * Eine Kachel der Startseite (Spec 2026-09-17, § 3). Ein Modul deklariert sie
@@ -38,8 +39,8 @@ export type DashboardContent =
 export interface DashboardTile<O = Record<string, unknown>> {
   /** Eindeutig je Modul, camelCase. Beschriftung: `dashboard.tiles.<modul>.<key>.{title,empty,open}`. */
   key: string;
-  /** Genau ein Recht (Entscheidung 10); ohne es wird die Kachel weder angeboten noch geladen. */
-  permission: string;
+  /** Ein Recht oder eine Liste, von der eines genügt (Entscheidung 10, erweitert am 2026-09-20). */
+  permission: PermissionSpec;
   /** Die Form, die `load` liefert — steht hier, damit die Seitenleiste die Breite kennt, ohne zu laden. */
   kind: DashboardKind;
   /** Vorgabe für Nutzer ohne eigene Anordnung (Entscheidung 3). */

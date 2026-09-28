@@ -1,5 +1,6 @@
 'use server';
 
+import { guardAction } from '@/lib/action-guard';
 import {
   applySeed,
   applyTemplateSync,
@@ -41,12 +42,14 @@ export async function previewSyncAction(): Promise<SyncPreviewState> {
 }
 
 export async function applySyncAction(): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await applyTemplateSync(deps, ctx, { dir: DIR(), confirm: true });
-  revalidatePath('/site/template');
-  revalidatePath('/site', 'layout');
-  return toActionState(result, t, t('site.template.readDone'));
+  return guardAction('(shell)/site/actions.ts#applySyncAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await applyTemplateSync(deps, ctx, { dir: DIR(), confirm: true });
+    revalidatePath('/site/template');
+    revalidatePath('/site', 'layout');
+    return toActionState(result, t, t('site.template.readDone'));
+  });
 }
 
 export type SeedPreviewState =
@@ -64,36 +67,42 @@ export async function previewSeedAction(): Promise<SeedPreviewState> {
 }
 
 export async function applySeedAction(): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await applySeed(deps, ctx, { confirm: true });
-  revalidatePath('/site/template');
-  revalidatePath('/site', 'layout');
-  return toActionState(result, t, t('site.seed.applied'));
+  return guardAction('(shell)/site/actions.ts#applySeedAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await applySeed(deps, ctx, { confirm: true });
+    revalidatePath('/site/template');
+    revalidatePath('/site', 'layout');
+    return toActionState(result, t, t('site.seed.applied'));
+  });
 }
 
 export async function saveVariablesAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const values = JSON.parse(String(formData.get('payload') ?? '{}')) as Record<string, unknown>;
-  const result = await setValues(deps, ctx, { values, expectedVersion: String(formData.get('expectedVersion') ?? '') || undefined });
-  revalidatePath('/site/variables');
-  return toActionState(result, t, t('site.variables.saved'));
+  return guardAction('(shell)/site/actions.ts#saveVariablesAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const values = JSON.parse(String(formData.get('payload') ?? '{}')) as Record<string, unknown>;
+    const result = await setValues(deps, ctx, { values, expectedVersion: String(formData.get('expectedVersion') ?? '') || undefined });
+    revalidatePath('/site/variables');
+    return toActionState(result, t, t('site.variables.saved'));
+  });
 }
 
 export async function saveEntryAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const collection = String(formData.get('collection') ?? '');
-  const id = String(formData.get('id') ?? '');
-  const payload = JSON.parse(String(formData.get('payload') ?? '{}')) as { slug?: string; data: Record<string, unknown> };
-  const result = id
-    ? await updateEntry(deps, ctx, { id, slug: payload.slug, data: payload.data, expectedVersion: String(formData.get('expectedVersion') ?? '') || undefined })
-    : await createEntry(deps, ctx, { collection, slug: payload.slug, data: payload.data });
-  revalidatePath(`/site/c/${collection}`);
-  if (!result.ok) return toActionState(result, t);
-  if (!id) redirect(`/site/c/${collection}`);
-  return toActionState(result, t, t('site.entries.saved'));
+  return guardAction('(shell)/site/actions.ts#saveEntryAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const collection = String(formData.get('collection') ?? '');
+    const id = String(formData.get('id') ?? '');
+    const payload = JSON.parse(String(formData.get('payload') ?? '{}')) as { slug?: string; data: Record<string, unknown> };
+    const result = id
+      ? await updateEntry(deps, ctx, { id, slug: payload.slug, data: payload.data, expectedVersion: String(formData.get('expectedVersion') ?? '') || undefined })
+      : await createEntry(deps, ctx, { collection, slug: payload.slug, data: payload.data });
+    revalidatePath(`/site/c/${collection}`);
+    if (!result.ok) return toActionState(result, t);
+    if (!id) redirect(`/site/c/${collection}`);
+    return toActionState(result, t, t('site.entries.saved'));
+  });
 }
 
 export async function entryDeletionPreviewAction(id: string): Promise<DeletionPreviewView | null> {
@@ -103,27 +112,33 @@ export async function entryDeletionPreviewAction(id: string): Promise<DeletionPr
 }
 
 export async function deleteEntryAction(id: string, collection: string, deleteOrphanedMedia = false): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await deleteEntry(deps, ctx, { id, deleteOrphanedMedia });
-  revalidatePath(`/site/c/${collection}`);
-  return toActionState(result, t, result.ok ? t('deletion.deletedWithMedia', { count: (result.value as MediaCleanup).deletedMedia.length }) : undefined);
+  return guardAction('(shell)/site/actions.ts#deleteEntryAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await deleteEntry(deps, ctx, { id, deleteOrphanedMedia });
+    revalidatePath(`/site/c/${collection}`);
+    return toActionState(result, t, result.ok ? t('deletion.deletedWithMedia', { count: (result.value as MediaCleanup).deletedMedia.length }) : undefined);
+  });
 }
 
 export async function setEntryPublishedAction(id: string, isPublished: boolean, collection = ''): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await setEntryPublished(deps, ctx, { id, isPublished });
-  revalidatePath(`/site/c/${collection}`);
-  return toActionState(result, t);
+  return guardAction('(shell)/site/actions.ts#setEntryPublishedAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await setEntryPublished(deps, ctx, { id, isPublished });
+    revalidatePath(`/site/c/${collection}`);
+    return toActionState(result, t);
+  });
 }
 
 export async function reorderEntriesAction(collection: string, ids: string[]): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await reorderEntries(deps, ctx, { collection, ids });
-  revalidatePath(`/site/c/${collection}`);
-  return toActionState(result, t);
+  return guardAction('(shell)/site/actions.ts#reorderEntriesAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await reorderEntries(deps, ctx, { collection, ids });
+    revalidatePath(`/site/c/${collection}`);
+    return toActionState(result, t);
+  });
 }
 
 export type { Finding };

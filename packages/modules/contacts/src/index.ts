@@ -6,3 +6,4 @@ export * from './roles';
 export * from './schema';
 export * from './seed';
 export * from './service';
+export * from './user-links';

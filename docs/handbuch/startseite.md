@@ -36,6 +36,10 @@ Welche Kacheln Sie sehen können, hängt an Ihren Rechten. Heute gibt es:
 - **Einrichtung** — was an den Stammdaten noch fehlt, ob es eine zweite
   Rolle gibt und ob ein Fachmodul eingeschaltet ist. Leer, sobald der Verein
   eingerichtet ist. Siehe [Stammdaten](einstellungen/verein.md).
+  Steht dort „Grundausstattung von … unvollständig“, konnte ein Modul beim
+  Start etwas nicht anlegen, das es mitbringt — eine Rolle, eine
+  Dokumentart. Kompass läuft trotzdem. Die Meldung nennt den Grund und
+  verschwindet von selbst, sobald ein Start ohne Fehler durchläuft.
 - **Backup** — wann das letzte Backup war, und eine Warnung, wenn es älter
   ist als die eingestellte Frist. Siehe [Backup](einstellungen/backup.md).
 - **Löschfällig** — wie viele Datensätze zur Löschung anstehen. Siehe

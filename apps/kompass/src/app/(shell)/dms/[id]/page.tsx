@@ -1,11 +1,17 @@
-import { activeUserChoices, hasPermission, isModuleEnabled, requirePermission, retentionEnd, retentionMonths, userNamesFor } from '@kompass/core';
+import { activeUserChoices, hasPermission, isModuleEnabled, readSetting, retentionEnd, retentionMonths, userNamesFor, todayIn } from '@kompass/core';
 import { listProjects } from '@kompass/module-projects';
 import { listAnimals } from '@kompass/module-animals';
-import { dispatchChannels, documentTypeFor, getDocumentRecord, listDocumentFolders, listDocumentTypes } from '@kompass/module-dms';
+import { invoiceProposal } from '@kompass/module-finance';
+import { dispatchChannels, documentTypeFor, getDocumentRecord, listDocumentFolders, listDocumentTypes, requireDmsGate } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
+import Link from 'next/link';
+import { Fragment } from 'react';
 import { notFound } from 'next/navigation';
+import { InvoiceCard } from '@/components/finance/invoice-card';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Notice } from '@/components/notice';
 import { PageHeader } from '@/components/page-header';
+import { buttonVariants } from '@/components/ui/button';
 import { requireSession } from '@/lib/request-context';
 import { DocumentDetail } from './document-detail';
 import { resolveLinks } from './links';
@@ -15,11 +21,13 @@ export default async function DocumentDetailPage(props: {
 }) {
   const { deps, ctx } = await requireSession();
   const tCommon = await getTranslations('common');
-  if (requirePermission(ctx, 'dms.view')) return <ForbiddenCard permission="dms.view" />;
+  const tDms = await getTranslations('dms');
+  if (requireDmsGate(deps, ctx)) return <ForbiddenCard permission="dms.view" />;
 
   const { id } = await props.params;
   const result = await getDocumentRecord(deps, ctx, id);
   if (!result.ok) {
+    if (result.error.type === 'forbidden') return <ForbiddenCard permission={result.error.permission} />;
     notFound();
   }
 
@@ -27,7 +35,7 @@ export default async function DocumentDetailPage(props: {
   const docType = documentTypeFor(deps.db, doc.typeKey);
   const typeLabel = docType?.label ?? doc.typeKey;
 
-  const today = deps.clock.now().toISOString().slice(0, 10);
+  const today = todayIn(deps);
   let retentionInfo: { retentionClass: string; until: string | null; due: boolean } | null = null;
   if (doc.phase === 'issued' && docType) {
     let until: string | null = null;
@@ -98,12 +106,57 @@ export default async function DocumentDetailPage(props: {
 
   // Umklassifizieren nur am abgelegten, nicht stornierten Eingang (Spec 2026-09-19).
   const canReclassify = doc.direction === 'incoming' && doc.phase === 'issued' && doc.status !== 'voided' && permissions.canEdit;
-  const typesRes = canReclassify ? await listDocumentTypes(deps, ctx) : null;
+  const typesRes = canReclassify ? await listDocumentTypes(deps, ctx, { selectable: true }) : null;
   const reclassifyTypes = typesRes?.ok ? typesRes.value.map((type) => ({ key: type.key, label: type.label })) : null;
+
+  // „Zu Buchung machen“ (Finanzen F5): ein Finanzbeleg, der noch an keiner Buchung hängt — nur, wer Buchungen vorbereiten darf.
+  const canMakeEntry =
+    isModuleEnabled(deps, 'finance') &&
+    hasPermission(ctx, 'finance.entriesWrite') &&
+    doc.phase === 'issued' &&
+    doc.status !== 'voided' &&
+    readSetting<string[]>(deps, 'finance.voucherTypes').includes(doc.typeKey) &&
+    !doc.links.some((link) => link.entityType === 'financeEntry');
+  const tWork = await getTranslations('finance.work');
+
+  // „Aus der Rechnung“ (Finanzen F5b): nur an Finanzbelegen und nur mit `finance.read` — der Dienst prüft das Recht
+  // ohnehin, die Bedingung spart nur das Lesen der Anhänge. Ohne Rechnung im PDF bleibt die Karte weg.
+  const isFinanceVoucher = isModuleEnabled(deps, 'finance') && doc.phase === 'issued' && readSetting<string[]>(deps, 'finance.voucherTypes').includes(doc.typeKey);
+  const proposalRes = isFinanceVoucher && hasPermission(ctx, 'finance.read') ? await invoiceProposal(deps, ctx, { documentId: doc.id }) : null;
+  const invoicePanel =
+    proposalRes?.ok && proposalRes.value.kind !== 'noInvoice' ? (
+      <InvoiceCard documentId={doc.id} proposal={proposalRes.value} canWrite={hasPermission(ctx, 'finance.entriesWrite')} canCreateContact={hasPermission(ctx, 'contacts.manage')} />
+    ) : null;
 
   return (
     <>
-      <PageHeader title={doc.subject} back={{ href: '/dms', label: tCommon('backToList') }} />
+      <PageHeader
+        title={doc.subject}
+        back={{ href: '/dms', label: tCommon('backToList') }}
+        actions={
+          canMakeEntry ? (
+            <Link href={`/finance/entries/new?voucher=${doc.id}`} className={buttonVariants({ size: 'sm' })}>
+              {tWork('toEntry')}
+            </Link>
+          ) : undefined
+        }
+      />
+      {doc.duplicateOf && doc.duplicateOf.length > 0 ? (
+        // Befund Z: dieselbe Datei liegt schon vor — ein Hinweis mit Weg dorthin, kein Verbot.
+        <div className="mb-4">
+          <Notice level="warn">
+            {tDms('duplicateOf')}{' '}
+            {doc.duplicateOf.map((d, i) => (
+              <Fragment key={d.id}>
+                {i > 0 ? ', ' : null}
+                <Link href={`/dms/${d.id}`} className="font-mono font-semibold underline underline-offset-2">
+                  {d.number ?? d.id}
+                </Link>
+              </Fragment>
+            ))}
+          </Notice>
+        </div>
+      ) : null}
       <DocumentDetail
         document={{
           id: doc.id,
@@ -145,6 +198,7 @@ export default async function DocumentDetailPage(props: {
         retentionInfo={retentionInfo}
         permissions={permissions}
         fileState={doc.fileState ?? 'none'}
+        invoicePanel={invoicePanel}
       />
     </>
   );

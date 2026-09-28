@@ -18,6 +18,7 @@ const EXEMPT: Record<string, string> = {
   'auth/login.ts:changeOwnPassword': 'nur das eigene Passwort',
   'setup/service.ts:completeSetup': 'das erste Konto; es gibt noch niemanden, dessen Rechte man übersteigen könnte',
   'seed/seed.ts:seedDevelopment': 'Entwicklungsdaten, läuft nie in Produktion',
+  'roles/provision.ts:createRoleInternal': 'Grundausstattung eines Moduls; legt Rollenvorschläge an, weist keine Rollen zu',
 };
 
 interface Write {

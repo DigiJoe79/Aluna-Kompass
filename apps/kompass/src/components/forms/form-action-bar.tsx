@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { SubmitButton } from '@/components/forms/submit-button';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { countChanged, snapshotOf, type Snapshot } from '@/lib/form-dirty';
@@ -30,6 +30,8 @@ export function FormActionBar({
   baseline,
   onChangedCount,
   onDiscard,
+  note,
+  extraActions,
 }: {
   /**
    * Fehlt, wenn die Seite selbst in der Navigation hängt: Dort ist man schon
@@ -82,6 +84,17 @@ export function FormActionBar({
    * ein Zurücksetzen des Formulars.
    */
   onDiscard?: () => void;
+  /**
+   * Links vor der Zähl-Zeile, für einen Satz statt eines Zwischenstands —
+   * „Bargeld wird am selben Tag festgehalten.“ bei einer Kasse. Ohne diese
+   * Prop unverändertes Markup.
+   */
+  note?: ReactNode;
+  /**
+   * Zusätzliche Speicherwege vor dem primären Knopf. Es bleibt bei genau
+   * einer primären Aktion — diese Knöpfe sind sekundär.
+   */
+  extraActions?: ReactNode;
 }) {
   const t = useTranslations('common');
   const anchor = useRef<HTMLDivElement>(null);
@@ -137,10 +150,12 @@ export function FormActionBar({
         sticky && 'sticky bottom-0'
       )}
     >
+      {note ? <span className="text-[13px] text-ink-2">{note}</span> : null}
       <span className={changed > 0 ? 'text-[13px] font-semibold text-warning' : 'text-[12px] text-muted-ink'}>
         {changed > 0 ? t('changesPending', { count: changed }) : hasRequired ? t('requiredLegend') : ''}
       </span>
       <div className="ml-auto flex items-center gap-2">
+        {extraActions}
         {cancel ? (
           <Button type="button" variant="ghost" onClick={cancel}>
             {t('cancel')}

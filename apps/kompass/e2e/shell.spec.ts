@@ -10,7 +10,7 @@ test.describe('app shell', () => {
   test('shows one rail row per area, home on top and settings behind a line', async ({ page }) => {
     await expect(page.getByTestId('env-banner')).toContainText('TESTUMGEBUNG');
     const rail = page.getByRole('navigation', { name: 'Hauptnavigation' });
-    await expect(rail.getByRole('link')).toHaveText(['Startseite', 'Webseite', 'Projekte', 'Tiere', 'Kontakte', 'Akte', 'Mediathek', 'Einstellungen']);
+    await expect(rail.getByRole('link')).toHaveText(['Startseite', 'Webseite', 'Projekte', 'Tiere', 'Kontakte', 'Akte', 'Finanzen', 'Mediathek', 'Einstellungen']);
     // Seiten stehen nicht in der Schiene — weder aus Verwaltung noch aus einem Modul.
     await expect(rail.getByRole('link', { name: 'Nutzer' })).toHaveCount(0);
     await expect(rail.getByRole('link', { name: 'Hunde' })).toHaveCount(0);
@@ -161,7 +161,11 @@ test.describe('app shell', () => {
    * Dieser Test hält den Hebel dort, wo er hingehört.
    */
   test('leaves a table without its own cell padding untouched', async ({ page }) => {
-    await page.goto('/admin/audit');
+    // Nur Einträge der Oberfläche (Muster `audit.spec.ts`): Ohne Filter steht nach dem Reset oft die „Volltext
+    // gelesen“-Zeile des Hintergrunddienstes oben, deren lange Objektbezeichnung umbricht — ihre Höhe käme aus
+    // dem Inhalt, nicht aus der Zeilenhöhe, um die es hier geht.
+    await page.goto('/admin/audit?channel=ui');
+    await expect(page.locator('tbody tr').first()).toContainText('Oberfläche');
     const rowHeight = () => page.locator('tbody tr').first().evaluate((el) => el.getBoundingClientRect().height);
     const padding = () => page.locator('tbody tr').first().locator('td').first().evaluate((el) => getComputedStyle(el).paddingTop);
 
@@ -227,14 +231,16 @@ test.describe('app shell', () => {
   });
 
   test('a user without module rights sees neither the modules nor an admin page she may not open', async ({ page }) => {
-    // Kassenprüfer ist eine Seed-Rolle ohne Modulrecht: audit.view und
+    // Interne Revision ist eine Seed-Rolle ohne Modulrecht: audit.view und
     // documents.export (roles.spec.ts, Test „edits permissions …“, zeigt den
     // Stand). Beides sind Kernrechte, keine Modulrechte, also bleibt die
-    // Schiene bei Startseite und Einstellungen.
+    // Schiene bei Startseite und Einstellungen. Nicht die Finanzrolle
+    // „Kassenprüfer“ (F1): Die trägt finance.read und finance.overview, also
+    // Modulrechte.
     await page.goto('/admin/users');
     await page.getByRole('button', { name: 'Nutzer anlegen' }).click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByLabel('Kassenprüfer').check();
+    await dialog.getByLabel('Interne Revision').check();
     await dialog.getByLabel('Name').fill('Lea Prüfer');
     await dialog.getByLabel('E-Mail').fill('lea@example.org');
     await dialog.getByRole('button', { name: 'Nutzer anlegen' }).click();

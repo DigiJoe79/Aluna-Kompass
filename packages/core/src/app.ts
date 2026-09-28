@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs';
+import { accessSync, constants, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
 import { systemClock, type Clock } from './clock';
@@ -11,7 +11,9 @@ import { createFileStore, type FileStore } from './files/store';
 import type { DocumentTemplate, ModuleManifest } from './modules/manifest';
 import { createRegistry } from './modules/registry';
 import { readLocales } from './i18n/locales';
+import { runModuleInstalls } from './modules/installs';
 import { noopTextExtraction, type TextExtraction } from './text/extraction';
+import { noopPdfTools, type PdfTools } from './pdf/tools';
 
 export interface CreateDepsOptions {
   /**
@@ -29,7 +31,15 @@ export interface CreateDepsOptions {
   documents?: DocumentEngine;
   /** Ohne Angabe ist Texterkennung nicht eingerichtet (Skripte, Tests ohne Modul). */
   textExtraction?: TextExtraction;
+  /** Ohne Angabe lassen sich keine PDFs zusammenfügen (Skripte, Tests ohne Modul). */
+  pdf?: PdfTools;
   clock?: Clock;
+  /**
+   * Grundausstattung der eingeschalteten Module beim Öffnen nachliefern
+   * (Vorgabe: ja). `createTestDeps` baut seine Deps selbst und ist nicht
+   * betroffen; Skripte, die eine halbfertige Datenbank öffnen, schalten es ab.
+   */
+  runInstalls?: boolean;
 }
 
 export type AppDeps = Deps & {
@@ -52,7 +62,25 @@ export function mediaPathIn(dataPath: string): string {
   return path.join(dataPath, CORE_MODULE_KEY, 'media');
 }
 
+/**
+ * Legt `dir` an, falls es fehlt, und prüft das Schreibrecht — beides sofort,
+ * nicht erst beim ersten Schreiben (Befundliste 0.2.0, N10:
+ * `createFileStore.write` legt seine Ablage sonst erst beim ersten Upload an
+ * und scheitert dort mit einem stillen `EACCES`, wenn `DATA_PATH` nicht der
+ * Container-UID gehört). Der Start bricht statt dessen mit einer Meldung ab,
+ * die den Pfad nennt.
+ */
+function ensureWritableDir(dir: string): void {
+  mkdirSync(dir, { recursive: true });
+  try {
+    accessSync(dir, constants.W_OK);
+  } catch {
+    throw new Error(`Datenverzeichnis nicht beschreibbar: ${dir}`);
+  }
+}
+
 export function createDeps(opts: CreateDepsOptions): AppDeps {
+  ensureWritableDir(opts.dataPath);
   const databasePath = databasePathIn(opts.dataPath);
   mkdirSync(path.dirname(databasePath), { recursive: true });
   let handle = openDatabase(databasePath);
@@ -61,15 +89,21 @@ export function createDeps(opts: CreateDepsOptions): AppDeps {
   const moduleStores = new Map<string, FileStore>(
     [coreModule, ...(opts.modules ?? [])]
       .filter((manifest) => manifest.files)
-      .map((manifest) => [manifest.key, createFileStore(path.join(opts.dataPath, manifest.key))]),
+      .map((manifest) => {
+        const dir = path.join(opts.dataPath, manifest.key);
+        ensureWritableDir(dir);
+        return [manifest.key, createFileStore(dir)] as const;
+      }),
   );
+  const mediaDir = mediaPathIn(opts.dataPath);
+  ensureWritableDir(mediaDir);
   const deps: AppDeps = {
     db: handle.db,
     sqlite: handle.sqlite,
     clock: opts.clock ?? systemClock,
     env: opts.env,
     registry: createRegistry([coreModule, ...(opts.modules ?? [])], { coreTemplates: opts.coreTemplates }),
-    media: createFileStore(mediaPathIn(opts.dataPath)),
+    media: createFileStore(mediaDir),
     files: (moduleKey) => {
       const store = moduleStores.get(moduleKey);
       if (!store) throw new Error(`module without files: true has no store: ${moduleKey}`);
@@ -77,6 +111,7 @@ export function createDeps(opts: CreateDepsOptions): AppDeps {
     },
     documents: opts.documents ?? noopDocumentEngine,
     textExtraction: opts.textExtraction ?? noopTextExtraction,
+    pdf: opts.pdf ?? noopPdfTools,
     locales: () => readLocales(deps),
     dataPath: opts.dataPath,
     databasePath,
@@ -89,9 +124,11 @@ export function createDeps(opts: CreateDepsOptions): AppDeps {
       deps.db = handle.db;
       deps.sqlite = handle.sqlite;
       deps.migrationCount = countMigrations();
+      if (opts.runInstalls !== false) runModuleInstalls(deps);
     },
     close: () => handle.sqlite.close(),
   };
+  if (opts.runInstalls !== false) runModuleInstalls(deps);
   return deps;
 }
 

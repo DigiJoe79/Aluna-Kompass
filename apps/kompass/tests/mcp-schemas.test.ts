@@ -90,4 +90,83 @@ describe('MCP-Werkzeugschemata', () => {
     );
     expect(withDefaults).toEqual([]);
   });
+
+  /**
+   * Prozesstest-Befund 11: der Agent sah beim Aufruf von `finance_master_data`
+   * angeblich nur `kind: account`, obwohl der Dienst alle fünf Arten kennt
+   * (`readMasterDataSchema`, eine `z.discriminatedUnion('kind', […])`). Der
+   * Verdacht war, die JSON-Schema-Ausgabe verliere die Union. Dieser Test
+   * liest das tatsächlich ausgelieferte Schema (wie oben, über einen echten
+   * MCP-Client) und prüft es direkt.
+   */
+  /**
+   * MCP-Prüfer M11 (2026-09-27): Ein Client, der auf oberster Ebene eine Union bekommt, nimmt den ersten Zweig —
+   * `finance_master_data` und `finance_master_data_save` boten deshalb nur `kind: "account"` an. Jedes Werkzeug zeigt
+   * an der Wurzel ein Objekt; eine Union darf erst eine Ebene tiefer stehen.
+   */
+  it('haben auf oberster Ebene ein Objekt, nie eine Union (M11)', async () => {
+    const tools = await listAllTools();
+    const offenders = tools
+      .filter((tool) => {
+        const schema = tool.inputSchema as Record<string, unknown>;
+        return schema.type !== 'object' || 'anyOf' in schema || 'oneOf' in schema || 'allOf' in schema;
+      })
+      .map((tool) => tool.name);
+    expect(offenders).toEqual([]);
+    for (const name of ['finance_master_data', 'finance_master_data_save']) {
+      const kind = (tools.find((t) => t.name === name)!.inputSchema.properties as Record<string, { enum?: string[] }>).kind;
+      expect(kind?.enum, name).toEqual(expect.arrayContaining(['account', 'category', 'purpose']));
+    }
+  });
+
+  it('finance_master_data nennt alle fünf Arten im ausgelieferten Schema (Befund 11)', async () => {
+    const tools = await listAllTools();
+    const tool = tools.find((t) => t.name === 'finance_master_data');
+    expect(tool).toBeDefined();
+    const schemaText = JSON.stringify(tool!.inputSchema);
+    for (const kind of ['account', 'category', 'purpose', 'fiscalYear', 'datedValue']) {
+      expect(schemaText, kind).toContain(`"${kind}"`);
+    }
+  });
+
+  /**
+   * Befund 28: `finance_entry_save_draft` verwarf `settlements` auf der
+   * Geldzeile lautlos (eigenes Schema in `mcp-tools.ts`, ohne das Feld, das
+   * der Dienst kennt) — ein Agent konnte darüber keinen Zahlungsentwurf
+   * gegen einen offenen Posten anlegen. Paritätswächter, eng gefasst: das
+   * ausgelieferte Schema nennt das Feld mit Beschreibung, für Entwurf und
+   * Direktbuchung gleich (beide teilen sich `saveDraftMcpSchema`).
+   */
+  it('finance_entry_save_draft und finance_entry_book nennen settlements auf der Geldzeile (Befund 28)', async () => {
+    const tools = await listAllTools();
+    for (const name of ['finance_entry_save_draft', 'finance_entry_book']) {
+      const tool = tools.find((t) => t.name === name);
+      expect(tool, name).toBeDefined();
+      const moneyLineSchema = (tool!.inputSchema.properties as { moneyLines?: { items?: { properties?: Record<string, { description?: string }> } } }).moneyLines?.items?.properties;
+      expect(moneyLineSchema, name).toHaveProperty('settlements');
+      expect(moneyLineSchema!.settlements!.description, name).toBeTruthy();
+    }
+  });
+
+  /**
+   * Architektur-Review A3: Drei Werkzeuge nahmen ein freies Objekt
+   * (`z.record(z.string(), z.unknown())`) — ein Agent sah kein einziges Feld.
+   * Jetzt zeigen sie die Schemata der Dienste selbst, keine Handkopie.
+   */
+  it('finance_master_data_save, lineTemplate und das CSV-Format zeigen die Felder der Dienste (A3)', async () => {
+    const tools = await listAllTools();
+    const schemaOf = (name: string) => {
+      const tool = tools.find((t) => t.name === name);
+      expect(tool, name).toBeDefined();
+      return tool!.inputSchema as { properties?: Record<string, unknown> };
+    };
+    const masterData = JSON.stringify(schemaOf('finance_master_data_save'));
+    for (const field of ['iban', 'openingBalanceCents', 'sphere', 'incomeKind', 'costFunction', 'carryForwardCents', 'referenceNote', 'expectedVersion']) {
+      expect(masterData, field).toContain(`"${field}"`);
+    }
+    const lineTemplate = JSON.stringify(schemaOf('finance_open_item_save').properties?.lineTemplate);
+    for (const field of ['categoryId', 'amountCents', 'taxCode', 'purposeId', 'abroad']) expect(lineTemplate, field).toContain(`"${field}"`);
+    const format = JSON.stringify(schemaOf('finance_import_profile_save').properties?.format);
+    for (const field of ['encoding', 'delimiter', 'headerSignature', 'dateFormat', 'columns']) expect(format, field).toContain(`"${field}"`);
+  });
 });

@@ -12,8 +12,10 @@ import {
   type Deps,
   type Result,
 } from '@kompass/core';
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { requireAreaAccess, requireReadable } from './access';
+import { auditDocumentRef } from './audit-ref';
 import { RELATION_KINDS, documentRelations, documents, type DocumentRelationRow, type RelationKind } from './schema';
 
 export interface DocumentRelationView {
@@ -25,6 +27,8 @@ export interface DocumentRelationView {
   otherNumber: string | null;
   otherSubject: string;
   otherPhase: 'draft' | 'issued';
+  /** Der Aufrufer darf das andere Ende nicht lesen: Es bleibt die Nummer, `otherSubject` ist leer. */
+  otherProtected: boolean;
 }
 
 export const relateSchema = z.object({
@@ -35,17 +39,24 @@ export const relateSchema = z.object({
 
 export const unrelateSchema = z.object({ id: z.string().min(1) });
 
-/** Beide Richtungen, jede Zeile mit Nummer, Betreff und Phase des anderen Endes. */
-export function relationsFor(db: DbOrTx, documentId: string): DocumentRelationView[] {
-  const other = (id: string) => db.select({ number: documents.number, subject: documents.subject, phase: documents.phase }).from(documents).where(eq(documents.id, id)).get();
+/**
+ * Beide Richtungen, jede Zeile mit Nummer, Betreff und Phase des anderen Endes.
+ * Darf der Aufrufer das andere Ende nicht lesen, bleibt die Nummer (V12) und der
+ * Betreff ist leer.
+ */
+export function relationsFor(deps: Deps, ctx: CallContext, db: DbOrTx, documentId: string): DocumentRelationView[] {
+  const other = (id: string) => db.select({ number: documents.number, subject: documents.subject, phase: documents.phase, typeKey: documents.typeKey }).from(documents).where(eq(documents.id, id)).get();
   const view = (row: DocumentRelationRow, direction: 'out' | 'in'): DocumentRelationView | null => {
     const otherId = direction === 'out' ? row.relatedDocumentId : row.documentId;
     const doc = other(otherId);
     if (!doc) return null;
-    return { id: row.id, kind: row.kind, direction, otherId, otherNumber: doc.number, otherSubject: doc.subject, otherPhase: doc.phase };
+    const hidden = requireReadable(deps, ctx, doc, db) !== null;
+    return { id: row.id, kind: row.kind, direction, otherId, otherNumber: doc.number, otherSubject: hidden ? '' : doc.subject, otherPhase: doc.phase, otherProtected: hidden };
   };
-  const out = db.select().from(documentRelations).where(eq(documentRelations.documentId, documentId)).all().map((r) => view(r, 'out'));
-  const inbound = db.select().from(documentRelations).where(eq(documentRelations.relatedDocumentId, documentId)).all().map((r) => view(r, 'in'));
+  // In der Reihenfolge des Entstehens: ohne `orderBy` lieferte SQLite nach dem Index (ID des anderen Dokuments) — die
+  // Reihenfolge hing daran, welches Dokument zufällig die kleinere ID hatte (Wackler dms.spec „Anlage zu einem Brief“).
+  const out = db.select().from(documentRelations).where(eq(documentRelations.documentId, documentId)).orderBy(asc(documentRelations.createdAt), asc(documentRelations.id)).all().map((r) => view(r, 'out'));
+  const inbound = db.select().from(documentRelations).where(eq(documentRelations.relatedDocumentId, documentId)).orderBy(asc(documentRelations.createdAt), asc(documentRelations.id)).all().map((r) => view(r, 'in'));
   return [...out, ...inbound].filter((v): v is DocumentRelationView => v !== null);
 }
 
@@ -58,21 +69,28 @@ export async function relateDocuments(deps: Deps, ctx: CallContext, input: unkno
   if (v.documentId === v.relatedDocumentId) return conflict('relationSelf', 'Ein Dokument kann sich nicht auf sich selbst beziehen');
 
   const [doc, related] = [v.documentId, v.relatedDocumentId].map((id) =>
-    deps.db.select({ id: documents.id, number: documents.number, subject: documents.subject }).from(documents).where(eq(documents.id, id)).get(),
+    deps.db.select({ id: documents.id, number: documents.number, subject: documents.subject, typeKey: documents.typeKey }).from(documents).where(eq(documents.id, id)).get(),
   );
   if (!doc) return notFound('document', v.documentId);
   if (!related) return notFound('document', v.relatedDocumentId);
+  for (const end of [doc, related]) {
+    const unreadable = requireAreaAccess(deps, ctx, end);
+    if (unreadable) return unreadable;
+  }
 
   const id = newId();
   try {
     return deps.db.transaction((tx: DbOrTx) => {
       tx.insert(documentRelations).values({ id, documentId: v.documentId, relatedDocumentId: v.relatedDocumentId, kind: v.kind, createdByUserId: ctx.userId ?? 'system', createdAt: isoNow(deps.clock) }).run();
+      // Ist eines der beiden Enden geschützt, nennt das Protokoll beide nur über die Nummer.
+      const [a, b] = [auditDocumentRef(tx, doc), auditDocumentRef(tx, related)];
+      const hidden = a.hidden || b.hidden;
       recordAudit(tx, deps, ctx, {
         action: 'dms.relate',
         entityType: 'documentRelation',
         entityId: id,
         after: { documentId: v.documentId, relatedDocumentId: v.relatedDocumentId, kind: v.kind },
-        summary: `Bezug „${v.kind}“ von ${doc.number ?? doc.subject} auf ${related.number ?? related.subject} angelegt`,
+        summary: hidden ? `Bezug „${v.kind}“ von ${a.name} auf ${b.name} angelegt` : `Bezug „${v.kind}“ von ${doc.number ?? doc.subject} auf ${related.number ?? related.subject} angelegt`,
       });
       return ok(tx.select().from(documentRelations).where(eq(documentRelations.id, id)).get()!);
     });
@@ -91,6 +109,12 @@ export async function unrelateDocuments(deps: Deps, ctx: CallContext, input: unk
   if (!parsed.ok) return parsed;
   const row = deps.db.select().from(documentRelations).where(eq(documentRelations.id, parsed.value.id)).get();
   if (!row) return notFound('documentRelation', parsed.value.id);
+  // Beide Enden: Wer eines nicht lesen darf, löst den Bezug nicht.
+  for (const documentId of [row.documentId, row.relatedDocumentId]) {
+    const end = deps.db.select({ typeKey: documents.typeKey }).from(documents).where(eq(documents.id, documentId)).get();
+    const unreadable = end ? requireAreaAccess(deps, ctx, end) : null;
+    if (unreadable) return unreadable;
+  }
   return deps.db.transaction((tx: DbOrTx) => {
     tx.delete(documentRelations).where(eq(documentRelations.id, row.id)).run();
     recordAudit(tx, deps, ctx, { action: 'dms.unrelate', entityType: 'documentRelation', entityId: row.id, before: row, summary: `Bezug ${row.id} gelöst` });

@@ -8,12 +8,6 @@ import { formatDate, type DateFormatMode } from '@/lib/dates';
 import { requireSession } from '@/lib/request-context';
 import { RetentionSettings } from './retention-settings';
 
-/** Wohin ein fälliger Eintrag führt. Der Kern löscht nie selbst — er verweist. */
-const HREF_BY_ENTITY: Record<string, (id: string) => string> = {
-  contact: (id) => `/contacts/${id}`,
-  document: (id) => `/dms/${id}`,
-};
-
 export default async function RetentionPage() {
   const { deps, ctx } = await requireSession();
   if (requirePermission(ctx, 'retention.view')) return <ForbiddenCard permission="retention.view" />;
@@ -22,6 +16,7 @@ export default async function RetentionPage() {
   if (!result.ok) return <ForbiddenCard permission="retention.view" />;
 
   const statutory10Y = readSetting<number>(deps, 'retention.statutory10Y');
+  const statutory8Y = readSetting<number>(deps, 'retention.statutory8Y');
   const statutory6Y = readSetting<number>(deps, 'retention.statutory6Y');
   const consent = readSetting<number>(deps, 'retention.consent');
   const canManageSettings = hasPermission(ctx, 'settings.manage');
@@ -34,6 +29,7 @@ export default async function RetentionPage() {
       <PageHeader title={t('title')} description={t('description')} />
       <RetentionSettings
         statutory10Y={statutory10Y}
+        statutory8Y={statutory8Y}
         statutory6Y={statutory6Y}
         consent={consent}
         canManage={canManageSettings}
@@ -46,7 +42,7 @@ export default async function RetentionPage() {
             <h2 className="mb-2 text-[13px] font-semibold text-muted-ink">{t.has(`entities.${entity}`) ? t(`entities.${entity}`) : entity}</h2>
             <ul className="divide-y divide-line rounded-md border border-line">
               {items.map((item) => {
-                const href = HREF_BY_ENTITY[item.entity]?.(item.id);
+                const href = item.href;
                 return (
                   <li key={`${item.entity}:${item.id}`} className="flex items-center justify-between gap-4 px-3 py-2">
                     <span>{href ? <Link href={href} className="underline underline-offset-2">{item.label}</Link> : item.label}</span>

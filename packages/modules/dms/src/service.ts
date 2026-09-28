@@ -1,28 +1,12 @@
-import { and, asc, count, desc, eq, inArray, like, or, sql, type SQL } from 'drizzle-orm';
-import {
-  conflict,
-  deleteFollowUpsFor,
-  invalid,
-  isoNow,
-  newId,
-  notFound,
-  ok,
-  parseFolderPath,
-  recordAudit,
-  requirePermission,
-  retentionEnd,
-  retentionMonths,
-  schema,
-  validate,
-  type CallContext,
-  type DbOrTx,
-  type Deps,
-  type FollowUpRecord,
-  type Result,
-} from '@kompass/core';
+import { and, asc, count, desc, eq, inArray, isNull, like, or, sql, type SQL } from 'drizzle-orm';
+import { yearIn, blockingHolds, conflict, deleteFollowUpsFor, findModuleRecordReferences, invalid, isoNow, linkedAccess, newId, notFound, notifyRecordDeleted, ok, parseFolderPath, recordAudit, requirePermission, reservedLinkTypes, retentionEnd, retentionMonths, schema, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Failure, type FollowUpRecord, type Result } from '@kompass/core';
 import { z } from 'zod';
+import { canReadType, isProtectedType, readableTypeFilter, requireAreaAccess, requireDmsGate, requireReadable } from './access';
+import { auditDocumentRef } from './audit-ref';
 import { documentTypeFor } from './catalog';
-import { documentCounters, documentFolders, documentFormerNumbers, documentLinks, documentRelations, documents, type DocumentLinkRow, type DocumentNoteRow, type DocumentRow } from './schema';
+import { duplicatesOfInternal, type DuplicateRef } from './duplicates';
+import { refuseModuleOwned } from './owned';
+import { documentCounters, documentFolders, documentFormerNumbers, documentLinks, documentRelations, documents, documentTypes, type DocumentLinkRow, type DocumentNoteRow, type DocumentRow } from './schema';
 import { checksumOf, readDocumentFile, removeDocumentFile } from './storage';
 import { removeDocumentText } from './index-store';
 import { fulltextCondition, fulltextHits, type TextHit } from './search';
@@ -45,15 +29,17 @@ export type DocumentRecord = Omit<DocumentRow, 'inputSnapshot'> & {
    * eine Liste kann es nicht, ohne jede Datei zu lesen; dort steht `undefined`.
    */
   fileState?: DocumentFileState;
+  /** Nur am einzelnen Dokument (`getDocumentRecord`), Befund Z: lesbare, nicht stornierte Dokumente mit derselben Datei. */
+  duplicateOf?: DuplicateRef[];
 };
 
-export function toRecord(deps: Deps, row: DocumentRow, dbOrTx: DbOrTx = deps.db): DocumentRecord {
+export function toRecord(deps: Deps, ctx: CallContext, row: DocumentRow, dbOrTx: DbOrTx = deps.db): DocumentRecord {
   const links = dbOrTx.select().from(documentLinks).where(eq(documentLinks.documentId, row.id)).all();
   return {
     ...row,
     inputSnapshot: row.inputSnapshot ? JSON.parse(row.inputSnapshot) : null,
     links,
-    relations: relationsFor(dbOrTx, row.id),
+    relations: relationsFor(deps, ctx, dbOrTx, row.id),
     notes: notesFor(dbOrTx, row.id),
     formerNumbers: dbOrTx
       .select({ number: documentFormerNumbers.number })
@@ -69,7 +55,8 @@ export function toRecord(deps: Deps, row: DocumentRow, dbOrTx: DbOrTx = deps.db)
       .from(schema.followUps)
       .where(and(eq(schema.followUps.entityType, 'document'), eq(schema.followUps.entityId, row.id)))
       .orderBy(asc(schema.followUps.dueAt))
-      .all(),
+      .all()
+      .map((f) => ({ ...f, titleHidden: false })),
   };
 }
 
@@ -116,8 +103,8 @@ export async function previewNextNumber(
   deps: Deps,
   ctx: CallContext,
   input: unknown,
-): Promise<Result<{ number: string }>> {
-  const denied = requirePermission(ctx, 'dms.view');
+): Promise<Result<{ number: string | null }>> {
+  const denied = requireDmsGate(deps, ctx);
   if (denied) return denied;
 
   const parsed = validate(deps, previewNumberSchema, input);
@@ -126,7 +113,15 @@ export async function previewNextNumber(
   const docType = documentTypeFor(deps.db, parsed.value.typeKey);
   if (!docType) return notFound('documentType', parsed.value.typeKey);
 
-  const year = deps.clock.now().getUTCFullYear();
+  const owned = refuseModuleOwned(docType);
+  if (owned) return owned;
+
+  // Die nächste Nummer ist ein Zähler im Klartext: wie viele Dokumente dieser
+  // Art es dieses Jahr gibt. Wer die Art nicht lesen darf, legt trotzdem hinein
+  // ab — und erfährt die Nummer mit der Bestätigung.
+  if (!canReadType(deps, ctx, docType)) return ok({ number: null });
+
+  const year = yearIn(deps);
   return ok({ number: peekDocumentNumber(deps.db, docType.prefix, year) });
 }
 
@@ -161,12 +156,14 @@ export async function listDocuments(
   ctx: CallContext,
   input: unknown,
 ): Promise<Result<{ documents: DocumentRecord[]; total: number; fulltextTooShort: boolean; hits: Record<string, TextHit> }>> {
-  const denied = requirePermission(ctx, 'dms.view');
+  const denied = requireDmsGate(deps, ctx);
   if (denied) return denied;
   const parsed = validate(deps, documentListSchema, input);
   if (!parsed.ok) return parsed;
   const q = parsed.value;
-  const conditions: SQL[] = [];
+  // Was der Aufrufer lesen darf, steht als eigene UND-Bedingung ganz vorn —
+  // nie im `or(…)` der Textsuche, sonst fände der Volltext, was die Liste verbirgt.
+  const conditions: SQL[] = [readableTypeFilter(deps, ctx)];
   if (q.direction) conditions.push(eq(documents.direction, q.direction));
   if (q.phase) conditions.push(eq(documents.phase, q.phase));
   if (q.typeKey) conditions.push(eq(documents.typeKey, q.typeKey));
@@ -201,6 +198,8 @@ export async function listDocuments(
   }
   if (q.unsent) {
     conditions.push(eq(documents.direction, 'outgoing'), eq(documents.phase, 'issued'), sql`${documents.sentAt} is null`);
+    // Was ein Modul ausstellt, verschickt es nach eigenen Regeln (Serienlauf, Bericht) — es stünde hier ewig.
+    conditions.push(inArray(documents.typeKey, deps.db.select({ key: documentTypes.key }).from(documentTypes).where(isNull(documentTypes.ownerModule))));
   }
   if (q.relatedTo) {
     const ids = new Set<string>();
@@ -231,7 +230,7 @@ export async function listDocuments(
   const hits = q.text ? fulltextHits(deps, rows.map((r) => r.id), q.text) : new Map<string, TextHit>();
 
   return ok({
-    documents: rows.map((row) => toRecord(deps, row)),
+    documents: rows.map((row) => toRecord(deps, ctx, row)),
     total,
     fulltextTooShort,
     hits: Object.fromEntries(hits),
@@ -251,12 +250,14 @@ export async function listDocuments(
  * gelesen werden, und die Liste soll schnell bleiben.
  */
 export async function getDocumentRecord(deps: Deps, ctx: CallContext, id: string): Promise<Result<DocumentRecord>> {
-  const denied = requirePermission(ctx, 'dms.view');
+  const denied = requireDmsGate(deps, ctx);
   if (denied) return denied;
   const row = deps.db.select().from(documents).where(eq(documents.id, id)).get();
   if (!row) return notFound('document', id);
-  const fileState: DocumentFileState = row.fileName ? (await pruefeDatei(deps, ctx, row)).state : 'none';
-  return ok({ ...toRecord(deps, row), fileState });
+  const unreadable = requireReadable(deps, ctx, row);
+  if (unreadable) return unreadable;
+  const fileState: DocumentFileState = row.fileName ? (await checkDocumentFile(deps, ctx, row)).state : 'none';
+  return ok({ ...toRecord(deps, ctx, row), fileState, duplicateOf: duplicatesOfInternal(deps, ctx, deps.db, row.fileChecksum, row.id) });
 }
 
 /**
@@ -270,7 +271,7 @@ export async function getDocumentRecord(deps: Deps, ctx: CallContext, id: string
  * darauf. Ändert sich die Datei ein zweites Mal, ist das ein neuer Befund und
  * bekommt seinen Eintrag.
  */
-async function pruefeDatei(
+export async function checkDocumentFile(
   deps: Deps,
   ctx: CallContext,
   row: typeof documents.$inferSelect,
@@ -326,20 +327,70 @@ async function pruefeDatei(
  * Ein Entwurf trägt keine Summe (`fileChecksum: null`): Seine Datei entsteht
  * bei jeder Vorschau neu, das ist seine Natur und kein Vorfall.
  */
-export async function getDocument(deps: Deps, ctx: CallContext, id: string): Promise<Result<{ record: DocumentRecord; bytes: Uint8Array; filename: string }>> {
-  const denied = requirePermission(ctx, 'dms.view');
+export async function getDocument(deps: Deps, ctx: CallContext, id: string): Promise<Result<{ record: DocumentRecord; bytes: Uint8Array; filename: string; protected: boolean }>> {
+  const denied = requireDmsGate(deps, ctx);
   if (denied) return denied;
   const row = deps.db.select().from(documents).where(eq(documents.id, id)).get();
   if (!row) return notFound('document', id);
+  const unreadable = requireReadable(deps, ctx, row);
+  if (unreadable) return unreadable;
   if (!row.fileName) return notFound('documentFile', id);
 
-  const geprueft = await pruefeDatei(deps, ctx, row);
+  const geprueft = await checkDocumentFile(deps, ctx, row);
   if (geprueft.state === 'missing') return notFound('documentFile', id);
   if (geprueft.state === 'altered') {
     return conflict('documentAltered', `Die Datei von Dokument ${row.number} stimmt nicht mehr mit der beim Festschreiben gebildeten Prüfsumme überein`);
   }
 
-  return ok({ record: toRecord(deps, row), bytes: geprueft.bytes!, filename: `${row.number}.pdf` });
+  return ok({ record: toRecord(deps, ctx, row), bytes: geprueft.bytes!, filename: `${row.number}.pdf`, protected: isProtectedType(documentTypeFor(deps.db, row.typeKey)) });
+}
+
+const linkedDocumentSchema = z.object({ documentId: z.string().min(1), entityType: z.string().min(1), entityId: z.string().min(1) });
+
+/**
+ * Der Bezug als Berechtigung: genau dieses Dokument, für den, der den Vorgang
+ * lesen darf — die Helferin ihren Auslagenbeleg, der Kassenprüfer den Beschluss
+ * zur Rücklage. Kein Weg in die Akte. Recht **und** Bezug prüft dieser Dienst;
+ * dem aufrufenden Modul bleibt nur die Frage, ob der Vorgang dem Aufrufer
+ * gehört („eigener Antrag“).
+ */
+export async function readLinkedDocument(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<{ record: { id: string; number: string | null; subject: string; typeKey: string; documentDate: string; status: 'issued' | 'voided' }; bytes: Uint8Array; filename: string }>> {
+  const parsed = validate(deps, linkedDocumentSchema, input);
+  if (!parsed.ok) return parsed;
+  const { documentId, entityType, entityId } = parsed.value;
+  const unknown = notFound('linkedDocument', documentId);
+
+  const access = linkedAccess(deps, entityType);
+  if (!access) return unknown;
+  const denied = requirePermission(ctx, access.readPermission);
+  if (denied) return denied;
+
+  const link = deps.db.select({ id: documentLinks.id }).from(documentLinks).where(and(eq(documentLinks.documentId, documentId), eq(documentLinks.entityType, entityType), eq(documentLinks.entityId, entityId))).get();
+  if (!link) return unknown;
+  const row = deps.db.select().from(documents).where(eq(documents.id, documentId)).get();
+  if (!row || !row.fileName) return unknown;
+
+  const checked = await checkDocumentFile(deps, ctx, row);
+  if (checked.state === 'missing') return notFound('documentFile', documentId);
+  if (checked.state === 'altered') return conflict('documentAltered', `Die Datei von Dokument ${row.number} stimmt nicht mehr mit der beim Festschreiben gebildeten Prüfsumme überein`);
+  return ok({ record: { id: row.id, number: row.number, subject: row.subject, typeKey: row.typeKey, documentDate: row.documentDate, status: row.status }, bytes: checked.bytes!, filename: `${row.number}.pdf` });
+}
+
+/**
+ * Storno in einer fremden Transaktion — für Module, die ihr eigenes Dokument
+ * stornieren (Bestätigung, Bericht). Ohne Rechteprüfung und ohne die Sperre für
+ * modul-eigene Arten: Beides prüft der Dienst des Moduls. Der Grund steht am
+ * Dokument, nicht im Protokoll — er ist frei getippt, und das Protokoll ist
+ * unlöschbar.
+ */
+export function voidDocumentInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, input: { id: string; reason: string }): Result<{ id: string; number: string | null }> {
+  const row = tx.select().from(documents).where(eq(documents.id, input.id)).get();
+  if (!row) return notFound('document', input.id);
+  if (row.phase !== 'issued') return conflict('documentIsDraft', 'Ein Entwurf kann nicht storniert werden — nur verworfen');
+  if (row.status === 'voided') return conflict('documentAlreadyVoided', `Dokument ${row.number} ist bereits storniert`);
+  tx.update(documents).set({ status: 'voided', voidedAt: isoNow(deps.clock), voidedByUserId: ctx.userId, voidReason: input.reason }).where(eq(documents.id, row.id)).run();
+  recordAudit(tx, deps, ctx, { action: 'dms.void', entityType: 'document', entityId: row.id, before: { status: 'issued' }, after: { status: 'voided' }, summary: `Dokument ${row.number} storniert` });
+  return ok({ id: row.id, number: row.number });
 }
 
 const voidSchema = z.object({ id: z.string().min(1), reason: z.string().trim().min(1).max(300) });
@@ -351,13 +402,28 @@ export async function voidDocument(deps: Deps, ctx: CallContext, input: unknown)
   if (!parsed.ok) return parsed;
   const row = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
   if (!row) return notFound('document', parsed.value.id);
+  const unreadable = requireAreaAccess(deps, ctx, row);
+  if (unreadable) return unreadable;
   if (row.phase !== 'issued') return conflict('documentIsDraft', `Entwurf „${row.subject}“ kann nicht storniert werden — nur verworfen`);
   if (row.status === 'voided') return conflict('documentAlreadyVoided', `Dokument ${row.number} ist bereits storniert`);
+
+  const docType = documentTypeFor(deps.db, row.typeKey);
+  const owned = docType ? refuseModuleOwned(docType) : null;
+  if (owned) return owned;
   return deps.db.transaction((tx: DbOrTx) => {
     tx.update(documents).set({ status: 'voided', voidedAt: isoNow(deps.clock), voidedByUserId: ctx.userId, voidReason: parsed.value.reason }).where(eq(documents.id, row.id)).run();
     const after = tx.select().from(documents).where(eq(documents.id, row.id)).get()!;
-    recordAudit(tx, deps, ctx, { action: 'dms.void', entityType: 'document', entityId: row.id, before: { status: 'issued' }, after: { status: 'voided', reason: parsed.value.reason }, summary: `Dokument ${row.number} storniert: ${parsed.value.reason}` });
-    return ok(toRecord(deps, after));
+    // Der Grund ist frei getippt und das Protokoll unlöschbar: Bei einer geschützten Art bleibt er am Dokument.
+    const ref = auditDocumentRef(tx, row);
+    recordAudit(tx, deps, ctx, {
+      action: 'dms.void',
+      entityType: 'document',
+      entityId: row.id,
+      before: { status: 'issued' },
+      after: ref.hidden ? { status: 'voided' } : { status: 'voided', reason: parsed.value.reason },
+      summary: ref.hidden ? `Dokument ${row.number} storniert` : `Dokument ${row.number} storniert: ${parsed.value.reason}`,
+    });
+    return ok(toRecord(deps, ctx, after));
   });
 }
 
@@ -394,6 +460,8 @@ export async function moveDocument(
 
   const doc = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
   if (!doc) return notFound('document', parsed.value.id);
+  const unreadable = requireAreaAccess(deps, ctx, doc);
+  if (unreadable) return unreadable;
 
   const resolved = resolveFolder(deps.db, parsed.value.folder, null);
   if (!resolved.ok) return resolved;
@@ -403,18 +471,26 @@ export async function moveDocument(
     const now = isoNow(deps.clock);
     tx.update(documents).set({ folder: targetFolder, updatedAt: now }).where(eq(documents.id, doc.id)).run();
 
+    const ref = auditDocumentRef(tx, doc);
     recordAudit(tx, deps, ctx, {
       action: 'dms.move',
       entityType: 'document',
       entityId: doc.id,
       before: { folder: doc.folder },
       after: { folder: targetFolder },
-      summary: `Dokument ${doc.number ?? doc.subject} nach „${targetFolder ?? 'Eingangskorb'}“ verschoben`,
+      summary: `Dokument ${ref.hidden ? ref.name : (doc.number ?? doc.subject)} nach „${targetFolder ?? 'Eingangskorb'}“ verschoben`,
     });
 
     const after = tx.select().from(documents).where(eq(documents.id, doc.id)).get()!;
-    return ok(toRecord(deps, after, tx));
+    return ok(toRecord(deps, ctx, after, tx));
   });
+}
+
+/** Bezugstypen, die ein Modul über `linkedDocumentAccess` anmeldet, setzt und löst nur dieses Modul. */
+export function refuseReservedLinks(deps: Deps, links: readonly { entityType: string }[]): Failure | null {
+  const reserved = reservedLinkTypes(deps);
+  const hit = links.find((link) => reserved.has(link.entityType));
+  return hit ? conflict('linkTypeReserved', `Bezüge auf „${hit.entityType}“ setzt und löst nur das Modul, dem dieser Vorgang gehört`) : null;
 }
 
 export const linkInputSchema = z.object({
@@ -438,8 +514,13 @@ export async function linkDocument(
   const parsed = validate(deps, linkSchema, input);
   if (!parsed.ok) return parsed;
 
+  const reservedHit = refuseReservedLinks(deps, [parsed.value]);
+  if (reservedHit) return reservedHit;
+
   const doc = deps.db.select().from(documents).where(eq(documents.id, parsed.value.documentId)).get();
   if (!doc) return notFound('document', parsed.value.documentId);
+  const unreadable = requireAreaAccess(deps, ctx, doc);
+  if (unreadable) return unreadable;
 
   const id = newId();
   const now = isoNow(deps.clock);
@@ -457,6 +538,8 @@ export async function linkDocument(
         })
         .run();
 
+      // Bei einer geschützten Art nennt das Protokoll nicht, mit wem oder was sie verknüpft ist.
+      const ref = auditDocumentRef(tx, doc);
       recordAudit(tx, deps, ctx, {
         action: 'dms.link',
         entityType: 'documentLink',
@@ -464,10 +547,10 @@ export async function linkDocument(
         after: {
           documentId: parsed.value.documentId,
           entityType: parsed.value.entityType,
-          entityId: parsed.value.entityId,
+          ...(ref.hidden ? {} : { entityId: parsed.value.entityId }),
           role: parsed.value.role,
         },
-        summary: `Bezug zu ${parsed.value.entityType}:${parsed.value.entityId} angelegt`,
+        summary: ref.hidden ? `Bezug an ${ref.name} angelegt` : `Bezug zu ${parsed.value.entityType}:${parsed.value.entityId} angelegt`,
       });
 
       const row = tx.select().from(documentLinks).where(eq(documentLinks.id, id)).get()!;
@@ -499,9 +582,18 @@ export async function unlinkDocument(
   const link = deps.db.select().from(documentLinks).where(eq(documentLinks.id, parsed.value.id)).get();
   if (!link) return notFound('documentLink', parsed.value.id);
 
+  const reservedHit = refuseReservedLinks(deps, [link]);
+  if (reservedHit) return reservedHit;
+
+  const doc = deps.db.select().from(documents).where(eq(documents.id, link.documentId)).get();
+  if (doc) {
+    const unreadable = requireAreaAccess(deps, ctx, doc);
+    if (unreadable) return unreadable;
+  }
   return deps.db.transaction((tx: DbOrTx) => {
     tx.delete(documentLinks).where(eq(documentLinks.id, link.id)).run();
 
+    const ref = doc ? auditDocumentRef(tx, doc) : null;
     recordAudit(tx, deps, ctx, {
       action: 'dms.unlink',
       entityType: 'documentLink',
@@ -509,7 +601,7 @@ export async function unlinkDocument(
       before: {
         documentId: link.documentId,
         entityType: link.entityType,
-        entityId: link.entityId,
+        ...(ref?.hidden ? {} : { entityId: link.entityId }),
         role: link.role,
       },
       summary: `Bezug ${link.id} gelöscht`,
@@ -536,6 +628,9 @@ export async function deleteDocument(
 
   const doc = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
   if (!doc) return notFound('document', parsed.value.id);
+  // Vor der Fristprüfung: Sonst verriete die Meldung die Frist eines Dokuments, das man nicht sehen darf.
+  const unreadable = requireAreaAccess(deps, ctx, doc);
+  if (unreadable) return unreadable;
   if (doc.phase !== 'issued') return conflict('documentIsDraft', `Entwurf „${doc.subject}“ unterliegt keiner Frist — Entwürfe werden verworfen`);
 
   const docType = documentTypeFor(deps.db, doc.typeKey);
@@ -551,10 +646,19 @@ export async function deleteDocument(
   }
 
   const until = retentionEnd(doc.documentDate, months);
-  const today = deps.clock.now().toISOString().slice(0, 10);
+  const today = todayIn(deps);
   if (until >= today) {
     return conflict('retentionRunning', `Aufbewahrungsfrist für Dokument ${doc.number ?? doc.id} läuft noch bis ${until}`);
   }
+
+  // Die Frist der Dokumentart ist nur die eigene. Ein Modul kann länger halten
+  // (die Buchung ihren Beleg) — und solange eines darauf zeigt, bleibt es.
+  // Ein Modul lässt seinen Verweis mit seinem Halter enden; sonst wäre ein
+  // Beleg nie löschbar.
+  const holds = blockingHolds(deps, 'document', doc.id);
+  if (holds.length > 0) return conflict('recordHeld', `Noch gehalten von: ${holds.map((h) => `${h.label}${h.until ? ` (bis ${h.until})` : ' (dauerhaft)'}`).join('; ')}`);
+  const references = findModuleRecordReferences(deps, 'document', doc.id);
+  if (references.length > 0) return conflict('stillReferenced', `Es zeigt noch darauf: ${references.map((r) => r.label).join('; ')}`);
 
   deps.db.transaction((tx: DbOrTx) => {
     // Was mit dem Dokument verschwindet, steht im Protokoll — als Zahl, nicht
@@ -565,6 +669,7 @@ export async function deleteDocument(
       followUps: deleteFollowUpsFor(tx, 'document', doc.id),
     };
 
+    const ref = auditDocumentRef(tx, doc);
     recordAudit(tx, deps, ctx, {
       action: 'dms.delete',
       entityType: 'document',
@@ -572,19 +677,20 @@ export async function deleteDocument(
       before: {
         id: doc.id,
         number: doc.number,
-        subject: doc.subject,
+        ...ref.subject,
         typeKey: doc.typeKey,
         documentDate: doc.documentDate,
         folder: doc.folder,
         fileChecksum: doc.fileChecksum,
         removed,
       },
-      summary: `Dokument ${doc.number ?? doc.subject} gelöscht`,
+      summary: `Dokument ${ref.hidden ? ref.name : (doc.number ?? doc.subject)} gelöscht`,
     });
 
     tx.delete(documentLinks).where(eq(documentLinks.documentId, doc.id)).run();
     tx.delete(documentFormerNumbers).where(eq(documentFormerNumbers.documentId, doc.id)).run();
     tx.delete(documents).where(eq(documents.id, doc.id)).run();
+    notifyRecordDeleted(tx, deps, ctx, 'document', doc.id);
   });
 
   removeDocumentText(deps, doc.id);

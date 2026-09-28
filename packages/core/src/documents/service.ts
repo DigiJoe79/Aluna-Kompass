@@ -7,12 +7,14 @@ import type { CallContext } from '../context';
 import type { DbOrTx } from '../db/client';
 import { mediaAssets } from '../db/schema';
 import type { Deps } from '../deps';
-import type { DocumentBuildResult, DocumentRenderContext, DocumentTemplate } from '../modules/manifest';
+import type { DocumentBuildResult, DocumentImage, DocumentRenderContext, DocumentSlots, DocumentTemplate } from '../modules/manifest';
 import { requirePermission } from '../permissions/check';
 import { conflict, notFound, ok, type Result } from '../result';
 import { readAllSettings, readSetting } from '../settings/service';
 import { resolveActiveTheme } from '../themes/service';
 import { validate } from '../validate';
+import { enabledManifests } from '../modules/service';
+import { DOCUMENT_IMAGE_KEY, documentImageExtension } from './images';
 
 const renderSchema = z.object({
   templateKey: z.string().min(1),
@@ -40,6 +42,37 @@ export async function buildContext(deps: Deps, ctx: CallContext, number: string,
   return { number, issuedAt, organization, theme: resolveActiveTheme(deps), logo };
 }
 
+/** Der Snapshot eines ausgestellten Dokuments — `input ∪ { slots, base, baseChecksum, images }`, je Bild nur die Prüfsumme. */
+export interface DocumentSnapshot {
+  input: unknown;
+  slots: DocumentSlots;
+  base: string;
+  baseChecksum: string;
+  images?: Record<string, string>;
+}
+
+/** Bytes gehören nie in den Snapshot: ein `Uint8Array` in der Eingabe fällt heraus, seine Prüfsumme daneben bleibt. */
+function withoutBytes(value: unknown): unknown {
+  return JSON.parse(JSON.stringify(value ?? null, (_key, v: unknown) => (v instanceof Uint8Array ? undefined : v)));
+}
+
+/**
+ * Baut den Snapshot aus dem Ergebnis von `prepare`. `input` ist, was der
+ * Aufrufer ablegen will (Vorarbeiten-Spec § 4 Regel 7) — sonst die geprüften
+ * Daten der Vorlage, ohne Bytes.
+ */
+export function documentSnapshot(
+  prepared: { data: unknown; built: DocumentBuildResult; baseId: string; base: { checksum: string } },
+  input?: unknown,
+): DocumentSnapshot {
+  const snapshot: DocumentSnapshot = { input: withoutBytes(input ?? prepared.data), slots: prepared.built.slots, base: prepared.baseId, baseChecksum: prepared.base.checksum };
+  const images = prepared.built.images;
+  if (images && Object.keys(images).length > 0) {
+    snapshot.images = Object.fromEntries(Object.entries(images).map(([key, image]) => [key, image.checksum]));
+  }
+  return snapshot;
+}
+
 /** Vorgabe der Vorlage, überschrieben von `build()` und von `documents.bases`. */
 function resolveBaseId(deps: Deps, template: DocumentTemplate, fromBuild: string | undefined): string {
   const configured = readSetting<Record<string, string>>(deps, 'documents.bases')[template.key];
@@ -51,7 +84,8 @@ export async function prepare(
   deps: Deps,
   ctx: CallContext,
   parsedInput: z.infer<typeof renderSchema>,
-): Promise<Result<{ template: DocumentTemplate; data: unknown; built: DocumentBuildResult; baseId: string; base: { checksum: string }; bodyTypst: string }>> {
+  render?: { number: string; issuedOn?: string },
+): Promise<Result<{ template: DocumentTemplate; data: unknown; built: DocumentBuildResult; baseId: string; base: { checksum: string }; bodyTypst: string; images: Record<string, DocumentImage> | undefined }>> {
   const template = deps.registry.documentTemplates.get(parsedInput.templateKey) as DocumentTemplate | undefined;
   if (!template) return notFound('documentTemplate', parsedInput.templateKey);
   if (template.permission) {
@@ -61,13 +95,22 @@ export async function prepare(
   const data = validate(deps, template.schema, parsedInput.input);
   if (!data.ok) return data;
 
-  const built = template.build(data.value, await buildContext(deps, ctx, 'PENDING'));
+  // Ohne `render` ist es die Vorprüfung oder ein Brief: Die Basis zeichnet die
+  // Nummer. Ein Modul, dessen Körper die Nummer druckt, ruft je Anlauf der
+  // Nummernschleife mit der angesehenen Nummer.
+  const built = template.build(data.value, await buildContext(deps, ctx, render?.number ?? 'PENDING', render?.issuedOn));
   const baseId = resolveBaseId(deps, template, built.base);
   const base = deps.documents.base(baseId);
   if (!base) return conflict('documentBaseUnavailable', `Basis-Vorlage „${baseId}“ ist nicht verfügbar`);
 
+  for (const [key, image] of Object.entries(built.images ?? {})) {
+    if (!DOCUMENT_IMAGE_KEY.test(key) || documentImageExtension(image.bytes) === null) {
+      return conflict('documentImageInvalid', `Bild „${key}“ der Vorlage ${template.key} ist kein PNG oder JPEG unter einem gültigen Schlüssel`);
+    }
+  }
+
   const bodyTypst = 'markdown' in built.body ? await renderMarkdownTypst(built.body.markdown) : built.body.typst;
-  return ok({ template, data: data.value, built, baseId, base, bodyTypst });
+  return ok({ template, data: data.value, built, baseId, base, bodyTypst, images: built.images });
 }
 
 /**
@@ -83,13 +126,13 @@ export async function exportDocument(deps: Deps, ctx: CallContext, input: unknow
   if (!parsed.ok) return parsed;
   const prepared = await prepare(deps, ctx, parsed.value);
   if (!prepared.ok) return prepared;
-  const { template, built, baseId, bodyTypst } = prepared.value;
+  const { template, built, baseId, bodyTypst, images } = prepared.value;
   if (template.filed !== false) {
     return conflict('documentIsFiled', `Vorlage „${template.key}“ ist ein Akteneintrag und wird über das Modul dms erzeugt`);
   }
 
   const context = await buildContext(deps, ctx, '');
-  const { bytes } = await deps.documents.render({ baseId, bodyTypst, slots: built.slots, context });
+  const { bytes } = await deps.documents.render({ baseId, bodyTypst, slots: built.slots, context, images });
   const filename = `${(built.slots.title ?? template.key).replace(/[^\p{L}\p{N} _-]/gu, '').trim() || template.key}.pdf`;
   deps.db.transaction((tx: DbOrTx) => {
     recordAudit(tx, deps, ctx, {
@@ -106,13 +149,30 @@ export async function exportDocument(deps: Deps, ctx: CallContext, input: unknow
 export async function listDocumentBases(
   deps: Deps,
   ctx: CallContext,
-): Promise<Result<{ id: string; label: string; kind: string; ok: boolean; error?: string }[]>> {
+): Promise<Result<{ id: string; label: string; kind: string; own: boolean; ok: boolean; error?: string }[]>> {
   const denied = requirePermission(ctx, 'documents.export');
   if (denied) return denied;
   const out = [];
   for (const base of deps.documents.bases()) {
     const probe = await deps.documents.probe(base.id);
-    out.push({ id: base.id, label: base.label, kind: base.kind, ok: probe.ok, error: probe.ok ? undefined : probe.error });
+    out.push({ id: base.id, label: base.label, kind: base.kind, own: base.own, ok: probe.ok, error: probe.ok ? undefined : probe.error });
   }
   return ok(out.sort((a, b) => a.id.localeCompare(b.id)));
+}
+
+/**
+ * Befund 51 b: Führt eine Installation **irgendeine** eigene Basis, meldet
+ * Kompass jede Basis, die ein eingeschaltetes Modul nutzt (`documentBases` im
+ * Manifest) und die Installation nicht selbst führt — dort erschiene das
+ * Dokument im Standardkopf. Ohne eigene Basen gibt es nichts zu melden: Dann
+ * sieht alles einheitlich generisch aus.
+ */
+export function documentBaseGaps(deps: Deps): { hasOwnBases: boolean; missing: { module: string; base: string }[] } {
+  const own = new Set(deps.documents.bases().filter((b) => b.own).map((b) => b.id));
+  if (own.size === 0) return { hasOwnBases: false, missing: [] };
+  const missing: { module: string; base: string }[] = [];
+  for (const manifest of enabledManifests(deps)) {
+    for (const base of manifest.documentBases ?? []) if (!own.has(base)) missing.push({ module: manifest.key, base });
+  }
+  return { hasOwnBases: true, missing };
 }

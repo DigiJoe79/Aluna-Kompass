@@ -5,7 +5,7 @@ export const letterSchema = z.object({
   subject: z.string().trim().min(1).max(300),
   body: z.string().max(100_000),
   /** Fertiger, mehrzeiliger Anschriftsblock — im Service aufgelöst, nicht hier (Entscheidung 7). */
-  recipient: z.string().max(500).default(''),
+  recipient: z.string().max(500).nullish().transform((v) => v ?? ''),
 });
 
 export const letterTemplate: DocumentTemplate<z.infer<typeof letterSchema>> = {

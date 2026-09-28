@@ -1,4 +1,5 @@
 import {
+  yearIn,
   buildContext,
   conflict,
   deleteFollowUpsFor,
@@ -17,11 +18,14 @@ import {
 } from '@kompass/core';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { requireAreaAccess, requireDmsGate, requireReadable } from './access';
+import { auditDocumentRef } from './audit-ref';
 import { documentTypeFor } from './catalog';
+import { refuseModuleOwned } from './owned';
 import { resolveRecipient } from './recipients';
 import { documentLinks, documents } from './schema';
 import { storeDocumentFile } from './storage';
-import { allocateDocumentNumber, getDocumentRecord, peekDocumentNumber, resolveFolder, toRecord, type DocumentRecord } from './service';
+import { allocateDocumentNumber, getDocumentRecord, peekDocumentNumber, refuseReservedLinks, resolveFolder, toRecord, type DocumentRecord } from './service';
 import { removeDocumentText } from './index-store';
 import { deleteNotesFor } from './notes';
 import { deleteRelationsFor, relateDocuments } from './relations';
@@ -74,7 +78,7 @@ export const fileDocumentSchema = z.object({
  * gerenderten PDF steht. Das Werfen rollt zurück; der nächste Anlauf rendert
  * neu. Eine eigene Klasse, damit der Fang nicht an einer Fehlermeldung hängt.
  */
-class NumberMovedOn extends Error {
+export class NumberMovedOn extends Error {
   constructor() {
     super('number moved on between peek and draw');
     this.name = 'NumberMovedOn';
@@ -100,8 +104,19 @@ export async function createDraft(deps: Deps, ctx: CallContext, input: unknown):
   const parsed = validate(deps, draftCreateSchema, input);
   if (!parsed.ok) return parsed;
 
+  const reservedHit = refuseReservedLinks(deps, parsed.value.links);
+  if (reservedHit) return reservedHit;
+
   const docType = documentTypeFor(deps.db, parsed.value.typeKey);
   if (!docType) return notFound('documentType', parsed.value.typeKey);
+
+  const owned = refuseModuleOwned(docType);
+  if (owned) return owned;
+
+  // Ein Entwurf, den sein Autor nach dem Speichern nicht mehr sähe, wäre eine
+  // Falle. Der Eingang ist anders: Dort ist das Dokument mit dem Ablegen fertig.
+  const unreadable = requireAreaAccess(deps, ctx, { typeKey: docType.key });
+  if (unreadable) return unreadable;
 
   const id = newId();
   const now = isoNow(deps.clock);
@@ -148,16 +163,17 @@ export async function createDraft(deps: Deps, ctx: CallContext, input: unknown):
         .run();
     }
 
+    const row = tx.select().from(documents).where(eq(documents.id, id)).get()!;
+    const ref = auditDocumentRef(tx, row);
     recordAudit(tx, deps, ctx, {
       action: 'dms.draft.create',
       entityType: 'documentDraft',
       entityId: id,
-      after: { typeKey: docType.key, subject: parsed.value.subject },
-      summary: `Entwurf „${parsed.value.subject}“ angelegt`,
+      after: { typeKey: docType.key, ...ref.subject },
+      summary: ref.hidden ? `${ref.name} angelegt` : `Entwurf „${parsed.value.subject}“ angelegt`,
     });
 
-    const row = tx.select().from(documents).where(eq(documents.id, id)).get()!;
-    return ok(toRecord(deps, row, tx));
+    return ok(toRecord(deps, ctx, row, tx));
   });
 }
 
@@ -170,6 +186,8 @@ export async function updateDraft(deps: Deps, ctx: CallContext, input: unknown):
 
   const row = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
   if (!row) return notFound('document', parsed.value.id);
+  const unreadable = requireAreaAccess(deps, ctx, row);
+  if (unreadable) return unreadable;
 
   if (row.phase !== 'draft') {
     return conflict('documentIsFiled', `Dokument ${row.number ?? row.id} ist bereits festgeschrieben`);
@@ -210,16 +228,17 @@ export async function updateDraft(deps: Deps, ctx: CallContext, input: unknown):
 
     const after = tx.select().from(documents).where(eq(documents.id, row.id)).get()!;
 
+    const ref = auditDocumentRef(tx, after);
     recordAudit(tx, deps, ctx, {
       action: 'dms.draft.update',
       entityType: 'documentDraft',
       entityId: row.id,
-      before: { subject: row.subject },
-      after: { subject: after.subject },
-      summary: `Entwurf „${after.subject}“ geändert`,
+      before: ref.hidden ? {} : { subject: row.subject },
+      after: ref.hidden ? {} : { subject: after.subject },
+      summary: ref.hidden ? `${ref.name} geändert` : `Entwurf „${after.subject}“ geändert`,
     });
 
-    return ok(toRecord(deps, after, tx));
+    return ok(toRecord(deps, ctx, after, tx));
   });
 }
 
@@ -232,6 +251,8 @@ export async function deleteDraft(deps: Deps, ctx: CallContext, input: unknown):
 
   const row = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
   if (!row) return notFound('document', parsed.value.id);
+  const unreadable = requireAreaAccess(deps, ctx, row);
+  if (unreadable) return unreadable;
 
   if (row.phase === 'issued') {
     return conflict('documentIsFiled', `Dokument ${row.number ?? row.id} ist bereits festgeschrieben`);
@@ -246,12 +267,13 @@ export async function deleteDraft(deps: Deps, ctx: CallContext, input: unknown):
     tx.delete(documentLinks).where(eq(documentLinks.documentId, row.id)).run();
     tx.delete(documents).where(eq(documents.id, row.id)).run();
 
+    const ref = auditDocumentRef(tx, row);
     recordAudit(tx, deps, ctx, {
       action: 'dms.draft.delete',
       entityType: 'documentDraft',
       entityId: row.id,
-      before: { subject: row.subject, typeKey: row.typeKey, removed },
-      summary: `Entwurf „${row.subject}“ gelöscht`,
+      before: { ...ref.subject, typeKey: row.typeKey, removed },
+      summary: ref.hidden ? `${ref.name} gelöscht` : `Entwurf „${row.subject}“ gelöscht`,
     });
   });
 
@@ -264,7 +286,7 @@ export async function previewDraft(
   ctx: CallContext,
   input: unknown,
 ): Promise<Result<{ bytes: Uint8Array; filename: string; mimeType: string; pages: number | null }>> {
-  const denied = requirePermission(ctx, 'dms.view');
+  const denied = requireDmsGate(deps, ctx);
   if (denied) return denied;
 
   const parsed = validate(deps, draftPreviewSchema, input);
@@ -272,6 +294,8 @@ export async function previewDraft(
 
   const row = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
   if (!row) return notFound('document', parsed.value.id);
+  const unreadable = requireReadable(deps, ctx, row);
+  if (unreadable) return unreadable;
 
   const recipient = resolveRecipient(deps, row.id);
   const templateKey = row.templateKey ?? FALLBACK_TEMPLATE_KEY;
@@ -294,12 +318,13 @@ export async function previewDraft(
   const filename = `${(row.subject || 'Entwurf').replace(/[^\p{L}\p{N} _-]/gu, '').trim() || 'Entwurf'}-Vorschau.pdf`;
 
   deps.db.transaction((tx: DbOrTx) => {
+    const ref = auditDocumentRef(tx, row);
     recordAudit(tx, deps, ctx, {
       action: 'dms.draft.preview',
       entityType: 'documentDraft',
       entityId: row.id,
-      after: { templateKey, subject: row.subject },
-      summary: `Vorschau für Entwurf „${row.subject}“ erzeugt`,
+      after: { templateKey, ...ref.subject },
+      summary: ref.hidden ? `Vorschau für ${ref.name} erzeugt` : `Vorschau für Entwurf „${row.subject}“ erzeugt`,
     });
   });
 
@@ -315,6 +340,8 @@ export async function fileDocument(deps: Deps, ctx: CallContext, input: unknown)
 
   const row = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
   if (!row) return notFound('document', parsed.value.id);
+  const unreadable = requireAreaAccess(deps, ctx, row);
+  if (unreadable) return unreadable;
 
   if (row.phase === 'issued') {
     return conflict('documentIsFiled', `Dokument ${row.number ?? row.id} ist bereits festgeschrieben`);
@@ -341,7 +368,7 @@ export async function fileDocument(deps: Deps, ctx: CallContext, input: unknown)
    * der angesehenen ab, war jemand dazwischen: zurückrollen und neu rendern.
    */
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const year = deps.clock.now().getUTCFullYear();
+    const year = yearIn(deps);
     const expected = peekDocumentNumber(deps.db, docType.prefix, year);
     const context = await buildContext(deps, ctx, expected, row.documentDate);
     const { bytes } = await deps.documents.render({ baseId, bodyTypst, slots: built.slots, context });
@@ -384,7 +411,7 @@ export async function fileDocument(deps: Deps, ctx: CallContext, input: unknown)
           after: { number, templateKey, base: baseId },
           summary: `Dokument ${number} festgeschrieben`,
         });
-        return ok(toRecord(deps, after, tx));
+        return ok(toRecord(deps, ctx, after, tx));
       });
     } catch (error) {
       if (!(error instanceof NumberMovedOn)) throw error;
@@ -409,6 +436,8 @@ export async function createReplacementDraft(deps: Deps, ctx: CallContext, input
   if (!parsed.ok) return parsed;
   const old = deps.db.select().from(documents).where(eq(documents.id, parsed.value.voidedId)).get();
   if (!old) return notFound('document', parsed.value.voidedId);
+  const unreadable = requireAreaAccess(deps, ctx, old);
+  if (unreadable) return unreadable;
   if (old.status !== 'voided') return conflict('documentNotVoided', `Dokument ${old.number ?? old.subject} ist nicht storniert`);
 
   const snapshot = old.inputSnapshot ? (JSON.parse(old.inputSnapshot) as { input?: { body?: string } }) : null;

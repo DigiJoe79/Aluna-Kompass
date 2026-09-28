@@ -1,0 +1,381 @@
+import { csvFormatSchema, headerSignature } from '../src/import/csv';
+import { saveImportProfile } from '../src/import/profiles';
+import { roleIdByOrigin, schema, unwrap, readSetting, writeSettingInternal } from '@kompass/core';
+import { auditEntry, ctxWith, fakeDocumentEngine, insertRole, insertUser, systemContext } from '@kompass/core/testing';
+import { addContactRole, contactRoles, createContact, endContactRole, linkUserToContact } from '@kompass/module-contacts';
+import { eq } from 'drizzle-orm';
+import { describe, expect, it } from 'vitest';
+import { createAccount, setAccountActive } from '../src/ledger/accounts';
+import { createFirstFiscalYear } from '../src/ledger/fiscal-years';
+import { saveNotice } from '../src/donations/notices';
+import { saveSigner, uploadFacsimile } from '../src/donations/machine';
+import { applyTaxDefaults, confirmSetupStep, getPermissionMatrix, getSetupStatus, setBoardRemuneration, setExpenseWaiverBasisText, setFinanceLimit, setFinanceSwitch } from '../src/ledger/setup';
+import { installFinance } from '../src/install';
+import { financeModule, FINANCE_PERMISSIONS } from '../src/manifest';
+import { setupFinance } from './helpers';
+
+const FINANCE_ROLE_ORIGIN_KEYS = ['finance:treasurer', 'finance:approver', 'finance:clerk', 'finance:auditor', 'finance:agent'];
+
+describe('finance setup status', () => {
+  it('reports every step open on a fresh installation, account blocked behind fiscal year', async () => {
+    const { deps, ctx } = setupFinance();
+    const status = unwrap(await getSetupStatus(deps, ctx));
+    expect(status.complete).toBe(false);
+    expect(status.steps.map((s) => s.key)).toEqual(['fiscalYear', 'account', 'roles', 'categories', 'tax', 'importFormat', 'notice', 'machineProcedure', 'boardRemuneration', 'boardMembers']);
+    // importFormat ist ohne Bankkonto vakuos erfüllt (nichts, was ein Format bräuchte) — die übrigen sind offen.
+    for (const step of status.steps.filter((s) => s.key !== 'importFormat')) expect(step.done, step.key).toBe(false);
+    const account = status.steps.find((s) => s.key === 'account')!;
+    expect(account.dependsOn).toBe('fiscalYear');
+    expect(account.blocked).toBe(true);
+    const fiscalYear = status.steps.find((s) => s.key === 'fiscalYear')!;
+    expect(fiscalYear.blocked).toBe(false);
+
+    // F4 Task 6: importFormat ist der einzige optionale Schritt — hängt an account, nicht an fiscalYear.
+    const importFormat = status.steps.find((s) => s.key === 'importFormat')!;
+    expect(importFormat.required).toBe(false);
+    expect(importFormat.dependsOn).toBe('account');
+    expect(importFormat.blocked).toBe(true);
+    for (const step of status.steps.filter((s) => s.key !== 'importFormat' && s.key !== 'notice' && s.key !== 'machineProcedure' && s.key !== 'boardRemuneration' && s.key !== 'boardMembers')) expect(step.required, step.key).toBe(true);
+  });
+
+  it('zeigt „Eigene Basis für Formulare“ nur, wenn die Installation eigene Basen führt, aber nicht jede von Finanzen genutzte (Befund 51 b)', async () => {
+    const { deps, ctx } = setupFinance();
+    expect(unwrap(await getSetupStatus(deps, ctx)).steps.map((s) => s.key)).not.toContain('documentBases');
+    const inner = fakeDocumentEngine();
+    const own = (ids: string[]) => fakeDocumentEngine({ bases: () => inner.bases().map((b) => ({ ...b, own: ids.includes(b.id) })) });
+    deps.documents = own(['a4-mit-briefkopf', 'a4-ohne-briefkopf', 'a4-plain']);
+    const step = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'documentBases')!;
+    expect(step).toMatchObject({ required: false, done: false, detail: { missing: 'a4-formular' }, permission: 'settings.manage' });
+    deps.documents = own(['a4-mit-briefkopf', 'a4-formular']);
+    expect(unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'documentBases')).toMatchObject({ done: true, detail: {} });
+  });
+
+  it('shows the waiver basis step only while expense waivers are switched on, done once the association text is set (F8a Task 4)', async () => {
+    const { deps, ctx } = setupFinance();
+    expect(unwrap(await getSetupStatus(deps, ctx)).steps.map((s) => s.key)).not.toContain('waiverBasis');
+
+    await deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.expenseWaiversEnabled', true, 'test'));
+    const withWaivers = unwrap(await getSetupStatus(deps, ctx));
+    const step = withWaivers.steps.find((s) => s.key === 'waiverBasis')!;
+    expect(step).toBeDefined();
+    expect(step.required).toBe(false);
+    expect(step.done).toBe(false);
+
+    await deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.expenseWaiverBasisText', 'Satzung § 9', 'test'));
+    // Befund J: eine Grundlage ohne Datum (Bestand von vor dem Datum) lässt den Schritt offen.
+    expect(unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'waiverBasis')!.done).toBe(false);
+    await deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.expenseWaiverBasisAgreedOn', '2026-01-01', 'test'));
+    expect(unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'waiverBasis')!.done).toBe(true);
+
+    await deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.expenseWaiversEnabled', false, 'test'));
+    expect(unwrap(await getSetupStatus(deps, ctx)).steps.map((s) => s.key)).not.toContain('waiverBasis');
+  });
+
+  it('checklist offers the board remuneration step as optional (F8b Annahme 10)', async () => {
+    const { deps, ctx } = setupFinance();
+    const status = unwrap(await getSetupStatus(deps, ctx));
+    const step = status.steps.find((s) => s.key === 'boardRemuneration')!;
+    expect(step).toMatchObject({ required: false, done: false });
+    expect(status.complete).toBe(true === status.steps.filter((s) => s.required).every((s) => s.done));
+
+    unwrap(await setBoardRemuneration(deps, ctx, { allowed: true, basisText: 'Satzung § 12', validFrom: '2026-01-01' }));
+    expect(unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'boardRemuneration')!.done).toBe(true);
+    // Befund AK: bestätigt ohne „gilt ab“ (Bestand) bleibt der Schritt offen.
+    await deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'finance.boardRemunerationValidFrom', null, 'test'));
+    expect(unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'boardRemuneration')!.done).toBe(false);
+  });
+
+  it('checklist names the board at the contact as optional step: open until a contact holds an active board-member role (T)', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.clock.set('2026-06-15T10:00:00.000Z');
+    const stepOf = async () => unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'boardMembers')!;
+    expect(await stepOf()).toMatchObject({ required: false, done: false, permission: 'contacts.manage' });
+    const manage = { ...systemContext(), permissions: new Set(['contacts.manage']) };
+    const board = unwrap(await createContact(deps, manage, { kind: 'person', firstName: 'Vera', lastName: 'Vorstand' }));
+    unwrap(await addContactRole(deps, manage, { id: board.id, role: 'board-member', since: '2025-01-01' }));
+    expect((await stepOf()).done).toBe(true);
+    const role = deps.db.select().from(contactRoles).where(eq(contactRoles.contactId, board.id)).get()!;
+    unwrap(await endContactRole(deps, manage, { roleId: role.id, until: '2026-03-31' }));
+    expect((await stepOf()).done).toBe(false);
+  });
+
+  it('the import format step counts bank and payment-service accounts and names how many lack a format (F4b)', async () => {
+    const { deps, ctx } = setupFinance();
+    unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-01-01', endsOn: '2026-12-31' }));
+    unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true, importFormat: 'camt053' }));
+    const service = unwrap(await createAccount(deps, ctx, { name: 'Zahlungsdienst', kind: 'paymentService' }));
+    const open = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'importFormat')!;
+    expect(open.done).toBe(false);
+    expect(open.detail).toEqual({ missing: 1 });
+
+    unwrap(await saveImportProfile(deps, ctx, { accountId: service.id, name: 'Zahlungsdienst CSV', format: csvFormatSchema.parse({
+      encoding: 'utf-8', delimiter: ',', headerRow: 0, headerSignature: headerSignature(['Datum', 'Brutto', 'Name']), dateFormat: 'DD.MM.YYYY', decimalSeparator: ',',
+      columns: { bookingDate: 'Datum', valueDate: null, amount: 'Brutto', debit: null, credit: null, debitCreditIndicator: null, counterpartyName: 'Name', counterpartyIban: null, purpose: null, reference: null, fee: null, balance: null, currency: null, pending: null },
+      invertSign: false,
+    }) }));
+    const done = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'importFormat')!;
+    expect(done.done).toBe(true);
+    expect(done.detail).toEqual({ missing: 0 });
+  });
+
+  it('counts an account only with an opening balance', async () => {
+    const { deps, ctx } = setupFinance();
+    unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-01-01', endsOn: '2026-12-31' }));
+    unwrap(await createAccount(deps, ctx, { name: 'Barkasse', kind: 'cash' }));
+    const withoutOpening = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'account')!;
+    expect(withoutOpening.done).toBe(false);
+    expect(withoutOpening.detail).toEqual({ accounts: 1, withoutOpening: 1 });
+
+    unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true, openingBalanceCents: 10000, openingDate: '2026-01-01' }));
+    const withOpening = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'account')!;
+    expect(withOpening.done).toBe(true);
+    expect(withOpening.detail).toEqual({ accounts: 2, withoutOpening: 1 });
+  });
+
+  it('adds the optional import format step, done when every active bank account has a format, without touching completeness', async () => {
+    const { deps, ctx } = setupFinance();
+    unwrap(await createAccount(deps, ctx, { name: 'Barkasse', kind: 'cash' }));
+    const importFormatWithOnlyCash = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'importFormat')!;
+    expect(importFormatWithOnlyCash.required).toBe(false);
+    expect(importFormatWithOnlyCash.done).toBe(true); // eine Barkasse braucht kein Auszugsformat
+
+    const main = unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true, importFormat: 'camt053' }));
+    const formatlos = unwrap(await createAccount(deps, ctx, { name: 'Zweitkonto', kind: 'bank', iban: 'DE12999999990000112233' }));
+    void main;
+    const withUnsetFormat = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'importFormat')!;
+    expect(withUnsetFormat.done).toBe(false); // ein Bankkonto hat noch kein Format
+
+    unwrap(await setAccountActive(deps, ctx, { id: formatlos.id, isActive: false, expectedVersion: formatlos.updatedAt }));
+    const afterDeactivating = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'importFormat')!;
+    expect(afterDeactivating.done).toBe(true); // nur aktive Bankkonten zaehlen
+  });
+
+  it('adds the optional notice step, done while a notice is valid today', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.clock.set('2026-03-01T10:00:00.000Z');
+    const open = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'notice')!;
+    expect(open).toMatchObject({ required: false, done: false, dependsOn: null, blocked: false, detail: {}, permission: 'finance.donationsIssue' });
+
+    const notice = unwrap(await saveNotice(deps, ctx, { kind: 'section60a', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2023-09-15', exemptFrom: '2023-01-01', purposesText: 'des Tierschutzes', purposesTextAccusative: 'den Tierschutz' }));
+    const status = unwrap(await getSetupStatus(deps, ctx));
+    expect(status.steps.find((s) => s.key === 'notice')).toMatchObject({ done: true, detail: { validUntil: '2026-09-15' } });
+
+    deps.clock.set('2026-09-16T10:00:00.000Z');
+    expect(unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'notice')).toMatchObject({ done: false, detail: {} });
+    void notice;
+    // Optional: ein offener Bescheid-Schritt kippt die Einrichtung nicht.
+    expect(status.complete).toBe(false);
+  });
+
+  it('reports roles done only when each finance role has an active user and every finance user is linked to a contact', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+
+    const before = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'roles')!;
+    expect(before.done).toBe(false);
+    expect(before.detail.rolesWithoutUser).toContain('Schatzmeister');
+    expect(before.permission).toBe('users.manage');
+
+    const holderId = insertUser(deps, { name: 'Rollen-Halterin' });
+    for (const originKey of FINANCE_ROLE_ORIGIN_KEYS) {
+      const roleId = roleIdByOrigin(deps.db, originKey)!;
+      deps.db.insert(schema.userRoles).values({ userId: holderId, roleId }).run();
+    }
+    const afterAssign = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'roles')!;
+    expect(afterAssign.done).toBe(false);
+    expect(afterAssign.detail.usersWithoutContact).toBe(1);
+    expect(afterAssign.detail.rolesWithoutUser).toBeUndefined();
+
+    const adminCtx = ctxWith(['users.manage', 'contacts.manage'], 'ADMIN-USER');
+    const contact = unwrap(await createContact(deps, adminCtx, { kind: 'person', lastName: 'Musterhalterin' }));
+    unwrap(await linkUserToContact(deps, adminCtx, { userId: holderId, contactId: contact.id }));
+
+    const afterLink = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'roles')!;
+    expect(afterLink.done).toBe(true);
+    expect(afterLink.detail).toEqual({});
+  });
+
+  it('the checklist step follows the status and depends on the notice step', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.clock.set('2026-03-01T10:00:00.000Z');
+    const step = async () => unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'machineProcedure')!;
+    expect(await step()).toMatchObject({ required: false, done: false, dependsOn: 'notice', blocked: true, detail: { missing: 'signer' }, permission: 'finance.donationsIssue' });
+
+    unwrap(await saveNotice(deps, ctx, { kind: 'exemptionNotice', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2025-05-02', exemptFrom: '2023-01-01', assessmentPeriod: '2023', purposesText: 'Tierschutz' }));
+    expect(await step()).toMatchObject({ done: false, blocked: false, detail: { missing: 'signer' } });
+
+    const signer = unwrap(await saveSigner(deps, ctx, { validFrom: '2026-01-01', signerName: 'Jonas Feld' }));
+    expect(await step()).toMatchObject({ done: false, detail: { missing: 'facsimile,notifiedOn' } });
+    const png = new Uint8Array(32).fill(1);
+    png.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    unwrap(await uploadFacsimile(deps, ctx, { signerId: signer.id, bytes: png, mimeType: 'image/png' }));
+    unwrap(await saveSigner(deps, ctx, { id: signer.id, validFrom: '2026-01-01', signerName: 'Jonas Feld', notifiedOn: '2026-02-01' }));
+    const done = await step();
+    expect(done).toMatchObject({ done: true, blocked: false, detail: {} });
+    // Optional: das Verfahren kippt die Einrichtung nicht.
+    expect(unwrap(await getSetupStatus(deps, ctx)).complete).toBe(false);
+  });
+
+  it('names who can do a step, without e-mail addresses', async () => {
+    const { deps, ctx } = setupFinance();
+    const roleId = insertRole(deps, { name: 'Kann Einrichten' });
+    deps.db.insert(schema.rolePermissions).values({ roleId, permissionKey: 'finance.setup' }).run();
+    insertUser(deps, { name: 'Helfer Person', email: 'helfer@example.org', id: 'HELPER' });
+    deps.db.insert(schema.userRoles).values({ userId: 'HELPER', roleId }).run();
+
+    const fiscalYear = unwrap(await getSetupStatus(deps, ctx)).steps.find((s) => s.key === 'fiscalYear')!;
+    expect(fiscalYear.canDo).toContain('Helfer Person');
+    expect(fiscalYear.canDo.join(' ')).not.toContain('@');
+  });
+
+  it('confirms categories and tax, and applyTaxDefaults confirms tax in one go', async () => {
+    const { deps, ctx } = setupFinance();
+    const before = unwrap(await getSetupStatus(deps, ctx));
+    expect(before.steps.find((s) => s.key === 'categories')!.done).toBe(false);
+    expect(before.steps.find((s) => s.key === 'tax')!.done).toBe(false);
+
+    unwrap(await confirmSetupStep(deps, ctx, { step: 'categories' }));
+    const afterCategories = unwrap(await getSetupStatus(deps, ctx));
+    expect(afterCategories.steps.find((s) => s.key === 'categories')!.done).toBe(true);
+    expect(afterCategories.steps.find((s) => s.key === 'tax')!.done).toBe(false);
+
+    const applied = unwrap(await applyTaxDefaults(deps, ctx));
+    expect(applied.applied).toEqual(['finance.isEntrepreneurOrHasVatId', 'finance.membershipFeesCertifiable', 'finance.expenseWaiversEnabled']);
+    expect(readSetting(deps, 'finance.isEntrepreneurOrHasVatId')).toBe(false);
+    expect(readSetting(deps, 'finance.membershipFeesCertifiable')).toBe(true);
+    // Spec E13: Aufwandsspende ist Schalter, Vorgabe aus.
+    expect(readSetting(deps, 'finance.expenseWaiversEnabled')).toBe(false);
+    const afterTax = unwrap(await getSetupStatus(deps, ctx));
+    expect(afterTax.steps.find((s) => s.key === 'tax')!.done).toBe(true);
+  });
+
+  it('is complete when all five required steps are done, even while the optional importFormat step is still open', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+    unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: '2026-01-01', endsOn: '2026-12-31' }));
+    unwrap(await createAccount(deps, ctx, { name: 'Vereinskonto', kind: 'bank', iban: 'DE23999999990000202051', isMain: true, openingBalanceCents: 10000, openingDate: '2026-01-01' }));
+
+    const holderId = insertUser(deps, { name: 'Rollen-Halterin' });
+    for (const originKey of FINANCE_ROLE_ORIGIN_KEYS) {
+      const roleId = roleIdByOrigin(deps.db, originKey)!;
+      deps.db.insert(schema.userRoles).values({ userId: holderId, roleId }).run();
+    }
+    const adminCtx = ctxWith(['users.manage', 'contacts.manage'], 'ADMIN-USER');
+    const contact = unwrap(await createContact(deps, adminCtx, { kind: 'person', lastName: 'Musterhalterin' }));
+    unwrap(await linkUserToContact(deps, adminCtx, { userId: holderId, contactId: contact.id }));
+
+    unwrap(await confirmSetupStep(deps, ctx, { step: 'categories' }));
+    unwrap(await applyTaxDefaults(deps, ctx));
+
+    const status = unwrap(await getSetupStatus(deps, ctx));
+    expect(status.complete).toBe(true);
+    expect(status.steps.filter((s) => s.required).every((s) => s.done)).toBe(true);
+    // Das angelegte Bankkonto hat noch kein Auszugsformat — der optionale Schritt bleibt offen, ohne complete zu kippen.
+    expect(status.steps.find((s) => s.key === 'importFormat')!.done).toBe(false);
+  });
+
+  it('lets finance.read see the status but not confirm', async () => {
+    const { deps } = setupFinance();
+    const readerCtx = ctxWith(['finance.read'], 'READER');
+    const status = await getSetupStatus(deps, readerCtx);
+    expect(status.ok).toBe(true);
+    expect(await confirmSetupStep(deps, readerCtx, { step: 'categories' })).toMatchObject({ ok: false, error: { type: 'forbidden', permission: 'finance.setup' } });
+    expect(await applyTaxDefaults(deps, readerCtx)).toMatchObject({ ok: false, error: { type: 'forbidden', permission: 'finance.setup' } });
+  });
+
+  it('maps ten activities to the ten permissions and lists holders per role; a role nobody holds has an empty list', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+    const matrix = unwrap(await getPermissionMatrix(deps, ctx));
+    expect(matrix.activities).toHaveLength(10);
+    expect(matrix.activities.map((a) => a.permission)).toEqual([...FINANCE_PERMISSIONS]);
+    expect(matrix.activities[0]).toEqual({ key: 'read', permission: 'finance.read' });
+
+    const treasurer = matrix.roles.find((r) => r.name === 'Schatzmeister')!;
+    expect(treasurer.holders).toEqual([]);
+    expect(treasurer.permissions).toContain('finance.setup');
+    expect(treasurer.navigation).toContain('finance.admin');
+
+    const holderId = insertUser(deps, { name: 'Schatzmeister Person' });
+    const treasurerRoleId = roleIdByOrigin(deps.db, 'finance:treasurer')!;
+    deps.db.insert(schema.userRoles).values({ userId: holderId, roleId: treasurerRoleId }).run();
+    const matrixAfter = unwrap(await getPermissionMatrix(deps, ctx));
+    expect(matrixAfter.roles.find((r) => r.name === 'Schatzmeister')!.holders).toEqual(['Schatzmeister Person']);
+  });
+
+  it('shows every finance navigation entry of the manifest in the matrix, with its permission', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.db.transaction((tx) => installFinance(tx, deps, systemContext()));
+    const matrix = unwrap(await getPermissionMatrix(deps, ctx));
+    const entries = [...(financeModule.navigation ?? []), ...(financeModule.adminNavigation ?? [])];
+    // F8b Annahme 13: `finance.purposes` nennt eine Liste — bei einer Liste genügt eines der Rechte.
+    const grants = (permission: string | readonly string[] | undefined, granted: readonly string[]) => (Array.isArray(permission) ? permission.some((p) => granted.includes(p)) : granted.includes(permission as string));
+    for (const role of matrix.roles) {
+      const expected = entries.filter((e) => grants(e.permission, role.permissions)).map((e) => e.key);
+      expect([...role.navigation].sort(), role.name).toEqual(expected.sort());
+    }
+    const treasurer = matrix.roles.find((r) => r.name === 'Schatzmeister')!;
+    expect(treasurer.navigation).toEqual(expect.arrayContaining(['finance.work', 'finance.donations', 'finance.donationRun', 'finance.donationBook', 'finance.donationNotices']));
+  });
+
+  it('sets a finance switch (H7) with finance.setup, refuses an unknown key, and keeps the mcp-only switch bound to the ui channel', async () => {
+    const { deps, ctx } = setupFinance();
+    unwrap(await setFinanceSwitch(deps, ctx, { key: 'finance.isEntrepreneurOrHasVatId', value: true }));
+    expect(readSetting(deps, 'finance.isEntrepreneurOrHasVatId')).toBe(true);
+
+    const invalid = await setFinanceSwitch(deps, ctx, { key: 'finance.uploadLimitMb', value: true });
+    expect(invalid.ok).toBe(false);
+
+    const agentCtx = { ...ctx, channel: 'mcp' as const };
+    const refused = await setFinanceSwitch(deps, agentCtx, { key: 'finance.mcpHumanOnlyAllowed', value: true });
+    expect(refused).toMatchObject({ ok: false, error: { type: 'conflict', code: 'switchUiOnly' } });
+
+    const readerCtx = ctxWith(['finance.read'], 'READER');
+    expect(await setFinanceSwitch(deps, readerCtx, { key: 'finance.isEntrepreneurOrHasVatId', value: false })).toMatchObject({ ok: false, error: { type: 'forbidden', permission: 'finance.setup' } });
+  });
+
+  it('sets one of the three finance limits with finance.setup, refuses other keys and negative amounts', async () => {
+    const { deps, ctx } = setupFinance();
+    unwrap(await setFinanceLimit(deps, ctx, { key: 'finance.statementSufficesBelowCents', cents: 5000 }));
+    expect(readSetting(deps, 'finance.statementSufficesBelowCents')).toBe(5000);
+
+    const unknownKey = await setFinanceLimit(deps, ctx, { key: 'finance.uploadLimitMb', cents: 5 });
+    expect(unknownKey.ok).toBe(false);
+
+    const negative = await setFinanceLimit(deps, ctx, { key: 'finance.cashDonationAlertCents', cents: -100 });
+    expect(negative.ok).toBe(false);
+
+    const readerCtx = ctxWith(['finance.read'], 'READER');
+    expect(await setFinanceLimit(deps, readerCtx, { key: 'finance.roundAmountFromCents', cents: 10000 })).toMatchObject({ ok: false, error: { type: 'forbidden', permission: 'finance.setup' } });
+  });
+
+  it('sets the association waiver basis text with finance.setup (the finance entry names only the key; the setting is logged like every setting), refuses without the right or beyond 500 characters', async () => {
+    const { deps, ctx } = setupFinance();
+    // Befund J: die Grundlage trägt ein Pflichtdatum — seit wann sie gilt.
+    expect(await setExpenseWaiverBasisText(deps, ctx, { text: 'Satzung § 9' })).toMatchObject({ ok: false, error: { type: 'validation', issues: [{ path: 'agreedOn', message: 'required' }] } });
+    unwrap(await setExpenseWaiverBasisText(deps, ctx, { text: '  Vereinbarung vom 01.03.2026 / Satzung § 9  ', agreedOn: '2026-03-01' }));
+    expect(readSetting(deps, 'finance.expenseWaiverBasisText')).toBe('Vereinbarung vom 01.03.2026 / Satzung § 9');
+    expect(readSetting(deps, 'finance.expenseWaiverBasisAgreedOn')).toBe('2026-03-01');
+    const entry = auditEntry(deps, 'finance.setup.waiverBasis');
+    expect(entry.entityType).toBe('financeSetup');
+    expect(entry.after).not.toContain('Satzung');
+    expect(entry.summary).not.toContain('Satzung');
+
+    // Leeren ist erlaubt — der Schritt der Checkliste ist dann wieder offen.
+    unwrap(await setExpenseWaiverBasisText(deps, ctx, { text: '' }));
+    expect(readSetting(deps, 'finance.expenseWaiverBasisText')).toBe('');
+    expect(readSetting(deps, 'finance.expenseWaiverBasisAgreedOn')).toBeNull();
+
+    expect(await setExpenseWaiverBasisText(deps, ctx, { text: 'x'.repeat(501) })).toMatchObject({ ok: false, error: { type: 'validation' } });
+    expect(await setExpenseWaiverBasisText(deps, ctxWith(['finance.read'], 'READER'), { text: 'Satzung § 9' })).toMatchObject({ ok: false, error: { type: 'forbidden', permission: 'finance.setup' } });
+  });
+
+  it('never writes user names into the audit log', async () => {
+    const { deps, ctx } = setupFinance();
+    unwrap(await confirmSetupStep(deps, ctx, { step: 'categories' }));
+    unwrap(await applyTaxDefaults(deps, ctx));
+    const entry = auditEntry(deps, 'finance.setup.applyTaxDefaults');
+    expect(Object.keys(JSON.parse(entry.after as string)).sort()).toEqual(['applied', 'confirmedAt', 'step']);
+    expect(entry.summary).not.toMatch(/Test/);
+  });
+});

@@ -30,7 +30,7 @@ import { Select } from '@/components/ui/select';
 const TABS = [
   {
     key: 'profile',
-    fields: ['slug', 'name', 'sex', 'location', 'sizeCm', 'externalProfileUrl', 'birthText', 'sizeText'],
+    fields: ['slug', 'name', 'sex', 'location', 'place', 'sizeCm', 'externalProfileUrl', 'birthText', 'sizeText'],
   },
   { key: 'texts', fields: ['summary', 'body', 'traits__text', 'traits'] },
 ] as const;
@@ -67,6 +67,7 @@ export function AnimalForm({ animal, locales }: { animal: AnimalRecord | null; l
             <FormField id="name" label={t('name')} error={errors.name} required><Input id="name" name="name" defaultValue={animal?.name ?? ''} required /></FormField>
             <FormField id="sex" label={t('sex')}><Select id="sex" name="sex" defaultValue={animal?.sex ?? 'female'} className="w-auto"><option value="female">{t('sexes.female')}</option><option value="male">{t('sexes.male')}</option></Select></FormField>
             <FormField id="location" label={t('location')}><Select id="location" name="location" defaultValue={animal?.location ?? 'shelter'} className="w-auto"><option value="shelter">{t('locations.shelter')}</option><option value="germany">{t('locations.germany')}</option></Select></FormField>
+            <FormField id="place" label={t('place')} hint={t('placeHint')} error={errors.place}><Input id="place" name="place" defaultValue={animal?.place ?? ''} /></FormField>
             <FormField id="sizeCm" label={t('sizeCm')} error={errors.sizeCm}><Input id="sizeCm" name="sizeCm" type="number" defaultValue={animal?.sizeCm ?? 0} className="font-mono" /></FormField>
             <FormField id="externalProfileUrl" label={t('externalProfileUrl')} hint={t('externalHint')} error={errors.externalProfileUrl}><Input id="externalProfileUrl" name="externalProfileUrl" defaultValue={animal?.externalProfileUrl ?? ''} /></FormField>
             <LocalizedField name="birthText" label={t('birthText')} value={animal?.birthText ?? {}} errors={errors} locales={locales} />

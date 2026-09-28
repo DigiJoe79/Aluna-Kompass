@@ -3,7 +3,7 @@
 import type { ListedUser } from '@kompass/core';
 import { MoreHorizontal } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
-import { useMemo, useState, useTransition } from 'react';
+import { useMemo, useState, useTransition, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { StatusBadge } from '@/components/status-badge';
@@ -19,7 +19,16 @@ import { cn } from '@/lib/utils';
 import { resetStartPasswordAction, setUserActiveAction, setUserRolesAction } from './actions';
 import { StartPasswordDialog } from './start-password-dialog';
 
-export function UserTable({ users, roles }: { users: ListedUser[]; roles: { id: string; name: string; grantable: boolean }[] }) {
+export function UserTable({
+  users,
+  roles,
+  contactCells,
+}: {
+  users: ListedUser[];
+  roles: { id: string; name: string; grantable: boolean }[];
+  /** Je Nutzer die fertige Zelle der Spalte „Kontakt“; ohne sie gibt es die Spalte nicht. */
+  contactCells?: Record<string, ReactNode>;
+}) {
   const t = useTranslations('users');
   const format = useFormatter();
   const [query, setQuery] = useState('');
@@ -60,6 +69,7 @@ export function UserTable({ users, roles }: { users: ListedUser[]; roles: { id: 
               <TableHead>{t('columns.name')}</TableHead>
               <TableHead>{t('columns.email')}</TableHead>
               <TableHead>{t('columns.roles')}</TableHead>
+              {contactCells ? <TableHead>{t('contactLink.column')}</TableHead> : null}
               <TableHead>{t('columns.status')}</TableHead>
               <TableHead>{t('columns.lastLogin')}</TableHead>
               <TableHead className="w-11" />
@@ -79,6 +89,7 @@ export function UserTable({ users, roles }: { users: ListedUser[]; roles: { id: 
                     ))}
                   </div>
                 </TableCell>
+                {contactCells ? <TableCell>{contactCells[u.id] ?? null}</TableCell> : null}
                 <TableCell>
                   <StatusBadge tone={tone[u.status]} dot>
                     {t(`status.${u.status}`)}

@@ -1,0 +1,5 @@
+﻿"Datum","Uhrzeit","Name","Typ","Status","Währung","Brutto","Gebühr","Netto","Transaktionscode","Guthaben","Betreff"
+"05.03.2026","10:15:00","Erika Beispiel","Spendenzahlung","Abgeschlossen","EUR","50,00","-1,60","48,40","ZD-0001","148,40","Spende März"
+"06.03.2026","09:00:00","Max Muster","Spendenzahlung","Ausstehend","EUR","20,00","-0,85","19,15","ZD-0002","","Spende"
+"07.03.2026","11:30:00","Paula Probe","Spendenzahlung","Abgeschlossen","EUR","10,00","-0,55","9,45","ZD-0003","157,85","Spende Tierheim"
+"10.03.2026","08:00:00","","Auszahlung","Abgeschlossen","EUR","-150,00","0,00","-150,00","ZD-0004","7,85","Auszahlung auf Bankkonto"

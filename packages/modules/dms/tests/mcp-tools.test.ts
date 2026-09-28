@@ -52,6 +52,15 @@ describe('DMS-Werkzeuge', () => {
     expect(names).not.toContain('dms_manage_types');
     expect(DMS_MCP_TOOLS.filter((t) => typeof t.service !== 'function').map((t) => t.name)).toEqual([]);
   });
+
+  it('dms_delete_type calls deleteDocumentType and names dms.manage (Task 4)', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const created = await tool('dms_create_type').handler(deps, ctx, { key: 'memo', label: 'Vermerk', prefix: 'VMK', defaultDirection: 'outgoing', retentionClass: 'statutory6Y' });
+    expect(created.ok).toBe(true);
+    expect(tool('dms_delete_type').description).toContain('dms.manage');
+    const deleted = await tool('dms_delete_type').handler(deps, ctx, { key: 'memo' });
+    expect(deleted.ok).toBe(true);
+  });
 });
 
 describe('Umklassifizieren über MCP (Spec 2026-09-19)', () => {

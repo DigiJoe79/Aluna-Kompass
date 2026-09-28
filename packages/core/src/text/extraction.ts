@@ -11,6 +11,26 @@ export interface ExtractOptions {
   languages: string[];
 }
 
+/**
+ * Eine in ein PDF eingebettete Datei (etwa die ZUGFeRD-XML einer Rechnung).
+ * `name` ist der Name, den das PDF nennt — nur zur Anzeige und zum Vergleich,
+ * nie als Pfad: Er kommt aus fremder Hand und darf `../` enthalten.
+ */
+export interface EmbeddedFile {
+  name: string;
+  bytes: Uint8Array;
+  /** Aus der Endung abgeleitet, soweit bekannt; `pdfdetach` nennt keinen Typ. */
+  mimeType: string | null;
+}
+
+export interface EmbeddedFilesOptions {
+  bytes: Uint8Array;
+  /** Höchstens so viele Anhänge werden gelesen (Vorgabe 10). */
+  maxFiles?: number;
+  /** Größere Anhänge werden übersprungen (Vorgabe 5 MB). */
+  maxBytesPerFile?: number;
+}
+
 export type ProbeResult = { ok: true; languages: string[] } | { ok: false; error: string };
 
 /**
@@ -24,6 +44,8 @@ export interface TextExtraction {
   /** Was die Umgebung kann: Binaries vorhanden, welche Sprachen installiert. */
   probe(): Promise<ProbeResult>;
   extract(opts: ExtractOptions): Promise<PageText[]>;
+  /** Die eingebetteten Dateien eines PDFs; ein PDF ohne Anhänge liefert `[]`. */
+  embeddedFiles(opts: EmbeddedFilesOptions): Promise<EmbeddedFile[]>;
 }
 
 /** Fallback für Kontexte ohne Erkennung (Skripte, manche Tests). */
@@ -32,11 +54,12 @@ export const noopTextExtraction: TextExtraction = {
   extract: async () => {
     throw new Error('no text extraction configured');
   },
+  embeddedFiles: async () => [],
 };
 
 /** Attrappe für Service-Tests: feste Seiten, aufgezeichnete Aufrufe. */
 export function fakeTextExtraction(
-  opts: { pages?: PageText[]; probe?: ProbeResult; onExtract?: (o: ExtractOptions) => void } = {},
+  opts: { pages?: PageText[]; probe?: ProbeResult; onExtract?: (o: ExtractOptions) => void; embedded?: EmbeddedFile[] } = {},
 ): TextExtraction {
   return {
     probe: async () => opts.probe ?? { ok: true, languages: ['deu', 'eng'] },
@@ -44,5 +67,6 @@ export function fakeTextExtraction(
       opts.onExtract?.(o);
       return opts.pages ?? [{ page: 1, text: 'Beispieltext', source: 'layer' }];
     },
+    embeddedFiles: async () => opts.embedded ?? [],
   };
 }

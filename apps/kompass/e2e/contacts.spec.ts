@@ -67,6 +67,47 @@ test.describe('contacts', () => {
     await expect(page.getByTestId('retention-holds')).toContainText('31.12.2028');
   });
 
+  test('bearbeitet einen Kontakt: Anschrift ergänzen, und ein veralteter Stand wird abgewiesen', async ({ page, context }) => {
+    await page.goto('/contacts');
+    await page.getByRole('row', { name: /Sandberg/ }).click();
+    await page.getByRole('button', { name: 'Kontakt bearbeiten' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByLabel('Nachname')).toHaveValue('Sandberg');
+    await dialog.getByLabel('Straße').fill('Lindenallee 7');
+    await dialog.getByLabel('PLZ').fill('54321');
+    await dialog.getByLabel('Ort').fill('Beispielheim');
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByTestId('postal-address')).toContainText('Lindenallee 7');
+    await expect(page.getByTestId('postal-address')).toContainText('54321 Beispielheim');
+
+    // Die Maske ist offen, dann ändert jemand anders den Kontakt — Speichern darf das nicht überschreiben.
+    await page.getByRole('button', { name: 'Kontakt bearbeiten' }).click();
+    await expect(dialog.getByLabel('Straße')).toHaveValue('Lindenallee 7');
+    const other = await context.newPage();
+    await other.goto(page.url());
+    await other.waitForFunction(() => document.documentElement.dataset.hydrated === 'true');
+    await other.getByRole('button', { name: 'Kontakt bearbeiten' }).click();
+    await other.getByRole('dialog').getByLabel('Ort').fill('Zwischenstadt');
+    await other.getByRole('dialog').getByRole('button', { name: 'Speichern' }).click();
+    await expect(other.getByTestId('postal-address')).toContainText('Zwischenstadt');
+    await other.close();
+
+    await dialog.getByLabel('Ort').fill('Spätstadt');
+    await dialog.getByRole('button', { name: 'Speichern' }).click();
+    await expect(dialog.getByRole('alert')).toContainText('Inzwischen wurde dieser Eintrag an anderer Stelle geändert');
+    await page.reload();
+    await expect(page.getByTestId('postal-address')).toContainText('Zwischenstadt');
+  });
+
+  test('das Protokoll zeigt den Namen live aus dem Kontakt, gespeichert ist nur die Art der Änderung', async ({ page }) => {
+    await page.goto('/admin/audit?action=contacts.create');
+    const row = page.getByRole('table').getByRole('row').filter({ hasText: 'Sandberg' });
+    await expect(row).toHaveCount(1);
+    await expect(row).toContainText('Kontakt angelegt');
+    await expect(row).not.toContainText('Sandberg angelegt');
+  });
+
   test('sortiert die Kontakte über den Spaltenkopf', async ({ page }) => {
     await page.goto('/contacts');
     await page.getByRole('button', { name: 'Sortieren nach Ort' }).click();

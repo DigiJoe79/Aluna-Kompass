@@ -10,15 +10,15 @@ Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. J
 
 ## Neun Prinzipien
 
-1. **Generischer Kern, optionale Module.** Keine Vereinsspezifika im Kern. Faustregel: Würde ein anderer Verein bei einem Namen stutzen, ist er zu spezifisch.
+1. **Generischer Kern, optionale Module.** Keine Vereinsspezifika im Kern. Faustregel: Würde ein anderer Verein bei einem Namen stutzen, ist er zu spezifisch. Ein Fachmodul darf einen Rechtsraum abbilden (Finanzen: deutsches Gemeinnützigkeitsrecht) — dann sind dessen Begriffe Code und dessen Werte Einstellungen; der Kern bleibt frei davon.
 2. **Konfiguration statt Konstanten.** Vereinsstamm, Steuerdaten, Branding, Farben, Regeln sind Einstellungen in der Datenbank. Kein statischer Farbwert im Anwendungscode — nur Theme-Tokens. Env-Vars nur für Betriebsparameter (Pfade, Port, Secrets, Umgebungsname).
-3. **Nichts Rechenschaftsrelevantes wird gelöscht.** Rechenschaft meint die Pflichten gegenüber Finanzamt und Transparenzregister: Finanzdaten, Belege, Beschlüsse, Dokumente sowie der Verlauf von Nutzern, Rollen und Rechten. Dort gilt Storno/Deaktivieren/Widerrufen statt Löschen. Was nur auf der Webseite steht — die Inhalte, die das Template deklariert (Variablen, Sammlungseinträge), Tierprofile, Projekte, dazu Medien — ist Arbeitsmaterial und darf gelöscht werden. Rechenschaftsrelevant ist nicht der Datensatz, sondern die Spur, die an ihm hängt: Solange ein Halter läuft (`retentionHolds`) oder noch etwas auf ihn zeigt (`recordReferences`), bleibt er. Was einen Veröffentlicht-Schalter hat, wird in zwei Stufen gelöscht: erst zurückziehen, dann löschen. Der Löschvorgang selbst steht im Änderungsprotokoll: was verschwindet, ist der Inhalt, nicht die Tatsache, dass jemand ihn entfernt hat. Jede schreibende Aktion erzeugt einen Eintrag im Änderungsprotokoll (Nutzer, Zeit, Kanal, Vorher/Nachher). Die vollständige, maßgebliche Aufstellung, welche Entität löschbar ist und warum, steht als `deletionRules` am Manifest jedes Moduls — ein Modul regelt nur, was ihm gehört; der Kern führt seine Regeln in `packages/core/src/deletion-policy.ts`, und `deletionPolicy(registry)` liefert die Summe einer Installation. Personenbezogene Daten sind die Ausnahme von „nichts wird gelöscht": Nach Ablauf der gesetzlichen Aufbewahrung werden sie zur Löschung **fällig** (DSGVO Art. 17). Fällig heißt nicht gelöscht — ein Mensch bestätigt jede Löschung unter Verwaltung → Aufbewahrung; die Frist selbst wird berechnet, nie gespeichert, und steht als `retentionClass` an der Löschregel.
+3. **Nichts Rechenschaftsrelevantes wird gelöscht.** Rechenschaft meint die Pflichten gegenüber Finanzamt und Transparenzregister: Finanzdaten, Belege, Beschlüsse, Dokumente sowie der Verlauf von Nutzern, Rollen und Rechten. Dort gilt Storno/Deaktivieren/Widerrufen statt Löschen. Was nur auf der Webseite steht — die Inhalte, die das Template deklariert (Variablen, Sammlungseinträge), Tierprofile, Projekte, dazu Medien — ist Arbeitsmaterial und darf gelöscht werden. Rechenschaftsrelevant ist nicht der Datensatz, sondern die Spur, die an ihm hängt: Solange ein Halter läuft (`retentionHolds`) oder noch etwas auf ihn zeigt (`recordReferences`), bleibt er. Was einen Veröffentlicht-Schalter hat, wird in zwei Stufen gelöscht: erst zurückziehen, dann löschen. Der Löschvorgang selbst steht im Änderungsprotokoll: was verschwindet, ist der Inhalt, nicht die Tatsache, dass jemand ihn entfernt hat. Jede schreibende Aktion erzeugt einen Eintrag im Änderungsprotokoll (Nutzer, Zeit, Kanal, Vorher/Nachher). Die vollständige, maßgebliche Aufstellung, welche Entität löschbar ist und warum, steht als `deletionRules` am Manifest jedes Moduls — ein Modul regelt nur, was ihm gehört; der Kern führt seine Regeln in `packages/core/src/deletion-policy.ts`, und `deletionPolicy(registry)` liefert die Summe einer Installation. Personenbezogene Daten sind die Ausnahme von „nichts wird gelöscht": Nach Ablauf der gesetzlichen Aufbewahrung werden sie zur Löschung **fällig** (DSGVO Art. 17). Fällig heißt nicht gelöscht — ein Mensch bestätigt jede Löschung unter Verwaltung → Aufbewahrung; die Frist selbst wird berechnet, nie gespeichert, und steht als `retentionClass` an der Löschregel. Wo der Datensatz selbst bleiben muss, weil Bestände und Nummernfolgen aus ihm rechnen (festgeschriebene Buchungen), wird nach Fristablauf nicht gelöscht, sondern der **Personenbezug entfernt**: Fällig wird eine logische Entität („Finanzdaten 2026 — Personenbezug"), die Buchung bleibt. Weil das Änderungsprotokoll unlöschbar ist, schreibt ein solches Modul dort von Anfang an keine Namen, keine Kontakt-IDs und keinen Freitext hinein; dasselbe gilt für Dokumente geschützter Arten der Akte — Nummer statt Betreff, das Vorher/Nachher steht im Fachdatensatz.
 4. **Interner Datensatz ≠ veröffentlichte Sicht.** Webseite und Berichte lesen nur explizit freigegebene Sichten.
 5. **Abgeleitete Werte werden berechnet, nie gespeichert.**
-6. **Rechteprüfung nur serverseitig**, zentral in der Service-Schicht vor jeder schreibenden Aktion. Permission-Keys fest im Code je Modul, Rollen frei benennbar.
-7. **Code Englisch, Oberfläche über i18n.** Eine Sprachdatei `messages/de.json` (Sie-Form), kein hartcodierter UI-Text.
+6. **Rechteprüfung nur serverseitig**, zentral in der Service-Schicht vor jeder schreibenden Aktion. Permission-Keys fest im Code je Modul, Rollen frei benennbar. Das gilt auch, wo ein Modul Dokumente der Akte schützt oder ausliefert: Es meldet seinen Schutzbereich und seine Bezugs-Berechtigung mit einem seiner Rechte an, und **die Akte prüft** — nie das aufrufende Modul.
+7. **Code Englisch, Oberfläche über i18n.** Eine Sprachdatei `messages/de.json` (Sie-Form), kein hartcodierter UI-Text. Zwei Ausnahmen: amtlich vorgeschriebener Wortlaut (die Muster der Zuwendungsbestätigungen) steht deutsch in der Modul-Vorlage, und Nutzdaten, die ein Modul als Grundausstattung anlegt (Rollennamen, Kategorien, Dokumentarten), kommen aus einer Sprachtabelle im Code.
 8. **Ein Weg zu den Daten.** Oberfläche und MCP rufen dieselbe Service-Schicht (`packages/core`). Keine Fachlogik in Adaptern. Ein neues Modul bringt seine Werkzeuge mit: zu jedem Permission-Key gehört mindestens eines, das ihn in seiner Beschreibung nennt, und jedes Werkzeug zeigt sein echtes Zod-Schema — nicht `any`. Wo ein Recht bewusst ohne MCP bleibt, steht es begründet in `apps/kompass/tests/mcp-tools.test.ts`.
-9. **Nie in Prod testen.** TDD ab der ersten Zeile. Dev/Test/Prod strikt getrennt, Umgebungsbalken außerhalb von Prod, Website-Publish nur aus Prod. Vor jedem Push `pnpm verify` — drei Prüfringe, siehe `docs/intern/specs/2026-09-08-pruefringe-design.md`.
+9. **Nie in Prod testen.** TDD ab der ersten Zeile. Dev/Test/Prod strikt getrennt, Umgebungsbalken außerhalb von Prod, Website-Publish nur aus Prod. `pnpm verify` zu jedem Push — drei Prüfringe, siehe `docs/intern/specs/2026-09-08-pruefringe-design.md`; auf `dev-*`-Branches darf er parallel zum Push laufen, vor einem Release oder Push nach `main` muss er vorher grün sein.
 
 ## Coding-Regeln
 
@@ -27,26 +27,31 @@ Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. J
 - IDs: ULID (`newId()`). Zeit: `deps.clock.now()` — nie `new Date()` in Fachcode. Zeitstempel ISO-8601 UTC. Geld: Integer in Cent.
 - Passwörter: Argon2id. Tokens und Startpasswörter werden nur als Hash gespeichert und genau einmal im Klartext zurückgegeben.
 - Tests: Vitest. Service-Tests gegen `createTestDeps()` (In-Memory-SQLite mit echten Migrationen). Pro Service mindestens: Erfolg, `forbidden`, `validation`, Audit-Eintrag.
+- Prüfrhythmus bei Plänen, für Menschen wie Agenten: Während eines Tasks nur die Testdatei, an der gearbeitet wird (rot sehen, grün). Am Ende jedes Tasks `pnpm verify:modul`. Einmal am Plan-Ende, vor dem Push, `pnpm verify` mit allen drei Ringen. Nicht je Task die volle Suite, nicht je Task Typecheck über alles.
+- Werkzeugausgaben klein halten, das gilt vor allem für Agenten: Von einem Testlauf gehört nur die Zusammenfassung in den Verlauf (`| grep -E 'Tests |FAIL|×'`, bei Playwright `| grep -E 'passed|failed|✘'`), nie `tail -150`. Mehrere Änderungen an derselben Datei in einem Aufruf statt in fünf. Gemessen am 26.09.: Ein Agentenlauf verbrachte 22 von 38 Minuten nicht in Werkzeugen, sondern im Modell, weil 287 Runden einen Verlauf von zuletzt 270.000 Token immer wieder lasen — Testausgaben waren der Hauptteil davon.
 - Sichten nie strenger als ihre Dienste: Ein Modul mit `publishedViews` hat einen Test `tests/views-hold.test.ts`, der einen Datensatz mit nur den Pflichtfeldern über den Dienst anlegt, veröffentlicht und alle Sichten mit `loadAllViews` aus `@kompass/core/testing` lädt. Muster: `packages/modules/animals/tests/views-hold.test.ts`.
 - Seed-Daten für jedes Modul und jede neue Fachfunktion. Ein neues Modul bringt einen `seed`-Haken im Manifest mit, Kern-Funktionen einen Block unter `packages/core/src/seed/`; beide laufen über `seedDevelopment`. Regeln: frei erfundene Beispiele (das Repo ist öffentlich, `no-association-content.test.ts`), idempotent (kein Lauf, wenn schon Zeilen da sind), mit Varianten der wichtigen Zustände, und ein Test wie `…/tests/seed.test.ts`. Muster: `packages/modules/contacts/src/seed.ts`, `packages/modules/animals/src/seed.ts`, `packages/modules/dms/src/seed.ts`, `packages/modules/projects/src/seed.ts`. In `development` liegen sie neben den Prototyp-Daten von `dev:reset`; NAS-Test bleibt Aluna-only, weil dort `seedDevelopment` nicht läuft.
-- Migrationen: `pnpm --filter @kompass/core db:generate` nach jeder Schema-Änderung; erzeugte SQL-Dateien werden committet und nie nachträglich editiert.
+- Migrationen: `pnpm --filter @kompass/core db:generate` nach jeder Schema-Änderung; erzeugte SQL-Dateien werden committet und nie nachträglich editiert. Auf einem `dev-*`-Branch dürfen beliebig viele entstehen; `main` bekommt je Fassung höchstens eine. Vor der Schlussabnahme werden die Migrationen des Branches deshalb zu einer zusammengelegt (verwerfen, neu erzeugen, von Hand angefügtes SQL neu anfügen — partielle Indizes stehen dafür im Drizzle-Schema), und die Testinstanz wird neu aus Prod gezogen. Folge: Auf Dev- und Testinstanzen entstehen nie Echtdaten. `packages/core/tests/migrations.test.ts` wacht darüber; er lernt die zwei Stellungen mit den Vorarbeiten für Fachmodule (Plan VP1).
 - Keine Löschfunktionen außer den in den `deletionRules` des eigenen Manifests als `deletable: true` geführten (Kern: `packages/core/src/deletion-policy.ts`; `defineModule` prüft jede Regel, `apps/kompass/tests/deletion-policy.test.ts` die Summe) — jede mit Eintrag im Änderungsprotokoll. Flüchtige Infrastruktur (Sitzungen löschen, Tokens widerrufen) steht dort nicht, weil sie keinen Vereinsvorgang abbildet.
 - Eigene Kennzeichen in `.meta()` nie mit reservierten JSON-Schema-Namen (`required`, `type`, `properties`, `items`, `default`, `enum`, `format` …): Zod 4 schreibt `.meta()` ungefiltert ins JSON-Schema, das MCP-Clients zu sehen bekommen, und ein strenger Client verwirft das ganze Werkzeug. `apps/kompass/tests/mcp-schemas.test.ts` prüft jedes ausgelieferte Werkzeugschema gegen das Metaschema.
 - Masken mit ungesteuerten Feldern (`defaultValue`) nutzen `ActionForm` (`apps/kompass/src/components/forms/action-form.tsx`) statt `<form action>`: React 19 setzt ein `<form action>` nach jedem Durchlauf zurück, auch nach einem abgelehnten Speichern, und die Eingaben wären weg. Ausnahmen sind Anmeldung, Passwort und Einrichtung, wo ein falsches Passwort ruhig verschwinden soll.
 - Handbuch: Jede neue Seite der Oberfläche bringt ihre Handbuchseite unter `docs/handbuch/` und ihren `help`-Eintrag mit (Modul: im Manifest; Kern: `apps/kompass/src/lib/help.ts`). Eine Seite beginnt mit `# Titel` und einem Kurzabsatz; `apps/kompass/tests/handbook-complete.test.ts` prüft Vollständigkeit und Form. Spec: `2026-09-14-handbuch-und-hilfe-design.md`.
-- Ein Modul, das Vorgänge an fremden Datensätzen führt (Buchungen an Projekten, Bestandsbuch an Tieren, Dokumente an allem), meldet sie über `retentionHolds` **und** `recordReferences`. Der erste Haken sichert die Rechenschaft, der zweite die Integrität; wer nur einen bedient, gibt trotzdem nichts frei, weil beide geprüft werden (`buildDeletionPreview` in `packages/core/src/deletion-guards.ts`).
+- Ein Modul, das Vorgänge an fremden Datensätzen führt (Buchungen an Projekten, Bestandsbuch an Tieren, Dokumente an allem), meldet sie über `retentionHolds` **und** `recordReferences`. Der erste Haken sichert die Rechenschaft, der zweite die Integrität; wer nur einen bedient, gibt trotzdem nichts frei, weil beide geprüft werden (`buildDeletionPreview` in `packages/core/src/deletion-guards.ts`). Ausnahme sind Kontakte: Dort zählen nur Halter, weil bei Personen die Löschpflicht sticht — ein Modul meldet für Kontakte deshalb Halter mit einem Ende, keine Verweise. Mit den Vorarbeiten für Fachmodule kommen drei Haken dazu: `recordLabels` (Beschriftung eines fremden Datensatzes, mit `ctx`), `recordDeleted` (Anhängsel mitlöschen, protokolliert) und `canDisable` (ein Modul mit festgeschriebenen Vorgängen lässt sich nicht ausschalten). Spec: `2026-09-20-vorarbeiten-fachmodule-design.md`.
 
 ## Befehle
 
 - `pnpm install` — Abhängigkeiten
 - `pnpm test` — alle Tests; `pnpm --filter @kompass/core test` — nur Kern
 - `pnpm typecheck` — TypeScript
-- `pnpm --filter @kompass/app e2e` — Playwright-E2E (Start den Dev-Server auf Port 3100 selbst)
-- `pnpm verify` — **vor dem Push**: Typecheck, alle Tests, E2E gegen `next dev` **mit geleertem `.next`**, Image-Build und dieselbe E2E-Suite gegen den laufenden Container. Braucht Docker; rund vier Minuten.
+- `pnpm --filter @kompass/app e2e` — Playwright-E2E. Jeder Worker startet seinen eigenen Dev-Server auf 3100 + Platz mit eigenem Datenpfad und Build-Verzeichnis (`apps/kompass/e2e/servers.ts`); Vorgabe drei Worker lokal, online einer (der Läufer hat vier Kerne und 16 GB, beides reicht nicht für zwei), `E2E_WORKERS` übersteuert. `npx playwright test <datei>` für eine einzelne Spec.
+- `pnpm verify` — **zu jedem Push**: auf `dev-*`-Branches gleichzeitig mit dem Push gestartet (ist er rot: Online-Lauf mit `gh run cancel` abbrechen, fixen, neu pushen — der Dev-Ring läuft nur hier); vor Release und `main` vorher grün. Typecheck, alle Tests, E2E gegen `next dev` **mit geleertem `.next`**, Image-Build und dieselbe E2E-Suite gegen den laufenden Container. Braucht Docker. Die gemessenen Laufzeiten stehen in der Prüfringe-Spec (Nachtrag vom 26.09.); mit einer dreiviertel Stunde ist zu rechnen.
+- `pnpm verify:modul [-n] [modul …]` — **je Task**: Typecheck und Unit-Tests der betroffenen Pakete samt Abhängigen, dann die E2E-Projekte der Module plus `kern` (Anmeldung, Shell, Startseite, Hydration, Modul-Aus). Ohne Argument leitet er die Module aus den Änderungen des Arbeitsbaums ab (`apps/kompass/e2e/projects.ts`); berührt eine Änderung Kern, geteilte Bausteine, Gerüst oder E2E-Infrastruktur, läuft die volle Dev-Suite. `-n` zeigt nur den Plan. Ersetzt nicht `pnpm verify` vor dem Push. Einzelne Projekte direkt: `npx playwright test --project=finance --project=kern`.
+- `scripts/e2e-lock.sh <befehl …>` — parallele Agenten starten jeden Playwright-Lauf (auch `verify:modul` und `verify`) über diese Sperre mit Besitzer, und einen eigenen Lauf beenden sie nur über die eigene PID (steht in der Sperre), nie mit `pkill -f "playwright test"`.
 - `pnpm e2e:cold` — nur der zweite Ring, und zwar kalt. Das Leeren ist kein Ritual: `next dev` übersetzt jede Route beim ersten Aufruf, und lokal liegen dafür zwei Gigabyte warm, die es auf einem CI-Läufer nie gibt. Wer warm prüft, prüft eine andere Anwendung — am 11.09. kostete das vier rote Online-Läufe hintereinander.
 - `pnpm image` — nur das Image bauen, für die eigene Architektur (schnell). `pnpm image:release` baut amd64 wie die CI.
-- `pnpm e2e:image` — die E2E-Suite gegen ein gebautes `kompass-local` auf Port 3200. Prüft die Verpackung: gebündelter Code, `/data`-Volume, mitgeliefertes Template, Modulauflösung.
-- `pnpm dev:image [up|down|reset]` — eine **stehende** Testumgebung auf Port 3300, mit Daten, die Neustarts überleben. Zum Anklicken, wenn die Frage „verhält es sich als Container auch so?" lautet. Der Alltag bleibt `pnpm dev`: Dort siehst du eine Änderung sofort, hier kostet sie einen Neubau.
+- `pnpm e2e:image` — die E2E-Suite gegen ein gebautes `kompass-local`, ein Container `kompass-e2e-<Platz>` je Worker ab Port 3200, online nur einer, weil vier Kerne keine Parallelität tragen (`E2E_IMAGE` für ein anderes Bild). Prüft die Verpackung: gebündelter Code, `/data`-Volume, mitgeliefertes Template, Modulauflösung.
+- `pnpm e2e:stress` — die Suite mit absichtlich vielen Workern (Vorgabe acht). Nicht Teil von `verify` und nicht in der CI: Sie macht die Fenster breit, in denen ein Wettlauf zuschlägt, und dient dazu, einen Wackler reproduzierbar zu machen. Zeitüberschreitungen unter dieser Last sind Sättigung, keine Fehler — dann die Worker-Zahl senken, keinen Test ändern.
+- `pnpm dev:image [up|down|reset|seed]` — eine **stehende** Testumgebung auf Port 3300 (nur localhost), mit Daten, die Neustarts überleben; `seed` verwirft alles darin und spielt die Entwicklungsdaten ein. Zum Anklicken, wenn die Frage „verhält es sich als Container auch so?" lautet. Der Alltag bleibt `pnpm dev`: Dort siehst du eine Änderung sofort, hier kostet sie einen Neubau.
 - `pnpm --filter @kompass/core db:generate` — Migration aus Schema erzeugen
 - `pnpm seed` — Entwicklungsdaten für Kern **und** alle Module, ohne etwas zu verwerfen (nur `APP_ENV=development`). `pnpm --filter @kompass/core seed` kennt nur den Kern und schaltet kein Modul ein.
 - `scripts/doc-preview.sh [basis-id] [verzeichnis]` — Live-Vorschau einer Dokument-Basisvorlage: rendert einen Beispielbrief, öffnet das PDF und rendert bei jeder Änderung an der `.typ` neu
@@ -57,6 +62,7 @@ Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. J
 - `scripts/third-party-notices.sh [image] [--pruefen]` — die Aufstellung der Software Dritter entsteht beim Bau **im Image** (`--erzeugen` im Dockerfile, nach `/app/THIRD-PARTY-NOTICES.md`); ohne Flag gibt das Skript sie aus. `--pruefen` verlangt, dass sie da ist und jede npm-Lizenz auf der Positivliste steht — so läuft es in `pnpm image:check` und in der CI vor dem Hochladen. `THIRD-PARTY-NOTICES.md` im Repo ist eine Übersicht **ohne Versionen**; wer ein `apt-get install` ins Dockerfile schreibt, trägt das Paket dort ein (Test).
 - `pnpm dev:reset` — Entwicklungsdatenbank verwerfen und mit Seed **und** den Tieren und Projekten des Prototyps neu aufbauen (nur `APP_ENV=development`; Prototyp-Pfad über `PROTOTYPE_DIR`)
 - Texterkennung lokal: `brew install tesseract tesseract-lang poppler` — ohne sie meldet die Akte „Texterkennung nicht verfügbar", und `packages/text-extraction` überspringt seine Tests nicht, sondern schlägt fehl.
+- Statische Analyse: Job `semgrep` in `ci.yml` fährt `semgrep ci` je Push; Regeln und Blockier-Einstufung kommen aus der Policy im Semgrep-Konto, das Token liegt als Repo-Secret `SEMGREP_APP_TOKEN`. Lokal: `semgrep scan --config p/default --config p/secrets --metrics=off`. Ein Befund ist erst dann keiner, wenn er im Semgrep-Konto eingeordnet oder im Code mit `// nosemgrep: <regel>` und Begründung markiert ist.
 - Betrieb: `docs/handbuch/betrieb.md` — die allgemeine Anleitung, die mit jeder Installation ausgeliefert wird (Voraussetzungen, Erstinstallation, Update, Backup, Webseite). **Sie nennt keine Hardware, keinen Hoster und keinen Verein**; `apps/kompass/tests/no-association-content.test.ts` prüft das, weil `docs/handbuch` im Image liegt. Alunas konkreter Aufbau steht in `docs/intern/betrieb-aluna-qnap.md` (nicht im Repo). Compose-Vorlagen `docker-compose.test.yml` und `docker-compose.prod.yml`, CI `.github/workflows/ci.yml`
 
 ## Release
@@ -78,42 +84,56 @@ Das Gesamtbild — Säulen, Grenzen, Roadmap — steht in `docs/nordstern.md`. J
   Fassung ausmacht — nie auf einen Arbeitsstand. Erst dann erzeugt die CI aus
   `type=semver` ein Registry-Tag; ohne Git-Tag entstehen nur `sha-*` und
   `latest`.
-- **Der Push löst ein Mensch aus**, nach `pnpm verify`.
+- **Der Push löst ein Mensch aus** (oder ein Agent auf dessen ausdrücklichen Auftrag); auf `dev-*` parallel zu `pnpm verify`, vor Release und `main` danach.
 
 ### Ablauf einer Fassung
 
 1. **Je Fassung ein Branch von `main`**, benannt nach der Nummer, die er
    ausliefert: `dev-0.1.1` für Fehlerbehebungen, `dev-0.2.0` für ein neues
    Modul. Jeder Push darauf baut, prüft und lädt `:dev-x.y.z` samt `sha-*` hoch
-   (`ci.yml`, `branches: [main, 'dev-*']`) — dieses Bild läuft auf der
+   (`ci.yml`, `branches: ['dev-*']`; ein Push auf `main` startet keinen Lauf, das tut erst der Release-Tag) — dieses Bild läuft auf der
    Testinstanz. Der erste Commit setzt die Nummer in allen `package.json` auf
    die **Vorabnummer** `x.y.z-dev`: So zeigt die Testinstanz „Version
    0.1.1-dev (…)“ und nicht die alte Fassung.
 2. **Ein Commit je Aufgabe**, der CHANGELOG-Eintrag unter „Unveröffentlicht“
-   im selben Commit. Ein Fehler in einem eigenen, noch nicht gepushten Commit
+   im selben Commit — der erste Eintrag eines Zyklus legt die Überschrift an;
+   leer steht sie nie da. Ein Fehler in einem eigenen, noch nicht gepushten Commit
    wird per `git commit --fixup` und `git rebase --autosquash` eingefaltet,
    nicht als eigener Commit angehängt. Gepushte Commits bleiben, wie sie sind.
 3. **Abnahme auf der Testinstanz**, gegen eine frische Kopie der Produktion.
    Eine Testinstanz läuft nur vorwärts: Ihr Schema ist so neu wie die jüngste
    Fassung, die je auf ihr lief. Vor dem Wechsel auf eine ältere Fassung
    werden ihre Daten deshalb neu aus der Produktion gezogen.
-4. **Release**: im letzten Commit des Branches `-dev` von der Nummer streichen
+4. **Release**: vorher die Migrationen des Branches zu einer zusammenlegen und die Abnahme aus Schritt 3 auf einer frisch aus Prod gezogenen Testinstanz wiederholen. Dann im letzten Commit des Branches `-dev` von der Nummer streichen
    (alle `package.json`) und „Unveröffentlicht“ zur Nummer mit Datum machen. Nach lokalem
-   `pnpm verify` und grünem Job `test` des Branch-Laufs lokal nach `main`
+   `pnpm verify` und grünem Branch-Lauf (Job `test` für Typecheck, Lint und
+   Unit-Tests, Job `image` für Bau und Container-Ring) lokal nach `main`
    squashen (`git merge --squash dev-x.y.z`), `vX.Y.Z` auf den Sammelcommit
    setzen, `main` und den Tag einzeln pushen — nie `git push --tags`, lokale
-   Tags bleiben lokal. Auf den Job `image` des Branches wird nicht gewartet:
-   Der Tag-Lauf wiederholt den Image-Ring und lädt `x.y.z` und `latest` nur bei
-   Grün hoch. Ein roter Tag-Lauf veröffentlicht nichts; der Tag wird dann
+   Tags bleiben lokal. Der Tag-Lauf wiederholt Bau und Container-Ring und lädt `x.y.z` und `latest`
+   nur bei Grün hoch. Ein roter Tag-Lauf veröffentlicht nichts; der Tag wird dann
    gelöscht und nach dem Fix neu gesetzt.
-5. **Aufräumen**: Branch lokal und auf GitHub löschen, die Registry-Tags
-   `dev-x.y.z` und die zugehörigen `sha-*` entfernen. `x.y.z` und `latest`
-   bleiben.
+5. **Aufräumen**: `scripts/zyklus-aufraeumen.sh x.y.z` (erst mit `-n`). Es
+   setzt das lokale Archiv-Tag `archiv/x.y.z`, löscht die Registry-Tags
+   `dev-x.y.z` und die `sha-*` der Branch-Commits, die Actions-Caches von
+   Branch und Tag, die Läufe des Branches und den Branch selbst. `x.y.z`,
+   `latest` und der Tag-Lauf bleiben. Danach die Testinstanz auf `latest`.
 6. **Laufen zwei Branches parallel** (etwa ein `dev-0.1.2` während `dev-0.2.0`),
    wird nach jedem Release der andere auf das neue `main` rebased.
-7. **Dependabot** stellt seine Pull Requests gegen `main`. Sie werden nicht dort
-   gemergt, sondern in den laufenden Branch übernommen und dann geschlossen —
-   so läuft jede Aktualisierung vor dem Release über die Testinstanz.
+7. **Dependabot** stellt seine Pull Requests gegen `main`; sein CI-Lauf prüft
+   sie samt Image-Ring. Was damit geschieht, hängt davon ab, ob ein Zyklus
+   offen ist:
+   - **Ein `dev-x.y.z` läuft:** Der PR wird in den Branch übernommen
+     (`git merge --squash`) und dann geschlossen — die Aktualisierung kommt
+     mit der nächsten Fassung und läuft vorher über die Testinstanz.
+   - **Kein Zyklus offen** (Pause): Der PR wird zur **Wartungsfassung**.
+     Nach grünem PR-Lauf squashen nach `main`, im selben Zug Patchnummer hoch
+     und ein CHANGELOG-Abschnitt „Abhängigkeiten aktualisiert“, Tag `vx.y.z+1`.
+     Eine Abnahme auf der Testinstanz nur, wenn Sichtbares betroffen ist
+     (React, Next, UI-Bibliotheken) — dann den PR stattdessen in einen kurzen
+     `dev-x.y.z+1` übernehmen, der das Test-Image baut.
+   Sicherheitsupdates kommen außerhalb des Monatsplans und werden genauso,
+   aber ohne Aufschub behandelt.
 
 ## Quellen
 

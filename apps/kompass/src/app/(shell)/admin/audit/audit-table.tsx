@@ -3,16 +3,20 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { EmptyState } from '@/components/empty-state';
 import { StatusBadge } from '@/components/status-badge';
+import type { AuditEntityLabel } from '@/lib/audit-entities';
 import { cn } from '@/lib/utils';
 
 export async function AuditTable({
   entries,
   selectedId,
   query,
+  labels = {},
 }: {
   entries: AuditEntry[];
   selectedId: string | null;
   query: string;
+  /** Live aufgelöste Namen je Eintrag — das Protokoll selbst trägt bei Personendaten nur die ID. */
+  labels?: Record<string, AuditEntityLabel>;
 }) {
   const t = await getTranslations('audit');
   const format = await getFormatter();
@@ -62,7 +66,13 @@ export async function AuditTable({
               <td className="px-4 font-mono text-[12px]">{e.action}</td>
               <td className="px-4 text-ink-2">
                 {e.entityType}
-                {e.entityId ? ` · ${e.entityId}` : ''}
+                {labels[e.id]?.state === 'ok'
+                  ? ` · ${(labels[e.id] as { label: string }).label}`
+                  : labels[e.id]?.state === 'missing'
+                    ? ` · ${t('deletedRecord', { type: e.entityType })}`
+                    : e.entityId
+                      ? ` · ${e.entityId}`
+                      : ''}
               </td>
               <td className="max-w-[320px] truncate px-4 text-ink-2">{e.summary}</td>
             </tr>

@@ -8,12 +8,15 @@ type Prefs = {
   mediaView: 'list' | 'grid';
   /** Der zuletzt im Auswahl-Dialog geöffnete Ordner; null = Alle Dateien. */
   mediaChooserFolder: string | null;
+  /** Randspalte des Journals (HANDOFF § 6). `'auto'` entscheidet über CSS am Breakpoint 1360 px — geschrieben wird nur die ausdrückliche Wahl. */
+  financeSidePanel: 'auto' | 'open' | 'closed';
 };
 const DEFAULTS: Prefs = {
   colorScheme: 'light',
   density: 'default',
   mediaView: 'list',
   mediaChooserFolder: null,
+  financeSidePanel: 'auto',
 };
 
 function read<K extends keyof Prefs>(key: K): Prefs[K] {

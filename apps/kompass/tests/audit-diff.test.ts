@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { diffFields } from '@/lib/audit-diff';
+import { changedFieldsOf, diffFields } from '@/lib/audit-diff';
 
 describe('diffFields', () => {
   it('lists only changed keys of two objects', () => {
@@ -17,5 +17,12 @@ describe('diffFields', () => {
     expect(diffFields('Alt', 'Neu')).toEqual([{ key: 'value', before: 'Alt', after: 'Neu' }]);
     expect(diffFields(null, { name: 'Neu' })).toEqual([{ key: 'name', before: null, after: 'Neu' }]);
     expect(diffFields(undefined, undefined)).toEqual([]);
+  });
+  it('reads changedFields as a list of field names, never as a value row (D7)', () => {
+    expect(changedFieldsOf({ changedFields: ['name'] })).toEqual(['name']);
+    expect(changedFieldsOf({ name: 'x' })).toBeNull();
+    expect(changedFieldsOf(null)).toBeNull();
+    expect(diffFields(undefined, { changedFields: ['name'] })).toEqual([]);
+    expect(diffFields(null, { kind: 'person', changedFields: ['firstName'] })).toEqual([{ key: 'kind', before: null, after: 'person' }]);
   });
 });

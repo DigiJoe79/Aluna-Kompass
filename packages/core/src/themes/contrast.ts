@@ -53,6 +53,11 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
   { fg: 'link', bg: 'surface', minimum: 4.5 },
   { fg: 'input-placeholder', bg: 'input-bg', minimum: 3 },
   { fg: 'focus-ring', bg: 'bg', minimum: 3 },
+  { fg: 'color-final', bg: 'color-final-bg', minimum: 4.5 },
+  { fg: 'color-agent', bg: 'color-agent-bg', minimum: 4.5 },
+  { fg: 'color-amount-out', bg: 'surface', minimum: 4.5 },
+  { fg: 'color-amount-out', bg: 'table-zebra', minimum: 4.5 },
+  { fg: 'color-key-ink', bg: 'color-key-bg', minimum: 4.5 },
 ];
 
 export interface ContrastFinding {

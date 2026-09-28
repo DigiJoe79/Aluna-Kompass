@@ -4,11 +4,12 @@ import type { AuditEntry } from '@kompass/core';
 import { useFormatter, useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
-import { diffFields } from '@/lib/audit-diff';
+import { changedFieldsOf, diffFields } from '@/lib/audit-diff';
 
 export function AuditDetail({ entry }: { entry: AuditEntry }) {
   const t = useTranslations('audit.detail');
   const f = useTranslations('audit.filters.channels');
+  const fieldLabel = useTranslations('contacts.fields');
   const format = useFormatter();
   const router = useRouter();
   const pathname = usePathname();
@@ -19,6 +20,9 @@ export function AuditDetail({ entry }: { entry: AuditEntry }) {
     router.replace(`${pathname}?${next.toString()}`);
   };
   const rows = diffFields(entry.before, entry.after);
+  const changed = changedFieldsOf(entry.after);
+  // D7: Feldnamen mit der Beschriftung des Kontaktformulars, sonst der Schlüssel.
+  const labelOf = (key: string) => (fieldLabel.has(key) ? fieldLabel(key) : key);
   return (
     <Sheet
       open
@@ -32,7 +36,13 @@ export function AuditDetail({ entry }: { entry: AuditEntry }) {
           {format.dateTime(new Date(entry.occurredAt), { dateStyle: 'medium', timeStyle: 'medium' })}
         </p>
         <div className="mt-4 flex flex-col gap-2">
-          {rows.length === 0 ? <p className="text-[13px] text-muted-ink">{t('noDiff')}</p> : null}
+          {changed !== null ? (
+            <div className="rounded-md border border-line bg-surface-2 px-3 py-2.5 text-[13px]" data-testid="audit-changed-fields">
+              <p>{t('changedFields', { fields: changed.map(labelOf).join(', ') })}</p>
+              <p className="mt-1 text-[12px] text-muted-ink">{t('changedFieldsNote')}</p>
+            </div>
+          ) : null}
+          {rows.length === 0 && changed === null ? <p className="text-[13px] text-muted-ink">{t('noDiff')}</p> : null}
           {rows.map((row) => (
             <div key={row.key} className="rounded-md border border-line bg-surface-2 px-3 py-2.5">
               <div className="font-mono text-[11px] text-muted-ink">{row.key}</div>

@@ -2,6 +2,7 @@ import { coreModule, moduleMcpTools, type McpToolDefinition, type ModuleManifest
 import * as animalsPkg from '@kompass/module-animals';
 import * as contactsPkg from '@kompass/module-contacts';
 import * as dmsPkg from '@kompass/module-dms';
+import * as financePkg from '@kompass/module-finance';
 import * as projectsPkg from '@kompass/module-projects';
 import * as corePkg from '@kompass/core';
 import * as sitePkg from '@kompass/module-site';
@@ -31,7 +32,12 @@ const modulesWithTools: [ModuleManifest, readonly McpToolDefinition[]][] = [
  * entscheidet bewusst; wer ein Recht ergänzt, ohne es hier oder in einem
  * Werkzeug zu nennen, bekommt einen roten Test.
  */
-const WITHOUT_MCP = new Set(['backup.export', 'backup.import']);
+const WITHOUT_MCP = new Set([
+  'backup.export', 'backup.import',
+  // Finanzen: Rechte stehen ab F1 im Manifest (Rollenvorschläge werden nie nachgefüllt),
+  // ihre Werkzeuge kommen mit den genannten Plänen. Jeder Plan streicht seine Zeile.
+  'finance.reportsFinalize',  // F9a
+]);
 
 /** Rechte, die kein Werkzeug nennt, als `modul: recht`. */
 const uncoveredPermissions = (pairs: [ModuleManifest, readonly McpToolDefinition[]][]) =>
@@ -182,8 +188,17 @@ const WITHOUT_TOOL: Record<string, string> = {
   'dms.countUnreadDocuments': 'Ein Zähler für die Verwaltungsseite.',
   'dms.countDocumentsByFolder': 'Die Zahlen neben den Ordnern; die Liste selbst ist dms_list.',
   'dms.seedDms': 'Beispieldaten der Entwicklung; laufen über seedDevelopment, nie über MCP.',
+  'dms.issueGeneratedDocument': 'Baustein für Module: nimmt einen Callback und stellt unter dem Recht der Vorlage aus; das Werkzeug ist der Dienst des Moduls (z. B. Bestätigung ausstellen).',
+  'dms.readLinkedDocument': 'Liefert Bytes, und nur über die Seiten des Moduls, dem der Vorgang gehört.',
+  'dms.receiveGeneratedUpload': 'Baustein für Module: nimmt einen Callback; das Werkzeug ist der Dienst des Moduls (z. B. Auslage einreichen).',
+  'dms.storeIncoming': 'Innenleben von dms_receive und receiveGeneratedUpload.',
+  'dms.requireDmsGate': 'Rechteprüfung für die Seiten der Akte, kein Dienst.',
+  'dms.exportBundle': 'Liefert eine Datei mit vielen PDFs; ein Agent liest Dokumente über dms_list und dms_text.',
+  'dms.resolveBundle': 'Innenleben von exportBundle.',
+  'dms.canReadDocumentType': 'Rechteprüfung für die Seiten der Akte, kein Dienst.',
   'contacts.deleteContact': 'Löschung personenbezogener Daten bestätigt ein Mensch.',
   'contacts.seedContacts': 'Beispieldaten der Entwicklung.',
+  'contacts.getUserLink': 'Lesehilfe der Nutzerverwaltung; über MCP liefert contacts_user_link_changes dasselbe mit Verlauf.',
   'animals.seedAnimals': 'Beispieldaten der Entwicklung.',
   'projects.seedProjects': 'Beispieldaten der Entwicklung.',
   'site.applySeed': 'Beispielinhalte des Templates; ein Mensch bestätigt sie in der Oberfläche.',
@@ -205,6 +220,49 @@ const WITHOUT_TOOL: Record<string, string> = {
   'core.listApiTokens': 'Ebenso: Die Liste der eigenen Token gehört zur Kontoverwaltung.',
   'core.listDueFollowUps': 'followups_list_due ruft listDueFollowUpsWithTargets — dieselbe Liste, dazu wohin jede Wiedervorlage zeigt.',
   'core.deleteUnreferencedMedia': 'Innenleben der Löschfunktionen; erreichbar über deren Schalter deleteOrphanedMedia, ruft sich nicht selbst über MCP.',
+  'core.requireHumanChannel': 'Prüft den Aufrufkanal; Helfer für Dienste, kein eigener Vorgang.',
+  'core.resolveRecordLabel': 'Hakenverteiler für Datensatzbeschriftungen, kein eigener Dienst.',
+  'core.withTarget': 'Reichert Wiedervorlagen mit Zielbeschriftung an; Innenleben von listDueFollowUpsWithTargets.',
+
+  // Finanzen: Stammdaten je Art laufen über die Verteilerdienste finance_master_data*
+  // (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).
+  'finance.createAccount': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.updateAccount': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.setAccountActive': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.deleteAccount': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.listAccounts': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.createCategory': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.updateCategory': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.setCategoryActive': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.deleteCategory': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.listCategories': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.createPurpose': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.updatePurpose': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.setPurposeActive': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.deletePurpose': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.listPurposes': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.fulfillPurpose': 'Erreichbar über finance_purpose_close.',
+  'finance.dissolvePurpose': 'Erreichbar über finance_purpose_close.',
+  'finance.reopenPurpose': 'Erreichbar über finance_purpose_close.',
+  'finance.listFiscalYears': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.listDatedValues': 'Erreichbar über finance_master_data* (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.seedFinance': 'Beispieldaten der Entwicklung.',
+  'finance.readVoucher': 'Liefert Bytes, über die Seiten des Moduls (ab F3).',
+  'finance.uploadResolution': 'Upload-Dienst hinter der Oberfläche (F8b, Global Constraints); ein vorhandenes Dokument verknüpft finance_reserve_resolution_link.',
+  'finance.readCashCountProtocol': 'Liefert Bytes, über die Seiten des Moduls (F3b Task 2, Muster readVoucher).',
+  'finance.readFacsimile': 'Liefert die Bytes einer Unterschrift — sie gehören nie in den Modellkontext; nur der Route Handler der Bescheid-Seite liest sie (F6a, Annahme 8).',
+  'finance.previewConfirmation': 'Liefert Bytes (Vorschau-PDF mit ENTWURF) für den Ausstellen-Dialog; ein Agent liest die Prüfliste über finance_confirmation_check (F6a).',
+  'finance.readConfirmationCopy': 'Liefert Bytes (unser Exemplar), über den Route Handler der Spenden-Seite (F6a, Muster readCashCountProtocol).',
+  'finance.readRunBundle': 'Liefert Bytes (Sammel-PDF eines Serienlaufs), über den Route Handler der Serienlauf-Seite; ein Agent liest den Lauf über finance_confirmation_run_get (F6b Task 4).',
+  'finance.readSimplifiedReceipt': 'Liefert Bytes (Vordruck des vereinfachten Nachweises ohne Personenbezug), über den Route Handler des Spendenbuchs (F6b Task 5, Muster readRunBundle).',
+  'finance.readExpenseReceipt': 'Liefert Bytes (Beleg eines Antrags), über den Route Handler der Auslagen-Seite; die Eigentümerin liest ihre eigenen ohne finance.read, geprüft im Dienst (F8a Task 2, Review Focus 1).',
+  'finance.createOpenItem': 'Erreichbar über finance_open_item_save (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.updateOpenItem': 'Erreichbar über finance_open_item_save (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.approveAllocationCorrection': 'Erreichbar über finance_correction_decide (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.rejectAllocationCorrection': 'Erreichbar über finance_correction_decide (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.previewPeriodClose': 'Erreichbar über finance_period_preview (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+  'finance.previewPeriodReopen': 'Erreichbar über finance_period_preview (ein Verteiler je Tätigkeit statt zwanzig Werkzeuge, Finanz-Spec 10.2).',
+
 };
 
 const servicesOf = (moduleKey: string, pkg: Record<string, unknown>) =>
@@ -245,6 +303,7 @@ describe('every service has a tool', () => {
     ['animals', animalsPkg],
     ['site', sitePkg],
     ['dms', dmsPkg],
+    ['finance', financePkg],
     ['projects', projectsPkg],
     ['core', corePkg],
   ];

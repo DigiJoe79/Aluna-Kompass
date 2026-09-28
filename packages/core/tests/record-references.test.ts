@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { coreModule } from '../src/core-module';
-import { findRecordReferences } from '../src/deletion-guards';
+import { findModuleRecordReferences, findRecordReferences } from '../src/deletion-guards';
 import { completeFollowUp, createFollowUp } from '../src/follow-ups/service';
 import { defineModule } from '../src/modules/manifest';
 import { unwrap } from '../src/result';
@@ -51,5 +51,21 @@ describe('findRecordReferences', () => {
     const deps = createTestDeps({ manifests: [coreModule, broken] });
     enable(deps, ['broken']);
     expect(() => findRecordReferences(deps, 'animal', 'A1')).toThrow('kaputt');
+  });
+
+  it('findModuleRecordReferences leaves the core’s own follow-ups out', async () => {
+    const probe = defineModule({
+      key: 'probe',
+      version: '0.0.0',
+      permissions: [],
+      recordReferences: (_deps, entityType, id) => (entityType === 'animal' ? [{ label: 'Dokument X', entity: 'probeRef', id: `D-${id}` }] : []),
+    });
+    const deps = createTestDeps({ manifests: [coreModule, probe], now: '2026-09-17T08:00:00.000Z' });
+    enable(deps, ['probe']);
+    const ctx = ctxWith(['followUps.view', 'followUps.manage'], insertUser(deps, {}));
+    await createFollowUp(deps, ctx, { entityType: 'animal', entityId: 'A1', dueAt: '2026-10-01', title: 'Impfpass nachfragen' });
+
+    expect(findRecordReferences(deps, 'animal', 'A1').map((r) => r.entity).sort()).toEqual(['followUp', 'probeRef']);
+    expect(findModuleRecordReferences(deps, 'animal', 'A1').map((r) => r.entity)).toEqual(['probeRef']);
   });
 });

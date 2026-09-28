@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 
-export type BadgeTone = 'success' | 'warning' | 'error' | 'info' | 'neutral' | 'brand' | 'accent';
+export type BadgeTone = 'success' | 'warning' | 'error' | 'info' | 'neutral' | 'brand' | 'accent' | 'final' | 'agent';
 
 const TONES: Record<BadgeTone, string> = {
   success: 'bg-success-bg text-success',
@@ -10,6 +10,8 @@ const TONES: Record<BadgeTone, string> = {
   neutral: 'bg-badge text-badge-ink',
   brand: 'bg-brand-soft text-brand-ink',
   accent: 'bg-brand-accent-soft text-brand-accent-deep',
+  final: 'bg-final-bg text-final',
+  agent: 'bg-agent-bg text-agent',
 };
 
 export function StatusBadge({ tone, dot, children, className }: { tone: BadgeTone; dot?: boolean; children: React.ReactNode; className?: string }) {

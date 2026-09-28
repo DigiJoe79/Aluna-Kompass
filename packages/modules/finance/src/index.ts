@@ -1,0 +1,387 @@
+export { financeModule, FINANCE_PERMISSIONS } from './manifest';
+export {
+  financeAccounts,
+  financeAllocationLines,
+  financeCashCounts,
+  financeCategories,
+  financeConfirmationLines,
+  financeConfirmations,
+  financeDatedValues,
+  financeEntries,
+  financeEntryCounters,
+  financeAllocationCorrections,
+  financeEntryDocuments,
+  financeEntryJustifications,
+  financeNotReturnMarks,
+  financeContactWaiverTerms,
+  financeExpenseClaims,
+  financeExpenseCounters,
+  financeExpensePositions,
+  financeFiscalYears,
+  financeContactBankAccounts,
+  financeImportCandidates,
+  financeImportRules,
+  financeImportRuns,
+  financeInKindDetails,
+  financeMoneyLines,
+  financeNotices,
+  financeOpenItems,
+  financeOpenItemSettlements,
+  financePeriodEvents,
+  financeProjectSettings,
+  financePurposes,
+  financeRawTransactions,
+  financeSigners,
+  type FinanceAccountRow,
+  type FinanceAllocationCorrectionRow,
+  type FinanceAllocationLineRow,
+  type FinanceCashCountRow,
+  type FinanceCategoryRow,
+  type FinanceConfirmationLineRow,
+  type FinanceConfirmationRow,
+  type FinanceDatedValueRow,
+  type FinanceEntryDocumentRow,
+  type FinanceEntryJustificationRow,
+  type FinanceEntryRow,
+  type FinanceContactWaiverTermsRow,
+  type FinanceExpenseClaimRow,
+  type FinanceExpensePositionRow,
+  type FinanceFiscalYearRow,
+  type FinanceContactBankAccountRow,
+  type FinanceImportCandidateRow,
+  type FinanceImportRuleRow,
+  type FinanceImportRunRow,
+  type FinanceInKindDetailsRow,
+  type FinanceMoneyLineRow,
+  type FinanceNoticeRow,
+  type FinanceOpenItemRow,
+  type FinanceOpenItemSettlementRow,
+  type FinancePeriodEventRow,
+  type FinanceProjectSettingsRow,
+  type FinancePurposeRow,
+  type FinanceRawTransactionRow,
+  type FinanceSignerRow,
+} from './schema';
+
+export { requireFinanceRead } from './ledger/access';
+export { epcQrPayload, type EpcQrInput } from './ledger/epc-qr';
+export { formatIban, isValidIban, normalizeIban } from './ledger/iban';
+// F8a: die reinen Rechnungen der Auslagen — die Oberfläche zeigt dieselbe Fahrtrechnung und Frist wie der Dienst.
+export { tripAmountCents } from './ledger/trip-amount';
+export { waiverDeadline, waiverIsTimely } from './allocation/waiver-rules';
+export { ALLOWANCE_KINDS, CERTIFIABLE_INCOME_KINDS, COST_FUNCTIONS, DIRECTIONS, INCOME_KINDS, INPUT_TAX, SPHERES, TAX_CODES } from './ledger/codes';
+export {
+  accountActiveSchema,
+  accountCreateSchema,
+  accountDeleteSchema,
+  accountInUseInternal,
+  accountListSchema,
+  accountUpdateSchema,
+  createAccount,
+  deleteAccount,
+  listAccounts,
+  setAccountActive,
+  setImportFormatInternal,
+  updateAccount,
+  type AccountView,
+} from './ledger/accounts';
+export {
+  categoryFieldsSchema,
+  categoryInUseInternal,
+  createCategory,
+  createCategoryInternal,
+  deleteCategory,
+  listCategories,
+  setCategoryActive,
+  updateCategory,
+  type CategoryView,
+} from './ledger/categories';
+export { START_PLAN } from './ledger/start-plan';
+export {
+  createPurpose,
+  deletePurpose,
+  dissolvePurpose,
+  fulfillPurpose,
+  listPurposes,
+  purposeInUseInternal,
+  reopenPurpose,
+  setPurposeActive,
+  updatePurpose,
+  type PurposeView,
+} from './ledger/purposes';
+export {
+  allocateEntryNumber,
+  createFirstFiscalYear,
+  ensureFiscalYearFor,
+  fiscalYearForInternal,
+  fiscalYearStatusInternal,
+  listFiscalYears,
+  updateFiscalYear,
+  type FiscalYearStatus,
+  type FiscalYearView,
+} from './ledger/fiscal-years';
+export { DATED_SERIES, type DatedValueKey } from './ledger/dated-series';
+export { listDatedValues, removeDatedValue, setDatedValue, valueAt, type DatedValueListEntry } from './ledger/dated-values';
+export { closePurpose, deleteMasterData, readMasterData, saveMasterData, setMasterDataActive } from './ledger/master-data';
+export { firstNegativeCashDay, formatEuro } from './ledger/cash-check';
+export { countCash, emptyDonationBox, lastCountInternal, listCashCounts, moveCash, readCashCountProtocol, type CashCountKind, type CashCountView, type CountCashResult, type EmptyDonationBoxResult } from './ledger/cash';
+export { cashCountTemplate, type CashCountTemplateInput } from './ledger/cash-count-template';
+export {
+  applyTaxDefaults,
+  confirmSetupStep,
+  getPermissionMatrix,
+  getSetupStatus,
+  setBoardRemuneration,
+  setExpenseWaiverBasisText,
+  setFinanceLimit,
+  setFinanceSwitch,
+  type PermissionMatrixActivity,
+  type PermissionMatrixRole,
+  type SetupStep,
+  type SetupStepKey,
+} from './ledger/setup';
+export { taxContextAt, taxOf, type Taxation, type TaxCode, type TaxInput, type TaxResult } from './ledger/tax';
+export { abortFinalize, bookEntry, checkFinalizableInternal, finalizeEntry, finalizeInternal, finalizeReviewed, FinalizeAborted, type FinalizeOptions } from './ledger/finalize';
+export { reverseEntry, reverseInternal } from './ledger/reverse';
+export {
+  deleteDraft,
+  documentationOf,
+  entryLinesSchema,
+  entryViewInternal,
+  getEntry,
+  listEntries,
+  resolveEntryLines,
+  saveDraft,
+  setReviewed,
+  writeLinesInternal,
+  type AllocationLineView,
+  type AllocationLineWrite,
+  type EntryDocumentationState,
+  type EntryLinesInput,
+  type EntryView,
+  type MoneyLineView,
+  type MoneyLineWrite,
+  type VoucherListEntry,
+} from './ledger/entries';
+
+export { attachDocument, listVouchersWithoutEntry, readVoucher, revokeVoucher, uploadVoucher, type VoucherLinkResult, type VoucherWithoutEntry } from './ledger/vouchers';
+export {
+  accountBalancesAt,
+  assetOverviewAt,
+  incomeStatement,
+  projectBalances,
+  purposeBalancesAt,
+  standing,
+  type AccountBalance,
+  type AssetOverview,
+  type IncomeStatement,
+  type IncomeStatementCategory,
+  type IncomeStatementSphere,
+  type ProjectBalance,
+  type PurposeBalance,
+  type Sphere,
+  type Standing,
+} from './ledger/queries';
+export { getBalances, getIncomeStatement, type BalancesView } from './ledger/overview';
+export {
+  closeFiscalYear,
+  justifyUndocumentedEntry,
+  previewPeriod,
+  previewPeriodClose,
+  previewPeriodReopen,
+  previewReopenInternal,
+  reopenFiscalYear,
+  reopenInternal,
+  type PeriodClosePreview,
+  type UndocumentedEntryPreview,
+} from './ledger/period';
+export { financeRecordDeleted, financeRecordReferences, financeRetentionDue, financeRetentionHolds, yearAnchorInternal } from './ledger/holds';
+export { getEntryHistory, type EntryHistoryEvent } from './ledger/history';
+export { getProjectFinance, projectFinanceInternal, setProjectFinance, type ProjectFinanceSettings } from './ledger/project-settings';
+export { cancelOpenItem, createOpenItem, listOpenItems, listOpenItemSettlements, openCentsInternal, openItemHasAnySettlementInternal, openItemsAtInternal, overdueOpenItemsInternal, saveOpenItem, updateOpenItem, type OpenItemSettlementView, type OpenItemView } from './ledger/open-items';
+export { applyCorrectionInternal, approveAllocationCorrection, decideAllocationCorrection, listAllocationCorrections, rejectAllocationCorrection, requestAllocationCorrection, type CorrectionView } from './ledger/corrections';
+
+// F8a — Auslagen: einreichen, freigeben, Verzicht (allocation/).
+export {
+  copyExpenseClaim,
+  deleteExpenseDraft,
+  expenseFormStart,
+  getExpenseClaim,
+  listMyExpenseClaims,
+  readExpenseReceipt,
+  saveExpenseDraft,
+  submitExpenseClaim,
+  uploadExpenseReceipt,
+  type ExpenseClaimPaid,
+  type ExpenseClaimView,
+  type ExpenseFormStart,
+  type ExpensePositionView,
+} from './allocation/expenses';
+export { approveExpenseClaim, approvePartnerPayment, getApproval, listApprovals, rejectExpenseClaim, waiverChecks, type ApprovalQueueItem, type ApprovalView } from './allocation/approvals';
+export { suggestExpenseCategories, type ExpenseCategorySuggestion } from './allocation/suggest';
+export { attachSignedWaiver, createWaiverDeclaration, saveContactWaiverTerms, type WaiverCheck, type WaiverCheckKey } from './allocation/waiver';
+
+// F7 — Partner und Empfängerbescheide (allocation/).
+export {
+  checkBasisAllowed,
+  deletePartnerProfile,
+  getPartner,
+  listPartnerNotices,
+  listPartners,
+  partnerNoticeValidAtInternal,
+  savePartnerNotice,
+  savePartnerProfile,
+  setPartnerActive,
+  voidPartnerNotice,
+  type PartnerNoticeView,
+  type PartnerView,
+} from './allocation/partners';
+export {
+  copyPartnerPayment,
+  deletePartnerPaymentDraft,
+  evidenceUsedMultipleTimesInternal,
+  getPartnerPayment,
+  listEligibleLines,
+  listPartnerPayments,
+  ownPaymentProblem,
+  partnerProofDeadlines,
+  partnerProofDeadlinesInternal,
+  rejectPartnerPayment,
+  savePartnerPaymentDraft,
+  submitPartnerPayment,
+  type ActiveStep,
+  type EligibleLine,
+  type PaidLineView,
+  type PartnerPaymentView,
+  type PositionView,
+} from './allocation/partner-payments';
+export { acknowledgeEvidence, addEvidenceLink, addEvidenceUpload, listEvidence, removeEvidence, updateEvidence } from './allocation/evidence';
+export { coverageRequired, evidenceCoverage, missingEvidence, paymentProofSatisfied, requiredEvidenceKinds, type EvidenceKind, type EvidenceRow } from './allocation/evidence-rules';
+export { foreignActivity, foreignActivityInternal, type ForeignActivityView, type ForeignLineEntry, type ForeignPartnerPaymentEntry } from './allocation/foreign';
+
+// F8b — zurückgelegtes Geld (allocation/).
+export { freeReserveCapCents, type FreeReserveCapInput } from './allocation/reserve-rules';
+export {
+  deleteReserve,
+  freeReserveCap,
+  linkResolution,
+  listReserves,
+  recordReserveCarryForward,
+  recordReserveMovement,
+  saveReserve,
+  setReserveActive,
+  uploadResolution,
+  type FreeReserveCapView,
+  type ReserveMovementView,
+  type ReserveView,
+} from './allocation/reserves';
+export {
+  approvePurposeTransfer,
+  getPurposeTransfer,
+  listPurposeTransfers,
+  purposeMovements,
+  purposeMovementsInternal,
+  purposeOverview,
+  rejectPurposeTransfer,
+  requestPurposeTransfer,
+  type PurposeMovementLine,
+  type PurposeOverviewRow,
+  type TransferSide,
+  type TransferView,
+} from './allocation/transfers';
+export { personYearOverview, relatedPartyPayments, type PersonYearRow, type RelatedPartyPaymentRow } from './allocation/people';
+
+export { AUDIT_FIELDS, financeAudit, type FinanceEntity } from './audit';
+export { installFinance } from './install';
+export { FINANCE_MCP_TOOLS } from './mcp-tools';
+export { seedFinance } from './seed';
+
+export { camtStatementIbans, parseCamt053, type CamtError, type CamtLine, type CamtStatement } from './import/camt';
+export { buildCamt053, buildCamt053Bytes, type CamtFixtureInput, type CamtFixtureLine } from './import/camt-fixture';
+export { dedupKey, normalizePurpose } from './import/dedup';
+export { detectStatementAccount, type DetectedAccount, type DetectedStatement } from './import/detect';
+export { getImportRun, importRunRowInternal, importStatement, listImportRuns, setRunClosingBalance, toRunView, type ImportRunView } from './import/runs';
+export { decideCandidate, listCandidates, type CandidateView } from './import/candidates';
+export { getRawTransaction, listRawTransactions, rawStateInternal, rawTransactionViewInternal, rawTransactionsForRunInternal, type RawTransactionView } from './import/queries';
+export { discardRun, previewDiscardRun, type DiscardBlockingEntry, type DiscardPreview } from './import/discard';
+export { getAccountStatements, type AccountStatementView } from './import/accounts';
+export { activeProfileInternal, listImportProfiles, profileFormatInternal, saveImportProfile, type ImportProfileView } from './import/profiles';
+
+// F5 — Arbeitsliste: Regeln, Kontakt über IBAN, Vorschläge, Handeln, fremdes Geld, Sammel-Festschreiben, Beleg von beiden Seiten.
+export { deleteImportRule, listImportRules, previewImportRule, saveImportRule, type ImportRuleView } from './import/rules';
+export { ruleMatches, normalizeText, type RuleConditions, type RuleTarget } from './rules-pure';
+export { contactForIbanInternal, createContactFromTransaction, learnContactIbanInternal, linkContactIban, listContactIbans, unlinkContactIban, type ContactIbanSource, type ContactIbanView } from './import/contact-ibans';
+export { openRawTransactionsInternal, suggestForTransaction, type SuggestionDraft, type SuggestionKind, type SuggestionReason, type SuggestionView } from './import/suggestions';
+export { getWorkCounts, listWorkItems, type SuggestionSummary, type WorkCounts, type WorkEntry, type WorkItem, type WorkOpenItem, type WorkTab } from './import/work';
+export { bookFromTransaction, linkTransactionToEntry } from './import/book';
+export { listForeignMoney, markTransactionForeign, type ForeignMoneyItem } from './import/transit';
+export { previewBatchFinalize, type BatchAccountPreview, type BatchFinalizePreview } from './import/batch';
+export { amountSpellings, attachVoucherToTransaction, searchVouchersForTransaction, type VoucherSearchHit } from './import/vouchers';
+export { INVOICE_ATTACHMENT_NAMES, INVOICE_XML_MAX_BYTES, isInvoiceAttachmentName, parseFacturX, type InvoiceTax, type ParseInvoiceResult, type ParsedInvoice } from './import/zugferd/parse';
+export { applyInvoiceToDraft, createOpenItemFromInvoice, invoiceProposal, readInvoiceFromDocument, type InvoiceProposal, type InvoiceView } from './import/zugferd/read';
+
+// F6a — Spenden: Bescheide; Gültigkeit rein in `ledger/`, damit F7 sie für Empfängerbescheide nutzt.
+export { NOTICE_KINDS, noticeValidAt, noticeValidUntil, type NoticeKind, type NoticeValidityInput } from './ledger/notice-validity';
+export { attachNoticeDocument, certifiableLineExistsInternal, listNotices, noticeExpiryInternal, noticeValidAtInternal, saveNotice, supersedeNotice, voidNotice, type NoticeView } from './donations/notices';
+// Maschinelles Verfahren: `readFacsimile` nur für den Route Handler (bewusst ohne MCP — Ausnahmeliste der App).
+export {
+  createNotificationLetterDraft,
+  FACSIMILE_MAX_BYTES,
+  getMachineProcedure,
+  machineProcedureStatusAt,
+  readFacsimile,
+  readFacsimileInternal,
+  saveSigner,
+  uploadFacsimile,
+  type MachineProcedureStatus,
+  type SignerView,
+} from './donations/machine';
+export { type MachineProcedureMissing } from './ledger/machine-status';
+export { markNotReturn, notReturnMarkInternal, type NotReturnMarkView } from './ledger/not-return';
+// Bestätigung: Prüfliste, Ausstellen, Rücknahme, Versand, unterschriebene Fassung, Listen, Vorschau (nur Route Handler), Sachspende.
+export {
+  checkConfirmable,
+  CONFIRMATION_CHECK_KEYS,
+  checkConfirmableInternal,
+  checkFailure,
+  missingContactFields,
+  type CheckConfirmableArgs,
+  type ConfirmationCheck,
+  type ConfirmationCheckKey,
+  type ConfirmationCheckLine,
+  type ConfirmationBlockingEntry,
+  type ConfirmationCheckResult,
+  type ConfirmationWarning,
+} from './donations/check';
+export {
+  attachSignedConfirmation,
+  buildConfirmationInputInternal,
+  countNeedsSignatureInternal,
+  issueConfirmation,
+  listConfirmations,
+  listUncertifiedDonations,
+  PREVIEW_NUMBER,
+  previewConfirmation,
+  readConfirmationCopy,
+  recordConfirmationDispatch,
+  recordConfirmationRecall,
+  voidConfirmation,
+  type ConfirmationInputBuild,
+  type ConfirmationInputOptions,
+  type ConfirmationKind,
+  type ConfirmationLineView,
+  type ConfirmationList,
+  type ConfirmationView,
+  type UncertifiedGroup,
+} from './donations/confirmations';
+export { getInKindDetails, saveInKindDetails } from './donations/in-kind';
+// Serienlauf (F6b): Dienste mit ihren MCP-Werkzeugen; `readRunBundle` liefert Bytes und bleibt ohne Werkzeug (Route Handler der Serienlauf-Seite).
+export { continueConfirmationRun, continueRunSchema, dispatchRunConfirmations, getConfirmationRun, listConfirmationRuns, previewConfirmationRun, startConfirmationRun, dispatchRunSchema, previewConfirmationRunInternal, readRunBundle, runArgsSchema, startRunSchema, type RunBlocked, type RunBlockedBy, type RunCounts, type RunExcludedContact, type RunExclusionReason, type RunItemKind, type RunItemState, type RunSummary, type RunView, type RunViewItem, type RunPreview, type RunPreviewArgs, type RunPreviewGroup, type RunPreviewItem, type RunSignatureReason } from './donations/runs';
+// Spendenbuch (F6b): Buch und Abstimmung mit ihren MCP-Werkzeugen; der vereinfachte Nachweis liefert Bytes (nur Route Handler).
+export { getDonationBook, getDonationReconciliation, readSimplifiedReceipt, type DonationBook, type DonationBookKind, type DonationBookRow, type DonationBookSums, type DonationReconciliation, type ReconciliationReasonKey } from './donations/book';
+export { SIMPLIFIED_RECEIPT_TEMPLATE_KEY, simplifiedReceiptTemplate, type SimplifiedReceiptInput } from './donations/templates/simplified';
+export { countToCorrectInternal, toCorrectConfirmationsInternal, toCorrectReasonsInternal, type ToCorrectReason } from './donations/to-correct';
+export { confirmationContactLock, confirmationEntryLock } from './donations/locks';
+export { ENTRY_LOCKS, registerEntryLocks, type EntryLock } from './locks';
+// A6: Codes und Parameterarten der Fehlerbilder — die Texte stehen in der Sprachdatei der App.
+export { FINANCE_ERRORS, financeConflict, type FinanceErrorCode, type FinanceErrorParamKind } from './errors';

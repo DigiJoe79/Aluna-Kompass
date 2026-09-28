@@ -18,7 +18,10 @@ export function RolesPanel({
   roles,
   roleDefinitions,
   canManage,
+  today,
 }: {
+  /** „Heute“ in der Zeitzone des Vereins, vom Server (Befund 47) — Vorgabe für „Seit“ und „Bis“. */
+  today: string;
   contactId: string;
   roles: { id: string; role: string; since: string; until: string | null }[];
   roleDefinitions: { key: string; retention: string }[];
@@ -30,11 +33,11 @@ export function RolesPanel({
 
   const [addOpen, setAddOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState(roleDefinitions[0]?.key ?? '');
-  const [since, setSince] = useState(new Date().toISOString().slice(0, 10));
+  const [since, setSince] = useState(today);
   const [addPending, startAdd] = useTransition();
 
   const [endingRoleId, setEndingRoleId] = useState<string | null>(null);
-  const [until, setUntil] = useState(new Date().toISOString().slice(0, 10));
+  const [until, setUntil] = useState(today);
   const [endPending, startEnd] = useTransition();
 
   const handleAddSubmit = (e: React.FormEvent) => {

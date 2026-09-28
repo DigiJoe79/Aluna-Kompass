@@ -18,6 +18,7 @@ test.describe('animals', () => {
     await expect(page.getByText('laufen Anfragen auf der Webseite über den Partner')).toBeVisible();
     await page.getByLabel('Geschlecht').selectOption('female');
     await page.getByLabel('Größe in cm (für den Filter)').fill('45');
+    await page.getByLabel('Ort').fill('Rumänien, Brașov');
     await page.getByLabel('Notfall').check();
     await page.getByLabel('Patentier').check();
     await page.getByRole('tab', { name: 'Texte' }).click();
@@ -53,6 +54,7 @@ test.describe('animals', () => {
     await expect(row).toContainText('Veröffentlicht');
 
     await row.getByRole('link', { name: 'Chiara' }).click();
+    await expect(page.getByLabel('Ort')).toHaveValue('Rumänien, Brașov');
     await page.getByRole('button', { name: 'Status ändern' }).click();
     await page.getByRole('dialog').getByLabel('Neuer Status').selectOption('adopted');
     await page.getByRole('dialog').getByLabel('Vermittlungsjahr').fill('2026');

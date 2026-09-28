@@ -1,4 +1,4 @@
-import { hasPermission, readSetting, requirePermission } from '@kompass/core';
+import { hasPermission, readSetting, requirePermission, todayIn } from '@kompass/core';
 import { contactRetention, contactRoleDefinitions, displayName, formatPostalAddress, getContact } from '@kompass/module-contacts';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -10,6 +10,7 @@ import { ChannelsEditor } from './channels-editor';
 import { RetentionPanel } from './retention-panel';
 import { RolesPanel } from './roles-panel';
 import { RelatedDocuments } from '@/components/related-documents';
+import { CreateContactDialog } from '../contact-form';
 
 export default async function ContactDetailPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params;
@@ -38,9 +39,29 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
         description={contact.kind === 'organization' ? t('fields.organization') : t('fields.person')}
         back={{ href: '/contacts', label: c('backToList') }}
         actions={
-          contact.status === 'archived' ? (
-            <StatusBadge tone="neutral">{t('archived')}</StatusBadge>
-          ) : null
+          <>
+            {contact.status === 'archived' ? <StatusBadge tone="neutral">{t('archived')}</StatusBadge> : null}
+            {canManage ? (
+              <CreateContactDialog
+                contact={{
+                  id: contact.id,
+                  kind: contact.kind,
+                  salutation: contact.salutation,
+                  firstName: contact.firstName,
+                  lastName: contact.lastName,
+                  name: contact.name,
+                  legalForm: contact.legalForm,
+                  addressExtra: contact.addressExtra,
+                  street: contact.street,
+                  postalCode: contact.postalCode,
+                  city: contact.city,
+                  country: contact.country,
+                  notes: contact.notes,
+                  updatedAt: contact.updatedAt,
+                }}
+              />
+            ) : null}
+          </>
         }
       />
 
@@ -75,6 +96,7 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
           roles={contact.roles}
           roleDefinitions={roleDefs}
           canManage={canManage}
+          today={todayIn(deps)}
         />
 
         <ChannelsEditor

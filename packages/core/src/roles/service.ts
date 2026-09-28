@@ -47,7 +47,7 @@ const createRoleSchema = z.object({
   description: z.string().trim().max(300).default(''),
 });
 
-function nameTaken(db: DbOrTx, name: string, exceptId?: string): boolean {
+export function nameTaken(db: DbOrTx, name: string, exceptId?: string): boolean {
   const row = db
     .select({ id: roles.id })
     .from(roles)

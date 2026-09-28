@@ -1,6 +1,7 @@
 import type { CallContext } from '../context';
 import type { Deps } from '../deps';
 import type { DueItem, RetentionHold } from '../modules/manifest';
+import { withResolvedLabel } from '../modules/record-hooks';
 import { enabledManifests } from '../modules/service';
 import { requirePermission } from '../permissions/check';
 import { ok, type Result } from '../result';
@@ -38,10 +39,11 @@ const FULL_ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 export function holdsFor(deps: Deps, entityType: string, id: string): RetentionHold[] {
   return enabledManifests(deps).flatMap((m) =>
     [...(m.retentionHolds?.(deps, entityType, id) ?? [])].map((hold) => {
-      if (hold.until !== null && !FULL_ISO_DATE.test(hold.until)) {
-        throw new Error(`holdsFor: module "${m.key}" returned a malformed until for hold "${hold.label}": ${JSON.stringify(hold.until)}`);
+      const resolved = withResolvedLabel(deps, hold);
+      if (resolved.until !== null && !FULL_ISO_DATE.test(resolved.until)) {
+        throw new Error(`holdsFor: module "${m.key}" returned a malformed until for hold "${resolved.label}": ${JSON.stringify(resolved.until)}`);
       }
-      return hold;
+      return resolved;
     }),
   );
 }
@@ -65,7 +67,7 @@ export function dueUntil(holds: readonly RetentionHold[]): string | null {
  * aber bewusst so entschieden und nicht nur ein Nebeneffekt von `flatMap`.
  */
 export function collectRetentionDue(deps: Deps): DueItem[] {
-  return enabledManifests(deps).flatMap((m) => [...(m.retentionDue?.(deps) ?? [])]);
+  return enabledManifests(deps).flatMap((m) => [...(m.retentionDue?.(deps) ?? [])].map((d) => withResolvedLabel(deps, d)));
 }
 
 /** Alles, was zur Löschung ansteht — über alle aktiven Module hinweg. */

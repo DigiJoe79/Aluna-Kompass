@@ -1,4 +1,5 @@
 import { pdfPageCount } from '@kompass/documents';
+import { isModuleEnabled } from '@kompass/core';
 import { getDocument, previewDraft } from '@kompass/module-dms';
 import { getDeps } from '@/lib/deps';
 import { optionalSession } from '@/lib/request-context';
@@ -16,6 +17,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
   if (!session) return new Response(null, { status: 401 });
   const { id } = await ctx.params;
   const deps = getDeps();
+  if (!isModuleEnabled(deps, 'dms')) return new Response(null, { status: 404 });
 
   // Ist es bereits festgeschrieben oder eine abgelegte Datei, liefern wir die Datei.
   const filed = await getDocument(deps, session.ctx, id);
@@ -24,7 +26,9 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
       headers: {
         'content-type': 'application/pdf',
         'content-disposition': `inline; filename="${filed.value.filename}"`,
-        'cache-control': 'private, max-age=3600',
+        // Eine geschützte Datei bleibt nicht eine Stunde im Browser liegen: Wem
+        // das Recht entzogen wird, der soll sie beim nächsten Klick nicht mehr sehen.
+        'cache-control': filed.value.protected ? 'private, no-store' : 'private, max-age=3600',
         'content-length': String(filed.value.bytes.byteLength),
         ...pageHeader(pdfPageCount(filed.value.bytes)),
       },

@@ -14,28 +14,30 @@ import { previewNumberAction } from '../actions';
  */
 export function NumberHint({ typeKey }: { typeKey: string }) {
   const t = useTranslations('dms');
-  const [number, setNumber] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ number: string | null } | null>(null);
 
   useEffect(() => {
     let current = true;
     void previewNumberAction(typeKey).then((next) => {
-      if (current) setNumber(next);
+      if (current) setPreview(next);
     });
     return () => {
       current = false;
     };
   }, [typeKey]);
 
-  if (!number) return null;
+  if (!preview) return null;
 
   return (
     <p className="flex items-start gap-2 rounded-md bg-info-bg px-3.5 py-3 text-[13px] text-ink-2">
       <Info className="mt-px size-4 shrink-0 text-info" aria-hidden />
       <span>
-        {t.rich('number.pending', {
-          number,
-          mono: (chunks) => <span className="font-mono">{chunks}</span>,
-        })}
+        {preview.number
+          ? t.rich('number.pending', {
+              number: preview.number,
+              mono: (chunks) => <span className="font-mono">{chunks}</span>,
+            })
+          : t('number.numberOnFiling')}
       </span>
     </p>
   );

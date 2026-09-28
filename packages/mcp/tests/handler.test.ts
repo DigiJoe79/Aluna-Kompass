@@ -1,7 +1,8 @@
 import { createApiToken, createRole, schema, setRolePermissions, assignRole, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 import { coreMcpTools, createKompassMcpHandler, toCallToolResult } from '../src';
 
 async function connect(fetchImpl: (url: string | URL, init?: RequestInit) => Promise<Response>, token: string | null) {
@@ -67,6 +68,22 @@ describe('kompass mcp handler', () => {
     const result = await client.callTool({ name: 'settings_set', arguments: { key: 'organization.city', value: 'X' } });
     expect(result.isError).toBe(true);
     expect(JSON.parse((result.content as { text: string }[])[0]!.text)).toEqual({ error: { type: 'forbidden', permission: 'settings.manage' } });
+    await client.close();
+  });
+
+  it('N1: a violated database constraint reaches the agent as a conflict, never as the raw SQLite text', async () => {
+    const deps = createTestDeps();
+    const breaking = { name: 'test_break_fk', description: 'test', inputSchema: z.object({}), handler: async () => { deps.db.insert(schema.userRoles).values({ userId: 'NOPE', roleId: 'NOPE' }).run(); return { ok: true as const, value: null }; } };
+    const handler = createKompassMcpHandler(deps, { extraTools: [...coreMcpTools, breaking] });
+    const { token } = await tokenFor(deps, ['audit.view']);
+    const client = await connect((url, init) => handler.fetch(new Request(url, init)), token);
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const result = await client.callTool({ name: 'test_break_fk', arguments: {} });
+    log.mockRestore();
+    expect(result.isError).toBe(true);
+    const text = (result.content as { text: string }[])[0]!.text;
+    expect(text).not.toMatch(/FOREIGN KEY|SQLITE/);
+    expect(JSON.parse(text)).toMatchObject({ error: { type: 'conflict', code: 'databaseConstraint' } });
     await client.close();
   });
 

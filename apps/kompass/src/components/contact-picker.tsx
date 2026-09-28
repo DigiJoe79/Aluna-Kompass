@@ -31,6 +31,7 @@ export function ContactPicker({
   required,
   canCreate,
   hint,
+  kind,
 }: {
   id: string;
   name: string;
@@ -40,10 +41,13 @@ export function ContactPicker({
   required?: boolean;
   canCreate?: boolean;
   hint?: string;
+  /** Nur Personen oder nur Organisationen anbieten (z. B. Zählende an der Barkasse). */
+  kind?: 'person' | 'organization';
 }) {
   const t = useTranslations('contacts.picker');
   const [query, setQuery] = useState(value?.name ?? '');
   const [options, setOptions] = useState<PickedContact[]>([]);
+  const [more, setMore] = useState(false);
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   /**
@@ -64,13 +68,14 @@ export function ContactPicker({
     setLoaded(false);
     const run = ++latest.current;
     const handle = setTimeout(async () => {
-      const found = await searchContactsAction(query);
+      const found = await searchContactsAction(query, kind);
       if (run !== latest.current) return;
-      setOptions(found);
+      setOptions(found.contacts);
+      setMore(found.more);
       setLoaded(true);
     }, 150);
     return () => clearTimeout(handle);
-  }, [query, open]);
+  }, [query, open, kind]);
 
   const pick = (contact: PickedContact | null) => {
     onChange(contact);
@@ -115,7 +120,7 @@ export function ContactPicker({
             className={cn('absolute left-0 right-0 top-full z-20 mt-1 max-h-64 rounded-md border border-line bg-surface shadow-md')}
           >
             {!loaded ? (
-              <div role="presentation" className="px-3 py-2 text-[13px] text-muted-ink">
+              <div role="presentation" aria-hidden className="px-3 py-2 text-[13px] text-muted-ink">
                 {t('searching')}
               </div>
             ) : (
@@ -130,6 +135,11 @@ export function ContactPicker({
                       {option.city ? <span className="ml-auto shrink-0 pl-2 text-[12px] text-muted-ink">{option.city}</span> : null}
                     </CommandItem>
                   ))}
+                  {more ? (
+                    <div role="presentation" aria-hidden className="px-3 py-1.5 text-[12px] text-muted-ink" data-testid="contact-more">
+                      {t('more')}
+                    </div>
+                  ) : null}
                   {value ? (
                     <CommandItem value="__clear" onSelect={() => pick(null)} className="text-muted-ink">
                       {t('clear')}
@@ -147,6 +157,12 @@ export function ContactPicker({
           </CommandList>
         ) : null}
       </Command>
+      {/* Die Hinweise der Liste sind nur zu sehen (`aria-hidden`); angesagt werden sie hier. Die Region steht
+          immer da, auch bei geschlossener Liste — eine erst mit dem Text eingefügte Region sagt ein
+          Screenreader nicht an (Teil C Task 2). */}
+      <p role="status" aria-live="polite" className="sr-only" data-testid="contact-picker-status">
+        {open ? (!loaded ? t('searching') : more ? t('more') : '') : ''}
+      </p>
       {hint ? <p className="text-[12px] text-muted-ink">{hint}</p> : null}
       {canCreate ? (
         <CreateContactDialog withTrigger={false} open={creating} onOpenChange={setCreating} onCreated={(contact) => pick(contact)} />

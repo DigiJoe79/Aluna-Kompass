@@ -1,11 +1,13 @@
 'use server';
 
+import { guardAction } from '@/lib/action-guard';
 import {
   addNote,
   clearDispatch,
   createDocumentFollowUp,
   createDraft,
   createReplacementDraft,
+  canReadDocumentType,
   defaultTypeKey,
   deleteNote,
   recordDispatch,
@@ -42,122 +44,132 @@ const orNull = (value: FormDataEntryValue | null): string | null => {
 };
 
 export async function createDraftAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
+  return guardAction('(shell)/dms/actions.ts#createDraftAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
 
-  const subject = String(formData.get('subject') ?? '').trim();
-  const body = String(formData.get('body') ?? '');
-  const typeKey = orNull(formData.get('typeKey')) ?? defaultTypeKey(deps, 'outgoing');
-  const folder = orNull(formData.get('folder'));
-  const documentDate = orNull(formData.get('documentDate')) ?? undefined;
-  const recipientId = orNull(formData.get('recipientId'));
+    const subject = String(formData.get('subject') ?? '').trim();
+    const body = String(formData.get('body') ?? '');
+    const typeKey = orNull(formData.get('typeKey')) ?? defaultTypeKey(deps, 'outgoing');
+    const folder = orNull(formData.get('folder'));
+    const documentDate = orNull(formData.get('documentDate')) ?? undefined;
+    const recipientId = orNull(formData.get('recipientId'));
 
-  const links = recipientId
-    ? [{ entityType: 'contact', entityId: recipientId, role: 'recipient' as const }]
-    : [];
+    const links = recipientId
+      ? [{ entityType: 'contact', entityId: recipientId, role: 'recipient' as const }]
+      : [];
 
-  const result = await createDraft(deps, ctx, {
-    subject,
-    body,
-    typeKey,
-    folder,
-    documentDate,
-    links,
+    const result = await createDraft(deps, ctx, {
+      subject,
+      body,
+      typeKey,
+      folder,
+      documentDate,
+      links,
+    });
+
+    if (!result.ok) {
+      return toActionState(result, t);
+    }
+
+    revalidatePath('/dms');
+    // In den Editor, nicht auf das fertige Dokument: Wer gerade geschrieben hat,
+    // ist meist noch nicht fertig — und der erste Blick auf das gesetzte Blatt
+    // findet die Tippfehler, die im Formular niemand sieht.
+    redirect(`/dms/${result.value.id}/edit`);
   });
-
-  if (!result.ok) {
-    return toActionState(result, t);
-  }
-
-  revalidatePath('/dms');
-  // In den Editor, nicht auf das fertige Dokument: Wer gerade geschrieben hat,
-  // ist meist noch nicht fertig — und der erste Blick auf das gesetzte Blatt
-  // findet die Tippfehler, die im Formular niemand sieht.
-  redirect(`/dms/${result.value.id}/edit`);
 }
 
 export async function updateDraftAction(id: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
+  return guardAction('(shell)/dms/actions.ts#updateDraftAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
 
-  const subject = String(formData.get('subject') ?? '').trim();
-  const body = String(formData.get('body') ?? '');
-  const folder = orNull(formData.get('folder'));
-  const documentDate = orNull(formData.get('documentDate')) ?? undefined;
+    const subject = String(formData.get('subject') ?? '').trim();
+    const body = String(formData.get('body') ?? '');
+    const folder = orNull(formData.get('folder'));
+    const documentDate = orNull(formData.get('documentDate')) ?? undefined;
 
-  const result = await updateDraft(deps, ctx, {
-    id,
-    subject: subject || undefined,
-    body,
-    folder,
-    documentDate,
-    // Das Formular schickt das Feld immer mit; leer heißt „kein Empfänger“.
-    recipientId: orNull(formData.get('recipientId')),
+    const result = await updateDraft(deps, ctx, {
+      id,
+      subject: subject || undefined,
+      body,
+      folder,
+      documentDate,
+      // Das Formular schickt das Feld immer mit; leer heißt „kein Empfänger“.
+      recipientId: orNull(formData.get('recipientId')),
+    });
+
+    if (!result.ok) {
+      return toActionState(result, t);
+    }
+
+    revalidatePath(`/dms/${id}`);
+    revalidatePath('/dms');
+    // Beim Schreiben mit Vorschau daneben führt kein Weg weg: Gespeichert wird,
+    // damit das Blatt rechts neu entsteht.
+    if (formData.get('stay')) return { status: 'success', data: { savedAt: deps.clock.now().toISOString() } };
+    redirect(`/dms/${id}`);
   });
-
-  if (!result.ok) {
-    return toActionState(result, t);
-  }
-
-  revalidatePath(`/dms/${id}`);
-  revalidatePath('/dms');
-  // Beim Schreiben mit Vorschau daneben führt kein Weg weg: Gespeichert wird,
-  // damit das Blatt rechts neu entsteht.
-  if (formData.get('stay')) return { status: 'success', data: { savedAt: deps.clock.now().toISOString() } };
-  redirect(`/dms/${id}`);
 }
 
 export async function fileDocumentAction(id: string): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
+  return guardAction('(shell)/dms/actions.ts#fileDocumentAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
 
-  const result = await fileDocument(deps, ctx, { id });
-  if (!result.ok) {
-    return toActionState(result, t);
-  }
+    const result = await fileDocument(deps, ctx, { id });
+    if (!result.ok) {
+      return toActionState(result, t);
+    }
 
-  // Nicht warten: Der Upload ist fertig, das Lesen darf dauern.
-  textWorker()?.wake();
+    // Nicht warten: Der Upload ist fertig, das Lesen darf dauern.
+    textWorker()?.wake();
 
-  revalidatePath(`/dms/${id}`);
-  revalidatePath('/dms');
-  return toActionState(result, t, t('dms.toast.filed'));
+    revalidatePath(`/dms/${id}`);
+    revalidatePath('/dms');
+    return toActionState(result, t, t('dms.toast.filed'));
+  });
 }
 
 export async function voidDocumentAction(id: string, reason: string, withReplacement = false): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
+  return guardAction('(shell)/dms/actions.ts#voidDocumentAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
 
-  const result = await voidDocument(deps, ctx, { id, reason });
-  if (!result.ok) {
-    return toActionState(result, t);
-  }
+    const result = await voidDocument(deps, ctx, { id, reason });
+    if (!result.ok) {
+      return toActionState(result, t);
+    }
 
-  revalidatePath(`/dms/${id}`);
-  revalidatePath('/dms');
+    revalidatePath(`/dms/${id}`);
+    revalidatePath('/dms');
 
-  // Der Ersatz ist ein zweiter Vorgang: Erst steht das Storno, dann entsteht
-  // der neue Entwurf — scheitert er, bleibt das Storno bestehen und gesagt.
-  if (withReplacement) {
-    const replacement = await createReplacementDraft(deps, ctx, { voidedId: id });
-    if (!replacement.ok) return toActionState(replacement, t);
-    redirect(`/dms/${replacement.value.id}/edit`);
-  }
+    // Der Ersatz ist ein zweiter Vorgang: Erst steht das Storno, dann entsteht
+    // der neue Entwurf — scheitert er, bleibt das Storno bestehen und gesagt.
+    if (withReplacement) {
+      const replacement = await createReplacementDraft(deps, ctx, { voidedId: id });
+      if (!replacement.ok) return toActionState(replacement, t);
+      redirect(`/dms/${replacement.value.id}/edit`);
+    }
 
-  return toActionState(result, t, t('dms.toast.voided'));
+    return toActionState(result, t, t('dms.toast.voided'));
+  });
 }
 
 export async function deleteDraftAction(id: string): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
+  return guardAction('(shell)/dms/actions.ts#deleteDraftAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
 
-  const result = await deleteDraft(deps, ctx, { id });
-  if (!result.ok) {
-    return toActionState(result, t);
-  }
+    const result = await deleteDraft(deps, ctx, { id });
+    if (!result.ok) {
+      return toActionState(result, t);
+    }
 
-  revalidatePath('/dms');
-  redirect('/dms');
+    revalidatePath('/dms');
+    redirect('/dms');
+  });
 }
 
 /**
@@ -166,17 +178,19 @@ export async function deleteDraftAction(id: string): Promise<ActionState> {
  * (Prinzip 3, Entscheidung 10). Der Service prüft die Frist erneut.
  */
 export async function deleteDocumentAction(id: string): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
+  return guardAction('(shell)/dms/actions.ts#deleteDocumentAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
 
-  const result = await deleteDocument(deps, ctx, { id });
-  if (!result.ok) {
-    return toActionState(result, t);
-  }
+    const result = await deleteDocument(deps, ctx, { id });
+    if (!result.ok) {
+      return toActionState(result, t);
+    }
 
-  revalidatePath('/dms');
-  revalidatePath('/admin/retention');
-  redirect('/dms');
+    revalidatePath('/dms');
+    revalidatePath('/admin/retention');
+    redirect('/dms');
+  });
 }
 
 export async function suggestClassificationAction(
@@ -196,92 +210,106 @@ export async function suggestClassificationAction(
 /**
  * Die Nummer, die das nächste Dokument dieser Art bekäme. Nur zum Ansehen —
  * gezogen wird sie beim Ablegen, und zwischen beidem kann jemand anders
- * schneller sein.
+ * schneller sein. `number: null` heißt: Die Art darf der Aufrufer nicht lesen,
+ * die Nummer erfährt er erst mit der Bestätigung; `null` heißt: keine Antwort.
  */
-export async function previewNumberAction(typeKey: string): Promise<string | null> {
+export async function previewNumberAction(typeKey: string): Promise<{ number: string | null } | null> {
   const { deps, ctx } = await requireSession();
   const result = await previewNextNumber(deps, ctx, { typeKey });
-  return result.ok ? result.value.number : null;
+  return result.ok ? result.value : null;
 }
 
 export async function receiveDocumentAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
+  return guardAction('(shell)/dms/actions.ts#receiveDocumentAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
 
-  const file = formData.get('file') as File | null;
-  if (!file || file.size === 0) {
-    return { status: 'error', message: t('dms.errors.noFile'), fieldErrors: { file: t('dms.errors.noFile') } };
-  }
+    const file = formData.get('file') as File | null;
+    if (!file || file.size === 0) {
+      return { status: 'error', message: t('dms.errors.noFile'), fieldErrors: { file: t('dms.errors.noFile') } };
+    }
 
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  const filename = file.name;
-  const typeKey = orNull(formData.get('typeKey')) ?? defaultTypeKey(deps, 'incoming');
-  const subject = String(formData.get('subject') ?? '').trim();
-  const documentDate = String(formData.get('documentDate') ?? '').trim();
-  const folder = orNull(formData.get('folder'));
-  const senderId = orNull(formData.get('senderId'));
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const filename = file.name;
+    const typeKey = orNull(formData.get('typeKey')) ?? defaultTypeKey(deps, 'incoming');
+    const subject = String(formData.get('subject') ?? '').trim();
+    const documentDate = String(formData.get('documentDate') ?? '').trim();
+    const folder = orNull(formData.get('folder'));
+    const senderId = orNull(formData.get('senderId'));
 
-  const links: { entityType: string; entityId: string; role: 'sender' | 'recipient' | 'about' }[] = senderId
-    ? [{ entityType: 'contact', entityId: senderId, role: 'sender' }]
-    : [];
+    const links: { entityType: string; entityId: string; role: 'sender' | 'recipient' | 'about' }[] = senderId
+      ? [{ entityType: 'contact', entityId: senderId, role: 'sender' }]
+      : [];
 
-  // Von der Seite eines Tiers oder Projekts aus: der Bezug reist im Formular mit.
-  const aboutType = orNull(formData.get('aboutType'));
-  const aboutId = orNull(formData.get('aboutId'));
-  if (aboutType && aboutId) links.push({ entityType: aboutType, entityId: aboutId, role: 'about' });
+    // Von der Seite eines Tiers oder Projekts aus: der Bezug reist im Formular mit.
+    const aboutType = orNull(formData.get('aboutType'));
+    const aboutId = orNull(formData.get('aboutId'));
+    if (aboutType && aboutId) links.push({ entityType: aboutType, entityId: aboutId, role: 'about' });
 
-  // „Antwort auf“ entsteht in derselben Transaktion wie das Dokument — sonst
-  // stünde die Post kurz ohne den Bezug da, der sie erklärt.
-  const repliesToId = orNull(formData.get('repliesToId'));
-  const relations = repliesToId ? [{ relatedDocumentId: repliesToId, kind: 'repliesTo' as const }] : [];
+    // „Antwort auf“ entsteht in derselben Transaktion wie das Dokument — sonst
+    // stünde die Post kurz ohne den Bezug da, der sie erklärt.
+    const repliesToId = orNull(formData.get('repliesToId'));
+    const relations = repliesToId ? [{ relatedDocumentId: repliesToId, kind: 'repliesTo' as const }] : [];
 
-  const result = await receiveDocument(deps, ctx, {
-    filename,
-    bytes,
-    typeKey,
-    subject,
-    documentDate,
-    folder,
-    links,
-    relations,
+    const result = await receiveDocument(deps, ctx, {
+      filename,
+      bytes,
+      typeKey,
+      subject,
+      documentDate,
+      folder,
+      links,
+      relations,
+    });
+
+    if (!result.ok) {
+      return toActionState(result, t);
+    }
+
+    // Nicht warten: Der Upload ist fertig, das Lesen darf dauern.
+    textWorker()?.wake();
+
+    revalidatePath('/dms');
+    // Wer in eine geschützte Art ablegt, sieht das Dokument danach nicht mehr —
+    // die Detailseite zeigte ihm „kein Zugriff“. Er bekommt die Nummer und die Liste.
+    if (!canReadDocumentType(deps, ctx, result.value.typeKey)) redirect(`/dms?filed=${encodeURIComponent(result.value.number ?? '')}`);
+    // Aus einer Warteschlange heraus führt kein Weg zum einzelnen Dokument: Die
+    // nächste Datei wartet schon, und ein Sprung dorthin verlöre sie.
+    if (formData.get('queued')) {
+      // Befund Z: Die Detailseite zeigt das Doppel; aus der Warteschlange heraus sagt es ein Hinweis.
+      const numbers = result.value.duplicateOf.map((d) => d.number ?? d.id).join(', ');
+      return numbers ? { status: 'success', message: t('dms.duplicateOfToast', { numbers }) } : { status: 'success' };
+    }
+    redirect(`/dms/${result.value.id}`);
   });
-
-  if (!result.ok) {
-    return toActionState(result, t);
-  }
-
-  // Nicht warten: Der Upload ist fertig, das Lesen darf dauern.
-  textWorker()?.wake();
-
-  revalidatePath('/dms');
-  // Aus einer Warteschlange heraus führt kein Weg zum einzelnen Dokument: Die
-  // nächste Datei wartet schon, und ein Sprung dorthin verlöre sie.
-  if (formData.get('queued')) return { status: 'success' };
-  redirect(`/dms/${result.value.id}`);
 }
 
 export async function rereadDocumentAction(documentId: string): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
+  return guardAction('(shell)/dms/actions.ts#rereadDocumentAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
 
-  const result = await extractDocumentText(deps, ctx, { documentId });
-  if (!result.ok) {
-    return toActionState(result, t);
-  }
+    const result = await extractDocumentText(deps, ctx, { documentId });
+    if (!result.ok) {
+      return toActionState(result, t);
+    }
 
-  revalidatePath(`/dms/${documentId}`);
-  revalidatePath('/dms');
-  return toActionState(result, t, t('dms.text.rereadQueued'));
+    revalidatePath(`/dms/${documentId}`);
+    revalidatePath('/dms');
+    return toActionState(result, t, t('dms.text.rereadQueued'));
+  });
 }
 
 export async function moveDocumentAction(id: string, folder: string | null): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await moveDocument(deps, ctx, { id, folder });
-  if (!result.ok) return toActionState(result, t);
-  revalidatePath(`/dms/${id}`);
-  revalidatePath('/dms');
-  return toActionState(result, t, t('dms.toast.moved'));
+  return guardAction('(shell)/dms/actions.ts#moveDocumentAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await moveDocument(deps, ctx, { id, folder });
+    if (!result.ok) return toActionState(result, t);
+    revalidatePath(`/dms/${id}`);
+    revalidatePath('/dms');
+    return toActionState(result, t, t('dms.toast.moved'));
+  });
 }
 
 export async function linkDocumentAction(
@@ -290,110 +318,132 @@ export async function linkDocumentAction(
   entityId: string,
   role: 'sender' | 'recipient' | 'about',
 ): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await linkDocument(deps, ctx, { documentId: id, entityType, entityId, role });
-  revalidatePath(`/dms/${id}`);
-  return toActionState(result, t, t('dms.toast.linked'));
+  return guardAction('(shell)/dms/actions.ts#linkDocumentAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await linkDocument(deps, ctx, { documentId: id, entityType, entityId, role });
+    revalidatePath(`/dms/${id}`);
+    return toActionState(result, t, t('dms.toast.linked'));
+  });
 }
 
 export async function unlinkDocumentAction(id: string, linkId: string): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await unlinkDocument(deps, ctx, { id: linkId });
-  revalidatePath(`/dms/${id}`);
-  return toActionState(result, t, t('dms.toast.unlinked'));
+  return guardAction('(shell)/dms/actions.ts#unlinkDocumentAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await unlinkDocument(deps, ctx, { id: linkId });
+    revalidatePath(`/dms/${id}`);
+    return toActionState(result, t, t('dms.toast.unlinked'));
+  });
 }
 
 export async function relateDocumentsAction(id: string, relatedDocumentId: string, kind: string): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await relateDocuments(deps, ctx, { documentId: id, relatedDocumentId, kind });
-  revalidatePath(`/dms/${id}`);
-  revalidatePath(`/dms/${relatedDocumentId}`);
-  return toActionState(result, t, t('dms.toast.related'));
+  return guardAction('(shell)/dms/actions.ts#relateDocumentsAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await relateDocuments(deps, ctx, { documentId: id, relatedDocumentId, kind });
+    revalidatePath(`/dms/${id}`);
+    revalidatePath(`/dms/${relatedDocumentId}`);
+    return toActionState(result, t, t('dms.toast.related'));
+  });
 }
 
 export async function unrelateDocumentsAction(id: string, relationId: string): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await unrelateDocuments(deps, ctx, { id: relationId });
-  revalidatePath(`/dms/${id}`);
-  return toActionState(result, t, t('dms.toast.unrelated'));
+  return guardAction('(shell)/dms/actions.ts#unrelateDocumentsAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await unrelateDocuments(deps, ctx, { id: relationId });
+    revalidatePath(`/dms/${id}`);
+    return toActionState(result, t, t('dms.toast.unrelated'));
+  });
 }
 
 export async function recordDispatchAction(id: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await recordDispatch(deps, ctx, {
-    id,
-    sentAt: String(formData.get('sentAt') ?? ''),
-    sentVia: String(formData.get('sentVia') ?? ''),
-    note: orNull(formData.get('note')) ?? undefined,
+  return guardAction('(shell)/dms/actions.ts#recordDispatchAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await recordDispatch(deps, ctx, {
+      id,
+      sentAt: String(formData.get('sentAt') ?? ''),
+      sentVia: String(formData.get('sentVia') ?? ''),
+      note: orNull(formData.get('note')) ?? undefined,
+    });
+    revalidatePath(`/dms/${id}`);
+    revalidatePath('/dms');
+    return toActionState(result, t, t('dms.toast.dispatched'));
   });
-  revalidatePath(`/dms/${id}`);
-  revalidatePath('/dms');
-  return toActionState(result, t, t('dms.toast.dispatched'));
 }
 
 export async function clearDispatchAction(id: string): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await clearDispatch(deps, ctx, { id });
-  revalidatePath(`/dms/${id}`);
-  revalidatePath('/dms');
-  return toActionState(result, t, t('dms.toast.dispatchCleared'));
+  return guardAction('(shell)/dms/actions.ts#clearDispatchAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await clearDispatch(deps, ctx, { id });
+    revalidatePath(`/dms/${id}`);
+    revalidatePath('/dms');
+    return toActionState(result, t, t('dms.toast.dispatchCleared'));
+  });
 }
 
 export async function createFollowUpAction(id: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await createDocumentFollowUp(deps, ctx, {
-    documentId: id,
-    dueAt: String(formData.get('dueAt') ?? ''),
-    title: String(formData.get('title') ?? '').trim(),
-    assigneeUserId: orNull(formData.get('assigneeUserId')),
+  return guardAction('(shell)/dms/actions.ts#createFollowUpAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await createDocumentFollowUp(deps, ctx, {
+      documentId: id,
+      dueAt: String(formData.get('dueAt') ?? ''),
+      title: String(formData.get('title') ?? '').trim(),
+      assigneeUserId: orNull(formData.get('assigneeUserId')),
+    });
+    revalidatePath(`/dms/${id}`);
+    revalidatePath('/dms');
+    revalidatePath('/');
+    return toActionState(result, t, t('dms.toast.followUpCreated'));
   });
-  revalidatePath(`/dms/${id}`);
-  revalidatePath('/dms');
-  revalidatePath('/');
-  return toActionState(result, t, t('dms.toast.followUpCreated'));
 }
 
 export async function completeFollowUpAction(id: string, followUpId: string): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await completeFollowUp(deps, ctx, { id: followUpId });
-  revalidatePath(`/dms/${id}`);
-  revalidatePath('/dms');
-  revalidatePath('/');
-  return toActionState(result, t);
+  return guardAction('(shell)/dms/actions.ts#completeFollowUpAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await completeFollowUp(deps, ctx, { id: followUpId });
+    revalidatePath(`/dms/${id}`);
+    revalidatePath('/dms');
+    revalidatePath('/');
+    return toActionState(result, t);
+  });
 }
 
 export async function reopenFollowUpAction(id: string, followUpId: string): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await reopenFollowUp(deps, ctx, { id: followUpId });
-  revalidatePath(`/dms/${id}`);
-  revalidatePath('/dms');
-  revalidatePath('/');
-  return toActionState(result, t);
+  return guardAction('(shell)/dms/actions.ts#reopenFollowUpAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await reopenFollowUp(deps, ctx, { id: followUpId });
+    revalidatePath(`/dms/${id}`);
+    revalidatePath('/dms');
+    revalidatePath('/');
+    return toActionState(result, t);
+  });
 }
 
 export async function addNoteAction(id: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await addNote(deps, ctx, { documentId: id, body: String(formData.get('body') ?? '') });
-  revalidatePath(`/dms/${id}`);
-  return toActionState(result, t, t('dms.toast.noteAdded'));
+  return guardAction('(shell)/dms/actions.ts#addNoteAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await addNote(deps, ctx, { documentId: id, body: String(formData.get('body') ?? '') });
+    revalidatePath(`/dms/${id}`);
+    return toActionState(result, t, t('dms.toast.noteAdded'));
+  });
 }
 
 export async function deleteNoteAction(id: string, noteId: string): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await deleteNote(deps, ctx, { id: noteId });
-  revalidatePath(`/dms/${id}`);
-  return toActionState(result, t, t('dms.toast.noteDeleted'));
+  return guardAction('(shell)/dms/actions.ts#deleteNoteAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await deleteNote(deps, ctx, { id: noteId });
+    revalidatePath(`/dms/${id}`);
+    return toActionState(result, t, t('dms.toast.noteDeleted'));
+  });
 }
 
 /** Was ein Umklassifizieren bewirken würde — für den Dialog, liest nur (Spec 2026-09-19). */
@@ -404,16 +454,21 @@ export async function previewReclassificationAction(id: string, typeKey: string,
 }
 
 export async function reclassifyDocumentAction(id: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
-  const t = await getTranslations();
-  const { deps, ctx } = await requireSession();
-  const result = await reclassifyDocument(deps, ctx, {
-    id,
-    typeKey: String(formData.get('typeKey') ?? ''),
-    subject: String(formData.get('subject') ?? ''),
-    documentDate: String(formData.get('documentDate') ?? ''),
-    expectedVersion: String(formData.get('expectedVersion') ?? '') || undefined,
+  return guardAction('(shell)/dms/actions.ts#reclassifyDocumentAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await reclassifyDocument(deps, ctx, {
+      id,
+      typeKey: String(formData.get('typeKey') ?? ''),
+      subject: String(formData.get('subject') ?? ''),
+      documentDate: String(formData.get('documentDate') ?? ''),
+      expectedVersion: String(formData.get('expectedVersion') ?? '') || undefined,
+    });
+    revalidatePath(`/dms/${id}`);
+    revalidatePath('/dms');
+    // Umklassifiziert in eine geschützte Art: Die Detailseite zeigte „kein Zugriff“ —
+    // der Aufrufer bekommt die Nummer und die Liste, wie beim Ablegen.
+    if (result.ok && !canReadDocumentType(deps, ctx, result.value.typeKey)) redirect(`/dms?filed=${encodeURIComponent(result.value.number ?? '')}`);
+    return toActionState(result, t, t('dms.reclassify.saved'));
   });
-  revalidatePath(`/dms/${id}`);
-  revalidatePath('/dms');
-  return toActionState(result, t, t('dms.reclassify.saved'));
 }

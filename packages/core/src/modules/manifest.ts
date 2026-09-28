@@ -5,6 +5,7 @@ import type { DbOrTx } from '../db/client';
 import { validateDeletionRules, type DeletionRule } from '../deletion-policy';
 import type { Deps } from '../deps';
 import { CORE_PERMISSIONS } from '../permissions/core';
+import type { PermissionSpec } from '../permissions/check';
 import type { Result } from '../result';
 import { RETENTION_CLASSES, type RetentionClass } from '../retention/classes';
 import type { Theme } from '../themes/tokens';
@@ -39,6 +40,16 @@ export interface SettingDefinition<T = unknown> {
   default: T;
   /** Nur vom System schreibbar (Import, Export); im Admin lesbar, nicht editierbar. */
   systemOnly?: boolean;
+  /** Ist dieses Modul eingeschaltet, führt es den Wert: `setSetting` lehnt ab, nur `writeSettingInternal` schreibt. */
+  managedBy?: string;
+  /** Nur über die Kanäle `ui` und `system` änderbar, nie über `mcp`. */
+  uiOnly?: boolean;
+  /**
+   * `'redact'`: Das Protokoll hält nur fest, dass sich der Wert geändert hat,
+   * nie den Wert selbst — für Freitexte, die Namen, Beschlüsse oder Vereinbarungen
+   * tragen können (AGENTS.md Prinzip 3: das Protokoll ist unlöschbar).
+   */
+  auditValue?: 'redact';
 }
 
 export interface MediaReference {
@@ -58,6 +69,24 @@ export interface MediaReference {
    */
   permission?: string;
 }
+
+/**
+ * K2 (Rest von Befund 49): eine Bezeichnung als Schlüssel der Sprachdatei samt Parametern — Werte (Nummer, Name,
+ * Datum als `YYYY-MM-DD`), nie Satzstücke. Die Haken der Module liefern sie so; der Kern löst sie beim Einsammeln
+ * über `Deps.labels` auf (`resolveLabel`), das die App mit der Sprachdatei belegt.
+ */
+export interface LabelRef {
+  key: string;
+  params?: Record<string, string | number>;
+}
+export type LabelText = string | LabelRef;
+/** Was ein Haken liefert: dieselbe Form, nur die Bezeichnung darf ein Schlüssel sein. */
+export type WithLabelRef<T extends { label: string }> = Omit<T, 'label'> & { label: LabelText };
+export type RetentionHoldInput = WithLabelRef<RetentionHold>;
+export type RecordReferenceInput = WithLabelRef<RecordReference>;
+export type DueItemInput = WithLabelRef<DueItem>;
+export type FollowUpTargetInput = WithLabelRef<FollowUpTarget>;
+export type RecordLabelInput = Omit<RecordLabel, 'label' | 'auditLabel'> & { label: LabelText; auditLabel?: LabelText };
 
 /** Eine Stelle, die auf einen fremden Datensatz zeigt. Form wie `MediaReference`. */
 export interface RecordReference {
@@ -86,6 +115,8 @@ export interface DueItem {
   label: string;
   /** ISO-Datum, seit wann fällig. */
   dueSince: string;
+  /** Wohin der Fristenbildschirm führt — die Seite, auf der gelöscht wird. Ohne Angabe steht der Eintrag ohne Link da. */
+  href?: string;
 }
 
 /** Wie ein Modul eine Entität für die Wiedervorlage-Liste beschriftet. */
@@ -95,10 +126,35 @@ export interface FollowUpTarget {
   href: string | null;
 }
 
+export type RecordLabelState = 'ok' | 'forbidden' | 'missing';
+/** Beschriftung eines fremden Datensatzes für den, der fragt. */
+export interface RecordLabel {
+  /** Bei `forbidden` neutral („Kontakt (kein Zugriff)“, „ZWB-2026-0007, geschützt“), bei `missing` leer. */
+  label: string;
+  href: string | null;
+  state: RecordLabelState;
+  /**
+   * Freitext zu diesem Datensatz gehört nicht ins Änderungsprotokoll — es ist
+   * unlöschbar und mit `audit.view` durchsuchbar. Gilt für jeden Aufrufer; der
+   * Kern lässt dann den Titel einer Wiedervorlage aus seinem Eintrag.
+   */
+  sensitive?: boolean;
+  /** Wie das Protokoll den Datensatz nennt, wenn er heikel ist — nie mit Betreff oder Namen. Fehlt es, gilt `label`. */
+  auditLabel?: string;
+}
+
+/**
+ * `none`: Die Rolle hält ihren Kontakt nicht selbst — das Modul, das sie
+ * mitbringt, hält ihn über seine Vorgänge (Buchungen, Bestätigungen). Eine
+ * Klasse wäre hier falsch: Eine laufende Rolle rechnet „ab heute“ und hielte
+ * für immer (Vorarbeiten-Spec V6).
+ */
+export type ContactRoleRetention = RetentionClass | 'none';
+
 /** Eine Kontaktrolle, die ein Modul beisteuert, samt ihrer Aufbewahrungsklasse. */
 export interface ContactRoleDefinition {
   key: string;
-  retention: RetentionClass;
+  retention: ContactRoleRetention;
 }
 
 export interface NavigationItem {
@@ -107,18 +163,34 @@ export interface NavigationItem {
   icon: string;
   /** Gruppen-Key; ohne Gruppe erscheint der Eintrag ungruppiert oben. */
   group?: string;
-  /** Recht, das zum Anzeigen nötig ist. */
-  permission?: string;
+  /** Recht, das zum Anzeigen nötig ist — bei einer Liste genügt eines. */
+  permission?: PermissionSpec;
   /** Beschriftung aus Daten. Fehlt sie, kommt der Text aus `nav.<key>`. */
   label?: string;
   /** Trennlinie oberhalb dieses Eintrags — teilt eine Gruppe in Abschnitte. */
   sectionBreak?: boolean;
+  /** Abschnitt der Zweitebene; Beschriftung aus `nav.sections.<section>`. Ohne Abschnitt: kopflos, oben. */
+  section?: string;
 }
 
 export interface PublishedView<T = unknown> {
   name: string;
   schema: z.ZodType<T>;
   load(deps: Deps): T[];
+}
+
+/** Ein Schutzbereich für Dokumentarten der Akte: ein fester Schlüssel und das Recht, das ihn öffnet. */
+export interface DocumentArea {
+  key: string;
+  permission: string;
+}
+
+/** Zu welchen seiner Vorgänge ein Modul Dokumente der Akte ausliefert und ablegt — und unter welchem seiner Rechte. */
+export interface LinkedDocumentAccess {
+  entityType: string;
+  readPermission: string;
+  /** Fehlt es, legt das Modul zu diesem Vorgang nichts ab. */
+  receivePermission?: string;
 }
 
 export interface DocumentRenderContext {
@@ -141,10 +213,24 @@ export interface DocumentSlots {
   subtitle?: string;
   /** „Ort, Datum“ — Vorgabe: organization.city + ausgestellt am. */
   place?: string;
-  /** Mehrzeiliges Anschriftenfeld (Brief). */
+  /**
+   * Mehrzeiliges Anschriftenfeld (Brief; Formular, wenn die Basis im Manifest
+   * `"slots": ["recipient", "recipientLabel", "infoBlock"]` trägt). Klartext,
+   * Zeilen mit `\n` getrennt.
+   */
   recipient?: string;
+  /** Formular: Klartext klein in der Rücksendezeile über der Anschrift, z. B. „Name und Anschrift des Zuwendenden:“. */
+  recipientLabel?: string;
+  /** Formular: Typst-Markup rechts neben der Anschrift (die Basis setzt es mit `eval(…, mode: "markup")`); Freitext darin mit `typstText` absichern. */
+  infoBlock?: string;
   /** „Betreff“ (Brief). */
   subject?: string;
+}
+
+/** Ein Bild, das der Körper einbindet: Bytes und ihre Prüfsumme (SHA-256, vom Modul berechnet). */
+export interface DocumentImage {
+  bytes: Uint8Array;
+  checksum: string;
 }
 
 export interface DocumentBuildResult {
@@ -152,6 +238,14 @@ export interface DocumentBuildResult {
   base?: string;
   slots: DocumentSlots;
   body: DocumentBody;
+  /**
+   * Bilder für den Körper, je Schlüssel (`[a-z0-9-]+`). Der Renderer legt sie
+   * als `/images/<key>.<png|jpg>` in den Job — die Endung kommt aus den
+   * Magic Bytes (`documentImagePath`). `build` bleibt rein: Bytes und
+   * Prüfsumme löst das Modul vorher auf und gibt sie in der Eingabe mit. Im
+   * Snapshot steht je Bild nur die Prüfsumme.
+   */
+  images?: Record<string, DocumentImage>;
 }
 
 export interface DocumentTemplate<T = unknown> {
@@ -225,6 +319,14 @@ export interface ModuleManifest {
   dependsOn?: readonly string[];
   publishedViews?: readonly PublishedView[];
   documentTemplates?: readonly DocumentTemplate[];
+  /**
+   * Die Basis-Vorlagen, auf denen die Dokumente des Moduls erscheinen (Befund
+   * 51 b). Führt eine Installation überhaupt eigene Basen, meldet Kompass jede
+   * hier genannte, die sie nicht selbst führt — sonst erschiene etwa eine
+   * Zuwendungsbestätigung im Standardkopf neben Briefen im Vereinskopf.
+   * Jede Basis aus `documentTemplates` steht hier (`apps/kompass/tests/document-bases.test.ts`).
+   */
+  documentBases?: readonly string[];
   mcpTools?: readonly McpToolDefinition[] | ((deps: Deps) => readonly McpToolDefinition[]);
   /** Einträge, die erst zur Laufzeit feststehen — etwa je Sammlung eines Templates. */
   navigationFor?: (deps: Deps) => NavigationItem[];
@@ -234,7 +336,30 @@ export interface ModuleManifest {
   /** Wo dieses Modul auf einen fremden Datensatz zeigt — synchron, nur lesend,
    *  ohne Rechteprüfung. Befragt vor dem Löschen des Datensatzes. Anders als
    *  `retentionHolds` fragt der Haken nicht nach Fristen: Jeder Verweis zählt. */
-  recordReferences?: (deps: Deps, entityType: string, id: string) => readonly RecordReference[];
+  recordReferences?: (deps: Deps, entityType: string, id: string) => readonly RecordReferenceInput[];
+  /**
+   * Der Bezug als Berechtigung (Vorarbeiten-Spec V2): Wer ein hier genanntes
+   * Recht hat, bekommt über die Seiten dieses Moduls genau die Dokumente, die
+   * mit dessen Vorgängen verknüpft sind — ohne `dms.view`. **Die Akte prüft**
+   * Recht und Bezug, nie das Modul (Prinzip 6). Ein so angemeldeter Bezugstyp
+   * ist reserviert: Nur sein Modul setzt und löst solche Bezüge.
+   */
+  linkedDocumentAccess?: readonly LinkedDocumentAccess[];
+  /**
+   * Schutzbereiche, die dieses Modul für Dokumentarten anmeldet (Vorarbeiten-Spec
+   * V1). Eine Art mit Bereich zeigt ihre Dokumente nur dem, der **genau** dieses
+   * Recht hat. Aufgelöst wird registry-weit, auch bei ausgeschaltetem Modul —
+   * sonst öffnete das Ausschalten den Bereich (V15). Label: `dms.areas.<key>`.
+   */
+  documentAreas?: readonly DocumentArea[];
+  /**
+   * Ein fremder Datensatz wurde gelöscht — in dieser Transaktion. Das Modul
+   * räumt mit, was nur an ihm hing (Finanzfelder eines Projekts ohne Buchung),
+   * und protokolliert es. Richtung Kern → Modul, nur eingeschaltete Module.
+   * **Was ein Modul hier mitlöscht, meldet es nicht über `recordReferences`**:
+   * Ein Verweis blockiert das Löschen, dann käme dieser Haken nie an die Reihe.
+   */
+  recordDeleted?: (tx: DbOrTx, deps: Deps, ctx: CallContext, entityType: string, id: string) => void;
   /**
    * Dieses Modul legt eigene Dateien ab. Es bekommt dann `<dataPath>/<key>`
    * über `deps.files(key)`. Die Anmeldung ist nicht Form, sondern Zweck: Das
@@ -250,16 +375,26 @@ export interface ModuleManifest {
   /** Was dieses Modul festhält — synchron, nur lesend, ohne Rechteprüfung.
    *  Befragt vor dem Löschen und für den Fristenbildschirm. `entityType` ist
    *  generisch: derselbe Haken trägt später Dokumente und Belege. */
-  retentionHolds?: (deps: Deps, entityType: string, id: string) => readonly RetentionHold[];
+  retentionHolds?: (deps: Deps, entityType: string, id: string) => readonly RetentionHoldInput[];
   /** Was bei diesem Modul zur Löschung fällig ist. */
-  retentionDue?: (deps: Deps) => readonly DueItem[];
+  retentionDue?: (deps: Deps) => readonly DueItemInput[];
   /**
    * Beschriftung und Link für eine Entität dieses Moduls, an der eine
    * Wiedervorlage hängt. Richtung Kern → Modul, wie `retentionHolds`: Der Kern
    * fragt nach einem Namen für etwas, das das Modul besitzt. `null` heißt:
    * nicht meine Entität.
    */
-  followUpTargets?: (deps: Deps, entityType: string, id: string) => FollowUpTarget | null;
+  followUpTargets?: (deps: Deps, entityType: string, id: string) => FollowUpTargetInput | null;
+  /**
+   * Beschriftung und Link für einen Datensatz dieses Moduls — **mit `ctx`**
+   * (wie `translatables`): Wer ihn nicht lesen darf, bekommt `forbidden` und
+   * eine neutrale Beschriftung. `null` heißt: nicht meine Entität. Der Kern
+   * fragt diesen Haken auch für Wiedervorlagen; `followUpTargets` bleibt als
+   * Rückfall für Module, die ihn noch nicht bedienen. Nicht aus dem
+   * `index.ts` des Moduls exportieren — der MCP-Paritätswächter hielte die
+   * Funktion für einen Dienst.
+   */
+  recordLabels?: (deps: Deps, ctx: CallContext, entityType: string, id: string) => RecordLabelInput | null;
   /**
    * Die mehrsprachigen Datensätze dieses Moduls, Entwürfe eingeschlossen.
    * Richtung Kern → Modul wie `followUpTargets`. Prüft das Ansichtsrecht des
@@ -275,6 +410,12 @@ export interface ModuleManifest {
   setTranslations?: (deps: Deps, ctx: CallContext, input: TranslationWrite) => Promise<Result<unknown>> | null;
   /** Kontaktrollen, die dieses Modul beisteuert. */
   contactRoles?: readonly ContactRoleDefinition[];
+  /**
+   * Darf dieses Modul gerade ausgeschaltet werden? Ein ausgeschaltetes Modul
+   * schweigt als Halter — wer festgeschriebene Vorgänge führt, lehnt deshalb
+   * ab. Rückgabe: Meldungsschlüssel unter `modules.cannotDisable.*`, oder `null`.
+   */
+  canDisable?: (deps: Deps) => string | null;
   /**
    * Was von den Entitäten dieses Moduls gelöscht werden darf, und warum
    * (nicht). Prinzip 3 als Daten: `deletionPolicy(registry)` bündelt Kern und
@@ -327,7 +468,7 @@ export function defineModule(manifest: ModuleManifest): ModuleManifest {
   validateDeletionRules(manifest.key, manifest.deletionRules ?? []);
   for (const role of manifest.contactRoles ?? []) {
     if (!ROLE_KEY.test(role.key)) throw new Error(`invalid contact role key: ${role.key}`);
-    if (!RETENTION_CLASSES.includes(role.retention)) throw new Error(`invalid contact role retention class: ${role.retention}`);
+    if (role.retention !== 'none' && !RETENTION_CLASSES.includes(role.retention)) throw new Error(`invalid contact role retention class: ${role.retention}`);
   }
   const seenTiles = new Set<string>();
   for (const tile of manifest.dashboardTiles ?? []) {
@@ -335,10 +476,20 @@ export function defineModule(manifest: ModuleManifest): ModuleManifest {
     if (seenTiles.has(tile.key)) throw new Error(`duplicate dashboard tile: ${manifest.key}/${tile.key}`);
     seenTiles.add(tile.key);
     if (!TILE_KINDS.has(tile.kind)) throw new Error(`invalid dashboard tile kind: ${tile.kind}`);
-    const own = manifest.permissions.includes(tile.permission);
-    const core = (CORE_PERMISSIONS as readonly string[]).includes(tile.permission);
-    if (!own && !core) throw new Error(`dashboard tile ${manifest.key}/${tile.key} names a foreign permission: ${tile.permission}`);
+    for (const permission of typeof tile.permission === 'string' ? [tile.permission] : tile.permission) {
+      const own = manifest.permissions.includes(permission);
+      const core = (CORE_PERMISSIONS as readonly string[]).includes(permission);
+      if (!own && !core) throw new Error(`dashboard tile ${manifest.key}/${tile.key} names a foreign permission: ${permission}`);
+    }
     dashboardOptionFields(tile.options); // wirft bei unzulässigem Schema
+  }
+  for (const access of manifest.linkedDocumentAccess ?? []) {
+    for (const permission of [access.readPermission, access.receivePermission]) {
+      if (permission && !manifest.permissions.includes(permission)) throw new Error(`linked document access ${manifest.key}/${access.entityType} names a foreign permission: ${permission}`);
+    }
+  }
+  for (const area of manifest.documentAreas ?? []) {
+    if (!manifest.permissions.includes(area.permission)) throw new Error(`document area ${manifest.key}/${area.key} names a foreign permission: ${area.permission}`);
   }
   return manifest;
 }
