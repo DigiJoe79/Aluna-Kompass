@@ -34,7 +34,7 @@ describe('published organization view', () => {
   it('leaves out what is nobody business on a website', async () => {
     const deps = await setup();
     const [row] = publishedOrganization.load(deps) as Record<string, unknown>[];
-    for (const secret of ['taxNumber', 'taxOffice', 'exemptionNoticeType', 'exemptionNoticeDate', 'statutoryPurpose']) {
+    for (const secret of ['taxNumber', 'taxOffice', 'exemptionNoticeType', 'exemptionNoticeDate']) {
       expect(row, `${secret} gehört nicht in die veröffentlichte Sicht`).not.toHaveProperty(secret);
     }
   });

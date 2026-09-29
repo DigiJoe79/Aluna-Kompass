@@ -41,6 +41,15 @@ export function positionViewsOf(db: DbOrTx, paymentId: string): PositionView[] {
 
 export const sumPositionCents = (positions: readonly PositionView[]) => positions.reduce((s, p) => s + p.amountCents, 0);
 
+/**
+ * Befund AQ: Ein nachträglicher Entwurf hat noch keine Geldpositionen — sie entstehen beim Einreichen aus den gewählten
+ * bezahlten Zeilen. Nur im Entwurf zählen sie hier mit; danach stecken sie in den Positionen (sonst doppelt).
+ */
+export function paymentTotalCents(payment: Pick<FinancePartnerPaymentRow, 'retroactive' | 'state'>, positions: readonly PositionView[], paidLines: readonly PaidLineView[]): number {
+  const fromPositions = sumPositionCents(positions);
+  return payment.retroactive && payment.state === 'draft' ? fromPositions + paidLines.reduce((sum, l) => sum + l.amountCents, 0) : fromPositions;
+}
+
 export function paidLinesOf(db: DbOrTx, paymentId: string): FinancePartnerPaidLineRow[] {
   return db.select().from(financePartnerPaidLines).where(eq(financePartnerPaidLines.paymentId, paymentId)).all();
 }

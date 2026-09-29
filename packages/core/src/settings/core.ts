@@ -35,7 +35,6 @@ const organization: SettingDefinition[] = [
     managedBy: 'finance',
   },
   { key: 'organization.exemptionNoticeDate', schema: isoDateOrEmpty, default: '', managedBy: 'finance' },
-  { key: 'organization.statutoryPurpose', schema: z.string().trim().max(500), default: '' },
   { key: 'organization.email', schema: z.union([z.literal(''), z.email()]), default: '' },
   { key: 'organization.website', schema: z.union([z.literal(''), z.url()]), default: '' },
   { key: 'organization.phone', schema: shortText, default: '' },

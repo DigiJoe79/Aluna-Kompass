@@ -61,6 +61,18 @@ describe('Nachweisfrist in Monaten (Design-Nachtrag Phase 4, Entscheidung 2)', (
     const approved = unwrap(await approvePartnerPayment(f.deps, f.secondPerson, { id: submitted.id, expectedVersion: submitted.version }));
     expect(approved.proofDueOn).toBe('2026-05-01');
   });
+
+  it('Befund 29: eine eingereichte nachträgliche Zahlung hat weder Zahltag noch Frist, die Freigabe setzt beides', async () => {
+    const f = await ledgerFixture();
+    const { org, partner } = await orgPartner(f, 'Später e.V.', 'publicBody', { usualProofMonths: 3 });
+    const entry = unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-02-10', text: 'Förderung', moneyLines: [{ accountId: f.bank.id, amountCents: -5000 }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -5000, contactId: org.id }], reason: 'Vorschuss aus freien Mitteln (Befund Q)' }));
+    const line = f.deps.db.select({ id: financeAllocationLines.id }).from(financeAllocationLines).where(eq(financeAllocationLines.entryId, entry.id)).get()!.id;
+    const draft = unwrap(await savePartnerPaymentDraft(f.deps, f.ctx, { partnerId: partner.id, basis: 'transfer58', purposeText: 'Förderung', retroactive: true, positions: [], paidLineIds: [line] }));
+    const submitted = unwrap(await submitPartnerPayment(f.deps, f.ctx, { id: draft.id, expectedVersion: draft.version }));
+    expect(submitted).toMatchObject({ activeStep: 'submitted', paidOn: null, proofDueOn: null });
+    const approved = unwrap(await approvePartnerPayment(f.deps, f.secondPerson, { id: submitted.id, expectedVersion: submitted.version }));
+    expect(approved).toMatchObject({ activeStep: 'paid', paidOn: '2026-02-10', proofDueOn: proofDueDate('2026-02-10', 3) });
+  });
 });
 
 describe('Warnungen vorab im Entwurf (Design-Nachtrag Phase 4, Task 1)', () => {

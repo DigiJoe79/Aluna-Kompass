@@ -65,8 +65,8 @@ test.describe('app shell', () => {
     const sections = page.getByRole('navigation', { name: 'Unternavigation' });
     await expect(sections.getByText('Verwaltung')).toBeVisible();
     await expect(sections.getByText('Einrichtung')).toBeVisible();
-    for (const label of ['Nutzer', 'Rollen', 'Änderungsprotokoll', 'Aufbewahrung', 'Backup', 'Stammdaten', 'Sprachen', 'Erscheinungsbild', 'Module', 'Dokumentvorlagen', 'Akte einrichten']) {
-      await expect(sections.getByRole('link', { name: label })).toBeVisible();
+    for (const label of ['Nutzer', 'Rollen', 'Änderungsprotokoll', 'Aufbewahrung', 'Backup', 'Stammdaten', 'Sprachen', 'Erscheinungsbild', 'Module', 'Dokumentvorlagen', 'Akte']) {
+      await expect(sections.getByRole('link', { name: label, exact: true })).toBeVisible();
     }
     // Die Mediathek ist ein eigener Bereich in der Schiene, kein Verwaltungspunkt.
     await expect(sections.getByRole('link', { name: 'Mediathek' })).toHaveCount(0);

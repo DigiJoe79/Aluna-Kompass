@@ -14,7 +14,7 @@ import { Topbar } from './topbar';
 
 export const DRAWER_BREAKPOINT = 1180;
 
-export function ShellFrame({ organization, logoUrl, groups, build, version, user, permissions, helpChapters, helpPages, children }: { organization: string; logoUrl: string | null; groups: NavGroup[]; build: string; version: string; user: { name: string; roleNames: string[] }; permissions: string[]; helpChapters: HandbookChapter[]; helpPages: { doc: string; title: string; chapter: string }[]; children: ReactNode }) {
+export function ShellFrame({ organization, logoUrl, groups, build, version, user, permissions, helpChapters, helpPages, children }: { organization: string; logoUrl: string | null; groups: NavGroup[]; build: string; version: string; user: { name: string }; permissions: string[]; helpChapters: HandbookChapter[]; helpPages: { doc: string; title: string; chapter: string }[]; children: ReactNode }) {
   const t = useTranslations();
   const pathname = usePathname();
   const [drawer, setDrawer] = useState(false);

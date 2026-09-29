@@ -124,6 +124,18 @@ describe('donation confirmation templates render', () => {
     expect(text).not.toContain('ZWB-');
   });
 
+  it('sets the issuer of the simplified receipt in the right column with a clear line gap under its label', async () => {
+    const out = await render('finance-simplified-receipt', { organization: common.organization, notice: common.notice, limitCents: 30000 });
+    const label = wordAt(out.bytes, 'Aussteller');
+    // Kopfzeile der Basis nennt Verein und Anschrift schon einmal: der zweite Treffer ist der Ausstellerblock.
+    const name = wordAt(out.bytes, 'Musterweg', 1);
+    // Wie in den Bestätigungen: rechts (ab 100 mm), und zwischen Beschriftung (8 pt) und Name mindestens eine volle Zeile.
+    expect(label.x).toBeGreaterThan(100);
+    expect(name.x).toBeGreaterThan(100);
+    expect(name.y - label.y).toBeGreaterThanOrEqual(3.5);
+    expect(wordAt(out.bytes, '12345', 1).y).toBeGreaterThan(name.y);
+  });
+
   it('builds with hostile names and texts', async () => {
     const hostile = 'Zusage; "Anführung" | #panic("x") $x$ @label [box] ~ C:\\temp *fett* _k_ <l>';
     const out = await render('finance-confirmation-in-kind', { ...inKind, recipient: { name: hostile, addressLines: ['- Liste', '= Titel', '1. Aufzählung'] }, item: hostile, condition: '/ term: x', valuation: '```code```' });
@@ -133,17 +145,18 @@ describe('donation confirmation templates render', () => {
 
 const MM = 25.4 / 72;
 /** Oberkante eines Wortes in Millimetern und seine Seite — aus `pdftotext -bbox`. */
-function wordAt(bytes: Uint8Array, word: string): { x: number; y: number; page: number } {
+function wordAt(bytes: Uint8Array, word: string, nth = 0): { x: number; y: number; page: number } {
   const dir = mkdtempSync(path.join(tmpdir(), 'kompass-zwb-'));
   dirs.push(dir);
   writeFileSync(path.join(dir, 'x.pdf'), bytes);
   const out = spawnSync('pdftotext', ['-bbox', path.join(dir, 'x.pdf'), '-'], { encoding: 'utf8' });
   if (out.status !== 0) throw new Error(`pdftotext: ${out.stderr}`);
   let page = 0;
+  let seen = 0;
   for (const line of out.stdout.split('\n')) {
     if (line.includes('<page ')) page += 1;
     const m = /<word xMin="([\d.]+)" yMin="([\d.]+)"[^>]*>([^<]*)<\/word>/.exec(line);
-    if (m && m[3] === word) return { x: Number(m[1]) * MM, y: Number(m[2]) * MM, page };
+    if (m && m[3] === word && seen++ === nth) return { x: Number(m[1]) * MM, y: Number(m[2]) * MM, page };
   }
   throw new Error(`word not found: ${word}`);
 }

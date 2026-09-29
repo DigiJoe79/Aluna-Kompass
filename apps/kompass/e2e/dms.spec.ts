@@ -457,7 +457,7 @@ test.describe('dms', () => {
     // Über die Navigation, nicht über die URL: Der Bildschirm war gebaut und
     // fertig, nur zeigte nichts darauf.
     await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Einstellungen' }).click();
-    await page.getByRole('navigation', { name: 'Unternavigation' }).getByRole('link', { name: 'Akte einrichten' }).click();
+    await page.getByRole('navigation', { name: 'Unternavigation' }).getByRole('link', { name: 'Akte', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Dokumentarten' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Einsortierregeln' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Ordner' })).toBeVisible();

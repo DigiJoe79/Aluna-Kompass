@@ -18,19 +18,21 @@ const rootVersion = (JSON.parse(readFileSync(path.join(__dirname, '../../../pack
  * ausgeliefert werden. Eine Fassung bringt höchstens eine (Prod-Spec,
  * Entscheidung 9). Auf einem `dev-*`-Branch dürfen weitere folgen (9b): Vor der
  * Schlussabnahme werden sie zu einer zusammengelegt und hier eingetragen.
- * `0003_finance` ist die zusammengelegte Migration der Fassung 0.2.0.
+ * `0003_finance` ist die zusammengelegte Migration der Fassung 0.2.0,
+ * `0004_finance_0_2_1` die der Fassung 0.2.1.
  */
-const RELEASED = ['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql', '0003_finance.sql'];
+const RELEASED = ['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql', '0003_finance.sql', '0004_finance_0_2_1.sql'];
 
 /**
  * Was eine Produktion schon ausgeführt hat, bleibt Byte für Byte, wie es war:
  * sha256 über den Dateiinhalt, so wie `drizzle-orm/migrator` rechnet und wie er
- * in `__drizzle_migrations` einer Installation der Fassung 0.1.1 steht.
+ * in `__drizzle_migrations` einer Installation der Fassung 0.2.0 steht (0003 seit deren Release).
  */
 const SHIPPED_HASHES: Record<string, string> = {
   '0000_init.sql': '90c7ee099e9b814f38c7f5accdeb020aeb30e6108864630bafd95519ad85d124',
   '0001_dashboard_layouts.sql': '200b81c11fa9739d331e1099bb5998e8628b151ccdfddf5812d144fae72d2705',
   '0002_document_former_numbers.sql': '3d54523a6aef7a9555caaacb15bbc3ab731e4a4314f5c9aa70c6717c7fc0f697',
+  '0003_finance.sql': '8e2b6d69c78f801453fee3b1977a2f779ddbd8a48b5fc4187fd27abcc169409a',
 };
 
 /**
@@ -40,6 +42,11 @@ const SHIPPED_HASHES: Record<string, string> = {
  * Reihe als aktuell und bekommt nichts doppelt.
  */
 const LAST_WHEN_BEFORE_SQUASH_0_2_0 = 1790605068196;
+/**
+ * `when` der letzten Migration vor dem Zusammenlegen der Fassung 0.2.1 (2026-09-29). Wie oben: Trägt
+ * `0004_finance_0_2_1` denselben Wert, gilt eine Testinstanz aus der unzusammengelegten Reihe als aktuell.
+ */
+const LAST_WHEN_BEFORE_SQUASH_0_2_1 = 1790702142322;
 const journal = JSON.parse(readFileSync(path.join(MIGRATIONS_DIR, 'meta/_journal.json'), 'utf8')) as { entries: { idx: number; when: number; tag: string }[] };
 
 /**
@@ -49,6 +56,10 @@ const journal = JSON.parse(readFileSync(path.join(MIGRATIONS_DIR, 'meta/_journal
  * zusammengelegte Migration die Stücke eines Moduls an beliebiger Stelle trägt.
  */
 describe('hand-written SQL survives', () => {
+  it('keeps at most one active open item per document as a partial unique index', () => {
+    expect(allSql).toMatch(/CREATE UNIQUE INDEX `finance_open_items_document_active_idx`[^;]*WHERE[^;]*cancelled_at/);
+  });
+
   it('starts with 0000_init', () => {
     expect(files[0]).toBe('0000_init.sql');
   });
@@ -76,6 +87,12 @@ describe('hand-written SQL survives', () => {
 
   it('locks the settlements of a finalized finance entry', () => {
     for (const name of ['finance_open_item_settlements_final_no_update', 'finance_open_item_settlements_final_no_delete', 'finance_open_item_settlements_final_no_insert']) {
+      expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
+    }
+  });
+
+  it('locks what the finance manifest calls undeletable (0.2.1, Befund 4)', () => {
+    for (const name of ['finance_fiscal_years_no_delete', 'finance_period_events_no_delete', 'finance_open_items_no_delete', 'finance_entry_justifications_no_delete', 'finance_not_return_marks_no_delete', 'finance_partner_notices_no_delete', 'finance_in_kind_details_final_no_delete', 'finance_import_candidates_booked_no_delete']) {
       expect(allSql, name).toContain(`CREATE TRIGGER ${name} `);
     }
   });
@@ -232,6 +249,12 @@ describe('the migrations of this version', () => {
   it('let a database from the unsquashed 0.2.0 series count as current (same `when` as its last migration)', () => {
     const squashed = journal.entries.find((e) => e.tag === '0003_finance');
     expect(squashed?.when).toBe(LAST_WHEN_BEFORE_SQUASH_0_2_0);
+    expect(journal.entries.map((e) => `${e.tag}.sql`)).toEqual(files);
+  });
+
+  it('let a database from the unsquashed 0.2.1 series count as current (same `when` as its last migration)', () => {
+    const squashed = journal.entries.find((e) => e.tag === '0004_finance_0_2_1');
+    expect(squashed?.when).toBe(LAST_WHEN_BEFORE_SQUASH_0_2_1);
     expect(journal.entries.map((e) => `${e.tag}.sql`)).toEqual(files);
   });
 

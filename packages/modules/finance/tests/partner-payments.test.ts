@@ -1,4 +1,4 @@
-import { unwrap } from '@kompass/core';
+import { schema, unwrap } from '@kompass/core';
 import { createContact } from '@kompass/module-contacts';
 import { createProject } from '@kompass/module-projects';
 import { ctxWith } from '@kompass/core/testing';
@@ -174,5 +174,27 @@ describe('lesen, Fristen, Mehrfachnutzung (F7 Task 3)', () => {
     expect(evidenceUsedMultipleTimesInternal(f.deps.db, 'DOC-SHARED')).toBe(false);
     insertPartnerEvidence(f.deps.db, paymentB, { documentId: 'DOC-SHARED' });
     expect(evidenceUsedMultipleTimesInternal(f.deps.db, 'DOC-SHARED')).toBe(true);
+  });
+});
+
+describe('Befund AQ — ein nachträglicher Entwurf zeigt die Summe der gewählten Zeilen', () => {
+  const retro = (f: Awaited<ReturnType<typeof fixture>>, line: string) => savePartnerPaymentDraft(f.deps, f.ctx, { partnerId: f.partner.id, basis: 'transfer58', purposeText: 'Förderung', retroactive: true, positions: [], paidLineIds: [line] });
+
+  it('shows the paid line as the total in the draft, in the audit entry, and stays the same after submitting', async () => {
+    const f = await fixture();
+    const line = await paidLine(f, 12000);
+    const draft = unwrap(await retro(f, line));
+    expect(draft.totalCents).toBe(12000);
+    const saved = f.deps.db.select().from(schema.auditLog).all().filter((e) => e.action === 'finance.partnerPayment.saveDraft').at(-1)!;
+    expect(JSON.parse(saved.after as string)).toMatchObject({ totalCents: 12000 });
+    expect(unwrap(await getPartnerPayment(f.deps, f.ctx, { id: draft.id })).totalCents).toBe(12000);
+    const submitted = unwrap(await submitPartnerPayment(f.deps, f.ctx, { id: draft.id, expectedVersion: draft.version }));
+    expect(submitted.totalCents).toBe(12000);
+  });
+
+  it('leaves the total of an ordinary draft as the sum of its positions', async () => {
+    const f = await fixture();
+    const draft = unwrap(await savePartnerPaymentDraft(f.deps, f.ctx, { partnerId: f.partner.id, basis: 'transfer58', purposeText: 'Futter', retroactive: false, positions: [{ kind: 'money', amountCents: 5000, categoryId: f.programCosts.id }] }));
+    expect(draft.totalCents).toBe(5000);
   });
 });

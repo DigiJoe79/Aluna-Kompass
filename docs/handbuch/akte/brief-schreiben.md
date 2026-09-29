@@ -18,7 +18,7 @@ die einzige Löschung in der Akte, und sie steht im Änderungsprotokoll.
 ## Bausteine
 
 Wiederkehrende Absätze — Grußformel, Spendenhinweis, Bankverbindung — legen
-Sie unter Einstellungen → Akte einrichten als Bausteine an. Im Entwurf fügt
+Sie unter Einstellungen → Akte als Bausteine an. Im Entwurf fügt
 „Baustein einfügen“ den Text an der Schreibmarke ein; danach ist er normaler
 Text und lässt sich ändern.
 

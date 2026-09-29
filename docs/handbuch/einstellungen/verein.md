@@ -10,8 +10,9 @@ der Webseite — sie stehen nirgends ein zweites Mal.
 - **Verein** — Name, Rechtsform, Anschrift, Gründungsjahr, Registergericht
   und Registernummer, Kontakt-E-Mail, Telefon, Webseite.
 - **Steuer & Bescheide** — Steuernummer, Finanzamt, Art und Datum des
-  Freistellungsbescheids, Satzungszweck. Der Satzungszweck wird wörtlich in
-  Zuwendungsbestätigungen übernommen; ohne Bescheid gibt es keine.
+  Freistellungsbescheids. Ist das Modul Finanzen eingeschaltet, führt es diese
+  Felder aus dem gültigen Bescheid; die begünstigten Zwecke für
+  Zuwendungsbestätigungen stehen ebenfalls am Bescheid.
 - **Bank** — IBAN, BIC, Bankname, für Briefbogen und Bestätigungen.
 - **Branding** — Logo aus der [Mediathek](../mediathek.md), Schrift für
   Fließtext und Überschriften, das aktive [Theme](themes.md).

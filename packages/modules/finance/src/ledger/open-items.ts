@@ -1,7 +1,7 @@
 import { expectedVersionField, isoNow, newId, notFound, ok, requirePermission, staleVersion, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { contacts } from '@kompass/module-contacts';
 import { getDocumentRecord, linkDocumentInternal } from '@kompass/module-dms';
-import { and, desc, eq, isNull, lte } from 'drizzle-orm';
+import { and, desc, eq, isNull, lte, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict, requireHumanChannelFinance } from '../errors';
@@ -114,7 +114,8 @@ function parsedLineTemplate(raw: string | null): LineTemplateEntry[] | null {
 
 function openItemViewOf(db: DbOrTx, row: FinanceOpenItemRow): OpenItemView {
   const settledCents = settledCentsFor(db, row.id);
-  const openCents = row.amountCents - settledCents;
+  // Befund 27: Ein Storno ist kein Betrag, der noch aussteht. Nur die Sicht sagt 0; `openCentsInternal` rechnet weiter mit dem Rest, weil seine Aufrufer `<= 0` als bezahlt lesen.
+  const openCents = row.cancelledAt !== null ? 0 : row.amountCents - settledCents;
   const state: OpenItemView['state'] = row.cancelledAt !== null ? 'cancelled' : settledCents === row.amountCents ? 'settled' : settledCents > row.amountCents ? 'overpaid' : 'open';
   return { ...row, settledCents, openCents, state, lineTemplate: parsedLineTemplate(row.lineTemplate), draftSettlementCents: draftSettlementCentsFor(db, row.id) };
 }
@@ -132,6 +133,13 @@ async function checkOptionalDocument(deps: Deps, ctx: CallContext, documentId: s
   if (record.value.phase !== 'issued') return financeConflict('documentNotFinal');
   if (record.value.status === 'voided') return financeConflict('documentVoided');
   return ok({ id: record.value.id });
+}
+
+/** Befund 3: der aktive (nicht stornierte) Posten zu einem Dokument — höchstens einer, auch der Index `finance_open_items_document_active_idx` trägt das. */
+export function activeItemForDocumentInternal(db: DbOrTx, documentId: string, exceptId?: string): { id: string; paymentReference: string | null } | undefined {
+  const conditions = [eq(financeOpenItems.documentId, documentId), isNull(financeOpenItems.cancelledAt)];
+  if (exceptId) conditions.push(ne(financeOpenItems.id, exceptId));
+  return db.select({ id: financeOpenItems.id, paymentReference: financeOpenItems.paymentReference }).from(financeOpenItems).where(and(...conditions)).get();
 }
 
 /**
@@ -176,6 +184,8 @@ export async function createOpenItem(deps: Deps, ctx: CallContext, input: unknow
   if (v.contactId && !contactExists(deps.db, v.contactId)) return notFound('contact', v.contactId);
   const doc = await checkOptionalDocument(deps, ctx, v.documentId);
   if (!doc.ok) return doc;
+  const existing = v.documentId ? activeItemForDocumentInternal(deps.db, v.documentId) : undefined;
+  if (existing) return financeConflict('openItemExistsForDocument', { openItemId: existing.id, reference: existing.paymentReference ?? '' });
 
   return deps.db.transaction((tx: DbOrTx) => {
     const view = createOpenItemInternal(tx, deps, ctx, v);
@@ -232,6 +242,8 @@ export async function updateOpenItem(deps: Deps, ctx: CallContext, input: unknow
   if (v.contactId !== undefined && v.contactId !== null && !contactExists(deps.db, v.contactId)) return notFound('contact', v.contactId);
   const doc = v.documentId !== undefined ? await checkOptionalDocument(deps, ctx, v.documentId) : ok(null);
   if (!doc.ok) return doc;
+  const existing = v.documentId && v.documentId !== before.documentId ? activeItemForDocumentInternal(deps.db, v.documentId, before.id) : undefined;
+  if (existing) return financeConflict('openItemExistsForDocument', { openItemId: existing.id, reference: existing.paymentReference ?? '' });
 
   return deps.db.transaction((tx: DbOrTx) => {
     const now = isoNow(deps.clock);

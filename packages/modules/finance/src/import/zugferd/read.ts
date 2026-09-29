@@ -8,7 +8,7 @@ import { requireFinanceRead } from '../../ledger/access';
 import { valueAt } from '../../ledger/dated-values';
 import { entryViewInternal, saveDraft, type EntryView } from '../../ledger/entries';
 import { normalizeIban } from '../../ledger/iban';
-import { createOpenItem, openItemHasAnySettlementInternal, type OpenItemView } from '../../ledger/open-items';
+import { activeItemForDocumentInternal, createOpenItem, openItemHasAnySettlementInternal, type OpenItemView } from '../../ledger/open-items';
 import type { TaxCode } from '../../ledger/tax';
 import { attachDocument } from '../../ledger/vouchers';
 import { normalizeText } from '../../rules-pure';
@@ -358,8 +358,8 @@ export async function createOpenItemFromInvoice(deps: Deps, ctx: CallContext, in
   if (!loaded.ok) return loaded;
   const invoice = loaded.value.invoice;
 
-  const exists = deps.db.select({ id: financeOpenItems.id }).from(financeOpenItems).where(and(eq(financeOpenItems.documentId, v.documentId), isNull(financeOpenItems.cancelledAt))).get();
-  if (exists) return financeConflict('openItemExistsForDocument');
+  const existing = activeItemForDocumentInternal(deps.db, v.documentId);
+  if (existing) return financeConflict('openItemExistsForDocument', { openItemId: existing.id, reference: existing.paymentReference ?? '' });
 
   const contactId = v.contactId !== undefined ? v.contactId : invoice.contactId;
   const reference = invoice.invoiceNumber.slice(0, MAX_PAYMENT_REFERENCE);

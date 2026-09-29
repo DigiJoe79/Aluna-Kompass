@@ -44,7 +44,7 @@ vertraulich und gehört in ein gewöhnliches Issue.
 
 ## Systempakete, die das Image selbst installiert
 
-Zur Debian-Basis (`node:26-bookworm-slim`) kommen diese Pakete hinzu. GPL-Programme
+Zur Debian-Basis (`node:26-trixie-slim`) kommen diese Pakete hinzu. GPL-Programme
 werden als eigene Prozesse aufgerufen, nicht eingebunden.
 
 | Paket | Lizenzangaben laut `copyright` |

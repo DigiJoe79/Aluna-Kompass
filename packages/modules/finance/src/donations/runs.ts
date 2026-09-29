@@ -43,7 +43,10 @@ export type RunBlockedBy = ConfirmationCheckKey;
 export interface RunPreviewItem {
   contactId: string;
   contactName: string;
+  /** Der Topf des Postens: `collective` (Geld und Beiträge), `collectiveWaiver` (Aufwandsspenden), `inKind` (eine Sachspende). Nicht die Form der Bestätigung — die steht in `issueKind`. */
   kind: RunItemKind;
+  /** Was der Lauf tatsächlich ausstellt: bei einer einzigen Zeile eine Einzelbestätigung (`money`), sonst die Sammelbestätigung. */
+  issueKind: 'money' | 'inKind' | 'collective';
   inKindLineId: string | null;
   lineIds: string[];
   /** Nach Rückläufern. */
@@ -113,6 +116,11 @@ export interface RunPreviewArgs {
   excludedContactIds?: readonly string[];
   /** Schließt nichts aus — bestätigte Zeilen fallen ohnehin heraus (Annahme 6). */
   followUpOfRunId?: string | null;
+}
+
+/** Befund 21: wie beim Einzelausstellen — eine Zeile ergibt die Einzelbestätigung, erst ab zwei die Sammelbestätigung. Sachspenden bleiben einzeln. */
+export function issueKindOf(kind: RunItemKind, lineCount: number): 'money' | 'inKind' | 'collective' {
+  return kind === 'inKind' ? 'inKind' : lineCount > 1 ? 'collective' : 'money';
 }
 
 /** Diese Prüfungen gelten dem Lauf, nicht dem Spender — sie stehen in `blockedRun`, nicht am Posten. */
@@ -273,7 +281,7 @@ export function previewConfirmationRunInternal(db: DbOrTx, deps: Deps, args: Run
 
     for (const bucket of buckets) {
       const lineIds = bucket.lines.map((l) => l.lineId);
-      const checked = checkConfirmableInternal(db, deps, { lineIds, issuedOn, kind: bucket.kind === 'inKind' ? 'inKind' : 'collective' });
+      const checked = checkConfirmableInternal(db, deps, { lineIds, issuedOn, kind: issueKindOf(bucket.kind, lineIds.length) });
       let group: RunPreviewGroup;
       let blockedBy: RunBlockedBy | null = null;
       let signatureReason: RunSignatureReason | null = null;
@@ -297,6 +305,7 @@ export function previewConfirmationRunInternal(db: DbOrTx, deps: Deps, args: Run
         contactId,
         contactName: names.get(contactId) ?? '',
         kind: bucket.kind,
+        issueKind: issueKindOf(bucket.kind, lineIds.length),
         inKindLineId: bucket.inKindLineId,
         lineIds,
         totalCents: bucket.lines.reduce((s, l) => s + l.netCents, 0),
@@ -637,9 +646,10 @@ export async function continueConfirmationRun(deps: Deps, ctx: CallContext, inpu
 
   for (const row of batch) {
     const lineIds = JSON.parse(row.lineIds) as string[];
+    const issueKind = issueKindOf(row.kind, lineIds.length);
     const issued = await issueConfirmation(deps, ctx, {
-      lineIds, issuedOn: run.startedOn, kind: row.kind === 'inKind' ? 'inKind' : 'collective',
-      ...(row.kind === 'inKind' ? {} : { periodFrom, periodTo }),
+      lineIds, issuedOn: run.startedOn, kind: issueKind,
+      ...(issueKind === 'collective' ? { periodFrom, periodTo } : {}),
     });
     if (issued.ok) {
       settleItemInternal(deps, ctx, row, { state: 'issued', confirmationId: issued.value.id, errorCode: null });

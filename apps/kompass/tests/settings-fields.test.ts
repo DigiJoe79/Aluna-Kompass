@@ -18,7 +18,6 @@ describe('SETTINGS_TABS', () => {
       'organization.taxOffice',
       'organization.exemptionNoticeType',
       'organization.exemptionNoticeDate',
-      'organization.statutoryPurpose',
     ]);
   });
   it('names, for every field a module may manage, where it is kept instead — one sentence per tab', () => {

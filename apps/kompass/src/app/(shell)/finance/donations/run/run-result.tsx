@@ -1,5 +1,6 @@
 'use client';
 
+import { runItemKindKey } from '@/lib/finance/run-item-kind';
 import type { RunView, RunViewItem } from '@kompass/module-finance';
 import { Download } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -135,7 +136,7 @@ function ItemList({ testId, title, items, reason }: { testId: string; title: str
           <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-1.5">
             <span className="flex flex-wrap items-baseline gap-x-3">
               <span className="font-semibold text-ink">{item.contactName}</span>
-              <span className="text-ink-2">{t(`itemKind.${item.kind}`)}</span>
+              <span className="text-ink-2">{t(`itemKind.${runItemKindKey(item.kind, item.lineCount)}`)}</span>
               <span className="text-ink-2">{reason(item)}</span>
             </span>
             <span className="font-mono tabular-nums text-ink">{formatEuro(item.totalCents)}</span>

@@ -256,7 +256,8 @@ export function membershipBlock(certifiable: boolean, sentence: string): string 
 export function signatureBlock(input: { place: string; issuedOn: string; machine: boolean; signerName: string | null; machineNotifiedOn: string | null; facsimile?: { bytes: Uint8Array } ; notice: { taxOffice: string } }): string {
   const placeDate = t(`${input.place}, ${germanDate(input.issuedOn)}`);
   // N11 (Befundliste 0.2.0): rechtsbündig in der zweiten Spalte — dieselbe Kante wie der Name darunter (`#h(1fr)` in der Zeile mit `SIGNATURE_CAPTION`), sonst steht die Unterschrift optisch in der Seitenmitte statt über dem Namen.
-  const signature = input.machine && input.facsimile ? `#image("${documentImagePath('signature', input.facsimile.bytes)}", height: 16mm)` : '#v(16mm)';
+  // 12 mm (75 % der früheren 16 mm). Der Innenabstand hebt das Bild über die Linie: die Zeile darunter zieht sie um 2 pt hoch (`#v(-2pt)`), dazu 0,75 pt (1 px) Luft. Ohne Faksimile bleibt der Platz für die Handunterschrift bei 16 mm.
+  const signature = input.machine && input.facsimile ? `#box(inset: (bottom: 2.75pt))[#image("${documentImagePath('signature', input.facsimile.bytes)}", height: 12mm)]` : '#v(16mm)';
   const out = [
     '#v(3mm)',
     '#block(breakable: false)[',

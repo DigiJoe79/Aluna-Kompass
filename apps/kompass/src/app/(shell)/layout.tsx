@@ -28,7 +28,7 @@ export default async function ShellLayout({ children }: { children: ReactNode })
   return (
     <div className="flex h-dvh flex-col overflow-hidden">
       {banner ? <EnvBanner banner={banner} context={context} /> : null}
-      <ShellFrame organization={readSetting<string>(deps, 'organization.name')} logoUrl={logoId ? `/media/${logoId}` : null} groups={groups} build={buildId()} version={appVersion()} user={{ name: user.name, roleNames: user.roles.map((r) => r.name) }} permissions={[...ctx.permissions]} helpChapters={helpChapters} helpPages={helpPages}>
+      <ShellFrame organization={readSetting<string>(deps, 'organization.name')} logoUrl={logoId ? `/media/${logoId}` : null} groups={groups} build={buildId()} version={appVersion()} user={{ name: user.name }} permissions={[...ctx.permissions]} helpChapters={helpChapters} helpPages={helpPages}>
         <DateFormatProvider mode={readSetting<DateFormatMode>(deps, 'ui.dateFormat')}>{children}</DateFormatProvider>
       </ShellFrame>
     </div>

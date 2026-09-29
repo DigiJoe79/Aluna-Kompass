@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM node:26-bookworm-slim AS base
+FROM node:26-trixie-slim AS base
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH CI=true
 # Node 26 liefert corepack nicht mehr mit; pnpm wird deshalb direkt
 # installiert. Version identisch mit packageManager in package.json.
@@ -43,7 +43,7 @@ RUN SESSION_SECRET=build-time-only-not-a-real-secret-0000000000 pnpm --filter @k
 FROM manifests AS runtime-deps
 RUN pnpm install --frozen-lockfile --prod
 
-FROM node:26-bookworm-slim AS runner
+FROM node:26-trixie-slim AS runner
 ARG TYPST_VERSION=0.15.1
 # Zielarchitektur statt fester x86_64-Datei: Sonst zwingt jeder Bau auf einem
 # ARM-Rechner das ganze Image in die Emulation, und die Container-Tests werden

@@ -64,6 +64,15 @@ export const WAIVER_SENTENCE = 'Es handelt sich um den Verzicht auf Erstattung v
 export const YES = 'Ja';
 export const NO = 'Nein';
 
+/**
+ * Das Muster hat die Lücke „Finanzamt …“ / „des Finanzamtes …“; das Feld trägt
+ * den vollen Namen („Finanzamt Jülich“). Ein führendes „Finanzamt “ fällt weg,
+ * damit es nicht doppelt steht.
+ */
+export function officeName(taxOffice: string): string {
+  return taxOffice.trim().replace(/^Finanzamt\s+/i, '');
+}
+
 // ── Bescheid-Sätze je Art ───────────────────────────────────────────────────
 
 export interface NoticeWording {
@@ -97,16 +106,17 @@ export interface NoticeWording {
  * Körperschaftsteuerbescheid“); gedruckt wird nur die zutreffende Hälfte.
  */
 export function noticeSentence(n: NoticeWording): string {
+  const office = officeName(n.taxOffice);
   if (n.kind === 'section60a') {
     return bindLegalReferences(
-      `Die Einhaltung der satzungsmäßigen Voraussetzungen nach den §§ 51, 59, 60 und 61 AO wurde vom Finanzamt ${n.taxOffice}, ` +
+      `Die Einhaltung der satzungsmäßigen Voraussetzungen nach den §§ 51, 59, 60 und 61 AO wurde vom Finanzamt ${office}, ` +
         `StNr. ${n.taxNumber}, mit Bescheid vom ${n.noticeDate} nach § 60a AO gesondert festgestellt. ` +
         `Wir fördern nach unserer Satzung ${n.purposesTextAccusative ?? n.purposesText}.`,
     );
   }
   const source = n.kind === 'exemptionNotice' ? 'nach dem Freistellungsbescheid' : 'nach der Anlage zum Körperschaftsteuerbescheid';
   return bindLegalReferences(
-    `Wir sind wegen Förderung ${n.purposesText} ${source} des Finanzamtes ${n.taxOffice}, StNr. ${n.taxNumber}, vom ${n.noticeDate} ` +
+    `Wir sind wegen Förderung ${n.purposesText} ${source} des Finanzamtes ${office}, StNr. ${n.taxNumber}, vom ${n.noticeDate} ` +
       `für den letzten Veranlagungszeitraum ${n.assessmentPeriod ?? ''} nach § 5 Abs. 1 Nr. 9 des Körperschaftsteuergesetzes ` +
       `von der Körperschaftsteuer und nach § 3 Nr. 6 des Gewerbesteuergesetzes von der Gewerbesteuer befreit.`,
   );
@@ -177,7 +187,7 @@ export const VALIDITY_NOTE = bindLegalReferences(
 
 /** Maschinelles Verfahren (R 10b.1 Abs. 4 EStR): nur, wenn es vollständig eingerichtet und angezeigt ist. `notifiedOn` im Format TT.MM.JJJJ. */
 export function machineNote(taxOffice: string, notifiedOn: string): string {
-  return `Diese Zuwendungsbestätigung wurde maschinell erstellt und ist ohne eigenhändige Unterschrift gültig. Die Anwendung des maschinellen Verfahrens wurde dem Finanzamt ${taxOffice} am ${notifiedOn} angezeigt.`;
+  return `Diese Zuwendungsbestätigung wurde maschinell erstellt und ist ohne eigenhändige Unterschrift gültig. Die Anwendung des maschinellen Verfahrens wurde dem Finanzamt ${officeName(taxOffice)} am ${notifiedOn} angezeigt.`;
 }
 
 // ── Anzeige des maschinellen Verfahrens ─────────────────────────────────────

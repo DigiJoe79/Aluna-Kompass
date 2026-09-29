@@ -5,7 +5,7 @@ import { createTestDeps, ctxWith, insertUser, systemContext } from '@kompass/cor
 import { coreMcpTools, createKompassMcpHandler, toCallToolResult } from '@kompass/mcp';
 import { contactsModule } from '@kompass/module-contacts';
 import { dmsModule } from '@kompass/module-dms';
-import { financeModule } from '@kompass/module-finance';
+import { financeConflict, financeModule } from '@kompass/module-finance';
 import { projectsModule } from '@kompass/module-projects';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { createTranslator } from 'next-intl';
@@ -40,7 +40,7 @@ async function connectAsAdministrator() {
   return { deps, client };
 }
 
-type McpError = { type: string; code?: string; message?: string; issues?: { path: string; code: string; message: string }[] };
+type McpError = { type: string; code?: string; message?: string; params?: Record<string, string | number>; issues?: { path: string; code: string; message: string }[] };
 async function callError(client: Client, name: string, args: Record<string, unknown>): Promise<McpError> {
   const res = await client.callTool({ name, arguments: args });
   expect(res.isError).toBe(true);
@@ -109,6 +109,19 @@ describe('Sperren des Kerns über MCP als Satz (MB)', () => {
 
   it('ein Konflikt ohne Übersetzung behält die Meldung des Dienstes', () => {
     expect(mcpError(conflict('somethingUnknown', 'Dienst sagt etwas'))).toMatchObject({ code: 'somethingUnknown', message: 'Dienst sagt etwas' });
+  });
+});
+
+describe('Befund 25: Konflikte tragen ihre Werte als params', () => {
+  it('gibt die Parameter des Konflikts neben dem Satz mit', () => {
+    const error = mcpError(financeConflict('purposeGoesNegative', { purpose: 'Futter', balance: -5000 }));
+    expect(error).toMatchObject({ type: 'conflict', code: 'purposeGoesNegative', params: { purpose: 'Futter', balance: -5000 } });
+    expect(error.message).toContain('Futter');
+  });
+
+  it('lässt params weg, wenn der Konflikt keine hat', () => {
+    expect(mcpError(financeConflict('confirmationAlreadyVoided'))).not.toHaveProperty('params');
+    expect(mcpError(conflict('humanOnly', 'x'))).not.toHaveProperty('params');
   });
 });
 

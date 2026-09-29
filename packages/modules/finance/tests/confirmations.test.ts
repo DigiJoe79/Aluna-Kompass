@@ -203,8 +203,8 @@ describe('voidConfirmation', () => {
     expect(voided).toMatchObject({ state: 'voided', voidNote: 'Falscher Betrag, Spenderin informiert', sentBeforeVoid: true, originalReturnedOn: '2026-03-19', taxOfficeInformedOn: '2026-03-20', voidedByUserId: f.userId });
     expect(voided.voidedAt).not.toBeNull();
     expect(voided.lines[0]!.releasedAt).not.toBeNull();
-    // Unser Exemplar bleibt als Beweis in der Akte, festgeschrieben und gültig.
-    expect(f.deps.db.select().from(documents).where(eq(documents.id, confirmation.documentId)).get()).toMatchObject({ status: 'issued' });
+    // Unser Exemplar bleibt als Beweis in der Akte, festgeschrieben — aber als storniert (Befund 24).
+    expect(f.deps.db.select().from(documents).where(eq(documents.id, confirmation.documentId)).get()).toMatchObject({ status: 'voided', voidReason: 'Falscher Betrag, Spenderin informiert', voidedByUserId: f.userId });
 
     const [entry] = auditOf(f, 'finance.confirmation.void');
     expect(JSON.parse(entry!.after as string)).toEqual({ voided: true, sentBeforeVoid: true, originalReturned: true, taxOfficeInformed: true });
@@ -213,6 +213,48 @@ describe('voidConfirmation', () => {
     expect(err(await voidConfirmation(f.deps, f.ctx, { id: confirmation.id, note: 'nochmal', alreadySent: false }))).toMatchObject({ type: 'conflict', code: 'confirmationAlreadyVoided' });
     const again = unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [line.id] }));
     expect(again.documentNumber).not.toBe(confirmation.documentNumber);
+  });
+
+  it('Befund 24: stores the reason without the note in the audit, and cuts it to 300 characters at the document', async () => {
+    const f = await donationFixture();
+    const { line } = await f.donate();
+    const confirmation = unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [line.id] }));
+    const note = `Geheimnis ${'x'.repeat(400)}`;
+    unwrap(await voidConfirmation(f.deps, f.ctx, { id: confirmation.id, note, alreadySent: false }));
+    const doc = f.deps.db.select().from(documents).where(eq(documents.id, confirmation.documentId)).get()!;
+    expect(doc.voidReason).toBe(note.slice(0, 300));
+    const entries = f.deps.db.select().from(schema.auditLog).where(eq(schema.auditLog.action, 'dms.void')).all();
+    expect(entries).toHaveLength(1);
+    expect(JSON.stringify(entries)).not.toContain('Geheimnis');
+  });
+
+  it('Befund 24: an already voided document does not hinder the void', async () => {
+    const f = await donationFixture();
+    const { line } = await f.donate();
+    const confirmation = unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [line.id] }));
+    f.deps.db.update(documents).set({ status: 'voided', voidedAt: '2026-03-01T00:00:00.000Z', voidReason: 'von Hand' }).where(eq(documents.id, confirmation.documentId)).run();
+    expect(unwrap(await voidConfirmation(f.deps, f.ctx, { id: confirmation.id, note: 'x', alreadySent: false })).state).toBe('voided');
+    expect(f.deps.db.select().from(documents).where(eq(documents.id, confirmation.documentId)).get()).toMatchObject({ status: 'voided', voidReason: 'von Hand' });
+  });
+
+  it('Befund 24: the signed version is its own document and is voided too', async () => {
+    const f = await donationFixture();
+    const { line } = await f.donate();
+    const confirmation = unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [line.id] }));
+    const signed = unwrap(await attachSignedConfirmation(f.deps, f.ctx, { id: confirmation.id, bytes: pdfBytes(), fileName: 'unterschrieben.pdf' }));
+    expect(signed.signedDocumentId).not.toBe(confirmation.documentId);
+    unwrap(await voidConfirmation(f.deps, f.ctx, { id: confirmation.id, note: 'Betrag falsch', alreadySent: false }));
+    expect(f.deps.db.select().from(documents).where(eq(documents.id, signed.signedDocumentId!)).get()).toMatchObject({ status: 'voided', voidReason: 'Betrag falsch' });
+    expect(f.deps.db.select().from(documents).where(eq(documents.id, confirmation.documentId)).get()).toMatchObject({ status: 'voided' });
+  });
+
+  it('Befund 24: a failing document void keeps the confirmation valid', async () => {
+    const f = await donationFixture();
+    const { line } = await f.donate();
+    const confirmation = unwrap(await issueConfirmation(f.deps, f.ctx, { lineIds: [line.id] }));
+    f.deps.db.update(documents).set({ phase: 'draft' }).where(eq(documents.id, confirmation.documentId)).run();
+    expect(err(await voidConfirmation(f.deps, f.ctx, { id: confirmation.id, note: 'x', alreadySent: false }))).toMatchObject({ type: 'conflict', code: 'documentIsDraft' });
+    expect(f.deps.db.select().from(financeConfirmations).where(eq(financeConfirmations.id, confirmation.id)).get()!.voidedAt).toBeNull();
   });
 
   it('needs finance.donationsIssue and a reason', async () => {

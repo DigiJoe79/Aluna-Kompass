@@ -1161,7 +1161,8 @@ async function seedRunDonationEntries(deps: Deps, ctx: CallContext, previousYear
       entryDate: `${previousYear}-10-02`,
       text: 'Spende Paul Winter Vorjahr',
       moneyLines: [{ accountId: bank.id, amountCents: 9000 }],
-      allocationLines: [{ categoryId: donations.id, amountCents: 9000, contactId: paul }],
+      // Zwei Zeilen, damit der Serienlauf hier eine Sammelbestätigung ausstellt (eine einzige Zeile ergäbe eine Einzelbestätigung).
+      allocationLines: [{ categoryId: donations.id, amountCents: 5000, contactId: paul }, { categoryId: donations.id, amountCents: 4000, contactId: paul }],
     }).then(unwrap),
   );
   await ensureVoucher(deps, ctx, entryByText(deps, 'Spende Paul Winter Vorjahr'), 'voucher-own', `${previousYear}-10-02`, 'Spendeneingang Paul Winter Vorjahr');

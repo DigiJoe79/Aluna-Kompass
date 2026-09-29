@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { MediaPicker } from '@/components/forms/media-picker';
 import { managedHintKey, managedTarget, SETTINGS_TABS, TAX_REQUIRED, type SettingsField } from '@/lib/settings-fields';
+import { formatDate, type DateFormatMode } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import { saveSettingsAction } from './actions';
 
@@ -69,7 +70,8 @@ export function SettingsForm({
 
     // E-1: kein Eingabeelement für geführte Felder — Wert, Kennzeichen und der Weg dorthin, statt readOnly/disabled.
     if (isManaged && target) {
-      const display = field.kind === 'select' && value ? t(`options.${field.key}.${String(value)}`) : value === null || value === undefined ? '' : String(value);
+      // Befund 32 (0.2.1): ein Datum wie überall im Format des Vereins, nicht als ISO.
+      const display = field.kind === 'select' && value ? t(`options.${field.key}.${String(value)}`) : field.kind === 'date' && value ? formatDate(String(value), (initial['ui.dateFormat'] as DateFormatMode | undefined) ?? 'locale') : value === null || value === undefined ? '' : String(value);
       return (
         <div key={field.key} className={field.span === 'full' ? 'md:col-span-2' : undefined}>
           <ManagedField label={label} value={display} managedBy={{ label: t(`managedTarget.${target.targetKey}`), href: target.href }} />

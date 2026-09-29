@@ -6,6 +6,7 @@ const item = (over: Partial<RunPreviewItem> = {}): RunPreviewItem => ({
   contactId: 'C1',
   contactName: 'Erika Beispiel',
   kind: 'collective',
+  issueKind: 'money',
   inKindLineId: null,
   lineIds: ['L1'],
   totalCents: 5000,

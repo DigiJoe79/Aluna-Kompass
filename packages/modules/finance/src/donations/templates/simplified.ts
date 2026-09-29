@@ -34,9 +34,9 @@ export const simplifiedReceiptTemplate: DocumentTemplate<SimplifiedReceiptInput>
     slots: { kind: 'form', title: W.SIMPLIFIED_TITLE },
     body: {
       typst: [
-        `#text(size: 8pt)[${t(W.ISSUER_LABEL)}]`,
-        `#block(above: 2pt)[${[data.organization.name, ...data.organization.addressLines].map(t).join(' #linebreak() ')}]`,
-        '#v(5mm)',
+        // Wie der Informationsblock der Bestätigungen: rechts, Beschriftung klein, dann Name und Anschrift in einem Block (eigene Absätze klebten aufeinander).
+        `#grid(columns: (1fr, 1fr), [], [#text(size: 8pt)[${t(W.ISSUER_LABEL)}] #linebreak() ${[data.organization.name, ...data.organization.addressLines].map(t).join(' #linebreak() ')}])`,
+        '#v(8mm)',
         `#align(center)[#text(size: 13pt, weight: "bold")[${t(W.SIMPLIFIED_TITLE)}]]`,
         '#v(4mm)',
         noticeBlock(data.notice),

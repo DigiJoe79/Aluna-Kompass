@@ -8,7 +8,7 @@ import { usePreference } from '@/lib/preferences';
 import { initials } from '@/lib/utils';
 
 export interface UserMenuProps {
-  user: { name: string; roleNames: string[] };
+  user: { name: string };
   build: string;
   /** Die Fassung aus der Wurzel-`package.json` (`appVersion`). */
   version: string;
@@ -30,10 +30,8 @@ export function UserMenu({ user, build, version }: UserMenuProps) {
         render={
           <button type="button" aria-label={t('aria')} className="flex h-[38px] max-w-60 items-center gap-2 rounded-md px-1.5 hover:bg-hover">
             <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-brand text-[12px] font-bold text-on-brand">{initials(user.name)}</span>
-            <span className="min-w-0 flex-1 text-left leading-tight">
-              <span className="block truncate text-[13px] font-semibold">{user.name}</span>
-              <span className="block truncate text-[11px] text-muted-ink">{user.roleNames.join(', ') || t('noRole')}</span>
-            </span>
+            {/* Nur der Name: Die Rollen standen hier abgeschnitten und sagten wenig (Befund 30, 0.2.1). */}
+            <span className="min-w-0 flex-1 truncate text-left text-[13px] font-semibold">{user.name}</span>
             <ChevronDown className="size-3.5 shrink-0 text-muted-ink" aria-hidden />
           </button>
         }

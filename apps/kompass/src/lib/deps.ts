@@ -38,8 +38,9 @@ const holder: Holder = ((globalThis as unknown as { __kompass?: Holder }).__komp
 function closeOnExit(): void {
   try {
     holder.deps?.close();
-  } catch {
-    // War schon zu.
+  } catch (error) {
+    // Ein schon geschlossener Halter ist kein Fehler; alles andere gehört ins Protokoll, sonst bleibt die WAL unbemerkt liegen.
+    if (!String(error).includes('not open')) console.error('[kompass] Datenbank beim Beenden nicht geschlossen: %s', String(error));
   }
   holder.deps = null;
   if (holder.seedSnapshot) {

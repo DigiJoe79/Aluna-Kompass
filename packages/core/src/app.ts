@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { systemClock, type Clock } from './clock';
 import { coreModule } from './core-module';
 import { CORE_MODULE_KEY } from './modules/service';
+import type Database from 'better-sqlite3';
 import { openDatabase, runMigrations } from './db/client';
 import type { AppEnv, Deps } from './deps';
 import { noopDocumentEngine, type DocumentEngine } from './documents/engine';
@@ -79,6 +80,16 @@ function ensureWritableDir(dir: string): void {
   }
 }
 
+/** Vor dem Schliessen die WAL in die Hauptdatei übertragen und kürzen — `close()` allein tut das nur als letzte Verbindung. */
+function checkpointAndClose(sqlite: Database.Database): void {
+  if (!sqlite.open) return;
+  try {
+    sqlite.pragma('wal_checkpoint(TRUNCATE)');
+  } finally {
+    sqlite.close();
+  }
+}
+
 export function createDeps(opts: CreateDepsOptions): AppDeps {
   ensureWritableDir(opts.dataPath);
   const databasePath = databasePathIn(opts.dataPath);
@@ -118,7 +129,7 @@ export function createDeps(opts: CreateDepsOptions): AppDeps {
     migrationCount: countMigrations(),
     backupDatabase: (destination) => handle.sqlite.backup(destination).then(() => undefined),
     reopen() {
-      handle.sqlite.close();
+      checkpointAndClose(handle.sqlite);
       handle = openDatabase(databasePath);
       runMigrations(handle.db);
       deps.db = handle.db;
@@ -126,7 +137,7 @@ export function createDeps(opts: CreateDepsOptions): AppDeps {
       deps.migrationCount = countMigrations();
       if (opts.runInstalls !== false) runModuleInstalls(deps);
     },
-    close: () => handle.sqlite.close(),
+    close: () => checkpointAndClose(handle.sqlite),
   };
   if (opts.runInstalls !== false) runModuleInstalls(deps);
   return deps;

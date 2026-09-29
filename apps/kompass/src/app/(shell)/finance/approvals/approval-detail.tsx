@@ -160,7 +160,7 @@ export function ApprovalDetail({
                 <span className="shrink-0 font-mono text-[15px] font-semibold tabular-nums">{formatEuro(p.amountCents)}</span>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className={`grid gap-3 ${purposes.length > 0 ? 'sm:grid-cols-2' : ''}`}>
                 <div className="space-y-1">
                   <Label htmlFor={id('category')}>{t('category')}</Label>
                   <Select id={id('category')} value={decision.categoryId} onChange={(e) => decide(p.id, { categoryId: e.target.value })}>
@@ -305,7 +305,7 @@ export function ApprovalDetail({
             <Notice level="hint">{t('ibanBelongsToOtherContact')}</Notice>
           </div>
         ) : null}
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className={cn('grid gap-4', receiptPane && 'xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]')}>
           {positions}
           {receiptPane}
         </div>

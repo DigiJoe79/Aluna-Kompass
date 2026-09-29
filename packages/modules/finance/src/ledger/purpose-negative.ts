@@ -1,7 +1,7 @@
 import type { DbOrTx, Failure } from '@kompass/core';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { financeConflict } from '../errors';
-import { financePurposes } from '../schema';
+import { financeExpenseClaims, financeMoneyLines, financeOpenItems, financeOpenItemSettlements, financePartnerPayments, financePurposes } from '../schema';
 import { purposeBalancesAt } from './queries';
 
 /** Weit genug in der Zukunft, dass jede festgeschriebene Zeile und jeder Vortrag zählt. */
@@ -33,4 +33,33 @@ export function purposeGoingNegative(db: DbOrTx, lines: readonly { purposeId?: s
     return financeConflict('purposeGoesNegative', { purpose: name, balance: after });
   }
   return null;
+}
+
+/**
+ * Befund 1: Läuft die Buchung über den Posten eines Antrags (Auslage oder Zahlung an Partner), gilt die Begründung „Zweck im
+ * Minus“, die bei dessen Freigabe gegeben wurde — sie wird nicht ein zweites Mal verlangt. Nur Posten dieser beiden Herkünfte
+ * zählen; eine beliebige andere Buchung auf denselben Zweck bleibt begründungspflichtig.
+ */
+export function inheritedPurposeReasonOfOpenItemsInternal(db: DbOrTx, openItemIds: readonly string[]): string | null {
+  if (openItemIds.length === 0) return null;
+  const items = db.select({ originType: financeOpenItems.originType, originId: financeOpenItems.originId }).from(financeOpenItems).where(inArray(financeOpenItems.id, [...openItemIds])).all();
+  for (const item of items) {
+    if (!item.originId) continue;
+    const reason =
+      item.originType === 'financeExpenseClaim'
+        ? db.select({ reason: financeExpenseClaims.purposeNegativeReason }).from(financeExpenseClaims).where(eq(financeExpenseClaims.id, item.originId)).get()?.reason
+        : item.originType === 'financePartnerPayment'
+          ? db.select({ reason: financePartnerPayments.purposeNegativeReason }).from(financePartnerPayments).where(eq(financePartnerPayments.id, item.originId)).get()?.reason
+          : null;
+    if (reason?.trim()) return reason.trim();
+  }
+  return null;
+}
+
+/** Wie `inheritedPurposeReasonOfOpenItemsInternal`, für einen gespeicherten Entwurf: die Posten, die seine Geldzeilen ausgleichen. */
+export function inheritedPurposeReasonOfEntryInternal(db: DbOrTx, entryId: string): string | null {
+  const moneyLineIds = db.select({ id: financeMoneyLines.id }).from(financeMoneyLines).where(eq(financeMoneyLines.entryId, entryId)).all().map((r) => r.id);
+  if (moneyLineIds.length === 0) return null;
+  const openItemIds = db.select({ id: financeOpenItemSettlements.openItemId }).from(financeOpenItemSettlements).where(inArray(financeOpenItemSettlements.moneyLineId, moneyLineIds)).all().map((r) => r.id);
+  return inheritedPurposeReasonOfOpenItemsInternal(db, openItemIds);
 }

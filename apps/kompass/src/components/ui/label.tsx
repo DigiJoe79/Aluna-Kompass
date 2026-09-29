@@ -30,7 +30,7 @@ function Label({
   return (
     <span data-slot="label-required" className="flex items-center gap-1.5">
       {label}
-      <span aria-hidden="true" className="font-bold text-brand-accent">
+      <span aria-hidden="true" className="font-bold leading-none text-brand-accent">
         *
       </span>
     </span>

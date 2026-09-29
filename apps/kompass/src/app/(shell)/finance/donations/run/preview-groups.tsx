@@ -1,5 +1,6 @@
 'use client';
 
+import { runItemKindKey } from '@/lib/finance/run-item-kind';
 import type { RunExcludedContact, RunPreviewItem } from '@kompass/module-finance';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
@@ -49,7 +50,7 @@ export function PreviewGroups({ items, excluded = [] }: { items: readonly RunPre
                 <li key={`${item.contactId}-${item.kind}-${item.inKindLineId ?? ''}`} data-testid="run-item" className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2">
                   <span className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5">
                     <span className="font-semibold text-ink">{item.contactName}</span>
-                    <span className="text-ink-2">{t(`itemKind.${item.kind}`)}</span>
+                    <span className="text-ink-2">{t(`itemKind.${runItemKindKey(item.kind, item.lineCount)}`)}</span>
                     <span className="text-muted-ink">{linesText(item)}</span>
                     {item.excludedPossibleReturn > 0 ? <span className="text-[12px] text-ink-2">{t('excludedPossibleReturn')}</span> : null}
                     {item.excludedReturnDraft > 0 ? <span className="text-[12px] text-ink-2">{t('excludedReturnDraft')}</span> : null}

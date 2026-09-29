@@ -16,6 +16,7 @@ import { bookEntry } from '../src/ledger/finalize';
 import { updateFiscalYear } from '../src/ledger/fiscal-years';
 import { createPurpose } from '../src/ledger/purposes';
 import { uploadVoucher } from '../src/ledger/vouchers';
+import { financeAllocationCorrections } from '../src/schema';
 import type { EntryLock } from '../src/locks';
 import { allowHumanOnlyOverMcp, ledgerFixture, pdfBytes } from './helpers';
 
@@ -109,7 +110,7 @@ describe('allocation correction', () => {
     const entry = unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-03-05', text: 'Ausgabe', moneyLines: [{ accountId: f.bank.id, amountCents: -5000 }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -5000 }] }));
     const line = entry.allocationLines[0]!;
     const newPurpose = unwrap(await createPurpose(f.deps, f.ctx, { name: 'Projekt X' }));
-    const requested = unwrap(await requestAllocationCorrection(f.deps, f.ctx, { lineId: line.id, changes: { purposeId: newPurpose.id }, note: 'x' }));
+    const requested = unwrap(await requestAllocationCorrection(f.deps, f.ctx, { lineId: line.id, changes: { purposeId: newPurpose.id }, note: 'x', purposeReason: 'Vorschuss, Spenden sind zugesagt' }));
     expect(requested.applied).toBe(true);
   });
 
@@ -200,5 +201,76 @@ describe('allocation correction', () => {
     expect(listed.items.map((c) => c.id)).toContain(requested.correction.id);
     const byEntry = unwrap(await listAllocationCorrections(f.deps, f.ctx, { entryId: entry.id }));
     expect(byEntry.total).toBe(1);
+  });
+});
+
+/** Befund 7: Die Zuordnungskorrektur darf die Zweck-Begründung nicht umgehen. */
+describe('allocation correction: Zweck ins Minus', () => {
+  async function purposeFixture() {
+    const f = await ledgerFixture({ years: ['2025', '2026'] });
+    // 200 € zweckgebunden eingegangen (2025).
+    const income = unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2025-11-01', text: 'Zweckspende', moneyLines: [{ accountId: f.bank.id, amountCents: 20000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 20000, purposeId: f.abroadPurpose.id }] }));
+    const expense = async (date: string, cents: number, purposeId?: string) =>
+      unwrap(await bookEntry(f.deps, f.ctx, { entryDate: date, text: 'Ausgabe', moneyLines: [{ accountId: f.bank.id, amountCents: -cents }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -cents, ...(purposeId ? { purposeId } : {}) }] }));
+    return { f, income, expense };
+  }
+  const corrections = (f: Awaited<ReturnType<typeof ledgerFixture>>) => f.deps.db.select().from(schema.auditLog).all();
+
+  it('an expense line moved onto a purpose that goes negative needs the reason; with it the reason is kept off the audit log', async () => {
+    const { f, expense } = await purposeFixture();
+    const entry = await expense('2026-03-10', 30000);
+    const line = entry.allocationLines[0]!;
+    const denied = await requestAllocationCorrection(f.deps, f.ctx, { lineId: line.id, changes: { purposeId: f.abroadPurpose.id }, note: 'x' });
+    expect(err(denied)).toMatchObject({ type: 'conflict', code: 'purposeGoesNegative', params: { purpose: 'Partnerprojekt Ausland', balance: -10000 } });
+    expect(f.deps.db.select().from(financeAllocationCorrections).all()).toHaveLength(0);
+
+    const requested = unwrap(await requestAllocationCorrection(f.deps, f.ctx, { lineId: line.id, changes: { purposeId: f.abroadPurpose.id }, note: 'x', purposeReason: 'Vorschuss aus Rücklage' }));
+    expect(requested).toMatchObject({ applied: true, correction: { purposeNegativeReason: 'Vorschuss aus Rücklage' } });
+    expect(unwrap(await getEntry(f.deps, f.ctx, { id: entry.id })).allocationLines[0]!.purposeId).toBe(f.abroadPurpose.id);
+    expect(JSON.stringify(corrections(f))).not.toContain('Vorschuss aus Rücklage');
+  });
+
+  it('an income line moved away from a purpose that would fall below zero needs the reason as well', async () => {
+    const { f, income, expense } = await purposeFixture();
+    await expense('2026-03-10', 15000, f.abroadPurpose.id); // Bestand 50 €
+    seedLetter(f.deps, 'PROOF1');
+    const withDms = ctxWith([...f.ctx.permissions, 'dms.view'], f.userId);
+    const line = income.allocationLines[0]!;
+    const input = { lineId: line.id, changes: { purposeId: null }, note: 'x', proofDocumentId: 'PROOF1' };
+    expect(err(await requestAllocationCorrection(f.deps, withDms, input))).toMatchObject({ code: 'purposeGoesNegative', params: { balance: -15000 } });
+    expect(unwrap(await requestAllocationCorrection(f.deps, withDms, { ...input, purposeReason: 'Spender wollte allgemein spenden' })).applied).toBe(true);
+  });
+
+  it('a correction that keeps every purpose at or above zero needs no reason and stores none', async () => {
+    const { f, expense } = await purposeFixture();
+    const entry = await expense('2026-03-10', 5000);
+    const requested = unwrap(await requestAllocationCorrection(f.deps, f.ctx, { lineId: entry.allocationLines[0]!.id, changes: { purposeId: f.abroadPurpose.id }, note: 'x', purposeReason: 'unnötig' }));
+    expect(requested.correction.purposeNegativeReason).toBeNull();
+  });
+
+  it('in a closed year the approval checks again; the reason from the request stays valid, a missing one is asked for then', async () => {
+    const { f, expense } = await purposeFixture();
+    const entry = await expense('2025-11-10', 10000);
+    f.closeYear(f.years['2025']!.id);
+    const line = entry.allocationLines[0]!;
+    const pending = unwrap(await requestAllocationCorrection(f.deps, f.ctx, { lineId: line.id, changes: { purposeId: f.abroadPurpose.id }, note: 'x' }));
+    expect(pending.applied).toBe(false);
+    await expense('2026-03-10', 15000, f.abroadPurpose.id); // Bestand jetzt 50 €, die Korrektur würde ihn auf −50 € senken
+
+    const refused = await approveAllocationCorrection(f.deps, f.secondPerson, { id: pending.correction.id });
+    expect(err(refused)).toMatchObject({ code: 'purposeGoesNegative', params: { balance: -5000 } });
+    expect(f.deps.db.select().from(financeAllocationCorrections).all()[0]!.state).toBe('pending');
+    const approved = unwrap(await approveAllocationCorrection(f.deps, f.secondPerson, { id: pending.correction.id, purposeReason: 'Vorschuss aus Rücklage' }));
+    expect(approved).toMatchObject({ state: 'applied', purposeNegativeReason: 'Vorschuss aus Rücklage' });
+    expect(JSON.stringify(corrections(f))).not.toContain('Vorschuss aus Rücklage');
+  });
+
+  it('the reason given with the request holds at the approval', async () => {
+    const { f, expense } = await purposeFixture();
+    const entry = await expense('2025-11-10', 30000);
+    f.closeYear(f.years['2025']!.id);
+    const pending = unwrap(await requestAllocationCorrection(f.deps, f.ctx, { lineId: entry.allocationLines[0]!.id, changes: { purposeId: f.abroadPurpose.id }, note: 'x', purposeReason: 'Vorschuss' }));
+    expect(pending.applied).toBe(false);
+    expect(unwrap(await approveAllocationCorrection(f.deps, f.secondPerson, { id: pending.correction.id })).state).toBe('applied');
   });
 });

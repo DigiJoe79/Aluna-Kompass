@@ -209,7 +209,7 @@ function EvidenceSection({ payment, basis, canWrite, canApprove, evidence, peopl
       canDoNames: [],
       canDoText: '',
       href: '',
-      actionLabel: t('evidence.addOrLink'),
+      actionLabel: t('evidence.missing'),
       doneLabel: t('evidence.done'),
       extra: (
         <span className="flex flex-wrap items-center gap-2">

@@ -29,6 +29,8 @@ const mcpText = (failure: Failure) => {
   return (JSON.parse((res.content[0] as { text: string }).text) as { error: { message: string } }).error.message;
 };
 
+const DATA_ONLY_PARAMS: Partial<Record<FinanceErrorCode, string[]>> = { openItemExistsForDocument: ['openItemId', 'reference'] };
+
 describe('Finanzfehler aus der Sprachdatei (A6)', () => {
   it('jeder Code hat Grund und Abhilfe in de.json, und de.json kennt keinen anderen', () => {
     const codes = Object.keys(FINANCE_ERRORS);
@@ -54,8 +56,11 @@ describe('Finanzfehler aus der Sprachdatei (A6)', () => {
       // Ein ICU-`select` (Nachweisart, P) zählt als ein Platzhalter; seine Zweige sind Text.
       const text = `${texts[code]!.reason} ${texts[code]!.remedy}`.replace(/\{(\w+), select,(?:[^{}]|\{[^{}]*\})*\}/g, '{$1, select}');
       const used = new Map([...text.matchAll(/\{(\w+)(?:, ([^}]*))?\}/g)].map((m) => [m[1]!, m[2] ?? ''] as const));
-      if ([...used.keys()].sort().join() !== Object.keys(params).sort().join()) wrong.push(`${code}: ${[...used.keys()]} ≠ ${Object.keys(params)}`);
-      for (const [name, kind] of Object.entries(params)) {
+      // Nur als `params` (MCP), nie im Satz: Verweise auf einen Datensatz (Befund 26).
+      const dataOnly = DATA_ONLY_PARAMS[code] ?? [];
+      const inText = Object.keys(params).filter((k) => !dataOnly.includes(k));
+      if ([...used.keys()].sort().join() !== inText.sort().join()) wrong.push(`${code}: ${[...used.keys()]} ≠ ${Object.keys(params)}`);
+      for (const [name, kind] of Object.entries(params).filter(([k]) => !dataOnly.includes(k))) {
         const format = used.get(name);
         const expected = kind === 'date' ? 'date, ::ddMMyyyy' : kind === 'cents' ? 'number, ::currency/EUR scale/0.01' : kind === 'evidenceKind' ? 'select' : '';
         if (format !== undefined && format !== expected) wrong.push(`${code}.${name}: „${format}“ statt „${expected}“`);

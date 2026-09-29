@@ -61,14 +61,14 @@ export function conflictMessage(error: ConflictError, t: Translate): string | nu
 /**
  * Ein Fehler, wie ihn ein Agent über MCP sieht — derselbe Text wie in der Oberfläche (A6, Nachtrag Rest 0.2.0
  * Task 7g/M): Konflikte mit Übersetzung bekommen ihren Satz, Prüfmeldungen ihren Feldtext; der Code bleibt
- * daneben maschinenlesbar.
+ * daneben maschinenlesbar, ebenso die Werte des Konflikts als `params` (Beträge in Cent, Daten als YYYY-MM-DD).
  */
 export function localizeError(error: ServiceError, t: Translate): ServiceError {
   if (error.type === 'validation') {
     return { type: 'validation', issues: error.issues.map((issue) => ({ path: issue.path, code: issue.message, message: fieldMessage(issue.message, t, issue.params) })) };
   }
   if (error.type !== 'conflict') return error;
-  return { type: 'conflict', code: error.code, message: conflictMessage(error, t) ?? error.message, ...(error.also ? { also: error.also } : {}) };
+  return { type: 'conflict', code: error.code, message: conflictMessage(error, t) ?? error.message, ...(error.params && Object.keys(error.params).length > 0 ? { params: error.params } : {}), ...(error.also ? { also: error.also } : {}) };
 }
 
 const KNOWN_CONFLICTS = new Set([

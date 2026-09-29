@@ -40,7 +40,6 @@ export const SETTINGS_TABS: SettingsTab[] = [
       { key: 'organization.taxOffice', kind: 'text' },
       { key: 'organization.exemptionNoticeType', kind: 'select', options: ['none', 'exemptionNotice', 'corporateTaxNoticeAttachment', 'section60a'] },
       { key: 'organization.exemptionNoticeDate', kind: 'date' },
-      { key: 'organization.statutoryPurpose', kind: 'textarea', span: 'full', maxLength: 500, hintKey: 'statutoryPurposeHint' },
     ],
   },
   {

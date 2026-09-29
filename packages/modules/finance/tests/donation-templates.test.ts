@@ -144,7 +144,17 @@ describe('money confirmation', () => {
     // N11 (Befundliste 0.2.0): das Faksimile steht rechts, über dem Namen — dieselbe Kante wie `#h(1fr)` vor dem Namen in der Zeile mit der Bildunterschrift.
     expect(auto.typst).toContain('#grid(columns: (70mm, 1fr), align: (left + bottom, right + bottom)');
     expect(auto.typst).not.toContain('align: (left + bottom, left + bottom)');
-    expect(auto.typst).toContain('#image("/images/signature.png", height: 16mm)');
+    // Feinschliff 2026-09-29 (Joe): Unterschrift auf 75 % der früheren 16 mm, mit 1 px (0,75 pt) Luft über der Linie — auch in der Sammelbestätigung.
+    expect(auto.typst).toContain('#box(inset: (bottom: 2.75pt))[#image("/images/signature.png", height: 12mm)]');
+    expect(auto.typst).not.toContain('height: 16mm)]');
+    // Auch die Sammelbestätigung trägt das Faksimile (sie ist maschinell, solange keine Zeile ein Aufwandsverzicht ist) — mit derselben Größe und demselben Abstand.
+    const collectiveLines = collective.lines.filter((l) => !l.expenseWaiver);
+    const autoCollective = build(collectiveConfirmationTemplate, { ...collective, ...machine, lines: collectiveLines });
+    expect(autoCollective.typst).toContain('#box(inset: (bottom: 2.75pt))[#image("/images/signature.png", height: 12mm)]');
+    // Mit einem Aufwandsverzicht bleibt es bei der Handunterschrift: kein Bild, 16 mm Platz für den Stift.
+    const byHand = build(collectiveConfirmationTemplate, collective);
+    expect(byHand.typst).toContain('#v(16mm)');
+    expect(byHand.typst).not.toContain('signature.png');
     expect(auto.typst).toContain('#h(1fr)');
 
     // Faksimile ohne maschinelles Verfahren, oder maschinell ohne Faksimile, Anzeige oder Unterzeichner: die Vorlage lehnt ab.
@@ -276,6 +286,16 @@ describe('official wording: Zweck des Bescheids im Genitiv und im Akkusativ (N8,
     const sentence = W.noticeSentence({ ...base, kind: 'section60a', assessmentPeriod: null, purposesText: genitive, purposesTextAccusative: accusative });
     expect(denbsp(sentence)).toContain(`Wir fördern nach unserer Satzung ${accusative}.`);
     expect(sentence).not.toContain(genitive);
+  });
+
+  it('setzt den Namen des Finanzamts in die Lücke „Finanzamt …“, ohne das Wort zu doppeln (AR)', () => {
+    const full = { ...base, taxOffice: 'Finanzamt Jülich' };
+    const provisional = denbsp(W.noticeSentence({ ...full, kind: 'section60a', assessmentPeriod: null, purposesText: genitive, purposesTextAccusative: accusative }));
+    expect(provisional).toContain('wurde vom Finanzamt Jülich, StNr.');
+    const exemption = denbsp(W.noticeSentence({ ...full, kind: 'exemptionNotice', assessmentPeriod: '2023', purposesText: genitive }));
+    expect(exemption).toContain('des Finanzamtes Jülich, StNr.');
+    expect(W.machineNote('Finanzamt Jülich', '10.01.2026')).toContain('dem Finanzamt Jülich am 10.01.2026');
+    for (const text of [provisional, exemption, W.machineNote('Finanzamt Jülich', '10.01.2026')]) expect(text).not.toMatch(/Finanzamt\w* Finanzamt/);
   });
 
   it('§ 60a ohne Akkusativform (ältere Daten) weicht auf den Genitiv aus, statt leer zu bleiben', () => {

@@ -8,7 +8,7 @@ import { financeAudit } from '../audit';
 import { financeConflict } from '../errors';
 import { requireFinanceRead } from '../ledger/access';
 import { checkBasisAllowed, partnerNoticeValidAtInternal } from './partners';
-import { activeStepOf, goodsLineInfo, paidLinesOf, paymentsReadyToAcknowledgeInternal, readyForUserInternal, paidLineViewsOf, paidOnOf, partnerProofDeadlinesInternal, positionsOf, positionViewsOf, proofDueOnOf, sumPositionCents, type ActiveStep, type PaidLineView, type PositionView } from './partner-proof';
+import { activeStepOf, goodsLineInfo, paidLinesOf, paymentsReadyToAcknowledgeInternal, readyForUserInternal, paidLineViewsOf, paidOnOf, partnerProofDeadlinesInternal, positionsOf, positionViewsOf, proofDueOnOf, paymentTotalCents, sumPositionCents, type ActiveStep, type PaidLineView, type PositionView } from './partner-proof';
 
 export { activeStepOf, paymentsReadyToAcknowledgeInternal, paidLineViewsOf, paidOnOf, partnerProofDeadlinesInternal, positionViewsOf, sumPositionCents, type ActiveStep, type PaidLineView, type PositionView };
 import { paymentProofSatisfied, proofDueDate, requiredEvidenceKinds, type EvidenceKind, type PartnerBasis } from './evidence-rules';
@@ -103,12 +103,13 @@ function toView(deps: Deps, ctx: CallContext, db: DbOrTx, row: FinancePartnerPay
   const partner = partnerOf(db, row.partnerId)!;
   const contact = db.select().from(contacts).where(eq(contacts.id, partner.contactId)).get()!;
   const positions = positionViewsOf(db, row.id);
+  const paidLines = paidLineViewsOf(db, row.id);
   return {
     ...row,
     partnerName: displayName(contact),
     positions,
-    paidLines: paidLineViewsOf(db, row.id),
-    totalCents: sumPositionCents(positions),
+    paidLines,
+    totalCents: paymentTotalCents(row, positions, paidLines),
     activeStep: activeStepOf(db, row),
     requiredEvidenceKinds: requiredEvidenceKindsFor(partner, row, positions),
     readyToAcknowledge: readyToAcknowledgeFor(db, ctx, row),
@@ -311,9 +312,10 @@ export async function savePartnerPaymentDraft(deps: Deps, ctx: CallContext, inpu
 
     const after = tx.select().from(financePartnerPayments).where(eq(financePartnerPayments.id, paymentId)).get()!;
     const positions = positionViewsOf(tx, paymentId);
+    const totalCents = paymentTotalCents(after, positions, paidLineViewsOf(tx, paymentId));
     financeAudit(tx, deps, ctx, {
       action: 'finance.partnerPayment.saveDraft', entity: 'financePartnerPayment', id: paymentId,
-      after: { state: 'draft', basis: after.basis, basisOverridden: after.basisOverridden, retroactive: after.retroactive, proofMonths: after.proofMonths, positionCount: positions.length, totalCents: sumPositionCents(positions) },
+      after: { state: 'draft', basis: after.basis, basisOverridden: after.basisOverridden, retroactive: after.retroactive, proofMonths: after.proofMonths, positionCount: positions.length, totalCents },
       summary: `Zahlung an Partner (Entwurf) ${paymentId} gesichert`,
     });
     return ok(toView(deps, ctx, tx, after));

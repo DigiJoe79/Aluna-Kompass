@@ -6,7 +6,7 @@ import { financeAudit } from '../audit';
 import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { financeAccounts, financeCategories, financeEntries, type FinanceAccountRow } from '../schema';
 import { boardAllowanceProblemInternal } from './board';
-import { purposeGoingNegative, purposeNegativeProblemInternal } from './purpose-negative';
+import { inheritedPurposeReasonOfEntryInternal, inheritedPurposeReasonOfOpenItemsInternal, purposeGoingNegative, purposeNegativeProblemInternal } from './purpose-negative';
 import { firstNegativeCashDay } from './cash-check';
 import { valueAt } from './dated-values';
 import { entryLinesSchema, entryViewInternal, resolveEntryLines, writeLinesInternal, type AllowanceExceededNotice, type EntryNotice, type EntryView } from './entries';
@@ -189,10 +189,12 @@ export function finalizeInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, entry
   }
 
   if (!entry.reversesEntryId) attachSettledItemDocumentsInternal(tx, deps, ctx, entryId);
+  // Befund 1: Die Begründung „Zweck im Minus“ vom Antrag, über dessen Posten diese Buchung läuft, steht danach auch an der Buchung.
+  const inheritedReason = !entry.reversesEntryId && !entry.purposeNegativeReason && purposeGoingNegative(tx, entry.allocationLines) ? inheritedPurposeReasonOfEntryInternal(tx, entryId) : null;
   const number = allocateEntryNumber(tx, year.id);
   const now = isoNow(deps.clock);
   tx.update(financeEntries)
-    .set({ status: 'final', number, finalizedAt: now, finalizedByUserId: ctx.userId, finalizedChannel: ctx.channel, fiscalYearId: year.id, updatedAt: now, ...(opts.textFromNumber ? { text: opts.textFromNumber(number) } : {}) })
+    .set({ status: 'final', number, finalizedAt: now, finalizedByUserId: ctx.userId, finalizedChannel: ctx.channel, fiscalYearId: year.id, updatedAt: now, ...(inheritedReason ? { purposeNegativeReason: inheritedReason } : {}), ...(opts.textFromNumber ? { text: opts.textFromNumber(number) } : {}) })
     .where(eq(financeEntries.id, entryId))
     .run();
   const after = entryViewInternal(tx, entryId)!;
@@ -209,7 +211,7 @@ export function finalizeInternal(tx: DbOrTx, deps: Deps, ctx: CallContext, entry
 function boardAllowanceProblemOf(deps: Deps, entry: EntryView): Failure | null {
   if (entry.reversesEntryId) return null;
   return boardAllowanceProblemInternal(deps.db, deps, { entryDate: entry.entryDate, reason: entry.boardAllowanceReason, lines: entry.allocationLines })
-    ?? purposeNegativeProblemInternal(deps.db, { reason: entry.purposeNegativeReason, lines: entry.allocationLines });
+    ?? purposeNegativeProblemInternal(deps.db, { reason: entry.purposeNegativeReason ?? inheritedPurposeReasonOfEntryInternal(deps.db, entry.id), lines: entry.allocationLines });
 }
 
 const finalizeEntrySchema = z.object({ id: z.string().min(1), expectedVersion: z.string().min(1).optional() });
@@ -293,9 +295,11 @@ export async function bookEntry(deps: Deps, ctx: CallContext, input: unknown): P
   const boardProblem = boardAllowanceProblemInternal(deps.db, deps, { entryDate: v.entryDate, reason: v.reason, lines: v.allocationLines });
   if (boardProblem) return boardProblem;
   const boardAllowanceReason = boardAllowanceProblemInternal(deps.db, deps, { entryDate: v.entryDate, reason: null, lines: v.allocationLines }) ? v.reason!.trim() : null;
-  const purposeProblem = purposeNegativeProblemInternal(deps.db, { reason: v.reason, lines: v.allocationLines });
+  // Befund 1: Läuft die Buchung über den Posten eines Antrags, gilt dessen Begründung (sie wird beim Festschreiben an die Buchung übernommen).
+  const inheritedReason = inheritedPurposeReasonOfOpenItemsInternal(deps.db, v.moneyLines.flatMap((line) => (line.settlements ?? []).map((s) => s.openItemId)));
+  const purposeProblem = purposeNegativeProblemInternal(deps.db, { reason: v.reason?.trim() || inheritedReason, lines: v.allocationLines });
   if (purposeProblem) return purposeProblem;
-  const purposeNegativeReason = purposeGoingNegative(deps.db, v.allocationLines) ? v.reason!.trim() : null;
+  const purposeNegativeReason = purposeGoingNegative(deps.db, v.allocationLines) ? (v.reason?.trim() || inheritedReason) : null;
 
   try {
     return deps.db.transaction((tx: DbOrTx) => {

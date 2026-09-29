@@ -1,4 +1,4 @@
-# Akte einrichten
+# Akte
 
 Hier bestimmen Sie, wie die Akte sortiert: die Dokumentarten mit
 Nummernkreis und Aufbewahrungsfrist, die Ordner, die Einsortierregeln, die aus

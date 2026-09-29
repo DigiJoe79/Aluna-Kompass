@@ -44,7 +44,7 @@
   - [Erscheinungsbild](einstellungen/themes.md)
   - [Module](einstellungen/module.md)
   - [Dokumentvorlagen](einstellungen/dokumente.md)
-  - [Akte einrichten](einstellungen/akte-einrichten.md)
+  - [Akte](einstellungen/akte-einrichten.md)
   - [Schutzbereiche](einstellungen/schutzbereiche.md)
 - [Profil](profil.md)
 - [Betrieb](betrieb.md)

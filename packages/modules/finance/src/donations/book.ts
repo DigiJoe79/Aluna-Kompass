@@ -243,7 +243,7 @@ export async function readSimplifiedReceipt(deps: Deps, ctx: CallContext): Promi
 
   const input = {
     organization,
-    notice: { kind: notice.kind, taxOffice: notice.taxOffice, taxNumber: notice.taxNumber, noticeDate: notice.noticeDate, assessmentPeriod: notice.assessmentPeriod, purposesText: notice.purposesText },
+    notice: { kind: notice.kind, taxOffice: notice.taxOffice, taxNumber: notice.taxNumber, noticeDate: notice.noticeDate, assessmentPeriod: notice.assessmentPeriod, purposesText: notice.purposesText, purposesTextAccusative: notice.purposesTextAccusative },
     limitCents,
   };
   const prepared = await prepare(deps, ctx, { templateKey: SIMPLIFIED_RECEIPT_TEMPLATE_KEY, input }, { number: '', issuedOn: today });

@@ -115,6 +115,16 @@ describe('deleteDocumentType (Task 4)', () => {
     expect(documentTypeFor(deps.db, 'letter')).not.toBeNull();
   });
 
+  it('refuses a type that a filing rule points to, naming the rule (Befund 6, 0.2.1)', async () => {
+    const { deps, ctx } = setupWithTypes();
+    unwrap(await createDocumentType(deps, ctx, { key: 'memo', label: 'Vermerk', prefix: 'VMK', defaultDirection: 'outgoing', retentionClass: 'statutory6Y' }));
+    unwrap(await createDocumentRule(deps, ctx, { matchField: 'filename', matchContains: 'Vermerk', thenTypeKey: 'memo' }));
+    const denied = await deleteDocumentType(deps, ctx, { key: 'memo' });
+    expect(code(denied)).toBe('documentTypeHasRules');
+    expect(denied.ok === false && denied.error.type === 'conflict' && denied.error.message).toContain('Vermerk');
+    expect(documentTypeFor(deps.db, 'memo')).not.toBeNull();
+  });
+
   it('refuses a module-owned type', async () => {
     const { deps, ctx } = setupWithProbe();
     const denied = await deleteDocumentType(deps, ctx, { key: 'probe-note' });

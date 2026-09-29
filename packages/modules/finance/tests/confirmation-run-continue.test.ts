@@ -114,12 +114,12 @@ describe('continueConfirmationRun', () => {
     const first = unwrap(await continueConfirmationRun(f.deps, f.ctx, { runId: run.id, max: 2 }));
     expect(first.counts).toMatchObject({ total: 3, pending: 1, issued: 2, failed: 0, machine: 2, needsSignature: 0 });
     expect(first.finishedAt).toBeNull();
-    // In der Reihenfolge der Namen, als Sammelbestätigung, unter dem Aufrufer.
+    // In der Reihenfolge der Namen, je eine einzige Zeile und damit als Einzelbestätigung, unter dem Aufrufer.
     expect(first.items.map((i) => [i.contactName, i.state])).toEqual([['Anna Alpha', 'issued'], ['Bert Beta', 'issued'], ['Erika Beispiel', 'pending']]);
     const issued = f.deps.db.select().from(financeConfirmations).all();
     expect(issued.map((c) => [c.kind, c.issuedOn, c.issuedByUserId, c.issuedChannel, c.machine])).toEqual([
-      ['collective', '2026-03-20', f.userId, 'ui', true],
-      ['collective', '2026-03-20', f.userId, 'ui', true],
+      ['money', '2026-03-20', f.userId, 'ui', true],
+      ['money', '2026-03-20', f.userId, 'ui', true],
     ]);
     expect(first.items[0]!.confirmationNumber).toBe(issued.find((c) => c.id === first.items[0]!.confirmationId)!.documentNumber);
 
@@ -171,6 +171,7 @@ describe('continueConfirmationRun', () => {
     const f = await donationFixture({ notice: false, machine: true });
     unwrap(await saveNotice(f.deps, f.ctx, { kind: 'exemptionNotice', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2026-01-05', exemptFrom: '2026-02-01', assessmentPeriod: '2026', purposesText: 'Förderung des Tierschutzes' }));
     await f.donate({ date: '2026-03-01', cents: 5000 });
+    await f.donate({ date: '2026-03-02', cents: 2000 }); // zwei Zeilen: erst dann eine Sammelbestätigung
     const run = unwrap(await startConfirmationRun(f.deps, f.ctx, { year: 2026 }));
     unwrap(await continueConfirmationRun(f.deps, f.ctx, { runId: run.id }));
     const confirmation = f.deps.db.select().from(financeConfirmations).all()[0]!;
@@ -181,6 +182,7 @@ describe('continueConfirmationRun', () => {
     const f = await donationFixture({ notice: false, machine: true });
     unwrap(await saveNotice(f.deps, f.ctx, { kind: 'exemptionNotice', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2025-06-01', exemptFrom: '2025-06-01', assessmentPeriod: '2025', purposesText: 'Förderung des Tierschutzes' }));
     await f.donate({ date: '2026-02-01', cents: 5000 });
+    await f.donate({ date: '2026-02-02', cents: 2000 });
     const run = unwrap(await startConfirmationRun(f.deps, f.ctx, { year: 2026 }));
     unwrap(await continueConfirmationRun(f.deps, f.ctx, { runId: run.id }));
     const confirmation = f.deps.db.select().from(financeConfirmations).all()[0]!;
@@ -338,5 +340,46 @@ describe('access, validation, audit', () => {
     // Nie Kontakt-IDs, nie Namen, nie der Sortierschlüssel.
     const all = JSON.stringify(entries);
     for (const needle of [anna.id, bert.id, f.erika.id, 'Anna', 'Erika', 'erika beispiel']) expect(all).not.toContain(needle);
+  });
+});
+
+/** Befund 21: eine einzige Zuwendung ergibt im Serienlauf die Einzelbestätigung, erst ab zwei Zeilen die Sammelbestätigung. */
+describe('continueConfirmationRun: Einzel- oder Sammelbestätigung', () => {
+  it('stellt bei genau einer Zeile eine Einzelbestätigung ohne Zeitraum aus, ab zwei Zeilen die Sammelbestätigung', async () => {
+    const f = await donationFixture({ machine: true });
+    const anna = await person(f, 'Anna', 'Alpha'); // eine Zeile
+    const bert = await person(f, 'Bert', 'Beta'); // zwei Zeilen
+    await f.donate({ date: '2026-01-10', cents: 3000, contactId: anna.id });
+    await f.donate({ date: '2026-01-11', cents: 2000, contactId: bert.id });
+    await f.donate({ date: '2026-02-11', cents: 1500, contactId: bert.id });
+
+    const preview = unwrap(await previewConfirmationRun(f.deps, f.ctx, { year: 2026 }));
+    expect(preview.items.map((i) => [i.contactName, i.kind, i.issueKind])).toEqual([['Anna Alpha', 'collective', 'money'], ['Bert Beta', 'collective', 'collective']]);
+
+    const run = unwrap(await startConfirmationRun(f.deps, f.ctx, { year: 2026 }));
+    unwrap(await continueConfirmationRun(f.deps, f.ctx, { runId: run.id }));
+    const issued = f.deps.db.select().from(financeConfirmations).all();
+    expect(issued.map((c) => [c.contactId, c.kind, c.periodFrom, c.periodTo])).toEqual([
+      [anna.id, 'money', null, null],
+      [bert.id, 'collective', '2026-01-01', '2026-03-20'],
+    ]);
+  });
+
+  it('stellt eine einzige Aufwandsspende einzeln aus und lässt sie im Unterschriftsfeld-Topf', async () => {
+    const f = await donationFixture({ machine: true });
+    await f.waive({ date: '2026-01-20', cents: 4200 });
+    const preview = unwrap(await previewConfirmationRun(f.deps, f.ctx, { year: 2026 }));
+    expect(preview.items[0]).toMatchObject({ kind: 'collectiveWaiver', issueKind: 'money', group: 'needsSignature', signatureReason: 'expenseWaiver' });
+    const run = unwrap(await startConfirmationRun(f.deps, f.ctx, { year: 2026 }));
+    unwrap(await continueConfirmationRun(f.deps, f.ctx, { runId: run.id }));
+    expect(f.deps.db.select().from(financeConfirmations).all().map((c) => [c.kind, c.periodFrom, c.machine])).toEqual([['money', null, false]]);
+  });
+
+  it('Sachspenden bleiben einzeln, zwei Aufwandsspenden werden eine Sammelbestätigung', async () => {
+    const f = await donationFixture({ machine: true });
+    await f.waive({ date: '2026-01-20', cents: 4200 });
+    await f.waive({ date: '2026-01-25', cents: 1800 });
+    const preview = unwrap(await previewConfirmationRun(f.deps, f.ctx, { year: 2026 }));
+    expect(preview.items.map((i) => [i.kind, i.issueKind, i.lineCount])).toEqual([['collectiveWaiver', 'collective', 2]]);
   });
 });

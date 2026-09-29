@@ -55,13 +55,13 @@ test.describe('settings', () => {
     await expect(page.getByLabel('Kontakt-E-Mail')).toHaveValue('keine-mail');
   });
 
-  test('tax tab shows no incomplete alert once finance records the notice, and the purpose counter', async ({ page }) => {
+  test('tax tab shows no incomplete alert once finance records the notice, and no statutory purpose', async ({ page }) => {
     await page.getByRole('tab', { name: 'Steuer & Bescheide' }).click();
     // Seit F6a erfasst der Finanz-Seed den Freistellungsbescheid; Finanzamt, Steuernummer und Bescheid stehen damit (E22).
-    await expect(page.getByLabel('Satzungszweck')).toBeVisible();
+    await expect(page.getByTestId('managed-field-value').first()).toBeVisible();
     await expect(page.locator('main').getByRole('alert')).toHaveCount(0);
-    await page.getByLabel('Satzungszweck').fill('Förderung des Tierschutzes');
-    await expect(page.getByText('26 von 500 Zeichen')).toBeVisible();
+    // Befund 31 (0.2.1): Den Zweck führt der Bescheid; das Feld hier las niemand.
+    await expect(page.getByLabel('Satzungszweck')).toHaveCount(0);
   });
 
   test('geführte Felder zeigen Wert, Kennzeichen und den Weg, kein Eingabefeld', async ({ page }) => {

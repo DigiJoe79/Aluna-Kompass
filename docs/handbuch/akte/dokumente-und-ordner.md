@@ -9,8 +9,8 @@ mit allem, was dazugehört.
 
 „Alle Dokumente“ zeigt die ganze Akte, „Eingang“ die eingegangene Post,
 die noch keinen Ordner hat, darunter die Ordner mit ihrer Anzahl. Die Ordner
-legen Sie unter [Einstellungen → Akte
-einrichten](../einstellungen/akte-einrichten.md) an; ein Pfad wie
+legen Sie unter [Einstellungen →
+Akte](../einstellungen/akte-einrichten.md) an; ein Pfad wie
 „Behörden/Finanzamt“ ergibt einen Unterordner. Die Spalte ist zugleich
 Ablagefläche: Eine Datei vom Rechner oder eine Zeile aus der Liste auf einen
 Ordner ziehen sortiert dorthin — siehe [Post ablegen](post-ablegen.md).

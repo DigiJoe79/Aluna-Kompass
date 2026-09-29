@@ -10,7 +10,7 @@ import { definePublishedView } from './view';
  * einmal in den Einstellungen und einmal als Template-Variable.
  *
  * Was fehlt, fehlt mit Absicht: Steuernummer, Finanzamt, Freistellungsbescheid
- * und Satzungszweck sind Verwaltungsdaten und nach Prinzip 4 nicht Teil einer
+ * sind Verwaltungsdaten und nach Prinzip 4 nicht Teil einer
  * veröffentlichten Sicht.
  */
 export const publishedOrganization = definePublishedView({

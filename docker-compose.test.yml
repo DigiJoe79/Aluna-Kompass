@@ -28,6 +28,10 @@ services:
     pull_policy: always
     container_name: kompass-test
     restart: unless-stopped
+    # Beim Stopp schliesst Kompass die Datenbank und überträgt dabei die
+    # Nebendatei kompass.db-wal in kompass.db. Docker wartet sonst nur 10 s und
+    # beendet dann hart; die Frist gilt auch für die Container Station.
+    stop_grace_period: 60s
     # Vor der Einrichtung nimmt Kompass den ersten Nutzer von jedem an, der die
     # Adresse erreicht — vorher gibt es niemanden, an dem sich das pruefen liesse.
     # Wer nicht ausschliessen kann, dass in dieser Zeit jemand anders zugreift,
@@ -43,3 +47,13 @@ services:
       # Geheimnisse ausdrücklich daneben, nie unter /data — das Backup bildet
       # /data ab und darf das Webspace-Passwort nicht mit ausliefern.
       - /pfad/zu/kompass-test/secret:/secret:ro
+
+# Die MTU des Netzes liegt unter dem Docker-Standard von 1500. Auf manchen
+# Anschlüssen (PPPoE, Tunnel) ist die Pfad-MTU kleiner, und die Rückmeldung
+# „Paket zu groß“ erreicht den Container nicht. Dann bleiben große Pakete
+# stumm hängen: Der SSH-Schlüsselaustausch beim Veröffentlichen bricht ab, kleine
+# Verbindungen laufen weiter. 1400 lässt Luft unter jedem üblichen Anschluss.
+networks:
+  default:
+    driver_opts:
+      com.docker.network.driver.mtu: "1400"

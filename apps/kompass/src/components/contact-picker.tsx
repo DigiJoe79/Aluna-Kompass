@@ -84,7 +84,9 @@ export function ContactPicker({
   };
 
   return (
-    <div className="space-y-1.5">
+    // `gap` statt `space-y`: Letzteres gibt jedem Kind außer dem letzten Abstand nach unten, und das unsichtbare
+    // Statusfeld (`sr-only`) hinter dem Feld macht dieses zum „nicht letzten“ — es saß 6 px höher als Nachbarfelder.
+    <div className="flex flex-col gap-1.5">
       <Label htmlFor={id} required={required}>
         {label}
       </Label>

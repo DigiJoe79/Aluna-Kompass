@@ -179,6 +179,26 @@ test.describe('finance approvals (D3)', () => {
     await expect(position(page, 2).getByLabel('Kategorie')).not.toHaveValue('');
   });
 
+  test('eine reine Fahrt hat keine Beleg-Vorschau: die Positionskarte ist so breit wie die Kopfkarte (Befund 14)', async ({ page, baseURL }) => {
+    const client = await mcpClient(page, baseURL);
+    const draft = await callTool<{ id: string }>(client, 'finance_expense_draft_save', {
+      waiver: false,
+      iban: 'DE23999999990000202051',
+      positions: [{ kind: 'trip', positionDate: associationDay(), tripFrom: 'Musterstadt', tripTo: 'Beispielstadt', tripReason: 'Pflegestelle besuchen', tripKm: 24 }],
+    });
+    const claim = await callTool<{ id: string }>(client, 'finance_expense_submit', { id: draft.id });
+    await client.close();
+
+    await switchToJonas(page);
+    await page.goto(`/finance/approvals?claim=${claim.id}`);
+    const head = await detail(page).getByTestId('approval-head').boundingBox();
+    const card = await position(page, 1).boundingBox();
+    expect(head).not.toBeNull();
+    expect(card).not.toBeNull();
+    // Ohne Vorschau gibt es keine zweite Spalte: die Karte geht über die volle Breite, nicht über die halbe.
+    expect(Math.abs(card!.width - head!.width)).toBeLessThan(4);
+  });
+
   test('Verzicht: die Prüfungen als Checkliste; ohne Verzichtserklärung und ohne ihre unterschriebene Fassung keine Freigabe; danach steht die Aufwandsspende als Buchung und ist bescheinigbar', async ({ page, baseURL }) => {
     await setE2ESetting(page, 'finance.expenseWaiverBasisText', 'Satzung § 9 Abs. 2');
     const client = await mcpClient(page, baseURL);

@@ -9,6 +9,126 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 1.0.0 kann jede Minor-Fassung Brüche enthalten — was bricht, steht unter
 **Geändert** mit dem, was zu tun ist.
 
+## [0.2.1] - 2026-09-29
+
+Fehlerbehebungen vor der ersten echten Buchung: Zuwendungsbestätigungen im
+Wortlaut des Musters, Begründungen für Zwecke im Minus an allen Wegen,
+Löschsperren in der Datenbank und ein sicheres Beenden. Diese Fassung bringt
+genau eine Datenbank-Migration mit (`0004_finance_0_2_1`), die beim Start von
+selbst läuft — vor dem Update wie immer ein Backup exportieren. Wer eine eigene
+Compose-Datei führt (auch in der Container Station), übernimmt zwei Zeilen aus
+`docker-compose.prod.yml`: den Block `networks` (MTU) und
+`stop_grace_period: 60s`. Einzelheiten im Betriebshandbuch unter „Update“.
+
+### Geändert
+
+- **Kopfleiste zeigt nur den Namen.** Die Rollen standen unter dem Namen oben
+  rechts und wurden abgeschnitten; sie entfallen dort.
+- **Das Image baut auf Debian 13.** Der Container basiert jetzt auf
+  `node:26-trixie-slim` statt auf Debian 12, mit OpenSSH 10, rsync 3.5,
+  Tesseract 5.5 und Poppler 25. Der Grund: Ein Hoster mit OpenSSH 10 bevorzugt
+  einen Schlüsselaustausch, den der alte Client nicht beherrschte; das
+  Veröffentlichen brach dort ab. Die Texterkennung im Posteingang läuft mit den
+  neuen Paketen unverändert, kann bei einzelnen Scans aber leicht anders lesen.
+  Nichts zu tun, außer das neue Image zu ziehen.
+- **Einstellungen → „Akte“.** Der Menüpunkt heißt nur noch „Akte“ statt „Akte
+  einrichten“, wie „Finanzen“.
+- **Unterschrift auf der maschinell erstellten Bestätigung.** Das Faksimile ist
+  auf 75 % verkleinert und sitzt knapp über der Linie. Das Amt neben dem Namen
+  wird beim Unterzeichner mit eingetragen („Name (Amt)“).
+
+### Behoben
+
+- **Einstellungen → Steuer & Bescheide: Satzungszweck entfernt.** Das Feld
+  versprach, wörtlich in Zuwendungsbestätigungen zu erscheinen, wurde aber seit
+  0.2.0 nirgends mehr gelesen: Die begünstigten Zwecke stehen am Bescheid unter
+  Finanzen → Spenden → Bescheide. Ein dort früher eingetragener Text bleibt in
+  der Datenbank liegen, wirkt aber nicht.
+- **Datum des Bescheids im Format des Vereins.** Unter Einstellungen → Steuer &
+  Bescheide stand es als 2026-07-29 statt 29.07.2026.
+- **Stornierte offene Zahlung zeigt keinen offenen Betrag mehr.** Sie stand als
+  „storniert“ da und nannte trotzdem weiter den vollen Betrag als offen; jetzt 0,00 €.
+- **Hinweis „offene Zahlung schon vorhanden“ passt zu jedem Dokument.** Der Satz sprach
+  nur von einer Rechnung, obwohl die Sperre für jedes Dokument gilt (etwa einen
+  Kontoauszug). Er sagt jetzt „Dokument“; über die KI-Schnittstelle nennt die
+  Ablehnung außerdem den vorhandenen Posten und dessen Zahlungsreferenz.
+- **KI-Assistenten sehen die Werte einer Ablehnung.** Über die KI-Schnittstelle
+  stehen Beträge, Namen und Daten, die im Satz einer Ablehnung vorkommen, jetzt
+  auch als eigene Felder bereit, nicht nur im deutschen Text.
+- **Zurückgenommene Zuwendungsbestätigung steht in der Akte als storniert.** Bisher
+  blieb ihr Dokument dort „ausgestellt“, und das PDF sah gültig aus. Jetzt wird es
+  beim Zurücknehmen mit storniert, ebenso eine abgelegte unterschriebene Fassung.
+  Bereits zurückgenommene Bestätigungen werden nicht nachträglich angepasst.
+- **Nachträglicher Entwurf einer Zahlung an einen Partner zeigt die Summe.** Ein
+  Entwurf für bereits gezahlte Zeilen stand bei 0,00 €, bis er eingereicht war;
+  jetzt zeigt er, auch im Protokoll, die Summe der gewählten bezahlten Zeilen.
+- **Festgeschriebenes lässt sich auch in der Datenbank nicht löschen.** Was die
+  Löschregeln der Finanzen als unlöschbar führen — Geschäftsjahre, Abschluss-
+  ereignisse, offene Zahlungen, Begründungen und „Keine Rückzahlung“-Vermerke
+  zu Buchungen, Bescheide von Partnern, Angaben zu Sachspenden festgeschriebener
+  Zeilen, Kandidaten gebuchter Umsätze —, sperrt jetzt ein Trigger, nicht nur
+  der Dienst. Im Alltag ändert sich nichts: Entwürfe und Auszüge lassen sich
+  weiter verwerfen.
+- **Eine offene Zahlung je Dokument, auch in der Datenbank.** Zu einem Dokument
+  kann es nur eine nicht stornierte offene Zahlung geben; ein zweiter Versuch
+  meldet, dass es schon eine gibt, statt mit einem technischen Fehler
+  abzubrechen. Eine stornierte Zahlung zählt nicht mit. Vor dem Einspielen
+  prüfen, dass kein Dokument zwei aktive offene Zahlungen hat.
+- **Zuwendungsbestätigung: „vom Finanzamt Finanzamt Jülich“.** Der Name des
+  Finanzamts steht mit seinem vollen Namen im Feld; der Mustersatz setzte
+  „Finanzamt“ davor noch einmal. Jetzt steht es einmal, im Wortlaut des
+  amtlichen Musters, auch im Hinweis zum maschinellen Verfahren.
+- **Vereinfachter Zuwendungsnachweis mit vorläufiger Bescheinigung (§ 60a AO).**
+  Liegt nur eine vorläufige Bescheinigung vor, fehlte dem Nachweis der Zweck im
+  Wortlaut „Wir fördern nach unserer Satzung …“. Er wird jetzt gebildet; ein
+  Fehler dabei landet im Protokoll. Außerdem trägt eine Statusmarke jetzt den
+  Text „fehlt“.
+- **Dokumentart mit Ablageregeln lässt sich nicht mehr kaputt löschen.**
+  Zeigen Ablageregeln auf die Art, lehnt Kompass das Löschen ab und nennt die
+  Regeln, statt mit einem Datenbankfehler zu scheitern.
+- **Modul einschalten meldet, woran es scheitert.** Bricht die Einrichtung
+  eines Moduls ab (etwa weil ein Nummernpräfix schon vergeben ist), zeigt
+  Kompass den Grund und eine Abhilfe statt „Technischer Fehler“; das gilt auch
+  für den MCP-Weg.
+- **Finanzen: Freigeben-Fenster.** Gibt es keine Zwecke, füllt die Kategorie
+  die ganze Breite statt neben einer leeren Spalte zu stehen.
+- **Veröffentlichen bricht auf manchen Anschlüssen ab.** Wo die Pfad-MTU unter
+  1500 liegt (PPPoE, Tunnel), erreicht die Rückmeldung „Paket zu groß“ den
+  Container nicht, und der Verbindungsaufbau zum Hoster blieb hängen. Die
+  mitgelieferten Compose-Dateien setzen die MTU des Netzes auf 1400. **Wer eine
+  eigene Compose-Datei führt** (auch in der Container Station), übernimmt den
+  Block `networks` aus `docker-compose.prod.yml` und stellt die Anwendung neu
+  bereit. Hinweise dazu stehen im Betriebshandbuch unter „Webseite“.
+- **Beim Beenden landen alle Änderungen in `kompass.db`.** Bisher blieb ein Teil
+  in der Nebendatei `kompass.db-wal`, wenn beim Stopp noch eine zweite
+  Verbindung zur Datenbank offen war; wer nur `kompass.db` sicherte, hatte einen
+  alten Stand. Jetzt wird beim Stopp immer übertragen, und ein Fehler dabei
+  steht im Protokoll. Die mitgelieferten Compose-Dateien geben dem Stopp
+  60 Sekunden (`stop_grace_period`), damit er nicht nach 10 Sekunden
+  abgeschnitten wird; wer von Hand stoppt, gibt `docker stop -t 60`. Eine
+  Sicherung per Dateikopie im laufenden Betrieb braucht weiterhin `-wal` und
+  `-shm` (oder die Sicherungsfunktion).
+- **Zuordnung korrigieren verlangt die Begründung, wenn ein Zweck ins Minus
+  geht.** Bisher konnte man über „Zuordnung ändern“ eine Ausgabe auf einen
+  Zweck legen (oder eine Einnahme von ihm wegnehmen) und ihn damit unter null
+  bringen, ohne dass Kompass nachfragte; beim Buchen wäre die Begründung
+  Pflicht gewesen. Jetzt fragt der Dialog danach. Im abgeschlossenen Jahr wird
+  bei der Freigabe erneut geprüft; eine mit dem Antrag gegebene Begründung
+  gilt dort weiter. Die Begründung steht an der Korrektur, nicht im
+  Änderungsprotokoll.
+- **Die Begründung „Zweck im Minus“ wird nur einmal verlangt.** Wer eine Auslage
+  oder eine Zahlung an Partner freigab und dabei begründete, dass ein Zweck ins
+  Minus geht, musste dieselbe Begründung beim Festschreiben der Zahlung noch
+  einmal eingeben. Läuft die Buchung über den Posten des Antrags, gilt jetzt
+  die Begründung des Antrags und steht auch an der Buchung. Jede andere Buchung
+  auf denselben Zweck braucht weiter ihre eigene Begründung.
+- **Serienlauf: eine einzige Zuwendung ergibt eine Einzelbestätigung.** Hatte
+  ein Spender im Jahr nur eine Geldzuwendung, stellte der Serienlauf trotzdem
+  eine „Sammelbestätigung“ mit Zeitraum aus. Jetzt gilt wie beim Einzelausstellen:
+  eine Zeile, eine Einzelbestätigung; erst ab zwei Zeilen die Sammelbestätigung.
+  Dasselbe gilt für eine einzige Aufwandsspende (weiterhin mit Unterschriftsfeld).
+  Sachspenden bleiben einzeln. Die Vorschau nennt die Art, die ausgestellt wird.
+
 ## [0.2.0] - 2026-09-28
 
 Kompass führt jetzt die Finanzen des Vereins: vom Kontoauszug über Belege und
@@ -341,6 +461,7 @@ kommen in späteren Fassungen (siehe `docs/nordstern.md`).
   einer Sandbox ausgeliefert.
 - Meldeweg für Schwachstellen: siehe [`SECURITY.md`](SECURITY.md).
 
-[Unveröffentlicht]: https://github.com/DigiJoe79/Aluna-Kompass/compare/v0.1.1...HEAD
+[0.2.1]: https://github.com/DigiJoe79/Aluna-Kompass/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/DigiJoe79/Aluna-Kompass/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/DigiJoe79/Aluna-Kompass/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/DigiJoe79/Aluna-Kompass/releases/tag/v0.1.0

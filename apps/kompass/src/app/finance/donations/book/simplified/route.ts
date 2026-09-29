@@ -22,6 +22,7 @@ export async function GET(): Promise<Response> {
   if (!result.ok) {
     const error = result.error;
     if (error.type === 'conflict') return Response.json({ code: error.code, message: conflictText(error, await getTranslations()) }, { status: 409, headers: { 'cache-control': 'private, no-store' } });
+    console.error('[finance] simplified receipt failed', error);
     return new Response(null, { status: error.type === 'forbidden' ? 403 : error.type === 'validation' ? 400 : error.type === 'notFound' ? 404 : 401 });
   }
   return new Response(Buffer.from(result.value.bytes), {

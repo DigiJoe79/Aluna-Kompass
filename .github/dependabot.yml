@@ -54,7 +54,7 @@ updates:
       default-days: 7
 
   # --- Das Basis-Image des Containers -------------------------------------
-  # `node:26-bookworm-slim` im Dockerfile. Ein Vorschlag hier ist fast immer
+  # `node:26-trixie-slim` im Dockerfile. Ein Vorschlag hier ist fast immer
   # ein Sprung auf die nächste Node-Hauptversion und gehört angesehen, nicht
   # durchgewinkt.
   - package-ecosystem: docker

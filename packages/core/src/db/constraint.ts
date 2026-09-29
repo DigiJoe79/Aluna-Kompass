@@ -20,7 +20,7 @@ export async function guardConstraint<T>(where: string, run: () => Promise<Resul
     return await run();
   } catch (error) {
     if (!isConstraintError(error)) throw error;
-    console.error(`[db] ${where}`, error);
+    console.error('[db] %s', where, error);
     return constraintFailure();
   }
 }

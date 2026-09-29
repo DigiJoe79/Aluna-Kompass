@@ -412,7 +412,7 @@
     "dms": {
       "list": "Akte",
       "manage": "Stammdaten",
-      "admin": "Akte einrichten"
+      "admin": "Akte"
     },
     "site": {
       "template": "Template",
@@ -481,8 +481,7 @@
       "densityCompact": "Kompakte Zeilen",
       "densityDefault": "Normale Zeilen",
       "densityComfortable": "Komfortable Zeilen",
-      "logout": "Abmelden",
-      "noRole": "Keine Rolle"
+      "logout": "Abmelden"
     }
   },
   "auth": {
@@ -1151,7 +1150,6 @@
         "taxOffice": "Finanzamt",
         "exemptionNoticeType": "Art des Bescheids",
         "exemptionNoticeDate": "Datum des Bescheids",
-        "statutoryPurpose": "Satzungszweck",
         "iban": "IBAN",
         "bic": "BIC",
         "bankName": "Bankname"
@@ -1169,7 +1167,6 @@
     "hints": {
       "registerNumberHint": "Erscheint im Briefbogen-Fuß.",
       "timeZoneHint": "Bestimmt, welcher Tag „heute“ ist — etwa für Fristen und Buchungsdaten. Name nach IANA, z. B. Europe/Berlin.",
-      "statutoryPurposeHint": "Wird wörtlich in Zuwendungsbestätigungen übernommen.",
       "logoHint": "Logo-Upload folgt mit der Mediathek.",
       "themeHint": "Themes werden unter Einrichtung → Erscheinungsbild bearbeitet."
     },
@@ -2956,6 +2953,7 @@
           "withDraft": "danach vorbelegten Entwurf öffnen",
           "cashReasonLabel": "Warum geht die Kasse ins Minus?"
         },
+        "purposeReasonLabel": "Warum geht der Zweck ins Minus?",
         "proof": {
           "label": "Dokument, das belegt, was die Spenderin bestimmt hat",
           "hint": "Ohne ein solches Dokument ist es ein „Zweck ändern (Umwidmung)“.",
@@ -4686,6 +4684,8 @@
         "itemKind": {
           "collective": "Sammelbestätigung",
           "collectiveWaiver": "Sammelbestätigung Aufwandsspenden",
+          "single": "Einzelbestätigung",
+          "singleWaiver": "Aufwandsspende, einzeln",
           "inKind": "Sachspende, einzeln"
         },
         "signatureReason": {
@@ -5252,6 +5252,7 @@
           "acknowledged": "Nachweise anerkannt.",
           "cancel": "Abbrechen",
           "addOrLink": "Hochladen oder verknüpfen",
+          "missing": "fehlt",
           "linkSave": "Verknüpfen",
           "done": "belegt",
           "optional": "zusätzlich",
@@ -6064,7 +6065,7 @@
         "remedy": "Bitten Sie eine Person mit dem Recht „Finanzen lesen“, den Beleg zuzuordnen."
       },
       "openItemExistsForDocument": {
-        "reason": "Zu dieser Rechnung gibt es schon eine offene Zahlung.",
+        "reason": "Zu diesem Dokument gibt es schon eine offene Zahlung.",
         "remedy": "Öffnen Sie die vorhandene offene Zahlung, statt eine zweite anzulegen."
       },
       "purposeGoesNegative": {

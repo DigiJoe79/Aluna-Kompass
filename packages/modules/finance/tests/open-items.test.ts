@@ -255,3 +255,77 @@ describe('Befund AA — der Ausgleich eines Rechnungspostens hängt die Rechnung
     expect(final.documentation.state).toBe('missing');
   });
 });
+
+describe('Befund 27 — ein stornierter Posten hat keinen offenen Betrag', () => {
+  it('shows openCents 0 in the list and the view, while open, partial and overpaid items keep their values', async () => {
+    const f = await ledgerFixture();
+    const base = { kind: 'payable', itemDate: '2026-03-01' } as const;
+    const cancelled = unwrap(await createOpenItem(f.deps, f.ctx, { ...base, amountCents: 1000 }));
+    const view = unwrap(await cancelOpenItem(f.deps, f.ctx, { id: cancelled.id, note: 'Irrtum' }));
+    expect(view).toMatchObject({ state: 'cancelled', openCents: 0, amountCents: 1000 });
+    const listed = unwrap(await listOpenItems(f.deps, f.ctx, { state: 'cancelled' }));
+    expect(listed.items.map((i) => ({ id: i.id, openCents: i.openCents, state: i.state }))).toEqual([{ id: cancelled.id, openCents: 0, state: 'cancelled' }]);
+
+    const open = unwrap(await createOpenItem(f.deps, f.ctx, { ...base, amountCents: 2000 }));
+    const partial = unwrap(await createOpenItem(f.deps, f.ctx, { ...base, amountCents: 3000 }));
+    const over = unwrap(await createOpenItem(f.deps, f.ctx, { ...base, amountCents: 4000 }));
+    const pay = (item: { id: string }, cents: number) => bookEntry(f.deps, f.ctx, { entryDate: '2026-03-05', text: 'x', moneyLines: [{ accountId: f.bank.id, amountCents: -cents, settlements: [{ openItemId: item.id, amountCents: cents }] }], allocationLines: [{ categoryId: f.programCosts.id, amountCents: -cents }] });
+    unwrap(await pay(partial, 1000));
+    unwrap(await pay(over, 4500));
+    const all = unwrap(await listOpenItems(f.deps, f.ctx, { state: 'all' })).items;
+    const byId = (id: string) => all.find((i) => i.id === id)!;
+    expect(byId(open.id)).toMatchObject({ state: 'open', openCents: 2000 });
+    expect(byId(partial.id)).toMatchObject({ state: 'open', openCents: 2000 });
+    expect(byId(over.id)).toMatchObject({ state: 'overpaid', openCents: -500 });
+    // Der Kern rechnet weiter mit dem Rest: Aufrufer lesen `<= 0` als bezahlt.
+    expect(openCentsInternal(f.deps.db, cancelled.id)).toBe(1000);
+    expect(openItemsAtInternal(f.deps.db, '2026-03-31').map((i) => i.id)).not.toContain(cancelled.id);
+  });
+});
+
+describe('Befund 3 — höchstens eine aktive offene Zahlung je Dokument', () => {
+  async function setup() {
+    const f = await ledgerFixture();
+    const doc = insertDocument(f, { subject: 'Rechnung' });
+    const base = { kind: 'payable', itemDate: '2026-03-01', amountCents: 5000 } as const;
+    return { f, doc, base };
+  }
+
+  it('a second active item for the same document is a conflict, not a technical error', async () => {
+    const { f, doc, base } = await setup();
+    unwrap(await createOpenItem(f.deps, f.ctx, { ...base, documentId: doc }));
+    expect(err(await createOpenItem(f.deps, f.ctx, { ...base, documentId: doc }))).toMatchObject({ type: 'conflict', code: 'openItemExistsForDocument' });
+  });
+
+  it('Befund 26: the conflict names the existing item and its reference in params', async () => {
+    const { f, doc, base } = await setup();
+    const first = unwrap(await createOpenItem(f.deps, f.ctx, { ...base, documentId: doc, paymentReference: 'RE-42' }));
+    expect(err(await createOpenItem(f.deps, f.ctx, { ...base, documentId: doc }))).toMatchObject({ type: 'conflict', code: 'openItemExistsForDocument', params: { openItemId: first.id, reference: 'RE-42' } });
+    const bare = unwrap(await createOpenItem(f.deps, f.ctx, { ...base, documentId: insertDocument(f, { subject: 'Kontoauszug' }) }));
+    expect(err(await createOpenItem(f.deps, f.ctx, { ...base, documentId: bare.documentId! }))).toMatchObject({ params: { openItemId: bare.id, reference: '' } });
+  });
+
+  it('a cancelled item does not block a new one for the same document', async () => {
+    const { f, doc, base } = await setup();
+    const first = unwrap(await createOpenItem(f.deps, f.ctx, { ...base, documentId: doc }));
+    unwrap(await cancelOpenItem(f.deps, f.ctx, { id: first.id, note: 'Irrtum' }));
+    expect(err(await createOpenItem(f.deps, f.ctx, { ...base, documentId: doc }))).toBe('ok');
+  });
+
+  it('updating documentId onto a document that already has an active item is the same conflict', async () => {
+    const { f, doc, base } = await setup();
+    unwrap(await createOpenItem(f.deps, f.ctx, { ...base, documentId: doc }));
+    const second = unwrap(await createOpenItem(f.deps, f.ctx, base));
+    expect(err(await updateOpenItem(f.deps, f.ctx, { id: second.id, expectedVersion: second.updatedAt, documentId: doc }))).toMatchObject({ type: 'conflict', code: 'openItemExistsForDocument' });
+  });
+
+  it('the database itself refuses a second active item for a document', async () => {
+    const { f, doc, base } = await setup();
+    unwrap(await createOpenItem(f.deps, f.ctx, { ...base, documentId: doc }));
+    const insert = (id: string) =>
+      f.deps.sqlite
+        .prepare(`insert into finance_open_items (id, kind, item_date, amount_cents, document_id, created_by_user_id, created_at, updated_at) values (?, 'payable', '2026-03-01', 100, ?, 'U', 'x', 'x')`)
+        .run(id, doc);
+    expect(() => insert('RAW1')).toThrow(/UNIQUE/);
+  });
+});

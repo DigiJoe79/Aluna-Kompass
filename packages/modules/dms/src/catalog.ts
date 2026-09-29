@@ -375,8 +375,8 @@ export const documentTypeDeleteSchema = z.object({ key: z.string().min(1) });
 
 /**
  * Eine von Hand angelegte Dokumentart wieder löschen (Joe, 2026-09-26:
- * „Aufräumen-Können statt Neuaufsetzen“). Vier Sperren, jede mit eigenem
- * Grund: Dokumente vorhanden, modul-eigen, Vorschlag eines Moduls
+ * „Aufräumen-Können statt Neuaufsetzen“). Fünf Sperren, jede mit eigenem
+ * Grund: Dokumente vorhanden, Ablageregeln, die auf die Art zeigen, modul-eigen, Vorschlag eines Moduls
  * (`module_provisions`, egal ob angenommen oder übersprungen — der
  * Vorschlag kommt sonst beim nächsten Start nicht zurück, aber die Art
  * wäre weg), Vorgabeart je Richtung. Der Schlüssel bleibt im
@@ -399,6 +399,9 @@ export async function deleteDocumentType(deps: Deps, ctx: CallContext, input: un
 
   const anyDoc = deps.db.select({ id: documents.id }).from(documents).where(eq(documents.typeKey, existing.key)).get();
   if (anyDoc) return conflict('documentTypeHasDocuments', `Dokumentart „${existing.label}“ hat schon Dokumente`);
+
+  const rules = deps.db.select({ matchContains: documentRules.matchContains }).from(documentRules).where(eq(documentRules.thenTypeKey, existing.key)).all();
+  if (rules.length > 0) return conflict('documentTypeHasRules', `Dokumentart „${existing.label}“ wird von Ablageregeln genutzt: ${rules.map((r) => `„${r.matchContains}“`).join(', ')}`);
 
   const owned = refuseModuleOwned(existing);
   if (owned) return owned;

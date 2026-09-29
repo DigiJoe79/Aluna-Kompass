@@ -1,6 +1,6 @@
-import { buildContext, invalid, isoNow, newId, notFound, ok, prepare, readSetting, requirePermission, systemContext, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { buildContext, invalid, isoNow, newId, notFound, ok, prepare, readSetting, requirePermission, systemContext, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
 import { addContactRole, contactRoles, contacts, displayName, type ContactRow } from '@kompass/module-contacts';
-import { abortIssue, abortReceive, issueGeneratedDocument, readLinkedDocument, receiveGeneratedUpload } from '@kompass/module-dms';
+import { abortIssue, abortReceive, issueGeneratedDocument, readLinkedDocument, receiveGeneratedUpload, voidDocumentInternal } from '@kompass/module-dms';
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
@@ -378,6 +378,13 @@ const voidSchema = z.object({
  * bestätigbar, Storno und Kontaktkorrektur der Buchung wieder möglich. Unser
  * Exemplar bleibt als Beweis festgeschrieben in der Akte.
  */
+class VoidAborted extends Error {
+  constructor(readonly failure: Failure) {
+    super('void aborted');
+    this.name = 'VoidAborted';
+  }
+}
+
 export async function voidConfirmation(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<ConfirmationView>> {
   const denied = requirePermission(ctx, 'finance.donationsIssue');
   if (denied) return denied;
@@ -393,20 +400,32 @@ export async function voidConfirmation(deps: Deps, ctx: CallContext, input: unkn
   // Befund E: Kompass kennt den eigenen Versandvermerk — „nicht versandt“ hieße, die Rückholspur zu überspringen.
   if (before.sentAt && !v.alreadySent) return financeConflict('confirmationWasSent', { sentAt: before.sentAt });
 
-  return deps.db.transaction((tx: DbOrTx) => {
-    const now = isoNow(deps.clock);
-    tx.update(financeConfirmations)
-      .set({ voidedAt: now, voidedByUserId: ctx.userId ?? 'system', voidNote: v.note, sentBeforeVoid: v.alreadySent, originalReturnedOn: v.originalReturnedOn ?? null, taxOfficeInformedOn: v.taxOfficeInformedOn ?? null })
-      .where(eq(financeConfirmations.id, v.id))
-      .run();
-    tx.update(financeConfirmationLines).set({ releasedAt: now }).where(and(eq(financeConfirmationLines.confirmationId, v.id), isNull(financeConfirmationLines.releasedAt))).run();
-    financeAudit(tx, deps, ctx, {
-      action: 'finance.confirmation.void', entity: 'financeConfirmation', id: v.id,
-      after: { voided: true, sentBeforeVoid: v.alreadySent, originalReturned: v.originalReturnedOn !== undefined, taxOfficeInformed: v.taxOfficeInformedOn !== undefined },
-      summary: `Zuwendungsbestätigung ${before.documentNumber} zurückgenommen`,
+  try {
+    return deps.db.transaction((tx: DbOrTx) => {
+      const now = isoNow(deps.clock);
+      tx.update(financeConfirmations)
+        .set({ voidedAt: now, voidedByUserId: ctx.userId ?? 'system', voidNote: v.note, sentBeforeVoid: v.alreadySent, originalReturnedOn: v.originalReturnedOn ?? null, taxOfficeInformedOn: v.taxOfficeInformedOn ?? null })
+        .where(eq(financeConfirmations.id, v.id))
+        .run();
+      tx.update(financeConfirmationLines).set({ releasedAt: now }).where(and(eq(financeConfirmationLines.confirmationId, v.id), isNull(financeConfirmationLines.releasedAt))).run();
+      financeAudit(tx, deps, ctx, {
+        action: 'finance.confirmation.void', entity: 'financeConfirmation', id: v.id,
+        after: { voided: true, sentBeforeVoid: v.alreadySent, originalReturned: v.originalReturnedOn !== undefined, taxOfficeInformed: v.taxOfficeInformedOn !== undefined },
+        summary: `Zuwendungsbestätigung ${before.documentNumber} zurückgenommen`,
+      });
+      // Befund 24: Die Akte zeigt sonst weiter „ausgestellt“, und das PDF sähe gültig aus. Ein schon
+      // storniertes Dokument (Altdaten, Handstorno) hindert die Rücknahme nicht; jeder andere Fehler
+      // rollt beides zurück.
+      for (const documentId of [before.documentId, before.signedDocumentId].filter((id): id is string => !!id)) {
+        const voided = voidDocumentInternal(tx, deps, ctx, { id: documentId, reason: v.note.slice(0, 300) });
+        if (!voided.ok && !(voided.error.type === 'conflict' && voided.error.code === 'documentAlreadyVoided')) throw new VoidAborted(voided);
+      }
+      return ok(viewInternal(tx, v.id)!);
     });
-    return ok(viewInternal(tx, v.id)!);
-  });
+  } catch (error) {
+    if (error instanceof VoidAborted) return error.failure;
+    throw error;
+  }
 }
 
 // ── Rückholspur nachtragen ──────────────────────────────────────────────────

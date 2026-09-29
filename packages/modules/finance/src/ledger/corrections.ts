@@ -9,6 +9,7 @@ import { financeConflict, lockConflict, requireHumanChannelFinance } from '../er
 import { ENTRY_LOCKS, type EntryLock } from '../locks';
 import { financeAllocationCorrections, financeAllocationLines, financeCategories, financeFiscalYears, financePurposes, type FinanceAllocationCorrectionRow } from '../schema';
 import { requireFinanceRead } from './access';
+import { purposeGoingNegative, purposeNegativeProblemInternal } from './purpose-negative';
 import { CERTIFIABLE_INCOME_KINDS } from './codes';
 import { entryViewInternal } from './entries';
 import { fiscalYearStatusInternal } from './fiscal-years';
@@ -97,6 +98,14 @@ export function applyCorrectionInternal(tx: DbOrTx, deps: Deps, ctx: CallContext
   return ok(applied);
 }
 
+/** Befund 7: Die Korrektur verschiebt den Betrag der Zeile vom alten zum neuen Zweck — der alte sinkt bei einer Einnahme, der neue bei einer Ausgabe. */
+function purposeShiftOf(line: { purposeId: string | null; amountCents: number }, newPurposeId: string | null): { purposeId: string | null; amountCents: number }[] {
+  return [
+    { purposeId: line.purposeId, amountCents: -line.amountCents },
+    { purposeId: newPurposeId, amountCents: line.amountCents },
+  ];
+}
+
 const changesSchema = z.object({
   contactId: z.string().min(1).nullable().optional(),
   projectId: z.string().min(1).nullable().optional(),
@@ -110,6 +119,8 @@ const requestSchema = z.object({
   note: z.string().trim().min(1).max(500),
   proofDocumentId: z.string().min(1).optional(),
   acknowledgeSection153: z.boolean().optional(),
+  /** Nur nötig, wenn ein Zweck durch die Korrektur ins Minus geht (`purposeGoesNegative`). */
+  purposeReason: z.string().trim().max(1000).optional(),
 });
 
 /**
@@ -155,6 +166,14 @@ export async function requestAllocationCorrection(deps: Deps, ctx: CallContext, 
     proofDoc = { id: record.value.id, number: record.value.number, fileChecksum: record.value.fileChecksum };
   }
 
+  let purposeNegativeReason: string | null = null;
+  if (purposeChanges) {
+    const shift = purposeShiftOf(line, changed.purposeId ?? null);
+    const problem = purposeNegativeProblemInternal(deps.db, { reason: v.purposeReason, lines: shift });
+    if (problem) return problem;
+    if (v.purposeReason?.trim() && purposeGoingNegative(deps.db, shift)) purposeNegativeReason = v.purposeReason.trim();
+  }
+
   const pending = deps.db.select({ id: financeAllocationCorrections.id }).from(financeAllocationCorrections).where(and(eq(financeAllocationCorrections.lineId, v.lineId), eq(financeAllocationCorrections.state, 'pending'))).get();
   if (pending) return financeConflict('correctionPendingExists');
 
@@ -178,7 +197,7 @@ export async function requestAllocationCorrection(deps: Deps, ctx: CallContext, 
         .values({
           id, lineId: v.lineId, entryId: line.entryId, state: 'pending', before: JSON.stringify(before), after: JSON.stringify(changed), note: v.note,
           proofDocumentId: proofDoc?.id ?? null, section153: triggersSection153, requestedByUserId: ctx.userId ?? 'system', requestedAt: now,
-          approvedByUserId: null, approvedAt: null, rejectedByUserId: null, rejectedAt: null, rejectNote: null,
+          approvedByUserId: null, approvedAt: null, rejectedByUserId: null, rejectedAt: null, rejectNote: null, purposeNegativeReason,
         })
         .run();
       if (proofDoc) {
@@ -203,7 +222,7 @@ export async function requestAllocationCorrection(deps: Deps, ctx: CallContext, 
   }
 }
 
-const idSchema = z.object({ id: z.string().min(1) });
+const idSchema = z.object({ id: z.string().min(1), purposeReason: z.string().trim().max(1000).optional() });
 
 /** `finance.approve`, **`humanOnly`**, nie der Anleger (`ownCorrection`). */
 export async function approveAllocationCorrection(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<CorrectionView>> {
@@ -217,7 +236,23 @@ export async function approveAllocationCorrection(deps: Deps, ctx: CallContext, 
   if (!correction) return notFound('financeAllocationCorrection', parsed.value.id);
   if (correction.state !== 'pending') return financeConflict('correctionNotPending');
   if (correction.requestedByUserId === ctx.userId) return financeConflict('ownCorrection');
-  return deps.db.transaction((tx: DbOrTx) => applyCorrectionInternal(tx, deps, ctx, correction.id));
+  return deps.db.transaction((tx: DbOrTx) => {
+    // Bis zur Freigabe kann sich der Bestand geändert haben; die Begründung vom Antrag gilt weiter, sonst wird sie hier verlangt.
+    const after = JSON.parse(correction.after) as Partial<LineFields>;
+    if ('purposeId' in after) {
+      const line = tx.select().from(financeAllocationLines).where(eq(financeAllocationLines.id, correction.lineId)).get();
+      if (line) {
+        const shift = purposeShiftOf(line, after.purposeId ?? null);
+        const reason = correction.purposeNegativeReason ?? parsed.value.purposeReason;
+        const problem = purposeNegativeProblemInternal(tx, { reason, lines: shift });
+        if (problem) return problem;
+        if (!correction.purposeNegativeReason && parsed.value.purposeReason?.trim() && purposeGoingNegative(tx, shift)) {
+          tx.update(financeAllocationCorrections).set({ purposeNegativeReason: parsed.value.purposeReason.trim() }).where(eq(financeAllocationCorrections.id, correction.id)).run();
+        }
+      }
+    }
+    return applyCorrectionInternal(tx, deps, ctx, correction.id);
+  });
 }
 
 const rejectSchema = z.object({ id: z.string().min(1), note: z.string().trim().min(1).max(500) });
@@ -267,13 +302,13 @@ export async function listAllocationCorrections(deps: Deps, ctx: CallContext, in
   return ok({ items, total });
 }
 
-const decideSchema = z.object({ id: z.string().min(1), decision: z.enum(['approve', 'reject']), note: z.string().trim().min(1).max(500).optional() });
+const decideSchema = z.object({ id: z.string().min(1), decision: z.enum(['approve', 'reject']), note: z.string().trim().min(1).max(500).optional(), purposeReason: z.string().trim().max(1000).optional() });
 
 /** `finance_correction_decide` (Spec 10.2): ein Verteiler statt zweier Werkzeuge — nie die eigene Korrektur, **`humanOnly`** (über die beiden gerufenen Dienste). */
 export async function decideAllocationCorrection(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<CorrectionView>> {
   const parsed = validate(deps, decideSchema, input);
   if (!parsed.ok) return parsed;
-  const { id, decision, note } = parsed.value;
-  if (decision === 'approve') return approveAllocationCorrection(deps, ctx, { id });
+  const { id, decision, note, purposeReason } = parsed.value;
+  if (decision === 'approve') return approveAllocationCorrection(deps, ctx, { id, purposeReason });
   return rejectAllocationCorrection(deps, ctx, { id, note: note ?? '' });
 }

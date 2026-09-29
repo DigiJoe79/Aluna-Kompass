@@ -82,4 +82,12 @@ describe('modules service', () => {
     expect(res.ok ? null : res.error).toEqual({ type: 'conflict', code: 'moduleRefusesDisable', message: 'hasFinalRecords' });
     expect(isModuleEnabled(deps, 'stubborn')).toBe(true);
   });
+
+  it('reports a failing install as a conflict with its sentence and leaves the module off (Befund 5, 0.2.1)', async () => {
+    const broken = defineModule({ key: 'broken', version: '0', permissions: [], install: () => { throw new Error('Präfix ZWB trägt schon die Dokumentart „Zweitschrift“'); } });
+    const deps = createTestDeps({ manifests: [coreModule, broken] });
+    const res = await setModuleEnabled(deps, admin, { key: 'broken', enabled: true });
+    expect(res.ok ? null : res.error).toEqual({ type: 'conflict', code: 'moduleInstallFailed', message: 'Präfix ZWB trägt schon die Dokumentart „Zweitschrift“' });
+    expect(isModuleEnabled(deps, 'broken')).toBe(false);
+  });
 });

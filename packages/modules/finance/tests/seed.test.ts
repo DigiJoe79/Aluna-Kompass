@@ -540,9 +540,10 @@ describe('seedFinance', () => {
       const details = unwrap(await getInKindDetails(deps, ctx, { lineId: inKind.lines[0]!.lineId }));
       expect(details).toMatchObject({ origin: 'private' });
       expect(details?.proofDocumentId).toBeTruthy();
-      expect(byName.get('Nora Lehmann')).toMatchObject({ kind: 'collective', machine: true, signatureState: 'machine', state: 'valid' });
+      // Befund 21: eine einzige Zeile ergibt im Serienlauf die Einzelbestätigung, Pauls zwei Zeilen die Sammelbestätigung.
+      expect(byName.get('Nora Lehmann')).toMatchObject({ kind: 'money', machine: true, signatureState: 'machine', state: 'valid' });
       expect(byName.get('Paul Winter')).toMatchObject({ kind: 'collective', machine: true, signatureState: 'machine', state: 'valid' });
-      expect(byName.get('Sina Krüger')).toMatchObject({ kind: 'collective', expenseWaiver: true, signatureState: 'needsSignature' });
+      expect(byName.get('Sina Krüger')).toMatchObject({ kind: 'money', expenseWaiver: true, signatureState: 'needsSignature' });
       expect(byName.has('Jan Moser')).toBe(false);
     });
 
@@ -556,8 +557,8 @@ describe('seedFinance', () => {
       expect(byName.get('Greta Sommer')!.toCorrect).toEqual(['noticeSuperseded']);
       // Gretas Zuwendung liegt nach dem Beginn der Befreiung laut § 60a-Bescheid — sonst gäbe es keine Bestätigung.
       expect(provisional.exemptFrom <= '2025-03-14').toBe(true);
-      // Prüfstein 6: die Rücklastschrift auf Nora Lehmanns Sammelbestätigung des Serienlaufs.
-      expect(byName.get('Nora Lehmann')).toMatchObject({ kind: 'collective', totalCents: 6000, state: 'valid' });
+      // Prüfstein 6: die Rücklastschrift auf Nora Lehmanns Bestätigung des Serienlaufs.
+      expect(byName.get('Nora Lehmann')).toMatchObject({ kind: 'money', totalCents: 6000, state: 'valid' });
       expect(byName.get('Nora Lehmann')!.toCorrect).toEqual(['lineReturned']);
       // Befund E: zurückgenommen, versandt, das Finanzamt noch nicht informiert.
       expect(byName.get('Henrik Brandt')).toMatchObject({ state: 'voided', sentBeforeVoid: true, taxOfficeInformedOn: null, toCorrect: ['recallTrailMissing'] });
@@ -575,7 +576,7 @@ describe('seedFinance', () => {
       expect(run.counts).toMatchObject({ total: 4, issued: 3, skipped: 1, machine: 2, needsSignature: 1 });
 
       const book = unwrap(await getDonationBook(deps, ctx, { year: previousYear }));
-      expect(book.rows.find((r) => r.contactName === 'Nora Lehmann')).toMatchObject({ amountCents: 6000, confirmation: { kind: 'collective' } });
+      expect(book.rows.find((r) => r.contactName === 'Nora Lehmann')).toMatchObject({ amountCents: 6000, confirmation: { kind: 'money' } });
 
       const reconciliation = unwrap(await getDonationReconciliation(deps, ctx, { year: previousYear }));
       expect(reconciliation.toCorrect).toMatchObject({ count: 1, cents: 6000 });

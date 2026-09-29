@@ -312,7 +312,11 @@ export const financeOpenItems = sqliteTable(
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
-  (t) => [index('finance_open_items_kind_idx').on(t.kind), index('finance_open_items_origin_idx').on(t.originType, t.originId), index('finance_open_items_contact_idx').on(t.contactId)],
+  (t) => [
+    // Befund 3 (0.2.1): höchstens ein aktiver Posten je Dokument — die Vorabprüfung allein trägt nicht.
+    uniqueIndex('finance_open_items_document_active_idx').on(t.documentId).where(sql`${t.documentId} is not null and ${t.cancelledAt} is null`),
+    index('finance_open_items_kind_idx').on(t.kind), index('finance_open_items_origin_idx').on(t.originType, t.originId), index('finance_open_items_contact_idx').on(t.contactId),
+  ],
 );
 export type FinanceOpenItemRow = typeof financeOpenItems.$inferSelect;
 
@@ -349,6 +353,8 @@ export const financeAllocationCorrections = sqliteTable(
     rejectedByUserId: text('rejected_by_user_id'),
     rejectedAt: text('rejected_at'),
     rejectNote: text('reject_note'),
+    /** Befund 7: warum ein Zweck durch diese Korrektur ins Minus geht — frei getippt, deshalb hier und nie im Protokoll. */
+    purposeNegativeReason: text('purpose_negative_reason'),
   },
   (t) => [index('finance_allocation_corrections_line_idx').on(t.lineId), index('finance_allocation_corrections_entry_idx').on(t.entryId), index('finance_allocation_corrections_state_idx').on(t.state)],
 );

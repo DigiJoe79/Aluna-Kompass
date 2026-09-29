@@ -6,6 +6,7 @@ import { readSimplifiedReceipt } from '../src/donations/book';
 import { germanDate, typstText } from '../src/donations/templates/shared';
 import { SIMPLIFIED_RECEIPT_TEMPLATE_KEY, simplifiedReceiptTemplate } from '../src/donations/templates/simplified';
 import * as W from '../src/donations/templates/wording';
+import { saveNotice } from '../src/donations/notices';
 import { setDatedValue } from '../src/ledger/dated-values';
 import { financeModule } from '../src/manifest';
 import { donationFixture, EXEMPTION, type DonationFixture } from './donation-fixture';
@@ -50,6 +51,15 @@ describe('simplified receipt (§ 50 Abs. 4 EStDV)', () => {
     // Kein Akteneintrag, keine Nummer, kein Protokoll — ein Vordruck ohne Personenbezug.
     expect(f.deps.db.select().from(documents).all()).toHaveLength(documentsBefore);
     expect(f.deps.db.select().from(schema.auditLog).all()).toHaveLength(auditBefore);
+  });
+
+  it('renders with a provisional notice (§ 60a AO), which needs the accusative purposes (Befund 15)', async () => {
+    const f = await donationFixture({ notice: false });
+    unwrap(await saveNotice(f.deps, f.ctx, { kind: 'section60a', taxOffice: 'Finanzamt Musterstadt', taxNumber: '99/999/99999', noticeDate: '2025-05-02', exemptFrom: '2025-04-01', purposesText: 'des Tierschutzes', purposesTextAccusative: 'den Tierschutz' }));
+    const calls = captureRender(f);
+    unwrap(await readSimplifiedReceipt(f.deps, f.ctx));
+    expect(calls[0]!.bodyTypst).toContain('Wir fördern nach unserer Satzung den Tierschutz');
+    expect(calls[0]!.bodyTypst).toContain('vom Finanzamt Musterstadt, StNr.');
   });
 
   it('takes the limit valid today, including the association’s override', async () => {

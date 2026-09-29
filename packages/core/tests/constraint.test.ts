@@ -13,7 +13,7 @@ describe('guardConstraint', () => {
     });
     expect(result).toEqual({ ok: false, error: { type: 'conflict', code: 'databaseConstraint', message: 'databaseConstraint', messageKey: 'errors.databaseConstraint', params: {} } });
     expect(JSON.stringify(result)).not.toMatch(/FOREIGN KEY/);
-    expect(log).toHaveBeenCalledWith('[db] test.tool', expect.objectContaining({ code: 'SQLITE_CONSTRAINT_FOREIGNKEY' }));
+    expect(log).toHaveBeenCalledWith('[db] %s', 'test.tool', expect.objectContaining({ code: 'SQLITE_CONSTRAINT_FOREIGNKEY' }));
     log.mockRestore();
   });
 

@@ -144,7 +144,8 @@ test.describe('finance donation run', () => {
     expect(signature.suggestedFilename()).toMatch(/zum-unterschreiben\.pdf$/);
 
     await page.goto('/finance/donations');
-    await expect(issuedRow(page, 'Sportfreunde Beispieltal')).toContainText('Sammel');
+    // Befund 21: eine einzige Zeile ergibt im Lauf die Einzelbestätigung (Art „Geld“), keine Sammelbestätigung.
+    await expect(issuedRow(page, 'Sportfreunde Beispieltal')).toContainText('Geld');
   });
 
   test('Versandvermerk für alle setzt nur die maschinellen; die zu unterschreibenden bleiben in „Unterschrift fehlt“', async ({ page }) => {
@@ -164,8 +165,9 @@ test.describe('finance donation run', () => {
 
     await page.goto('/finance/donations');
     await expect(issuedRow(page, 'Sportfreunde Beispieltal')).toContainText('Post');
-    await expect(issuedRow(page, 'Henrik Brandt').filter({ hasText: 'Sammel' })).toContainText('Post');
-    await expect(issuedRow(page, 'Lukas Hofmann').filter({ hasText: 'Sammel' })).not.toContainText('Post');
+    // Henriks erste Bestätigung ist zurückgenommen; die aus dem Lauf trägt den Vermerk. Lukas' Zeilen sind unterschriftspflichtig.
+    await expect(issuedRow(page, 'Henrik Brandt').filter({ hasNotText: 'zurückgenommen' })).toContainText('Post');
+    for (const row of await issuedRow(page, 'Lukas Hofmann').all()) await expect(row).not.toContainText('Post');
     // Dazu Sina Krügers Aufwandsspende aus dem Serienlauf des Vorjahrs und (F8a Task 7) Nadja Vogts
     // freigegebene Verzicht-Auslage aus diesem Lauf — beide ebenfalls ohne Unterschrift.
     await expect(page.getByRole('tab', { name: 'Unterschrift fehlt (4)' })).toBeVisible();

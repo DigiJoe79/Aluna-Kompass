@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { CallContext } from '../context';
+import { isConstraintError } from '../db/constraint';
 import type { Deps } from '../deps';
 import { requirePermission } from '../permissions/check';
 import { conflict, notFound, ok, type Result } from '../result';
@@ -73,13 +74,20 @@ export async function setModuleEnabled(deps: Deps, ctx: CallContext, input: unkn
   const next = [...current].filter((k) => k !== CORE_MODULE_KEY && k !== key);
   if (enabled) next.push(key);
   next.sort();
-  return deps.db.transaction((tx) => {
-    const written = writeSettingInternal(tx, deps, ctx, 'modules.enabled', next, enabled ? 'modules.enable' : 'modules.disable');
-    if (!written.ok) return written;
-    // Stammdaten, ohne die das Modul nicht benutzbar wäre — in derselben
-    // Transaktion, damit es das Modul entweder eingeschaltet **und**
-    // eingerichtet gibt oder gar nicht.
-    if (enabled) manifest.install?.(tx, deps, ctx);
-    return ok(listModules(deps).find((m) => m.key === key) as ModuleStatus);
-  });
+  try {
+    return deps.db.transaction((tx) => {
+      const written = writeSettingInternal(tx, deps, ctx, 'modules.enabled', next, enabled ? 'modules.enable' : 'modules.disable');
+      if (!written.ok) return written;
+      // Stammdaten, ohne die das Modul nicht benutzbar wäre — in derselben
+      // Transaktion, damit es das Modul entweder eingeschaltet **und**
+      // eingerichtet gibt oder gar nicht.
+      if (enabled) manifest.install?.(tx, deps, ctx);
+      return ok(listModules(deps).find((m) => m.key === key) as ModuleStatus);
+    });
+  } catch (error) {
+    // Ein Fehler aus `install` (z. B. ein belegtes Präfix) rollt die Transaktion zurück; der Satz geht an den Aufrufer statt in einen 500er.
+    if (!enabled || !(error instanceof Error) || isConstraintError(error)) throw error;
+    console.error('[modules] install %s failed', key, error);
+    return conflict('moduleInstallFailed', error.message);
+  }
 }

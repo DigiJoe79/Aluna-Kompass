@@ -129,6 +129,32 @@ Ein Backup aus 0.1.x lässt sich in 0.2.0 einspielen; es wird beim Einspielen
 auf den neuen Stand gebracht. Umgekehrt nicht: Ein Backup aus 0.2.0 weist eine
 Installation mit 0.1.x als „aus einer neueren Version“ zurück.
 
+### Von 0.2.0 auf 0.2.1
+
+Die Fassung 0.2.1 bringt genau eine Migration mit (`0004_finance_0_2_1`),
+wieder in einem Zug. Danach meldet `/api/health` `migrationCount: 5` statt `4`.
+
+Die Migration legt fest, dass es zu einem Dokument höchstens eine nicht
+stornierte offene Zahlung gibt. Hat eine Installation das Modul Finanzen schon
+benutzt, vorher prüfen, dass kein Dokument zwei davon hat — sonst scheitert die
+Migration, und die Anwendung startet nicht. Auf einer Kopie der Datenbank:
+
+```sql
+SELECT document_id, COUNT(*) AS aktive_posten
+FROM finance_open_items
+WHERE document_id IS NOT NULL AND cancelled_at IS NULL
+GROUP BY document_id HAVING COUNT(*) > 1;
+```
+
+Liefert die Abfrage Zeilen, je Dokument alle offenen Zahlungen bis auf eine
+unter Finanzen → Offene Zahlungen stornieren und dann aktualisieren.
+
+Wer eine eigene Compose-Datei führt, übernimmt außerdem aus
+`docker-compose.prod.yml` den Block `networks` (MTU 1400 für das
+Veröffentlichen) und `stop_grace_period: 60s`: Beim Stopp schreibt Kompass die
+Nebendatei `kompass.db-wal` in `kompass.db`; ohne Frist beendet Docker den
+Container nach 10 Sekunden hart.
+
 **Wenn etwas schiefgeht:** Es gibt keinen Weg zurück in eine ältere Fassung der
 Datenbank — Migrationen laufen nur vorwärts. Der Rückweg ist das Backup aus
 Schritt 1: altes Image eintragen, Container starten, Backup einspielen.
@@ -206,6 +232,14 @@ Der Lauf meldet sich am Ziel an, überträgt nichts und listet auf, was dort
 liegt und ein Publish entfernen würde. Kommt die Liste leer zurück, zeigt das
 Zielverzeichnis ins Leere — ein vertippter Pfad lässt `rsync` nicht scheitern,
 er trifft nur nichts.
+
+**Wenn die Verbindung beim Schlüsselaustausch abbricht.** Meldet der Test
+„Connection closed“ direkt nach dem Schlüsselaustausch, obwohl Zugangsdaten und
+Adresse stimmen, liegt es meist an der Pfad-MTU: Auf manchen Anschlüssen (PPPoE,
+Tunnel) passen Pakete von 1500 Byte nicht durch, und die Rückmeldung darüber
+erreicht den Container nicht. Die Compose-Dateien setzen deshalb die MTU des
+Netzes auf 1400. Bei einer selbst geführten Datei den Block `networks` aus
+`docker-compose.prod.yml` übernehmen und die Anwendung neu bereitstellen.
 
 Solange die Seite noch nicht öffentlich sein soll, hält `SITE_STAGING=1` sie
 aus den Suchmaschinen: `noindex`, `Disallow: /`, keine Sitemap.

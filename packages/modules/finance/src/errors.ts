@@ -116,7 +116,8 @@ export const FINANCE_ERRORS = {
   contactIbanTaken: { contact: 'text' },
   voucherSearchNeedsRead: {},
   // F5b — Rechnungen mit ZUGFeRD/Factur-X.
-  openItemExistsForDocument: {},
+  // `openItemId` und `reference` stehen nicht im Satz, sondern nur als `params` (MCP): der Verweis auf den vorhandenen Posten.
+  openItemExistsForDocument: { openItemId: 'text', reference: 'text' },
   openItemExistsForInvoice: { reference: 'text', date: 'date' },
   invoiceProbablyPaidNeedsReason: { date: 'date' },
   invoiceCurrencyUnsupported: { currency: 'text' },

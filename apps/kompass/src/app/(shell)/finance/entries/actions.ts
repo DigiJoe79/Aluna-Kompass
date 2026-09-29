@@ -161,11 +161,11 @@ export interface CorrectionChanges {
 }
 
 /** Zuordnung ändern (offenes Jahr: sofort; abgeschlossenes: wartet auf Freigabe — nennt dann, wer freigeben kann). */
-export async function requestCorrectionAction(lineId: string, changes: CorrectionChanges, note: string, proofDocumentId?: string, acknowledgeSection153?: boolean): Promise<ActionState> {
+export async function requestCorrectionAction(lineId: string, changes: CorrectionChanges, note: string, proofDocumentId?: string, acknowledgeSection153?: boolean, purposeReason?: string): Promise<ActionState> {
   return guardAction('(shell)/finance/entries/actions.ts#requestCorrectionAction', async () => {
     const t = await getTranslations();
     const { deps, ctx, user } = await requireSession();
-    const result = await requestAllocationCorrection(deps, ctx, { lineId, changes, note, proofDocumentId, acknowledgeSection153 });
+    const result = await requestAllocationCorrection(deps, ctx, { lineId, changes, note, proofDocumentId, acknowledgeSection153, purposeReason });
     revalidatePath('/finance/entries');
     if (!result.ok) return toActionState(result, t);
     if (result.value.applied) return toActionState(result, t, t('finance.entryView.correct.toast.applied'));

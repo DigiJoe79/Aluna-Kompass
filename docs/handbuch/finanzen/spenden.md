@@ -224,7 +224,8 @@ nachtragen** eintragen — über die KI-Schnittstelle mit
 `finance_confirmation_recall_record`.
 
 Danach sind die Spenden wieder bestätigbar und stehen unter „Noch nicht
-bestätigt“. Unser Exemplar bleibt in der Akte, die Nummer bleibt vergeben,
+bestätigt“. Unser Exemplar bleibt in der Akte, dort als storniert (samt einer
+unterschriebenen Fassung), die Nummer bleibt vergeben,
 und die Bestätigung steht in der Liste als „zurückgenommen“. Zurücknehmen kann
 wie Ausstellen nur ein Mensch.
 
@@ -293,8 +294,10 @@ Schritten:
    Angaben wie sein Ursprungslauf und zeigt von vornherein nur, was seither
    noch fehlt.
 2. **Vorschau** — je Spender ein Posten: eine Sammelbestätigung über alle
-   Geldspenden und Mitgliedsbeiträge des Jahres, Aufwandsspenden gesondert
-   (immer mit Unterschriftsfeld), Sachspenden einzeln. Die Posten stehen in
+   Geldspenden und Mitgliedsbeiträge des Jahres — bei genau einer Zuwendung
+   eine Einzelbestätigung —, Aufwandsspenden gesondert (immer mit
+   Unterschriftsfeld, bei einer einzigen ebenfalls einzeln), Sachspenden
+   einzeln. Die Posten stehen in
    drei Gruppen — **bereit**, **braucht Unterschrift**, **Anschrift fehlt** —
    mit Link zum Kontakt, wo eine Anschrift fehlt. Ein Nummernbereich zeigt
    vorab, welche Nummern der Lauf vergeben würde. Zuwendungen mit einem Datum

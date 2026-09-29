@@ -462,10 +462,11 @@ test.describe('finance donation notices', () => {
     await page.goto('/admin/settings');
     await page.getByRole('tab', { name: 'Steuer & Bescheide' }).click();
     const managedValues = page.getByTestId('managed-field-value');
-    await expect(managedValues).toHaveText(['11/222/33333', 'Finanzamt Beispielstadt', 'Freistellungsbescheid', today]);
+    // Befund 32 (0.2.1): das Datum im Format des Vereins, nicht als ISO.
+    await expect(managedValues).toHaveText(['11/222/33333', 'Finanzamt Beispielstadt', 'Freistellungsbescheid', germanDay(today)]);
     for (const label of ['Finanzamt', 'Steuernummer', 'Art des Bescheids', 'Datum des Bescheids']) await expect(page.getByLabel(label)).toHaveCount(0);
     await expect(page.getByText('Wird unter Finanzen → Spenden → Bescheide geführt.')).toHaveCount(1);
-    await expect(page.getByLabel('Satzungszweck')).toBeEditable();
+    await expect(page.getByLabel('Satzungszweck')).toHaveCount(0);
   });
 
   test('ein Bescheid-Dokument über 1 MB kommt an (N9)', async ({ page }) => {

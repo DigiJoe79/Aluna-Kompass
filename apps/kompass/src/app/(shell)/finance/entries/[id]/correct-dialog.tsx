@@ -64,6 +64,9 @@ export function CorrectDialog({
   const [proofDocumentId, setProofDocumentId] = useState<string | null>(null);
   const [proofArchiveOpen, setProofArchiveOpen] = useState(false);
   const [acknowledgeSection153, setAcknowledgeSection153] = useState(false);
+  // Befund 7: geht ein Zweck durch die Korrektur ins Minus, fragt der Dienst nach einer Begründung.
+  const [purposeDetail, setPurposeDetail] = useState<string | null>(null);
+  const [purposeReason, setPurposeReason] = useState('');
   const [voidingConfirmation, setVoidingConfirmation] = useState(false);
 
   // Bei genau einer Aufteilungszeile entfällt der Auswahlschritt (Task 1).
@@ -104,14 +107,20 @@ export function CorrectDialog({
     setProofDocumentId(null);
     setProofArchiveOpen(false);
     setAcknowledgeSection153(false);
+    setPurposeDetail(null);
+    setPurposeReason('');
     setVoidingConfirmation(false);
   };
 
   const runCorrection = async (proofId?: string, ack?: boolean) => {
     if (!pickedLine || nothingChanged) return;
-    const result = await requestCorrectionAction(pickedLine.id, changes, note, proofId, ack);
+    const result = await requestCorrectionAction(pickedLine.id, changes, note, proofId, ack, purposeDetail && purposeReason.trim() ? purposeReason : undefined);
     if (result.status === 'error') {
       // Zwei Lagen reagieren statt zu raten (Task 2): der Dialog bleibt offen, die Eingaben stehen noch da.
+      if (result.code === 'purposeGoesNegative') {
+        setPurposeDetail(result.detail ?? result.message);
+        return;
+      }
       if (result.code === 'purposeChangeNeedsProof' || result.code === 'section153Unacknowledged') {
         setServerCode(result.code);
         return;
@@ -334,6 +343,12 @@ export function CorrectDialog({
                     </div>
                   ) : null}
 
+                  {purposeDetail ? (
+                    <Notice level="warn" reason={{ name: 'purposeReason', value: purposeReason, onChange: setPurposeReason, label: t('purposeReasonLabel') }}>
+                      {purposeDetail}
+                    </Notice>
+                  ) : null}
+
                   {serverCode === 'section153Unacknowledged' ? (
                     <Notice
                       level="warn"
@@ -376,7 +391,7 @@ export function CorrectDialog({
               {t('cancel')}
             </Button>
             {lineConfirmation ? null : path === 'allocation' ? (
-              <Button type="button" disabled={note.trim().length === 0 || nothingChanged} onClick={() => void submitAllocation()}>
+              <Button type="button" disabled={note.trim().length === 0 || nothingChanged || (purposeDetail !== null && purposeReason.trim().length === 0)} onClick={() => void submitAllocation()}>
                 {t('submitAllocation')}
               </Button>
             ) : path === 'reverse' ? (
