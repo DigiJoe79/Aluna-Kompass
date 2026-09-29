@@ -14,12 +14,12 @@
     "@astrojs/sitemap": "^3.7.4",
     "@kompass/markdown": "workspace:*",
     "@kompass/site-template": "workspace:*",
-    "astro": "^7.3.2"
+    "astro": "^7.3.4"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
-    "@types/node": "^26.5.1",
+    "@types/node": "^26.6.2",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.1"
   }
 }
