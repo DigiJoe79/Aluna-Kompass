@@ -181,6 +181,8 @@
     "settingUiOnly": "Diese Einstellung lässt sich nur in der Oberfläche ändern.",
     "conflict": {
       "staleVersion": "Inzwischen wurde dieser Eintrag an anderer Stelle geändert — etwa über MCP oder in einem zweiten Fenster. Gespeichert wurde nichts; Ihre Eingaben stehen noch in der Maske. Kopieren Sie, was Sie behalten wollen, laden Sie die Seite neu und tragen Sie es auf dem aktuellen Stand erneut ein.",
+      "reviewUiOnly": "Die Prüfung bestätigt ein Mensch in der Oberfläche.",
+      "noReviewPending": "Für dieses Profil ist keine Prüfung offen.",
       "documentIsDraft": "Das ist noch ein Entwurf.",
       "notOutgoing": "Eingegangene Post wird nicht versandt.",
       "notDispatched": "Es gibt keinen Versandvermerk.",
@@ -404,7 +406,8 @@
     "backup": "Backup",
     "logoAlt": "Vereinslogo",
     "animals": {
-      "list": "Hunde"
+      "list": "Hunde",
+      "admin": "Tiere"
     },
     "contacts": {
       "list": "Kontakte"
@@ -627,6 +630,13 @@
           "title": "Übersetzungslücken",
           "empty": "Alles übersetzt.",
           "open": "Zu den Sprachen"
+        }
+      },
+      "animals": {
+        "reviewPending": {
+          "title": "Tiere: Prüfung offen",
+          "empty": "Kein Profil wartet auf eine Prüfung.",
+          "open": "Zur Prüfliste"
         }
       },
       "dms": {
@@ -1494,9 +1504,27 @@
     "description": "Woraus Briefe und Ausdrucke gebaut werden: die Basis-Vorlagen und die Vorlage je Dokumentart. Die Dokumente selbst liegen in der Akte.",
     "bases": {
       "title": "Basis-Vorlagen",
+      "intro": "Die Seitenrahmen, auf denen Dokumente erscheinen: Kopf, Ränder, Schrift, Fußzeile. Eine eigene Basis mit derselben Kennung ersetzt die mitgelieferte.",
+      "columns": {
+        "base": "Basis",
+        "id": "Kennung",
+        "origin": "Herkunft",
+        "state": "Zustand",
+        "type": "Dokumentart",
+        "effective": "Erscheint auf",
+        "choice": "Auswahl"
+      },
+      "own": "eigene",
+      "shipped": "mitgeliefert",
       "ready": "bereit",
       "broken": "fehlerhaft",
-      "useDefault": "Vorgabe der Vorlage",
+      "typesTitle": "Dokumentarten",
+      "typesIntro": "Jede Dokumentart bringt eine Basis als Vorgabe mit. Hier steht, worauf sie tatsächlich erscheint; eine Abweichung von der Vorgabe ist markiert und lässt sich zurücksetzen.",
+      "overridden": "abweichend",
+      "unavailable": "nicht verfügbar",
+      "useDefault": "Vorgabe der Vorlage ({base})",
+      "choiceFor": "Basis für {type}",
+      "reset": "Zurücksetzen",
       "saved": "Basis-Vorlage gesetzt.",
       "gapsTitle": "Eigene Basis fehlt",
       "gapsText": "Diese Installation führt eigene Basis-Vorlagen, aber nicht alle, die die Module nutzen. Dokumente auf den folgenden Basen erscheinen im mitgelieferten Standardkopf:",
@@ -1506,7 +1534,14 @@
       "templates": {
         "letterhead": "Briefbogen",
         "audit-log-export": "Änderungsprotokoll-Export",
-        "letter": "Brief"
+        "letter": "Brief",
+        "dms-bundle-index": "Inhaltsverzeichnis zum Aktenbündel",
+        "finance-cash-count": "Kassenzählprotokoll",
+        "finance-confirmation-money": "Zuwendungsbestätigung für Geldzuwendungen",
+        "finance-confirmation-in-kind": "Zuwendungsbestätigung für Sachzuwendungen",
+        "finance-confirmation-collective": "Sammelbestätigung",
+        "finance-simplified-receipt": "Vereinfachter Zuwendungsnachweis",
+        "finance-waiver-declaration": "Verzichtserklärung"
       }
     }
   },
@@ -1647,16 +1682,46 @@
         "status": "Status",
         "flags": "Kennzeichen",
         "location": "Aufenthalt",
+        "photos": "Fotos",
+        "updated": "Geändert",
         "published": "Webseite"
       },
       "emergency": "Notfall",
-      "sponsorable": "Patentier"
+      "sponsorable": "Patentier",
+      "views": "Ansicht",
+      "all": "Alle ({count})",
+      "reviewPending": "Prüfung offen ({count})",
+      "reviewBadge": "Prüfung offen",
+      "search": "Name suchen",
+      "filterStatus": "Status",
+      "allStatuses": "Alle Status",
+      "filterLocation": "Aufenthalt",
+      "allLocations": "Jeder Aufenthalt",
+      "filterPublished": "Webseite",
+      "publishedAny": "Veröffentlicht und nicht",
+      "publishedYes": "Veröffentlicht",
+      "publishedNo": "Nicht veröffentlicht",
+      "countLine": "{shown} von {total} Hunden",
+      "noMatchTitle": "Kein Hund passt zu dieser Auswahl.",
+      "noMatchText": "Ändern Sie die Filter oder wechseln Sie auf „Alle“."
+    },
+    "queue": {
+      "label": "Blättern in der Liste",
+      "position": "{index} von {total}",
+      "previous": "Vorheriger Hund",
+      "next": "Nächster Hund"
+    },
+    "review": {
+      "pendingSince": "Prüfung offen seit {date}",
+      "publishOnConfirm": "Beim Bestätigen veröffentlichen",
+      "confirm": "Geprüft",
+      "confirmNext": "Geprüft und weiter",
+      "confirmed": "Prüfung bestätigt."
     },
     "form": {
       "tabs": {
         "profile": "Steckbrief",
-        "texts": "Texte",
-        "photos": "Fotos",
+        "content": "Texte und Fotos",
         "story": "Geschichte"
       },
       "name": "Name",
@@ -1687,7 +1752,8 @@
         "lookingForHome": "Sucht ein Zuhause",
         "reserved": "Reserviert",
         "adopted": "Vermittelt"
-      }
+      },
+      "saveNext": "Speichern und weiter"
     },
     "status": {
       "change": "Status ändern",
@@ -1707,8 +1773,8 @@
       "choose": "Fotos wählen",
       "primary": "Hauptfoto",
       "remove": "Entfernen",
-      "save": "Fotos speichern",
-      "saved": "Fotos gespeichert."
+      "open": "Foto in neuem Tab öffnen",
+      "afterCreate": "Fotos lassen sich wählen, sobald der Hund angelegt ist."
     },
     "story": {
       "locked": "Erst nach der Vermittlung: Setzen Sie den Status auf „Vermittelt“, dann lässt sich die Erfolgsgeschichte pflegen.",
@@ -1717,8 +1783,6 @@
       "quote": "Zitat der Familie",
       "family": "Familie",
       "year": "Vermittlungsjahr",
-      "save": "Geschichte speichern",
-      "saved": "Geschichte gespeichert.",
       "beforeCaption": "Unterschrift unter dem Vorher-Bild",
       "afterCaption": "Unterschrift unter dem Nachher-Bild",
       "captionHint": "Leer heißt: keine Ortsangabe unter dem Bild."
@@ -1730,6 +1794,31 @@
     },
     "records": {
       "forbidden": "Tier (kein Zugriff)"
+    },
+    "admin": {
+      "title": "Tiere",
+      "description": "Einstellungen des Tiermoduls.",
+      "saved": "Bildausschnitt gespeichert.",
+      "frame": {
+        "title": "Bildausschnitt des Hauptfotos",
+        "intro": "In welchem Format und mit welchem Ausschnitt die Webseite das Hauptfoto eines Tiers zeigt. Das legt das Template der Webseite fest; tragen Sie hier dasselbe ein, dann zeigt das Tierprofil die Fotos so, wie die Seite sie zeigen wird, und Sie sehen beim Wählen des Hauptfotos, ob es passt.",
+        "aspect": "Seitenverhältnis",
+        "aspectHint": "Breite zu Höhe",
+        "aspects": {
+          "4x5": "4:5 (hoch)",
+          "3x4": "3:4 (hoch)",
+          "2x3": "2:3 (hoch)",
+          "1x1": "1:1 (quadratisch)",
+          "4x3": "4:3 (quer)",
+          "3x2": "3:2 (quer)",
+          "16x9": "16:9 (quer)"
+        },
+        "focusX": "Blickpunkt waagerecht (%)",
+        "focusXHint": "0 = links, 50 = Mitte, 100 = rechts",
+        "focusY": "Blickpunkt senkrecht (%)",
+        "focusYHint": "0 = oben, 50 = Mitte, 100 = unten",
+        "save": "Speichern"
+      }
     }
   },
   "site": {
@@ -1818,7 +1907,10 @@
         "noGaps": "Alle Übersetzungen vorhanden.",
         "staleTitle": "Veraltete Verweise",
         "noStale": "Alle Verweise gültig.",
-        "staleHint": "Wird im Export leer ausgeliefert; das Template zeigt dann seine Automatik."
+        "staleHint": "Wird im Export leer ausgeliefert; das Template zeigt dann seine Automatik.",
+        "pendingReviewTitle": "Prüfung offen",
+        "noPendingReview": "Nichts Veröffentlichtes wartet auf eine Prüfung.",
+        "pendingReviewHint": "Diese Einträge sind veröffentlicht und seit der letzten Änderung von niemandem geprüft. Der Publish nimmt sie mit."
       },
       "blockedTerms": {
         "title": "Sperrwörter",

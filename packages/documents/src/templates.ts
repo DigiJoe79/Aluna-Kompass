@@ -44,6 +44,8 @@ const auditEntrySchema = z.object({
   action: z.string(),
   entityType: z.string(),
   entityId: z.string().nullable(),
+  /** Der Name des Datensatzes, wo der Aufrufer ihn auflösen konnte; sonst steht die ID. */
+  entityLabel: z.string().nullable().optional(),
   summary: z.string(),
 });
 const auditExportSchema = z.object({
@@ -52,24 +54,36 @@ const auditExportSchema = z.object({
   entries: z.array(auditEntrySchema).max(2000),
 });
 
-/** Die Änderungsprotokoll-Tabelle als Typst (datenlastig, kein Markdown). */
+/**
+ * Die Änderungsprotokoll-Tabelle als Typst (datenlastig, kein Markdown).
+ *
+ * Die Breite gehört dem Inhalt: Zeitpunkt, Nutzer mit Kanal und Aktion stehen in festen, schmalen Spalten, der
+ * Rest ist Objekt und Zusammenfassung. Zeitpunkt und Kanal kommen fertig formatiert vom Aufrufer.
+ *
+ * Die Kopfzeile trägt keinen Fettdruck: Jede Basis setzt sie selbst fett und hell auf ihre Hauptfarbe. Eine
+ * Basis, die Fettes in eben dieser Farbe setzt, machte die Köpfe sonst unsichtbar (Befund 5, 0.2.2). Aus
+ * demselben Befund: keine Silbentrennung in der Tabelle, und der Aktionsschlüssel bricht an seinen Punkten.
+ */
 function auditTable(data: z.infer<typeof auditExportSchema>): string {
   const filters = Object.entries(data.filters).map(([k, v]) => `${k}: ${v}`).join('; ');
+  const breakable = (key: string) => `raw("${key.split('.').map((part) => part.replace(/[\\"]/g, (c) => `\\${c}`)).join('.\\u{200B}')}")`;
   const cells = data.entries.flatMap((e) => [
-    `raw(${q(e.occurredAt)})`,
-    `[${esc(e.userName ?? '—')}]`,
-    `[${esc(e.channel)}]`,
-    `raw(${q(e.action)})`,
-    `[${esc(e.entityType + (e.entityId ? ` · ${e.entityId}` : ''))} #linebreak() #text(size: 8.5pt)[${esc(e.summary)}]]`,
+    `[${esc(e.occurredAt)}]`,
+    `[${esc(e.userName ?? '—')} #linebreak() #text(size: 8pt)[${esc(e.channel)}]]`,
+    breakable(e.action),
+    `[${esc(`${e.entityType}${e.entityLabel ? ` · ${e.entityLabel}` : e.entityId ? ` · ${e.entityId}` : ''}`)} #linebreak() #text(size: 8.5pt)[${esc(e.summary)}]]`,
   ]);
   return [
     `#text(size: 9pt)[${esc(`Filter: ${filters || 'keine'}`)}]`,
     '#v(3mm)',
-    '#table(',
-    '  columns: (auto, auto, auto, auto, 1fr),',
-    '  table.header([*Zeitpunkt*], [*Nutzer*], [*Kanal*], [*Aktion*], [*Objekt / Zusammenfassung*]),',
-    `  ${cells.join(',\n  ')}`,
-    ')',
+    '#{',
+    '  set text(size: 9pt, hyphenate: false)',
+    '  table(',
+    '    columns: (21mm, 30mm, 34mm, 1fr),',
+    '    table.header([Zeitpunkt], [Nutzer / Kanal], [Aktion], [Objekt / Zusammenfassung]),',
+    `    ${cells.join(',\n    ')}`,
+    '  )',
+    '}',
   ].join('\n');
 }
 
@@ -79,7 +93,8 @@ export function coreDocumentTemplates(): DocumentTemplate[] {
     type: 'audit-export',
     schema: auditExportSchema,
     permission: 'audit.view',
-    base: 'a4-plain',
+    // Die schlanke Basis: schmale Ränder, die Breite gehört der Tabelle.
+    base: 'a4-plain-slim',
     filed: false, // Ad-hoc-Auszug: wird gezogen und heruntergeladen, nicht abgelegt.
     build: (data) => ({
       slots: { kind: 'report', title: data.title },

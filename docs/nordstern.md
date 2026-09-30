@@ -209,7 +209,9 @@ Rechte, Protokoll, MCP, Seed.
 Spec: das Profil hat eine, siehe `docs/intern/specs/`; die Vollstufe hat noch
 keine.
 
-**Stand: Profil steht, Vollstufe offen.** Schritt 5 der Roadmap.
+**Stand: Profil steht, Vollstufe offen.** Schritt 5 der Roadmap. Seit 0.2.2
+tragen die Profile einen Prüfmerker, die Liste filtert und sortiert auch
+einige hundert Tiere, und geprüft wird am Stück von Profil zu Profil.
 
 ### Betrieb
 
@@ -445,7 +447,10 @@ die Säulen stehen.
   Schnittstelle dafür steht (Services über MCP); die Treffsicherheit braucht
   den Volltext, den es jetzt gibt. Für Finanzen mit 0.2.0 eingelöst: Der Agent
   sortiert Kontoumsätze vor, und was festschreibt, freigibt, abschließt oder
-  ausstellt, ist über MCP gesperrt, bis ein Verein es bewusst freigibt. Offen
+  ausstellt, ist über MCP gesperrt, bis ein Verein es bewusst freigibt. Für
+  Tierprofile mit 0.2.2 eingelöst: Jedes Schreiben über MCP merkt das Profil
+  zur Prüfung vor, bestätigen kann nur ein Mensch in der Oberfläche, und der
+  Publish warnt vor Veröffentlichtem, das noch niemand gesehen hat. Offen
   bleibt die Akte.
 - **Einsortierregeln auf dem Volltext** (Backlog 5), als Teil desselben
   Vorgangs.

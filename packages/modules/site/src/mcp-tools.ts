@@ -107,11 +107,11 @@ const FIXED: McpToolDefinition[] = [
   tool('site_variables_options', 'List the selectable records per reference variable (value and label), filtered by the declared condition. Requires site.view.', z.object({}), (deps, ctx) => listReferenceOptions(deps, ctx), listReferenceOptions),
   tool('site_blocked_terms_get', 'Read the blocked terms: words that must never appear on the website; a hit blocks publishing. Requires site.view.', z.object({}), (deps, ctx) => getBlockedTerms(deps, ctx), getBlockedTerms),
   tool('site_blocked_terms_set', 'Replace the list of blocked terms (2–80 characters each, at most 50; blank lines and duplicates are dropped). Requires site.publish. Audited.', blockedTermsSchema, (deps, ctx, args) => setBlockedTerms(deps, ctx, args), setBlockedTerms),
-  tool('site_export_check', 'Build the content export into a throwaway directory without publishing, to check it is current and complete. Requires site.publish.', z.object({}), async (deps, ctx) => {
+  tool('site_export_check', 'Build the content export into a throwaway directory without publishing, to check it is current and complete. Returns gaps, violations, stale and pendingReview: published records still waiting for a human review (a warning, not a block). Requires site.publish.', z.object({}), async (deps, ctx) => {
     const dir = await mkdtemp(path.join(tmpdir(), 'kompass-site-check-'));
     try {
       const result = await exportSiteContent(deps, ctx, { jobDir: dir });
-      return result.ok ? { ok: true as const, value: { contentHash: result.value.contentHash, assets: result.value.assets.length, gaps: result.value.gaps, violations: result.value.violations, stale: result.value.stale } } : result;
+      return result.ok ? { ok: true as const, value: { contentHash: result.value.contentHash, assets: result.value.assets.length, gaps: result.value.gaps, violations: result.value.violations, stale: result.value.stale, pendingReview: result.value.pendingReview } } : result;
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -125,7 +125,7 @@ const FIXED: McpToolDefinition[] = [
   ),
   tool(
     'site_preview_build',
-    'Build the preview of the site into the configured preview directory and report diff against the last publish. Requires site.publish.',
+    'Build the preview of the site into the configured preview directory and report diff against the last publish, along with gaps, violations, stale and pendingReview: published records still waiting for a human review (a warning, not a block). Requires site.publish.',
     z.object({}),
     (deps, ctx) => runPreview(deps, ctx, readSiteEnv()),
     runPreview,

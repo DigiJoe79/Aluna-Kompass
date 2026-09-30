@@ -25,10 +25,11 @@ export interface TestDeps extends Deps {
   sqlite: Database.Database;
 }
 
-/** Attrappe der Dokument-Engine für Kern-Tests: liefert Fake-PDF-Bytes, die vier mitgelieferten Basen. */
+/** Attrappe der Dokument-Engine für Kern-Tests: liefert Fake-PDF-Bytes, die mitgelieferten Basen. */
 export function fakeDocumentEngine(overrides: Partial<DocumentEngine> = {}): DocumentEngine {
   const bases = [
     { id: 'a4-plain', label: 'A4 ohne Briefkopf', kind: 'report', checksum: 'a'.repeat(64), own: false },
+    { id: 'a4-plain-slim', label: 'A4 ohne Briefkopf (schlank)', kind: 'report', checksum: 'e'.repeat(64), own: false },
     { id: 'a4-mit-briefkopf', label: 'A4 mit Briefkopf', kind: 'letter', checksum: 'b'.repeat(64), own: false },
     { id: 'a4-ohne-briefkopf', label: 'A4 Folgeblatt', kind: 'letter', checksum: 'c'.repeat(64), own: false },
     { id: 'a4-formular', label: 'Formular mit Vereinskopf', kind: 'form', checksum: 'd'.repeat(64), own: false },

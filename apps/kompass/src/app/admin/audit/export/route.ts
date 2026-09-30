@@ -1,5 +1,7 @@
-import { exportDocument, queryAudit } from '@kompass/core';
+import { exportDocument, queryAudit, timeZoneOf } from '@kompass/core';
 import { getTranslations } from 'next-intl/server';
+import { auditEntityLabels } from '@/lib/audit-entities';
+import { auditExportEntries } from '@/lib/audit-export';
 import { getDeps } from '@/lib/deps';
 import { optionalSession } from '@/lib/request-context';
 
@@ -30,7 +32,12 @@ export async function GET(request: Request): Promise<Response> {
     input: {
       title: t('audit.title'),
       filters: shown,
-      entries: query.value.entries.map((e) => ({ occurredAt: e.occurredAt, userName: e.userName, channel: e.channel, action: e.action, entityType: e.entityType, entityId: e.entityId, summary: e.summary })),
+      entries: auditExportEntries(query.value.entries, {
+        timeZone: timeZoneOf(deps),
+        channels: t.raw('audit.filters.channels') as Record<string, string>,
+        labels: auditEntityLabels(deps, session.ctx, query.value.entries),
+        deleted: (type) => t('audit.deletedRecord', { type }),
+      }),
     },
   });
   if (!result.ok) return new Response(null, { status: result.error.type === 'forbidden' ? 403 : 400 });

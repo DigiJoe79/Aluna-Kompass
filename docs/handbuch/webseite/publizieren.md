@@ -29,7 +29,7 @@ und `site_blocked_terms_set`.
 
 ## Prüfen
 
-„Prüfen“ geht über alle Inhalte, ändert nichts und meldet drei Dinge:
+„Prüfen“ geht über alle Inhalte, ändert nichts und meldet vier Dinge:
 
 - **Sperrworttreffer** — Begriffe, die nie auf der Seite erscheinen dürfen,
   etwa ein alter Vereinsname oder ein Platzhalter aus der Einrichtung. Ein
@@ -40,6 +40,11 @@ und `site_blocked_terms_set`.
 - **Veraltete Verweise** — eine Variable zeigt auf einen Datensatz, der nicht
   mehr veröffentlicht ist. Ebenfalls eine Warnung; das Feld wird leer
   ausgeliefert, das Template nimmt seinen Vorschlag.
+- **Prüfung offen** — veröffentlichte Einträge, die seit ihrer letzten
+  Änderung kein Mensch geprüft hat, heute die [Tierprofile](../tiere.md), die
+  ein Agent über MCP geändert hat. Jeder Eintrag ist ein Link ins Profil.
+  Eine Warnung, keine Sperre: Der Publish nimmt diese Einträge mit, so wie
+  sie sind. Was noch nicht veröffentlicht ist, steht hier nicht.
 
 Der **Inhalts-Hash** darunter ist die Prüfsumme des Stands, der gebaut
 würde; er steht später in der Historie.

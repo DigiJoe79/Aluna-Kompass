@@ -39,6 +39,16 @@ test.describe('contacts', () => {
     await expect(page.getByRole('row', { name: /Leitner/ })).toHaveCount(0);
   });
 
+  /** Wie in der Tierliste (Befund Joe, 2026-09-30): Die Felder lasen die Adresse nur beim ersten Rendern. */
+  test('die Filterfelder folgen der Adresse, auch wenn sie von außen wechselt', async ({ page }) => {
+    await page.goto('/contacts');
+    await page.getByLabel('Rolle').selectOption('interested');
+    await expect(page).toHaveURL(/role=interested/);
+    await page.getByRole('navigation').getByRole('link', { name: 'Kontakte' }).first().click();
+    await expect(page).toHaveURL(/\/contacts$/);
+    await expect(page.getByLabel('Rolle')).toHaveValue('');
+  });
+
   test('gives a role, shows the address block and blocks deletion while a hold runs', async ({ page }) => {
     await page.goto('/contacts');
     await page.getByRole('button', { name: 'Kontakt anlegen' }).click();

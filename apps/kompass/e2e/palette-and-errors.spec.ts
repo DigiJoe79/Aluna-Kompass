@@ -27,6 +27,6 @@ test.describe('command palette and error pages', () => {
     await expect(page.getByText('404', { exact: true })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Hauptnavigation' })).toBeVisible();
     await page.goto('/admin/documents');
-    await expect(page.getByRole('button', { name: 'Basis-Vorlagen' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Basis-Vorlagen' })).toBeVisible();
   });
 });

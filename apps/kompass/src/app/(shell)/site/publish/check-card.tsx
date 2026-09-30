@@ -5,9 +5,9 @@ import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { runCheckAction } from './actions';
-import { ExportFindings } from './export-findings';
+import { ExportFindings, type Findings } from './export-findings';
 
-type Check = { contentHash: string; gaps: { path: string; locale: string }[]; violations: { path: string; term: string; excerpt: string }[]; stale: { path: string; value: string }[] };
+type Check = { contentHash: string } & Findings;
 
 
 export function CheckCard({ onResult }: { onResult?: (check: Check) => void }) {
@@ -38,7 +38,7 @@ export function CheckCard({ onResult }: { onResult?: (check: Check) => void }) {
       {check ? (
         <>
           <p className="font-mono text-[12px] text-muted-ink">{t('hash', { hash: check.contentHash.slice(0, 12) })}</p>
-          <ExportFindings gaps={check.gaps} violations={check.violations} stale={check.stale} />
+          <ExportFindings gaps={check.gaps} violations={check.violations} stale={check.stale} pendingReview={check.pendingReview} />
         </>
       ) : (
         <p className="text-[13px] text-muted-ink">{t('intro')}</p>

@@ -9,6 +9,171 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 1.0.0 kann jede Minor-Fassung Brüche enthalten — was bricht, steht unter
 **Geändert** mit dem, was zu tun ist.
 
+## [0.2.2] - 2026-09-30
+
+Tierprofile lassen sich jetzt prüfen: Was ein Agent über MCP schreibt, wartet
+als Vorschlag auf einen Menschen. Die Tierliste trägt einige hundert Hunde,
+das Profil führt von Hund zu Hund, die Startseite zählt die offenen
+Prüfungen, und das Publizieren warnt vor Veröffentlichtem, das noch niemand
+gesehen hat. Im Tierprofil gibt es eine Speicherleiste für alles, und die
+Fotos stehen dort im Ausschnitt, in dem die Webseite sie zeigt. Die Seite
+Dokumentvorlagen sagt, worauf ein Dokument erscheint, und der PDF-Auszug des
+Änderungsprotokolls ist lesbar. Für MCP-Clients bricht `animals_list` (siehe
+**Geändert**).
+
+Diese Fassung bringt genau eine Datenbank-Migration mit
+(`0005_animals_review`), die beim Start von selbst läuft — vor dem Update wie
+immer ein Backup exportieren. Was nach dem Update von Hand zu tun ist, steht im
+Betriebshandbuch unter „Von 0.2.1 auf 0.2.2“.
+
+### Hinzugefügt
+
+- **Prüfmerker an Tierprofilen.** Ein Tierprofil kann als „Prüfung offen“
+  vorgemerkt sein, mit Zeitpunkt und einer kurzen Notiz, was anzusehen ist. Der
+  Merker steht quer zu „veröffentlicht“: Ein neues wie ein schon
+  veröffentlichtes Profil kann auf eine Prüfung warten. Bestehende Profile
+  haben nach dem Update keinen Merker. Auf der Webseite erscheint er nie.
+- **Was ein Agent schreibt, wartet auf einen Menschen.** Legt ein Agent über
+  MCP ein Tierprofil an oder ändert er Texte, Fotos, Erfolgsgeschichte oder
+  Übersetzungen, merkt Kompass das Profil von selbst zur Prüfung vor. Die
+  Änderung steht sofort im Profil; der Merker sagt nur, dass noch niemand
+  draufgeschaut hat. Statuswechsel und Veröffentlichen setzen ihn nicht, und
+  Änderungen in der Oberfläche auch nicht.
+  Jedes Vormerken steht als eigener Eintrag (`animals.requestReview`) im
+  Änderungsprotokoll, direkt vor der Änderung, die es ausgelöst hat.
+- **Neues MCP-Werkzeug `animals_request_review`.** Ein Agent merkt damit ein
+  Profil ausdrücklich zur Prüfung vor und schreibt in eine Notiz (höchstens
+  500 Zeichen, keine Personendaten), was anzusehen ist, etwa „zwei neue Fotos“
+  oder „beim Partner nicht mehr gelistet“. `animals_get` liefert Merker und
+  Notiz mit. Verlangt `animals.manage`.
+- **Die Prüfung bestätigt nur ein Mensch.** Den Merker nimmt allein die
+  Oberfläche zurück; über MCP gibt es dafür kein Werkzeug, ein Agent kann
+  seinen eigenen Vorschlag nicht freigeben. Hat der Agent das Profil nach dem
+  Öffnen der Maske noch einmal geändert, wird das Bestätigen abgewiesen, bis
+  die Seite neu geladen ist.
+- **Beispieldaten mit offener Prüfung.** Die Entwicklungsdaten (`pnpm seed`)
+  bringen zwei weitere erfundene Hunde mit, die auf eine Prüfung warten: einen
+  neuen, unveröffentlichten und einen veröffentlichten mit geänderten Texten
+  und Fotos. Bestehende Installationen sind nicht betroffen.
+- **Tierliste für einige hundert Hunde.** Über der Liste steht ein Umschalter
+  „Alle“ und „Prüfung offen“, jeweils mit der Zahl der Profile; „Prüfung
+  offen“ zeigt zuerst, was am längsten wartet. Dazu kommen eine Namenssuche
+  und Filter nach Status, Aufenthalt und Veröffentlichung, eine Zeile wie
+  „17 von 187 Hunden“ und zwei neue Spalten: die Zahl der Fotos und das Datum
+  der letzten Änderung. Nach „Hund“ und „Geändert“ lässt sich sortieren. Ein
+  wartendes Profil trägt die Marke „Prüfung offen“, die Notiz dazu erscheint
+  beim Überfahren mit der Maus. Auswahl und Sortierung stehen in der Adresse
+  der Seite und bleiben beim Öffnen eines Profils erhalten.
+
+- **Prüfen am Stück im Tierprofil.** Wartet ein Profil auf eine Prüfung, steht
+  über den Reitern ein Band: „Prüfung offen seit …“ mit der Notiz dazu. Der
+  Knopf unten heißt dann „Geprüft“: Er speichert Texte und Fotos und nimmt den
+  Merker zurück. Bei einem noch nicht veröffentlichten Hund steht im Band der
+  Haken „Beim Bestätigen veröffentlichen“; er ist gesetzt, wer ihn
+  herausnimmt, bestätigt nur. Wer das Profil aus der Liste „Prüfung offen“
+  geöffnet hat, bekommt „Geprüft und weiter“ und landet beim nächsten
+  wartenden Hund, nach dem letzten wieder in der Liste. „Speichern“ bleibt als
+  zweiter Knopf daneben und lässt die Prüfung offen. Ohne offene Prüfung heißt
+  der Knopf in einer gefilterten Liste „Speichern und weiter“.
+- **Publizieren warnt vor Veröffentlichtem mit offener Prüfung.** „Prüfen“
+  und „Vorschau bauen“ auf der Seite Webseite → Publizieren zeigen eine vierte
+  Befundzeile „Prüfung offen“: jedes veröffentlichte Tierprofil, das noch auf
+  eine Prüfung wartet, mit Link ins Profil. Die Zeile warnt nur; publizieren
+  lässt sich weiterhin, und der Publish nimmt diese Profile mit. Noch nicht
+  veröffentlichte Profile stehen dort nicht, sie gehen ja nicht live. Über MCP
+  liefern `site_export_check` und `site_preview_build` dasselbe als
+  `pendingReview`.
+- **Kachel „Tiere: Prüfung offen“ auf der Startseite.** Sie zählt die
+  Tierprofile, die auf eine Prüfung warten, veröffentlichte wie
+  unveröffentlichte, und führt mit einem Klick in die Tierliste mit dem
+  Umschalter „Prüfung offen“. Wer Tiere sehen darf und seine Startseite nie
+  angepasst hat, sieht sie von selbst; wer eine eigene Anordnung gespeichert
+  hat, schaltet sie unter „Anpassen“ ein.
+
+### Geändert
+
+- **Bruch für MCP-Clients: `animals_list` liefert knappe Zeilen in einem
+  Objekt.** Die Antwort ist nicht mehr eine Liste voller Profile, sondern
+  `{ animals, total, reviewPending }`. Die Zeilen unter `animals` tragen Name,
+  Slug, Status, Aufenthalt, Kennzeichen, Veröffentlichung, Prüfmerker,
+  Fotoanzahl und das Hauptfoto, aber **keine Texte, keine Fotoliste und keine
+  Erfolgsgeschichte** mehr; die beiden Zähler gelten für den ganzen Bestand,
+  auch wenn gefiltert wird. Neu sind Filter (`text`, `status`, `location`,
+  `isPublished`, `reviewPending`) und eine Sortierung (`orderBy`). Was zu tun
+  ist: Skripte und Agenten, die die Antwort als Liste lesen, greifen auf
+  `animals` zu; wer Texte, Fotos oder die Geschichte eines Tiers braucht, ruft
+  danach `animals_get` mit dessen `id`. Der Grund: Bei einigen hundert Hunden
+  sprengte die alte Antwort jeden Agentenkontext.
+- **Ein Fototausch zählt als Änderung am Profil.** Wer die Fotos eines Tiers
+  ändert, schreibt jetzt auch „zuletzt geändert“ fort. Eine Maske, die vor dem
+  Fototausch geöffnet wurde, meldet beim Speichern den veralteten Stand, statt
+  still darüberzuschreiben.
+- **Die Tierliste lädt Vorschaubilder statt der Originalfotos** und baut sich
+  dadurch auch bei vielen Hunden zügig auf. Neben dem Aufenthalt steht jetzt
+  der Ort.
+- **Tierprofil: Texte und Fotos auf einem Reiter, ein Speichern.** Die Reiter
+  „Texte“ und „Fotos“ sind zu „Texte und Fotos“ zusammengelegt: links die
+  Texte, rechts die Fotos, auf schmalen Bildschirmen untereinander. Der Knopf
+  „Fotos speichern“ entfällt; Hauptfoto, Reihenfolge und Auswahl werden mit
+  „Speichern“ unten zusammen mit den Texten gespeichert, und die Leiste zählt
+  eine Fotoänderung als ungespeicherte Änderung mit. Was zu beachten ist: Wer
+  Fotos ändert und die Seite ohne „Speichern“ verlässt, verliert die Änderung
+  wie bei jedem anderen Feld. Ein Klick auf ein Foto öffnet das Original in
+  einem neuen Tab.
+- **Tierprofil: eine Speicherleiste für alles.** „Speichern“ schreibt, was auf
+  irgendeinem Reiter geändert wurde, auch die Erfolgsgeschichte; der Knopf
+  „Geschichte speichern“ entfällt, und die Zählung der ungespeicherten
+  Änderungen gilt über alle Reiter. Der Schalter „Veröffentlicht“ im Profil
+  wirkt nicht mehr sofort, sondern zählt als Änderung und wird mit „Speichern“
+  geschrieben. Was zu beachten ist: Wer im Profil veröffentlicht oder
+  zurückzieht, muss danach speichern. In der Liste schaltet der Schalter
+  weiterhin sofort, und „Status ändern“ schreibt weiterhin gleich.
+- **Tierfotos im Ausschnitt der Webseite.** Neue Einstellungsseite Tiere unter
+  Einstellungen: Seitenverhältnis und Blickpunkt, in denen die Webseite das
+  Hauptfoto zeigt. Das Tierprofil zeigt die Fotos dann im selben Rahmen, und
+  beim Wählen des Hauptfotos ist zu sehen, was die Seite abschneidet. Vorgabe
+  ist 4:3 mittig wie bisher. Was zu tun ist: Zeigt das Template der eigenen
+  Webseite die Fotos in einem anderen Format, dieses einmal dort eintragen.
+- **Dokumentvorlagen: übersichtlicher.** Die Seite unter Verwaltung zeigt jetzt
+  zwei Tabellen statt eines zugeklappten Kastens. Die erste nennt je
+  Basis-Vorlage, ob sie mitgeliefert oder eine eigene ist. Die zweite nennt je
+  Dokumentart, nach Modul gruppiert, auf welcher Basis sie tatsächlich
+  erscheint; „Vorgabe der Vorlage“ nennt die Kennung der Vorgabe, eine
+  Abweichung davon ist markiert und lässt sich zurücksetzen. Was zu beachten
+  ist: Wer für den Export des Änderungsprotokolls früher eine Basis fest
+  eingestellt hat, sieht die Zeile jetzt als „abweichend“; der Auszug erscheint
+  erst nach „Zurücksetzen“ auf der neuen schlanken Basis.
+- **Das Tierprofil kennt seinen Platz in der Liste.** Wer ein Profil aus einer
+  gefilterten oder sortierten Liste öffnet, sieht oben rechts „3 von 17“ mit
+  Pfeilen zum vorherigen und nächsten Hund derselben Auswahl. Der gewählte
+  Reiter bleibt beim Blättern stehen, und „Zurück zur Übersicht“ führt in
+  dieselbe Auswahl zurück.
+
+- **Abhängigkeiten aktualisiert.** Der Monatsstand der Bibliotheken ist
+  eingezogen, durchweg Fehlerbehebungen und kleine Fassungen: unter anderem
+  Next.js 16.3.6, Zod 4.6.5, Drizzle 0.45.3 und Astro 7.3.4 für das
+  mitgelieferte Basis-Template. Für den Betrieb ändert sich nichts.
+
+### Behoben
+
+- **Filterfelder zeigen wieder, was gilt.** In der Kontaktliste und in der Akte
+  nahm ein Klick auf den Eintrag in der Seitenleiste (oder der Zurück-Knopf des
+  Browsers) den Filter zurück, die Felder zeigten aber weiter die alte
+  Auswahl. Sie folgen jetzt der Adresse.
+
+- **PDF-Auszug des Änderungsprotokolls ist lesbar.** Die Spaltenköpfe waren
+  auf einer eigenen Basis-Vorlage mit farbigem Fettdruck unsichtbar, und die
+  Spalte mit dem eigentlichen Inhalt war wenige Zeichen breit. Jetzt haben
+  Zeitpunkt, Nutzer mit Kanal und Aktion feste schmale Spalten, der Rest gehört
+  Objekt und Zusammenfassung. Der Zeitpunkt steht als Datum und Uhrzeit in der
+  Zeitzone des Vereins statt als ISO-Zeit in UTC, der Kanal in Worten, und wo
+  die Ansicht den Namen eines Datensatzes zeigt, zeigt ihn auch der Auszug
+  statt der ID. Die Aktion bleibt wie in der Ansicht ihr Schlüssel. Der Auszug
+  erscheint jetzt auf der neuen, schlanken Basis `a4-plain-slim` mit schmalen
+  Rändern, die Kompass mitliefert. Wer eigene Basis-Vorlagen führt und den
+  Auszug im eigenen Kopf haben will, legt eine `a4-plain-slim.typ` daneben;
+  ohne sie erscheint der Auszug in der mitgelieferten, neutralen Fassung.
+
 ## [0.2.1] - 2026-09-29
 
 Fehlerbehebungen vor der ersten echten Buchung: Zuwendungsbestätigungen im
@@ -461,6 +626,7 @@ kommen in späteren Fassungen (siehe `docs/nordstern.md`).
   einer Sandbox ausgeliefert.
 - Meldeweg für Schwachstellen: siehe [`SECURITY.md`](SECURITY.md).
 
+[0.2.2]: https://github.com/DigiJoe79/Aluna-Kompass/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/DigiJoe79/Aluna-Kompass/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/DigiJoe79/Aluna-Kompass/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/DigiJoe79/Aluna-Kompass/compare/v0.1.0...v0.1.1

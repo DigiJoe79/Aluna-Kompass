@@ -36,6 +36,11 @@ test('publish page runs the checks and blocks on a blocked term', async ({ page 
   const violations = page.getByRole('region', { name: 'Sperrworttreffer' });
   await expect(violations).toContainText('variables.claim');
   await expect(violations).toContainText('Popescu');
+  // Die Entwicklungsdaten tragen einen veröffentlichten Hund, dessen Prüfung
+  // offen ist. Der Befund nennt ihn und führt ins Profil; er sperrt nicht.
+  const pending = page.getByRole('region', { name: 'Prüfung offen' });
+  await expect(pending).toContainText('Prüfung offen · 1');
+  await expect(pending.getByRole('link', { name: 'Mika' })).toHaveAttribute('href', /\/animals\/[A-Z0-9]+$/);
   await expect(page.getByRole('button', { name: /publizieren/i })).toHaveCount(0);
 
   await page.goto('/');

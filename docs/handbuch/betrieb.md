@@ -149,6 +149,32 @@ GROUP BY document_id HAVING COUNT(*) > 1;
 Liefert die Abfrage Zeilen, je Dokument alle offenen Zahlungen bis auf eine
 unter Finanzen → Offene Zahlungen stornieren und dann aktualisieren.
 
+### Von 0.2.1 auf 0.2.2
+
+Die Fassung 0.2.2 bringt genau eine Migration mit (`0005_animals_review`): zwei
+neue Spalten an den Tierprofilen für den Prüfmerker. Sie läuft beim Start von
+selbst und ändert keine bestehenden Werte; kein Profil hat danach einen Merker.
+Danach meldet `/api/health` `migrationCount: 6` statt `5`.
+
+Drei Dinge sind nach dem Update von Hand zu tun oder zu wissen:
+
+- **MCP-Clients, die `animals_list` lesen**, müssen vor dem Update angepasst
+  sein: Die Antwort ist ein Objekt `{ animals, total, reviewPending }` mit
+  knappen Zeilen statt einer Liste voller Profile. Texte, Fotos und Geschichte
+  eines Tiers liefert `animals_get`.
+- **Bestehende Tierprofile haben keinen Prüfmerker.** Wer Profile, die ein
+  Agent vor dem Update angelegt hat, noch von einem Menschen prüfen lassen
+  will, merkt sie einmalig über `animals_request_review` vor.
+- **Der Auszug des Änderungsprotokolls** erscheint jetzt auf der Basis
+  `a4-plain-slim`. Wer unter Verwaltung → Dokumentvorlagen für den Export früher
+  eine Basis fest eingestellt hat, sieht die Zeile dort als „abweichend“ und
+  stellt sie mit „Zurücksetzen“ auf die neue Vorgabe. Wer eigene Basis-Vorlagen
+  führt und den Auszug im eigenen Kopf haben will, legt eine
+  `a4-plain-slim.typ` daneben.
+- **Der Bildausschnitt der Tierfotos** steht auf 4:3 mittig. Zeigt das Template
+  der Webseite das Hauptfoto in einem anderen Format, unter Einstellungen →
+  Tiere einmal Seitenverhältnis und Blickpunkt eintragen.
+
 Wer eine eigene Compose-Datei führt, übernimmt außerdem aus
 `docker-compose.prod.yml` den Block `networks` (MTU 1400 für das
 Veröffentlichen) und `stop_grace_period: 60s`: Beim Stopp schreibt Kompass die
@@ -247,8 +273,8 @@ aus den Suchmaschinen: `noindex`, `Disallow: /`, keine Sitemap.
 ## Dokument-Basisvorlagen
 
 Unter `<daten>/core/document-templates` liegen die Seitenrahmen für erzeugte
-PDFs. Kompass liefert die generischen Basen `a4-plain`, `a4-mit-briefkopf`,
-`a4-ohne-briefkopf` und `a4-formular` mit; ein Verein legt hier eigene
+PDFs. Kompass liefert die generischen Basen `a4-plain`, `a4-plain-slim`,
+`a4-mit-briefkopf`, `a4-ohne-briefkopf` und `a4-formular` mit; ein Verein legt hier eigene
 `.typ`-Dateien ab, um eine zu ergänzen oder zu ersetzen (gleiche Kennung
 gewinnt). `a4-formular` zeichnet Vereinskopf, Fußzeile und — wenn die Vorlage
 eine Anschrift liefert — auf Seite 1 das Anschriftfeld für den Fensterumschlag

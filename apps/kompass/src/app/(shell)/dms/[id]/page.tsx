@@ -63,7 +63,7 @@ export default async function DocumentDetailPage(props: {
   // zur Wahl.
   const animalsRes =
     isModuleEnabled(deps, 'animals') && hasPermission(ctx, 'animals.view') ? await listAnimals(deps, ctx) : null;
-  const animals = animalsRes?.ok ? animalsRes.value.map((a) => ({ id: a.id, name: a.name })) : [];
+  const animals = animalsRes?.ok ? animalsRes.value.animals.map((a) => ({ id: a.id, name: a.name })) : [];
   const leading = deps.locales()[0] ?? 'de';
   const projectsRes = hasPermission(ctx, 'projects.view') ? await listProjects(deps, ctx) : null;
   const projects = projectsRes?.ok ? projectsRes.value.map((p) => ({ id: p.id, name: p.name[leading] || p.slug })) : [];

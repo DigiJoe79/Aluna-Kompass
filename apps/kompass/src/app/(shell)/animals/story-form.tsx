@@ -2,35 +2,35 @@
 
 import type { AnimalRecord } from '@kompass/module-animals';
 import { useTranslations } from 'next-intl';
-import { useActionState, useEffect } from 'react';
-import { toast } from 'sonner';
 import { FormField } from '@/components/forms/form-field';
 import { LocalizedField } from '@/components/forms/localized-field';
 import { MediaPicker } from '@/components/forms/media-picker';
-import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Input } from '@/components/ui/input';
-import { idleState } from '@/lib/actions';
-import { saveAnimalStoryAction } from './actions';
-import { ActionForm } from '@/components/forms/action-form';
 
-export function StoryForm({ animal, locales }: { animal: AnimalRecord; locales: string[] }) {
+/**
+ * Die Felder der Erfolgsgeschichte. Kein eigenes Formular: Sie stehen in dem der Maske und werden mit deren
+ * „Speichern“ geschrieben, egal auf welchem Reiter man es drückt.
+ *
+ * Auch vor der Vermittlung stehen die Felder im Formular, nur unsichtbar: Kämen sie erst mit dem Statuswechsel
+ * dazu, zählte die Speicherleiste jedes von ihnen als ungespeicherte Änderung. Die Action schreibt die
+ * Geschichte nur bei einem vermittelten Hund.
+ */
+export function StoryFields({ animal, locales, errors, onMediaChange }: { animal: AnimalRecord; locales: string[]; errors: Record<string, string>; onMediaChange: () => void }) {
   const t = useTranslations('animals.story');
-  const [state, action] = useActionState(saveAnimalStoryAction, idleState);
-  useEffect(() => { if (state.status === 'success') toast.success(state.message ?? ''); else if (state.status === 'error') toast.error(state.message); }, [state]);
-  if (animal.status !== 'adopted') return <p className="rounded-md border border-line bg-surface-2 p-4 text-[13px] text-ink-2">{t('locked')}</p>;
   const story = animal.story;
+  const adopted = animal.status === 'adopted';
   return (
-    <ActionForm action={action} state={state} className="grid gap-4 md:grid-cols-2">
-      <input type="hidden" name="id" value={animal.id} />
-      <input type="hidden" name="expectedVersion" value={animal.updatedAt} />
-      <div><MediaPicker name="beforeAssetId" value={story?.beforeAssetId ?? null} label={t('before')} /></div>
-      <div><MediaPicker name="afterAssetId" value={story?.afterAssetId ?? null} label={t('after')} /></div>
-      <LocalizedField name="quote" label={t('quote')} kind="textarea" rows={3} value={story?.quote ?? {}} locales={locales} />
-      <LocalizedField name="beforeCaption" label={t('beforeCaption')} hint={t('captionHint')} value={story?.beforeCaption ?? {}} locales={locales} />
-      <LocalizedField name="afterCaption" label={t('afterCaption')} hint={t('captionHint')} value={story?.afterCaption ?? {}} locales={locales} />
-      <FormField id="family" label={t('family')}><Input id="family" name="family" defaultValue={story?.family ?? ''} /></FormField>
-      <FormField id="adoptedYear" label={t('year')}><Input id="adoptedYear" name="adoptedYear" type="number" defaultValue={story?.adoptedYear ?? new Date().getFullYear()} className="font-mono" /></FormField>
-      <div className="md:col-span-2"><FormActionBar saveLabel={t('save')} /></div>
-    </ActionForm>
+    <>
+      {adopted ? null : <p className="rounded-md border border-line bg-surface-2 p-4 text-[13px] text-ink-2">{t('locked')}</p>}
+      <div className={adopted ? 'grid gap-4 md:grid-cols-2' : 'hidden'}>
+        <div><MediaPicker name="beforeAssetId" value={story?.beforeAssetId ?? null} label={t('before')} onChange={onMediaChange} /></div>
+        <div><MediaPicker name="afterAssetId" value={story?.afterAssetId ?? null} label={t('after')} onChange={onMediaChange} /></div>
+        <LocalizedField name="quote" label={t('quote')} kind="textarea" rows={3} value={story?.quote ?? {}} errors={errors} locales={locales} />
+        <LocalizedField name="beforeCaption" label={t('beforeCaption')} hint={t('captionHint')} value={story?.beforeCaption ?? {}} errors={errors} locales={locales} />
+        <LocalizedField name="afterCaption" label={t('afterCaption')} hint={t('captionHint')} value={story?.afterCaption ?? {}} errors={errors} locales={locales} />
+        <FormField id="family" label={t('family')} error={errors.family}><Input id="family" name="family" defaultValue={story?.family ?? ''} /></FormField>
+        <FormField id="adoptedYear" label={t('year')} error={errors.adoptedYear}><Input id="adoptedYear" name="adoptedYear" type="number" defaultValue={story?.adoptedYear ?? new Date().getFullYear()} className="font-mono" /></FormField>
+      </div>
+    </>
   );
 }

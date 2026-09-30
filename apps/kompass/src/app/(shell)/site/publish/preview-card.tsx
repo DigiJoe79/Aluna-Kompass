@@ -7,14 +7,11 @@ import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { runPreviewAction } from './actions';
-import { ExportFindings } from './export-findings';
+import { ExportFindings, type Findings } from './export-findings';
 import type { PublishDiff } from './diff-card';
 
-export interface PreviewData {
+export interface PreviewData extends Findings {
   contentHash: string;
-  gaps: { path: string; locale: string }[];
-  violations: { path: string; term: string; excerpt: string }[];
-  stale: { path: string; value: string }[];
   diff: PublishDiff;
   previewDir: string;
 }
@@ -70,7 +67,7 @@ export function PreviewCard({ onResult }: { onResult?: (data: PreviewData) => vo
       {data ? (
         <>
           <p className="font-mono text-[12px] text-muted-ink">{tCheck('hash', { hash: data.contentHash.slice(0, 12) })}</p>
-          <ExportFindings gaps={data.gaps} violations={data.violations} stale={data.stale} />
+          <ExportFindings gaps={data.gaps} violations={data.violations} stale={data.stale} pendingReview={data.pendingReview} />
         </>
       ) : (
         <p className="text-[13px] text-muted-ink">

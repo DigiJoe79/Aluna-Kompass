@@ -79,7 +79,7 @@ describe('animals module', () => {
     expect(rows.map((r) => r.slug)).toEqual(['chiara']);
     expect(rows[0]).toMatchObject({ summary: { en: 'Gentle girl.' }, photos: [], story: null });
     expect('isPublished' in rows[0]!).toBe(false);
-    expect(unwrap(await listAnimals(d, ctxWith(['animals.view'])))).toHaveLength(2);
+    expect(unwrap(await listAnimals(d, ctxWith(['animals.view']))).animals).toHaveLength(2);
     expect(unwrap(await getAnimal(d, ctxWith(['animals.view']), a.id)).slug).toBe('chiara');
   });
 

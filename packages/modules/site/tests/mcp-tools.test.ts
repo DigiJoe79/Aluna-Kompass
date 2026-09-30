@@ -1,4 +1,7 @@
-import { moduleMcpTools, storeMediaAsset } from '@kompass/core';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { coreModule, defineModule, definePublishedView, moduleMcpTools, setModuleEnabled, storeMediaAsset, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
@@ -9,6 +12,7 @@ import { siteTemplateState } from '../src/schema';
 import { listPublishes } from '../src/services/publishes';
 import { listReferenceOptions } from '../src/values';
 import { getBlockedTerms, setBlockedTerms } from '../src/blocked-terms';
+import { applyTemplateSync } from '../src/service';
 
 const asJson = (s: unknown) => z.toJSONSchema(s as z.ZodType, { io: 'input' }) as FieldSchema;
 
@@ -155,5 +159,38 @@ describe('site mcp tools', () => {
     expect(updated.ok).toBe(true);
     expect(updated.value.data.cover).toBe(photo.value.id);
     expect(jsonSchema(tools.site_articles_update!).properties?.cover).not.toHaveProperty('default');
+  });
+});
+
+describe('site_export_check', () => {
+  it('reports published records that still wait for a human review', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'kompass-mcp-tpl-'));
+    const before = process.env.SITE_TEMPLATE_DIR;
+    process.env.SITE_TEMPLATE_DIR = dir;
+    try {
+      writeFileSync(
+        path.join(dir, 'kompass.template.ts'),
+        "import { defineTemplate, text } from '@kompass/site-template';\nexport default defineTemplate({ name: 'X', locales: ['de'], variables: { claim: text({ label: 'Claim' }) }, collections: {} });",
+      );
+      const waiting = defineModule({
+        key: 'waiting',
+        version: '0',
+        permissions: [],
+        publishedViews: [definePublishedView({ name: 'things', schema: z.object({ slug: z.string() }), load: () => [], pendingReview: () => [{ label: 'Ding', href: '/things/1' }] })],
+      });
+      const deps = createTestDeps({ locales: ['de'], manifests: [coreModule, waiting, siteModule] });
+      insertUser(deps, { id: 'USER-TEST' });
+      unwrap(await setModuleEnabled(deps, ctxWith(['modules.manage']), { key: 'waiting', enabled: true }));
+      unwrap(await applyTemplateSync(deps, ctxWith(['site.manage']), { dir, confirm: true }));
+      const tools = Object.fromEntries(moduleMcpTools(deps, siteModule).map((t) => [t.name, t]));
+      const result = await tools.site_export_check!.handler(deps, ctxWith(['site.publish']), {});
+      expect(result).toMatchObject({ ok: true, value: { pendingReview: [{ view: 'things', label: 'Ding', href: '/things/1' }] } });
+      expect(tools.site_export_check!.description).toContain('pendingReview');
+      expect(tools.site_preview_build!.description).toContain('pendingReview');
+    } finally {
+      if (before === undefined) delete process.env.SITE_TEMPLATE_DIR;
+      else process.env.SITE_TEMPLATE_DIR = before;
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

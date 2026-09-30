@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useTransition } from 'react';
 import { StatusBadge } from '@/components/status-badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { SortableHead } from '@/components/sortable-head';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { roleLabel } from '@/lib/contact-roles';
+import { useUrlFilters } from '@/lib/use-url-filters';
 import { cn } from '@/lib/utils';
 import { Select } from '@/components/ui/select';
 
@@ -34,15 +35,23 @@ export function ContactList({ contacts, roles }: { contacts: ContactListItem[]; 
 
   // Gefiltert wird serverseitig (`listContacts`); die Felder hier setzen nur die
   // Query-Parameter, dieselbe Trennung wie in der Dokumentenliste.
-  const [query, setQuery] = useState(params.get('text') ?? '');
-  const [kindFilter, setKindFilter] = useState(params.get('kind') ?? '');
-  const [roleFilter, setRoleFilter] = useState(params.get('role') ?? '');
-  const [showArchived, setShowArchived] = useState(params.get('archived') === '1');
+  // Die Felder folgen der Adresse, wenn sie von außen wechselt (Seitenleiste, Zurück-Knopf).
+  const [filters, setFilters] = useUrlFilters({
+    text: params.get('text') ?? '',
+    kind: params.get('kind') ?? '',
+    role: params.get('role') ?? '',
+    archived: params.get('archived') === '1' ? '1' : '',
+  });
+  const query = filters.text;
+  const kindFilter = filters.kind;
+  const roleFilter = filters.role;
+  const showArchived = filters.archived === '1';
 
   // Aus allen vier Feldern zusammen, nicht als Patch auf `params` — sonst geht
   // eine Änderung verloren, wenn zwei Filter im selben Render umgestellt werden.
   const applyFilters = (patch: Partial<{ text: string; kind: string; role: string; archived: boolean }>) => {
     const merged = { text: query, kind: kindFilter, role: roleFilter, archived: showArchived, ...patch };
+    setFilters({ text: merged.text, kind: merged.kind, role: merged.role, archived: merged.archived ? '1' : '' });
     const next = new URLSearchParams();
     if (merged.text.trim()) next.set('text', merged.text.trim());
     if (merged.kind) next.set('kind', merged.kind);
@@ -67,7 +76,6 @@ export function ContactList({ contacts, roles }: { contacts: ContactListItem[]; 
           placeholder={t('search')}
           value={query}
           onChange={(e) => {
-            setQuery(e.target.value);
             applyFilters({ text: e.target.value });
           }}
           className="w-[260px]"
@@ -77,7 +85,6 @@ export function ContactList({ contacts, roles }: { contacts: ContactListItem[]; 
           value={kindFilter}
           onChange={(e) => {
             const val = e.target.value;
-            setKindFilter(val);
             applyFilters({ kind: val });
           }}
           className="w-auto"
@@ -91,7 +98,6 @@ export function ContactList({ contacts, roles }: { contacts: ContactListItem[]; 
           value={roleFilter}
           onChange={(e) => {
             const val = e.target.value;
-            setRoleFilter(val);
             applyFilters({ role: val });
           }}
           className="w-auto"
@@ -108,7 +114,6 @@ export function ContactList({ contacts, roles }: { contacts: ContactListItem[]; 
             id="show-archived"
             checked={showArchived}
             onCheckedChange={(checked) => {
-              setShowArchived(checked);
               applyFilters({ archived: checked });
             }}
           />

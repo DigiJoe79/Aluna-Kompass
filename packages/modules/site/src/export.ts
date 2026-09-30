@@ -39,6 +39,8 @@ export interface ExportChecks {
   violations: { path: string; term: string; excerpt: string }[];
   /** Referenzwerte, die nicht mehr in der gefilterten Sicht stehen; im Export durch null ersetzt bzw. aus der Liste genommen. */
   stale: { path: string; value: string }[];
+  /** Veröffentlichte Datensätze, die auf eine Prüfung durch einen Menschen warten. Eine Warnung, keine Sperre. */
+  pendingReview: { view: string; label: string; href: string }[];
 }
 
 export interface SiteContentExport extends ExportChecks {
@@ -296,6 +298,18 @@ export async function exportSiteContent(deps: Deps, ctx: CallContext, input: unk
     }
   }
 
+  // Was veröffentlicht ist und noch auf eine Prüfung wartet, melden die Module
+  // selbst. Gefragt wird jedes eingeschaltete, nicht nur die unter `uses`:
+  // Die Warnung gilt dem Bestand, nicht dem Template, und dieses Modul weiß
+  // dabei nicht, wessen Datensätze es sind.
+  const pendingReview: ExportChecks['pendingReview'] = [];
+  for (const manifest of deps.registry.manifests) {
+    if (manifest.key !== 'core' && !isModuleEnabled(deps, manifest.key)) continue;
+    for (const view of manifest.publishedViews ?? []) {
+      for (const item of view.pendingReview?.(deps) ?? []) pendingReview.push({ view: view.name, ...item });
+    }
+  }
+
   const ids = new Set<string>();
   assetIdsFromFields(template.schema.variables, variables, ids);
   for (const [key, col] of Object.entries(template.schema.collections)) {
@@ -324,5 +338,5 @@ export async function exportSiteContent(deps: Deps, ctx: CallContext, input: unk
   const gaps: { path: string; locale: string }[] = [];
   collectGaps(contentPayload, '', locales, gaps);
 
-  return ok({ contentHash, contentPath, assets, gaps, violations, stale });
+  return ok({ contentHash, contentPath, assets, gaps, violations, stale, pendingReview });
 }

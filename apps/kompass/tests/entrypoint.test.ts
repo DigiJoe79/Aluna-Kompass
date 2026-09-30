@@ -98,6 +98,7 @@ describe('seed-document-templates.sh', () => {
 
     expect(existsSync(path.join(dir, 'README.md'))).toBe(true);
     expect(existsSync(path.join(dir, 'bases.reference/a4-plain.typ'))).toBe(true);
+    expect(existsSync(path.join(dir, 'bases.reference/a4-plain-slim.typ'))).toBe(true);
     expect(readFileSync(path.join(dir, 'README.md'), 'utf8')).toContain('Vertrauensgrenze');
   });
 

@@ -36,6 +36,13 @@
       "when": 1790702142322,
       "tag": "0004_finance_0_2_1",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1790751919828,
+      "tag": "0005_animals_review",
+      "breakpoints": true
     }
   ]
 }

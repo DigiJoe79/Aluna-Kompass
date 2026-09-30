@@ -19,9 +19,10 @@ const rootVersion = (JSON.parse(readFileSync(path.join(__dirname, '../../../pack
  * Entscheidung 9). Auf einem `dev-*`-Branch dürfen weitere folgen (9b): Vor der
  * Schlussabnahme werden sie zu einer zusammengelegt und hier eingetragen.
  * `0003_finance` ist die zusammengelegte Migration der Fassung 0.2.0,
- * `0004_finance_0_2_1` die der Fassung 0.2.1.
+ * `0004_finance_0_2_1` die der Fassung 0.2.1. `0005_animals_review` ist die eine Migration der Fassung 0.2.2
+ * (nie zusammengelegt: Der Branch hatte nur diese).
  */
-const RELEASED = ['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql', '0003_finance.sql', '0004_finance_0_2_1.sql'];
+const RELEASED = ['0000_init.sql', '0001_dashboard_layouts.sql', '0002_document_former_numbers.sql', '0003_finance.sql', '0004_finance_0_2_1.sql', '0005_animals_review.sql'];
 
 /**
  * Was eine Produktion schon ausgeführt hat, bleibt Byte für Byte, wie es war:
@@ -33,6 +34,8 @@ const SHIPPED_HASHES: Record<string, string> = {
   '0001_dashboard_layouts.sql': '200b81c11fa9739d331e1099bb5998e8628b151ccdfddf5812d144fae72d2705',
   '0002_document_former_numbers.sql': '3d54523a6aef7a9555caaacb15bbc3ab731e4a4314f5c9aa70c6717c7fc0f697',
   '0003_finance.sql': '8e2b6d69c78f801453fee3b1977a2f779ddbd8a48b5fc4187fd27abcc169409a',
+  // Seit dem Release der Fassung 0.2.1.
+  '0004_finance_0_2_1.sql': '80558554c1a9f90bf52e6dd8887f4bf3dec48b724d295fc63d23378023d36bda',
 };
 
 /**

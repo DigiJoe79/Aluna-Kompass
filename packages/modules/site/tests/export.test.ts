@@ -1,11 +1,12 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { coreModule, setModuleEnabled, setSetting, storeMediaAsset, unwrap, writeSettingInternal } from '@kompass/core';
+import { coreModule, defineModule, definePublishedView, setModuleEnabled, setSetting, storeMediaAsset, unwrap, writeSettingInternal } from '@kompass/core';
 import { animalsModule, createAnimal, setAnimalPublished, setAnimalStatus } from '@kompass/module-animals';
 import { createProject, projectsModule, setProjectPublished } from '@kompass/module-projects';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import { createEntry, setEntryPublished } from '../src/entries';
 import { exportSiteContent } from '../src/export';
 import { siteModule } from '../src/manifest';
@@ -296,5 +297,36 @@ export default defineTemplate({
     const content = JSON.parse(readFileSync(out.contentPath, 'utf8')) as { variables: Record<string, unknown> };
     expect(content.variables.dogs).toEqual(['bruno']);
     expect(out.stale).toEqual([{ path: 'variables.dogs', value: 'rex' }]);
+  });
+});
+
+describe('pending reviews in the export', () => {
+  const view = (name: string, pendingReview?: () => { label: string; href: string }[]) =>
+    definePublishedView({ name, schema: z.object({ slug: z.string() }), load: () => [], ...(pendingReview ? { pendingReview } : {}) });
+  const setup = async (enabled: boolean) => {
+    const waiting = defineModule({ key: 'waiting', version: '0', permissions: [], publishedViews: [view('things', () => [{ label: 'Ding', href: '/things/1' }])] });
+    const silent = defineModule({ key: 'silent', version: '0', permissions: [], publishedViews: [view('others')] });
+    const deps = createTestDeps({ locales: ['de'], manifests: [coreModule, waiting, silent, siteModule] });
+    insertUser(deps, { id: 'USER-TEST' });
+    const admin = ctxWith(['modules.manage']);
+    unwrap(await setModuleEnabled(deps, admin, { key: 'silent', enabled: true }));
+    if (enabled) unwrap(await setModuleEnabled(deps, admin, { key: 'waiting', enabled: true }));
+    const dir = templateDir(GOOD);
+    unwrap(await applyTemplateSync(deps, manage, { dir, confirm: true }));
+    return { deps, dir };
+  };
+
+  it('collects what enabled modules report, whether or not the template uses them', async () => {
+    const { deps, dir } = await setup(true);
+    const out = unwrap(await exportSiteContent(deps, publish, { jobDir: tmp('kompass-exp-'), templateDir: dir }));
+    expect(out.pendingReview).toEqual([{ view: 'things', label: 'Ding', href: '/things/1' }]);
+    // Eine Warnung, keine Sperre: Der Inhalt ist derselbe.
+    expect(out.violations).toEqual([]);
+  });
+
+  it('is empty where no view reports anything or the module is off', async () => {
+    const { deps, dir } = await setup(false);
+    const out = unwrap(await exportSiteContent(deps, publish, { jobDir: tmp('kompass-exp-'), templateDir: dir }));
+    expect(out.pendingReview).toEqual([]);
   });
 });

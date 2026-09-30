@@ -149,14 +149,14 @@ test.describe('media library', () => {
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page).toHaveURL(/\/animals\/[A-Z0-9]+$/);
     const animalUrl = page.url();
-    await page.getByRole('tab', { name: 'Fotos' }).click();
+    await page.getByRole('tab', { name: 'Texte und Fotos' }).click();
     await page.getByRole('button', { name: 'Fotos wählen' }).click();
     const chooser = page.getByRole('dialog', { name: 'Bilder wählen' });
     await chooser.getByLabel('Hochladen').setInputFiles({ name: 'rex-foto.png', mimeType: 'image/png', buffer: PNG });
     await expect(chooser.getByText('1 ausgewählt')).toBeVisible();
     await chooser.getByRole('button', { name: 'Übernehmen' }).click();
-    await page.getByRole('button', { name: 'Fotos speichern' }).click();
-    await expect(page.getByRole('status')).toContainText('Fotos gespeichert');
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByRole('status')).toContainText('Gespeichert');
 
     // Ein PDF für den Typfilter
     await page.goto('/admin/media');

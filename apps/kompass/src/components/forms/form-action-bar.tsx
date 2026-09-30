@@ -26,6 +26,8 @@ export function FormActionBar({
   saveLabel,
   saveLabelChanged,
   saveDisabled,
+  saveName,
+  saveValue,
   count,
   baseline,
   onChangedCount,
@@ -60,6 +62,13 @@ export function FormActionBar({
    * bewirken kann — die Akte ohne Datei etwa.
    */
   saveDisabled?: boolean;
+  /**
+   * Name und Wert des primären Knopfs, für Formulare mit mehreren Speicherwegen:
+   * Die Action liest daran, welcher Knopf abgeschickt hat (`extraActions`
+   * tragen denselben Namen mit anderem Wert).
+   */
+  saveName?: string;
+  saveValue?: string;
   /**
    * Für Formulare, die ihren Inhalt als ein einziges verstecktes Feld
    * abschicken: Aus dem Formular gezählt wäre es immer genau eines, egal wie
@@ -182,7 +191,7 @@ export function FormActionBar({
             {t('discard')}
           </Button>
         )}
-        <SubmitButton disabled={saveDisabled}>
+        <SubmitButton disabled={saveDisabled} name={saveName} value={saveValue}>
           {(changed > 0 ? saveLabelChanged : undefined) ?? saveLabel ?? t('save')}
         </SubmitButton>
       </div>

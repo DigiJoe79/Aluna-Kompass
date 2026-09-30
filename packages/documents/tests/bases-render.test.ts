@@ -32,7 +32,7 @@ const payload = (over: Record<string, unknown> = {}) => ({
 });
 
 describe('generic bases render', () => {
-  for (const id of ['a4-plain', 'a4-mit-briefkopf', 'a4-ohne-briefkopf']) {
+  for (const id of ['a4-plain', 'a4-plain-slim', 'a4-mit-briefkopf', 'a4-ohne-briefkopf']) {
     it(`${id} produces a PDF`, async () => {
       const pdf = await renderer.renderDocument({ baseId: id, bases, bodyTypst: 'Absatz eins.\n\nAbsatz zwei.', payload: payload() });
       expect(new TextDecoder().decode(pdf.subarray(0, 5))).toBe('%PDF-');
@@ -54,7 +54,7 @@ describe('generic bases render', () => {
     expect(pdf.byteLength).toBeGreaterThan(6000);
   });
 
-  it('renders the audit-log-export body (typst, not markdown) into a4-plain', async () => {
+  it('renders the audit-log-export body (typst, not markdown) into its base, a4-plain-slim', async () => {
     const [audit] = coreDocumentTemplates();
     const ctx: DocumentRenderContext = { number: 'PRO-2026-001', issuedAt: '2026-09-05T08:00:00.000Z', organization: { 'organization.name': 'Musterverein e.V.' }, theme: DEFAULT_THEME, logo: null };
     const built = audit!.build(

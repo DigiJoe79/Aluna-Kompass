@@ -1,7 +1,9 @@
 import { defineModule, type ModuleManifest } from '@kompass/core';
+import { ANIMALS_DASHBOARD_TILES } from './dashboard';
 import { animalsMediaReferences } from './references';
 import { animalsRecordLabels } from './record-labels';
 import { seedAnimals } from './seed';
+import { ANIMALS_SETTINGS } from './settings';
 import { animalsSetTranslations, animalsTranslatables } from './translations';
 import { publishedAnimals } from './views';
 import { ANIMALS_MCP_TOOLS } from './mcp-tools';
@@ -11,7 +13,12 @@ export const animalsModule: ModuleManifest = defineModule({
   version: '0.1.0',
   permissions: ['animals.view', 'animals.manage'],
   navigation: [{ key: 'animals.list', href: '/animals', icon: 'paw-print', group: 'animals', permission: 'animals.view' }],
-  help: [{ href: '/animals', doc: 'tiere' }],
+  adminNavigation: [{ key: 'animals.admin', href: '/admin/animals', icon: 'paw-print', permission: 'settings.manage' }],
+  help: [
+    { href: '/animals', doc: 'tiere' },
+    { href: '/admin/animals', doc: 'einstellungen/tiere-einrichten' },
+  ],
+  settings: ANIMALS_SETTINGS,
   deletionRules: [
     {
       entity: 'animal',
@@ -28,4 +35,5 @@ export const animalsModule: ModuleManifest = defineModule({
   translatables: animalsTranslatables,
   setTranslations: animalsSetTranslations,
   seed: seedAnimals,
+  dashboardTiles: ANIMALS_DASHBOARD_TILES,
 });

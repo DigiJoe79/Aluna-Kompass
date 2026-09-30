@@ -3,8 +3,8 @@
 #
 # Legt beim ersten Start /data/document-templates an — leer bis auf ein README
 # und bases.reference/ als Kopiervorlage. Leer ist gültig: dann gelten alle
-# mitgelieferten Basen (a4-plain, a4-mit-briefkopf, a4-ohne-briefkopf,
-# a4-formular). Ein
+# mitgelieferten Basen (a4-plain, a4-plain-slim, a4-mit-briefkopf,
+# a4-ohne-briefkopf, a4-formular). Ein
 # vorhandenes Verzeichnis bleibt unberührt.
 #
 # Vom Entrypoint aufgerufen; als eigenes Skript, damit sich die Logik ohne einen

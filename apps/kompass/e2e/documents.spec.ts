@@ -14,9 +14,32 @@ test.describe('documents', () => {
 
   test('shows the base templates, ready to render', async ({ page }) => {
     await page.goto('/admin/documents');
-    await page.getByRole('button', { name: 'Basis-Vorlagen' }).click();
-    await expect(page.getByText('a4-mit-briefkopf', { exact: true })).toBeVisible();
-    await expect(page.getByText('bereit').first()).toBeVisible();
+    const bases = page.getByRole('region', { name: 'Basis-Vorlagen' });
+    await expect(bases.getByText('a4-mit-briefkopf', { exact: true })).toBeVisible();
+    await expect(bases.getByText('bereit').first()).toBeVisible();
+    await expect(bases.getByText('mitgeliefert').first()).toBeVisible();
+  });
+
+  /**
+   * Befund Joe, 2026-09-30: „Vorgabe der Vorlage“ sagte nicht, welche Basis das ist, und eine Übersteuerung war
+   * nicht als solche zu erkennen – eine alte stand unbemerkt auf dem Protokoll-Auszug.
+   */
+  test('sagt je Dokumentart, worauf sie erscheint, und macht eine Abweichung sichtbar', async ({ page }) => {
+    await page.goto('/admin/documents');
+    const types = page.getByRole('region', { name: 'Dokumentarten' });
+    const row = types.getByRole('row', { name: /Änderungsprotokoll-Export/ });
+    await expect(row.getByTestId('effective-base')).toContainText('a4-plain-slim');
+    await expect(row.getByRole('combobox').locator('option').first()).toHaveText('Vorgabe der Vorlage (a4-plain-slim)');
+    await expect(row.getByText('abweichend')).toHaveCount(0);
+
+    await row.getByRole('combobox').selectOption('a4-plain');
+    await expect(row.getByText('abweichend')).toBeVisible();
+    await expect(row.getByTestId('effective-base')).toContainText('a4-plain');
+    await expect(row.getByTestId('effective-base')).not.toContainText('a4-plain-slim');
+
+    await row.getByRole('button', { name: 'Zurücksetzen' }).click();
+    await expect(row.getByText('abweichend')).toHaveCount(0);
+    await expect(row.getByTestId('effective-base')).toContainText('a4-plain-slim');
   });
 
   test('exports the audit log as an ad-hoc download that files no document', async ({ page }) => {

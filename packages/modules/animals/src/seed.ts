@@ -1,6 +1,6 @@
-import { unwrap, type CallContext, type Deps, type LocalizedText } from '@kompass/core';
+import { schema as core, unwrap, type CallContext, type Deps, type LocalizedText } from '@kompass/core';
 import { animals } from './schema';
-import { createAnimal, setAnimalPublished, setAnimalStatus, setAnimalStory } from './service';
+import { createAnimal, requestAnimalReview, setAnimalPhotos, setAnimalPublished, setAnimalStatus, setAnimalStory } from './service';
 
 interface ExampleStory { quote: LocalizedText; family: string; beforeCaption: LocalizedText; afterCaption: LocalizedText }
 interface ExampleAnimal {
@@ -21,12 +21,16 @@ interface ExampleAnimal {
   adoptedYear?: number;
   published: boolean;
   story?: ExampleStory;
+  /** Notiz einer offenen Prüfung. Gesetzt heißt: Das Tier wartet, mit Fotos aus der Mediathek des Kern-Seeds. */
+  review?: string;
 }
 
 /**
  * Beispieltiere für Entwicklung und Test — frei erfunden, weil das Repo
  * öffentlich ist. Deckt die Statusvarianten ab (sucht ein Zuhause, reserviert,
- * vermittelt), damit Liste, Filter und die veröffentlichte Sicht Inhalt haben.
+ * vermittelt), damit Liste, Filter und die veröffentlichte Sicht Inhalt haben,
+ * und die zwei Fälle einer offenen Prüfung: neu und unveröffentlicht, geändert
+ * und schon veröffentlicht.
  * In `development` liegen sie neben den Prototyp-Daten von `dev:reset`.
  */
 const EXAMPLE_ANIMALS: ExampleAnimal[] = [
@@ -113,6 +117,42 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
       afterCaption: {},
     },
   },
+  {
+    slug: 'pelle',
+    name: 'Pelle',
+    sex: 'male' as const,
+    birthText: { de: 'Mai 2023', en: 'May 2023' },
+    sizeCm: 38,
+    sizeText: { de: 'ca. 38 cm', en: 'approx. 38 cm' },
+    location: 'shelter' as const,
+    place: 'Rumänien, Brașov',
+    isEmergency: false,
+    isSponsorable: true,
+    traits: { de: ['neugierig', 'verspielt'], en: ['curious', 'playful'] },
+    summary: { de: 'Junger Rüde, frisch im Shelter angekommen.', en: 'Young boy, newly arrived at the shelter.' },
+    body: { de: 'Pelle ist neu angelegt und wartet darauf, dass jemand Texte und Fotos ansieht.', en: 'Pelle was newly created and waits for someone to look at texts and photos.' },
+    status: 'lookingForHome' as const,
+    published: false,
+    review: 'neu',
+  },
+  {
+    slug: 'mika',
+    name: 'Mika',
+    sex: 'female' as const,
+    birthText: { de: '2021', en: '2021' },
+    sizeCm: 46,
+    sizeText: { de: 'ca. 46 cm', en: 'approx. 46 cm' },
+    location: 'germany' as const,
+    place: 'Niedersachsen',
+    isEmergency: false,
+    isSponsorable: false,
+    traits: { de: ['anhänglich', 'stubenrein'], en: ['affectionate', 'house-trained'] },
+    summary: { de: 'Lebt inzwischen auf einer Pflegestelle.', en: 'Now lives in a foster home.' },
+    body: { de: 'Mika ist veröffentlicht; ihr Profil wurde geändert und wartet auf eine Prüfung.', en: 'Mika is published; her profile was changed and waits for a review.' },
+    status: 'lookingForHome' as const,
+    published: true,
+    review: 'Text und Fotos geändert',
+  },
 ];
 
 /** Legt die Beispieltiere an, sofern noch keine Tiere existieren. */
@@ -145,5 +185,15 @@ export async function seedAnimals(deps: Deps, ctx: CallContext): Promise<void> {
       unwrap(await setAnimalStory(deps, ctx, { id: created.id, beforeAssetId: null, afterAssetId: null, quote: a.story.quote, family: a.story.family, adoptedYear: a.adoptedYear!, beforeCaption: a.story.beforeCaption, afterCaption: a.story.afterCaption }));
     }
     if (a.published) unwrap(await setAnimalPublished(deps, ctx, { id: created.id, isPublished: true }));
+    if (a.review !== undefined) {
+      // Fotos aus der Mediathek des Kern-Seeds (`seedMedia` läuft vorher); ohne sie bleibt das Tier ohne Fotos.
+      const photos = deps.db.select({ id: core.mediaAssets.id, mimeType: core.mediaAssets.mimeType, filename: core.mediaAssets.filename }).from(core.mediaAssets).all()
+        .filter((m) => m.mimeType.startsWith('image/') && m.mimeType !== 'image/svg+xml')
+        .sort((x, y) => (x.filename < y.filename ? -1 : 1))
+        .slice(0, 3);
+      if (photos.length > 0) unwrap(await setAnimalPhotos(deps, ctx, { id: created.id, photos: photos.map((m, i) => ({ assetId: m.id, isPrimary: i === 0 })) }));
+      // Der Seed läuft auf dem Kanal `system`: Der Merker kommt nur aus diesem ausdrücklichen Aufruf.
+      unwrap(await requestAnimalReview(deps, ctx, { id: created.id, note: a.review }));
+    }
   }
 }

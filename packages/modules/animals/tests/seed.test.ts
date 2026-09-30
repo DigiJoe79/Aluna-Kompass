@@ -2,7 +2,8 @@ import { coreModule, seedDevelopment } from '@kompass/core';
 import { createTestDeps } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { animalsModule } from '../src/manifest';
-import { animalStories, animals } from '../src/schema';
+import { eq } from 'drizzle-orm';
+import { animalPhotos, animalStories, animals } from '../src/schema';
 
 describe('animals seed', () => {
   it('seeds a few example animals with a mix of statuses and one published', async () => {
@@ -41,6 +42,8 @@ describe('animals seed', () => {
     expect(bySlug.frida).toBe('Nordrhein-Westfalen');
     expect(bySlug.nala).toBe('Rumänien, Cluj-Napoca');
     expect(bySlug.juno).toBe('Baden-Württemberg');
+    expect(bySlug.pelle).toBe('Rumänien, Brașov');
+    expect(bySlug.mika).toBe('Niedersachsen');
   });
 
   it('leaves one animal untranslated so translations_list_gaps has something to show', async () => {
@@ -52,5 +55,13 @@ describe('animals seed', () => {
     const gap = rows.filter((a) => locale(a.summary, 'de').length > 0 && locale(a.summary, 'en').length === 0);
     expect(gap.map((a) => a.slug)).toEqual(['frida']);
     expect(rows.filter((a) => locale(a.summary, 'en').length > 0).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('seeds two animals waiting for review: one new and unpublished, one published and changed, both with photos', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, animalsModule], env: 'development' });
+    await seedDevelopment(deps);
+    const pending = deps.db.select().from(animals).all().filter((a) => a.reviewRequestedAt !== null);
+    expect(pending.map((a) => [a.slug, a.isPublished, a.reviewNote]).sort()).toEqual([['mika', true, 'Text und Fotos geändert'], ['pelle', false, 'neu']]);
+    for (const a of pending) expect(deps.db.select().from(animalPhotos).where(eq(animalPhotos.animalId, a.id)).all().length).toBeGreaterThanOrEqual(2);
   });
 });

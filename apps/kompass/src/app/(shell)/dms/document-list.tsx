@@ -4,13 +4,14 @@ import { useDateFormat } from '@/components/date-format-provider';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Fragment, useState, useTransition } from 'react';
+import { Fragment, useTransition } from 'react';
 import { EmptyState } from '@/components/empty-state';
 import { SnippetText } from '@/components/snippet-text';
 import { StatusBadge } from '@/components/status-badge';
 import { Input } from '@/components/ui/input';
 import { SortableHead } from '@/components/sortable-head';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useUrlFilters } from '@/lib/use-url-filters';
 import { cn } from '@/lib/utils';
 import { Select } from '@/components/ui/select';
 
@@ -53,12 +54,16 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
   const [, startTransition] = useTransition();
 
   const isInbox = params.get('inbox') === '1';
-  const [query, setQuery] = useState(params.get('text') ?? '');
-  const [directionFilter, setDirectionFilter] = useState(params.get('direction') ?? '');
-  const [typeFilter, setTypeFilter] = useState(params.get('type') ?? '');
-  const [phaseFilter, setPhaseFilter] = useState(params.get('phase') ?? '');
-  const [dispatchFilter, setDispatchFilter] = useState(params.get('unsent') === '1' ? 'unsent' : '');
-  const [followUpFilter, setFollowUpFilter] = useState(params.get('followUp') === 'open' ? 'open' : '');
+  // Die Felder folgen der Adresse, wenn sie von außen wechselt (Seitenleiste, Zurück-Knopf, Kachel der Startseite).
+  const [filters, setFilters] = useUrlFilters({
+    text: params.get('text') ?? '',
+    direction: params.get('direction') ?? '',
+    type: params.get('type') ?? '',
+    phase: params.get('phase') ?? '',
+    unsent: params.get('unsent') === '1' ? 'unsent' : '',
+    followUp: params.get('followUp') === 'open' ? 'open' : '',
+  });
+  const { text: query, direction: directionFilter, type: typeFilter, phase: phaseFilter, unsent: dispatchFilter, followUp: followUpFilter } = filters;
 
   const applyFilters = (
     patch: Partial<{ text: string; direction: string; type: string; folder: string; phase: string; inbox: boolean; unsent: string; followUp: string }>,
@@ -74,6 +79,7 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
       followUp: followUpFilter,
       ...patch,
     };
+    setFilters({ text: merged.text, direction: merged.direction, type: merged.type, phase: merged.phase, unsent: merged.unsent, followUp: merged.followUp });
     const next = new URLSearchParams();
     if (merged.text.trim()) next.set('text', merged.text.trim());
     if (merged.direction) next.set('direction', merged.direction);
@@ -105,7 +111,6 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
           placeholder={t('searchPlaceholder')}
           value={query}
           onChange={(e) => {
-            setQuery(e.target.value);
             applyFilters({ text: e.target.value });
           }}
           className="w-[260px]"
@@ -115,7 +120,6 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
           value={directionFilter}
           onChange={(e) => {
             const val = e.target.value;
-            setDirectionFilter(val);
             applyFilters({ direction: val });
           }}
           className="w-auto"
@@ -129,7 +133,6 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
           value={typeFilter}
           onChange={(e) => {
             const val = e.target.value;
-            setTypeFilter(val);
             applyFilters({ type: val });
           }}
           className="w-auto"
@@ -146,7 +149,6 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
           value={phaseFilter}
           onChange={(e) => {
             const val = e.target.value;
-            setPhaseFilter(val);
             applyFilters({ phase: val });
           }}
           className="w-auto"
@@ -160,7 +162,6 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
           value={dispatchFilter}
           onChange={(e) => {
             const val = e.target.value;
-            setDispatchFilter(val);
             applyFilters({ unsent: val });
           }}
           className="w-auto"
@@ -173,7 +174,6 @@ export function DocumentList({ documents, types, folders, inboxCount, hits, full
           value={followUpFilter}
           onChange={(e) => {
             const val = e.target.value;
-            setFollowUpFilter(val);
             applyFilters({ followUp: val });
           }}
           className="w-auto"

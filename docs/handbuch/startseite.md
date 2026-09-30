@@ -30,6 +30,9 @@ Welche Kacheln Sie sehen können, hängt an Ihren Rechten. Heute gibt es:
   auf Wunsch nur die eigenen.
 - **Unversandt** — festgeschriebene Ausgänge ohne Versandvermerk. Siehe
   [Festschreiben und Versand](akte/festschreiben-und-versand.md).
+- **Tiere: Prüfung offen** — wie viele Tierprofile auf eine Prüfung warten,
+  veröffentlichte wie unveröffentlichte. Der Link öffnet die Tierliste mit
+  genau dieser Auswahl. Siehe [Tiere](tiere.md).
 - **Webseite** — ob seit dem letzten Publish etwas geändert wurde, ob der
   letzte Publish gelungen ist, und ob das Template nach einem Import noch
   geprüft werden muss. Siehe [Publizieren](webseite/publizieren.md).

@@ -26,6 +26,10 @@ export const animals = sqliteTable(
     summary: localizedColumn('summary'),
     body: localizedColumn('body'),
     isPublished: integer('is_published', { mode: 'boolean' }).notNull().default(false),
+    /** Gesetzt heißt: Prüfung offen, seit diesem Zeitpunkt. Ein Zustand, nicht ableitbar (Spec 2026-09-30, § 4). */
+    reviewRequestedAt: text('review_requested_at'),
+    /** Freitext des Anfordernden, was zu prüfen ist. Keine Personendaten. */
+    reviewNote: text('review_note').notNull().default(''),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },

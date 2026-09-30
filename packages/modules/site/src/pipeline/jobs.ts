@@ -17,6 +17,7 @@ export interface PreviewResult {
   gaps: SiteContentExport['gaps'];
   violations: SiteContentExport['violations'];
   stale: SiteContentExport['stale'];
+  pendingReview: SiteContentExport['pendingReview'];
   diff: PublishDiff;
   previewDir: string;
   log: string;
@@ -244,6 +245,7 @@ export async function runPreview(deps: Deps, ctx: CallContext, env: SiteEnv): Pr
       gaps: built.value.exported.gaps,
       violations: built.value.exported.violations,
       stale: built.value.exported.stale,
+      pendingReview: built.value.exported.pendingReview,
       diff: built.value.diff,
       previewDir: env.previewDir,
       log: built.value.log,

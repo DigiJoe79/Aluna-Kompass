@@ -173,10 +173,18 @@ export interface NavigationItem {
   section?: string;
 }
 
+/** Ein Datensatz, der veröffentlicht ist und auf eine Prüfung wartet: Beschriftung und Weg in die Oberfläche. */
+export interface PendingReviewItem {
+  label: string;
+  href: string;
+}
+
 export interface PublishedView<T = unknown> {
   name: string;
   schema: z.ZodType<T>;
   load(deps: Deps): T[];
+  /** Datensätze dieser Sicht, die veröffentlicht sind und auf eine Prüfung durch einen Menschen warten. Der Publish warnt, sperrt aber nicht. */
+  pendingReview?(deps: Deps): PendingReviewItem[];
 }
 
 /** Ein Schutzbereich für Dokumentarten der Akte: ein fester Schlüssel und das Recht, das ihn öffnet. */

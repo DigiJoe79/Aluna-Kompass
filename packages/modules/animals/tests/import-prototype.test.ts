@@ -3,7 +3,7 @@ import { listProjects } from '@kompass/module-projects';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 import { importPrototype } from '../../../../scripts/import-prototype';
-import { animalsModule, listAnimals } from '../src';
+import { animalsModule, findAnimalBySlug, listAnimals } from '../src';
 import { cleanupPrototypes, fakePrototype } from './prototype-fixture';
 
 afterEach(() => {
@@ -19,11 +19,11 @@ describe('importPrototype', () => {
 
     const first = await importPrototype(deps, ctx, { prototypeDir: dir });
     expect(first).toEqual({ animals: 2, projects: 1 });
-    const animals = unwrap(await listAnimals(deps, ctx));
-    const akiko = animals.find((a) => a.slug === 'akiko')!;
+    expect(unwrap(await listAnimals(deps, ctx)).total).toBe(2);
+    const akiko = findAnimalBySlug(deps.db, 'akiko')!;
     expect(akiko.status).toBe('adopted');
     expect(akiko.story?.quote.de).toBe('Endlich zuhause.');
-    expect(animals.find((a) => a.slug === 'chiara')?.photos).toHaveLength(1);
+    expect(findAnimalBySlug(deps.db, 'chiara')?.photos).toHaveLength(1);
     expect(unwrap(await listProjects(deps, ctx))[0]?.type).toBe('ongoing');
 
     const second = await importPrototype(deps, ctx, { prototypeDir: dir });

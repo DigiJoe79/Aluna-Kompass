@@ -14,15 +14,27 @@ Dokumentart eine Vorgabe mit: Brief, Briefbogen, Export des
 `/data/core/document-templates` legen (siehe [Betrieb](../betrieb.md)); sie
 erscheinen hier.
 
-Die Liste zeigt je Vorlage, ob sie bereit oder fehlerhaft ist. Eine
+Die Tabelle zeigt je Basis ihren Namen, ihre Kennung, ob sie **mitgeliefert**
+oder eine **eigene** des Vereins ist, und ob sie bereit oder fehlerhaft ist.
+Eine eigene Basis mit derselben Kennung ersetzt die mitgelieferte. Eine
 fehlerhafte Vorlage — ein Tippfehler in der Datei — wird nicht benutzt;
 Kompass fällt auf die Vorgabe zurück und sagt es hier.
 
-## Je Dokumentart eine Basis
+## Dokumentarten
 
-Darunter steht je Dokumentart (Brief, Briefbogen, Export des
-Änderungsprotokolls), welche Basis-Vorlage gilt: „Vorgabe der Vorlage“ oder
-eine eigene. Prüfen Sie eine neue Basis, indem Sie einen Entwurf in der
+Darunter steht, nach Modul gruppiert, jede Dokumentart — Brief, Export des
+Änderungsprotokolls, Zuwendungsbestätigung und so weiter. Jede bringt eine
+Basis als Vorgabe mit. Die Spalte „Erscheint auf“ nennt die Basis, auf der ein
+Dokument dieser Art tatsächlich entsteht.
+
+In der Spalte „Auswahl“ legen Sie eine andere Basis fest. Der erste Eintrag,
+„Vorgabe der Vorlage“, nennt in Klammern die Kennung der Vorgabe. Weicht eine
+Dokumentart von ihrer Vorgabe ab, trägt die Zeile die Marke „abweichend“, und
+„Zurücksetzen“ stellt die Vorgabe wieder her. Eine Abweichung bleibt bestehen,
+auch wenn eine neue Fassung von Kompass die Vorgabe ändert — wer sich wundert,
+warum ein Dokument nicht auf der erwarteten Basis erscheint, sieht es hier.
+
+Prüfen Sie eine neue Basis, indem Sie einen Entwurf in der
 [Akte](../akte/brief-schreiben.md) anlegen — die Vorschau dort zeigt sie mit
 den echten Vereinsdaten, bevor ein Brief darauf festgeschrieben wird.
 

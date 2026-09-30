@@ -1,6 +1,6 @@
 {
   "name": "@kompass/module-site",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "type": "module",
   "exports": {
@@ -14,14 +14,14 @@
   "dependencies": {
     "@kompass/core": "workspace:*",
     "@kompass/site-template": "workspace:*",
-    "drizzle-orm": "^0.45.2",
+    "drizzle-orm": "^0.45.3",
     "sharp": "^0.35.4",
-    "zod": "^4.6.2"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@types/node": "^26.5.1",
+    "@types/node": "^26.6.2",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.0",
+    "vitest": "^5.0.1",
     "@kompass/module-animals": "workspace:*",
     "@kompass/module-projects": "workspace:*"
   }

@@ -45,6 +45,7 @@
   - [Module](einstellungen/module.md)
   - [Dokumentvorlagen](einstellungen/dokumente.md)
   - [Akte](einstellungen/akte-einrichten.md)
+  - [Tiere](einstellungen/tiere-einrichten.md)
   - [Schutzbereiche](einstellungen/schutzbereiche.md)
 - [Profil](profil.md)
 - [Betrieb](betrieb.md)

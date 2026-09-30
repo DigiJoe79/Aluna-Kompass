@@ -1304,3 +1304,15 @@ test('exports a folder as a bundle', async ({ page }) => {
   await page.getByRole('button', { name: 'Bündel herunterladen' }).click();
   expect((await download).suggestedFilename()).toMatch(/^Akte-Jahrgang-\d{4}-.*\.zip$/);
 });
+
+/** Wie in Tier- und Kontaktliste (Befund Joe, 2026-09-30): Die Felder lasen die Adresse nur beim ersten Rendern. */
+test('die Filterfelder der Akte folgen der Adresse, auch wenn sie von außen wechselt', async ({ page }) => {
+  await resetDatabase(page, 'seeded');
+  await login(page);
+  await page.goto('/dms');
+  await page.getByLabel('Richtung', { exact: true }).selectOption('outgoing');
+  await expect(page).toHaveURL(/direction=outgoing/);
+  await page.getByRole('navigation').getByRole('link', { name: 'Akte', exact: true }).first().click();
+  await expect(page).toHaveURL(/\/dms$/);
+  await expect(page.getByLabel('Richtung', { exact: true })).toHaveValue('');
+});
