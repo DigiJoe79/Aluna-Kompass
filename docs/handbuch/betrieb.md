@@ -181,6 +181,16 @@ Veröffentlichen) und `stop_grace_period: 60s`: Beim Stopp schreibt Kompass die
 Nebendatei `kompass.db-wal` in `kompass.db`; ohne Frist beendet Docker den
 Container nach 10 Sekunden hart.
 
+### Von 0.2.2 auf 0.2.3
+
+Die Fassung 0.2.3 bringt keine Migration mit; `/api/health` meldet weiter
+`migrationCount: 6`. Nach dem Update ist nichts von Hand zu tun.
+
+Für MCP-Clients: Ein Protokolleintrag `animals.setPhotos` trägt in Vorher und
+Nachher jetzt ein Objekt `{ photos, reviewRequestedAt }` statt der bloßen
+Fotoliste. Ältere Einträge behalten ihre Form. `media_get` kennt den neuen,
+optionalen Parameter `variant`.
+
 **Wenn etwas schiefgeht:** Es gibt keinen Weg zurück in eine ältere Fassung der
 Datenbank — Migrationen laufen nur vorwärts. Der Rückweg ist das Backup aus
 Schritt 1: altes Image eintragen, Container starten, Backup einspielen.

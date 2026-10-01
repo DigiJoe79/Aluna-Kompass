@@ -64,4 +64,12 @@ describe('animals seed', () => {
     expect(pending.map((a) => [a.slug, a.isPublished, a.reviewNote]).sort()).toEqual([['mika', true, 'Text und Fotos geändert'], ['pelle', false, 'neu']]);
     for (const a of pending) expect(deps.db.select().from(animalPhotos).where(eq(animalPhotos.animalId, a.id)).all().length).toBeGreaterThanOrEqual(2);
   });
+
+  it('gives the two waiting animals different review times, so the queue order does not depend on the name', async () => {
+    // Die Testuhr steht still: Ohne eigenen Abstand bekämen beide denselben Zeitpunkt.
+    const deps = createTestDeps({ manifests: [coreModule, animalsModule], env: 'development' });
+    await seedDevelopment(deps);
+    const at = Object.fromEntries(deps.db.select().from(animals).all().map((a) => [a.slug, a.reviewRequestedAt]));
+    expect(at.pelle! < at.mika!).toBe(true);
+  });
 });

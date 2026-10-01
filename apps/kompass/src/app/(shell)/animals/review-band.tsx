@@ -11,6 +11,9 @@ import { useDateFormat } from '@/components/date-format-provider';
  * Der Haken ist ein natives Feld mit `form`-Attribut: Das Band steht außerhalb
  * des Formulars, das Feld reist trotzdem mit dessen Speichern. Der
  * `Checkbox`-Baustein ist ein Knopf und kennt kein `form`.
+ *
+ * Der Haken ändert keinen Datensatz: Die Action liest ihn nur beim Bestätigen, beim Speichern nicht. Deshalb
+ * `data-dirty-ignore` – er zählt in der Speicherleiste nie als Änderung und bietet kein Speichern an.
  */
 export function ReviewBand({ requestedAt, note, canPublish, formId }: { requestedAt: string; note: string; canPublish: boolean; formId: string }) {
   const t = useTranslations('animals.review');
@@ -21,7 +24,7 @@ export function ReviewBand({ requestedAt, note, canPublish, formId }: { requeste
       {note ? <p className="whitespace-pre-line">{note}</p> : null}
       {canPublish ? (
         <div className="flex items-center gap-2">
-          <input type="checkbox" id="publishOnConfirm" name="publishOnConfirm" form={formId} defaultChecked className="size-4 rounded border-line" />
+          <input type="checkbox" id="publishOnConfirm" name="publishOnConfirm" form={formId} data-dirty-ignore defaultChecked className="size-4 rounded border-line" />
           <label htmlFor="publishOnConfirm">{t('publishOnConfirm')}</label>
         </div>
       ) : null}

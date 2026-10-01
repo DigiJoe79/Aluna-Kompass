@@ -321,7 +321,8 @@ describe('checkDeployTarget', () => {
 
     expect(result.target).toBe(target);
     expect(result.filesAtTarget).toEqual(expect.arrayContaining(['wp-config.php', 'wp-content/logo.png']));
-    expect(result.log).toContain('--dry-run');
+    expect(result.log).toContain('nichts wird gelöscht');
+    expect(result.log).not.toContain('*deleting');
     expect(readFileSync(path.join(target, 'wp-config.php'), 'utf8')).toBe('<?php');
     expect(readFileSync(path.join(target, 'wp-content', 'logo.png'), 'utf8')).toBe('binary');
 
@@ -345,6 +346,14 @@ describe('checkDeployTarget', () => {
 
     expect(result.publishWould).toEqual({ changed: [], added: [], removed: ['alte-seite.html'] });
     expect(readFileSync(path.join(target, 'alte-seite.html'), 'utf8')).toBe('veraltet');
+    // Befund vom 27.09.: Das Protokoll trug die Pfadprüfung (Trockenlauf gegen ein leeres Verzeichnis) als
+    // „*deleting“ für jede Datei am Ziel und las sich, als räumte ein Publish alles ab. Gelöscht wird nur, was
+    // dem Build fehlt; die Pfadprüfung steht als Liste „am Ziel“ darin.
+    // GNU rsync (Container, CI) rückt den Namen mit mehreren Leerzeichen ein, openrsync (macOS) mit einem.
+    expect([...result.log.matchAll(/^\*deleting +(.*[^/\n])$/gm)].map((m) => m[1])).toEqual(['alte-seite.html']);
+    expect(result.log).toMatch(/^am Ziel: index\.html$/m);
+    expect(result.log).toContain('Pfadprüfung');
+    expect(result.log).toContain('Trockenlauf gegen den Build');
   }, 240_000);
 
   it('reports changed and added files from the build', async () => {

@@ -115,8 +115,11 @@ describe('animal review marker', () => {
     const photo = await p1(d3);
     unwrap(await setAnimalPhotos(d3, mcp, { id: b.id, photos: [{ assetId: photo.id, isPrimary: true }] }));
     expect(reviewEntries(d3)).toHaveLength(1);
-    // Die Form des Fotoeintrags bleibt: eine Liste, kein Merker darin.
-    expect(Array.isArray(JSON.parse(auditEntry(d3, 'animals.setPhotos').after!))).toBe(true);
+    // Spec § 5.1: Der Merker steht auch im Nachher-Stand des Eintrags der Änderung selbst.
+    const photoAfter = JSON.parse(auditEntry(d3, 'animals.setPhotos').after!);
+    expect(photoAfter.reviewRequestedAt).toEqual(expect.any(String));
+    expect(photoAfter.photos.map((p: { assetId: string }) => p.assetId)).toEqual([photo.id]);
+    expect(JSON.parse(auditEntry(d3, 'animals.setPhotos').before!)).toEqual({ photos: [], reviewRequestedAt: null });
 
     const d4 = await deps();
     const c = unwrap(await createAnimal(d4, manage, chiara));
@@ -124,6 +127,9 @@ describe('animal review marker', () => {
     unwrap(await setAnimalStory(d4, mcp, { id: c.id, ...story }));
     expect(reviewEntries(d4)).toHaveLength(1);
     expect(reviewEntries(d4)[0]?.entityId).toBe(c.id);
+    const storyAfter = JSON.parse(auditEntry(d4, 'animals.setStory').after!);
+    expect(storyAfter).toMatchObject({ family: story.family, reviewRequestedAt: expect.any(String) });
+    expect(JSON.parse(auditEntry(d4, 'animals.setStory').before!)).toMatchObject({ reviewRequestedAt: null });
   });
 
   it('translations written through mcp mark the profile', async () => {

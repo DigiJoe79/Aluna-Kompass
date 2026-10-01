@@ -2,7 +2,7 @@ import {
   activateTheme, addLocale, assignRole, completeFollowUp, createFollowUp, deleteFollowUp, followUpCreateSchema,
   followUpDueSchema, followUpIdSchema, followUpListSchema, listDueFollowUpsWithTargets, listFollowUps, reopenFollowUp,
   dashboardLayoutSchema, getDashboardLayout, listDashboardTiles, readDashboard, resetDashboardLayout, setDashboardLayout,
-  createMediaFolder, createRole, createUser, deleteMediaAsset, getMediaAsset, deleteMediaFolder, getAuditEntry, listDocumentBases, listLocales, listMediaAssets, listModules, mediaListFilterSchema,
+  createMediaFolder, createRole, createUser, deleteMediaAsset, getMediaAsset, getMediaPreview, deleteMediaFolder, getAuditEntry, listDocumentBases, listLocales, listMediaAssets, listModules, mediaListFilterSchema,
   getSetting, listRetentionDue, listRoles, listSettings, listThemes, listUsers, moveMediaAsset, queryAudit, removeLocale, removeRole, renameMediaFolder,
   reorderLocales, resetStartPassword, setModuleEnabled, setRolePermissions, setSetting, setUserActive, storeMediaAsset,
   updateRole, ok, invalid,
@@ -40,12 +40,19 @@ export const coreMcpTools: McpToolDefinition[] = [
   }),
   t({
     name: 'media_get',
-    description: 'Download a media asset: its record plus the content as base64 (no data-URL prefix) — the counterpart of media_upload, e.g. to copy images between installations. Needs a signed-in user; an asset used by a record also needs the view right of that record (animals.view, projects.view, site.view, …), like the UI. At most 10 MB, the upload limit.',
-    inputSchema: z.object({ id: z.string() }),
-    handler: async (deps, ctx, { id }) => {
+    description: 'Download a media asset: its record, contentType and the content as base64 (no data-URL prefix) — the counterpart of media_upload, e.g. to copy images between installations. variant: original (default, up to 10 MB, the upload limit — about 13 MB of base64) or preview (the media library thumbnail, WebP at most 320 px wide, a few KB — enough to see what is on an image; SVG comes back as is, a PDF has no preview and returns contentBase64 null). Needs a signed-in user; an asset used by a record also needs the view right of that record (animals.view, projects.view, site.view, …), like the UI. Read only, not audited.',
+    inputSchema: z.object({ id: z.string(), variant: z.enum(['original', 'preview']).optional() }),
+    handler: async (deps, ctx, { id, variant }) => {
+      if (variant === 'preview') {
+        const preview = await getMediaPreview(deps, ctx, id);
+        if (!preview.ok) return preview;
+        const { record, bytes, contentType } = preview.value;
+        return ok({ record, contentType, contentBase64: bytes ? Buffer.from(bytes).toString('base64') : null });
+      }
       const result = await getMediaAsset(deps, ctx, id);
       if (!result.ok) return result;
-      return ok({ record: result.value.record, contentBase64: Buffer.from(result.value.bytes).toString('base64') });
+      const { record, bytes } = result.value;
+      return ok({ record, contentType: record.mimeType, contentBase64: Buffer.from(bytes).toString('base64') });
     },
     service: getMediaAsset,
   }),

@@ -12,6 +12,12 @@ const FIXTURE_PDF = path.resolve(import.meta.dirname, 'fixtures/brief-digital.pd
  * Dinge auf der Liste dahinter — „Betreff“ steht auch im Suchfeld —, deshalb
  * wird im Dialog gesucht und nicht auf der Seite.
  */
+/*
+ * Sonde, kein Fix: Unter Last verschluckt das Betreff-Feld des Dialogs
+ * gelegentlich ein `fill` (Mechanismus C, Ursache unbekannt). Nach jedem
+ * `fill` darauf steht deshalb `toHaveValue` — schlägt es fehl, zeigt der Trace
+ * den Stand des Feldes an genau dieser Stelle statt erst beim Ablegen.
+ */
 function receiveDialog(page: Page) {
   return page.getByRole('dialog', { name: 'Post ablegen' });
 }
@@ -114,6 +120,7 @@ test.describe('dms', () => {
     await expect(dialog.getByLabel('Datum auf dem Dokument')).toHaveValue('2026-03-14', { timeout: 30_000 });
     await dialog.getByLabel('Dokumentart').selectOption('authority');
     await dialog.getByLabel('Betreff').fill('Eingegangenes Schreiben');
+    await expect(dialog.getByLabel('Betreff')).toHaveValue('Eingegangenes Schreiben');
     await dialog.getByRole('button', { name: 'Ablegen' }).click();
     // Erst auf das Dokument warten, dann die Nummer lesen: Solange der Dialog
     // offen steht, trägt die Liste dahinter ihre Nummern und der Hinweis im
@@ -411,6 +418,7 @@ test.describe('dms', () => {
     await dialog.getByLabel('Datei').setInputFiles({ name: 'notiz.txt', mimeType: 'text/plain', buffer: Buffer.from('Text, kein PDF.') });
     await dialog.getByLabel('Datum auf dem Dokument').fill('2026-03-01');
     await dialog.getByLabel('Betreff').fill('Falscher Dateityp');
+    await expect(dialog.getByLabel('Betreff')).toHaveValue('Falscher Dateityp');
     await dialog.getByRole('button', { name: 'Ablegen' }).click();
     await expect(page.getByText('Nur PDF. Schriftverkehr wird als PDF abgelegt, damit er in zehn Jahren noch lesbar ist.')).toBeVisible();
     // Der allgemeine Kasten verweist nur dann auf Markierungen, wenn es welche gibt.
@@ -425,6 +433,7 @@ test.describe('dms', () => {
     await dialog.getByLabel('Dokumentart').selectOption('invoice');
     await dialog.getByLabel('Datum auf dem Dokument').fill('2005-06-01');
     await dialog.getByLabel('Betreff').fill('Abgelaufene Rechnung');
+    await expect(dialog.getByLabel('Betreff')).toHaveValue('Abgelaufene Rechnung');
     await dialog.getByRole('button', { name: 'Ablegen' }).click();
     await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}$/);
     await expect(page.getByText(/RCH-\d{4}-\d{3}/)).toBeVisible();
@@ -448,6 +457,7 @@ test.describe('dms', () => {
     await dialog.getByLabel('Dokumentart').selectOption('invoice');
     await dialog.getByLabel('Datum auf dem Dokument').fill('2026-03-01');
     await dialog.getByLabel('Betreff').fill('Laufende Rechnung');
+    await expect(dialog.getByLabel('Betreff')).toHaveValue('Laufende Rechnung');
     await dialog.getByRole('button', { name: 'Ablegen' }).click();
     await expect(page.getByRole('button', { name: 'Endgültig löschen' })).toBeDisabled();
   });
@@ -665,6 +675,7 @@ test.describe('dms', () => {
     await expect(dialog.getByText('Erster Vertrag.pdf')).toBeVisible();
     await dialog.getByLabel('Datum auf dem Dokument').fill('2026-05-01');
     await dialog.getByLabel('Betreff').fill('Erster Vertrag');
+    await expect(dialog.getByLabel('Betreff')).toHaveValue('Erster Vertrag');
     await dialog.getByRole('button', { name: 'Ablegen' }).click();
 
     // Die nächste Datei steht schon da; der Ordner, auf den gezogen wurde, bleibt.
@@ -673,6 +684,7 @@ test.describe('dms', () => {
     await expect(dialog.getByLabel('Ordner')).toHaveValue('vertraege');
     await dialog.getByLabel('Datum auf dem Dokument').fill('2026-05-02');
     await dialog.getByLabel('Betreff').fill('Zweiter Vertrag');
+    await expect(dialog.getByLabel('Betreff')).toHaveValue('Zweiter Vertrag');
     await dialog.getByRole('button', { name: 'Ablegen' }).click();
 
     // Nach der letzten schliesst der Dialog, und beide stehen in der Liste.
@@ -689,6 +701,7 @@ test.describe('dms', () => {
     const dialog = receiveDialog(page);
     await dialog.getByLabel('Datum auf dem Dokument').fill('2026-05-01');
     await dialog.getByLabel('Betreff').fill('Eins');
+    await expect(dialog.getByLabel('Betreff')).toHaveValue('Eins');
     await dialog.getByRole('button', { name: 'Ablegen' }).click();
     await expect(dialog.getByText('2 von 2')).toBeVisible();
 
@@ -1126,6 +1139,7 @@ test.describe('dms', () => {
     // ihn. Im Container fiel genau das auf — dort kommt der Vorschlag später.
     await expect(dialog.getByText(/wird beim Ablegen gezogen/)).toBeVisible({ timeout: 30_000 });
     await dialog.getByLabel('Betreff').fill('Antwort der Praxis');
+    await expect(dialog.getByLabel('Betreff')).toHaveValue('Antwort der Praxis');
     await dialog.getByLabel('Datum auf dem Dokument').fill('2026-09-10');
     await dialog.getByRole('combobox', { name: 'Antwort auf' }).fill('BRF');
     await page.getByTestId('document-option').first().click();
@@ -1141,15 +1155,15 @@ test.describe('dms', () => {
     await page.goto('/dms/new');
     await page.getByLabel('Baustein einfügen').selectOption({ label: 'Bitte um Rückmeldung' });
     await expect(page.getByLabel('Betreff')).toHaveValue('Bitte um Rückmeldung');
-    await expect(page.getByLabel('Text')).toHaveValue(/Rückmeldung/);
     const body = page.getByLabel('Text');
-    // Wackler seit 2026-09-17 (Memory „DMS: fill-Wackler“): `fill` markiert erst alles und fügt dann ein — fällt ein
-    // React-Commit des ersten Bausteins dazwischen, landet die Markierung am Ende und `fill` hängt an. Deshalb: füllen,
-    // den Stand prüfen und, falls angehängt, erneut füllen, bis das Feld genau „Anfang “ trägt.
-    await expect(async () => {
-      await body.fill('Anfang ');
-      await expect(body).toHaveValue('Anfang ', { timeout: 500 });
-    }).toPass({ timeout: 10_000 });
+    // Wackler seit 2026-09-17: `fill` markiert erst alles und fügt dann ein. `insertSnippet` setzt die Schreibmarke
+    // aber erst einen Frame nach dem Commit (requestAnimationFrame: focus + setSelectionRange ans Ende des Bausteins).
+    // Läuft dieser Frame zwischen Markieren und Einfügen, ist die Markierung weg und `fill` hängt an. Deshalb erst
+    // füllen, wenn der Frame gelaufen ist: Text vollständig da und das Feld hat den Fokus, den nur der Frame setzt.
+    await expect(body).toHaveValue('Wir bitten um Ihre Rückmeldung bis zum genannten Termin.');
+    await expect(body).toBeFocused();
+    await body.fill('Anfang ');
+    await expect(body).toHaveValue('Anfang ');
     await body.evaluate((el: HTMLTextAreaElement) => { el.setSelectionRange(el.value.length, el.value.length); });
     await page.getByLabel('Baustein einfügen').selectOption({ label: 'Grußformel' });
     await expect(body).toHaveValue(/^Anfang Mit freundlichen Grüßen/);
@@ -1234,6 +1248,7 @@ test.describe('dms', () => {
     const dialog = receiveDialog(page);
     await dialog.getByLabel('Datei').setInputFiles(FIXTURE_PDF);
     await dialog.getByLabel('Betreff').fill('Impfpass');
+    await expect(dialog.getByLabel('Betreff')).toHaveValue('Impfpass');
     await dialog.getByLabel('Datum auf dem Dokument').fill('2026-09-10');
     await dialog.getByRole('button', { name: 'Ablegen' }).click();
     await expect(page.getByTestId('document-links').getByText('Betrifft')).toBeVisible();

@@ -131,6 +131,15 @@ test.describe('animals', () => {
     await expect(page.getByText(/Prüfung offen seit/)).toBeVisible();
     await expect(page.getByText('neu', { exact: true })).toBeVisible(); // die Notiz
     await expect(page.getByLabel('Beim Bestätigen veröffentlichen')).toBeChecked();
+    // Der Haken ändert keinen Datensatz, er wirkt nur beim Bestätigen: Er zählt nie als Änderung.
+    await page.getByLabel('Beim Bestätigen veröffentlichen').uncheck();
+    await page.getByLabel('Name').fill('Pelle');
+    await expect(page.getByText('noch nicht gespeichert')).toHaveCount(0);
+    await page.getByLabel('Name').fill('Pelle II');
+    await expect(page.getByText('1 Änderung noch nicht gespeichert')).toBeVisible();
+    await page.getByLabel('Name').fill('Pelle');
+    await page.getByLabel('Beim Bestätigen veröffentlichen').check();
+    await expect(page.getByText('noch nicht gespeichert')).toHaveCount(0);
 
     await page.getByRole('tab', { name: 'Texte und Fotos' }).click();
     await page.locator('[name="summary.de"]').fill('Von Hand geprüfter Kurztext.');
@@ -233,6 +242,32 @@ test.describe('animals', () => {
     await page.getByRole('button', { name: 'Speichern' }).click();
     await page.getByRole('tab', { name: 'Geschichte' }).click();
     await expect(page.getByText('Erst nach der Vermittlung')).toBeVisible();
+  });
+
+  test('übernimmt das Vermittlungsjahr aus „Status ändern“ in die Geschichte, ohne es beim Speichern zu überschreiben', async ({ page }) => {
+    await page.goto('/animals/new');
+    await page.getByLabel('Slug (URL-Teil)').fill('greta');
+    await page.getByLabel('Name').fill('Greta');
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page).toHaveURL(/\/animals\/[A-Z0-9]+$/);
+    await page.getByRole('button', { name: 'Status ändern' }).click();
+    await page.getByRole('dialog').getByLabel('Neuer Status').selectOption('adopted');
+    await page.getByRole('dialog').getByLabel('Vermittlungsjahr').fill('2024');
+    await page.getByRole('dialog').getByRole('button', { name: 'Status setzen' }).click();
+    await expect(page.getByRole('status')).toContainText('Status gesetzt');
+    await page.getByRole('tab', { name: 'Geschichte' }).click();
+    const year = page.locator('[name="adoptedYear"]');
+    await expect(year).toHaveValue('2024');
+    // Das neu geladene Jahr ist keine Änderung: Nur die Familie zählt.
+    await page.getByLabel('Familie').fill('Familie G.');
+    await expect(page.getByText('1 Änderung noch nicht gespeichert')).toBeVisible();
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByRole('status')).toContainText('Gespeichert');
+    await expect(page.getByText('noch nicht gespeichert')).toHaveCount(0);
+    await page.reload();
+    await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
+    await page.getByRole('tab', { name: 'Geschichte' }).click();
+    await expect(year).toHaveValue('2024');
   });
 
   test('unchecking a photo in the chooser removes it from the list', async ({ page }) => {

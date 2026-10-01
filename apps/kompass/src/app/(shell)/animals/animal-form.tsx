@@ -162,6 +162,7 @@ export function AnimalForm({ animal, locales, queue, initialTab, backHref, photo
           {/* „Speichern“ steht im DOM zuerst: Die Eingabetaste in einem Feld speichert nur, sie bestätigt nichts. */}
           <FormActionBar
             baseline={baseline}
+            loadedVersion={animal?.updatedAt}
             back={{ href: backHref, label: tCommon('backToList') }}
             saveName="intent"
             saveValue={primary?.intent ?? 'save'}

@@ -33,6 +33,28 @@ Welche Kacheln Sie sehen können, hängt an Ihren Rechten. Heute gibt es:
 - **Tiere: Prüfung offen** — wie viele Tierprofile auf eine Prüfung warten,
   veröffentlichte wie unveröffentlichte. Der Link öffnet die Tierliste mit
   genau dieser Auswahl. Siehe [Tiere](tiere.md).
+- **Finanzen: zu tun** — alles, was in der Buchhaltung ansteht, in einer
+  Liste: geprüfte, aber nicht festgeschriebene Buchungen, Buchungen ohne
+  Beleg, überfällige offene Zahlungen, Kontoumsätze ohne Zuordnung, ein zu
+  alter Kontoauszug, ein auslaufender Freistellungsbescheid,
+  Zuwendungsbestätigungen zum Korrigieren oder Unterschreiben, Anträge, die
+  auf Freigabe warten. Jede Zeile führt an die Stelle, an der sie erledigt
+  wird. Siehe [Arbeitsliste](finanzen/arbeitsliste.md).
+- **Wartet auf Ihre Freigabe** und **Ihre Auslagen** — für die, die Anträge
+  freigeben, und für die, die Auslagen einreichen. Siehe
+  [Auslagen](finanzen/auslagen.md).
+- **Zwecke im Minus** und **Zahlungen an Partner ohne Nachweis** — für den
+  Überblick über die Mittelverwendung. Siehe
+  [Zwecke und zurückgelegtes Geld](finanzen/zwecke-und-ruecklagen.md) und
+  [Partner](finanzen/partner.md).
+- **Einrichtung** (Finanzen) und **Niemand kann freigeben** — für die
+  Verwaltung der Finanzen, solange an der Einrichtung etwas fehlt oder kein
+  Nutzer Anträge freigeben darf. Siehe [Finanzen einrichten](finanzen/einrichten.md).
+- Standardmäßig aus, unter „Anpassen“ einzuschalten: **Buchungen ohne
+  Beleg**, **Entwürfe zu alt** (älter als 14 Tage), **Überfällige offene
+  Zahlungen**, **Konten im Minus**, **Höchstbetrag der freien Rücklage**,
+  **Umsätze ohne Zuordnung**, **Saldodifferenz**, **Letzter Auszug** und
+  **Bestätigungen zu korrigieren**.
 - **Webseite** — ob seit dem letzten Publish etwas geändert wurde, ob der
   letzte Publish gelungen ist, und ob das Template nach einem Import noch
   geprüft werden muss. Siehe [Publizieren](webseite/publizieren.md).

@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { useUrlFilters } from '@/lib/use-url-filters';
 
 export interface JournalFiltersProps {
   accounts: { id: string; name: string }[];
@@ -21,6 +22,9 @@ export function JournalFilters({ accounts, categories }: JournalFiltersProps) {
   const pathname = usePathname();
   const params = useSearchParams();
   const [, startTransition] = useTransition();
+  // Das Suchfeld braucht eigenen Zustand, weil die Adresse dem Tippen nachläuft; es folgt ihr, wenn sie von
+  // außen wechselt (Chip, Seitenleiste, Zurück). Die Auswahlfelder lesen die Adresse direkt.
+  const [search, setSearch] = useUrlFilters({ q: params.get('q') ?? '' });
 
   const apply = (patch: Record<string, string | null>) => {
     const next = new URLSearchParams(params.toString());
@@ -46,8 +50,11 @@ export function JournalFilters({ accounts, categories }: JournalFiltersProps) {
         <Input
           aria-label={t('textLabel')}
           placeholder={t('textPlaceholder')}
-          defaultValue={params.get('q') ?? ''}
-          onChange={(e) => apply({ q: e.target.value })}
+          value={search.q}
+          onChange={(e) => {
+            setSearch({ q: e.target.value });
+            apply({ q: e.target.value });
+          }}
           className="w-[220px]"
         />
         <Select aria-label={t('state.label')} value={params.get('state') ?? ''} onChange={(e) => apply({ state: e.target.value || null })} className="w-auto">

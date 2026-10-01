@@ -93,6 +93,45 @@ describe('media_get', () => {
     const result = await tool('media_get').handler(setup(), ctxWith([]), { id: '01J00000000000000000000000' });
     expect(result.ok === false && result.error.type).toBe('notFound');
   });
+
+  /**
+   * Ein Foto von 8 MB käme als 11 MB Base64 in den Kontext eines Agenten. Wer
+   * nur sehen will, was auf dem Bild ist, nimmt die Vorschau der Mediathek
+   * (höchstens 320 px breit, WebP) — dieselbe, die `/media/<id>/preview` ausliefert.
+   */
+  it('returns the small preview instead of the original on request', async () => {
+    const deps = setup();
+    const stored = unwrap(await storeMediaAsset(deps, ctxWith(['media.upload']), { originalName: 'punkt.png', bytes: new Uint8Array(Buffer.from(PNG_BASE64, 'base64')) }));
+    const got = unwrap(await tool('media_get').handler(deps, ctxWith([]), { id: stored.id, variant: 'preview' })) as { record: { id: string }; contentType: string; contentBase64: string };
+    expect(got.record.id).toBe(stored.id);
+    expect(got.contentType).toBe('image/webp');
+    const bytes = Buffer.from(got.contentBase64, 'base64');
+    expect([bytes.subarray(0, 4).toString('latin1'), bytes.subarray(8, 12).toString('latin1')]).toEqual(['RIFF', 'WEBP']);
+  });
+
+  it('names the content type of the original, and has no preview for a PDF', async () => {
+    const deps = setup();
+    const ctx = ctxWith(['media.upload']);
+    const pdf = new TextEncoder().encode('%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 100]>>endobj\nxref\n0 4\n0000000000 65535 f \ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n0\n%%EOF');
+    const doc = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'doc.pdf', bytes: pdf, declaredMimeType: 'application/pdf' }));
+    const original = unwrap(await tool('media_get').handler(deps, ctxWith([]), { id: doc.id })) as { contentType: string };
+    expect(original.contentType).toBe('application/pdf');
+    const preview = unwrap(await tool('media_get').handler(deps, ctxWith([]), { id: doc.id, variant: 'preview' })) as { contentBase64: string | null };
+    expect(preview.contentBase64).toBeNull();
+  });
+
+  it('keeps the rights of the UI for the preview: not signed in, no bytes', async () => {
+    const deps = setup();
+    const stored = unwrap(await storeMediaAsset(deps, ctxWith(['media.upload']), { originalName: 'punkt.png', bytes: new Uint8Array(Buffer.from(PNG_BASE64, 'base64')) }));
+    const anonymous = await tool('media_get').handler(deps, ctxWith([], null), { id: stored.id, variant: 'preview' });
+    expect(anonymous.ok === false && anonymous.error.type).toBe('unauthorized');
+  });
+
+  it('shows the variant in its schema and description', () => {
+    const shape = (tool('media_get').inputSchema as unknown as { shape: Record<string, unknown> }).shape;
+    expect(Object.keys(shape).sort()).toEqual(['id', 'variant']);
+    expect(tool('media_get').description).toContain('variant');
+  });
 });
 
 describe('media_list', () => {

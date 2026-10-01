@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changedValues, countChanged, countChangedValues, snapshotOf } from '@/lib/form-dirty';
+import { changedValues, countChanged, countChangedValues, rebaseSnapshot, snapshotOf } from '@/lib/form-dirty';
 
 /**
  * Die Formulare der Anwendung sind unkontrolliert: Die Felder tragen
@@ -69,5 +69,44 @@ describe('changedValues', () => {
     expect(changedValues(loaded, { claim: { de: 'B' }, dog: 'chiara', count: 3 })).toEqual({ claim: { de: 'B' } });
     // Leeren ist eine Änderung: null wird mitgeschickt, damit der Dienst die Zeile löscht.
     expect(changedValues(loaded, { claim: { de: 'A' }, dog: null, count: 3 })).toEqual({ dog: null });
+  });
+});
+
+describe('snapshotOf mit ausgenommenen Feldern', () => {
+  // Ein Feld, das keinen Datensatz ändert – der Haken „Beim Bestätigen veröffentlichen“ wirkt nur beim Bestätigen.
+  it('lässt ausgenommene Felder aus dem Stand, sodass ihr Umschalten nie zählt', () => {
+    const ignore = new Set(['publishOnConfirm']);
+    const before = snapshotOf(fd([['name', 'Bo'], ['publishOnConfirm', 'on']]), ignore);
+    expect(countChanged(before, snapshotOf(fd([['name', 'Bo']]), ignore))).toBe(0);
+    expect(countChanged(before, snapshotOf(fd([['name', 'Boris']]), ignore))).toBe(1);
+  });
+});
+
+describe('rebaseSnapshot', () => {
+  // Ein neuer Ladestand, während die Maske stehen bleibt – „Status ändern“ setzt das Vermittlungsjahr.
+  const loaded = snapshotOf(fd([['family', ''], ['adoptedYear', '2026'], ['name', 'Bo']]));
+
+  it('übernimmt unberührte Felder aus dem neuen Ladestand, sodass sie nicht als Änderung zählen', () => {
+    const current = loaded;
+    const reloaded = snapshotOf(fd([['family', ''], ['adoptedYear', '2024'], ['name', 'Bo']]));
+    const next = rebaseSnapshot(loaded, current, reloaded);
+    expect(next.get('adoptedYear')).toBe('2024');
+    expect(countChanged(next, reloaded)).toBe(0);
+  });
+
+  it('lässt angefasste Felder auf dem alten Stand, damit die Eingabe weiter als Änderung zählt', () => {
+    const current = snapshotOf(fd([['family', 'Familie G.'], ['adoptedYear', '2026'], ['name', 'Bo']]));
+    const reloaded = snapshotOf(fd([['family', 'Familie G.'], ['adoptedYear', '2024'], ['name', 'Bo']]));
+    const next = rebaseSnapshot(loaded, current, reloaded);
+    expect(next.get('family')).toBe('');
+    expect(countChanged(next, reloaded)).toBe(1);
+  });
+
+  it('nimmt Felder auf, die erst mit dem neuen Ladestand dazukommen, und lässt verschwundene fallen', () => {
+    const reloaded = snapshotOf(fd([['family', ''], ['adoptedYear', '2024'], ['quote.de', '']]));
+    const next = rebaseSnapshot(loaded, loaded, reloaded);
+    expect(next.has('quote.de')).toBe(true);
+    expect(next.has('name')).toBe(false);
+    expect(countChanged(next, reloaded)).toBe(0);
   });
 });

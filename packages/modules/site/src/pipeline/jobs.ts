@@ -321,12 +321,15 @@ export async function checkDeployTarget(deps: Deps, ctx: CallContext, env: SiteE
     let pathCheckLog: string;
     try {
       const { log } = await rsyncPublish({ distDir: emptyDir, deploy, dryRun: true, timeoutMs: 60_000 });
-      pathCheckLog = log;
       // Verzeichniszeilen enden auf "/" und zaehlen nicht als Datei.
       filesAtTarget = log
         .split('\n')
         .flatMap((line) => (line.startsWith('*deleting ') ? [line.slice('*deleting '.length).trim()] : []))
         .filter((entry) => entry.length > 0 && !entry.endsWith('/'));
+      // Nicht das rohe rsync-Protokoll: Gegen ein leeres Verzeichnis meldet es jede Datei als „*deleting“, und
+      // das Protokoll las sich, als raeumte ein Publish das Ziel leer (Befund vom 27.09.). Was ein Publish
+      // wirklich entfernt, steht im Abschnitt zum Build.
+      pathCheckLog = [`Pfadprüfung: ${filesAtTarget.length} Dateien am Ziel ${target} (nur gelesen, nichts wird gelöscht)`, ...filesAtTarget.map((file) => `am Ziel: ${file}`)].join('\n');
     } catch (error) {
       return conflict('deployCheckFailed', (error instanceof Error ? error.message : String(error)).slice(0, 2000));
     } finally {
@@ -344,7 +347,7 @@ export async function checkDeployTarget(deps: Deps, ctx: CallContext, env: SiteE
         return ok({ target, filesAtTarget, publishWould: null, build: { ok: false, reason: 'blockedTermsPresent' }, log: pathCheckLog });
       }
       const { log: buildLog } = await rsyncPublish({ distDir: outDir, deploy, dryRun: true, timeoutMs: 60_000 });
-      return ok({ target, filesAtTarget, publishWould: parsePublishWould(buildLog), build: { ok: true }, log: `${pathCheckLog}\n${buildLog}` });
+      return ok({ target, filesAtTarget, publishWould: parsePublishWould(buildLog), build: { ok: true }, log: `${pathCheckLog}\n\nTrockenlauf gegen den Build, den ein Publish überträgt („*deleting“ = würde entfernt):\n${buildLog}` });
     } catch (error) {
       return conflict('deployCheckFailed', (error instanceof Error ? error.message : String(error)).slice(0, 2000));
     } finally {

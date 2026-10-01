@@ -14,6 +14,10 @@ import { Input } from '@/components/ui/input';
  * Auch vor der Vermittlung stehen die Felder im Formular, nur unsichtbar: Kämen sie erst mit dem Statuswechsel
  * dazu, zählte die Speicherleiste jedes von ihnen als ungespeicherte Änderung. Die Action schreibt die
  * Geschichte nur bei einem vermittelten Hund.
+ *
+ * Das Jahr setzt schon „Status ändern“, während die Maske stehen bleibt. Ein ungesteuertes Feld übernähme
+ * den neuen `defaultValue` nicht, und ein folgendes Speichern schriebe das alte Jahr zurück: `key` aus dem
+ * Ladestand baut es neu auf, und die Speicherleiste zieht es nach (`loadedVersion`).
  */
 export function StoryFields({ animal, locales, errors, onMediaChange }: { animal: AnimalRecord; locales: string[]; errors: Record<string, string>; onMediaChange: () => void }) {
   const t = useTranslations('animals.story');
@@ -29,7 +33,7 @@ export function StoryFields({ animal, locales, errors, onMediaChange }: { animal
         <LocalizedField name="beforeCaption" label={t('beforeCaption')} hint={t('captionHint')} value={story?.beforeCaption ?? {}} errors={errors} locales={locales} />
         <LocalizedField name="afterCaption" label={t('afterCaption')} hint={t('captionHint')} value={story?.afterCaption ?? {}} errors={errors} locales={locales} />
         <FormField id="family" label={t('family')} error={errors.family}><Input id="family" name="family" defaultValue={story?.family ?? ''} /></FormField>
-        <FormField id="adoptedYear" label={t('year')} error={errors.adoptedYear}><Input id="adoptedYear" name="adoptedYear" type="number" defaultValue={story?.adoptedYear ?? new Date().getFullYear()} className="font-mono" /></FormField>
+        <FormField id="adoptedYear" label={t('year')} error={errors.adoptedYear}><Input key={animal.updatedAt} id="adoptedYear" name="adoptedYear" type="number" defaultValue={story?.adoptedYear ?? new Date().getFullYear()} className="font-mono" /></FormField>
       </div>
     </>
   );

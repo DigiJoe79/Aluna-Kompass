@@ -31,6 +31,17 @@ test.describe('finance', () => {
     await expect(page).toHaveURL(/sort=entryDate/);
   });
 
+  /** Wie Tier-, Kontaktliste und Akte (Befund 2026-09-30): Das Suchfeld las die Adresse nur beim ersten Rendern. */
+  test('das Suchfeld folgt der Adresse, auch wenn sie von außen wechselt', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries');
+    await page.getByLabel('Suche').fill('Entwurf');
+    await expect(page).toHaveURL(/q=Entwurf/);
+    await page.getByRole('button', { name: 'Entwurf', exact: true }).click(); // der Chip nimmt den Filter zurück
+    await expect(page).not.toHaveURL(/q=/);
+    await expect(page.getByLabel('Suche')).toHaveValue('');
+  });
+
   test('die Summenzeile nennt die gefilterte Menge', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/entries');

@@ -41,8 +41,8 @@ describe('animals module', () => {
     expect(withPhotos.photos.map((p) => [p.assetId, p.sortOrder, p.isPrimary])).toEqual([[p2.id, 1, false], [p1.id, 2, true]]);
     const photoEntry = auditEntry(d, 'animals.setPhotos');
     expect(photoEntry).toMatchObject({ entityType: 'animal', entityId: a.id });
-    expect(JSON.parse(photoEntry.before!)).toEqual([]);
-    expect(JSON.parse(photoEntry.after!).map((p: { assetId: string }) => p.assetId)).toEqual([p2.id, p1.id]);
+    expect(JSON.parse(photoEntry.before!)).toEqual({ photos: [], reviewRequestedAt: null });
+    expect(JSON.parse(photoEntry.after!).photos.map((p: { assetId: string }) => p.assetId)).toEqual([p2.id, p1.id]);
     const bad = await setAnimalPhotos(d, manage, { id: a.id, photos: [{ assetId: pdf.id, isPrimary: true }] });
     expect(bad.ok === false && bad.error.type === 'validation' && bad.error.issues[0]?.message === 'notAnImage').toBe(true);
     const twoPrimary = await setAnimalPhotos(d, manage, { id: a.id, photos: [{ assetId: p1.id, isPrimary: true }, { assetId: p2.id, isPrimary: true }] });
@@ -61,11 +61,24 @@ describe('animals module', () => {
     expect(adopted.story).toMatchObject({ adoptedYear: 2026, family: '' });
     const statusEntry = auditEntry(d, 'animals.setStatus');
     expect(statusEntry).toMatchObject({ entityType: 'animal', entityId: a.id });
-    expect(JSON.parse(statusEntry.before!)).toEqual({ status: 'lookingForHome' });
+    expect(JSON.parse(statusEntry.before!)).toEqual({ status: 'lookingForHome', adoptedYear: null });
     expect(JSON.parse(statusEntry.after!)).toEqual({ status: 'adopted', adoptedYear: 2026 });
     const withStory = unwrap(await setAnimalStory(d, manage, { id: a.id, beforeAssetId: before.id, afterAssetId: before.id, quote: { de: 'Endlich zuhause.', en: 'Home at last.' }, family: 'Familie M.', adoptedYear: 2026 }));
     expect(withStory.story?.quote.en).toBe('Home at last.');
     expect(unwrap(await setAnimalStatus(d, manage, { id: a.id, status: 'reserved' })).status).toBe('reserved');
+  });
+
+  it('setting adopted with a year updates the year of an existing story and audits it', async () => {
+    const d = await deps();
+    const a = unwrap(await createAnimal(d, manage, chiara));
+    unwrap(await setAnimalStatus(d, manage, { id: a.id, status: 'adopted', adoptedYear: 2024 }));
+    unwrap(await setAnimalStory(d, manage, { id: a.id, beforeAssetId: null, afterAssetId: null, quote: { de: 'Endlich zuhause.', en: '' }, family: 'Familie M.', adoptedYear: 2024 }));
+    unwrap(await setAnimalStatus(d, manage, { id: a.id, status: 'reserved' }));
+    const again = unwrap(await setAnimalStatus(d, manage, { id: a.id, status: 'adopted', adoptedYear: 2026 }));
+    expect(again.story).toMatchObject({ adoptedYear: 2026, family: 'Familie M.', quote: { de: 'Endlich zuhause.' } });
+    const entry = auditEntry(d, 'animals.setStatus');
+    expect(JSON.parse(entry.before!)).toEqual({ status: 'reserved', adoptedYear: 2024 });
+    expect(JSON.parse(entry.after!)).toEqual({ status: 'adopted', adoptedYear: 2026 });
   });
 
   it('publishes and exposes only published animals with photos and story in the view', async () => {

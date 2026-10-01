@@ -23,6 +23,11 @@ interface ExampleAnimal {
   story?: ExampleStory;
   /** Notiz einer offenen Prüfung. Gesetzt heißt: Das Tier wartet, mit Fotos aus der Mediathek des Kern-Seeds. */
   review?: string;
+  /**
+   * Wie lange die Prüfung schon wartet. Die Warteschlange sortiert nach dem Zeitpunkt; ohne Abstand
+   * bekämen zwei Tiere im selben Seed-Lauf denselben, und der Name entschiede die Reihenfolge.
+   */
+  reviewHoursAgo?: number;
 }
 
 /**
@@ -134,6 +139,7 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
     status: 'lookingForHome' as const,
     published: false,
     review: 'neu',
+    reviewHoursAgo: 26,
   },
   {
     slug: 'mika',
@@ -152,6 +158,7 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
     status: 'lookingForHome' as const,
     published: true,
     review: 'Text und Fotos geändert',
+    reviewHoursAgo: 3,
   },
 ];
 
@@ -193,7 +200,9 @@ export async function seedAnimals(deps: Deps, ctx: CallContext): Promise<void> {
         .slice(0, 3);
       if (photos.length > 0) unwrap(await setAnimalPhotos(deps, ctx, { id: created.id, photos: photos.map((m, i) => ({ assetId: m.id, isPrimary: i === 0 })) }));
       // Der Seed läuft auf dem Kanal `system`: Der Merker kommt nur aus diesem ausdrücklichen Aufruf.
-      unwrap(await requestAnimalReview(deps, ctx, { id: created.id, note: a.review }));
+      const ago = (a.reviewHoursAgo ?? 0) * 3_600_000;
+      const earlier = { ...deps, clock: { now: () => new Date(deps.clock.now().getTime() - ago) } };
+      unwrap(await requestAnimalReview(earlier, ctx, { id: created.id, note: a.review }));
     }
   }
 }

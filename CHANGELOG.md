@@ -9,6 +9,56 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 1.0.0 kann jede Minor-Fassung Brüche enthalten — was bricht, steht unter
 **Geändert** mit dem, was zu tun ist.
 
+## [0.2.3] - 2026-10-01
+
+Eine Wartungsfassung: aktualisierte Abhängigkeiten ohne bekannte Lücken und
+kleine Fehler aus 0.2.2, vor allem im Tierprofil — das Vermittlungsjahr aus
+„Status ändern“ wird nicht mehr überschrieben, und die Speicherleiste zählt
+nur noch, was ein Speichern wirklich ändert. Das Protokoll von
+`site_deploy_check` liest sich nicht mehr, als räumte ein Publish die Seite
+leer. Keine Migration, nichts bricht; MCP-Clients, die Protokolleinträge
+`animals.setPhotos` auswerten, finden die Fotos dort jetzt unter `photos`.
+
+### Hinzugefügt
+
+- MCP: `media_get` liefert auf Wunsch statt des Originals die kleine
+  Vorschau aus der Mediathek (`variant: preview`, WebP, höchstens 320 Pixel
+  breit) und nennt den Dateityp. Ein KI-Assistent, der nur sehen will, was
+  auf einem Bild ist, muss so kein Foto von mehreren Megabyte laden.
+
+### Behoben
+
+- Änderungsprotokoll: Die Einträge zu Fotos und Erfolgsgeschichte eines Tiers
+  zeigen jetzt auch, ob das Profil damit zur Prüfung vorgemerkt wurde — wie
+  schon die Einträge zum Anlegen und Ändern.
+- Tierprofil: Der Haken „Beim Bestätigen veröffentlichen“ zählt in der
+  Speicherleiste nicht mehr als ungespeicherte Änderung — er wirkt nur beim
+  Bestätigen, ein Speichern ändert daran nichts.
+- Buchungsliste und Änderungsprotokoll: Das Suchfeld (im Protokoll auch die
+  Datumsfelder) leert sich, wenn der Filter von außen zurückgenommen wird —
+  über die Seitenleiste, den Zurück-Knopf oder den Filter-Chip —, statt den
+  alten Text weiter zu zeigen. Wie schon in Tier-, Kontaktliste und Akte.
+- Tierprofil: Das Vermittlungsjahr aus „Status ändern“ steht jetzt sofort im
+  Reiter „Geschichte“. Bisher zeigte das Feld bis zum Neuladen das alte Jahr,
+  und ein Speichern in der Maske schrieb es über das eben gesetzte.
+- Webseite: Das Protokoll von `site_deploy_check` (MCP) führt die Dateien am
+  Ziel jetzt als Liste „am Ziel“ statt als rsync-Zeilen „*deleting“. Es las
+  sich bisher, als räumte ein Publish die Live-Seite leer; was ein Publish
+  wirklich entfernt, steht weiter in `publishWould.removed` und im Abschnitt
+  zum Build.
+- Tierprofil: „Status ändern“ auf „vermittelt“ setzt das abgefragte
+  Vermittlungsjahr jetzt auch, wenn das Tier schon eine Erfolgsgeschichte hat
+  (in der Oberfläche wie über MCP). Bisher blieb dort das alte Jahr stehen.
+  Das Änderungsprotokoll zeigt das Jahr vorher und nachher.
+
+### Sicherheit
+
+- Abhängigkeiten aktualisiert: Die Bibliotheken für Adressprüfung
+  (`fast-uri`, eine mittelschwere Lücke), Dateimuster (`brace-expansion`) und
+  der Webserver unter dem MCP-Zugang (`hono`) sind auf dem Stand ohne bekannte
+  Lücken; das MCP-SDK kommt in Fassung 2.1. Für den Verein ändert sich nichts
+  Sichtbares.
+
 ## [0.2.2] - 2026-09-30
 
 Tierprofile lassen sich jetzt prüfen: Was ein Agent über MCP schreibt, wartet

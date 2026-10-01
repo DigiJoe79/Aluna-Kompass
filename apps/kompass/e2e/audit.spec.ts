@@ -8,6 +8,20 @@ test.describe('audit log', () => {
     await loginAsAdmin(page);
   });
 
+  /** Wie Tier-, Kontaktliste und Akte (Befund 2026-09-30): Such- und Datumsfelder lasen die Adresse nur beim ersten Rendern. */
+  test('Such- und Datumsfelder folgen der Adresse, auch wenn sie von außen wechselt', async ({ page }) => {
+    await page.goto('/admin/audit');
+    await page.getByLabel('Objekt oder Wert').fill('settings');
+    await page.getByLabel('Objekt oder Wert').press('Enter');
+    await expect(page).toHaveURL(/text=settings/);
+    await page.getByLabel('Von').fill('2026-01-01');
+    await expect(page).toHaveURL(/from=2026-01-01/);
+    await page.getByRole('navigation', { name: 'Unternavigation' }).getByRole('link', { name: 'Änderungsprotokoll' }).click();
+    await expect(page).toHaveURL(/\/admin\/audit$/);
+    await expect(page.getByLabel('Objekt oder Wert')).toHaveValue('');
+    await expect(page.getByLabel('Von')).toHaveValue('');
+  });
+
   test('lists entries newest first, filters by channel and opens the field diff', async ({ page }) => {
     await page.goto('/admin/settings');
     await page.getByLabel('Vereinsname').fill('Geänderter Verein e.V.');

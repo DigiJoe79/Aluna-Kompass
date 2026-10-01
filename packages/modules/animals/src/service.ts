@@ -68,9 +68,9 @@ function markReviewPending(tx: DbOrTx, deps: Deps, ctx: CallContext, id: string)
   if (!row || row.reviewRequestedAt) return;
   const now = isoNow(deps.clock);
   tx.update(animals).set({ reviewRequestedAt: now }).where(and(eq(animals.id, id), isNull(animals.reviewRequestedAt))).run();
-  // Jedes Vormerken hat seinen eigenen Eintrag, dieselbe Aktion wie das ausdrückliche Anfordern: Die Einträge
-  // zu Fotos und Geschichte protokollieren nur ihren Inhalt, der Merker stünde dort sonst nirgends. Er steht
-  // vor dem Eintrag der Änderung, die ihn ausgelöst hat.
+  // Jedes Vormerken hat seinen eigenen Eintrag, dieselbe Aktion wie das ausdrückliche Anfordern; zusätzlich
+  // steht der Merker im Nachher-Stand des Eintrags der Änderung, die ihn ausgelöst hat (alle vier Dienste).
+  // Der eigene Eintrag steht davor.
   recordAudit(tx, deps, ctx, { action: 'animals.requestReview', entityType: 'animal', entityId: id, before: { reviewRequestedAt: null, reviewNote: row.reviewNote }, after: { reviewRequestedAt: now, reviewNote: row.reviewNote }, summary: `${row.name} zur Prüfung vorgemerkt (Schreiben über MCP)` });
 }
 
@@ -126,9 +126,12 @@ export async function setAnimalStatus(deps: Deps, ctx: CallContext, input: unkno
     tx.update(animals).set({ status, updatedAt: isoNow(deps.clock) }).where(eq(animals.id, id)).run();
     if (status === 'adopted' && !before.story) {
       tx.insert(animalStories).values({ animalId: id, beforeAssetId: null, afterAssetId: null, quote: emptyLocalized(deps.locales()), family: '', adoptedYear: adoptedYear as number }).run();
+    } else if (status === 'adopted') {
+      // Das abgefragte Jahr gilt auch für eine schon vorhandene Geschichte; der Rest bleibt.
+      tx.update(animalStories).set({ adoptedYear: adoptedYear as number }).where(eq(animalStories.animalId, id)).run();
     }
     const after = loadAnimal(tx, id)!;
-    recordAudit(tx, deps, ctx, { action: 'animals.setStatus', entityType: 'animal', entityId: id, before: { status: before.status }, after: { status, adoptedYear: adoptedYear ?? null }, summary: `Status von ${after.name}: ${status}` });
+    recordAudit(tx, deps, ctx, { action: 'animals.setStatus', entityType: 'animal', entityId: id, before: { status: before.status, adoptedYear: before.story?.adoptedYear ?? null }, after: { status, adoptedYear: adoptedYear ?? null }, summary: `Status von ${after.name}: ${status}` });
     return ok(after);
   });
 }
@@ -156,7 +159,7 @@ export async function setAnimalPhotos(deps: Deps, ctx: CallContext, input: unkno
     tx.update(animals).set({ updatedAt: isoNow(deps.clock) }).where(eq(animals.id, id)).run();
     markReviewPending(tx, deps, ctx, id);
     const after = loadAnimal(tx, id)!;
-    recordAudit(tx, deps, ctx, { action: 'animals.setPhotos', entityType: 'animal', entityId: id, before: before.photos, after: after.photos, summary: `Fotos von ${after.name} geändert` });
+    recordAudit(tx, deps, ctx, { action: 'animals.setPhotos', entityType: 'animal', entityId: id, before: { photos: before.photos, reviewRequestedAt: before.reviewRequestedAt }, after: { photos: after.photos, reviewRequestedAt: after.reviewRequestedAt }, summary: `Fotos von ${after.name} geändert` });
     return ok(after);
   });
 }
@@ -204,7 +207,7 @@ export async function setAnimalStory(deps: Deps, ctx: CallContext, input: unknow
     tx.update(animals).set({ updatedAt: isoNow(deps.clock) }).where(eq(animals.id, id)).run();
     markReviewPending(tx, deps, ctx, id);
     const after = loadAnimal(tx, id)!;
-    recordAudit(tx, deps, ctx, { action: 'animals.setStory', entityType: 'animal', entityId: id, before: before.story, after: after.story, summary: `Erfolgsgeschichte von ${after.name} geändert` });
+    recordAudit(tx, deps, ctx, { action: 'animals.setStory', entityType: 'animal', entityId: id, before: { ...before.story, reviewRequestedAt: before.reviewRequestedAt }, after: { ...after.story, reviewRequestedAt: after.reviewRequestedAt }, summary: `Erfolgsgeschichte von ${after.name} geändert` });
     return ok(after);
   });
 }

@@ -212,7 +212,7 @@ const WITHOUT_TOOL: Record<string, string> = {
   'core.exportDocument': 'Liefert Bytes; ein Agent liest den Datensatz.',
   'core.exportBackup': 'Ein Archiv von hunderten Megabyte durch JSON-RPC zu reichen, hilft niemandem.',
   'core.importBackup': 'Ersetzt die Datenbank als Datei — das bestätigt ein Mensch vor sich, nicht ein Agent für ihn.',
-  'core.getMediaPreview': 'Liefert Bytes einer Vorschau.',
+  'core.getMediaPreview': 'media_get mit variant: preview ruft es; das Werkzeug nennt getMediaAsset, den Weg zum Original.',
   'core.storeMediaInternal': 'Innenleben; media_upload ist der Weg von außen.',
   'core.storeMediaAssetDetailed': 'Dieselbe Ablage wie media_upload, mit mehr Rückgabe für die Oberfläche.',
   'core.changeOwnPassword': 'Das eigene Passwort ändert man dort, wo man sich anmeldet. Ein API-Token, das Passwörter setzen darf, wäre ein zweiter Anmeldeweg.',

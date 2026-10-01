@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { SubmitButton } from '@/components/forms/submit-button';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { countChanged, snapshotOf, type Snapshot } from '@/lib/form-dirty';
+import { countChanged, rebaseSnapshot, snapshotOf, type Snapshot } from '@/lib/form-dirty';
 import { cn } from '@/lib/utils';
 
 /**
@@ -30,6 +30,7 @@ export function FormActionBar({
   saveValue,
   count,
   baseline,
+  loadedVersion,
   onChangedCount,
   onDiscard,
   note,
@@ -82,6 +83,13 @@ export function FormActionBar({
    */
   baseline?: number;
   /**
+   * Ladestand des Datensatzes (etwa `updatedAt`), für Masken, die stehen bleiben, während sich der Datensatz
+   * unter ihnen ändert – „Status ändern“ am Tier. Felder, die ihn per `key` neu aufbauen, zeigen den neuen
+   * Wert; unberührte zieht die Leiste nach (`rebaseSnapshot`), angefasste zählen weiter. Ohne diese Prop
+   * unverändert.
+   */
+  loadedVersion?: string;
+  /**
    * Für Bildschirme, die vom Zustand des Formulars abhängen — die Briefvorschau
    * etwa, die veraltet, sobald jemand tippt.
    */
@@ -108,6 +116,10 @@ export function FormActionBar({
   const t = useTranslations('common');
   const anchor = useRef<HTMLDivElement>(null);
   const initial = useRef<Snapshot | null>(null);
+  // Der zuletzt gelesene Stand und wie man liest und zählt – für den neuen Ladestand unten.
+  const last = useRef<Snapshot | null>(null);
+  const reader = useRef<{ read: () => Snapshot; recount: () => void } | null>(null);
+  const seenVersion = useRef(loadedVersion);
   const [fromDom, setFromDom] = useState(0);
   const [hasRequired, setHasRequired] = useState(false);
   // Als Ref, damit ein neuer Rückruf die Horcher nicht jedes Mal neu hängt.
@@ -125,15 +137,20 @@ export function FormActionBar({
     const form = anchor.current?.closest('form');
     if (!form) return;
 
-    const read = () => snapshotOf(new FormData(form));
+    // `form.elements` kennt auch Felder mit Attribut `form`, die außerhalb stehen.
+    const ignored = () => new Set(Array.from(form.elements).filter((el) => el instanceof HTMLElement && el.dataset.dirtyIgnore !== undefined).map((el) => (el as HTMLInputElement).name));
+    const read = () => snapshotOf(new FormData(form), ignored());
     initial.current = read();
     const recount = () => {
-      const next = countChanged(initial.current ?? new Map(), read());
+      last.current = read();
+      const next = countChanged(initial.current ?? new Map(), last.current);
       setFromDom(next);
       // Erst nach dem Ereignis melden: Dieser Horcher hängt am Formular und
       // läuft vor Reacts eigenem.
       queueMicrotask(() => onChanged.current?.(next));
     };
+
+    reader.current = { read, recount };
 
     // Der neue Stand ist der Stand: Nach einem Speichern, das auf dem
     // Bildschirm bleibt, zählt die Leiste bei null weiter — und sagt es auch
@@ -149,6 +166,16 @@ export function FormActionBar({
       form.removeEventListener('change', recount);
     };
   }, [count, baseline]);
+
+  // Ein neuer Ladestand setzt nicht alles neu wie `baseline`, er zieht nur nach. Läuft nach dem Effekt oben:
+  // Wechseln beide zugleich (Speichern), ist der Stand dort schon frisch gelesen und hier nichts mehr zu tun.
+  useEffect(() => {
+    if (loadedVersion === seenVersion.current) return;
+    seenVersion.current = loadedVersion;
+    if (!reader.current || !initial.current || !last.current) return;
+    initial.current = rebaseSnapshot(initial.current, last.current, reader.current.read());
+    reader.current.recount();
+  }, [loadedVersion]);
 
   return (
     <div
