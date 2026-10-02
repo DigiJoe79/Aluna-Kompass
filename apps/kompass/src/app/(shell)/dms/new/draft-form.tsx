@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { idleState } from '@/lib/actions';
 import { createDraftAction, updateDraftAction } from '../actions';
+import { FolderField } from '@/components/folder-tree/folder-field';
+import type { FolderEntry } from '@/lib/folder-tree-model';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -20,7 +22,9 @@ import { Textarea } from '@/components/ui/textarea';
  */
 export interface DraftFormProps {
   types: { key: string; label: string }[];
-  folders: string[];
+  folders: FolderEntry[];
+  /** Vorbelegter Ordner, etwa vom geöffneten Ordner der Akte; nur beim Anlegen. */
+  initialFolder?: string | null;
   /** Darf der Mensch fehlende Kontakte gleich hier anlegen? */
   canCreateContact: boolean;
   /** Textbausteine, die der Editor auf Wunsch einfügt. */
@@ -51,6 +55,7 @@ export interface DraftFormProps {
 export function DraftForm({
   types,
   folders,
+  initialFolder,
   canCreateContact,
   snippets,
   initialRecipient,
@@ -63,6 +68,7 @@ export function DraftForm({
 }: DraftFormProps) {
   const t = useTranslations('dms');
   const tCommon = useTranslations('common');
+  const tTree = useTranslations('folderTree');
   const [state, formAction] = useActionState(
     draft ? updateDraftAction.bind(null, draft.id) : createDraftAction,
     idleState,
@@ -98,7 +104,7 @@ export function DraftForm({
   };
   const [documentDate, setDocumentDate] = useState(draft?.documentDate ?? today);
   const [typeKey, setTypeKey] = useState(draft?.typeKey ?? defaultTypeKey);
-  const [folder, setFolder] = useState(draft?.folder ?? '');
+  const [folder, setFolder] = useState(draft?.folder ?? initialFolder ?? '');
   const [recipient, setRecipient] = useState<PickedContact | null>(draft?.recipient ?? initialRecipient ?? null);
   const recipientTouched = useRef(false);
 
@@ -215,22 +221,23 @@ export function DraftForm({
         ) : null}
 
         <div className="space-y-1.5">
-          <Label htmlFor="folder">{t('fields.folder')}</Label>
-          <Select
-            id="folder"
+          {/* Der Ort im Baum statt einer langen Liste; das versteckte Feld `folder` trägt den Weg (`''` = kein Ordner). */}
+          <FolderField
+            value={folder || null}
+            folders={folders}
+            label={t('fields.folder')}
+            emptyLabel={t('noFolder')}
             name="folder"
-            value={folder}
-            onChange={(e) => setFolder(e.target.value)}
-          >
-            {/* Nicht „Eingangskorb“: Der liegt im Eingang. Hier heißt kein
-                Ordner schlicht, dass noch nicht einsortiert wurde. */}
-            <option value="">{t('noFolder')}</option>
-            {folders.map((f) => (
-              <option key={f} value={f}>
-                {f}
-              </option>
-            ))}
-          </Select>
+            moveLabel={tTree('change')}
+            dialogTitle={tTree('pickTitle')}
+            showLocation={false}
+            verb="pick"
+            variant="field"
+            kind="documents"
+            onChange={(path) => setFolder(path ?? '')}
+            errorId={errors.folder ? 'folder-error' : undefined}
+          />
+          <FieldError id="folder-error" message={errors.folder} />
         </div>
 
         <div>

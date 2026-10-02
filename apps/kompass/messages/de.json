@@ -38,7 +38,9 @@
     "audited": "Wird protokolliert.",
     "backToList": "Zurück zur Übersicht",
     "requiredLegend": "* Pflichtfeld",
-    "fieldsInvalid": "{count, plural, one {Ein Feld braucht noch eine Angabe.} other {# Felder brauchen noch eine Angabe.}}",
+    "fieldsInvalid": "Bitte prüfen Sie {count, plural, one {ein Feld} other {# Felder}}:",
+    "fieldInvalid": "{field}: {message}",
+    "fieldUnnamed": "Ein Feld",
     "tabInvalid": "Enthält einen Fehler",
     "notice": {
       "waysOut": "Das hilft weiter"
@@ -75,6 +77,165 @@
       "failed": "Nicht gespeichert: {detail}"
     }
   },
+  "folderTree": {
+    "label": "Ordner",
+    "heading": "ORDNER",
+    "keyHelp": "Tastenkürzel",
+    "keyHelpTitle": "Tasten im Ordnerbaum",
+    "countTooltip": "{total} insgesamt · {direct} direkt in diesem Ordner",
+    "accessibleName": "{name}, {total} {unit}, davon {direct} direkt",
+    "accessibleNameAll": "{name}, {total} {unit}",
+    "accessibleNameEmpty": "{name}, leer",
+    "accessibleNameMark": "{label}, {mark}",
+    "here": "liegt hier",
+    "hereCount": "{count} liegen hier",
+    "opening": "Klappt gleich auf",
+    "moving": "<strong>{name}</strong> wird verschoben",
+    "movingBadge": "wird verschoben",
+    "saving": "wird gespeichert",
+    "newFolder": "Neuer Ordner",
+    "newSubfolder": "Neuer Unterordner",
+    "rename": "Umbenennen",
+    "moveTo": "Verschieben nach…",
+    "change": "Ändern…",
+    "pickTitle": "Ordner wählen",
+    "pickConfirm": "„{target}“ übernehmen",
+    "pickConfirmEmpty": "Übernehmen",
+    "chosen": "gewählt",
+    "delete": "Löschen",
+    "deleteBlocked": "Enthält {count} {unit}. Löschen lassen sich nur leere Ordner.",
+    "deleteHasChildren": "Enthält {count, plural, one {# Unterordner} other {# Unterordner}}. Löschen lassen sich nur leere Ordner.",
+    "namePlaceholder": "Name des Ordners",
+    "nameSlash": "Ein Ordnername darf keinen Schrägstrich (/) enthalten.",
+    "nameTooLong": "Name zu lang: höchstens 60 Zeichen.",
+    "nameInvalid": "Dieser Name geht nicht: kein umgekehrter Schrägstrich, keine Steuerzeichen, kein Leerzeichen am Rand und nicht nur „.“ oder „..“.",
+    "nameExists": "Einen Ordner „{name}“ gibt es hier schon.",
+    "empty": "Noch keine Ordner",
+    "emptyManage": "Mit Ordnern finden Sie Dokumente schneller wieder, etwa „Behörden“ oder „Verträge“. Unterordner legen Sie später am Ordner an.",
+    "emptyRead": "Ordner legt an, wer die Akte verwaltet. Bis dahin liegt alles unter „Alle Dokumente“.",
+    "createFirst": "Ersten Ordner anlegen",
+    "areaNote": "Sie sehen nur Ordner mit Dokumenten, die Sie lesen dürfen. Die Zahlen zählen nur diese.",
+    "export": "Als Paket exportieren",
+    "toast": {
+      "movedFolder": "Ordner {name} mit {unit, select, files {{total, plural, =0 {keiner Datei} one {# Datei} other {# Dateien}}} other {{total, plural, =0 {keinem Dokument} one {# Dokument} other {# Dokumenten}}}} nach {target} verschoben",
+      "movedFolderTop": "Ordner {name} mit {unit, select, files {{total, plural, =0 {keiner Datei} one {# Datei} other {# Dateien}}} other {{total, plural, =0 {keinem Dokument} one {# Dokument} other {# Dokumenten}}}} auf die oberste Ebene verschoben",
+      "renamedFolder": "Ordner {name} in {newName} umbenannt",
+      "deletedFolder": "Ordner {name} gelöscht",
+      "undo": "Rückgängig",
+      "undoneFolder": "{name} liegt wieder in {target}",
+      "undoneFolderTop": "{name} liegt wieder auf der obersten Ebene",
+      "undoneRename": "Der Ordner heißt wieder {name}",
+      "undoneDelete": "Ordner {name} ist wieder da",
+      "rejected": "{name} nicht verschoben",
+      "renameFailed": "{name} nicht umbenannt",
+      "deleteFailed": "{name} nicht gelöscht",
+      "createFailed": "{name} nicht angelegt",
+      "undoFailed": "Nicht rückgängig gemacht: {name}",
+      "quoted": "„{title}“",
+      "documents": "{count} Dokumente",
+      "placeMoved": "{where, select, inbox {in den Eingangskorb verschoben} none {nach „Kein Ordner“ verschoben} loose {aus ihren Ordnern genommen} other {nach {target} verschoben}}",
+      "placeLies": "{where, select, inbox {im Eingangskorb} none {in „Kein Ordner“} loose {ohne Ordner} other {in {target}}}",
+      "movedDocument": "„{title}“ {place}",
+      "movedDocuments": "{count} Dokumente {place}",
+      "movedDocumentsSkipped": "{count, plural, one {# Dokument} other {# Dokumente}} {place}, {skipped, plural, one {# lag} other {# lagen}} schon dort",
+      "alreadyThere": "{count, plural, one {Das Dokument lag} other {Alle # Dokumente lagen}} schon {place}",
+      "undoneDocument": "„{title}“ liegt wieder {place}",
+      "undoneDocuments": "{count} Dokumente liegen wieder {place}",
+      "undoneDocumentsMixed": "{count} Dokumente liegen wieder dort, wo sie vorher lagen",
+      "undoMovedAway": "Nicht mehr rückgängig zu machen: {count, plural, one {„{title}“ wurde} other {Eines der # Dokumente wurde}} inzwischen verschoben"
+    },
+    "error": {
+      "unexpected": "Das hat nicht geklappt. Bitte versuchen Sie es noch einmal."
+    },
+    "dragBar": {
+      "target": "Ziel",
+      "drop": "ablegen",
+      "cancel": "abbrechen",
+      "blocked": "Hier nicht: {reason}."
+    },
+    "block": {
+      "here": "Liegt schon hier",
+      "self": "Ordner kann nicht in sich selbst",
+      "depth": "Zu tief: mehr als 8 Ebenen",
+      "nameLength": "Ordnerweg zu lang: höchstens 200 Zeichen",
+      "exists": "Einen Ordner „{name}“ gibt es dort schon",
+      "forbidden": "Keine Berechtigung für diesen Ordner",
+      "notCreated": "Diesen Ordner gibt es nur als Weg — legen Sie ihn zuerst an.",
+      "incomingOnly": "In den Eingangskorb kommt nur eingegangene Post."
+    },
+    "announce": {
+      "pickUp": "{name} aufgenommen. Wählen Sie mit den Pfeiltasten ein Ziel. Eingabetaste legt ab, Escape bricht ab.",
+      "target": "Ziel: {name}.",
+      "targetOpening": "Ziel: {name}. Klappt gleich auf.",
+      "opened": "{name} aufgeklappt, {count, plural, one {# Unterordner} other {# Unterordner}}.",
+      "blocked": "Ziel: {name}. Hier nicht möglich: {reason}.",
+      "notDropped": "Nicht abgelegt: {reason}. {name} ist noch aufgenommen.",
+      "cancelled": "Verschieben abgebrochen. {name} bleibt in {parent}.",
+      "cancelledTop": "Verschieben abgebrochen. {name} bleibt auf der obersten Ebene.",
+      "created": "Ordner {name} angelegt."
+    },
+    "keys": {
+      "groupMove": "Bewegen",
+      "groupDrag": "Verschieben",
+      "groupManage": "Pflegen",
+      "rename": "Umbenennen",
+      "menu": "Menü am Ordner (auch die Menütaste)",
+      "upDown": "Vorheriger oder nächster Ordner",
+      "right": "Aufklappen; ist er offen: zum ersten Unterordner",
+      "left": "Zuklappen; ist er zu: zum übergeordneten Ordner",
+      "homeEnd": "Erster oder letzter Eintrag",
+      "letters": "Springt zum passenden Ordnernamen",
+      "enter": "Ordner öffnen",
+      "pickUp": "Ordner aufnehmen",
+      "target": "Ziel wählen (klappt beim Verweilen auf)",
+      "drop": "Ablegen",
+      "cancel": "Abbrechen"
+    },
+    "keyNames": {
+      "up": "Pfeil nach oben",
+      "down": "Pfeil nach unten",
+      "left": "Pfeil nach links",
+      "right": "Pfeil nach rechts",
+      "home": "Pos1",
+      "end": "Ende",
+      "letters": "Buchstaben",
+      "enter": "Enter",
+      "esc": "Esc",
+      "ctrl": "Strg",
+      "shift": "Umschalt",
+      "ctrlMac": "⌃",
+      "shiftMac": "⇧",
+      "f2": "F2",
+      "f10": "F10"
+    }
+  },
+  "moveDialog": {
+    "titleOne": "„{title}“ verschieben nach…",
+    "titleMany": "{count} Dokumente verschieben nach…",
+    "titleManyAssets": "{count} Dateien verschieben nach…",
+    "titleFolder": "„{name}“ verschieben nach…",
+    "root": "Oberste Ebene",
+    "confirm": "Nach „{target}“ verschieben",
+    "confirmEmpty": "Verschieben",
+    "location": {
+      "one": "{count, plural, one {Liegt} other {Liegen}} in {place}.",
+      "oneInbox": "{count, plural, one {Liegt} other {Liegen}} im Eingangskorb.",
+      "oneNone": "{count, plural, one {Liegt} other {Liegen}} in keinem Ordner.",
+      "first": "{count, plural, one {# liegt} other {# liegen}} in {place}",
+      "firstInbox": "{count, plural, one {# liegt} other {# liegen}} im Eingangskorb",
+      "firstNone": "{count, plural, one {# liegt} other {# liegen}} in keinem Ordner",
+      "next": "{count} in {place}",
+      "nextInbox": "{count} im Eingangskorb",
+      "nextNone": "{count} in keinem Ordner",
+      "separator": ", ",
+      "list": "{items}.",
+      "many": "Aus {count} verschiedenen Orten."
+    },
+    "unit": {
+      "documents": { "one": "Dokument", "many": "Dokumente" },
+      "files": { "one": "Datei", "many": "Dateien" }
+    }
+  },
   "media": {
     "title": "Mediathek",
     "empty": "Keine Dateien in diesem Ordner.",
@@ -86,6 +247,7 @@
       "usage": "Verwendung"
     },
     "unused": "nicht verwendet",
+    "listTruncated": "Es werden die ersten {shown} von {matching} Dateien gezeigt. Grenzen Sie die Liste mit einem Ordner, der Suche oder der Art ein.",
     "used": "verwendet",
     "view": {
       "list": "Liste",
@@ -114,16 +276,23 @@
     "confirmDeleteBody": "Die Datei wird entfernt. Der Löschvorgang steht im Änderungsprotokoll.",
     "deleted": "Datei gelöscht.",
     "inUse": "In Verwendung — kann nicht gelöscht werden.",
-    "move": "Verschieben nach",
-    "movedToast": "Datei verschoben.",
     "root": "Alle Dateien",
-    "newFolder": "Neuer Ordner",
-    "newFolderName": "Ordnername",
-    "renameFolder": "Umbenennen",
-    "deleteFolder": "Ordner löschen",
-    "folderDeleted": "Ordner gelöscht.",
-    "created": "Ordner angelegt.",
-    "renamed": "Ordner umbenannt.",
+    "uploadButton": "Hochladen",
+    "treeEmpty": "Mit Ordnern finden Sie Dateien schneller wieder, etwa „Logos“ oder „Veranstaltungen“. Unterordner legen Sie später am Ordner an.",
+    "toast": {
+      "quoted": "„{title}“",
+      "files": "{count} Dateien",
+      "placeMoved": "{where, select, none {nach „Ohne Ordner“ verschoben} other {nach {target} verschoben}}",
+      "placeLies": "{where, select, none {in „Ohne Ordner“} other {in {target}}}",
+      "movedFile": "„{title}“ {place}",
+      "movedFiles": "{count} Dateien {place}",
+      "movedFilesSkipped": "{count, plural, one {# Datei} other {# Dateien}} {place}, {skipped, plural, one {# lag} other {# lagen}} schon dort",
+      "alreadyThere": "{count, plural, one {Die Datei lag} other {Alle # Dateien lagen}} schon {place}",
+      "undoneFile": "„{title}“ liegt wieder {place}",
+      "undoneFiles": "{count} Dateien liegen wieder {place}",
+      "undoneFilesMixed": "{count} Dateien liegen wieder dort, wo sie vorher lagen",
+      "undoMovedAway": "Nicht mehr rückgängig zu machen: {count, plural, one {„{title}“ wurde} other {Eine der # Dateien wurde}} inzwischen verschoben"
+    },
     "emptyTitle": "Keine Dateien",
     "search": "Suchen",
     "searchPlaceholder": "Dateiname oder Verwendung",
@@ -134,6 +303,18 @@
       "name": "Name",
       "size": "Größe"
     },
+    "drop": {
+      "overlayTitle": "{count, plural, one {# Datei hochladen} other {# Dateien hochladen}}",
+      "overlayTitleUnknown": "Dateien hochladen",
+      "overlayFolder": "{count, plural, one {# Datei} other {# Dateien}} in „{folder}“ hochladen",
+      "overlayFolderUnknown": "Dateien in „{folder}“ hochladen",
+      "overlayHint": "Loslassen lädt sofort hoch. Lassen Sie hier im Raster los, landen die Dateien {where, select, none {in „Ohne Ordner“} other {im geöffneten Ordner „{current}“}}.",
+      "progress": "{current} von {total} wird hochgeladen: „{name}“",
+      "done": "{count, plural, one {# Datei} other {# Dateien}} {where, select, none {in „Ohne Ordner“} other {nach {folder}}} hochgeladen",
+      "noneDone": "Keine Datei hochgeladen",
+      "failed": "„{name}“ nicht hochgeladen: {reason}",
+      "openFolder": "Ordner öffnen"
+    },
     "chooser": {
       "titleImage": "Bild wählen",
       "titlePdf": "Datei wählen",
@@ -142,6 +323,8 @@
       "confirm": "Übernehmen",
       "cancel": "Abbrechen",
       "selectedCount": "{count, plural, =0 {Nichts ausgewählt} one {# ausgewählt} other {# ausgewählt}}",
+      "selectedOfMax": "{count} von {max} ausgewählt",
+      "limitReached": "Höchstens {max} ausgewählt — heben Sie erst eine Auswahl auf, um eine andere zu wählen.",
       "emptyTitle": "Keine passende Datei",
       "empty": "Laden Sie eine Datei hoch oder ändern Sie Suche und Ordner.",
       "loadFailed": "Die Mediathek konnte nicht geladen werden.",
@@ -175,6 +358,16 @@
     "databaseConstraint": {
       "reason": "Der Vorgang verstößt gegen eine Regel der Datenbank und wurde abgebrochen. Es wurde nichts gespeichert.",
       "remedy": "Laden Sie die Seite neu und versuchen Sie es noch einmal. Tritt der Fehler wieder auf, melden Sie ihn bitte mit Uhrzeit der Administration — die Ursache steht im Server-Protokoll."
+    },
+    "folder": {
+      "sameLocation": { "reason": "Der Ordner liegt schon hier.", "remedy": "Wählen Sie ein anderes Ziel." },
+      "insideItself": { "reason": "Ein Ordner kann nicht in sich selbst liegen.", "remedy": "Wählen Sie einen Ordner außerhalb dieses Ordners." },
+      "tooDeep": { "reason": "Danach hätte ein Ordner mehr als 8 Ebenen.", "remedy": "Wählen Sie ein Ziel weiter oben." },
+      "tooLong": { "reason": "Danach wäre ein Ordnerweg länger als 200 Zeichen.", "remedy": "Kürzen Sie einen Namen oder wählen Sie ein Ziel weiter oben." },
+      "exists": { "reason": "Einen Ordner „{name}“ gibt es dort schon.", "remedy": "Wählen Sie einen anderen Namen oder ein anderes Ziel." },
+      "notFound": { "reason": "Den Ordner gibt es nicht mehr.", "remedy": "Laden Sie die Seite neu." },
+      "parentMissing": { "reason": "Den übergeordneten Ordner „{name}“ gibt es nicht.", "remedy": "Legen Sie ihn zuerst an." },
+      "movedInBetween": { "reason": "Inzwischen wurde es an anderer Stelle verschoben.", "remedy": "Laden Sie die Seite neu und verschieben Sie es von dort." }
     },
     "humanOnly": "Diese Aktion ist über MCP gesperrt. Ein Mensch löst sie in der Oberfläche aus.",
     "settingManaged": "Diese Einstellung wird im Modul „{module}“ geführt und dort geändert.",
@@ -212,7 +405,7 @@
       "blockedTermsPresent": "Sperrworttreffer: {detail}",
       "siteBuildFailed": "Der Build ist fehlgeschlagen: {detail}",
       "publishFailed": "Die Übertragung ist fehlgeschlagen: {detail}",
-      "siteJobRunning": "Es läuft bereits ein Vorschau- oder Publish-Lauf. Bitte warten Sie, bis er fertig ist.",
+      "siteJobRunning": "Es läuft bereits eine Vorschau, ein Publish oder ein Verbindungstest. Bitte warten Sie, bis der Lauf fertig ist.",
       "duplicateLocale": "Diese Sprache ist bereits eingerichtet.",
       "tooManyLocales": "Höchstens zehn Sprachen können eingerichtet werden.",
       "lastLocale": "Die letzte verbleibende Sprache kann nicht entfernt werden.",
@@ -285,6 +478,7 @@
       "invalidOption": "Unzulässiger Wert. Erlaubt sind: {options}.",
       "confirmationRequired": "Bitte bestätigen Sie den Vorgang.",
       "invalidFolderPath": "Ungültiger Ordnerpfad.",
+      "duplicateIds": "Jedes Dokument darf nur einmal vorkommen.",
       "invalidTimeZone": "Unbekannte Zeitzone.",
       "multiplePrimary": "Nur ein Foto kann das Hauptfoto sein.",
       "notAnImage": "Diese Datei ist kein Bild.",
@@ -1300,6 +1494,12 @@
       "color-amount-out": "Minuszeichen und Betrag bei Ausgaben",
       "color-key-bg": "Fläche des Zuwendungsbestätigungs-Schlüssels",
       "color-key-ink": "Text auf color-key-bg",
+      "color-drop-bg": "Fläche des gültigen Ablageziels im Ordnerbaum",
+      "color-drop-ring": "Rahmen und Pfeil des gültigen Ablageziels",
+      "color-drop-ink": "Text auf color-drop-bg",
+      "color-drop-blocked-ring": "Gestrichelter Rahmen und Symbol des gesperrten Ziels",
+      "color-drop-blocked-hatch": "Schraffur des gesperrten Ziels",
+      "color-tree-guide": "Führungslinien im Ordnerbaum",
       "bg": "Fensterhintergrund, Login, Inhaltsbereich",
       "surface": "Karte, Tabelle, Dialog",
       "surface-2": "Speicherleiste, eingebettete Blöcke",
@@ -1771,6 +1971,9 @@
     },
     "photos": {
       "choose": "Fotos wählen",
+      "label": "Fotos",
+      "count": "{count} von {max} Fotos",
+      "tooMany": "Höchstens {max} Fotos. Entfernen Sie eines, bevor Sie ein neues hinzufügen.",
       "primary": "Hauptfoto",
       "remove": "Entfernen",
       "open": "Foto in neuem Tab öffnen",
@@ -1924,7 +2127,8 @@
         "run": "Vorschau bauen",
         "running": "Build läuft …",
         "open": "Vorschau öffnen",
-        "built": "Vorschau gebaut."
+        "built": "Vorschau gebaut.",
+        "failed": "Die Vorschau konnte nicht gebaut werden."
       },
       "connection": {
         "title": "Verbindung testen",
@@ -1940,7 +2144,9 @@
         "buildFailed": "Der Vergleich mit dem Build konnte nicht laufen — siehe Protokoll.",
         "removedTitle": "Würde entfernt",
         "changedTitle": "Würde geändert oder hinzugefügt",
-        "logTitle": "Protokoll"
+        "logTitle": "Protokoll",
+        "checkedAt": "Zuletzt getestet: {date}",
+        "failed": "Der Verbindungstest ist fehlgeschlagen: {message}"
       },
       "diff": {
         "title": "Änderungen gegenüber Live",
@@ -1965,7 +2171,7 @@
           "record": "Protokollieren"
         },
         "cancel": "Abbrechen",
-        "published": "Publiziert",
+        "failed": "Der Publish ist fehlgeschlagen.",
         "title": "Publizieren",
         "target": "Ziel: {url}"
       },
@@ -1987,7 +2193,8 @@
         "running": "{name} läuft seit {duration}",
         "names": {
           "preview": "Vorschau",
-          "publish": "Publish"
+          "publish": "Publish",
+          "deployCheck": "Verbindungstest"
         }
       },
       "previewTitle": "Vorschau"
@@ -2143,12 +2350,26 @@
     "deletedWithMedia": "{count, plural, =0 {Gelöscht.} one {Gelöscht, samt einem Foto.} other {Gelöscht, samt # Fotos.}}"
   },
   "dms": {
+    "documentUnit": { "one": "Dokument", "many": "Dokumente" },
+    "selection": {
+      "count": "{count} ausgewählt",
+      "selectAll": "Alle auf dieser Seite auswählen",
+      "selectOne": "„{subject}“ auswählen",
+      "dragTitle": "{count} Dokumente"
+    },
     "title": "Akte",
     "description": "Schriftverkehr und Dokumente des Vereins",
     "inbox": "Eingangskorb",
-    "folders": "Ordner",
     "noFolder": "Kein Ordner",
     "allDocuments": "Alle Dokumente",
+    "heading": {
+      "path": "Weg",
+      "count": "{count, plural, one {# Dokument} other {# Dokumente}}",
+      "countReadable": "{count, plural, one {# Dokument, das Sie lesen dürfen} other {# Dokumente, die Sie lesen dürfen}}"
+    },
+    "list": {
+      "truncated": "Es werden die ersten {shown} von {total} Dokumenten gezeigt. Grenzen Sie die Liste mit Suche oder Filtern ein."
+    },
     "newDraft": "Neuer Entwurf",
     "receivePost": "Post ablegen",
     "duplicateOf": "Dieselbe Datei liegt schon vor als",
@@ -2156,7 +2377,7 @@
     "export": {
       "open": "Bündel exportieren",
       "title": "Dokumente als Bündel",
-      "thisFolder": "Diesen Ordner: {folder} (samt Unterordnern)",
+      "thisFolder": "Diesen Ordner: „{folder}“ (samt Unterordnern)",
       "year": "Einen Jahrgang",
       "yearLabel": "Jahr des Dokumentdatums",
       "submit": "Bündel herunterladen",
@@ -2221,7 +2442,10 @@
       "overlayTitle": "{count, plural, one {# Datei ablegen} other {# Dateien ablegen}}",
       "overlayTitleUnknown": "Dateien ablegen",
       "overlayHint": "Auf einen Ordner ziehen, um dort einzusortieren — oder hier loslassen für den Eingangskorb.",
-      "notPdf": "{count, plural, one {Nur PDF möglich — eine Datei übersprungen.} other {Nur PDF möglich — # Dateien übersprungen.}}",
+      "overlayFolder": "{count, plural, one {# Datei} other {# Dateien}} in „{folder}“ ablegen",
+      "overlayFolderUnknown": "Dateien in „{folder}“ ablegen",
+      "overlayHintFolder": "Die Akte nimmt nur PDF. Hier loslassen legt in den Eingangskorb.",
+      "skippedNamed": "„{name}“ ist kein PDF und wurde nicht übernommen. Die Akte nimmt nur PDF.",
       "queueBadge": "{current} von {total}",
       "queueHint": "Gezogen auf {folder}. Nach dem Ablegen folgt die nächste Datei.",
       "queueHintInbox": "Nach dem Ablegen folgt die nächste Datei.",
@@ -2230,6 +2454,8 @@
       "discardConfirm": "Verwerfen"
     },
     "filedProtected": "Abgelegt als {number}. Die Dokumentart ist geschützt; Sie sehen das Dokument hier nicht.",
+    "folderGone": "Den Ordner „{name}“ gibt es nicht mehr, vielleicht wurde er verschoben oder umbenannt. Sie sehen den Ordner „{target}“.",
+    "folderGoneAll": "Den Ordner „{name}“ gibt es nicht mehr, vielleicht wurde er verschoben oder umbenannt. Sie sehen alle Dokumente.",
     "areas": {
       "finance": "Finanzen"
     },
@@ -2312,7 +2538,6 @@
       "animal": "Tier",
       "project": "Projekt"
     },
-    "folderSave": "Ordner speichern",
     "related": {
       "title": "Dokumente",
       "none": "Noch kein Dokument mit Bezug hierher.",
@@ -2335,6 +2560,10 @@
       "followUpOpen": "offen"
     },
     "voidWithReplacement": "Ersatz als Entwurf anlegen",
+    "respond": {
+      "incoming": "Antworten",
+      "outgoing": "Folgeschreiben"
+    },
     "dispatch": {
       "title": "Versand",
       "none": "Noch nicht versandt.",
@@ -2453,12 +2682,12 @@
       "voidReasonPlaceholder": "z. B. Falsche Anschrift oder fehlerhafter Inhalt"
     },
     "errors": {
-      "noFile": "Bitte wählen Sie eine Datei aus."
+      "noFile": "Bitte wählen Sie eine Datei aus.",
+      "folderGone": "Den Ordner „{name}“ gibt es nicht mehr. Wählen Sie einen anderen."
     },
     "toast": {
       "filed": "Dokument festgeschrieben",
       "voided": "Dokument storniert",
-      "moved": "Dokument verschoben",
       "dispatched": "Versand vermerkt",
       "dispatchCleared": "Versandvermerk entfernt",
       "followUpCreated": "Wiedervorlage angelegt",
@@ -2510,15 +2739,8 @@
         "consent": "Einwilligung"
       },
       "foldersTitle": "Ordner",
-      "foldersDescription": "Strukturieren Sie die Ablage in Ordnerpfaden.",
-      "createFolder": "Ordner anlegen",
-      "createFolderTitle": "Neuen Ordner anlegen",
-      "createFolderDescription": "Geben Sie den relativen Ordnerpfad an (z. B. „behoerden/finanzamt“).",
-      "folderPath": "Ordnerpfad",
-      "folderColumns": {
-        "path": "Pfad",
-        "actions": "Aktionen"
-      },
+      "foldersMoved": "Ordner legen Sie jetzt direkt in der Akte an: oben in der Ordnerspalte „Neuer Ordner“, an jedem Ordner über „…“ oder mit Rechtsklick. Dort benennen Sie sie auch um, verschieben und löschen sie.",
+      "toFile": "Zur Akte",
       "snippetsTitle": "Textbausteine",
       "snippetsDescription": "Absätze und Standardbriefe, die der Editor auf Wunsch einfügt. Ohne Platzhalter.",
       "createSnippet": "Baustein anlegen",
@@ -2558,10 +2780,6 @@
       "removeChannelDescription": "„{label}“ steht danach nicht mehr zur Wahl.",
       "removeChannelConfirm": "Entfernen",
       "lastChannel": "Mindestens ein Weg muss bleiben.",
-      "deleteFolderTitle": "Ordner löschen",
-      "deleteFolderDescription": "Möchten Sie den Ordner „{path}“ wirklich löschen? Nur leere Ordner können gelöscht werden.",
-      "deleteFolderConfirm": "Ordner löschen",
-      "emptyFolders": "Noch keine Ordner vorhanden.",
       "rulesTitle": "Einsortierregeln",
       "rulesDescription": "Automatische Erkennung und Zuordnung von Dokumentart und Ordner beim Ablegen eingehender Post.",
       "createRule": "Regel anlegen",
@@ -2614,8 +2832,6 @@
         "typeCreated": "Dokumentart angelegt",
         "typeUpdated": "Dokumentart aktualisiert",
         "typeDeleted": "Dokumentart gelöscht",
-        "folderCreated": "Ordner angelegt",
-        "folderDeleted": "Ordner gelöscht",
         "ruleCreated": "Regel angelegt",
         "ruleUpdated": "Regel aktualisiert",
         "ruleDeleted": "Regel gelöscht",
@@ -2625,7 +2841,6 @@
         "snippetDeleted": "Baustein gelöscht",
         "channelsSaved": "Versandwege gespeichert"
       },
-      "folderPathPlaceholder": "z. B. behoerden/finanzamt",
       "typeKeyPlaceholder": "z. B. notice",
       "typeShortPlaceholder": "z. B. NOT",
       "removeLanguage": "{lang} entfernen"

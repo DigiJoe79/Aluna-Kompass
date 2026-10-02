@@ -16,7 +16,7 @@ import { asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { requireAreaAccess, requireReadable } from './access';
 import { auditDocumentRef } from './audit-ref';
-import { RELATION_KINDS, documentRelations, documents, type DocumentRelationRow, type RelationKind } from './schema';
+import { RELATION_KINDS, documentRelations, documents, type DocumentRelationRow, type DocumentRow, type RelationKind } from './schema';
 
 export interface DocumentRelationView {
   id: string;
@@ -78,28 +78,40 @@ export async function relateDocuments(deps: Deps, ctx: CallContext, input: unkno
     if (unreadable) return unreadable;
   }
 
-  const id = newId();
   try {
-    return deps.db.transaction((tx: DbOrTx) => {
-      tx.insert(documentRelations).values({ id, documentId: v.documentId, relatedDocumentId: v.relatedDocumentId, kind: v.kind, createdByUserId: ctx.userId ?? 'system', createdAt: isoNow(deps.clock) }).run();
-      // Ist eines der beiden Enden geschützt, nennt das Protokoll beide nur über die Nummer.
-      const [a, b] = [auditDocumentRef(tx, doc), auditDocumentRef(tx, related)];
-      const hidden = a.hidden || b.hidden;
-      recordAudit(tx, deps, ctx, {
-        action: 'dms.relate',
-        entityType: 'documentRelation',
-        entityId: id,
-        after: { documentId: v.documentId, relatedDocumentId: v.relatedDocumentId, kind: v.kind },
-        summary: hidden ? `Bezug „${v.kind}“ von ${a.name} auf ${b.name} angelegt` : `Bezug „${v.kind}“ von ${doc.number ?? doc.subject} auf ${related.number ?? related.subject} angelegt`,
-      });
-      return ok(tx.select().from(documentRelations).where(eq(documentRelations.id, id)).get()!);
-    });
+    return deps.db.transaction((tx: DbOrTx) => ok(insertRelation(tx, deps, ctx, v, doc, related)));
   } catch (error) {
     if (error instanceof Error && /UNIQUE constraint failed: document_relations/.test(error.message)) {
       return conflict('relationExists', 'Dieser Bezug besteht bereits');
     }
     throw error;
   }
+}
+
+type RelationEnd = Pick<DocumentRow, 'id' | 'number' | 'subject' | 'typeKey'>;
+
+/** Zeile und Protokolleintrag eines Bezugs — in der Transaktion des Aufrufers, ohne Rechteprüfung. */
+export function insertRelation(
+  tx: DbOrTx,
+  deps: Deps,
+  ctx: CallContext,
+  v: { documentId: string; relatedDocumentId: string; kind: RelationKind },
+  doc: RelationEnd,
+  related: RelationEnd,
+): DocumentRelationRow {
+  const id = newId();
+  tx.insert(documentRelations).values({ id, documentId: v.documentId, relatedDocumentId: v.relatedDocumentId, kind: v.kind, createdByUserId: ctx.userId ?? 'system', createdAt: isoNow(deps.clock) }).run();
+  // Ist eines der beiden Enden geschützt, nennt das Protokoll beide nur über die Nummer.
+  const [a, b] = [auditDocumentRef(tx, doc), auditDocumentRef(tx, related)];
+  const hidden = a.hidden || b.hidden;
+  recordAudit(tx, deps, ctx, {
+    action: 'dms.relate',
+    entityType: 'documentRelation',
+    entityId: id,
+    after: { documentId: v.documentId, relatedDocumentId: v.relatedDocumentId, kind: v.kind },
+    summary: hidden ? `Bezug „${v.kind}“ von ${a.name} auf ${b.name} angelegt` : `Bezug „${v.kind}“ von ${doc.number ?? doc.subject} auf ${related.number ?? related.subject} angelegt`,
+  });
+  return tx.select().from(documentRelations).where(eq(documentRelations.id, id)).get()!;
 }
 
 export async function unrelateDocuments(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<null>> {

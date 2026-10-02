@@ -135,12 +135,13 @@ describe('media_get', () => {
 });
 
 describe('media_list', () => {
-  it('shows the four filter fields and passes them to the service', async () => {
+  it('shows the five filter fields and passes them to the service', async () => {
     const deps = setup();
     const ctx = ctxWith(['media.upload']);
     const shape = (tool('media_list').inputSchema as unknown as { shape: Record<string, unknown> }).shape;
-    expect(Object.keys(shape).sort()).toEqual(['folder', 'kind', 'query', 'sort']);
+    expect(Object.keys(shape).sort()).toEqual(['folder', 'includeSubfolders', 'kind', 'query', 'sort']);
     expect(tool('media_list').description).toContain('media.upload');
+    expect(tool('media_list').description).toContain('includeSubfolders');
 
     await tool('media_upload').handler(deps, ctx, { filename: 'punkt.png', contentBase64: PNG_BASE64 });
     const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><rect width="2" height="2"/></svg>').toString('base64');

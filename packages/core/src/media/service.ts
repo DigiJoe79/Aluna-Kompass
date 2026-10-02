@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { and, asc, desc, eq, isNull, like, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 import { fileTypeFromBuffer } from 'file-type';
 import { z } from 'zod';
 import { recordAudit } from '../audit/log';
@@ -13,9 +13,9 @@ import { requirePermission } from '../permissions/check';
 import { zodIssues } from '../validate';
 import type { MediaReference } from '../modules/manifest';
 import { conflict, invalid, notFound, ok, unauthorized, type Result } from '../result';
-import { folderExists } from './folders';
+import { folderExists, mediaKindCondition, withinSubtree } from './folders';
 import { ensurePreview, hasPreview, previewFilename, readImageMeta, renderPreview } from './preview';
-import { findMediaReferences } from './references';
+import { findMediaReferences, findMediaReferencesFor } from './references';
 
 export const MEDIA_MAX_BYTES = 10 * 1024 * 1024;
 
@@ -180,8 +180,10 @@ export interface MediaLibraryItem {
 }
 
 export interface MediaListFilter {
-  /** weggelassen = alle; null = ohne Ordner; Pfad = genau dieser Ordner */
+  /** weggelassen = alle; null = ohne Ordner; Pfad = genau dieser Ordner (mit `includeSubfolders` samt Unterordnern) */
   folder?: string | null;
+  /** Mit einem Ordnerpfad: auch alles in seinen Unterordnern. Vorgabe `false`, ohne Wirkung bei `folder: null`. */
+  includeSubfolders?: boolean;
   /** Teilstring ohne Groß-/Kleinschreibung im Dateinamen oder in einem Verwendungs-Label */
   query?: string;
   /** image umfasst PNG, JPEG, WebP und SVG; pdf nur PDF */
@@ -193,6 +195,7 @@ export interface MediaListFilter {
 /** Ein Schema für alle Kanäle: MCP-Werkzeug, Route Handler, Seite. */
 export const mediaListFilterSchema = z.object({
   folder: z.string().nullable().optional(),
+  includeSubfolders: z.boolean().optional(),
   query: z.string().max(200).optional(),
   kind: z.enum(['image', 'pdf']).optional(),
   sort: z.enum(['newest', 'oldest', 'name', 'size']).optional(),
@@ -206,9 +209,13 @@ export async function listMediaAssets(deps: Deps, ctx: CallContext, filter: Medi
   const denied = requirePermission(ctx, 'media.upload');
   if (denied) return denied;
   const conditions = [];
-  if (filter.folder !== undefined) conditions.push(filter.folder === null ? isNull(mediaAssets.folder) : eq(mediaAssets.folder, filter.folder));
-  if (filter.kind === 'image') conditions.push(like(mediaAssets.mimeType, 'image/%'));
-  if (filter.kind === 'pdf') conditions.push(eq(mediaAssets.mimeType, 'application/pdf'));
+  if (filter.folder !== undefined) {
+    conditions.push(
+      filter.folder === null ? isNull(mediaAssets.folder) : filter.includeSubfolders ? withinSubtree(mediaAssets.folder, filter.folder) : eq(mediaAssets.folder, filter.folder),
+    );
+  }
+  const kind = mediaKindCondition(filter.kind);
+  if (kind) conditions.push(kind);
   const order = {
     newest: [desc(mediaAssets.createdAt), desc(mediaAssets.id)],
     oldest: [asc(mediaAssets.createdAt), asc(mediaAssets.id)],
@@ -216,7 +223,8 @@ export async function listMediaAssets(deps: Deps, ctx: CallContext, filter: Medi
     size: [desc(mediaAssets.bytes), asc(mediaAssets.filename)],
   }[filter.sort ?? 'newest'];
   const rows = deps.db.select().from(mediaAssets).where(conditions.length ? and(...conditions) : undefined).orderBy(...order).all();
-  const items = rows.map((record) => ({ record, references: findMediaReferences(deps, record.id) }));
+  const references = findMediaReferencesFor(deps, rows.map((record) => record.id));
+  const items = rows.map((record) => ({ record, references: references.get(record.id) ?? [] }));
   const q = filter.query?.trim().toLowerCase();
   if (!q) return ok(items);
   return ok(items.filter((it) => it.record.filename.toLowerCase().includes(q) || it.references.some((r) => r.label.toLowerCase().includes(q))));
@@ -268,10 +276,11 @@ export interface MediaUsage {
  */
 export function describeMediaUsage(deps: Deps, assetIds: readonly string[], self: { entity: string; id: string }): MediaUsage[] {
   const usage: MediaUsage[] = [];
+  const references = findMediaReferencesFor(deps, assetIds);
   for (const id of new Set(assetIds)) {
     const record = deps.db.select().from(mediaAssets).where(eq(mediaAssets.id, id)).get();
     if (!record) continue;
-    const usedElsewhere = findMediaReferences(deps, id)
+    const usedElsewhere = (references.get(id) ?? [])
       .filter((r) => !(r.entity === self.entity && r.id === self.id))
       .map((r) => r.label);
     usage.push({ id, filename: record.filename, usedElsewhere });

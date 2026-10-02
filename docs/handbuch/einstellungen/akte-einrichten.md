@@ -1,7 +1,7 @@
 # Akte
 
 Hier bestimmen Sie, wie die Akte sortiert: die Dokumentarten mit
-Nummernkreis und Aufbewahrungsfrist, die Ordner, die Einsortierregeln, die aus
+Nummernkreis und Aufbewahrungsfrist, die Einsortierregeln, die aus
 Absender oder Text auf Art und Ordner schließen, und die Textbausteine für
 Briefe. Was hier steht, erscheint beim Ablegen als Vorschlag.
 
@@ -24,9 +24,12 @@ Eine Art kann außerdem einen **Schutzbereich** tragen, sobald ein Modul einen a
 
 ## Ordner
 
-Ordner sind Pfade: „Behörden“, „Behörden/Finanzamt“, „Verträge/2026“. Sie
-tragen keine Frist und keine Rechte; sie ordnen. Die Ordnerspalte der Akte
-zeigt sie mit der Zahl der Dokumente.
+Ordner stehen nicht mehr in der Verwaltung; hier steht nur der Verweis „Zur
+Akte“. Ordner legen Sie in der [Akte](../akte/dokumente-und-ordner.md#ordner-pflegen)
+an, benennen sie um, verschieben und löschen sie — oben in der Ordnerspalte
+„Neuer Ordner“, am Ordner über „…“ oder mit Rechtsklick. Das dürfen Personen
+mit dem Recht „Akte verwalten“. Ein Unterordner liegt in einem anderen Ordner, etwa
+der Ordner „Finanzamt“ unter „Behörden“.
 
 ## Einsortierregeln
 

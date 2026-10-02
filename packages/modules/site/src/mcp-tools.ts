@@ -22,7 +22,7 @@ import { activeTemplate, applyTemplateSync, previewTemplateSync, readActiveTempl
 import { getVariables, listReferenceOptions, setValues } from './values';
 import { readSiteEnv } from './pipeline/env';
 import { listPublishes } from './services/publishes';
-import { checkDeployTarget, runPreview, runPublish } from './pipeline/jobs';
+import { lastSiteJob, SITE_JOB_KINDS, startDeployCheck, startPreview, startPublish } from './pipeline/jobs';
 
 
 const tool = (
@@ -116,26 +116,37 @@ const FIXED: McpToolDefinition[] = [
       await rm(dir, { recursive: true, force: true });
     }
   }, exportSiteContent),
+  // Check, Vorschau und Publish bauen die Seite und liefen über MCP in die
+  // Zeitüberschreitung des Clients (01.10.). Sie starten nur; was dabei
+  // herauskam, liest site_job_result — eine Abfrage für alle drei, weil Antwort
+  // und Abfrageschleife dieselben sind.
   tool(
     'site_deploy_check',
-    'Checks the deploy target without transferring anything: lists the files found there (path check) and, from a fresh build like site_publish would transfer, what a publish would change, add and remove. Requires site.publish.',
+    'Start the deploy target check in the background and return at once: { started: true, runId, startedAt }, or { started: false, running } while a preview, publish or check is already running. Read the outcome with site_job_result (kind: deployCheck). The check transfers nothing: it lists the files found there (path check) and, from a fresh build like site_publish would transfer, what a publish would change, add and remove. Requires site.publish.',
     z.object({}),
-    (deps, ctx) => checkDeployTarget(deps, ctx, readSiteEnv()),
-    checkDeployTarget,
+    (deps, ctx) => startDeployCheck(deps, ctx, readSiteEnv()),
+    startDeployCheck,
   ),
   tool(
     'site_preview_build',
-    'Build the preview of the site into the configured preview directory and report diff against the last publish, along with gaps, violations, stale and pendingReview: published records still waiting for a human review (a warning, not a block). Requires site.publish.',
+    'Start building the preview of the site in the background and return at once: { started: true, runId, startedAt }, or { started: false, running } while a preview, publish or check is already running. Read the outcome with site_job_result (kind: preview): diff against the last publish, gaps, violations, stale and pendingReview: published records still waiting for a human review (a warning, not a block), previewDir and log. Requires site.publish.',
     z.object({}),
-    (deps, ctx) => runPreview(deps, ctx, readSiteEnv()),
-    runPreview,
+    (deps, ctx) => startPreview(deps, ctx, readSiteEnv()),
+    startPreview,
   ),
   tool(
     'site_publish',
-    'Build and publish the site to the configured deploy target. Requires site.publish and confirm: true. Audited.',
+    'Start building and publishing the site to the configured deploy target in the background and return at once: { started: true, runId, startedAt }, or { started: false, running } while a preview, publish or check is already running. Requires site.publish and confirm: true; a missing target or confirmation fails right away. Read the outcome with site_job_result (kind: publish): result { status, record, diff, log } or error, e.g. blockedTermsPresent. Every attempt also appears in site_publishes. Audited.',
     z.object({ confirm: z.boolean() }),
-    (deps, ctx, args) => runPublish(deps, ctx, readSiteEnv(), args as { confirm: boolean }),
-    runPublish,
+    (deps, ctx, args) => startPublish(deps, ctx, readSiteEnv(), args as { confirm: boolean }),
+    startPublish,
+  ),
+  tool(
+    'site_job_result',
+    'Read the state of the background site jobs started by site_deploy_check, site_preview_build and site_publish, for one kind (deployCheck, preview, publish): running (the job in progress, if any, of any kind — only one runs at a time) and last (the last finished run of this kind: runId, startedAt, finishedAt, userId and either result or error). Poll every few seconds until last.runId is the runId the start returned. Changes nothing. Requires site.publish.',
+    z.object({ kind: z.enum(SITE_JOB_KINDS) }),
+    async (deps, ctx, args) => lastSiteJob(deps, ctx, readSiteEnv(), args),
+    lastSiteJob,
   ),
   // Wer veröffentlichen darf, soll nachsehen können, ob und wann zuletzt
   // veröffentlicht wurde (Prinzip 8) — ein reiner Lesezugriff.

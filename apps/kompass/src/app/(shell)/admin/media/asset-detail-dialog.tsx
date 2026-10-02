@@ -3,11 +3,19 @@
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useDateFormat } from '@/components/date-format-provider';
+import { FolderField } from '@/components/folder-tree/folder-field';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { formatBytes, type Folder, type Item } from './types';
-import { Select } from '@/components/ui/select';
+import type { ActionState } from '@/lib/actions';
+import type { FolderEntry } from '@/lib/folder-tree-model';
+import { formatBytes, type Item } from './types';
 
+/**
+ * Eine Datei der Mediathek im Detail. Der Ort steht als Weg mit „Verschieben
+ * nach…“ (HANDOFF § 3.5, README § 3 Artboard 5): verschoben wird über
+ * denselben Weg wie beim Ziehen — Toast mit „Rückgängig“ —; lehnt der Server
+ * ab, bleibt der Dialog offen und nennt den Grund.
+ */
 export function AssetDetailDialog({
   item,
   folders,
@@ -17,13 +25,15 @@ export function AssetDetailDialog({
   onDelete,
 }: {
   item: Item | null;
-  folders: Folder[];
+  /** Die Ordner wie im Baum, samt noch nicht bestätigter Züge. */
+  folders: FolderEntry[];
   assetFolder: string | null;
   onOpenChange: (open: boolean) => void;
-  onMove: (id: string, folder: string | null) => void;
+  onMove: (id: string, folder: string | null) => Promise<ActionState>;
   onDelete: (id: string) => void;
 }) {
   const t = useTranslations('media');
+  const tMove = useTranslations('moveDialog');
   const fmt = useDateFormat();
   const isImage = item?.mimeType.startsWith('image/') ?? false;
 
@@ -55,8 +65,6 @@ export function AssetDetailDialog({
                   </dd>
                 </>
               ) : null}
-              <dt className="text-ink-2">{t('folder')}</dt>
-              <dd>{assetFolder ?? t('noFolder')}</dd>
               <dt className="text-ink-2">{t('uploadedAt')}</dt>
               <dd>{fmt.date(item.createdAt)}</dd>
               {item.uploadedBy ? (
@@ -86,25 +94,20 @@ export function AssetDetailDialog({
               </dd>
             </dl>
 
+            <FolderField
+              value={assetFolder}
+              folders={folders}
+              label={t('folder')}
+              emptyLabel={t('noFolder')}
+              dialogTitle={tMove('titleOne', { title: item.filename })}
+              kind="assets"
+              onChange={(target) => onMove(item.id, target)}
+            />
+
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-2 pt-3">
               <a href={`/media/${item.id}`} target="_blank" rel="noopener" className="text-[13px] text-link underline">
                 {t('open')}
               </a>
-              <label className="flex items-center gap-2 text-[13px] text-ink-2">
-                {t('move')}
-                <Select
-                  value={assetFolder ?? ''}
-                  className="w-auto"
-                  onChange={(e) => onMove(item.id, e.target.value || null)}
-                >
-                  <option value="">{t('noFolder')}</option>
-                  {folders.map((f) => (
-                    <option key={f.path} value={f.path}>
-                      {f.path}
-                    </option>
-                  ))}
-                </Select>
-              </label>
               <Button
                 type="button"
                 variant="destructive"

@@ -21,6 +21,11 @@ export function ProjectForm({ project, locales }: { project: ProjectRecord | nul
   const t = useTranslations('projects.form');
   const c = useTranslations('content');
   const tCommon = useTranslations('common');
+  // Die Namen für die Fehlerbox; Links melden als `externalLinks.0.url` und stehen unter ihrem Rumpf.
+  const labels: Record<string, string> = {
+    slug: c('slug'), type: t('type'), status: t('status'), name: t('name'), summary: t('summary'), body: t('body'),
+    imageAssetId: t('image'), externalLinks: t('links.title'),
+  };
   const [state, action] = useActionState(saveProjectAction, idleState);
   // `useMemo`, weil `errors` sonst bei jedem Render ein neues Objekt waere und
   // der Effekt unten damit bei jedem Render feuerte statt nur bei einer
@@ -32,7 +37,7 @@ export function ProjectForm({ project, locales }: { project: ProjectRecord | nul
       {project ? <input type="hidden" name="id" value={project.id} /> : null}
       {/* Ladestand: Hat inzwischen jemand anderes gespeichert, weist der Dienst ab (Backlog 20). */}
       {project ? <input type="hidden" name="expectedVersion" value={project.updatedAt} /> : null}
-      <FormErrorSummary errors={errors} />
+      <FormErrorSummary errors={errors} labels={labels} />
       <Tabs defaultValue="public">
         <TabsList className="border-b border-line bg-surface px-6"><TabsTrigger value="public" className="gap-2">{t('tabs.public')}{Object.keys(errors).length > 0 ? <TabInvalidDot label={tCommon('tabInvalid')} /> : null}</TabsTrigger></TabsList>
         <TabsContent value="public" className="grid gap-5 p-6 md:grid-cols-2">

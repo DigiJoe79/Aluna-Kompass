@@ -1,15 +1,17 @@
 'use client';
 
+import { CircleSlash, Files, Image as ImageIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { uploadMediaAction } from '@/app/(shell)/admin/media/actions';
-import { flattenFolderTree } from '@/app/(shell)/admin/media/folder-tree-model';
 import { EmptyState } from '@/components/empty-state';
+import { FolderTree } from '@/components/folder-tree/folder-tree';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { ancestorsOf, namesBelow, type FolderEntry } from '@/lib/folder-tree-model';
 import type { MediaListing } from '@/lib/media-listing';
 import { usePreference } from '@/lib/preferences';
 import { AssetGrid } from './asset-grid';
@@ -20,6 +22,11 @@ export interface MediaChooserDialogProps {
   /** Was das Feld nimmt — der Dialog zeigt nur das. */
   kind: 'image' | 'pdf';
   multiple: boolean;
+  /**
+   * Nur bei `multiple`: wie viele höchstens gewählt sein dürfen, die bereits gewählten mitgezählt. An der
+   * Grenze sind die übrigen Kacheln gesperrt und der Fuß sagt, warum (Befund 6, 0.2.4: das 13. Tierfoto).
+   */
+  max?: number;
   /** Bereits gewählte IDs; bei multiple vorab angehakt, bei single nur markiert. */
   selected: string[];
   onConfirm: (ids: string[]) => void;
@@ -29,13 +36,30 @@ const ACCEPT = { image: 'image/png,image/jpeg,image/webp,image/svg+xml', pdf: 'a
 type Sort = 'newest' | 'oldest' | 'name' | 'size';
 const SORTS: Sort[] = ['newest', 'oldest', 'name', 'size'];
 
+/** Gemerkt als `mediaChooserFolder`: `null` = „Alle Dateien“, `''` = „Ohne Ordner“ (kein gültiger Pfad), sonst der Ordner. */
+const UNFILED = '';
+
 /**
- * Die Mediathek in klein: Ordner links, Kacheln rechts, Suche und Upload oben.
- * Einzelauswahl: Klick auf die Kachel übernimmt sofort. Mehrfachauswahl: Häkchen
- * und „Übernehmen“. Ein Upload landet im offenen Ordner und wird ausgewählt.
+ * Nur Ordner mit passenden Dateien und deren Vorfahren (Handoff § 9.2): Ein
+ * Ordner ohne Bild hat im Bild-Dialog nichts zu bieten. Die Zahlen zählen
+ * schon nur die Art des Dialogs.
  */
-export function MediaChooserDialog({ open, onOpenChange, kind, multiple, selected, onConfirm }: MediaChooserDialogProps) {
+function foldersWithMatches(folders: MediaListing['folders']): FolderEntry[] {
+  const keep = new Set<string>();
+  for (const f of folders) if (f.assetCount > 0) for (const path of [...ancestorsOf(f.path), f.path]) keep.add(path);
+  return folders.filter((f) => keep.has(f.path)).map((f) => ({ path: f.path, count: f.assetCount }));
+}
+
+/**
+ * Die Mediathek in klein (README § 3, Artboard 8): der Ordnerbaum als Filter
+ * links, Kacheln rechts, Suche und Upload oben. Klick im Baum wählt — kein
+ * Link, kein „…“, kein Ziehen. Einzelauswahl: Klick auf die Kachel übernimmt
+ * sofort. Mehrfachauswahl: Häkchen und „Übernehmen“. Ein Upload landet im
+ * offenen Ordner und wird ausgewählt.
+ */
+export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, selected, onConfirm }: MediaChooserDialogProps) {
   const t = useTranslations('media');
+  const tMove = useTranslations('moveDialog');
   const [folder, setFolder] = usePreference('mediaChooserFolder');
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<Sort>('newest');
@@ -44,6 +68,7 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, selecte
   const [picked, setPicked] = useState<Set<string>>(() => new Set(selected));
   const [uploading, setUploading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const reasonId = useId();
 
   // `selected` kommt vom aufrufenden Formular und bekommt bei jedem Render dort
   // (z. B. nach einem Server-Action-Refresh der Seite während des Uploads) eine
@@ -82,8 +107,27 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, selecte
     return () => clearTimeout(handle);
   }, [open, load, query]);
 
-  const tree = useMemo(() => flattenFolderTree(listing?.folders ?? []), [listing]);
-  const items = useMemo(() => (listing?.items ?? []).map((it) => ({ id: it.id, filename: it.filename, mimeType: it.mimeType, used: it.references.length > 0 })), [listing]);
+  const shownFolders = useMemo(() => foldersWithMatches(listing?.folders ?? []), [listing]);
+  /** Ein geöffneter Ordner, oder `null` bei „Alle Dateien“ und „Ohne Ordner“. */
+  const openFolder = folder === null || folder === UNFILED ? null : folder;
+  const items = useMemo(
+    () =>
+      (listing?.items ?? []).map((it) => ({
+        id: it.id,
+        filename: it.filename,
+        mimeType: it.mimeType,
+        used: it.references.length > 0,
+        // Der Ort unter dem geöffneten Ordner, wie in der Mediathek (Spec § 9).
+        place: openFolder === null || it.folder === null ? '' : namesBelow(it.folder, openFolder).join(' › '),
+      })),
+    [listing, openFolder]
+  );
+
+  // Ein gemerkter Ordner, den es nicht mehr gibt (umbenannt, gelöscht) oder der
+  // nichts Passendes enthält, steht nicht im Baum: zurück auf „Alle Dateien“.
+  useEffect(() => {
+    if (listing && openFolder !== null && !shownFolders.some((f) => f.path === openFolder)) setFolder(null);
+  }, [listing, openFolder, shownFolders, setFolder]);
 
   const choose = (id: string) => {
     if (!multiple) {
@@ -94,7 +138,7 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, selecte
     setPicked((p) => {
       const next = new Set(p);
       if (next.has(id)) next.delete(id);
-      else next.add(id);
+      else if (max === undefined || next.size < max) next.add(id);
       return next;
     });
   };
@@ -116,7 +160,8 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, selecte
           const data = state.data as { id: string; created: boolean };
           if (!data.created && state.message) toast.info(state.message);
           last = data.id;
-          if (multiple) setPicked((p) => new Set(p).add(data.id));
+          // Hochladen geht auch an der Grenze; angehakt wird nur, was noch Platz hat.
+          if (multiple) setPicked((p) => (max !== undefined && p.size >= max && !p.has(data.id) ? p : new Set(p).add(data.id)));
         }
       }
       await load();
@@ -129,6 +174,12 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, selecte
       if (fileInput.current) fileInput.current.value = '';
     }
   };
+
+  const full = multiple && max !== undefined && picked.size >= max;
+  const blocked = useMemo(
+    () => (full ? { ids: new Set(items.filter((it) => !picked.has(it.id)).map((it) => it.id)), reasonId } : undefined),
+    [full, items, picked, reasonId]
+  );
 
   const title = multiple ? t('chooser.titleMultiple') : kind === 'pdf' ? t('chooser.titlePdf') : t('chooser.titleImage');
 
@@ -173,22 +224,22 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, selecte
         </div>
 
         <div className="flex gap-4">
-          <nav className="w-48 shrink-0 text-[13px]" aria-label={t('folder')}>
-            <button type="button" onClick={() => setFolder(null)} className={`block w-full rounded px-2 py-1 text-left ${folder === null ? 'bg-selected text-selected-ink' : 'hover:bg-row-hover'}`}>
-              {t('root')}
-            </button>
-            {tree.map((node) => (
-              <button
-                key={node.path}
-                type="button"
-                onClick={() => setFolder(node.path)}
-                className={`block w-full rounded px-2 py-1 text-left ${folder === node.path ? 'bg-selected text-selected-ink' : 'hover:bg-row-hover'}`}
-                style={{ paddingLeft: `${0.5 + node.depth * 0.75}rem` }}
-              >
-                {node.name} <span className="text-ink-2">({node.assetCount})</span>
-              </button>
-            ))}
-          </nav>
+          <div className="max-h-[55vh] w-60 shrink-0 overflow-y-auto border-r border-line pr-3">
+            <FolderTree
+              folders={shownFolders}
+              mode="pick"
+              selected={openFolder}
+              fixed={[
+                { key: 'all', label: t('root'), icon: kind === 'image' ? ImageIcon : Files, count: listing?.total, dropTarget: false, folder: null, current: folder === null },
+                { key: 'unfiled', label: t('noFolder'), icon: CircleSlash, count: listing?.unfiledCount, dropTarget: false, folder: null, current: folder === UNFILED },
+              ]}
+              onPick={(path, fixedKey) => setFolder(path ?? (fixedKey === 'unfiled' ? UNFILED : null))}
+              unit={{ one: tMove('unit.files.one'), many: tMove('unit.files.many') }}
+              storageKey={null}
+              // Der Baum filtert hier: Das Gewählte zeigt seine Zahl, kein Häkchen (Artboard 8).
+              pickCheck={false}
+            />
+          </div>
 
           <div className="max-h-[55vh] min-w-0 flex-1 overflow-y-auto">
             {failed ? (
@@ -198,13 +249,20 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, selecte
             ) : listing && items.length === 0 ? (
               <EmptyState title={t('chooser.emptyTitle')} text={t('chooser.empty')} />
             ) : (
-              <AssetGrid items={items} selected={multiple ? picked : new Set(selected)} onOpen={(it) => choose(it.id)} />
+              <AssetGrid items={items} selected={multiple ? picked : new Set(selected)} onOpen={(it) => choose(it.id)} blocked={blocked} />
             )}
           </div>
         </div>
 
         <DialogFooter className="flex items-center justify-between gap-3">
-          {multiple ? <span className="text-[13px] text-ink-2">{t('chooser.selectedCount', { count: picked.size })}</span> : <span />}
+          {multiple ? (
+            <span className="flex flex-col text-[13px] text-ink-2" aria-live="polite">
+              <span>{max === undefined ? t('chooser.selectedCount', { count: picked.size }) : t('chooser.selectedOfMax', { count: picked.size, max })}</span>
+              {full ? <span id={reasonId}>{t('chooser.limitReached', { max })}</span> : null}
+            </span>
+          ) : (
+            <span />
+          )}
           <div className="flex gap-2">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               {t('chooser.cancel')}

@@ -1,6 +1,6 @@
 {
   "name": "@kompass/module-finance",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "private": true,
   "type": "module",
   "exports": { ".": "./src/index.ts", "./csv": "./src/import/csv/index.ts", "./wording": "./src/donations/templates/wording.ts", "./evidence-rules": "./src/allocation/evidence-rules.ts" },

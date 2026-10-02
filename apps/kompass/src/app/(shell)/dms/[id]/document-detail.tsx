@@ -1,5 +1,6 @@
 'use client';
 
+import { pollTextStatus } from '@/lib/poll-text-status';
 import { useDateFormat } from '@/components/date-format-provider';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
@@ -13,8 +14,9 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { deleteDocumentAction, deleteDraftAction, rereadDocumentAction, voidDocumentAction } from '../actions';
+import { createResponseDraftAction, deleteDocumentAction, deleteDraftAction, rereadDocumentAction, voidDocumentAction } from '../actions';
 import { FileDialog } from './file-dialog';
+import type { FolderEntry } from '@/lib/folder-tree-model';
 import { FolderPanel } from './folder-panel';
 import { ReclassifyDialog } from './reclassify-dialog';
 import { LinksPanel, type ResolvedLink } from './links-panel';
@@ -58,7 +60,7 @@ export interface DocumentDetailProps {
   today: string;
   canSeeFollowUps: boolean;
   canManageFollowUps: boolean;
-  folders: string[];
+  folders: FolderEntry[];
   animals: { id: string; name: string }[];
   projects: { id: string; name: string }[];
   canCreateContact: boolean;
@@ -115,13 +117,21 @@ export function DocumentDetail({
   const [voidReason, setVoidReason] = useState('');
   const [withReplacement, setWithReplacement] = useState(false);
 
+  // Die Erkennung fragt /dms/[id]/text-status ab, nicht den Router: Ein
+  // `router.refresh()` im Sekundentakt staut sich unter Last in Nexts Warteschlange
+  // und hielte Verschieben und Rückgängig auf. Die nächste Abfrage wird erst nach
+  // der vorigen geplant (kein Überlapp), der Abstand wächst von 1 s auf 5 s; die
+  // Seite erneuert sich genau einmal, wenn der Stand umschlägt (Kette: lib/poll-text-status.ts).
+  // Schlägt der Stand nach der Erneuerung wieder auf `pending` um (neu indiziert),
+  // ändert sich `doc.textStatus` und der Effekt startet die Kette neu.
   useEffect(() => {
     if (doc.textStatus !== 'pending' && doc.textStatus !== 'running') return;
-    const interval = setInterval(() => {
-      router.refresh();
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [doc.textStatus, router]);
+    return pollTextStatus({
+      url: `/dms/${encodeURIComponent(doc.id)}/text-status`,
+      onDone: () => router.refresh(),
+      onUnauthorized: () => router.refresh(),
+    });
+  }, [doc.textStatus, doc.id, router]);
 
   return (
     <div className="space-y-6">
@@ -196,6 +206,7 @@ export function DocumentDetail({
                   {t('openPdf')}
                 </a>
               )}
+              {doc.status !== 'voided' && permissions.canEdit ? <ResponseButton documentId={doc.id} direction={doc.direction} /> : null}
               {reclassifyTypes ? (
                 <ReclassifyDialog
                   document={{ id: doc.id, typeKey: doc.typeKey, subject: doc.subject, documentDate: doc.documentDate, updatedAt: doc.updatedAt }}
@@ -310,9 +321,7 @@ export function DocumentDetail({
                 <dt className="text-muted-ink">{t('columns.date')}</dt>
                 <dd className="font-medium text-ink">{fmt.date(doc.documentDate)}</dd>
               </div>
-              <div>
-                <FolderPanel documentId={doc.id} folder={doc.folder} folders={folders} direction={doc.direction} canEdit={permissions.canEdit} />
-              </div>
+              <FolderPanel documentId={doc.id} title={doc.subject} folder={doc.folder} folders={folders} direction={doc.direction} canEdit={permissions.canEdit} />
               <div>
                 <dt className="text-muted-ink">{t('columns.direction')}</dt>
                 <dd className="font-medium text-ink">{t(`directions.${doc.direction}`)}</dd>
@@ -431,6 +440,30 @@ export function DocumentDetail({
         </div>
       </div>
     </div>
+  );
+}
+
+/** Genau ein Knopf, beschriftet nach Richtung: eingegangen „Antworten“, ausgehend „Folgeschreiben“ (Befund 0.2.4 Nr. 5). */
+function ResponseButton({ documentId, direction }: { documentId: string; direction: 'incoming' | 'outgoing' }) {
+  const t = useTranslations('dms');
+  const [pending, start] = useTransition();
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      disabled={pending}
+      onClick={() => {
+        start(async () => {
+          // Bei Erfolg leitet die Aktion zur Bearbeiten-Seite des Entwurfs weiter.
+          const s = await createResponseDraftAction(documentId);
+          if (s.status === 'error') toast.error(s.message);
+        });
+      }}
+    >
+      {t(`respond.${direction}`)}
+    </Button>
   );
 }
 

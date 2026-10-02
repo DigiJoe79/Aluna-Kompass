@@ -42,42 +42,67 @@ export async function deleteMediaAction(id: string): Promise<ActionState> {
   });
 }
 
-export async function moveMediaAction(id: string, folder: string | null): Promise<ActionState> {
+/**
+ * Verschiebt eine Datei; `expectedFolder` nur beim „Rückgängig“: Liegt sie
+ * inzwischen woanders, lehnt der Dienst ab (Spec § 9). `data` wie in der
+ * Akte (`{ moved, skipped }`), damit der Toast dieselbe Hilfe nutzt.
+ */
+export async function moveMediaAction(id: string, folder: string | null, expectedFolder?: string | null): Promise<ActionState> {
   return guardAction('(shell)/admin/media/actions.ts#moveMediaAction', async () => {
     const t = await getTranslations();
     const { deps, ctx } = await requireSession();
-    const result = await moveMediaAsset(deps, ctx, { id, folder });
+    const result = await moveMediaAsset(deps, ctx, { id, folder, ...(expectedFolder !== undefined ? { expectedFolder } : {}) });
+    if (!result.ok) return toActionState(result, t);
+    if (!result.value.moved) return { status: 'success', data: { moved: [], skipped: [id] } };
     revalidatePath('/admin/media');
-    return toActionState(result, t, t('media.movedToast'));
+    return { status: 'success', data: { moved: [id], skipped: [] } };
   });
 }
 
-export async function createFolderAction(path: string): Promise<ActionState> {
+/** Ein Ordnerpfad aus Elternordner und Name; der Name ohne Rand, den Rest prüft der Dienst. */
+const childPath = (parent: string | null, name: string) => (parent ? `${parent}/${name.trim()}` : name.trim());
+const parentPath = (path: string) => (path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : null);
+
+export async function createFolderAction(parent: string | null, name: string): Promise<ActionState> {
   return guardAction('(shell)/admin/media/actions.ts#createFolderAction', async () => {
     const t = await getTranslations();
     const { deps, ctx } = await requireSession();
-    const result = await createMediaFolder(deps, ctx, { path });
-    revalidatePath('/admin/media');
-    return toActionState(result, t, t('media.created'));
+    const result = await createMediaFolder(deps, ctx, { path: childPath(parent, name) });
+    if (result.ok) revalidatePath('/admin/media');
+    return toActionState(result, t);
   });
 }
 
-export async function renameFolderAction(from: string, to: string): Promise<ActionState> {
+/** Benennt einen Ordner um: derselbe Dienst wie Verschieben, mit gleichem Elternordner. */
+export async function renameFolderAction(path: string, name: string): Promise<ActionState> {
   return guardAction('(shell)/admin/media/actions.ts#renameFolderAction', async () => {
     const t = await getTranslations();
     const { deps, ctx } = await requireSession();
-    const result = await renameMediaFolder(deps, ctx, { from, to });
-    revalidatePath('/admin/media');
-    return toActionState(result, t, t('media.renamed'));
+    const result = await renameMediaFolder(deps, ctx, { from: path, to: childPath(parentPath(path), name) });
+    if (result.ok) revalidatePath('/admin/media');
+    return toActionState(result, t);
   });
 }
 
+/** Verschiebt einen Ordner samt Unterordnern und Dateien unter `toParent` (`null` = oberste Ebene). */
+export async function moveFolderAction(from: string, toParent: string | null): Promise<ActionState> {
+  return guardAction('(shell)/admin/media/actions.ts#moveFolderAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const name = from.slice(from.lastIndexOf('/') + 1);
+    const result = await renameMediaFolder(deps, ctx, { from, to: childPath(toParent, name) });
+    if (result.ok) revalidatePath('/admin/media');
+    return toActionState(result, t);
+  });
+}
+
+/** Löscht einen leeren Ordner, ohne Rückfrage (Spec § 5.4); „Rückgängig“ legt ihn neu an. */
 export async function deleteFolderAction(path: string): Promise<ActionState> {
   return guardAction('(shell)/admin/media/actions.ts#deleteFolderAction', async () => {
     const t = await getTranslations();
     const { deps, ctx } = await requireSession();
     const result = await deleteMediaFolder(deps, ctx, { path });
-    revalidatePath('/admin/media');
-    return toActionState(result, t, t('media.folderDeleted'));
+    if (result.ok) revalidatePath('/admin/media');
+    return toActionState(result, t);
   });
 }

@@ -3,13 +3,13 @@ import { ctxWith } from '@kompass/core/testing';
 import { eq } from 'drizzle-orm';
 import { documents } from '../src/schema';
 import { describe, expect, it } from 'vitest';
-import { countDocumentsByFolder, createDocumentFolder, deleteDocumentFolder, listDocumentFolders, listDocumentTypes } from '../src/catalog';
+import { createDocumentFolder, deleteDocumentFolder, listDocumentFolders, listDocumentTypes } from '../src/catalog';
 import { DMS_DASHBOARD_TILES } from '../src/dashboard';
 import { replaceDocumentText } from '../src/index-store';
 import { previewReclassification, receiveDocument } from '../src/incoming';
 import { relateDocuments } from '../src/relations';
 import { getDocument, getDocumentRecord, listDocuments, moveDocument, previewNextNumber } from '../src/service';
-import { countUnreadDocuments, getDocumentText, reindexAllDocuments } from '../src/text';
+import { countUnreadDocuments, getDocumentText, getDocumentTextStatus, reindexAllDocuments } from '../src/text';
 import { INCOMING_OPEN_TYPE, pdfBytes, setupWithArea } from './helpers';
 
 const denied = (r: { ok: boolean; error?: unknown }) => (r.ok ? null : r.error);
@@ -49,6 +49,7 @@ describe('a protected document type — reading', () => {
     expect(denied(await getDocumentRecord(deps, viewer, secretId))).toEqual(missing);
     expect(denied(await getDocument(deps, viewer, secretId))).toEqual(missing);
     expect(denied(await getDocumentText(deps, viewer, { documentId: secretId }))).toEqual(missing);
+    expect(denied(await getDocumentTextStatus(deps, viewer, secretId))).toEqual(missing);
     expect(unwrap(await getDocumentRecord(deps, auditor, secretId)).subject).toBe('Streng geheimer Betreff');
     expect(unwrap(await getDocument(deps, auditor, secretId)).protected).toBe(true);
   });
@@ -101,8 +102,9 @@ describe('types, folders and counts', () => {
 
   it('folder counts count only what the caller may read', async () => {
     const { deps, viewer, auditor } = await withFolders();
-    expect(unwrap(await countDocumentsByFolder(deps, viewer))).toEqual({ Offen: 1 });
-    expect(unwrap(await countDocumentsByFolder(deps, auditor))).toEqual({ 'Tresor/2026': 1 });
+    const counts = async (ctx: typeof viewer) => unwrap(await listDocumentFolders(deps, ctx)).map((f) => [f.path, f.count]);
+    expect(await counts(viewer)).toEqual([['Offen', 1], ['Tresor', 0], ['Tresor/2026', 0]]);
+    expect(await counts(auditor)).toEqual([['Tresor', 0], ['Tresor/2026', 1]]);
   });
 
   it('a folder holding only protected documents says so instead of claiming to be not empty', async () => {

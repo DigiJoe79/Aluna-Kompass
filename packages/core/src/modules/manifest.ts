@@ -88,6 +88,11 @@ export type DueItemInput = WithLabelRef<DueItem>;
 export type FollowUpTargetInput = WithLabelRef<FollowUpTarget>;
 export type RecordLabelInput = Omit<RecordLabel, 'label' | 'auditLabel'> & { label: LabelText; auditLabel?: LabelText };
 
+/** Ein Fund des Haken `mediaReferences`: die Fundstelle samt dem Asset, auf das sie zeigt. */
+export interface AssetMediaReference extends MediaReference {
+  assetId: string;
+}
+
 /** Eine Stelle, die auf einen fremden Datensatz zeigt. Form wie `MediaReference`. */
 export interface RecordReference {
   /** Menschlich lesbar, für die Fehlermeldung und den Löschdialog:
@@ -338,9 +343,12 @@ export interface ModuleManifest {
   mcpTools?: readonly McpToolDefinition[] | ((deps: Deps) => readonly McpToolDefinition[]);
   /** Einträge, die erst zur Laufzeit feststehen — etwa je Sammlung eines Templates. */
   navigationFor?: (deps: Deps) => NavigationItem[];
-  /** Wo dieses Modul ein Medium verwendet — synchron, nur lesend, ohne
-   *  Rechteprüfung. Befragt vor dem Löschen eines Assets. */
-  mediaReferences?: (deps: Deps, assetId: string) => readonly MediaReference[];
+  /** Wo dieses Modul Medien verwendet — synchron, nur lesend, ohne
+   *  Rechteprüfung. Befragt vor dem Löschen eines Assets und für die Spalte
+   *  „Verwendet in“ der Mediathek. Gefragt wird für viele Assets auf einmal:
+   *  Jedes Modul antwortet mit wenigen Abfragen für die ganze Menge, nicht mit
+   *  einer je Asset (1546 Dateien kosteten auf dem NAS 7 s, Befund 0.2.4/10). */
+  mediaReferences?: (deps: Deps, assetIds: ReadonlySet<string>) => readonly AssetMediaReference[];
   /** Wo dieses Modul auf einen fremden Datensatz zeigt — synchron, nur lesend,
    *  ohne Rechteprüfung. Befragt vor dem Löschen des Datensatzes. Anders als
    *  `retentionHolds` fragt der Haken nicht nach Fristen: Jeder Verweis zählt. */

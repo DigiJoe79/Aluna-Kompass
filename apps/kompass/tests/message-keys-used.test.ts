@@ -29,6 +29,7 @@ const SOURCES = ['apps/kompass/src', 'packages'].map((dir) => path.join(REPO, di
 const SKIP_DIRS = new Set(['node_modules', 'tests', 'dist', '.astro', 'drizzle', '.next']);
 
 const DYNAMIC: { prefix: RegExp; where: string }[] = [
+  { prefix: /^folderTree\.(block|announce)\./, where: 'components/folder-tree/announcements.ts — `block.${reason}` und die Ansagen, mit dem Übersetzer des Baums' },
   { prefix: /^nav\./, where: 'apps/kompass/src/lib/navigation.ts — `nav.${item.key}` aus den Menüeinträgen von Kern und Modulen' },
   { prefix: /^(content|[a-z]+\.common)\.(moduleInactiveTitle|moduleInactiveText|openModules)$/, where: 'components/module-inactive-card.tsx — `getTranslations(namespace)` mit dem Namensraum des Moduls' },
   { prefix: /^contacts\.roleNames\./, where: 'lib/contact-roles.ts — `roleNames.${key}` mit dem Übersetzer des Aufrufers' },

@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { asset, text } from '@kompass/site-template';
 import type { FieldSchema, TemplateSchema } from '../src/load';
 import { siteModule } from '../src/manifest';
+import { lastSiteJob, startDeployCheck, startPreview, startPublish } from '../src/pipeline/jobs';
 import { siteTemplateState } from '../src/schema';
 import { listPublishes } from '../src/services/publishes';
 import { listReferenceOptions } from '../src/values';
@@ -65,6 +66,7 @@ describe('site mcp tools', () => {
       'site_deploy_check',
       'site_preview_build',
       'site_publish',
+      'site_job_result',
       'site_publishes',
     ]);
   });
@@ -115,6 +117,19 @@ describe('site mcp tools', () => {
     expect(description).toContain('site.publish');
     expect(description).toMatch(/found there|path check/i);
     expect(description).toMatch(/would (change|transfer)/i);
+  });
+
+  it('starts check, preview and publish in the background and reads all three with one tool', () => {
+    const tools = Object.fromEntries(moduleMcpTools(createTestDeps(), siteModule).map((t) => [t.name, t]));
+    expect(tools.site_deploy_check?.service).toBe(startDeployCheck);
+    expect(tools.site_preview_build?.service).toBe(startPreview);
+    expect(tools.site_publish?.service).toBe(startPublish);
+    for (const name of ['site_deploy_check', 'site_preview_build', 'site_publish']) {
+      expect(tools[name]?.description).toContain('site_job_result');
+    }
+    expect(tools.site_job_result?.service).toBe(lastSiteJob);
+    expect(tools.site_job_result?.description).toContain('site.publish');
+    expect(jsonSchema(tools.site_job_result!).properties?.kind).toMatchObject({ enum: ['preview', 'publish', 'deployCheck'] });
   });
 
   it('site_variables_options calls listReferenceOptions', () => {

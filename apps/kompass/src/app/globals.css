@@ -49,6 +49,12 @@
   --color-amount-out: var(--color-amount-out);
   --color-key: var(--color-key-bg);
   --color-key-ink: var(--color-key-ink);
+  --color-drop-bg: var(--color-drop-bg);
+  --color-drop-ring: var(--color-drop-ring);
+  --color-drop-ink: var(--color-drop-ink);
+  --color-drop-blocked-ring: var(--color-drop-blocked-ring);
+  --color-drop-blocked-hatch: var(--color-drop-blocked-hatch);
+  --color-tree-guide: var(--color-tree-guide);
   --color-hover: var(--hover-surface);
   --color-active: var(--active-surface);
   --color-selected: var(--selected-bg);
@@ -109,6 +115,15 @@
  * Steht als Utility da, weil `h-[var(--row-h-density,var(--row-h))]` sonst in
  * jeder Tabelle stünde — und beim nächsten Umbau in einer davon nicht.
  */
+/* Verweil-Balken im Ordnerbaum: 0,8 s wie `openOnDropDelay`, linear (HANDOFF § 2). */
+@theme {
+  --animate-dwell: dwell 0.8s linear forwards;
+  @keyframes dwell {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+}
+
 @utility h-row {
   height: var(--row-h-density, var(--row-h));
 }

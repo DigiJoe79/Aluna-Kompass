@@ -3,12 +3,13 @@
 import { ExternalLink } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { runPreviewAction } from './actions';
+import { startPreviewAction } from './actions';
 import { ExportFindings, type Findings } from './export-findings';
 import type { PublishDiff } from './diff-card';
+import { useSiteJob } from './use-site-job';
 
 export interface PreviewData extends Findings {
   contentHash: string;
@@ -16,12 +17,22 @@ export interface PreviewData extends Findings {
   previewDir: string;
 }
 
-
+/** Der Bau läuft im Hintergrund; der Knopf startet ihn nur, `useSiteJob` wartet auf das Ergebnis. */
 export function PreviewCard({ onResult }: { onResult?: (data: PreviewData) => void }) {
   const t = useTranslations('site.publish');
   const tCheck = useTranslations('site.publish.check');
   const [data, setData] = useState<PreviewData | null>(null);
-  const [pending, start] = useTransition();
+  const { busy, start } = useSiteJob<PreviewData>('preview', {
+    onDone: (outcome) => {
+      if (outcome.error || !outcome.result) {
+        toast.error(outcome.error ?? t('preview.failed'));
+        return;
+      }
+      setData(outcome.result);
+      onResult?.(outcome.result);
+      toast.success(t('preview.built'));
+    },
+  });
 
   return (
     <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-5">
@@ -43,23 +54,11 @@ export function PreviewCard({ onResult }: { onResult?: (data: PreviewData) => vo
             </Link>
           )}
           <Button
-            disabled={pending}
-            aria-busy={pending}
-            onClick={() =>
-              start(async () => {
-                const s = await runPreviewAction();
-                if (s.status === 'error') {
-                  toast.error(s.message);
-                } else if (s.status === 'success') {
-                  const res = s.data as PreviewData;
-                  setData(res);
-                  onResult?.(res);
-                  toast.success(t('preview.built'));
-                }
-              })
-            }
+            disabled={busy}
+            aria-busy={busy}
+            onClick={() => start(startPreviewAction)}
           >
-            {pending ? t('preview.running') : t('preview.run')}
+            {busy ? t('preview.running') : t('preview.run')}
           </Button>
         </div>
       </div>

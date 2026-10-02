@@ -4,15 +4,19 @@ import { guardAction } from '@/lib/action-guard';
 import {
   addNote,
   clearDispatch,
+  createDocumentFolder,
   createDocumentFollowUp,
   createDraft,
   createReplacementDraft,
+  createResponseDraft,
   canReadDocumentType,
   defaultTypeKey,
+  deleteDocumentFolder,
   deleteNote,
   recordDispatch,
   linkDocument,
-  moveDocument,
+  moveDocuments,
+  moveDocumentFolder,
   relateDocuments,
   unlinkDocument,
   unrelateDocuments,
@@ -35,6 +39,7 @@ import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { toActionState, type ActionState } from '@/lib/actions';
+import { nameOf } from '@/lib/folder-tree-model';
 import { textWorker } from '@/lib/background';
 import { requireSession } from '@/lib/request-context';
 
@@ -42,6 +47,14 @@ const orNull = (value: FormDataEntryValue | null): string | null => {
   const text = String(value ?? '').trim();
   return text === '' ? null : text;
 };
+
+/**
+ * Der Ordner, den es nicht mehr gibt: Zwischen Öffnen und Speichern hat ihn
+ * jemand umbenannt, verschoben oder gelöscht. Der Grund nennt ihn beim Namen
+ * statt „Der Eintrag wurde nicht gefunden“.
+ */
+const goneFolder = (error: { type: string } & Partial<{ entity: string; id: string }>): string | null =>
+  error.type === 'notFound' && error.entity === 'documentFolder' && error.id ? error.id : null;
 
 export async function createDraftAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   return guardAction('(shell)/dms/actions.ts#createDraftAction', async () => {
@@ -157,6 +170,21 @@ export async function voidDocumentAction(id: string, reason: string, withReplace
   });
 }
 
+/** „Antworten“ und „Folgeschreiben“: ein Entwurf aus dem Dokument, danach geht es zur Bearbeiten-Seite. */
+export async function createResponseDraftAction(id: string): Promise<ActionState> {
+  return guardAction('(shell)/dms/actions.ts#createResponseDraftAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+
+    const result = await createResponseDraft(deps, ctx, { id });
+    if (!result.ok) return toActionState(result, t);
+
+    revalidatePath(`/dms/${id}`);
+    revalidatePath('/dms');
+    redirect(`/dms/${result.value.id}/edit`);
+  });
+}
+
 export async function deleteDraftAction(id: string): Promise<ActionState> {
   return guardAction('(shell)/dms/actions.ts#deleteDraftAction', async () => {
     const t = await getTranslations();
@@ -263,7 +291,11 @@ export async function receiveDocumentAction(_prev: ActionState, formData: FormDa
     });
 
     if (!result.ok) {
-      return toActionState(result, t);
+      const state = toActionState(result, t);
+      const gone = goneFolder(result.error);
+      // Der Grund gehört ans Ordnerfeld; alles Getippte bleibt stehen.
+      if (state.status === 'error' && gone) return { ...state, fieldErrors: { folder: t('dms.errors.folderGone', { name: nameOf(gone) }) } };
+      return state;
     }
 
     // Nicht warten: Der Upload ist fertig, das Lesen darf dauern.
@@ -300,15 +332,72 @@ export async function rereadDocumentAction(documentId: string): Promise<ActionSt
   });
 }
 
-export async function moveDocumentAction(id: string, folder: string | null): Promise<ActionState> {
-  return guardAction('(shell)/dms/actions.ts#moveDocumentAction', async () => {
+/**
+ * Verschiebt mehrere Dokumente in einem Zug, alles oder nichts; was schon im
+ * Ziel liegt, wird übersprungen. `expectedFolder` je Dokument: „Rückgängig“
+ * gilt nur, solange es noch dort liegt (Spec § 9). `data`: `{ moved, skipped }`.
+ */
+export async function moveDocumentsAction(moves: { id: string; folder: string | null; expectedFolder?: string | null }[]): Promise<ActionState> {
+  return guardAction('(shell)/dms/actions.ts#moveDocumentsAction', async () => {
     const t = await getTranslations();
     const { deps, ctx } = await requireSession();
-    const result = await moveDocument(deps, ctx, { id, folder });
-    if (!result.ok) return toActionState(result, t);
-    revalidatePath(`/dms/${id}`);
+    const result = await moveDocuments(deps, ctx, { moves });
+    if (!result.ok) {
+      const state = toActionState(result, t);
+      const gone = goneFolder(result.error);
+      return state.status === 'error' && gone ? { ...state, detail: t('dms.errors.folderGone', { name: nameOf(gone) }) } : state;
+    }
+    for (const id of result.value.moved) revalidatePath(`/dms/${id}`);
     revalidatePath('/dms');
-    return toActionState(result, t, t('dms.toast.moved'));
+    return toActionState(result, t);
+  });
+}
+
+/** Ein Ordnerpfad aus Elternordner und Name; der Name ohne Rand, den Rest prüft der Dienst. */
+const childPath = (parent: string | null, name: string) => (parent ? `${parent}/${name.trim()}` : name.trim());
+const parentPath = (path: string) => (path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : null);
+
+/** Verschiebt einen Ordner samt Unterordnern unter `toParent` (`null` = oberste Ebene); `data` ist das Ergebnis des Dienstes. */
+export async function moveFolderAction(from: string, toParent: string | null): Promise<ActionState> {
+  return guardAction('(shell)/dms/actions.ts#moveFolderAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const name = from.slice(from.lastIndexOf('/') + 1);
+    const result = await moveDocumentFolder(deps, ctx, { from, to: childPath(toParent, name) });
+    if (result.ok) revalidatePath('/dms');
+    return toActionState(result, t);
+  });
+}
+
+/** Benennt einen Ordner um: derselbe Dienst wie Verschieben, mit gleichem Elternordner. */
+export async function renameFolderAction(path: string, name: string): Promise<ActionState> {
+  return guardAction('(shell)/dms/actions.ts#renameFolderAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await moveDocumentFolder(deps, ctx, { from: path, to: childPath(parentPath(path), name) });
+    if (result.ok) revalidatePath('/dms');
+    return toActionState(result, t);
+  });
+}
+
+export async function createFolderAction(parent: string | null, name: string): Promise<ActionState> {
+  return guardAction('(shell)/dms/actions.ts#createFolderAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await createDocumentFolder(deps, ctx, { path: childPath(parent, name) });
+    if (result.ok) revalidatePath('/dms');
+    return toActionState(result, t);
+  });
+}
+
+/** Löscht einen leeren Ordner, ohne Rückfrage (Spec § 5.4); „Rückgängig“ legt ihn neu an. */
+export async function deleteFolderAction(path: string): Promise<ActionState> {
+  return guardAction('(shell)/dms/actions.ts#deleteFolderAction', async () => {
+    const t = await getTranslations();
+    const { deps, ctx } = await requireSession();
+    const result = await deleteDocumentFolder(deps, ctx, { path });
+    if (result.ok) revalidatePath('/dms');
+    return toActionState(result, t);
   });
 }
 

@@ -47,12 +47,17 @@ describe('siteMediaReferences', () => {
     unwrap(await setValues(deps, ctx, { values: { heroImage: a.id } }));
     unwrap(await createEntry(deps, ctx, { collection: 'news', slug: 'fest', data: { title: { de: 'Fest' }, image: a.id } }));
 
-    const hits = siteMediaReferences(deps, a.id);
+    const b = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'b.svg', bytes: new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"/>'), declaredMimeType: 'image/svg+xml' }));
+    unwrap(await createEntry(deps, ctx, { collection: 'news', slug: 'markt', data: { title: { de: 'Markt' }, image: b.id } }));
+
+    const all = siteMediaReferences(deps, new Set([a.id, b.id]));
+    expect(all.filter((h) => h.assetId === b.id).map((h) => h.label)).toEqual(['Eintrag „markt“ in „News“']);
+    const hits = all.filter((h) => h.assetId === a.id);
     expect(hits.map((h) => h.label).sort()).toEqual(['Eintrag „fest“ in „News“', 'Variable „heroImage“']);
     const variable = hits.find((h) => h.entity === 'siteValue')!;
     expect(variable.href).toBe('/site/variables');
     const entry = hits.find((h) => h.entity === 'siteEntry')!;
     expect(entry.href).toBe(`/site/c/news/${entry.id}`);
-    expect(siteMediaReferences(deps, 'OTHER')).toEqual([]);
+    expect(siteMediaReferences(deps, new Set(['OTHER']))).toEqual([]);
   });
 });

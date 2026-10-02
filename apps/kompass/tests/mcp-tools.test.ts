@@ -185,8 +185,9 @@ const WITHOUT_TOOL: Record<string, string> = {
   'dms.getDocument': 'Liefert Bytes; dms_get ruft getDocumentRecord.',
   'dms.extractDocumentText': 'Innenleben des Workers; dms_reindex stößt es an.',
   'dms.previewNextNumber': 'Ein Hinweis in der Oberfläche, kein Vorgang.',
+  'dms.moveDocuments': 'Dienst hinter Mehrfach-Verschieben und Rückgängig der Oberfläche; MCP verschiebt einzeln mit dms_move (Spec 6.3).',
   'dms.countUnreadDocuments': 'Ein Zähler für die Verwaltungsseite.',
-  'dms.countDocumentsByFolder': 'Die Zahlen neben den Ordnern; die Liste selbst ist dms_list.',
+  'dms.getDocumentTextStatus': 'Der Takt der Dokumentseite; der Agent liest den Stand mit dms_text.',
   'dms.seedDms': 'Beispieldaten der Entwicklung; laufen über seedDevelopment, nie über MCP.',
   'dms.issueGeneratedDocument': 'Baustein für Module: nimmt einen Callback und stellt unter dem Recht der Vorlage aus; das Werkzeug ist der Dienst des Moduls (z. B. Bestätigung ausstellen).',
   'dms.readLinkedDocument': 'Liefert Bytes, und nur über die Seiten des Moduls, dem der Vorgang gehört.',
@@ -204,6 +205,9 @@ const WITHOUT_TOOL: Record<string, string> = {
   'projects.seedProjects': 'Beispieldaten der Entwicklung.',
   'site.applySeed': 'Beispielinhalte des Templates; ein Mensch bestätigt sie in der Oberfläche.',
   'site.previewTemplateSync': 'Derselbe Vorgang wie site_template_sync ohne confirm; das Werkzeug nennt den anwendenden Zweig.',
+  'site.checkDeployTarget': 'Der Lauf selbst; site_deploy_check startet ihn über startDeployCheck im Hintergrund, site_job_result liest das Ergebnis.',
+  'site.runPreview': 'Der Lauf selbst; site_preview_build startet ihn über startPreview im Hintergrund, site_job_result liest das Ergebnis.',
+  'site.runPublish': 'Der Lauf selbst; site_publish startet ihn über startPublish im Hintergrund, site_job_result liest das Ergebnis.',
   'site.recordPublish': 'Innenleben von site_publish: schreibt den Verlaufseintrag, den der Lauf erzeugt.',
 
   // Kern. Seit dem 2026-09-15 mitgeprüft; was hier steht, ist entschieden.
@@ -214,6 +218,7 @@ const WITHOUT_TOOL: Record<string, string> = {
   'core.importBackup': 'Ersetzt die Datenbank als Datei — das bestätigt ein Mensch vor sich, nicht ein Agent für ihn.',
   'core.getMediaPreview': 'media_get mit variant: preview ruft es; das Werkzeug nennt getMediaAsset, den Weg zum Original.',
   'core.storeMediaInternal': 'Innenleben; media_upload ist der Weg von außen.',
+  'core.countUnfiledMediaAssets': 'Ein Zähler für „Ohne Ordner“ in der Mediathek; media_list mit folder: null liefert dieselbe Menge.',
   'core.storeMediaAssetDetailed': 'Dieselbe Ablage wie media_upload, mit mehr Rückgabe für die Oberfläche.',
   'core.changeOwnPassword': 'Das eigene Passwort ändert man dort, wo man sich anmeldet. Ein API-Token, das Passwörter setzen darf, wäre ein zweiter Anmeldeweg.',
   'core.createApiToken': 'Ein Token, das Token ausstellt, hebelt die Rechtevergabe aus: Wer eines hat, verschafft sich beliebig weitere.',

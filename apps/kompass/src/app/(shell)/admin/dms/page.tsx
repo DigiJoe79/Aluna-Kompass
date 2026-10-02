@@ -76,7 +76,7 @@ export default async function AdminDmsPage() {
       <div className="space-y-6">
         <TypesPanel types={types} folders={folders} areas={areas} />
         <RulesPanel rules={rules} types={selectableTypes} folders={folders} />
-        <FoldersPanel folders={folders} />
+        <FoldersPanel />
         <SnippetsPanel snippets={snippets} />
         <DispatchChannelsPanel channels={channels} canManageSettings={canManageSettings} />
         <TextPanel

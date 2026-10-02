@@ -51,7 +51,9 @@ test.describe('settings', () => {
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByRole('tab', { name: /Verein/ })).toHaveAttribute('data-invalid', 'true');
     await page.getByRole('tab', { name: /Verein/ }).click();
-    await expect(page.getByText('Bitte eine gültige E-Mail-Adresse eingeben.')).toBeVisible();
+    await expect(page.getByText('Bitte eine gültige E-Mail-Adresse eingeben.', { exact: true })).toBeVisible();
+    // Die Box oben nennt das Feld mit seiner Meldung (Befund 6, 0.2.4), unter dem ganzen Schlüssel der Einstellung.
+    await expect(page.getByText('Kontakt-E-Mail: Bitte eine gültige E-Mail-Adresse eingeben.')).toBeVisible();
     await expect(page.getByLabel('Kontakt-E-Mail')).toHaveValue('keine-mail');
   });
 

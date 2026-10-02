@@ -101,4 +101,16 @@ describe('theme service', () => {
     const saved = unwrap(await updateTheme(deps, admin, filled));
     expect(saved.tokens['color-final']).toEqual(DEFAULT_THEME.tokens['color-final']);
   });
+
+  it('gives a stored theme without the folder-tree tokens the default values', () => {
+    const deps = createTestDeps();
+    const stored = oldStoredTheme('vereinsfarben', 'Alte Vereinsfarben');
+    for (const key of ['color-drop-bg', 'color-drop-ring', 'color-drop-ink', 'color-drop-blocked-ring', 'color-drop-blocked-hatch', 'color-tree-guide']) delete (stored.tokens as Record<string, unknown>)[key];
+    const now = '2020-01-01T00:00:00.000Z';
+    deps.db.insert(settings).values({ key: 'themes', value: JSON.stringify([stored]), updatedAt: now, updatedByUserId: null }).run();
+    deps.db.insert(settings).values({ key: 'branding.activeTheme', value: JSON.stringify('vereinsfarben'), updatedAt: now, updatedByUserId: null }).run();
+    const active = resolveActiveTheme(deps);
+    expect(active.tokens['color-drop-bg']).toEqual(DEFAULT_THEME.tokens['color-drop-bg']);
+    expect(active.tokens['color-tree-guide']).toEqual(DEFAULT_THEME.tokens['color-tree-guide']);
+  });
 });

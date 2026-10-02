@@ -31,15 +31,24 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       style={
         {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
-          "--border-radius": "var(--radius)",
+          // Theme-Tokens statt shadcn-Namen: `--popover`/`--border`/`--radius`
+          // gibt es nur als `--color-*` im @theme, nicht als Laufzeitvariable
+          // (HANDOFF Ordnerbaum § 3.8).
+          "--normal-bg": "var(--surface)",
+          "--normal-text": "var(--ink)",
+          "--normal-border": "var(--line)",
+          "--border-radius": "var(--radius-md)",
         } as React.CSSProperties
       }
       toastOptions={{
         classNames: {
           toast: "cn-toast",
+          // Farbe nicht nur im Symbol: ein Rand links in der Statusfarbe. Die
+          // Statusfarben stehen zur Fläche im Kontrast ≥ 4,5:1 (`CONTRAST_PAIRS`).
+          success: "border-l-4! border-l-success!",
+          error: "border-l-4! border-l-error!",
+          warning: "border-l-4! border-l-warning!",
+          info: "border-l-4! border-l-info!",
         },
       }}
       {...props}

@@ -1,62 +1,69 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useState, useTransition } from 'react';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
-import { moveDocumentAction } from '../actions';
+import { useState } from 'react';
+import { FolderField } from '@/components/folder-tree/folder-field';
+import type { ActionState } from '@/lib/actions';
+import type { FolderEntry } from '@/lib/folder-tree-model';
+import { useFolderMoves } from '../use-folder-moves';
 
-/** Der Ausgang aus dem Eingangskorb: der Ordner ist am Dokument änderbar. */
+const folderHref = (path: string | null) => (path === null ? '/dms' : `/dms?folder=${encodeURIComponent(path)}`);
+
+/**
+ * Der Ort eines Dokuments: der Weg als Links in die Akte und „Verschieben
+ * nach…“ (README § 3, Artboard 5). Verschoben wird über denselben Weg wie in
+ * der Liste — Toast mit „Rückgängig“ —; lehnt der Server ab, bleibt der Dialog
+ * offen und nennt den Grund. Steht in der `<dl>` der Metadaten: Die Wurzel ist
+ * eine `<div>`-Gruppe aus `<dt>` und `<dd>`.
+ */
 export function FolderPanel({
   documentId,
+  title,
   folder,
   folders,
   direction,
   canEdit,
 }: {
   documentId: string;
+  /** Der Betreff, für Dialogtitel und Toast. */
+  title: string;
   folder: string | null;
-  folders: string[];
+  folders: FolderEntry[];
   /** Ohne Ordner heißt beim Eingang „Eingangskorb“, sonst schlicht „Kein Ordner“. */
   direction: 'incoming' | 'outgoing';
   canEdit: boolean;
 }) {
   const t = useTranslations('dms');
-  const [value, setValue] = useState(folder ?? '');
-  const [pending, start] = useTransition();
-  const changed = (value || null) !== folder;
+  const tMove = useTranslations('moveDialog');
+  const { folders: shown, moveDocuments } = useFolderMoves({ folders, selected: null, hrefFor: folderHref });
+  // Wo es zuletzt bestätigt lag — Ausgangspunkt für „Rückgängig“, auch bevor
+  // die Seite neu geladen ist. Ein neuer Stand vom Server gilt (Rückgängig, anderer Tab).
+  const [at, setAt] = useState(folder);
+  const [seen, setSeen] = useState(folder);
+  if (folder !== seen) {
+    setSeen(folder);
+    setAt(folder);
+  }
+
+  const move = async (target: string | null): Promise<ActionState> => {
+    // `quiet`: Den Fehler nennt der Dialog selbst; ein Toast daneben wäre doppelt.
+    const result = await moveDocuments([{ id: documentId, from: at, title, direction }], target, { quiet: true });
+    if (result.status === 'success') setAt(target);
+    return result;
+  };
 
   return (
-    <div className="space-y-1.5">
-      <Label htmlFor="document-folder">{t('columns.folder')}</Label>
-      <div className="flex gap-2">
-        <Select id="document-folder" value={value} onChange={(e) => setValue(e.target.value)} disabled={!canEdit}>
-          <option value="">{direction === 'incoming' ? t('inbox') : t('noFolder')}</option>
-          {folders.map((f) => (
-            <option key={f} value={f}>
-              {f}
-            </option>
-          ))}
-        </Select>
-        {canEdit ? (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!changed || pending}
-            onClick={() =>
-              start(async () => {
-                const s = await moveDocumentAction(documentId, value || null);
-                if (s.status === 'error') toast.error(s.message);
-                else if (s.status === 'success' && s.message) toast.success(s.message);
-              })
-            }
-          >
-            {t('folderSave')}
-          </Button>
-        ) : null}
-      </div>
-    </div>
+    <FolderField
+      value={at}
+      folders={shown}
+      label={t('columns.folder')}
+      emptyLabel={direction === 'incoming' ? t('inbox') : t('noFolder')}
+      rootKind={direction === 'incoming' ? 'inbox' : 'none'}
+      dialogTitle={tMove('titleOne', { title })}
+      linkToAkte
+      labelAs="dt"
+      readOnly={!canEdit}
+      onChange={move}
+    />
   );
 }

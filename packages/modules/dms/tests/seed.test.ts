@@ -38,6 +38,20 @@ describe('seedDms', () => {
     expect(docs.some((d) => d.direction === 'incoming' && d.folder === null)).toBe(true);
   });
 
+  it('bringt Ordner in drei Ebenen und einen langen Namen, jeder mit Elternordner', async () => {
+    const { deps, ctx } = setup();
+    await seedDms(deps, ctx);
+    const paths = deps.db.select().from(documentFolders).all().map((f) => f.path);
+    const set = new Set(paths);
+    for (const path of paths) {
+      if (path.includes('/')) expect(set.has(path.slice(0, path.lastIndexOf('/')))).toBe(true);
+    }
+    expect(paths.some((p) => p.split('/').length >= 3)).toBe(true);
+    expect(paths.some((p) => p.split('/').some((segment) => segment.length > 40))).toBe(true);
+    const deep = deps.db.select().from(documents).all().filter((d) => d.folder === 'behoerden/amtsgericht/vereinsregister-2026');
+    expect(deep.length).toBeGreaterThan(0);
+  });
+
   it('bringt einen umklassifizierten Eingang mit früherer Nummer (Spec 2026-09-19)', async () => {
     const { deps, ctx } = setup();
     await seedDms(deps, ctx);

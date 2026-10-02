@@ -15,9 +15,9 @@ describe('projectsMediaReferences', () => {
     const asset = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'hof.png', bytes: PNG }));
     const other = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'x.svg', bytes: SVG, declaredMimeType: 'image/svg+xml' }));
     unwrap(await createProject(deps, ctx, { slug: 'hof', name: { de: 'Hof' }, type: 'ongoing', summary: { de: '' }, body: { de: '' }, imageAssetId: asset.id }));
-    const hits = projectsMediaReferences(deps, asset.id);
-    expect(hits).toEqual([{ label: 'Projekt „hof“', entity: 'project', id: expect.any(String), href: expect.stringMatching(/^\/projects\/[0-9A-Z]{26}$/) }]);
+    const hits = projectsMediaReferences(deps, new Set([asset.id, other.id]));
+    expect(hits).toEqual([{ assetId: asset.id, label: 'Projekt „hof“', entity: 'project', id: expect.any(String), href: expect.stringMatching(/^\/projects\/[0-9A-Z]{26}$/) }]);
     expect(hits[0]!.href).toBe(`/projects/${hits[0]!.id}`);
-    expect(projectsMediaReferences(deps, other.id)).toEqual([]);
+    expect(projectsMediaReferences(deps, new Set([other.id]))).toEqual([]);
   });
 });

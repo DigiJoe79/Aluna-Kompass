@@ -1,7 +1,7 @@
 'use server';
 
 import { guardAction } from '@/lib/action-guard';
-import { animalDeletionPreview, confirmAnimalReview, createAnimal, deleteAnimal, setAnimalPhotos, setAnimalPublished, setAnimalStatus, setAnimalStory, updateAnimal } from '@kompass/module-animals';
+import { animalDeletionPreview, confirmAnimalReview, createAnimal, deleteAnimal, MAX_ANIMAL_PHOTOS, setAnimalPhotos, setAnimalPublished, setAnimalStatus, setAnimalStory, updateAnimal } from '@kompass/module-animals';
 import { requirePermission, type MediaCleanup } from '@kompass/core';
 import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
@@ -52,7 +52,12 @@ export async function saveAnimalAction(_prev: ActionState, formData: FormData): 
     const chosen = photosFromForm(formData.get('photos'));
     if (chosen && photosChanged(current.photos, chosen)) {
       const withPhotos = await setAnimalPhotos(deps, ctx, { id, photos: chosen });
-      if (!withPhotos.ok) return toActionState(withPhotos, t);
+      if (!withPhotos.ok) {
+        const state = toActionState(withPhotos, t);
+        // Zu viele Fotos: Am Feld steht, was zu tun ist, nicht nur „Höchstens 12 Einträge.“ (Befund 6, 0.2.4).
+        const tooMany = withPhotos.error.type === 'validation' && withPhotos.error.issues.some((i) => i.path === 'photos' && i.message === 'tooManyItems');
+        return tooMany && state.status === 'error' ? { ...state, fieldErrors: { ...state.fieldErrors, photos: t('animals.photos.tooMany', { max: MAX_ANIMAL_PHOTOS }) } } : state;
+      }
       current = withPhotos.value;
     }
     // Die Geschichte steht im selben Formular. Geschrieben wird sie nur bei einem vermittelten Hund und nur

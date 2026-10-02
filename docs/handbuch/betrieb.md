@@ -191,6 +191,30 @@ Nachher jetzt ein Objekt `{ photos, reviewRequestedAt }` statt der bloßen
 Fotoliste. Ältere Einträge behalten ihre Form. `media_get` kennt den neuen,
 optionalen Parameter `variant`.
 
+### Von 0.2.3 auf 0.2.4
+
+Die Fassung 0.2.4 bringt keine Migration mit; `/api/health` meldet weiter
+`migrationCount: 6`. Ordner, Dokumente und Medien bleiben, wo sie sind.
+
+Vor dem Update zu wissen:
+
+- **MCP-Clients, die die Webseite bauen oder publizieren**, müssen angepasst
+  sein: `site_preview_build`, `site_publish` und `site_deploy_check` kehren
+  sofort mit `{ started, runId, startedAt }` zurück. Das Ergebnis liefert das
+  neue Werkzeug `site_job_result` mit `kind` (`preview`, `publish` oder
+  `deployCheck`); abfragen, bis `last.runId` der `runId` des Starts ist.
+  Einem KI-Assistenten, der sich Abläufe notiert hat, das einmal sagen.
+- **Kein Lauf sollte während des Updates laufen.** Ein Publish, der beim
+  Neustart des Containers unterbrochen wird, blockiert zwar keinen späteren
+  Lauf mehr, ist aber nicht fertig; danach einfach neu starten.
+
+Nach dem Update ist nichts von Hand zu tun. Ordner pflegt man jetzt in der
+Akte selbst statt unter Verwaltung. Neu für MCP-Clients sind
+`dms_move_folder` und `dms_create_response`; `dms_move` und `media_move`
+nehmen den erwarteten Ort entgegen, `dms_list` und `media_list` den Schalter
+`includeSubfolders`. Eigene Themes übernehmen die sechs neuen Farben des
+Ordnerbaums aus der Vorgabe.
+
 **Wenn etwas schiefgeht:** Es gibt keinen Weg zurück in eine ältere Fassung der
 Datenbank — Migrationen laufen nur vorwärts. Der Rückweg ist das Backup aus
 Schritt 1: altes Image eintragen, Container starten, Backup einspielen.
@@ -265,7 +289,11 @@ der Prozessliste.
 
 **Vor dem ersten Veröffentlichen:** Publizieren-Seite → „Verbindung testen“.
 Der Lauf meldet sich am Ziel an, überträgt nichts und listet auf, was dort
-liegt und ein Publish entfernen würde. Kommt die Liste leer zurück, zeigt das
+liegt und ein Publish entfernen würde. Wie Vorschau und Publish baut er die
+Seite und läuft deshalb im Hintergrund; das Ergebnis erscheint auf der Seite,
+sobald er fertig ist, und bleibt bis zum nächsten Test stehen. Wird der
+Container mitten in einem Lauf neu gestartet, ist der Lauf verloren, aber
+nichts bleibt blockiert: Der nächste Start läuft normal. Kommt die Liste leer zurück, zeigt das
 Zielverzeichnis ins Leere — ein vertippter Pfad lässt `rsync` nicht scheitern,
 er trifft nur nichts.
 

@@ -1,12 +1,11 @@
 'use client';
 
 import { AlertTriangle } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-import { useState, useTransition } from 'react';
-import { toast } from 'sonner';
+import { useFormatter, useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Disclosure } from '@/components/ui/disclosure';
-import { runDeployCheckAction } from './actions';
+import { startDeployCheckAction } from './actions';
+import { useSiteJob } from './use-site-job';
 
 interface DeployCheck {
   target: string;
@@ -16,13 +15,20 @@ interface DeployCheck {
   log: string;
 }
 
+/**
+ * Der Test läuft im Hintergrund (er baut wie ein Publish); der Knopf startet
+ * ihn nur, `useSiteJob` wartet auf das Ergebnis. Das letzte Ergebnis liegt im
+ * Cache und steht deshalb auch nach dem Neuladen noch da.
+ */
 export function ConnectionCard({ hasDeploy }: { hasDeploy: boolean }) {
   const t = useTranslations('site.publish.connection');
-  const [result, setResult] = useState<DeployCheck | null>(null);
-  const [pending, start] = useTransition();
+  const format = useFormatter();
+  const { last, busy, start } = useSiteJob<DeployCheck>('deployCheck', { keepLast: true });
 
   if (!hasDeploy) return null;
 
+  const result = busy ? null : (last?.result ?? null);
+  const failure = busy ? null : (last?.error ?? null);
   const isEmpty = result !== null && result.filesAtTarget.length === 0;
   const would = result?.publishWould ?? null;
 
@@ -34,22 +40,28 @@ export function ConnectionCard({ hasDeploy }: { hasDeploy: boolean }) {
           <p className="text-[13px] text-muted-ink">{result ? t('target', { target: result.target }) : t('intro')}</p>
         </div>
         <Button
-          disabled={pending}
-          aria-busy={pending}
-          onClick={() =>
-            start(async () => {
-              const s = await runDeployCheckAction();
-              if (s.status === 'error') toast.error(s.message);
-              else if (s.status === 'success') setResult(s.data as DeployCheck);
-            })
-          }
+          disabled={busy}
+          aria-busy={busy}
+          onClick={() => start(startDeployCheckAction)}
         >
-          {pending ? t('running') : t('run')}
+          {busy ? t('running') : t('run')}
         </Button>
       </div>
 
+      {failure && (
+        <p role="alert" className="flex items-start gap-2 text-[13px] text-error">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+          {t('failed', { message: failure })}
+        </p>
+      )}
+
       {result && (
         <section aria-label={t('resultTitle')} className="flex flex-col gap-3">
+          {last && (
+            <p className="text-[12px] text-muted-ink">
+              {t('checkedAt', { date: format.dateTime(new Date(last.finishedAt), { dateStyle: 'medium', timeStyle: 'short' }) })}
+            </p>
+          )}
           <p className={`flex items-start gap-2 text-[13px] ${isEmpty ? 'text-error' : 'text-ink-2'}`}>
             {isEmpty ? <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden /> : null}
             {isEmpty ? t('empty') : t('ok', { count: result.filesAtTarget.length })}

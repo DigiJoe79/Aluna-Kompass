@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { nameOf, type FolderEntry } from '@/lib/folder-tree-model';
 import type { Drop } from '../dms-workspace';
 import { ReceiveForm } from './receive-form';
 
@@ -24,7 +25,7 @@ export function ReceiveDialog({
   onFiled,
 }: {
   types: { key: string; label: string }[];
-  folders: string[];
+  folders: FolderEntry[];
   canCreateContact: boolean;
   /** Von der Kontaktseite vorbelegter Absender. */
   initialSender?: { id: string; name: string } | null;
@@ -57,7 +58,7 @@ export function ReceiveDialog({
           <DialogDescription className="text-[13px] text-ink-2">
             {queued
               ? drop?.folder
-                ? t('drop.queueHint', { folder: drop.folder })
+                ? t('drop.queueHint', { folder: nameOf(drop.folder) })
                 : t('drop.queueHintInbox')
               : t('receiveDescription')}
           </DialogDescription>
@@ -71,7 +72,7 @@ export function ReceiveDialog({
           defaultTypeKey={defaultTypeKey}
           droppedFile={drop?.files[index] ?? null}
           droppedFolder={drop?.folder ?? null}
-          skipped={index === 0 ? (drop?.skipped ?? 0) : 0}
+          skipped={index === 0 ? (drop?.skippedNames ?? []) : []}
           queued={queued}
           onFiled={onFiled}
           onCancel={() => onOpenChange(false)}

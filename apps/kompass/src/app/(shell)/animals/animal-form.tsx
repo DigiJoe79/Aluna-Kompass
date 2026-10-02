@@ -44,12 +44,21 @@ const TABS = [
 /** Bindet den Haken im Prüfband ans Formular, obwohl das Band außerhalb steht. */
 const FORM_ID = 'animal-form';
 
-export function AnimalForm({ animal, locales, queue, initialTab, backHref, photoFrame }: { animal: AnimalRecord | null; locales: string[]; queue: AnimalQueue | null; initialTab: FormTab; backHref: string; photoFrame: { aspectRatio: string; objectPosition: string } }) {
+export function AnimalForm({ animal, locales, queue, initialTab, backHref, photoFrame, maxPhotos }: { animal: AnimalRecord | null; locales: string[]; queue: AnimalQueue | null; initialTab: FormTab; backHref: string; photoFrame: { aspectRatio: string; objectPosition: string }; maxPhotos: number }) {
   const t = useTranslations('animals.form');
   const p = useTranslations('animals.photos');
   const r = useTranslations('animals.review');
   const c = useTranslations('content');
   const tCommon = useTranslations('common');
+  const s = useTranslations('animals.story');
+  // Die Namen für die Fehlerbox, je Feld wie in `TABS`: Sie nennt jedes Feld mit seiner Meldung.
+  const labels: Record<string, string> = {
+    slug: c('slug'), name: t('name'), sex: t('sex'), location: t('location'), place: t('place'), sizeCm: t('sizeCm'),
+    externalProfileUrl: t('externalProfileUrl'), birthText: t('birthText'), sizeText: t('sizeText'),
+    summary: t('summary'), body: t('body'), traits__text: t('traits'), traits: t('traits'), photos: p('label'),
+    beforeAssetId: s('before'), afterAssetId: s('after'), quote: s('quote'), family: s('family'), adoptedYear: s('year'),
+    beforeCaption: s('beforeCaption'), afterCaption: s('afterCaption'),
+  };
   const [state, action] = useActionState(saveAnimalAction, idleState);
   const [tab, setTab] = useState<FormTab>(initialTab);
   // Der Fotostand lebt hier und nicht im Editor: Er reist als verstecktes Feld
@@ -121,7 +130,7 @@ export function AnimalForm({ animal, locales, queue, initialTab, backHref, photo
         </div>
       ) : null}
       {animal?.reviewRequestedAt ? <ReviewBand requestedAt={animal.reviewRequestedAt} note={animal.reviewNote} canPublish={!animal.isPublished} formId={FORM_ID} /> : null}
-      <FormErrorSummary errors={errors} />
+      <FormErrorSummary errors={errors} labels={labels} />
       <Tabs value={tab} onValueChange={(value) => changeTab(value as FormTab)} className="overflow-hidden rounded-lg border border-line bg-surface">
         <TabsList className="border-b border-line bg-surface px-6"><TabsTrigger value="profile" className="gap-2">{t('tabs.profile')}{broken.has('profile') ? <TabInvalidDot label={tCommon('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="content" className="gap-2">{t('tabs.content')}{broken.has('content') ? <TabInvalidDot label={tCommon('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="story" disabled={!animal}>{t('tabs.story')}</TabsTrigger></TabsList>
         {/*
@@ -155,7 +164,7 @@ export function AnimalForm({ animal, locales, queue, initialTab, backHref, photo
               <LocalizedField name="body" label={t('body')} kind="markdown" rows={10} value={animal?.body ?? {}} errors={errors} locales={locales} />
               <LocalizedField name="traits__text" label={t('traits')} hint={t('traitsHint')} value={Object.fromEntries(locales.map((l) => [l, ((animal?.traits as Record<string, string[]> | undefined)?.[l] ?? []).join(', ')]))} locales={locales} />
             </div>
-            {animal ? <PhotosEditor photos={photos} onChange={changePhotos} onChoose={() => setChooserOpen(true)} frame={photoFrame} /> : <p className="h-fit rounded-md border border-line bg-surface-2 p-4 text-[13px] text-ink-2">{p('afterCreate')}</p>}
+            {animal ? <PhotosEditor photos={photos} max={maxPhotos} error={errors.photos} onChange={changePhotos} onChoose={() => setChooserOpen(true)} frame={photoFrame} /> : <p className="h-fit rounded-md border border-line bg-surface-2 p-4 text-[13px] text-ink-2">{p('afterCreate')}</p>}
           </TabsContent>
           <TabsContent keepMounted value="story" className="flex flex-col gap-4 p-6">{animal ? <StoryFields animal={animal} locales={locales} errors={errors} onMediaChange={hiddenEdited} /> : null}</TabsContent>
           {/* Eine Leiste für alle Reiter: Sie zählt und speichert, was auf irgendeinem von ihnen geändert wurde. */}
@@ -172,7 +181,7 @@ export function AnimalForm({ animal, locales, queue, initialTab, backHref, photo
         </ActionForm>
       </Tabs>
       {/* Außerhalb des Formulars: Ein Dialog ist ein React-Portal, und was darin geschieht, stiege sonst ins Formular auf. */}
-      {animal ? <MediaChooserDialog open={chooserOpen} onOpenChange={setChooserOpen} kind="image" multiple selected={photos.map((x) => x.assetId)} onConfirm={(ids) => changePhotos(mergePhotos(photos, ids))} /> : null}
+      {animal ? <MediaChooserDialog open={chooserOpen} onOpenChange={setChooserOpen} kind="image" multiple max={maxPhotos} selected={photos.map((x) => x.assetId)} onConfirm={(ids) => changePhotos(mergePhotos(photos, ids))} /> : null}
     </div>
   );
 }

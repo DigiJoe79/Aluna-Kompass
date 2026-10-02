@@ -3,13 +3,11 @@
 import { guardAction } from '@/lib/action-guard';
 import { setSetting } from '@kompass/core';
 import {
-  createDocumentFolder,
   createSnippet,
   deleteSnippet,
   updateSnippet,
   createDocumentRule,
   createDocumentType,
-  deleteDocumentFolder,
   deleteDocumentRule,
   deleteDocumentType,
   reindexAllDocuments,
@@ -102,31 +100,6 @@ export async function deleteDocumentTypeAction(key: string): Promise<ActionState
 
     revalidatePath('/admin/dms');
     return toActionState(result, t, t('dms.admin.toast.typeDeleted'));
-  });
-}
-
-export async function createDocumentFolderAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  return guardAction('(shell)/admin/dms/actions.ts#createDocumentFolderAction', async () => {
-    const t = await getTranslations();
-    const { deps, ctx } = await requireSession();
-
-    const path = String(formData.get('path') ?? '').trim();
-    const result = await createDocumentFolder(deps, ctx, { path });
-
-    revalidatePath('/admin/dms');
-    return toActionState(result, t, t('dms.admin.toast.folderCreated'));
-  });
-}
-
-export async function deleteDocumentFolderAction(path: string): Promise<ActionState> {
-  return guardAction('(shell)/admin/dms/actions.ts#deleteDocumentFolderAction', async () => {
-    const t = await getTranslations();
-    const { deps, ctx } = await requireSession();
-
-    const result = await deleteDocumentFolder(deps, ctx, { path });
-
-    revalidatePath('/admin/dms');
-    return toActionState(result, t, t('dms.admin.toast.folderDeleted'));
   });
 }
 

@@ -1,5 +1,5 @@
 import { readSetting, requirePermission } from '@kompass/core';
-import { getAnimal, listAnimals, PHOTO_FRAME_KEY, photoFrameStyle, type PhotoFrame } from '@kompass/module-animals';
+import { getAnimal, listAnimals, MAX_ANIMAL_PHOTOS, PHOTO_FRAME_KEY, photoFrameStyle, type PhotoFrame } from '@kompass/module-animals';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
@@ -24,7 +24,7 @@ export default async function AnimalEditPage(props: { params: Promise<{ id: stri
   const back = { href: `/animals${query ? `?${query}` : ''}`, label: c('backToList') };
   // Der Ausschnitt, in dem die Webseite das Hauptfoto zeigt – die Kacheln der Maske stehen darin.
   const photoFrame = photoFrameStyle(readSetting<PhotoFrame>(deps, PHOTO_FRAME_KEY));
-  if (id === 'new') return (<><PageHeader title={t('create')} back={back} /><AnimalForm animal={null} locales={deps.locales()} queue={null} initialTab="profile" backHref={back.href} photoFrame={photoFrame} /></>);
+  if (id === 'new') return (<><PageHeader title={t('create')} back={back} /><AnimalForm animal={null} locales={deps.locales()} queue={null} initialTab="profile" backHref={back.href} photoFrame={photoFrame} maxPhotos={MAX_ANIMAL_PHOTOS} /></>);
   const animal = await getAnimal(deps, ctx, id);
   if (!animal.ok) notFound();
   // Die Warteschlange ist die gefilterte, sortierte Liste – dieselbe Abfrage wie dort, kein eigener Zustand.
@@ -37,7 +37,7 @@ export default async function AnimalEditPage(props: { params: Promise<{ id: stri
     <>
       <PageHeader title={animal.value.name} description={`/hunde/${animal.value.slug}/`} back={back} actions={queue ? <QueueNav key={animal.value.id} queue={queue} /> : undefined} />
       {/* `key`: Beim Wechsel zum nächsten Hund behielte React sonst den Zustand der Felder und der Fotos. */}
-      <AnimalForm key={animal.value.id} animal={animal.value} locales={deps.locales()} queue={queue} initialTab={formTab(q.tab)} backHref={back.href} photoFrame={photoFrame} />
+      <AnimalForm key={animal.value.id} animal={animal.value} locales={deps.locales()} queue={queue} initialTab={formTab(q.tab)} backHref={back.href} photoFrame={photoFrame} maxPhotos={MAX_ANIMAL_PHOTOS} />
       <div className="mt-6">
         <RelatedDocuments deps={deps} ctx={ctx} entityType="animal" entityId={animal.value.id} />
       </div>

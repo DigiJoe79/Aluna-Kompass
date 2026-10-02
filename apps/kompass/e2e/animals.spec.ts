@@ -34,7 +34,7 @@ test.describe('animals', () => {
       { name: 'chiara-1.png', mimeType: 'image/png', buffer: PNG },
       { name: 'chiara-2.svg', mimeType: 'image/svg+xml', buffer: SVG },
     ]);
-    await expect(chooser.getByText('2 ausgewählt')).toBeVisible();
+    await expect(chooser.getByText('2 von 12 ausgewählt')).toBeVisible();
     await chooser.getByRole('button', { name: 'Übernehmen' }).click();
     await expect(chooser).toBeHidden();
     await expect(page.locator('[data-testid="animal-photo"]')).toHaveCount(2);
@@ -285,16 +285,63 @@ test.describe('animals', () => {
       { name: 'bo-1.png', mimeType: 'image/png', buffer: PNG },
       { name: 'bo-2.svg', mimeType: 'image/svg+xml', buffer: SVG },
     ]);
-    await expect(chooser.getByText('2 ausgewählt')).toBeVisible();
+    await expect(chooser.getByText('2 von 12 ausgewählt')).toBeVisible();
     await chooser.getByRole('button', { name: 'Übernehmen' }).click();
     await expect(page.locator('[data-testid="animal-photo"]')).toHaveCount(2);
 
     await page.getByRole('button', { name: 'Fotos wählen' }).click();
     chooser = page.getByRole('dialog', { name: 'Bilder wählen' });
     await chooser.getByRole('button', { name: /bo-2-/ }).click();
-    await expect(chooser.getByText('1 ausgewählt')).toBeVisible();
+    await expect(chooser.getByText('1 von 12 ausgewählt')).toBeVisible();
     await chooser.getByRole('button', { name: 'Übernehmen' }).click();
     await expect(page.locator('[data-testid="animal-photo"]')).toHaveCount(1);
+  });
+
+  /**
+   * Befund 6 (0.2.4): Auf Prod führte das 13. Foto zu „Ein Feld braucht noch eine Angabe.“ — nichts fehlte,
+   * es war eines zu viel, und am Feld stand nichts. Jetzt sperrt der Dialog an der Grenze, und kommt doch
+   * ein 13. an (hier per manipuliertem Formularzustand), nennen Fehlerbox und Editor die Meldung.
+   */
+  test('lässt kein 13. Foto zu und nennt die Grenze, wenn doch eines ankommt', async ({ page }) => {
+    await page.goto('/animals');
+    await page.getByRole('link', { name: 'Hund anlegen' }).click();
+    await page.getByLabel('Slug (URL-Teil)').fill('dreizehn');
+    await page.getByLabel('Name').fill('Dreizehn');
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page).toHaveURL(/\/animals\/[A-Z0-9]+$/);
+    await page.getByRole('tab', { name: 'Texte und Fotos' }).click();
+    await expect(page.getByText('0 von 12 Fotos')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Fotos wählen' }).click();
+    const chooser = page.getByRole('dialog', { name: 'Bilder wählen' });
+    // 13 verschiedene Bilder: Gleicher Inhalt würde als schon vorhanden erkannt.
+    const files = Array.from({ length: 13 }, (_, i) => ({
+      name: `dreizehn-${i + 1}.svg`,
+      mimeType: 'image/svg+xml',
+      buffer: Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${i + 2}" height="4"><rect width="${i + 2}" height="4"/></svg>`),
+    }));
+    await chooser.getByLabel('Hochladen').setInputFiles(files);
+    // Hochgeladen werden alle 13, angehakt nur 12; der Rest ist gesperrt, mit Grund.
+    await expect(chooser.getByText('12 von 12 ausgewählt')).toBeVisible();
+    await expect(chooser.getByRole('button', { name: /dreizehn-/ })).toHaveCount(13);
+    const spare = chooser.locator('[data-asset-id][aria-pressed="false"]').filter({ hasText: 'dreizehn-' });
+    await expect(spare).toHaveCount(1);
+    await expect(spare).toBeDisabled();
+    await expect(spare).toHaveAccessibleDescription(/Höchstens 12/);
+    const spareId = await spare.getAttribute('data-asset-id');
+    await chooser.getByRole('button', { name: 'Übernehmen' }).click();
+    await expect(page.getByTestId('animal-photo')).toHaveCount(12);
+    await expect(page.getByText('12 von 12 Fotos')).toBeVisible();
+
+    // Am Dialog vorbei: das 13. direkt in den Formularzustand.
+    await page.locator('input[name="photos"]').evaluate((input: HTMLInputElement, id) => {
+      input.value = JSON.stringify([...JSON.parse(input.value), { assetId: id, isPrimary: false }]);
+    }, spareId);
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    const summary = page.getByRole('alert').filter({ hasText: 'Bitte prüfen Sie ein Feld:' });
+    await expect(summary).toContainText('Fotos: Höchstens 12 Fotos. Entfernen Sie eines, bevor Sie ein neues hinzufügen.');
+    await expect(summary).not.toContainText('Angabe');
+    await expect(page.getByRole('tabpanel', { name: 'Texte und Fotos' }).getByText('Höchstens 12 Fotos. Entfernen Sie eines, bevor Sie ein neues hinzufügen.', { exact: true })).toBeVisible();
   });
 
   test('löscht einen Hund in zwei Stufen und nimmt die nur hier verwendeten Fotos mit', async ({ page }) => {
@@ -311,7 +358,7 @@ test.describe('animals', () => {
     await page.getByRole('button', { name: 'Fotos wählen' }).click();
     const chooser = page.getByRole('dialog', { name: 'Bilder wählen' });
     await chooser.getByLabel('Hochladen').setInputFiles([{ name: 'partnerhund.png', mimeType: 'image/png', buffer: PNG }]);
-    await expect(chooser.getByText('1 ausgewählt')).toBeVisible();
+    await expect(chooser.getByText('1 von 12 ausgewählt')).toBeVisible();
     await chooser.getByRole('button', { name: 'Übernehmen' }).click();
     await expect(chooser).toBeHidden();
     await expect(page.locator('[data-testid="animal-photo"]')).toHaveCount(1);

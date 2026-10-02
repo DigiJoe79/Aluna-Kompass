@@ -1,18 +1,21 @@
 # Post ablegen
 
 Eingehende Post kommt als PDF in die Akte: Ziehen Sie die Datei auf einen
-Ordner der Ordnerspalte oder auf den Eingang, bestätigen Sie Art, Betreff und
+Ordner der Ordnerspalte oder auf den Eingangskorb, bestätigen Sie Art, Betreff und
 Absender — und das Dokument hat seine Nummer, seinen Ordner und seine
-Aufbewahrungsfrist. Was Sie nicht sofort einsortieren, wartet im Eingang.
+Aufbewahrungsfrist. Was Sie nicht sofort einsortieren, wartet im Eingangskorb.
 
 ## Die Ablage
 
 Die Ordnerspalte links ist nicht nur ein Filter, sondern das Ziel: Während
 Sie eine Datei über das Fenster ziehen, hebt sich jede Zeile als Ablagefläche
 hervor. Lassen Sie die Datei auf einem Ordner los, öffnet sich der Dialog
-„Post ablegen“ mit diesem Ordner. Lassen Sie sie auf „Eingang“ los, landet
-sie ohne Ordner im Eingang. Mehrere PDFs auf einmal werden nacheinander
-abgefragt; Dateien, die kein PDF sind, meldet Kompass und überspringt sie.
+„Post ablegen“ mit diesem Ordner. Lassen Sie sie auf „Eingangskorb“ los, landet
+sie ohne Ordner im Eingangskorb. Mehrere PDFs auf einmal werden nacheinander
+abgefragt; Dateien, die kein PDF sind, nennt Kompass beim Namen („… ist kein PDF und
+wurde nicht übernommen“); sie werden nicht abgelegt und bleiben dort liegen,
+wo sie sind. Auf dem Telefon gibt es kein Ziehen; dort nehmen Sie „Post
+ablegen“.
 
 Ohne Drag-and-drop: „Post ablegen“ oben in der Liste öffnet denselben Dialog
 mit einer Dateiauswahl.
@@ -27,18 +30,19 @@ mit einer Dateiauswahl.
   an.
 - **Datum auf dem Dokument** — das Datum des Schreibens, nicht der Ablage.
 - **Ordner** — vorbelegt aus dem Ziel, auf dem Sie die Datei losgelassen
-  haben.
+  haben. Mit „Ändern…“ öffnet sich „Ordner wählen“ mit dem Ordnerbaum; Sie
+  wählen den Ordner und übernehmen ihn.
 
 Die **Einsortierhilfe** schlägt Art und Ordner vor, sobald der Text der
 Datei gelesen ist: nach den Regeln, die Sie unter Einstellungen → Akte festgelegt
 haben (etwa „Absender Finanzamt → Behördenschreiben, Ordner Steuern“). Ein
 Vorschlag ist ein Vorschlag; Sie bestätigen oder ändern ihn.
 
-## Der Eingang
+## Der Eingangskorb
 
-Der Eingang sammelt, was noch keinen Ordner hat. Von dort ziehen Sie ein
-Dokument später auf seinen Ordner oder öffnen es und setzen den Ordner in der
-Detailansicht. Ein Dokument im Eingang ist bereits abgelegt und nummeriert —
+Der Eingangskorb sammelt, was noch keinen Ordner hat. Von dort ziehen Sie ein
+Dokument später auf seinen Ordner, kreuzen mehrere an und wählen „Verschieben
+nach…“ oder öffnen es und verschieben es auf der Detailseite. Ein Dokument im Eingangskorb ist bereits abgelegt und nummeriert —
 es ist nur noch nicht einsortiert.
 
 ## Angaben nachträglich ändern

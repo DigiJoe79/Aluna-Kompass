@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { nameOf } from '@/lib/folder-tree-model';
 
 /**
  * Einstieg in den Aktenexport: ein Ordner (samt Unterordnern) oder ein
@@ -15,10 +16,29 @@ import { Label } from '@/components/ui/label';
  * ein flüchtiger `<a download>`, kein Server Action, denn der Dienst liefert
  * Bytes, keinen Formularzustand.
  */
-export function ExportDialog({ canExport, folder, currentYear }: { canExport: boolean; folder: string | null; currentYear: number }) {
+export function ExportDialog({
+  canExport,
+  folder,
+  currentYear,
+  open: controlledOpen,
+  onOpenChange,
+}: {
+  canExport: boolean;
+  folder: string | null;
+  currentYear: number;
+  /** Gesteuert (aus dem Menü am Ordner): ohne eigenen Knopf, offen nach Vorgabe. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const t = useTranslations('dms.export');
   const tCommon = useTranslations('common');
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const controlled = controlledOpen !== undefined;
+  const open = controlled ? controlledOpen : ownOpen;
+  const setOpen = (next: boolean) => {
+    if (!controlled) setOwnOpen(next);
+    onOpenChange?.(next);
+  };
   const [mode, setMode] = useState<'folder' | 'year'>(folder ? 'folder' : 'year');
   const [year, setYear] = useState(currentYear);
   const [busy, setBusy] = useState(false);
@@ -60,9 +80,11 @@ export function ExportDialog({ canExport, folder, currentYear }: { canExport: bo
 
   return (
     <>
-      <Button variant="outline" onClick={() => setOpen(true)}>
-        {t('open')}
-      </Button>
+      {controlled ? null : (
+        <Button variant="outline" onClick={() => setOpen(true)}>
+          {t('open')}
+        </Button>
+      )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="w-full sm:max-w-[480px] bg-surface p-6 shadow-md">
           <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
@@ -77,7 +99,8 @@ export function ExportDialog({ canExport, folder, currentYear }: { canExport: bo
                   checked={mode === 'folder'}
                   onChange={() => setMode('folder')}
                 />
-                {t('thisFolder', { folder })}
+                {/* Der Name, nie der Weg mit Schrägstrichen. */}
+                {t('thisFolder', { folder: nameOf(folder) })}
               </label>
             ) : null}
 

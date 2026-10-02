@@ -5,13 +5,13 @@ import { describe, expect, it } from 'vitest';
 import * as dms from '../src/index';
 import { createDocumentFolder, deleteDocumentFolder } from '../src/catalog';
 import { clearDispatch, recordDispatch } from '../src/dispatch';
-import { createDraft, createReplacementDraft, deleteDraft, fileDocument, updateDraft } from '../src/drafts';
+import { createDraft, createReplacementDraft, createResponseDraft, deleteDraft, fileDocument, updateDraft } from '../src/drafts';
 import { createDocumentFollowUp } from '../src/follow-ups';
 import { receiveDocument, reclassifyDocument } from '../src/incoming';
 import { addNote, deleteNote } from '../src/notes';
 import { relateDocuments, unrelateDocuments } from '../src/relations';
 import { documentTypes } from '../src/schema';
-import { deleteDocument, linkDocument, moveDocument, unlinkDocument, voidDocument } from '../src/service';
+import { deleteDocument, linkDocument, moveDocument, moveDocuments, unlinkDocument, voidDocument } from '../src/service';
 import { INCOMING_OPEN_TYPE, pdfBytes, setupWithArea } from './helpers';
 
 type Ctx = Awaited<ReturnType<typeof setupWithArea>>['viewer'];
@@ -33,6 +33,7 @@ describe('write services and protected document types', () => {
   const WRITES: Record<string, (f: Awaited<ReturnType<typeof fixture>>, ctx: Ctx) => Promise<{ ok: boolean; error?: unknown }>> = {
     voidDocument: (f, c) => voidDocument(f.deps, c, { id: f.secretId, reason: 'x' }),
     moveDocument: (f, c) => moveDocument(f.deps, c, { id: f.secretId, folder: null }),
+    moveDocuments: (f, c) => moveDocuments(f.deps, c, { moves: [{ id: f.secretId, folder: null }] }),
     linkDocument: (f, c) => linkDocument(f.deps, c, { documentId: f.secretId, entityType: 'animal', entityId: 'A2', role: 'about' }),
     unlinkDocument: (f, c) => unlinkDocument(f.deps, c, { id: f.linkId }),
     deleteDocument: (f, c) => deleteDocument(f.deps, c, { id: f.secretId }),
@@ -40,6 +41,7 @@ describe('write services and protected document types', () => {
     deleteDraft: (f, c) => deleteDraft(f.deps, c, { id: f.draftId }),
     fileDocument: (f, c) => fileDocument(f.deps, c, { id: f.draftId }),
     createReplacementDraft: (f, c) => createReplacementDraft(f.deps, c, { voidedId: f.secretId }),
+    createResponseDraft: (f, c) => createResponseDraft(f.deps, c, { id: f.secretId }),
     reclassifyDocument: (f, c) => reclassifyDocument(f.deps, c, { id: f.secretId, typeKey: INCOMING_OPEN_TYPE, subject: 'x', documentDate: '2026-09-01' }),
     relateDocuments: (f, c) => relateDocuments(f.deps, c, { documentId: f.openId, relatedDocumentId: f.secretId, kind: 'replaces' }),
     unrelateDocuments: (f, c) => unrelateDocuments(f.deps, c, { id: f.relationId }),
@@ -79,7 +81,7 @@ describe('write services and protected document types', () => {
   });
 
   it('the list above is complete: every exported service is a read, a write, or exempt with a reason', () => {
-    const READS = ['listDocuments', 'getDocumentRecord', 'getDocument', 'getDocumentText', 'countUnreadDocuments', 'previewDraft', 'previewNextNumber', 'previewReclassification', 'listDocumentTypes', 'listDocumentFolders', 'countDocumentsByFolder', 'listDocumentRules', 'listSnippets', 'suggestClassification', 'readLinkedDocument', 'listDocumentAreas', 'countDocumentsOfType', 'exportBundle', 'resolveBundle'];
+    const READS = ['listDocuments', 'getDocumentRecord', 'getDocument', 'getDocumentText', 'getDocumentTextStatus', 'countUnreadDocuments', 'previewDraft', 'previewNextNumber', 'previewReclassification', 'listDocumentTypes', 'listDocumentFolders', 'listDocumentRules', 'listSnippets', 'suggestClassification', 'readLinkedDocument', 'listDocumentAreas', 'countDocumentsOfType', 'exportBundle', 'resolveBundle'];
     const EXEMPT: Record<string, string> = {
       createDraft: 'legt an; verlangt bei geschützter Art das Bereichsrecht (Task 4)',
       receiveDocument: 'legt an; Ablegen in eine geschützte Art ist erlaubt (Task 4)',
@@ -92,6 +94,7 @@ describe('write services and protected document types', () => {
       extractDocumentText: 'gibt keinen Inhalt aus; der Text-Worker könnte geschützte Dokumente sonst nie indizieren',
       reindexAllDocuments: 'läuft über manageableTypeFilter (VP3a)',
       createDocumentType: 'Katalog', updateDocumentType: 'Katalog, V14 in Task 5', createDocumentFolder: 'Katalog', deleteDocumentFolder: 'Katalog, achtet geschützte Dokumente (VP3a)',
+      moveDocumentFolder: 'Katalog, schreibt nur den Pfad um; geschützte Dokumente ziehen mit (Spec 6.3), das Protokoll zählt nur',
       deleteDocumentType: 'Katalog, verlangt schon keine Dokumente — geschützt oder nicht (Task 4)',
       createDocumentRule: 'Katalog', updateDocumentRule: 'Katalog', deleteDocumentRule: 'Katalog', createSnippet: 'Katalog', updateSnippet: 'Katalog', deleteSnippet: 'Katalog',
     };

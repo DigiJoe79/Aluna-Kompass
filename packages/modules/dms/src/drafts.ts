@@ -1,6 +1,8 @@
 import {
   yearIn,
   buildContext,
+  hasPermission,
+  reservedLinkTypes,
   conflict,
   deleteFollowUpsFor,
   isoNow,
@@ -18,17 +20,18 @@ import {
 } from '@kompass/core';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { requireAreaAccess, requireDmsGate, requireReadable } from './access';
+import { isProtectedType, requireAreaAccess, requireDmsGate, requireReadable } from './access';
 import { auditDocumentRef } from './audit-ref';
-import { documentTypeFor } from './catalog';
+import { defaultTypeKey, documentTypeFor } from './catalog';
 import { refuseModuleOwned } from './owned';
+import { responseSubject } from './response-subject';
 import { resolveRecipient } from './recipients';
-import { documentLinks, documents } from './schema';
+import { documentLinks, documents, type DocumentRow, type DocumentTypeRow } from './schema';
 import { storeDocumentFile } from './storage';
 import { allocateDocumentNumber, getDocumentRecord, peekDocumentNumber, refuseReservedLinks, resolveFolder, toRecord, type DocumentRecord } from './service';
 import { removeDocumentText } from './index-store';
 import { deleteNotesFor } from './notes';
-import { deleteRelationsFor, relateDocuments } from './relations';
+import { deleteRelationsFor, insertRelation, relateDocuments } from './relations';
 
 export const draftCreateSchema = z.object({
   typeKey: z.string().min(1),
@@ -126,55 +129,64 @@ export async function createDraft(deps: Deps, ctx: CallContext, input: unknown):
   const folder = folderRes.value;
 
   return deps.db.transaction((tx: DbOrTx) => {
-    tx.insert(documents)
-      .values({
-        id,
-        phase: 'draft',
-        direction: docType.defaultDirection,
-        sourceKind: 'generated',
-        typeKey: docType.key,
-        number: null,
-        subject: parsed.value.subject,
-        documentDate,
-        folder,
-        draftBody: parsed.value.body,
-        templateKey: templateKeyForType(deps, docType.key),
-        inputSnapshot: null,
-        fileName: null,
-        fileChecksum: null,
-        fileBytes: null,
-        status: 'issued',
-        createdByUserId: ctx.userId ?? 'system',
-        createdAt: now,
-        updatedAt: now,
-      })
-      .run();
-
-    for (const link of parsed.value.links) {
-      tx.insert(documentLinks)
-        .values({
-          id: newId(),
-          documentId: id,
-          entityType: link.entityType,
-          entityId: link.entityId,
-          role: link.role,
-          createdAt: now,
-        })
-        .run();
-    }
-
-    const row = tx.select().from(documents).where(eq(documents.id, id)).get()!;
-    const ref = auditDocumentRef(tx, row);
-    recordAudit(tx, deps, ctx, {
-      action: 'dms.draft.create',
-      entityType: 'documentDraft',
-      entityId: id,
-      after: { typeKey: docType.key, ...ref.subject },
-      summary: ref.hidden ? `${ref.name} angelegt` : `Entwurf „${parsed.value.subject}“ angelegt`,
-    });
-
+    const row = insertDraft(tx, deps, ctx, { id, docType, subject: parsed.value.subject, body: parsed.value.body, documentDate, folder, links: parsed.value.links, now });
     return ok(toRecord(deps, ctx, row, tx));
   });
+}
+
+interface DraftValues {
+  id: string;
+  docType: DocumentTypeRow;
+  subject: string;
+  body: string;
+  documentDate: string;
+  folder: string | null;
+  links: readonly { entityType: string; entityId: string; role: 'sender' | 'recipient' | 'about' }[];
+  now: string;
+}
+
+/** Zeile, Bezüge und Protokolleintrag eines neuen Entwurfs — in der Transaktion des Aufrufers. */
+function insertDraft(tx: DbOrTx, deps: Deps, ctx: CallContext, v: DraftValues): DocumentRow {
+  tx.insert(documents)
+    .values({
+      id: v.id,
+      phase: 'draft',
+      direction: v.docType.defaultDirection,
+      sourceKind: 'generated',
+      typeKey: v.docType.key,
+      number: null,
+      subject: v.subject,
+      documentDate: v.documentDate,
+      folder: v.folder,
+      draftBody: v.body,
+      templateKey: templateKeyForType(deps, v.docType.key),
+      inputSnapshot: null,
+      fileName: null,
+      fileChecksum: null,
+      fileBytes: null,
+      status: 'issued',
+      createdByUserId: ctx.userId ?? 'system',
+      createdAt: v.now,
+      updatedAt: v.now,
+    })
+    .run();
+
+  for (const link of v.links) {
+    tx.insert(documentLinks)
+      .values({ id: newId(), documentId: v.id, entityType: link.entityType, entityId: link.entityId, role: link.role, createdAt: v.now })
+      .run();
+  }
+
+  const row = tx.select().from(documents).where(eq(documents.id, v.id)).get()!;
+  const ref = auditDocumentRef(tx, row);
+  recordAudit(tx, deps, ctx, {
+    action: 'dms.draft.create',
+    entityType: 'documentDraft',
+    entityId: v.id,
+    after: { typeKey: v.docType.key, ...ref.subject },
+    summary: ref.hidden ? `${ref.name} angelegt` : `Entwurf „${v.subject}“ angelegt`,
+  });
+  return row;
 }
 
 export async function updateDraft(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DocumentRecord>> {
@@ -449,4 +461,62 @@ export async function createReplacementDraft(deps: Deps, ctx: CallContext, input
   const related = await relateDocuments(deps, ctx, { documentId: created.value.id, relatedDocumentId: old.id, kind: 'replaces' });
   if (!related.ok) return related;
   return getDocumentRecord(deps, ctx, created.value.id);
+}
+
+export const responseSchema = z.object({ id: z.string().min(1) });
+
+/**
+ * „Antworten“ (eingegangen) und „Folgeschreiben“ (ausgehend): ein Entwurf in der
+ * Vorgabeart für ausgehend, im Ordner der Quelle, an den Absender bzw. denselben
+ * Empfänger, mit den „betrifft“-Bezügen der Quelle und dem Bezug `repliesTo` —
+ * alles in einer Transaktion. Nicht zu verwechseln mit der Wiedervorlage.
+ *
+ * Ein Empfänger, den der Aufrufer nicht sehen darf (`contacts.view`), wird nicht
+ * übernommen: Die Bearbeiten-Seite zeigte ihn nicht und nähme ihn beim Speichern
+ * weg, gedruckt stünde er trotzdem im Brief.
+ *
+ * Liegt die Quelle in einem Schutzbereich und der Entwurf nicht in demselben,
+ * trägt der Betreff die Nummer statt des Betreffs, und „betrifft“-Bezüge bleiben
+ * zurück — sonst stünde Geschütztes offen in der Akte.
+ */
+export async function createResponseDraft(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<DocumentRecord>> {
+  const denied = requirePermission(ctx, 'dms.create');
+  if (denied) return denied;
+  const parsed = validate(deps, responseSchema, input);
+  if (!parsed.ok) return parsed;
+
+  const source = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
+  if (!source) return notFound('document', parsed.value.id);
+  const unreadable = requireAreaAccess(deps, ctx, source);
+  if (unreadable) return unreadable;
+  if (source.phase === 'draft') return conflict('documentIsDraft', `Dokument ${source.id} ist noch ein Entwurf`);
+  if (source.status === 'voided') return conflict('documentVoided', `Dokument ${source.number ?? source.id} ist storniert`);
+
+  const docType = documentTypeFor(deps.db, defaultTypeKey(deps, 'outgoing'));
+  if (!docType) return notFound('documentType', defaultTypeKey(deps, 'outgoing'));
+  const owned = refuseModuleOwned(docType);
+  if (owned) return owned;
+  const targetUnreadable = requireAreaAccess(deps, ctx, { typeKey: docType.key });
+  if (targetUnreadable) return targetUnreadable;
+
+  const sourceType = documentTypeFor(deps.db, source.typeKey);
+  const crossesArea = isProtectedType(sourceType) && sourceType?.protectionArea !== docType.protectionArea;
+
+  const sourceLinks = deps.db.select().from(documentLinks).where(eq(documentLinks.documentId, source.id)).all();
+  const addressee = sourceLinks.find((l) => l.entityType === 'contact' && l.role === (source.direction === 'incoming' ? 'sender' : 'recipient'));
+  const reserved = reservedLinkTypes(deps);
+  const links: DraftValues['links'] = [
+    ...(addressee && hasPermission(ctx, 'contacts.view') ? [{ entityType: 'contact', entityId: addressee.entityId, role: 'recipient' as const }] : []),
+    ...(crossesArea ? [] : sourceLinks.filter((l) => l.role === 'about' && !reserved.has(l.entityType)).map((l) => ({ entityType: l.entityType, entityId: l.entityId, role: 'about' as const }))),
+  ];
+
+  const subject = responseSubject(deps, source.direction, source.documentDate, crossesArea ? (source.number ?? source.id) : source.subject);
+  const now = isoNow(deps.clock);
+  const id = newId();
+
+  return deps.db.transaction((tx: DbOrTx) => {
+    const row = insertDraft(tx, deps, ctx, { id, docType, subject, body: '', documentDate: now.slice(0, 10), folder: source.folder, links, now });
+    insertRelation(tx, deps, ctx, { documentId: row.id, relatedDocumentId: source.id, kind: 'repliesTo' }, row, source);
+    return ok(toRecord(deps, ctx, row, tx));
+  });
 }

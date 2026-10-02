@@ -136,7 +136,10 @@ export async function setAnimalStatus(deps: Deps, ctx: CallContext, input: unkno
   });
 }
 
-export const animalPhotosSchema = z.object({ id: z.string().min(1), photos: z.array(z.object({ assetId: z.string().min(1), isPrimary: z.boolean().default(false) })).max(12) });
+/** Höchstens so viele Fotos je Tier. Die Maske zeigt die Zahl und sperrt den Auswahldialog daran (Befund 6, 0.2.4). */
+export const MAX_ANIMAL_PHOTOS = 12;
+
+export const animalPhotosSchema = z.object({ id: z.string().min(1), photos: z.array(z.object({ assetId: z.string().min(1), isPrimary: z.boolean().default(false) })).max(MAX_ANIMAL_PHOTOS) });
 
 export async function setAnimalPhotos(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AnimalRecord>> {
   const denied = requirePermission(ctx, 'animals.manage');

@@ -9,6 +9,113 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 1.0.0 kann jede Minor-Fassung Brüche enthalten — was bricht, steht unter
 **Geändert** mit dem, was zu tun ist.
 
+## [0.2.4] - 2026-10-02
+
+Akte und Mediathek bekommen einen Ordnerbaum: Ordner stehen mit vollem Namen
+als aufklappbarer Baum, lassen sich dort anlegen, umbenennen und per Ziehen
+oder Tastatur verschieben, und jede Änderung kann man 10 Sekunden lang
+rückgängig machen. In der Akte kommen „Antworten“ und „Folgeschreiben“ dazu.
+Vorschau, Verbindungstest und Publish der Webseite laufen im Hintergrund und
+brechen nicht mehr mit einer Zeitüberschreitung ab. Keine Migration. **Es
+bricht etwas für MCP-Clients**, die die Webseite bauen oder publizieren: Die
+drei Werkzeuge kehren sofort zurück, das Ergebnis liefert `site_job_result`
+(siehe **Geändert**).
+
+### Hinzugefügt
+
+- Akte und Mediathek: Ordner pflegen Sie direkt im Ordnerbaum — anlegen,
+  umbenennen (auch mit F2), samt Unterordnern verschieben per Ziehen, per
+  Tastatur oder über „Verschieben nach…“, leere Ordner löschen; das Menü am
+  Ordner öffnet auch ein Rechtsklick. Wo etwas nicht abgelegt werden kann,
+  steht der Grund an der Zeile. Jede Änderung lässt sich 10 Sekunden lang
+  rückgängig machen. In der Akte ziehen Dokumentarten und Einsortierregeln
+  mit, wenn ein Ordner umbenannt oder verschoben wird.
+- Akte: Dokumente lassen sich ankreuzen und gemeinsam in einen Ordner
+  verschieben — per Ziehen oder „Verschieben nach…“.
+- Akte: Passen mehr Dokumente, als die Liste auf einmal zeigt, sagt ein Satz
+  darunter, wie viele es insgesamt sind.
+- Mediathek: Eine Kachel ziehen Sie auf einen Ordner, um die Datei zu
+  verschieben. Dateien aus dem Dateimanager landen beim Loslassen sofort im
+  Ordner darunter. „Ohne Ordner“ zeigt die Dateien, die in keinem Ordner
+  liegen.
+- Akte: „Antworten“ an eingegangener Post und „Folgeschreiben“ an einem
+  eigenen, abgelegten Brief beginnen einen Entwurf im selben Ordner, an den
+  Absender bzw. denselben Empfänger, mit dem Betreff „Ihr Schreiben vom …“
+  bzw. „Unser Schreiben vom …“ und dem Bezug „Antwort auf“.
+- Themes: sechs neue Farben für den Ordnerbaum (Ablageziel, gesperrtes Ziel,
+  Führungslinien); eigene Themes übernehmen die Vorgabe, bis man sie ändert.
+- MCP: neues Werkzeug `dms_create_response` — derselbe Entwurf wie
+  „Antworten“/„Folgeschreiben“ in der Akte.
+- MCP: neues Werkzeug `dms_move_folder`. `dms_move` und `media_move` nehmen
+  den erwarteten Ort entgegen und verschieben nichts, was inzwischen woanders
+  liegt. `dms_list` und `media_list` nehmen `includeSubfolders: true` und
+  liefern dann zu einem Ordner auch den Inhalt aller Unterordner; ohne den
+  Schalter bleibt es genau dieser Ordner.
+
+### Geändert
+
+- Hinweise (Toasts): Erfolg, Warnung, Fehler und Information tragen einen
+  Rand in ihrer Statusfarbe, nicht nur ein anderes Symbol.
+- Akte: Ein neuer Brief übernimmt den gerade geöffneten Ordner; den Ordner
+  wählen Sie im Ordnerbaum.
+- Akte und Mediathek: Die Ordner stehen als aufklappbarer Baum mit vollem
+  Namen statt als flache Liste. Zähler zeigen die Summe samt Unterordnern,
+  der Baum merkt sich, was aufgeklappt war, Buchstaben springen zum Ordner,
+  „Tastenkürzel“ erklärt die Bedienung. Ein geöffneter Ordner zeigt auch den
+  Inhalt seiner Unterordner; die Spalte „Ordner“ sagt, wo darunter etwas
+  liegt. Auf dem Telefon öffnet ein Knopf über der Liste den Ordnerbaum.
+- Akte: Über der Liste steht, wo Sie sind. Ordner pflegen Sie nicht mehr in
+  der Verwaltung, sondern in der Akte; ein Unterordner lässt sich nur noch in
+  einem vorhandenen Ordner anlegen.
+- Akte: Den Ordner eines Dokuments wählen Sie im Ordnerbaum statt in einer
+  langen Liste; beim Ablegen nennt Kompass die Dateien, die kein PDF sind.
+- Mediathek: Der Auswahldialog zeigt den Ordnerbaum und zählt nur, was gerade
+  gewählt werden kann.
+- Meldungen unten rechts übernehmen die Farben des Themes.
+- Vorschau, „Verbindung testen“ und Publish laufen jetzt im Hintergrund. Sie
+  bauen die Seite, und nach vielen neuen Bildern dauert das Minuten — über MCP
+  brach der KI-Assistent deshalb mitten im Lauf mit einer Zeitüberschreitung
+  ab. Auf der Publizieren-Seite zeigt die Laufanzeige oben, was läuft; die
+  Seite darf man dabei verlassen und neu laden. Das Ergebnis des letzten
+  Verbindungstests steht mit Zeitpunkt auch nach dem Neuladen noch da. Ein
+  Neustart des Containers mitten im Lauf blockiert keinen späteren Lauf mehr.
+- **Bruch für MCP-Clients:** `site_preview_build`, `site_publish` und
+  `site_deploy_check` liefern nicht mehr das Ergebnis, sondern kehren sofort
+  mit `{ started: true, runId, startedAt }` zurück — läuft schon etwas:
+  `{ started: false, running }`. Das Ergebnis liest das neue Werkzeug
+  `site_job_result` mit `kind` (`preview`, `publish` oder `deployCheck`):
+  alle paar Sekunden abfragen, bis `last.runId` der `runId` des Starts ist.
+  Dann steht unter `last.result` dasselbe wie bisher in der Antwort, ein
+  Fehler (etwa `blockedTermsPresent` beim Publish) unter `last.error`. Fehler,
+  die vor dem Start feststehen (fehlende Bestätigung, kein Ziel), kommen wie
+  bisher direkt. Ein Agent, der publiziert, ruft also `site_publish` mit
+  `confirm: true` und fragt danach `site_job_result` mit `kind: publish` ab;
+  die Historie bleibt `site_publishes`.
+
+### Behoben
+
+- Mediathek: Auch in der Listenansicht lassen sich Dateien auf einen Ordner
+  ziehen.
+- Akte: Solange die Texterkennung eines Dokuments läuft, bleiben Verschieben
+  und Rückgängig auf der Dokumentseite flüssig.
+- Mediathek: Ein Ordner mit `_`, `%` oder Emoji im Namen nimmt beim
+  Umbenennen keine fremden Ordner mehr mit; zu tiefe Ziele werden abgewiesen.
+- Akte und Mediathek: Die Ablagefläche beim Ziehen von Dateien steht im
+  sichtbaren Teil der Liste, auch wenn diese lang ist.
+- Akte und Mediathek: Die Ordnerspalte bleibt beim Scrollen langer Listen
+  stehen.
+- Formulare nennen bei einem Fehler, was nicht stimmt, statt nur ‚ein Feld
+  braucht eine Angabe‘. Tierprofile zeigen die Grenze von 12 Fotos schon bei
+  der Auswahl.
+- Mediathek: Der Knopf „Hochladen“ meldet eine Datei, die es schon gibt, wie
+  das Ablegen per Ziehen als Fehler mit Grund statt als Erfolg.
+- Mediathek: Mit vielen Dateien öffnet sie wieder schnell — mit gut 1500
+  Dateien dauerte „Alle Dateien“ mehrere Sekunden. Die Liste zeigt höchstens
+  200 Dateien und sagt darunter, wie viele es insgesamt sind; Ordner, Suche
+  und Art grenzen ein. Auch `media_list` antwortet schneller.
+- Akte und Mediathek: Am Telefon lässt sich nichts mehr ziehen, was dort nicht
+  abgelegt werden kann; verschoben wird über „Verschieben nach…“.
+
 ## [0.2.3] - 2026-10-01
 
 Eine Wartungsfassung: aktualisierte Abhängigkeiten ohne bekannte Lücken und
@@ -676,6 +783,8 @@ kommen in späteren Fassungen (siehe `docs/nordstern.md`).
   einer Sandbox ausgeliefert.
 - Meldeweg für Schwachstellen: siehe [`SECURITY.md`](SECURITY.md).
 
+[0.2.4]: https://github.com/DigiJoe79/Aluna-Kompass/compare/v0.2.3...v0.2.4
+[0.2.3]: https://github.com/DigiJoe79/Aluna-Kompass/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/DigiJoe79/Aluna-Kompass/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/DigiJoe79/Aluna-Kompass/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/DigiJoe79/Aluna-Kompass/compare/v0.1.1...v0.2.0

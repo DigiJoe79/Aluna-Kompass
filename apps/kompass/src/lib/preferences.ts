@@ -6,7 +6,7 @@ type Prefs = {
   colorScheme: 'light' | 'dark';
   density: 'compact' | 'default' | 'comfortable';
   mediaView: 'list' | 'grid';
-  /** Der zuletzt im Auswahl-Dialog geöffnete Ordner; null = Alle Dateien. */
+  /** Der zuletzt im Auswahl-Dialog geöffnete Ordner; null = Alle Dateien, '' = Ohne Ordner. */
   mediaChooserFolder: string | null;
   /** Randspalte des Journals (HANDOFF § 6). `'auto'` entscheidet über CSS am Breakpoint 1360 px — geschrieben wird nur die ausdrückliche Wahl. */
   financeSidePanel: 'auto' | 'open' | 'closed';

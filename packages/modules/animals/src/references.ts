@@ -1,22 +1,28 @@
-import type { Deps, MediaReference } from '@kompass/core';
-import { eq, or } from 'drizzle-orm';
+import type { AssetMediaReference, Deps } from '@kompass/core';
 import { animalPhotos, animals, animalStories } from './schema';
 
-/** Wo ein Asset als Tierfoto oder in einer Erfolgsgeschichte hängt. */
-export function animalsMediaReferences(deps: Deps, assetId: string): MediaReference[] {
-  const animalIds = new Set<string>();
-  for (const r of deps.db.select({ id: animalPhotos.animalId }).from(animalPhotos).where(eq(animalPhotos.assetId, assetId)).all()) {
-    animalIds.add(r.id);
-  }
+/**
+ * Wo Assets als Tierfoto oder in einer Erfolgsgeschichte hängen. Liest die
+ * Foto- und Geschichtstabelle je einmal ganz und filtert hier — beide sind
+ * klein, und eine IN-Liste mit tausenden IDs stieße an SQLites Grenze.
+ */
+export function animalsMediaReferences(deps: Deps, assetIds: ReadonlySet<string>): AssetMediaReference[] {
+  const pairs = new Set<string>();
+  const hits: { assetId: string; animalId: string }[] = [];
+  const add = (assetId: string | null, animalId: string) => {
+    if (!assetId || !assetIds.has(assetId) || pairs.has(`${assetId}|${animalId}`)) return;
+    pairs.add(`${assetId}|${animalId}`);
+    hits.push({ assetId, animalId });
+  };
+  for (const r of deps.db.select({ assetId: animalPhotos.assetId, animalId: animalPhotos.animalId }).from(animalPhotos).all()) add(r.assetId, r.animalId);
   for (const r of deps.db
-    .select({ id: animalStories.animalId })
+    .select({ before: animalStories.beforeAssetId, after: animalStories.afterAssetId, animalId: animalStories.animalId })
     .from(animalStories)
-    .where(or(eq(animalStories.beforeAssetId, assetId), eq(animalStories.afterAssetId, assetId)))
     .all()) {
-    animalIds.add(r.id);
+    add(r.before, r.animalId);
+    add(r.after, r.animalId);
   }
-  return [...animalIds].map((id) => {
-    const name = deps.db.select({ name: animals.name }).from(animals).where(eq(animals.id, id)).get()?.name ?? id;
-    return { label: `Tier „${name}“`, entity: 'animal', id, href: `/animals/${id}` };
-  });
+  if (hits.length === 0) return [];
+  const names = new Map(deps.db.select({ id: animals.id, name: animals.name }).from(animals).all().map((a) => [a.id, a.name]));
+  return hits.map(({ assetId, animalId }) => ({ assetId, label: `Tier „${names.get(animalId) ?? animalId}“`, entity: 'animal', id: animalId, href: `/animals/${animalId}` }));
 }

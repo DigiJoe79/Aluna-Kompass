@@ -22,7 +22,28 @@ export function invalidTabs(
   return new Set(tabs.filter((tab) => tab.fields.some((f) => stems.has(f))).map((tab) => tab.key));
 }
 
-/** Wie viele Felder betroffen sind — ein Sprachfeld einmal, nicht je Sprache. */
-export function countInvalidFields(errors: Record<string, string>): number {
-  return new Set(Object.keys(errors).map(stemOf)).size;
+export interface InvalidField {
+  /** Der Schlüssel, unter dem das Formular den Namen führt — ein Sprachfeld unter seinem Rumpf. */
+  key: string;
+  /** Der Feldname aus dem Formular; `null`, wenn es keinen mitgab (dann nie den Schlüssel zeigen). */
+  label: string | null;
+  /** Die Meldungen des Felds, jede einmal (zwei Sprachen mit derselben Meldung: eine). */
+  messages: string[];
+}
+
+/**
+ * Die betroffenen Felder mit ihren Meldungen, in der Reihenfolge der Fehler.
+ * Ein Sprachfeld (`summary.de`, `summary.en`) erscheint einmal unter seinem
+ * Rumpf. Führt das Formular einen Schlüssel mit Punkt selbst als Feld (die
+ * Einstellungen: `organization.name`), gilt der ganze Schlüssel.
+ */
+export function invalidFields(errors: Record<string, string>, labels: Record<string, string>): InvalidField[] {
+  const groups = new Map<string, InvalidField>();
+  for (const [path, message] of Object.entries(errors)) {
+    const key = labels[path] !== undefined ? path : stemOf(path);
+    const group = groups.get(key) ?? { key, label: labels[key] ?? null, messages: [] };
+    if (!group.messages.includes(message)) group.messages.push(message);
+    groups.set(key, group);
+  }
+  return [...groups.values()];
 }

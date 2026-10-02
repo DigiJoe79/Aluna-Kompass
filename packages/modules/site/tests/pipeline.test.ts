@@ -1,4 +1,4 @@
-import { lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { coreModule, fixedClock, setModuleEnabled, setSetting, storeMediaAsset, unwrap } from '@kompass/core';
@@ -21,7 +21,11 @@ import {
   setValues,
   listPublishes,
   currentSiteJob,
+  lastSiteJob,
   siteJobElapsedMs,
+  startDeployCheck,
+  startPreview,
+  startPublish,
   siteModule,
 } from '../src';
 
@@ -526,6 +530,172 @@ describe('publish history', () => {
   });
 });
 
+describe('background jobs', () => {
+  /**
+   * Über MCP liefen Check, Vorschau und Publish in die Zeitüberschreitung des
+   * Clients (01.10.): Sie bauen die Seite, und der erste Bau nach vielen neuen
+   * Bildern erzeugt Tausende Varianten. Darum starten sie nur und kehren
+   * sofort zurück; das Ergebnis liegt neben dem Riegel im Cache, nicht im
+   * Speicher, weil Next jede Route eigens bündelt.
+   */
+  const envFor = (target: string | null) => ({
+    publicUrl: 'https://staging.example.org',
+    staging: true,
+    deploy: target === null ? null : { host: '', user: '', path: target, auth: { kind: 'none' as const } },
+    templateDir: TEMPLATE_DIR,
+    cacheDir: tmp(),
+    previewDir: tmp(),
+  });
+  const setup = () => {
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule, siteModule], locales: LOCALES });
+    insertUser(deps, { id: 'USER-TEST' });
+    return deps;
+  };
+  const withTemplate = async () => {
+    const deps = setup();
+    unwrap(await enableProjects(deps));
+    unwrap(await applyTemplateSync(deps, ctxWith(['site.manage']), { dir: TEMPLATE_DIR, confirm: true }));
+    return deps;
+  };
+  /** Wartet, bis der Hintergrundlauf den Riegel wieder freigibt. */
+  const settle = async (env: { cacheDir: string }) => {
+    for (let i = 0; i < 4800 && currentSiteJob(env as never); i++) await new Promise((r) => setTimeout(r, 50));
+  };
+  const started = (r: Awaited<ReturnType<typeof startPreview>>) => {
+    const value = unwrap(r);
+    if (!value.started) throw new Error('nicht gestartet');
+    return value;
+  };
+
+  it('needs the publish permission to start and to read, and a known kind', async () => {
+    const deps = setup();
+    const view = ctxWith(['site.view']);
+    for (const denied of [
+      await startDeployCheck(deps, view, envFor(tmp())),
+      await startPreview(deps, view, envFor(tmp())),
+      await startPublish(deps, view, envFor(tmp()), { confirm: true }),
+      lastSiteJob(deps, view, envFor(tmp()), { kind: 'preview' }),
+    ]) {
+      expect(denied.ok === false && denied.error.type === 'forbidden').toBe(true);
+    }
+    const unknown = lastSiteJob(deps, ctxWith(['site.publish']), envFor(tmp()), { kind: 'deploy' });
+    expect(unknown.ok === false && unknown.error.type === 'validation').toBe(true);
+  });
+
+  it('refuses before anything runs what it can tell up front', async () => {
+    const deps = setup();
+    const ctx = ctxWith(['site.publish']);
+    const env = envFor(null);
+    const noTarget = await startDeployCheck(deps, ctx, env);
+    expect(noTarget.ok === false && noTarget.error.type === 'conflict' && noTarget.error.code === 'publishTargetMissing').toBe(true);
+    const noConfirm = await startPublish(deps, ctx, envFor(tmp()), { confirm: false });
+    expect(noConfirm.ok === false && noConfirm.error.type === 'validation').toBe(true);
+    expect(currentSiteJob(env)).toBeNull();
+    expect(unwrap(lastSiteJob(deps, ctx, env, { kind: 'deployCheck' }))).toEqual({ running: null, last: null });
+  });
+
+  it('returns at once, reports the run, and keeps the result with time and person', async () => {
+    const deps = setup();
+    const target = tmp();
+    writeFileSync(path.join(target, 'wp-config.php'), '<?php');
+    const env = envFor(target);
+    const ctx = ctxWith(['site.publish']);
+
+    const run = started(await startDeployCheck(deps, ctx, env));
+    const startedAt = deps.clock.now().toISOString();
+    expect(run).toEqual({ started: true, runId: expect.any(String), startedAt });
+    expect(currentSiteJob(env)).toEqual({ name: 'deployCheck', runId: run.runId, startedAt });
+
+    // Ein zweiter Start während des Laufs meldet den laufenden, statt zu warten —
+    // auch wenn er eine andere Art ist.
+    const running = { name: 'deployCheck', runId: run.runId, startedAt };
+    expect(unwrap(await startDeployCheck(deps, ctx, env))).toEqual({ started: false, running });
+    expect(unwrap(await startPreview(deps, ctx, env))).toEqual({ started: false, running });
+    expect(unwrap(lastSiteJob(deps, ctx, env, { kind: 'deployCheck' })).running).toEqual(running);
+
+    await settle(env);
+    const { running: after, last } = unwrap(lastSiteJob(deps, ctx, env, { kind: 'deployCheck' }));
+    expect(after).toBeNull();
+    expect(last).toMatchObject({ kind: 'deployCheck', runId: run.runId, startedAt, finishedAt: startedAt, userId: ctx.userId });
+    expect((last?.result as { filesAtTarget: string[] }).filesAtTarget).toEqual(['wp-config.php']);
+    expect(last?.error).toBeUndefined();
+    // Je Art ein eigener letzter Lauf.
+    expect(unwrap(lastSiteJob(deps, ctx, env, { kind: 'preview' })).last).toBeNull();
+  }, 240_000);
+
+  it('keeps a failed check as an error, and opens the guard again', async () => {
+    const deps = setup();
+    // Ein Ziel, das rsync nicht lesen darf.
+    const target = tmp();
+    mkdirSync(path.join(target, 'gesperrt'));
+    chmodSync(path.join(target, 'gesperrt'), 0o000);
+    const env = envFor(target);
+    const ctx = ctxWith(['site.publish']);
+
+    started(await startDeployCheck(deps, ctx, env));
+    await settle(env);
+
+    const { last } = unwrap(lastSiteJob(deps, ctx, env, { kind: 'deployCheck' }));
+    expect(last?.result).toBeUndefined();
+    expect(last?.error).toMatchObject({ type: 'conflict', code: 'deployCheckFailed' });
+    expect(currentSiteJob(env)).toBeNull();
+    chmodSync(path.join(target, 'gesperrt'), 0o700);
+  }, 240_000);
+
+  it('builds the preview in the background and keeps what the page shows', async () => {
+    const deps = await withTemplate();
+    const env = envFor(tmp());
+    const ctx = ctxWith(['site.publish', 'site.view']);
+
+    const run = started(await startPreview(deps, ctx, env));
+    expect(currentSiteJob(env)?.name).toBe('preview');
+    await settle(env);
+
+    const { last } = unwrap(lastSiteJob(deps, ctx, env, { kind: 'preview' }));
+    expect(last).toMatchObject({ kind: 'preview', runId: run.runId });
+    const result = last?.result as { diff: { added: string[] }; violations: unknown[]; previewDir: string; contentHash: string };
+    expect(result.violations).toEqual([]);
+    expect(result.diff.added.length).toBeGreaterThan(0);
+    expect(result.previewDir).toBe(env.previewDir);
+    expect(readFileSync(path.join(env.previewDir, 'index.html'), 'utf8')).toContain('<html');
+  }, 240_000);
+
+  it('publishes in the background, records the publish, and keeps the result', async () => {
+    const deps = await withTemplate();
+    const target = tmp();
+    const env = envFor(target);
+    const ctx = ctxWith(['site.publish', 'site.view']);
+
+    const run = started(await startPublish(deps, ctx, env, { confirm: true }));
+    expect(currentSiteJob(env)?.name).toBe('publish');
+    await settle(env);
+
+    const { last } = unwrap(lastSiteJob(deps, ctx, env, { kind: 'publish' }));
+    expect(last).toMatchObject({ kind: 'publish', runId: run.runId, result: { status: 'success' } });
+    expect(readFileSync(path.join(target, 'index.html'), 'utf8')).toContain('<html');
+    const history = unwrap(await listPublishes(deps, ctx, { environment: 'test' }));
+    expect(history.map((h) => h.status)).toEqual(['success']);
+  }, 240_000);
+
+  it('keeps a blocked publish as an error, records the attempt, and opens the guard again', async () => {
+    const deps = await withTemplate();
+    const manage = ctxWith(['site.manage', 'settings.manage']);
+    unwrap(await setSetting(deps, manage, { key: 'site.blockedTerms', value: ['strenggeheim'] }));
+    unwrap(await setValues(deps, manage, { values: { claim: { de: 'strenggeheim' } } }));
+    const env = envFor(tmp());
+    const ctx = ctxWith(['site.publish', 'site.view']);
+
+    started(await startPublish(deps, ctx, env, { confirm: true }));
+    await settle(env);
+
+    const { last } = unwrap(lastSiteJob(deps, ctx, env, { kind: 'publish' }));
+    expect(last?.result).toBeUndefined();
+    expect(last?.error).toMatchObject({ type: 'conflict', code: 'blockedTermsPresent' });
+    expect(unwrap(await listPublishes(deps, ctx, { environment: 'test' })).map((h) => h.status)).toEqual(['aborted']);
+    expect(currentSiteJob(env)).toBeNull();
+  }, 240_000);
+});
+
 describe('currentSiteJob', () => {
   /**
    * Wer den Tab schliesst, sieht nicht, dass noch gebaut wird. Die Seite fragt
@@ -546,10 +716,24 @@ describe('currentSiteJob', () => {
     };
     expect(currentSiteJob(env)).toBeNull();
     const running = runPreview(deps, ctxWith(['site.publish', 'site.view']), env);
-    expect(currentSiteJob(env)).toEqual({ name: 'preview', startedAt: deps.clock.now().toISOString() });
+    expect(currentSiteJob(env)).toEqual({ name: 'preview', runId: expect.any(String), startedAt: deps.clock.now().toISOString() });
     unwrap(await running);
     expect(currentSiteJob(env)).toBeNull();
   }, 240_000);
+
+  /**
+   * Ein Neustart mitten im Lauf hinterlässt die Datei. Im Container bekommt
+   * Node danach meist dieselbe Prozessnummer — die Datei darf trotzdem nicht
+   * als laufender Job gelten, sonst stünde der Riegel für immer.
+   */
+  it('ignores a job file left by another process, even with the same pid', () => {
+    const env = { publicUrl: null, staging: false, deploy: null, templateDir: TEMPLATE_DIR, cacheDir: tmp(), previewDir: tmp() };
+    writeFileSync(
+      path.join(env.cacheDir, 'running-job.json'),
+      JSON.stringify({ name: 'publish', runId: 'R1', startedAt: '2026-10-01T10:00:00.000Z', pid: process.pid, process: 'ein-anderer-prozess' }),
+    );
+    expect(currentSiteJob(env)).toBeNull();
+  });
 });
 
 describe('siteJobElapsedMs', () => {

@@ -56,6 +56,21 @@ würde; er steht später in der Historie.
 den Webspace erreicht. Das ist der Weg, eine Änderung zu sehen, bevor sie
 draußen ist.
 
+## Im Hintergrund
+
+Vorschau, Verbindungstest und Publish bauen die Seite; nach vielen neuen
+Bildern kann das Minuten dauern. Sie laufen deshalb im Hintergrund: Oben
+steht „Vorschau läuft seit …“ (oder Publish, Verbindungstest), und Sie dürfen
+die Seite verlassen oder neu laden — kommen Sie zurück, wartet die Karte auf
+den laufenden Lauf und zeigt sein Ergebnis. Es läuft immer nur einer; wer
+während eines Laufs einen zweiten startet, bekommt einen Hinweis.
+
+Ein KI-Assistent startet die Läufe über `site_preview_build`,
+`site_deploy_check` und `site_publish` und bekommt sofort eine Kennung
+(`runId`) zurück. Das Ergebnis liest er mit `site_job_result` und der Art des
+Laufs (`preview`, `deployCheck`, `publish`), bis dort derselbe `runId` als
+letzter Lauf steht.
+
 ## Änderungen gegenüber Live
 
 Die Liste zeigt je Datei, ob sie gegenüber dem letzten Publish **geändert**,
@@ -72,6 +87,9 @@ in der Liste, stimmt der Pfad; kommt sie leer zurück, zeigt der Pfad ins
 Leere. Zweitens, aus einem frischen Bau wie beim Publish, was ein Publish
 ändern, hinzufügen und entfernen würde — verglichen mit dem echten Ziel, nicht
 mit einem leeren Verzeichnis.
+
+Das Ergebnis des letzten Tests bleibt mit Zeitpunkt stehen, auch nach dem
+Neuladen.
 
 ## Publizieren
 

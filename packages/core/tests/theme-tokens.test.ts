@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CONTRAST_PAIRS, checkThemeContrast } from '../src/themes/contrast';
 import { DEFAULT_THEME } from '../src/themes/default-theme';
-import { themeTokensSchema } from '../src/themes/tokens';
+import { THEME_TOKENS, themeTokensSchema } from '../src/themes/tokens';
 
 /**
  * Ein Token-Wert landet als CSS-Deklaration im `<style>` des Wurzel-Layouts.
@@ -41,6 +41,22 @@ describe('theme token values', () => {
   it('checks the new ink/surface pairs for contrast', () => {
     const pairs = CONTRAST_PAIRS.map((p) => `${p.fg}/${p.bg}`);
     expect(pairs).toEqual(expect.arrayContaining(['color-final/color-final-bg', 'color-agent/color-agent-bg', 'color-amount-out/surface', 'color-amount-out/table-zebra', 'color-key-ink/color-key-bg']));
+    expect(checkThemeContrast(DEFAULT_THEME)).toEqual([]);
+  });
+
+  const TREE_TOKENS = ['color-drop-bg', 'color-drop-ring', 'color-drop-ink', 'color-drop-blocked-ring', 'color-drop-blocked-hatch', 'color-tree-guide'] as const;
+
+  it('carries the six folder-tree tokens, light and dark', () => {
+    for (const token of TREE_TOKENS) {
+      expect(THEME_TOKENS, token).toContain(token);
+      expect(DEFAULT_THEME.tokens[token].light).toMatch(/^#[0-9A-F]{6}$/i);
+      expect(DEFAULT_THEME.tokens[token].dark).toMatch(/^#[0-9A-F]{6}$/i);
+    }
+  });
+
+  it('checks drop target and blocked target for contrast', () => {
+    const pairs = CONTRAST_PAIRS.map((p) => `${p.fg}/${p.bg}:${p.minimum}`);
+    expect(pairs).toEqual(expect.arrayContaining(['color-drop-ink/color-drop-bg:4.5', 'color-drop-ring/surface:3', 'color-drop-blocked-ring/surface:3']));
     expect(checkThemeContrast(DEFAULT_THEME)).toEqual([]);
   });
 });

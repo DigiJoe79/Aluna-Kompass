@@ -1,4 +1,4 @@
-import type { Deps, MediaReference } from '@kompass/core';
+import type { AssetMediaReference, Deps } from '@kompass/core';
 import { widgetOf } from './field-schema';
 import { siteEntries } from './schema';
 import { activeTemplate } from './service';
@@ -12,15 +12,16 @@ export function assetKeys(fields: Record<string, FieldSchema>): string[] {
     .map(([key]) => key);
 }
 
-/** Wo ein Asset in einer Template-Variablen oder einem Sammlungseintrag steckt. */
-export function siteMediaReferences(deps: Deps, assetId: string): MediaReference[] {
+/** Wo Assets in Template-Variablen oder Sammlungseinträgen stecken — Template, Werte und Einträge je einmal gelesen. */
+export function siteMediaReferences(deps: Deps, assetIds: ReadonlySet<string>): AssetMediaReference[] {
   const template = activeTemplate(deps);
   if (!template) return [];
-  const refs: MediaReference[] = [];
+  const refs: AssetMediaReference[] = [];
 
   const values = readValues(deps);
   for (const key of assetKeys(template.schema.variables)) {
-    if (values[key] === assetId) refs.push({ label: `Variable „${key}“`, entity: 'siteValue', id: key, href: '/site/variables' });
+    const assetId = values[key];
+    if (typeof assetId === 'string' && assetIds.has(assetId)) refs.push({ assetId, label: `Variable „${key}“`, entity: 'siteValue', id: key, href: '/site/variables' });
   }
 
   const collections = template.schema.collections;
@@ -29,13 +30,13 @@ export function siteMediaReferences(deps: Deps, assetId: string): MediaReference
     if (!col) continue;
     const data = row.data as Record<string, unknown>;
     for (const key of assetKeys(col.fields)) {
-      if (data[key] === assetId) {
-        const title =
-          row.slug ??
-          (data.title && typeof data.title === 'object' ? Object.values(data.title as Record<string, string>)[0] : null) ??
-          row.id;
-        refs.push({ label: `Eintrag „${title}“ in „${col.label}“`, entity: 'siteEntry', id: row.id, href: `/site/c/${row.collection}/${row.id}` });
-      }
+      const assetId = data[key];
+      if (typeof assetId !== 'string' || !assetIds.has(assetId)) continue;
+      const title =
+        row.slug ??
+        (data.title && typeof data.title === 'object' ? Object.values(data.title as Record<string, string>)[0] : null) ??
+        row.id;
+      refs.push({ assetId, label: `Eintrag „${title}“ in „${col.label}“`, entity: 'siteEntry', id: row.id, href: `/site/c/${row.collection}/${row.id}` });
     }
   }
   return refs;

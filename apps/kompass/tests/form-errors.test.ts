@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countInvalidFields, invalidTabs } from '@/lib/form-errors';
+import { invalidFields, invalidTabs } from '@/lib/form-errors';
 
 /**
  * Ein Fehler im hinteren Reiter ist ein Fehler, den niemand sieht: Das
@@ -30,12 +30,23 @@ describe('invalidTabs', () => {
   });
 });
 
-describe('countInvalidFields', () => {
+describe('invalidFields', () => {
   it('zählt ein Sprachfeld einmal, nicht je Sprache', () => {
-    expect(countInvalidFields({ 'summary.de': 'x', 'summary.en': 'y', name: 'z' })).toBe(2);
+    expect(invalidFields({ 'summary.de': 'x', 'summary.en': 'x', name: 'z' }, { summary: 'Kurz', name: 'Name' })).toEqual([
+      { key: 'summary', label: 'Kurz', messages: ['x'] },
+      { key: 'name', label: 'Name', messages: ['z'] },
+    ]);
   });
 
-  it('zählt nichts ohne Fehler', () => {
-    expect(countInvalidFields({})).toBe(0);
+  it('nimmt den ganzen Schlüssel, wenn das Formular ihn selbst benennt', () => {
+    expect(invalidFields({ 'organization.name': 'x', 'organization.city': 'y' }, { 'organization.name': 'A', 'organization.city': 'B' })).toHaveLength(2);
+  });
+
+  it('gibt ohne Namen `null` statt des Schlüssels', () => {
+    expect(invalidFields({ 'externalLinks.0.url': 'x' }, {})).toEqual([{ key: 'externalLinks', label: null, messages: ['x'] }]);
+  });
+
+  it('bleibt leer ohne Fehler', () => {
+    expect(invalidFields({}, {})).toEqual([]);
   });
 });

@@ -4,8 +4,9 @@ import { useTranslations } from 'next-intl';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { runCheckAction, runPublishAction } from './actions';
+import { runCheckAction, startPublishAction } from './actions';
 import type { PublishDiff } from './diff-card';
+import { useSiteJob } from './use-site-job';
 
 export function PublishCard({
   env,
@@ -26,8 +27,22 @@ export function PublishCard({
   onPublished?: () => void;
 }) {
   const t = useTranslations('site.publish.publishCard');
+  const tPublish = useTranslations('site.publish');
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [pending, start] = useTransition();
+  // Der Publish läuft im Hintergrund; der Knopf startet ihn nur, `useSiteJob`
+  // wartet auf das Ergebnis und meldet es hier.
+  const { busy: pending, start } = useSiteJob<{ diff: PublishDiff }>('publish', {
+    onDone: (outcome) => {
+      if (outcome.error || !outcome.result) {
+        toast.error(outcome.error ?? t('failed'));
+        return;
+      }
+      const { diff: done } = outcome.result;
+      toast.success(tPublish('done', { changed: done.changed.length, added: done.added.length, removed: done.removed.length }));
+      setDialogOpen(false);
+      onPublished?.();
+    },
+  });
   // null: wird gerade geprüft. Die Zahlen im Dialog (aus `diff`) stammen vom
   // letzten Vorschau-Lauf — ohne diesen Abgleich veröffentlichte ein Klick
   // unbemerkt einen inzwischen geänderten Stand, oder gleich den allerersten
@@ -104,18 +119,7 @@ export function PublishCard({
                 </Button>
                 <Button
                   disabled={stale !== false || checking}
-                  onClick={() =>
-                    start(async () => {
-                      const s = await runPublishAction(true);
-                      if (s.status === 'error') {
-                        toast.error(s.message);
-                      } else if (s.status === 'success') {
-                        toast.success(s.message ?? t('published'));
-                        setDialogOpen(false);
-                        onPublished?.();
-                      }
-                    })
-                  }
+                  onClick={() => start(() => startPublishAction(true))}
                 >
                   {t('confirm')}
                 </Button>

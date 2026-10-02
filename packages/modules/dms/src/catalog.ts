@@ -1,6 +1,8 @@
 import {
   conflict,
   documentArea,
+  folderMoveConflict,
+  folderParentMissing,
   forbidden,
   invalid,
   isoNow,
@@ -8,19 +10,21 @@ import {
   notFound,
   ok,
   parseFolderPath,
+  planFolderMove,
   readSetting,
   recordAudit,
   schema,
   hasPermission,
   requirePermission,
   validate,
+  withinSubtree,
   type CallContext,
   type DbOrTx,
   type Deps,
   type Failure,
   type Result,
 } from '@kompass/core';
-import { and, asc, count, eq, isNotNull, like } from 'drizzle-orm';
+import { and, asc, count, eq, isNotNull, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { canReadType, manageableTypeFilter, readableTypeFilter, requireAreaAccess, requireDmsGate, typePermission } from './access';
 import { refuseModuleOwned } from './owned';
@@ -95,6 +99,14 @@ export async function listDocumentTypes(deps: Deps, ctx: CallContext, input: unk
   return ok(parsed.value.includeInactive ? rows : rows.filter((row) => row.isActive));
 }
 
+const parentOf = (path: string): string | null => {
+  const i = path.lastIndexOf('/');
+  return i === -1 ? null : path.slice(0, i);
+};
+
+const documentFolderExists = (deps: Deps, path: string): boolean =>
+  !!deps.db.select({ path: documentFolders.path }).from(documentFolders).where(eq(documentFolders.path, path)).get();
+
 export const documentFolderCreateSchema = z.object({
   path: z.string().min(1),
 });
@@ -115,6 +127,8 @@ export async function createDocumentFolder(
 
   const existing = deps.db.select().from(documentFolders).where(eq(documentFolders.path, path)).get();
   if (existing) return conflict('folderExists', `Der Ordner „${path}“ existiert bereits`);
+  const parent = parentOf(path);
+  if (parent && !documentFolderExists(deps, parent)) return folderParentMissing(parent);
 
   const now = isoNow(deps.clock);
   return deps.db.transaction((tx: DbOrTx) => {
@@ -131,46 +145,87 @@ export async function createDocumentFolder(
   });
 }
 
+export type DocumentFolderListItem = DocumentFolderRow & { count: number };
+
+/** Ordner mit der Zahl lesbarer Dokumente, die direkt darin liegen (eine gruppierte Abfrage). */
 export async function listDocumentFolders(
   deps: Deps,
   ctx: CallContext,
-): Promise<Result<DocumentFolderRow[]>> {
+): Promise<Result<DocumentFolderListItem[]>> {
   const denied = requireDmsGate(deps, ctx);
   if (denied) return denied;
 
   const rows = deps.db.select().from(documentFolders).orderBy(asc(documentFolders.path)).all();
-  if (hasPermission(ctx, 'dms.view')) return ok(rows);
-
-  // Nur mit Bereichsrecht: die Ordner, in denen etwas Lesbares liegt, und der Weg dorthin.
-  const used = deps.db.select({ folder: documents.folder }).from(documents).where(and(isNotNull(documents.folder), readableTypeFilter(deps, ctx))).groupBy(documents.folder).all().map((r) => r.folder!);
-  const shown = new Set(used.flatMap((path) => path.split('/').map((_, i, parts) => parts.slice(0, i + 1).join('/'))));
-  return ok(rows.filter((row) => shown.has(row.path)));
-}
-
-/**
- * Wie viele Dokumente in welchem Ordner liegen. Die Ordnerspalte der Akte
- * zeigt die Zahl neben dem Namen; ohne sie ist ein Ordner eine Behauptung.
- * Leere Ordner fehlen in der Antwort — dort steht dann keine Zahl.
- */
-export async function countDocumentsByFolder(
-  deps: Deps,
-  ctx: CallContext,
-): Promise<Result<Record<string, number>>> {
-  const denied = requireDmsGate(deps, ctx);
-  if (denied) return denied;
-
-  const rows = deps.db
+  const counted = deps.db
     .select({ folder: documents.folder, count: count() })
     .from(documents)
     .where(and(isNotNull(documents.folder), readableTypeFilter(deps, ctx)))
     .groupBy(documents.folder)
     .all();
+  const counts = new Map(counted.map((r) => [r.folder!, r.count]));
+  const withCount = rows.map((row) => ({ ...row, count: counts.get(row.path) ?? 0 }));
+  if (hasPermission(ctx, 'dms.view')) return ok(withCount);
 
-  const counts: Record<string, number> = {};
-  for (const row of rows) {
-    if (row.folder) counts[row.folder] = row.count;
+  // Nur mit Bereichsrecht: die Ordner, in denen etwas Lesbares liegt, und der Weg dorthin.
+  const shown = new Set([...counts.keys()].flatMap((path) => path.split('/').map((_, i, parts) => parts.slice(0, i + 1).join('/'))));
+  return ok(withCount.filter((row) => shown.has(row.path)));
+}
+
+export const documentFolderMoveSchema = z.object({ from: z.string().min(1), to: z.string().min(1) });
+
+export type DocumentFolderMoveResult = { from: string; to: string; folders: number; documents: number; types: number; rules: number };
+
+/**
+ * Benennt einen Ordner um oder verschiebt ihn samt Unterordnern. Dokumente,
+ * Standardordner der Arten und Zielordner der Regeln ziehen mit; das Protokoll
+ * zählt nur, nennt aber weder Betreffs noch Nummern (geschützte Arten).
+ */
+export async function moveDocumentFolder(
+  deps: Deps,
+  ctx: CallContext,
+  input: unknown,
+): Promise<Result<DocumentFolderMoveResult>> {
+  const denied = requirePermission(ctx, 'dms.manage');
+  if (denied) return denied;
+
+  const parsed = validate(deps, documentFolderMoveSchema, input);
+  if (!parsed.ok) return parsed;
+
+  const from = parseFolderPath(parsed.value.from);
+  const to = parseFolderPath(parsed.value.to);
+  if (!from || !to) return invalid([{ path: 'to', message: 'invalidFolderPath' }]);
+
+  const existing = deps.db.select({ path: documentFolders.path }).from(documentFolders).all().map((r) => r.path);
+  const plan = planFolderMove(existing, from, to);
+  if (!plan.ok) {
+    if (plan.reason === 'notFound') return notFound('documentFolder', from);
+    return folderMoveConflict(plan.reason, { from, to, name: to.slice(to.lastIndexOf('/') + 1) });
   }
-  return ok(counts);
+  const toParent = parentOf(to);
+  if (toParent && !documentFolderExists(deps, toParent)) return folderParentMissing(toParent);
+
+  const now = isoNow(deps.clock);
+  return deps.db.transaction((tx: DbOrTx) => {
+    let documentCount = 0;
+    let types = 0;
+    let rules = 0;
+    for (const r of plan.renames) {
+      tx.update(documentFolders).set({ path: r.to }).where(eq(documentFolders.path, r.from)).run();
+      documentCount += tx.update(documents).set({ folder: r.to }).where(eq(documents.folder, r.from)).run().changes;
+      types += tx.update(documentTypes).set({ defaultFolder: r.to }).where(eq(documentTypes.defaultFolder, r.from)).run().changes;
+      rules += tx.update(documentRules).set({ thenFolder: r.to }).where(eq(documentRules.thenFolder, r.from)).run().changes;
+    }
+    const folders = plan.renames.length;
+    recordAudit(tx, deps, ctx, {
+      action: 'dms.folder.move',
+      entityType: 'documentFolder',
+      entityId: from,
+      before: { path: from },
+      after: { path: to, folders, documents: documentCount, types, rules },
+      summary: `Ordner „${from}“ nach „${to}“ verschoben`,
+    });
+    return ok({ from, to, folders, documents: documentCount, types, rules });
+  });
 }
 
 export const documentFolderDeleteSchema = z.object({
@@ -196,7 +251,7 @@ export async function deleteDocumentFolder(
 
   const readableDoc = deps.db.select({ id: documents.id }).from(documents).where(and(eq(documents.folder, path), manageableTypeFilter(deps, ctx))).get();
   const anyDoc = deps.db.select({ id: documents.id }).from(documents).where(eq(documents.folder, path)).get();
-  const hasChild = deps.db.select({ path: documentFolders.path }).from(documentFolders).where(like(documentFolders.path, `${path}/%`)).get();
+  const hasChild = deps.db.select({ path: documentFolders.path }).from(documentFolders).where(and(ne(documentFolders.path, path), withinSubtree(documentFolders.path, path))).get();
   if (readableDoc || hasChild) return conflict('folderNotEmpty', `Der Ordner „${path}“ ist nicht leer`);
   if (anyDoc) return conflict('folderHasProtectedDocuments', `Der Ordner „${path}“ enthält geschützte Dokumente`);
 

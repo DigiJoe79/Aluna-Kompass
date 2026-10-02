@@ -15,6 +15,25 @@ Pflicht; Datum und Absender setzt Kompass aus den Vereinsdaten.
 Ein Entwurf bleibt, bis Sie ihn festschreiben oder verwerfen. Verwerfen ist
 die einzige Löschung in der Akte, und sie steht im Änderungsprotokoll.
 
+## Antworten und Folgeschreiben
+
+Am abgelegten Dokument steht ein Knopf, der einen Entwurf darauf beginnt. An
+eingegangener Post heißt er „Antworten“, an einem eigenen Brief
+„Folgeschreiben“. Der Entwurf bekommt die Vorgabeart für ausgehende Post und
+liegt im selben Ordner wie das Dokument. Bei einer Antwort ist der Absender
+der Empfänger, bei einem Folgeschreiben derselbe Empfänger wie zuvor. Die
+„Betrifft“-Bezüge kommen mit. Der Betreff lautet „Ihr Schreiben vom
+15.02.2026: …“ bzw. „Unser Schreiben vom …: …“ mit dem Datum des Dokuments;
+Sie können ihn ändern. Beide Dokumente sind verbunden: Der Entwurf ist
+„Antwort auf“ das Dokument, das Dokument „beantwortet durch“ den Entwurf —
+auch beim Folgeschreiben.
+
+An Entwürfen und stornierten Dokumenten gibt es den Knopf nicht. Dürfen Sie
+den Absender in den Kontakten nicht sehen, beginnt der Entwurf ohne
+Empfänger. Liegt das Dokument in einem geschützten Bereich und der Entwurf
+nicht, steht im Betreff die Nummer statt des Betreffs, und die
+„Betrifft“-Bezüge bleiben zurück.
+
 ## Bausteine
 
 Wiederkehrende Absätze — Grußformel, Spendenhinweis, Bankverbindung — legen

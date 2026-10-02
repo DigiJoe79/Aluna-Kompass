@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { coreModule } from '../src/core-module';
 import { defineModule } from '../src/modules/manifest';
 import { unwrap } from '../src/result';
-import { setSetting } from '../src/settings/service';
-import { findMediaReferences } from '../src/media/references';
+import { findMediaReferences, findMediaReferencesFor } from '../src/media/references';
+import { setSetting, writeSettingInternal } from '../src/settings/service';
 import { storeMediaAsset } from '../src/media/service';
 import { createTestDeps, ctxWith, insertUser } from '../src/testing';
 
@@ -33,9 +33,35 @@ describe('findMediaReferences', () => {
       key: 'probe',
       version: '0.0.0',
       permissions: [],
-      mediaReferences: () => [{ label: 'X', entity: 'probe', id: 'p1' }],
+      mediaReferences: () => [{ assetId: 'anything', label: 'X', entity: 'probe', id: 'p1' }],
     });
     const deps = createTestDeps({ manifests: [coreModule, probe] });
     expect(findMediaReferences(deps, 'anything')).toEqual([]);
+  });
+});
+
+describe('findMediaReferencesFor', () => {
+  it('asks each module once for a whole list and sorts the hits by asset', () => {
+    const calls: string[][] = [];
+    const probe = defineModule({
+      key: 'probe',
+      version: '0.0.0',
+      permissions: [],
+      mediaReferences: (_deps, assetIds) => {
+        calls.push([...assetIds]);
+        return [...assetIds].filter((id) => id !== 'C').map((id) => ({ assetId: id, label: `Probe ${id}`, entity: 'probe', id: `p-${id}` }));
+      },
+    });
+    const deps = createTestDeps({ manifests: [coreModule, probe] });
+    deps.db.transaction((tx) => {
+      writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'modules.enabled', ['probe'], 'test.enable');
+    });
+
+    const found = findMediaReferencesFor(deps, ['A', 'B', 'C', 'A']);
+    expect(calls).toEqual([['A', 'B', 'C']]);
+    expect(found.get('A')).toEqual([{ label: 'Probe A', entity: 'probe', id: 'p-A' }]);
+    expect(found.get('B')).toEqual([{ label: 'Probe B', entity: 'probe', id: 'p-B' }]);
+    expect(found.get('C')).toEqual([]);
+    expect(findMediaReferences(deps, 'B')).toEqual([{ label: 'Probe B', entity: 'probe', id: 'p-B' }]);
   });
 });

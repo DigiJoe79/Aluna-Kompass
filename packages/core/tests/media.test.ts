@@ -148,9 +148,7 @@ describe('Assets unter dem Recht eines Moduls', () => {
     key: 'guard',
     version: '0.0.1',
     permissions: ['guard.view'],
-    mediaReferences: (_deps, assetId) => [
-      { label: 'Verschlossen', entity: 'secret', id: assetId, permission: 'guard.view' },
-    ],
+    mediaReferences: (_deps, assetIds) => [...assetIds].map((assetId) => ({ assetId, label: 'Verschlossen', entity: 'secret', id: assetId, permission: 'guard.view' })),
   });
 
   it('liefert es nur an jemanden mit diesem Recht aus', async () => {

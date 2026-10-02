@@ -1,7 +1,8 @@
 'use server';
 
 import { guardAction } from '@/lib/action-guard';
-import { checkDeployTarget, exportSiteContent, runPreview, runPublish, setBlockedTerms } from '@kompass/module-site';
+import { conflict, type Result } from '@kompass/core';
+import { exportSiteContent, setBlockedTerms, startDeployCheck, startPreview, startPublish, type SiteJobKind, type SiteJobStart } from '@kompass/module-site';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -26,43 +27,39 @@ export async function runCheckAction(): Promise<ActionState> {
   });
 }
 
-export async function runPreviewAction(): Promise<ActionState> {
-  return guardAction('(shell)/site/publish/actions.ts#runPreviewAction', async () => {
-    const t = await getTranslations();
+/**
+ * Vorschau, Verbindungstest und Publish starten nur und kehren sofort zurück;
+ * `data.runId` sagt der Karte, auf welchen Lauf sie in /site/job/[kind]
+ * wartet. Läuft schon einer derselben Art, wartet sie auf diesen; läuft ein
+ * anderer, ist das ein Konflikt wie bisher.
+ */
+async function startedState(result: Result<SiteJobStart>, kind: SiteJobKind): Promise<ActionState> {
+  const t = await getTranslations();
+  if (!result.ok) return toActionState(result, t);
+  if (result.value.started) return { status: 'success', data: { runId: result.value.runId } };
+  const { running } = result.value;
+  if (running.name === kind) return { status: 'success', data: { runId: running.runId } };
+  return toActionState(conflict('siteJobRunning', running.name), t);
+}
+
+export async function startPreviewAction(): Promise<ActionState> {
+  return guardAction('(shell)/site/publish/actions.ts#startPreviewAction', async () => {
     const { deps, ctx } = await requireSession();
-    const result = await runPreview(deps, ctx, siteEnv());
-    if (!result.ok) return toActionState(result, t);
-    const { log: _log, ...data } = result.value;
-    return { status: 'success', data };
+    return startedState(await startPreview(deps, ctx, siteEnv()), 'preview');
   });
 }
 
-export async function runDeployCheckAction(): Promise<ActionState> {
-  return guardAction('(shell)/site/publish/actions.ts#runDeployCheckAction', async () => {
-    const t = await getTranslations();
+export async function startDeployCheckAction(): Promise<ActionState> {
+  return guardAction('(shell)/site/publish/actions.ts#startDeployCheckAction', async () => {
     const { deps, ctx } = await requireSession();
-    const result = await checkDeployTarget(deps, ctx, siteEnv());
-    if (!result.ok) return toActionState(result, t);
-    return { status: 'success', data: result.value };
+    return startedState(await startDeployCheck(deps, ctx, siteEnv()), 'deployCheck');
   });
 }
 
-export async function runPublishAction(confirm: boolean): Promise<ActionState> {
-  return guardAction('(shell)/site/publish/actions.ts#runPublishAction', async () => {
-    const t = await getTranslations();
+export async function startPublishAction(confirm: boolean): Promise<ActionState> {
+  return guardAction('(shell)/site/publish/actions.ts#startPublishAction', async () => {
     const { deps, ctx } = await requireSession();
-    const result = await runPublish(deps, ctx, siteEnv(), { confirm });
-    revalidatePath('/site/publish');
-    if (!result.ok) return toActionState(result, t);
-    return {
-      status: 'success',
-      message: t('site.publish.done', {
-        changed: result.value.diff.changed.length,
-        added: result.value.diff.added.length,
-        removed: result.value.diff.removed.length,
-      }),
-      data: result.value.diff,
-    };
+    return startedState(await startPublish(deps, ctx, siteEnv(), { confirm }), 'publish');
   });
 }
 

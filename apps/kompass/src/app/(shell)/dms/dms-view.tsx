@@ -3,7 +3,6 @@ import { getProject } from '@kompass/module-projects';
 import { getAnimal } from '@kompass/module-animals';
 import { displayName, getContact } from '@kompass/module-contacts';
 import {
-  countDocumentsByFolder,
   defaultTypeKey,
   listDocumentFolders,
   listDocuments,
@@ -12,9 +11,11 @@ import {
 } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { ancestorsOf, nameOf } from '@/lib/folder-tree-model';
 import { requireSession } from '@/lib/request-context';
 import { DmsWorkspace } from './dms-workspace';
 import { DocumentList, type DocumentListItem } from './document-list';
+import { FolderHeading } from './folder-heading';
 import { readSort } from '@/lib/sort';
 
 /**
@@ -76,7 +77,8 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
   const typesMap = new Map(types.map((type) => [type.key, type.label]));
 
   const foldersRes = await listDocumentFolders(deps, ctx);
-  const folders = foldersRes.ok ? foldersRes.value.map((f) => f.path) : [];
+  const folders = foldersRes.ok ? foldersRes.value.map((f) => ({ path: f.path, count: f.count })) : [];
+  const folderPaths = folders.map((f) => f.path);
 
   const inboxRes = await listDocuments(deps, ctx, { inbox: true, limit: 1 });
   const inboxCount = inboxRes.ok ? inboxRes.value.total : 0;
@@ -84,16 +86,23 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
   const allRes = await listDocuments(deps, ctx, { limit: 1 });
   const total = allRes.ok ? allRes.value.total : 0;
 
-  const countsRes = await countDocumentsByFolder(deps, ctx);
-  const counts = countsRes.ok ? countsRes.value : {};
-
   const isInbox = query.inbox === '1';
+  // Ein Ordner aus der Adresse, den es nicht mehr gibt (von anderer Hand
+  // verschoben, alter Link): der nächste vorhandene Vorfahr mit Hinweis, ohne
+  // ihn „Alle Dokumente“ (Spec § 5.3). Vorfahren zählen mit, auch wenn sie nur
+  // als Weg bestehen — der Baum zeigt sie ebenso.
+  const known = new Set(folderPaths.flatMap((path) => [...ancestorsOf(path), path]));
+  const requestedFolder = isInbox ? null : query.folder || null;
+  const folderGone = requestedFolder !== null && !known.has(requestedFolder);
+  const currentFolder = folderGone ? (ancestorsOf(requestedFolder).reverse().find((path) => known.has(path)) ?? null) : requestedFolder;
   const docsRes = await listDocuments(deps, ctx, {
     direction: query.direction === 'incoming' || query.direction === 'outgoing' ? query.direction : undefined,
     phase: query.phase === 'draft' || query.phase === 'issued' ? query.phase : undefined,
     typeKey: query.type || undefined,
     inbox: isInbox ? true : undefined,
-    folder: isInbox ? undefined : query.folder || undefined,
+    folder: currentFolder ?? undefined,
+    // Ein geöffneter Ordner zeigt seinen ganzen Teilbaum: Zahl im Baum und Länge der Liste stimmen überein (Spec § 9).
+    includeSubfolders: currentFolder !== null,
     text: query.text || undefined,
     unsent: query.unsent === '1' ? true : undefined,
     withOpenFollowUp: query.followUp === 'open' ? true : undefined,
@@ -121,7 +130,6 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
 
   const canCreate = hasPermission(ctx, 'dms.create');
   const canExport = hasPermission(ctx, 'documents.export');
-  const currentFolder = isInbox ? null : query.folder || null;
   const currentYear = yearIn(deps);
 
   // Nach dem Ablegen in eine geschützte Art: die Nummer, sonst nichts. Sie kommt
@@ -150,10 +158,12 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
   return (
     <DmsWorkspace
       folders={folders}
-      counts={counts}
       inboxCount={inboxCount}
       total={total}
+      listTotal={docsRes.value.total}
       canCreate={canCreate}
+      canManage={hasPermission(ctx, 'dms.manage')}
+      areaOnly={!hasPermission(ctx, 'dms.view')}
       canExport={canExport}
       currentFolder={currentFolder}
       currentYear={currentYear}
@@ -169,10 +179,26 @@ export async function DmsView({ query, receive }: { query: DmsQuery; receive?: b
           {t('filedProtected', { number: filedNumber })}
         </p>
       ) : null}
+      {folderGone ? (
+        <p data-testid="folder-gone" className="mb-3 rounded-md bg-info-bg px-3.5 py-3 text-[13px] text-ink-2">
+          {currentFolder === null
+            ? t('folderGoneAll', { name: nameOf(requestedFolder) })
+            : t('folderGone', { name: nameOf(requestedFolder), target: nameOf(currentFolder) })}
+        </p>
+      ) : null}
+      <FolderHeading
+        folder={currentFolder}
+        inbox={isInbox}
+        count={docsRes.value.total}
+        readableOnly={!hasPermission(ctx, 'dms.view')}
+        className="max-sm:hidden"
+      />
       <DocumentList
         documents={rows}
+        currentFolder={currentFolder}
+        total={docsRes.value.total}
         types={types.map((type) => ({ key: type.key, label: type.label }))}
-        folders={folders}
+        folders={folderPaths}
         inboxCount={inboxCount}
         today={todayIn(deps)}
         canMove={canCreate}

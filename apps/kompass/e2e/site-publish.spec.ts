@@ -184,8 +184,14 @@ test('the connection test lists what a publish would remove and touches nothing'
   await page.getByRole('button', { name: 'Verbindung testen' }).click();
   const result = page.getByRole('region', { name: 'Verbindungstest' });
   await expect(result).toContainText('fremde-datei.html', { timeout: 60_000 });
-
   expect(fs.readFileSync(stranger, 'utf8')).toBe('<html>WordPress</html>');
+
+  // Der Test läuft im Hintergrund, sein Ergebnis liegt im Cache: Nach dem
+  // Neuladen steht es mit Zeitpunkt noch da, ohne neuen Lauf.
+  await page.reload();
+  const kept = page.getByRole('region', { name: 'Verbindungstest' });
+  await expect(kept).toContainText('Zuletzt getestet');
+  await expect(kept).toContainText('fremde-datei.html');
 });
 
 test('the check reports a stale reference as a warning, not as a block', async ({ page }) => {

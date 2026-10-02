@@ -56,7 +56,7 @@ export default async function DocumentDetailPage(props: {
   const links = await resolveLinks(deps, ctx, doc.links);
 
   const foldersRes = await listDocumentFolders(deps, ctx);
-  const folders = foldersRes.ok ? foldersRes.value.map((f) => f.path) : [];
+  const folders = foldersRes.ok ? foldersRes.value.map((f) => ({ path: f.path, count: f.count })) : [];
 
   // Nur, was dieser Betrachter auch verknüpfen dürfte: ein ausgeschaltetes
   // Modul und ein fehlendes Recht sehen gleich aus — die Art steht dann nicht

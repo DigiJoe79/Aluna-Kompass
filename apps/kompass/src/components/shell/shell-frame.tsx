@@ -72,7 +72,8 @@ export function ShellFrame({ organization, logoUrl, groups, build, version, user
               <SectionNav sections={sections} activeHref={activeHref} variant="column" />
             </>
           )}
-          <main className="min-h-0 flex-1 overflow-auto p-6">{children}</main>
+          {/* `--shell-pad`: Das Polster des Arbeitsbereichs; randlose Flächen (Ordnerspalte, `FolderColumn`) rechnen damit. */}
+          <main className="min-h-0 flex-1 overflow-auto p-(--shell-pad) [--shell-pad:--spacing(6)]">{children}</main>
         </div>
       </div>
     </>

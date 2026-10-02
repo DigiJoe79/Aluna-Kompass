@@ -30,7 +30,16 @@ export async function seedDms(deps: Deps, ctx: CallContext): Promise<void> {
     deps.db.insert(documentTypes).values({ ...type, sortOrder: sortOrder += 1 }).run();
   }
 
-  const folders = ['behoerden', 'behoerden/finanzamt', 'vertraege', 'protokolle'];
+  // Eltern vor Kindern; drei Ebenen und ein langer Name zeigen den Baum.
+  const folders = [
+    'behoerden',
+    'behoerden/finanzamt',
+    'behoerden/amtsgericht',
+    'behoerden/amtsgericht/vereinsregister-2026',
+    'vertraege',
+    'protokolle',
+    'korrespondenz-mit-dem-landesverband-und-den-kreisgruppen',
+  ];
   for (const path of folders) {
     const existingFolder = deps.db.select().from(documentFolders).where(eq(documentFolders.path, path)).get();
     if (!existingFolder) {
@@ -69,6 +78,7 @@ export async function seedDms(deps: Deps, ctx: CallContext): Promise<void> {
       body: 'Sehr geehrte Damen und Herren,\n\nhiermit laden wir Sie herzlich ein.',
       // Festes Datum, damit der Versandvermerk danach liegen kann.
       documentDate: '2026-02-10',
+      folder: 'behoerden/amtsgericht/vereinsregister-2026',
       links,
     }),
   );

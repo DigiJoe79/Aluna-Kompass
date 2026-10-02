@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { moveDocumentFolder } from '../src/catalog';
 import { dmsModule } from '../src/manifest';
 import { DMS_MCP_TOOLS } from '../src/mcp-tools';
 import { fileFixture, setupWithTypes } from './helpers';
@@ -46,11 +47,20 @@ describe('DMS-Werkzeuge', () => {
 
   it('jedes Werkzeug nennt seinen Service, und die neuen sind da', () => {
     const names = DMS_MCP_TOOLS.map((t) => t.name);
-    for (const expected of ['dms_text', 'dms_unlink', 'dms_relate', 'dms_unrelate', 'dms_dispatch', 'dms_dispatch_clear', 'dms_add_note', 'dms_delete_note', 'dms_snippets', 'dms_create_snippet', 'dms_update_snippet', 'dms_delete_snippet', 'dms_folders', 'dms_create_folder', 'dms_delete_folder', 'dms_rules', 'dms_create_rule', 'dms_update_rule', 'dms_delete_rule', 'dms_create_type', 'dms_update_type', 'dms_create_replacement', 'dms_create_follow_up']) {
+    for (const expected of ['dms_text', 'dms_unlink', 'dms_relate', 'dms_unrelate', 'dms_dispatch', 'dms_dispatch_clear', 'dms_add_note', 'dms_delete_note', 'dms_snippets', 'dms_create_snippet', 'dms_update_snippet', 'dms_delete_snippet', 'dms_folders', 'dms_create_folder', 'dms_delete_folder', 'dms_move_folder', 'dms_rules', 'dms_create_rule', 'dms_update_rule', 'dms_delete_rule', 'dms_create_type', 'dms_update_type', 'dms_create_replacement', 'dms_create_response', 'dms_create_follow_up']) {
       expect(names, expected).toContain(expected);
     }
     expect(names).not.toContain('dms_manage_types');
     expect(DMS_MCP_TOOLS.filter((t) => typeof t.service !== 'function').map((t) => t.name)).toEqual([]);
+  });
+
+  it('dms_move_folder ruft moveDocumentFolder und nennt dms.manage', async () => {
+    const { deps, ctx } = setupWithTypes();
+    await tool('dms_create_folder').handler(deps, ctx, { path: 'a' });
+    expect(tool('dms_move_folder').description).toContain('dms.manage');
+    expect(tool('dms_move_folder').service).toBe(moveDocumentFolder);
+    const moved = await tool('dms_move_folder').handler(deps, ctx, { from: 'a', to: 'b' });
+    expect(moved).toMatchObject({ ok: true, value: { from: 'a', to: 'b', folders: 1 } });
   });
 
   it('dms_delete_type calls deleteDocumentType and names dms.manage (Task 4)', async () => {

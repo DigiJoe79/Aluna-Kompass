@@ -69,7 +69,8 @@ function SheetContent({
             render={
               <Button
                 variant="ghost"
-                className="absolute top-3 right-3"
+                // 32 px sichtbar, 44 px Klickfläche: Sheets sind fürs Telefon.
+                className="absolute top-3 right-3 after:absolute after:-inset-2"
                 size="icon-sm"
               />
             }

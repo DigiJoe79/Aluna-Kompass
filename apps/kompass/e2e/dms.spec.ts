@@ -1,7 +1,8 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { callTool, mcpClient, switchTo, switchToJonas } from './expense-helpers';
 import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
 
 const login = loginAsAdmin;
@@ -22,13 +23,56 @@ function receiveDialog(page: Page) {
   return page.getByRole('dialog', { name: 'Post ablegen' });
 }
 
+function folderTree(page: Page) {
+  return page.getByRole('tree', { name: 'Ordner' });
+}
+
+/**
+ * Das Ordnerfeld im Empfangsdialog: der Weg, wie er dasteht (Namen mit „›“),
+ * und der Wert, den das versteckte Feld abschickt (`''` = Eingangskorb).
+ */
+async function expectFolder(scope: Locator, value: string, shown: string) {
+  await expect(scope.locator('input[name="folder"]')).toHaveValue(value);
+  await expect(scope.locator('[data-folder-path]')).toHaveText(shown);
+}
+
+/**
+ * Benennt einen Ordner in einem zweiten Tab derselben Sitzung um — „inzwischen,
+ * von anderer Hand“, während der erste Tab den alten Namen noch zeigt.
+ */
+async function renameFolderElsewhere(page: Page, path: string, newName: string) {
+  const other = await page.context().newPage();
+  await other.goto(`/dms?folder=${encodeURIComponent(path)}`);
+  await other.waitForFunction(() => document.documentElement.dataset.hydrated === 'true');
+  const row = folderTree(other).locator(`[data-folder="${path}"]`);
+  await row.focus();
+  await other.keyboard.press('F2');
+  const input = folderTree(other).getByRole('textbox', { name: 'Name des Ordners' });
+  await expect(input).toHaveValue(path.split('/').at(-1)!);
+  await input.fill(newName);
+  await expect(input).toHaveValue(newName);
+  await input.press('Enter');
+  await expect(other.locator('[data-sonner-toast]').filter({ hasText: `in ${newName} umbenannt` })).toBeVisible();
+  await other.close();
+}
+
+/** Klappt einen Ordner über seinen Pfeil auf — der Name selbst navigiert. */
+async function expandFolder(page: Page, name: string) {
+  // Der zugängliche Name trägt die Zähler („behoerden, 9 Dokumente, davon 3 direkt“).
+  const item = folderTree(page).getByRole('treeitem', { name: new RegExp(`^${name},`) });
+  await item.locator('[data-toggle]').click();
+  await expect(item).toHaveAttribute('aria-expanded', 'true');
+}
+
 /**
  * Ziehen lässt sich aus dem Dateimanager nicht nachstellen; nachgestellt wird,
  * was im Fenster ankommt — eine Datei in einem DataTransfer auf einem Ziel.
  */
 async function dropFiles(page: Page, selector: string, names: string[]) {
   // Die Horcher hängen an einem Effekt; vor der Hydration geht der Zug ins Leere.
+  // Der Ordnerbaum baut seine Zeilen ebenfalls erst im Effekt.
   await expect(page.locator('[data-drop="ready"]')).toBeAttached();
+  await expect(page.locator(selector).first()).toBeAttached();
   await page.evaluate(
     ({ selector, names }) => {
       const transfer = new DataTransfer();
@@ -514,13 +558,55 @@ test.describe('dms', () => {
     await login(page);
     await page.goto('/dms');
 
-    const folders = page.getByRole('navigation', { name: 'Ordner' });
-    await expect(folders.getByRole('link', { name: /Eingangskorb/ })).toBeVisible();
-    await expect(folders.getByRole('link', { name: /protokolle/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Eingangskorb/ })).toBeVisible();
+    const folders = folderTree(page);
+    await expect(folders.getByRole('treeitem', { name: 'protokolle' })).toBeVisible();
 
-    // Ein Klick filtert die Liste auf diesen Ordner.
-    await folders.getByRole('link', { name: /protokolle/ }).click();
+    // Unterordner stehen mit ihrem Namen unter dem Elternordner, erst nach dem Aufklappen.
+    await expect(folders.getByRole('treeitem', { name: 'finanzamt' })).toHaveCount(0);
+    await expandFolder(page, 'behoerden');
+    await expect(folders.getByRole('treeitem', { name: 'finanzamt' })).toHaveAttribute('aria-level', '2');
+
+    // Ein Klick filtert die Liste auf diesen Ordner, und der Ordner ist gewählt.
+    await folders.getByRole('treeitem', { name: 'protokolle' }).click();
     await expect(page).toHaveURL(/folder=protokolle/);
+    await expect(folders.getByRole('treeitem', { name: 'protokolle' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  test('klappt Ordner mit den Pfeiltasten auf und zu, und der Weg zum gewählten ist offen', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms?folder=behoerden%2Ffinanzamt');
+
+    const folders = folderTree(page);
+    const row = (name: string) => folders.getByRole('treeitem', { name: new RegExp(`^${name},`) });
+    const behoerden = row('behoerden');
+    const amtsgericht = row('amtsgericht');
+    await expect(behoerden).toHaveAttribute('aria-expanded', 'true');
+    await expect(row('finanzamt')).toHaveAttribute('aria-current', 'page');
+
+    // Mit Tab vom Eingangskorb in den Baum: Der gewählte Ordner hat den Fokus.
+    await page.getByRole('link', { name: /Eingangskorb/ }).focus();
+    await page.keyboard.press('Tab');
+    await expect(row('finanzamt')).toBeFocused();
+
+    await page.keyboard.press('ArrowUp');
+    await expect(amtsgericht).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(amtsgericht).toHaveAttribute('aria-expanded', 'true');
+    await page.keyboard.press('ArrowLeft');
+    await expect(amtsgericht).toHaveAttribute('aria-expanded', 'false');
+
+    // Der Weg zum gewählten Ordner bleibt offen (README § 5).
+    await page.keyboard.press('ArrowUp');
+    await expect(behoerden).toBeFocused();
+    await page.keyboard.press('ArrowLeft');
+    await expect(behoerden).toHaveAttribute('aria-expanded', 'true');
+
+    // Enter öffnet den Ordner, obwohl die Zeile selbst kein Link ist.
+    await page.keyboard.press('ArrowDown');
+    await expect(amtsgericht).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/folder=behoerden%2Famtsgericht/);
   });
 
   test('stellt die Kopfknöpfe auf Feldhöhe und den primären nach rechts', async ({ page }) => {
@@ -544,9 +630,11 @@ test.describe('dms', () => {
 
   test('hält die Zeilenhöhe des Fundaments ein', async ({ page }) => {
     await login(page);
-    await page.goto('/dms');
-
-    const row = page.locator('tbody tr').first();
+    // Lange Betreffs, Arten und Orte brechen um, damit die Spalte „Ordner“
+    // ohne Querscrollen sichtbar bleibt (Spec § 9); solche Zeilen werden
+    // höher. Eine einzeilige Zeile hat die Höhe des Fundaments.
+    await page.goto('/dms?folder=vertraege');
+    const row = page.getByRole('row', { name: /Mietvertrag Lagerraum/ });
     const box = await row.boundingBox();
     if (!box) throw new Error('Zeile nicht sichtbar');
     expect(Math.round(box.height)).toBe(44);
@@ -568,7 +656,8 @@ test.describe('dms', () => {
 
     // Der Entwurf steht beim Betreff, nicht nur am rechten Rand.
     const draftRow = page.getByRole('row', { name: /Protokoll Vorstandssitzung/ });
-    await expect(draftRow.getByRole('cell').nth(1)).toContainText('Entwurf');
+    // Spalte 0 ist das Kästchen der Auswahl.
+    await expect(draftRow.getByRole('cell').nth(2)).toContainText('Entwurf');
   });
 
   test('führt die Ordnerspalte bis zum unteren Rand der Fläche', async ({ page }) => {
@@ -579,7 +668,7 @@ test.describe('dms', () => {
     // Ordnern wäre die Spalte sonst das höchste Element und die Prüfung ginge
     // aus dem falschen Grund durch.
     const main = page.locator('main');
-    const column = page.getByRole('navigation', { name: 'Ordner' });
+    const column = page.getByTestId('folder-column');
     const mainBox = await main.boundingBox();
     const columnBox = await column.boundingBox();
     if (!mainBox || !columnBox) throw new Error('Bereich oder Spalte nicht sichtbar');
@@ -589,28 +678,111 @@ test.describe('dms', () => {
     expect(columnBox.y + columnBox.height).toBeGreaterThanOrEqual(mainBox.y + mainBox.height - 1);
   });
 
-  test('färbt den Zähler mit der Zeile, in der er steht', async ({ page }) => {
-    await login(page);
-    await page.goto('/dms');
-
-    const current = page.getByRole('navigation', { name: 'Ordner' }).locator('[aria-current="page"]');
-    const row = await current.evaluate((el) => getComputedStyle(el).color);
-    const count = await current.locator('span').last().evaluate((el) => getComputedStyle(el).color);
-
-    expect(count).toBe(row);
-  });
-
   test('zieht eine Datei auf einen Ordner und legt sie dorthin', async ({ page }) => {
     await login(page);
     await page.goto('/dms');
+    await expandFolder(page, 'behoerden');
 
     await dropFiles(page, '[data-folder="behoerden/finanzamt"]', ['Bescheid der Stadtkasse.pdf']);
 
     const dialog = receiveDialog(page);
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText('Bescheid der Stadtkasse.pdf')).toBeVisible();
-    await expect(dialog.getByLabel('Ordner')).toHaveValue('behoerden/finanzamt');
+    await expectFolder(dialog, 'behoerden/finanzamt', 'behoerden › finanzamt');
     await expect(dialog.getByText('hierauf gezogen')).toBeVisible();
+
+    // „Ändern…“ wählt im Baum einen anderen Ordner, und abgelegt wird dort.
+    await dialog.getByRole('button', { name: 'Ändern…' }).click();
+    const pick = page.getByRole('dialog', { name: 'Ordner wählen' });
+    await pick.getByRole('treeitem', { name: /^protokolle,/ }).click();
+    await pick.getByRole('button', { name: '„protokolle“ übernehmen' }).click();
+    await expect(pick).toHaveCount(0);
+    await expectFolder(dialog, 'protokolle', 'protokolle');
+    await expect(dialog.getByText('hierauf gezogen')).toHaveCount(0);
+
+    await dialog.getByLabel('Datum auf dem Dokument').fill('2026-05-01');
+    await dialog.getByLabel('Betreff').fill('Bescheid der Stadtkasse');
+    await expect(dialog.getByLabel('Betreff')).toHaveValue('Bescheid der Stadtkasse');
+    await dialog.getByRole('button', { name: 'Ablegen' }).click();
+    await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}$/);
+    await expect(page.locator('[data-folder-path]')).toHaveText('protokolle');
+  });
+
+  /**
+   * Review Focus 5 (Plan 3): Zwischen Öffnen und Ablegen benennt jemand den
+   * Ordner um. Der Grund steht am Ordnerfeld, und was getippt war, bleibt.
+   */
+  test('nennt am Ordnerfeld, dass der Ordner inzwischen anders heißt, und behält die Eingaben', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+    await expandFolder(page, 'behoerden');
+    await dropFiles(page, '[data-folder="behoerden/finanzamt"]', ['Grundsteuer.pdf']);
+
+    const dialog = receiveDialog(page);
+    await expectFolder(dialog, 'behoerden/finanzamt', 'behoerden › finanzamt');
+    await dialog.getByLabel('Datum auf dem Dokument').fill('2026-05-01');
+    await dialog.getByLabel('Dokumentart').selectOption('authority');
+    await dialog.getByLabel('Betreff').fill('Bescheid zur Grundsteuer');
+    await expect(dialog.getByLabel('Betreff')).toHaveValue('Bescheid zur Grundsteuer');
+
+    await renameFolderElsewhere(page, 'behoerden/finanzamt', 'steueramt');
+
+    await dialog.getByRole('button', { name: 'Ablegen' }).click();
+    await expect(dialog.locator('#folder-error')).toHaveText('Den Ordner „finanzamt“ gibt es nicht mehr. Wählen Sie einen anderen.');
+    await expect(dialog.getByLabel('Betreff')).toHaveValue('Bescheid zur Grundsteuer');
+    await expect(dialog.getByLabel('Dokumentart')).toHaveValue('authority');
+    await expect(dialog.getByText('Grundsteuer.pdf')).toBeVisible();
+  });
+
+  test('nennt beim Ablegen jede gezogene Datei, die kein PDF ist', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+
+    await dropFiles(page, '[data-folder="vertraege"]', ['Vertrag.pdf', 'notiz.txt']);
+
+    const dialog = receiveDialog(page);
+    await expect(dialog.getByText('„notiz.txt“ ist kein PDF und wurde nicht übernommen. Die Akte nimmt nur PDF.')).toBeVisible();
+    await expect(dialog.getByText('Vertrag.pdf')).toBeVisible();
+  });
+
+  test('nennt beim Ziehen über einem Ordner das Ziel, über der Liste den Eingangskorb', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+    await expandFolder(page, 'behoerden');
+    await expect(page.locator('[data-drop="ready"]')).toBeAttached();
+
+    await page.evaluate(() => {
+      const transfer = new DataTransfer();
+      for (const name of ['Eins.pdf', 'Zwei.pdf']) transfer.items.add(new File(['%PDF-1.4'], name, { type: 'application/pdf' }));
+      const row = document.querySelector('[data-folder="behoerden/finanzamt"]')!;
+      for (const type of ['dragenter', 'dragover']) row.dispatchEvent(new DragEvent(type, { dataTransfer: transfer, bubbles: true, cancelable: true }));
+    });
+    await expect(page.getByText('2 Dateien in „finanzamt“ ablegen', { exact: true })).toBeVisible();
+    await expect(page.getByText('Die Akte nimmt nur PDF. Hier loslassen legt in den Eingangskorb.', { exact: true })).toBeVisible();
+
+    await page.evaluate(() => {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File(['%PDF-1.4'], 'Eins.pdf', { type: 'application/pdf' }));
+      document.querySelector('main')!.dispatchEvent(new DragEvent('dragover', { dataTransfer: transfer, bubbles: true, cancelable: true }));
+    });
+    await expect(page.getByText('2 Dateien ablegen', { exact: true })).toBeVisible();
+  });
+
+  /**
+   * Der Baum nimmt die Datei an, und das Fenster hört ebenfalls auf `drop`
+   * (Eingangskorb). Feuerten beide, gewönne das Fenster, weil es zuletzt
+   * hört: Der Dialog stünde dann auf dem Eingangskorb statt auf dem Ordner.
+   */
+  test('eine Datei auf einem Ordner öffnet genau einen Empfangsdialog', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+
+    await dropFiles(page, '[data-folder="protokolle"]', ['Protokoll.pdf']);
+
+    const dialog = receiveDialog(page);
+    await expect(dialog).toHaveCount(1);
+    await expectFolder(dialog, 'protokolle', 'protokolle');
+    await expect(dialog.getByText('1 von')).toHaveCount(0);
   });
 
   test('eine Datei irgendwo im Fenster landet im Eingangskorb', async ({ page }) => {
@@ -621,7 +793,24 @@ test.describe('dms', () => {
 
     const dialog = receiveDialog(page);
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByLabel('Ordner')).toHaveValue('');
+    await expectFolder(dialog, '', 'Eingangskorb');
+  });
+
+  /**
+   * Zwischen oder unter den Zeilen des Baums ist kein Ordner. Früher schluckte
+   * der Baum die Datei dort still (er nahm sie an, die Wurzel lehnte ab, und
+   * das Fenster sah weg, weil das Ziel im Baum lag).
+   */
+  test('eine Datei neben die Ordnerzeilen landet im Eingangskorb', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+    await expect(folderTree(page).getByRole('treeitem').first()).toBeVisible();
+
+    await dropFiles(page, '[role="tree"]', ['Neben dem Baum.pdf']);
+
+    const dialog = receiveDialog(page);
+    await expect(dialog).toBeVisible();
+    await expectFolder(dialog, '', 'Eingangskorb');
   });
 
   test('nennt beim Ziehen die Zahl der Dateien, wenn der Browser sie kennt', async ({ page }) => {
@@ -664,6 +853,29 @@ test.describe('dms', () => {
     await expect(dialog.getByText('Aus Safari.pdf')).toBeVisible();
   });
 
+  /**
+   * Nimmt der Baum ein Ablegen entgegen und kommt keine Datei an (oder lehnt er
+   * das Ziel ab), stoppt er das Ereignis; die Ablagefläche blieb stehen.
+   */
+  test('die Ablagefläche verschwindet auch, wenn der Baum das Ablegen schluckt', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+    await expect(page.locator('[data-drop="ready"]')).toBeAttached();
+    await expect(page.locator('[data-folder="vertraege"]')).toBeAttached();
+
+    await page.evaluate(() => {
+      const hidden = { types: ['Files'], items: { length: 0 }, files: { length: 0 } };
+      for (const [type, target] of [['dragenter', 'main'], ['drop', '[data-folder="vertraege"]']] as const) {
+        const event = new DragEvent(type, { bubbles: true, cancelable: true });
+        Object.defineProperty(event, 'dataTransfer', { value: hidden });
+        document.querySelector(target)!.dispatchEvent(event);
+      }
+    });
+
+    await expect(page.getByText('Dateien ablegen', { exact: true })).toHaveCount(0);
+    await expect(receiveDialog(page)).toHaveCount(0);
+  });
+
   test('arbeitet mehrere gezogene Dateien der Reihe nach ab', async ({ page }) => {
     await login(page);
     await page.goto('/dms');
@@ -681,7 +893,7 @@ test.describe('dms', () => {
     // Die nächste Datei steht schon da; der Ordner, auf den gezogen wurde, bleibt.
     await expect(dialog.getByText('2 von 2')).toBeVisible();
     await expect(dialog.getByText('Zweiter Vertrag.pdf')).toBeVisible();
-    await expect(dialog.getByLabel('Ordner')).toHaveValue('vertraege');
+    await expectFolder(dialog, 'vertraege', 'vertraege');
     await dialog.getByLabel('Datum auf dem Dokument').fill('2026-05-02');
     await dialog.getByLabel('Betreff').fill('Zweiter Vertrag');
     await expect(dialog.getByLabel('Betreff')).toHaveValue('Zweiter Vertrag');
@@ -941,19 +1153,46 @@ test.describe('dms', () => {
     await login(page);
     await page.goto('/dms?inbox=1');
     const row = page.getByRole('row').nth(1);
-    const subject = (await row.getByRole('cell').nth(1).textContent())?.trim() ?? '';
+    const subject = (await row.getByRole('cell').nth(2).textContent())?.trim() ?? '';
     expect(subject.length).toBeGreaterThan(0);
     await row.click();
     await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}$/);
-    await page.getByLabel('Ordner').selectOption('behoerden/finanzamt');
-    await page.getByRole('button', { name: 'Ordner speichern' }).click();
-    await expect(page.getByText('Dokument verschoben')).toBeVisible();
+    // Der Ort als Weg und „Verschieben nach…“ statt Auswahlliste und „Speichern“ (Artboard 5).
+    const place = page.locator('[data-folder-path]');
+    await expect(place).toHaveText('Eingangskorb');
+    await page.getByRole('button', { name: 'Verschieben nach…' }).click();
+    const dialog = page.getByRole('dialog', { name: `„${subject}“ verschieben nach…` });
+    await expect(dialog.getByText('Liegt im Eingangskorb.')).toBeVisible();
+    await dialog.getByRole('treeitem', { name: /^behoerden,/ }).locator('[data-toggle]').click();
+    await dialog.getByRole('treeitem', { name: /^finanzamt,/ }).click();
+    await dialog.getByRole('button', { name: 'Nach „finanzamt“ verschieben' }).click();
+    await expect(dialog).toHaveCount(0);
 
-    // Im Eingangskorb liegt es nicht mehr, im Ordner dafür schon.
+    await expect(place).toHaveText('behoerden › finanzamt');
+    await expect(place.getByRole('link', { name: 'finanzamt' })).toHaveAttribute('href', '/dms?folder=behoerden%2Ffinanzamt');
+    await expect(place.getByRole('link', { name: 'behoerden' })).toHaveAttribute('href', '/dms?folder=behoerden');
+    // Derselbe Weg wie in der Liste: Toast mit „Rückgängig“.
+    const moved = page.locator('[data-sonner-toast]').filter({ hasText: `„${subject}“ nach finanzamt verschoben` });
+    await expect(moved).toBeVisible();
+    await moved.getByRole('button', { name: 'Rückgängig' }).click();
+    await expect(place).toHaveText('Eingangskorb');
+  });
+
+  test('lehnt der Server das Verschieben am Dokument ab, bleibt der Dialog offen und nennt den Grund', async ({ page }) => {
+    await login(page);
     await page.goto('/dms?inbox=1');
-    await expect(page.getByRole('row').filter({ hasText: subject })).toHaveCount(0);
-    await page.goto('/dms?folder=behoerden%2Ffinanzamt');
-    await expect(page.getByRole('row').filter({ hasText: subject })).toHaveCount(1);
+    await page.getByRole('row').nth(1).click();
+    await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}$/);
+    await page.getByRole('button', { name: 'Verschieben nach…' }).click();
+    const dialog = page.getByRole('dialog', { name: /verschieben nach…$/ });
+    await dialog.getByRole('treeitem', { name: /^protokolle,/ }).click();
+
+    await renameFolderElsewhere(page, 'protokolle', 'sitzungsprotokolle');
+
+    await dialog.getByRole('button', { name: 'Nach „protokolle“ verschieben' }).click();
+    await expect(dialog.getByText('Den Ordner „protokolle“ gibt es nicht mehr. Wählen Sie einen anderen.')).toBeVisible();
+    await expect(page.locator('[data-folder-path]')).toHaveText('Eingangskorb');
+    await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
   });
 
   test('legt am Dokument einen Bezug zu einem Kontakt an und entfernt ihn wieder', async ({ page }) => {
@@ -990,6 +1229,34 @@ test.describe('dms', () => {
     // und welcher Brief zuerst gefunden wird, hängt davon ab, was vorher im selben Worker angelegt wurde (Teil C Task 2d).
     await relations.getByRole('listitem').filter({ hasText: 'Anlage zu' }).getByRole('link', { name: /BRF-/ }).click();
     await expect(page.getByTestId('document-relations').getByText('Anlage:')).toBeVisible();
+  });
+
+  test('antwortet auf einen Eingang: Entwurf mit Betreff, Ordner und Absender als Empfänger, die Quelle sagt „beantwortet durch“', async ({ page, baseURL }) => {
+    await login(page);
+    // Der Seed-Bescheid liegt im Eingangskorb und hat keinen Absender — beides kommt hier dazu.
+    const client = await mcpClient(page, baseURL);
+    const listed = await callTool<{ documents: { id: string; number: string }[] }>(client, 'dms_list', { text: 'Freistellungsbescheid', direction: 'incoming', limit: 1 });
+    const source = listed.documents[0]!;
+    const contacts = await callTool<{ contacts: { id: string }[] }>(client, 'contacts_list', { text: 'Sandberg' });
+    await callTool(client, 'dms_link', { documentId: source.id, entityType: 'contact', entityId: contacts.contacts[0]!.id, role: 'sender' });
+    await callTool(client, 'dms_move', { id: source.id, folder: 'behoerden/finanzamt' });
+    const letter = (await callTool<{ documents: { id: string }[] }>(client, 'dms_list', { text: 'Dankschreiben', limit: 1 })).documents[0]!;
+    await client.close();
+
+    await page.goto(`/dms/${source.id}`);
+    await page.getByRole('button', { name: 'Antworten' }).click();
+    await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}\/edit$/);
+    await expect(page.locator('#subject')).toHaveValue('Ihr Schreiben vom 15.02.2026: Freistellungsbescheid');
+    await expectFolder(page.locator('body'), 'behoerden/finanzamt', 'behoerden › finanzamt');
+    await expect(page.getByRole('combobox', { name: 'Empfänger' })).toHaveValue('Mira Sandberg');
+
+    await page.goto(`/dms/${source.id}`);
+    await expect(page.getByTestId('document-relations').getByRole('listitem').filter({ hasText: 'beantwortet durch' })).toBeVisible();
+
+    // Am eigenen, abgelegten Brief heißt derselbe Knopf „Folgeschreiben“.
+    await page.goto(`/dms/${letter.id}`);
+    await expect(page.getByRole('button', { name: 'Folgeschreiben' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Antworten' })).toHaveCount(0);
   });
 
   test('vermerkt den Versand eines Briefs und entfernt den Vermerk wieder', async ({ page }) => {
@@ -1098,19 +1365,20 @@ test.describe('dms', () => {
     await login(page);
     await page.goto('/dms?inbox=1');
     await expect(page.locator('[data-drop="ready"]')).toBeAttached();
+    await expandFolder(page, 'behoerden');
     const row = page.getByRole('row').nth(1);
-    const subject = (await row.getByRole('cell').nth(1).textContent())?.trim() ?? '';
+    const subject = (await row.getByRole('cell').nth(2).textContent())?.trim() ?? '';
     const rowId = await row.getAttribute('data-document-id');
     expect(rowId).toBeTruthy();
     await page.evaluate(({ id }) => {
       const transfer = new DataTransfer();
-      transfer.setData('application/x-kompass-document', id!);
+      transfer.setData('application/x-kompass-documents', JSON.stringify([id]));
       const target = document.querySelector('[data-folder="behoerden/finanzamt"]')!;
       for (const type of ['dragenter', 'dragover', 'drop']) {
         target.dispatchEvent(new DragEvent(type, { dataTransfer: transfer, bubbles: true, cancelable: true }));
       }
     }, { id: rowId });
-    await expect(page.getByText('Dokument verschoben')).toBeVisible();
+    await expect(page.locator('[data-sonner-toast]').filter({ hasText: `„${subject}“ nach finanzamt verschoben` })).toBeVisible();
     await expect(page.getByRole('row').filter({ hasText: subject })).toHaveCount(0);
   });
 
@@ -1330,4 +1598,540 @@ test('die Filterfelder der Akte folgen der Adresse, auch wenn sie von außen wec
   await page.getByRole('navigation').getByRole('link', { name: 'Akte', exact: true }).first().click();
   await expect(page).toHaveURL(/\/dms$/);
   await expect(page.getByLabel('Richtung', { exact: true })).toHaveValue('');
+});
+
+/**
+ * Ordner pflegt man in der Akte selbst (Plan 3, Task 1): verschieben per
+ * Ziehen, Tastatur oder „Verschieben nach…“, umbenennen, löschen — jede
+ * Änderung mit „Rückgängig“ im Toast, und die Adresse folgt dem geöffneten
+ * Ordner, ohne einen Verlaufseintrag zu hinterlassen.
+ */
+test.describe('Ordnerbaum', () => {
+  test.beforeEach(async ({ page }) => {
+    await resetDatabase(page, 'seeded');
+  });
+
+  const treeRow = (page: Page, name: string) => folderTree(page).getByRole('treeitem', { name: new RegExp(`^${name},`) });
+  const toastWith = (page: Page, text: string | RegExp) => page.locator('[data-sonner-toast]').filter({ hasText: text });
+
+  /** Nimmt „amtsgericht“ per Tastatur auf und legt es in „vertraege“ ab. */
+  async function moveAmtsgerichtByKeyboard(page: Page) {
+    await expandFolder(page, 'behoerden');
+    await page.getByRole('link', { name: /Eingangskorb/ }).focus();
+    await page.keyboard.press('Tab');
+    await expect(treeRow(page, 'behoerden')).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(treeRow(page, 'amtsgericht')).toBeFocused();
+    await page.keyboard.press('Control+Shift+D');
+    // behoerden › amtsgericht, finanzamt, korrespondenz…, protokolle, vertraege
+    for (let i = 0; i < 4; i += 1) await page.keyboard.press('ArrowDown');
+    await expect(treeRow(page, 'vertraege')).toBeFocused();
+    await page.keyboard.press('Enter');
+  }
+
+  test('verschiebt einen Ordner per Tastatur und nimmt es mit „Rückgängig“ zurück', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+    await moveAmtsgerichtByKeyboard(page);
+
+    const moved = toastWith(page, /Ordner amtsgericht mit .+ nach vertraege verschoben/);
+    await expect(moved).toBeVisible();
+    await expect(page.locator('[data-folder="behoerden/amtsgericht"]')).toHaveCount(0);
+    await expandFolder(page, 'vertraege');
+    await expect(page.locator('[data-folder="vertraege/amtsgericht"]')).toBeVisible();
+
+    await moved.getByRole('button', { name: 'Rückgängig' }).click();
+    await expect(toastWith(page, 'amtsgericht liegt wieder in behoerden')).toBeVisible();
+    await expect(page.locator('[data-folder="behoerden/amtsgericht"]')).toBeVisible();
+    await expect(page.locator('[data-folder="vertraege/amtsgericht"]')).toHaveCount(0);
+  });
+
+  test('benennt den geöffneten Ordner um, und die Adresse folgt ohne neuen Verlaufseintrag', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+    await treeRow(page, 'protokolle').click();
+    await expect(page).toHaveURL(/folder=protokolle$/);
+    await expect(treeRow(page, 'protokolle')).toHaveAttribute('aria-current', 'page');
+
+    await treeRow(page, 'protokolle').focus();
+    await page.keyboard.press('F2');
+    const input = folderTree(page).getByRole('textbox', { name: 'Name des Ordners' });
+    await expect(input).toHaveValue('protokolle');
+    await input.fill('sitzungsprotokolle');
+    await expect(input).toHaveValue('sitzungsprotokolle');
+    await input.press('Enter');
+
+    await expect(page).toHaveURL(/folder=sitzungsprotokolle$/);
+    await expect(treeRow(page, 'sitzungsprotokolle')).toHaveAttribute('aria-current', 'page');
+    await expect(toastWith(page, 'Ordner protokolle in sitzungsprotokolle umbenannt')).toBeVisible();
+
+    // Zurück führt hinter den Ordner, nicht auf seinen alten Namen.
+    await page.goBack();
+    await expect(page).toHaveURL(/\/dms$/);
+  });
+
+  test('löscht einen leeren, geöffneten Ordner ohne Rückfrage; die Akte springt in den Elternordner', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms?folder=behoerden%2Ffinanzamt');
+    const row = treeRow(page, 'finanzamt');
+    await expect(row).toHaveAttribute('aria-current', 'page');
+    await row.locator('[data-row-menu]').click();
+    await page.getByRole('menuitem', { name: 'Löschen' }).click();
+
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page).toHaveURL(/folder=behoerden$/);
+    await expect(page.locator('[data-folder="behoerden/finanzamt"]')).toHaveCount(0);
+
+    const deleted = toastWith(page, 'Ordner finanzamt gelöscht');
+    await deleted.getByRole('button', { name: 'Rückgängig' }).click();
+    await expect(page.locator('[data-folder="behoerden/finanzamt"]')).toBeVisible();
+    await expect(page).toHaveURL(/folder=behoerden$/);
+  });
+
+  test('öffnet bei einem verschwundenen Ordner den nächsten vorhandenen Vorfahren mit Hinweis', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms?folder=gibt-es-nicht%2Funter');
+    await expect(page.getByTestId('folder-gone')).toContainText('unter');
+    await expect(page.getByRole('link', { name: /Alle Dokumente/ })).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('link', { name: /Einladung zur ordentlichen Mitgliederversammlung/ }).first()).toBeVisible();
+
+    await page.goto('/dms?folder=behoerden%2Fgibt-es-nicht');
+    await expect(page.getByTestId('folder-gone')).toContainText('gibt-es-nicht');
+    await expect(page.getByTestId('folder-gone')).toContainText('behoerden');
+    await expect(treeRow(page, 'behoerden')).toHaveAttribute('aria-current', 'page');
+  });
+
+  test('„Rückgängig“ nimmt den Zug zurück, auch wenn inzwischen ein anderer Ordner offen ist', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+    await moveAmtsgerichtByKeyboard(page);
+    const moved = toastWith(page, /Ordner amtsgericht mit .+ nach vertraege verschoben/);
+    await expect(moved).toBeVisible();
+
+    await treeRow(page, 'protokolle').click();
+    await expect(page).toHaveURL(/folder=protokolle$/);
+    await moved.getByRole('button', { name: 'Rückgängig' }).click();
+
+    await expect(toastWith(page, 'amtsgericht liegt wieder in behoerden')).toBeVisible();
+    await expect(page.locator('[data-folder="behoerden/amtsgericht"]')).toBeAttached();
+    await expect(page).toHaveURL(/folder=protokolle$/);
+  });
+
+  test('„Als Paket exportieren“ öffnet den Export mit diesem Ordner', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms?folder=protokolle');
+    await treeRow(page, 'protokolle').locator('[data-row-menu]').click();
+    await page.getByRole('menuitem', { name: 'Als Paket exportieren' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Dokumente als Bündel' });
+    await expect(dialog.getByRole('radio', { name: /Diesen Ordner/ })).toBeChecked();
+  });
+
+  test('ohne dms.manage gibt es weder „Neuer Ordner“ noch das Menü am Ordner', async ({ page }) => {
+    await login(page);
+    await switchToJonas(page);
+    await page.goto('/dms?folder=protokolle');
+    await expect(treeRow(page, 'protokolle')).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('button', { name: 'Neuer Ordner' })).toHaveCount(0);
+    await expect(folderTree(page).locator('[data-row-menu]')).toHaveCount(0);
+  });
+
+  test('„Neuer Entwurf“ übernimmt den geöffneten Ordner und legt den Brief dort ab', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms?folder=behoerden%2Ffinanzamt');
+    await page.getByRole('link', { name: 'Neuer Entwurf' }).click();
+    await expect(page).toHaveURL(/\/dms\/new\?folder=behoerden%2Ffinanzamt/);
+    await expectFolder(page.locator('body'), 'behoerden/finanzamt', 'behoerden › finanzamt');
+    await page.getByLabel('Betreff').fill('Einspruch Finanzamt');
+    await page.getByLabel('Text').fill('Text');
+    await page.getByRole('button', { name: 'Entwurf speichern' }).click();
+    await page.getByRole('link', { name: 'Zurück zum Dokument' }).click();
+    await expect(page.getByText('behoerden › finanzamt').first()).toBeVisible();
+  });
+
+  test('„Neuer Entwurf“ mit unbekanntem Ordner: Feld leer, keine Fehlermeldung; Empfänger und Ordner zusammen', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms/new?folder=gibt-es-nicht');
+    await expect(page.locator('form input[name="folder"]')).toHaveValue('');
+    await expect(page.locator('form [role="alert"]')).toHaveCount(0);
+
+    await page.goto('/dms');
+    await page.getByRole('link', { name: 'Einladung zur ordentlichen Mitgliederversammlung' }).click();
+    const contactLink = page.getByTestId('document-links').getByRole('link').first();
+    const recipientId = (await contactLink.getAttribute('href'))!.split('/').pop()!;
+    await page.goto(`/dms/new?recipient=${recipientId}&folder=vertraege`);
+    await expectFolder(page.locator('form'), 'vertraege', 'vertraege');
+    await expect(page.getByRole('combobox', { name: 'Empfänger' })).not.toHaveValue('');
+  });
+});
+
+/**
+ * Mehrfachauswahl in der Akte (README § 3, Artboards 1, 2b, 5c; § 5): Zeilen
+ * ankreuzen, gemeinsam per „Verschieben nach…“ oder Ziehen verschieben, jeder
+ * Zug mit eigenem „Rückgängig“, das den Ort prüft.
+ */
+test.describe('Mehrfachauswahl', () => {
+  test.beforeEach(async ({ page }) => {
+    await resetDatabase(page, 'seeded');
+  });
+
+  const toastWith = (page: Page, text: string | RegExp) => page.locator('[data-sonner-toast]').filter({ hasText: text });
+  const rowOf = (page: Page, id: string) => page.locator(`tr[data-document-id="${id}"]`);
+  const selectionBar = (page: Page) => page.getByTestId('selection-bar');
+
+  /** „Rückgängig“ in einem Toast; ältere liegen im Stapel hinter dem neuesten, bis der Zeiger darüber steht. */
+  async function undoIn(page: Page, toast: ReturnType<typeof toastWith>) {
+    await page.locator('[data-sonner-toast][data-front="true"]').hover();
+    await toast.getByRole('button', { name: 'Rückgängig' }).click();
+  }
+
+  /** Die IDs der ersten `n` Zeilen der Liste, sobald die Seite zuhört. */
+  async function firstIds(page: Page, n: number): Promise<string[]> {
+    await expect(page.locator('[data-drop="ready"]')).toBeAttached();
+    await expect(page.locator('tr[data-document-id]').nth(n - 1)).toBeAttached();
+    const ids = await page.locator('tr[data-document-id]').evaluateAll((rows) => rows.map((r) => r.getAttribute('data-document-id')!));
+    return ids.slice(0, n);
+  }
+
+  async function tick(page: Page, id: string) {
+    const box = rowOf(page, id).getByRole('checkbox');
+    await box.click();
+    await expect(box).toBeChecked();
+  }
+
+  /**
+   * Zieht die Zeile `id` auf einen Ordner: `dragstart` an der Zeile (sie legt
+   * das Ziehgut in den DataTransfer), dann die Ereignisse am Ziel. `dragend`
+   * nur, wenn die Zeile noch steht — verschwindet sie vorher, kommt es auch im
+   * Browser nie an.
+   */
+  async function dragRow(page: Page, id: string, folder: string) {
+    await page.evaluate(
+      ({ id, folder }) => {
+        const row = document.querySelector(`tr[data-document-id="${id}"]`)!;
+        const target = document.querySelector(`[data-folder="${folder}"]`)!;
+        const transfer = new DataTransfer();
+        row.dispatchEvent(new DragEvent('dragstart', { dataTransfer: transfer, bubbles: true, cancelable: true }));
+        for (const type of ['dragenter', 'dragover', 'drop']) {
+          target.dispatchEvent(new DragEvent(type, { dataTransfer: transfer, bubbles: true, cancelable: true }));
+        }
+        if (row.isConnected) row.dispatchEvent(new DragEvent('dragend', { dataTransfer: transfer, bubbles: true }));
+      },
+      { id, folder }
+    );
+  }
+
+  /** „Verschieben nach…“ der Auswahl, Ziel `behoerden › finanzamt`. */
+  async function moveSelectionToFinanzamt(page: Page, count: number) {
+    await selectionBar(page).getByRole('button', { name: 'Verschieben nach…' }).click();
+    const dialog = page.getByRole('dialog', { name: `${count} Dokumente verschieben nach…` });
+    // Liegt schon etwas in finanzamt, ist der Weg dorthin beim Öffnen offen.
+    const behoerden = dialog.getByRole('treeitem', { name: /^behoerden,/ });
+    if ((await behoerden.getAttribute('aria-expanded')) !== 'true') await behoerden.locator('[data-toggle]').click();
+    await dialog.getByRole('treeitem', { name: /^finanzamt,/ }).click();
+    await dialog.getByRole('button', { name: 'Nach „finanzamt“ verschieben' }).click();
+    await expect(dialog).toHaveCount(0);
+  }
+
+  test('kreuzt drei Zeilen an, verschiebt sie gemeinsam und nimmt es mit „Rückgängig“ zurück', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms?inbox=1');
+    const ids = await firstIds(page, 3);
+    for (const id of ids) await tick(page, id);
+    await expect(selectionBar(page)).toContainText('3 ausgewählt');
+
+    await moveSelectionToFinanzamt(page, 3);
+    const moved = toastWith(page, '3 Dokumente nach finanzamt verschoben');
+    await expect(moved).toBeVisible();
+    for (const id of ids) await expect(rowOf(page, id)).toHaveCount(0);
+    await expect(selectionBar(page)).toHaveCount(0);
+
+    await moved.getByRole('button', { name: 'Rückgängig' }).click();
+    await expect(toastWith(page, '3 Dokumente liegen wieder im Eingangskorb')).toBeVisible();
+    for (const id of ids) await expect(rowOf(page, id)).toHaveCount(1);
+  });
+
+  test('wer eine angekreuzte Zeile zieht, zieht alle angekreuzten; eine nicht angekreuzte nur sich selbst', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms?inbox=1');
+    await expandFolder(page, 'behoerden');
+    const [a, b, c, d] = await firstIds(page, 4);
+    await tick(page, a!);
+    await tick(page, b!);
+
+    // Nicht angekreuzt: nur diese Zeile, die Auswahl bleibt.
+    await dragRow(page, c!, 'vertraege');
+    await expect(toastWith(page, /^„.+“ nach vertraege verschoben/)).toBeVisible();
+    await expect(rowOf(page, c!)).toHaveCount(0);
+    await expect(rowOf(page, a!)).toHaveCount(1);
+    await expect(selectionBar(page)).toContainText('2 ausgewählt');
+    await expect(rowOf(page, a!).getByRole('checkbox')).toBeChecked();
+
+    // Angekreuzt: die ganze Auswahl.
+    await dragRow(page, b!, 'behoerden/finanzamt');
+    await expect(toastWith(page, '2 Dokumente nach finanzamt verschoben')).toBeVisible();
+    await expect(rowOf(page, a!)).toHaveCount(0);
+    await expect(rowOf(page, b!)).toHaveCount(0);
+    await expect(rowOf(page, d!)).toHaveCount(1);
+    await expect(selectionBar(page)).toHaveCount(0);
+  });
+
+  test('überspringt, was schon im Ziel liegt, und sagt es', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms?inbox=1');
+    await expandFolder(page, 'behoerden');
+    const [a, b, c] = await firstIds(page, 3);
+    await tick(page, a!);
+    await tick(page, b!);
+    await dragRow(page, a!, 'behoerden/finanzamt');
+    await expect(toastWith(page, '2 Dokumente nach finanzamt verschoben')).toBeVisible();
+
+    // In „Alle Dokumente“ stehen alle drei; zwei davon liegen schon in finanzamt.
+    await page.getByRole('link', { name: /^Alle Dokumente/ }).click();
+    await expect(page).toHaveURL(/\/dms$/);
+    for (const id of [a!, b!, c!]) await tick(page, id);
+    await moveSelectionToFinanzamt(page, 3);
+    await expect(toastWith(page, '1 Dokument nach finanzamt verschoben, 2 lagen schon dort')).toBeVisible();
+  });
+
+  test('jedes „Rückgängig“ nimmt nur seinen eigenen Zug zurück', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms?inbox=1');
+    await expandFolder(page, 'behoerden');
+    const [a, b] = await firstIds(page, 2);
+    await dragRow(page, a!, 'behoerden/finanzamt');
+    const first = toastWith(page, /nach finanzamt verschoben/);
+    await expect(first).toBeVisible();
+    await dragRow(page, b!, 'vertraege');
+    await expect(toastWith(page, /nach vertraege verschoben/)).toBeVisible();
+
+    await undoIn(page, first);
+    await expect(toastWith(page, /liegt wieder im Eingangskorb/)).toBeVisible();
+    await expect(rowOf(page, a!)).toHaveCount(1);
+    await expect(rowOf(page, b!)).toHaveCount(0);
+  });
+
+  test('ein anderer Ordner ist eine neue Liste: die Auswahl ist weg', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms?inbox=1');
+    const [a] = await firstIds(page, 1);
+    await tick(page, a!);
+    await expect(selectionBar(page)).toContainText('1 ausgewählt');
+
+    await folderTree(page).getByRole('treeitem', { name: /^protokolle,/ }).click();
+    await expect(page).toHaveURL(/folder=protokolle$/);
+    await expect(selectionBar(page)).toHaveCount(0);
+    await expect(page.locator('tr[data-document-id]').getByRole('checkbox', { checked: true })).toHaveCount(0);
+  });
+
+  test('„Rückgängig“ lehnt ab, wenn das Dokument inzwischen weiterverschoben wurde', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms?inbox=1');
+    await expandFolder(page, 'behoerden');
+    const [a] = await firstIds(page, 1);
+    await dragRow(page, a!, 'behoerden/finanzamt');
+    const first = toastWith(page, /nach finanzamt verschoben/);
+    await expect(first).toBeVisible();
+
+    await folderTree(page).getByRole('treeitem', { name: /^finanzamt,/ }).click();
+    await expect(page).toHaveURL(/folder=behoerden%2Ffinanzamt$/);
+    await dragRow(page, a!, 'vertraege');
+    await expect(toastWith(page, /nach vertraege verschoben/)).toBeVisible();
+
+    await undoIn(page, first);
+    await expect(toastWith(page, /^Nicht mehr rückgängig zu machen/)).toBeVisible();
+    await folderTree(page).getByRole('treeitem', { name: /^vertraege,/ }).click();
+    await expect(page).toHaveURL(/folder=vertraege$/);
+    await expect(rowOf(page, a!)).toHaveCount(1);
+  });
+
+  /** Die Zeile eines Ausgangs aus dem Bestand: der Brief im Ordner vereinsregister-2026. */
+  async function outgoingRow(page: Page): Promise<string> {
+    await page.goto('/dms');
+    await expect(page.locator('[data-drop="ready"]')).toBeAttached();
+    const row = page.locator('tr[data-document-id]').filter({ hasText: 'Einladung zur ordentlichen Mitgliederversammlung' }).first();
+    return (await row.getAttribute('data-document-id'))!;
+  }
+
+  test('ein Ausgang ohne Ordner heißt „Kein Ordner“, nicht Eingangskorb', async ({ page }) => {
+    await login(page);
+    const id = await outgoingRow(page);
+    await tick(page, id);
+    await selectionBar(page).getByRole('button', { name: 'Verschieben nach…' }).click();
+    const dialog = page.getByRole('dialog', { name: '„Einladung zur ordentlichen Mitgliederversammlung“ verschieben nach…' });
+    await dialog.getByRole('button', { name: /^Kein Ordner/ }).click();
+    await dialog.getByRole('button', { name: 'Nach „Kein Ordner“ verschieben' }).click();
+    const moved = toastWith(page, '„Einladung zur ordentlichen Mitgliederversammlung“ nach „Kein Ordner“ verschoben');
+    await expect(moved).toBeVisible();
+    await expect(rowOf(page, id)).toContainText('Kein Ordner');
+
+    await moved.getByRole('button', { name: 'Rückgängig' }).click();
+    await expect(toastWith(page, '„Einladung zur ordentlichen Mitgliederversammlung“ liegt wieder in vereinsregister-2026')).toBeVisible();
+  });
+
+  /**
+   * Wie in der Mediathek (Abnahme 01.10.): Legt der Browser einem Zug aus der
+   * Seite eine Datei bei, ist das kein Brief vom Rechner. Die Zeile wird
+   * verschoben, der Empfangsdialog geht nicht auf.
+   */
+  test('eine gezogene Zeile mit beigelegter Datei verschiebt und öffnet keinen Empfang', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms?inbox=1');
+    await expect(page.locator('[data-drop="ready"]')).toBeAttached();
+    const [id] = await firstIds(page, 1);
+    await page.evaluate((id) => {
+      const row = document.querySelector(`tr[data-document-id="${id}"]`)!;
+      const target = document.querySelector('[data-folder="protokolle"]')!;
+      const transfer = new DataTransfer();
+      transfer.items.add(new File(['%PDF-1.4'], 'image.png', { type: 'image/png' }));
+      row.dispatchEvent(new DragEvent('dragstart', { dataTransfer: transfer, bubbles: true, cancelable: true }));
+      for (const type of ['dragenter', 'dragover', 'drop']) target.dispatchEvent(new DragEvent(type, { dataTransfer: transfer, bubbles: true, cancelable: true }));
+      if (row.isConnected) row.dispatchEvent(new DragEvent('dragend', { dataTransfer: transfer, bubbles: true }));
+    }, id!);
+    await expect(toastWith(page, /nach protokolle verschoben/)).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test('der Eingangskorb nimmt keinen Ausgang an', async ({ page }) => {
+    await login(page);
+    const id = await outgoingRow(page);
+    const state = await page.evaluate((id) => {
+      const row = document.querySelector(`tr[data-document-id="${id}"]`)!;
+      const inbox = document.querySelector('[data-fixed="inbox"]')!;
+      const transfer = new DataTransfer();
+      row.dispatchEvent(new DragEvent('dragstart', { dataTransfer: transfer, bubbles: true, cancelable: true }));
+      for (const type of ['dragenter', 'dragover']) {
+        inbox.dispatchEvent(new DragEvent(type, { dataTransfer: transfer, bubbles: true, cancelable: true }));
+      }
+      return new Promise<string | null>((resolve) =>
+        setTimeout(() => {
+          const shown = `${inbox.getAttribute('data-drop')}|${inbox.textContent}`;
+          inbox.dispatchEvent(new DragEvent('drop', { dataTransfer: transfer, bubbles: true, cancelable: true }));
+          row.dispatchEvent(new DragEvent('dragend', { dataTransfer: transfer, bubbles: true }));
+          resolve(shown);
+        }, 50)
+      );
+    }, id);
+    expect(state).toContain('blocked|');
+    expect(state).toContain('In den Eingangskorb kommt nur eingegangene Post.');
+    await expect(rowOf(page, id)).toContainText('vereinsregister-2026');
+    await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
+  });
+});
+
+/**
+ * Wo man ist (Plan 3, Task 4; Spec § 9, Entscheidung Joe 2026-10-01): Ein
+ * geöffneter Ordner zeigt seinen ganzen Teilbaum, die Spalte „Ordner“ nennt
+ * den Ort darunter; über der Liste stehen Weg und Titel. Dazu der kurze Baum
+ * mit Bereichsrecht, das Telefon-Sheet und der Verweis in der Verwaltung.
+ */
+test.describe('Weg und Teilbaum', () => {
+  test.beforeEach(async ({ page }) => {
+    await resetDatabase(page, 'seeded');
+  });
+
+  const treeRow = (page: Page, name: string) => folderTree(page).getByRole('treeitem', { name: new RegExp(`^${name},`) });
+  const rows = (page: Page) => page.locator('tr[data-document-id]');
+  const heading = (page: Page) => page.getByTestId('folder-heading');
+  /** Die Summe, die der Baum am Ordner nennt — aus dem zugänglichen Namen („behoerden, 3 Dokumente“ oder „…, leer“). */
+  async function treeTotal(page: Page, name: string): Promise<number> {
+    const label = (await treeRow(page, name).getAttribute('aria-label')) ?? '';
+    return Number(label.match(/^[^,]+, (\d+)/)?.[1] ?? 0);
+  }
+
+  test('ein geöffneter Ordner listet seinen Teilbaum und nennt den Ort darunter', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms?folder=behoerden');
+    await expect(treeRow(page, 'behoerden')).toHaveAttribute('aria-current', 'page');
+    const total = await treeTotal(page, 'behoerden');
+    expect(total).toBeGreaterThan(0);
+    await expect(rows(page)).toHaveCount(total);
+    const deep = rows(page).filter({ hasText: 'Einladung zur ordentlichen Mitgliederversammlung' });
+    await expect(deep.locator('[data-folder-cell]')).toHaveText('amtsgericht › vereinsregister-2026');
+
+    // Über der Liste: Titel und Anzahl, kein „davon … direkt“; oben im Baum kein Weg davor.
+    await expect(heading(page).getByRole('heading', { name: 'behoerden' })).toBeVisible();
+    await expect(heading(page)).toContainText(total === 1 ? '1 Dokument' : `${total} Dokumente`);
+    await expect(heading(page)).not.toContainText('direkt');
+    await expect(heading(page).getByRole('navigation', { name: 'Weg' })).toHaveCount(0);
+
+    // Eine Ebene tiefer: der Weg als Links, der Ordner als Titel.
+    await expandFolder(page, 'behoerden');
+    await treeRow(page, 'amtsgericht').click();
+    await expect(page).toHaveURL(/folder=behoerden%2Famtsgericht$/);
+    const path = heading(page).getByRole('navigation', { name: 'Weg' });
+    await expect(path.getByRole('link', { name: 'behoerden' })).toHaveAttribute('href', '/dms?folder=behoerden');
+    await expect(heading(page).getByRole('heading', { name: 'amtsgericht' })).toBeVisible();
+    await expect(deep.locator('[data-folder-cell]')).toHaveText('vereinsregister-2026');
+
+    // Wo das Dokument selbst liegt, bleibt die Spalte leer.
+    await page.goto('/dms?folder=behoerden%2Famtsgericht%2Fvereinsregister-2026');
+    await expect(heading(page).getByRole('heading', { name: 'vereinsregister-2026' })).toBeVisible();
+    await expect(heading(page).getByRole('navigation', { name: 'Weg' }).getByRole('link')).toHaveText(['behoerden', 'amtsgericht']);
+    await expect(deep.locator('[data-folder-cell]')).toHaveText('');
+  });
+
+  test('nur mit Bereichsrecht: der kurze Baum mit Hinweis darunter', async ({ page, baseURL }) => {
+    await login(page);
+    // Ein Beleg (Schutzbereich Finanzen) nach „behoerden/finanzamt“ — sonst läge nichts Lesbares in einem Ordner.
+    const client = await mcpClient(page, baseURL);
+    const listed = await callTool<{ documents: { id: string }[] }>(client, 'dms_list', { typeKey: 'voucher-own', limit: 1 });
+    await callTool(client, 'dms_move', { id: listed.documents[0]!.id, folder: 'behoerden/finanzamt' });
+    await client.close();
+
+    await switchTo(page, 'Mira Klein', 'mira@kompass.local');
+    await page.goto('/dms');
+    await expect(page.getByTestId('folder-column')).toContainText('Sie sehen nur Ordner mit Dokumenten, die Sie lesen dürfen. Die Zahlen zählen nur diese.');
+    await expect(treeRow(page, 'behoerden')).toBeVisible();
+    await expect(treeRow(page, 'protokolle')).toHaveCount(0);
+    await expect(treeRow(page, 'vertraege')).toHaveCount(0);
+  });
+
+  test('mit dms.view kein Hinweis zum Bereichsrecht', async ({ page }) => {
+    await login(page);
+    await page.goto('/dms');
+    await expect(treeRow(page, 'protokolle')).toBeVisible();
+    await expect(page.getByTestId('folder-column')).not.toContainText('die Sie lesen dürfen');
+  });
+
+  test('die Verwaltung der Akte verweist für Ordner auf die Akte', async ({ page }) => {
+    await login(page);
+    await page.goto('/admin/dms');
+    const card = page.getByTestId('folders-moved');
+    await expect(card.getByRole('heading', { name: 'Ordner' })).toBeVisible();
+    await expect(card).toContainText('Ordner legen Sie jetzt direkt in der Akte an');
+    await expect(card.getByRole('table')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Ordner anlegen' })).toHaveCount(0);
+    await card.getByRole('link', { name: 'Zur Akte' }).click();
+    await expect(page).toHaveURL(/\/dms$/);
+  });
+
+  test('am Telefon nennt der Ortsknopf dieselbe Zahl wie die Liste, auch mit Filter', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await login(page);
+    await page.goto('/dms?direction=incoming');
+    const filtered = await rows(page).count();
+    expect(filtered).toBeGreaterThan(0);
+    await page.goto('/dms');
+    const all = await rows(page).count();
+    // Der Filter muss etwas wegnehmen, sonst beweist der Vergleich nichts.
+    expect(filtered).toBeLessThan(all);
+    await page.goto('/dms?direction=incoming');
+    await expect(page.getByTestId('folder-sheet-count')).toHaveText(String(filtered));
+  });
+
+  test('am Telefon öffnet der Ortsknopf den Baum im Sheet; ein Name öffnet den Ordner und schließt es', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await login(page);
+    await page.goto('/dms');
+    await expect(page.getByTestId('folder-column')).toBeHidden();
+    const trigger = page.getByTestId('folder-sheet-trigger');
+    await expect(trigger).toContainText('Alle Dokumente');
+    await trigger.click();
+    const sheet = page.getByRole('dialog', { name: 'Ordner' });
+    await expect(sheet).toBeVisible();
+    await sheet.getByRole('treeitem', { name: /^protokolle,/ }).getByRole('link', { name: 'protokolle' }).click();
+    await expect(page).toHaveURL(/folder=protokolle$/);
+    await expect(sheet).toBeHidden();
+    await expect(trigger).toContainText('protokolle');
+  });
 });

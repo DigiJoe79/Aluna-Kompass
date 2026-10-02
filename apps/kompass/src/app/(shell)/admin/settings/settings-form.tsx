@@ -45,6 +45,8 @@ export function SettingsForm({
     [values, initial]
   );
   const pendingCount = Object.keys(changes).length;
+  // Die Namen für die Fehlerbox, je Einstellung unter ihrem ganzen Schlüssel (`organization.name`).
+  const labels = Object.fromEntries(SETTINGS_TABS.flatMap((tab) => tab.fields).map((f) => [f.key, t(`fields.${f.key}`)]));
   const invalidTabs = new Set(
     SETTINGS_TABS.filter((tab) => tab.fields.some((f) => errors[f.key])).map((tab) => tab.key)
   );
@@ -168,7 +170,7 @@ export function SettingsForm({
 
   return (
     <>
-    <FormErrorSummary errors={errors} />
+    <FormErrorSummary errors={errors} labels={labels} />
     <Tabs defaultValue="organization">
       <TabsList className="border-b border-line bg-surface px-6">
         {SETTINGS_TABS.map((tab) => (

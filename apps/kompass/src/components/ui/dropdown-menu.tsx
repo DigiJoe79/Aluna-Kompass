@@ -22,12 +22,13 @@ function DropdownMenuContent({
   alignOffset = 0,
   side = "bottom",
   sideOffset = 4,
+  anchor,
   className,
   ...props
 }: MenuPrimitive.Popup.Props &
   Pick<
     MenuPrimitive.Positioner.Props,
-    "align" | "alignOffset" | "side" | "sideOffset"
+    "align" | "alignOffset" | "side" | "sideOffset" | "anchor"
   >) {
   return (
     <MenuPrimitive.Portal>
@@ -37,6 +38,7 @@ function DropdownMenuContent({
         alignOffset={alignOffset}
         side={side}
         sideOffset={sideOffset}
+        anchor={anchor}
       >
         <MenuPrimitive.Popup
           data-slot="dropdown-menu-content"
@@ -72,33 +74,68 @@ function DropdownMenuLabel({
   )
 }
 
+/**
+ * `description`: zweite Zeile unter der Beschriftung. `disabledReason`
+ * deaktiviert den Eintrag und nennt den Grund als zweite Zeile; der Eintrag
+ * bleibt fokussierbar (`aria-disabled`, Base UI) und liest den Grund über
+ * `aria-describedby` vor. Grund in `muted`, nicht halb durchsichtig, damit er
+ * lesbar bleibt (Ordnerbaum, HANDOFF § 3.8).
+ */
 function DropdownMenuItem({
   className,
   inset,
   variant = "default",
   onSelect,
   onClick,
+  description,
+  disabledReason,
+  disabled,
+  children,
   ...props
 }: MenuPrimitive.Item.Props & {
   inset?: boolean
   variant?: "default" | "destructive"
   onSelect?: (event: React.MouseEvent<HTMLElement>) => void
+  description?: React.ReactNode
+  disabledReason?: string
 }) {
+  const hint = disabledReason ?? description
+  const hintId = React.useId()
+  const hasHint = hint !== undefined && hint !== null && hint !== ""
   return (
     <MenuPrimitive.Item
       data-slot="dropdown-menu-item"
       data-inset={inset}
       data-variant={variant}
+      data-reason={disabledReason ? "" : undefined}
+      disabled={disabled || !!disabledReason}
+      aria-describedby={hasHint ? hintId : undefined}
       onClick={(e) => {
         onClick?.(e)
         onSelect?.(e)
       }}
       className={cn(
         "group/dropdown-menu-item relative flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-inset:pl-7 data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive dark:data-[variant=destructive]:focus:bg-destructive/20 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-destructive",
+        // Zweite Zeile: Der Eintrag bricht um, die Beschreibung steht unter der Beschriftung, nicht unter dem Symbol.
+        hasHint && "flex-wrap gap-y-px [&:has(>svg)>[data-slot=dropdown-menu-item-description]]:pl-[22px]",
+        disabledReason && "data-disabled:text-disabled-ink data-disabled:opacity-100",
         className
       )}
       {...props}
-    />
+    >
+      {children}
+      {hasHint ? (
+        // Nur über `aria-describedby` vorgelesen; der Name bleibt die Beschriftung.
+        <span
+          id={hintId}
+          aria-hidden
+          data-slot="dropdown-menu-item-description"
+          className="basis-full text-xs leading-[1.4] text-muted-foreground"
+        >
+          {hint}
+        </span>
+      ) : null}
+    </MenuPrimitive.Item>
   )
 }
 

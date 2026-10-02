@@ -1,4 +1,4 @@
-import { listMediaAssets, listMediaFolders, mediaListFilterSchema, ok, type CallContext, type Deps, type MediaListFilter, type Result } from '@kompass/core';
+import { countUnfiledMediaAssets, listMediaAssets, listMediaFolders, mediaListFilterSchema, ok, type CallContext, type Deps, type MediaListFilter, type Result } from '@kompass/core';
 
 export interface MediaListingItem {
   id: string;
@@ -14,7 +14,12 @@ export interface MediaListingItem {
 
 export interface MediaListing {
   items: MediaListingItem[];
+  /** Alle Ordner; die Zahl zählt nur Dateien der gefragten Art (`kind`). */
   folders: { path: string; assetCount: number }[];
+  /** Dateien der gefragten Art insgesamt — der Zähler an „Alle Dateien“. */
+  total: number;
+  /** Dateien der gefragten Art ohne Ordner — der Zähler an „Ohne Ordner“. */
+  unfiledCount: number;
 }
 
 /**
@@ -32,12 +37,19 @@ export function parseMediaListParams(params: URLSearchParams): MediaListFilter |
   return parsed.success ? parsed.data : null;
 }
 
-/** Was der Auswahl-Dialog braucht: die gefilterte Liste und alle Ordner, in einer Antwort. */
+/**
+ * Was der Auswahl-Dialog braucht: die gefilterte Liste und alle Ordner samt
+ * Zählern, in einer Antwort. Die Zähler zählen nur die Art des Dialogs
+ * (README § 3, Artboard 8). Ein geöffneter Ordner listet seinen Teilbaum,
+ * damit die Liste so lang ist, wie der Baum zählt (Spec § 9).
+ */
 export async function buildMediaListing(deps: Deps, ctx: CallContext, filter: MediaListFilter): Promise<Result<MediaListing>> {
-  const assets = await listMediaAssets(deps, ctx, filter);
+  const assets = await listMediaAssets(deps, ctx, { ...filter, includeSubfolders: typeof filter.folder === 'string' });
   if (!assets.ok) return assets;
-  const folders = await listMediaFolders(deps, ctx);
+  const folders = await listMediaFolders(deps, ctx, { kind: filter.kind });
   if (!folders.ok) return folders;
+  const unfiled = await countUnfiledMediaAssets(deps, ctx, { kind: filter.kind });
+  if (!unfiled.ok) return unfiled;
   return ok({
     items: assets.value.map(({ record, references }) => ({
       id: record.id,
@@ -51,5 +63,7 @@ export async function buildMediaListing(deps: Deps, ctx: CallContext, filter: Me
       references: references.map((r) => (r.href ? { label: r.label, href: r.href } : { label: r.label })),
     })),
     folders: folders.value,
+    total: unfiled.value + folders.value.reduce((sum, f) => sum + f.assetCount, 0),
+    unfiledCount: unfiled.value,
   });
 }

@@ -230,3 +230,18 @@ export async function getDocumentText(
   const pages = row.textStatus === 'done' ? readDocumentText(deps, parsed.value.documentId) : [];
   return ok({ textStatus: row.textStatus, textError: row.textError, pages });
 }
+
+/**
+ * Nur der Stand der Texterkennung, ohne Text und ohne Dateiprüfung: Die Seite
+ * eines Dokuments fragt ihn im Takt ab, solange die Erkennung läuft. Dieselben
+ * Leserechte wie `getDocumentText`, aber nichts, was bei jeder Abfrage Arbeit macht.
+ */
+export async function getDocumentTextStatus(deps: Deps, ctx: CallContext, id: string): Promise<Result<{ textStatus: string | null }>> {
+  const denied = requireDmsGate(deps, ctx);
+  if (denied) return denied;
+  const row = deps.db.select({ textStatus: documents.textStatus, typeKey: documents.typeKey }).from(documents).where(eq(documents.id, id)).get();
+  if (!row) return notFound('document', id);
+  const unreadable = requireReadable(deps, ctx, row);
+  if (unreadable) return unreadable;
+  return ok({ textStatus: row.textStatus });
+}

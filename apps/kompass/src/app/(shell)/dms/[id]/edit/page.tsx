@@ -24,7 +24,7 @@ export default async function EditDraftPage(props: { params: Promise<{ id: strin
   const types = typesRes.ok ? typesRes.value : [];
 
   const foldersRes = await listDocumentFolders(deps, ctx);
-  const folders = foldersRes.ok ? foldersRes.value.map((f) => f.path) : [];
+  const folders = foldersRes.ok ? foldersRes.value.map((f) => ({ path: f.path, count: f.count })) : [];
 
   const snippetsRes = await listSnippets(deps, ctx, {});
   const snippets = snippetsRes.ok

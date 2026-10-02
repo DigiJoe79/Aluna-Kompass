@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { replaceDocumentText } from '../src/index-store';
-import { getDocumentText } from '../src/text';
+import { getDocumentText, getDocumentTextStatus } from '../src/text';
 import { fileFixture, setupWithTypes } from './helpers';
 
 describe('getDocumentText', () => {
@@ -22,6 +22,19 @@ describe('getDocumentText', () => {
     const { ctx: nobody } = setupWithTypes([]);
     expect((await getDocumentText(deps, nobody, { documentId: letter.id })).ok).toBe(false);
     const ghost = await getDocumentText(deps, ctx, { documentId: 'NOPE' });
+    expect(!ghost.ok && ghost.error.type).toBe('notFound');
+  });
+});
+
+describe('getDocumentTextStatus', () => {
+  it('liefert nur den Stand, und nur wem das Dokument lesbar ist', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const letter = await fileFixture(deps, ctx);
+    const res = await getDocumentTextStatus(deps, ctx, letter.id);
+    expect(res.ok && res.value).toEqual({ textStatus: 'pending' });
+    const { ctx: nobody } = setupWithTypes([]);
+    expect((await getDocumentTextStatus(deps, nobody, letter.id)).ok).toBe(false);
+    const ghost = await getDocumentTextStatus(deps, ctx, 'NOPE');
     expect(!ghost.ok && ghost.error.type).toBe('notFound');
   });
 });

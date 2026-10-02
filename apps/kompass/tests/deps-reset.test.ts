@@ -243,7 +243,16 @@ describe('eine Anfrage, die beim Reset schon rechnet', () => {
  * gerechnet und danach als Schnappschuss des Datenpfads kopiert. Der Bestand,
  * den ein Test vorfindet, ist derselbe; nur der Weg dahin ist ein `cp`.
  */
-describe('resetDeps(seeded) mit Schnappschuss', () => {
+/*
+ * Eigenes Budget: Jeder Fall hier hat einen neuen Datenpfad und rechnet den
+ * Seed darum einmal voll — allein 0,7 s, in der vollen App-Suite 1,8 s
+ * (gemessen 01.10., M5 Max; vor dem Ordnerbaum 1,55 s, der Seed selbst ist
+ * gleich schnell geblieben, mehr Testdateien teilen sich die Kerne). Läuft
+ * nebenher noch etwas, kippt das über die 5 s der Vorgabe (zweimal beim
+ * Zusammenführen am 01.10.). 30 s wie `seed-script.test.ts`, das ebenfalls
+ * voll seedet.
+ */
+describe('resetDeps(seeded) mit Schnappschuss', { timeout: 30_000 }, () => {
   it('liefert beim zweiten Mal denselben Bestand wie beim ersten', async () => {
     const { getDeps, resetDeps } = await import('@/lib/deps');
     const users = (deps: { sqlite: { prepare(sql: string): { get(): unknown } } }) =>

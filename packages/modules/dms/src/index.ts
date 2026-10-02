@@ -39,6 +39,8 @@ export {
   listDocuments,
   moveDocument,
   moveDocumentSchema,
+  moveDocuments,
+  moveDocumentsSchema,
   peekDocumentNumber,
   previewNextNumber,
   previewNumberSchema,

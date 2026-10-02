@@ -44,7 +44,10 @@ Drei Reiter:
   eingestellt wird er unter [Einstellungen → Tiere](einstellungen/tiere-einrichten.md).
   Texte und Fotos werden zusammen mit „Speichern“ unten gespeichert; einen
   eigenen Knopf für die Fotos gibt es nicht. Bei einem neuen Hund lassen sich
-  Fotos wählen, sobald er angelegt ist.
+  Fotos wählen, sobald er angelegt ist. Ein Tier hat höchstens 12 Fotos; neben
+  „Fotos wählen“ steht, wie viele davon belegt sind („10 von 12 Fotos“). Ist
+  die Grenze erreicht, lässt der Auswahldialog kein weiteres Foto zu — heben
+  Sie dort erst eines auf oder nehmen Sie eines heraus.
 - **Geschichte** — erst nach der Vermittlung: Vorher- und Nachher-Bild mit
   Unterschrift, ein Zitat der Familie, das Vermittlungsjahr. Daraus macht das
   Template die „Glücklichen Vermittlungen“.

@@ -9,6 +9,8 @@ export const THEME_TOKENS = [
   'color-error', 'color-error-bg', 'color-info', 'color-info-bg',
   // Finanzen
   'color-final', 'color-final-bg', 'color-agent', 'color-agent-bg', 'color-amount-out', 'color-key-bg', 'color-key-ink',
+  // Ordnerbaum
+  'color-drop-bg', 'color-drop-ring', 'color-drop-ink', 'color-drop-blocked-ring', 'color-drop-blocked-hatch', 'color-tree-guide',
   // Flächen
   'bg', 'surface', 'surface-2', 'sidebar-bg', 'topbar-bg',
   // Schrift und Linien

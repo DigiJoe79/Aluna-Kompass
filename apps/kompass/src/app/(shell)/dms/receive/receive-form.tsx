@@ -3,12 +3,16 @@
 import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { ActionForm } from '@/components/forms/action-form';
 import { FieldError } from '@/components/forms/field-error';
 import { FormActionBar } from '@/components/forms/form-action-bar';
+import { FolderField } from '@/components/folder-tree/folder-field';
+import { Notice } from '@/components/notice';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { idleState } from '@/lib/actions';
+import type { FolderEntry } from '@/lib/folder-tree-model';
 import { receiveDocumentAction, suggestClassificationAction } from '../actions';
 import { FileDropzone } from './file-dropzone';
 import { NumberHint } from './number-hint';
@@ -30,13 +34,13 @@ export function ReceiveForm({
   defaultTypeKey,
   droppedFile,
   droppedFolder,
-  skipped = 0,
+  skipped = [],
   queued,
   onFiled,
   onCancel,
 }: {
   types: { key: string; label: string }[];
-  folders: string[];
+  folders: FolderEntry[];
   /** Darf der Mensch fehlende Kontakte gleich hier anlegen? */
   canCreateContact: boolean;
   /** Von der Kontaktseite vorbelegter Absender. */
@@ -49,8 +53,8 @@ export function ReceiveForm({
   droppedFile?: File | null;
   /** Der Ordner, auf dem sie gelandet ist — er schlägt jeden Regelvorschlag. */
   droppedFolder?: string | null;
-  /** Wie viele mitgezogene Dateien keine PDFs waren. */
-  skipped?: number;
+  /** Die Namen der mitgezogenen Dateien, die keine PDFs waren. */
+  skipped?: string[];
   /** Es warten weitere Dateien: nach dem Ablegen geht es hier weiter. */
   queued?: boolean;
   onFiled?: () => void;
@@ -58,6 +62,7 @@ export function ReceiveForm({
   onCancel?: () => void;
 }) {
   const t = useTranslations('dms');
+  const tTree = useTranslations('folderTree');
   const [state, formAction] = useActionState(receiveDocumentAction, idleState);
 
   const [documentDate, setDocumentDate] = useState('');
@@ -166,7 +171,10 @@ export function ReceiveForm({
   };
 
   return (
-    <form action={formAction} className="flex min-h-0 flex-col">
+    // `ActionForm`: Lehnt der Server ab (etwa weil der Ordner inzwischen anders
+    // heißt), bleiben Datei und Eingaben stehen — ein `<form action>` setzte
+    // die Datei zurück.
+    <ActionForm action={formAction} state={state} className="flex min-h-0 flex-col">
       {queued ? <input type="hidden" name="queued" value="1" /> : null}
       {/* Der Körper scrollt, die Fußleiste bleibt stehen. */}
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
@@ -174,10 +182,11 @@ export function ReceiveForm({
           <div role="alert" className="rounded-md bg-error-bg p-3 text-[13px] text-error">{state.message}</div>
         ) : null}
 
-        {skipped > 0 ? (
-          <div role="alert" className="rounded-md bg-error-bg p-3 text-[13px] text-error">
-            {t('drop.notPdf', { count: skipped })}
-          </div>
+        {/* Beim Ziehen lässt sich nicht verlässlich prüfen, was ein PDF ist; nach dem Loslassen wird jede Datei genannt (Artboard 2f). */}
+        {skipped.length > 0 ? (
+          <Notice level="warn" reasons={skipped.map((name) => t('drop.skippedNamed', { name }))}>
+            {t('drop.skippedNamed', { name: skipped[0]! })}
+          </Notice>
         ) : null}
 
         <div className="space-y-1.5">
@@ -244,26 +253,27 @@ export function ReceiveForm({
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="folder">{t('fields.folder')}</Label>
-            <Select
-              id="folder"
+            {/* Der Ort im Baum statt einer langen Liste; das versteckte Feld `folder` trägt den Weg (`''` = Eingangskorb). */}
+            <FolderField
+              value={folder || null}
+              folders={folders}
+              label={t('fields.folder')}
+              emptyLabel={t('inbox')}
               name="folder"
-              className={origin.folder ? 'border-info' : undefined}
-              value={folder}
-              onFocus={() => touch('folder')}
-              onChange={(e) => {
+              moveLabel={tTree('change')}
+              dialogTitle={tTree('pickTitle')}
+              showLocation={false}
+              verb="pick"
+              variant="field"
+              suggested={!!origin.folder}
+              errorId={errors.folder ? 'folder-error' : undefined}
+              onChange={(path) => {
                 touch('folder');
-                setFolder(e.target.value);
+                setFolder(path ?? '');
               }}
-            >
-              <option value="">{t('inbox')}</option>
-              {folders.map((f) => (
-                <option key={f} value={f}>
-                  {f}
-                </option>
-              ))}
-            </Select>
+            />
             <SuggestionFlag text={origin.folder} />
+            <FieldError id="folder-error" message={errors.folder} />
           </div>
 
           <ContactPicker
@@ -308,6 +318,6 @@ export function ReceiveForm({
         <NumberHint typeKey={typeKey} />
       </div>
       <FormActionBar cancel={onCancel} sticky={false} saveLabel={t('receiveSubmit')} saveDisabled={!hasFile} />
-    </form>
+    </ActionForm>
   );
 }

@@ -6,13 +6,13 @@ import { storeMediaInternal } from '../media/service';
 import { unwrap } from '../result';
 
 /**
- * Beispieldateien für die Mediathek: Ordner in zwei Ebenen, Bilder in
+ * Beispieldateien für die Mediathek: Ordner in bis zu drei Ebenen, Bilder in
  * verschiedenen Maßen, ein PDF, ein SVG — nichts davon wird von einem Modul
  * verwendet, damit „nicht verwendet“, Löschen und Verschieben ausprobierbar
  * sind. Bilder entstehen mit sharp, damit kein Binärmaterial im Repo liegt.
  */
 const IMAGES: { name: string; width: number; height: number; color: string; folder: string | null }[] = [
-  { name: 'Sommerfest Wiese.jpg', width: 1600, height: 900, color: '#5b8c5a', folder: 'Bilder/2026' },
+  { name: 'Sommerfest Wiese.jpg', width: 1600, height: 900, color: '#5b8c5a', folder: 'Bilder/2026/Sommerfest' },
   { name: 'Hoftor.png', width: 900, height: 1600, color: '#8c6a5b', folder: 'Bilder/2026' },
   { name: 'Vereinsbanner.png', width: 1200, height: 1200, color: '#5b6f8c', folder: 'Bilder' },
   { name: 'Notiz.png', width: 240, height: 160, color: '#8c8a5b', folder: null },
@@ -28,7 +28,7 @@ const SVG = new TextEncoder().encode(
 
 export async function seedMedia(deps: Deps, ctx: CallContext): Promise<void> {
   if (folderExists(deps, 'Bilder')) return;
-  for (const path of ['Bilder', 'Bilder/2026', 'Dokumente']) unwrap(await createMediaFolder(deps, ctx, { path }));
+  for (const path of ['Bilder', 'Bilder/2026', 'Bilder/2026/Sommerfest', 'Dokumente']) unwrap(await createMediaFolder(deps, ctx, { path }));
 
   for (const image of IMAGES) {
     const ext = image.name.toLowerCase().endsWith('.jpg') ? 'jpeg' : 'png';

@@ -1,5 +1,5 @@
 import { and, asc, count, desc, eq, inArray, isNull, like, or, sql, type SQL } from 'drizzle-orm';
-import { yearIn, blockingHolds, conflict, deleteFollowUpsFor, findModuleRecordReferences, invalid, isoNow, linkedAccess, newId, notFound, notifyRecordDeleted, ok, parseFolderPath, recordAudit, requirePermission, reservedLinkTypes, retentionEnd, retentionMonths, schema, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Failure, type FollowUpRecord, type Result } from '@kompass/core';
+import { yearIn, blockingHolds, conflict, deleteFollowUpsFor, findModuleRecordReferences, invalid, isoNow, linkedAccess, localizedConflict, newId, normalizeExpectedFolder, notFound, notifyRecordDeleted, ok, parseFolderPath, recordAudit, requirePermission, reservedLinkTypes, retentionEnd, retentionMonths, schema, todayIn, validate, withinSubtree, type CallContext, type DbOrTx, type Deps, type Failure, type FollowUpRecord, type Result } from '@kompass/core';
 import { z } from 'zod';
 import { canReadType, isProtectedType, readableTypeFilter, requireAreaAccess, requireDmsGate, requireReadable } from './access';
 import { auditDocumentRef } from './audit-ref';
@@ -130,6 +130,8 @@ export const documentListSchema = z.object({
   phase: z.enum(['draft', 'issued']).optional(),
   typeKey: z.string().min(1).optional(),
   folder: z.string().nullable().optional(), // null = ohne Ordner
+  /** Mit `folder`: auch alles aus den Unterordnern (Teilbaum). Vorgabe: nur genau dieser Ordner. */
+  includeSubfolders: z.boolean().default(false),
   inbox: z.boolean().optional(),
   linkedTo: z.object({ entityType: z.string().min(1), entityId: z.string().min(1) }).optional(),
   text: z.string().trim().min(1).optional(), // Betreff oder Nummer
@@ -171,7 +173,10 @@ export async function listDocuments(
   // ohne Ordner. Ein Brief ohne Ordner ist ein Brief ohne Ordner (Nachtrag zu
   // Entscheidung 20).
   if (q.inbox) conditions.push(eq(documents.direction, 'incoming'), sql`${documents.folder} is null`);
-  else if (q.folder !== undefined) conditions.push(q.folder === null ? sql`${documents.folder} is null` : eq(documents.folder, q.folder));
+  else if (q.folder !== undefined) {
+    // Der Teilbaum ohne LIKE: „behoerden_alt“ und „behoerden%x“ sind Nachbarn, keine Kinder.
+    conditions.push(q.folder === null ? sql`${documents.folder} is null` : q.includeSubfolders ? withinSubtree(documents.folder, q.folder) : eq(documents.folder, q.folder));
+  }
 
   let fulltextTooShort = false;
   if (q.text) {
@@ -442,10 +447,54 @@ export function resolveFolder(db: DbOrTx, folder: string | null | undefined, fal
   return ok(normalized);
 }
 
-export const moveDocumentSchema = z.object({
+const moveShape = {
   id: z.string().min(1),
   folder: z.string().min(1).nullable(),
+  /** Der Ordner, den der Aufrufer zuletzt gesehen hat; liegt das Dokument inzwischen woanders, wird nichts verschoben. */
+  expectedFolder: z.string().min(1).nullable().optional(),
+};
+export const moveDocumentSchema = z.object(moveShape);
+export const moveDocumentsSchema = z.object({
+  moves: z
+    .array(z.object(moveShape))
+    .min(1)
+    .max(200)
+    .refine((moves) => new Set(moves.map((m) => m.id)).size === moves.length, { message: 'duplicateIds' }),
 });
+
+type MoveInput = z.infer<typeof moveDocumentSchema>;
+type PreparedMove = { doc: DocumentRow; target: string | null; skip: boolean };
+
+/** Alle Prüfungen eines Zuges, gemeinsam für den Einzel- und den Mehrfachdienst. `skip`: liegt schon am Ziel. */
+function prepareMove(deps: Deps, ctx: CallContext, move: MoveInput): Result<PreparedMove> {
+  const doc = deps.db.select().from(documents).where(eq(documents.id, move.id)).get();
+  if (!doc) return notFound('document', move.id);
+  const unreadable = requireAreaAccess(deps, ctx, doc);
+  if (unreadable) return unreadable;
+
+  const expected = normalizeExpectedFolder(move.expectedFolder);
+  if (expected === false) return invalid([{ path: 'expectedFolder', message: 'invalidFolderPath' }]);
+  if (expected !== undefined && doc.folder !== expected) {
+    return localizedConflict('movedInBetween', 'errors.folder.movedInBetween', { id: doc.id });
+  }
+
+  const resolved = resolveFolder(deps.db, move.folder, null);
+  if (!resolved.ok) return resolved;
+  return ok({ doc, target: resolved.value, skip: doc.folder === resolved.value });
+}
+
+function applyMove(tx: DbOrTx, deps: Deps, ctx: CallContext, { doc, target }: PreparedMove): void {
+  tx.update(documents).set({ folder: target, updatedAt: isoNow(deps.clock) }).where(eq(documents.id, doc.id)).run();
+  const ref = auditDocumentRef(tx, doc);
+  recordAudit(tx, deps, ctx, {
+    action: 'dms.move',
+    entityType: 'document',
+    entityId: doc.id,
+    before: { folder: doc.folder },
+    after: { folder: target },
+    summary: `Dokument ${ref.hidden ? ref.name : (doc.number ?? doc.subject)} nach „${target ?? 'Eingangskorb'}“ verschoben`,
+  });
+}
 
 export async function moveDocument(
   deps: Deps,
@@ -458,32 +507,45 @@ export async function moveDocument(
   const parsed = validate(deps, moveDocumentSchema, input);
   if (!parsed.ok) return parsed;
 
-  const doc = deps.db.select().from(documents).where(eq(documents.id, parsed.value.id)).get();
-  if (!doc) return notFound('document', parsed.value.id);
-  const unreadable = requireAreaAccess(deps, ctx, doc);
-  if (unreadable) return unreadable;
-
-  const resolved = resolveFolder(deps.db, parsed.value.folder, null);
-  if (!resolved.ok) return resolved;
-  const targetFolder = resolved.value;
+  const prepared = prepareMove(deps, ctx, parsed.value);
+  if (!prepared.ok) return prepared;
 
   return deps.db.transaction((tx: DbOrTx) => {
-    const now = isoNow(deps.clock);
-    tx.update(documents).set({ folder: targetFolder, updatedAt: now }).where(eq(documents.id, doc.id)).run();
-
-    const ref = auditDocumentRef(tx, doc);
-    recordAudit(tx, deps, ctx, {
-      action: 'dms.move',
-      entityType: 'document',
-      entityId: doc.id,
-      before: { folder: doc.folder },
-      after: { folder: targetFolder },
-      summary: `Dokument ${ref.hidden ? ref.name : (doc.number ?? doc.subject)} nach „${targetFolder ?? 'Eingangskorb'}“ verschoben`,
-    });
-
-    const after = tx.select().from(documents).where(eq(documents.id, doc.id)).get()!;
+    applyMove(tx, deps, ctx, prepared.value);
+    const after = tx.select().from(documents).where(eq(documents.id, prepared.value.doc.id)).get()!;
     return ok(toRecord(deps, ctx, after, tx));
   });
+}
+
+/**
+ * Mehrere Dokumente in einem Zug — auch der Dienst hinter „Rückgängig“ (je Dokument
+ * ein eigenes Ziel, `expectedFolder` = wohin der erste Zug es legte). Alles wird
+ * vorab geprüft, der erste Fehler bricht ab; geschrieben wird in einer Transaktion.
+ * Wer schon am Ziel liegt, wird übersprungen und nicht protokolliert.
+ */
+export async function moveDocuments(
+  deps: Deps,
+  ctx: CallContext,
+  input: unknown,
+): Promise<Result<{ moved: string[]; skipped: string[] }>> {
+  const denied = requirePermission(ctx, 'dms.create');
+  if (denied) return denied;
+
+  const parsed = validate(deps, moveDocumentsSchema, input);
+  if (!parsed.ok) return parsed;
+
+  const prepared: PreparedMove[] = [];
+  for (const move of parsed.value.moves) {
+    const one = prepareMove(deps, ctx, move);
+    if (!one.ok) return one;
+    prepared.push(one.value);
+  }
+
+  const todo = prepared.filter((p) => !p.skip);
+  deps.db.transaction((tx: DbOrTx) => {
+    for (const move of todo) applyMove(tx, deps, ctx, move);
+  });
+  return ok({ moved: todo.map((p) => p.doc.id), skipped: prepared.filter((p) => p.skip).map((p) => p.doc.id) });
 }
 
 /** Bezugstypen, die ein Modul über `linkedDocumentAccess` anmeldet, setzt und löst nur dieses Modul. */
