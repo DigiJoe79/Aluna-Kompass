@@ -5,10 +5,10 @@ import { coreModule, defineModule, definePublishedView, setModuleEnabled, setSet
 import { animalsModule, createAnimal, setAnimalPublished, setAnimalStatus } from '@kompass/module-animals';
 import { createProject, projectsModule, setProjectPublished } from '@kompass/module-projects';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { createEntry, setEntryPublished } from '../src/entries';
-import { exportSiteContent } from '../src/export';
+import { exportSiteContent, siteContentHash } from '../src/export';
 import { siteModule } from '../src/manifest';
 import { siteValues } from '../src/schema';
 import { applyTemplateSync } from '../src/service';
@@ -102,6 +102,25 @@ describe('site export', () => {
     expect(content.views.projects).toEqual([expect.objectContaining({ slug: 'hof', externalLinks: [{ label: 'Spenden', url: 'https://example.org/s' }] })]);
   });
 
+  it('links a blocked term in a view row to the record, and leaves file names without a link', async () => {
+    const deps = createTestDeps({ locales: ['de'], manifests: [coreModule, projectsModule, animalsModule, siteModule] });
+    insertUser(deps, { id: 'USER-TEST' });
+    const admin = ctxWith(['site.manage', 'modules.manage', 'projects.manage', 'projects.view', 'animals.manage', 'animals.view', 'settings.manage']);
+    unwrap(await setModuleEnabled(deps, admin, { key: 'projects', enabled: true }));
+    unwrap(await setModuleEnabled(deps, admin, { key: 'animals', enabled: true }));
+    const dir = templateDir(GOOD.replace('collections: {', "uses: ['projects', 'animals'],\n  collections: {"));
+    unwrap(await applyTemplateSync(deps, admin, { dir, confirm: true }));
+    unwrap(await setSetting(deps, admin, { key: 'site.blockedTerms', value: ['popescu'] }));
+    const project = unwrap(await createProject(deps, admin, { slug: 'hof', name: { de: 'Der Hof' }, type: 'ongoing', summary: { de: 'Frau Popescu' }, body: { de: '' } }));
+    unwrap(await setProjectPublished(deps, admin, { id: project.id, isPublished: true }));
+    const dog = unwrap(await createAnimal(deps, admin, { slug: 'bruno', name: 'Bruno', sex: 'male', birthText: {}, sizeText: {}, summary: { de: 'Herr Popescu' }, body: {} }));
+    unwrap(await setAnimalPublished(deps, admin, { id: dog.id, isPublished: true }));
+    const { result } = await readContent(deps, dir);
+    const edit = (prefix: string) => result.violations.find((v) => v.path.startsWith(prefix))?.edit;
+    expect(edit('views.projects[0].summary')).toEqual({ kind: 'view', href: `/projects/${project.id}`, title: 'Der Hof' });
+    expect(edit('views.animals[0].summary')).toEqual({ kind: 'view', href: `/animals/${dog.id}`, title: 'Bruno' });
+  });
+
   /**
    * Das Template kommt mit dem Backup zurueck — verlieren soll es niemand.
    * Ausgefuehrt wird es aber erst, wenn ein Mensch es eingelesen hat: Der
@@ -189,18 +208,30 @@ export default defineTemplate({
     unwrap(await setValues(deps, manage, { values: { claim: { de: 'Streng geheim' } } }));
     const { result } = await readContent(deps, dir);
     expect(result.violations).toEqual([
-      { path: 'variables.claim.de', term: 'geheim', excerpt: expect.stringContaining('geheim') },
+      { path: 'variables.claim.de', term: 'geheim', excerpt: expect.stringContaining('geheim'), edit: { kind: 'variables' } },
     ]);
   });
 
   it('detects a blocked term in a collection entry', async () => {
     const { deps, dir } = await setup();
     unwrap(await setSetting(deps, ctxWith(['settings.manage']), { key: 'site.blockedTerms', value: ['maria popescu'] }));
-    unwrap(await createEntry(deps, manage, { collection: 'notes', data: { body: 'Shelter von Maria Popescu vor Ort' } }));
+    const noteId = unwrap(await createEntry(deps, manage, { collection: 'notes', data: { body: 'Shelter von Maria Popescu vor Ort' } })).id;
     const { result } = await readContent(deps, dir);
     expect(result.violations).toEqual([
-      { path: 'collections.notes[0].body', term: 'maria popescu', excerpt: expect.stringContaining('Maria Popescu') },
+      { path: 'collections.notes[0].body', term: 'maria popescu', excerpt: expect.stringContaining('Maria Popescu'), edit: { kind: 'entry', collection: 'notes', id: noteId, title: expect.any(String) } },
     ]);
+  });
+
+  it('tells where a hit can be edited: variable page, collection entry, nothing for views and files', async () => {
+    const { deps, dir } = await setup();
+    unwrap(await setSetting(deps, ctxWith(['settings.manage']), { key: 'site.blockedTerms', value: ['popescu', 'sommerfest'] }));
+    unwrap(await setValues(deps, manage, { values: { claim: { de: 'Frau Popescu' } } }));
+    const id = unwrap(await createEntry(deps, manage, { collection: 'posts', slug: 'fest', data: { title: 'Sommerfest bei Popescu' } })).id;
+    unwrap(await setEntryPublished(deps, manage, { id, isPublished: true }));
+    const { result } = await readContent(deps, dir);
+    const edit = (path: string) => result.violations.find((v) => v.path.startsWith(path))?.edit;
+    expect(edit('variables.claim')).toEqual({ kind: 'variables' });
+    expect(edit('collections.posts[0].title')).toEqual({ kind: 'entry', collection: 'posts', id, title: expect.stringContaining('Sommerfest') });
   });
 
   it('reports a translation gap in a nested field', async () => {
@@ -328,5 +359,44 @@ describe('pending reviews in the export', () => {
     const { deps, dir } = await setup(false);
     const out = unwrap(await exportSiteContent(deps, publish, { jobDir: tmp('kompass-exp-'), templateDir: dir }));
     expect(out.pendingReview).toEqual([]);
+  });
+});
+
+describe('siteContentHash', () => {
+  const HERO_TEMPLATE = `
+import { defineTemplate, asset } from '@kompass/site-template';
+export default defineTemplate({
+  name: 'X', locales: ['de'],
+  variables: { heroImage: asset({ label: 'Titelbild' }) },
+  collections: {},
+});`;
+  const heroPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWMQFBQEAABqADTs/917AAAAAElFTkSuQmCC', 'base64');
+
+  it('gives the same hash as the full export without writing a file or reading media', async () => {
+    const { deps, dir } = await setup(HERO_TEMPLATE);
+    const media = ctxWith(['site.manage', 'site.view', 'media.upload']);
+    const hero = unwrap(await storeMediaAsset(deps, media, { originalName: 'hero.png', bytes: heroPng }));
+    unwrap(await setValues(deps, media, { values: { heroImage: hero.id } }));
+    const full = await readContent(deps, dir);
+    const read = vi.spyOn(deps.media, 'read');
+    const cheap = unwrap(await siteContentHash(deps, publish, { templateDir: dir }));
+    expect(cheap.contentHash).toBe(full.result.contentHash);
+    expect(cheap.assets).toBe(1);
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it('ignores the e2e brake and needs site.publish', async () => {
+    const { deps, dir } = await setup();
+    const g = globalThis as { __kompassSiteTestBrakeMs?: number };
+    g.__kompassSiteTestBrakeMs = 60_000;
+    try {
+      const started = Date.now();
+      unwrap(await siteContentHash({ ...deps, env: 'test' }, publish, { templateDir: dir }));
+      expect(Date.now() - started).toBeLessThan(5_000);
+    } finally {
+      g.__kompassSiteTestBrakeMs = 0;
+    }
+    const denied = await siteContentHash(deps, manage, { templateDir: dir });
+    expect(denied.ok === false && denied.error.type === 'forbidden').toBe(true);
   });
 });

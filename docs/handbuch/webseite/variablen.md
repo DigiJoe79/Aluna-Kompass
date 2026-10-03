@@ -39,7 +39,7 @@ Verein](../einstellungen/verein.md) und werden von dort auf die Seite
 Ein Feld, das das Template als mehrsprachig deklariert, hat je eingerichteter
 Sprache einen eigenen Wert. Was in einer Sprache fehlt, zeigt „noch nicht
 übersetzt“. Die Übersetzungen können Sie hier eintragen — oder Sie lassen sie
-sich von einem KI-Assistenten über MCP vorschlagen, der die Lücken kennt
+sich von einem Assistenten über MCP vorschlagen, der die Lücken kennt
 (siehe [Profil](../profil.md)).
 
 ## Veraltete Verweise

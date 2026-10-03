@@ -1,10 +1,18 @@
 {
   "name": "@kompass/module-finance",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts", "./csv": "./src/import/csv/index.ts", "./wording": "./src/donations/templates/wording.ts", "./evidence-rules": "./src/allocation/evidence-rules.ts" },
-  "scripts": { "test": "vitest run", "typecheck": "tsc --noEmit" },
+  "exports": {
+    ".": "./src/index.ts",
+    "./csv": "./src/import/csv/index.ts",
+    "./wording": "./src/donations/templates/wording.ts",
+    "./evidence-rules": "./src/allocation/evidence-rules.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "@kompass/core": "workspace:*",
     "@kompass/module-contacts": "workspace:*",
@@ -17,6 +25,6 @@
   "devDependencies": {
     "@types/node": "^26.6.2",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.1"
+    "vitest": "^5.0.2"
   }
 }

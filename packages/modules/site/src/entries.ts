@@ -20,6 +20,7 @@ import {
   staleVersion,
   validate,
   zodIssues,
+  localizedConflict,
 } from '@kompass/core';
 import { and, asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -104,10 +105,10 @@ export async function createEntry(deps: Deps, ctx: CallContext, raw: unknown): P
 
   const existing = rowsOf(deps.db, collection);
   if (col.max !== undefined && existing.length >= col.max) {
-    return conflict('tooManyEntries', `Die Sammlung „${col.label}“ fasst höchstens ${col.max} Einträge`);
+    return localizedConflict('tooManyEntries', 'errors.site.tooManyEntries', { collection: col.label, max: col.max });
   }
   if (slugResult.value && slugTaken(deps.db, collection, slugResult.value)) {
-    return conflict('duplicateSlug', `Der Slug „${slugResult.value}“ ist in „${col.label}“ schon vergeben`);
+    return localizedConflict('duplicateSlug', 'errors.site.duplicateSlug', { slug: slugResult.value, collection: col.label });
   }
 
   const now = isoNow(deps.clock);
@@ -142,7 +143,7 @@ export async function updateEntry(deps: Deps, ctx: CallContext, raw: unknown): P
     const slugResult = checkSlug(col, slug);
     if (!slugResult.ok) return slugResult;
     if (slugResult.value && slugTaken(deps.db, before.collection, slugResult.value, id)) {
-      return conflict('duplicateSlug', `Der Slug „${slugResult.value}“ ist in „${col.label}“ schon vergeben`);
+      return localizedConflict('duplicateSlug', 'errors.site.duplicateSlug', { slug: slugResult.value, collection: col.label });
     }
     nextSlug = slugResult.value;
   }
@@ -255,7 +256,7 @@ export async function setEntryPublished(deps: Deps, ctx: CallContext, raw: unkno
   if (!before) return notFound('siteEntry', id);
   const col = collectionOf(deps, before.collection);
   if (!col) return notFound('siteCollection', before.collection);
-  if (!col.publishable) return conflict('notPublishable', `Die Sammlung „${col.label}“ kennt keinen Veröffentlicht-Schalter`);
+  if (!col.publishable) return localizedConflict('notPublishable', 'errors.site.notPublishable', { collection: col.label });
 
   const now = isoNow(deps.clock);
   return deps.db.transaction((tx) => {

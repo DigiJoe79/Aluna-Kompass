@@ -1,11 +1,12 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { type CallContext, type Deps, readLocales, readSetting, schema as core, unwrap, writeSettingInternal } from '@kompass/core';
+import { type CallContext, type Deps, newId, readLocales, readSetting, schema as core, unwrap, writeSettingInternal } from '@kompass/core';
 import { siteTemplateDir } from './env';
 import { widgetOf } from './field-schema';
 import { createEntry, setEntryPublished } from './entries';
-import { siteEntries, siteValues } from './schema';
+import { siteEntries, sitePublishes, siteValues } from './schema';
 import { activeTemplate, applyTemplateSync } from './service';
+import { recordPublish } from './services/publishes';
 import { setValues } from './values';
 import type { FieldSchema } from './types';
 
@@ -33,6 +34,20 @@ export async function seedSiteDevelopment(deps: Deps, ctx: CallContext): Promise
   // Publish, den die E2E-Suite gleich danach probt.
   if (readSetting<string[]>(deps, 'site.blockedTerms').length === 0) {
     deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctx, 'site.blockedTerms', ['Alter Beispielname e.V.', 'TODO-Platzhalter'], 'site.blockedTerms.set'));
+  }
+  // Eine erfundene Historie, damit Liste, Status und Kachel in der Entwicklung
+  // nicht leer sind (Durchsicht U7). Der abgebrochene Lauf liegt vor dem
+  // erfolgreichen, die Kachel bleibt ruhig. Leeres Manifest: Der nächste echte
+  // Publish vergleicht gegen nichts, wie ohne Seed.
+  if (!deps.db.select({ id: sitePublishes.id }).from(sitePublishes).get()) {
+    const none = { changed: [], added: [], removed: [] };
+    // Beide Quellen der Historie: einmal die Oberfläche, einmal ein MCP-Zugang (erfundener, nicht benutzbarer Token).
+    const tokenId = newId();
+    deps.db.insert(core.apiTokens).values({ id: tokenId, userId: ctx.userId!, name: 'Beispiel-Zugang', prefix: 'dev_beispiel', tokenHash: `seed-unusable-${tokenId}`, createdAt: '2026-09-01T08:00:00.000Z' }).run();
+    const viaUi = { ...ctx, channel: 'ui' as const, apiTokenId: null };
+    const viaMcp = { ...ctx, channel: 'mcp' as const, apiTokenId: tokenId };
+    recordPublish(deps, viaUi, { environment: deps.env, startedAt: '2026-09-20T08:00:00.000Z', status: 'aborted', contentHash: '', diff: none, fileManifest: {}, log: 'Beispiel: Sperrworttreffer in variables.claim — abgebrochen.', summary: 'Beispiel-Abbruch' });
+    recordPublish(deps, viaMcp, { environment: deps.env, startedAt: '2026-09-27T08:00:00.000Z', status: 'success', contentHash: 'beispiel', diff: none, fileManifest: {}, log: 'Beispiel: übertragen.', summary: 'Beispiel-Publish' });
   }
   if (deps.db.select().from(siteEntries).get() || deps.db.select().from(siteValues).get()) return;
 

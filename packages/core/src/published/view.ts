@@ -11,11 +11,13 @@ export function definePublishedView<Shape extends z.ZodRawShape>(def: {
   schema: z.ZodObject<Shape>;
   load: (deps: Deps) => unknown[];
   pendingReview?: (deps: Deps) => PendingReviewItem[];
+  editLink?: (deps: Deps, row: z.infer<z.ZodObject<Shape>>) => { href: string; title: string } | null;
 }): PublishedView<z.infer<z.ZodObject<Shape>>> {
   return {
     name: def.name,
     schema: def.schema,
     load: (deps) => def.load(deps).map((row) => def.schema.parse(row)),
     ...(def.pendingReview ? { pendingReview: def.pendingReview } : {}),
+    ...(def.editLink ? { editLink: def.editLink } : {}),
   };
 }

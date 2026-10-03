@@ -1,5 +1,6 @@
 import { coreModule, defineModule, type HandbookChapter, type ModuleManifest } from '@kompass/core';
 import { dmsModule } from '@kompass/module-dms';
+import { siteModule } from '@kompass/module-site';
 import { describe, expect, it } from 'vitest';
 import { activeRailKey, buildNavigation, buildRail, crumbsFor, locate, sectionsFor, type NavGroup, type NavItem } from '@/lib/navigation';
 
@@ -63,6 +64,15 @@ describe('buildNavigation', () => {
     // Ein ausgeschaltetes Modul hängt nichts ein.
     const off = buildNavigation({ manifests: [coreModule, akte], enabledKeys: new Set(['core']), permissions: new Set(['akte.manage']) });
     expect(off.find((g) => g.key === 'config')!.items.map((i) => i.key)).not.toContain('akte.admin');
+  });
+
+  it('lässt die Webseite ohne Template in der Leiste und hängt ihre Einstellungen in die Einrichtung', () => {
+    const enabledKeys = new Set(['core', 'site']);
+    const publish = buildNavigation({ manifests: [coreModule, siteModule], enabledKeys, permissions: new Set(['site.publish']), extraItems: {} });
+    expect(publish.find((g) => g.key === 'site')!.items.map((i) => i.href)).toEqual(['/site/publish']);
+    expect(publish.find((g) => g.key === 'config')!.items.find((i) => i.key === 'site.admin')!.visible).toBe(false);
+    const manage = buildNavigation({ manifests: [coreModule, siteModule], enabledKeys, permissions: new Set(['site.manage']), extraItems: {} });
+    expect(manage.find((g) => g.key === 'config')!.items.find((i) => i.key === 'site.admin')!.visible).toBe(true);
   });
 
   /**

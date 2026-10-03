@@ -27,6 +27,6 @@ vorher, wie viele Felder betroffen sind, und fragt. Der Vorgang steht im
 ## Übersetzen
 
 Übersetzt wird dort, wo der Text steht: am Tier, am Projekt, in der Variable.
-Ein KI-Assistent über MCP kann alle Lücken auf einmal holen — mit dem Text
+Ein Assistent über MCP kann alle Lücken auf einmal holen — mit dem Text
 der Leitsprache daneben — und die Übersetzungen zurückschreiben, je Datensatz
 ein Protokolleintrag. Siehe [Profil](../profil.md) für die Anbindung.

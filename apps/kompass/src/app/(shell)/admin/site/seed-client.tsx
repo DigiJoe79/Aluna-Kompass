@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { applySeedAction, previewSeedAction, type SeedPreviewState } from '../actions';
+import { applySeedAction, previewSeedAction, type SeedPreviewState } from '@/app/(shell)/site/actions';
 
 export function SeedClient() {
   const t = useTranslations('site.seed');
@@ -28,6 +28,7 @@ export function SeedClient() {
 
   return (
     <div className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
+      <h3 className="font-heading text-[18px]">{t('title')}</h3>
       <div className="flex items-center justify-between gap-4">
         <span className="text-[14px] text-ink-2">{t('intro')}</span>
         <Button type="button" onClick={preview} disabled={pending}>{t('preview')}</Button>

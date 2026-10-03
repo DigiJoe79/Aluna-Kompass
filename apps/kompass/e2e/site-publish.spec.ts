@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { expect, test } from './fixtures';
 import { loginAsAdmin, resetDatabase, waitForHydration } from './helpers';
 
@@ -7,24 +8,33 @@ const PNG = Buffer.from(
   'base64',
 );
 
-test('publish page runs the checks and blocks on a blocked term', async ({ page }) => {
-  await resetDatabase(page, 'seeded');
-  await loginAsAdmin(page);
-
+const importTemplate = async (page: import('@playwright/test').Page) => {
   await page.goto('/site/template');
   await page.getByRole('button', { name: 'Template einlesen' }).click();
   await page.getByRole('button', { name: 'Übernehmen' }).click();
   await expect(page.getByRole('status')).toContainText('eingelesen');
+};
 
-  // Über die Karte auf der Publizieren-Seite, nicht über die Hintertür: Bis
-  // 0.1.1 ließ sich die Liste nirgends pflegen (Backlog 23).
-  await page.goto('/site/publish');
+/** Die Karte der Publizieren-Seite: ihr Titel nennt den einen Zustand. */
+const cardTitle = (page: import('@playwright/test').Page, name: string | RegExp) => page.getByRole('heading', { level: 2, name });
+
+test('the preview blocks on a blocked term and says where to change it', async ({ page }) => {
+  // Der erste Test im Worker, der das Template einliest: Die Route wird dabei zum ersten Mal übersetzt.
+  test.setTimeout(180_000);
+  await resetDatabase(page, 'seeded');
+  await loginAsAdmin(page);
+  await importTemplate(page);
+
+  // Die Liste liegt unter Einstellungen → Webseite; bis 0.1.1 ließ sie sich nirgends pflegen (Backlog 23).
+  await page.goto('/admin/site?panel=blockedTerms');
   const terms = page.getByRole('region', { name: 'Sperrwörter' });
   await terms.getByLabel('Begriffe, einer je Zeile').fill('Popescu\nLorem ipsum');
   await terms.getByRole('button', { name: 'Sperrwörter speichern' }).click();
   await expect(page.getByRole('status')).toContainText('Sperrwörter gespeichert');
   await page.reload();
   await expect(page.getByRole('region', { name: 'Sperrwörter' }).getByLabel('Begriffe, einer je Zeile')).toHaveValue('Popescu\nLorem ipsum');
+  await page.goto('/site/publish');
+  await expect(page.getByRole('region', { name: 'Sperrwörter' })).toHaveCount(0);
 
   await page.goto('/site/variables');
   await page.locator('[name="claim.de"]').fill('Frau Popescu betreibt den Verein.');
@@ -32,16 +42,31 @@ test('publish page runs the checks and blocks on a blocked term', async ({ page 
   await expect(page.getByRole('status')).toContainText('Gespeichert');
 
   await page.goto('/site/publish');
-  await page.getByRole('button', { name: 'Prüfen' }).click();
-  const violations = page.getByRole('region', { name: 'Sperrworttreffer' });
-  await expect(violations).toContainText('variables.claim');
-  await expect(violations).toContainText('Popescu');
+  await expect(cardTitle(page, 'Noch keine Vorschau')).toBeVisible();
+  // „Prüfen“ ist der erste Schritt der Vorschau, kein eigener Knopf.
+  await expect(page.getByRole('button', { name: 'Prüfen' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Vorschau bauen' }).click();
+
+  await expect(cardTitle(page, 'Publizieren gesperrt')).toBeVisible({ timeout: 120_000 });
+  const blocked = page.getByRole('region', { name: 'Publizieren gesperrt' });
+  await expect(blocked).toContainText('popescu');
+  await expect(blocked).toContainText('variables.claim');
+  await expect(blocked.getByRole('link', { name: 'Variablen bearbeiten' })).toHaveAttribute('href', '/site/variables');
+  await expect(blocked.getByRole('link', { name: 'Liste der gesperrten Begriffe' })).toHaveAttribute('href', '/admin/site?panel=blockedTerms');
+  // Gesperrt, aber lesbar erklärt: fokussierbar, mit Grund.
+  const locked = page.getByRole('button', { name: 'Auf Test publizieren' });
+  await expect(locked).toHaveAttribute('aria-disabled', 'true');
   // Die Entwicklungsdaten tragen einen veröffentlichten Hund, dessen Prüfung
   // offen ist. Der Befund nennt ihn und führt ins Profil; er sperrt nicht.
-  const pending = page.getByRole('region', { name: 'Prüfung offen' });
-  await expect(pending).toContainText('Prüfung offen · 1');
+  await page.getByText('Einzelheiten: Dateien und Hinweise').click();
+  const pending = page.getByRole('region', { name: 'Noch zu prüfen' });
+  await pending.getByText(/Noch zu prüfen/).click();
   await expect(pending.getByRole('link', { name: 'Mika' })).toHaveAttribute('href', /\/animals\/[A-Z0-9]+$/);
-  await expect(page.getByRole('button', { name: /publizieren/i })).toHaveCount(0);
+  // Keine Verbindungsprobe auf dieser Seite: Sie liegt unter Einstellungen.
+  await expect(page.locator('main').getByText('Verbindung')).toHaveCount(0);
+
+  await blocked.getByRole('link', { name: 'Liste der gesperrten Begriffe' }).click();
+  await expect(page).toHaveURL('/admin/site?panel=blockedTerms');
 
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Webseite' })).toBeVisible();
@@ -51,11 +76,7 @@ test('preview build, diff and publish to the local staging target', async ({ pag
   test.setTimeout(240_000);
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
-
-  await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Template einlesen' }).click();
-  await page.getByRole('button', { name: 'Übernehmen' }).click();
-  await expect(page.getByRole('status')).toContainText('eingelesen');
+  await importTemplate(page);
 
   await page.goto('/site/c/news/new');
   await page.getByLabel('Slug (URL-Teil)').fill('sommerfest');
@@ -70,29 +91,33 @@ test('preview build, diff and publish to the local staging target', async ({ pag
   await expect(publish).toBeChecked();
 
   await page.goto('/site/publish');
-  await page.getByRole('button', { name: 'Prüfen' }).click();
-  await expect(page.getByRole('region', { name: 'Sperrworttreffer' })).toBeVisible();
   await page.getByRole('button', { name: 'Vorschau bauen' }).click();
-  // Während des Baus meldet /site/job, was läuft und seit wann; die Seite
-  // fragt das sekündlich ab. Warm baut das Basis-Template in unter einer
-  // Sekunde, deshalb fragt der Test selbst sofort nach dem Klick.
-  type Job = { name: string; elapsedMs: number };
-  let running: Job | null = null;
+  // Während des Baus meldet /site/job, was läuft und seit wann; der Poller des
+  // Tabs fragt das ab. Warm baut das Basis-Template in unter einer Sekunde,
+  // deshalb fragt der Test selbst sofort nach dem Klick.
+  type Job = { running: { kind: string; elapsedMs: number } | null };
+  let running: Job['running'] = null;
   for (let i = 0; i < 100 && !running; i++) {
-    running = (await (await page.request.get('/site/job')).json()) as Job | null;
+    running = ((await (await page.request.get('/site/job')).json()) as Job).running;
     if (!running) await page.waitForTimeout(50);
   }
-  expect(running?.name).toBe('preview');
-  await expect(page.getByRole('region', { name: 'Änderungen gegenüber Live' })).toContainText('aktuelles/sommerfest/index.html', { timeout: 180_000 });
+  expect(running?.kind).toBe('preview');
+  await expect(cardTitle(page, 'Vorschau bereit')).toBeVisible({ timeout: 180_000 });
+  // Die Kurzbilanz hält alle drei Zahlen in einer Zeile, die Dateien stehen zugeklappt darunter.
+  // (Die Historie darunter nennt ihre Änderungen im selben Wortlaut; die Karte steht zuerst.)
+  await expect(page.getByText(/\d+ geändert · \d+ neu · 0 entfallen/).first()).toBeVisible();
+  await expect(page.getByText('aktuelles/sommerfest/index.html')).toBeHidden();
+  await page.getByText('Einzelheiten: Dateien und Hinweise').click();
+  await expect(page.getByText('aktuelles/sommerfest/index.html')).toBeAttached();
   // Danach ist nichts mehr gemeldet und nichts mehr angezeigt.
-  expect(await (await page.request.get('/site/job')).json()).toBeNull();
+  expect(((await (await page.request.get('/site/job')).json()) as Job).running).toBeNull();
   await expect(page.getByTestId('site-job')).toHaveCount(0);
   const preview = await page.request.get('/site/preview/aktuelles/sommerfest/');
   expect(preview.ok()).toBe(true);
   expect(await preview.text()).toContain('Sommerfest 2026');
-  // Die Vorschau öffnet einen eigenen Tab: Die Publizieren-Seite behält
-  // Prüfergebnis und gebaute Vorschau. Bis 0.2.0 öffnete sie im selben Tab,
-  // und wer zurückging, fand beides leer (2026-09-19).
+  // Die Vorschau öffnet einen eigenen Tab: Die Publizieren-Seite behält die
+  // gebaute Vorschau. Bis 0.2.0 öffnete sie im selben Tab, und wer zurückging,
+  // fand beides leer (2026-09-19).
   const [tab] = await Promise.all([page.context().waitForEvent('page'), page.getByRole('link', { name: 'Vorschau öffnen' }).click()]);
   await tab.waitForLoadState();
   await expect(tab).toHaveURL(/\/site\/preview-frame$/);
@@ -107,11 +132,9 @@ test('preview build, diff and publish to the local staging target', async ({ pag
   await tab.getByRole('button', { name: /Tablet/ }).click();
   await expect(frame).toHaveCSS('width', '820px');
 
-  // Der erste Tab steht unverändert: Prüfergebnis und Änderungen sind noch da.
-  // Zwei Treffer-Bereiche: der der Prüfung (oben) und der der Vorschau.
+  // Der erste Tab steht unverändert: Die Vorschau ist noch da.
   await expect(page).toHaveURL('/site/publish');
-  await expect(page.getByRole('region', { name: 'Sperrworttreffer' })).toHaveCount(2);
-  await expect(page.getByRole('region', { name: 'Änderungen gegenüber Live' })).toContainText('aktuelles/sommerfest/index.html');
+  await expect(cardTitle(page, 'Vorschau bereit')).toBeVisible();
 
   // Die gebaute Seite selbst bei Handybreite: nichts ragt über den Rand, das Menü öffnet.
   await tab.setViewportSize({ width: 390, height: 844 });
@@ -122,85 +145,80 @@ test('preview build, diff and publish to the local staging target', async ({ pag
   await tab.close();
 
   // Publiziert wird ohne neuen Vorschau-Lauf: Die Seite hat die Vorschau nicht vergessen.
-  await page.getByRole('button', { name: 'Nach Staging publizieren' }).click();
+  await page.getByRole('button', { name: 'Auf Test publizieren' }).click();
   const confirmDialog = page.getByRole('alertdialog');
-  await expect(confirmDialog.getByRole('button', { name: 'Jetzt publizieren' })).toBeEnabled();
-  await confirmDialog.getByRole('button', { name: 'Jetzt publizieren' }).click();
-  await expect(page.getByRole('status')).toContainText('Publiziert', { timeout: 180_000 });
-  await expect(page.getByRole('table', { name: 'Publish-Historie' }).getByRole('row').nth(1)).toContainText('success');
+  await expect(confirmDialog.getByRole('button', { name: 'Auf Test publizieren' })).toBeEnabled();
+  await confirmDialog.getByRole('button', { name: 'Auf Test publizieren' }).click();
+  // Der Dialog schließt beim Start; den Lauf zeigen Karte und Kopfzeile.
+  await expect(confirmDialog).toBeHidden();
+  await expect(page.getByRole('region', { name: 'Laufender Lauf' }).or(cardTitle(page, 'Publiziert'))).toBeVisible();
+  await expect(cardTitle(page, 'Publiziert')).toBeVisible({ timeout: 180_000 });
+  await expect(page.getByTestId('site-job')).toHaveCount(0);
+  const history = page.getByRole('table', { name: 'Letzte Publishes' });
+  await expect(history.getByRole('row').nth(1)).toContainText('Publiziert');
+  // Der Publish, der gerade zu Ende ging, trägt die Marke „neu“.
+  await expect(history.getByRole('row').nth(1)).toContainText('neu');
+  // Das Protokoll lädt erst beim Öffnen und liegt in einem Dialog, der mit Escape schließt.
+  await history.getByRole('button', { name: 'Protokoll' }).first().click();
+  const logDialog = page.getByRole('dialog', { name: /Protokoll/ });
+  await expect(logDialog).toBeVisible();
+  await expect(logDialog.locator('pre')).toBeVisible();
+  await expect(logDialog.getByRole('button', { name: 'Kopieren' })).toBeEnabled();
+  await page.keyboard.press('Escape');
+  await expect(logDialog).toBeHidden();
   const fs = await import('node:fs');
   expect(fs.existsSync(path.join(process.env.E2E_SITE_TARGET!, 'aktuelles', 'sommerfest', 'index.html'))).toBe(true);
 
-  // Ohne neuen Vorschau-Lauf darf die Box nicht weiter die gerade
-  // publizierten Dateien als ausstehend zeigen.
-  await expect(page.getByRole('region', { name: 'Änderungen gegenüber Live' })).toContainText('Keine Änderungen');
+  // Der Publish ist verbraucht: Nach dem Neuladen steht er nicht mehr als „Publiziert“ da.
+  await page.reload();
+  await expect(cardTitle(page, 'Noch keine Vorschau')).toBeVisible();
 });
 
 test('publishing is blocked when content changed after the preview was built', async ({ page, context }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(180_000);
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
-
-  await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Template einlesen' }).click();
-  await page.getByRole('button', { name: 'Übernehmen' }).click();
-  await expect(page.getByRole('status')).toContainText('eingelesen');
+  await importTemplate(page);
 
   await page.goto('/site/publish');
   await page.getByRole('button', { name: 'Vorschau bauen' }).click();
-  await expect(page.getByRole('region', { name: 'Änderungen gegenüber Live' })).toBeVisible({ timeout: 180_000 });
+  await expect(cardTitle(page, 'Vorschau bereit')).toBeVisible({ timeout: 180_000 });
 
   // Der Inhalt ändert sich in einem zweiten Tab, ohne dass die Publish-Seite
   // im ersten Tab neu geladen wird — die dort gebaute Vorschau weiss davon nichts.
-  const second = await context.newPage();
-  await second.goto('/site/variables');
-  await waitForHydration(second, '[name="claim.de"]');
-  await second.locator('[name="claim.de"]').fill('Geänderter Claim nach der Vorschau.');
-  await second.getByRole('button', { name: 'Speichern' }).click();
-  await expect(second.getByRole('status')).toContainText('Gespeichert');
-  await second.close();
+  const change = async (text: string) => {
+    const second = await context.newPage();
+    await second.goto('/site/variables');
+    await waitForHydration(second, '[name="claim.de"]');
+    await second.locator('[name="claim.de"]').fill(text);
+    await second.getByRole('button', { name: 'Speichern' }).click();
+    await expect(second.getByRole('status')).toContainText('Gespeichert');
+    await second.close();
+  };
+  await change('Geänderter Claim nach der Vorschau.');
 
-  await page.getByRole('button', { name: 'Nach Staging publizieren' }).click();
+  // Ohne Neuladen: Der Dialog gleicht ab und bietet genau zwei Knöpfe.
+  await page.getByRole('button', { name: 'Auf Test publizieren' }).click();
   const dialog = page.getByRole('alertdialog');
-  await expect(dialog.getByRole('alert')).toContainText('Vorschau ist nicht mehr aktuell');
-  await expect(dialog.getByRole('button', { name: 'Jetzt publizieren' })).toBeDisabled();
-});
+  await expect(dialog.getByRole('alert')).toContainText('Vorschau nicht mehr aktuell');
+  await expect(dialog.locator('[data-slot="dialog-footer"]').getByRole('button')).toHaveText(['Abbrechen', 'Vorschau neu bauen']);
+  // Neu bauen schließt den Dialog und zeigt den Lauf in der Karte.
+  await dialog.getByRole('button', { name: 'Vorschau neu bauen' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole('region', { name: 'Laufender Lauf' }).or(cardTitle(page, 'Vorschau bereit'))).toBeVisible();
+  await expect(cardTitle(page, 'Vorschau bereit')).toBeVisible({ timeout: 180_000 });
 
-test('the connection test lists what a publish would remove and touches nothing', async ({ page }) => {
-  await resetDatabase(page, 'seeded');
-  await loginAsAdmin(page);
-  // Die Publizieren-Seite gibt es erst mit eingelesenem Template.
-  await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Template einlesen' }).click();
-  await page.getByRole('button', { name: 'Übernehmen' }).click();
-  await expect(page.getByRole('status')).toContainText('eingelesen');
-  const fs = await import('node:fs');
-  const target = process.env.E2E_SITE_TARGET!;
-  fs.mkdirSync(target, { recursive: true });
-  const stranger = path.join(target, 'fremde-datei.html');
-  fs.writeFileSync(stranger, '<html>WordPress</html>');
-
-  await page.goto('/site/publish');
-  await page.getByRole('button', { name: 'Verbindung testen' }).click();
-  const result = page.getByRole('region', { name: 'Verbindungstest' });
-  await expect(result).toContainText('fremde-datei.html', { timeout: 60_000 });
-  expect(fs.readFileSync(stranger, 'utf8')).toBe('<html>WordPress</html>');
-
-  // Der Test läuft im Hintergrund, sein Ergebnis liegt im Cache: Nach dem
-  // Neuladen steht es mit Zeitpunkt noch da, ohne neuen Lauf.
+  // Mit Neuladen: Die Karte nennt es gleich beim Öffnen der Seite.
+  await change('Noch ein geänderter Claim.');
   await page.reload();
-  const kept = page.getByRole('region', { name: 'Verbindungstest' });
-  await expect(kept).toContainText('Zuletzt getestet');
-  await expect(kept).toContainText('fremde-datei.html');
+  await expect(cardTitle(page, 'Vorschau nicht mehr aktuell')).toBeVisible();
 });
 
-test('the check reports a stale reference as a warning, not as a block', async ({ page }) => {
+test('the preview reports a stale reference as a hint, not as a block', async ({ page }) => {
+  test.setTimeout(180_000);
   await resetDatabase(page, 'seeded');
   await loginAsAdmin(page);
-  await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Template einlesen' }).click();
-  await page.getByRole('button', { name: 'Übernehmen' }).click();
-  await expect(page.getByRole('status')).toContainText('eingelesen');
+  await importTemplate(page);
 
   await page.goto('/site/variables');
   await page.getByLabel('Projekt auf der Startseite').selectOption('winterhilfe');
@@ -211,11 +229,14 @@ test('the check reports a stale reference as a warning, not as a block', async (
   await page.getByRole('row', { name: /Winterhilfe/ }).getByRole('switch').click();
 
   await page.goto('/site/publish');
-  await page.getByRole('button', { name: 'Prüfen' }).click();
+  await page.getByRole('button', { name: 'Vorschau bauen' }).click();
+  await expect(cardTitle(page, 'Vorschau bereit')).toBeVisible({ timeout: 120_000 });
+  await page.getByText('Einzelheiten: Dateien und Hinweise').click();
   const stale = page.getByRole('region', { name: 'Veraltete Verweise' });
+  await stale.getByText(/Veraltete Verweise/).click();
   await expect(stale).toContainText('variables.featuredProject');
   await expect(stale).toContainText('winterhilfe');
-  await expect(page.getByRole('region', { name: 'Sperrworttreffer' })).toContainText('Keine Treffer');
+  await expect(page.getByRole('region', { name: 'Publizieren gesperrt' })).toHaveCount(0);
 });
 
 /**
@@ -241,10 +262,7 @@ test('the preview rewrites every absolute path, srcset included', async ({ page 
   await page.getByLabel('Datei hochladen').setInputFiles({ name: 'hero.png', mimeType: 'image/png', buffer: PNG });
   await expect(page.getByRole('row', { name: /hero-/ })).toBeVisible();
 
-  await page.goto('/site/template');
-  await page.getByRole('button', { name: 'Template einlesen' }).click();
-  await page.getByRole('button', { name: 'Übernehmen' }).click();
-  await expect(page.getByRole('status')).toContainText('eingelesen');
+  await importTemplate(page);
 
   await page.goto('/site/variables');
   await page.getByRole('button', { name: 'Bild auf der Startseite: Wählen' }).click();
@@ -256,7 +274,7 @@ test('the preview rewrites every absolute path, srcset included', async ({ page 
 
   await page.goto('/site/publish');
   await page.getByRole('button', { name: 'Vorschau bauen' }).click();
-  await expect(page.getByRole('region', { name: 'Änderungen gegenüber Live' })).toContainText('index.html', { timeout: 180_000 });
+  await expect(cardTitle(page, 'Vorschau bereit')).toBeVisible({ timeout: 180_000 });
 
   const html = await (await page.request.get('/site/preview/')).text();
   const leftovers = [...html.matchAll(/(\w[\w-]*)="(\/(?!site\/preview)[^"]*)"/g)].map((m) => `${m[1]}="${m[2]}"`);
@@ -269,4 +287,48 @@ test('the preview rewrites every absolute path, srcset included', async ({ page 
   const first = srcset!.split(',')[0]!.trim().split(' ')[0]!;
   const image = await page.request.get(first);
   expect(image.headers()['content-type']).toBe('image/webp');
+});
+
+/**
+ * Die Laufanzeige hängt nicht an der Seite, die den Lauf gestartet hat: Ein
+ * Assistent startet die Vorschau über MCP, die Kopfzeile jeder Seite zeigt sie,
+ * und die Laufkarte bricht sie ab. Die Bremse hält den Export fest, weil der Bau
+ * warm in unter einer Sekunde fertig wäre.
+ */
+test('a run started over MCP shows in the header and on the publish page and can be cancelled there', async ({ page, baseURL }) => {
+  test.setTimeout(180_000);
+  await resetDatabase(page, 'seeded');
+  await loginAsAdmin(page);
+  await importTemplate(page);
+  await page.goto('/profile');
+  await page.getByRole('button', { name: 'Token erstellen' }).click();
+  await page.getByRole('dialog').getByLabel('Name').fill('Playwright');
+  await page.getByRole('dialog').getByRole('button', { name: 'Erstellen' }).click();
+  const token = (await page.getByTestId('api-token-plaintext').textContent())!.trim();
+  await page.getByRole('button', { name: 'Ich habe das Token gespeichert' }).click();
+  await page.request.post('/__e2e/site-brake', { headers: { 'x-e2e-token': 'e2e-reset' }, data: { ms: 20_000 } });
+  try {
+    const client = new Client({ name: 'e2e', version: '0' });
+    await client.connect(new StreamableHTTPClientTransport(new URL('/mcp', baseURL), { requestInit: { headers: { Authorization: `Bearer ${token}` } } }));
+    expect((await client.callTool({ name: 'site_preview_build', arguments: {} })).isError).toBeFalsy();
+    await client.close();
+
+    await page.goto('/');
+    const indicator = page.getByTestId('site-job');
+    await expect(indicator).toContainText('Vorschau');
+    await indicator.click();
+    await expect(page).toHaveURL('/site/publish');
+    const run = page.getByRole('region', { name: 'Laufender Lauf' });
+    await expect(run).toContainText('MCP');
+    await run.getByRole('button', { name: 'Abbrechen' }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Lauf abbrechen' }).click();
+    await expect(run).toHaveCount(0, { timeout: 60_000 });
+    await expect(indicator).toHaveCount(0);
+    // Abgebrochen ist kein Fehler: Die Karte nennt den Schritt, ohne eine zweite Region „Letzter Lauf“.
+    await expect(cardTitle(page, 'Vorschau abgebrochen')).toBeVisible();
+    await expect(page.getByText('bei „Inhalte prüfen“')).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Letzter Lauf: Vorschau' })).toHaveCount(0);
+  } finally {
+    await page.request.post('/__e2e/site-brake', { headers: { 'x-e2e-token': 'e2e-reset' }, data: { ms: 0 } });
+  }
 });

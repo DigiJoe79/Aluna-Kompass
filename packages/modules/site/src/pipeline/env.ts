@@ -1,5 +1,9 @@
 import path from 'node:path';
+import type { StepKey } from './run-state';
 import { siteTemplateDir } from '../env';
+
+/** Fassung der Bildvarianten im Cache; steht in jedem Cache-Dateinamen. Hochzählen, wenn sich Encoder oder Einstellungen ändern. */
+export const SITE_CACHE_VERSION = 'v1';
 
 /** Wie sich Kompass beim Zielserver anmeldet. */
 export type DeployAuth =
@@ -21,6 +25,10 @@ export interface SiteEnv {
   templateDir: string;
   cacheDir: string;
   previewDir: string;
+  /** Wurzel der Laufverzeichnisse; nur Tests setzen sie (sonst das Temp-Verzeichnis des Systems). */
+  workDir?: string;
+  /** Übersteuert die Zeitlimits je Schritt; nur Tests setzen sie. */
+  limits?: Partial<Record<StepKey, { totalMs?: number; stallMs?: number; perItemMs?: number }>>;
 }
 
 function readAuth(env: Record<string, string | undefined>, host: string): DeployAuth | null {

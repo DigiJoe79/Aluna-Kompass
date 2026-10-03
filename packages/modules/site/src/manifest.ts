@@ -10,18 +10,16 @@ import { seedSiteDevelopment } from './dev-seed';
 export const SITE_PERMISSIONS = ['site.view', 'site.manage', 'site.publish'] as const;
 
 /**
- * Je Sammlung ein Navigationseintrag mit ihrer Beschriftung, dazu „Variablen“
- * und „Publizieren“ — alles erst, wenn ein Template eingelesen ist. Ohne
- * Template lehnt der Export mit `noTemplate` ab; der Eintrag führte bis dahin
- * auf eine Seite, die nur scheitern konnte.
+ * Je Sammlung ein Navigationseintrag mit ihrer Beschriftung, dazu „Variablen“ —
+ * erst, wenn ein Template eingelesen ist. „Publizieren“ steht dagegen immer
+ * (fester Eintrag im Manifest): `buildNavigation` blendet Module ohne Einträge
+ * aus, und ohne Template verschwände die Webseite sonst aus der Leiste, bevor
+ * jemand das Template einlesen könnte. Die Seite zeigt dann einen Leerzustand.
  */
 const siteNavigationFor = (deps: Parameters<typeof activeTemplate>[0]): NavigationItem[] => {
   const template = activeTemplate(deps);
   if (!template) return [];
   return [
-    // „Publizieren“ schließt oben an „Template“ an (das steht als fester Eintrag im
-    // Manifest); darunter, hinter einer Trennlinie, die pflegbaren Inhalte.
-    { key: 'site.publish', href: '/site/publish', icon: 'upload', group: 'site', permission: 'site.publish' },
     { key: 'site.variables', href: '/site/variables', icon: 'sliders', group: 'site', permission: 'site.manage', sectionBreak: true },
     ...Object.entries(template.schema.collections).map(([key, col]): NavigationItem => ({
       key: `site.c.${key}`,
@@ -43,10 +41,12 @@ export const siteModule: ModuleManifest = defineModule({
   // stehen (`globe`). Das erste Item-Icon `layout-template` meint die Seite
   // „Template“, nicht das Modul „Webseite“.
   moduleIcon: 'globe',
-  // Nur der Weg hinein steht immer da; alles Weitere hängt am Template.
-  navigation: [{ key: 'site.template', href: '/site/template', icon: 'layout-template', group: 'site', permission: 'site.manage' }],
+  // „Publizieren“ steht immer da; Variablen und Sammlungen hängen am Template.
+  navigation: [{ key: 'site.publish', href: '/site/publish', icon: 'upload', group: 'site', permission: 'site.publish' }],
+  // Template, Verbindung, Cache und Sperrwörter: eine Seite unter Einstellungen.
+  adminNavigation: [{ key: 'site.admin', href: '/admin/site', icon: 'globe', permission: 'site.manage' }],
   help: [
-    { href: '/site/template', doc: 'webseite/template-einlesen' },
+    { href: '/admin/site', doc: 'einstellungen/webseite-einrichten' },
     { href: '/site/variables', doc: 'webseite/variablen' },
     { href: '/site/c', doc: 'webseite/sammlungen' },
     { href: '/site/publish', doc: 'webseite/publizieren' },

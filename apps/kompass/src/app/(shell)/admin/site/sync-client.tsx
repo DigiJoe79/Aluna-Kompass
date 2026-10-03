@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { applySyncAction, previewSyncAction, type SyncPreviewState } from '../actions';
+import { applySyncAction, previewSyncAction, type SyncPreviewState } from '@/app/(shell)/site/actions';
 
 /**
  * Der Satz zu einem Befund. Er stand bis zum 2026-09-15 als Template-Literal

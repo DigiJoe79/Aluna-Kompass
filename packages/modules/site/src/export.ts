@@ -1,3 +1,4 @@
+import { siteTestBrake } from './test-brake';
 import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -11,11 +12,13 @@ import {
   readSetting,
   requirePermission,
   schema as core,
+  localizedConflict,
 } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import type { FieldSchema } from './types';
 import { z } from 'zod';
 import { previousTemplateDir, siteTemplateDir } from './env';
+import { entryLabel } from './entry-label';
 import { checkReferenceValues } from './reference-fields';
 import { siteEntries } from './schema';
 import { activeTemplate, templateIsCurrent } from './service';
@@ -34,9 +37,18 @@ export interface ExportedAsset {
   height: number | null;
 }
 
+/** Wo ein Treffer zu bearbeiten ist: Variablen haben eine Seite, Sammlungseinträge je eine Maske, Zeilen einer Sicht ihre Adresse (`editLink` der Sicht). Dateinamen tragen keinen Verweis. */
+export type SiteViolationEdit = { kind: 'variables' } | { kind: 'entry'; collection: string; id: string; title: string } | { kind: 'view'; href: string; title: string };
+export interface SiteViolation {
+  path: string;
+  term: string;
+  excerpt: string;
+  edit?: SiteViolationEdit;
+}
+
 export interface ExportChecks {
   gaps: { path: string; locale: string }[];
-  violations: { path: string; term: string; excerpt: string }[];
+  violations: SiteViolation[];
   /** Referenzwerte, die nicht mehr in der gefilterten Sicht stehen; im Export durch null ersetzt bzw. aus der Liste genommen. */
   stale: { path: string; value: string }[];
   /** Veröffentlichte Datensätze, die auf eine Prüfung durch einen Menschen warten. Eine Warnung, keine Sperre. */
@@ -97,11 +109,28 @@ function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/** Fragt die Sicht erst beim Treffer nach dem Weg zur Zeile; `rows` sind die Zeilen des Exports in seiner Reihenfolge. */
+type ViewLinks = Record<string, (index: number) => { href: string; title: string } | null>;
+
+function editFor(path: string, refs: Record<string, { id: string; title: string }[]>, viewLinks: ViewLinks): SiteViolationEdit | undefined {
+  if (path.startsWith('variables.')) return { kind: 'variables' };
+  const v = /^views\.([^.[]+)\[(\d+)\]/.exec(path);
+  if (v) {
+    const link = viewLinks[v[1]!]?.(Number(v[2]));
+    return link ? { kind: 'view', href: link.href, title: link.title } : undefined;
+  }
+  const m = /^collections\.([^.[]+)\[(\d+)\]/.exec(path);
+  const ref = m ? refs[m[1]!]?.[Number(m[2])] : undefined;
+  return m && ref ? { kind: 'entry', collection: m[1]!, id: ref.id, title: ref.title } : undefined;
+}
+
 function collectViolations(
   content: unknown,
   terms: string[],
   assets: ExportedAsset[],
-): { path: string; term: string; excerpt: string }[] {
+  refs: Record<string, { id: string; title: string }[]>,
+  viewLinks: ViewLinks,
+): SiteViolation[] {
   const needles = terms.map((t) => t.trim().toLowerCase()).filter((t) => t.length >= 2);
   if (needles.length === 0) return [];
   const patterns = needles.map((term) => {
@@ -110,16 +139,14 @@ function collectViolations(
     return { term, regex };
   });
 
-  const hits: { path: string; term: string; excerpt: string }[] = [];
+  const hits: SiteViolation[] = [];
   for (const item of texts(content)) {
     for (const { term, regex } of patterns) {
       const match = item.value.match(regex);
       if (match && match.index !== undefined) {
-        hits.push({
-          path: item.locale ? `${item.path}.${item.locale}` : item.path,
-          term,
-          excerpt: excerptAround(item.value, match.index, match[0].length),
-        });
+        const path = item.locale ? `${item.path}.${item.locale}` : item.path;
+        const edit = editFor(path, refs, viewLinks);
+        hits.push({ path, term, excerpt: excerptAround(item.value, match.index, match[0].length), ...(edit ? { edit } : {}) });
       }
     }
   }
@@ -219,19 +246,20 @@ function assetIdsFromViews(node: unknown, out: Set<string>): void {
   }
 }
 
-/**
- * Schreibt `content.json` in der Form der Spec: Variablen, Sammlungen, Sichten,
- * Assets. Vorher prüft die Publish-Sicherung, dass die Datei im Volume dem
- * eingelesenen Stand entspricht.
- */
-export async function exportSiteContent(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<SiteContentExport>> {
-  const denied = requirePermission(ctx, 'site.publish');
-  if (denied) return denied;
-  const parsed = inputSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: { type: 'validation', issues: [{ path: 'jobDir', message: 'required' }] } };
-  const { jobDir } = parsed.data;
-  const templateDir = parsed.data.templateDir ?? siteTemplateDir();
+type CollectOut = { jobDir: string; hooks: { signal?: AbortSignal; onAsset?: (done: number, total: number) => void } };
 
+/**
+ * Gemeinsamer Weg für Export und Hash-Abgleich. Mit `out === null` werden keine
+ * Dateien angelegt und keine Originalbilder gelesen: Der Hash umfasst nur die
+ * Metadaten der Assets (`canonical({ variables, collections, views, assets })`),
+ * deshalb ist er ohne Kopie derselbe wie im Export.
+ */
+async function collect(
+  deps: Deps,
+  ctx: CallContext,
+  templateDir: string,
+  out: CollectOut | null,
+): Promise<Result<{ contentHash: string; json: string; assets: ExportedAsset[] } & ExportChecks>> {
   const template = activeTemplate(deps);
   if (!template) return conflict('noTemplate', 'Es ist kein Template eingelesen');
   // Vor `templateIsCurrent`, denn das lädt die Template-Datei — und genau das
@@ -267,6 +295,8 @@ export async function exportSiteContent(deps: Deps, ctx: CallContext, input: unk
   }
 
   const collections: Record<string, unknown[]> = {};
+  // Je Sammlung die Zeilen in der Reihenfolge des Exports: Der Index im Pfad eines Treffers führt so zum Eintrag.
+  const refs: Record<string, { id: string; title: string }[]> = {};
   for (const [key, col] of Object.entries(template.schema.collections)) {
     const rows = deps.db
       .select()
@@ -275,6 +305,7 @@ export async function exportSiteContent(deps: Deps, ctx: CallContext, input: unk
       .all()
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .filter((row) => !col.publishable || row.isPublished);
+    refs[key] = rows.map((row) => ({ id: row.id, title: entryLabel(col, row, locales[0] ?? '') }));
     collections[key] = rows.map((row) => ({
       ...(pruneLocales(row.data, locales) as Record<string, unknown>),
       ...(col.slug ? { slug: row.slug } : {}),
@@ -283,18 +314,24 @@ export async function exportSiteContent(deps: Deps, ctx: CallContext, input: unk
   }
 
   const views: Record<string, unknown[]> = {};
+  const viewLinks: ViewLinks = {};
+  const addView = (view: { name: string; load(deps: Deps): unknown[]; editLink?(deps: Deps, row: never): { href: string; title: string } | null }) => {
+    const rows = view.load(deps);
+    views[view.name] = pruneLocales(rows, locales) as unknown[];
+    if (view.editLink) viewLinks[view.name] = (i) => (rows[i] === undefined ? null : view.editLink!(deps, rows[i] as never));
+  };
   // Die Sichten des Kerns sind immer dabei: Vereinsstammdaten pflegt man einmal
   // in den Einstellungen, kein Template soll sie als Variablen verdoppeln.
   for (const view of deps.registry.module('core')?.publishedViews ?? []) {
-    views[view.name] = pruneLocales(view.load(deps), locales) as unknown[];
+    addView(view);
   }
   for (const use of template.schema.uses) {
     const manifest = deps.registry.manifests.find((m) => m.key === use);
     if (!manifest || !isModuleEnabled(deps, use)) {
-      return conflict('moduleDisabled', `Das Template nutzt Sichten von „${use}“, aber das Modul ist nicht aktiv`);
+      return localizedConflict('moduleDisabled', 'errors.site.moduleDisabled', { module: use });
     }
     for (const view of manifest.publishedViews ?? []) {
-      views[view.name] = pruneLocales(view.load(deps), locales) as unknown[];
+      addView(view);
     }
   }
 
@@ -317,26 +354,66 @@ export async function exportSiteContent(deps: Deps, ctx: CallContext, input: unk
   }
   assetIdsFromViews(views, ids);
   const assets: ExportedAsset[] = [];
-  await mkdir(path.join(jobDir, 'assets'), { recursive: true });
+  if (out) await mkdir(path.join(out.jobDir, 'assets'), { recursive: true });
+  let copied = 0;
   for (const id of [...ids].sort()) {
+    out?.hooks.signal?.throwIfAborted();
+    out?.hooks.onAsset?.(++copied, ids.size);
     const row = deps.db.select().from(core.mediaAssets).where(eq(core.mediaAssets.id, id)).get();
     if (!row) continue;
     assets.push({ id: row.id, filename: row.filename, mimeType: row.mimeType, width: row.width, height: row.height });
-    await writeFile(path.join(jobDir, 'assets', row.filename), await deps.media.read(row.filename));
+    if (out) await writeFile(path.join(out.jobDir, 'assets', row.filename), await deps.media.read(row.filename));
   }
 
   const contentPayload = { variables, collections, views };
   const json = JSON.stringify(canonical({ variables, collections, views, assets }), null, 2);
-  const contentPath = path.join(jobDir, 'content.json');
-  await writeFile(contentPath, json);
   const contentHash = createHash('sha256').update(json).digest('hex');
 
   const terms = deps.registry.settingDefinitions.has('site.blockedTerms')
     ? readSetting<string[]>(deps, 'site.blockedTerms')
     : [];
-  const violations = collectViolations(contentPayload, terms, assets);
+  const violations = collectViolations(contentPayload, terms, assets, refs, viewLinks);
   const gaps: { path: string; locale: string }[] = [];
   collectGaps(contentPayload, '', locales, gaps);
 
-  return ok({ contentHash, contentPath, assets, gaps, violations, stale, pendingReview });
+  return ok({ contentHash, json, assets, gaps, violations, stale, pendingReview });
+}
+
+/**
+ * Schreibt `content.json` in der Form der Spec: Variablen, Sammlungen, Sichten,
+ * Assets. Vorher prüft die Publish-Sicherung, dass die Datei im Volume dem
+ * eingelesenen Stand entspricht.
+ */
+export async function exportSiteContent(
+  deps: Deps,
+  ctx: CallContext,
+  input: unknown,
+  hooks: { signal?: AbortSignal; onAsset?: (done: number, total: number) => void } = {},
+): Promise<Result<SiteContentExport>> {
+  const denied = requirePermission(ctx, 'site.publish');
+  if (denied) return denied;
+  await siteTestBrake(deps, hooks.signal);
+  const parsed = inputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: { type: 'validation', issues: [{ path: 'jobDir', message: 'required' }] } };
+  const { jobDir } = parsed.data;
+  const collected = await collect(deps, ctx, parsed.data.templateDir ?? siteTemplateDir(), { jobDir, hooks });
+  if (!collected.ok) return collected;
+  const { json, ...rest } = collected.value;
+  const contentPath = path.join(jobDir, 'content.json');
+  await writeFile(contentPath, json);
+  return ok({ ...rest, contentPath });
+}
+
+/** Nur der Inhalts-Hash: gleicher Wert wie im Export, ohne Dateien und ohne die Originalbilder zu lesen. */
+export async function siteContentHash(
+  deps: Deps,
+  ctx: CallContext,
+  input: { templateDir?: string } = {},
+): Promise<Result<{ contentHash: string; assets: number } & ExportChecks>> {
+  const denied = requirePermission(ctx, 'site.publish');
+  if (denied) return denied;
+  const collected = await collect(deps, ctx, input.templateDir ?? siteTemplateDir(), null);
+  if (!collected.ok) return collected;
+  const { json: _json, assets, ...rest } = collected.value;
+  return ok({ ...rest, assets: assets.length });
 }

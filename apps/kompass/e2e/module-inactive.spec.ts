@@ -22,6 +22,8 @@ test.describe('Modul inaktiv', () => {
     { key: 'dms', title: 'Modul Dokumentenmanagement ist nicht aktiv', paths: ['/dms', '/dms/new', '/dms/receive', '/admin/dms'] },
     { key: 'contacts', title: 'Modul Kontakte ist nicht aktiv', paths: ['/contacts'] },
     { key: 'projects', title: 'Modul Projekte ist nicht aktiv', paths: ['/projects'] },
+    // Nur `/admin/site`: Die `/site/*`-Seiten zeigen heute keine Modul-Sperre.
+    { key: 'site', title: 'Modul Webseite ist nicht aktiv', paths: ['/admin/site'] },
   ];
 
   for (const c of cases) {

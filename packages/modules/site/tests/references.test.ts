@@ -51,13 +51,42 @@ describe('siteMediaReferences', () => {
     unwrap(await createEntry(deps, ctx, { collection: 'news', slug: 'markt', data: { title: { de: 'Markt' }, image: b.id } }));
 
     const all = siteMediaReferences(deps, new Set([a.id, b.id]));
-    expect(all.filter((h) => h.assetId === b.id).map((h) => h.label)).toEqual(['Eintrag „markt“ in „News“']);
+    expect(all.filter((h) => h.assetId === b.id).map((h) => h.label)).toEqual(['Eintrag „Markt“ in „News“']);
     const hits = all.filter((h) => h.assetId === a.id);
-    expect(hits.map((h) => h.label).sort()).toEqual(['Eintrag „fest“ in „News“', 'Variable „heroImage“']);
+    expect(hits.map((h) => h.label).sort()).toEqual(['Eintrag „Fest“ in „News“', 'Variable „Titelbild“']);
     const variable = hits.find((h) => h.entity === 'siteValue')!;
     expect(variable.href).toBe('/site/variables');
     const entry = hits.find((h) => h.entity === 'siteEntry')!;
     expect(entry.href).toBe(`/site/c/news/${entry.id}`);
     expect(siteMediaReferences(deps, new Set(['OTHER']))).toEqual([]);
+  });
+
+  it('beschriftet Einträge ohne slug/title nach ihrem ersten Textfeld, nicht nach der ID', async () => {
+    const SRC = `
+import { defineTemplate, asset, text } from '@kompass/site-template';
+export default defineTemplate({
+  name: 'Y', locales: ['de'],
+  variables: { logo: asset() },
+  collections: {
+    team: { label: 'Team', fields: { name: text({ label: 'Name' }), photo: asset({ label: 'Foto' }) } },
+    notes: { label: 'Notizen', slug: false, fields: { title: text({ label: 'Titel' }), image: asset() } },
+  },
+});`;
+    const deps = createTestDeps({ locales: ['de'], manifests: [coreModule, siteModule] });
+    insertUser(deps, { id: 'USER-TEST' });
+    const dir = mkdtempSync(path.join(tmpdir(), 'kompass-ref-tpl-'));
+    dirs.push(dir);
+    writeFileSync(path.join(dir, 'kompass.template.ts'), SRC);
+    unwrap(await applyTemplateSync(deps, ctxWith(['site.manage']), { dir, confirm: true }));
+    const ctx = ctxWith(['media.upload', 'site.manage', 'site.view']);
+    const a = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'a.png', bytes: PNG }));
+    unwrap(await createEntry(deps, ctx, { collection: 'team', data: { name: 'Rita Beispiel', photo: a.id } }));
+    unwrap(await createEntry(deps, ctx, { collection: 'notes', data: { title: 'Schlichter Titel', image: a.id } }));
+    unwrap(await setValues(deps, ctx, { values: { logo: a.id } }));
+    expect(siteMediaReferences(deps, new Set([a.id])).map((h) => h.label).sort()).toEqual([
+      'Eintrag „Rita Beispiel“ in „Team“',
+      'Eintrag „Schlichter Titel“ in „Notizen“',
+      'Variable „logo“',
+    ]);
   });
 });

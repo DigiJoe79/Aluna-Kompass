@@ -1,3 +1,4 @@
+import { requirePermission } from '@kompass/core';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { optionalSession } from '@/lib/request-context';
@@ -21,6 +22,7 @@ const TYPES: Record<string, string> = {
 export async function GET(_request: Request, ctx: { params: Promise<{ path?: string[] }> }): Promise<Response> {
   const session = await optionalSession();
   if (!session) return new Response(null, { status: 401 });
+  if (requirePermission(session.ctx, 'site.view')) return new Response(null, { status: 403 });
   const { path: parts = [] } = await ctx.params;
   const resolved = resolvePreviewFile(siteEnv().previewDir, parts);
   if (!resolved) return new Response(null, { status: 404 });

@@ -49,6 +49,8 @@ test.describe('app shell', () => {
     await expect(page.getByRole('region', { name: 'Befunde' })).toBeVisible();
     await page.getByRole('button', { name: 'Übernehmen' }).click();
     await expect(page.getByRole('status')).toContainText('eingelesen');
+    // Die Unternavigation der Webseite zeigt erst die Seiten der Webseite, nicht die Einstellungen.
+    await page.goto('/site/publish');
 
     const sections = page.getByRole('navigation', { name: 'Unternavigation' });
     await sections.getByRole('link', { name: 'Aktuelles' }).click();
@@ -65,7 +67,7 @@ test.describe('app shell', () => {
     const sections = page.getByRole('navigation', { name: 'Unternavigation' });
     await expect(sections.getByText('Verwaltung')).toBeVisible();
     await expect(sections.getByText('Einrichtung')).toBeVisible();
-    for (const label of ['Nutzer', 'Rollen', 'Änderungsprotokoll', 'Aufbewahrung', 'Backup', 'Stammdaten', 'Sprachen', 'Erscheinungsbild', 'Module', 'Dokumentvorlagen', 'Akte']) {
+    for (const label of ['Nutzer', 'Rollen', 'Änderungsprotokoll', 'Aufbewahrung', 'Backup', 'Stammdaten', 'Sprachen', 'Erscheinungsbild', 'Module', 'Dokumentvorlagen', 'Akte', 'Webseite']) {
       await expect(sections.getByRole('link', { name: label, exact: true })).toBeVisible();
     }
     // Die Mediathek ist ein eigener Bereich in der Schiene, kein Verwaltungspunkt.

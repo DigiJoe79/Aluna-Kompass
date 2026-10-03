@@ -432,7 +432,48 @@
       "default": "Der Vorgang ist nicht möglich: {detail}",
       "notIncoming": "Nur eingehende Post lässt sich nachträglich umklassifizieren — die Nummer eines ausgehenden Dokuments steht im verschickten PDF.",
       "documentVoided": "Das Dokument ist storniert und lässt sich nicht mehr ändern.",
-      "documentTypeInactive": "Diese Dokumentart ist abgeschaltet."
+      "documentTypeInactive": "Diese Dokumentart ist abgeschaltet.",
+      "alreadySeeded": "Die Startinhalte wurden bereits übernommen.",
+      "noSeed": "Das Template bringt keine Startinhalte mit.",
+      "noTemplate": "Es ist noch kein Template eingelesen. Lesen Sie es zuerst ein.",
+      "siteNotEmpty": "Es sind schon Inhalte vorhanden. Startinhalte werden nur in eine leere Webseite übernommen.",
+      "templateMissing": "Im Template-Verzeichnis fehlt die Datei kompass.template.ts.",
+      "templateResolutionMissing": "Das Template-Verzeichnis hat noch keine Modulauflösung; sie wird beim Einrichten angelegt.",
+      "templateInvalid": "kompass.template.ts exportiert keine Template-Deklaration.",
+      "templateNeedsReview": "Das Template kam mit einem Backup und muss erst eingelesen werden.",
+      "templateStale": "Die Template-Datei weicht vom eingelesenen Stand ab. Lesen Sie das Template neu ein.",
+      "templateUnreadable": "Das Template lässt sich nicht laden: {detail}",
+      "localeMissing": "Das Template verlangt Sprachen, die nicht eingerichtet sind: {detail}",
+      "seedAssetsMissing": "Unter seed/assets fehlen Dateien: {detail}",
+      "deployCredentialsUnusable": "Die Zugangsdaten für das Ziel sind nicht nutzbar: {detail}",
+      "deployCheckFailed": "Der Verbindungstest ist fehlgeschlagen: {detail}",
+      "previewFailed": "Die Vorschau ist fehlgeschlagen: {detail}"
+    },
+    "site": {
+      "previewOutdated": {
+        "reason": "Seit der Vorschau hat sich der Inhalt der Webseite geändert (Vorschau {expected}, jetzt {actual}).",
+        "remedy": "Bauen Sie die Vorschau neu, sehen Sie sie an und publizieren Sie dann."
+      },
+      "duplicateSlug": {
+        "reason": "Der Slug „{slug}“ ist in „{collection}“ schon vergeben.",
+        "remedy": "Wählen Sie einen anderen."
+      },
+      "tooManyEntries": {
+        "reason": "Die Sammlung „{collection}“ fasst höchstens {max} Einträge.",
+        "remedy": "Löschen Sie zuerst einen Eintrag."
+      },
+      "notPublishable": {
+        "reason": "Die Sammlung „{collection}“ kennt keinen Veröffentlicht-Schalter.",
+        "remedy": "Ihre Einträge erscheinen ohne Freigabe auf der Webseite."
+      },
+      "moduleDisabled": {
+        "reason": "Das Template nutzt Sichten des Moduls „{module}“, das nicht aktiv ist.",
+        "remedy": "Schalten Sie es unter Einrichtung → Module ein."
+      },
+      "overLimit": {
+        "reason": "{names} überschreitet die neue Obergrenze des Templates.",
+        "remedy": "Räumen Sie dort zuerst auf und lesen Sie das Template dann ein."
+      }
     },
     "fields": {
       "unknownDispatchChannel": "Unbekannter Versandweg.",
@@ -612,7 +653,7 @@
       "admin": "Akte"
     },
     "site": {
-      "template": "Template",
+      "admin": "Webseite",
       "variables": "Variablen",
       "publish": "Publizieren"
     },
@@ -1011,8 +1052,10 @@
           "empty": "",
           "open": "Zum Publizieren",
           "messages": {
+            "running": "{kind, select, preview {Die Vorschau} deployCheck {Der Verbindungstest} other {Der Publish}} läuft gerade.",
             "templateUnreviewed": "Das Template ist seit dem Import ungeprüft. Der Publish ist gesperrt, bis es eingelesen wurde.",
             "lastFailed": "Der letzte Publish ist fehlgeschlagen.",
+            "lastAborted": "Der letzte Publish wurde abgebrochen.",
             "changed": "{count, plural, one {# Änderung} other {# Änderungen}} seit dem letzten Publish.",
             "never": "Noch nie publiziert.",
             "current": "Stand vom {date}. Keine Änderungen seither."
@@ -1623,6 +1666,7 @@
       }
     },
     "detail": {
+      "tokenGone": "gelöschter Token ({id})",
       "before": "vorher",
       "after": "nachher",
       "noDiff": "Kein Feld-Diff für diesen Eintrag.",
@@ -2025,6 +2069,59 @@
     }
   },
   "site": {
+    "admin": {
+      "title": "Webseite",
+      "description": "Template, Verbindung zum Webspace, Cache und gesperrte Begriffe.",
+      "tabsLabel": "Bereiche der Webseite",
+      "cache": {
+        "title": "Cache der Webseite",
+        "intro": "Bildvarianten und Vorschau lassen sich jederzeit neu erzeugen. Leeren lohnt sich, wenn Bilder oder Vorschau offensichtlich nicht mehr stimmen.",
+        "images": "{count, plural, one {# Bildvariante} other {# Bildvarianten}}, {size} MB",
+        "age": "älteste {oldest} · neueste {newest}",
+        "noAge": "keine Bildvarianten",
+        "preview": "Vorschau {size} MB, gebaut {date}",
+        "noPreview": "keine Vorschau",
+        "clear": "Cache leeren",
+        "blocked": "Während eines Laufs lässt sich der Cache nicht leeren.",
+        "confirmTitle": "Cache leeren?",
+        "confirmText": "Die Bildvarianten und die Vorschau werden gelöscht. Der nächste Bau erzeugt sie neu und dauert bei vielen Fotos deutlich länger.",
+        "cleared": "{removed, plural, one {# Datei} other {# Dateien}} gelöscht."
+      },
+      "needsPublish": "Dafür braucht es zusätzlich das Recht „Publizieren“.",
+      "connection": {
+        "title": "Verbindung zum Webspace",
+        "publicUrl": "Öffentliche Adresse",
+        "target": "Ziel",
+        "targetRemote": "{user}@{host}:{path}",
+        "targetLocal": "lokales Verzeichnis: {path}",
+        "notConfigured": "nicht eingerichtet",
+        "auth": "Anmeldung",
+        "authValues": {
+          "local": "keine nötig",
+          "key": "Schlüsseldatei",
+          "password": "Passwortdatei",
+          "missing": "fehlt"
+        },
+        "secret": "Geheimnis",
+        "secretValues": {
+          "set": "gesetzt",
+          "missing": "fehlt",
+          "unreadable": "nicht lesbar"
+        },
+        "staging": "Staging",
+        "yes": "ja",
+        "no": "nein",
+        "none": "nicht gesetzt",
+        "envHint": "Diese Werte stehen in der Umgebung des Containers. Ändern lassen sie sich nur dort; danach den Container neu erstellen (siehe Betriebshandbuch).",
+        "notReady": "Das Ziel ist nicht vollständig eingerichtet oder die Schlüssel- oder Passwortdatei ist nicht lesbar. Ein Verbindungstest ist erst möglich, wenn die Umgebung stimmt."
+      },
+      "tabs": {
+        "template": "Template",
+        "connection": "Verbindung",
+        "cache": "Cache",
+        "blockedTerms": "Gesperrte Begriffe"
+      }
+    },
     "form": {
       "add": "Hinzufügen",
       "remove": "Entfernen",
@@ -2088,116 +2185,331 @@
     },
     "publish": {
       "title": "Publizieren",
+      "empty": {
+        "text": "Es ist noch kein Template eingelesen. Erst danach lassen sich Inhalte pflegen und veröffentlichen.",
+        "action": "In den Einstellungen einrichten"
+      },
       "target": {
-        "development": "Ziel: keine Veröffentlichung in der Entwicklungsumgebung",
-        "test": "Ziel: Staging",
-        "production": "Ziel: Live-Webseite"
+        "development": "Entwicklung",
+        "test": "Test",
+        "production": "Produktion"
       },
-      "state": {
-        "title": "Stand",
-        "last": "Letzter Publish: {date} ({status})",
-        "never": "Noch nie publiziert."
+      "summary": {
+        "changed": "<b>{count, number}</b> geändert",
+        "added": "<b>{count, number}</b> neu",
+        "removed": "<b>{count, number}</b> entfallen",
+        "hints": "{count, plural, one {# Hinweis} other {# Hinweise}}",
+        "hintsText": "{list}. Hinweise halten den Publish nicht auf — wer publiziert, übernimmt sie.",
+        "gaps": "{count, plural, one {# Übersetzungslücke} other {# Übersetzungslücken}}",
+        "stale": "{count, plural, one {# veralteter Verweis} other {# veraltete Verweise}}",
+        "pendingReview": "{count, plural, one {# offene Prüfung} other {# offene Prüfungen}}",
+        "skippedImages": "{count, plural, one {# Bild nicht lesbar} other {# Bilder nicht lesbar}}"
       },
-      "check": {
-        "title": "Prüfen",
-        "intro": "Prüft alle Inhalte auf Sperrwörter und Übersetzungslücken. Ändert nichts.",
-        "run": "Prüfen",
-        "running": "Prüfung läuft …",
-        "hash": "Inhalts-Hash {hash}",
-        "violationsTitle": "Sperrworttreffer",
-        "noViolations": "Keine Treffer.",
-        "gapsTitle": "Übersetzungslücken",
-        "noGaps": "Alle Übersetzungen vorhanden.",
-        "staleTitle": "Veraltete Verweise",
-        "noStale": "Alle Verweise gültig.",
+      "details": {
+        "show": "Einzelheiten: Dateien und Hinweise",
+        "changes": "Änderungen",
+        "hints": "Hinweise",
+        "gaps": "Fehlende Übersetzungen",
+        "gapItem": "Text fehlt auf {language}",
+        "stale": "Veraltete Verweise",
         "staleHint": "Wird im Export leer ausgeliefert; das Template zeigt dann seine Automatik.",
-        "pendingReviewTitle": "Prüfung offen",
-        "noPendingReview": "Nichts Veröffentlichtes wartet auf eine Prüfung.",
-        "pendingReviewHint": "Diese Einträge sind veröffentlicht und seit der letzten Änderung von niemandem geprüft. Der Publish nimmt sie mit."
+        "pendingReview": "Noch zu prüfen",
+        "pendingReviewHint": "Diese Einträge sind veröffentlicht und seit der letzten Änderung von niemandem geprüft. Der Publish nimmt sie mit.",
+        "skippedImages": "Bilder nicht lesbar",
+        "clear": {
+          "gaps": "keine fehlenden Übersetzungen",
+          "stale": "keine veralteten Verweise",
+          "pendingReview": "nichts zu prüfen",
+          "skippedImages": "alle Bilder lesbar"
+        }
       },
       "blockedTerms": {
         "title": "Sperrwörter",
-        "intro": "Begriffe, die nie auf der Webseite erscheinen dürfen — etwa ein alter Vereinsname oder ein Platzhalter aus der Einrichtung. „Prüfen“ meldet jeden Treffer, und solange einer da ist, lässt sich nicht publizieren.",
+        "intro": "Begriffe, die nie auf der Webseite erscheinen dürfen — etwa ein alter Vereinsname oder ein Platzhalter aus der Einrichtung. Die Vorschau meldet jeden Treffer, und solange einer da ist, lässt sich nicht publizieren.",
         "label": "Begriffe, einer je Zeile",
         "hint": "2 bis 80 Zeichen je Begriff, höchstens 50. Groß- und Kleinschreibung zählt nicht; Leerzeichen, Bindestrich und Unterstrich gelten als gleich.",
         "save": "Sperrwörter speichern",
         "saved": "Sperrwörter gespeichert."
       },
-      "preview": {
-        "run": "Vorschau bauen",
-        "running": "Build läuft …",
-        "open": "Vorschau öffnen",
-        "built": "Vorschau gebaut.",
-        "failed": "Die Vorschau konnte nicht gebaut werden."
-      },
       "connection": {
         "title": "Verbindung testen",
-        "intro": "Meldet sich am Publish-Ziel an, überträgt aber nichts. Zeigt, was am Ziel liegt, und was ein Publish mit dem aktuellen Stand ändern würde.",
+        "intro": "Meldet sich am Ziel an, legt eine Probedatei an und löscht sie wieder, zählt die Dateien. Baut nichts und überträgt nichts.",
         "run": "Verbindung testen",
         "running": "Test läuft …",
         "target": "Ziel: {target}",
         "resultTitle": "Verbindungstest",
-        "ok": "Verbindung steht. Am Ziel liegen {count} Dateien (Pfad stimmt).",
+        "notTested": "Noch nicht getestet.",
+        "checksLabel": "Prüfpunkte",
+        "outcome": {
+          "ok": "in Ordnung",
+          "skipped": "entfällt (lokales Ziel)",
+          "notRun": "nicht geprüft"
+        },
+        "problems": {
+          "authFailed": "Der Webserver hat die Anmeldung abgelehnt. Prüfen Sie Benutzer sowie Schlüssel- oder Passwortdatei.",
+          "unreachable": "Der Webserver ist nicht erreichbar. Prüfen Sie SITE_DEPLOY_HOST und die Netzwerkverbindung.",
+          "rsyncMissing": "Auf dem Webserver gibt es kein rsync. Fragen Sie Ihren Hoster, ob es sich freischalten lässt.",
+          "targetMissing": "Das Verzeichnis gibt es am Ziel nicht. Prüfen Sie SITE_DEPLOY_PATH.",
+          "notWritable": "Am Ziel lässt sich nichts schreiben. Prüfen Sie die Rechte des Benutzers im Zielverzeichnis.",
+          "diskFull": "Auf dem Webserver ist kein Platz mehr. Schaffen Sie Platz oder erhöhen Sie das Kontingent.",
+          "probeLeft": "Die Probedatei ließ sich nicht wieder löschen: Anlegen geht, Löschen nicht, und ein Publish würde scheitern. Prüfen Sie die Rechte im Zielverzeichnis.",
+          "unknown": "Der Punkt ist gescheitert; die Meldung steht im Protokoll."
+        },
+        "ok": "Verbindung steht. Am Ziel liegen {count, number} Dateien.",
         "empty": "Verbindung steht, aber am Ziel liegt keine einzige Datei. Prüfen Sie SITE_DEPLOY_PATH — zeigt der Pfad wirklich auf das Webverzeichnis?",
         "filesTitle": "Am Ziel gefunden",
-        "would": "Ein Publish würde: {changed} ändern, {added} hinzufügen, {removed} entfernen.",
-        "buildFailed": "Der Vergleich mit dem Build konnte nicht laufen — siehe Protokoll.",
-        "removedTitle": "Würde entfernt",
-        "changedTitle": "Würde geändert oder hinzugefügt",
         "logTitle": "Protokoll",
-        "checkedAt": "Zuletzt getestet: {date}",
-        "failed": "Der Verbindungstest ist fehlgeschlagen: {message}"
+        "checkedAt": "Zuletzt getestet: {date}"
       },
       "diff": {
-        "title": "Änderungen gegenüber Live",
         "changed": "Geändert",
         "added": "Neu",
         "removed": "Entfallen",
-        "none": "Keine Änderungen gegenüber dem letzten Publish."
-      },
-      "publishCard": {
-        "staging": "Nach Staging publizieren",
-        "live": "Live publizieren",
-        "noTarget": "Kein Publish-Ziel konfiguriert (SITE_DEPLOY_*).",
-        "notHere": "Aus der Entwicklungsumgebung wird nicht publiziert.",
-        "blocked": "Sperrworttreffer — Publish nicht möglich.",
-        "confirmTitle": "Webseite publizieren?",
-        "confirmText": "Ziel: {url}. {changed} geändert, {added} neu, {removed} entfallen. Die Seite wird frisch gebaut und übertragen.",
-        "stalePreview": "Die Vorschau ist nicht mehr aktuell — seitdem hat sich der Inhalt geändert. Bitte zuerst erneut „Vorschau bauen“, damit die Zahlen oben stimmen.",
-        "confirm": "Jetzt publizieren",
-        "steps": {
-          "build": "Bauen",
-          "transfer": "Übertragen",
-          "record": "Protokollieren"
-        },
-        "cancel": "Abbrechen",
-        "failed": "Der Publish ist fehlgeschlagen.",
-        "title": "Publizieren",
-        "target": "Ziel: {url}"
+        "none": "Keine Änderungen gegenüber dem letzten Publish.",
+        "more": "… und {count} weitere"
       },
       "done": "Publiziert: {changed} geändert, {added} neu, {removed} entfallen.",
       "history": {
-        "title": "Publish-Historie",
+        "title": "Letzte Publishes",
         "columns": {
-          "time": "Zeitpunkt",
-          "status": "Status",
-          "hash": "Inhalts-Hash",
+          "time": "Zeit",
+          "status": "Ergebnis",
           "changes": "Änderungen",
-          "by": "Auslöser"
+          "by": "Von",
+          "log": "Protokoll"
         },
+        "changes": "{changed, number} geändert · {added, number} neu · {removed, number} entfallen",
         "log": "Protokoll",
-        "empty": "Bislang keine Veröffentlichungen."
+        "new": "neu",
+        "older": "Ältere anzeigen",
+        "empty": "Bislang keine Veröffentlichungen.",
+        "status": {
+          "success": "Publiziert",
+          "failed": "Gescheitert",
+          "aborted": "Abgebrochen"
+        },
+        "loading": "Protokoll wird geladen …",
+        "source": {
+          "mcpToken": "{token} · für {name}",
+          "mcp": "für {name}",
+          "system": "System (Neustart)",
+          "systemFor": "System (Neustart) · {name}",
+          "unknown": "System"
+        }
       },
-      "previewExplainer": "Baut die vollständige Webseite als statische Vorschau und vergleicht den Stand mit der Live-Version.",
+      "log": {
+        "title": "Protokoll · {when}",
+        "short": "Kurz:",
+        "copy": "Kopieren",
+        "copied": "Protokoll kopiert"
+      },
       "job": {
         "running": "{name} läuft seit {duration}",
         "names": {
           "preview": "Vorschau",
-          "publish": "Publish",
+          "publish": "Publizieren",
           "deployCheck": "Verbindungstest"
+        },
+        "errors": {
+          "jobInterrupted": {
+            "reason": "Der Lauf wurde durch einen Neustart von Kompass unterbrochen.",
+            "remedy": "Starten Sie ihn erneut — der fertige Teil bleibt im Cache."
+          },
+          "jobCancelled": {
+            "reason": "Der Lauf wurde im Schritt „{step, select, export {Inhalte prüfen} images {Bildvarianten} build {Seite bauen} copyImages {Bilder übernehmen} checksums {Prüfsummen} connect {Anmelden} targetDir {Zielverzeichnis} writable {Schreibrecht} targetFiles {Dateien am Ziel} transfer {Übertragen} record {Festhalten} other {{step}}}“ abgebrochen.",
+            "remedy": "Starten Sie ihn erneut, wenn Sie so weit sind."
+          },
+          "stepTimedOut": {
+            "reason": "Der Schritt „{step, select, export {Inhalte prüfen} images {Bildvarianten} build {Seite bauen} copyImages {Bilder übernehmen} checksums {Prüfsummen} connect {Anmelden} targetDir {Zielverzeichnis} writable {Schreibrecht} targetFiles {Dateien am Ziel} transfer {Übertragen} record {Festhalten} other {{step}}}“ hat sein Zeitlimit überschritten.",
+            "remedy": "Starten Sie den Lauf erneut; bleibt es dabei, sehen Sie ins Containerprotokoll."
+          },
+          "jobNotRunning": {
+            "reason": "Dieser Lauf läuft nicht mehr.",
+            "remedy": "Laden Sie die Seite neu, um den aktuellen Stand zu sehen."
+          },
+          "jobNotCancellable": {
+            "reason": "Der Publish überträgt gerade; ein Abbruch ließe die Webseite halb aktualisiert zurück.",
+            "remedy": "Warten Sie, bis die Übertragung fertig ist."
+          }
+        },
+        "indicator": "{kind} · {step} {progress}",
+        "indicatorShort": "{kind} {progress}",
+        "count": {
+          "count": "{done, number} von {total, number}",
+          "countFiles": "{done, number} von {total, number} Dateien",
+          "pages": "{count, plural, one {# Seite} other {# Seiten}}",
+          "variants": "{count, number} Varianten",
+          "files": "{count, plural, one {# Datei} other {# Dateien}}",
+          "number": "{count, number}",
+          "reusing": "Vorschau wird übernommen · {done, number} von {total, number}"
+        },
+        "buildSkipped": "Die Vorschau passt, sie wird übernommen.",
+        "stepState": {
+          "pending": "wartet",
+          "running": "läuft",
+          "done": "fertig",
+          "skipped": "übersprungen"
+        },
+        "steps": {
+          "export": "Inhalte prüfen",
+          "images": "Bildvarianten",
+          "build": "Seite bauen",
+          "copyImages": "Bilder übernehmen",
+          "checksums": "Prüfsummen",
+          "connect": "Anmelden",
+          "targetDir": "Zielverzeichnis",
+          "writable": "Schreibrecht",
+          "targetFiles": "Dateien am Ziel",
+          "transfer": "Übertragen",
+          "record": "Festhalten"
+        },
+        "done": {
+          "preview": "Vorschau gebaut.",
+          "deployCheck": "Verbindungstest fertig.",
+          "deployCheckFailed": "Verbindungstest: nicht bestanden.",
+          "publish": "Publiziert."
+        },
+        "failed": {
+          "failed": "{kind} fehlgeschlagen: {message}",
+          "aborted": "{kind} abgebrochen.",
+          "interrupted": "{kind} wurde unterbrochen (Neustart)."
+        },
+        "openLog": "Protokoll"
+      },
+      "flow": {
+        "step1": "Schritt 1 von 2 · Vorschau",
+        "step2": "Schritt 2 von 2 · Publizieren",
+        "startPreview": "Vorschau bauen",
+        "rebuild": "Vorschau neu bauen",
+        "openPreview": "Vorschau öffnen",
+        "notHere": "Hier wird nicht publiziert. Vorschau bauen und ansehen geht.",
+        "noTarget": "Es ist kein Publish-Ziel eingerichtet.",
+        "noTargetLink": "Verbindung einrichten",
+        "none": {
+          "title": "Noch keine Vorschau",
+          "text": "Seit dem letzten Publish am {date} wurde keine Vorschau gebaut. Die Vorschau prüft die Inhalte und zeigt, was sich auf der Webseite ändert. Publiziert wird danach genau dieser Stand.",
+          "textNever": "Noch nie publiziert. Die Vorschau prüft die Inhalte und zeigt, wie die Webseite aussehen wird. Publiziert wird danach genau dieser Stand."
+        },
+        "outdated": {
+          "title": "Vorschau nicht mehr aktuell",
+          "text": "Seit der Vorschau von {time} Uhr wurden Inhalte geändert. Publiziert wird nur ein Stand, den eine Vorschau gezeigt hat — bauen Sie die Vorschau bitte neu."
+        },
+        "ready": {
+          "title": "Vorschau bereit",
+          "meta": "Gebaut {when}, von {name} · Stand {hash}",
+          "metaNoName": "Gebaut {when} · Stand {hash}"
+        },
+        "publish": {
+          "live": "Jetzt publizieren",
+          "test": "Auf Test publizieren"
+        },
+        "unchanged": {
+          "title": "Alles auf dem neuesten Stand",
+          "text": "Die Vorschau von {time} Uhr entspricht genau dem, was auf {host} steht. Es gibt nichts zu publizieren.",
+          "publishAnyway": "Trotzdem publizieren"
+        },
+        "end": {
+          "success": {
+            "title": "Publiziert",
+            "text": "{when}: {changed, plural, one {# Seite} other {# Seiten}} geändert, {added} neu, {removed} entfallen. Die Webseite zeigt jetzt diesen Stand.",
+            "open": "{host} öffnen",
+            "consumed": "Die Vorschau ist damit verbraucht. Für die nächste Änderung bauen Sie eine neue."
+          },
+          "failed": {
+            "title": "Publizieren gescheitert",
+            "untouched": "Es wurde nichts übertragen; die Webseite zeigt weiter den bisherigen Stand.",
+            "partial": "Ein Teil wurde übertragen. Die Webseite kann gemischt aussehen, bis ein Publish gelingt."
+          },
+          "failedPreview": {
+            "title": "Vorschau gescheitert"
+          },
+          "reason": {
+            "authFailed": "Beim Übertragen hat der Webserver die Anmeldung abgelehnt.",
+            "unreachable": "Der Webserver war nicht erreichbar.",
+            "rsyncMissing": "Auf dem Webserver gibt es kein rsync.",
+            "notWritable": "Am Ziel ließ sich nicht schreiben.",
+            "probeLeft": "Am Ziel ließ sich nicht aufräumen.",
+            "diskFull": "Auf dem Webserver ist kein Platz mehr.",
+            "build": "Die Seite ließ sich nicht bauen.",
+            "previewOutdated": "Seit der Vorschau haben sich Inhalte geändert.",
+            "blockedTerms": "Die Inhalte enthalten einen gesperrten Begriff.",
+            "unknown": "Der Lauf ist an einer unerwarteten Stelle gescheitert."
+          },
+          "cancelled": {
+            "title": "{kind, select, publish {Publizieren abgebrochen} other {Vorschau abgebrochen}}",
+            "text": "Der Lauf wurde bei „{step}“ abgebrochen. Die Webseite hat sich nicht verändert."
+          },
+          "timeout": {
+            "title": "Zeitlimit erreicht",
+            "text": "„{step}“ lief länger als {minutes, plural, one {# Minute} other {# Minuten}} und wurde{hasCount, select, yes { bei {count}} other {}} beendet.",
+            "textStalled": "„{step}“ kam {minutes, plural, one {# Minute} other {# Minuten}} lang nicht voran und wurde{hasCount, select, yes { bei {count}} other {}} beendet."
+          },
+          "interrupted": {
+            "title": "Unterbrochen",
+            "text": "Kompass wurde während des Laufs neu gestartet. Er ist bei „{step}“ stehen geblieben."
+          },
+          "cache": "Der fertige Teil bleibt im Cache — ein neuer Start setzt dort an.",
+          "restart": "Erneut starten",
+          "log": "Protokoll ansehen",
+          "retryPublish": "Erneut publizieren"
+        },
+        "confirm": {
+          "title": "Auf {host} publizieren?",
+          "titleTest": "Auf Test publizieren?",
+          "text": "<b>{changed, number} geändert · {added, number} neu · {removed, number} entfallen.</b> {hints, plural, =0 {} one {Der Hinweis der Vorschau geht mit online.} other {Die # Hinweise der Vorschau gehen mit online.}} Der Lauf dauert einige Minuten; Sie sehen ihn danach auf dieser Seite.",
+          "stale": "<b>Vorschau nicht mehr aktuell.</b> Seit der Vorschau von {time} Uhr wurden Inhalte geändert. Publiziert wird nur ein Stand, den eine Vorschau gezeigt hat.",
+          "checking": "Wird geprüft …",
+          "cancel": "Abbrechen"
+        },
+        "blocked": {
+          "title": "Publizieren gesperrt",
+          "text": "Die Vorschau hat einen gesperrten Begriff gefunden. Solange er im Inhalt steht, lässt sich nicht publizieren.",
+          "edit": "„{title}“ bearbeiten",
+          "editVariables": "Variablen bearbeiten",
+          "more": "und {count, plural, one {# weitere Stelle} other {# weitere Stellen}}",
+          "manage": "Ist der Begriff hier gewollt? Dann nehmen Sie ihn aus der <link>Liste der gesperrten Begriffe</link>.",
+          "noManage": "Ist der Begriff hier gewollt? Die Liste der gesperrten Begriffe pflegt, wer die Webseite verwaltet."
+        },
+        "run": {
+          "preview": "Vorschau wird gebaut",
+          "publish": "Wird publiziert",
+          "publishTest": "Wird auf Test publiziert",
+          "deployCheck": "Verbindung wird getestet",
+          "cacheEmpty": "Nach dem Update ist der Bild-Cache leer. Dieser erste Bau rechnet alle Bildvarianten neu und dauert einige Minuten. Sie können die Seite verlassen; der Lauf geht im Hintergrund weiter.",
+          "agentBadge": "MCP",
+          "byAgent": "{token} · für {name} um {time} Uhr",
+          "byAgentNoToken": "für {name} um {time} Uhr",
+          "byPerson": "Gestartet von {name} um {time} Uhr",
+          "cancelLocked": "Abbrechen geht nicht mehr: Die Übertragung läuft. Ein Abbruch jetzt hinterließe eine halb aktualisierte Webseite."
         }
       },
-      "previewTitle": "Vorschau"
+      "run": {
+        "title": "Laufender Lauf",
+        "lastTitle": "Letzter Lauf: {kind}",
+        "source": {
+          "ui": "Über die Oberfläche gestartet"
+        },
+        "elapsed": "seit {duration}",
+        "cancel": "Abbrechen",
+        "cancelConfirm": "Lauf abbrechen",
+        "cancelConfirmTitle": "Lauf abbrechen?",
+        "cancelConfirmText": "Der Lauf endet im nächsten Schritt. Was schon gebaut ist, bleibt im Cache; ein neuer Start macht dort weiter.",
+        "cancelled": "Der Lauf wird abgebrochen.",
+        "blockedBy": "Es läuft gerade: {kind}",
+        "restart": "Erneut starten – der fertige Teil bleibt im Cache",
+        "status": {
+          "failed": "Fehlgeschlagen",
+          "aborted": "Abgebrochen",
+          "interrupted": "Unterbrochen"
+        },
+        "reason": {
+          "cancelled": "Der Lauf wurde abgebrochen.",
+          "timeout": "Ein Schritt hat sein Zeitlimit überschritten.",
+          "interrupted": "Kompass wurde während des Laufs neu gestartet."
+        },
+        "lastStep": "Zuletzt im Schritt „{step}“.",
+        "logTruncated": "Nur das Ende des Protokolls; vollständig über MCP (site_job_result, log: full) oder in der Publish-Historie."
+      }
     },
     "previewFrame": {
       "title": "Webseiten-Vorschau",

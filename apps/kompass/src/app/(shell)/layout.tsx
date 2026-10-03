@@ -1,6 +1,8 @@
-import { enabledManifests, parseHandbookIndex, readHandbookIndex, readSetting } from '@kompass/core';
+import { enabledManifests, hasPermission, parseHandbookIndex, readHandbookIndex, readSetting } from '@kompass/core';
 import type { ReactNode } from 'react';
 import { DateFormatProvider } from '@/components/date-format-provider';
+import { SiteJobIndicator } from '@/components/site/site-job-indicator';
+import { SiteJobProvider } from '@/components/site/site-job-provider';
 import { EnvBanner } from '@/components/shell/env-banner';
 import type { DateFormatMode } from '@/lib/dates';
 import { ShellFrame } from '@/components/shell/shell-frame';
@@ -22,15 +24,22 @@ export default async function ShellLayout({ children }: { children: ReactNode })
   const helpChapters = parseHandbookIndex(readHandbookIndex(env));
   const helpPages = helpChapters.flatMap((c) => c.pages.map((p) => ({ doc: p.doc, title: p.title, chapter: c.title })));
   const logoId = readSetting<string | null>(deps, 'branding.logoAssetId');
+  // Die einzige modulbezogene Zeile der Hülle: Wer die Webseite veröffentlichen
+  // darf, sieht in der Kopfzeile, was gerade läuft. Ein allgemeiner Haken im
+  // Manifest lohnt erst bei einem zweiten Modul.
+  const siteJobs = enabledManifests(deps).some((m) => m.key === 'site') && hasPermission(ctx, 'site.publish');
+  const frame = (
+    <ShellFrame organization={readSetting<string>(deps, 'organization.name')} logoUrl={logoId ? `/media/${logoId}` : null} groups={groups} build={buildId()} version={appVersion()} user={{ name: user.name }} permissions={[...ctx.permissions]} helpChapters={helpChapters} helpPages={helpPages} extras={siteJobs ? <SiteJobIndicator key="site-jobs" /> : undefined}>
+      <DateFormatProvider mode={readSetting<DateFormatMode>(deps, 'ui.dateFormat')}>{children}</DateFormatProvider>
+    </ShellFrame>
+  );
   // Feste Höhe, nicht „mindestens“: Gescrollt wird im Hauptbereich. Mit
   // `min-h-screen` konnte ein einzelner Bildschirm die Hülle aufblähen — der
   // Splitscreen der Akte tat es und liess unter sich tote Fläche.
   return (
     <div className="flex h-dvh flex-col overflow-hidden">
       {banner ? <EnvBanner banner={banner} context={context} /> : null}
-      <ShellFrame organization={readSetting<string>(deps, 'organization.name')} logoUrl={logoId ? `/media/${logoId}` : null} groups={groups} build={buildId()} version={appVersion()} user={{ name: user.name }} permissions={[...ctx.permissions]} helpChapters={helpChapters} helpPages={helpPages}>
-        <DateFormatProvider mode={readSetting<DateFormatMode>(deps, 'ui.dateFormat')}>{children}</DateFormatProvider>
-      </ShellFrame>
+      {siteJobs ? <SiteJobProvider>{frame}</SiteJobProvider> : frame}
     </div>
   );
 }

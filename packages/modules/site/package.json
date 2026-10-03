@@ -1,6 +1,6 @@
 {
   "name": "@kompass/module-site",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": true,
   "type": "module",
   "exports": {
@@ -19,10 +19,10 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@kompass/module-animals": "workspace:*",
+    "@kompass/module-projects": "workspace:*",
     "@types/node": "^26.6.2",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.1",
-    "@kompass/module-animals": "workspace:*",
-    "@kompass/module-projects": "workspace:*"
+    "vitest": "^5.0.2"
   }
 }

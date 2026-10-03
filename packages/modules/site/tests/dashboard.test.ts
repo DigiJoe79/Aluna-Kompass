@@ -1,12 +1,16 @@
 import { createTestDeps, ctxWith } from '@kompass/core/testing';
 import { writeSettingInternal, systemContext } from '@kompass/core';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+const fake = vi.hoisted(() => ({ run: null as unknown }));
+vi.mock('../src/pipeline/run-state', async (orig) => ({ ...(await orig<object>()), runningSiteJob: () => fake.run }));
 import { SITE_DASHBOARD_TILES } from '../src/dashboard';
 import { siteModule } from '../src/manifest';
 import { siteEntries, sitePublishes, siteTemplateState, siteValues } from '../src/schema';
 
 const tile = SITE_DASHBOARD_TILES[0]!;
-const ctx = ctxWith(['site.view'], 'U');
+const ctx = ctxWith(['site.view', 'site.publish'], 'U');
+const reader = ctxWith(['site.view'], 'U');
 
 function setup() {
   const deps = createTestDeps({ locales: ['de'], now: '2026-09-17T08:00:00.000Z' });
@@ -17,13 +21,13 @@ function setup() {
   return deps;
 }
 
-const publish = (deps: ReturnType<typeof setup>, startedAt: string, status: 'success' | 'failed') =>
+const publish = (deps: ReturnType<typeof setup>, startedAt: string, status: 'success' | 'failed' | 'aborted') =>
   deps.db.insert(sitePublishes).values({ id: `P-${startedAt}-${status}`, environment: deps.env, startedAt, finishedAt: startedAt, status, contentHash: '', log: '', fileManifest: '{}' }).run();
 
 describe('site tile', () => {
   it('steht am Manifest als status-Kachel mit site.view', () => {
     expect(siteModule.dashboardTiles?.map((t) => `${t.key}:${t.kind}:${t.permission}:${t.defaultOn}`)).toEqual(['site:status:site.view:true']);
-    expect(tile.messageKeys).toEqual(['templateUnreviewed', 'lastFailed', 'changed', 'never', 'current']);
+    expect(tile.messageKeys).toEqual(['running', 'templateUnreviewed', 'lastFailed', 'lastAborted', 'changed', 'never', 'current']);
   });
 
   it('meldet „nie publiziert“ ohne erfolgreichen Publish', async () => {
@@ -59,5 +63,30 @@ describe('site tile', () => {
     publish(deps, '2026-09-12T10:00:00.000Z', 'failed');
     deps.db.transaction((tx) => writeSettingInternal(tx, deps, systemContext(), 'system.lastImportAt', '2026-09-15T00:00:00.000Z', 'test'));
     expect(await tile.load(deps, ctx, {})).toEqual({ kind: 'status', tone: 'warning', messageKey: 'templateUnreviewed', href: '/site/publish' });
+  });
+
+  it('meldet einen laufenden Lauf vor allem anderen', async () => {
+    const deps = setup();
+    publish(deps, '2026-09-12T10:00:00.000Z', 'failed');
+    fake.run = { runId: 'R', kind: 'publish', source: 'ui', userId: 'U', startedAt: 't', steps: [], cancellable: true };
+    try {
+      expect(await tile.load(deps, ctx, {})).toEqual({ kind: 'status', tone: 'info', messageKey: 'running', values: { kind: 'publish' }, href: '/site/publish' });
+    } finally {
+      fake.run = null;
+    }
+  });
+
+  it('warnt auch vor einem abgebrochenen Publish', async () => {
+    const deps = setup();
+    publish(deps, '2026-09-10T10:00:00.000Z', 'success');
+    publish(deps, '2026-09-12T10:00:00.000Z', 'aborted');
+    expect(await tile.load(deps, ctx, {})).toEqual({ kind: 'status', tone: 'warning', messageKey: 'lastAborted', href: '/site/publish' });
+  });
+
+  it('verlinkt Leser ohne site.publish nicht auf die gesperrte Seite', async () => {
+    const deps = setup();
+    expect(await tile.load(deps, reader, {})).toMatchObject({ messageKey: 'never', href: null });
+    publish(deps, '2026-09-12T10:00:00.000Z', 'failed');
+    expect(await tile.load(deps, reader, {})).toMatchObject({ messageKey: 'lastFailed', href: null });
   });
 });

@@ -58,7 +58,7 @@ RUN set -eu; \
 # Texterkennung fuer den Posteingang: Poppler liest die Textebene, Tesseract
 # liest die Seiten, die nur ein Bild sind. Rund 117 MB, alles aus Debian —
 # keine Fremdquelle, und nichts verlaesst das Geraet.
-    apt-get update && apt-get install -y --no-install-recommends ca-certificates curl xz-utils rsync openssh-client sshpass \
+    apt-get update && apt-get install -y --no-install-recommends ca-certificates curl xz-utils rsync openssh-client sshpass tini \
       tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng poppler-utils \
  && curl -sSL "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-${typst_arch}-unknown-linux-musl.tar.xz" \
     | tar -xJ -C /usr/local/bin --strip-components=1 "typst-${typst_arch}-unknown-linux-musl/typst" \
@@ -116,5 +116,7 @@ VOLUME ["/data"]
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-ENTRYPOINT ["docker-entrypoint.sh"]
+# tini als PID 1 räumt beendete Kindprozesse ab (Astro, rsync, ssh); ohne es
+# blieben sie als Zombies stehen, sobald ein Lauf Prozessgruppen beendet.
+ENTRYPOINT ["/usr/bin/tini", "--", "docker-entrypoint.sh"]
 CMD ["node", "apps/kompass/server.js"]

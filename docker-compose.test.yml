@@ -47,6 +47,14 @@ services:
       # Geheimnisse ausdrücklich daneben, nie unter /data — das Backup bildet
       # /data ab und darf das Webspace-Passwort nicht mit ausliefern.
       - /pfad/zu/kompass-test/secret:/secret:ro
+      # Bild-Cache und Vorschau der Webseite. Eigenes Volume, damit ein Update
+      # die Bildvarianten nicht verwirft (sonst baut der erste Lauf danach alle
+      # neu). Bewusst nicht unter /data: alles darin ist neu erzeugbar und
+      # gehört in kein Backup.
+      - kompass-test-cache:/cache
+
+volumes:
+  kompass-test-cache:
 
 # Die MTU des Netzes liegt unter dem Docker-Standard von 1500. Auf manchen
 # Anschlüssen (PPPoE, Tunnel) ist die Pfad-MTU kleiner, und die Rückmeldung

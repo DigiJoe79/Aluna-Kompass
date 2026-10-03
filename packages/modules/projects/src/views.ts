@@ -1,4 +1,4 @@
-import { definePublishedView, localizedText, type Deps } from '@kompass/core';
+import { definePublishedView, localizedText, readLocales, type Deps, type LocalizedText } from '@kompass/core';
 import { asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { projects } from './schema';
@@ -24,4 +24,9 @@ export const publishedProjects = definePublishedView({
   }),
   load: (deps: Deps) =>
     deps.db.select().from(projects).where(eq(projects.isPublished, true)).orderBy(asc(projects.sortOrder)).all(),
+  // Die Zeile hat keine ID, wohl aber den eindeutigen Slug.
+  editLink: (deps, row) => {
+    const p = deps.db.select().from(projects).where(eq(projects.slug, row.slug)).get();
+    return p ? { href: `/projects/${p.id}`, title: (p.name as LocalizedText)[readLocales(deps)[0] ?? ''] || p.slug } : null;
+  },
 });

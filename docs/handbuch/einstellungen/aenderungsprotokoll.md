@@ -19,7 +19,7 @@ Alles, was etwas ändert: ein neuer Kontakt, ein festgeschriebener Brief, ein
 Publish, ein aktiviertes Modul, ein geändertes Recht, eine Löschung. Auch
 ein gelöschter Inhalt hinterlässt seinen Eintrag — was verschwindet, ist der
 Inhalt, nicht die Tatsache, dass jemand ihn entfernt hat. Vorgänge eines
-KI-Assistenten stehen mit Kanal „MCP“ und dem Namen der Person, deren Token
+Assistenten stehen mit Kanal „MCP“ und dem Namen der Person, deren Token
 er benutzt hat.
 
 Was **nicht** drinsteht: Lesen. Wer sich eine Seite ansieht, hinterlässt

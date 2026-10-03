@@ -1,4 +1,4 @@
-import { requirePermission } from '@kompass/core';
+import { hasPermission, requirePermission } from '@kompass/core';
 import { activeTemplate, entryLabel, listEntries } from '@kompass/module-site';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -23,6 +23,7 @@ export default async function CollectionPage(props: { params: Promise<{ collecti
   const result = await listEntries(deps, ctx, collection);
   if (!result.ok) return <ForbiddenCard permission="site.view" />;
 
+  const canManage = hasPermission(ctx, 'site.manage');
   const t = await getTranslations('site.entries');
   const locales = deps.locales();
   const leading = locales[0] ?? 'de';
@@ -33,7 +34,7 @@ export default async function CollectionPage(props: { params: Promise<{ collecti
     <>
       <PageHeader
         title={col.label}
-        actions={<Link href={`/site/c/${collection}/new`} className={buttonVariants()}>{t('new')}</Link>}
+        actions={canManage ? <Link href={`/site/c/${collection}/new`} className={buttonVariants()}>{t('new')}</Link> : undefined}
       />
       {rows.length === 0 ? (
         <EmptyState title={col.label} text={t('count', { n: 0 })} />
@@ -43,6 +44,7 @@ export default async function CollectionPage(props: { params: Promise<{ collecti
           rows={rows}
           publishable={col.publishable}
           sortable={col.sortable}
+          canManage={canManage}
         />
       )}
     </>

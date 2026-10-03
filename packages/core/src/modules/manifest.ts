@@ -190,6 +190,12 @@ export interface PublishedView<T = unknown> {
   load(deps: Deps): T[];
   /** Datensätze dieser Sicht, die veröffentlicht sind und auf eine Prüfung durch einen Menschen warten. Der Publish warnt, sperrt aber nicht. */
   pendingReview?(deps: Deps): PendingReviewItem[];
+  /**
+   * Wohin eine Zeile dieser Sicht in der Oberfläche führt (Bearbeiten-Adresse und Titel) — für den Sperrhinweis des Publish.
+   * Die Zeile trägt nur das öffentliche Schema, keine ID; deshalb bekommt der Haken `deps` und schlägt den Datensatz selbst nach.
+   * Wird nur für Treffer gefragt, nicht für jede Zeile.
+   */
+  editLink?(deps: Deps, row: T): { href: string; title: string } | null;
 }
 
 /** Ein Schutzbereich für Dokumentarten der Akte: ein fester Schlüssel und das Recht, das ihn öffnet. */

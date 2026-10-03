@@ -1,11 +1,8 @@
 import { expectedVersionField, type Deps, type McpToolDefinition } from '@kompass/core';
 import { blockedTermsSchema, getBlockedTerms, setBlockedTerms } from './blocked-terms';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
 import { z } from 'zod';
 import { siteTemplateDir } from './env';
-import { exportSiteContent } from './export';
+import { siteContentHash } from './export';
 import {
   createEntry,
   deleteEntry,
@@ -21,8 +18,10 @@ import type { TemplateSchema } from './load';
 import { activeTemplate, applyTemplateSync, previewTemplateSync, readActiveTemplate } from './service';
 import { getVariables, listReferenceOptions, setValues } from './values';
 import { readSiteEnv } from './pipeline/env';
-import { listPublishes } from './services/publishes';
-import { lastSiteJob, SITE_JOB_KINDS, startDeployCheck, startPreview, startPublish } from './pipeline/jobs';
+import { getPublish, listPublishes } from './services/publishes';
+import { siteJobResult } from './services/job-view';
+import { clearSiteCache, siteCacheStatus } from './pipeline/cache';
+import { cancelSiteJob, SITE_JOB_KINDS, startDeployCheck, startPreview, startPublish } from './pipeline/jobs';
 
 
 const tool = (
@@ -38,6 +37,11 @@ const tool = (
   handler,
   service,
 });
+
+const jobDetailSchema = {
+  paths: z.literal('all').optional().describe('Return every path instead of the first 20.'),
+  log: z.literal('full').optional().describe('Return the whole log instead of its last 2000 characters.'),
+};
 
 const fieldShape = (fields: TemplateSchema['collections'][string]['fields']) =>
   Object.fromEntries(Object.entries(fields).map(([key, field]) => [key, schemaFor(field).optional()]));
@@ -102,60 +106,83 @@ const FIXED: McpToolDefinition[] = [
     },
     applyTemplateSync,
   ),
-  tool('site_variables_get', 'Read all template variable values. Requires site.view.', z.object({}), (deps, ctx) => getVariables(deps, ctx), getVariables),
-  tool('site_variables_set', 'Write template variable values, checked against the template schema. Requires site.manage. Localized fields are replaced as a whole map; to change one locale use translations_set.', z.object({ values: z.record(z.string(), z.unknown()) }), (deps, ctx, args) => setValues(deps, ctx, args), setValues),
+  tool('site_variables_get', 'Read all template variable values and their version. Requires site.view.', z.object({}), (deps, ctx) => getVariables(deps, ctx), getVariables),
+  tool('site_variables_set', 'Write template variable values, checked against the template schema. Requires site.manage. Localized fields are replaced as a whole map; to change one locale use translations_set. Pass expectedVersion (the version site_variables_get returned) to be rejected with staleVersion instead of overwriting a change made in between.', z.object({ values: z.record(z.string(), z.unknown()), expectedVersion: expectedVersionField }), (deps, ctx, args) => setValues(deps, ctx, args), setValues),
   tool('site_variables_options', 'List the selectable records per reference variable (value and label), filtered by the declared condition. Requires site.view.', z.object({}), (deps, ctx) => listReferenceOptions(deps, ctx), listReferenceOptions),
   tool('site_blocked_terms_get', 'Read the blocked terms: words that must never appear on the website; a hit blocks publishing. Requires site.view.', z.object({}), (deps, ctx) => getBlockedTerms(deps, ctx), getBlockedTerms),
   tool('site_blocked_terms_set', 'Replace the list of blocked terms (2–80 characters each, at most 50; blank lines and duplicates are dropped). Requires site.publish. Audited.', blockedTermsSchema, (deps, ctx, args) => setBlockedTerms(deps, ctx, args), setBlockedTerms),
-  tool('site_export_check', 'Build the content export into a throwaway directory without publishing, to check it is current and complete. Returns gaps, violations, stale and pendingReview: published records still waiting for a human review (a warning, not a block). Requires site.publish.', z.object({}), async (deps, ctx) => {
-    const dir = await mkdtemp(path.join(tmpdir(), 'kompass-site-check-'));
-    try {
-      const result = await exportSiteContent(deps, ctx, { jobDir: dir });
-      return result.ok ? { ok: true as const, value: { contentHash: result.value.contentHash, assets: result.value.assets.length, gaps: result.value.gaps, violations: result.value.violations, stale: result.value.stale, pendingReview: result.value.pendingReview } } : result;
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
-  }, exportSiteContent),
+  tool('site_export_check', 'Check the content without publishing: returns the contentHash of the current state (the one a preview reports), gaps, violations, stale and pendingReview: published records still waiting for a human review (a warning, not a block). Reads no original images and takes seconds. Requires site.publish.', z.object({}), async (deps, ctx) => {
+    const result = await siteContentHash(deps, ctx);
+    return result.ok ? { ok: true as const, value: { contentHash: result.value.contentHash, assets: result.value.assets, gaps: result.value.gaps, violations: result.value.violations, stale: result.value.stale, pendingReview: result.value.pendingReview } } : result;
+  }, siteContentHash),
   // Check, Vorschau und Publish bauen die Seite und liefen über MCP in die
   // Zeitüberschreitung des Clients (01.10.). Sie starten nur; was dabei
   // herauskam, liest site_job_result — eine Abfrage für alle drei, weil Antwort
   // und Abfrageschleife dieselben sind.
   tool(
     'site_deploy_check',
-    'Start the deploy target check in the background and return at once: { started: true, runId, startedAt }, or { started: false, running } while a preview, publish or check is already running. Read the outcome with site_job_result (kind: deployCheck). The check transfers nothing: it lists the files found there (path check) and, from a fresh build like site_publish would transfer, what a publish would change, add and remove. Requires site.publish.',
+    'Start the connection test of the deploy target in the background and return at once: { started: true, runId, startedAt }, or { started: false, running } while a preview, publish or check is already running. Read the outcome with site_job_result (kind: deployCheck): passed and checks[] (connect, targetDir, writable, targetFiles) each with outcome ok|failed|skipped|notRun and, on failure, a problem (authFailed, unreachable, rsyncMissing, targetMissing, notWritable, diskFull, probeLeft, unknown), plus the files found at the target. The check logs in, lists the target directory, creates and removes a probe file (write access) and counts the files at the target. It builds and transfers nothing and takes seconds. A failed check point does not make the run fail: look at passed. Requires site.publish.',
     z.object({}),
-    (deps, ctx) => startDeployCheck(deps, ctx, readSiteEnv()),
+    (deps, ctx) => startDeployCheck(deps, ctx, readSiteEnv(), { source: 'mcp' }),
     startDeployCheck,
   ),
   tool(
     'site_preview_build',
-    'Start building the preview of the site in the background and return at once: { started: true, runId, startedAt }, or { started: false, running } while a preview, publish or check is already running. Read the outcome with site_job_result (kind: preview): diff against the last publish, gaps, violations, stale and pendingReview: published records still waiting for a human review (a warning, not a block), previewDir and log. Requires site.publish.',
+    'Start building the preview of the site in the background and return at once: { started: true, runId, startedAt }, or { started: false, running } while a preview, publish or check is already running. Read the outcome with site_job_result (kind: preview): counts, the first paths of the diff against the last publish, gaps, violations, stale and pendingReview: published records still waiting for a human review (a warning, not a block), and the log tail; pass its contentHash to site_publish. Requires site.publish.',
     z.object({}),
-    (deps, ctx) => startPreview(deps, ctx, readSiteEnv()),
+    (deps, ctx) => startPreview(deps, ctx, readSiteEnv(), { source: 'mcp' }),
     startPreview,
   ),
   tool(
     'site_publish',
-    'Start building and publishing the site to the configured deploy target in the background and return at once: { started: true, runId, startedAt }, or { started: false, running } while a preview, publish or check is already running. Requires site.publish and confirm: true; a missing target or confirmation fails right away. Read the outcome with site_job_result (kind: publish): result { status, record, diff, log } or error, e.g. blockedTermsPresent. Every attempt also appears in site_publishes. Audited.',
-    z.object({ confirm: z.boolean() }),
-    (deps, ctx, args) => startPublish(deps, ctx, readSiteEnv(), args as { confirm: boolean }),
+    'Start building and publishing the site to the configured deploy target in the background and return at once: { started: true, runId, startedAt }, or { started: false, running } while a preview, publish or check is already running. Requires site.publish, confirm: true and the expectedContentHash of the preview you reviewed (site_job_result, kind: preview); a missing target or confirmation fails right away. Read the outcome with site_job_result (kind: publish): status, counts, publishId or error, e.g. blockedTermsPresent or previewOutdated. Every attempt also appears in site_publishes. Audited.',
+    z.object({ confirm: z.boolean(), expectedContentHash: z.string().min(1).describe('contentHash of the preview you reviewed (site_job_result kind preview); a different current state is refused with previewOutdated') }),
+    (deps, ctx, args) => startPublish(deps, ctx, readSiteEnv(), { ...(args as { confirm: boolean; expectedContentHash: string }), source: 'mcp' }),
     startPublish,
   ),
   tool(
     'site_job_result',
-    'Read the state of the background site jobs started by site_deploy_check, site_preview_build and site_publish, for one kind (deployCheck, preview, publish): running (the job in progress, if any, of any kind — only one runs at a time) and last (the last finished run of this kind: runId, startedAt, finishedAt, userId and either result or error). Poll every few seconds until last.runId is the runId the start returned. Changes nothing. Requires site.publish.',
-    z.object({ kind: z.enum(SITE_JOB_KINDS) }),
-    async (deps, ctx, args) => lastSiteJob(deps, ctx, readSiteEnv(), args),
-    lastSiteJob,
+    'Read the state of the background site jobs for one kind (deployCheck, preview, publish): running (the job in progress of any kind, with its steps, counters, source, elapsedMs and cancellable) and last (the last finished run of this kind: status success|failed|aborted|interrupted, reason, timeout {limitMs, stalled} and stoppedAt {done, total} after a timeout, failure for a failed publish, passed and checks for deployCheck, counts, the first 20 paths of each list with total and truncated, all blocked-term hits, skipped images, the last 2000 log characters). paths: "all" and log: "full" return everything. Poll every few seconds until last.runId is the runId the start returned. Changes nothing. Requires site.publish.',
+    z.object({ kind: z.enum(SITE_JOB_KINDS), ...jobDetailSchema }),
+    async (deps, ctx, args) => siteJobResult(deps, ctx, readSiteEnv(), args),
+    siteJobResult,
   ),
   // Wer veröffentlichen darf, soll nachsehen können, ob und wann zuletzt
   // veröffentlicht wurde (Prinzip 8) — ein reiner Lesezugriff.
   tool(
     'site_publishes',
-    'List the publish history of an environment, newest first: when, by whom, with what result and how many pages changed. Requires site.view.',
-    z.object({ environment: z.string().min(1), limit: z.number().int().min(1).max(200).optional() }),
-    (deps, ctx, args) => listPublishes(deps, ctx, args as { environment: string; limit?: number }),
+    'List the publish history, newest first (environment defaults to this installation): when, by whom and from where (source: channel ui, mcp or system, plus the API token name), with what result and how many pages changed, without file lists or logs; use site_publish_get for those. Requires site.view.',
+    z.object({ environment: z.string().min(1).optional(), limit: z.number().int().min(1).max(200).optional() }),
+    (deps, ctx, args) => listPublishes(deps, ctx, args as { environment?: string; limit?: number }),
     listPublishes,
+  ),
+  tool(
+    'site_job_cancel',
+    'Cancel the running site job with this runId. A publish cannot be cancelled once the transfer has begun (jobNotCancellable); another or no running job gives jobNotRunning. The run ends with status aborted, reason cancelled. Requires site.publish. Audited.',
+    z.object({ runId: z.string().min(1) }),
+    async (deps, ctx, args) => cancelSiteJob(deps, ctx, readSiteEnv(), args),
+    cancelSiteJob,
+  ),
+  tool(
+    'site_publish_get',
+    'Read one publish of the history by id: summary, the first 20 transferred files (paths: "all" for every one) and the last 2000 log characters (log: "full" for the whole log). Requires site.view.',
+    z.object({ id: z.string().min(1), ...jobDetailSchema }),
+    (deps, ctx, args) => getPublish(deps, ctx, args as { id: string; paths?: 'all'; log?: 'full' }),
+    getPublish,
+  ),
+  tool(
+    'site_cache_status',
+    'Show the build cache of the website: number, size and age of the image variants, size and build time of the preview. Changes nothing. Requires site.manage.',
+    z.object({}),
+    async (deps, ctx) => siteCacheStatus(deps, ctx, readSiteEnv()),
+    siteCacheStatus,
+  ),
+  tool(
+    'site_cache_clear',
+    'Delete the image variants and the preview so the next build creates them anew (slow for many photos). Refused with siteJobRunning while a preview, check or publish runs. Requires site.manage. Audited.',
+    z.object({}),
+    async (deps, ctx) => clearSiteCache(deps, ctx, readSiteEnv()),
+    clearSiteCache,
   ),
 ];
 

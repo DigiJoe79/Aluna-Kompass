@@ -44,7 +44,10 @@ Person, die diesen Rechner betreut.
    herunterlädt und weitergibt.
 
 4. **Container starten**, mit `docker-compose.prod.yml` als Vorlage. Die Pfade
-   darin sind Beispiele und werden auf die eigenen angepasst.
+   darin sind Beispiele und werden auf die eigenen angepasst. Die Vorlage legt
+   neben `/data` ein benanntes Volume für `/cache` an (Bild-Cache und Vorschau
+   der Webseite). Wer stattdessen ein Verzeichnis einhängt, gibt es UID 1000
+   wie das Datenverzeichnis.
 
    ```
    docker compose -f docker-compose.prod.yml up -d
@@ -203,7 +206,7 @@ Vor dem Update zu wissen:
   sofort mit `{ started, runId, startedAt }` zurück. Das Ergebnis liefert das
   neue Werkzeug `site_job_result` mit `kind` (`preview`, `publish` oder
   `deployCheck`); abfragen, bis `last.runId` der `runId` des Starts ist.
-  Einem KI-Assistenten, der sich Abläufe notiert hat, das einmal sagen.
+  Einem Assistenten, der sich Abläufe notiert hat, das einmal sagen.
 - **Kein Lauf sollte während des Updates laufen.** Ein Publish, der beim
   Neustart des Containers unterbrochen wird, blockiert zwar keinen späteren
   Lauf mehr, ist aber nicht fertig; danach einfach neu starten.
@@ -219,6 +222,31 @@ Ordnerbaums aus der Vorgabe.
 Datenbank — Migrationen laufen nur vorwärts. Der Rückweg ist das Backup aus
 Schritt 1: altes Image eintragen, Container starten, Backup einspielen.
 Deshalb Schritt 1 nicht überspringen.
+
+### Von 0.2.4 auf 0.2.5
+
+Die Fassung 0.2.5 bringt keine Migration mit; `/api/health` meldet weiter
+`migrationCount: 6`.
+
+Vor dem Update:
+
+- **Speicherort für `/cache` eintragen** — die Zeile `- kompass-prod-cache:/cache`
+  und den Block `volumes:` aus `docker-compose.prod.yml` übernehmen (Test
+  entsprechend). Wer seine Daten als Verzeichnisse einhängt, nimmt stattdessen
+  ein Verzeichnis **neben** dem Datenverzeichnis, nicht darin (es gehört nicht
+  ins Backup), mit Besitzer UID 1000. Ohne Speicherort läuft alles, aber nach
+  jedem Update erzeugt der erste Bau alle Bildvarianten neu und dauert
+  entsprechend länger.
+- **MCP-Clients**, die publizieren, übergeben `expectedContentHash` aus der
+  Vorschau; ohne ihn lehnt `site_publish` ab. `site_deploy_check` prüft nur
+  noch die Verbindung und liefert `passed` und `checks` statt einer Liste,
+  was ein Publish ändern würde.
+
+Nach dem Update:
+
+- Die erste Vorschau erzeugt alle Bildvarianten einmal neu (der Cache trägt
+  jetzt eine Version) und dauert bei vielen Fotos einige Minuten. Die Seite
+  Publizieren weist darauf hin.
 
 ## Backups
 
@@ -263,10 +291,10 @@ Token wirkt mit den Rechten des Nutzers, dem es gehört; jeder Vorgang steht im
 sondern die Inhalte, die ein Astro-Template deklariert. Beim ersten Start legt
 der Container das mitgelieferte Basis-Template dort ab; ein vorhandenes bleibt
 unberührt, auch bei einem Update. Der Verein ersetzt es durch sein eigenes und
-liest es unter Webseite → Template ein.
+liest es unter Einstellungen → Webseite → Template ein.
 
 **Startinhalte.** Bringt ein Template ein Verzeichnis `seed/` mit, erscheint
-unter Webseite → Template der Knopf „Startinhalte“ — einmalig, solange die
+unter Einstellungen → Webseite → Template der Knopf „Startinhalte“ — einmalig, solange die
 Webseite leer ist. Danach ist die Datenbank die Quelle. Das mitgelieferte
 Basis-Template hat kein `seed/`.
 
@@ -287,15 +315,18 @@ Die Passwortdatei wird schreibgeschützt in den Container eingehängt, gehört d
 Benutzer des Containers und hat die Rechte 600. Das Passwort steht damit nie in
 der Prozessliste.
 
-**Vor dem ersten Veröffentlichen:** Publizieren-Seite → „Verbindung testen“.
-Der Lauf meldet sich am Ziel an, überträgt nichts und listet auf, was dort
-liegt und ein Publish entfernen würde. Wie Vorschau und Publish baut er die
-Seite und läuft deshalb im Hintergrund; das Ergebnis erscheint auf der Seite,
-sobald er fertig ist, und bleibt bis zum nächsten Test stehen. Wird der
-Container mitten in einem Lauf neu gestartet, ist der Lauf verloren, aber
-nichts bleibt blockiert: Der nächste Start läuft normal. Kommt die Liste leer zurück, zeigt das
-Zielverzeichnis ins Leere — ein vertippter Pfad lässt `rsync` nicht scheitern,
-er trifft nur nichts.
+**Vor dem ersten Veröffentlichen:** Einstellungen → Webseite → Verbindung →
+„Verbindung testen“. Der Test baut nichts und überträgt nichts. Er meldet sich
+am Ziel an, prüft, ob das Zielverzeichnis da ist, legt dort eine kleine
+Probedatei an und löscht sie wieder (Schreibrecht) und zählt die Dateien am
+Ziel. Nach wenigen Sekunden steht je Punkt ein Haken oder eine Meldung, etwa
+„Anmeldung abgelehnt“, „Verzeichnis fehlt“ oder „keine Schreibrechte“. Was ein
+Publish ändern würde, zeigt die Vorschau auf der Seite Publizieren.
+
+**Wenn ein Publish abbricht.** Gelöscht wird am Ziel erst, nachdem alle neuen
+Dateien übertragen sind; eine abgebrochene Übertragung lässt die alte Seite
+stehen. Sie kann Reste `.~tmp~` im Zielverzeichnis hinterlassen, die der
+nächste Lauf räumt.
 
 **Wenn die Verbindung beim Schlüsselaustausch abbricht.** Meldet der Test
 „Connection closed“ direkt nach dem Schlüsselaustausch, obwohl Zugangsdaten und

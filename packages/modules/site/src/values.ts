@@ -45,11 +45,11 @@ export function readValues(deps: Deps): Record<string, unknown> {
   return out;
 }
 
-/** Alle Variablenwerte, mit Rechteprüfung — für Oberfläche und MCP. */
-export async function getVariables(deps: Deps, ctx: CallContext): Promise<Result<Record<string, unknown>>> {
+/** Alle Variablenwerte samt Version (`valuesVersion`, für `expectedVersion` beim Schreiben), mit Rechteprüfung. */
+export async function getVariables(deps: Deps, ctx: CallContext): Promise<Result<{ values: Record<string, unknown>; version: string }>> {
   const denied = requirePermission(ctx, 'site.view');
   if (denied) return denied;
-  return ok(readValues(deps));
+  return ok({ values: readValues(deps), version: valuesVersion(deps) });
 }
 
 /** Schreibt die übergebenen Variablenwerte, geprüft gegen das Template-Schema. */

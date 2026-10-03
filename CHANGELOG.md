@@ -9,6 +9,113 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 1.0.0 kann jede Minor-Fassung Brüche enthalten — was bricht, steht unter
 **Geändert** mit dem, was zu tun ist.
 
+## [0.2.5] - 2026-10-03
+
+Die Webseite wird robust und durchschaubar. Vorschau, Verbindungstest und
+Publish zeigen Schritt für Schritt, was gerade läuft („Bildvarianten 342 von
+1.533“), auf der Seite und oben in der Kopfzeile — auch wenn ein Lauf über MCP
+gestartet wurde. Läufe lassen sich abbrechen, ein Zeitlimit beendet sie
+wirklich, und ein Neustart mitten im Lauf hinterlässt nichts Blockiertes. Die
+Seite Publizieren ist ein Ablauf mit genau einer Hauptaktion je Schritt; die
+Einrichtung (Template, Verbindung, Cache, gesperrte Begriffe) liegt neu unter
+Einstellungen → Webseite, und „Verbindung testen“ prüft nur noch die
+Verbindung, in Sekunden. Keine Migration. **Zu tun:** einen Speicherort für
+`/cache` eintragen (siehe Handbuch, „Von 0.2.4 auf 0.2.5“); ohne ihn läuft
+alles, aber jeder erste Bau nach einem Update dauert länger. Nach dem Update
+entstehen alle Bildvarianten einmal neu. **Es bricht etwas für MCP-Clients**,
+die publizieren: `site_publish` verlangt den `expectedContentHash` der
+geprüften Vorschau, und `site_deploy_check` liefert Prüfpunkte statt einer
+Liste, was ein Publish ändern würde (siehe **Geändert**).
+
+### Hinzugefügt
+
+- Webseite: Jeder Lauf kennt seine Schritte und zählt mit, in Worten mit
+  Tausenderpunkt (z. B. „Bildvarianten 342 von 1.533“, „86 Seiten“). Der erste
+  Schritt heißt „Inhalte prüfen“; beim Publish mit übernommener Vorschau steht „Seite bauen“ sofort auf „übersprungen“, das Kopieren zählt mit; ein Lauf über MCP trägt die Marke
+  „MCP“ mit dem Namen des API-Tokens und der Person, für die er läuft.
+- Webseite: Vorschau, Verbindungstest und Publish lassen sich abbrechen, ein
+  Publish bis zum Beginn der Übertragung, über die Laufkarte oder
+  `site_job_cancel`.
+- Webseite: Einstellungen → Webseite → Cache zeigt Zahl, Größe und Alter der
+  Bildvarianten und der Vorschau; „Cache leeren“ fragt nach und ist während
+  eines Laufs gesperrt. Per MCP: `site_cache_status` und `site_cache_clear`.
+- Webseite: Ein laufender Bau oder Publish steht auf jeder Seite oben mit Schritt und Zähler, auch wenn er über MCP gestartet wurde. Ein Klick führt zum Veröffentlichen.
+- Veröffentlichen: Laufkarte mit Schritten, Fortschritt und Abbrechen; bei einem gescheiterten, unterbrochenen oder am Zeitlimit beendeten Lauf öffnet „Protokoll ansehen“ das Protokoll; die Historie und das Protokoll nennen, ob ein Publish über die Oberfläche oder über MCP (mit Token-Namen) kam; eine über MCP gebaute Vorschau gibt den Publish frei und steht nach dem Neuladen noch da.
+
+### Geändert
+
+- Webseite: „Publizieren“ steht immer in der Leiste; ohne Template führt die
+  Seite in die Einstellungen. Die Einrichtung liegt neu unter Einstellungen →
+  Webseite.
+- Webseite: Template einlesen und Startinhalte liegen unter Einstellungen →
+  Webseite → Template; die alte Adresse leitet weiter.
+- Webseite: Verbindung testen liegt unter Einstellungen → Webseite →
+  Verbindung, mit Ziel, Adresse und Anmeldeart aus der Umgebung (Geheimnisse
+  nur als gesetzt oder fehlt), mit Haken oder Meldung je Prüfpunkt.
+- Webseite: Die Liste der gesperrten Begriffe pflegen Sie unter Einstellungen →
+  Webseite; ein Treffer in der Vorschau verlinkt auf den Inhalt und, mit dem
+  Recht, auf die Liste.
+- Veröffentlichen: Hinweis, wenn der erste Bau wegen leerem Bild-Cache länger
+  dauert.
+- Handbuch: neue Seite „Webseite einrichten“; Template und Publizieren
+  verweisen dorthin.
+- Webseite: Ein Lauf merkt sich, ob er über die Oberfläche oder per MCP
+  gestartet wurde.
+- MCP: `site_variables_get` liefert die Version der Variablen, `site_variables_set` nimmt sie als `expectedVersion` und überschreibt keine Änderung, die inzwischen gespeichert wurde.
+- Webseite: Beim Publish wird am Ziel erst gelöscht, wenn alle neuen Dateien da
+  sind; der Template-Bau sieht keine Geheimnisse der Anwendung mehr.
+- Webseite: „Verbindung testen“ baut nichts mehr. Er prüft in Sekunden
+  Anmeldung, Zielverzeichnis, Schreibrecht (Probedatei anlegen und löschen)
+  und zählt die Dateien am Ziel, je Punkt mit Haken oder konkreter Meldung.
+- Webseite: Zwischenstände des Seitenbaus liegen im Cache statt im
+  Datenverzeichnis und fallen damit aus dem Backup; Reste älterer Fassungen
+  räumt der erste Bau weg.
+- Webseite: Der Server prüft beim Publish, dass genau der Stand der gezeigten
+  Vorschau übertragen wird, und lehnt sonst mit „Vorschau nicht mehr aktuell“
+  ab.
+- Betrieb: `/cache` als eigenes Volume in den Compose-Vorlagen, `tini` als Init
+  im Image. Siehe Handbuch, „Von 0.2.4 auf 0.2.5“.
+- Webseite: Laufzustand und Ergebnisse von Vorschau, Verbindungstest und Publish kommen gekürzt aus einer Quelle (Zahlen, die ersten 20 Pfade, Protokollende).
+- MCP: `site_job_result` und `site_publishes` antworten gekürzt (Schalter `paths`, `log`); neu `site_publish_get` und `site_job_cancel`. `site_publish` verlangt den `contentHash` der geprüften Vorschau; ohne `expectedContentHash` wird der Aufruf abgelehnt. `site_job_result` liefert für `deployCheck` `passed` und die Prüfpunkte, nach einem Zeitlimit die gerissene Grenze und den Zählerstand und bei einem gescheiterten Publish den Grund (`failure`).
+- Publish-Historie: Das Protokoll öffnet in einem zugänglichen Dialog und wird erst dann geladen, mit Kopieren; Status mit Symbol und Wort, Name statt Kennung, Änderungen in Worten, die letzten fünf, Ältere auf Wunsch.
+- Handbuch Publizieren: Laufanzeige und Abbrechen.
+- Webseite: Prüfen und der Abgleich vor dem Publish lesen keine Originalbilder mehr und sind auch bei vielen Fotos in Sekunden fertig (Backlog 47).
+- Veröffentlichen: Die Seite zeigt eine Karte mit genau einem Schritt und einer Hauptaktion. „Prüfen“ ist der erste Schritt der Vorschau, Hinweise stehen als Kurzbilanz mit aufklappbaren Einzelheiten, ein gesperrter Begriff verlinkt auf den Inhalt, auch bei einem Hund oder Projekt. Der Bestätigungsdialog schließt beim Start, und der Lauf steht in Karte und Kopfzeile. Nach dem Neuladen steht die letzte Vorschau wieder da, als „nicht mehr aktuell“, wenn sich Inhalte geändert haben.
+
+### Behoben
+
+- Änderungsprotokoll: Ein Vorgang über MCP nennt in der Detailansicht den Namen
+  des API-Tokens statt seiner Kennung, wie es die Seite „API-Tokens“ verspricht;
+  `audit_query` und `audit_get` liefern ihn als `apiTokenName` mit.
+- Webseite: Wird Kompass während eines Laufs neu gestartet, steht der Lauf
+  danach als „unterbrochen“ da, statt endlos zu warten; ein unterbrochener
+  Publish erscheint in der Historie.
+- Webseite: Ein Zeitlimit beendet den Lauf wirklich und meldet den Schritt,
+  statt „ENOTEMPTY“ anzuzeigen und im Hintergrund weiterzuarbeiten.
+- Webseite: Ein abgebrochener Bau oder Publish hinterlässt keine
+  weiterlaufenden Astro-, rsync- oder ssh-Prozesse mehr; Astro bricht nicht
+  mehr nach festen 5 Minuten ab.
+- Webseite: Ein unlesbares Bild bricht den Bau nicht mehr ab, es wird mit
+  Namen gemeldet; ein abgebrochener Lauf hinterlässt keine kaputten
+  Bildvarianten mehr, und die Bildvarianten entstehen schneller.
+- Webseite: Eine abgebrochene Vorschau wird von einem folgenden Publish nicht
+  mehr als fertig übernommen.
+- Webseite: Nach dem Speichern eines Eintrags zeigt die Leiste keine offenen Änderungen mehr, „Verwerfen“ kehrt zum gespeicherten Stand zurück, und ein zweites Speichern ohne Neuladen gelingt.
+- Webseite: Wer Inhalte nur ansehen darf, sieht in den Sammlungen keine Knöpfe mehr, die dann scheitern. Die Vorschau der Webseite sieht nur, wer die Webseite ansehen darf.
+- Mediathek: „Verwendet in“ nennt Webseiten-Einträge mit ihrem Namen statt einer Kennung und Variablen mit ihrer Beschriftung.
+- Webseite: Jede Fehlermeldung des Moduls erscheint als verständlicher Satz, in der Oberfläche wie über MCP — nicht mehr als „Der Vorgang ist nicht möglich“ mit technischem Text.
+- Webseite: Die Publish-Historie lädt nicht mehr alle Dateilisten und Protokolle mit; die Seite lädt dadurch deutlich schneller (Backlog 39).
+- Startseite: Die Kachel Webseite meldet einen laufenden Lauf, warnt auch bei abgebrochenem Publish und verlinkt Leser nicht mehr auf eine gesperrte Seite.
+- Veröffentlichen: Der Bestätigungsdialog ragte mit drei Knöpfen über den Rand und verdeckte während des Publish die Laufanzeige; „Abbrechen“ schloss nur den Dialog.
+
+### Sicherheit
+
+- Abhängigkeiten aktualisiert: Das mitgelieferte Basis-Template baut mit
+  Astro 7.3.5 und bekommt darüber `devalue` 5.9.4, frei von den sechs
+  bekannten Lücken in 5.9.2 (Rechenzeit und Speicher beim Serialisieren).
+  Dazu kleine Fehlerbehebungen in `next-intl` 4.14.7, `lucide-react` 1.48.0
+  und `vitest` 5.0.2. Für den Betrieb ändert sich nichts.
+
 ## [0.2.4] - 2026-10-02
 
 Akte und Mediathek bekommen einen Ordnerbaum: Ordner stehen mit vollem Namen

@@ -16,8 +16,9 @@ interface Row {
   isPublished: boolean;
 }
 
-export function ListClient({ collection, rows, publishable, sortable }: { collection: string; rows: Row[]; publishable: boolean; sortable: boolean }) {
+export function ListClient({ collection, rows, publishable, sortable, canManage }: { collection: string; rows: Row[]; publishable: boolean; sortable: boolean; canManage: boolean }) {
   const t = useTranslations('site.entries');
+  const c = useTranslations('content');
   const router = useRouter();
   const ids = rows.map((r) => r.id);
   const [confirm, setConfirm] = useState<Row | null>(null);
@@ -30,18 +31,23 @@ export function ListClient({ collection, rows, publishable, sortable }: { collec
           {rows.map((row, index) => (
             <tr key={row.id} className={`h-row border-b border-line-2 hover:bg-row-hover ${index % 2 === 1 ? 'bg-zebra' : ''}`}>
               <td className="px-4 font-semibold">
-                <Link href={`/site/c/${collection}/${row.id}`} className="text-link underline">{row.label}</Link>
+                {canManage ? <Link href={`/site/c/${collection}/${row.id}`} className="text-link underline">{row.label}</Link> : row.label}
               </td>
               {publishable ? (
                 <td className="px-4">
-                  <PublishSwitch id={row.id} isPublished={row.isPublished} action={(id, next) => setEntryPublishedAction(id, next, collection)} />
+                  {canManage ? (
+                    <PublishSwitch id={row.id} isPublished={row.isPublished} action={(id, next) => setEntryPublishedAction(id, next, collection)} />
+                  ) : (
+                    <span>{row.isPublished ? c('published') : c('unpublished')}</span>
+                  )}
                 </td>
               ) : null}
-              {sortable ? (
+              {sortable && canManage ? (
                 <td className="px-4 text-right">
                   <ReorderButtons ids={ids} index={index} action={(next) => reorderEntriesAction(collection, next)} />
                 </td>
               ) : null}
+              {canManage ? (
               <td className="px-4 text-right">
                 <Button
                   type="button"
@@ -52,6 +58,7 @@ export function ListClient({ collection, rows, publishable, sortable }: { collec
                   {t('delete')}
                 </Button>
               </td>
+              ) : null}
             </tr>
           ))}
         </tbody>

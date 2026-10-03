@@ -6,7 +6,8 @@ import { projectsModule } from '@kompass/module-projects';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 import { siteModule } from '../src/manifest';
-import { siteEntries, siteValues } from '../src/schema';
+import { siteEntries, sitePublishes, siteValues } from '../src/schema';
+import { lastSuccessfulPublish, listPublishes } from '../src/services/publishes';
 import { seedSiteDevelopment } from '../src/dev-seed';
 import { NICHT_TEMPLATE } from '../src/review';
 import { activeTemplate } from '../src/service';
@@ -60,6 +61,14 @@ describe('seedSiteDevelopment', () => {
     const entries = deps.db.select().from(siteEntries).all();
     const byCollection = new Set(entries.map((e) => e.collection));
     expect([...byCollection].sort()).toEqual(['documents', 'faq', 'news', 'team']);
+  });
+
+  it('gives the example history both sources, the interface and an MCP token', async () => {
+    process.env.SITE_TEMPLATE_DIR = BASIS;
+    const { deps, ctx } = await setup();
+    await seedSiteDevelopment(deps, ctx);
+    const list = unwrap(await listPublishes(deps, ctx, {}));
+    expect(list.map((p) => p.source)).toEqual(expect.arrayContaining([{ channel: 'ui', tokenName: null }, { channel: 'mcp', tokenName: 'Beispiel-Zugang' }]));
   });
 
   /** Ohne Varianten zeigt die Oberfläche nur einen Zustand — verlangt AGENTS.md ausdrücklich. */
@@ -210,4 +219,16 @@ describe('seedSiteDevelopment', () => {
    * Der erste Anlauf dieses Tests nannte die Namen, nach denen er suchte —
    * und fiel prompt bei jenem Wächter durch. Er hatte recht.
    */
+
+  it('legt eine erfundene Publish-Historie an, einmal (U7)', async () => {
+    const { deps, ctx } = await setup();
+    await seedSiteDevelopment(deps, ctx);
+    await seedSiteDevelopment(deps, ctx);
+    const rows = deps.db.select().from(sitePublishes).all();
+    expect(rows.map((r) => r.status).sort()).toEqual(['aborted', 'success']);
+    expect(rows.every((r) => r.environment === deps.env)).toBe(true);
+    // Review Focus 3: Der Seed-Stand ist kein Vergleichsstand für den nächsten Diff.
+    expect(rows.every((r) => r.fileManifest === '{}')).toBe(true);
+    expect(lastSuccessfulPublish(deps, deps.env)!.startedAt > rows.find((r) => r.status === 'aborted')!.startedAt).toBe(true);
+  });
 });

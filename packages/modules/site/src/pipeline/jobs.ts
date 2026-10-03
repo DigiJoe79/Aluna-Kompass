@@ -1,17 +1,20 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { existsSync, readFileSync } from 'node:fs';
+import { mkdir, mkdtemp, readdir, readFile, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { conflict, invalid, isoNow, newId, ok, requirePermission, validate, type CallContext, type Clock, type Deps, type Result, type ServiceError } from '@kompass/core';
+import { conflict, invalid, isoNow, localizedConflict, systemContext, newId, ok, recordAudit, requirePermission, validate, type CallContext, type Clock, type Deps, type Result, type ServiceError } from '@kompass/core';
 import { z } from 'zod';
 import { exportSiteContent, type SiteContentExport } from '../export';
 import { lastSuccessfulPublish, recordPublish, type PublishDiff, type PublishRecord } from '../services/publishes';
-import { buildSite, SiteBuildError } from './build';
-import { copyTree } from './copy';
+import { buildSite, removeLegacyStages, SiteBuildError } from './build';
+import { copyTree, countFiles, type TreeHooks } from './copy';
 import { diffTrees, hashTree } from './diff';
-import type { DeployTarget, SiteEnv } from './env';
-import { prepareImageVariants } from './images';
+import { runDeployCheck, type DeployCheckResult } from './deploy-check';
+import { imageLimit, limitFor } from './limits';
+import { SITE_CACHE_VERSION, type DeployTarget, type SiteEnv } from './env';
+import { prepareImageVariants, type SkippedImage } from './images';
 import { checkDeployCredentials, rsyncPublish } from './publish';
+import { JobAbortedError, removeQuietly, step } from './step';
+import { beginRun, endRun, requestCancel, resultFile, runningSiteJob, SITE_JOB_KINDS, SITE_JOB_TMP_PREFIX, workRoot, writeJsonAtomic, type RunHandle, type SiteJobKind, type SiteJobRun, type SiteJobStep, type StepKey } from './run-state';
 
 export interface PreviewResult {
   contentHash: string;
@@ -22,6 +25,8 @@ export interface PreviewResult {
   diff: PublishDiff;
   previewDir: string;
   log: string;
+  /** Bilder, die sich nicht lesen ließen — der Bau ging ohne sie weiter. */
+  skippedImages: SkippedImage[];
 }
 
 export interface PublishResult {
@@ -29,115 +34,28 @@ export interface PublishResult {
   record: PublishRecord;
   diff: PublishDiff;
   log: string;
+  skippedImages: SkippedImage[];
 }
 
-/**
- * Schreibt jeden Schritt mit Dauer nach stdout und bricht ab, wenn einer
- * haengt. Ohne das steht die Oberflaeche im Fehlerfall beliebig lange auf
- * „wird erstellt“, und im Containerprotokoll steht nichts.
- */
-async function step<T>(name: string, limitMs: number, run: () => Promise<T>): Promise<T> {
-  const started = Date.now();
-  console.log(`[site] ${name} …`);
-  let timer: NodeJS.Timeout | undefined;
-  try {
-    const value = await Promise.race([
-      run(),
-      new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new StepTimeoutError(name, limitMs)), limitMs);
-      }),
-    ]);
-    console.log(`[site] ${name} fertig nach ${Date.now() - started} ms`);
-    return value;
-  } catch (error) {
-    // „fertig“ gehoert nur an einen geglueckten Schritt. Beim Zeitlimit laeuft
-    // die urspruengliche Arbeit weiter und belegt einen Worker im Threadpool.
-    const reason = error instanceof StepTimeoutError ? 'Zeitlimit überschritten' : 'fehlgeschlagen';
-    console.log(`[site] ${name} ${reason} nach ${Date.now() - started} ms`);
-    throw error;
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
-}
-
-export class StepTimeoutError extends Error {
-  constructor(public readonly step: string, limitMs: number) {
-    super(`Schritt „${step}“ hat das Zeitlimit von ${Math.round(limitMs / 1000)} s überschritten`);
-    this.name = 'StepTimeoutError';
-  }
-}
-
-/**
- * Es läuft höchstens ein Vorschau-, Publish- oder Prüflauf je Prozess. Zwei
- * Läufe räumten dasselbe Vorschauverzeichnis gleichzeitig ab und schrieben
- * denselben Stempel; der zweite meldet deshalb den ersten, statt zu warten.
- */
-export const SITE_JOB_KINDS = ['preview', 'publish', 'deployCheck'] as const;
-export type SiteJobKind = (typeof SITE_JOB_KINDS)[number];
-
-export interface RunningSiteJob {
-  /** `preview`, `publish` oder `deployCheck`; die Oberfläche übersetzt. */
-  name: SiteJobKind;
-  /** Kennung dieses Laufs — der Start nennt sie, das Ergebnis trägt sie. */
-  runId: string;
-  startedAt: string;
-}
-
-/**
- * Der Zustand liegt als Datei im Cache, nicht in einer Modulvariablen: Next
- * bündelt dieses Modul je Route, und der Route Handler, der den Zustand
- * abfragt, sähe eine andere Instanz als die Server Action, die baut.
- *
- * Damit eine Datei aus einem abgestürzten oder neu gestarteten Prozess nicht
- * als laufender Job gilt, steht eine Kennung des Prozesses dabei. Die
- * Prozessnummer reichte dafür nicht: Im Container bekommt Node nach einem
- * Neustart meist wieder dieselbe, und der Riegel stünde für immer. Die
- * Kennung liegt auf `globalThis`, das sich alle Route-Bündel eines Prozesses
- * teilen.
- */
-const jobFile = (env: SiteEnv) => path.join(env.cacheDir, 'running-job.json');
-
-export function siteProcessToken(): string {
-  const holder = globalThis as unknown as { __kompassSiteProcess?: string };
-  return (holder.__kompassSiteProcess ??= newId());
-}
-
-/** Was gerade läuft und seit wann — für die Anzeige, auch nach dem Neuladen. */
-export function currentSiteJob(env: SiteEnv): RunningSiteJob | null {
-  try {
-    const job = JSON.parse(readFileSync(jobFile(env), 'utf8')) as RunningSiteJob & { process?: string };
-    if (job.process !== siteProcessToken()) return null;
-    return { name: job.name, runId: job.runId, startedAt: job.startedAt };
-  } catch {
-    return null;
-  }
-}
+export { SITE_JOB_KINDS, STEPS, beginRun, endRun, requestCancel, runningSiteJob, siteProcessToken, writeJsonAtomic } from './run-state';
+export { SITE_JOB_TMP_PREFIX, workRoot } from './run-state';
+export type { RunHandle, SiteJobKind, SiteJobRun, SiteJobStep, StepKey, StepState } from './run-state';
 
 /**
  * Verstrichene Zeit fuer die Anzeige — aus derselben Uhr wie `startedAt`,
  * nicht aus der Uhr im Browser. Die ging bei einer Vorstandstestung
  * unbemerkt 21s falsch; die Oberflaeche zeigte prompt 21s statt 0.
  */
-export function siteJobElapsedMs(job: Pick<RunningSiteJob, 'startedAt'>, clock: Clock): number {
+export function siteJobElapsedMs(job: Pick<SiteJobRun, 'startedAt'>, clock: Clock): number {
   return Math.max(0, clock.now().getTime() - Date.parse(job.startedAt));
 }
 
-async function exclusive<T>(deps: Deps, env: SiteEnv, name: SiteJobKind, run: (job: RunningSiteJob) => Promise<Result<T>>, runId: string = newId()): Promise<Result<T>> {
-  // Prüfen und Schreiben ohne await dazwischen, sonst kämen zwei Aufrufe
-  // gleichzeitig an der Prüfung vorbei.
-  const running = currentSiteJob(env);
-  if (running) return conflict('siteJobRunning', `Es läuft bereits: ${running.name}`);
-  const job: RunningSiteJob = { name, runId, startedAt: isoNow(deps.clock) };
-  mkdirSync(env.cacheDir, { recursive: true });
-  writeFileSync(jobFile(env), JSON.stringify({ ...job, process: siteProcessToken() }));
-  try {
-    return await run(job);
-  } finally {
-    rmSync(jobFile(env), { force: true });
-  }
-}
-
-/** Der letzte abgeschlossene Lauf einer Art, wie er im Cache liegt. */
+/**
+ * Der letzte abgeschlossene Lauf einer Art, wie er im Cache liegt. Je Art eine
+ * Datei neben dem Riegel: Den Lauf startet eine Server Action oder die
+ * MCP-Route, abgefragt wird er aus einem Route Handler oder einem zweiten
+ * MCP-Aufruf — jeder mit eigenem Modul-Bündel.
+ */
 export interface SiteJobRecord<T = unknown> {
   kind: SiteJobKind;
   runId: string;
@@ -145,47 +63,74 @@ export interface SiteJobRecord<T = unknown> {
   finishedAt: string;
   /** Wer ihn gestartet hat. */
   userId: string | null;
+  status: 'success' | 'failed' | 'aborted' | 'interrupted';
+  reason?: 'cancelled' | 'timeout';
+  /** Bei `reason: 'timeout'`: die gerissene Grenze. */
+  timeout?: { limitMs: number; stalled: boolean };
+  lastStep?: StepKey;
+  /** Endstand der Schritte. */
+  steps: SiteJobStep[];
   result?: T;
   error?: ServiceError;
+  /** Ein unterbrochener Publish wartet noch auf seinen Historieneintrag. */
+  historyPending?: boolean;
 }
 
-export type SiteJobStart = { started: true; runId: string; startedAt: string } | { started: false; running: RunningSiteJob };
+export type SiteJobStart = { started: true; runId: string; startedAt: string } | { started: false; running: SiteJobRun };
 
-/**
- * Je Art eine Datei neben dem Riegel, aus demselben Grund wie dieser: Den Lauf
- * startet eine Server Action oder die MCP-Route, abgefragt wird er aus einem
- * Route Handler oder einem zweiten MCP-Aufruf — jeder mit eigenem Modul-Bündel.
- */
-const resultFile = (env: SiteEnv, kind: SiteJobKind) => path.join(env.cacheDir, `${kind}-result.json`);
+const abortedConflict = (e: JobAbortedError) =>
+  localizedConflict(e.reason === 'cancelled' ? 'jobCancelled' : 'stepTimedOut', `site.publish.job.errors.${e.reason === 'cancelled' ? 'jobCancelled' : 'stepTimedOut'}`, { step: e.step ?? 'export' });
 
 /**
  * Ein Lauf unter dem Riegel, dessen Ausgang — Ergebnis, Fachfehler oder
  * technischer Fehler — als letzter Lauf seiner Art im Cache landet. Nimmt den
- * Riegel **ohne await davor**, damit `startInBackground` ihn synchron hält,
- * bevor es antwortet.
+ * Riegel **ohne await davor**, damit `start*` ihn synchron hält, bevor es
+ * antwortet.
  */
-function recorded<T>(deps: Deps, ctx: CallContext, env: SiteEnv, kind: SiteJobKind, body: () => Promise<Result<T>>, runId?: string): Promise<Result<T>> {
-  return exclusive<T>(
-    deps,
-    env,
-    kind,
-    async (job) => {
-      const save = (outcome: { result: T } | { error: ServiceError }) => {
-        const record: SiteJobRecord<T> = { kind, runId: job.runId, startedAt: job.startedAt, finishedAt: isoNow(deps.clock), userId: ctx.userId, ...outcome };
-        writeFileSync(resultFile(env, kind), JSON.stringify(record));
-      };
-      try {
-        const result = await body();
-        save(result.ok ? { result: result.value } : { error: result.error });
-        return result;
-      } catch (error) {
-        const failed = conflict(`${kind}Failed`, (error instanceof Error ? error.message : String(error)).slice(0, 2000));
-        if (!failed.ok) save({ error: failed.error });
-        throw error;
+function launch<T>(
+  deps: Deps,
+  ctx: CallContext,
+  env: SiteEnv,
+  kind: SiteJobKind,
+  source: 'ui' | 'mcp',
+  body: (h: RunHandle) => Promise<Result<T>>,
+): { busy: SiteJobRun } | { run: SiteJobRun; done: Promise<Result<T>> } {
+  settleInterruptedPublish(deps, env);
+  const begun = beginRun(env, deps.clock, { kind, source, userId: ctx.userId ?? '', apiTokenId: ctx.apiTokenId, runId: newId() });
+  if ('busy' in begun) return begun;
+  const h = begun;
+  let stoppedAt: StepKey | undefined;
+  const save = (outcome: Pick<SiteJobRecord<T>, 'status' | 'result' | 'error' | 'reason' | 'timeout'>) => {
+    const lastStep = outcome.status === 'success' ? undefined : (h.run.steps.find((s) => s.state === 'running')?.key ?? stoppedAt);
+    const record = { kind, runId: h.run.runId, startedAt: h.run.startedAt, finishedAt: isoNow(deps.clock), userId: ctx.userId, steps: h.run.steps, ...(lastStep ? { lastStep } : {}), ...outcome };
+    writeJsonAtomic(resultFile(env, kind), record);
+  };
+  const done = (async () => {
+    try {
+      const result = await body(h);
+      save(result.ok ? { status: 'success', result: result.value } : { status: 'failed', error: result.error });
+      return result;
+    } catch (error) {
+      if (error instanceof JobAbortedError) {
+        stoppedAt = error.step ?? undefined;
+        const stopped = abortedConflict(error);
+        save({ status: 'aborted', reason: error.reason, ...(error.limit ? { timeout: { limitMs: error.limit.ms, stalled: error.limit.stalled } } : {}), error: stopped.ok ? undefined : stopped.error });
+        return stopped as Result<T>;
       }
-    },
-    runId,
-  );
+      const failed = conflict(`${kind}Failed`, (error instanceof Error ? error.message : String(error)).slice(0, 2000));
+      if (!failed.ok) save({ status: 'failed', error: failed.error });
+      throw error;
+    } finally {
+      endRun(env, h.run.runId);
+    }
+  })();
+  return { run: h.run, done };
+}
+
+async function runAndWait<T>(deps: Deps, ctx: CallContext, env: SiteEnv, kind: SiteJobKind, source: 'ui' | 'mcp', body: (h: RunHandle) => Promise<Result<T>>): Promise<Result<T>> {
+  const started = launch(deps, ctx, env, kind, source, body);
+  if ('busy' in started) return conflict('siteJobRunning', `Es läuft bereits: ${started.busy.kind}`);
+  return started.done;
 }
 
 /**
@@ -198,35 +143,77 @@ function recorded<T>(deps: Deps, ctx: CallContext, env: SiteEnv, kind: SiteJobKi
  * Texterkennungs-Worker der Akte; `after()` hinge an der Antwort und taugt
  * nicht für Arbeit, die eine abgebrochene Anfrage überdauern soll.
  */
-function startInBackground<T>(deps: Deps, ctx: CallContext, env: SiteEnv, kind: SiteJobKind, body: () => Promise<Result<T>>): Result<SiteJobStart> {
-  // Prüfen und Riegel nehmen ohne await dazwischen (siehe `exclusive`).
-  const running = currentSiteJob(env);
-  if (running) return ok({ started: false, running });
-  const runId = newId();
-  recorded(deps, ctx, env, kind, body, runId).catch((error: unknown) => {
+function startInBackground<T>(deps: Deps, ctx: CallContext, env: SiteEnv, kind: SiteJobKind, source: 'ui' | 'mcp', body: (h: RunHandle) => Promise<Result<T>>): Result<SiteJobStart> {
+  const started = launch(deps, ctx, env, kind, source, body);
+  if ('busy' in started) return ok({ started: false, running: started.busy });
+  started.done.catch((error: unknown) => {
     console.error(`[site] ${kind} fehlgeschlagen`, error);
   });
-  return ok({ started: true, runId, startedAt: currentSiteJob(env)?.startedAt ?? isoNow(deps.clock) });
+  return ok({ started: true, runId: started.run.runId, startedAt: started.run.startedAt });
 }
 
 const siteJobResultSchema = z.object({ kind: z.enum(SITE_JOB_KINDS) });
+
+const readResult = (env: SiteEnv, kind: SiteJobKind): SiteJobRecord | null => {
+  try {
+    return JSON.parse(readFileSync(resultFile(env, kind), 'utf8')) as SiteJobRecord;
+  } catch {
+    return null;
+  }
+};
+
+/** Trägt den Historieneintrag eines unterbrochenen Publish nach — genau einmal. */
+export function settleInterruptedPublish(deps: Deps, env: SiteEnv): void {
+  runningSiteJob(env);
+  const rec = readResult(env, 'publish');
+  if (rec?.status !== 'interrupted' || !rec.historyPending) return;
+  recordPublish(deps, { ...systemContext('site-interrupted'), userId: rec.userId || null }, {
+    environment: deps.env,
+    startedAt: rec.startedAt,
+    status: 'aborted',
+    contentHash: '',
+    diff: { changed: [], added: [], removed: [] },
+    fileManifest: {},
+    log: `Unterbrochen im Schritt ${rec.lastStep ?? '–'}`,
+    summary: 'Publish unterbrochen: Neustart während des Laufs',
+  });
+  writeJsonAtomic(resultFile(env, 'publish'), { ...rec, historyPending: false });
+}
 
 /**
  * Was gerade läuft und der letzte abgeschlossene Lauf einer Art — für alle
  * drei Hintergrundläufe derselbe Weg, damit ein Client nur eine Abfrage kennt.
  */
-export function lastSiteJob(deps: Deps, ctx: CallContext, env: SiteEnv, input: unknown): Result<{ running: RunningSiteJob | null; last: SiteJobRecord | null }> {
+export function lastSiteJob(deps: Deps, ctx: CallContext, env: SiteEnv, input: unknown): Result<{ running: SiteJobRun | null; last: SiteJobRecord | null }> {
   const denied = requirePermission(ctx, 'site.publish');
   if (denied) return denied;
   const parsed = validate(deps, siteJobResultSchema, input);
   if (!parsed.ok) return parsed;
-  let last: SiteJobRecord | null = null;
-  try {
-    last = JSON.parse(readFileSync(resultFile(env, parsed.value.kind), 'utf8')) as SiteJobRecord;
-  } catch {
-    last = null;
-  }
-  return ok({ running: currentSiteJob(env), last });
+  settleInterruptedPublish(deps, env);
+  return ok({ running: runningSiteJob(env), last: readResult(env, parsed.value.kind) });
+}
+
+const cancelSchema = z.object({ runId: z.string().min(1) });
+
+/**
+ * Bricht den laufenden Lauf ab — bei einem Publish nur bis zum Beginn der
+ * Übertragung. Der Lauf endet im nächsten Wächterschritt und hinterlässt ein
+ * Ergebnis `aborted`; hier steht nur, dass jemand es verlangt hat.
+ */
+export function cancelSiteJob(deps: Deps, ctx: CallContext, env: SiteEnv, input: unknown): Result<{ cancelled: true }> {
+  const denied = requirePermission(ctx, 'site.publish');
+  if (denied) return denied;
+  const parsed = validate(deps, cancelSchema, input);
+  if (!parsed.ok) return parsed;
+  settleInterruptedPublish(deps, env);
+  const run = runningSiteJob(env);
+  if (!run || run.runId !== parsed.value.runId) return localizedConflict('jobNotRunning', 'site.publish.job.errors.jobNotRunning');
+  const step = run.steps.find((s) => s.state === 'running')?.key ?? null;
+  if (!run.cancellable || !requestCancel(run.runId)) return localizedConflict('jobNotCancellable', 'site.publish.job.errors.jobNotCancellable');
+  deps.db.transaction((tx) =>
+    recordAudit(tx, deps, ctx, { action: 'site.jobCancel', entityType: 'siteJob', entityId: run.runId, after: { kind: run.kind, step }, summary: `Lauf ${run.kind} abgebrochen` }),
+  );
+  return ok({ cancelled: true as const });
 }
 
 /** Steht im Protokoll, wenn ein Publish den Vorschau-Build uebernommen hat. */
@@ -258,41 +245,80 @@ interface PreviewStamp {
   staging: boolean;
   /** Stand des Templates zum Bauzeitpunkt; ein bearbeitetes Template macht die Vorschau ungueltig. */
   templateChangedAt: number;
+  /** `SITE_CACHE_VERSION` zum Bauzeitpunkt; ein Stempel anderer Fassung gilt nicht. */
+  cacheVersion: string;
 }
 
 const stampFile = (env: SiteEnv) => path.join(env.cacheDir, 'preview-build.json');
 
 async function readStamp(env: SiteEnv): Promise<PreviewStamp | null> {
   try {
-    return JSON.parse(await readFile(stampFile(env), 'utf8')) as PreviewStamp;
+    const stamp = JSON.parse(await readFile(stampFile(env), 'utf8')) as PreviewStamp;
+    if (stamp.cacheVersion === SITE_CACHE_VERSION) return stamp;
+    await rm(stampFile(env), { force: true });
+    return null;
   } catch {
     return null;
   }
+}
+
+/** Kopiert den Bildordner, wenn es einen gibt; nur „fehlt“ ist kein Fehler — alles andere hat früher still ein kaputtes Verzeichnis hinterlassen. */
+export async function copyImagesIfAny(src: string, dest: string, hooks?: TreeHooks): Promise<void> {
+  try {
+    await stat(src);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+    throw error;
+  }
+  await copyTree(src, dest, hooks);
 }
 
 async function exportAndBuild(
   deps: Deps,
   ctx: CallContext,
   env: SiteEnv,
+  h: RunHandle,
   outDir: string,
-): Promise<Result<{ exported: SiteContentExport; log: string; manifest: Record<string, string>; diff: PublishDiff }>> {
+  opts: { expectedContentHash?: string } = {},
+): Promise<Result<{ exported: SiteContentExport; log: string; manifest: Record<string, string>; diff: PublishDiff; skippedImages: SkippedImage[] }>> {
   const publicUrl = env.publicUrl;
   if (!publicUrl) return conflict('publicUrlMissing', 'SITE_PUBLIC_URL ist nicht gesetzt');
-  const job = await mkdtemp(path.join(tmpdir(), 'kompass-site-'));
+  const job = await mkdtemp(path.join(workRoot(env), `${SITE_JOB_TMP_PREFIX}site-`));
   try {
-    const exported = await step('Inhalt exportieren', 120_000, () =>
-      exportSiteContent(deps, ctx, { jobDir: job, templateDir: env.templateDir }),
-    );
+    const first = await step(h, 'export', limitFor(env, 'export'), async (c) => {
+      const result = await exportSiteContent(deps, ctx, { jobDir: job, templateDir: env.templateDir }, { signal: c.signal, onAsset: (d, t) => c.progress(d, t) });
+      return { result, templateChangedAt: result.ok ? await newestTemplateChange(env.templateDir) : 0 };
+    });
+    const exported = first.result;
     if (!exported.ok) return exported;
+    // Der Server baut den Hash selbst neu: Zwischen Vorschau und Klick kann sich
+    // der Inhalt geändert haben, etwa per MCP (B14).
+    const expected = opts.expectedContentHash;
+    if (expected !== undefined && exported.value.contentHash !== expected) {
+      return localizedConflict('previewOutdated', 'errors.site.previewOutdated', { expected: expected.slice(0, 12), actual: exported.value.contentHash.slice(0, 12) });
+    }
     for (const s of exported.value.stale) console.log(`[site] veralteter Verweis: ${s.path} = ${s.value}`);
-    await step('Bildvarianten', 600_000, () =>
-      prepareImageVariants({ jobDir: job, assets: exported.value.assets, cacheDir: env.cacheDir }),
+    const images = await step(h, 'images', limitFor(env, 'images'), (c) =>
+      prepareImageVariants({
+        jobDir: job,
+        assets: exported.value.assets,
+        cacheDir: env.cacheDir,
+        signal: c.signal,
+        onPlan: ({ total, missing }) => {
+          c.setLimit(imageLimit(env, missing));
+          c.progress(0, total, { generated: 0 });
+        },
+        onProgress: (d, t, g) => c.progress(d, t, { generated: g }),
+      }),
     );
+    const skippedImages = images.skipped;
+    const imageLog = skippedImages.map((i) => `Bild übersprungen: ${i.filename}\n`).join('');
     const stamp: PreviewStamp = {
       contentHash: exported.value.contentHash,
       publicUrl,
       staging: env.staging,
-      templateChangedAt: await newestTemplateChange(env.templateDir),
+      templateChangedAt: first.templateChangedAt,
+      cacheVersion: SITE_CACHE_VERSION,
     };
     const toPreview = path.resolve(outDir) === path.resolve(env.previewDir);
     const lastBuild = await readStamp(env);
@@ -312,53 +338,73 @@ async function exportAndBuild(
 
     let log: string;
     if (reusable) {
-      await mkdir(outDir, { recursive: true });
-      await copyTree(env.previewDir, outDir);
-      log = `${REUSED_PREVIEW}\n`;
+      log = await step(
+        h,
+        'build',
+        limitFor(env, 'build'),
+        async (c) => {
+          await mkdir(outDir, { recursive: true });
+          // Der Schritt steht von Anfang an auf „übersprungen“; das Kopieren zählt trotzdem, damit es nicht stumm wirkt.
+          const total = await countFiles(env.previewDir);
+          let copied = 0;
+          c.progress(0, total);
+          await copyTree(env.previewDir, outDir, { signal: c.signal, onFile: () => c.progress(++copied, total) });
+          return `${REUSED_PREVIEW}\n`;
+        },
+        { startAs: 'skipped' },
+      );
     } else {
+      // Der Stempel zuerst: Bricht der Bau ab, steht im Verzeichnis ein halber
+      // Stand, und der Stempel des vorigen darf ihn nicht für fertig erklären.
+      if (toPreview) await rm(stampFile(env), { force: true });
       await rm(outDir, { recursive: true, force: true });
       await mkdir(outDir, { recursive: true });
-      ({ log } = await step('Site bauen', 600_000, () =>
-        buildSite({ siteDir: env.templateDir, contentDir: job, outDir, publicUrl, staging: env.staging }),
-      ));
-      if (toPreview) await writeFile(stampFile(env), JSON.stringify(stamp), 'utf8');
+      await removeLegacyStages(env.templateDir);
+      ({ log } = await step(h, 'build', limitFor(env, 'build'), (c) => buildSite({ siteDir: env.templateDir, stageRoot: env.cacheDir, contentDir: job, outDir, publicUrl, staging: env.staging, signal: c.signal, timeoutMs: limitFor(env, 'build').totalMs, onPage: (n) => c.progress(n) })));
     }
-    await step('Bilder uebernehmen', 120_000, async () => {
-      try {
-        await copyTree(path.join(job, 'images'), path.join(outDir, 'images'));
-      } catch {
-        // ignore if no images
-      }
+    await step(h, 'copyImages', limitFor(env, 'copyImages'), async (c) => {
+      const images = path.join(job, 'images');
+      const total = await countFiles(images);
+      c.progress(0, total);
+      let n = 0;
+      await copyImagesIfAny(images, path.join(outDir, 'images'), { signal: c.signal, onFile: () => c.progress(++n, total) });
     });
-    const manifest = await step('Pruefsummen', 300_000, () => hashTree(outDir));
+    // Erst jetzt ist die Vorschau vollständig, mit Bildern.
+    if (toPreview) writeJsonAtomic(stampFile(env), stamp);
+    const manifest = await step(h, 'checksums', limitFor(env, 'checksums'), async (c) => {
+      const total = await countFiles(outDir);
+      c.progress(0, total);
+      let n = 0;
+      return hashTree(outDir, { signal: c.signal, onFile: () => c.progress(++n, total) });
+    });
     const last = lastSuccessfulPublish(deps, deps.env);
     const previous = last ? (JSON.parse(last.fileManifest) as Record<string, string>) : {};
-    return ok({ exported: exported.value, log, manifest, diff: diffTrees(previous, manifest) });
+    return ok({ exported: exported.value, log: imageLog + log, manifest, diff: diffTrees(previous, manifest), skippedImages });
   } catch (error) {
+    if (error instanceof JobAbortedError) throw error;
     if (error instanceof SiteBuildError) return conflict('siteBuildFailed', error.log.slice(-4000) || error.message);
-    if (error instanceof StepTimeoutError) return conflict('siteBuildFailed', error.message);
     throw error;
   } finally {
-    await rm(job, { recursive: true, force: true });
+    await removeQuietly(job);
   }
 }
 
 /** Baut die Vorschau und wartet darauf — der Lauf, den `startPreview` im Hintergrund anstößt. */
-export async function runPreview(deps: Deps, ctx: CallContext, env: SiteEnv): Promise<Result<PreviewResult>> {
+export async function runPreview(deps: Deps, ctx: CallContext, env: SiteEnv, opts: { source?: 'ui' | 'mcp' } = {}): Promise<Result<PreviewResult>> {
   const denied = requirePermission(ctx, 'site.publish');
   if (denied) return denied;
-  return recorded(deps, ctx, env, 'preview', () => previewBody(deps, ctx, env));
+  return runAndWait(deps, ctx, env, 'preview', opts.source ?? 'ui', (h) => previewBody(deps, ctx, env, h));
 }
 
 /** Startet den Vorschau-Bau im Hintergrund; das Ergebnis liest `lastSiteJob` (`kind: preview`). */
-export async function startPreview(deps: Deps, ctx: CallContext, env: SiteEnv): Promise<Result<SiteJobStart>> {
+export async function startPreview(deps: Deps, ctx: CallContext, env: SiteEnv, opts: { source: 'ui' | 'mcp' }): Promise<Result<SiteJobStart>> {
   const denied = requirePermission(ctx, 'site.publish');
   if (denied) return denied;
-  return startInBackground(deps, ctx, env, 'preview', () => previewBody(deps, ctx, env));
+  return startInBackground(deps, ctx, env, 'preview', opts.source, (h) => previewBody(deps, ctx, env, h));
 }
 
-async function previewBody(deps: Deps, ctx: CallContext, env: SiteEnv): Promise<Result<PreviewResult>> {
-  const built = await exportAndBuild(deps, ctx, env, env.previewDir);
+async function previewBody(deps: Deps, ctx: CallContext, env: SiteEnv, h: RunHandle): Promise<Result<PreviewResult>> {
+  const built = await exportAndBuild(deps, ctx, env, h, env.previewDir);
   if (!built.ok) return built;
   return ok({
     contentHash: built.value.exported.contentHash,
@@ -369,75 +415,30 @@ async function previewBody(deps: Deps, ctx: CallContext, env: SiteEnv): Promise<
     diff: built.value.diff,
     previewDir: env.previewDir,
     log: built.value.log,
+    skippedImages: built.value.skippedImages,
   });
 }
 
-export interface DeployCheckResult {
-  /** Das Ziel, wie rsync es anspricht — user@host:pfad oder ein lokaler Pfad. */
-  target: string;
-  /** Pfadpruefung: Dateien, die am Ziel liegen (gegen ein leeres Verzeichnis geprueft). */
-  filesAtTarget: string[];
-  /**
-   * Was ein Publish aendern, hinzufuegen und entfernen wuerde — aus dem
-   * Trockenlauf gegen genau den Build, den `runPublish` uebertraegt. `null`,
-   * wenn der Build nicht zustande kam (siehe `build`).
-   */
-  publishWould: PublishDiff | null;
-  build: { ok: boolean; reason?: string };
-  log: string;
-}
-
-/** Nur `>f…` (Datei) mit Aenderungscode; Verzeichniszeilen ("...d...", "/") bleiben aussen vor. */
-function parsePublishWould(log: string): PublishDiff {
-  const changed: string[] = [];
-  const added: string[] = [];
-  const removed: string[] = [];
-  for (const line of log.split('\n')) {
-    if (line.startsWith('*deleting ')) {
-      const entry = line.slice('*deleting '.length).trim();
-      if (entry.length > 0 && !entry.endsWith('/')) removed.push(entry);
-      continue;
-    }
-    // Die Breite der Kennung schwankt mit den uebersprungenen Merkmalen
-    // (--no-owner --no-group --no-perms lassen ihre Spalten ganz weg), darum
-    // nur auf "nur Pluszeichen" statt auf eine feste Laenge pruefen.
-    const match = /^>f(\S+) (.+)$/.exec(line);
-    if (!match || match[1] === undefined || match[2] === undefined) continue;
-    const code = match[1];
-    const entry = match[2];
-    if (entry.endsWith('/')) continue;
-    (/^\++$/.test(code) ? added : changed).push(entry);
-  }
-  return { changed, added, removed };
-}
+export type { DeployCheckResult } from './deploy-check';
 
 /**
- * Prueft den eingestellten Zielpfad und, was ein Publish dort aendern wuerde
- * — ohne etwas zu uebertragen und ohne einen Publish zu protokollieren.
- *
- * Zwei getrennte Aussagen: (1) die **Pfadpruefung**, wie bisher ein
- * Trockenlauf gegen ein leeres Quellverzeichnis — ihr Schutz ist ein
- * Tippfehler in SITE_DEPLOY_PATH; rsync scheitert daran nicht, ein falscher
- * Pfad zeigt einfach ins Leere, und die Liste zeigt, ob die erwartete
- * Installation dort liegt. (2) **was ein Publish aendern wuerde** — dafuer
- * baut dieser Check wie `runPublish` (dieselbe `exportAndBuild`, derselbe
- * `exclusive`-Riegel, kein `recordPublish`) und vergleicht das Ziel mit
- * genau diesem Build. Scheitert der Build oder hat der Export Sperrworttreffer,
- * bleibt (2) `null`; (1) laeuft trotzdem.
+ * Der Verbindungstest: Anmeldung, Zielverzeichnis, Schreibrecht (Probedatei
+ * anlegen und löschen) und die Dateien am Ziel — nur mit rsync, ohne Export
+ * und ohne Bau, in Sekunden. Siehe `runDeployCheck`.
  */
-export async function checkDeployTarget(deps: Deps, ctx: CallContext, env: SiteEnv): Promise<Result<DeployCheckResult>> {
+export async function checkDeployTarget(deps: Deps, ctx: CallContext, env: SiteEnv, opts: { source?: 'ui' | 'mcp' } = {}): Promise<Result<DeployCheckResult>> {
   const deploy = await deployCheckTarget(ctx, env);
   if (!deploy.ok) return deploy;
   const target = deploy.value;
-  return recorded(deps, ctx, env, 'deployCheck', () => deployCheckBody(deps, ctx, env, target));
+  return runAndWait(deps, ctx, env, 'deployCheck', opts.source ?? 'ui', (h) => runDeployCheck(h, env, target));
 }
 
 /** Startet den Verbindungstest im Hintergrund; das Ergebnis liest `lastSiteJob` (`kind: deployCheck`). */
-export async function startDeployCheck(deps: Deps, ctx: CallContext, env: SiteEnv): Promise<Result<SiteJobStart>> {
+export async function startDeployCheck(deps: Deps, ctx: CallContext, env: SiteEnv, opts: { source: 'ui' | 'mcp' }): Promise<Result<SiteJobStart>> {
   const deploy = await deployCheckTarget(ctx, env);
   if (!deploy.ok) return deploy;
   const target = deploy.value;
-  return startInBackground(deps, ctx, env, 'deployCheck', () => deployCheckBody(deps, ctx, env, target));
+  return startInBackground(deps, ctx, env, 'deployCheck', opts.source, (h) => runDeployCheck(h, env, target));
 }
 
 /** Recht, Ziel und Zugangsdaten — was ein Check vor dem Start klären kann. */
@@ -450,52 +451,11 @@ async function deployCheckTarget(ctx: CallContext, env: SiteEnv): Promise<Result
   return ok(env.deploy);
 }
 
-async function deployCheckBody(deps: Deps, ctx: CallContext, env: SiteEnv, deploy: DeployTarget): Promise<Result<DeployCheckResult>> {
-  const target = deploy.host ? `${deploy.user}@${deploy.host}:${deploy.path}` : deploy.path;
-  const emptyDir = await mkdtemp(path.join(tmpdir(), 'kompass-deploy-check-'));
-  let filesAtTarget: string[];
-  let pathCheckLog: string;
-  try {
-    const { log } = await rsyncPublish({ distDir: emptyDir, deploy, dryRun: true, timeoutMs: 60_000 });
-    // Verzeichniszeilen enden auf "/" und zaehlen nicht als Datei.
-    filesAtTarget = log
-      .split('\n')
-      .flatMap((line) => (line.startsWith('*deleting ') ? [line.slice('*deleting '.length).trim()] : []))
-      .filter((entry) => entry.length > 0 && !entry.endsWith('/'));
-    // Nicht das rohe rsync-Protokoll: Gegen ein leeres Verzeichnis meldet es jede Datei als „*deleting“, und
-    // das Protokoll las sich, als raeumte ein Publish das Ziel leer (Befund vom 27.09.). Was ein Publish
-    // wirklich entfernt, steht im Abschnitt zum Build.
-    pathCheckLog = [`Pfadprüfung: ${filesAtTarget.length} Dateien am Ziel ${target} (nur gelesen, nichts wird gelöscht)`, ...filesAtTarget.map((file) => `am Ziel: ${file}`)].join('\n');
-  } catch (error) {
-    return conflict('deployCheckFailed', (error instanceof Error ? error.message : String(error)).slice(0, 2000));
-  } finally {
-    await rm(emptyDir, { recursive: true, force: true });
-  }
-
-  const outDir = await mkdtemp(path.join(tmpdir(), 'kompass-deploy-check-build-'));
-  try {
-    const built = await exportAndBuild(deps, ctx, env, outDir);
-    if (!built.ok) {
-      const reason = built.error.type === 'conflict' ? built.error.code : built.error.type;
-      return ok({ target, filesAtTarget, publishWould: null, build: { ok: false, reason }, log: pathCheckLog });
-    }
-    if (built.value.exported.violations.length > 0) {
-      return ok({ target, filesAtTarget, publishWould: null, build: { ok: false, reason: 'blockedTermsPresent' }, log: pathCheckLog });
-    }
-    const { log: buildLog } = await rsyncPublish({ distDir: outDir, deploy, dryRun: true, timeoutMs: 60_000 });
-    return ok({ target, filesAtTarget, publishWould: parsePublishWould(buildLog), build: { ok: true }, log: `${pathCheckLog}\n\nTrockenlauf gegen den Build, den ein Publish überträgt („*deleting“ = würde entfernt):\n${buildLog}` });
-  } catch (error) {
-    return conflict('deployCheckFailed', (error instanceof Error ? error.message : String(error)).slice(0, 2000));
-  } finally {
-    await rm(outDir, { recursive: true, force: true });
-  }
-}
-
 /** Baut, überträgt und protokolliert, und wartet darauf — der Lauf, den `startPublish` im Hintergrund anstößt. */
-export async function runPublish(deps: Deps, ctx: CallContext, env: SiteEnv, opts: { confirm: boolean }): Promise<Result<PublishResult>> {
+export async function runPublish(deps: Deps, ctx: CallContext, env: SiteEnv, opts: { confirm: boolean; source?: 'ui' | 'mcp'; expectedContentHash?: string }): Promise<Result<PublishResult>> {
   const ready = await publishTarget(deps, ctx, env, opts);
   if (!ready.ok) return ready;
-  return recorded(deps, ctx, env, 'publish', () => publishBody(deps, ctx, env));
+  return runAndWait(deps, ctx, env, 'publish', opts.source ?? 'ui', (h) => publishBody(deps, ctx, env, h, opts));
 }
 
 /**
@@ -503,10 +463,10 @@ export async function runPublish(deps: Deps, ctx: CallContext, env: SiteEnv, opt
  * (`kind: publish`). Was vor dem Start feststeht — Recht, Bestätigung,
  * Umgebung, Ziel, Zugangsdaten — kommt sofort als Fehler zurück.
  */
-export async function startPublish(deps: Deps, ctx: CallContext, env: SiteEnv, opts: { confirm: boolean }): Promise<Result<SiteJobStart>> {
+export async function startPublish(deps: Deps, ctx: CallContext, env: SiteEnv, opts: { confirm: boolean; source: 'ui' | 'mcp'; expectedContentHash?: string }): Promise<Result<SiteJobStart>> {
   const ready = await publishTarget(deps, ctx, env, opts);
   if (!ready.ok) return ready;
-  return startInBackground(deps, ctx, env, 'publish', () => publishBody(deps, ctx, env));
+  return startInBackground(deps, ctx, env, 'publish', opts.source, (h) => publishBody(deps, ctx, env, h, opts));
 }
 
 async function publishTarget(deps: Deps, ctx: CallContext, env: SiteEnv, opts: { confirm: boolean }): Promise<Result<DeployTarget>> {
@@ -520,11 +480,12 @@ async function publishTarget(deps: Deps, ctx: CallContext, env: SiteEnv, opts: {
   return ok(env.deploy);
 }
 
-async function publishBody(deps: Deps, ctx: CallContext, env: SiteEnv): Promise<Result<PublishResult>> {
+async function publishBody(deps: Deps, ctx: CallContext, env: SiteEnv, h: RunHandle, opts: { expectedContentHash?: string }): Promise<Result<PublishResult>> {
   const startedAt = isoNow(deps.clock);
-  const outDir = await mkdtemp(path.join(tmpdir(), 'kompass-publish-'));
+  const outDir = await mkdtemp(path.join(workRoot(env), `${SITE_JOB_TMP_PREFIX}publish-`));
+  let contentHash = '';
   try {
-    const built = await exportAndBuild(deps, ctx, env, outDir);
+    const built = await exportAndBuild(deps, ctx, env, h, outDir, { expectedContentHash: opts.expectedContentHash });
     if (!built.ok) {
       // Auch ein Abbruch vor dem Build ist ein Versuch: Wer nachsieht, warum
       // gestern nichts publiziert wurde, soll ihn in der Historie finden.
@@ -541,12 +502,13 @@ async function publishBody(deps: Deps, ctx: CallContext, env: SiteEnv): Promise<
       });
       return built;
     }
+    contentHash = built.value.exported.contentHash;
     if (built.value.exported.violations.length > 0) {
       recordPublish(deps, ctx, {
         environment: deps.env,
         startedAt,
         status: 'aborted',
-        contentHash: built.value.exported.contentHash,
+        contentHash,
         diff: built.value.diff,
         fileManifest: {},
         log: JSON.stringify(built.value.exported.violations),
@@ -554,26 +516,20 @@ async function publishBody(deps: Deps, ctx: CallContext, env: SiteEnv): Promise<
       });
       return conflict('blockedTermsPresent', `${built.value.exported.violations.length} Sperrworttreffer`);
     }
+    // Ab hier ein Abbruch ließe die Webseite halb aktualisiert zurück.
+    h.setCancellable(false);
+    const total = built.value.diff.added.length + built.value.diff.changed.length;
+    let transferLog: string;
     try {
-      const { log } = await step('Uebertragen', 600_000, () => rsyncPublish({ distDir: outDir, deploy: env.deploy! }));
-      const record = recordPublish(deps, ctx, {
-        environment: deps.env,
-        startedAt,
-        status: 'success',
-        contentHash: built.value.exported.contentHash,
-        diff: built.value.diff,
-        fileManifest: built.value.manifest,
-        log: built.value.log + log,
-        summary: `Publiziert: ${built.value.diff.changed.length} geändert, ${built.value.diff.added.length} neu, ${built.value.diff.removed.length} entfernt`,
-      });
-      return ok({ status: 'success' as const, record, diff: built.value.diff, log });
+      ({ log: transferLog } = await step(h, 'transfer', limitFor(env, 'transfer'), (c) => rsyncPublish({ distDir: outDir, deploy: env.deploy!, signal: c.signal, onFile: (n) => c.progress(Math.min(n, total), total) })));
     } catch (error) {
+      if (error instanceof JobAbortedError) throw error;
       const message = error instanceof Error ? error.message : String(error);
       recordPublish(deps, ctx, {
         environment: deps.env,
         startedAt,
         status: 'failed',
-        contentHash: built.value.exported.contentHash,
+        contentHash,
         diff: built.value.diff,
         fileManifest: {},
         log: message,
@@ -581,7 +537,35 @@ async function publishBody(deps: Deps, ctx: CallContext, env: SiteEnv): Promise<
       });
       return conflict('publishFailed', message.slice(0, 2000));
     }
+    const record = await step(h, 'record', limitFor(env, 'record'), async () =>
+      recordPublish(deps, ctx, {
+        environment: deps.env,
+        startedAt,
+        status: 'success',
+        contentHash,
+        diff: built.value.diff,
+        fileManifest: built.value.manifest,
+        log: built.value.log + transferLog,
+        summary: `Publiziert: ${built.value.diff.changed.length} geändert, ${built.value.diff.added.length} neu, ${built.value.diff.removed.length} entfernt`,
+      }),
+    );
+    return ok({ status: 'success' as const, record, diff: built.value.diff, log: transferLog, skippedImages: built.value.skippedImages });
+  } catch (error) {
+    if (error instanceof JobAbortedError) {
+      // Ein Zeitlimit mitten in der Übertragung ist ein gescheiterter Publish, kein sauberer Abbruch.
+      recordPublish(deps, ctx, {
+        environment: deps.env,
+        startedAt,
+        status: error.step === 'transfer' || error.step === 'record' ? 'failed' : 'aborted',
+        contentHash,
+        diff: { changed: [], added: [], removed: [] },
+        fileManifest: {},
+        log: `${error.reason} (${error.step ?? '–'})`,
+        summary: `Publish abgebrochen: ${error.reason} (${error.step ?? '–'})`,
+      });
+    }
+    throw error;
   } finally {
-    await rm(outDir, { recursive: true, force: true });
+    await removeQuietly(outDir);
   }
 }

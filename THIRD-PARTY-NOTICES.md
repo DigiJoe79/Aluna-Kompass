@@ -53,6 +53,7 @@ werden als eigene Prozesse aufgerufen, nicht eingebunden.
 | `rsync` | GPL-3 |
 | `openssh-client` | BSD-2-clause, BSD-3-clause, OpenSSH und BSD-artige |
 | `sshpass` | GPL-2+ |
+| `tini` | Expat (MIT) |
 | `tesseract-ocr` | Apache-2.0 |
 | `tesseract-ocr-deu` | Apache-2.0 |
 | `tesseract-ocr-eng` | Apache-2.0 |

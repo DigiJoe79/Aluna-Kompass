@@ -11,11 +11,13 @@ import { idleState } from '@/lib/actions';
 import { saveBlockedTermsAction } from './actions';
 
 /**
- * Die Sperrwörter stehen dort, wo ihre Treffer gemeldet werden: vor dem Knopf,
- * den sie sperren (Backlog 23). Ein Begriff je Zeile.
+ * Die Sperrwörter (Backlog 23): ein Begriff je Zeile. Die Seite verlangt
+ * `site.manage`, das Speichern aber `site.publish` (Dienst `setBlockedTerms`);
+ * ohne dieses Recht ist die Liste nur zu lesen.
  */
-export function BlockedTermsCard({ terms }: { terms: string[] }) {
+export function BlockedTermsPanel({ terms, canPublish }: { terms: string[]; canPublish: boolean }) {
   const t = useTranslations('site.publish.blockedTerms');
+  const tAdmin = useTranslations('site.admin');
   const [state, action] = useActionState(saveBlockedTermsAction, idleState);
   const titleId = useId();
 
@@ -31,12 +33,16 @@ export function BlockedTermsCard({ terms }: { terms: string[] }) {
       <ActionForm action={action} state={state} className="flex flex-col gap-3">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="blocked-terms">{t('label')}</Label>
-          <Textarea id="blocked-terms" name="terms" rows={4} defaultValue={terms.join('\n')} className="font-mono text-[13px]" />
+          <Textarea id="blocked-terms" name="terms" rows={4} readOnly={!canPublish} defaultValue={terms.join('\n')} className="font-mono text-[13px]" />
           <p className="text-[12px] text-muted-ink">{t('hint')}</p>
         </div>
-        <div>
-          <SubmitButton variant="outline">{t('save')}</SubmitButton>
-        </div>
+        {canPublish ? (
+          <div>
+            <SubmitButton variant="outline">{t('save')}</SubmitButton>
+          </div>
+        ) : (
+          <p className="text-[13px] text-ink-2" role="note">{tAdmin('needsPublish')}</p>
+        )}
       </ActionForm>
     </section>
   );

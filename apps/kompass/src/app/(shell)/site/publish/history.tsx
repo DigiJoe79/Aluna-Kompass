@@ -1,58 +1,64 @@
 'use client';
 
-import type { PublishRecord } from '@kompass/module-site';
-import { useTranslations } from 'next-intl';
+import type { PublishSummary } from '@kompass/module-site';
+import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { LogDialog, subjectOfPublish } from './log-dialog';
+import { SourceMark } from './source-mark';
+import { StatusMark } from './status-mark';
 
-export function PublishHistory({ items }: { items: PublishRecord[] }) {
+const SHOWN = 5;
+
+/**
+ * Die letzten Publishes: Zeit, Ergebnis, Änderungen in Worten, wer, und das
+ * Protokoll hinter einem Knopf. Am Telefon ist die ganze Zeile der Knopf.
+ * `highlightId` ist der Publish, der gerade zu Ende ging — er trägt „neu“.
+ */
+export function PublishHistory({ items, highlightId = null }: { items: PublishSummary[]; highlightId?: string | null }) {
   const t = useTranslations('site.publish.history');
-  const tCommon = useTranslations('common');
-  const [selected, setSelected] = useState<PublishRecord | null>(null);
+  const format = useFormatter();
+  const [selected, setSelected] = useState<PublishSummary | null>(null);
+  const [all, setAll] = useState(false);
+  const shown = all ? items : items.slice(0, SHOWN);
+  const when = (iso: string) => format.dateTime(new Date(iso), { dateStyle: 'medium', timeStyle: 'short' });
 
   return (
-    <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-5">
+    <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-5 max-sm:p-4">
       <h3 className="font-heading text-[18px]">{t('title')}</h3>
       {items.length === 0 ? (
         <p className="text-[13px] text-muted-ink">{t('empty')}</p>
       ) : (
         <div className="overflow-x-auto">
           <table aria-label={t('title')} className="w-full text-left text-[13px]">
-            <thead>
+            <thead className="max-sm:hidden">
               <tr className="border-b border-line text-muted-ink">
                 <th className="py-2 pr-4">{t('columns.time')}</th>
                 <th className="py-2 pr-4">{t('columns.status')}</th>
-                <th className="py-2 pr-4">{t('columns.hash')}</th>
                 <th className="py-2 pr-4">{t('columns.changes')}</th>
                 <th className="py-2 pr-4">{t('columns.by')}</th>
-                <th className="py-2 pr-4"></th>
+                <th className="py-2 pr-4">{t('columns.log')}</th>
               </tr>
             </thead>
             <tbody>
-              {items.map((row) => (
-                <tr key={row.id} className="border-b border-line hover:bg-surface-2">
-                  <td className="py-2 pr-4 whitespace-nowrap">{new Date(row.startedAt).toLocaleString('de-DE')}</td>
-                  <td className="py-2 pr-4">
-                    <span
-                      className={`inline-block rounded px-1.5 py-0.5 font-mono text-[11px] uppercase ${
-                        row.status === 'success'
-                          ? 'bg-success-bg text-success'
-                          : row.status === 'failed'
-                          ? 'bg-error-bg text-error'
-                          : 'bg-muted-ink/10 text-muted-ink'
-                      }`}
-                    >
-                      {row.status}
-                    </span>
+              {shown.map((row) => (
+                <tr
+                  key={row.id}
+                  onClick={() => row.hasLog && setSelected(row)}
+                  className={`border-b border-line hover:bg-surface-2 max-sm:grid max-sm:min-h-14 max-sm:grid-cols-2 max-sm:items-center max-sm:gap-x-3 max-sm:py-2 ${row.hasLog ? 'max-sm:cursor-pointer' : ''} ${row.id === highlightId ? 'bg-brand-soft' : ''}`}
+                >
+                  <td className="py-2 pr-4 whitespace-nowrap max-sm:py-0">
+                    {when(row.startedAt)}
+                    {row.id === highlightId ? <span className="ml-2 rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">{t('new')}</span> : null}
                   </td>
-                  <td className="py-2 pr-4 font-mono text-[12px]">{row.contentHash ? row.contentHash.slice(0, 12) : '—'}</td>
-                  <td className="py-2 pr-4">
-                    +{row.pagesAdded} / ~{row.pagesChanged} / -{row.pagesRemoved}
+                  <td className="py-2 pr-4 max-sm:py-0">
+                    <StatusMark status={row.status} />
                   </td>
-                  <td className="py-2 pr-4 text-ink-2">{row.triggeredByUserId ?? 'System'}</td>
-                  <td className="py-2 text-right">
-                    {row.log && (
-                      <Button variant="ghost" size="sm" onClick={() => setSelected(row)}>
+                  <td className="py-2 pr-4 tabular-nums max-sm:py-0">{t('changes', { changed: row.pagesChanged, added: row.pagesAdded, removed: row.pagesRemoved })}</td>
+                  <td className="py-2 pr-4 text-ink-2 max-sm:py-0"><SourceMark source={row.source} name={row.triggeredByName} /></td>
+                  <td className="py-1 pr-4 text-right max-sm:col-span-2 max-sm:py-0 sm:text-left">
+                    {row.hasLog && (
+                      <Button variant="ghost" size="sm" className="max-sm:h-11" onClick={() => setSelected(row)}>
                         {t('log')}
                       </Button>
                     )}
@@ -63,28 +69,14 @@ export function PublishHistory({ items }: { items: PublishRecord[] }) {
           </table>
         </div>
       )}
-
-      {selected && (
-        <div
-          role="dialog"
-          aria-label={t('log')}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-        >
-          <div className="flex max-h-[80vh] w-full max-w-3xl flex-col rounded-lg border border-line bg-surface shadow-lg">
-            <div className="flex items-center justify-between border-b border-line p-4">
-              <h4 className="font-heading text-[16px]">
-                {t('log')} · {new Date(selected.startedAt).toLocaleString('de-DE')}
-              </h4>
-              <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>
-                {tCommon('close')}
-              </Button>
-            </div>
-            <pre className="flex-1 overflow-auto p-4 font-mono text-[12px] text-ink-2 bg-surface-2 whitespace-pre-wrap">
-              {selected.log}
-            </pre>
-          </div>
+      {!all && items.length > SHOWN ? (
+        <div>
+          <Button variant="outline" size="sm" onClick={() => setAll(true)}>
+            {t('older')}
+          </Button>
         </div>
-      )}
+      ) : null}
+      <LogDialog item={selected ? subjectOfPublish(selected) : null} onClose={() => setSelected(null)} />
     </section>
   );
 }

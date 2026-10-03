@@ -24,6 +24,11 @@ export * from './pipeline/diff';
 export * from './pipeline/build';
 export * from './pipeline/copy';
 export * from './pipeline/publish';
+export * from './pipeline/deploy-check';
+export * from './pipeline/deploy-errors';
 export * from './pipeline/images';
+export * from './pipeline/cache';
+export * from './pipeline/connection';
 export { entryLabel, localizedPaths } from './translations';
 
+export * from './services/job-view';

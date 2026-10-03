@@ -1,5 +1,5 @@
 import { asc, eq, inArray } from 'drizzle-orm';
-import { users } from '../db/schema';
+import { apiTokens, users } from '../db/schema';
 import type { Deps } from '../deps';
 
 /**
@@ -20,4 +20,11 @@ export function userNamesFor(deps: Deps, ids: readonly (string | null | undefine
  */
 export function activeUserChoices(deps: Deps): { id: string; name: string }[] {
   return deps.db.select({ id: users.id, name: users.name }).from(users).where(eq(users.isActive, true)).orderBy(asc(users.name)).all();
+}
+
+/** Namen zu API-Token-IDs (Kennung im Änderungsprotokoll und im Laufzustand), ohne Rechteprüfung wie `userNamesFor`; auch widerrufene Tokens behalten ihren Namen. */
+export function apiTokenNamesFor(deps: Deps, ids: readonly (string | null | undefined)[]): Map<string, string> {
+  const unique = [...new Set(ids.filter((id): id is string => typeof id === 'string' && id.length > 0))];
+  if (unique.length === 0) return new Map();
+  return new Map(deps.db.select({ id: apiTokens.id, name: apiTokens.name }).from(apiTokens).where(inArray(apiTokens.id, unique)).all().map((t) => [t.id, t.name]));
 }

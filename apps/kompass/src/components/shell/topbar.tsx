@@ -2,7 +2,7 @@
 
 import { CircleQuestionMark, Menu, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Fragment } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { UserMenu, type UserMenuProps } from './user-menu';
 
 export interface TopbarProps {
@@ -17,6 +17,8 @@ export interface TopbarProps {
   onOpenDrawer: () => void;
   onSearch: () => void;
   onHelp: () => void;
+  /** Platz vor dem Hilfe-Knopf, den die Hülle nicht kennt — etwa die Laufanzeige eines Moduls. */
+  extras?: ReactNode;
 }
 
 /**
@@ -24,7 +26,7 @@ export interface TopbarProps {
  * Vereinsname, Nutzermenü. Der Menüknopf erscheint nur im Drawer-Modus — im
  * festen Rahmen gibt es nichts zu klappen.
  */
-export function Topbar({ organization, logoUrl, crumbs, user, build, version, drawer, onOpenDrawer, onSearch, onHelp }: TopbarProps) {
+export function Topbar({ organization, logoUrl, crumbs, user, build, version, drawer, onOpenDrawer, onSearch, onHelp, extras }: TopbarProps) {
   const t = useTranslations();
   return (
     <header className="flex h-14 shrink-0 items-center gap-3.5 border-b border-line bg-topbar px-4">
@@ -57,6 +59,7 @@ export function Topbar({ organization, logoUrl, crumbs, user, build, version, dr
         <span className="flex-1 text-left">{t('shell.topbar.search')}</span>
         <kbd className="rounded-[3px] border border-line px-1 font-mono text-[11px]">⌘K</kbd>
       </button>
+      {extras}
       <button type="button" onClick={onHelp} aria-label={t('shell.topbar.help')} className="flex size-[30px] shrink-0 items-center justify-center rounded-sm text-muted-ink hover:bg-hover hover:text-ink">
         <CircleQuestionMark className="size-[18px]" aria-hidden />
       </button>

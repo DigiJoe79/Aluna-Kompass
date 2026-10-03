@@ -1,7 +1,7 @@
 import { and, desc, eq, getTableColumns, gte, like, lte, or, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import type { CallContext } from '../context';
-import { auditLog, users } from '../db/schema';
+import { apiTokens, auditLog, users } from '../db/schema';
 import type { Deps } from '../deps';
 import { requirePermission } from '../permissions/check';
 import { notFound, ok, type Result } from '../result';
@@ -20,6 +20,8 @@ export interface AuditEntry {
   after: unknown;
   summary: string;
   apiTokenId: string | null;
+  /** Name des API-Tokens bei Vorgängen über MCP; null, wenn es keinen gibt oder er nicht mehr existiert. */
+  apiTokenName: string | null;
   ipAddress: string | null;
   requestId: string;
   environment: string;
@@ -40,7 +42,7 @@ const querySchema = z.object({
 
 const parseJson = (value: string | null): unknown => (value === null ? null : JSON.parse(value));
 
-type Row = typeof auditLog.$inferSelect & { userName: string | null };
+type Row = typeof auditLog.$inferSelect & { userName: string | null; apiTokenName: string | null };
 
 const toEntry = (row: Row): AuditEntry => ({
   id: row.id,
@@ -55,6 +57,7 @@ const toEntry = (row: Row): AuditEntry => ({
   after: parseJson(row.after),
   summary: row.summary,
   apiTokenId: row.apiTokenId,
+  apiTokenName: row.apiTokenName,
   ipAddress: row.ipAddress,
   requestId: row.requestId,
   environment: row.environment,
@@ -81,9 +84,10 @@ export function queryAudit(deps: Deps, ctx: CallContext, input: unknown): Result
   const where = conditions.length > 0 ? and(...conditions) : undefined;
   const total = deps.db.select({ count: sql<number>`count(*)` }).from(auditLog).where(where).get()?.count ?? 0;
   const rows = deps.db
-    .select({ ...getTableColumns(auditLog), userName: users.name })
+    .select({ ...getTableColumns(auditLog), userName: users.name, apiTokenName: apiTokens.name })
     .from(auditLog)
     .leftJoin(users, eq(users.id, auditLog.userId))
+    .leftJoin(apiTokens, eq(apiTokens.id, auditLog.apiTokenId))
     .where(where)
     .orderBy(desc(auditLog.occurredAt), desc(auditLog.id))
     .limit(q.limit)
@@ -96,9 +100,10 @@ export function getAuditEntry(deps: Deps, ctx: CallContext, id: string): Result<
   const denied = requirePermission(ctx, 'audit.view');
   if (denied) return denied;
   const row = deps.db
-    .select({ ...getTableColumns(auditLog), userName: users.name })
+    .select({ ...getTableColumns(auditLog), userName: users.name, apiTokenName: apiTokens.name })
     .from(auditLog)
     .leftJoin(users, eq(users.id, auditLog.userId))
+    .leftJoin(apiTokens, eq(apiTokens.id, auditLog.apiTokenId))
     .where(eq(auditLog.id, id))
     .get();
   return row ? ok(toEntry(row as Row)) : notFound('auditEntry', id);

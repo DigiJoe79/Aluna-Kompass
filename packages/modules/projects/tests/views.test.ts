@@ -2,6 +2,7 @@ import { coreModule, unwrap } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { projectsModule } from '../src/manifest';
+import { projects } from '../src/schema';
 import { createProject, setProjectPublished } from '../src/service';
 import { publishedProjects } from '../src/views';
 
@@ -16,6 +17,14 @@ const setup = async () => {
 };
 
 describe('published projects view', () => {
+  it('leads from a view row to the edit page, titled with the leading-language name', async () => {
+    const deps = await setup();
+    const [row] = publishedProjects.load(deps);
+    const id = deps.db.select().from(projects).all().find((p) => p.slug === 'hof')!.id;
+    expect(publishedProjects.editLink!(deps, row!)).toEqual({ href: `/projects/${id}`, title: 'Der Hof' });
+    expect(publishedProjects.editLink!(deps, { ...row!, slug: 'weg' })).toBeNull();
+  });
+
   it('belongs to the projects module, not the core', () => {
     expect(projectsModule.publishedViews?.some((v) => v.name === 'projects')).toBe(true);
     expect(coreModule.publishedViews?.some((v) => v.name === 'projects')).toBe(false);

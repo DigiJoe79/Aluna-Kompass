@@ -123,6 +123,15 @@ const KNOWN_CONFLICTS = new Set([
   'notIncoming',
   'documentVoided',
   'documentTypeInactive',
+  'alreadySeeded',
+  'noSeed',
+  'noTemplate',
+  'siteNotEmpty',
+  'templateMissing',
+  'templateResolutionMissing',
+  'templateInvalid',
+  'templateNeedsReview',
+  'templateStale',
 ]);
 
 const CONFLICTS_WITH_DETAIL = new Set([
@@ -135,6 +144,14 @@ const CONFLICTS_WITH_DETAIL = new Set([
   'folderNotEmpty',
   'recordHeld',
   'stillReferenced',
+  'templateUnreadable',
+  'localeMissing',
+  'seedAssetsMissing',
+  'deployCredentialsUnusable',
+  'deployCheckFailed',
+  'previewFailed',
+  'unknownView',
+  'unknownViewField',
 ]);
 
 const MEDIA_FIELD_CODES = ['unsupportedMediaType', 'notAPdf', 'fileTooLarge', 'svgContainsScript'];

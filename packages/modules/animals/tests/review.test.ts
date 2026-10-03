@@ -273,3 +273,14 @@ describe('publishedAnimals.pendingReview', () => {
     expect(publishedAnimals.pendingReview!(d)).toEqual([]);
   });
 });
+
+describe('publishedAnimals.editLink', () => {
+  it('leads from a view row to the edit page, titled with the name', async () => {
+    const d = await deps();
+    const live = unwrap(await createAnimal(d, manage, chiara));
+    unwrap(await setAnimalPublished(d, manage, { id: live.id, isPublished: true }));
+    const [row] = publishedAnimals.load(d);
+    expect(publishedAnimals.editLink!(d, row!)).toEqual({ href: `/animals/${live.id}`, title: 'Chiara' });
+    expect(publishedAnimals.editLink!(d, { ...row!, slug: 'gibt-es-nicht' })).toBeNull();
+  });
+});

@@ -67,7 +67,7 @@ describe('deleteEntry in zwei Stufen', () => {
     const kept = unwrap(await deleteEntry(deps, manage, { id: b.id, deleteOrphanedMedia: true }));
     expect(kept.deletedMedia).toEqual([]);
     expect(kept.keptMedia).toHaveLength(1);
-    expect(kept.keptMedia[0]!.usedBy[0]).toContain('Eintrag „c“');
+    expect(kept.keptMedia[0]!.usedBy[0]).toContain('Eintrag „C“');
     expect(await deps.media.exists(shared.filename)).toBe(true);
   });
 

@@ -1,7 +1,7 @@
 # Profil
 
 Ihr eigener Zugang: Passwort ändern und API-Tokens verwalten. Ein Token
-verbindet einen KI-Assistenten über MCP mit Kompass — er kann dann dasselbe
+verbindet einen Assistenten über MCP mit Kompass — er kann dann dasselbe
 wie Sie, mit denselben Rechten, und jede Aktion steht unter Ihrem Namen im
 Änderungsprotokoll. Ein Token wird nur einmal angezeigt.
 
@@ -14,7 +14,7 @@ E-Mail ändert die Verwaltung unter Einstellungen → Nutzer, nicht Sie selbst
 
 ## API-Tokens und MCP
 
-MCP ist die Schnittstelle, über die ein KI-Assistent — etwa Claude — mit
+MCP ist die Schnittstelle, über die ein Assistent — etwa Claude — mit
 Kompass arbeitet: Kontakte anlegen, Post einsortieren, Übersetzungen
 vorschlagen, Fragen an die Akte stellen. Ein Token ist der Schlüssel dafür.
 

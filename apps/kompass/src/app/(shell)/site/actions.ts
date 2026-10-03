@@ -46,7 +46,7 @@ export async function applySyncAction(): Promise<ActionState> {
     const t = await getTranslations();
     const { deps, ctx } = await requireSession();
     const result = await applyTemplateSync(deps, ctx, { dir: DIR(), confirm: true });
-    revalidatePath('/site/template');
+    revalidatePath('/admin/site');
     revalidatePath('/site', 'layout');
     return toActionState(result, t, t('site.template.readDone'));
   });
@@ -71,7 +71,7 @@ export async function applySeedAction(): Promise<ActionState> {
     const t = await getTranslations();
     const { deps, ctx } = await requireSession();
     const result = await applySeed(deps, ctx, { confirm: true });
-    revalidatePath('/site/template');
+    revalidatePath('/admin/site');
     revalidatePath('/site', 'layout');
     return toActionState(result, t, t('site.seed.applied'));
   });

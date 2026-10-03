@@ -8,9 +8,11 @@ import { z } from 'zod';
 import { asset, text } from '@kompass/site-template';
 import type { FieldSchema, TemplateSchema } from '../src/load';
 import { siteModule } from '../src/manifest';
-import { lastSiteJob, startDeployCheck, startPreview, startPublish } from '../src/pipeline/jobs';
+import { clearSiteCache, siteCacheStatus } from '../src/pipeline/cache';
+import { cancelSiteJob, startDeployCheck, startPreview, startPublish } from '../src/pipeline/jobs';
+import { siteJobResult } from '../src/services/job-view';
 import { siteTemplateState } from '../src/schema';
-import { listPublishes } from '../src/services/publishes';
+import { getPublish, listPublishes } from '../src/services/publishes';
 import { listReferenceOptions } from '../src/values';
 import { getBlockedTerms, setBlockedTerms } from '../src/blocked-terms';
 import { applyTemplateSync } from '../src/service';
@@ -32,14 +34,14 @@ const articles: TemplateSchema['collections'][string] = {
   fields: { title: asJson(text({ localized: true, label: 'Titel' })), cover: asJson(asset({ label: 'Bild' })) },
 };
 
-const withTemplate = (collections: TemplateSchema['collections']) => {
+const withTemplate = (collections: TemplateSchema['collections'], variables: TemplateSchema['variables'] = {}) => {
   const deps = createTestDeps({ locales: ['de'] });
   deps.db
     .insert(siteTemplateState)
     .values({
       id: 'current',
       name: 'T',
-      schemaJson: { name: 'T', locales: ['de'], uses: [], variables: {}, collections },
+      schemaJson: { name: 'T', locales: ['de'], uses: [], variables, collections },
       checksum: 'a'.repeat(64),
       readAt: 't',
       readByUserId: null,
@@ -49,7 +51,7 @@ const withTemplate = (collections: TemplateSchema['collections']) => {
 };
 
 const jsonSchema = (tool: { inputSchema: z.ZodType<unknown> }) =>
-  z.toJSONSchema(tool.inputSchema, { io: 'input' }) as { properties?: Record<string, unknown> };
+  z.toJSONSchema(tool.inputSchema, { io: 'input' }) as { properties?: Record<string, unknown>; required?: string[] };
 
 describe('site mcp tools', () => {
   it('offers the fixed tools even without a template', () => {
@@ -68,7 +70,19 @@ describe('site mcp tools', () => {
       'site_publish',
       'site_job_result',
       'site_publishes',
+      'site_job_cancel',
+      'site_publish_get',
+      'site_cache_status',
+      'site_cache_clear',
     ]);
+  });
+
+  it('bietet Stand und Leeren des Caches an (Spec § 5)', () => {
+    const tools = Object.fromEntries(moduleMcpTools(withTemplate({}), siteModule).map((t) => [t.name, t]));
+    expect(tools.site_cache_status?.service).toBe(siteCacheStatus);
+    expect(tools.site_cache_clear?.service).toBe(clearSiteCache);
+    expect(tools.site_cache_status?.description).toContain('site.manage');
+    expect(tools.site_cache_clear?.description).toContain('siteJobRunning');
   });
 
   it('pflegt die Sperrwörter mit site.publish (Backlog 23)', () => {
@@ -111,12 +125,13 @@ describe('site mcp tools', () => {
     }
   });
 
-  it('describes the deploy check as two separate statements, not a removal list', () => {
+  it('describes the deploy check as a connection test with checks, not a build', () => {
     const tools = Object.fromEntries(moduleMcpTools(createTestDeps(), siteModule).map((t) => [t.name, t]));
     const description = tools.site_deploy_check?.description ?? '';
     expect(description).toContain('site.publish');
-    expect(description).toMatch(/found there|path check/i);
-    expect(description).toMatch(/would (change|transfer)/i);
+    expect(description).toMatch(/probe file/i);
+    expect(description).toMatch(/checks\[\]/);
+    expect(description).toMatch(/builds and transfers nothing/i);
   });
 
   it('starts check, preview and publish in the background and reads all three with one tool', () => {
@@ -127,9 +142,19 @@ describe('site mcp tools', () => {
     for (const name of ['site_deploy_check', 'site_preview_build', 'site_publish']) {
       expect(tools[name]?.description).toContain('site_job_result');
     }
-    expect(tools.site_job_result?.service).toBe(lastSiteJob);
+    expect(tools.site_job_result?.service).toBe(siteJobResult);
     expect(tools.site_job_result?.description).toContain('site.publish');
     expect(jsonSchema(tools.site_job_result!).properties?.kind).toMatchObject({ enum: ['preview', 'publish', 'deployCheck'] });
+  });
+
+  it('cancels a run, reads one publish and demands the preview hash for a publish', () => {
+    const tools = Object.fromEntries(moduleMcpTools(createTestDeps(), siteModule).map((t) => [t.name, t]));
+    expect(tools.site_job_cancel?.service).toBe(cancelSiteJob);
+    expect(tools.site_job_cancel?.description).toContain('site.publish');
+    expect(tools.site_publish_get?.service).toBe(getPublish);
+    expect(tools.site_publish_get?.description).toContain('site.view');
+    expect(jsonSchema(tools.site_publish!).required).toEqual(expect.arrayContaining(['confirm', 'expectedContentHash']));
+    expect(jsonSchema(tools.site_publishes!).required ?? []).not.toContain('environment');
   });
 
   it('site_variables_options calls listReferenceOptions', () => {
@@ -151,6 +176,19 @@ describe('site mcp tools', () => {
     await tools.site_notes_update!.handler(deps, ctx, { id: created.value.id, body: 'Zwei' });
 
     const stale = await tools.site_notes_update!.handler(deps, ctx, { id: created.value.id, body: 'Drei', expectedVersion: created.value.updatedAt });
+    expect(stale).toMatchObject({ ok: false, error: { type: 'conflict', code: 'staleVersion' } });
+  });
+
+  it('liefert die Version der Variablen und weist ein Speichern auf altem Stand ab (M3)', async () => {
+    const deps = withTemplate({}, { claim: asJson(text({ label: 'Claim' })) });
+    insertUser(deps, { id: 'USER-TEST' });
+    const ctx = ctxWith(['site.manage', 'site.view']);
+    const tools = Object.fromEntries(moduleMcpTools(deps, siteModule).map((t) => [t.name, t]));
+    expect(jsonSchema(tools.site_variables_set!).properties).toHaveProperty('expectedVersion');
+    const first = (await tools.site_variables_get!.handler(deps, ctx, {})) as { ok: true; value: { values: Record<string, unknown>; version: string } };
+    expect(first.value.version).toEqual(expect.any(String));
+    unwrap(await tools.site_variables_set!.handler(deps, ctx, { values: { claim: 'Eins' }, expectedVersion: first.value.version }) as never);
+    const stale = await tools.site_variables_set!.handler(deps, ctx, { values: { claim: 'Zwei' }, expectedVersion: first.value.version });
     expect(stale).toMatchObject({ ok: false, error: { type: 'conflict', code: 'staleVersion' } });
   });
 

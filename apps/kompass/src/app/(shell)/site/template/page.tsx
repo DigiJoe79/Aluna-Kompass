@@ -1,52 +1,6 @@
-import { existsSync } from 'node:fs';
-import path from 'node:path';
-import { readSetting, requirePermission } from '@kompass/core';
-import { activeTemplate, siteTemplateDir, templateNeedsReview } from '@kompass/module-site';
-import { getFormatter, getTranslations } from 'next-intl/server';
-import { ForbiddenCard } from '@/components/forbidden-card';
-import { PageHeader } from '@/components/page-header';
-import { requireSession } from '@/lib/request-context';
-import { SyncClient } from './sync-client';
-import { SeedClient } from './seed-client';
+import { redirect } from 'next/navigation';
 
-export const dynamic = 'force-dynamic';
-
-export default async function SiteTemplatePage() {
-  const { deps, ctx } = await requireSession();
-  if (requirePermission(ctx, 'site.manage')) return <ForbiddenCard permission="site.manage" />;
-  const t = await getTranslations('site.template');
-  const tSeed = await getTranslations('site.seed');
-  const format = await getFormatter();
-  const state = activeTemplate(deps);
-  const needsReview = templateNeedsReview(deps);
-
-  const seedFile = path.join(siteTemplateDir(), 'seed', 'content.json');
-  const seedAppliedAt = readSetting<string | null>(deps, 'site.seedAppliedAt');
-  const showSeedCard = existsSync(seedFile);
-
-  return (
-    <>
-      <PageHeader
-        title={t('title')}
-        description={state ? t('lastRead', { when: format.dateTime(new Date(state.readAt), { dateStyle: 'medium', timeStyle: 'short' }) }) : t('neverRead')}
-      />
-      <div className="flex max-w-[880px] flex-col gap-4">
-        {needsReview ? (
-          <p className="rounded-lg border border-line bg-error-bg p-6 text-[14px] text-ink" role="status">
-            {t('needsReview')}
-          </p>
-        ) : null}
-        <SyncClient name={state?.name ?? null} />
-        {showSeedCard ? (
-          seedAppliedAt ? (
-            <p className="rounded-lg border border-line bg-surface p-6 text-[14px] text-ink-2">
-              {tSeed('done', { when: format.dateTime(new Date(seedAppliedAt), { dateStyle: 'medium', timeStyle: 'short' }) })}
-            </p>
-          ) : (
-            <SeedClient />
-          )
-        ) : null}
-      </div>
-    </>
-  );
+/** Lesezeichen und Handbuch-Links von vor 0.2.5: Das Template liegt jetzt in den Einstellungen. */
+export default function SiteTemplateRedirect(): never {
+  redirect('/admin/site?panel=template');
 }

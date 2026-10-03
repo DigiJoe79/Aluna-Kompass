@@ -35,6 +35,7 @@ const DYNAMIC: { prefix: RegExp; where: string }[] = [
   { prefix: /^contacts\.roleNames\./, where: 'lib/contact-roles.ts — `roleNames.${key}` mit dem Übersetzer des Aufrufers' },
   { prefix: /^settings\.managedHint\./, where: 'lib/settings-fields.ts — `managedHintKey()` liefert `managedHint.${tab}`' },
   { prefix: /^finance\.taxText\./, where: 'lib/finance/tax-text.ts — `taxTextKey()` liefert den Schlüssel' },
+  { prefix: /^site\.publish\.flow\.end\.(success\.title|failed|failedPreview|cancelled|timeout|interrupted|cache)/, where: 'app/(shell)/site/publish/end-text.ts — endTitle/endText mit dem Übersetzer des Namensraums site.publish' },
   { prefix: /^finance\.channel\./, where: 'lib/finance/channel.ts — `channelKey()` liefert den Schlüssel' },
 ];
 

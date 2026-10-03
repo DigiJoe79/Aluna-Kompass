@@ -13,8 +13,9 @@ ersetzt es durch sein eigenes, indem die Person, die das NAS betreut, das
 Verzeichnis austauscht (siehe [Betrieb](../betrieb.md)). Kompass liest von
 dort — es lädt kein Template hoch und speichert keins in der Datenbank.
 
-Die Seite „Template“ zeigt den Namen des Templates, das zuletzt eingelesen
-wurde, und wann. Steht dort „Noch kein Template eingelesen“, sind Variablen,
+Sie lesen es unter Einstellungen → Webseite → Template ein (siehe
+[Webseite einrichten](../einstellungen/webseite-einrichten.md)). Der Reiter
+zeigt den Namen des Templates, das zuletzt eingelesen wurde, und wann. Steht dort „Noch kein Template eingelesen“, sind Variablen,
 Sammlungen und Publizieren noch nicht verfügbar.
 
 ## Einlesen

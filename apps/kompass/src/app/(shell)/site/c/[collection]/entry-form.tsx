@@ -38,7 +38,8 @@ export function EntryForm({
   const tCommon = useTranslations('common');
   const [data, setData] = useState(() => withBlanks(fields, entry?.data ?? {}, locales));
   const [slug, setSlug] = useState(entry?.slug ?? '');
-  const [loaded] = useState({ data, slug });
+  const [loaded, setLoaded] = useState({ data, slug });
+  const [version, setVersion] = useState(entry?.updatedAt ?? '');
   const changedCount =
     countChangedValues(loaded.data, data) + (loaded.slug === slug ? 0 : 1);
   const discard = () => {
@@ -52,15 +53,22 @@ export function EntryForm({
   const errors = useMemo(() => (state.status === 'error' ? state.fieldErrors : {}), [state]);
 
   useEffect(() => {
-    if (state.status === 'success') toast.success(state.message ?? '');
-    else if (state.status === 'error' && Object.keys(errors).length === 0) toast.error(state.message);
+    if (state.status === 'success') {
+      toast.success(state.message ?? '');
+      // Der gespeicherte Stand ist der neue Ladestand: Leiste leer, „Verwerfen“
+      // führt hierher zurück, und das nächste Speichern prüft gegen diese Version.
+      setLoaded({ data, slug });
+      const saved = (state.data as { updatedAt?: string } | undefined)?.updatedAt;
+      if (saved) setVersion(saved);
+    } else if (state.status === 'error' && Object.keys(errors).length === 0) toast.error(state.message);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur bei neuem Aktionsstand
   }, [state, errors]);
 
   return (
     <form action={action} className="flex flex-col gap-6 rounded-lg border border-line bg-surface p-6">
       <input type="hidden" name="collection" value={collection} />
       {entry ? <input type="hidden" name="id" value={entry.id} /> : null}
-      {entry ? <input type="hidden" name="expectedVersion" value={entry.updatedAt} /> : null}
+      {entry ? <input type="hidden" name="expectedVersion" value={version} /> : null}
       <input type="hidden" name="payload" value={JSON.stringify({ slug: hasSlug ? slug : undefined, data })} />
       {hasSlug ? (
         <FormField id="slug" label={c('slug')} error={errors.slug}>

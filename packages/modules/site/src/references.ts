@@ -1,4 +1,5 @@
 import type { AssetMediaReference, Deps } from '@kompass/core';
+import { entryLabel } from './entry-label';
 import { widgetOf } from './field-schema';
 import { siteEntries } from './schema';
 import { activeTemplate } from './service';
@@ -17,11 +18,12 @@ export function siteMediaReferences(deps: Deps, assetIds: ReadonlySet<string>): 
   const template = activeTemplate(deps);
   if (!template) return [];
   const refs: AssetMediaReference[] = [];
+  const leading = deps.locales()[0] ?? 'de';
 
   const values = readValues(deps);
   for (const key of assetKeys(template.schema.variables)) {
     const assetId = values[key];
-    if (typeof assetId === 'string' && assetIds.has(assetId)) refs.push({ assetId, label: `Variable „${key}“`, entity: 'siteValue', id: key, href: '/site/variables' });
+    if (typeof assetId === 'string' && assetIds.has(assetId)) refs.push({ assetId, label: `Variable „${template.schema.variables[key]?.label ?? key}“`, entity: 'siteValue', id: key, href: '/site/variables' });
   }
 
   const collections = template.schema.collections;
@@ -32,10 +34,7 @@ export function siteMediaReferences(deps: Deps, assetIds: ReadonlySet<string>): 
     for (const key of assetKeys(col.fields)) {
       const assetId = data[key];
       if (typeof assetId !== 'string' || !assetIds.has(assetId)) continue;
-      const title =
-        row.slug ??
-        (data.title && typeof data.title === 'object' ? Object.values(data.title as Record<string, string>)[0] : null) ??
-        row.id;
+      const title = entryLabel(col, row, leading);
       refs.push({ assetId, label: `Eintrag „${title}“ in „${col.label}“`, entity: 'siteEntry', id: row.id, href: `/site/c/${row.collection}/${row.id}` });
     }
   }

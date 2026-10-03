@@ -1,6 +1,6 @@
 {
   "name": "@kompass/module-dms",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": true,
   "type": "module",
   "sideEffects": false,
@@ -25,6 +25,6 @@
     "@types/node": "^26.6.2",
     "better-sqlite3": "^13.0.3",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.1"
+    "vitest": "^5.0.2"
   }
 }

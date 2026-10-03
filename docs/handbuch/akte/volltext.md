@@ -35,5 +35,5 @@ schlechten Text — die Suche findet dann weniger, nicht Falsches. Was die
 Erkennung gelesen hat, ist Hilfsmittel für die Suche, nicht der Inhalt des
 Dokuments: Maßgeblich bleibt das PDF.
 
-Ein KI-Assistent über MCP bekommt denselben Text, um beim Einsortieren zu
+Ein Assistent über MCP bekommt denselben Text, um beim Einsortieren zu
 helfen — nie die Datei selbst.

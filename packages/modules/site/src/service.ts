@@ -8,6 +8,7 @@ import {
   ok,
   recordAudit,
   requirePermission,
+  localizedConflict,
 } from '@kompass/core';
 import { z } from 'zod';
 import { ensureModuleResolution, loadTemplate, type TemplateSchema } from './load';
@@ -120,7 +121,7 @@ export async function applyTemplateSync(deps: Deps, ctx: CallContext, input: unk
   }
   if (preview.blocking.length > 0) {
     const names = preview.blocking.map((f) => f.path).join(', ');
-    return conflict('overLimit', `Erst aufräumen: ${names} überschreitet die neue Obergrenze`);
+    return localizedConflict('overLimit', 'errors.site.overLimit', { names });
   }
   if (!confirm) return invalid([{ path: 'confirm', message: 'confirmationRequired' }]);
 

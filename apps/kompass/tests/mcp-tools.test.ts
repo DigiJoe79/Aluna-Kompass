@@ -170,7 +170,7 @@ describe('registered mcp tools', () => {
  * Ausnahmeliste wäre länger als die Werkzeugliste. Nachgezählt: 22 von 60
  * Kern-Diensten hatten kein Werkzeug, die Liste wäre also kürzer gewesen — und
  * darunter waren Lücken, die niemand entschieden hatte. `README.md` verspricht
- * „Alles, was die Oberfläche kann, kann auch ein KI-Assistent über MCP“; ein
+ * „Alles, was die Oberfläche kann, kann auch ein Assistent über MCP“; ein
  * Wächter, der den Kern auslässt, kann das nicht halten.
  */
 const SERVICE_SIGNATURE = /^(?:async\s+)?function\s+\w+\s*\(\s*deps\s*,\s*ctx\b/;
@@ -205,9 +205,12 @@ const WITHOUT_TOOL: Record<string, string> = {
   'projects.seedProjects': 'Beispieldaten der Entwicklung.',
   'site.applySeed': 'Beispielinhalte des Templates; ein Mensch bestätigt sie in der Oberfläche.',
   'site.previewTemplateSync': 'Derselbe Vorgang wie site_template_sync ohne confirm; das Werkzeug nennt den anwendenden Zweig.',
+  'site.exportSiteContent': 'Innenleben der Vorschau: schreibt content.json und kopiert die Originalbilder; site_export_check prüft ohne Kopie über siteContentHash.',
   'site.checkDeployTarget': 'Der Lauf selbst; site_deploy_check startet ihn über startDeployCheck im Hintergrund, site_job_result liest das Ergebnis.',
   'site.runPreview': 'Der Lauf selbst; site_preview_build startet ihn über startPreview im Hintergrund, site_job_result liest das Ergebnis.',
   'site.runPublish': 'Der Lauf selbst; site_publish startet ihn über startPublish im Hintergrund, site_job_result liest das Ergebnis.',
+  'site.lastSiteJob': 'Rohform der Ergebnisdatei; site_job_result liest sie über siteJobResult gekürzt (Backlog 39).',
+  'site.siteJobOverview': 'Takt der Oberfläche (alle drei Arten auf einmal); ein Agent liest mit site_job_result je Art, running steht dort mit drin.',
   'site.recordPublish': 'Innenleben von site_publish: schreibt den Verlaufseintrag, den der Lauf erzeugt.',
 
   // Kern. Seit dem 2026-09-15 mitgeprüft; was hier steht, ist entschieden.

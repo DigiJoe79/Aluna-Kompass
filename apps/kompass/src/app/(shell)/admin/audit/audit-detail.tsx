@@ -65,7 +65,7 @@ export function AuditDetail({ entry }: { entry: AuditEntry }) {
           <dt className="text-muted-ink">{t('channel')}</dt>
           <dd>
             {f(entry.channel)}
-            {entry.apiTokenId ? ` · ${entry.apiTokenId}` : ''}
+            {entry.apiTokenId ? ` · ${entry.apiTokenName ?? t('tokenGone', { id: entry.apiTokenId })}` : ''}
           </dd>
           <dt className="text-muted-ink">{t('origin')}</dt>
           <dd className="font-mono">{entry.ipAddress ?? '—'}</dd>

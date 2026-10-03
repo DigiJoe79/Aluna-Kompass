@@ -57,4 +57,9 @@ export const publishedAnimals = definePublishedView({
       .orderBy(asc(animals.reviewRequestedAt), asc(animals.name))
       .all()
       .map((a) => ({ label: a.name, href: `/animals/${a.id}` })),
+  // Die Zeile hat keine ID, wohl aber den eindeutigen Slug.
+  editLink: (deps, row) => {
+    const a = deps.db.select({ id: animals.id, name: animals.name }).from(animals).where(eq(animals.slug, row.slug)).get();
+    return a ? { href: `/animals/${a.id}`, title: a.name } : null;
+  },
 });
