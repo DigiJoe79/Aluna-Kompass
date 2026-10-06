@@ -9,6 +9,34 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 1.0.0 kann jede Minor-Fassung Brüche enthalten — was bricht, steht unter
 **Geändert** mit dem, was zu tun ist.
 
+## [0.2.7] - 2026-10-06
+
+Eine Wartungsfassung: Kompass nennt Dokumente in der Akte lesbar, die freie
+Rücklage zeigt im Frühjahr das richtige Jahr, und die Oberfläche passt besser
+auf das Telefon. Keine Migration (`migrationCount` bleibt 6), nach dem Update
+ist nichts zu tun. Wer über die KI-Schnittstelle (MCP) Geld der freien
+Rücklage zuführt, muss das Jahr angeben, solange das Vorjahr noch nicht
+abgeschlossen ist.
+
+### Geändert
+
+- **Lesbare Betreffe.** Beschlüsse zu zurückgelegtem Geld und zu Umwidmungen,
+  Belege zu Auslagen und Zuwendungsbestätigungen tragen in der Akte den Namen
+  der Rücklage, die Zwecke oder ein deutsches Datum statt einer internen
+  Kennung oder „2026-04-15“. Bereits abgelegte Dokumente behalten ihren Betreff.
+- **Freie Rücklage zu Jahresbeginn.** Bis das Vorjahr abgeschlossen ist, zeigt
+  „Zurückgelegtes Geld“ dessen Höchstbetrag als „vorläufig“ neben dem laufenden
+  Jahr, und das Formular schlägt das Vorjahr vor. Bisher stand im Frühjahr ein
+  Höchstbetrag von 0 € da und jede Rücklage als „überschritten“.
+
+### Behoben
+
+- Ein abgelehnter Vorgang an zurückgelegtem Geld oder eine abgelehnte
+  Umwidmung ließ das hochgeladene Protokoll trotzdem in der Akte liegen.
+- Auf dem Telefon liefen Startseite, Kopfzeile, Seitenköpfe und Kontaktwege
+  seitlich aus dem Bild; Zuwendungsbestätigungen, Bescheide und das
+  Änderungsprotokoll waren in einem üblichen Laptopfenster rechts abgeschnitten.
+
 ## [0.2.6] - 2026-10-06
 
 Die Oberfläche wird einheitlicher: Einstellungen mit Unterbereichen haben überall

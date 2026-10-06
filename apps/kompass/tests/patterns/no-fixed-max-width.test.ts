@@ -9,7 +9,6 @@ import { type Allowlist, matchingLines, read, relative, sourceFiles } from './so
 const FIXED = /max-w-\[[\d.]+(px|ch|rem|em)\]/;
 
 const ALLOWED: Allowlist = {
-  'app/(shell)/admin/audit/audit-table.tsx': 'Zelle „Zusammenfassung“ mit `truncate`, keine Seitenbreite.',
   'app/(shell)/help/[[...doc]]/page.tsx': 'Lesetext Handbuch: 72 Zeichen je Zeile (Entscheidung zum Inventar, 05.10.2026).',
   'app/(shell)/dms/new/draft-preview.tsx': 'Papiermaß der Briefvorschau (A4 im Maßstab), keine Seitenbreite.',
   'components/empty-state.tsx': 'Textblock des leeren Zustands, wie `max-w-prose` (Entscheidung zum Inventar).',

@@ -283,6 +283,21 @@ Sonst ist nichts von Hand zu tun. Wer sich wundert:
   Eingabemaske ordnen; ohne sie bekommt jedes Feld eine Breite nach seinem Typ.
 - MCP-Clients sind nicht betroffen.
 
+### Von 0.2.6 auf 0.2.7
+
+Die Fassung 0.2.7 bringt keine Migration mit; `/api/health` meldet weiter
+`migrationCount: 6`. Vor und nach dem Update ist nichts Besonderes zu tun; ein
+Backup (Schritt 1) gehört wie immer dazu.
+
+Wer sich wundert:
+
+- **„Zurückgelegtes Geld“ zeigt zwei Jahre.** Solange das Vorjahr nicht
+  abgeschlossen ist, steht sein Höchstbetrag „vorläufig“ neben dem laufenden
+  Jahr; nach dem Abschluss verschwindet es.
+- **Ein Agent bekommt bei einer Zuführung zur freien Rücklage eine Ablehnung.**
+  Über MCP muss das Jahr (`forFiscalYearId`) angegeben werden, solange Vorjahr
+  und laufendes Jahr in Frage kommen; die Meldung nennt beide.
+
 ## Backups
 
 - **Aus der Anwendung** (Verwaltung → Backup): eine Datei

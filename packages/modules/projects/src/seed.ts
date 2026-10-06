@@ -1,4 +1,4 @@
-import { type CallContext, type Deps, unwrap } from '@kompass/core';
+import { SEED_PHOTO_FOLDER, seedPhotoIds, type CallContext, type Deps, unwrap } from '@kompass/core';
 import { projects } from './schema';
 import { createProject, setProjectPublished } from './service';
 
@@ -6,10 +6,12 @@ import { createProject, setProjectPublished } from './service';
  * Beispielprojekte für Entwicklung und Test — frei erfunden, weil das Repo
  * öffentlich ist. In `development` liegen sie neben den Prototyp-Daten, die
  * `dev:reset` danach einspielt; sie füllen die Liste, wenn kein Prototyp da ist.
+ * `photo` ist das Präfix ihres Bildes in `Fotos/Projekte` (Kern-Seed).
  */
 const EXAMPLE_PROJECTS = [
   {
     slug: 'winterhilfe',
+    photo: 'winterhilfe-',
     name: { de: 'Winterhilfe für Streuner', en: 'Winter aid for strays' },
     type: 'ongoing' as const,
     status: 'active' as const,
@@ -20,6 +22,7 @@ const EXAMPLE_PROJECTS = [
   },
   {
     slug: 'kastrationsaktion-2026',
+    photo: 'kastrationsaktion-',
     name: { de: 'Kastrationsaktion 2026', en: 'Neutering campaign 2026' },
     type: 'shortTerm' as const,
     status: 'active' as const,
@@ -30,6 +33,7 @@ const EXAMPLE_PROJECTS = [
   },
   {
     slug: 'auslauf-am-heim',
+    photo: 'auslauf-am-heim-',
     name: { de: 'Auslauf am Heim', en: 'Exercise yard at the home' },
     type: 'shortTerm' as const,
     status: 'completed' as const,
@@ -45,7 +49,9 @@ const EXAMPLE_PROJECTS = [
 export async function seedProjects(deps: Deps, ctx: CallContext): Promise<void> {
   if (deps.db.select({ id: projects.id }).from(projects).all().length > 0) return;
   for (const p of EXAMPLE_PROJECTS) {
-    const created = unwrap(await createProject(deps, ctx, { slug: p.slug, name: p.name, type: p.type, status: p.status, summary: p.summary, body: p.body, externalLinks: p.externalLinks }));
+    // Das Bild aus der Mediathek des Kern-Seeds (Spec 2026-10-06 § 4); ohne sie bleibt das Projekt ohne Bild.
+    const imageAssetId = seedPhotoIds(deps, SEED_PHOTO_FOLDER.projects, p.photo)[0] ?? null;
+    const created = unwrap(await createProject(deps, ctx, { slug: p.slug, name: p.name, type: p.type, status: p.status, summary: p.summary, body: p.body, externalLinks: p.externalLinks, imageAssetId }));
     if (p.published) unwrap(await setProjectPublished(deps, ctx, { id: created.id, isPublished: true }));
   }
 }

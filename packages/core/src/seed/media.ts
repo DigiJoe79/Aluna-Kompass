@@ -1,9 +1,12 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import sharp from 'sharp';
 import type { CallContext } from '../context';
 import type { Deps } from '../deps';
 import { createMediaFolder, folderExists } from '../media/folders';
 import { storeMediaInternal } from '../media/service';
 import { unwrap } from '../result';
+import { resolveSeedAssetsDir, SEED_PHOTO_FOLDERS, SEED_PHOTOS } from './photos';
 
 /**
  * Beispieldateien für die Mediathek: Ordner in bis zu drei Ebenen, Bilder in
@@ -27,8 +30,13 @@ const SVG = new TextEncoder().encode(
 );
 
 export async function seedMedia(deps: Deps, ctx: CallContext): Promise<void> {
-  if (folderExists(deps, 'Bilder')) return;
-  for (const path of ['Bilder', 'Bilder/2026', 'Bilder/2026/Sommerfest', 'Dokumente']) unwrap(await createMediaFolder(deps, ctx, { path }));
+  if (!folderExists(deps, 'Bilder')) await seedLibraryExamples(deps, ctx);
+  // Eigene Wache: Eine Entwicklungsdatenbank aus 0.2.6 hat „Bilder“ schon, aber noch keine „Fotos“.
+  if (!folderExists(deps, 'Fotos')) await seedPhotos(deps, ctx);
+}
+
+async function seedLibraryExamples(deps: Deps, ctx: CallContext): Promise<void> {
+  for (const folder of ['Bilder', 'Bilder/2026', 'Bilder/2026/Sommerfest', 'Dokumente']) unwrap(await createMediaFolder(deps, ctx, { path: folder }));
 
   for (const image of IMAGES) {
     const ext = image.name.toLowerCase().endsWith('.jpg') ? 'jpeg' : 'png';
@@ -38,4 +46,21 @@ export async function seedMedia(deps: Deps, ctx: CallContext): Promise<void> {
   }
   unwrap(await storeMediaInternal(deps, ctx, { originalName: 'Satzung Entwurf.pdf', bytes: PDF, declaredMimeType: 'application/pdf', folder: 'Dokumente' }));
   unwrap(await storeMediaInternal(deps, ctx, { originalName: 'Haken.svg', bytes: SVG, declaredMimeType: 'image/svg+xml', folder: null }));
+}
+
+/**
+ * Die Bilder, die Tiere, Projekte und Webseite des Seeds tragen (Spec
+ * 2026-10-06 § 4) — Joes Dateien aus `assets/`, abgelegt über den normalen
+ * Weg der Mediathek (Vorschaubilder, Prüfsumme), in eigenen Ordnern unter
+ * „Fotos“, damit die Beispiele unter „Bilder“ unbenutzt bleiben
+ * (`media.spec.ts` prüft „nicht verwendet“). Fehlt eine Datei, bricht der Seed
+ * ab: ein halber Satz Bilder ist kein Zustand, den die Bilder der Pipeline zeigen sollen.
+ */
+async function seedPhotos(deps: Deps, ctx: CallContext): Promise<void> {
+  const dir = resolveSeedAssetsDir();
+  for (const folder of SEED_PHOTO_FOLDERS) unwrap(await createMediaFolder(deps, ctx, { path: folder }));
+  for (const photo of SEED_PHOTOS) {
+    const bytes = new Uint8Array(readFileSync(path.join(dir, photo.file)));
+    unwrap(await storeMediaInternal(deps, ctx, { originalName: photo.file, bytes, declaredMimeType: 'image/jpeg', folder: photo.folder }));
+  }
 }

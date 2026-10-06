@@ -29,6 +29,8 @@ bei CSV an der Kopfzeile, weil jedes Konto genau ein CSV-Format hat. Mehrere Dat
 **nacheinander**, jede mit ihrem eigenen Ergebnis: „42 neu, 3 bereits
 vorhanden, 2 zurückgehalten“.
 
+![Hochgeladene Kontoauszüge je Konto mit Prüfung der Salden](../bilder/finanzen/kontoauszug-importieren.png)
+
 - **Neu** heißt: ein Kontoumsatz, den Kompass noch nicht kennt.
 - **Bereits vorhanden** heißt: Kompass hat diesen Kontoumsatz schon aus einem
   früheren, nicht verworfenen Auszug — er wird nicht doppelt angelegt.

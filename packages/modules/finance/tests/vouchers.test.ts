@@ -52,7 +52,9 @@ describe('vouchers', () => {
     const res = unwrap(await uploadVoucher(f.deps, bookkeeper, { entryId: entry.id, bytes: pdfBytes(), typeKey: 'voucher-invoice', documentDate: '2026-03-01' }));
     expect(res.documentNumber).toMatch(/^ERE-/);
     const doc = f.deps.db.select().from(documents).where(eq(documents.id, res.documentId)).get()!;
-    expect(doc).toMatchObject({ phase: 'issued', typeKey: 'voucher-invoice', subject: 'Beleg vom 2026-03-01' });
+    // Datum im Betreff deutsch, nie ISO (release-0.2.7, Befund 20).
+    expect(doc).toMatchObject({ phase: 'issued', typeKey: 'voucher-invoice', subject: 'Beleg vom 01.03.2026' });
+    expect(doc.subject).not.toMatch(/\d{4}-\d{2}-\d{2}/);
     // der Beweis für die Akte
     expect(f.deps.db.select().from(documentLinks).where(and(eq(documentLinks.documentId, res.documentId), eq(documentLinks.entityType, 'financeEntry'), eq(documentLinks.entityId, entry.id))).all()).toHaveLength(1);
     // … und damit liest der Kassenprüfer genau diesen Beleg, ohne dms.view

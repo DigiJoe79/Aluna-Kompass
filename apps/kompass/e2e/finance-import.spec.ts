@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { expect, test } from './fixtures';
 import { loginAsAdmin, resetDatabase } from './helpers';
+import { story, storyFile, storyFiles, storyPattern } from './story-year';
 
 /**
  * F4 Task 7 — „Hochgeladene Auszüge“ (`/finance/imports`). Läuft ausschließlich
@@ -13,7 +14,7 @@ import { loginAsAdmin, resetDatabase } from './helpers';
  * hält sie gegen den Leser für sich schon grün).
  */
 const FIXTURES = path.resolve(import.meta.dirname, 'fixtures/camt');
-const fixture = (name: string) => path.join(FIXTURES, name);
+const fixture = (name: string) => storyFile(path.join(FIXTURES, name));
 
 test.describe('finance import', () => {
   test.beforeEach(async ({ page }) => {
@@ -53,8 +54,8 @@ test.describe('finance import', () => {
     await expect(results).toHaveAttribute('aria-live', 'polite');
     await expect(results).toContainText('1 neu, 1 bereits vorhanden, 1 zurückgehalten');
     // Der jüngste Auszug aus dem Seed reicht bis Ende August (F5 Task 9) — ein Juli-Auszug schiebt das nicht zurück.
-    await expect(page.getByText(/Auszug importiert bis 31\.08\.2026/)).toBeVisible();
-    await expect(page.getByText(/Auszug importiert bis 2026-08-31/)).toHaveCount(0);
+    await expect(page.getByText(storyPattern('Auszug importiert bis 31\\.08\\.2026'))).toBeVisible();
+    await expect(page.getByText(storyPattern('Auszug importiert bis 2026-08-31'))).toHaveCount(0);
   });
 
   test('denselben Auszug noch einmal laden wird abgelehnt und verlinkt den vorhandenen', async ({ page }) => {
@@ -110,7 +111,7 @@ test.describe('finance import', () => {
 
   test('zwei Dateien auf einmal laufen nacheinander, jede mit eigenem Ergebnis', async ({ page }) => {
     await openImports(page);
-    await page.getByTestId('statement-file-input').setInputFiles([fixture('mehrere-a.xml'), fixture('mehrere-b.xml')]);
+    await page.getByTestId('statement-file-input').setInputFiles(storyFiles(path.join(FIXTURES, 'mehrere-a.xml'), path.join(FIXTURES, 'mehrere-b.xml')));
     await expect(page.getByText(/mehrere-a\.xml/)).toBeVisible();
     await expect(page.getByText(/mehrere-b\.xml/)).toBeVisible();
     await expect(page.getByText(/1 neu, 0 bereits vorhanden, 0 zurückgehalten/)).toHaveCount(2);
@@ -124,7 +125,7 @@ test.describe('finance import', () => {
     // Der Seed selbst kennt schon eine Lücke (Lauf B) — deshalb der ganze Satz in einer Zusicherung,
     // damit nicht versehentlich die andere Lückenmeldung auf der Seite trifft.
     // AD: Der Auszug beginnt nach dem Ende des Vorgängers — erst dann ist es eine Lücke (vorher überlappte er und hieß verkehrt „31.08. bis 01.08.“).
-    await expect(page.getByText(/Es fehlen Umsätze zwischen 31\.08\.2026 und 05\.09\.2026\. Die Reihenfolge ist Kompass gleich/)).toBeVisible();
+    await expect(page.getByText(storyPattern('Es fehlen Umsätze zwischen 31\\.08\\.2026 und 05\\.09\\.2026\\. Die Reihenfolge ist Kompass gleich'))).toBeVisible();
     // Eine Warnung, kein Textfeld — die Lückenmeldung verlangt keine Begründung.
     await expect(page.getByRole('textbox')).toHaveCount(0);
   });
@@ -140,7 +141,7 @@ test.describe('finance import', () => {
 
   test('ein Lauf klappt auf und zeigt seine Kontoumsätze, und klappt wieder zu', async ({ page }) => {
     await openImports(page);
-    const row = page.getByTestId('import-run').filter({ hasText: '01.01.2026 – 31.01.2026' });
+    const row = page.getByTestId('import-run').filter({ hasText: story('01.01.2026 – 31.01.2026') });
     const trigger = row.getByRole('button', { name: 'Kontoumsätze anzeigen' });
     await expect(trigger).toHaveAttribute('aria-expanded', 'false');
     await expect(row.getByText('Erika Beispiel')).toHaveCount(0);
@@ -165,7 +166,7 @@ test.describe('finance import', () => {
   test('Verwerfen nennt die Folgen in Zahlen, verlangt eine Notiz, und der Lauf bleibt als verworfen stehen', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/imports');
-    const row = page.getByTestId('import-run').filter({ hasText: '10.02.2026 – 28.02.2026' });
+    const row = page.getByTestId('import-run').filter({ hasText: story('10.02.2026 – 28.02.2026') });
     await row.getByRole('button', { name: 'Verwerfen' }).click();
     const dialog = page.getByRole('alertdialog');
     await expect(dialog.getByText(/Kontoumsatz wird gelöscht/)).toBeVisible();
@@ -180,7 +181,7 @@ test.describe('finance import', () => {
   test('eine festgeschriebene Buchung sperrt das Verwerfen und zeigt den Weg', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/imports');
-    const row = page.getByTestId('import-run').filter({ hasText: '01.01.2026 – 31.01.2026' });
+    const row = page.getByTestId('import-run').filter({ hasText: story('01.01.2026 – 31.01.2026') });
     await row.getByRole('button', { name: 'Verwerfen' }).click();
     const dialog = page.getByRole('alertdialog');
     await expect(dialog.getByText('Festgeschriebene Buchungen sperren das Verwerfen.')).toBeVisible();
@@ -200,7 +201,7 @@ test.describe('finance import', () => {
     await page.goto('/finance/accounts');
     const card = page.locator('[role="link"]', { hasText: 'Importkonto' });
     // N3 Nachtrag A: die Kontokarte zeigt das deutsche Format, kein rohes ISO-Datum mehr.
-    await expect(card.getByText(/Auszug importiert bis 31\.08\.2026/)).toBeVisible();
+    await expect(card.getByText(storyPattern('Auszug importiert bis 31\\.08\\.2026'))).toBeVisible();
     await expect(card).not.toContainText(/\d{4}-\d{2}-\d{2}/);
     await expect(card.getByText(/Kein Auszug für heute|Stimmt mit dem Auszug|Differenz zum Auszug/)).toBeVisible();
   });

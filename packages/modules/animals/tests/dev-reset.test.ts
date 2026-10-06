@@ -83,5 +83,6 @@ describe('devReset', () => {
     const again = await devReset({ ...ws, env: 'development' });
     expect(again.counts.animals).toBe(2);
     expect(existsSync(path.join(ws.mediaPath, 'verwaist.bin'))).toBe(false);
-  });
+    // Zwei volle Seeds mit Joes Bildern (Plan 2b, Task 2: je ~0,5 s Vorschaubilder) — unter paralleler Last über 5 s.
+  }, 30_000);
 });

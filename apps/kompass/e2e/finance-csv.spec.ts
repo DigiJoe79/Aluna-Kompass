@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { loginAsAdmin, resetDatabase } from './helpers';
+import { story, storyFile } from './story-year';
 
 /**
  * F4b — CSV-Format einrichten (B3, HANDOFF § 12.3) und CSV-Auszüge laden.
@@ -34,7 +35,7 @@ function bigBankCsv(rows = 55): string {
 /** Kopien der Bauhelfer-Ausgabe (`packages/modules/finance/src/import/csv-fixture.ts`), Byte für Byte geprüft. */
 const FIXTURES = path.resolve(import.meta.dirname, 'fixtures/csv');
 
-const csvFile = (content = BANK_CSV, name = 'hausbank-maerz.csv') => ({ name, mimeType: 'text/csv', buffer: Buffer.from(content, 'utf8') });
+const csvFile = (content = BANK_CSV, name = 'hausbank-maerz.csv') => ({ name, mimeType: 'text/csv', buffer: Buffer.from(story(content), 'utf8') });
 
 async function createBankAccount(page: Page, name: string, iban: string): Promise<void> {
   await page.goto('/admin/finance?panel=accounts');
@@ -47,7 +48,7 @@ async function createBankAccount(page: Page, name: string, iban: string): Promis
 }
 
 /** Bis Schritt 2: Konto wählen, CAMT-Empfehlung überspringen, Datei wählen. */
-async function startAssistant(page: Page, account: string, file: ReturnType<typeof csvFile> | string = csvFile()): Promise<void> {
+async function startAssistant(page: Page, account: string, file: ReturnType<typeof csvFile> | ReturnType<typeof storyFile> = csvFile()): Promise<void> {
   await page.goto('/finance/imports/format');
   await page.getByLabel('Konto', { exact: true }).selectOption({ label: account });
   await page.getByRole('button', { name: 'Trotzdem CSV einrichten' }).click();
@@ -107,7 +108,7 @@ test.describe('finance csv', () => {
     await page.getByRole('button', { name: 'Weiter' }).click();
 
     const probe = page.getByTestId('csv-probe');
-    await expect(probe.getByText('02.03.2026')).toBeVisible();
+    await expect(probe.getByText(story('02.03.2026'))).toBeVisible();
     await expect(probe.getByText('Erika Beispiel')).toBeVisible();
     await expect(probe.getByText('Spende März')).toBeVisible();
     await expect(probe.getByText('50,00 €')).toBeVisible();
@@ -118,7 +119,7 @@ test.describe('finance csv', () => {
     await expect(page).toHaveURL(/\/finance\/imports$/);
     const run = page.getByTestId('import-run').filter({ hasText: 'Hausbank CSV-Test' });
     await expect(run).toContainText('Hausbank März-Format');
-    await expect(run).toContainText('02.03.2026 – 05.03.2026');
+    await expect(run).toContainText(story('02.03.2026 – 05.03.2026'));
     await expect(run).not.toContainText(/\d{4}-\d{2}-\d{2}/);
   });
 
@@ -220,7 +221,7 @@ test.describe('finance csv', () => {
   test('passen zwei Konten, fragt Kompass nach', async ({ page }) => {
     // Ein zweites Konto mit demselben CSV-Format wie das Seed-Konto „Zweitbank CSV“ — eingerichtet über den Assistenten.
     await createBankAccount(page, 'Drittbank CSV-Test', 'DE30999999990000505050');
-    await startAssistant(page, 'Drittbank CSV-Test', path.join(FIXTURES, 'zweitbank.csv'));
+    await startAssistant(page, 'Drittbank CSV-Test', storyFile(path.join(FIXTURES, 'zweitbank.csv')));
     await page.getByRole('button', { name: 'Weiter' }).click();
     await page.getByRole('button', { name: 'Weiter' }).click();
     await page.getByRole('radio', { name: 'Nein, Geld kam herein' }).check();
@@ -228,11 +229,11 @@ test.describe('finance csv', () => {
     await page.getByRole('button', { name: 'Nur speichern' }).click();
     await expect(page).toHaveURL(/\/finance\/imports$/);
 
-    await page.getByTestId('statement-file-input').setInputFiles(path.join(FIXTURES, 'zweitbank.csv'));
+    await page.getByTestId('statement-file-input').setInputFiles(storyFile(path.join(FIXTURES, 'zweitbank.csv')));
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByText('zweitbank.csv — 2 Konten haben ein Format mit dieser Kopfzeile. Welches ist es?')).toBeVisible();
     await expect(dialog.getByRole('radio', { name: /Zweitbank CSV/ })).toBeVisible();
-    await expect(dialog.getByText('Format „Zweitbank CSV“ · importiert bis 04.03.2026')).toBeVisible();
+    await expect(dialog.getByText(story('Format „Zweitbank CSV“ · importiert bis 04.03.2026'))).toBeVisible();
     await expect(dialog.getByText('Format „Drittbank CSV-Test CSV“ · noch kein Auszug')).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Einlesen' })).toBeDisabled();
     await dialog.getByRole('radio', { name: /Drittbank CSV-Test/ }).check();
@@ -272,7 +273,7 @@ test.describe('finance csv', () => {
 
   test('Windows-Zeichensatz, Vorspann und getrennte Spalten für Aus- und Eingang erkennt der Assistent ohne Handarbeit', async ({ page }) => {
     await createBankAccount(page, 'Drittbank CSV-Test', 'DE30999999990000505050');
-    await startAssistant(page, 'Drittbank CSV-Test', path.join(FIXTURES, 'zweitbank.csv'));
+    await startAssistant(page, 'Drittbank CSV-Test', storyFile(path.join(FIXTURES, 'zweitbank.csv')));
     await expect(page.getByLabel('Zeichensatz')).toHaveValue('windows-1252');
     await expect(page.getByLabel('Kopfzeile steht in Zeile')).toHaveValue('5');
     await page.getByRole('button', { name: 'Weiter' }).click();
@@ -285,7 +286,7 @@ test.describe('finance csv', () => {
     await page.getByRole('button', { name: 'Speichern und Auszug laden' }).click();
     await expect(page).toHaveURL(/\/finance\/imports$/);
     const run = page.getByTestId('import-run').filter({ hasText: 'Drittbank CSV-Test' });
-    await expect(run).toContainText('03.03.2026 – 04.03.2026');
+    await expect(run).toContainText(story('03.03.2026 – 04.03.2026'));
     await expect(run).toContainText('ohne Kontostand');
   });
 
@@ -297,9 +298,9 @@ test.describe('finance csv', () => {
     await run.getByRole('button', { name: 'Kontostand nachtragen' }).click();
 
     const dialog = page.getByRole('dialog');
-    await expect(dialog.getByText('Kontostand laut Bank am 04.03.2026')).toBeVisible();
+    await expect(dialog.getByText(story('Kontostand laut Bank am 04.03.2026'))).toBeVisible();
     await expect(dialog).not.toContainText(/\d{4}-\d{2}-\d{2}/);
-    await dialog.getByLabel('Kontostand laut Bank am 04.03.2026').fill('1.030,00');
+    await dialog.getByLabel(story('Kontostand laut Bank am 04.03.2026')).fill('1.030,00');
     await dialog.getByRole('button', { name: 'Kontostand übernehmen' }).click();
 
     await expect(page.getByText('Kontostand nachgetragen.')).toBeVisible();

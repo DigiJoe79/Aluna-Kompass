@@ -12,6 +12,8 @@ Bildschirm: links die Felder, rechts die Vorschau. Der Empfänger kommt aus den
 Kontakten — fehlt er, legen Sie ihn von hier aus an. Betreff und Text sind
 Pflicht; Datum und Absender setzt Kompass aus den Vereinsdaten.
 
+![Ein Brief im Entwurf: links der Text in Markdown, rechts die Vorschau](../bilder/akte/brief-vorschau.png)
+
 Ein Entwurf bleibt, bis Sie ihn festschreiben oder verwerfen. Verwerfen ist
 die einzige Löschung in der Akte, und sie steht im Änderungsprotokoll.
 

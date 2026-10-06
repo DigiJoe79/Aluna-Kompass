@@ -1,5 +1,6 @@
 import { coreModule, schema, seedDevelopment } from '@kompass/core';
 import { createTestDeps } from '@kompass/core/testing';
+import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { contactsModule } from '../src/manifest';
 import { contactChannels, contactRoles, contacts, contactUserLinks } from '../src/schema';
@@ -54,5 +55,20 @@ describe('contacts seed', () => {
     const open = deps.db.select().from(contactUserLinks).all().filter((l) => l.unlinkedAt === null);
     expect(open).toHaveLength(1);
     expect(open[0]!.linkedByUserId).not.toBe(open[0]!.userId); // nicht selbst gesetzt
+  });
+
+  it('zeigt einen Verein nach einem Jahr: Behörden, Praxis, Verband, und eine Person, deren Rolle wechselt (Spec 2026-10-06 § 4)', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, contactsModule], env: 'development' });
+    await seedDevelopment(deps);
+    const all = deps.db.select().from(contacts).all();
+    expect(all.filter((c) => c.kind === 'organization').map((c) => c.name).sort()).toEqual(['Amtsgericht Musterstadt', 'Finanzamt Musterstadt', 'Landesverband Musterland e.V.', 'Tierarztpraxis am Stadtpark']);
+    // Jede Person mit Vor- und Nachnamen.
+    for (const p of all.filter((c) => c.kind === 'person')) expect([p.firstName, p.lastName].every((v) => (v ?? '').trim().length > 0), `${p.firstName} ${p.lastName}`).toBe(true);
+    const jakob = all.find((c) => c.firstName === 'Jakob' && c.lastName === 'Brenner')!;
+    const roles = deps.db.select().from(contactRoles).where(eq(contactRoles.contactId, jakob.id)).all().sort((a, b) => (a.since < b.since ? -1 : 1));
+    expect(roles.map((r) => [r.role, r.until === null])).toEqual([['interested', false], ['partner', true]]);
+    expect(roles[0]!.until! < roles[1]!.since).toBe(true);
+    const today = deps.clock.now().toISOString().slice(0, 10);
+    expect(deps.db.select().from(contactRoles).all().every((r) => r.since <= today && (r.until === null || r.until <= today))).toBe(true);
   });
 });

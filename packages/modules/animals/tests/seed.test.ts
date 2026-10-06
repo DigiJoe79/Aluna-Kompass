@@ -84,4 +84,19 @@ describe('animals seed', () => {
     expect(body.split(/\n\s*\n/).length).toBeGreaterThanOrEqual(8);
     expect(body.length).toBeGreaterThan(3000);
   });
+
+  it('gives every example animal its own pictures from the core media seed, Nala a before and an after picture (Spec 2026-10-06 § 4)', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, animalsModule], env: 'development' });
+    await seedDevelopment(deps);
+    const rows = deps.db.select().from(animals).all();
+    const count = Object.fromEntries(rows.map((a) => [a.name, deps.db.select().from(animalPhotos).where(eq(animalPhotos.animalId, a.id)).all().length]));
+    expect(count).toEqual({ Baxter: 2, Frida: 1, Nala: 1, Juno: 1, Pelle: 3, Mika: 3 });
+    const assetIds = deps.db.select().from(animalPhotos).all().map((p) => p.assetId);
+    expect(new Set(assetIds).size).toBe(assetIds.length);
+    const nala = rows.find((a) => a.name === 'Nala')!;
+    const story = deps.db.select().from(animalStories).where(eq(animalStories.animalId, nala.id)).get()!;
+    expect(story.beforeAssetId).not.toBeNull();
+    expect(story.afterAssetId).not.toBeNull();
+    expect(story.beforeAssetId).not.toBe(story.afterAssetId);
+  });
 });

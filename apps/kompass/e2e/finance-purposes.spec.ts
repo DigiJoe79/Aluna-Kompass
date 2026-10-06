@@ -4,6 +4,7 @@ import { expect, test } from './fixtures';
 import { associationDay } from './association-day';
 import { backToAdmin, callTool, mcpClient, PDF, PHONE, switchTo, switchToJonas } from './expense-helpers';
 import { loginAsAdmin, resetDatabase } from './helpers';
+import { story } from './story-year';
 
 /** > 1 MB (N9, Befundliste 0.2.0) — derselbe erfundene Beleg wie bei den Auslagen. */
 const BIG_PDF = path.resolve(import.meta.dirname, 'fixtures/beleg-1500k.pdf');
@@ -37,7 +38,7 @@ test.describe('finance purposes (F8b)', () => {
     const client = await mcpClient(page, baseURL);
     await callTool(client, 'finance_master_data_save', { kind: 'purpose', data: { name: 'Tierarztfonds E2E', targetCents: 50000 } });
     await callTool(client, 'finance_master_data_save', { kind: 'purpose', data: { name: 'Winterfutter E2E' } });
-    await callTool(client, 'dms_receive', { filename: 'protokoll.pdf', typeKey: 'minutes', subject: 'Protokoll Mittelumwidmung E2E', documentDate: '2026-01-15', contentBase64: PDF.buffer.toString('base64') });
+    await callTool(client, 'dms_receive', { filename: 'protokoll.pdf', typeKey: 'minutes', subject: 'Protokoll Mittelumwidmung E2E', documentDate: story('2026-01-15'), contentBase64: PDF.buffer.toString('base64') });
 
     // 1. Aus den freien Mitteln in den Zweck — Beschluss als Upload über 1 MB.
     await page.goto('/finance/purposes');
@@ -99,7 +100,7 @@ test.describe('finance purposes (F8b)', () => {
   test('Freigaben auf 390 px: mit gewählter Umwidmung steht das Detail, nicht die Schlange (K9-Befund 12)', async ({ page, baseURL }) => {
     const client = await mcpClient(page, baseURL);
     const purpose = await callTool<{ id: string }>(client, 'finance_master_data_save', { kind: 'purpose', data: { name: 'Telefonfonds E2E' } });
-    const doc = await callTool<{ id: string }>(client, 'dms_receive', { filename: 'protokoll.pdf', typeKey: 'minutes', subject: 'Protokoll Telefon E2E', documentDate: '2026-01-15', contentBase64: PDF.buffer.toString('base64') });
+    const doc = await callTool<{ id: string }>(client, 'dms_receive', { filename: 'protokoll.pdf', typeKey: 'minutes', subject: 'Protokoll Telefon E2E', documentDate: story('2026-01-15'), contentBase64: PDF.buffer.toString('base64') });
     const transfer = await callTool<{ id: string }>(client, 'finance_purpose_transfer_request', {
       fromPurposeId: null,
       toPurposeId: purpose.id,

@@ -78,6 +78,7 @@ ENV NODE_ENV=production \
     KOMPASS_TEMPLATES_DIR=/app/packages/documents/templates \
     KOMPASS_HANDBOOK_DIR=/app/docs/handbuch \
     KOMPASS_FONTS_DIR=/app/packages/documents/fonts \
+    KOMPASS_SEED_ASSETS_DIR=/app/packages/core/src/seed/assets \
     KOMPASS_DOCUMENT_TEMPLATES_DIR=/data/core/document-templates
 WORKDIR /app
 COPY --from=build --chown=node:node /app/apps/kompass/.next/standalone ./
@@ -96,6 +97,8 @@ COPY --from=build --chown=node:node /app/packages/markdown ./packages/markdown
 COPY --from=build --chown=node:node /app/packages/core/src/db/migrations ./packages/core/src/db/migrations
 COPY --from=build --chown=node:node /app/packages/documents/templates ./packages/documents/templates
 COPY --from=build --chown=node:node /app/packages/documents/fonts ./packages/documents/fonts
+# Die Bilder der Entwicklungsdaten: `e2e:image` und `dev:image seed` säen im Container (Spec 2026-10-06 § 4).
+COPY --from=build --chown=node:node /app/packages/core/src/seed/assets ./packages/core/src/seed/assets
 # Die node_modules aus runtime-deps, nicht aus dem Bau. Das Standalone-Paket
 # von Next bringt nur, was es beim Buendeln verfolgt; der Site-Build ruft Astro
 # und das Template laedt @kompass/site-template, beides ausserhalb dieser Spur.

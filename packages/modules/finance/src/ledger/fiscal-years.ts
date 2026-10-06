@@ -152,9 +152,18 @@ export async function updateFiscalYear(deps: Deps, ctx: CallContext, input: unkn
   });
 }
 
+/** Alle Geschäftsjahre mit Abschlussstand, jüngstes zuerst — ohne Rechteprüfung, für Dienste des Moduls. */
+export function fiscalYearsWithStatusInternal(db: DbOrTx): FiscalYearView[] {
+  return db
+    .select()
+    .from(financeFiscalYears)
+    .orderBy(desc(financeFiscalYears.startsOn))
+    .all()
+    .map((row) => ({ ...row, status: fiscalYearStatusInternal(db, row.id), isShortYear: isShortFiscalYear(row) }));
+}
+
 export async function listFiscalYears(deps: Deps, ctx: CallContext): Promise<Result<FiscalYearView[]>> {
   const denied = requireMasterDataRead(ctx).failure;
   if (denied) return denied;
-  const rows = deps.db.select().from(financeFiscalYears).orderBy(desc(financeFiscalYears.startsOn)).all();
-  return ok(rows.map((row) => ({ ...row, status: fiscalYearStatusInternal(deps.db, row.id), isShortYear: isShortFiscalYear(row) })));
+  return ok(fiscalYearsWithStatusInternal(deps.db));
 }

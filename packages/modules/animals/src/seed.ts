@@ -1,12 +1,22 @@
-import { schema as core, unwrap, writeSettingInternal, type CallContext, type Deps, type LocalizedText } from '@kompass/core';
+import { SEED_PHOTO_FOLDER, seedPhotoIds, unwrap, writeSettingInternal, type CallContext, type Deps, type LocalizedText } from '@kompass/core';
 import { animals } from './schema';
 import { PROFILE_URL_KEY } from './settings';
 import { createAnimal, requestAnimalReview, setAnimalPhotos, setAnimalPublished, setAnimalStatus, setAnimalStory } from './service';
 
-interface ExampleStory { quote: LocalizedText; family: string; beforeCaption: LocalizedText; afterCaption: LocalizedText }
+interface ExampleStory {
+  quote: LocalizedText;
+  family: string;
+  beforeCaption: LocalizedText;
+  afterCaption: LocalizedText;
+  /** Präfix eines Bildes aus `Fotos/Tiere` (Kern-Seed) für Vorher bzw. Nachher. */
+  beforePhoto?: string;
+  afterPhoto?: string;
+}
 interface ExampleAnimal {
   /** Nur zur Orientierung im Code; den Slug bildet Kompass. */
   key: string;
+  /** Präfix der eigenen Bilder in `Fotos/Tiere` (Kern-Seed, `seedPhotoIds`); das erste ist das Hauptfoto. */
+  photos: string;
   name: string;
   sex: 'female' | 'male';
   birthText: LocalizedText;
@@ -23,7 +33,7 @@ interface ExampleAnimal {
   adoptedYear?: number;
   published: boolean;
   story?: ExampleStory;
-  /** Notiz einer offenen Prüfung. Gesetzt heißt: Das Tier wartet, mit Fotos aus der Mediathek des Kern-Seeds. */
+  /** Notiz einer offenen Prüfung. Gesetzt heißt: Das Tier wartet. */
   review?: string;
   /**
    * Wie lange die Prüfung schon wartet. Die Warteschlange sortiert nach dem Zeitpunkt; ohne Abstand
@@ -43,6 +53,7 @@ interface ExampleAnimal {
 const EXAMPLE_ANIMALS: ExampleAnimal[] = [
   {
     key: 'baxter',
+    photos: 'baxter-',
     name: 'Baxter',
     sex: 'male' as const,
     birthText: { de: 'März 2020', en: 'March 2020' },
@@ -60,6 +71,7 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
   },
   {
     key: 'frida',
+    photos: 'frida-',
     name: 'Frida',
     sex: 'female' as const,
     birthText: { de: '2019', en: '2019' },
@@ -78,6 +90,7 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
   },
   {
     key: 'nala',
+    photos: 'nala-nachher-',
     name: 'Nala',
     sex: 'female' as const,
     birthText: { de: '2018', en: '2018' },
@@ -98,10 +111,13 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
       family: 'Familie Berger',
       beforeCaption: { de: 'Auf der Pflegestelle in Bonn', en: 'At the foster home in Bonn' },
       afterCaption: { de: 'Zuhause am Rhein', en: 'At home by the Rhine' },
+      beforePhoto: 'nala-vorher-',
+      afterPhoto: 'nala-nachher-',
     },
   },
   {
     key: 'juno',
+    photos: 'juno-',
     name: 'Juno',
     sex: 'female' as const,
     birthText: { de: '2020', en: '2020' },
@@ -126,6 +142,7 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
   },
   {
     key: 'pelle',
+    photos: 'pelle-',
     name: 'Pelle',
     sex: 'male' as const,
     birthText: { de: 'Mai 2023', en: 'May 2023' },
@@ -145,6 +162,7 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
   },
   {
     key: 'mika',
+    photos: 'mika-',
     name: 'Mika',
     sex: 'female' as const,
     birthText: { de: '2021', en: '2021' },
@@ -168,6 +186,7 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
 /** Legt die Beispieltiere an, sofern noch keine Tiere existieren. */
 export async function seedAnimals(deps: Deps, ctx: CallContext): Promise<void> {
   if (deps.db.select({ id: animals.id }).from(animals).all().length > 0) return;
+  const photosOf = (prefix: string) => seedPhotoIds(deps, SEED_PHOTO_FOLDER.animals, prefix);
   for (const a of EXAMPLE_ANIMALS) {
     const created = unwrap(
       await createAnimal(deps, ctx, {
@@ -190,17 +209,16 @@ export async function seedAnimals(deps: Deps, ctx: CallContext): Promise<void> {
     if (a.status !== 'lookingForHome') {
       unwrap(await setAnimalStatus(deps, ctx, { id: created.id, status: a.status, adoptedYear: a.adoptedYear }));
     }
+    // Eigene Bilder aus der Mediathek des Kern-Seeds (`seedMedia` läuft vorher, Spec 2026-10-06 § 4);
+    // ohne sie bleibt das Tier ohne Fotos. Pelle und Mika haben je drei — die Prüf-E2E tauscht das Hauptfoto.
+    const photos = photosOf(a.photos);
+    if (photos.length > 0) unwrap(await setAnimalPhotos(deps, ctx, { id: created.id, photos: photos.map((assetId, i) => ({ assetId, isPrimary: i === 0 })) }));
     if (a.status === 'adopted' && a.story) {
-      unwrap(await setAnimalStory(deps, ctx, { id: created.id, beforeAssetId: null, afterAssetId: null, quote: a.story.quote, family: a.story.family, adoptedYear: a.adoptedYear!, beforeCaption: a.story.beforeCaption, afterCaption: a.story.afterCaption }));
+      const picture = (prefix?: string) => (prefix ? (photosOf(prefix)[0] ?? null) : null);
+      unwrap(await setAnimalStory(deps, ctx, { id: created.id, beforeAssetId: picture(a.story.beforePhoto), afterAssetId: picture(a.story.afterPhoto), quote: a.story.quote, family: a.story.family, adoptedYear: a.adoptedYear!, beforeCaption: a.story.beforeCaption, afterCaption: a.story.afterCaption }));
     }
     if (a.published) unwrap(await setAnimalPublished(deps, ctx, { id: created.id, isPublished: true }));
     if (a.review !== undefined) {
-      // Fotos aus der Mediathek des Kern-Seeds (`seedMedia` läuft vorher); ohne sie bleibt das Tier ohne Fotos.
-      const photos = deps.db.select({ id: core.mediaAssets.id, mimeType: core.mediaAssets.mimeType, filename: core.mediaAssets.filename }).from(core.mediaAssets).all()
-        .filter((m) => m.mimeType.startsWith('image/') && m.mimeType !== 'image/svg+xml')
-        .sort((x, y) => (x.filename < y.filename ? -1 : 1))
-        .slice(0, 3);
-      if (photos.length > 0) unwrap(await setAnimalPhotos(deps, ctx, { id: created.id, photos: photos.map((m, i) => ({ assetId: m.id, isPrimary: i === 0 })) }));
       // Der Seed läuft auf dem Kanal `system`: Der Merker kommt nur aus diesem ausdrücklichen Aufruf.
       const ago = (a.reviewHoursAgo ?? 0) * 3_600_000;
       const earlier = { ...deps, clock: { now: () => new Date(deps.clock.now().getTime() - ago) } };

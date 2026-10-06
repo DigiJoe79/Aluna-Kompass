@@ -1,13 +1,13 @@
-import { coreModule, unwrap } from '@kompass/core';
+import { coreModule, isoNow, unwrap, writeSettingInternal } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
-import { contactsModule } from '@kompass/module-contacts';
-import { isNotNull } from 'drizzle-orm';
+import { contactsModule, seedContacts } from '@kompass/module-contacts';
+import { eq, isNotNull } from 'drizzle-orm';
 import { readTextLayer } from '@kompass/text-extraction';
 import { describe, expect, it } from 'vitest';
 import { EXAMPLE_DOCUMENT_TYPES } from '../src/catalog';
 import { countDocumentText } from '../src/index-store';
 import { dmsModule } from '../src/manifest';
-import { documentFolders, documentFormerNumbers, documents, documentTypes } from '../src/schema';
+import { documentFolders, documentFormerNumbers, documentLinks, documentRelations, documents, documentTypes } from '../src/schema';
 import { seedDms } from '../src/seed';
 import { getDocument } from '../src/service';
 import { ALL_DMS } from './helpers';
@@ -19,6 +19,17 @@ function setup() {
     deps,
     ctx: ctxWith([...ALL_DMS, 'contacts.manage', 'followUps.view', 'followUps.manage'], userId),
   };
+}
+
+/** Mit den Kontakten des Kontakte-Seeds — so wie `seedDevelopment` die Module nacheinander fährt. */
+async function setupWithContacts(now?: string) {
+  const deps = createTestDeps({ manifests: [coreModule, contactsModule, dmsModule], ...(now ? { now } : {}) });
+  const userId = insertUser(deps, { name: 'Admin', email: 'admin@kompass.local' });
+  const ctx = ctxWith([...ALL_DMS, 'contacts.manage', 'contacts.view', 'followUps.view', 'followUps.manage'], userId);
+  // Die Rollen der Kontakte kommen aus eingeschalteten Modulen (`contactRoleDefinitions`).
+  deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctx, 'modules.enabled', ['contacts', 'dms'], 'test.enable'));
+  await seedContacts(deps, ctx);
+  return { deps, ctx };
 }
 
 describe('seedDms', () => {
@@ -99,17 +110,78 @@ describe('seedDms', () => {
   /**
    * Das Beispiel im Eingangskorb soll der Worker wirklich lesen können: Die
    * Volltextsuche ist sonst in der Entwicklung leer, und der E2E-Test für die
-   * Texterkennung im Image hat nichts zu finden. Bis 2026-09-16 war die Datei
-   * ein PDF-Gerüst ohne Seite. Das Wort steht bewusst nicht im Betreff — nur
-   * so beweist ein Treffer, dass der Inhalt gelesen wurde.
+   * Texterkennung im Image hat nichts zu finden. Das Wort steht bewusst nicht
+   * im Betreff — nur so beweist ein Treffer, dass der Inhalt gelesen wurde.
+   * Seit 0.2.7 „Rechtsbehelfsbelehrung“ statt „Tierschutzes“: Den Zweck nennen
+   * jetzt auch die Zuwendungsbestätigungen des Finanz-Seeds.
    */
-  it('legt ein Eingangsdokument mit lesbarer Textebene ab', async () => {
+  it('legt ein Eingangsdokument mit lesbarer Textebene ab — Steuernummer wie im Finanz-Seed', async () => {
     const { deps, ctx } = setup();
     await seedDms(deps, ctx);
     const bescheid = deps.db.select().from(documents).all().find((d) => d.subject === 'Freistellungsbescheid')!;
-    expect(bescheid.subject).not.toMatch(/Tierschutz/i);
+    expect(bescheid.subject).not.toMatch(/Rechtsbehelf/i);
     const datei = unwrap(await getDocument(deps, ctx, bescheid.id));
-    const seiten = await readTextLayer(datei.bytes, 30_000);
-    expect(seiten.join(' ')).toContain('Tierschutzes');
+    const seiten = (await readTextLayer(datei.bytes, 30_000)).join(' ');
+    expect(seiten).toContain('Rechtsbehelfsbelehrung');
+    expect(seiten).toContain('99/999/99999');
+    expect(seiten).toContain('Tierschutzes');
+  });
+
+  it('erzählt ein Vereinsjahr: Schriftverkehr in den Ordnern, Antwort und Folgeschreiben verknüpft (Spec 2026-10-06 § 4)', async () => {
+    const { deps, ctx } = await setupWithContacts();
+    await seedDms(deps, ctx);
+    const docs = deps.db.select().from(documents).all();
+    expect(docs.length).toBeGreaterThanOrEqual(20);
+    const by = (subject: string) => {
+      const doc = docs.find((d) => d.subject === subject);
+      if (!doc) throw new Error(`fehlt: ${subject}`);
+      return doc;
+    };
+    const relations = deps.db.select().from(documentRelations).all();
+    const related = (from: string, to: string, kind: string) => relations.some((r) => r.documentId === by(from).id && r.relatedDocumentId === by(to).id && r.kind === kind);
+    expect(related('Freistellungsbescheid', 'Steuererklärung 2024 und Antrag auf Freistellung', 'repliesTo')).toBe(true);
+    expect(related('Angebot Kastrationsaktion', 'Anfrage Kastrationsaktion: Termine und Kosten', 'repliesTo')).toBe(true);
+    expect(related('Auftrag Kastrationsaktion', 'Angebot Kastrationsaktion', 'repliesTo')).toBe(true);
+    expect(related('Protokoll der Mitgliederversammlung', 'Anmeldung der Vorstandsänderung zum Vereinsregister', 'attachmentOf')).toBe(true);
+    expect(related('Eintragungsnachricht Vereinsregister', 'Anmeldung der Vorstandsänderung zum Vereinsregister', 'repliesTo')).toBe(true);
+    // Bis 0.2.6 „antwortete“ das Finanzamt auf die Einladung zur Mitgliederversammlung.
+    expect(relations.some((r) => r.relatedDocumentId === by('Einladung zur ordentlichen Mitgliederversammlung').id)).toBe(false);
+    for (const folder of ['behoerden/finanzamt', 'behoerden/amtsgericht', 'partner/tieraerzte', 'partner/pflegestellen', 'mitglieder', 'protokolle', 'korrespondenz-mit-dem-landesverband-und-den-kreisgruppen']) {
+      expect(docs.some((d) => d.folder === folder), folder).toBe(true);
+    }
+    // Der Dank geht an die Praxis, nicht an den ersten Kontakt der Liste.
+    const praxis = deps.db.select().from(documentLinks).where(eq(documentLinks.documentId, by('Dankschreiben an die Tierarztpraxis').id)).all();
+    expect(praxis.map((l) => l.role)).toEqual(['recipient']);
+  });
+
+  it('bringt einen Briefentwurf mit Text, Aufzählung und Empfänger — für „Brief mit Vorschau“', async () => {
+    const { deps, ctx } = await setupWithContacts();
+    await seedDms(deps, ctx);
+    const draft = deps.db.select().from(documents).all().find((d) => d.subject === 'Winterhilfe: Bitte um Unterstützung')!;
+    expect(draft).toMatchObject({ phase: 'draft', typeKey: 'letter', folder: 'partner/pflegestellen' });
+    expect(draft.draftBody!.length).toBeGreaterThan(600);
+    expect(draft.draftBody).toMatch(/^- /m);
+    expect(draft.draftBody).toMatch(/\*\*[^*]+\*\*/);
+    expect(deps.db.select().from(documentLinks).where(eq(documentLinks.documentId, draft.id)).all().map((l) => l.role)).toEqual(['recipient']);
+  });
+
+  it('legt jedes Dokument an seinem Datum ab, keines in der Zukunft, keine zwei zur selben Zeit', async () => {
+    const { deps, ctx } = await setupWithContacts();
+    await seedDms(deps, ctx);
+    const now = isoNow(deps.clock);
+    const docs = deps.db.select().from(documents).all();
+    for (const d of docs) {
+      expect(d.createdAt <= now, d.subject).toBe(true);
+      expect(d.createdAt.slice(0, 10), d.subject).toBe(d.documentDate);
+    }
+    expect(new Set(docs.map((d) => d.createdAt)).size).toBe(docs.length);
+  });
+
+  it('läuft auch am 2. Januar: kein Datum nach heute, jede Nummer im Jahr ihrer Ablage', async () => {
+    const { deps, ctx } = await setupWithContacts('2027-01-02T10:00:00.000Z');
+    await seedDms(deps, ctx);
+    const docs = deps.db.select().from(documents).all();
+    for (const d of docs) expect(d.documentDate! <= '2027-01-02', d.subject).toBe(true);
+    for (const d of docs.filter((x) => x.number)) expect(d.number!.slice(4, 8), d.subject).toBe(d.createdAt.slice(0, 4));
   });
 });

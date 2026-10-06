@@ -5,6 +5,8 @@ import {
   deleteReserve,
   freeReserveCap,
   freeReserveCapSchema,
+  freeReserveCapOverview,
+  freeReserveCapOverviewSchema,
   linkResolution,
   linkResolutionSchema,
   listReserves,
@@ -917,7 +919,7 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
   t({ name: 'finance_reserve_delete', description: 'Delete reserved funds - only without a movement and without a carry-forward; deactivate otherwise. Requires finance.setup.', inputSchema: reserveIdSchema, handler: (deps, ctx, args) => deleteReserve(deps, ctx, args), service: deleteReserve }),
   t({
     name: 'finance_reserve_movement_record',
-    description: 'Record a movement of reserved funds (allocate, withdraw, dissolve) with its resolution document - an already filed, finalized document of the file register (never uploaded here; use the screen or link an existing one). Allocating to a free reserve above the cap of its year needs capReason (freeReserveCapExceeded); it is kept at the movement. Dissolve never takes an amount, it is the balance on that day, computed and stored. Never touches a money account, a line or the income statement. Human only: refused over MCP unless the association has set finance.mcpHumanOnlyAllowed at the screen. Requires finance.entriesWrite.',
+    description: 'Record a movement of reserved funds (allocate, withdraw, dissolve) with its resolution document - an already filed, finalized document of the file register (never uploaded here; use the screen or link an existing one). An allocation to a free reserve counts against the cap of forFiscalYearId. Without it, the only fiscal year in question on the movement date is taken; while the year before is not yet closed, two years are in question and the call is refused (reserveYearAmbiguous, naming both) - pass forFiscalYearId then (finance_free_reserve_cap_overview lists the years). Allocating above that cap needs capReason (freeReserveCapExceeded); it is kept at the movement. Dissolve never takes an amount, it is the balance on that day, computed and stored. Never touches a money account, a line or the income statement. Human only: refused over MCP unless the association has set finance.mcpHumanOnlyAllowed at the screen. Requires finance.entriesWrite.',
     inputSchema: recordReserveMovementSchema.omit({ resolutionUpload: true }),
     handler: (deps, ctx, args) => recordReserveMovement(deps, ctx, args),
     service: recordReserveMovement,
@@ -926,10 +928,17 @@ export const FINANCE_MCP_TOOLS: readonly McpToolDefinition[] = [
   t({ name: 'finance_reserve_resolution_link', description: 'Link an already filed, finalized document of the file register as the resolution or carry-forward resolution of reserved funds - also after creation. Requires finance.entriesWrite.', inputSchema: linkResolutionSchema, handler: (deps, ctx, args) => linkResolution(deps, ctx, args), service: linkResolution }),
   t({
     name: 'finance_free_reserve_cap',
-    description: 'The approximate cap of the free reserve for a fiscal year (§ 62 Abs. 1 Nr. 3 AO): the dated share of the surplus of asset management plus the dated share of the other timely funds, and how much of it is already used for that year; exceeded and overCents flag an allocation above the cap. Display and warning only, never a lock. Requires finance.overview.',
+    description: 'The approximate cap of the free reserve for a fiscal year (§ 62 Abs. 1 Nr. 3 AO): the dated share of the surplus of asset management plus the dated share of the other timely funds, and how much of it is already used for that year; exceeded and overCents flag an allocation above the cap. Which years matter today: finance_free_reserve_cap_overview. Display and warning only, never a lock. Requires finance.overview.',
     inputSchema: freeReserveCapSchema,
     handler: (deps, ctx, args) => freeReserveCap(deps, ctx, args),
     service: freeReserveCap,
+  }),
+  t({
+    name: 'finance_free_reserve_cap_overview',
+    description: 'The cap of the free reserve (§ 62 Abs. 1 Nr. 3 AO) for the fiscal years that matter today, older first: the year before, while it is not closed (provisional: true - its figures can still change; an allocation decided at its year-end close counts for it), and the current year (capCents 0 until it has income). defaultFiscalYearId is the year the screen proposes for an allocation (the open year before, else the current year); while two years are listed, finance_reserve_movement_record needs forFiscalYearId for an allocation to a free reserve. Display and warning only, never a lock. Requires finance.overview.',
+    inputSchema: freeReserveCapOverviewSchema,
+    handler: (deps, ctx) => freeReserveCapOverview(deps, ctx, {}),
+    service: freeReserveCapOverview,
   }),
 
   // F8b — Zweck ändern / Umwidmung (Task 3/5, Annahme 5, 6, 7, 8).

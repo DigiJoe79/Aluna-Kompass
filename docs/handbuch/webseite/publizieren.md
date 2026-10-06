@@ -27,6 +27,8 @@ Hauptknopf.
 2. **Publizieren.** Der Knopf „Jetzt publizieren“ (auf der Test-Instanz „Auf
    Test publizieren“) fragt noch einmal nach und startet den Publish.
 
+![Publizieren: Vorschau gebaut, Änderungen gegenüber der Live-Seite](../bilder/webseite/publizieren.png)
+
 Hat sich seit der Vorschau nichts geändert, was sie vom Stand der Webseite
 unterscheidet, steht dort „Alles auf dem neuesten Stand“; ein stiller Link
 „Trotzdem publizieren“ bleibt für den Fall, dass Sie es erzwingen wollen.

@@ -1,17 +1,18 @@
 import { expectedVersionField, invalid, isoNow, listUserNamesWithPermission, newId, notFound, ok, requirePermission, staleVersion, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
-import { documentTypeFor, getDocumentRecord, linkDocumentInternal, receiveGeneratedUpload, type ReceivedDocument } from '@kompass/module-dms';
+import { abortReceive, documentTypeFor, getDocumentRecord, linkDocumentInternal, receiveGeneratedUpload, type ReceivedDocument } from '@kompass/module-dms';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
 import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { requireFinanceRead } from '../ledger/access';
-import { checkDatedInternal } from '../ledger/fiscal-years';
+import { checkDatedInternal, fiscalYearsWithStatusInternal } from '../ledger/fiscal-years';
 import { freeReserveInputsAt } from '../ledger/queries';
 import { latestMovementDate, reserveBalanceAt, reserveBalancesAt, reserveIsDissolved } from '../ledger/reserve-balances';
 import { valueAt } from '../ledger/dated-values';
 import { financeFiscalYears, financePurposes, financeReserveMovements, financeReserves, type FinanceReserveMovementRow, type FinanceReserveRow } from '../schema';
 import { nextVersion } from './expenses';
-import { freeReserveCapCents } from './reserve-rules';
+import { reserveResolutionSubject } from './subjects';
+import { freeReserveCapCents, freeReserveYears } from './reserve-rules';
 
 /**
  * Zurückgelegtes Geld (F8b Task 2, Spec 8.3, Annahme 1–4): Stammsatz,
@@ -115,7 +116,7 @@ export async function saveReserve(deps: Deps, ctx: CallContext, input: unknown):
       const result = await receiveGeneratedUpload(deps, ctx, {
         bytes: v.resolutionUpload.bytes,
         typeKey: 'minutes',
-        subject: `Beschluss für zurückgelegtes Geld ${id}`,
+        subject: reserveResolutionSubject('resolution', fields.name),
         documentDate: v.resolutionUpload.documentDate ?? todayIn(deps),
         links: [{ entityType: 'financeReserve', entityId: id }],
         afterReceive: (tx: DbOrTx, doc: ReceivedDocument) => {
@@ -201,7 +202,7 @@ export async function uploadResolution(deps: Deps, ctx: CallContext, input: unkn
   const result = await receiveGeneratedUpload(deps, ctx, {
     bytes: v.bytes,
     typeKey: 'minutes',
-    subject: `Beschluss für zurückgelegtes Geld ${before.id}`,
+    subject: reserveResolutionSubject('resolution', before.name),
     documentDate: v.documentDate ?? todayIn(deps),
     links: [{ entityType: 'financeReserve', entityId: before.id }],
     afterReceive: (tx: DbOrTx, doc: ReceivedDocument) => {
@@ -263,7 +264,7 @@ export async function recordReserveCarryForward(deps: Deps, ctx: CallContext, in
     const result = await receiveGeneratedUpload(deps, ctx, {
       bytes: v.upload.bytes,
       typeKey: 'minutes',
-      subject: `Beschluss zum Vortrag von zurückgelegtem Geld ${before.id}`,
+      subject: reserveResolutionSubject('carryForward', before.name),
       documentDate: v.upload.documentDate ?? todayIn(deps),
       links: [{ entityType: 'financeReserve', entityId: before.id }],
       afterReceive: (tx: DbOrTx, doc: ReceivedDocument) => write(tx, doc.id),
@@ -381,7 +382,18 @@ function insertMovement(tx: DbOrTx, deps: Deps, ctx: CallContext, reserve: Finan
 
   const now = isoNow(deps.clock);
   const id = newId();
-  const forFiscalYearId = v.kind === 'allocate' && reserve.kind === 'free' ? (v.forFiscalYearId ?? yearCheck.value.id) : null;
+  // Befund 4 (0.2.7): Das Jahr einer Zuführung zur freien Rücklage wird nie geraten. Ohne Angabe nimmt der Dienst das
+  // Jahr nur, wenn am Vorgangstag genau eines in Frage kommt (`freeReserveYears`); ist das Vorjahr noch offen, lehnt
+  // er ab und nennt beide. Dieselbe Regel für Oberfläche und MCP — die Oberfläche schickt das Jahr immer mit.
+  let forFiscalYearId: string | null = null;
+  if (v.kind === 'allocate' && reserve.kind === 'free') {
+    if (v.forFiscalYearId) forFiscalYearId = v.forFiscalYearId;
+    else {
+      const inQuestion = freeReserveYears(fiscalYearsWithStatusInternal(tx), v.movementDate).years;
+      if (inQuestion.length > 1) return financeConflict('reserveYearAmbiguous', { previous: inQuestion[0]!.designation, current: inQuestion[1]!.designation });
+      forFiscalYearId = yearCheck.value.id;
+    }
+  }
   const overrun = forFiscalYearId ? capOverrun(tx, reserve, v, forFiscalYearId) : null;
   if (overrun && !v.capReason) return financeConflict('freeReserveCapExceeded', { cap: overrun.capCents, over: overrun.overCents });
   tx.insert(financeReserveMovements).values({ id, reserveId: reserve.id, kind: v.kind, movementDate: v.movementDate, amountCents, forFiscalYearId, resolutionDocumentId, note: v.note ?? null, capReason: overrun ? v.capReason! : null, createdByUserId: ctx.userId ?? 'system', createdAt: now }).run();
@@ -424,10 +436,15 @@ export async function recordReserveMovement(deps: Deps, ctx: CallContext, input:
     const result = await receiveGeneratedUpload(deps, ctx, {
       bytes: v.resolutionUpload.bytes,
       typeKey: 'minutes',
-      subject: `Beschluss für einen Vorgang an zurückgelegtem Geld ${reserve.id}`,
+      subject: reserveResolutionSubject('movement', reserve.name),
       documentDate: v.resolutionUpload.documentDate ?? todayIn(deps),
       links: [{ entityType: 'financeReserve', entityId: reserve.id }],
-      afterReceive: (tx: DbOrTx, doc: ReceivedDocument) => insertMovement(tx, deps, ctx, reserve, v, doc.id),
+      // Befund 6 (0.2.7): Lehnt `insertMovement` ab, rollt `abortReceive` den Eingang mit zurück — kein Beschluss bleibt in der Akte.
+      afterReceive: (tx: DbOrTx, doc: ReceivedDocument) => {
+        const movement = insertMovement(tx, deps, ctx, reserve, v, doc.id);
+        if (!movement.ok) abortReceive(movement);
+        return movement;
+      },
     });
     if (!result.ok) return result;
     return result.value.after!;
@@ -465,6 +482,47 @@ export async function freeReserveCap(deps: Deps, ctx: CallContext, input: unknow
   const cap = freeReserveCapInternal(deps.db, parsed.value.fiscalYearId);
   if (!cap) return notFound('financeFiscalYear', parsed.value.fiscalYearId);
   return ok(cap);
+}
+
+export interface FreeReserveCapYearView extends FreeReserveCapView {
+  fiscalYearId: string;
+  designation: string;
+  startsOn: string;
+  endsOn: string;
+  /** Das Vorjahr, solange es nicht abgeschlossen ist — sein Höchstbetrag ist vorläufig. */
+  provisional: boolean;
+}
+
+export interface FreeReserveCapOverview {
+  /** Älteres Jahr zuerst (`freeReserveYears`); leer ohne Geschäftsjahr für heute und ohne offenes Vorjahr. */
+  years: FreeReserveCapYearView[];
+  /** Der Vorschlag für eine Zuführung zur freien Rücklage: das offene Vorjahr, sonst das laufende Jahr. */
+  defaultFiscalYearId: string | null;
+}
+
+export const freeReserveCapOverviewSchema = z.object({}).strict();
+
+/**
+ * `finance.overview`: der Höchstbetrag der freien Rücklage für die Jahre, die
+ * heute zählen (Befund 4, Fassung 0.2.7) — das offene Vorjahr („vorläufig“)
+ * und das laufende. Dieselbe Regel wie die Jahrespflicht beim Zuführen
+ * (`insertMovement`) und die Kachel `reserveCapNear`.
+ */
+export async function freeReserveCapOverview(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<FreeReserveCapOverview>> {
+  const denied = requireFinanceRead(ctx, 'overview');
+  if (denied) return denied;
+  const parsed = validate(deps, freeReserveCapOverviewSchema, input ?? {});
+  if (!parsed.ok) return parsed;
+  const pick = freeReserveYears(fiscalYearsWithStatusInternal(deps.db), todayIn(deps));
+  const years = pick.years.map((y) => ({
+    fiscalYearId: y.id,
+    designation: y.designation,
+    startsOn: y.startsOn,
+    endsOn: y.endsOn,
+    provisional: y.provisional,
+    ...freeReserveCapInternal(deps.db, y.id)!,
+  }));
+  return ok({ years, defaultFiscalYearId: pick.defaultFiscalYearId });
 }
 
 /** Der Höchstbetrag ohne Rechteprüfung — auch für die Warnung beim Zuführen (Befund S). `null` ohne dieses Jahr. */

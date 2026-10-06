@@ -101,5 +101,15 @@ export const OFFICE_INVOICE = {
   iban: 'DE12999999990000112233',
 } as const satisfies InvoiceFixture;
 
-export const buildVetInvoicePdf = (): Uint8Array => buildInvoicePdf({ ...VET_INVOICE, taxes: [...VET_INVOICE.taxes] });
-export const buildOfficeInvoicePdf = (): Uint8Array => buildInvoicePdf({ ...OFFICE_INVOICE, taxes: [...OFFICE_INVOICE.taxes] });
+/**
+ * Eine der beiden Seed-Rechnungen in ein anderes Jahr gerückt — für den Entwicklungs-Seed, dessen Geschichte im
+ * Stichjahr spielt (`seed-calendar.ts`). Verschoben werden nur Nummer, Rechnungs- und Fälligkeitsdatum;
+ * mit 2026 entsteht genau die Vorgabe (Byte-Wächter `tests/e2e-fixtures-zugferd.test.ts`).
+ */
+export function invoiceInYear(fixture: typeof VET_INVOICE | typeof OFFICE_INVOICE, year: number): InvoiceFixture {
+  const shift = (value: string) => value.replace(/^(\D*)2026/, `$1${year}`);
+  return { ...fixture, number: shift(fixture.number), issue: shift(fixture.issue), dueDate: shift(fixture.dueDate), taxes: [...fixture.taxes] };
+}
+
+export const buildVetInvoicePdf = (year = 2026): Uint8Array => buildInvoicePdf(invoiceInYear(VET_INVOICE, year));
+export const buildOfficeInvoicePdf = (year = 2026): Uint8Array => buildInvoicePdf(invoiceInYear(OFFICE_INVOICE, year));

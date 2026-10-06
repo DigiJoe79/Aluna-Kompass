@@ -31,4 +31,12 @@ describe('CSV fixtures for seed and E2E', () => {
       ['2026-03-04', -4590, 'Druckerei Müller & Söhne'],
     ]);
   });
+
+  it('moves both exports into another year on request — the seed tells its story in the story year', () => {
+    const text = (bytes: Uint8Array) => new TextDecoder('windows-1252').decode(bytes);
+    expect(text(buildPaymentServiceCsv(2027))).toContain('"05.03.2027"');
+    expect(text(buildPaymentServiceCsv(2027))).not.toContain('2026');
+    expect(text(buildSecondBankCsv(2027))).toContain('03.03.2027;03.03.2027;Erika Beispiel;Mitgliedsbeitrag 2027;;60,00');
+    expect(text(buildSecondBankCsv(2027))).not.toContain('2026');
+  });
 });

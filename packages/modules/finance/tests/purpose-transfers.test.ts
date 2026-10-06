@@ -1,11 +1,14 @@
-import { unwrap } from '@kompass/core';
+import { schema, unwrap, yearIn } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
+import { documents } from '@kompass/module-dms';
+import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { approvePurposeTransfer, getPurposeTransfer, listPurposeTransfers, purposeMovements, purposeOverview, rejectPurposeTransfer, requestPurposeTransfer } from '../src/allocation/transfers';
 import { listApprovals } from '../src/allocation/approvals';
 import { bookEntry } from '../src/ledger/finalize';
 import { deletePurpose, fulfillPurpose, reopenPurpose } from '../src/ledger/purposes';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
+import { ULID_PATTERN } from '../src/allocation/subjects';
 import { insertDocument, ledgerFixture, pdfBytes } from './helpers';
 import { jpegBytes } from './expense-fixture';
 
@@ -43,8 +46,17 @@ describe('requestPurposeTransfer (F8b Task 3, Annahme 5)', () => {
     expect(err(none)).toMatchObject({ code: 'transferNoPurposes' });
 
     const transfer = unwrap(await requestPurposeTransfer(f.deps, withDms(f), { fromPurposeId: a.id, toPurposeId: null, amountCents: 1000, transferDate: '2026-03-01', reason: 'Umschichtung', documentId: docId }));
-    expect(transfer.number).toBe(`UM-${new Date().getUTCFullYear()}-001`);
+    expect(transfer.number).toBe(`UM-${yearIn(f.deps)}-001`);
     expect(transfer.state).toBe('submitted');
+  });
+
+  it('names the purposes in the subject of an uploaded resolution, free funds included', async () => {
+    const f = await ledgerFixture();
+    const a = await purposeWithBalance(f, 'Zweck A', 10000);
+    const created = unwrap(await requestPurposeTransfer(f.deps, withDms(f), { fromPurposeId: a.id, toPurposeId: null, amountCents: 1000, transferDate: '2026-03-01', reason: 'Umschichtung', documentUpload: { bytes: pdfBytes(), fileName: 'protokoll.pdf' } }));
+    const subject = f.deps.db.select({ subject: documents.subject }).from(documents).where(eq(documents.id, created.documentId!)).get()!.subject;
+    expect(subject).toBe('Beschluss für Umwidmung von „Zweck A“ zu freien Mitteln');
+    expect(subject).not.toMatch(ULID_PATTERN);
   });
 
   it('creates a transfer with an uploaded resolution instead of a picked one — never both', async () => {
@@ -55,7 +67,7 @@ describe('requestPurposeTransfer (F8b Task 3, Annahme 5)', () => {
 
     const created = unwrap(await requestPurposeTransfer(f.deps, withDms(f), { fromPurposeId: a.id, toPurposeId: null, amountCents: 1000, transferDate: '2026-03-01', reason: 'Umschichtung', documentUpload: { bytes: pdfBytes(), fileName: 'protokoll.pdf' } }));
     expect(created.documentId).not.toBeNull();
-    expect(created.number).toBe(`UM-${new Date().getUTCFullYear()}-001`);
+    expect(created.number).toBe(`UM-${yearIn(f.deps)}-001`);
   });
 
   it('refuses an uploaded resolution that is not a PDF or too large', async () => {
@@ -221,5 +233,17 @@ describe('listPurposeTransfers', () => {
     expect(all.length).toBeGreaterThan(0);
     const filtered = unwrap(await listPurposeTransfers(f.deps, f.ctx, { purposeId: a.id }));
     expect(filtered.every((t) => t.fromPurposeId === a.id || t.toPurposeId === a.id)).toBe(true);
+  });
+});
+
+describe('Befund 6 (0.2.7): eine abgelehnte Umwidmung lässt keinen hochgeladenen Beschluss in der Akte', () => {
+  it('Datum in der Zukunft: kein Dokument, kein Eingang im Protokoll', async () => {
+    const f = await ledgerFixture();
+    const a = await purposeWithBalance(f, 'Zweck A', 10000);
+    const trace = () => ({ documents: f.deps.db.select().from(documents).all().length, received: f.deps.db.select().from(schema.auditLog).all().filter((x) => x.action === 'dms.receive').length });
+    const before = trace();
+    const refused = await requestPurposeTransfer(f.deps, withDms(f), { fromPurposeId: a.id, toPurposeId: null, amountCents: 1000, transferDate: '2026-12-31', reason: 'Umschichtung', documentUpload: { bytes: pdfBytes(), fileName: 'protokoll.pdf' } });
+    expect(err(refused)).toMatchObject({ code: 'transferDateInFuture' });
+    expect(trace()).toEqual(before);
   });
 });

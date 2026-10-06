@@ -30,14 +30,17 @@ export function PageHeader({
           {back.label}
         </Link>
       ) : null}
-      <div className="flex items-start justify-between gap-4">
+      {/* Telefon (`max-sm`): Titel und Aktionen untereinander, die Aktionen brechen um — nebeneinander drückten
+          „Als PDF“ und das Blättern die Tieradresse in eine Spalte von wenigen Zeichen (release-0.2.7.md,
+          Befund 15). Ab 640 px wie bisher nebeneinander. Kein Layout-Test für diese Einzelstelle. */}
+      <div className="flex items-start justify-between gap-4 max-sm:flex-col max-sm:gap-3">
         {/* `min-w-0` und `break-words`: Eine lange Adresse in der Beschreibung (Tier) schob auf dem Telefon die Kopfaktionen
             23 px über die Inhaltskante (Abnahme K8/K9, 390 px). Kein Layout-Test für diese Einzelstelle. */}
         <div className="min-w-0">
           {title ? <h2 className="font-heading text-[22px]">{title}</h2> : null}
           {description ? <p className="mt-1 text-[14px] break-words text-ink-2">{description}</p> : null}
         </div>
-        {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+        {actions ? <div className="flex shrink-0 items-center gap-2 max-sm:flex-wrap">{actions}</div> : null}
       </div>
     </div>
   );

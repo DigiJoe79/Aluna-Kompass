@@ -1,11 +1,11 @@
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { associationYear } from './association-day';
 import { loginAsAdmin, resetDatabase } from './helpers';
+import { STORY_YEAR } from './story-year';
 
 /**
- * F6b Task 7 — Oberfläche C2 „Serienlauf“. Der Seed bringt im laufenden Jahr
+ * F6b Task 7 — Oberfläche C2 „Serienlauf“. Der Seed bringt im Stichjahr (`story-year.ts`)
  * unbestätigt: Henrik Brandt (seine Bestätigung ist zurückgenommen) und die
  * Sportfreunde Beispieltal — beide bereit, maschinell; die zweite
  * Aufwandsspende von Lukas Hofmann und (F8a Task 7) die Aufwandsspende aus
@@ -15,7 +15,7 @@ import { loginAsAdmin, resetDatabase } from './helpers';
  * „Laptop“ von Clara Neumann ohne Angaben (blockiert). Der Bescheid gilt,
  * das maschinelle Verfahren ist vollständig.
  */
-const YEAR = String(associationYear());
+const YEAR = String(STORY_YEAR);
 
 async function mcpClient(page: Page, baseURL: string | undefined): Promise<Client> {
   await page.goto('/profile');

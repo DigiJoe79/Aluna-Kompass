@@ -20,6 +20,8 @@ ablegen“.
 Ohne Drag-and-drop: „Post ablegen“ oben in der Liste öffnet denselben Dialog
 mit einer Dateiauswahl.
 
+![Der Dialog „Post ablegen“: Datei, Art, Betreff, Absender und Ordner](../bilder/akte/post-ablegen.png)
+
 ## Der Dialog
 
 - **Dokumentart** — Brief, Behördenschreiben, Vertrag, Rechnung, Protokoll

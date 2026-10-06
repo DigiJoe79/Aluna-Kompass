@@ -199,10 +199,9 @@ export function CreateContactDialog({
                       <FormField id="salutation" label={t('fields.salutation')} error={errors.salutation} size="s">
                         <Input id="salutation" name="salutation" list="salutations" value={salutation} onChange={(e) => setSalutation(e.target.value)} />
                         <datalist id="salutations">
-                          <option value="Frau" />
-                          <option value="Herr" />
-                          <option value="Familie" />
-                          <option value="Dr." />
+                          {(['ms', 'mr', 'family'] as const).map((key) => (
+                            <option key={key} value={t(`fields.salutationSuggestions.${key}`)} />
+                          ))}
                         </datalist>
                       </FormField>
                       <FormField id="firstName" label={t('fields.firstName')} error={errors.firstName}>

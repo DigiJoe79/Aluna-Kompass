@@ -107,7 +107,7 @@ test('Leser sehen Sammlungen ohne Bearbeiten-Knöpfe, ohne Leserecht keine Vorsc
   await loginFirstTime(page, 'peter@kompass.local', peterPw);
   await page.goto('/site/c/news');
   await expect(page.getByRole('row').first()).toContainText(/Veröffentlicht|Nicht veröffentlicht/);
-  await expect(page.getByRole('link', { name: 'Neu' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Neu', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Löschen' })).toHaveCount(0);
   await expect(page.getByRole('switch')).toHaveCount(0);
   await expect(page.getByRole('table').getByRole('link')).toHaveCount(0);

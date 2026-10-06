@@ -6,7 +6,7 @@ import { listApprovals } from './allocation/approvals';
 import { listMyExpenseClaims } from './allocation/expenses';
 import { positionViewsOf, sumPositionCents } from './allocation/partner-payments';
 import { openProofsInternal, paymentsReadyToAcknowledgeInternal } from './allocation/partner-proof';
-import { freeReserveCap } from './allocation/reserves';
+import { freeReserveCapOverview } from './allocation/reserves';
 import { countNeedsSignatureInternal } from './donations/confirmations';
 import { certifiableLineExistsInternal, noticeExpiryInternal, noticeValidAtInternal } from './donations/notices';
 import { countToCorrectInternal } from './donations/to-correct';
@@ -16,7 +16,6 @@ import { formatEuro } from './ledger/cash-check';
 import { valueAt } from './ledger/dated-values';
 import { getSetupStatus } from './ledger/setup';
 import { listEntries } from './ledger/entries';
-import { fiscalYearForInternal } from './ledger/fiscal-years';
 import { overdueOpenItemsInternal } from './ledger/open-items';
 import { accountBalancesAt, purposeBalancesAt } from './ledger/queries';
 import { listVouchersWithoutEntry } from './ledger/vouchers';
@@ -250,7 +249,12 @@ const purposesNegativeTile: DashboardTile<Record<string, never>> = {
   },
 };
 
-/** F8b Annahme 12: der Höchstbetrag der freien Rücklage nähert sich — ab `warnAtPercent`, wie `LimitProgress` es auch am Bildschirm zeigt. */
+/**
+ * F8b Annahme 12: der Höchstbetrag der freien Rücklage nähert sich — ab `warnAtPercent`, wie `LimitProgress` es auch
+ * am Bildschirm zeigt. Befund 4/7c (0.2.7): geprüft werden dieselben Jahre wie auf der Seite (`freeReserveYears`:
+ * offenes Vorjahr und laufendes Jahr); gemeldet wird das ernstere (überschritten vor nähert sich vor ruhig), bei
+ * Gleichstand das jüngere. Ein Jahr ohne Höchstbetrag (0 €) zählt nicht — `limitState` kennt dort keinen Zustand.
+ */
 const reserveCapNearTile: DashboardTile<Record<string, never>> = {
   key: 'reserveCapNear',
   permission: 'finance.overview',
@@ -260,14 +264,17 @@ const reserveCapNearTile: DashboardTile<Record<string, never>> = {
   messageKeys: ['ok', 'near'],
   async load(deps, ctx) {
     const today = todayIn(deps);
-    const year = fiscalYearForInternal(deps.db, today);
-    if (!year) return { kind: 'status', tone: 'neutral', messageKey: 'ok', href: '/finance/reserves' };
-    const cap = await freeReserveCap(deps, ctx, { fiscalYearId: year.id });
-    if (!cap.ok || cap.value.capCents <= 0) return { kind: 'status', tone: 'neutral', messageKey: 'ok', href: '/finance/reserves' };
+    const overview = await freeReserveCapOverview(deps, ctx, {});
     const warnAtPercent = (valueAt(deps.db, 'warnAtPercent', today) as number | null) ?? 80;
-    const usedPercent = Math.round((cap.value.usedCents / cap.value.capCents) * 100);
-    if (usedPercent < warnAtPercent) return { kind: 'status', tone: 'neutral', messageKey: 'ok', href: '/finance/reserves' };
-    return { kind: 'status', tone: 'warning', messageKey: 'near', values: { percent: usedPercent }, href: '/finance/reserves' };
+    // 2 überschritten, 1 nähert sich, 0 ruhig — wie `limitState`. Die Jahre kommen älteres zuerst, `>=` nimmt bei Gleichstand das jüngere.
+    let worst: { rank: number; percent: number } | null = null;
+    for (const y of overview.ok ? overview.value.years : []) {
+      if (y.capCents <= 0) continue;
+      const rank = y.usedCents > y.capCents ? 2 : y.usedCents * 100 >= y.capCents * warnAtPercent ? 1 : 0;
+      if (worst === null || rank >= worst.rank) worst = { rank, percent: Math.round((y.usedCents / y.capCents) * 100) };
+    }
+    if (!worst || worst.rank === 0) return { kind: 'status', tone: 'neutral', messageKey: 'ok', href: '/finance/reserves' };
+    return { kind: 'status', tone: 'warning', messageKey: 'near', values: { percent: worst.percent }, href: '/finance/reserves' };
   },
 };
 

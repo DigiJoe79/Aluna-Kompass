@@ -547,13 +547,17 @@ test.describe('dms', () => {
     test.setTimeout(150_000);
     await login(page);
 
-    // „Tierschutzes“ steht nur im Text des Freistellungsbescheids, nicht im
-    // Betreff. Der Worker liest die Seed-Dokumente nach dem Reset im
-    // Hintergrund; gewartet wird auf den Treffer, nicht auf eine feste Zeit.
+    // „Rechtsbehelfsbelehrung“ steht nur im Text des Freistellungsbescheids, nicht im
+    // Betreff. Seit 0.2.7 nicht mehr „Tierschutzes“: Das steht nun auch in den
+    // Zuwendungsbestätigungen des Finanz-Seeds. Der Worker liest die Seed-Dokumente
+    // nach dem Reset im Hintergrund; gewartet wird auf den Treffer, nicht auf eine feste Zeit.
     await expect(async () => {
       await page.goto('/dms');
-      await page.getByPlaceholder('Betreff, Nummer oder Inhalt').fill('tierschutzes');
+      await page.getByPlaceholder('Betreff, Nummer oder Inhalt').fill('rechtsbehelfsbelehrung');
       await expect(page.getByText('Freistellungsbescheid')).toBeVisible({ timeout: 5_000 });
+      // Gewartet wird auf den Treffer im Inhalt („Seite 1“), nicht nur auf die Zeile: Seit 0.2.7 liegen die
+      // Finanz-Dokumente an ihrem Datum, und der Bescheid steht schon in der ungefilterten ersten Seite.
+      await expect(page.getByRole('link', { name: /Seite 1/ })).toBeVisible({ timeout: 5_000 });
     }).toPass({ timeout: 120_000 });
 
     const previewLink = page.getByRole('link', { name: /Seite 1/ });
@@ -1643,8 +1647,12 @@ test.describe('Ordnerbaum', () => {
     await page.keyboard.press('ArrowDown');
     await expect(treeRow(page, 'amtsgericht')).toBeFocused();
     await page.keyboard.press('Control+Shift+D');
-    // behoerden › amtsgericht, finanzamt, korrespondenz…, protokolle, vertraege
-    for (let i = 0; i < 4; i += 1) await page.keyboard.press('ArrowDown');
+    // behoerden › amtsgericht, finanzamt, dann die Ordner der ersten Ebene bis vertraege — wie viele dazwischen
+    // liegen, bestimmt der Seed (seit 0.2.7 auch mitglieder und partner).
+    for (let i = 0; i < 12; i += 1) {
+      if (await treeRow(page, 'vertraege').evaluate((el) => el === document.activeElement)) break;
+      await page.keyboard.press('ArrowDown');
+    }
     await expect(treeRow(page, 'vertraege')).toBeFocused();
     await page.keyboard.press('Enter');
   }
@@ -1690,21 +1698,25 @@ test.describe('Ordnerbaum', () => {
     await expect(page).toHaveURL(/\/dms$/);
   });
 
-  test('löscht einen leeren, geöffneten Ordner ohne Rückfrage; die Akte springt in den Elternordner', async ({ page }) => {
+  test('löscht einen leeren, geöffneten Ordner ohne Rückfrage; die Akte springt in den Elternordner', async ({ page, baseURL }) => {
     await login(page);
-    await page.goto('/dms?folder=behoerden%2Ffinanzamt');
-    const row = treeRow(page, 'finanzamt');
+    // Seit 0.2.7 liegt Schriftverkehr in „behoerden/finanzamt“ — den leeren Ordner legt der Test selbst an.
+    const client = await mcpClient(page, baseURL);
+    await callTool(client, 'dms_create_folder', { path: 'behoerden/gewerbeamt' });
+    await client.close();
+    await page.goto('/dms?folder=behoerden%2Fgewerbeamt');
+    const row = treeRow(page, 'gewerbeamt');
     await expect(row).toHaveAttribute('aria-current', 'page');
     await row.locator('[data-row-menu]').click();
     await page.getByRole('menuitem', { name: 'Löschen' }).click();
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page).toHaveURL(/folder=behoerden$/);
-    await expect(page.locator('[data-folder="behoerden/finanzamt"]')).toHaveCount(0);
+    await expect(page.locator('[data-folder="behoerden/gewerbeamt"]')).toHaveCount(0);
 
-    const deleted = toastWith(page, 'Ordner finanzamt gelöscht');
+    const deleted = toastWith(page, 'Ordner gewerbeamt gelöscht');
     await deleted.getByRole('button', { name: 'Rückgängig' }).click();
-    await expect(page.locator('[data-folder="behoerden/finanzamt"]')).toBeVisible();
+    await expect(page.locator('[data-folder="behoerden/gewerbeamt"]')).toBeVisible();
     await expect(page).toHaveURL(/folder=behoerden$/);
   });
 

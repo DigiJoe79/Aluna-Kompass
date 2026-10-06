@@ -60,12 +60,14 @@ export function NoticesTable({ rows, canIssue, canPickDocument }: { rows: Notice
             const actions = noticeActions(row);
             return (
               <TableRow key={row.id} data-testid="notice-row">
-                <TableCell>
+                {/* Bescheid und Geltung dürfen umbrechen (Unterzeilen): Einzeilig liefen
+                    die sechs Spalten bei 1440 px seitlich über (release-0.2.7.md, Befund 14). */}
+                <TableCell className="whitespace-normal">
                   {tk(row.kind)}
                   <span className="block text-[12px] text-muted-ink">{row.taxOffice} · <span className="font-mono">{row.taxNumber}</span></span>
                 </TableCell>
                 <TableCell className="font-mono tabular-nums">{date(row.noticeDate)}</TableCell>
-                <TableCell>
+                <TableCell className="whitespace-normal">
                   <span className="whitespace-nowrap font-mono tabular-nums"><span data-testid="notice-exempt-from">{date(row.exemptFrom)}</span> – {date(row.validUntil)}</span>
                   {row.assessmentPeriod ? <span className="block text-[12px] text-muted-ink">{t('assessmentPeriodLine', { period: row.assessmentPeriod })}</span> : null}
                 </TableCell>

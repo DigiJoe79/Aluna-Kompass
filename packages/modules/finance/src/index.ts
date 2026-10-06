@@ -260,10 +260,11 @@ export { coverageRequired, evidenceCoverage, missingEvidence, paymentProofSatisf
 export { foreignActivity, foreignActivityInternal, type ForeignActivityView, type ForeignLineEntry, type ForeignPartnerPaymentEntry } from './allocation/foreign';
 
 // F8b — zurückgelegtes Geld (allocation/).
-export { freeReserveCapCents, type FreeReserveCapInput } from './allocation/reserve-rules';
+export { freeReserveCapCents, freeReserveYears, type FreeReserveCapInput, type FreeReserveYear, type FreeReserveYearInput, type FreeReserveYears } from './allocation/reserve-rules';
 export {
   deleteReserve,
   freeReserveCap,
+  freeReserveCapOverview,
   linkResolution,
   listReserves,
   recordReserveCarryForward,
@@ -271,7 +272,9 @@ export {
   saveReserve,
   setReserveActive,
   uploadResolution,
+  type FreeReserveCapOverview,
   type FreeReserveCapView,
+  type FreeReserveCapYearView,
   type ReserveMovementView,
   type ReserveView,
 } from './allocation/reserves';
@@ -295,6 +298,7 @@ export { AUDIT_FIELDS, financeAudit, type FinanceEntity } from './audit';
 export { installFinance } from './install';
 export { FINANCE_MCP_TOOLS } from './mcp-tools';
 export { seedFinance } from './seed';
+export { SEED_STORY_LAST_DAY, seedStoryYear } from './seed-calendar';
 
 export { camtStatementIbans, parseCamt053, type CamtError, type CamtLine, type CamtStatement } from './import/camt';
 export { buildCamt053, buildCamt053Bytes, type CamtFixtureInput, type CamtFixtureLine } from './import/camt-fixture';

@@ -33,7 +33,13 @@ export default async function HomePage() {
       {tiles.length === 0 ? (
         <p className="text-[14px] text-ink-2">{t('noTiles')}</p>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        // `grid-cols-1` ist `minmax(0,1fr)`: Ohne Vorgabe wuchs die implizite Spalte
+        // auf dem Telefon auf die längste `truncate`-Zeile einer Kachel (602 px bei
+        // 390 px Fenster). Wie die Nachbarraster (Kontakt, Konten); die Zeile selbst
+        // begrenzt `tile-lines.tsx` (`max-w-full`), beides ist nötig. Kein Layout-Test
+        // für diese Einzelstelle (AGENTS.md); der Überlauf-Wächter der
+        // Screenshot-Pipeline sieht es.
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {tiles.map((view) => (
             <TileCard key={`${view.module}.${view.key}`} view={view} canComplete={hasPermission(ctx, 'followUps.manage')} />
           ))}

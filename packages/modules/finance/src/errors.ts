@@ -32,6 +32,8 @@ export const FINANCE_ERRORS = {
   purposeGoesNegative: { purpose: 'text', balance: 'cents' },
   // Befund S: Zuführung zur freien Rücklage über dem Höchstbetrag des Jahres — Pflichtbegründung, kein Verbot.
   freeReserveCapExceeded: { cap: 'cents', over: 'cents' },
+  // Befund 4 (0.2.7): Zuführung zur freien Rücklage ohne Jahr, solange das Vorjahr offen ist — kein stilles Raten.
+  reserveYearAmbiguous: { previous: 'text', current: 'text' },
   accountInactive: { account: 'text' },
   categoryInactive: { category: 'text' },
   fiscalYearClosed: { year: 'text' },

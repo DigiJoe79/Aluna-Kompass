@@ -74,6 +74,11 @@ export const test = base.extend<Record<never, never>, { serverKind: ServerKind; 
     await use(server.url);
   },
   page: async ({ page }, use) => {
+    // `scripts/e2e-kalender.sh` stellt Server und Testlauf um FAKE_OFFSET_MS vor (`scripts/fake-date.mjs`; hier ist
+    // `new Date()` schon die vorgestellte Uhr). Der Browser geht mit, weil Masken „heute“ auch im Client rechnen
+    // (Auslage, Kontoauszug, Entwürfe). `page.clock` gilt für den ganzen Kontext, also auch für `context.newPage()`;
+    // ein eigener `browser.newContext()` (nur `profile.spec.ts`) bliebe ohne. Ohne die Variable: wie bisher.
+    if (process.env.FAKE_OFFSET_MS) await page.clock.install({ time: new Date() });
     const goto = page.goto.bind(page);
     page.goto = async (...args: Parameters<Page['goto']>) => {
       const response = await goto(...args);

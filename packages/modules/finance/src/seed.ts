@@ -1,6 +1,6 @@
-import { assignRole, createRole, createUser, getDashboardLayout, getEffectivePermissions, readSetting, schema, setDashboardLayout, setRolePermissions, todayIn, unwrap, type CallContext, type Deps } from '@kompass/core';
+import { assignRole, changeOwnPassword, createRole, createUser, getDashboardLayout, getEffectivePermissions, isoDayIn, login, readSetting, schema, SEED_ADMIN_PASSWORD, seedClockAt, seedMoment, setDashboardLayout, setRolePermissions, todayIn, unwrap, type CallContext, type Deps } from '@kompass/core';
 import { addContactRole, contactRoles, contacts, createContact, endContactRole, hasLinkHistoryInternal, linkUserToContact, updateContact } from '@kompass/module-contacts';
-import { documents as dmsDocuments, receiveDocument, textPdf } from '@kompass/module-dms';
+import { documents as dmsDocuments, receiptPdf, receiveDocument, textPdf } from '@kompass/module-dms';
 import { projects } from '@kompass/module-projects';
 import { and, asc, eq } from 'drizzle-orm';
 import { completeFormat, guessCsvFormat, type CsvFormat } from './import/csv';
@@ -24,6 +24,7 @@ import { reverseEntry } from './ledger/reverse';
 import { uploadVoucher, revokeVoucher } from './ledger/vouchers';
 import { setDatedValue } from './ledger/dated-values';
 import { installFinance } from './install';
+import { seedStoryYear } from './seed-calendar';
 import { checkConfirmable } from './donations/check';
 import { attachSignedConfirmation, issueConfirmation, recordConfirmationDispatch, voidConfirmation } from './donations/confirmations';
 import { saveInKindDetails } from './donations/in-kind';
@@ -78,6 +79,13 @@ async function ensureAccount(deps: Deps, ctx: CallContext, name: string, input: 
   return unwrap(await createAccount(deps, ctx, { name, ...input }));
 }
 
+/**
+ * Ein Dokument entsteht an seinem Tag (Joe, 2026-10-06): der Dienstaufruf läuft unter einer Uhr, die auf `isoDay`
+ * 10:00 UTC steht, nie nach jetzt. Nur für Aufrufe, deren Dokumentdatum der Seed selbst nennt — siehe
+ * „Ausnahmen“ in Plan 2b, Task 7.
+ */
+const on = (deps: Deps, isoDay: string): Deps => seedClockAt(deps, seedMoment(deps, isoDay, '10:00'));
+
 /** Gibt einem Konto einmal ein CSV-Format — erraten wie im Assistenten, gespeichert über `saveImportProfile` — und lädt einmal einen Auszug (F4b). */
 async function ensureCsvAccountWithRun(deps: Deps, ctx: CallContext, accountName: string, formatName: string, fileName: string, bytes: Uint8Array): Promise<void> {
   let account = accountByName(deps, accountName);
@@ -116,6 +124,17 @@ function accountByName(deps: Deps, name: string) {
   return row;
 }
 
+/**
+ * Das Projekt, an dem die Finanz-Beispiele hängen: „winterhilfe“ aus dem Projekte-Seed, sonst das erste nach
+ * Reihenfolge — nie ein beliebiges (bis 0.2.6 `limit(1)` ohne Ordnung, Spec 2026-10-06 § 4).
+ */
+function seedProject(deps: Deps): { id: string } | undefined {
+  return (
+    deps.db.select({ id: projects.id }).from(projects).where(eq(projects.slug, 'winterhilfe')).get() ??
+    deps.db.select({ id: projects.id }).from(projects).orderBy(asc(projects.sortOrder), asc(projects.createdAt)).limit(1).get()
+  );
+}
+
 function purposeByName(deps: Deps, name: string) {
   const row = deps.db.select().from(financePurposes).where(eq(financePurposes.name, name)).get();
   if (!row) throw new Error(`Zweck fehlt: ${name}`);
@@ -146,11 +165,12 @@ function allocationLinesOf(deps: Deps, entryId: string) {
   return deps.db.select().from(financeAllocationLines).where(eq(financeAllocationLines.entryId, entryId)).orderBy(asc(financeAllocationLines.position)).all();
 }
 
-/** Belegt eine Buchung nur, wenn sie noch keinen Beleg trägt — idempotent über `uploadVoucher` hinweg. */
-async function ensureVoucher(deps: Deps, ctx: CallContext, entry: { id: string }, typeKey: string, documentDate: string, title?: string): Promise<{ linkId: string; documentId: string } | null> {
+/** Belegt eine Buchung nur, wenn sie noch keinen Beleg trägt — idempotent über `uploadVoucher` hinweg. Ohne `bytes` ein Platzhalter-PDF. */
+async function ensureVoucher(deps: Deps, ctx: CallContext, entry: { id: string }, typeKey: string, documentDate: string, title?: string, bytes?: Uint8Array): Promise<{ linkId: string; documentId: string } | null> {
   const existing = deps.db.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, entry.id)).all();
   if (existing.length > 0) return { linkId: existing[0]!.id, documentId: existing[0]!.documentId ?? '' };
-  const res = unwrap(await uploadVoucher(deps, ctx, { entryId: entry.id, bytes: textPdf(['Beleg', '', 'Erfundenes Beispiel für die Entwicklung.']), typeKey, documentDate, title }));
+  // Der Beleg entsteht an seinem Tag (Plan 2b, Task 7, 3m).
+  const res = unwrap(await uploadVoucher(on(deps, documentDate), ctx, { entryId: entry.id, bytes: bytes ?? textPdf(['Beleg', '', 'Erfundenes Beispiel für die Entwicklung.']), typeKey, documentDate, title }));
   return { linkId: res.linkId, documentId: res.documentId };
 }
 
@@ -179,8 +199,8 @@ async function ensureDonors(deps: Deps, ctx: CallContext, since: string): Promis
   if (existing.length >= 2) return [{ id: existing[0]!.contactId }, { id: existing[1]!.contactId }];
   const contactCtx: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, 'contacts.manage']) };
   const invented: [{ id: string }, { id: string }] = [{ id: '' }, { id: '' }];
-  for (const [index, lastName] of ['Wagner', 'Kruse'].entries()) {
-    const contact = unwrap(await createContact(deps, contactCtx, { kind: 'person', lastName }));
+  for (const [index, [firstName, lastName]] of [['Petra', 'Wagner'], ['Uwe', 'Kruse']].entries()) {
+    const contact = unwrap(await createContact(deps, contactCtx, { kind: 'person', firstName, lastName }));
     unwrap(await addContactRole(deps, contactCtx, { id: contact.id, role: 'donor', since }));
     invented[index] = { id: contact.id };
   }
@@ -188,24 +208,38 @@ async function ensureDonors(deps: Deps, ctx: CallContext, since: string): Promis
 }
 
 /**
- * Ein erfundenes Vereinsjahr mit allen Stammdaten von F1: zwei Geschäftsjahre,
+ * Das Stichjahr dieses Seeds: Gibt es schon ein Geschäftsjahr, ist das erste davon das Vorjahr der Geschichte —
+ * ein zweiter Lauf bleibt so in der Geschichte des ersten, auch wenn der Kalender inzwischen ein neues Stichjahr
+ * nennt (sonst stünde sie doppelt da, und der Abschluss fände die Entwürfe des alten Stichjahrs). Ohne
+ * Geschäftsjahr gilt der Kalender (`seedStoryYear`).
+ */
+function storyYearOf(deps: Deps): number {
+  const first = deps.db.select({ startsOn: financeFiscalYears.startsOn }).from(financeFiscalYears).orderBy(asc(financeFiscalYears.startsOn)).limit(1).get();
+  return first ? Number(first.startsOn.slice(0, 4)) + 1 : seedStoryYear(todayIn(deps));
+}
+
+/**
+ * Ein erfundenes Vereinsjahr mit allen Stammdaten von F1: die Geschäftsjahre
+ * des Vor- und des Stichjahrs (dazu das laufende, liegt heute schon danach),
  * vier Geldkonten (eines stillgelegt), vier Zwecke, eine eigene Kategorie
  * neben dem Startplan, eine Überschreibung eines datierten Werts. Frei
  * erfunden (keine Tier- und keine Aluna-Begriffe), idempotent — ein zweiter
- * Lauf verdoppelt nichts.
+ * Lauf verdoppelt nichts, auch nicht in einem anderen Stichjahr.
  */
 export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   // Damit der Startplan sicher steht, auch wenn ein Aufrufer `installFinance` noch nicht selbst gerufen hat.
   deps.db.transaction((tx) => installFinance(tx, deps, ctx));
 
-  const now = deps.clock.now();
-  const currentYear = now.getUTCFullYear();
-  const previousYear = currentYear - 1;
+  // Die Geschichte spielt im Stichjahr und seinem Vorjahr (`seed-calendar.ts`) — nie in der Zukunft.
+  const storyYear = storyYearOf(deps);
+  const previousYear = storyYear - 1;
 
   const hasFiscalYear = deps.db.select({ id: financeFiscalYears.id }).from(financeFiscalYears).limit(1).get();
   if (!hasFiscalYear) {
     unwrap(await createFirstFiscalYear(deps, ctx, { startsOn: `${previousYear}-01-01`, endsOn: `${previousYear}-12-31` }));
-    unwrap(deps.db.transaction((tx) => ensureFiscalYearFor(tx, deps, ctx, todayIn(deps))));
+    // `ensureFiscalYearFor` legt nur den unmittelbaren Nachfolger an: erst das Stichjahr, dann — liegt heute
+    // schon im Jahr danach — das laufende. Ein Dienst, der „heute“ bucht, findet so immer sein Geschäftsjahr.
+    for (const day of [`${storyYear}-01-01`, todayIn(deps)]) unwrap(deps.db.transaction((tx) => ensureFiscalYearFor(tx, deps, ctx, day)));
   }
 
   await ensureAccount(deps, ctx, 'Vereinskonto', {
@@ -226,9 +260,9 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   await ensureAccount(deps, ctx, 'Spendenplattform', { kind: 'paymentService', iban: 'DE32999999990301059999', importFormat: null });
   // F4b: CSV entsteht nur über ein gespeichertes Format — auch im Seed derselbe Weg wie im Assistenten:
   // Kompass errät das Format, der Mensch beantwortet nur das Vorzeichen, dann ein Auszug.
-  await ensureCsvAccountWithRun(deps, ctx, 'Spendenplattform', 'Spendenplattform CSV', 'aktivitaeten-2026-03.csv', buildPaymentServiceCsv());
+  await ensureCsvAccountWithRun(deps, ctx, 'Spendenplattform', 'Spendenplattform CSV', `aktivitaeten-${storyYear}-03.csv`, buildPaymentServiceCsv(storyYear));
   await ensureAccount(deps, ctx, 'Zweitbank CSV', { kind: 'bank', iban: 'DE48999999990000404040', isMain: false });
-  await ensureCsvAccountWithRun(deps, ctx, 'Zweitbank CSV', 'Zweitbank CSV', 'umsaetze-2026-03.csv', buildSecondBankCsv());
+  await ensureCsvAccountWithRun(deps, ctx, 'Zweitbank CSV', 'Zweitbank CSV', `umsaetze-${storyYear}-03.csv`, buildSecondBankCsv(storyYear));
   // IBAN erfunden (BLZ 99999) — N2: die frühere Beispielnummer trug die echte österreichische BLZ 19043.
   const oldSavings = await ensureAccount(deps, ctx, 'Altes Sparbuch', { kind: 'bank', iban: 'AT939999900001234567', isMain: false });
   if (oldSavings) {
@@ -237,7 +271,7 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   }
 
   await ensurePurpose(deps, ctx, 'Dachsanierung Vereinsheim', { targetCents: 800000, description: 'Zusage von Frau Erika Beispiel über 2.000 €' });
-  const existingProject = deps.db.select({ id: projects.id }).from(projects).limit(1).get();
+  const existingProject = seedProject(deps);
   await ensurePurpose(deps, ctx, 'Jugendfreizeit', existingProject ? { projectId: existingProject.id } : {});
   await ensurePurpose(deps, ctx, 'Partnerprojekt Ausland', { abroad: true });
   await ensurePurpose(deps, ctx, 'Flutlicht', {});
@@ -246,7 +280,7 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
 
   await ensureCategory(deps, ctx, 'room-rental', { name: 'Raumvermietung', direction: 'income', sphere: 'assetManagement', incomeKind: 'fees' });
 
-  unwrap(await setDatedValue(deps, ctx, { key: 'mileageRate', validFrom: `${currentYear}-01-01`, value: 25 }));
+  unwrap(await setDatedValue(deps, ctx, { key: 'mileageRate', validFrom: `${storyYear}-01-01`, value: 25 }));
 
   // Buchungen in jedem Zustand (Spec 11.3) — über die Dienste, damit Trigger, Kassenprüfung und Nummernvergabe mitlaufen.
   const bank = accountByName(deps, 'Vereinskonto');
@@ -290,7 +324,7 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
 
   await ensureEntry(deps, 'Spende mit Zweck', () =>
     bookEntry(deps, ctx, {
-      entryDate: `${currentYear}-02-01`,
+      entryDate: `${storyYear}-02-01`,
       text: 'Spende mit Zweck',
       moneyLines: [{ accountId: bank.id, amountCents: 15000 }],
       allocationLines: [{ categoryId: donationsCat.id, amountCents: 15000, contactId: donorA.id, purposeId: dachsanierung.id }],
@@ -300,7 +334,7 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   // Prüfstein 2: Auszahlung des Zahlungsdiensts als Split über zwei Spender und eine Gebühr.
   await ensureEntry(deps, 'Auszahlung Spendenplattform', () =>
     bookEntry(deps, ctx, {
-      entryDate: `${currentYear}-02-10`,
+      entryDate: `${storyYear}-02-10`,
       text: 'Auszahlung Spendenplattform',
       moneyLines: [{ accountId: platform.id, amountCents: 48500 }],
       allocationLines: [
@@ -314,7 +348,7 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
 
   await ensureEntry(deps, 'Abhebung Barkasse', () =>
     bookEntry(deps, ctx, {
-      entryDate: `${currentYear}-02-15`,
+      entryDate: `${storyYear}-02-15`,
       text: 'Abhebung Barkasse',
       moneyLines: [
         { accountId: bank.id, amountCents: -10000 },
@@ -325,12 +359,12 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   );
 
   await ensureEntry(deps, 'Bar-Ausgabe Fahrtkosten', () =>
-    bookEntry(deps, ctx, { entryDate: `${currentYear}-02-20`, text: 'Bar-Ausgabe Fahrtkosten', moneyLines: [{ accountId: cash.id, amountCents: -1500 }], allocationLines: [{ categoryId: programCostsCat.id, amountCents: -1500 }] }).then(unwrap),
+    bookEntry(deps, ctx, { entryDate: `${storyYear}-02-20`, text: 'Bar-Ausgabe Fahrtkosten', moneyLines: [{ accountId: cash.id, amountCents: -1500 }], allocationLines: [{ categoryId: programCostsCat.id, amountCents: -1500 }] }).then(unwrap),
   );
 
   await ensureEntry(deps, 'Sachspende Werkzeug', () =>
     bookEntry(deps, ctx, {
-      entryDate: `${currentYear}-02-25`,
+      entryDate: `${storyYear}-02-25`,
       text: 'Sachspende Werkzeug',
       moneyLines: [],
       allocationLines: [
@@ -343,7 +377,7 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   // F2c: ein erfüllter Zweck, der noch Restmittel hält (Spec 5.6, Warnung „erfüllt mit Restmitteln“).
   const floodlight = purposeByName(deps, 'Flutlicht');
   await ensureEntry(deps, 'Spende Flutlicht', () =>
-    bookEntry(deps, ctx, { entryDate: `${currentYear}-02-12`, text: 'Spende Flutlicht', moneyLines: [{ accountId: bank.id, amountCents: 12000 }], allocationLines: [{ categoryId: donationsCat.id, amountCents: 12000, purposeId: floodlight.id }] }).then(unwrap),
+    bookEntry(deps, ctx, { entryDate: `${storyYear}-02-12`, text: 'Spende Flutlicht', moneyLines: [{ accountId: bank.id, amountCents: 12000 }], allocationLines: [{ categoryId: donationsCat.id, amountCents: 12000, purposeId: floodlight.id }] }).then(unwrap),
   );
   {
     const row = deps.db.select().from(financePurposes).where(eq(financePurposes.id, floodlight.id)).get();
@@ -353,35 +387,35 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   // F2c: ein Zweck im Minus — die Ausgabe übersteigt, was je für ihn einging.
   const sommerfest = purposeByName(deps, 'Sommerfest');
   await ensureEntry(deps, 'Ausgabe Sommerfest', () =>
-    bookEntry(deps, ctx, { entryDate: `${currentYear}-02-14`, text: 'Ausgabe Sommerfest', moneyLines: [{ accountId: bank.id, amountCents: -8000 }], allocationLines: [{ categoryId: programCostsCat.id, amountCents: -8000, purposeId: sommerfest.id }], reason: 'Vorschuss aus freien Mitteln, der Zuschuss der Gemeinde ist zugesagt' }).then(unwrap),
+    bookEntry(deps, ctx, { entryDate: `${storyYear}-02-14`, text: 'Ausgabe Sommerfest', moneyLines: [{ accountId: bank.id, amountCents: -8000 }], allocationLines: [{ categoryId: programCostsCat.id, amountCents: -8000, purposeId: sommerfest.id }], reason: 'Vorschuss aus freien Mitteln, der Zuschuss der Gemeinde ist zugesagt' }).then(unwrap),
   );
 
   await ensureEntry(deps, 'Fehlerhafte Spendenbuchung', async () => {
     const booked = unwrap(
-      await bookEntry(deps, ctx, { entryDate: `${currentYear}-03-01`, text: 'Fehlerhafte Spendenbuchung', moneyLines: [{ accountId: bank.id, amountCents: 5000 }], allocationLines: [{ categoryId: donationsCat.id, amountCents: 5000 }] }),
+      await bookEntry(deps, ctx, { entryDate: `${storyYear}-03-01`, text: 'Fehlerhafte Spendenbuchung', moneyLines: [{ accountId: bank.id, amountCents: 5000 }], allocationLines: [{ categoryId: donationsCat.id, amountCents: 5000 }] }),
     );
     unwrap(await reverseEntry(deps, ctx, { id: booked.id }));
   });
 
   await ensureEntry(deps, 'Entwurf geprüft', async () => {
     const draft = unwrap(
-      await saveDraft(deps, ctx, { entryDate: `${currentYear}-03-05`, text: 'Entwurf geprüft', moneyLines: [{ accountId: bank.id, amountCents: 2500 }], allocationLines: [{ categoryId: donationsCat.id, amountCents: 2500 }] }),
+      await saveDraft(deps, ctx, { entryDate: `${storyYear}-03-05`, text: 'Entwurf geprüft', moneyLines: [{ accountId: bank.id, amountCents: 2500 }], allocationLines: [{ categoryId: donationsCat.id, amountCents: 2500 }] }),
     );
     unwrap(await setReviewed(deps, ctx, { id: draft.id, reviewed: true }));
   });
 
   await ensureEntry(deps, 'Entwurf ungeprüft', () =>
-    saveDraft(deps, ctx, { entryDate: `${currentYear}-03-06`, text: 'Entwurf ungeprüft', moneyLines: [{ accountId: bank.id, amountCents: 1800 }], allocationLines: [{ categoryId: donationsCat.id, amountCents: 1800 }] }).then(unwrap),
+    saveDraft(deps, ctx, { entryDate: `${storyYear}-03-06`, text: 'Entwurf ungeprüft', moneyLines: [{ accountId: bank.id, amountCents: 1800 }], allocationLines: [{ categoryId: donationsCat.id, amountCents: 1800 }] }).then(unwrap),
   );
 
   // F3a: ein zweiter ausgeglichener, ungeprüfter Entwurf — das Journal braucht zwei für die Mehrfachauswahl.
   await ensureEntry(deps, 'Entwurf ungeprüft zwei', () =>
-    saveDraft(deps, ctx, { entryDate: `${currentYear}-03-09`, text: 'Entwurf ungeprüft zwei', moneyLines: [{ accountId: bank.id, amountCents: 2200 }], allocationLines: [{ categoryId: donationsCat.id, amountCents: 2200 }] }).then(unwrap),
+    saveDraft(deps, ctx, { entryDate: `${storyYear}-03-09`, text: 'Entwurf ungeprüft zwei', moneyLines: [{ accountId: bank.id, amountCents: 2200 }], allocationLines: [{ categoryId: donationsCat.id, amountCents: 2200 }] }).then(unwrap),
   );
 
   // Unausgeglichen: der Agent hat die Zuordnung noch nicht vollständig — ein Mensch prüft und ergänzt sie.
   await ensureEntry(deps, 'Entwurf vom Agenten', () =>
-    saveDraft(deps, { ...ctx, channel: 'mcp' as const }, { entryDate: `${currentYear}-03-07`, text: 'Entwurf vom Agenten', moneyLines: [{ accountId: bank.id, amountCents: 4000 }], allocationLines: [{ categoryId: donationsCat.id, amountCents: 3500 }] }).then(unwrap),
+    saveDraft(deps, { ...ctx, channel: 'mcp' as const }, { entryDate: `${storyYear}-03-07`, text: 'Entwurf vom Agenten', moneyLines: [{ accountId: bank.id, amountCents: 4000 }], allocationLines: [{ categoryId: donationsCat.id, amountCents: 3500 }] }).then(unwrap),
   );
 
   // --- Kontoauszüge (F4 Task 8, Spec 6.1): eigenes Konto „Importkonto“ mit erfundener IBAN
@@ -390,7 +424,7 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   // ein Kontoumsatz gebucht, mehrere offen. Über die Dienste, nicht per Insert — ein Lauf ist eine
   // Tatsache, die nur `importStatement`/`discardRun` selbst herstellen dürfen.
   const IMPORTKONTO_IBAN = 'DE60999999990201051234';
-  const importkonto = await ensureAccount(deps, ctx, 'Importkonto', { kind: 'bank', iban: IMPORTKONTO_IBAN, isMain: false, openingBalanceCents: 100000, openingDate: '2026-01-01' });
+  const importkonto = await ensureAccount(deps, ctx, 'Importkonto', { kind: 'bank', iban: IMPORTKONTO_IBAN, isMain: false, openingBalanceCents: 100000, openingDate: `${storyYear}-01-01` });
   if (importkonto) {
     const hasImportRuns = deps.db.select({ id: financeImportRuns.id }).from(financeImportRuns).where(eq(financeImportRuns.accountId, importkonto.id)).limit(1).get();
     if (!hasImportRuns) {
@@ -398,15 +432,15 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
       const runA = unwrap(
         await importStatement(deps, ctx, {
           accountId: importkonto.id,
-          fileName: 'kontoauszug-2026-01.xml',
+          fileName: `kontoauszug-${storyYear}-01.xml`,
           bytes: buildCamt053Bytes({
             iban: IMPORTKONTO_IBAN,
-            from: '2026-01-01',
-            to: '2026-01-31',
+            from: `${storyYear}-01-01`,
+            to: `${storyYear}-01-31`,
             openingCents: 100000,
             lines: [
-              { bookingDate: '2026-01-05', amountCents: 20000, counterpartyName: 'Erika Beispiel', counterpartyIban: 'DE66999999991234567890', purpose: 'Spende', bankReference: 'IMP-0001' },
-              { bookingDate: '2026-01-10', amountCents: -3500, counterpartyName: 'Buerobedarf Muster GmbH', counterpartyIban: 'DE12999999990000112233', purpose: 'Bueromaterial', bankReference: 'IMP-0002' },
+              { bookingDate: `${storyYear}-01-05`, amountCents: 20000, counterpartyName: 'Erika Beispiel', counterpartyIban: 'DE66999999991234567890', purpose: 'Spende', bankReference: 'IMP-0001' },
+              { bookingDate: `${storyYear}-01-10`, amountCents: -3500, counterpartyName: 'Buerobedarf Muster GmbH', counterpartyIban: 'DE12999999990000112233', purpose: 'Bueromaterial', bankReference: 'IMP-0002' },
             ],
           }),
         }),
@@ -416,13 +450,13 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
       unwrap(
         await importStatement(deps, ctx, {
           accountId: importkonto.id,
-          fileName: 'kontoauszug-2026-02.xml',
+          fileName: `kontoauszug-${storyYear}-02.xml`,
           bytes: buildCamt053Bytes({
             iban: IMPORTKONTO_IBAN,
-            from: '2026-02-10',
-            to: '2026-02-28',
+            from: `${storyYear}-02-10`,
+            to: `${storyYear}-02-28`,
             openingCents: 130000,
-            lines: [{ bookingDate: '2026-02-15', amountCents: 5000, counterpartyName: 'Foerderverein Musterstadt e. V.', counterpartyIban: 'DE22999999995566778899', purpose: 'Zuschuss', bankReference: 'IMP-0003' }],
+            lines: [{ bookingDate: `${storyYear}-02-15`, amountCents: 5000, counterpartyName: 'Foerderverein Musterstadt e. V.', counterpartyIban: 'DE22999999995566778899', purpose: 'Zuschuss', bankReference: 'IMP-0003' }],
           }),
         }),
       );
@@ -432,15 +466,15 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
       unwrap(
         await importStatement(deps, ctx, {
           accountId: importkonto.id,
-          fileName: 'kontoauszug-2026-04.xml',
+          fileName: `kontoauszug-${storyYear}-04.xml`,
           bytes: buildCamt053Bytes({
             iban: IMPORTKONTO_IBAN,
-            from: '2026-04-01',
-            to: '2026-04-30',
+            from: `${storyYear}-04-01`,
+            to: `${storyYear}-04-30`,
             openingCents: 135000,
             lines: [
-              { bookingDate: '2026-04-05', amountCents: 7500, counterpartyName: 'Erika Beispiel', counterpartyIban: 'DE66999999991234567890', purpose: 'Spende April', bankReference: 'IMP-0004' },
-              { bookingDate: '2026-01-10', amountCents: -3500, counterpartyName: 'Buerobedarf Muster GmbH', counterpartyIban: 'DE12999999990000112233', purpose: 'Bueromaterial' },
+              { bookingDate: `${storyYear}-04-05`, amountCents: 7500, counterpartyName: 'Erika Beispiel', counterpartyIban: 'DE66999999991234567890', purpose: 'Spende April', bankReference: 'IMP-0004' },
+              { bookingDate: `${storyYear}-01-10`, amountCents: -3500, counterpartyName: 'Buerobedarf Muster GmbH', counterpartyIban: 'DE12999999990000112233', purpose: 'Bueromaterial' },
             ],
           }),
         }),
@@ -450,13 +484,13 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
       const runD = unwrap(
         await importStatement(deps, ctx, {
           accountId: importkonto.id,
-          fileName: 'kontoauszug-2026-05-versehentlich.xml',
+          fileName: `kontoauszug-${storyYear}-05-versehentlich.xml`,
           bytes: buildCamt053Bytes({
             iban: IMPORTKONTO_IBAN,
-            from: '2026-05-01',
-            to: '2026-05-31',
+            from: `${storyYear}-05-01`,
+            to: `${storyYear}-05-31`,
             openingCents: 139000,
-            lines: [{ bookingDate: '2026-05-10', amountCents: 2000, counterpartyName: 'Erika Beispiel', counterpartyIban: 'DE66999999991234567890', purpose: 'Testbuchung falsch', bankReference: 'IMP-0005' }],
+            lines: [{ bookingDate: `${storyYear}-05-10`, amountCents: 2000, counterpartyName: 'Erika Beispiel', counterpartyIban: 'DE66999999991234567890', purpose: 'Testbuchung falsch', bankReference: 'IMP-0005' }],
           }),
         }),
       ).runs[0]!;
@@ -465,10 +499,10 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
       // Lauf E: eine Datei, deren Summenprobe nicht aufgeht — schreibt nur einen fehlgeschlagenen Lauf, keine Zeilen.
       const failedResult = await importStatement(deps, ctx, {
         accountId: importkonto.id,
-        fileName: 'kontoauszug-2026-06-kaputt.xml',
-        bytes: buildCamt053Bytes({ iban: IMPORTKONTO_IBAN, from: '2026-06-01', to: '2026-06-30', openingCents: 141000, closingCents: 999999, lines: [{ bookingDate: '2026-06-05', amountCents: 1000 }] }),
+        fileName: `kontoauszug-${storyYear}-06-kaputt.xml`,
+        bytes: buildCamt053Bytes({ iban: IMPORTKONTO_IBAN, from: `${storyYear}-06-01`, to: `${storyYear}-06-30`, openingCents: 141000, closingCents: 999999, lines: [{ bookingDate: `${storyYear}-06-05`, amountCents: 1000 }] }),
       });
-      if (failedResult.ok) throw new Error('Seed: kontoauszug-2026-06-kaputt.xml haette als fehlgeschlagener Lauf enden muessen');
+      if (failedResult.ok) throw new Error(`Seed: kontoauszug-${storyYear}-06-kaputt.xml haette als fehlgeschlagener Lauf enden muessen`);
 
       // Ein Kontoumsatz gebucht (die Spende aus Lauf A), die übrigen bleiben offen (E8).
       const donationRaw = deps.db
@@ -478,7 +512,7 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
         .get()!;
       unwrap(
         await bookEntry(deps, ctx, {
-          entryDate: '2026-01-06',
+          entryDate: `${storyYear}-01-06`,
           text: 'Spende aus Kontoauszug',
           moneyLines: [{ accountId: importkonto.id, amountCents: 20000, rawTransactionId: donationRaw.id }],
           allocationLines: [{ categoryId: donationsCat.id, amountCents: 20000 }],
@@ -488,7 +522,7 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   }
 
   // --- Arbeitsliste (F5, aus Task 9 vorgezogen für die E2E von Task 7): alles auf „Importkonto“.
-  if (importkonto) await seedWorkList(deps, ctx, importkonto.id);
+  if (importkonto) await seedWorkList(deps, ctx, importkonto.id, storyYear);
 
   // --- Belege (F2b, Spec 5.2): drei festgeschriebene Buchungen mit hochgeladenem PDF; eine davon
   // widerrufen und ersetzt; „Spende Altjahr“ bleibt bewusst ohne Beleg (der Rohumsatz allein reicht
@@ -498,7 +532,7 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   const bankgebuehr = entryByText(deps, 'Bankgebühr Altjahr');
 
   await ensureVoucher(deps, ctx, bueromaterial, 'voucher-invoice', `${previousYear}-05-20`, 'Rechnung Büromaterial');
-  const fahrtkostenVoucher = await ensureVoucher(deps, ctx, fahrtkosten, 'voucher-receipt', `${currentYear}-02-20`);
+  const fahrtkostenVoucher = await ensureVoucher(deps, ctx, fahrtkosten, 'voucher-receipt', `${storyYear}-02-20`);
   const bankgebuehrVoucher = await ensureVoucher(deps, ctx, bankgebuehr, 'voucher-own', `${previousYear}-04-15`);
 
   if (bankgebuehrVoucher && fahrtkostenVoucher) {
@@ -519,19 +553,19 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
 
   // --- Offene Posten (F2b, Spec 5.3): außerhalb des Journals — eine Verbindlichkeit offen, eine
   // teilbezahlt, eine Forderung erledigt, ein Posten ohne Zahlung erledigt.
-  const payableOpen = await ensureOpenItem(deps, ctx, 'RE-2026-041', { kind: 'payable', itemDate: `${currentYear}-01-10`, amountCents: 12000, dueOn: `${currentYear}-02-10` });
-  const payablePartial = await ensureOpenItem(deps, ctx, 'RE-2026-055', { kind: 'payable', itemDate: `${currentYear}-01-15`, amountCents: 20000, dueOn: `${currentYear}-02-15` });
-  const receivableSettled = await ensureOpenItem(deps, ctx, 'SP-2026-003', { kind: 'receivable', itemDate: `${currentYear}-01-20`, amountCents: 5000, dueOn: `${currentYear}-02-20` });
-  const payableCancelled = await ensureOpenItem(deps, ctx, 'RE-2026-060', { kind: 'payable', itemDate: `${currentYear}-01-25`, amountCents: 3000 });
+  const payableOpen = await ensureOpenItem(deps, ctx, `RE-${storyYear}-041`, { kind: 'payable', itemDate: `${storyYear}-01-10`, amountCents: 12000, dueOn: `${storyYear}-02-10` });
+  const payablePartial = await ensureOpenItem(deps, ctx, `RE-${storyYear}-055`, { kind: 'payable', itemDate: `${storyYear}-01-15`, amountCents: 20000, dueOn: `${storyYear}-02-15` });
+  const receivableSettled = await ensureOpenItem(deps, ctx, `SP-${storyYear}-003`, { kind: 'receivable', itemDate: `${storyYear}-01-20`, amountCents: 5000, dueOn: `${storyYear}-02-20` });
+  const payableCancelled = await ensureOpenItem(deps, ctx, `RE-${storyYear}-060`, { kind: 'payable', itemDate: `${storyYear}-01-25`, amountCents: 3000 });
   // F3b Task 3 (A6): ein Posten mit Herkunft — „Erledigt ohne Zahlung“ bietet er nicht an, er verweist auf
   // seinen Vorgang. `originType` ist erfunden (kein Fachmodul liefert vor F8a/F7 echte Vorgänge).
-  await ensureOpenItem(deps, ctx, 'ANT-2026-014', { kind: 'payable', itemDate: `${currentYear}-02-01`, amountCents: 4500, dueOn: `${currentYear}-03-01`, originType: 'demoProcess', originId: 'demo-1' });
+  await ensureOpenItem(deps, ctx, `ANT-${storyYear}-014`, { kind: 'payable', itemDate: `${storyYear}-02-01`, amountCents: 4500, dueOn: `${storyYear}-03-01`, originType: 'demoProcess', originId: 'demo-1' });
   void payableOpen; // bleibt bewusst unbeglichen — nichts weiter zu tun.
 
   if (payablePartial) {
     await ensureEntry(deps, 'Teilzahlung Lieferant', () =>
       bookEntry(deps, ctx, {
-        entryDate: `${currentYear}-02-01`,
+        entryDate: `${storyYear}-02-01`,
         text: 'Teilzahlung Lieferant',
         moneyLines: [{ accountId: bank.id, amountCents: -8000, settlements: [{ openItemId: payablePartial.id, amountCents: 8000 }] }],
         allocationLines: [{ categoryId: programCostsCat.id, amountCents: -8000 }],
@@ -541,7 +575,7 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   if (receivableSettled) {
     await ensureEntry(deps, 'Ausgleich Forderung', () =>
       bookEntry(deps, ctx, {
-        entryDate: `${currentYear}-02-05`,
+        entryDate: `${storyYear}-02-05`,
         text: 'Ausgleich Forderung',
         moneyLines: [{ accountId: bank.id, amountCents: 5000, settlements: [{ openItemId: receivableSettled.id, amountCents: 5000 }] }],
         allocationLines: [{ categoryId: donationsCat.id, amountCents: 5000 }],
@@ -566,11 +600,13 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   // F2c: Finanzfelder eines vorhandenen Projekts aus dem Projekte-Seed.
   if (existingProject) {
     unwrap(await setProjectFinance(deps, ctx, { projectId: existingProject.id, targetCents: 250000, defaultPurposeId: dachsanierung.id }));
+    // Vor `seedMittel`: Der Höchstbetrag der freien Rücklage zählt diese Einnahme mit.
+    await seedProjectBookings(deps, ctx, existingProject.id, storyYear);
   }
 
   // F6a Task 9: eine Spende im Vorjahr, bestätigt auf dem später ersetzten § 60a-Bescheid — gebucht und
   // belegt, solange das Jahr noch offen ist.
-  await seedProvisionalNoticeDonation(deps, ctx);
+  await seedProvisionalNoticeDonation(deps, ctx, storyYear);
 
   // F6b Task 9: die Buchungen für den Serienlauf des Vorjahrs — vor dem Abschluss, solange das Jahr
   // noch offen ist. Der Lauf selbst startet erst später (`seedConfirmationRun`), wenn Bescheid,
@@ -627,7 +663,7 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
       unwrap(
         await updateFiscalYear(deps, ctx, {
           id: previousFiscalYear.id,
-          taxReturnFiledOn: `${currentYear}-05-31`,
+          taxReturnFiledOn: `${storyYear}-05-31`,
           expectedVersion: currentPreviousFiscalYear.updatedAt,
         }),
       );
@@ -654,23 +690,26 @@ export async function seedFinance(deps: Deps, ctx: CallContext): Promise<void> {
   await ensureCashOnlyPerson(deps, ctx);
 
   // F6a (aus Task 9 vorgezogen): Bescheid, maschinelles Verfahren, Bestätigungen in ihren Zuständen.
-  await seedDonations(deps, ctx, currentYear);
+  await seedDonations(deps, ctx, storyYear);
 
   // F6b Task 9: der abgeschlossene Serienlauf des Vorjahrs mit Versandvermerk, dazu die Rücklastschrift
   // einer Spende, die in einer Sammelbestätigung stand (Prüfstein 6).
-  await seedConfirmationRun(deps, ctx, previousYear, currentYear);
+  await seedConfirmationRun(deps, ctx, previousYear, storyYear);
 
   // F8a Task 7: Anträge in jedem Zustand — nach `seedDonations`, weil der Verzicht den eingeschalteten
   // Aufwandsspenden-Schalter braucht, den `seedDonations` setzt.
-  await seedExpenseClaims(deps, ctx, currentYear);
+  await seedExpenseClaims(deps, ctx, storyYear);
 
   // F7 Task 7: Partner und ihre Zahlungen in jedem Zustand — nach `grantApproverRoleToJonasFeld`, weil
   // Jonas Feld hier freigibt oder ablehnt.
-  await seedPartners(deps, ctx, currentYear);
+  await seedPartners(deps, ctx, storyYear);
 
   // F8b Task 7: Rücklagen, Umwidmungen, Pauschalen an Vorstand und Nahestehende — nach
   // `grantApproverRoleToJonasFeld`, weil Jonas Feld die Umwidmung freigibt.
-  await seedMittel(deps, ctx, currentYear);
+  await seedMittel(deps, ctx, storyYear);
+
+  // Spec 2026-10-06 § 4: Clara Neumann kommt bei der Mitgliederversammlung in den Vorstand, Bernd Hagedorn geht.
+  await seedBoardHistory(deps, ctx, storyYear);
 }
 
 async function grantAuditorRoleToMiraKlein(deps: Deps, ctx: CallContext): Promise<void> {
@@ -739,6 +778,46 @@ async function ensureCashOnlyPerson(deps: Deps, ctx: CallContext): Promise<void>
  * Schritt für sich idempotent.
  */
 /**
+ * Spec 2026-10-06 § 4: Der Finanzabschnitt am Projekt zeigt Einnahmen und Ausgaben — bis 0.2.6 stand dort nur das
+ * Ziel. Ein Zuschuss der Gemeinde und eine Ausgabe mit Kassenbon, beide mit `projectId`, beide belegt (sonst stünden
+ * sie unter „Beleg fehlt“). Zwei Buchungen mehr: 47 im Journal, die „…Altjahr“-Zeilen bleiben auf Seite 1 (50).
+ */
+async function seedProjectBookings(deps: Deps, ctx: CallContext, projectId: string, year: number): Promise<void> {
+  const bank = accountByName(deps, 'Vereinskonto');
+  const grantDate = `${year}-01-12`;
+  await ensureEntry(deps, 'Zuschuss Gemeinde Winterhilfe', () =>
+    bookEntry(deps, ctx, { entryDate: grantDate, text: 'Zuschuss Gemeinde Winterhilfe', moneyLines: [{ accountId: bank.id, amountCents: 85000 }], allocationLines: [{ categoryId: categoryByKey(deps, 'public-grants').id, amountCents: 85000, projectId }] }).then(unwrap),
+  );
+  await ensureVoucher(deps, ctx, entryByText(deps, 'Zuschuss Gemeinde Winterhilfe'), 'voucher-own', grantDate, 'Bewilligung Zuschuss Winterhilfe', textPdf([
+    'Gemeinde Musterstadt',
+    'Fachbereich Soziales',
+    '',
+    'Bewilligung eines Zuschusses',
+    '',
+    'Für die Winterhilfe des Musterverein e.V. bewilligen wir einen',
+    'Zuschuss von 850,00 EUR. Der Betrag wird überwiesen.',
+    '',
+    'Erfundenes Beispiel für die Entwicklung.',
+  ]));
+  const boxesDate = `${year}-01-26`;
+  await ensureEntry(deps, 'Schlafboxen Winterhilfe', () =>
+    bookEntry(deps, ctx, { entryDate: boxesDate, text: 'Schlafboxen Winterhilfe', moneyLines: [{ accountId: bank.id, amountCents: -42000 }], allocationLines: [{ categoryId: categoryByKey(deps, 'program-costs').id, amountCents: -42000, projectId }] }).then(unwrap),
+  );
+  await ensureVoucher(deps, ctx, entryByText(deps, 'Schlafboxen Winterhilfe'), 'voucher-receipt', boxesDate, 'Kassenbon Schlafboxen', receiptPdf({
+    shop: ['Landhandel Kornblum', 'Feldweg 2', '12345 Musterstadt'],
+    date: boxesDate,
+    time: '11:20',
+    receiptNo: '0815-3321',
+    payment: 'EC-KARTE',
+    items: [
+      { text: 'Schlafbox isoliert 6 St.', cents: 33000 },
+      { text: 'Strohballen 10 St.', cents: 6500, vat: 7 },
+      { text: 'Fleecedecken 5 St.', cents: 2500 },
+    ],
+  }));
+}
+
+/**
  * Befund 34: Der Abschluss verlangt für jedes Bankkonto einen Auszug im Jahr.
  * Das Vereinskonto bekommt einen Jahresauszug ohne Zeilen — die Buchungen des
  * Vorjahrs sind von Hand erfasst —, mit dem festgeschriebenen Bestand als Saldo
@@ -753,7 +832,7 @@ async function seedPreviousYearStatement(deps: Deps, ctx: CallContext, previousY
   unwrap(await importStatement(deps, ctx, { accountId: account.id, fileName: `jahresauszug-${previousYear}.xml`, bytes }));
 }
 
-async function seedWorkList(deps: Deps, ctx: CallContext, importkontoId: string): Promise<void> {
+async function seedWorkList(deps: Deps, ctx: CallContext, importkontoId: string, storyYear: number): Promise<void> {
   const contactCtx: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, 'contacts.manage']) };
   let erika = deps.db.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.firstName, 'Erika'), eq(contacts.lastName, 'Beispiel'))).get();
   if (!erika) erika = { id: unwrap(await createContact(deps, contactCtx, { kind: 'person', firstName: 'Erika', lastName: 'Beispiel' })).id };
@@ -775,7 +854,7 @@ async function seedWorkList(deps: Deps, ctx: CallContext, importkontoId: string)
   await ensureEntry(deps, 'Zuschuss', async () =>
     unwrap(
       await saveDraft(deps, ctx, {
-        entryDate: '2026-02-14',
+        entryDate: `${storyYear}-02-14`,
         text: 'Zuschuss',
         moneyLines: [{ accountId: importkontoId, amountCents: 5000 }],
         allocationLines: [{ categoryId: categoryByKey(deps, 'public-grants').id, amountCents: 5000 }],
@@ -783,9 +862,9 @@ async function seedWorkList(deps: Deps, ctx: CallContext, importkontoId: string)
     ),
   );
 
-  await seedForeignMoneyAndVoucher(deps, ctx, importkontoId);
-  await seedZugferdInvoices(deps, ctx);
-  await seedCashDepositAndReturn(deps, ctx, importkontoId);
+  await seedForeignMoneyAndVoucher(deps, ctx, importkontoId, storyYear);
+  await seedZugferdInvoices(deps, ctx, storyYear);
+  await seedCashDepositAndReturn(deps, ctx, importkontoId, storyYear);
 
   const april = deps.db.select().from(financeRawTransactions).where(and(eq(financeRawTransactions.accountId, importkontoId), eq(financeRawTransactions.bankReference, 'IMP-0004'))).get();
   const aprilBound = april ? deps.db.select({ id: financeMoneyLines.id }).from(financeMoneyLines).where(eq(financeMoneyLines.rawTransactionId, april.id)).get() : undefined;
@@ -811,8 +890,8 @@ async function seedWorkList(deps: Deps, ctx: CallContext, importkontoId: string)
  * („Beleg suchen“ findet sie über den Betrag der Büromaterial-Zeile). Jeder
  * Schritt über seinen Dienst und für sich idempotent.
  */
-async function seedForeignMoneyAndVoucher(deps: Deps, ctx: CallContext, importkontoId: string): Promise<void> {
-  const JULY_FILE = 'kontoauszug-2026-07.xml';
+async function seedForeignMoneyAndVoucher(deps: Deps, ctx: CallContext, importkontoId: string, storyYear: number): Promise<void> {
+  const JULY_FILE = `kontoauszug-${storyYear}-07.xml`;
   const hasJuly = deps.db.select({ id: financeImportRuns.id }).from(financeImportRuns).where(and(eq(financeImportRuns.accountId, importkontoId), eq(financeImportRuns.fileName, JULY_FILE))).get();
   if (!hasJuly) {
     unwrap(
@@ -821,10 +900,10 @@ async function seedForeignMoneyAndVoucher(deps: Deps, ctx: CallContext, importko
         fileName: JULY_FILE,
         bytes: buildCamt053Bytes({
           iban: 'DE60999999990201051234',
-          from: '2026-07-01',
-          to: '2026-07-31',
+          from: `${storyYear}-07-01`,
+          to: `${storyYear}-07-31`,
           openingCents: 139000,
-          lines: [{ bookingDate: '2026-07-06', amountCents: 12000, counterpartyName: 'Max Muster', counterpartyIban: 'DE12999999990000112233', purpose: 'Sammelbestellung Futter, für Nachbarverein', bankReference: 'IMP-0007' }],
+          lines: [{ bookingDate: `${storyYear}-07-06`, amountCents: 12000, counterpartyName: 'Max Muster', counterpartyIban: 'DE12999999990000112233', purpose: 'Sammelbestellung Futter, für Nachbarverein', bankReference: 'IMP-0007' }],
         }),
       }),
     );
@@ -838,12 +917,12 @@ async function seedForeignMoneyAndVoucher(deps: Deps, ctx: CallContext, importko
   if (!hasInvoice) {
     const dmsCtx: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, 'dms.view', 'dms.create']) };
     unwrap(
-      await receiveDocument(deps, dmsCtx, {
-        filename: '2026-01-08 Rechnung Buerobedarf.pdf',
-        bytes: textPdf(['Buerobedarf Muster GmbH', 'Rechnung Nr. 2026-0042', '', 'Bueromaterial (Ordner, Papier, Stifte)', 'Rechnungsbetrag: 35,00 EUR']),
+      await receiveDocument(on(deps, `${storyYear}-01-08`), dmsCtx, {
+        filename: `${storyYear}-01-08 Rechnung Buerobedarf.pdf`,
+        bytes: textPdf(['Buerobedarf Muster GmbH', `Rechnung Nr. ${storyYear}-0042`, '', 'Bueromaterial (Ordner, Papier, Stifte)', 'Rechnungsbetrag: 35,00 EUR']),
         typeKey: 'voucher-invoice',
         subject: INVOICE_SUBJECT,
-        documentDate: '2026-01-08',
+        documentDate: `${storyYear}-01-08`,
         folder: null,
       }),
     );
@@ -855,20 +934,20 @@ async function seedForeignMoneyAndVoucher(deps: Deps, ctx: CallContext, importko
  * Finanzbeleg ohne Buchung — die Tierarzt-Rechnung über 119,00 € ist
  * unbezahlt (Karte „Aus der Rechnung“: „Offene Zahlung anlegen“), die über
  * 35,00 € von Bürobedarf Muster GmbH bezahlt: Ihre IBAN trägt die offene
- * Büromaterial-Zeile vom 10.01.2026 auf „Importkonto“ (Lauf A). Je Rechnung
+ * Büromaterial-Zeile vom 10.01. des Stichjahrs auf „Importkonto“ (Lauf A). Je Rechnung
  * idempotent über den Betreff.
  */
-async function seedZugferdInvoices(deps: Deps, ctx: CallContext): Promise<void> {
+async function seedZugferdInvoices(deps: Deps, ctx: CallContext, storyYear: number): Promise<void> {
   const dmsCtx: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, 'dms.view', 'dms.create']) };
   const invoices = [
-    { subject: 'Rechnung TM-2026-0042 Tierarztpraxis Muster', filename: '2026-04-01 Rechnung Tierarztpraxis.pdf', documentDate: '2026-04-01', bytes: buildVetInvoicePdf },
-    { subject: 'Rechnung BM-7781 Bürobedarf Muster GmbH', filename: '2026-01-08 Rechnung BM-7781.pdf', documentDate: '2026-01-08', bytes: buildOfficeInvoicePdf },
+    { subject: `Rechnung TM-${storyYear}-0042 Tierarztpraxis Muster`, filename: `${storyYear}-04-01 Rechnung Tierarztpraxis.pdf`, documentDate: `${storyYear}-04-01`, bytes: () => buildVetInvoicePdf(storyYear) },
+    { subject: 'Rechnung BM-7781 Bürobedarf Muster GmbH', filename: `${storyYear}-01-08 Rechnung BM-7781.pdf`, documentDate: `${storyYear}-01-08`, bytes: () => buildOfficeInvoicePdf(storyYear) },
   ];
   for (const invoice of invoices) {
     const exists = deps.db.select({ id: dmsDocuments.id }).from(dmsDocuments).where(eq(dmsDocuments.subject, invoice.subject)).get();
     if (exists) continue;
     unwrap(
-      await receiveDocument(deps, dmsCtx, {
+      await receiveDocument(on(deps, invoice.documentDate), dmsCtx, {
         filename: invoice.filename,
         bytes: invoice.bytes(),
         typeKey: 'voucher-invoice',
@@ -888,8 +967,8 @@ async function seedZugferdInvoices(deps: Deps, ctx: CallContext): Promise<void> 
  * dessen Rückgabe mit Rückgabe-Code `AC04` (Vorschlag: zurückgegebene Zahlung
  * mit `originLineId`). Der Lauf und die Buchung sind je für sich idempotent.
  */
-async function seedCashDepositAndReturn(deps: Deps, ctx: CallContext, importkontoId: string): Promise<void> {
-  const AUGUST_FILE = 'kontoauszug-2026-08.xml';
+async function seedCashDepositAndReturn(deps: Deps, ctx: CallContext, importkontoId: string, storyYear: number): Promise<void> {
+  const AUGUST_FILE = `kontoauszug-${storyYear}-08.xml`;
   const PAYER_IBAN = 'DE30999999990000505050';
   const hasAugust = deps.db.select({ id: financeImportRuns.id }).from(financeImportRuns).where(and(eq(financeImportRuns.accountId, importkontoId), eq(financeImportRuns.fileName, AUGUST_FILE))).get();
   if (!hasAugust) {
@@ -899,14 +978,14 @@ async function seedCashDepositAndReturn(deps: Deps, ctx: CallContext, importkont
         fileName: AUGUST_FILE,
         bytes: buildCamt053Bytes({
           iban: 'DE60999999990201051234',
-          from: '2026-08-01',
-          to: '2026-08-31',
+          from: `${storyYear}-08-01`,
+          to: `${storyYear}-08-31`,
           // Endsaldo des Juli-Auszugs: 1.390,00 € + 120,00 € fremdes Geld.
           openingCents: 151000,
           lines: [
-            { bookingDate: '2026-08-04', amountCents: 2500, counterpartyName: 'Paula Probe', counterpartyIban: PAYER_IBAN, purpose: 'Mitgliedsbeitrag August', bankReference: 'IMP-0008' },
-            { bookingDate: '2026-08-10', amountCents: 20000, purpose: 'Bareinzahlung Spendendose', bankReference: 'IMP-0009' },
-            { bookingDate: '2026-08-20', amountCents: -2500, counterpartyName: 'Paula Probe', counterpartyIban: PAYER_IBAN, purpose: 'Mitgliedsbeitrag August, Lastschrift zurueckgegeben', bankReference: 'IMP-0010', returnCode: 'AC04' },
+            { bookingDate: `${storyYear}-08-04`, amountCents: 2500, counterpartyName: 'Paula Probe', counterpartyIban: PAYER_IBAN, purpose: 'Mitgliedsbeitrag August', bankReference: 'IMP-0008' },
+            { bookingDate: `${storyYear}-08-10`, amountCents: 20000, purpose: 'Bareinzahlung Spendendose', bankReference: 'IMP-0009' },
+            { bookingDate: `${storyYear}-08-20`, amountCents: -2500, counterpartyName: 'Paula Probe', counterpartyIban: PAYER_IBAN, purpose: 'Mitgliedsbeitrag August, Lastschrift zurueckgegeben', bankReference: 'IMP-0010', returnCode: 'AC04' },
           ],
         }),
       }),
@@ -976,26 +1055,45 @@ function confirmationOfLine(deps: Deps, lineId: string) {
 const organizationAddressComplete = (deps: Deps) => (['street', 'postalCode', 'city'] as const).every((field) => String(readSetting(deps, `organization.${field}`) ?? '').trim());
 
 // N8 (Befundliste 0.2.0): Genitiv ohne „Förderung“ — die Sätze setzen das Wort selbst davor; § 60a braucht zusätzlich den Akkusativ.
+// Spec 2026-10-06 § 4: dieselben Zwecke wie der Bescheid in der Akte (`dms/src/seed.ts`). Bis 0.2.6 „Sport und
+// Jugendhilfe“ — neben Hunden und Winterhilfe ein Widerspruch. Der Wortwächter (`tests/seed.test.ts`, „uses no
+// animal …“) gilt Konten und Zwecken, nicht dem Bescheid.
 const NOTICE_TAX_OFFICE = {
   taxOffice: 'Finanzamt Musterstadt',
   taxNumber: '99/999/99999',
-  purposesText: 'des Sports (§ 52 Abs. 2 Satz 1 Nr. 21 AO) und der Jugendhilfe (§ 52 Abs. 2 Satz 1 Nr. 4 AO)',
-  purposesTextAccusative: 'den Sport (§ 52 Abs. 2 Satz 1 Nr. 21 AO) und die Jugendhilfe (§ 52 Abs. 2 Satz 1 Nr. 4 AO)',
+  purposesText: 'des Tierschutzes (§ 52 Abs. 2 Satz 1 Nr. 14 AO) und der Jugendhilfe (§ 52 Abs. 2 Satz 1 Nr. 4 AO)',
+  purposesTextAccusative: 'den Tierschutz (§ 52 Abs. 2 Satz 1 Nr. 14 AO) und die Jugendhilfe (§ 52 Abs. 2 Satz 1 Nr. 4 AO)',
 } as const;
-/** Die Spende, die auf dem § 60a-Bescheid bestätigt wird — die Daten hängen an den festen Bescheiddaten, nicht am Kalender. */
-const PROVISIONAL_DONATION = { text: 'Spende Greta Sommer März', entryDate: '2025-03-14', issuedOn: '2025-04-15', amountCents: 12000 } as const;
+
+/** Der Kassenbon zur eingereichten Auslage „Büromaterial für die Infotheke“ (18,90 €) — erfundener Laden. */
+const officeSupplyReceipt = (date: string) =>
+  receiptPdf({
+    shop: ['Papierhaus Lindner', 'Marktstraße 14', '12345 Musterstadt'],
+    date,
+    time: '10:42',
+    receiptNo: '4711-0815',
+    payment: 'EC-KARTE',
+    items: [
+      { text: 'Flipchartpapier 2 Blöcke', cents: 1190 },
+      { text: 'Klebeband transparent', cents: 249 },
+      { text: 'Namensschilder 50 St.', cents: 451 },
+    ],
+  });
+/** Die Spende, die auf dem § 60a-Bescheid bestätigt wird — im Vorjahr der Geschichte, wie die Bescheide (`seedNotices`). */
+const provisionalDonation = (storyYear: number) => ({ text: 'Spende Greta Sommer März', entryDate: `${storyYear - 1}-03-14`, issuedOn: `${storyYear - 1}-04-15`, amountCents: 12000 });
 
 /**
- * F6a Task 9: Greta Sommer spendet im März 2025 — das Jahr, in dem der
+ * F6a Task 9: Greta Sommer spendet im März des Vorjahrs — das Jahr, in dem der
  * Freistellungsbescheid den § 60a-Bescheid ablöst. Die Buchung entsteht nur,
- * solange das Geschäftsjahr 2025 besteht und offen ist (bei einem Seed nach
- * dem Abschluss oder in einem späteren Kalenderjahr bleibt sie aus).
+ * solange dieses Geschäftsjahr besteht und offen ist (bei einem zweiten Seed
+ * nach dem Abschluss bleibt sie aus).
  */
-async function seedProvisionalNoticeDonation(deps: Deps, ctx: CallContext): Promise<void> {
-  const year = deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.designation, PROVISIONAL_DONATION.entryDate.slice(0, 4))).get();
+async function seedProvisionalNoticeDonation(deps: Deps, ctx: CallContext, storyYear: number): Promise<void> {
+  const donation = provisionalDonation(storyYear);
+  const year = deps.db.select().from(financeFiscalYears).where(eq(financeFiscalYears.designation, donation.entryDate.slice(0, 4))).get();
   if (!year || fiscalYearStatusInternal(deps.db, year.id) === 'closed') return;
   const greta = await ensureDonationContact(deps, ctx, { kind: 'person', firstName: 'Greta', lastName: 'Sommer' }, { street: 'Lindenallee 23', postalCode: '12343', city: 'Musterstadt' });
-  const { text, entryDate, amountCents } = PROVISIONAL_DONATION;
+  const { text, entryDate, amountCents } = donation;
   await ensureEntry(deps, text, () =>
     bookEntry(deps, ctx, { entryDate, text, moneyLines: [{ accountId: accountByName(deps, 'Vereinskonto').id, amountCents }], allocationLines: [{ categoryId: categoryByKey(deps, 'donations').id, amountCents, contactId: greta }] }).then(unwrap),
   );
@@ -1003,27 +1101,28 @@ async function seedProvisionalNoticeDonation(deps: Deps, ctx: CallContext): Prom
 }
 
 /**
- * Die Bescheide in ihrer Geschichte: erst der § 60a-Bescheid vom 01.03.2024,
- * darauf die Bestätigung für Greta Sommer (15.04.2025), dann der
- * Freistellungsbescheid vom 02.05.2025, der den § 60a-Bescheid am selben Tag
+ * Die Bescheide in ihrer Geschichte (Stichjahr 2026 in Klammern): erst der § 60a-Bescheid vom 01.03. zwei Jahre
+ * vor dem Stichjahr (2024), darauf die Bestätigung für Greta Sommer (15.04.2025), dann der
+ * Freistellungsbescheid vom 02.05. des Vorjahrs (2025), der den § 60a-Bescheid am selben Tag
  * ersetzt — Gretas Bestätigung ist damit „zu korrigieren“. Nur beim ersten
  * Lauf; die Reihenfolge ist Pflicht, weil ein § 60a-Bescheid nach einem
  * Freistellungsbescheid abgelehnt wird.
  */
-async function seedNotices(deps: Deps, ctx: CallContext): Promise<void> {
+async function seedNotices(deps: Deps, ctx: CallContext, storyYear: number): Promise<void> {
   if (deps.db.select({ id: financeNotices.id }).from(financeNotices).get()) return;
-  const provisional = unwrap(await saveNotice(deps, ctx, { kind: 'section60a', ...NOTICE_TAX_OFFICE, noticeDate: '2024-03-01', exemptFrom: '2024-01-01' }));
-  await ensureSigner(deps, ctx);
-  const greta = deps.db.select({ id: financeEntries.id }).from(financeEntries).where(eq(financeEntries.text, PROVISIONAL_DONATION.text)).get();
-  if (greta && organizationAddressComplete(deps)) await ensureConfirmation(deps, ctx, incomeLineOf(deps, PROVISIONAL_DONATION.text).id, PROVISIONAL_DONATION.issuedOn);
-  unwrap(await saveNotice(deps, ctx, { kind: 'exemptionNotice', ...NOTICE_TAX_OFFICE, noticeDate: '2025-05-02', exemptFrom: '2023-01-01', assessmentPeriod: '2023' }));
-  unwrap(await supersedeNotice(deps, ctx, { id: provisional.id, supersededOn: '2025-05-02' }));
+  const provisional = unwrap(await saveNotice(deps, ctx, { kind: 'section60a', ...NOTICE_TAX_OFFICE, noticeDate: `${storyYear - 2}-03-01`, exemptFrom: `${storyYear - 2}-01-01` }));
+  await ensureSigner(deps, ctx, storyYear);
+  const donation = provisionalDonation(storyYear);
+  const greta = deps.db.select({ id: financeEntries.id }).from(financeEntries).where(eq(financeEntries.text, donation.text)).get();
+  if (greta && organizationAddressComplete(deps)) await ensureConfirmation(deps, ctx, incomeLineOf(deps, donation.text).id, donation.issuedOn);
+  unwrap(await saveNotice(deps, ctx, { kind: 'exemptionNotice', ...NOTICE_TAX_OFFICE, noticeDate: `${storyYear - 1}-05-02`, exemptFrom: `${storyYear - 3}-01-01`, assessmentPeriod: `${storyYear - 3}` }));
+  unwrap(await supersedeNotice(deps, ctx, { id: provisional.id, supersededOn: `${storyYear - 1}-05-02` }));
 }
 
 /** Jonas Feld als Unterzeichner mit Faksimile und Anzeige — nur, wenn noch keiner besteht. */
-async function ensureSigner(deps: Deps, ctx: CallContext): Promise<void> {
+async function ensureSigner(deps: Deps, ctx: CallContext, storyYear: number): Promise<void> {
   if (deps.db.select({ id: financeSigners.id }).from(financeSigners).get()) return;
-  const signer = unwrap(await saveSigner(deps, ctx, { validFrom: '2025-01-01', signerName: 'Jonas Feld', notifiedOn: '2025-06-02' }));
+  const signer = unwrap(await saveSigner(deps, ctx, { validFrom: `${storyYear - 1}-01-01`, signerName: 'Jonas Feld', notifiedOn: `${storyYear - 1}-06-02` }));
   unwrap(await uploadFacsimile(deps, ctx, { signerId: signer.id, bytes: new Uint8Array(Buffer.from(SEED_FACSIMILE_PNG, 'base64')), mimeType: 'image/png' }));
 }
 
@@ -1041,9 +1140,9 @@ async function ensureSigner(deps: Deps, ctx: CallContext): Promise<void> {
  * dem ersetzten § 60a-Bescheid, `seedNotices`) und „zurückgenommen“ mit
  * Rückholspur (Henrik Brandt).
  */
-async function seedDonations(deps: Deps, ctx: CallContext, currentYear: number): Promise<void> {
-  await seedNotices(deps, ctx);
-  await ensureSigner(deps, ctx);
+async function seedDonations(deps: Deps, ctx: CallContext, storyYear: number): Promise<void> {
+  await seedNotices(deps, ctx, storyYear);
+  await ensureSigner(deps, ctx, storyYear);
   if (!readSetting<boolean>(deps, 'finance.expenseWaiversEnabled')) unwrap(await setFinanceSwitch(deps, ctx, { key: 'finance.expenseWaiversEnabled', value: true }));
 
   const erika = await ensureDonationContact(deps, ctx, { kind: 'person', firstName: 'Erika', lastName: 'Beispiel' }, { street: 'Beispielstraße 7', postalCode: '54321', city: 'Beispielstadt' });
@@ -1069,14 +1168,14 @@ async function seedDonations(deps: Deps, ctx: CallContext, currentYear: number):
     );
   };
 
-  await money('Spende Erika Beispiel Juni', `${currentYear}-06-12`, 25000, erika);
-  await money('Spende Tobias Adler', `${currentYear}-06-20`, 5000, tobias);
-  await money('Spende Sportfreunde Beispieltal', `${currentYear}-07-05`, 10000, club);
+  await money('Spende Erika Beispiel Juni', `${storyYear}-06-12`, 25000, erika);
+  await money('Spende Tobias Adler', `${storyYear}-06-20`, 5000, tobias);
+  await money('Spende Sportfreunde Beispieltal', `${storyYear}-07-05`, 10000, club);
 
-  await withoutMoney('Aufwandsspende Fahrtkosten Mai', `${currentYear}-05-20`, 4800, lukas, waivers, travel);
-  await ensureVoucher(deps, ctx, entryByText(deps, 'Aufwandsspende Fahrtkosten Mai'), 'voucher-own', `${currentYear}-05-20`, 'Verzichtserklärung Fahrtkosten Mai');
-  await withoutMoney('Aufwandsspende Fahrtkosten Juli', `${currentYear}-07-15`, 3600, lukas, waivers, travel);
-  await ensureVoucher(deps, ctx, entryByText(deps, 'Aufwandsspende Fahrtkosten Juli'), 'voucher-own', `${currentYear}-07-15`, 'Verzichtserklärung Fahrtkosten Juli');
+  await withoutMoney('Aufwandsspende Fahrtkosten Mai', `${storyYear}-05-20`, 4800, lukas, waivers, travel);
+  await ensureVoucher(deps, ctx, entryByText(deps, 'Aufwandsspende Fahrtkosten Mai'), 'voucher-own', `${storyYear}-05-20`, 'Verzichtserklärung Fahrtkosten Mai');
+  await withoutMoney('Aufwandsspende Fahrtkosten Juli', `${storyYear}-07-15`, 3600, lukas, waivers, travel);
+  await ensureVoucher(deps, ctx, entryByText(deps, 'Aufwandsspende Fahrtkosten Juli'), 'voucher-own', `${storyYear}-07-15`, 'Verzichtserklärung Fahrtkosten Juli');
 
   // Prüfstein 5: Sachspenden ohne Geldfluss. Die Wertunterlage liegt als Dokument in der Akte; die des Beamers wird
   // über die Angaben zum Beleg der Buchung, die des Laptops wartet — die E2E beschreibt ihn selbst.
@@ -1084,15 +1183,15 @@ async function seedDonations(deps: Deps, ctx: CallContext, currentYear: number):
   const proof = async (subject: string, date: string) => {
     const found = deps.db.select({ id: dmsDocuments.id }).from(dmsDocuments).where(eq(dmsDocuments.subject, subject)).get();
     if (found) return found.id;
-    return unwrap(await receiveDocument(deps, dmsCtx, { filename: `${date} ${subject}.pdf`, bytes: textPdf([subject, '', 'Erfundenes Beispiel für die Entwicklung.']), typeKey: 'voucher-own', subject, documentDate: date, folder: null })).id;
+    return unwrap(await receiveDocument(on(deps, date), dmsCtx, { filename: `${date} ${subject}.pdf`, bytes: textPdf([subject, '', 'Erfundenes Beispiel für die Entwicklung.']), typeKey: 'voucher-own', subject, documentDate: date, folder: null })).id;
   };
-  await withoutMoney('Sachspende Beamer', `${currentYear}-04-18`, 35000, clara, inKind, inKindExpense);
-  const beamerProof = await proof('Wertnachweis Beamer', `${currentYear}-08-20`);
-  await withoutMoney('Sachspende Laptop', `${currentYear}-08-03`, 20000, clara, inKind, inKindExpense);
-  await proof('Wertnachweis Laptop', `${currentYear}-08-21`);
+  await withoutMoney('Sachspende Beamer', `${storyYear}-04-18`, 35000, clara, inKind, inKindExpense);
+  const beamerProof = await proof('Wertnachweis Beamer', `${storyYear}-08-20`);
+  await withoutMoney('Sachspende Laptop', `${storyYear}-08-03`, 20000, clara, inKind, inKindExpense);
+  await proof('Wertnachweis Laptop', `${storyYear}-08-21`);
 
   const henrik = await ensureDonationContact(deps, ctx, { kind: 'person', firstName: 'Henrik', lastName: 'Brandt' }, { street: 'Birkenstraße 9', postalCode: '12344', city: 'Musterstadt' });
-  await money('Spende Henrik Brandt März', `${currentYear}-03-20`, 7500, henrik);
+  await money('Spende Henrik Brandt März', `${storyYear}-03-20`, 7500, henrik);
 
   if (!organizationAddressComplete(deps)) return;
 
@@ -1120,8 +1219,8 @@ async function seedDonations(deps: Deps, ctx: CallContext, currentYear: number):
   await ensureConfirmation(deps, ctx, henrikLine.id);
   const henrikConfirmation = confirmationOfLine(deps, henrikLine.id);
   if (henrikConfirmation && !henrikConfirmation.voidedAt) {
-    if (!henrikConfirmation.sentAt) unwrap(await recordConfirmationDispatch(deps, ctx, { id: henrikConfirmation.id, sentAt: `${currentYear}-03-27`, sentVia: 'post' }));
-    unwrap(await voidConfirmation(deps, ctx, { id: henrikConfirmation.id, note: 'Betrag doppelt bestätigt', alreadySent: true, originalReturnedOn: `${currentYear}-04-09` }));
+    if (!henrikConfirmation.sentAt) unwrap(await recordConfirmationDispatch(deps, ctx, { id: henrikConfirmation.id, sentAt: `${storyYear}-03-27`, sentVia: 'post' }));
+    unwrap(await voidConfirmation(deps, ctx, { id: henrikConfirmation.id, note: 'Betrag doppelt bestätigt', alreadySent: true, originalReturnedOn: `${storyYear}-04-09` }));
   }
 }
 
@@ -1198,7 +1297,7 @@ async function seedRunDonationEntries(deps: Deps, ctx: CallContext, previousYear
  * 6, Annahme 11): eine Rücklastschrift auf Nora Lehmanns maschinell
  * bestätigte Spende — ihre Sammelbestätigung steht danach „zu korrigieren“.
  */
-async function seedConfirmationRun(deps: Deps, ctx: CallContext, previousYear: number, currentYear: number): Promise<void> {
+async function seedConfirmationRun(deps: Deps, ctx: CallContext, previousYear: number, storyYear: number): Promise<void> {
   if (!organizationAddressComplete(deps)) return;
 
   let run = deps.db.select().from(financeConfirmationRuns).where(eq(financeConfirmationRuns.year, previousYear)).get();
@@ -1219,7 +1318,7 @@ async function seedConfirmationRun(deps: Deps, ctx: CallContext, previousYear: n
   const noraLine = incomeLineOf(deps, 'Spende Nora Lehmann Vorjahr');
   await ensureEntry(deps, 'Rücklastschrift Nora Lehmann Vorjahr', () =>
     bookEntry(deps, ctx, {
-      entryDate: `${currentYear}-02-18`,
+      entryDate: `${storyYear}-02-18`,
       text: 'Rücklastschrift Nora Lehmann Vorjahr',
       moneyLines: [{ accountId: accountByName(deps, 'Vereinskonto').id, amountCents: -6000 }],
       allocationLines: [{ categoryId: categoryByKey(deps, 'donations').id, amountCents: -6000, contactId: noraLine.contactId!, originLineId: noraLine.id }],
@@ -1242,6 +1341,11 @@ async function ensureExpenseClerkPerson(deps: Deps, ctx: CallContext): Promise<s
   if (!person) {
     const created = unwrap(await createUser(deps, usersCtx, { name: 'Nadja Vogt', email: 'nadja@kompass.local', roleIds: [clerkRole.id] }));
     person = { id: created.user.id };
+    // Spec 2026-10-06 § 5.5: Das Telefon-Bild „Auslage einreichen“ zeigt Nadja — die Pipeline meldet sich mit dem
+    // Entwicklungs-Passwort an (wie die Verwaltung). Derselbe Weg wie im Betrieb: mit dem Startpasswort anmelden
+    // und das eigene Passwort setzen — nie am Dienst vorbei in die Datenbank (Joe, 2026-10-06).
+    const session = unwrap(await login(deps, { email: 'nadja@kompass.local', password: created.startPassword, ipAddress: null, requestId: ctx.requestId }));
+    unwrap(await changeOwnPassword(deps, { ...ctx, userId: person.id, permissions: new Set() }, session.sessionId, { currentPassword: created.startPassword, newPassword: SEED_ADMIN_PASSWORD }));
   } else {
     const already = deps.db
       .select({ userId: schema.userRoles.userId })
@@ -1290,7 +1394,7 @@ function expenseClaimSeeded(deps: Deps, marker: string): boolean {
  * jeder Antrag ist über seine erfundene, eindeutige erste Position für sich
  * idempotent.
  */
-async function seedExpenseClaims(deps: Deps, ctx: CallContext, currentYear: number): Promise<void> {
+async function seedExpenseClaims(deps: Deps, ctx: CallContext, storyYear: number): Promise<void> {
   const jonas = deps.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, 'jonas@kompass.local')).get();
   if (!jonas) return;
   const clerkUserId = await ensureExpenseClerkPerson(deps, ctx);
@@ -1301,7 +1405,7 @@ async function seedExpenseClaims(deps: Deps, ctx: CallContext, currentYear: numb
   // Verzichtserklärung an `waiverBasisMissing` (BMF 25.11.2014: Vertrag oder Satzung).
   if (!readSetting<string>(deps, 'finance.expenseWaiverBasisText')) {
     const setupCtx: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, 'finance.setup']) };
-    unwrap(await setExpenseWaiverBasisText(deps, setupCtx, { text: 'Vereinbarung vom 02.01.2026 nach § 14 der Satzung', agreedOn: '2026-01-02' }));
+    unwrap(await setExpenseWaiverBasisText(deps, setupCtx, { text: `Vereinbarung vom 02.01.${storyYear} nach § 14 der Satzung`, agreedOn: `${storyYear}-01-02` }));
   }
 
   const submitCtx: CallContext = { ...ctx, userId: clerkUserId, permissions: new Set([...ctx.permissions, 'finance.expensesSubmit']) };
@@ -1324,21 +1428,22 @@ async function seedExpenseClaims(deps: Deps, ctx: CallContext, currentYear: numb
         waiver: false,
         iban: IBAN,
         positions: [
-          { kind: 'receipt', positionDate: `${currentYear}-06-05`, amountCents: 1890, purpose: 'Büromaterial für die Infotheke' },
-          { kind: 'trip', positionDate: `${currentYear}-06-05`, tripFrom: 'Musterstadt', tripTo: 'Beispielstadt', tripReason: 'Infomaterial abgeholt', tripKm: 18 },
+          { kind: 'receipt', positionDate: `${storyYear}-06-05`, amountCents: 1890, purpose: 'Büromaterial für die Infotheke' },
+          { kind: 'trip', positionDate: `${storyYear}-06-05`, tripFrom: 'Musterstadt', tripTo: 'Beispielstadt', tripReason: 'Infomaterial abgeholt', tripKm: 18 },
         ],
       }),
     );
-    unwrap(await uploadExpenseReceipt(deps, submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: receiptBytes(), fileName: 'beleg-bueromaterial.pdf' }));
+    // Spec 2026-10-06 § 5.5: Diese Auslage zeigt die Freigabe — mit einem Bon statt „Erfundenes Beispiel“.
+    unwrap(await uploadExpenseReceipt(on(deps, draft.positions[0]!.positionDate!), submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: officeSupplyReceipt(draft.positions[0]!.positionDate!), fileName: 'beleg-bueromaterial.pdf' }));
     unwrap(await submitExpenseClaim(deps, submitCtx, { id: draft.id }));
   }
 
   // 3) Freigegeben, noch nicht ausgezahlt — offener Posten, Herkunft `financeExpenseClaim`.
   if (!expenseClaimSeeded(deps, 'Getränke für die Versammlung')) {
     const draft = unwrap(
-      await saveExpenseDraft(deps, submitCtx, { waiver: false, iban: IBAN, positions: [{ kind: 'receipt', positionDate: `${currentYear}-06-12`, amountCents: 4200, purpose: 'Getränke für die Versammlung' }] }),
+      await saveExpenseDraft(deps, submitCtx, { waiver: false, iban: IBAN, positions: [{ kind: 'receipt', positionDate: `${storyYear}-06-12`, amountCents: 4200, purpose: 'Getränke für die Versammlung' }] }),
     );
-    unwrap(await uploadExpenseReceipt(deps, submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: receiptBytes(), fileName: 'beleg-getraenke.pdf' }));
+    unwrap(await uploadExpenseReceipt(on(deps, draft.positions[0]!.positionDate!), submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: receiptBytes(), fileName: 'beleg-getraenke.pdf' }));
     const submitted = unwrap(await submitExpenseClaim(deps, submitCtx, { id: draft.id }));
     unwrap(await approveExpenseClaim(deps, approveCtx, { claimId: submitted.id, positions: [{ positionId: submitted.positions[0]!.id, categoryId: officeCat.id }] }));
   }
@@ -1346,14 +1451,14 @@ async function seedExpenseClaims(deps: Deps, ctx: CallContext, currentYear: numb
   // 4) Freigegeben und ausgezahlt — die Überweisung begleicht den offenen Posten voll.
   if (!expenseClaimSeeded(deps, 'Portokosten Mitgliederbrief')) {
     const draft = unwrap(
-      await saveExpenseDraft(deps, submitCtx, { waiver: false, iban: IBAN, positions: [{ kind: 'receipt', positionDate: `${currentYear}-06-18`, amountCents: 2350, purpose: 'Portokosten Mitgliederbrief' }] }),
+      await saveExpenseDraft(deps, submitCtx, { waiver: false, iban: IBAN, positions: [{ kind: 'receipt', positionDate: `${storyYear}-06-18`, amountCents: 2350, purpose: 'Portokosten Mitgliederbrief' }] }),
     );
-    unwrap(await uploadExpenseReceipt(deps, submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: receiptBytes(), fileName: 'beleg-porto.pdf' }));
+    unwrap(await uploadExpenseReceipt(on(deps, draft.positions[0]!.positionDate!), submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: receiptBytes(), fileName: 'beleg-porto.pdf' }));
     const submitted = unwrap(await submitExpenseClaim(deps, submitCtx, { id: draft.id }));
     const approved = unwrap(await approveExpenseClaim(deps, approveCtx, { claimId: submitted.id, positions: [{ positionId: submitted.positions[0]!.id, categoryId: officeCat.id }] }));
     unwrap(
       await bookEntry(deps, ctx, {
-        entryDate: `${currentYear}-07-02`,
+        entryDate: `${storyYear}-07-02`,
         text: `Überweisung Auslage ${approved.number}`,
         moneyLines: [{ accountId: bank.id, amountCents: -2350, settlements: [{ openItemId: approved.openItemId!, amountCents: 2350 }] }],
         allocationLines: [{ categoryId: officeCat.id, amountCents: -2350 }],
@@ -1364,9 +1469,9 @@ async function seedExpenseClaims(deps: Deps, ctx: CallContext, currentYear: numb
   // 5) Abgelehnt, mit Grund — der Grund steht nur am Antrag, nie im Protokoll.
   if (!expenseClaimSeeded(deps, 'Blumenstrauß zum Jubiläum')) {
     const draft = unwrap(
-      await saveExpenseDraft(deps, submitCtx, { waiver: false, iban: IBAN, positions: [{ kind: 'receipt', positionDate: `${currentYear}-06-20`, amountCents: 3500, purpose: 'Blumenstrauß zum Jubiläum' }] }),
+      await saveExpenseDraft(deps, submitCtx, { waiver: false, iban: IBAN, positions: [{ kind: 'receipt', positionDate: `${storyYear}-06-20`, amountCents: 3500, purpose: 'Blumenstrauß zum Jubiläum' }] }),
     );
-    unwrap(await uploadExpenseReceipt(deps, submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: receiptBytes(), fileName: 'beleg-blumen.pdf' }));
+    unwrap(await uploadExpenseReceipt(on(deps, draft.positions[0]!.positionDate!), submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: receiptBytes(), fileName: 'beleg-blumen.pdf' }));
     const submitted = unwrap(await submitExpenseClaim(deps, submitCtx, { id: draft.id }));
     unwrap(await rejectExpenseClaim(deps, approveCtx, { claimId: submitted.id, note: 'Kein Vereinszweck, bitte privat tragen' }));
   }
@@ -1374,17 +1479,44 @@ async function seedExpenseClaims(deps: Deps, ctx: CallContext, currentYear: numb
   // 6) Verzicht (Aufwandsspende) freigegeben — Verzichtserklärung erzeugt und unterschrieben zurück.
   if (!expenseClaimSeeded(deps, 'Fahrtkosten Pflegestelle Juli')) {
     const draft = unwrap(
-      await saveExpenseDraft(deps, submitCtx, { waiver: true, positions: [{ kind: 'receipt', positionDate: `${currentYear}-07-01`, amountCents: 1600, purpose: 'Fahrtkosten Pflegestelle Juli' }] }),
+      await saveExpenseDraft(deps, submitCtx, { waiver: true, positions: [{ kind: 'receipt', positionDate: `${storyYear}-07-01`, amountCents: 1600, purpose: 'Fahrtkosten Pflegestelle Juli' }] }),
     );
-    unwrap(await uploadExpenseReceipt(deps, submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: receiptBytes(), fileName: 'beleg-fahrtkosten.pdf' }));
+    unwrap(await uploadExpenseReceipt(on(deps, draft.positions[0]!.positionDate!), submitCtx, { claimId: draft.id, positionId: draft.positions[0]!.id, bytes: receiptBytes(), fileName: 'beleg-fahrtkosten.pdf' }));
     const submitted = unwrap(await submitExpenseClaim(deps, submitCtx, { id: draft.id }));
-    unwrap(await createWaiverDeclaration(deps, approveCtx, { claimId: submitted.id, declaredOn: `${currentYear}-07-10` }));
-    unwrap(await attachSignedWaiver(deps, approveCtx, { claimId: submitted.id, bytes: textPdf(['Verzichtserklärung, unterschrieben', '', 'Erfundenes Beispiel für die Entwicklung.']) }));
+    unwrap(await createWaiverDeclaration(on(deps, `${storyYear}-07-10`), approveCtx, { claimId: submitted.id, declaredOn: `${storyYear}-07-10` }));
+    unwrap(await attachSignedWaiver(on(deps, `${storyYear}-07-10`), approveCtx, { claimId: submitted.id, bytes: textPdf(['Verzichtserklärung, unterschrieben', '', 'Erfundenes Beispiel für die Entwicklung.']) }));
     unwrap(
       await approveExpenseClaim(deps, approveCtx, {
         claimId: submitted.id,
         positions: [{ positionId: submitted.positions[0]!.id, categoryId: travelCat.id }],
-        waiver: { claimAgreedConfirmed: true, declaredOn: `${currentYear}-07-10` },
+        waiver: { claimAgreedConfirmed: true, declaredOn: `${storyYear}-07-10` },
+      }),
+    );
+  }
+
+  // 7) Entwurf mit PDF-Beleg (Spec 2026-10-06 § 5.5, Telefon „Auslage einreichen“): gestern gekauft, Bon schon dran,
+  //    noch nicht eingereicht — die Warteschlangen der Freigabe bleiben, wie die E2E sie zählen.
+  if (!expenseClaimSeeded(deps, 'Druckerpatronen für die Geschäftsstelle')) {
+    const boughtOn = isoDayIn(deps, deps.clock.now().getTime() - 86_400_000);
+    const draft = unwrap(
+      await saveExpenseDraft(deps, submitCtx, { waiver: false, iban: IBAN, positions: [{ kind: 'receipt', positionDate: boughtOn, amountCents: 3480, purpose: 'Druckerpatronen für die Geschäftsstelle' }] }),
+    );
+    unwrap(
+      await uploadExpenseReceipt(on(deps, boughtOn), submitCtx, {
+        claimId: draft.id,
+        positionId: draft.positions[0]!.id,
+        bytes: receiptPdf({
+          shop: ['Bürobedarf Ostertag', 'Lindenplatz 3', '12345 Musterstadt'],
+          date: boughtOn,
+          time: '17:20',
+          receiptNo: '2210-4471',
+          payment: 'BAR',
+          items: [
+            { text: 'Druckerpatrone schwarz 2 St.', cents: 2390 },
+            { text: 'Druckerpatrone farbig', cents: 1090 },
+          ],
+        }),
+        fileName: 'kassenbon-druckerpatronen.pdf',
       }),
     );
   }
@@ -1426,7 +1558,7 @@ async function ensurePartnerContact(deps: Deps, ctx: CallContext, name: string, 
  * (ein isolierter Modultest) bleibt der Schritt aus; jede Zahlung ist über
  * ihre erfundene, eindeutige Zweckangabe für sich idempotent.
  */
-async function seedPartners(deps: Deps, ctx: CallContext, currentYear: number): Promise<void> {
+async function seedPartners(deps: Deps, ctx: CallContext, storyYear: number): Promise<void> {
   const jonas = deps.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, 'jonas@kompass.local')).get();
   if (!jonas) return;
   const approveCtx: CallContext = { ...ctx, userId: jonas.id, permissions: new Set([...ctx.permissions, 'finance.approve']) };
@@ -1436,7 +1568,7 @@ async function seedPartners(deps: Deps, ctx: CallContext, currentYear: number): 
   const agreementDoc = async (subject: string, date: string): Promise<string> => {
     const found = deps.db.select({ id: dmsDocuments.id }).from(dmsDocuments).where(eq(dmsDocuments.subject, subject)).get();
     if (found) return found.id;
-    return unwrap(await receiveDocument(deps, dmsCtx, { filename: `${date} ${subject}.pdf`, bytes: textPdf([subject, '', 'Erfundenes Beispiel für die Entwicklung.']), typeKey: 'voucher-own', subject, documentDate: date, folder: null })).id;
+    return unwrap(await receiveDocument(on(deps, date), dmsCtx, { filename: `${date} ${subject}.pdf`, bytes: textPdf([subject, '', 'Erfundenes Beispiel für die Entwicklung.']), typeKey: 'voucher-own', subject, documentDate: date, folder: null })).id;
   };
 
   // 1) „Kinderhilfe Regional e.V.“ — ein Entwurf ohne Einreichung, dazu eine eingereichte Zahlung,
@@ -1462,11 +1594,11 @@ async function seedPartners(deps: Deps, ctx: CallContext, currentYear: number): 
   const internationalPartner = await ensurePartner(deps, ctx, internationalContact, { status: 'foreignBody', usualBasis: 'transfer58', usualProofMonths: 6 });
   // Design-Nachtrag Phase 4 (Entscheidung 3): die Anerkennung im Sitzland mit „gültig bis“ — ohne Prüfwirkung.
   if (!deps.db.select({ id: financePartnerNotices.id }).from(financePartnerNotices).where(eq(financePartnerNotices.partnerId, internationalPartner.id)).get()) {
-    const recognition = await agreementDoc('Anerkennung im Sitzland Hilfswerk International', `${currentYear}-02-04`);
-    unwrap(await savePartnerNotice(deps, dmsCtx, { partnerId: internationalPartner.id, kind: 'recognitionAbroad', noticeDate: `${currentYear - 1}-12-01`, validUntil: `${currentYear + 1}-12-31`, receivedOn: `${currentYear}-02-04`, documentId: recognition }));
+    const recognition = await agreementDoc('Anerkennung im Sitzland Hilfswerk International', `${storyYear}-02-04`);
+    unwrap(await savePartnerNotice(deps, dmsCtx, { partnerId: internationalPartner.id, kind: 'recognitionAbroad', noticeDate: `${storyYear - 1}-12-01`, validUntil: `${storyYear + 1}-12-31`, receivedOn: `${storyYear}-02-04`, documentId: recognition }));
   }
   if (!partnerPaymentSeeded(deps, 'Nothilfe Erdbebenregion')) {
-    const agreementId = await agreementDoc('Vereinbarung Nothilfe Erdbebenregion', `${currentYear}-03-01`);
+    const agreementId = await agreementDoc('Vereinbarung Nothilfe Erdbebenregion', `${storyYear}-03-01`);
     const draft = unwrap(
       await savePartnerPaymentDraft(deps, ctx, { partnerId: internationalPartner.id, basis: 'transfer58', purposeText: 'Nothilfe Erdbebenregion', retroactive: false, agreementDocumentId: agreementId, positions: [{ kind: 'money', amountCents: 120000, categoryId: programCostsCat.id }] }),
     );
@@ -1493,7 +1625,7 @@ async function seedPartners(deps: Deps, ctx: CallContext, currentYear: number): 
   const suedPartner = await ensurePartner(deps, ctx, suedContact, { status: 'publicBody' });
   await ensureEntry(deps, 'Förderung Süd, bereits überwiesen', () =>
     bookEntry(deps, ctx, {
-      entryDate: `${currentYear}-04-05`,
+      entryDate: `${storyYear}-04-05`,
       text: 'Förderung Süd, bereits überwiesen',
       moneyLines: [{ accountId: bank.id, amountCents: -80000 }],
       allocationLines: [{ categoryId: programCostsCat.id, amountCents: -80000, contactId: suedContact }],
@@ -1522,7 +1654,7 @@ async function seedPartners(deps: Deps, ctx: CallContext, currentYear: number): 
  * Einrichtungspunkt und eine Zahlung an eine nahestehende Person, deren Rolle
  * im Jahr endet. Alles erfunden, jeder Schritt für sich idempotent.
  */
-async function seedMittel(deps: Deps, ctx: CallContext, currentYear: number): Promise<void> {
+async function seedMittel(deps: Deps, ctx: CallContext, storyYear: number): Promise<void> {
   const jonas = deps.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, 'jonas@kompass.local')).get();
   if (!jonas) return;
   const approveCtx: CallContext = { ...ctx, userId: jonas.id, permissions: new Set([...ctx.permissions, 'finance.approve']) };
@@ -1531,29 +1663,32 @@ async function seedMittel(deps: Deps, ctx: CallContext, currentYear: number): Pr
   const bank = accountByName(deps, 'Vereinskonto');
   const donationsCat = categoryByKey(deps, 'donations');
   const programCostsCat = categoryByKey(deps, 'program-costs');
-  const minutes = (title: string) => ({ bytes: textPdf([title, '', 'Erfundenes Beispiel für die Entwicklung.']), fileName: `${title}.pdf` });
+  // Spec 2026-10-06 § 4: Ein Beschluss trägt das Datum, an dem er gefasst wurde — bis 0.2.6 stand jeder auf „heute“
+  // und alle neun oben in der Akte. Ohne Datum (nur die wartende Umwidmung, Ausnahme in Plan 2b, Task 7, 3m) bleibt
+  // es beim Tag der Ablage. Der Dienst läuft unter der Uhr desselben Tages (`on`).
+  const minutes = (title: string, documentDate?: string) => ({ bytes: textPdf([title, '', 'Erfundenes Beispiel für die Entwicklung.']), fileName: `${title}.pdf`, ...(documentDate ? { documentDate } : {}) });
 
   // 1) Erfüllter Zweck mit Rest (Prüfstein 9): 500 € eingegangen, 350 € verwendet, 100 € in die freien Mittel umgewidmet — 50 € Rest.
   await ensurePurpose(deps, ctx, 'Notfallhilfe Winter', { targetCents: 50000 });
   const winter = purposeByName(deps, 'Notfallhilfe Winter');
   await ensureEntry(deps, 'Spende Notfallhilfe Winter', () =>
-    bookEntry(deps, ctx, { entryDate: `${currentYear}-01-20`, text: 'Spende Notfallhilfe Winter', moneyLines: [{ accountId: bank.id, amountCents: 50000 }], allocationLines: [{ categoryId: donationsCat.id, amountCents: 50000, purposeId: winter.id }] }).then(unwrap),
+    bookEntry(deps, ctx, { entryDate: `${storyYear}-01-20`, text: 'Spende Notfallhilfe Winter', moneyLines: [{ accountId: bank.id, amountCents: 50000 }], allocationLines: [{ categoryId: donationsCat.id, amountCents: 50000, purposeId: winter.id }] }).then(unwrap),
   );
   await ensureEntry(deps, 'Ausgabe Notfallhilfe Winter', () =>
-    bookEntry(deps, ctx, { entryDate: `${currentYear}-02-20`, text: 'Ausgabe Notfallhilfe Winter', moneyLines: [{ accountId: bank.id, amountCents: -35000 }], allocationLines: [{ categoryId: programCostsCat.id, amountCents: -35000, purposeId: winter.id }] }).then(unwrap),
+    bookEntry(deps, ctx, { entryDate: `${storyYear}-02-20`, text: 'Ausgabe Notfallhilfe Winter', moneyLines: [{ accountId: bank.id, amountCents: -35000 }], allocationLines: [{ categoryId: programCostsCat.id, amountCents: -35000, purposeId: winter.id }] }).then(unwrap),
   );
   const hasTransfers = deps.db.select({ id: financePurposeTransfers.id }).from(financePurposeTransfers).limit(1).get();
   if (!hasTransfers) {
     const row = deps.db.select().from(financePurposes).where(eq(financePurposes.id, winter.id)).get();
     if (row && !row.fulfilledAt) unwrap(await fulfillPurpose(deps, ctx, { id: winter.id, expectedVersion: row.updatedAt }));
     const rest = unwrap(
-      await requestPurposeTransfer(deps, writeCtx, { fromPurposeId: winter.id, toPurposeId: null, amountCents: 10000, transferDate: `${currentYear}-03-01`, reason: 'Rest nach Abschluss der Hilfe', documentUpload: minutes('Protokoll Umwidmung Notfallhilfe') }),
+      await requestPurposeTransfer(on(deps, `${storyYear}-03-01`), writeCtx, { fromPurposeId: winter.id, toPurposeId: null, amountCents: 10000, transferDate: `${storyYear}-03-01`, reason: 'Rest nach Abschluss der Hilfe', documentUpload: minutes('Protokoll Umwidmung Notfallhilfe', `${storyYear}-03-01`) }),
     );
     unwrap(await approvePurposeTransfer(deps, approveCtx, { id: rest.id }));
     // 2) Wartet auf Jonas Feld: aus den freien Mitteln in die Jugendfreizeit, angelegt von der Verwaltung.
     const youth = purposeByName(deps, 'Jugendfreizeit');
     unwrap(
-      await requestPurposeTransfer(deps, writeCtx, { fromPurposeId: null, toPurposeId: youth.id, amountCents: 20000, transferDate: `${currentYear}-03-05`, reason: 'Zusage für die Herbstfahrt', documentUpload: minutes('Protokoll Umwidmung Jugendfreizeit') }),
+      await requestPurposeTransfer(deps, writeCtx, { fromPurposeId: null, toPurposeId: youth.id, amountCents: 20000, transferDate: `${storyYear}-03-05`, reason: 'Zusage für die Herbstfahrt', documentUpload: minutes('Protokoll Umwidmung Jugendfreizeit') }),
     );
   }
 
@@ -1561,20 +1696,21 @@ async function seedMittel(deps: Deps, ctx: CallContext, currentYear: number): Pr
   const hasReserves = deps.db.select({ id: financeReserves.id }).from(financeReserves).limit(1).get();
   if (!hasReserves) {
     const dach = purposeByName(deps, 'Dachsanierung Vereinsheim');
-    const project = unwrap(await saveReserve(deps, writeCtx, { kind: 'projectFunds', name: 'Projektmittel Dach', purposeText: 'Neues Vereinsheimdach', purposeId: dach.id, resolutionUpload: minutes('Protokoll Projektmittel Dach') }));
-    unwrap(await recordReserveMovement(deps, writeCtx, { reserveId: project.id, kind: 'allocate', movementDate: `${currentYear}-02-10`, amountCents: 30000, resolutionUpload: minutes('Protokoll Zuführung Projektmittel Dach') }));
+    const d = (monthDay: string) => `${storyYear}-${monthDay}`;
+    const project = unwrap(await saveReserve(on(deps, d('02-09')), writeCtx, { kind: 'projectFunds', name: 'Projektmittel Dach', purposeText: 'Neues Vereinsheimdach', purposeId: dach.id, resolutionUpload: minutes('Protokoll Projektmittel Dach', d('02-09')) }));
+    unwrap(await recordReserveMovement(on(deps, d('02-10')), writeCtx, { reserveId: project.id, kind: 'allocate', movementDate: d('02-10'), amountCents: 30000, resolutionUpload: minutes('Protokoll Zuführung Projektmittel Dach', d('02-10')) }));
 
-    const replacement = unwrap(await saveReserve(deps, writeCtx, { kind: 'replacement', name: 'Ersatz Transporter', purposeText: 'Ersatz des Vereinsfahrzeugs', resolutionUpload: minutes('Protokoll Ersatz Transporter') }));
-    unwrap(await recordReserveMovement(deps, writeCtx, { reserveId: replacement.id, kind: 'allocate', movementDate: `${currentYear}-01-15`, amountCents: 20000, resolutionUpload: minutes('Protokoll Zuführung Ersatz Transporter') }));
-    unwrap(await recordReserveMovement(deps, writeCtx, { reserveId: replacement.id, kind: 'dissolve', movementDate: `${currentYear}-03-20`, resolutionUpload: minutes('Protokoll Auflösung Ersatz Transporter') }));
+    const replacement = unwrap(await saveReserve(on(deps, d('01-14')), writeCtx, { kind: 'replacement', name: 'Ersatz Transporter', purposeText: 'Ersatz des Vereinsfahrzeugs', resolutionUpload: minutes('Protokoll Ersatz Transporter', d('01-14')) }));
+    unwrap(await recordReserveMovement(on(deps, d('01-15')), writeCtx, { reserveId: replacement.id, kind: 'allocate', movementDate: d('01-15'), amountCents: 20000, resolutionUpload: minutes('Protokoll Zuführung Ersatz Transporter', d('01-15')) }));
+    unwrap(await recordReserveMovement(on(deps, d('03-20')), writeCtx, { reserveId: replacement.id, kind: 'dissolve', movementDate: d('03-20'), resolutionUpload: minutes('Protokoll Auflösung Ersatz Transporter', d('03-20')) }));
 
     // Die freie Rücklage nutzt 85 % des Höchstbetrags dieses Jahres — über dem Warnwert (80 %), unter der Grenze.
-    const year = deps.db.select().from(financeFiscalYears).all().find((y) => y.startsOn <= `${currentYear}-03-15` && `${currentYear}-03-15` <= y.endsOn);
-    const free = unwrap(await saveReserve(deps, writeCtx, { kind: 'free', name: 'Freie Rücklage', resolutionUpload: minutes('Protokoll Freie Rücklage') }));
+    const year = deps.db.select().from(financeFiscalYears).all().find((y) => y.startsOn <= `${storyYear}-03-15` && `${storyYear}-03-15` <= y.endsOn);
+    const free = unwrap(await saveReserve(on(deps, d('03-14')), writeCtx, { kind: 'free', name: 'Freie Rücklage', resolutionUpload: minutes('Protokoll Freie Rücklage', d('03-14')) }));
     const cap = year ? unwrap(await freeReserveCap(deps, writeCtx, { fiscalYearId: year.id })).capCents : 0;
     const amountCents = Math.floor((cap * 85) / 100);
     if (year && amountCents > 0) {
-      unwrap(await recordReserveMovement(deps, writeCtx, { reserveId: free.id, kind: 'allocate', movementDate: `${currentYear}-03-15`, amountCents, forFiscalYearId: year.id, resolutionUpload: minutes('Protokoll Zuführung Freie Rücklage') }));
+      unwrap(await recordReserveMovement(on(deps, d('03-15')), writeCtx, { reserveId: free.id, kind: 'allocate', movementDate: d('03-15'), amountCents, forFiscalYearId: year.id, resolutionUpload: minutes('Protokoll Zuführung Freie Rücklage', d('03-15')) }));
     }
   }
 
@@ -1585,24 +1721,43 @@ async function seedMittel(deps: Deps, ctx: CallContext, currentYear: number): Pr
   };
   const helga = await person('Helga', 'Sommer');
   if (!deps.db.select({ id: contactRoles.id }).from(contactRoles).where(and(eq(contactRoles.contactId, helga), eq(contactRoles.role, 'board-member'))).get()) {
-    unwrap(await addContactRole(deps, contactCtx, { id: helga, role: 'board-member', since: `${currentYear}-01-01` }));
+    unwrap(await addContactRole(deps, contactCtx, { id: helga, role: 'board-member', since: `${storyYear}-01-01` }));
   }
   const volunteerCat = categoryByKey(deps, 'volunteer-allowance');
   await ensureEntry(deps, 'Ehrenamtspauschale Vorstand', () =>
-    bookEntry(deps, ctx, { entryDate: `${currentYear}-03-10`, text: 'Ehrenamtspauschale Vorstand', moneyLines: [{ accountId: bank.id, amountCents: -78000 }], allocationLines: [{ categoryId: volunteerCat.id, amountCents: -78000, contactId: helga }], reason: 'Satzungsänderung zur Vorstandsvergütung ist beantragt' }).then(unwrap),
+    bookEntry(deps, ctx, { entryDate: `${storyYear}-03-10`, text: 'Ehrenamtspauschale Vorstand', moneyLines: [{ accountId: bank.id, amountCents: -78000 }], allocationLines: [{ categoryId: volunteerCat.id, amountCents: -78000, contactId: helga }], reason: 'Satzungsänderung zur Vorstandsvergütung ist beantragt' }).then(unwrap),
   );
 
   // 5) Eine nahestehende Person, deren Rolle zur Jahresmitte endet — die Zahlung im März steht in E21.
   const paul = await person('Paul', 'Winter');
   if (!deps.db.select({ id: contactRoles.id }).from(contactRoles).where(and(eq(contactRoles.contactId, paul), eq(contactRoles.role, 'related-party'))).get()) {
-    unwrap(await addContactRole(deps, contactCtx, { id: paul, role: 'related-party', since: `${currentYear}-01-01` }));
+    unwrap(await addContactRole(deps, contactCtx, { id: paul, role: 'related-party', since: `${storyYear}-01-01` }));
     const role = deps.db.select({ id: contactRoles.id }).from(contactRoles).where(and(eq(contactRoles.contactId, paul), eq(contactRoles.role, 'related-party'))).get()!;
-    unwrap(await endContactRole(deps, contactCtx, { roleId: role.id, until: `${currentYear}-06-30` }));
+    unwrap(await endContactRole(deps, contactCtx, { roleId: role.id, until: `${storyYear}-06-30` }));
   }
   await ensureEntry(deps, 'Honorar Werkstattkurs', () =>
-    bookEntry(deps, ctx, { entryDate: `${currentYear}-03-12`, text: 'Honorar Werkstattkurs', moneyLines: [{ accountId: bank.id, amountCents: -12000 }], allocationLines: [{ categoryId: programCostsCat.id, amountCents: -12000, contactId: paul }] }).then(unwrap),
+    bookEntry(deps, ctx, { entryDate: `${storyYear}-03-12`, text: 'Honorar Werkstattkurs', moneyLines: [{ accountId: bank.id, amountCents: -12000 }], allocationLines: [{ categoryId: programCostsCat.id, amountCents: -12000, contactId: paul }] }).then(unwrap),
   );
   // AC: Paul hat auch gespendet — das Honorar ist ausdrücklich keine Rückgabe seiner Spende.
   const honorar = entryByText(deps, 'Honorar Werkstattkurs');
   if (!notReturnMarkInternal(deps.db, honorar.id)) unwrap(await markNotReturn(deps, ctx, { entryId: honorar.id, notReturn: true, note: 'Honorar für den Werkstattkurs, keine Rückzahlung' }));
+}
+
+/**
+ * Der Vorstandswechsel aus dem Protokoll der Mitgliederversammlung (Akte, Stichjahr 29.04.): Bernd Hagedorn war drei
+ * Jahre im Vorstand, Clara Neumann folgt. Beide kommen aus dem Kontakte-Seed; fehlen sie (Modultest), bleibt der
+ * Schritt aus — der Finanz-Seed erfindet hier keine Personen. Idempotent über die vorhandene Rolle.
+ */
+async function seedBoardHistory(deps: Deps, ctx: CallContext, year: number): Promise<void> {
+  const contactCtx: CallContext = { ...ctx, permissions: new Set([...ctx.permissions, 'contacts.manage']) };
+  const find = (firstName: string, lastName: string) => deps.db.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.firstName, firstName), eq(contacts.lastName, lastName))).get()?.id ?? null;
+  const onBoard = (contactId: string) => !!deps.db.select({ id: contactRoles.id }).from(contactRoles).where(and(eq(contactRoles.contactId, contactId), eq(contactRoles.role, 'board-member'))).get();
+  const bernd = find('Bernd', 'Hagedorn');
+  if (bernd && !onBoard(bernd)) {
+    const added = unwrap(await addContactRole(deps, contactCtx, { id: bernd, role: 'board-member', since: `${year - 3}-04-01` }));
+    const open = added.roles.find((r) => r.role === 'board-member' && r.until === null);
+    if (open) unwrap(await endContactRole(deps, contactCtx, { roleId: open.id, until: `${year}-04-28` }));
+  }
+  const clara = find('Clara', 'Neumann');
+  if (clara && !onBoard(clara)) unwrap(await addContactRole(deps, contactCtx, { id: clara, role: 'board-member', since: `${year}-04-29` }));
 }

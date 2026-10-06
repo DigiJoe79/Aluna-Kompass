@@ -1,4 +1,5 @@
 import { expect, test } from './fixtures';
+import { associationYear } from './association-day';
 import { loginAsAdmin, resetDatabase } from './helpers';
 
 test.describe('contacts', () => {
@@ -74,7 +75,7 @@ test.describe('contacts', () => {
     // Solange die Rolle läuft, hält sie den Kontakt — der Löschknopf ist aus und sagt warum.
     await expect(page.getByRole('button', { name: 'Kontakt löschen' })).toBeDisabled();
     await expect(page.getByTestId('retention-holds')).toContainText('Rolle Interessiert');
-    await expect(page.getByTestId('retention-holds')).toContainText('31.12.2028');
+    await expect(page.getByTestId('retention-holds')).toContainText(`31.12.${associationYear() + 2}`); // läuft die Rolle noch, zählt die Frist ab heute
   });
 
   test('bearbeitet einen Kontakt: Anschrift ergänzen, und ein veralteter Stand wird abgewiesen', async ({ page, context }) => {

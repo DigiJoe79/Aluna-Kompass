@@ -5,6 +5,8 @@ Schreiben, das hereinkommt, als PDF mit Nummer, Art, Datum und Absender oder
 Empfänger. Links die Ordner, rechts die Liste; ein Klick öffnet das Dokument
 mit allem, was dazugehört.
 
+![Die Akte mit Ordnerbaum links und der Dokumentliste eines Ordners](../bilder/akte/ordnerbaum.png)
+
 ## Die Ordnerspalte
 
 Oben stehen „Alle Dokumente“ und „Eingangskorb“ (die eingegangene Post, die

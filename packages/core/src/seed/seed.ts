@@ -8,8 +8,10 @@ import { unwrap } from '../result';
 import { createRole, setRolePermissions } from '../roles/service';
 import { readSetting, writeSettingInternal } from '../settings/service';
 import { completeSetup, isSetupRequired } from '../setup/service';
+import { todayIn } from '../today';
 import { createUser } from '../users/service';
 import { seedMedia } from './media';
+import { seedStoryYear } from './story-year';
 
 export const SEED_ADMIN_EMAIL = 'admin@kompass.local';
 export const SEED_ADMIN_PASSWORD = 'kompass-entwicklung-2026';
@@ -23,11 +25,25 @@ const EXAMPLE_ROLES: { name: string; description: string; permissions: string[] 
   { name: 'Schriftführung', description: 'Dokumente erzeugen', permissions: ['documents.export'] },
 ];
 
-const EXAMPLE_ADDRESS: [string, string][] = [
-  ['organization.street', 'Vereinsweg 1'],
-  ['organization.postalCode', '12345'],
-  ['organization.city', 'Musterstadt'],
-];
+/**
+ * Ein erfundener Vereinsstamm: die Anschrift für jede Zuwendungsbestätigung
+ * (F6a), Register und Kontakt für Briefkopf und Webseite. Bis 0.2.6 fehlte das
+ * Registergericht, und die Startseite meldete einem Verein nach einem Jahr
+ * „Registergericht fehlt“ (Spec 2026-10-06 § 4).
+ */
+function exampleOrganization(deps: Deps): [string, string][] {
+  return [
+    ['organization.street', 'Vereinsweg 1'],
+    ['organization.postalCode', '12345'],
+    ['organization.city', 'Musterstadt'],
+    ['organization.registerCourt', 'Amtsgericht Musterstadt'],
+    ['organization.registerNumber', 'VR 4711'],
+    ['organization.foundedYear', String(seedStoryYear(todayIn(deps)) - 7)],
+    ['organization.email', 'info@musterverein.example'],
+    ['organization.phone', '+49 1234 56780'],
+    ['organization.website', 'https://musterverein.example'],
+  ];
+}
 
 const EXAMPLE_USERS: { name: string; email: string; role: string }[] = [
   { name: 'Jonas Feld', email: 'jonas@kompass.local', role: 'Schatzmeisterin' },
@@ -52,8 +68,8 @@ export async function seedDevelopment(deps: Deps): Promise<{ adminEmail: string;
     // stünde die Entwicklung auf einem anderen Zustand als eine echte
     // Installation — und genau solche Unterschiede fallen zuletzt auf.
     for (const manifest of deps.registry.manifests) manifest.install?.(tx, deps, ctx);
-    // Eine erfundene Vereinsanschrift — jede Zuwendungsbestätigung trägt sie (F6a). Was schon eingetragen ist, bleibt.
-    for (const [key, value] of EXAMPLE_ADDRESS) {
+    // Ein erfundener Vereinsstamm — was schon eingetragen ist, bleibt.
+    for (const [key, value] of exampleOrganization(deps)) {
       if (!String(readSetting(deps, key) ?? '').trim()) writeSettingInternal(tx, deps, ctx, key, value, 'seed.organization');
     }
   });

@@ -103,14 +103,25 @@ dasselbe Geld nicht zweimal abgezogen.
 
 ## Höchstbetrag der freien Rücklage
 
-Oben auf der Seite steht der Höchstbetrag der freien Rücklage für das
-laufende Geschäftsjahr und wie viel davon genutzt ist. Er ist eine
-**Näherung**: ein Drittel (33 %) des Überschusses aus der
+Oben auf der Seite steht der Höchstbetrag der freien Rücklage und wie viel
+davon genutzt ist — für das laufende Geschäftsjahr und, solange das Vorjahr
+noch nicht abgeschlossen ist, davor auch für das Vorjahr. Der Vorjahreswert
+trägt den Zusatz „vorläufig, Jahr nicht abgeschlossen“: Er ändert sich mit
+jeder Buchung, die im Vorjahr noch dazukommt. Mit dem Abschluss des Vorjahres
+verschwindet er. Hat das laufende Jahr noch keine Einnahmen, steht dort „noch
+kein Höchstbetrag“.
+
+Der Höchstbetrag ist eine **Näherung**: ein Drittel (33 %) des Überschusses aus der
 Vermögensverwaltung — ein Verlust zählt als null — plus 10 % der übrigen
 zeitnah zu verwendenden Mittel. Dazu zählen die Einnahmen des ideellen
 Bereichs ohne Zuwendungen zum Vermögen sowie die Überschüsse aus Zweckbetrieb
 und wirtschaftlichem Geschäftsbetrieb. Die Prozentsätze stehen unter
 „Sätze und Grenzen“ in der Einrichtung.
+
+Eine Zuführung zur freien Rücklage zählt für das Jahr, das im Vorgang unter
+„für das Geschäftsjahr“ steht. Vorgeschlagen ist das Vorjahr, solange es offen
+ist — meist beschließt der Vorstand die Zuführung beim Abschluss des
+Vorjahres —, sonst das laufende Jahr.
 
 Ab dem Warnwert unter „Sätze und Grenzen“ steht „nähert sich“, darüber
 „überschritten“ mit dem Betrag darüber. Kompass sperrt nichts; eine

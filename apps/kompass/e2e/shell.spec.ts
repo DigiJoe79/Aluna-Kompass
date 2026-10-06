@@ -166,7 +166,10 @@ test.describe('app shell', () => {
   test('the audit trail follows the density like every list', async ({ page }) => {
     // Nur Einträge der Oberfläche (Muster `audit.spec.ts`): Ohne Filter steht nach dem Reset oft die „Volltext
     // gelesen“-Zeile des Hintergrunddienstes oben, deren lange Objektbezeichnung umbricht — ihre Höhe käme aus
-    // dem Inhalt, nicht aus der Zeilenhöhe, um die es hier geht.
+    // dem Inhalt, nicht aus der Zeilenhöhe, um die es hier geht. Aus demselben Grund breiter als die
+    // Vorgabe 1280: Objekt und Zusammenfassung brechen seit release-0.2.7.md Befund 14 um, statt die
+    // Tabelle seitlich überlaufen zu lassen; bei 1600 px passt eine Anmeldezeile in eine Zeile.
+    await page.setViewportSize({ width: 1600, height: 900 });
     await page.goto('/admin/audit?channel=ui');
     await expect(page.locator('tbody tr').first()).toContainText('Oberfläche');
     const rowHeight = () => page.locator('tbody tr').first().evaluate((el) => el.getBoundingClientRect().height);

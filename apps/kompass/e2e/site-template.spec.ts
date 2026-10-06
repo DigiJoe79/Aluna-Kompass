@@ -23,7 +23,7 @@ test('reads a template, fills a variable and keeps a collection entry', async ({
 
   await page.getByRole('link', { name: 'Aktuelles' }).click();
   await expect(page).toHaveURL('/site/c/news');
-  await page.getByRole('link', { name: 'Neu' }).click();
+  await page.getByRole('link', { name: 'Neu', exact: true }).click();
   await page.getByLabel('Slug (URL-Teil)').fill('erste-notiz');
   await page.locator('[name="title.de"]').fill('Erste Notiz');
   await page.getByRole('button', { name: 'Speichern' }).click();

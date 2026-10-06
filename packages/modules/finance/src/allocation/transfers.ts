@@ -1,6 +1,6 @@
 import { yearIn, invalid, isoNow, newId, notFound, ok, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
 import { contacts, displayName } from '@kompass/module-contacts';
-import { linkDocumentInternal, receiveGeneratedUpload, type ReceivedDocument } from '@kompass/module-dms';
+import { abortReceive, linkDocumentInternal, receiveGeneratedUpload, type ReceivedDocument } from '@kompass/module-dms';
 import { and, eq, inArray, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { financeAudit } from '../audit';
@@ -10,6 +10,7 @@ import { checkDatedInternal } from '../ledger/fiscal-years';
 import { purposeBalancesAt } from '../ledger/queries';
 import { financeAllocationLines, financeEntries, financePurposeTransferCounters, financePurposeTransfers, financePurposes, type FinancePurposeRow, type FinancePurposeTransferRow } from '../schema';
 import { checkPickedDocument, minutesTypeProblem, uploadInputSchema } from './reserves';
+import { transferResolutionSubject } from './subjects';
 
 const DOCUMENT_MAX_BYTES = 10 * 1024 * 1024;
 const PDF_MAGIC = [0x25, 0x50, 0x44, 0x46, 0x2d]; // %PDF-
@@ -134,10 +135,15 @@ export async function requestPurposeTransfer(deps: Deps, ctx: CallContext, input
     const result = await receiveGeneratedUpload(deps, ctx, {
       bytes: v.documentUpload.bytes,
       typeKey: 'minutes',
-      subject: `Beschluss für Umwidmung ${id}`,
+      subject: transferResolutionSubject(from?.name ?? null, to?.name ?? null),
       documentDate: v.documentUpload.documentDate ?? todayIn(deps),
       links: [{ entityType: 'financePurposeTransfer', entityId: id }],
-      afterReceive: (tx: DbOrTx, doc: ReceivedDocument) => insertTransfer(tx, deps, ctx, v, id, doc.id),
+      // Befund 6 (0.2.7): Lehnt `insertTransfer` ab, rollt `abortReceive` den Eingang mit zurück — kein Beschluss bleibt in der Akte.
+      afterReceive: (tx: DbOrTx, doc: ReceivedDocument) => {
+        const transfer = insertTransfer(tx, deps, ctx, v, id, doc.id);
+        if (!transfer.ok) abortReceive(transfer);
+        return transfer;
+      },
     });
     if (!result.ok) return result;
     return result.value.after!;

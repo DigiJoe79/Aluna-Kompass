@@ -154,9 +154,12 @@ export function ChannelsEditor({
         <ul className="divide-y divide-line-2">
           {channels.map((ch) => (
             <li key={ch.id} className="flex items-center justify-between gap-4 py-2.5">
-              <div className="flex items-center gap-3">
+              {/* `min-w-0 flex-wrap` und `wrap-anywhere` (wie im Protokoll): Marke, lange E-Mail und „bevorzugt“ liefen auf
+                  dem Telefon über den Rand (`main` 467 > 390 px, release-0.2.7.md, Befund 17); jetzt bricht die Zeile
+                  um, die Adresse notfalls in sich. Kein Layout-Test für diese Einzelstelle (AGENTS.md). */}
+              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                 <StatusBadge tone="neutral">{t(`channels.kinds.${ch.kind}`)}</StatusBadge>
-                <span className="font-mono text-[13px] text-ink">{ch.value}</span>
+                <span className="min-w-0 font-mono text-[13px] wrap-anywhere text-ink">{ch.value}</span>
                 {ch.label ? <span className="text-[12px] text-muted-ink">({ch.label})</span> : null}
                 {ch.isPrimary ? (
                   <StatusBadge tone="accent" dot>
@@ -170,7 +173,7 @@ export function ChannelsEditor({
                   variant="ghost"
                   onClick={() => handleRemove(ch.id)}
                   disabled={pending}
-                  className="size-7 p-0 text-muted-ink"
+                  className="size-7 shrink-0 p-0 text-muted-ink"
                 >
                   <Trash2 className="size-3.5" aria-hidden />
                 </Button>

@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
+import { story, storyFile, storyPattern } from './story-year';
 
 /**
  * F5b Task 4 — die Karte „Aus der Rechnung“. Im Seed liegen zwei
@@ -34,13 +35,13 @@ test.describe('finance: Rechnungen mit ZUGFeRD', () => {
 
   test('eine unbezahlte ZUGFeRD-Rechnung ohne Buchung zeigt die Karte und legt mit einem Klick die offene Zahlung an', async ({ page }) => {
     await loginAsAdmin(page);
-    await openCardInVouchers(page, /Rechnung TM-2026-0042/);
+    await openCardInVouchers(page, storyPattern('Rechnung TM-2026-0042'));
     await expect(card(page)).toContainText('Tierarztpraxis Muster');
-    await expect(card(page)).toContainText('TM-2026-0042');
-    await expect(card(page)).toContainText('01.04.2026');
+    await expect(card(page)).toContainText(story('TM-2026-0042'));
+    await expect(card(page)).toContainText(story('01.04.2026'));
     await expect(card(page)).toContainText('119,00 €');
     await expect(card(page)).toContainText('19 %: 19,00 €');
-    await expect(card(page)).toContainText('30.04.2026');
+    await expect(card(page)).toContainText(story('30.04.2026'));
     await expect(card(page)).toContainText('DE25999999990000424242');
     await expect(card(page)).toContainText('Nicht bezahlt');
     await expect(card(page)).not.toContainText(/\d{4}-\d{2}-\d{2}/);
@@ -51,12 +52,12 @@ test.describe('finance: Rechnungen mit ZUGFeRD', () => {
     await expect(page).toHaveURL(/\/finance\/open-items\?tab=payable&item=[0-9A-Z]{26}$/);
     // Die offene Zahlung öffnet sich gleich in ihrem Blatt: Zahlungsreferenz ist die Rechnungsnummer.
     const sheet = page.getByRole('dialog');
-    await expect(sheet.getByRole('heading', { name: 'TM-2026-0042' })).toBeVisible();
+    await expect(sheet.getByRole('heading', { name: story('TM-2026-0042') })).toBeVisible();
     await expect(sheet).toContainText('119,00');
 
     // Dieselbe Karte in der Akte — jetzt mit der vorhandenen offenen Zahlung statt eines zweiten Knopfs.
     await page.goto('/finance/work/vouchers');
-    await page.getByRole('link', { name: /Rechnung TM-2026-0042/ }).click();
+    await page.getByRole('link', { name: storyPattern('Rechnung TM-2026-0042') }).click();
     await expect(page).toHaveURL(/\/dms\/[0-9A-Z]{26}$/);
     await expect(card(page)).toContainText('Zu dieser Rechnung gibt es schon eine offene Zahlung.');
     await expect(card(page).getByRole('button', { name: 'Offene Zahlung anlegen' })).toHaveCount(0);
@@ -66,7 +67,7 @@ test.describe('finance: Rechnungen mit ZUGFeRD', () => {
     await loginAsAdmin(page);
     await openCardInVouchers(page, /Rechnung BM-7781/);
     await expect(card(page)).toContainText('Bürobedarf Muster GmbH');
-    await expect(card(page)).toContainText('Bezahlt: Kontoumsatz vom 10.01.2026');
+    await expect(card(page)).toContainText(story('Bezahlt: Kontoumsatz vom 10.01.2026'));
     await expect(card(page)).not.toContainText(/\d{4}-\d{2}-\d{2}/);
     await card(page).getByRole('link', { name: 'Zum Kontoumsatz buchen' }).click();
     await expect(page).toHaveURL(/\/finance\/work\?raw=[0-9A-Z]{26}&voucher=[0-9A-Z]{26}$/);
@@ -112,13 +113,13 @@ test.describe('finance: Rechnungen mit ZUGFeRD', () => {
     const documentHref = await page.getByRole('link', { name: /Rechnung BM-7781/ }).getAttribute('href');
     await openCardInVouchers(page, /Rechnung BM-7781/);
     await expect(card(page)).toContainText('Wahrscheinlich schon bezahlt');
-    await expect(card(page).getByRole('list', { name: 'Buchungen, die zur Rechnung passen' })).toContainText('Entwurf vom 10.01.2026');
+    await expect(card(page).getByRole('list', { name: 'Buchungen, die zur Rechnung passen' })).toContainText(story('Entwurf vom 10.01.2026'));
     await expect(card(page).getByRole('button', { name: 'Offene Zahlung anlegen', exact: true })).toHaveCount(0);
     // Eine offene Zahlung gäbe es nur mit Begründung.
     await card(page).getByRole('button', { name: 'Trotzdem offene Zahlung anlegen' }).click();
     await expect(card(page).getByRole('button', { name: 'Offene Zahlung mit Begründung anlegen' })).toBeDisabled();
 
-    await card(page).getByRole('button', { name: 'Rechnung als Beleg an Entwurf vom 10.01.2026 anhängen' }).click();
+    await card(page).getByRole('button', { name: story('Rechnung als Beleg an Entwurf vom 10.01.2026 anhängen') }).click();
     await expect(page.getByText(/Beleg ERE-[\d-]+ verknüpft\./)).toBeVisible();
 
     // In der Akte hängt die Rechnung jetzt am Entwurf; eine offene Zahlung gibt es nicht.
@@ -162,7 +163,7 @@ test.describe('finance: Rechnungen mit ZUGFeRD', () => {
     await expect(page).toHaveURL(/account=/);
     await expect(option(page, 'Buerobedarf Muster GmbH')).toHaveAttribute('aria-selected', 'true');
     const detail = page.getByTestId('work-detail');
-    await detail.getByTestId('voucher-file-input').setInputFiles(path.resolve(import.meta.dirname, 'fixtures/zugferd/rechnung-buerobedarf.pdf'));
+    await detail.getByTestId('voucher-file-input').setInputFiles(storyFile(path.resolve(import.meta.dirname, 'fixtures/zugferd/rechnung-buerobedarf.pdf')));
     await detail.getByRole('group', { name: 'Beleg ablegen' }).getByRole('button', { name: 'Beleg ablegen' }).click();
 
     const offer = detail.getByTestId('invoice-offer');

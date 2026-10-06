@@ -6,6 +6,7 @@ import { financeAudit } from '../audit';
 import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { financeEntryDocuments, financeFiscalYears, financeMoneyLines, financeOpenItems, financeOpenItemSettlements } from '../schema';
 import { requireFinanceRead } from './access';
+import { germanDate } from './dates';
 import { entryViewInternal } from './entries';
 import { fiscalYearStatusInternal } from './fiscal-years';
 
@@ -44,7 +45,8 @@ export async function uploadVoucher(deps: Deps, ctx: CallContext, input: unknown
   const allowedTypes = readSetting<string[]>(deps, 'finance.voucherTypes');
   if (!allowedTypes.includes(v.typeKey)) return financeConflict('voucherTypeNotAllowed', { type: v.typeKey });
 
-  const subject = v.title ?? `Beleg vom ${v.documentDate}`;
+  // Datum deutsch, nie ISO (release-0.2.7, Befund 20).
+  const subject = v.title ?? `Beleg vom ${germanDate(v.documentDate)}`;
   const result = await receiveGeneratedUpload(deps, ctx, {
     bytes: v.bytes,
     typeKey: v.typeKey,

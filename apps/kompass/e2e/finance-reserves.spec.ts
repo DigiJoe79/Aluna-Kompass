@@ -3,6 +3,7 @@ import { expect, test } from './fixtures';
 import { associationDay } from './association-day';
 import { callTool, mcpClient, PDF, PHONE } from './expense-helpers';
 import { loginAsAdmin, resetDatabase } from './helpers';
+import { STORY_YEAR, story } from './story-year';
 
 /** > 1 MB (N9, Befundliste 0.2.0) — derselbe erfundene Beleg wie bei den Auslagen. */
 const BIG_PDF = path.resolve(import.meta.dirname, 'fixtures/beleg-1500k.pdf');
@@ -11,7 +12,8 @@ const BIG_PDF = path.resolve(import.meta.dirname, 'fixtures/beleg-1500k.pdf');
  * F8b Task 6b — Finanzen → Zurückgelegtes Geld (E4, HANDOFF 14.3 Punkte 6
  * und 7): ein Vorgang ändert den Bestand der Rücklage, nie ein Bankkonto
  * oder eine Kasse; der Höchstbetrag trägt ein Zustandswort; ein Vorgang in
- * der Zukunft wird mit Grund abgelehnt.
+ * der Zukunft wird mit Grund abgelehnt. Befund 4 (0.2.7): im Frühjahr
+ * Vorjahr vorläufig neben dem laufenden Jahr, Vorgabe im Dialog.
  */
 test.describe('finance reserves (F8b)', () => {
   test.beforeEach(async ({ page }) => {
@@ -21,7 +23,7 @@ test.describe('finance reserves (F8b)', () => {
 
   test('zuführen mit Beschluss-Upload über 1 MB: Bestand steigt, Bankkonten und Kassen bleiben, Höchstbetrag mit Zustandswort, Zukunft abgelehnt', async ({ page, baseURL }) => {
     const client = await mcpClient(page, baseURL);
-    const doc = await callTool<{ id: string }>(client, 'dms_receive', { filename: 'protokoll.pdf', typeKey: 'minutes', subject: 'Protokoll Rücklage E2E', documentDate: '2026-01-15', contentBase64: PDF.buffer.toString('base64') });
+    const doc = await callTool<{ id: string }>(client, 'dms_receive', { filename: 'protokoll.pdf', typeKey: 'minutes', subject: 'Protokoll Rücklage E2E', documentDate: story('2026-01-15'), contentBase64: PDF.buffer.toString('base64') });
     await callTool(client, 'finance_reserve_save', { kind: 'free', name: 'Freie Rücklage E2E', resolutionDocumentId: doc.id });
     const balancesBefore = await callTool<{ accounts: unknown }>(client, 'finance_balances', {});
 
@@ -32,6 +34,8 @@ test.describe('finance reserves (F8b)', () => {
     await row.getByTestId('reserve-movement-trigger').click();
     const dialog = page.getByTestId('movement-dialog');
     await expect(dialog.locator('#movement-for-year')).toBeVisible();
+    // Befund 4 (0.2.7): Vorgeschlagen ist das Jahr des Seed-Höchstbetrags — von Januar bis August das offene Vorjahr.
+    await expect(dialog.locator('#movement-for-year option:checked')).toHaveText(String(STORY_YEAR));
     // Weit über jedem Höchstbetrag der Entwicklungsdaten: Befund S fragt nach einer Begründung, sperrt aber nicht.
     await dialog.locator('#movement-amount').fill('1000000,00');
     await page.getByTestId('movement-resolution-upload').setInputFiles(BIG_PDF);
@@ -43,16 +47,27 @@ test.describe('finance reserves (F8b)', () => {
     await page.getByTestId('movement-save').click();
     await expect(dialog).toHaveCount(0);
     await expect(row.getByTestId('reserve-balance')).toHaveText('1.000.000,00 €');
-    await expect(page.getByTestId('reserve-cap-over')).toContainText('über dem Höchstbetrag');
+    const storyCap = page.locator(`[data-testid="reserve-cap"][data-fiscal-year="${STORY_YEAR}"]`);
+    await expect(storyCap.getByTestId('reserve-cap-over')).toContainText('über dem Höchstbetrag');
 
     // Punkt 6: kein Bankkonto, keine Kasse bewegt.
     const balancesAfter = await callTool<{ accounts: unknown }>(client, 'finance_balances', {});
     expect(balancesAfter.accounts).toEqual(balancesBefore.accounts);
 
-    // Punkt 7: der Höchstbetrag trägt ein Zustandswort.
-    await expect(page.getByTestId('reserve-cap').getByTestId('limit-progress')).toHaveAttribute('data-state', /calm|near|exceeded/);
-    await expect(page.getByTestId('reserve-cap')).toContainText(/ruhig|nähert sich|überschritten/);
-    await expect(page.getByTestId('reserve-cap')).toContainText('Näherung');
+    // Punkt 7: der Höchstbetrag trägt ein Zustandswort — auch im Frühjahr, wenn das laufende Jahr noch keinen hat.
+    await expect(storyCap.getByTestId('limit-progress')).toHaveAttribute('data-state', /calm|near|exceeded/);
+    await expect(storyCap).toContainText(/ruhig|nähert sich|überschritten/);
+    await expect(storyCap).toContainText('Näherung');
+    const thisYear = associationDay(0).slice(0, 4);
+    if (String(STORY_YEAR) === thisYear) {
+      await expect(page.getByTestId('reserve-cap')).toHaveCount(1);
+      await expect(storyCap).not.toContainText('vorläufig');
+    } else {
+      // Bedarfslauf an 2027-01-02 / 2027-03-01 (scripts/e2e-kalender.sh): Vorjahr vorläufig, laufendes Jahr daneben.
+      await expect(page.getByTestId('reserve-cap')).toHaveCount(2);
+      await expect(storyCap).toContainText('vorläufig, Jahr nicht abgeschlossen');
+      await expect(page.locator(`[data-testid="reserve-cap"][data-fiscal-year="${thisYear}"]`)).toContainText(/noch kein Höchstbetrag|ruhig|nähert sich|überschritten/);
+    }
 
     // Ein Vorgang in der Zukunft wird mit Grund abgelehnt.
     const tomorrow = associationDay(1);
@@ -66,14 +81,14 @@ test.describe('finance reserves (F8b)', () => {
   });
   test('Stammsatz im UI (Befund 40): Beschluss mit Nummer, Art-Info per Tastatur, bearbeiten, Vortrag, Beschluss ersetzen, stilllegen, löschen', async ({ page, baseURL }) => {
     const client = await mcpClient(page, baseURL);
-    const doc = await callTool<{ id: string; number: string }>(client, 'dms_receive', { filename: 'protokoll.pdf', typeKey: 'minutes', subject: 'Protokoll Rücklagenbeschluss', documentDate: '2026-01-15', contentBase64: PDF.buffer.toString('base64') });
+    const doc = await callTool<{ id: string; number: string }>(client, 'dms_receive', { filename: 'protokoll.pdf', typeKey: 'minutes', subject: 'Protokoll Rücklagenbeschluss', documentDate: story('2026-01-15'), contentBase64: PDF.buffer.toString('base64') });
     await callTool(client, 'finance_reserve_save', { kind: 'free', name: 'Stammsatz E2E', resolutionDocumentId: doc.id });
     await callTool(client, 'finance_reserve_save', { kind: 'free', name: 'Löschbar E2E', resolutionDocumentId: doc.id });
 
     await page.goto('/finance/reserves');
     const row = page.getByTestId('reserve-row').filter({ hasText: 'Stammsatz E2E' });
     // Beschluss mit Nummer, Betreff und Datum statt „Beschluss öffnen“.
-    await expect(row.getByTestId('reserve-resolution')).toHaveText(`${doc.number} · Protokoll Rücklagenbeschluss · 15.01.2026`);
+    await expect(row.getByTestId('reserve-resolution')).toHaveText(`${doc.number} · Protokoll Rücklagenbeschluss · ${story('15.01.2026')}`);
 
     // § 62 AO als Infoknopf: per Tastatur erreichbar, kein title-Attribut.
     const info = row.getByTestId('reserve-kind-info');
@@ -111,6 +126,11 @@ test.describe('finance reserves (F8b)', () => {
     await page.getByTestId('replace-resolution-upload').setInputFiles({ name: 'neu.pdf', mimeType: 'application/pdf', buffer: PDF.buffer });
     await page.getByTestId('replace-resolution-save').click();
     await expect(renamed.getByTestId('reserve-resolution')).not.toContainText(doc.number);
+    // Seit über der Liste zwei Jahreskarten stehen (0.2.7), liegt das Zeilenmenü tiefer, und die Meldung
+    // „Beschluss ersetzt.“ deckte „Löschen …“ ab. Sie blieb, solange der Zeiger nach dem Speichern auf ihr
+    // stand (Meldungen halten bei Berührung an) — erst den Zeiger wegnehmen, dann warten.
+    await page.mouse.move(0, 0);
+    await expect(page.getByText('Beschluss ersetzt.')).toBeHidden({ timeout: 15_000 });
 
     // Löschen geht nicht mit Vortrag — der Grund steht da.
     await renamed.getByTestId('reserve-menu').click();

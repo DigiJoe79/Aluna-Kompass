@@ -443,6 +443,48 @@ describe('finance partner payment dashboard tiles (F7 Task 5, Annahme 6, 13)', (
     expect(await tile.load(f.deps, f.ctx, {})).toMatchObject({ kind: 'status', tone: 'warning', messageKey: 'near', values: { percent: 90 } });
   });
 
+  it('reserve cap tile looks at the open previous year in spring (Befund 4, Fassung 0.2.7)', async () => {
+    const f = await ledgerFixture({ years: ['2026', '2027'] });
+    const tile = tileByKey('reserveCapNear');
+    unwrap(await bookEntry(f.deps, f.ctx, { entryDate: '2026-02-01', text: 'Spende', moneyLines: [{ accountId: f.bank.id, amountCents: 100000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 100000 }] }));
+    const docId = insertDocument(f, { subject: 'Protokoll', typeKey: 'minutes' });
+    const reserve = unwrap(await saveReserve(f.deps, withDms(f), { kind: 'free', name: 'Freie Rücklage', resolutionDocumentId: docId }));
+    unwrap(await recordReserveMovement(f.deps, withDms(f), { reserveId: reserve.id, kind: 'allocate', movementDate: '2026-03-05', amountCents: 9000, forFiscalYearId: f.years['2026']!.id, resolutionDocumentId: docId }));
+
+    f.deps.clock.set('2027-02-10T10:00:00.000Z');
+    expect(await tile.load(f.deps, f.ctx, {})).toMatchObject({ kind: 'status', tone: 'warning', messageKey: 'near', values: { percent: 90 } });
+    f.closeYear(f.years['2026']!.id);
+    expect(await tile.load(f.deps, f.ctx, {})).toEqual({ kind: 'status', tone: 'neutral', messageKey: 'ok', href: '/finance/reserves' });
+  });
+
+  it('reserve cap tile reports the more serious of both years, the younger one on a tie (Befund 7c, Fassung 0.2.7)', async () => {
+    const f = await ledgerFixture({ years: ['2026', '2027'] });
+    const tile = tileByKey('reserveCapNear');
+    const donate = (entryDate: string) => bookEntry(f.deps, f.ctx, { entryDate, text: 'Spende', moneyLines: [{ accountId: f.bank.id, amountCents: 100000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 100000 }] }).then(unwrap);
+    await donate('2026-02-01');
+    const docId = insertDocument(f, { subject: 'Protokoll', typeKey: 'minutes' });
+    const reserve = unwrap(await saveReserve(f.deps, withDms(f), { kind: 'free', name: 'Freie Rücklage', resolutionDocumentId: docId }));
+    const allocate = (movementDate: string, year: string, amountCents: number) =>
+      recordReserveMovement(f.deps, withDms(f), { reserveId: reserve.id, kind: 'allocate', movementDate, amountCents, forFiscalYearId: f.years[year]!.id, capReason: 'Test', resolutionDocumentId: docId }).then(unwrap);
+    // Höchstbetrag je Jahr ≈ 10.000; 2026 zu 90 % genutzt (nähert sich).
+    await allocate('2026-03-05', '2026', 9000);
+
+    f.deps.clock.set('2027-02-10T10:00:00.000Z');
+    await donate('2027-02-01');
+    // 2027 ruhig: die Kachel meldet das Vorjahr.
+    await allocate('2027-02-02', '2027', 1000);
+    expect(await tile.load(f.deps, f.ctx, {})).toMatchObject({ tone: 'warning', messageKey: 'near', values: { percent: 90 } });
+    // Gleichstand (beide nähern sich): das jüngere Jahr.
+    await allocate('2027-02-03', '2027', 7500);
+    expect(await tile.load(f.deps, f.ctx, {})).toMatchObject({ tone: 'warning', messageKey: 'near', values: { percent: 85 } });
+    // 2027 überschritten schlägt 2026 „nähert sich“.
+    await allocate('2027-02-04', '2027', 2500);
+    expect(await tile.load(f.deps, f.ctx, {})).toMatchObject({ tone: 'warning', messageKey: 'near', values: { percent: 110 } });
+    // Nach dem Abschluss von 2026 zählt nur noch 2027 — auch wenn es ruhig wäre, ist es hier überschritten.
+    f.closeYear(f.years['2026']!.id);
+    expect(await tile.load(f.deps, f.ctx, {})).toMatchObject({ values: { percent: 110 } });
+  });
+
   it('todo lists submitted purpose transfers waiting for approval (F8b Annahme 12)', async () => {
     const f = await ledgerFixture();
     const purpose = unwrap(await createPurpose(f.deps, f.ctx, { name: 'Zweck A' }));

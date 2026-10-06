@@ -12,6 +12,7 @@ import { DATED_SERIES } from '../ledger/dated-series';
 import { isValidIban, maskIban, normalizeIban } from '../ledger/iban';
 import { openCentsInternal, openItemSettlementsInternal } from '../ledger/open-items';
 import { tripAmountCents } from '../ledger/trip-amount';
+import { expenseReceiptSubject } from './subjects';
 import {
   financeContactBankAccounts,
   financeContactWaiverTerms,
@@ -322,7 +323,8 @@ function receiptTypeKey(deps: Deps): string | null {
  * Person braucht kein Recht der Akte. Ein zweites PDF ersetzt das erste an der
  * Position; der alte Bezug bleibt in der Akte. Kein PDF (am Magic Byte) oder
  * zu groß → Meldung mit dem Dateinamen, der Entwurf bleibt, wie er ist. Der
- * Betreff nennt Antrag und Position, nie die Person. Die Version des Antrags
+ * Betreff nennt die Nummer des Antrags oder — im Entwurf, der noch keine hat — das
+ * Datum der Position, dazu die Position; nie die Person und nie eine ID. Die Version des Antrags
  * bleibt: Die laufende Sicherung schreibt den Beleg nie, sie darf deshalb nicht
  * an ihm scheitern.
  */
@@ -350,7 +352,7 @@ export async function uploadExpenseReceipt(deps: Deps, ctx: CallContext, input: 
   const result = await receiveGeneratedUpload(deps, ctx, {
     bytes: v.bytes,
     typeKey,
-    subject: `Beleg zu Auslage ${claim.number ?? claim.id} · Position ${index + 1}`,
+    subject: expenseReceiptSubject({ claimNumber: claim.number, positionDate: position.positionDate, today: todayIn(deps), position: index + 1 }),
     documentDate: position.positionDate ?? todayIn(deps),
     links: [{ entityType: 'financeExpenseClaim', entityId: claim.id }],
     afterReceive: (tx, doc) => {

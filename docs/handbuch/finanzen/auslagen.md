@@ -22,6 +22,8 @@ Datei weist Kompass am Feld ab, mit dem Dateinamen und der Grenze — Ihre
 Seitenzahl und Größe, so fällt ein vergessenes zweites Blatt auf. Das Feld
 **Projekt** erscheint nur, wer Projekte sehen darf.
 
+![Eine Auslage auf dem Telefon einreichen, mit PDF-Beleg](../bilder/finanzen/auslage-einreichen-mobil.png)
+
 Bei einer Fahrt tragen Sie Von, Nach, den Anlass und die gefahrenen Kilometer
 ein; Kompass rechnet den Betrag selbst aus dem am Fahrtdatum geltenden
 Kilometersatz aus und zeigt die Rechnung an (etwa „84 km × 0,30 € = 25,20 €“).
@@ -78,6 +80,8 @@ freigeben können — und können optional angeben, **woraus bezahlt** wird
 Regel des Vereins oder eine ähnliche, schon festgeschriebene Buchung passt,
 und sagt dazu „Vorschlag, weil: …“ — nie als Pflicht, Sie können jede andere
 Kategorie wählen.
+
+![Freigabe einer Auslage: Positionen, Kategorie-Vorschlag und Kassenbon](../bilder/finanzen/freigabe.png)
 
 Geben Sie frei, entsteht eine offene Zahlung an die antragstellende Person;
 Kompass zeigt gleich danach die Überweisungsdaten mit der IBAN, einem

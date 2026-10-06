@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseFacturX } from '../src/import/zugferd/parse';
-import { buildInvoicePdf, buildInvoiceXml, buildOfficeInvoicePdf, buildVetInvoicePdf, OFFICE_INVOICE, VET_INVOICE } from '../src/import/zugferd-fixture';
+import { buildInvoicePdf, buildInvoiceXml, buildOfficeInvoicePdf, buildVetInvoicePdf, invoiceInYear, OFFICE_INVOICE, VET_INVOICE } from '../src/import/zugferd-fixture';
 
 const xmlOf = (pdf: Uint8Array): Uint8Array => {
   // Der Anhang steht unkomprimiert im Stream — für den Test genügt es, seine Bytes herauszuschneiden.
@@ -41,5 +41,12 @@ describe('zugferd-fixture', () => {
     expect(text.startsWith('%PDF-1.7')).toBe(true);
     expect(text).toContain('/EmbeddedFiles');
     expect(text).toContain('(factur-x.xml)');
+  });
+
+  it('moves number, issue and due date of a seed invoice into another year on request', () => {
+    expect(invoiceInYear(VET_INVOICE, 2027)).toMatchObject({ number: 'TM-2027-0042', issue: '20270401', dueDate: '20270430' });
+    expect(invoiceInYear(OFFICE_INVOICE, 2027)).toMatchObject({ number: 'BM-7781', issue: '20270108', dueDate: '20270122' });
+    expect(parseFacturX(xmlOf(buildVetInvoicePdf(2027)))).toMatchObject({ ok: true, invoice: { invoiceNumber: 'TM-2027-0042', issueDate: '2027-04-01', dueDate: '2027-04-30' } });
+    expect(parseFacturX(xmlOf(buildOfficeInvoicePdf(2027)))).toMatchObject({ ok: true, invoice: { invoiceNumber: 'BM-7781', issueDate: '2027-01-08' } });
   });
 });

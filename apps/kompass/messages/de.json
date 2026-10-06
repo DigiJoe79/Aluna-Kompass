@@ -2689,6 +2689,11 @@
       "person": "Person",
       "organization": "Organisation",
       "salutation": "Anrede",
+      "salutationSuggestions": {
+        "ms": "Frau",
+        "mr": "Herr",
+        "family": "Familie"
+      },
       "firstName": "Vorname",
       "lastName": "Nachname",
       "name": "Name",
@@ -6310,6 +6315,10 @@
       "create": "Geld zurücklegen",
       "cap": {
         "label": "Höchstbetrag der freien Rücklage {year}: {cap}",
+        "labelProvisional": "Höchstbetrag der freien Rücklage {year} (vorläufig, Jahr nicht abgeschlossen): {cap}",
+        "heading": "Höchstbetrag der freien Rücklage {year}",
+        "headingProvisional": "Höchstbetrag der freien Rücklage {year} (vorläufig, Jahr nicht abgeschlossen)",
+        "noCapYet": "noch kein Höchstbetrag",
         "figure": "{used} von {cap} genutzt",
         "over": "{over} über dem Höchstbetrag — jede Zuführung darüber steht mit ihrer Begründung am Vorgang.",
         "derivation": "Näherung: {assetShare} % des Überschusses der Vermögensverwaltung ({asset}) plus {otherShare} % der übrigen zeitnah zu verwendenden Mittel ({other}); den genauen Wert nennt Ihre Steuerberatung.",
@@ -6841,6 +6850,10 @@
       "freeReserveCapExceeded": {
         "reason": "Die freie Rücklage läge damit {over, number, ::currency/EUR scale/0.01} über dem Höchstbetrag von {cap, number, ::currency/EUR scale/0.01} für dieses Jahr.",
         "remedy": "Begründen Sie die Zuführung — die Begründung steht am Vorgang. Der Höchstbetrag ist eine Näherung nach § 62 Abs. 1 Nr. 3 AO; im Zweifel fragen Sie Ihre Steuerberatung."
+      },
+      "reserveYearAmbiguous": {
+        "reason": "Für diese Zuführung kommen zwei Geschäftsjahre in Frage: {previous} (noch nicht abgeschlossen) und {current}.",
+        "remedy": "Geben Sie an, für welches Geschäftsjahr die Zuführung zählt — {previous}, wenn sie aus dessen Mitteln beim Jahresabschluss beschlossen wurde, sonst {current}."
       },
       "boardAllowanceNeedsReason": {
         "reason": "{contact} ist am {date, date, ::ddMMyyyy} Vorstandsmitglied, und für eine Pauschale an Vorstandsmitglieder gilt an diesem Tag keine bestätigte Grundlage. Ohne Erlaubnis in der Satzung gefährdet eine Vergütung des Vorstands die Gemeinnützigkeit.",

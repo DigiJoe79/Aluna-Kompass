@@ -47,8 +47,15 @@ export function TileLines({ ns, lines, canComplete }: { ns: string; lines: Dashb
                 }
               />
             ) : null}
-            {/* Bis 390 px (einschließlich) steht das Datum unter dem Satz (order 3 vs. 2); ab 391 px wieder davor (order 2 vs. 3) — das einzige responsive Verhalten dieser Komponente. */}
-            <span data-testid="tile-line-title" className="order-2 flex min-w-0 flex-1 items-baseline gap-3 min-[391px]:order-3">
+            {/* Bis 390 px (einschließlich) steht das Datum unter dem Satz (order 3 vs. 2); ab 391 px wieder davor (order 2 vs. 3) — das einzige responsive Verhalten dieser Komponente.
+                `max-w-full`: In der Spalte (`flex-col flex-wrap items-start`) wuchs der Satz sonst auf seine
+                volle Länge, `truncate` griff nicht, und die Startseite lief auf dem Telefon seitlich über
+                (release-0.2.7.md, Befund 13).
+                `flex-wrap`: Passen Satz und Bezug nicht nebeneinander, steht der Bezug unter dem Satz, statt dass
+                beide kürzen („Antwor… · BRF-2026-002 · Einladung zur ord…“, Befund 18) — auf dem Telefon wie in
+                der halben Kachel am Rechner; was passt, bleibt in einer Zeile. Kein Layout-Test für diese
+                Einzelstelle (AGENTS.md). */}
+            <span data-testid="tile-line-title" className="order-2 flex min-w-0 max-w-full flex-1 flex-wrap items-baseline gap-x-3 gap-y-0.5 min-[391px]:order-3">
               {line.href ? (
                 <Link href={line.href} className="truncate text-ink underline-offset-2 hover:underline">{title}</Link>
               ) : (

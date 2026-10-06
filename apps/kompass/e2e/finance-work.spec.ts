@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { loginAsAdmin, resetDatabase } from './helpers';
+import { story, storyFile } from './story-year';
 
 /**
  * F5 Task 7 — die Arbeitsliste (`/finance/work`, HANDOFF § 12.5 B1). Läuft auf
@@ -87,7 +88,7 @@ test.describe('finance work list', () => {
     await option(page, 'Foerderverein Musterstadt e. V.').click();
     await expect(option(page, 'Foerderverein Musterstadt e. V.')).toHaveAttribute('aria-selected', 'true');
     const detail = page.getByTestId('work-detail');
-    await expect(detail.getByText('Dieser Umsatz passt zu Ihrem Entwurf vom 14.02.2026.')).toBeVisible();
+    await expect(detail.getByText(story('Dieser Umsatz passt zu Ihrem Entwurf vom 14.02.2026.'))).toBeVisible();
     await expect(detail.getByRole('button', { name: /Übernehmen und geprüft/ })).toHaveCount(0);
     await expect(detail.getByTestId('split-row')).toHaveCount(0);
     await detail.getByRole('button', { name: 'Verknüpfen' }).click();
@@ -101,7 +102,7 @@ test.describe('finance work list', () => {
     await expect(option(page, 'Buerobedarf Muster GmbH')).toHaveAttribute('aria-selected', 'true');
     await page.keyboard.press('e');
     await expect(page).toHaveURL(/\/finance\/entries\/new\?raw=[0-9A-Z]{26}&back=work$/);
-    await expect(page.getByTestId('bound-money-line')).toHaveText('Kontoumsatz vom 10.01.2026 · −35,00 €');
+    await expect(page.getByTestId('bound-money-line')).toHaveText(story('Kontoumsatz vom 10.01.2026 · −35,00 €'));
     await expect(page.getByTestId('bound-money-line')).not.toContainText(/\d{4}-\d{2}-\d{2}/);
     await expect(page.getByLabel('Text', { exact: true })).toHaveValue('Büromaterial');
     await expect(page.getByRole('radio', { name: 'Ausgabe' })).toHaveAttribute('aria-checked', 'true');
@@ -117,7 +118,7 @@ test.describe('finance work list', () => {
     await loginAsAdmin(page);
     await openWorkList(page);
     // Der Dezember-Auszug trifft die Seed-Regel „Bürobedarf Dezember“, deren Kategorie stillgelegt ist.
-    await page.getByTestId('statement-file-input').setInputFiles(path.resolve(import.meta.dirname, 'fixtures/camt/mehrere-b.xml'));
+    await page.getByTestId('statement-file-input').setInputFiles(storyFile(path.resolve(import.meta.dirname, 'fixtures/camt/mehrere-b.xml')));
     await expect(page.getByText(/1 neu, 0 bereits vorhanden, 0 zurückgehalten/)).toBeVisible();
     await option(page, 'Bueromaterial Dezember').click();
     await expect(option(page, 'Bueromaterial Dezember')).toHaveAttribute('aria-selected', 'true');
@@ -182,7 +183,7 @@ test.describe('finance work list: rules, foreign money, vouchers, batch', () => 
     await resetDatabase(page, 'seeded');
   });
 
-  const camt = (name: string) => path.resolve(import.meta.dirname, 'fixtures/camt', name);
+  const camt = (name: string) => storyFile(path.resolve(import.meta.dirname, 'fixtures/camt', name));
   const option = (page: Page, text: string) => page.getByRole('listbox', { name: 'Kontoumsätze' }).getByRole('option').filter({ hasText: text });
 
   async function openImportAccount(page: Page, tab?: 'unsure') {
@@ -297,7 +298,7 @@ test.describe('finance work list: rules, foreign money, vouchers, batch', () => 
     await option(page, 'Weitergabe Sammelbestellung').click();
     await expect(option(page, 'Weitergabe Sammelbestellung')).toHaveAttribute('aria-selected', 'true');
     await page.getByTestId('work-detail').getByRole('button', { name: 'Gehört nicht dem Verein' }).click();
-    await dialog.getByLabel('Rückzahlung von').selectOption({ label: '06.07.2026 · Nachbarverein Beispielstadt · 120,00 €' });
+    await dialog.getByLabel('Rückzahlung von').selectOption({ label: story('06.07.2026 · Nachbarverein Beispielstadt · 120,00 €') });
     await dialog.getByLabel('Für wen ist das Geld?').fill('Nachbarverein Beispielstadt');
     await dialog.getByRole('button', { name: 'Als fremdes Geld buchen' }).click();
     await expect(page.getByText('Als fremdes Geld gebucht.')).toBeVisible();
@@ -332,7 +333,7 @@ test.describe('finance work list: rules, foreign money, vouchers, batch', () => 
     await detail.getByTestId('voucher-file-input').setInputFiles(path.resolve(import.meta.dirname, 'fixtures/brief-digital.pdf'));
     const confirm = detail.getByRole('group', { name: 'Beleg ablegen' });
     await expect(confirm.getByLabel('Art')).toHaveValue('voucher-invoice');
-    await expect(confirm.getByLabel('Datum')).toHaveValue('2026-08-03');
+    await expect(confirm.getByLabel('Datum')).toHaveValue(story('2026-08-03'));
     await confirm.getByRole('button', { name: 'Beleg ablegen' }).click();
     await expect(page.getByText(/Beleg ERE-[\d-]+ im Namen der Buchung abgelegt\./)).toBeVisible();
     await expect(option(page, 'Futter Juli')).toHaveCount(0);

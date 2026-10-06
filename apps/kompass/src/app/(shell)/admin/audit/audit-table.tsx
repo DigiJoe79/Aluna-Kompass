@@ -52,7 +52,11 @@ export async function AuditTable({
               <StatusBadge tone={tone[e.channel]}>{t(`filters.channels.${e.channel}`)}</StatusBadge>
             </TableCell>
             <TableCell className="font-mono text-[12px]">{e.action}</TableCell>
-            <TableCell className="text-ink-2">
+            {/* Objekt und Zusammenfassung brechen um, Kennungen auch mitten im Wort (wie
+                in der Akte): Einzeilig lief die Tabelle bei 1440 px seitlich über, und
+                `max-w` mit `truncate` greift an einer Tabellenzelle nicht
+                (release-0.2.7.md, Befund 14). */}
+            <TableCell className="whitespace-normal wrap-anywhere text-ink-2">
               {e.entityType}
               {labels[e.id]?.state === 'ok'
                 ? ` · ${(labels[e.id] as { label: string }).label}`
@@ -62,7 +66,7 @@ export async function AuditTable({
                     ? ` · ${e.entityId}`
                     : ''}
             </TableCell>
-            <TableCell className="max-w-[320px] truncate text-ink-2">{e.summary}</TableCell>
+            <TableCell className="whitespace-normal text-ink-2">{e.summary}</TableCell>
           </TableRow>
         ))}
       </TableBody>

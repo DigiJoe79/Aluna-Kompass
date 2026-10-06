@@ -17,6 +17,7 @@ import {
   uploadExpenseReceipt,
   type ExpenseClaimView,
 } from '../src/allocation/expenses';
+import { ULID_PATTERN } from '../src/allocation/subjects';
 import { setDatedValue } from '../src/ledger/dated-values';
 import { bookEntry } from '../src/ledger/finalize';
 import { financeRecordDeleted } from '../src/ledger/holds';
@@ -142,8 +143,9 @@ describe('uploadExpenseReceipt', () => {
     const position = withReceipt.positions[1]!;
     expect(position.documentId).toBeTruthy();
     const doc = f.deps.db.select().from(documents).where(eq(documents.id, position.documentId!)).get()!;
-    expect(doc).toMatchObject({ typeKey: 'voucher-invoice', direction: 'incoming', documentDate: '2026-08-20', subject: `Beleg zu Auslage ${draft.id} · Position 2`, number: position.documentNumber });
+    expect(doc).toMatchObject({ typeKey: 'voucher-invoice', direction: 'incoming', documentDate: '2026-08-20', subject: 'Beleg zu Auslage vom 20.08.2026 · Position 2', number: position.documentNumber });
     expect(doc.subject).not.toContain('Hanna');
+    expect(doc.subject).not.toMatch(ULID_PATTERN);
     expect(f.deps.db.select().from(documentLinks).where(eq(documentLinks.documentId, doc.id)).all()).toEqual([expect.objectContaining({ entityType: 'financeExpenseClaim', entityId: draft.id })]);
 
     // Ersetzen: die Position zeigt auf das neue Dokument, der alte Bezug bleibt in der Akte.

@@ -3,6 +3,7 @@ import { expect, test } from './fixtures';
 import { associationDay } from './association-day';
 import { backToAdmin, callTool, mcpClient, PDF, switchTo, switchToJonas } from './expense-helpers';
 import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
+import { story } from './story-year';
 
 /** > 1 MB (N9, Befundliste 0.2.0) — derselbe erfundene Beleg wie bei den Auslagen. */
 const BIG_PDF = path.resolve(import.meta.dirname, 'fixtures/beleg-1500k.pdf');
@@ -309,9 +310,9 @@ test.describe('finance partners (F7)', () => {
     await expect(page.getByRole('row', { name: /Leerpartner/ })).toHaveCount(0);
 
     const org = await callTool<{ id: string }>(client, 'contacts_create', { kind: 'organization', name: 'Archivpartner e.V.' });
-    const doc = await callTool<{ id: string }>(client, 'dms_receive', { filename: 'bescheid.pdf', typeKey: 'minutes', subject: 'Bescheid Archivpartner', documentDate: '2026-02-01', contentBase64: PDF.buffer.toString('base64') });
+    const doc = await callTool<{ id: string }>(client, 'dms_receive', { filename: 'bescheid.pdf', typeKey: 'minutes', subject: 'Bescheid Archivpartner', documentDate: story('2026-02-01'), contentBase64: PDF.buffer.toString('base64') });
     const partner = await callTool<{ id: string }>(client, 'finance_partner_save', { contactId: org.id, status: 'taxExemptBody' });
-    await callTool(client, 'finance_partner_notice_save', { partnerId: partner.id, kind: 'exemptionNotice', noticeDate: '2026-03-15', receivedOn: '2026-03-20', documentId: doc.id });
+    await callTool(client, 'finance_partner_notice_save', { partnerId: partner.id, kind: 'exemptionNotice', noticeDate: story('2026-03-15'), receivedOn: story('2026-03-20'), documentId: doc.id });
     await page.goto(`/finance/partners/${partner.id}`);
     await expect(page.getByTestId('partner-delete-trigger')).toHaveCount(0);
     await page.getByTestId('partner-archive-trigger').click();
@@ -323,12 +324,12 @@ test.describe('finance partners (F7)', () => {
   test('D5: Leser sehen Registernachweis und Rahmenvereinbarung, das Bescheiddatum formatiert und „deaktiviert“ als Zustand', async ({ page, baseURL }) => {
     const client = await mcpClient(page, baseURL);
     const org = await callTool<{ id: string }>(client, 'contacts_create', { kind: 'organization', name: 'Lesepartner e.V.' });
-    const receive = (subject: string) => callTool<{ id: string }>(client, 'dms_receive', { filename: 'nachweis.pdf', typeKey: 'minutes', subject, documentDate: '2026-02-01', contentBase64: PDF.buffer.toString('base64') });
+    const receive = (subject: string) => callTool<{ id: string }>(client, 'dms_receive', { filename: 'nachweis.pdf', typeKey: 'minutes', subject, documentDate: story('2026-02-01'), contentBase64: PDF.buffer.toString('base64') });
     const register = await receive('Registerauszug Lesepartner');
     const agreement = await receive('Rahmenvertrag Lesepartner');
     const noticeDoc = await receive('Freistellungsbescheid Lesepartner');
     const partner = await callTool<{ id: string }>(client, 'finance_partner_save', { contactId: org.id, status: 'taxExemptBody', registerDocumentId: register.id, agreementDocumentId: agreement.id });
-    await callTool(client, 'finance_partner_notice_save', { partnerId: partner.id, kind: 'exemptionNotice', noticeDate: '2026-03-15', receivedOn: '2026-03-20', documentId: noticeDoc.id });
+    await callTool(client, 'finance_partner_notice_save', { partnerId: partner.id, kind: 'exemptionNotice', noticeDate: story('2026-03-15'), receivedOn: story('2026-03-20'), documentId: noticeDoc.id });
     await callTool(client, 'finance_partner_set_active', { id: partner.id, isActive: false });
 
     // Wer schreiben darf, sieht im Picker den Betreff, nicht ein leeres Feld.
@@ -350,7 +351,7 @@ test.describe('finance partners (F7)', () => {
     await expect(profile).not.toContainText('Deaktivieren');
     const notices = page.getByTestId('partner-notices');
     await expect(notices).toContainText('15.03.');
-    await expect(notices).not.toContainText('2026-03-15');
+    await expect(notices).not.toContainText(story('2026-03-15'));
 
     // Ohne Recht auf die Akte: das Dokument ist hinterlegt, aber Nummer, Betreff und Link bleiben verborgen.
     await callTool(client, 'roles_set_permissions', { roleId: role.id, permissionKeys: ['finance.read'] });
@@ -417,7 +418,7 @@ test.describe('finance partners (F7)', () => {
     const partner = await callTool<{ id: string }>(client, 'finance_partner_save', { contactId: org.id, status: 'foreignBody', usualBasis: 'transfer58' });
     const bank = (await callTool<{ id: string; isMain?: boolean }[]>(client, 'finance_master_data', { kind: 'account' })).find((a) => a.isMain) as { id: string };
     const category = (await callTool<{ id: string; key: string }[]>(client, 'finance_master_data', { kind: 'category' })).find((c) => c.key === 'program-costs')!;
-    const agreement = await callTool<{ id: string }>(client, 'dms_receive', { filename: 'vereinbarung.pdf', typeKey: 'minutes', subject: 'Vereinbarung Schulmaterial', documentDate: '2026-02-01', contentBase64: PDF.buffer.toString('base64') });
+    const agreement = await callTool<{ id: string }>(client, 'dms_receive', { filename: 'vereinbarung.pdf', typeKey: 'minutes', subject: 'Vereinbarung Schulmaterial', documentDate: story('2026-02-01'), contentBase64: PDF.buffer.toString('base64') });
     await callTool(client, 'finance_entry_book', { entryDate: associationDay(), text: 'Förderung Nachweispartner', moneyLines: [{ accountId: bank.id, amountCents: -150000 }], allocationLines: [{ categoryId: category.id, amountCents: -150000, contactId: org.id }] });
     const paidLine = (await callTool<{ id: string }[]>(client, 'finance_partner_eligible_lines', { partnerId: partner.id, kind: 'paidLine' }))[0]!;
     const draft = await callTool<{ id: string; version: string }>(client, 'finance_partner_payment_draft_save', { partnerId: partner.id, basis: 'transfer58', purposeText: 'Schulmaterial', agreementDocumentId: agreement.id, retroactive: true, positions: [], paidLineIds: [paidLine.id] });
@@ -544,7 +545,7 @@ test.describe('finance partners (F7)', () => {
     const org = await callTool<{ id: string }>(client, 'contacts_create', { kind: 'organization', name: 'Auftragspartner Beispielland' });
     const partner = await callTool<{ id: string }>(client, 'finance_partner_save', { contactId: org.id, status: 'foreignBody', usualBasis: 'agent57' });
     const category = (await callTool<{ id: string; key: string }[]>(client, 'finance_master_data', { kind: 'category' })).find((c) => c.key === 'program-costs')!;
-    const order = await callTool<{ id: string }>(client, 'dms_receive', { filename: 'auftrag.pdf', typeKey: 'minutes', subject: 'Auftrag Brunnenbau', documentDate: '2026-02-01', contentBase64: PDF.buffer.toString('base64') });
+    const order = await callTool<{ id: string }>(client, 'dms_receive', { filename: 'auftrag.pdf', typeKey: 'minutes', subject: 'Auftrag Brunnenbau', documentDate: story('2026-02-01'), contentBase64: PDF.buffer.toString('base64') });
     const draft = await callTool<{ id: string; version: string }>(client, 'finance_partner_payment_draft_save', { partnerId: partner.id, basis: 'agent57', purposeText: 'Brunnenbau', agreementDocumentId: order.id, retroactive: false, positions: [{ kind: 'money', amountCents: 25000, categoryId: category.id }] });
     const submitted = await callTool<{ id: string }>(client, 'finance_partner_payment_submit', { id: draft.id, expectedVersion: draft.version });
 
@@ -592,7 +593,7 @@ test.describe('finance partners (F7)', () => {
     const client = await mcpClient(page, baseURL);
     const org = await callTool<{ id: string }>(client, 'contacts_create', { kind: 'organization', name: 'Partnerorganisation Tabelle', legalForm: 'Stiftung nach örtlichem Recht' });
     const partner = await callTool<{ id: string }>(client, 'finance_partner_save', { contactId: org.id, status: 'foreignBody', usualBasis: 'agent57' });
-    const anerkennung = await callTool<{ id: string }>(client, 'dms_receive', { filename: 'anerkennung.pdf', typeKey: 'minutes', subject: 'Anerkennung Sitzland', documentDate: '2026-02-04', contentBase64: PDF.buffer.toString('base64') });
+    const anerkennung = await callTool<{ id: string }>(client, 'dms_receive', { filename: 'anerkennung.pdf', typeKey: 'minutes', subject: 'Anerkennung Sitzland', documentDate: story('2026-02-04'), contentBase64: PDF.buffer.toString('base64') });
 
     await page.goto('/finance/partners');
     const table = page.getByRole('table');
@@ -625,15 +626,15 @@ test.describe('finance partners (F7)', () => {
     const notices = page.getByTestId('partner-notices');
     await notices.getByRole('button', { name: 'Bescheid erfassen' }).click();
     await page.getByLabel('Art', { exact: true }).selectOption({ label: 'Anerkennung im Sitzland' });
-    await page.getByLabel('Datum des Bescheids').fill('2025-12-01');
-    await page.getByLabel('gültig bis').fill('2027-12-31');
-    await page.getByLabel('Eingegangen am').fill('2026-02-04');
+    await page.getByLabel('Datum des Bescheids').fill(story('2025-12-01'));
+    await page.getByLabel('gültig bis').fill(story('2027-12-31'));
+    await page.getByLabel('Eingegangen am').fill(story('2026-02-04'));
     await page.getByRole('combobox', { name: 'Dokument' }).fill('Anerkennung Sitzland');
     await page.getByRole('option', { name: /Anerkennung Sitzland/ }).click();
     await notices.getByRole('button', { name: 'Speichern' }).click();
     const noticeRow = notices.getByRole('row').filter({ hasText: 'Anerkennung im Sitzland' });
-    await expect(noticeRow).toContainText('31.12.2027');
-    await expect(noticeRow).toContainText('04.02.2026');
+    await expect(noticeRow).toContainText(story('31.12.2027'));
+    await expect(noticeRow).toContainText(story('04.02.2026'));
     void anerkennung;
 
     await page.setViewportSize({ width: 390, height: 844 });
@@ -667,7 +668,7 @@ test.describe('finance partners (F7)', () => {
     const partner = await callTool<{ id: string }>(client, 'finance_partner_save', { contactId: org.id, status: 'agent' });
     const bank = (await callTool<{ id: string; isMain?: boolean }[]>(client, 'finance_master_data', { kind: 'account' })).find((a) => a.isMain) as { id: string };
     const category = (await callTool<{ id: string; key: string }[]>(client, 'finance_master_data', { kind: 'category' })).find((c) => c.key === 'program-costs')!;
-    const order = await callTool<{ id: string }>(client, 'dms_receive', { filename: 'auftrag.pdf', typeKey: 'minutes', subject: 'Auftrag Futterverteilung', documentDate: '2026-02-01', contentBase64: PDF.buffer.toString('base64') });
+    const order = await callTool<{ id: string }>(client, 'dms_receive', { filename: 'auftrag.pdf', typeKey: 'minutes', subject: 'Auftrag Futterverteilung', documentDate: story('2026-02-01'), contentBase64: PDF.buffer.toString('base64') });
     await callTool(client, 'finance_entry_book', { entryDate: associationDay(), text: 'Auftrag Futterverteilung', moneyLines: [{ accountId: bank.id, amountCents: -25000 }], allocationLines: [{ categoryId: category.id, amountCents: -25000, contactId: org.id }] });
     const paidLine = (await callTool<{ id: string }[]>(client, 'finance_partner_eligible_lines', { partnerId: partner.id, kind: 'paidLine' }))[0]!;
     const draft = await callTool<{ id: string; version: string }>(client, 'finance_partner_payment_draft_save', { partnerId: partner.id, basis: 'agent57', purposeText: 'Futterverteilung', agreementDocumentId: order.id, retroactive: true, positions: [], paidLineIds: [paidLine.id] });

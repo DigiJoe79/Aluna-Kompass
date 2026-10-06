@@ -105,7 +105,7 @@ describe('deleting a draft', () => {
     const draft = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'Spende', moneyLines: [{ accountId: f.accountId, amountCents: 5000 }], allocationLines: [{ categoryId: f.categoryId, amountCents: 5000 }] }));
     f.deps.db.insert(documentTypes).values({ key: 'voucher-invoice', label: 'Eingangsrechnung', prefix: 'ERE', defaultDirection: 'incoming', retentionClass: 'statutory8Y', defaultFolder: null, isActive: true, sortOrder: 0, ownerModule: null, protectionArea: 'finance' }).run();
     const now = '2026-03-01T10:00:00.000Z';
-    f.deps.db.insert(documents).values({ id: 'DOC1', phase: 'issued', direction: 'incoming', sourceKind: 'uploaded', typeKey: 'voucher-invoice', number: 'ERE-2026-0001', subject: 'Beleg vom 2026-03-01', documentDate: '2026-03-01', folder: null, draftBody: null, fileName: 'x', fileChecksum: 'abc', fileBytes: 1, textStatus: 'unavailable', textAttempts: 0, textError: null, textExtractedAt: null, status: 'issued', createdByUserId: 'U1', createdAt: now, updatedAt: now }).run();
+    f.deps.db.insert(documents).values({ id: 'DOC1', phase: 'issued', direction: 'incoming', sourceKind: 'uploaded', typeKey: 'voucher-invoice', number: 'ERE-2026-0001', subject: 'Beleg vom 01.03.2026', documentDate: '2026-03-01', folder: null, draftBody: null, fileName: 'x', fileChecksum: 'abc', fileBytes: 1, textStatus: 'unavailable', textAttempts: 0, textError: null, textExtractedAt: null, status: 'issued', createdByUserId: 'U1', createdAt: now, updatedAt: now }).run();
     f.deps.db.insert(documentLinks).values({ id: 'LINK1', documentId: 'DOC1', entityType: 'financeEntry', entityId: draft.id, role: 'about', createdAt: now }).run();
     seedLink(f.deps, 'D1', draft.id, 'DOC1');
 

@@ -27,6 +27,14 @@ describe('seedDevelopment', () => {
     expect([readSetting(deps, 'organization.street'), readSetting(deps, 'organization.postalCode'), readSetting(deps, 'organization.city')]).toEqual(['Vereinsweg 1', '12345', 'Musterstadt']);
   });
 
+  it('fills register and contact of the invented association — the setup tile asks for nothing the core knows (Spec 2026-10-06 § 4)', async () => {
+    const deps = createTestDeps({ env: 'development' });
+    await seedDevelopment(deps);
+    expect([readSetting(deps, 'organization.registerCourt'), readSetting(deps, 'organization.registerNumber')]).toEqual(['Amtsgericht Musterstadt', 'VR 4711']);
+    expect(readSetting<string>(deps, 'organization.foundedYear')).toMatch(/^20\d{2}$/);
+    expect([readSetting(deps, 'organization.email'), readSetting(deps, 'organization.website')]).toEqual(['info@musterverein.example', 'https://musterverein.example']);
+  });
+
   it('keeps an address someone already entered', async () => {
     const deps = createTestDeps({ env: 'development' });
     await seedDevelopment(deps);

@@ -123,6 +123,7 @@ Bausteine: `forms/form-grid.tsx` (`FormGrid`, `FormCell`, `FormRowBreak`), `form
 - Fehlendes Recht → `ForbiddenCard`; Schritt nicht erlaubt → `BlockedState`; Modul aus → `ModuleInactiveCard`.
 - Anlegen- und Hinzufügen-Knöpfe tragen kein „+“, weder als Symbol noch im Text („Kontakt anlegen“, „Sprache auswählen…“); auch der Knopf „Neuer Ordner“ der Ordnerbäume. Wächter `no-plus-on-create.test.ts`, Ausnahmen dort mit Grund.
 - Nur Tokens aus dem Theme; keine statischen Farben, keine shadcn-Klassennamen (`bg-primary`, `bg-muted`, `text-destructive`).
+- **Telefon (unter 640 px, `max-sm`):** Die Kopfzeile zeigt keinen Vereinsnamen und keine vorderen Brotkrumen — nur den Seitentitel —, die Suche als Lupe ohne Text und Tastenkürzel, das Nutzermenü nur mit Initialen. `PageHeader` stellt Titel und Aktionen untereinander, die Aktionen brechen um (Joe 2026-10-06).
 
 Bausteine: `page-header.tsx`, `forbidden-card.tsx`, `blocked-state.tsx`, `module-inactive-card.tsx`, `empty-state.tsx`.
 

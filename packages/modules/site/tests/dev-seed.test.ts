@@ -1,14 +1,14 @@
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { coreModule, readSetting, setModuleEnabled, storeMediaAsset, unwrap, writeSettingInternal } from '@kompass/core';
+import { coreModule, createMediaFolder, readSetting, setModuleEnabled, storeMediaAsset, unwrap, writeSettingInternal } from '@kompass/core';
 import { projectsModule } from '@kompass/module-projects';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 import { siteModule } from '../src/manifest';
 import { siteEntries, sitePublishes, siteValues } from '../src/schema';
 import { lastSuccessfulPublish, listPublishes } from '../src/services/publishes';
-import { seedSiteDevelopment } from '../src/dev-seed';
+import { seedSiteDevelopment, sprechenderSlug } from '../src/dev-seed';
 import { NICHT_TEMPLATE } from '../src/review';
 import { activeTemplate } from '../src/service';
 
@@ -230,5 +230,54 @@ describe('seedSiteDevelopment', () => {
     // Review Focus 3: Der Seed-Stand ist kein Vergleichsstand für den nächsten Diff.
     expect(rows.every((r) => r.fileManifest === '{}')).toBe(true);
     expect(lastSuccessfulPublish(deps, deps.env)!.startedAt > rows.find((r) => r.status === 'aborted')!.startedAt).toBe(true);
+  });
+
+  it('writes credible texts instead of „Titel 1 (Beispiel)“: news, document titles for a file collection, names for people (Spec 2026-10-06 § 4)', async () => {
+    process.env.SITE_TEMPLATE_DIR = BASIS;
+    const { deps, ctx } = await setup();
+    await seedSiteDevelopment(deps, ctx);
+    const entries = deps.db.select().from(siteEntries).all();
+    const titles = (collection: string) => entries.filter((e) => e.collection === collection).map((e) => (e.data as { title: Record<string, string> }).title.de);
+    expect(titles('news')).toEqual(['Winterhilfe gestartet: 40 neue Schlafboxen', 'Rückblick auf unser Sommerfest', 'Pflegestellen gesucht']);
+    expect(titles('documents')).toEqual(['Satzung', 'Beitragsordnung', 'Datenschutzhinweise']);
+    expect(entries.filter((e) => e.collection === 'team').map((e) => (e.data as { name: string }).name)).toEqual(['Anna Berger', 'Jonas Feld', 'Clara Neumann']);
+    expect(JSON.stringify(entries.map((e) => e.data))).not.toMatch(/\(Beispiel\)|\(example\)/);
+    const values = Object.fromEntries(deps.db.select().from(siteValues).all().map((v) => [v.key, v.value]));
+    expect((values.intro as Record<string, string>).de).toMatch(/^Wir sind ein kleiner Verein/);
+    expect((values.claim as Record<string, string>).en).toBe('Together for animals looking for a home.');
+  });
+
+  it('gives entries with a URL part a speaking slug from their title, not „beispiel-1“ (release-0.2.7, Befund 16)', async () => {
+    process.env.SITE_TEMPLATE_DIR = BASIS;
+    const { deps, ctx } = await setup();
+    await seedSiteDevelopment(deps, ctx);
+    const slugs = deps.db.select().from(siteEntries).all().filter((e) => e.collection === 'news').map((e) => e.slug);
+    expect(slugs).toEqual(['winterhilfe-gestartet-40-neue-schlafboxen', 'rueckblick-auf-unser-sommerfest', 'pflegestellen-gesucht']);
+  });
+
+  it('takes the slug from a text field, title first — never from an image or select field before it', () => {
+    const fields = { image: { type: ['string', 'null'] }, kind: { enum: ['a', 'b'] }, name: { type: 'string' }, title: { type: 'string' } } as never;
+    expect(sprechenderSlug(fields, { image: '01M49AWB5GK5WFH1JBF9PC5410', kind: 'a', name: 'Jonas Feld', title: 'Großer Tag' }, 0, new Set())).toBe('grosser-tag');
+    expect(sprechenderSlug(fields, { image: '01M49AWB5GK5WFH1JBF9PC5410', kind: 'a', name: 'Jonas Feld' }, 0, new Set())).toBe('jonas-feld');
+    expect(sprechenderSlug(fields, { image: '01M49AWB5GK5WFH1JBF9PC5410', kind: 'a' }, 1, new Set())).toBe('eintrag-2');
+  });
+
+  it('takes the website photos of the core seed for image fields, portraits for people (Spec 2026-10-06 § 4)', async () => {
+    process.env.SITE_TEMPLATE_DIR = BASIS;
+    const { deps, ctx } = await setup();
+    for (const path of ['Fotos', 'Fotos/Webseite']) unwrap(await createMediaFolder(deps, ctx, { path }));
+    const png = (b64: string) => Uint8Array.from(Buffer.from(b64, 'base64'));
+    const scene = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'startseite.png', bytes: PNG, folder: 'Fotos/Webseite' }));
+    const portrait = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'team-1.png', bytes: png('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWMQUDAAAACkAGFhe1DEAAAAAElFTkSuQmCC'), folder: 'Fotos/Webseite' }));
+    const other = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'anderes.png', bytes: png('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWNwCEgAAAHEAPFkOJheAAAAAElFTkSuQmCC') }));
+
+    await seedSiteDevelopment(deps, ctx);
+
+    const entries = deps.db.select().from(siteEntries).all();
+    const team = entries.filter((e) => e.collection === 'team').map((e) => (e.data as { photo?: string | null }).photo);
+    const news = entries.filter((e) => e.collection === 'news').map((e) => (e.data as { image?: string | null }).image);
+    expect(team.filter(Boolean)).toEqual([portrait.id, portrait.id]);
+    expect(news.filter(Boolean)).toEqual([scene.id, scene.id]);
+    expect([...team, ...news]).not.toContain(other.id);
   });
 });

@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase } from './helpers';
+import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
 
 test.describe('home', () => {
   test.beforeEach(async ({ page }) => {
@@ -17,12 +17,14 @@ test.describe('home', () => {
     await expect(inbox.getByRole('link', { name: /^Alle \d+ anzeigen$/ })).toHaveAttribute('href', '/dms?inbox=1');
     await expect(page.getByTestId('dashboard-tile-core-followUps').getByText('Antwort abwarten')).toBeVisible();
     const setup = page.getByTestId('dashboard-tile-core-setup');
-    // Steuernummer und Bescheid schreibt der Finanz-Seed über den Bescheid nach (E22), die Anschrift der Kern-Seed —
-    // offen bleibt das Registergericht.
-    await expect(setup.getByText('Registergericht fehlt')).toBeVisible();
-    await expect(setup.getByText('Steuernummer fehlt')).toHaveCount(0);
+    // Seit 0.2.7 trägt der Seed den ganzen Vereinsstamm, Steuerdaten schreibt der Finanz-Seed über den Bescheid (E22):
+    // Die Kachel meldet „eingerichtet“. Den Weg aus einer offenen Zeile prüft der Test an einer Lücke, die er selbst herstellt.
+    await expect(setup.getByText('Der Verein ist eingerichtet.')).toBeVisible();
     await expect(page.getByTestId('dashboard-tile-core-backup').getByText(/Noch kein Backup/)).toBeVisible();
     await expect(page.getByTestId('dashboard-tile-core-retention')).toContainText('1');
+    await setE2ESetting(page, 'organization.registerCourt', '');
+    await page.reload();
+    await expect(setup.getByText('Steuernummer fehlt')).toHaveCount(0);
     await setup.getByRole('link', { name: 'Registergericht fehlt' }).click();
     await expect(page).toHaveURL('/admin/settings');
   });

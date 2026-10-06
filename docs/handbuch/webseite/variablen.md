@@ -11,6 +11,8 @@ Jede Variable ist ein Feld mit der Beschriftung, die das Template ihr
 gegeben hat. Die Reihenfolge ist die des Templates. „Speichern“ sichert alle
 Felder auf einmal; jede Änderung steht im Änderungsprotokoll.
 
+![Die Variablen des Templates mit ihren Werten](../bilder/webseite/variablen.png)
+
 Was Sie **nicht** hier finden: Anschrift, Vorstand, Registereintrag,
 Bankverbindung. Die stehen unter [Einstellungen →
 Verein](../einstellungen/verein.md) und werden von dort auf die Seite

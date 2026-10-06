@@ -1,10 +1,10 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { associationYear } from './association-day';
 import { loginAsAdmin, resetDatabase } from './helpers';
+import { STORY_YEAR } from './story-year';
 
 /**
- * F6b Task 8 — Oberfläche C4 „Spendenbuch“. Der Seed bringt im laufenden Jahr
+ * F6b Task 8 — Oberfläche C4 „Spendenbuch“. Der Seed bringt im Stichjahr (`story-year.ts`)
  * unter anderem eine bestätigte Geldzuwendung (Erika Beispiel, 250,00 €) und
  * eine unbestätigte ohne Anschrift (Tobias Adler) — der Rest der Zeilen
  * kommt aus mehreren Modul-Seeds zusammen und wird hier nicht einzeln
@@ -14,8 +14,8 @@ import { loginAsAdmin, resetDatabase } from './helpers';
  * Rücklastschrift auf Nora Lehmanns Sammelbestätigung — gebucht in diesem
  * Jahr, auf eine Zeile des Vorjahrs.
  */
-const YEAR = String(associationYear());
-const PREVIOUS_YEAR = String(associationYear() - 1);
+const YEAR = String(STORY_YEAR);
+const PREVIOUS_YEAR = String(STORY_YEAR - 1);
 const MINUS = '−';
 
 /** „1.234,56 €“ oder „−12,00 €“ → Cent, für Rechenproben in der Oberfläche. */

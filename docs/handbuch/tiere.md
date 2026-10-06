@@ -100,6 +100,8 @@ noch niemand draufgeschaut hat. Der Agent kann dazu eine kurze Notiz
 hinterlassen, was anzusehen ist, etwa „zwei neue Fotos“. Änderungen in der
 Oberfläche, ein Statuswechsel und das Veröffentlichen setzen keinen Merker.
 
+![Ein Tierprofil mit offener Prüfung](bilder/tiere/pruefung.png)
+
 Der Merker steht quer zu „veröffentlicht“, es gibt also vier Fälle:
 
 - **Prüfung offen, nicht veröffentlicht** — ein neues Profil, das auf die

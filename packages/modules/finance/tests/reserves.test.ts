@@ -1,14 +1,16 @@
 import { unwrap } from '@kompass/core';
 import { schema } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
-import { documentTypes } from '@kompass/module-dms';
+import { documents, documentTypes } from '@kompass/module-dms';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { deleteReserve, freeReserveCap, linkResolution, listReserves, recordReserveCarryForward, recordReserveMovement, saveReserve, setReserveActive, uploadResolution } from '../src/allocation/reserves';
+import { deleteReserve, freeReserveCap, freeReserveCapOverview, linkResolution, listReserves, recordReserveCarryForward, recordReserveMovement, saveReserve, setReserveActive, uploadResolution } from '../src/allocation/reserves';
 import { setDatedValue } from '../src/ledger/dated-values';
+import { reopenFiscalYear } from '../src/ledger/period';
 import { bookEntry } from '../src/ledger/finalize';
 import { incomeStatement } from '../src/ledger/queries';
 import { FINANCE_PERMISSIONS } from '../src/manifest';
+import { ULID_PATTERN } from '../src/allocation/subjects';
 import { financeAllocationLines, financeEntries, financeReserveMovements, financeReserves } from '../src/schema';
 import { allowHumanOnlyOverMcp, insertDocument, ledgerFixture, pdfBytes } from './helpers';
 import { jpegBytes } from './expense-fixture';
@@ -293,6 +295,75 @@ describe('freeReserveCap (F8b Task 2, Annahme 4, § 62 Abs. 1 Nr. 3 AO — Nähe
   });
 });
 
+describe('freeReserveCapOverview (Befund 4, Fassung 0.2.7)', () => {
+  it('shows the open previous year as provisional before the current one, and drops it once closed', async () => {
+    const f = await ledgerFixture({ years: ['2026', '2027'] });
+    unwrap(await bookEntryDonation(f)); // 2026-03-01, gibt 2026 einen Höchstbetrag
+    f.deps.clock.set('2027-02-10T10:00:00.000Z');
+
+    const spring = unwrap(await freeReserveCapOverview(f.deps, f.ctx, {}));
+    expect(spring.years.map((y) => [y.designation, y.provisional])).toEqual([['2026', true], ['2027', false]]);
+    expect(spring.defaultFiscalYearId).toBe(f.years['2026']!.id);
+    const cap2026 = unwrap(await freeReserveCap(f.deps, f.ctx, { fiscalYearId: f.years['2026']!.id }));
+    expect(spring.years[0]).toMatchObject({ fiscalYearId: f.years['2026']!.id, startsOn: '2026-01-01', endsOn: '2026-12-31', capCents: cap2026.capCents });
+    expect(spring.years[0]!.capCents).toBeGreaterThan(0);
+    expect(spring.years[1]).toMatchObject({ capCents: 0, usedCents: 0, exceeded: false });
+
+    f.closeYear(f.years['2026']!.id);
+    const closed = unwrap(await freeReserveCapOverview(f.deps, f.ctx, {}));
+    expect(closed.years.map((y) => y.designation)).toEqual(['2027']);
+    expect(closed.defaultFiscalYearId).toBe(f.years['2027']!.id);
+  });
+
+  it('brings a reopened previous year back, provisional again (Befund 7b) — the latest period event counts', async () => {
+    const f = await ledgerFixture({ years: ['2026', '2027'] });
+    unwrap(await bookEntryDonation(f));
+    f.deps.clock.set('2027-02-10T10:00:00.000Z');
+    f.closeYear(f.years['2026']!.id);
+    expect(unwrap(await freeReserveCapOverview(f.deps, f.ctx, {})).years.map((y) => y.designation)).toEqual(['2027']);
+
+    unwrap(await reopenFiscalYear(f.deps, f.ctx, { id: f.years['2026']!.id, note: 'Spende nachgetragen' }));
+    const reopened = unwrap(await freeReserveCapOverview(f.deps, f.ctx, {}));
+    expect(reopened.years.map((y) => [y.designation, y.provisional])).toEqual([['2026', true], ['2027', false]]);
+    expect(reopened.defaultFiscalYearId).toBe(f.years['2026']!.id);
+  });
+
+  it('needs finance.overview or finance.read and takes no arguments', async () => {
+    const f = await ledgerFixture();
+    expect(err(await freeReserveCapOverview(f.deps, ctxWith([], f.userId), {}))).toMatchObject({ type: 'forbidden' });
+    expect(unwrap(await freeReserveCapOverview(f.deps, ctxWith(['finance.overview'], f.userId), {})).years.map((y) => y.designation)).toEqual(['2026']);
+    expect(err(await freeReserveCapOverview(f.deps, f.ctx, { fiscalYearId: 'x' }))).toMatchObject({ type: 'validation' });
+  });
+
+  it('refuses an allocation to a free reserve without a year while two years are in question, and names both', async () => {
+    const f = await ledgerFixture({ years: ['2026', '2027'] });
+    f.deps.clock.set('2027-02-12T10:00:00.000Z');
+    const docId = insertDocument(f, { subject: 'Protokoll', typeKey: 'minutes' });
+    const reserve = unwrap(await saveReserve(f.deps, withDms(f), { kind: 'free', name: 'Freie Rücklage', resolutionDocumentId: docId }));
+    const allocate = { reserveId: reserve.id, kind: 'allocate', amountCents: 100, capReason: 'Test: ohne Einnahmen ist der Höchstbetrag 0', resolutionDocumentId: docId };
+
+    // Ohne Jahr bei offenem Vorjahr: Ablehnung mit beiden Jahren, nichts gespeichert.
+    const refused = await recordReserveMovement(f.deps, withDms(f), { ...allocate, movementDate: '2027-02-10' });
+    expect(err(refused)).toMatchObject({ type: 'conflict', code: 'reserveYearAmbiguous', params: { previous: '2026', current: '2027' } });
+    expect(f.deps.db.select().from(financeReserveMovements).all()).toHaveLength(0);
+
+    // Mit Jahr: wie angegeben — das Vorjahr wie das laufende.
+    const forPrevious = unwrap(await recordReserveMovement(f.deps, withDms(f), { ...allocate, movementDate: '2027-02-10', forFiscalYearId: f.years['2026']!.id }));
+    expect(forPrevious.forFiscalYearId).toBe(f.years['2026']!.id);
+    const forCurrent = unwrap(await recordReserveMovement(f.deps, withDms(f), { ...allocate, movementDate: '2027-02-11', forFiscalYearId: f.years['2027']!.id }));
+    expect(forCurrent.forFiscalYearId).toBe(f.years['2027']!.id);
+
+    // Entnahmen tragen kein Jahr und fragen nicht.
+    const withdrawn = unwrap(await recordReserveMovement(f.deps, withDms(f), { reserveId: reserve.id, kind: 'withdraw', movementDate: '2027-02-11', amountCents: 50, resolutionDocumentId: docId }));
+    expect(withdrawn.forFiscalYearId).toBeNull();
+
+    // Ohne Jahr bei abgeschlossenem Vorjahr: das laufende Jahr, ohne Rückfrage.
+    f.closeYear(f.years['2026']!.id);
+    const later = unwrap(await recordReserveMovement(f.deps, withDms(f), { ...allocate, movementDate: '2027-02-12' }));
+    expect(later.forFiscalYearId).toBe(f.years['2027']!.id);
+  });
+});
+
 describe('Befund S: freie Rücklage über dem Höchstbetrag (Teil C Task 2c)', () => {
   it('kennzeichnet exceeded und den Betrag darüber, und verlangt beim Zuführen darüber eine Begründung, die am Vorgang bleibt', async () => {
     const f = await ledgerFixture();
@@ -324,3 +395,65 @@ describe('Befund S: freie Rücklage über dem Höchstbetrag (Teil C Task 2c)', (
 async function bookEntryDonation(f: Awaited<ReturnType<typeof ledgerFixture>>) {
   return bookEntry(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'Spende', moneyLines: [{ accountId: f.bank.id, amountCents: 10000 }], allocationLines: [{ categoryId: f.donations.id, amountCents: 10000 }] });
 }
+
+describe('resolution subjects name the reserve (Spec 2026-10-06 § 3)', () => {
+  const subjectOf = (f: Awaited<ReturnType<typeof ledgerFixture>>, id: string | null) => f.deps.db.select({ subject: documents.subject }).from(documents).where(eq(documents.id, id!)).get()!.subject;
+
+  it('uses the current name on every upload path and never the id', async () => {
+    const f = await ledgerFixture();
+    const created = unwrap(await saveReserve(f.deps, withDms(f), { kind: 'free', name: 'Tierarztkosten', resolutionUpload: { bytes: pdfBytes(), fileName: 'protokoll.pdf' } }));
+    expect(subjectOf(f, created.resolutionDocumentId)).toBe('Beschluss für zurückgelegtes Geld „Tierarztkosten“');
+
+    const renamed = unwrap(await saveReserve(f.deps, withDms(f), { id: created.id, expectedVersion: created.updatedAt, kind: 'free', name: 'Tierarztkosten 2027' }));
+    const reuploaded = unwrap(await uploadResolution(f.deps, withDms(f), { id: renamed.id, field: 'resolution', bytes: pdfBytes(), fileName: 'neu.pdf' }));
+    expect(subjectOf(f, reuploaded.resolutionDocumentId)).toBe('Beschluss für zurückgelegtes Geld „Tierarztkosten 2027“');
+
+    const carried = unwrap(await recordReserveCarryForward(f.deps, withDms(f), { id: reuploaded.id, expectedVersion: reuploaded.updatedAt, carryForwardCents: 1000, carryForwardDate: '2026-01-01', upload: { bytes: pdfBytes(), fileName: 'vortrag.pdf' } }));
+    expect(subjectOf(f, carried.carryForwardDocumentId)).toBe('Beschluss zum Vortrag von zurückgelegtem Geld „Tierarztkosten 2027“');
+
+    const movement = unwrap(await recordReserveMovement(f.deps, withDms(f), { reserveId: created.id, kind: 'allocate', movementDate: '2026-03-05', amountCents: 5000, capReason: 'Test: ohne Einnahmen im Jahr ist der Höchstbetrag 0', resolutionUpload: { bytes: pdfBytes(), fileName: 'beschluss.pdf' } }));
+    expect(subjectOf(f, movement.resolutionDocumentId)).toBe('Beschluss für einen Vorgang an zurückgelegtem Geld „Tierarztkosten 2027“');
+
+    for (const id of [created.resolutionDocumentId, reuploaded.resolutionDocumentId, carried.carryForwardDocumentId, movement.resolutionDocumentId]) {
+      expect(subjectOf(f, id)).not.toMatch(ULID_PATTERN);
+    }
+  });
+});
+
+describe('Befund 6 (0.2.7): ein abgelehnter Vorgang lässt keinen hochgeladenen Beschluss in der Akte', () => {
+  const trace = (f: Awaited<ReturnType<typeof ledgerFixture>>) => ({
+    documents: f.deps.db.select().from(documents).all().length,
+    received: f.deps.db.select().from(schema.auditLog).all().filter((a) => a.action === 'dms.receive').length,
+  });
+  const upload = () => ({ bytes: pdfBytes(), fileName: 'beschluss.pdf' });
+
+  it('recordReserveMovement: Bestand zu klein, über dem Höchstbetrag, Jahr offen, Datum in der Zukunft', async () => {
+    const f = await ledgerFixture({ years: ['2026', '2027'] });
+    const docId = insertDocument(f, { subject: 'Protokoll', typeKey: 'minutes' });
+    const free = unwrap(await saveReserve(f.deps, withDms(f), { kind: 'free', name: 'Freie Rücklage', resolutionDocumentId: docId }));
+    f.deps.clock.set('2027-02-12T10:00:00.000Z');
+    const before = trace(f);
+    const refusals = [
+      { input: { reserveId: free.id, kind: 'withdraw', movementDate: '2027-02-10', amountCents: 100 }, code: 'reserveInsufficient' },
+      { input: { reserveId: free.id, kind: 'allocate', movementDate: '2027-02-10', amountCents: 100, forFiscalYearId: f.years['2027']!.id }, code: 'freeReserveCapExceeded' },
+      { input: { reserveId: free.id, kind: 'allocate', movementDate: '2027-02-10', amountCents: 100, capReason: 'Test' }, code: 'reserveYearAmbiguous' },
+      { input: { reserveId: free.id, kind: 'allocate', movementDate: '2027-02-13', amountCents: 100, forFiscalYearId: f.years['2027']!.id, capReason: 'Test' }, code: 'movementDateInFuture' },
+    ];
+    for (const { input, code } of refusals) {
+      expect(err(await recordReserveMovement(f.deps, withDms(f), { ...input, resolutionUpload: upload() }))).toMatchObject({ code });
+      expect(trace(f)).toEqual(before);
+    }
+    expect(f.deps.db.select().from(financeReserveMovements).all()).toHaveLength(0);
+  });
+
+  it('saveReserve, uploadResolution und recordReserveCarryForward lehnen vor dem Ablegen ab', async () => {
+    const f = await ledgerFixture();
+    const docId = insertDocument(f, { subject: 'Protokoll', typeKey: 'minutes' });
+    const reserve = unwrap(await saveReserve(f.deps, withDms(f), { kind: 'free', name: 'Freie Rücklage', resolutionDocumentId: docId }));
+    const before = trace(f);
+    expect(err(await saveReserve(f.deps, withDms(f), { kind: 'replacement', name: 'Ohne Zweck', resolutionUpload: upload() }))).toMatchObject({ code: 'reservePurposeTextRequired' });
+    expect(err(await uploadResolution(f.deps, withDms(f), { id: 'fehlt', field: 'resolution', bytes: pdfBytes(), fileName: 'b.pdf' }))).toMatchObject({ type: 'notFound' });
+    expect(err(await recordReserveCarryForward(f.deps, withDms(f), { id: reserve.id, expectedVersion: '2000-01-01T00:00:00.000Z', carryForwardCents: 100, carryForwardDate: '2026-01-01', upload: upload() }))).toMatchObject({ type: 'conflict' });
+    expect(trace(f)).toEqual(before);
+  });
+});

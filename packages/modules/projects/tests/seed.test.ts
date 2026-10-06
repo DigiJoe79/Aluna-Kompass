@@ -1,5 +1,7 @@
+import { coreModule, seedDevelopment } from '@kompass/core';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
+import { projectsModule } from '../src/manifest';
 import { projects } from '../src/schema';
 import { seedProjects } from '../src/seed';
 
@@ -28,5 +30,13 @@ describe('seedProjects', () => {
     const locale = (summary: unknown, code: string): string => (summary as Record<string, string | undefined>)[code] ?? '';
     const gap = rows.filter((p) => locale(p.summary, 'de').length > 0 && locale(p.summary, 'en').length === 0);
     expect(gap.map((p) => p.slug)).toEqual(['auslauf-am-heim']);
+  });
+
+  it('gives every example project its picture from the core media seed (Spec 2026-10-06 § 4)', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, projectsModule], env: 'development' });
+    await seedDevelopment(deps);
+    const rows = deps.db.select().from(projects).all();
+    expect(rows.map((r) => [r.slug, r.imageAssetId !== null]).sort()).toEqual([['auslauf-am-heim', true], ['kastrationsaktion-2026', true], ['winterhilfe', true]]);
+    expect(new Set(rows.map((r) => r.imageAssetId)).size).toBe(3);
   });
 });

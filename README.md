@@ -2,7 +2,7 @@
 
 Vereinsverwaltung für gemeinnützige Vereine — eine Anwendung für Webseite, Schriftverkehr, Kontakte, Finanzen und alles, was der Verein sonst führt. Läuft auf eigener Hardware im eigenen Netz, eine Installation je Verein.
 
-![Die Startseite: fällige Wiedervorlagen, Eingangskorb, offene Prüfungen und die Arbeit der Finanzen auf einen Blick](docs/screenshots/0.2.4-start.png)
+![Die Startseite: Eingangskorb, fällige Wiedervorlagen, offene Prüfungen und die Arbeitsliste der Finanzen auf einen Blick](docs/screenshots/desktop/start.png)
 
 ## Worum es geht
 
@@ -24,18 +24,35 @@ Wer sich anmeldet, sieht, was ansteht: fällige Wiedervorlagen, neue Post im Ein
 
 Die Akte nimmt eingehende Post auf und erzeugt ausgehende. Eingescannte Briefe landen im Eingangskorb, werden per Texterkennung durchsuchbar und von Regeln einsortiert. Ordner pflegt man direkt im Baum — anlegen, umbenennen, per Ziehen oder Tastatur verschieben, jede Änderung zehn Sekunden lang rückgängig.
 
-![Die Akte mit Ordnerbaum, Filtern und Dokumentliste](docs/screenshots/0.2.4-akte.png)
+![Die Akte mit Ordnerbaum, Filtern und Dokumentliste](docs/screenshots/desktop/akte.png)
 
 Ein Brief entsteht als Entwurf in Markdown, mit Textbausteinen und einer Vorschau, die beim Tippen mitläuft. Beim Festschreiben bekommt er eine Nummer aus dem Nummernkreis seiner Dokumentart und ist ab dann unveränderlich — korrigiert wird durch Storno und Ersatz, nie durch Überschreiben. „Antworten“ und „Folgeschreiben“ übernehmen Empfänger, Ordner und Bezug.
 
 <table>
   <tr>
-    <td><img src="docs/screenshots/0.2.4-brief.png" alt="Ein Brief im Entwurf mit Live-Vorschau" /></td>
-    <td><img src="docs/screenshots/0.2.4-dokument.png" alt="Ein festgeschriebenes Dokument mit Details, Versand und Wiedervorlagen" /></td>
+    <td><img src="docs/screenshots/desktop/brief.png" width="420" alt="Der Entwurf „Winterhilfe: Bitte um Unterstützung“ mit Text und Live-Vorschau" /></td>
+    <td><img src="docs/screenshots/desktop/dokument.png" width="420" alt="Ein festgeschriebenes, versandtes Dokument mit Anlage, Antwort und Bezügen zu Kontakten" /></td>
   </tr>
   <tr>
     <td>Entwurf mit Vorschau</td>
     <td>Festgeschrieben: Nummer, Versand, Wiedervorlage, Storno</td>
+  </tr>
+</table>
+
+### Kontakte, Tiere, Projekte
+
+Kontakte tragen ihre Rollen über die Zeit: wer wann Interessent war, wann Vorstandsmitglied wurde, wann Partner. Das Tiermodul pflegt Profile mit Fotos und eigener Prüfung vor der Veröffentlichung, Projekte bekommen einen Finanzabschnitt mit Ziel, Einnahmen und Ausgaben. Tiere und Projekte liefern ihren öffentlichen Teil für die Webseite.
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/desktop/kontakt.png" width="280" alt="Ein Kontakt mit Rollen über die Zeit: erst interessiert, dann Vorstandsmitglied" /></td>
+    <td><img src="docs/screenshots/desktop/tier.png" width="280" alt="Ein Tierprofil mit Fotos, Steckbrief und Geschichte" /></td>
+    <td><img src="docs/screenshots/desktop/projekt.png" width="280" alt="Das Projekt „Winterhilfe für Streuner“ mit Bild, Ziel, Einnahmen und Ausgaben" /></td>
+  </tr>
+  <tr>
+    <td>Kontakt mit Rollen</td>
+    <td>Tierprofil</td>
+    <td>Projekt mit Finanzabschnitt</td>
   </tr>
 </table>
 
@@ -45,28 +62,28 @@ Kontoauszüge kommen als CAMT oder CSV herein, Belege aus der Akte, Rechnungen m
 
 <table>
   <tr>
-    <td><img src="docs/screenshots/0.2.4-fin2.png" alt="Hochgeladene Kontoauszüge je Konto mit Prüfung der Salden" /></td>
-    <td><img src="docs/screenshots/0.2.4-fin1.png" alt="Belege in der Akte, die noch an keiner Buchung hängen" /></td>
+    <td><img src="docs/screenshots/desktop/fin-arbeitsliste.png" width="420" alt="Die Arbeitsliste der Finanzen mit offenen Aufgaben" /></td>
+    <td><img src="docs/screenshots/desktop/fin-auszuege.png" width="420" alt="Hochgeladene Kontoauszüge je Konto mit Prüfung der Salden" /></td>
   </tr>
   <tr>
+    <td>Arbeitsliste</td>
     <td>Kontoauszüge mit Saldenprüfung</td>
-    <td>Belege ohne Buchung</td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/0.2.4-fin3.png" alt="Ausgestellte Zuwendungsbestätigungen mit Zustand und Versand" /></td>
-    <td><img src="docs/screenshots/0.2.4-fin5.png" alt="Freigabe einer Auslage mit Kategorie-Vorschlag" /></td>
+    <td><img src="docs/screenshots/desktop/fin-buchung.png" width="420" alt="Eine Buchung zum Projekt „Winterhilfe“ mit Beleg" /></td>
+    <td><img src="docs/screenshots/desktop/fin-bestaetigungen.png" width="420" alt="Ausgestellte Zuwendungsbestätigungen mit Zustand und Versand" /></td>
   </tr>
   <tr>
+    <td>Buchung mit Beleg</td>
     <td>Zuwendungsbestätigungen</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/desktop/fin-freigabe.png" width="420" alt="Freigabe einer Auslage mit Kassenbon, Kategorie-Vorschlag und Positionen" /></td>
+    <td><img src="docs/screenshots/desktop/fin-bescheide.png" width="420" alt="Freistellungsbescheide mit den Zwecken des Vereins" /></td>
+  </tr>
+  <tr>
     <td>Auslagen: Freigabe durch eine zweite Person</td>
-  </tr>
-  <tr>
-    <td><img src="docs/screenshots/0.2.4-fin4.png" alt="Freistellungsbescheide und maschinell erstellte Bestätigungen" /></td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>Bescheide des Finanzamts und maschinelle Bestätigung</td>
-    <td></td>
+    <td>Bescheide des Finanzamts</td>
   </tr>
 </table>
 
@@ -75,6 +92,8 @@ Jahresabschluss und Berichte folgen mit 0.3.0. Nicht vorgesehen sind Bilanzierun
 ### Webseite — kein CMS im Internet
 
 Die meisten Vereinsseiten laufen auf einem CMS wie WordPress: ein Programm mit Datenbank, Anmeldung und Plugins, das rund um die Uhr im Internet steht. Jede Lücke darin ist für jeden erreichbar, und Angreifer suchen sie automatisch — sie fragen nicht, wie klein der Verein ist. Wer eine solche Seite sicher halten will, muss ständig Updates einspielen, Plugins prüfen und Warnungen lesen. Das schafft ein ehrenamtlicher Vorstand kaum.
+
+![Pflege in Kompass: ein Aktuelles-Eintrag in der Maske](docs/screenshots/desktop/web-pflege.png)
 
 Kompass macht es anders: Die Seite wird **in Kompass gepflegt** und als **fertige Dateien** veröffentlicht — HTML, Bilder, CSS. Auf dem Webspace liegt nur das. Daraus folgt:
 
@@ -86,7 +105,9 @@ Kompass macht es anders: Die Seite wird **in Kompass gepflegt** und als **fertig
 
 Vor dem Hochladen prüft Kompass auf Sperrwörter und Übersetzungslücken, baut eine Vorschau und zeigt, was sich gegenüber der Live-Seite ändert. Veröffentlicht wird erst, wenn man es bestätigt; jeder Publish steht im Änderungsprotokoll.
 
-![Publizieren: prüfen, Vorschau bauen, Änderungen gegenüber Live sehen, hochladen](docs/screenshots/0.2.4-webpublish.png)
+![Publizieren: prüfen, Vorschau bauen, Änderungen gegenüber Live sehen, hochladen](docs/screenshots/desktop/web-publizieren.png)
+
+![Die gebaute Vorschau der Webseite mit Team, Aktuellem und Fotos](docs/screenshots/desktop/web-vorschau.png)
 
 **So sieht das Ergebnis aus:** [aluna-tierhilfe.org](https://aluna-tierhilfe.org) ist die Seite der Aluna Tierhilfe, vollständig aus Kompass gebaut — mit eigenem Template, Hundeprofilen aus dem Tiermodul und Projekten.
 
@@ -104,24 +125,24 @@ Rechte vergibt man je Rolle, Rollennamen sind frei — „Schatzmeisterin“, �
 
 <table>
   <tr>
-    <td><img src="docs/screenshots/0.2.4-rollen.png" alt="Rollen und ihre Rechte" /></td>
-    <td><img src="docs/screenshots/0.2.4-protokoll.png" alt="Änderungsprotokoll mit Filtern und PDF-Export" /></td>
+    <td><img src="docs/screenshots/desktop/rollen.png" width="420" alt="Rollen und ihre Rechte" /></td>
+    <td><img src="docs/screenshots/desktop/protokoll.png" width="420" alt="Änderungsprotokoll mit Filtern und PDF-Export" /></td>
   </tr>
   <tr>
     <td>Rollen und Rechte</td>
     <td>Änderungsprotokoll</td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/0.2.4-eudsgvo.png" alt="Aufbewahrung und Löschfristen" /></td>
-    <td><img src="docs/screenshots/0.2.4-benutzer.png" alt="Profil mit API-Tokens für den MCP-Zugang" /></td>
+    <td><img src="docs/screenshots/desktop/aufbewahrung.png" width="420" alt="Aufbewahrung und Löschfristen" /></td>
+    <td><img src="docs/screenshots/desktop/tokens.png" width="420" alt="Das Profil mit dem Beispiel-Zugang unter den API-Tokens für den MCP-Zugang" /></td>
   </tr>
   <tr>
     <td>Aufbewahrung und Löschfristen</td>
     <td>API-Tokens für KI-Assistenten (MCP)</td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/0.2.4-themes.png" alt="Erscheinungsbild: Farben für hell und dunkel mit Live-Vorschau" /></td>
-    <td><img src="docs/screenshots/0.2.4-darkmode.png" alt="Die Akte im dunklen Modus" /></td>
+    <td><img src="docs/screenshots/desktop/erscheinungsbild.png" width="420" alt="Erscheinungsbild: Farben für hell und dunkel mit Live-Vorschau" /></td>
+    <td><img src="docs/screenshots/desktop/dunkel.png" width="420" alt="Die Akte im dunklen Modus" /></td>
   </tr>
   <tr>
     <td>Erscheinungsbild in den Farben des Vereins</td>
@@ -132,6 +153,19 @@ Rechte vergibt man je Rolle, Rollennamen sind frei — „Schatzmeisterin“, �
 ### KI-Assistenten über MCP
 
 Was die Oberfläche kann, kann auch ein KI-Assistent über das [Model Context Protocol](https://modelcontextprotocol.io) — dieselben Dienste, dieselben Rechte, dasselbe Protokoll. Ein Token wirkt mit den Rechten der Person, die es erstellt hat; jeder Vorgang steht mit dem Kanal „MCP“ und dem Namen des Tokens im Änderungsprotokoll. Vier Dinge bewusst nicht: Backup ein- und ausspielen, Dateien abrufen, API-Token verwalten, das eigene Passwort ändern. In den Finanzen bleiben Festschreiben, Freigeben und Ausstellen Menschen vorbehalten, solange der Verein es nicht ausdrücklich erlaubt. Ein Test hält die Liste vollständig.
+
+### Unterwegs
+
+Kompass läuft auch auf dem Telefon: die Startseite, ein Kontakt, ein Tierprofil — und eine Auslage mit Beleg ist schnell eingereicht.
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/mobil/start.png" width="200" alt="Die Startseite auf dem Telefon" /></td>
+    <td><img src="docs/screenshots/mobil/kontakt.png" width="200" alt="Ein Kontakt mit seinen Rollen auf dem Telefon" /></td>
+    <td><img src="docs/screenshots/mobil/tier.png" width="200" alt="Ein Tierprofil auf dem Telefon" /></td>
+    <td><img src="docs/screenshots/mobil/auslage.png" width="200" alt="Eine Auslage mit PDF-Beleg und Kassenbon-Positionen auf dem Telefon" /></td>
+  </tr>
+</table>
 
 ## Was heute da ist
 

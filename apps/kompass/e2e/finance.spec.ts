@@ -3,6 +3,7 @@ import { expect, test } from './fixtures';
 import { associationDay } from './association-day';
 import { callTool, mcpClient, PDF } from './expense-helpers';
 import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
+import { story, storyPattern } from './story-year';
 
 /** > 1 MB (N9, Befundliste 0.2.0) — erzeugt mit `docs/intern/recherche/2026-09-26-upload-repro/mkpdf.py`. */
 const BIG_PDF = path.resolve(import.meta.dirname, 'fixtures/beleg-1500k.pdf');
@@ -311,10 +312,10 @@ test.describe('finance', () => {
     await page.goto('/finance/entries');
     await page.locator('tr', { hasText: 'Teilzahlung Lieferant' }).click();
     await expect(page.getByText('Hängt zusammen mit')).toBeVisible();
-    await expect(page.getByText(/RE-2026-055/)).toBeVisible();
+    await expect(page.getByText(storyPattern('RE-2026-055'))).toBeVisible();
     await expect(page.getByText(/Rest 120,00 €/)).toBeVisible();
     // F3b Task 3 (A6): der Eintrag verlinkt jetzt auf die offene Zahlung.
-    await page.getByRole('link', { name: /RE-2026-055/ }).click();
+    await page.getByRole('link', { name: storyPattern('RE-2026-055') }).click();
     await expect(page).toHaveURL(/\/finance\/open-items\?tab=payable&item=/);
   });
 
@@ -344,7 +345,7 @@ test.describe('finance', () => {
     await accountCard.getByLabel('Konto').selectOption({ label: 'Vereinskonto' });
     await accountCard.getByLabel('Betrag').fill('120,00');
     await accountCard.getByRole('button', { name: 'begleicht offene Zahlung' }).click();
-    await accountCard.getByRole('button').filter({ hasText: 'RE-2026-041' }).click();
+    await accountCard.getByRole('button').filter({ hasText: story('RE-2026-041') }).click();
     const allocationCard = page.getByTestId('finance-allocation-card');
     const rows = allocationCard.getByTestId('split-row');
     await allocationCard.getByRole('button', { name: 'Zeile hinzufügen' }).click();
@@ -364,7 +365,7 @@ test.describe('finance', () => {
     await accountCard.getByLabel('Konto').selectOption({ label: 'Vereinskonto' });
     await accountCard.getByLabel('Betrag').fill('50,00');
     await accountCard.getByRole('button', { name: 'begleicht offene Zahlung' }).click();
-    await accountCard.getByRole('button').filter({ hasText: 'RE-2026-041' }).click();
+    await accountCard.getByRole('button').filter({ hasText: story('RE-2026-041') }).click();
     const allocationCard = page.getByTestId('finance-allocation-card');
     const rows = allocationCard.getByTestId('split-row');
     await allocationCard.getByRole('button', { name: 'Zeile hinzufügen' }).click();
@@ -384,7 +385,7 @@ test.describe('finance', () => {
     await accountCard.getByLabel('Konto').selectOption({ label: 'Vereinskonto' });
     await accountCard.getByLabel('Betrag').fill('50,00');
     await accountCard.getByRole('button', { name: 'begleicht offene Zahlung' }).click();
-    await accountCard.getByRole('button').filter({ hasText: 'RE-2026-041' }).click();
+    await accountCard.getByRole('button').filter({ hasText: story('RE-2026-041') }).click();
     await accountCard.getByLabel('Teilbetrag').fill('999,00');
     await expect(page.getByText('Der Teilbetrag übersteigt den Betrag des Kontos.')).toBeVisible();
   });
@@ -739,34 +740,34 @@ test.describe('finance', () => {
     await page.goto('/finance/open-items');
     await page.getByRole('button', { name: 'Offene Zahlung anlegen' }).click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByLabel('Datum', { exact: true }).fill('2026-01-05');
+    await dialog.getByLabel('Datum', { exact: true }).fill(story('2026-01-05'));
     await dialog.getByRole('combobox', { name: 'Kontakt' }).fill('Sandberg');
     await dialog.getByTestId('contact-option').filter({ hasText: 'Mira Sandberg' }).first().click();
     await dialog.getByLabel('Betrag', { exact: true }).fill('75,00');
-    await dialog.getByLabel('Fällig am').fill('2026-01-20');
-    await dialog.getByLabel('Verwendungszweck').fill('RE-2026-999');
+    await dialog.getByLabel('Fällig am').fill(story('2026-01-20'));
+    await dialog.getByLabel('Verwendungszweck').fill(story('RE-2026-999'));
     await dialog.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByText('Offene Zahlung angelegt.')).toBeVisible();
-    const row = page.getByRole('row', { name: /RE-2026-999/ });
+    const row = page.getByRole('row', { name: storyPattern('RE-2026-999') });
     await expect(row).toBeVisible();
     await expect(row).toContainText('überfällig');
     await expect(row).toContainText('Mira Sandberg');
     // Das Datum ist gefärbt, wenn der Posten überfällig ist — deutsches Format, kein rohes ISO-Datum (N3 Nachtrag A).
-    await expect(row.getByText('20.01.2026')).toHaveClass(/text-error/);
+    await expect(row.getByText(story('20.01.2026'))).toHaveClass(/text-error/);
     await expect(row).not.toContainText(/\d{4}-\d{2}-\d{2}/);
 
     // Zwei Reiter in der URL: unter „Wir erwarten“ steht der neue Posten nicht.
     await page.getByRole('tab', { name: 'Wir erwarten' }).click();
     await expect(page).toHaveURL(/tab=receivable/);
-    await expect(page.getByRole('row', { name: /RE-2026-999/ })).toHaveCount(0);
+    await expect(page.getByRole('row', { name: storyPattern('RE-2026-999') })).toHaveCount(0);
     await page.getByRole('tab', { name: 'Wir zahlen noch' }).click();
     await expect(page).toHaveURL(/tab=payable/);
-    await expect(page.getByRole('row', { name: /RE-2026-999/ })).toBeVisible();
+    await expect(page.getByRole('row', { name: storyPattern('RE-2026-999') })).toBeVisible();
 
     // Anlegen/Ändern-Dialog: derselbe Dialog ändert einen vorhandenen Posten.
     await row.click();
-    const sheet = page.getByRole('dialog', { name: 'RE-2026-999' });
-    await expect(sheet.getByText('20.01.2026')).toBeVisible();
+    const sheet = page.getByRole('dialog', { name: story('RE-2026-999') });
+    await expect(sheet.getByText(story('20.01.2026'))).toBeVisible();
     await expect(sheet).not.toContainText(/\d{4}-\d{2}-\d{2}/);
     await page.getByRole('button', { name: 'Ändern' }).click();
     const editDialog = page.getByRole('dialog');
@@ -774,7 +775,7 @@ test.describe('finance', () => {
     await editDialog.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByText('Offene Zahlung geändert.')).toBeVisible();
     // Die Seitenleiste bleibt offen und verdeckt die Tabelle für Hilfstechnik — der neue Betrag steht dort.
-    await expect(page.getByRole('dialog', { name: 'RE-2026-999' })).toContainText('90,00 €');
+    await expect(page.getByRole('dialog', { name: story('RE-2026-999') })).toContainText('90,00 €');
   });
 
   test('eine Zahlung als Entwurf an einer überfälligen Zahlung steht als eigenes Wort da, nicht nur „überfällig“ (Befund 6)', async ({ page }) => {
@@ -782,17 +783,17 @@ test.describe('finance', () => {
     await page.goto('/finance/open-items');
     await page.getByRole('button', { name: 'Offene Zahlung anlegen' }).click();
     const createDialog = page.getByRole('dialog');
-    await createDialog.getByLabel('Datum', { exact: true }).fill('2026-01-05');
+    await createDialog.getByLabel('Datum', { exact: true }).fill(story('2026-01-05'));
     await createDialog.getByLabel('Betrag', { exact: true }).fill('60,00');
-    await createDialog.getByLabel('Fällig am').fill('2026-01-20');
-    await createDialog.getByLabel('Verwendungszweck').fill('RE-2026-998');
+    await createDialog.getByLabel('Fällig am').fill(story('2026-01-20'));
+    await createDialog.getByLabel('Verwendungszweck').fill(story('RE-2026-998'));
     await createDialog.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByText('Offene Zahlung angelegt.')).toBeVisible();
 
-    await page.getByRole('row', { name: /RE-2026-998/ }).click();
+    await page.getByRole('row', { name: storyPattern('RE-2026-998') }).click();
     await page.getByRole('link', { name: 'Jetzt buchen' }).click();
     await expect(page).toHaveURL(/\/finance\/entries\/new\?template=expense&settles=/);
-    await page.getByLabel('Text').fill('Rechnung RE-2026-998, noch als Entwurf');
+    await page.getByLabel('Text').fill(story('Rechnung RE-2026-998, noch als Entwurf'));
     const accountCard = page.getByTestId('finance-account-card');
     await accountCard.getByLabel('Konto').selectOption({ label: 'Vereinskonto' });
     const allocationCard = page.getByTestId('finance-allocation-card');
@@ -805,7 +806,7 @@ test.describe('finance', () => {
     await expect(page).toHaveURL('/finance/entries');
 
     await page.goto('/finance/open-items?tab=payable');
-    const row = page.getByRole('row', { name: /RE-2026-998/ });
+    const row = page.getByRole('row', { name: storyPattern('RE-2026-998') });
     await expect(row).toContainText('Zahlung liegt als Entwurf vor');
     await expect(row).not.toContainText('überfällig');
   });
@@ -814,13 +815,13 @@ test.describe('finance', () => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await loginAsAdmin(page);
     await page.goto('/finance/open-items');
-    await page.getByRole('row', { name: /RE-2026-041/ }).click();
+    await page.getByRole('row', { name: storyPattern('RE-2026-041') }).click();
     await expect(page).toHaveURL(/item=/);
     await expect(page.getByText('Eine Bankverbindung ist hier noch nicht hinterlegt.')).toBeVisible();
     await expect(page.getByAltText(/QR/i)).toHaveCount(0);
     await expect(page.getByTestId('transfer-qr')).toHaveCount(0);
     await page.getByRole('button', { name: 'Kopieren: Verwendungszweck' }).click();
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('RE-2026-041');
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(story('RE-2026-041'));
   });
 
   test('N5: ein Posten an einem Kontakt mit gelernter IBAN zeigt den EPC-QR-Code', async ({ page }) => {
@@ -829,15 +830,15 @@ test.describe('finance', () => {
     await page.goto('/finance/open-items');
     await page.getByRole('button', { name: 'Offene Zahlung anlegen' }).click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByLabel('Datum', { exact: true }).fill('2026-01-07');
+    await dialog.getByLabel('Datum', { exact: true }).fill(story('2026-01-07'));
     await dialog.getByRole('combobox', { name: 'Kontakt' }).fill('Beispiel');
     await dialog.getByTestId('contact-option').filter({ hasText: 'Erika Beispiel' }).first().click();
     await dialog.getByLabel('Betrag', { exact: true }).fill('42,00');
-    await dialog.getByLabel('Verwendungszweck').fill('QR-2026-100');
+    await dialog.getByLabel('Verwendungszweck').fill(story('QR-2026-100'));
     await dialog.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByText('Offene Zahlung angelegt.')).toBeVisible();
 
-    await page.getByRole('row', { name: /QR-2026-100/ }).click();
+    await page.getByRole('row', { name: storyPattern('QR-2026-100') }).click();
     await expect(page).toHaveURL(/item=/);
     await expect(page.getByText('Eine Bankverbindung ist hier noch nicht hinterlegt.')).toHaveCount(0);
     const qr = page.getByTestId('transfer-qr');
@@ -848,13 +849,13 @@ test.describe('finance', () => {
   test('„Jetzt buchen“ öffnet die Maske mit Rest und Begleichung; nach dem Festschreiben ist die Zahlung erledigt', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/open-items');
-    await page.getByRole('row', { name: /RE-2026-041/ }).click();
+    await page.getByRole('row', { name: storyPattern('RE-2026-041') }).click();
     await page.getByRole('link', { name: 'Jetzt buchen' }).click();
     await expect(page).toHaveURL(/\/finance\/entries\/new\?template=expense&settles=/);
-    await page.getByLabel('Text').fill('Rechnung RE-2026-041 beglichen');
+    await page.getByLabel('Text').fill(story('Rechnung RE-2026-041 beglichen'));
     const accountCard = page.getByTestId('finance-account-card');
     await expect(accountCard.getByLabel('Betrag').first()).toHaveValue('120,00');
-    await expect(accountCard.getByText('RE-2026-041')).toBeVisible(); // Begleichung vorbelegt (MoneySettlements)
+    await expect(accountCard.getByText(story('RE-2026-041'))).toBeVisible(); // Begleichung vorbelegt (MoneySettlements)
     await accountCard.getByLabel('Konto').selectOption({ label: 'Vereinskonto' });
     const allocationCard = page.getByTestId('finance-allocation-card');
     const rows = allocationCard.getByTestId('split-row');
@@ -867,7 +868,7 @@ test.describe('finance', () => {
     const bookedNumber = (await page.getByTestId('entry-number').textContent())!.trim();
 
     await page.goto('/finance/open-items');
-    const row = page.getByRole('row', { name: /RE-2026-041/ });
+    const row = page.getByRole('row', { name: storyPattern('RE-2026-041') });
     await expect(row).toContainText('erledigt');
 
     // „Wird beglichen durch“ nennt die Buchungsnummer als Link.
@@ -878,7 +879,7 @@ test.describe('finance', () => {
   test('„Erledigt ohne Zahlung“ verlangt eine Notiz und nennt die Folgen', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/open-items');
-    await page.getByRole('row', { name: /RE-2026-041/ }).click();
+    await page.getByRole('row', { name: storyPattern('RE-2026-041') }).click();
     await page.getByRole('button', { name: 'Erledigt ohne Zahlung' }).click();
     await expect(page.getByText(/Es entsteht keine Buchung/)).toBeVisible();
     const alertDialog = page.getByRole('alertdialog');
@@ -888,14 +889,14 @@ test.describe('finance', () => {
     await expect(confirm).toBeEnabled();
     await confirm.click();
     await expect(page.getByText('Ohne Zahlung erledigt.')).toBeVisible();
-    const row = page.getByRole('row', { name: /RE-2026-041/ });
+    const row = page.getByRole('row', { name: storyPattern('RE-2026-041') });
     await expect(row).toContainText('erledigt ohne Zahlung');
   });
 
   test('eine offene Zahlung mit Herkunft bietet „Erledigt ohne Zahlung“ nicht an', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/open-items');
-    await page.getByRole('row', { name: /ANT-2026-014/ }).click();
+    await page.getByRole('row', { name: storyPattern('ANT-2026-014') }).click();
     await expect(page).toHaveURL(/item=/);
     await expect(page.getByRole('button', { name: 'Erledigt ohne Zahlung' })).toHaveCount(0);
     await expect(page.getByText('Was mit dem Vorgang geschieht, entscheidet sich an ihm selbst.')).toBeVisible();
@@ -920,7 +921,7 @@ test.describe('finance', () => {
     await expect(page).toHaveURL('/');
 
     await page.goto('/finance/open-items');
-    await page.getByRole('row', { name: /RE-2026-041/ }).click();
+    await page.getByRole('row', { name: storyPattern('RE-2026-041') }).click();
     await expect(page.getByText('Kein Recht zum Erledigen')).toBeVisible();
     await expect(page.getByText('Anna Berger')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Erledigt ohne Zahlung' })).toHaveCount(0);
@@ -1180,9 +1181,9 @@ test.describe('finance: Ausgleich eines Rechnungspostens (Befund AA)', () => {
   test('die begleichende Buchung trägt die Rechnung als Beleg und steht nicht unter „ohne Beleg“', async ({ page, baseURL }) => {
     await setE2ESetting(page, 'finance.mcpHumanOnlyAllowed', true); // `finance_entry_book` ist humanOnly (E10) — hier nur, um die Ausgangslage zu buchen.
     const client = await mcpClient(page, baseURL);
-    const invoice = await callTool<{ id: string }>(client, 'dms_receive', { filename: 'rechnung.pdf', typeKey: 'voucher-invoice', subject: 'Rechnung Ausgleich E2E', documentDate: '2026-01-15', contentBase64: PDF.buffer.toString('base64') });
+    const invoice = await callTool<{ id: string }>(client, 'dms_receive', { filename: 'rechnung.pdf', typeKey: 'voucher-invoice', subject: 'Rechnung Ausgleich E2E', documentDate: story('2026-01-15'), contentBase64: PDF.buffer.toString('base64') });
     const today = associationDay();
-    const item = await callTool<{ id: string }>(client, 'finance_open_item_save', { kind: 'payable', itemDate: '2026-01-15', amountCents: 17850, documentId: invoice.id, paymentReference: 'AUSGL-E2E-1' });
+    const item = await callTool<{ id: string }>(client, 'finance_open_item_save', { kind: 'payable', itemDate: story('2026-01-15'), amountCents: 17850, documentId: invoice.id, paymentReference: 'AUSGL-E2E-1' });
     const bank = (await callTool<{ id: string; isMain?: boolean }[]>(client, 'finance_master_data', { kind: 'account' })).find((a) => a.isMain) as { id: string };
     const category = (await callTool<{ id: string; key: string }[]>(client, 'finance_master_data', { kind: 'category' })).find((c) => c.key === 'program-costs')!;
     await callTool(client, 'finance_entry_book', {

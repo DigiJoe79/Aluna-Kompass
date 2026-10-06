@@ -58,21 +58,24 @@ export function ConfirmationsTable({ rows, canIssue, initialOpenId, today }: { r
   const [dispatching, setDispatching] = useState<ConfirmationRow | null>(null);
   const [recalling, setRecalling] = useState<ConfirmationRow | null>(null);
 
+  // Der Grund steht als Unterzeile unter der Marke (wie Finanzamt und Steuernummer
+  // unter dem Bescheid): Neben ihr machte er die Spalte so breit, dass die Tabelle
+  // bei 1440 px seitlich überlief (release-0.2.7.md, Befund 14).
   const stateOf = (row: ConfirmationRow) => {
     if (row.state === 'voided') {
       return (
-        <span className="space-x-1.5">
+        <>
           <StatusBadge tone="neutral">{t('state.voided')}</StatusBadge>
-          {row.toCorrect.length > 0 ? <span className="text-[12px] text-ink-2">{row.toCorrect.map((reason) => t(`toCorrectReason.${reason}`)).join(', ')}</span> : null}
-        </span>
+          {row.toCorrect.length > 0 ? <span className="block text-[12px] text-ink-2">{row.toCorrect.map((reason) => t(`toCorrectReason.${reason}`)).join(', ')}</span> : null}
+        </>
       );
     }
     if (row.toCorrect.length > 0) {
       return (
-        <span className="space-x-1.5">
+        <>
           <StatusBadge tone="warning">{t('state.toCorrect')}</StatusBadge>
-          <span className="text-[12px] text-ink-2">{row.toCorrect.map((reason) => t(`toCorrectReason.${reason}`)).join(', ')}</span>
-        </span>
+          <span className="block text-[12px] text-ink-2">{row.toCorrect.map((reason) => t(`toCorrectReason.${reason}`)).join(', ')}</span>
+        </>
       );
     }
     // C1-5: „Unterschrift fehlt“ als zweites Badge neben „gültig“ — „unterschrieben“ und „maschinell“ bleiben Tatsachen der aufgeklappten Zeile.
@@ -121,7 +124,7 @@ export function ConfirmationsTable({ rows, canIssue, initialOpenId, today }: { r
                 <TableCell className="text-right font-mono tabular-nums">{formatEuro(row.totalCents)}</TableCell>
                 <TableCell>{row.periodFrom && row.periodTo ? `${date(row.periodFrom)} – ${date(row.periodTo)}` : '—'}</TableCell>
                 <TableCell>{row.sentAt && row.sentVia ? t('sentValue', { date: date(row.sentAt), via: t(`sentVia.${row.sentVia}`) }) : '—'}</TableCell>
-                <TableCell data-testid="confirmation-state">{stateOf(row)}</TableCell>
+                <TableCell data-testid="confirmation-state" className="whitespace-normal">{stateOf(row)}</TableCell>
               </TableRow>
               {openId === row.id ? (
                 <TableRow className="bg-surface-2 even:bg-surface-2 hover:bg-surface-2">

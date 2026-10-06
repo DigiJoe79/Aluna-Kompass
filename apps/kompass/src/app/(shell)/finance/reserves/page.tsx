@@ -1,12 +1,13 @@
 import { hasPermission, isoNow } from '@kompass/core';
 import { getDocumentRecord } from '@kompass/module-dms';
-import { freeReserveCap, listFiscalYears, listPurposes, listReserves, valueAt } from '@kompass/module-finance';
+import { freeReserveCapOverview, listFiscalYears, listPurposes, listReserves, valueAt, type FreeReserveCapYearView } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { LimitProgress, limitState } from '@/components/finance/limit-progress';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
+import { StatusBadge } from '@/components/status-badge';
 import { formatEuro } from '@/lib/finance/amount';
 import { requireSession } from '@/lib/request-context';
 import { ReserveTable, type ReserveDocument, type ReserveRow } from './reserve-table';
@@ -15,6 +16,8 @@ import { ReserveTable, type ReserveDocument, type ReserveRow } from './reserve-t
  * E4 „Zurückgelegtes Geld“ (F8b Task 6b, Designer-README 4d): Kopfsatz,
  * Höchstbetrag der freien Rücklage als Näherung mit „davon genutzt“ und
  * Herleitung, Tabelle, Vorgang-Dialog, Stammsatz (`finance.setup`).
+ * Befund 4 (0.2.7): je Jahr eine Karte — das offene Vorjahr „vorläufig“ und
+ * das laufende Jahr; dieselbe Regel schlägt das Jahr im Vorgang-Dialog vor.
  */
 export default async function ReservesPage() {
   const { deps, ctx } = await requireSession();
@@ -28,10 +31,13 @@ export default async function ReservesPage() {
   const reservesRes = await listReserves(deps, ctx, { includeInactive: canSetup });
   const purposesRes = await listPurposes(deps, ctx, {});
   const yearsRes = await listFiscalYears(deps, ctx);
+  const capRes = await freeReserveCapOverview(deps, ctx, {});
   const purposes = purposesRes.ok ? purposesRes.value.map((p) => ({ id: p.id, name: p.name })) : [];
   const purposeName = new Map(purposes.map((p) => [p.id, p.name]));
   const years = yearsRes.ok ? yearsRes.value : [];
-  const current = years.find((y) => y.startsOn <= today && today <= y.endsOn) ?? null;
+  const capYears = capRes.ok ? capRes.value.years : [];
+  const defaultFiscalYearId = capRes.ok ? capRes.value.defaultFiscalYearId : null;
+  const warnAtPercent = (valueAt(deps.db, 'warnAtPercent', today) as number | null) ?? 80;
 
   // Nummer, Betreff und Datum des Beschlusses nur, wenn die Akte sie dieser Person zeigt — sonst „hinterlegt“ (Muster E1, D5).
   const document = async (documentId: string | null): Promise<ReserveDocument | null> => {
@@ -58,46 +64,54 @@ export default async function ReservesPage() {
     })),
   );
 
-  let cap: ReactNode = <p className="text-[13px] text-muted-ink">{t('cap.noYear')}</p>;
-  if (current) {
-    const capRes = await freeReserveCap(deps, ctx, { fiscalYearId: current.id });
-    if (capRes.ok) {
-      const { capCents, usedCents, assetManagementSurplusCents, otherTimelyFundsCents, exceeded, overCents } = capRes.value;
-      const warnAtPercent = (valueAt(deps.db, 'warnAtPercent', today) as number | null) ?? 80;
-      const assetShare = (valueAt(deps.db, 'freeReserveAssetShare', current.endsOn) as number | null) ?? 0;
-      const otherShare = (valueAt(deps.db, 'freeReserveOtherShare', current.endsOn) as number | null) ?? 0;
-      const state = limitState({ valueCents: usedCents, limitCents: capCents, warnAtPercent, kind: 'limit' });
-      cap = (
-        <div className="rounded-lg border border-line bg-surface p-4" data-testid="reserve-cap">
+  const capCard = (y: FreeReserveCapYearView): ReactNode => {
+    const assetShare = (valueAt(deps.db, 'freeReserveAssetShare', y.endsOn) as number | null) ?? 0;
+    const otherShare = (valueAt(deps.db, 'freeReserveOtherShare', y.endsOn) as number | null) ?? 0;
+    const derivation = t('cap.derivation', { assetShare, asset: formatEuro(Math.max(0, y.assetManagementSurplusCents)), otherShare, other: formatEuro(y.otherTimelyFundsCents) });
+    // Noch keine Einnahmen im Jahr und nichts zugeführt: ein Zustandswort statt eines leeren Balkens. Mit Zuführung
+    // bleibt es beim Balken und der Zeile „über dem Höchstbetrag“ (`limitState` kennt bei Grenze 0 keinen Zustand).
+    const noCapYet = y.capCents <= 0 && y.usedCents === 0;
+    const state = limitState({ valueCents: y.usedCents, limitCents: y.capCents, warnAtPercent, kind: 'limit' });
+    return (
+      <div key={y.fiscalYearId} className="rounded-lg border border-line bg-surface p-4" data-testid="reserve-cap" data-fiscal-year={y.designation} data-provisional={y.provisional ? 'true' : undefined}>
+        {noCapYet ? (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-[13px] text-ink-2">{t(y.provisional ? 'cap.headingProvisional' : 'cap.heading', { year: y.designation })}</p>
+              <StatusBadge tone="neutral">{t('cap.noCapYet')}</StatusBadge>
+            </div>
+            <p className="text-[12px] text-muted-ink">{derivation}</p>
+          </div>
+        ) : (
           <LimitProgress
-            coveredCents={usedCents}
-            totalCents={capCents}
-            label={t('cap.label', { year: current.designation, cap: formatEuro(capCents) })}
+            coveredCents={y.usedCents}
+            totalCents={y.capCents}
+            label={t(y.provisional ? 'cap.labelProvisional' : 'cap.label', { year: y.designation, cap: formatEuro(y.capCents) })}
             state={state}
             stateLabel={state ? tLimit(`states.${state}`) : undefined}
-            figure={t('cap.figure', { used: formatEuro(usedCents), cap: formatEuro(capCents) })}
-            remainder={t('cap.derivation', { assetShare, asset: formatEuro(Math.max(0, assetManagementSurplusCents)), otherShare, other: formatEuro(otherTimelyFundsCents) })}
+            figure={t('cap.figure', { used: formatEuro(y.usedCents), cap: formatEuro(y.capCents) })}
+            remainder={derivation}
           />
-          {/* Befund S: das Kennzeichen des Dienstes, mit dem Betrag darüber. */}
-          {exceeded ? (
-            <p className="mt-2 text-[13px] font-semibold text-error" data-testid="reserve-cap-over">
-              {t('cap.over', { over: formatEuro(overCents) })}
-            </p>
-          ) : null}
-        </div>
-      );
-    }
-  }
+        )}
+        {/* Befund S: das Kennzeichen des Dienstes, mit dem Betrag darüber. */}
+        {y.exceeded ? (
+          <p className="mt-2 text-[13px] font-semibold text-error" data-testid="reserve-cap-over">
+            {t('cap.over', { over: formatEuro(y.overCents) })}
+          </p>
+        ) : null}
+      </div>
+    );
+  };
 
   return (
     <Page width="standard" header={<PageHeader title={t('title')} description={t('intro')} />}>
       <div className="space-y-4">
-        {cap}
+        {capYears.length === 0 ? <p className="text-[13px] text-muted-ink">{t('cap.noYear')}</p> : capYears.map(capCard)}
         <ReserveTable
           rows={rows}
           purposes={purposes}
           fiscalYears={years.map((y) => ({ id: y.id, designation: y.designation }))}
-          defaultFiscalYearId={current?.id ?? null}
+          defaultFiscalYearId={defaultFiscalYearId}
           today={today}
           canWrite={hasPermission(ctx, 'finance.entriesWrite')}
           canSetup={canSetup}

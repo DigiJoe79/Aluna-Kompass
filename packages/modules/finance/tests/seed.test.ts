@@ -1,8 +1,8 @@
-import { fakeTextExtraction, getDashboardLayout, getEffectivePermissions, readSetting, schema, unwrap, writeSettingInternal } from '@kompass/core';
-import { insertUser, systemContext } from '@kompass/core/testing';
-import { contactRoles, contacts } from '@kompass/module-contacts';
+import { fakeTextExtraction, getDashboardLayout, getEffectivePermissions, login, readSetting, schema, SEED_ADMIN_PASSWORD, todayIn, unwrap, writeSettingInternal } from '@kompass/core';
+import { ctxWith, insertUser, systemContext } from '@kompass/core/testing';
+import { contactRoles, contacts, createContact } from '@kompass/module-contacts';
 import { documents as dmsDocuments } from '@kompass/module-dms';
-import { projects } from '@kompass/module-projects';
+import { createProject, projects } from '@kompass/module-projects';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { installFinance } from '../src/install';
@@ -27,7 +27,7 @@ import { listOpenItems } from '../src/ledger/open-items';
 import { getBalances } from '../src/ledger/overview';
 import { getProjectFinance } from '../src/ledger/project-settings';
 import { listPurposes } from '../src/ledger/purposes';
-import { financeCategories, financeEntries, financeEntryDocuments } from '../src/schema';
+import { financeAllocationLines, financeCategories, financeEntries, financeEntryDocuments, financeExpensePositions } from '../src/schema';
 import { seedFinance } from '../src/seed';
 import { listApprovals } from '../src/allocation/approvals';
 import { listMyExpenseClaims } from '../src/allocation/expenses';
@@ -44,6 +44,7 @@ import { listPurposeTransfers, purposeOverview } from '../src/allocation/transfe
 import { relatedPartyPayments } from '../src/allocation/people';
 import { listPartnerNotices, listPartners } from '../src/allocation/partners';
 import { financeReserveMovements } from '../src/schema';
+import { seedStoryYear } from '../src/seed-calendar';
 import { setupFinance } from './helpers';
 
 describe('seedFinance', () => {
@@ -106,6 +107,41 @@ describe('seedFinance', () => {
     const read = unwrap(await getProjectFinance(deps, ctx, { projectId: existingProject.id }));
     expect(read.settings.targetCents).toBe(250000);
     expect(read.settings.defaultPurposeId).not.toBeNull();
+  });
+
+  it('books a grant and a receipted expense on „winterhilfe“, chosen by slug — the finance section shows income and expenses (Spec 2026-10-06 § 4)', async () => {
+    const { deps, ctx, userId } = setupFinance();
+    const projectCtx = ctxWith(['projects.manage', 'projects.view'], userId);
+    // Zuerst ein anderes Projekt: bis 0.2.6 nahm der Seed das erste beliebige (`limit(1)` ohne Ordnung).
+    unwrap(await createProject(deps, projectCtx, { slug: 'auslauf', name: { de: 'Auslauf' }, type: 'shortTerm', summary: { de: 'Kurz' }, body: { de: 'Text' } }));
+    const winter = unwrap(await createProject(deps, projectCtx, { slug: 'winterhilfe', name: { de: 'Winterhilfe' }, type: 'ongoing', summary: { de: 'Kurz' }, body: { de: 'Text' } }));
+    await seedFinance(deps, ctx);
+    await seedFinance(deps, ctx);
+    const read = unwrap(await getProjectFinance(deps, ctx, { projectId: winter.id }));
+    expect(read.settings.targetCents).toBe(250000);
+    expect(read.result).toEqual({ incomeCents: 85000, expenseCents: 42000, resultCents: 43000 });
+    const lines = deps.db.select().from(financeAllocationLines).all().filter((l) => l.projectId === winter.id);
+    for (const line of lines) expect(deps.db.select().from(financeEntryDocuments).where(eq(financeEntryDocuments.entryId, line.entryId)).all().length).toBeGreaterThan(0);
+  });
+
+  it('records the change of the board at the members’ meeting for the contacts of the contacts seed (Spec 2026-10-06 § 4)', async () => {
+    const { deps, ctx } = setupFinance();
+    const contactCtx = { ...ctx, permissions: new Set([...ctx.permissions, 'contacts.manage']) };
+    const clara = unwrap(await createContact(deps, contactCtx, { kind: 'person', firstName: 'Clara', lastName: 'Neumann' }));
+    const bernd = unwrap(await createContact(deps, contactCtx, { kind: 'person', firstName: 'Bernd', lastName: 'Hagedorn' }));
+    await seedFinance(deps, ctx);
+    await seedFinance(deps, ctx);
+    const board = (id: string) => deps.db.select().from(contactRoles).where(eq(contactRoles.contactId, id)).all().filter((r) => r.role === 'board-member');
+    expect(board(clara.id).map((r) => r.until)).toEqual([null]);
+    expect(board(bernd.id)).toHaveLength(1);
+    expect(board(bernd.id)[0]!.until! < board(clara.id)[0]!.since).toBe(true);
+  });
+
+  it('gives the two donors of the payout full names', async () => {
+    const { deps, ctx } = setupFinance();
+    await seedFinance(deps, ctx);
+    const donors = deps.db.select().from(contactRoles).where(eq(contactRoles.role, 'donor')).all().map((r) => deps.db.select().from(contacts).where(eq(contacts.id, r.contactId)).get()!);
+    for (const d of donors.filter((c) => c.kind === 'person')) expect((d.firstName ?? '').length > 0 && (d.lastName ?? '').length > 0, d.lastName ?? '').toBe(true);
   });
 
   it('seeds two CSV accounts, each with its format and one finished CSV run, idempotently (F4b)', async () => {
@@ -522,6 +558,8 @@ describe('seedFinance', () => {
       expect(machine.signers).toHaveLength(1);
       expect(machine.status.complete).toBe(true);
       expect(machine.status.signer?.signerName).toBe('Jonas Feld');
+      // Spec 2026-10-06 § 4: dieselben Zwecke wie der Bescheid in der Akte.
+      expect(notices[0]!.purposesText).toContain('Tierschutzes');
     });
 
     it('issues a machine money confirmation, an expense waiver without signature and a signed in-kind confirmation — once', async () => {
@@ -566,7 +604,7 @@ describe('seedFinance', () => {
 
     it('finishes a confirmation run for the previous year with a dispatch note, once (F6b Task 9)', async () => {
       const { deps, ctx } = await seededWithAddress();
-      const previousYear = new Date().getUTCFullYear() - 1;
+      const previousYear = seedStoryYear(todayIn(deps)) - 1;
       const runs = unwrap(await listConfirmationRuns(deps, ctx, {}));
       expect(runs.items).toHaveLength(1);
       const run = runs.items[0]!;
@@ -638,11 +676,11 @@ describe('seedFinance', () => {
       const { deps, ctx, nadja } = await seededWithClerkAndApprover();
       const nadjaCtx = { ...ctx, userId: nadja.id, permissions: new Set([...ctx.permissions, 'finance.expensesSubmit']) };
       const claims = unwrap(await listMyExpenseClaims(deps, nadjaCtx, { limit: 50, offset: 0 }));
-      expect(claims.total).toBe(6);
+      expect(claims.total).toBe(7);
 
-      const draft = claims.items.find((c) => c.state === 'draft');
-      expect(draft).toMatchObject({ state: 'draft' });
-      expect(draft!.positions[0]!.documentId).toBeNull();
+      // Zwei Entwürfe: einer ohne Beleg (laufende Sicherung), einer mit PDF-Beleg (Smartphone-Bild „Auslage einreichen“).
+      const drafts = claims.items.filter((c) => c.state === 'draft');
+      expect(drafts.map((c) => c.positions[0]!.documentId === null).sort()).toEqual([false, true]);
 
       const submitted = claims.items.find((c) => c.state === 'submitted');
       expect(submitted).toBeTruthy();
@@ -709,10 +747,29 @@ describe('seedFinance', () => {
       const log = JSON.stringify(deps.db.select().from(schema.auditLog).all().filter((e) => e.action.startsWith('finance.') && e.entityType !== 'setting'));
       for (const secret of [
         'Deko für den Infoabend', 'Büromaterial für die Infotheke', 'Getränke für die Versammlung', 'Portokosten Mitgliederbrief', 'Blumenstrauß zum Jubiläum', 'Fahrtkosten Pflegestelle Juli',
-        'Kein Vereinszweck, bitte privat tragen', 'DE93999999990000000001',
+        'Kein Vereinszweck, bitte privat tragen', 'DE93999999990000000001', 'Druckerpatronen für die Geschäftsstelle',
       ]) {
         expect(log, secret).not.toContain(secret);
       }
+    });
+
+    it('lets Nadja Vogt sign in with the development password — the phone picture „submit an expense“ is hers (Spec 2026-10-06 § 5.5)', async () => {
+      const { deps } = await seededWithClerkAndApprover();
+      const session = await login(deps, { email: 'nadja@kompass.local', password: SEED_ADMIN_PASSWORD, ipAddress: null, requestId: 'R' });
+      expect(session.ok).toBe(true);
+      expect(deps.db.select().from(schema.users).where(eq(schema.users.email, 'nadja@kompass.local')).get()!.mustChangePassword).toBe(false);
+    });
+
+    it('attaches a till receipt, not a placeholder, to the claim waiting for approval', async () => {
+      const { deps, ctx, jonas } = await seededWithClerkAndApprover();
+      const approveCtx = { ...ctx, userId: jonas.id, permissions: new Set([...ctx.permissions, 'finance.approve']) };
+      const queue = unwrap(await listApprovals(deps, approveCtx, {}));
+      const item = queue.items.find((i) => i.kind === 'expenseClaim');
+      if (!item || item.kind !== 'expenseClaim') throw new Error('expected an expense claim');
+      const position = deps.db.select().from(financeExpensePositions).where(eq(financeExpensePositions.claimId, item.claimId)).all().find((p) => p.kind === 'receipt')!;
+      const receipt = deps.db.select().from(dmsDocuments).where(eq(dmsDocuments.id, position.documentId!)).get()!;
+      // Ein `textPdf` mit drei Zeilen hat ~650 Byte, der Bon ~1350 (beim Planen gemessen).
+      expect(receipt.fileBytes).toBeGreaterThan(1000);
     });
   });
 
@@ -731,6 +788,21 @@ describe('seedFinance', () => {
         const today = deps.clock.now().toISOString().slice(0, 10);
         return unwrap(r).find((y) => y.startsOn <= today && today <= y.endsOn)!;
       });
+
+    it('files every finance document at its own date through the services — except the named ones (Joe, 2026-10-06; Plan 2b Task 7, 3m)', async () => {
+      const { deps } = await seededTwice();
+      const today = deps.clock.now().toISOString().slice(0, 10);
+      const docs = deps.db.select().from(dmsDocuments).all();
+      const isException = (d: (typeof docs)[number]) => ['finance-confirmation', 'finance-confirmation-signed', 'finance-partner-evidence'].includes(d.typeKey) || d.subject.includes('Jugendfreizeit');
+      const minutes = docs.filter((d) => d.typeKey === 'minutes' && !isException(d));
+      expect(minutes.length).toBeGreaterThanOrEqual(8);
+      expect(minutes.every((d) => d.documentDate! < today)).toBe(true);
+      // Ablage am Tag des Dokuments, 10:00 UTC — so hat die verschobene Uhr sie angelegt.
+      const late = docs.filter((d) => !isException(d) && !d.createdAt.startsWith(d.documentDate!));
+      expect(late.map((d) => `${d.typeKey}: ${d.subject}`)).toEqual([]);
+      // Die Ausnahmen liegen heute, mit Datum und Ablage zusammen.
+      expect(docs.filter(isException).every((d) => d.documentDate === today && d.createdAt.startsWith(today))).toBe(true);
+    });
 
     it('seeds a purpose-bound project reserve with minutes, a free reserve near the cap for its year, and a dissolved one — once', async () => {
       const { deps, ctx } = await seededTwice();

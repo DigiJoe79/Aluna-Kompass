@@ -40,8 +40,9 @@ describe('issueConfirmation', () => {
 
     const [doc] = confirmationDocuments(f);
     expect(doc).toMatchObject({ id: confirmation.documentId, number: confirmation.documentNumber, phase: 'issued', status: 'issued', templateKey: 'finance-confirmation-money', documentDate: '2026-03-20' });
-    // Der Betreff nennt keinen Namen — er steht in Listen der Akte.
-    expect(doc!.subject).toBe('Zuwendungsbestätigung Geldzuwendung 2026-03-20');
+    // Der Betreff nennt keinen Namen — er steht in Listen der Akte. Datum deutsch, nie ISO (release-0.2.7, Befund 20).
+    expect(doc!.subject).toBe('Zuwendungsbestätigung Geldzuwendung 20.03.2026');
+    expect(doc!.subject).not.toMatch(/\d{4}-\d{2}-\d{2}/);
     const links = f.deps.db.select().from(documentLinks).where(eq(documentLinks.documentId, doc!.id)).all().map((l) => `${l.entityType}:${l.entityId}`).sort();
     expect(links).toEqual([`financeConfirmation:${confirmation.id}`, `financeEntry:${entry.id}`].sort());
 

@@ -12,14 +12,16 @@ const quote = (cell: string) => `"${cell.replace(/"/g, '""')}"`;
  * UTF-8 mit BOM, Komma, alles in Anführungszeichen, Brutto/Gebühr/Netto,
  * Transaktionscode, Guthaben, eine vorgemerkte Zeile ohne Guthaben und eine
  * Auszahlung aufs Bankkonto. Die Guthaben gehen als Kette auf (Saldenprobe).
+ * `year` rückt die Daten ins Stichjahr des Entwicklungs-Seeds (`seed-calendar.ts`); die Vorgabe 2026 ergibt die
+ * Bytes der E2E-Fixtures.
  */
-export function buildPaymentServiceCsv(): Uint8Array {
+export function buildPaymentServiceCsv(year = 2026): Uint8Array {
   const rows = [
     ['Datum', 'Uhrzeit', 'Name', 'Typ', 'Status', 'Währung', 'Brutto', 'Gebühr', 'Netto', 'Transaktionscode', 'Guthaben', 'Betreff'],
-    ['05.03.2026', '10:15:00', 'Erika Beispiel', 'Spendenzahlung', 'Abgeschlossen', 'EUR', '50,00', '-1,60', '48,40', 'ZD-0001', '148,40', 'Spende März'],
-    ['06.03.2026', '09:00:00', 'Max Muster', 'Spendenzahlung', 'Ausstehend', 'EUR', '20,00', '-0,85', '19,15', 'ZD-0002', '', 'Spende'],
-    ['07.03.2026', '11:30:00', 'Paula Probe', 'Spendenzahlung', 'Abgeschlossen', 'EUR', '10,00', '-0,55', '9,45', 'ZD-0003', '157,85', 'Spende Tierheim'],
-    ['10.03.2026', '08:00:00', '', 'Auszahlung', 'Abgeschlossen', 'EUR', '-150,00', '0,00', '-150,00', 'ZD-0004', '7,85', 'Auszahlung auf Bankkonto'],
+    [`05.03.${year}`, '10:15:00', 'Erika Beispiel', 'Spendenzahlung', 'Abgeschlossen', 'EUR', '50,00', '-1,60', '48,40', 'ZD-0001', '148,40', 'Spende März'],
+    [`06.03.${year}`, '09:00:00', 'Max Muster', 'Spendenzahlung', 'Ausstehend', 'EUR', '20,00', '-0,85', '19,15', 'ZD-0002', '', 'Spende'],
+    [`07.03.${year}`, '11:30:00', 'Paula Probe', 'Spendenzahlung', 'Abgeschlossen', 'EUR', '10,00', '-0,55', '9,45', 'ZD-0003', '157,85', 'Spende Tierheim'],
+    [`10.03.${year}`, '08:00:00', '', 'Auszahlung', 'Abgeschlossen', 'EUR', '-150,00', '0,00', '-150,00', 'ZD-0004', '7,85', 'Auszahlung auf Bankkonto'],
   ];
   const text = rows.map((r) => r.map(quote).join(',')).join('\r\n') + '\r\n';
   const body = new TextEncoder().encode(text);
@@ -48,16 +50,18 @@ function encodeWindows1252(text: string): Uint8Array {
  * Eine Bank mit dem, was deutsche Banken gern tun: Windows-Zeichensatz,
  * Semikolon, vier Zeilen Vorspann (Kontoinhaber, IBAN, Zeitraum, leer) und
  * getrennte Spalten für Aus- und Eingang.
+ * `year` rückt die Daten ins Stichjahr des Entwicklungs-Seeds (`seed-calendar.ts`); die Vorgabe 2026 ergibt die
+ * Bytes der E2E-Fixtures.
  */
-export function buildSecondBankCsv(): Uint8Array {
+export function buildSecondBankCsv(year = 2026): Uint8Array {
   const lines = [
     'Kontoinhaber;Musterverein e.V.',
     'IBAN;DE48999999990000404040',
-    'Zeitraum;01.03.2026 - 31.03.2026',
+    `Zeitraum;01.03.${year} - 31.03.${year}`,
     '',
     'Buchungstag;Wertstellung;Auftraggeber/Empfänger;Verwendungszweck;Soll;Haben',
-    '03.03.2026;03.03.2026;Erika Beispiel;Mitgliedsbeitrag 2026;;60,00',
-    '04.03.2026;04.03.2026;Druckerei Müller & Söhne;Rechnung 2026-17;45,90;',
+    `03.03.${year};03.03.${year};Erika Beispiel;Mitgliedsbeitrag ${year};;60,00`,
+    `04.03.${year};04.03.${year};Druckerei Müller & Söhne;Rechnung ${year}-17;45,90;`,
   ];
   return encodeWindows1252(lines.join('\r\n') + '\r\n');
 }
