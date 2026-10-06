@@ -18,7 +18,7 @@ export function limitState({ valueCents, limitCents, warnAtPercent, kind }: { va
 }
 
 const TONE: Record<LimitState, BadgeTone> = { calm: 'neutral', near: 'warning', exceeded: 'error', reached: 'success' };
-const BAR: Record<LimitState, string> = { calm: 'bg-primary', near: 'bg-warning', exceeded: 'bg-error', reached: 'bg-success' };
+const BAR: Record<LimitState, string> = { calm: 'bg-brand', near: 'bg-warning', exceeded: 'bg-error', reached: 'bg-success' };
 
 /**
  * Baustein 16 (F7 Task 6a, Design 4h): Label · Zustandswort als Badge ·

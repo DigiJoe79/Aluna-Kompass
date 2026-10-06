@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { LimitProgress, limitState } from '@/components/finance/limit-progress';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { formatEuro } from '@/lib/finance/amount';
 import { requireSession } from '@/lib/request-context';
@@ -17,7 +18,7 @@ import { ReserveTable, type ReserveDocument, type ReserveRow } from './reserve-t
  */
 export default async function ReservesPage() {
   const { deps, ctx } = await requireSession();
-  if (!hasPermission(ctx, 'finance.read')) return <ForbiddenCard permission="finance.read" />;
+  if (!hasPermission(ctx, 'finance.read')) return <Page width="standard"><ForbiddenCard permission="finance.read" /></Page>;
   const t = await getTranslations('finance.reserves');
   const tLimit = await getTranslations('finance.limitProgress');
 
@@ -89,18 +90,19 @@ export default async function ReservesPage() {
   }
 
   return (
-    <div className="max-w-[1000px] space-y-4">
-      <PageHeader title={t('title')} description={t('intro')} />
-      {cap}
-      <ReserveTable
-        rows={rows}
-        purposes={purposes}
-        fiscalYears={years.map((y) => ({ id: y.id, designation: y.designation }))}
-        defaultFiscalYearId={current?.id ?? null}
-        today={today}
-        canWrite={hasPermission(ctx, 'finance.entriesWrite')}
-        canSetup={canSetup}
-      />
-    </div>
+    <Page width="standard" header={<PageHeader title={t('title')} description={t('intro')} />}>
+      <div className="space-y-4">
+        {cap}
+        <ReserveTable
+          rows={rows}
+          purposes={purposes}
+          fiscalYears={years.map((y) => ({ id: y.id, designation: y.designation }))}
+          defaultFiscalYearId={current?.id ?? null}
+          today={today}
+          canWrite={hasPermission(ctx, 'finance.entriesWrite')}
+          canSetup={canSetup}
+        />
+      </div>
+    </Page>
   );
 }

@@ -1,6 +1,7 @@
 import { documentBaseGaps, hasPermission, listDocumentBases, readSetting, requirePermission } from '@kompass/core';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { documentTemplateGroups } from '@/lib/document-template-rows';
 import { requireSession } from '@/lib/request-context';
@@ -14,7 +15,7 @@ import { BasesPanel } from './bases-panel';
  */
 export default async function DocumentsPage() {
   const { deps, ctx } = await requireSession();
-  if (requirePermission(ctx, 'documents.export')) return <ForbiddenCard permission="documents.export" />;
+  if (requirePermission(ctx, 'documents.export')) return <Page width="standard"><ForbiddenCard permission="documents.export" /></Page>;
   const t = await getTranslations('documents');
   const registered = [...deps.registry.documentTemplates.values()];
   const basesResult = await listDocumentBases(deps, ctx);
@@ -33,9 +34,8 @@ export default async function DocumentsPage() {
     module: m.has(gap.module) ? m(gap.module) : gap.module,
   }));
   return (
-    <>
-      <PageHeader title={t('title')} description={t('description')} />
+    <Page width="standard" header={<PageHeader title={t('title')} description={t('description')} />}>
       <BasesPanel bases={bases} groups={groups} gaps={gaps} canManage={hasPermission(ctx, 'settings.manage')} />
-    </>
+    </Page>
   );
 }

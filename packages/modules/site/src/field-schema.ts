@@ -14,6 +14,56 @@ export function widgetOf(field: FieldSchema): string {
   return 'text';
 }
 
+/** Breite eines Feldes in der Maske (docs/MUSTER.md § J). */
+export type FieldSize = 's' | 'm' | 'l' | 'full';
+
+const SIZES: readonly FieldSize[] = ['s', 'm', 'l', 'full'];
+
+/** Standard nach Feldtyp (Handoff Konsistenz § 8c); ein mehrsprachiges Feld nach seinem inneren Typ. */
+const DEFAULT_SIZE: Record<string, FieldSize> = {
+  text: 'm',
+  select: 'm',
+  reference: 'm',
+  number: 's',
+  date: 's',
+  markdown: 'l',
+  // Größe je Platz: Die Plätze stehen als einzelne Zellen im Raster des Abschnitts (Befund K9 5b, 05.10.).
+  references: 'm',
+  asset: 'full',
+  list: 'full',
+  objectList: 'full',
+};
+
+/**
+ * Die Breite eines Feldes: `size` aus dem Template, sonst der Standard des Feldtyps. Bei einem mehrsprachigen
+ * Feld gilt sie je Sprache; wie viele Sprachen nebeneinander stehen, rechnet die Maske dazu.
+ */
+export function fieldSizeOf(field: FieldSchema): FieldSize {
+  const own = (field as { size?: unknown }).size;
+  if (typeof own === 'string' && (SIZES as readonly string[]).includes(own)) return own as FieldSize;
+  const widget = widgetOf(field);
+  if (widget === 'localized') return field.markdown === true ? 'l' : 'm';
+  if (widget === 'text' && (field as { format?: string }).format === 'date') return 's';
+  return DEFAULT_SIZE[widget] ?? 'm';
+}
+
+/**
+ * Die Abschnitte einer Maske: aufeinanderfolgende Felder mit gleichem `group` bilden einen Abschnitt mit diesem
+ * Titel, Felder ohne `group` einen ohne Titel. Nichts wird umsortiert — steht eine Gruppe zweimal, sind es zwei
+ * Abschnitte.
+ */
+export function fieldGroups(schema: Record<string, FieldSchema>): { group: string | undefined; keys: string[] }[] {
+  const out: { group: string | undefined; keys: string[] }[] = [];
+  for (const [key, field] of Object.entries(schema)) {
+    const own = (field as { group?: unknown }).group;
+    const group = typeof own === 'string' && own.trim() ? own : undefined;
+    const last = out[out.length - 1];
+    if (last && last.group === group) last.keys.push(key);
+    else out.push({ group, keys: [key] });
+  }
+  return out;
+}
+
 const num = (field: FieldSchema): number | undefined => (typeof field.max === 'number' ? field.max : undefined);
 const boundNumber = (field: FieldSchema): number | undefined => {
   const v = (field as { maxLength?: number; maxItems?: number }).maxLength ?? (field as { maxItems?: number }).maxItems ?? num(field);

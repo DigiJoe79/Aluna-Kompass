@@ -322,8 +322,12 @@ test.describe('finance approvals (D3)', () => {
     // Die Fußleiste klebt: ganz oben auf der Seite ist sie schon zu sehen.
     await page.evaluate(() => window.scrollTo(0, 0));
     await expect(footer(page)).toBeInViewport();
-    await expect(footer(page).getByRole('button', { name: 'Freigeben' })).toHaveCSS('height', '48px');
-    await expect(footer(page).getByRole('button', { name: 'Ablehnen' })).toHaveCSS('height', '48px');
+    // Die Leiste ist die gemeinsame: Knöpfe untereinander, Hauptaktion oben, beide so hoch wie ein Feld (--field-h).
+    const approveBox = (await footer(page).getByRole('button', { name: 'Freigeben' }).boundingBox())!;
+    const rejectBox = (await footer(page).getByRole('button', { name: 'Ablehnen' }).boundingBox())!;
+    expect(approveBox.height).toBeGreaterThanOrEqual(38);
+    expect(rejectBox.height).toBeGreaterThanOrEqual(38);
+    expect(approveBox.y).toBeLessThan(rejectBox.y);
 
     await position(page, 1).getByLabel('Kategorie').selectOption({ label: 'Büro, Porto, Telefon' });
     await position(page, 2).getByLabel('Kategorie').selectOption({ label: 'Fahrt- und Reisekosten' });

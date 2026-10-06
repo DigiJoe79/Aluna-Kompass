@@ -60,26 +60,38 @@ export function EntryForm({
       setLoaded({ data, slug });
       const saved = (state.data as { updatedAt?: string } | undefined)?.updatedAt;
       if (saved) setVersion(saved);
-    } else if (state.status === 'error' && Object.keys(errors).length === 0) toast.error(state.message);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- nur bei neuem Aktionsstand
-  }, [state, errors]);
+  }, [state]);
 
   return (
-    <form action={action} className="flex flex-col gap-6 rounded-lg border border-line bg-surface p-6">
+    <form action={action} className="overflow-hidden rounded-lg border border-line bg-surface">
       <input type="hidden" name="collection" value={collection} />
       {entry ? <input type="hidden" name="id" value={entry.id} /> : null}
       {entry ? <input type="hidden" name="expectedVersion" value={version} /> : null}
       <input type="hidden" name="payload" value={JSON.stringify({ slug: hasSlug ? slug : undefined, data })} />
-      {hasSlug ? (
-        <FormField id="slug" label={c('slug')} error={errors.slug}>
-          <Input id="slug" name="slug" value={slug} onChange={(e) => setSlug(e.target.value)} pattern="[a-z0-9][a-z0-9-]{0,80}" className="font-mono" />
-        </FormField>
-      ) : null}
-      <SchemaForm schema={fields} value={data} errors={errors} locales={locales} onChange={setData} />
+      <div className="p-5">
+        <SchemaForm
+          schema={fields}
+          value={data}
+          errors={errors}
+          locales={locales}
+          onChange={setData}
+          leading={
+            hasSlug ? (
+              <FormField id="slug" label={c('slug')} error={errors.slug}>
+                <Input id="slug" name="slug" value={slug} onChange={(e) => setSlug(e.target.value)} pattern="[a-z0-9][a-z0-9-]{0,80}" className="font-mono" />
+              </FormField>
+            ) : null
+          }
+        />
+      </div>
       <FormActionBar
+        mode={entry ? 'edit' : 'create'}
         back={{ href: `/site/c/${collection}`, label: tCommon('backToList') }}
         count={changedCount}
         onDiscard={discard}
+        state={state}
       />
     </form>
   );

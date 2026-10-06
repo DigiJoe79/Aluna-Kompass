@@ -2,6 +2,7 @@ import { getAuditEntry, hasPermission, listUsers, queryAudit, requirePermission 
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { buttonVariants } from '@/components/ui/button';
 import { auditEntityLabels } from '@/lib/audit-entities';
@@ -15,7 +16,7 @@ const PAGE = 50;
 
 export default async function AuditPage(props: { searchParams: Promise<Record<string, string | undefined>> }) {
   const { deps, ctx } = await requireSession();
-  if (requirePermission(ctx, 'audit.view')) return <ForbiddenCard permission="audit.view" />;
+  if (requirePermission(ctx, 'audit.view')) return <Page width="full"><ForbiddenCard permission="audit.view" /></Page>;
   const t = await getTranslations('audit');
   const sp = await props.searchParams;
   const offset = Number(sp.offset ?? 0) || 0;
@@ -29,7 +30,7 @@ export default async function AuditPage(props: { searchParams: Promise<Record<st
     limit: PAGE,
     offset,
   });
-  if (!result.ok) return <ForbiddenCard permission="audit.view" />;
+  if (!result.ok) return <Page width="full"><ForbiddenCard permission="audit.view" /></Page>;
   const users = await listUsers(deps, ctx);
   const recent = queryAudit(deps, ctx, { limit: 200 });
   const actions = recent.ok ? [...new Set(recent.value.entries.map((e) => e.action))].sort() : [];
@@ -38,11 +39,15 @@ export default async function AuditPage(props: { searchParams: Promise<Record<st
     Object.entries(sp).filter(([k, v]) => v && k !== 'entry' && k !== 'offset') as [string, string][]
   ).toString();
   return (
-    <>
-      <PageHeader
-        title={t('title')}
-        actions={<ExportButton enabled={hasPermission(ctx, 'documents.export')} />}
-      />
+    <Page
+      width="full"
+      header={
+        <PageHeader
+          title={t('title')}
+          actions={<ExportButton enabled={hasPermission(ctx, 'documents.export')} />}
+        />
+      }
+    >
       <div className="overflow-hidden rounded-lg border border-line bg-surface">
         <AuditFilters
           users={users.ok ? users.value.map((u) => ({ id: u.id, name: u.name })) : []}
@@ -84,6 +89,6 @@ export default async function AuditPage(props: { searchParams: Promise<Record<st
         </div>
       </div>
       {selected?.ok ? <AuditDetail entry={selected.value} /> : null}
-    </>
+    </Page>
   );
 }

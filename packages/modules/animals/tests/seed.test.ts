@@ -37,13 +37,13 @@ describe('animals seed', () => {
     await seedDevelopment(deps);
     const rows = deps.db.select().from(animals).all();
     for (const a of rows) expect(a.place.length).toBeGreaterThan(0);
-    const bySlug = Object.fromEntries(rows.map((a) => [a.slug, a.place]));
-    expect(bySlug.baxter).toBe('Rumänien, Ploiești');
-    expect(bySlug.frida).toBe('Nordrhein-Westfalen');
-    expect(bySlug.nala).toBe('Rumänien, Cluj-Napoca');
-    expect(bySlug.juno).toBe('Baden-Württemberg');
-    expect(bySlug.pelle).toBe('Rumänien, Brașov');
-    expect(bySlug.mika).toBe('Niedersachsen');
+    const byName = Object.fromEntries(rows.map((a) => [a.name, a.place]));
+    expect(byName.Baxter).toBe('Rumänien, Ploiești');
+    expect(byName.Frida).toBe('Nordrhein-Westfalen');
+    expect(byName.Nala).toBe('Rumänien, Cluj-Napoca');
+    expect(byName.Juno).toBe('Baden-Württemberg');
+    expect(byName.Pelle).toBe('Rumänien, Brașov');
+    expect(byName.Mika).toBe('Niedersachsen');
   });
 
   it('leaves one animal untranslated so translations_list_gaps has something to show', async () => {
@@ -53,7 +53,7 @@ describe('animals seed', () => {
     // `noUncheckedIndexedAccess` macht Record-Zugriffe optional — Helfer statt Cast-Wiederholung.
     const locale = (summary: unknown, code: string): string => (summary as Record<string, string | undefined>)[code] ?? '';
     const gap = rows.filter((a) => locale(a.summary, 'de').length > 0 && locale(a.summary, 'en').length === 0);
-    expect(gap.map((a) => a.slug)).toEqual(['frida']);
+    expect(gap.map((a) => a.name)).toEqual(['Frida']);
     expect(rows.filter((a) => locale(a.summary, 'en').length > 0).length).toBeGreaterThanOrEqual(2);
   });
 
@@ -61,7 +61,7 @@ describe('animals seed', () => {
     const deps = createTestDeps({ manifests: [coreModule, animalsModule], env: 'development' });
     await seedDevelopment(deps);
     const pending = deps.db.select().from(animals).all().filter((a) => a.reviewRequestedAt !== null);
-    expect(pending.map((a) => [a.slug, a.isPublished, a.reviewNote]).sort()).toEqual([['mika', true, 'Text und Fotos geändert'], ['pelle', false, 'neu']]);
+    expect(pending.map((a) => [a.name, a.isPublished, a.reviewNote]).sort()).toEqual([['Mika', true, 'Text und Fotos geändert'], ['Pelle', false, 'neu']]);
     for (const a of pending) expect(deps.db.select().from(animalPhotos).where(eq(animalPhotos.animalId, a.id)).all().length).toBeGreaterThanOrEqual(2);
   });
 
@@ -69,7 +69,19 @@ describe('animals seed', () => {
     // Die Testuhr steht still: Ohne eigenen Abstand bekämen beide denselben Zeitpunkt.
     const deps = createTestDeps({ manifests: [coreModule, animalsModule], env: 'development' });
     await seedDevelopment(deps);
-    const at = Object.fromEntries(deps.db.select().from(animals).all().map((a) => [a.slug, a.reviewRequestedAt]));
-    expect(at.pelle! < at.mika!).toBe(true);
+    const at = Object.fromEntries(deps.db.select().from(animals).all().map((a) => [a.name, a.reviewRequestedAt]));
+    expect(at.Pelle! < at.Mika!).toBe(true);
+  });
+
+  it('sets an invented profile address and gives one published dog a long, multi-paragraph text', async () => {
+    const deps = createTestDeps({ manifests: [coreModule, animalsModule], env: 'development' });
+    await seedDevelopment(deps);
+    const { readSetting } = await import('@kompass/core');
+    expect(readSetting<string>(deps, 'animals.profileUrl')).toBe('https://musterverein.example/tiere/{slug}/');
+    const mika = deps.db.select().from(animals).where(eq(animals.name, 'Mika')).get()!;
+    expect(mika.isPublished).toBe(true);
+    const body = (mika.body as Record<string, string>).de!;
+    expect(body.split(/\n\s*\n/).length).toBeGreaterThanOrEqual(8);
+    expect(body.length).toBeGreaterThan(3000);
   });
 });

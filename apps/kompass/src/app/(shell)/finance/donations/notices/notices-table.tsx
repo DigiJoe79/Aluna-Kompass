@@ -4,15 +4,17 @@ import type { NoticeView } from '@kompass/module-finance';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { toast } from 'sonner';
 import { DocumentPicker } from '@/app/(shell)/dms/document-picker';
 import type { PickedDocument } from '@/app/(shell)/dms/search-action';
 import { useDateFormat } from '@/components/date-format-provider';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { FormField } from '@/components/forms/form-field';
+import { FormCell, FormGrid } from '@/components/forms/form-grid';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { noticeActions, noticeStateDisplay } from '@/lib/finance/notices';
@@ -24,9 +26,11 @@ export type NoticeRow = Pick<NoticeView, 'id' | 'kind' | 'taxOffice' | 'taxNumbe
 const TONE = { valid: 'success', endsOn: 'warning', expired: 'neutral', superseded: 'neutral', supersededByFinal: 'neutral', voided: 'neutral', future: 'neutral' } as const;
 
 /**
- * Die Reihe der Bescheide (C3): Art in Alltagssprache · Finanzamt ·
- * Steuernummer · Datum · Befreiung ab · Veranlagungszeitraum · gültig bis (taggenau) ·
- * Dokument · Zustand. Handeln mit `finance.donationsIssue`: aufgehoben oder
+ * Die Reihe der Bescheide (C3), verdichtet auf sechs Spalten (K9-Befund 8),
+ * damit sie auf einer `standard`-Seite nicht waagerecht scrollt: Bescheid (Art
+ * in Alltagssprache, darunter Finanzamt · Steuernummer) · vom · gilt (Befreiung
+ * ab – gültig bis, taggenau; darunter der Veranlagungszeitraum) · Dokument ·
+ * Zustand. Handeln mit `finance.donationsIssue`: aufgehoben oder
  * ersetzt am …, irrtümlich erfasst, Dokument nachreichen.
  */
 export function NoticesTable({ rows, canIssue, canPickDocument }: { rows: NoticeRow[]; canIssue: boolean; canPickDocument: boolean }) {
@@ -42,13 +46,9 @@ export function NoticesTable({ rows, canIssue, canPickDocument }: { rows: Notice
       <Table aria-label={t('tableLabel')}>
         <TableHeader>
           <TableRow>
-            <TableHead>{t('columns.kind')}</TableHead>
-            <TableHead>{t('columns.taxOffice')}</TableHead>
-            <TableHead>{t('columns.taxNumber')}</TableHead>
+            <TableHead>{t('columns.notice')}</TableHead>
             <TableHead>{t('columns.noticeDate')}</TableHead>
-            <TableHead>{t('columns.exemptFrom')}</TableHead>
-            <TableHead>{t('columns.assessmentPeriod')}</TableHead>
-            <TableHead>{t('columns.validUntil')}</TableHead>
+            <TableHead>{t('columns.validity')}</TableHead>
             <TableHead>{t('columns.document')}</TableHead>
             <TableHead>{t('columns.state')}</TableHead>
             {canIssue ? <TableHead className="text-right">{t('columns.actions')}</TableHead> : null}
@@ -60,13 +60,15 @@ export function NoticesTable({ rows, canIssue, canPickDocument }: { rows: Notice
             const actions = noticeActions(row);
             return (
               <TableRow key={row.id} data-testid="notice-row">
-                <TableCell>{tk(row.kind)}</TableCell>
-                <TableCell>{row.taxOffice}</TableCell>
-                <TableCell className="font-mono">{row.taxNumber}</TableCell>
+                <TableCell>
+                  {tk(row.kind)}
+                  <span className="block text-[12px] text-muted-ink">{row.taxOffice} · <span className="font-mono">{row.taxNumber}</span></span>
+                </TableCell>
                 <TableCell className="font-mono tabular-nums">{date(row.noticeDate)}</TableCell>
-                <TableCell data-testid="notice-exempt-from" className="font-mono tabular-nums">{date(row.exemptFrom)}</TableCell>
-                <TableCell>{row.assessmentPeriod ?? '—'}</TableCell>
-                <TableCell className="font-mono tabular-nums">{date(row.validUntil)}</TableCell>
+                <TableCell>
+                  <span className="whitespace-nowrap font-mono tabular-nums"><span data-testid="notice-exempt-from">{date(row.exemptFrom)}</span> – {date(row.validUntil)}</span>
+                  {row.assessmentPeriod ? <span className="block text-[12px] text-muted-ink">{t('assessmentPeriodLine', { period: row.assessmentPeriod })}</span> : null}
+                </TableCell>
                 <TableCell data-testid="notice-document" className="font-mono">{row.documentNumber ?? <span className="font-sans text-muted-ink">{t('noDocument')}</span>}</TableCell>
                 <TableCell>
                   <StatusBadge tone={TONE[state.key]}>
@@ -100,17 +102,13 @@ function SupersedeDialog({ notice, canPickDocument, onClose }: { notice: NoticeR
   const [supersededOn, setSupersededOn] = useState('');
   const [doc, setDoc] = useState<PickedDocument | null>(null);
   const [pending, setPending] = useState(false);
+  const feedback = useActionFeedback();
 
   const submit = async () => {
     setPending(true);
-    const result = await supersedeNoticeAction({ id: notice.id, supersededOn, documentId: doc?.id ?? null });
+    const result = await feedback.run(() => supersedeNoticeAction({ id: notice.id, supersededOn, documentId: doc?.id ?? null }), { retry: () => void submit() });
     setPending(false);
-    if (result.status === 'error') {
-      toast.error(result.message);
-      return;
-    }
     if (result.status === 'success') {
-      if (result.message) toast.success(result.message);
       onClose();
       router.refresh();
     }
@@ -118,18 +116,20 @@ function SupersedeDialog({ notice, canPickDocument, onClose }: { notice: NoticeR
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="bg-surface shadow-md sm:max-w-[520px]">
+      <DialogContent size="md" className="bg-surface shadow-md">
         <DialogTitle className="font-heading text-[19px]">{ts('title')}</DialogTitle>
         <p className="text-[13px] text-ink-2">{ts('hint')}</p>
-        <div className="space-y-1.5">
-          <Label htmlFor="notice-superseded-on" required>{ts('date')}</Label>
-          <Input id="notice-superseded-on" type="date" className="font-mono" value={supersededOn} onChange={(e) => setSupersededOn(e.target.value)} />
-        </div>
-        {canPickDocument ? <DocumentPicker id="notice-superseded-document" name="supersededDocumentId" label={ts('document')} value={doc} onChange={setDoc} /> : null}
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={onClose}>{ts('cancel')}</Button>
-          <Button type="button" disabled={pending || supersededOn === ''} onClick={() => void submit()}>{ts('save')}</Button>
-        </DialogFooter>
+        <FormGrid>
+          <FormField id="notice-superseded-on" label={ts('date')} required size="s">
+            <Input id="notice-superseded-on" type="date" className="font-mono" value={supersededOn} onChange={(e) => setSupersededOn(e.target.value)} />
+          </FormField>
+          {canPickDocument ? (
+            <FormCell size="m">
+              <DocumentPicker id="notice-superseded-document" name="supersededDocumentId" label={ts('document')} value={doc} onChange={setDoc} />
+            </FormCell>
+          ) : null}
+        </FormGrid>
+        <FormActionBar placement="dialog" cancel={onClose} pending={pending} saveDisabled={supersededOn === ''} saveLabel={ts('save')} onSave={() => void submit()} state={feedback.state} />
       </DialogContent>
     </Dialog>
   );
@@ -140,17 +140,13 @@ function VoidNoticeDialog({ notice, onClose }: { notice: NoticeRow; onClose: () 
   const router = useRouter();
   const [note, setNote] = useState('');
   const [pending, setPending] = useState(false);
+  const feedback = useActionFeedback();
 
   const submit = async () => {
     setPending(true);
-    const result = await voidNoticeAction({ id: notice.id, note });
+    const result = await feedback.run(() => voidNoticeAction({ id: notice.id, note }), { retry: () => void submit() });
     setPending(false);
-    if (result.status === 'error') {
-      toast.error(result.message);
-      return;
-    }
     if (result.status === 'success') {
-      if (result.message) toast.success(result.message);
       onClose();
       router.refresh();
     }
@@ -158,17 +154,15 @@ function VoidNoticeDialog({ notice, onClose }: { notice: NoticeRow; onClose: () 
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="bg-surface shadow-md sm:max-w-[520px]">
+      <DialogContent size="md" className="bg-surface shadow-md">
         <DialogTitle className="font-heading text-[19px]">{tv('title')}</DialogTitle>
         <p className="text-[13px] text-ink-2">{tv('hint')}</p>
-        <div className="space-y-1.5">
-          <Label htmlFor="notice-void-note" required>{tv('reason')}</Label>
-          <Textarea id="notice-void-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={onClose}>{tv('cancel')}</Button>
-          <Button type="button" variant="destructive" disabled={pending || note.trim() === ''} onClick={() => void submit()}>{tv('submit')}</Button>
-        </DialogFooter>
+        <FormGrid>
+          <FormField id="notice-void-note" label={tv('reason')} required size="l">
+            <Textarea id="notice-void-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+          </FormField>
+        </FormGrid>
+        <FormActionBar placement="dialog" cancel={onClose} destructive pending={pending} saveDisabled={note.trim() === ''} saveLabel={tv('submit')} onSave={() => void submit()} state={feedback.state} />
       </DialogContent>
     </Dialog>
   );

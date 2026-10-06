@@ -40,11 +40,28 @@ function DialogOverlay({
   )
 }
 
+type DialogSize = "sm" | "md" | "lg" | "xl"
+
+const DIALOG_SIZE: Record<DialogSize, string> = {
+  sm: "sm:max-w-dialog-sm",
+  md: "sm:max-w-dialog-md",
+  lg: "sm:max-w-dialog-lg",
+  xl: "sm:max-w-dialog-xl",
+}
+
+// Vorbilder: `site/publish/confirm-dialog.tsx` (Blatt) und `site/publish/log-dialog.tsx` (Vollbild).
+const DIALOG_MOBILE = {
+  sheet: "max-sm:top-auto max-sm:bottom-0 max-sm:max-w-full max-sm:translate-y-0 max-sm:rounded-b-none",
+  full: "max-sm:h-full max-sm:max-h-full max-sm:max-w-full max-sm:rounded-none",
+} as const
+
 function DialogContent({
   className,
   children,
   showCloseButton = true,
   layout = "default",
+  size,
+  mobile,
   onEscapeKeyDown,
   onPointerDownOutside,
   ...props
@@ -56,6 +73,15 @@ function DialogContent({
    * (`DialogBody`) scrollt — die Hauptaktion bleibt bei jeder Länge sichtbar.
    */
   layout?: "default" | "fixed-footer"
+  /**
+   * Breite und Polster (docs/MUSTER.md § I, Handoff Konsistenz § 8a.4): `sm` 440 (bestätigen, ein bis zwei
+   * Felder), `md` 560 (Formular in einer Spalte, innen ~512 px), `lg` 760 (zwei Spalten, Auswahl mit Liste),
+   * `xl` 1040 (mit Vorschau). Keine eigene Breite und kein eigenes `--dialog-pad` an der Aufrufstelle.
+   * Pflicht und ohne Standard (Handoff § 8c): So wird kein Dialog ungefragt breiter oder schmaler.
+   */
+  size: DialogSize
+  /** Telefon (< 640): `sm`/`md` kommen als Blatt von unten, `lg`/`xl` als Vollbild; `mobile` übersteuert das. */
+  mobile?: "sheet" | "full"
   onEscapeKeyDown?: (e: React.KeyboardEvent | Event) => void
   onPointerDownOutside?: (e: Event) => void
 }) {
@@ -67,8 +93,11 @@ function DialogContent({
         data-slot="dialog-content"
         data-layout={layout}
         className={cn(
-          "group/dialog fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
-          layout === "fixed-footer" && "flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0",
+          "group/dialog fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-surface text-sm text-ink ring-1 ring-line duration-100 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          DIALOG_SIZE[size],
+          "p-5 [--dialog-pad:1.25rem]",
+          DIALOG_MOBILE[mobile ?? (size === "sm" || size === "md" ? "sheet" : "full")],
+          layout === "fixed-footer" && "flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 [--dialog-pad:0px]",
           className
         )}
         onKeyDown={(e) => {
@@ -135,7 +164,7 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end group-data-[layout=fixed-footer]/dialog:m-0 group-data-[layout=fixed-footer]/dialog:flex-none group-data-[layout=fixed-footer]/dialog:px-5 group-data-[layout=fixed-footer]/dialog:py-3",
+        "-mx-5 -mb-5 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-surface-2 px-5 py-4 sm:flex-row sm:justify-end group-data-[layout=fixed-footer]/dialog:m-0 group-data-[layout=fixed-footer]/dialog:flex-none group-data-[layout=fixed-footer]/dialog:px-5 group-data-[layout=fixed-footer]/dialog:py-3",
         className
       )}
       {...props}
@@ -171,7 +200,7 @@ function DialogDescription({
     <DialogPrimitive.Description
       data-slot="dialog-description"
       className={cn(
-        "text-sm text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground",
+        "text-sm text-muted-ink *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-ink",
         className
       )}
       {...props}

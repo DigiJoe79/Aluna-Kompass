@@ -3,16 +3,15 @@
 import type { PublishSource } from '@kompass/module-site';
 import { Bot } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/status-badge';
 
 /** Die Marke „MCP“ der Laufkarte, der Historie und des Protokolls — überall dieselbe. */
 export function McpBadge() {
   const t = useTranslations('site.publish');
   return (
-    <Badge className="bg-agent-bg text-agent">
-      <Bot aria-hidden />
+    <StatusBadge tone="agent" icon={Bot}>
       {t('flow.run.agentBadge')}
-    </Badge>
+    </StatusBadge>
   );
 }
 

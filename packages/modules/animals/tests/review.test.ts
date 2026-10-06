@@ -19,7 +19,7 @@ const deps = async () => {
 const manage = ctxWith(['animals.manage', 'animals.view', 'media.upload']);
 const mcp = { ...manage, channel: 'mcp' as const };
 const system = { ...manage, channel: 'system' as const };
-const chiara = { slug: 'chiara', name: 'Chiara', sex: 'female' as const, birthText: { de: '16.02.2021', en: '16 Feb 2021' }, sizeCm: 45, sizeText: { de: '45–50 cm', en: '45–50 cm' }, location: 'shelter' as const, isEmergency: false, isSponsorable: true, traits: { de: ['ruhig', 'verträglich'], en: ['calm', 'sociable'] }, externalProfileUrl: 'https://example.org/profile/chiara', summary: { de: 'Sanfte Hündin.', en: '' }, body: { de: 'Text', en: '' } };
+const chiara = { name: 'Chiara', sex: 'female' as const, birthText: { de: '16.02.2021', en: '16 Feb 2021' }, sizeCm: 45, sizeText: { de: '45–50 cm', en: '45–50 cm' }, location: 'shelter' as const, isEmergency: false, isSponsorable: true, traits: { de: ['ruhig', 'verträglich'], en: ['calm', 'sociable'] }, externalProfileUrl: 'https://example.org/profile/chiara', summary: { de: 'Sanfte Hündin.', en: '' }, body: { de: 'Text', en: '' } };
 const story = { beforeAssetId: null, afterAssetId: null, quote: { de: 'Zitat', en: '' }, family: 'Familie M.', adoptedYear: 2026 };
 
 describe('animal review marker', () => {
@@ -37,8 +37,8 @@ describe('animal review marker', () => {
     const d = await deps();
     const viaMcp = unwrap(await createAnimal(d, mcp, chiara));
     expect(viaMcp.reviewRequestedAt).toBe(viaMcp.createdAt);
-    expect(unwrap(await createAnimal(d, manage, { ...chiara, slug: 'ui' })).reviewRequestedAt).toBeNull();
-    expect(unwrap(await createAnimal(d, system, { ...chiara, slug: 'sys' })).reviewRequestedAt).toBeNull();
+    expect(unwrap(await createAnimal(d, manage, { ...chiara })).reviewRequestedAt).toBeNull();
+    expect(unwrap(await createAnimal(d, system, { ...chiara })).reviewRequestedAt).toBeNull();
   });
 
   it('updateAnimal, setAnimalPhotos and setAnimalStory mark through mcp and leave it alone through ui', async () => {
@@ -50,7 +50,7 @@ describe('animal review marker', () => {
       (ctx: typeof manage, id: string) => setAnimalStory(d, ctx, { id, ...story }),
     ];
     for (const [i, write] of writes.entries()) {
-      const a = unwrap(await createAnimal(d, manage, { ...chiara, slug: `a${i}` }));
+      const a = unwrap(await createAnimal(d, manage, { ...chiara }));
       unwrap(await setAnimalStatus(d, manage, { id: a.id, status: 'adopted', adoptedYear: 2026 }));
       expect(unwrap(await write(manage, a.id)).reviewRequestedAt).toBeNull();
       d.clock.advance(60_000);
@@ -138,7 +138,7 @@ describe('animal review marker', () => {
     unwrap(await animalsSetTranslations(d, mcp, { entityType: 'animal', id: a.id, items: [{ field: 'summary', locale: 'en', text: 'Gentle.' }] })!);
     expect(unwrap(await getAnimal(d, manage, a.id)).reviewRequestedAt).not.toBeNull();
     unwrap(await setAnimalStatus(d, manage, { id: a.id, status: 'adopted', adoptedYear: 2026 }));
-    const b = unwrap(await createAnimal(d, manage, { ...chiara, slug: 'b' }));
+    const b = unwrap(await createAnimal(d, manage, { ...chiara }));
     unwrap(await setAnimalStatus(d, manage, { id: b.id, status: 'adopted', adoptedYear: 2026 }));
     unwrap(await animalsSetTranslations(d, mcp, { entityType: 'animal', id: b.id, items: [{ field: 'story.quote', locale: 'en', text: 'Home.' }] })!);
     expect(unwrap(await getAnimal(d, manage, b.id)).reviewRequestedAt).not.toBeNull();
@@ -158,7 +158,7 @@ describe('requestAnimalReview', () => {
   it('sets marker and note through ui and through mcp, and audits', async () => {
     const d = await deps();
     for (const [i, ctx] of [manage, mcp].entries()) {
-      const a = unwrap(await createAnimal(d, manage, { ...chiara, slug: `r${i}` }));
+      const a = unwrap(await createAnimal(d, manage, { ...chiara }));
       d.clock.advance(60_000);
       const marked = unwrap(await requestAnimalReview(d, ctx, { id: a.id, note: '  neu  ' }));
       expect(marked).toMatchObject({ reviewRequestedAt: d.clock.now().toISOString(), reviewNote: 'neu', updatedAt: d.clock.now().toISOString() });
@@ -190,8 +190,8 @@ describe('requestAnimalReview', () => {
 });
 
 describe('confirmAnimalReview', () => {
-  const pending = async (d: Awaited<ReturnType<typeof deps>>, slug = 'chiara') => {
-    const a = unwrap(await createAnimal(d, manage, { ...chiara, slug }));
+  const pending = async (d: Awaited<ReturnType<typeof deps>>) => {
+    const a = unwrap(await createAnimal(d, manage, { ...chiara }));
     d.clock.advance(60_000);
     return unwrap(await requestAnimalReview(d, mcp, { id: a.id, note: 'neu' }));
   };
@@ -263,7 +263,7 @@ describe('publishedAnimals.pendingReview', () => {
     const d = await deps();
     const live = unwrap(await createAnimal(d, manage, chiara));
     unwrap(await setAnimalPublished(d, manage, { id: live.id, isPublished: true }));
-    const draft = unwrap(await createAnimal(d, manage, { ...chiara, slug: 'pelle', name: 'Pelle' }));
+    const draft = unwrap(await createAnimal(d, manage, { ...chiara, name: 'Pelle' }));
     expect(publishedAnimals.pendingReview!(d)).toEqual([]);
     const marked = unwrap(await requestAnimalReview(d, mcp, { id: live.id, note: 'Text geändert' }));
     // Ein unveröffentlichter Hund geht nicht live: Er gehört in die Arbeitsliste, nicht in die Warnung.

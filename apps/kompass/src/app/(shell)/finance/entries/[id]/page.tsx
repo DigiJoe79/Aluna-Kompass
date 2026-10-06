@@ -11,6 +11,7 @@ import { ConfirmationSection, type ConfirmationSectionLine } from '@/components/
 import { EntryStateBadge } from '@/components/finance/entry-state-badge';
 import { LockLine } from '@/components/finance/lock-line';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { formatEuro } from '@/lib/finance/amount';
 import { taxTextKey } from '@/lib/finance/tax-text';
@@ -26,7 +27,7 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
 
   const entryRes = await getEntry(deps, ctx, { id });
   if (!entryRes.ok) {
-    if (entryRes.error.type === 'forbidden') return <ForbiddenCard permission="finance.read" />;
+    if (entryRes.error.type === 'forbidden') return <Page width="standard"><ForbiddenCard permission="finance.read" /></Page>;
     notFound();
   }
   const entry = entryRes.value;
@@ -109,128 +110,129 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
   }));
 
   return (
-    <div className="space-y-4">
-      <PageHeader back={{ href: '/finance/entries', label: t('back') }} />
-      <section className="space-y-2 rounded-md border border-line bg-surface p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <span data-testid="entry-number" className="font-mono text-[26px] font-semibold">{entry.number}</span>
-          <EntryStateBadge entry={entry} />
-        </div>
-        <p className="text-[15px] text-ink">{entry.text}</p>
-        {finalizedEvent && finalizedEvent.kind === 'finalized' ? (
-          <LockLine at={finalizedEvent.at} userName={finalizedEvent.userName} channel={finalizedEvent.channel} />
-        ) : null}
-        {entry.purposeNegativeReason ? (
-          <p data-testid="entry-purpose-negative-reason" className="text-[13px] text-ink-2">
-            {t('purposeNegativeReason', { reason: entry.purposeNegativeReason })}
-          </p>
-        ) : null}
-        {entry.boardAllowanceReason ? (
-          <p data-testid="entry-board-allowance-reason" className="text-[13px] text-ink-2">
-            {t('boardAllowanceReason', { reason: entry.boardAllowanceReason })}
-          </p>
-        ) : null}
-        {reversed && entry.reversedByEntryId ? (
-          <p className="text-[13px] text-ink-2">
-            {t('reversedBy')} <Link className="underline" href={`/finance/entries/${entry.reversedByEntryId}`}>{t('open')}</Link>
-          </p>
-        ) : null}
-        {entry.reversesEntryId ? (
-          <p className="text-[13px] text-ink-2">
-            {t('reverses')} <Link className="underline" href={`/finance/entries/${entry.reversesEntryId}`}>{t('open')}</Link>
-          </p>
-        ) : null}
-        {!reversed && canCorrect ? (
-          <CorrectDialog
-            entry={entry}
-            purposes={purposes}
-            projects={projects}
-            contactNames={contactNames}
-            categoryNames={categoryNames}
-            confirmations={Object.fromEntries(confirmationByLine)}
-            canVoidConfirmation={hasPermission(ctx, 'finance.donationsIssue')}
-          />
-        ) : null}
-      </section>
+    <Page width="standard" header={<PageHeader back={{ href: '/finance/entries', label: t('back') }} />}>
+      <div className="space-y-4">
+        <section className="space-y-2 rounded-md border border-line bg-surface p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <span data-testid="entry-number" className="font-mono text-[26px] font-semibold">{entry.number}</span>
+            <EntryStateBadge entry={entry} />
+          </div>
+          <p className="text-[15px] text-ink">{entry.text}</p>
+          {finalizedEvent && finalizedEvent.kind === 'finalized' ? (
+            <LockLine at={finalizedEvent.at} userName={finalizedEvent.userName} channel={finalizedEvent.channel} />
+          ) : null}
+          {entry.purposeNegativeReason ? (
+            <p data-testid="entry-purpose-negative-reason" className="text-[13px] text-ink-2">
+              {t('purposeNegativeReason', { reason: entry.purposeNegativeReason })}
+            </p>
+          ) : null}
+          {entry.boardAllowanceReason ? (
+            <p data-testid="entry-board-allowance-reason" className="text-[13px] text-ink-2">
+              {t('boardAllowanceReason', { reason: entry.boardAllowanceReason })}
+            </p>
+          ) : null}
+          {reversed && entry.reversedByEntryId ? (
+            <p className="text-[13px] text-ink-2">
+              {t('reversedBy')} <Link className="underline" href={`/finance/entries/${entry.reversedByEntryId}`}>{t('open')}</Link>
+            </p>
+          ) : null}
+          {entry.reversesEntryId ? (
+            <p className="text-[13px] text-ink-2">
+              {t('reverses')} <Link className="underline" href={`/finance/entries/${entry.reversesEntryId}`}>{t('open')}</Link>
+            </p>
+          ) : null}
+          {!reversed && canCorrect ? (
+            <CorrectDialog
+              entry={entry}
+              purposes={purposes}
+              projects={projects}
+              contactNames={contactNames}
+              categoryNames={categoryNames}
+              confirmations={Object.fromEntries(confirmationByLine)}
+              canVoidConfirmation={hasPermission(ctx, 'finance.donationsIssue')}
+            />
+          ) : null}
+        </section>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
-        <div className="space-y-4">
-          <section className="space-y-2 rounded-md border border-line bg-surface p-4">
-            <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('account')}</h3>
-            <table className="w-full text-[13px]">
-              <tbody>
-                {entry.moneyLines.map((line) => (
-                  <tr key={line.id} className="border-b border-line-2 last:border-0">
-                    <td className="py-1.5 text-ink-2">{accountNames.get(line.accountId) ?? line.accountId}</td>
-                    <td className="py-1.5">
-                      <AmountCell cents={line.amountCents} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-
-          <section className="space-y-2 rounded-md border border-line bg-surface p-4">
-            <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('allocation')}</h3>
-            <table data-testid="finance-allocation-table" className="w-full text-[13px]">
-              <tbody>
-                {entry.allocationLines.map((line) => (
-                  <tr key={line.id} className="border-b border-line-2 last:border-0">
-                    <td className="py-1.5 text-ink-2">{categoryNames.get(line.categoryId) ?? line.categoryId}</td>
-                    <td className="py-1.5 text-ink-2">{line.contactId ? (contactNames.get(line.contactId) ?? '') : '—'}</td>
-                    <td className="py-1.5 text-ink-2">{line.purposeId ? (purposeNames.get(line.purposeId) ?? '') : '—'}</td>
-                    <td className="py-1.5">
-                      <AmountCell cents={line.amountCents} />
-                      {line.amountCents !== 0 && taxTextKey(line.tax) ? (
-                        <p className="text-right text-[12px] text-muted-ink">
-                          {tTax(taxTextKey(line.tax)!.key, { amount: formatEuro(taxTextKey(line.tax)!.cents) })}
-                        </p>
-                      ) : null}
-                    </td>
-                    <td className="py-1.5 text-right text-[12px]">
-                      {line.corrected ? <span className="text-info">{t('corrected')}</span> : null}
-                      {line.pendingCorrectionId ? <span className="text-warning">{t('pendingCorrection')}</span> : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-
-          {settlements.length > 0 ? (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
+          <div className="space-y-4">
             <section className="space-y-2 rounded-md border border-line bg-surface p-4">
-              <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('related.title')}</h3>
-              <ul className="space-y-1.5 text-[13px]">
-                {settlements.map(({ settlement, item }) => (
-                  <li key={settlement.id} className="flex items-center justify-between gap-2 border-b border-line-2 py-1 last:border-0">
-                    {item ? (
-                      <Link href={`/finance/open-items?tab=${item.kind}&item=${item.id}`} className="text-link underline">
-                        {item.paymentReference ?? t('related.unnamedItem')}
-                      </Link>
-                    ) : (
-                      <span className="text-ink-2">{t('related.unnamedItem')}</span>
-                    )}
-                    <span className="font-mono tabular-nums text-ink-2">
-                      {t('related.settlement', { amount: formatEuro(settlement.amountCents), rest: formatEuro(item?.openCents ?? 0) })}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('account')}</h3>
+              <table className="w-full text-[13px]">
+                <tbody>
+                  {entry.moneyLines.map((line) => (
+                    <tr key={line.id} className="border-b border-line-2 last:border-0">
+                      <td className="py-1.5 text-ink-2">{accountNames.get(line.accountId) ?? line.accountId}</td>
+                      <td className="py-1.5">
+                        <AmountCell cents={line.amountCents} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </section>
-          ) : null}
 
-          {entry.status === 'final' && !entry.reversesEntryId ? (
-            <ConfirmationSection lines={confirmationLines} canIssue={!reversed && hasPermission(ctx, 'finance.donationsIssue')} canDescribe={hasPermission(ctx, 'finance.entriesWrite')} today={today} />
-          ) : null}
+            <section className="space-y-2 rounded-md border border-line bg-surface p-4">
+              <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('allocation')}</h3>
+              <table data-testid="finance-allocation-table" className="w-full text-[13px]">
+                <tbody>
+                  {entry.allocationLines.map((line) => (
+                    <tr key={line.id} className="border-b border-line-2 last:border-0">
+                      <td className="py-1.5 text-ink-2">{categoryNames.get(line.categoryId) ?? line.categoryId}</td>
+                      <td className="py-1.5 text-ink-2">{line.contactId ? (contactNames.get(line.contactId) ?? '') : '—'}</td>
+                      <td className="py-1.5 text-ink-2">{line.purposeId ? (purposeNames.get(line.purposeId) ?? '') : '—'}</td>
+                      <td className="py-1.5">
+                        <AmountCell cents={line.amountCents} />
+                        {line.amountCents !== 0 && taxTextKey(line.tax) ? (
+                          <p className="text-right text-[12px] text-muted-ink">
+                            {tTax(taxTextKey(line.tax)!.key, { amount: formatEuro(taxTextKey(line.tax)!.cents) })}
+                          </p>
+                        ) : null}
+                      </td>
+                      <td className="py-1.5 text-right text-[12px]">
+                        {line.corrected ? <span className="text-info">{t('corrected')}</span> : null}
+                        {line.pendingCorrectionId ? <span className="text-warning">{t('pendingCorrection')}</span> : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
 
-          {paysPerson ? <NotReturnCard entryId={id} mark={entry.notReturn} canMark={hasPermission(ctx, 'finance.entriesFinalize')} /> : null}
+            {settlements.length > 0 ? (
+              <section className="space-y-2 rounded-md border border-line bg-surface p-4">
+                <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('related.title')}</h3>
+                <ul className="space-y-1.5 text-[13px]">
+                  {settlements.map(({ settlement, item }) => (
+                    <li key={settlement.id} className="flex items-center justify-between gap-2 border-b border-line-2 py-1 last:border-0">
+                      {item ? (
+                        <Link href={`/finance/open-items?tab=${item.kind}&item=${item.id}`} className="text-link underline">
+                          {item.paymentReference ?? t('related.unnamedItem')}
+                        </Link>
+                      ) : (
+                        <span className="text-ink-2">{t('related.unnamedItem')}</span>
+                      )}
+                      <span className="font-mono tabular-nums text-ink-2">
+                        {t('related.settlement', { amount: formatEuro(settlement.amountCents), rest: formatEuro(item?.openCents ?? 0) })}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
 
-          <EntryHistory events={events} />
+            {entry.status === 'final' && !entry.reversesEntryId ? (
+              <ConfirmationSection lines={confirmationLines} canIssue={!reversed && hasPermission(ctx, 'finance.donationsIssue')} canDescribe={hasPermission(ctx, 'finance.entriesWrite')} today={today} />
+            ) : null}
+
+            {paysPerson ? <NotReturnCard entryId={id} mark={entry.notReturn} canMark={hasPermission(ctx, 'finance.entriesFinalize')} /> : null}
+
+            <EntryHistory events={events} />
+          </div>
+
+          <EntryVouchers today={today} entryId={id} vouchers={vouchers} closedYear={closedYear} documentationState={entry.documentation.state} origin={entry.documentation.origin} />
         </div>
-
-        <EntryVouchers today={today} entryId={id} vouchers={vouchers} closedYear={closedYear} documentationState={entry.documentation.state} origin={entry.documentation.origin} />
       </div>
-    </div>
+    </Page>
   );
 }

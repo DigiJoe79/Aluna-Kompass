@@ -4,10 +4,9 @@ import type { ApprovalView, ExpenseCategorySuggestion, WaiverCheck } from '@komp
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
-import { ApprovalDetailFrame } from '@/components/finance/approval-detail-frame';
+import { ApprovalDetailFrame, type ApprovalFooter } from '@/components/finance/approval-detail-frame';
 import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { useDateFormat } from '@/components/date-format-provider';
 import { formatEuro } from '@/lib/finance/amount';
@@ -16,6 +15,8 @@ import { cn } from '@/lib/utils';
 import { approveExpenseClaimAction, attachSignedWaiverAction, createWaiverDeclarationAction, waiverChecksAction } from '../expenses/actions';
 import { RejectDialog } from './reject-dialog';
 import { WaiverChecks, type WaiverState } from './waiver-checks';
+import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
 
 /** Ob in dieser Sitzung schon ein Antrag rechts stand — erst ab dem zweiten wandert der Fokus auf den Kopf. */
 let shownBefore = false;
@@ -160,9 +161,8 @@ export function ApprovalDetail({
                 <span className="shrink-0 font-mono text-[15px] font-semibold tabular-nums">{formatEuro(p.amountCents)}</span>
               </div>
 
-              <div className={`grid gap-3 ${purposes.length > 0 ? 'sm:grid-cols-2' : ''}`}>
-                <div className="space-y-1">
-                  <Label htmlFor={id('category')}>{t('category')}</Label>
+              <FormGrid>
+                <FormField id={id('category')} label={t('category')}>
                   <Select id={id('category')} value={decision.categoryId} onChange={(e) => decide(p.id, { categoryId: e.target.value })}>
                     <option value="">{t('categoryPlaceholder')}</option>
                     {categories.map((c) => (
@@ -177,10 +177,9 @@ export function ApprovalDetail({
                       {category.explanation ? ` · ${category.explanation}` : ''}
                     </p>
                   ) : null}
-                </div>
+                </FormField>
                 {purposes.length > 0 ? (
-                  <div className="space-y-1">
-                    <Label htmlFor={id('purpose')}>{t('paidFrom')}</Label>
+                  <FormField id={id('purpose')} label={t('paidFrom')}>
                     <Select id={id('purpose')} value={decision.purposeId} onChange={(e) => decide(p.id, { purposeId: e.target.value })}>
                       <option value="">{t('freeFunds')}</option>
                       {purposes.map((purpose) => (
@@ -189,9 +188,9 @@ export function ApprovalDetail({
                         </option>
                       ))}
                     </Select>
-                  </div>
+                  </FormField>
                 ) : null}
-              </div>
+              </FormGrid>
 
               {suggestion && suggestion.categoryId !== decision.categoryId ? (
                 <p data-testid="category-suggestion" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-muted-ink">
@@ -231,32 +230,28 @@ export function ApprovalDetail({
     </figure>
   ) : null;
 
-  const footer = (
-    <>
-      {purposeDetail ? (
-        <div data-testid="purpose-reason">
-          <Notice level="warn" reason={{ name: 'purpose-reason', value: purposeReason, onChange: setPurposeReason, label: t('purposeReason.label') }}>
-            {purposeDetail}
-          </Notice>
-        </div>
-      ) : null}
-      {refusal ? (
-        <Notice level="refuse" title={t('footer.refused')} reasons={refusal.reasons}>
-          {refusal.message}
+  const footer: ApprovalFooter = {
+    above: purposeDetail ? (
+      <div data-testid="purpose-reason">
+        <Notice level="warn" reason={{ name: 'purpose-reason', value: purposeReason, onChange: setPurposeReason, label: t('purposeReason.label') }}>
+          {purposeDetail}
         </Notice>
-      ) : null}
-      <p className="text-[13px] text-ink-2">{claim.waiver ? t('footer.waiver', { name: claim.contactName, amount }) : t('footer.payable', { name: claim.contactName, amount })}</p>
-      <p className="text-[12px] text-muted-ink">{t('footer.humanOnly')}</p>
-      <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
-        <Button type="button" variant="outline" className="max-lg:h-12" disabled={busy} onClick={() => setRejecting(true)}>
-          {t('footer.reject')}
-        </Button>
-        <Button type="button" className="max-lg:h-12" disabled={busy} onClick={() => void approve()}>
-          {t('footer.approve')}
-        </Button>
       </div>
-    </>
-  );
+    ) : undefined,
+    state: refusal ? { status: 'error', message: refusal.message, reasons: refusal.reasons, title: t('footer.refused'), fieldErrors: {} } : undefined,
+    note: (
+      <>
+        <p>{claim.waiver ? t('footer.waiver', { name: claim.contactName, amount }) : t('footer.payable', { name: claim.contactName, amount })}</p>
+        <p className="text-[12px] text-muted-ink">{t('footer.humanOnly')}</p>
+      </>
+    ),
+    reject: (
+      <Button type="button" variant="outline" disabled={busy} onClick={() => setRejecting(true)}>
+        {t('footer.reject')}
+      </Button>
+    ),
+    approve: { label: t('footer.approve'), pending: busy, onClick: () => void approve() },
+  };
 
   return (
     <>

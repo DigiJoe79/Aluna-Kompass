@@ -16,7 +16,7 @@ describe('media delete across modules', () => {
 
     const ctx = ctxWith(['media.upload', 'animals.manage'], userId);
     const photo = unwrap(await storeMediaAsset(deps, ctx, { originalName: 'r.png', bytes: PNG }));
-    const animal = unwrap(await createAnimal(deps, ctx, { slug: 'rex', name: 'Rex', sex: 'male', birthText: {}, sizeText: {}, summary: {}, body: {} }));
+    const animal = unwrap(await createAnimal(deps, ctx, { name: 'Rex', sex: 'male', birthText: {}, sizeText: {}, summary: {}, body: {} }));
     unwrap(await setAnimalPhotos(deps, ctx, { id: animal.id, photos: [{ assetId: photo.id, isPrimary: true }] }));
 
     const res = await deleteMediaAsset(deps, ctx, { id: photo.id });

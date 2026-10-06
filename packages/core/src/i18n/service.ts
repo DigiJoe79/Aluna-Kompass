@@ -5,7 +5,8 @@ import type { CallContext } from '../context';
 import { settings } from '../db/schema';
 import type { Deps } from '../deps';
 import { requirePermission } from '../permissions/check';
-import { conflict, invalid, ok, type Result } from '../result';
+import { enabledManifests } from '../modules/service';
+import { conflict, invalid, localizedConflict, ok, type Failure, type Result } from '../result';
 import { validate } from '../validate';
 import { LOCALE_CODE, readLocales } from './locales';
 import { countLocale, stripLocale } from './values';
@@ -154,6 +155,12 @@ function scanLocale(
   return { tables, filled: tables.reduce((sum, t) => sum + t.filled, 0) };
 }
 
+/** Das erste eingeschaltete Modul, das die Sprache braucht — als Ablehnung, sonst `null`. */
+function requiredByModule(deps: Deps, code: string): Failure | null {
+  const holder = enabledManifests(deps).find((m) => m.requiredLocales?.(deps).includes(code));
+  return holder ? localizedConflict('localeRequired', 'errors.localeRequired', { module: holder.key, locale: code }) : null;
+}
+
 export async function previewLocaleRemoval(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<LocaleRemovalPreview>> {
   const denied = requirePermission(ctx, 'settings.manage');
   if (denied) return denied;
@@ -161,6 +168,8 @@ export async function previewLocaleRemoval(deps: Deps, ctx: CallContext, input: 
   if (!parsed.ok) return parsed;
   const { code } = parsed.value;
   if (!readLocales(deps).includes(code)) return conflict('unknownLocale', `${code} ist nicht eingerichtet`);
+  const required = requiredByModule(deps, code);
+  if (required) return required;
   return ok({ code, ...scanLocale(deps, code, { write: false }) });
 }
 
@@ -173,6 +182,8 @@ export async function removeLocale(deps: Deps, ctx: CallContext, input: unknown)
   const current = readLocales(deps);
   if (!current.includes(code)) return conflict('unknownLocale', `${code} ist nicht eingerichtet`);
   if (current.length === 1) return conflict('lastLocale', 'Die letzte Sprache kann nicht entfernt werden');
+  const required = requiredByModule(deps, code);
+  if (required) return required;
   if (!confirm) return invalid([{ path: 'confirm', message: 'confirmationRequired' }]);
   const { filled } = scanLocale(deps, code, { write: false });
   const next = current.filter((c) => c !== code);

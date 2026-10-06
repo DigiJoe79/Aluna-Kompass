@@ -1,10 +1,12 @@
-import { schema as core, unwrap, type CallContext, type Deps, type LocalizedText } from '@kompass/core';
+import { schema as core, unwrap, writeSettingInternal, type CallContext, type Deps, type LocalizedText } from '@kompass/core';
 import { animals } from './schema';
+import { PROFILE_URL_KEY } from './settings';
 import { createAnimal, requestAnimalReview, setAnimalPhotos, setAnimalPublished, setAnimalStatus, setAnimalStory } from './service';
 
 interface ExampleStory { quote: LocalizedText; family: string; beforeCaption: LocalizedText; afterCaption: LocalizedText }
 interface ExampleAnimal {
-  slug: string;
+  /** Nur zur Orientierung im Code; den Slug bildet Kompass. */
+  key: string;
   name: string;
   sex: 'female' | 'male';
   birthText: LocalizedText;
@@ -40,7 +42,7 @@ interface ExampleAnimal {
  */
 const EXAMPLE_ANIMALS: ExampleAnimal[] = [
   {
-    slug: 'baxter',
+    key: 'baxter',
     name: 'Baxter',
     sex: 'male' as const,
     birthText: { de: 'März 2020', en: 'March 2020' },
@@ -57,7 +59,7 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
     published: true,
   },
   {
-    slug: 'frida',
+    key: 'frida',
     name: 'Frida',
     sex: 'female' as const,
     birthText: { de: '2019', en: '2019' },
@@ -75,7 +77,7 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
     published: false,
   },
   {
-    slug: 'nala',
+    key: 'nala',
     name: 'Nala',
     sex: 'female' as const,
     birthText: { de: '2018', en: '2018' },
@@ -99,7 +101,7 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
     },
   },
   {
-    slug: 'juno',
+    key: 'juno',
     name: 'Juno',
     sex: 'female' as const,
     birthText: { de: '2020', en: '2020' },
@@ -123,7 +125,7 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
     },
   },
   {
-    slug: 'pelle',
+    key: 'pelle',
     name: 'Pelle',
     sex: 'male' as const,
     birthText: { de: 'Mai 2023', en: 'May 2023' },
@@ -142,7 +144,7 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
     reviewHoursAgo: 26,
   },
   {
-    slug: 'mika',
+    key: 'mika',
     name: 'Mika',
     sex: 'female' as const,
     birthText: { de: '2021', en: '2021' },
@@ -154,7 +156,8 @@ const EXAMPLE_ANIMALS: ExampleAnimal[] = [
     isSponsorable: false,
     traits: { de: ['anhänglich', 'stubenrein'], en: ['affectionate', 'house-trained'] },
     summary: { de: 'Lebt inzwischen auf einer Pflegestelle.', en: 'Now lives in a foster home.' },
-    body: { de: 'Mika ist veröffentlicht; ihr Profil wurde geändert und wartet auf eine Prüfung.', en: 'Mika is published; her profile was changed and waits for a review.' },
+    // Lang genug, dass der PDF-Export ihn kleiner setzt und kürzt (Spec 2026-10-05, § 11).
+    body: { de: 'Mika kam im Frühjahr zu uns auf die Pflegestelle, ein wenig mager und sehr vorsichtig. In den ersten Tagen beobachtete sie alles aus sicherer Entfernung, am liebsten vom Flur aus, wo sie Küche und Wohnzimmer zugleich im Blick hatte. Nach einer Woche legte sie sich zum ersten Mal neben das Sofa, nach zwei Wochen darauf. Heute begrüßt sie jeden, der nach Hause kommt, mit einem leisen Brummen und wedelndem Hinterteil, als hätte sie nie anders gelebt.\n\nSpaziergänge liebt Mika über alles. Sie läuft gut an der lockeren Leine, bleibt aber gern stehen, um Gräser und Zaunpfähle ausführlich zu untersuchen. Auf Feldwegen ist sie aufmerksam und ruhig, an belebten Straßen braucht sie noch ein wenig Zuspruch, wenn ein Lastwagen vorbeifährt. Eine Stunde am Stück schafft sie problemlos, danach schläft sie zufrieden im Körbchen. Im Freilauf haben wir sie bisher nicht erlebt, eine Schleppleine empfehlen wir für den Anfang ausdrücklich.\n\nAnderen Hunden begegnet Mika freundlich, wenn sie ihr Zeit lassen. Mit dem älteren Rüden der Pflegestelle teilt sie sich inzwischen Garten und Wassernapf, beim Fressen möchte sie aber ihre Ruhe haben. Stürmische Junghunde sind ihr zu viel, dann dreht sie ab und sucht die Nähe ihrer Menschen. Katzen kennt sie aus der Nachbarschaft, sie schaut ihnen interessiert hinterher, jagt aber nicht. Ein Zuhause mit einem gelassenen Ersthund wäre schön, ist aber keine Bedingung.\n\nAutofahren war anfangs schwierig: Mika zitterte und hechelte schon beim Einsteigen. Mit kurzen Fahrten zum Waldparkplatz, die jedes Mal mit einem schönen Spaziergang endeten, hat sie gelernt, dass das Auto etwas Gutes bedeutet. Inzwischen springt sie selbst in die Box im Kofferraum und legt sich hin. Längere Strecken über eine Stunde haben wir noch nicht ausprobiert. Wir geben den neuen Menschen gern weiter, wie wir das Training aufgebaut haben.\n\nAlleinbleiben übt Mika seit einigen Wochen in kleinen Schritten. Zwei Stunden schafft sie inzwischen entspannt, wenn sie vorher ausgelastet ist und ihr Kauknochen bereitliegt. Die Kamera zeigt, dass sie die meiste Zeit verschläft und nur kurz an der Tür horcht. Bellen oder Zerstören kam bisher nicht vor. Ein Zuhause, in dem sie nicht täglich viele Stunden allein bleiben muss, wäre für sie trotzdem am besten, gerade in der ersten Zeit nach dem Umzug.\n\nBeim Futter ist Mika unkompliziert. Sie bekommt zweimal täglich Trockenfutter mit etwas Gemüse und verträgt das gut. Leckerlis nimmt sie sanft aus der Hand, was beim Training sehr hilft. Unverträglichkeiten sind nicht bekannt. Weil sie gern bettelt, achten wir darauf, dass am Tisch nichts für sie abfällt, und wir bitten die neuen Menschen, das beizubehalten. Ihr Gewicht hat sich auf der Pflegestelle gut eingependelt, sie ist jetzt schlank, aber nicht mehr dünn.\n\nBeim Tierarzt war Mika mehrfach zur Kontrolle. Sie ist geimpft, gechippt, entwurmt und kastriert, alle Befunde waren unauffällig. Untersuchungen lässt sie ruhig über sich ergehen, wenn jemand Vertrautes dabei ist und ihr gut zuredet. Krallenschneiden mag sie nicht besonders, duldet es aber mit etwas Geduld und Käsewürfeln. Den Impfpass und die Berichte der Untersuchungen geben wir bei der Vermittlung selbstverständlich mit, ebenso eine Liste ihrer Gewohnheiten.\n\nFür Mika suchen wir Menschen mit Zeit und Ruhe, die ihr einen festen Tagesablauf bieten. Ein Haus mit Garten ist kein Muss, eine Wohnung im Erdgeschoss oder mit Aufzug wäre aber gut, weil sie Treppen noch nicht ganz traut. Kinder ab dem Schulalter, die verstehen, dass Mika manchmal ihre Ruhe braucht, sind willkommen. Wer sie kennenlernen möchte, ist herzlich zu einem Besuch auf der Pflegestelle eingeladen, gern auch mehrmals, bevor eine Entscheidung fällt.', en: 'Mika is published; her profile was changed and waits for a review.' },
     status: 'lookingForHome' as const,
     published: true,
     review: 'Text und Fotos geändert',
@@ -168,7 +171,6 @@ export async function seedAnimals(deps: Deps, ctx: CallContext): Promise<void> {
   for (const a of EXAMPLE_ANIMALS) {
     const created = unwrap(
       await createAnimal(deps, ctx, {
-        slug: a.slug,
         name: a.name,
         sex: a.sex,
         birthText: a.birthText,
@@ -205,4 +207,6 @@ export async function seedAnimals(deps: Deps, ctx: CallContext): Promise<void> {
       unwrap(await requestAnimalReview(earlier, ctx, { id: created.id, note: a.review }));
     }
   }
+  // Eine erfundene Adresse, damit der PDF-Export in der Entwicklung QR-Codes zeigt (Spec 2026-10-05, § 11).
+  deps.db.transaction((tx) => unwrap(writeSettingInternal(tx, deps, ctx, PROFILE_URL_KEY, 'https://musterverein.example/tiere/{slug}/')));
 }

@@ -4,6 +4,7 @@ import type { ExternalLink } from '@kompass/module-projects';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { FormField } from '@/components/forms/form-field';
+import { FormCell } from '@/components/forms/form-grid';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -17,7 +18,7 @@ export function ExternalLinksField({ value, errors }: { value: ExternalLink[]; e
   const [links, setLinks] = useState<ExternalLink[]>(value);
   const update = (index: number, patch: Partial<ExternalLink>) => setLinks(links.map((l, i) => (i === index ? { ...l, ...patch } : l)));
   return (
-    <fieldset className="md:col-span-2 flex flex-col gap-3">
+    <FormCell as="fieldset" size="full" className="flex min-w-0 flex-col gap-3">
       <legend className="text-[13px] font-semibold">{t('title')}</legend>
       <p className="text-[12px] text-muted-ink">{t('hint')}</p>
       {links.length === 0 ? <p className="text-[13px] text-muted-ink">{t('empty')}</p> : null}
@@ -33,6 +34,6 @@ export function ExternalLinksField({ value, errors }: { value: ExternalLink[]; e
         </div>
       ))}
       <div><Button type="button" variant="outline" onClick={() => setLinks([...links, { label: '', url: '' }])}>{t('add')}</Button></div>
-    </fieldset>
+    </FormCell>
   );
 }

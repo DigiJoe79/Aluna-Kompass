@@ -3,14 +3,18 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
 import { AmountField } from '@/components/finance/amount-field';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
+import { withUnplacedFieldErrors } from '@/lib/feedback';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select } from '@/components/ui/select';
 import { formatAmount, parseAmount } from '@/lib/finance/amount';
 import { setProjectFinanceAction } from './finance-actions';
+import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
 
 export interface FinanceSectionValues {
   targetCents: number | null;
@@ -28,25 +32,19 @@ export function FinanceSectionEditor({ projectId, initial, purposes }: { project
   const [abroad, setAbroad] = useState(initial.abroad);
   const [publishDonationStatus, setPublishDonationStatus] = useState(initial.publishDonationStatus);
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const feedback = useActionFeedback();
 
   const submit = async () => {
     setPending(true);
-    setError(null);
-    const result = await setProjectFinanceAction({
+    const result = await feedback.run(() => setProjectFinanceAction({
       projectId,
       targetCents: targetText.trim() === '' ? null : parseAmount(targetText),
       defaultPurposeId: defaultPurposeId === '' ? null : defaultPurposeId,
       abroad,
       publishDonationStatus,
-    });
+    }), { retry: () => void submit() });
     setPending(false);
-    if (result.status === 'error') {
-      setError(result.message);
-      toast.error(result.message);
-      return;
-    }
-    if (result.status === 'success' && result.message) toast.success(result.message);
+    if (result.status !== 'success') return;
     setOpen(false);
     router.refresh();
   };
@@ -58,16 +56,13 @@ export function FinanceSectionEditor({ projectId, initial, purposes }: { project
       </Button>
       {open ? (
         <Dialog open onOpenChange={(next) => !next && setOpen(false)}>
-          <DialogContent className="bg-surface shadow-md sm:max-w-[420px]">
+          <DialogContent size="sm" className="bg-surface shadow-md">
             <DialogTitle className="font-heading text-[18px]">{t('title')}</DialogTitle>
-            <div className="space-y-3.5">
-              {error ? <div className="rounded-md bg-error-bg p-2.5 text-[13px] text-error">{error}</div> : null}
-              <div className="space-y-1.5">
-                <Label htmlFor="project-finance-target">{t('target')}</Label>
+            <FormGrid>
+              <FormField id="project-finance-target" label={t('target')} size="s">
                 <AmountField id="project-finance-target" name="target" value={targetText} onChange={setTargetText} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="project-finance-purpose">{t('purpose')}</Label>
+              </FormField>
+              <FormField id="project-finance-purpose" label={t('purpose')} size="m">
                 <Select id="project-finance-purpose" value={defaultPurposeId} onChange={(e) => setDefaultPurposeId(e.target.value)}>
                   <option value="">{t('purposeNone')}</option>
                   {purposes.map((p) => (
@@ -76,34 +71,15 @@ export function FinanceSectionEditor({ projectId, initial, purposes }: { project
                     </option>
                   ))}
                 </Select>
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="project-finance-abroad" checked={abroad} onChange={(e) => setAbroad(e.target.checked)} className="size-4 rounded border-line" />
-                <Label htmlFor="project-finance-abroad" className="cursor-pointer text-[13px]">
-                  {t('abroad')}
-                </Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="project-finance-publish"
-                  checked={publishDonationStatus}
-                  onChange={(e) => setPublishDonationStatus(e.target.checked)}
-                  className="size-4 rounded border-line"
-                />
-                <Label htmlFor="project-finance-publish" className="cursor-pointer text-[13px]">
-                  {t('publishDonationStatus')}
-                </Label>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-                {t('cancel')}
-              </Button>
-              <Button type="button" disabled={pending} onClick={() => void submit()}>
-                {t('save')}
-              </Button>
-            </DialogFooter>
+              </FormField>
+              <FormField id="project-finance-abroad" label={t('abroad')} size="m" toggle>
+                <Checkbox id="project-finance-abroad" checked={abroad} onCheckedChange={(checked) => setAbroad(checked)} />
+              </FormField>
+              <FormField id="project-finance-publish" label={t('publishDonationStatus')} size="m" toggle>
+                <Checkbox id="project-finance-publish" checked={publishDonationStatus} onCheckedChange={(checked) => setPublishDonationStatus(checked)} />
+              </FormField>
+            </FormGrid>
+            <FormActionBar placement="dialog" cancel={() => setOpen(false)} pending={pending} saveLabel={t('save')} onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, [])} />
           </DialogContent>
         </Dialog>
       ) : null}

@@ -5,10 +5,12 @@ import { useTranslations } from 'next-intl';
 import { useRef } from 'react';
 import { RequirementList, type RequirementListItem } from '@/components/requirement-list';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useDateFormat } from '@/components/date-format-provider';
 import { formatEuro } from '@/lib/finance/amount';
+import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
 
 export interface WaiverState {
   declaredOn: string;
@@ -130,19 +132,17 @@ export function WaiverChecks({
 
   return (
     <section data-testid="waiver-checks" aria-labelledby="waiver-checks-title" className="space-y-3 rounded-lg border border-line bg-surface p-4">
-      <h4 id="waiver-checks-title" className="text-[13px] font-semibold text-muted-ink">
+      <h3 id="waiver-checks-title" className="text-[15px] font-semibold">
         {t('title')}
-      </h4>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="waiver-declared-on">{t('declaredOn')}</Label>
+      </h3>
+      <FormGrid>
+        <FormField id="waiver-declared-on" label={t('declaredOn')} size="s">
           <Input id="waiver-declared-on" type="date" value={state.declaredOn} onChange={(e) => onChange({ declaredOn: e.target.value })} />
-        </div>
-        <label htmlFor="waiver-agreed" className="flex min-h-11 cursor-pointer items-center gap-3 self-end text-[14px] text-ink">
-          <input id="waiver-agreed" type="checkbox" checked={state.claimAgreedConfirmed} onChange={(e) => onChange({ claimAgreedConfirmed: e.target.checked })} className="size-5 shrink-0 rounded border-line" />
-          {t('agreed')}
-        </label>
-      </div>
+        </FormField>
+        <FormField id="waiver-agreed" label={t('agreed')} toggle>
+          <Checkbox id="waiver-agreed" checked={state.claimAgreedConfirmed} onCheckedChange={(next) => onChange({ claimAgreedConfirmed: next === true })} />
+        </FormField>
+      </FormGrid>
       <RequirementList items={items} grouping="open-first" />
       {declaration.href ? (
         <div className="flex flex-wrap items-center gap-3 text-[13px]">

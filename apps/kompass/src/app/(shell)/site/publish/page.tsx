@@ -5,30 +5,31 @@ import { getTranslations } from 'next-intl/server';
 import { buttonVariants } from '@/components/ui/button';
 import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { runtimeEnv } from '@/lib/deps';
 import { requireSession } from '@/lib/request-context';
 import { siteEnv } from '@/lib/site-env';
 import { PublishClient } from './publish-client';
 import { PublishTarget } from './publish-target';
+import { panelHref } from '@/components/panel-nav';
 
 export default async function PublishPage() {
   const { deps, ctx } = await requireSession();
-  if (requirePermission(ctx, 'site.publish')) return <ForbiddenCard permission="site.publish" />;
+  if (requirePermission(ctx, 'site.publish')) return <Page width="standard"><ForbiddenCard permission="site.publish" /></Page>;
   const t = await getTranslations('site.publish');
   // „Publizieren“ steht auch ohne Template in der Leiste; jeder Lauf endete an
   // `noTemplate`, deshalb ein Leerzustand mit dem Weg in die Einstellungen.
   if (!activeTemplate(deps)) {
     const canManage = !requirePermission(ctx, 'site.manage');
     return (
-      <>
-        <PageHeader title={t('title')} />
+      <Page width="standard" header={<PageHeader title={t('title')} />}>
         <EmptyState
           title={t('title')}
           text={t('empty.text')}
-          action={canManage ? <Link href="/admin/site?panel=template" className={buttonVariants({ variant: 'outline' })}>{t('empty.action')}</Link> : null}
+          action={canManage ? <Link href={panelHref('/admin/site', 'template')} className={buttonVariants({ variant: 'outline' })}>{t('empty.action')}</Link> : null}
         />
-      </>
+      </Page>
     );
   }
   const env = runtimeEnv().env;
@@ -46,9 +47,8 @@ export default async function PublishPage() {
   const lastPublishedAt = history.find((h) => h.status === 'success')?.startedAt ?? null;
 
   return (
-    <>
-      <PageHeader title={t('title')} />
-      <div className="flex max-w-[880px] flex-col gap-4">
+    <Page width="standard" header={<PageHeader title={t('title')} />}>
+      <div className="flex flex-col gap-4">
         <PublishTarget env={env} publicUrl={se.publicUrl} />
         <PublishClient
           env={env}
@@ -61,6 +61,6 @@ export default async function PublishPage() {
           lastPublishedAt={lastPublishedAt}
         />
       </div>
-    </>
+    </Page>
   );
 }

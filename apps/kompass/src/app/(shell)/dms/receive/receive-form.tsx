@@ -9,7 +9,6 @@ import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FolderField } from '@/components/folder-tree/folder-field';
 import { Notice } from '@/components/notice';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { idleState } from '@/lib/actions';
 import type { FolderEntry } from '@/lib/folder-tree-model';
@@ -21,6 +20,9 @@ import { DocumentPicker } from '../document-picker';
 import { lastOutgoingToAction } from '../search-action';
 import type { PickedDocument } from '../search-action';
 import { SuggestionFlag } from './suggestion-flag';
+import { FormField } from '@/components/forms/form-field';
+import { FormCell, FormGrid } from '@/components/forms/form-grid';
+import { DialogBody } from '@/components/ui/dialog';
 
 /** Die Felder, die die Einsortierregeln vorbelegen können. */
 type Suggested = 'documentDate' | 'typeKey' | 'folder';
@@ -174,150 +176,156 @@ export function ReceiveForm({
     // `ActionForm`: Lehnt der Server ab (etwa weil der Ordner inzwischen anders
     // heißt), bleiben Datei und Eingaben stehen — ein `<form action>` setzte
     // die Datei zurück.
-    <ActionForm action={formAction} state={state} className="flex min-h-0 flex-col">
+    <ActionForm action={formAction} state={state} className="flex min-h-0 flex-1 flex-col">
       {queued ? <input type="hidden" name="queued" value="1" /> : null}
-      {/* Der Körper scrollt, die Fußleiste bleibt stehen. */}
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
-        {state.status === 'error' && Object.keys(errors).length === 0 ? (
-          <div role="alert" className="rounded-md bg-error-bg p-3 text-[13px] text-error">{state.message}</div>
-        ) : null}
-
+      {/* Der Körper scrollt, Kopf und Fußleiste bleiben stehen (`layout="fixed-footer"` am Dialog). */}
+      <DialogBody>
         {/* Beim Ziehen lässt sich nicht verlässlich prüfen, was ein PDF ist; nach dem Loslassen wird jede Datei genannt (Artboard 2f). */}
         {skipped.length > 0 ? (
-          <Notice level="warn" reasons={skipped.map((name) => t('drop.skippedNamed', { name }))}>
-            {t('drop.skippedNamed', { name: skipped[0]! })}
-          </Notice>
-        ) : null}
-
-        <div className="space-y-1.5">
-          <Label htmlFor="file" required>{t('fields.file')}</Label>
-          <FileDropzone id="file" name="file" required initial={droppedFile} onFile={handleFile} />
-          <FieldError id="file-error" message={errors.file} />
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="documentDate" required>{t('fields.documentDate')}</Label>
-            <Input
-              id="documentDate"
-              name="documentDate"
-              type="date"
-              required
-              className={origin.documentDate ? 'border-info font-mono' : 'font-mono'}
-              value={documentDate}
-              onFocus={() => touch('documentDate')}
-              onChange={(e) => {
-                touch('documentDate');
-                setDocumentDate(e.target.value);
-              }}
-            />
-            <SuggestionFlag text={origin.documentDate} />
-            <FieldError id="documentDate-error" message={errors.documentDate} />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="typeKey" required>{t('fields.type')}</Label>
-            <Select
-              id="typeKey"
-              name="typeKey"
-              required
-              className={origin.typeKey ? 'border-info' : undefined}
-              value={typeKey}
-              onFocus={() => touch('typeKey')}
-              onChange={(e) => {
-                touch('typeKey');
-                setTypeKey(e.target.value);
-              }}
-            >
-              {types.map((type) => (
-                <option key={type.key} value={type.key}>
-                  {type.label}
-                </option>
-              ))}
-            </Select>
-            <SuggestionFlag text={origin.typeKey} />
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="subject" required>{t('fields.subject')}</Label>
-          <Input
-            id="subject"
-            name="subject"
-            required
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-          />
-          <FieldError id="subject-error" message={errors.subject} />
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            {/* Der Ort im Baum statt einer langen Liste; das versteckte Feld `folder` trägt den Weg (`''` = Eingangskorb). */}
-            <FolderField
-              value={folder || null}
-              folders={folders}
-              label={t('fields.folder')}
-              emptyLabel={t('inbox')}
-              name="folder"
-              moveLabel={tTree('change')}
-              dialogTitle={tTree('pickTitle')}
-              showLocation={false}
-              verb="pick"
-              variant="field"
-              suggested={!!origin.folder}
-              errorId={errors.folder ? 'folder-error' : undefined}
-              onChange={(path) => {
-                touch('folder');
-                setFolder(path ?? '');
-              }}
-            />
-            <SuggestionFlag text={origin.folder} />
-            <FieldError id="folder-error" message={errors.folder} />
-          </div>
-
-          <ContactPicker
-            id="senderId"
-            name="senderId"
-            label={t('fields.sender')}
-            value={sender}
-            onChange={(next) => {
-              senderTouched.current = true;
-              void handleSenderChange(next);
-            }}
-            canCreate={canCreateContact}
-          />
-          {initialSender && !senderTouched.current ? <SuggestionFlag text={t('suggest.fromContactPage')} /> : null}
-        </div>
-
-        <div>
-          <DocumentPicker
-            id="repliesToId"
-            name="repliesToId"
-            label={t('fields.repliesTo')}
-            value={repliesTo}
-            onChange={(next) => {
-              repliesToTouched.current = true;
-              setRepliesTo(next);
-            }}
-          />
-          {repliesTo && !repliesToTouched.current ? <SuggestionFlag text={t('suggest.fromSender')} /> : null}
-        </div>
-
-        {initialAbout ? (
-          <div className="space-y-1.5">
-            <span className="block text-[13px] font-semibold text-ink-2">{t('fields.about')}</span>
-            <p className="text-[13px] text-ink">{initialAbout.label}</p>
-            <input type="hidden" name="aboutType" value={initialAbout.entityType} />
-            <input type="hidden" name="aboutId" value={initialAbout.entityId} />
-            <SuggestionFlag text={t('suggest.fromEntityPage')} />
+          <div className="mb-4">
+            <Notice level="warn" reasons={skipped.map((name) => t('drop.skippedNamed', { name }))}>
+              {t('drop.skippedNamed', { name: skipped[0]! })}
+            </Notice>
           </div>
         ) : null}
 
-        {/* Die Nummer ist eine Vorschau: Gezogen wird sie beim Ablegen. */}
-        <NumberHint typeKey={typeKey} />
-      </div>
-      <FormActionBar cancel={onCancel} sticky={false} saveLabel={t('receiveSubmit')} saveDisabled={!hasFile} />
+        <section>
+          <h3 className="text-[15px] font-semibold">{t('sections.document')}</h3>
+          <div className="mt-3">
+            <FormGrid>
+              <FormField id="file" label={t('fields.file')} required error={errors.file} size="full">
+                <FileDropzone id="file" name="file" required initial={droppedFile} onFile={handleFile} />
+              </FormField>
+
+              <FormField id="typeKey" label={t('fields.type')} required>
+                <Select
+                  id="typeKey"
+                  name="typeKey"
+                  required
+                  className={origin.typeKey ? 'border-info' : undefined}
+                  value={typeKey}
+                  onFocus={() => touch('typeKey')}
+                  onChange={(e) => {
+                    touch('typeKey');
+                    setTypeKey(e.target.value);
+                  }}
+                >
+                  {types.map((type) => (
+                    <option key={type.key} value={type.key}>
+                      {type.label}
+                    </option>
+                  ))}
+                </Select>
+                <SuggestionFlag text={origin.typeKey} />
+              </FormField>
+
+              <FormField id="documentDate" label={t('fields.documentDate')} required error={errors.documentDate} size="s">
+                <Input
+                  id="documentDate"
+                  name="documentDate"
+                  type="date"
+                  required
+                  className={origin.documentDate ? 'border-info font-mono' : 'font-mono'}
+                  value={documentDate}
+                  onFocus={() => touch('documentDate')}
+                  onChange={(e) => {
+                    touch('documentDate');
+                    setDocumentDate(e.target.value);
+                  }}
+                />
+                <SuggestionFlag text={origin.documentDate} />
+              </FormField>
+
+              <FormField id="subject" label={t('fields.subject')} required error={errors.subject} size="l">
+                <Input
+                  id="subject"
+                  name="subject"
+                  required
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                />
+              </FormField>
+
+              {/* Die Nummer ist eine Vorschau: Gezogen wird sie beim Ablegen. */}
+              <FormCell size="full">
+                <NumberHint typeKey={typeKey} />
+              </FormCell>
+            </FormGrid>
+          </div>
+        </section>
+
+        <section className="mt-5 border-t border-line pt-5">
+          <h3 className="text-[15px] font-semibold">{t('sections.filing')}</h3>
+          <div className="mt-3">
+            <FormGrid>
+              {/* Der Absender vor dem Ordner: Sein Wechsel zieht Regelvorschläge (Art, Ordner) und „Antwort auf“ nach. */}
+              <FormCell size="m" className="flex flex-col gap-1.5">
+                <ContactPicker
+                  id="senderId"
+                  name="senderId"
+                  label={t('fields.sender')}
+                  value={sender}
+                  onChange={(next) => {
+                    senderTouched.current = true;
+                    void handleSenderChange(next);
+                  }}
+                  canCreate={canCreateContact}
+                />
+                {initialSender && !senderTouched.current ? <SuggestionFlag text={t('suggest.fromContactPage')} /> : null}
+              </FormCell>
+
+              <FormCell size="m" className="flex flex-col gap-1.5">
+                {/* Der Ort im Baum statt einer langen Liste; das versteckte Feld `folder` trägt den Weg (`''` = Eingangskorb). */}
+                <FolderField
+                  value={folder || null}
+                  folders={folders}
+                  label={t('fields.folder')}
+                  emptyLabel={t('inbox')}
+                  name="folder"
+                  moveLabel={tTree('change')}
+                  dialogTitle={tTree('pickTitle')}
+                  showLocation={false}
+                  verb="pick"
+                  variant="field"
+                  suggested={!!origin.folder}
+                  errorId={errors.folder ? 'folder-error' : undefined}
+                  onChange={(path) => {
+                    touch('folder');
+                    setFolder(path ?? '');
+                  }}
+                />
+                <SuggestionFlag text={origin.folder} />
+                <FieldError id="folder-error" message={errors.folder} />
+              </FormCell>
+
+              <FormCell size="m" className="flex flex-col gap-1.5">
+                <DocumentPicker
+                  id="repliesToId"
+                  name="repliesToId"
+                  label={t('fields.repliesTo')}
+                  value={repliesTo}
+                  onChange={(next) => {
+                    repliesToTouched.current = true;
+                    setRepliesTo(next);
+                  }}
+                />
+                {repliesTo && !repliesToTouched.current ? <SuggestionFlag text={t('suggest.fromSender')} /> : null}
+              </FormCell>
+
+              {initialAbout ? (
+                <FormCell size="m" className="flex flex-col gap-1.5">
+                  <span className="block text-[13px] font-semibold text-ink-2">{t('fields.about')}</span>
+                  <p className="text-[13px] text-ink">{initialAbout.label}</p>
+                  <input type="hidden" name="aboutType" value={initialAbout.entityType} />
+                  <input type="hidden" name="aboutId" value={initialAbout.entityId} />
+                  <SuggestionFlag text={t('suggest.fromEntityPage')} />
+                </FormCell>
+              ) : null}
+            </FormGrid>
+          </div>
+        </section>
+      </DialogBody>
+      <FormActionBar mode="create" cancel={onCancel} state={state} saveLabel={t('receiveSubmit')} saveDisabled={!hasFile} />
     </ActionForm>
   );
 }

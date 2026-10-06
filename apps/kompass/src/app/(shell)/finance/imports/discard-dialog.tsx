@@ -5,11 +5,15 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
-import { toast } from 'sonner';
 import { ConsequenceList } from '@/components/consequence-list';
 import { useDateFormat } from '@/components/date-format-provider';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { formatEuro } from '@/lib/finance/amount';
 import { discardRunAction, previewDiscardRunAction } from './actions';
 import type { RunRow } from './runs-table';
@@ -31,13 +35,16 @@ export function DiscardRunDialog({ open, onOpenChange, run }: { open: boolean; o
   const [loaded, setLoaded] = useState<Loaded>({ state: 'loading' });
   const [note, setNote] = useState('');
   const [pending, start] = useTransition();
+  const feedback = useActionFeedback();
+  const resetFeedback = feedback.reset;
 
   useEffect(() => {
     if (!open || !run) return;
     setNote('');
+    resetFeedback();
     setLoaded({ state: 'loading' });
     void previewDiscardRunAction(run.id).then((preview) => setLoaded(preview ? { state: 'ready', preview } : { state: 'failed' }));
-  }, [open, run]);
+  }, [open, run, resetFeedback]);
 
   if (!run) return null;
   const preview = loaded.state === 'ready' ? loaded.preview : null;
@@ -45,7 +52,7 @@ export function DiscardRunDialog({ open, onOpenChange, run }: { open: boolean; o
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent role="alertdialog" className="bg-surface shadow-md">
+      <DialogContent size="sm" role="alertdialog" className="bg-surface shadow-md">
         <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
 
         {loaded.state === 'loading' ? <p className="text-[14px] text-ink-2">{tCommon('loading')}</p> : null}
@@ -76,39 +83,41 @@ export function DiscardRunDialog({ open, onOpenChange, run }: { open: boolean; o
                 <p className="text-[13px] text-ink-2">{t('blocked.hint')}</p>
               </div>
             ) : (
-              <label className="block space-y-1 text-[13px]">
-                <span className="font-semibold">{t('noteLabel')}</span>
-                <textarea required value={note} onChange={(e) => setNote(e.target.value)} className="w-full rounded-sm border border-line-strong bg-field px-2.5 py-1.5 text-[13px]" rows={2} />
-              </label>
+              <FormGrid>
+                <FormField id="discardNote" label={t('noteLabel')} required size="l">
+                  <Textarea id="discardNote" required value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
+                </FormField>
+              </FormGrid>
             )}
           </>
         ) : null}
 
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-            {tCommon('cancel')}
-          </Button>
-          {!blocked ? (
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={pending || !preview || note.trim().length === 0}
-              onClick={() =>
-                start(async () => {
-                  const result = await discardRunAction(run.id, note);
-                  if (result.status === 'error') toast.error(result.message);
-                  else {
-                    if (result.status === 'success' && result.message) toast.success(result.message);
-                    onOpenChange(false);
-                    router.refresh();
-                  }
-                })
-              }
-            >
-              {tCommon('discard')}
+        {blocked ? (
+          // Sperren festgeschriebene Buchungen, gibt es kein „Verwerfen“, nur den Weg ins Journal (Spec 6.1).
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              {tCommon('cancel')}
             </Button>
-          ) : null}
-        </DialogFooter>
+          </DialogFooter>
+        ) : (
+          <FormActionBar
+            placement="dialog"
+            cancel={() => onOpenChange(false)}
+            destructive
+            pending={pending}
+            saveDisabled={!preview || note.trim().length === 0}
+            saveLabel={tCommon('discard')}
+            state={feedback.state}
+            onSave={() =>
+              start(async () => {
+                const result = await feedback.run(() => discardRunAction(run.id, note));
+                if (result.status !== 'success') return;
+                onOpenChange(false);
+                router.refresh();
+              })
+            }
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -39,7 +39,8 @@ export function StartPasswordDialog({
         showCloseButton={false}
         onEscapeKeyDown={(e) => e.preventDefault()}
         onPointerDownOutside={(e) => e.preventDefault()}
-        className="w-[520px] bg-surface shadow-md"
+        size="md"
+        className="bg-surface shadow-md"
       >
         <DialogTitle className="font-heading text-[19px]">{t('title', { name })}</DialogTitle>
         <DialogDescription className="text-[14px] text-ink-2">{t('text')}</DialogDescription>
@@ -54,7 +55,7 @@ export function StartPasswordDialog({
             variant="secondary"
             onClick={async () => {
               if (await copyToClipboard(`${email}\n${startPassword}`)) setCopied(true);
-              else toast.error(c('copyFailed'));
+              else toast.error(c('copyFailed'), { duration: Infinity, closeButton: true });
             }}
           >
             <Copy className="size-4" aria-hidden />

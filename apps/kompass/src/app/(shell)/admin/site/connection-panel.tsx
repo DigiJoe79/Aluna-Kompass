@@ -27,7 +27,7 @@ export function ConnectionPanel({ summary, canPublish }: { summary: SiteConnecti
   return (
     <>
       <section className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-5">
-        <h3 className="font-heading text-[18px]">{t('title')}</h3>
+        <h3 className="text-[15px] font-semibold">{t('title')}</h3>
         <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1 text-[13px]">
           {rows.map(([label, value]) => (
             <div key={label} className="contents">
@@ -36,7 +36,7 @@ export function ConnectionPanel({ summary, canPublish }: { summary: SiteConnecti
             </div>
           ))}
         </dl>
-        <p className="text-[13px] text-ink-2">{t('envHint')}</p>
+        <p className="max-w-prose text-[13px] text-ink-2">{t('envHint')}</p>
       </section>
       {!summary.ready ? (
         <p className="rounded-lg border border-line bg-surface p-5 text-[13px] text-ink-2" role="note">{t('notReady')}</p>

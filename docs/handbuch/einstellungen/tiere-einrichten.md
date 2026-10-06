@@ -1,8 +1,8 @@
 # Tiere
 
-Hier stellen Sie ein, was das Tiermodul über die Webseite wissen muss. Heute
-ist das eine Angabe: in welchem Ausschnitt die Webseite das Hauptfoto eines
-Tiers zeigt.
+Hier stellen Sie ein, was das Tiermodul über die Webseite wissen muss: in
+welchem Ausschnitt die Webseite das Hauptfoto eines Tiers zeigt und unter
+welcher Adresse sie ein Tierprofil zeigt.
 
 ## Bildausschnitt des Hauptfotos
 
@@ -27,3 +27,12 @@ sind oder abgeschnitten werden.
 Vorgabe ist 4:3, mittig. Die Einstellung verlangt das Recht, Einstellungen zu
 ändern; ein Agent kann sie über MCP mit `settings_set` und dem Schlüssel
 `animals.photoFrame` setzen.
+
+## Adresse des Online-Profils
+
+Unter welcher Adresse die Webseite ein Tierprofil zeigt, mit `{slug}` als
+Platzhalter für den URL-Teil des Tiers, etwa
+`https://example.org/tiere/{slug}/`. Den Pfad legt das Template der Webseite
+fest. Aus der Adresse entstehen der QR-Code auf dem PDF-Profil und die Zeile
+unter dem Namen im Profil. Bleibt das Feld leer, gibt es beides nicht. Per
+MCP: `settings_set` mit `animals.profileUrl`.

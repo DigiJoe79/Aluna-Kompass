@@ -1,6 +1,7 @@
 import { countUnfiledMediaAssets, listMediaAssets, listMediaFolders, mediaListFilterSchema, requirePermission, unwrap, userNamesFor } from '@kompass/core';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { requireSession } from '@/lib/request-context';
 import { LibraryClient } from './library-client';
 import { capItems, type ListQuery } from './types';
@@ -18,7 +19,7 @@ function readQuery(params: Params): ListQuery {
 
 export default async function MediaPage({ searchParams }: { searchParams: Promise<Params> }) {
   const { deps, ctx } = await requireSession();
-  if (requirePermission(ctx, 'media.upload')) return <ForbiddenCard permission="media.upload" />;
+  if (requirePermission(ctx, 'media.upload')) return <Page width="full"><ForbiddenCard permission="media.upload" /></Page>;
   const t = await getTranslations('media');
   const query = readQuery(await searchParams);
 
@@ -52,5 +53,9 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
   const unfiledCount = unwrap(await countUnfiledMediaAssets(deps, ctx));
   const total = unfiledCount + folders.reduce((sum, f) => sum + f.assetCount, 0);
 
-  return <LibraryClient title={t('title')} query={query} folders={folders} items={items} matching={matching} total={total} unfiledCount={unfiledCount} />;
+  return (
+    <Page width="full">
+      <LibraryClient title={t('title')} query={query} folders={folders} items={items} matching={matching} total={total} unfiledCount={unfiledCount} />
+    </Page>
+  );
 }

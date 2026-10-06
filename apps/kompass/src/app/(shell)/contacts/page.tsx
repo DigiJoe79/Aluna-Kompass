@@ -3,6 +3,7 @@ import { contactRoleDefinitions, displayName, listContacts } from '@kompass/modu
 import { getTranslations } from 'next-intl/server';
 import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
 import { readSort } from '@/lib/sort';
@@ -16,7 +17,7 @@ export default async function ContactsPage(props: {
   searchParams: Promise<{ kind?: string; role?: string; text?: string; archived?: string; sort?: string; dir?: string }>;
 }) {
   const { deps, ctx } = await requireSession();
-  if (requirePermission(ctx, 'contacts.view')) return <ForbiddenCard permission="contacts.view" />;
+  if (requirePermission(ctx, 'contacts.view')) return <Page width="full"><ForbiddenCard permission="contacts.view" /></Page>;
   const t = await getTranslations('contacts');
   const q = await props.searchParams;
   const result = await listContacts(deps, ctx, {
@@ -27,7 +28,7 @@ export default async function ContactsPage(props: {
     orderBy: readSort(q, SORTABLE),
     limit: 200,
   });
-  if (!result.ok) return <ForbiddenCard permission="contacts.view" />;
+  if (!result.ok) return <Page width="full"><ForbiddenCard permission="contacts.view" /></Page>;
 
   const rows = result.value.contacts.map((c) => ({
     id: c.id,
@@ -44,17 +45,21 @@ export default async function ContactsPage(props: {
   const roleKeys = [...contactRoleDefinitions(deps).keys()];
 
   return (
-    <>
-      <PageHeader
-        title={t('title')}
-        description={t('description')}
-        actions={hasPermission(ctx, 'contacts.manage') ? <CreateContactDialog /> : null}
-      />
+    <Page
+      width="full"
+      header={
+        <PageHeader
+          title={t('title')}
+          description={t('description')}
+          actions={hasPermission(ctx, 'contacts.manage') ? <CreateContactDialog /> : null}
+        />
+      }
+    >
       {rows.length === 0 && !hasFilter ? (
         <EmptyState title={t('empty.title')} text={t('empty.text')} />
       ) : (
         <ContactList contacts={rows} roles={roleKeys} />
       )}
-    </>
+    </Page>
   );
 }

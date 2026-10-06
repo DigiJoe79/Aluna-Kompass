@@ -24,7 +24,6 @@ export async function saveAnimalAction(_prev: ActionState, formData: FormData): 
     const { deps, ctx } = await requireSession();
     const id = String(formData.get('id') ?? '');
     const fields = {
-      slug: String(formData.get('slug') ?? '').trim(),
       name: String(formData.get('name') ?? '').trim(),
       sex: String(formData.get('sex') ?? 'female'),
       birthText: localizedFromForm(formData, 'birthText', deps.locales()),

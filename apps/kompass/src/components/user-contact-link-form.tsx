@@ -7,8 +7,11 @@ import { toast } from 'sonner';
 import { linkUserAction, unlinkUserAction } from '@/app/(shell)/admin/users/actions';
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
 import { ActionForm } from '@/components/forms/action-form';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { idleState } from '@/lib/actions';
 import type { LinkControls } from '@/lib/user-contact-link';
 
@@ -27,12 +30,13 @@ export function UserContactLinkForm({
   controls: LinkControls;
 }) {
   const t = useTranslations('users.contactLink');
-  const tCommon = useTranslations('common');
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<PickedContact | null>(null);
   const [pending, start] = useTransition();
+  // „Lösen“ steht in der Zeile: Die Ablehnung steht darüber.
+  const unlinkFb = useActionFeedback();
 
-  const [state, action, actionPending] = useActionState(async (prev: Parameters<typeof linkUserAction>[1], formData: FormData) => {
+  const [state, action] = useActionState(async (prev: Parameters<typeof linkUserAction>[1], formData: FormData) => {
     const res = await linkUserAction(userId, prev, formData);
     if (res.status === 'success') {
       setOpen(false);
@@ -43,6 +47,7 @@ export function UserContactLinkForm({
 
   return (
     <div className="flex flex-col gap-1" data-testid="user-contact-link">
+      <RefusalNotice action state={unlinkFb.state} />
       <div className="flex flex-wrap items-center gap-2">
         {linked ? (
           linkedName && linkedHref ? (
@@ -68,9 +73,8 @@ export function UserContactLinkForm({
             disabled={pending}
             onClick={() =>
               start(async () => {
-                const res = await unlinkUserAction(userId);
-                if (res.status === 'success') toast.success(res.message ?? t('ended'));
-                else if (res.status === 'error') toast.error(res.message);
+                const res = await unlinkFb.run(() => unlinkUserAction(userId));
+                if (res.status === 'success' && !res.message) toast.success(t('ended'));
               })
             }
           >
@@ -81,19 +85,11 @@ export function UserContactLinkForm({
       {controls.reason ? <p className="text-[12px] text-muted-ink">{t(controls.reason)}</p> : null}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="bg-surface shadow-md sm:max-w-[460px]">
+        <DialogContent size="sm" className="bg-surface shadow-md">
           <ActionForm action={action} state={state} className="space-y-4">
             <DialogTitle className="font-heading text-[19px]">{t('choose')}</DialogTitle>
-            {state.status === 'error' ? <div className="rounded-md bg-error-bg p-2.5 text-[13px] text-error">{state.message}</div> : null}
             <ContactPicker id={`link-contact-${userId}`} name="contactId" label={t('choose')} value={picked} onChange={setPicked} required />
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-                {tCommon('cancel')}
-              </Button>
-              <Button type="submit" disabled={actionPending || !picked}>
-                {t('link')}
-              </Button>
-            </DialogFooter>
+            <FormActionBar placement="dialog" mode="create" cancel={() => setOpen(false)} saveDisabled={!picked} saveLabel={t('link')} state={state} />
           </ActionForm>
         </DialogContent>
       </Dialog>

@@ -55,6 +55,23 @@ test.describe('finance', () => {
     await expect(row.getByRole('link', { name: /zurückgenommen durch/ })).toBeVisible();
   });
 
+  test('Zeilenklick: Text im Betrag lässt sich markieren, ohne die Buchung zu öffnen; ein Klick sonst öffnet sie', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/finance/entries');
+    const row = page.locator('tbody tr[data-row-id]').first();
+    // Die Betragszelle ist `selectable`: Doppelklick markiert, navigiert aber nicht.
+    await row.locator('td').nth(7).dblclick();
+    await expect(page).toHaveURL(/\/finance\/entries$/);
+    // Cmd-/Strg-Klick-Tauglichkeit: Es ist ein echter Link mit Adresse.
+    await expect(row.locator('a[data-row-link]')).toHaveAttribute('href', /\/finance\/entries\/[0-9A-Z]{26}/);
+    // In die Textzelle geklickt (ohne den Link zu treffen) öffnet die Buchung.
+    const cell = row.locator('td').nth(5);
+    await cell.scrollIntoViewIfNeeded();
+    const box = await cell.boundingBox();
+    await page.mouse.click(box!.x + 4, box!.y + 4);
+    await expect(page).toHaveURL(/\/finance\/entries\/[0-9A-Z]{26}/);
+  });
+
   test('Mehrfachauswahl: zwei Entwürfe als geprüft markieren, dann festschreiben; die Nummern erscheinen', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/finance/entries');
@@ -62,7 +79,10 @@ test.describe('finance', () => {
     const rowB = page.locator('tr', { hasText: 'Entwurf ungeprüft zwei' });
     await rowA.getByRole('checkbox').click();
     await rowB.getByRole('checkbox').click();
-    await expect(page.getByText('2 Buchungen ausgewählt')).toBeVisible();
+    // Der Haken liegt über der Zeilenfläche: Die Zeile öffnet sich nicht nebenbei.
+    await expect(page).toHaveURL(/\/finance\/entries$/);
+    await expect(page.getByTestId('selection-bar')).toContainText('2 Buchungen ausgewählt');
+    await expect(page.getByTestId('selection-live')).toHaveText('2 Buchungen ausgewählt');
     await page.getByRole('button', { name: 'als geprüft markieren' }).click();
     await expect(page.getByText('Als geprüft markiert.')).toBeVisible();
 
@@ -168,9 +188,11 @@ test.describe('finance', () => {
 
     await page.getByRole('button', { name: 'Festschreiben', exact: true }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Festschreiben' }).click();
-    await expect(page.getByText('Rest in diese Zeile eintragen')).toBeVisible();
+    // Die Ablehnung steht im offenen Dialog und nennt den Ausweg dort.
+    const refused = page.getByRole('alertdialog');
+    await expect(refused.getByRole('alert')).toContainText('Rest in diese Zeile eintragen');
 
-    await page.getByRole('button', { name: 'Rest in diese Zeile eintragen' }).click();
+    await refused.getByRole('button', { name: 'Rest in diese Zeile eintragen' }).click();
     await expect(page).toHaveURL(/\/finance\/entries\/[0-9A-Z]{26}$/);
     await expect(page.getByTestId('entry-number')).toContainText(/\d{4}-\d+/);
   });

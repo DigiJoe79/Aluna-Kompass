@@ -24,7 +24,13 @@ test.describe('finance partners (F7)', () => {
     const category = (await callTool<{ id: string; key: string }[]>(client, 'finance_master_data', { kind: 'category', includeInactive: false })).find((c) => c.key === 'program-costs')!;
 
     await page.goto('/finance/partners');
-    await page.getByRole('button', { name: 'Partner anlegen' }).click();
+    // Anlegen steht auf einer eigenen Seite (MUSTER.md § C), erreichbar über den Knopf der Liste.
+    await page.getByRole('link', { name: 'Partner anlegen' }).click();
+    await expect(page).toHaveURL(/\/finance\/partners\/new$/);
+    // Ohne Kontakt gespeichert: die Feldmeldung steht am Kontakt, die Seite bleibt.
+    await page.getByTestId('partner-create-form').getByRole('button', { name: 'Anlegen' }).click();
+    await expect(page.getByTestId('partner-create-form').getByRole('alert')).toBeVisible();
+    await expect(page).toHaveURL(/\/finance\/partners\/new$/);
     await page.getByRole('combobox', { name: 'Kontakt' }).click();
     await page.getByTestId('contact-option').filter({ hasText: 'Beispielhilfe gGmbH' }).click();
     await page.getByLabel('Status').selectOption({ label: 'öffentliche Stelle' });
@@ -288,6 +294,30 @@ test.describe('finance partners (F7)', () => {
     await page.getByRole('alertdialog').getByRole('button', { name: 'Entwurf löschen' }).click();
     await expect(page).toHaveURL(new RegExp(`/finance/partners/${partner.id}$`));
     await expect(page.getByText('Zum Löschen')).toHaveCount(0);
+  });
+
+  test('Löschen und Archivieren stehen als letzter Abschnitt: ohne Vorgänge Löschen, mit Bescheid Archivieren und wieder Aktivieren', async ({ page, baseURL }) => {
+    const client = await mcpClient(page, baseURL);
+    const leer = await callTool<{ id: string }>(client, 'contacts_create', { kind: 'organization', name: 'Leerpartner e.V.' });
+    const leerPartner = await callTool<{ id: string }>(client, 'finance_partner_save', { contactId: leer.id, status: 'taxExemptBody' });
+    await page.goto(`/finance/partners/${leerPartner.id}`);
+    // Speichern steht allein; Löschen ist der Abschnitt darunter, nicht mehr der Knopf daneben.
+    await expect(page.getByTestId('partner-profile').getByRole('button', { name: 'Löschen' })).toHaveCount(0);
+    await page.getByTestId('partner-delete-trigger').click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Löschen' }).click();
+    await expect(page).toHaveURL(/\/finance\/partners$/);
+    await expect(page.getByRole('row', { name: /Leerpartner/ })).toHaveCount(0);
+
+    const org = await callTool<{ id: string }>(client, 'contacts_create', { kind: 'organization', name: 'Archivpartner e.V.' });
+    const doc = await callTool<{ id: string }>(client, 'dms_receive', { filename: 'bescheid.pdf', typeKey: 'minutes', subject: 'Bescheid Archivpartner', documentDate: '2026-02-01', contentBase64: PDF.buffer.toString('base64') });
+    const partner = await callTool<{ id: string }>(client, 'finance_partner_save', { contactId: org.id, status: 'taxExemptBody' });
+    await callTool(client, 'finance_partner_notice_save', { partnerId: partner.id, kind: 'exemptionNotice', noticeDate: '2026-03-15', receivedOn: '2026-03-20', documentId: doc.id });
+    await page.goto(`/finance/partners/${partner.id}`);
+    await expect(page.getByTestId('partner-delete-trigger')).toHaveCount(0);
+    await page.getByTestId('partner-archive-trigger').click();
+    await expect(page.getByTestId('partner-profile')).toContainText('deaktiviert');
+    await page.getByTestId('partner-activate-trigger').click();
+    await expect(page.getByTestId('partner-profile')).not.toContainText('deaktiviert');
   });
 
   test('D5: Leser sehen Registernachweis und Rahmenvereinbarung, das Bescheiddatum formatiert und „deaktiviert“ als Zustand', async ({ page, baseURL }) => {
@@ -570,7 +600,7 @@ test.describe('finance partners (F7)', () => {
     const row = table.getByRole('row').filter({ hasText: 'Partnerorganisation Tabelle' });
     await expect(row).toContainText('Organisation im Ausland');
     await expect(row).toContainText('Auftrag');
-    await expect(page.getByRole('button', { name: 'Partner anlegen' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Partner anlegen' })).toBeVisible();
     await page.setViewportSize({ width: 390, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.setViewportSize({ width: 1400, height: 900 });

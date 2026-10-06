@@ -4,12 +4,14 @@ import type { ListedUser } from '@kompass/core';
 import { MoreHorizontal } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useMemo, useState, useTransition, type ReactNode } from 'react';
-import { toast } from 'sonner';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,6 +40,9 @@ export function UserTable({
   const [editRoles, setEditRoles] = useState<ListedUser | null>(null);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [pending, start] = useTransition();
+  // Die Zeilenmenüs (Startpasswort, Aktivieren) haben keinen Platz für eine Meldung: Sie steht über der Tabelle. Die Rollen-Maske hat ihre eigene.
+  const menuFb = useActionFeedback();
+  const rolesFb = useActionFeedback();
 
   const rows = useMemo(
     () => users.filter((u) => (showInactive || u.isActive) && `${u.name} ${u.email}`.toLowerCase().includes(query.toLowerCase())),
@@ -62,9 +67,10 @@ export function UserTable({
         </div>
         <span className="ml-auto text-[13px] text-muted-ink">{t('filter.count', { count: users.length, inactive })}</span>
       </div>
+      <RefusalNotice action state={menuFb.state} />
       <div className="overflow-hidden rounded-md border border-line bg-surface">
         <Table>
-          <TableHeader className="bg-table-head">
+          <TableHeader>
             <TableRow>
               <TableHead>{t('columns.name')}</TableHead>
               <TableHead>{t('columns.email')}</TableHead>
@@ -77,7 +83,7 @@ export function UserTable({
           </TableHeader>
           <TableBody>
             {rows.map((u, i) => (
-              <TableRow key={u.id} className={cn('h-row hover:bg-row-hover', i % 2 === 1 && 'bg-zebra')}>
+              <TableRow key={u.id}>
                 <TableCell className={cn('font-semibold', !u.isActive && 'text-disabled-ink')}>{u.name}</TableCell>
                 <TableCell className={cn('text-ink-2', !u.isActive && 'text-disabled-ink')}>{u.email}</TableCell>
                 <TableCell>
@@ -112,6 +118,7 @@ export function UserTable({
                         disabled={!u.controllable}
                         onSelect={() => {
                           setSelectedRoles(u.roles.map((r) => r.id));
+                          rolesFb.reset();
                           setEditRoles(u);
                         }}
                       >
@@ -121,11 +128,9 @@ export function UserTable({
                         disabled={!u.controllable}
                         onSelect={() =>
                           start(async () => {
-                            const s = await resetStartPasswordAction(u.id);
+                            const s = await menuFb.run(() => resetStartPasswordAction(u.id));
                             if (s.status === 'success') {
                               setReset({ user: u, startPassword: (s.data as { startPassword: string }).startPassword });
-                            } else if (s.status === 'error') {
-                              toast.error(s.message);
                             }
                           })
                         }
@@ -139,8 +144,7 @@ export function UserTable({
                           disabled={!u.controllable}
                           onSelect={() =>
                             start(async () => {
-                              const s = await setUserActiveAction(u.id, true);
-                              if (s.status === 'error') toast.error(s.message);
+                              await menuFb.run(() => setUserActiveAction(u.id, true));
                             })
                           }
                         >
@@ -184,7 +188,7 @@ export function UserTable({
             if (!o) setEditRoles(null);
           }}
         >
-          <DialogContent className="bg-surface shadow-md">
+          <DialogContent size="sm" className="bg-surface shadow-md">
             <DialogTitle className="font-heading text-[19px]">{t('roles.title', { name: editRoles.name })}</DialogTitle>
             <div className="flex flex-col gap-2">
               {roles.map((r) => (
@@ -199,24 +203,19 @@ export function UserTable({
                 </div>
               ))}
             </div>
-            <DialogFooter>
-              <Button variant="ghost" onClick={() => setEditRoles(null)}>
-                {t('roles.cancel')}
-              </Button>
-              <Button
-                disabled={pending}
-                onClick={() =>
-                  start(async () => {
-                    const s = await setUserRolesAction(editRoles.id, selectedRoles, editRoles.roles.map((r) => r.id));
-                    if (s.status === 'error') toast.error(s.message);
-                    else toast.success(s.status === 'success' ? s.message ?? '' : '');
-                    setEditRoles(null);
-                  })
-                }
-              >
-                {t('roles.save')}
-              </Button>
-            </DialogFooter>
+            <FormActionBar
+              placement="dialog"
+              cancel={() => setEditRoles(null)}
+              pending={pending}
+              saveLabel={t('roles.save')}
+              state={rolesFb.state}
+              onSave={() =>
+                start(async () => {
+                  const s = await rolesFb.run(() => setUserRolesAction(editRoles.id, selectedRoles, editRoles.roles.map((r) => r.id)));
+                  if (s.status === 'success') setEditRoles(null);
+                })
+              }
+            />
           </DialogContent>
         </Dialog>
       ) : null}

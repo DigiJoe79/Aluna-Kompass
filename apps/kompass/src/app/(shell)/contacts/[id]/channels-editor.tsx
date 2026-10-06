@@ -1,15 +1,18 @@
 'use client';
 
-import { Plus, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState, useTransition } from 'react';
+import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { setContactChannelsAction } from '../actions';
 import { Select } from '@/components/ui/select';
 
@@ -33,6 +36,9 @@ export function ChannelsEditor({
   const [label, setLabel] = useState('');
   const [isPrimary, setIsPrimary] = useState(channels.length === 0);
   const [pending, startTransition] = useTransition();
+  const addFb = useActionFeedback();
+  // „Entfernen“ steht in den Zeilen der Liste: Die Ablehnung steht über der Liste.
+  const removeFb = useActionFeedback();
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +51,8 @@ export function ChannelsEditor({
     }));
     const nextChannels = [...current, { kind, value: value.trim(), label: label.trim() || null, isPrimary }];
     startTransition(async () => {
-      await setContactChannelsAction(contactId, nextChannels);
+      const result = await addFb.run(() => setContactChannelsAction(contactId, nextChannels));
+      if (result.status !== 'success') return;
       setValue('');
       setLabel('');
       setIsPrimary(false);
@@ -63,7 +70,7 @@ export function ChannelsEditor({
         isPrimary: ch.isPrimary,
       }));
     startTransition(async () => {
-      await setContactChannelsAction(contactId, nextChannels);
+      await removeFb.run(() => setContactChannelsAction(contactId, nextChannels), { retry: () => handleRemove(channelId) });
     });
   };
 
@@ -76,21 +83,20 @@ export function ChannelsEditor({
             <DialogTrigger
               render={
                 <Button size="sm" variant="outline">
-                  <Plus className="size-3.5" aria-hidden />
                   {t('channels.add')}
                 </Button>
               }
             />
-            <DialogContent className="w-full sm:max-w-[440px] bg-surface p-0 shadow-md">
+            <DialogContent size="sm" className="bg-surface shadow-md">
               <form onSubmit={handleAdd}>
-                <div className="p-6">
-                  <DialogTitle className="font-heading text-[17px]">{t('channels.add')}</DialogTitle>
-                  <DialogDescription className="text-[13px] text-muted-ink">
-                    {t('channels.title')}
-                  </DialogDescription>
+                <DialogTitle className="font-heading text-[17px]">{t('channels.add')}</DialogTitle>
+                <DialogDescription className="text-[13px] text-muted-ink">
+                  {t('channels.title')}
+                </DialogDescription>
 
-                  <div className="mt-4 space-y-3.5">
-                    <FormField id="channel-kind" label={t('channels.kind')}>
+                <div className="mt-4">
+                  <FormGrid>
+                    <FormField id="channel-kind" label={t('channels.kind')} size="s">
                       <Select
                         id="channel-kind"
                         value={kind}
@@ -114,7 +120,7 @@ export function ChannelsEditor({
                       />
                     </FormField>
 
-                    <FormField id="channel-label" label={t('channels.label')}>
+                    <FormField id="channel-label" label={t('channels.label')} size="s">
                       <Input
                         id="channel-label"
                         value={label}
@@ -123,32 +129,24 @@ export function ChannelsEditor({
                       />
                     </FormField>
 
-                    <div className="flex items-center gap-2 pt-1">
+                    <FormField id="channel-primary" label={t('channels.isPrimary')} toggle>
                       <Checkbox
                         id="channel-primary"
                         checked={isPrimary}
                         onCheckedChange={(c) => setIsPrimary(Boolean(c))}
                       />
-                      <Label htmlFor="channel-primary" className="text-[13px] text-ink-2 cursor-pointer">
-                        {t('channels.isPrimary')}
-                      </Label>
-                    </div>
-                  </div>
+                    </FormField>
+                  </FormGrid>
                 </div>
 
-                <DialogFooter className="items-center border-t border-line bg-surface-2 px-6 py-3">
-                  <Button type="button" variant="ghost" onClick={() => setAddOpen(false)}>
-                    {c('cancel')}
-                  </Button>
-                  <Button type="submit" disabled={pending}>
-                    {t('channels.save')}
-                  </Button>
-                </DialogFooter>
+                <FormActionBar placement="dialog" mode="create" cancel={() => setAddOpen(false)} pending={pending} saveLabel={t('channels.save')} state={addFb.state} />
               </form>
             </DialogContent>
           </Dialog>
         ) : null}
       </div>
+
+      <RefusalNotice action state={removeFb.state} />
 
       {channels.length === 0 ? (
         <p className="text-[13px] text-muted-ink">—</p>
@@ -172,7 +170,7 @@ export function ChannelsEditor({
                   variant="ghost"
                   onClick={() => handleRemove(ch.id)}
                   disabled={pending}
-                  className="size-7 p-0 text-muted-ink hover:text-error"
+                  className="size-7 p-0 text-muted-ink"
                 >
                   <Trash2 className="size-3.5" aria-hidden />
                 </Button>

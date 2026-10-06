@@ -7,6 +7,7 @@ import { ANIMALS_SETTINGS } from './settings';
 import { animalsSetTranslations, animalsTranslatables } from './translations';
 import { publishedAnimals } from './views';
 import { ANIMALS_MCP_TOOLS } from './mcp-tools';
+import { animalProfileTemplate, PROFILE_BASE } from './print/template';
 
 export const animalsModule: ModuleManifest = defineModule({
   key: 'animals',
@@ -19,6 +20,9 @@ export const animalsModule: ModuleManifest = defineModule({
     { href: '/admin/animals', doc: 'einstellungen/tiere-einrichten' },
   ],
   settings: ANIMALS_SETTINGS,
+  documentTemplates: [animalProfileTemplate],
+  // Führt eine Installation eigene Basen, meldet `documentBaseGaps`, wenn diese fehlt.
+  documentBases: [PROFILE_BASE],
   deletionRules: [
     {
       entity: 'animal',

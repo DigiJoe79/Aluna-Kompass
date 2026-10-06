@@ -8,16 +8,21 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useDateFormat } from '@/components/date-format-provider';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import type { ActionState } from '@/lib/actions';
 import { formatEuro } from '@/lib/finance/amount';
 import { runProgress } from '@/lib/finance/run';
 import { dispatchRunConfirmationsAction } from './actions';
+import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
 
 type SentVia = 'post' | 'email' | 'handed';
 
@@ -34,6 +39,8 @@ export function RunResult({ run, canIssue, today, missing, followUpHref }: { run
   const { date } = useDateFormat();
   const [dispatching, setDispatching] = useState(false);
   const [downloading, setDownloading] = useState<'machine' | 'signature' | null>(null);
+  const [refusal, setRefusal] = useState<ActionState>({ status: 'idle' });
+  const tCommon = useTranslations('common');
   const { total } = runProgress(run.counts);
 
   const errorText = (code: string | null) => {
@@ -43,11 +50,12 @@ export function RunResult({ run, canIssue, today, missing, followUpHref }: { run
 
   const download = async (part: 'machine' | 'signature') => {
     setDownloading(part);
+    setRefusal({ status: 'idle' });
     try {
       const response = await fetch(`/finance/donations/run/${run.id}/bundle?part=${part}`);
       if (!response.ok) {
         const body = response.status === 409 ? ((await response.json()) as { message?: string }) : null;
-        toast.error(body?.message ?? t('result.bundleFailed'));
+        setRefusal({ status: 'error', message: body?.message ?? t('result.bundleFailed'), fieldErrors: {} });
         return;
       }
       const disposition = response.headers.get('content-disposition') ?? '';
@@ -60,6 +68,9 @@ export function RunResult({ run, canIssue, today, missing, followUpHref }: { run
       anchor.click();
       anchor.remove();
       setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch {
+      // Der Server war nicht zu erreichen: keine Ablehnung, sondern ein Toast zum Wiederholen.
+      toast.error(tCommon('network'), { duration: Infinity, closeButton: true, action: { label: tCommon('retry'), onClick: () => void download(part) } });
     } finally {
       setDownloading(null);
     }
@@ -80,6 +91,7 @@ export function RunResult({ run, canIssue, today, missing, followUpHref }: { run
 
       <div className="space-y-2">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-ink">{t('result.bundles')}</p>
+        <RefusalNotice action state={refusal} />
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" disabled={run.counts.machine === 0 || downloading !== null} onClick={() => void download('machine')}>
             <Download aria-hidden />
@@ -155,17 +167,13 @@ function DispatchAllDialog({ runId, today, onClose }: { runId: string; today: st
   const [sentAt, setSentAt] = useState(today);
   const [sentVia, setSentVia] = useState<SentVia>('post');
   const [pending, setPending] = useState(false);
+  const feedback = useActionFeedback();
 
   const submit = async () => {
     setPending(true);
-    const result = await dispatchRunConfirmationsAction({ runId, sentAt, sentVia });
+    const result = await feedback.run(() => dispatchRunConfirmationsAction({ runId, sentAt, sentVia }), { retry: () => void submit() });
     setPending(false);
-    if (result.status === 'error') {
-      toast.error(result.message);
-      return;
-    }
     if (result.status === 'success') {
-      if (result.message) toast.success(result.message);
       onClose();
       router.refresh();
     }
@@ -173,29 +181,26 @@ function DispatchAllDialog({ runId, today, onClose }: { runId: string; today: st
 
   return (
     <Dialog open onOpenChange={(next) => (next ? undefined : onClose())}>
-      <DialogContent layout="fixed-footer" className="bg-surface shadow-md">
+      <DialogContent size="sm" layout="fixed-footer" className="bg-surface shadow-md">
         <DialogHeader>
           <DialogTitle className="font-heading text-[19px]">{td('title')}</DialogTitle>
         </DialogHeader>
-        <DialogBody className="space-y-3 px-5 py-4">
+        <DialogBody className="space-y-3">
           <p className="text-[13px] text-ink-2">{td('text')}</p>
-          <div className="space-y-1.5">
-            <Label htmlFor="run-dispatch-date" required>{td('sentAt')}</Label>
-            <Input id="run-dispatch-date" type="date" value={sentAt} max={today} onChange={(e) => setSentAt(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="run-dispatch-via" required>{td('sentVia')}</Label>
-            <Select id="run-dispatch-via" value={sentVia} onChange={(e) => setSentVia(e.target.value as SentVia)}>
-              {(['post', 'email', 'handed'] as const).map((via) => (
-                <option key={via} value={via}>{tv(via)}</option>
-              ))}
-            </Select>
-          </div>
+          <FormGrid>
+            <FormField id="run-dispatch-date" label={td('sentAt')} required size="s">
+              <Input id="run-dispatch-date" type="date" value={sentAt} max={today} onChange={(e) => setSentAt(e.target.value)} />
+            </FormField>
+            <FormField id="run-dispatch-via" label={td('sentVia')} required size="s">
+              <Select id="run-dispatch-via" value={sentVia} onChange={(e) => setSentVia(e.target.value as SentVia)}>
+                {(['post', 'email', 'handed'] as const).map((via) => (
+                  <option key={via} value={via}>{tv(via)}</option>
+                ))}
+              </Select>
+            </FormField>
+          </FormGrid>
         </DialogBody>
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={onClose}>{td('cancel')}</Button>
-          <Button type="button" disabled={!sentAt || pending} onClick={() => void submit()}>{td('submit')}</Button>
-        </DialogFooter>
+        <FormActionBar placement="dialog" cancel={onClose} pending={pending} saveDisabled={!sentAt} saveLabel={td('submit')} onSave={() => void submit()} state={feedback.state} />
       </DialogContent>
     </Dialog>
   );

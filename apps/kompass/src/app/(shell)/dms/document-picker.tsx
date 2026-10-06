@@ -3,8 +3,8 @@
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Label } from '@/components/ui/label';
 import { searchDocumentsAction, type PickedDocument } from './search-action';
+import { FormField } from '@/components/forms/form-field';
 
 /**
  * Dasselbe Suchfeld wie für Kontakte, nur gegen die Akte: Ein Dokument wird
@@ -61,10 +61,7 @@ export function DocumentPicker({
   };
 
   return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id} required={required}>
-        {label}
-      </Label>
+    <FormField id={id} label={label} required={required}>
       <input type="hidden" name={name} value={value?.id ?? ''} />
       {/* Der Rahmen sitzt am Feld, nicht an der Hülle: `h-auto` gegen das
           `size-full` der Palette, sonst nimmt die Hülle in einer Rasterzelle
@@ -115,6 +112,6 @@ export function DocumentPicker({
           </CommandList>
         ) : null}
       </Command>
-    </div>
+    </FormField>
   );
 }

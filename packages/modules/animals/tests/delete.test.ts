@@ -8,17 +8,17 @@ const PNG = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAA
 const png = (n: number) => new Uint8Array([...PNG, ...Array(n).fill(0)]);
 
 const deleted: string[] = [];
-/** Hält jedes Tier mit Slug „gehalten“ fest und zeigt auf jedes mit Slug „verwiesen“. */
+/** Hält jedes Tier mit Namen „Gehalten“ fest und zeigt auf jedes mit Namen „Verwiesen“ (den Slug bildet Kompass, er taugt nicht als Schlüssel). */
 const probe = defineModule({
   key: 'probe',
   version: '0.0.0',
   permissions: [],
   retentionHolds: (deps, entityType, id) =>
-    entityType === 'animal' && deps.db.select().from(animals).where(eq(animals.id, id)).get()?.slug === 'gehalten'
+    entityType === 'animal' && deps.db.select().from(animals).where(eq(animals.id, id)).get()?.name === 'Gehalten'
       ? [{ label: 'Schutzvertrag SV-2026-0007', until: '2036-12-31', entity: 'document', id: 'D1' }]
       : [],
   recordReferences: (deps, entityType, id) =>
-    entityType === 'animal' && deps.db.select().from(animals).where(eq(animals.id, id)).get()?.slug === 'verwiesen'
+    entityType === 'animal' && deps.db.select().from(animals).where(eq(animals.id, id)).get()?.name === 'Verwiesen'
       ? [{ label: 'Dokument „Anfrage Tierarzt“ (Entwurf)', entity: 'document', id: 'D2', href: '/dms/D2' }]
       : [],
   recordDeleted: (_tx, _deps, _ctx, entityType, id) => void deleted.push(`${entityType}:${id}`),
@@ -41,7 +41,7 @@ const code = (r: { ok: boolean; error?: { type: string; code?: string } }) => (r
 describe('deleteAnimal', () => {
   it('lehnt ein veröffentlichtes Tier ab und löscht es nach dem Zurückziehen', async () => {
     const deps = await setup();
-    const a = unwrap(await createAnimal(deps, manage, { ...base, slug: 'rocky' }));
+    const a = unwrap(await createAnimal(deps, manage, { ...base }));
     unwrap(await setAnimalPublished(deps, manage, { id: a.id, isPublished: true }));
     expect(code(await deleteAnimal(deps, manage, { id: a.id }))).toBe('stillPublished');
     expect(deps.db.select().from(animals).all()).toHaveLength(1);
@@ -53,7 +53,7 @@ describe('deleteAnimal', () => {
 
   it('nimmt Fotos-Zuordnung und Erfolgsgeschichte mit und schreibt das volle Vorher ins Protokoll', async () => {
     const deps = await setup();
-    const a = unwrap(await createAnimal(deps, manage, { ...base, slug: 'rocky' }));
+    const a = unwrap(await createAnimal(deps, manage, { ...base }));
     const photo = unwrap(await storeMediaAsset(deps, manage, { originalName: 'rocky.png', bytes: png(1) }));
     unwrap(await setAnimalPhotos(deps, manage, { id: a.id, photos: [{ assetId: photo.id, isPrimary: true }] }));
     unwrap(await setAnimalStatus(deps, manage, { id: a.id, status: 'adopted', adoptedYear: 2026 }));
@@ -66,7 +66,7 @@ describe('deleteAnimal', () => {
     const entry = auditEntry(deps, 'animals.delete');
     expect(entry).toMatchObject({ entityType: 'animal', entityId: a.id, summary: 'Tier Rocky gelöscht' });
     const before = JSON.parse(entry.before!);
-    expect(before).toMatchObject({ slug: 'rocky', name: 'Rocky', story: { family: 'Familie Berger' } });
+    expect(before).toMatchObject({ slug: expect.stringMatching(/^rocky-[0-9a-z]{4}$/), name: 'Rocky', story: { family: 'Familie Berger' } });
     expect(before.photos.map((p: { assetId: string }) => p.assetId)).toEqual([photo.id]);
     // Ohne Schalter bleibt das Foto — und ist jetzt in der Mediathek frei.
     expect(deps.db.select().from(schema.mediaAssets).all().map((m) => m.id)).toEqual([photo.id]);
@@ -74,8 +74,8 @@ describe('deleteAnimal', () => {
 
   it('lehnt ab, solange ein Halter läuft oder ein Verweis besteht, und nennt ihn', async () => {
     const deps = await setup();
-    const held = unwrap(await createAnimal(deps, manage, { ...base, slug: 'gehalten' }));
-    const linked = unwrap(await createAnimal(deps, manage, { ...base, slug: 'verwiesen' }));
+    const held = unwrap(await createAnimal(deps, manage, { ...base, name: 'Gehalten' }));
+    const linked = unwrap(await createAnimal(deps, manage, { ...base, name: 'Verwiesen' }));
     const heldResult = await deleteAnimal(deps, manage, { id: held.id });
     expect(code(heldResult)).toBe('recordHeld');
     expect(heldResult.ok === false && heldResult.error.type === 'conflict' && heldResult.error.message).toContain('Schutzvertrag SV-2026-0007 (bis 2036-12-31)');
@@ -87,8 +87,8 @@ describe('deleteAnimal', () => {
 
   it('räumt mit Schalter die nur hier verwendeten Fotos ab und behält geteilte', async () => {
     const deps = await setup();
-    const rocky = unwrap(await createAnimal(deps, manage, { ...base, slug: 'rocky' }));
-    const luna = unwrap(await createAnimal(deps, manage, { ...base, slug: 'luna', name: 'Luna' }));
+    const rocky = unwrap(await createAnimal(deps, manage, { ...base }));
+    const luna = unwrap(await createAnimal(deps, manage, { ...base, name: 'Luna' }));
     const own = unwrap(await storeMediaAsset(deps, manage, { originalName: 'rocky.png', bytes: png(1) }));
     const shared = unwrap(await storeMediaAsset(deps, manage, { originalName: 'beide.png', bytes: png(2) }));
     unwrap(await setAnimalPhotos(deps, manage, { id: rocky.id, photos: [{ assetId: own.id, isPrimary: true }, { assetId: shared.id, isPrimary: false }] }));
@@ -111,7 +111,7 @@ describe('deleteAnimal', () => {
 
   it('verlangt animals.manage, und für den Schalter media.upload — vorher passiert nichts', async () => {
     const deps = await setup();
-    const a = unwrap(await createAnimal(deps, manage, { ...base, slug: 'rocky' }));
+    const a = unwrap(await createAnimal(deps, manage, { ...base }));
     expect(code(await deleteAnimal(deps, ctxWith(['animals.view']), { id: a.id }))).toBe('forbidden');
     expect(code(await deleteAnimal(deps, ctxWith(['animals.manage']), { id: a.id, deleteOrphanedMedia: true }))).toBe('forbidden');
     expect(deps.db.select().from(animals).all()).toHaveLength(1);
@@ -121,8 +121,8 @@ describe('deleteAnimal', () => {
 
   it('sagt in der Vorschau dasselbe wie beim Löschen', async () => {
     const deps = await setup();
-    const held = unwrap(await createAnimal(deps, manage, { ...base, slug: 'gehalten' }));
-    const free = unwrap(await createAnimal(deps, manage, { ...base, slug: 'frei' }));
+    const held = unwrap(await createAnimal(deps, manage, { ...base, name: 'Gehalten' }));
+    const free = unwrap(await createAnimal(deps, manage, { ...base }));
     expect(unwrap(await animalDeletionPreview(deps, manage, held.id)).deletable).toBe(false);
     expect((await deleteAnimal(deps, manage, { id: held.id })).ok).toBe(false);
     expect(unwrap(await animalDeletionPreview(deps, manage, free.id)).deletable).toBe(true);
@@ -131,7 +131,7 @@ describe('deleteAnimal', () => {
 
   it('sagt den anderen Modulen, dass das Tier weg ist', async () => {
     const deps = await setup();
-    const a = unwrap(await createAnimal(deps, manage, { ...base, slug: 'weg' }));
+    const a = unwrap(await createAnimal(deps, manage, { ...base }));
     deleted.length = 0;
     expect(unwrap(await deleteAnimal(deps, manage, { id: a.id }))).toEqual({ deletedMedia: [], keptMedia: [] });
     expect(deleted).toEqual([`animal:${a.id}`]);

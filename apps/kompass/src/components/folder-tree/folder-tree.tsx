@@ -2,7 +2,7 @@
 
 import { dragAndDropFeature, hotkeysCoreFeature, syncDataLoaderFeature, type DragTarget } from '@headless-tree/core';
 import { useTree } from '@headless-tree/react';
-import { Keyboard, Plus } from 'lucide-react';
+import { Keyboard } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Fragment, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type FocusEvent as ReactFocusEvent, type DragEvent as ReactDragEvent, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import { KeyChip } from '@/components/key-chip';
@@ -874,7 +874,6 @@ export function FolderTree({
               density === 'touch' && 'relative after:absolute after:-inset-x-px after:-inset-y-[9px]'
             )}
           >
-            <Plus className="size-3.5" strokeWidth={2.2} aria-hidden />
             {t('newFolder')}
           </button>
         ) : null}
@@ -909,7 +908,6 @@ export function FolderTree({
               onClick={() => startCreate(null)}
               className="mt-1 inline-flex h-7 items-center gap-[5px] rounded-sm border border-line-strong bg-active px-[9px] text-[13px] font-medium whitespace-nowrap text-ink hover:bg-hover focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus"
             >
-              <Plus className="size-3.5" strokeWidth={2.2} aria-hidden />
               {t('createFirst')}
             </button>
           ) : null}

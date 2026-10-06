@@ -1,6 +1,5 @@
 'use client';
 
-import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 import { CreateContactDialog } from '@/app/(shell)/contacts/contact-form';
@@ -149,7 +148,6 @@ export function ContactPicker({
                   ) : null}
                   {canCreate ? (
                     <CommandItem value="__create" onSelect={() => { setOpen(false); setCreating(true); }} className="border-t border-line-2 font-semibold">
-                      <Plus className="size-3.5" aria-hidden />
                       {t('create')}
                     </CommandItem>
                   ) : null}

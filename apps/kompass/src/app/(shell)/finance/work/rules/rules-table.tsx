@@ -32,31 +32,31 @@ export function RulesTable({ rows, canWrite, options }: { rows: RuleRow[]; canWr
     <div className="overflow-hidden rounded-md border border-line bg-surface">
       <Table>
         <TableHeader>
-          <TableRow className="h-9">
-            <TableHead className="px-4">{t('name')}</TableHead>
-            <TableHead className="px-4">{t('condition')}</TableHead>
-            <TableHead className="px-4">{t('result')}</TableHead>
-            <TableHead className="px-4 text-right">{t('hits')}</TableHead>
-            <TableHead className="px-4">{t('active')}</TableHead>
-            <TableHead className="px-4" />
+          <TableRow>
+            <TableHead>{t('name')}</TableHead>
+            <TableHead>{t('condition')}</TableHead>
+            <TableHead>{t('result')}</TableHead>
+            <TableHead className="text-right">{t('hits')}</TableHead>
+            <TableHead>{t('active')}</TableHead>
+            <TableHead />
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((row) => (
-            <TableRow key={row.rule.id} className="border-b border-line-2 align-top">
-              <TableCell className="px-4 py-2.5 font-medium text-ink">{row.rule.name}</TableCell>
-              <TableCell className="px-4 py-2.5 text-ink-2">{row.conditionTexts.join(' · ')}</TableCell>
-              <TableCell className="px-4 py-2.5 text-ink-2">
+            <TableRow key={row.rule.id} className="align-top">
+              <TableCell className="py-2.5 font-medium text-ink">{row.rule.name}</TableCell>
+              <TableCell className="py-2.5 text-ink-2">{row.conditionTexts.join(' · ')}</TableCell>
+              <TableCell className="py-2.5 text-ink-2">
                 <span className="flex flex-wrap items-center gap-2">
                   {row.categoryName}
                   {row.categoryInactive ? <StatusBadge tone="error">{t('categoryInactive')}</StatusBadge> : null}
                 </span>
               </TableCell>
-              <TableCell data-testid="rule-hits" className="px-4 py-2.5 text-right font-mono tabular-nums">
+              <TableCell data-testid="rule-hits" className="py-2.5 text-right font-mono tabular-nums">
                 {row.hitCount}
               </TableCell>
-              <TableCell className="px-4 py-2.5">{row.rule.isActive ? t('yes') : t('no')}</TableCell>
-              <TableCell className="px-4 py-2.5 text-right">
+              <TableCell className="py-2.5">{row.rule.isActive ? t('yes') : t('no')}</TableCell>
+              <TableCell className="py-2.5 text-right">
                 {canWrite ? (
                   <span className="flex justify-end gap-2">
                     <Button type="button" size="sm" variant="secondary" onClick={() => setEditing(ruleFormFromRule(row.rule, row.contactName))}>

@@ -18,7 +18,7 @@ steht, beschreibt [Auszug bei der Bank holen](auszug-bei-der-bank-holen.md).
 
 Den Assistenten öffnen Sie unter „Hochgeladene Auszüge“: Laden Sie eine
 CSV-Datei auf ein Konto ohne CSV-Format, bietet Kompass „CSV-Format
-einrichten“ an. Auch die Checkliste unter „Finanzen einrichten“ führt dorthin.
+einrichten“ an. Auch die Checkliste unter Einstellungen → Finanzen führt dorthin.
 Einrichten darf, wer „Finanzen einrichten“ darf.
 
 1. **CAMT oder CSV** — der Assistent fragt noch einmal nach CAMT. Erst mit

@@ -12,6 +12,7 @@ import type { FlowState } from './flow-state';
 import { PreviewDetails } from './preview-details';
 import { PreviewSummary } from './preview-summary';
 import { RunCard } from './run-card';
+import { panelHref } from '@/components/panel-nav';
 
 export { endText } from './end-text';
 
@@ -82,7 +83,7 @@ export function PublishFlowCard(p: PublishFlowCardProps) {
       <p className="text-[13px] text-muted-ink">
         {t('flow.noTarget')}{' '}
         {p.canManage ? (
-          <Link href="/admin/site?panel=connection" className="text-link underline">
+          <Link href={panelHref('/admin/site', 'connection')} className="text-link underline">
             {t('flow.noTargetLink')}
           </Link>
         ) : null}

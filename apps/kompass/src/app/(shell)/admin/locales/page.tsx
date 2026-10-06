@@ -1,20 +1,20 @@
 import { listLocales, requirePermission } from '@kompass/core';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
 import { LocalesClient } from './locales-client';
 
 export default async function LocalesPage() {
   const { deps, ctx } = await requireSession();
-  if (requirePermission(ctx, 'settings.manage')) return <ForbiddenCard permission="settings.manage" />;
+  if (requirePermission(ctx, 'settings.manage')) return <Page width="standard"><ForbiddenCard permission="settings.manage" /></Page>;
   const t = await getTranslations('admin.locales');
   const result = await listLocales(deps, ctx);
-  if (!result.ok) return <ForbiddenCard permission="settings.manage" />;
+  if (!result.ok) return <Page width="standard"><ForbiddenCard permission="settings.manage" /></Page>;
   return (
-    <>
-      <PageHeader title={t('title')} description={t('description')} />
+    <Page width="standard" header={<PageHeader title={t('title')} description={t('description')} />}>
       <LocalesClient locales={result.value} />
-    </>
+    </Page>
   );
 }

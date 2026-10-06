@@ -36,6 +36,7 @@ const DYNAMIC: { prefix: RegExp; where: string }[] = [
   { prefix: /^settings\.managedHint\./, where: 'lib/settings-fields.ts — `managedHintKey()` liefert `managedHint.${tab}`' },
   { prefix: /^finance\.taxText\./, where: 'lib/finance/tax-text.ts — `taxTextKey()` liefert den Schlüssel' },
   { prefix: /^site\.publish\.flow\.end\.(success\.title|failed|failedPreview|cancelled|timeout|interrupted|cache)/, where: 'app/(shell)/site/publish/end-text.ts — endTitle/endText mit dem Übersetzer des Namensraums site.publish' },
+  { prefix: /^common\.conflict\.(compare|reload)$/, where: 'lib/conflict-remedies.ts — `conflictRemedies()` löst die Auswege mit dem Übersetzer der Leiste auf' },
   { prefix: /^finance\.channel\./, where: 'lib/finance/channel.ts — `channelKey()` liefert den Schlüssel' },
 ];
 

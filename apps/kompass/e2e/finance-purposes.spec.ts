@@ -1,6 +1,7 @@
 import path from 'node:path';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { associationDay } from './association-day';
 import { backToAdmin, callTool, mcpClient, PDF, PHONE, switchTo, switchToJonas } from './expense-helpers';
 import { loginAsAdmin, resetDatabase } from './helpers';
 
@@ -95,6 +96,27 @@ test.describe('finance purposes (F8b)', () => {
     await expect(row(page, 'Tierarztfonds E2E')).not.toContainText('Rest');
   });
 
+  test('Freigaben auf 390 px: mit gewählter Umwidmung steht das Detail, nicht die Schlange (K9-Befund 12)', async ({ page, baseURL }) => {
+    const client = await mcpClient(page, baseURL);
+    const purpose = await callTool<{ id: string }>(client, 'finance_master_data_save', { kind: 'purpose', data: { name: 'Telefonfonds E2E' } });
+    const doc = await callTool<{ id: string }>(client, 'dms_receive', { filename: 'protokoll.pdf', typeKey: 'minutes', subject: 'Protokoll Telefon E2E', documentDate: '2026-01-15', contentBase64: PDF.buffer.toString('base64') });
+    const transfer = await callTool<{ id: string }>(client, 'finance_purpose_transfer_request', {
+      fromPurposeId: null,
+      toPurposeId: purpose.id,
+      amountCents: 5000,
+      transferDate: associationDay(0),
+      reason: 'Probe auf dem Telefon',
+      documentId: doc.id,
+    });
+    await switchToJonas(page);
+    await page.setViewportSize(PHONE);
+    // Wie `?claim=`/`?payment=`: Nach der Wahl zeigt das Telefon das Detail mit dem Weg zurück, die Schlange ist weg.
+    await page.goto(`/finance/approvals?transfer=${transfer.id}`);
+    await expect(page.getByTestId('purpose-transfer-detail')).toBeVisible();
+    await expect(page.getByTestId('approval-queue')).toBeHidden();
+    await expect(page.getByRole('link', { name: 'Zur Warteschlange' })).toBeVisible();
+  });
+
   test('nur mit finance.overview: Zweck, Ziel, Bestand und Zustand — keine Bewegungen, die Zeile öffnet nichts', async ({ page, baseURL }) => {
     const client = await mcpClient(page, baseURL);
     await callTool(client, 'finance_master_data_save', { kind: 'purpose', data: { name: 'Überblick E2E', targetCents: 10000, description: 'Zusage von Frau Beispiel', referenceNote: 'Brief vom Januar' } });
@@ -155,7 +177,7 @@ test.describe('finance purposes (F8b)', () => {
     await form.locator('#transfer-from').selectOption({ index: 1 });
     await page.getByTestId('transfer-save').focus();
     await page.keyboard.press('Enter');
-    const refusal = page.getByTestId('transfer-error');
+    const refusal = page.getByTestId('transfer-footer');
     await expect(refusal.getByRole('alert')).toContainText('Das Dokument fehlt');
     await expect(page.getByTestId('transfer-save')).toHaveText('Zur Freigabe geben');
   });

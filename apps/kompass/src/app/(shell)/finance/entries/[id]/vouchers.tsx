@@ -8,6 +8,9 @@ import { toast } from 'sonner';
 import { ReceiptDrop } from '@/components/finance/receipt-drop';
 import { ReceiptList, type ReceiptListItem } from '@/components/finance/receipt-list';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import type { ActionState } from '@/lib/actions';
+import { runAction, toastNetwork } from '@/lib/feedback';
 import { revokeVoucherAction, uploadVoucherAction } from '../actions';
 
 /**
@@ -34,32 +37,34 @@ export function EntryVouchers({
   origin?: { entity: 'financeExpenseClaim' | 'financePartnerPayment'; id: string };
 }) {
   const t = useTranslations('finance.entryView.vouchers');
-  const tCommon = useTranslations('common');
   const router = useRouter();
   const [vouchers, setVouchers] = useState(initial);
   const [revokeTarget, setRevokeTarget] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  const [refusal, setRefusal] = useState<ActionState>({ status: 'idle' });
+  const tCommon = useTranslations('common');
 
   const uploadFiles = async (files: File[]) => {
+    setRefusal({ status: 'idle' });
     for (const file of files) {
-      try {
-        const formData = new FormData();
-        formData.append('entryId', entryId);
-        formData.append('typeKey', 'voucher-own');
-        formData.append('documentDate', today);
-        formData.append('file', file);
-        const result = await uploadVoucherAction(formData);
-        if (result.status !== 'success') {
-          if (result.status === 'error') toast.error(result.message);
-          continue;
+      const formData = new FormData();
+      formData.append('entryId', entryId);
+      formData.append('typeKey', 'voucher-own');
+      formData.append('documentDate', today);
+      formData.append('file', file);
+      // Der Hinweis zu einem Beleg ist eine Warnung, kein Erfolgs-Toast — darum nicht über den Feedback-Haken.
+      const result = await runAction(() => uploadVoucherAction(formData), tCommon('network'));
+      if (result.status !== 'success') {
+        if (result.status === 'error') {
+          if (result.kind === 'network') toastNetwork(result, tCommon('retry'), () => void uploadFiles([file]));
+          else setRefusal(result);
         }
-        if (result.message) toast.warning(result.message);
-        const data = result.data as { linkId: string; documentId: string; documentNumber: string };
-        setVouchers((prev) => [...prev, { linkId: data.linkId, documentNumber: data.documentNumber, title: file.name, typeLabel: t('type'), date: today, viewHref: `/finance/entries/${entryId}/voucher/${data.documentId}`, revoked: false }]);
-        router.refresh();
-      } catch {
-        toast.error(tCommon('uploadFailed'));
+        continue;
       }
+      if (result.message) toast.warning(result.message);
+      const data = result.data as { linkId: string; documentId: string; documentNumber: string };
+      setVouchers((prev) => [...prev, { linkId: data.linkId, documentNumber: data.documentNumber, title: file.name, typeLabel: t('type'), date: today, viewHref: `/finance/entries/${entryId}/voucher/${data.documentId}`, revoked: false }]);
+      router.refresh();
     }
   };
 
@@ -76,6 +81,7 @@ export function EntryVouchers({
         </p>
       ) : null}
       <ReceiptList items={vouchers} onRevoke={(linkId) => setRevokeTarget(linkId)} />
+      <RefusalNotice action state={refusal} />
       <ReceiptDrop onFiles={(files) => void uploadFiles(files)} />
 
       <ConfirmDialog
@@ -88,7 +94,7 @@ export function EntryVouchers({
         confirmDisabled={note.trim().length === 0}
         action={async () => {
           const result = await revokeVoucherAction(revokeTarget!, note);
-          setNote('');
+          if (result.status === 'success') setNote('');
           router.refresh();
           return result;
         }}

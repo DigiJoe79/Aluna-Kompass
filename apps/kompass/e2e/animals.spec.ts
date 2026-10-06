@@ -1,5 +1,6 @@
+import { readFile } from 'node:fs/promises';
 import { expect, test } from './fixtures';
-import { loginAsAdmin, resetDatabase } from './helpers';
+import { loginAsAdmin, resetDatabase, setE2ESetting } from './helpers';
 
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
 const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4"/></svg>');
@@ -10,10 +11,45 @@ test.describe('animals', () => {
     await loginAsAdmin(page);
   });
 
+  /** Spec 2026-10-05 „Tier-Slug fest“: Kompass bildet den Slug, die Maske zeigt ihn nur an, Umbenennen lässt ihn stehen (Review Focus 1). */
+  test('bildet den Slug selbst und lässt ihn beim Umbenennen stehen', async ({ page }) => {
+    await page.goto('/animals');
+    await page.getByRole('link', { name: 'Hund anlegen' }).click();
+    await expect(page).toHaveURL(/\/animals\/new/);
+    await expect(page.getByLabel('Slug (URL-Teil)')).toHaveCount(0);
+    await page.getByLabel('Name').fill('Wilma');
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page).toHaveURL(/\/animals\/[A-Z0-9]+$/);
+
+    const slug = page.getByLabel('Slug (URL-Teil)');
+    await expect(slug).toHaveAttribute('readonly', '');
+    await expect(slug).toHaveValue(/^wilma-[0-9a-z]{4}$/);
+    const before = await slug.inputValue();
+
+    await page.getByLabel('Name').fill('Wilhelmine');
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByRole('status')).toContainText('Gespeichert');
+    await page.reload();
+    await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
+    await expect(page.getByLabel('Slug (URL-Teil)')).toHaveValue(before);
+  });
+
+  test('zwei Hunde mit gleichem Namen werden beide angelegt', async ({ page }) => {
+    const urls: string[] = [];
+    for (let i = 0; i < 2; i++) {
+      await page.goto('/animals/new');
+      await page.getByLabel('Name').fill('Doppelt');
+      await page.getByRole('button', { name: 'Speichern' }).click();
+      await expect(page).toHaveURL(/\/animals\/[A-Z0-9]+$/);
+      urls.push(page.url());
+    }
+    expect(urls[0]).not.toBe(urls[1]);
+  });
+
   test('creates a dog, adds photos, publishes, adopts with a story', async ({ page }) => {
     await page.goto('/animals');
     await page.getByRole('link', { name: 'Hund anlegen' }).click();
-    await page.getByLabel('Slug (URL-Teil)').fill('chiara');
+    await expect(page).toHaveURL(/\/animals\/new/);
     await page.getByLabel('Name').fill('Chiara');
     await expect(page.getByText('laufen Anfragen auf der Webseite über den Partner')).toBeVisible();
     await page.getByLabel('Geschlecht').selectOption('female');
@@ -48,7 +84,7 @@ test.describe('animals', () => {
     await page.locator('[data-testid="animal-photo"]').nth(1).getByRole('button', { name: 'Hauptfoto' }).click();
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByText('noch nicht gespeichert')).toHaveCount(0);
-    await expect(page.getByText('Inzwischen wurde dieser Eintrag')).toHaveCount(0);
+    await expect(page.getByText('wurde inzwischen geändert')).toHaveCount(0);
     await page.reload();
     await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
     await expect(page.locator('[data-testid="animal-photo"]')).toHaveCount(2);
@@ -76,8 +112,8 @@ test.describe('animals', () => {
     await page.getByRole('dialog').getByRole('button', { name: 'Status setzen' }).click();
     await expect(page.getByRole('status')).toContainText('Status gesetzt');
     await page.getByRole('tab', { name: 'Geschichte' }).click();
-    await page.locator('[name="quote.de"]').fill('Endlich zuhause.');
-    await page.getByLabel('Familie').fill('Familie M.');
+    await page.getByRole('textbox', { name: 'Zitat der Familie (Deutsch)' }).fill('Endlich zuhause.');
+    await page.getByLabel('Familie', { exact: true }).fill('Familie M.');
     await page.locator('[name="beforeCaption.de"]').fill('Auf der Pflegestelle');
     await page.locator('[name="afterCaption.de"]').fill('Zuhause in Köln');
     // Eine Speicherleiste für alle Reiter: Sie zählt die Geschichte mit, und „Speichern“ auf dem Steckbrief schreibt auch sie.
@@ -162,7 +198,7 @@ test.describe('animals', () => {
     await page.goto('/animals');
     await expect(pelle.getByRole('switch')).toBeChecked();
     await expect(pelle).not.toContainText('Prüfung offen');
-    await expect(pelle.getByRole('cell').nth(4)).toHaveText('2'); // Fotozahl
+    await expect(pelle.getByRole('cell').nth(5)).toHaveText('2'); // Fotozahl (Zelle 0 ist das Kästchen der Auswahl)
     expect(await pelle.locator('img').getAttribute('src')).not.toBe(thumb); // neues Hauptfoto
     await expect(page.getByRole('link', { name: /^Prüfung offen \(1\)$/ })).toBeVisible();
     await pelle.getByRole('link', { name: 'Pelle' }).click();
@@ -177,7 +213,6 @@ test.describe('animals', () => {
    */
   test('weist ein Speichern auf veraltetem Stand ab und lässt die Änderung dazwischen stehen', async ({ page }) => {
     await page.goto('/animals/new');
-    await page.getByLabel('Slug (URL-Teil)').fill('mira');
     await page.getByLabel('Name').fill('Mira');
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page).toHaveURL(/\/animals\/[A-Z0-9]+$/);
@@ -190,6 +225,8 @@ test.describe('animals', () => {
 
     const other = await page.context().newPage();
     await other.goto(url);
+    // Die zweite Seite läuft nicht über die Fixture, ihr `goto` wartet nicht auf React (wie contacts.spec.ts).
+    await other.waitForFunction(() => document.documentElement.dataset.hydrated === 'true');
     await other.getByRole('tab', { name: 'Texte und Fotos' }).click();
     await other.locator('[name="summary.de"]').fill('Aus dem zweiten Fenster.');
     await other.getByRole('button', { name: 'Speichern' }).click();
@@ -197,7 +234,8 @@ test.describe('animals', () => {
 
     await page.getByLabel('Name').fill('Mira aus dem ersten Fenster');
     await page.getByRole('button', { name: 'Speichern' }).click();
-    await expect(page.getByText('Inzwischen wurde dieser Eintrag an anderer Stelle geändert')).toBeVisible();
+    // Der Konflikt steht über der Leiste (Text ohne Person und Uhrzeit, weil der Dienst sie nicht nennt).
+    await expect(page.locator('[data-slot="form-action-bar"]').getByRole('alert')).toContainText('wurde inzwischen geändert');
     await expect(page.getByLabel('Name')).toHaveValue('Mira aus dem ersten Fenster');
 
     await page.reload();
@@ -215,28 +253,24 @@ test.describe('animals', () => {
 
   test('behält die Eingaben, wenn das Speichern scheitert', async ({ page }) => {
     await page.goto('/animals/new');
-    await page.getByLabel('Slug (URL-Teil)').fill('doppelt');
-    await page.getByLabel('Name').fill('Erster');
-    await page.getByRole('button', { name: 'Speichern' }).click();
-    await expect(page).toHaveURL(/\/animals\/[A-Z0-9]+$/);
-
-    await page.goto('/animals/new');
-    // Derselbe Slug: Der Server lehnt ab, der Browser lässt es durch.
-    await page.getByLabel('Slug (URL-Teil)').fill('doppelt');
-    await page.getByLabel('Name').fill('Zweiter, mühsam getippt');
+    // Ein Name über 80 Zeichen: Der Server lehnt ab, der Browser lässt es durch. Geprüft wird gerade das Feld
+    // mit der Meldung — es verlor bis 2026-10-05 seine Eingabe, weil FormField es beim ersten Fehler neu aufbaute.
+    const name = 'Ein Name, der mühsam getippt wurde und für das Feld leider viel zu lang geraten ist, xxxx';
+    await page.getByLabel('Name').fill(name);
     await page.getByRole('tab', { name: 'Texte und Fotos' }).click();
     await page.locator('[name="summary.de"]').fill('Ein Text, der nicht verloren gehen darf.');
     await page.getByRole('button', { name: 'Speichern' }).click();
 
-    await expect(page.getByText('bereits vergeben').first()).toBeVisible();
-    await expect(page.locator('[name="summary.de"]')).toHaveValue('Ein Text, der nicht verloren gehen darf.');
+    await expect(page).toHaveURL(/\/animals\/new/);
     await page.getByRole('tab', { name: 'Steckbrief' }).click();
-    await expect(page.getByLabel('Name')).toHaveValue('Zweiter, mühsam getippt');
+    await expect(page.getByLabel('Name')).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.getByLabel('Name')).toHaveValue(name);
+    await page.getByRole('tab', { name: 'Texte und Fotos' }).click();
+    await expect(page.locator('[name="summary.de"]')).toHaveValue('Ein Text, der nicht verloren gehen darf.');
   });
 
   test('the story tab is locked until the dog is adopted', async ({ page }) => {
     await page.goto('/animals/new');
-    await page.getByLabel('Slug (URL-Teil)').fill('bruno');
     await page.getByLabel('Name').fill('Bruno');
     await page.getByLabel('Geschlecht').selectOption('male');
     await page.getByRole('button', { name: 'Speichern' }).click();
@@ -246,7 +280,6 @@ test.describe('animals', () => {
 
   test('übernimmt das Vermittlungsjahr aus „Status ändern“ in die Geschichte, ohne es beim Speichern zu überschreiben', async ({ page }) => {
     await page.goto('/animals/new');
-    await page.getByLabel('Slug (URL-Teil)').fill('greta');
     await page.getByLabel('Name').fill('Greta');
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page).toHaveURL(/\/animals\/[A-Z0-9]+$/);
@@ -259,7 +292,7 @@ test.describe('animals', () => {
     const year = page.locator('[name="adoptedYear"]');
     await expect(year).toHaveValue('2024');
     // Das neu geladene Jahr ist keine Änderung: Nur die Familie zählt.
-    await page.getByLabel('Familie').fill('Familie G.');
+    await page.getByLabel('Familie', { exact: true }).fill('Familie G.');
     await expect(page.getByText('1 Änderung noch nicht gespeichert')).toBeVisible();
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByRole('status')).toContainText('Gespeichert');
@@ -273,7 +306,7 @@ test.describe('animals', () => {
   test('unchecking a photo in the chooser removes it from the list', async ({ page }) => {
     await page.goto('/animals');
     await page.getByRole('link', { name: 'Hund anlegen' }).click();
-    await page.getByLabel('Slug (URL-Teil)').fill('bo');
+    await expect(page).toHaveURL(/\/animals\/new/);
     await page.getByLabel('Name').fill('Bo');
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page).toHaveURL(/\/animals\/[A-Z0-9]+$/);
@@ -305,7 +338,7 @@ test.describe('animals', () => {
   test('lässt kein 13. Foto zu und nennt die Grenze, wenn doch eines ankommt', async ({ page }) => {
     await page.goto('/animals');
     await page.getByRole('link', { name: 'Hund anlegen' }).click();
-    await page.getByLabel('Slug (URL-Teil)').fill('dreizehn');
+    await expect(page).toHaveURL(/\/animals\/new/);
     await page.getByLabel('Name').fill('Dreizehn');
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page).toHaveURL(/\/animals\/[A-Z0-9]+$/);
@@ -347,7 +380,7 @@ test.describe('animals', () => {
   test('löscht einen Hund in zwei Stufen und nimmt die nur hier verwendeten Fotos mit', async ({ page }) => {
     await page.goto('/animals');
     await page.getByRole('link', { name: 'Hund anlegen' }).click();
-    await page.getByLabel('Slug (URL-Teil)').fill('partnerhund');
+    await expect(page).toHaveURL(/\/animals\/new/);
     await page.getByLabel('Name').fill('Partnerhund');
     await page.getByLabel('Geschlecht').selectOption('male');
     await page.getByRole('button', { name: 'Speichern' }).click();
@@ -426,7 +459,7 @@ test.describe('animals', () => {
     await page.getByLabel('Seitenverhältnis').selectOption('4:5');
     await page.getByLabel('Blickpunkt senkrecht (%)').fill('25');
     await page.getByRole('button', { name: 'Speichern' }).click();
-    await expect(page.getByRole('status')).toContainText('Bildausschnitt gespeichert');
+    await expect(page.getByRole('status')).toContainText('Einstellungen gespeichert');
 
     await page.goto('/animals');
     await page.getByRole('link', { name: 'Pelle' }).click();
@@ -434,5 +467,43 @@ test.describe('animals', () => {
     const photo = page.getByTestId('animal-photo').first().locator('img');
     await expect(photo).toHaveCSS('aspect-ratio', '4 / 5');
     await expect(photo).toHaveCSS('object-position', '50% 25%');
+  });
+
+  /** Spec 2026-10-05: Mappe aus der gefilterten Liste, Einzelblatt aus der Maske. Kein Layout-Test des PDFs. */
+  test('exportiert die gefilterte Liste und einen Hund als PDF', async ({ page }) => {
+    await page.goto('/animals');
+    await page.getByLabel('Status', { exact: true }).selectOption('lookingForHome');
+    await page.getByLabel('Webseite', { exact: true }).selectOption('1');
+    await expect(page.getByText('2 von 6 Hunden')).toBeVisible();
+
+    // Review Focus 1: Das Kästchen kreuzt an und öffnet den Hund nicht.
+    await page.getByRole('checkbox', { name: 'Mika auswählen' }).click();
+    await expect(page).toHaveURL(/\/animals\?/);
+    await expect(page.getByTestId('selection-bar')).toContainText('1 Hund ausgewählt');
+
+    await page.getByRole('checkbox', { name: 'Alle gezeigten Hunde auswählen' }).click();
+    await expect(page.getByTestId('selection-bar')).toContainText('2 Hunde ausgewählt');
+    const [mappe] = await Promise.all([page.waitForEvent('download'), page.getByTestId('animals-export').click()]);
+    expect(mappe.suggestedFilename()).toMatch(/^Hundeprofile \d{4}-\d{2}-\d{2}\.pdf$/);
+    const bytes = await readFile((await mappe.path())!);
+    expect(bytes.subarray(0, 4).toString()).toBe('%PDF');
+    expect(bytes.byteLength).toBeGreaterThan(10_000);
+
+    // Review Focus 2: Ein anderer Filter ist eine neue Liste.
+    await page.getByLabel('Webseite', { exact: true }).selectOption('');
+    await expect(page.getByTestId('selection-bar')).toHaveCount(0);
+
+    await page.getByRole('link', { name: 'Mika' }).click();
+    await expect(page.getByText(/https:\/\/musterverein\.example\/tiere\/mika-[0-9a-z]{4}\//)).toBeVisible();
+    const [blatt] = await Promise.all([page.waitForEvent('download'), page.getByTestId('animals-export').click()]);
+    expect(blatt.suggestedFilename()).toBe('Mika.pdf');
+  });
+
+  test('zeigt ohne Profiladresse keine Adresse unter dem Namen', async ({ page }) => {
+    await setE2ESetting(page, 'animals.profileUrl', '');
+    await page.goto('/animals');
+    await page.getByRole('link', { name: 'Mika' }).click();
+    await expect(page.getByRole('heading', { name: 'Mika' })).toBeVisible();
+    await expect(page.getByText('musterverein.example')).toHaveCount(0);
   });
 });

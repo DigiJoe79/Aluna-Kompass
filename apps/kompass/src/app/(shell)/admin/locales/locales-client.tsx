@@ -6,12 +6,14 @@ import { useActionState, useEffect, useRef, useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { ReorderButtons } from '@/components/forms/reorder-buttons';
 import { SubmitButton } from '@/components/forms/submit-button';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { idleState } from '@/lib/actions';
+import { idleState, type ActionState } from '@/lib/actions';
 import { addLocaleAction, previewLocaleRemovalAction, removeLocaleAction, reorderLocalesAction } from './actions';
 
 export function LocalesClient({ locales }: { locales: string[] }) {
@@ -26,25 +28,26 @@ export function LocalesClient({ locales }: { locales: string[] }) {
   const [toRemove, setToRemove] = useState<string | null>(null);
   const [preview, setPreview] = useState<LocaleRemovalPreview | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  // „Entfernen“ steht in den Zeilen der Liste: Die Ablehnung steht über der Liste.
+  const [removeRefusal, setRemoveRefusal] = useState<ActionState>({ status: 'idle' });
 
   useEffect(() => {
     if (state.status === 'success') {
       toast.success(state.message ?? '');
       formRef.current?.reset();
-    } else if (state.status === 'error' && Object.keys(errors).length === 0) {
-      toast.error(state.message);
     }
-  }, [state, errors]);
+  }, [state]);
 
   const openRemove = async (code: string) => {
     setToRemove(code);
+    setRemoveRefusal({ status: 'idle' });
     setLoadingPreview(true);
     setPreview(null);
     const res = await previewLocaleRemovalAction(code);
-    if (res.ok) {
-      setPreview(res.value);
+    if (res.status === 'success') {
+      setPreview(res.data as LocaleRemovalPreview);
     } else {
-      toast.error(res.error.type === 'conflict' ? res.error.message : 'Fehler');
+      setRemoveRefusal(res);
       setToRemove(null);
     }
     setLoadingPreview(false);
@@ -52,6 +55,7 @@ export function LocalesClient({ locales }: { locales: string[] }) {
 
   return (
     <div className="flex flex-col gap-6">
+      <RefusalNotice action state={removeRefusal} />
       <div className="overflow-hidden rounded-lg border border-line bg-surface">
         <div className="border-b border-line bg-table-head px-6 py-3 text-[13px] font-semibold text-muted-ink">
           {t('title')} ({locales.length})
@@ -75,7 +79,6 @@ export function LocalesClient({ locales }: { locales: string[] }) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-error hover:bg-error-bg hover:text-error"
                     aria-label={t('remove', { code })}
                     onClick={() => openRemove(code)}
                   >
@@ -88,11 +91,14 @@ export function LocalesClient({ locales }: { locales: string[] }) {
         </ul>
       </div>
 
-      <div className="rounded-lg border border-line bg-surface p-6">
-        <h3 className="mb-4 font-heading text-[17px] text-ink">{t('add')}</h3>
-        <form ref={formRef} action={action} className="flex flex-col gap-4 sm:flex-row sm:items-end">
-          <div className="flex-1">
-            <FormField id="code" label={t('code')} hint={t('codeHint')} error={errors.code}>
+      <div className="rounded-lg border border-line bg-surface p-5">
+        <h3 className="text-[15px] font-semibold text-ink">{t('add')}</h3>
+        <div className="mt-3">
+          <RefusalNotice state={state} />
+        </div>
+        <form ref={formRef} action={action} className="mt-3">
+          <FormGrid>
+            <FormField id="code" label={t('code')} hint={t('codeHint')} error={errors.code} size="s">
               <Input
                 id="code"
                 name="code"
@@ -102,10 +108,10 @@ export function LocalesClient({ locales }: { locales: string[] }) {
                 className="font-mono"
               />
             </FormField>
-          </div>
-          <div>
-            <SubmitButton>{t('add')}</SubmitButton>
-          </div>
+            <div className="self-end">
+              <SubmitButton>{t('add')}</SubmitButton>
+            </div>
+          </FormGrid>
         </form>
       </div>
 
@@ -132,8 +138,11 @@ export function LocalesClient({ locales }: { locales: string[] }) {
         action={async () => {
           if (!toRemove) return idleState;
           const res = await removeLocaleAction(toRemove);
-          setToRemove(null);
-          setPreview(null);
+          // Nur bei Erfolg: Eine Ablehnung hält den Dialog offen.
+          if (res.status === 'success') {
+            setToRemove(null);
+            setPreview(null);
+          }
           return res;
         }}
       />

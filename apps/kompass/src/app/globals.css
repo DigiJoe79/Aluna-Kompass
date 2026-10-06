@@ -115,6 +115,22 @@
  * Steht als Utility da, weil `h-[var(--row-h-density,var(--row-h))]` sonst in
  * jeder Tabelle stünde — und beim nächsten Umbau in einer davon nicht.
  */
+/*
+ * Breiten (docs/MUSTER.md § I, Handoff Konsistenz § 8a.1): drei Seitenbreiten über `Page`, vier Dialog- und
+ * zwei Seitenfenster-Größen über `size`. Layout-Maße, keine Farben. Der Namensraum `--container-*` erzeugt
+ * `max-w-task`, `max-w-dialog-md` usw.
+ */
+@theme {
+  --container-task: 720px;
+  --container-standard: 1200px;
+  --container-dialog-sm: 440px;
+  --container-dialog-md: 560px;
+  --container-dialog-lg: 760px;
+  --container-dialog-xl: 1040px;
+  --container-sheet-sm: 400px;
+  --container-sheet-md: 560px;
+}
+
 /* Verweil-Balken im Ordnerbaum: 0,8 s wie `openOnDropDelay`, linear (HANDOFF § 2). */
 @theme {
   --animate-dwell: dwell 0.8s linear forwards;

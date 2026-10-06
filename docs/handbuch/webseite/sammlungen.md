@@ -30,7 +30,8 @@ einen Eintrag öffnet ihn. Die Felder sind dieselben Typen wie bei den
 
 ## Einträge löschen
 
-„Löschen“ in der Zeile öffnet einen Dialog. In Sammlungen mit
+Der Abschnitt „Löschen“ ganz unten auf der Seite des Eintrags — nicht mehr in
+der Liste — öffnet einen Dialog. In Sammlungen mit
 Veröffentlicht-Schalter muss der Eintrag erst zurückgezogen sein; der Dialog
 bietet das an. Bilder, die nur dieser Eintrag verwendet, können Sie mitlöschen.
 

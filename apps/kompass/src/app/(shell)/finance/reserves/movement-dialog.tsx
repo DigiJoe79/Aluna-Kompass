@@ -4,16 +4,20 @@ import { useTranslations } from 'next-intl';
 import { useState, type KeyboardEvent } from 'react';
 import type { PickedDocument } from '@/app/(shell)/dms/search-action';
 import { Notice } from '@/components/notice';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
+import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import type { ActionState } from '@/lib/actions';
 import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
+import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { reserveBalanceAfter, type ReserveMovementKind } from '@/lib/finance/reserves';
 import { recordReserveMovementAction, recordReserveMovementUploadAction } from './actions';
 import { ResolutionField } from './resolution-field';
+import { FormField } from '@/components/forms/form-field';
+import { FormCell, FormGrid } from '@/components/forms/form-grid';
 
 export interface MovementReserve {
   id: string;
@@ -55,14 +59,14 @@ export function MovementDialog({
   const [document, setDocument] = useState<PickedDocument | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const feedback = useActionFeedback();
   // Befund S: über dem Höchstbetrag der freien Rücklage fragt der Dienst nach einer Begründung — kein Verbot.
   const [capProblem, setCapProblem] = useState<string | null>(null);
   const [capReason, setCapReason] = useState('');
 
   const amountCents = kind === 'dissolve' || amountText.trim() === '' ? null : parseAmount(amountText);
   const showForYear = kind === 'allocate' && reserve.kind === 'free';
-  const canSave = !pending && !!date && (kind === 'dissolve' || (amountCents !== null && amountCents > 0)) && !!document !== !!file;
+  const canSave = !!date && (kind === 'dissolve' || (amountCents !== null && amountCents > 0)) && !!document !== !!file;
   const after = reserveBalanceAfter(reserve.balanceCents, kind, amountCents);
 
   // Segment als Radiogruppe (HANDOFF § 6): ein Tab-Halt, Pfeiltasten wechseln und wandern ringsum.
@@ -77,7 +81,6 @@ export function MovementDialog({
 
   const submit = async () => {
     setPending(true);
-    setError(null);
     const base = {
       reserveId: reserve.id,
       kind,
@@ -87,8 +90,8 @@ export function MovementDialog({
       note: note.trim() || null,
       ...(capReason.trim() ? { capReason: capReason.trim() } : {}),
     };
-    let result;
-    if (file) {
+    const call = (): Promise<ActionState> => {
+      if (!file) return recordReserveMovementAction({ ...base, resolutionDocumentId: document!.id });
       const formData = new FormData();
       formData.append('reserveId', base.reserveId);
       formData.append('kind', base.kind);
@@ -98,101 +101,90 @@ export function MovementDialog({
       if (base.note) formData.append('note', base.note);
       if (base.capReason) formData.append('capReason', base.capReason);
       formData.append('file', file);
-      result = await recordReserveMovementUploadAction(formData);
-    } else {
-      result = await recordReserveMovementAction({ ...base, resolutionDocumentId: document!.id });
-    }
+      return recordReserveMovementUploadAction(formData);
+    };
+    const result = await feedback.run(call, { retry: () => void submit() });
     setPending(false);
     if (result.status === 'error') {
       if (result.code === 'freeReserveCapExceeded') {
+        feedback.reset();
         setCapProblem(result.detail ?? result.message);
-        return;
       }
-      setError(result.message);
       return;
     }
-    onSaved();
+    if (result.status === 'success') onSaved();
   };
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-surface shadow-md sm:max-w-[480px]">
-        <DialogTitle className="font-heading text-[19px]">{t('title', { name: reserve.name })}</DialogTitle>
-        <div className="space-y-3.5" data-testid="movement-dialog">
-          {error ? (
-            <div className="rounded-md bg-error-bg p-2.5 text-[13px] text-error" role="alert" data-testid="movement-error">
-              {error}
-            </div>
-          ) : null}
-          <div role="radiogroup" aria-label={t('kindLabel')} className="grid grid-cols-3 gap-1 rounded-md border border-line bg-surface-2 p-1" onKeyDown={onSegmentKey}>
-            {KINDS.map((k) => (
-              <button
-                key={k}
-                type="button"
-                role="radio"
-                aria-checked={kind === k}
-                tabIndex={kind === k ? 0 : -1}
-                data-testid={`movement-kind-${k}`}
-                onClick={() => setKind(k)}
-                className={`rounded-sm px-2 py-1.5 text-[13px] font-semibold ${kind === k ? 'bg-surface text-ink shadow-sm' : 'text-ink-2'}`}
-              >
-                {t(`kinds.${k}`)}
-              </button>
-            ))}
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="movement-date" required>
-                {t('date')}
-              </Label>
-              <Input id="movement-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-            </div>
-            {kind === 'dissolve' ? null : (
-              <div className="space-y-1.5">
-                <Label htmlFor="movement-amount" required>
-                  {t('amount')}
-                </Label>
-                <Input id="movement-amount" value={amountText} onChange={(e) => setAmountText(e.target.value)} placeholder={formatAmount(0)} />
+      {/* fixed-footer: in `md` stehen die Felder untereinander, mit Beschluss und Begründung wird der Dialog höher als mancher Bildschirm — die Mitte scrollt, Kopf und Leiste stehen. */}
+      <DialogContent size="md" layout="fixed-footer" className="bg-surface shadow-md">
+        <DialogHeader>
+          <DialogTitle className="font-heading text-[19px]">{t('title', { name: reserve.name })}</DialogTitle>
+        </DialogHeader>
+        <DialogBody>
+          <div className="space-y-3.5" data-testid="movement-dialog">
+            <FormGrid>
+              {/* Sichtbares Label wie bei FormField (Entscheidung zum Inventar § E); die Leiste ist kein einzelnes Eingabefeld. */}
+              <FormCell size="m" className="flex flex-col gap-1.5">
+                <span id="movement-kind-label" className="text-[13px] font-semibold text-ink-2">{t('kindLabel')}</span>
+                <div role="radiogroup" aria-labelledby="movement-kind-label" className="flex gap-1 rounded-md border border-line bg-surface-2 p-1" onKeyDown={onSegmentKey}>
+                  {KINDS.map((k) => (
+                    <button
+                      key={k}
+                      type="button"
+                      role="radio"
+                      aria-checked={kind === k}
+                      tabIndex={kind === k ? 0 : -1}
+                      data-testid={`movement-kind-${k}`}
+                      onClick={() => setKind(k)}
+                      className={`flex-1 rounded-sm px-2 py-1.5 text-[13px] font-semibold ${kind === k ? 'bg-surface text-ink shadow-sm' : 'text-ink-2'}`}
+                    >
+                      {t(`kinds.${k}`)}
+                    </button>
+                  ))}
+                </div>
+              </FormCell>
+              <FormField id="movement-date" label={t('date')} required size="s">
+                <Input id="movement-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              </FormField>
+              {kind === 'dissolve' ? null : (
+                <FormField id="movement-amount" label={t('amount')} required size="s">
+                  <Input id="movement-amount" value={amountText} onChange={(e) => setAmountText(e.target.value)} placeholder={formatAmount(0)} />
+                </FormField>
+              )}
+              {showForYear ? (
+                <FormField id="movement-for-year" label={t('forYear')} size="s">
+                  <Select id="movement-for-year" value={forYear} onChange={(e) => setForYear(e.target.value)}>
+                    {fiscalYears.map((y) => (
+                      <option key={y.id} value={y.id}>
+                        {y.designation}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+              ) : null}
+              {kind === 'dissolve' ? <FormCell as="p" size="full" className="text-[13px] text-ink-2">{t('dissolveAmount', { amount: formatEuro(reserve.balanceCents) })}</FormCell> : null}
+              <FormCell size="full">
+                <ResolutionField id="movement-resolution" document={document} onDocument={setDocument} onFile={setFile} />
+              </FormCell>
+              <FormField id="movement-note" label={t('note')} size="l">
+                <Textarea id="movement-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+              </FormField>
+            </FormGrid>
+            {capProblem ? (
+              <div data-testid="movement-cap-reason">
+                <Notice level="warn" reason={{ name: 'movement-cap-reason', value: capReason, onChange: setCapReason, label: t('capReason') }}>
+                  {capProblem}
+                </Notice>
               </div>
-            )}
+            ) : null}
+            <p className="text-[13px] text-ink" aria-live="polite" data-testid="movement-after">
+              {t('after', { amount: formatEuro(after) })}
+            </p>
           </div>
-          {kind === 'dissolve' ? <p className="text-[13px] text-ink-2">{t('dissolveAmount', { amount: formatEuro(reserve.balanceCents) })}</p> : null}
-          {showForYear ? (
-            <div className="space-y-1.5">
-              <Label htmlFor="movement-for-year">{t('forYear')}</Label>
-              <Select id="movement-for-year" value={forYear} onChange={(e) => setForYear(e.target.value)}>
-                {fiscalYears.map((y) => (
-                  <option key={y.id} value={y.id}>
-                    {y.designation}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          ) : null}
-          <ResolutionField id="movement-resolution" document={document} onDocument={setDocument} onFile={setFile} />
-          <div className="space-y-1.5">
-            <Label htmlFor="movement-note">{t('note')}</Label>
-            <Textarea id="movement-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
-          </div>
-          {capProblem ? (
-            <div data-testid="movement-cap-reason">
-              <Notice level="warn" reason={{ name: 'movement-cap-reason', value: capReason, onChange: setCapReason, label: t('capReason') }}>
-                {capProblem}
-              </Notice>
-            </div>
-          ) : null}
-          <p className="text-[13px] text-ink" aria-live="polite" data-testid="movement-after">
-            {t('after', { amount: formatEuro(after) })}
-          </p>
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={onClose}>
-            {t('cancel')}
-          </Button>
-          <Button type="button" disabled={!canSave} onClick={() => void submit()} data-testid="movement-save">
-            {t('save')}
-          </Button>
-        </DialogFooter>
+        </DialogBody>
+        <FormActionBar placement="dialog" cancel={onClose} pending={pending} saveDisabled={!canSave} saveLabel={t('save')} saveTestId="movement-save" onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, [])} />
       </DialogContent>
     </Dialog>
   );

@@ -3,7 +3,8 @@
 import type { ModuleStatus } from '@kompass/core';
 import { useTranslations } from 'next-intl';
 import { useTransition } from 'react';
-import { toast } from 'sonner';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { StatusBadge } from '@/components/status-badge';
 import { Switch } from '@/components/ui/switch';
 import { setModuleEnabledAction } from './actions';
@@ -11,6 +12,7 @@ import { setModuleEnabledAction } from './actions';
 export function ModuleCard({ module }: { module: ModuleStatus }) {
   const t = useTranslations('modules');
   const [pending, start] = useTransition();
+  const feedback = useActionFeedback();
   const name = t.has(`names.${module.key}`) ? t(`names.${module.key}`) : module.key;
   return (
     <section
@@ -29,7 +31,7 @@ export function ModuleCard({ module }: { module: ModuleStatus }) {
           )}
           <span className="font-mono text-[11px] text-muted-ink">{module.key}</span>
         </div>
-        <p className="mt-1 max-w-[640px] text-[14px] leading-[1.5] text-ink-2">
+        <p className="mt-1 max-w-prose text-[14px] leading-[1.5] text-ink-2">
           {t.has(`descriptions.${module.key}`) ? t(`descriptions.${module.key}`) : t('noDescription')}
         </p>
         <p className="mt-1 text-[12px] text-muted-ink">
@@ -38,6 +40,7 @@ export function ModuleCard({ module }: { module: ModuleStatus }) {
         </p>
       </div>
       <div className="flex flex-col items-end gap-1">
+        <RefusalNotice action state={feedback.state} />
         <div className="flex items-center gap-2 text-[13px] font-semibold">
           <span>{module.locked ? t('locked') : module.enabled ? t('enabled') : t('disabled')}</span>
           <Switch
@@ -46,9 +49,7 @@ export function ModuleCard({ module }: { module: ModuleStatus }) {
             aria-label={t('toggle', { name })}
             onCheckedChange={(next) =>
               start(async () => {
-                const s = await setModuleEnabledAction(module.key, next);
-                if (s.status === 'error') toast.error(s.message);
-                else toast.success(s.status === 'success' ? s.message ?? '' : '');
+                await feedback.run(() => setModuleEnabledAction(module.key, next));
               })
             }
           />

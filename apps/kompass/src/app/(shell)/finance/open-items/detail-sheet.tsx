@@ -98,78 +98,80 @@ export function DetailSheet({
           if (!o) close();
         }}
       >
-        <SheetContent side="right" className="w-[320px] bg-surface shadow-md">
-          <SheetTitle className="font-heading text-[17px]">{item.paymentReference ?? t('detail.unnamed')}</SheetTitle>
-          <div className="space-y-4">
-            <div>
-              <p className="font-mono text-[22px] font-semibold tabular-nums text-ink">{formatEuro(item.openCents)}</p>
-              <p className="text-[12px] text-muted-ink">{t('detail.ofTotal', { amount: formatEuro(item.amountCents) })}</p>
-            </div>
-            <dl className="space-y-1.5 text-[13px]">
-              <div className="flex justify-between gap-2">
-                <dt className="text-muted-ink">{t('columns.contact')}</dt>
-                <dd>{item.contactLabel ?? '—'}</dd>
+        <SheetContent side="right" size="md" className="gap-0 overflow-y-auto bg-surface shadow-md">
+          <div className="p-5">
+            <SheetTitle className="font-heading text-[17px]">{item.paymentReference ?? t('detail.unnamed')}</SheetTitle>
+            <div className="mt-4 space-y-4">
+              <div>
+                <p className="font-mono text-[22px] font-semibold tabular-nums text-ink">{formatEuro(item.openCents)}</p>
+                <p className="text-[12px] text-muted-ink">{t('detail.ofTotal', { amount: formatEuro(item.amountCents) })}</p>
               </div>
-              <div className="flex justify-between gap-2">
-                <dt className="text-muted-ink">{t('columns.dueOn')}</dt>
-                <dd className={state.overdue ? 'font-semibold text-error' : undefined}>{formatDateOrDash(date, item.dueOn)}</dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt className="text-muted-ink">{t('columns.state')}</dt>
-                <dd>
-                  {t(`state.${state.word}`)}
-                  {state.overdue ? ` · ${item.draftSettlementCents > 0 ? t('draftSettlement') : t('overdue')}` : ''}
-                </dd>
-              </div>
-            </dl>
+              <dl className="space-y-1.5 text-[13px]">
+                <div className="flex justify-between gap-2">
+                  <dt className="text-muted-ink">{t('columns.contact')}</dt>
+                  <dd>{item.contactLabel ?? '—'}</dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-muted-ink">{t('columns.dueOn')}</dt>
+                  <dd className={state.overdue ? 'font-semibold text-error' : undefined}>{formatDateOrDash(date, item.dueOn)}</dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-muted-ink">{t('columns.state')}</dt>
+                  <dd>
+                    {t(`state.${state.word}`)}
+                    {state.overdue ? ` · ${item.draftSettlementCents > 0 ? t('draftSettlement') : t('overdue')}` : ''}
+                  </dd>
+                </div>
+              </dl>
 
-            <TransferBlock recipient={item.contactLabel ?? t('detail.noRecipient')} amountCents={item.openCents} reference={item.paymentReference ?? ''} iban={iban} epcPayload={epcPayload} />
+              <TransferBlock recipient={item.contactLabel ?? t('detail.noRecipient')} amountCents={item.openCents} reference={item.paymentReference ?? ''} iban={iban} epcPayload={epcPayload} />
 
-            <div>
-              <h4 className="text-[12px] font-semibold uppercase tracking-wide text-muted-ink">{t('detail.settledByTitle')}</h4>
-              {settlements.length === 0 ? (
-                <p className="mt-1 text-[13px] text-muted-ink">{t('detail.settledByEmpty')}</p>
-              ) : (
-                <ul className="mt-1 space-y-1">
-                  {settlements.map((s) => (
-                    <li key={s.entryId} className="flex items-center justify-between gap-2 text-[13px]">
-                      <Link href={`/finance/entries/${s.entryId}`} className="text-link underline">
-                        {s.entryNumber ?? s.entryId}
-                      </Link>
-                      <span className="font-mono tabular-nums text-ink-2">{formatEuro(s.amountCents)}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            {!done ? (
-              <div className="flex flex-col gap-2 border-t border-line pt-3">
-                {!item.originType ? (
-                  canFinalize ? (
-                    <Button type="button" variant="secondary" onClick={() => setSettleOpen(true)}>
-                      {t('settleWithoutPayment.trigger')}
-                    </Button>
-                  ) : (
-                    <BlockedState step={t('settleWithoutPayment.trigger')} title={t('settleWithoutPayment.noRight.title')}>
-                      {finalizeNames.length > 0
-                        ? t('settleWithoutPayment.noRight.textWithNames', { names: finalizeNames.join(', ') })
-                        : t('settleWithoutPayment.noRight.text')}
-                    </BlockedState>
-                  )
+              <div>
+                <h4 className="text-[12px] font-semibold uppercase tracking-wide text-muted-ink">{t('detail.settledByTitle')}</h4>
+                {settlements.length === 0 ? (
+                  <p className="mt-1 text-[13px] text-muted-ink">{t('detail.settledByEmpty')}</p>
                 ) : (
-                  <p className="text-[13px] text-ink-2">{t('detail.hasOriginText')}</p>
+                  <ul className="mt-1 space-y-1">
+                    {settlements.map((s) => (
+                      <li key={s.entryId} className="flex items-center justify-between gap-2 text-[13px]">
+                        <Link href={`/finance/entries/${s.entryId}`} className="text-link underline">
+                          {s.entryNumber ?? s.entryId}
+                        </Link>
+                        <span className="font-mono tabular-nums text-ink-2">{formatEuro(s.amountCents)}</span>
+                      </li>
+                    ))}
+                  </ul>
                 )}
-                <Link href={bookHref} className={buttonVariants()}>
-                  {t('detail.bookNow')}
-                </Link>
-                {canWrite ? (
-                  <Button type="button" variant="ghost" onClick={() => setEditOpen(true)}>
-                    {t('detail.change')}
-                  </Button>
-                ) : null}
               </div>
-            ) : null}
+
+              {!done ? (
+                <div className="flex flex-col gap-2 border-t border-line pt-3">
+                  {!item.originType ? (
+                    canFinalize ? (
+                      <Button type="button" variant="secondary" onClick={() => setSettleOpen(true)}>
+                        {t('settleWithoutPayment.trigger')}
+                      </Button>
+                    ) : (
+                      <BlockedState step={t('settleWithoutPayment.trigger')} title={t('settleWithoutPayment.noRight.title')}>
+                        {finalizeNames.length > 0
+                          ? t('settleWithoutPayment.noRight.textWithNames', { names: finalizeNames.join(', ') })
+                          : t('settleWithoutPayment.noRight.text')}
+                      </BlockedState>
+                    )
+                  ) : (
+                    <p className="text-[13px] text-ink-2">{t('detail.hasOriginText')}</p>
+                  )}
+                  <Link href={bookHref} className={buttonVariants()}>
+                    {t('detail.bookNow')}
+                  </Link>
+                  {canWrite ? (
+                    <Button type="button" variant="ghost" onClick={() => setEditOpen(true)}>
+                      {t('detail.change')}
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
           </div>
         </SheetContent>
       </Sheet>

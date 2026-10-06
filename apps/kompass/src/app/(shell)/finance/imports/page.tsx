@@ -3,6 +3,7 @@ import { getAccountStatements, getImportRun, listAccounts, listCandidates, listI
 import { getTranslations } from 'next-intl/server';
 import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { formatDate, type DateFormatMode } from '@/lib/dates';
 import { formatEuro } from '@/lib/finance/amount';
@@ -24,7 +25,7 @@ import { ImportUpload } from './upload';
 export default async function FinanceImportsPage() {
   const { deps, ctx } = await requireSession();
   const t = await getTranslations('finance.imports');
-  if (!hasPermission(ctx, 'finance.read')) return <ForbiddenCard permission="finance.read" />;
+  if (!hasPermission(ctx, 'finance.read')) return <Page width="standard"><ForbiddenCard permission="finance.read" /></Page>;
   const canWrite = hasPermission(ctx, 'finance.entriesWrite');
   const dateMode = readSetting<DateFormatMode>(deps, 'ui.dateFormat');
   const fmtDate = (value: string | null | undefined) => formatDate(value, dateMode);
@@ -35,7 +36,7 @@ export default async function FinanceImportsPage() {
     listImportRuns(deps, ctx, { limit: 100 }),
     listCandidates(deps, ctx, { open: true }),
   ]);
-  if (!accountsRes.ok || !statementsRes.ok || !runsRes.ok || !candidatesRes.ok) return <ForbiddenCard permission="finance.read" />;
+  if (!accountsRes.ok || !statementsRes.ok || !runsRes.ok || !candidatesRes.ok) return <Page width="standard"><ForbiddenCard permission="finance.read" /></Page>;
 
   const importableAccounts = accountsRes.value.filter((a) => a.isActive && (a.kind === 'bank' || a.kind === 'paymentService'));
   const accountNameById = new Map(accountsRes.value.map((a) => [a.id, a.name]));
@@ -86,37 +87,38 @@ export default async function FinanceImportsPage() {
   }));
 
   if (importableAccounts.length === 0) {
-    return <EmptyState title={t('empty.title')} text={t('empty.text')} />;
+    return <Page width="standard"><EmptyState title={t('empty.title')} text={t('empty.text')} /></Page>;
   }
 
   return (
-    <div className="max-w-[1100px] space-y-6">
-      <PageHeader title={t('title')} />
+    <Page width="standard" header={<PageHeader title={t('title')} />}>
+      <div className="space-y-6">
 
-      <section aria-label={t('accountsSummary.title')} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {importableAccounts.map((a) => {
-          const s = statementByAccount.get(a.id);
-          return (
-            <div key={a.id} className="rounded-md border border-line bg-surface p-3 text-[13px]">
-              <p className="font-semibold text-ink">{a.name}</p>
-              <p className="text-ink-2">{s?.importedThrough ? t('accountsSummary.through', { date: fmtDate(s.importedThrough) }) : t('accountsSummary.none')}</p>
-              <p className="text-muted-ink">
-                {!s?.reconciliation || s.reconciliation.state === 'noStatement'
-                  ? t('accountsSummary.noStatement')
-                  : s.reconciliation.state === 'matches'
-                    ? t('accountsSummary.matches', { date: formatDateOrDash(fmtDate, s.reconciliation.statementDate) })
-                    : t('accountsSummary.differs', { date: formatDateOrDash(fmtDate, s.reconciliation.statementDate), amount: formatEuro(s.reconciliation.differenceCents ?? 0) })}
-              </p>
-            </div>
-          );
-        })}
-      </section>
+        <section aria-label={t('accountsSummary.title')} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {importableAccounts.map((a) => {
+            const s = statementByAccount.get(a.id);
+            return (
+              <div key={a.id} className="rounded-md border border-line bg-surface p-3 text-[13px]">
+                <p className="font-semibold text-ink">{a.name}</p>
+                <p className="text-ink-2">{s?.importedThrough ? t('accountsSummary.through', { date: fmtDate(s.importedThrough) }) : t('accountsSummary.none')}</p>
+                <p className="text-muted-ink">
+                  {!s?.reconciliation || s.reconciliation.state === 'noStatement'
+                    ? t('accountsSummary.noStatement')
+                    : s.reconciliation.state === 'matches'
+                      ? t('accountsSummary.matches', { date: formatDateOrDash(fmtDate, s.reconciliation.statementDate) })
+                      : t('accountsSummary.differs', { date: formatDateOrDash(fmtDate, s.reconciliation.statementDate), amount: formatEuro(s.reconciliation.differenceCents ?? 0) })}
+                </p>
+              </div>
+            );
+          })}
+        </section>
 
-      {canWrite ? <ImportUpload accounts={importableAccounts.map((a) => ({ id: a.id, name: a.name }))} /> : null}
+        {canWrite ? <ImportUpload accounts={importableAccounts.map((a) => ({ id: a.id, name: a.name }))} /> : null}
 
-      <RunsTable runs={runRows} canDiscard={canWrite} />
+        <RunsTable runs={runRows} canDiscard={canWrite} />
 
-      <CandidatesSection candidates={candidateRows} canDecide={canWrite} />
-    </div>
+        <CandidatesSection candidates={candidateRows} canDecide={canWrite} />
+      </div>
+    </Page>
   );
 }

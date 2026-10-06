@@ -3,12 +3,11 @@
 import { CircleSlash, Folder, Inbox } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState, useSyncExternalStore, useTransition } from 'react';
-import { Notice } from '@/components/notice';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { ActionState } from '@/lib/actions';
 import { TREE_ROOT, ancestorsOf, buildFolderTree, nameOf, validateFolderTarget, type DragItem, type FolderEntry, type FolderNode } from '@/lib/folder-tree-model';
-import { cn } from '@/lib/utils';
 import { FolderTree } from './folder-tree';
 import type { FolderTreeUnit } from './folder-tree-row';
 
@@ -95,14 +94,13 @@ export function FolderMoveDialog({ open, onOpenChange, ...rest }: FolderMoveDial
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        size="sm"
+        // Unter `sm` ganzseitig, der Knopf unten fest (Artboard 5, 390 px): Der Ordnerbaum braucht die Höhe.
+        mobile="full"
         layout="fixed-footer"
         // Den Fokus setzt der Baum selbst, sobald seine Zeilen stehen.
         initialFocus={false}
-        className={cn(
-          'bg-surface shadow-md sm:max-w-[440px]',
-          // Unter `sm` ganzseitig, der Knopf unten fest (Artboard 5, 390 px).
-          'max-sm:top-0 max-sm:left-0 max-sm:h-dvh max-sm:max-h-none max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none max-sm:ring-0'
-        )}
+        className="bg-surface shadow-md"
       >
         {open ? <MoveDialogBody {...rest} onOpenChange={onOpenChange} density={narrow ? 'touch' : 'default'} /> : null}
       </DialogContent>
@@ -125,11 +123,10 @@ function MoveDialogBody({
 }: Omit<FolderMoveDialogProps, 'open'> & { density: 'default' | 'touch' }) {
   const t = useTranslations('moveDialog');
   const tree = useTranslations('folderTree');
-  const tc = useTranslations('common');
   const nodes = useMemo(() => buildFolderTree(folders), [folders]);
   /** `undefined`: noch nichts gewählt; `null`: der feste Eintrag ohne Ordner. */
   const [picked, setPicked] = useState<string | null | undefined>(undefined);
-  const [error, setError] = useState<string | null>(null);
+  const feedback = useActionFeedback();
   const [pending, start] = useTransition();
 
   const item: DragItem = useMemo(
@@ -199,16 +196,10 @@ function MoveDialogBody({
 
   const confirm = () => {
     if (picked === undefined) return;
-    setError(null);
     start(async () => {
-      try {
-        const state = await onConfirm(picked);
-        if (state.status === 'error') setError(state.detail ?? state.message);
-        else onOpenChange(false);
-      } catch {
-        // Eine Ausnahme der Server Action ginge sonst an die Fehlergrenze; der Dialog bleibt offen.
-        setError(tree('error.unexpected'));
-      }
+      // Eine Ausnahme der Server Action ginge sonst an die Fehlergrenze: `run` fängt sie ab, der Dialog bleibt offen.
+      const state = await feedback.run(() => onConfirm(picked), { retry: confirm });
+      if (state.status === 'success') onOpenChange(false);
     });
   };
 
@@ -229,7 +220,7 @@ function MoveDialogBody({
             storageKey={null}
             density={density}
             onPick={(path) => {
-              setError(null);
+              feedback.reset();
               setPicked(path);
             }}
             marks={marks}
@@ -243,26 +234,25 @@ function MoveDialogBody({
             initialFocus={initialFocus}
           />
         </div>
-        {error ? (
-          <Notice level="refuse">
-            <p>{error}</p>
-          </Notice>
-        ) : null}
       </DialogBody>
-      <DialogFooter className="max-sm:px-4 max-sm:pt-3 max-sm:pb-5">
-        <Button variant="ghost" className="max-sm:hidden" onClick={() => onOpenChange(false)}>
-          {tc('cancel')}
-        </Button>
-        <Button data-confirm disabled={picked === undefined || pending} onClick={confirm} className="max-sm:h-[46px] max-sm:w-full max-sm:text-base">
-          {verb === 'pick'
+      <FormActionBar
+        placement="dialog"
+        cancel={() => onOpenChange(false)}
+        saveTestId="folder-move-confirm"
+        pending={pending}
+        saveDisabled={picked === undefined}
+        saveLabel={
+          verb === 'pick'
             ? picked === undefined
               ? tree('pickConfirmEmpty')
               : tree('pickConfirm', { target: picked === null ? rootLabel : nameOf(picked) })
             : picked === undefined
               ? t('confirmEmpty')
-              : t('confirm', { target: picked === null ? rootLabel : nameOf(picked) })}
-        </Button>
-      </DialogFooter>
+              : t('confirm', { target: picked === null ? rootLabel : nameOf(picked) })
+        }
+        onSave={confirm}
+        state={feedback.state}
+      />
     </>
   );
 }

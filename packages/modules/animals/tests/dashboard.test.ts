@@ -10,7 +10,7 @@ import { ANIMALS_DASHBOARD_TILES } from '../src/dashboard';
  * live geht (`review.test.ts`).
  */
 const manage = ctxWith(['animals.manage', 'animals.view']);
-const dog = (slug: string) => ({ slug, name: slug, sex: 'male' as const, birthText: {}, sizeText: {}, summary: {}, body: {} });
+const dog = (name: string) => ({ name, sex: 'male' as const, birthText: {}, sizeText: {}, summary: {}, body: {} });
 const setup = () => {
   const deps = createTestDeps({ manifests: [coreModule, animalsModule] });
   insertUser(deps, { id: 'USER-TEST' });

@@ -2,14 +2,17 @@
 
 import { useTranslations } from 'next-intl';
 import { useState, useTransition } from 'react';
-import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { saveDispatchChannelsAction } from './actions';
+import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
 
 export interface DispatchChannelRow {
   key: string;
@@ -36,12 +39,13 @@ export function DispatchChannelsPanel({
   const [key, setKey] = useState('');
   const [label, setLabel] = useState('');
   const [pending, start] = useTransition();
+  const feedback = useActionFeedback();
+  const resetFeedback = feedback.reset;
 
   const save = (next: DispatchChannelRow[]) =>
     start(async () => {
-      const state = await saveDispatchChannelsAction(next);
-      if (state.status === 'error') toast.error(state.message);
-      else if (state.status === 'success' && state.message) toast.success(state.message);
+      const state = await feedback.run(() => saveDispatchChannelsAction(next), { retry: () => save(next) });
+      if (state.status !== 'success') return;
       setCreating(false);
       setRenaming(null);
       setToRemove(null);
@@ -53,8 +57,7 @@ export function DispatchChannelsPanel({
     <section className="space-y-4 rounded-md border border-line bg-surface p-5">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-heading text-[18px] text-ink">{t('channelsTitle')}</h3>
-          <p className="text-[13px] text-muted-ink">{t('channelsDescription')}</p>
+          <p className="text-[13px] text-ink-2">{t('channelsDescription')}</p>
         </div>
         {canManageSettings ? (
           <Button
@@ -72,19 +75,19 @@ export function DispatchChannelsPanel({
 
       <div className="overflow-hidden rounded-md border border-line">
         <Table>
-          <TableHeader className="bg-table-head text-left text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink">
-            <TableRow className="h-9">
-              <TableHead className="px-4">{t('channelColumns.key')}</TableHead>
-              <TableHead className="px-4">{t('channelColumns.label')}</TableHead>
-              <TableHead className="px-4 text-right">{t('channelColumns.actions')}</TableHead>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t('channelColumns.key')}</TableHead>
+              <TableHead>{t('channelColumns.label')}</TableHead>
+              <TableHead className="text-right">{t('channelColumns.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {channels.map((channel) => (
-              <TableRow key={channel.key} className="h-row border-b border-line-2">
-                <TableCell className="px-4 font-mono text-[13px] text-ink-2">{channel.key}</TableCell>
-                <TableCell className="px-4 font-semibold text-ink">{channel.label}</TableCell>
-                <TableCell className="px-4 text-right">
+              <TableRow key={channel.key}>
+                <TableCell className="font-mono text-[13px] text-ink-2">{channel.key}</TableCell>
+                <TableCell className="font-semibold text-ink">{channel.label}</TableCell>
+                <TableCell className="text-right">
                   {canManageSettings ? (
                     <>
                       <Button
@@ -117,65 +120,56 @@ export function DispatchChannelsPanel({
           if (!next) {
             setCreating(false);
             setRenaming(null);
+            resetFeedback();
           }
         }}
       >
-        <DialogContent className="w-full sm:max-w-[480px] bg-surface p-6 shadow-md">
+        <DialogContent size="md" className="bg-surface shadow-md">
           <DialogTitle className="font-heading text-[19px]">
             {renaming ? t('renameChannelTitle') : t('createChannelTitle')}
           </DialogTitle>
           <DialogDescription className="text-[13px] text-muted-ink">{t('channelsDescription')}</DialogDescription>
 
-          <div className="mt-5 space-y-4">
-            {renaming ? null : (
-              <div className="space-y-1.5">
-                <Label htmlFor="channel-key" required>
-                  {t('channelFields.key')}
-                </Label>
-                <Input
-                  id="channel-key"
-                  value={key}
-                  onChange={(e) => setKey(e.target.value)}
-                  pattern="[a-z][a-zA-Z0-9]*"
-                  required
-                  className="font-mono"
-                />
-              </div>
-            )}
-            <div className="space-y-1.5">
-              <Label htmlFor="channel-label" required>
-                {t('channelFields.label')}
-              </Label>
-              <Input id="channel-label" value={label} onChange={(e) => setLabel(e.target.value)} required />
-            </div>
+          <div className="mt-5">
+            <FormGrid>
+              {renaming ? null : (
+                <FormField id="channel-key" label={t('channelFields.key')} required size="s">
+                  <Input
+                    id="channel-key"
+                    value={key}
+                    onChange={(e) => setKey(e.target.value)}
+                    pattern="[a-z][a-zA-Z0-9]*"
+                    required
+                    className="font-mono"
+                  />
+                </FormField>
+              )}
+              <FormField id="channel-label" label={t('channelFields.label')} required>
+                <Input id="channel-label" value={label} onChange={(e) => setLabel(e.target.value)} required />
+              </FormField>
+            </FormGrid>
           </div>
 
-          <DialogFooter className="mt-6">
-            <span className="mr-auto text-[12px] text-muted-ink">{tCommon('requiredLegend')}</span>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setCreating(false);
-                setRenaming(null);
-              }}
-            >
-              {tCommon('cancel')}
-            </Button>
-            <Button
-              type="button"
-              disabled={pending || !label.trim() || (!renaming && !key.trim())}
-              onClick={() =>
-                save(
-                  renaming
-                    ? channels.map((c) => (c.key === renaming.key ? { ...c, label: label.trim() } : c))
-                    : [...channels, { key: key.trim(), label: label.trim() }],
-                )
-              }
-            >
-              {tCommon('save')}
-            </Button>
-          </DialogFooter>
+          <FormActionBar
+            placement="dialog"
+            cancel={() => {
+              setCreating(false);
+              setRenaming(null);
+              resetFeedback();
+            }}
+            pending={pending}
+            saveDisabled={!label.trim() || (!renaming && !key.trim())}
+            saveLabel={tCommon('save')}
+            note={<span className="text-[12px] text-muted-ink">{tCommon('requiredLegend')}</span>}
+            state={withUnplacedFieldErrors(feedback.state, [])}
+            onSave={() =>
+              save(
+                renaming
+                  ? channels.map((c) => (c.key === renaming.key ? { ...c, label: label.trim() } : c))
+                  : [...channels, { key: key.trim(), label: label.trim() }],
+              )
+            }
+          />
         </DialogContent>
       </Dialog>
 

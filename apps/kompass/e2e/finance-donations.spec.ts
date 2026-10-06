@@ -429,7 +429,9 @@ test.describe('finance donation notices', () => {
     await expect(seededExemption(page).getByTestId('notice-state')).toHaveText('gültig');
     await expect(seededExemption(page)).toContainText('02.05.2030');
     await expect(seededExemption(page).getByTestId('notice-exempt-from')).toHaveText('01.01.2023');
-    await expect(page.getByRole('table', { name: 'Bescheide des Finanzamts' }).getByRole('columnheader', { name: 'Befreiung ab' })).toBeVisible();
+    // K9-Befund 8: sechs Spalten — Befreiung ab und gültig bis stehen zusammen unter „Gilt“, der Veranlagungszeitraum darunter.
+    await expect(page.getByRole('table', { name: 'Bescheide des Finanzamts' }).getByRole('columnheader', { name: 'Gilt' })).toBeVisible();
+    await expect(page.getByRole('table', { name: 'Bescheide des Finanzamts' }).getByRole('columnheader')).toHaveCount(6);
     await expect(noticeRow(page, 'vorläufige Anerkennung (§ 60a)').getByTestId('notice-state')).toContainText('02.05.2025');
 
     await page.getByRole('button', { name: 'Bescheid erfassen' }).click();
@@ -458,9 +460,9 @@ test.describe('finance donation notices', () => {
     await expect(row.getByTestId('notice-state')).toHaveText('gültig');
     await expect(row.getByTestId('notice-document')).toHaveText(/^EIN-/);
     await expect(row.getByTestId('notice-exempt-from')).toHaveText('01.01.2022');
+    await expect(row).toContainText('Veranlagungszeitraum 2022–2024');
 
-    await page.goto('/admin/settings');
-    await page.getByRole('tab', { name: 'Steuer & Bescheide' }).click();
+    await page.goto('/admin/settings?panel=tax');
     const managedValues = page.getByTestId('managed-field-value');
     // Befund 32 (0.2.1): das Datum im Format des Vereins, nicht als ISO.
     await expect(managedValues).toHaveText(['11/222/33333', 'Finanzamt Beispielstadt', 'Freistellungsbescheid', germanDay(today)]);
@@ -498,7 +500,7 @@ test.describe('finance donation notices', () => {
     await dialog.getByLabel('Veranlagungszeitraum').fill('2024');
     await dialog.getByLabel('Begünstigte Zwecke im Wortlaut').fill('Förderung des Sports');
     await dialog.getByRole('button', { name: 'Speichern' }).click();
-    await expect(dialog.getByTestId('notice-exempt-from-error')).toHaveText('Pflichtfeld.');
+    await expect(dialog.locator('#notice-exempt-from-error')).toHaveText('Pflichtfeld.');
     await expect(dialog.getByTestId('notice-form')).toBeVisible();
 
     await dialog.getByLabel('Steuerbefreiung ab').fill('2024-01-01');
@@ -513,7 +515,7 @@ test.describe('finance donation notices', () => {
     await page.getByRole('button', { name: 'Bescheid erfassen' }).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel('Art des Bescheids').selectOption({ label: 'vorläufige Anerkennung (§ 60a)' });
-    await dialog.getByRole('radiogroup', { name: 'Wurde bereits ein Freistellungsbescheid erteilt?' }).getByLabel('Nein').check();
+    await dialog.getByRole('radiogroup', { name: 'Wurde bereits ein Freistellungsbescheid erteilt?' }).getByRole('radio', { name: 'Nein' }).check();
     await dialog.getByLabel('Finanzamt').fill('Finanzamt Beispielstadt');
     await dialog.getByLabel('Steuernummer').fill('22/333/44444');
     // Vor dem endgültigen Freistellungsbescheid des Seeds (02.05.2025) — sonst greift die Ablehnung aus dem nächsten Test.
@@ -526,7 +528,7 @@ test.describe('finance donation notices', () => {
 
     // Ohne den zweiten Wortlaut wird nicht gespeichert (N8 — sonst würde "Wir fördern nach unserer Satzung" den Genitiv tragen).
     await dialog.getByRole('button', { name: 'Speichern' }).click();
-    await expect(dialog.getByTestId('notice-purposes-accusative-error')).toHaveText('Pflichtfeld.');
+    await expect(dialog.locator('#notice-purposes-accusative-error')).toHaveText('Pflichtfeld.');
 
     await dialog.getByLabel('Begünstigte Zwecke, im Akkusativ (§ 60a)').fill('den Tierschutz (§ 52 Abs. 2 Satz 1 Nr. 14 AO)');
     await expect(preview).toContainText('Wir fördern nach unserer Satzung den Tierschutz (§ 52 Abs. 2 Satz 1 Nr. 14 AO).');
@@ -541,11 +543,11 @@ test.describe('finance donation notices', () => {
     await dialog.getByLabel('Art des Bescheids').selectOption({ label: 'vorläufige Anerkennung (§ 60a)' });
     await expect(dialog.getByLabel('Veranlagungszeitraum')).toHaveCount(0);
     const question = dialog.getByRole('radiogroup', { name: 'Wurde bereits ein Freistellungsbescheid erteilt?' });
-    await question.getByLabel('Ja').check();
+    await question.getByRole('radio', { name: 'Ja' }).check();
     await expect(dialog.getByText('Dann erfassen Sie bitte den Freistellungsbescheid')).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Speichern' })).toBeDisabled();
 
-    await question.getByLabel('Nein').check();
+    await question.getByRole('radio', { name: 'Nein' }).check();
     await dialog.getByLabel('Finanzamt').fill('Finanzamt Musterstadt');
     await dialog.getByLabel('Steuernummer').fill('99/999/99990');
     await dialog.getByLabel('Datum des Bescheids').fill(isoDay());

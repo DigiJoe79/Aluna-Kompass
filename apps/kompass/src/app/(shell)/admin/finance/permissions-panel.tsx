@@ -22,7 +22,6 @@ export async function PermissionsPanel({ activities, roles }: { activities: Perm
 
   return (
     <section className="space-y-4" data-testid="permissions-panel">
-      <h2 className="font-heading text-[18px] text-ink">{t('title')}</h2>
       <div className="space-y-4">
         {roles.map((role) => (
           <div key={role.id} className="overflow-hidden rounded-md border border-line" data-testid={`permission-role-${role.name}`}>
@@ -30,17 +29,17 @@ export async function PermissionsPanel({ activities, roles }: { activities: Perm
               <p className="font-semibold text-ink">{role.name}</p>
             </div>
             <Table>
-              <TableHeader className="text-left text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink">
+              <TableHeader>
                 <TableRow className="h-8">
-                  <TableHead className="px-4">{t('activity')}</TableHead>
-                  <TableHead className="px-4">{t('granted')}</TableHead>
+                  <TableHead>{t('activity')}</TableHead>
+                  <TableHead>{t('granted')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {activities.map((activity) => (
-                  <TableRow key={activity.key} className="h-9 border-b border-line-2">
-                    <TableCell className="px-4 text-ink-2">{activityLabel(activity.permission)}</TableCell>
-                    <TableCell className="px-4">{role.permissions.includes(activity.permission) ? t('yes') : '—'}</TableCell>
+                  <TableRow key={activity.key}>
+                    <TableCell className="text-ink-2">{activityLabel(activity.permission)}</TableCell>
+                    <TableCell>{role.permissions.includes(activity.permission) ? t('yes') : '—'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

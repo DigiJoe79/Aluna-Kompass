@@ -4,9 +4,10 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import { toast } from 'sonner';
 import { BeforeAfter } from '@/components/before-after';
 import { useDateFormat } from '@/components/date-format-provider';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
 import { formatEuro } from '@/lib/finance/amount';
 import { decideCandidateAction } from './actions';
@@ -31,14 +32,16 @@ export function CandidatesSection({ candidates, canDecide }: { candidates: Candi
   const router = useRouter();
   const [pending, start] = useTransition();
   const [decidingId, setDecidingId] = useState<string | null>(null);
+  const feedback = useActionFeedback();
 
   const decide = (id: string, decision: 'same' | 'own') => {
     setDecidingId(id);
     start(async () => {
-      const result = await decideCandidateAction(id, decision);
-      if (result.status === 'error') toast.error(result.message);
-      router.refresh();
-      setDecidingId(null);
+      const result = await feedback.run(() => decideCandidateAction(id, decision), { retry: () => decide(id, decision) });
+      if (result.status === 'success') {
+        router.refresh();
+        setDecidingId(null);
+      }
     });
   };
 
@@ -78,6 +81,7 @@ export function CandidatesSection({ candidates, canDecide }: { candidates: Candi
               },
             ]}
           />
+          {decidingId === c.id ? <RefusalNotice action state={feedback.state} /> : null}
           {canDecide ? (
             <div className="flex flex-wrap gap-2">
               <Button type="button" disabled={pending && decidingId === c.id} onClick={() => decide(c.id, 'same')}>

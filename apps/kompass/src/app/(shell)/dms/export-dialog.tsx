@@ -1,14 +1,16 @@
 'use client';
 
-import { Download } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import type { ActionState } from '@/lib/actions';
 import { nameOf } from '@/lib/folder-tree-model';
+import { FormField } from '@/components/forms/form-field';
 
 /**
  * Einstieg in den Aktenexport: ein Ordner (samt Unterordnern) oder ein
@@ -42,11 +44,13 @@ export function ExportDialog({
   const [mode, setMode] = useState<'folder' | 'year'>(folder ? 'folder' : 'year');
   const [year, setYear] = useState(currentYear);
   const [busy, setBusy] = useState(false);
+  const [refusal, setRefusal] = useState<ActionState>({ status: 'idle' });
 
   if (!canExport) return null;
 
   const run = async () => {
     setBusy(true);
+    setRefusal({ status: 'idle' });
     try {
       const body = mode === 'folder' && folder ? { folder } : { year };
       const res = await fetch('/dms/export', { method: 'POST', body: JSON.stringify(body) });
@@ -54,11 +58,11 @@ export function ExportDialog({
         if (res.status === 409) {
           const error: unknown = await res.json().catch(() => null);
           const message = error && typeof error === 'object' && 'message' in error ? String((error as { message: unknown }).message) : t('failed');
-          toast.error(message);
+          setRefusal({ status: 'error', message, fieldErrors: {} });
         } else if (res.status === 403) {
-          toast.error(t('forbidden'));
+          setRefusal({ status: 'error', message: t('forbidden'), fieldErrors: {} });
         } else {
-          toast.error(t('failed'));
+          setRefusal({ status: 'error', message: t('failed'), fieldErrors: {} });
         }
         return;
       }
@@ -73,6 +77,9 @@ export function ExportDialog({
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
       setOpen(false);
+    } catch {
+      // Der Server war nicht zu erreichen: keine Ablehnung, sondern ein Toast zum Wiederholen.
+      toast.error(tCommon('network'), { duration: Infinity, closeButton: true, action: { label: tCommon('retry'), onClick: () => void run() } });
     } finally {
       setBusy(false);
     }
@@ -86,60 +93,39 @@ export function ExportDialog({
         </Button>
       )}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-full sm:max-w-[480px] bg-surface p-6 shadow-md">
+        <DialogContent size="md" className="bg-surface shadow-md">
           <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
 
-          <div className="mt-5 space-y-4">
-            {folder ? (
+          <div className="mt-5">
+            <RadioGroup aria-label={t('title')} value={mode} onValueChange={(value) => setMode(value as 'folder' | 'year')} className="gap-4">
+              {folder ? (
+                <label className="flex items-center gap-2 text-[14px] text-ink">
+                  <RadioGroupItem value="folder" />
+                  {/* Der Name, nie der Weg mit Schrägstrichen. */}
+                  {t('thisFolder', { folder: nameOf(folder) })}
+                </label>
+              ) : null}
               <label className="flex items-center gap-2 text-[14px] text-ink">
-                <input
-                  type="radio"
-                  name="export-mode"
-                  className="size-4"
-                  checked={mode === 'folder'}
-                  onChange={() => setMode('folder')}
-                />
-                {/* Der Name, nie der Weg mit Schrägstrichen. */}
-                {t('thisFolder', { folder: nameOf(folder) })}
-              </label>
-            ) : null}
-
-            <div className="space-y-1.5">
-              <label className="flex items-center gap-2 text-[14px] text-ink">
-                <input
-                  type="radio"
-                  name="export-mode"
-                  className="size-4"
-                  checked={mode === 'year'}
-                  onChange={() => setMode('year')}
-                />
+                <RadioGroupItem value="year" />
                 {t('year')}
               </label>
-              <div className="ml-6 space-y-1.5">
-                <Label htmlFor="export-year">{t('yearLabel')}</Label>
-                <Input
-                  id="export-year"
-                  type="number"
-                  value={year}
-                  onFocus={() => setMode('year')}
-                  onChange={(e) => setYear(Number(e.target.value))}
-                  className="w-32"
-                />
-              </div>
-            </div>
+            </RadioGroup>
+            {/* Außerhalb der Gruppe: Die Pfeiltasten gehören dem Zahlfeld, nicht dem Wechsel der Option. */}
+            <FormField id="export-year" label={t('yearLabel')} className="mt-1.5 ml-6">
+              <Input
+                id="export-year"
+                type="number"
+                value={year}
+                onFocus={() => setMode('year')}
+                onChange={(e) => setYear(Number(e.target.value))}
+                className="w-32"
+              />
+            </FormField>
           </div>
 
           <p className="mt-4 text-[12px] text-muted-ink">{t('hint')}</p>
 
-          <DialogFooter className="mt-6">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              {tCommon('cancel')}
-            </Button>
-            <Button type="button" disabled={busy} aria-busy={busy} onClick={run}>
-              <Download className="size-4" aria-hidden />
-              {busy ? t('working') : t('submit')}
-            </Button>
-          </DialogFooter>
+          <FormActionBar placement="dialog" cancel={() => setOpen(false)} pending={busy} saveLabel={busy ? t('working') : t('submit')} onSave={() => void run()} state={refusal} />
         </DialogContent>
       </Dialog>
     </>

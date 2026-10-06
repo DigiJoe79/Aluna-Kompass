@@ -5,8 +5,9 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import type { ActionState } from '@/lib/actions';
 import { toast } from 'sonner';
-import { ApprovalDetailFrame } from '@/components/finance/approval-detail-frame';
+import { ApprovalDetailFrame, type ApprovalFooter } from '@/components/finance/approval-detail-frame';
 import { BeforeAfter } from '@/components/before-after';
 import { Notice } from '@/components/notice';
 import { StatusBadge } from '@/components/status-badge';
@@ -27,6 +28,7 @@ export function PurposeTransferDetail({ transfer, creatorName, nextHref }: { tra
   const router = useRouter();
   const [rejecting, setRejecting] = useState(false);
   const [pending, setPending] = useState(false);
+  const [refusal, setRefusal] = useState<ActionState | null>(null);
 
   const sideLabel = (side: { name: string | null }) => side.name ?? t('transfer.freeFunds');
 
@@ -61,9 +63,10 @@ export function PurposeTransferDetail({ transfer, creatorName, nextHref }: { tra
     const result = await approvePurposeTransferAction(transfer.id);
     setPending(false);
     if (result.status === 'error') {
-      toast.error(result.message);
+      setRefusal(result);
       return;
     }
+    setRefusal(null);
     toast.success(result.status === 'success' ? result.message ?? '' : '');
     router.refresh();
   };
@@ -91,19 +94,16 @@ export function PurposeTransferDetail({ transfer, creatorName, nextHref }: { tra
     </div>
   );
 
-  const footer = (
-    <>
-      <p className="text-[12px] text-muted-ink">{t('footer.humanOnly')}</p>
-      <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
-        <Button type="button" variant="outline" className="max-lg:h-12" onClick={() => setRejecting(true)} data-testid="purpose-transfer-reject">
-          {t('transferReject.trigger')}
-        </Button>
-        <Button type="button" className="max-lg:h-12" disabled={pending} onClick={() => void approve()} data-testid="purpose-transfer-approve">
-          {t('transferApprove.trigger')}
-        </Button>
-      </div>
-    </>
-  );
+  const footer: ApprovalFooter = {
+    state: refusal ?? undefined,
+    note: <p className="text-[12px] text-muted-ink">{t('footer.humanOnly')}</p>,
+    reject: (
+      <Button type="button" variant="outline" onClick={() => setRejecting(true)} data-testid="purpose-transfer-reject">
+        {t('transferReject.trigger')}
+      </Button>
+    ),
+    approve: { label: t('transferApprove.trigger'), pending, onClick: () => void approve(), testId: 'purpose-transfer-approve' },
+  };
 
   return (
     <>

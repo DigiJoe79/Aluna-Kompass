@@ -3,12 +3,11 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useDateFormat } from '@/components/date-format-provider';
 import { EmptyState } from '@/components/empty-state';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatEuro } from '@/lib/finance/amount';
 import { formatDateOrDash } from '@/lib/finance/dates';
 import { ItemDialog } from './item-dialog';
@@ -41,14 +40,13 @@ export function OpenItemsList({ rows, tab, canWrite, canCreateContact, today }: 
   today: string;
 }) {
   const t = useTranslations('finance.openItems');
-  const router = useRouter();
   const { date } = useDateFormat();
   const [newOpen, setNewOpen] = useState(false);
 
   const tabHref = (next: 'receivable' | 'payable') => `/finance/open-items?tab=${next}`;
 
   return (
-    <div className="max-w-[900px] space-y-4">
+    <div className="space-y-4">
       <PageHeader
         title={t('title')}
         actions={
@@ -79,35 +77,31 @@ export function OpenItemsList({ rows, tab, canWrite, canCreateContact, today }: 
       ) : (
         <div className="overflow-hidden rounded-md border border-line bg-surface">
           <Table>
-            <TableHeader className="bg-table-head text-left text-[11px] font-bold uppercase tracking-[.06em] text-muted-ink">
-              <TableRow className="h-9">
-                <TableHead className="px-4">{t('columns.dueOn')}</TableHead>
-                <TableHead className="px-4">{t('columns.contact')}</TableHead>
-                <TableHead className="px-4">{t('columns.amount')}</TableHead>
-                <TableHead className="px-4">{t('columns.open')}</TableHead>
-                <TableHead className="px-4">{t('columns.origin')}</TableHead>
-                <TableHead className="px-4">{t('columns.reference')}</TableHead>
-                <TableHead className="px-4">{t('columns.state')}</TableHead>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('columns.dueOn')}</TableHead>
+                <TableHead>{t('columns.contact')}</TableHead>
+                <TableHead>{t('columns.amount')}</TableHead>
+                <TableHead>{t('columns.open')}</TableHead>
+                <TableHead>{t('columns.origin')}</TableHead>
+                <TableHead>{t('columns.reference')}</TableHead>
+                <TableHead>{t('columns.state')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  tabIndex={0}
-                  onClick={() => router.push(`/finance/open-items?tab=${tab}&item=${row.id}`)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') router.push(`/finance/open-items?tab=${tab}&item=${row.id}`);
-                  }}
-                  className="h-row cursor-pointer border-b border-line-2 hover:bg-row-hover"
-                >
-                  <TableCell className={row.overdue ? 'px-4 font-semibold text-error' : 'px-4'}>{formatDateOrDash(date, row.dueOn)}</TableCell>
-                  <TableCell className="px-4">{row.contactLabel ?? '—'}</TableCell>
-                  <TableCell className="px-4 font-mono tabular-nums">{formatEuro(row.amountCents)}</TableCell>
-                  <TableCell className="px-4 font-mono tabular-nums">{formatEuro(row.openCents)}</TableCell>
-                  <TableCell className="px-4">{row.hasOrigin ? t('hasOrigin') : '—'}</TableCell>
-                  <TableCell className="px-4">{row.paymentReference ?? '—'}</TableCell>
-                  <TableCell className="px-4">
+                <TableRow key={row.id}>
+                  <TableCell>
+                    <RowLink href={`/finance/open-items?tab=${tab}&item=${row.id}`} className={row.overdue ? 'text-error' : 'text-ink'}>
+                      {formatDateOrDash(date, row.dueOn)}
+                    </RowLink>
+                  </TableCell>
+                  <TableCell>{row.contactLabel ?? '—'}</TableCell>
+                  <TableCell className="font-mono tabular-nums">{formatEuro(row.amountCents)}</TableCell>
+                  <TableCell className="font-mono tabular-nums">{formatEuro(row.openCents)}</TableCell>
+                  <TableCell>{row.hasOrigin ? t('hasOrigin') : '—'}</TableCell>
+                  <TableCell selectable>{row.paymentReference ?? '—'}</TableCell>
+                  <TableCell>
                     {t(`state.${row.word}`)}
                     {row.overdue ? ` · ${row.draftSettlementCents > 0 ? t('draftSettlement') : t('overdue')}` : ''}
                   </TableCell>

@@ -3,13 +3,15 @@
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
-import { Notice } from '@/components/notice';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import type { ActionState } from '@/lib/actions';
+import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { rejectExpenseClaimAction } from '../expenses/actions';
+import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
 
 /**
  * Ablehnen mit Pflichtgrund (Designer-README 3h). Der Satz sagt, wer den Grund
@@ -43,7 +45,7 @@ export function RejectDialog({
   const router = useRouter();
   const [note, setNote] = useState('');
   const [missing, setMissing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const feedback = useActionFeedback();
   const [busy, setBusy] = useState(false);
 
   const confirm = async () => {
@@ -52,57 +54,36 @@ export function RejectDialog({
       return;
     }
     setBusy(true);
-    setError(null);
-    const state = onReject ? await onReject(note.trim()) : await rejectExpenseClaimAction(claimId ?? '', note.trim());
+    const state = await feedback.run(() => (onReject ? onReject(note.trim()) : rejectExpenseClaimAction(claimId ?? '', note.trim())), { retry: () => void confirm() });
     setBusy(false);
     if (state.status === 'success') {
       onOpenChange(false);
       router.refresh();
-      return;
     }
-    if (state.status === 'error') setError(state.message);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent size="sm">
         <DialogHeader>
           <DialogTitle>{title ?? t('title', { number })}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-2">
-          <p className="text-[14px] text-ink-2">{who ?? t('who', { name: person })}</p>
-          <Label htmlFor="reject-note">{t('reason')}</Label>
-          <Textarea
-            id="reject-note"
-            rows={3}
-            maxLength={1000}
-            value={note}
-            aria-invalid={missing || undefined}
-            aria-describedby={missing ? 'reject-note-missing' : undefined}
-            onChange={(e) => {
-              setNote(e.target.value);
-              setMissing(false);
-            }}
-          />
-          {missing ? (
-            <p id="reject-note-missing" role="alert" className="text-[12px] text-error">
-              {t('required')}
-            </p>
-          ) : null}
-          {error ? (
-            <Notice level="refuse" title={t('confirm')}>
-              {error}
-            </Notice>
-          ) : null}
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            {t('cancel')}
-          </Button>
-          <Button type="button" disabled={busy} onClick={() => void confirm()}>
-            {t('confirm')}
-          </Button>
-        </DialogFooter>
+        <p className="text-[14px] text-ink-2">{who ?? t('who', { name: person })}</p>
+        <FormGrid>
+          <FormField id="reject-note" label={t('reason')} error={missing ? t('required') : undefined} size="l">
+            <Textarea
+              id="reject-note"
+              rows={3}
+              maxLength={1000}
+              value={note}
+              onChange={(e) => {
+                setNote(e.target.value);
+                setMissing(false);
+              }}
+            />
+          </FormField>
+        </FormGrid>
+        <FormActionBar placement="dialog" cancel={() => onOpenChange(false)} pending={busy} saveLabel={t('confirm')} onSave={() => void confirm()} state={withUnplacedFieldErrors(feedback.state, [])} />
       </DialogContent>
     </Dialog>
   );

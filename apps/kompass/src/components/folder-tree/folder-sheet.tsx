@@ -62,13 +62,13 @@ export function FolderSheet({
         <ChevronDown className="size-[18px] shrink-0 text-muted-ink" strokeWidth={2.2} aria-hidden />
       </button>
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="bottom" className="max-h-[85dvh] gap-0 rounded-t-[16px] bg-surface pb-4 shadow-md">
+        <SheetContent side="bottom" size="sm" className="max-h-[85dvh] gap-0 rounded-t-[16px] bg-surface shadow-md">
           <div aria-hidden className="flex justify-center pt-2 pb-0.5">
             <span className="h-1 w-10 rounded-full bg-line-strong" />
           </div>
           <SheetTitle className="flex h-[52px] items-center px-4 font-heading text-[17px] font-semibold text-ink">{t('label')}</SheetTitle>
           <div
-            className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2.5"
+            className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2.5 pb-4"
             // Ein Name im Baum oder ein fester Eintrag ist ein Link: Wer ihn
             // antippt, hat gewählt — auch den Ort, der schon offen ist.
             onClickCapture={(e) => {

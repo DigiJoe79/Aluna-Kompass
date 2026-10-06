@@ -8,15 +8,18 @@ import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 import { useDateFormat } from '@/components/date-format-provider';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
+import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Notice } from '@/components/notice';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { ActionState } from '@/lib/actions';
 import { stashCsvHandoff } from '@/lib/finance/csv-handoff';
 import { groupIban } from '@/lib/finance/iban-check';
 import { remediesFor } from '@/lib/finance/remedies';
 import { cn } from '@/lib/utils';
 import { detectStatementAccountAction, uploadStatementAction } from './actions';
+import { panelHref } from '@/components/panel-nav';
 
 export interface ImportAccountOption {
   id: string;
@@ -195,7 +198,7 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
         }}
         className={cn(
           'flex h-24 flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed text-center text-[13px]',
-          dragging ? 'border-primary bg-brand-soft' : 'border-line-strong bg-surface',
+          dragging ? 'border-brand bg-brand-soft' : 'border-line-strong bg-surface',
         )}
       >
         <FileUp className="size-5 text-muted-ink" aria-hidden />
@@ -255,17 +258,17 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
       </div>
 
       <Dialog open={pending !== null} onOpenChange={(open) => !open && answer(null)}>
-        <DialogContent className="bg-surface shadow-md sm:max-w-md">
+        <DialogContent size="sm" className="bg-surface shadow-md">
           {pending && doubt?.kind === 'many' ? (
             <>
               <DialogTitle className="font-heading text-[19px]">{t('choose.title')}</DialogTitle>
               <p className="text-[14px] text-ink-2">
                 {t(doubt.format === 'csv' ? 'choose.questionCsv' : 'choose.questionCamt', { file: pending.file.name, count: doubt.accounts.length })}
               </p>
-              <div role="radiogroup" aria-label={t('choose.accountsLabel')} className="space-y-2">
+              <RadioGroup aria-label={t('choose.accountsLabel')} value={chosen} onValueChange={(value) => setChosen(value as string)}>
                 {doubt.accounts.map((a) => (
-                  <label key={a.accountId} className={cn('flex cursor-pointer items-start gap-2.5 rounded-md border p-3 text-[13px]', chosen === a.accountId ? 'border-primary bg-brand-soft' : 'border-line')}>
-                    <input type="radio" name="statement-account" value={a.accountId} checked={chosen === a.accountId} onChange={() => setChosen(a.accountId)} className="mt-0.5 size-4" />
+                  <label key={a.accountId} className={cn('flex cursor-pointer items-start gap-2.5 rounded-md border p-3 text-[13px]', chosen === a.accountId ? 'border-brand bg-brand-soft' : 'border-line')}>
+                    <RadioGroupItem value={a.accountId} className="mt-0.5" />
                     <span>
                       <span className="block font-semibold text-ink">{a.name}</span>
                       <span className="block text-ink-2">
@@ -274,15 +277,8 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
                     </span>
                   </label>
                 ))}
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="ghost" onClick={() => answer(null)}>
-                  {tCommon('cancel')}
-                </Button>
-                <Button type="button" disabled={chosen === ''} onClick={() => answer(chosen)}>
-                  {t('choose.submit')}
-                </Button>
-              </DialogFooter>
+              </RadioGroup>
+              <FormActionBar placement="dialog" cancel={() => answer(null)} saveDisabled={chosen === ''} saveLabel={t('choose.submit')} onSave={() => answer(chosen)} />
             </>
           ) : null}
 
@@ -291,14 +287,7 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
               <DialogTitle className="font-heading text-[19px]">{t('noneCsv.title')}</DialogTitle>
               <p className="text-[14px] text-ink-2">{t('noneCsv.text', { file: pending.file.name })}</p>
               <p className="text-[14px] text-ink-2">{t('noneCsv.question')}</p>
-              <DialogFooter>
-                <Button type="button" variant="ghost" onClick={() => answer(null)}>
-                  {tCommon('cancel')}
-                </Button>
-                <Button type="button" title={t('noneCsv.setUpHint')} onClick={() => openAssistantWith(pending)}>
-                  {t('noneCsv.setUp')}
-                </Button>
-              </DialogFooter>
+              <FormActionBar placement="dialog" cancel={() => answer(null)} saveLabel={t('noneCsv.setUp')} onSave={() => openAssistantWith(pending)} />
             </>
           ) : null}
 
@@ -312,7 +301,7 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
                   {tCommon('cancel')}
                 </Button>
                 <Link
-                  href="/admin/finance?panel=accounts"
+                  href={panelHref('/admin/finance', 'accounts')}
                   className={buttonVariants()}
                   onClick={() => {
                     stoppedRef.current = true;

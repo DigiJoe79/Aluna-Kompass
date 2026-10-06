@@ -248,6 +248,41 @@ Nach dem Update:
   jetzt eine Version) und dauert bei vielen Fotos einige Minuten. Die Seite
   Publizieren weist darauf hin.
 
+### Von 0.2.5 auf 0.2.6
+
+Die Fassung 0.2.6 bringt keine Migration mit; `/api/health` meldet weiter
+`migrationCount: 6`. Es ändert sich nur die Oberfläche.
+
+Vor dem Update ist nichts Besonderes zu prüfen. Ein Backup (Schritt 1) gehört
+wie immer dazu.
+
+Nach dem Update gibt es zwei Handgriffe für die neuen Tierprofile als PDF:
+
+- Unter Verwaltung → Tiere die **Adresse des Online-Profils** eintragen, mit
+  `{slug}` als Platzhalter. Ohne sie tragen die PDF-Profile keinen QR-Code, und
+  unter dem Namen eines Tiers steht keine Adresse mehr.
+- Rollen, die Profile drucken sollen, brauchen das Recht „Dokumente erzeugen“
+  (`documents.export`).
+
+Sonst ist nichts von Hand zu tun. Wer sich wundert:
+
+- **Listen wirken niedriger oder höher als vorher.** Die Zeilenhöhe aller
+  Listen folgt jetzt der Dichte-Einstellung im Profil („Zeilendichte“ im
+  Nutzermenü); wählen Sie dort „normal“ oder „kompakt“.
+- **Anlegen und Löschen wandern.** Neue Tiere, Projekte, Partner und
+  Webseiten-Einträge legen Sie auf einer eigenen Seite an; Löschen und
+  Archivieren steht als letzter Abschnitt der Detailseite.
+- **Lesezeichen auf Einstellungsseiten** (Verein, Finanzen, Webseite, Akte)
+  führen weiter an die richtige Stelle; der gewählte Reiter steht jetzt in der
+  Adresse.
+- **Seiten sind schmaler als das Fenster.** Formulare, Detailseiten und
+  Einstellungen enden bei 1.200 Pixeln, linksbündig; nur Listen und
+  Arbeitsflächen nutzen die ganze Breite. Das ist Absicht: Felder werden auf
+  großen Bildschirmen nicht mehr überbreit.
+- **Template-Autoren** können mit den neuen Feldoptionen `size` und `group` die
+  Eingabemaske ordnen; ohne sie bekommt jedes Feld eine Breite nach seinem Typ.
+- MCP-Clients sind nicht betroffen.
+
 ## Backups
 
 - **Aus der Anwendung** (Verwaltung → Backup): eine Datei

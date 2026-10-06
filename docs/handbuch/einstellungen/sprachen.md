@@ -22,7 +22,9 @@ ausgeliefert.
 
 Eine Sprache zu entfernen löscht ihre Texte überall — deshalb zeigt Kompass
 vorher, wie viele Felder betroffen sind, und fragt. Der Vorgang steht im
-Änderungsprotokoll.
+Änderungsprotokoll. Eine Sprache, die die Webseite braucht — weil das eingelesene
+Template sie verlangt —, lässt sich nicht entfernen; Kompass nennt den Grund.
+Ändern Sie erst das Template oder schalten Sie das Modul aus.
 
 ## Übersetzen
 

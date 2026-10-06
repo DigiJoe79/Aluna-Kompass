@@ -3,10 +3,12 @@
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { toast } from 'sonner';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Notice } from '@/components/notice';
 import { RequirementList, type RequirementListItem } from '@/components/requirement-list';
 import { applyTaxDefaultsAction, confirmSetupStepAction } from './actions';
+import { panelHref } from '@/components/panel-nav';
 
 export interface ChecklistStep {
   key: 'fiscalYear' | 'account' | 'roles' | 'categories' | 'tax' | 'importFormat' | 'notice' | 'machineProcedure' | 'waiverBasis' | 'boardRemuneration' | 'boardMembers' | 'documentBases';
@@ -19,11 +21,11 @@ export interface ChecklistStep {
 }
 
 const STEP_HREF: Record<ChecklistStep['key'], string> = {
-  fiscalYear: '/admin/finance?panel=fiscalYears',
-  account: '/admin/finance?panel=accounts',
+  fiscalYear: panelHref('/admin/finance', 'fiscalYears'),
+  account: panelHref('/admin/finance', 'accounts'),
   roles: '/admin/roles',
-  categories: '/admin/finance?panel=categories',
-  tax: '/admin/finance?panel=tax',
+  categories: panelHref('/admin/finance', 'categories'),
+  tax: panelHref('/admin/finance', 'tax'),
   // F4b: der Assistent — sein erster Schritt rät zu CAMT, das sich beim ersten Import von selbst setzt.
   importFormat: '/finance/imports/format',
   // F6a: die Seite der Bescheide (Task 8).
@@ -31,11 +33,11 @@ const STEP_HREF: Record<ChecklistStep['key'], string> = {
   // F6a Task 4: das maschinelle Verfahren steht auf derselben Seite (Abschnitt, Task 8).
   machineProcedure: '/finance/donations/notices',
   // F8a Task 4: die Einstellung steht beim Schalter „Aufwandsspenden“.
-  waiverBasis: '/admin/finance?panel=tax',
+  waiverBasis: panelHref('/admin/finance', 'tax'),
   // Befund 51 b: die Basen-Übersicht der Dokument-Einrichtung.
   documentBases: '/admin/documents',
   // F8b Annahme 10: der Einrichtungspunkt steht unter Steuerliches.
-  boardRemuneration: '/admin/finance?panel=tax',
+  boardRemuneration: panelHref('/admin/finance', 'tax'),
   // Befund T: die Rolle „Vorstand“ steht am Kontakt.
   boardMembers: '/contacts',
 };
@@ -45,29 +47,22 @@ export function ChecklistPanel({ steps, complete }: { steps: ChecklistStep[]; co
   const t = useTranslations('finance.admin.checklist');
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  // Je Schritt eine eigene Ablehnung, über dem Knopf des Schritts.
+  const taxFb = useActionFeedback();
+  const categoriesFb = useActionFeedback();
 
   const applyDefaults = async () => {
     setPending(true);
-    const result = await applyTaxDefaultsAction();
+    const result = await taxFb.run(() => applyTaxDefaultsAction(), { retry: () => void applyDefaults() });
     setPending(false);
-    if (result.status === 'error') {
-      toast.error(result.message);
-      return;
-    }
-    if (result.status === 'success' && result.message) toast.success(result.message);
-    router.refresh();
+    if (result.status === 'success') router.refresh();
   };
 
   const confirmCategories = async () => {
     setPending(true);
-    const result = await confirmSetupStepAction('categories');
+    const result = await categoriesFb.run(() => confirmSetupStepAction('categories'), { retry: () => void confirmCategories() });
     setPending(false);
-    if (result.status === 'error') {
-      toast.error(result.message);
-      return;
-    }
-    if (result.status === 'success' && result.message) toast.success(result.message);
-    router.refresh();
+    if (result.status === 'success') router.refresh();
   };
 
   const items: RequirementListItem[] = steps.map((step) => {
@@ -77,13 +72,19 @@ export function ChecklistPanel({ steps, complete }: { steps: ChecklistStep[]; co
 
     const extra =
       step.key === 'tax' && !step.done && canSelf ? (
-        <button type="button" onClick={() => void applyDefaults()} disabled={pending} className="rounded-sm border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink hover:bg-surface-2" data-testid="apply-tax-defaults">
-          {t('applyTaxDefaults')}
-        </button>
+        <div className="space-y-2">
+          <RefusalNotice action state={taxFb.state} />
+          <button type="button" onClick={() => void applyDefaults()} disabled={pending} className="rounded-sm border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink hover:bg-surface-2" data-testid="apply-tax-defaults">
+            {t('applyTaxDefaults')}
+          </button>
+        </div>
       ) : step.key === 'categories' && !step.done && canSelf ? (
-        <button type="button" onClick={() => void confirmCategories()} disabled={pending} className="rounded-sm border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink hover:bg-surface-2" data-testid="confirm-categories">
-          {t('reviewCategories')}
-        </button>
+        <div className="space-y-2">
+          <RefusalNotice action state={categoriesFb.state} />
+          <button type="button" onClick={() => void confirmCategories()} disabled={pending} className="rounded-sm border border-line bg-surface px-3 py-1.5 text-[13px] font-semibold text-ink hover:bg-surface-2" data-testid="confirm-categories">
+            {t('reviewCategories')}
+          </button>
+        </div>
       ) : undefined;
 
     return {

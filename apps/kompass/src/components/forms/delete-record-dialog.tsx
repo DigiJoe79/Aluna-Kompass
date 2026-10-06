@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useEffect, useState, useTransition } from 'react';
-import { toast } from 'sonner';
+import { useEffect, useState } from 'react';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { useDateFormat } from '@/components/date-format-provider';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -18,7 +19,7 @@ type Loaded = { state: 'loading' } | { state: 'failed' } | { state: 'ready'; pre
  * fragt beim Öffnen den Dienst, ob gelöscht werden darf — dieselbe Funktion,
  * die der Löschdienst selbst benutzt. Er zeigt deshalb nie „frei“, wo der
  * Dienst ablehnen würde; lehnt der Dienst trotzdem ab (jemand hat inzwischen
- * einen Bezug gesetzt), steht der Grund im Toast.
+ * einen Bezug gesetzt), steht der Grund im Dialog.
  */
 export function DeleteRecordDialog({
   open,
@@ -39,7 +40,8 @@ export function DeleteRecordDialog({
   const format = useDateFormat();
   const [loaded, setLoaded] = useState<Loaded>({ state: 'loading' });
   const [withMedia, setWithMedia] = useState(true);
-  const [pending, start] = useTransition();
+  const [pending, setPending] = useState(false);
+  const feedback = useActionFeedback();
 
   const load = () => {
     setLoaded({ state: 'loading' });
@@ -47,7 +49,7 @@ export function DeleteRecordDialog({
   };
   // Je Öffnen frisch: Zwischen zwei Öffnungen kann jemand einen Bezug gesetzt oder gelöst haben.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { if (open) { setWithMedia(true); load(); } }, [open]);
+  useEffect(() => { if (open) { setWithMedia(true); feedback.reset(); load(); } }, [open]);
 
   const preview = loaded.state === 'ready' ? loaded.preview : null;
   const free = !!preview && !preview.isPublished && preview.blockers.length === 0;
@@ -66,16 +68,21 @@ export function DeleteRecordDialog({
       action={() => remove(offerMedia && withMedia)}
     >
       {preview?.isPublished && unpublish ? (
-        <div>
+        <div className="space-y-2">
+          <RefusalNotice action state={feedback.state} />
           <Button
             type="button"
             variant="outline"
             disabled={pending}
-            onClick={() => start(async () => {
-              const state = await unpublish();
-              if (state.status === 'error') toast.error(state.message);
-              else load();
-            })}
+            onClick={() => {
+              setPending(true);
+              void feedback
+                .run(unpublish)
+                .then((result) => {
+                  if (result.status === 'success') load();
+                })
+                .finally(() => setPending(false));
+            }}
           >
             {t('unpublish')}
           </Button>

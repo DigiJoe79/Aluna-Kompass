@@ -63,7 +63,7 @@ export function SuggestionCard({
   const [refusal, setRefusal] = useState<Extract<ActionState, { status: 'error' }> | null>(null);
   const linkEntry = suggestion?.kind === 'linkEntry' ? suggestion.linkEntry : null;
   const [dialog, setDialog] = useState<'rule' | 'foreign' | 'contact' | 'partner' | null>(null);
-  const [partnerError, setPartnerError] = useState<string | null>(null);
+  const [partnerError, setPartnerError] = useState<ActionState>({ status: 'idle' });
   const router = useRouter();
   const [ruleInitial, setRuleInitial] = useState<RuleFormState | null>(null);
 
@@ -89,7 +89,6 @@ export function SuggestionCard({
       onDone(raw.id);
     } else if (result.status === 'error') {
       setRefusal(result);
-      toast.error(result.message);
     }
   };
 
@@ -102,10 +101,11 @@ export function SuggestionCard({
     const built = miniFormToBookInput(mini, raw.id, suggestion?.draft ?? null);
     if (!built.ok) {
       setFieldErrors(built.fieldErrors);
-      toast.error(t('toast.fieldsInvalid'));
+      setRefusal({ status: 'error', message: t('toast.fieldsInvalid'), fieldErrors: {} });
       return;
     }
     setFieldErrors({});
+    setRefusal(null);
     startTransition(async () => finish(await bookFromTransactionAction(built.input, detail.pendingInvoice?.documentId)));
   };
   /**
@@ -117,26 +117,26 @@ export function SuggestionCard({
     if (!built.ok) {
       setFieldErrors(built.fieldErrors);
       setDialog(null);
-      toast.error(t('toast.fieldsInvalid'));
+      setRefusal({ status: 'error', message: t('toast.fieldsInvalid'), fieldErrors: {} });
       return;
     }
-    setPartnerError(null);
+    setPartnerError({ status: 'idle' });
     startTransition(async () => {
       const input = { ...built.input, allocationLines: built.input.allocationLines.map((l) => ({ ...l, contactId: partner.contactId })) };
       const booked = await bookFromTransactionAction(input);
       if (booked.status !== 'success') {
-        setPartnerError(booked.status === 'error' ? booked.message : null);
+        setPartnerError(booked);
         return;
       }
       const entry = booked.data as EntryView;
       const line = entry.allocationLines.find((l) => l.amountCents < 0 && l.contactId === partner.contactId);
       if (!line) {
-        setPartnerError(t('partnerPayment.noLine'));
+        setPartnerError({ status: 'error', message: t('partnerPayment.noLine'), fieldErrors: {} });
         return;
       }
       const draft = await savePartnerPaymentDraftAction({ partnerId: partner.id, basis: partner.usualBasis ?? 'transfer58', purposeText: mini.text.trim() || raw.purpose || '', retroactive: true, positions: [], paidLineIds: [line.id] });
       if (draft.status !== 'success') {
-        setPartnerError(draft.status === 'error' ? draft.message : null);
+        setPartnerError(draft);
         return;
       }
       const data = draft.data as { id: string };
@@ -233,7 +233,7 @@ export function SuggestionCard({
                 <KeyChip className="ml-1">{t('keys.enterKey')}</KeyChip>
               </Button>
             )}
-            <Link href={`/finance/entries/new?raw=${raw.id}&back=work`} className="inline-flex h-[var(--field-h)] items-center gap-1.5 rounded-md bg-secondary px-3.5 text-[13px] font-medium text-secondary-foreground">
+            <Link href={`/finance/entries/new?raw=${raw.id}&back=work`} className="inline-flex h-[var(--field-h)] items-center gap-1.5 rounded-md bg-surface-2 px-3.5 text-[13px] font-medium text-ink-2">
               {t('actions.edit')}
               <KeyChip>E</KeyChip>
             </Link>
@@ -268,7 +268,7 @@ export function SuggestionCard({
         <VoucherPanel raw={raw} voucherTypes={form.voucherTypes} draftForLink={draftForLink} entryTextIfNew={mini.text} onDone={onDone} />
         {ruleInitial ? <RuleDialog open={dialog === 'rule'} onOpenChange={(open) => setDialog(open ? 'rule' : null)} initial={ruleInitial} mode="create" options={form.rule} onSaved={onReload} /> : null}
         <ForeignDialog open={dialog === 'foreign'} onOpenChange={(open) => setDialog(open ? 'foreign' : null)} rawTransactionId={raw.id} outgoing={raw.amountCents < 0} returnOptions={detail.foreignReturnOptions} onDone={() => onDone(raw.id)} />
-        <PartnerPaymentDialog open={dialog === 'partner'} onOpenChange={(open) => setDialog(open ? 'partner' : null)} partners={form.partners} error={partnerError} pending={pending} onConfirm={recordAsPartnerPayment} />
+        <PartnerPaymentDialog open={dialog === 'partner'} onOpenChange={(open) => setDialog(open ? 'partner' : null)} partners={form.partners} state={partnerError} pending={pending} onConfirm={recordAsPartnerPayment} />
         <ContactDialog
           open={dialog === 'contact'}
           onOpenChange={(open) => setDialog(open ? 'contact' : null)}

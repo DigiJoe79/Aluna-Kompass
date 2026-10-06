@@ -5,20 +5,22 @@ import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { toast } from 'sonner';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
 import { useDateFormat } from '@/components/date-format-provider';
 import { EmptyState } from '@/components/empty-state';
 import { AmountField } from '@/components/finance/amount-field';
 import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { formatAmount, parseAmount } from '@/lib/finance/amount';
 import { numberRangeText, runIssueCount, runQueryString } from '@/lib/finance/run';
 import { previewConfirmationRunAction, startConfirmationRunAction } from './actions';
 import { PreviewGroups } from './preview-groups';
 import { RunSteps } from './run-steps';
+import { FormField } from '@/components/forms/form-field';
 
 export interface RunSelectionProps {
   years: number[];
@@ -50,6 +52,8 @@ export function RunSelection(props: RunSelectionProps) {
   const [preview, setPreview] = useState<RunPreview | null>(props.preview);
   const [loading, setLoading] = useState(false);
   const [starting, setStarting] = useState(false);
+  const previewFb = useActionFeedback();
+  const startFb = useActionFeedback();
 
   const recompute = async (next: { year: string; min: string; excluded: PickedContact[] }) => {
     const minCents = next.min.trim() ? parseAmount(next.min) : null;
@@ -60,12 +64,9 @@ export function RunSelection(props: RunSelectionProps) {
       ...(props.followUp ? { followUpOfRunId: props.followUp.id } : {}),
     };
     setLoading(true);
-    const result = await previewConfirmationRunAction(input);
+    const result = await previewFb.run(() => previewConfirmationRunAction(input), { retry: () => void recompute(next) });
     setLoading(false);
-    if (result.status === 'error') {
-      toast.error(result.message);
-      return;
-    }
+    if (result.status === 'error') return;
     if (result.status === 'success') {
       setPreview(result.data as RunPreview);
       const query = runQueryString({ year: input.year, minCents: input.minCents ?? null, excluded: input.excludedContactIds, followUp: props.followUp?.id ?? null });
@@ -90,19 +91,21 @@ export function RunSelection(props: RunSelectionProps) {
   const start = async () => {
     if (!preview) return;
     setStarting(true);
-    const result = await startConfirmationRunAction({
-      year: preview.year,
-      minCents: preview.minCents,
-      excludedContactIds: preview.excludedContactIds,
-      ...(props.followUp ? { followUpOfRunId: props.followUp.id } : {}),
-    });
+    const result = await startFb.run(
+      () =>
+        startConfirmationRunAction({
+          year: preview.year,
+          minCents: preview.minCents,
+          excludedContactIds: preview.excludedContactIds,
+          ...(props.followUp ? { followUpOfRunId: props.followUp.id } : {}),
+        }),
+      { retry: () => void start() },
+    );
     if (result.status === 'error') {
       setStarting(false);
-      toast.error(result.message);
       return;
     }
     if (result.status === 'success') {
-      if (result.message) toast.success(result.message);
       router.push(`/finance/donations/run?run=${(result.data as { id: string }).id}`);
     }
   };
@@ -117,6 +120,8 @@ export function RunSelection(props: RunSelectionProps) {
 
       {props.followUp ? <Notice level="hint">{t('selection.followUp', { date: date(props.followUp.startedOn) })}</Notice> : null}
 
+      <RefusalNotice action state={previewFb.state} />
+
       <form
         aria-label={t('selection.label')}
         className="flex flex-wrap items-end gap-4 rounded-md border border-line bg-surface p-4"
@@ -125,10 +130,10 @@ export function RunSelection(props: RunSelectionProps) {
           void recompute({ year, min, excluded });
         }}
       >
-        <div className="space-y-1.5">
-          <Label htmlFor="run-year">{t('selection.year')}</Label>
+        <FormField id="run-year" label={t('selection.year')}>
           <Select
             id="run-year"
+            className="w-auto"
             value={year}
             onChange={(e) => {
               setYear(e.target.value);
@@ -139,12 +144,12 @@ export function RunSelection(props: RunSelectionProps) {
               <option key={y} value={String(y)}>{y}</option>
             ))}
           </Select>
-        </div>
-        <div className="w-40 space-y-1.5">
-          <Label htmlFor="run-min">{t('selection.minimum')}</Label>
+        </FormField>
+        <FormField id="run-min" label={t('selection.minimum')}>
           <AmountField id="run-min" name="min" value={min} onChange={setMin} />
-        </div>
-        <div className="w-72">
+        </FormField>
+        {/* Breite wie das Suchfeld der Filterleisten in den Listen (Entscheidung zum Inventar). */}
+        <div className="w-[220px]">
           <ContactPicker id="run-exclude" name="exclude" label={t('selection.exclude')} value={picker} onChange={exclude} />
         </div>
         <Button type="submit" variant={preview ? 'outline' : 'default'} disabled={loading}>
@@ -180,25 +185,31 @@ export function RunSelection(props: RunSelectionProps) {
             <PreviewGroups items={preview.items} excluded={preview.excluded ?? []} />
           )}
 
-          <div data-testid="run-footer" className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-4 rounded-md border border-line bg-surface px-4 py-3 shadow-md">
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-6 gap-y-1 text-[13px]">
-              <span>
-                <span className="text-muted-ink">{t('footer.range')}: </span>
-                <span data-testid="run-number-range" className="font-mono text-ink">
-                  {range ? (range.to ? t('footer.rangeValue', { from: range.from, to: range.to }) : range.from) : t('footer.rangeNone')}
-                </span>
-              </span>
-              <span className="text-ink-2">{t('footer.issuedOn', { date: date(preview.issuedOn) })}</span>
-              {props.canIssue ? <span className="max-w-[320px] text-[12px] text-muted-ink">{td('issue.humanOnly')}</span> : null}
-            </div>
-            {props.canIssue ? (
-              <Button type="button" disabled={!canStart} onClick={() => void start()}>
-                {t('footer.submit', { count })}
-              </Button>
-            ) : (
-              <p className="text-[13px] text-ink-2">{t('footer.noPermission')}</p>
-            )}
-          </div>
+          {props.canIssue ? (
+            <FormActionBar
+              mode="run"
+              testId="run-footer"
+              note={
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
+                  <span>
+                    <span className="text-muted-ink">{t('footer.range')}: </span>
+                    <span data-testid="run-number-range" className="font-mono text-ink">
+                      {range ? (range.to ? t('footer.rangeValue', { from: range.from, to: range.to }) : range.from) : t('footer.rangeNone')}
+                    </span>
+                  </span>
+                  <span className="text-ink-2">{t('footer.issuedOn', { date: date(preview.issuedOn) })}</span>
+                  <span className="max-w-prose text-[12px] text-muted-ink">{td('issue.humanOnly')}</span>
+                </div>
+              }
+              saveLabel={t('footer.submit', { count })}
+              saveDisabled={!canStart}
+              pending={starting}
+              onSave={() => void start()}
+              state={startFb.state}
+            />
+          ) : (
+            <p data-testid="run-footer" className="text-[13px] text-ink-2">{t('footer.noPermission')}</p>
+          )}
         </>
       ) : null}
     </div>

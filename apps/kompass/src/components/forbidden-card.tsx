@@ -5,7 +5,7 @@ import { buttonVariants } from '@/components/ui/button';
 export function ForbiddenCard({ permission }: { permission: string }) {
   const t = useTranslations('errors.pages.forbidden');
   return (
-    <section className="flex min-h-[320px] max-w-[720px] flex-col gap-3 rounded-lg border border-line bg-surface p-7">
+    <section className="flex min-h-[320px] flex-col gap-3 rounded-lg border border-line bg-surface p-7">
       <div className="flex items-center gap-2 text-[12px]">
         <span className="rounded-sm bg-warning-bg px-1.5 py-0.5 font-mono font-semibold text-warning">403</span>
         <span className="text-muted-ink">{t('kicker')}</span>

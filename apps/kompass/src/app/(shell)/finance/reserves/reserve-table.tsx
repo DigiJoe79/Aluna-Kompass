@@ -5,6 +5,8 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useId, useState } from 'react';
 import { toast } from 'sonner';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { useDateFormat } from '@/components/date-format-provider';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { StatusBadge } from '@/components/status-badge';
@@ -55,7 +57,7 @@ function KindInfo({ kind }: { kind: ReserveKind }) {
         {t(`kinds.${kind}`)}
         <button
           type="button"
-          className="inline-flex size-6 items-center justify-center rounded-full text-muted-ink hover:text-ink focus-visible:outline-2 focus-visible:outline-primary"
+          className="inline-flex size-6 items-center justify-center rounded-full text-muted-ink hover:text-ink focus-visible:outline-2 focus-visible:outline-brand"
           aria-expanded={open}
           aria-controls={id}
           aria-label={t('kindInfo', { kind: t(`kinds.${kind}`) })}
@@ -124,6 +126,8 @@ export function ReserveTable({
   const fmt = useDateFormat();
   const router = useRouter();
   const [open, setOpen] = useState<Open>(null);
+  // „Stilllegen“ steht im Zeilenmenü: Die Ablehnung steht über der Tabelle.
+  const activeFb = useActionFeedback();
   const close = () => setOpen(null);
   const saved = (message: string) => () => {
     setOpen(null);
@@ -132,11 +136,8 @@ export function ReserveTable({
   };
 
   const toggleActive = async (row: ReserveRow) => {
-    const result = await setReserveActiveAction(row.id, !row.isActive, row.updatedAt);
-    if (result.status === 'error') {
-      toast.error(result.message);
-      return;
-    }
+    const result = await activeFb.run(() => setReserveActiveAction(row.id, !row.isActive, row.updatedAt), { retry: () => void toggleActive(row) });
+    if (result.status !== 'success') return;
     toast.success(row.isActive ? t('menu.deactivated') : t('menu.activated'));
     router.refresh();
   };
@@ -165,6 +166,7 @@ export function ReserveTable({
 
   return (
     <div className="space-y-3">
+      <RefusalNotice action state={activeFb.state} />
       {canSetup ? (
         <div className="flex justify-end">
           <Button type="button" onClick={() => setOpen({ kind: 'create' })} data-testid="reserve-create">
@@ -177,8 +179,8 @@ export function ReserveTable({
       ) : (
         <div className="overflow-x-auto rounded-md border border-line">
           <Table data-testid="reserve-table">
-            <TableHeader className="bg-table-head text-left text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink">
-              <TableRow className="h-9">
+            <TableHeader>
+              <TableRow>
                 <TableHead className="px-3">{t('columns.kind')}</TableHead>
                 <TableHead className="px-3">{t('columns.name')}</TableHead>
                 <TableHead className="px-3">{t('columns.purpose')}</TableHead>
@@ -189,7 +191,7 @@ export function ReserveTable({
             </TableHeader>
             <TableBody>
               {rows.map((row) => (
-                <TableRow key={row.id} className="border-b border-line-2" data-testid="reserve-row">
+                <TableRow key={row.id} data-testid="reserve-row">
                   <TableCell className="px-3 align-top text-ink">
                     <KindInfo kind={row.kind} />
                   </TableCell>
@@ -203,7 +205,8 @@ export function ReserveTable({
                     ) : null}
                   </TableCell>
                   <TableCell className="px-3 align-top text-ink-2">{row.purposeLabel ?? '—'}</TableCell>
-                  <TableCell className="px-3 align-top">
+                  {/* Nummer · Betreff · Datum darf umbrechen: einzeilig trieb der Betreff die Tabelle auf einer standard-Seite ins waagerechte Scrollen (K9-Befund 8). */}
+                  <TableCell className="whitespace-normal px-3 align-top">
                     <DocumentLabel document={row.resolution} testId="reserve-resolution" />
                   </TableCell>
                   <TableCell className="px-3 text-right align-top font-mono font-semibold tabular-nums" data-testid="reserve-balance">

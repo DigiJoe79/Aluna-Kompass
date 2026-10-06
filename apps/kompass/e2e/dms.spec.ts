@@ -290,15 +290,19 @@ test.describe('dms', () => {
     await expect(page).toHaveURL(/\/edit$/);
 
     const hint = page.getByText(/Die Dokumentart steht seit dem Anlegen fest/);
+    // Die Zeile darüber ist Art · Datum (HANDOFF Konsistenz § 8c): Der Hinweis beginnt unter „Art“.
+    const type = page.locator('#typeKey');
     const date = page.getByLabel('Datum auf dem Dokument');
     const hintBox = await hint.boundingBox();
+    const typeBox = await type.boundingBox();
     const dateBox = await date.boundingBox();
-    if (!hintBox || !dateBox) throw new Error('Hinweis oder Feld nicht sichtbar');
+    if (!hintBox || !typeBox || !dateBox) throw new Error('Hinweis oder Feld nicht sichtbar');
 
-    // Über beide Spalten statt in einer Zelle: Sonst steht neben „Datum“ ein
+    // Über beide Spalten statt in einer Zelle: Sonst steht neben „Art“ ein
     // Loch, und die vier Felder lesen sich als zwei lose Paare.
     expect(hintBox.width).toBeGreaterThan(dateBox.width * 1.5);
-    expect(Math.round(hintBox.x)).toBe(Math.round(dateBox.x));
+    expect(Math.round(hintBox.x)).toBe(Math.round(typeBox.x));
+    expect(hintBox.y).toBeGreaterThan(dateBox.y);
   });
 
   test('teilt den Splitscreen mit dem Fenster, statt die Spalte festzunageln', async ({ page }) => {
@@ -512,9 +516,21 @@ test.describe('dms', () => {
     // fertig, nur zeigte nichts darauf.
     await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Einstellungen' }).click();
     await page.getByRole('navigation', { name: 'Unternavigation' }).getByRole('link', { name: 'Akte', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Dokumentarten' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Einsortierregeln' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Ordner' })).toBeVisible();
+    const tabs = page.getByRole('navigation', { name: 'Bereiche der Akte' });
+    await expect(tabs.getByRole('link', { name: 'Arten' })).toHaveAttribute('aria-current', 'page');
+    // Der Bereich steht im Reiter, nicht noch einmal als Überschrift darunter.
+    await expect(page.getByText('Verwalten Sie die Dokumentarten')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dokumentarten' })).toHaveCount(0);
+    await tabs.getByRole('link', { name: 'Regeln' }).click();
+    await expect(page.getByText('Automatische Erkennung und Zuordnung')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Einsortierregeln' })).toHaveCount(0);
+    await tabs.getByRole('link', { name: 'Ordner' }).click();
+    await expect(page.getByTestId('folders-moved')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Ordner' })).toHaveCount(0);
+    // Ein altes Lesezeichen mit unbekanntem Bereich zeigt den ersten, keine leere Seite.
+    await page.goto('/admin/dms?panel=quatsch');
+    await expect(tabs.getByRole('link', { name: 'Arten' })).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByText('Verwalten Sie die Dokumentarten')).toBeVisible();
   });
 
   /**
@@ -1198,7 +1214,8 @@ test.describe('dms', () => {
   test('legt am Dokument einen Bezug zu einem Kontakt an und entfernt ihn wieder', async ({ page }) => {
     await login(page);
     await page.goto('/dms');
-    await page.getByRole('link', { name: /BRF-\d{4}-\d{3}/ }).first().click();
+    // Die Nummer ist kopierbarer Text; geöffnet wird über den Betreff (RowLink, Mittelweg Zeilenklick).
+    await page.getByRole('row').filter({ hasText: /BRF-\d{4}-\d{3}/ }).first().getByRole('link').first().click();
     await page.getByRole('button', { name: 'Bezug hinzufügen', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Bezug hinzufügen', exact: true });
     await dialog.getByRole('combobox', { name: 'Kontakt' }).fill('Mus');
@@ -1283,7 +1300,8 @@ test.describe('dms', () => {
   test('legt eine Wiedervorlage an und hakt sie ab', async ({ page }) => {
     await login(page);
     await page.goto('/dms');
-    await page.getByRole('link', { name: /BRF-\d{4}-\d{3}/ }).first().click();
+    // Die Nummer ist kopierbarer Text; geöffnet wird über den Betreff (RowLink, Mittelweg Zeilenklick).
+    await page.getByRole('row').filter({ hasText: /BRF-\d{4}-\d{3}/ }).first().getByRole('link').first().click();
     await page.getByRole('button', { name: 'Neue Wiedervorlage' }).click();
     const dialog = page.getByRole('dialog', { name: 'Neue Wiedervorlage' });
     await dialog.getByLabel('Fällig am').fill('2026-10-01');
@@ -1439,7 +1457,7 @@ test.describe('dms', () => {
 
   test('löscht eine leere, selbst angelegte Dokumentart, aber nicht die mit Dokumenten (Task 4)', async ({ page }) => {
     await login(page);
-    await page.goto('/admin/dms');
+    await page.goto('/admin/dms?panel=types');
     await page.getByRole('button', { name: 'Dokumentart anlegen' }).click();
     const create = page.getByRole('dialog', { name: 'Neue Dokumentart' });
     await create.getByLabel('Schlüssel').fill('probe-memo');
@@ -1463,7 +1481,7 @@ test.describe('dms', () => {
 
   test('verwaltet Textbausteine und Versandwege', async ({ page }) => {
     await login(page);
-    await page.goto('/admin/dms');
+    await page.goto('/admin/dms?panel=snippets');
     await page.getByRole('button', { name: 'Baustein anlegen' }).click();
     const dialog = page.getByRole('dialog', { name: 'Baustein anlegen' });
     await dialog.getByLabel('Name').fill('Absage');
@@ -1471,6 +1489,7 @@ test.describe('dms', () => {
     await dialog.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByRole('row').filter({ hasText: 'Absage' })).toBeVisible();
 
+    await page.getByRole('navigation', { name: 'Bereiche der Akte' }).getByRole('link', { name: 'Versand' }).click();
     await page.getByRole('button', { name: 'Versandweg anlegen' }).click();
     const channel = page.getByRole('dialog', { name: 'Versandweg anlegen' });
     await channel.getByLabel('Schlüssel').fill('courier');
@@ -1499,7 +1518,8 @@ test.describe('dms', () => {
   test('von der Kontaktseite aus Post ablegen belegt den Absender vor', async ({ page }) => {
     await login(page);
     await page.goto('/contacts');
-    await page.getByRole('row').nth(1).click();
+    // Die Kontaktliste öffnet über den Namen, nicht über die Zeile.
+    await page.getByRole('row').nth(1).getByRole('link').first().click();
     await expect(page).toHaveURL(/\/contacts\/[0-9A-Z]{26}$/);
     await page.getByTestId('related-documents').getByRole('link', { name: 'Post ablegen' }).click();
     const dialog = receiveDialog(page);
@@ -1582,7 +1602,7 @@ test('exports a folder as a bundle', async ({ page }) => {
   await login(page);
   await page.goto('/dms');
   await page.getByRole('button', { name: 'Bündel exportieren' }).click();
-  await page.getByLabel('Einen Jahrgang').check();
+  await page.getByRole('radio', { name: 'Einen Jahrgang' }).check();
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Bündel herunterladen' }).click();
   expect((await download).suggestedFilename()).toMatch(/^Akte-Jahrgang-\d{4}-.*\.zip$/);
@@ -2095,9 +2115,8 @@ test.describe('Weg und Teilbaum', () => {
 
   test('die Verwaltung der Akte verweist für Ordner auf die Akte', async ({ page }) => {
     await login(page);
-    await page.goto('/admin/dms');
+    await page.goto('/admin/dms?panel=folders');
     const card = page.getByTestId('folders-moved');
-    await expect(card.getByRole('heading', { name: 'Ordner' })).toBeVisible();
     await expect(card).toContainText('Ordner legen Sie jetzt direkt in der Akte an');
     await expect(card.getByRole('table')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Ordner anlegen' })).toHaveCount(0);

@@ -5,6 +5,10 @@ Nummernkreis und Aufbewahrungsfrist, die Einsortierregeln, die aus
 Absender oder Text auf Art und Ordner schließen, und die Textbausteine für
 Briefe. Was hier steht, erscheint beim Ablegen als Vorschlag.
 
+Die Seite hat sechs Reiter: Arten, Regeln, Ordner, Textbausteine, Versand und
+Texterkennung. Der Bereich steht im Reiter, nicht zusätzlich als Überschrift
+darunter; der gewählte steht in der Adresse, und die Seite lädt nur ihn.
+
 ## Dokumentarten
 
 Jede Art hat einen Namen, ein Präfix für die Nummer (`BRF` für Brief, `BEH`

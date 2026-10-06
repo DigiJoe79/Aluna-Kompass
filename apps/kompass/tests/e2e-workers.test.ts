@@ -30,6 +30,10 @@ describe('workerEnvironment', () => {
     expect(w.env.NEXT_DIST_DIR).toMatch(/^\.next[\\/]/);
   });
 
+  it('schaltet für die Dev-Server den Next-Indikator ab, der sonst unten rechts Klicks abfängt (K9-Befund 14)', () => {
+    expect(workerEnvironment('dev', 0, root).env.KOMPASS_E2E_NO_DEV_INDICATOR).toBe('1');
+  });
+
   it('hält den Dev-Server in APP_ENV=test mit Reset-Token und Staging-Publish', () => {
     const w = workerEnvironment('dev', 0, root);
     expect(w.env.APP_ENV).toBe('test');

@@ -352,19 +352,31 @@ importers:
       '@kompass/core':
         specifier: workspace:*
         version: link:../../core
+      '@kompass/markdown':
+        specifier: workspace:*
+        version: link:../../markdown
       drizzle-orm:
         specifier: ^0.45.3
         version: 0.45.3(@types/better-sqlite3@9.6.0)(better-sqlite3@13.0.3)
+      qrcode-generator:
+        specifier: 2.0.4
+        version: 2.0.4
       zod:
         specifier: ^4.6.5
         version: 4.6.5
     devDependencies:
+      '@kompass/documents':
+        specifier: workspace:*
+        version: link:../../documents
       '@kompass/module-projects':
         specifier: workspace:*
         version: link:../projects
       '@types/node':
         specifier: ^26.6.2
         version: 26.6.2
+      sharp:
+        specifier: ^0.35.4
+        version: 0.35.4(@types/node@26.6.2)
       typescript:
         specifier: ^6.0.3
         version: 6.0.3

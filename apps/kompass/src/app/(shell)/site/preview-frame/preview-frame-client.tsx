@@ -20,7 +20,7 @@ export function PreviewFrameClient() {
             type="button"
             aria-pressed={width === key}
             onClick={() => setWidth(key)}
-            className={cn('rounded-md border border-line px-3 py-1.5 text-[13px] font-medium', width === key ? 'bg-primary text-primary-foreground' : 'bg-surface text-ink-2')}
+            className={cn('rounded-md border border-line px-3 py-1.5 text-[13px] font-medium', width === key ? 'bg-brand text-on-brand' : 'bg-surface text-ink-2')}
           >
             {t(`widths.${key}`)}{PREVIEW_WIDTHS[key] ? ` · ${PREVIEW_WIDTHS[key]}px` : ''}
           </button>

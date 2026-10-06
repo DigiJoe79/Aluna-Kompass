@@ -8,19 +8,23 @@ import { useTransition } from 'react';
 import { useDateFormat } from '@/components/date-format-provider';
 import { EmptyState } from '@/components/empty-state';
 import { PublishSwitch } from '@/components/forms/publish-switch';
+import { SelectionBar } from '@/components/selection-bar';
 import { SortableHead } from '@/components/sortable-head';
 import { StatusBadge } from '@/components/status-badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { listKeyOf, useListSelection } from '@/lib/use-list-selection';
 import { useUrlFilters } from '@/lib/use-url-filters';
 import { cn } from '@/lib/utils';
 import { setAnimalPublishedAction } from './actions';
 import { LIST_LOCATIONS, LIST_STATUSES, listQueryString } from './list-params';
+import { ProfileExportButton } from './profile-export-button';
 
 type Filters = { text: string; status: string; location: string; published: string };
 
-export function AnimalList({ animals, total, reviewPending }: { animals: AnimalListItem[]; total: number; reviewPending: number }) {
+export function AnimalList({ animals, total, reviewPending, canExport }: { animals: AnimalListItem[]; total: number; reviewPending: number; canExport: boolean }) {
   const t = useTranslations('animals.list');
   const f = useTranslations('animals.form');
   const dates = useDateFormat();
@@ -58,6 +62,10 @@ export function AnimalList({ animals, total, reviewPending }: { animals: AnimalL
   };
   // Der Weg ins Profil nimmt die Auswahl mit, damit die Maske zurück und weiter findet.
   const listQs = listQueryString(current);
+  // Wie in der Akte: Ein Filterwechsel ist eine neue Liste und fängt leer an; „alle“ meint die gezeigten Zeilen.
+  const selection = useListSelection(listKeyOf(params), animals);
+  const selected = animals.filter((a) => selection.ids.has(a.id));
+  const allSelected = animals.length > 0 && selected.length === animals.length;
   const viewClass = (active: boolean) => cn('rounded-sm px-3 py-1.5 text-[13px] font-semibold', active ? 'bg-brand-soft text-brand-ink' : 'text-muted-ink hover:bg-surface-2');
 
   return (
@@ -94,26 +102,36 @@ export function AnimalList({ animals, total, reviewPending }: { animals: AnimalL
       ) : (
         <div className="overflow-hidden rounded-md border border-line bg-surface">
           <Table className="text-[14px]">
-            <TableHeader className="bg-table-head text-left text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink">
-              <TableRow className="h-9">
+            <TableHeader>
+              <TableRow>
+                {canExport ? (
+                  <TableHead className="w-10 pr-0 pl-4">
+                    <Checkbox aria-label={t('selection.selectAll')} checked={allSelected} indeterminate={selected.length > 0 && !allSelected} onCheckedChange={() => selection.toggle(animals.map((a) => a.id), !allSelected)} />
+                  </TableHead>
+                ) : null}
                 <SortableHead field="name" label={t('columns.animal')} />
-                <TableHead className="px-4">{t('columns.status')}</TableHead>
-                <TableHead className="px-4">{t('columns.flags')}</TableHead>
-                <TableHead className="px-4">{t('columns.location')}</TableHead>
-                <TableHead className="px-4 text-right">{t('columns.photos')}</TableHead>
+                <TableHead>{t('columns.status')}</TableHead>
+                <TableHead>{t('columns.flags')}</TableHead>
+                <TableHead>{t('columns.location')}</TableHead>
+                <TableHead className="text-right">{t('columns.photos')}</TableHead>
                 <SortableHead field="updatedAt" label={t('columns.updated')} />
-                <TableHead className="px-4 text-right">{t('columns.published')}</TableHead>
+                <TableHead className="text-right">{t('columns.published')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {animals.map((a, i) => (
-                // Kein Zeilen-`onClick` wie bei den Kontakten: Der Schalter rechts darf den Weg ins Profil nicht auslösen.
-                <TableRow key={a.id} data-testid="animal-row" className={cn('h-[52px] border-b border-line-2 hover:bg-row-hover', i % 2 === 1 && 'bg-zebra')}>
-                  <TableCell className="px-4">
+                <TableRow key={a.id} data-testid="animal-row">
+                  {canExport ? (
+                    // Das Kästchen wählt aus; die Zeile öffnet weiter den Hund.
+                    <TableCell className="w-10 pr-0 pl-4">
+                      <Checkbox aria-label={t('selection.selectOne', { name: a.name })} checked={selection.ids.has(a.id)} onCheckedChange={(on) => selection.toggle([a.id], on === true)} />
+                    </TableCell>
+                  ) : null}
+                  <TableCell>
                     <span className="flex items-center gap-3">
                       {/* Die Vorschau statt des Originals: Bei einigen hundert Hunden lüde die Liste sonst jedes Foto in voller Größe. */}
                       {a.primaryAssetId ? <img src={`/media/${a.primaryAssetId}/preview`} loading="lazy" alt="" className="size-9 shrink-0 rounded-full object-cover" /> : <span className="size-9 shrink-0 rounded-full bg-surface-2" aria-hidden />}
-                      <Link href={`/animals/${a.id}${listQs ? `?${listQs}` : ''}`} className="font-semibold text-link underline">{a.name}</Link>
+                      <RowLink href={`/animals/${a.id}${listQs ? `?${listQs}` : ''}`}>{a.name}</RowLink>
                       {a.reviewRequestedAt ? (
                         <span title={a.reviewNote || undefined} data-testid="animal-review-badge">
                           <StatusBadge tone="warning">{t('reviewBadge')}</StatusBadge>
@@ -121,21 +139,21 @@ export function AnimalList({ animals, total, reviewPending }: { animals: AnimalL
                       ) : null}
                     </span>
                   </TableCell>
-                  <TableCell className="px-4">
+                  <TableCell>
                     <StatusBadge tone={a.status === 'adopted' ? 'success' : a.status === 'reserved' ? 'warning' : 'info'} dot>
                       {f(`status.${a.status}`)}
                     </StatusBadge>
                   </TableCell>
-                  <TableCell className="px-4">
+                  <TableCell>
                     <span className="flex items-center gap-1.5">
                       {a.isEmergency ? <StatusBadge tone="error">{t('emergency')}</StatusBadge> : null}
                       {a.isSponsorable ? <StatusBadge tone="accent">{t('sponsorable')}</StatusBadge> : null}
                     </span>
                   </TableCell>
-                  <TableCell className="px-4 text-ink-2">{[f(`locations.${a.location}`), a.place].filter(Boolean).join(' · ')}</TableCell>
-                  <TableCell className="px-4 text-right font-mono text-[13px] text-ink-2">{a.photoCount}</TableCell>
-                  <TableCell className="px-4 text-ink-2">{dates.date(a.updatedAt)}</TableCell>
-                  <TableCell className="px-4">
+                  <TableCell className="text-ink-2">{[f(`locations.${a.location}`), a.place].filter(Boolean).join(' · ')}</TableCell>
+                  <TableCell className="text-right font-mono text-[13px] text-ink-2">{a.photoCount}</TableCell>
+                  <TableCell className="text-ink-2">{dates.date(a.updatedAt)}</TableCell>
+                  <TableCell>
                     <span className="flex justify-end">
                       <PublishSwitch id={a.id} isPublished={a.isPublished} action={setAnimalPublishedAction} switchAfterText />
                     </span>
@@ -146,6 +164,12 @@ export function AnimalList({ animals, total, reviewPending }: { animals: AnimalL
           </Table>
         </div>
       )}
+      {/* Unter der Tabelle und klebend; die Live-Region darin steht immer im DOM (Kommentar im Baustein). */}
+      {canExport ? (
+        <SelectionBar count={selected.length} label={t('selection.count', { count: selected.length })}>
+          <ProfileExportButton ids={selected.map((a) => a.id)} size="sm" />
+        </SelectionBar>
+      ) : null}
     </div>
   );
 }

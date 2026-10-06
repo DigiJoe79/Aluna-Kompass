@@ -5,17 +5,21 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { toast } from 'sonner';
 import { BlockedState } from '@/components/blocked-state';
 import { useDateFormat } from '@/components/date-format-provider';
 import { Notice } from '@/components/notice';
 import { ReceiptDrop } from '@/components/finance/receipt-drop';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { FormField } from '@/components/forms/form-field';
+import { FormGrid, FormRowBreak } from '@/components/forms/form-grid';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { createNotificationLetterAction, saveSignerAction, uploadFacsimileAction } from './actions';
 
 /**
@@ -27,11 +31,13 @@ import { createNotificationLetterAction, saveSignerAction, uploadFacsimileAction
  */
 export function MachinePanel({ signers, status, canIssue, canDraftLetter, draftNames, facsimileMaxBytes }: { signers: SignerView[]; status: MachineProcedureStatus; canIssue: boolean; canDraftLetter: boolean; draftNames: string[]; facsimileMaxBytes: number }) {
   const t = useTranslations('finance.donations.machine');
-  const tCommon = useTranslations('common');
   const { date } = useDateFormat();
   const router = useRouter();
   const [editing, setEditing] = useState<SignerView | 'new' | null>(null);
   const [pending, setPending] = useState(false);
+  // Das Hochladen steht in den Tabellenzeilen: Die Ablehnung steht über der Tabelle. Das Anzeigeschreiben hat seine eigene.
+  const uploadFb = useActionFeedback();
+  const letterFb = useActionFeedback();
   const [draftId, setDraftId] = useState<string | null>(null);
   const letterSigner = status.signer ?? signers[0] ?? null;
 
@@ -40,37 +46,20 @@ export function MachinePanel({ signers, status, canIssue, canDraftLetter, draftN
   const upload = async (signerId: string, file: File | undefined) => {
     if (!file) return;
     setPending(true);
-    try {
-      const formData = new FormData();
-      formData.append('signerId', signerId);
-      formData.append('file', file);
-      const result = await uploadFacsimileAction(formData);
-      if (result.status === 'error') {
-        toast.error(result.message);
-        return;
-      }
-      if (result.status === 'success') {
-        if (result.message) toast.success(result.message);
-        router.refresh();
-      }
-    } catch {
-      toast.error(tCommon('uploadFailed'));
-    } finally {
-      setPending(false);
-    }
+    const formData = new FormData();
+    formData.append('signerId', signerId);
+    formData.append('file', file);
+    const result = await uploadFb.run(() => uploadFacsimileAction(formData), { retry: () => void upload(signerId, file) });
+    setPending(false);
+    if (result.status === 'success') router.refresh();
   };
 
   const draftLetter = async () => {
     if (!letterSigner) return;
     setPending(true);
-    const result = await createNotificationLetterAction(letterSigner.id);
+    const result = await letterFb.run(() => createNotificationLetterAction(letterSigner.id), { retry: () => void draftLetter() });
     setPending(false);
-    if (result.status === 'error') {
-      toast.error(result.message);
-      return;
-    }
     if (result.status === 'success') {
-      if (result.message) toast.success(result.message);
       setDraftId((result.data as { id: string }).id);
     }
   };
@@ -85,6 +74,8 @@ export function MachinePanel({ signers, status, canIssue, canDraftLetter, draftN
       <Notice level={status.complete ? 'hint' : 'warn'}>
         <span data-testid="machine-status">{status.complete ? t('statusComplete', { name: status.signer?.signerName ?? '' }) : t('statusIncomplete', { missing })}</span>
       </Notice>
+
+      <RefusalNotice action state={uploadFb.state} />
 
       {signers.length === 0 ? (
         <p className="text-[13px] text-muted-ink">{t('empty')}</p>
@@ -142,8 +133,9 @@ export function MachinePanel({ signers, status, canIssue, canDraftLetter, draftN
           {letterSigner ? (
             canDraftLetter ? (
               <div className="space-y-1">
+                <RefusalNotice action state={letterFb.state} />
                 <Button type="button" variant="outline" disabled={pending} onClick={() => void draftLetter()}>{t('letter')}</Button>
-                <p className="max-w-[420px] text-[12px] text-muted-ink">{t('letterHint')}</p>
+                <p className="max-w-prose text-[12px] text-muted-ink">{t('letterHint')}</p>
                 {draftId ? <Link href={`/dms/${draftId}`} className="text-[13px] font-semibold text-ink underline underline-offset-2">{t('openDraft')}</Link> : null}
               </div>
             ) : (
@@ -167,48 +159,42 @@ function SignerDialog({ signer, onClose }: { signer: SignerView | null; onClose:
   const [validFrom, setValidFrom] = useState(signer?.validFrom ?? '');
   const [validTo, setValidTo] = useState(signer?.validTo ?? '');
   const [notifiedOn, setNotifiedOn] = useState(signer?.notifiedOn ?? '');
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const feedback = useActionFeedback();
+  const errors = feedback.state.status === 'error' ? feedback.state.fieldErrors : {};
   const [pending, setPending] = useState(false);
 
   const submit = async () => {
     setPending(true);
-    const result = await saveSignerAction({ id: signer?.id, signerName, validFrom, validTo: validTo || null, notifiedOn: notifiedOn || null });
+    const result = await feedback.run(() => saveSignerAction({ id: signer?.id, signerName, validFrom, validTo: validTo || null, notifiedOn: notifiedOn || null }), { retry: () => void submit() });
     setPending(false);
-    if (result.status === 'error') {
-      setErrors(result.fieldErrors);
-      toast.error(result.message);
-      return;
-    }
     if (result.status === 'success') {
-      if (result.message) toast.success(result.message);
       onClose();
       router.refresh();
     }
   };
 
-  const field = (id: string, label: string, node: React.ReactNode, required: boolean, error?: string, hint?: string) => (
-    <div className="space-y-1.5">
-      <Label htmlFor={id} required={required}>{label}</Label>
-      {node}
-      {hint ? <p className="text-[12px] text-muted-ink">{hint}</p> : null}
-      {error ? <p className="text-[12px] text-error">{error}</p> : null}
-    </div>
-  );
-
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="bg-surface shadow-md sm:max-w-[520px]">
+      <DialogContent size="md" className="bg-surface shadow-md">
         <DialogTitle className="font-heading text-[19px]">{signer ? td('editTitle') : td('addTitle')}</DialogTitle>
-        {field('signer-name', td('name'), <Input id="signer-name" value={signerName} onChange={(e) => setSignerName(e.target.value)} />, true, errors.signerName)}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {field('signer-valid-from', td('validFrom'), <Input id="signer-valid-from" type="date" className="font-mono" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />, true, errors.validFrom)}
-          {field('signer-valid-to', td('validTo'), <Input id="signer-valid-to" type="date" className="font-mono" value={validTo} onChange={(e) => setValidTo(e.target.value)} />, false, errors.validTo, td('validToHint'))}
-        </div>
-        {field('signer-notified-on', td('notifiedOn'), <Input id="signer-notified-on" type="date" className="font-mono" value={notifiedOn} onChange={(e) => setNotifiedOn(e.target.value)} />, false, errors.notifiedOn)}
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={onClose}>{td('cancel')}</Button>
-          <Button type="button" disabled={pending || signerName.trim() === '' || validFrom === ''} onClick={() => void submit()}>{td('save')}</Button>
-        </DialogFooter>
+        <FormGrid>
+          <FormField id="signer-name" label={td('name')} required error={errors.signerName}>
+            <Input id="signer-name" value={signerName} onChange={(e) => setSignerName(e.target.value)} />
+          </FormField>
+          <FormRowBreak />
+          <FormField id="signer-valid-from" label={td('validFrom')} required error={errors.validFrom} size="s">
+            <Input id="signer-valid-from" type="date" className="font-mono" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
+          </FormField>
+          <FormField id="signer-valid-to" label={td('validTo')} error={errors.validTo} size="s">
+            <Input id="signer-valid-to" type="date" className="font-mono" aria-describedby="signer-valid-to-note" value={validTo} onChange={(e) => setValidTo(e.target.value)} />
+          </FormField>
+          <FormField id="signer-notified-on" label={td('notifiedOn')} error={errors.notifiedOn} size="s">
+            <Input id="signer-notified-on" type="date" className="font-mono" value={notifiedOn} onChange={(e) => setNotifiedOn(e.target.value)} />
+          </FormField>
+        </FormGrid>
+        {/* Der lange Hinweis zu „Gültig bis“ steht unter der Zeile, nicht in der schmalen Spalte (Entscheidung zum Inventar). */}
+        <p id="signer-valid-to-note" className="text-[12px] text-muted-ink">{td('validToHint')}</p>
+        <FormActionBar placement="dialog" cancel={onClose} pending={pending} saveDisabled={signerName.trim() === '' || validFrom === ''} saveLabel={td('save')} onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, ['signerName', 'validFrom', 'validTo', 'notifiedOn'])} />
       </DialogContent>
     </Dialog>
   );

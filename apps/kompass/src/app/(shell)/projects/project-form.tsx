@@ -5,12 +5,12 @@ import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { FormField } from '@/components/forms/form-field';
+import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { LocalizedField } from '@/components/forms/localized-field';
 import { MediaPicker } from '@/components/forms/media-picker';
 import { FormActionBar } from '@/components/forms/form-action-bar';
-import { FormErrorSummary, TabInvalidDot } from '@/components/forms/form-error-summary';
+import { FormErrorSummary } from '@/components/forms/form-error-summary';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { idleState } from '@/lib/actions';
 import { saveProjectAction } from './actions';
 import { ExternalLinksField } from './external-links-field';
@@ -31,27 +31,45 @@ export function ProjectForm({ project, locales }: { project: ProjectRecord | nul
   // der Effekt unten damit bei jedem Render feuerte statt nur bei einer
   // Zustandsaenderung — der Toast erschiene mehrfach.
   const errors = useMemo(() => (state.status === 'error' ? state.fieldErrors : {}), [state]);
-  useEffect(() => { if (state.status === 'success') toast.success(state.message ?? ''); else if (state.status === 'error' && Object.keys(errors).length === 0) toast.error(state.message); }, [state, errors]);
+  useEffect(() => { if (state.status === 'success') toast.success(state.message ?? ''); }, [state]);
   return (
     <ActionForm action={action} state={state} className="overflow-hidden rounded-lg border border-line bg-surface">
       {project ? <input type="hidden" name="id" value={project.id} /> : null}
       {/* Ladestand: Hat inzwischen jemand anderes gespeichert, weist der Dienst ab (Backlog 20). */}
       {project ? <input type="hidden" name="expectedVersion" value={project.updatedAt} /> : null}
       <FormErrorSummary errors={errors} labels={labels} />
-      <Tabs defaultValue="public">
-        <TabsList className="border-b border-line bg-surface px-6"><TabsTrigger value="public" className="gap-2">{t('tabs.public')}{Object.keys(errors).length > 0 ? <TabInvalidDot label={tCommon('tabInvalid')} /> : null}</TabsTrigger></TabsList>
-        <TabsContent value="public" className="grid gap-5 p-6 md:grid-cols-2">
-          <FormField id="slug" label={c('slug')} hint={c('slugHint')} error={errors.slug} required><Input id="slug" name="slug" defaultValue={project?.slug ?? ''} required pattern="[a-z0-9][a-z0-9-]{0,80}" className="font-mono" /></FormField>
-          <FormField id="type" label={t('type')}><Select id="type" name="type" defaultValue={project?.type ?? 'ongoing'} className="w-auto"><option value="ongoing">{t('types.ongoing')}</option><option value="shortTerm">{t('types.shortTerm')}</option></Select></FormField>
-          <FormField id="status" label={t('status')}><Select id="status" name="status" defaultValue={project?.status ?? 'active'} className="w-auto"><option value="active">{t('statuses.active')}</option><option value="completed">{t('statuses.completed')}</option></Select></FormField>
-          <LocalizedField name="name" label={t('name')} value={project?.name ?? {}} required errors={errors} locales={locales} />
-          <LocalizedField name="summary" label={t('summary')} kind="textarea" rows={3} value={project?.summary ?? {}} errors={errors} locales={locales} />
-          <LocalizedField name="body" label={t('body')} kind="markdown" rows={12} value={project?.body ?? {}} errors={errors} locales={locales} />
-          <div className="md:col-span-2"><MediaPicker name="imageAssetId" value={project?.imageAssetId ?? null} label={t('image')} /></div>
-          <ExternalLinksField value={project?.externalLinks ?? []} errors={errors} />
-          <div className="md:col-span-2"><FormActionBar back={{ href: '/projects', label: tCommon('backToList') }} /></div>
-        </TabsContent>
-      </Tabs>
+      <div className="p-5">
+        <section>
+          <h3 className="text-[15px] font-semibold">{t('sections.display')}</h3>
+          <div className="mt-3">
+            <FormGrid>
+              <FormField id="slug" label={c('slug')} hint={c('slugHint')} error={errors.slug} required><Input id="slug" name="slug" defaultValue={project?.slug ?? ''} required pattern="[a-z0-9][a-z0-9-]{0,80}" className="font-mono" /></FormField>
+              <FormField id="type" label={t('type')} size="s"><Select id="type" name="type" defaultValue={project?.type ?? 'ongoing'}><option value="ongoing">{t('types.ongoing')}</option><option value="shortTerm">{t('types.shortTerm')}</option></Select></FormField>
+              <FormField id="status" label={t('status')} size="s"><Select id="status" name="status" defaultValue={project?.status ?? 'active'}><option value="active">{t('statuses.active')}</option><option value="completed">{t('statuses.completed')}</option></Select></FormField>
+            </FormGrid>
+          </div>
+        </section>
+        <section className="mt-5 border-t border-line pt-5">
+          <h3 className="text-[15px] font-semibold">{t('sections.content')}</h3>
+          <div className="mt-3">
+            <FormGrid>
+              <LocalizedField name="name" label={t('name')} value={project?.name ?? {}} required errors={errors} locales={locales} />
+              <LocalizedField name="summary" label={t('summary')} kind="textarea" rows={3} value={project?.summary ?? {}} errors={errors} locales={locales} />
+              <LocalizedField name="body" label={t('body')} kind="markdown" rows={12} value={project?.body ?? {}} errors={errors} locales={locales} />
+            </FormGrid>
+          </div>
+        </section>
+        <section className="mt-5 border-t border-line pt-5">
+          <h3 className="text-[15px] font-semibold">{t('sections.media')}</h3>
+          <div className="mt-3">
+            <FormGrid>
+              <FormCell size="full"><MediaPicker name="imageAssetId" value={project?.imageAssetId ?? null} label={t('image')} /></FormCell>
+              <ExternalLinksField value={project?.externalLinks ?? []} errors={errors} />
+            </FormGrid>
+          </div>
+        </section>
+      </div>
+      <FormActionBar state={state} mode={project ? 'edit' : 'create'} back={{ href: '/projects', label: tCommon('backToList') }} />
     </ActionForm>
   );
 }

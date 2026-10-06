@@ -84,7 +84,7 @@ export function RunCard({ embedded = false, notice, headingRef }: { embedded?: b
                 {step.state === 'done' ? (
                   <Check className="size-[18px] shrink-0 text-success" aria-hidden />
                 ) : step.state === 'running' ? (
-                  <span className="size-[18px] shrink-0 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-hidden />
+                  <span className="size-[18px] shrink-0 animate-spin rounded-full border-2 border-brand border-t-transparent" aria-hidden />
                 ) : step.state === 'skipped' ? (
                   <Minus className="size-[18px] shrink-0" aria-hidden />
                 ) : (

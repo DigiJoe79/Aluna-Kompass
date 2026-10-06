@@ -8,6 +8,9 @@ import { FolderMoveDialog, type FolderMoveDialogProps } from '@/components/folde
 import type { ActionState } from '@/lib/actions';
 import messages from '../messages/de.json';
 
+const toastMock = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() }));
+vi.mock('sonner', () => ({ toast: toastMock }));
+
 function Intl({ children }: { children: ReactNode }) {
   return (
     <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
@@ -49,7 +52,7 @@ function renderDialog(props: Partial<FolderMoveDialogProps> = {}) {
 }
 
 const row = (name: RegExp) => screen.getByRole('treeitem', { name });
-const confirmButton = () => within(screen.getByRole('dialog')).getAllByRole('button').find((b) => b.dataset.confirm !== undefined)!;
+const confirmButton = () => within(screen.getByRole('dialog')).getAllByRole('button').find((b) => b.dataset.testid === 'folder-move-confirm')!;
 const describedBy = (el: Element) =>
   (el.getAttribute('aria-describedby') ?? '')
     .split(' ')
@@ -205,7 +208,8 @@ describe('FolderMoveDialog, for documents', () => {
 });
 
 describe('FolderMoveDialog, when moving throws', () => {
-  it('stays open with a general reason and lets the user try again', async () => {
+  // Seit 0.2.6: Eine geworfene Aktion ist keine Ablehnung, sondern ein Netzproblem — Toast mit „Erneut versuchen“, Dialog offen.
+  it('stays open, offers „Erneut versuchen“ in a toast and lets the user try again', async () => {
     const onConfirm = vi.fn(async (): Promise<ActionState> => {
       throw new Error('Netz weg');
     });
@@ -213,7 +217,11 @@ describe('FolderMoveDialog, when moving throws', () => {
     await screen.findAllByRole('treeitem');
     fireEvent.click(row(/^Verträge,/));
     await act(async () => fireEvent.click(confirmButton()));
-    expect(await screen.findByText('Das hat nicht geklappt. Bitte versuchen Sie es noch einmal.')).toBeTruthy();
+    await waitFor(() => expect(toastMock.error).toHaveBeenCalled());
+    const [message, options] = toastMock.error.mock.calls[0]!;
+    expect(message).toContain('Verbindung');
+    expect(options.duration).toBe(Infinity);
+    expect(options.action.label).toBe('Erneut versuchen');
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
     expect(confirmButton().hasAttribute('disabled')).toBe(false);
   });

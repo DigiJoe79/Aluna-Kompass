@@ -5,11 +5,12 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
-import { toast } from 'sonner';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { useDateFormat } from '@/components/date-format-provider';
 import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { formatEuro } from '@/lib/finance/amount';
 import { formatDateOrDash } from '@/lib/finance/dates';
 import { batchAccountState } from '@/lib/finance/work-dialogs';
@@ -29,30 +30,28 @@ const PROBLEM_KEYS = new Set(['accountInactive', 'categoryInactive', 'entryUnbal
  */
 export function BatchFinalizeDialog({ reviewedCount }: { reviewedCount: number }) {
   const t = useTranslations('finance.work.batch');
-  const tCommon = useTranslations('common');
   const { date } = useDateFormat();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loaded, setLoaded] = useState<Loaded>({ state: 'loading' });
   const [pending, startTransition] = useTransition();
+  const feedback = useActionFeedback();
+  const resetFeedback = feedback.reset;
 
   useEffect(() => {
     if (!open) return;
+    resetFeedback();
     setLoaded({ state: 'loading' });
     void previewBatchFinalizeAction().then((result) => setLoaded(result.ok ? { state: 'ready', preview: result.preview } : { state: 'failed', message: result.message }));
-  }, [open]);
+  }, [open, resetFeedback]);
 
   const preview = loaded.state === 'ready' ? loaded.preview : null;
   const blocked = !!preview && preview.problems.length > 0;
 
   const finalize = () =>
     startTransition(async () => {
-      const result = await finalizeAllReviewedAction();
-      if (result.status === 'error') {
-        toast.error(result.message);
-        return;
-      }
-      if (result.status === 'success' && result.message) toast.success(result.message);
+      const result = await feedback.run(() => finalizeAllReviewedAction(), { retry: finalize });
+      if (result.status !== 'success') return;
       setOpen(false);
       router.refresh();
     });
@@ -63,7 +62,7 @@ export function BatchFinalizeDialog({ reviewedCount }: { reviewedCount: number }
         {t('confirm')}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="bg-surface shadow-md sm:max-w-[680px]">
+        <DialogContent size="lg" className="bg-surface shadow-md">
           <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
           <div className="space-y-3 text-[13px]">
             {loaded.state === 'loading' ? <p className="text-ink-2">{t('loading')}</p> : null}
@@ -136,14 +135,7 @@ export function BatchFinalizeDialog({ reviewedCount }: { reviewedCount: number }
               </>
             ) : null}
           </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-              {tCommon('cancel')}
-            </Button>
-            <Button type="button" onClick={finalize} disabled={pending || !preview || blocked}>
-              {t('confirm')}
-            </Button>
-          </DialogFooter>
+          <FormActionBar placement="dialog" cancel={() => setOpen(false)} pending={pending} saveDisabled={!preview || blocked} saveLabel={t('confirm')} onSave={finalize} state={feedback.state} />
         </DialogContent>
       </Dialog>
     </>

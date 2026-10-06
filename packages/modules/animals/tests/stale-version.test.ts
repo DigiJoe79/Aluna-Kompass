@@ -16,7 +16,7 @@ const setup = async () => {
   return d;
 };
 const manage = ctxWith(['animals.manage', 'animals.view']);
-const akiko = { slug: 'akiko', name: 'Akiko', sex: 'female' as const, birthText: { de: '2022', en: '' }, sizeCm: 40, sizeText: { de: '40 cm', en: '' }, location: 'shelter' as const, isEmergency: false, isSponsorable: false, traits: { de: [], en: [] }, externalProfileUrl: '', summary: { de: 'Kurz', en: '' }, body: { de: 'Lang', en: '' } };
+const akiko = { name: 'Akiko', sex: 'female' as const, birthText: { de: '2022', en: '' }, sizeCm: 40, sizeText: { de: '40 cm', en: '' }, location: 'shelter' as const, isEmergency: false, isSponsorable: false, traits: { de: [], en: [] }, externalProfileUrl: '', summary: { de: 'Kurz', en: '' }, body: { de: 'Lang', en: '' } };
 
 describe('updateAnimal mit Ladestand', () => {
   it('weist ein Speichern auf veraltetem Stand ab und lässt die Zwischenänderung stehen', async () => {

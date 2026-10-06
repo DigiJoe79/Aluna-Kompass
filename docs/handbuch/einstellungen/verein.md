@@ -7,6 +7,9 @@ der Webseite — sie stehen nirgends ein zweites Mal.
 
 ## Die Reiter
 
+Der gewählte Reiter steht in der Adresse: Ein Lesezeichen oder ein Link
+führt direkt auf „Bank“ oder „Steuer & Bescheide“.
+
 - **Verein** — Name, Rechtsform, Anschrift, Gründungsjahr, Registergericht
   und Registernummer, Kontakt-E-Mail, Telefon, Webseite.
 - **Steuer & Bescheide** — Steuernummer, Finanzamt, Art und Datum des

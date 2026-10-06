@@ -6,25 +6,25 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { DocumentPicker } from '@/app/(shell)/dms/document-picker';
+import { ChoiceCards } from '@/components/choice-cards';
 import type { PickedDocument } from '@/app/(shell)/dms/search-action';
 import { useDateFormat } from '@/components/date-format-provider';
 import { PartnerReasonPrompt } from '@/components/finance/partner-reason-prompt';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
-import { SaveStatus } from '@/components/forms/save-status';
-import { StickyFooter } from '@/components/forms/sticky-footer';
+import { FormActionBar } from '@/components/forms/form-action-bar';
 import { useAutosave, type SaveOutcome } from '@/components/forms/use-autosave';
 import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import type { ActionState } from '@/lib/actions';
 import { formatEuro, parseAmount } from '@/lib/finance/amount';
 import { evidenceKindLabelKey, proofDueDate, requiredEvidenceKinds, type PartnerBasis } from '@/lib/finance/partners';
-import { cn } from '@/lib/utils';
 import { deletePartnerPaymentDraftAction, savePartnerPaymentDraftAction, submitPartnerPaymentAction } from '../../../actions';
+import { FormField } from '@/components/forms/form-field';
+import { FormCell, FormGrid } from '@/components/forms/form-grid';
 
 interface Option { id: string; label: string }
 export interface LineOption { id: string; entryNumber: string | null; entryDate: string; amountCents: number; categoryId?: string }
@@ -97,6 +97,7 @@ export function DraftForm({
 }) {
   const t = useTranslations('finance.partners.payment');
   const tBasis = useTranslations('finance.partners.basis');
+  const tDetail = useTranslations('finance.partners.detail');
   const tStatus = useTranslations('finance.partners.status');
   const fmt = useDateFormat();
   const router = useRouter();
@@ -107,6 +108,7 @@ export function DraftForm({
   const [noticeReason, setNoticeReason] = useState('');
   const [overdueReason, setOverdueReason] = useState('');
   const [busy, setBusy] = useState(false);
+  const [refusal, setRefusal] = useState<ActionState | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const save = useCallback(
@@ -154,6 +156,7 @@ export function DraftForm({
 
   const submit = async () => {
     setBusy(true);
+    setRefusal(null);
     try {
       markDirty();
       const saved = await flush();
@@ -166,7 +169,7 @@ export function DraftForm({
           setReasonNeeds((prev) => ({ ...prev, purpose: true }));
           setPurposeDetail(result.detail ?? result.message);
         }
-        else toast.error(result.message);
+        else setRefusal(result);
         return;
       }
       if (result.status === 'success' && result.message) toast.success(result.message);
@@ -176,34 +179,31 @@ export function DraftForm({
     }
   };
 
-  const basisOption = (basis: PartnerBasis) => (
-    <label
-      key={basis}
-      className={cn(
-        'relative flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-sm px-3 py-1.5 text-center text-[14px] font-semibold has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring',
-        d.basis === basis ? 'bg-selected text-selected-ink' : 'text-ink-2',
-      )}
-    >
-      <input type="radio" name="payment-basis" value={basis} checked={d.basis === basis} disabled={!canWrite} onChange={() => set({ basis })} className="absolute inset-0 cursor-pointer opacity-0" />
-      {tBasis(basis)}
-    </label>
-  );
-
   return (
     <div className="space-y-6" data-testid="payment-draft-form">
-      <div className="space-y-1.5">
-        <Label htmlFor="payment-purpose" required>
-          {t('purposeText')}
-        </Label>
-        <Textarea id="payment-purpose" rows={2} value={d.purposeText} disabled={!canWrite} onChange={(e) => set({ purposeText: e.target.value })} />
-      </div>
+      <FormGrid>
+        <FormField id="payment-purpose" label={t('purposeText')} required size="l">
+          <Textarea id="payment-purpose" rows={2} value={d.purposeText} disabled={!canWrite} onChange={(e) => set({ purposeText: e.target.value })} />
+        </FormField>
+      </FormGrid>
 
+      {/* Art als ChoiceCards, weil die Optionen Sätze sind (Entscheidung zum Inventar § E); ohne Schreibrecht als Anzeige wie in den Angaben zum Partner. */}
       <div className="space-y-1.5" data-testid="payment-basis">
-        <p id="payment-basis-label" className="text-sm font-medium">{t('basis')}</p>
-        <div role="radiogroup" aria-labelledby="payment-basis-label" className="flex flex-col gap-1 rounded-md border border-line-strong bg-surface-2 p-1 sm:flex-row">
-          {basisOption('transfer58')}
-          {basisOption('agent57')}
-        </div>
+        {canWrite ? (
+          <ChoiceCards
+            mode="choice"
+            name="payment-basis"
+            legend={t('basis')}
+            value={d.basis}
+            onSelect={(v) => set({ basis: v as PartnerBasis })}
+            options={(['transfer58', 'agent57'] as const).map((b) => ({ value: b, label: tDetail(`profile.basisCards.${b}`), description: tBasis(b) }))}
+          />
+        ) : (
+          <div className="space-y-1">
+            <p className="text-[13px] font-semibold text-ink">{t('basis')}</p>
+            <p className="text-[14px] text-ink-2">{tBasis(d.basis)}</p>
+          </div>
+        )}
         {partner.usualBasis ? <p className="text-[12px] text-muted-ink">{t('basisFrom', { basis: tBasis(partner.usualBasis) })}</p> : null}
       </div>
 
@@ -231,15 +231,34 @@ export function DraftForm({
 
       <PartnerReasonPrompt needs={reasonNeeds} noticeReason={noticeReason} overdueReason={overdueReason} onNoticeReason={setNoticeReason} onOverdueReason={setOverdueReason} purposeReason={purposeReason} onPurposeReason={setPurposeReason} purposeDetail={purposeDetail} noticeValidUntil={payment.reasonsNeeded.noticeValidUntil} />
 
-      {d.basis === 'agent57' || partner.status === 'foreignBody' || d.agreementDocument ? (
-        <DocumentPicker id="payment-agreement-doc" name="agreementDocumentId" label={t(`agreementDocumentFor.${d.basis}`)} value={d.agreementDocument} onChange={(doc) => set({ agreementDocument: doc })} required={d.basis === 'agent57' || partner.status === 'foreignBody'} />
-      ) : null}
-
       <div className="space-y-2">
-        <label className="flex min-h-11 items-center gap-2 text-[14px]" data-testid="payment-retroactive">
-          <Checkbox checked={d.retroactive} disabled={!canWrite} onCheckedChange={(v) => set({ retroactive: v === true })} />
-          {t('retroactive')}
-        </label>
+        <FormGrid>
+          {d.basis === 'agent57' || partner.status === 'foreignBody' || d.agreementDocument ? (
+            <FormCell size="m">
+              <DocumentPicker id="payment-agreement-doc" name="agreementDocumentId" label={t(`agreementDocumentFor.${d.basis}`)} value={d.agreementDocument} onChange={(doc) => set({ agreementDocument: doc })} required={d.basis === 'agent57' || partner.status === 'foreignBody'} />
+            </FormCell>
+          ) : null}
+          <FormCell size="s" data-testid="payment-proof">
+            <FormField id="payment-proof-months" label={t('proof.label')} hint={d.proofMonths === null ? t('proof.fromUsual', { count: partner.usualProofMonths }) : t('proof.own', { count: partner.usualProofMonths })}>
+              <div className="flex flex-wrap items-center gap-3">
+                <Select id="payment-proof-months" className="w-auto" value={String(months)} disabled={!canWrite} onChange={(e) => set({ proofMonths: Number(e.target.value) === partner.usualProofMonths && d.proofMonths === null ? null : Number(e.target.value) })}>
+                  {PROOF_MONTHS.map((n) => (
+                    <option key={n} value={n}>
+                      {t('proof.months', { count: n })}
+                    </option>
+                  ))}
+                </Select>
+                {/* Task 6c (Joe 28.09.): die Frist läuft ab dem Zahlungstag — ein Datum gibt es erst, wenn er feststeht (nachträglich: die gewählte Zeile). */}
+                {d.retroactive && chosenLines.length > 0 ? <span className="font-mono text-[14px] tabular-nums text-ink">{fmt.date(proofDueDate(paymentDay, months))}</span> : null}
+              </div>
+            </FormField>
+          </FormCell>
+          <FormCell size="full" data-testid="payment-retroactive">
+            <FormField id="payment-retroactive" label={t('retroactive')} toggle>
+              <Checkbox id="payment-retroactive" checked={d.retroactive} disabled={!canWrite} onCheckedChange={(v) => set({ retroactive: v === true })} />
+            </FormField>
+          </FormCell>
+        </FormGrid>
         {d.retroactive ? (
           <div data-testid="payment-retroactive-warn">
             <Notice level="warn">{t('retroactiveWarn')}</Notice>
@@ -249,7 +268,7 @@ export function DraftForm({
 
       {d.retroactive ? (
         <section className="space-y-2" data-testid="paid-line-picker">
-          <h2 className="font-heading text-[15px] text-ink">{t('paidLines.title')}</h2>
+          <h3 className="text-[15px] font-semibold">{t('paidLines.title')}</h3>
           {lineOptions.length === 0 ? (
             <p className="text-[13px] text-muted-ink">{t('paidLines.empty')}</p>
           ) : (
@@ -275,7 +294,7 @@ export function DraftForm({
       ) : (
         <section className="space-y-3" data-testid="position-rows">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-heading text-[15px] text-ink">{t('positions.title')}</h2>
+            <h3 className="text-[15px] font-semibold">{t('positions.title')}</h3>
             {canWrite ? (
               <span className="flex flex-wrap gap-2">
                 <Button type="button" variant="secondary" size="sm" onClick={() => addPosition('money')} data-testid="position-add-money">
@@ -339,39 +358,27 @@ export function DraftForm({
         </section>
       )}
 
-      <div className="space-y-1.5" data-testid="payment-proof">
-        <Label htmlFor="payment-proof-months">{t('proof.label')}</Label>
-        <div className="flex flex-wrap items-center gap-3">
-          <Select id="payment-proof-months" className="w-auto" value={String(months)} disabled={!canWrite} onChange={(e) => set({ proofMonths: Number(e.target.value) === partner.usualProofMonths && d.proofMonths === null ? null : Number(e.target.value) })}>
-            {PROOF_MONTHS.map((n) => (
-              <option key={n} value={n}>
-                {t('proof.months', { count: n })}
-              </option>
-            ))}
-          </Select>
-          {/* Task 6c (Joe 28.09.): die Frist läuft ab dem Zahlungstag — ein Datum gibt es erst, wenn er feststeht (nachträglich: die gewählte Zeile). */}
-          {d.retroactive && chosenLines.length > 0 ? <span className="font-mono text-[14px] tabular-nums text-ink">{fmt.date(proofDueDate(paymentDay, months))}</span> : null}
-        </div>
-        <p className="text-[12px] text-muted-ink">{d.proofMonths === null ? t('proof.fromUsual', { count: partner.usualProofMonths }) : t('proof.own', { count: partner.usualProofMonths })}</p>
-      </div>
-
       {canWrite ? (
-        <StickyFooter testId="payment-footer">
-          <SaveStatus state={saveState} pending={pending} />
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <Button type="button" variant="ghost" className="text-error" data-testid="payment-delete-draft" onClick={() => setConfirmDelete(true)}>
-              {t('deleteDraft')}
-            </Button>
-            <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:flex">
+        <FormActionBar
+          mode="create"
+          testId="payment-footer"
+          saveTestId="payment-submit"
+          status={{ state: saveState, pending }}
+          extraActions={
+            <>
+              <Button type="button" variant="outline" data-testid="payment-delete-draft" onClick={() => setConfirmDelete(true)}>
+                {t('deleteDraft')}
+              </Button>
               <Button type="button" variant="outline" disabled={busy} onClick={() => void keepDraft()} data-testid="payment-save">
                 {t('save')}
               </Button>
-              <Button type="button" disabled={busy} onClick={() => void submit()} data-testid="payment-submit">
-                {t('submit')}
-              </Button>
-            </div>
-          </div>
-        </StickyFooter>
+            </>
+          }
+          saveLabel={t('submit')}
+          onSave={() => void submit()}
+          pending={busy}
+          state={refusal ?? undefined}
+        />
       ) : null}
       <ConfirmDialog
         open={confirmDelete}

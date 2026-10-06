@@ -4,7 +4,9 @@ import type { PartnerPaymentView, PartnerView } from '@kompass/module-finance';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { toast } from 'sonner';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
+import type { ActionState } from '@/lib/actions';
 import { DocumentPicker } from '@/app/(shell)/dms/document-picker';
 import type { PickedDocument } from '@/app/(shell)/dms/search-action';
 import { BlockedState } from '@/components/blocked-state';
@@ -17,12 +19,12 @@ import { GuidedSteps, guidedSteps } from '@/components/guided-steps';
 import { RequirementList, type RequirementListItem } from '@/components/requirement-list';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { formatEuro, parseAmount } from '@/lib/finance/amount';
 import { AMOUNT_EVIDENCE_KINDS, coverageRequired, evidenceCoverage, evidenceKindLabelKey, missingEvidence, type EvidenceKind, type PartnerBasis } from '@/lib/finance/partners';
 import { acknowledgeEvidenceAction, addEvidenceLinkAction, addEvidenceUploadAction, copyPartnerPaymentAction, removeEvidenceAction, updateEvidenceAction } from '../../../actions';
 import { DraftForm, type LineOption } from './draft-form';
+import { FormField } from '@/components/forms/form-field';
 
 interface Option { id: string; label: string }
 export interface EvidenceRow {
@@ -81,6 +83,7 @@ export function PaymentDetail({
   const tBasis = useTranslations('finance.partners.basis');
   const fmt = useDateFormat();
   const router = useRouter();
+  const copyFb = useActionFeedback();
 
   if (payment.state === 'draft') {
     return <DraftForm payment={payment} partner={partner} canWrite={canWrite} categories={categories} purposes={purposes} projects={projects} paidLineOptions={paidLineOptions} goodsLineOptions={goodsLineOptions} agreementDocument={agreementDocument} today={today} />;
@@ -128,22 +131,22 @@ export function PaymentDetail({
           </p>
         ) : null}
         {payment.state === 'rejected' && canWrite ? (
+          <>
+          <RefusalNotice action state={copyFb.state} />
           <Button
             type="button"
             variant="secondary"
             data-testid="payment-copy"
             onClick={async () => {
-              const result = await copyPartnerPaymentAction(payment.id);
-              if (result.status !== 'success') {
-                if (result.status === 'error') toast.error(result.message);
-                return;
-              }
+              const result = await copyFb.run(() => copyPartnerPaymentAction(payment.id));
+              if (result.status !== 'success') return;
               const data = result.data as { id: string; partnerId: string } | undefined;
               if (data) router.push(`/finance/partners/${data.partnerId}/payments/${data.id}`);
             }}
           >
             {t('copy')}
           </Button>
+          </>
         ) : null}
       </section>
 
@@ -162,6 +165,9 @@ function EvidenceSection({ payment, basis, canWrite, canApprove, evidence, peopl
   const router = useRouter();
   const [openKind, setOpenKind] = useState<string | null>(null);
   const [completing, setCompleting] = useState<string | null>(null);
+  // Entfernen steht in den Zeilen der Nachweisliste: Die Ablehnung steht über der Liste.
+  const evidenceFb = useActionFeedback();
+  const ackFb = useActionFeedback();
   const acknowledged = !!payment.acknowledgedAt;
   const editable = canWrite && !acknowledged;
 
@@ -190,9 +196,8 @@ function EvidenceSection({ payment, basis, canWrite, canApprove, evidence, peopl
   const remove = async (kind: string) => {
     const last = rowsOf(kind).at(-1);
     if (!last) return;
-    const result = await removeEvidenceAction(last.id);
-    if (result.status === 'error') toast.error(result.message);
-    else router.refresh();
+    const result = await evidenceFb.run(() => removeEvidenceAction(last.id), { retry: () => void remove(kind) });
+    if (result.status === 'success') router.refresh();
   };
 
   const items: RequirementListItem[] = [...required, ...extraKinds].map((kind) => {
@@ -252,13 +257,8 @@ function EvidenceSection({ payment, basis, canWrite, canApprove, evidence, peopl
   const rest = Math.max(0, coverage.totalCents - coverage.coveredCents);
 
   const acknowledge = async () => {
-    const result = await acknowledgeEvidenceAction(payment.id);
-    if (result.status === 'error') {
-      toast.error(result.message);
-      return;
-    }
-    if (result.status === 'success' && result.message) toast.success(result.message);
-    router.refresh();
+    const result = await ackFb.run(() => acknowledgeEvidenceAction(payment.id), { retry: () => void acknowledge() });
+    if (result.status === 'success') router.refresh();
   };
 
   // AM (Recheck sha-0170e73): Eine Sperre am Recht nennt, wer es kann; eine Sperre am Zustand (Zahlung, Nachweise) nennt, was sie löst — nie Personen.
@@ -278,6 +278,7 @@ function EvidenceSection({ payment, basis, canWrite, canApprove, evidence, peopl
         <h2 className="font-heading text-[16px] text-ink">{t('evidence.title')}</h2>
         <span className="text-[13px] text-muted-ink">{t('evidence.count', { done: required.filter((k) => kindDone(k, rowsOf(k))).length, total: required.length })}</span>
       </div>
+      <RefusalNotice action state={evidenceFb.state} />
       <div data-testid="evidence-requirements">
         <RequirementList items={items} />
       </div>
@@ -316,9 +317,12 @@ function EvidenceSection({ payment, basis, canWrite, canApprove, evidence, peopl
                 {block.byRight ? ` ${people.acknowledgers.length > 0 ? t('acknowledge.canDo', { names: people.acknowledgers.join(', ') }) : t('acknowledge.nobody')}` : null}
               </BlockedState>
             ) : (
-              <Button type="button" data-testid="evidence-acknowledge" onClick={() => void acknowledge()}>
-                {t('evidence.acknowledge')}
-              </Button>
+              <>
+                <RefusalNotice action state={ackFb.state} />
+                <Button type="button" data-testid="evidence-acknowledge" onClick={() => void acknowledge()}>
+                  {t('evidence.acknowledge')}
+                </Button>
+              </>
             )}
           </>
         )}
@@ -337,12 +341,13 @@ function EvidenceForm({ paymentId, kind, label, onDone, onCancel }: { paymentId:
   const [explanationDe, setExplanationDe] = useState('');
   const [amountText, setAmountText] = useState('');
   const [pending, setPending] = useState(false);
+  const feedback = useActionFeedback();
   const withAmount = AMOUNT_KINDS.includes(kind);
 
   const save = async () => {
     setPending(true);
     const coveredCents = withAmount ? parseAmount(amountText) : null;
-    let result;
+    let call: (() => Promise<ActionState>) | null = null;
     if (file) {
       const formData = new FormData();
       formData.append('paymentId', paymentId);
@@ -351,19 +356,17 @@ function EvidenceForm({ paymentId, kind, label, onDone, onCancel }: { paymentId:
       formData.append('explanationDe', explanationDe);
       formData.append('coveredCents', coveredCents === null ? '' : String(coveredCents / 100));
       formData.append('file', file);
-      result = await addEvidenceUploadAction(formData);
+      call = () => addEvidenceUploadAction(formData);
     } else if (document) {
-      result = await addEvidenceLinkAction({ paymentId, kind, documentId: document.id, foreignLanguage, explanationDe: explanationDe || undefined, coveredCents: coveredCents ?? undefined });
-    } else {
+      call = () => addEvidenceLinkAction({ paymentId, kind, documentId: document.id, foreignLanguage, explanationDe: explanationDe || undefined, coveredCents: coveredCents ?? undefined });
+    }
+    if (!call) {
       setPending(false);
       return;
     }
+    const result = await feedback.run(call, { retry: () => void save() });
     setPending(false);
-    if (result.status === 'error') {
-      toast.error(result.message);
-      return;
-    }
-    onDone();
+    if (result.status === 'success') onDone();
   };
 
   return (
@@ -380,21 +383,16 @@ function EvidenceForm({ paymentId, kind, label, onDone, onCancel }: { paymentId:
         {t('evidence.foreignLanguage')}
       </label>
       {foreignLanguage ? (
-        <div className="space-y-1.5">
-          <Label htmlFor={`evidence-explanation-${kind}`} required>
-            {t('evidence.explanation')}
-          </Label>
+        <FormField id={`evidence-explanation-${kind}`} label={t('evidence.explanation')} required>
           <Textarea id={`evidence-explanation-${kind}`} rows={2} value={explanationDe} onChange={(e) => setExplanationDe(e.target.value)} />
-        </div>
+        </FormField>
       ) : null}
       {withAmount ? (
-        <div className="space-y-1.5">
-          <Label htmlFor={`evidence-amount-${kind}`} required>
-            {t('evidence.coveredAmount')}
-          </Label>
+        <FormField id={`evidence-amount-${kind}`} label={t('evidence.coveredAmount')} required>
           <AmountField id={`evidence-amount-${kind}`} name="coveredAmount" value={amountText} onChange={setAmountText} required />
-        </div>
+        </FormField>
       ) : null}
+      <RefusalNotice state={feedback.state} />
       <div className="flex flex-wrap justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onCancel}>
           {t('evidence.cancel')}
@@ -413,29 +411,24 @@ function CompleteForm({ row, onDone, onCancel }: { row: EvidenceRow; onDone: () 
   const [explanationDe, setExplanationDe] = useState(row.explanationDe ?? '');
   const [amountText, setAmountText] = useState(row.coveredCents !== null ? (row.coveredCents / 100).toFixed(2).replace('.', ',') : '');
   const withAmount = AMOUNT_KINDS.includes(row.kind);
+  const feedback = useActionFeedback();
   const save = async () => {
-    const result = await updateEvidenceAction({ id: row.id, ...(row.foreignLanguage ? { explanationDe } : {}), ...(withAmount ? { coveredCents: parseAmount(amountText) } : {}) });
-    if (result.status === 'error') toast.error(result.message);
-    else onDone();
+    const result = await feedback.run(() => updateEvidenceAction({ id: row.id, ...(row.foreignLanguage ? { explanationDe } : {}), ...(withAmount ? { coveredCents: parseAmount(amountText) } : {}) }), { retry: () => void save() });
+    if (result.status === 'success') onDone();
   };
   return (
     <div className="space-y-3 rounded-md border border-line bg-surface p-3" data-testid="evidence-complete-form">
       {row.foreignLanguage ? (
-        <div className="space-y-1.5">
-          <Label htmlFor="evidence-complete-explanation" required>
-            {t('evidence.explanation')}
-          </Label>
+        <FormField id="evidence-complete-explanation" label={t('evidence.explanation')} required>
           <Textarea id="evidence-complete-explanation" rows={2} value={explanationDe} onChange={(e) => setExplanationDe(e.target.value)} />
-        </div>
+        </FormField>
       ) : null}
       {withAmount ? (
-        <div className="space-y-1.5">
-          <Label htmlFor="evidence-complete-amount" required>
-            {t('evidence.coveredAmount')}
-          </Label>
+        <FormField id="evidence-complete-amount" label={t('evidence.coveredAmount')} required>
           <AmountField id="evidence-complete-amount" name="coveredAmount" value={amountText} onChange={setAmountText} required />
-        </div>
+        </FormField>
       ) : null}
+      <RefusalNotice state={feedback.state} />
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onCancel}>
           {t('evidence.cancel')}

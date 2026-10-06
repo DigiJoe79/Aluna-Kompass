@@ -55,6 +55,8 @@ export const siteModule: ModuleManifest = defineModule({
   mcpTools: SITE_MCP_TOOLS,
   seed: seedSiteDevelopment,
   mediaReferences: siteMediaReferences,
+  // Die Sprachen des eingelesenen Templates: Ohne sie filtert der Export Inhalte stillschweigend weg.
+  requiredLocales: (deps) => activeTemplate(deps)?.schema.locales ?? [],
   dashboardTiles: SITE_DASHBOARD_TILES,
   deletionRules: [
     {

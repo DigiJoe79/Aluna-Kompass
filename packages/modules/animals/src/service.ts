@@ -1,6 +1,7 @@
 import { buildDeletionPreview, conflict, expectedVersionField, staleVersion, deleteUnreferencedMedia, deletionConflict, emptyLocalized, invalid, isoNow, localizedList as coreLocalizedList, localizedText, newId, notFound, notifyRecordDeleted, ok, recordAudit, requirePermission, schema as core, validate, type CallContext, type DbOrTx, type DeletionPreview, type Deps, type LocalizedText, type MediaCleanup, type Result } from '@kompass/core';
 import { and, asc, count, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { z } from 'zod';
+import { animalSlug } from './slug';
 import { animalPhotos, animalStories, animals, type LocalizedList } from './schema';
 
 export const SLUG = /^[a-z0-9][a-z0-9-]{0,80}$/;
@@ -11,7 +12,6 @@ export interface AnimalStory { beforeAssetId: string | null; afterAssetId: strin
 export type AnimalRecord = typeof animals.$inferSelect & { photos: AnimalPhoto[]; story: AnimalStory | null };
 
 const fields = {
-  slug: z.string().regex(SLUG),
   name: z.string().trim().min(1).max(80),
   sex: z.enum(['female', 'male']),
   birthText: localizedText({ max: 60 }),
@@ -32,7 +32,6 @@ export const animalCreateSchema = z.object(fields);
 // einzigen Feld Größe, Standort, Notfall und Patenschaft auf die Vorgabe zurück.
 export const animalUpdateSchema = z.object({
   id: z.string().min(1),
-  slug: fields.slug.optional(),
   name: fields.name.optional(),
   sex: fields.sex.optional(),
   birthText: fields.birthText.optional(),
@@ -59,6 +58,18 @@ export function loadAnimal(db: DbOrTx, id: string): AnimalRecord | null {
 }
 
 const slugTaken = (db: DbOrTx, slug: string, exceptId?: string) => { const r = db.select({ id: animals.id }).from(animals).where(eq(animals.slug, slug)).get(); return !!r && r.id !== exceptId; };
+
+/** Der erste freie Slug nach der Regel: erst vier Zeichen der ID, bei einer Kollision sechs, acht … (Spec, Entscheidung 3). */
+export function animalSlugFor(db: DbOrTx, name: string, id: string): string {
+  for (let length = 4; length < id.length; length += 2) {
+    const slug = animalSlug(name, id, length);
+    if (!slugTaken(db, slug)) return slug;
+  }
+  return animalSlug(name, id, id.length);
+}
+
+/** Den Slug bildet Kompass; wer ihn mitschickt, hat ein altes Bild von der Schnittstelle (Spec, Entscheidung 5). */
+const sendsSlug = (input: unknown): boolean => typeof input === 'object' && input !== null && 'slug' in input;
 const imageMime = (db: DbOrTx, id: string): 'missing' | 'notImage' | 'ok' => { const m = db.select({ mime: core.mediaAssets.mimeType }).from(core.mediaAssets).where(eq(core.mediaAssets.id, id)).get()?.mime; return !m ? 'missing' : m.startsWith('image/') ? 'ok' : 'notImage'; };
 
 /** Was ein Agent schreibt, ist ein Vorschlag, bis ein Mensch ihn gesehen hat (Spec 2026-09-30, § 5.1). Der erste Zeitpunkt bleibt: Die Warteschlange sortiert nach ihm. */
@@ -77,13 +88,13 @@ function markReviewPending(tx: DbOrTx, deps: Deps, ctx: CallContext, id: string)
 export async function createAnimal(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AnimalRecord>> {
   const denied = requirePermission(ctx, 'animals.manage');
   if (denied) return denied;
+  if (sendsSlug(input)) return invalid([{ path: 'slug', message: 'slugGenerated' }]);
   const parsed = validate(deps, animalCreateSchema, input);
   if (!parsed.ok) return parsed;
-  if (slugTaken(deps.db, parsed.value.slug)) return conflict('slugTaken', `Slug ${parsed.value.slug} ist bereits vergeben`);
   return deps.db.transaction((tx) => {
     const id = newId();
     const now = isoNow(deps.clock);
-    tx.insert(animals).values({ id, ...parsed.value, species: 'dog', status: 'lookingForHome', isPublished: false, createdAt: now, updatedAt: now }).run();
+    tx.insert(animals).values({ id, slug: animalSlugFor(tx, parsed.value.name, id), ...parsed.value, species: 'dog', status: 'lookingForHome', isPublished: false, createdAt: now, updatedAt: now }).run();
     markReviewPending(tx, deps, ctx, id);
     const record = loadAnimal(tx, id)!;
     recordAudit(tx, deps, ctx, { action: 'animals.create', entityType: 'animal', entityId: id, after: record, summary: `Tier ${record.name} angelegt` });
@@ -94,6 +105,7 @@ export async function createAnimal(deps: Deps, ctx: CallContext, input: unknown)
 export async function updateAnimal(deps: Deps, ctx: CallContext, input: unknown): Promise<Result<AnimalRecord>> {
   const denied = requirePermission(ctx, 'animals.manage');
   if (denied) return denied;
+  if (sendsSlug(input)) return invalid([{ path: 'slug', message: 'slugGenerated' }]);
   const parsed = validate(deps, animalUpdateSchema, input);
   if (!parsed.ok) return parsed;
   const { id, expectedVersion, ...changes } = parsed.value;
@@ -101,7 +113,6 @@ export async function updateAnimal(deps: Deps, ctx: CallContext, input: unknown)
   if (!before) return notFound('animal', id);
   const stale = staleVersion(expectedVersion, before.updatedAt);
   if (stale) return stale;
-  if (changes.slug && slugTaken(deps.db, changes.slug, id)) return conflict('slugTaken', `Slug ${changes.slug} ist bereits vergeben`);
   return deps.db.transaction((tx) => {
     tx.update(animals).set({ ...changes, updatedAt: isoNow(deps.clock) }).where(eq(animals.id, id)).run();
     markReviewPending(tx, deps, ctx, id);

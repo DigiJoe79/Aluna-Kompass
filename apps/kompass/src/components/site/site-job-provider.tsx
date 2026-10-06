@@ -6,6 +6,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, useSyn
 import { toast } from 'sonner';
 import { nextPollDelay, transitions } from '@/lib/site-job-poll';
 import type { OverviewView } from '@/lib/site-job-view';
+import { panelHref } from '@/components/panel-nav';
 
 export interface SiteJobStatus {
   /** Ohne Provider (Webseite aus oder Recht fehlt) bleibt alles leer. */
@@ -109,11 +110,12 @@ export function SiteJobProvider({ children }: { children: ReactNode }) {
         const { pathname: here, router: nav, t: tr } = latest.current;
         for (const f of finished) {
           const kind = tr(`names.${f.kind}`);
-          const openLog = { label: tr('openLog'), onClick: () => nav.push(f.kind === 'deployCheck' ? '/admin/site?panel=connection' : '/site/publish') };
+          const openLog = { label: tr('openLog'), onClick: () => nav.push(f.kind === 'deployCheck' ? panelHref('/admin/site', 'connection') : '/site/publish') };
           // Ein Verbindungstest endet als Lauf erfolgreich, auch wenn ein Prüfpunkt durchfiel; das Urteil steht in `passed`.
-          if (f.kind === 'deployCheck' && f.summary.status === 'success' && f.summary.passed === false) toast.error(tr('done.deployCheckFailed'), { action: openLog });
+          if (f.kind === 'deployCheck' && f.summary.status === 'success' && f.summary.passed === false) toast.error(tr('done.deployCheckFailed'), { action: openLog, duration: Infinity, closeButton: true });
           else if (f.summary.status === 'success') toast.success(tr(`done.${f.kind}`), { action: openLog });
-          else toast.error(tr(`failed.${f.summary.status}`, { kind, message: f.summary.error?.message ?? '' }), { action: openLog });
+          // Ein gescheiterter Lauf ist ein Ergebnis, keine Ablehnung: Toast bis zum Schließen, mit dem Weg ins Protokoll.
+          else toast.error(tr(`failed.${f.summary.status}`, { kind, message: f.summary.error?.message ?? '' }), { action: openLog, duration: Infinity, closeButton: true });
         }
         if ((started || finished.length > 0) && REFRESH_ON(here)) nav.refresh();
         prev = next;

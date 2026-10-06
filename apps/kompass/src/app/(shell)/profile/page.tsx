@@ -1,6 +1,7 @@
 import { listApiTokens } from '@kompass/core';
 import { getTranslations } from 'next-intl/server';
 import { StatusBadge } from '@/components/status-badge';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { initials } from '@/lib/utils';
 import { requireSession } from '@/lib/request-context';
@@ -12,8 +13,7 @@ export default async function ProfilePage() {
   const t = await getTranslations('profile');
   const tokens = await listApiTokens(deps, ctx);
   return (
-    <>
-      <PageHeader title={t('title')} />
+    <Page width="standard" header={<PageHeader title={t('title')} />}>
       <div className="grid gap-5 lg:grid-cols-[340px_minmax(0,1fr)]">
         <div className="flex flex-col gap-5">
           <section className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-5">
@@ -39,6 +39,6 @@ export default async function ProfilePage() {
         </div>
         <ApiTokens tokens={tokens.ok ? tokens.value : []} />
       </div>
-    </>
+    </Page>
   );
 }

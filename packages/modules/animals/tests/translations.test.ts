@@ -7,7 +7,7 @@ import { animalsSetTranslations, animalsTranslatables } from '../src/translation
 
 const manage = ctxWith(['animals.manage', 'animals.view']);
 const view = ctxWith(['animals.view']);
-const bruno = { slug: 'bruno', name: 'Bruno', sex: 'male' as const, birthText: { de: 'März 2020', en: '' }, sizeCm: 55, sizeText: { de: 'ca. 55 cm', en: 'approx. 55 cm' }, location: 'shelter' as const, isEmergency: false, isSponsorable: false, traits: { de: ['ruhig'], en: [] }, externalProfileUrl: '', summary: { de: 'Sanfter Rüde.', en: '' }, body: { de: '', en: '' } };
+const bruno = { name: 'Bruno', sex: 'male' as const, birthText: { de: 'März 2020', en: '' }, sizeCm: 55, sizeText: { de: 'ca. 55 cm', en: 'approx. 55 cm' }, location: 'shelter' as const, isEmergency: false, isSponsorable: false, traits: { de: ['ruhig'], en: [] }, externalProfileUrl: '', summary: { de: 'Sanfter Rüde.', en: '' }, body: { de: '', en: '' } };
 
 const setup = async () => {
   const deps = createTestDeps({ manifests: [coreModule, animalsModule] });

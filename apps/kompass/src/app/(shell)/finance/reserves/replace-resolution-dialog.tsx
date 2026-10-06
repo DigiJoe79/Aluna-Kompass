@@ -3,9 +3,10 @@
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import type { PickedDocument } from '@/app/(shell)/dms/search-action';
-import { Notice } from '@/components/notice';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { replaceResolutionAction } from './actions';
 import { ResolutionField } from './resolution-field';
 import { DocumentLabel, type ReserveRow } from './reserve-table';
@@ -20,48 +21,31 @@ export function ReplaceResolutionDialog({ reserve, onClose, onSaved }: { reserve
   const [document, setDocument] = useState<PickedDocument | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const feedback = useActionFeedback();
 
   const submit = async () => {
     setPending(true);
-    setError(null);
     const formData = new FormData();
     formData.append('id', reserve.id);
     if (document) formData.append('documentId', document.id);
     if (file) formData.append('file', file);
-    const result = await replaceResolutionAction(formData);
+    const result = await feedback.run(() => replaceResolutionAction(formData), { retry: () => void submit() });
     setPending(false);
-    if (result.status === 'error') {
-      setError(result.message);
-      return;
-    }
-    onSaved();
+    if (result.status === 'success') onSaved();
   };
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-surface shadow-md sm:max-w-[480px]">
+      <DialogContent size="md" className="bg-surface shadow-md">
         <DialogTitle className="font-heading text-[19px]">{t('title', { name: reserve.name })}</DialogTitle>
         <DialogDescription className="text-[13px] text-ink-2">{t('hint')}</DialogDescription>
         <div className="space-y-3.5" data-testid="replace-resolution-dialog">
-          {error ? (
-            <Notice level="refuse">
-              <span role="alert">{error}</span>
-            </Notice>
-          ) : null}
           <p className="text-[13px] text-ink-2">
             {t('current')} <DocumentLabel document={reserve.resolution} />
           </p>
           <ResolutionField id="replace-resolution" document={document} onDocument={setDocument} onFile={setFile} />
         </div>
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={onClose}>
-            {t('cancel')}
-          </Button>
-          <Button type="button" disabled={pending || !document === !file} onClick={() => void submit()} data-testid="replace-resolution-save">
-            {t('save')}
-          </Button>
-        </DialogFooter>
+        <FormActionBar placement="dialog" cancel={onClose} pending={pending} saveDisabled={!document === !file} saveLabel={t('save')} saveTestId="replace-resolution-save" onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, [])} />
       </DialogContent>
     </Dialog>
   );

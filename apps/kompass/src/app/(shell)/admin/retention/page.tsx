@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { formatDate, type DateFormatMode } from '@/lib/dates';
 import { requireSession } from '@/lib/request-context';
@@ -10,10 +11,10 @@ import { RetentionSettings } from './retention-settings';
 
 export default async function RetentionPage() {
   const { deps, ctx } = await requireSession();
-  if (requirePermission(ctx, 'retention.view')) return <ForbiddenCard permission="retention.view" />;
+  if (requirePermission(ctx, 'retention.view')) return <Page width="standard"><ForbiddenCard permission="retention.view" /></Page>;
   const t = await getTranslations('retention');
   const result = await listRetentionDue(deps, ctx);
-  if (!result.ok) return <ForbiddenCard permission="retention.view" />;
+  if (!result.ok) return <Page width="standard"><ForbiddenCard permission="retention.view" /></Page>;
 
   const statutory10Y = readSetting<number>(deps, 'retention.statutory10Y');
   const statutory8Y = readSetting<number>(deps, 'retention.statutory8Y');
@@ -25,8 +26,7 @@ export default async function RetentionPage() {
   for (const item of result.value) byEntity.set(item.entity, [...(byEntity.get(item.entity) ?? []), item]);
 
   return (
-    <>
-      <PageHeader title={t('title')} description={t('description')} />
+    <Page width="standard" header={<PageHeader title={t('title')} description={t('description')} />}>
       <RetentionSettings
         statutory10Y={statutory10Y}
         statutory8Y={statutory8Y}
@@ -55,6 +55,6 @@ export default async function RetentionPage() {
         ))
       )}
       <p className="mt-3 text-[12px] text-muted-ink">{t('footnote')}</p>
-    </>
+    </Page>
   );
 }

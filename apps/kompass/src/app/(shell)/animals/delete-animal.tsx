@@ -3,18 +3,18 @@
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { DangerSection } from '@/components/forms/danger-section';
 import { DeleteRecordDialog } from '@/components/forms/delete-record-dialog';
-import { Button } from '@/components/ui/button';
 import { animalDeletionPreviewAction, deleteAnimalAction, setAnimalPublishedAction } from './actions';
 
 export function DeleteAnimal({ id, name }: { id: string; name: string }) {
   const t = useTranslations('animals.delete');
+  const c = useTranslations('common');
   const router = useRouter();
   const [open, setOpen] = useState(false);
   return (
-    <section className="mt-6 rounded-lg border border-line bg-surface p-6">
-      <p className="text-[13px] text-muted-ink">{t('hint')}</p>
-      <Button type="button" variant="ghost" className="mt-3" onClick={() => setOpen(true)}>{t('button')}</Button>
+    <>
+      <DangerSection title={c('danger.delete')} text={t('hint')} actionLabel={t('button')} onAction={() => setOpen(true)} testId="delete-record-trigger" />
       <DeleteRecordDialog
         open={open}
         onOpenChange={setOpen}
@@ -27,6 +27,6 @@ export function DeleteAnimal({ id, name }: { id: string; name: string }) {
           return state;
         }}
       />
-    </section>
+    </>
   );
 }

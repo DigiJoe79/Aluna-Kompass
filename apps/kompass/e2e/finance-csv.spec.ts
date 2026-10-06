@@ -51,7 +51,7 @@ async function startAssistant(page: Page, account: string, file: ReturnType<type
   await page.goto('/finance/imports/format');
   await page.getByLabel('Konto', { exact: true }).selectOption({ label: account });
   await page.getByRole('button', { name: 'Trotzdem CSV einrichten' }).click();
-  await page.getByTestId('csv-file-input').setInputFiles(file);
+  await page.getByLabel('CSV-Datei wählen').setInputFiles(file);
   await expect(page.getByRole('heading', { name: 'Erkannte Einstellungen' })).toBeVisible();
 }
 
@@ -65,9 +65,9 @@ test.describe('finance csv', () => {
     await page.goto('/finance/imports/format');
     await expect(page.getByRole('heading', { name: 'Bietet Ihre Bank CAMT.053 an? Dann nehmen Sie das.' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Wie Sie den Auszug bei der Bank holen' })).toBeVisible();
-    await expect(page.getByTestId('csv-file-input')).toHaveCount(0);
+    await expect(page.getByLabel('CSV-Datei wählen')).toHaveCount(0);
     await page.getByRole('button', { name: 'Trotzdem CSV einrichten' }).click();
-    await expect(page.getByTestId('csv-file-input')).toHaveCount(1);
+    await expect(page.getByLabel('CSV-Datei wählen')).toHaveCount(1);
   });
 
   test('die Spaltenauswahl steht über der Vorschau; eine ignorierte Spalte ist als ignoriert markiert', async ({ page }) => {
@@ -94,7 +94,7 @@ test.describe('finance csv', () => {
     await page.getByRole('button', { name: 'Weiter' }).click();
     await expect(page.getByText(/50,00 €.*Erika Beispiel.*Ist das eine Ausgabe\?/)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Weiter' })).toBeDisabled();
-    await page.getByRole('button', { name: 'Nein, Geld kam herein' }).click();
+    await page.getByRole('radio', { name: 'Nein, Geld kam herein' }).check();
     await expect(page.getByRole('button', { name: 'Weiter' })).toBeEnabled();
   });
 
@@ -103,7 +103,7 @@ test.describe('finance csv', () => {
     await startAssistant(page, 'Hausbank CSV-Test');
     await page.getByRole('button', { name: 'Weiter' }).click();
     await page.getByRole('button', { name: 'Weiter' }).click();
-    await page.getByRole('button', { name: 'Nein, Geld kam herein' }).click();
+    await page.getByRole('radio', { name: 'Nein, Geld kam herein' }).check();
     await page.getByRole('button', { name: 'Weiter' }).click();
 
     const probe = page.getByTestId('csv-probe');
@@ -129,7 +129,7 @@ test.describe('finance csv', () => {
     await startAssistant(page, 'Hausbank Großdatei', file);
     await page.getByRole('button', { name: 'Weiter' }).click();
     await page.getByRole('button', { name: 'Weiter' }).click();
-    await page.getByRole('button', { name: 'Nein, Geld kam herein' }).click();
+    await page.getByRole('radio', { name: 'Nein, Geld kam herein' }).check();
     await page.getByRole('button', { name: 'Weiter' }).click();
     await expect(page.getByLabel('Name des Formats')).toBeVisible();
     await page.getByRole('button', { name: 'Speichern und Auszug laden' }).click();
@@ -148,7 +148,7 @@ test.describe('finance csv', () => {
     await page.reload();
     await page.getByLabel('Konto', { exact: true }).selectOption({ label: 'Hausbank CSV-Test' });
     await page.getByRole('button', { name: 'Trotzdem CSV einrichten' }).click();
-    await page.getByTestId('csv-file-input').setInputFiles(csvFile());
+    await page.getByLabel('CSV-Datei wählen').setInputFiles(csvFile());
     await expect(page.getByRole('heading', { name: 'Vorzeichen' })).toBeVisible();
   });
 
@@ -156,7 +156,7 @@ test.describe('finance csv', () => {
     await startAssistant(page, 'Vereinskonto');
     await page.getByRole('button', { name: 'Weiter' }).click();
     await page.getByRole('button', { name: 'Weiter' }).click();
-    await page.getByRole('button', { name: 'Nein, Geld kam herein' }).click();
+    await page.getByRole('radio', { name: 'Nein, Geld kam herein' }).check();
     await page.getByRole('button', { name: 'Weiter' }).click();
     await page.getByRole('button', { name: 'Nur speichern' }).click();
     const dialog = page.getByRole('alertdialog', { name: 'Auszugsformat wechseln?' });
@@ -223,7 +223,7 @@ test.describe('finance csv', () => {
     await startAssistant(page, 'Drittbank CSV-Test', path.join(FIXTURES, 'zweitbank.csv'));
     await page.getByRole('button', { name: 'Weiter' }).click();
     await page.getByRole('button', { name: 'Weiter' }).click();
-    await page.getByRole('button', { name: 'Nein, Geld kam herein' }).click();
+    await page.getByRole('radio', { name: 'Nein, Geld kam herein' }).check();
     await page.getByRole('button', { name: 'Weiter' }).click();
     await page.getByRole('button', { name: 'Nur speichern' }).click();
     await expect(page).toHaveURL(/\/finance\/imports$/);
@@ -248,7 +248,7 @@ test.describe('finance csv', () => {
     await startAssistant(page, 'Hausbank CSV-Test', csvFile(noBalance, 'ohne-saldo.csv'));
     await page.getByRole('button', { name: 'Weiter' }).click();
     await page.getByRole('button', { name: 'Weiter' }).click();
-    await page.getByRole('button', { name: 'Nein, Geld kam herein' }).click();
+    await page.getByRole('radio', { name: 'Nein, Geld kam herein' }).check();
     await page.getByRole('button', { name: 'Weiter' }).click();
     await page.getByRole('button', { name: 'Nur speichern' }).click();
     await expect(page).toHaveURL(/\/finance\/imports$/);
@@ -280,7 +280,7 @@ test.describe('finance csv', () => {
     await expect(page.getByLabel('Rolle der Spalte „Haben“')).toHaveValue('credit');
     await expect(page.getByTestId('csv-preview')).toContainText('Druckerei Müller & Söhne');
     await page.getByRole('button', { name: 'Weiter' }).click();
-    await page.getByRole('button', { name: 'Nein, Geld kam herein' }).click();
+    await page.getByRole('radio', { name: 'Nein, Geld kam herein' }).check();
     await page.getByRole('button', { name: 'Weiter' }).click();
     await page.getByRole('button', { name: 'Speichern und Auszug laden' }).click();
     await expect(page).toHaveURL(/\/finance\/imports$/);

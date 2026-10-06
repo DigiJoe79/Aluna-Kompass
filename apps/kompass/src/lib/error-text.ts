@@ -14,6 +14,14 @@ export function messageValues(params: Record<string, string | number> = {}): Rec
   return Object.fromEntries(Object.entries(params).map(([key, value]) => [key, typeof value === 'string' && ISO_DATE.test(value) ? new Date(`${value}T12:00:00.000Z`) : value]));
 }
 
+/** `moduleKeys` („dms,finance“) wird zu `modules` („Dokumentenmanagement, Finanzen“): Meldungen nennen Namen, nicht Schlüssel. */
+function withModuleNames(values: Record<string, string | number | Date>, t: Translate): Record<string, string | number | Date> {
+  const keys = values.moduleKeys;
+  if (typeof keys !== 'string') return values;
+  const names = keys.split(',').map((key) => ((t.has?.(`modules.names.${key}`) ?? false) ? t(`modules.names.${key}`) : key));
+  return { ...values, modules: names.join(', ') };
+}
+
 /**
  * Die Gründe eines Konflikts, je Grund ein Satz aus Grund und Abhilfe (N6: alle, nicht nur der erste). Leer, wenn der
  * Konflikt keinen Schlüssel der Sprachdatei trägt.
@@ -21,7 +29,7 @@ export function messageValues(params: Record<string, string | number> = {}): Rec
 export function conflictReasons(error: ConflictError, t: Translate): string[] {
   if (!error.messageKey) return [];
   return [{ messageKey: error.messageKey, params: error.params }, ...(error.also ?? [])].map((r) => {
-    const values = messageValues(r.params);
+    const values = withModuleNames(messageValues(r.params), t);
     return `${t(`${r.messageKey}.reason`, values)} ${t(`${r.messageKey}.remedy`, values)}`;
   });
 }
@@ -92,8 +100,6 @@ const KNOWN_CONFLICTS = new Set([
   'themeReadOnly',
   'themeActive',
   'moduleLocked',
-  'moduleDependencyInactive',
-  'moduleRequiredByOthers',
   'setupAlreadyDone',
   'publicUrlMissing',
   'publishTargetMissing',
@@ -135,8 +141,6 @@ const KNOWN_CONFLICTS = new Set([
 ]);
 
 const CONFLICTS_WITH_DETAIL = new Set([
-  'moduleDependencyInactive',
-  'moduleRequiredByOthers',
   'blockedTermsPresent',
   'siteBuildFailed',
   'publishFailed',

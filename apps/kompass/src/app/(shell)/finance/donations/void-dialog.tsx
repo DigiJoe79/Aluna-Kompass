@@ -3,12 +3,15 @@
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { toast } from 'sonner';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { ConsequenceList } from '@/components/consequence-list';
-import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { voidConfirmationAction } from './actions';
 
 export interface VoidableConfirmation {
@@ -33,24 +36,24 @@ export function VoidForm({ confirmation, onDone, onCancel }: { confirmation: Voi
   const [originalReturnedOn, setOriginalReturnedOn] = useState('');
   const [taxOfficeInformedOn, setTaxOfficeInformedOn] = useState('');
   const [pending, setPending] = useState(false);
+  const feedback = useActionFeedback();
   const id = `void-${confirmation.id}`;
 
   const submit = async () => {
     setPending(true);
-    const result = await voidConfirmationAction({
-      id: confirmation.id,
-      note,
-      alreadySent,
-      originalReturnedOn: alreadySent && originalReturnedOn ? originalReturnedOn : undefined,
-      taxOfficeInformedOn: alreadySent && taxOfficeInformedOn ? taxOfficeInformedOn : undefined,
-    });
+    const result = await feedback.run(
+      () =>
+        voidConfirmationAction({
+          id: confirmation.id,
+          note,
+          alreadySent,
+          originalReturnedOn: alreadySent && originalReturnedOn ? originalReturnedOn : undefined,
+          taxOfficeInformedOn: alreadySent && taxOfficeInformedOn ? taxOfficeInformedOn : undefined,
+        }),
+      { retry: () => void submit() },
+    );
     setPending(false);
-    if (result.status === 'error') {
-      toast.error(result.message);
-      return;
-    }
     if (result.status === 'success') {
-      if (result.message) toast.success(result.message);
       onDone();
       router.refresh();
     }
@@ -58,40 +61,33 @@ export function VoidForm({ confirmation, onDone, onCancel }: { confirmation: Voi
 
   return (
     <div className="space-y-4" data-testid="void-form">
-      <div className="space-y-1.5">
-        <Label htmlFor={`${id}-note`} required>{t('reason')}</Label>
-        <textarea id={`${id}-note`} value={note} onChange={(e) => setNote(e.target.value)} rows={2} required className="w-full rounded-sm border border-line-strong bg-field px-2.5 py-1.5 text-[13px]" />
-      </div>
-      <label className="flex items-center gap-2 text-[13px]">
+      <FormGrid>
+        <FormField id={`${id}-note`} label={t('reason')} required size="l">
+          <Textarea id={`${id}-note`} value={note} onChange={(e) => setNote(e.target.value)} rows={2} required />
+        </FormField>
         {/* Befund E: mit Versandvermerk steht der Haken fest — Kompass kennt den eigenen Vermerk. */}
-        <input type="checkbox" checked={alreadySent} disabled={confirmation.sent} aria-describedby={confirmation.sent ? `${id}-sent-fixed` : undefined} onChange={(e) => setAlreadySent(e.target.checked)} />
-        {t('alreadySent')}
-      </label>
-      {confirmation.sent ? (
-        <p id={`${id}-sent-fixed`} className="text-[12px] text-muted-ink">
-          {t('alreadySentFixed')}
-        </p>
-      ) : null}
+        <FormField id={`${id}-sent`} label={t('alreadySent')} toggle hint={confirmation.sent ? t('alreadySentFixed') : undefined}>
+          <Checkbox id={`${id}-sent`} checked={alreadySent} disabled={confirmation.sent} onCheckedChange={(next) => setAlreadySent(next === true)} />
+        </FormField>
+      </FormGrid>
       {alreadySent ? (
-        <div className="space-y-3 rounded-md border border-line bg-surface-2 p-3">
-          <p className="text-[13px] text-ink-2">{t('trailHint')}</p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor={`${id}-returned`}>{t('originalReturnedOn')}</Label>
-              <Input id={`${id}-returned`} type="date" value={originalReturnedOn} onChange={(e) => setOriginalReturnedOn(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor={`${id}-informed`}>{t('taxOfficeInformedOn')}</Label>
-              <Input id={`${id}-informed`} type="date" value={taxOfficeInformedOn} onChange={(e) => setTaxOfficeInformedOn(e.target.value)} />
-            </div>
+        <section className="border-t border-line pt-5">
+          <h3 className="text-[15px] font-semibold">{t('trailTitle')}</h3>
+          <p className="mt-1 text-[13px] text-ink-2">{t('trailHint')}</p>
+          <div className="mt-3">
+            <FormGrid>
+              <FormField id={`${id}-returned`} label={t('originalReturnedOn')} size="s">
+                <Input id={`${id}-returned`} type="date" value={originalReturnedOn} onChange={(e) => setOriginalReturnedOn(e.target.value)} />
+              </FormField>
+              <FormField id={`${id}-informed`} label={t('taxOfficeInformedOn')} size="s">
+                <Input id={`${id}-informed`} type="date" value={taxOfficeInformedOn} onChange={(e) => setTaxOfficeInformedOn(e.target.value)} />
+              </FormField>
+            </FormGrid>
           </div>
-        </div>
+        </section>
       ) : null}
       <ConsequenceList items={[{ number: confirmation.lineCount, label: t('consequences.lines', { count: confirmation.lineCount }) }]} stays={[t('stays.copy'), t('stays.number', { number: confirmation.number })]} />
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="ghost" onClick={onCancel}>{t('cancel')}</Button>
-        <Button type="button" variant="destructive" disabled={note.trim().length === 0 || pending} onClick={() => void submit()}>{t('submit')}</Button>
-      </div>
+      <FormActionBar placement="dialog" cancel={onCancel} destructive pending={pending} saveDisabled={note.trim().length === 0} saveLabel={t('submit')} onSave={() => void submit()} state={feedback.state} />
     </div>
   );
 }
@@ -100,7 +96,7 @@ export function VoidDialog({ open, onOpenChange, confirmation }: { open: boolean
   const t = useTranslations('finance.donations.void');
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-surface shadow-md sm:max-w-[560px]">
+      <DialogContent size="md" className="bg-surface shadow-md">
         <DialogTitle className="font-heading text-[19px]">{t('title', { number: confirmation.number })}</DialogTitle>
         <VoidForm confirmation={confirmation} onDone={() => onOpenChange(false)} onCancel={() => onOpenChange(false)} />
       </DialogContent>

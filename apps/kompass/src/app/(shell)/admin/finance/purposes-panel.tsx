@@ -4,16 +4,23 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
+import type { ActionState } from '@/lib/actions';
+import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatAmount, parseAmount } from '@/lib/finance/amount';
 import { savePurposeAction, setPurposeStateAction, type PurposeInput } from './actions';
 import { useSavedVersions } from '@/lib/saved-versions';
+import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 
 export interface PurposeRow {
   id: string;
@@ -39,24 +46,24 @@ export function PurposesPanel({ purposes }: { purposes: PurposeRow[] }) {
   const [pending, setPending] = useState(false);
   const versions = useSavedVersions();
 
-  const setState = async (row: PurposeRow, how: 'fulfilled' | 'dissolved' | 'reopen', reason?: string) => {
-    setPending(true);
-    const result = await setPurposeStateAction(row.id, versions.latest(row).expectedVersion, how, reason);
-    setPending(false);
-    if (result.status === 'error') {
-      toast.error(result.message);
-      return;
-    }
+  // „Erfüllt“ und „aufgelöst“ stehen in den Tabellenzeilen: Die Ablehnung steht über der Tabelle. „Wieder öffnen“ hat einen Dialog mit eigener.
+  const stateFb = useActionFeedback();
+  const applied = (result: ActionState) => {
     if (result.status === 'success') versions.remember(result.data);
     router.refresh();
+  };
+  const setState = async (row: PurposeRow, how: 'fulfilled' | 'dissolved') => {
+    setPending(true);
+    const result = await stateFb.run(() => setPurposeStateAction(row.id, versions.latest(row).expectedVersion, how), { retry: () => void setState(row, how) });
+    setPending(false);
+    if (result.status === 'success') applied(result);
   };
 
   const stateOf = (row: PurposeRow) => (row.fulfilledAt ? 'fulfilled' : row.dissolvedAt ? 'dissolved' : 'open');
 
   return (
     <section className="space-y-4" data-testid="purposes-panel">
-      <div className="flex items-center justify-between">
-        <h2 className="font-heading text-[18px] text-ink">{t('title')}</h2>
+      <div className="flex items-center justify-end">
         <div className="flex items-center gap-3">
           {/* F8b 6a: Bestände, Bewegungen und Umwidmung stehen auf der operativen Seite E3. */}
           <Link href="/finance/purposes" className="text-[13px] font-semibold text-ink underline underline-offset-2" data-testid="purposes-panel-overview">
@@ -67,25 +74,26 @@ export function PurposesPanel({ purposes }: { purposes: PurposeRow[] }) {
           </Button>
         </div>
       </div>
+      <RefusalNotice action state={stateFb.state} />
       <div className="overflow-hidden rounded-md border border-line">
         <Table>
-          <TableHeader className="bg-table-head text-left text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink">
-            <TableRow className="h-9">
-              <TableHead className="px-4">{t('columns.name')}</TableHead>
-              <TableHead className="px-4">{t('columns.target')}</TableHead>
-              <TableHead className="px-4">{t('columns.state')}</TableHead>
-              <TableHead className="px-4 text-right">{tCommon('edit')}</TableHead>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t('columns.name')}</TableHead>
+              <TableHead>{t('columns.target')}</TableHead>
+              <TableHead>{t('columns.state')}</TableHead>
+              <TableHead className="text-right">{tCommon('edit')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {purposes.map((row) => (
-              <TableRow key={row.id} className="h-12 border-b border-line-2">
-                <TableCell className="px-4 font-medium text-ink">{row.name}</TableCell>
-                <TableCell className="px-4 font-mono text-ink-2">{row.targetCents !== null ? formatAmount(row.targetCents) : '—'}</TableCell>
-                <TableCell className="px-4">
+              <TableRow key={row.id}>
+                <TableCell className="font-medium text-ink">{row.name}</TableCell>
+                <TableCell className="font-mono text-ink-2">{row.targetCents !== null ? formatAmount(row.targetCents) : '—'}</TableCell>
+                <TableCell>
                   <StatusBadge tone={stateOf(row) === 'open' ? 'success' : 'neutral'}>{t(`states.${stateOf(row)}`)}</StatusBadge>
                 </TableCell>
-                <TableCell className="px-4 text-right">
+                <TableCell className="text-right">
                   <div className="flex justify-end gap-1.5">
                     <Button variant="ghost" size="sm" onClick={() => setEditing(versions.latest(row))}>
                       {tCommon('edit')}
@@ -126,10 +134,10 @@ export function PurposesPanel({ purposes }: { purposes: PurposeRow[] }) {
       {reopening ? (
         <ReopenDialog
           purpose={reopening}
-          pending={pending}
           onClose={() => setReopening(null)}
-          onConfirm={async (reason) => {
-            await setState(reopening, 'reopen', reason);
+          onConfirm={(reason) => setPurposeStateAction(reopening.id, versions.latest(reopening).expectedVersion, 'reopen', reason)}
+          onDone={(result) => {
+            applied(result);
             setReopening(null);
           }}
         />
@@ -139,27 +147,27 @@ export function PurposesPanel({ purposes }: { purposes: PurposeRow[] }) {
 }
 
 /** F8b Annahme 7: Wiederöffnen verlangt eine Begründung — sie steht am Zweck, nie im Änderungsprotokoll. */
-function ReopenDialog({ purpose, pending, onClose, onConfirm }: { purpose: PurposeRow; pending: boolean; onClose: () => void; onConfirm: (reason: string) => Promise<void> }) {
+function ReopenDialog({ purpose, onClose, onConfirm, onDone }: { purpose: PurposeRow; onClose: () => void; onConfirm: (reason: string) => Promise<ActionState>; onDone: (result: ActionState) => void }) {
   const t = useTranslations('finance.admin.purposes');
   const tCommon = useTranslations('common');
   const [reason, setReason] = useState('');
+  const feedback = useActionFeedback();
+  const [pending, setPending] = useState(false);
+  const confirm = async () => {
+    setPending(true);
+    const result = await feedback.run(() => onConfirm(reason), { retry: () => void confirm() });
+    setPending(false);
+    if (result.status === 'success') onDone(result);
+  };
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-surface shadow-md sm:max-w-[420px]">
+      <DialogContent size="sm" className="bg-surface shadow-md">
         <DialogTitle className="font-heading text-[19px]">{t('reopenDialog.title', { name: purpose.name })}</DialogTitle>
-        <div className="space-y-1.5">
-          <Label htmlFor="purpose-reopen-reason" required>{t('reopenDialog.reason')}</Label>
+        <FormField id="purpose-reopen-reason" label={t('reopenDialog.reason')} required>
           <Input id="purpose-reopen-reason" value={reason} onChange={(e) => setReason(e.target.value)} required />
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={onClose}>
-            {tCommon('cancel')}
-          </Button>
-          <Button type="button" disabled={pending || reason.trim() === ''} onClick={() => void onConfirm(reason)}>
-            {t('actions.reopen')}
-          </Button>
-        </DialogFooter>
+        </FormField>
+        <FormActionBar placement="dialog" cancel={onClose} pending={pending} saveDisabled={reason.trim() === ''} saveLabel={t('actions.reopen')} onSave={() => void confirm()} state={feedback.state} />
       </DialogContent>
     </Dialog>
   );
@@ -175,11 +183,10 @@ function PurposeDialog({ purpose, onClose, onSaved }: { purpose: PurposeRow | nu
   const [carryForwardText, setCarryForwardText] = useState(purpose?.carryForwardCents !== null && purpose?.carryForwardCents !== undefined ? formatAmount(purpose.carryForwardCents) : '');
   const [carryForwardDate, setCarryForwardDate] = useState(purpose?.carryForwardDate ?? '');
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const feedback = useActionFeedback();
 
   const submit = async () => {
     setPending(true);
-    setError(null);
     const input: PurposeInput = {
       id: purpose?.id,
       expectedVersion: purpose?.expectedVersion,
@@ -190,62 +197,48 @@ function PurposeDialog({ purpose, onClose, onSaved }: { purpose: PurposeRow | nu
       carryForwardCents: carryForwardText.trim() === '' ? null : parseAmount(carryForwardText),
       carryForwardDate: carryForwardDate || null,
     };
-    const result = await savePurposeAction(input);
+    const result = await feedback.run(() => savePurposeAction(input), { retry: () => void submit() });
     setPending(false);
-    if (result.status === 'error') {
-      setError(result.message);
-      toast.error(result.message);
-      return;
-    }
-    if (result.status === 'success') {
-      if (result.message) toast.success(result.message);
-      onSaved(result.data);
-    }
+    if (result.status === 'success') onSaved(result.data);
   };
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-surface shadow-md sm:max-w-[460px]">
+      <DialogContent size="sm" className="bg-surface shadow-md">
         <DialogTitle className="font-heading text-[19px]">{purpose ? t('edit') : t('create')}</DialogTitle>
-        <div className="space-y-3.5">
-          {error ? <div className="rounded-md bg-error-bg p-2.5 text-[13px] text-error">{error}</div> : null}
-          <div className="space-y-1.5">
-            <Label htmlFor="purpose-name" required>{t('columns.name')}</Label>
-            <Input id="purpose-name" value={name} onChange={(e) => setName(e.target.value)} required />
+        <section>
+          <h3 className="text-[15px] font-semibold">{t('sections.purpose')}</h3>
+          <div className="mt-3">
+            <FormGrid>
+              <FormField id="purpose-name" label={t('columns.name')} required>
+                <Input id="purpose-name" value={name} onChange={(e) => setName(e.target.value)} required />
+              </FormField>
+              <FormField id="purpose-target" label={t('columns.target')} size="s">
+                <Input id="purpose-target" value={targetText} onChange={(e) => setTargetText(e.target.value)} placeholder="0,00" />
+              </FormField>
+              <FormField id="purpose-description" label={t('description')} size="l">
+                <Textarea id="purpose-description" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
+              </FormField>
+              <FormField id="purpose-abroad" label={t('abroad')} toggle>
+                <Checkbox id="purpose-abroad" checked={abroad} onCheckedChange={(checked) => setAbroad(checked)} />
+              </FormField>
+            </FormGrid>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="purpose-description">{t('description')}</Label>
-            <Input id="purpose-description" value={description} onChange={(e) => setDescription(e.target.value)} />
+        </section>
+        <section className="border-t border-line pt-5">
+          <h3 className="text-[15px] font-semibold">{t('sections.carryForward')}</h3>
+          <div className="mt-3">
+            <FormGrid>
+              <FormField id="purpose-carry-forward" label={t('carryForward')} size="s">
+                <Input id="purpose-carry-forward" value={carryForwardText} onChange={(e) => setCarryForwardText(e.target.value)} placeholder="0,00" />
+              </FormField>
+              <FormField id="purpose-carry-forward-date" label={t('carryForwardDate')} size="s">
+                <Input id="purpose-carry-forward-date" type="date" value={carryForwardDate} onChange={(e) => setCarryForwardDate(e.target.value)} />
+              </FormField>
+            </FormGrid>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="purpose-target">{t('columns.target')}</Label>
-            <Input id="purpose-target" value={targetText} onChange={(e) => setTargetText(e.target.value)} placeholder="0,00" />
-          </div>
-          <div className="flex items-center gap-2">
-            <input type="checkbox" id="purpose-abroad" checked={abroad} onChange={(e) => setAbroad(e.target.checked)} className="size-4 rounded border-line" />
-            <Label htmlFor="purpose-abroad" className="cursor-pointer text-[13px]">
-              {t('abroad')}
-            </Label>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="purpose-carry-forward">{t('carryForward')}</Label>
-              <Input id="purpose-carry-forward" value={carryForwardText} onChange={(e) => setCarryForwardText(e.target.value)} placeholder="0,00" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="purpose-carry-forward-date">{t('carryForwardDate')}</Label>
-              <Input id="purpose-carry-forward-date" type="date" value={carryForwardDate} onChange={(e) => setCarryForwardDate(e.target.value)} />
-            </div>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={onClose}>
-            {tCommon('cancel')}
-          </Button>
-          <Button type="button" disabled={pending || !name} onClick={() => void submit()}>
-            {tCommon('save')}
-          </Button>
-        </DialogFooter>
+        </section>
+        <FormActionBar placement="dialog" cancel={onClose} pending={pending} saveDisabled={!name} saveLabel={tCommon('save')} onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, [])} />
       </DialogContent>
     </Dialog>
   );

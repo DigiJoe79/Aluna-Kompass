@@ -25,8 +25,8 @@ export function CachePanel({ status }: { status: SiteCacheStatus }) {
 
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-5">
-      <h3 className="font-heading text-[18px]">{t('title')}</h3>
-      <p className="text-[13px] text-ink-2">{t('intro')}</p>
+      <h3 className="text-[15px] font-semibold">{t('title')}</h3>
+      <p className="max-w-prose text-[13px] text-ink-2">{t('intro')}</p>
       <ul className="flex flex-col gap-1 text-[13px] text-ink">
         <li>{t('images', { count: images.count, size: size(images.bytes) })}</li>
         <li>{images.oldest && images.newest ? t('age', { oldest: date(images.oldest), newest: date(images.newest) }) : t('noAge')}</li>

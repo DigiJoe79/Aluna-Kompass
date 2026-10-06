@@ -20,9 +20,11 @@ import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { RowButton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { ActionState } from '@/lib/actions';
 import { MEDIA_MIME, carriesOutsideFiles } from '@/lib/drag-types';
 import { ancestorsOf, isWithin, nameOf, namesBelow } from '@/lib/folder-tree-model';
+import { runAction } from '@/lib/feedback';
 import { usePreference } from '@/lib/preferences';
 import { AssetDetailDialog } from './asset-detail-dialog';
 import { ListTruncated } from './list-truncated';
@@ -76,7 +78,7 @@ export function LibraryClient({
 }) {
   const t = useTranslations('media');
   const tMove = useTranslations('moveDialog');
-  const tTree = useTranslations('folderTree');
+  const tCommon = useTranslations('common');
   const fmt = useDateFormat();
   const router = useRouter();
   const [view, setView] = usePreference('mediaView');
@@ -147,14 +149,11 @@ export function LibraryClient({
       const fd = new FormData();
       fd.set('file', file);
       if (folder !== null) fd.set('folder', folder);
-      try {
-        const s = await uploadMediaAction(fd);
-        if (s.status === 'error') failed.push(t('drop.failed', { name: file.name, reason: reasonOf(s) }));
-        else if (s.status === 'success' && (s.data as { created?: boolean } | undefined)?.created === false) failed.push(t('drop.failed', { name: file.name, reason: s.message ?? '' }));
-        else if (s.status === 'success') done += 1;
-      } catch {
-        failed.push(t('drop.failed', { name: file.name, reason: tTree('error.unexpected') }));
-      }
+      // Eine geworfene Aktion (Netz weg) meldet `runAction` als Netzproblem mit eigenem Satz.
+      const s = await runAction(() => uploadMediaAction(fd), tCommon('network'));
+      if (s.status === 'error') failed.push(t('drop.failed', { name: file.name, reason: reasonOf(s) }));
+      else if (s.status === 'success' && (s.data as { created?: boolean } | undefined)?.created === false) failed.push(t('drop.failed', { name: file.name, reason: s.message ?? '' }));
+      else if (s.status === 'success') done += 1;
     }
     if (done > 0) start(() => router.refresh());
     const title = done > 0 ? t('drop.done', { count: done, ...(folder === null ? { where: 'none', folder: '' } : { where: 'folder', folder: nameOf(folder) }) }) : t('drop.noneDone');
@@ -172,7 +171,7 @@ export function LibraryClient({
         ))}
       </ul>
     );
-    toast.error(title, { id, description, action, duration: Infinity });
+    toast.error(title, { id, description, action, duration: Infinity, closeButton: true });
   };
 
   // Der Horcher hängt einmal am Fenster; was und wohin hochzuladen ist, liest er hier nach.
@@ -415,51 +414,39 @@ export function LibraryClient({
               draggable
             />
           ) : (
-            <table className="w-full text-[14px]">
-              <thead className="text-left text-ink-2">
-                <tr>
-                  <th className="py-2">{t('columns.file')}</th>
-                  <th>{t('columns.folder')}</th>
-                  <th>{t('columns.size')}</th>
-                  <th>{t('columns.uploadedAt')}</th>
-                  <th>{t('columns.usage')}</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('columns.file')}</TableHead>
+                  <TableHead>{t('columns.folder')}</TableHead>
+                  <TableHead>{t('columns.size')}</TableHead>
+                  <TableHead>{t('columns.uploadedAt')}</TableHead>
+                  <TableHead>{t('columns.usage')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {items.map((it) => (
-                  <tr
-                    key={it.id}
-                    {...dragProps(it)}
-                    className={`h-row cursor-pointer border-b border-line-2 hover:bg-row-hover ${rowDragging === it.id ? 'opacity-50' : ''}`}
-                    onClick={() => setDetailId(it.id)}
-                  >
-                    <td className="py-2">
-                      <button
-                        type="button"
-                        className="flex items-center gap-2 text-left"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDetailId(it.id);
-                        }}
-                      >
+                  <TableRow key={it.id} {...dragProps(it)} className={rowDragging === it.id ? 'opacity-50' : undefined}>
+                    <TableCell>
+                      <RowButton aria-haspopup="dialog" className="flex items-center gap-2" onClick={() => setDetailId(it.id)}>
                         {it.mimeType.startsWith('image/') ? (
                           <img src={`/media/${it.id}/preview`} alt="" loading="lazy" draggable={false} className="size-8 shrink-0 rounded border border-line object-cover" />
                         ) : (
                           <span className="grid size-8 shrink-0 place-items-center rounded border border-line bg-surface-2 text-[10px] uppercase text-ink-2">{it.filename.split('.').at(-1)}</span>
                         )}
                         <span className="font-mono text-[13px]">{it.filename}</span>
-                      </button>
-                    </td>
-                    <td data-folder-cell className="text-ink-2">
+                      </RowButton>
+                    </TableCell>
+                    <TableCell data-folder-cell className="text-ink-2">
                       {placeOf(it.folder)}
-                    </td>
-                    <td>{formatBytes(it.bytes)}</td>
-                    <td className="text-ink-2">{fmt.date(it.createdAt)}</td>
-                    <td>{it.references.length === 0 ? <span className="text-ink-2">{t('unused')}</span> : it.references.map((r) => r.label).join(', ')}</td>
-                  </tr>
+                    </TableCell>
+                    <TableCell>{formatBytes(it.bytes)}</TableCell>
+                    <TableCell className="text-ink-2">{fmt.date(it.createdAt)}</TableCell>
+                    <TableCell className="whitespace-normal">{it.references.length === 0 ? <span className="text-ink-2">{t('unused')}</span> : it.references.map((r) => r.label).join(', ')}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           )}
 
           <ListTruncated shown={items.length} matching={matching} />
@@ -510,8 +497,10 @@ export function LibraryClient({
         action={async () => {
           if (!confirmId) return { status: 'idle' } as ActionState;
           const state = await deleteMediaAction(confirmId);
-          if (state.status === 'success') start(() => router.refresh());
-          setConfirmId(null);
+          if (state.status === 'success') {
+            start(() => router.refresh());
+            setConfirmId(null);
+          }
           return state;
         }}
       />

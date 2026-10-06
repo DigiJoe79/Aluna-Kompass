@@ -4,6 +4,8 @@ import { CircleSlash, Files, Image as ImageIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { uploadMediaAction } from '@/app/(shell)/admin/media/actions';
 import { EmptyState } from '@/components/empty-state';
 import { FolderTree } from '@/components/folder-tree/folder-tree';
@@ -11,6 +13,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import type { ActionState } from '@/lib/actions';
+import { runAction, toastNetwork } from '@/lib/feedback';
 import { ancestorsOf, namesBelow, type FolderEntry } from '@/lib/folder-tree-model';
 import type { MediaListing } from '@/lib/media-listing';
 import { usePreference } from '@/lib/preferences';
@@ -67,6 +71,8 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
   const [failed, setFailed] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(() => new Set(selected));
   const [uploading, setUploading] = useState(false);
+  const [uploadRefusal, setUploadRefusal] = useState<ActionState>({ status: 'idle' });
+  const tCommon = useTranslations('common');
   const fileInput = useRef<HTMLInputElement>(null);
   const reasonId = useId();
 
@@ -145,15 +151,17 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
 
   const upload = async (files: FileList) => {
     setUploading(true);
+    setUploadRefusal({ status: 'idle' });
     try {
       let last: string | null = null;
       for (const file of Array.from(files)) {
         const fd = new FormData();
         fd.set('file', file);
         if (folder) fd.set('folder', folder);
-        const state = await uploadMediaAction(fd);
+        const state = await runAction(() => uploadMediaAction(fd), tCommon('network'));
         if (state.status === 'error') {
-          toast.error(state.message);
+          if (state.kind === 'network') toastNetwork(state, tCommon('retry'), () => fileInput.current?.click());
+          else setUploadRefusal(state);
           continue;
         }
         if (state.status === 'success') {
@@ -185,7 +193,7 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl">
+      <DialogContent size="xl">
         <DialogTitle>{title}</DialogTitle>
 
         <div className="flex flex-wrap items-center gap-3 text-[13px]">
@@ -223,6 +231,8 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
           </label>
         </div>
 
+        <RefusalNotice action state={uploadRefusal} />
+
         <div className="flex gap-4">
           <div className="max-h-[55vh] w-60 shrink-0 overflow-y-auto border-r border-line pr-3">
             <FolderTree
@@ -254,32 +264,31 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
           </div>
         </div>
 
-        <DialogFooter className="flex items-center justify-between gap-3">
-          {multiple ? (
-            <span className="flex flex-col text-[13px] text-ink-2" aria-live="polite">
-              <span>{max === undefined ? t('chooser.selectedCount', { count: picked.size }) : t('chooser.selectedOfMax', { count: picked.size, max })}</span>
-              {full ? <span id={reasonId}>{t('chooser.limitReached', { max })}</span> : null}
-            </span>
-          ) : (
+        {multiple ? (
+          <FormActionBar
+            placement="dialog"
+            cancel={() => onOpenChange(false)}
+            saveLabel={t('chooser.confirm')}
+            note={
+              <span className="flex flex-col" aria-live="polite">
+                <span>{max === undefined ? t('chooser.selectedCount', { count: picked.size }) : t('chooser.selectedOfMax', { count: picked.size, max })}</span>
+                {full ? <span id={reasonId}>{t('chooser.limitReached', { max })}</span> : null}
+              </span>
+            }
+            onSave={() => {
+              onConfirm([...picked]);
+              onOpenChange(false);
+            }}
+          />
+        ) : (
+          // Einzelwahl: Ein Klick auf die Datei wählt, es gibt nur „Abbrechen“.
+          <DialogFooter className="flex items-center justify-between gap-3">
             <span />
-          )}
-          <div className="flex gap-2">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               {t('chooser.cancel')}
             </Button>
-            {multiple ? (
-              <Button
-                type="button"
-                onClick={() => {
-                  onConfirm([...picked]);
-                  onOpenChange(false);
-                }}
-              >
-                {t('chooser.confirm')}
-              </Button>
-            ) : null}
-          </div>
-        </DialogFooter>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

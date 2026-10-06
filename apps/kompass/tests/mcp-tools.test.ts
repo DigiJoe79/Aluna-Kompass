@@ -202,6 +202,7 @@ const WITHOUT_TOOL: Record<string, string> = {
   'contacts.getUserLink': 'Lesehilfe der Nutzerverwaltung; über MCP liefert contacts_user_link_changes dasselbe mit Verlauf.',
   'animals.seedAnimals': 'Beispieldaten der Entwicklung.',
   'animals.confirmAnimalReview': 'Die Prüfung bestätigt ein Mensch in der Oberfläche.',
+  'animals.exportAnimalProfiles': 'Liefert Bytes wie core.exportDocument; ein Agent liest die Tiere über animals_get und animals_list.',
   'projects.seedProjects': 'Beispieldaten der Entwicklung.',
   'site.applySeed': 'Beispielinhalte des Templates; ein Mensch bestätigt sie in der Oberfläche.',
   'site.previewTemplateSync': 'Derselbe Vorgang wie site_template_sync ohne confirm; das Werkzeug nennt den anwendenden Zweig.',

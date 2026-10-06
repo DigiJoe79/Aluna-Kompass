@@ -133,3 +133,42 @@ describe('locale removal reaches beyond localized columns', () => {
     expect(String(created.after)).toContain('Yard');
   });
 });
+
+describe('Sprachen, die ein Modul als Pflicht meldet', () => {
+  const withModule = async (required: readonly string[], enable = true) => {
+    const { defineModule } = await import('../src/modules/manifest');
+    const { setModuleEnabled } = await import('../src/modules/service');
+    const needy = defineModule({ key: 'needy', version: '0', permissions: [], requiredLocales: () => required });
+    const deps = createTestDeps({ manifests: [coreModule, needy], locales: ['de', 'en'] });
+    insertUser(deps, { id: 'USER-TEST' });
+    if (enable) unwrap(await setModuleEnabled(deps, ctxWith(['modules.manage']), { key: 'needy', enabled: true }));
+    return deps;
+  };
+  const ctx = ctxWith(['settings.manage']);
+
+  it('lehnt Vorschau und Entfernen ab und nennt das Modul', async () => {
+    const deps = await withModule(['de', 'en']);
+    const preview = await previewLocaleRemoval(deps, ctx, { code: 'en' });
+    expect(preview.ok === false && preview.error.type === 'conflict' && preview.error.code === 'localeRequired' && preview.error.params?.module === 'needy').toBe(true);
+    const removed = await removeLocale(deps, ctx, { code: 'en', confirm: true });
+    expect(removed.ok === false && removed.error.type === 'conflict' && removed.error.code === 'localeRequired').toBe(true);
+    expect(unwrap(await listLocales(deps, ctx))).toEqual(['de', 'en']);
+  });
+
+  it('schreibt bei der Ablehnung nichts ins Protokoll', async () => {
+    const deps = await withModule(['en']);
+    await removeLocale(deps, ctx, { code: 'en', confirm: true });
+    expect(deps.db.select().from(schema.auditLog).all().some((e) => e.action === 'locale.remove')).toBe(false);
+  });
+
+  it('erlaubt, was kein Modul braucht', async () => {
+    const deps = await withModule(['de']);
+    unwrap(await previewLocaleRemoval(deps, ctx, { code: 'en' }));
+    expect(unwrap(await removeLocale(deps, ctx, { code: 'en', confirm: true }))).toEqual(['de']);
+  });
+
+  it('fragt ausgeschaltete Module nicht', async () => {
+    const deps = await withModule(['de', 'en'], false);
+    expect(unwrap(await removeLocale(deps, ctx, { code: 'en', confirm: true }))).toEqual(['de']);
+  });
+});

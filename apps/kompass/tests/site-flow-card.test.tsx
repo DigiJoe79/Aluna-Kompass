@@ -53,7 +53,7 @@ const props = (state: FlowState, over: Partial<PublishFlowCardProps> = {}): Publ
   ...over,
 });
 const renderCard = (state: FlowState, over: Partial<PublishFlowCardProps> = {}) => render(<PublishFlowCard {...props(state, over)} />, { wrapper: Intl });
-const primaries = () => screen.queryAllByRole('button').filter((b) => b.className.includes('bg-primary text-primary-foreground'));
+const primaries = () => screen.queryAllByRole('button').filter((b) => b.className.includes('bg-brand text-on-brand'));
 
 beforeEach(() => check.mockReset());
 afterEach(cleanup);
@@ -136,7 +136,7 @@ describe('endText', () => {
 });
 
 describe('PublishConfirmDialog', () => {
-  const footer = () => document.querySelector('[data-slot="dialog-footer"]') as HTMLElement;
+  const footer = () => document.querySelector('[data-slot="form-action-bar"]') as HTMLElement;
   const dialog = (over: Partial<Parameters<typeof PublishConfirmDialog>[0]> = {}) => (
     <PublishConfirmDialog open onOpenChange={() => {}} env="production" publicUrl="https://beispiel.invalid" preview={job()} onPublish={() => {}} onRebuild={() => {}} {...over} />
   );

@@ -6,6 +6,8 @@ const PNG = Buffer.from(
   'base64',
 );
 
+const NAV = 'Bereiche der Vereinseinstellungen';
+
 test.describe('settings', () => {
   test.beforeEach(async ({ page }) => {
     await resetDatabase(page, 'seeded');
@@ -20,13 +22,13 @@ test.describe('settings', () => {
    * Zeilenrichtung. Ein Test, der nur klickt, sieht das nicht.
    */
   test('legt die Reiterleiste über die Inhaltsfläche, nicht daneben', async ({ page }) => {
-    const list = page.getByRole('tablist').first();
-    const panel = page.getByRole('tabpanel').first();
+    const list = page.getByRole('navigation', { name: NAV });
+    const firstField = page.getByLabel('Vereinsname');
     const listBox = await list.boundingBox();
-    const panelBox = await panel.boundingBox();
-    if (!listBox || !panelBox) throw new Error('Reiter nicht sichtbar');
+    const fieldBox = await firstField.boundingBox();
+    if (!listBox || !fieldBox) throw new Error('Reiter nicht sichtbar');
 
-    expect(listBox.y + listBox.height).toBeLessThanOrEqual(panelBox.y + 1);
+    expect(listBox.y + listBox.height).toBeLessThanOrEqual(fieldBox.y + 1);
     // Und sie ist eine Leiste, kein hoher Kasten: deutlich breiter als hoch.
     expect(listBox.width).toBeGreaterThan(listBox.height);
   });
@@ -44,13 +46,35 @@ test.describe('settings', () => {
     await expect(page.getByRole('row', { name: /organization.name/ }).first()).toBeVisible();
   });
 
-  test('marks the tab with a validation error and keeps the input', async ({ page }) => {
-    await page.getByRole('tab', { name: 'Verein' }).click();
-    await page.getByLabel('Kontakt-E-Mail').fill('keine-mail');
-    await page.getByRole('tab', { name: 'Bank' }).click();
+  test('behält Änderungen über einen Reiterwechsel und speichert alle zusammen', async ({ page }) => {
+    const nav = page.getByRole('navigation', { name: NAV });
+    await page.goto('/admin/settings?panel=organization');
+    await page.getByLabel('Vereinsname').fill('Testverein Reiter e.V.');
+    await nav.getByRole('link', { name: 'Darstellung' }).click();
+    await expect(page).toHaveURL(/panel=display/);
+    await page.getByLabel('Datumsformat').selectOption('iso');
+    await expect(page.getByText('2 Änderungen noch nicht gespeichert')).toBeVisible();
     await page.getByRole('button', { name: 'Speichern' }).click();
-    await expect(page.getByRole('tab', { name: /Verein/ })).toHaveAttribute('data-invalid', 'true');
-    await page.getByRole('tab', { name: /Verein/ }).click();
+    await expect(page.getByText('2 Änderungen noch nicht gespeichert')).toBeHidden();
+    await page.goto('/admin/settings?panel=organization');
+    await expect(page.getByLabel('Vereinsname')).toHaveValue('Testverein Reiter e.V.');
+    await nav.getByRole('link', { name: 'Darstellung' }).click();
+    await expect(page.getByLabel('Datumsformat')).toHaveValue('iso');
+  });
+
+  test('ein unbekannter Bereich in der Adresse zeigt den ersten', async ({ page }) => {
+    await page.goto('/admin/settings?panel=quatsch');
+    await expect(page.getByRole('navigation', { name: NAV }).getByRole('link', { name: 'Verein' })).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByLabel('Vereinsname')).toBeVisible();
+  });
+
+  test('marks the tab with a validation error and keeps the input', async ({ page }) => {
+    await page.getByRole('navigation', { name: NAV }).getByRole('link', { name: 'Verein' }).click();
+    await page.getByLabel('Kontakt-E-Mail').fill('keine-mail');
+    await page.getByRole('navigation', { name: NAV }).getByRole('link', { name: 'Bank' }).click();
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByRole('navigation', { name: NAV }).getByRole('link', { name: /Verein/ })).toHaveAttribute('data-invalid', 'true');
+    await page.getByRole('navigation', { name: NAV }).getByRole('link', { name: /Verein/ }).click();
     await expect(page.getByText('Bitte eine gültige E-Mail-Adresse eingeben.', { exact: true })).toBeVisible();
     // Die Box oben nennt das Feld mit seiner Meldung (Befund 6, 0.2.4), unter dem ganzen Schlüssel der Einstellung.
     await expect(page.getByText('Kontakt-E-Mail: Bitte eine gültige E-Mail-Adresse eingeben.')).toBeVisible();
@@ -58,7 +82,7 @@ test.describe('settings', () => {
   });
 
   test('tax tab shows no incomplete alert once finance records the notice, and no statutory purpose', async ({ page }) => {
-    await page.getByRole('tab', { name: 'Steuer & Bescheide' }).click();
+    await page.getByRole('navigation', { name: NAV }).getByRole('link', { name: 'Steuer & Bescheide' }).click();
     // Seit F6a erfasst der Finanz-Seed den Freistellungsbescheid; Finanzamt, Steuernummer und Bescheid stehen damit (E22).
     await expect(page.getByTestId('managed-field-value').first()).toBeVisible();
     await expect(page.locator('main').getByRole('alert')).toHaveCount(0);
@@ -67,8 +91,8 @@ test.describe('settings', () => {
   });
 
   test('geführte Felder zeigen Wert, Kennzeichen und den Weg, kein Eingabefeld', async ({ page }) => {
-    await page.getByRole('tab', { name: 'Bank' }).click();
-    await expect(page.getByText('Wird unter Finanzen einrichten → Bankkonten und Kassen am Hauptkonto geführt.')).toHaveCount(1);
+    await page.getByRole('navigation', { name: NAV }).getByRole('link', { name: 'Bank' }).click();
+    await expect(page.getByText('Wird unter Einstellungen → Finanzen → Bankkonten und Kassen am Hauptkonto geführt.')).toHaveCount(1);
     for (const label of ['IBAN', 'BIC', 'Bankname']) await expect(page.getByLabel(label)).toHaveCount(0);
     const bankValues = page.getByTestId('managed-field-value');
     await expect(bankValues).toHaveCount(3);
@@ -77,7 +101,7 @@ test.describe('settings', () => {
     await expect(bankLinks).toHaveCount(3);
     await expect(bankLinks.first()).toHaveAttribute('href', '/admin/finance?panel=accounts');
 
-    await page.getByRole('tab', { name: 'Steuer & Bescheide' }).click();
+    await page.getByRole('navigation', { name: NAV }).getByRole('link', { name: 'Steuer & Bescheide' }).click();
     await expect(page.getByText('Wird unter Finanzen → Spenden → Bescheide geführt.')).toHaveCount(1);
     await expect(page.getByLabel('Steuernummer')).toHaveCount(0);
     const noticeLinks = page.getByRole('link', { name: /^geführt unter Bescheide$/ });
@@ -95,7 +119,7 @@ test.describe('settings', () => {
     await expect(dialog).toBeHidden();
 
     await page.goto('/admin/settings');
-    await page.getByRole('tab', { name: 'Steuer & Bescheide' }).click();
+    await page.getByRole('navigation', { name: NAV }).getByRole('link', { name: 'Steuer & Bescheide' }).click();
     await expect(page.locator('main').getByRole('alert')).toHaveCount(0);
     await expect(page.getByText('Es ist noch kein Bescheid erfasst.')).toBeVisible();
     const link = page.getByRole('link', { name: 'Bescheid erfassen' });
@@ -110,7 +134,7 @@ test.describe('settings', () => {
     await expect(page.getByRole('row', { name: /logo-/ })).toBeVisible();
 
     await page.goto('/admin/settings');
-    await page.getByRole('tab', { name: 'Branding' }).click();
+    await page.getByRole('navigation', { name: NAV }).getByRole('link', { name: 'Branding' }).click();
     await page.getByRole('button', { name: 'Logo: Wählen' }).click();
     const chooser = page.getByRole('dialog', { name: 'Bild wählen' });
     await chooser.getByRole('button', { name: /logo-/ }).click();

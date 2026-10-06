@@ -2,13 +2,15 @@
 
 import { useDateFormat } from '@/components/date-format-provider';
 import { roleLabel } from '@/lib/contact-roles';
-import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState, useTransition } from 'react';
+import { FormActionBar } from '@/components/forms/form-action-bar';
 import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { addContactRoleAction, endContactRoleAction } from '../actions';
 import { Select } from '@/components/ui/select';
@@ -35,6 +37,8 @@ export function RolesPanel({
   const [selectedRole, setSelectedRole] = useState(roleDefinitions[0]?.key ?? '');
   const [since, setSince] = useState(today);
   const [addPending, startAdd] = useTransition();
+  const addFb = useActionFeedback();
+  const endFb = useActionFeedback();
 
   const [endingRoleId, setEndingRoleId] = useState<string | null>(null);
   const [until, setUntil] = useState(today);
@@ -44,8 +48,8 @@ export function RolesPanel({
     e.preventDefault();
     if (!selectedRole || !since) return;
     startAdd(async () => {
-      await addContactRoleAction(contactId, selectedRole, since);
-      setAddOpen(false);
+      const result = await addFb.run(() => addContactRoleAction(contactId, selectedRole, since));
+      if (result.status === 'success') setAddOpen(false);
     });
   };
 
@@ -53,8 +57,8 @@ export function RolesPanel({
     e.preventDefault();
     if (!endingRoleId || !until) return;
     startEnd(async () => {
-      await endContactRoleAction(contactId, endingRoleId, until);
-      setEndingRoleId(null);
+      const result = await endFb.run(() => endContactRoleAction(contactId, endingRoleId, until));
+      if (result.status === 'success') setEndingRoleId(null);
     });
   };
 
@@ -67,20 +71,19 @@ export function RolesPanel({
             <DialogTrigger
               render={
                 <Button size="sm" variant="outline">
-                  <Plus className="size-3.5" aria-hidden />
                   {t('roles.add')}
                 </Button>
               }
             />
-            <DialogContent className="w-full sm:max-w-[440px] bg-surface p-0 shadow-md">
+            <DialogContent size="sm" className="bg-surface shadow-md">
               <form onSubmit={handleAddSubmit}>
-                <div className="p-6">
-                  <DialogTitle className="font-heading text-[17px]">{t('roles.add')}</DialogTitle>
-                  <DialogDescription className="text-[13px] text-muted-ink">
-                    {t('roles.title')}
-                  </DialogDescription>
+                <DialogTitle className="font-heading text-[17px]">{t('roles.add')}</DialogTitle>
+                <DialogDescription className="text-[13px] text-muted-ink">
+                  {t('roles.title')}
+                </DialogDescription>
 
-                  <div className="mt-4 space-y-3.5">
+                <div className="mt-4">
+                  <FormGrid>
                     <FormField id="role" label={t('roles.field')}>
                       <Select
                         id="role"
@@ -97,7 +100,7 @@ export function RolesPanel({
                       </Select>
                     </FormField>
 
-                    <FormField id="since" label={t('roles.since')}>
+                    <FormField id="since" label={t('roles.since')} size="s">
                       <Input
                         id="since"
                         name="since"
@@ -107,17 +110,10 @@ export function RolesPanel({
                         required
                       />
                     </FormField>
-                  </div>
+                  </FormGrid>
                 </div>
 
-                <DialogFooter className="items-center border-t border-line bg-surface-2 px-6 py-3">
-                  <Button type="button" variant="ghost" onClick={() => setAddOpen(false)}>
-                    {c('cancel')}
-                  </Button>
-                  <Button type="submit" disabled={addPending}>
-                    {t('roles.submit')}
-                  </Button>
-                </DialogFooter>
+                <FormActionBar placement="dialog" mode="create" cancel={() => setAddOpen(false)} pending={addPending} saveLabel={t('roles.submit')} state={addFb.state} />
               </form>
             </DialogContent>
           </Dialog>
@@ -154,12 +150,12 @@ export function RolesPanel({
 
       {endingRoleId ? (
         <Dialog open={true} onOpenChange={(o) => { if (!o) setEndingRoleId(null); }}>
-          <DialogContent className="w-full sm:max-w-[400px] bg-surface p-0 shadow-md">
+          <DialogContent size="sm" className="bg-surface shadow-md">
             <form onSubmit={handleEndSubmit}>
-              <div className="p-6">
-                <DialogTitle className="font-heading text-[17px]">{t('roles.end')}</DialogTitle>
-                <div className="mt-4">
-                  <FormField id="until" label={t('roles.until')}>
+              <DialogTitle className="font-heading text-[17px]">{t('roles.end')}</DialogTitle>
+              <div className="mt-4">
+                <FormGrid>
+                  <FormField id="until" label={t('roles.until')} size="s">
                     <Input
                       id="until"
                       name="until"
@@ -169,16 +165,9 @@ export function RolesPanel({
                       required
                     />
                   </FormField>
-                </div>
+                </FormGrid>
               </div>
-              <DialogFooter className="items-center border-t border-line bg-surface-2 px-6 py-3">
-                <Button type="button" variant="ghost" onClick={() => setEndingRoleId(null)}>
-                  {c('cancel')}
-                </Button>
-                <Button type="submit" disabled={endPending}>
-                  {t('roles.end')}
-                </Button>
-              </DialogFooter>
+              <FormActionBar placement="dialog" mode="create" cancel={() => setEndingRoleId(null)} pending={endPending} saveLabel={t('roles.end')} state={endFb.state} />
             </form>
           </DialogContent>
         </Dialog>

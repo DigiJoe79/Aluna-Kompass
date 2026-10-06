@@ -16,6 +16,7 @@ import { conflict, invalid, notFound, ok, unauthorized, type Result } from '../r
 import { folderExists, mediaKindCondition, withinSubtree } from './folders';
 import { ensurePreview, hasPreview, previewFilename, readImageMeta, renderPreview } from './preview';
 import { findMediaReferences, findMediaReferencesFor } from './references';
+import { IMAGE_VARIANTS, variantFilename, type ImageVariant } from './variants';
 
 export const MEDIA_MAX_BYTES = 10 * 1024 * 1024;
 
@@ -259,6 +260,7 @@ export async function deleteMediaAsset(deps: Deps, ctx: CallContext, input: unkn
   // Datei erst nach dem Commit; ein verwaister Rest wäre harmlos (Dedup nach Hash).
   await deps.media.delete(record.filename);
   await deps.media.delete(previewFilename(record.filename));
+  for (const variant of Object.keys(IMAGE_VARIANTS) as ImageVariant[]) await deps.media.delete(variantFilename(record.filename, variant));
   return ok(null);
 }
 

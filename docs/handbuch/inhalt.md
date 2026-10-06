@@ -2,6 +2,7 @@
   - [Der erste Start](einstieg/erster-start.md)
   - [Anmelden](einstieg/anmelden.md)
   - [Die Oberfläche](einstieg/oberflaeche.md)
+  - [Speichern und Meldungen](einstieg/speichern-und-meldungen.md)
 - [Startseite](startseite.md)
 - Webseite
   - [Template einlesen](webseite/template-einlesen.md)

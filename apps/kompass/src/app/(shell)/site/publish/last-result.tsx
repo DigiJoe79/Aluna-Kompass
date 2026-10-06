@@ -4,7 +4,7 @@ import type { SiteJobKind } from '@kompass/module-site';
 import { AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState, useTransition } from 'react';
-import { toast } from 'sonner';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { useSiteJobStatus } from '@/components/site/site-job-provider';
 import { Button } from '@/components/ui/button';
 import type { ActionState } from '@/lib/actions';
@@ -40,23 +40,26 @@ export function useSiteJobDetail(kind: SiteJobKind): DetailView | null {
   return { ...detail, superseded: summary.superseded };
 }
 
-/** Startet einen Lauf über eine Action und meldet ihn beim Poller an; ein Fehler kommt als Toast oder an `onError`. */
+/**
+ * Startet einen Lauf über eine Action und meldet ihn beim Poller an. Lehnt der Dienst ab, hält `state` die Ablehnung —
+ * der Aufrufer zeigt sie mit `RefusalNotice` über dem Startknopf —; `onError` bekommt sie zusätzlich (etwa zum Neuladen).
+ */
 export function useStartJob() {
   const { track } = useSiteJobStatus();
   const [pending, startTransition] = useTransition();
+  const feedback = useActionFeedback();
   const start = (action: () => Promise<ActionState>, hooks: { onError?: (state: Extract<ActionState, { status: 'error' }>) => void; onStarted?: (runId: string) => void } = {}) =>
     startTransition(async () => {
-      const state = await action();
+      const state = await feedback.run(action, { retry: () => start(action, hooks) });
       if (state.status === 'error') {
-        if (hooks.onError) hooks.onError(state);
-        else toast.error(state.message);
+        hooks.onError?.(state);
       } else if (state.status === 'success') {
         const { runId } = state.data as { runId: string };
         hooks.onStarted?.(runId);
         track(runId);
       }
     });
-  return { pending, start };
+  return { pending, start, state: feedback.state };
 }
 
 /**

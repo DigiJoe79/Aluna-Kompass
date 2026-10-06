@@ -31,26 +31,28 @@ export function HelpPanel({ open, onOpenChange, pathname }: { open: boolean; onO
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[400px] gap-0 overflow-y-auto bg-surface p-6 shadow-md" data-testid="help-panel">
-        <SheetTitle className="font-heading text-[19px]">{title}</SheetTitle>
-        <div className="prose-preview mt-3 text-[14px]">
-          {current === null ? (
-            <div className="h-16 animate-pulse rounded-md bg-surface-2" aria-hidden />
-          ) : current === 'error' ? (
-            <p className="text-muted-ink">{t('shell.help.unavailable')}</p>
-          ) : current.doc !== null ? (
-            <>
-              <div dangerouslySetInnerHTML={{ __html: current.leadHtml }} />
-              <Link href={current.href} onClick={() => onOpenChange(false)} className="mt-2 inline-block font-semibold text-link underline">
-                {t('shell.help.readAll')}
-              </Link>
-            </>
-          ) : (
-            <>
-              <p className="text-muted-ink">{t('shell.help.none')}</p>
-              <div onClick={() => onOpenChange(false)} dangerouslySetInnerHTML={{ __html: current.indexHtml }} />
-            </>
-          )}
+      <SheetContent side="right" size="sm" className="gap-0 overflow-y-auto bg-surface shadow-md" data-testid="help-panel">
+        <div className="p-5">
+          <SheetTitle className="font-heading text-[19px]">{title}</SheetTitle>
+          <div className="prose-preview mt-3 text-[14px]">
+            {current === null ? (
+              <div className="h-16 animate-pulse rounded-md bg-surface-2" aria-hidden />
+            ) : current === 'error' ? (
+              <p className="text-muted-ink">{t('shell.help.unavailable')}</p>
+            ) : current.doc !== null ? (
+              <>
+                <div dangerouslySetInnerHTML={{ __html: current.leadHtml }} />
+                <Link href={current.href} onClick={() => onOpenChange(false)} className="mt-2 inline-block font-semibold text-link underline">
+                  {t('shell.help.readAll')}
+                </Link>
+              </>
+            ) : (
+              <>
+                <p className="text-muted-ink">{t('shell.help.none')}</p>
+                <div onClick={() => onOpenChange(false)} dangerouslySetInnerHTML={{ __html: current.indexHtml }} />
+              </>
+            )}
+          </div>
         </div>
       </SheetContent>
     </Sheet>

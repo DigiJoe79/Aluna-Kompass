@@ -1,12 +1,15 @@
 'use client';
 
-import { widgetOf, type FieldSchema } from '@kompass/module-site/client';
+import { fieldSizeOf, widgetOf, type FieldSchema } from '@kompass/module-site/client';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { FieldError } from '@/components/forms/field-error';
+import type { FieldSize } from '@/components/forms/form-field';
+import { FormCell, FormGrid } from '@/components/forms/form-grid';
+import { LocaleInput, LocaleLabel, languageColumns, localizedSize, useLanguageName } from '@/components/forms/localized-field';
 import { MediaPicker } from '@/components/forms/media-picker';
 import { MarkdownPreview } from '@/components/markdown-preview';
 import { blankFor, setAtPath } from './state';
@@ -20,12 +23,16 @@ export interface FieldProps {
   locales: string[];
   onChange: (next: unknown) => void;
   options?: { value: string; label: string }[];
+  /** Spannweite im `FormGrid`, gesetzt von `SchemaField`. */
+  span?: FieldSize;
 }
 
 const labelOf = (field: FieldSchema, path: string) => (typeof field.label === 'string' && field.label) || path;
 
-function Localized({ path, field, value, errors, locales, onChange }: FieldProps) {
+function Localized({ path, field, value, errors, locales, onChange, span }: FieldProps) {
   const t = useTranslations('site.form');
+  const tContent = useTranslations('content');
+  const languageName = useLanguageName();
   const record = (value && typeof value === 'object' && !Array.isArray(value) ? value : {}) as Record<string, string>;
   const leading = locales[0] ?? 'de';
   const isMarkdown = field.markdown === true;
@@ -37,27 +44,38 @@ function Localized({ path, field, value, errors, locales, onChange }: FieldProps
     const name = `${path}.${locale}`;
     const error = errors[name] ?? (locale === leading ? errors[path] : undefined);
     const untranslated = locale !== leading && (record[leading] ?? '').length > 0 && (record[locale] ?? '').length === 0;
+    const hintId = `${name}-untranslated`;
     const shared = {
       id: name,
       name,
       value: record[locale] ?? '',
       'aria-invalid': error ? true : undefined,
+      'aria-label': tContent('localizedName', { label: labelOf(field, path), language: languageName(locale) }),
+      'aria-describedby': untranslated ? hintId : undefined,
       onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange({ ...record, [locale]: e.target.value }),
     };
     return (
       <div key={locale} className={cn('flex min-w-0 flex-col gap-1', tabbed && locale !== active && 'hidden')}>
-        <span className="flex items-center gap-2 text-[11px] font-semibold text-muted-ink">
-          <span className="rounded-sm bg-badge px-1.5 py-0.5 font-mono text-[10px] text-badge-ink">{locale.toUpperCase()}</span>
-          {untranslated ? <span className="text-warning">{t('untranslated')}</span> : null}
-        </span>
-        {isMarkdown ? <Textarea {...shared} rows={5} className="font-mono text-[13px]" /> : <Input {...shared} />}
+        {isMarkdown ? (
+          <>
+            <LocaleLabel htmlFor={name} locale={locale} />
+            <Textarea {...shared} rows={5} className="font-mono text-[13px]" />
+          </>
+        ) : (
+          <LocaleInput {...shared} locale={locale} invalid={!!error} />
+        )}
+        {untranslated ? (
+          <p id={hintId} className="text-[12px] text-warning">
+            {t('untranslated')}
+          </p>
+        ) : null}
         <FieldError id={`${name}-error`} message={error} />
       </div>
     );
   };
 
   return (
-    <fieldset className="flex flex-col gap-2">
+    <FormCell as="fieldset" size={span} className="flex min-w-0 flex-col gap-2">
       <legend className="text-[13px] font-semibold text-ink-2">{labelOf(field, path)}</legend>
       {tabbed ? (
         <div className="flex flex-wrap gap-1 border-b border-subtle pb-1">
@@ -68,8 +86,8 @@ function Localized({ path, field, value, errors, locales, onChange }: FieldProps
           ))}
         </div>
       ) : null}
-      <div className={cn('grid gap-3', locales.length === 2 && 'md:grid-cols-2', locales.length === 3 && 'md:grid-cols-3')}>
-        {locales.map(cell)}
+      <div className="@container">
+        <div className={cn('grid grid-cols-1 gap-3', languageColumns(locales.length, fieldSizeOf(field)))}>{locales.map(cell)}</div>
       </div>
       {isMarkdown ? (
         <div className="flex flex-col gap-2">
@@ -79,12 +97,12 @@ function Localized({ path, field, value, errors, locales, onChange }: FieldProps
           {preview ? <MarkdownPreview markdown={record[active] ?? record[leading] ?? ''} /> : null}
         </div>
       ) : null}
-    </fieldset>
+    </FormCell>
   );
 }
 
 /** Liste aus Textzeilen oder aus Datensätzen — was von beidem, sagt das Feldschema. */
-function ListField({ path, field, value, errors, locales, onChange }: FieldProps) {
+function ListField({ path, field, value, errors, locales, onChange, span }: FieldProps) {
   const t = useTranslations('site.form');
   const items = Array.isArray(value) ? (value as unknown[]) : [];
   const itemSchema = (field.items as FieldSchema | undefined) ?? { widget: 'text' };
@@ -106,7 +124,7 @@ function ListField({ path, field, value, errors, locales, onChange }: FieldProps
   };
 
   return (
-    <fieldset className="flex flex-col gap-2">
+    <FormCell as="fieldset" size={span} className="flex min-w-0 flex-col gap-2">
       <legend className="flex items-center gap-2 text-[13px] font-semibold text-ink-2">
         {labelOf(field, path)}
         {max ? <span className="text-[11px] font-normal text-muted-ink">{t('atMost', { max })}</span> : null}
@@ -116,7 +134,8 @@ function ListField({ path, field, value, errors, locales, onChange }: FieldProps
           <li key={index} className="flex items-start gap-2 rounded-md border border-line p-2">
             <div className="flex-1">
               {objectItems ? (
-                <div className="grid gap-2">
+                // Die Unterfelder rastern im Eintrag nach ihrer eigenen Größe.
+                <FormGrid>
                   {Object.entries((itemSchema as { properties: Record<string, FieldSchema> }).properties).map(([key, sub]) => (
                     <SchemaField
                       key={key}
@@ -128,7 +147,7 @@ function ListField({ path, field, value, errors, locales, onChange }: FieldProps
                       onChange={(next) => update(index, setAtPath(item, key, next))}
                     />
                   ))}
-                </div>
+                </FormGrid>
               ) : (
                 <Input
                   name={`${path}.${index}`}
@@ -150,15 +169,22 @@ function ListField({ path, field, value, errors, locales, onChange }: FieldProps
           {t('add')}
         </button>
       ) : null}
-    </fieldset>
+    </FormCell>
   );
 }
 
-export function SchemaField(props: FieldProps) {
-  const { path, field, value, errors, onChange } = props;
+/**
+ * Ein Feld der Maske, in seiner Spannweite im `FormGrid` (docs/MUSTER.md § J): `size` aus dem Template, sonst nach
+ * Feldtyp; ein mehrsprachiges Feld je Sprache mal die Zahl der nebeneinander stehenden Sprachen.
+ */
+export function SchemaField(fieldProps: FieldProps) {
+  const { path, field, value, errors, onChange, locales } = fieldProps;
   const widget = widgetOf(field);
   const error = errors[path];
   const label = labelOf(field, path);
+  const size = fieldSizeOf(field);
+  const span = widget === 'localized' ? localizedSize(size, locales.length) : size;
+  const props = { ...fieldProps, span };
 
   if (widget === 'localized') return <Localized {...props} />;
   if (widget === 'list' || widget === 'objectList') return <ListField {...props} />;
@@ -166,11 +192,11 @@ export function SchemaField(props: FieldProps) {
   if (widget === 'references') return <ReferencesField {...props} />;
 
   const simple = (control: React.ReactNode) => (
-    <div className="flex flex-col gap-1">
+    <FormCell size={span} className="flex min-w-0 flex-col gap-1">
       <label htmlFor={path} className="text-[13px] font-semibold text-ink-2">{label}</label>
       {control}
       <FieldError id={`${path}-error`} message={error} />
-    </div>
+    </FormCell>
   );
 
   if (widget === 'markdown') {
@@ -205,11 +231,11 @@ export function SchemaField(props: FieldProps) {
   );
 }
 
-function AssetField({ path, field, value, errors, onChange }: FieldProps) {
+function AssetField({ path, field, value, errors, onChange, span }: FieldProps) {
   const assetId = typeof value === 'string' ? value : null;
   const accept = (field as { accept?: string }).accept;
   return (
-    <div className="flex flex-col gap-1">
+    <FormCell size={span} className="flex min-w-0 flex-col gap-1">
       <MediaPicker
         name={path}
         value={assetId}
@@ -218,7 +244,7 @@ function AssetField({ path, field, value, errors, onChange }: FieldProps) {
         onChange={(id) => onChange(id)}
       />
       <FieldError id={`${path}-error`} message={errors[path]} />
-    </div>
+    </FormCell>
   );
 }
 
@@ -237,10 +263,10 @@ function StaleNote({ value, onClear }: { value: string; onClear: () => void }) {
   );
 }
 
-function ReferenceSelect({ id, name, value, options, stale, onChange }: { id: string; name: string; value: string; options: { value: string; label: string }[]; stale: boolean; onChange: (next: string) => void }) {
+function ReferenceSelect({ id, name, ariaLabel, value, options, stale, onChange }: { id: string; name: string; ariaLabel?: string; value: string; options: { value: string; label: string }[]; stale: boolean; onChange: (next: string) => void }) {
   const t = useTranslations('site.form');
   return (
-    <Select id={id} name={name} value={stale ? '' : value} onChange={(e) => onChange(e.target.value)}>
+    <Select id={id} name={name} aria-label={ariaLabel} value={stale ? '' : value} onChange={(e) => onChange(e.target.value)}>
       <option value="">{t('noChoice')}</option>
       {options.map((o) => (
         <option key={o.value} value={o.value}>{o.label}</option>
@@ -250,22 +276,27 @@ function ReferenceSelect({ id, name, value, options, stale, onChange }: { id: st
 }
 
 /** Ein Verweis auf einen Datensatz einer Sicht; die Optionen liefert die Seite. */
-function ReferenceField({ path, field, value, errors, onChange, options = [] }: FieldProps) {
+function ReferenceField({ path, field, value, errors, onChange, options = [], span }: FieldProps) {
   const current = typeof value === 'string' ? value : '';
   const stale = current !== '' && !options.some((o) => o.value === current);
   return (
-    <div className="flex flex-col gap-1">
+    <FormCell size={span} className="flex min-w-0 flex-col gap-1">
       <label htmlFor={path} className="text-[13px] font-semibold text-ink-2">{labelOf(field, path)}</label>
       <ReferenceSelect id={path} name={path} value={current} options={options} stale={stale} onChange={(next) => onChange(next === '' ? null : next)} />
       {stale ? <StaleNote value={current} onClear={() => onChange(null)} /> : null}
       <FieldError id={`${path}-error`} message={errors[path]} />
-    </div>
+    </FormCell>
   );
 }
 
-/** Feste Plätze in Reihenfolge; leere Plätze fallen aus dem Wert heraus. */
-function ReferencesField({ path, field, value, errors, onChange, options = [] }: FieldProps) {
+/**
+ * Feste Plätze in Reihenfolge, jeder eine eigene Zelle im Raster des Abschnitts (docs/MUSTER.md § J): `size` gilt je
+ * Platz. Der erste Platz trägt sichtbar den Feldnamen, die weiteren „Platz n“; zugänglich heißt jeder
+ * „‹Feldname›, Platz n“. Leere Plätze fallen aus dem Wert heraus.
+ */
+function ReferencesField({ path, field, value, errors, onChange, options = [], span }: FieldProps) {
   const t = useTranslations('site.form');
+  const label = labelOf(field, path);
   const max = typeof field.maxItems === 'number' ? field.maxItems : 1;
   const list = Array.isArray(value) ? (value as unknown[]).filter((v): v is string => typeof v === 'string') : [];
   const slots = Array.from({ length: max }, (_, i) => list[i] ?? '');
@@ -275,20 +306,21 @@ function ReferencesField({ path, field, value, errors, onChange, options = [] }:
     onChange(copy.filter((v) => v !== ''));
   };
   return (
-    <fieldset className="flex flex-col gap-2">
-      <legend className="text-[13px] font-semibold text-ink-2">{labelOf(field, path)}</legend>
+    <>
       {slots.map((current, index) => {
         const id = `${path}.${index}`;
         const stale = current !== '' && !options.some((o) => o.value === current);
         return (
-          <div key={index} className="flex flex-col gap-1">
-            <label htmlFor={id} className="text-[11px] font-semibold text-muted-ink">{t('slot', { n: index + 1 })}</label>
-            <ReferenceSelect id={id} name={id} value={current} options={options} stale={stale} onChange={(next) => set(index, next)} />
+          <FormCell key={index} size={span} className="flex min-w-0 flex-col gap-1">
+            <label htmlFor={id} className="text-[13px] font-semibold text-ink-2">
+              {index === 0 ? label : t('slot', { n: index + 1 })}
+            </label>
+            <ReferenceSelect id={id} name={id} ariaLabel={t('slotName', { label, n: index + 1 })} value={current} options={options} stale={stale} onChange={(next) => set(index, next)} />
             {stale ? <StaleNote value={current} onClear={() => set(index, '')} /> : null}
-          </div>
+            {index === 0 ? <FieldError id={`${path}-error`} message={errors[path]} /> : null}
+          </FormCell>
         );
       })}
-      <FieldError id={`${path}-error`} message={errors[path]} />
-    </fieldset>
+    </>
   );
 }

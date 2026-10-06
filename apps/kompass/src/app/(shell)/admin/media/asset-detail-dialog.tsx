@@ -39,7 +39,7 @@ export function AssetDetailDialog({
 
   return (
     <Dialog open={item !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent size="md">
         {item ? (
           <>
             <DialogTitle className="truncate font-mono text-[14px]">{item.filename}</DialogTitle>

@@ -2,6 +2,7 @@ import { hasPermission, listUserNamesWithPermission, todayIn } from '@kompass/co
 import { displayName, getContact } from '@kompass/module-contacts';
 import { epcQrPayload, listContactIbans, listOpenItems, listOpenItemSettlements } from '@kompass/module-finance';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { requireSession } from '@/lib/request-context';
 import { openItemState } from '@/lib/finance/open-item-state';
 import { DetailSheet } from './detail-sheet';
@@ -14,13 +15,13 @@ export interface OpenItemsQuery {
 
 export default async function FinanceOpenItemsPage({ searchParams }: { searchParams: Promise<OpenItemsQuery> }) {
   const { deps, ctx } = await requireSession();
-  if (!hasPermission(ctx, 'finance.read')) return <ForbiddenCard permission="finance.read" />;
+  if (!hasPermission(ctx, 'finance.read')) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
 
   const query = await searchParams;
   const tab: 'receivable' | 'payable' = query.tab === 'receivable' ? 'receivable' : 'payable';
 
   const itemsRes = await listOpenItems(deps, ctx, { state: 'all', limit: 200 });
-  if (!itemsRes.ok) return <ForbiddenCard permission="finance.read" />;
+  if (!itemsRes.ok) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
   const allItems = itemsRes.value.items;
 
   const contactIds = new Set(allItems.map((i) => i.contactId).filter((id): id is string => !!id));
@@ -75,7 +76,7 @@ export default async function FinanceOpenItemsPage({ searchParams }: { searchPar
       : null;
 
   return (
-    <>
+    <Page width="full">
       <OpenItemsList rows={rows} tab={tab} canWrite={canWrite} canCreateContact={canCreateContact} today={today} />
       {selected ? (
         <DetailSheet
@@ -104,6 +105,6 @@ export default async function FinanceOpenItemsPage({ searchParams }: { searchPar
           epcPayload={epcPayload}
         />
       ) : null}
-    </>
+    </Page>
   );
 }

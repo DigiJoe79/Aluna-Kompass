@@ -19,7 +19,7 @@ function setup() {
 describe('ein Tier mit Aktenbezug', () => {
   it('bleibt, solange ein Entwurf darauf zeigt, und geht, sobald der Bezug gelöst ist', async () => {
     const { deps, ctx } = setup();
-    const animal = unwrap(await createAnimal(deps, ctx, { slug: 'rocky', name: 'Rocky', sex: 'male', birthText: {}, sizeText: {}, summary: {}, body: {} }));
+    const animal = unwrap(await createAnimal(deps, ctx, { name: 'Rocky', sex: 'male', birthText: {}, sizeText: {}, summary: {}, body: {} }));
     const draft = unwrap(await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Anfrage Tierarzt', body: 'x', links: [{ entityType: 'animal', entityId: animal.id, role: 'about' }] }));
 
     const preview = unwrap(await animalDeletionPreview(deps, ctx, animal.id));

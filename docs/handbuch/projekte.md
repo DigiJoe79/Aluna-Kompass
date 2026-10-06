@@ -7,10 +7,18 @@ Säule Finanzen.
 
 ## Anlegen und pflegen
 
-„Projekt anlegen“ fragt Name, Typ (Dauerprojekt oder Kurzzeitprojekt) und
-Status (Aktiv oder Abgeschlossen). Der Reiter „Webseite“ trägt, was das
-Template zeigt: Kurztext, Langtext mit Formatierung, ein Bild aus der
-[Mediathek](mediathek.md) — je Sprache, die der Verein pflegt.
+„Projekt anlegen“ öffnet eine eigene Seite und fragt Name, Typ (Dauerprojekt
+oder Kurzzeitprojekt) und Status (Aktiv oder Abgeschlossen). Das Formular ist
+eine Karte mit drei Abschnitten: „Darstellung“, „Inhalt“ und „Bild und Links“.
+Der Inhalt trägt, was das Template zeigt: Kurztext, Langtext mit
+Formatierung, ein Bild aus der [Mediathek](mediathek.md) — je Sprache, die
+der Verein pflegt. „Speichern“ steht unten in der Leiste; ohne Änderung sagt
+sie „Nichts geändert“, statt ausgegraut zu sein.
+
+Die Liste lässt sich nach Name und Art sortieren. Die eigene Reihenfolge, die
+das Template für die Webseite nutzt, bleibt die Vorgabe („Eigene
+Reihenfolge“). Ein Klick irgendwo in die Zeile öffnet das Projekt; mit Cmd-
+bzw. Strg-Klick öffnet es in einem neuen Tab.
 
 **Verweise nach außen** sind Bezeichnung und Adresse: die Spendenseite auf
 einer Plattform, ein Bericht, die Seite eines Partners. Kompass bildet keine
@@ -33,8 +41,9 @@ Von hier aus legen Sie neue Post mit dem Bezug an.
 ## Löschen
 
 Ein Projekt ist Webseiteninhalt und lässt sich löschen — etwa eines, das nur
-auf die Initiative eines Partners verweist. Der Knopf „Projekt löschen“ steht
-unten auf der Projektseite.
+auf die Initiative eines Partners verweist. Der Abschnitt „Löschen“ mit dem
+Knopf „Projekt löschen“ steht als letzte Karte ganz unten auf der
+Projektseite, nie neben „Speichern“.
 
 Wie bei den Tieren in zwei Stufen: Ein veröffentlichtes Projekt ziehen Sie im
 Dialog erst zurück. Hängt ein Dokument oder eine offene Wiedervorlage am
@@ -44,4 +53,5 @@ mitlöschen, wenn es nirgends sonst verwendet wird.
 ## Später
 
 Mit der Säule Finanzen bekommt jedes Projekt seine Finanzseite: Konten,
-Buchungen, Rücklagen. Der Reiter ist schon da und sagt, dass er wartet.
+Buchungen, Rücklagen. Der Abschnitt „Finanzen“ auf der Projektseite zeigt
+schon, was dafür feststeht: Zielbetrag, Einnahmen, Ausgaben, Ergebnis.

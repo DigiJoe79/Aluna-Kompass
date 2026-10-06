@@ -3,16 +3,19 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
+import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { useDateFormat } from '@/components/date-format-provider';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/status-badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { createFirstFiscalYearAction, updateFiscalYearAction } from './actions';
 import { useSavedVersions } from '@/lib/saved-versions';
+import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
 
 export interface FiscalYearRow {
   id: string;
@@ -38,8 +41,7 @@ export function FiscalYearsPanel({ years }: { years: FiscalYearRow[] }) {
 
   return (
     <section className="space-y-4" data-testid="fiscal-years-panel">
-      <div className="flex items-center justify-between">
-        <h2 className="font-heading text-[18px] text-ink">{t('title')}</h2>
+      <div className="flex items-center justify-end">
         {years.length === 0 ? (
           <Button size="sm" onClick={() => setCreateOpen(true)}>
             {t('createFirst')}
@@ -48,19 +50,19 @@ export function FiscalYearsPanel({ years }: { years: FiscalYearRow[] }) {
       </div>
       <div className="overflow-hidden rounded-md border border-line">
         <Table>
-          <TableHeader className="bg-table-head text-left text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink">
-            <TableRow className="h-9">
-              <TableHead className="px-4">{t('designation')}</TableHead>
-              <TableHead className="px-4">{t('range')}</TableHead>
-              <TableHead className="px-4">{t('status')}</TableHead>
-              <TableHead className="px-4">{t('taxReturnFiledOn')}</TableHead>
-              <TableHead className="px-4 text-right">{tCommon('edit')}</TableHead>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t('designation')}</TableHead>
+              <TableHead>{t('range')}</TableHead>
+              <TableHead>{t('status')}</TableHead>
+              <TableHead>{t('taxReturnFiledOn')}</TableHead>
+              <TableHead className="text-right">{tCommon('edit')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {years.map((year) => (
-              <TableRow key={year.id} className="h-12 border-b border-line-2">
-                <TableCell className="px-4">
+              <TableRow key={year.id}>
+                <TableCell>
                   <span className="font-mono font-semibold text-ink">{year.designation}</span>
                   {year.isShortYear ? (
                     <StatusBadge tone="neutral" className="ml-2">
@@ -68,14 +70,14 @@ export function FiscalYearsPanel({ years }: { years: FiscalYearRow[] }) {
                     </StatusBadge>
                   ) : null}
                 </TableCell>
-                <TableCell className="px-4 text-ink-2">
+                <TableCell className="text-ink-2">
                   {year.startsOn} – {year.endsOn}
                 </TableCell>
-                <TableCell className="px-4">
+                <TableCell>
                   <StatusBadge tone={year.status === 'open' ? 'success' : 'neutral'}>{t(`statusValues.${year.status}`)}</StatusBadge>
                 </TableCell>
-                <TableCell className="px-4 text-ink-2">{year.taxReturnFiledOn ?? '—'}</TableCell>
-                <TableCell className="px-4 text-right">
+                <TableCell className="text-ink-2">{year.taxReturnFiledOn ?? '—'}</TableCell>
+                <TableCell className="text-right">
                   <Button variant="ghost" size="sm" onClick={() => setEditing(versions.latest(year))}>
                     {tCommon('edit')}
                   </Button>
@@ -116,48 +118,29 @@ function CreateFirstYearDialog({ onClose, onSaved }: { onClose: () => void; onSa
   const [startsOn, setStartsOn] = useState('');
   const [endsOn, setEndsOn] = useState('');
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const feedback = useActionFeedback();
 
   const submit = async () => {
     setPending(true);
-    setError(null);
-    const result = await createFirstFiscalYearAction({ startsOn, endsOn });
+    const result = await feedback.run(() => createFirstFiscalYearAction({ startsOn, endsOn }), { retry: () => void submit() });
     setPending(false);
-    if (result.status === 'error') {
-      setError(result.message);
-      toast.error(result.message);
-      return;
-    }
-    if (result.status === 'success') {
-      if (result.message) toast.success(result.message);
-      onSaved();
-    }
+    if (result.status === 'success') onSaved();
   };
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-surface shadow-md sm:max-w-[420px]">
+      <DialogContent size="sm" className="bg-surface shadow-md">
         <DialogTitle className="font-heading text-[19px]">{t('createFirst')}</DialogTitle>
         <p className="text-[13px] text-muted-ink">{t('createFirstHint')}</p>
-        <div className="space-y-3.5">
-          {error ? <div className="rounded-md bg-error-bg p-2.5 text-[13px] text-error">{error}</div> : null}
-          <div className="space-y-1.5">
-            <Label htmlFor="fy-starts" required>{t('startsOn')}</Label>
+        <FormGrid>
+          <FormField id="fy-starts" label={t('startsOn')} required size="s">
             <Input id="fy-starts" type="date" value={startsOn} onChange={(e) => setStartsOn(e.target.value)} required />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="fy-ends" required>{t('endsOn')}</Label>
+          </FormField>
+          <FormField id="fy-ends" label={t('endsOn')} required size="s">
             <Input id="fy-ends" type="date" value={endsOn} onChange={(e) => setEndsOn(e.target.value)} required />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={onClose}>
-            {tCommon('cancel')}
-          </Button>
-          <Button type="button" disabled={pending || !startsOn || !endsOn} onClick={() => void submit()}>
-            {tCommon('save')}
-          </Button>
-        </DialogFooter>
+          </FormField>
+        </FormGrid>
+        <FormActionBar placement="dialog" cancel={onClose} pending={pending} saveDisabled={!startsOn || !endsOn} saveLabel={tCommon('save')} onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, [])} />
       </DialogContent>
     </Dialog>
   );
@@ -169,48 +152,28 @@ function EditYearDialog({ year, onClose, onSaved }: { year: FiscalYearRow; onClo
   const [designation, setDesignation] = useState(year.designation);
   const [taxReturnFiledOn, setTaxReturnFiledOn] = useState(year.taxReturnFiledOn ?? '');
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const feedback = useActionFeedback();
 
   const submit = async () => {
     setPending(true);
-    setError(null);
-    const result = await updateFiscalYearAction({ id: year.id, expectedVersion: year.expectedVersion, designation, taxReturnFiledOn: taxReturnFiledOn || null });
+    const result = await feedback.run(() => updateFiscalYearAction({ id: year.id, expectedVersion: year.expectedVersion, designation, taxReturnFiledOn: taxReturnFiledOn || null }), { retry: () => void submit() });
     setPending(false);
-    if (result.status === 'error') {
-      setError(result.message);
-      toast.error(result.message);
-      return;
-    }
-    onSaved(result.status === 'success' ? result.data : undefined);
+    if (result.status === 'success') onSaved(result.data);
   };
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-surface shadow-md sm:max-w-[420px]">
+      <DialogContent size="sm" className="bg-surface shadow-md">
         <DialogTitle className="font-heading text-[19px]">{t('edit')}</DialogTitle>
-        <div className="space-y-3.5">
-          {error ? (
-            <div role="alert" className="rounded-md bg-error-bg p-2.5 text-[13px] text-error" data-testid="fiscal-year-designation-error">
-              {error}
-            </div>
-          ) : null}
-          <div className="space-y-1.5">
-            <Label htmlFor="fy-designation">{t('designation')}</Label>
+        <FormGrid>
+          <FormField id="fy-designation" label={t('designation')} size="s">
             <Input id="fy-designation" value={designation} onChange={(e) => setDesignation(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="fy-tax-return">{t('taxReturnFiledOn')}</Label>
+          </FormField>
+          <FormField id="fy-tax-return" label={t('taxReturnFiledOn')} size="s">
             <Input id="fy-tax-return" type="date" value={taxReturnFiledOn} onChange={(e) => setTaxReturnFiledOn(e.target.value)} />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={onClose}>
-            {tCommon('cancel')}
-          </Button>
-          <Button type="button" disabled={pending} onClick={() => void submit()}>
-            {tCommon('save')}
-          </Button>
-        </DialogFooter>
+          </FormField>
+        </FormGrid>
+        <FormActionBar placement="dialog" cancel={onClose} pending={pending} saveLabel={tCommon('save')} onSave={() => void submit()} state={withUnplacedFieldErrors(feedback.state, [])} />
       </DialogContent>
     </Dialog>
   );

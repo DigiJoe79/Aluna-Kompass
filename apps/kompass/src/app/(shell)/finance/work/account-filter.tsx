@@ -2,17 +2,16 @@
 
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { workHref, type WorkTabKey } from '@/lib/finance/work';
+import { FormField } from '@/components/forms/form-field';
 
 /** Welches Konto die Liste zeigt — steht in der Adresse wie der Reiter; danach geht der Fokus in die Liste, damit die Tasten gleich wirken. */
 export function AccountFilter({ accounts, value, tab }: { accounts: { id: string; name: string }[]; value: string | null; tab: WorkTabKey }) {
   const t = useTranslations('finance.work');
   const router = useRouter();
   return (
-    <div className="w-56 space-y-1">
-      <Label htmlFor="work-account">{t('accountFilter')}</Label>
+    <FormField id="work-account" label={t('accountFilter')} className="w-56">
       <Select
         id="work-account"
         value={value ?? ''}
@@ -28,6 +27,6 @@ export function AccountFilter({ accounts, value, tab }: { accounts: { id: string
           </option>
         ))}
       </Select>
-    </div>
+    </FormField>
   );
 }

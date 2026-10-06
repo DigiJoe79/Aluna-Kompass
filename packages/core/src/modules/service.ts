@@ -3,7 +3,7 @@ import type { CallContext } from '../context';
 import { isConstraintError } from '../db/constraint';
 import type { Deps } from '../deps';
 import { requirePermission } from '../permissions/check';
-import { conflict, notFound, ok, type Result } from '../result';
+import { conflict, localizedConflict, notFound, ok, type Result } from '../result';
 import { readSetting, writeSettingInternal } from '../settings/service';
 import { validate } from '../validate';
 import type { ModuleManifest } from './manifest';
@@ -56,7 +56,7 @@ export async function setModuleEnabled(deps: Deps, ctx: CallContext, input: unkn
   const current = enabledKeys(deps);
   if (enabled) {
     const missing = (manifest.dependsOn ?? []).filter((dep) => !current.has(dep));
-    if (missing.length > 0) return conflict('moduleDependencyInactive', `Benötigt aktive Module: ${missing.join(', ')}`);
+    if (missing.length > 0) return localizedConflict('moduleDependencyInactive', 'errors.moduleDependencyInactive', { moduleKeys: missing.join(',') });
     const activeManifests = deps.registry.manifests.filter((m) => current.has(m.key) && m.key !== key);
     for (const role of manifest.contactRoles ?? []) {
       for (const active of activeManifests) {
@@ -67,7 +67,7 @@ export async function setModuleEnabled(deps: Deps, ctx: CallContext, input: unkn
     }
   } else {
     const dependents = deps.registry.manifests.filter((m) => current.has(m.key) && (m.dependsOn ?? []).includes(key));
-    if (dependents.length > 0) return conflict('moduleRequiredByOthers', `Wird benötigt von: ${dependents.map((m) => m.key).join(', ')}`);
+    if (dependents.length > 0) return localizedConflict('moduleRequiredByOthers', 'errors.moduleRequiredByOthers', { moduleKeys: dependents.map((m) => m.key).join(',') });
     const refusal = manifest.canDisable?.(deps) ?? null;
     if (refusal) return conflict('moduleRefusesDisable', refusal);
   }

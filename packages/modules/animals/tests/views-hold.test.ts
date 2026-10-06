@@ -15,12 +15,12 @@ describe('animals views hold against what the service accepts', () => {
     insertUser(deps, { id: 'USER-TEST' });
     await setSetting(deps, ctxWith(['settings.manage']), { key: 'i18n.locales', value: ['de', 'en'] });
 
-    const a = unwrap(await createAnimal(deps, manage, { slug: 'minimal', name: 'Minimal', sex: 'male', birthText: {}, sizeText: {}, summary: {}, body: {} }));
+    const a = unwrap(await createAnimal(deps, manage, { name: 'Minimal', sex: 'male', birthText: {}, sizeText: {}, summary: {}, body: {} }));
     unwrap(await setAnimalPublished(deps, manage, { id: a.id, isPublished: true }));
     unwrap(await setAnimalStatus(deps, manage, { id: a.id, status: 'adopted', adoptedYear: 2026 }));
     unwrap(await setAnimalStory(deps, manage, { id: a.id, beforeAssetId: null, afterAssetId: null, quote: {}, family: '', adoptedYear: 2026 }));
 
     const views = loadAllViews(deps, animalsModule);
-    expect(views.animals).toEqual([expect.objectContaining({ slug: 'minimal', traits: {}, story: expect.objectContaining({ adoptedYear: 2026 }) })]);
+    expect(views.animals).toEqual([expect.objectContaining({ slug: a.slug, traits: {}, story: expect.objectContaining({ adoptedYear: 2026 }) })]);
   });
 });

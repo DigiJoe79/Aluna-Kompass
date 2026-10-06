@@ -234,7 +234,7 @@ export function FolderTreeRow({ node, level, isFolder, isExpanded, isSelected, d
         ) : locked ? (
           <Ban className="size-4 text-drop-blocked-ring" strokeWidth={2.4} aria-hidden />
         ) : pick && pick.check !== false && isSelected ? (
-          <Check className="size-4 text-primary" strokeWidth={2.6} aria-hidden />
+          <Check className="size-4 text-brand" strokeWidth={2.6} aria-hidden />
         ) : (
           <>
             {saving ? <SavingMark /> : null}

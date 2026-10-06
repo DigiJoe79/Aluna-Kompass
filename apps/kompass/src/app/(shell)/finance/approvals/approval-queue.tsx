@@ -40,47 +40,44 @@ export function ApprovalQueue({ rows, selectedId }: { rows: QueueRow[]; selected
 
   return (
     <section data-testid="approval-queue" aria-labelledby="approval-queue-title" className="space-y-2">
-      <h3 id="approval-queue-title" className="text-[13px] font-semibold text-muted-ink">
+      <h3 id="approval-queue-title" className="text-[15px] font-semibold">
         {t('queue.title')}
       </h3>
-      {rows.length === 0 ? (
-        <p className="rounded-md border border-dashed border-line-strong bg-surface p-4 text-[14px] text-muted-ink">{t('queue.empty')}</p>
-      ) : (
-        <ul className="space-y-2" onKeyDown={onKeyDown}>
-          {rows.map((row) => {
-            const selected = row.id === selectedId;
-            return (
-              <li key={row.id}>
-                <Link
-                  ref={(el) => {
-                    if (el) links.current.set(row.id, el);
-                    else links.current.delete(row.id);
-                  }}
-                  href={row.href}
-                  data-testid="approval-queue-item"
-                  aria-current={selected ? 'true' : undefined}
-                  className={cn(
-                    'flex min-h-16 flex-col gap-1 rounded-lg border p-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
-                    selected ? 'border-line-strong bg-selected text-selected-ink' : 'border-line bg-surface hover:bg-hover',
-                  )}
-                >
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="flex min-w-0 items-center gap-2">
-                      <span className="rounded-sm border border-line-strong px-1.5 py-0.5 text-[11px] font-semibold">{t(`kind.${row.kind}`)}</span>
-                      <span className="font-mono text-[13px] font-semibold">{row.number}</span>
-                    </span>
-                    <span className="shrink-0 font-mono text-[14px] font-semibold tabular-nums">{row.amount}</span>
+      {/* Leer steht die Schlange nie da: Die Seite zeigt dann den leeren Zustand (K9-Befund 7). */}
+      <ul className="space-y-2" onKeyDown={onKeyDown}>
+        {rows.map((row) => {
+          const selected = row.id === selectedId;
+          return (
+            <li key={row.id}>
+              <Link
+                ref={(el) => {
+                  if (el) links.current.set(row.id, el);
+                  else links.current.delete(row.id);
+                }}
+                href={row.href}
+                data-testid="approval-queue-item"
+                aria-current={selected ? 'true' : undefined}
+                className={cn(
+                  'flex min-h-16 flex-col gap-1 rounded-lg border p-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+                  selected ? 'border-line-strong bg-selected text-selected-ink' : 'border-line bg-surface hover:bg-hover',
+                )}
+              >
+                <span className="flex items-center justify-between gap-2">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="rounded-sm border border-line-strong px-1.5 py-0.5 text-[11px] font-semibold">{t(`kind.${row.kind}`)}</span>
+                    <span className="font-mono text-[13px] font-semibold">{row.number}</span>
                   </span>
-                  <span className="flex items-baseline justify-between gap-2 text-[13px]">
-                    <span className="min-w-0 truncate">{row.person}</span>
-                    <span className="shrink-0 text-[12px] opacity-80">{t('queue.since', { date: row.since })}</span>
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                  <span className="shrink-0 font-mono text-[14px] font-semibold tabular-nums">{row.amount}</span>
+                </span>
+                <span className="flex items-baseline justify-between gap-2 text-[13px]">
+                  <span className="min-w-0 truncate">{row.person}</span>
+                  <span className="shrink-0 text-[12px] opacity-80">{t('queue.since', { date: row.since })}</span>
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }

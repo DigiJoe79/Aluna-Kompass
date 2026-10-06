@@ -157,9 +157,9 @@ test.describe('finance import', () => {
     await page.goto('/finance/imports');
     const same = page.getByRole('button', { name: 'Dieselbe Zahlung — nicht übernehmen' });
     const own = page.getByRole('button', { name: 'Eigene Zahlung — übernehmen' });
-    await expect(same).toHaveClass(/(^|\s)bg-primary(\s|$)/);
-    await expect(own).toHaveClass(/(^|\s)bg-secondary(\s|$)/);
-    await expect(own).not.toHaveClass(/(^|\s)bg-primary(\s|$)/);
+    await expect(same).toHaveClass(/(^|\s)bg-brand(\s|$)/);
+    await expect(own).toHaveClass(/(^|\s)bg-surface-2(\s|$)/);
+    await expect(own).not.toHaveClass(/(^|\s)bg-brand(\s|$)/);
   });
 
   test('Verwerfen nennt die Folgen in Zahlen, verlangt eine Notiz, und der Lauf bleibt als verworfen stehen', async ({ page }) => {

@@ -3,10 +3,12 @@
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
-import { toast } from 'sonner';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { TemplateRow } from '@/lib/document-template-rows';
 import { setDocumentBaseAction } from './actions';
 
@@ -46,16 +48,14 @@ export function BasesPanel({ bases, groups, gaps = [], canManage }: { bases: Bas
   const t = useTranslations('documents.bases');
   const router = useRouter();
   const [pending, start] = useTransition();
+  // Die Basis-Auswahl steht in den Tabellenzeilen: Die Ablehnung steht über der Tabelle.
+  const baseFb = useActionFeedback();
   const usable = bases.filter((b) => b.ok);
 
   const setBase = (key: string, baseId: string | null) =>
     start(async () => {
-      const s = await setDocumentBaseAction(key, baseId);
-      if (s.status === 'error') toast.error(s.message);
-      else if (s.status === 'success') {
-        toast.success(s.message ?? '');
-        router.refresh();
-      }
+      const s = await baseFb.run(() => setDocumentBaseAction(key, baseId), { retry: () => setBase(key, baseId) });
+      if (s.status === 'success') router.refresh();
     });
 
   return (
@@ -77,37 +77,40 @@ export function BasesPanel({ bases, groups, gaps = [], canManage }: { bases: Bas
           <h2 id="bases-heading" className="text-[14px] font-semibold">{t('title')}</h2>
           <p className="mt-0.5 text-[13px] text-ink-2">{t('intro')}</p>
         </div>
-        <table className="w-full text-[13px]">
-          <thead className="text-left text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink">
-            <tr className="h-9">
-              <th className="px-4">{t('columns.base')}</th>
-              <th className="px-4">{t('columns.id')}</th>
-              <th className="px-4">{t('columns.origin')}</th>
-              <th className="px-4">{t('columns.state')}</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table className="text-[13px]">
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t('columns.base')}</TableHead>
+              <TableHead>{t('columns.id')}</TableHead>
+              <TableHead>{t('columns.origin')}</TableHead>
+              <TableHead>{t('columns.state')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {bases.map((b) => (
-              <tr key={b.id} className="h-10 border-t border-line-2">
-                <td className="px-4">{b.label}</td>
-                <td className="px-4 font-mono text-[12px] text-ink-2">{b.id}</td>
-                <td className="px-4">
+              <TableRow key={b.id}>
+                <TableCell>{b.label}</TableCell>
+                <TableCell className="font-mono text-[12px] text-ink-2">{b.id}</TableCell>
+                <TableCell>
                   <StatusBadge tone={b.own ? 'brand' : 'neutral'}>{b.own ? t('own') : t('shipped')}</StatusBadge>
-                </td>
-                <td className="px-4">
+                </TableCell>
+                <TableCell>
                   <StatusBadge tone={b.ok ? 'success' : 'error'}>{b.ok ? t('ready') : t('broken')}</StatusBadge>
                   {b.error ? <span className="ml-2 text-[11px] text-error" title={b.error}>{b.error}</span> : null}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </section>
 
       <section aria-labelledby="types-heading" className="rounded-lg border border-line bg-surface">
         <div className="border-b border-line-2 px-4 py-3">
           <h2 id="types-heading" className="text-[14px] font-semibold">{t('typesTitle')}</h2>
           <p className="mt-0.5 text-[13px] text-ink-2">{t('typesIntro')}</p>
+        </div>
+        <div className="px-4 pt-3">
+          <RefusalNotice action state={baseFb.state} />
         </div>
         <table className="w-full text-[13px]">
           <thead className="text-left text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink">

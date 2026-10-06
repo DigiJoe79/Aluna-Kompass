@@ -29,29 +29,29 @@ export function RunsList({ runs, currentId }: { runs: RunSummary[]; currentId: s
         <div className="overflow-hidden rounded-md border border-line bg-surface">
           <Table>
             <TableHeader>
-              <TableRow className="h-9">
-                <TableHead className="px-4">{t('columns.year')}</TableHead>
-                <TableHead className="px-4">{t('columns.startedOn')}</TableHead>
-                <TableHead className="px-4">{t('columns.issued')}</TableHead>
-                <TableHead className="px-4">{t('columns.state')}</TableHead>
-                <TableHead className="px-4">{t('columns.dispatched')}</TableHead>
-                <TableHead className="px-4"><span className="sr-only">{t('columns.open')}</span></TableHead>
+              <TableRow>
+                <TableHead>{t('columns.year')}</TableHead>
+                <TableHead>{t('columns.startedOn')}</TableHead>
+                <TableHead>{t('columns.issued')}</TableHead>
+                <TableHead>{t('columns.state')}</TableHead>
+                <TableHead>{t('columns.dispatched')}</TableHead>
+                <TableHead><span className="sr-only">{t('columns.open')}</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {runs.map((run) => (
-                <TableRow key={run.id} data-testid="run-row" aria-current={run.id === currentId ? 'true' : undefined} className="h-row border-b border-line-2">
-                  <TableCell className="px-4">
+                <TableRow key={run.id} data-testid="run-row" aria-current={run.id === currentId ? 'true' : undefined}>
+                  <TableCell>
                     <span className="inline-flex items-center gap-2">
                       <span className="font-mono">{run.year}</span>
                       {run.followUpOfRunId ? <StatusBadge tone="neutral">{t('followUp')}</StatusBadge> : null}
                     </span>
                   </TableCell>
-                  <TableCell className="px-4">{date(run.startedOn)}</TableCell>
-                  <TableCell className="px-4 font-mono tabular-nums">{t('issued', { issued: run.counts.issued, total: runProgress(run.counts).total })}</TableCell>
-                  <TableCell className="px-4">{stateOf(run)}</TableCell>
-                  <TableCell className="px-4">{run.dispatchedAt && run.dispatchedVia ? `${date(run.dispatchedAt)} · ${tv(run.dispatchedVia)}` : '—'}</TableCell>
-                  <TableCell className="px-4 text-right">
+                  <TableCell>{date(run.startedOn)}</TableCell>
+                  <TableCell className="font-mono tabular-nums">{t('issued', { issued: run.counts.issued, total: runProgress(run.counts).total })}</TableCell>
+                  <TableCell>{stateOf(run)}</TableCell>
+                  <TableCell>{run.dispatchedAt && run.dispatchedVia ? `${date(run.dispatchedAt)} · ${tv(run.dispatchedVia)}` : '—'}</TableCell>
+                  <TableCell className="text-right">
                     <Link href={`/finance/donations/run?run=${run.id}`} className="text-link underline">{t('open')}</Link>
                   </TableCell>
                 </TableRow>

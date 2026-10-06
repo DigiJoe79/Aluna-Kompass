@@ -62,7 +62,7 @@ test.describe('finance reserves (F8b)', () => {
     await dialog.locator('#movement-amount').fill('10,00');
     await page.getByTestId('movement-resolution-upload').setInputFiles({ name: 'protokoll.pdf', mimeType: 'application/pdf', buffer: PDF.buffer });
     await page.getByTestId('movement-save').click();
-    await expect(page.getByTestId('movement-error')).toContainText('liegt nach heute');
+    await expect(page.getByTestId('movement-dialog').locator('xpath=ancestor::*[@data-slot="dialog-content"]').getByRole('alert')).toContainText('liegt nach heute');
   });
   test('Stammsatz im UI (Befund 40): Beschluss mit Nummer, Art-Info per Tastatur, bearbeiten, Vortrag, Beschluss ersetzen, stilllegen, löschen', async ({ page, baseURL }) => {
     const client = await mcpClient(page, baseURL);
@@ -116,7 +116,11 @@ test.describe('finance reserves (F8b)', () => {
     await renamed.getByTestId('reserve-menu').click();
     await page.getByRole('menuitem', { name: 'Löschen …' }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Löschen' }).click();
-    await expect(page.getByText('Zu diesem zurückgelegten Geld gibt es schon Vorgänge oder einen Vortrag.')).toBeVisible();
+    // Die Ablehnung steht im offenen Dialog, nicht in einem Toast.
+    const refused = page.getByRole('alertdialog');
+    await expect(refused.getByRole('alert')).toContainText('Zu diesem zurückgelegten Geld gibt es schon Vorgänge oder einen Vortrag.');
+    await refused.getByRole('button', { name: 'Abbrechen' }).click();
+    await expect(refused).toHaveCount(0);
 
     // Stilllegen und wieder aktivieren.
     await renamed.getByTestId('reserve-menu').click();

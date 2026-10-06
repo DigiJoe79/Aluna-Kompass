@@ -5,18 +5,23 @@ import { useRouter } from 'next/navigation';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { Button } from '@/components/ui/button';
+import type { ActionState } from '@/lib/actions';
 
 export function ExportCard({ lastExportAt }: { lastExportAt: string | null }) {
   const t = useTranslations('backup.export');
   const format = useFormatter();
   const router = useRouter();
+  const tCommon = useTranslations('common');
   const [busy, setBusy] = useState(false);
+  const [refusal, setRefusal] = useState<ActionState>({ status: 'idle' });
   const run = async () => {
     setBusy(true);
+    setRefusal({ status: 'idle' });
     try {
       const res = await fetch('/admin/backup/export', { method: 'POST' });
-      if (!res.ok) { toast.error(t('failed')); return; }
+      if (!res.ok) { setRefusal({ status: 'error', message: t('failed'), fieldErrors: {} }); return; }
       const blob = await res.blob();
       const name = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1] ?? 'kompass-backup.tar.gz';
       const url = URL.createObjectURL(blob);
@@ -30,6 +35,9 @@ export function ExportCard({ lastExportAt }: { lastExportAt: string | null }) {
       // die Seite weich aktualisieren — ein harter Reload bräche ihn ab.
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
       router.refresh();
+    } catch {
+      // Der Server war nicht zu erreichen: keine Ablehnung, sondern ein Toast zum Wiederholen.
+      toast.error(tCommon('network'), { duration: Infinity, closeButton: true, action: { label: tCommon('retry'), onClick: () => void run() } });
     } finally {
       setBusy(false);
     }
@@ -37,11 +45,12 @@ export function ExportCard({ lastExportAt }: { lastExportAt: string | null }) {
   return (
     <section className="grid grid-cols-[minmax(0,1fr)_220px] gap-4 rounded-lg border border-line bg-surface p-5">
       <div>
-        <h3 className="font-heading text-[18px]">{t('title')}</h3>
+        <h3 className="text-[15px] font-semibold">{t('title')}</h3>
         <p className="mt-1 text-[14px] text-ink-2">{t('text')}</p>
         <dl className="mt-3 grid grid-cols-3 gap-3 text-[13px]"><dt className="text-muted-ink">{t('last')}</dt><dd className="col-span-2 font-mono font-semibold">{lastExportAt ? format.dateTime(new Date(lastExportAt), { dateStyle: 'short', timeStyle: 'short' }) : '—'}</dd></dl>
       </div>
       <div className="flex flex-col items-end gap-1">
+        <RefusalNotice action state={refusal} />
         <Button className="h-[38px]" disabled={busy} aria-busy={busy} onClick={run}><Download className="size-4" aria-hidden />{busy ? t('running') : t('button')}</Button>
         <span className="text-[12px] text-muted-ink">{t('duration')}</span>
       </div>

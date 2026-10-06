@@ -10,7 +10,7 @@ import { buttonVariants } from '@/components/ui/button';
 export async function ModuleInactiveCard({ namespace }: { namespace: string }) {
   const t = await getTranslations(namespace);
   return (
-    <section className="max-w-[720px] rounded-lg border border-line bg-surface p-7">
+    <section className="rounded-lg border border-line bg-surface p-7">
       <h2 className="font-heading text-[20px]">{t('moduleInactiveTitle')}</h2>
       <p className="mt-2 text-[14px] text-ink-2">{t('moduleInactiveText')}</p>
       <Link href="/admin/modules" className={buttonVariants({ className: 'mt-4' })}>

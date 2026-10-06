@@ -1,5 +1,7 @@
 import { getDashboardLayout, hasPermission, listDashboardTiles, readDashboard } from '@kompass/core';
 import { getTranslations } from 'next-intl/server';
+import { Page } from '@/components/page';
+import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
 import { DashboardCustomize } from './dashboard/customize';
 import { TileCard } from './dashboard/tile-card';
@@ -19,11 +21,15 @@ export default async function HomePage() {
   const tiles = views.ok ? views.value : [];
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-4">
-        <h2 className="font-heading text-[26px]">{t('greeting', { name: firstName })}</h2>
-        {layout.ok && available.ok ? <DashboardCustomize layout={layout.value} available={available.value} /> : null}
-      </div>
+    <Page
+      width="full"
+      header={
+        <PageHeader
+          title={t('greeting', { name: firstName })}
+          actions={layout.ok && available.ok ? <DashboardCustomize layout={layout.value} available={available.value} /> : undefined}
+        />
+      }
+    >
       {tiles.length === 0 ? (
         <p className="text-[14px] text-ink-2">{t('noTiles')}</p>
       ) : (
@@ -33,6 +39,6 @@ export default async function HomePage() {
           ))}
         </div>
       )}
-    </div>
+    </Page>
   );
 }

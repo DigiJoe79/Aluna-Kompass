@@ -59,7 +59,7 @@ test.describe('contacts', () => {
     await dialog.getByLabel('PLZ').fill('12345');
     await dialog.getByLabel('Ort').fill('Musterstadt');
     await dialog.getByRole('button', { name: 'Anlegen' }).click();
-    await page.getByRole('row', { name: /Klein/ }).click();
+    await page.getByRole('row', { name: /Klein/ }).getByRole('link').first().click();
 
     // Der Anschriftsblock steht mehrzeilig da, so wie er ins Fensterkuvert fällt.
     await expect(page.getByTestId('postal-address')).toContainText('Musterweg 2');
@@ -79,7 +79,14 @@ test.describe('contacts', () => {
 
   test('bearbeitet einen Kontakt: Anschrift ergänzen, und ein veralteter Stand wird abgewiesen', async ({ page, context }) => {
     await page.goto('/contacts');
-    await page.getByRole('row', { name: /Sandberg/ }).click();
+    // Mittelweg Zeilenklick (Joe 2026-10-04, release-0.2.6.md): Der Name trägt die Fläche über der ganzen Zeile,
+    // ein Klick irgendwo in die Zeile öffnet den Kontakt. Charge 1 hielt hier das Gegenteil fest.
+    // (Mit der Maus statt `cell.click()`: Die Fläche gehört dem Link in der ersten Zelle, nicht der angeklickten.)
+    const cell = page.getByRole('row', { name: /Sandberg/ }).getByRole('cell').nth(1);
+    await cell.scrollIntoViewIfNeeded();
+    const box = await cell.boundingBox();
+    await page.mouse.click(box!.x + 4, box!.y + 4);
+    await expect(page).toHaveURL(/\/contacts\/[0-9A-Z]{26}$/);
     await page.getByRole('button', { name: 'Kontakt bearbeiten' }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByLabel('Nachname')).toHaveValue('Sandberg');
@@ -105,7 +112,7 @@ test.describe('contacts', () => {
 
     await dialog.getByLabel('Ort').fill('Spätstadt');
     await dialog.getByRole('button', { name: 'Speichern' }).click();
-    await expect(dialog.getByRole('alert')).toContainText('Inzwischen wurde dieser Eintrag an anderer Stelle geändert');
+    await expect(dialog.getByRole('alert')).toContainText('wurde inzwischen geändert');
     await page.reload();
     await expect(page.getByTestId('postal-address')).toContainText('Zwischenstadt');
   });

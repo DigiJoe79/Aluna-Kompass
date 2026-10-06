@@ -201,7 +201,7 @@ test('publishing is blocked when content changed after the preview was built', a
   await page.getByRole('button', { name: 'Auf Test publizieren' }).click();
   const dialog = page.getByRole('alertdialog');
   await expect(dialog.getByRole('alert')).toContainText('Vorschau nicht mehr aktuell');
-  await expect(dialog.locator('[data-slot="dialog-footer"]').getByRole('button')).toHaveText(['Abbrechen', 'Vorschau neu bauen']);
+  await expect(dialog.locator('[data-slot="form-action-bar"]').getByRole('button')).toHaveText(['Abbrechen', 'Vorschau neu bauen']);
   // Neu bauen schließt den Dialog und zeigt den Lauf in der Karte.
   await dialog.getByRole('button', { name: 'Vorschau neu bauen' }).click();
   await expect(dialog).toBeHidden();

@@ -178,7 +178,6 @@ function ProbablyPaidPart({ documentId, proposal, canWrite }: { documentId: stri
         router.refresh();
       } else if (result.status === 'error') {
         setRefusal(result);
-        toast.error(result.message);
       }
     });
 
@@ -191,7 +190,6 @@ function ProbablyPaidPart({ documentId, proposal, canWrite }: { documentId: stri
         setCreated(result.data as { id: string; kind: string });
       } else if (result.status === 'error') {
         setRefusal(result);
-        toast.error(result.message);
       }
     });
 
@@ -259,7 +257,6 @@ function UnpaidPart({ documentId, invoice, existingOpenItemId, canWrite, canCrea
         setCreated(result.data as { id: string; kind: string });
       } else if (result.status === 'error') {
         setRefusal(result);
-        toast.error(result.message);
       }
     });
 

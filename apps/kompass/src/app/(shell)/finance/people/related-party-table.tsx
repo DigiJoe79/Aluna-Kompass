@@ -5,6 +5,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatEuro } from '@/lib/finance/amount';
 import { formatDate, type DateFormatMode } from '@/lib/dates';
+import { panelHref } from '@/components/panel-nav';
 
 /**
  * E21 „Zahlungen an Vorstandsmitglieder und nahestehende Personen“
@@ -18,8 +19,8 @@ export async function RelatedPartyTable({ rows, approverNames, dateMode }: { row
   return (
     <div className="overflow-x-auto rounded-md border border-line">
       <Table data-testid="related-party-table">
-        <TableHeader className="bg-table-head text-left text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink">
-          <TableRow className="h-9">
+        <TableHeader>
+          <TableRow>
             <TableHead className="px-3">{t('columns.date')}</TableHead>
             <TableHead className="px-3">{t('columns.person')}</TableHead>
             <TableHead className="px-3">{t('columns.role')}</TableHead>
@@ -30,7 +31,7 @@ export async function RelatedPartyTable({ rows, approverNames, dateMode }: { row
         </TableHeader>
         <TableBody>
           {rows.map((row, i) => (
-            <TableRow key={`${row.entryId}-${row.contactId}-${i}`} className="border-b border-line-2" data-testid="related-party-row">
+            <TableRow key={`${row.entryId}-${row.contactId}-${i}`} data-testid="related-party-row">
               <TableCell className="px-3 text-ink-2">{formatDate(row.entryDate, dateMode)}</TableCell>
               <TableCell className="px-3 text-ink">{row.contactName}</TableCell>
               <TableCell className="px-3 text-ink-2" data-testid="related-party-role">{t(`roleShort.${row.role === 'board-member' ? 'boardMember' : 'relatedParty'}`)}</TableCell>
@@ -44,7 +45,7 @@ export async function RelatedPartyTable({ rows, approverNames, dateMode }: { row
                     <StatusBadge tone="warning" dot>
                       {t('withoutBasis')}
                     </StatusBadge>
-                    <Link href="/admin/finance?panel=tax" className="text-[12px] font-semibold underline underline-offset-2">
+                    <Link href={panelHref('/admin/finance', 'tax')} className="text-[12px] font-semibold underline underline-offset-2">
                       {t('toSetup')}
                     </Link>
                   </span>

@@ -6,6 +6,7 @@ import { getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import type { ReceiptListItem } from '@/components/finance/receipt-list';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
 import { fromEntryView } from '@/lib/finance/entry-form';
@@ -14,10 +15,10 @@ import { EntryForm } from '../../entry-form';
 export default async function EditFinanceEntryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { deps, ctx } = await requireSession();
-  if (!hasPermission(ctx, 'finance.entriesWrite')) return <ForbiddenCard permission="finance.entriesWrite" />;
+  if (!hasPermission(ctx, 'finance.entriesWrite')) return <Page width="standard"><ForbiddenCard permission="finance.entriesWrite" /></Page>;
 
   const entryRes = await getEntry(deps, ctx, { id });
-  if (!entryRes.ok) return <ForbiddenCard permission="finance.read" />;
+  if (!entryRes.ok) return <Page width="standard"><ForbiddenCard permission="finance.read" /></Page>;
   const entry = entryRes.value;
   // Eine festgeschriebene Buchung hat kein Eingabefeld (Global Constraint) — die Ansicht kommt mit Task 10.
   if (entry.status !== 'draft') redirect('/finance/entries');
@@ -54,8 +55,7 @@ export default async function EditFinanceEntryPage({ params }: { params: Promise
   const openItems = (openItemsRes.ok ? openItemsRes.value.items : []).map((i) => ({ id: i.id, kind: i.kind as 'receivable' | 'payable', label: i.paymentReference ?? t('settlement.unnamed', { date: i.itemDate }), openCents: i.openCents }));
 
   return (
-    <>
-      <PageHeader title={t('editTitle')} back={{ href: '/finance/entries', label: t('cancel') }} />
+    <Page width="standard" header={<PageHeader title={t('editTitle')} back={{ href: '/finance/entries', label: t('cancel') }} />}>
       <EntryForm
         today={todayIn(deps)}
         initial={fromEntryView(entry)}
@@ -70,6 +70,6 @@ export default async function EditFinanceEntryPage({ params }: { params: Promise
         vouchers={vouchers}
         openItems={openItems}
       />
-    </>
+    </Page>
   );
 }

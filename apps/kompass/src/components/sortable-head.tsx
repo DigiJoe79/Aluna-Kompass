@@ -29,7 +29,7 @@ export function SortableHead({ field, label, className }: { field: string; label
   const Icon = !active ? ArrowUpDown : direction === 'asc' ? ArrowUp : ArrowDown;
 
   return (
-    <TableHead className={cn('px-4', className)} aria-sort={active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}>
+    <TableHead className={cn('', className)} aria-sort={active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}>
       <button type="button" onClick={toggle} className="inline-flex items-center gap-1 hover:text-ink" aria-label={t('sortBy', { column: label })}>
         {label}
         <Icon className={cn('size-3', !active && 'opacity-50')} aria-hidden />

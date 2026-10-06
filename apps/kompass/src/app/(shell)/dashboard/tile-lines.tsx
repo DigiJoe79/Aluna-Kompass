@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
-import { toast } from 'sonner';
+import { toastRefusal } from '@/lib/feedback';
 import { useDateFormat } from '@/components/date-format-provider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -39,8 +39,9 @@ export function TileLines({ ns, lines, canComplete }: { ns: string; lines: Dashb
                 aria-label={t('complete', { title })}
                 onCheckedChange={() =>
                   start(async () => {
+                    // R5 (MUSTER: Ausnahme): Das Häkchen sitzt in der Zeile einer Kachel, ohne Platz für eine Meldung — Toast bis zum Schließen.
                     const s = await completeDueAction(line.action!.followUpId);
-                    if (s.status === 'error') toast.error(s.message);
+                    if (s.status === 'error') toastRefusal(s);
                     else router.refresh();
                   })
                 }

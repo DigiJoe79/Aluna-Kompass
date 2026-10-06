@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { donationTab, DONATION_TABS, type DonationTab } from '@/lib/finance/donations';
 import { requireSession } from '@/lib/request-context';
@@ -25,7 +26,7 @@ export interface DonationsQuery {
  */
 export default async function FinanceDonationsPage({ searchParams }: { searchParams: Promise<DonationsQuery> }) {
   const { deps, ctx } = await requireSession();
-  if (!hasPermission(ctx, 'finance.read')) return <ForbiddenCard permission="finance.read" />;
+  if (!hasPermission(ctx, 'finance.read')) return <Page width="standard"><ForbiddenCard permission="finance.read" /></Page>;
   const t = await getTranslations('finance.donations');
 
   const query = await searchParams;
@@ -41,7 +42,7 @@ export default async function FinanceDonationsPage({ searchParams }: { searchPar
     listNotices(deps, ctx, { includeInactive: true }),
     tab === 'uncertified' ? listUncertifiedDonations(deps, ctx, { minCents: minCents ?? undefined, limit: 200 }) : Promise.resolve(null),
   ]);
-  if (!confirmationsRes.ok) return <ForbiddenCard permission="finance.read" />;
+  if (!confirmationsRes.ok) return <Page width="standard"><ForbiddenCard permission="finance.read" /></Page>;
   const { items, counts } = confirmationsRes.value;
   const notices = new Map((noticesRes.ok ? noticesRes.value : []).map((n) => [n.id, { kind: n.kind, noticeDate: n.noticeDate }]));
 
@@ -70,32 +71,33 @@ export default async function FinanceDonationsPage({ searchParams }: { searchPar
   const tabLabel = (key: DonationTab) => (key === 'toCorrect' ? t('tabs.toCorrect', { count: counts.toCorrect }) : key === 'needsSignature' ? t('tabs.needsSignature', { count: counts.needsSignature }) : t(`tabs.${key}`));
 
   return (
-    <div className="max-w-[1100px] space-y-4">
-      <PageHeader title={t('title')} description={t('description')} />
+    <Page width="standard" header={<PageHeader title={t('title')} description={t('description')} />}>
+      <div className="space-y-4">
 
-      <div role="tablist" aria-label={t('tabsGroup')} className="inline-flex h-[var(--field-h)] overflow-hidden rounded-md border border-line-strong">
-        {DONATION_TABS.map((key) => (
-          <Link
-            key={key}
-            href={key === 'issued' ? '/finance/donations' : `/finance/donations?tab=${key}`}
-            role="tab"
-            aria-selected={tab === key}
-            className={tab === key ? 'bg-selected px-3 py-1.5 text-[13px] font-semibold text-selected-ink' : 'bg-surface-2 px-3 py-1.5 text-[13px] text-ink-2'}
-          >
-            {tabLabel(key)}
-          </Link>
-        ))}
+        <div role="tablist" aria-label={t('tabsGroup')} className="inline-flex h-[var(--field-h)] overflow-hidden rounded-md border border-line-strong">
+          {DONATION_TABS.map((key) => (
+            <Link
+              key={key}
+              href={key === 'issued' ? '/finance/donations' : `/finance/donations?tab=${key}`}
+              role="tab"
+              aria-selected={tab === key}
+              className={tab === key ? 'bg-selected px-3 py-1.5 text-[13px] font-semibold text-selected-ink' : 'bg-surface-2 px-3 py-1.5 text-[13px] text-ink-2'}
+            >
+              {tabLabel(key)}
+            </Link>
+          ))}
+        </div>
+
+        {tab === 'uncertified' ? (
+          <UncertifiedList groups={uncertifiedRes?.ok ? uncertifiedRes.value.groups : []} minCents={minCents} canIssue={canIssue} canDescribe={canDescribe} today={today} />
+        ) : tab === 'needsSignature' ? (
+          <SignatureSteps rows={items.map((c) => ({ id: c.id, number: c.documentNumber, issuedOn: c.issuedOn, contactName: c.contactName, totalCents: c.totalCents, signed: c.signatureState === 'signed' }))} canIssue={canIssue} />
+        ) : items.length === 0 ? (
+          <EmptyState title={t(`empty.${tab}.title`)} text={t(`empty.${tab}.text`)} />
+        ) : (
+          <ConfirmationsTable rows={items.map(rowOf)} canIssue={canIssue} initialOpenId={query.confirmation ?? null} today={today} />
+        )}
       </div>
-
-      {tab === 'uncertified' ? (
-        <UncertifiedList groups={uncertifiedRes?.ok ? uncertifiedRes.value.groups : []} minCents={minCents} canIssue={canIssue} canDescribe={canDescribe} today={today} />
-      ) : tab === 'needsSignature' ? (
-        <SignatureSteps rows={items.map((c) => ({ id: c.id, number: c.documentNumber, issuedOn: c.issuedOn, contactName: c.contactName, totalCents: c.totalCents, signed: c.signatureState === 'signed' }))} canIssue={canIssue} />
-      ) : items.length === 0 ? (
-        <EmptyState title={t(`empty.${tab}.title`)} text={t(`empty.${tab}.text`)} />
-      ) : (
-        <ConfirmationsTable rows={items.map(rowOf)} canIssue={canIssue} initialOpenId={query.confirmation ?? null} today={today} />
-      )}
-    </div>
+    </Page>
   );
 }

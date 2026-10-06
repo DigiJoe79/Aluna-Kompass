@@ -30,7 +30,7 @@ export function PaidDialog({ cashId }: { cashId: string }) {
         {t('trigger')}
       </Button>
       <Dialog open={open} onOpenChange={close}>
-        <DialogContent className="bg-surface shadow-md">
+        <DialogContent size="sm" className="bg-surface shadow-md">
           <DialogTitle className="font-heading text-[19px]">{t('question')}</DialogTitle>
           <div className="space-y-3">
             <ChoiceCards

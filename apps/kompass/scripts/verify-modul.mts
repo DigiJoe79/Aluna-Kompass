@@ -17,6 +17,14 @@ import { installedModuleKeys, scopeFromPaths, type Scope } from '../e2e/projects
 const APP = path.resolve(import.meta.dirname, '..');
 const REPO = path.resolve(APP, '../..');
 
+/**
+ * Vor jedem E2E-Lauf kalt: Die Worker-Server bauen nach `.next/e2e/w<n>` (`e2e/servers.ts`). Ein warmer Cache
+ * (am 05.10. 14 GB) ließ Turbopack mitten im Lauf in eine interne Panik laufen; der Server des Workers brach ab,
+ * und danach scheiterten Tests der Mediathek, des Protokolls und der Akte mit 30-s-Zeitüberschreitungen. Kalt
+ * war derselbe Code grün und mit 11 statt 21 Minuten sogar schneller.
+ */
+const COLD = ['rm', '-rf', path.join('apps', 'kompass', '.next', 'e2e')];
+
 function git(...args: string[]): string[] {
   return execFileSync('git', args, { cwd: REPO, encoding: 'utf8' })
     .split('\n')
@@ -38,6 +46,7 @@ function plan(scope: Scope): { label: string; steps: string[][] } {
       steps: [
         ['pnpm', 'typecheck'],
         ['pnpm', 'test'],
+        COLD,
         ['pnpm', '--filter', '@kompass/app', 'e2e'],
       ],
     };
@@ -55,6 +64,7 @@ function plan(scope: Scope): { label: string; steps: string[][] } {
     steps: [
       ['pnpm', ...filters, 'typecheck'],
       ['pnpm', ...filters, 'test'],
+      COLD,
       ['pnpm', '--filter', '@kompass/app', 'exec', 'playwright', 'test', ...projects],
     ],
   };

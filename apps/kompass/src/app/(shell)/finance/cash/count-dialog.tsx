@@ -3,15 +3,18 @@
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { FormField } from '@/components/forms/form-field';
+import { FormCell, FormGrid, FormRowBreak } from '@/components/forms/form-grid';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Notice } from '@/components/notice';
 import { AmountField } from '@/components/finance/amount-field';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
 import { countResult, DENOMINATIONS_CENTS, sumDenominations } from '@/lib/finance/cash';
 import { countCashAction, emptyDonationBoxAction } from './actions';
@@ -45,6 +48,7 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
   const [note, setNote] = useState('');
   const [pending, setPending] = useState(false);
   const [fieldError, setFieldError] = useState<string | null>(null);
+  const feedback = useActionFeedback();
 
   const helperCents = useMemo(() => sumDenominations(pieces), [pieces]);
   const countedCents = useHelper ? helperCents : parseAmount(amountText);
@@ -63,6 +67,7 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
     setCounterTwo(null);
     setNote('');
     setFieldError(null);
+    feedback.reset();
   };
 
   const submit = async () => {
@@ -73,9 +78,10 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
     }
     setPending(true);
     setFieldError(null);
-    const result =
+    const result = await feedback.run(
+      () =>
       mode === 'cash'
-        ? await countCashAction({
+        ? countCashAction({
             accountId: account.id,
             countedOn,
             countedCents,
@@ -84,21 +90,18 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
             note: note.trim() || undefined,
             denominations: useHelper ? Object.fromEntries(Object.entries(pieces).filter(([, c]) => c > 0)) : undefined,
           })
-        : await emptyDonationBoxAction({
+        : emptyDonationBoxAction({
             accountId: account.id,
             date: countedOn,
             amountCents: countedCents,
             counterOneContactId: counterOne.id,
             counterTwoContactId: counterTwo.id,
             boxLabel: boxLabel.trim(),
-          });
+          }),
+      { retry: () => void submit() },
+    );
     setPending(false);
-    if (result.status === 'error') {
-      toast.error(result.message);
-      return;
-    }
     if (result.status === 'success') {
-      if (result.message) toast.success(result.message);
       close();
       router.refresh();
     }
@@ -110,113 +113,115 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
         {t('trigger')}
       </Button>
       <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
-        <DialogContent className="bg-surface shadow-md">
+        <DialogContent size="lg" className="bg-surface shadow-md">
           <DialogTitle className="font-heading text-[19px]">{t('trigger')}</DialogTitle>
-          <div className="space-y-4">
-            <div role="group" aria-label={t('modeGroup')} className="inline-flex h-[var(--field-h)] overflow-hidden rounded-md border border-line-strong">
-              {(['cash', 'box'] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  aria-pressed={mode === m}
-                  onClick={() => setMode(m)}
-                  className={mode === m ? 'bg-selected px-3 text-[13px] font-semibold text-selected-ink' : 'bg-surface-2 px-3 text-[13px] text-ink-2'}
-                >
-                  {t(`mode.${m}`)}
-                </button>
-              ))}
-            </div>
-
-            {mode === 'box' ? (
-              <label className="block space-y-1.5 text-[13px]">
-                <span className="font-semibold text-ink">{t('boxLabel')}</span>
-                <Input value={boxLabel} onChange={(e) => setBoxLabel(e.target.value)} required />
-              </label>
-            ) : null}
-
-            <label className="block space-y-1.5 text-[13px]">
-              <span className="font-semibold text-ink">{t('date')}</span>
-              <Input type="date" value={countedOn} max={today} onChange={(e) => setCountedOn(e.target.value)} />
-            </label>
-
-            {!useHelper ? (
-              <div className="space-y-1.5">
-                <Label htmlFor="countedCents" required>
-                  {t('countedAmount')}
-                </Label>
-                <AmountField id="countedCents" name="countedCents" value={amountText} onChange={setAmountText} required />
-              </div>
-            ) : (
-              <p className="text-[13px] font-mono">{formatEuro(helperCents)}</p>
-            )}
-
-            {mode === 'cash' ? (
-              <Disclosure label={t('helper.title')} defaultOpen={useHelper}>
-                <label className="mb-2 flex items-center gap-2 text-[13px]">
-                  <input type="checkbox" checked={useHelper} onChange={(e) => setUseHelper(e.target.checked)} />
-                  {t('helper.use')}
-                </label>
-                {useHelper ? (
-                  <div className="grid grid-cols-3 gap-2">
-                    {DENOMINATIONS_CENTS.map((cents) => (
-                      <label key={cents} className="flex items-center gap-1.5 text-[12px]">
-                        <span className="w-16 shrink-0">{formatAmount(cents)} €</span>
-                        <Input
-                          type="number"
-                          min={0}
-                          inputMode="numeric"
-                          data-testid={`denomination-${cents}`}
-                          value={pieces[cents] ?? ''}
-                          onChange={(e) => setPieces((prev) => ({ ...prev, [cents]: Number(e.target.value) || 0 }))}
-                          className="text-right"
-                        />
-                      </label>
+          <section>
+            <h3 className="text-[15px] font-semibold">{t('sections.what')}</h3>
+            <div className="mt-3">
+              <FormGrid>
+                <FormCell size="s">
+                  <div role="group" aria-label={t('modeGroup')} className="inline-flex h-[var(--field-h)] overflow-hidden rounded-md border border-line-strong">
+                    {(['cash', 'box'] as const).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        aria-pressed={mode === m}
+                        onClick={() => setMode(m)}
+                        className={mode === m ? 'bg-selected px-3 text-[13px] font-semibold text-selected-ink' : 'bg-surface-2 px-3 text-[13px] text-ink-2'}
+                      >
+                        {t(`mode.${m}`)}
+                      </button>
                     ))}
                   </div>
+                </FormCell>
+                {mode === 'box' ? (
+                  <FormField id="countBoxLabel" label={t('boxLabel')} required>
+                    <Input id="countBoxLabel" value={boxLabel} onChange={(e) => setBoxLabel(e.target.value)} required />
+                  </FormField>
                 ) : null}
-              </Disclosure>
-            ) : null}
+                <FormRowBreak />
+                <FormField id="countedOn" label={t('date')} size="s">
+                  <Input id="countedOn" type="date" value={countedOn} max={today} onChange={(e) => setCountedOn(e.target.value)} />
+                </FormField>
+                {!useHelper ? (
+                  <FormField id="countedCents" label={t('countedAmount')} required size="s">
+                    <AmountField id="countedCents" name="countedCents" value={amountText} onChange={setAmountText} required />
+                  </FormField>
+                ) : (
+                  <FormCell as="p" size="s" className="self-end text-[13px] font-mono">{formatEuro(helperCents)}</FormCell>
+                )}
+                {mode === 'cash' ? (
+                  <FormCell size="full">
+                    <Disclosure label={t('helper.title')} defaultOpen={useHelper}>
+                      <FormField id="countHelper" label={t('helper.use')} toggle className="mb-2">
+                        <Checkbox id="countHelper" checked={useHelper} onCheckedChange={(next) => setUseHelper(next === true)} />
+                      </FormField>
+                      {useHelper ? (
+                        // Die Zählhilfe hat ihr eigenes Unterraster für die Stückelungen (Entscheidung zum Inventar).
+                        <div className="grid grid-cols-3 gap-2">
+                          {DENOMINATIONS_CENTS.map((cents) => (
+                            <label key={cents} className="flex items-center gap-1.5 text-[12px]">
+                              <span className="w-16 shrink-0">{formatAmount(cents)} €</span>
+                              <Input
+                                type="number"
+                                min={0}
+                                inputMode="numeric"
+                                data-testid={`denomination-${cents}`}
+                                value={pieces[cents] ?? ''}
+                                onChange={(e) => setPieces((prev) => ({ ...prev, [cents]: Number(e.target.value) || 0 }))}
+                                className="text-right"
+                              />
+                            </label>
+                          ))}
+                        </div>
+                      ) : null}
+                    </Disclosure>
+                  </FormCell>
+                ) : null}
+              </FormGrid>
+            </div>
+          </section>
 
-            <ContactPicker id="counter-one" name="counterOne" label={t('counterOne')} value={counterOne} onChange={setCounterOne} required kind="person" canCreate={canCreateContact} />
-            <ContactPicker id="counter-two" name="counterTwo" label={t('counterTwo')} value={counterTwo} onChange={setCounterTwo} required kind="person" canCreate={canCreateContact} />
-            {fieldError ? (
-              <p role="alert" className="text-[12px] text-error">
-                {fieldError}
-              </p>
-            ) : null}
+          <section className="border-t border-line pt-5">
+            <h3 className="text-[15px] font-semibold">{t('sections.who')}</h3>
+            <div className="mt-3">
+              <FormGrid>
+                <FormCell size="m">
+                  <ContactPicker id="counter-one" name="counterOne" label={t('counterOne')} value={counterOne} onChange={setCounterOne} required kind="person" canCreate={canCreateContact} />
+                </FormCell>
+                <FormCell size="m">
+                  <ContactPicker id="counter-two" name="counterTwo" label={t('counterTwo')} value={counterTwo} onChange={setCounterTwo} required kind="person" canCreate={canCreateContact} />
+                </FormCell>
+              </FormGrid>
+              {fieldError ? (
+                <p role="alert" className="mt-2 text-[12px] text-error">
+                  {fieldError}
+                </p>
+              ) : null}
+            </div>
+          </section>
 
-            {mode === 'cash' && preview ? (
-              <p aria-live="polite" className="text-[13px]">
-                {t('resultLine', { book: formatEuro(bookCents), counted: formatEuro(countedCents ?? 0) })}
-                {preview.kind !== 'equal' ? <strong> · {t(`kind.${preview.kind}`)} {formatEuro(Math.abs(preview.differenceCents))}</strong> : null}
-              </p>
-            ) : null}
+          {mode === 'cash' && preview ? (
+            <p aria-live="polite" className="text-[13px]">
+              {t('resultLine', { book: formatEuro(bookCents), counted: formatEuro(countedCents ?? 0) })}
+              {preview.kind !== 'equal' ? <strong> · {t(`kind.${preview.kind}`)} {formatEuro(Math.abs(preview.differenceCents))}</strong> : null}
+            </p>
+          ) : null}
 
-            {mode === 'cash' && preview?.kind === 'shortage' ? (
-              <Notice level="warn" reason={{ name: 'note', value: note, onChange: setNote, label: t('noteLabel') }}>
-                {t('shortageHint')}
-              </Notice>
-            ) : null}
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={close}>
-              {t('cancel')}
-            </Button>
-            <Button
-              type="button"
-              disabled={
-                pending ||
-                countedCents === null ||
-                !counterOne ||
-                !counterTwo ||
-                (mode === 'box' && !boxLabel.trim()) ||
-                (mode === 'cash' && preview?.kind === 'shortage' && !note.trim())
-              }
-              onClick={() => void submit()}
-            >
-              {t('submit')}
-            </Button>
-          </DialogFooter>
+          {mode === 'cash' && preview?.kind === 'shortage' ? (
+            <Notice level="warn" reason={{ name: 'note', value: note, onChange: setNote, label: t('noteLabel') }}>
+              {t('shortageHint')}
+            </Notice>
+          ) : null}
+          <FormActionBar
+            placement="dialog"
+            cancel={close}
+            pending={pending}
+            saveDisabled={countedCents === null || !counterOne || !counterTwo || (mode === 'box' && !boxLabel.trim()) || (mode === 'cash' && preview?.kind === 'shortage' && !note.trim())}
+            saveLabel={t('submit')}
+            onSave={() => void submit()}
+            state={feedback.state}
+          />
         </DialogContent>
       </Dialog>
     </>

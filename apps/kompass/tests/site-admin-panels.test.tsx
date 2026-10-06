@@ -51,7 +51,8 @@ describe('Reiter Verbindung', () => {
 describe('Reiter Gesperrte Begriffe', () => {
   it('lässt mit site.publish speichern', () => {
     render(<BlockedTermsPanel terms={['Popescu']} canPublish />, { wrapper: Intl });
-    expect(screen.getByRole('button', { name: 'Sperrwörter speichern' })).toBeTruthy();
+    // K9-Befund 4: Speichern über die Leiste am Ende der Karte (MUSTER § B), nicht als eigener Knopf.
+    expect(screen.getByRole('button', { name: 'Sperrwörter speichern' }).closest('[data-slot="form-action-bar"]')).toBeTruthy();
     expect((screen.getByLabelText('Begriffe, einer je Zeile') as HTMLTextAreaElement).readOnly).toBe(false);
   });
 

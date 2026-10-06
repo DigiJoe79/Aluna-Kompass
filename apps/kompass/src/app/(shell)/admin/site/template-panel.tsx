@@ -22,14 +22,14 @@ export async function TemplatePanel({ deps }: { deps: Deps }) {
         {state ? t('lastRead', { when: format.dateTime(new Date(state.readAt), { dateStyle: 'medium', timeStyle: 'short' }) }) : t('neverRead')}
       </p>
       {needsReview ? (
-        <p className="rounded-lg border border-line bg-error-bg p-6 text-[14px] text-ink" role="status">
+        <p className="rounded-lg border border-line bg-error-bg p-5 text-[14px] text-ink" role="status">
           {t('needsReview')}
         </p>
       ) : null}
       <SyncClient name={state?.name ?? null} />
       {showSeedCard ? (
         seedAppliedAt ? (
-          <p className="rounded-lg border border-line bg-surface p-6 text-[14px] text-ink-2">
+          <p className="rounded-lg border border-line bg-surface p-5 text-[14px] text-ink-2">
             {tSeed('done', { when: format.dateTime(new Date(seedAppliedAt), { dateStyle: 'medium', timeStyle: 'short' }) })}
           </p>
         ) : (

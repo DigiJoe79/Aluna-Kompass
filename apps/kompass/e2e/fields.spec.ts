@@ -79,7 +79,7 @@ test.describe('field metrics', () => {
   });
 
   test('erklärt die Pflichtfelder auch in den Dialogen der Akte', async ({ page }) => {
-    await page.goto('/admin/dms');
+    await page.goto('/admin/dms?panel=snippets');
     await page.getByRole('button', { name: 'Baustein anlegen' }).click();
     const dialog = page.getByRole('dialog', { name: 'Baustein anlegen' });
     await expect(dialog.getByText('* Pflichtfeld')).toBeVisible();

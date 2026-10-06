@@ -37,7 +37,27 @@
     "lastSaved": "zuletzt gespeichert am {date} von {name}",
     "audited": "Wird protokolliert.",
     "backToList": "Zurück zur Übersicht",
+    "danger": {
+      "delete": "Löschen",
+      "archive": "Archivieren"
+    },
     "requiredLegend": "* Pflichtfeld",
+    "nothingChanged": "Nichts geändert",
+    "retry": "Erneut versuchen",
+    "network": "Die Verbindung zum Server ist abgebrochen. Ihre Eingaben stehen noch da.",
+    "conflict": {
+      "textPlain": "Der Eintrag wurde inzwischen geändert. Ihre Eingaben stehen noch in der Maske.",
+      "compare": "Ihre Änderungen neben den neuen Stand legen",
+      "reload": "Neuen Stand laden, Eingaben verwerfen",
+      "compareTitle": "Ihre Eingaben neben dem neuen Stand",
+      "yours": "Ihre Eingabe",
+      "current": "Jetzt gespeichert",
+      "dismiss": "Ausblenden"
+    },
+    "refused": {
+      "title": "Nicht gespeichert",
+      "titleAction": "Nicht möglich"
+    },
     "fieldsInvalid": "Bitte prüfen Sie {count, plural, one {ein Feld} other {# Felder}}:",
     "fieldInvalid": "{field}: {message}",
     "fieldUnnamed": "Ein Feld",
@@ -335,6 +355,7 @@
     "preview": "Vorschau",
     "previewEmpty": "Noch kein Text.",
     "untranslated": "unübersetzt",
+    "localizedName": "{label} ({language})",
     "published": "Veröffentlicht",
     "unpublished": "Nicht veröffentlicht",
     "moveUp": "Nach oben",
@@ -358,6 +379,18 @@
     "databaseConstraint": {
       "reason": "Der Vorgang verstößt gegen eine Regel der Datenbank und wurde abgebrochen. Es wurde nichts gespeichert.",
       "remedy": "Laden Sie die Seite neu und versuchen Sie es noch einmal. Tritt der Fehler wieder auf, melden Sie ihn bitte mit Uhrzeit der Administration — die Ursache steht im Server-Protokoll."
+    },
+    "moduleDependencyInactive": {
+      "reason": "Dieses Modul braucht noch: {modules}. Das ist nicht eingeschaltet.",
+      "remedy": "Schalten Sie zuerst {modules} unter Einrichtung → Module ein."
+    },
+    "moduleRequiredByOthers": {
+      "reason": "Dieses Modul wird noch gebraucht von: {modules}.",
+      "remedy": "Schalten Sie zuerst {modules} aus."
+    },
+    "localeRequired": {
+      "reason": "Die Sprache „{locale}“ wird noch gebraucht: Das Modul „{module}“ verlangt sie (bei der Webseite: das eingelesene Template).",
+      "remedy": "Ändern Sie zuerst das Template oder schalten Sie das Modul aus."
     },
     "folder": {
       "sameLocation": { "reason": "Der Ordner liegt schon hier.", "remedy": "Wählen Sie ein anderes Ziel." },
@@ -396,8 +429,6 @@
       "themeReadOnly": "Das Default-Theme ist schreibgeschützt.",
       "themeActive": "Das aktive Theme kann nicht gelöscht werden.",
       "moduleLocked": "Der Kern kann nicht deaktiviert werden.",
-      "moduleDependencyInactive": "Benötigte Module sind nicht aktiv: {detail}",
-      "moduleRequiredByOthers": "Wird von aktiven Modulen benötigt: {detail}",
       "setupAlreadyDone": "Die Einrichtung wurde bereits abgeschlossen.",
       "publicUrlMissing": "SITE_PUBLIC_URL ist nicht gesetzt.",
       "publishTargetMissing": "Kein Publish-Ziel konfiguriert.",
@@ -470,6 +501,10 @@
         "reason": "Das Template nutzt Sichten des Moduls „{module}“, das nicht aktiv ist.",
         "remedy": "Schalten Sie es unter Einrichtung → Module ein."
       },
+      "localeMissing": {
+        "reason": "Das Template fordert Sprachen, die nicht eingerichtet sind: {locales}.",
+        "remedy": "Fügen Sie sie unter Einstellungen → Sprachen hinzu und lesen Sie das Template dann ein."
+      },
       "overLimit": {
         "reason": "{names} überschreitet die neue Obergrenze des Templates.",
         "remedy": "Räumen Sie dort zuerst auf und lesen Sie das Template dann ein."
@@ -482,6 +517,7 @@
       "required": "Pflichtfeld.",
       "email": "Bitte eine gültige E-Mail-Adresse eingeben.",
       "passwordTooShort": "Mindestens 12 Zeichen.",
+      "profileUrlNeedsSlug": "Die Adresse braucht den Platzhalter '{slug}'.",
       "unknownPermission": "Unbekanntes Recht.",
       "unknownSetting": "Unbekannte Einstellung.",
       "unknownLocale": "Diese Sprache ist nicht eingerichtet.",
@@ -580,6 +616,7 @@
       "carryForwardCentsRequired": "Pflichtfeld.",
       "invalidBase64": "Die Datei ist nicht gültig Base64-kodiert.",
       "invalidSlug": "Nur Kleinbuchstaben, Ziffern und Bindestrich.",
+      "slugGenerated": "Den URL-Teil bildet Kompass beim Anlegen selbst; er bleibt danach fest.",
       "slugNotAllowed": "Diese Sammlung hat keinen Slug.",
       "invalidJson": "Die Datei ist kein gültiges JSON.",
       "unknownVariable": "Diese Variable kennt das Template nicht."
@@ -725,6 +762,10 @@
   "auth": {
     "setup": {
       "title": "Erste Einrichtung",
+      "sections": {
+        "organization": "Verein",
+        "account": "Erstes Konto"
+      },
       "intro": "Legen Sie das erste Vorstandskonto an. Danach werden weitere Nutzer in der Verwaltung angelegt — dieser Schritt erscheint nicht wieder.",
       "organizationName": "Vereinsname",
       "locale": "Sprache der Webseite und Oberfläche",
@@ -1115,6 +1156,7 @@
       "button": "Nutzer anlegen",
       "title": "Nutzer anlegen",
       "subtitle": "Nach dem Anlegen zeigt das System einmalig ein Startpasswort. Der Nutzer muss es beim ersten Login ändern.",
+      "person": "Person",
       "roles": "Rollen",
       "name": "Name",
       "email": "E-Mail",
@@ -1131,7 +1173,6 @@
     },
     "roles": {
       "title": "Rollen für {name}",
-      "cancel": "Abbrechen",
       "save": "Rollen speichern"
     },
     "toast": {
@@ -1367,6 +1408,7 @@
   },
   "settings": {
     "title": "Einstellungen",
+    "tabsLabel": "Bereiche der Vereinseinstellungen",
     "tabs": {
       "organization": "Verein",
       "tax": "Steuer & Bescheide",
@@ -1411,11 +1453,24 @@
         "dateFormat": "Datumsformat"
       }
     },
+    "sections": {
+      "name": "Name",
+      "address": "Anschrift",
+      "locale": "Land und Zeit",
+      "register": "Register",
+      "contact": "Kontakt",
+      "taxOffice": "Finanzamt",
+      "notice": "Bescheid",
+      "fontsAndColors": "Schrift und Farben"
+    },
     "hints": {
       "registerNumberHint": "Erscheint im Briefbogen-Fuß.",
-      "timeZoneHint": "Bestimmt, welcher Tag „heute“ ist — etwa für Fristen und Buchungsdaten. Name nach IANA, z. B. Europe/Berlin.",
+      "timeZoneHint": "Bestimmt, welcher Tag „heute“ ist.",
       "logoHint": "Logo-Upload folgt mit der Mediathek.",
       "themeHint": "Themes werden unter Einrichtung → Erscheinungsbild bearbeitet."
+    },
+    "placeholders": {
+      "timeZone": "Name nach IANA, z. B. Europe/Berlin"
     },
     "options": {
       "ui": {
@@ -1457,7 +1512,7 @@
     },
     "managedHint": {
       "tax": "Wird unter Finanzen → Spenden → Bescheide geführt.",
-      "bank": "Wird unter Finanzen einrichten → Bankkonten und Kassen am Hauptkonto geführt."
+      "bank": "Wird unter Einstellungen → Finanzen → Bankkonten und Kassen am Hauptkonto geführt."
     },
     "managedTarget": {
       "notices": "Bescheide",
@@ -1856,6 +1911,7 @@
   "projects": {
     "title": "Projekte",
     "create": "Projekt anlegen",
+    "ownOrder": "Eigene Reihenfolge",
     "emptyTitle": "Noch keine Projekte",
     "emptyText": "Dauer- und Kurzzeitprojekte mit ihrer öffentlichen Seite.",
     "columns": {
@@ -1869,8 +1925,10 @@
       "shortTerm": "Kurzzeitprojekt"
     },
     "form": {
-      "tabs": {
-        "public": "Webseite"
+      "sections": {
+        "display": "Darstellung",
+        "content": "Inhalt",
+        "media": "Bild und Links"
       },
       "name": "Name",
       "summary": "Kurztext",
@@ -1916,7 +1974,24 @@
       "moduleInactiveText": "Aktivieren Sie das Modul unter Einrichtung → Module. Vorhandene Daten bleiben erhalten.",
       "openModules": "Module öffnen"
     },
+    "print": {
+      "title": "Hundeprofile",
+      "more": "Mehr über {name}:",
+      "continued": "Die ganze Geschichte lesen Sie online.",
+      "export": "Als PDF",
+      "running": "PDF wird erstellt …",
+      "refused": {
+        "forbidden": "Zum Erstellen fehlt das Recht „Dokumente erzeugen“.",
+        "notFound": "Ein ausgewählter Hund ist nicht mehr da. Laden Sie die Liste neu.",
+        "failed": "Das PDF ließ sich nicht erstellen."
+      }
+    },
     "list": {
+      "selection": {
+        "selectAll": "Alle gezeigten Hunde auswählen",
+        "selectOne": "{name} auswählen",
+        "count": "{count, plural, one {# Hund} other {# Hunde}} ausgewählt"
+      },
       "title": "Hunde",
       "create": "Hund anlegen",
       "emptyTitle": "Noch keine Hunde",
@@ -1969,6 +2044,7 @@
         "story": "Geschichte"
       },
       "name": "Name",
+      "slugFixed": "Bildet Kompass beim Anlegen aus Name und Kennung. Er bleibt fest, auch wenn sich der Name ändert.",
       "sex": "Geschlecht",
       "sexes": {
         "female": "Hündin",
@@ -1980,7 +2056,7 @@
         "germany": "in Deutschland"
       },
       "place": "Ort",
-      "placeHint": "z. B. Rumänien, Brașov oder Nordrhein-Westfalen",
+      "placePlaceholder": "z. B. Rumänien, Brașov",
       "sizeCm": "Größe in cm (für den Filter)",
       "sizeText": "Größe als Text",
       "birthText": "Geburtsangabe",
@@ -1997,7 +2073,15 @@
         "reserved": "Reserviert",
         "adopted": "Vermittelt"
       },
-      "saveNext": "Speichern und weiter"
+      "saveNext": "Speichern und weiter",
+      "sections": {
+        "name": "Name",
+        "traits": "Merkmale",
+        "stay": "Aufenthalt",
+        "flags": "Kennzeichen",
+        "texts": "Texte",
+        "photos": "Fotos"
+      }
     },
     "status": {
       "change": "Status ändern",
@@ -2025,6 +2109,10 @@
     },
     "story": {
       "locked": "Erst nach der Vermittlung: Setzen Sie den Status auf „Vermittelt“, dann lässt sich die Erfolgsgeschichte pflegen.",
+      "sections": {
+        "images": "Bilder",
+        "family": "Familie"
+      },
       "before": "Vorher-Bild",
       "after": "Nachher-Bild",
       "quote": "Zitat der Familie",
@@ -2045,7 +2133,7 @@
     "admin": {
       "title": "Tiere",
       "description": "Einstellungen des Tiermoduls.",
-      "saved": "Bildausschnitt gespeichert.",
+      "saved": "Einstellungen gespeichert.",
       "frame": {
         "title": "Bildausschnitt des Hauptfotos",
         "intro": "In welchem Format und mit welchem Ausschnitt die Webseite das Hauptfoto eines Tiers zeigt. Das legt das Template der Webseite fest; tragen Sie hier dasselbe ein, dann zeigt das Tierprofil die Fotos so, wie die Seite sie zeigen wird, und Sie sehen beim Wählen des Hauptfotos, ob es passt.",
@@ -2063,8 +2151,13 @@
         "focusX": "Blickpunkt waagerecht (%)",
         "focusXHint": "0 = links, 50 = Mitte, 100 = rechts",
         "focusY": "Blickpunkt senkrecht (%)",
-        "focusYHint": "0 = oben, 50 = Mitte, 100 = unten",
-        "save": "Speichern"
+        "focusYHint": "0 = oben, 50 = Mitte, 100 = unten"
+      },
+      "profileUrl": {
+        "title": "Adresse des Online-Profils",
+        "intro": "Unter welcher Adresse die Webseite ein Tierprofil zeigt. Das legt das Template fest. Aus der Adresse entstehen der QR-Code auf dem PDF und die Zeile unter dem Namen im Profil. Leer: kein QR-Code, keine Adresse.",
+        "label": "Adressvorlage",
+        "hint": "Mit '{slug}' als Platzhalter, etwa https://example.org/tiere/'{slug}'/"
       }
     }
   },
@@ -2132,6 +2225,7 @@
       "untranslated": "noch nicht übersetzt",
       "noChoice": "Keine Auswahl – das Template entscheidet",
       "slot": "Platz {n}",
+      "slotName": "{label}, Platz {n}",
       "staleReference": "„{value}“ steht nicht mehr zur Auswahl.",
       "clearReference": "Leeren"
     },
@@ -2148,7 +2242,7 @@
       "blocking": "Blockiert — erst aufräumen:",
       "lossy": "Kostet Inhalt:",
       "harmless": "Unkritisch:",
-      "localesMissing": "Das Template fordert Sprachen, die nicht eingerichtet sind: {locales}. Legen Sie sie unter Sprachen an.",
+      "localesMissing": "Das Template fordert Sprachen, die nicht eingerichtet sind: {locales}. Fügen Sie sie unter Einstellungen → Sprachen hinzu.",
       "readDone": "Template eingelesen.",
       "name": "Name",
       "finding": {
@@ -2181,6 +2275,7 @@
       "saved": "Gespeichert.",
       "delete": "Löschen",
       "deleteTitle": "„{label}“ löschen?",
+      "deleteHint": "Ein Eintrag ist Webseiteninhalt. Hängt ein Dokument oder eine Wiedervorlage daran, bleibt er.",
       "count": "{n, plural, =0 {keine Einträge} one {ein Eintrag} other {# Einträge}}"
     },
     "publish": {
@@ -2458,8 +2553,7 @@
           "titleTest": "Auf Test publizieren?",
           "text": "<b>{changed, number} geändert · {added, number} neu · {removed, number} entfallen.</b> {hints, plural, =0 {} one {Der Hinweis der Vorschau geht mit online.} other {Die # Hinweise der Vorschau gehen mit online.}} Der Lauf dauert einige Minuten; Sie sehen ihn danach auf dieser Seite.",
           "stale": "<b>Vorschau nicht mehr aktuell.</b> Seit der Vorschau von {time} Uhr wurden Inhalte geändert. Publiziert wird nur ein Stand, den eine Vorschau gezeigt hat.",
-          "checking": "Wird geprüft …",
-          "cancel": "Abbrechen"
+          "checking": "Wird geprüft …"
         },
         "blocked": {
           "title": "Publizieren gesperrt",
@@ -2558,6 +2652,11 @@
     "archived": "Archiviert",
     "preview": "So fällt die Anschrift",
     "previewPlaceholder": "Anschrift wird hier als Vorschau angezeigt…",
+    "sections": {
+      "name": "Name",
+      "address": "Anschrift",
+      "notes": "Notizen"
+    },
     "create": {
       "trigger": "Kontakt anlegen",
       "title": "Kontakt anlegen",
@@ -2566,7 +2665,8 @@
     },
     "edit": {
       "trigger": "Kontakt bearbeiten",
-      "title": "Kontakt bearbeiten",
+      "titlePerson": "Person bearbeiten",
+      "titleOrganization": "Organisation bearbeiten",
       "description": "Ändern Sie Name, Anschrift und Notizen dieses Kontakts.",
       "submit": "Speichern"
     },
@@ -2735,8 +2835,10 @@
     "fileHint": "Nur PDF, höchstens 10 MB.",
     "upload": {
       "dropTitle": "PDF hierher ziehen",
+      "dropTitleAny": "Datei hierher ziehen",
       "dropBrowse": "oder <a>Datei auswählen</a>",
       "meta": "PDF · {size}",
+      "metaOf": "{kind} · {size}",
       "ocrPending": "Texterkennung läuft nach dem Ablegen.",
       "view": "Ansehen",
       "replace": "Ersetzen"
@@ -2889,7 +2991,6 @@
       "sentAt": "Versandt am",
       "sentVia": "Weg",
       "note": "Bemerkung",
-      "cancel": "Abbrechen",
       "submit": "Vermerken",
       "unsentBadge": "nicht versandt"
     },
@@ -2902,7 +3003,6 @@
       "titleField": "Anlass",
       "assignee": "Zuständig",
       "everyone": "— Alle —",
-      "cancel": "Abbrechen",
       "submit": "Anlegen",
       "complete": "{title} erledigen",
       "reopen": "{title} wieder öffnen",
@@ -2935,7 +3035,6 @@
       "contact": "Kontakt",
       "choose": "— Bitte wählen —",
       "role": "Rolle",
-      "cancel": "Abbrechen",
       "submit": "Hinzufügen",
       "remove": "Entfernen"
     },
@@ -2946,7 +3045,6 @@
       "addDescription": "Ein anderes Dokument der Akte, zu dem dieses gehört.",
       "kind": "Art",
       "document": "Dokument",
-      "cancel": "Abbrechen",
       "submit": "Hinzufügen",
       "remove": "Entfernen",
       "protected": "geschützt",
@@ -2993,6 +3091,10 @@
       "voidReason": "Grund für die Stornierung",
       "voidReasonPlaceholder": "z. B. Falsche Anschrift oder fehlerhafter Inhalt"
     },
+    "sections": {
+      "document": "Dokument",
+      "filing": "Ablage und Bezüge"
+    },
     "errors": {
       "noFile": "Bitte wählen Sie eine Datei aus.",
       "folderGone": "Den Ordner „{name}“ gibt es nicht mehr. Wählen Sie einen anderen."
@@ -3011,9 +3113,17 @@
       "unrelated": "Dokumentbezug entfernt"
     },
     "admin": {
-      "title": "Akte – Stammdaten",
+      "title": "Akte",
+      "tabsLabel": "Bereiche der Akte",
+      "panels": {
+        "types": "Arten",
+        "rules": "Regeln",
+        "folders": "Ordner",
+        "snippets": "Textbausteine",
+        "channels": "Versand",
+        "text": "Texterkennung"
+      },
       "description": "Dokumentarten, Ordnerstruktur und Einsortierregeln der Sachakte",
-      "typesTitle": "Dokumentarten",
       "typesDescription": "Verwalten Sie die Dokumentarten für Vorlagen, Nummernkreis-Präfixe und Aufbewahrungsfristen.",
       "createType": "Dokumentart anlegen",
       "createTypeTitle": "Neue Dokumentart",
@@ -3050,10 +3160,8 @@
         "permanent": "Dauerhaft",
         "consent": "Einwilligung"
       },
-      "foldersTitle": "Ordner",
       "foldersMoved": "Ordner legen Sie jetzt direkt in der Akte an: oben in der Ordnerspalte „Neuer Ordner“, an jedem Ordner über „…“ oder mit Rechtsklick. Dort benennen Sie sie auch um, verschieben und löschen sie.",
       "toFile": "Zur Akte",
-      "snippetsTitle": "Textbausteine",
       "snippetsDescription": "Absätze und Standardbriefe, die der Editor auf Wunsch einfügt. Ohne Platzhalter.",
       "createSnippet": "Baustein anlegen",
       "createSnippetTitle": "Baustein anlegen",
@@ -3074,7 +3182,6 @@
       "deleteSnippetDescription": "„{name}“ wird gelöscht. Briefe, die ihn benutzt haben, behalten ihren Text.",
       "deleteSnippetConfirm": "Löschen",
       "emptySnippets": "Noch kein Baustein.",
-      "channelsTitle": "Versandwege",
       "channelsDescription": "Die Wege, die ein Versandvermerk kennt. Ein entfernter Weg bleibt an alten Vermerken lesbar.",
       "createChannel": "Versandweg anlegen",
       "createChannelTitle": "Versandweg anlegen",
@@ -3092,7 +3199,6 @@
       "removeChannelDescription": "„{label}“ steht danach nicht mehr zur Wahl.",
       "removeChannelConfirm": "Entfernen",
       "lastChannel": "Mindestens ein Weg muss bleiben.",
-      "rulesTitle": "Einsortierregeln",
       "rulesDescription": "Automatische Erkennung und Zuordnung von Dokumentart und Ordner beim Ablegen eingehender Post.",
       "createRule": "Regel anlegen",
       "createRuleTitle": "Neue Einsortierregel",
@@ -3110,6 +3216,14 @@
         "thenFolder": "Ordner",
         "status": "Status",
         "actions": "Aktionen"
+      },
+      "typeSections": {
+        "identity": "Kennung",
+        "filing": "Ablage"
+      },
+      "ruleSections": {
+        "condition": "Bedingung",
+        "result": "Folge"
       },
       "ruleFields": {
         "matchField": "Feld",
@@ -3131,14 +3245,13 @@
       "delete": "Löschen",
       "save": "Speichern",
       "textPanel": {
-        "heading": "Volltext",
         "description": "Liest alle abgelegten Dokumente erneut ein. Das geschieht im Hintergrund, eins nach dem anderen; die Suche bleibt währenddessen benutzbar.",
         "languages": "Sprachen der Texterkennung",
         "reindex": "Alles neu lesen",
         "queued": "{count} Dokumente wurden zum Neu-Lesen vorgemerkt.",
         "open": "{count} warten noch",
         "languageMissing": "{lang} ist in dieser Umgebung nicht installiert.",
-        "addLanguage": "+ Sprache auswählen…"
+        "addLanguage": "Sprache auswählen…"
       },
       "toast": {
         "typeCreated": "Dokumentart angelegt",
@@ -3290,6 +3403,7 @@
       "project": "Projekt",
       "none": "—",
       "rowMenu": "Zeilenmenü",
+      "rowLabel": "Zeile {n}",
       "restIntoHereWithAmount": "Rest hierher — {amount}",
       "restIntoHere": "Rest hierher",
       "splitEvenly": "gleichmäßig auf {n} teilen",
@@ -3307,7 +3421,8 @@
       "notSetUp": {
         "title": "Finanzen sind noch nicht eingerichtet.",
         "text": "Es fehlt ein Geschäftsjahr oder ein aktives Konto.",
-        "textWithNames": "Es fehlt ein Geschäftsjahr oder ein aktives Konto. Das kann erledigen: {names}."
+        "textWithNames": "Es fehlt ein Geschäftsjahr oder ein aktives Konto. Das kann erledigen: {names}.",
+        "action": "Finanzen einrichten"
       },
       "accountsCount": "{count} Konten",
       "allocationsCount": "{count} Aufteilungen",
@@ -3540,6 +3655,8 @@
         "title": "Was stimmt nicht?",
         "groupParty": "Die Zuordnung",
         "groupNumbers": "Die Zahlen",
+        "groupNew": "Neue Zuordnung",
+        "groupReverse": "Zurücknehmen",
         "party": {
           "contact": "Spender/Empfänger",
           "project": "Projekt",
@@ -3600,7 +3717,10 @@
       "title": "Barkasse",
       "noAccount": {
         "title": "Noch keine Barkasse",
-        "text": "Für die Barkasse ist noch kein Konto eingerichtet."
+        "text": "Für die Barkasse ist noch kein Konto eingerichtet. Legen Sie unter Bankkonten und Kassen eine Kasse an.",
+        "textNoRight": "Für die Barkasse ist noch kein Konto eingerichtet. Anlegen kann es, wer Finanzen einrichten darf.",
+        "textNoRightWithNames": "Für die Barkasse ist noch kein Konto eingerichtet. Anlegen kann es, wer Finanzen einrichten darf — das können: {names}.",
+        "action": "Barkasse einrichten"
       },
       "noRight": {
         "title": "Kein Recht zum Festschreiben",
@@ -3623,6 +3743,10 @@
       },
       "count": {
         "trigger": "Kasse oder Dose gezählt",
+        "sections": {
+          "what": "Was gezählt wurde",
+          "who": "Wer gezählt hat"
+        },
         "modeGroup": "Kasse oder Dose",
         "mode": {
           "cash": "Kasse",
@@ -3645,7 +3769,6 @@
         },
         "noteLabel": "Erklärung zum Fehlbetrag",
         "shortageHint": "Bitte kurz erklären, wo der Betrag geblieben ist.",
-        "cancel": "Abbrechen",
         "submit": "Zählung speichern",
         "toast": {
           "done": "Zählprotokoll {number} erstellt."
@@ -3661,7 +3784,6 @@
         "bankAccount": "Bankkonto",
         "date": "Datum",
         "amount": "Betrag",
-        "cancel": "Abbrechen",
         "submit": "Buchen",
         "toast": {
           "done": "Bargeldbewegung gebucht."
@@ -3740,8 +3862,7 @@
           "title": "Kein passendes Konto",
           "text": "{file} — kein Konto hat ein Format mit dieser Kopfzeile.",
           "question": "Ist das ein neues Konto, oder hat die Bank ihr Format geändert?",
-          "setUp": "Format für ein Konto einrichten",
-          "setUpHint": "Öffnet den CSV-Assistenten mit dieser Datei."
+          "setUp": "Format für ein Konto einrichten"
         },
         "noneCamt": {
           "title": "Kein passendes Konto",
@@ -3870,6 +3991,10 @@
         "text": "Hier stehen Forderungen und Verbindlichkeiten, die außerhalb des Journals geführt werden."
       },
       "dialog": {
+        "sections": {
+          "payment": "Zahlung",
+          "counterparty": "Gegenüber"
+        },
         "newTitle": "Offene Zahlung anlegen",
         "editTitle": "Offene Zahlung ändern",
         "kind": "Art",
@@ -3884,7 +4009,6 @@
         "reference": "Verwendungszweck",
         "document": "Dokument",
         "save": "Speichern",
-        "cancel": "Abbrechen",
         "toast": {
           "created": "Offene Zahlung angelegt.",
           "updated": "Offene Zahlung geändert."
@@ -3938,15 +4062,15 @@
         "purposeNone": "Kein Standard-Zweck",
         "abroad": "Wird im Ausland verwendet",
         "publishDonationStatus": "Spendenstand auf der Webseite zeigen",
-        "save": "Speichern",
-        "cancel": "Abbrechen"
+        "save": "Speichern"
       },
       "toast": {
         "saved": "Finanzfelder geändert."
       }
     },
     "admin": {
-      "title": "Finanzen einrichten",
+      "title": "Finanzen",
+      "tabsLabel": "Bereiche der Finanzen",
       "description": "Geschäftsjahr, Bankkonten und Kassen, wer welche Rolle trägt, Kategorien, Zwecke, Sätze und Grenzen sowie das Steuerliche.",
       "tabs": {
         "checklist": "Checkliste",
@@ -4004,7 +4128,6 @@
         }
       },
       "accounts": {
-        "title": "Bankkonten und Kassen",
         "create": "Konto anlegen",
         "edit": "Konto ändern",
         "active": "Aktiv",
@@ -4016,6 +4139,11 @@
           "paymentService": "Zahlungsdienst"
         },
         "dialog": {
+          "sections": {
+            "account": "Konto",
+            "bank": "Bankverbindung",
+            "opening": "Anfangsbestand"
+          },
           "name": "Name",
           "kind": "Art",
           "iban": "IBAN",
@@ -4041,8 +4169,11 @@
         }
       },
       "categories": {
-        "title": "Kategorien",
         "search": "Suchen",
+        "sections": {
+          "basics": "Grunddaten",
+          "tax": "Steuer"
+        },
         "create": "Kategorie anlegen",
         "edit": "Kategorie ändern",
         "inactiveState": "Stillgelegt",
@@ -4127,8 +4258,11 @@
         }
       },
       "purposes": {
-        "title": "Zwecke",
         "create": "Zweck anlegen",
+        "sections": {
+          "purpose": "Zweck",
+          "carryForward": "Vortrag"
+        },
         "edit": "Zweck ändern",
         "description": "Beschreibung",
         "abroad": "Wird im Ausland verwendet",
@@ -4160,7 +4294,6 @@
         "toOverview": "Bestände und Umwidmungen ansehen"
       },
       "fiscalYears": {
-        "title": "Geschäftsjahre",
         "createFirst": "Erstes Geschäftsjahr anlegen",
         "createFirstHint": "Kompass schlägt als Bezeichnung das Jahr des Beginns vor; ein Rumpfjahr — beginnt nicht am 1. Januar oder endet nicht am 31. Dezember — erkennt man am Kennzeichen, nicht an der Bezeichnung.",
         "shortYear": "Rumpfjahr ({from}–{to})",
@@ -4223,8 +4356,13 @@
         }
       },
       "tax": {
-        "title": "Steuerliches",
         "confirmedAt": "Zuletzt bestätigt am {date}.",
+        "sections": {
+          "switches": "Schalter",
+          "boardRemuneration": "Pauschalen an Vorstandsmitglieder",
+          "limits": "Grenzen",
+          "agent": "Agent"
+        },
         "notConfirmed": "Noch nicht bestätigt.",
         "isEntrepreneurOrHasVatId": "Ist der Verein Unternehmer oder hat eine Umsatzsteuer-Identifikationsnummer?",
         "membershipFeesCertifiable": "Sind Mitgliedsbeiträge bescheinigungsfähig?",
@@ -4237,7 +4375,8 @@
           "roundAmountFromCents": "Ab welchem Betrag ist ein runder Betrag auffällig?",
           "proofGraceDays": "Wie viele Tage Kulanz nach der Nachweisfrist einer Zahlung an Partner, bevor sie als überfällig gilt?",
           "save": "Speichern",
-          "saved": "Grenze gespeichert."
+          "saved": "Grenze gespeichert.",
+          "daysFormat": "Eine ganze Zahl von 0 bis 365."
         },
         "waiverBasis": {
           "label": "Anspruchsgrundlage für Aufwandsspenden",
@@ -4252,12 +4391,10 @@
           "basisLabel": "Satzungsfundstelle",
           "validFromLabel": "Gilt ab",
           "validFromHint": "Ab diesem Tag trägt die Grundlage Pauschalen an Vorstandsmitglieder; frühere Zahlungen bleiben als „ohne Grundlage“ markiert.",
-          "hint": "Ohne diese Bestätigung warnt die Personenübersicht bei jeder Pauschale an ein Vorstandsmitglied.",
-          "save": "Speichern"
+          "hint": "Ohne diese Bestätigung warnt die Personenübersicht bei jeder Pauschale an ein Vorstandsmitglied."
         }
       },
       "permissions": {
-        "title": "Wer darf was",
         "activity": "Tätigkeit",
         "granted": "Erlaubt",
         "yes": "Ja",
@@ -4309,6 +4446,7 @@
         "csvAnyway": "Trotzdem CSV einrichten"
       },
       "fileLabel": "CSV-Datei wählen",
+      "fileHint": "Die Umsätze als CSV-Datei aus dem Online-Banking.",
       "handoff": {
         "text": "Datei „{name}“ aus der Ablagefläche",
         "hint": "Wählen Sie das Konto, zu dem die Datei gehört.",
@@ -4370,8 +4508,9 @@
           "currency": "Währung",
           "pending": "Status (vorgemerkt)"
         },
-        "indicatorValues": "Werte, die „Ausgang“ bedeuten (durch Komma getrennt)",
-        "pendingValues": "Werte, die „vorgemerkt“ bedeuten (durch Komma getrennt)",
+        "indicatorValues": "Werte für „Ausgang“",
+        "pendingValues": "Werte für „vorgemerkt“",
+        "valuesHint": "durch Komma getrennt",
         "reasons": {
           "settingsMissing": "Wählen Sie im Schritt davor Datumsformat und Dezimalzeichen.",
           "dateMissing": "Wählen Sie die Spalte mit dem Buchungstag.",
@@ -4568,7 +4707,6 @@
         "text": "Kompass bucht den Umsatz als geprüften Entwurf auf den Partner und legt dazu eine nachträgliche Zahlung an Partner mit dieser Zeile an. Einreichen lässt sie sich, sobald die Buchung festgeschrieben ist.",
         "none": "Noch kein Partner angelegt — legen Sie ihn unter Finanzen → Partner an.",
         "confirm": "Entwurf anlegen",
-        "cancel": "Abbrechen",
         "noLine": "Die Buchung trägt keine ausgehende Zeile an diesen Partner."
       },
       "entries": {
@@ -4908,7 +5046,6 @@
       "recall": {
         "title": "Rückholspur zu {number} nachtragen",
         "hint": "Die Bestätigung war schon versandt. Tragen Sie ein, was inzwischen geschehen ist; ein vermerktes Datum bleibt.",
-        "cancel": "Abbrechen",
         "submit": "Nachtragen",
         "toast": {
           "done": "Rückholspur zu {number} nachgetragen"
@@ -5005,7 +5142,6 @@
           "signatureField": "mit Unterschriftsfeld"
         },
         "humanOnly": "Ausstellen kann nur ein Mensch — nicht über ein Werkzeug für Agenten.",
-        "cancel": "Abbrechen",
         "submit": "Ausstellen",
         "toast": {
           "issued": "Bestätigung {number} ausgestellt"
@@ -5038,6 +5174,7 @@
         "reason": "Grund",
         "alreadySent": "Bereits versandt?",
         "alreadySentFixed": "Der Versand ist vermerkt — die Rückholspur gehört dazu. Fehlende Daten lassen sich später nachtragen.",
+        "trailTitle": "Rückholspur",
         "trailHint": "Ist die Bestätigung schon beim Spender, gehört die Rückholspur dazu: Original zurückfordern und das Finanzamt informieren.",
         "originalReturnedOn": "Original zurück am",
         "taxOfficeInformedOn": "Finanzamt informiert am",
@@ -5048,7 +5185,6 @@
           "copy": "Unser Exemplar bleibt in der Akte.",
           "number": "Die Nummer {number} bleibt vergeben."
         },
-        "cancel": "Abbrechen",
         "submit": "Bestätigung zurücknehmen",
         "toast": {
           "done": "Bestätigung {number} zurückgenommen"
@@ -5115,13 +5251,9 @@
         "add": "Bescheid erfassen",
         "tableLabel": "Bescheide des Finanzamts",
         "columns": {
-          "kind": "Art",
-          "taxOffice": "Finanzamt",
-          "taxNumber": "Steuernummer",
-          "noticeDate": "Datum",
-          "exemptFrom": "Befreiung ab",
-          "assessmentPeriod": "Veranlagungszeitraum",
-          "validUntil": "gültig bis",
+          "notice": "Bescheid",
+          "noticeDate": "Vom",
+          "validity": "Gilt",
           "document": "Dokument",
           "state": "Zustand",
           "actions": "Aktionen"
@@ -5136,6 +5268,7 @@
           "future": "künftig"
         },
         "noDocument": "keins",
+        "assessmentPeriodLine": "Veranlagungszeitraum {period}",
         "empty": {
           "title": "Noch kein Bescheid erfasst",
           "text": "Ohne Bescheid des Finanzamts lassen sich keine Zuwendungsbestätigungen ausstellen."
@@ -5149,6 +5282,12 @@
         },
         "dialog": {
           "title": "Bescheid erfassen",
+          "sections": {
+            "notice": "Bescheid",
+            "taxOffice": "Finanzamt",
+            "period": "Zeitraum",
+            "purposes": "Zwecke"
+          },
           "kind": "Art des Bescheids",
           "taxOffice": "Finanzamt",
           "taxNumber": "Steuernummer",
@@ -5239,8 +5378,7 @@
           "validTo": "Gültig bis",
           "validToHint": "Leer lassen, solange die Person unterzeichnet. Bei einer Amtsübergabe setzen Sie hier das Ende.",
           "notifiedOn": "Angezeigt beim Finanzamt am",
-          "save": "Speichern",
-          "cancel": "Abbrechen"
+          "save": "Speichern"
         },
         "letter": "Anzeigeschreiben als Entwurf erzeugen",
         "letterHint": "Das Schreiben an das Finanzamt entsteht als Entwurf in der Akte; Sie prüfen, drucken und versenden es dort.",
@@ -5509,6 +5647,7 @@
         "tripNoRate": "Für dieses Datum ist kein Kilometersatz hinterlegt.",
         "removePosition": "Position {n} entfernen",
         "addPosition": "Weitere Position",
+        "refund": "Erstattung",
         "total": "Summe",
         "iban": "IBAN",
         "ibanHint": "Auf dieses Konto wird erstattet.",
@@ -5678,23 +5817,26 @@
         "emptyTitle": "Noch kein Partner.",
         "emptyText": "Noch kein Partner angelegt.",
         "create": {
+          "title": "Partner anlegen",
           "contact": "Kontakt",
           "status": "Status",
-          "cancel": "Abbrechen",
           "save": "Anlegen"
         }
       },
       "detail": {
         "back": "Partner",
         "profile": {
+          "sections": {
+            "classification": "Einordnung",
+            "documents": "Unterlagen"
+          },
           "title": "Angaben zum Partner",
           "status": "Status",
           "usualBasis": "Übliche Art",
           "usualBasisDerived": "ergibt sich aus dem Status",
           "usualProofMonths": "Übliche Nachweisfrist",
           "months": "{count, plural, one {# Monat} other {# Monate}}",
-          "legalForm": "Rechtsform",
-          "legalFormNone": "nicht angegeben – am Kontakt pflegen",
+          "legalFormNone": "Rechtsform nicht angegeben – am Kontakt pflegen",
           "basisQuestion": "Wie arbeitet der Partner mit Ihrem Geld?",
           "basisCards": {
             "transfer58": "Der Partner entscheidet selbst, wofür er das Geld einsetzt",
@@ -5712,6 +5854,12 @@
           "delete": "Löschen",
           "deleteConfirmTitle": "Partner löschen?",
           "deleteConfirmDescription": "Das lässt sich nicht zurücknehmen."
+        },
+        "danger": {
+          "deleteText": "Entfernt die Angaben zum Partner. Das geht nur, solange weder Zahlungen noch Bescheide daran hängen.",
+          "archiveText": "Der Partner bleibt mit seinen Zahlungen und Bescheiden erhalten und wird als inaktiv geführt.",
+          "activateTitle": "Wieder aktivieren",
+          "activateText": "Der Partner wird wieder als aktiv geführt."
         },
         "notices": {
           "title": "Bescheide des Partners",
@@ -5899,9 +6047,12 @@
       },
       "title": "Freigaben",
       "intro": "Anträge, die auf Ihre Freigabe warten – die ältesten zuerst. Ihre eigenen stehen hier nie.",
+      "empty": {
+        "title": "Nichts wartet auf Ihre Freigabe",
+        "text": "Neue Anträge erscheinen hier, sobald jemand eine Auslage, eine Zahlung oder eine Umwidmung einreicht."
+      },
       "queue": {
         "title": "Wartet auf Ihre Freigabe",
-        "empty": "Nichts wartet auf Ihre Freigabe.",
         "since": "seit {date}",
         "back": "Zur Warteschlange"
       },
@@ -6004,8 +6155,7 @@
         "who": "Den Grund liest {name} in den eigenen Anträgen.",
         "reason": "Grund",
         "required": "Bitte nennen Sie den Grund.",
-        "confirm": "Ablehnen",
-        "cancel": "Abbrechen"
+        "confirm": "Ablehnen"
       },
       "result": {
         "approved": "freigegeben",
@@ -6206,7 +6356,6 @@
         "dissolveAmount": "Aufgelöst wird der ganze Bestand: {amount}.",
         "note": "Notiz",
         "after": "Danach: Bestand {amount}. Auf den Bankkonten und Kassen ändert sich nichts.",
-        "cancel": "Abbrechen",
         "save": "Vorgang erfassen",
         "saved": "Vorgang erfasst."
       },
@@ -6246,7 +6395,6 @@
         "date": "Stichtag",
         "currentDocument": "Hinterlegter Beschluss zum Vortrag:",
         "documentRequired": "Pflicht — ohne Beschluss kein Vortrag.",
-        "cancel": "Abbrechen",
         "save": "Vortrag speichern",
         "saved": "Vortrag gespeichert."
       },
@@ -6254,7 +6402,6 @@
         "title": "Beschluss ersetzen: {name}",
         "hint": "Der bisherige Beschluss bleibt in der Akte und am Datensatz verknüpft; maßgeblich ist danach der neue.",
         "current": "Bisher:",
-        "cancel": "Abbrechen",
         "save": "Beschluss ersetzen",
         "saved": "Beschluss ersetzt."
       },
@@ -6321,7 +6468,7 @@
     "errors": {
       "humanOnly": {
         "reason": "Diesen Schritt führt ein Mensch in der Oberfläche aus.",
-        "remedy": "Der Verein kann ihn für MCP freigeben: Finanzen einrichten → Steuerliches → „Darf ein Agent festschreiben?“ einschalten."
+        "remedy": "Der Verein kann ihn für MCP freigeben: Einstellungen → Finanzen → Steuerliches → „Darf ein Agent festschreiben?“ einschalten."
       },
       "accountInUse": {
         "reason": "Auf dieses Konto ist bereits gebucht.",
@@ -6385,11 +6532,11 @@
       },
       "accountInactive": {
         "reason": "Das Konto {account} ist stillgelegt.",
-        "remedy": "Wählen Sie ein aktives Konto oder aktivieren Sie es unter „Finanzen einrichten“."
+        "remedy": "Wählen Sie ein aktives Konto oder aktivieren Sie es unter Einstellungen → Finanzen → Bankkonten und Kassen."
       },
       "categoryInactive": {
         "reason": "Die Kategorie {category} ist stillgelegt.",
-        "remedy": "Wählen Sie eine aktive Kategorie oder aktivieren Sie sie unter „Finanzen einrichten“."
+        "remedy": "Wählen Sie eine aktive Kategorie oder aktivieren Sie sie unter Einstellungen → Finanzen → Kategorien."
       },
       "fiscalYearClosed": {
         "reason": "Das Geschäftsjahr {year} ist abgeschlossen.",
@@ -6425,11 +6572,11 @@
       },
       "noTaxRateForDate": {
         "reason": "Für den {date, date, ::ddMMyyyy} ist kein Umsatzsteuersatz hinterlegt.",
-        "remedy": "Tragen Sie den Satz unter „Finanzen einrichten → Werte“ mit seinem Stichtag ein."
+        "remedy": "Tragen Sie den Satz unter Einstellungen → Finanzen → Sätze und Grenzen mit seinem Stichtag ein."
       },
       "voucherTypeNotAllowed": {
         "reason": "Die Art „{type}“ gilt beim Verein nicht als Finanzbeleg.",
-        "remedy": "Wählen Sie eine der hinterlegten Belegarten, oder tragen Sie die Art unter „Finanzen einrichten“ nach."
+        "remedy": "Wählen Sie eine der hinterlegten Belegarten, oder tragen Sie die Art unter Einstellungen → Finanzen nach."
       },
       "documentNotFinal": {
         "reason": "Das Dokument ist noch ein Entwurf.",
@@ -6577,7 +6724,7 @@
       },
       "statementTooLarge": {
         "reason": "Die Datei ist größer als das eingestellte Limit von {limit} MB.",
-        "remedy": "Prüfen Sie die Datei, oder erhöhen Sie das Limit unter „Finanzen einrichten“."
+        "remedy": "Prüfen Sie die Datei, oder erhöhen Sie das Limit unter Einstellungen → Finanzen."
       },
       "statementUnreadable": {
         "reason": "Der Auszug lässt sich nicht lesen.",
@@ -6653,7 +6800,7 @@
       },
       "ruleCategoryInactive": {
         "reason": "Die Regel „{name}“ bucht auf eine stillgelegte Kategorie.",
-        "remedy": "Aktivieren Sie die Kategorie unter „Finanzen einrichten“, oder ändern Sie die Regel."
+        "remedy": "Aktivieren Sie die Kategorie unter Einstellungen → Finanzen → Kategorien, oder ändern Sie die Regel."
       },
       "suggestionStale": {
         "reason": "Der Kontoumsatz ist inzwischen zugeordnet.",
@@ -6801,7 +6948,7 @@
       },
       "confirmationExpenseWaiversDisabled": {
         "reason": "Aufwandsspenden sind ausgeschaltet.",
-        "remedy": "Schalten Sie sie unter „Finanzen einrichten → Steuerliches“ ein, wenn der Verein sie bestätigt."
+        "remedy": "Schalten Sie sie unter Einstellungen → Finanzen → Steuerliches ein, wenn der Verein sie bestätigt."
       },
       "confirmationBeforeExemptionStart": {
         "reason": "Die Zuwendung vom {entryDate, date, ::ddMMyyyy} liegt vor dem Beginn der Steuerbefreiung am {exemptFrom, date, ::ddMMyyyy}; dafür darf keine Bestätigung ausgestellt werden.",
@@ -6957,7 +7104,7 @@
       },
       "expenseWaiversDisabled": {
         "reason": "Aufwandsspenden sind beim Verein ausgeschaltet.",
-        "remedy": "Reichen Sie den Antrag ohne Verzicht neu ein, oder schalten Sie Aufwandsspenden unter „Finanzen einrichten“ ein."
+        "remedy": "Reichen Sie den Antrag ohne Verzicht neu ein, oder schalten Sie Aufwandsspenden unter Einstellungen → Finanzen → Steuerliches ein."
       },
       "waiverAgreedAfterPosition": {
         "reason": "Die Vereinbarung über den Erstattungsanspruch ist jünger als die früheste Position.",
@@ -6985,7 +7132,7 @@
       },
       "waiverBasisMissing": {
         "reason": "Für den Verzicht fehlt eine Anspruchsgrundlage — weder bei der Person noch beim Verein.",
-        "remedy": "Hinterlegen Sie eine Vereinbarung bei der Person oder den Vereinstext unter „Finanzen einrichten“, bevor Sie den Verzicht einreichen oder freigeben."
+        "remedy": "Hinterlegen Sie eine Vereinbarung bei der Person oder den Vereinstext unter Einstellungen → Finanzen → Steuerliches, bevor Sie den Verzicht einreichen oder freigeben."
       },
       "expenseFileNotPdf": {
         "reason": "Die Datei {file} ist kein PDF.",
@@ -7005,7 +7152,7 @@
       },
       "expenseWaiverCategoryMissing": {
         "reason": "Es gibt keine aktive Kategorie für Aufwandsspenden.",
-        "remedy": "Legen Sie unter „Finanzen einrichten“ eine Einnahme-Kategorie der Art „Aufwandsspende“ an oder aktivieren Sie sie wieder."
+        "remedy": "Legen Sie unter Einstellungen → Finanzen → Kategorien eine Einnahme-Kategorie der Art „Aufwandsspende“ an oder aktivieren Sie sie wieder."
       },
       "expenseNotRejected": {
         "reason": "Neu einreichen lässt sich nur ein abgelehnter Antrag.",

@@ -27,7 +27,7 @@ describe('mcp endpoint with a feature module', () => {
   it('tells a client which arguments a writing module tool takes', async () => {
     const client = await connectAsAnimalManager();
     const create = (await client.listTools()).tools.find((t) => t.name === 'animals_create')!;
-    expect(Object.keys(create.inputSchema.properties ?? {})).toEqual(expect.arrayContaining(['slug', 'name', 'sex', 'summary', 'body']));
+    expect(Object.keys(create.inputSchema.properties ?? {})).toEqual(expect.arrayContaining(['name', 'sex', 'summary', 'body']));
     await client.close();
   });
 
@@ -35,10 +35,10 @@ describe('mcp endpoint with a feature module', () => {
     const client = await connectAsAnimalManager();
     const result = await client.callTool({
       name: 'animals_create',
-      arguments: { slug: 'luna', name: 'Luna', sex: 'female', birthText: { de: '2022', en: '' }, sizeText: { de: '40 cm', en: '' }, summary: { de: 'Kurz', en: '' }, body: { de: 'Lang', en: '' } },
+      arguments: { name: 'Luna', sex: 'female', birthText: { de: '2022', en: '' }, sizeText: { de: '40 cm', en: '' }, summary: { de: 'Kurz', en: '' }, body: { de: 'Lang', en: '' } },
     });
     expect(result.isError).toBeFalsy();
-    expect((result.structuredContent as { slug: string }).slug).toBe('luna');
+    expect((result.structuredContent as { slug: string }).slug).toMatch(/^luna-[0-9a-z]{4}$/);
     await client.close();
   });
 });

@@ -1,7 +1,6 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
 import { StatusBadge } from '@/components/status-badge';
@@ -9,10 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { SortableHead } from '@/components/sortable-head';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { roleLabel } from '@/lib/contact-roles';
 import { useUrlFilters } from '@/lib/use-url-filters';
-import { cn } from '@/lib/utils';
 import { Select } from '@/components/ui/select';
 
 export interface ContactListItem {
@@ -125,40 +123,27 @@ export function ContactList({ contacts, roles }: { contacts: ContactListItem[]; 
 
       <div className="overflow-hidden rounded-md border border-line bg-surface">
         <Table>
-          <TableHeader className="bg-table-head text-left text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink">
-            <TableRow className="h-9">
+          <TableHeader>
+            <TableRow>
               <SortableHead field="name" label={t('columns.name')} />
               <SortableHead field="kind" label={t('columns.kind')} />
-              <TableHead className="px-4">{t('columns.roles')}</TableHead>
+              <TableHead>{t('columns.roles')}</TableHead>
               <SortableHead field="city" label={t('columns.city')} />
-              <TableHead className="px-4">{t('columns.contact')}</TableHead>
+              <TableHead>{t('columns.contact')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {contacts.map((c, i) => (
-              <TableRow
-                key={c.id}
-                onClick={() => router.push(`/contacts/${c.id}`)}
-                className={cn(
-                  'h-[52px] cursor-pointer border-b border-line-2 hover:bg-row-hover',
-                  i % 2 === 1 && 'bg-zebra',
-                )}
-              >
-                <TableCell className="px-4">
+            {contacts.map((c) => (
+              <TableRow key={c.id}>
+                <TableCell>
                   <div className="flex flex-col">
-                    <Link
-                      href={`/contacts/${c.id}`}
-                      className="font-semibold underline underline-offset-2 hover:text-link"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {c.name}
-                    </Link>
+                    <RowLink href={`/contacts/${c.id}`}>{c.name}</RowLink>
                     {c.affiliation ? (
                       <span className="text-[12px] text-muted-ink">{c.affiliation}</span>
                     ) : null}
                   </div>
                 </TableCell>
-                <TableCell className="px-4 text-ink-2">
+                <TableCell className="text-ink-2">
                   {c.kind === 'organization' ? t('fields.organization') : t('fields.person')}
                   {c.status === 'archived' ? (
                     <StatusBadge tone="neutral" className="ml-2">
@@ -166,7 +151,7 @@ export function ContactList({ contacts, roles }: { contacts: ContactListItem[]; 
                     </StatusBadge>
                   ) : null}
                 </TableCell>
-                <TableCell className="px-4">
+                <TableCell>
                   <div className="flex flex-wrap gap-1">
                     {c.roles.map((r) => (
                       <StatusBadge key={r} tone="info">
@@ -175,8 +160,8 @@ export function ContactList({ contacts, roles }: { contacts: ContactListItem[]; 
                     ))}
                   </div>
                 </TableCell>
-                <TableCell className="px-4 text-ink-2">{c.city || '—'}</TableCell>
-                <TableCell className="px-4 text-ink-2 font-mono text-[13px]">{c.primaryChannel || '—'}</TableCell>
+                <TableCell className="text-ink-2">{c.city || '—'}</TableCell>
+                <TableCell selectable className="text-ink-2 font-mono text-[13px]">{c.primaryChannel || '—'}</TableCell>
               </TableRow>
             ))}
           </TableBody>

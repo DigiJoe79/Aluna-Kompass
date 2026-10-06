@@ -5,21 +5,25 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { toast } from 'sonner';
 import { DocumentPicker } from '@/app/(shell)/dms/document-picker';
 import type { PickedDocument } from '@/app/(shell)/dms/search-action';
 import { useDateFormat } from '@/components/date-format-provider';
 import { AmountField } from '@/components/finance/amount-field';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Notice } from '@/components/notice';
 import { RequirementList, type RequirementListItem } from '@/components/requirement-list';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
 import { issueAllowed, signatureMode } from '@/lib/finance/donations';
 import { issueConfirmationAction, loadIssueCheckAction, saveInKindDetailsAction } from './actions';
+import { FormField } from '@/components/forms/form-field';
+import { FormCell, FormGrid, FormRowBreak } from '@/components/forms/form-grid';
 
 type Loaded = { check: ConfirmationCheckResult; inKindDetails: FinanceInKindDetailsRow | null };
 type Preview = { state: 'idle' } | { state: 'loading' } | { state: 'ready'; url: string } | { state: 'failed'; message: string };
@@ -43,6 +47,7 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
   const [loadError, setLoadError] = useState<string | null>(null);
   const [preview, setPreview] = useState<Preview>({ state: 'idle' });
   const [pending, setPending] = useState(false);
+  const feedback = useActionFeedback();
 
   const load = useCallback(async () => {
     const result = await loadIssueCheckAction([lineId], issuedOn);
@@ -93,15 +98,13 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
   const submit = async () => {
     if (!check) return;
     setPending(true);
-    const result = await issueConfirmationAction({ lineIds: [lineId], issuedOn });
+    const result = await feedback.run(() => issueConfirmationAction({ lineIds: [lineId], issuedOn }), { retry: () => void submit() });
     setPending(false);
     if (result.status === 'error') {
-      toast.error(result.message);
       void load();
       return;
     }
     if (result.status === 'success') {
-      if (result.message) toast.success(result.message);
       onOpenChange(false);
       router.refresh();
     }
@@ -198,7 +201,7 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent layout="fixed-footer" className="h-[85vh] bg-surface shadow-md sm:max-w-[1040px]">
+      <DialogContent size="xl" layout="fixed-footer" className="h-[85vh] bg-surface shadow-md">
         <DialogHeader data-testid="issue-dialog-head">
           <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
           {check ? (
@@ -219,14 +222,14 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
           ) : (
             <>
               <div data-testid="issue-requirements" className="min-h-0 space-y-4 px-5 py-4 lg:overflow-auto">
-                <h3 className="text-[12px] font-semibold uppercase tracking-wide text-muted-ink">{t('requirements')}</h3>
+                <h3 className="text-[15px] font-semibold">{t('requirements')}</h3>
                 <RequirementList items={items} grouping="open-first" />
                 {check.kind === 'inKind' ? (
                   <InKindForm lineId={lineId} valueCents={check.lines[0]?.amountCents ?? 0} details={loaded?.inKindDetails ?? null} canDescribe={canDescribe} onSaved={() => void load()} />
                 ) : null}
               </div>
               <div className="flex min-h-[420px] flex-col gap-2 border-t border-line px-5 py-4 lg:min-h-0 lg:border-t-0 lg:border-l">
-                <h3 className="text-[12px] font-semibold uppercase tracking-wide text-muted-ink">{t('preview')}</h3>
+                <h3 className="text-[15px] font-semibold">{t('preview')}</h3>
                 {preview.state === 'ready' ? (
                   <iframe data-testid="confirmation-preview" title={t('previewTitle')} src={preview.url} className="min-h-0 w-full flex-1 rounded-md border border-line bg-surface-2" />
                 ) : (
@@ -238,27 +241,29 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
             </>
           )}
         </DialogBody>
-        <DialogFooter className="sm:items-end sm:justify-between">
-          {check ? (
-            <div className="flex flex-wrap items-end gap-5">
-              <div className="space-y-1.5">
-                <Label htmlFor="issue-date" required>{t('issuedOn')}</Label>
-                <Input id="issue-date" type="date" value={issuedOn} max={today} onChange={(e) => setIssuedOn(e.target.value)} required />
+        <FormActionBar
+          placement="dialog"
+          cancel={() => onOpenChange(false)}
+          pending={pending}
+          saveDisabled={!allowed}
+          saveLabel={t('submit')}
+          onSave={() => void submit()}
+          state={feedback.state}
+          note={
+            check ? (
+              <div className="flex flex-wrap items-end gap-5">
+                <FormField id="issue-date" label={t('issuedOn')} required>
+                  <Input id="issue-date" type="date" value={issuedOn} max={today} onChange={(e) => setIssuedOn(e.target.value)} required />
+                </FormField>
+                <div className="space-y-1 text-[13px]">
+                  <p className="text-[12px] font-semibold text-muted-ink">{t('signatureLabel')}</p>
+                  <p data-testid="issue-signature-mode" className="font-semibold text-ink">{mode ? t(`signatureMode.${mode}`) : ''}</p>
+                </div>
+                <p className="max-w-prose text-[12px] text-muted-ink">{t('humanOnly')}</p>
               </div>
-              <div className="space-y-1 text-[13px]">
-                <p className="text-[12px] font-semibold text-muted-ink">{t('signatureLabel')}</p>
-                <p data-testid="issue-signature-mode" className="font-semibold text-ink">{mode ? t(`signatureMode.${mode}`) : ''}</p>
-              </div>
-              <p className="max-w-[260px] text-[12px] text-muted-ink">{t('humanOnly')}</p>
-            </div>
-          ) : (
-            <span />
-          )}
-          <div className="flex flex-col-reverse gap-2 sm:flex-row">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t('cancel')}</Button>
-            <Button type="button" disabled={!allowed} onClick={() => void submit()}>{t('submit')}</Button>
-          </div>
-        </DialogFooter>
+            ) : undefined
+          }
+        />
       </DialogContent>
     </Dialog>
   );
@@ -280,6 +285,7 @@ function InKindForm({ lineId, valueCents, details, canDescribe, onSaved }: { lin
   const [vat, setVat] = useState(details?.vatCents != null ? formatAmount(details.vatCents) : '');
   const [proof, setProof] = useState<PickedDocument | null>(null);
   const [pending, setPending] = useState(false);
+  const feedback = useActionFeedback();
 
   const business = origin === 'business';
   const withdrawalCents = parseAmount(withdrawal);
@@ -289,14 +295,9 @@ function InKindForm({ lineId, valueCents, details, canDescribe, onSaved }: { lin
 
   const save = async () => {
     setPending(true);
-    const result = await saveInKindDetailsAction({ lineId, item, condition, valuation, origin, withdrawalValueCents: business ? withdrawalCents : null, vatCents: business ? vatCents : null, proofDocumentId: proofId });
+    const result = await feedback.run(() => saveInKindDetailsAction({ lineId, item, condition, valuation, origin, withdrawalValueCents: business ? withdrawalCents : null, vatCents: business ? vatCents : null, proofDocumentId: proofId }), { retry: () => void save() });
     setPending(false);
-    if (result.status === 'error') {
-      toast.error(result.message);
-      return;
-    }
     if (result.status === 'success') {
-      if (result.message) toast.success(result.message);
       onSaved();
     }
   };
@@ -304,44 +305,45 @@ function InKindForm({ lineId, valueCents, details, canDescribe, onSaved }: { lin
   return (
     <fieldset className="space-y-3 rounded-md border border-line p-3.5" disabled={!canDescribe}>
       <legend className="px-1 text-[13px] font-semibold text-ink">{tk('title')}</legend>
-      <div className="space-y-1.5">
-        <Label htmlFor="in-kind-item" required>{tk('item')}</Label>
-        <Input id="in-kind-item" value={item} onChange={(e) => setItem(e.target.value)} />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="in-kind-condition" required>{tk('condition')}</Label>
-        <Input id="in-kind-condition" value={condition} onChange={(e) => setCondition(e.target.value)} />
-      </div>
-      <div className="space-y-1">
-        <p className="text-[13px] font-semibold text-ink-2">{tk('value')}</p>
-        <p className="font-mono tabular-nums text-ink">{formatEuro(valueCents)}</p>
-        <p className="text-[12px] text-muted-ink">{tk('valueHint')}</p>
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="in-kind-valuation" required>{tk('valuation')}</Label>
-        <textarea id="in-kind-valuation" value={valuation} onChange={(e) => setValuation(e.target.value)} rows={2} className="w-full rounded-sm border border-line-strong bg-field px-2.5 py-1.5 text-[13px]" />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="in-kind-origin" required>{tk('origin')}</Label>
-        <Select id="in-kind-origin" value={origin} onChange={(e) => setOrigin(e.target.value as 'private' | 'business')}>
-          <option value="private">{tk('originOptions.private')}</option>
-          <option value="business">{tk('originOptions.business')}</option>
-        </Select>
-      </div>
-      {business ? (
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="in-kind-withdrawal" required>{tk('withdrawalValue')}</Label>
-            <AmountField id="in-kind-withdrawal" name="withdrawalValue" value={withdrawal} onChange={setWithdrawal} required />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="in-kind-vat" required>{tk('vat')}</Label>
-            <AmountField id="in-kind-vat" name="vat" value={vat} onChange={setVat} required />
-          </div>
-        </div>
-      ) : null}
-      <DocumentPicker id="in-kind-proof" name="proofDocument" label={tk('proof')} value={proof} onChange={setProof} />
+      <FormGrid>
+        <FormField id="in-kind-item" label={tk('item')} required>
+          <Input id="in-kind-item" value={item} onChange={(e) => setItem(e.target.value)} />
+        </FormField>
+        <FormField id="in-kind-condition" label={tk('condition')} required>
+          <Input id="in-kind-condition" value={condition} onChange={(e) => setCondition(e.target.value)} />
+        </FormField>
+        <FormCell size="full" className="space-y-1">
+          <p className="text-[13px] font-semibold text-ink-2">{tk('value')}</p>
+          <p className="font-mono tabular-nums text-ink">{formatEuro(valueCents)}</p>
+          <p className="text-[12px] text-muted-ink">{tk('valueHint')}</p>
+        </FormCell>
+        <FormField id="in-kind-valuation" label={tk('valuation')} required size="l">
+          <Textarea id="in-kind-valuation" value={valuation} onChange={(e) => setValuation(e.target.value)} rows={2} />
+        </FormField>
+        <FormRowBreak />
+        <FormField id="in-kind-origin" label={tk('origin')} required size="s">
+          <Select id="in-kind-origin" value={origin} onChange={(e) => setOrigin(e.target.value as 'private' | 'business')}>
+            <option value="private">{tk('originOptions.private')}</option>
+            <option value="business">{tk('originOptions.business')}</option>
+          </Select>
+        </FormField>
+        {business ? (
+          <>
+            <FormField id="in-kind-withdrawal" label={tk('withdrawalValue')} required size="s">
+              <AmountField id="in-kind-withdrawal" name="withdrawalValue" value={withdrawal} onChange={setWithdrawal} required />
+            </FormField>
+            <FormField id="in-kind-vat" label={tk('vat')} required size="s">
+              <AmountField id="in-kind-vat" name="vat" value={vat} onChange={setVat} required />
+            </FormField>
+          </>
+        ) : null}
+        <FormRowBreak />
+        <FormCell size="m">
+          <DocumentPicker id="in-kind-proof" name="proofDocument" label={tk('proof')} value={proof} onChange={setProof} />
+        </FormCell>
+      </FormGrid>
       {!proof && details?.proofDocumentId ? <p className="text-[12px] text-muted-ink">{tk('proofKept')}</p> : null}
+      <RefusalNotice action state={feedback.state} />
       <Button type="button" variant="outline" disabled={!complete || pending} onClick={() => void save()}>{tk('save')}</Button>
     </fieldset>
   );

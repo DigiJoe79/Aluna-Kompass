@@ -4,13 +4,17 @@ import { checkThemeContrast, THEME_TOKENS, type Theme } from '@kompass/core/them
 import { AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState, useTransition } from 'react';
-import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { FormField } from '@/components/forms/form-field';
-import { SaveBar } from '@/components/forms/save-bar';
+import { FormGrid } from '@/components/forms/form-grid';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
+import { isRefusal } from '@/lib/actions';
+import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { activateThemeAction, deleteThemeAction, duplicateThemeAction, saveThemeAction } from './actions';
@@ -27,7 +31,11 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
   const [dup, setDup] = useState(false);
   const [del, setDel] = useState(false);
   const [saving, start] = useTransition();
+  const saveFb = useActionFeedback();
+  const activateFb = useActionFeedback();
+  const dupFb = useActionFeedback();
   const [dupForm, setDupForm] = useState({ key: '', name: '' });
+  const dupFieldError = (field: string) => (dupFb.state.status === 'error' ? dupFb.state.fieldErrors[field] : undefined);
 
   const current = draft && draft.key === selected.key ? draft : selected;
   const readOnly = selected.key === 'default';
@@ -52,6 +60,11 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
         tokens: { ...base.tokens, [token]: { ...base.tokens[token], [m]: value } },
       };
     });
+
+  const closeDup = () => {
+    dupFb.reset();
+    setDup(false);
+  };
 
   const select = (key: string) => {
     setSelectedKey(key);
@@ -121,7 +134,6 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
             {readOnly || selected.key === activeKey ? null : (
               <Button
                 variant="outline"
-                className="border-error text-error"
                 onClick={() => setDel(true)}
               >
                 {t('delete')}
@@ -131,9 +143,7 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
               <Button
                 onClick={() =>
                   start(async () => {
-                    const s = await activateThemeAction(selected.key);
-                    if (s.status === 'error') toast.error(s.message);
-                    else toast.success(s.status === 'success' ? s.message ?? '' : '');
+                    await activateFb.run(() => activateThemeAction(selected.key));
                   })
                 }
               >
@@ -142,6 +152,11 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
             )}
           </div>
         </div>
+        {isRefusal(activateFb.state) ? (
+          <div className="border-b border-line px-5 py-3">
+            <RefusalNotice action state={activateFb.state} />
+          </div>
+        ) : null}
         {findings.length > 0 ? (
           <div
             role="alert"
@@ -213,19 +228,19 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
         </div>
         <p className="px-5 py-2 text-[11px] text-muted-ink">{t('noInheritance')}</p>
         {readOnly ? null : (
-          <SaveBar
-            pendingCount={pendingCount}
-            saving={saving}
-            onDiscard={() => setDraft(null)}
+          <FormActionBar
+            count={pendingCount}
+            pending={saving}
+            state={saveFb.state}
+            onDiscard={() => {
+              setDraft(null);
+              saveFb.reset();
+            }}
             saveLabel={t('save')}
             onSave={() =>
               start(async () => {
-                const s = await saveThemeAction(current);
-                if (s.status === 'error') toast.error(s.message);
-                else {
-                  toast.success(s.status === 'success' ? s.message ?? '' : '');
-                  setDraft(null);
-                }
+                const s = await saveFb.run(() => saveThemeAction(current));
+                if (s.status === 'success') setDraft(null);
               })
             }
           />
@@ -254,42 +269,44 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
         <ThemePreview theme={current} mode={mode} />
       </aside>
 
-      <Dialog open={dup} onOpenChange={setDup}>
-        <DialogContent className="bg-surface shadow-md">
+      <Dialog open={dup} onOpenChange={(o) => (o ? setDup(true) : closeDup())}>
+        <DialogContent size="sm" className="bg-surface shadow-md">
           <DialogTitle className="font-heading text-[19px]">
             {t('duplicateTitle', { name: selected.name })}
           </DialogTitle>
-          <FormField id="dup-key" label={t('key')} hint={t('keyHint')}>
-            <Input
-              id="dup-key"
-              value={dupForm.key}
-              onChange={(e) => setDupForm({ ...dupForm, key: e.target.value })}
-            />
-          </FormField>
-          <FormField id="dup-name" label={t('name')}>
-            <Input
-              id="dup-name"
-              value={dupForm.name}
-              onChange={(e) => setDupForm({ ...dupForm, name: e.target.value })}
-            />
-          </FormField>
-          <DialogFooter>
-            <Button
-              disabled={saving}
-              onClick={() =>
-                start(async () => {
-                  const s = await duplicateThemeAction({ sourceKey: selected.key, ...dupForm });
-                  if (s.status === 'error') toast.error(s.message);
-                  else {
-                    setDup(false);
-                    select(dupForm.key);
-                  }
-                })
-              }
-            >
-              {t('duplicate')}
-            </Button>
-          </DialogFooter>
+          <FormGrid>
+            <FormField id="dup-key" label={t('key')} hint={t('keyHint')} error={dupFieldError('key')} size="s">
+              <Input
+                id="dup-key"
+                value={dupForm.key}
+                onChange={(e) => setDupForm({ ...dupForm, key: e.target.value })}
+              />
+            </FormField>
+            <FormField id="dup-name" label={t('name')} error={dupFieldError('name')}>
+              <Input
+                id="dup-name"
+                value={dupForm.name}
+                onChange={(e) => setDupForm({ ...dupForm, name: e.target.value })}
+              />
+            </FormField>
+          </FormGrid>
+          <FormActionBar
+            placement="dialog"
+            mode="create"
+            cancel={() => closeDup()}
+            pending={saving}
+            saveLabel={t('duplicate')}
+            state={withUnplacedFieldErrors(dupFb.state, ['key', 'name'])}
+            onSave={() =>
+              start(async () => {
+                const s = await dupFb.run(() => duplicateThemeAction({ sourceKey: selected.key, ...dupForm }));
+                if (s.status === 'success') {
+                  closeDup();
+                  select(dupForm.key);
+                }
+              })
+            }
+          />
         </DialogContent>
       </Dialog>
       <ConfirmDialog

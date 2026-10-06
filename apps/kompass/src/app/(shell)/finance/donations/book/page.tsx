@@ -2,6 +2,7 @@ import { yearIn, hasPermission } from '@kompass/core';
 import { getDonationBook, getDonationReconciliation } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
 import { BookTable } from './book-table';
@@ -25,7 +26,7 @@ const PAGE_LIMIT = 500;
  */
 export default async function DonationBookPage({ searchParams }: { searchParams: Promise<DonationBookQuery> }) {
   const { deps, ctx } = await requireSession();
-  if (!hasPermission(ctx, 'finance.read')) return <ForbiddenCard permission="finance.read" />;
+  if (!hasPermission(ctx, 'finance.read')) return <Page width="standard"><ForbiddenCard permission="finance.read" /></Page>;
   const t = await getTranslations('finance.donations.book');
 
   const query = await searchParams;
@@ -40,24 +41,25 @@ export default async function DonationBookPage({ searchParams }: { searchParams:
     getDonationBook(deps, ctx, { year, limit: PAGE_LIMIT, offset: 0 }),
     getDonationReconciliation(deps, ctx, { year }),
   ]);
-  if (!bookRes.ok || !reconciliationRes.ok) return <ForbiddenCard permission="finance.read" />;
+  if (!bookRes.ok || !reconciliationRes.ok) return <Page width="standard"><ForbiddenCard permission="finance.read" /></Page>;
   const book = bookRes.value;
   const reconciliation = reconciliationRes.value;
   const rows = filterAnonymous ? book.rows.filter((row) => row.contactId === null) : book.rows;
 
   return (
-    <div className="max-w-[1100px] space-y-6">
-      <PageHeader title={t('title')} description={t('description')} />
-      <BookTable
-        years={years}
-        year={year}
-        rows={rows}
-        sums={book.sums}
-        membershipFeesCertifiable={book.membershipFeesCertifiable}
-        filterAnonymous={filterAnonymous}
-        simplifiedReceiptLimitCents={reconciliation.simplifiedReceiptLimitCents}
-      />
-      <Reconciliation data={reconciliation} />
-    </div>
+    <Page width="standard" header={<PageHeader title={t('title')} description={t('description')} />}>
+      <div className="space-y-6">
+        <BookTable
+          years={years}
+          year={year}
+          rows={rows}
+          sums={book.sums}
+          membershipFeesCertifiable={book.membershipFeesCertifiable}
+          filterAnonymous={filterAnonymous}
+          simplifiedReceiptLimitCents={reconciliation.simplifiedReceiptLimitCents}
+        />
+        <Reconciliation data={reconciliation} />
+      </div>
+    </Page>
   );
 }

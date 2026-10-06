@@ -31,9 +31,11 @@ export function PageHeader({
         </Link>
       ) : null}
       <div className="flex items-start justify-between gap-4">
-        <div>
+        {/* `min-w-0` und `break-words`: Eine lange Adresse in der Beschreibung (Tier) schob auf dem Telefon die Kopfaktionen
+            23 px über die Inhaltskante (Abnahme K8/K9, 390 px). Kein Layout-Test für diese Einzelstelle. */}
+        <div className="min-w-0">
           {title ? <h2 className="font-heading text-[22px]">{title}</h2> : null}
-          {description ? <p className="mt-1 text-[14px] text-ink-2">{description}</p> : null}
+          {description ? <p className="mt-1 text-[14px] break-words text-ink-2">{description}</p> : null}
         </div>
         {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
       </div>

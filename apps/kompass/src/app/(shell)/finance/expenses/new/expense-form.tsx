@@ -1,15 +1,16 @@
 'use client';
 
 import type { ExpenseClaimView } from '@kompass/module-finance';
-import { Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { SaveStatus } from '@/components/forms/save-status';
-import { StickyFooter } from '@/components/forms/sticky-footer';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { FormField } from '@/components/forms/form-field';
+import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { useAutosave, type SaveOutcome } from '@/components/forms/use-autosave';
 import { Notice, type NoticeRemedy } from '@/components/notice';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -248,12 +249,14 @@ export function ExpenseForm({
           ))}
         </ol>
         <Button type="button" variant="outline" className="w-full" onClick={addPosition}>
-          <Plus aria-hidden />
           {t('addPosition')}
         </Button>
       </section>
 
-      <section className="space-y-4 rounded-lg border border-line bg-surface p-4">
+      <section aria-labelledby="expense-refund" className="space-y-4 rounded-lg border border-line bg-surface p-4">
+        <h3 id="expense-refund" className="text-[15px] font-semibold">
+          {t('refund')}
+        </h3>
         <div data-testid="expense-total" className="flex items-baseline justify-between gap-3">
           <span className="text-[13px] font-semibold text-muted-ink">{t('total')}</span>
           <span className="font-mono text-[22px] font-semibold tabular-nums">{formatEuro(totalCents(form, mileageRates))}</span>
@@ -268,11 +271,9 @@ export function ExpenseForm({
             <p className="text-[13px] text-ink-2">{t('waiver.text')}</p>
             {form.waiver ? (
               <div className="space-y-1 border-t border-line pt-2">
-                <label htmlFor="expense-recurring" className="flex min-h-11 cursor-pointer items-center gap-3 text-[14px] text-ink">
-                  <input id="expense-recurring" type="checkbox" checked={form.recurring} onChange={(e) => update((f) => ({ ...f, recurring: e.target.checked }))} className="size-5 shrink-0 rounded border-line" />
-                  {t('waiver.recurring')}
-                </label>
-                <p className="text-[12px] text-muted-ink">{t('waiver.recurringHint')}</p>
+                <FormField id="expense-recurring" label={t('waiver.recurring')} hint={t('waiver.recurringHint')} toggle>
+                  <Checkbox id="expense-recurring" checked={form.recurring} onCheckedChange={(next) => update((f) => ({ ...f, recurring: next === true }))} />
+                </FormField>
                 {agreedLate ? (
                   <div data-testid="expense-waiver-agreed-late">
                     <Notice level="warn">{t('waiver.agreedAfterPosition')}</Notice>
@@ -287,37 +288,40 @@ export function ExpenseForm({
           </p>
         ) : null}
 
-        {form.waiver ? null : ibanLocked ? (
-          <div className="space-y-1">
-            <p id="expense-iban-label" className="text-sm font-medium">
-              {t('iban')}
-            </p>
-            <div className="flex min-h-[var(--field-h)] items-center justify-between gap-2 rounded-md border border-line bg-surface-2 px-3">
-              <span data-testid="iban-fixed" aria-labelledby="expense-iban-label" className="font-mono text-[14px] tabular-nums">
-                {groupIban(form.iban)}
-              </span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setIbanLocked(false);
-                  update((f) => ({ ...f, iban: '' }));
-                }}
-              >
-                {t('otherIban')}
-              </Button>
-            </div>
-            <p className="text-[12px] text-muted-ink">{form.iban === prefilledIban ? `${t('ibanHint')} (${t('ibanPrefilled')})` : t('ibanHint')}</p>
-          </div>
-        ) : (
-          <div className="space-y-1.5">
-            <Label htmlFor="expense-iban">{t('iban')}</Label>
-            <Input id="expense-iban" autoComplete="off" autoCapitalize="characters" spellCheck={false} value={form.iban} aria-invalid={iban.state === 'checksum' || undefined} onChange={(e) => update((f) => ({ ...f, iban: e.target.value }))} />
-            <p aria-live="polite" className={iban.state === 'valid' || iban.state === 'empty' ? 'text-[12px] text-muted-ink' : 'text-[12px] text-error'}>
-              {iban.state === 'empty' ? t('ibanHint') : t(`ibanCheck.${iban.state}`)}
-            </p>
-          </div>
+        {form.waiver ? null : (
+          <FormGrid>
+            {ibanLocked ? (
+              <FormCell size="m" className="space-y-1">
+                <p id="expense-iban-label" className="text-sm font-medium">
+                  {t('iban')}
+                </p>
+                <div className="flex min-h-[var(--field-h)] items-center justify-between gap-2 rounded-md border border-line bg-surface-2 px-3">
+                  <span data-testid="iban-fixed" aria-labelledby="expense-iban-label" className="font-mono text-[14px] tabular-nums">
+                    {groupIban(form.iban)}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setIbanLocked(false);
+                      update((f) => ({ ...f, iban: '' }));
+                    }}
+                  >
+                    {t('otherIban')}
+                  </Button>
+                </div>
+                <p className="text-[12px] text-muted-ink">{form.iban === prefilledIban ? `${t('ibanHint')} (${t('ibanPrefilled')})` : t('ibanHint')}</p>
+              </FormCell>
+            ) : (
+              <FormField id="expense-iban" label={t('iban')}>
+                <Input id="expense-iban" autoComplete="off" autoCapitalize="characters" spellCheck={false} value={form.iban} aria-invalid={iban.state === 'checksum' || undefined} onChange={(e) => update((f) => ({ ...f, iban: e.target.value }))} />
+                <p aria-live="polite" className={iban.state === 'valid' || iban.state === 'empty' ? 'text-[12px] text-muted-ink' : 'text-[12px] text-error'}>
+                  {iban.state === 'empty' ? t('ibanHint') : t(`ibanCheck.${iban.state}`)}
+                </p>
+              </FormField>
+            )}
+          </FormGrid>
         )}
         {!form.waiver && foreignIban !== null && foreignIban === compactIban(form.iban) ? (
           <div data-testid="iban-other-contact">
@@ -326,22 +330,20 @@ export function ExpenseForm({
         ) : null}
       </section>
 
-      <StickyFooter testId="expense-footer">
-        {refusal ? (
-          <Notice level="refuse" title={t('refuse.title')} remedies={remedies}>
-            {refusal.message}
-          </Notice>
-        ) : null}
-        <SaveStatus state={save} pending={pending} />
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
+      <FormActionBar
+        mode="create"
+        testId="expense-footer"
+        status={{ state: save, pending }}
+        extraActions={
           <Button type="button" variant="outline" disabled={busy} onClick={() => void keepDraft()}>
             {t('keepDraft')}
           </Button>
-          <Button type="button" disabled={busy} onClick={() => void submit()}>
-            {t('submit')}
-          </Button>
-        </div>
-      </StickyFooter>
+        }
+        saveLabel={t('submit')}
+        onSave={() => void submit()}
+        pending={busy}
+        state={refusal ? { status: 'error', message: refusal.message, title: t('refuse.title'), remedies, fieldErrors: {} } : undefined}
+      />
     </div>
   );
 }

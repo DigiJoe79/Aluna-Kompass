@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { useDateFormat } from '@/components/date-format-provider';
 import { Notice } from '@/components/notice';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -43,6 +45,7 @@ export function PurposeDetail({
   const [confirmFulfill, setConfirmFulfill] = useState(false);
   const [reopening, setReopening] = useState(false);
   const [pending, setPending] = useState(false);
+  const fulfillFb = useActionFeedback();
 
   useEffect(() => {
     let cancelled = false;
@@ -58,27 +61,11 @@ export function PurposeDetail({
 
   const fulfill = async () => {
     setPending(true);
-    const result = await fulfillPurposeAction(row.id, row.updatedAt ?? '');
+    const result = await fulfillFb.run(() => fulfillPurposeAction(row.id, row.updatedAt ?? ''), { retry: () => void fulfill() });
     setPending(false);
     setConfirmFulfill(false);
-    if (result.status === 'error') {
-      toast.error(result.message);
-      return;
-    }
+    if (result.status !== 'success') return;
     toast.success(t('detail.fulfilled'));
-    router.refresh();
-  };
-
-  const reopen = async (reason: string) => {
-    setPending(true);
-    const result = await reopenPurposeAction(row.id, row.updatedAt ?? '', reason);
-    setPending(false);
-    if (result.status === 'error') {
-      toast.error(result.message);
-      return;
-    }
-    setReopening(false);
-    toast.success(t('detail.reopened'));
     router.refresh();
   };
 
@@ -130,6 +117,8 @@ export function PurposeDetail({
         </div>
       </div>
 
+      <RefusalNotice action state={fulfillFb.state} />
+
       {confirmFulfill ? (
         <Notice level="hint">
           <div className="space-y-2" data-testid="purpose-fulfill-confirm">
@@ -157,8 +146,8 @@ export function PurposeDetail({
         ) : (
           <div className="overflow-x-auto rounded-md border border-line">
             <Table data-testid="purpose-movements">
-              <TableHeader className="bg-table-head text-left text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink">
-                <TableRow className="h-9">
+              <TableHeader>
+                <TableRow>
                   <TableHead className="px-3">{t('detail.movementColumns.date')}</TableHead>
                   <TableHead className="px-3">{t('detail.movementColumns.entry')}</TableHead>
                   <TableHead className="px-3">{t('detail.movementColumns.text')}</TableHead>
@@ -169,7 +158,7 @@ export function PurposeDetail({
               </TableHeader>
               <TableBody>
                 {movements.map((m, i) => (
-                  <TableRow key={`${m.kind}-${m.entryId ?? m.transferId ?? 'cf'}-${i}`} className="border-b border-line-2">
+                  <TableRow key={`${m.kind}-${m.entryId ?? m.transferId ?? 'cf'}-${i}`}>
                     <TableCell className="px-3 text-ink-2">{fmt.date(m.date)}</TableCell>
                     <TableCell className="px-3 font-mono text-[12px]">
                       {m.kind === 'line' && m.entryId ? (
@@ -192,7 +181,16 @@ export function PurposeDetail({
         )}
       </div>
 
-      {reopening ? <ReopenDialog name={row.name} pending={pending} onClose={() => setReopening(false)} onConfirm={(reason) => void reopen(reason)} /> : null}
+      {reopening ? <ReopenDialog
+          name={row.name}
+          onClose={() => setReopening(false)}
+          onConfirm={(reason) => reopenPurposeAction(row.id, row.updatedAt ?? '', reason)}
+          onDone={() => {
+            setReopening(false);
+            toast.success(t('detail.reopened'));
+            router.refresh();
+          }}
+        /> : null}
     </section>
   );
 }

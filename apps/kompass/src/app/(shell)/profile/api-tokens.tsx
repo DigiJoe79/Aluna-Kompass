@@ -7,10 +7,11 @@ import { useActionState, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { FormField } from '@/components/forms/form-field';
-import { SubmitButton } from '@/components/forms/submit-button';
+import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { idleState } from '@/lib/actions';
 import { copyToClipboard } from '@/lib/clipboard';
 import { cn } from '@/lib/utils';
@@ -38,53 +39,46 @@ export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
     <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="font-heading text-[17px]">{t('title')}</h3>
+          <h3 className="text-[15px] font-semibold">{t('title')}</h3>
           <p className="mt-1 text-[13px] text-ink-2">{t('intro')}</p>
         </div>
         <Button onClick={() => setOpen(true)}>{t('create')}</Button>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="bg-surface shadow-md">
+          <DialogContent size="sm" className="bg-surface shadow-md">
             <ActionForm action={action} state={state} className="flex flex-col gap-4">
               <DialogTitle className="font-heading text-[19px]">{t('createTitle')}</DialogTitle>
-              {state.status === 'error' ? (
-                <p role="alert" className="rounded-md border border-error bg-error-bg p-3 text-[13px] text-error">
-                  {state.message}
-                </p>
-              ) : null}
               <FormField id="token-name" label={t('name')} hint={t('nameHint')}>
                 <Input id="token-name" name="name" required />
               </FormField>
-              <DialogFooter>
-                <SubmitButton>{t('createSubmit')}</SubmitButton>
-              </DialogFooter>
+              <FormActionBar placement="dialog" mode="create" cancel={() => setOpen(false)} saveLabel={t('createSubmit')} state={state} />
             </ActionForm>
           </DialogContent>
         </Dialog>
       </div>
-      <table className="w-full text-[14px]">
-        <thead className="bg-table-head text-left text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink">
-          <tr className="h-9">
-            <th className="px-3">{t('columns.name')}</th>
-            <th className="px-3">{t('columns.created')}</th>
-            <th className="px-3">{t('columns.lastUsed')}</th>
-            <th className="px-3" />
-          </tr>
-        </thead>
-        <tbody>
+      <Table className="w-full text-[14px]">
+        <TableHeader>
+          <TableRow>
+            <TableHead>{t('columns.name')}</TableHead>
+            <TableHead>{t('columns.created')}</TableHead>
+            <TableHead>{t('columns.lastUsed')}</TableHead>
+            <TableHead />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {tokens.map((token) => {
             const days = token.daysSinceLastUsed;
             return (
-              <tr key={token.id} className="h-[52px] border-b border-line-2">
-                <td className={cn('px-3', token.revokedAt && 'text-disabled-ink')}>
+              <TableRow key={token.id}>
+                <TableCell className={cn(token.revokedAt && 'text-disabled-ink')}>
                   <div className="font-semibold">{token.name}</div>
                   <div className="font-mono text-[11px] text-muted-ink">{token.prefix}…</div>
-                </td>
-                <td className="px-3 font-mono text-[12px]">
+                </TableCell>
+                <TableCell className="font-mono text-[12px]">
                   {format.dateTime(new Date(token.createdAt), { dateStyle: 'short' })}
-                </td>
-                <td
+                </TableCell>
+                <TableCell
                   className={cn(
-                    'px-3 font-mono text-[12px]',
+                    'font-mono text-[12px]',
                     !token.revokedAt && (days === null || days > 90) && 'text-warning'
                   )}
                 >
@@ -93,24 +87,23 @@ export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
                     : days === null
                       ? t('neverUsed')
                       : t('lastUsedDays', { days })}
-                </td>
-                <td className="px-3 text-right">
+                </TableCell>
+                <TableCell className="text-right">
                   {token.revokedAt ? null : (
                     <Button
                       variant="outline"
                       size="sm"
-                      className="border-error text-error"
                       onClick={() => setRevoke(token)}
                     >
                       {t('revoke')}
                     </Button>
                   )}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             );
           })}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
       <p className="text-[12px] text-muted-ink">{t('footnote')}</p>
       {created ? (
         <Dialog open onOpenChange={() => {}}>
@@ -118,7 +111,8 @@ export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
             showCloseButton={false}
             onEscapeKeyDown={(e) => e.preventDefault()}
             onPointerDownOutside={(e) => e.preventDefault()}
-            className="w-[520px] bg-surface shadow-md"
+            size="md"
+            className="bg-surface shadow-md"
           >
             <DialogTitle className="font-heading text-[19px]">
               {t('createdTitle', { name: created.record.name })}
@@ -133,7 +127,7 @@ export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
                 size="sm"
                 onClick={async () => {
                   if (await copyToClipboard(created.token)) setCopied(true);
-                  else toast.error(c('copyFailed'));
+                  else toast.error(c('copyFailed'), { duration: Infinity, closeButton: true });
                 }}
               >
                 <Copy className="size-3.5" aria-hidden />

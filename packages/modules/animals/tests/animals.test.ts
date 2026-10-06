@@ -11,7 +11,7 @@ const deps = async () => {
   return d;
 };
 const manage = ctxWith(['animals.manage', 'animals.view', 'media.upload']);
-const chiara = { slug: 'chiara', name: 'Chiara', sex: 'female' as const, birthText: { de: '16.02.2021', en: '16 Feb 2021' }, sizeCm: 45, sizeText: { de: '45–50 cm', en: '45–50 cm' }, location: 'shelter' as const, isEmergency: false, isSponsorable: true, traits: { de: ['ruhig', 'verträglich'], en: ['calm', 'sociable'] }, externalProfileUrl: 'https://example.org/profile/chiara', summary: { de: 'Sanfte Hündin.', en: '' }, body: { de: 'Text', en: '' } };
+const chiara = { name: 'Chiara', sex: 'female' as const, birthText: { de: '16.02.2021', en: '16 Feb 2021' }, sizeCm: 45, sizeText: { de: '45–50 cm', en: '45–50 cm' }, location: 'shelter' as const, isEmergency: false, isSponsorable: true, traits: { de: ['ruhig', 'verträglich'], en: ['calm', 'sociable'] }, externalProfileUrl: 'https://example.org/profile/chiara', summary: { de: 'Sanfte Hündin.', en: '' }, body: { de: 'Text', en: '' } };
 
 describe('animals module', () => {
   it('creates tables via the core chain and registers the view', async () => {
@@ -24,11 +24,12 @@ describe('animals module', () => {
   it('creates an animal looking for a home, unpublished, and audits', async () => {
     const d = await deps();
     const a = unwrap(await createAnimal(d, manage, chiara));
-    expect(a).toMatchObject({ slug: 'chiara', status: 'lookingForHome', isPublished: false, species: 'dog', photos: [], story: null });
+    expect(a).toMatchObject({ slug: expect.stringMatching(/^chiara-[0-9a-z]{4}$/), status: 'lookingForHome', isPublished: false, species: 'dog', photos: [], story: null });
     expect(d.db.select().from(schema.auditLog).all().at(-1)).toMatchObject({ action: 'animals.create', entityType: 'animal', entityId: a.id });
-    const dup = await createAnimal(d, manage, chiara);
-    expect(dup.ok === false && dup.error.type === 'conflict' && dup.error.code === 'slugTaken').toBe(true);
-    expect((await createAnimal(d, ctxWith(['animals.view']), { ...chiara, slug: 'x' })).ok).toBe(false);
+    // Doppelte Namen sind erlaubt; der Slug trägt die Kennung (Spec „Tier-Slug fest“, Näheres in slug-service.test.ts).
+    const twin = unwrap(await createAnimal(d, manage, chiara));
+    expect(twin.slug).not.toBe(a.slug);
+    expect((await createAnimal(d, ctxWith(['animals.view']), { ...chiara })).ok).toBe(false);
   });
 
   it('manages photos with a primary image and rejects non-images', async () => {
@@ -84,16 +85,16 @@ describe('animals module', () => {
   it('publishes and exposes only published animals with photos and story in the view', async () => {
     const d = await deps();
     const a = unwrap(await createAnimal(d, manage, chiara));
-    unwrap(await createAnimal(d, manage, { ...chiara, slug: 'bruno', name: 'Bruno', sex: 'male' as const, location: 'germany' as const, isEmergency: true }));
+    unwrap(await createAnimal(d, manage, { ...chiara, name: 'Bruno', sex: 'male' as const, location: 'germany' as const, isEmergency: true }));
     expect(publishedAnimals.load(d)).toEqual([]);
     unwrap(await updateAnimal(d, manage, { id: a.id, summary: { de: 'Sanfte Hündin.', en: 'Gentle girl.' } }));
     unwrap(await setAnimalPublished(d, manage, { id: a.id, isPublished: true }));
     const rows = publishedAnimals.load(d);
-    expect(rows.map((r) => r.slug)).toEqual(['chiara']);
+    expect(rows.map((r) => r.slug)).toEqual([a.slug]);
     expect(rows[0]).toMatchObject({ summary: { en: 'Gentle girl.' }, photos: [], story: null });
     expect('isPublished' in rows[0]!).toBe(false);
     expect(unwrap(await listAnimals(d, ctxWith(['animals.view']))).animals).toHaveLength(2);
-    expect(unwrap(await getAnimal(d, ctxWith(['animals.view']), a.id)).slug).toBe('chiara');
+    expect(unwrap(await getAnimal(d, ctxWith(['animals.view']), a.id)).slug).toBe(a.slug);
   });
 
   it('exposes story captions in the published view', async () => {
@@ -136,7 +137,7 @@ describe('animals module', () => {
     const d = await deps();
     const a = unwrap(await createAnimal(d, manage, { ...chiara, place: '  Brașov  ' }));
     expect(a.place).toBe('Brașov');
-    const tooLong = await createAnimal(d, manage, { ...chiara, slug: 'lang', place: 'x'.repeat(121) });
+    const tooLong = await createAnimal(d, manage, { ...chiara, place: 'x'.repeat(121) });
     expect(tooLong.ok === false && tooLong.error.type === 'validation').toBe(true);
   });
 

@@ -2,6 +2,7 @@ import { hasPermission, isoNow, listUserNamesWithPermission } from '@kompass/cor
 import { purposeOverview } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
 import { TransferForm } from './transfer-form';
@@ -14,8 +15,8 @@ import { TransferForm } from './transfer-form';
  */
 export default async function PurposeTransferPage({ searchParams }: { searchParams: Promise<{ from?: string }> }) {
   const { deps, ctx, user } = await requireSession();
-  if (!hasPermission(ctx, 'finance.read')) return <ForbiddenCard permission="finance.read" />;
-  if (!hasPermission(ctx, 'finance.entriesWrite')) return <ForbiddenCard permission="finance.entriesWrite" />;
+  if (!hasPermission(ctx, 'finance.read')) return <Page width="task"><ForbiddenCard permission="finance.read" /></Page>;
+  if (!hasPermission(ctx, 'finance.entriesWrite')) return <Page width="task"><ForbiddenCard permission="finance.entriesWrite" /></Page>;
   const t = await getTranslations('finance.purposes.transferDialog');
   const tPurposes = await getTranslations('finance.purposes');
 
@@ -27,9 +28,8 @@ export default async function PurposeTransferPage({ searchParams }: { searchPara
   const approverNames = listUserNamesWithPermission(deps, 'finance.approve').filter((name) => name !== user.name);
 
   return (
-    <div className="max-w-[640px] space-y-4">
-      <PageHeader title={t('title')} description={t('intro')} back={{ href: '/finance/purposes', label: tPurposes('title') }} />
+    <Page width="task" header={<PageHeader title={t('title')} description={t('intro')} back={{ href: '/finance/purposes', label: tPurposes('title') }} />}>
       <TransferForm purposes={purposes} defaultFromId={defaultFromId} today={isoNow(deps.clock).slice(0, 10)} approverNames={approverNames} />
-    </div>
+    </Page>
   );
 }

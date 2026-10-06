@@ -15,14 +15,14 @@ export function ExportButton({ enabled }: { enabled: boolean }) {
 
   if (!enabled) {
     return (
-      <Button variant="secondary" disabled>
+      <Button disabled>
         <Download className="size-4" aria-hidden />
         {t('export')}
       </Button>
     );
   }
   return (
-    <a href={`/admin/audit/export${query ? `?${query}` : ''}`} className={buttonVariants({ variant: 'secondary' })}>
+    <a href={`/admin/audit/export${query ? `?${query}` : ''}`} className={buttonVariants()}>
       <Download className="size-4" aria-hidden />
       {t('export')}
     </a>

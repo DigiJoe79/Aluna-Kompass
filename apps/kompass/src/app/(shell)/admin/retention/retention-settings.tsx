@@ -138,7 +138,7 @@ export function RetentionSettings({ statutory10Y, statutory8Y, statutory6Y, cons
               {t('save')}
             </Button>
             {state.status === 'success' && <span className="text-[12px] text-muted-ink">{state.message}</span>}
-            {state.status === 'error' && <span className="text-[12px] text-destructive">{state.message}</span>}
+            {state.status === 'error' && <span className="text-[12px] text-error">{state.message}</span>}
           </div>
         )}
       </ActionForm>

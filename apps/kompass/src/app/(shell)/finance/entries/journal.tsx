@@ -10,18 +10,22 @@ import type { Standing } from '@kompass/module-finance';
 import { useDateFormat } from '@/components/date-format-provider';
 import { EmptyState } from '@/components/empty-state';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { AmountCell } from '@/components/finance/amount-cell';
 import { EntryStateBadge } from '@/components/finance/entry-state-badge';
 import { PageHeader } from '@/components/page-header';
+import { SelectionBar } from '@/components/selection-bar';
 import { SortableHead } from '@/components/sortable-head';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { RowLink, Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { ActionState } from '@/lib/actions';
 import { formatEuro } from '@/lib/finance/amount';
 import { cn } from '@/lib/utils';
 import { deleteDraftsAction, finalizeAllReviewedAction, finalizeReviewedAction, setReviewedManyAction } from './actions';
 import { JournalFilters } from './filters';
+import { panelHref } from '@/components/panel-nav';
 
 export interface JournalRow {
   id: string;
@@ -84,6 +88,8 @@ export function Journal({ rows, total, totals, standing, accounts, categories, c
   const [confirmFinalizeAll, setConfirmFinalizeAll] = useState(false);
   const [confirmFinalizeSelection, setConfirmFinalizeSelection] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // „Als geprüft markieren“ steht in der Auswahlleiste: Die Ablehnung steht unmittelbar darüber.
+  const reviewFb = useActionFeedback();
 
   const toggle = (id: string, index: number, shiftKey: boolean) => {
     setSelected((prev) => {
@@ -108,9 +114,8 @@ export function Journal({ rows, total, totals, standing, accounts, categories, c
 
   const markReviewed = () => {
     startTransition(async () => {
-      const result = await setReviewedManyAction([...selected], true);
-      if (result.status === 'error') toast.error(result.message);
-      else {
+      const result = await reviewFb.run(() => setReviewedManyAction([...selected], true), { retry: markReviewed });
+      if (result.status === 'success') {
         toast.success(t('toast.reviewed'));
         setSelected(new Set());
         router.refresh();
@@ -153,7 +158,7 @@ export function Journal({ rows, total, totals, standing, accounts, categories, c
               </Link>
             ) : null}
             {canFinalize && standing.reviewedDraftCount > 0 ? (
-              <Button type="button" variant="secondary" onClick={() => setConfirmFinalizeAll(true)}>
+              <Button type="button" variant="outline" onClick={() => setConfirmFinalizeAll(true)}>
                 {t('actions.finalizeReviewed', { count: standing.reviewedDraftCount })}
               </Button>
             ) : null}
@@ -176,7 +181,7 @@ export function Journal({ rows, total, totals, standing, accounts, categories, c
                   </Link>
                 ) : null}
                 {showSetupLink ? (
-                  <Link href="/admin/finance?panel=accounts" className={buttonVariants({ variant: 'secondary' })}>
+                  <Link href={panelHref('/admin/finance', 'accounts')} className={buttonVariants({ variant: 'secondary' })}>
                     {t('empty.setupAction')}
                   </Link>
                 ) : null}
@@ -187,19 +192,19 @@ export function Journal({ rows, total, totals, standing, accounts, categories, c
       ) : (
         <div className="mt-3 overflow-hidden rounded-md border border-line bg-surface">
           <Table>
-            <TableHeader className="bg-table-head text-left text-[11px] font-bold uppercase tracking-[.06em] text-muted-ink">
-              <TableRow className="h-9">
-                <TableHead className="w-9 px-4" />
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-9" />
                 <SortableHead field="number" label={t('columns.number')} />
                 <SortableHead field="entryDate" label={t('columns.date')} />
                 <SortableHead field="text" label={t('columns.text')} />
-                <TableHead className="px-4">{t('columns.account')}</TableHead>
-                <TableHead className="px-4">{t('columns.allocation')}</TableHead>
-                <TableHead className="px-4">{t('columns.contact')}</TableHead>
+                <TableHead>{t('columns.account')}</TableHead>
+                <TableHead>{t('columns.allocation')}</TableHead>
+                <TableHead>{t('columns.contact')}</TableHead>
                 <SortableHead field="amount" label={t('columns.amount')} />
-                {accountFilter ? <TableHead className="px-4">{t('columns.balance')}</TableHead> : null}
-                <TableHead className="px-4">{t('columns.voucher')}</TableHead>
-                <TableHead className="px-4">{t('columns.state')}</TableHead>
+                {accountFilter ? <TableHead>{t('columns.balance')}</TableHead> : null}
+                <TableHead>{t('columns.voucher')}</TableHead>
+                <TableHead>{t('columns.state')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -207,31 +212,27 @@ export function Journal({ rows, total, totals, standing, accounts, categories, c
                 const reversed = row.status === 'final' && row.reversedByEntryId !== null;
                 const href = row.status === 'draft' ? `/finance/entries/${row.id}/edit` : `/finance/entries/${row.id}`;
                 return (
-                  <TableRow
-                    key={row.id}
-                    data-row-id={row.id}
-                    tabIndex={0}
-                    onClick={() => router.push(href)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') router.push(href);
-                    }}
-                    className={cn('h-row cursor-pointer border-b border-line-2 hover:bg-row-hover', index % 2 === 1 && 'bg-zebra')}
-                  >
-                    <TableCell className="px-4" onClick={(e) => e.stopPropagation()}>
+                  <TableRow key={row.id} data-row-id={row.id}>
+                    <TableCell>
                       <Checkbox
                         aria-label={t('selectRow', { number: row.number ?? row.text })}
                         checked={selected.has(row.id)}
                         onClick={(e) => toggle(row.id, index, e.shiftKey)}
                       />
                     </TableCell>
-                    <TableCell className="px-4 font-mono text-[13px]">{row.number ?? '—'}</TableCell>
-                    <TableCell className="px-4 font-mono text-[13px] text-ink-2">{fmt.date(row.entryDate)}</TableCell>
-                    <TableCell className={cn('px-4', reversed && 'text-muted-ink line-through')}>
+                    <TableCell className="font-mono text-[13px]">
+                      {/* Die Fläche dieses Links liegt über der ganzen Zeile (MUSTER.md § G); ein Entwurf hat noch keine Nummer, dann nennt der Text den Link. */}
+                      <RowLink href={href} aria-label={row.number ? `${row.number} · ${row.text}` : row.text}>
+                        {row.number ?? '—'}
+                      </RowLink>
+                    </TableCell>
+                    <TableCell className="font-mono text-[13px] text-ink-2">{fmt.date(row.entryDate)}</TableCell>
+                    <TableCell className={cn('', reversed && 'text-muted-ink line-through')}>
                       {row.text}
                       {reversed && row.reversedByNumber ? (
                         <>
                           {' '}
-                          <Link href={`/finance/entries/${row.reversedByEntryId}`} onClick={(e) => e.stopPropagation()} className="not-italic text-[12px] font-normal text-link no-underline">
+                          <Link href={`/finance/entries/${row.reversedByEntryId}`} className="not-italic text-[12px] font-normal text-link no-underline">
                             {t('reversedByLink', { number: row.reversedByNumber })}
                           </Link>
                         </>
@@ -239,7 +240,7 @@ export function Journal({ rows, total, totals, standing, accounts, categories, c
                       {row.reversesEntryId && row.reversesNumber ? (
                         <>
                           {' '}
-                          <Link href={`/finance/entries/${row.reversesEntryId}`} onClick={(e) => e.stopPropagation()} className="text-[12px] text-link">
+                          <Link href={`/finance/entries/${row.reversesEntryId}`} className="text-[12px] text-link">
                             {t('reversesLink', { number: row.reversesNumber })}
                           </Link>
                         </>
@@ -247,26 +248,26 @@ export function Journal({ rows, total, totals, standing, accounts, categories, c
                       {row.correctionOfEntryId && row.correctionOfNumber ? (
                         <>
                           {' '}
-                          <Link href={`/finance/entries/${row.correctionOfEntryId}`} onClick={(e) => e.stopPropagation()} className="text-[12px] text-link">
+                          <Link href={`/finance/entries/${row.correctionOfEntryId}`} className="text-[12px] text-link">
                             {t('correctionOfLink', { number: row.correctionOfNumber })}
                           </Link>
                         </>
                       ) : null}
                     </TableCell>
-                    <TableCell className="px-4 text-ink-2">{row.accountLabel}</TableCell>
-                    <TableCell className="px-4 text-ink-2">{row.allocationLabel}</TableCell>
-                    <TableCell className="px-4 text-ink-2">{row.contactLabel ?? '—'}</TableCell>
-                    <TableCell className="px-4">
+                    <TableCell className="text-ink-2">{row.accountLabel}</TableCell>
+                    <TableCell className="text-ink-2">{row.allocationLabel}</TableCell>
+                    <TableCell className="text-ink-2">{row.contactLabel ?? '—'}</TableCell>
+                    <TableCell selectable>
                       <AmountCell cents={row.amountCents} reversed={reversed} />
                       {row.transfer ? <span className="block text-right text-[11px] text-muted-ink">{t('transfer')}</span> : null}
                     </TableCell>
                     {accountFilter ? (
-                      <TableCell className="px-4">{row.runningBalanceCents !== null ? <AmountCell cents={row.runningBalanceCents} /> : <span className="block text-right text-ink-2">—</span>}</TableCell>
+                      <TableCell>{row.runningBalanceCents !== null ? <AmountCell cents={row.runningBalanceCents} /> : <span className="block text-right text-ink-2">—</span>}</TableCell>
                     ) : null}
-                    <TableCell className="px-4">
+                    <TableCell>
                       <VoucherIcon state={row.documentationState} />
                     </TableCell>
-                    <TableCell className="px-4">
+                    <TableCell>
                       <EntryStateBadge entry={row} />
                     </TableCell>
                   </TableRow>
@@ -275,11 +276,11 @@ export function Journal({ rows, total, totals, standing, accounts, categories, c
             </TableBody>
             <TableFooter className="border-t border-line-strong bg-surface-2">
               <TableRow>
-                <TableCell colSpan={accountFilter ? 8 : 7} className="px-4 text-[12px] text-muted-ink">
+                <TableCell colSpan={accountFilter ? 8 : 7} className="text-[12px] text-muted-ink">
                   {t('totals.label', { count: total })}
                 </TableCell>
-                <TableCell className="px-4 text-[12px] text-ink-2">{t('totals.income', { amount: formatEuro(totals.incomeCents) })}</TableCell>
-                <TableCell colSpan={2} className="px-4 text-[12px] text-ink-2">
+                <TableCell className="text-[12px] text-ink-2">{t('totals.income', { amount: formatEuro(totals.incomeCents) })}</TableCell>
+                <TableCell colSpan={2} className="text-[12px] text-ink-2">
                   {t('totals.expense', { amount: formatEuro(-totals.expenseCents) })} · {t('totals.result', { amount: formatEuro(totals.resultCents) })}
                 </TableCell>
               </TableRow>
@@ -289,29 +290,27 @@ export function Journal({ rows, total, totals, standing, accounts, categories, c
       )}
 
       {selected.size > 0 ? (
-        <div role="toolbar" className="sticky bottom-0 mt-3 flex items-center gap-3 rounded-md bg-ink px-4 py-2.5 text-surface">
-          <span aria-live="polite" className="text-[13px] font-semibold">
-            {t('selection.count', { count: selected.size })}
-          </span>
-          <div className="ml-auto flex items-center gap-2">
-            {canWrite ? (
-              <Button type="button" variant="secondary" onClick={markReviewed}>
-                {t('selection.markReviewed')}
-              </Button>
-            ) : null}
-            {canFinalize ? (
-              <Button type="button" variant="secondary" disabled={!allReviewedDrafts} onClick={() => setConfirmFinalizeSelection(true)}>
-                {t('selection.finalize')}
-              </Button>
-            ) : null}
-            {canWrite ? (
-              <Button type="button" variant="destructive" disabled={!allDrafts} onClick={() => setConfirmDelete(true)}>
-                {t('selection.delete')}
-              </Button>
-            ) : null}
-          </div>
+        <div className="mt-3">
+          <RefusalNotice action state={reviewFb.state} />
         </div>
       ) : null}
+      <SelectionBar count={selected.size} label={t('selection.count', { count: selected.size })}>
+        {canWrite ? (
+          <Button type="button" variant="outline" onClick={markReviewed}>
+            {t('selection.markReviewed')}
+          </Button>
+        ) : null}
+        {canFinalize ? (
+          <Button type="button" variant="outline" disabled={!allReviewedDrafts} onClick={() => setConfirmFinalizeSelection(true)}>
+            {t('selection.finalize')}
+          </Button>
+        ) : null}
+        {canWrite ? (
+          <Button type="button" variant="destructive" disabled={!allDrafts} onClick={() => setConfirmDelete(true)}>
+            {t('selection.delete')}
+          </Button>
+        ) : null}
+      </SelectionBar>
 
       <ConfirmDialog
         open={confirmFinalizeAll}

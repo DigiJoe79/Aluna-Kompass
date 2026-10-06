@@ -39,7 +39,7 @@ export function ChoiceCards({
             key={option.value}
             type="button"
             onClick={() => onSelect(option.value)}
-            className="w-full rounded-md border border-line bg-surface px-4 py-3 text-left transition hover:border-primary"
+            className="w-full rounded-md border border-line bg-surface px-4 py-3 text-left transition hover:border-brand"
             data-testid={`choice-card-${option.value}`}
           >
             <span className="block text-[14px] font-semibold text-ink">{option.label}</span>
@@ -59,7 +59,7 @@ export function ChoiceCards({
             key={option.value}
             className={cn(
               'flex cursor-pointer items-start gap-2.5 rounded-md border px-4 py-3 transition',
-              value === option.value ? 'border-primary bg-brand-soft' : 'border-line bg-surface hover:border-line-2',
+              value === option.value ? 'border-brand bg-brand-soft' : 'border-line bg-surface hover:border-line-2',
             )}
             data-testid={`choice-card-${option.value}`}
           >

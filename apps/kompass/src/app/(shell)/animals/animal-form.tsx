@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { FormField } from '@/components/forms/form-field';
+import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { LocalizedField } from '@/components/forms/localized-field';
 import { FormActionBar } from '@/components/forms/form-action-bar';
 import { SubmitButton } from '@/components/forms/submit-button';
@@ -13,9 +14,9 @@ import { invalidTabs } from '@/lib/form-errors';
 import { StatusBadge } from '@/components/status-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { ActionForm } from '@/components/forms/action-form';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { lineTabsListClass, lineTabsTriggerClass, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 import { idleState } from '@/lib/actions';
 import { saveAnimalAction } from './actions';
 import { MediaChooserDialog } from '@/components/media/media-chooser-dialog';
@@ -35,7 +36,7 @@ import { Switch } from '@/components/ui/switch';
 const TABS = [
   {
     key: 'profile',
-    fields: ['slug', 'name', 'sex', 'location', 'place', 'sizeCm', 'externalProfileUrl', 'birthText', 'sizeText'],
+    fields: ['name', 'sex', 'location', 'place', 'sizeCm', 'externalProfileUrl', 'birthText', 'sizeText'],
   },
   { key: 'content', fields: ['summary', 'body', 'traits__text', 'traits', 'photos'] },
   { key: 'story', fields: ['beforeAssetId', 'afterAssetId', 'quote', 'family', 'adoptedYear', 'beforeCaption', 'afterCaption'] },
@@ -43,6 +44,8 @@ const TABS = [
 
 /** Bindet den Haken im Prüfband ans Formular, obwohl das Band außerhalb steht. */
 const FORM_ID = 'animal-form';
+const TAB_LIST = cn(lineTabsListClass, 'px-5');
+const TAB = lineTabsTriggerClass;
 
 export function AnimalForm({ animal, locales, queue, initialTab, backHref, photoFrame, maxPhotos }: { animal: AnimalRecord | null; locales: string[]; queue: AnimalQueue | null; initialTab: FormTab; backHref: string; photoFrame: { aspectRatio: string; objectPosition: string }; maxPhotos: number }) {
   const t = useTranslations('animals.form');
@@ -53,7 +56,7 @@ export function AnimalForm({ animal, locales, queue, initialTab, backHref, photo
   const s = useTranslations('animals.story');
   // Die Namen für die Fehlerbox, je Feld wie in `TABS`: Sie nennt jedes Feld mit seiner Meldung.
   const labels: Record<string, string> = {
-    slug: c('slug'), name: t('name'), sex: t('sex'), location: t('location'), place: t('place'), sizeCm: t('sizeCm'),
+    name: t('name'), sex: t('sex'), location: t('location'), place: t('place'), sizeCm: t('sizeCm'),
     externalProfileUrl: t('externalProfileUrl'), birthText: t('birthText'), sizeText: t('sizeText'),
     summary: t('summary'), body: t('body'), traits__text: t('traits'), traits: t('traits'), photos: p('label'),
     beforeAssetId: s('before'), afterAssetId: s('after'), quote: s('quote'), family: s('family'), adoptedYear: s('year'),
@@ -81,8 +84,8 @@ export function AnimalForm({ animal, locales, queue, initialTab, backHref, photo
       toast.success(state.message ?? '');
       // Die Maske bleibt stehen: Die Speicherleiste zählt ab dem neuen Stand wieder bei null.
       setBaseline((n) => n + 1);
-    } else if (state.status === 'error' && Object.keys(errors).length === 0) toast.error(state.message);
-  }, [state, errors]);
+    }
+  }, [state]);
   // Die Speicherleiste horcht auf `input` am Formular; ein verstecktes Feld
   // feuert keines. Ohne diesen Anstoß zählte sie eine solche Änderung nicht mit
   // (Fotos, Veröffentlicht-Schalter, die Bilder der Geschichte.)
@@ -132,7 +135,7 @@ export function AnimalForm({ animal, locales, queue, initialTab, backHref, photo
       {animal?.reviewRequestedAt ? <ReviewBand requestedAt={animal.reviewRequestedAt} note={animal.reviewNote} canPublish={!animal.isPublished} formId={FORM_ID} /> : null}
       <FormErrorSummary errors={errors} labels={labels} />
       <Tabs value={tab} onValueChange={(value) => changeTab(value as FormTab)} className="overflow-hidden rounded-lg border border-line bg-surface">
-        <TabsList className="border-b border-line bg-surface px-6"><TabsTrigger value="profile" className="gap-2">{t('tabs.profile')}{broken.has('profile') ? <TabInvalidDot label={tCommon('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="content" className="gap-2">{t('tabs.content')}{broken.has('content') ? <TabInvalidDot label={tCommon('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="story" disabled={!animal}>{t('tabs.story')}</TabsTrigger></TabsList>
+        <TabsList variant="line" className={TAB_LIST}><TabsTrigger value="profile" className={TAB}>{t('tabs.profile')}{broken.has('profile') ? <TabInvalidDot label={tCommon('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="content" className={TAB}>{t('tabs.content')}{broken.has('content') ? <TabInvalidDot label={tCommon('tabInvalid')} /> : null}</TabsTrigger><TabsTrigger value="story" disabled={!animal} className={TAB}>{t('tabs.story')}</TabsTrigger></TabsList>
         {/*
           Reiter und Ladestand reisen beim Abschicken mit, aber nicht als Felder: Die Speicherleiste zählte sonst
           den Reiterwechsel als Änderung – und den neuen Ladestand nach „Status ändern“ ebenso.
@@ -144,32 +147,90 @@ export function AnimalForm({ animal, locales, queue, initialTab, backHref, photo
           {animal ? <input type="hidden" name="isPublished" value={published ? '1' : '0'} /> : null}
           {/* Der Nachfolger steht beim Rendern fest: Fällt dieser Hund mit dem Bestätigen aus dem Filter, stimmt das Ziel trotzdem. */}
           {position ? <><input type="hidden" name="queue" value={queue?.query ?? ''} /><input type="hidden" name="nextId" value={position.nextId ?? ''} /></> : null}
-          <TabsContent keepMounted value="profile" className="grid gap-4 p-6 md:grid-cols-2">
-            <FormField id="slug" label={c('slug')} hint={c('slugHint')} error={errors.slug} required><Input id="slug" name="slug" defaultValue={animal?.slug ?? ''} required pattern="[a-z0-9][a-z0-9-]{0,80}" className="font-mono" /></FormField>
-            <FormField id="name" label={t('name')} error={errors.name} required><Input id="name" name="name" defaultValue={animal?.name ?? ''} required /></FormField>
-            <FormField id="sex" label={t('sex')}><Select id="sex" name="sex" defaultValue={animal?.sex ?? 'female'} className="w-auto"><option value="female">{t('sexes.female')}</option><option value="male">{t('sexes.male')}</option></Select></FormField>
-            <FormField id="location" label={t('location')}><Select id="location" name="location" defaultValue={animal?.location ?? 'shelter'} className="w-auto"><option value="shelter">{t('locations.shelter')}</option><option value="germany">{t('locations.germany')}</option></Select></FormField>
-            <FormField id="place" label={t('place')} hint={t('placeHint')} error={errors.place}><Input id="place" name="place" defaultValue={animal?.place ?? ''} /></FormField>
-            <FormField id="sizeCm" label={t('sizeCm')} error={errors.sizeCm}><Input id="sizeCm" name="sizeCm" type="number" defaultValue={animal?.sizeCm ?? 0} className="font-mono" /></FormField>
-            <FormField id="externalProfileUrl" label={t('externalProfileUrl')} hint={t('externalHint')} error={errors.externalProfileUrl}><Input id="externalProfileUrl" name="externalProfileUrl" defaultValue={animal?.externalProfileUrl ?? ''} /></FormField>
-            <LocalizedField name="birthText" label={t('birthText')} value={animal?.birthText ?? {}} errors={errors} locales={locales} />
-            <LocalizedField name="sizeText" label={t('sizeText')} value={animal?.sizeText ?? {}} errors={errors} locales={locales} />
-            <div className="flex items-center gap-2"><Checkbox id="isEmergency" name="isEmergency" defaultChecked={animal?.isEmergency ?? false} /><Label htmlFor="isEmergency">{t('isEmergency')}</Label></div>
-            <div className="flex items-center gap-2"><Checkbox id="isSponsorable" name="isSponsorable" defaultChecked={animal?.isSponsorable ?? false} /><Label htmlFor="isSponsorable">{t('isSponsorable')}</Label></div>
+          <TabsContent keepMounted value="profile" className="p-5">
+            <section>
+              <h3 className="text-[15px] font-semibold">{t('sections.name')}</h3>
+              <div className="mt-3">
+                <FormGrid>
+                  {animal ? (
+                    // Fest seit dem Anlegen (Spec „Tier-Slug fest“): kein `name`, also reist er nicht mit dem Speichern.
+                    <FormField id="slug" label={c('slug')} hint={t('slugFixed')}><Input id="slug" value={animal.slug} readOnly className="font-mono" /></FormField>
+                  ) : null}
+                  <FormField id="name" label={t('name')} error={errors.name} required><Input id="name" name="name" defaultValue={animal?.name ?? ''} required /></FormField>
+                </FormGrid>
+              </div>
+            </section>
+            <section className="mt-5 border-t border-line pt-5">
+              <h3 className="text-[15px] font-semibold">{t('sections.traits')}</h3>
+              <div className="mt-3">
+                <FormGrid>
+                  <FormField id="sex" label={t('sex')} size="s"><Select id="sex" name="sex" defaultValue={animal?.sex ?? 'female'}><option value="female">{t('sexes.female')}</option><option value="male">{t('sexes.male')}</option></Select></FormField>
+                  <FormField id="sizeCm" label={t('sizeCm')} error={errors.sizeCm} size="s"><Input id="sizeCm" name="sizeCm" type="number" defaultValue={animal?.sizeCm ?? 0} className="font-mono" /></FormField>
+                  <LocalizedField name="sizeText" label={t('sizeText')} size="s" value={animal?.sizeText ?? {}} errors={errors} locales={locales} />
+                  <LocalizedField name="birthText" label={t('birthText')} size="s" value={animal?.birthText ?? {}} errors={errors} locales={locales} />
+                </FormGrid>
+              </div>
+            </section>
+            <section className="mt-5 border-t border-line pt-5">
+              <h3 className="text-[15px] font-semibold">{t('sections.stay')}</h3>
+              <div className="mt-3">
+                <FormGrid>
+                  <FormField id="location" label={t('location')} size="s"><Select id="location" name="location" defaultValue={animal?.location ?? 'shelter'}><option value="shelter">{t('locations.shelter')}</option><option value="germany">{t('locations.germany')}</option></Select></FormField>
+                  <FormField id="place" label={t('place')} size="s" error={errors.place}><Input id="place" name="place" placeholder={t('placePlaceholder')} defaultValue={animal?.place ?? ''} /></FormField>
+                  <FormField id="externalProfileUrl" label={t('externalProfileUrl')} hint={t('externalHint')} error={errors.externalProfileUrl}><Input id="externalProfileUrl" name="externalProfileUrl" defaultValue={animal?.externalProfileUrl ?? ''} /></FormField>
+                </FormGrid>
+              </div>
+            </section>
+            <section className="mt-5 border-t border-line pt-5">
+              <h3 className="text-[15px] font-semibold">{t('sections.flags')}</h3>
+              <div className="mt-3">
+                <FormGrid>
+                  <FormField id="isEmergency" label={t('isEmergency')} toggle><Checkbox id="isEmergency" name="isEmergency" defaultChecked={animal?.isEmergency ?? false} /></FormField>
+                  <FormField id="isSponsorable" label={t('isSponsorable')} toggle><Checkbox id="isSponsorable" name="isSponsorable" defaultChecked={animal?.isSponsorable ?? false} /></FormField>
+                </FormGrid>
+              </div>
+            </section>
           </TabsContent>
-          {/* Texte links, Fotos rechts: Wer prüft, sieht beides nebeneinander und speichert einmal. */}
-          <TabsContent keepMounted value="content" className="grid gap-6 p-6 lg:grid-cols-2">
-            <div className="flex flex-col gap-4">
-              <LocalizedField name="summary" label={t('summary')} kind="textarea" rows={2} value={animal?.summary ?? {}} errors={errors} locales={locales} />
-              <LocalizedField name="body" label={t('body')} kind="markdown" rows={10} value={animal?.body ?? {}} errors={errors} locales={locales} />
-              <LocalizedField name="traits__text" label={t('traits')} hint={t('traitsHint')} value={Object.fromEntries(locales.map((l) => [l, ((animal?.traits as Record<string, string[]> | undefined)?.[l] ?? []).join(', ')]))} locales={locales} />
+          {/*
+            Texte links, Fotos rechts: Wer prüft, sieht beides nebeneinander und speichert einmal. Eigenes Zwei-Block-
+            Layout nur für diesen Reiter (Plan K8/K9 T2b): ab 880 px Kartenbreite nebeneinander, je halbe Breite,
+            darunter untereinander. Jeder Block rastert in seinem eigenen `FormGrid`.
+          */}
+          <TabsContent keepMounted value="content" className="p-5">
+            <div className="@container">
+              <div className="grid grid-cols-1 gap-x-5 gap-y-4 @[880px]:grid-cols-2">
+                {/* Der Texte-Block ist eine eigene Spalte (~570 px): Jedes Feld darin nimmt die volle Blockbreite,
+                    auch bei einer Sprache; mehrere Sprachen teilen sie sich (HANDOFF Konsistenz § 8c). */}
+                <section className="flex min-w-0 flex-col">
+                  <h3 className="text-[15px] font-semibold">{t('sections.texts')}</h3>
+                  <div className="mt-3">
+                    <FormGrid>
+                      <LocalizedField name="summary" label={t('summary')} size="full" kind="textarea" rows={2} value={animal?.summary ?? {}} errors={errors} locales={locales} />
+                      <LocalizedField name="body" label={t('body')} size="full" kind="markdown" rows={10} value={animal?.body ?? {}} errors={errors} locales={locales} />
+                      <LocalizedField name="traits__text" label={t('traits')} size="full" hint={t('traitsHint')} value={Object.fromEntries(locales.map((l) => [l, ((animal?.traits as Record<string, string[]> | undefined)?.[l] ?? []).join(', ')]))} locales={locales} />
+                    </FormGrid>
+                  </div>
+                </section>
+                <section className="flex min-w-0 flex-col">
+                  <h3 className="text-[15px] font-semibold">{t('sections.photos')}</h3>
+                  <div className="mt-3">
+                    <FormGrid>
+                      <FormCell size="full">
+                        {animal ? <PhotosEditor photos={photos} max={maxPhotos} error={errors.photos} onChange={changePhotos} onChoose={() => setChooserOpen(true)} frame={photoFrame} /> : <p className="h-fit rounded-md border border-line bg-surface-2 p-4 text-[13px] text-ink-2">{p('afterCreate')}</p>}
+                      </FormCell>
+                    </FormGrid>
+                  </div>
+                </section>
+              </div>
             </div>
-            {animal ? <PhotosEditor photos={photos} max={maxPhotos} error={errors.photos} onChange={changePhotos} onChoose={() => setChooserOpen(true)} frame={photoFrame} /> : <p className="h-fit rounded-md border border-line bg-surface-2 p-4 text-[13px] text-ink-2">{p('afterCreate')}</p>}
           </TabsContent>
-          <TabsContent keepMounted value="story" className="flex flex-col gap-4 p-6">{animal ? <StoryFields animal={animal} locales={locales} errors={errors} onMediaChange={hiddenEdited} /> : null}</TabsContent>
+          <TabsContent keepMounted value="story" className="p-5">{animal ? <StoryFields animal={animal} locales={locales} errors={errors} onMediaChange={hiddenEdited} /> : null}</TabsContent>
           {/* Eine Leiste für alle Reiter: Sie zählt und speichert, was auf irgendeinem von ihnen geändert wurde. */}
           {/* „Speichern“ steht im DOM zuerst: Die Eingabetaste in einem Feld speichert nur, sie bestätigt nichts. */}
           <FormActionBar
+            // Hat die Leiste einen Hauptweg über „Speichern und weiter“, geht der auch ohne Änderung weiter: nie „Nichts geändert“.
+            mode={animal && !primary ? 'edit' : 'create'}
+            state={state}
             baseline={baseline}
             loadedVersion={animal?.updatedAt}
             back={{ href: backHref, label: tCommon('backToList') }}

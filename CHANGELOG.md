@@ -9,6 +9,94 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 1.0.0 kann jede Minor-Fassung Brüche enthalten — was bricht, steht unter
 **Geändert** mit dem, was zu tun ist.
 
+## [0.2.6] - 2026-10-06
+
+Die Oberfläche wird einheitlicher: Einstellungen mit Unterbereichen haben überall
+dieselben Reiter, Listen denselben Kopf und öffnen mit einem Klick in die Zeile,
+Mehrfachauswahl hat dieselbe Leiste und Knöpfe dieselben Farben. Speichern
+sieht überall gleich aus und ist nie ausgegraut; wenn Kompass etwas ablehnt,
+steht der Grund dort, wo Sie gehandelt haben, mit Auswegen — auch wenn zwei
+Menschen denselben Eintrag bearbeiten. Neue Tiere, Projekte, Partner und
+Webseiten-Einträge legen Sie auf einer eigenen Seite an, Löschen und
+Archivieren steht als letzter Abschnitt der Seite. Jede Seite hat eine feste
+Breite, Formulare ordnen ihre Felder in einem Raster, und Dialoge passen auf das
+Telefon. Neu sind Tierprofile als
+PDF, eine Seite je Tier, einzeln oder als Mappe aus der gefilterten Liste.
+Keine Migration (`migrationCount` bleibt 6). Nach dem Update unter
+Verwaltung → Tiere die Adresse des Online-Profils eintragen; ohne sie tragen
+die PDF-Profile keinen QR-Code und unter dem Tiernamen steht keine Adresse.
+Rollen, die Profile drucken sollen, brauchen „Dokumente erzeugen“. Was
+auffällt: Die Zeilenhöhe der Listen folgt der Dichte-Einstellung im Profil, auf
+dem Telefon stehen die Knöpfe unter Formularen untereinander, und die Reiter
+der Einstellungen stehen in der Adresse. Alte Lesezeichen auf einen Bereich
+führen weiter an die richtige Stelle. Die neue Handbuchseite „Speichern und
+Meldungen“ erklärt das Zusammenspiel.
+
+### Hinzugefügt
+
+- Projekte: Liste nach Name und Art sortierbar; die eigene Reihenfolge für die
+  Webseite bleibt die Vorgabe.
+- **Tierprofile als PDF.** In der Hundeliste lassen sich Hunde ankreuzen, auch
+  alle der gefilterten Liste auf einmal; „Als PDF“ lädt eine Mappe mit einer
+  Seite je Hund. Im Profil eines Hundes gibt es dasselbe für ihn allein. Die
+  Seite zeigt Hauptfoto, drei weitere Fotos, die Angaben, Kurz- und Langtext;
+  ein langer Text wird kleiner gesetzt und notfalls gekürzt, mit QR-Code zum
+  Online-Profil. Dafür braucht es das Recht „Dokumente erzeugen“ und unter
+  Verwaltung → Tiere die neue Adresse des Online-Profils.
+
+- **Feste Adressen für Tiere.** Den URL-Teil eines Tierprofils bildet Kompass jetzt beim Anlegen selbst (Name und kurze Kennung, etwa `luna-7k3f`); er lässt sich danach nicht mehr ändern, auch nicht über MCP. Zwei Hunde dürfen gleich heißen, und eine Adresse wird nie an einen anderen Hund vergeben. Wer über MCP Tiere anlegt, schickt keinen `slug` mehr mit.
+
+### Geändert
+
+- **Adresse unter dem Hundenamen** kommt jetzt aus der Einstellung „Adresse des
+  Online-Profils“ statt aus einem festen Pfad; ohne Einstellung bleibt die Zeile
+  leer.
+- **Einheitliche Oberfläche.** Reiter, Listen, Marken, Knöpfe und
+  Mehrfachauswahl sehen überall gleich aus und nutzen die Farben des Themes,
+  auch im Dunkelmodus. Ein Klick in eine Listenzeile öffnet den Eintrag (mit
+  Cmd- bzw. Strg-Klick in einem neuen Tab); die Zeilenhöhe folgt der
+  Dichte-Einstellung im Profil.
+- **Speichern und Meldungen.** Speichern ist nie ausgegraut; ohne Änderung
+  sagt die Leiste „Nichts geändert“. Lehnt Kompass etwas ab, steht der Grund
+  mit Auswegen dort, wo Sie gehandelt haben, und ein Bestätigungsdialog bleibt
+  offen. Hat jemand anderes den Eintrag inzwischen geändert, legt die Maske Ihre
+  Eingaben neben den neuen Stand, statt sie zu verwerfen.
+- **Anlegen und Löschen.** Tiere, Projekte, Partner und Webseiten-Einträge
+  legen Sie auf einer eigenen Seite an; Löschen und Archivieren steht als
+  letzter Abschnitt der Detailseite, nie neben Speichern.
+- **Breiten und Formulare.** Jede Seite hat eine von drei Breiten (Abläufe
+  schmal, Formulare und Einstellungen bis 1.200 Pixel, Listen und
+  Arbeitsflächen voll). Formularfelder stehen in einem Raster nach der Breite
+  der Karte, kurze Werte schmal, Langtext breit; auf großen Bildschirmen wird
+  kein Feld mehr überbreit. Dialoge haben vier Größen und kommen auf dem
+  Telefon als Blatt von unten oder als Vollbild. Bei mehrsprachigen Feldern
+  steht das Sprachkürzel im Feld.
+- **Einstellungen:** Der gewählte Reiter steht in der Adresse; alte
+  Lesezeichen auf einen Bereich führen weiter an die richtige Stelle.
+- **Für Template-Autoren:** Neue Feldoptionen `size` und `group` steuern die
+  Eingabemaske (Breite eines Feldes, Abschnitt mit Titel). Die Plätze einer
+  Mehrfachauswahl (`references`) stehen als einzelne Felder im Raster, `size`
+  gilt je Platz. Ältere Kompass-Fassungen übergehen die Optionen.
+
+### Behoben
+
+- Webseite → Template einlesen: Verlangt das Template Sprachen, die nicht
+  eingerichtet sind, nennt Kompass sie und den Weg (Einstellungen → Sprachen →
+  hinzufügen), auch über MCP.
+- Verwaltung → Module: Lässt sich ein Modul nicht ein- oder ausschalten, weil
+  andere davon abhängen, nennt Kompass die Module mit Namen (statt mit ihren
+  Schlüsseln) und sagt, was zuerst zu tun ist.
+- Einstellungen → Sprachen: Eine Sprache, die die Webseite braucht (weil das
+  Template sie verlangt), lässt sich nicht mehr entfernen — auch nicht über MCP;
+  Kompass nennt den Grund. Bisher verschwand etwa „en“ stillschweigend aus der
+  ausgelieferten Webseite.
+- Einstellungen: Die Seiten „Akte“ und „Finanzen“ tragen den Namen ihrer
+  Rubrik als Überschrift (statt „Akte – Stammdaten“ und „Finanzen
+  einrichten“).
+- Einstellungen → Erscheinungsbild → Duplizieren: Ist der Schlüssel ungültig
+  (etwa mit Großbuchstaben), steht der Grund am Feld, statt dass nichts
+  passiert.
+
 ## [0.2.5] - 2026-10-03
 
 Die Webseite wird robust und durchschaubar. Vorschau, Verbindungstest und

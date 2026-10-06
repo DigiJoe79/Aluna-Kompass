@@ -140,7 +140,7 @@ export function PickFixedEntry({
         ) : blocked ? (
           <Ban className="size-4 text-drop-blocked-ring" strokeWidth={2.4} aria-hidden />
         ) : picked && check ? (
-          <Check className="size-4 text-primary" strokeWidth={2.6} aria-hidden />
+          <Check className="size-4 text-brand" strokeWidth={2.6} aria-hidden />
         ) : entry.count !== undefined ? (
           <span className={cn('font-mono text-[12px] font-normal tabular-nums', picked ? 'text-current' : 'text-muted-ink')}>{entry.count}</span>
         ) : null}

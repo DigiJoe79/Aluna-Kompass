@@ -17,21 +17,21 @@ const setup = async () => {
   const d = createTestDeps({ manifests: [coreModule, animalsModule] });
   insertUser(d, { id: 'USER-TEST' });
   await setSetting(d, ctxWith(['settings.manage']), { key: 'i18n.locales', value: ['de', 'en'] });
-  const baerbel = unwrap(await createAnimal(d, manage, { ...base, slug: 'baerbel', name: 'Bärbel', location: 'germany', place: 'Hessen', isSponsorable: true }));
+  const baerbel = unwrap(await createAnimal(d, manage, { ...base, name: 'Bärbel', location: 'germany', place: 'Hessen', isSponsorable: true }));
   unwrap(await setAnimalStatus(d, manage, { id: baerbel.id, status: 'reserved' }));
   unwrap(await setAnimalPublished(d, manage, { id: baerbel.id, isPublished: true }));
   const p1 = unwrap(await storeMediaAsset(d, manage, { originalName: 'eins.png', bytes: PNG }));
   const p2 = unwrap(await storeMediaAsset(d, manage, { originalName: 'zwei.png', bytes: new Uint8Array([...PNG, 0]) }));
   unwrap(await setAnimalPhotos(d, manage, { id: baerbel.id, photos: [{ assetId: p1.id, isPrimary: false }, { assetId: p2.id, isPrimary: true }] }));
   d.clock.advance(60_000);
-  const anton = unwrap(await createAnimal(d, manage, { ...base, slug: 'anton-hund', name: 'anton', sex: 'male' }));
+  const anton = unwrap(await createAnimal(d, manage, { ...base, name: 'anton', sex: 'male' }));
   unwrap(await requestAnimalReview(d, manage, { id: anton.id, note: 'neu' }));
   d.clock.advance(60_000);
-  const zora = unwrap(await createAnimal(d, manage, { ...base, slug: 'zora', name: 'Zora' }));
+  const zora = unwrap(await createAnimal(d, manage, { ...base, name: 'Zora' }));
   unwrap(await setAnimalStatus(d, manage, { id: zora.id, status: 'adopted', adoptedYear: 2026 }));
   unwrap(await setAnimalPublished(d, manage, { id: zora.id, isPublished: true }));
   d.clock.advance(60_000);
-  const milo = unwrap(await createAnimal(d, manage, { ...base, slug: 'milo-x9', name: 'Milo', sex: 'male' }));
+  const milo = unwrap(await createAnimal(d, manage, { ...base, name: 'Milo', sex: 'male' }));
   return { d, baerbel, anton, zora, milo, primaryAssetId: p2.id };
 };
 const names = async (d: Awaited<ReturnType<typeof setup>>['d'], input?: unknown) => unwrap(await listAnimals(d, view, input)).animals.map((a) => a.name);
@@ -49,17 +49,17 @@ describe('listAnimals', () => {
     const rows = unwrap(await listAnimals(d, view)).animals;
     const baerbel = rows.find((a) => a.name === 'Bärbel')!;
     expect(Object.keys(baerbel).sort()).toEqual(['createdAt', 'externalProfileUrl', 'id', 'isEmergency', 'isPublished', 'isSponsorable', 'location', 'name', 'photoCount', 'place', 'primaryAssetId', 'reviewNote', 'reviewRequestedAt', 'sex', 'slug', 'status', 'updatedAt']);
-    expect(baerbel).toMatchObject({ slug: 'baerbel', sex: 'female', status: 'reserved', location: 'germany', place: 'Hessen', isSponsorable: true, isPublished: true, reviewRequestedAt: null, reviewNote: '', photoCount: 2, primaryAssetId });
+    expect(baerbel).toMatchObject({ slug: expect.stringMatching(/^baerbel-[0-9a-z]{4}$/), sex: 'female', status: 'reserved', location: 'germany', place: 'Hessen', isSponsorable: true, isPublished: true, reviewRequestedAt: null, reviewNote: '', photoCount: 2, primaryAssetId });
     expect(rows.find((a) => a.name === 'Milo')).toMatchObject({ photoCount: 0, primaryAssetId: null });
     expect(rows.find((a) => a.name === 'anton')).toMatchObject({ reviewNote: 'neu', reviewRequestedAt: expect.any(String) });
   });
 
   it('filters by text in name or slug, with umlauts and without case', async () => {
-    const { d } = await setup();
+    const { d, milo } = await setup();
     expect(await names(d, { text: 'bär' })).toEqual(['Bärbel']);
     expect(await names(d, { text: 'BÄR' })).toEqual(['Bärbel']);
     expect(await names(d, { text: 'ANT' })).toEqual(['anton']);
-    expect(await names(d, { text: 'x9' })).toEqual(['Milo']);
+    expect(await names(d, { text: milo.slug })).toEqual(['Milo']);
     expect(await names(d, { text: 'gibtsnicht' })).toEqual([]);
     expect(await names(d, { text: '  ' })).toHaveLength(4);
   });

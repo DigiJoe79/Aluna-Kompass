@@ -11,6 +11,8 @@ import { useDateFormat } from '@/components/date-format-provider';
 import { AmountCell } from '@/components/finance/amount-cell';
 import { EntryStateBadge } from '@/components/finance/entry-state-badge';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { EmptyState } from '@/components/empty-state';
 import { KeyChip } from '@/components/key-chip';
 import { StatusBadge } from '@/components/status-badge';
@@ -239,19 +241,20 @@ export function WorkEntries({ rows, tab, canWrite }: { rows: WorkEntryRow[]; tab
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [deleting, setDeleting] = useState<WorkEntryRow | null>(null);
+  // „Als geprüft“ steht in den Zeilen: Die Ablehnung steht über der Liste.
+  const reviewFb = useActionFeedback();
 
   if (rows.length === 0) return <EmptyState title={te('entries.empty')} text={te('list.emptyText')} />;
 
   const review = (id: string) =>
     startTransition(async () => {
-      const result = await markReviewedAction(id);
-      if (result.status === 'success') {
-        if (result.message) toast.success(result.message);
-        router.refresh();
-      } else if (result.status === 'error') toast.error(result.message);
+      const result = await reviewFb.run(() => markReviewedAction(id), { retry: () => review(id) });
+      if (result.status === 'success') router.refresh();
     });
 
   return (
+    <>
+    <RefusalNotice action state={reviewFb.state} />
     <section aria-label={te('entries.label')} className="divide-y divide-line-2 rounded-md border border-line bg-surface">
       {rows.map((row) => (
         <div key={row.id} data-testid="work-entry" className="flex flex-wrap items-center gap-3 px-3 py-2.5 text-[13px]">
@@ -302,6 +305,7 @@ export function WorkEntries({ rows, tab, canWrite }: { rows: WorkEntryRow[]; tab
         }}
       />
     </section>
+    </>
   );
 }
 

@@ -4,7 +4,8 @@ import { MoreVertical } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
 import { Notice } from '@/components/notice';
-import { Button } from '@/components/ui/button';
+import { FormField } from '@/components/forms/form-field';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
@@ -54,6 +55,8 @@ export interface SplitRowProps {
   showTax: boolean;
   allowsAddsToAssets?: boolean;
   density?: 'default' | 'narrow';
+  /** Nummer der Zeile ab 1, links im Kopf der Zeilenkarte („Zeile 2“). */
+  position: number;
   /** „Zweck im Minus“ — Warnung ohne Begründungsfeld. */
   purposeOverspent?: boolean;
   onFreeFundsRemainder?: () => void;
@@ -73,6 +76,7 @@ export function SplitRow({
   onDuplicate,
   onRestHere,
   onSplitEvenly,
+  position,
   restCents,
   categories,
   purposes,
@@ -93,7 +97,28 @@ export function SplitRow({
 
   return (
     <div data-testid="split-row" data-density={density} className="space-y-3 rounded-md border border-line bg-surface-2 p-3">
-      <div className={cn('grid gap-3', narrow ? 'grid-cols-[1fr_1fr_auto] items-start' : 'grid-cols-1 sm:grid-cols-[2fr_1.2fr_repeat(3,1fr)_auto] sm:items-start')}>
+      {/* Kopf der Zeilenkarte: links „Zeile n“, rechts das Zeilenmenü — in breiter und schmaler Spalte gleich,
+          32 px hoch, keine leere Zeile mit nur dem Menü (HANDOFF Konsistenz § 8c). */}
+      <div className="-mt-1 -mr-1 flex h-8 items-center justify-between gap-2">
+        <span className="text-[12px] font-semibold text-muted-ink">{t('rowLabel', { n: position })}</span>
+        {value.locked ? null : (
+          <DropdownMenu>
+            <DropdownMenuTrigger aria-label={t('rowMenu')} className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}>
+              <MoreVertical className="size-4" aria-hidden />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-surface shadow-md">
+              <DropdownMenuItem onSelect={onRestHere} disabled={restCents === null}>
+                {restCents !== null ? t('restIntoHereWithAmount', { amount: formatEuro(restCents) }) : t('restIntoHere')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onSplitEvenly(2)}>{t('splitEvenly', { n: 2 })}</DropdownMenuItem>
+              <DropdownMenuItem onSelect={onDuplicate}>{t('duplicate')}</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={onRemove}>{t('removeRow')}</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+      <div className={cn('grid gap-3', narrow ? 'grid-cols-2 items-start' : 'grid-cols-1 sm:grid-cols-[2fr_1.2fr_repeat(3,1fr)] sm:items-start')}>
         <div className={cn('space-y-1', narrow && 'col-span-2')}>
           <Label htmlFor={`${value.key}-category`}>{t('category')}</Label>
           <Select
@@ -175,22 +200,6 @@ export function SplitRow({
           </Select>
         </div>
 
-        {value.locked ? null : (
-          <DropdownMenu>
-            <DropdownMenuTrigger aria-label={t('rowMenu')} className={cn('mt-6 flex size-[var(--field-h)] items-center justify-center rounded-md border border-line-strong text-ink-2', narrow && 'col-start-3 row-start-1')}>
-              <MoreVertical className="size-4" aria-hidden />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-surface shadow-md">
-              <DropdownMenuItem onSelect={onRestHere} disabled={restCents === null}>
-                {restCents !== null ? t('restIntoHereWithAmount', { amount: formatEuro(restCents) }) : t('restIntoHere')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onSplitEvenly(2)}>{t('splitEvenly', { n: 2 })}</DropdownMenuItem>
-              <DropdownMenuItem onSelect={onDuplicate}>{t('duplicate')}</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={onRemove}>{t('removeRow')}</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
       </div>
 
       {purposes.length > 0 || allowsAddsToAssets ? (
@@ -211,15 +220,15 @@ export function SplitRow({
               </Select>
             </div>
           ) : null}
-          <label className={cn('flex items-center gap-2 text-[13px]', narrow ? 'pt-0' : 'pt-6')}>
-            <Switch checked={value.abroad} onCheckedChange={(checked) => set({ abroad: checked === true })} />
-            {t('abroad')}
-          </label>
+          {/* Schalter als `FormField toggle`: unten bündig mit den Feldern der Zeile, ohne `pt-6`. `size="s"`, weil die
+              Zeile ihr eigenes Raster hat und keine Spannweite des FormGrid gilt. */}
+          <FormField id={`${value.key}-abroad`} label={t('abroad')} toggle size="s">
+            <Switch id={`${value.key}-abroad`} checked={value.abroad} onCheckedChange={(checked) => set({ abroad: checked === true })} />
+          </FormField>
           {allowsAddsToAssets ? (
-            <label className="flex items-center gap-2 pt-6 text-[13px]">
-              <Switch checked={value.addsToAssets} onCheckedChange={(checked) => set({ addsToAssets: checked === true })} />
-              {t('addsToAssets')}
-            </label>
+            <FormField id={`${value.key}-adds-to-assets`} label={t('addsToAssets')} toggle size="s">
+              <Switch id={`${value.key}-adds-to-assets`} checked={value.addsToAssets} onCheckedChange={(checked) => set({ addsToAssets: checked === true })} />
+            </FormField>
           ) : null}
         </div>
       ) : null}

@@ -4,6 +4,7 @@ import { getPartner, listPartnerNotices, listPartnerPayments } from '@kompass/mo
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
 import { PartnerDetail, type PartnerDocument } from './partner-detail';
@@ -18,7 +19,7 @@ import { PartnerDetail, type PartnerDocument } from './partner-detail';
 export default async function PartnerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { deps, ctx } = await requireSession();
-  if (!hasPermission(ctx, 'finance.read')) return <ForbiddenCard permission="finance.read" />;
+  if (!hasPermission(ctx, 'finance.read')) return <Page width="standard"><ForbiddenCard permission="finance.read" /></Page>;
   const t = await getTranslations('finance.partners.detail');
 
   const partnerRes = await getPartner(deps, ctx, { id });
@@ -37,8 +38,7 @@ export default async function PartnerDetailPage({ params }: { params: Promise<{ 
   const [registerDocument, agreementDocument] = await Promise.all([document(partner.registerDocumentId), document(partner.agreementDocumentId)]);
 
   return (
-    <div className="max-w-[1200px] space-y-2">
-      <PageHeader title={partner.contactName} back={{ href: '/finance/partners', label: t('back') }} />
+    <Page width="standard" header={<PageHeader title={partner.contactName} back={{ href: '/finance/partners', label: t('back') }} />}>
       <PartnerDetail
         partner={partner}
         notices={noticesRes.ok ? noticesRes.value : []}
@@ -47,6 +47,6 @@ export default async function PartnerDetailPage({ params }: { params: Promise<{ 
         agreementDocument={agreementDocument}
         canWrite={canWrite}
       />
-    </div>
+    </Page>
   );
 }

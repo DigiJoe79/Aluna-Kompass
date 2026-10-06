@@ -117,7 +117,7 @@ export async function applyTemplateSync(deps: Deps, ctx: CallContext, input: unk
   const preview = buildPreview(deps, loaded.value.schema, loaded.value.definition.locales, loaded.value.checksum, loaded.value.definition.name);
 
   if (preview.localesMissing.length > 0) {
-    return conflict('localeMissing', `Das Template fordert Sprachen, die nicht eingerichtet sind: ${preview.localesMissing.join(', ')}`);
+    return localizedConflict('localeMissing', 'errors.site.localeMissing', { locales: preview.localesMissing.join(', ') });
   }
   if (preview.blocking.length > 0) {
     const names = preview.blocking.map((f) => f.path).join(', ');

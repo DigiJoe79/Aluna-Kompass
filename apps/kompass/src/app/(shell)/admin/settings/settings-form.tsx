@@ -4,41 +4,48 @@ import { Info } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useMemo, useState, useTransition } from 'react';
-import { toast } from 'sonner';
 import { FormField } from '@/components/forms/form-field';
-import { SaveBar } from '@/components/forms/save-bar';
+import { FormCell, FormGrid } from '@/components/forms/form-grid';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { ManagedField } from '@/components/managed-field';
 import { Notice } from '@/components/notice';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { FormErrorSummary } from '@/components/forms/form-error-summary';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PanelNav } from '@/components/panel-nav';
 import { Textarea } from '@/components/ui/textarea';
 import { MediaPicker } from '@/components/forms/media-picker';
-import { managedHintKey, managedTarget, SETTINGS_TABS, TAX_REQUIRED, type SettingsField } from '@/lib/settings-fields';
+import { managedHintKey, managedTarget, SETTINGS_TABS, settingsSections, TAX_REQUIRED, type SettingsField } from '@/lib/settings-fields';
 import { formatDate, type DateFormatMode } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import { saveSettingsAction } from './actions';
 
+const SETTINGS_TAB_KEYS = SETTINGS_TABS.map((tab) => tab.key);
 type Values = Record<string, unknown>;
+export type SettingsTabKey = (typeof SETTINGS_TABS)[number]['key'];
 
 export function SettingsForm({
   initial,
   themes,
   lastSaved,
   managed = [],
+  panel,
 }: {
   initial: Values;
   themes: { key: string; name: string }[];
   lastSaved: string | null;
   /** Felder, die ein eingeschaltetes Modul führt (`managedSettings`): nur lesbar, mit dem Satz, wo sie gepflegt werden. */
   managed?: string[];
+  /** Der Bereich aus der Adresse (`?panel=`); die Werte aller Bereiche bleiben beim Wechsel erhalten. */
+  panel: SettingsTabKey;
 }) {
   const t = useTranslations('settings');
   const c = useTranslations('common');
   const [values, setValues] = useState<Values>(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, start] = useTransition();
+  const feedback = useActionFeedback();
 
   const changes = useMemo(
     () => Object.fromEntries(Object.entries(values).filter(([k, v]) => v !== initial[k])),
@@ -75,9 +82,9 @@ export function SettingsForm({
       // Befund 32 (0.2.1): ein Datum wie überall im Format des Vereins, nicht als ISO.
       const display = field.kind === 'select' && value ? t(`options.${field.key}.${String(value)}`) : field.kind === 'date' && value ? formatDate(String(value), (initial['ui.dateFormat'] as DateFormatMode | undefined) ?? 'locale') : value === null || value === undefined ? '' : String(value);
       return (
-        <div key={field.key} className={field.span === 'full' ? 'md:col-span-2' : undefined}>
+        <FormCell key={field.key} size={field.size}>
           <ManagedField label={label} value={display} managedBy={{ label: t(`managedTarget.${target.targetKey}`), href: target.href }} />
-        </div>
+        </FormCell>
       );
     }
 
@@ -89,7 +96,7 @@ export function SettingsForm({
         label={label}
         hint={extraHint ?? hint}
         error={errors[field.key]}
-        className={field.span === 'full' ? 'md:col-span-2' : undefined}
+        size={field.size}
       >
         {node}
       </FormField>
@@ -149,6 +156,7 @@ export function SettingsForm({
           <Input
             {...common}
             value={value === null || value === undefined ? '' : String(value)}
+            placeholder={field.placeholderKey ? t(`placeholders.${field.placeholderKey}`) : undefined}
             onChange={(e) => set(field.key, e.target.value)}
             aria-invalid={!!errors[field.key] || undefined}
           />
@@ -156,42 +164,35 @@ export function SettingsForm({
     }
   };
 
-  const save = () =>
+  const save = (): void =>
     start(async () => {
-      const state = await saveSettingsAction(changes);
+      const state = await feedback.run(() => saveSettingsAction(changes), { retry: save });
       if (state.status === 'error') {
         setErrors(state.fieldErrors);
-        toast.error(state.message);
         return;
       }
-      toast.success(state.status === 'success' ? state.message ?? '' : '');
       setErrors({});
     });
 
   return (
     <>
     <FormErrorSummary errors={errors} labels={labels} />
-    <Tabs defaultValue="organization">
-      <TabsList className="border-b border-line bg-surface px-6">
-        {SETTINGS_TABS.map((tab) => (
-          <TabsTrigger
-            key={tab.key}
-            value={tab.key}
-            data-invalid={invalidTabs.has(tab.key) ? 'true' : undefined}
-            className="gap-2 data-[state=active]:font-semibold data-[state=active]:shadow-[inset_0_-2px_0_var(--color-primary)] data-active:font-semibold data-active:shadow-[inset_0_-2px_0_var(--color-primary)]"
-          >
-            {t(`tabs.${tab.key}`)}
-            {invalidTabs.has(tab.key) ? (
-              <span className="size-[7px] rounded-full bg-error" aria-label={t('tabInvalid')} />
-            ) : null}
-          </TabsTrigger>
-        ))}
-      </TabsList>
-      {SETTINGS_TABS.map((tab) => {
+    <div className="px-6">
+      <PanelNav
+        basePath="/admin/settings"
+        panels={SETTINGS_TAB_KEYS}
+        active={panel}
+        labels={Object.fromEntries(SETTINGS_TAB_KEYS.map((key) => [key, t(`tabs.${key}`)])) as Record<SettingsTabKey, string>}
+        invalid={invalidTabs}
+        invalidLabel={t('tabInvalid')}
+        ariaLabel={t('tabsLabel')}
+      />
+    </div>
+      {SETTINGS_TABS.filter((tab) => tab.key === panel).map((tab) => {
         const tabManagedFields = tab.fields.filter((f) => managed.includes(f.key));
         const tabManagedHintKey = tabManagedFields.length > 0 ? managedHintKey(tabManagedFields[0]!.key) : null;
         return (
-        <TabsContent key={tab.key} value={tab.key} className="p-6">
+        <div key={tab.key} className="p-5">
           {tabManagedHintKey ? <p className="mb-4 text-[13px] text-ink-2">{t(tabManagedHintKey)}</p> : null}
           {tab.key === 'tax' && taxMissingUnmanaged > 0 ? (
             <p
@@ -217,7 +218,7 @@ export function SettingsForm({
             </div>
           ) : null}
           {tab.key === 'branding' ? (
-            <div className="mb-4 flex flex-col gap-1 rounded-lg border border-line bg-surface p-6">
+            <div className="flex flex-col gap-1">
               <MediaPicker
                 name="branding.logoAssetId"
                 value={String(values['branding.logoAssetId'] ?? '') || null}
@@ -227,23 +228,29 @@ export function SettingsForm({
               <p className="text-[12px] text-ink-2">{t('logo.hint')}</p>
             </div>
           ) : null}
-          <div className="grid gap-x-6 gap-y-4 rounded-lg border border-line bg-surface p-6 md:grid-cols-2">
-            {tab.fields.map(render)}
-          </div>
-        </TabsContent>
+          {settingsSections(tab).map(({ section, fields }, index) => (
+            <section key={section ?? index} className={cn((index > 0 || tab.key === 'branding') && 'mt-5 border-t border-line pt-5')}>
+              {section ? <h3 className="text-[15px] font-semibold">{t(`sections.${section}`)}</h3> : null}
+              <div className={cn(section && 'mt-3')}>
+                <FormGrid>{fields.map(render)}</FormGrid>
+              </div>
+            </section>
+          ))}
+        </div>
         );
       })}
-      <SaveBar
-        pendingCount={pendingCount}
-        saving={saving}
-        info={lastSaved ? c('lastSaved', { date: lastSaved, name: '' }) : undefined}
+      <FormActionBar
+        count={pendingCount}
+        pending={saving}
+        note={lastSaved ? c('lastSaved', { date: lastSaved, name: '' }) : undefined}
+        state={feedback.state}
         onDiscard={() => {
           setValues(initial);
           setErrors({});
+          feedback.reset();
         }}
         onSave={save}
       />
-    </Tabs>
     </>
   );
 }

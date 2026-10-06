@@ -4,13 +4,13 @@ import type { Role } from '@kompass/core';
 import { Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useMemo, useState, useTransition } from 'react';
-import { toast } from 'sonner';
 import { FormField } from '@/components/forms/form-field';
-import { SaveBar } from '@/components/forms/save-bar';
-import { SubmitButton } from '@/components/forms/submit-button';
+import { FormGrid } from '@/components/forms/form-grid';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { idleState } from '@/lib/actions';
 import type { PermissionGroup } from '@/lib/permission-groups';
@@ -37,6 +37,7 @@ export function RoleEditor({
   const selected = roles.find((r) => r.id === selectedId) ?? roles[0];
   const [draft, setDraft] = useState<{ name: string; description: string; keys: Set<string> } | null>(null);
   const [saving, start] = useTransition();
+  const saveFb = useActionFeedback();
   const [createState, createAction] = useActionState(createRoleAction, idleState);
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -110,45 +111,42 @@ export function RoleEditor({
         <p className="mt-3 px-3 text-[12px] text-muted-ink">{t('noDelete')}</p>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger render={<Button variant="outline" className="mt-auto border-dashed">{t('create.button')}</Button>} />
-          <DialogContent className="bg-surface shadow-md">
+          <DialogContent size="sm" className="bg-surface shadow-md">
             <ActionForm action={createAction} state={createState} className="flex flex-col gap-4">
               <DialogTitle className="font-heading text-[19px]">{t('create.title')}</DialogTitle>
-              {createState.status === 'error' ? (
-                <p role="alert" className="rounded-md border border-error bg-error-bg p-3 text-[13px] text-error">
-                  {createState.message}
-                </p>
-              ) : null}
-              <FormField id="new-role-name" label={t('fields.name')}>
-                <Input id="new-role-name" name="name" required />
-              </FormField>
-              <FormField id="new-role-description" label={t('fields.description')}>
-                <Input id="new-role-description" name="description" />
-              </FormField>
-              <DialogFooter>
-                <SubmitButton>{t('create.submit')}</SubmitButton>
-              </DialogFooter>
+              <FormGrid>
+                <FormField id="new-role-name" label={t('fields.name')} error={createState.status === 'error' ? createState.fieldErrors.name : undefined}>
+                  <Input id="new-role-name" name="name" required />
+                </FormField>
+                <FormField id="new-role-description" label={t('fields.description')} error={createState.status === 'error' ? createState.fieldErrors.description : undefined}>
+                  <Input id="new-role-description" name="description" />
+                </FormField>
+              </FormGrid>
+              <FormActionBar placement="dialog" mode="create" cancel={() => setCreateOpen(false)} saveLabel={t('create.submit')} state={createState} />
             </ActionForm>
           </DialogContent>
         </Dialog>
       </aside>
       <section className="flex min-w-0 flex-col">
-        <div className="grid grid-cols-[280px_minmax(0,1fr)] gap-4 border-b border-line px-6 pb-4 pt-5">
-          <FormField id="role-name" label={t('fields.name')}>
-            <Input
-              id="role-name"
-              value={name}
-              disabled={selected.isProtected}
-              onChange={(e) => edit({ name: e.target.value })}
-            />
-          </FormField>
-          <FormField id="role-description" label={t('fields.description')}>
-            <Input
-              id="role-description"
-              value={description}
-              disabled={selected.isProtected}
-              onChange={(e) => edit({ description: e.target.value })}
-            />
-          </FormField>
+        <div className="border-b border-line px-6 pb-4 pt-5">
+          <FormGrid>
+            <FormField id="role-name" label={t('fields.name')}>
+              <Input
+                id="role-name"
+                value={name}
+                disabled={selected.isProtected}
+                onChange={(e) => edit({ name: e.target.value })}
+              />
+            </FormField>
+            <FormField id="role-description" label={t('fields.description')}>
+              <Input
+                id="role-description"
+                value={description}
+                disabled={selected.isProtected}
+                onChange={(e) => edit({ description: e.target.value })}
+              />
+            </FormField>
+          </FormGrid>
         </div>
         <div className="flex-1 overflow-auto">
           {groups.map((group) => {
@@ -201,19 +199,19 @@ export function RoleEditor({
           })}
         </div>
         {selected.isProtected ? null : (
-          <SaveBar
-            pendingCount={pendingCount}
-            saving={saving}
-            onDiscard={() => setDraft(null)}
+          <FormActionBar
+            count={pendingCount}
+            pending={saving}
+            state={saveFb.state}
+            onDiscard={() => {
+              setDraft(null);
+              saveFb.reset();
+            }}
             saveLabel={t('save')}
             onSave={() =>
               start(async () => {
-                const s = await saveRoleAction({ id: selected.id, name, description, permissionKeys: [...effectiveKeys] });
-                if (s.status === 'error') toast.error(s.message);
-                else {
-                  toast.success(s.status === 'success' ? s.message ?? '' : '');
-                  setDraft(null);
-                }
+                const s = await saveFb.run(() => saveRoleAction({ id: selected.id, name, description, permissionKeys: [...effectiveKeys] }));
+                if (s.status === 'success') setDraft(null);
               })
             }
           />

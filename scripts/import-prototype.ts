@@ -60,12 +60,11 @@ export async function importPrototype(
   const counts = { animals: 0, projects: 0 };
 
   const dogs = await load<any[]>('dogs.js', 'dogs');
-  const existingAnimals = new Set(unwrap(await listAnimals(deps, ctx)).animals.map((a) => a.slug));
+  const existingAnimals = new Set(unwrap(await listAnimals(deps, ctx)).animals.map((a) => a.name));
   for (const d of dogs) {
-    if (existingAnimals.has(d.slug)) continue;
+    if (existingAnimals.has(d.name)) continue;
     const created = unwrap(
       await createAnimal(deps, ctx, {
-        slug: d.slug,
         name: d.name,
         sex: d.geschlecht === 'Rüde' ? 'male' : 'female',
         birthText: L(d.geboren ?? ''),

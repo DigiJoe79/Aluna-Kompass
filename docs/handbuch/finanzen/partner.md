@@ -11,8 +11,10 @@ sind.
 
 Die Liste zeigt je Partner den Status, die übliche Art der Zahlung, wie viele
 Nachweise noch offen sind — überfällige stehen mit dem Wort „überfällig“
-daneben — und wann zuletzt gezahlt wurde. Über **Partner anlegen** wählen Sie
-einen Kontakt und seinen Status.
+daneben — und wann zuletzt gezahlt wurde. Ein Klick irgendwo in die Zeile
+öffnet den Partner. Über **Partner anlegen** kommen Sie auf eine eigene Seite,
+auf der Sie einen Kontakt und seinen Status wählen; danach landen Sie auf dem
+neuen Partner.
 
 ## Angaben zum Partner
 
@@ -34,6 +36,12 @@ Die **übliche Nachweisfrist** steht in Monaten; sie ist die Vorgabe für jede
 Zahlung. Dazu kommen, wenn vorhanden, der Registernachweis und eine
 Rahmenvereinbarung aus der Akte. Auf breitem Bildschirm stehen die Angaben
 links, Bescheide und Zahlungen rechts.
+
+Ganz unten auf der Seite steht der Abschnitt **Löschen** oder **Archivieren**:
+Solange weder Zahlungen noch Bescheide am Partner hängen, lässt er sich
+löschen. Danach bleibt nur das Archivieren — der Partner wird als inaktiv
+geführt und behält alles, was an ihm hängt; hier lässt er sich auch wieder
+aktivieren.
 
 ## Bescheide des Partners
 
@@ -125,5 +133,5 @@ Die Startseite zeigt sie standardmäßig. Wer Finanzen lesen darf, sieht je
 Zahlung Partner, Nummer, Betrag und „offen“ oder „seit N Tagen überfällig“;
 ohne dieses Recht nur Anzahl, Summe und wie viele überfällig sind. Überfällig
 ist eine Zahlung erst, wenn Zahlungstag, Nachweisfrist und Kulanzfrist
-verstrichen sind; die Kulanzfrist stellen Sie unter Finanzen einrichten →
+verstrichen sind; die Kulanzfrist stellen Sie unter Einstellungen → Finanzen →
 Steuerliches ein.

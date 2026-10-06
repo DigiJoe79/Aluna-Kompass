@@ -5,6 +5,7 @@ import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
 import { PaymentDetail } from './payment-detail';
@@ -19,7 +20,7 @@ import { PaymentDetail } from './payment-detail';
 export default async function PartnerPaymentPage({ params }: { params: Promise<{ id: string; paymentId: string }> }) {
   const { id, paymentId } = await params;
   const { deps, ctx } = await requireSession();
-  if (!hasPermission(ctx, 'finance.read')) return <ForbiddenCard permission="finance.read" />;
+  if (!hasPermission(ctx, 'finance.read')) return <Page width="task"><ForbiddenCard permission="finance.read" /></Page>;
   const t = await getTranslations('finance.partners.payment');
   const tState = await getTranslations('finance.partners.detail.payments.state');
 
@@ -73,12 +74,16 @@ export default async function PartnerPaymentPage({ params }: { params: Promise<{
   const acknowledgers = listUserNamesWithPermission(deps, 'finance.approve').filter((name) => name !== creatorName);
 
   return (
-    <div className="max-w-[760px] space-y-2">
-      <PageHeader
-        title={t('heading', { label: payment.number ?? tState(payment.state) })}
-        description={partner.contactName}
-        back={{ href: `/finance/partners/${id}`, label: t('back') }}
-      />
+    <Page
+      width="task"
+      header={
+        <PageHeader
+          title={t('heading', { label: payment.number ?? tState(payment.state) })}
+          description={partner.contactName}
+          back={{ href: `/finance/partners/${id}`, label: t('back') }}
+        />
+      }
+    >
       <PaymentDetail
         payment={payment}
         partner={partner}
@@ -94,6 +99,6 @@ export default async function PartnerPaymentPage({ params }: { params: Promise<{
         evidence={evidence.map((e) => ({ id: e.id, kind: e.kind, documentId: e.documentId, foreignLanguage: e.foreignLanguage, explanationDe: e.explanationDe, coveredCents: e.coveredCents, document: e.documentId ? evidenceDocs.get(e.documentId) ?? null : null }))}
         people={{ creator: creatorName, approver: payment.approvedByUserId ? names.get(payment.approvedByUserId) ?? null : null, acknowledger: payment.acknowledgedByUserId ? names.get(payment.acknowledgedByUserId) ?? null : null, acknowledgers, viewerIsCreator: ctx.userId === payment.createdByUserId }}
       />
-    </div>
+    </Page>
   );
 }

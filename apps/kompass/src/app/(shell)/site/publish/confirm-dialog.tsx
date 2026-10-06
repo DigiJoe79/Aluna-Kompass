@@ -1,9 +1,9 @@
 'use client';
 
 import { useFormatter, useTranslations } from 'next-intl';
-import { useEffect, useRef, useState, useTransition } from 'react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { useEffect, useState, useTransition } from 'react';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import type { DetailView } from '@/lib/site-job-view';
 import { checkContentHashAction } from './actions';
 import { hintCount } from './flow-state';
@@ -38,7 +38,6 @@ export function PublishConfirmDialog({
   const format = useFormatter();
   const [check, setCheck] = useState<Check>('checking');
   const [, startCheck] = useTransition();
-  const main = useRef<HTMLButtonElement>(null);
   const hash = preview.contentHash ?? null;
 
   useEffect(() => {
@@ -70,8 +69,10 @@ export function PublishConfirmDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         role="alertdialog"
-        initialFocus={main}
-        className="bg-surface shadow-md sm:max-w-[460px] max-sm:top-auto max-sm:bottom-0 max-sm:max-w-full max-sm:translate-y-0 max-sm:rounded-b-none"
+        // Der Fokus liegt auf der Hauptaktion der Leiste.
+        initialFocus={() => document.querySelector<HTMLElement>('[data-testid="publish-confirm-main"]')}
+        size="sm"
+        className="bg-surface shadow-md"
       >
         <DialogTitle className="font-heading text-[19px]">{env === 'test' ? t('confirm.titleTest') : t('confirm.title', { host })}</DialogTitle>
         <DialogDescription className="text-[14px] text-ink-2">
@@ -93,34 +94,19 @@ export function PublishConfirmDialog({
         <p className="rounded-md border border-line bg-surface-2 p-3 text-[13px] text-ink-2">
           {env === 'test' ? t('publish.test') : t('publish.live')} · {host}
         </p>
-        <DialogFooter>
-          <Button variant="ghost" onClick={close}>
-            {t('confirm.cancel')}
-          </Button>
-          {check === 'stale' ? (
-            <Button
-              ref={main}
-              onClick={() => {
-                close();
-                onRebuild();
-              }}
-            >
-              {t('rebuild')}
-            </Button>
-          ) : (
-            <Button
-              ref={main}
-              aria-busy={check === 'checking' || undefined}
-              disabled={check === 'checking'}
-              onClick={() => {
-                close();
-                onPublish(hash!);
-              }}
-            >
-              {check === 'checking' ? t('confirm.checking') : label}
-            </Button>
-          )}
-        </DialogFooter>
+        <FormActionBar
+          placement="dialog"
+          mode="run"
+          cancel={close}
+          saveTestId="publish-confirm-main"
+          pending={check === 'checking'}
+          saveLabel={check === 'stale' ? t('rebuild') : check === 'checking' ? t('confirm.checking') : label}
+          onSave={() => {
+            close();
+            if (check === 'stale') onRebuild();
+            else onPublish(hash!);
+          }}
+        />
       </DialogContent>
     </Dialog>
   );

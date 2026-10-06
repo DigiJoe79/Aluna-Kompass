@@ -18,7 +18,7 @@ export async function SubmittedView({ claim }: { claim: ExpenseClaimView }) {
   const t = await getTranslations('finance.expenses.submitted');
   const mode = readSetting<DateFormatMode>(deps, 'ui.dateFormat');
   return (
-    <section data-testid="expense-submitted" aria-labelledby="expense-submitted-title" className="max-w-[640px] space-y-5">
+    <section data-testid="expense-submitted" aria-labelledby="expense-submitted-title" className="space-y-5">
       <div className="rounded-lg border border-line bg-surface p-5">
         <h2 id="expense-submitted-title" className="font-heading text-[22px]">
           {t('title')}

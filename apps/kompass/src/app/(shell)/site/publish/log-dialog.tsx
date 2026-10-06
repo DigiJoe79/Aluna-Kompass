@@ -92,7 +92,7 @@ export function LogDialog({ item, onClose }: { item: LogSubject | null; onClose(
 
   return (
     <Dialog open={item !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent layout="fixed-footer" initialFocus={pre} className="bg-surface sm:max-w-[760px] max-sm:h-full max-sm:max-h-full max-sm:max-w-full max-sm:rounded-none">
+      <DialogContent size="lg" layout="fixed-footer" initialFocus={pre} className="bg-surface">
         <DialogHeader>
           <DialogTitle className="font-heading text-[16px]">{item ? t('title', { when: format.dateTime(new Date(item.startedAt), { dateStyle: 'medium', timeStyle: 'short' }) }) : ''}</DialogTitle>
           {item ? (

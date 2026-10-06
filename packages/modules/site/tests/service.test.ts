@@ -78,7 +78,7 @@ describe('template sync', () => {
     const deps = withUser();
     const dir = templateDir(GOOD.replace("locales: ['de']", "locales: ['de', 'fr']"));
     const applied = await applyTemplateSync(deps, ctxWith(['site.manage']), { dir, confirm: true });
-    expect(applied.ok === false && applied.error.type === 'conflict' && applied.error.code === 'localeMissing' && applied.error.message.includes('fr')).toBe(true);
+    expect(applied.ok === false && applied.error.type === 'conflict' && applied.error.code === 'localeMissing' && applied.error.messageKey === 'errors.site.localeMissing' && applied.error.params?.locales === 'fr').toBe(true);
   });
 
   it('stores schema and checksum and writes an audit entry with the plan', async () => {

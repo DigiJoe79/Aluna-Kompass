@@ -3,6 +3,7 @@ import { contactRetention, contactRoleDefinitions, displayName, formatPostalAddr
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
 import { requireSession } from '@/lib/request-context';
@@ -15,7 +16,7 @@ import { CreateContactDialog } from '../contact-form';
 export default async function ContactDetailPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params;
   const { deps, ctx } = await requireSession();
-  if (requirePermission(ctx, 'contacts.view')) return <ForbiddenCard permission="contacts.view" />;
+  if (requirePermission(ctx, 'contacts.view')) return <Page width="standard"><ForbiddenCard permission="contacts.view" /></Page>;
 
   const t = await getTranslations('contacts');
   const c = await getTranslations('common');
@@ -25,7 +26,7 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
   const contact = contactResult.value;
 
   const retentionResult = await contactRetention(deps, ctx, id);
-  if (!retentionResult.ok) return <ForbiddenCard permission="contacts.view" />;
+  if (!retentionResult.ok) return <Page width="standard"><ForbiddenCard permission="contacts.view" /></Page>;
   const retention = retentionResult.value;
 
   const organizationCountry = (await readSetting<string>(deps, 'organization.country')) ?? undefined;
@@ -33,38 +34,41 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
   const canManage = hasPermission(ctx, 'contacts.manage');
 
   return (
-    <>
-      <PageHeader
-        title={displayName(contact)}
-        description={contact.kind === 'organization' ? t('fields.organization') : t('fields.person')}
-        back={{ href: '/contacts', label: c('backToList') }}
-        actions={
-          <>
-            {contact.status === 'archived' ? <StatusBadge tone="neutral">{t('archived')}</StatusBadge> : null}
-            {canManage ? (
-              <CreateContactDialog
-                contact={{
-                  id: contact.id,
-                  kind: contact.kind,
-                  salutation: contact.salutation,
-                  firstName: contact.firstName,
-                  lastName: contact.lastName,
-                  name: contact.name,
-                  legalForm: contact.legalForm,
-                  addressExtra: contact.addressExtra,
-                  street: contact.street,
-                  postalCode: contact.postalCode,
-                  city: contact.city,
-                  country: contact.country,
-                  notes: contact.notes,
-                  updatedAt: contact.updatedAt,
-                }}
-              />
-            ) : null}
-          </>
-        }
-      />
-
+    <Page
+      width="standard"
+      header={
+        <PageHeader
+          title={displayName(contact)}
+          description={contact.kind === 'organization' ? t('fields.organization') : t('fields.person')}
+          back={{ href: '/contacts', label: c('backToList') }}
+          actions={
+            <>
+              {contact.status === 'archived' ? <StatusBadge tone="neutral">{t('archived')}</StatusBadge> : null}
+              {canManage ? (
+                <CreateContactDialog
+                  contact={{
+                    id: contact.id,
+                    kind: contact.kind,
+                    salutation: contact.salutation,
+                    firstName: contact.firstName,
+                    lastName: contact.lastName,
+                    name: contact.name,
+                    legalForm: contact.legalForm,
+                    addressExtra: contact.addressExtra,
+                    street: contact.street,
+                    postalCode: contact.postalCode,
+                    city: contact.city,
+                    country: contact.country,
+                    notes: contact.notes,
+                    updatedAt: contact.updatedAt,
+                  }}
+                />
+              ) : null}
+            </>
+          }
+        />
+      }
+    >
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section className="rounded-md border border-line bg-surface p-5">
           <h2 className="mb-2 text-[13px] font-semibold text-muted-ink">{t('preview')}</h2>
@@ -107,6 +111,6 @@ export default async function ContactDetailPage(props: { params: Promise<{ id: s
 
         <RelatedDocuments deps={deps} ctx={ctx} entityType="contact" entityId={contact.id} />
       </div>
-    </>
+    </Page>
   );
 }

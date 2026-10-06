@@ -3,7 +3,8 @@
 import { losesContent, type Finding } from '@kompass/module-site/client';
 import { useTranslations } from 'next-intl';
 import { useState, useTransition } from 'react';
-import { toast } from 'sonner';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
 import { applySyncAction, previewSyncAction, type SyncPreviewState } from '@/app/(shell)/site/actions';
 
@@ -37,17 +38,13 @@ export function SyncClient({ name }: { name: string | null }) {
   const [state, setState] = useState<SyncPreviewState>({ status: 'idle' });
   const [pending, start] = useTransition();
   const [applying, startApply] = useTransition();
+  const applyFb = useActionFeedback();
 
   const preview = () => start(async () => setState(await previewSyncAction()));
   const apply = () =>
     startApply(async () => {
-      const result = await applySyncAction();
-      if (result.status === 'success') {
-        toast.success(result.message ?? '');
-        setState({ status: 'idle' });
-      } else if (result.status === 'error') {
-        toast.error(result.message);
-      }
+      const result = await applyFb.run(() => applySyncAction(), { retry: apply });
+      if (result.status === 'success') setState({ status: 'idle' });
     });
 
   const p = state.status === 'preview' ? state.preview : null;
@@ -56,13 +53,13 @@ export function SyncClient({ name }: { name: string | null }) {
   const harmless = (p?.findings ?? []).filter((f) => f.kind !== 'overLimit' && !losesContent(f));
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
+    <div className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-5">
       <div className="flex items-center justify-between gap-4">
         <span className="text-[14px] text-ink-2">{name ? t('name') + ': ' + name : t('neverRead')}</span>
         <Button type="button" onClick={preview} disabled={pending}>{t('read')}</Button>
       </div>
 
-      {state.status === 'error' ? <p role="alert" className="text-[13px] font-semibold text-error">{state.message}</p> : null}
+      <RefusalNotice action state={state.status === 'error' ? { status: 'error', message: state.message, fieldErrors: {} } : { status: 'idle' }} />
 
       {p ? (
         <section aria-label={t('findings')} className="flex flex-col gap-3 border-t border-subtle pt-4">
@@ -95,6 +92,7 @@ export function SyncClient({ name }: { name: string | null }) {
 
           {p.findings.length === 0 && p.localesMissing.length === 0 ? <p className="text-[13px] text-muted-ink">{t('noFindings')}</p> : null}
 
+          <RefusalNotice action state={applyFb.state} />
           <div className="flex gap-2 pt-1">
             <Button type="button" onClick={apply} disabled={applying || blocking.length > 0 || p.localesMissing.length > 0}>{t('apply')}</Button>
             <Button type="button" variant="ghost" onClick={() => setState({ status: 'idle' })}>{t('cancel')}</Button>

@@ -1,17 +1,19 @@
 'use client';
 
-import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import { toast } from 'sonner';
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Select } from '@/components/ui/select';
 import { linkDocumentAction, unlinkDocumentAction } from '../actions';
+import { FormField } from '@/components/forms/form-field';
+import { FormCell, FormGrid } from '@/components/forms/form-grid';
 
 export interface ResolvedLink {
   id: string;
@@ -53,6 +55,9 @@ export function LinksPanel({
   const [otherId, setOtherId] = useState('');
   const [role, setRole] = useState<(typeof ROLES)[number]>('about');
   const [pending, start] = useTransition();
+  const addFb = useActionFeedback();
+  // „Lösen“ steht in den Zeilen der Liste: Die Ablehnung steht über der Liste.
+  const removeFb = useActionFeedback();
 
   const types = ['contact', ...(animals.length > 0 ? ['animal'] : []), ...(projects.length > 0 ? ['project'] : [])];
   const entityId = entityType === 'contact' ? (contact?.id ?? '') : otherId;
@@ -60,12 +65,8 @@ export function LinksPanel({
   const submit = () => {
     if (!entityId) return;
     start(async () => {
-      const state = await linkDocumentAction(documentId, entityType, entityId, role);
-      if (state.status === 'error') {
-        toast.error(state.message);
-        return;
-      }
-      if (state.status === 'success' && state.message) toast.success(state.message);
+      const state = await addFb.run(() => linkDocumentAction(documentId, entityType, entityId, role), { retry: submit });
+      if (state.status !== 'success') return;
       setOpen(false);
       setContact(null);
       setOtherId('');
@@ -75,10 +76,8 @@ export function LinksPanel({
 
   const remove = (linkId: string) =>
     start(async () => {
-      const state = await unlinkDocumentAction(documentId, linkId);
-      if (state.status === 'error') toast.error(state.message);
-      else if (state.status === 'success' && state.message) toast.success(state.message);
-      router.refresh();
+      const state = await removeFb.run(() => unlinkDocumentAction(documentId, linkId), { retry: () => remove(linkId) });
+      if (state.status === 'success') router.refresh();
     });
 
   return (
@@ -87,11 +86,12 @@ export function LinksPanel({
         <h3 className="text-[15px] font-semibold text-ink">{t('linksTitle')}</h3>
         {canEdit ? (
           <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
-            <Plus className="size-3.5" aria-hidden />
             {t('links.add')}
           </Button>
         ) : null}
       </div>
+
+      <RefusalNotice action state={removeFb.state} />
 
       {links.length === 0 ? (
         <p className="text-[13px] text-muted-ink">{t('links.none')}</p>
@@ -125,73 +125,62 @@ export function LinksPanel({
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-full sm:max-w-[520px] bg-surface p-6 shadow-md">
+        <DialogContent size="md" className="bg-surface shadow-md">
           <DialogTitle className="font-heading text-[19px]">{t('links.addTitle')}</DialogTitle>
           <DialogDescription className="text-[13px] text-muted-ink">{t('links.addDescription')}</DialogDescription>
 
-          <div className="mt-5 space-y-4">
-            {types.length > 1 ? (
-              <div className="space-y-1.5">
-                <Label htmlFor="link-entity-type">{t('links.entityType')}</Label>
-                <Select id="link-entity-type" value={entityType} onChange={(e) => setEntityType(e.target.value)}>
-                  {types.map((type) => (
-                    <option key={type} value={type}>
-                      {t(`entities.${type}`)}
+          <div className="mt-5">
+            <FormGrid>
+              {types.length > 1 ? (
+                <FormField id="link-entity-type" label={t('links.entityType')} size="s">
+                  <Select id="link-entity-type" value={entityType} onChange={(e) => setEntityType(e.target.value)}>
+                    {types.map((type) => (
+                      <option key={type} value={type}>
+                        {t(`entities.${type}`)}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+              ) : null}
+
+              {entityType === 'contact' ? (
+                <FormCell size="m">
+                  <ContactPicker
+                    id="link-contact"
+                    name="linkContactId"
+                    label={t('links.contact')}
+                    value={contact}
+                    onChange={setContact}
+                    canCreate={canCreateContact}
+                    required
+                  />
+                </FormCell>
+              ) : (
+                <FormField id="link-entity-id" label={t(`entities.${entityType}`)} required>
+                  <Select id="link-entity-id" value={otherId} onChange={(e) => setOtherId(e.target.value)}>
+                    <option value="">{t('links.choose')}</option>
+                    {(entityType === 'animal' ? animals : projects).map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+              )}
+
+              <FormField id="link-role" label={t('links.role')} required size="s">
+                <Select id="link-role" value={role} onChange={(e) => setRole(e.target.value as (typeof ROLES)[number])}>
+                  {ROLES.map((r) => (
+                    <option key={r} value={r}>
+                      {t(`roles.${r}`)}
                     </option>
                   ))}
                 </Select>
-              </div>
-            ) : null}
-
-            {entityType === 'contact' ? (
-              <ContactPicker
-                id="link-contact"
-                name="linkContactId"
-                label={t('links.contact')}
-                value={contact}
-                onChange={setContact}
-                canCreate={canCreateContact}
-                required
-              />
-            ) : (
-              <div className="space-y-1.5">
-                <Label htmlFor="link-entity-id" required>
-                  {t(`entities.${entityType}`)}
-                </Label>
-                <Select id="link-entity-id" value={otherId} onChange={(e) => setOtherId(e.target.value)}>
-                  <option value="">{t('links.choose')}</option>
-                  {(entityType === 'animal' ? animals : projects).map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            )}
-
-            <div className="space-y-1.5">
-              <Label htmlFor="link-role" required>
-                {t('links.role')}
-              </Label>
-              <Select id="link-role" value={role} onChange={(e) => setRole(e.target.value as (typeof ROLES)[number])}>
-                {ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {t(`roles.${r}`)}
-                  </option>
-                ))}
-              </Select>
-            </div>
+              </FormField>
+            </FormGrid>
           </div>
 
-          <DialogFooter className="mt-6">
-            <span className="mr-auto text-[12px] text-muted-ink">{tCommon('requiredLegend')}</span>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              {t('links.cancel')}
-            </Button>
-            <Button type="button" disabled={!entityId || pending} onClick={submit}>
-              {t('links.submit')}
-            </Button>
-          </DialogFooter>
+          <FormActionBar placement="dialog" cancel={() => setOpen(false)} pending={pending} saveDisabled={!entityId} saveLabel={t('links.submit')} onSave={submit} state={addFb.state} note={<span className="text-[12px] text-muted-ink">{tCommon('requiredLegend')}</span>} />
         </DialogContent>
       </Dialog>
     </section>

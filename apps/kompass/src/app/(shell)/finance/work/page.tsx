@@ -6,6 +6,7 @@ import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { formatDate, type DateFormatMode } from '@/lib/dates';
 import { formatEuro } from '@/lib/finance/amount';
@@ -36,7 +37,7 @@ export interface WorkQuery {
  */
 export default async function FinanceWorkPage({ searchParams }: { searchParams: Promise<WorkQuery> }) {
   const { deps, ctx } = await requireSession();
-  if (!hasPermission(ctx, 'finance.read')) return <ForbiddenCard permission="finance.read" />;
+  if (!hasPermission(ctx, 'finance.read')) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
   const t = await getTranslations('finance.work');
   const canWrite = hasPermission(ctx, 'finance.entriesWrite');
   const dateMode = readSetting<DateFormatMode>(deps, 'ui.dateFormat');
@@ -45,13 +46,13 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
   const query = await searchParams;
   const tab = parseWorkTab(query.tab);
   const accountsRes = await listAccounts(deps, ctx, { includeInactive: true });
-  if (!accountsRes.ok) return <ForbiddenCard permission="finance.read" />;
+  if (!accountsRes.ok) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
   const accounts = accountsRes.value;
   const accountName = new Map(accounts.map((a) => [a.id, a.name]));
   const account = query.account && accountName.has(query.account) ? query.account : null;
 
   const [countsRes, itemsRes] = await Promise.all([getWorkCounts(deps, ctx), listWorkItems(deps, ctx, { tab, accountId: account ?? undefined, limit: 200, offset: 0 })]);
-  if (!countsRes.ok || !itemsRes.ok) return <ForbiddenCard permission="finance.read" />;
+  if (!countsRes.ok || !itemsRes.ok) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
   const counts = countsRes.value;
   const items = itemsRes.value.items;
 
@@ -190,51 +191,53 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
   const tone = { open: 'bg-info-bg text-info', unsure: 'bg-warning-bg text-warning', agent: 'bg-agent-bg text-agent', reviewed: 'bg-info-bg text-info', due: 'bg-error-bg text-error' } as const;
 
   return (
-    <div className="space-y-4">
-      <PageHeader title={t('title')} description={t('description')} />
+    <Page width="full">
+      <div className="space-y-4">
+        <PageHeader title={t('title')} description={t('description')} />
 
-      <div className="sticky top-0 z-10 space-y-3 bg-bg pb-2">
-        {/* N3, W-1: die Ablagefläche erkennt das Konto selbst — „Liste für Konto“ filtert nur die Liste. */}
-        {canWrite && importable.length > 0 ? <ImportUpload accounts={importable} /> : null}
+        <div className="sticky top-0 z-10 space-y-3 bg-bg pb-2">
+          {/* N3, W-1: die Ablagefläche erkennt das Konto selbst — „Liste für Konto“ filtert nur die Liste. */}
+          {canWrite && importable.length > 0 ? <ImportUpload accounts={importable} /> : null}
 
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div role="tablist" aria-label={t('tabsGroup')} className="flex flex-wrap gap-1 border-b border-line">
-            {WORK_TABS.map((key) => (
-              <Link
-                key={key}
-                href={workHref({ tab: key, account })}
-                role="tab"
-                aria-selected={tab === key}
-                className={cn('-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-[13px]', tab === key ? 'border-primary font-semibold text-ink' : 'border-transparent text-ink-2')}
-              >
-                {t(`tabs.${key}`)}
-                <span data-testid={`work-count-${key}`} className={cn('rounded-full px-2 py-0.5 font-mono text-[11px] font-semibold tabular-nums', countOf[key] > 0 ? tone[key] : 'bg-surface-2 text-muted-ink')}>
-                  {countOf[key]}
-                </span>
-              </Link>
-            ))}
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div role="tablist" aria-label={t('tabsGroup')} className="flex flex-wrap gap-1 border-b border-line">
+              {WORK_TABS.map((key) => (
+                <Link
+                  key={key}
+                  href={workHref({ tab: key, account })}
+                  role="tab"
+                  aria-selected={tab === key}
+                  className={cn('-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-[13px]', tab === key ? 'border-brand font-semibold text-ink' : 'border-transparent text-ink-2')}
+                >
+                  {t(`tabs.${key}`)}
+                  <span data-testid={`work-count-${key}`} className={cn('rounded-full px-2 py-0.5 font-mono text-[11px] font-semibold tabular-nums', countOf[key] > 0 ? tone[key] : 'bg-surface-2 text-muted-ink')}>
+                    {countOf[key]}
+                  </span>
+                </Link>
+              ))}
+            </div>
+            <AccountFilter accounts={filterAccounts} value={account} tab={tab} />
           </div>
-          <AccountFilter accounts={filterAccounts} value={account} tab={tab} />
+
+          {counts.heldCandidates > 0 ? (
+            <p className="text-[13px] text-ink-2">
+              {t('held', { count: counts.heldCandidates })}{' '}
+              <Link href="/finance/imports" className="font-semibold underline underline-offset-2">
+                {t('heldLink')}
+              </Link>
+            </p>
+          ) : null}
+          {counts.reviewed > 0 ? (
+            <div className="flex items-center justify-between gap-3 rounded-md border border-line bg-surface px-3 py-2 text-[13px]">
+              <span className="text-ink-2">{t('reviewedLine', { count: counts.reviewed })}</span>
+              {hasPermission(ctx, 'finance.entriesFinalize') ? <BatchFinalizeDialog reviewedCount={counts.reviewed} /> : null}
+            </div>
+          ) : null}
         </div>
 
-        {counts.heldCandidates > 0 ? (
-          <p className="text-[13px] text-ink-2">
-            {t('held', { count: counts.heldCandidates })}{' '}
-            <Link href="/finance/imports" className="font-semibold underline underline-offset-2">
-              {t('heldLink')}
-            </Link>
-          </p>
-        ) : null}
-        {counts.reviewed > 0 ? (
-          <div className="flex items-center justify-between gap-3 rounded-md border border-line bg-surface px-3 py-2 text-[13px]">
-            <span className="text-ink-2">{t('reviewedLine', { count: counts.reviewed })}</span>
-            {hasPermission(ctx, 'finance.entriesFinalize') ? <BatchFinalizeDialog reviewedCount={counts.reviewed} /> : null}
-          </div>
-        ) : null}
+        {body}
       </div>
-
-      {body}
-    </div>
+    </Page>
   );
 }
 

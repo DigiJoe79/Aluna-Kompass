@@ -13,8 +13,7 @@ export async function FoldersPanel() {
   return (
     <section data-testid="folders-moved" className="flex flex-wrap items-start gap-4 rounded-md border border-line bg-surface p-5">
       <div className="flex min-w-[240px] flex-1 flex-col gap-1">
-        <h3 className="font-heading text-[18px] text-ink">{t('foldersTitle')}</h3>
-        <p className="text-[13px] leading-[1.5] text-pretty text-muted-ink">{t('foldersMoved')}</p>
+        <p className="text-[13px] leading-[1.5] text-pretty text-ink-2">{t('foldersMoved')}</p>
       </div>
       <Link href="/dms" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
         {t('toFile')}

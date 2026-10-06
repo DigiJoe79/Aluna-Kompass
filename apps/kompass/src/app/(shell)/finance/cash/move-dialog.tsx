@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
 import { AmountField } from '@/components/finance/amount-field';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { FormField } from '@/components/forms/form-field';
+import { FormCell, FormGrid } from '@/components/forms/form-grid';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { parseAmount } from '@/lib/finance/amount';
 import { moveCashAction } from './actions';
@@ -28,6 +30,7 @@ export function MoveDialog({ cashId, bankAccounts, today }: { cashId: string; ba
   const [date, setDate] = useState(today);
   const [amountText, setAmountText] = useState('');
   const [pending, setPending] = useState(false);
+  const feedback = useActionFeedback();
 
   const amountCents = parseAmount(amountText);
 
@@ -36,24 +39,24 @@ export function MoveDialog({ cashId, bankAccounts, today }: { cashId: string; ba
     setDirection('toBank');
     setDate(today);
     setAmountText('');
+    feedback.reset();
   };
 
   const submit = async () => {
     if (amountCents === null || amountCents <= 0 || !bankAccountId) return;
     setPending(true);
-    const result = await moveCashAction({
-      fromAccountId: direction === 'toBank' ? cashId : bankAccountId,
-      toAccountId: direction === 'toBank' ? bankAccountId : cashId,
-      date,
-      amountCents,
-    });
+    const result = await feedback.run(
+      () =>
+        moveCashAction({
+          fromAccountId: direction === 'toBank' ? cashId : bankAccountId,
+          toAccountId: direction === 'toBank' ? bankAccountId : cashId,
+          date,
+          amountCents,
+        }),
+      { retry: () => void submit() },
+    );
     setPending(false);
-    if (result.status === 'error') {
-      toast.error(result.message);
-      return;
-    }
     if (result.status === 'success') {
-      if (result.message) toast.success(result.message);
       close();
       router.refresh();
     }
@@ -65,51 +68,41 @@ export function MoveDialog({ cashId, bankAccounts, today }: { cashId: string; ba
         {t('trigger')}
       </Button>
       <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
-        <DialogContent className="bg-surface shadow-md">
+        <DialogContent size="sm" className="bg-surface shadow-md">
           <DialogTitle className="font-heading text-[19px]">{t('trigger')}</DialogTitle>
-          <div className="space-y-4">
-            <div role="group" aria-label={t('directionGroup')} className="inline-flex h-[var(--field-h)] overflow-hidden rounded-md border border-line-strong">
-              {(['toBank', 'toCash'] as const).map((d) => (
-                <button
-                  key={d}
-                  type="button"
-                  aria-pressed={direction === d}
-                  onClick={() => setDirection(d)}
-                  className={direction === d ? 'bg-selected px-3 text-[13px] font-semibold text-selected-ink' : 'bg-surface-2 px-3 text-[13px] text-ink-2'}
-                >
-                  {t(`direction.${d}`)}
-                </button>
-              ))}
-            </div>
-            <label className="block space-y-1.5 text-[13px]">
-              <span className="font-semibold text-ink">{t('bankAccount')}</span>
-              <Select value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)}>
+          <FormGrid>
+            <FormCell size="m">
+              <div role="group" aria-label={t('directionGroup')} className="inline-flex h-[var(--field-h)] overflow-hidden rounded-md border border-line-strong">
+                {(['toBank', 'toCash'] as const).map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    aria-pressed={direction === d}
+                    onClick={() => setDirection(d)}
+                    className={direction === d ? 'bg-selected px-3 text-[13px] font-semibold text-selected-ink' : 'bg-surface-2 px-3 text-[13px] text-ink-2'}
+                  >
+                    {t(`direction.${d}`)}
+                  </button>
+                ))}
+              </div>
+            </FormCell>
+            <FormField id="moveBankAccount" label={t('bankAccount')}>
+              <Select id="moveBankAccount" value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)}>
                 {bankAccounts.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name}
                   </option>
                 ))}
               </Select>
-            </label>
-            <label className="block space-y-1.5 text-[13px]">
-              <span className="font-semibold text-ink">{t('date')}</span>
-              <Input type="date" value={date} max={today} onChange={(e) => setDate(e.target.value)} />
-            </label>
-            <div className="space-y-1.5">
-              <Label htmlFor="moveAmount" required>
-                {t('amount')}
-              </Label>
+            </FormField>
+            <FormField id="moveDate" label={t('date')} size="s">
+              <Input id="moveDate" type="date" value={date} max={today} onChange={(e) => setDate(e.target.value)} />
+            </FormField>
+            <FormField id="moveAmount" label={t('amount')} required size="s">
               <AmountField id="moveAmount" name="moveAmount" value={amountText} onChange={setAmountText} required />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={close}>
-              {t('cancel')}
-            </Button>
-            <Button type="button" disabled={pending || amountCents === null || amountCents <= 0 || !bankAccountId} onClick={() => void submit()}>
-              {t('submit')}
-            </Button>
-          </DialogFooter>
+            </FormField>
+          </FormGrid>
+          <FormActionBar placement="dialog" cancel={close} pending={pending} saveDisabled={amountCents === null || amountCents <= 0 || !bankAccountId} saveLabel={t('submit')} onSave={() => void submit()} state={feedback.state} />
         </DialogContent>
       </Dialog>
     </>

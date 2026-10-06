@@ -2,11 +2,12 @@
 
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
+import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Notice } from '@/components/notice';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Select } from '@/components/ui/select';
+import type { ActionState } from '@/lib/actions';
+import { FormField } from '@/components/forms/form-field';
 
 export interface WorkPartnerOption {
   id: string;
@@ -27,14 +28,15 @@ export function PartnerPaymentDialog({
   open,
   onOpenChange,
   partners,
-  error,
+  state,
   pending,
   onConfirm,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   partners: WorkPartnerOption[];
-  error: string | null;
+  /** Die Ablehnung des Dienstes beim letzten Versuch. */
+  state: ActionState;
   pending: boolean;
   onConfirm: (partner: WorkPartnerOption) => void;
 }) {
@@ -47,17 +49,14 @@ export function PartnerPaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent size="sm">
         <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
         <div className="space-y-3" data-testid="work-partner-payment">
           <p className="text-[13px] text-ink-2">{t('text')}</p>
           {partners.length === 0 ? (
             <Notice level="hint">{t('none')}</Notice>
           ) : (
-            <div className="space-y-1.5">
-              <Label htmlFor="work-partner" required>
-                {t('partner')}
-              </Label>
+            <FormField id="work-partner" label={t('partner')} required>
               <Select id="work-partner" value={partnerId} onChange={(e) => setPartnerId(e.target.value)}>
                 <option value="">{t('choose')}</option>
                 {partners.map((p) => (
@@ -66,22 +65,10 @@ export function PartnerPaymentDialog({
                   </option>
                 ))}
               </Select>
-            </div>
+            </FormField>
           )}
-          {error ? (
-            <Notice level="refuse" title={t('title')}>
-              {error}
-            </Notice>
-          ) : null}
         </div>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            {t('cancel')}
-          </Button>
-          <Button type="button" disabled={!chosen || pending} onClick={() => chosen && onConfirm(chosen)}>
-            {t('confirm')}
-          </Button>
-        </DialogFooter>
+        <FormActionBar placement="dialog" cancel={() => onOpenChange(false)} pending={pending} saveDisabled={!chosen} saveLabel={t('confirm')} onSave={() => chosen && onConfirm(chosen)} state={state} />
       </DialogContent>
     </Dialog>
   );

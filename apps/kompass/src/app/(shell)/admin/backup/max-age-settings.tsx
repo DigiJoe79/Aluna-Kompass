@@ -23,7 +23,7 @@ export function MaxAgeSettings({ maxAgeDays, canManage }: { maxAgeDays: number; 
 
   return (
     <section className="rounded-lg border border-line bg-surface p-5">
-      <h3 className="font-heading text-[18px]">{t('title')}</h3>
+      <h3 className="text-[15px] font-semibold">{t('title')}</h3>
       <ActionForm action={formAction} state={state} className="mt-3 flex flex-col gap-3">
         <label htmlFor="backup-max-age" className="text-[13px] font-medium text-ink">{t('maxAgeDays')}</label>
         <p className="text-[11px] text-muted-ink">{t('maxAgeDaysHint')}</p>

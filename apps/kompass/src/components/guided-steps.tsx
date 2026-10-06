@@ -39,7 +39,7 @@ export function GuidedSteps({ steps, label }: { steps: readonly GuidedStep[]; la
           aria-current={step.state === 'active' ? 'step' : undefined}
           className={cn(
             'flex items-center gap-1.5 rounded-full border px-3 py-1',
-            step.state === 'active' ? 'border-primary bg-brand-soft font-semibold text-ink' : step.state === 'done' ? 'border-line text-ink' : 'border-line text-muted-ink',
+            step.state === 'active' ? 'border-brand bg-brand-soft font-semibold text-ink' : step.state === 'done' ? 'border-line text-ink' : 'border-line text-muted-ink',
           )}
         >
           {step.state === 'done' ? <Check className="size-3.5 text-success" aria-hidden /> : <span className="font-mono" aria-hidden>{index + 1}</span>}

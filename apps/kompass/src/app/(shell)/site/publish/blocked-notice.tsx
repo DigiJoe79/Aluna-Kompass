@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import type { DetailView } from '@/lib/site-job-view';
+import { panelHref } from '@/components/panel-nav';
 
 type Violation = NonNullable<DetailView['violations']>[number];
 
@@ -75,7 +76,7 @@ export function BlockedNotice({ violations, canManage }: { violations: NonNullab
         {canManage
           ? t.rich('manage', {
               link: (chunks) => (
-                <Link href="/admin/site?panel=blockedTerms" className="font-medium text-link underline">
+                <Link href={panelHref('/admin/site', 'blockedTerms')} className="font-medium text-link underline">
                   {chunks}
                 </Link>
               ),

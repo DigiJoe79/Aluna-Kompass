@@ -26,6 +26,24 @@ Filter und Sortierung stehen in der Adresse der Seite: Ein Lesezeichen oder
 ein weitergegebener Link öffnet dieselbe Auswahl, und der Weg in ein Profil
 nimmt sie mit.
 
+## Profile drucken
+
+Wer Dokumente erzeugen darf, sieht in der Liste vor jedem Hund ein Kästchen.
+Das Kästchen im Tabellenkopf wählt alle Hunde, die gerade gezeigt werden —
+mit Filtern also genau die gefilterte Auswahl, etwa alle veröffentlichten
+Hunde, die ein Zuhause suchen. Die Leiste unten nennt die Zahl, „Als PDF“
+lädt eine Mappe mit einer Seite je Hund in der Reihenfolge der Liste. Ein
+anderer Filter fängt mit einer leeren Auswahl an. Im Profil eines Hundes
+gibt es „Als PDF“ für ihn allein.
+
+Jede Seite zeigt das Hauptfoto im Ausschnitt der Webseite, bis zu drei
+weitere Fotos, die Angaben als Marken, den Kurztext und darunter den
+Langtext. Passt der Langtext nicht, wird er kleiner gesetzt; reicht auch das
+nicht, endet er nach dem letzten ganzen Absatz, der noch passt. Bei
+veröffentlichten Hunden steht unten ein QR-Code zum Online-Profil, und ein
+gekürzter Text verweist darauf. Dafür muss unter Verwaltung → Tiere die
+Adresse des Online-Profils eingetragen sein.
+
 ## Das Profil
 
 Drei Reiter:
@@ -51,6 +69,12 @@ Drei Reiter:
 - **Geschichte** — erst nach der Vermittlung: Vorher- und Nachher-Bild mit
   Unterschrift, ein Zitat der Familie, das Vermittlungsjahr. Daraus macht das
   Template die „Glücklichen Vermittlungen“.
+
+Den URL-Teil (Slug) bildet Kompass beim Anlegen selbst: der Name, ein
+Bindestrich und eine kurze Kennung, etwa `luna-7k3f`. Er bleibt danach fest,
+auch wenn sich der Name ändert. So zeigen geteilte Links und gedruckte
+QR-Codes immer auf denselben Hund, und zwei Hunde dürfen gleich heißen. In
+der Maske steht er zum Kopieren, ändern lässt er sich nicht.
 
 **Speichern heißt speichern.** Die Leiste unten gilt für alle drei Reiter: Sie
 zählt, was auf irgendeinem von ihnen geändert wurde, und „Speichern“ schreibt
@@ -127,7 +151,8 @@ Sie neue Post mit dem Bezug an.
 
 Ein Tierprofil ist Webseiteninhalt und lässt sich löschen — etwa ein Hund des
 Partnervereins, der ein paar Tage auf der Seite stand und dort vermittelt
-wurde. Der Knopf „Tierprofil löschen“ steht unten auf der Profilseite.
+wurde. Der Abschnitt „Löschen“ mit dem Knopf „Tierprofil löschen“ steht als
+letzte Karte ganz unten auf der Profilseite, nie neben „Speichern“.
 
 Gelöscht wird in zwei Stufen. Ist das Profil veröffentlicht, bietet der Dialog
 zuerst „Zurückziehen“ an; erst danach wird „Löschen“ frei. So verschwindet

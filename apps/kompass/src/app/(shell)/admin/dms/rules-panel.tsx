@@ -3,11 +3,12 @@
 import { useTranslations } from 'next-intl';
 import { useActionState, useState, useTransition } from 'react';
 import { toast } from 'sonner';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { idleState } from '@/lib/actions';
 import { cn } from '@/lib/utils';
@@ -15,6 +16,9 @@ import { createDocumentRuleAction, deleteDocumentRuleAction, updateDocumentRuleA
 import type { DocumentTypeItem } from './types-panel';
 import { Select } from '@/components/ui/select';
 import { ActionForm } from '@/components/forms/action-form';
+import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export interface DocumentRuleItem {
   id: string;
@@ -42,8 +46,9 @@ export function RulesPanel({
   const [editingRule, setEditingRule] = useState<DocumentRuleItem | null>(null);
   const [ruleToDelete, setRuleToDelete] = useState<DocumentRuleItem | null>(null);
   const [deletePending, startDeleteTransition] = useTransition();
+  const deleteFb = useActionFeedback();
 
-  const [createState, createAction, createPending] = useActionState(async (prev: any, formData: FormData) => {
+  const [createState, createAction] = useActionState(async (prev: any, formData: FormData) => {
     const res = await createDocumentRuleAction(prev, formData);
     if (res.status === 'success') {
       setCreateOpen(false);
@@ -52,7 +57,7 @@ export function RulesPanel({
     return res;
   }, idleState);
 
-  const [editState, editAction, editPending] = useActionState(async (prev: any, formData: FormData) => {
+  const [editState, editAction] = useActionState(async (prev: any, formData: FormData) => {
     if (!editingRule) return prev;
     const res = await updateDocumentRuleAction(editingRule.id, prev, formData);
     if (res.status === 'success') {
@@ -64,13 +69,8 @@ export function RulesPanel({
 
   const handleDelete = (id: string) => {
     startDeleteTransition(async () => {
-      const res = await deleteDocumentRuleAction(id);
-      if (res.status === 'success') {
-        setRuleToDelete(null);
-        if (res.message) toast.success(res.message);
-      } else if (res.status === 'error') {
-        toast.error(res.message);
-      }
+      const res = await deleteFb.run(() => deleteDocumentRuleAction(id), { retry: () => handleDelete(id) });
+      if (res.status === 'success') setRuleToDelete(null);
     });
   };
 
@@ -80,8 +80,7 @@ export function RulesPanel({
     <section className="space-y-4 rounded-md border border-line bg-surface p-5">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-heading text-[18px] text-ink">{t('rulesTitle')}</h3>
-          <p className="text-[13px] text-muted-ink">{t('rulesDescription')}</p>
+          <p className="text-[13px] text-ink-2">{t('rulesDescription')}</p>
         </div>
         <Button size="sm" onClick={() => setCreateOpen(true)}>
           {t('createRule')}
@@ -90,40 +89,40 @@ export function RulesPanel({
 
       <div className="overflow-hidden rounded-md border border-line">
         <Table>
-          <TableHeader className="bg-table-head text-left text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink">
-            <TableRow className="h-9">
-              <TableHead className="px-4">{t('ruleColumns.matchField')}</TableHead>
-              <TableHead className="px-4">{t('ruleColumns.matchContains')}</TableHead>
-              <TableHead className="px-4">{t('ruleColumns.thenType')}</TableHead>
-              <TableHead className="px-4">{t('ruleColumns.thenFolder')}</TableHead>
-              <TableHead className="px-4">{t('ruleColumns.status')}</TableHead>
-              <TableHead className="px-4 text-right">{t('ruleColumns.actions')}</TableHead>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t('ruleColumns.matchField')}</TableHead>
+              <TableHead>{t('ruleColumns.matchContains')}</TableHead>
+              <TableHead>{t('ruleColumns.thenType')}</TableHead>
+              <TableHead>{t('ruleColumns.thenFolder')}</TableHead>
+              <TableHead>{t('ruleColumns.status')}</TableHead>
+              <TableHead className="text-right">{t('ruleColumns.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rules.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="px-4 py-6 text-center text-[13px] text-muted-ink">
+                <TableCell colSpan={6} className="py-6 text-center text-[13px] text-muted-ink">
                   {t('emptyRules')}
                 </TableCell>
               </TableRow>
             ) : (
               rules.map((row, i) => (
-                <TableRow key={row.id} className={cn('h-12 border-b border-line-2', i % 2 === 1 && 'bg-zebra')}>
-                  <TableCell className="px-4 text-[13px] text-ink">
+                <TableRow key={row.id}>
+                  <TableCell className="text-[13px] text-ink">
                     {t(`ruleFields.${row.matchField}`)}
                   </TableCell>
-                  <TableCell className="px-4 font-mono font-medium text-ink">{row.matchContains}</TableCell>
-                  <TableCell className="px-4 text-ink-2">
+                  <TableCell className="font-mono font-medium text-ink">{row.matchContains}</TableCell>
+                  <TableCell className="text-ink-2">
                     {row.thenTypeKey ? typeMap.get(row.thenTypeKey) ?? row.thenTypeKey : '—'}
                   </TableCell>
-                  <TableCell className="px-4 text-ink-2">{row.thenFolder ?? '—'}</TableCell>
-                  <TableCell className="px-4">
+                  <TableCell className="text-ink-2">{row.thenFolder ?? '—'}</TableCell>
+                  <TableCell>
                     <StatusBadge tone={row.isActive ? 'success' : 'neutral'}>
                       {row.isActive ? t('active') : t('inactive')}
                     </StatusBadge>
                   </TableCell>
-                  <TableCell className="px-4 text-right">
+                  <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Button variant="ghost" size="sm" onClick={() => setEditingRule(row)}>
                         {t('edit')}
@@ -142,197 +141,163 @@ export function RulesPanel({
 
       {/* Dialog: Create Rule */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="bg-surface shadow-md sm:max-w-[500px]">
+        <DialogContent size="md" className="bg-surface shadow-md">
           <ActionForm action={createAction} state={createState} className="space-y-4">
             <DialogTitle className="font-heading text-[19px]">{t('createRuleTitle')}</DialogTitle>
             <DialogDescription className="text-[13px] text-muted-ink">{t('createRuleDescription')}</DialogDescription>
 
-            {createState.status === 'error' && (
-              <div className="rounded-md bg-error-bg p-2.5 text-[13px] text-error">{createState.message}</div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="create-rule-field">{t('ruleFields.matchField')}</Label>
-                <Select
-                  id="create-rule-field"
-                  name="matchField"
-                  defaultValue="filename"
-                >
-                  <option value="filename">{t('ruleFields.filename')}</option>
-                  <option value="senderName">{t('ruleFields.senderName')}</option>
-                </Select>
+            <section>
+              <h3 className="text-[15px] font-semibold">{t('ruleSections.condition')}</h3>
+              <div className="mt-3">
+                <FormGrid>
+                  <FormField id="create-rule-field" label={t('ruleFields.matchField')} size="s">
+                    <Select
+                      id="create-rule-field"
+                      name="matchField"
+                      defaultValue="filename"
+                    >
+                      <option value="filename">{t('ruleFields.filename')}</option>
+                      <option value="senderName">{t('ruleFields.senderName')}</option>
+                    </Select>
+                  </FormField>
+                  <FormField id="create-rule-contains" label={t('ruleFields.matchContains')}>
+                    <Input
+                      id="create-rule-contains"
+                      name="matchContains"
+                      placeholder={t('ruleFields.matchContainsPlaceholder')}
+                      required
+                    />
+                  </FormField>
+                </FormGrid>
               </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="create-rule-contains">{t('ruleFields.matchContains')}</Label>
-                <Input
-                  id="create-rule-contains"
-                  name="matchContains"
-                  placeholder={t('ruleFields.matchContainsPlaceholder')}
-                  required
-                />
+            </section>
+            <section className="border-t border-line pt-5">
+              <h3 className="text-[15px] font-semibold">{t('ruleSections.result')}</h3>
+              <div className="mt-3">
+                <FormGrid>
+                  <FormField id="create-rule-type" label={t('ruleFields.thenType')}>
+                    <Select
+                      id="create-rule-type"
+                      name="thenTypeKey"
+                      defaultValue=""
+                    >
+                      <option value="">{t('ruleFields.noType')}</option>
+                      {types.map((tp) => (
+                        <option key={tp.key} value={tp.key}>
+                          {tp.label} ({tp.prefix})
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                  <FormField id="create-rule-folder" label={t('ruleFields.thenFolder')}>
+                    <Select
+                      id="create-rule-folder"
+                      name="thenFolder"
+                      defaultValue=""
+                    >
+                      <option value="">{t('ruleFields.noFolder')}</option>
+                      {folders.map((f) => (
+                        <option key={f} value={f}>
+                          {f}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormField>
+                </FormGrid>
               </div>
-            </div>
+            </section>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="create-rule-type">{t('ruleFields.thenType')}</Label>
-              <Select
-                id="create-rule-type"
-                name="thenTypeKey"
-                defaultValue=""
-              >
-                <option value="">{t('ruleFields.noType')}</option>
-                {types.map((tp) => (
-                  <option key={tp.key} value={tp.key}>
-                    {tp.label} ({tp.prefix})
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="create-rule-folder">{t('ruleFields.thenFolder')}</Label>
-              <Select
-                id="create-rule-folder"
-                name="thenFolder"
-                defaultValue=""
-              >
-                <option value="">{t('ruleFields.noFolder')}</option>
-                {folders.map((f) => (
-                  <option key={f} value={f}>
-                    {f}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
-                {tCommon('cancel')}
-              </Button>
-              <Button type="submit" disabled={createPending}>
-                {t('save')}
-              </Button>
-            </DialogFooter>
+            <FormActionBar placement="dialog" mode="create" cancel={() => setCreateOpen(false)} saveLabel={t('save')} state={createState} />
           </ActionForm>
         </DialogContent>
       </Dialog>
 
       {/* Dialog: Edit Rule */}
       <Dialog open={Boolean(editingRule)} onOpenChange={(open) => !open && setEditingRule(null)}>
-        <DialogContent className="bg-surface shadow-md sm:max-w-[500px]">
+        <DialogContent size="md" className="bg-surface shadow-md">
           {editingRule && (
             <ActionForm action={editAction} state={editState} className="space-y-4">
               <DialogTitle className="font-heading text-[19px]">{t('editRuleTitle')}</DialogTitle>
               <DialogDescription className="text-[13px] text-muted-ink">{t('editRuleDescription')}</DialogDescription>
 
-              {editState.status === 'error' && (
-                <div className="rounded-md bg-error-bg p-2.5 text-[13px] text-error">{editState.message}</div>
-              )}
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="edit-rule-field">{t('ruleFields.matchField')}</Label>
-                  <Select
-                    id="edit-rule-field"
-                    name="matchField"
-                    defaultValue={editingRule.matchField}
-                  >
-                    <option value="filename">{t('ruleFields.filename')}</option>
-                    <option value="senderName">{t('ruleFields.senderName')}</option>
-                  </Select>
+              <section>
+                <h3 className="text-[15px] font-semibold">{t('ruleSections.condition')}</h3>
+                <div className="mt-3">
+                  <FormGrid>
+                    <FormField id="edit-rule-field" label={t('ruleFields.matchField')} size="s">
+                      <Select
+                        id="edit-rule-field"
+                        name="matchField"
+                        defaultValue={editingRule.matchField}
+                      >
+                        <option value="filename">{t('ruleFields.filename')}</option>
+                        <option value="senderName">{t('ruleFields.senderName')}</option>
+                      </Select>
+                    </FormField>
+                    <FormField id="edit-rule-contains" label={t('ruleFields.matchContains')}>
+                      <Input
+                        id="edit-rule-contains"
+                        name="matchContains"
+                        defaultValue={editingRule.matchContains}
+                        required
+                      />
+                    </FormField>
+                  </FormGrid>
                 </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="edit-rule-contains">{t('ruleFields.matchContains')}</Label>
-                  <Input
-                    id="edit-rule-contains"
-                    name="matchContains"
-                    defaultValue={editingRule.matchContains}
-                    required
-                  />
+              </section>
+              <section className="border-t border-line pt-5">
+                <h3 className="text-[15px] font-semibold">{t('ruleSections.result')}</h3>
+                <div className="mt-3">
+                  <FormGrid>
+                    <FormField id="edit-rule-type" label={t('ruleFields.thenType')}>
+                      <Select
+                        id="edit-rule-type"
+                        name="thenTypeKey"
+                        defaultValue={editingRule.thenTypeKey ?? ''}
+                      >
+                        <option value="">{t('ruleFields.noType')}</option>
+                        {types.map((tp) => (
+                          <option key={tp.key} value={tp.key}>
+                            {tp.label} ({tp.prefix})
+                          </option>
+                        ))}
+                      </Select>
+                    </FormField>
+                    <FormField id="edit-rule-folder" label={t('ruleFields.thenFolder')}>
+                      <Select
+                        id="edit-rule-folder"
+                        name="thenFolder"
+                        defaultValue={editingRule.thenFolder ?? ''}
+                      >
+                        <option value="">{t('ruleFields.noFolder')}</option>
+                        {folders.map((f) => (
+                          <option key={f} value={f}>
+                            {f}
+                          </option>
+                        ))}
+                      </Select>
+                    </FormField>
+                    <FormField id="edit-rule-active" label={t('ruleFields.activeCheckbox')} toggle>
+                      <Checkbox id="edit-rule-active" name="isActive" defaultChecked={editingRule.isActive} value="on" />
+                    </FormField>
+                  </FormGrid>
                 </div>
-              </div>
+              </section>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="edit-rule-type">{t('ruleFields.thenType')}</Label>
-                <Select
-                  id="edit-rule-type"
-                  name="thenTypeKey"
-                  defaultValue={editingRule.thenTypeKey ?? ''}
-                >
-                  <option value="">{t('ruleFields.noType')}</option>
-                  {types.map((tp) => (
-                    <option key={tp.key} value={tp.key}>
-                      {tp.label} ({tp.prefix})
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="edit-rule-folder">{t('ruleFields.thenFolder')}</Label>
-                <Select
-                  id="edit-rule-folder"
-                  name="thenFolder"
-                  defaultValue={editingRule.thenFolder ?? ''}
-                >
-                  <option value="">{t('ruleFields.noFolder')}</option>
-                  {folders.map((f) => (
-                    <option key={f} value={f}>
-                      {f}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="edit-rule-active"
-                  name="isActive"
-                  defaultChecked={editingRule.isActive}
-                  className="size-4 rounded border-line"
-                />
-                <Label htmlFor="edit-rule-active" className="cursor-pointer text-[13px]">
-                  {t('ruleFields.activeCheckbox')}
-                </Label>
-              </div>
-
-              <DialogFooter>
-                <Button type="button" variant="ghost" onClick={() => setEditingRule(null)}>
-                  {tCommon('cancel')}
-                </Button>
-                <Button type="submit" disabled={editPending}>
-                  {t('save')}
-                </Button>
-              </DialogFooter>
+              <FormActionBar placement="dialog" mode="create" cancel={() => setEditingRule(null)} saveLabel={t('save')} state={editState} />
             </ActionForm>
           )}
         </DialogContent>
       </Dialog>
 
       {/* Dialog: Confirm Delete Rule */}
-      <Dialog open={Boolean(ruleToDelete)} onOpenChange={(open) => !open && setRuleToDelete(null)}>
-        <DialogContent className="bg-surface shadow-md sm:max-w-[440px]">
+      <Dialog open={Boolean(ruleToDelete)} onOpenChange={(open) => { if (!open) { setRuleToDelete(null); deleteFb.reset(); } }}>
+        <DialogContent size="sm" className="bg-surface shadow-md">
           <DialogTitle className="font-heading text-[19px]">{t('deleteRuleTitle')}</DialogTitle>
           <DialogDescription className="text-[13px] text-muted-ink">
             {t('deleteRuleDescription')}
           </DialogDescription>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setRuleToDelete(null)}>
-              {tCommon('cancel')}
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={deletePending}
-              onClick={() => ruleToDelete && handleDelete(ruleToDelete.id)}
-            >
-              {t('deleteRuleConfirm')}
-            </Button>
-          </DialogFooter>
+          <FormActionBar placement="dialog" cancel={() => setRuleToDelete(null)} destructive pending={deletePending} saveLabel={t('deleteRuleConfirm')} onSave={() => ruleToDelete && handleDelete(ruleToDelete.id)} state={deleteFb.state} />
         </DialogContent>
       </Dialog>
     </section>

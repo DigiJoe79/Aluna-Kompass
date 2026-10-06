@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { missingDonors, parseRunQuery, runQueryString, runStep } from '@/lib/finance/run';
 import { requireSession } from '@/lib/request-context';
@@ -35,7 +36,7 @@ const YEARS_BACK = 5;
  */
 export default async function DonationRunPage({ searchParams }: { searchParams: Promise<DonationRunQuery> }) {
   const { deps, ctx } = await requireSession();
-  if (!hasPermission(ctx, 'finance.read')) return <ForbiddenCard permission="finance.read" />;
+  if (!hasPermission(ctx, 'finance.read')) return <Page width="standard"><ForbiddenCard permission="finance.read" /></Page>;
   const t = await getTranslations('finance.donations.run');
   const query = parseRunQuery(await searchParams);
   const canIssue = hasPermission(ctx, 'finance.donationsIssue');
@@ -50,11 +51,12 @@ export default async function DonationRunPage({ searchParams }: { searchParams: 
     const runRes = await getConfirmationRun(deps, ctx, { id: query.runId });
     if (!runRes.ok) {
       return (
-        <div className="max-w-[1100px] space-y-4">
-          <PageHeader title={t('title')} description={t('description')} />
-          <EmptyState title={t('empty.title')} text={t('empty.text')} />
-          <RunsList runs={runs} currentId={null} />
-        </div>
+        <Page width="standard" header={<PageHeader title={t('title')} description={t('description')} />}>
+          <div className="space-y-4">
+            <EmptyState title={t('empty.title')} text={t('empty.text')} />
+            <RunsList runs={runs} currentId={null} />
+          </div>
+        </Page>
       );
     }
     run = runRes.value;
@@ -125,10 +127,11 @@ export default async function DonationRunPage({ searchParams }: { searchParams: 
   }
 
   return (
-    <div className="max-w-[1100px] space-y-6">
-      <PageHeader title={t('title')} description={t('description')} />
-      <div className="space-y-4">{body}</div>
-      <RunsList runs={runs} currentId={run?.id ?? null} />
-    </div>
+    <Page width="standard" header={<PageHeader title={t('title')} description={t('description')} />}>
+      <div className="space-y-6">
+        <div className="space-y-4">{body}</div>
+        <RunsList runs={runs} currentId={run?.id ?? null} />
+      </div>
+    </Page>
   );
 }

@@ -6,14 +6,15 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition, type ReactNode } from 'react';
-import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { StatusBadge } from '@/components/status-badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { createResponseDraftAction, deleteDocumentAction, deleteDraftAction, rereadDocumentAction, voidDocumentAction } from '../actions';
 import { FileDialog } from './file-dialog';
 import type { FolderEntry } from '@/lib/folder-tree-model';
@@ -24,6 +25,8 @@ import { DispatchPanel } from './dispatch-panel';
 import { FollowUpsPanel, type FollowUpView } from './follow-ups-panel';
 import { NotesPanel, type NoteView } from './notes-panel';
 import { RelationsPanel, type RelationView } from './relations-panel';
+import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
 
 export interface DocumentDetailProps {
   document: {
@@ -113,6 +116,12 @@ export function DocumentDetail({
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [voidOpen, setVoidOpen] = useState(false);
+  const voidFb = useActionFeedback();
+  const [voidBusy, setVoidBusy] = useState(false);
+  const resetVoid = voidFb.reset;
+  useEffect(() => {
+    if (!voidOpen) resetVoid();
+  }, [voidOpen, resetVoid]);
   const [purgeOpen, setPurgeOpen] = useState(false);
   const [voidReason, setVoidReason] = useState('');
   const [withReplacement, setWithReplacement] = useState(false);
@@ -175,10 +184,9 @@ export function DocumentDetail({
                 <>
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={() => setDeleteOpen(true)}
-                    className="text-error hover:bg-error-bg hover:text-error"
                   >
                     {t('deleteDraft')}
                   </Button>
@@ -220,54 +228,50 @@ export function DocumentDetail({
                     variant="outline"
                     size="sm"
                     onClick={() => setVoidOpen(true)}
-                    className="border-error text-error hover:bg-error-bg hover:text-error"
                   >
                     {t('void')}
                   </Button>
                   <Dialog open={voidOpen} onOpenChange={setVoidOpen}>
-                    <DialogContent className="bg-surface shadow-md">
+                    <DialogContent size="sm" className="bg-surface shadow-md">
                       <DialogTitle className="font-heading text-[19px]">{t('voidConfirmTitle')}</DialogTitle>
                       <DialogDescription className="text-[14px] text-ink-2">
                         {t('voidConfirmDescription')}
                       </DialogDescription>
-                      <div className="space-y-1.5 py-2">
-                        <Label htmlFor="voidReason" required>{t('fields.voidReason')}</Label>
-                        <Input
-                          id="voidReason"
-                          value={voidReason}
-                          onChange={(e) => setVoidReason(e.target.value)}
-                          placeholder={t('fields.voidReasonPlaceholder')}
-                        />
-                      </div>
-                      {permissions.canEdit ? (
-                        <div className="flex items-center gap-2 py-1 text-[13px] text-ink-2">
-                          <Checkbox
-                            id="void-with-replacement"
-                            aria-labelledby="void-with-replacement-label"
-                            checked={withReplacement}
-                            onCheckedChange={(next) => setWithReplacement(next === true)}
+                      <FormGrid>
+                        <FormField id="voidReason" label={t('fields.voidReason')} required>
+                          <Input
+                            id="voidReason"
+                            value={voidReason}
+                            onChange={(e) => setVoidReason(e.target.value)}
+                            placeholder={t('fields.voidReasonPlaceholder')}
                           />
-                          <Label id="void-with-replacement-label" htmlFor="void-with-replacement" className="cursor-pointer font-normal">
-                            {t('voidWithReplacement')}
-                          </Label>
-                        </div>
-                      ) : null}
-                      <DialogFooter className="items-center">
-                        <span className="mr-auto text-[12px] text-muted-ink">{tCommon('requiredLegend')}</span>
-                        <Button variant="ghost" onClick={() => setVoidOpen(false)}>
-                          {tCommon('cancel')}
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          disabled={!voidReason.trim()}
-                          onClick={async () => {
-                            await voidDocumentAction(doc.id, voidReason, withReplacement);
-                            setVoidOpen(false);
-                          }}
-                        >
-                          {t('voidConfirmSubmit')}
-                        </Button>
-                      </DialogFooter>
+                        </FormField>
+                        {permissions.canEdit ? (
+                          <FormField id="void-with-replacement" label={t('voidWithReplacement')} toggle>
+                            <Checkbox
+                              id="void-with-replacement"
+                              checked={withReplacement}
+                              onCheckedChange={(next) => setWithReplacement(next === true)}
+                            />
+                          </FormField>
+                        ) : null}
+                      </FormGrid>
+                      <FormActionBar
+                        placement="dialog"
+                        cancel={() => setVoidOpen(false)}
+                        destructive
+                        pending={voidBusy}
+                        saveDisabled={!voidReason.trim()}
+                        saveLabel={t('voidConfirmSubmit')}
+                        note={<span className="text-[12px] text-muted-ink">{tCommon('requiredLegend')}</span>}
+                        state={voidFb.state}
+                        onSave={async () => {
+                          setVoidBusy(true);
+                          const result = await voidFb.run(() => voidDocumentAction(doc.id, voidReason, withReplacement));
+                          setVoidBusy(false);
+                          if (result.status === 'success') setVoidOpen(false);
+                        }}
+                      />
                     </DialogContent>
                   </Dialog>
                 </>
@@ -287,9 +291,9 @@ export function DocumentDetail({
              * Fließtext in einem leeren Rahmen — sichtbar, aber nicht als
              * Befund erkennbar. Und er holte die Datei ein zweites Mal.
              */
-            <div className="rounded-md border border-destructive/40 bg-destructive/5 p-6" role="alert">
-              <p className="font-medium text-destructive">{t(fileState === 'altered' ? 'fileAltered.title' : 'fileMissing.title')}</p>
-              <p className="mt-2 text-sm text-muted-foreground">{t(fileState === 'altered' ? 'fileAltered.body' : 'fileMissing.body')}</p>
+            <div className="rounded-md border border-error bg-error-bg p-6" role="alert">
+              <p className="font-medium text-error">{t(fileState === 'altered' ? 'fileAltered.title' : 'fileMissing.title')}</p>
+              <p className="mt-2 text-sm text-muted-ink">{t(fileState === 'altered' ? 'fileAltered.body' : 'fileMissing.body')}</p>
             </div>
           ) : (
             <div className="overflow-hidden rounded-md border border-line bg-surface shadow-xs">
@@ -378,7 +382,7 @@ export function DocumentDetail({
                     size="sm"
                     disabled={!retentionInfo.due}
                     onClick={() => setPurgeOpen(true)}
-                    className="self-start border-error text-error hover:bg-error-bg hover:text-error"
+                    className="self-start"
                   >
                     {t('deleteDocument')}
                   </Button>
@@ -447,8 +451,11 @@ export function DocumentDetail({
 function ResponseButton({ documentId, direction }: { documentId: string; direction: 'incoming' | 'outgoing' }) {
   const t = useTranslations('dms');
   const [pending, start] = useTransition();
+  const feedback = useActionFeedback();
 
   return (
+    <div className="space-y-2">
+    <RefusalNotice action state={feedback.state} />
     <Button
       type="button"
       variant="outline"
@@ -457,39 +464,38 @@ function ResponseButton({ documentId, direction }: { documentId: string; directi
       onClick={() => {
         start(async () => {
           // Bei Erfolg leitet die Aktion zur Bearbeiten-Seite des Entwurfs weiter.
-          const s = await createResponseDraftAction(documentId);
-          if (s.status === 'error') toast.error(s.message);
+          await feedback.run(() => createResponseDraftAction(documentId));
         });
       }}
     >
       {t(`respond.${direction}`)}
     </Button>
+    </div>
   );
 }
 
 function RereadButton({ documentId }: { documentId: string }) {
   const t = useTranslations('dms');
   const [pending, start] = useTransition();
+  const feedback = useActionFeedback();
 
   return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      disabled={pending}
-      onClick={() => {
-        start(async () => {
-          const s = await rereadDocumentAction(documentId);
-          if (s.status === 'error') {
-            toast.error(s.message);
-          } else if (s.status === 'success' && s.message) {
-            toast.success(s.message);
-          }
-        });
-      }}
-    >
-      {t('text.reread')}
-    </Button>
+    <div className="space-y-2">
+      <RefusalNotice action state={feedback.state} />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={pending}
+        onClick={() => {
+          start(async () => {
+            await feedback.run(() => rereadDocumentAction(documentId));
+          });
+        }}
+      >
+        {t('text.reread')}
+      </Button>
+    </div>
   );
 }
 

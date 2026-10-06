@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { nameOf, type FolderEntry } from '@/lib/folder-tree-model';
 import type { Drop } from '../dms-workspace';
 import { ReceiveForm } from './receive-form';
@@ -45,10 +45,11 @@ export function ReceiveDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="grid max-h-[calc(100vh-4rem)] w-[700px] grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden bg-surface p-0 shadow-md sm:max-w-[700px]">
-        <div className="border-b border-line-2 px-6 pt-[18px] pb-3.5">
+      {/* fixed-footer: Kopf und Leiste stehen fest, die Mitte scrollt — die Maske ist mit zwei Abschnitten höher als ein flaches Fenster. */}
+      <DialogContent size="lg" layout="fixed-footer" className="bg-surface shadow-md">
+        <DialogHeader>
           <div className="flex items-center gap-2.5">
-            <DialogTitle className="font-heading text-[20px] text-ink">{t('receivePost')}</DialogTitle>
+            <DialogTitle className="font-heading text-[19px]">{t('receivePost')}</DialogTitle>
             {queued ? (
               <span className="rounded-full bg-badge px-2.5 py-0.5 font-mono text-[12px] text-badge-ink">
                 {t('drop.queueBadge', { current: index + 1, total })}
@@ -62,7 +63,7 @@ export function ReceiveDialog({
                 : t('drop.queueHintInbox')
               : t('receiveDescription')}
           </DialogDescription>
-        </div>
+        </DialogHeader>
         <ReceiveForm
           types={types}
           folders={folders}

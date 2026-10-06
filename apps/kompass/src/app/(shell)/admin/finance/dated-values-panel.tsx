@@ -3,15 +3,18 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { DatedValueRow } from '@/components/finance/dated-value-row';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
 import { removeDatedValueAction, setDatedValueAction } from './actions';
+import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
 
 export interface DatedValueListEntry {
   key: string;
@@ -34,22 +37,20 @@ export function DatedValuesPanel({ entries }: { entries: DatedValueListEntry[] }
   const router = useRouter();
   const [editing, setEditing] = useState<DatedValueListEntry | null>(null);
   const [pending, setPending] = useState(false);
+  // „Zurücksetzen“ steht in der Zeile eines Werts: Die Ablehnung steht im Kasten des Werts, dessen Zeile gedrückt wurde.
+  const revertFb = useActionFeedback();
+  const [revertKey, setRevertKey] = useState<string | null>(null);
 
   const revert = async (key: string, validFrom: string) => {
     setPending(true);
-    const result = await removeDatedValueAction(key, validFrom);
+    setRevertKey(key);
+    const result = await revertFb.run(() => removeDatedValueAction(key, validFrom), { retry: () => void revert(key, validFrom) });
     setPending(false);
-    if (result.status === 'error') {
-      toast.error(result.message);
-      return;
-    }
-    if (result.status === 'success' && result.message) toast.success(result.message);
-    router.refresh();
+    if (result.status === 'success') router.refresh();
   };
 
   return (
-    <section className="max-w-[640px] space-y-4" data-testid="dated-values-panel">
-      <h2 className="font-heading text-[18px] text-ink">{t('title')}</h2>
+    <section className="space-y-4" data-testid="dated-values-panel">
       <div className="space-y-3">
         {entries.map((entry) => {
           const latest = entry.entries.at(-1)!;
@@ -61,6 +62,11 @@ export function DatedValuesPanel({ entries }: { entries: DatedValueListEntry[] }
                   {t('change')}
                 </Button>
               </div>
+              {revertKey === entry.key ? (
+                <div className="px-3 pb-2">
+                  <RefusalNotice action state={revertFb.state} />
+                </div>
+              ) : null}
               {entry.key === 'taxation' ? <p className="px-3 pb-1 text-[12px] text-muted-ink">{t('taxationHint')}</p> : null}
               {entry.entries.map((row) => (
                 <DatedValueRow
@@ -101,61 +107,43 @@ function DatedValueDialog({ entry, onClose, onSaved }: { entry: DatedValueListEn
   const [numberValue, setNumberValue] = useState('');
   const [taxation, setTaxation] = useState<'smallBusiness' | 'regular'>('smallBusiness');
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const feedback = useActionFeedback();
 
   const submit = async () => {
     setPending(true);
-    setError(null);
     const value: number | string =
       entry.unit === 'taxation' ? taxation : entry.unit === 'cents' ? (parseAmount(amountText) ?? 0) : Number(numberValue);
-    const result = await setDatedValueAction(entry.key, validFrom, value);
+    const result = await feedback.run(() => setDatedValueAction(entry.key, validFrom, value), { retry: () => void submit() });
     setPending(false);
-    if (result.status === 'error') {
-      setError(result.message);
-      toast.error(result.message);
-      return;
-    }
-    onSaved();
+    if (result.status === 'success') onSaved();
   };
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-surface shadow-md sm:max-w-[380px]">
+      <DialogContent size="sm" className="bg-surface shadow-md">
         <DialogTitle className="font-heading text-[18px]">{t('changeTitle', { name: t(`keys.${entry.key}`) })}</DialogTitle>
-        <div className="space-y-3.5">
-          {error ? <div className="rounded-md bg-error-bg p-2.5 text-[13px] text-error">{error}</div> : null}
-          <div className="space-y-1.5">
-            <Label htmlFor="dv-valid-from" required>{t('validFrom')}</Label>
-            <Input id="dv-valid-from" type="date" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} required />
-          </div>
-          {entry.unit === 'taxation' ? (
-            <div className="space-y-1.5">
-              <Label htmlFor="dv-taxation">{t('title')}</Label>
-              <Select id="dv-taxation" value={taxation} onChange={(e) => setTaxation(e.target.value as 'smallBusiness' | 'regular')}>
-                <option value="smallBusiness">{t('taxation.smallBusiness')}</option>
-                <option value="regular">{t('taxation.regular')}</option>
-              </Select>
-            </div>
-          ) : entry.unit === 'cents' ? (
-            <div className="space-y-1.5">
-              <Label htmlFor="dv-amount" required>{t('value')}</Label>
-              <Input id="dv-amount" value={amountText} onChange={(e) => setAmountText(e.target.value)} placeholder={formatAmount(0)} required />
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              <Label htmlFor="dv-number" required>{t('value')}</Label>
-              <Input id="dv-number" type="number" value={numberValue} onChange={(e) => setNumberValue(e.target.value)} required />
-            </div>
-          )}
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={onClose}>
-            {tCommon('cancel')}
-          </Button>
-          <Button type="button" disabled={pending || !validFrom} onClick={() => void submit()}>
-            {tCommon('save')}
-          </Button>
-        </DialogFooter>
+        <FormGrid>
+            <FormField id="dv-valid-from" label={t('validFrom')} required size="s">
+              <Input id="dv-valid-from" type="date" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} required />
+            </FormField>
+            {entry.unit === 'taxation' ? (
+              <FormField id="dv-taxation" label={t('title')} size="s">
+                <Select id="dv-taxation" value={taxation} onChange={(e) => setTaxation(e.target.value as 'smallBusiness' | 'regular')}>
+                  <option value="smallBusiness">{t('taxation.smallBusiness')}</option>
+                  <option value="regular">{t('taxation.regular')}</option>
+                </Select>
+              </FormField>
+            ) : entry.unit === 'cents' ? (
+              <FormField id="dv-amount" label={t('value')} required size="s">
+                <Input id="dv-amount" value={amountText} onChange={(e) => setAmountText(e.target.value)} placeholder={formatAmount(0)} required />
+              </FormField>
+            ) : (
+              <FormField id="dv-number" label={t('value')} required size="s">
+                <Input id="dv-number" type="number" value={numberValue} onChange={(e) => setNumberValue(e.target.value)} required />
+              </FormField>
+            )}
+        </FormGrid>
+        <FormActionBar placement="dialog" cancel={onClose} pending={pending} saveDisabled={!validFrom} saveLabel={tCommon('save')} onSave={() => void submit()} state={feedback.state} />
       </DialogContent>
     </Dialog>
   );

@@ -54,4 +54,13 @@ describe('toActionState', () => {
     expect(toActionState(forbidden('finance.read'), t)).toEqual({ status: 'error', message: 'errors.forbidden:{"permission":"finance.read"}', fieldErrors: {} });
     expect(toActionState(ok({ id: 1 }), t, 'saved')).toEqual({ status: 'success', message: 'saved', data: { id: 1 } });
   });
+
+  it('gibt einer veralteten Version Titel und allgemeinen Satz ohne Person und Uhrzeit', () => {
+    expect(toActionState(conflict('staleVersion', 'Der Datensatz wurde inzwischen geändert'), t)).toMatchObject({
+      status: 'error',
+      code: 'staleVersion',
+      title: 'common.refused.title',
+      detail: 'common.conflict.textPlain',
+    });
+  });
 });

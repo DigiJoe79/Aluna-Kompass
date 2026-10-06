@@ -185,7 +185,8 @@ export function useUndoableMoves<I extends UndoableItem>({
       });
     });
 
-  const fail = (title: string, result: ErrorState) => toast.error(title, { description: reasonOf(result), duration: Infinity });
+  // R5 (MUSTER: Ausnahme): Beim Ziehen und Ablegen gibt es keinen Knopf, über dem die Ablehnung stehen könnte — sie bleibt als Toast, bis man sie schließt.
+  const fail = (title: string, result: ErrorState) => toast.error(title, { description: reasonOf(result), duration: Infinity, closeButton: true });
   const withUndo = (message: string, undo: () => void) =>
     toast.success(message, { duration: UNDO_MS, action: { label: t('toast.undo'), onClick: undo } });
   const undone = (message: string) => toast.info(message, { duration: UNDONE_MS });
@@ -272,7 +273,7 @@ export function useUndoableMoves<I extends UndoableItem>({
         () => actions.moveItems(moved.map((item) => ({ id: item.id, folder: item.from, expectedFolder: target }))),
         (result) => {
           if (result.status === 'error') {
-            if (result.code === 'movedInBetween') toast.error(wording.undoMovedAway(moved), { duration: Infinity });
+            if (result.code === 'movedInBetween') toast.error(wording.undoMovedAway(moved), { duration: Infinity, closeButton: true });
             else fail(t('toast.undoFailed', { name: wording.name(moved) }), result);
           } else if (result.status === 'success') {
             undone(wording.undone(moved, back));

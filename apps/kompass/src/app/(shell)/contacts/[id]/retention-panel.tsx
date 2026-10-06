@@ -64,7 +64,6 @@ export function RetentionPanel({
               variant="outline"
               disabled={!due || pending}
               onClick={handleDelete}
-              className="border-error text-error hover:bg-error-bg hover:text-error"
             >
               {t('retention.delete')}
             </Button>

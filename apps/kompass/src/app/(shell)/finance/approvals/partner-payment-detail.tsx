@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Notice } from '@/components/notice';
 import { useDateFormat } from '@/components/date-format-provider';
-import { ApprovalDetailFrame } from '@/components/finance/approval-detail-frame';
+import { ApprovalDetailFrame, type ApprovalFooter } from '@/components/finance/approval-detail-frame';
 import { PartnerReasonPrompt, type PartnerReasonNeeds } from '@/components/finance/partner-reason-prompt';
 import { RequirementList, type RequirementListItem } from '@/components/requirement-list';
 import { StatusBadge } from '@/components/status-badge';
@@ -132,29 +132,25 @@ export function PartnerPaymentDetail({ payment, creatorName, evidence, nextHref 
     </div>
   );
 
-  const footer = (
-    <>
-      {refusal ? (
-        <Notice level="refuse" title={t('footer.refused')} reasons={refusal.reasons}>
-          {refusal.message}
-        </Notice>
-      ) : null}
-      <p className="text-[13px] text-ink-2" data-testid="partner-payment-after">
-        {payment.retroactive
-          ? t('partnerFooter.retroactive', { count: payment.effectiveProofMonths })
-          : t('partnerFooter.payable', { name: payment.partnerName, amount: formatEuro(payment.totalCents), count: payment.effectiveProofMonths })}
-      </p>
-      <p className="text-[12px] text-muted-ink">{t('footer.humanOnly')}</p>
-      <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
-        <Button type="button" variant="outline" className="max-lg:h-12" onClick={() => setRejecting(true)} data-testid="partner-payment-reject">
-          {t('partnerReject.trigger')}
-        </Button>
-        <Button type="button" className="max-lg:h-12" disabled={pending} onClick={() => void approve()} data-testid="partner-payment-approve">
-          {t('partnerApprove.trigger')}
-        </Button>
-      </div>
-    </>
-  );
+  const footer: ApprovalFooter = {
+    state: refusal ? { status: 'error', message: refusal.message, reasons: refusal.reasons, title: t('footer.refused'), fieldErrors: {} } : undefined,
+    note: (
+      <>
+        <p data-testid="partner-payment-after">
+          {payment.retroactive
+            ? t('partnerFooter.retroactive', { count: payment.effectiveProofMonths })
+            : t('partnerFooter.payable', { name: payment.partnerName, amount: formatEuro(payment.totalCents), count: payment.effectiveProofMonths })}
+        </p>
+        <p className="text-[12px] text-muted-ink">{t('footer.humanOnly')}</p>
+      </>
+    ),
+    reject: (
+      <Button type="button" variant="outline" onClick={() => setRejecting(true)} data-testid="partner-payment-reject">
+        {t('partnerReject.trigger')}
+      </Button>
+    ),
+    approve: { label: t('partnerApprove.trigger'), pending, onClick: () => void approve(), testId: 'partner-payment-approve' },
+  };
 
   return (
     <>

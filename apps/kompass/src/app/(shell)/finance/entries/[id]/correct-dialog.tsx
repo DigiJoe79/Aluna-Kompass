@@ -3,16 +3,21 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
 import type { AllocationLineView } from '@kompass/module-finance';
 import { DocumentPicker } from '@/app/(shell)/dms/document-picker';
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { FormField } from '@/components/forms/form-field';
+import { FormCell, FormGrid } from '@/components/forms/form-grid';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Notice } from '@/components/notice';
 import { ReceiptDrop } from '@/components/finance/receipt-drop';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { Select } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { formatEuro } from '@/lib/finance/amount';
 import { changesOf, correctionPath, selectableLines, type CorrectableLine } from '@/lib/finance/correction';
 import { VoidForm } from '@/app/(shell)/finance/donations/void-dialog';
@@ -45,7 +50,6 @@ export function CorrectDialog({
   canVoidConfirmation?: boolean;
 }) {
   const t = useTranslations('finance.entryView.correct');
-  const tCommon = useTranslations('common');
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pickedLineId, setPickedLineId] = useState<string | null>(null);
@@ -68,6 +72,8 @@ export function CorrectDialog({
   const [purposeDetail, setPurposeDetail] = useState<string | null>(null);
   const [purposeReason, setPurposeReason] = useState('');
   const [voidingConfirmation, setVoidingConfirmation] = useState(false);
+  const feedback = useActionFeedback();
+  const [pending, setPending] = useState(false);
 
   // Bei genau einer Aufteilungszeile entfällt der Auswahlschritt (Task 1).
   const autoPicked = entry.allocationLines.length === 1 ? entry.allocationLines[0]! : null;
@@ -110,26 +116,29 @@ export function CorrectDialog({
     setPurposeDetail(null);
     setPurposeReason('');
     setVoidingConfirmation(false);
+    feedback.reset();
   };
 
   const runCorrection = async (proofId?: string, ack?: boolean) => {
     if (!pickedLine || nothingChanged) return;
-    const result = await requestCorrectionAction(pickedLine.id, changes, note, proofId, ack, purposeDetail && purposeReason.trim() ? purposeReason : undefined);
+    setPending(true);
+    const result = await feedback.run(() => requestCorrectionAction(pickedLine.id, changes, note, proofId, ack, purposeDetail && purposeReason.trim() ? purposeReason : undefined), { retry: () => void runCorrection(proofId, ack) });
+    setPending(false);
     if (result.status === 'error') {
       // Zwei Lagen reagieren statt zu raten (Task 2): der Dialog bleibt offen, die Eingaben stehen noch da.
       if (result.code === 'purposeGoesNegative') {
+        feedback.reset();
         setPurposeDetail(result.detail ?? result.message);
         return;
       }
       if (result.code === 'purposeChangeNeedsProof' || result.code === 'section153Unacknowledged') {
+        feedback.reset();
         setServerCode(result.code);
         return;
       }
-      toast.error(result.message);
       return;
     }
     if (result.status === 'success') {
-      if (result.message) toast.success(result.message);
       close();
       router.refresh();
     }
@@ -140,22 +149,14 @@ export function CorrectDialog({
   const uploadProof = async (files: File[]) => {
     const file = files[0];
     if (!file) return;
-    try {
-      const formData = new FormData();
-      formData.append('entryId', entry.id);
-      formData.append('file', file);
-      const result = await uploadCorrectionProofAction(formData);
-      if (result.status === 'error') {
-        toast.error(result.message);
-        return;
-      }
-      if (result.status !== 'success') return;
-      const data = result.data as { documentId: string };
-      setProofDocumentId(data.documentId);
-      await runCorrection(data.documentId, acknowledgeSection153 || undefined);
-    } catch {
-      toast.error(tCommon('uploadFailed'));
-    }
+    const formData = new FormData();
+    formData.append('entryId', entry.id);
+    formData.append('file', file);
+    const result = await feedback.run(() => uploadCorrectionProofAction(formData), { retry: () => void uploadProof(files) });
+    if (result.status !== 'success') return;
+    const data = result.data as { documentId: string };
+    setProofDocumentId(data.documentId);
+    await runCorrection(data.documentId, acknowledgeSection153 || undefined);
   };
 
   const pickProofFromArchive = async (documentId: string) => {
@@ -165,13 +166,14 @@ export function CorrectDialog({
   };
 
   const submitReversal = async (reason?: string) => {
-    const result = await reverseEntryAction(entry.id, withCorrectionDraft, reason);
+    setPending(true);
+    const result = await feedback.run(() => reverseEntryAction(entry.id, withCorrectionDraft, reason), { retry: () => void submitReversal(reason) });
+    setPending(false);
     if (result.status === 'error') {
       if (result.code === 'cashNegativeNeedsReason') {
+        feedback.reset();
         setCashReason(result.detail ?? result.message);
-        return;
       }
-      toast.error(result.message);
       return;
     }
     if (result.status !== 'success') return;
@@ -200,7 +202,7 @@ export function CorrectDialog({
         {t('trigger')}
       </Button>
       <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
-        <DialogContent className="bg-surface shadow-md">
+        <DialogContent size="lg" className="bg-surface shadow-md">
           <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
 
           {needsPick && !pickedLine ? (
@@ -261,68 +263,79 @@ export function CorrectDialog({
             </div>
           ) : pickedLine ? (
             <>
-              <fieldset className="space-y-2">
-                <legend className="text-[12px] font-semibold uppercase tracking-wide text-muted-ink">{t('groupParty')}</legend>
-                {(['contact', 'project', 'purpose', 'abroad'] as const).map((key) => (
-                  <label key={key} className="flex items-center gap-2 text-[13px]">
-                    <input type="checkbox" checked={party[key]} onChange={(e) => setParty((p) => ({ ...p, [key]: e.target.checked }))} />
-                    {t(`party.${key}`)}
-                    {key === 'contact' && pickedLine.contactId ? (
-                      <span className="text-[12px] text-muted-ink">{t('currentlyValue', { value: contactNames.get(pickedLine.contactId) ?? '' })}</span>
-                    ) : null}
-                  </label>
-                ))}
-              </fieldset>
+              <section>
+                <h3 id="correct-group-party" className="text-[15px] font-semibold">{t('groupParty')}</h3>
+                {/* Die Haken bilden zusammen eine Diagnose: eine Gruppe über die volle Breite, darin zwei Spalten (Entscheidung zum Inventar). */}
+                <div role="group" aria-labelledby="correct-group-party" className="mt-3">
+                  <FormGrid>
+                    {(['contact', 'project', 'purpose', 'abroad'] as const).map((key) => (
+                      <FormField
+                        key={key}
+                        id={`correct-party-${key}`}
+                        label={t(`party.${key}`)}
+                        toggle
+                        hint={key === 'contact' && pickedLine.contactId ? t('currentlyValue', { value: contactNames.get(pickedLine.contactId) ?? '' }) : undefined}
+                      >
+                        <Checkbox id={`correct-party-${key}`} checked={party[key]} onCheckedChange={(next) => setParty((p) => ({ ...p, [key]: next === true }))} />
+                      </FormField>
+                    ))}
+                  </FormGrid>
+                </div>
+              </section>
 
-              <fieldset className="space-y-2">
-                <legend className="text-[12px] font-semibold uppercase tracking-wide text-muted-ink">{t('groupNumbers')}</legend>
-                {(['amount', 'date', 'account', 'category', 'vat'] as const).map((key) => (
-                  <label key={key} className="flex items-center gap-2 text-[13px]">
-                    <input type="checkbox" checked={numbers[key]} onChange={(e) => setNumbers((n) => ({ ...n, [key]: e.target.checked }))} />
-                    {t(`numbers.${key}`)}
-                  </label>
-                ))}
-              </fieldset>
+              <section className="border-t border-line pt-5">
+                <h3 id="correct-group-numbers" className="text-[15px] font-semibold">{t('groupNumbers')}</h3>
+                <div role="group" aria-labelledby="correct-group-numbers" className="mt-3">
+                  <FormGrid>
+                    {(['amount', 'date', 'account', 'category', 'vat'] as const).map((key) => (
+                      <FormField key={key} id={`correct-numbers-${key}`} label={t(`numbers.${key}`)} toggle>
+                        <Checkbox id={`correct-numbers-${key}`} checked={numbers[key]} onCheckedChange={(next) => setNumbers((n) => ({ ...n, [key]: next === true }))} />
+                      </FormField>
+                    ))}
+                  </FormGrid>
+                </div>
+              </section>
 
               {path ? <p className="text-[13px] font-semibold text-ink">{t(path === 'reverse' ? 'pathReverse' : 'pathAllocation')}</p> : null}
 
               {path === 'allocation' ? (
-                <div className="space-y-3 border-t border-line pt-3">
-                  {party.contact ? (
-                    <ContactPicker id="correct-contact" name="correctContact" label={t('party.contact')} value={contact} onChange={setContact} />
-                  ) : null}
-                  {party.project ? (
-                    <div className="space-y-1">
-                      <label htmlFor="correct-project" className="text-[13px] font-semibold text-ink-2">{t('party.project')}</label>
-                      <Select id="correct-project" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-                        <option value="">—</option>
-                        {projects.map((p) => (
-                          <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                      </Select>
-                    </div>
-                  ) : null}
-                  {party.purpose ? (
-                    <div className="space-y-1">
-                      <label htmlFor="correct-purpose" className="text-[13px] font-semibold text-ink-2">{t('party.purpose')}</label>
-                      <Select id="correct-purpose" value={purposeId} onChange={(e) => setPurposeId(e.target.value)}>
-                        <option value="">—</option>
-                        {purposes.map((p) => (
-                          <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                      </Select>
-                    </div>
-                  ) : null}
-                  {party.abroad ? (
-                    <label className="flex items-center gap-2 text-[13px]">
-                      <Switch checked={abroad} onCheckedChange={(c) => setAbroad(c === true)} />
-                      {t('party.abroad')}
-                    </label>
-                  ) : null}
-                  <label className="block space-y-1 text-[13px]">
-                    <span className="font-semibold">{t('noteLabel')}</span>
-                    <textarea required value={note} onChange={(e) => setNote(e.target.value)} className="w-full rounded-sm border border-line-strong bg-field px-2.5 py-1.5 text-[13px]" rows={2} />
-                  </label>
+                <section className="space-y-3 border-t border-line pt-5">
+                  <h3 className="text-[15px] font-semibold">{t('groupNew')}</h3>
+                  <FormGrid>
+                    {party.contact ? (
+                      <FormCell size="m">
+                        <ContactPicker id="correct-contact" name="correctContact" label={t('party.contact')} value={contact} onChange={setContact} />
+                      </FormCell>
+                    ) : null}
+                    {party.project ? (
+                      <FormField id="correct-project" label={t('party.project')}>
+                        <Select id="correct-project" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+                          <option value="">—</option>
+                          {projects.map((p) => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </Select>
+                      </FormField>
+                    ) : null}
+                    {party.purpose ? (
+                      <FormField id="correct-purpose" label={t('party.purpose')}>
+                        <Select id="correct-purpose" value={purposeId} onChange={(e) => setPurposeId(e.target.value)}>
+                          <option value="">—</option>
+                          {purposes.map((p) => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </Select>
+                      </FormField>
+                    ) : null}
+                    {party.abroad ? (
+                      <FormField id="correct-abroad" label={t('party.abroad')} toggle>
+                        <Switch id="correct-abroad" checked={abroad} onCheckedChange={(c) => setAbroad(c === true)} />
+                      </FormField>
+                    ) : null}
+                    <FormField id="correct-note" label={t('noteLabel')} required size="l">
+                      <Textarea id="correct-note" required value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
+                    </FormField>
+                  </FormGrid>
                   {nothingChanged ? <p className="text-[12px] text-muted-ink">{t('nothingChanged')}</p> : null}
 
                   {serverCode === 'purposeChangeNeedsProof' ? (
@@ -330,13 +343,17 @@ export function CorrectDialog({
                       <p className="text-[13px] font-semibold text-ink-2">{t('proof.label')}</p>
                       <ReceiptDrop onFiles={(files) => void uploadProof(files)} onPickFromArchive={() => setProofArchiveOpen(true)} />
                       {proofArchiveOpen ? (
-                        <DocumentPicker
-                          id="correction-proof-archive"
-                          name="correctionProofArchive"
-                          label={t('proof.label')}
-                          value={null}
-                          onChange={(doc) => doc && void pickProofFromArchive(doc.id)}
-                        />
+                        <FormGrid>
+                          <FormCell size="m">
+                            <DocumentPicker
+                              id="correction-proof-archive"
+                              name="correctionProofArchive"
+                              label={t('proof.label')}
+                              value={null}
+                              onChange={(doc) => doc && void pickProofFromArchive(doc.id)}
+                            />
+                          </FormCell>
+                        </FormGrid>
                       ) : null}
                       {proofDocumentId ? <p className="text-[12px] text-success">{t('proof.attached')}</p> : null}
                       <p className="text-[13px] text-ink-2">{t('proof.hint')}</p>
@@ -353,57 +370,59 @@ export function CorrectDialog({
                     <Notice
                       level="warn"
                       action={
-                        <label className="flex items-center gap-2 text-[13px]">
-                          <input type="checkbox" checked={acknowledgeSection153} onChange={(e) => setAcknowledgeSection153(e.target.checked)} />
-                          {t('section153.label')}
-                        </label>
+                        <div className="flex items-center gap-2 text-[13px]">
+                          <Checkbox id="correct-section153" checked={acknowledgeSection153} onCheckedChange={(next) => setAcknowledgeSection153(next === true)} />
+                          <label htmlFor="correct-section153">{t('section153.label')}</label>
+                        </div>
                       }
                     >
                       {t('section153.notice')}
                     </Notice>
                   ) : null}
-                </div>
+                </section>
               ) : null}
 
               {path === 'reverse' ? (
-                <div className="space-y-3 border-t border-line pt-3">
+                <section className="space-y-3 border-t border-line pt-5">
+                  <h3 className="text-[15px] font-semibold">{t('groupReverse')}</h3>
                   <ol className="list-decimal space-y-1 pl-5 text-[13px] text-ink-2">
                     <li>{t('reverse.step1')}</li>
                     <li>{t('reverse.step2')}</li>
                     <li>{t('reverse.step3')}</li>
                   </ol>
-                  <label className="flex items-center gap-2 text-[13px]">
-                    <Switch checked={withCorrectionDraft} onCheckedChange={(c) => setWithCorrectionDraft(c === true)} />
-                    {t('reverse.withDraft')}
-                  </label>
+                  <FormGrid>
+                    <FormField id="correct-with-draft" label={t('reverse.withDraft')} toggle>
+                      <Switch id="correct-with-draft" checked={withCorrectionDraft} onCheckedChange={(c) => setWithCorrectionDraft(c === true)} />
+                    </FormField>
+                  </FormGrid>
                   {cashReason ? (
                     <Notice level="warn" reason={{ name: 'cashReason', value: cashReasonText, onChange: setCashReasonText, label: t('reverse.cashReasonLabel') }}>
                       {cashReason}
                     </Notice>
                   ) : null}
-                </div>
+                </section>
               ) : null}
             </>
           ) : null}
 
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={close}>
-              {t('cancel')}
-            </Button>
-            {lineConfirmation ? null : path === 'allocation' ? (
-              <Button type="button" disabled={note.trim().length === 0 || nothingChanged || (purposeDetail !== null && purposeReason.trim().length === 0)} onClick={() => void submitAllocation()}>
-                {t('submitAllocation')}
+          {pickedLine && !lineConfirmation ? (
+            <FormActionBar
+              placement="dialog"
+              cancel={close}
+              pending={pending}
+              saveLabel={path === 'reverse' ? t('submitReverse') : t('submitAllocation')}
+              saveDisabled={path === 'allocation' ? note.trim().length === 0 || nothingChanged || (purposeDetail !== null && purposeReason.trim().length === 0) : path === 'reverse' ? cashReason !== null && cashReasonText.trim().length === 0 : true}
+              onSave={() => (path === 'reverse' ? void submitReversal(cashReason ? cashReasonText : undefined) : submitAllocation())}
+              state={feedback.state}
+            />
+          ) : (
+            // Nur „Abbrechen“: Auswahl der Zeile und Dreischritt der Bestätigung haben keine eigene Hauptaktion.
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={close}>
+                {t('cancel')}
               </Button>
-            ) : path === 'reverse' ? (
-              <Button
-                type="button"
-                disabled={cashReason !== null && cashReasonText.trim().length === 0}
-                onClick={() => void submitReversal(cashReason ? cashReasonText : undefined)}
-              >
-                {t('submitReverse')}
-              </Button>
-            ) : null}
-          </DialogFooter>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
     </>

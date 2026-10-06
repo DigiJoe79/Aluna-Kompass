@@ -76,7 +76,7 @@ export function FolderTreeKeyHelp({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="gap-3 bg-surface px-5 py-[18px] text-ink sm:max-w-[440px]">
+      <DialogContent size="sm" className="gap-3 bg-surface text-ink">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold">{t('keyHelpTitle')}</DialogTitle>
         </DialogHeader>

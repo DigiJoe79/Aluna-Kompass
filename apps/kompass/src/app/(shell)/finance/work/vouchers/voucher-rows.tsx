@@ -50,9 +50,9 @@ export function VoucherRows({ rows, canOpenDocument, canWrite, canCreateContact 
         const loaded = open[doc.id];
         return (
           <Fragment key={doc.id}>
-            <TableRow className="h-11 border-b border-line-2">
-              <TableCell className="px-4 font-mono text-[12px] text-ink-2">{doc.number}</TableCell>
-              <TableCell className="px-4 font-medium text-ink">
+            <TableRow>
+              <TableCell className="font-mono text-[12px] text-ink-2">{doc.number}</TableCell>
+              <TableCell className="font-medium text-ink">
                 {canOpenDocument ? (
                   <Link href={`/dms/${doc.id}`} className="underline underline-offset-2">
                     {doc.subject}
@@ -61,9 +61,9 @@ export function VoucherRows({ rows, canOpenDocument, canWrite, canCreateContact 
                   doc.subject
                 )}
               </TableCell>
-              <TableCell className="px-4 font-mono text-[12px] tabular-nums text-ink-2">{date(doc.documentDate)}</TableCell>
-              <TableCell className="px-4 text-ink-2">{doc.typeLabel}</TableCell>
-              <TableCell className="px-4 text-right">
+              <TableCell className="font-mono text-[12px] tabular-nums text-ink-2">{date(doc.documentDate)}</TableCell>
+              <TableCell className="text-ink-2">{doc.typeLabel}</TableCell>
+              <TableCell className="text-right">
                 <span className="inline-flex items-center gap-2">
                   <Button type="button" size="sm" variant="ghost" aria-expanded={!!loaded} aria-controls={`invoice-${doc.id}`} onClick={() => toggle(doc.id)}>
                     {loaded ? <ChevronDown className="size-4" aria-hidden /> : <ChevronRight className="size-4" aria-hidden />}
@@ -78,8 +78,8 @@ export function VoucherRows({ rows, canOpenDocument, canWrite, canCreateContact 
               </TableCell>
             </TableRow>
             {loaded ? (
-              <TableRow id={`invoice-${doc.id}`} className="border-b border-line-2 bg-surface-2">
-                <TableCell colSpan={5} className="px-4 py-3">
+              <TableRow id={`invoice-${doc.id}`} className="bg-surface-2 even:bg-surface-2 hover:bg-surface-2">
+                <TableCell colSpan={5} className="py-3">
                   {loaded.state === 'loading' ? (
                     <p className="text-[13px] text-muted-ink">{t('invoice.loading')}</p>
                   ) : loaded.state === 'failed' ? (

@@ -6,6 +6,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { BlockedState } from '@/components/blocked-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { deviceFromUserAgent, emptyExpenseForm, emptyPosition, formFromClaim } from '@/lib/finance/expenses';
 import { requireSession } from '@/lib/request-context';
@@ -21,7 +22,7 @@ import { conflictText } from '@/lib/error-text';
  */
 export default async function NewExpensePage({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
   const { deps, ctx } = await requireSession();
-  if (!hasPermission(ctx, 'finance.expensesSubmit')) return <ForbiddenCard permission="finance.expensesSubmit" />;
+  if (!hasPermission(ctx, 'finance.expensesSubmit')) return <Page width="task"><ForbiddenCard permission="finance.expensesSubmit" /></Page>;
   const t = await getTranslations('finance.expenses.new');
   const query = await searchParams;
   const header = <PageHeader title={t('title')} description={t('intro')} back={{ href: '/finance/expenses', label: t('back') }} />;
@@ -29,27 +30,25 @@ export default async function NewExpensePage({ searchParams }: { searchParams: P
   const start = await expenseFormStart(deps, ctx, {});
   if (!start.ok) {
     return (
-      <div className="max-w-[640px]">
-        {header}
+      <Page width="task" header={header}>
         <BlockedState step={t('blocked.step')} title={t('blocked.title')}>
           {start.error.type === 'conflict' ? conflictText(start.error, await getTranslations()) : t('blocked.title')}
         </BlockedState>
-      </div>
+      </Page>
     );
   }
 
   const claim = query.id ? await getExpenseClaim(deps, ctx, { id: query.id }) : null;
   if (claim && !claim.ok) {
     return (
-      <div className="max-w-[640px]">
-        {header}
+      <Page width="task" header={header}>
         <BlockedState step={t('blocked.step')} title={t('title')}>
           {claim.error.type === 'conflict' ? conflictText(claim.error, await getTranslations()) : t('blocked.title')}
         </BlockedState>
-      </div>
+      </Page>
     );
   }
-  if (claim?.ok && claim.value.state === 'submitted') return <SubmittedView claim={claim.value} />;
+  if (claim?.ok && claim.value.state === 'submitted') return <Page width="task"><SubmittedView claim={claim.value} /></Page>;
   if (claim?.ok && claim.value.state !== 'draft') redirect(`/finance/expenses/${claim.value.id}`);
 
   const today = todayIn(deps);
@@ -61,8 +60,7 @@ export default async function NewExpensePage({ searchParams }: { searchParams: P
   const source = claim?.ok && claim.value.copiedFromClaimId ? await getExpenseClaim(deps, ctx, { id: claim.value.copiedFromClaimId }) : null;
 
   return (
-    <div className="max-w-[640px]">
-      {header}
+    <Page width="task" header={header}>
       {source?.ok ? (
         <p data-testid="expense-copied-from" className="mb-4 rounded-md border border-line bg-surface-2 px-3 py-2 text-[13px] text-ink-2">
           {t('copiedFrom', { number: source.value.number ?? '' })}
@@ -82,6 +80,6 @@ export default async function NewExpensePage({ searchParams }: { searchParams: P
         maxBytes={DOCUMENT_MAX_BYTES}
         today={today}
       />
-    </div>
+    </Page>
   );
 }

@@ -5,6 +5,7 @@ import { documentTypeFor, getDocumentRecord } from '@kompass/module-dms';
 import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/request-context';
 import { formatAmount } from '@/lib/finance/amount';
@@ -14,7 +15,7 @@ import { EntryForm, type PendingVoucher } from '../entry-form';
 
 export default async function NewFinanceEntryPage({ searchParams }: { searchParams: Promise<{ template?: string; account?: string; settles?: string; raw?: string; back?: string; voucher?: string }> }) {
   const { deps, ctx } = await requireSession();
-  if (!hasPermission(ctx, 'finance.entriesWrite')) return <ForbiddenCard permission="finance.entriesWrite" />;
+  if (!hasPermission(ctx, 'finance.entriesWrite')) return <Page width="standard"><ForbiddenCard permission="finance.entriesWrite" /></Page>;
 
   const query = await searchParams;
   const template: EntryTemplate = (['income', 'expense', 'transfer', 'inKind'] as const).includes(query.template as never) ? (query.template as EntryTemplate) : 'expense';
@@ -79,8 +80,7 @@ export default async function NewFinanceEntryPage({ searchParams }: { searchPara
   }
 
   return (
-    <>
-      <PageHeader title={t('newTitle')} back={{ href: returnTo, label: t('cancel') }} />
+    <Page width="standard" header={<PageHeader title={t('newTitle')} back={{ href: returnTo, label: t('cancel') }} />}>
       <EntryForm
         today={today}
         initial={initial}
@@ -97,6 +97,6 @@ export default async function NewFinanceEntryPage({ searchParams }: { searchPara
         returnTo={returnTo}
         pendingVoucher={pendingVoucher}
       />
-    </>
+    </Page>
   );
 }

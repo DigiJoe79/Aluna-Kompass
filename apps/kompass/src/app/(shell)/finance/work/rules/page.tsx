@@ -5,6 +5,7 @@ import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
 import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { ruleConditionParts } from '@/lib/finance/work-dialogs';
 import { requireSession } from '@/lib/request-context';
@@ -18,7 +19,7 @@ import { RulesTable, type RuleRow } from './rules-table';
  */
 export default async function FinanceRulesPage() {
   const { deps, ctx } = await requireSession();
-  if (!hasPermission(ctx, 'finance.read')) return <ForbiddenCard permission="finance.read" />;
+  if (!hasPermission(ctx, 'finance.read')) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
   const t = await getTranslations('finance.work.pages.rules');
   const [rulesRes, accountsRes, categoriesRes, purposesRes, projectsRes] = await Promise.all([
     listImportRules(deps, ctx, { includeInactive: true }),
@@ -27,7 +28,7 @@ export default async function FinanceRulesPage() {
     listPurposes(deps, ctx, {}),
     listProjects(deps, ctx),
   ]);
-  if (!rulesRes.ok) return <ForbiddenCard permission="finance.read" />;
+  if (!rulesRes.ok) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
   const accounts = accountsRes.ok ? accountsRes.value : [];
   const accountNames = new Map(accounts.map((a) => [a.id, a.name]));
   const categories = categoriesRes.ok ? categoriesRes.value : [];
@@ -52,24 +53,26 @@ export default async function FinanceRulesPage() {
   }));
 
   return (
-    <div className="space-y-4">
-      <PageHeader title={t('title')} description={t('description')} />
-      {rows.length === 0 ? (
-        <EmptyState title={t('empty')} text={t('emptyText')} />
-      ) : (
-        <RulesTable
-          rows={rows}
-          canWrite={hasPermission(ctx, 'finance.entriesWrite')}
-          options={{
-            accounts: accounts.filter((a) => a.isActive).map((a) => ({ id: a.id, name: a.name })),
-            categories: categories.filter((c) => c.isActive).map((c) => ({ id: c.id, name: c.name })),
-            projects: (projectsRes.ok ? projectsRes.value : []).map((p) => ({ id: p.id, name: (p.name as LocalizedText)[leading] || p.slug })),
-            purposes: (purposesRes.ok ? purposesRes.value : []).map((p) => ({ id: p.id, name: p.name })),
-            taxCodeOptions: [...TAX_CODES],
-            showTax: readSetting<boolean>(deps, 'finance.isEntrepreneurOrHasVatId'),
-          }}
-        />
-      )}
-    </div>
+    <Page width="full">
+      <div className="space-y-4">
+        <PageHeader title={t('title')} description={t('description')} />
+        {rows.length === 0 ? (
+          <EmptyState title={t('empty')} text={t('emptyText')} />
+        ) : (
+          <RulesTable
+            rows={rows}
+            canWrite={hasPermission(ctx, 'finance.entriesWrite')}
+            options={{
+              accounts: accounts.filter((a) => a.isActive).map((a) => ({ id: a.id, name: a.name })),
+              categories: categories.filter((c) => c.isActive).map((c) => ({ id: c.id, name: c.name })),
+              projects: (projectsRes.ok ? projectsRes.value : []).map((p) => ({ id: p.id, name: (p.name as LocalizedText)[leading] || p.slug })),
+              purposes: (purposesRes.ok ? purposesRes.value : []).map((p) => ({ id: p.id, name: p.name })),
+              taxCodeOptions: [...TAX_CODES],
+              showTax: readSetting<boolean>(deps, 'finance.isEntrepreneurOrHasVatId'),
+            }}
+          />
+        )}
+      </div>
+    </Page>
   );
 }

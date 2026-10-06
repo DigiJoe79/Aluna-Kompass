@@ -1,18 +1,20 @@
 'use client';
 
-import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import { toast } from 'sonner';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Select } from '@/components/ui/select';
 import { relateDocumentsAction, unrelateDocumentsAction } from '../actions';
 import { DocumentPicker } from '../document-picker';
 import type { PickedDocument } from '../search-action';
+import { FormField } from '@/components/forms/form-field';
+import { FormCell, FormGrid } from '@/components/forms/form-grid';
 
 const KINDS = ['repliesTo', 'signedCopyOf', 'replaces', 'attachmentOf'] as const;
 
@@ -47,16 +49,15 @@ export function RelationsPanel({
   const [kind, setKind] = useState<(typeof KINDS)[number]>('repliesTo');
   const [other, setOther] = useState<PickedDocument | null>(null);
   const [pending, start] = useTransition();
+  const addFb = useActionFeedback();
+  // „Lösen“ steht in den Zeilen der Liste: Die Ablehnung steht über der Liste.
+  const removeFb = useActionFeedback();
 
   const submit = () => {
     if (!other) return;
     start(async () => {
-      const state = await relateDocumentsAction(documentId, other.id, kind);
-      if (state.status === 'error') {
-        toast.error(state.message);
-        return;
-      }
-      if (state.status === 'success' && state.message) toast.success(state.message);
+      const state = await addFb.run(() => relateDocumentsAction(documentId, other.id, kind), { retry: submit });
+      if (state.status !== 'success') return;
       setOpen(false);
       setOther(null);
       router.refresh();
@@ -65,10 +66,8 @@ export function RelationsPanel({
 
   const remove = (relationId: string) =>
     start(async () => {
-      const state = await unrelateDocumentsAction(documentId, relationId);
-      if (state.status === 'error') toast.error(state.message);
-      else if (state.status === 'success' && state.message) toast.success(state.message);
-      router.refresh();
+      const state = await removeFb.run(() => unrelateDocumentsAction(documentId, relationId), { retry: () => remove(relationId) });
+      if (state.status === 'success') router.refresh();
     });
 
   return (
@@ -77,11 +76,12 @@ export function RelationsPanel({
         <h3 className="text-[15px] font-semibold text-ink">{t('title')}</h3>
         {canEdit ? (
           <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
-            <Plus className="size-3.5" aria-hidden />
             {t('add')}
           </Button>
         ) : null}
       </div>
+
+      <RefusalNotice action state={removeFb.state} />
 
       {relations.length === 0 ? (
         <p className="text-[13px] text-muted-ink">{t('none')}</p>
@@ -107,44 +107,37 @@ export function RelationsPanel({
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-full sm:max-w-[520px] bg-surface p-6 shadow-md">
+        <DialogContent size="md" className="bg-surface shadow-md">
           <DialogTitle className="font-heading text-[19px]">{t('add')}</DialogTitle>
           <DialogDescription className="text-[13px] text-muted-ink">{t('addDescription')}</DialogDescription>
 
-          <div className="mt-5 space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="relation-kind" required>
-                {t('kind')}
-              </Label>
-              <Select id="relation-kind" value={kind} onChange={(e) => setKind(e.target.value as (typeof KINDS)[number])}>
-                {KINDS.map((k) => (
-                  <option key={k} value={k}>
-                    {t(`kindLabels.${k}`)}
-                  </option>
-                ))}
-              </Select>
-            </div>
+          <div className="mt-5">
+            <FormGrid>
+              <FormField id="relation-kind" label={t('kind')} required>
+                <Select id="relation-kind" value={kind} onChange={(e) => setKind(e.target.value as (typeof KINDS)[number])}>
+                  {KINDS.map((k) => (
+                    <option key={k} value={k}>
+                      {t(`kindLabels.${k}`)}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
 
-            <DocumentPicker
-              id="relation-document"
-              name="relatedDocumentId"
-              label={t('document')}
-              value={other}
-              onChange={setOther}
-              exceptId={documentId}
-              required
-            />
+              <FormCell size="m">
+                <DocumentPicker
+                  id="relation-document"
+                  name="relatedDocumentId"
+                  label={t('document')}
+                  value={other}
+                  onChange={setOther}
+                  exceptId={documentId}
+                  required
+                />
+              </FormCell>
+            </FormGrid>
           </div>
 
-          <DialogFooter className="mt-6">
-            <span className="mr-auto text-[12px] text-muted-ink">{tCommon('requiredLegend')}</span>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              {t('cancel')}
-            </Button>
-            <Button type="button" disabled={!other || pending} onClick={submit}>
-              {t('submit')}
-            </Button>
-          </DialogFooter>
+          <FormActionBar placement="dialog" cancel={() => setOpen(false)} pending={pending} saveDisabled={!other} saveLabel={t('submit')} onSave={submit} state={addFb.state} note={<span className="text-[12px] text-muted-ink">{tCommon('requiredLegend')}</span>} />
         </DialogContent>
       </Dialog>
     </section>

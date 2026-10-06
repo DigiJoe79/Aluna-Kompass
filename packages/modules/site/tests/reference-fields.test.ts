@@ -1,6 +1,7 @@
 import { coreModule, setSetting, unwrap } from '@kompass/core';
-import { animalsModule, createAnimal, setAnimalPublished, setAnimalStatus, setAnimalStory } from '@kompass/module-animals';
+import { animals, animalsModule, createAnimal, setAnimalPublished, setAnimalStatus, setAnimalStory } from '@kompass/module-animals';
 import { createProject, projectsModule, setProjectPublished } from '@kompass/module-projects';
+import { eq } from 'drizzle-orm';
 import { createTestDeps, ctxWith, insertUser } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
@@ -8,6 +9,8 @@ import { reference, references } from '@kompass/site-template';
 import type { FieldSchema, TemplateSchema } from '../src/types';
 import { checkReferenceFields, checkReferenceValues, duplicateReferences, findView, matchesWhere, referenceMetaOf, resolveReferenceOptions } from '../src/reference-fields';
 
+/** Den Slug bildet Kompass (Name plus Kennung); Tests suchen ihn über den Namen. */
+const slugOf = (deps: { db: any }, name: string) => deps.db.select().from(animals).where(eq(animals.name, name)).get()!.slug;
 const asJson = (s: unknown) => z.toJSONSchema(s as z.ZodType, { io: 'input' }) as FieldSchema;
 const animalsCtx = ctxWith(['animals.manage', 'animals.view']);
 const projectsCtx = ctxWith(['projects.manage', 'projects.view']);
@@ -18,10 +21,10 @@ const setup = async () => {
   const deps = createTestDeps({ manifests: [coreModule, animalsModule, projectsModule] });
   insertUser(deps, { id: 'USER-TEST' });
   await setSetting(deps, ctxWith(['settings.manage']), { key: 'i18n.locales', value: ['de', 'en'] });
-  const dog = (slug: string, name: string) => createAnimal(deps, animalsCtx, { slug, name, sex: 'female', birthText: {}, sizeText: {}, summary: {}, body: {} });
-  const bruno = unwrap(await dog('bruno', 'Bruno'));
-  const akiko = unwrap(await dog('akiko', 'Akiko'));
-  const draft = unwrap(await dog('entwurf', 'Entwurf'));
+  const dog = (name: string) => createAnimal(deps, animalsCtx, { name, sex: 'female', birthText: {}, sizeText: {}, summary: {}, body: {} });
+  const bruno = unwrap(await dog('Bruno'));
+  const akiko = unwrap(await dog('Akiko'));
+  const draft = unwrap(await dog('Entwurf'));
   for (const a of [bruno, akiko]) unwrap(await setAnimalPublished(deps, animalsCtx, { id: a.id, isPublished: true }));
   unwrap(await setAnimalStatus(deps, animalsCtx, { id: akiko.id, status: 'adopted', adoptedYear: 2025 }));
   unwrap(await setAnimalStory(deps, animalsCtx, { id: akiko.id, beforeAssetId: null, afterAssetId: null, quote: {}, family: '', adoptedYear: 2025 }));
@@ -66,9 +69,9 @@ describe('resolveReferenceOptions', () => {
   it('lists published rows that satisfy where, labelled by name, in view order', async () => {
     const deps = await setup();
     const looking = resolveReferenceOptions(deps, ['animals'], asJson(reference({ view: 'animals', where: { status: 'lookingForHome' } })));
-    expect(looking).toEqual([{ value: 'bruno', label: 'Bruno' }]);
+    expect(looking).toEqual([{ value: slugOf(deps, 'Bruno'), label: 'Bruno' }]);
     const stories = resolveReferenceOptions(deps, ['animals'], asJson(reference({ view: 'animals', where: { status: 'adopted', story: { present: true } } })));
-    expect(stories).toEqual([{ value: 'akiko', label: 'Akiko' }]);
+    expect(stories).toEqual([{ value: slugOf(deps, 'Akiko'), label: 'Akiko' }]);
   });
 
   it('shows the localized label in the leading locale, in view order', async () => {
@@ -87,8 +90,8 @@ describe('checkReferenceValues and duplicateReferences', () => {
   it('names every value that is not among the options, per field', async () => {
     const deps = await setup();
     const schema = schemaWith({ dog: asJson(reference({ view: 'animals', where: { status: 'lookingForHome' } })), projects: asJson(references({ view: 'projects', max: 2 })) });
-    expect(checkReferenceValues(deps, schema, { dog: 'bruno', projects: ['hof', 'futter'] })).toEqual([]);
-    expect(checkReferenceValues(deps, schema, { dog: 'akiko', projects: ['hof', 'ghost'] })).toEqual([{ field: 'dog', value: 'akiko' }, { field: 'projects', value: 'ghost' }]);
+    expect(checkReferenceValues(deps, schema, { dog: slugOf(deps, 'Bruno'), projects: ['hof', 'futter'] })).toEqual([]);
+    expect(checkReferenceValues(deps, schema, { dog: slugOf(deps, 'Akiko'), projects: ['hof', 'ghost'] })).toEqual([{ field: 'dog', value: slugOf(deps, 'Akiko') }, { field: 'projects', value: 'ghost' }]);
     expect(checkReferenceValues(deps, schema, { dog: null, projects: [] })).toEqual([]);
     expect(checkReferenceValues(deps, schema, {})).toEqual([]);
   });

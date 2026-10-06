@@ -8,6 +8,8 @@ import { BlockedState } from '@/components/blocked-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { TransferBlock } from '@/components/finance/transfer-block';
 import { Notice } from '@/components/notice';
+import { Page } from '@/components/page';
+import { EmptyState } from '@/components/empty-state';
 import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
 import { buttonVariants } from '@/components/ui/button';
@@ -31,7 +33,7 @@ import { conflictText } from '@/lib/error-text';
  */
 export default async function ApprovalsPage({ searchParams }: { searchParams: Promise<{ claim?: string; payment?: string; transfer?: string }> }) {
   const { deps, ctx } = await requireSession();
-  if (!hasPermission(ctx, 'finance.approve')) return <ForbiddenCard permission="finance.approve" />;
+  if (!hasPermission(ctx, 'finance.approve')) return <Page width="full"><ForbiddenCard permission="finance.approve" /></Page>;
   const t = await getTranslations('finance.approvals');
   const mode = readSetting<DateFormatMode>(deps, 'ui.dateFormat');
   const query = await searchParams;
@@ -93,15 +95,29 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
     }
   }
 
-  const activeQuery = query.claim || query.payment;
+  const header = <PageHeader title={t('title')} description={t('intro')} />;
+  // Leere Schlange, nichts gewählt: nur der leere Zustand, ohne Spalten und ohne Überschrift der Schlange (K9-Befund 7).
+  if (!selectedId) {
+    return (
+      <Page width="full" header={header}>
+        <EmptyState title={t('empty.title')} text={t('empty.text')} />
+      </Page>
+    );
+  }
+
+  // Jede der drei Arten zählt als Wahl — sonst zeigt das Telefon bei `?transfer=` die Schlange statt der Umwidmung (K9-Befund 12).
+  const activeQuery = query.claim || query.payment || query.transfer;
+  // Nach der letzten Entscheidung ist die Schlange leer, der Vorgang aber noch gewählt: dann nur die Detailspalte.
+  const withQueue = rows.length > 0;
   return (
-    <div>
-      <PageHeader title={t('title')} description={t('intro')} />
-      <div className="grid gap-5 lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start">
-        <div className={cn(activeQuery && 'max-lg:hidden')}>
-          <ApprovalQueue rows={rows} selectedId={selectedId} />
-        </div>
-        <div data-testid="approval-detail" className={cn('min-w-0 space-y-3', !activeQuery && 'max-lg:hidden')}>
+    <Page width="full" header={header}>
+      <div className={cn('grid gap-5', withQueue && 'lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start')}>
+        {withQueue ? (
+          <div className={cn(activeQuery && 'max-lg:hidden')}>
+            <ApprovalQueue rows={rows} selectedId={selectedId} />
+          </div>
+        ) : null}
+        <div data-testid="approval-detail" className={cn('min-w-0 space-y-3', withQueue && !activeQuery && 'max-lg:hidden')}>
           {activeQuery ? (
             <Link href="/finance/approvals" className={buttonVariants({ variant: 'ghost', size: 'sm', className: '-ml-2 lg:hidden' })}>
               <span aria-hidden>←</span>
@@ -111,7 +127,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
           {detail}
         </div>
       </div>
-    </div>
+    </Page>
   );
 
   /** Ein eingereichter Antrag: Kategorien, Zwecke, Projektnamen, Vorschläge und — bei Verzicht — die vier Prüfungen laden. */

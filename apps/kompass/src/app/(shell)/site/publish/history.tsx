@@ -44,12 +44,11 @@ export function PublishHistory({ items, highlightId = null }: { items: PublishSu
               {shown.map((row) => (
                 <tr
                   key={row.id}
-                  onClick={() => row.hasLog && setSelected(row)}
-                  className={`border-b border-line hover:bg-surface-2 max-sm:grid max-sm:min-h-14 max-sm:grid-cols-2 max-sm:items-center max-sm:gap-x-3 max-sm:py-2 ${row.hasLog ? 'max-sm:cursor-pointer' : ''} ${row.id === highlightId ? 'bg-brand-soft' : ''}`}
+                  className={`border-b border-line hover:bg-surface-2 max-sm:grid max-sm:min-h-14 max-sm:grid-cols-2 max-sm:items-center max-sm:gap-x-3 max-sm:py-2 ${row.id === highlightId ? 'bg-brand-soft' : ''}`}
                 >
                   <td className="py-2 pr-4 whitespace-nowrap max-sm:py-0">
                     {when(row.startedAt)}
-                    {row.id === highlightId ? <span className="ml-2 rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">{t('new')}</span> : null}
+                    {row.id === highlightId ? <span className="ml-2 rounded-full bg-brand px-2 py-0.5 text-[11px] font-semibold text-on-brand">{t('new')}</span> : null}
                   </td>
                   <td className="py-2 pr-4 max-sm:py-0">
                     <StatusMark status={row.status} />

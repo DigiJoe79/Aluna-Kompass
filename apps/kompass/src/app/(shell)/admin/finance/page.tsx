@@ -11,27 +11,31 @@ import {
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { ModuleInactiveCard } from '@/components/module-inactive-card';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
+import { PanelNav, panelFromQuery } from '@/components/panel-nav';
 import { requireSession } from '@/lib/request-context';
 import { AccountsPanel } from './accounts-panel';
 import { CategoriesPanel } from './categories-panel';
 import { ChecklistPanel } from './checklist-panel';
 import { DatedValuesPanel } from './dated-values-panel';
 import { FiscalYearsPanel } from './fiscal-years-panel';
-import { panelFromQuery, PanelNav } from './panel-nav';
 import { PermissionsPanel } from './permissions-panel';
 import { PurposesPanel } from './purposes-panel';
 import { TaxPanel } from './tax-panel';
 
+const PANELS = ['checklist', 'accounts', 'categories', 'purposes', 'fiscalYears', 'datedValues', 'tax', 'permissions'] as const;
+
 export default async function AdminFinancePage({ searchParams }: { searchParams: Promise<{ panel?: string }> }) {
   const { deps, ctx } = await requireSession();
-  if (!isModuleEnabled(deps, 'finance')) return <ModuleInactiveCard namespace="finance.common" />;
+  if (!isModuleEnabled(deps, 'finance')) return <Page width="standard"><ModuleInactiveCard namespace="finance.common" /></Page>;
   // Die Checkliste (`getSetupStatus`) liest auch, wer nur `finance.read` trägt — die Seite
   // sperrt deshalb nicht strenger als der Dienst, den sie zeigt.
-  if (!hasPermission(ctx, 'finance.setup') && !hasPermission(ctx, 'finance.read')) return <ForbiddenCard permission="finance.setup" />;
+  if (!hasPermission(ctx, 'finance.setup') && !hasPermission(ctx, 'finance.read')) return <Page width="standard"><ForbiddenCard permission="finance.setup" /></Page>;
   const t = await getTranslations('finance.admin');
   const query = await searchParams;
-  const panel = panelFromQuery(query.panel);
+  const panel = panelFromQuery(query.panel, PANELS, 'checklist');
+  const tabs = await getTranslations('finance.admin.tabs');
   const canManageDms = hasPermission(ctx, 'dms.view');
 
   let content: React.ReactNode = null;
@@ -95,10 +99,17 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
   }
 
   return (
-    <div className="max-w-[1000px] space-y-5">
-      <PageHeader title={t('title')} description={t('description')} />
-      <PanelNav active={panel} />
-      {content}
-    </div>
+    <Page width="standard" header={<PageHeader title={t('title')} description={t('description')} />}>
+      <div className="space-y-5">
+        <PanelNav
+          basePath="/admin/finance"
+          panels={PANELS}
+          active={panel}
+          labels={Object.fromEntries(PANELS.map((k) => [k, tabs(k)])) as Record<(typeof PANELS)[number], string>}
+          ariaLabel={t('tabsLabel')}
+        />
+        {content}
+      </div>
+    </Page>
   );
 }

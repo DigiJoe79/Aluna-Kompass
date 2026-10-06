@@ -14,6 +14,8 @@ import { FolderField } from '@/components/folder-tree/folder-field';
 import type { FolderEntry } from '@/lib/folder-tree-model';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { FormField } from '@/components/forms/form-field';
+import { FormCell, FormGrid } from '@/components/forms/form-grid';
 
 /**
  * Dasselbe Formular legt an und bessert aus. Ohne `draft` entsteht ein neuer
@@ -133,15 +135,9 @@ export function DraftForm({
           Brief entsteht, das kleinste Element der Spalte wäre. */}
       <div className="min-h-0 flex-1 px-6 pb-6">
       <div data-slot="form-card" className="flex h-full flex-col gap-4 rounded-md border border-line bg-surface p-5">
-      {state.status === 'error' && Object.keys(errors).length === 0 ? (
-        <div role="alert" className="rounded-md bg-error-bg p-3 text-[13px] text-error">{state.message}</div>
-      ) : null}
-
-      <div className="space-y-1.5">
-        <Label htmlFor="subject" required>{t('fields.subject')}</Label>
+      <FormField id="subject" label={t('fields.subject')} required error={errors.subject}>
         <Input id="subject" name="subject" required value={subject} onChange={(e) => setSubject(e.target.value)} />
-        <FieldError id="subject-error" message={errors.subject} />
-      </div>
+      </FormField>
 
       <div className="flex min-h-0 shrink-0 grow flex-col gap-1.5">
         <div className="flex items-center justify-between gap-2">
@@ -181,46 +177,26 @@ export function DraftForm({
         {errors.body ? null : <p id="body-hint" className="text-[12px] text-muted-ink">{t('fields.bodyHint')}</p>}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="documentDate" required>{t('fields.documentDate')}</Label>
-          <Input
-            id="documentDate"
-            name="documentDate"
-            type="date"
-            required
-            value={documentDate}
-            onChange={(e) => setDocumentDate(e.target.value)}
+      {/* Die Angaben unter einer Trennlinie im `FormGrid`: In der Schreibspalte (innen rund 430 px) zwei Spalten,
+          Zeile für Zeile Empfänger · Ordner, dann Art · Datum. Wer schreibt, legt zuerst fest, an wen; Art und
+          Datum sind meist vorbelegt (HANDOFF Konsistenz § 8c). */}
+      <div className="shrink-0 border-t border-line pt-4">
+      <FormGrid>
+        <FormCell size="m">
+          <ContactPicker
+            id="recipientId"
+            name="recipientId"
+            label={t('fields.recipient')}
+            value={recipient}
+            onChange={(next) => {
+              recipientTouched.current = true;
+              setRecipient(next);
+            }}
+            canCreate={canCreateContact}
           />
-          <FieldError id="documentDate-error" message={errors.documentDate} />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="typeKey" required>{t('fields.type')}</Label>
-          <Select
-            id="typeKey"
-            name="typeKey"
-            required
-            value={typeKey}
-            onChange={(e) => setTypeKey(e.target.value)}
-            disabled={Boolean(draft)}
-          >
-            {types.map((type) => (
-              <option key={type.key} value={type.key}>
-                {type.label}
-              </option>
-            ))}
-          </Select>
-        </div>
-
-        {/* Über die ganze Zeile, nicht in der Zelle: In der Zelle streckt der
-            Hinweis nur seine Spalte, neben „Datum“ bleibt ein Loch, und die
-            vier Felder lesen sich als zwei lose Paare statt als Raster. */}
-        {draft ? (
-          <p className="text-[12px] text-muted-ink sm:col-span-2">{t('typeFixedHint')}</p>
-        ) : null}
-
-        <div className="space-y-1.5">
+          {recipientOrigin && !recipientTouched.current ? <SuggestionFlag text={recipientOrigin} /> : null}
+        </FormCell>
+        <FormCell size="m" className="space-y-1.5">
           {/* Der Ort im Baum statt einer langen Liste; das versteckte Feld `folder` trägt den Weg (`''` = kein Ordner). */}
           <FolderField
             value={folder || null}
@@ -238,27 +214,51 @@ export function DraftForm({
             errorId={errors.folder ? 'folder-error' : undefined}
           />
           <FieldError id="folder-error" message={errors.folder} />
-        </div>
+        </FormCell>
 
-        <div>
-          <ContactPicker
-            id="recipientId"
-            name="recipientId"
-            label={t('fields.recipient')}
-            value={recipient}
-            onChange={(next) => {
-              recipientTouched.current = true;
-              setRecipient(next);
-            }}
-            canCreate={canCreateContact}
+        <FormField id="typeKey" label={t('fields.type')} required size="m">
+          <Select
+            id="typeKey"
+            name="typeKey"
+            required
+            value={typeKey}
+            onChange={(e) => setTypeKey(e.target.value)}
+            disabled={Boolean(draft)}
+          >
+            {types.map((type) => (
+              <option key={type.key} value={type.key}>
+                {type.label}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+
+        <FormField id="documentDate" label={t('fields.documentDate')} required error={errors.documentDate} size="s">
+          <Input
+            id="documentDate"
+            name="documentDate"
+            type="date"
+            required
+            value={documentDate}
+            onChange={(e) => setDocumentDate(e.target.value)}
           />
-          {recipientOrigin && !recipientTouched.current ? <SuggestionFlag text={recipientOrigin} /> : null}
-        </div>
+        </FormField>
+
+        {/* Über die ganze Zeile, nicht in der Zelle: In der Zelle streckt der
+            Hinweis nur seine Spalte, neben „Art“ bleibt ein Loch, und die
+            vier Felder lesen sich als zwei lose Paare statt als Raster. */}
+        {draft ? (
+          <FormCell as="p" size="full" className="text-[12px] text-muted-ink">{t('typeFixedHint')}</FormCell>
+        ) : null}
+
+      </FormGrid>
       </div>
 
       </div>
       </div>
       <FormActionBar
+        mode={draft ? 'edit' : 'create'}
+        state={state}
         back={{ href: draft ? `/dms/${draft.id}` : '/dms', label: draft ? t('backToDocument') : tCommon('backToList') }}
         saveLabel={draft ? t('saveChanges') : t('saveDraft')}
         saveLabelChanged={draft ? t('draft.saveAndPreview') : undefined}

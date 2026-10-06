@@ -119,7 +119,7 @@ export function ReceiptDrop({
           className={cn(
             'flex flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed text-center text-[13px]',
             kind === 'image' ? 'h-16 w-[240px]' : 'h-24',
-            dragging ? 'border-primary bg-brand-soft' : 'border-line-strong bg-surface',
+            dragging ? 'border-brand bg-brand-soft' : 'border-line-strong bg-surface',
           )}
         >
           <FileUp className="size-5 text-muted-ink" aria-hidden />

@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { LimitProgress, limitState } from '@/components/finance/limit-progress';
 import { StatusBadge, type BadgeTone } from '@/components/status-badge';
 import { buttonVariants } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { RowButton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatEuro } from '@/lib/finance/amount';
 import { PurposeDetail } from './purpose-detail';
 
@@ -86,8 +86,8 @@ export function PurposesTable({
       ) : null}
       <div className="overflow-x-auto rounded-md border border-line">
         <Table data-testid="purposes-table">
-          <TableHeader className="bg-table-head text-left text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink">
-            <TableRow className="h-9">
+          <TableHeader>
+            <TableRow>
               <TableHead className="px-3">{t('columns.name')}</TableHead>
               {full ? <TableHead className="px-3">{t('columns.project')}</TableHead> : null}
               <TableHead className="px-3">{t('columns.target')}</TableHead>
@@ -109,15 +109,14 @@ export function PurposesTable({
                 key={row.id}
                 data-testid="purpose-row"
                 data-selected={row.id === selectedId ? 'true' : undefined}
-                className={`border-b border-line-2 ${full ? 'cursor-pointer hover:bg-surface-2' : ''} ${row.id === selectedId ? 'bg-surface-2' : ''}`}
-                onClick={full ? () => setSelectedId(row.id === selectedId ? null : row.id) : undefined}
+                data-state={row.id === selectedId ? 'selected' : undefined}
               >
                 <TableCell className="px-3 font-medium text-ink">
                   {full ? (
                     <span className="inline-flex flex-wrap items-center gap-1.5">
-                      <button type="button" className="text-left underline-offset-2 hover:underline" aria-expanded={row.id === selectedId} onClick={(e) => { e.stopPropagation(); setSelectedId(row.id === selectedId ? null : row.id); }}>
+                      <RowButton aria-expanded={row.id === selectedId} onClick={() => setSelectedId(row.id === selectedId ? null : row.id)}>
                         {row.name}
-                      </button>
+                      </RowButton>
                       {/* Entscheidung 7: Ausland als Kennzeichen am Namen statt eigener Spalte. */}
                       {row.abroad ? <span data-testid="purpose-abroad"><StatusBadge tone="neutral">{t('abroadYes')}</StatusBadge></span> : null}
                     </span>

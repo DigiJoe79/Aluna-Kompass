@@ -2,8 +2,8 @@ import { validate } from '@kompass/core';
 import { createTestDeps } from '@kompass/core/testing';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { markdown, number, reference, references, select, text } from '@kompass/site-template';
-import { blankValue, schemaFor, widgetOf } from '../src/field-schema';
+import { asset, date, list, markdown, number, objectList, reference, references, select, text } from '@kompass/site-template';
+import { blankValue, fieldGroups, fieldSizeOf, schemaFor, widgetOf } from '../src/field-schema';
 import type { FieldSchema } from '../src/types';
 
 const asJson = (s: unknown) => z.toJSONSchema(s as z.ZodType, { io: 'input' }) as FieldSchema;
@@ -91,5 +91,61 @@ describe('reference widgets', () => {
     expect(s.parse(['a'])).toEqual(['a']);
     expect(s.safeParse(['a', 'b', 'c']).success).toBe(false);
     expect(blankValue(field)).toEqual([]);
+  });
+});
+
+// docs/MUSTER.md § J, Handoff Konsistenz § 8c: ohne `size` im Template die Größe nach Feldtyp; ein mehrsprachiges
+// Feld nach seinem inneren Typ, je Sprache.
+describe('fieldSizeOf', () => {
+  it.each([
+    ['text', 'm', text({ label: 'T' })],
+    ['select', 'm', select(['a', 'b'], { label: 'S' })],
+    ['reference', 'm', reference({ view: 'animals', label: 'R' })],
+    ['number', 's', number({ label: 'N' })],
+    ['date', 's', date({ label: 'D' })],
+    ['markdown', 'l', markdown({ label: 'M' })],
+    // je Platz; die Plätze stehen als eigene Zellen im Raster (Befund K9 5b)
+    ['references', 'm', references({ view: 'projects', max: 2, label: 'Rs' })],
+    ['asset', 'full', asset({ label: 'A' })],
+    ['list', 'full', list(text(), { label: 'L' })],
+    ['objectList', 'full', objectList({ label: 'O', fields: { a: text() } })],
+    ['localized text', 'm', text({ localized: true, label: 'LT' })],
+    ['localized markdown', 'l', markdown({ localized: true, label: 'LM' })],
+  ] as const)('%s steht ohne Angabe in %s', (_name, size, field) => {
+    expect(fieldSizeOf(asJson(field))).toBe(size);
+  });
+
+  it('nimmt die Größe aus dem Template vor dem Standard', () => {
+    expect(fieldSizeOf(asJson(asset({ label: 'A', size: 'm' })))).toBe('m');
+    expect(fieldSizeOf(asJson(select(['ja', 'nein'], { label: 'S', size: 's' })))).toBe('s');
+  });
+
+  it('übergeht eine unbekannte Größe', () => {
+    expect(fieldSizeOf({ widget: 'text', size: 'xxl' })).toBe('m');
+  });
+});
+
+describe('fieldGroups', () => {
+  it('fasst aufeinanderfolgende Felder mit gleichem group zu einem Abschnitt, ohne umzusortieren', () => {
+    const schema = {
+      claim: asJson(text({ label: 'C' })),
+      a: asJson(asset({ label: 'A', group: 'Bilder' })),
+      b: asJson(asset({ label: 'B', group: 'Bilder' })),
+      count: asJson(number({ label: 'N', group: 'Zahlen' })),
+      c: asJson(asset({ label: 'C2', group: 'Bilder' })),
+      free: asJson(text({ label: 'F' })),
+    };
+    expect(fieldGroups(schema).map((g) => [g.group ?? null, g.keys])).toEqual([
+      [null, ['claim']],
+      ['Bilder', ['a', 'b']],
+      ['Zahlen', ['count']],
+      ['Bilder', ['c']],
+      [null, ['free']],
+    ]);
+  });
+
+  it('gibt ein Schema ohne Gruppen als einen Abschnitt ohne Titel zurück', () => {
+    const schema = { a: asJson(text({ label: 'A' })), b: asJson(number({ label: 'B' })) };
+    expect(fieldGroups(schema)).toEqual([{ group: undefined, keys: ['a', 'b'] }]);
   });
 });

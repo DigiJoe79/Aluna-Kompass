@@ -50,7 +50,8 @@ export function CommandPalette({ groups, permissions, helpPages = [] }: { groups
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent showCloseButton={false} className="top-24 w-[600px] translate-y-0 bg-surface p-0 shadow-md">
+      {/* Oben verankert und 600 breit (Ausnahme im Wächter `dialog-size`); auf dem Telefon Vollbild wie jedes `lg`. */}
+      <DialogContent size="lg" showCloseButton={false} className="w-[600px] bg-surface p-0 shadow-md sm:top-24 sm:translate-y-0">
         <DialogTitle className="sr-only">{t('palette.aria')}</DialogTitle>
         <Command label={t('palette.aria')}>
           <CommandInput placeholder={t('palette.placeholder')} />

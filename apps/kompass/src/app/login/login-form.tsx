@@ -4,6 +4,7 @@ import { Info } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useActionState } from 'react';
 import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
 import { SubmitButton } from '@/components/forms/submit-button';
 import { Input } from '@/components/ui/input';
 import { idleState } from '@/lib/actions';
@@ -26,12 +27,14 @@ export function LoginForm({ imported }: { imported: boolean }) {
           <span>{state.message}</span>
         </p>
       ) : null}
-      <FormField id="email" label={t('email')}>
-        <Input id="email" name="email" type="email" required autoComplete="email" aria-invalid={invalid || undefined} />
-      </FormField>
-      <FormField id="password" label={t('password')}>
-        <Input id="password" name="password" type="password" required autoComplete="current-password" aria-invalid={invalid || undefined} />
-      </FormField>
+      <FormGrid>
+        <FormField id="email" label={t('email')}>
+          <Input id="email" name="email" type="email" required autoComplete="email" aria-invalid={invalid || undefined} />
+        </FormField>
+        <FormField id="password" label={t('password')}>
+          <Input id="password" name="password" type="password" required autoComplete="current-password" aria-invalid={invalid || undefined} />
+        </FormField>
+      </FormGrid>
       <SubmitButton className="h-10 w-full">{t('submit')}</SubmitButton>
     </form>
   );

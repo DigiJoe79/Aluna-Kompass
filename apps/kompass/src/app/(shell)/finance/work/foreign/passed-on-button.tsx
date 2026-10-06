@@ -21,7 +21,7 @@ export function PassedOnButton({ holder, amount }: { holder: string; amount: str
         {t('passedOn')}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="bg-surface shadow-md">
+        <DialogContent size="sm" className="bg-surface shadow-md">
           <DialogTitle className="font-heading text-[19px]">{t('passedOnTitle')}</DialogTitle>
           <DialogDescription className="text-[14px] text-ink-2">{t('passedOnText', { holder, amount })}</DialogDescription>
           <DialogFooter>

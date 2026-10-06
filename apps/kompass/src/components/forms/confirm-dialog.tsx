@@ -1,10 +1,10 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
-import { useTransition, type ReactNode } from 'react';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { useEffect, useState, type ReactNode } from 'react';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import type { ActionState } from '@/lib/actions';
 
 export function ConfirmDialog({
@@ -30,29 +30,38 @@ export function ConfirmDialog({
   action: () => Promise<ActionState>;
   children?: ReactNode;
 }) {
-  const t = useTranslations('common');
-  const [pending, start] = useTransition();
+  const feedback = useActionFeedback();
+  const [pending, setPending] = useState(false);
+  const { reset } = feedback;
+  // Jedes Öffnen beginnt ohne die Ablehnung vom letzten Mal.
+  useEffect(() => {
+    if (!open) reset();
+  }, [open, reset]);
+
+  const close = () => {
+    reset();
+    onOpenChange(false);
+  };
+
+  // Eine Ablehnung hält den Dialog offen und steht im Dialog; nur Erfolg schließt. Netz: Toast mit „Erneut versuchen“, Dialog offen.
+  const confirm = async () => {
+    setPending(true);
+    try {
+      const result = await feedback.run(action, { retry: () => void confirm() });
+      if (result.status === 'success') onOpenChange(false);
+    } finally {
+      setPending(false);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent role={role} className="bg-surface shadow-md">
+    <Dialog open={open} onOpenChange={(next) => (next ? onOpenChange(true) : close())}>
+      <DialogContent role={role} size="sm" className="bg-surface shadow-md">
         <DialogTitle className="font-heading text-[19px]">{title}</DialogTitle>
         <DialogDescription className="text-[14px] text-ink-2">{description}</DialogDescription>
         {children}
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>{t('cancel')}</Button>
-          <Button
-            variant={destructive ? 'destructive' : 'default'}
-            disabled={pending || confirmDisabled}
-            onClick={() => start(async () => {
-              const state = await action();
-              if (state.status === 'error') toast.error(state.message);
-              else if (state.status === 'success' && state.message) toast.success(state.message);
-              onOpenChange(false);
-            })}
-          >
-            {confirmLabel}
-          </Button>
-        </DialogFooter>
+        <RefusalNotice action state={feedback.state} />
+        <FormActionBar placement="dialog" mode="run" cancel={close} onSave={() => void confirm()} pending={pending} saveDisabled={confirmDisabled} saveLabel={confirmLabel} destructive={destructive} />
       </DialogContent>
     </Dialog>
   );

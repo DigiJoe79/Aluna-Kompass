@@ -18,6 +18,8 @@ export function FileDropzone({
   required,
   initial,
   onFile,
+  accept,
+  hint,
 }: {
   id: string;
   name: string;
@@ -25,6 +27,13 @@ export function FileDropzone({
   /** Eine Datei, die schon vor dem Öffnen des Formulars gezogen wurde. */
   initial?: File | null;
   onFile?: (file: File | null) => void;
+  /**
+   * Erlaubte Dateitypen wie am `<input accept>`. Ohne Angabe nur PDF, und die Fläche spricht von PDF und
+   * Texterkennung wie in der Akte; mit Angabe spricht sie von „Datei“ und nennt den Typ aus der Endung.
+   */
+  accept?: string;
+  /** Der Hinweis unter der Fläche; ohne Angabe der der Akte (PDF, Größe). */
+  hint?: string;
 }) {
   const t = useTranslations('dms');
   const format = useFormatter();
@@ -45,6 +54,10 @@ export function FileDropzone({
     onFile?.(next);
   };
 
+  const pdfOnly = accept === undefined;
+  /** Der Typ aus der Endung, groß geschrieben („CSV“); ohne Endung „PDF“ wie bisher. */
+  const kind = (f: File) => (pdfOnly ? 'PDF' : (f.name.match(/\.([a-z0-9]{1,5})$/i)?.[1] ?? '').toUpperCase() || 'PDF');
+
   const size = (bytes: number) =>
     bytes >= 1024 * 1024
       ? `${format.number(bytes / (1024 * 1024), { maximumFractionDigits: 1 })} MB`
@@ -57,7 +70,7 @@ export function FileDropzone({
         id={id}
         name={name}
         type="file"
-        accept="application/pdf"
+        accept={accept ?? 'application/pdf'}
         required={required}
         className="sr-only"
         onChange={(e) => take(e.target.files?.[0] ?? null)}
@@ -65,11 +78,11 @@ export function FileDropzone({
 
       {file ? (
         <div className="flex items-center gap-3.5 rounded-md border border-line-strong bg-surface p-3">
-          <FilePlaceholder />
+          <FilePlaceholder label={kind(file)} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-ink">{file.name}</p>
-            <p className="font-mono text-[12px] text-muted-ink">{t('upload.meta', { size: size(file.size) })}</p>
-            <p className="text-[12px] text-ink-2">{t('upload.ocrPending')}</p>
+            <p className="font-mono text-[12px] text-muted-ink">{pdfOnly ? t('upload.meta', { size: size(file.size) }) : t('upload.metaOf', { kind: kind(file), size: size(file.size) })}</p>
+            {pdfOnly ? <p className="text-[12px] text-ink-2">{t('upload.ocrPending')}</p> : null}
           </div>
           <div className="flex shrink-0 gap-2">
             <Button
@@ -113,7 +126,7 @@ export function FileDropzone({
           )}
         >
           <Upload className="size-[26px] text-muted-ink" strokeWidth={1.7} aria-hidden />
-          <p className="text-sm font-semibold text-ink">{t('upload.dropTitle')}</p>
+          <p className="text-sm font-semibold text-ink">{pdfOnly ? t('upload.dropTitle') : t('upload.dropTitleAny')}</p>
           <p className="text-[13px] text-ink-2">
             {t.rich('upload.dropBrowse', {
               a: (chunks) => (
@@ -127,7 +140,7 @@ export function FileDropzone({
               ),
             })}
           </p>
-          <p className="text-[12px] text-muted-ink">{t('fileHint')}</p>
+          <p className="text-[12px] text-muted-ink">{hint ?? t('fileHint')}</p>
         </div>
       )}
     </>
@@ -135,7 +148,7 @@ export function FileDropzone({
 }
 
 /** Ein Blatt Papier als Strichschema — die erste Seite zu rendern kommt später. */
-function FilePlaceholder() {
+function FilePlaceholder({ label }: { label: string }) {
   return (
     <div
       aria-hidden
@@ -146,7 +159,7 @@ function FilePlaceholder() {
         <span className="block h-0.5 bg-line-strong" />
         <span className="block h-0.5 w-3/5 bg-line-strong" />
       </div>
-      <span className="font-mono text-[8px] text-muted-ink">PDF</span>
+      <span className="font-mono text-[8px] text-muted-ink">{label}</span>
     </div>
   );
 }

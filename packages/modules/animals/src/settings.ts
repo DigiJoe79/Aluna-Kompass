@@ -18,8 +18,25 @@ export const photoFrameSchema = z.object({
 });
 export type PhotoFrame = z.infer<typeof photoFrameSchema>;
 
+/**
+ * Die Adresse des Online-Profils eines Tiers, mit `{slug}` als Platzhalter.
+ * Den Pfad legt das Template des Vereins fest, nicht Kompass (Spec
+ * 2026-10-05, § 5); leer heißt: kein QR-Code, keine Adresse in der Maske.
+ */
+export const PROFILE_URL_KEY = 'animals.profileUrl';
+export const profileUrlSchema = z.union([
+  z.literal(''),
+  z
+    .string()
+    .trim()
+    .max(300)
+    .regex(/^https?:\/\/\S+$/)
+    .refine((value) => value.includes('{slug}'), { message: 'profileUrlNeedsSlug' }),
+]);
+
 export const ANIMALS_SETTINGS: SettingDefinition[] = [
   { key: PHOTO_FRAME_KEY, schema: photoFrameSchema, default: { aspect: '4:3', focusX: 50, focusY: 50 } satisfies PhotoFrame },
+  { key: PROFILE_URL_KEY, schema: profileUrlSchema, default: '' },
 ];
 
 /** Der Ausschnitt als CSS für ein Bild mit `object-fit: cover`. */

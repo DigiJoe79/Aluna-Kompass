@@ -59,7 +59,7 @@ test.describe('finance setup', () => {
       await dialog.getByRole('button', { name: 'Speichern' }).click();
       await expect(dialog).toBeHidden();
     }
-    await expect(page.getByText(/Inzwischen wurde dieser Eintrag/)).toHaveCount(0);
+    await expect(page.getByText(/wurde inzwischen geändert/)).toHaveCount(0);
   });
 
   test('Zwecke-Panel übernimmt die Version aus der Antwort: speichern und gleich als erfüllt markieren (Befund 43)', async ({ page }) => {
@@ -78,7 +78,7 @@ test.describe('finance setup', () => {
     }
     await row.getByRole('button', { name: 'Erfüllt' }).click();
     await expect(row.getByText('Erfüllt', { exact: true })).toBeVisible();
-    await expect(page.getByText(/Inzwischen wurde dieser Eintrag/)).toHaveCount(0);
+    await expect(page.getByText(/wurde inzwischen geändert/)).toHaveCount(0);
   });
 
   test('Geschäftsjahre-Panel übernimmt die Version aus der Antwort: zweimal speichern vor dem Refresh (Befund 43)', async ({ page }) => {
@@ -97,7 +97,7 @@ test.describe('finance setup', () => {
       await dialog.getByRole('button', { name: 'Speichern' }).click();
       await expect(dialog).toBeHidden();
     }
-    await expect(page.getByText(/Inzwischen wurde dieser Eintrag/)).toHaveCount(0);
+    await expect(page.getByText(/wurde inzwischen geändert/)).toHaveCount(0);
   });
 
   test.beforeEach(async ({ page }) => {
@@ -111,6 +111,37 @@ test.describe('finance setup', () => {
     await expect(sections.getByRole('link', { name: 'Finanzen' })).toBeVisible();
     await sections.getByRole('link', { name: 'Finanzen' }).click();
     await expect(page).toHaveURL('/admin/finance');
+  });
+
+  test('der Bereich steht im Reiter, nicht noch einmal als Überschrift darunter', async ({ page }) => {
+    for (const [panel, name] of [
+      ['accounts', 'Bankkonten und Kassen'],
+      ['categories', 'Kategorien'],
+      ['purposes', 'Zwecke'],
+      ['fiscalYears', 'Geschäftsjahre'],
+      ['datedValues', 'Sätze und Grenzen'],
+      ['tax', 'Steuerliches'],
+      ['permissions', 'Wer darf was'],
+    ] as const) {
+      await page.goto(`/admin/finance?panel=${panel}`);
+      await expect(page.getByRole('navigation', { name: 'Bereiche der Finanzen' }).getByRole('link', { name })).toHaveAttribute('aria-current', 'page');
+      await expect(page.getByRole('heading', { name, exact: true })).toHaveCount(0);
+    }
+  });
+
+  test('Telefon: der gewählte Reiter ganz rechts ist im Blick, die Seite scrollt nicht waagrecht', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/admin/finance?panel=permissions');
+    const nav = page.getByRole('navigation', { name: 'Bereiche der Finanzen' });
+    const link = nav.getByRole('link', { name: 'Wer darf was' });
+    await expect(link).toHaveAttribute('aria-current', 'page');
+    await expect
+      .poll(async () => {
+        const [n, l] = await Promise.all([nav.boundingBox(), link.boundingBox()]);
+        return n !== null && l !== null && l.x >= n.x - 1 && l.x + l.width <= n.x + n.width + 1;
+      })
+      .toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   });
 
   test('die Checkliste zeigt erledigte und offene Schritte, und was auf etwas wartet', async ({ page }) => {
@@ -402,7 +433,7 @@ test.describe('finance setup', () => {
     const editDialog = page.getByRole('dialog');
     await editDialog.getByLabel('Bezeichnung').fill('Anders');
     await editDialog.getByRole('button', { name: 'Speichern' }).click();
-    await expect(page.getByTestId('fiscal-year-designation-error')).toContainText('Bezeichnung');
+    await expect(page.getByRole('dialog').getByRole('alert')).toContainText('Bezeichnung');
   });
 
   test('ein Rumpfjahr bekommt nur das Jahr des Beginns als Bezeichnung, mit dem Kennzeichen daneben (Befund 15)', async ({ page }) => {
@@ -423,7 +454,7 @@ test.describe('finance setup', () => {
     await page.goto('/admin/finance?panel=tax');
     const row = page.getByTestId('mcp-human-only-row');
     await expect(row).toBeVisible();
-    await expect(row.getByRole('checkbox', { name: 'Darf ein Agent festschreiben?' })).not.toBeChecked();
+    await expect(row.getByRole('switch', { name: 'Darf ein Agent festschreiben?' })).not.toBeChecked();
   });
 
   test('die Anspruchsgrundlage für Aufwandsspenden steht nur bei eingeschaltetem Schalter und hakt den Schritt der Checkliste ab', async ({ page }) => {
@@ -431,14 +462,15 @@ test.describe('finance setup', () => {
     const panel = page.getByTestId('tax-panel');
     await expect(panel.getByLabel('Anspruchsgrundlage für Aufwandsspenden')).toHaveCount(0);
     // Der Schalter ist gesteuert: Er steht erst nach dem Speichern um — also klicken und warten.
-    await panel.getByRole('checkbox', { name: 'Werden Aufwandsspenden angeboten?' }).click();
-    await expect(panel.getByRole('checkbox', { name: 'Werden Aufwandsspenden angeboten?' })).toBeChecked();
+    await panel.getByRole('switch', { name: 'Werden Aufwandsspenden angeboten?' }).click();
+    await expect(panel.getByRole('switch', { name: 'Werden Aufwandsspenden angeboten?' })).toBeChecked();
     const field = panel.getByLabel('Anspruchsgrundlage für Aufwandsspenden');
     await expect(field).toBeVisible();
     await expect(panel.getByTestId('waiver-basis')).toContainText('Vereinbarung vom … / Satzung § …');
     await field.fill('Satzung § 9 Abs. 2');
-    // Befund J: ohne „Gilt seit“ bleibt Speichern gesperrt.
-    await expect(panel.getByTestId('waiver-basis').getByRole('button', { name: 'Speichern' })).toBeDisabled();
+    // Befund J: ohne „Gilt seit“ nennt der Dienst das Feld; der Knopf ist nie ausgegraut (K9-Befund 10, MUSTER § B).
+    await panel.getByTestId('waiver-basis').getByRole('button', { name: 'Speichern' }).click();
+    await expect(panel.getByLabel('Gilt seit')).toHaveAttribute('aria-invalid', 'true');
     await panel.getByLabel('Gilt seit').fill('2026-01-02');
     await panel.getByTestId('waiver-basis').getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByText('Anspruchsgrundlage gespeichert.')).toBeVisible();
@@ -448,6 +480,50 @@ test.describe('finance setup', () => {
     await page.goto('/admin/finance?panel=tax');
     await expect(page.getByTestId('tax-panel').getByLabel('Anspruchsgrundlage für Aufwandsspenden')).toHaveValue('Satzung § 9 Abs. 2');
     await expect(page.getByTestId('tax-panel').getByLabel('Gilt seit')).toHaveValue('2026-01-02');
+  });
+
+  test('Barkasse und Journal ohne Einrichtung: Seitenkopf, leerer Zustand und der Weg zum Einrichten (K9-Befund 6)', async ({ page }) => {
+    await page.goto('/finance/cash');
+    await expect(page.getByRole('heading', { name: 'Barkasse', level: 2 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Noch keine Barkasse' })).toBeVisible();
+    // Kein gesperrter Schritt, sondern noch nichts da (MUSTER Seitenrahmen).
+    await expect(page.getByText('nicht möglich', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Barkasse einrichten' })).toHaveAttribute('href', '/admin/finance?panel=accounts');
+
+    // Dasselbe im Journal: ohne Geschäftsjahr und Konto ein leerer Zustand mit dem Weg zur Checkliste.
+    await page.goto('/finance/entries');
+    await expect(page.getByRole('heading', { name: 'Journal', level: 2 })).toBeVisible();
+    await expect(page.getByText('nicht möglich', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Finanzen einrichten' })).toHaveAttribute('href', '/admin/finance?panel=checklist');
+  });
+
+  test('Freigaben ohne wartende Anträge: nur der leere Zustand unter dem Seitenkopf (K9-Befund 7)', async ({ page }) => {
+    await page.goto('/finance/approvals');
+    await expect(page.getByRole('heading', { name: 'Freigaben', level: 2 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Nichts wartet auf Ihre Freigabe' })).toBeVisible();
+    // Keine leere Schlange mit Überschrift und keine leere Detailspalte daneben.
+    await expect(page.getByTestId('approval-queue')).toHaveCount(0);
+    await expect(page.getByTestId('approval-detail')).toHaveCount(0);
+  });
+
+  test('Pauschalen an Vorstandsmitglieder: eigener Abschnitt mit Speicherleiste, „Gilt ab“ meldet der Dienst am Feld (K9-Befund 2/3)', async ({ page }) => {
+    await page.goto('/admin/finance?panel=tax');
+    const panel = page.getByTestId('tax-panel');
+    await expect(panel.getByRole('heading', { name: 'Pauschalen an Vorstandsmitglieder', level: 3 })).toBeVisible();
+    const form = panel.getByTestId('board-remuneration');
+    await form.getByLabel('Pauschalen an Vorstandsmitglieder sind vorgesehen').check();
+    await form.getByLabel('Satzungsfundstelle').fill('Satzung § 7 Abs. 3');
+    // Speichern ist nie ausgegraut (MUSTER § B); das fehlende Datum nennt der Dienst am Feld.
+    const save = form.getByTestId('board-remuneration-save');
+    await expect(save).toBeEnabled();
+    await save.click();
+    await expect(form.getByText('Pflichtfeld.')).toBeVisible();
+    await form.getByLabel('Gilt ab').fill('2026-01-01');
+    await save.click();
+    await expect(form.getByText('Pflichtfeld.')).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByTestId('board-remuneration').getByLabel('Satzungsfundstelle')).toHaveValue('Satzung § 7 Abs. 3');
+    await expect(page.getByTestId('board-remuneration').getByLabel('Gilt ab')).toHaveValue('2026-01-01');
   });
 
   test('einen Satz ab Stichtag überschreiben und wieder zurücknehmen', async ({ page }) => {
@@ -475,6 +551,9 @@ test.describe('finance setup', () => {
     const row = page.getByTestId('tax-limit-statement-suffices');
     try {
       await page.goto('/admin/finance?panel=tax');
+      // K9-Befund 10: ohne Änderung meldet die Zeile „Nichts geändert“ wie die Speicherleiste, statt ausgegraut zu sein.
+      await row.getByRole('button', { name: 'Speichern' }).click();
+      await expect(row.getByText('Nichts geändert')).toBeVisible();
       await row.getByLabel('Bis zu welchem Betrag genügt der Kontoauszug als Beleg?').fill('50,00');
       await row.getByRole('button', { name: 'Speichern' }).click();
       await expect(page.getByText('Grenze gespeichert.')).toBeVisible();

@@ -1,3 +1,4 @@
+import { panelHref } from '@/components/panel-nav';
 /** Ein Ausweg aus einer Ablehnung (Finanz-Spec 5.4: „Fehlerbilder mit Grund **und** Abhilfe“). */
 export type RemedyAction = 'restIntoLastRow' | 'focusDate' | 'focusAccount' | 'confirmFormatChange' | 'openCsvAssistant' | 'reloadWork';
 export type Remedy = { labelKey: string } & ({ kind: 'action'; action: RemedyAction } | { kind: 'link'; href: string });
@@ -26,7 +27,7 @@ const REMEDIES: Record<string, Remedy[]> = {
   // wird in der Einrichtung wieder aktiv (oder in der Maske ersetzt).
   suggestionStale: [{ kind: 'action', action: 'reloadWork', labelKey: 'finance.remedy.reloadWork' }],
   transactionAlreadyBooked: [{ kind: 'link', href: '/finance/entries', labelKey: 'finance.remedy.openJournal' }],
-  categoryInactive: [{ kind: 'link', href: '/admin/finance?panel=categories', labelKey: 'finance.remedy.setUpCategories' }],
+  categoryInactive: [{ kind: 'link', href: panelHref('/admin/finance', 'categories'), labelKey: 'finance.remedy.setUpCategories' }],
   // F6a Task 7: eine gültige Bestätigung sperrt Rücknahme und Kontaktkorrektur — zuerst sie zurücknehmen.
   entryLockedByConfirmation: [{ kind: 'link', href: '/finance/donations', labelKey: 'finance.remedy.openConfirmations' }],
   contactLockedByConfirmation: [{ kind: 'link', href: '/finance/donations', labelKey: 'finance.remedy.openConfirmations' }],

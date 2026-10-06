@@ -4,12 +4,13 @@ import { defaultTypeKey, getDocumentRecord, listDocumentFolders, listDocumentTyp
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { ForbiddenCard } from '@/components/forbidden-card';
+import { Page } from '@/components/page';
 import { requireSession } from '@/lib/request-context';
 import { DraftScreen } from '../../new/draft-screen';
 
 export default async function EditDraftPage(props: { params: Promise<{ id: string }> }) {
   const { deps, ctx } = await requireSession();
-  if (requirePermission(ctx, 'dms.create')) return <ForbiddenCard permission="dms.create" />;
+  if (requirePermission(ctx, 'dms.create')) return <Page width="full"><ForbiddenCard permission="dms.create" /></Page>;
 
   const { id } = await props.params;
   const result = await getDocumentRecord(deps, ctx, id);
@@ -37,27 +38,30 @@ export default async function EditDraftPage(props: { params: Promise<{ id: strin
   const recipientRes = recipientLink ? await getContact(deps, ctx, recipientLink.entityId) : null;
   const recipient = recipientRes?.ok ? { id: recipientRes.value.id, name: displayName(recipientRes.value) } : null;
 
+  // Papiervorschau neben der Maske: eine Arbeitsfläche, darum `full` (Handoff Konsistenz § 8c).
   return (
-    <DraftScreen
-      title={t('editDraft')}
-      description={t('editDraftDescription')}
-      back={{ href: `/dms/${id}`, label: t('backToDocument') }}
-      types={types.map((type) => ({ key: type.key, label: type.label }))}
-      folders={folders}
-      canCreateContact={hasPermission(ctx, 'contacts.manage')}
-      snippets={snippets}
-      today={todayIn(deps)}
-      defaultTypeKey={defaultTypeKey(deps, 'outgoing')}
-      draft={{
-        id: doc.id,
-        subject: doc.subject,
-        body: doc.draftBody ?? '',
-        typeKey: doc.typeKey,
-        documentDate: doc.documentDate,
-        folder: doc.folder,
-        recipient,
-        savedAt: doc.updatedAt,
-      }}
-    />
+    <Page width="full">
+      <DraftScreen
+        title={t('editDraft')}
+        description={t('editDraftDescription')}
+        back={{ href: `/dms/${id}`, label: t('backToDocument') }}
+        types={types.map((type) => ({ key: type.key, label: type.label }))}
+        folders={folders}
+        canCreateContact={hasPermission(ctx, 'contacts.manage')}
+        snippets={snippets}
+        today={todayIn(deps)}
+        defaultTypeKey={defaultTypeKey(deps, 'outgoing')}
+        draft={{
+          id: doc.id,
+          subject: doc.subject,
+          body: doc.draftBody ?? '',
+          typeKey: doc.typeKey,
+          documentDate: doc.documentDate,
+          folder: doc.folder,
+          recipient,
+          savedAt: doc.updatedAt,
+        }}
+      />
+    </Page>
   );
 }

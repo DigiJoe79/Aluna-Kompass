@@ -60,10 +60,13 @@ export function ShellFrame({ organization, logoUrl, groups, build, version, user
         <div className="flex min-h-0 flex-1">
           {drawer ? (
             <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-              <SheetContent side="left" className="w-[280px] gap-0 overflow-y-auto p-0 pt-10 shadow-md">
-                <SheetTitle className="sr-only">{t('nav.aria')}</SheetTitle>
-                <Rail entries={rail} active={active} variant="list" onClose={closeDrawer} />
-                <SectionNav sections={sections} activeHref={activeHref} variant="list" onClose={closeDrawer} />
+              <SheetContent side="left" size="sm" className="gap-0 overflow-y-auto shadow-md">
+                {/* Das Polster im inneren Behälter wie bei jedem Seitenfenster; die Listen bringen ihre Zeilenränder selbst mit, oben Platz für das Schließen. */}
+                <div className="pt-10">
+                  <SheetTitle className="sr-only">{t('nav.aria')}</SheetTitle>
+                  <Rail entries={rail} active={active} variant="list" onClose={closeDrawer} />
+                  <SectionNav sections={sections} activeHref={activeHref} variant="list" onClose={closeDrawer} />
+                </div>
               </SheetContent>
             </Sheet>
           ) : (

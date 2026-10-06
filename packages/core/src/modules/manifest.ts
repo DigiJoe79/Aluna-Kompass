@@ -439,6 +439,13 @@ export interface ModuleManifest {
    */
   canDisable?: (deps: Deps) => string | null;
   /**
+   * Sprachen, die dieses Modul braucht, solange es eingeschaltet ist (die Webseite: die
+   * Sprachen des aktiven Templates). Richtung Kern → Modul wie `canDisable`: Der Kern
+   * fragt nur eingeschaltete Module, bevor eine Sprache entfernt wird, und lehnt mit
+   * `localeRequired` ab, wenn eines sie nennt. Leer, wenn das Modul nichts verlangt.
+   */
+  requiredLocales?: (deps: Deps) => readonly string[];
+  /**
    * Was von den Entitäten dieses Moduls gelöscht werden darf, und warum
    * (nicht). Prinzip 3 als Daten: `deletionPolicy(registry)` bündelt Kern und
    * Module, `defineModule` prüft jede Regel, die Registry lehnt eine Entität

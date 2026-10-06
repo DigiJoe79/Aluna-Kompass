@@ -2,15 +2,16 @@
 
 import { useTranslations } from 'next-intl';
 import { useEffect, useState, useTransition } from 'react';
-import { toast } from 'sonner';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { BlockedState } from '@/components/blocked-state';
-import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import type { ActionState } from '@/lib/actions';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { createContactFromTransactionAction } from './actions';
+import { FormField } from '@/components/forms/form-field';
+import { FormCell, FormGrid } from '@/components/forms/form-grid';
 
 /**
  * „Kontakt anlegen“ aus dem Kontoumsatz (F5 Task 8, Annahme 2): Person oder
@@ -42,7 +43,8 @@ export function ContactDialog({
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [name, setName] = useState(counterpartyName ?? '');
-  const [refusal, setRefusal] = useState<Extract<ActionState, { status: 'error' }> | null>(null);
+  const feedback = useActionFeedback();
+  const resetFeedback = feedback.reset;
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -51,8 +53,8 @@ export function ContactDialog({
     setFirstName('');
     setLastName('');
     setName(counterpartyName ?? '');
-    setRefusal(null);
-  }, [open, counterpartyName]);
+    resetFeedback();
+  }, [open, counterpartyName, resetFeedback]);
 
   const save = () =>
     startTransition(async () => {
@@ -60,71 +62,61 @@ export function ContactDialog({
         kind === 'organization'
           ? { rawTransactionId, kind, name: name.trim() || undefined }
           : { rawTransactionId, kind, firstName: firstName.trim() || undefined, lastName: lastName.trim() || undefined };
-      const result = await createContactFromTransactionAction(input);
-      if (result.status === 'error') {
-        setRefusal(result);
-        return;
-      }
-      if (result.status === 'success' && result.message) toast.success(result.message);
+      const result = await feedback.run(() => createContactFromTransactionAction(input), { retry: save });
+      if (result.status !== 'success') return;
       onOpenChange(false);
       onDone();
     });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-surface shadow-md sm:max-w-[480px]">
+      <DialogContent size="md" className="bg-surface shadow-md">
         <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
         {canCreate ? (
           <div className="space-y-3 text-[13px]">
             <p className="text-ink-2">{t('intro')}</p>
-            <div role="radiogroup" aria-label={t('kind')} className="flex gap-4">
-              {(['person', 'organization'] as const).map((k) => (
-                <label key={k} className="flex items-center gap-2">
-                  <input type="radio" name="contact-kind" value={k} checked={kind === k} onChange={() => setKind(k)} className="size-4" />
-                  <span>{t(k)}</span>
-                </label>
-              ))}
-            </div>
-            {kind === 'organization' ? (
-              <div className="space-y-1">
-                <Label htmlFor="contact-org-name" required>
-                  {t('name')}
-                </Label>
-                <Input id="contact-org-name" value={name} onChange={(e) => setName(e.target.value)} />
-              </div>
-            ) : (
-              <>
-                {counterpartyName ? <p className="text-ink-2">{t('fromCounterparty', { name: counterpartyName })}</p> : null}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label htmlFor="contact-first-name">{t('firstName')}</Label>
+            {kind === 'person' && counterpartyName ? <p className="text-ink-2">{t('fromCounterparty', { name: counterpartyName })}</p> : null}
+            <FormGrid>
+              <FormCell as={RadioGroup} aria-label={t('kind')} value={kind} onValueChange={(value) => setKind(value as 'person' | 'organization')} size="m" className="flex-row gap-4">
+                {(['person', 'organization'] as const).map((k) => (
+                  <label key={k} className="flex items-center gap-2">
+                    <RadioGroupItem value={k} />
+                    <span>{t(k)}</span>
+                  </label>
+                ))}
+              </FormCell>
+              {kind === 'organization' ? (
+                <FormField id="contact-org-name" label={t('name')} required>
+                  <Input id="contact-org-name" value={name} onChange={(e) => setName(e.target.value)} />
+                </FormField>
+              ) : (
+                <>
+                  <FormField id="contact-first-name" label={t('firstName')}>
                     <Input id="contact-first-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="contact-last-name">{t('lastName')}</Label>
+                  </FormField>
+                  <FormField id="contact-last-name" label={t('lastName')}>
                     <Input id="contact-last-name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
-                  </div>
-                </div>
-                <p className="text-[12px] text-muted-ink">{t('nameHint')}</p>
-              </>
-            )}
-            {refusal ? <Notice level="refuse">{refusal.detail ?? refusal.message}</Notice> : null}
+                  </FormField>
+                  <FormCell as="p" size="full" className="text-[12px] text-muted-ink">{t('nameHint')}</FormCell>
+                </>
+              )}
+            </FormGrid>
           </div>
         ) : (
           <BlockedState step={t('title')} title={t('blockedTitle')}>
             {grantNames.length > 0 ? t('blockedTextWithNames', { names: grantNames.join(', ') }) : t('blockedText')}
           </BlockedState>
         )}
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-            {tCommon('cancel')}
-          </Button>
-          {canCreate ? (
-            <Button type="button" onClick={save} disabled={pending}>
-              {t('save')}
+        {canCreate ? (
+          <FormActionBar placement="dialog" cancel={() => onOpenChange(false)} pending={pending} saveLabel={t('save')} onSave={save} state={feedback.state} />
+        ) : (
+          // Ohne Recht gibt es nichts zu speichern: nur „Abbrechen“.
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              {tCommon('cancel')}
             </Button>
-          ) : null}
-        </DialogFooter>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -6,13 +6,15 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useDateFormat } from '@/components/date-format-provider';
 import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { ActionState } from '@/lib/actions';
 import { formatEuro } from '@/lib/finance/amount';
+import { FormField } from '@/components/forms/form-field';
 
 const SUM_KINDS = ['donation', 'membershipFee', 'inKindDonation', 'expenseWaiver'] as const;
 
@@ -43,14 +45,17 @@ export function BookTable({
   const { date } = useDateFormat();
   const router = useRouter();
   const [downloading, setDownloading] = useState(false);
+  const [refusal, setRefusal] = useState<ActionState>({ status: 'idle' });
+  const tCommon = useTranslations('common');
 
   const download = async () => {
     setDownloading(true);
+    setRefusal({ status: 'idle' });
     try {
       const response = await fetch('/finance/donations/book/simplified');
       if (!response.ok) {
         const body = response.status === 409 ? ((await response.json()) as { message?: string }) : null;
-        toast.error(body?.message ?? t('simplified.failed'));
+        setRefusal({ status: 'error', message: body?.message ?? t('simplified.failed'), fieldErrors: {} });
         return;
       }
       const disposition = response.headers.get('content-disposition') ?? '';
@@ -63,6 +68,9 @@ export function BookTable({
       anchor.click();
       anchor.remove();
       setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch {
+      // Der Server war nicht zu erreichen: keine Ablehnung, sondern ein Toast zum Wiederholen.
+      toast.error(tCommon('network'), { duration: Infinity, closeButton: true, action: { label: tCommon('retry'), onClick: () => void download() } });
     } finally {
       setDownloading(false);
     }
@@ -71,15 +79,15 @@ export function BookTable({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="w-32 space-y-1.5">
-          <Label htmlFor="book-year">{t('year')}</Label>
+        <FormField id="book-year" label={t('year')} className="w-32">
           <Select id="book-year" value={String(year)} onChange={(e) => router.push(`/finance/donations/book?year=${e.target.value}`)}>
             {years.map((y) => (
               <option key={y} value={String(y)}>{y}</option>
             ))}
           </Select>
-        </div>
-        <div className="max-w-[360px] space-y-1">
+        </FormField>
+        <div className="max-w-prose space-y-1">
+          <RefusalNotice action state={refusal} />
           <Button type="button" variant="outline" disabled={downloading} onClick={() => void download()}>
             {t('simplified.action')}
           </Button>
@@ -117,24 +125,24 @@ export function BookTable({
         <div className="overflow-hidden rounded-md border border-line bg-surface">
           <Table>
             <TableHeader>
-              <TableRow className="h-9">
-                <TableHead className="px-4">{t('columns.date')}</TableHead>
-                <TableHead className="px-4">{t('columns.contact')}</TableHead>
-                <TableHead className="px-4">{t('columns.kind')}</TableHead>
-                <TableHead className="px-4 text-right">{t('columns.amount')}</TableHead>
-                <TableHead className="px-4">{t('columns.purpose')}</TableHead>
-                <TableHead className="px-4">{t('columns.confirmed')}</TableHead>
+              <TableRow>
+                <TableHead>{t('columns.date')}</TableHead>
+                <TableHead>{t('columns.contact')}</TableHead>
+                <TableHead>{t('columns.kind')}</TableHead>
+                <TableHead className="text-right">{t('columns.amount')}</TableHead>
+                <TableHead>{t('columns.purpose')}</TableHead>
+                <TableHead>{t('columns.confirmed')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((row) => (
-                <TableRow key={row.lineId} data-testid="book-row" className="h-row border-b border-line-2">
-                  <TableCell className="px-4">{date(row.entryDate)}</TableCell>
-                  <TableCell className="px-4">{row.contactName ?? t('anonymous')}</TableCell>
-                  <TableCell className="px-4">{t(`sums.${row.kind}`)}</TableCell>
-                  <TableCell className="px-4 text-right font-mono tabular-nums">{formatEuro(row.amountCents)}</TableCell>
-                  <TableCell className="px-4">{row.purposeName ?? t('noPurpose')}</TableCell>
-                  <TableCell data-testid="book-confirmed" className="px-4">
+                <TableRow key={row.lineId} data-testid="book-row">
+                  <TableCell>{date(row.entryDate)}</TableCell>
+                  <TableCell>{row.contactName ?? t('anonymous')}</TableCell>
+                  <TableCell>{t(`sums.${row.kind}`)}</TableCell>
+                  <TableCell className="text-right font-mono tabular-nums">{formatEuro(row.amountCents)}</TableCell>
+                  <TableCell>{row.purposeName ?? t('noPurpose')}</TableCell>
+                  <TableCell data-testid="book-confirmed">
                     {row.confirmation ? (
                       <span className="inline-flex items-center gap-1">
                         <Link href={`/finance/donations?confirmation=${row.confirmation.id}`} className="font-mono text-link underline">

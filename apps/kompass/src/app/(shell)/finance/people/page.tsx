@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { BlockedState } from '@/components/blocked-state';
 import { Notice } from '@/components/notice';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import type { DateFormatMode } from '@/lib/dates';
 import { requireSession } from '@/lib/request-context';
@@ -24,12 +25,11 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
   if (!hasPermission(ctx, 'finance.read')) {
     const names = listUserNamesWithPermission(deps, 'roles.manage');
     return (
-      <div className="max-w-[1000px] space-y-4">
-        <PageHeader title={t('title')} description={t('intro')} />
+      <Page width="standard" header={<PageHeader title={t('title')} description={t('intro')} />}>
         <BlockedState step={t('title')} title={t('blocked.title')}>
           {names.length > 0 ? t('blocked.textWithNames', { names: names.join(', ') }) : t('blocked.text')}
         </BlockedState>
-      </div>
+      </Page>
     );
   }
 
@@ -58,56 +58,57 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
   const sameYear = !!fiscalYear && fiscalYear.startsOn === `${year}-01-01` && fiscalYear.endsOn === `${year}-12-31`;
 
   return (
-    <div className="max-w-[1000px] space-y-5">
-      <PageHeader title={t('pageTitle', { year })} description={t('intro')} />
-      {boardMembersMissing ? (
-        <div data-testid="people-board-missing">
-          <Notice level="hint" title={t('boardMissing.title')}>
-            {t('boardMissing.text')}{' '}
-            <Link href="/contacts" className="text-link underline">{t('boardMissing.link')}</Link>
-          </Notice>
-        </div>
-      ) : null}
-      <nav aria-label={t('yearChoice')} className="flex flex-wrap items-center gap-1.5" data-testid="people-year">
-        <span className="text-[13px] text-muted-ink">{t('yearChoice')}:</span>
-        {choices.map((y) => (
-          <Link
-            key={y}
-            href={`/finance/people?year=${y}`}
-            aria-current={y === year ? 'page' : undefined}
-            className={`rounded-sm px-2 py-1 font-mono text-[13px] ${y === year ? 'bg-surface-2 font-semibold text-ink' : 'text-ink-2 hover:bg-surface-2'}`}
-          >
-            {y}
-          </Link>
-        ))}
-      </nav>
-
-      <h2 className="font-heading text-[18px] text-ink" data-testid="people-allowances-heading">
-        {sameYear ? t('allowancesHeading') : t('allowancesHeadingCalendar', { year })}
-      </h2>
-      {overview.rows.length === 0 ? (
-        <p className="rounded-md border border-line bg-surface p-4 text-[14px] text-ink-2">{t('empty')}</p>
-      ) : (
-        <div className="grid gap-3 md:grid-cols-2">
-          {overview.rows.map((person) => (
-            <PersonCard key={person.contactId} person={person} year={year} warnAtPercent={warnAtPercent} />
+    <Page width="standard" header={<PageHeader title={t('pageTitle', { year })} description={t('intro')} />}>
+      <div className="space-y-5">
+        {boardMembersMissing ? (
+          <div data-testid="people-board-missing">
+            <Notice level="hint" title={t('boardMissing.title')}>
+              {t('boardMissing.text')}{' '}
+              <Link href="/contacts" className="text-link underline">{t('boardMissing.link')}</Link>
+            </Notice>
+          </div>
+        ) : null}
+        <nav aria-label={t('yearChoice')} className="flex flex-wrap items-center gap-1.5" data-testid="people-year">
+          <span className="text-[13px] text-muted-ink">{t('yearChoice')}:</span>
+          {choices.map((y) => (
+            <Link
+              key={y}
+              href={`/finance/people?year=${y}`}
+              aria-current={y === year ? 'page' : undefined}
+              className={`rounded-sm px-2 py-1 font-mono text-[13px] ${y === year ? 'bg-surface-2 font-semibold text-ink' : 'text-ink-2 hover:bg-surface-2'}`}
+            >
+              {y}
+            </Link>
           ))}
-        </div>
-      )}
-      {overview.linesWithoutPersonCount > 0 ? <p className="text-[13px] text-warning-ink" data-testid="people-without-person">{t('withoutPerson', { count: overview.linesWithoutPersonCount })}</p> : null}
+        </nav>
 
-      <section className="space-y-2">
-        <h2 className="font-heading text-[18px] text-ink" data-testid="people-related-heading">
-          {fiscalYear && !sameYear ? t('related.headingFiscal', { name: fiscalYear.designation }) : t('related.heading')}
+        <h2 className="font-heading text-[18px] text-ink" data-testid="people-allowances-heading">
+          {sameYear ? t('allowancesHeading') : t('allowancesHeadingCalendar', { year })}
         </h2>
-        {fiscalYear ? (
-          <>
-            <RelatedPartyTable rows={related} approverNames={approverNames} dateMode={dateMode} />
-          </>
+        {overview.rows.length === 0 ? (
+          <p className="rounded-md border border-line bg-surface p-4 text-[14px] text-ink-2">{t('empty')}</p>
         ) : (
-          <p className="text-[13px] text-muted-ink">{t('related.noFiscalYear')}</p>
+          <div className="grid gap-3 md:grid-cols-2">
+            {overview.rows.map((person) => (
+              <PersonCard key={person.contactId} person={person} year={year} warnAtPercent={warnAtPercent} />
+            ))}
+          </div>
         )}
-      </section>
-    </div>
+        {overview.linesWithoutPersonCount > 0 ? <p className="text-[13px] text-warning-ink" data-testid="people-without-person">{t('withoutPerson', { count: overview.linesWithoutPersonCount })}</p> : null}
+
+        <section className="space-y-2">
+          <h2 className="font-heading text-[18px] text-ink" data-testid="people-related-heading">
+            {fiscalYear && !sameYear ? t('related.headingFiscal', { name: fiscalYear.designation }) : t('related.heading')}
+          </h2>
+          {fiscalYear ? (
+            <>
+              <RelatedPartyTable rows={related} approverNames={approverNames} dateMode={dateMode} />
+            </>
+          ) : (
+            <p className="text-[13px] text-muted-ink">{t('related.noFiscalYear')}</p>
+          )}
+        </section>
+      </div>
+    </Page>
   );
 }

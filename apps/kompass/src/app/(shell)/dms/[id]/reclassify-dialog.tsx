@@ -6,14 +6,15 @@ import { useActionState, useEffect, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { useDateFormat } from '@/components/date-format-provider';
 import { ActionForm } from '@/components/forms/action-form';
-import { SubmitButton } from '@/components/forms/submit-button';
+import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { idleState } from '@/lib/actions';
 import { previewReclassificationAction, reclassifyDocumentAction } from '../actions';
+import { FormField } from '@/components/forms/form-field';
+import { FormCell, FormGrid } from '@/components/forms/form-grid';
 
 /**
  * Art, Betreff und Datum eines abgelegten Eingangs nachträglich ändern (Spec
@@ -46,8 +47,6 @@ export function ReclassifyDialog({
     if (state.status === 'success') {
       toast.success(state.message ?? '');
       setOpen(false);
-    } else if (state.status === 'error') {
-      toast.error(state.message);
     }
   }, [state]);
 
@@ -63,49 +62,44 @@ export function ReclassifyDialog({
         {t('open')}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="bg-surface shadow-md">
+        <DialogContent size="md" className="bg-surface shadow-md">
           <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
           <DialogDescription className="text-[14px] text-ink-2">{t('description')}</DialogDescription>
           <ActionForm action={action} state={state} className="flex flex-col gap-4">
             <input type="hidden" name="expectedVersion" value={doc.updatedAt} />
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="reclassify-type">{t('type')}</Label>
-              <Select id="reclassify-type" name="typeKey" value={typeKey} onChange={(e) => setTypeKey(e.target.value)}>
-                {types.map((type) => (
-                  <option key={type.key} value={type.key}>
-                    {type.label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="reclassify-subject">{t('subject')}</Label>
-              <Input id="reclassify-subject" name="subject" defaultValue={doc.subject} required maxLength={300} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="reclassify-date">{t('date')}</Label>
-              <Input id="reclassify-date" name="documentDate" type="date" value={documentDate} onChange={(e) => setDocumentDate(e.target.value)} required className="font-mono" />
-            </div>
-            {preview ? (
-              <div className="space-y-1 rounded-md bg-surface-2 p-3 text-[13px] text-ink-2" aria-live="polite">
-                <p>
-                  {preview.number.next
-                    ? t('newNumber', { next: preview.number.next, current: preview.number.current ?? '' })
-                    : preview.number.numberHidden
-                      ? t('numberOnFiling', { current: preview.number.current ?? '' })
-                      : t('sameNumber', { current: preview.number.current ?? '' })}
-                </p>
-                {retentionChanges ? (
-                  <p>{t('retentionChange', { current: retention(preview.retention.current), next: retention(preview.retention.next) })}</p>
-                ) : null}
-              </div>
-            ) : null}
-            <DialogFooter className="items-center">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-                {t('cancel')}
-              </Button>
-              <SubmitButton>{t('save')}</SubmitButton>
-            </DialogFooter>
+            <FormGrid>
+              <FormField id="reclassify-type" label={t('type')}>
+                <Select id="reclassify-type" name="typeKey" value={typeKey} onChange={(e) => setTypeKey(e.target.value)}>
+                  {types.map((type) => (
+                    <option key={type.key} value={type.key}>
+                      {type.label}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+              {/* Datum neben der Art: beide steuern die Vorschau darunter (Inventar § 3 C). */}
+              <FormField id="reclassify-date" label={t('date')} size="s">
+                <Input id="reclassify-date" name="documentDate" type="date" value={documentDate} onChange={(e) => setDocumentDate(e.target.value)} required className="font-mono" />
+              </FormField>
+              <FormField id="reclassify-subject" label={t('subject')}>
+                <Input id="reclassify-subject" name="subject" defaultValue={doc.subject} required maxLength={300} />
+              </FormField>
+              {preview ? (
+                <FormCell size="full" className="space-y-1 rounded-md bg-surface-2 p-3 text-[13px] text-ink-2" aria-live="polite">
+                  <p>
+                    {preview.number.next
+                      ? t('newNumber', { next: preview.number.next, current: preview.number.current ?? '' })
+                      : preview.number.numberHidden
+                        ? t('numberOnFiling', { current: preview.number.current ?? '' })
+                        : t('sameNumber', { current: preview.number.current ?? '' })}
+                  </p>
+                  {retentionChanges ? (
+                    <p>{t('retentionChange', { current: retention(preview.retention.current), next: retention(preview.retention.next) })}</p>
+                  ) : null}
+                </FormCell>
+              ) : null}
+            </FormGrid>
+            <FormActionBar placement="dialog" mode="create" cancel={() => setOpen(false)} saveLabel={t('save')} state={state} />
           </ActionForm>
         </DialogContent>
       </Dialog>

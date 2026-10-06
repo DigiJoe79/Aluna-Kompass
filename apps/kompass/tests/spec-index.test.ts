@@ -33,3 +33,47 @@ describe.runIf(existsSync(SPECS))('the spec index in docs/intern/README.md', () 
     expect(genannt.filter((name) => !specs.has(name))).toEqual([]);
   });
 });
+
+/**
+ * Specs ab dem Stichtag sagen, aus welchen Bausteinen ihre Oberfläche besteht
+ * (`AGENTS.md`, „Oberfläche nur aus bestehenden Bausteinen“). Bis 0.2.5 hatte
+ * jede Spec ihre Leiste, Marke oder Reiterzeile selbst entworfen; 0.2.6 führt
+ * sie wieder zusammen. Der Abschnitt zwingt die Frage beim Schreiben, nicht
+ * erst beim Review — neue Varianten stehen dort mit „Neu, Freigabe: …“.
+ * Welche Bausteine und Muster es gibt, steht in `docs/MUSTER.md`.
+ */
+const BAUSTEINE_AB = '2026-10-05';
+
+function specsWithoutBuildingBlocks(files: { name: string; text: string }[]): string[] {
+  return files
+    .filter(({ name }) => /^\d{4}-\d{2}-\d{2}-/.test(name) && name.slice(0, 10) >= BAUSTEINE_AB)
+    .filter(({ text }) => !/^## Bausteine\s*$/m.test(text))
+    .map(({ name }) => name);
+}
+
+describe('specsWithoutBuildingBlocks', () => {
+  it('verlangt den Abschnitt ab dem Stichtag, nicht davor', () => {
+    expect(
+      specsWithoutBuildingBlocks([
+        { name: '2026-10-04-alt-design.md', text: '# Alt' },
+        { name: '2026-10-05-neu-design.md', text: '# Neu\n\n## Ziel' },
+        { name: '2026-10-06-gut-design.md', text: '# Gut\n\n## Bausteine\n\nKeine Oberfläche.' },
+      ]),
+    ).toEqual(['2026-10-05-neu-design.md']);
+  });
+
+  it('zählt nur eine echte Überschrift zweiter Ebene', () => {
+    expect(specsWithoutBuildingBlocks([{ name: '2026-10-07-x-design.md', text: 'Siehe ### Bausteine und „## Bausteine“ im Text' }])).toEqual([
+      '2026-10-07-x-design.md',
+    ]);
+  });
+});
+
+describe.runIf(existsSync(SPECS))('specs in docs/intern/specs', () => {
+  it('nennen ab dem Stichtag ihre Bausteine', () => {
+    const files = readdirSync(SPECS)
+      .filter((f) => f.endsWith('.md'))
+      .map((name) => ({ name, text: readFileSync(path.join(SPECS, name), 'utf8') }));
+    expect(specsWithoutBuildingBlocks(files)).toEqual([]);
+  });
+});

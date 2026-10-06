@@ -5,11 +5,12 @@ import { BalanceIndicator } from '@/components/finance/balance-indicator';
 import { SplitRow } from '@/components/finance/split-row';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { formatAmount, parseAmount } from '@/lib/finance/amount';
 import { splitEvenly } from '@/lib/finance/split';
 import { miniFormRemainder, type MiniFormRow, type MiniFormState } from '@/lib/finance/work';
 import type { WorkFormOptions } from './work-detail';
+import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
 
 const newKey = (): string => `mini-${Math.random().toString(36).slice(2, 10)}`;
 const emptyRow = (): MiniFormRow => ({ key: newKey(), categoryId: '', amountText: '', contactId: null, projectId: null, purposeId: null, abroad: false, addsToAssets: false });
@@ -39,16 +40,14 @@ export function MiniEntryForm({
 
   return (
     <section aria-label={t('label')} className="space-y-3">
-      <div className="grid grid-cols-[auto_1fr] gap-3">
-        <div className="space-y-1">
-          <Label htmlFor="work-mini-date">{t('date')}</Label>
+      <FormGrid>
+        <FormField id="work-mini-date" label={t('date')} size="s">
           <Input id="work-mini-date" type="date" value={value.entryDate} onChange={(e) => onChange({ ...value, entryDate: e.target.value })} aria-invalid={!!fieldErrors.entryDate} required />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="work-mini-text">{t('text')}</Label>
+        </FormField>
+        <FormField id="work-mini-text" label={t('text')}>
           <Input id="work-mini-text" value={value.text} onChange={(e) => onChange({ ...value, text: e.target.value })} aria-invalid={!!fieldErrors.text} required />
-        </div>
-      </div>
+        </FormField>
+      </FormGrid>
 
       {extraLineTexts.map((text) => (
         <p key={text} className="rounded-sm border border-line bg-surface-2 px-2.5 py-1.5 text-[13px] text-ink-2">
@@ -56,12 +55,13 @@ export function MiniEntryForm({
         </p>
       ))}
 
-      {value.rows.map((row) => {
+      {value.rows.map((row, index) => {
         const without = { ...value, rows: value.rows.filter((r) => r.key !== row.key) };
         const rest = miniFormRemainder(without);
         return (
           <SplitRow
             key={row.key}
+            position={index + 1}
             density="narrow"
             value={row}
             onChange={(next) => setRows(value.rows.map((r) => (r.key === row.key ? { ...r, ...next } : r)))}

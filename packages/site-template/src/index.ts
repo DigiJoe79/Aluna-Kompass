@@ -8,6 +8,13 @@ import { z } from 'zod';
 // Feldhelfer
 // ---------------------------------------------------------------------------
 
+/**
+ * Die Breite eines Feldes in der Maske von Kompass: `s` kurze Werte, `m` Namen
+ * und Auswahl, `l` Langtext, `full` die ganze Zeile. Bei einem mehrsprachigen
+ * Feld gilt sie je Sprache.
+ */
+export type FieldSize = 's' | 'm' | 'l' | 'full';
+
 export interface FieldOptions {
   label?: string;
   localized?: boolean;
@@ -16,6 +23,13 @@ export interface FieldOptions {
    * Umbenennung als „entfällt plus neu“ — der Inhalt wäre verloren.
    */
   renamedFrom?: string;
+  /** Breite in der Maske; ohne Angabe wählt Kompass nach dem Feldtyp. */
+  size?: FieldSize;
+  /**
+   * Titel eines Abschnitts der Maske. Aufeinanderfolgende Felder mit gleichem
+   * `group` stehen darunter zusammen; die Reihenfolge der Felder bleibt.
+   */
+  group?: string;
 }
 
 const LOCALE_CODE = /^[a-z]{2}(-[a-z]{2})?$/;
@@ -25,6 +39,9 @@ const meta = (opts: FieldOptions, widget: string, extra: Record<string, unknown>
   widget,
   ...(opts.label === undefined ? {} : { label: opts.label }),
   ...(opts.renamedFrom === undefined ? {} : { renamedFrom: opts.renamedFrom }),
+  // Eigene Namen, keine aus JSON Schema: `.meta()` landet ungefiltert im Schema (AGENTS.md).
+  ...(opts.size === undefined ? {} : { size: opts.size }),
+  ...(opts.group === undefined ? {} : { group: opts.group }),
   ...extra,
 });
 

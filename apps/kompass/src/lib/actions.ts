@@ -1,4 +1,5 @@
 import type { Result, ServiceError } from '@kompass/core';
+import type { NoticeRemedy } from '@/components/notice';
 import { conflictMessage, conflictReasons, conflictText, fieldMessage } from './error-text';
 
 export { fieldMessage } from './error-text';
@@ -7,9 +8,27 @@ export type ActionState =
   | { status: 'idle' }
   | { status: 'success'; message?: string; data?: unknown }
   /** `reasons`: nur bei mehreren Gründen eines Konflikts, je Grund ein Satz — die Fehlerbox zeigt sie als Liste. */
-  | { status: 'error'; message: string; fieldErrors: Record<string, string>; code?: string; detail?: string; reasons?: string[] };
+  | {
+      status: 'error';
+      message: string;
+      fieldErrors: Record<string, string>;
+      code?: string;
+      detail?: string;
+      reasons?: string[];
+      /** Überschrift der Ablehnung; ohne Angabe nimmt `RefusalNotice` „Nicht gespeichert“. */
+      title?: string;
+      /** Ein bis drei Auswege unter der Ablehnung. */
+      remedies?: NoticeRemedy[];
+      /** `network`: die Aktion hat den Server nicht erreicht — keine Ablehnung des Dienstes. */
+      kind?: 'refused' | 'network';
+    };
 
 export const idleState: ActionState = { status: 'idle' };
+
+/** Eine Ablehnung des Dienstes: Fehler ohne Netzproblem und ohne Feldfehler (die stehen am Feld). */
+export function isRefusal(s: ActionState): s is Extract<ActionState, { status: 'error' }> {
+  return s.status === 'error' && s.kind !== 'network' && Object.keys(s.fieldErrors).length === 0;
+}
 
 type Translate = ((key: string, values?: any) => string) & {
   has?: (key: string) => boolean;
@@ -45,5 +64,7 @@ export function toActionState<T>(result: Result<T>, t: Translate, successMessage
   }
   const conflictFields = result.error.type === 'conflict' ? { code: result.error.code, detail: result.error.messageKey ? conflictText(result.error, t) : rawDetail(result.error.message) } : {};
   const reasons = result.error.type === 'conflict' ? conflictReasons(result.error, t) : [];
-  return { status: 'error', message: errorMessage(result.error, t), fieldErrors, ...conflictFields, ...(reasons.length > 1 ? { reasons } : {}) };
+  // Veraltete Version: Der Dienst nennt weder Person noch Uhrzeit — der Satz bleibt allgemein, die Auswege setzt die Leiste (conflict-remedies).
+  const stale = result.error.type === 'conflict' && result.error.code === 'staleVersion' ? { title: t('common.refused.title'), detail: t('common.conflict.textPlain') } : {};
+  return { status: 'error', message: errorMessage(result.error, t), fieldErrors, ...conflictFields, ...stale, ...(reasons.length > 1 ? { reasons } : {}) };
 }

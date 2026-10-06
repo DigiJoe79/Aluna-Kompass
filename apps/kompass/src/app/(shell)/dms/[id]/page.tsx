@@ -10,6 +10,7 @@ import { notFound } from 'next/navigation';
 import { InvoiceCard } from '@/components/finance/invoice-card';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { Notice } from '@/components/notice';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { buttonVariants } from '@/components/ui/button';
 import { requireSession } from '@/lib/request-context';
@@ -22,12 +23,12 @@ export default async function DocumentDetailPage(props: {
   const { deps, ctx } = await requireSession();
   const tCommon = await getTranslations('common');
   const tDms = await getTranslations('dms');
-  if (requireDmsGate(deps, ctx)) return <ForbiddenCard permission="dms.view" />;
+  if (requireDmsGate(deps, ctx)) return <Page width="standard"><ForbiddenCard permission="dms.view" /></Page>;
 
   const { id } = await props.params;
   const result = await getDocumentRecord(deps, ctx, id);
   if (!result.ok) {
-    if (result.error.type === 'forbidden') return <ForbiddenCard permission={result.error.permission} />;
+    if (result.error.type === 'forbidden') return <Page width="standard"><ForbiddenCard permission={result.error.permission} /></Page>;
     notFound();
   }
 
@@ -129,18 +130,22 @@ export default async function DocumentDetailPage(props: {
     ) : null;
 
   return (
-    <>
-      <PageHeader
-        title={doc.subject}
-        back={{ href: '/dms', label: tCommon('backToList') }}
-        actions={
-          canMakeEntry ? (
-            <Link href={`/finance/entries/new?voucher=${doc.id}`} className={buttonVariants({ size: 'sm' })}>
-              {tWork('toEntry')}
-            </Link>
-          ) : undefined
-        }
-      />
+    <Page
+      width="standard"
+      header={
+        <PageHeader
+          title={doc.subject}
+          back={{ href: '/dms', label: tCommon('backToList') }}
+          actions={
+            canMakeEntry ? (
+              <Link href={`/finance/entries/new?voucher=${doc.id}`} className={buttonVariants({ size: 'sm' })}>
+                {tWork('toEntry')}
+              </Link>
+            ) : undefined
+          }
+        />
+      }
+    >
       {doc.duplicateOf && doc.duplicateOf.length > 0 ? (
         // Befund Z: dieselbe Datei liegt schon vor — ein Hinweis mit Weg dorthin, kein Verbot.
         <div className="mb-4">
@@ -200,6 +205,6 @@ export default async function DocumentDetailPage(props: {
         fileState={doc.fileState ?? 'none'}
         invoicePanel={invoicePanel}
       />
-    </>
+    </Page>
   );
 }

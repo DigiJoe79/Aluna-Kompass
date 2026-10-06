@@ -155,16 +155,15 @@ test.describe('app shell', () => {
   });
 
   /**
-   * Das Zellpolster hängt an der Dichte — aber nur dort, wo es eines gibt.
+   * Das Zellpolster hängt an der Dichte, in jeder Liste.
    *
-   * Die Listen im Haus sind zweierlei: die `TableCell` aus dem Baukasten
-   * bringt `py-2` mit, die handgeschriebenen `<td>` der Prüfspur haben
-   * überhaupt kein senkrechtes Polster; ihre Höhe kommt aus einem
-   * umbrechenden Zeitstempel. Ein Polster auf `h-row` — also auf jeder Zeile
-   * — hätte der Prüfspur deshalb 16px *hinzugefügt* statt sie zu stauchen.
-   * Dieser Test hält den Hebel dort, wo er hingehört.
+   * Früher hielt dieser Test fest, dass die Prüfspur als handgeschriebene
+   * Tabelle ohne senkrechtes Polster davon ausgenommen war. Joe hat am
+   * 2026-10-04 entschieden (release-0.2.6.md, „Prüfspur auf Standard“): Sie
+   * ist eine Liste wie jede andere und folgt der Dichte. Normal: Polster 8px,
+   * Zeile 44px; kompakt: Polster 4px, Zeile 36px.
    */
-  test('leaves a table without its own cell padding untouched', async ({ page }) => {
+  test('the audit trail follows the density like every list', async ({ page }) => {
     // Nur Einträge der Oberfläche (Muster `audit.spec.ts`): Ohne Filter steht nach dem Reset oft die „Volltext
     // gelesen“-Zeile des Hintergrunddienstes oben, deren lange Objektbezeichnung umbricht — ihre Höhe käme aus
     // dem Inhalt, nicht aus der Zeilenhöhe, um die es hier geht.
@@ -173,16 +172,15 @@ test.describe('app shell', () => {
     const rowHeight = () => page.locator('tbody tr').first().evaluate((el) => el.getBoundingClientRect().height);
     const padding = () => page.locator('tbody tr').first().locator('td').first().evaluate((el) => getComputedStyle(el).paddingTop);
 
-    expect(await padding()).toBe('0px');
+    expect(await padding()).toBe('8px');
     expect(await rowHeight()).toBe(44);
 
     await page.getByRole('button', { name: 'Nutzermenü' }).click();
     await page.getByRole('menuitemradio', { name: 'Kompakte Zeilen' }).click();
     await page.keyboard.press('Escape');
 
-    // Kein Polster da, keines dazu — und die Zeile wächst nicht.
-    expect(await padding()).toBe('0px');
-    expect(await rowHeight()).toBeLessThanOrEqual(44);
+    expect(await padding()).toBe('4px');
+    expect(Math.abs((await rowHeight()) - 36)).toBeLessThanOrEqual(1);
   });
 
   /**
@@ -202,6 +200,27 @@ test.describe('app shell', () => {
     await page.getByRole('button', { name: 'Nutzermenü' }).click();
     await expect(page.getByRole('menuitemcheckbox', { name: 'Dunkles Design' })).toBeChecked();
     await page.keyboard.press('Escape');
+  });
+
+  /**
+   * Schalter, Haken und Menüs nutzen die Theme-Tokens statt der shadcn-Namen (Wächter `no-shadcn-colors`):
+   * Im Dunkelmodus muss ein eingeschalteter Schalter trotzdem von der Seite abstechen.
+   */
+  test('an enabled switch stands out from the page in the dark colour scheme', async ({ page }) => {
+    await page.getByRole('button', { name: 'Nutzermenü' }).click();
+    await page.getByRole('menuitemcheckbox', { name: 'Dunkles Design' }).click();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('html')).toHaveAttribute('data-color-scheme', 'dark');
+
+    await page.goto('/admin/modules');
+    const on = page.locator('[role="switch"][aria-checked="true"]').first();
+    await expect(on).toBeVisible();
+    const [switchColour, pageColour] = await Promise.all([
+      on.evaluate((el) => getComputedStyle(el).backgroundColor),
+      page.evaluate(() => getComputedStyle(document.body).backgroundColor),
+    ]);
+    expect(switchColour).not.toBe('rgba(0, 0, 0, 0)');
+    expect(switchColour).not.toBe(pageColour);
   });
 
   test('turns into a drawer below 1180px with labelled areas and the second level beneath', async ({ page }) => {

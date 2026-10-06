@@ -2,7 +2,8 @@
 
 import { useTranslations } from 'next-intl';
 import { useState, useTransition } from 'react';
-import { toast } from 'sonner';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
 import { reindexAllDocumentsAction, updateOcrLanguagesAction } from './actions';
 import { Select } from '@/components/ui/select';
@@ -28,6 +29,8 @@ export function TextPanel({
   );
   const [savingLangs, startSaveTransition] = useTransition();
   const [reindexing, startReindexTransition] = useTransition();
+  const langFb = useActionFeedback();
+  const reindexFb = useActionFeedback();
 
   const handleAddLanguage = (lang: string) => {
     if (!selectedLangs.includes(lang)) {
@@ -42,23 +45,13 @@ export function TextPanel({
 
   const handleSaveLanguages = () => {
     startSaveTransition(async () => {
-      const res = await updateOcrLanguagesAction(selectedLangs.join('+'));
-      if (res.status === 'error') {
-        toast.error(res.message);
-      } else if (res.status === 'success' && res.message) {
-        toast.success(res.message);
-      }
+      await langFb.run(() => updateOcrLanguagesAction(selectedLangs.join('+')), { retry: handleSaveLanguages });
     });
   };
 
   const handleReindex = () => {
     startReindexTransition(async () => {
-      const res = await reindexAllDocumentsAction();
-      if (res.status === 'error') {
-        toast.error(res.message);
-      } else if (res.status === 'success' && res.message) {
-        toast.success(res.message);
-      }
+      await reindexFb.run(() => reindexAllDocumentsAction(), { retry: handleReindex });
     });
   };
 
@@ -67,8 +60,7 @@ export function TextPanel({
   return (
     <section className="space-y-6 rounded-md border border-line bg-surface p-5">
       <div>
-        <h3 className="font-heading text-[18px] text-ink">{t('textPanel.heading')}</h3>
-        <p className="text-[13px] text-muted-ink">{t('textPanel.description')}</p>
+        <p className="text-[13px] text-ink-2">{t('textPanel.description')}</p>
       </div>
 
       {/* Sprachen der Texterkennung */}
@@ -100,6 +92,8 @@ export function TextPanel({
             </div>
 
             {canManageSettings ? (
+              <div className="space-y-2">
+              <RefusalNotice action state={langFb.state} />
               <div className="flex flex-wrap items-center gap-2">
                 <Select
                   value=""
@@ -130,13 +124,16 @@ export function TextPanel({
                   </Button>
                 ) : null}
               </div>
+              </div>
             ) : null}
           </div>
         )}
       </div>
 
       {/* Alles neu lesen */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-2 pt-4">
+      <div className="space-y-2 border-t border-line-2 pt-4">
+        <RefusalNotice action state={reindexFb.state} />
+        <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Button
             type="button"
@@ -152,6 +149,7 @@ export function TextPanel({
               {t('textPanel.open', { count: openCount })}
             </span>
           ) : null}
+        </div>
         </div>
       </div>
     </section>

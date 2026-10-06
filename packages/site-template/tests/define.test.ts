@@ -60,6 +60,36 @@ describe('defineTemplate', () => {
     }
   });
 
+  // Größe und Abschnitt der Maske (docs/MUSTER.md § J): Das Template sagt, wie breit ein Feld steht und unter
+  // welchem Titel es mit seinen Nachbarn erscheint; ohne Angabe wählt Kompass nach dem Feldtyp.
+  it('carries size and group into the schema, for every field helper', () => {
+    const opts = { label: 'A', size: 'm', group: 'Bilder' } as const;
+    const cases = {
+      text: text(opts),
+      localized: text({ ...opts, localized: true }),
+      markdown: markdown(opts),
+      number: number(opts),
+      asset: asset(opts),
+      select: select(['a', 'b'], opts),
+      list: list(text(), opts),
+      date: date(opts),
+      objectList: objectList({ ...opts, fields: { a: text() } }),
+      reference: reference({ ...opts, view: 'animals' }),
+      references: references({ ...opts, view: 'animals', max: 2 }),
+    };
+    for (const [name, field] of Object.entries(cases)) {
+      const json = z.toJSONSchema(field as never, { io: 'input' }) as { size?: string; group?: string };
+      expect(json.size, `${name} verliert size`).toBe('m');
+      expect(json.group, `${name} verliert group`).toBe('Bilder');
+    }
+  });
+
+  it('leaves size and group out where they were not given', () => {
+    const json = z.toJSONSchema(text({ label: 'A' }) as never, { io: 'input' });
+    expect(json).not.toHaveProperty('size');
+    expect(json).not.toHaveProperty('group');
+  });
+
   it('leaves renamedFrom out where it was not given', () => {
     expect(z.toJSONSchema(text({ label: 'A' }) as never, { io: 'input' })).not.toHaveProperty('renamedFrom');
   });

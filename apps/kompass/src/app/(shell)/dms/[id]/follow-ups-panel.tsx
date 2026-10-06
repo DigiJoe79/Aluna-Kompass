@@ -3,20 +3,21 @@
 import { useDateFormat } from '@/components/date-format-provider';
 import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useState, useTransition } from 'react';
-import { toast } from 'sonner';
-import { FieldError } from '@/components/forms/field-error';
-import { SubmitButton } from '@/components/forms/submit-button';
+import { FormActionBar } from '@/components/forms/form-action-bar';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { idleState } from '@/lib/actions';
 import { cn } from '@/lib/utils';
 import { completeFollowUpAction, createFollowUpAction, reopenFollowUpAction } from '../actions';
 import { ActionForm } from '@/components/forms/action-form';
+import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
 
 export interface FollowUpView {
   id: string;
@@ -47,10 +48,11 @@ export function FollowUpsPanel({
   const t = useTranslations('dms.followUps');
   const fmt = useDateFormat();
   const inOneWeek = new Date(Date.parse(`${today}T00:00:00.000Z`) + 7 * 86_400_000).toISOString().slice(0, 10);
-  const tCommon = useTranslations('common');
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState(createFollowUpAction.bind(null, documentId), idleState);
   const [pending, start] = useTransition();
+  // Abhaken steht in den Zeilen der Liste: Die Ablehnung steht über der Liste.
+  const toggleFb = useActionFeedback();
   const errors = state.status === 'error' ? state.fieldErrors : {};
 
   useEffect(() => {
@@ -62,10 +64,7 @@ export function FollowUpsPanel({
 
   const toggle = (followUp: FollowUpView) =>
     start(async () => {
-      const result = followUp.doneAt
-        ? await reopenFollowUpAction(documentId, followUp.id)
-        : await completeFollowUpAction(documentId, followUp.id);
-      if (result.status === 'error') toast.error(result.message);
+      await toggleFb.run(() => (followUp.doneAt ? reopenFollowUpAction(documentId, followUp.id) : completeFollowUpAction(documentId, followUp.id)), { retry: () => toggle(followUp) });
     });
 
   return (
@@ -78,6 +77,8 @@ export function FollowUpsPanel({
           </Button>
         ) : null}
       </div>
+
+      <RefusalNotice action state={toggleFb.state} />
 
       {openOnes.length === 0 ? (
         <p className="text-[13px] text-muted-ink">{t('none')}</p>
@@ -131,53 +132,34 @@ export function FollowUpsPanel({
       ) : null}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-full sm:max-w-[480px] bg-surface p-6 shadow-md">
+        <DialogContent size="md" className="bg-surface shadow-md">
           <ActionForm action={action} state={state}>
             <DialogTitle className="font-heading text-[19px]">{t('add')}</DialogTitle>
             <DialogDescription className="text-[13px] text-muted-ink">{t('addDescription')}</DialogDescription>
 
-            {state.status === 'error' && Object.keys(errors).length === 0 ? (
-              <p role="alert" className="mt-3 rounded-md border border-error bg-error-bg p-3 text-[13px] text-error">
-                {state.message}
-              </p>
-            ) : null}
-
-            <div className="mt-5 space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="dueAt" required>
-                  {t('dueAt')}
-                </Label>
-                {/* In einer Woche nachsehen ist der häufigste Fall; wer es anders will, tippt. */}
-                <Input id="dueAt" name="dueAt" type="date" defaultValue={inOneWeek} required />
-                <FieldError id="dueAt-error" message={errors.dueAt} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="followUpTitle" required>
-                  {t('titleField')}
-                </Label>
-                <Input id="followUpTitle" name="title" required />
-                <FieldError id="followUpTitle-error" message={errors.title} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="assigneeUserId">{t('assignee')}</Label>
-                <Select id="assigneeUserId" name="assigneeUserId" defaultValue="">
-                  <option value="">{t('everyone')}</option>
-                  {users.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
+            <div className="mt-5">
+              <FormGrid>
+                <FormField id="dueAt" label={t('dueAt')} required error={errors.dueAt} size="s">
+                  {/* In einer Woche nachsehen ist der häufigste Fall; wer es anders will, tippt. */}
+                  <Input id="dueAt" name="dueAt" type="date" defaultValue={inOneWeek} required />
+                </FormField>
+                <FormField id="followUpTitle" label={t('titleField')} required error={errors.title}>
+                  <Input id="followUpTitle" name="title" required />
+                </FormField>
+                <FormField id="assigneeUserId" label={t('assignee')}>
+                  <Select id="assigneeUserId" name="assigneeUserId" defaultValue="">
+                    <option value="">{t('everyone')}</option>
+                    {users.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+              </FormGrid>
             </div>
 
-            <DialogFooter className="mt-6">
-              <span className="mr-auto text-[12px] text-muted-ink">{tCommon('requiredLegend')}</span>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                {t('cancel')}
-              </Button>
-              <SubmitButton>{t('submit')}</SubmitButton>
-            </DialogFooter>
+            <FormActionBar placement="dialog" mode="create" cancel={() => setOpen(false)} saveLabel={t('submit')} state={state} />
           </ActionForm>
         </DialogContent>
       </Dialog>

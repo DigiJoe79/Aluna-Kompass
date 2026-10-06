@@ -14,6 +14,8 @@ import { ReceiptList, type ReceiptListItem } from '@/components/finance/receipt-
 import { SplitRow, type SplitRowCategoryOption, type SplitRowOption } from '@/components/finance/split-row';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
 import { FormActionBar } from '@/components/forms/form-action-bar';
+import { FormField } from '@/components/forms/form-field';
+import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +24,8 @@ import { Select } from '@/components/ui/select';
 import type { ActionState } from '@/lib/actions';
 import { formatAmount, formatEuro, parseAmount } from '@/lib/finance/amount';
 import { applyTemplate, remainderCents, restInto, toServiceInput, type EntryFormState, type EntryTemplate, type MoneyRow } from '@/lib/finance/entry-form';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { runAction as guarded, toastNetwork, toastRefusal } from '@/lib/feedback';
 import { remediesFor, type RemedyAction } from '@/lib/finance/remedies';
 import { matchesDirection, suggestSettlementCents } from '@/lib/finance/settlement';
 import { splitEvenly } from '@/lib/finance/split';
@@ -189,6 +193,8 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [pendingVoucher, setPendingVoucher] = useState<PendingVoucher | null>(initialPending);
   const [actionState, setActionState] = useState<ActionState>({ status: 'idle' });
+  // Belege hochladen oder aus der Akte holen: Die Ablehnung steht über der Ablage.
+  const [voucherRefusal, setVoucherRefusal] = useState<ActionState>({ status: 'idle' });
   const dateRef = useRef<HTMLInputElement>(null);
 
   const accountsById = new Map(accounts.map((a) => [a.id, a]));
@@ -205,7 +211,8 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
   const attachPending = async (id: string) => {
     if (!pendingVoucher) return;
     const attached = await attachDocumentAction(id, pendingVoucher.documentId);
-    if (attached.status === 'error') toast.error(attached.message);
+    // Die Seite wechselt gleich: Der Entwurf steht, der Beleg hängt nicht — kein Platz über einem Knopf, deshalb ein Toast.
+    if (attached.status === 'error') toastRefusal(attached);
     else setPendingVoucher(null);
   };
 
@@ -218,8 +225,6 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
       const data = result.data as { id?: string } | undefined;
       router.push(redirectTo === 'entry' && data?.id ? `/finance/entries/${data.id}` : returnTo);
       router.refresh();
-    } else if (result.status === 'error') {
-      toast.error(result.message);
     }
   };
 
@@ -258,9 +263,12 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
       setActionState({ status: 'error', message: t('toast.fieldsInvalid'), fieldErrors: validation.fieldErrors });
       return null;
     }
-    const saved = await saveDraftAction(validation.input);
+    const saved = await guarded(() => saveDraftAction(validation.input), tRoot('common.network'));
     if (saved.status !== 'success') {
-      if (saved.status === 'error') toast.error(saved.message);
+      if (saved.status === 'error') {
+        if (saved.kind === 'network') toastNetwork(saved, tRoot('common.retry'));
+        else setVoucherRefusal(saved);
+      }
       return null;
     }
     const data = saved.data as { id: string; expectedVersion: string };
@@ -271,35 +279,38 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
   };
 
   const uploadFiles = async (files: File[]) => {
+    setVoucherRefusal({ status: 'idle' });
     const id = await ensureSavedId();
     if (!id) return;
     for (const file of files) {
-      try {
-        const formData = new FormData();
-        formData.append('entryId', id);
-        formData.append('typeKey', voucherTypeKey);
-        formData.append('documentDate', state.entryDate);
-        formData.append('file', file);
-        const result = await uploadVoucherAction(formData);
-        if (result.status !== 'success') {
-          if (result.status === 'error') toast.error(result.message);
-          continue;
+      const formData = new FormData();
+      formData.append('entryId', id);
+      formData.append('typeKey', voucherTypeKey);
+      formData.append('documentDate', state.entryDate);
+      formData.append('file', file);
+      const result = await guarded(() => uploadVoucherAction(formData), tRoot('common.network'));
+      if (result.status !== 'success') {
+        if (result.status === 'error') {
+          if (result.kind === 'network') toastNetwork(result, tRoot('common.retry'), () => void uploadFiles([file]));
+          else setVoucherRefusal(result);
         }
-        if (result.message) toast.warning(result.message);
-        const data = result.data as { linkId: string; documentId: string; documentNumber: string };
-        setVouchers((prev) => [...prev, { linkId: data.linkId, documentNumber: data.documentNumber, title: file.name, typeLabel: t('voucherType'), date: state.entryDate, viewHref: `/finance/entries/${id}/voucher/${data.documentId}`, revoked: false }]);
-      } catch {
-        toast.error(tRoot('common.uploadFailed'));
+        continue;
       }
+      if (result.message) toast.warning(result.message);
+      const data = result.data as { linkId: string; documentId: string; documentNumber: string };
+      setVouchers((prev) => [...prev, { linkId: data.linkId, documentNumber: data.documentNumber, title: file.name, typeLabel: t('voucherType'), date: state.entryDate, viewHref: `/finance/entries/${id}/voucher/${data.documentId}`, revoked: false }]);
     }
   };
 
   const pickFromArchive = async (documentId: string) => {
+    setVoucherRefusal({ status: 'idle' });
     const id = await ensureSavedId();
     if (!id) return;
-    const result = await attachDocumentAction(id, documentId);
-    if (result.status === 'error') toast.error(result.message);
-    else if (result.status === 'success') router.refresh();
+    const result = await guarded(() => attachDocumentAction(id, documentId), tRoot('common.network'));
+    if (result.status === 'error') {
+      if (result.kind === 'network') toastNetwork(result, tRoot('common.retry'), () => void pickFromArchive(documentId));
+      else setVoucherRefusal(result);
+    } else if (result.status === 'success') router.refresh();
   };
 
   const purposeReason = actionState.status === 'error' ? actionState.code === 'purposeGoesNegative' || (actionState.code !== 'boardAllowanceNeedsReason' && state.reasonKind === 'purpose') : state.reasonKind === 'purpose';
@@ -316,75 +327,79 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
       className="space-y-4"
     >
       <section className="space-y-3 rounded-md border border-line bg-surface p-4">
-        <div className="flex flex-wrap gap-3">
-          <div className="space-y-1">
-            <Label htmlFor="entry-date">{t('date')}</Label>
+        {/* Raster nur innerhalb der Karte (Entscheidung zum Inventar): Datum `s` und Text `l` ergeben eine Zeile. */}
+        <FormGrid>
+          <FormField id="entry-date" label={t('date')} size="s">
             <Input ref={dateRef} id="entry-date" type="date" value={state.entryDate} onChange={(e) => setState((s) => ({ ...s, entryDate: e.target.value }))} required />
             {/* Befund 20: warnt, sperrt aber nicht — erst Festschreiben lehnt ein Datum nach heute ab. */}
             {state.entryDate > today ? <p className="text-[12px] text-warning">{t('futureDate')}</p> : null}
-          </div>
-          <div className="min-w-[260px] flex-1 space-y-1">
-            <Label htmlFor="entry-text">{t('text')}</Label>
+          </FormField>
+          <FormField id="entry-text" label={t('text')} size="l">
             <Input id="entry-text" value={state.text} onChange={(e) => setState((s) => ({ ...s, text: e.target.value }))} required />
-          </div>
-        </div>
-        <div role="radiogroup" aria-label={t('template')} className="flex flex-wrap gap-2">
-          {TEMPLATES.map((template) => (
-            <button
-              key={template}
-              type="button"
-              role="radio"
-              aria-checked={state.template === template}
-              disabled={bound && state.template !== template}
-              onClick={() => setState((s) => applyTemplate(s, template))}
-              className={`h-[var(--field-h)] rounded-md border px-3 text-[13px] font-semibold ${state.template === template ? 'border-selected bg-selected text-selected-ink' : 'border-line-strong bg-surface-2 text-ink-2'}`}
-            >
-              {t(`templates.${template}`)}
-            </button>
-          ))}
-        </div>
+          </FormField>
+          <FormCell role="radiogroup" aria-label={t('template')} size="full" className="flex flex-wrap gap-2">
+            {TEMPLATES.map((template) => (
+              <button
+                key={template}
+                type="button"
+                role="radio"
+                aria-checked={state.template === template}
+                disabled={bound && state.template !== template}
+                onClick={() => setState((s) => applyTemplate(s, template))}
+                className={`h-[var(--field-h)] rounded-md border px-3 text-[13px] font-semibold ${state.template === template ? 'border-selected bg-selected text-selected-ink' : 'border-line-strong bg-surface-2 text-ink-2'}`}
+              >
+                {t(`templates.${template}`)}
+              </button>
+            ))}
+          </FormCell>
+        </FormGrid>
       </section>
 
       {state.template !== 'inKind' ? (
         <section data-testid="finance-account-card" className="space-y-3 rounded-md border border-line bg-surface p-4">
-          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('accountCard')}</h3>
+          <h3 className="text-[15px] font-semibold">{t('accountCard')}</h3>
           {state.moneyRows.map((row, index) => (
-            <div key={row.key} className="space-y-1.5">
+            <FormGrid key={row.key}>
               {row.rawTransactionId ? (
-                <p data-testid="bound-money-line" className="rounded-sm border border-line bg-surface-2 px-2.5 py-1.5 font-mono text-[13px] tabular-nums text-ink">
+                <FormCell as="p" data-testid="bound-money-line" size="full" className="rounded-sm border border-line bg-surface-2 px-2.5 py-1.5 font-mono text-[13px] tabular-nums text-ink">
                   {(() => {
                     const cents = (parseAmount(row.amountText) ?? 0) * (row.direction === 'out' ? -1 : 1);
                     return row.rawBookingDate ? t('boundLine', { date: date(row.rawBookingDate), amount: formatEuro(cents) }) : t('boundLineNoDate', { amount: formatEuro(cents) });
                   })()}
-                </p>
+                </FormCell>
               ) : null}
-              <Label htmlFor={`account-${row.key}`}>{state.template === 'transfer' ? t(row.direction === 'out' ? 'transferFrom' : 'transferTo') : t('account')}</Label>
-              <Select id={`account-${row.key}`} value={row.accountId} disabled={!!row.rawTransactionId} onChange={(e) => setState((s) => ({ ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, accountId: e.target.value } : r)) }))} required>
-                <option value="" disabled>
-                  {t('accountPlaceholder')}
-                </option>
-                {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name}</option>
-                ))}
-              </Select>
-              <Label htmlFor={`amount-${row.key}`}>{t('amount')}</Label>
-              <AmountField
-                id={`amount-${row.key}`}
-                name={`amount-${row.key}`}
-                value={row.amountText}
-                onChange={(amountText) => setState((s) => ({ ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, amountText } : r)) }))}
-                disabled={!!row.rawTransactionId}
-                required
-                balanceHint={accountsById.get(row.accountId) ? t('balanceHint', { amount: formatEuro(accountsById.get(row.accountId)!.balanceCents) }) : undefined}
-              />
-              <MoneySettlements
-                row={row}
-                rowIndex={index}
-                openItems={openItems}
-                fieldErrors={validation.ok ? {} : validation.fieldErrors}
-                onChange={(settlements) => setState((s) => ({ ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, settlements } : r)) }))}
-              />
-            </div>
+              <FormField id={`account-${row.key}`} label={state.template === 'transfer' ? t(row.direction === 'out' ? 'transferFrom' : 'transferTo') : t('account')}>
+                <Select id={`account-${row.key}`} value={row.accountId} disabled={!!row.rawTransactionId} onChange={(e) => setState((s) => ({ ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, accountId: e.target.value } : r)) }))} required>
+                  <option value="" disabled>
+                    {t('accountPlaceholder')}
+                  </option>
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </Select>
+              </FormField>
+              <FormField id={`amount-${row.key}`} label={t('amount')} size="s">
+                <AmountField
+                  id={`amount-${row.key}`}
+                  name={`amount-${row.key}`}
+                  value={row.amountText}
+                  onChange={(amountText) => setState((s) => ({ ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, amountText } : r)) }))}
+                  disabled={!!row.rawTransactionId}
+                  required
+                  balanceHint={accountsById.get(row.accountId) ? t('balanceHint', { amount: formatEuro(accountsById.get(row.accountId)!.balanceCents) }) : undefined}
+                />
+              </FormField>
+              {/* „begleicht offene Zahlung“ bleibt unter seiner Geldzeile (Entscheidung zum Inventar). */}
+              <FormCell size="full">
+                <MoneySettlements
+                  row={row}
+                  rowIndex={index}
+                  openItems={openItems}
+                  fieldErrors={validation.ok ? {} : validation.fieldErrors}
+                  onChange={(settlements) => setState((s) => ({ ...s, moneyRows: s.moneyRows.map((r, i) => (i === index ? { ...r, settlements } : r)) }))}
+                />
+              </FormCell>
+            </FormGrid>
           ))}
           {remainder !== null ? <BalanceIndicator open={remainder} /> : null}
         </section>
@@ -394,13 +409,14 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
         <p className="text-[13px] text-ink-2">{t('transferHint')}</p>
       ) : (
         <section data-testid="finance-allocation-card" className="space-y-3 rounded-md border border-line bg-surface p-4">
-          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('allocationCard')}</h3>
-          {state.splitRows.map((row) => {
+          <h3 className="text-[15px] font-semibold">{t('allocationCard')}</h3>
+          {state.splitRows.map((row, index) => {
             const withoutRow = { ...state, splitRows: state.splitRows.filter((r) => r.key !== row.key) };
             const restForRow = remainderCents(withoutRow);
             return (
               <SplitRow
                 key={row.key}
+                position={index + 1}
                 value={row}
                 onChange={(next) =>
                   setState((s) => {
@@ -444,9 +460,16 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
       )}
 
       <section className="space-y-3 rounded-md border border-line bg-surface p-4">
-        <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('voucherCard')}</h3>
+        <h3 className="text-[15px] font-semibold">{t('voucherCard')}</h3>
+        <RefusalNotice action state={voucherRefusal} />
         <ReceiptDrop onFiles={(files) => void uploadFiles(files)} onPickFromArchive={() => setArchiveOpen(true)} />
-        {archiveOpen ? <DocumentPicker id="voucher-archive" name="voucherArchive" label={t('pickFromArchive')} value={null} onChange={(doc) => doc && void pickFromArchive(doc.id)} /> : null}
+        {archiveOpen ? (
+          <FormGrid>
+            <FormCell size="m">
+              <DocumentPicker id="voucher-archive" name="voucherArchive" label={t('pickFromArchive')} value={null} onChange={(doc) => doc && void pickFromArchive(doc.id)} />
+            </FormCell>
+          </FormGrid>
+        ) : null}
         {pendingVoucher ? (
           <p data-testid="pending-voucher" className="flex flex-wrap items-center gap-2 rounded-sm border border-line bg-surface-2 px-2.5 py-1.5 text-[13px]">
             <span className="font-mono text-[12px]">{pendingVoucher.number}</span>
@@ -479,7 +502,11 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
         </Notice>
       ) : null}
 
+      {/* Ablehnungen ohne Code (etwa fehlendes Recht) haben keinen Ausweg und stehen schlicht über der Leiste. */}
+      {actionState.status === 'error' && !actionState.code ? <RefusalNotice state={actionState} /> : null}
+
       <FormActionBar
+        mode="create"
         back={{ href: returnTo, label: t('cancel') }}
         count={0}
         note={isCash ? t('cashNote') : undefined}
@@ -506,9 +533,19 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
         description={t('confirmFinalize.description')}
         confirmLabel={t('actions.finalize')}
         action={async () => {
-          if (!validation.ok) return { status: 'error', message: t('toast.fieldsInvalid'), fieldErrors: validation.fieldErrors };
+          if (!validation.ok) return { status: 'error', message: t('toast.fieldsInvalid'), fieldErrors: {} };
           const result = await finalizeAction(validation.input);
           await afterSuccess(result, 'entry');
+          // Die Ablehnung steht im Dialog, samt Ausweg (er schließt den Dialog und führt ihn aus); dieselbe steht auch über der Leiste.
+          if (result.status === 'error' && result.code && !REASON_CODES.has(result.code)) {
+            return {
+              ...result,
+              remedies: remediesFor(result.code).map((remedy) => ({
+                label: tRoot(remedy.labelKey),
+                ...(remedy.kind === 'action' ? { onSelect: () => { setConfirmFinalize(false); applyRemedy(remedy.action); } } : { href: remedy.href }),
+              })),
+            };
+          }
           return result;
         }}
       />

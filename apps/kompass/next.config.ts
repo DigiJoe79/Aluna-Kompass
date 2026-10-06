@@ -42,8 +42,10 @@ const nextConfig: NextConfig = {
   // Die Schiene hat jetzt einen Bereich „Einstellungen“ unten links, genau wo
   // der Next-Entwicklungsindikator sonst sitzt (`position: 'bottom-left'`,
   // Vorgabe) — er nimmt der Zeile die Klicks weg. Rein visuell, ohne
-  // Wirkung auf Prod-Build oder die Fehleranzeige.
-  devIndicators: { position: 'bottom-right' },
+  // Wirkung auf Prod-Build oder die Fehleranzeige. Unten rechts fing er in den
+  // E2E-Läufen gegen `next dev` Klicks ab (K9-Befund 14, Zeilenmenü der
+  // Rücklagen): Die E2E-Server (`e2e/servers.ts`) verlangen ihn deshalb weg.
+  devIndicators: process.env.KOMPASS_E2E_NO_DEV_INDICATOR === '1' ? false : { position: 'bottom-right' },
   // Die Anwendung laeuft nach Zielbild im eigenen Netz. Das ist eine
   // Betriebsannahme, kein Schutz: Sobald jemand einen Reverse Proxy davorstellt
   // — der wahrscheinlichste Weg, sie doch erreichbar zu machen —, zaehlt jede

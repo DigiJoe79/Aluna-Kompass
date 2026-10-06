@@ -2,16 +2,17 @@
 
 import { useDateFormat } from '@/components/date-format-provider';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Fragment, useEffect, useState, useTransition } from 'react';
 import { EmptyState } from '@/components/empty-state';
+import { SelectionBar } from '@/components/selection-bar';
 import { SnippetText } from '@/components/snippet-text';
 import { StatusBadge } from '@/components/status-badge';
 import { Input } from '@/components/ui/input';
 import { SortableHead } from '@/components/sortable-head';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { RowLink, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useFinePointer } from '@/lib/use-fine-pointer';
+import { listKeyOf, useListSelection } from '@/lib/use-list-selection';
 import { useUrlFilters } from '@/lib/use-url-filters';
 import { cn } from '@/lib/utils';
 import { Select } from '@/components/ui/select';
@@ -142,30 +143,11 @@ export function DocumentList({ documents, currentFolder, total, types, folders, 
     moves?.remember(documents.map(({ id, folder, subject, direction }) => ({ id, folder, subject, direction })));
   }, [documents, moves]);
 
-  /**
-   * Die Auswahl gehört zu dieser Liste: Ein anderer Ort oder andere Filter
-   * sind eine neue Liste und fangen leer an (Sortieren nicht — dieselben
-   * Zeilen). Kommt die Liste nach einem Zug neu vom Server, fällt heraus, was
-   * nicht mehr darin steht; der Rest bleibt angekreuzt.
-   */
-  const listKey = [...params.entries()].filter(([key]) => key !== 'sort' && key !== 'dir').map(([key, value]) => `${key}=${value}`).sort().join('&');
-  const [selection, setSelection] = useState({ listKey, documents, ids: new Set<string>() });
-  if (selection.listKey !== listKey || selection.documents !== documents) {
-    const present = new Set(documents.map((doc) => doc.id));
-    const ids = selection.listKey !== listKey ? new Set<string>() : new Set([...selection.ids].filter((id) => present.has(id)));
-    setSelection({ listKey, documents, ids });
-  }
+  // Auswahl: siehe useListSelection.
+  const selection = useListSelection(listKeyOf(params), documents);
   const selected = shown.filter((doc) => selection.ids.has(doc.id));
   const allSelected = shown.length > 0 && selected.length === shown.length;
-  const toggle = (ids: string[], on: boolean) =>
-    setSelection((prev) => {
-      const next = new Set(prev.ids);
-      for (const id of ids) {
-        if (on) next.add(id);
-        else next.delete(id);
-      }
-      return { ...prev, ids: next };
-    });
+  const toggle = selection.toggle;
 
   /** Die Zeilen, die gerade gezogen werden — gedämpft (Artboard 2a). */
   const [dragging, setDragging] = useState<ReadonlySet<string>>(new Set());
@@ -276,34 +258,14 @@ export function DocumentList({ documents, currentFolder, total, types, folders, 
 
       {fulltextTooShort ? <p className="text-[13px] text-muted-ink">{t('searchTooShort')}</p> : null}
 
-      {/* Immer da, nur der Text wechselt: Eine Live-Region sagt nur an, was in ihr geschieht, nachdem sie im DOM steht. */}
-      {selectable ? (
-        <span data-testid="selection-live" role="status" className="sr-only">
-          {selected.length > 0 ? t('selection.count', { count: selected.length }) : ''}
-        </span>
-      ) : null}
-      {selectable && selected.length > 0 ? (
-        <div data-testid="selection-bar" className="flex items-center gap-3 rounded-md border border-line bg-surface-2 px-4 py-1.5 text-[13px] text-ink">
-          <span aria-hidden className="font-semibold">
-            {t('selection.count', { count: selected.length })}
-          </span>
-          <span aria-hidden className="text-muted-ink">
-            ·
-          </span>
-          <Button variant="outline" size="sm" onClick={() => moves?.requestMove(selected)}>
-            {tTree('moveTo')}
-          </Button>
-        </div>
-      ) : null}
-
       {shown.length === 0 ? (
         <EmptyState title={t('empty.title')} text={t('empty.text')} />
       ) : (
         <div className="overflow-hidden rounded-md border border-line bg-surface">
           {/* 12 px Zellabstand wie im Artboard: Damit passen alle Spalten ohne Querscrollen, auch auf dem Tablet. */}
           <Table className="[&_td]:px-3 [&_th]:px-3">
-            <TableHeader className="bg-table-head text-left text-[11px] font-bold uppercase tracking-[.06em] text-muted-ink">
-              <TableRow className="h-9">
+            <TableHeader>
+              <TableRow>
                 {selectable ? (
                   <TableHead className="w-10 pr-0 pl-4">
                     <Checkbox
@@ -320,29 +282,28 @@ export function DocumentList({ documents, currentFolder, total, types, folders, 
                 <SortableHead field="typeKey" label={t('columns.type')} className="max-[1100px]:hidden" />
                 <SortableHead field="documentDate" label={t('columns.date')} />
                 <SortableHead field="folder" label={t('columns.folder')} />
-                <TableHead className="px-4">{t('columns.direction')}</TableHead>
-                <TableHead className="px-4">{t('columns.status')}</TableHead>
+                <TableHead>{t('columns.direction')}</TableHead>
+                <TableHead>{t('columns.status')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {shown.map((doc, i) => (
+              {shown.map((doc) => (
                 <Fragment key={doc.id}>
                   <TableRow
                     data-document-id={doc.id}
                     draggable={canMove && fine}
                     onDragStart={(e) => startDrag(e.dataTransfer, doc)}
                     onDragEnd={() => setDragging(new Set())}
-                    onClick={() => router.push(`/dms/${doc.id}`)}
                     className={cn(
-                      'h-row cursor-pointer hover:bg-row-hover',
-                      hits?.[doc.id] ? 'border-b-0' : 'border-b border-line-2',
-                      i % 2 === 1 && 'bg-zebra',
+                      // Ein Treffer hängt eine zweite Zeile an; beide gehören zusammen und tragen keinen Zebrastreifen,
+                      // sonst springt das Muster mit jedem Treffer.
+                      hits?.[doc.id] && 'border-b-0 even:bg-transparent',
                       dragging.has(doc.id) && 'opacity-50',
                     )}
                   >
                     {selectable ? (
                       // Das Kästchen wählt aus; die Zeile öffnet weiter das Dokument.
-                      <TableCell className="w-10 pr-0 pl-4" onClick={(e) => e.stopPropagation()}>
+                      <TableCell className="w-10 pr-0 pl-4">
                         <Checkbox
                           aria-label={t('selection.selectOne', { subject: doc.subject })}
                           checked={selection.ids.has(doc.id)}
@@ -350,29 +311,16 @@ export function DocumentList({ documents, currentFolder, total, types, folders, 
                         />
                       </TableCell>
                     ) : null}
-                    <TableCell className="px-4 font-mono text-[13px] text-ink">
-                      {doc.number ? (
-                        <Link
-                          href={`/dms/${doc.id}`}
-                          className="font-semibold underline underline-offset-2 hover:text-link"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {doc.number}
-                        </Link>
-                      ) : (
-                        '—'
-                      )}
+                    {/* Die Nummer ist kopierwürdig und liegt über der Zeilenfläche; geöffnet wird über den Betreff. */}
+                    <TableCell selectable className="font-mono text-[13px] font-semibold text-ink">
+                      {doc.number ?? '—'}
                     </TableCell>
                     {/* Betreff, Art und Ordner brechen um, damit „Ordner“ auch auf dem Tablet ohne Querscrollen sichtbar bleibt (Spec § 9). */}
-                    <TableCell className="min-w-[160px] px-4 whitespace-normal hyphens-auto wrap-anywhere max-[1100px]:min-w-[140px]">
+                    <TableCell className="min-w-[160px] whitespace-normal hyphens-auto wrap-anywhere max-[1100px]:min-w-[140px]">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <Link
-                          href={`/dms/${doc.id}`}
-                          className="font-semibold text-ink underline-offset-2 hover:text-link hover:underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >
+                        <RowLink href={`/dms/${doc.id}`} className="text-ink hover:text-link">
                           {doc.subject}
-                        </Link>
+                        </RowLink>
                         {/* Auch hier, nicht nur am rechten Rand: Die
                             Statusspalte steht zu weit weg, um beim Überfliegen
                             zu wirken. */}
@@ -396,14 +344,14 @@ export function DocumentList({ documents, currentFolder, total, types, folders, 
                         ) : null}
                       </div>
                     </TableCell>
-                    <TableCell className="min-w-[110px] px-4 whitespace-normal hyphens-auto wrap-anywhere text-ink-2 max-[1100px]:hidden">{doc.typeLabel}</TableCell>
-                    <TableCell className="px-4 font-mono text-[13px] text-ink-2">{fmt.date(doc.documentDate)}</TableCell>
+                    <TableCell className="min-w-[110px] whitespace-normal hyphens-auto wrap-anywhere text-ink-2 max-[1100px]:hidden">{doc.typeLabel}</TableCell>
+                    <TableCell className="font-mono text-[13px] text-ink-2">{fmt.date(doc.documentDate)}</TableCell>
                     {/* Der Ort unter dem geöffneten Ordner, als Namen mit „›“; leer heißt „direkt hier“. */}
-                    <TableCell data-folder-cell className="min-w-[110px] px-4 whitespace-normal text-ink-2">
+                    <TableCell data-folder-cell className="min-w-[110px] whitespace-normal text-ink-2">
                       {doc.folder === null ? (doc.direction === 'incoming' ? t('inbox') : t('noFolder')) : namesBelow(doc.folder, openFolder).join(' › ')}
                     </TableCell>
-                    <TableCell className="px-4 text-ink-2">{t(`directions.${doc.direction}`)}</TableCell>
-                    <TableCell className="px-4">
+                    <TableCell className="text-ink-2">{t(`directions.${doc.direction}`)}</TableCell>
+                    <TableCell>
                       {doc.status === 'voided' ? (
                         <StatusBadge tone="error">{t('statuses.voided')}</StatusBadge>
                       ) : doc.phase === 'draft' ? (
@@ -414,21 +362,16 @@ export function DocumentList({ documents, currentFolder, total, types, folders, 
                     </TableCell>
                   </TableRow>
                   {hits?.[doc.id] ? (
-                    <TableRow
-                      onClick={() => router.push(`/dms/${doc.id}`)}
-                      className={cn(
-                        'cursor-pointer border-b border-line-2 hover:bg-row-hover',
-                        i % 2 === 1 && 'bg-zebra',
-                      )}
-                    >
-                      <TableCell colSpan={selectable ? 8 : 7} className="px-4 pt-0 pb-3 text-[13px] text-muted-ink">
+                    <TableRow className="even:bg-transparent">
+                      <TableCell colSpan={selectable ? 8 : 7} className="pt-0 pb-3 text-[13px] text-muted-ink">
+                        {/* Die Trefferzeile gehört zum Dokument: eine zweite, für Vorleser unsichtbare Fläche, damit ein Klick auch hier öffnet. */}
+                        <RowLink href={`/dms/${doc.id}`} aria-hidden tabIndex={-1} />
                         <SnippetText value={hits[doc.id]!.snippet} />{' '}
                         {/* `#page=` versteht jeder Browser-PDF-Betrachter; wir brauchen dafuer keinen
                             eigenen Betrachter und keine Bibliothek. */}
                         <a
                           href={`/dms/${doc.id}/preview#page=${hits[doc.id]!.page}`}
                           className="font-medium underline underline-offset-2 hover:text-link"
-                          onClick={(e) => e.stopPropagation()}
                         >
                           {t('hitOnPage', { page: hits[doc.id]!.page })}
                         </a>
@@ -441,6 +384,15 @@ export function DocumentList({ documents, currentFolder, total, types, folders, 
           </Table>
         </div>
       )}
+
+      {/* Unter der Tabelle und klebend; die Live-Region darin steht immer im DOM (Kommentar im Baustein). */}
+      {selectable ? (
+        <SelectionBar count={selected.length} label={t('selection.count', { count: selected.length })}>
+          <Button variant="outline" size="sm" onClick={() => moves?.requestMove(selected)}>
+            {tTree('moveTo')}
+          </Button>
+        </SelectionBar>
+      ) : null}
 
       {documents.length < total ? (
         <p data-testid="list-truncated" className="text-[13px] text-muted-ink">

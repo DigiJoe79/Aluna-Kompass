@@ -3,7 +3,8 @@
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { toast } from 'sonner';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { useDateFormat } from '@/components/date-format-provider';
 import { EmptyState } from '@/components/empty-state';
 import { ReceiptDrop } from '@/components/finance/receipt-drop';
@@ -40,33 +41,21 @@ export function SignatureSteps({ rows, canIssue }: { rows: NeedsSignatureRow[]; 
 
 function SignatureCard({ row, canIssue }: { row: NeedsSignatureRow; canIssue: boolean }) {
   const t = useTranslations('finance.donations.signature');
-  const tCommon = useTranslations('common');
   const { date } = useDateFormat();
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const feedback = useActionFeedback();
 
   const upload = async (files: File[]) => {
     const file = files[0];
     if (!file) return;
     setPending(true);
-    try {
-      const formData = new FormData();
-      formData.append('id', row.id);
-      formData.append('file', file);
-      const result = await attachSignedAction(formData);
-      if (result.status === 'error') {
-        toast.error(result.message);
-        return;
-      }
-      if (result.status === 'success') {
-        if (result.message) toast.success(result.message);
-        router.refresh();
-      }
-    } catch {
-      toast.error(tCommon('uploadFailed'));
-    } finally {
-      setPending(false);
-    }
+    const formData = new FormData();
+    formData.append('id', row.id);
+    formData.append('file', file);
+    const result = await feedback.run(() => attachSignedAction(formData), { retry: () => void upload(files) });
+    setPending(false);
+    if (result.status === 'success') router.refresh();
   };
 
   const common = { blocked: false, canDoNames: [], canDoText: '', doneLabel: t('done') };
@@ -88,7 +77,12 @@ function SignatureCard({ row, canIssue }: { row: NeedsSignatureRow; canIssue: bo
             canSelf: false,
             href: '',
             actionLabel: t('open'),
-            extra: canIssue && !row.signed ? <div className="w-72"><ReceiptDrop onFiles={(files) => void upload(files)} disabled={pending} /></div> : undefined,
+            extra: canIssue && !row.signed ? (
+              <div className="w-72 space-y-2">
+                <RefusalNotice action state={feedback.state} />
+                <ReceiptDrop onFiles={(files) => void upload(files)} disabled={pending} />
+              </div>
+            ) : undefined,
           },
           { ...common, key: 'linked', title: t('steps.linked'), done: row.signed, canSelf: false, href: '', actionLabel: t('open') },
         ]}

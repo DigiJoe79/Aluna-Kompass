@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { ModuleInactiveCard } from '@/components/module-inactive-card';
 import { Notice } from '@/components/notice';
+import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { formatDate } from '@/lib/dates';
 import { requireSession } from '@/lib/request-context';
@@ -20,12 +21,12 @@ import { NoticesTable } from './notices-table';
  */
 export default async function FinanceDonationNoticesPage() {
   const { deps, ctx } = await requireSession();
-  if (!isModuleEnabled(deps, 'finance')) return <ModuleInactiveCard namespace="finance.common" />;
-  if (!hasPermission(ctx, 'finance.read')) return <ForbiddenCard permission="finance.read" />;
+  if (!isModuleEnabled(deps, 'finance')) return <Page width="standard"><ModuleInactiveCard namespace="finance.common" /></Page>;
+  if (!hasPermission(ctx, 'finance.read')) return <Page width="standard"><ForbiddenCard permission="finance.read" /></Page>;
   const t = await getTranslations('finance.donations.notices');
 
   const [noticesRes, machineRes] = await Promise.all([listNotices(deps, ctx, { includeInactive: true }), getMachineProcedure(deps, ctx)]);
-  if (!noticesRes.ok || !machineRes.ok) return <ForbiddenCard permission="finance.read" />;
+  if (!noticesRes.ok || !machineRes.ok) return <Page width="standard"><ForbiddenCard permission="finance.read" /></Page>;
   const notices = noticesRes.value;
 
   const canIssue = hasPermission(ctx, 'finance.donationsIssue');
@@ -38,22 +39,23 @@ export default async function FinanceDonationNoticesPage() {
   const dateMode = readSetting<'locale' | 'iso'>(deps, 'ui.dateFormat');
 
   return (
-    <div className="max-w-[1100px] space-y-5">
-      <PageHeader title={t('title')} description={t('description')} actions={canIssue ? <AddNoticeButton canPickDocument={canPickDocument} /> : undefined} />
+    <Page width="standard" header={<PageHeader title={t('title')} description={t('description')} actions={canIssue ? <AddNoticeButton canPickDocument={canPickDocument} /> : undefined} />}>
+      <div className="space-y-5">
 
-      {!hasValid ? <Notice level="warn">{t('noValid')}</Notice> : expiry ? <Notice level="warn">{t('expiring', { date: formatDate(expiry.validUntil, dateMode) })}</Notice> : null}
+        {!hasValid ? <Notice level="warn">{t('noValid')}</Notice> : expiry ? <Notice level="warn">{t('expiring', { date: formatDate(expiry.validUntil, dateMode) })}</Notice> : null}
 
-      {notices.length === 0 ? (
-        <EmptyState title={t('empty.title')} text={t('empty.text')} />
-      ) : (
-        <NoticesTable
-          rows={notices.map(({ id, kind, taxOffice, taxNumber, noticeDate, exemptFrom, assessmentPeriod, purposesText, purposesTextAccusative, validUntil, state, supersededOn, voidedAt, documentId, documentNumber, supersededDocumentNumber }) => ({ id, kind, taxOffice, taxNumber, noticeDate, exemptFrom, assessmentPeriod, purposesText, purposesTextAccusative, validUntil, state, supersededOn, voidedAt, documentId, documentNumber, supersededDocumentNumber }))}
-          canIssue={canIssue}
-          canPickDocument={canPickDocument}
-        />
-      )}
+        {notices.length === 0 ? (
+          <EmptyState title={t('empty.title')} text={t('empty.text')} />
+        ) : (
+          <NoticesTable
+            rows={notices.map(({ id, kind, taxOffice, taxNumber, noticeDate, exemptFrom, assessmentPeriod, purposesText, purposesTextAccusative, validUntil, state, supersededOn, voidedAt, documentId, documentNumber, supersededDocumentNumber }) => ({ id, kind, taxOffice, taxNumber, noticeDate, exemptFrom, assessmentPeriod, purposesText, purposesTextAccusative, validUntil, state, supersededOn, voidedAt, documentId, documentNumber, supersededDocumentNumber }))}
+            canIssue={canIssue}
+            canPickDocument={canPickDocument}
+          />
+        )}
 
-      <MachinePanel signers={machineRes.value.signers} status={machineRes.value.status} canIssue={canIssue} canDraftLetter={canDraftLetter} draftNames={draftNames} facsimileMaxBytes={FACSIMILE_MAX_BYTES} />
-    </div>
+        <MachinePanel signers={machineRes.value.signers} status={machineRes.value.status} canIssue={canIssue} canDraftLetter={canDraftLetter} draftNames={draftNames} facsimileMaxBytes={FACSIMILE_MAX_BYTES} />
+      </div>
+    </Page>
   );
 }

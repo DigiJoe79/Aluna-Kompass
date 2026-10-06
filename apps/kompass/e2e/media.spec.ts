@@ -135,7 +135,7 @@ test.describe('media library', () => {
     // Ein Hund mit Foto — die Suche soll ihn über das Verwendungs-Label finden.
     await page.goto('/animals');
     await page.getByRole('link', { name: 'Hund anlegen' }).click();
-    await page.getByLabel('Slug (URL-Teil)').fill('rex');
+    await expect(page).toHaveURL(/\/animals\/new/);
     await page.getByLabel('Name').fill('Rex');
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page).toHaveURL(/\/animals\/[A-Z0-9]+$/);

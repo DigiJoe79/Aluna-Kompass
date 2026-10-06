@@ -5,7 +5,8 @@ import { ArrowDown, ArrowUp, SlidersHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import { toast } from 'sonner';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,6 +31,8 @@ export function DashboardCustomize({ layout, available }: { layout: DashboardLay
   const [open, setOpen] = useState(false);
   const [tiles, setTiles] = useState<LayoutTile[]>(layout.tiles);
   const [pending, start] = useTransition();
+  // Alles hier speichert sofort: Die Ablehnung steht oben in der Leiste der Anpassung.
+  const feedback = useActionFeedback();
 
   const title = (tile: { module: string; key: string }) => t(`tiles.${tile.module}.${tile.key}.title`);
   const off = available.filter((a) => !tiles.some((x) => id(x) === id(a)));
@@ -37,9 +40,8 @@ export function DashboardCustomize({ layout, available }: { layout: DashboardLay
   const persist = (next: LayoutTile[]) => {
     setTiles(next);
     start(async () => {
-      const s = await saveDashboardLayoutAction(next);
-      if (s.status === 'error') toast.error(s.message);
-      else router.refresh();
+      const s = await feedback.run(() => saveDashboardLayoutAction(next));
+      if (s.status === 'success') router.refresh();
     });
   };
   const toggle = (tile: AvailableTile, on: boolean) => {
@@ -60,13 +62,10 @@ export function DashboardCustomize({ layout, available }: { layout: DashboardLay
   };
   const reset = () =>
     start(async () => {
-      const s = await resetDashboardLayoutAction();
+      const s = await feedback.run(() => resetDashboardLayoutAction());
       if (s.status === 'success') {
-        toast.success(s.message ?? '');
         setTiles((s.data as DashboardLayout).tiles);
         router.refresh();
-      } else if (s.status === 'error') {
-        toast.error(s.message);
       }
     });
 
@@ -121,34 +120,39 @@ export function DashboardCustomize({ layout, available }: { layout: DashboardLay
         {tHome('customize')}
       </Button>
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="right" className="w-[420px] gap-0 overflow-y-auto bg-surface p-6 shadow-md" data-testid="dashboard-customize">
-          <SheetTitle className="font-heading text-[19px]">{t('customize.title')}</SheetTitle>
-          <p className="mt-1 mb-4 text-[13px] text-muted-ink">{t('customize.hint')}</p>
-          <ul className="divide-y divide-line-2">
-            {tiles.map((tile, index) => {
-              const def = available.find((a) => id(a) === id(tile));
-              if (!def) return null;
-              return (
-                <li key={id(tile)} className="flex flex-col gap-2 py-3">
-                  <div className="flex items-center gap-2">
-                    <Switch id={`tile-${id(tile)}`} checked disabled={pending} onCheckedChange={() => toggle(def, false)} />
-                    <Label htmlFor={`tile-${id(tile)}`} className="flex-1 cursor-pointer text-[14px]">{title(tile)}</Label>
-                    <Button variant="ghost" size="icon-sm" aria-label={tContent('moveUp')} disabled={pending || index === 0} onClick={() => move(index, -1)}><ArrowUp className="size-4" /></Button>
-                    <Button variant="ghost" size="icon-sm" aria-label={tContent('moveDown')} disabled={pending || index === tiles.length - 1} onClick={() => move(index, 1)}><ArrowDown className="size-4" /></Button>
-                  </div>
-                  {def.options.length > 0 ? <div className="flex flex-col gap-2 pl-10">{def.options.map((f) => optionField(tile, index, f))}</div> : null}
+        <SheetContent side="right" size="sm" className="gap-0 overflow-y-auto bg-surface shadow-md" data-testid="dashboard-customize">
+          <div className="p-5">
+            <SheetTitle className="font-heading text-[19px]">{t('customize.title')}</SheetTitle>
+            <p className="mt-1 mb-4 text-[13px] text-muted-ink">{t('customize.hint')}</p>
+            <div className="mb-3">
+              <RefusalNotice action state={feedback.state} />
+            </div>
+            <ul className="divide-y divide-line-2">
+              {tiles.map((tile, index) => {
+                const def = available.find((a) => id(a) === id(tile));
+                if (!def) return null;
+                return (
+                  <li key={id(tile)} className="flex flex-col gap-2 py-3">
+                    <div className="flex items-center gap-2">
+                      <Switch id={`tile-${id(tile)}`} checked disabled={pending} onCheckedChange={() => toggle(def, false)} />
+                      <Label htmlFor={`tile-${id(tile)}`} className="flex-1 cursor-pointer text-[14px]">{title(tile)}</Label>
+                      <Button variant="ghost" size="icon-sm" aria-label={tContent('moveUp')} disabled={pending || index === 0} onClick={() => move(index, -1)}><ArrowUp className="size-4" /></Button>
+                      <Button variant="ghost" size="icon-sm" aria-label={tContent('moveDown')} disabled={pending || index === tiles.length - 1} onClick={() => move(index, 1)}><ArrowDown className="size-4" /></Button>
+                    </div>
+                    {def.options.length > 0 ? <div className="flex flex-col gap-2 pl-10">{def.options.map((f) => optionField(tile, index, f))}</div> : null}
+                  </li>
+                );
+              })}
+              {off.map((tile) => (
+                <li key={id(tile)} className="flex items-center gap-2 py-3 opacity-60">
+                  <Switch id={`tile-${id(tile)}`} checked={false} disabled={pending} onCheckedChange={() => toggle(tile, true)} />
+                  <Label htmlFor={`tile-${id(tile)}`} className="flex-1 cursor-pointer text-[14px]">{title(tile)}</Label>
+                  <span className="text-[12px] text-muted-ink">{t('customize.off')}</span>
                 </li>
-              );
-            })}
-            {off.map((tile) => (
-              <li key={id(tile)} className="flex items-center gap-2 py-3 opacity-60">
-                <Switch id={`tile-${id(tile)}`} checked={false} disabled={pending} onCheckedChange={() => toggle(tile, true)} />
-                <Label htmlFor={`tile-${id(tile)}`} className="flex-1 cursor-pointer text-[14px]">{title(tile)}</Label>
-                <span className="text-[12px] text-muted-ink">{t('customize.off')}</span>
-              </li>
-            ))}
-          </ul>
-          <Button variant="secondary" className="mt-6 w-fit" disabled={pending || !layout.custom} onClick={reset}>{t('customize.reset')}</Button>
+              ))}
+            </ul>
+            <Button variant="secondary" className="mt-6 w-fit" disabled={pending || !layout.custom} onClick={reset}>{t('customize.reset')}</Button>
+          </div>
         </SheetContent>
       </Sheet>
     </>

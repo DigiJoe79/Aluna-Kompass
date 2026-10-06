@@ -22,7 +22,7 @@ describe('animalsMediaReferences', () => {
     const d = await setup();
     const ctx = ctxWith(['media.upload', 'animals.manage']);
     const photo = unwrap(await storeMediaAsset(d, ctx, { originalName: 'rocky.png', bytes: PNG }));
-    const animal = unwrap(await createAnimal(d, ctx, { slug: 'rocky', name: 'Rocky', sex: 'male', ...base }));
+    const animal = unwrap(await createAnimal(d, ctx, { name: 'Rocky', sex: 'male', ...base }));
     unwrap(await setAnimalPhotos(d, ctx, { id: animal.id, photos: [{ assetId: photo.id, isPrimary: true }] }));
 
     expect(animalsMediaReferences(d, new Set([photo.id, 'OTHER']))).toEqual([

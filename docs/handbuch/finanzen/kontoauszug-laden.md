@@ -47,7 +47,7 @@ Nur wenn das Konto nicht eindeutig ist, fragt Kompass nach dem Ziehen nach:
   hat ihr Format geändert. „Format für ein Konto einrichten“ öffnet den
   [CSV-Assistenten](csv-format-einrichten.md) gleich mit dieser Datei.
 - **Kein Konto passt, CAMT**: Die IBAN im Auszug gehört zu keinem Konto.
-  „Konto einrichten“ führt zu den Konten unter „Finanzen einrichten“; ist
+  „Konto einrichten“ führt zu den Konten unter Einstellungen → Finanzen; ist
   die IBAN am richtigen Konto nur falsch eingetragen, korrigieren Sie sie
   dort.
 

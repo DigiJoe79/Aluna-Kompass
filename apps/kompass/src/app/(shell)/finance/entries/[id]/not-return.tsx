@@ -3,8 +3,9 @@
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
+import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { markNotReturnAction } from '../actions';
 
@@ -37,10 +38,11 @@ export function NotReturnCard({ entryId, mark, canMark }: { entryId: string; mar
         action={() => markNotReturnAction({ entryId, notReturn: !mark, ...(mark ? {} : { note }) })}
       >
         {mark ? null : (
-          <div className="space-y-1">
-            <Label htmlFor="not-return-note">{t('note')}</Label>
-            <Textarea id="not-return-note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} />
-          </div>
+          <FormGrid>
+            <FormField id="not-return-note" label={t('note')} size="l">
+              <Textarea id="not-return-note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} />
+            </FormField>
+          </FormGrid>
         )}
       </ConfirmDialog>
     </section>

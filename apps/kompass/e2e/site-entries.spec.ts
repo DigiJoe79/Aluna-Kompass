@@ -33,6 +33,33 @@ test('ein bestehender Eintrag lässt sich speichern, danach verwerfen und erneut
   await expect(page.locator('[name="title.de"]')).toHaveValue('Zweiter Stand');
 });
 
+test('ein Eintrag wird unten auf seiner Seite gelöscht, nicht in der Liste', async ({ page }) => {
+  await resetDatabase(page, 'seeded');
+  await loginAsAdmin(page);
+  await page.goto('/site/template');
+  await page.getByRole('button', { name: 'Template einlesen' }).click();
+  await page.getByRole('button', { name: 'Übernehmen' }).click();
+  await expect(page.getByRole('status')).toContainText('eingelesen');
+
+  await page.goto('/site/c/news');
+  // Die Liste kennt keinen Löschen-Knopf mehr (MUSTER.md § C: Löschen ist der letzte Abschnitt der Detailseite).
+  await expect(page.getByRole('button', { name: 'Löschen' })).toHaveCount(0);
+  const before = await page.getByRole('row').count();
+  await page.getByRole('row').first().getByRole('link').click();
+  await waitForHydration(page, '[name="title.de"]');
+  await page.getByRole('button', { name: 'Löschen' }).click();
+  const dialog = page.getByRole('alertdialog');
+  const withdraw = dialog.getByRole('button', { name: 'Zurückziehen' });
+  const remove = dialog.getByRole('button', { name: 'Löschen' });
+  // Zwei Stufen: Ist der Eintrag veröffentlicht, zuerst zurückziehen.
+  await expect(dialog.getByText(/Das ist noch veröffentlicht\.|Der Inhalt wird entfernt\./)).toBeVisible();
+  if (await withdraw.isVisible()) await withdraw.click();
+  await expect(dialog.getByText('Der Inhalt wird entfernt.')).toBeVisible();
+  await remove.click();
+  await expect(page).toHaveURL(/\/site\/c\/news$/);
+  await expect(page.getByRole('row')).toHaveCount(before - 1);
+});
+
 async function startPasswordFor(page: Page, name: string): Promise<string> {
   await page.goto('/admin/users');
   await page.getByRole('row', { name: new RegExp(name) }).getByRole('button', { name: 'Aktionen' }).click();

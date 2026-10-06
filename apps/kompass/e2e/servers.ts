@@ -60,6 +60,8 @@ export function workerEnvironment(kind: ServerKind, index: number, root: string)
         SITE_TEMPLATE_DIR: path.resolve(root, '../../templates/verein-basis'),
         SITE_CACHE_DIR: path.join(tmp, 'site-cache'),
         SITE_PREVIEW_DIR: path.join(tmp, 'site-preview'),
+        // Der Routen-Indikator von `next dev` fängt unten rechts Klicks ab (K9-Befund 14, `next.config.ts`).
+        KOMPASS_E2E_NO_DEV_INDICATOR: '1',
       },
     };
   }

@@ -35,18 +35,18 @@ export function VariablesForm({
     if (state.status === 'success') {
       toast.success(state.message ?? '');
       setLoaded(current);
-    } else if (state.status === 'error' && Object.keys(errors).length === 0) {
-      toast.error(state.message);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, errors]);
+  }, [state]);
 
   return (
-    <form action={action} className="flex flex-col gap-6 rounded-lg border border-line bg-surface p-6">
+    <form action={action} className="overflow-hidden rounded-lg border border-line bg-surface">
       <input type="hidden" name="expectedVersion" value={version} />
       <input type="hidden" name="payload" value={JSON.stringify(changedValues(loaded, current))} />
-      <SchemaForm schema={schema} value={current} errors={errors} locales={locales} onChange={setCurrent} options={options} />
-      <FormActionBar count={changedCount} onDiscard={() => setCurrent(loaded)} />
+      <div className="p-5">
+        <SchemaForm schema={schema} value={current} errors={errors} locales={locales} onChange={setCurrent} options={options} />
+      </div>
+      <FormActionBar count={changedCount} onDiscard={() => setCurrent(loaded)} state={state} />
     </form>
   );
 }

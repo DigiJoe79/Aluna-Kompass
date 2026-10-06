@@ -3,18 +3,17 @@
 import { useDateFormat } from '@/components/date-format-provider';
 import { useTranslations } from 'next-intl';
 import { useActionState, useEffect, useState, useTransition } from 'react';
-import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
-import { FieldError } from '@/components/forms/field-error';
-import { SubmitButton } from '@/components/forms/submit-button';
+import { FormActionBar } from '@/components/forms/form-action-bar';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { idleState } from '@/lib/actions';
 import { clearDispatchAction, recordDispatchAction } from '../actions';
 import { ActionForm } from '@/components/forms/action-form';
+import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
 
 /**
  * Der Versandvermerk steht neben dem Dokument, nicht darin: Er ändert nichts
@@ -39,7 +38,6 @@ export function DispatchPanel({
   canEdit: boolean;
 }) {
   const t = useTranslations('dms.dispatch');
-  const tCommon = useTranslations('common');
   const fmt = useDateFormat();
   const [open, setOpen] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -104,51 +102,32 @@ export function DispatchPanel({
       ) : null}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-full sm:max-w-[480px] bg-surface p-6 shadow-md">
+        <DialogContent size="md" className="bg-surface shadow-md">
           <ActionForm action={action} state={state}>
             <DialogTitle className="font-heading text-[19px]">{t('record')}</DialogTitle>
             <DialogDescription className="text-[13px] text-muted-ink">{t('description')}</DialogDescription>
 
-            {state.status === 'error' && Object.keys(errors).length === 0 ? (
-              <p role="alert" className="mt-3 rounded-md border border-error bg-error-bg p-3 text-[13px] text-error">
-                {state.message}
-              </p>
-            ) : null}
-
-            <div className="mt-5 space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="sentAt" required>
-                  {t('sentAt')}
-                </Label>
-                <Input id="sentAt" name="sentAt" type="date" value={sentAtValue} onChange={(e) => setSentAtValue(e.target.value)} required />
-                <FieldError id="sentAt-error" message={errors.sentAt} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="sentVia" required>
-                  {t('sentVia')}
-                </Label>
-                <Select id="sentVia" name="sentVia" value={sentViaValue} onChange={(e) => setSentViaValue(e.target.value)} required>
-                  {channels.map((channel) => (
-                    <option key={channel.key} value={channel.key}>
-                      {channel.label}
-                    </option>
-                  ))}
-                </Select>
-                <FieldError id="sentVia-error" message={errors.sentVia} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="note">{t('note')}</Label>
-                <Input id="note" name="note" value={noteValue} onChange={(e) => setNoteValue(e.target.value)} />
-              </div>
+            <div className="mt-5">
+              <FormGrid>
+                <FormField id="sentAt" label={t('sentAt')} required error={errors.sentAt} size="s">
+                  <Input id="sentAt" name="sentAt" type="date" value={sentAtValue} onChange={(e) => setSentAtValue(e.target.value)} required />
+                </FormField>
+                <FormField id="sentVia" label={t('sentVia')} required error={errors.sentVia} size="s">
+                  <Select id="sentVia" name="sentVia" value={sentViaValue} onChange={(e) => setSentViaValue(e.target.value)} required>
+                    {channels.map((channel) => (
+                      <option key={channel.key} value={channel.key}>
+                        {channel.label}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+                <FormField id="note" label={t('note')}>
+                  <Input id="note" name="note" value={noteValue} onChange={(e) => setNoteValue(e.target.value)} />
+                </FormField>
+              </FormGrid>
             </div>
 
-            <DialogFooter className="mt-6">
-              <span className="mr-auto text-[12px] text-muted-ink">{tCommon('requiredLegend')}</span>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                {t('cancel')}
-              </Button>
-              <SubmitButton>{t('submit')}</SubmitButton>
-            </DialogFooter>
+            <FormActionBar placement="dialog" mode="create" cancel={() => setOpen(false)} saveLabel={t('submit')} state={state} />
           </ActionForm>
         </DialogContent>
       </Dialog>

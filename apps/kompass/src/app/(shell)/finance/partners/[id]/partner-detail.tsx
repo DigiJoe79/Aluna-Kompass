@@ -5,21 +5,24 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { toast } from 'sonner';
 import { DocumentPicker } from '@/app/(shell)/dms/document-picker';
 import type { PickedDocument } from '@/app/(shell)/dms/search-action';
 import { useDateFormat } from '@/components/date-format-provider';
 import { ConfirmDialog } from '@/components/forms/confirm-dialog';
+import { DangerSection } from '@/components/forms/danger-section';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
+import { useActionFeedback } from '@/components/forms/use-action-feedback';
 import { ChoiceCards } from '@/components/choice-cards';
 import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { formatEuro } from '@/lib/finance/amount';
 import { deletePartnerProfileAction, savePartnerNoticeAction, savePartnerPaymentDraftAction, savePartnerProfileAction, setPartnerActiveAction, voidPartnerNoticeAction } from '../actions';
+import { FormField } from '@/components/forms/form-field';
+import { FormCell, FormGrid } from '@/components/forms/form-grid';
 
 type Status = PartnerView['status'];
 type Basis = 'transfer58' | 'agent57';
@@ -54,217 +57,104 @@ export function PartnerDetail({ partner, notices, payments, registerDocument, ag
   const router = useRouter();
 
   const fmt = useDateFormat();
+  const newPaymentFb = useActionFeedback();
   const showNotices = partner.status === 'taxExemptBody' || partner.status === 'foreignBody';
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
-      <ProfileSection partner={partner} documents={{ register: registerDocument, agreement: agreementDocument }} canWrite={canWrite} t={t} tStatus={tStatus} tBasis={tBasis} router={router} />
-      <div className="space-y-6">
-        {showNotices ? <NoticesSection partnerId={partner.id} abroad={partner.status === 'foreignBody'} notices={notices} canWrite={canWrite} t={t} router={router} /> : null}
-        <section className="space-y-3" data-testid="partner-payments">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-heading text-[16px] text-ink">{t('payments.title')}</h2>
-            {canWrite ? (
-              <Button
-                type="button"
-                size="sm"
-                data-testid="partner-new-payment"
-                onClick={async () => {
-                  const result = await savePartnerPaymentDraftAction({ partnerId: partner.id, basis: (partner.usualBasis ?? 'transfer58') as Basis, purposeText: '', retroactive: false, positions: [] });
-                  if (result.status !== 'success') {
-                    if (result.status === 'error') toast.error(result.message);
-                    return;
-                  }
-                  const data = result.data as { id: string } | undefined;
-                  if (data?.id) router.push(`/finance/partners/${partner.id}/payments/${data.id}`);
-                }}
-              >
-                {t('payments.new')}
-              </Button>
-            ) : null}
-          </div>
-          {payments.length === 0 ? (
-            <p className="text-[13px] text-muted-ink">{t('payments.empty')}</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('payments.columns.number')}</TableHead>
-                  <TableHead className="text-right">{t('payments.columns.amount')}</TableHead>
-                  <TableHead>{t('payments.columns.state')}</TableHead>
-                  <TableHead className="hidden text-right sm:table-cell">{t('payments.columns.date')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {payments.map((p) => (
-                  <TableRow key={p.id} data-testid={`payment-row-${p.id}`}>
-                    <TableCell className="whitespace-normal">
-                      <Link href={`/finance/partners/${partner.id}/payments/${p.id}`} className="font-mono text-ink underline-offset-2 hover:underline">
-                        {p.number ?? (p.purposeText || t('payments.new'))}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">{formatEuro(p.totalCents)}</TableCell>
-                    <TableCell className="whitespace-normal text-ink-2">
-                      {t(`payments.state.${paymentStateKey(p)}`)}
-                      {p.readyToAcknowledge ? (
-                        <>
-                          {' '}
-                          <StatusBadge tone="warning">{t('payments.readyToAcknowledge')}</StatusBadge>
-                        </>
-                      ) : null}
-                    </TableCell>
-                    <TableCell className="hidden text-right font-mono tabular-nums sm:table-cell">{fmt.date(p.date.slice(0, 10))}</TableCell>
+    <>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+        <ProfileSection partner={partner} documents={{ register: registerDocument, agreement: agreementDocument }} canWrite={canWrite} t={t} tStatus={tStatus} tBasis={tBasis} router={router} />
+        <div className="space-y-6">
+          {showNotices ? <NoticesSection partnerId={partner.id} abroad={partner.status === 'foreignBody'} notices={notices} canWrite={canWrite} t={t} router={router} /> : null}
+          <section className="space-y-3" data-testid="partner-payments">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-heading text-[16px] text-ink">{t('payments.title')}</h2>
+              {canWrite ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  data-testid="partner-new-payment"
+                  onClick={async () => {
+                    const result = await newPaymentFb.run(() => savePartnerPaymentDraftAction({ partnerId: partner.id, basis: (partner.usualBasis ?? 'transfer58') as Basis, purposeText: '', retroactive: false, positions: [] }));
+                    if (result.status !== 'success') return;
+                    const data = result.data as { id: string } | undefined;
+                    if (data?.id) router.push(`/finance/partners/${partner.id}/payments/${data.id}`);
+                  }}
+                >
+                  {t('payments.new')}
+                </Button>
+              ) : null}
+            </div>
+            <RefusalNotice action state={newPaymentFb.state} />
+            {payments.length === 0 ? (
+              <p className="text-[13px] text-muted-ink">{t('payments.empty')}</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('payments.columns.number')}</TableHead>
+                    <TableHead className="text-right">{t('payments.columns.amount')}</TableHead>
+                    <TableHead>{t('payments.columns.state')}</TableHead>
+                    <TableHead className="hidden text-right sm:table-cell">{t('payments.columns.date')}</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </section>
+                </TableHeader>
+                <TableBody>
+                  {payments.map((p) => (
+                    <TableRow key={p.id} data-testid={`payment-row-${p.id}`}>
+                      <TableCell className="whitespace-normal">
+                        <Link href={`/finance/partners/${partner.id}/payments/${p.id}`} className="font-mono text-ink underline-offset-2 hover:underline">
+                          {p.number ?? (p.purposeText || t('payments.new'))}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums">{formatEuro(p.totalCents)}</TableCell>
+                      <TableCell className="whitespace-normal text-ink-2">
+                        {t(`payments.state.${paymentStateKey(p)}`)}
+                        {p.readyToAcknowledge ? (
+                          <>
+                            {' '}
+                            <StatusBadge tone="warning">{t('payments.readyToAcknowledge')}</StatusBadge>
+                          </>
+                        ) : null}
+                      </TableCell>
+                      <TableCell className="hidden text-right font-mono tabular-nums sm:table-cell">{fmt.date(p.date.slice(0, 10))}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </section>
+        </div>
       </div>
-    </div>
+      {canWrite ? <PartnerDanger partner={partner} deletable={payments.length === 0 && notices.length === 0} router={router} t={t} /> : null}
+    </>
   );
 }
 
-function ProfileSection({ partner, documents, canWrite, t, tStatus, tBasis, router }: { partner: PartnerView; documents: { register: PartnerDocument | null; agreement: PartnerDocument | null }; canWrite: boolean; t: ReturnType<typeof useTranslations>; tStatus: ReturnType<typeof useTranslations>; tBasis: ReturnType<typeof useTranslations>; router: ReturnType<typeof useRouter> }) {
-  const [status, setStatus] = useState<Status>(partner.status);
-  const [usualBasis, setUsualBasis] = useState<Basis>((partner.usualBasis ?? 'transfer58') as Basis);
-  const [usualProofMonths, setUsualProofMonths] = useState(partner.usualProofMonths);
-  const [note, setNote] = useState(partner.note ?? '');
-  const [registerDocument, setRegisterDocument] = useState<PickedDocument | null>(pickable(documents.register));
-  const [agreementDocument, setAgreementDocument] = useState<PickedDocument | null>(pickable(documents.agreement));
-  const [pending, setPending] = useState(false);
+/**
+ * Löschen oder Archivieren als letzter Abschnitt der Seite (MUSTER.md § C). Löschen geht nur,
+ * solange weder Zahlungen noch Bescheide am Partner hängen (der Dienst prüft es ohnehin);
+ * sonst bleibt das Archivieren, also das Deaktivieren, und beim inaktiven Partner das Aktivieren.
+ */
+function PartnerDanger({ partner, deletable, router, t }: { partner: PartnerView; deletable: boolean; router: ReturnType<typeof useRouter>; t: ReturnType<typeof useTranslations> }) {
+  const c = useTranslations('common');
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const tList = useTranslations('finance.partners.list');
-
-  const derived = status !== 'foreignBody';
-
-  const save = async () => {
-    setPending(true);
-    const result = await savePartnerProfileAction({
-      id: partner.id,
-      contactId: partner.contactId,
-      status,
-      usualBasis: derived ? undefined : usualBasis,
-      usualProofMonths,
-      note: note || null,
-      registerDocumentId: registerDocument?.id ?? null,
-      agreementDocumentId: agreementDocument?.id ?? null,
-      isActive: partner.isActive,
-    });
-    setPending(false);
-    if (result.status === 'error') { toast.error(result.message); return; }
-    if (result.status === 'success') { toast.success(result.message ?? ''); router.refresh(); }
+  const activeFb = useActionFeedback();
+  const toggleActive = async () => {
+    const result = await activeFb.run(() => setPartnerActiveAction(partner.id, !partner.isActive));
+    if (result.status === 'success') router.refresh();
   };
-
   return (
-    <section className="space-y-3 rounded-md border border-line bg-surface p-4" data-testid="partner-profile">
-      <div className="flex items-center justify-between">
-        <h2 className="font-heading text-[16px] text-ink">{t('profile.title')}</h2>
-        <div className="flex items-center gap-2">
-          {!partner.isActive ? <StatusBadge tone="neutral">{tList('inactive')}</StatusBadge> : null}
-          {canWrite ? (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={async () => {
-                const result = await setPartnerActiveAction(partner.id, !partner.isActive);
-                if (result.status === 'error') toast.error(result.message);
-                else router.refresh();
-              }}
-            >
-              {partner.isActive ? t('profile.deactivate') : t('profile.activate')}
-            </Button>
-          ) : null}
-        </div>
+    <>
+      <div className="mt-6">
+        <RefusalNotice action state={activeFb.state} />
       </div>
-
-      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="space-y-1">
-          <dt className="text-[13px] font-semibold text-ink">{t('profile.legalForm')}</dt>
-          <dd className="text-[14px] text-ink-2" data-testid="partner-legal-form">
-            {partner.contactLegalForm ?? (
-              <Link href={`/contacts/${partner.contactId}`} className="underline underline-offset-2">
-                {t('profile.legalFormNone')}
-              </Link>
-            )}
-          </dd>
-        </div>
-      </dl>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="partner-status" required>
-            {t('profile.status')}
-          </Label>
-          <Select id="partner-status" value={status} disabled={!canWrite} onChange={(e) => setStatus(e.target.value as Status)}>
-            {(['taxExemptBody', 'foreignBody', 'publicBody', 'agent'] as const).map((s) => (
-              <option key={s} value={s}>
-                {tStatus(s)}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="partner-proof-months">{t('profile.usualProofMonths')}</Label>
-          <Select id="partner-proof-months" value={String(usualProofMonths)} disabled={!canWrite} onChange={(e) => setUsualProofMonths(Number(e.target.value))}>
-            {PROOF_MONTHS.map((n) => (
-              <option key={n} value={n}>
-                {t('profile.months', { count: n })}
-              </option>
-            ))}
-          </Select>
-        </div>
-      </div>
-      {derived ? (
-        <div className="space-y-1">
-          <p className="text-[13px] font-semibold text-ink">{t('profile.usualBasis')}</p>
-          <p className="text-[14px] text-ink-2" data-testid="partner-basis-derived">
-            {tBasis(status === 'agent' ? 'agent57' : 'transfer58')} <span className="text-[12px] text-muted-ink">({t('profile.usualBasisDerived')})</span>
-          </p>
-        </div>
-      ) : canWrite ? (
-        <div className="space-y-1.5" data-testid="partner-basis-cards">
-          <ChoiceCards
-            mode="choice"
-            name="partner-usual-basis"
-            legend={t('profile.basisQuestion')}
-            value={usualBasis}
-            onSelect={(v) => setUsualBasis(v as Basis)}
-            options={(['transfer58', 'agent57'] as const).map((b) => ({ value: b, label: t(`profile.basisCards.${b}`), description: tBasis(b) }))}
-          />
-          <p className="text-[12px] text-muted-ink">{t('profile.basisHint')}</p>
-        </div>
+      {deletable ? (
+        <DangerSection title={c('danger.delete')} text={t('danger.deleteText')} actionLabel={t('profile.delete')} onAction={() => setDeleteOpen(true)} testId="partner-delete-trigger" />
+      ) : partner.isActive ? (
+        <DangerSection title={c('danger.archive')} text={t('danger.archiveText')} actionLabel={t('profile.deactivate')} onAction={() => void toggleActive()} testId="partner-archive-trigger" />
       ) : (
-        <div className="space-y-1">
-          <p className="text-[13px] font-semibold text-ink">{t('profile.basisQuestion')}</p>
-          <p className="text-[14px] text-ink-2">{t(`profile.basisCards.${usualBasis}`)}</p>
-        </div>
+        <DangerSection title={t('danger.activateTitle')} text={t('danger.activateText')} actionLabel={t('profile.activate')} onAction={() => void toggleActive()} testId="partner-activate-trigger" />
       )}
-      <div className="space-y-1.5">
-        <Label htmlFor="partner-note">{t('profile.note')}</Label>
-        <Textarea id="partner-note" rows={2} value={note} disabled={!canWrite} onChange={(e) => setNote(e.target.value)} />
-      </div>
-      {canWrite ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <DocumentPicker id="partner-register-doc" name="registerDocumentId" label={t('profile.registerDocument')} value={registerDocument} onChange={setRegisterDocument} />
-          <DocumentPicker id="partner-agreement-doc" name="agreementDocumentId" label={t('profile.agreementDocument')} value={agreementDocument} onChange={setAgreementDocument} />
-        </div>
-      ) : (
-        <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <DocumentLine label={t('profile.registerDocument')} doc={documents.register} t={t} />
-          <DocumentLine label={t('profile.agreementDocument')} doc={documents.agreement} t={t} />
-        </dl>
-      )}
-      {canWrite ? (
-        <div className="flex items-center justify-between">
-          <Button type="button" variant="ghost" className="text-error" onClick={() => setDeleteOpen(true)} data-testid="partner-delete-trigger">
-            {t('profile.delete')}
-          </Button>
-          <Button type="button" disabled={pending} onClick={() => void save()} data-testid="partner-profile-save">
-            {t('profile.save')}
-          </Button>
-        </div>
-      ) : null}
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
@@ -278,6 +168,147 @@ function ProfileSection({ partner, documents, canWrite, t, tStatus, tBasis, rout
           return result;
         }}
       />
+    </>
+  );
+}
+
+function ProfileSection({ partner, documents, canWrite, t, tStatus, tBasis, router }: { partner: PartnerView; documents: { register: PartnerDocument | null; agreement: PartnerDocument | null }; canWrite: boolean; t: ReturnType<typeof useTranslations>; tStatus: ReturnType<typeof useTranslations>; tBasis: ReturnType<typeof useTranslations>; router: ReturnType<typeof useRouter> }) {
+  const [status, setStatus] = useState<Status>(partner.status);
+  const [usualBasis, setUsualBasis] = useState<Basis>((partner.usualBasis ?? 'transfer58') as Basis);
+  const [usualProofMonths, setUsualProofMonths] = useState(partner.usualProofMonths);
+  const [note, setNote] = useState(partner.note ?? '');
+  const [registerDocument, setRegisterDocument] = useState<PickedDocument | null>(pickable(documents.register));
+  const [agreementDocument, setAgreementDocument] = useState<PickedDocument | null>(pickable(documents.agreement));
+  const [pending, setPending] = useState(false);
+  const saveFb = useActionFeedback();
+  const tList = useTranslations('finance.partners.list');
+
+  const derived = status !== 'foreignBody';
+
+  const save = async () => {
+    setPending(true);
+    const result = await saveFb.run(() => savePartnerProfileAction({
+      id: partner.id,
+      contactId: partner.contactId,
+      status,
+      usualBasis: derived ? undefined : usualBasis,
+      usualProofMonths,
+      note: note || null,
+      registerDocumentId: registerDocument?.id ?? null,
+      agreementDocumentId: agreementDocument?.id ?? null,
+      isActive: partner.isActive,
+    }), { retry: () => void save() });
+    setPending(false);
+    if (result.status === 'success') router.refresh();
+  };
+
+  return (
+    <section className="space-y-3 rounded-md border border-line bg-surface p-4" data-testid="partner-profile">
+      <div className="flex items-center justify-between">
+        <h2 className="font-heading text-[16px] text-ink">{t('profile.title')}</h2>
+        <div className="flex items-center gap-2">
+          {!partner.isActive ? <StatusBadge tone="neutral">{tList('inactive')}</StatusBadge> : null}
+        </div>
+      </div>
+
+      {/* Rechtsform als Anzeige in der Zeile des Abschnitts, kein Feld (Entscheidung zum Inventar § E). */}
+      <section>
+        <h3 className="text-[15px] font-semibold">
+          {t('profile.sections.classification')}
+          <span className="font-normal text-ink-2" data-testid="partner-legal-form">
+            {' · '}
+            {partner.contactLegalForm ?? (
+              <Link href={`/contacts/${partner.contactId}`} className="underline underline-offset-2">
+                {t('profile.legalFormNone')}
+              </Link>
+            )}
+          </span>
+        </h3>
+        <div className="mt-3">
+          <FormGrid>
+            <FormField id="partner-status" label={t('profile.status')} required>
+              <Select id="partner-status" value={status} disabled={!canWrite} onChange={(e) => setStatus(e.target.value as Status)}>
+                {(['taxExemptBody', 'foreignBody', 'publicBody', 'agent'] as const).map((s) => (
+                  <option key={s} value={s}>
+                    {tStatus(s)}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField id="partner-proof-months" label={t('profile.usualProofMonths')} size="s">
+              <Select id="partner-proof-months" value={String(usualProofMonths)} disabled={!canWrite} onChange={(e) => setUsualProofMonths(Number(e.target.value))}>
+                {PROOF_MONTHS.map((n) => (
+                  <option key={n} value={n}>
+                    {t('profile.months', { count: n })}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+            {derived ? (
+              <FormCell size="full" className="space-y-1">
+                <p className="text-[13px] font-semibold text-ink">{t('profile.usualBasis')}</p>
+                <p className="text-[14px] text-ink-2" data-testid="partner-basis-derived">
+                  {tBasis(status === 'agent' ? 'agent57' : 'transfer58')} <span className="text-[12px] text-muted-ink">({t('profile.usualBasisDerived')})</span>
+                </p>
+              </FormCell>
+            ) : canWrite ? (
+              <FormCell size="full" className="space-y-1.5" data-testid="partner-basis-cards">
+                <ChoiceCards
+                  mode="choice"
+                  name="partner-usual-basis"
+                  legend={t('profile.basisQuestion')}
+                  value={usualBasis}
+                  onSelect={(v) => setUsualBasis(v as Basis)}
+                  options={(['transfer58', 'agent57'] as const).map((b) => ({ value: b, label: t(`profile.basisCards.${b}`), description: tBasis(b) }))}
+                />
+                <p className="text-[12px] text-muted-ink">{t('profile.basisHint')}</p>
+              </FormCell>
+            ) : (
+              <FormCell size="full" className="space-y-1">
+                <p className="text-[13px] font-semibold text-ink">{t('profile.basisQuestion')}</p>
+                <p className="text-[14px] text-ink-2">{t(`profile.basisCards.${usualBasis}`)}</p>
+              </FormCell>
+            )}
+          </FormGrid>
+        </div>
+      </section>
+      <section className="mt-5 border-t border-line pt-5">
+        <h3 className="text-[15px] font-semibold">{t('profile.sections.documents')}</h3>
+        <div className="mt-3">
+          <FormGrid>
+            {canWrite ? (
+              <>
+                <FormCell size="m">
+                  <DocumentPicker id="partner-register-doc" name="registerDocumentId" label={t('profile.registerDocument')} value={registerDocument} onChange={setRegisterDocument} />
+                </FormCell>
+                <FormCell size="m">
+                  <DocumentPicker id="partner-agreement-doc" name="agreementDocumentId" label={t('profile.agreementDocument')} value={agreementDocument} onChange={setAgreementDocument} />
+                </FormCell>
+              </>
+            ) : (
+              <>
+                <FormCell as="dl" size="m">
+                  <DocumentLine label={t('profile.registerDocument')} doc={documents.register} t={t} />
+                </FormCell>
+                <FormCell as="dl" size="m">
+                  <DocumentLine label={t('profile.agreementDocument')} doc={documents.agreement} t={t} />
+                </FormCell>
+              </>
+            )}
+            <FormField id="partner-note" label={t('profile.note')} size="l">
+              <Textarea id="partner-note" rows={2} value={note} disabled={!canWrite} onChange={(e) => setNote(e.target.value)} />
+            </FormField>
+          </FormGrid>
+        </div>
+      </section>
+      <RefusalNotice state={saveFb.state} />
+      {canWrite ? (
+        <div className="flex items-center justify-end">
+          <Button type="button" disabled={pending} onClick={() => void save()} data-testid="partner-profile-save">
+            {t('profile.save')}
+          </Button>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -303,16 +334,15 @@ function NoticesSection({ partnerId, abroad, notices, canWrite, t, router }: { p
   const [voiding, setVoiding] = useState<string | null>(null);
   const [voidNote, setVoidNote] = useState('');
   const [pending, setPending] = useState(false);
+  const saveFb = useActionFeedback();
+  const voidFb = useActionFeedback();
 
   const save = async () => {
     if (!document) return;
     setPending(true);
-    const result = await savePartnerNoticeAction({ partnerId, kind, noticeDate, validUntil: kind === 'recognitionAbroad' ? validUntil || undefined : undefined, receivedOn: receivedOn || undefined, documentId: document.id });
+    const result = await saveFb.run(() => savePartnerNoticeAction({ partnerId, kind, noticeDate, validUntil: kind === 'recognitionAbroad' ? validUntil || undefined : undefined, receivedOn: receivedOn || undefined, documentId: document.id }), { retry: () => void save() });
     setPending(false);
-    if (result.status === 'error') {
-      toast.error(result.message);
-      return;
-    }
+    if (result.status !== 'success') return;
     setAdding(false);
     setDocument(null);
     setNoticeDate('');
@@ -333,34 +363,32 @@ function NoticesSection({ partnerId, abroad, notices, canWrite, t, router }: { p
       </div>
       {adding ? (
         <div className="space-y-3 rounded-md border border-line bg-surface p-3" data-testid="notice-form">
-          <Select id="notice-kind" value={kind} onChange={(e) => setKind(e.target.value as NoticeKindChoice)} aria-label={t('notices.kind')}>
-            {kinds.map((k) => (
-              <option key={k} value={k}>
-                {kindLabel(k)}
-              </option>
-            ))}
-          </Select>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="notice-date" required>
-                {t('notices.noticeDate')}
-              </Label>
+          <FormGrid>
+            <FormField id="notice-kind" label={t('notices.kind')}>
+              <Select id="notice-kind" value={kind} onChange={(e) => setKind(e.target.value as NoticeKindChoice)}>
+                {kinds.map((k) => (
+                  <option key={k} value={k}>
+                    {kindLabel(k)}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField id="notice-date" label={t('notices.noticeDate')} required size="s">
               <Input id="notice-date" type="date" value={noticeDate} onChange={(e) => setNoticeDate(e.target.value)} />
-            </div>
+            </FormField>
             {kind === 'recognitionAbroad' ? (
-              <div className="space-y-1.5">
-                <Label htmlFor="notice-valid-until" required>
-                  {t('notices.validUntil')}
-                </Label>
+              <FormField id="notice-valid-until" label={t('notices.validUntil')} required size="s">
                 <Input id="notice-valid-until" type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} />
-              </div>
+              </FormField>
             ) : null}
-            <div className="space-y-1.5">
-              <Label htmlFor="notice-received">{t('notices.receivedOn')}</Label>
+            <FormField id="notice-received" label={t('notices.receivedOn')} size="s">
               <Input id="notice-received" type="date" value={receivedOn} onChange={(e) => setReceivedOn(e.target.value)} />
-            </div>
-          </div>
-          <DocumentPicker id="notice-document" name="documentId" label={t('notices.document')} value={document} onChange={setDocument} required />
+            </FormField>
+            <FormCell size="m">
+              <DocumentPicker id="notice-document" name="documentId" label={t('notices.document')} value={document} onChange={setDocument} required />
+            </FormCell>
+          </FormGrid>
+          <RefusalNotice state={saveFb.state} />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setAdding(false)}>
               {t('notices.cancel')}
@@ -393,6 +421,7 @@ function NoticesSection({ partnerId, abroad, notices, canWrite, t, router }: { p
                     voiding === n.id ? (
                       <span className="mt-2 block space-y-2">
                         <Textarea rows={2} aria-label={t('notices.voidNote')} placeholder={t('notices.voidNote')} value={voidNote} onChange={(e) => setVoidNote(e.target.value)} />
+                        <RefusalNotice state={voidFb.state} />
                         <span className="flex justify-end gap-2">
                           <Button type="button" variant="ghost" size="sm" onClick={() => setVoiding(null)}>
                             {t('notices.cancel')}
@@ -403,11 +432,8 @@ function NoticesSection({ partnerId, abroad, notices, canWrite, t, router }: { p
                             size="sm"
                             disabled={!voidNote.trim()}
                             onClick={async () => {
-                              const result = await voidPartnerNoticeAction(n.id, voidNote);
-                              if (result.status === 'error') {
-                                toast.error(result.message);
-                                return;
-                              }
+                              const result = await voidFb.run(() => voidPartnerNoticeAction(n.id, voidNote));
+                              if (result.status !== 'success') return;
                               setVoiding(null);
                               setVoidNote('');
                               router.refresh();

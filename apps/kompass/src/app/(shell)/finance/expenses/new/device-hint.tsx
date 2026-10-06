@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { lineTabsListClass, lineTabsTriggerClass, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Device } from '@/lib/finance/expenses';
 
 function Steps({ device }: { device: 'ios' | 'android' }) {
@@ -31,9 +31,9 @@ export function DeviceHint({ device }: { device: Device }) {
         <Steps device={device} />
       ) : (
         <Tabs defaultValue="ios">
-          <TabsList>
-            <TabsTrigger value="ios">{t('ios.tab')}</TabsTrigger>
-            <TabsTrigger value="android">{t('android.tab')}</TabsTrigger>
+          <TabsList variant="line" className={lineTabsListClass}>
+            <TabsTrigger value="ios" className={lineTabsTriggerClass}>{t('ios.tab')}</TabsTrigger>
+            <TabsTrigger value="android" className={lineTabsTriggerClass}>{t('android.tab')}</TabsTrigger>
           </TabsList>
           <TabsContent value="ios">
             <Steps device="ios" />

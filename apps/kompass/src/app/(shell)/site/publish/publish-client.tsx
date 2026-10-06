@@ -3,7 +3,7 @@
 import type { PublishSummary } from '@kompass/module-site';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { useSiteJobStatus } from '@/components/site/site-job-provider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { startPreviewAction, startPublishAction } from './actions';
@@ -40,7 +40,7 @@ export function PublishClient({
   // Das letzte Ergebnis jeder Art kommt vom Server (auch nach dem Neuladen, auch wenn ein Assistent gebaut hat).
   const preview = useSiteJobDetail('preview');
   const publish = useSiteJobDetail('publish');
-  const { pending, start } = useStartJob();
+  const { pending, start, state: startRefusal } = useStartJob();
 
   // Ein gelungener Publish steht nur in dem Tab als „Publiziert“, der ihn laufen oder starten sah.
   const watched = useRef<string | null>(null);
@@ -75,7 +75,6 @@ export function PublishClient({
     start(() => startPublishAction({ expectedContentHash }), {
       onStarted: started,
       onError: (state) => {
-        toast.error(state.message);
         // Der Server hat die Vorschau abgelehnt: Die Seite lädt neu und zeigt „nicht mehr aktuell“.
         if (publishFollowUp(state.code)) router.refresh();
       },
@@ -88,6 +87,7 @@ export function PublishClient({
 
   return (
     <>
+      <RefusalNotice action state={startRefusal} />
       {loading && !running ? (
         <div aria-busy="true" className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-5">
           <Skeleton className="h-4 w-40" />

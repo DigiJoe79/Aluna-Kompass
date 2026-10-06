@@ -2,8 +2,13 @@ import { hasPermission, listUserNamesWithPermission } from '@kompass/core';
 import { displayName, getContact } from '@kompass/module-contacts';
 import { getBalances, getIncomeStatement, listAccounts, listCategories, listEntries, listFiscalYears } from '@kompass/module-finance';
 import { ForbiddenCard } from '@/components/forbidden-card';
-import { BlockedState } from '@/components/blocked-state';
+import { Page } from '@/components/page';
+import { EmptyState } from '@/components/empty-state';
+import { PageHeader } from '@/components/page-header';
+import { panelHref } from '@/components/panel-nav';
+import { buttonVariants } from '@/components/ui/button';
 import { getTranslations } from 'next-intl/server';
+import Link from 'next/link';
 import { requireSession } from '@/lib/request-context';
 import { readSort } from '@/lib/sort';
 import { Journal, type JournalRow } from './journal';
@@ -40,7 +45,7 @@ export default async function FinanceEntriesPage({ searchParams }: { searchParam
   const { deps, ctx } = await requireSession();
   const t = await getTranslations('finance.journal');
 
-  if (!hasPermission(ctx, 'finance.read')) return <ForbiddenCard permission="finance.read" />;
+  if (!hasPermission(ctx, 'finance.read')) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
 
   const [fiscalYearsRes, accountsRes, categoriesRes] = await Promise.all([
     listFiscalYears(deps, ctx),
@@ -55,11 +60,17 @@ export default async function FinanceEntriesPage({ searchParams }: { searchParam
   const activeAccounts = accounts.filter((a) => a.isActive);
 
   if (!defaultYear || activeAccounts.length === 0) {
-    const names = listUserNamesWithPermission(deps, 'finance.setup');
+    // Noch nichts eingerichtet ist ein leerer Zustand mit Ausweg, kein gesperrter Schritt (K9-Befund 6).
+    const canSetup = hasPermission(ctx, 'finance.setup');
+    const names = canSetup ? [] : listUserNamesWithPermission(deps, 'finance.setup');
     return (
-      <BlockedState step={t('title')} title={t('notSetUp.title')}>
-        {names.length > 0 ? t('notSetUp.textWithNames', { names: names.join(', ') }) : t('notSetUp.text')}
-      </BlockedState>
+      <Page width="full" header={<PageHeader title={t('title')} />}>
+        <EmptyState
+          title={t('notSetUp.title')}
+          text={names.length > 0 ? t('notSetUp.textWithNames', { names: names.join(', ') }) : t('notSetUp.text')}
+          action={canSetup ? <Link href={panelHref('/admin/finance', 'checklist')} className={buttonVariants()}>{t('notSetUp.action')}</Link> : undefined}
+        />
+      </Page>
     );
   }
 
@@ -87,7 +98,7 @@ export default async function FinanceEntriesPage({ searchParams }: { searchParam
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
   });
-  if (!entriesRes.ok) return <ForbiddenCard permission="finance.read" />;
+  if (!entriesRes.ok) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
 
   const numbersById = new Map(entriesRes.value.entries.map((e) => [e.id, e.number]));
 
@@ -147,26 +158,28 @@ export default async function FinanceEntriesPage({ searchParams }: { searchParam
   const filteredAccount = query.account ? accounts.find((a) => a.id === query.account) ?? null : null;
 
   return (
-    <div className="flex gap-5">
-      <div className="min-w-0 flex-1">
-        <Journal
-          rows={rows}
-          total={entriesRes.value.total}
-          totals={entriesRes.value.totals}
-          page={page}
-          pageSize={PAGE_SIZE}
-          standing={balancesRes.ok ? balancesRes.value.standing : { finalizedThrough: null, draftCount: 0, reviewedDraftCount: 0 }}
-          accounts={activeAccounts.map((a) => ({ id: a.id, name: a.name }))}
-          categories={categories.map((c) => ({ id: c.id, name: c.name }))}
-          canWrite={canWrite}
-          canFinalize={canFinalize}
-          showSetupLink={showSetupLink}
-          accountFilter={filteredAccount ? { name: filteredAccount.name, openingBalanceCents: filteredAccount.openingBalanceCents } : null}
-        />
+    <Page width="full">
+      <div className="flex gap-5">
+        <div className="min-w-0 flex-1">
+          <Journal
+            rows={rows}
+            total={entriesRes.value.total}
+            totals={entriesRes.value.totals}
+            page={page}
+            pageSize={PAGE_SIZE}
+            standing={balancesRes.ok ? balancesRes.value.standing : { finalizedThrough: null, draftCount: 0, reviewedDraftCount: 0 }}
+            accounts={activeAccounts.map((a) => ({ id: a.id, name: a.name }))}
+            categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+            canWrite={canWrite}
+            canFinalize={canFinalize}
+            showSetupLink={showSetupLink}
+            accountFilter={filteredAccount ? { name: filteredAccount.name, openingBalanceCents: filteredAccount.openingBalanceCents } : null}
+          />
+        </div>
+        {balancesRes.ok ? (
+          <SidePanel balances={balancesRes.value} incomeStatement={incomeRes.ok ? incomeRes.value : null} />
+        ) : null}
       </div>
-      {balancesRes.ok ? (
-        <SidePanel balances={balancesRes.value} incomeStatement={incomeRes.ok ? incomeRes.value : null} />
-      ) : null}
-    </div>
+    </Page>
   );
 }

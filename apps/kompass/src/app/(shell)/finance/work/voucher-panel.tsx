@@ -10,11 +10,13 @@ import { ReceiptDrop } from '@/components/finance/receipt-drop';
 import { Notice } from '@/components/notice';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import type { ActionState } from '@/lib/actions';
+import { toastNetwork } from '@/lib/feedback';
 import type { BookFromTransactionInput } from '@/lib/finance/work';
 import { applyInvoiceToDraftAction, linkVoucherAction, refreshWorkAction, searchVouchersAction, uploadVoucherToTransactionAction, type UploadedInvoiceOffer } from './actions';
+import { FormField } from '@/components/forms/form-field';
+import { FormGrid } from '@/components/forms/form-grid';
 
 export interface VoucherTypeOption {
   key: string;
@@ -61,7 +63,6 @@ export function VoucherPanel({
   const finish = (result: ActionState) => {
     if (result.status === 'error') {
       setRefusal(result);
-      toast.error(result.message);
       return;
     }
     if (result.status === 'success' && result.message) toast.success(result.message);
@@ -92,7 +93,8 @@ export function VoucherPanel({
         }
         finish(result);
       } catch {
-        toast.error(tCommon('uploadFailed'));
+        // Der Server war nicht zu erreichen: keine Ablehnung, sondern ein Toast zum Wiederholen.
+        toastNetwork({ status: 'error', kind: 'network', message: tCommon('network'), fieldErrors: {} }, tCommon('retry'), upload);
       }
     });
   };
@@ -124,7 +126,7 @@ export function VoucherPanel({
 
   return (
     <section aria-label={t('title')} className="space-y-3 rounded-md border border-line bg-surface p-4">
-      <h3 className="text-[13px] font-semibold uppercase tracking-wide text-muted-ink">{t('title')}</h3>
+      <h3 className="text-[15px] font-semibold">{t('title')}</h3>
       {offer ? (
         <div data-testid="invoice-offer" className="space-y-2">
           <Notice level="hint">{tInvoice('offer', { summary: offer.summary })}</Notice>
@@ -140,9 +142,8 @@ export function VoucherPanel({
       ) : file ? (
         <div role="group" aria-label={t('confirm')} className="space-y-3 rounded-md border border-line bg-surface-2 p-3 text-[13px]">
           <p className="text-ink-2">{t('file', { name: file.name })}</p>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label htmlFor="voucher-type">{t('type')}</Label>
+          <FormGrid>
+            <FormField id="voucher-type" label={t('type')} size="s">
               <Select id="voucher-type" value={typeKey} onChange={(e) => setTypeKey(e.target.value)}>
                 {voucherTypes.map((v) => (
                   <option key={v.key} value={v.key}>
@@ -150,17 +151,14 @@ export function VoucherPanel({
                   </option>
                 ))}
               </Select>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="voucher-date">{t('date')}</Label>
+            </FormField>
+            <FormField id="voucher-date" label={t('date')} size="s">
               <Input id="voucher-date" type="date" value={documentDate} onChange={(e) => setDocumentDate(e.target.value)} />
-            </div>
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="voucher-title">{t('titleField')}</Label>
-            <Input id="voucher-title" value={title} onChange={(e) => setTitle(e.target.value)} />
-            <p className="text-[12px] text-muted-ink">{t('titleHint')}</p>
-          </div>
+            </FormField>
+            <FormField id="voucher-title" label={t('titleField')} hint={t('titleHint')}>
+              <Input id="voucher-title" value={title} onChange={(e) => setTitle(e.target.value)} />
+            </FormField>
+          </FormGrid>
           <div className="flex gap-2">
             <Button type="button" onClick={upload} disabled={pending}>
               {t('confirm')}

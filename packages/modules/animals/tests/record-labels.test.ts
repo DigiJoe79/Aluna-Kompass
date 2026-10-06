@@ -7,7 +7,6 @@ import { createAnimal } from '../src/service';
 
 describe('animalsRecordLabels', () => {
   const base = {
-    slug: 'rocky',
     name: 'Rocky',
     sex: 'male' as const,
     birthText: { de: '' },

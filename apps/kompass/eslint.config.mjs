@@ -47,6 +47,19 @@ export default [
     rules: {
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'error',
+      // Gestrichene Bausteine (Fassung 0.2.6, docs/MUSTER.md). `tests/patterns/deleted-paths.test.ts` prüft, dass
+      // es die Dateien nicht gibt; das hier greift, falls jemand sie zurückholt (etwa per shadcn-CLI).
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            { name: '@/components/ui/alert', message: 'Notice verwenden (docs/MUSTER.md § A).' },
+            { name: '@/components/ui/badge', message: 'StatusBadge verwenden (docs/MUSTER.md § F).' },
+            { name: '@/components/forms/save-bar', message: 'FormActionBar verwenden (docs/MUSTER.md § B).' },
+            { name: '@/components/forms/sticky-footer', message: 'FormActionBar verwenden (docs/MUSTER.md § B).' },
+          ],
+        },
+      ],
     },
   },
 ];
