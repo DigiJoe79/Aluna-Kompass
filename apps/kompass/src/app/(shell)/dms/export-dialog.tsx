@@ -94,7 +94,7 @@ export function ExportDialog({
       )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent size="md" className="bg-surface shadow-md">
-          <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
+          <DialogTitle>{t('title')}</DialogTitle>
 
           <div className="mt-5">
             <RadioGroup aria-label={t('title')} value={mode} onValueChange={(value) => setMode(value as 'folder' | 'year')} className="gap-4">

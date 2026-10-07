@@ -58,4 +58,18 @@ describe('ConfirmDialog', () => {
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
     expect(screen.queryByText('Noch gesperrt.')).toBeNull();
   });
+
+  it('sagt die Folge als Beschreibung des Dialogs, in der Stufe body (K10 § 4.2, Review Focus 2)', () => {
+    render(<ConfirmDialog open onOpenChange={vi.fn()} title="Eintrag löschen?" description="Der Eintrag wird entfernt." confirmLabel="Löschen" action={async () => ({ status: 'success' })} />, { wrapper });
+    const dialog = screen.getByRole('alertdialog', { name: 'Eintrag löschen?' });
+    const described = document.getElementById(dialog.getAttribute('aria-describedby') ?? '');
+    expect(described?.textContent).toBe('Der Eintrag wird entfernt.');
+    expect(described?.className.split(' ')).toEqual(expect.arrayContaining(['text-body', 'text-ink-2']));
+    expect(screen.getByRole('heading', { name: 'Eintrag löschen?' }).className).not.toContain('text-[19px]');
+  });
+
+  it('verlangt eine Beschreibung', () => {
+    // @ts-expect-error — ohne description übersetzt ConfirmDialog nicht (K10 § 4.2).
+    void (<ConfirmDialog open onOpenChange={() => {}} title="T" confirmLabel="OK" action={async () => ({ status: 'success' as const })} />);
+  });
 });

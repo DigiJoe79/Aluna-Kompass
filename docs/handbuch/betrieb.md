@@ -283,6 +283,19 @@ Sonst ist nichts von Hand zu tun. Wer sich wundert:
   Eingabemaske ordnen; ohne sie bekommt jedes Feld eine Breite nach seinem Typ.
 - MCP-Clients sind nicht betroffen.
 
+### Von 0.2.7 auf 0.2.8
+
+Die Fassung 0.2.8 bringt keine Migration mit; `/api/health` meldet weiter
+`migrationCount: 6`. Sie enthält Sicherheitsupdates der Abhängigkeiten, deshalb
+lohnt das Update zügig. Vor und nach dem Update ist nichts Besonderes zu tun;
+ein Backup (Schritt 1) gehört wie immer dazu.
+
+Wer sich wundert:
+
+- **Datumsformat „ISO“ und Briefe.** Die Einstellung „Datumsformat“ gilt für
+  die Anzeige und für Meldungen, nicht für Schriftstücke: Briefe,
+  Zuwendungsbestätigungen und Betreffe in der Akte tragen immer TT.MM.JJJJ.
+
 ### Von 0.2.6 auf 0.2.7
 
 Die Fassung 0.2.7 bringt keine Migration mit; `/api/health` meldet weiter

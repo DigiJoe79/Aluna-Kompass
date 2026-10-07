@@ -43,34 +43,46 @@ describe('blockingHolds', () => {
 
 describe('buildDeletionPreview and deletionConflict', () => {
   it('ist frei, wenn nichts dagegen spricht — auch ganz ohne Halter', () => {
-    const preview = buildDeletionPreview(setup(), subject('A-FREE'));
+    const deps = setup();
+    const preview = buildDeletionPreview(deps, subject('A-FREE'));
     expect(preview).toEqual({ isPublished: false, holds: [], references: [], media: [], deletable: true });
-    expect(deletionConflict(preview)).toBeNull();
+    expect(deletionConflict(deps, preview)).toBeNull();
   });
 
   it('lehnt Veröffentlichtes zuerst ab', () => {
-    const preview = buildDeletionPreview(setup(), subject('A-RUNNING', true));
+    const deps = setup();
+    const preview = buildDeletionPreview(deps, subject('A-RUNNING', true));
     expect(preview.deletable).toBe(false);
-    expect(code(deletionConflict(preview))).toBe('stillPublished');
+    expect(code(deletionConflict(deps, preview))).toBe('stillPublished');
   });
 
-  it('nennt den Halter mit Frist hinter dem Doppelpunkt', () => {
-    const failure = deletionConflict(buildDeletionPreview(setup(), subject('A-RUNNING')));
+  it('nennt den Halter mit Frist hinter dem Doppelpunkt — das Datum wie die Anzeige (K10)', () => {
+    const deps = setup();
+    const failure = deletionConflict(deps, buildDeletionPreview(deps, subject('A-RUNNING')));
     expect(code(failure)).toBe('recordHeld');
-    expect(failure!.error.type === 'conflict' && failure!.error.message).toBe('Noch gehalten von: Vertrag V-1 (bis 2036-12-31)');
-    const permanent = deletionConflict(buildDeletionPreview(setup(), subject('A-PERMANENT')));
+    expect(failure!.error.type === 'conflict' && failure!.error.message).toBe('Noch gehalten von: Vertrag V-1 (bis 31.12.2036)');
+    const permanent = deletionConflict(deps, buildDeletionPreview(deps, subject('A-PERMANENT')));
     expect(permanent!.error.type === 'conflict' && permanent!.error.message).toBe('Noch gehalten von: Satzung (dauerhaft)');
   });
 
+  it('folgt ui.dateFormat = iso', () => {
+    const deps = setup();
+    deps.db.transaction((tx) => writeSettingInternal(tx, deps, ctxWith(['settings.manage']), 'ui.dateFormat', 'iso', 'test.dateFormat'));
+    const failure = deletionConflict(deps, buildDeletionPreview(deps, subject('A-RUNNING')));
+    expect(failure!.error.type === 'conflict' && failure!.error.message).toBe('Noch gehalten von: Vertrag V-1 (bis 2036-12-31)');
+  });
+
   it('nennt den Verweis', () => {
-    const preview = buildDeletionPreview(setup(), subject('A-LINKED'));
+    const deps = setup();
+    const preview = buildDeletionPreview(deps, subject('A-LINKED'));
     expect(preview.references).toHaveLength(1);
-    const failure = deletionConflict(preview);
+    const failure = deletionConflict(deps, preview);
     expect(code(failure)).toBe('stillReferenced');
     expect(failure!.error.type === 'conflict' && failure!.error.message).toBe('Es zeigt noch darauf: Dokument „Entwurf“');
   });
 
   it('lässt einen abgelaufenen Halter durch', () => {
-    expect(deletionConflict(buildDeletionPreview(setup(), subject('A-EXPIRED')))).toBeNull();
+    const deps = setup();
+    expect(deletionConflict(deps, buildDeletionPreview(deps, subject('A-EXPIRED')))).toBeNull();
   });
 });

@@ -1,11 +1,11 @@
-import { hasPermission, readSetting } from '@kompass/core';
+import { hasPermission } from '@kompass/core';
 import { getAccountStatements, getImportRun, listAccounts, listCandidates, listImportRuns } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
-import { formatDate, type DateFormatMode } from '@/lib/dates';
+import { dateFormatOf } from '@/lib/date-format';
 import { formatEuro } from '@/lib/finance/amount';
 import { formatDateOrDash } from '@/lib/finance/dates';
 import { requireSession } from '@/lib/request-context';
@@ -27,8 +27,7 @@ export default async function FinanceImportsPage() {
   const t = await getTranslations('finance.imports');
   if (!hasPermission(ctx, 'finance.read')) return <Page width="standard"><ForbiddenCard permission="finance.read" /></Page>;
   const canWrite = hasPermission(ctx, 'finance.entriesWrite');
-  const dateMode = readSetting<DateFormatMode>(deps, 'ui.dateFormat');
-  const fmtDate = (value: string | null | undefined) => formatDate(value, dateMode);
+  const fmtDate = dateFormatOf(deps).date;
 
   const [accountsRes, statementsRes, runsRes, candidatesRes] = await Promise.all([
     listAccounts(deps, ctx, {}),

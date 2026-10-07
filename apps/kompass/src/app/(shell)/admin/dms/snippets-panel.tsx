@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableEmpty, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { idleState, type ActionState } from '@/lib/actions';
 import { createSnippetAction, deleteSnippetAction, updateSnippetAction } from './actions';
@@ -68,11 +68,7 @@ export function SnippetsPanel({ snippets }: { snippets: SnippetRow[] }) {
           </TableHeader>
           <TableBody>
             {snippets.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="py-6 text-center text-[13px] text-muted-ink">
-                  {t('emptySnippets')}
-                </TableCell>
-              </TableRow>
+              <TableEmpty colSpan={4}>{t('emptySnippets')}</TableEmpty>
             ) : (
               snippets.map((snippet) => (
                 <TableRow key={snippet.id}>
@@ -105,10 +101,10 @@ export function SnippetsPanel({ snippets }: { snippets: SnippetRow[] }) {
       >
         <DialogContent size="lg" className="bg-surface shadow-md">
           <ActionForm action={action} state={state}>
-            <DialogTitle className="font-heading text-[19px]">
+            <DialogTitle>
               {editing ? t('editSnippetTitle') : t('createSnippetTitle')}
             </DialogTitle>
-            <DialogDescription className="text-[13px] text-muted-ink">{t('snippetsDescription')}</DialogDescription>
+            <DialogDescription>{t('snippetsDescription')}</DialogDescription>
 
             <div className="mt-5">
               <FormGrid>

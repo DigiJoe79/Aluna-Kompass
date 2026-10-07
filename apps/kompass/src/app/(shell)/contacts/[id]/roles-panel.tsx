@@ -77,8 +77,8 @@ export function RolesPanel({
             />
             <DialogContent size="sm" className="bg-surface shadow-md">
               <form onSubmit={handleAddSubmit}>
-                <DialogTitle className="font-heading text-[17px]">{t('roles.add')}</DialogTitle>
-                <DialogDescription className="text-[13px] text-muted-ink">
+                <DialogTitle>{t('roles.add')}</DialogTitle>
+                <DialogDescription>
                   {t('roles.title')}
                 </DialogDescription>
 
@@ -152,7 +152,7 @@ export function RolesPanel({
         <Dialog open={true} onOpenChange={(o) => { if (!o) setEndingRoleId(null); }}>
           <DialogContent size="sm" className="bg-surface shadow-md">
             <form onSubmit={handleEndSubmit}>
-              <DialogTitle className="font-heading text-[17px]">{t('roles.end')}</DialogTitle>
+              <DialogTitle>{t('roles.end')}</DialogTitle>
               <div className="mt-4">
                 <FormGrid>
                   <FormField id="until" label={t('roles.until')} size="s">

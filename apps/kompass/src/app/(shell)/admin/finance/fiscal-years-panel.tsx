@@ -130,7 +130,7 @@ function CreateFirstYearDialog({ onClose, onSaved }: { onClose: () => void; onSa
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent size="sm" className="bg-surface shadow-md">
-        <DialogTitle className="font-heading text-[19px]">{t('createFirst')}</DialogTitle>
+        <DialogTitle>{t('createFirst')}</DialogTitle>
         <p className="text-[13px] text-muted-ink">{t('createFirstHint')}</p>
         <FormGrid>
           <FormField id="fy-starts" label={t('startsOn')} required size="s">
@@ -164,7 +164,7 @@ function EditYearDialog({ year, onClose, onSaved }: { year: FiscalYearRow; onClo
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent size="sm" className="bg-surface shadow-md">
-        <DialogTitle className="font-heading text-[19px]">{t('edit')}</DialogTitle>
+        <DialogTitle>{t('edit')}</DialogTitle>
         <FormGrid>
           <FormField id="fy-designation" label={t('designation')} size="s">
             <Input id="fy-designation" value={designation} onChange={(e) => setDesignation(e.target.value)} />

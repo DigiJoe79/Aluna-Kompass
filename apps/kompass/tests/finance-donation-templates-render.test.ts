@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import type { DocumentBuildResult, DocumentRenderContext, DocumentTemplate } from '@kompass/core';
+import { isoDay, type DocumentBuildResult, type DocumentRenderContext, type DocumentTemplate } from '@kompass/core';
 import { DEFAULT_THEME } from '@kompass/core/themes';
 import { createDocumentEngine } from '@kompass/documents';
 import { financeModule } from '@kompass/module-finance';
@@ -22,7 +22,7 @@ afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force
 
 const context: DocumentRenderContext = {
   number: 'ZWB-2026-001',
-  issuedAt: '2026-03-20T12:00:00.000Z',
+  issuedAt: '2026-03-20T12:00:00.000Z', issuedDay: isoDay('2026-03-20'),
   organization: { 'organization.name': 'Musterverein e.V.', 'organization.street': 'Musterweg 1', 'organization.postalCode': '12345', 'organization.city': 'Musterstadt' },
   theme: DEFAULT_THEME,
   logo: null,

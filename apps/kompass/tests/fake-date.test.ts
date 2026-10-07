@@ -8,23 +8,24 @@ const YEAR_MS = 365 * 86_400_000;
 const PROBE = [
   'const Sub = class extends Date { tag() { return "sub"; } };',
   'console.log(JSON.stringify({ now: Date.now(), made: new Date().getTime(), fixed: new Date("2026-01-01T00:00:00.000Z").toISOString(),',
-  '  called: typeof Date(), sub: new Sub().tag(), isDate: new Date() instanceof Date }));',
+  '  called: typeof Date(), sub: new Sub().tag(), isDate: new Date() instanceof Date,',
+  '  ownConstructor: new Date().constructor === Date && new Sub().constructor === Sub }));',
 ].join('\n');
 
-function probe(env: Record<string, string>): { now: number; made: number; fixed: string; called: string; sub: string; isDate: boolean } {
+function probe(env: Record<string, string>): { now: number; made: number; fixed: string; called: string; sub: string; isDate: boolean; ownConstructor: boolean } {
   const rest: NodeJS.ProcessEnv = { ...process.env };
   for (const key of ['NODE_OPTIONS', 'FAKE_OFFSET_MS', 'FAKE_NOW']) delete rest[key];
   return JSON.parse(execFileSync(process.execPath, ['--import', PRELOAD, '-e', PROBE], { env: { ...rest, ...env }, encoding: 'utf8' }));
 }
 
 describe('scripts/fake-date.mjs', () => {
-  it('moves the clock by FAKE_OFFSET_MS and leaves explicit dates, Date(), subclasses and instanceof intact', () => {
+  it('moves the clock by FAKE_OFFSET_MS and leaves explicit dates, Date(), subclasses, instanceof and constructor intact', () => {
     const before = Date.now();
     const out = probe({ FAKE_OFFSET_MS: String(YEAR_MS) });
     expect(out.now - before).toBeGreaterThanOrEqual(YEAR_MS);
     expect(out.now - before).toBeLessThan(YEAR_MS + 60_000);
     expect(Math.abs(out.made - out.now)).toBeLessThan(1_000);
-    expect(out).toMatchObject({ fixed: '2026-01-01T00:00:00.000Z', called: 'string', sub: 'sub', isDate: true });
+    expect(out).toMatchObject({ fixed: '2026-01-01T00:00:00.000Z', called: 'string', sub: 'sub', isDate: true, ownConstructor: true });
   });
 
   it('takes FAKE_NOW as a point in time for a single process', () => {

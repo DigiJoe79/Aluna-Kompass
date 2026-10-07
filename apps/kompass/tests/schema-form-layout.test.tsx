@@ -97,6 +97,13 @@ describe('Sprachspalten', () => {
     }
   };
 
+  it('Sprachspalten haben den Abstand des Formularrasters (K10 § 4.6)', () => {
+    wrap(<LocalizedField name="name" label="Name" value={{}} locales={['de', 'en']} />);
+    const cls = languageGrid('DE').className.split(' ');
+    expect(cls).toEqual(expect.arrayContaining(['gap-x-5', 'gap-y-4']));
+    expect(cls).not.toContain('gap-3');
+  });
+
   it.each([2, 3, 4])('LocalizedField mit %i Sprachen', (count) => {
     const locales = ['de', 'en', 'ro', 'fr'].slice(0, count);
     wrap(<LocalizedField name="summary" label="Kurztext" value={{}} locales={locales} />);

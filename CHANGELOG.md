@@ -9,6 +9,39 @@ die Nummern folgen [Semantic Versioning](https://semver.org/lang/de/). Vor
 1.0.0 kann jede Minor-Fassung Brüche enthalten — was bricht, steht unter
 **Geändert** mit dem, was zu tun ist.
 
+## [0.2.8] - 2026-10-07
+
+Eine Wartungsfassung mit Sicherheitsupdates: Abhängigkeiten mit bekannten
+Lücken sind aktualisiert, Dialoge sehen überall gleich aus, und ein Datum
+erscheint überall im eingestellten Format und am Tag des Vereins. Keine
+Migration (`migrationCount` bleibt 6), nach dem Update ist nichts zu tun.
+
+### Sicherheit
+
+- Abhängigkeiten mit bekannten Lücken aktualisiert, darunter `proxy-addr`
+  (Vertrauen in Weiterleitungen), `sharp` (Bildverarbeitung) und das
+  MCP-SDK.
+
+### Geändert
+
+- **Einheitliche Dialoge.** Dialoge und Seitenfenster tragen ihren Titel überall
+  gleich. Der Satz, was eine Aktion bewirkt — Löschen, Überschreiben,
+  Veröffentlichen —, steht gut lesbar; ergänzende Erläuterungen treten zurück.
+- **Ein Datum, ein Format.** Listen, Hinweise und Meldungen folgen der
+  Einstellung „Datumsformat“, auch Meldungen wie „gehalten bis …“.
+  Schriftstücke — Briefe, Zuwendungsbestätigungen, Betreffe in der Akte —
+  tragen weiterhin immer TT.MM.JJJJ.
+
+### Behoben
+
+- Zwischen Mitternacht und ein bzw. zwei Uhr zeigte Kompass an mehreren
+  Stellen noch den Vortag: im Datum eines Briefs aus einem Entwurf, bei
+  „Zuletzt bestätigt“, im Verlauf einer Buchung (dort mit UTC-Uhrzeit) und als
+  „heute“ auf einigen Finanzseiten.
+- Auf dem Telefon liefen Hilfe, Medienwahl, Dokumentvorlagen und die
+  Dokumente einer Kontaktseite seitlich aus dem Bild; beim Backup lag das
+  Datum des letzten Exports über seiner Bezeichnung.
+
 ## [0.2.7] - 2026-10-06
 
 Eine Wartungsfassung: Kompass nennt Dokumente in der Akte lesbar, die freie

@@ -33,8 +33,10 @@ export default async function HelpPage({ params }: { params: Promise<{ doc?: str
   const html = await renderHandbook(page.body, { doc });
   return (
     <Page width="standard">
-      <div className="flex gap-8">
-        <aside className="w-60 shrink-0">
+      {/* Telefon (`max-sm`, Muster „Seitenrahmen“): Artikel und Verzeichnis untereinander, der Artikel zuerst —
+          das ganze Verzeichnis davor schöbe den Text mehrere Bildschirme nach unten. Kein Layout-Test (Projektregel). */}
+      <div className="flex gap-8 max-sm:flex-col-reverse">
+        <aside className="w-60 shrink-0 max-sm:w-auto max-sm:border-t max-sm:border-line max-sm:pt-5">
           <HandbookToc chapters={chapters} current={doc} />
         </aside>
         <article className="prose-preview min-w-0 max-w-[72ch] flex-1">

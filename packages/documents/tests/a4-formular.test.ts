@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import type { DocumentRenderContext } from '@kompass/core';
+import { isoDay, type DocumentRenderContext } from '@kompass/core';
 import { DEFAULT_THEME } from '@kompass/core/themes';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createDocumentEngine, createTypstRenderer, pdfPageCount, probeBase, resolveAssetDirs, resolveBases } from '../src';
@@ -88,7 +88,7 @@ describe('a4-formular base', () => {
   });
 
   it('the engine hands images from the core through to the renderer', async () => {
-    const context: DocumentRenderContext = { number: 'ZWB-2026-001', issuedAt: '2026-09-05T08:00:00.000Z', organization: { 'organization.name': 'Musterverein e.V.' }, theme: DEFAULT_THEME, logo: null };
+    const context: DocumentRenderContext = { number: 'ZWB-2026-001', issuedAt: '2026-09-05T08:00:00.000Z', issuedDay: isoDay('2026-09-05'), organization: { 'organization.name': 'Musterverein e.V.' }, theme: DEFAULT_THEME, logo: null };
     const { bytes, pages } = await createDocumentEngine().render({
       baseId: 'a4-formular',
       bodyTypst: '#image("/images/signature.png", width: 20mm)',

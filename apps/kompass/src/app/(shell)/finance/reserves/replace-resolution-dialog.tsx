@@ -37,8 +37,8 @@ export function ReplaceResolutionDialog({ reserve, onClose, onSaved }: { reserve
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent size="md" className="bg-surface shadow-md">
-        <DialogTitle className="font-heading text-[19px]">{t('title', { name: reserve.name })}</DialogTitle>
-        <DialogDescription className="text-[13px] text-ink-2">{t('hint')}</DialogDescription>
+        <DialogTitle>{t('title', { name: reserve.name })}</DialogTitle>
+        <DialogDescription tone="body">{t('hint')}</DialogDescription>
         <div className="space-y-3.5" data-testid="replace-resolution-dialog">
           <p className="text-[13px] text-ink-2">
             {t('current')} <DocumentLabel document={reserve.resolution} />

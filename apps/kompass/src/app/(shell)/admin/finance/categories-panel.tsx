@@ -20,6 +20,7 @@ import { FormField } from '@/components/forms/form-field';
 import { FormGrid } from '@/components/forms/form-grid';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
+import { useDateFormat } from '@/components/date-format-provider';
 
 export interface CategoryRow {
   id: string;
@@ -52,6 +53,7 @@ const INPUT_TAX = ['no', 'yes', 'partial'] as const;
 export function CategoriesPanel({ categories, confirmedAt }: { categories: CategoryRow[]; confirmedAt: string | null }) {
   const t = useTranslations('finance.admin.categories');
   const tCommon = useTranslations('common');
+  const fmt = useDateFormat();
   const router = useRouter();
   const [editing, setEditing] = useState<CategoryRow | null | 'new'>(null);
   const [search, setSearch] = useState('');
@@ -129,7 +131,7 @@ export function CategoriesPanel({ categories, confirmedAt }: { categories: Categ
 
       <div className="space-y-2 pt-2">
         <RefusalNotice action state={reviewFb.state} />
-        <p className="text-[13px] text-muted-ink">{confirmedAt ? t('reviewedAt', { date: confirmedAt.slice(0, 10) }) : t('notReviewed')}</p>
+        <p className="text-[13px] text-muted-ink">{confirmedAt ? t('reviewedAt', { date: fmt.date(confirmedAt) }) : t('notReviewed')}</p>
         <Button size="sm" variant="secondary" disabled={pending} onClick={() => void confirmReviewed()} data-testid="review-categories">
           {t('review')}
         </Button>
@@ -205,7 +207,7 @@ function CategoryDialog({ category, onClose, onSaved }: { category: CategoryRow 
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent size="md" layout="fixed-footer" className="bg-surface shadow-md">
         <DialogHeader>
-          <DialogTitle className="font-heading text-[19px]">{category ? t('edit') : t('create')}</DialogTitle>
+          <DialogTitle>{category ? t('edit') : t('create')}</DialogTitle>
         </DialogHeader>
         <DialogBody>
           <section>
@@ -238,7 +240,7 @@ function CategoryDialog({ category, onClose, onSaved }: { category: CategoryRow 
                   </Select>
                 </FormField>
                 {direction !== 'transit' ? (
-                  <FormField id="cat-sphere" label={t('sphere')} required>
+                  <FormField id="cat-sphere" label={t('sphere')} required error={fieldErrors.sphere}>
                     <Select id="cat-sphere" value={sphere} onChange={(e) => setSphere(e.target.value as 'ideal' | 'assetManagement' | 'purposeOperation' | 'business' | '')} aria-invalid={!!fieldErrors.sphere}>
                       <option value="">{t('spherePlaceholder')}</option>
                       {SPHERES.map((s) => (
@@ -247,11 +249,6 @@ function CategoryDialog({ category, onClose, onSaved }: { category: CategoryRow 
                         </option>
                       ))}
                     </Select>
-                    {fieldErrors.sphere ? (
-                      <p role="alert" className="text-[12px] text-error" data-testid="category-sphere-error">
-                        {fieldErrors.sphere}
-                      </p>
-                    ) : null}
                   </FormField>
                 ) : null}
                 <FormField id="cat-tax-code" label={t('defaultTaxCode')}>
@@ -277,7 +274,7 @@ function CategoryDialog({ category, onClose, onSaved }: { category: CategoryRow 
               <div className="pt-1">
                 <FormGrid>
                   {direction === 'income' ? (
-                    <FormField id="cat-income-kind" label={t('incomeKind')}>
+                    <FormField id="cat-income-kind" label={t('incomeKind')} error={fieldErrors.incomeKind}>
                       <Select id="cat-income-kind" value={incomeKind} onChange={(e) => setIncomeKind(e.target.value)} aria-invalid={!!fieldErrors.incomeKind}>
                         <option value="">{t('spherePlaceholder')}</option>
                         {INCOME_KINDS.map((k) => (
@@ -286,15 +283,10 @@ function CategoryDialog({ category, onClose, onSaved }: { category: CategoryRow 
                           </option>
                         ))}
                       </Select>
-                      {fieldErrors.incomeKind ? (
-                        <p role="alert" className="text-[12px] text-error" data-testid="category-income-kind-error">
-                          {fieldErrors.incomeKind}
-                        </p>
-                      ) : null}
                     </FormField>
                   ) : null}
                   {direction === 'expense' ? (
-                    <FormField id="cat-cost-function" label={t('costFunction')}>
+                    <FormField id="cat-cost-function" label={t('costFunction')} error={fieldErrors.costFunction}>
                       <Select id="cat-cost-function" value={costFunction} onChange={(e) => setCostFunction(e.target.value)} aria-invalid={!!fieldErrors.costFunction}>
                         <option value="">{t('spherePlaceholder')}</option>
                         {COST_FUNCTIONS.map((c) => (
@@ -303,11 +295,6 @@ function CategoryDialog({ category, onClose, onSaved }: { category: CategoryRow 
                           </option>
                         ))}
                       </Select>
-                      {fieldErrors.costFunction ? (
-                        <p role="alert" className="text-[12px] text-error">
-                          {fieldErrors.costFunction}
-                        </p>
-                      ) : null}
                     </FormField>
                   ) : null}
                   <FormField id="cat-allowance-kind" label={t('allowanceKind')}>

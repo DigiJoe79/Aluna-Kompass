@@ -46,7 +46,7 @@ export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent size="sm" className="bg-surface shadow-md">
             <ActionForm action={action} state={state} className="flex flex-col gap-4">
-              <DialogTitle className="font-heading text-[19px]">{t('createTitle')}</DialogTitle>
+              <DialogTitle>{t('createTitle')}</DialogTitle>
               <FormField id="token-name" label={t('name')} hint={t('nameHint')}>
                 <Input id="token-name" name="name" required />
               </FormField>
@@ -114,10 +114,10 @@ export function ApiTokens({ tokens }: { tokens: ApiTokenSummary[] }) {
             size="md"
             className="bg-surface shadow-md"
           >
-            <DialogTitle className="font-heading text-[19px]">
+            <DialogTitle>
               {t('createdTitle', { name: created.record.name })}
             </DialogTitle>
-            <DialogDescription className="text-[14px] text-ink-2">{t('createdText')}</DialogDescription>
+            <DialogDescription tone="body">{t('createdText')}</DialogDescription>
             <div className="flex items-center gap-2 rounded-md border border-line-strong bg-code p-3">
               <code data-testid="api-token-plaintext" className="flex-1 break-all font-mono text-[13px]">
                 {created.token}

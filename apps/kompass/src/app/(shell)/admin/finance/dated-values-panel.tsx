@@ -121,7 +121,7 @@ function DatedValueDialog({ entry, onClose, onSaved }: { entry: DatedValueListEn
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent size="sm" className="bg-surface shadow-md">
-        <DialogTitle className="font-heading text-[18px]">{t('changeTitle', { name: t(`keys.${entry.key}`) })}</DialogTitle>
+        <DialogTitle>{t('changeTitle', { name: t(`keys.${entry.key}`) })}</DialogTitle>
         <FormGrid>
             <FormField id="dv-valid-from" label={t('validFrom')} required size="s">
               <Input id="dv-valid-from" type="date" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} required />

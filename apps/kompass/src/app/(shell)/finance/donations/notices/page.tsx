@@ -7,7 +7,7 @@ import { ModuleInactiveCard } from '@/components/module-inactive-card';
 import { Notice } from '@/components/notice';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
-import { formatDate } from '@/lib/dates';
+import { dateFormatOf } from '@/lib/date-format';
 import { requireSession } from '@/lib/request-context';
 import { AddNoticeButton } from './add-notice-button';
 import { MachinePanel } from './machine-panel';
@@ -36,13 +36,13 @@ export default async function FinanceDonationNoticesPage() {
   const today = todayIn(deps);
   const expiry = noticeExpiryInternal(deps.db, today, readSetting<number>(deps, 'finance.noticeExpiryWarnMonths'));
   const hasValid = notices.some((n) => n.state === 'valid');
-  const dateMode = readSetting<'locale' | 'iso'>(deps, 'ui.dateFormat');
+  const fmt = dateFormatOf(deps);
 
   return (
     <Page width="standard" header={<PageHeader title={t('title')} description={t('description')} actions={canIssue ? <AddNoticeButton canPickDocument={canPickDocument} /> : undefined} />}>
       <div className="space-y-5">
 
-        {!hasValid ? <Notice level="warn">{t('noValid')}</Notice> : expiry ? <Notice level="warn">{t('expiring', { date: formatDate(expiry.validUntil, dateMode) })}</Notice> : null}
+        {!hasValid ? <Notice level="warn">{t('noValid')}</Notice> : expiry ? <Notice level="warn">{t('expiring', { date: fmt.date(expiry.validUntil) })}</Notice> : null}
 
         {notices.length === 0 ? (
           <EmptyState title={t('empty.title')} text={t('empty.text')} />

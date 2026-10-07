@@ -19,6 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { formatAmount, parseAmount } from '@/lib/finance/amount';
 import { setBoardRemunerationAction, setExpenseWaiverBasisAction, setFinanceLimitAction, setFinanceSwitchAction } from './actions';
+import { useDateFormat } from '@/components/date-format-provider';
 
 export interface TaxSwitches {
   isEntrepreneurOrHasVatId: boolean;
@@ -267,6 +268,7 @@ export function TaxPanel({
   boardRemunerationValidFrom: string | null;
 }) {
   const t = useTranslations('finance.admin.tax');
+  const fmt = useDateFormat();
   const router = useRouter();
   const [pending, setPending] = useState(false);
   // Schalter und Grenzen speichern je für sich; die Ablehnung steht über dem Block, dessen Knopf sie ausgelöst hat.
@@ -287,7 +289,7 @@ export function TaxPanel({
 
   return (
     <section data-testid="tax-panel">
-      <p className="text-[13px] text-muted-ink">{confirmedAt ? t('confirmedAt', { date: confirmedAt.slice(0, 10) }) : t('notConfirmed')}</p>
+      <p className="text-[13px] text-muted-ink">{confirmedAt ? t('confirmedAt', { date: fmt.date(confirmedAt) }) : t('notConfirmed')}</p>
       {/* Einstellungszeilen statt Raster (Entscheidung zum Inventar, 05.10.2026): Frage links, Bedienelement rechts,
           je Zeile eigenes Speichern. Die Kästen gehen über die volle Breite, bündig mit den Trennlinien (K9-Befund 1,
           Joe 05.10.2026: das Seitenformat stört mehr als der Weg von der Frage zum Bedienelement). */}

@@ -120,7 +120,7 @@ export function MovementDialog({
       {/* fixed-footer: in `md` stehen die Felder untereinander, mit Beschluss und Begründung wird der Dialog höher als mancher Bildschirm — die Mitte scrollt, Kopf und Leiste stehen. */}
       <DialogContent size="md" layout="fixed-footer" className="bg-surface shadow-md">
         <DialogHeader>
-          <DialogTitle className="font-heading text-[19px]">{t('title', { name: reserve.name })}</DialogTitle>
+          <DialogTitle>{t('title', { name: reserve.name })}</DialogTitle>
         </DialogHeader>
         <DialogBody>
           <div className="space-y-3.5" data-testid="movement-dialog">

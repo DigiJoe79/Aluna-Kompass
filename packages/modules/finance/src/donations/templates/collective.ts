@@ -1,5 +1,5 @@
-import type { DocumentTemplate } from '@kompass/core';
-import { CONFIRMATION_BASE, CONFIRMATION_DOCUMENT_TYPE, CONFIRMATION_ADDRESS_ZONE, CONFIRMATION_PERMISSION, confirmationSlots, amountBlock, collectiveConfirmationInputSchema, formatCents, germanDate, headBlock, membershipBlock, noticeBlock, notesBlock, signatureBlock, signatureImages, typstText as t, type CollectiveConfirmationInput } from './shared';
+import { isoDay, paperDate, type DocumentTemplate } from '@kompass/core';
+import { CONFIRMATION_BASE, CONFIRMATION_DOCUMENT_TYPE, CONFIRMATION_ADDRESS_ZONE, CONFIRMATION_PERMISSION, confirmationSlots, amountBlock, collectiveConfirmationInputSchema, formatCents, headBlock, membershipBlock, noticeBlock, notesBlock, signatureBlock, signatureImages, typstText as t, type CollectiveConfirmationInput } from './shared';
 import * as W from './wording';
 
 const ZONE = CONFIRMATION_ADDRESS_ZONE['finance-confirmation-collective'];
@@ -7,7 +7,7 @@ const ZONE = CONFIRMATION_ADDRESS_ZONE['finance-confirmation-collective'];
 function attachment(data: CollectiveConfirmationInput, total: number): string {
   const rows = data.lines.map((l) =>
     [
-      `[${t(germanDate(l.donatedOn))}]`,
+      `[${t(paperDate(isoDay(l.donatedOn)))}]`,
       `[${t(l.kind === 'donation' ? W.ATTACHMENT_KIND_DONATION : W.ATTACHMENT_KIND_MEMBERSHIP_FEE)}]`,
       `[${t(l.expenseWaiver ? W.ATTACHMENT_YES : W.ATTACHMENT_NO)}]`,
       `[${t(formatCents(l.amountCents))}]`,
@@ -41,7 +41,7 @@ export const collectiveConfirmationTemplate: DocumentTemplate<CollectiveConfirma
       body: {
         typst: [
           headBlock(W.TITLE_COLLECTIVE, data, ZONE),
-          amountBlock(W.COLLECTIVE_AMOUNT_LABEL, total, W.PERIOD_LABEL, W.periodText(germanDate(data.periodFrom), germanDate(data.periodTo))),
+          amountBlock(W.COLLECTIVE_AMOUNT_LABEL, total, W.PERIOD_LABEL, W.periodText(paperDate(isoDay(data.periodFrom)), paperDate(isoDay(data.periodTo)))),
           noticeBlock(data.notice),
           membershipBlock(data.membershipFeesCertifiable, W.MEMBERSHIP_SENTENCE),
           `#par[${t(W.COLLECTIVE_NO_OTHER_CONFIRMATIONS)}]`,

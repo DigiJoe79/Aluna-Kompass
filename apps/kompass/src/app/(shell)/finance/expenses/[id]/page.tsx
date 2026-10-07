@@ -1,4 +1,4 @@
-import { hasPermission, readSetting } from '@kompass/core';
+import { hasPermission } from '@kompass/core';
 import { getExpenseClaim } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -9,7 +9,7 @@ import { Notice } from '@/components/notice';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { buttonVariants } from '@/components/ui/button';
-import { formatDate, formatDateTime, type DateFormatMode } from '@/lib/dates';
+import { dateFormatOf } from '@/lib/date-format';
 import { formatEuro } from '@/lib/finance/amount';
 import { claimHistory } from '@/lib/finance/expenses';
 import { requireSession } from '@/lib/request-context';
@@ -26,7 +26,7 @@ export default async function ExpenseClaimPage({ params }: { params: Promise<{ i
   const { deps, ctx } = await requireSession();
   if (!hasPermission(ctx, 'finance.expensesSubmit') && !hasPermission(ctx, 'finance.read')) return <Page width="task"><ForbiddenCard permission="finance.expensesSubmit" /></Page>;
   const t = await getTranslations('finance.expenses.detail');
-  const mode = readSetting<DateFormatMode>(deps, 'ui.dateFormat');
+  const fmt = dateFormatOf(deps);
   const { id } = await params;
   const back = { href: '/finance/expenses', label: t('back') };
 
@@ -59,7 +59,7 @@ export default async function ExpenseClaimPage({ params }: { params: Promise<{ i
           <p data-testid="claim-amount" className="font-mono text-[34px] font-semibold tabular-nums">
             {formatEuro(claim.totalCents)}
           </p>
-          <ClaimState claim={claim} mode={mode} />
+          <ClaimState claim={claim} fmt={fmt} />
           {claim.waiver ? <p className="text-[14px] text-ink-2">{t('waiver')}</p> : null}
           <p className="text-[14px] text-ink-2">{hint}</p>
           {source?.ok ? <p className="text-[12px] text-muted-ink">{t('copiedFrom', { number: source.value.number ?? '' })}</p> : null}
@@ -83,7 +83,7 @@ export default async function ExpenseClaimPage({ params }: { params: Promise<{ i
               <li key={p.id} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-2.5 text-[14px]">
                 <span className="min-w-0 text-ink">
                   {p.kind === 'trip' ? t('trip', { from: p.tripFrom ?? '', to: p.tripTo ?? '', km: p.tripKm ?? 0 }) : p.purpose}
-                  <span className="block text-[12px] text-muted-ink">{formatDate(p.positionDate, mode)}</span>
+                  <span className="block text-[12px] text-muted-ink">{fmt.date(p.positionDate)}</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-3">
                   {p.documentId ? (
@@ -106,7 +106,7 @@ export default async function ExpenseClaimPage({ params }: { params: Promise<{ i
             {claimHistory(claim).map((event) => (
               <li key={event.key} className="flex justify-between gap-3">
                 <span className="text-ink">{t(`event.${event.key}`)}</span>
-                <span className="font-mono text-[13px] tabular-nums text-ink-2">{event.at.length > 10 ? formatDateTime(event.at, mode) : formatDate(event.at, mode)}</span>
+                <span className="font-mono text-[13px] tabular-nums text-ink-2">{event.at.length > 10 ? fmt.dateTime(event.at) : fmt.date(event.at)}</span>
               </li>
             ))}
           </ol>

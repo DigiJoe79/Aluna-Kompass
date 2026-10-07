@@ -2,7 +2,8 @@
 
 import { FileUp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
+import { FieldError } from '@/components/forms/field-error';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -51,6 +52,7 @@ export function ReceiptDrop({
   previewAlt?: string;
 }) {
   const t = useTranslations('finance.receipt');
+  const errorId = useId();
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [replacing, setReplacing] = useState(false);
@@ -127,7 +129,7 @@ export function ReceiptDrop({
             <p className="font-semibold text-ink">{t('dropHere')}</p>
           ) : (
             <>
-              <button type="button" disabled={disabled} onClick={() => inputRef.current?.click()} className="font-semibold text-ink underline underline-offset-2">
+              <button type="button" disabled={disabled} aria-describedby={error ? errorId : undefined} onClick={() => inputRef.current?.click()} className="font-semibold text-ink underline underline-offset-2">
                 {kind === 'image' ? t('dragOrPickImage') : t('dragOrPick')}
               </button>
               {onPickFromArchive ? (
@@ -151,11 +153,7 @@ export function ReceiptDrop({
           />
         </div>
       )}
-      {error ? (
-        <p role="alert" className="text-[12px] text-error">
-          {error}
-        </p>
-      ) : null}
+      <FieldError id={errorId} message={error ?? undefined} />
     </div>
   );
 }

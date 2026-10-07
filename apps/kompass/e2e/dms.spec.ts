@@ -689,13 +689,23 @@ test.describe('dms', () => {
     // aus dem falschen Grund durch.
     const main = page.locator('main');
     const column = page.getByTestId('folder-column');
-    const mainBox = await main.boundingBox();
-    const columnBox = await column.boundingBox();
-    if (!mainBox || !columnBox) throw new Error('Bereich oder Spalte nicht sichtbar');
 
-    // Beim Ziehen ist die Spalte die helle Fläche gegen das abgedunkelte Feld
-    // daneben. Endet sie vorher, sieht darunter Overlay aus wie Spalte.
-    expect(columnBox.y + columnBox.height).toBeGreaterThanOrEqual(mainBox.y + mainBox.height - 1);
+    // Wiederholt gemessen: Die Höhe setzt erst ein Layout-Effekt der Spalte.
+    // Bis 0.2.8 sass der Hydrationsmarker der Fixture im Wurzel-Layout,
+    // außerhalb der Suspense-Grenze von `(shell)/loading.tsx`, und meldete
+    // unter Last „hydriert“, während die Seite noch strömte — gemessen:
+    // Spalte fehlt ganz, oder sie hat ihre Inhaltshöhe (Unterkante 581 statt
+    // ≥ 799). Seit der Marker im Rahmen der Seite steht, ist das behoben; das
+    // Wiederholen bleibt als Spielraum für den Layout-Effekt.
+    await expect(async () => {
+      const mainBox = await main.boundingBox();
+      const columnBox = await column.boundingBox();
+      if (!mainBox || !columnBox) throw new Error('Bereich oder Spalte nicht sichtbar');
+
+      // Beim Ziehen ist die Spalte die helle Fläche gegen das abgedunkelte Feld
+      // daneben. Endet sie vorher, sieht darunter Overlay aus wie Spalte.
+      expect(columnBox.y + columnBox.height).toBeGreaterThanOrEqual(mainBox.y + mainBox.height - 1);
+    }).toPass();
   });
 
   test('zieht eine Datei auf einen Ordner und legt sie dorthin', async ({ page }) => {

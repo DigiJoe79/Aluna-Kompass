@@ -119,8 +119,15 @@ describe('buildContext', () => {
     const ctx = ctxWith([]);
     const fromClock = await buildContext(deps, ctx, 'BRF-2026-001');
     expect(fromClock.issuedAt).toBe('2026-09-12T10:00:00.000Z');
+    expect(fromClock.issuedDay).toBe('2026-09-12');
     const dated = await buildContext(deps, ctx, 'BRF-2026-001', '2026-02-10');
     expect(dated.issuedAt).toMatch(/^2026-02-10/);
+    expect(dated.issuedDay).toBe('2026-02-10');
+  });
+
+  it('der Tag ohne Dokumentdatum ist der des Vereins: 22:30 UTC ist in Berlin schon der 13. (K10)', async () => {
+    const deps = createTestDeps({ now: '2026-09-12T22:30:00.000Z' });
+    expect((await buildContext(deps, ctxWith([]), 'BRF-2026-002')).issuedDay).toBe('2026-09-13');
   });
 });
 

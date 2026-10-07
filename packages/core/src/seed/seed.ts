@@ -92,7 +92,7 @@ export async function seedDevelopment(deps: Deps): Promise<{ adminEmail: string;
     const roleId = roleIds.get(person.role);
     const created = unwrap(await createUser(deps, ctx, { name: person.name, email: person.email, roleIds: roleId ? [roleId] : [] }));
     if (person.name === 'Jonas Feld') {
-      deps.db.update(users).set({ mustChangePassword: false, lastLoginAt: '2026-09-01T10:00:00.000Z' }).where(eq(users.id, created.user.id)).run();
+      deps.db.update(users).set({ mustChangePassword: false, lastLoginAt: new Date(deps.clock.now().getTime() - 36 * 86_400_000).toISOString() }).where(eq(users.id, created.user.id)).run();
     }
   }
 

@@ -25,7 +25,7 @@ export function ReopenDialog({ name, onClose, onConfirm, onDone }: { name: strin
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent size="sm" className="bg-surface shadow-md">
-        <DialogTitle className="font-heading text-[19px]">
+        <DialogTitle>
           {t('title')}: {name}
         </DialogTitle>
         <div data-testid="reopen-dialog">

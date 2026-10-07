@@ -202,7 +202,7 @@ export async function deleteEntry(deps: Deps, ctx: CallContext, raw: unknown): P
   const before = deps.db.select().from(siteEntries).where(eq(siteEntries.id, parsed.data.id)).get();
   if (!before) return notFound('siteEntry', parsed.data.id);
   const col = collectionOf(deps, before.collection);
-  const blocked = deletionConflict(deletionPreviewOf(deps, col, before));
+  const blocked = deletionConflict(deps, deletionPreviewOf(deps, col, before));
   if (blocked) return blocked;
 
   const assetIds = assetIdsOf(col, before);

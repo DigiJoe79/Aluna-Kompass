@@ -1,5 +1,5 @@
-import type { DocumentTemplate } from '@kompass/core';
-import { CONFIRMATION_BASE, CONFIRMATION_DOCUMENT_TYPE, CONFIRMATION_ADDRESS_ZONE, CONFIRMATION_PERMISSION, confirmationSlots, amountBlock, checkbox, formatCents, germanDate, headBlock, inKindConfirmationInputSchema, noticeBlock, notesBlock, signatureBlock, typstText as t, type InKindConfirmationInput } from './shared';
+import { isoDay, paperDate, type DocumentTemplate } from '@kompass/core';
+import { CONFIRMATION_BASE, CONFIRMATION_DOCUMENT_TYPE, CONFIRMATION_ADDRESS_ZONE, CONFIRMATION_PERMISSION, confirmationSlots, amountBlock, checkbox, formatCents, headBlock, inKindConfirmationInputSchema, noticeBlock, notesBlock, signatureBlock, typstText as t, type InKindConfirmationInput } from './shared';
 import * as W from './wording';
 
 const ZONE = CONFIRMATION_ADDRESS_ZONE['finance-confirmation-in-kind'];
@@ -22,7 +22,7 @@ export const inKindConfirmationTemplate: DocumentTemplate<InKindConfirmationInpu
       body: {
         typst: [
           headBlock(W.TITLE_IN_KIND, data, ZONE),
-          amountBlock(W.IN_KIND_AMOUNT_LABEL, data.amountCents, W.DATE_LABEL, germanDate(data.donatedOn)),
+          amountBlock(W.IN_KIND_AMOUNT_LABEL, data.amountCents, W.DATE_LABEL, paperDate(isoDay(data.donatedOn))),
           `#block(width: 100%, stroke: 0.5pt, inset: (x: 6pt, y: 5pt))[#text(size: 8pt)[${t(W.IN_KIND_ITEM_LABEL)}] #linebreak() ${t(data.item)} #linebreak() ${t(data.condition)} #linebreak() ${t(data.valuation)}]`,
           origin,
           `#par[${checkbox(true)} #h(1.5mm) ${t(W.IN_KIND_VALUATION_DOCUMENTS)}]`,

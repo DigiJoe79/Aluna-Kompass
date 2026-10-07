@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { StatusBadge } from '@/components/status-badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatEuro } from '@/lib/finance/amount';
-import { formatDate, type DateFormatMode } from '@/lib/dates';
+import type { DateFormatter } from '@/lib/date-format';
 import { panelHref } from '@/components/panel-nav';
 
 /**
@@ -13,7 +13,7 @@ import { panelHref } from '@/components/panel-nav';
  * Zeilen, mit „freigegeben von“ und dem Warnwort für eine Pauschale ohne
  * bestätigte Grundlage.
  */
-export async function RelatedPartyTable({ rows, approverNames, dateMode }: { rows: RelatedPartyPaymentRow[]; approverNames: Map<string, string>; dateMode: DateFormatMode }) {
+export async function RelatedPartyTable({ rows, approverNames, fmt }: { rows: RelatedPartyPaymentRow[]; approverNames: Map<string, string>; fmt: DateFormatter }) {
   const t = await getTranslations('finance.people.related');
   if (rows.length === 0) return <p className="text-[13px] text-muted-ink">{t('empty')}</p>;
   return (
@@ -32,7 +32,7 @@ export async function RelatedPartyTable({ rows, approverNames, dateMode }: { row
         <TableBody>
           {rows.map((row, i) => (
             <TableRow key={`${row.entryId}-${row.contactId}-${i}`} data-testid="related-party-row">
-              <TableCell className="px-3 text-ink-2">{formatDate(row.entryDate, dateMode)}</TableCell>
+              <TableCell className="px-3 text-ink-2">{fmt.date(row.entryDate)}</TableCell>
               <TableCell className="px-3 text-ink">{row.contactName}</TableCell>
               <TableCell className="px-3 text-ink-2" data-testid="related-party-role">{t(`roleShort.${row.role === 'board-member' ? 'boardMember' : 'relatedParty'}`)}</TableCell>
               <TableCell className="px-3 text-ink-2" data-testid="related-party-kind">

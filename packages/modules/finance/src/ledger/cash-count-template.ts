@@ -1,13 +1,12 @@
-import type { DocumentTemplate } from '@kompass/core';
+import { isoDay, paperDate, type DocumentTemplate } from '@kompass/core';
 import { z } from 'zod';
-import { germanDate } from './dates';
 
 const denominationSchema = z.object({ cents: z.number().int().positive(), count: z.number().int().min(0) });
 
 const cashCountVariantSchema = z.object({
   variant: z.literal('cashCount').optional(),
   accountName: z.string().min(1),
-  countedOn: z.string(),
+  countedOn: z.iso.date(),
   bookAmount: z.string(),
   countedAmount: z.string(),
   differenceAmount: z.string(),
@@ -23,7 +22,7 @@ const donationBoxVariantSchema = z.object({
   variant: z.literal('donationBox'),
   accountName: z.string().min(1),
   boxLabel: z.string().min(1),
-  countedOn: z.string(),
+  countedOn: z.iso.date(),
   amount: z.string(),
   categoryName: z.string().min(1),
   counterOneName: z.string().min(1),
@@ -57,7 +56,7 @@ function donationBoxBody(data: DonationBoxVariant): string {
     '| | |',
     '|---|---|',
     `| Spendendose | ${data.boxLabel} |`,
-    `| Datum | ${germanDate(data.countedOn)} |`,
+    `| Datum | ${paperDate(isoDay(data.countedOn))} |`,
     `| Inhalt der Spendendose | ${data.amount} |`,
     `| Eingezahlt in | ${data.accountName} |`,
     '',
@@ -72,7 +71,7 @@ function body(data: CashCountVariant): string {
     '| | |',
     '|---|---|',
     `| Kasse | ${data.accountName} |`,
-    `| Datum | ${germanDate(data.countedOn)} |`,
+    `| Datum | ${paperDate(isoDay(data.countedOn))} |`,
     `| Buchbestand | ${data.bookAmount} |`,
     `| Gezählt | ${data.countedAmount} |`,
     `| ${DIFFERENCE_ROW_LABEL[data.kind]} | ${data.differenceAmount} |`,
@@ -100,6 +99,6 @@ export const cashCountTemplate: DocumentTemplate<CashCountTemplateInput> = {
   permission: 'finance.entriesFinalize',
   build: (data) =>
     data.variant === 'donationBox'
-      ? { slots: { kind: 'report', title: `Leerung ${data.boxLabel}`, subtitle: germanDate(data.countedOn) }, body: { markdown: donationBoxBody(data) } }
-      : { slots: { kind: 'report', title: `Kassenzählung ${data.accountName}`, subtitle: germanDate(data.countedOn) }, body: { markdown: body(data) } },
+      ? { slots: { kind: 'report', title: `Leerung ${data.boxLabel}`, subtitle: paperDate(isoDay(data.countedOn)) }, body: { markdown: donationBoxBody(data) } }
+      : { slots: { kind: 'report', title: `Kassenzählung ${data.accountName}`, subtitle: paperDate(isoDay(data.countedOn)) }, body: { markdown: body(data) } },
 };

@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
-import { formatDate, type DateFormatMode } from '@/lib/dates';
+import { dateFormatOf } from '@/lib/date-format';
 import { formatEuro } from '@/lib/finance/amount';
 import { formatDateOrDash } from '@/lib/finance/dates';
 import { parseWorkTab, WORK_TABS, workHref } from '@/lib/finance/work';
@@ -40,8 +40,7 @@ export default async function FinanceWorkPage({ searchParams }: { searchParams: 
   if (!hasPermission(ctx, 'finance.read')) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
   const t = await getTranslations('finance.work');
   const canWrite = hasPermission(ctx, 'finance.entriesWrite');
-  const dateMode = readSetting<DateFormatMode>(deps, 'ui.dateFormat');
-  const fmtDate = (value: string | null | undefined) => formatDate(value, dateMode);
+  const fmtDate = dateFormatOf(deps).date;
 
   const query = await searchParams;
   const tab = parseWorkTab(query.tab);

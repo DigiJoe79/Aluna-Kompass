@@ -42,12 +42,14 @@ export async function seedSiteDevelopment(deps: Deps, ctx: CallContext): Promise
   if (!deps.db.select({ id: sitePublishes.id }).from(sitePublishes).get()) {
     const none = { changed: [], added: [], removed: [] };
     // Beide Quellen der Historie: einmal die Oberfläche, einmal ein MCP-Zugang (erfundener, nicht benutzbarer Token).
+    // Relativ zu heute, nie auf einem festen Datum: Ein Seed an einem früheren Tag hätte sonst Publishes aus der Zukunft.
+    const daysAgo = (days: number) => new Date(deps.clock.now().getTime() - days * 86_400_000).toISOString();
     const tokenId = newId();
-    deps.db.insert(core.apiTokens).values({ id: tokenId, userId: ctx.userId!, name: 'Beispiel-Zugang', prefix: 'dev_beispiel', tokenHash: `seed-unusable-${tokenId}`, createdAt: '2026-09-01T08:00:00.000Z' }).run();
+    deps.db.insert(core.apiTokens).values({ id: tokenId, userId: ctx.userId!, name: 'Beispiel-Zugang', prefix: 'dev_beispiel', tokenHash: `seed-unusable-${tokenId}`, createdAt: daysAgo(36) }).run();
     const viaUi = { ...ctx, channel: 'ui' as const, apiTokenId: null };
     const viaMcp = { ...ctx, channel: 'mcp' as const, apiTokenId: tokenId };
-    recordPublish(deps, viaUi, { environment: deps.env, startedAt: '2026-09-20T08:00:00.000Z', status: 'aborted', contentHash: '', diff: none, fileManifest: {}, log: 'Beispiel: Sperrworttreffer in variables.claim — abgebrochen.', summary: 'Beispiel-Abbruch' });
-    recordPublish(deps, viaMcp, { environment: deps.env, startedAt: '2026-09-27T08:00:00.000Z', status: 'success', contentHash: 'beispiel', diff: none, fileManifest: {}, log: 'Beispiel: übertragen.', summary: 'Beispiel-Publish' });
+    recordPublish(deps, viaUi, { environment: deps.env, startedAt: daysAgo(17), status: 'aborted', contentHash: '', diff: none, fileManifest: {}, log: 'Beispiel: Sperrworttreffer in variables.claim — abgebrochen.', summary: 'Beispiel-Abbruch' });
+    recordPublish(deps, viaMcp, { environment: deps.env, startedAt: daysAgo(10), status: 'success', contentHash: 'beispiel', diff: none, fileManifest: {}, log: 'Beispiel: übertragen.', summary: 'Beispiel-Publish' });
   }
   if (deps.db.select().from(siteEntries).get() || deps.db.select().from(siteValues).get()) return;
 

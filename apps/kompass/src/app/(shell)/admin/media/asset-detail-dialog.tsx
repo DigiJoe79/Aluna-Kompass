@@ -42,7 +42,7 @@ export function AssetDetailDialog({
       <DialogContent size="md">
         {item ? (
           <>
-            <DialogTitle className="truncate font-mono text-[14px]">{item.filename}</DialogTitle>
+            <DialogTitle className="truncate font-mono text-[14px] font-medium">{item.filename}</DialogTitle>
 
             <div className="grid place-items-center rounded-md border border-line bg-surface-2 p-3">
               {isImage ? (

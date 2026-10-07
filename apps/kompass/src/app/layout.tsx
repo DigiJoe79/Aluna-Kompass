@@ -11,7 +11,6 @@ import type { Metadata } from 'next';
 import { NextIntlClientProvider } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
-import { HydrationMarker } from '@/components/hydration-marker';
 import { Toaster } from '@/components/ui/sonner';
 import { depsReady, getDeps } from '@/lib/deps';
 import { PREFERENCE_BOOTSTRAP } from '@/lib/preference-bootstrap';
@@ -42,7 +41,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <NextIntlClientProvider>
           {children}
           <Toaster position="bottom-right" />
-          <HydrationMarker />
         </NextIntlClientProvider>
       </body>
     </html>

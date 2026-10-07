@@ -203,7 +203,7 @@ export function CorrectDialog({
       </Button>
       <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
         <DialogContent size="lg" className="bg-surface shadow-md">
-          <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
+          <DialogTitle>{t('title')}</DialogTitle>
 
           {needsPick && !pickedLine ? (
             <div className="space-y-2">

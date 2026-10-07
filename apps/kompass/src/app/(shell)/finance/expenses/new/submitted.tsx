@@ -1,9 +1,8 @@
-import { readSetting } from '@kompass/core';
 import type { ExpenseClaimView } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { buttonVariants } from '@/components/ui/button';
-import { formatDateTime, type DateFormatMode } from '@/lib/dates';
+import { dateFormatOf } from '@/lib/date-format';
 import { formatEuro } from '@/lib/finance/amount';
 import { requireSession } from '@/lib/request-context';
 
@@ -16,14 +15,14 @@ import { requireSession } from '@/lib/request-context';
 export async function SubmittedView({ claim }: { claim: ExpenseClaimView }) {
   const { deps } = await requireSession();
   const t = await getTranslations('finance.expenses.submitted');
-  const mode = readSetting<DateFormatMode>(deps, 'ui.dateFormat');
+  const fmt = dateFormatOf(deps);
   return (
     <section data-testid="expense-submitted" aria-labelledby="expense-submitted-title" className="space-y-5">
       <div className="rounded-lg border border-line bg-surface p-5">
         <h2 id="expense-submitted-title" className="font-heading text-[22px]">
           {t('title')}
         </h2>
-        <p className="mt-1 text-[14px] text-ink-2">{t('text', { number: claim.number ?? '', at: formatDateTime(claim.submittedAt, mode) })}</p>
+        <p className="mt-1 text-[14px] text-ink-2">{t('text', { number: claim.number ?? '', at: fmt.dateTime(claim.submittedAt) })}</p>
         <p className="mt-4 text-[13px] text-muted-ink">{t('amount')}</p>
         <p className="font-mono text-[34px] font-semibold tabular-nums">{formatEuro(claim.totalCents)}</p>
         {claim.waiver ? <p className="mt-1 text-[14px] text-ink-2">{t('waiver')}</p> : null}

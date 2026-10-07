@@ -45,7 +45,7 @@ export async function TileCard({ view, canComplete }: { view: DashboardTileView;
     const n = content.kind === 'count' ? content.count : content.total;
     body = (
       <>
-        <p className="font-mono text-[32px] leading-none text-ink">{n}</p>
+        <p className="font-mono text-figure tabular-nums text-ink">{n}</p>
         {openLink(content.href)}
       </>
     );

@@ -1,14 +1,9 @@
-import type { DocumentRenderContext, DocumentTemplate } from '@kompass/core';
+import { paperDate, type DocumentRenderContext, type DocumentTemplate } from '@kompass/core';
 import { z } from 'zod';
 
 export function firstFontFamily(stack: string): string {
   const first = stack.split(',')[0] ?? '';
   return first.trim().replace(/^["']|["']$/g, '');
-}
-
-export function formatGermanDate(iso: string): string {
-  const [y, m, d] = iso.slice(0, 10).split('-');
-  return `${d}.${m}.${y}`;
 }
 
 /** Der Payload, den jede Basis-Vorlage als `payload` sieht. `slots` und `logoFile` ergänzt der Renderer/Kern. */
@@ -17,7 +12,7 @@ export function buildPayload(ctx: DocumentRenderContext) {
   return {
     organization: ctx.organization,
     number: ctx.number,
-    issuedDate: formatGermanDate(ctx.issuedAt),
+    issuedDate: paperDate(ctx.issuedDay),
     brand: {
       primary: t['color-primary'].light,
       primarySoft: t['color-primary-soft'].light,

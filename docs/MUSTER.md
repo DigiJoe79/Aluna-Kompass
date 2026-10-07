@@ -4,6 +4,8 @@ Gilt für jede neue Seite und jedes neue Modul, für Menschen wie für Agenten: 
 
 Abweichungen von den Mustern stehen nur in der Erlaubnisliste des jeweiligen Wächter-Tests (`apps/kompass/tests/patterns/`), je Zeile mit Begründung. Das Diff zeigt sie, also sieht sie das Review. Herkunft: Fassung 0.2.6 (Konsistenz).
 
+**Positivliste.** Die Wächter sagen, was erlaubt ist, nicht nur, was verboten ist: Schrift, Größe und Farbe eines Dialogtitels, einer Beschreibung oder eines Abschnitts kommen aus dem Baustein; die Aufrufstelle ergänzt höchstens Layout (`flex`, `gap-*`, `items-*`, `truncate`, `sr-only`, `text-pretty`). Was abweicht, steht mit Grund in der Erlaubnisliste von `no-title-override.test.ts`. Herkunft: K10 (Designer und Joe 2026-10-06).
+
 Vorlage zum Abschreiben: das Modul **Projekte** — Liste `apps/kompass/src/app/(shell)/projects/page.tsx`, Anlegen und Detail `projects/[id]/page.tsx` (die Kennung `new` legt an), Formular `projects/project-form.tsx`, Löschen `projects/delete-project.tsx`. Für eine Einstellungsseite mit Unterbereichen: `admin/settings/` (Reiter in der Adresse).
 
 ## A — Meldungen
@@ -17,6 +19,7 @@ Vorlage zum Abschreiben: das Modul **Projekte** — Liste `apps/kompass/src/app/
 - **Veralteter Stand** → der Konflikt-Satz („Der Eintrag wurde inzwischen geändert“) mit den Auswegen „Ihre Änderungen neben den neuen Stand legen“ und „Neuen Stand laden“ (`lib/conflict-remedies.ts`); die Leiste zeigt ihn selbst.
 - **Warnung ohne Sperre** → `Notice level="warn"` an der betroffenen Stelle; Hinweis → `level="hint"`.
 - **Erfolg** → `toast.success`.
+- **Beschreibung eines Dialogs** → `DialogDescription` bzw. `SheetDescription` mit `tone`: `body` (14 px, `ink-2`), wenn der Satz die Folge erklärt — Löschen, Überschreiben, Veröffentlichen, ein einmalig sichtbares Geheimnis; sonst `meta` (Standard, 13 px, `muted`). Muted ist Text, den man auslassen kann. Der Satz bleibt in der Description, damit ein Vorleser ihn als Beschreibung des Dialogs sagt. `ConfirmDialog` setzt `body` selbst und verlangt `description`. Kein `className` für die Schrift (K10, Designer und Joe 2026-10-07).
 - Ablehnungen nennen den Grund und bis zu drei Auswege, nie das Wort „Fehler“. Jede Ablehnung steht an der Stelle, an der man gehandelt hat.
 
 Bausteine: `forms/form-error-summary.tsx`, `forms/field-error.tsx`, `forms/refusal-notice.tsx`, `forms/use-action-feedback.ts`, `forms/confirm-dialog.tsx`, `lib/feedback.ts`, `notice.tsx`.
@@ -58,12 +61,13 @@ Bausteine: `panel-nav.tsx` (mit dem Hilfsteil `panel-nav-scroll.tsx`, der den ge
 ## E — Formulare
 
 - **Eine Karte** (`rounded-lg border border-line bg-surface`) mit Inhalt `p-5`; die `FormActionBar` ist das letzte Kind der Karte. Keine Karte in der Karte.
-- Abschnitte mit `h3` 15/600, getrennt durch `border-t`, Abstand 20 (`mt-5 border-t border-line pt-5`), Inhalt eines Abschnitts `mt-3`.
+- Abschnitte über `Section title intro actions` (`components/section.tsx`): Titel in der Rolle `text-section` (15/600), Einleitung `text-meta`, Inhalt `mt-3`, Aktionen rechts neben dem Titel (brechen am Telefon um). Ein Folgeabschnitt bekommt Linie und Abstand selbst (`border-t`, 20 px) — aber nur, wenn er **direkt** auf eine `Section` folgt; ein Hinweis oder bedingter Wrapper dazwischen unterbricht die Linie (gewollt).
+- Die Überschriftenebene kommt aus dem Umfeld: `Page` setzt 3 (der Seitentitel ist `h2`, der `h1` ist die Brotkrume), `DialogContent`/`SheetContent` 3, eine verschachtelte `Section` eins mehr, höchstens 4, ohne Umfeld 2; `level` nur als Ausnahme. Einstellungs-Panels unter `PanelNav` haben keinen eigenen Titel, ihre Abschnitte stehen wie überall unter dem Seitentitel auf Ebene 3. Vorlagen: Projekt-Formular und Einstellungen → Verein; die übrigen handgeschriebenen Abschnitte folgen in K10 Charge 3.
 - Raster je Abschnitt über `FormGrid`, Spannweite je Feld über `FormField size` (§ J). Kein `grid-cols-*` von Hand.
 - Jedes Feld über `FormField` (Beschriftung, Pflichtmarke, Hinweis, Feldfehler).
 - Reiter erst ab zwei Reitern; ein einzelner Reiter ist ein Abschnitt.
 
-Bausteine: `forms/form-field.tsx`, `forms/form-grid.tsx`, `forms/localized-field.tsx`, `forms/media-picker.tsx`, `contact-picker.tsx`, `choice-cards.tsx`, `ui/radio-group.tsx` (zwei bis vier kurze Optionen, wo `ChoiceCards` zu schwer wäre; keine nativen Radios), `schema-form/`, `ui/input.tsx`, `ui/select.tsx`, `ui/textarea.tsx`, `ui/label.tsx`, `ui/tabs.tsx`.
+Bausteine: `section.tsx`, `forms/form-field.tsx`, `forms/form-grid.tsx`, `forms/localized-field.tsx`, `forms/media-picker.tsx`, `contact-picker.tsx`, `choice-cards.tsx`, `ui/radio-group.tsx` (zwei bis vier kurze Optionen, wo `ChoiceCards` zu schwer wäre; keine nativen Radios), `schema-form/`, `ui/input.tsx`, `ui/select.tsx`, `ui/textarea.tsx`, `ui/label.tsx`, `ui/tabs.tsx`.
 
 ## F — Marken
 
@@ -78,7 +82,7 @@ Bausteine: `status-badge.tsx`, `finance/entry-state-badge.tsx`.
 - **Öffnen:** Das Element in der ersten Inhaltsspalte trägt eine unsichtbare Fläche über die ganze Zeile — `RowLink` (navigiert; echter Link, Cmd-/Strg-Klick öffnet einen Tab) bzw. `RowButton` (klappt auf oder öffnet ein Seitenfenster; mit `aria-expanded` bzw. `aria-haspopup="dialog"`). **Kein `onClick`, `onKeyDown`, `tabIndex` oder `cursor-pointer` an einer Zeile.**
 - Haken, Schalter, Knöpfe, Menüs und Links in anderen Zellen liegen über der Fläche und öffnen die Zeile nicht nebenbei (macht `TableCell` selbst). Eine Zelle mit Text zum Kopieren (IBAN, Belegnummer, Betrag) bekommt `selectable`.
 - Sortierbare Spalten über `SortableHead`; Filter setzen nur Query-Parameter (`useUrlFilters`). Mehrfachauswahl über `SelectionBar` (unten klebend, mit Ansage für Vorleser).
-- Leer: `EmptyState`; gefiltert leer: `EmptyState` mit „Keine Treffer“.
+- Leer: `EmptyState`; gefiltert leer: `EmptyState` mit „Keine Treffer“. Eine Tabelle, deren Kopf stehen bleibt, zeigt die Leere als `TableEmpty colSpan` — eine Zeile im Ton von `EmptyState`, nie eine handgeschriebene Zelle.
 
 Bausteine: `ui/table.tsx`, `sortable-head.tsx`, `selection-bar.tsx`, `empty-state.tsx`, `ui/checkbox.tsx`, `ui/switch.tsx`.
 
@@ -89,6 +93,7 @@ Bausteine: `ui/table.tsx`, `sortable-head.tsx`, `selection-bar.tsx`, `empty-stat
 - Die Seite wählt, nicht der Bereich: kein `max-w-[…]` in Seiten und Panels. Fließtext `max-w-prose`; schmale Felder über das Raster (§ J).
 - Dialoge über `DialogContent size` (Pflicht): `sm` 440 (bestätigen, ein bis zwei Felder), `md` 560 (innen ~512 px, zwei Spalten), `lg` 760 (zwei Spalten, Auswahl mit Liste, Protokoll), `xl` 1040 (mit Vorschau). Faustregel: bis etwa sechs Felder `md`, mehr Felder `lg`. Telefon: `sm`/`md` als Blatt von unten, `lg`/`xl` als Vollbild; `mobile` übersteuert das. Kein `sm:max-w-[…]`, kein `w-[…]`, kein eigenes Polster oder `--dialog-pad`; randloser Inhalt über `layout="fixed-footer"`.
 - Seitenfenster über `SheetContent size`: `sm` 400 (Hilfe, Navigation), `md` 560 (Detail, Ordner); auf dem Telefon volle Breite. Polster 20 px wie im Dialog, im inneren Behälter (`<div className="p-5">`), nicht am `SheetContent`. Ausnahme: Navigation und Ordnerblatt — Listen ohne Rand mit eigenen Zeilenrändern.
+- Titel über `DialogTitle`/`SheetTitle` ohne Klassen (Standard `font-heading text-dialog-title`, 19/600), Beschreibung mit `tone` (§ A). Kopf und Fuß eines Seitenfensters (`SheetHeader`, `SheetFooter`) haben 20 px Polster wie der Dialog; das Schließen-Kreuz hat in beiden 44 px Klickfläche.
 
 Begründung 1200: Die Schale nimmt 344 px; Inhalt bei Vollbild Air 13″ 1126, Pro 14″ 1168, Air 15″ 1366, Pro 16″ 1384 px. Auf kleinen Schirmen greift die Grenze kaum, ab 15″ hält sie Kopf, Felder und Speicherleiste zusammen.
 
@@ -116,6 +121,33 @@ Bausteine: `page.tsx`, `ui/dialog.tsx`, `ui/sheet.tsx`. Wächter: `page-width.te
 
 Bausteine: `forms/form-grid.tsx` (`FormGrid`, `FormCell`, `FormRowBreak`), `forms/form-field.tsx`. Wächter: `form-grid.test.ts`.
 
+## Schrift
+
+Sechs Rollen in `app/globals.css` (`@theme`, `--text-*` mit Zeilenhöhe und Gewicht); `cn` kennt sie über `TYPE_ROLES` in `lib/utils.ts`. Die Schriftfamilie steht nie in der Rolle, sondern im Baustein bzw. an der Kennzahl.
+
+| Klasse | Größe/Zeilenhöhe | Gewicht | Schrift steht … |
+|---|---|---|---|
+| `text-dialog-title` | 19/1.25 | 600 | `font-heading` im Standard von `DialogTitle`/`SheetTitle` |
+| `text-section` | 15/1.35 | 600 | `font-heading` im Standard von `Section` |
+| `text-body` | 14/1.5 | — | — |
+| `text-meta` | 13/1.45 | — | — |
+| `text-hint` | 12/1.4 | — | — |
+| `text-figure` | 32/1 | — | `font-mono tabular-nums` an der Aufrufstelle (Kennzahl der Startseiten-Kachel) |
+
+In K10 Charge 1 nutzen nur die Bausteine und die Kennzahl die Rollen; die übrigen `text-[…px]` folgen in Charge 3. Wächter: `no-title-override.test.ts`.
+
+## Datum
+
+Zwei Formate, drei Funktionen (K10, Joe 2026-10-07): Was ein Mensch am Bildschirm liest — in der Oberfläche oder als Meldung eines Dienstes —, folgt der Einstellung `ui.dateFormat` in der Zeitzone des Vereins; was auf Papier steht, ist fest `TT.MM.JJJJ`.
+
+| Weg | Funktion | Format |
+|---|---|---|
+| Bildschirm | `formatDate(value, mode, timeZone, locale?)`, `formatDateTime(…)` (die Zeitzone ist Pflicht) | Einstellung `ui.dateFormat` |
+| Meldungen der Dienste (Ablehnungen, Hinweise, Protokoll) | `messageDate(deps, iso)` | `ui.dateFormat` (über `readSetting`), immer absolut |
+| Papier (alles aus Typst, Betreffe der Akte) | `paperDate(iso)` | fest `TT.MM.JJJJ` |
+
+Papier ist fest, weil ein Brief nach außen geht, die Zuwendungsbestätigung dem amtlichen Muster folgt und ein festgeschriebenes Dokument sich nicht ändern darf, wenn jemand später die Einstellung umstellt. Kein `toLocaleString`, kein `.slice(0, 10)` in einer Anzeige — Wächter `no-raw-date.test.ts`.
+
 ## Seitenrahmen
 
 - `Page` mit `PageHeader` auf jeder Seite (§ I); `back` für Seiten, die nicht in der Navigation hängen (alles mit Platzhalter oder mit den Endungen `new`, `edit`, `receive` im Pfad) — `tests/back-navigation.test.ts` prüft es.
@@ -141,4 +173,5 @@ Was keinem der Abschnitte oben gehört, steht im Wächter `component-inventory.t
 - [ ] Seite über `Page width`, Dialog über `DialogContent size` (§ I)
 - [ ] Formular als eine Karte, Abschnitte statt Reiter, Raster über `FormGrid`, jedes Feld über `FormField size` (§ J)
 - [ ] Löschen oder Archivieren als `DangerSection` am Ende der Detailseite
+- [ ] Keine Schrift, Größe oder Farbe an Titel, Beschreibung oder Abschnitt; Datum nur über `formatDate`, `messageDate` oder `paperDate`
 - [ ] `apps/kompass/tests/patterns/` grün

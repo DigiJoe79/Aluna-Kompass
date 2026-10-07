@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { HydrationMarker } from '@/components/hydration-marker';
 
 export function AuthCard({ brand, organization, title, width = 400, children, footer }: { brand: string; organization?: string; title: string; width?: number; children: ReactNode; footer?: ReactNode }) {
   return (
@@ -15,6 +16,7 @@ export function AuthCard({ brand, organization, title, width = 400, children, fo
         {children}
       </section>
       {footer ? <p className="max-w-[520px] text-center text-[13px] text-muted-ink">{footer}</p> : null}
+      <HydrationMarker />
     </main>
   );
 }

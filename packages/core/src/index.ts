@@ -4,6 +4,8 @@ export * from './result';
 export * from './concurrency';
 export * from './clock';
 export { DEFAULT_TIME_ZONE, isoDayIn, isTimeZone, timeZoneOf, todayIn, yearIn } from './today';
+export * from './dates';
+export { messageDate, messageDateMode, messageDateTime } from './message-date';
 export { newId, ID_PATTERN } from './ids';
 export * from './context';
 export type { AppEnv, Deps } from './deps';

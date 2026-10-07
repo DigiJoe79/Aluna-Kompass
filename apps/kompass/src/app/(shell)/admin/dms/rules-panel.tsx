@@ -9,7 +9,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableEmpty, TableHeader, TableRow } from '@/components/ui/table';
 import { idleState } from '@/lib/actions';
 import { cn } from '@/lib/utils';
 import { createDocumentRuleAction, deleteDocumentRuleAction, updateDocumentRuleAction } from './actions';
@@ -101,11 +101,7 @@ export function RulesPanel({
           </TableHeader>
           <TableBody>
             {rules.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="py-6 text-center text-[13px] text-muted-ink">
-                  {t('emptyRules')}
-                </TableCell>
-              </TableRow>
+              <TableEmpty colSpan={6}>{t('emptyRules')}</TableEmpty>
             ) : (
               rules.map((row, i) => (
                 <TableRow key={row.id}>
@@ -143,8 +139,8 @@ export function RulesPanel({
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent size="md" className="bg-surface shadow-md">
           <ActionForm action={createAction} state={createState} className="space-y-4">
-            <DialogTitle className="font-heading text-[19px]">{t('createRuleTitle')}</DialogTitle>
-            <DialogDescription className="text-[13px] text-muted-ink">{t('createRuleDescription')}</DialogDescription>
+            <DialogTitle>{t('createRuleTitle')}</DialogTitle>
+            <DialogDescription>{t('createRuleDescription')}</DialogDescription>
 
             <section>
               <h3 className="text-[15px] font-semibold">{t('ruleSections.condition')}</h3>
@@ -217,8 +213,8 @@ export function RulesPanel({
         <DialogContent size="md" className="bg-surface shadow-md">
           {editingRule && (
             <ActionForm action={editAction} state={editState} className="space-y-4">
-              <DialogTitle className="font-heading text-[19px]">{t('editRuleTitle')}</DialogTitle>
-              <DialogDescription className="text-[13px] text-muted-ink">{t('editRuleDescription')}</DialogDescription>
+              <DialogTitle>{t('editRuleTitle')}</DialogTitle>
+              <DialogDescription>{t('editRuleDescription')}</DialogDescription>
 
               <section>
                 <h3 className="text-[15px] font-semibold">{t('ruleSections.condition')}</h3>
@@ -293,8 +289,8 @@ export function RulesPanel({
       {/* Dialog: Confirm Delete Rule */}
       <Dialog open={Boolean(ruleToDelete)} onOpenChange={(open) => { if (!open) { setRuleToDelete(null); deleteFb.reset(); } }}>
         <DialogContent size="sm" className="bg-surface shadow-md">
-          <DialogTitle className="font-heading text-[19px]">{t('deleteRuleTitle')}</DialogTitle>
-          <DialogDescription className="text-[13px] text-muted-ink">
+          <DialogTitle>{t('deleteRuleTitle')}</DialogTitle>
+          <DialogDescription tone="body">
             {t('deleteRuleDescription')}
           </DialogDescription>
           <FormActionBar placement="dialog" cancel={() => setRuleToDelete(null)} destructive pending={deletePending} saveLabel={t('deleteRuleConfirm')} onSave={() => ruleToDelete && handleDelete(ruleToDelete.id)} state={deleteFb.state} />

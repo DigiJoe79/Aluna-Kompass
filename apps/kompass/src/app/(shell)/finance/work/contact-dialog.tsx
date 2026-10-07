@@ -71,7 +71,7 @@ export function ContactDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="md" className="bg-surface shadow-md">
-        <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
+        <DialogTitle>{t('title')}</DialogTitle>
         {canCreate ? (
           <div className="space-y-3 text-[13px]">
             <p className="text-ink-2">{t('intro')}</p>

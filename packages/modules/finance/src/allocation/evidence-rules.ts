@@ -70,13 +70,13 @@ export const EVIDENCE_KIND_NAMES: { de: Record<EvidenceKindLabelKey, string> } &
  * Betreff eines hochgeladenen Nachweises: Art in Worten und Tag, nie der
  * Name des Partners (Annahme 9). Er wird gespeichert und entsteht deshalb in
  * der Leitsprache der Installation (`locale`), nicht in der des Aufrufers;
- * ohne eigene Tabelle auf Deutsch.
+ * ohne eigene Tabelle auf Deutsch. Der Tag kommt fertig als Papierdatum
+ * (`paperDate`, K10) vom Dienst — so bleibt diese Datei ohne Import.
  */
-export function evidenceSubject(kind: EvidenceKind, basis: PartnerBasis, dateIso: string, locale: string): string {
+export function evidenceSubject(kind: EvidenceKind, basis: PartnerBasis, dateText: string, locale: string): string {
   // Heute gibt es nur die deutsche Tabelle; eine weitere Sprache bringt mit ihren Wörtern auch ihr Satzmuster mit.
   const names = EVIDENCE_KIND_NAMES[locale] ?? EVIDENCE_KIND_NAMES.de;
-  const [y, m, d] = dateIso.slice(0, 10).split('-');
-  return `${names[evidenceKindLabelKey(kind, basis)]} vom ${d}.${m}.${y}`;
+  return `${names[evidenceKindLabelKey(kind, basis)]} vom ${dateText}`;
 }
 
 /**

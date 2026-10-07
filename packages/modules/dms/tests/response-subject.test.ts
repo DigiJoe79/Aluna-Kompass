@@ -22,4 +22,8 @@ describe('responseSubject', () => {
   it('lässt das Datum auf Englisch weg, wenn es fehlt', () => {
     expect(responseSubject(depsFor('en'), 'outgoing', 'unbekannt', 'Request')).toBe('Our letter: Request');
   });
+
+  it('behandelt einen Tag, den es nicht gibt, wie ein fehlendes Datum statt zu werfen', () => {
+    expect(responseSubject(depsFor('de'), 'incoming', '2026-02-30', 'Antrag')).toBe('Ihr Schreiben: Antrag');
+  });
 });

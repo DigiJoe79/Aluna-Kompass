@@ -1466,6 +1466,7 @@
     "hints": {
       "registerNumberHint": "Erscheint im Briefbogen-Fuß.",
       "timeZoneHint": "Bestimmt, welcher Tag „heute“ ist.",
+      "dateFormatHint": "Gilt für die Anzeige, nicht für Schriftstücke.",
       "logoHint": "Logo-Upload folgt mit der Mediathek.",
       "themeHint": "Themes werden unter Einrichtung → Erscheinungsbild bearbeitet."
     },

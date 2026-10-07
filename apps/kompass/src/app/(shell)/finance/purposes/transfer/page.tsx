@@ -1,4 +1,4 @@
-import { hasPermission, isoNow, listUserNamesWithPermission } from '@kompass/core';
+import { hasPermission, todayIn, listUserNamesWithPermission } from '@kompass/core';
 import { purposeOverview } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import { ForbiddenCard } from '@/components/forbidden-card';
@@ -29,7 +29,7 @@ export default async function PurposeTransferPage({ searchParams }: { searchPara
 
   return (
     <Page width="task" header={<PageHeader title={t('title')} description={t('intro')} back={{ href: '/finance/purposes', label: tPurposes('title') }} />}>
-      <TransferForm purposes={purposes} defaultFromId={defaultFromId} today={isoNow(deps.clock).slice(0, 10)} approverNames={approverNames} />
+      <TransferForm purposes={purposes} defaultFromId={defaultFromId} today={todayIn(deps)} approverNames={approverNames} />
     </Page>
   );
 }

@@ -1,4 +1,4 @@
-import { expectedVersionField, isoNow, newId, notFound, ok, requirePermission, staleVersion, validate, hasPermission, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { expectedVersionField, isoNow, newId, notFound, ok, requirePermission, staleVersion, todayIn, validate, hasPermission, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { projects } from '@kompass/module-projects';
 import { asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -140,7 +140,7 @@ export async function fulfillPurpose(deps: Deps, ctx: CallContext, input: unknow
     const after = { ...before, fulfilledAt: now, fulfilledByUserId: ctx.userId, updatedAt: now };
     tx.update(financePurposes).set({ fulfilledAt: after.fulfilledAt, fulfilledByUserId: after.fulfilledByUserId, updatedAt: after.updatedAt }).where(eq(financePurposes.id, before.id)).run();
     financeAudit(tx, deps, ctx, { action: 'finance.purpose.fulfill', entity: 'financePurpose', id: before.id, before, after, summary: `Zweck ${before.id} erfüllt` });
-    const remainderCents = Math.max(0, purposeBalancesAt(tx, now.slice(0, 10)).find((b) => b.purposeId === before.id)?.balanceCents ?? 0);
+    const remainderCents = Math.max(0, purposeBalancesAt(tx, todayIn(deps)).find((b) => b.purposeId === before.id)?.balanceCents ?? 0);
     return ok({ ...after, remainderCents });
   });
 }

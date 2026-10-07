@@ -90,7 +90,7 @@ export function PaymentDetail({
   }
 
   const basis = payment.basis as PartnerBasis;
-  const detail = (at: string | null, name: string | null) => (at ? [fmt.date(at.slice(0, 10)), name].filter(Boolean).join(' · ') : undefined);
+  const detail = (at: string | null, name: string | null) => (at ? [fmt.date(at), name].filter(Boolean).join(' · ') : undefined);
   const stepDetail: Record<(typeof STEP_KEYS)[number], string | undefined> = {
     draft: detail(payment.createdAt, people.creator),
     submitted: detail(payment.submittedAt, null),

@@ -2,8 +2,11 @@
 
 import { useEffect } from 'react';
 
+/** Wie viele Marker gerade stehen — eine Seite kann mehrere Rahmen tragen (`Page` um eine `ForbiddenCard`). */
+let mounted = 0;
+
 /**
- * Sagt der Seite an, dass React sie übernommen hat.
+ * Sagt der Seite an, dass React ihren Inhalt übernommen hat.
  *
  * Bis dahin steht sie vollständig da — servergerendert, sichtbar, anklickbar —
  * und tut nichts: Ein Klick läuft ins Leere, ein Tastendruck geht an ein
@@ -16,17 +19,31 @@ import { useEffect } from 'react';
  * die Effekte laufen noch danach. Auf solche Abstände lässt sich von aussen
  * nichts bauen; deshalb sagt die Anwendung es selbst.
  *
- * Steht als letztes Kind im Layout: React führt die Effekte in Baumreihenfolge
- * aus, dieser läuft also nach denen aller Geschwister davor — auch nach dem des
- * `ShellFrame`, der auf die Taste `?` hört.
+ * Steht im Rahmen der Seite, nicht im Wurzel-Layout: `Page` (jede Seite der
+ * Schale, `tests/patterns/page-width.test.ts`), `ForbiddenCard` und
+ * `AuthCard` (Anmeldung, Passwort, Einrichtung). Die Schale strömt ihren
+ * Inhalt hinter der Suspense-Grenze von `(shell)/loading.tsx`, und React
+ * hydriert eine solche Grenze in einem eigenen Durchgang. Im Wurzel-Layout
+ * meldete der Marker deshalb „hydriert“, sobald die Schale stand — unter Last
+ * auch dann, wenn darunter noch das Skelett lag oder der Inhalt erst zum Teil
+ * hydriert war (gemessen: 19 von 40 Seitenaufrufen). Im Rahmen läuft der
+ * Effekt im selben Durchgang wie der Inhalt, und als letztes Kind nach den
+ * Effekten aller Geschwister davor; die Schale samt `ShellFrame`, der auf die
+ * Taste `?` hört, ist dann schon hydriert, weil sie ausserhalb der Grenze
+ * liegt.
  *
- * Gelesen wird das Attribut von `e2e/fixtures.ts`.
+ * Bei einem Seitenwechsel im Client verschwindet der Marker mit der alten
+ * Seite und kommt mit der neuen wieder.
+ *
+ * Gelesen wird das Attribut von `e2e/fixtures.ts`. Rendert nichts.
  */
 export function HydrationMarker() {
   useEffect(() => {
+    mounted += 1;
     document.documentElement.dataset.hydrated = 'true';
     return () => {
-      delete document.documentElement.dataset.hydrated;
+      mounted -= 1;
+      if (mounted === 0) delete document.documentElement.dataset.hydrated;
     };
   }, []);
   return null;

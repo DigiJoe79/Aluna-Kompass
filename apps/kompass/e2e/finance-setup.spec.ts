@@ -1,7 +1,6 @@
 import { expect, test } from './fixtures';
 import { associationYear } from './association-day';
 import { resetDatabase } from './helpers';
-import { story, storyPattern } from './story-year';
 
 /**
  * F3b Task 5 — Finanzen einrichten (H1–H8). Die ganze Spec läuft auf einer
@@ -9,7 +8,12 @@ import { story, storyPattern } from './story-year';
  * Finanzdaten (Muster `finance.spec.ts`: „ohne Konten zeigt die Seite einen
  * leeren Zustand…“) — so zeigt die Checkliste „alles offen“, und jede
  * Ablehnung entsteht ohne fremde Vorbedingungen.
+ *
+ * Ohne Seed gibt es kein Stichjahr: Alle Daten rechnen vom heutigen Vereinstag aus (`associationYear`), nicht mit
+ * `story()` und nicht auf einer festen Jahreszahl — so läuft die Spec an jedem Kalendertag (0.2.7, Punkt 5).
  */
+/** Ein Tag `MM-DD` im laufenden Jahr des Vereins, `years` Jahre verschoben. */
+const thisYear = (monthDay: string, years = 0): string => `${associationYear() + years}-${monthDay}`;
 async function setupEmptyFinance(page: import('@playwright/test').Page): Promise<void> {
   await resetDatabase(page, 'empty');
   await page.goto('/login');
@@ -87,8 +91,8 @@ test.describe('finance setup', () => {
     await page.goto('/admin/finance?panel=fiscalYears');
     await page.getByRole('button', { name: 'Erstes Geschäftsjahr anlegen' }).click();
     const create = page.getByRole('dialog');
-    await create.getByLabel('Beginnt am').fill(story('2026-01-01'));
-    await create.getByLabel('Endet am').fill(story('2026-12-31'));
+    await create.getByLabel('Beginnt am').fill(thisYear('01-01'));
+    await create.getByLabel('Endet am').fill(thisYear('12-31'));
     await create.getByRole('button', { name: 'Speichern' }).click();
     const panel = page.getByTestId('fiscal-years-panel');
     await expect(panel.getByRole('button', { name: 'Ändern' })).toBeVisible();
@@ -330,13 +334,13 @@ test.describe('finance setup', () => {
 
     await page.getByTestId('dated-value-edit-taxation').click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByLabel('Gültig ab').fill('2030-01-01');
+    await dialog.getByLabel('Gültig ab').fill(thisYear('01-01', 1));
     await dialog.getByLabel('Sätze und Grenzen').selectOption('regular');
     await dialog.getByRole('button', { name: 'Speichern' }).click();
     await expect(dialog).toBeHidden();
     await expect(panel.getByText('Vom Verein überschrieben')).toBeVisible();
     // N3 Nachtrag A: der Stichtag steht im deutschen Format, nicht mehr roh als ISO.
-    await expect(panel.getByText('01.01.2030')).toBeVisible();
+    await expect(panel.getByText(`01.01.${associationYear() + 1}`)).toBeVisible();
     await expect(panel).not.toContainText(/\d{4}-\d{2}-\d{2}/);
   });
 
@@ -444,14 +448,15 @@ test.describe('finance setup', () => {
     await page.goto('/admin/finance?panel=fiscalYears');
     await page.getByRole('button', { name: 'Erstes Geschäftsjahr anlegen' }).click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByLabel('Beginnt am').fill(story('2026-03-15'));
-    await dialog.getByLabel('Endet am').fill(story('2026-12-31'));
+    await dialog.getByLabel('Beginnt am').fill(thisYear('03-15'));
+    await dialog.getByLabel('Endet am').fill(thisYear('12-31'));
     await dialog.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByText('Geschäftsjahr angelegt.')).toBeVisible();
 
-    const row = page.getByRole('row', { name: storyPattern('2026') });
-    await expect(row.getByText(story('2026'), { exact: true })).toBeVisible();
-    await expect(row.getByText(story('Rumpfjahr (15.03.2026–31.12.2026)'))).toBeVisible();
+    const year = associationYear();
+    const row = page.getByRole('row', { name: new RegExp(String(year)) });
+    await expect(row.getByText(String(year), { exact: true })).toBeVisible();
+    await expect(row.getByText(`Rumpfjahr (15.03.${year}–31.12.${year})`)).toBeVisible();
   });
 
   test('„Darf ein Agent festschreiben?“ ist aus und abgesetzt', async ({ page }) => {
@@ -475,7 +480,7 @@ test.describe('finance setup', () => {
     // Befund J: ohne „Gilt seit“ nennt der Dienst das Feld; der Knopf ist nie ausgegraut (K9-Befund 10, MUSTER § B).
     await panel.getByTestId('waiver-basis').getByRole('button', { name: 'Speichern' }).click();
     await expect(panel.getByLabel('Gilt seit')).toHaveAttribute('aria-invalid', 'true');
-    await panel.getByLabel('Gilt seit').fill(story('2026-01-02'));
+    await panel.getByLabel('Gilt seit').fill(thisYear('01-01'));
     await panel.getByTestId('waiver-basis').getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByText('Anspruchsgrundlage gespeichert.')).toBeVisible();
 
@@ -483,7 +488,7 @@ test.describe('finance setup', () => {
     await expect(page.getByTestId('requirement-waiverBasis')).toHaveAttribute('data-done', 'true');
     await page.goto('/admin/finance?panel=tax');
     await expect(page.getByTestId('tax-panel').getByLabel('Anspruchsgrundlage für Aufwandsspenden')).toHaveValue('Satzung § 9 Abs. 2');
-    await expect(page.getByTestId('tax-panel').getByLabel('Gilt seit')).toHaveValue(story('2026-01-02'));
+    await expect(page.getByTestId('tax-panel').getByLabel('Gilt seit')).toHaveValue(thisYear('01-01'));
   });
 
   test('Barkasse und Journal ohne Einrichtung: Seitenkopf, leerer Zustand und der Weg zum Einrichten (K9-Befund 6)', async ({ page }) => {
@@ -522,19 +527,19 @@ test.describe('finance setup', () => {
     await expect(save).toBeEnabled();
     await save.click();
     await expect(form.getByText('Pflichtfeld.')).toBeVisible();
-    await form.getByLabel('Gilt ab').fill(story('2026-01-01'));
+    await form.getByLabel('Gilt ab').fill(thisYear('01-01'));
     await save.click();
     await expect(form.getByText('Pflichtfeld.')).toHaveCount(0);
     await page.reload();
     await expect(page.getByTestId('board-remuneration').getByLabel('Satzungsfundstelle')).toHaveValue('Satzung § 7 Abs. 3');
-    await expect(page.getByTestId('board-remuneration').getByLabel('Gilt ab')).toHaveValue(story('2026-01-01'));
+    await expect(page.getByTestId('board-remuneration').getByLabel('Gilt ab')).toHaveValue(thisYear('01-01'));
   });
 
   test('einen Satz ab Stichtag überschreiben und wieder zurücknehmen', async ({ page }) => {
     await page.goto('/admin/finance?panel=datedValues');
     await page.getByTestId('dated-value-edit-vatStandard').click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByLabel('Gültig ab').fill('2030-01-01');
+    await dialog.getByLabel('Gültig ab').fill(thisYear('01-01', 1));
     await dialog.getByLabel('Wert').fill('21');
     await dialog.getByRole('button', { name: 'Speichern' }).click();
     await expect(dialog).toBeHidden();

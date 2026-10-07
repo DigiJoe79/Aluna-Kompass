@@ -1,3 +1,4 @@
+import { isoDay, paperDate } from '@kompass/core';
 /**
  * Einseitige PDFs mit Textebene, erzeugt ohne Werkzeug — für die
  * Entwicklungsdaten der Akte und der Module. Der Worker liest sie wie ein
@@ -75,7 +76,6 @@ export interface SeedReceipt {
 const RECEIPT_COLUMNS = 34;
 
 const euro = (cents: number) => (cents / 100).toFixed(2).replace('.', ',');
-const germanDate = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
 const center = (text: string) => text.padStart(Math.floor((RECEIPT_COLUMNS + text.length) / 2)).padEnd(RECEIPT_COLUMNS);
 const row = (left: string, right: string) => `${left.slice(0, RECEIPT_COLUMNS - right.length - 1).padEnd(RECEIPT_COLUMNS - right.length)}${right}`;
 
@@ -95,7 +95,7 @@ export function receiptLines(r: SeedReceipt): string[] {
   return [
     ...r.shop.map(center),
     '',
-    row(germanDate(r.date), r.time),
+    row(paperDate(isoDay(r.date)), r.time),
     row('Bon-Nr.', r.receiptNo),
     rule,
     ...r.items.map((item) => row(item.text, `${euro(item.cents)} ${letter(item.vat)}`)),

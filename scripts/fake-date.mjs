@@ -2,7 +2,7 @@
  * Verstellt die Uhr eines Node-Prozesses — nur für `scripts/e2e-kalender.sh`
  * (Plan 2026-10-06-seed-kalender), nie in der Anwendung.
  *
- *   NODE_OPTIONS=--import=file://<repo>/scripts/fake-date.mjs FAKE_OFFSET_MS=<ms> …
+ *   NODE_OPTIONS=--import=<file-URL von scripts/fake-date.mjs> FAKE_OFFSET_MS=<ms> …
  *
  * `FAKE_OFFSET_MS` ist ein Versatz und gilt für alle Prozesse eines Laufs
  * gleich (Playwright, `next dev`, Worker) — sie starten zu verschiedenen
@@ -26,9 +26,12 @@ if (!Number.isFinite(offset)) throw new Error('fake-date: FAKE_OFFSET_MS oder FA
 
 if (offset !== 0) {
   const now = () => RealDate.now() + offset;
-  globalThis.Date = new Proxy(RealDate, {
+  const FakeDate = new Proxy(RealDate, {
     construct: (target, args, newTarget) => Reflect.construct(target, args.length === 0 ? [now()] : args, newTarget),
     apply: () => new RealDate(now()).toString(),
     get: (target, prop, receiver) => (prop === 'now' ? now : Reflect.get(target, prop, receiver)),
   });
+  // Sonst zeigte `new Date().constructor` auf das echte Date, nicht auf den Proxy — `=== Date` wäre falsch.
+  Object.defineProperty(RealDate.prototype, 'constructor', { value: FakeDate, writable: true, configurable: true, enumerable: false });
+  globalThis.Date = FakeDate;
 }

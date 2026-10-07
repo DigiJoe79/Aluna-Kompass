@@ -189,7 +189,7 @@ export function UserTable({
           }}
         >
           <DialogContent size="sm" className="bg-surface shadow-md">
-            <DialogTitle className="font-heading text-[19px]">{t('roles.title', { name: editRoles.name })}</DialogTitle>
+            <DialogTitle>{t('roles.title', { name: editRoles.name })}</DialogTitle>
             <div className="flex flex-col gap-2">
               {roles.map((r) => (
                 <div key={r.id} className="flex items-center gap-2">

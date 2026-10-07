@@ -21,6 +21,10 @@ const ROOT = path.resolve(import.meta.dirname, '..');
  * der Mechanismus suchte sich den nächsten Fall. `e2e/hydration.spec.ts` löst
  * ihn absichtlich aus und hält diese Fixture ehrlich.
  *
+ * Das Attribut setzt der Rahmen der Seite (`components/hydration-marker.tsx`),
+ * nicht die Schale: Deren Inhalt strömt hinter einer Suspense-Grenze und
+ * hydriert später als sie.
+ *
  * Für das Warten mitten auf einer Seite — ein Dialog, ein nachgeladener
  * Bereich — bleibt `waitForHydration()` aus `helpers.ts`.
  */

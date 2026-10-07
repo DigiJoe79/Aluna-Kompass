@@ -49,14 +49,14 @@ export function ReceiveDialog({
       <DialogContent size="lg" layout="fixed-footer" className="bg-surface shadow-md">
         <DialogHeader>
           <div className="flex items-center gap-2.5">
-            <DialogTitle className="font-heading text-[19px]">{t('receivePost')}</DialogTitle>
+            <DialogTitle>{t('receivePost')}</DialogTitle>
             {queued ? (
               <span className="rounded-full bg-badge px-2.5 py-0.5 font-mono text-[12px] text-badge-ink">
                 {t('drop.queueBadge', { current: index + 1, total })}
               </span>
             ) : null}
           </div>
-          <DialogDescription className="text-[13px] text-ink-2">
+          <DialogDescription>
             {queued
               ? drop?.folder
                 ? t('drop.queueHint', { folder: nameOf(drop.folder) })

@@ -125,10 +125,10 @@ export function DispatchChannelsPanel({
         }}
       >
         <DialogContent size="md" className="bg-surface shadow-md">
-          <DialogTitle className="font-heading text-[19px]">
+          <DialogTitle>
             {renaming ? t('renameChannelTitle') : t('createChannelTitle')}
           </DialogTitle>
-          <DialogDescription className="text-[13px] text-muted-ink">{t('channelsDescription')}</DialogDescription>
+          <DialogDescription>{t('channelsDescription')}</DialogDescription>
 
           <div className="mt-5">
             <FormGrid>

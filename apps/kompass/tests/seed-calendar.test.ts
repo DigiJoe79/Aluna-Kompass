@@ -22,6 +22,43 @@ const counts = (deps: SeedDeps) => ({
   documents: deps.db.select().from(documents).all().length,
   contacts: deps.db.select().from(contacts).all().length,
 });
+/**
+ * Datierte Seed-Daten, die in der Zukunft liegen dürfen (0.2.8, aus 0.2.7 Punkt 5). Bis dahin prüfte der Test
+ * „nichts in der Zukunft“ nur an Buchungen und Auszugsenden; jetzt jede Spalte jeder Tabelle, deren Wert mit
+ * einem ISO-Tag beginnt — Belege, Bestätigungen, Bescheide, Dokumentdaten der Akte, Rollen, Protokoll,
+ * Zeitstempel. Ausgenommen ist nur, was seiner Natur nach vorausweist: eine Frist, ein Ablauf, ein Ende.
+ */
+const FUTURE_ALLOWED: Readonly<Record<string, string>> = {
+  'follow_ups.due_at': 'Wiedervorlage: Sie liegt gewollt in der Zukunft.',
+  'sessions.expires_at': 'Ablauf der Sitzung.',
+  'users.locked_until': 'Ende einer Anmeldesperre.',
+  'finance_fiscal_years.ends_on': 'Das laufende Geschäftsjahr endet nach heute.',
+  'finance_open_items.due_on': 'Fälligkeit eines offenen Postens.',
+  'finance_partner_notices.valid_until': 'Ein Bescheid des Partners gilt über heute hinaus.',
+  'finance_partner_payments.proof_due_on': 'Frist für den Verwendungsnachweis.',
+  'finance_signers.valid_to': 'Ende einer Zeichnungsberechtigung, darf geplant sein.',
+  'contact_roles.until': 'Ende einer Rolle, darf geplant sein.',
+  'finance_dated_values.valid_from': 'Ein Rechtswert darf ab einem künftigen Stichtag gelten.',
+};
+
+/**
+ * Spalten jeder Tabelle mit ISO-Tag nach `day` oder Zeitstempel nach jetzt, als `tabelle.spalte: spätester Wert`.
+ * Eine Minute Spielraum: Bei stehender Testuhr gehen Ladestände (`nextVersion`) Millisekunden vor — das sieht niemand.
+ */
+function futureValues(deps: SeedDeps, day: string): string[] {
+  const now = new Date(deps.clock.now().getTime() + 60_000).toISOString();
+  const tables = deps.sqlite.prepare("select name from sqlite_master where type = 'table' and name not like 'sqlite_%' and name not like '__drizzle%'").all() as { name: string }[];
+  return tables.flatMap(({ name: table }) =>
+    (deps.sqlite.prepare(`pragma table_info("${table}")`).all() as { name: string }[]).flatMap(({ name: column }) => {
+      if (`${table}.${column}` in FUTURE_ALLOWED) return [];
+      const row = deps.sqlite
+        .prepare(`select max("${column}") as latest from "${table}" where typeof("${column}") = 'text' and "${column}" glob '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]*' and "${column}" > (case when length("${column}") = 10 then ? else ? end)`)
+        .get(day, now) as { latest: string | null };
+      return row.latest ? [`${table}.${column}: ${row.latest}`] : [];
+    }),
+  );
+}
+
 const fiscalYears = (deps: SeedDeps) => deps.db.select().from(financeFiscalYears).all().map((y) => y.designation).sort();
 
 describe('the development seed on any calendar day', () => {
@@ -45,6 +82,7 @@ describe('the development seed on any calendar day', () => {
       const story = seedStoryYear(day);
       expect(fiscalYears(deps)).toEqual([...new Set([story - 1, story, Number(day.slice(0, 4))])].map(String));
       expect(deps.db.select().from(financeEntries).all().filter((e) => e.entryDate > day).map((e) => e.text)).toEqual([]);
+      expect(futureValues(deps, day)).toEqual([]);
       const periodEnds = deps.db.select().from(financeImportRuns).all().flatMap((r) => (r.periodTo ? [r.periodTo] : [])).sort();
       expect(periodEnds.at(-1)! <= day).toBe(true);
       // Der späteste Geschichtstag ist das Ende des August-Auszugs — genau dort wechselt das Stichjahr.
@@ -56,6 +94,15 @@ describe('the development seed on any calendar day', () => {
     },
     30_000,
   );
+
+  it('names only columns that exist in the exceptions for future dates', () => {
+    const deps = seedDeps('2026-10-06');
+    const missing = Object.keys(FUTURE_ALLOWED).filter((key) => {
+      const [table, column] = key.split('.');
+      return !(deps.sqlite.prepare(`pragma table_info("${table}")`).all() as { name: string }[]).some(({ name }) => name === column);
+    });
+    expect(missing).toEqual([]);
+  });
 
   it.each([
     ['2026-12-31', '2027-01-02'],

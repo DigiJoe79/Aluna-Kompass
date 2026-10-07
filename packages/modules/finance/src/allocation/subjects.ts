@@ -1,4 +1,4 @@
-import { germanDate } from '../ledger/dates';
+import { isoDay, paperDate } from '@kompass/core';
 
 /**
  * Betreffe der Dokumente, die das Finanzmodul im Namen eines Vorgangs in der
@@ -36,6 +36,6 @@ export function transferResolutionSubject(fromName: string | null, toName: strin
 
 /** Nie die Person: Der Beleg liegt in der Akte, die mehr Menschen sehen als die Auslage. */
 export function expenseReceiptSubject(o: { claimNumber: string | null; positionDate: string | null; today: string; position: number }): string {
-  const which = o.claimNumber ?? `vom ${germanDate(o.positionDate ?? o.today)}`;
+  const which = o.claimNumber ?? `vom ${paperDate(isoDay(o.positionDate ?? o.today))}`;
   return fit(`Beleg zu Auslage ${which} · Position ${o.position}`);
 }

@@ -92,6 +92,16 @@ describe('finance dashboard tiles', () => {
     expect(overdueLine.values).toMatchObject({ count: 1 });
   });
 
+  it('dates the reviewed-not-final line by the association\'s day of the oldest review, not the UTC day', async () => {
+    const f = await ledgerFixture();
+    const draft = unwrap(await saveDraft(f.deps, f.ctx, { entryDate: '2026-03-01', text: 'Gebühr', moneyLines: [{ accountId: f.bank.id, amountCents: -1000 }], allocationLines: [{ categoryId: f.fees.id, amountCents: -1000 }] }));
+    f.deps.clock.set('2026-09-12T22:30:00.000Z'); // in Berlin schon der 13.
+    unwrap(await setReviewed(f.deps, f.ctx, { id: draft.id, reviewed: true, expectedVersion: draft.updatedAt }));
+    const result = await tileByKey('todo').load(f.deps, f.ctx, {});
+    if (result.kind !== 'list') throw new Error('expected list');
+    expect(result.lines.find((l) => l.titleKey === 'reviewedNotFinal')!.date).toBe('2026-09-13');
+  });
+
   it('does not count an unvouchered reversal pair in the withoutVoucher tile', async () => {
     const f = await ledgerFixture();
     const entry = await f.finalEntry(); // festgeschrieben, kein Beleg

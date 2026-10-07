@@ -1,5 +1,5 @@
 import { and, asc, count, desc, eq, inArray, isNull, like, or, sql, type SQL } from 'drizzle-orm';
-import { yearIn, blockingHolds, conflict, deleteFollowUpsFor, findModuleRecordReferences, invalid, isoNow, linkedAccess, localizedConflict, newId, normalizeExpectedFolder, notFound, notifyRecordDeleted, ok, parseFolderPath, recordAudit, requirePermission, reservedLinkTypes, retentionEnd, retentionMonths, schema, todayIn, validate, withinSubtree, type CallContext, type DbOrTx, type Deps, type Failure, type FollowUpRecord, type Result } from '@kompass/core';
+import { yearIn, blockingHolds, messageDate, conflict, deleteFollowUpsFor, findModuleRecordReferences, invalid, isoNow, linkedAccess, localizedConflict, newId, normalizeExpectedFolder, notFound, notifyRecordDeleted, ok, parseFolderPath, recordAudit, requirePermission, reservedLinkTypes, retentionEnd, retentionMonths, schema, todayIn, validate, withinSubtree, type CallContext, type DbOrTx, type Deps, type Failure, type FollowUpRecord, type Result } from '@kompass/core';
 import { z } from 'zod';
 import { canReadType, isProtectedType, readableTypeFilter, requireAreaAccess, requireDmsGate, requireReadable } from './access';
 import { auditDocumentRef } from './audit-ref';
@@ -710,7 +710,7 @@ export async function deleteDocument(
   const until = retentionEnd(doc.documentDate, months);
   const today = todayIn(deps);
   if (until >= today) {
-    return conflict('retentionRunning', `Aufbewahrungsfrist für Dokument ${doc.number ?? doc.id} läuft noch bis ${until}`);
+    return conflict('retentionRunning', `Aufbewahrungsfrist für Dokument ${doc.number ?? doc.id} läuft noch bis ${messageDate(deps, until)}`);
   }
 
   // Die Frist der Dokumentart ist nur die eigene. Ein Modul kann länger halten
@@ -718,7 +718,7 @@ export async function deleteDocument(
   // Ein Modul lässt seinen Verweis mit seinem Halter enden; sonst wäre ein
   // Beleg nie löschbar.
   const holds = blockingHolds(deps, 'document', doc.id);
-  if (holds.length > 0) return conflict('recordHeld', `Noch gehalten von: ${holds.map((h) => `${h.label}${h.until ? ` (bis ${h.until})` : ' (dauerhaft)'}`).join('; ')}`);
+  if (holds.length > 0) return conflict('recordHeld', `Noch gehalten von: ${holds.map((h) => `${h.label}${h.until ? ` (bis ${messageDate(deps, h.until)})` : ' (dauerhaft)'}`).join('; ')}`);
   const references = findModuleRecordReferences(deps, 'document', doc.id);
   if (references.length > 0) return conflict('stillReferenced', `Es zeigt noch darauf: ${references.map((r) => r.label).join('; ')}`);
 

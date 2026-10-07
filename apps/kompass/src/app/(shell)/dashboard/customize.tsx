@@ -122,7 +122,7 @@ export function DashboardCustomize({ layout, available }: { layout: DashboardLay
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" size="sm" className="gap-0 overflow-y-auto bg-surface shadow-md" data-testid="dashboard-customize">
           <div className="p-5">
-            <SheetTitle className="font-heading text-[19px]">{t('customize.title')}</SheetTitle>
+            <SheetTitle>{t('customize.title')}</SheetTitle>
             <p className="mt-1 mb-4 text-[13px] text-muted-ink">{t('customize.hint')}</p>
             <div className="mb-3">
               <RefusalNotice action state={feedback.state} />

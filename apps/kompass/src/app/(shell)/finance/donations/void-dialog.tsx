@@ -97,7 +97,7 @@ export function VoidDialog({ open, onOpenChange, confirmation }: { open: boolean
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="md" className="bg-surface shadow-md">
-        <DialogTitle className="font-heading text-[19px]">{t('title', { number: confirmation.number })}</DialogTitle>
+        <DialogTitle>{t('title', { number: confirmation.number })}</DialogTitle>
         <VoidForm confirmation={confirmation} onDone={() => onOpenChange(false)} onCancel={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>

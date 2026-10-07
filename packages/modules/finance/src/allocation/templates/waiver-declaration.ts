@@ -1,9 +1,9 @@
-import type { DocumentTemplate } from '@kompass/core';
+import { isoDay, paperDate, type DocumentTemplate } from '@kompass/core';
 import { z } from 'zod';
-import { addressZoneSlots, formatCents, germanDate, typstText as t, withoutAddressZone } from '../../typst-pure';
+import { addressZoneSlots, formatCents, typstText as t, withoutAddressZone } from '../../typst-pure';
 import * as W from './shared';
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const isoDate = z.iso.date();
 const text = (max: number) => z.string().trim().min(1).max(max);
 const party = z.object({ name: text(200), addressLines: z.array(text(200)).max(4) });
 
@@ -44,7 +44,7 @@ export const waiverDeclarationTemplate: DocumentTemplate<WaiverDeclarationInput>
   filed: true,
   build: (data) => {
     const amount = formatCents(data.amountCents);
-    const placeDate = [data.place, germanDate(data.declaredOn)].filter((s) => s !== '').join(', ');
+    const placeDate = [data.place, paperDate(isoDay(data.declaredOn))].filter((s) => s !== '').join(', ');
     return {
       // Anschriftzone (Plan 2026-09-27): Die Erklärung geht per Post an die
       // verzichtende Person und kommt unterschrieben zurück — sie steht im
@@ -56,7 +56,7 @@ export const waiverDeclarationTemplate: DocumentTemplate<WaiverDeclarationInput>
           `#align(center)[#text(size: 13pt, weight: "bold")[${t(W.TITLE)}] #linebreak() ${t(W.SUBTITLE)}]`,
           unlessZone(['#v(4mm)', framed(W.CLAIMANT_LABEL, lines(data.claimant))].join('\n\n')),
           `#par[${t(W.claimSentence(data.claimNumber, amount))}]`,
-          framed(W.BASIS_LABEL, t(data.basisText) + (data.agreedOn ? ` #linebreak() ${t(W.agreedSentence(germanDate(data.agreedOn)))}` : '')),
+          framed(W.BASIS_LABEL, t(data.basisText) + (data.agreedOn ? ` #linebreak() ${t(W.agreedSentence(paperDate(isoDay(data.agreedOn))))}` : '')),
           `#par[${t(W.waiverSentence(amount))}]`,
           '#v(16mm)',
           `#grid(columns: (1fr, 1fr), column-gutter: 10mm, [${t(placeDate)} #line(length: 100%, stroke: 0.5pt) ${small(t(W.PLACE_DATE_LABEL))}], [#v(4.2mm) #line(length: 100%, stroke: 0.5pt) ${small(t(W.SIGNATURE_LABEL))}])`,

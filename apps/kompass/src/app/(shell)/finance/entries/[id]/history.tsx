@@ -2,6 +2,7 @@ import type { EntryHistoryEvent } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import { BeforeAfter } from '@/components/before-after';
 import { historyChannel } from '@/lib/finance/channel';
+import type { DateFormatter } from '@/lib/date-format';
 
 function summaryOf(event: EntryHistoryEvent, t: Awaited<ReturnType<typeof getTranslations>>): string {
   switch (event.kind) {
@@ -23,7 +24,7 @@ function summaryOf(event: EntryHistoryEvent, t: Awaited<ReturnType<typeof getTra
 }
 
 /** Der Verlauf einer Buchung, aus ihren Spalten (HANDOFF § 5.3) — nie aus dem Änderungsprotokoll. */
-export async function EntryHistory({ events }: { events: EntryHistoryEvent[] }) {
+export async function EntryHistory({ events, fmt }: { events: EntryHistoryEvent[]; fmt: DateFormatter }) {
   const t = await getTranslations('finance.entryView.history');
   const tc = await getTranslations('finance.channel');
   if (events.length === 0) return null;
@@ -37,7 +38,7 @@ export async function EntryHistory({ events }: { events: EntryHistoryEvent[] }) 
           return (
             <li key={index} className="space-y-1.5 border-t border-line-2 pt-2 first:border-0 first:pt-0">
               <p className="text-[13px]">
-                <span className="mr-2 font-mono text-[12px] text-muted-ink">{event.at.slice(0, 16).replace('T', ' ')}</span>
+                <span className="mr-2 font-mono text-[12px] text-muted-ink">{fmt.dateTime(event.at)}</span>
                 {summaryOf(event, t)}
                 {channel ? <span className="text-muted-ink"> {t('via', { channel: tc(channel) })}</span> : null}
               </p>

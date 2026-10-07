@@ -12,7 +12,7 @@ import { FormField } from '@/components/forms/form-field';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
-import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 afterEach(cleanup);
 
@@ -189,5 +189,20 @@ describe('SheetContent size', () => {
     expect(source).not.toContain('sm:max-w-sm');
     // @ts-expect-error — ohne `size` übersetzt ein Seitenfenster nicht.
     void (<SheetContent><SheetTitle>Titel</SheetTitle></SheetContent>);
+  });
+});
+
+describe('Kleinfehler K10 § 4.6', () => {
+  it('das Schließen-Kreuz im Dialog sitzt wie im Seitenfenster, mit 44 px Klickfläche', () => {
+    render(<Dialog open><DialogContent size="sm"><DialogTitle>Titel</DialogTitle></DialogContent></Dialog>, { wrapper });
+    const close = screen.getByRole('button', { name: 'Schließen' }).className.split(' ');
+    expect(close).toEqual(expect.arrayContaining(['absolute', 'top-3', 'right-3', 'after:absolute', 'after:-inset-2']));
+    expect(close).not.toContain('top-2');
+  });
+
+  it('Kopf und Fuß eines Seitenfensters haben 20 px Polster', () => {
+    render(<Sheet open><SheetContent size="sm"><SheetHeader><SheetTitle>Titel</SheetTitle></SheetHeader><SheetFooter>Fuß</SheetFooter></SheetContent></Sheet>, { wrapper });
+    expect(screen.getByText('Titel').closest('[data-slot="sheet-header"]')!.className.split(' ')).toContain('p-5');
+    expect(screen.getByText('Fuß').className.split(' ')).toContain('p-5');
   });
 });

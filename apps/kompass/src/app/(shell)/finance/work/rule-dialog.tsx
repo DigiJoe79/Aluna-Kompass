@@ -107,12 +107,8 @@ export function RuleDialog({
     });
   };
 
-  const fieldError = (key: string) =>
-    fieldErrors[key] ? (
-      <p role="alert" className="text-[12px] text-error">
-        {fieldErrors[key] === 'format' ? t('fieldFormat') : fieldErrors[key] === 'required' ? t('fieldRequired') : fieldErrors[key]}
-      </p>
-    ) : null;
+  const errorText = (key: string): string | undefined =>
+    fieldErrors[key] ? (fieldErrors[key] === 'format' ? t('fieldFormat') : fieldErrors[key] === 'required' ? t('fieldRequired') : fieldErrors[key]) : undefined;
 
   const title = mode === 'edit' ? t('editTitle') : t('title');
 
@@ -121,16 +117,15 @@ export function RuleDialog({
       {/* fixed-footer: elf Felder in zwei Abschnitten und die Vorschau — die Mitte scrollt, Kopf und Leiste stehen. */}
       <DialogContent size="lg" layout="fixed-footer" className="bg-surface shadow-md">
         <DialogHeader>
-          <DialogTitle className="font-heading text-[19px]">{title}</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <DialogBody className="text-[13px]">
           <section>
             <p className="text-ink-2">{t('intro')}</p>
             <div className="mt-3">
               <FormGrid>
-                <FormField id="rule-name" label={t('name')} required>
+                <FormField id="rule-name" label={t('name')} required error={errorText('name')}>
                   <Input id="rule-name" value={form.name} onChange={(e) => set({ name: e.target.value })} aria-invalid={!!fieldErrors.name} />
-                  {fieldError('name')}
                 </FormField>
               </FormGrid>
             </div>
@@ -160,13 +155,11 @@ export function RuleDialog({
                 <FormField id="rule-text" label={t('textContains')} hint={t('textHint')}>
                   <Input id="rule-text" value={form.textContains} onChange={(e) => set({ textContains: e.target.value })} />
                 </FormField>
-                <FormField id="rule-amount-min" label={t('amountMin')} size="s">
+                <FormField id="rule-amount-min" label={t('amountMin')} size="s" error={errorText('amountMinCents')}>
                   <Input id="rule-amount-min" inputMode="decimal" value={form.amountMinText} onChange={(e) => set({ amountMinText: e.target.value })} aria-invalid={!!fieldErrors.amountMinCents} />
-                  {fieldError('amountMinCents')}
                 </FormField>
-                <FormField id="rule-amount-max" label={t('amountMax')} size="s">
+                <FormField id="rule-amount-max" label={t('amountMax')} size="s" error={errorText('amountMaxCents')}>
                   <Input id="rule-amount-max" inputMode="decimal" value={form.amountMaxText} onChange={(e) => set({ amountMaxText: e.target.value })} aria-invalid={!!fieldErrors.amountMaxCents} />
-                  {fieldError('amountMaxCents')}
                 </FormField>
                 {form.iban ? (
                   <FormField id="rule-iban" label={t('iban', { iban: form.iban })} toggle size="full">
@@ -181,7 +174,7 @@ export function RuleDialog({
             <h3 className="text-[15px] font-semibold">{t('result')}</h3>
             <div className="mt-3">
               <FormGrid>
-                <FormField id="rule-category" label={t('category')} required>
+                <FormField id="rule-category" label={t('category')} required error={errorText('categoryId')}>
                   <Select id="rule-category" value={form.categoryId} onChange={(e) => set({ categoryId: e.target.value })} aria-invalid={!!fieldErrors.categoryId}>
                     <option value="">{t('chooseCategory')}</option>
                     {options.categories.map((c) => (
@@ -190,7 +183,6 @@ export function RuleDialog({
                       </option>
                     ))}
                   </Select>
-                  {fieldError('categoryId')}
                 </FormField>
                 <FormCell size="m">
                   <ContactPicker

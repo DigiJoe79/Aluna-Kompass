@@ -1,4 +1,4 @@
-import { hasPermission, readSetting } from '@kompass/core';
+import { hasPermission } from '@kompass/core';
 import { listForeignMoney } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -7,7 +7,7 @@ import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { formatDate, type DateFormatMode } from '@/lib/dates';
+import { dateFormatOf } from '@/lib/date-format';
 import { formatEuro } from '@/lib/finance/amount';
 import { requireSession } from '@/lib/request-context';
 import { PassedOnButton } from './passed-on-button';
@@ -22,7 +22,7 @@ export default async function FinanceForeignMoneyPage() {
   const { deps, ctx } = await requireSession();
   if (!hasPermission(ctx, 'finance.read')) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
   const t = await getTranslations('finance.work.pages.foreign');
-  const dateMode = readSetting<DateFormatMode>(deps, 'ui.dateFormat');
+  const fmt = dateFormatOf(deps);
   const result = await listForeignMoney(deps, ctx);
   if (!result.ok) return <Page width="full"><ForbiddenCard permission="finance.read" /></Page>;
   const items = result.value.items;
@@ -48,7 +48,7 @@ export default async function FinanceForeignMoneyPage() {
               <TableBody>
                 {items.map((item) => (
                   <TableRow key={item.lineId}>
-                    <TableCell className="font-mono text-[12px] tabular-nums text-ink-2">{formatDate(item.entryDate, dateMode)}</TableCell>
+                    <TableCell className="font-mono text-[12px] tabular-nums text-ink-2">{fmt.date(item.entryDate)}</TableCell>
                     <TableCell className="font-medium text-ink">{item.holderText}</TableCell>
                     <TableCell className="text-right font-mono tabular-nums">
                       {formatEuro(item.openCents)}

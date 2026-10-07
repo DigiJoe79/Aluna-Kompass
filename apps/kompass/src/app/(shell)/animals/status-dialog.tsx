@@ -24,7 +24,7 @@ export function StatusDialog({ animalId, current }: { animalId: string; current:
     <Dialog open={open} onOpenChange={(next) => { setOpen(next); if (!next) resetFeedback(); }}>
       <DialogTrigger render={<Button variant="secondary">{t('change')}</Button>} />
       <DialogContent size="sm" className="bg-surface shadow-md">
-        <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
+        <DialogTitle>{t('title')}</DialogTitle>
         <FormGrid>
           <FormField id="status" label={t('next')} size="s">
             <Select id="status" aria-label={t('next')} value={status} onChange={(e) => setStatus(e.target.value)}>

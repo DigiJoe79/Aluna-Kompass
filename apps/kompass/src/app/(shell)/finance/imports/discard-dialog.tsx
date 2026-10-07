@@ -53,7 +53,7 @@ export function DiscardRunDialog({ open, onOpenChange, run }: { open: boolean; o
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="sm" role="alertdialog" className="bg-surface shadow-md">
-        <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
+        <DialogTitle>{t('title')}</DialogTitle>
 
         {loaded.state === 'loading' ? <p className="text-[14px] text-ink-2">{tCommon('loading')}</p> : null}
         {loaded.state === 'failed' ? <p className="text-[14px] text-ink-2">{t('failed')}</p> : null}

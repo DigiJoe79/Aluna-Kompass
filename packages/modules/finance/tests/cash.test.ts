@@ -1,5 +1,5 @@
-import { schema, unwrap } from '@kompass/core';
-import { ctxWith } from '@kompass/core/testing';
+import { schema, unwrap, writeSettingInternal } from '@kompass/core';
+import { ctxWith, systemContext } from '@kompass/core/testing';
 import { createAccount } from '../src/ledger/accounts';
 import { createContact, deleteContact } from '@kompass/module-contacts';
 import { documents } from '@kompass/module-dms';
@@ -78,6 +78,15 @@ describe('countCash', () => {
 
   it('uses a german date in generated entry texts and subjects (Befund 27a)', async () => {
     const f = await fixtureWithCashBalance();
+    const res = unwrap(await countCash(f.deps, f.ctx, { accountId: f.cash.id, countedOn: '2026-03-10', countedCents: 21000, counterOneContactId: f.donor.id, counterTwoContactId: f.wrongDonor.id, note: 'Wechselgeld verauslagt' }));
+    expect(res.entry!.text).toBe('Kassenzählung 10.03.2026: Fehlbetrag');
+    const doc = f.deps.db.select().from(documents).where(eq(documents.id, res.entry!.vouchers[0]!.documentId!)).get()!;
+    expect(doc.subject).toBe(`Kassenzählung ${f.cash.name} 10.03.2026`);
+  });
+
+  it('Papier bleibt TT.MM.JJJJ, auch wenn die Anzeige auf ISO steht (K10)', async () => {
+    const f = await fixtureWithCashBalance();
+    f.deps.db.transaction((tx) => writeSettingInternal(tx, f.deps, systemContext(), 'ui.dateFormat', 'iso', 'test.dateFormat'));
     const res = unwrap(await countCash(f.deps, f.ctx, { accountId: f.cash.id, countedOn: '2026-03-10', countedCents: 21000, counterOneContactId: f.donor.id, counterTwoContactId: f.wrongDonor.id, note: 'Wechselgeld verauslagt' }));
     expect(res.entry!.text).toBe('Kassenzählung 10.03.2026: Fehlbetrag');
     const doc = f.deps.db.select().from(documents).where(eq(documents.id, res.entry!.vouchers[0]!.documentId!)).get()!;

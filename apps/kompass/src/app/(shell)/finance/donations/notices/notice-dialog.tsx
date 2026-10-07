@@ -21,6 +21,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import type { ActionState } from '@/lib/actions';
+import { isIsoDay, paperDate } from '@/lib/dates';
 import { withUnplacedFieldErrors } from '@/lib/feedback';
 import { attachNoticeDocumentAction, saveNoticeAction, type NoticeInput } from './actions';
 
@@ -29,12 +30,6 @@ const KINDS: NoticeKind[] = ['exemptionNotice', 'corporateTaxNoticeAttachment', 
 
 /** Was der Dialog vom gespeicherten Bescheid braucht — für „Dokument nachreichen“ und die Auswahl aus der Akte. */
 export type SavedNotice = Pick<NoticeView, 'id' | 'kind' | 'taxOffice' | 'taxNumber' | 'noticeDate' | 'exemptFrom' | 'assessmentPeriod' | 'purposesText' | 'purposesTextAccusative' | 'documentId' | 'documentNumber'>;
-
-/** TT.MM.JJJJ, wie es die amtlichen Sätze und die Vorschau zeigen — unabhängig von der persönlichen Datumseinstellung. */
-function germanDatePreview(iso: string): string {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
-  return m ? `${m[3]}.${m[2]}.${m[1]}` : '';
-}
 
 /**
  * „Bescheid erfassen“ (C3, F6a Task 8) in zwei Schritten: erst die Angaben
@@ -51,7 +46,7 @@ export function NoticeDialog({ open, onOpenChange, canPickDocument, attachTo }: 
       {/* fixed-footer: das zweite Wortlaut-Feld und die Vorschau (N8) lassen den Dialog beim § 60a-Bescheid höher werden, als mancher Bildschirm hoch ist — die Mitte scrollt, Kopf und Leiste stehen. */}
       <DialogContent size="lg" layout="fixed-footer" className="bg-surface shadow-md">
         <DialogHeader>
-          <DialogTitle className="font-heading text-[19px]">{attachTo ? t('documentTitle') : t('title')}</DialogTitle>
+          <DialogTitle>{attachTo ? t('documentTitle') : t('title')}</DialogTitle>
         </DialogHeader>
         {open ? <NoticeSteps key={attachTo?.id ?? 'new'} canPickDocument={canPickDocument} attachTo={attachTo} onClose={() => onOpenChange(false)} /> : null}
       </DialogContent>
@@ -190,7 +185,8 @@ function FormStep({ onSaved, onCancel }: { onSaved: (notice: SavedNotice) => voi
                       kind,
                       taxOffice: taxOffice || '…',
                       taxNumber: taxNumber || '…',
-                      noticeDate: noticeDate ? germanDatePreview(noticeDate) : '…',
+                      // Papierdatum wie im amtlichen Satz, unabhängig von ui.dateFormat (K10); halbe Eingaben zeigen „…“.
+                      noticeDate: noticeDate && isIsoDay(noticeDate) ? paperDate(noticeDate) : '…',
                       assessmentPeriod: provisional ? null : assessmentPeriod || null,
                       purposesText,
                       purposesTextAccusative: provisional ? purposesTextAccusative || null : null,

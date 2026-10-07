@@ -475,7 +475,7 @@ export function EntryForm({ initial, accounts, categories, purposes, projects, t
             <span className="font-mono text-[12px]">{pendingVoucher.number}</span>
             <span className="min-w-0 flex-1 truncate">{pendingVoucher.subject}</span>
             <span className="text-[12px] text-muted-ink">{pendingVoucher.typeLabel}</span>
-            <span className="font-mono text-[12px] text-muted-ink">{pendingVoucher.date}</span>
+            <span className="font-mono text-[12px] text-muted-ink">{date(pendingVoucher.date)}</span>
             <span className="text-[12px] font-semibold text-ink-2">{t('pendingVoucher')}</span>
           </p>
         ) : null}

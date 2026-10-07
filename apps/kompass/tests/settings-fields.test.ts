@@ -4,6 +4,12 @@ import messages from '../messages/de.json';
 import { managedHintKey, SETTINGS_TABS, settingsSections } from '@/lib/settings-fields';
 
 describe('SETTINGS_TABS', () => {
+  it('sagt am Datumsformat, dass es nur die Anzeige betrifft (K10)', () => {
+    const field = SETTINGS_TABS.flatMap((tab) => tab.fields).find((f) => f.key === 'ui.dateFormat')!;
+    expect(field.hintKey).toBe('dateFormatHint');
+    expect((messages.settings.hints as Record<string, string>).dateFormatHint).toBe('Gilt für die Anzeige, nicht für Schriftstücke.');
+  });
+
   it('covers every organization, branding and ui setting exactly once', () => {
     const covered = SETTINGS_TABS.flatMap((tab) => tab.fields.map((f) => f.key));
     // branding.logoAssetId wird über den Logo-Upload verwaltet, nicht als Textfeld

@@ -22,12 +22,26 @@ set -eu
 root=$(cd "$(dirname "$0")/.." && pwd)
 dry=''
 if [ "${1:-}" = "-n" ]; then dry=1; shift; fi
+# Jede Node-Ausgabe erst in eine Variable: `set -- $(node …)` verschluckte einen Fehler, und null Tage
+# liefen dann mit Exit 0 durch — ein stiller Erfolg. Unter `set -e` bricht `x=$(…)` dagegen ab.
 if [ "$#" -eq 0 ]; then
-  set -- $(node -e '
+  days=$(node -e '
     const now = Date.now();
     const year = new Date(now).getUTCFullYear();
     const next = (md) => [year, year + 1].map((y) => `${y}-${md}`).find((d) => Date.parse(`${d}T10:00:00.000Z`) > now);
     console.log(["01-02", "03-01", "09-15"].map(next).join(" "));')
+  # shellcheck disable=SC2086 # gewollt: die Tage einzeln
+  set -- $days
+fi
+if [ "$#" -eq 0 ]; then
+  echo 'e2e-kalender: keine Tage — null Tage sind kein Erfolg' >&2
+  exit 1
+fi
+# Als URL mit %20 statt Leerzeichen: NODE_OPTIONS trennt an Leerzeichen.
+preload=$(node -e 'console.log(require("node:url").pathToFileURL(process.argv[1]).href)' "$root/scripts/fake-date.mjs")
+if [ -z "$preload" ]; then
+  echo 'e2e-kalender: keine URL für scripts/fake-date.mjs' >&2
+  exit 1
 fi
 status=0
 for day in "$@"; do
@@ -43,13 +57,17 @@ for day in "$@"; do
       process.exit(64);
     }
     console.log(at - Date.now());' "$day")
+  if [ -z "$offset" ]; then
+    echo "e2e-kalender: kein Versatz für $day" >&2
+    exit 1
+  fi
   echo "== E2E am $day =="
   if [ -n "$dry" ]; then
     echo "export FAKE_OFFSET_MS=$offset"
-    echo "export NODE_OPTIONS=--import=file://$root/scripts/fake-date.mjs"
+    echo "export NODE_OPTIONS=--import=$preload"
     echo "$root/scripts/e2e-lock.sh pnpm --dir $root e2e:cold"
     continue
   fi
-  FAKE_OFFSET_MS=$offset NODE_OPTIONS="--import=file://$root/scripts/fake-date.mjs" "$root/scripts/e2e-lock.sh" pnpm --dir "$root" e2e:cold || status=1
+  FAKE_OFFSET_MS=$offset NODE_OPTIONS="--import=$preload" "$root/scripts/e2e-lock.sh" pnpm --dir "$root" e2e:cold || status=1
 done
 exit "$status"

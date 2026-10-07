@@ -22,8 +22,8 @@ export function PassedOnButton({ holder, amount }: { holder: string; amount: str
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent size="sm" className="bg-surface shadow-md">
-          <DialogTitle className="font-heading text-[19px]">{t('passedOnTitle')}</DialogTitle>
-          <DialogDescription className="text-[14px] text-ink-2">{t('passedOnText', { holder, amount })}</DialogDescription>
+          <DialogTitle>{t('passedOnTitle')}</DialogTitle>
+          <DialogDescription tone="body">{t('passedOnText', { holder, amount })}</DialogDescription>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
               {tCommon('cancel')}

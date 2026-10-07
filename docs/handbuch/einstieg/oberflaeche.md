@@ -37,6 +37,11 @@ Abmelden. Ganz unten steht, welche Fassung läuft, etwa „Version 0.1.1
 (46535d6)“ — die Zahl in Klammern ist der Build. Beides hilft, wenn Sie einen
 Fehler melden.
 
+So sieht die Hilfe auf dem Telefon aus: Der Artikel nimmt die volle Breite
+ein, das Verzeichnis der Handbuchseiten folgt darunter.
+
+![Die Hilfe auf dem Telefon mit dieser Seite](../bilder/einstieg/hilfe-mobil.png)
+
 ## Auf dem Tablet
 
 Unter 1180 Pixel Breite verschwinden Schiene und Zweitebene, und ein

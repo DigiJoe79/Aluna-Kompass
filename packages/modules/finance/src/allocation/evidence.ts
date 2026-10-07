@@ -1,4 +1,4 @@
-import { defaultLocale, isoNow, newId, notFound, ok, readSetting, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { defaultLocale, isoNow, newId, notFound, ok, paperDate, readSetting, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { abortReceive, DOCUMENT_MAX_BYTES, documents, getDocumentRecord, linkDocumentInternal, receiveGeneratedUpload } from '@kompass/module-dms';
 import { eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
@@ -96,7 +96,7 @@ export async function addEvidenceUpload(deps: Deps, ctx: CallContext, input: unk
   const result = await receiveGeneratedUpload(deps, ctx, {
     bytes: v.bytes,
     typeKey: 'finance-partner-evidence',
-    subject: evidenceSubject(v.kind, p.basis, now, defaultLocale(deps)),
+    subject: evidenceSubject(v.kind, p.basis, paperDate(now), defaultLocale(deps)),
     documentDate: now,
     links: [{ entityType: 'financePartnerPayment', entityId: p.id }],
     afterReceive: (tx, doc) => {

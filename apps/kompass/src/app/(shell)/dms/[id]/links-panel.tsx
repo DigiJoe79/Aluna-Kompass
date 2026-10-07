@@ -126,8 +126,8 @@ export function LinksPanel({
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent size="md" className="bg-surface shadow-md">
-          <DialogTitle className="font-heading text-[19px]">{t('links.addTitle')}</DialogTitle>
-          <DialogDescription className="text-[13px] text-muted-ink">{t('links.addDescription')}</DialogDescription>
+          <DialogTitle>{t('links.addTitle')}</DialogTitle>
+          <DialogDescription>{t('links.addDescription')}</DialogDescription>
 
           <div className="mt-5">
             <FormGrid>

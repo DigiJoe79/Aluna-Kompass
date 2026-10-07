@@ -1,6 +1,7 @@
 'use client';
 
 import { useId } from 'react';
+import { FieldError } from '@/components/forms/field-error';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 
@@ -32,7 +33,7 @@ export function PhotosEditor({ photos, max, error, onChange, onChoose, frame }: 
         </Button>
         <span className={`text-[13px] ${photos.length > max ? 'text-error' : 'text-ink-2'}`}>{t('count', { count: photos.length, max })}</span>
       </div>
-      {error ? <p id={errorId} className="text-[13px] text-error">{error}</p> : null}
+      <FieldError id={errorId} message={error} />
       <ul className="grid gap-3 sm:grid-cols-2">
         {photos.map((p, i) => (
           <li key={p.assetId} data-testid="animal-photo" className={`flex flex-col gap-1 rounded-md border p-2 ${p.isPrimary ? 'border-brand' : 'border-line'}`}>

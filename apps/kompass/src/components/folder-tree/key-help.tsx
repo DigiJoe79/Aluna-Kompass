@@ -78,7 +78,7 @@ export function FolderTreeKeyHelp({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="sm" className="gap-3 bg-surface text-ink">
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold">{t('keyHelpTitle')}</DialogTitle>
+          <DialogTitle>{t('keyHelpTitle')}</DialogTitle>
         </DialogHeader>
         {groups.map((group) => (
           <section key={group.title} className="flex flex-col gap-1.5">

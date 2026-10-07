@@ -410,7 +410,7 @@ export async function deleteAnimal(deps: Deps, ctx: CallContext, input: unknown)
   }
   const before = loadAnimal(deps.db, parsed.value.id);
   if (!before) return notFound('animal', parsed.value.id);
-  const blocked = deletionConflict(deletionPreviewOf(deps, before));
+  const blocked = deletionConflict(deps, deletionPreviewOf(deps, before));
   if (blocked) return blocked;
 
   const assetIds = assetIdsOf(before);

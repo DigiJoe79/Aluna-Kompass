@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { FieldError } from '@/components/forms/field-error';
 import { useTranslations } from 'next-intl';
 import { formatAmount, parseAmount } from '@/lib/finance/amount';
 import { cn } from '@/lib/utils';
@@ -88,11 +89,7 @@ export function AmountField({ name, id, value, onChange, direction, onDirectionC
         </div>
       </div>
       {balanceHint ? <p className="text-[12px] text-muted-ink">{balanceHint}</p> : null}
-      {showError ? (
-        <p id={errorId} role="alert" className="text-[12px] text-error">
-          {errorText ?? t('format')}
-        </p>
-      ) : null}
+      <FieldError id={errorId} message={showError ? (errorText ?? t('format')) : undefined} />
     </div>
   );
 }

@@ -32,7 +32,7 @@ export function AuditDetail({ entry }: { entry: AuditEntry }) {
     >
       <SheetContent side="right" size="md" className="gap-0 overflow-y-auto bg-surface shadow-md">
         <div className="p-5">
-          <SheetTitle className="font-heading text-[17px]">{entry.action}</SheetTitle>
+          <SheetTitle>{entry.action}</SheetTitle>
           <p className="mt-1 font-mono text-[12px] text-muted-ink">
             {format.dateTime(new Date(entry.occurredAt), { dateStyle: 'medium', timeStyle: 'medium' })}
           </p>

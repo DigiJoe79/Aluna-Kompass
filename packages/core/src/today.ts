@@ -1,8 +1,9 @@
+import { DEFAULT_TIME_ZONE, isoDayInZone, type IsoDay } from './dates';
 import type { Deps } from './deps';
 import { readSetting } from './settings/service';
 
 /** Vorgabe, bis der Verein eine andere Zeitzone einträgt — und für Deps ohne Kern-Einstellungen. */
-export const DEFAULT_TIME_ZONE = 'Europe/Berlin';
+export { DEFAULT_TIME_ZONE };
 
 /** Ob `zone` eine IANA-Zeitzone ist, die die Laufzeit kennt. */
 export function isTimeZone(zone: string): boolean {
@@ -25,14 +26,12 @@ export function timeZoneOf(deps: Pick<Deps, 'db' | 'registry'>): string {
  * A4: Die ersten zehn Zeichen von `toISOString()` sind der UTC-Tag — zwischen Mitternacht und
  * ein bzw. zwei Uhr deutscher Zeit noch gestern, und „heute“ läge in der Zukunft.
  */
-export function isoDayIn(deps: Pick<Deps, 'db' | 'registry'>, instant: Date | number): string {
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone: timeZoneOf(deps), year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(instant);
-  const part = (type: string) => parts.find((p) => p.type === type)!.value;
-  return `${part('year')}-${part('month')}-${part('day')}`;
+export function isoDayIn(deps: Pick<Deps, 'db' | 'registry'>, instant: Date | number): IsoDay {
+  return isoDayInZone(instant, timeZoneOf(deps));
 }
 
 /** „Heute“ im Sinne des Vereins: der Kalendertag von `deps.clock.now()` in seiner Zeitzone. */
-export function todayIn(deps: Pick<Deps, 'db' | 'registry' | 'clock'>): string {
+export function todayIn(deps: Pick<Deps, 'db' | 'registry' | 'clock'>): IsoDay {
   return isoDayIn(deps, deps.clock.now());
 }
 

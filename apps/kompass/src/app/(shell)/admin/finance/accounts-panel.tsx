@@ -18,6 +18,7 @@ import { formatAmount, parseAmount } from '@/lib/finance/amount';
 import { checkIban, type IbanCheckResult } from '@/lib/finance/iban-check';
 import { saveAccountAction, setAccountActiveAction, type AccountInput } from './actions';
 import { useSavedVersions } from '@/lib/saved-versions';
+import { FieldError } from '@/components/forms/field-error';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid } from '@/components/forms/form-grid';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -162,7 +163,7 @@ function AccountDialog({ account, canPickDocument, onClose, onSaved }: { account
       {/* Mit Bankverbindung höher als ein Telefon- oder Laptopfenster: Kopf und Leiste fest, die Mitte scrollt. */}
       <DialogContent size="md" layout="fixed-footer" className="bg-surface shadow-md">
         <DialogHeader>
-          <DialogTitle className="font-heading text-[19px]">{account ? t('edit') : t('create')}</DialogTitle>
+          <DialogTitle>{account ? t('edit') : t('create')}</DialogTitle>
         </DialogHeader>
         <DialogBody>
           <section>
@@ -187,14 +188,9 @@ function AccountDialog({ account, canPickDocument, onClose, onSaved }: { account
               <h3 className="text-[15px] font-semibold">{t('dialog.sections.bank')}</h3>
               <div className="mt-3">
                 <FormGrid>
-                  <FormField id="account-iban" label={t('dialog.iban')}>
+                  <FormField id="account-iban" label={t('dialog.iban')} error={ibanIssue ? t(`dialog.ibanState.${ibanIssue}`) : undefined}>
                     <Input id="account-iban" value={iban} onChange={(e) => setIban(e.target.value)} aria-invalid={ibanIssue !== null} />
                     {ibanCheck.state === 'valid' ? <p className="text-[12px] text-success">{t('dialog.ibanState.valid')}</p> : null}
-                    {ibanIssue ? (
-                      <p role="alert" className="text-[12px] text-error">
-                        {t(`dialog.ibanState.${ibanIssue}`)}
-                      </p>
-                    ) : null}
                   </FormField>
                   <FormField id="account-bic" label={t('dialog.bic')} size="s">
                     <Input id="account-bic" value={bic} onChange={(e) => setBic(e.target.value)} />
@@ -219,7 +215,10 @@ function AccountDialog({ account, canPickDocument, onClose, onSaved }: { account
                 <FormField id="account-opening-date" label={t('dialog.openingDate')} size="s">
                   <Input id="account-opening-date" type="date" value={openingDate} onChange={(e) => setOpeningDate(e.target.value)} />
                 </FormField>
-                {openingMismatch ? <p role="alert" className="col-span-full text-[12px] text-error">{t('dialog.openingBoth')}</p> : null}
+                {openingMismatch ? (
+                  // Betrifft Betrag und Datum zusammen, deshalb über die ganze Zeile statt an einem Feld.
+                  <FormCell size="full"><FieldError id="account-opening-error" message={t('dialog.openingBoth')} /></FormCell>
+                ) : null}
                 <FormCell size="m">
                   {canPickDocument ? (
                     <DocumentPicker id="account-document" name="document" label={t('dialog.document')} value={document} onChange={setDocument} />

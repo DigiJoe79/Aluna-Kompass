@@ -3,6 +3,7 @@ import { followUps } from './db/schema';
 import type { Deps } from './deps';
 import { describeMediaUsage, type MediaUsage } from './media/service';
 import type { RecordReference, RetentionHold } from './modules/manifest';
+import { messageDate } from './message-date';
 import { withResolvedLabel } from './modules/record-hooks';
 import { CORE_MODULE_KEY, enabledManifests } from './modules/service';
 import { conflict, type Failure } from './result';
@@ -74,11 +75,11 @@ export function buildDeletionPreview(deps: Deps, subject: { entityType: string; 
   return { isPublished: subject.isPublished, holds, references, media, deletable: !subject.isPublished && holds.length === 0 && references.length === 0 };
 }
 
-/** Der Konflikt zu einer Vorschau, oder `null`, wenn gelöscht werden darf. Detail hinter dem ersten Doppelpunkt. */
-export function deletionConflict(preview: DeletionPreview): Failure | null {
+/** Der Konflikt zu einer Vorschau, oder `null`, wenn gelöscht werden darf. Detail hinter dem ersten Doppelpunkt; Fristen wie die Anzeige (`messageDate`). */
+export function deletionConflict(deps: Pick<Deps, 'db' | 'registry'>, preview: DeletionPreview): Failure | null {
   if (preview.isPublished) return conflict('stillPublished', 'Der Datensatz ist veröffentlicht. Ziehen Sie ihn erst zurück.');
   if (preview.holds.length > 0) {
-    return conflict('recordHeld', `Noch gehalten von: ${preview.holds.map((h) => `${h.label}${h.until ? ` (bis ${h.until})` : ' (dauerhaft)'}`).join('; ')}`);
+    return conflict('recordHeld', `Noch gehalten von: ${preview.holds.map((h) => `${h.label}${h.until ? ` (bis ${messageDate(deps, h.until)})` : ' (dauerhaft)'}`).join('; ')}`);
   }
   if (preview.references.length > 0) return conflict('stillReferenced', `Es zeigt noch darauf: ${preview.references.map((r) => r.label).join('; ')}`);
   return null;

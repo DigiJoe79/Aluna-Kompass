@@ -207,8 +207,8 @@ export function TypesPanel({
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent size="md" className="bg-surface shadow-md">
           <ActionForm action={createAction} state={createState} className="space-y-4">
-            <DialogTitle className="font-heading text-[19px]">{t('createTypeTitle')}</DialogTitle>
-            <DialogDescription className="text-[13px] text-muted-ink">{t('createTypeDescription')}</DialogDescription>
+            <DialogTitle>{t('createTypeTitle')}</DialogTitle>
+            <DialogDescription>{t('createTypeDescription')}</DialogDescription>
 
             <section>
               <h3 className="text-[15px] font-semibold">{t('typeSections.identity')}</h3>
@@ -293,8 +293,8 @@ export function TypesPanel({
         <DialogContent size="md" className="bg-surface shadow-md">
           {editingType && (
             <ActionForm action={editAction} state={editState} className="space-y-4">
-              <DialogTitle className="font-heading text-[19px]">{t('editTypeTitle')}</DialogTitle>
-              <DialogDescription className="text-[13px] text-muted-ink">{t('editTypeDescription')}</DialogDescription>
+              <DialogTitle>{t('editTypeTitle')}</DialogTitle>
+              <DialogDescription>{t('editTypeDescription')}</DialogDescription>
 
               <section>
                 <h3 className="text-[15px] font-semibold">{t('typeSections.identity')}</h3>
@@ -390,8 +390,8 @@ export function TypesPanel({
       {/* Dialog: Confirm Delete Type */}
       <Dialog open={Boolean(typeToDelete)} onOpenChange={(open) => { if (!open) { setTypeToDelete(null); deleteFb.reset(); } }}>
         <DialogContent size="sm" className="bg-surface shadow-md">
-          <DialogTitle className="font-heading text-[19px]">{t('deleteTypeTitle')}</DialogTitle>
-          <DialogDescription className="text-[13px] text-muted-ink">
+          <DialogTitle>{t('deleteTypeTitle')}</DialogTitle>
+          <DialogDescription tone="body">
             {typeToDelete ? t('deleteTypeDescription', { label: typeToDelete.label }) : ''}
           </DialogDescription>
           <FormActionBar placement="dialog" cancel={() => setTypeToDelete(null)} destructive pending={deletePending} saveLabel={t('deleteTypeConfirm')} onSave={() => typeToDelete && handleDelete(typeToDelete.key)} state={deleteFb.state} />

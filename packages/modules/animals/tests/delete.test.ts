@@ -78,7 +78,7 @@ describe('deleteAnimal', () => {
     const linked = unwrap(await createAnimal(deps, manage, { ...base, name: 'Verwiesen' }));
     const heldResult = await deleteAnimal(deps, manage, { id: held.id });
     expect(code(heldResult)).toBe('recordHeld');
-    expect(heldResult.ok === false && heldResult.error.type === 'conflict' && heldResult.error.message).toContain('Schutzvertrag SV-2026-0007 (bis 2036-12-31)');
+    expect(heldResult.ok === false && heldResult.error.type === 'conflict' && heldResult.error.message).toContain('Schutzvertrag SV-2026-0007 (bis 31.12.2036)');
     const linkedResult = await deleteAnimal(deps, manage, { id: linked.id });
     expect(code(linkedResult)).toBe('stillReferenced');
     expect(linkedResult.ok === false && linkedResult.error.type === 'conflict' && linkedResult.error.message).toContain('Anfrage Tierarzt');

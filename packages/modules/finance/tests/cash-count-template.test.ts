@@ -1,10 +1,10 @@
-import type { DocumentRenderContext } from '@kompass/core';
+import { isoDay, type DocumentRenderContext } from '@kompass/core';
 import { DEFAULT_THEME } from '@kompass/core/themes';
 import { describe, expect, it } from 'vitest';
 import { cashCountTemplate } from '../src/ledger/cash-count-template';
 
 /** Nachtrag Rest 0.2.0, Task 7f (M28 Rest) und AG: Zählprotokoll mit Datum im Vereinsformat, Spendendose mit eigenem Protokoll. */
-const ctx: DocumentRenderContext = { number: 'KZP-2026-005', issuedAt: '2026-09-05T12:00:00.000Z', organization: { 'organization.name': 'Musterverein e.V.' }, theme: DEFAULT_THEME, logo: null };
+const ctx: DocumentRenderContext = { number: 'KZP-2026-005', issuedAt: '2026-09-05T12:00:00.000Z', issuedDay: isoDay('2026-09-05'), organization: { 'organization.name': 'Musterverein e.V.' }, theme: DEFAULT_THEME, logo: null };
 
 function build(data: unknown) {
   const parsed = cashCountTemplate.schema.safeParse(data);
@@ -59,5 +59,10 @@ describe('cash count template', () => {
     expect(text).toContain('Anna Beispiel  Bernd Muster');
     expect(text).not.toMatch(/Buchbestand|Kassendifferenz|Unterschied/);
     expect(text).not.toContain('2026-03-10');
+  });
+
+  it('refuses an impossible counting day as a validation issue, not an exception in build', () => {
+    expect(cashCountTemplate.schema.safeParse({ ...cashCount, countedOn: '2026-02-30' }).success).toBe(false);
+    expect(cashCountTemplate.schema.safeParse({ variant: 'donationBox', accountName: 'Handkasse', boxLabel: 'Dose', countedOn: '2026-02-30', amount: '1,00 €', categoryName: 'Spenden', counterOneName: 'A', counterTwoName: 'B' }).success).toBe(false);
   });
 });

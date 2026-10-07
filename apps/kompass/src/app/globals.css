@@ -131,6 +131,28 @@
   --container-sheet-md: 560px;
 }
 
+/*
+ * Schriftrollen (K10 Charge 1, docs/MUSTER.md „Schrift“; Designer und Joe 2026-10-06): Größe, Zeilenhöhe und bei
+ * Titeln das Gewicht. Tailwind v4 nimmt in `--text-*` keine Schriftfamilie — `font-heading` steht im Baustein,
+ * `font-mono tabular-nums` an der Kennzahl. Eine neue Rolle gehört auch in `TYPE_ROLES` (`lib/utils.ts`).
+ */
+@theme {
+  --text-dialog-title: 19px;
+  --text-dialog-title--line-height: 1.25;
+  --text-dialog-title--font-weight: 600;
+  --text-section: 15px;
+  --text-section--line-height: 1.35;
+  --text-section--font-weight: 600;
+  --text-body: 14px;
+  --text-body--line-height: 1.5;
+  --text-meta: 13px;
+  --text-meta--line-height: 1.45;
+  --text-hint: 12px;
+  --text-hint--line-height: 1.4;
+  --text-figure: 32px;
+  --text-figure--line-height: 1;
+}
+
 /* Verweil-Balken im Ordnerbaum: 0,8 s wie `openOnDropDelay`, linear (HANDOFF § 2). */
 @theme {
   --animate-dwell: dwell 0.8s linear forwards;
@@ -210,6 +232,8 @@
   .prose-preview .cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
   .prose-preview .card { border: 1px solid var(--line); border-radius: var(--radius-md); padding: 10px 12px; background: var(--surface-2); }
   .prose-preview a { color: var(--link); text-decoration: underline; }
+  /* Codeblöcke im Handbuch (Briefsyntax) brechen nicht um; am Telefon scrollen sie in sich statt über die Seite. */
+  .prose-preview pre { overflow-x: auto; }
   /* Höchsthöhe: Ein Telefonbild (1170×2532) füllte im Handbuch sonst die ganze Spalte in der Breite und
      wurde mehrere Bildschirme hoch; `help.ts` lässt an <img> kein width zu. Querformate bleiben darunter.
      Ohne Layout-Test (Einzelstelle, Regel in AGENTS.md). */

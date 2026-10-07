@@ -1,4 +1,4 @@
-import type { DocumentRenderContext } from '@kompass/core';
+import { isoDay, type DocumentRenderContext } from '@kompass/core';
 import { DEFAULT_THEME } from '@kompass/core/themes';
 import { createDocumentEngine } from '@kompass/documents';
 import { renderMarkdownTypst } from '@kompass/markdown';
@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
  */
 const context: DocumentRenderContext = {
   number: 'DMS-2026-001',
-  issuedAt: '2026-09-23T08:00:00.000Z',
+  issuedAt: '2026-09-23T08:00:00.000Z', issuedDay: isoDay('2026-09-23'),
   organization: { 'organization.name': 'Musterverein e.V.', 'organization.street': 'Musterweg 1', 'organization.postalCode': '12345', 'organization.city': 'Musterstadt' },
   theme: DEFAULT_THEME,
   logo: null,

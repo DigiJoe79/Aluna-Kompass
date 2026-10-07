@@ -1,4 +1,4 @@
-import { hasPermission, listUserNamesWithPermission, readSetting, todayIn } from '@kompass/core';
+import { hasPermission, listUserNamesWithPermission, todayIn } from '@kompass/core';
 import { getBalances, listCashCounts, listEntries } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/page-header';
 import { panelHref } from '@/components/panel-nav';
 import { buttonVariants } from '@/components/ui/button';
 import { requireSession } from '@/lib/request-context';
-import { formatDate, type DateFormatMode } from '@/lib/dates';
+import { dateFormatOf } from '@/lib/date-format';
 import { formatEuro } from '@/lib/finance/amount';
 import { CountDialog } from './count-dialog';
 import { MoveDialog } from './move-dialog';
@@ -25,7 +25,7 @@ export default async function FinanceCashPage({ searchParams }: { searchParams: 
   const t = await getTranslations('finance.cash');
   if (!hasPermission(ctx, 'finance.read')) return <Page width="task"><ForbiddenCard permission="finance.read" /></Page>;
 
-  const dateMode = readSetting<DateFormatMode>(deps, 'ui.dateFormat');
+  const fmt = dateFormatOf(deps);
   const query = await searchParams;
   const balancesRes = await getBalances(deps, ctx, {});
   if (!balancesRes.ok) return <Page width="task"><ForbiddenCard permission="finance.overview" /></Page>;
@@ -124,7 +124,7 @@ export default async function FinanceCashPage({ searchParams }: { searchParams: 
                 return (
                   <li key={entry.id} className="flex items-center justify-between px-3 py-2 text-[13px]">
                     <span>
-                      {formatDate(entry.entryDate, dateMode)} · {entry.text}
+                      {fmt.date(entry.entryDate)} · {entry.text}
                     </span>
                     <span className="font-mono tabular-nums">{formatEuro(amount)}</span>
                   </li>
@@ -142,7 +142,7 @@ export default async function FinanceCashPage({ searchParams }: { searchParams: 
             <ul className="divide-y divide-line rounded-md border border-line">
               {countsRes.value.counts.map((count) => (
                 <li key={count.id} className="flex items-center justify-between px-3 py-2 text-[13px]">
-                  <span>{formatDate(count.countedOn, dateMode)}</span>
+                  <span>{fmt.date(count.countedOn)}</span>
                   <a href={`/finance/cash/${count.id}/protocol`} target="_blank" rel="noreferrer" className="text-link">
                     {count.documentNumber}
                   </a>

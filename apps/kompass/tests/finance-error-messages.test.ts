@@ -97,11 +97,20 @@ describe('Finanzfehler aus der Sprachdatei (A6)', () => {
     expect(toActionState(financeConflict('noNoticeValidAt', { date: '2026-03-10' }), west)).toMatchObject({ message: expect.stringContaining('10.03.2026') });
   });
 
+  // Betrag und Datum gibt ein Dienst roh weiter; formatiert wird beim Übersetzen (Befund 38).
+  const selfFormatted = (source: string) => [...source.matchAll(/financeConflict\([^;]*?\)\s*[;,)]/g)].map((call) => call[0]).filter((call) => /formatEuro|toLocale/.test(call) || /\b(?:paperDate|messageDate)\(/.test(call));
+
+  it('erkennt einen Dienst, der Betrag oder Datum selbst formatiert (Selbsttest)', () => {
+    expect(selfFormatted("return financeConflict('noNoticeValidAt', { date: paperDate(day) });")).toHaveLength(1);
+    expect(selfFormatted("return financeConflict('noNoticeValidAt', { date: messageDate(deps, day) });")).toHaveLength(1);
+    expect(selfFormatted("return financeConflict('x', { amount: formatEuro(c) });")).toHaveLength(1);
+    expect(selfFormatted("return financeConflict('noNoticeValidAt', { date: day });")).toHaveLength(0);
+  });
+
   it('kein Dienst formatiert Betrag oder Datum selbst für eine Meldung', () => {
     const offenders: string[] = [];
     for (const file of files(FINANCE_SRC).filter((f) => f.endsWith('.ts'))) {
-      const source = readFileSync(file, 'utf8');
-      for (const call of source.matchAll(/financeConflict\([^;]*?\)\s*[;,)]/g)) if (/formatEuro|germanDate|toLocale/.test(call[0])) offenders.push(`${path.relative(FINANCE_SRC, file)}: ${call[0].slice(0, 80)}`);
+      for (const call of selfFormatted(readFileSync(file, 'utf8'))) offenders.push(`${path.relative(FINANCE_SRC, file)}: ${call.slice(0, 80)}`);
     }
     expect(offenders).toEqual([]);
   });

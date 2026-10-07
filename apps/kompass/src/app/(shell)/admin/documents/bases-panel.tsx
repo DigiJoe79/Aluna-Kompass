@@ -112,34 +112,40 @@ export function BasesPanel({ bases, groups, gaps = [], canManage }: { bases: Bas
         <div className="px-4 pt-3">
           <RefusalNotice action state={baseFb.state} />
         </div>
-        <table className="w-full text-[13px]">
-          <thead className="text-left text-[12px] font-semibold uppercase tracking-[.04em] text-muted-ink">
-            <tr className="h-9">
-              <th className="px-4">{t('columns.type')}</th>
-              <th className="px-4">{t('columns.effective')}</th>
-              <th className="px-4">{t('columns.choice')}</th>
-            </tr>
-          </thead>
+        {/* `ui/table` statt rohem `<table>`: Ihr Rahmen scrollt am Telefon in sich, vorher schob die Tabelle `main`
+            auf 701 px (Befund 14 in 0.2.8). Am Telefon angesehen, ohne eigenen Layout-Test (Projektregel: keine
+            Layout-Tests für Einzelstellen). */}
+        <Table className="text-[13px]">
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t('columns.type')}</TableHead>
+              <TableHead>{t('columns.effective')}</TableHead>
+              <TableHead>{t('columns.choice')}</TableHead>
+            </TableRow>
+          </TableHeader>
           {groups.map((group) => (
-            <tbody key={group.module}>
-              <tr className="border-t border-line-2 bg-surface-2">
-                <th colSpan={3} scope="colgroup" className="px-4 py-1.5 text-left text-[12px] font-semibold text-ink-2">{group.moduleLabel}</th>
-              </tr>
+            <TableBody key={group.module}>
+              {/* Gruppenzeile je Modul; ein eigener Baustein `TableGroupRow` ist für K10 Charge 2 vorgemerkt. */}
+              <TableRow className="bg-surface-2">
+                <TableHead colSpan={3} scope="colgroup" className="text-[12px] font-semibold text-ink-2">
+                  {group.moduleLabel}
+                </TableHead>
+              </TableRow>
               {group.rows.map((row) => (
-                <tr key={row.key} className="border-t border-line-2 [&>*]:py-2.5">
-                  <th scope="row" className="px-4 text-left font-normal">
+                <TableRow key={row.key}>
+                  <TableCell>
                     <span className="block">{row.label}</span>
                     {row.label === row.key ? null : <span className="block font-mono text-[11px] text-muted-ink">{row.key}</span>}
-                  </th>
-                  <td className="px-4" data-testid="effective-base">
+                  </TableCell>
+                  <TableCell data-testid="effective-base">
                     <span className="flex flex-wrap items-center gap-2">
                       <span>{row.effectiveLabel}</span>
                       <span className="font-mono text-[11px] text-ink-2">{row.effectiveBase}</span>
                       {row.override ? <StatusBadge tone="warning">{t('overridden')}</StatusBadge> : null}
                       {row.available ? null : <StatusBadge tone="error">{t('unavailable')}</StatusBadge>}
                     </span>
-                  </td>
-                  <td className="px-4">
+                  </TableCell>
+                  <TableCell>
                     <span className="flex items-center gap-2">
                       <Select
                         aria-label={t('choiceFor', { type: row.label })}
@@ -163,12 +169,12 @@ export function BasesPanel({ bases, groups, gaps = [], canManage }: { bases: Bas
                         </Button>
                       ) : null}
                     </span>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
+            </TableBody>
           ))}
-        </table>
+        </Table>
       </section>
     </div>
   );

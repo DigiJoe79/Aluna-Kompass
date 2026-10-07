@@ -81,7 +81,7 @@ export function ReserveForm({ purposes, initial, onClose, onSaved }: { purposes:
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent size="md" className="bg-surface shadow-md">
-        <DialogTitle className="font-heading text-[19px]">{initial ? t('form.editTitle', { name: initial.name }) : t('form.title')}</DialogTitle>
+        <DialogTitle>{initial ? t('form.editTitle', { name: initial.name }) : t('form.title')}</DialogTitle>
         <div data-testid="reserve-form">
           <FormGrid>
             <FormField id="reserve-kind" label={t('form.kind')}>

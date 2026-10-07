@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
@@ -136,6 +136,20 @@ function TableCaption({
   )
 }
 
+/**
+ * Leere Liste in einer Tabelle mit Kopf (docs/MUSTER.md § G; K10, Designer und Joe 2026-10-06): eine Zeile
+ * mit einer Zelle über alle Spalten, Text im Ton von `EmptyState`. Ohne Tabellenkopf bleibt `EmptyState`.
+ */
+function TableEmpty({ colSpan, children }: { colSpan: number; children: React.ReactNode }) {
+  return (
+    <TableRow>
+      <TableCell colSpan={colSpan} className="py-6 text-center whitespace-normal text-meta text-muted-ink">
+        {children}
+      </TableCell>
+    </TableRow>
+  )
+}
+
 const ROW_TARGET =
   'after:absolute after:inset-0 after:content-[""] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-focus'
 
@@ -181,4 +195,5 @@ export {
   TableRow,
   TableCell,
   TableCaption,
+  TableEmpty,
 }

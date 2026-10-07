@@ -5,7 +5,7 @@ import { EmptyState } from '@/components/empty-state';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
-import { formatDate, type DateFormatMode } from '@/lib/dates';
+import { dateFormatOf } from '@/lib/date-format';
 import { requireSession } from '@/lib/request-context';
 import { RetentionSettings } from './retention-settings';
 
@@ -21,6 +21,7 @@ export default async function RetentionPage() {
   const statutory6Y = readSetting<number>(deps, 'retention.statutory6Y');
   const consent = readSetting<number>(deps, 'retention.consent');
   const canManageSettings = hasPermission(ctx, 'settings.manage');
+  const fmt = dateFormatOf(deps);
 
   const byEntity = new Map<string, typeof result.value>();
   for (const item of result.value) byEntity.set(item.entity, [...(byEntity.get(item.entity) ?? []), item]);
@@ -46,7 +47,7 @@ export default async function RetentionPage() {
                 return (
                   <li key={`${item.entity}:${item.id}`} className="flex items-center justify-between gap-4 px-3 py-2">
                     <span>{href ? <Link href={href} className="underline underline-offset-2">{item.label}</Link> : item.label}</span>
-                    <span className="text-[12px] text-muted-ink">{t('dueSince', { date: formatDate(item.dueSince, readSetting<DateFormatMode>(deps, 'ui.dateFormat')) })}</span>
+                    <span className="text-[12px] text-muted-ink">{t('dueSince', { date: fmt.date(item.dueSince) })}</span>
                   </li>
                 );
               })}

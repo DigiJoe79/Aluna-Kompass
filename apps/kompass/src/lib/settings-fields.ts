@@ -70,7 +70,7 @@ export const SETTINGS_TABS: SettingsTab[] = [
   },
   {
     key: 'display',
-    fields: [{ key: 'ui.dateFormat', kind: 'select', size: 'm', options: ['locale', 'iso'] }],
+    fields: [{ key: 'ui.dateFormat', kind: 'select', size: 'm', options: ['locale', 'iso'], hintKey: 'dateFormatHint' }],
   },
 ];
 

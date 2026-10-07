@@ -42,8 +42,8 @@ export function StartPasswordDialog({
         size="md"
         className="bg-surface shadow-md"
       >
-        <DialogTitle className="font-heading text-[19px]">{t('title', { name })}</DialogTitle>
-        <DialogDescription className="text-[14px] text-ink-2">{t('text')}</DialogDescription>
+        <DialogTitle>{t('title', { name })}</DialogTitle>
+        <DialogDescription tone="body">{t('text')}</DialogDescription>
         <div className="rounded-md border border-line-strong bg-code p-3 font-mono">
           <div className="text-[11px] font-semibold tracking-[.06em] text-muted-ink">{t('emailLabel')}</div>
           <div className="text-[13px]">{email}</div>

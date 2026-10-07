@@ -1,9 +1,9 @@
-import { schema, unwrap, type Deps } from '@kompass/core';
+import { isoDay, paperDate, schema, unwrap, type Deps } from '@kompass/core';
 import { ctxWith } from '@kompass/core/testing';
 import { documents } from '@kompass/module-dms';
 import { describe, expect, it } from 'vitest';
 import { readSimplifiedReceipt } from '../src/donations/book';
-import { germanDate, typstText } from '../src/donations/templates/shared';
+import { typstText } from '../src/donations/templates/shared';
 import { SIMPLIFIED_RECEIPT_TEMPLATE_KEY, simplifiedReceiptTemplate } from '../src/donations/templates/simplified';
 import * as W from '../src/donations/templates/wording';
 import { saveNotice } from '../src/donations/notices';
@@ -43,7 +43,7 @@ describe('simplified receipt (§ 50 Abs. 4 EStDV)', () => {
     const body = calls[0]!.bodyTypst;
     expect(calls[0]!.baseId).toBe('a4-formular');
     expect(body).toContain(typstText(W.SIMPLIFIED_TITLE));
-    expect(body).toContain(typstText(W.noticeSentence({ ...EXEMPTION, noticeDate: germanDate(EXEMPTION.noticeDate) })));
+    expect(body).toContain(typstText(W.noticeSentence({ ...EXEMPTION, noticeDate: paperDate(isoDay(EXEMPTION.noticeDate)) })));
     expect(body).toContain(typstText(W.usageSentence(EXEMPTION.purposesText)));
     expect(body).toContain(typstText(W.simplifiedReceiptSentence('300,00 €')));
     expect(body).toContain(typstText(W.SIMPLIFIED_DONATION_SENTENCE));

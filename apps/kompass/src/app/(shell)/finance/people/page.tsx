@@ -1,4 +1,4 @@
-import { hasPermission, isoNow, listUserNamesWithPermission, readSetting, userNamesFor } from '@kompass/core';
+import { hasPermission, todayIn, listUserNamesWithPermission, userNamesFor } from '@kompass/core';
 import { listFiscalYears, personYearOverview, relatedPartyPayments, valueAt } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -6,7 +6,7 @@ import { BlockedState } from '@/components/blocked-state';
 import { Notice } from '@/components/notice';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
-import type { DateFormatMode } from '@/lib/dates';
+import { dateFormatOf } from '@/lib/date-format';
 import { requireSession } from '@/lib/request-context';
 import { PersonCard } from './person-card';
 import { RelatedPartyTable } from './related-party-table';
@@ -33,7 +33,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
     );
   }
 
-  const today = isoNow(deps.clock).slice(0, 10);
+  const today = todayIn(deps);
   const currentYear = Number(today.slice(0, 4));
   const query = await searchParams;
   const requested = Number(query.year);
@@ -53,7 +53,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
   // Befund T: ohne Kontakt mit der Rolle „Vorstand“ bliebe die Liste unten stumm leer.
   const boardMembersMissing = relatedRes?.ok ? relatedRes.value.boardMembersMissing : false;
   const approverNames = userNamesFor(deps, related.map((r) => r.approvedByUserId));
-  const dateMode = readSetting<DateFormatMode>(deps, 'ui.dateFormat');
+  const fmt = dateFormatOf(deps);
   // Entscheidung 5 (2026-09-28): Pauschalen nach Kalenderjahr, E21 nach Geschäftsjahr — fallen beide zusammen, genügt der Titel.
   const sameYear = !!fiscalYear && fiscalYear.startsOn === `${year}-01-01` && fiscalYear.endsOn === `${year}-12-31`;
 
@@ -102,7 +102,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
           </h2>
           {fiscalYear ? (
             <>
-              <RelatedPartyTable rows={related} approverNames={approverNames} dateMode={dateMode} />
+              <RelatedPartyTable rows={related} approverNames={approverNames} fmt={fmt} />
             </>
           ) : (
             <p className="text-[13px] text-muted-ink">{t('related.noFiscalYear')}</p>

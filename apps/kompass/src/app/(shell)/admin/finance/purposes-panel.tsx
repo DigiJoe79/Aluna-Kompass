@@ -163,7 +163,7 @@ function ReopenDialog({ purpose, onClose, onConfirm, onDone }: { purpose: Purpos
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent size="sm" className="bg-surface shadow-md">
-        <DialogTitle className="font-heading text-[19px]">{t('reopenDialog.title', { name: purpose.name })}</DialogTitle>
+        <DialogTitle>{t('reopenDialog.title', { name: purpose.name })}</DialogTitle>
         <FormField id="purpose-reopen-reason" label={t('reopenDialog.reason')} required>
           <Input id="purpose-reopen-reason" value={reason} onChange={(e) => setReason(e.target.value)} required />
         </FormField>
@@ -205,7 +205,7 @@ function PurposeDialog({ purpose, onClose, onSaved }: { purpose: PurposeRow | nu
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent size="sm" className="bg-surface shadow-md">
-        <DialogTitle className="font-heading text-[19px]">{purpose ? t('edit') : t('create')}</DialogTitle>
+        <DialogTitle>{purpose ? t('edit') : t('create')}</DialogTitle>
         <section>
           <h3 className="text-[15px] font-semibold">{t('sections.purpose')}</h3>
           <div className="mt-3">

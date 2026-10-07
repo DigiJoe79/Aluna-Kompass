@@ -1,4 +1,4 @@
-import { hasPermission, readSetting, todayIn, userNamesFor, type LocalizedText } from '@kompass/core';
+import { hasPermission, todayIn, userNamesFor, type LocalizedText } from '@kompass/core';
 import { epcQrPayload, getApproval, getPartnerPayment, getPurposeTransfer, listApprovals, listEvidence, listCategories, listPurposes, suggestExpenseCategories, waiverChecks, type ApprovalQueueItem, type ApprovalView } from '@kompass/module-finance';
 import { listProjects } from '@kompass/module-projects';
 import { getTranslations } from 'next-intl/server';
@@ -13,7 +13,7 @@ import { EmptyState } from '@/components/empty-state';
 import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
 import { buttonVariants } from '@/components/ui/button';
-import { formatDate, type DateFormatMode } from '@/lib/dates';
+import { dateFormatOf } from '@/lib/date-format';
 import { formatEuro } from '@/lib/finance/amount';
 import { requireSession } from '@/lib/request-context';
 import { cn } from '@/lib/utils';
@@ -35,7 +35,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
   const { deps, ctx } = await requireSession();
   if (!hasPermission(ctx, 'finance.approve')) return <Page width="full"><ForbiddenCard permission="finance.approve" /></Page>;
   const t = await getTranslations('finance.approvals');
-  const mode = readSetting<DateFormatMode>(deps, 'ui.dateFormat');
+  const fmt = dateFormatOf(deps);
   const query = await searchParams;
 
   const queueRes = await listApprovals(deps, ctx, { limit: 200 });
@@ -45,12 +45,12 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
   const isPurposeTransfer = (i: ApprovalQueueItem): i is Extract<ApprovalQueueItem, { kind: 'purposeTransfer' }> => i.kind === 'purposeTransfer';
   // F7 Task 4/6b, F8b Task 3 (Annahme 5/6): die Warteschlange ist polymorph — erst vereint, dann sortiert (`listApprovals`); hier nur die Zeilen bauen.
   const rows: QueueRow[] = queueItems.map((i) => {
-    if (isPartnerPayment(i)) return { id: i.paymentId, href: `/finance/approvals?payment=${i.paymentId}`, number: '', kind: 'partnerPayment', person: i.partnerName, amount: formatEuro(i.totalCents), since: formatDate(i.submittedAt, mode) };
+    if (isPartnerPayment(i)) return { id: i.paymentId, href: `/finance/approvals?payment=${i.paymentId}`, number: '', kind: 'partnerPayment', person: i.partnerName, amount: formatEuro(i.totalCents), since: fmt.date(i.submittedAt) };
     if (isPurposeTransfer(i)) {
       const person = `${i.fromName ?? t('transfer.freeFunds')} → ${i.toName ?? t('transfer.freeFunds')}`;
-      return { id: i.transferId, href: `/finance/approvals?transfer=${i.transferId}`, number: i.number, kind: 'purposeTransfer', person, amount: formatEuro(i.amountCents), since: formatDate(i.submittedAt, mode) };
+      return { id: i.transferId, href: `/finance/approvals?transfer=${i.transferId}`, number: i.number, kind: 'purposeTransfer', person, amount: formatEuro(i.amountCents), since: fmt.date(i.submittedAt) };
     }
-    return { id: i.claimId, href: `/finance/approvals?claim=${i.claimId}`, number: i.number, kind: i.waiver ? 'waiver' : 'expenseClaim', person: i.contactName, amount: formatEuro(i.totalCents), since: formatDate(i.submittedAt, mode) };
+    return { id: i.claimId, href: `/finance/approvals?claim=${i.claimId}`, number: i.number, kind: i.waiver ? 'waiver' : 'expenseClaim', person: i.contactName, amount: formatEuro(i.totalCents), since: fmt.date(i.submittedAt) };
   });
   // Nach einer Entscheidung steht die Zeile nicht mehr in `rows` (sie hat die Warteschlange verlassen) — `?claim=`/`?payment=`/`?transfer=`
   // bleiben trotzdem die gewählte Art: `getApproval`/`getPartnerPayment`/`getPurposeTransfer` liefern den Vorgang unabhängig vom Zustand.

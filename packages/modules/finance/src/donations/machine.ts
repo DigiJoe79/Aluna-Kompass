@@ -1,4 +1,4 @@
-import { documentImageExtension, isoNow, newId, notFound, ok, readSetting, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { documentImageExtension, isoDay, isoNow, newId, notFound, ok, paperDate, readSetting, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { checksumOf, createDraft, type DocumentRecord } from '@kompass/module-dms';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -7,7 +7,6 @@ import { financeConflict } from '../errors';
 import { requireFinanceRead } from '../ledger/access';
 import { machineStatusOf, periodsOverlap, type MachineProcedureMissing } from '../ledger/machine-status';
 import { financeNotices, financeSigners, type FinanceSignerRow } from '../schema';
-import { germanDate } from './templates/shared';
 import { notificationLetter } from './templates/wording';
 
 /**
@@ -235,7 +234,7 @@ export async function createNotificationLetterDraft(deps: Deps, ctx: CallContext
   // Zuständig für die Unterschrift: wer heute Unterzeichner ist, und der gewählte.
   const current = signers.filter((s) => s.validFrom <= today && (s.validTo === null || s.validTo >= today)).map((s) => s.signerName);
   const responsible = [...new Set([...current, signer.signerName])];
-  const body = notificationLetter(signer.signerName, earlier ? germanDate(earlier) : null, {
+  const body = notificationLetter(signer.signerName, earlier ? paperDate(isoDay(earlier)) : null, {
     organizationName: readSetting<string>(deps, 'organization.name'),
     taxOffice: notice.taxOffice,
     taxNumber: notice.taxNumber,

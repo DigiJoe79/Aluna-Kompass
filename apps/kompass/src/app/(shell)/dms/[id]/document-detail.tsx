@@ -233,8 +233,8 @@ export function DocumentDetail({
                   </Button>
                   <Dialog open={voidOpen} onOpenChange={setVoidOpen}>
                     <DialogContent size="sm" className="bg-surface shadow-md">
-                      <DialogTitle className="font-heading text-[19px]">{t('voidConfirmTitle')}</DialogTitle>
-                      <DialogDescription className="text-[14px] text-ink-2">
+                      <DialogTitle>{t('voidConfirmTitle')}</DialogTitle>
+                      <DialogDescription tone="body">
                         {t('voidConfirmDescription')}
                       </DialogDescription>
                       <FormGrid>

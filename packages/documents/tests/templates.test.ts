@@ -1,4 +1,4 @@
-import type { DocumentRenderContext } from '@kompass/core';
+import { isoDay, type DocumentRenderContext } from '@kompass/core';
 import { DEFAULT_THEME } from '@kompass/core/themes';
 import { describe, expect, it } from 'vitest';
 import { buildPayload, coreDocumentTemplates, firstFontFamily } from '../src';
@@ -6,6 +6,7 @@ import { buildPayload, coreDocumentTemplates, firstFontFamily } from '../src';
 const ctx: DocumentRenderContext = {
   number: 'BRF-2026-007',
   issuedAt: '2026-09-05T08:00:00.000Z',
+  issuedDay: isoDay('2026-09-05'),
   organization: { 'organization.name': 'Musterverein e.V.' },
   theme: DEFAULT_THEME,
   logo: null,
@@ -24,6 +25,11 @@ describe('core document templates', () => {
       issuedDate: '05.09.2026',
       brand: { primary: '#2F5D68', primarySoft: '#E3EEF0', fontBody: 'Source Sans 3', fontHeading: 'Source Serif 4', fontMono: 'IBM Plex Mono' },
     });
+  });
+
+  it('buildPayload druckt den Tag aus dem Kontext, nicht den UTC-Tag des Zeitstempels (K10)', () => {
+    const late = { ...ctx, issuedAt: '2026-09-12T22:30:00.000Z', issuedDay: isoDay('2026-09-13') };
+    expect(buildPayload(late).issuedDate).toBe('13.09.2026');
   });
 
   it('exposes audit-log-export (type audit-export) as build() on a default base', () => {

@@ -57,7 +57,7 @@ export function FinanceSectionEditor({ projectId, initial, purposes }: { project
       {open ? (
         <Dialog open onOpenChange={(next) => !next && setOpen(false)}>
           <DialogContent size="sm" className="bg-surface shadow-md">
-            <DialogTitle className="font-heading text-[18px]">{t('title')}</DialogTitle>
+            <DialogTitle>{t('title')}</DialogTitle>
             <FormGrid>
               <FormField id="project-finance-target" label={t('target')} size="s">
                 <AmountField id="project-finance-target" name="target" value={targetText} onChange={setTargetText} />

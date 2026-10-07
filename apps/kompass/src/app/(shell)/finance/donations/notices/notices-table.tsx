@@ -119,7 +119,7 @@ function SupersedeDialog({ notice, canPickDocument, onClose }: { notice: NoticeR
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent size="md" className="bg-surface shadow-md">
-        <DialogTitle className="font-heading text-[19px]">{ts('title')}</DialogTitle>
+        <DialogTitle>{ts('title')}</DialogTitle>
         <p className="text-[13px] text-ink-2">{ts('hint')}</p>
         <FormGrid>
           <FormField id="notice-superseded-on" label={ts('date')} required size="s">
@@ -157,7 +157,7 @@ function VoidNoticeDialog({ notice, onClose }: { notice: NoticeRow; onClose: () 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent size="md" className="bg-surface shadow-md">
-        <DialogTitle className="font-heading text-[19px]">{tv('title')}</DialogTitle>
+        <DialogTitle>{tv('title')}</DialogTitle>
         <p className="text-[13px] text-ink-2">{tv('hint')}</p>
         <FormGrid>
           <FormField id="notice-void-note" label={tv('reason')} required size="l">

@@ -1,5 +1,5 @@
-import type { DocumentTemplate } from '@kompass/core';
-import { CONFIRMATION_BASE, CONFIRMATION_DOCUMENT_TYPE, CONFIRMATION_ADDRESS_ZONE, CONFIRMATION_PERMISSION, confirmationSlots, amountBlock, germanDate, headBlock, membershipBlock, moneyConfirmationInputSchema, noticeBlock, notesBlock, signatureBlock, signatureImages, typstText as t, yesNoBoxes, type MoneyConfirmationInput } from './shared';
+import { isoDay, paperDate, type DocumentTemplate } from '@kompass/core';
+import { CONFIRMATION_BASE, CONFIRMATION_DOCUMENT_TYPE, CONFIRMATION_ADDRESS_ZONE, CONFIRMATION_PERMISSION, confirmationSlots, amountBlock, headBlock, membershipBlock, moneyConfirmationInputSchema, noticeBlock, notesBlock, signatureBlock, signatureImages, typstText as t, yesNoBoxes, type MoneyConfirmationInput } from './shared';
 import * as W from './wording';
 
 const ZONE = CONFIRMATION_ADDRESS_ZONE['finance-confirmation-money'];
@@ -17,7 +17,7 @@ export const moneyConfirmationTemplate: DocumentTemplate<MoneyConfirmationInput>
     body: {
       typst: [
         headBlock(W.TITLE_MONEY, data, ZONE),
-        amountBlock(W.MONEY_AMOUNT_LABEL, data.amountCents, W.DATE_LABEL, germanDate(data.donatedOn)),
+        amountBlock(W.MONEY_AMOUNT_LABEL, data.amountCents, W.DATE_LABEL, paperDate(isoDay(data.donatedOn))),
         `#par[${t(W.WAIVER_SENTENCE)} #h(4mm) ${yesNoBoxes(data.expenseWaiver)}]`,
         noticeBlock(data.notice),
         membershipBlock(data.membershipFeesCertifiable, W.MEMBERSHIP_SENTENCE),

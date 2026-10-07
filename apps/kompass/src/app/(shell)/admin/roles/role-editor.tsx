@@ -113,7 +113,7 @@ export function RoleEditor({
           <DialogTrigger render={<Button variant="outline" className="mt-auto border-dashed">{t('create.button')}</Button>} />
           <DialogContent size="sm" className="bg-surface shadow-md">
             <ActionForm action={createAction} state={createState} className="flex flex-col gap-4">
-              <DialogTitle className="font-heading text-[19px]">{t('create.title')}</DialogTitle>
+              <DialogTitle>{t('create.title')}</DialogTitle>
               <FormGrid>
                 <FormField id="new-role-name" label={t('fields.name')} error={createState.status === 'error' ? createState.fieldErrors.name : undefined}>
                   <Input id="new-role-name" name="name" required />

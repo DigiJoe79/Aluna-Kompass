@@ -89,8 +89,8 @@ export function ChannelsEditor({
             />
             <DialogContent size="sm" className="bg-surface shadow-md">
               <form onSubmit={handleAdd}>
-                <DialogTitle className="font-heading text-[17px]">{t('channels.add')}</DialogTitle>
-                <DialogDescription className="text-[13px] text-muted-ink">
+                <DialogTitle>{t('channels.add')}</DialogTitle>
+                <DialogDescription>
                   {t('channels.title')}
                 </DialogDescription>
 

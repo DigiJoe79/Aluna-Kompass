@@ -206,8 +206,8 @@ function MoveDialogBody({
   return (
     <>
       <DialogHeader>
-        <DialogTitle className="font-heading text-[19px] leading-[1.3] text-pretty">{heading}</DialogTitle>
-        {location ? <DialogDescription className="text-[13px] text-ink-2">{location}</DialogDescription> : null}
+        <DialogTitle className="text-pretty">{heading}</DialogTitle>
+        {location ? <DialogDescription>{location}</DialogDescription> : null}
       </DialogHeader>
       <DialogBody className="flex flex-col gap-3 max-sm:px-2.5 max-sm:py-1">
         <div className="flex flex-col rounded-md sm:border sm:border-line sm:p-1.5">

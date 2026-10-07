@@ -43,3 +43,6 @@ minimumReleaseAgeExclude:
   - '@playwright/test@1.63.0'
   - playwright-core@1.63.0
   - playwright@1.63.0
+  # Sicherheitskorrektur (GHSA, Alert #19), wenige Minuten vor Ablauf der Frist
+  # in 0.2.8 übernommen; entfällt mit der nächsten Fassung.
+  - source-map-js@1.2.2

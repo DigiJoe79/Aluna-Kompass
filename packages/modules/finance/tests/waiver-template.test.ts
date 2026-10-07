@@ -1,4 +1,4 @@
-import type { DocumentRenderContext } from '@kompass/core';
+import { isoDay, type DocumentRenderContext } from '@kompass/core';
 import { DEFAULT_THEME } from '@kompass/core/themes';
 import { describe, expect, it } from 'vitest';
 import { waiverDeclarationTemplate } from '../src/allocation/templates/waiver-declaration';
@@ -6,7 +6,7 @@ import { financeModule } from '../src/manifest';
 import { BASE_DRAWS_ADDRESS_ZONE, typstText as t } from '../src/typst-pure';
 
 /** F8a Task 3 — die Verzichtserklärung als Modul-Vorlage (Annahme 10): kein Mustertext, mit Unterschriftsfeld. */
-const ctx: DocumentRenderContext = { number: 'VZE-2026-001', issuedAt: '2026-09-05T12:00:00.000Z', organization: { 'organization.name': 'Musterverein e.V.' }, theme: DEFAULT_THEME, logo: null };
+const ctx: DocumentRenderContext = { number: 'VZE-2026-001', issuedAt: '2026-09-05T12:00:00.000Z', issuedDay: isoDay('2026-09-05'), organization: { 'organization.name': 'Musterverein e.V.' }, theme: DEFAULT_THEME, logo: null };
 
 const input = {
   organization: { name: 'Musterverein e.V.', addressLines: ['Musterweg 1', '12345 Musterstadt'] },
@@ -69,5 +69,10 @@ describe('waiver declaration template', () => {
   it('refuses an input without basis or with a zero amount', () => {
     expect(waiverDeclarationTemplate.schema.safeParse({ ...input, basisText: '' }).success).toBe(false);
     expect(waiverDeclarationTemplate.schema.safeParse({ ...input, amountCents: 0 }).success).toBe(false);
+  });
+
+  it('refuses an impossible day as a validation issue, not an exception in build', () => {
+    expect(waiverDeclarationTemplate.schema.safeParse({ ...input, declaredOn: '2026-02-30' }).success).toBe(false);
+    expect(waiverDeclarationTemplate.schema.safeParse({ ...input, agreedOn: '2026-02-30' }).success).toBe(false);
   });
 });

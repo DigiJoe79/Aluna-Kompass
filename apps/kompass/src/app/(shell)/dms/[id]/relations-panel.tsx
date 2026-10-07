@@ -108,8 +108,8 @@ export function RelationsPanel({
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent size="md" className="bg-surface shadow-md">
-          <DialogTitle className="font-heading text-[19px]">{t('add')}</DialogTitle>
-          <DialogDescription className="text-[13px] text-muted-ink">{t('addDescription')}</DialogDescription>
+          <DialogTitle>{t('add')}</DialogTitle>
+          <DialogDescription>{t('addDescription')}</DialogDescription>
 
           <div className="mt-5">
             <FormGrid>

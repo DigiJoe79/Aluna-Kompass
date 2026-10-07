@@ -1,4 +1,4 @@
-import { hasPermission, readSetting } from '@kompass/core';
+import { hasPermission } from '@kompass/core';
 import { listMyExpenseClaims } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -8,7 +8,7 @@ import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
 import { buttonVariants } from '@/components/ui/button';
-import type { DateFormatMode } from '@/lib/dates';
+import { dateFormatOf } from '@/lib/date-format';
 import { groupClaims } from '@/lib/finance/expenses';
 import { requireSession } from '@/lib/request-context';
 import { ClaimGroup } from './claims-list';
@@ -23,7 +23,7 @@ export default async function ExpensesPage() {
   const { deps, ctx } = await requireSession();
   if (!hasPermission(ctx, 'finance.expensesSubmit')) return <Page width="standard"><ForbiddenCard permission="finance.expensesSubmit" /></Page>;
   const t = await getTranslations('finance.expenses.list');
-  const mode = readSetting<DateFormatMode>(deps, 'ui.dateFormat');
+  const fmt = dateFormatOf(deps);
   const newLink = (
     <Link href="/finance/expenses/new" className={buttonVariants({ variant: 'default' })}>
       {t('new')}
@@ -50,8 +50,8 @@ export default async function ExpensesPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          <ClaimGroup id="open" title={t('open')} claims={groups.open} mode={mode} />
-          <ClaimGroup id="done" title={t('done')} claims={groups.done} mode={mode} />
+          <ClaimGroup id="open" title={t('open')} claims={groups.open} fmt={fmt} />
+          <ClaimGroup id="done" title={t('done')} claims={groups.done} fmt={fmt} />
         </div>
       )}
     </Page>

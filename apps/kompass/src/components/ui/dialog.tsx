@@ -2,9 +2,10 @@
 
 import * as React from "react"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 
 import { Button } from "@/components/ui/button"
+import { SectionLevel } from "@/components/section"
 import { XIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 
@@ -108,14 +109,15 @@ function DialogContent({
         }}
         {...props}
       >
-        {children}
+        <SectionLevel level={3}>{children}</SectionLevel>
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
             render={
               <Button
                 variant="ghost"
-                className="absolute top-2 right-2"
+                // 32 px sichtbar, 44 px Klickfläche — wie im Seitenfenster (K10 § 4.6).
+                className="absolute top-3 right-3 after:absolute after:-inset-2"
                 size="icon-sm"
               />
             }
@@ -183,24 +185,34 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn(
-        "font-heading text-base leading-none font-medium",
-        className
-      )}
+      // K10: Schrift, Größe und Farbe stehen hier und nicht an der Aufrufstelle (Wächter no-title-override).
+      className={cn("font-heading text-dialog-title text-ink", className)}
       {...props}
     />
   )
 }
 
+/**
+ * Zwei Stufen, keine weiteren (K10, Designer und Joe 2026-10-07): `body`, wenn der Satz die Folge erklärt
+ * (Löschen, Überschreiben, Veröffentlichen, ein einmalig sichtbares Geheimnis); sonst `meta`. Muted ist Text,
+ * den man auslassen kann. Der Satz bleibt in der Description — er ist die Beschreibung, die ein Vorleser sagt.
+ */
+const DESCRIPTION_TONE = {
+  meta: "text-meta text-muted-ink",
+  body: "text-body text-ink-2",
+} as const
+
 function DialogDescription({
   className,
+  tone = "meta",
   ...props
-}: DialogPrimitive.Description.Props) {
+}: DialogPrimitive.Description.Props & { tone?: keyof typeof DESCRIPTION_TONE }) {
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
       className={cn(
-        "text-sm text-muted-ink *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-ink",
+        DESCRIPTION_TONE[tone],
+        "*:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-ink",
         className
       )}
       {...props}
@@ -209,6 +221,7 @@ function DialogDescription({
 }
 
 export {
+  DESCRIPTION_TONE,
   Dialog,
   DialogBody,
   DialogClose,

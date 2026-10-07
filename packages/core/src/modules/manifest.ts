@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import type { CallContext } from '../context';
+import type { IsoDay } from '../dates';
 import { dashboardOptionFields, type DashboardTile } from '../dashboard/types';
 import type { DbOrTx } from '../db/client';
 import { validateDeletionRules, type DeletionRule } from '../deletion-policy';
@@ -215,6 +216,11 @@ export interface LinkedDocumentAccess {
 export interface DocumentRenderContext {
   number: string;
   issuedAt: string;
+  /**
+   * Der Tag auf dem Dokument im Kalender des Vereins: `issuedOn`, sonst heute in `organization.timeZone`.
+   * Papier druckt ihn über `paperDate` (K10) — nie `issuedAt`, dessen erste zehn Zeichen der UTC-Tag sind.
+   */
+  issuedDay: IsoDay;
   organization: Record<string, unknown>;
   theme: Theme;
   /** Bytes und MIME-Typ des aktiven Logos, falls vorhanden. */

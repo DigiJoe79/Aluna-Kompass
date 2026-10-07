@@ -63,8 +63,8 @@ export function ReclassifyDialog({
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent size="md" className="bg-surface shadow-md">
-          <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
-          <DialogDescription className="text-[14px] text-ink-2">{t('description')}</DialogDescription>
+          <DialogTitle>{t('title')}</DialogTitle>
+          <DialogDescription tone="body">{t('description')}</DialogDescription>
           <ActionForm action={action} state={state} className="flex flex-col gap-4">
             <input type="hidden" name="expectedVersion" value={doc.updatedAt} />
             <FormGrid>

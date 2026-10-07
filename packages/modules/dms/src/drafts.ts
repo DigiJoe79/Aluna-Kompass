@@ -1,5 +1,6 @@
 import {
   yearIn,
+  todayIn,
   buildContext,
   hasPermission,
   reservedLinkTypes,
@@ -123,7 +124,8 @@ export async function createDraft(deps: Deps, ctx: CallContext, input: unknown):
 
   const id = newId();
   const now = isoNow(deps.clock);
-  const documentDate = parsed.value.documentDate ?? now.slice(0, 10);
+  // Der Tag des Vereins, nicht der UTC-Tag: Ein Brief von 0:30 Uhr trägt sonst den Vortag (`issuedOn`).
+  const documentDate = parsed.value.documentDate ?? todayIn(deps);
   const folderRes = resolveFolder(deps.db, parsed.value.folder, docType.defaultFolder);
   if (!folderRes.ok) return folderRes;
   const folder = folderRes.value;
@@ -515,7 +517,7 @@ export async function createResponseDraft(deps: Deps, ctx: CallContext, input: u
   const id = newId();
 
   return deps.db.transaction((tx: DbOrTx) => {
-    const row = insertDraft(tx, deps, ctx, { id, docType, subject, body: '', documentDate: now.slice(0, 10), folder: source.folder, links, now });
+    const row = insertDraft(tx, deps, ctx, { id, docType, subject, body: '', documentDate: todayIn(deps), folder: source.folder, links, now });
     insertRelation(tx, deps, ctx, { documentId: row.id, relatedDocumentId: source.id, kind: 'repliesTo' }, row, source);
     return ok(toRecord(deps, ctx, row, tx));
   });

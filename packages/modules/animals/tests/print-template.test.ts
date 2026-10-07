@@ -1,3 +1,4 @@
+import { isoDay } from '@kompass/core';
 import { describe, expect, it } from 'vitest';
 import { animalsModule } from '../src/manifest';
 import { animalProfileTemplate, PROFILE_BASE, PROFILE_TEMPLATE_KEY, profileInputSchema, type ProfileInput, type ProfilePage } from '../src/print/template';
@@ -19,7 +20,7 @@ const page = (over: Partial<ProfilePage> = {}): ProfilePage => ({
   ...over,
 });
 const input = (pages: ProfilePage[]): ProfileInput => ({ frame: { aspect: [4, 5], focusX: 50, focusY: 40 }, pages });
-const ctx = { number: '', issuedAt: '2026-10-05T12:00:00.000Z', organization: {}, theme: {} as never, logo: null };
+const ctx = { number: '', issuedAt: '2026-10-05T12:00:00.000Z', issuedDay: isoDay('2026-10-05'), organization: {}, theme: {} as never, logo: null };
 
 describe('animalProfileTemplate', () => {
   it('is an ad-hoc extract on the slim base, readable with animals.view, registered in the manifest', () => {

@@ -1,5 +1,6 @@
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
+import { HydrationMarker } from '@/components/hydration-marker';
 import { buttonVariants } from '@/components/ui/button';
 
 export function ForbiddenCard({ permission }: { permission: string }) {
@@ -17,6 +18,7 @@ export function ForbiddenCard({ permission }: { permission: string }) {
         <Link href="/" className={buttonVariants()}>{t('home')}</Link>
         <span className="text-[12px] text-muted-ink">{t('footnote')}</span>
       </div>
+      <HydrationMarker />
     </section>
   );
 }

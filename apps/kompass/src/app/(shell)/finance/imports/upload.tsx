@@ -261,7 +261,7 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
         <DialogContent size="sm" className="bg-surface shadow-md">
           {pending && doubt?.kind === 'many' ? (
             <>
-              <DialogTitle className="font-heading text-[19px]">{t('choose.title')}</DialogTitle>
+              <DialogTitle>{t('choose.title')}</DialogTitle>
               <p className="text-[14px] text-ink-2">
                 {t(doubt.format === 'csv' ? 'choose.questionCsv' : 'choose.questionCamt', { file: pending.file.name, count: doubt.accounts.length })}
               </p>
@@ -284,7 +284,7 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
 
           {pending && doubt?.kind === 'none' && doubt.format === 'csv' ? (
             <>
-              <DialogTitle className="font-heading text-[19px]">{t('noneCsv.title')}</DialogTitle>
+              <DialogTitle>{t('noneCsv.title')}</DialogTitle>
               <p className="text-[14px] text-ink-2">{t('noneCsv.text', { file: pending.file.name })}</p>
               <p className="text-[14px] text-ink-2">{t('noneCsv.question')}</p>
               <FormActionBar placement="dialog" cancel={() => answer(null)} saveLabel={t('noneCsv.setUp')} onSave={() => openAssistantWith(pending)} />
@@ -293,7 +293,7 @@ export function ImportUpload({ accounts }: { accounts: ImportAccountOption[] }) 
 
           {pending && doubt?.kind === 'none' && doubt.format === 'camt053' ? (
             <>
-              <DialogTitle className="font-heading text-[19px]">{t('noneCamt.title')}</DialogTitle>
+              <DialogTitle>{t('noneCamt.title')}</DialogTitle>
               <p className="text-[14px] text-ink-2">{t('noneCamt.text', { file: pending.file.name, iban: groupIban(doubt.iban ?? '') })}</p>
               <p className="text-[14px] text-ink-2">{t('noneCamt.hint')}</p>
               <DialogFooter>

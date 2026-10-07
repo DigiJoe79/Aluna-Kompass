@@ -1,23 +1,32 @@
 'use client';
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
-import { formatDate, formatDateTime, type DateFormatMode } from '@/lib/dates';
+import { DEFAULT_TIME_ZONE, formatDate, formatDateTime, type DateFormatMode } from '@/lib/dates';
 
-const DateFormatContext = createContext<DateFormatMode>('locale');
+type DateFormat = { mode: DateFormatMode; timeZone: string };
 
-/** Die Schale setzt das Format aus der Einstellung `ui.dateFormat`; Client-Bausteine lesen es hier. */
-export function DateFormatProvider({ mode, children }: { mode: DateFormatMode; children: ReactNode }) {
-  return <DateFormatContext.Provider value={mode}>{children}</DateFormatContext.Provider>;
+// Ohne Provider (Tests, Seiten außerhalb der Schale) die Vorgabe des Kerns.
+const DateFormatContext = createContext<DateFormat>({ mode: 'locale', timeZone: DEFAULT_TIME_ZONE });
+
+/**
+ * Die Schale setzt das Format aus der Einstellung `ui.dateFormat` und die Zone aus `organization.timeZone`
+ * (`timeZoneOf`); Client-Bausteine lesen beides hier, Server-Seiten über `dateFormatOf` (`@/lib/date-format`). Aus einem
+ * Zeitstempel wird so der Tag des Vereins.
+ */
+export function DateFormatProvider({ mode, timeZone, children }: { mode: DateFormatMode; timeZone: string; children: ReactNode }) {
+  const value = useMemo(() => ({ mode, timeZone }), [mode, timeZone]);
+  return <DateFormatContext.Provider value={value}>{children}</DateFormatContext.Provider>;
 }
 
 export function useDateFormat() {
-  const mode = useContext(DateFormatContext);
+  const { mode, timeZone } = useContext(DateFormatContext);
   return useMemo(
     () => ({
       mode,
-      date: (value: string | null | undefined) => formatDate(value, mode),
-      dateTime: (value: string | null | undefined) => formatDateTime(value, mode),
+      timeZone,
+      date: (value: string | null | undefined) => formatDate(value, mode, timeZone),
+      dateTime: (value: string | null | undefined) => formatDateTime(value, mode, timeZone),
     }),
-    [mode],
+    [mode, timeZone],
   );
 }

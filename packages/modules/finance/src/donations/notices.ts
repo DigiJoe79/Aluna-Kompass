@@ -1,4 +1,4 @@
-import { invalid, isoNow, newId, notFound, ok, readSetting, requirePermission, todayIn, validate, writeSettingInternal, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { invalid, isoDay, isoNow, messageDate, newId, notFound, ok, paperDate, readSetting, requirePermission, todayIn, validate, writeSettingInternal, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { abortReceive, documents, getDocumentRecord, linkDocumentInternal, receiveGeneratedUpload } from '@kompass/module-dms';
 import { and, eq, gt, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { z } from 'zod';
@@ -8,7 +8,6 @@ import { requireFinanceRead } from '../ledger/access';
 import { CERTIFIABLE_INCOME_KINDS } from '../ledger/codes';
 import { NOTICE_KINDS, noticeValidAt, noticeValidUntil, type NoticeKind } from '../ledger/notice-validity';
 import { financeAllocationLines, financeCategories, financeEntries, financeNotices, type FinanceNoticeRow } from '../schema';
-import { germanDate } from './templates/shared';
 
 /**
  * Bescheide des Vereins (F6a Task 2, Spec 7.1): eine datierte Reihe, nie
@@ -261,7 +260,7 @@ export async function attachNoticeDocument(deps: Deps, ctx: CallContext, input: 
   const result = await receiveGeneratedUpload(deps, ctx, {
     bytes: v.bytes,
     typeKey: readSetting<string>(deps, 'dms.defaultTypeIncoming'),
-    subject: `${SUBJECT_KIND[before.kind]} vom ${germanDate(before.noticeDate)}`,
+    subject: `${SUBJECT_KIND[before.kind]} vom ${paperDate(isoDay(before.noticeDate))}`,
     documentDate: before.noticeDate,
     links: [{ entityType: 'financeNotice', entityId: before.id }],
     afterReceive: (tx, doc) => {
@@ -302,7 +301,7 @@ export async function supersedeNotice(deps: Deps, ctx: CallContext, input: unkno
     if (documentId) linkDocumentInternal(tx, deps, { documentId, entityType: 'financeNotice', entityId: v.id });
     const synced = syncCoreSettingsInternal(tx, deps, ctx);
     if (!synced.ok) return synced;
-    financeAudit(tx, deps, ctx, { action: 'finance.notice.supersede', entity: 'financeNotice', id: v.id, after: { supersededOn: v.supersededOn, supersededDocumentId: documentId }, summary: `Bescheid ${v.id} aufgehoben oder ersetzt am ${v.supersededOn}` });
+    financeAudit(tx, deps, ctx, { action: 'finance.notice.supersede', entity: 'financeNotice', id: v.id, after: { supersededOn: v.supersededOn, supersededDocumentId: documentId }, summary: `Bescheid ${v.id} aufgehoben oder ersetzt am ${messageDate(deps, v.supersededOn)}` });
     return ok(viewInternal(tx, v.id, todayIn(deps)));
   });
 }

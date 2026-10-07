@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { recordAudit } from '../audit/log';
 import { isoNow } from '../clock';
 import type { CallContext } from '../context';
+import { isoDay } from '../dates';
 import type { DbOrTx } from '../db/client';
 import { mediaAssets } from '../db/schema';
 import type { Deps } from '../deps';
@@ -11,6 +12,7 @@ import type { DocumentBuildResult, DocumentImage, DocumentRenderContext, Documen
 import { requirePermission } from '../permissions/check';
 import { conflict, notFound, ok, type Result } from '../result';
 import { readAllSettings, readSetting } from '../settings/service';
+import { todayIn } from '../today';
 import { resolveActiveTheme } from '../themes/service';
 import { validate } from '../validate';
 import { enabledManifests } from '../modules/service';
@@ -39,7 +41,8 @@ export async function buildContext(deps: Deps, ctx: CallContext, number: string,
     if (asset) logo = { bytes: await deps.media.read(asset.filename), mimeType: asset.mimeType };
   }
   const issuedAt = issuedOn ? `${issuedOn}T12:00:00.000Z` : isoNow(deps.clock);
-  return { number, issuedAt, organization, theme: resolveActiveTheme(deps), logo };
+  const issuedDay = issuedOn ? isoDay(issuedOn) : todayIn(deps);
+  return { number, issuedAt, issuedDay, organization, theme: resolveActiveTheme(deps), logo };
 }
 
 /** Der Snapshot eines ausgestellten Dokuments — `input ∪ { slots, base, baseChecksum, images }`, je Bild nur die Prüfsumme. */

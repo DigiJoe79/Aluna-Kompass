@@ -38,8 +38,8 @@ export function CreateUserDialog({ roles }: { roles: { id: string; name: string;
         <DialogTrigger render={<Button>{t('button')}</Button>} />
         <DialogContent size="md" className="bg-surface shadow-md">
           <ActionForm action={action} state={state}>
-            <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
-            <DialogDescription className="text-[13px] text-muted-ink">{t('subtitle')}</DialogDescription>
+            <DialogTitle>{t('title')}</DialogTitle>
+            <DialogDescription>{t('subtitle')}</DialogDescription>
             <section className="mt-4">
               <h3 className="text-[15px] font-semibold">{t('person')}</h3>
               <div className="mt-3">

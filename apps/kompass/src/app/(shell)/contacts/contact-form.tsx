@@ -169,8 +169,8 @@ export function CreateContactDialog({
       <DialogContent size="lg" layout="fixed-footer" className="bg-surface shadow-md">
         <ActionForm action={action} state={state} className="flex min-h-0 flex-1 flex-col">
           <DialogHeader>
-            <DialogTitle className="font-heading text-[19px]">{contact ? t(contact.kind === 'organization' ? 'edit.titleOrganization' : 'edit.titlePerson') : t('create.title')}</DialogTitle>
-            <DialogDescription className="text-[13px] text-muted-ink">{t(`${mode}.description`)}</DialogDescription>
+            <DialogTitle>{contact ? t(contact.kind === 'organization' ? 'edit.titleOrganization' : 'edit.titlePerson') : t('create.title')}</DialogTitle>
+            <DialogDescription>{t(`${mode}.description`)}</DialogDescription>
           </DialogHeader>
           <DialogBody>
             {contact ? (

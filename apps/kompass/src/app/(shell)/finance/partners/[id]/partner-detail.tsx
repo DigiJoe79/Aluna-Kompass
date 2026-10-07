@@ -116,7 +116,7 @@ export function PartnerDetail({ partner, notices, payments, registerDocument, ag
                           </>
                         ) : null}
                       </TableCell>
-                      <TableCell className="hidden text-right font-mono tabular-nums sm:table-cell">{fmt.date(p.date.slice(0, 10))}</TableCell>
+                      <TableCell className="hidden text-right font-mono tabular-nums sm:table-cell">{fmt.date(p.date)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

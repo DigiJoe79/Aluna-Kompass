@@ -81,21 +81,21 @@ describe('evidence-rules — pure required-evidence and coverage math (F7 Task 1
 
 describe('evidenceSubject — Betreff eines abgelegten Nachweises (AL, Recheck sha-0170e73)', () => {
   it('nennt die Art in Worten, nie den Code', () => {
-    expect(evidenceSubject('paymentProof', 'transfer58', '2026-09-28', 'de')).toBe('Zahlungsnachweis vom 28.09.2026');
-    expect(evidenceSubject('recipientReceipt', 'transfer58', '2026-09-28', 'de')).toBe('Empfangsbestätigung vom 28.09.2026');
-    expect(evidenceSubject('invoice', 'transfer58', '2026-09-28', 'de')).toBe('Rechnung oder Abrechnung vom 28.09.2026');
-    expect(evidenceSubject('report', 'agent57', '2026-09-28', 'de')).toBe('Bericht vom 28.09.2026');
-    for (const kind of EVIDENCE_KINDS) for (const basis of ['transfer58', 'agent57'] as const) expect(evidenceSubject(kind, basis, '2026-09-28', 'de')).not.toContain(kind);
+    expect(evidenceSubject('paymentProof', 'transfer58', '28.09.2026', 'de')).toBe('Zahlungsnachweis vom 28.09.2026');
+    expect(evidenceSubject('recipientReceipt', 'transfer58', '28.09.2026', 'de')).toBe('Empfangsbestätigung vom 28.09.2026');
+    expect(evidenceSubject('invoice', 'transfer58', '28.09.2026', 'de')).toBe('Rechnung oder Abrechnung vom 28.09.2026');
+    expect(evidenceSubject('report', 'agent57', '28.09.2026', 'de')).toBe('Bericht vom 28.09.2026');
+    for (const kind of EVIDENCE_KINDS) for (const basis of ['transfer58', 'agent57'] as const) expect(evidenceSubject(kind, basis, '28.09.2026', 'de')).not.toContain(kind);
   });
 
   it('die Vereinbarung heißt beim Auftrag „Auftrag je Vorhaben“', () => {
-    expect(evidenceSubject('agreement', 'transfer58', '2026-09-28', 'de')).toBe('Vereinbarung vom 28.09.2026');
-    expect(evidenceSubject('agreement', 'agent57', '2026-09-28', 'de')).toBe('Auftrag je Vorhaben vom 28.09.2026');
+    expect(evidenceSubject('agreement', 'transfer58', '28.09.2026', 'de')).toBe('Vereinbarung vom 28.09.2026');
+    expect(evidenceSubject('agreement', 'agent57', '28.09.2026', 'de')).toBe('Auftrag je Vorhaben vom 28.09.2026');
     expect(evidenceKindLabelKey('agreement', 'agent57')).toBe('agreementAgent57');
   });
 
   it('eine Leitsprache ohne eigene Tabelle fällt auf Deutsch zurück', () => {
-    expect(evidenceSubject('paymentProof', 'transfer58', '2026-09-28', 'en')).toBe(evidenceSubject('paymentProof', 'transfer58', '2026-09-28', 'de'));
+    expect(evidenceSubject('paymentProof', 'transfer58', '28.09.2026', 'en')).toBe(evidenceSubject('paymentProof', 'transfer58', '28.09.2026', 'de'));
     expect(Object.keys(EVIDENCE_KIND_NAMES.de).sort()).toEqual(['agreement', 'agreementAgent57', 'invoice', 'paymentProof', 'recipientReceipt', 'report', 'settlement']);
   });
 });

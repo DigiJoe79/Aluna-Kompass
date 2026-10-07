@@ -1,4 +1,4 @@
-import type { DocumentRenderContext, DocumentTemplate } from '@kompass/core';
+import { isoDay, type DocumentRenderContext, type DocumentTemplate } from '@kompass/core';
 import { DEFAULT_THEME } from '@kompass/core/themes';
 import { describe, expect, it } from 'vitest';
 import { collectiveConfirmationTemplate } from '../src/donations/templates/collective';
@@ -11,7 +11,7 @@ import { BASE_DRAWS_ADDRESS_ZONE } from '../src/typst-pure';
 import * as W from '../src/donations/templates/wording';
 import { financeModule } from '../src/manifest';
 
-const ctx: DocumentRenderContext = { number: 'ZWB-2026-001', issuedAt: '2026-03-20T12:00:00.000Z', organization: { 'organization.name': 'Musterverein e.V.' }, theme: DEFAULT_THEME, logo: null };
+const ctx: DocumentRenderContext = { number: 'ZWB-2026-001', issuedAt: '2026-03-20T12:00:00.000Z', issuedDay: isoDay('2026-03-20'), organization: { 'organization.name': 'Musterverein e.V.' }, theme: DEFAULT_THEME, logo: null };
 const PNG = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64'));
 const FACSIMILE = { bytes: PNG, checksum: 'f'.repeat(64), mimeType: 'image/png' as const };
 
@@ -162,6 +162,14 @@ describe('money confirmation', () => {
     expect(refuses(moneyConfirmationTemplate as DocumentTemplate<unknown>, { ...money, ...machine, facsimile: undefined })).toBe(true);
     expect(refuses(moneyConfirmationTemplate as DocumentTemplate<unknown>, { ...money, ...machine, machineNotifiedOn: null })).toBe(true);
     expect(refuses(moneyConfirmationTemplate as DocumentTemplate<unknown>, { ...money, ...machine, signerName: null })).toBe(true);
+  });
+
+  it('refuses an impossible day as a validation issue, not an exception in build', () => {
+    const T = moneyConfirmationTemplate as DocumentTemplate<unknown>;
+    expect(refuses(T, { ...money, issuedOn: '2026-02-30' })).toBe(true);
+    expect(refuses(T, { ...money, donatedOn: '2026-02-30' })).toBe(true);
+    expect(refuses(T, { ...money, notice: { ...common.notice, noticeDate: '2026-02-30' } })).toBe(true);
+    expect(refuses(collectiveConfirmationTemplate as DocumentTemplate<unknown>, { ...collective, periodTo: '2026-02-30' })).toBe(true);
   });
 
   it('an expense waiver is never confirmed by the machine procedure', () => {

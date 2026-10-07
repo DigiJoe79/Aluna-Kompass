@@ -94,7 +94,7 @@ export function LogDialog({ item, onClose }: { item: LogSubject | null; onClose(
     <Dialog open={item !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent size="lg" layout="fixed-footer" initialFocus={pre} className="bg-surface">
         <DialogHeader>
-          <DialogTitle className="font-heading text-[16px]">{item ? t('title', { when: format.dateTime(new Date(item.startedAt), { dateStyle: 'medium', timeStyle: 'short' }) }) : ''}</DialogTitle>
+          <DialogTitle>{item ? t('title', { when: format.dateTime(new Date(item.startedAt), { dateStyle: 'medium', timeStyle: 'short' }) }) : ''}</DialogTitle>
           {item ? (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-2">
               <StatusMark status={item.status} />

@@ -1,4 +1,4 @@
-import { hasPermission, isoNow } from '@kompass/core';
+import { hasPermission, todayIn } from '@kompass/core';
 import { getDocumentRecord } from '@kompass/module-dms';
 import { freeReserveCapOverview, listFiscalYears, listPurposes, listReserves, valueAt, type FreeReserveCapYearView } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
@@ -25,7 +25,7 @@ export default async function ReservesPage() {
   const t = await getTranslations('finance.reserves');
   const tLimit = await getTranslations('finance.limitProgress');
 
-  const today = isoNow(deps.clock).slice(0, 10);
+  const today = todayIn(deps);
   const canSetup = hasPermission(ctx, 'finance.setup');
   // Stillgelegtes sieht, wer es wieder aktivieren kann (Befund 40).
   const reservesRes = await listReserves(deps, ctx, { includeInactive: canSetup });

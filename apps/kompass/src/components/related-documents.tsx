@@ -1,10 +1,10 @@
-import { hasPermission, isModuleEnabled, readSetting, type CallContext, type Deps } from '@kompass/core';
+import { hasPermission, isModuleEnabled, type CallContext, type Deps } from '@kompass/core';
 import { listDocuments, requireDmsGate } from '@kompass/module-dms';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { StatusBadge } from '@/components/status-badge';
 import { buttonVariants } from '@/components/ui/button';
-import { formatDate, type DateFormatMode } from '@/lib/dates';
+import { dateFormatOf } from '@/lib/date-format';
 
 /**
  * Die Beziehungsakte von der anderen Seite. Lebt in der App-Schicht, weil
@@ -28,17 +28,18 @@ export async function RelatedDocuments({
   const res = await listDocuments(deps, ctx, { linkedTo: { entityType, entityId }, limit: 50 });
   if (!res.ok) return null;
   const canCreate = hasPermission(ctx, 'dms.create');
-  const dateFormat = readSetting<DateFormatMode>(deps, 'ui.dateFormat');
+  const fmt = dateFormatOf(deps);
 
   const receiveHref =
     entityType === 'contact' ? `/dms/receive?sender=${entityId}` : `/dms/receive?about=${entityType}:${entityId}`;
 
   return (
     <section data-testid="related-documents" className="rounded-md border border-line bg-surface p-5">
-      <div className="mb-3 flex items-center justify-between gap-3">
+      {/* Zwei Aktionen passen am Telefon nicht neben den Titel: umbrechen wie der Seitenkopf. */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-[15px] font-semibold text-ink">{t('title')}</h2>
         {canCreate ? (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {entityType === 'contact' ? (
               <Link href={`/dms/new?recipient=${entityId}`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
                 {t('writeLetter')}
@@ -64,7 +65,7 @@ export async function RelatedDocuments({
                 <Link href={`/dms/${doc.id}`} className="min-w-0 flex-1 truncate text-ink hover:underline">
                   {doc.subject}
                 </Link>
-                <span className="font-mono text-[12px] text-ink-2">{formatDate(doc.documentDate, dateFormat)}</span>
+                <span className="font-mono text-[12px] text-ink-2">{fmt.date(doc.documentDate)}</span>
                 {role ? <StatusBadge tone="neutral">{t(`roles.${role}`)}</StatusBadge> : null}
               </li>
             );

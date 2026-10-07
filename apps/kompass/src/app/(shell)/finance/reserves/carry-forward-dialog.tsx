@@ -62,8 +62,8 @@ export function CarryForwardDialog({ reserve, onClose, onSaved }: { reserve: Res
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent size="md" className="bg-surface shadow-md">
-        <DialogTitle className="font-heading text-[19px]">{t('title', { name: reserve.name })}</DialogTitle>
-        <DialogDescription className="text-[13px] text-ink-2">{t('hint')}</DialogDescription>
+        <DialogTitle>{t('title', { name: reserve.name })}</DialogTitle>
+        <DialogDescription>{t('hint')}</DialogDescription>
         <div className="space-y-3.5" data-testid="carry-forward-dialog">
           <FormGrid>
             <FormField id="carry-forward-amount" label={t('amount')} required size="s">

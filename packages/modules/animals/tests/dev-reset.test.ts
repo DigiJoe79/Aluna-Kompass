@@ -26,7 +26,9 @@ function workspace() {
   };
 }
 
-describe('devReset', () => {
+// Jeder Test fährt mindestens einen vollen Seed; seit den Bildern im Seed (0.2.7) braucht einer allein
+// auf den CI-Läufern schon gut 5 s (Dependabot-PRs vom 2026-10-06: 5.047 ms). Deshalb für die ganze Gruppe.
+describe('devReset', { timeout: 30_000 }, () => {
   it('refuses to run outside the development environment', async () => {
     const ws = workspace();
     await expect(devReset({ ...ws, env: 'production' })).rejects.toThrow(/development/);
@@ -83,6 +85,5 @@ describe('devReset', () => {
     const again = await devReset({ ...ws, env: 'development' });
     expect(again.counts.animals).toBe(2);
     expect(existsSync(path.join(ws.mediaPath, 'verwaist.bin'))).toBe(false);
-    // Zwei volle Seeds mit Joes Bildern (Plan 2b, Task 2: je ~0,5 s Vorschaubilder) — unter paralleler Last über 5 s.
-  }, 30_000);
+  });
 });

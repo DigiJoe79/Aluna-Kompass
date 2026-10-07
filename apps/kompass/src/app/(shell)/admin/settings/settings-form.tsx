@@ -1,5 +1,6 @@
 'use client';
 
+import { Section } from '@/components/section';
 import { Info } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
@@ -16,6 +17,7 @@ import { FormErrorSummary } from '@/components/forms/form-error-summary';
 import { PanelNav } from '@/components/panel-nav';
 import { Textarea } from '@/components/ui/textarea';
 import { MediaPicker } from '@/components/forms/media-picker';
+import { useDateFormat } from '@/components/date-format-provider';
 import { managedHintKey, managedTarget, SETTINGS_TABS, settingsSections, TAX_REQUIRED, type SettingsField } from '@/lib/settings-fields';
 import { formatDate, type DateFormatMode } from '@/lib/dates';
 import { cn } from '@/lib/utils';
@@ -42,6 +44,7 @@ export function SettingsForm({
 }) {
   const t = useTranslations('settings');
   const c = useTranslations('common');
+  const { timeZone } = useDateFormat();
   const [values, setValues] = useState<Values>(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, start] = useTransition();
@@ -80,7 +83,7 @@ export function SettingsForm({
     // E-1: kein Eingabeelement für geführte Felder — Wert, Kennzeichen und der Weg dorthin, statt readOnly/disabled.
     if (isManaged && target) {
       // Befund 32 (0.2.1): ein Datum wie überall im Format des Vereins, nicht als ISO.
-      const display = field.kind === 'select' && value ? t(`options.${field.key}.${String(value)}`) : field.kind === 'date' && value ? formatDate(String(value), (initial['ui.dateFormat'] as DateFormatMode | undefined) ?? 'locale') : value === null || value === undefined ? '' : String(value);
+      const display = field.kind === 'select' && value ? t(`options.${field.key}.${String(value)}`) : field.kind === 'date' && value ? formatDate(String(value), (initial['ui.dateFormat'] as DateFormatMode | undefined) ?? 'locale', timeZone) : value === null || value === undefined ? '' : String(value);
       return (
         <FormCell key={field.key} size={field.size}>
           <ManagedField label={label} value={display} managedBy={{ label: t(`managedTarget.${target.targetKey}`), href: target.href }} />
@@ -218,7 +221,7 @@ export function SettingsForm({
             </div>
           ) : null}
           {tab.key === 'branding' ? (
-            <div className="flex flex-col gap-1">
+            <div className="mb-5 flex flex-col gap-1 border-b border-line pb-5">
               <MediaPicker
                 name="branding.logoAssetId"
                 value={String(values['branding.logoAssetId'] ?? '') || null}
@@ -228,14 +231,18 @@ export function SettingsForm({
               <p className="text-[12px] text-ink-2">{t('logo.hint')}</p>
             </div>
           ) : null}
-          {settingsSections(tab).map(({ section, fields }, index) => (
-            <section key={section ?? index} className={cn((index > 0 || tab.key === 'branding') && 'mt-5 border-t border-line pt-5')}>
-              {section ? <h3 className="text-[15px] font-semibold">{t(`sections.${section}`)}</h3> : null}
-              <div className={cn(section && 'mt-3')}>
+          {settingsSections(tab).map(({ section, fields }, index) =>
+            section ? (
+              <Section key={section} title={t(`sections.${section}`)}>
+                <FormGrid>{fields.map(render)}</FormGrid>
+              </Section>
+            ) : (
+              // Felder ohne Abschnitt (Bank, Anzeige): kein Titel, also keine `Section`.
+              <div key={index} className={cn(index > 0 && 'mt-5 border-t border-line pt-5')}>
                 <FormGrid>{fields.map(render)}</FormGrid>
               </div>
-            </section>
-          ))}
+            ),
+          )}
         </div>
         );
       })}

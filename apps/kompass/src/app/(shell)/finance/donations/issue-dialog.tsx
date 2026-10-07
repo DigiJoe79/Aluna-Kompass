@@ -203,7 +203,7 @@ export function IssueDialog({ lineId, contactName, open, onOpenChange, today, ca
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="xl" layout="fixed-footer" className="h-[85vh] bg-surface shadow-md">
         <DialogHeader data-testid="issue-dialog-head">
-          <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
+          <DialogTitle>{t('title')}</DialogTitle>
           {check ? (
             <p className="text-[13px] text-ink-2">
               {contactName ? <span className="font-semibold text-ink">{contactName} · </span> : null}

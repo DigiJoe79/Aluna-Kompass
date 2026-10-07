@@ -11,6 +11,7 @@ import { conflict, invalid, ok, type Result } from '../result';
 import { writeSettingInternal } from '../settings/service';
 import { isSetupRequired } from '../setup/service';
 import { loadUserSummary } from '../users/service';
+import { messageDateTime } from '../message-date';
 import { validate } from '../validate';
 import { extractBackup } from './archive';
 import { DB_RELATIVE } from './export';
@@ -83,7 +84,7 @@ async function applyBackup(
       entityType: 'backup',
       entityId: opts.archiveName,
       after: manifest,
-      summary: `Bestand aus Backup (${manifest.environment}, ${manifest.createdAt}) importiert durch ${opts.importerEmail ?? 'unbekannt'}`,
+      summary: `Bestand aus Backup (${manifest.environment}, ${messageDateTime(deps, manifest.createdAt)}) importiert durch ${opts.importerEmail ?? 'unbekannt'}`,
     });
   });
   return ok({ manifest });

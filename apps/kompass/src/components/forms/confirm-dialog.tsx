@@ -57,8 +57,8 @@ export function ConfirmDialog({
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? onOpenChange(true) : close())}>
       <DialogContent role={role} size="sm" className="bg-surface shadow-md">
-        <DialogTitle className="font-heading text-[19px]">{title}</DialogTitle>
-        <DialogDescription className="text-[14px] text-ink-2">{description}</DialogDescription>
+        <DialogTitle>{title}</DialogTitle>
+        <DialogDescription tone="body">{description}</DialogDescription>
         {children}
         <RefusalNotice action state={feedback.state} />
         <FormActionBar placement="dialog" mode="run" cancel={close} onSave={() => void confirm()} pending={pending} saveDisabled={confirmDisabled} saveLabel={confirmLabel} destructive={destructive} />

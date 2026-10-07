@@ -5,12 +5,6 @@
  * darf `donations/` nicht kennen (`direction.test.ts`).
  */
 
-/** ISO → TT.MM.JJJJ. */
-export function germanDate(iso: string): string {
-  const [y, m, d] = iso.slice(0, 10).split('-');
-  return `${d}.${m}.${y}`;
-}
-
 /** 123456 → „1.234,56 €“ — ohne Intl, damit das PDF nicht an der ICU-Fassung hängt. */
 export function formatCents(value: number): string {
   const euros = String(Math.floor(value / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');

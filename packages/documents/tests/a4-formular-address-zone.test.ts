@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import type { DocumentRenderContext } from '@kompass/core';
+import { isoDay, type DocumentRenderContext } from '@kompass/core';
 import { DEFAULT_THEME } from '@kompass/core/themes';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createDocumentEngine, createTypstRenderer, resolveAssetDirs, resolveBases } from '../src';
@@ -128,7 +128,7 @@ describe('a4-formular base: optional address zone', () => {
   });
 
   it('the engine tells the body which slots the base draws', async () => {
-    const context: DocumentRenderContext = { number: 'ZWB-2026-001', issuedAt: '2026-09-05T08:00:00.000Z', organization: { 'organization.name': 'Musterverein e.V.' }, theme: DEFAULT_THEME, logo: null };
+    const context: DocumentRenderContext = { number: 'ZWB-2026-001', issuedAt: '2026-09-05T08:00:00.000Z', issuedDay: isoDay('2026-09-05'), organization: { 'organization.name': 'Musterverein e.V.' }, theme: DEFAULT_THEME, logo: null };
     const body = '#if json("/data.json").at("baseSlots", default: ()).contains("recipient") [ZONE-JA] else [ZONE-NEIN]';
     const render = (documentTemplatesDir: string | null) =>
       createDocumentEngine({ documentTemplatesDir }).render({ baseId: 'a4-formular', bodyTypst: body, slots: { kind: 'form', title: 'x' }, context });

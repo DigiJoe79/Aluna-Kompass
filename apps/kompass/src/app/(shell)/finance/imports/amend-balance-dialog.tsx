@@ -52,7 +52,7 @@ export function AmendBalanceDialog({ open, onOpenChange, run }: { open: boolean;
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? onOpenChange(true) : close())}>
       <DialogContent size="sm" className="bg-surface shadow-md">
-        <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
+        <DialogTitle>{t('title')}</DialogTitle>
         <FormGrid>
           <FormField id="amendBalanceAmount" label={run.periodTo ? t('label', { date: formatDateOrDash(date, run.periodTo) }) : t('labelNoDate')} required size="s">
             <AmountField id="amendBalanceAmount" name="amendBalanceAmount" value={amountText} onChange={setAmountText} allowNegative required />

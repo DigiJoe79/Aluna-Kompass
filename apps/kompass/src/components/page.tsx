@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { HydrationMarker } from '@/components/hydration-marker';
+import { SectionLevel } from '@/components/section';
 import { cn } from '@/lib/utils';
 
 /**
@@ -15,8 +17,11 @@ import { cn } from '@/lib/utils';
 export function Page({ width, header, children }: { width: 'task' | 'standard' | 'full'; header?: ReactNode; children?: ReactNode }) {
   return (
     <div data-page-width={width} className={cn(width === 'task' && 'max-w-task', width === 'standard' && 'max-w-standard', width === 'full' && 'contents')}>
-      {header}
-      {children}
+      <SectionLevel level={3}>
+        {header}
+        {children}
+      </SectionLevel>
+      <HydrationMarker />
     </div>
   );
 }

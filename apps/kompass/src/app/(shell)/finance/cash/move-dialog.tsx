@@ -69,7 +69,7 @@ export function MoveDialog({ cashId, bankAccounts, today }: { cashId: string; ba
       </Button>
       <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
         <DialogContent size="sm" className="bg-surface shadow-md">
-          <DialogTitle className="font-heading text-[19px]">{t('trigger')}</DialogTitle>
+          <DialogTitle>{t('trigger')}</DialogTitle>
           <FormGrid>
             <FormCell size="m">
               <div role="group" aria-label={t('directionGroup')} className="inline-flex h-[var(--field-h)] overflow-hidden rounded-md border border-line-strong">

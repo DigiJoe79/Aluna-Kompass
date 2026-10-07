@@ -66,6 +66,15 @@ describe('createResponseDraft', () => {
     expect(entries[0]).toMatchObject({ entityId: reply.id, summary: 'Entwurf „Ihr Schreiben vom 03.09.2026: Freistellungsbescheid“ angelegt' });
   });
 
+  it('die Antwort trägt den Tag des Vereins, nicht den UTC-Tag (22:30 UTC ist in Berlin schon morgen)', async () => {
+    const { deps, ctx } = setup();
+    outgoingDefault(deps);
+    const source = await incoming(deps, ctx, await contact(deps, ctx, 'Amt'));
+    deps.clock.set('2026-09-12T22:30:00.000Z');
+    const reply = unwrap(await createResponseDraft(deps, ctx, { id: source.id }));
+    expect(reply.documentDate).toBe('2026-09-13');
+  });
+
   it('schreibt einem abgelegten eigenen Brief nach: derselbe Empfänger, „Unser Schreiben vom …“', async () => {
     const { deps, ctx } = setup();
     outgoingDefault(deps);

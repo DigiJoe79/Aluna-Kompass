@@ -12,12 +12,14 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Input } from '@/components/ui/input';
 import { idleState } from '@/lib/actions';
 import { importBackupAction, inspectBackupAction } from './actions';
+import { useDateFormat } from '@/components/date-format-provider';
 
 type Manifest = { createdAt: string; environment: string; appVersion: string; counts: { users: number; auditEntries: number; documents: number } };
 
 export function ImportCard({ environmentName }: { environmentName: string }) {
   const t = useTranslations('backup.import');
   const c = useTranslations('common');
+  const fmt = useDateFormat();
   const [file, setFile] = useState<File | null>(null);
   const [inspect, inspectAction] = useActionState(inspectBackupAction, idleState);
   const [pending, start] = useTransition();
@@ -47,8 +49,8 @@ export function ImportCard({ environmentName }: { environmentName: string }) {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent role="alertdialog" size="md" className="bg-surface shadow-md">
           <div className="flex flex-col gap-4">
-            <DialogTitle className="flex items-center gap-2 font-heading text-[19px]"><AlertTriangle className="size-5 text-warning" aria-hidden />{t('confirmTitle', { env: environmentName })}</DialogTitle>
-            <DialogDescription className="text-[14px] text-ink-2">{manifest ? t('confirmText', { users: manifest.counts.users, audit: manifest.counts.auditEntries, documents: manifest.counts.documents, source: `${manifest.environment}, ${new Date(manifest.createdAt).toLocaleString('de-DE')}` }) : ''}</DialogDescription>
+            <DialogTitle className="flex items-center gap-2"><AlertTriangle className="size-5 text-warning" aria-hidden />{t('confirmTitle', { env: environmentName })}</DialogTitle>
+            <DialogDescription tone="body">{manifest ? t('confirmText', { users: manifest.counts.users, audit: manifest.counts.auditEntries, documents: manifest.counts.documents, source: `${manifest.environment}, ${fmt.dateTime(manifest.createdAt)}` }) : ''}</DialogDescription>
             {pending ? (
               <ol className="flex flex-col gap-1 text-[13px]" aria-live="polite">
                 <li className="font-semibold">{t('steps.writing')}</li>

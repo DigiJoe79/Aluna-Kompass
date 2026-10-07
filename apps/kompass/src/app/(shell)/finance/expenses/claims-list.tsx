@@ -2,18 +2,18 @@ import type { ExpenseClaimView } from '@kompass/module-finance';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { StatusBadge } from '@/components/status-badge';
-import { formatDate, type DateFormatMode } from '@/lib/dates';
+import type { DateFormatter } from '@/lib/date-format';
 import { formatEuro } from '@/lib/finance/amount';
 import { CLAIM_BADGE_TONE, claimHref, claimSentence } from '@/lib/finance/expenses';
 
 /** Badge und Satz in Alltagssprache — gemeinsam für Karte und Ansicht des Antrags. */
-export async function ClaimState({ claim, mode }: { claim: ExpenseClaimView; mode: DateFormatMode }) {
+export async function ClaimState({ claim, fmt }: { claim: ExpenseClaimView; fmt: DateFormatter }) {
   const t = await getTranslations('finance.expenses');
   const sentence = claimSentence(claim);
   return (
     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
       <StatusBadge tone={CLAIM_BADGE_TONE[claim.stateLabelKey]}>{t(`state.${claim.stateLabelKey}`)}</StatusBadge>
-      <span className="text-[13px] text-ink-2">{sentence.key === 'rejected' ? sentence.note : t(`sentence.${sentence.key}`, { date: formatDate(sentence.date, mode) })}</span>
+      <span className="text-[13px] text-ink-2">{sentence.key === 'rejected' ? sentence.note : t(`sentence.${sentence.key}`, { date: fmt.date(sentence.date) })}</span>
     </span>
   );
 }
@@ -23,7 +23,7 @@ export async function ClaimState({ claim, mode }: { claim: ExpenseClaimView; mod
  * Satz, darunter der nächste Schritt. Die ganze Karte ist Trefferfläche
  * (mindestens 64 px) — ein Entwurf öffnet das Formular, alles andere die Ansicht.
  */
-async function ClaimCard({ claim, mode }: { claim: ExpenseClaimView; mode: DateFormatMode }) {
+async function ClaimCard({ claim, fmt }: { claim: ExpenseClaimView; fmt: DateFormatter }) {
   const t = await getTranslations('finance.expenses.list');
   const next =
     claim.stateLabelKey === 'submitted'
@@ -42,14 +42,14 @@ async function ClaimCard({ claim, mode }: { claim: ExpenseClaimView; mode: DateF
           <span className="font-mono text-[14px] font-semibold text-ink">{claim.number ?? t('draftNumber')}</span>
           <span className="shrink-0 font-mono text-[16px] font-semibold tabular-nums text-ink">{formatEuro(claim.totalCents)}</span>
         </span>
-        <ClaimState claim={claim} mode={mode} />
+        <ClaimState claim={claim} fmt={fmt} />
         <span className="text-[12px] text-muted-ink">{next}</span>
       </Link>
     </li>
   );
 }
 
-export async function ClaimGroup({ id, title, claims, mode }: { id: 'open' | 'done'; title: string; claims: ExpenseClaimView[]; mode: DateFormatMode }) {
+export async function ClaimGroup({ id, title, claims, fmt }: { id: 'open' | 'done'; title: string; claims: ExpenseClaimView[]; fmt: DateFormatter }) {
   if (claims.length === 0) return null;
   return (
     <section data-testid={`claims-${id}`} aria-labelledby={`claims-${id}-title`} className="space-y-2">
@@ -58,7 +58,7 @@ export async function ClaimGroup({ id, title, claims, mode }: { id: 'open' | 'do
       </h3>
       <ul className="space-y-2">
         {claims.map((claim) => (
-          <ClaimCard key={claim.id} claim={claim} mode={mode} />
+          <ClaimCard key={claim.id} claim={claim} fmt={fmt} />
         ))}
       </ul>
     </section>

@@ -1,4 +1,4 @@
-import { conflict, invalid, isoNow, notFound, ok, readSetting, recordAudit, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { conflict, invalid, isoNow, messageDate, notFound, ok, readSetting, recordAudit, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { requireAreaAccess } from './access';
@@ -55,7 +55,7 @@ export async function recordDispatch(deps: Deps, ctx: CallContext, input: unknow
       entityId: row.id,
       before: { sentAt: row.sentAt, sentVia: row.sentVia, ...(hidden ? {} : { sentNote: row.sentNote }) },
       after: { sentAt: after.sentAt, sentVia: after.sentVia, ...(hidden ? {} : { sentNote: after.sentNote }) },
-      summary: `Dokument ${row.number} als versandt vermerkt: ${v.sentAt} per ${v.sentVia}`,
+      summary: `Dokument ${row.number} als versandt vermerkt: ${messageDate(deps, v.sentAt)} per ${v.sentVia}`,
     });
     return ok(toRecord(deps, ctx, after, tx));
   });

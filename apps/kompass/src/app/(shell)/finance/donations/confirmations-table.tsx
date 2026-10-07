@@ -177,7 +177,7 @@ function Detail({ row, canIssue, onVoid, onDispatch, onRecall }: { row: Confirma
           <span className="font-semibold text-ink">{t('detail.signature')}: </span>
           {row.signatureState === 'machine' ? t('detail.machine') : row.signatureState === 'signed' ? t('detail.signed') : t('detail.needsSignature')}
         </p>
-        {row.voidedAt ? <p className="text-ink-2">{t('detail.voidedOn', { date: date(row.voidedAt.slice(0, 10)) })}</p> : null}
+        {row.voidedAt ? <p className="text-ink-2">{t('detail.voidedOn', { date: date(row.voidedAt) })}</p> : null}
         {row.recall ? (
           <div data-testid="confirmation-recall" className="space-y-0.5 text-ink-2">
             <p>
@@ -232,7 +232,7 @@ function DispatchDialog({ row, today, onClose }: { row: ConfirmationRow; today: 
   return (
     <Dialog open onOpenChange={(next) => (next ? undefined : onClose())}>
       <DialogContent size="sm" className="bg-surface shadow-md">
-        <DialogTitle className="font-heading text-[19px]">{td('title', { number: row.number })}</DialogTitle>
+        <DialogTitle>{td('title', { number: row.number })}</DialogTitle>
         <FormGrid>
           <FormField id="dispatch-date" label={td('sentAt')} required size="s">
             <Input id="dispatch-date" type="date" value={sentAt} max={today} onChange={(e) => setSentAt(e.target.value)} />
@@ -275,7 +275,7 @@ function RecallDialog({ row, today, onClose }: { row: ConfirmationRow; today: st
   return (
     <Dialog open onOpenChange={(next) => (next ? undefined : onClose())}>
       <DialogContent size="sm" className="bg-surface shadow-md">
-        <DialogTitle className="font-heading text-[19px]">{t('recall.title', { number: row.number })}</DialogTitle>
+        <DialogTitle>{t('recall.title', { number: row.number })}</DialogTitle>
         <p className="text-[13px] text-ink-2">{t('recall.hint')}</p>
         <FormGrid>
           {needsOriginal ? (

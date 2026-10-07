@@ -191,7 +191,7 @@ export async function deleteProject(deps: Deps, ctx: CallContext, input: unknown
   }
   const before = load(deps.db, parsed.value.id);
   if (!before) return notFound('project', parsed.value.id);
-  const blocked = deletionConflict(deletionPreviewOf(deps, before));
+  const blocked = deletionConflict(deps, deletionPreviewOf(deps, before));
   if (blocked) return blocked;
 
   deps.db.transaction((tx) => {

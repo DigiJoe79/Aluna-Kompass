@@ -28,6 +28,14 @@ describe('createDraft', () => {
     expect(entry?.summary).toBe('Entwurf \u201eEinladung\u201c angelegt');
   });
 
+  it('ohne Datum trägt der Entwurf den Tag des Vereins, nicht den UTC-Tag (22:30 UTC ist in Berlin schon morgen)', async () => {
+    const { deps, ctx } = setupWithTypes();
+    deps.clock.set('2026-09-12T22:30:00.000Z');
+    const created = await createDraft(deps, ctx, { typeKey: 'letter', subject: 'Einladung', body: 'x' });
+    if (!created.ok) throw new Error('setup');
+    expect(created.value.documentDate).toBe('2026-09-13');
+  });
+
   it('lehnt eine unbekannte Dokumentart ab', async () => {
     const { deps, ctx } = setupWithTypes();
     const result = await createDraft(deps, ctx, { typeKey: 'gibtsnicht', subject: 'x', body: 'y' });

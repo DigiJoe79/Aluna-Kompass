@@ -29,7 +29,8 @@ describe('PhotosEditor', () => {
   it('shows the field error at the field', () => {
     render(<PhotosEditor photos={photos(13)} max={12} error="Höchstens 12 Fotos. Entfernen Sie eines, bevor Sie ein neues hinzufügen." onChange={() => {}} onChoose={() => {}} frame={frame} />, { wrapper: Intl });
     const line = screen.getByText('Höchstens 12 Fotos. Entfernen Sie eines, bevor Sie ein neues hinzufügen.');
-    expect(screen.queryByRole('alert')).toBeNull();
+    // K10 § 4.5: Feldfehler über `FieldError`, also mit role="alert" und verbunden mit dem Knopf.
+    expect(screen.getByRole('alert')).toBe(line);
     expect(screen.getByRole('button', { name: 'Fotos wählen' }).getAttribute('aria-describedby')).toBe(line.id);
     expect(screen.getByText('13 von 12 Fotos')).toBeTruthy();
   });

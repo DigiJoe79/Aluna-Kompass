@@ -1,5 +1,5 @@
 import { DEFAULT_THEME } from '@kompass/core/themes';
-import type { DocumentRenderContext } from '@kompass/core';
+import { isoDay, type DocumentRenderContext } from '@kompass/core';
 import { createDocumentEngine, pdfPageCount } from '@kompass/documents';
 import sharp from 'sharp';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -7,7 +7,7 @@ import { qrRows } from '../src/print/qr';
 import { animalProfileTemplate, PROFILE_BASE, type ProfileImage, type ProfileInput, type ProfilePage } from '../src/print/template';
 
 const engine = createDocumentEngine();
-const ctx: DocumentRenderContext = { number: '', issuedAt: '2026-10-05T12:00:00.000Z', organization: { 'organization.name': 'Musterverein e.V.' }, theme: DEFAULT_THEME, logo: null };
+const ctx: DocumentRenderContext = { number: '', issuedAt: '2026-10-05T12:00:00.000Z', issuedDay: isoDay('2026-10-05'), organization: { 'organization.name': 'Musterverein e.V.' }, theme: DEFAULT_THEME, logo: null };
 
 async function jpeg(width: number, height: number): Promise<ProfileImage> {
   const bytes = new Uint8Array(await sharp({ create: { width, height, channels: 3, background: '#808080' } }).jpeg().toBuffer());

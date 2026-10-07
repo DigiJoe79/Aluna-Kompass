@@ -87,7 +87,7 @@ export function UserContactLinkForm({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent size="sm" className="bg-surface shadow-md">
           <ActionForm action={action} state={state} className="space-y-4">
-            <DialogTitle className="font-heading text-[19px]">{t('choose')}</DialogTitle>
+            <DialogTitle>{t('choose')}</DialogTitle>
             <ContactPicker id={`link-contact-${userId}`} name="contactId" label={t('choose')} value={picked} onChange={setPicked} required />
             <FormActionBar placement="dialog" mode="create" cancel={() => setOpen(false)} saveDisabled={!picked} saveLabel={t('link')} state={state} />
           </ActionForm>

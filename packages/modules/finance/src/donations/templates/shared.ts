@@ -1,8 +1,8 @@
-import { documentImagePath, type DocumentImage } from '@kompass/core';
+import { documentImagePath, isoDay, paperDate, type DocumentImage } from '@kompass/core';
 import { z } from 'zod';
 import { AMOUNT_IN_WORDS_MAX_CENTS, amountInWordsHyphenated } from '../../ledger/amount-in-words';
 import { NOTICE_KINDS } from '../../ledger/notice-validity';
-import { addressZoneSlots, formatCents, germanDate, typstText, withoutAddressZone } from '../../typst-pure';
+import { addressZoneSlots, formatCents, typstText, withoutAddressZone } from '../../typst-pure';
 import * as W from './wording';
 
 /**
@@ -33,7 +33,7 @@ export const CONFIRMATION_ADDRESS_ZONE: Record<ConfirmationTemplateKey, boolean>
 
 // ── Eingabe ─────────────────────────────────────────────────────────────────
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const isoDate = z.iso.date();
 const text = (max: number) => z.string().trim().min(1).max(max);
 const cents = z.number().int().positive().max(AMOUNT_IN_WORDS_MAX_CENTS);
 
@@ -171,7 +171,7 @@ export type ConfirmationTemplateInput =
 
 // ── Formatierung (neutraler Boden: `typst-pure.ts`) ─────────────────────────
 
-export { formatCents, germanDate, typstText } from '../../typst-pure';
+export { formatCents, typstText } from '../../typst-pure';
 
 const t = typstText;
 
@@ -240,7 +240,7 @@ export function amountBlock(label: string, amount: number, dateLabel: string, da
 }
 
 export function noticeBlock(notice: CollectiveConfirmationInput['notice']): string {
-  return [`#par[${t(W.noticeSentence({ ...notice, noticeDate: germanDate(notice.noticeDate) }))}]`, `#par[${t(W.usageSentence(notice.purposesText))}]`].join('\n');
+  return [`#par[${t(W.noticeSentence({ ...notice, noticeDate: paperDate(isoDay(notice.noticeDate)) }))}]`, `#par[${t(W.usageSentence(notice.purposesText))}]`].join('\n');
 }
 
 export function membershipBlock(certifiable: boolean, sentence: string): string {
@@ -254,7 +254,7 @@ export function membershipBlock(certifiable: boolean, sentence: string): string 
  * die eigenhändige Unterschrift.
  */
 export function signatureBlock(input: { place: string; issuedOn: string; machine: boolean; signerName: string | null; machineNotifiedOn: string | null; facsimile?: { bytes: Uint8Array } ; notice: { taxOffice: string } }): string {
-  const placeDate = t(`${input.place}, ${germanDate(input.issuedOn)}`);
+  const placeDate = t(`${input.place}, ${paperDate(isoDay(input.issuedOn))}`);
   // N11 (Befundliste 0.2.0): rechtsbündig in der zweiten Spalte — dieselbe Kante wie der Name darunter (`#h(1fr)` in der Zeile mit `SIGNATURE_CAPTION`), sonst steht die Unterschrift optisch in der Seitenmitte statt über dem Namen.
   // 12 mm (75 % der früheren 16 mm). Der Innenabstand hebt das Bild über die Linie: die Zeile darunter zieht sie um 2 pt hoch (`#v(-2pt)`), dazu 0,75 pt (1 px) Luft. Ohne Faksimile bleibt der Platz für die Handunterschrift bei 16 mm.
   const signature = input.machine && input.facsimile ? `#box(inset: (bottom: 2.75pt))[#image("${documentImagePath('signature', input.facsimile.bytes)}", height: 12mm)]` : '#v(16mm)';
@@ -269,7 +269,7 @@ export function signatureBlock(input: { place: string; issuedOn: string; machine
   ];
   if (input.machine && input.machineNotifiedOn) {
     // Blocksatz mit Silbentrennung fürs Kleingedruckte (Sprache `de` schon in der Basis) — der übrige Text bleibt im Flattersatz.
-    out.push(`#block[#set par(justify: true)\n#set text(hyphenate: true)\n#par[${small(t(W.machineNote(input.notice.taxOffice, germanDate(input.machineNotifiedOn))))}]]`);
+    out.push(`#block[#set par(justify: true)\n#set text(hyphenate: true)\n#par[${small(t(W.machineNote(input.notice.taxOffice, paperDate(isoDay(input.machineNotifiedOn)))))}]]`);
   }
   return out.join('\n');
 }

@@ -100,7 +100,7 @@ export function DetailSheet({
       >
         <SheetContent side="right" size="md" className="gap-0 overflow-y-auto bg-surface shadow-md">
           <div className="p-5">
-            <SheetTitle className="font-heading text-[17px]">{item.paymentReference ?? t('detail.unnamed')}</SheetTitle>
+            <SheetTitle>{item.paymentReference ?? t('detail.unnamed')}</SheetTitle>
             <div className="mt-4 space-y-4">
               <div>
                 <p className="font-mono text-[22px] font-semibold tabular-nums text-ink">{formatEuro(item.openCents)}</p>

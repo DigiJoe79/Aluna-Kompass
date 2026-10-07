@@ -81,7 +81,7 @@ export function ItemDialog({ open, onOpenChange, item, defaultKind, canCreateCon
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg" className="bg-surface shadow-md">
-        <DialogTitle className="font-heading text-[19px]">{item ? t('editTitle') : t('newTitle')}</DialogTitle>
+        <DialogTitle>{item ? t('editTitle') : t('newTitle')}</DialogTitle>
         <section>
           <h3 className="text-[15px] font-semibold">{t('sections.payment')}</h3>
           <div className="mt-3">

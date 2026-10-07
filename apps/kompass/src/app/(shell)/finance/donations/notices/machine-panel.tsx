@@ -176,7 +176,7 @@ function SignerDialog({ signer, onClose }: { signer: SignerView | null; onClose:
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent size="md" className="bg-surface shadow-md">
-        <DialogTitle className="font-heading text-[19px]">{signer ? td('editTitle') : td('addTitle')}</DialogTitle>
+        <DialogTitle>{signer ? td('editTitle') : td('addTitle')}</DialogTitle>
         <FormGrid>
           <FormField id="signer-name" label={td('name')} required error={errors.signerName}>
             <Input id="signer-name" value={signerName} onChange={(e) => setSignerName(e.target.value)} />

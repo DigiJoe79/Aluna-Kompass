@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 
 /**
  * `required` macht sichtbar, was das Feld ohnehin verlangt. Das Sternchen steht

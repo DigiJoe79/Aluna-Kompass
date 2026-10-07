@@ -1,4 +1,4 @@
-import { schema, setSetting } from '@kompass/core';
+import { schema, setSetting, unwrap } from '@kompass/core';
 import { describe, expect, it } from 'vitest';
 import { clearDispatch, recordDispatch } from '../src/dispatch';
 import { createDraft, fileDocument } from '../src/drafts';
@@ -13,6 +13,14 @@ describe('Versandvermerk', () => {
     const sent = await recordDispatch(deps, ctx, { id: letter.id, sentAt: '2026-09-05', sentVia: 'post', note: 'mit Anlagen' });
     expect(sent.ok && [sent.value.sentAt, sent.value.sentVia, sent.value.sentNote]).toEqual(['2026-09-05', 'post', 'mit Anlagen']);
     expect(auditActions(deps)).toContain('dms.dispatch');
+  });
+
+  it('nennt das Versanddatum im Protokoll wie die Anzeige (K10)', async () => {
+    const { deps, ctx } = setupWithTypes();
+    const letter = await fileFixture(deps, ctx);
+    unwrap(await recordDispatch(deps, ctx, { id: letter.id, sentAt: '2026-09-05', sentVia: 'post' }));
+    const entry = deps.db.select().from(schema.auditLog).all().filter((e) => e.action === 'dms.dispatch').at(-1)!;
+    expect(entry.summary).toBe(`Dokument ${letter.number} als versandt vermerkt: 05.09.2026 per post`);
   });
 
   it('ändert nachträglich mit Vorher und Nachher im Protokoll', async () => {

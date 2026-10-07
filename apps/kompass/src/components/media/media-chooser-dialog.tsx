@@ -8,6 +8,7 @@ import { FormActionBar } from '@/components/forms/form-action-bar';
 import { RefusalNotice } from '@/components/forms/refusal-notice';
 import { uploadMediaAction } from '@/app/(shell)/admin/media/actions';
 import { EmptyState } from '@/components/empty-state';
+import { FolderSheet } from '@/components/folder-tree/folder-sheet';
 import { FolderTree } from '@/components/folder-tree/folder-tree';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
@@ -15,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import type { ActionState } from '@/lib/actions';
 import { runAction, toastNetwork } from '@/lib/feedback';
-import { ancestorsOf, namesBelow, type FolderEntry } from '@/lib/folder-tree-model';
+import { ancestorsOf, isWithin, nameOf, namesBelow, type FolderEntry } from '@/lib/folder-tree-model';
 import type { MediaListing } from '@/lib/media-listing';
 import { usePreference } from '@/lib/preferences';
 import { AssetGrid } from './asset-grid';
@@ -189,7 +190,37 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
     [full, items, picked, reasonId]
   );
 
+  // Der Ortsknopf am Telefon nennt, was die Spalte am Schreibtisch zeigt: Ort und Summe (wie in der Mediathek).
+  const place =
+    folder === UNFILED
+      ? { path: [], title: t('noFolder'), count: listing?.unfiledCount ?? 0 }
+      : openFolder === null
+        ? { path: [], title: t('root'), count: listing?.total ?? 0 }
+        : {
+            path: ancestorsOf(openFolder).map(nameOf),
+            title: nameOf(openFolder),
+            count: shownFolders.filter((f) => isWithin(f.path, openFolder)).reduce((sum, f) => sum + f.count, 0),
+          };
+
   const title = multiple ? t('chooser.titleMultiple') : kind === 'pdf' ? t('chooser.titlePdf') : t('chooser.titleImage');
+
+  const tree = (density: 'default' | 'touch') => (
+    <FolderTree
+      folders={shownFolders}
+      mode="pick"
+      selected={openFolder}
+      fixed={[
+        { key: 'all', label: t('root'), icon: kind === 'image' ? ImageIcon : Files, count: listing?.total, dropTarget: false, folder: null, current: folder === null },
+        { key: 'unfiled', label: t('noFolder'), icon: CircleSlash, count: listing?.unfiledCount, dropTarget: false, folder: null, current: folder === UNFILED },
+      ]}
+      onPick={(path, fixedKey) => setFolder(path ?? (fixedKey === 'unfiled' ? UNFILED : null))}
+      unit={{ one: tMove('unit.files.one'), many: tMove('unit.files.many') }}
+      storageKey={null}
+      // Der Baum filtert hier: Das Gewählte zeigt seine Zahl, kein Häkchen (Artboard 8).
+      pickCheck={false}
+      density={density}
+    />
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -233,23 +264,13 @@ export function MediaChooserDialog({ open, onOpenChange, kind, multiple, max, se
 
         <RefusalNotice action state={uploadRefusal} />
 
+        {/* Telefon (`max-sm`): kein Baum neben den Kacheln, sondern der Ortsknopf darüber — wie in Mediathek und Akte. */}
+        <FolderSheet {...place} place={JSON.stringify(folder)} className="mb-0 sm:hidden">
+          {tree('touch')}
+        </FolderSheet>
+
         <div className="flex gap-4">
-          <div className="max-h-[55vh] w-60 shrink-0 overflow-y-auto border-r border-line pr-3">
-            <FolderTree
-              folders={shownFolders}
-              mode="pick"
-              selected={openFolder}
-              fixed={[
-                { key: 'all', label: t('root'), icon: kind === 'image' ? ImageIcon : Files, count: listing?.total, dropTarget: false, folder: null, current: folder === null },
-                { key: 'unfiled', label: t('noFolder'), icon: CircleSlash, count: listing?.unfiledCount, dropTarget: false, folder: null, current: folder === UNFILED },
-              ]}
-              onPick={(path, fixedKey) => setFolder(path ?? (fixedKey === 'unfiled' ? UNFILED : null))}
-              unit={{ one: tMove('unit.files.one'), many: tMove('unit.files.many') }}
-              storageKey={null}
-              // Der Baum filtert hier: Das Gewählte zeigt seine Zahl, kein Häkchen (Artboard 8).
-              pickCheck={false}
-            />
-          </div>
+          <div className="max-h-[55vh] w-60 shrink-0 overflow-y-auto border-r border-line pr-3 max-sm:hidden">{tree('default')}</div>
 
           <div className="max-h-[55vh] min-w-0 flex-1 overflow-y-auto">
             {failed ? (

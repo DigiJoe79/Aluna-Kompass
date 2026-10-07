@@ -118,6 +118,7 @@ const INVENTORY: Readonly<Record<string, Entry>> = {
   'schema-form/field.tsx': bestand('Fachbaustein'),
   'schema-form/index.tsx': bestand('Fachbaustein'),
   'schema-form/state.ts': bestand('Fachbaustein'),
+  'section.tsx': neu('E', 'K10, Designer und Joe 2026-10-06'),
   'selection-bar.tsx': neu('G', 'Maintainer 2026-10-04 (SelectionBar für Journal und Akte)'),
   'shell/command-palette.tsx': bestand('Fachbaustein'),
   'shell/env-banner.tsx': bestand('Fachbaustein'),
@@ -135,6 +136,7 @@ const INVENTORY: Readonly<Record<string, Entry>> = {
   'ui/button.tsx': bestand('Grundbaustein'),
   'ui/checkbox.tsx': bestand('Grundbaustein'),
   'ui/command.tsx': bestand('Grundbaustein'),
+  // `DialogDescription tone` (meta|body): K10, Designer und Joe 2026-10-07. Titelstandard: K10, 2026-10-06.
   'ui/dialog.tsx': bestand('Grundbaustein'),
   'ui/disclosure.tsx': bestand('Grundbaustein'),
   'ui/dropdown-menu.tsx': bestand('Grundbaustein'),
@@ -146,10 +148,12 @@ const INVENTORY: Readonly<Record<string, Entry>> = {
   'ui/radio-group.tsx': neu('E', 'Handoff Konsistenz § 8c; Maintainer 2026-10-05 (zwei bis vier kurze Optionen statt nativer Radios)'),
   'ui/select.tsx': bestand('Grundbaustein'),
   'ui/separator.tsx': bestand('Grundbaustein'),
+  // `SheetDescription tone` (meta|body): K10, Designer und Joe 2026-10-07. Polster von Kopf und Fuß 20 px: K10 § 4.6.
   'ui/sheet.tsx': bestand('Grundbaustein'),
   'ui/skeleton.tsx': bestand('Grundbaustein'),
   'ui/sonner.tsx': bestand('Grundbaustein'),
   'ui/switch.tsx': bestand('Grundbaustein'),
+  // `TableEmpty`: K10, Designer und Joe 2026-10-06.
   'ui/table.tsx': bestand('G'),
   'ui/tabs.tsx': bestand('E'),
   'ui/textarea.tsx': bestand('Grundbaustein'),

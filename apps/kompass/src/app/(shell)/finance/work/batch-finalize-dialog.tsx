@@ -63,7 +63,7 @@ export function BatchFinalizeDialog({ reviewedCount }: { reviewedCount: number }
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent size="lg" className="bg-surface shadow-md">
-          <DialogTitle className="font-heading text-[19px]">{t('title')}</DialogTitle>
+          <DialogTitle>{t('title')}</DialogTitle>
           <div className="space-y-3 text-[13px]">
             {loaded.state === 'loading' ? <p className="text-ink-2">{t('loading')}</p> : null}
             {loaded.state === 'failed' ? <Notice level="refuse">{loaded.message || t('failed')}</Notice> : null}

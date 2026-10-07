@@ -104,8 +104,8 @@ export function DispatchPanel({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent size="md" className="bg-surface shadow-md">
           <ActionForm action={action} state={state}>
-            <DialogTitle className="font-heading text-[19px]">{t('record')}</DialogTitle>
-            <DialogDescription className="text-[13px] text-muted-ink">{t('description')}</DialogDescription>
+            <DialogTitle>{t('record')}</DialogTitle>
+            <DialogDescription>{t('description')}</DialogDescription>
 
             <div className="mt-5">
               <FormGrid>

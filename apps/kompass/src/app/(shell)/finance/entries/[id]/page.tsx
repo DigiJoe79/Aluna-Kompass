@@ -13,6 +13,7 @@ import { LockLine } from '@/components/finance/lock-line';
 import { ForbiddenCard } from '@/components/forbidden-card';
 import { Page } from '@/components/page';
 import { PageHeader } from '@/components/page-header';
+import { dateFormatOf } from '@/lib/date-format';
 import { formatEuro } from '@/lib/finance/amount';
 import { taxTextKey } from '@/lib/finance/tax-text';
 import { requireSession } from '@/lib/request-context';
@@ -119,7 +120,7 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
           </div>
           <p className="text-[15px] text-ink">{entry.text}</p>
           {finalizedEvent && finalizedEvent.kind === 'finalized' ? (
-            <LockLine at={finalizedEvent.at} userName={finalizedEvent.userName} channel={finalizedEvent.channel} />
+            <LockLine at={finalizedEvent.at} userName={finalizedEvent.userName} channel={finalizedEvent.channel} fmt={dateFormatOf(deps)} />
           ) : null}
           {entry.purposeNegativeReason ? (
             <p data-testid="entry-purpose-negative-reason" className="text-[13px] text-ink-2">
@@ -227,7 +228,7 @@ export default async function ViewFinanceEntryPage({ params }: { params: Promise
 
             {paysPerson ? <NotReturnCard entryId={id} mark={entry.notReturn} canMark={hasPermission(ctx, 'finance.entriesFinalize')} /> : null}
 
-            <EntryHistory events={events} />
+            <EntryHistory events={events} fmt={dateFormatOf(deps)} />
           </div>
 
           <EntryVouchers today={today} entryId={id} vouchers={vouchers} closedYear={closedYear} documentationState={entry.documentation.state} origin={entry.documentation.origin} />

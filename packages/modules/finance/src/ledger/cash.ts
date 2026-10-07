@@ -1,4 +1,4 @@
-import { isoNow, newId, notFound, ok, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
+import { isoDay, isoNow, newId, notFound, ok, paperDate, requirePermission, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Result } from '@kompass/core';
 import { contacts, displayName, type ContactRow } from '@kompass/module-contacts';
 import { abortIssue, issueGeneratedDocument, readLinkedDocument } from '@kompass/module-dms';
 import { asc, desc, eq } from 'drizzle-orm';
@@ -8,7 +8,6 @@ import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { financeAccounts, financeCashCounts, financeCategories, financeEntries, type FinanceCashCountRow } from '../schema';
 import { cashCountTemplate, type CashCountTemplateInput, type CashCountVariant } from './cash-count-template';
 import { formatEuro } from './cash-check';
-import { germanDate } from './dates';
 import { entryViewInternal, writeLinesInternal, type EntryView } from './entries';
 import { bookEntry, finalizeInternal } from './finalize';
 import { accountBalancesAt } from './queries';
@@ -131,7 +130,7 @@ export async function countCash(deps: Deps, ctx: CallContext, input: unknown): P
       counterOneName,
       counterTwoName,
     } satisfies CashCountTemplateInput,
-    subject: `Kassenzählung ${account.name} ${germanDate(v.countedOn)}`,
+    subject: `Kassenzählung ${account.name} ${paperDate(isoDay(v.countedOn))}`,
     documentDate: v.countedOn,
     links: entryId ? [{ entityType: 'financeCashCount', entityId: countId }, { entityType: 'financeEntry', entityId: entryId }] : [{ entityType: 'financeCashCount', entityId: countId }],
     afterIssue: (tx, doc) => {
@@ -151,7 +150,7 @@ export async function countCash(deps: Deps, ctx: CallContext, input: unknown): P
         tx.insert(financeEntries)
           .values({
             id: entryId, number: null, entryDate: v.countedOn,
-            text: freshKind === 'surplus' ? `Kassenzählung ${germanDate(v.countedOn)}: Differenz` : `Kassenzählung ${germanDate(v.countedOn)}: Fehlbetrag`,
+            text: freshKind === 'surplus' ? `Kassenzählung ${paperDate(isoDay(v.countedOn))}: Differenz` : `Kassenzählung ${paperDate(isoDay(v.countedOn))}: Fehlbetrag`,
             status: 'draft', createdByUserId: ctx.userId ?? 'system', createdChannel: ctx.channel, createdAt: now, updatedAt: now,
           })
           .run();
@@ -253,7 +252,7 @@ export async function emptyDonationBox(deps: Deps, ctx: CallContext, input: unkn
       counterOneName,
       counterTwoName,
     } satisfies CashCountTemplateInput,
-    subject: `${v.boxLabel} geleert ${germanDate(v.date)}`,
+    subject: `${v.boxLabel} geleert ${paperDate(isoDay(v.date))}`,
     documentDate: v.date,
     links: [{ entityType: 'financeCashCount', entityId: countId }, { entityType: 'financeEntry', entityId: entryId }],
     afterIssue: (tx, doc) => {
@@ -305,7 +304,7 @@ export async function moveCash(deps: Deps, ctx: CallContext, input: unknown): Pr
   if (cashCount !== 1) return financeConflict('cashMoveNeedsOneCash');
 
   // Befund 27b: mit Richtung statt des neutralen „Bargeldbewegung“ — „gebracht“, wenn die Kasse abgibt, sonst „abgehoben“.
-  const defaultText = from.kind === 'cash' ? `Bargeld zur Bank gebracht ${germanDate(v.date)}` : `Bargeld abgehoben ${germanDate(v.date)}`;
+  const defaultText = from.kind === 'cash' ? `Bargeld zur Bank gebracht ${paperDate(isoDay(v.date))}` : `Bargeld abgehoben ${paperDate(isoDay(v.date))}`;
   return bookEntry(deps, ctx, {
     entryDate: v.date,
     text: v.text ?? defaultText,

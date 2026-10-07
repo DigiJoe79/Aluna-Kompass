@@ -271,7 +271,7 @@ export function ThemeEditor({ themes, activeKey }: { themes: Theme[]; activeKey:
 
       <Dialog open={dup} onOpenChange={(o) => (o ? setDup(true) : closeDup())}>
         <DialogContent size="sm" className="bg-surface shadow-md">
-          <DialogTitle className="font-heading text-[19px]">
+          <DialogTitle>
             {t('duplicateTitle', { name: selected.name })}
           </DialogTitle>
           <FormGrid>

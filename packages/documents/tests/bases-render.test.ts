@@ -1,4 +1,4 @@
-import type { DocumentRenderContext } from '@kompass/core';
+import { isoDay, type DocumentRenderContext } from '@kompass/core';
 import { DEFAULT_THEME } from '@kompass/core/themes';
 import { describe, expect, it } from 'vitest';
 import { coreDocumentTemplates, createTypstRenderer, resolveAssetDirs, resolveBases } from '../src';
@@ -56,7 +56,7 @@ describe('generic bases render', () => {
 
   it('renders the audit-log-export body (typst, not markdown) into its base, a4-plain-slim', async () => {
     const [audit] = coreDocumentTemplates();
-    const ctx: DocumentRenderContext = { number: 'PRO-2026-001', issuedAt: '2026-09-05T08:00:00.000Z', organization: { 'organization.name': 'Musterverein e.V.' }, theme: DEFAULT_THEME, logo: null };
+    const ctx: DocumentRenderContext = { number: 'PRO-2026-001', issuedAt: '2026-09-05T08:00:00.000Z', issuedDay: isoDay('2026-09-05'), organization: { 'organization.name': 'Musterverein e.V.' }, theme: DEFAULT_THEME, logo: null };
     const built = audit!.build(
       { title: 'Änderungsprotokoll', filters: { Kanal: 'system' }, entries: [{ occurredAt: '2026-09-05T08:00:00.000Z', userName: 'Anna Berger', channel: 'ui', action: 'settings.update', entityType: 'setting', entityId: 'organization.name', summary: 'geändert #[nicht als Code]' }] },
       ctx,

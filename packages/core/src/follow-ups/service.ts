@@ -12,6 +12,7 @@ import { conflict, notFound, ok, type Result } from '../result';
 import { validate } from '../validate';
 
 import { resolveRecordLabel } from '../modules/record-hooks';
+import { messageDate } from '../message-date';
 
 export type FollowUpRecord = typeof followUps.$inferSelect & { titleHidden: boolean };
 
@@ -99,7 +100,7 @@ export async function createFollowUp(deps: Deps, ctx: CallContext, input: unknow
       entityType: 'followUp',
       entityId: id,
       after: redacted(record, n.redact),
-      summary: `${n.name} zum ${v.dueAt} angelegt`,
+      summary: `${n.name} zum ${messageDate(deps, v.dueAt)} angelegt`,
     });
     return ok(record);
   });

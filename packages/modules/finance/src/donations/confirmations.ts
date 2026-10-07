@@ -1,4 +1,4 @@
-import { buildContext, invalid, isoNow, newId, notFound, ok, prepare, readSetting, requirePermission, systemContext, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
+import { buildContext, invalid, isoDay, isoNow, newId, notFound, ok, paperDate, prepare, readSetting, requirePermission, systemContext, todayIn, validate, type CallContext, type DbOrTx, type Deps, type Failure, type Result } from '@kompass/core';
 import { addContactRole, contactRoles, contacts, displayName, type ContactRow } from '@kompass/module-contacts';
 import { abortIssue, abortReceive, issueGeneratedDocument, readLinkedDocument, receiveGeneratedUpload, voidDocumentInternal } from '@kompass/module-dms';
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
@@ -7,7 +7,6 @@ import { financeAudit } from '../audit';
 import { financeConflict, requireHumanChannelFinance } from '../errors';
 import { requireFinanceRead } from '../ledger/access';
 import { CERTIFIABLE_INCOME_KINDS } from '../ledger/codes';
-import { germanDate } from '../ledger/dates';
 import {
   financeAllocationLines,
   financeCategories,
@@ -276,7 +275,7 @@ export async function issueConfirmation(deps: Deps, ctx: CallContext, input: unk
     templateKey,
     input: templateInput,
     // Datum deutsch, nie ISO (release-0.2.7, Befund 20).
-    subject: `Zuwendungsbestätigung ${KIND_LABEL[kind]} ${germanDate(issuedOn)}`,
+    subject: `Zuwendungsbestätigung ${KIND_LABEL[kind]} ${paperDate(isoDay(issuedOn))}`,
     documentDate: issuedOn,
     // Das amtliche Muster ist eine Seite (BMF 7.11.2013 Nr. 2); die Sammelbestätigung hat ihre Anlage.
     maxPages: kind === 'collective' ? undefined : 1,

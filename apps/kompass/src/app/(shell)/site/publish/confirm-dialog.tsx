@@ -74,8 +74,8 @@ export function PublishConfirmDialog({
         size="sm"
         className="bg-surface shadow-md"
       >
-        <DialogTitle className="font-heading text-[19px]">{env === 'test' ? t('confirm.titleTest') : t('confirm.title', { host })}</DialogTitle>
-        <DialogDescription className="text-[14px] text-ink-2">
+        <DialogTitle>{env === 'test' ? t('confirm.titleTest') : t('confirm.title', { host })}</DialogTitle>
+        <DialogDescription tone="body">
           {check === 'stale'
             ? null
             : t.rich('confirm.text', {

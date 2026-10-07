@@ -183,7 +183,7 @@ function DispatchAllDialog({ runId, today, onClose }: { runId: string; today: st
     <Dialog open onOpenChange={(next) => (next ? undefined : onClose())}>
       <DialogContent size="sm" layout="fixed-footer" className="bg-surface shadow-md">
         <DialogHeader>
-          <DialogTitle className="font-heading text-[19px]">{td('title')}</DialogTitle>
+          <DialogTitle>{td('title')}</DialogTitle>
         </DialogHeader>
         <DialogBody className="space-y-3">
           <p className="text-[13px] text-ink-2">{td('text')}</p>

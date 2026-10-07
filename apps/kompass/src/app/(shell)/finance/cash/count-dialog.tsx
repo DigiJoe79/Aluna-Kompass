@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { ContactPicker, type PickedContact } from '@/components/contact-picker';
 import { FormActionBar } from '@/components/forms/form-action-bar';
+import { FieldError } from '@/components/forms/field-error';
 import { FormField } from '@/components/forms/form-field';
 import { FormCell, FormGrid, FormRowBreak } from '@/components/forms/form-grid';
 import { useActionFeedback } from '@/components/forms/use-action-feedback';
@@ -114,7 +115,7 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
       </Button>
       <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : close())}>
         <DialogContent size="lg" className="bg-surface shadow-md">
-          <DialogTitle className="font-heading text-[19px]">{t('trigger')}</DialogTitle>
+          <DialogTitle>{t('trigger')}</DialogTitle>
           <section>
             <h3 className="text-[15px] font-semibold">{t('sections.what')}</h3>
             <div className="mt-3">
@@ -193,11 +194,7 @@ export function CountDialog({ account, today, canCreateContact }: { account: Cas
                   <ContactPicker id="counter-two" name="counterTwo" label={t('counterTwo')} value={counterTwo} onChange={setCounterTwo} required kind="person" canCreate={canCreateContact} />
                 </FormCell>
               </FormGrid>
-              {fieldError ? (
-                <p role="alert" className="mt-2 text-[12px] text-error">
-                  {fieldError}
-                </p>
-              ) : null}
+              <FieldError id="count-counters-error" message={fieldError ?? undefined} />
             </div>
           </section>
 

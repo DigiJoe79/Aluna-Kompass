@@ -5,6 +5,7 @@ import Database from 'better-sqlite3';
 import * as tar from 'tar';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createDeps } from '../src/app';
+import { fixedClock } from '../src/clock';
 import { login } from '../src/auth/login';
 import { exportBackup, importBackup, importBackupForSetup, inspectBackup } from '../src/backup';
 import { auditLog, users } from '../src/db/schema';
@@ -22,8 +23,8 @@ const dirs: string[] = [];
 const tmp = () => { const d = mkdtempSync(path.join(tmpdir(), 'kompass-backup-')); dirs.push(d); return d; };
 afterEach(() => { for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true }); });
 
-function fileDeps(dir: string, env: 'test' | 'production' = 'test') {
-  return createDeps({ dataPath: dir, env });
+function fileDeps(dir: string, env: 'test' | 'production' = 'test', clock?: ReturnType<typeof fixedClock>) {
+  return createDeps({ dataPath: dir, env, clock });
 }
 
 describe('backup', () => {
@@ -51,9 +52,12 @@ describe('backup', () => {
   });
 
   it('imports into another installation, invalidates sessions and logs a system entry', async () => {
-    const source = fileDeps(tmp());
+    const clock = fixedClock(new Date().toISOString());
+    const source = fileDeps(tmp(), 'test', clock);
     const seed = await seedDevelopment(source);
     const admin = source.db.select().from(users).all()[0]!;
+    // 22:30 UTC im Sommer ist 00:30 des Folgetags in der Vereinszeit (Europe/Berlin, Vorgabe).
+    clock.set('2026-07-14T22:30:00.000Z');
     const exported = unwrap(await exportBackup(source, ctxWith(['backup.export'], admin.id), { workDir: tmp() }));
     source.close();
 
@@ -71,6 +75,8 @@ describe('backup', () => {
     expect(readSetting(target, 'system.lastImportAt')).not.toBeNull();
     const last = target.db.select().from(auditLog).all().filter((e) => e.action === 'backup.import').at(-1)!;
     expect(last).toMatchObject({ action: 'backup.import', channel: 'system', userId: null });
+    // K10: Datum und Uhrzeit des Backups stehen im Protokoll wie in der Anzeige (Uhrzeit des Vereins), nicht als roher Zeitstempel.
+    expect(last.summary).toMatch(/^Bestand aus Backup \(test, 15\.07\.2026, 00:30\) importiert durch /);
     target.close();
   });
 

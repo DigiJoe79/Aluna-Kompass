@@ -49,6 +49,13 @@ describe('purposes', () => {
     expect(reopened.reopenedAt).not.toBeNull();
   });
 
+  it('reckons the remainder on fulfilment as of the association\'s day, not the UTC day (22:30 UTC is already tomorrow in Berlin)', async () => {
+    const { deps, ctx } = setupFinance();
+    deps.clock.set('2026-09-12T22:30:00.000Z');
+    const purpose = unwrap(await createPurpose(deps, ctx, { name: 'Dach', carryForwardCents: 12000, carryForwardDate: '2026-09-13' }));
+    expect(unwrap(await fulfillPurpose(deps, ctx, { id: purpose.id })).remainderCents).toBe(12000);
+  });
+
   it('logs neither name nor description, and deletes an unused purpose', async () => {
     const { deps, ctx } = setupFinance();
     const purpose = unwrap(await createPurpose(deps, ctx, { name: 'Dachsanierung', description: 'Zusage von Frau Muster' }));

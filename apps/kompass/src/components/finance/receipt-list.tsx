@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { useDateFormat } from '@/components/date-format-provider';
 import { cn } from '@/lib/utils';
 
 export interface ReceiptListItem {
@@ -20,6 +21,7 @@ export interface ReceiptListItem {
  * die Prüfung muss sehen, dass er einmal dort hing.
  */
 export function ReceiptList({ items, onRevoke }: { items: ReceiptListItem[]; onRevoke?: (linkId: string) => void }) {
+  const { date } = useDateFormat();
   const t = useTranslations('finance.receipt');
   if (items.length === 0) return <p className="text-[13px] text-muted-ink">{t('none')}</p>;
 
@@ -30,7 +32,7 @@ export function ReceiptList({ items, onRevoke }: { items: ReceiptListItem[]; onR
           <span className={cn('font-mono text-[12px]', item.revoked && 'line-through')}>{item.documentNumber}</span>
           <span className={cn('min-w-0 flex-1 truncate', item.revoked && 'line-through')}>{item.title}</span>
           <span className="shrink-0 text-[12px] text-muted-ink">{item.typeLabel}</span>
-          <span className="shrink-0 font-mono text-[12px] text-muted-ink">{item.date}</span>
+          <span className="shrink-0 font-mono text-[12px] text-muted-ink">{date(item.date)}</span>
           {item.revoked ? (
             item.replacedByNumber ? <span className="shrink-0 text-[12px]">{t('replacedBy', { number: item.replacedByNumber })}</span> : null
           ) : (

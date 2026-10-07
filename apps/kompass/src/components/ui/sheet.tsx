@@ -2,9 +2,11 @@
 
 import * as React from "react"
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 
 import { Button } from "@/components/ui/button"
+import { SectionLevel } from "@/components/section"
+import { DESCRIPTION_TONE } from "@/components/ui/dialog"
 import { XIcon } from "lucide-react"
 import { useTranslations } from "next-intl"
 
@@ -75,7 +77,7 @@ function SheetContent({
         )}
         {...props}
       >
-        {children}
+        <SectionLevel level={3}>{children}</SectionLevel>
         {showCloseButton && (
           <SheetPrimitive.Close
             data-slot="sheet-close"
@@ -102,7 +104,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sheet-header"
-      className={cn("flex flex-col gap-0.5 p-4", className)}
+      className={cn("flex flex-col gap-0.5 p-5", className)}
       {...props}
     />
   )
@@ -112,7 +114,7 @@ function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sheet-footer"
-      className={cn("mt-auto flex flex-col gap-2 p-4", className)}
+      className={cn("mt-auto flex flex-col gap-2 p-5", className)}
       {...props}
     />
   )
@@ -122,10 +124,7 @@ function SheetTitle({ className, ...props }: SheetPrimitive.Title.Props) {
   return (
     <SheetPrimitive.Title
       data-slot="sheet-title"
-      className={cn(
-        "font-heading text-base font-medium text-ink",
-        className
-      )}
+      className={cn("font-heading text-dialog-title text-ink", className)}
       {...props}
     />
   )
@@ -133,12 +132,13 @@ function SheetTitle({ className, ...props }: SheetPrimitive.Title.Props) {
 
 function SheetDescription({
   className,
+  tone = "meta",
   ...props
-}: SheetPrimitive.Description.Props) {
+}: SheetPrimitive.Description.Props & { tone?: keyof typeof DESCRIPTION_TONE }) {
   return (
     <SheetPrimitive.Description
       data-slot="sheet-description"
-      className={cn("text-sm text-muted-ink", className)}
+      className={cn(DESCRIPTION_TONE[tone], className)}
       {...props}
     />
   )

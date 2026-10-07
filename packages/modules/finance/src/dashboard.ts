@@ -1,4 +1,4 @@
-import { hasPermission, listUserNamesWithPermission, readSetting, todayIn, type DashboardLine, type DashboardTile } from '@kompass/core';
+import { hasPermission, isoDayIn, listUserNamesWithPermission, readSetting, todayIn, type DashboardLine, type DashboardTile } from '@kompass/core';
 import { contacts, displayName } from '@kompass/module-contacts';
 import { and, eq, isNull, lt, or } from 'drizzle-orm';
 import { z } from 'zod';
@@ -92,7 +92,7 @@ const todoTile: DashboardTile<Record<string, never>> = {
     const reviewedRes = await listEntries(deps, ctx, { state: 'reviewed', limit: 200 });
     if (reviewedRes.ok && reviewedRes.value.total > 0) {
       const oldest = reviewedRes.value.entries.reduce((min, e) => (e.reviewedAt && (!min || e.reviewedAt < min) ? e.reviewedAt : min), null as string | null);
-      lines.push({ date: (oldest ?? today).slice(0, 10), titleKey: 'reviewedNotFinal', values: { count: reviewedRes.value.total }, href: '/finance/entries?state=reviewed' });
+      lines.push({ date: oldest ? isoDayIn(deps, Date.parse(oldest)) : today, titleKey: 'reviewedNotFinal', values: { count: reviewedRes.value.total }, href: '/finance/entries?state=reviewed' });
     }
 
     // Festgeschriebene Buchungen ohne Beleg.

@@ -1,4 +1,4 @@
-import type { DocumentRenderContext } from '@kompass/core';
+import { isoDay, type DocumentRenderContext } from '@kompass/core';
 import { DEFAULT_THEME } from '@kompass/core/themes';
 import { describe, expect, it } from 'vitest';
 import { letterTemplate } from '../src/templates';
@@ -6,7 +6,7 @@ import { letterTemplate } from '../src/templates';
 function renderContext(): DocumentRenderContext {
   return {
     number: 'BRF-2026-001',
-    issuedAt: '2026-09-10T12:00:00.000Z',
+    issuedAt: '2026-09-10T12:00:00.000Z', issuedDay: isoDay('2026-09-10'),
     organization: { 'organization.name': 'Musterverein e.V.' },
     theme: DEFAULT_THEME,
     logo: null,

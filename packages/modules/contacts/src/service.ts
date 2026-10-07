@@ -329,7 +329,7 @@ export async function endContactRole(deps: Deps, ctx: CallContext, input: unknow
   });
 }
 
-import { dueUntil, holdsFor, type DueItem, type RetentionHold } from '@kompass/core';
+import { dueUntil, holdsFor, messageDate, type DueItem, type RetentionHold } from '@kompass/core';
 import { contactsRetentionDue } from './retention';
 
 /** Bis wann dieser Kontakt gehalten wird — und von wem, damit man es nachlesen kann. */
@@ -376,7 +376,7 @@ export async function deleteContact(deps: Deps, ctx: CallContext, input: unknown
   const until = dueUntil(holds);
   const today = todayIn(deps);
   if (until === null || until >= today) {
-    return conflict('retentionHoldActive', `Noch gehalten von: ${holds.map((h) => `${h.label}${h.until ? ` (bis ${h.until})` : ' (dauerhaft)'}`).join('; ')}`);
+    return conflict('retentionHoldActive', `Noch gehalten von: ${holds.map((h) => `${h.label}${h.until ? ` (bis ${messageDate(deps, h.until)})` : ' (dauerhaft)'}`).join('; ')}`);
   }
 
   return deps.db.transaction((tx: DbOrTx) => {

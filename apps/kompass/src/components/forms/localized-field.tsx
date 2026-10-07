@@ -185,7 +185,8 @@ export function LocalizedField({
         </div>
       ) : null}
       <div className="@container">
-        <div className={cn('grid grid-cols-1 gap-3', languageColumns(locales.length, perLocale))}>{locales.map((l) => field(l))}</div>
+        {/* Abstand wie `FormGrid`: Ein `m`-Feld mit zwei Sprachen liegt so genau auf den `s`-Spalten darüber (K10 § 4.6). */}
+        <div className={cn('grid grid-cols-1 gap-x-5 gap-y-4', languageColumns(locales.length, perLocale))}>{locales.map((l) => field(l))}</div>
       </div>
       {hint && !error ? <p className="text-[12px] text-muted-ink">{hint}</p> : null}
       <FieldError id={`${name}-error`} message={error} />
